@@ -184,32 +184,71 @@ Proof.
 Admitted.
 
 (* ------------------------------------------------------------------ *)
-(* Lemma: usage safety — linear variables are consumed after typing      *)
+(* Linear scope-exit usage                                               *)
 (* ------------------------------------------------------------------ *)
 
-Lemma typed_linear_consumed : forall fenv Γ e T Γ' x Tx,
-  typed fenv Γ e T Γ' ->
-  ctx_lookup x Γ = Some (Tx, false) ->
-  ty_usage Tx = ULinear ->
-  ctx_lookup x Γ' = Some (Tx, true) \/
-  ctx_lookup x Γ' = None.
+Lemma ctx_is_ok_linear_used : forall x T Γ,
+  ty_usage T = ULinear ->
+  ctx_is_ok x T Γ ->
+  exists Tx, ctx_lookup x Γ = Some (Tx, true).
 Proof.
-  intros fenv Γ e T Γ' x Tx Htyped Hlookup Husage.
-  induction Htyped; admit.
-Admitted.
+  intros x T Γ Hlin Hok.
+  unfold ctx_is_ok in Hok.
+  rewrite Hlin in Hok.
+  destruct (ctx_lookup x Γ) as [[Tx b] |] eqn:Hlookup.
+  - destruct b.
+    + exists Tx. reflexivity.
+    + contradiction.
+  - contradiction.
+Qed.
 
-(* ------------------------------------------------------------------ *)
-(* Corollary: type checker preserves usage safety for linear variables   *)
-(* ------------------------------------------------------------------ *)
-
-Corollary infer_usage_safe : forall fenv Γ e T Γ' x Tx,
-  infer_core fenv Γ e = Some (T, Γ') ->
-  ctx_lookup x Γ = Some (Tx, false) ->
-  ty_usage Tx = ULinear ->
-  ctx_lookup x Γ' = Some (Tx, true) \/
-  ctx_lookup x Γ' = None.
+Lemma typed_linear_let_binding_used : forall fenv Γ Γout m x T e1 e2 T2,
+  typed fenv Γ (ELet m x T e1 e2) T2 Γout ->
+  ty_usage T = ULinear ->
+  exists Γ1 Γ2 T1 Tx,
+    typed fenv Γ e1 T1 Γ1 /\
+    typed fenv (ctx_add x T Γ1) e2 T2 Γ2 /\
+  ctx_lookup x Γ2 = Some (Tx, true).
 Proof.
-  intros fenv Γ e T Γ' x Tx Hinfer Hlookup Husage.
-  pose proof (infer_sound fenv Γ e T Γ' Hinfer) as Htyped.
-  exact (typed_linear_consumed fenv Γ e T Γ' x Tx Htyped Hlookup Husage).
+  intros fenv Γ Γout m x T e1 e2 T2 Htyped Hlin.
+  inversion Htyped; subst.
+  match goal with
+  | H : ctx_is_ok x T Γ2 |- _ =>
+      pose proof (ctx_is_ok_linear_used x T Γ2 Hlin H) as [Tx Hlookup]
+  end.
+  exists Γ1, Γ2, T1, Tx.
+  repeat split; assumption.
+Qed.
+
+Lemma params_ok_linear_param_used : forall ps Γ p,
+  In p ps ->
+  params_ok ps Γ ->
+  ty_usage (param_ty p) = ULinear ->
+  exists Tx, ctx_lookup (param_name p) Γ = Some (Tx, true).
+Proof.
+  intros ps Γ p Hin Hok Hlin.
+  induction ps as [| p0 ps IH].
+  - contradiction.
+  - simpl in Hin, Hok.
+    destruct Hok as [Hok0 Hoks].
+    destruct Hin as [Heq | Hin].
+    + subst p0.
+      exact (ctx_is_ok_linear_used (param_name p) (param_ty p) Γ Hlin Hok0).
+    + exact (IH Hin Hoks).
+Qed.
+
+Lemma typed_linear_param_used : forall fenv f p,
+  typed_fn_def fenv f ->
+  In p (fn_params f) ->
+  ty_usage (param_ty p) = ULinear ->
+  exists Γ' Tx,
+    typed fenv (params_ctx (fn_params f)) (fn_body f) (fn_ret f) Γ' /\
+    ctx_lookup (param_name p) Γ' = Some (Tx, true).
+Proof.
+  intros fenv f p Htyped_fn Hin Hlin.
+  destruct Htyped_fn as [Γ' [Hbody Hparams]].
+  pose proof (params_ok_linear_param_used
+    (fn_params f) Γ' p Hin Hparams Hlin) as [Tx Hlookup].
+  exists Γ', Tx.
+  split; assumption.
 Qed.

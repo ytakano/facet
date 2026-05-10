@@ -63,6 +63,24 @@ Definition ctx_is_ok (x : ident) (T : Ty) (Γ : ctx) : Prop :=
   | _ => True
   end.
 
+(* Build the initial context for checking a function body from its
+   parameters. Scope-exit checks reuse ctx_is_ok for each parameter. *)
+Definition param_ctx_entry (p : param) : ctx_entry :=
+  (param_name p, param_ty p, false).
+
+Fixpoint params_ctx (ps : list param) : ctx :=
+  match ps with
+  | [] => []
+  | p :: ps' => param_ctx_entry p :: params_ctx ps'
+  end.
+
+Fixpoint params_ok (ps : list param) (Γ : ctx) : Prop :=
+  match ps with
+  | [] => True
+  | p :: ps' =>
+      ctx_is_ok (param_name p) (param_ty p) Γ /\ params_ok ps' Γ
+  end.
+
 (* ------------------------------------------------------------------ *)
 (* Subtyping on usage qualifiers                                         *)
 (*                                                                      *)
@@ -165,3 +183,8 @@ with typed_args (fenv : list fn_def)
       usage_sub (ty_usage T_e) (ty_usage (param_ty p)) ->
       typed_args fenv Γ1 es ps Γ2 ->
       typed_args fenv Γ (e :: es) (p :: ps) Γ2.
+
+Definition typed_fn_def (fenv : list fn_def) (f : fn_def) : Prop :=
+  exists Γ',
+    typed fenv (params_ctx (fn_params f)) (fn_body f) (fn_ret f) Γ' /\
+    params_ok (fn_params f) Γ'.

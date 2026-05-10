@@ -99,6 +99,63 @@ Fixpoint rename_range (ρ : rename_env) : list ident :=
   | (_, xr) :: ρ' => xr :: rename_range ρ'
   end.
 
+Definition disjoint_names (xs ys : list ident) : Prop :=
+  forall x, In x xs -> ~ In x ys.
+
+Lemma disjoint_names_nil_l : forall xs,
+  disjoint_names [] xs.
+Proof.
+  intros xs x Hin. contradiction.
+Qed.
+
+Lemma disjoint_names_nil_r : forall xs,
+  disjoint_names xs [].
+Proof.
+  intros xs x Hin Hnil. contradiction.
+Qed.
+
+Lemma disjoint_names_cons_l : forall x xs ys,
+  disjoint_names (x :: xs) ys ->
+  ~ In x ys /\ disjoint_names xs ys.
+Proof.
+  intros x xs ys H.
+  split.
+  - apply H. simpl. left. reflexivity.
+  - intros y Hy. apply H. simpl. right. exact Hy.
+Qed.
+
+Lemma disjoint_names_app_l : forall xs ys zs,
+  disjoint_names (xs ++ ys) zs ->
+  disjoint_names xs zs /\ disjoint_names ys zs.
+Proof.
+  intros xs ys zs H.
+  split; intros x Hin; apply H; apply in_or_app;
+    [left | right]; exact Hin.
+Qed.
+
+Lemma ident_in_false_not_in : forall x xs,
+  ident_in x xs = false ->
+  ~ In x xs.
+Proof.
+  intros x xs. induction xs as [| y ys IH]; intros H Hin.
+  - contradiction.
+  - simpl in H, Hin.
+    destruct (String.eqb x y) eqn:Heq.
+    + discriminate.
+    + destruct Hin as [Heqxy | Hin].
+      * subst. rewrite String.eqb_refl in Heq.
+        discriminate.
+      * eapply IH; eauto.
+Qed.
+
+Lemma fresh_ident_go_not_in : forall fuel x used,
+  ident_in (fresh_ident_go fuel x used) used = false ->
+  ~ In (fresh_ident_go fuel x used) used.
+Proof.
+  intros fuel x used H.
+  apply ident_in_false_not_in. exact H.
+Qed.
+
 Inductive ctx_alpha : rename_env -> ctx -> ctx -> Prop :=
   | CtxAlpha_Base : forall Γ,
       ctx_alpha [] Γ Γ
@@ -350,6 +407,7 @@ Proof.
 Qed.
 
 Lemma alpha_rename_expr_sound : forall ρ used e er used',
+  disjoint_names (free_vars_expr e) (rename_range ρ) ->
   alpha_rename_expr ρ used e = (er, used') ->
   expr_alpha ρ e er.
 Proof.
@@ -420,7 +478,9 @@ Proof.
   injection Hrename as <- <-.
   split.
   - eapply alpha_rename_syntax_go_shape. exact Hfenv.
-  - eapply alpha_rename_expr_sound. exact He.
+  - eapply alpha_rename_expr_sound.
+    + apply disjoint_names_nil_r.
+    + exact He.
 Qed.
 
 Lemma typed_alpha_backward :

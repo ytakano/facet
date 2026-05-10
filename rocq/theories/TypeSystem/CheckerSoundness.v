@@ -424,12 +424,107 @@ Proof.
   exact I.
 Qed.
 
+Lemma alpha_rename_call_args_sound : forall ρ used args argsr used',
+  disjoint_names
+    ((fix go (args0 : list expr) : list ident :=
+        match args0 with
+        | [] => []
+        | arg :: rest => free_vars_expr arg ++ go rest
+        end) args)
+    (rename_range ρ) ->
+  ((fix go (used0 : list ident) (args0 : list expr)
+      : list expr * list ident :=
+      match args0 with
+      | [] => ([], used0)
+      | arg :: rest =>
+          let (arg', used1) := alpha_rename_expr ρ used0 arg in
+          let (rest', used2) := go used1 rest in
+          (arg' :: rest', used2)
+      end) used args) = (argsr, used') ->
+  exprs_alpha ρ args argsr.
+Proof.
+Admitted.
+
 Lemma alpha_rename_expr_sound : forall ρ used e er used',
   disjoint_names (free_vars_expr e) (rename_range ρ) ->
   alpha_rename_expr ρ used e = (er, used') ->
   expr_alpha ρ e er.
 Proof.
-Admitted.
+  intros ρ used e. revert ρ used.
+  induction e; intros ρ used er used' Hdisj Hrename; simpl in Hrename.
+  - injection Hrename as <- _. constructor.
+  - injection Hrename as <- _. constructor.
+  - injection Hrename as <- _. constructor.
+    apply (Hdisj i). simpl. left. reflexivity.
+  - destruct (disjoint_names_app_l (free_vars_expr e1) (free_vars_expr e2)
+      (rename_range ρ)) as [Hdisj1 Hdisj2].
+    { intros x Hin. apply Hdisj. simpl. right. exact Hin. }
+    destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
+    destruct (alpha_rename_expr
+      ((i, fresh_ident i (free_vars_expr e2 ++ used1)) :: ρ)
+      (fresh_ident i (free_vars_expr e2 ++ used1) ::
+       free_vars_expr e2 ++ used1) e2)
+      as [e2r used2] eqn:He2.
+    injection Hrename as <- _.
+    constructor.
+    + eapply IHe1; [exact Hdisj1 | exact He1].
+    + eapply IHe2.
+      * intros x Hin.
+        simpl. intros [Heq | Hin_range].
+        -- subst x.
+           apply (fresh_ident_not_in i (free_vars_expr e2 ++ used1)).
+           apply in_or_app. left. exact Hin.
+        -- exact (Hdisj2 x Hin Hin_range).
+      * exact He2.
+  - destruct (disjoint_names_app_l (free_vars_expr e1) (free_vars_expr e2)
+      (rename_range ρ)) as [Hdisj1 Hdisj2].
+    { intros x Hin. apply Hdisj. simpl. right. exact Hin. }
+    destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
+    destruct (alpha_rename_expr
+      ((i, fresh_ident i (free_vars_expr e2 ++ used1)) :: ρ)
+      (fresh_ident i (free_vars_expr e2 ++ used1) ::
+       free_vars_expr e2 ++ used1) e2)
+      as [e2r used2] eqn:He2.
+    injection Hrename as <- _.
+    constructor.
+    + eapply IHe1; [exact Hdisj1 | exact He1].
+    + eapply IHe2.
+      * intros x Hin.
+        simpl. intros [Heq | Hin_range].
+        -- subst x.
+           apply (fresh_ident_not_in i (free_vars_expr e2 ++ used1)).
+           apply in_or_app. left. exact Hin.
+        -- exact (Hdisj2 x Hin Hin_range).
+      * exact He2.
+  - remember
+      ((fix go (used0 : list ident) (args0 : list expr)
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used0)
+          | arg :: rest =>
+              let (arg', used1) := alpha_rename_expr ρ used0 arg in
+              let (rest', used2) := go used1 rest in
+              (arg' :: rest', used2)
+          end) used l) as r eqn:Hargs.
+    destruct r as [argsr used_args].
+    injection Hrename as <- _.
+    constructor.
+    eapply alpha_rename_call_args_sound.
+    + exact Hdisj.
+    + symmetry. exact Hargs.
+  - destruct p as [px].
+    destruct (disjoint_names_cons_l px (free_vars_expr e)
+      (rename_range ρ) Hdisj) as [Hpx Hdisj_e].
+    destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
+    injection Hrename as <- _.
+    constructor.
+    + exact Hpx.
+    + eapply IHe; [exact Hdisj_e | exact He].
+  - destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
+    injection Hrename as <- _.
+    constructor.
+    eapply IHe; [exact Hdisj | exact He].
+Qed.
 
 Lemma alpha_rename_params_shape : forall ρ used ps psr ρ' used',
   alpha_rename_params ρ used ps = (psr, ρ', used') ->

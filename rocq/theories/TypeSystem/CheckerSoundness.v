@@ -23,6 +23,22 @@ Proof.
   - reflexivity.
 Qed.
 
+Lemma lookup_fn_b_sound : forall fname fenv fdef,
+  lookup_fn_b fname fenv = Some fdef ->
+  In fdef fenv /\ fn_name fdef = fname.
+Proof.
+  intros fname fenv.
+  induction fenv as [| f fs IH]; intros fdef Hlookup.
+  - discriminate.
+  - simpl in Hlookup.
+    destruct (ident_eqb fname (fn_name f)) eqn:Hname.
+    + injection Hlookup as <-.
+      apply ident_eqb_eq in Hname.
+      split; [left; reflexivity | symmetry; exact Hname].
+    + destruct (IH fdef Hlookup) as [Hin Hfn].
+      split; [right; exact Hin | exact Hfn].
+Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Auxiliary: _b helpers agree with TypingRules definitions              *)
 (* ------------------------------------------------------------------ *)
@@ -722,6 +738,54 @@ Lemma typed_alpha_backward :
 Proof.
 Admitted.
 
+Lemma infer_call_args_sound : forall fenv Γ args params Γ',
+  (forall Γ0 e T Γ1,
+      In e args ->
+      infer_core fenv Γ0 e = Some (T, Γ1) ->
+      typed fenv Γ0 e T Γ1) ->
+  ((fix go (Γ0 : ctx) (as_ : list expr) (ps : list param)
+      : option ctx :=
+      match as_, ps with
+      | [], [] => Some Γ0
+      | [], _ :: _ => None
+      | _ :: _, [] => None
+      | e' :: es, p :: ps' =>
+          match infer_core fenv Γ0 e' with
+          | None => None
+          | Some (T_e, Γ1) =>
+              if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) &&
+                 usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))
+              then go Γ1 es ps'
+              else None
+          end
+      end) Γ args params) = Some Γ' ->
+  typed_args fenv Γ args params Γ'.
+Proof.
+  intros fenv Γ args.
+  revert Γ.
+  induction args as [| e es IH]; intros Γ params Γ' Hexpr Hgo;
+    destruct params as [| p ps]; simpl in Hgo; try discriminate.
+  - injection Hgo as <-. constructor.
+  - destruct (infer_core fenv Γ e) as [[T_e Γ1] |] eqn:He;
+      try discriminate.
+    destruct (ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) &&
+              usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p)))
+      eqn:Hcheck; try discriminate.
+    apply andb_prop in Hcheck as [Hcore Hsub].
+    eapply TArgs_Cons.
+    + eapply Hexpr.
+      * left. reflexivity.
+      * exact He.
+    + apply ty_core_eqb_true. exact Hcore.
+    + apply usage_sub_bool_sound. exact Hsub.
+    + eapply IH.
+      * intros Γ0 e0 T0 Γ0' Hin Hinfer0.
+        eapply Hexpr.
+        -- right. exact Hin.
+        -- exact Hinfer0.
+      * exact Hgo.
+Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Main theorem: infer_core is sound w.r.t. typed                             *)
 (* ------------------------------------------------------------------ *)
@@ -730,39 +794,45 @@ Theorem infer_sound : forall fenv Γ e T Γ',
   infer_core fenv Γ e = Some (T, Γ') ->
   typed fenv Γ e T Γ'.
 Proof.
-  intros fenv Γ e. revert Γ.
-  induction e; intros Γ T Γ' Hinfer; simpl in Hinfer.
+  assert (Hsize : forall n fenv Γ e T Γ',
+    expr_size e < n ->
+    infer_core fenv Γ e = Some (T, Γ') ->
+    typed fenv Γ e T Γ').
+  {
+  induction n as [| n IH]; intros fenv Γ e T Γ' Hlt Hinfer.
+  - lia.
+  - destruct e; simpl in Hinfer.
 
   (* EUnit *)
-  - injection Hinfer as <- <-. constructor.
+  + injection Hinfer as <- <-. constructor.
 
   (* ELit *)
-  - destruct l.
-    + injection Hinfer as <- <-. constructor.
-    + injection Hinfer as <- <-. constructor.
+  + destruct l.
+    * injection Hinfer as <- <-. constructor.
+    * injection Hinfer as <- <-. constructor.
 
   (* EVar i *)
-  - rename i into x.
+  + rename i into x.
     destruct (ctx_lookup_b x Γ) as [[Tv b] |] eqn:Hlookup_b.
     2: discriminate.
     destruct (usage_eqb (ty_usage Tv) UUnrestricted) eqn:Hunr.
-    + (* unrestricted: copy, no consumption *)
+    * (* unrestricted: copy, no consumption *)
       injection Hinfer as <- <-.
       apply T_Var_Copy with (b := b).
-      * rewrite <- ctx_lookup_b_eq. exact Hlookup_b.
-      * destruct (ty_usage Tv); simpl in Hunr; try discriminate; reflexivity.
-    + (* linear/affine: consume on read *)
+      -- rewrite <- ctx_lookup_b_eq. exact Hlookup_b.
+      -- destruct (ty_usage Tv); simpl in Hunr; try discriminate; reflexivity.
+    * (* linear/affine: consume on read *)
       destruct b; [discriminate |].
       destruct (ctx_consume_b x Γ) as [Γ'' |] eqn:Hcons_b.
       2: discriminate.
       injection Hinfer as <- <-.
       apply T_Var_Consume.
-      * rewrite <- ctx_lookup_b_eq. exact Hlookup_b.
-      * intro Heq. rewrite Heq in Hunr. simpl in Hunr. discriminate.
-      * rewrite <- ctx_consume_b_eq. exact Hcons_b.
+      -- rewrite <- ctx_lookup_b_eq. exact Hlookup_b.
+      -- intro Heq. rewrite Heq in Hunr. simpl in Hunr. discriminate.
+      -- rewrite <- ctx_consume_b_eq. exact Hcons_b.
 
   (* ELet m i t e1 e2 *)
-  - rename i into x.
+  + rename i into x.
     destruct (infer_core fenv Γ e1) as [[T1 Γ1] |] eqn:He1.
     2: discriminate.
     destruct (ty_core_eqb (ty_core T1) (ty_core t) &&
@@ -776,23 +846,56 @@ Proof.
     injection Hinfer as <- <-.
     rewrite ctx_remove_b_eq.
     eapply T_Let.
-    + apply IHe1. exact He1.
-    + apply ty_core_eqb_true. exact Hcore.
-    + apply usage_sub_bool_sound. exact Hsub.
-    + apply IHe2. exact He2.
-    + apply ctx_check_ok_sound. exact Hok.
+    * eapply IH.
+      -- simpl in Hlt. lia.
+      -- exact He1.
+    * apply ty_core_eqb_true. exact Hcore.
+    * apply usage_sub_bool_sound. exact Hsub.
+    * eapply IH.
+      -- simpl in Hlt. lia.
+      -- exact He2.
+    * apply ctx_check_ok_sound. exact Hok.
 
   (* ELetInfer: out of scope *)
-  - discriminate.
+  + discriminate.
 
-  (* ECall: admitted — the inline 'go' fixpoint inside infer_core is not
-     directly accessible for inversion in this proof.
-     A complete proof would require an auxiliary lemma relating 'go'
-     to typed_args. *)
-  - admit.
+  (* ECall *)
+  + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup.
+    2: discriminate.
+    remember
+      ((fix go (Γ0 : ctx) (as_ : list expr) (ps : list param)
+          : option ctx :=
+          match as_, ps with
+          | [], [] => Some Γ0
+          | [], _ :: _ => None
+          | _ :: _, [] => None
+          | e' :: es, p :: ps' =>
+              match infer_core fenv Γ0 e' with
+              | None => None
+              | Some (T_e, Γ1) =>
+                  if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) &&
+                     usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))
+                  then go Γ1 es ps'
+                  else None
+              end
+          end) Γ l (fn_params fdef)) as r eqn:Hgo.
+    destruct r as [Γcall |]; try discriminate.
+    injection Hinfer as <- <-.
+    destruct (lookup_fn_b_sound i fenv fdef Hlookup) as [Hin Hname].
+    eapply T_Call.
+    * exact Hin.
+    * exact Hname.
+    * eapply infer_call_args_sound.
+      -- intros Γ0 e0 T0 Γ0' Hin_arg Hinfer0.
+         eapply IH.
+         ++ pose proof (expr_size_call_arg_lt i l e0 Hin_arg) as Harg_lt.
+            assert (expr_size e0 < n) as Hlt_arg by lia.
+            exact Hlt_arg.
+         ++ exact Hinfer0.
+      -- symmetry. exact Hgo.
 
   (* EReplace (PVar px) e *)
-  - destruct p as [px].
+  + destruct p as [px].
     destruct (ctx_lookup_b px Γ) as [[T_x b] |] eqn:Hlx_b.
     2: discriminate.
     destruct b; [discriminate |].
@@ -804,17 +907,27 @@ Proof.
     apply andb_prop in Hcheck as [Hcore Hsub].
     injection Hinfer as <- <-.
     apply T_Replace with (T_new := T_new).
-    + rewrite <- ctx_lookup_b_eq. exact Hlx_b.
-    + apply IHe. exact He.
-    + apply ty_core_eqb_true. exact Hcore.
-    + apply usage_sub_bool_sound. exact Hsub.
+    * rewrite <- ctx_lookup_b_eq. exact Hlx_b.
+    * eapply IH.
+      -- simpl in Hlt. lia.
+      -- exact He.
+    * apply ty_core_eqb_true. exact Hcore.
+    * apply usage_sub_bool_sound. exact Hsub.
 
   (* EDrop e *)
-  - destruct (infer_core fenv Γ e) as [[Te Γ1] |] eqn:He.
+  + destruct (infer_core fenv Γ e) as [[Te Γ1] |] eqn:He.
     2: discriminate.
     injection Hinfer as <- <-.
-    eapply T_Drop. apply IHe. exact He.
-Admitted.
+    eapply T_Drop.
+    eapply IH.
+    * simpl in Hlt. lia.
+    * exact He.
+  }
+  intros fenv Γ e T Γ' Hinfer.
+  eapply (Hsize (S (expr_size e))).
+  - lia.
+  - exact Hinfer.
+Qed.
 
 (* Public infer runs alpha-renaming before infer_core. The proof requires
    alpha-renaming preservation for typing; keep it isolated from the

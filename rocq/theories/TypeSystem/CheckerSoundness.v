@@ -122,6 +122,7 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
   | EA_Lit : forall ρ l,
       expr_alpha ρ (ELit l) (ELit l)
   | EA_Var : forall ρ x,
+      ~ In x (rename_range ρ) ->
       expr_alpha ρ (EVar x) (EVar (lookup_rename x ρ))
   | EA_Let : forall ρ m x xr T e1 e1r e2 e2r,
       expr_alpha ρ e1 e1r ->
@@ -135,6 +136,7 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
       exprs_alpha ρ args argsr ->
       expr_alpha ρ (ECall fname args) (ECall fname argsr)
   | EA_Replace : forall ρ x e er,
+      ~ In x (rename_range ρ) ->
       expr_alpha ρ e er ->
       expr_alpha ρ (EReplace (PVar x) e)
         (EReplace (PVar (lookup_rename x ρ)) er)
@@ -191,15 +193,70 @@ Proof.
       exists f0. split; [right; exact Hin0 | exact Hshape].
 Qed.
 
+Lemma lookup_rename_in_range_or_self : forall ρ x,
+  In (lookup_rename x ρ) (rename_range ρ) \/ lookup_rename x ρ = x.
+Proof.
+  intros ρ x.
+  induction ρ as [| [old fresh] ρ IH].
+  - simpl. right. reflexivity.
+  - simpl.
+    destruct (String.eqb x old) eqn:Heq.
+    + left. left. reflexivity.
+    + destruct IH as [Hin | Heq_lookup].
+      * left. right. exact Hin.
+      * right. exact Heq_lookup.
+Qed.
+
+Lemma lookup_rename_not_in_range_neq : forall ρ x y,
+  ~ In y (rename_range ρ) ->
+  x <> y ->
+  lookup_rename x ρ <> y.
+Proof.
+  intros ρ x y Hnot Hyx Heq.
+  destruct (lookup_rename_in_range_or_self ρ x) as [Hin | Hself].
+  - rewrite Heq in Hin. contradiction.
+  - rewrite Hself in Heq. contradiction.
+Qed.
+
 Lemma ctx_alpha_lookup_backward : forall ρ Γ Γr x T b,
   ctx_alpha ρ Γ Γr ->
+  ~ In x (rename_range ρ) ->
   ctx_lookup (lookup_rename x ρ) Γr = Some (T, b) ->
   ctx_lookup x Γ = Some (T, b).
 Proof.
-Admitted.
+  intros ρ Γ Γr x T b Halpha.
+  revert x T b.
+  induction Halpha; intros y T0 b0 Hsafe Hlookup.
+  - simpl in Hlookup. exact Hlookup.
+  - simpl in Hsafe, Hlookup.
+    assert (Hneq_y_xr : y <> xr).
+    { intro Heq. apply Hsafe. left. symmetry. exact Heq. }
+    assert (Hsafe_tail : ~ In y (rename_range ρ)).
+    { intro Hin. apply Hsafe. right. exact Hin. }
+    destruct (String.eqb y x) eqn:Hyx.
+    + apply String.eqb_eq in Hyx. subst y.
+      simpl in Hlookup.
+      rewrite String.eqb_refl in Hlookup.
+      simpl. rewrite String.eqb_refl. exact Hlookup.
+    + simpl in Hlookup.
+      assert (Hneq_lookup :
+        String.eqb (lookup_rename y ρ) xr = false).
+      { apply String.eqb_neq.
+        apply lookup_rename_not_in_range_neq.
+        - exact H0.
+        - apply String.eqb_neq in Hyx. intro Heq. subst y. contradiction.
+      }
+      rewrite Hneq_lookup in Hlookup.
+      simpl.
+      rewrite Hyx.
+      apply IHHalpha.
+      * exact Hsafe_tail.
+      * exact Hlookup.
+Qed.
 
 Lemma ctx_alpha_consume_backward : forall ρ Γ Γr x Γr',
   ctx_alpha ρ Γ Γr ->
+  ~ In x (rename_range ρ) ->
   ctx_consume (lookup_rename x ρ) Γr = Some Γr' ->
   exists Γ',
     ctx_consume x Γ = Some Γ' /\
@@ -215,10 +272,19 @@ Admitted.
 
 Lemma ctx_alpha_is_ok_backward : forall ρ Γ Γr x T,
   ctx_alpha ρ Γ Γr ->
+  ~ In x (rename_range ρ) ->
   ctx_is_ok (lookup_rename x ρ) T Γr ->
   ctx_is_ok x T Γ.
 Proof.
-Admitted.
+  intros ρ Γ Γr x T Halpha Hsafe Hok.
+  unfold ctx_is_ok in *.
+  destruct (ty_usage T); try exact I.
+  destruct (ctx_lookup (lookup_rename x ρ) Γr) as [[Tx b] |] eqn:Hlookup;
+    try contradiction.
+  destruct b; try contradiction.
+  rewrite (ctx_alpha_lookup_backward ρ Γ Γr x Tx true Halpha Hsafe Hlookup).
+  exact I.
+Qed.
 
 Lemma alpha_rename_expr_sound : forall ρ used e er used',
   alpha_rename_expr ρ used e = (er, used') ->

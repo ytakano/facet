@@ -1,7 +1,40 @@
 From Facet.TypeSystem Require Import Types.
-From Stdlib Require Import String ZArith.
+From Stdlib Require Import String ZArith Bool PeanoNat.
 
-Definition ident := string.
+Definition ident := (string * nat)%type.
+
+Definition ident_eqb (x y : ident) : bool :=
+  String.eqb (fst x) (fst y) && Nat.eqb (snd x) (snd y).
+
+Lemma ident_eqb_eq : forall x y,
+  ident_eqb x y = true <-> x = y.
+Proof.
+  intros [xs xn] [ys yn]. unfold ident_eqb. simpl.
+  rewrite andb_true_iff, String.eqb_eq, Nat.eqb_eq.
+  split.
+  - intros [Hstr Hnat]. subst. reflexivity.
+  - intros H. inversion H. split; reflexivity.
+Qed.
+
+Lemma ident_eqb_neq : forall x y,
+  ident_eqb x y = false <-> x <> y.
+Proof.
+  intros x y.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst.
+    split; intros H; [discriminate | contradiction].
+  - split; intros H.
+    + intro Heqxy.
+      apply ident_eqb_eq in Heqxy.
+      rewrite Heqxy in Heq. discriminate.
+    + reflexivity.
+Qed.
+
+Lemma ident_eqb_refl : forall x,
+  ident_eqb x x = true.
+Proof.
+  intro x. apply ident_eqb_eq. reflexivity.
+Qed.
 
 Inductive literal : Type :=
 | LInt   : Z -> literal

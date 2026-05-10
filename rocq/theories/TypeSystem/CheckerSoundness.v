@@ -1,5 +1,5 @@
 From Facet.TypeSystem Require Import Types Syntax TypingRules TypeChecker.
-From Stdlib Require Import List String Bool.
+From Stdlib Require Import List String Bool Lia.
 Import ListNotations.
 
 (* ------------------------------------------------------------------ *)
@@ -32,7 +32,7 @@ Lemma ctx_lookup_b_eq : forall x Γ,
 Proof.
   intros x Γ. induction Γ as [| [[n T] b] t IH].
   - reflexivity.
-  - simpl. destruct (String.eqb x n); [reflexivity | apply IH].
+  - simpl. destruct (ident_eqb x n); [reflexivity | apply IH].
 Qed.
 
 Lemma ctx_consume_b_eq : forall x Γ,
@@ -40,7 +40,7 @@ Lemma ctx_consume_b_eq : forall x Γ,
 Proof.
   intros x Γ. induction Γ as [| [[n T] b] t IH].
   - reflexivity.
-  - simpl. destruct (String.eqb x n).
+  - simpl. destruct (ident_eqb x n).
     + reflexivity.
     + rewrite IH. reflexivity.
 Qed.
@@ -50,7 +50,7 @@ Lemma ctx_remove_b_eq : forall x Γ,
 Proof.
   intros x Γ. induction Γ as [| [[n T] b] t IH].
   - reflexivity.
-  - simpl. destruct (String.eqb x n); [reflexivity | rewrite IH; reflexivity].
+  - simpl. destruct (ident_eqb x n); [reflexivity | rewrite IH; reflexivity].
 Qed.
 
 (* ctx_add_b and ctx_add are definitionally equal. *)
@@ -140,20 +140,37 @@ Proof.
   intros x xs. induction xs as [| y ys IH]; intros H Hin.
   - contradiction.
   - simpl in H, Hin.
-    destruct (String.eqb x y) eqn:Heq.
+    destruct (ident_eqb x y) eqn:Heq.
     + discriminate.
     + destruct Hin as [Heqxy | Hin].
-      * subst. rewrite String.eqb_refl in Heq.
+      * subst. rewrite ident_eqb_refl in Heq.
         discriminate.
       * eapply IH; eauto.
 Qed.
 
-Lemma fresh_ident_go_not_in : forall fuel x used,
-  ident_in (fresh_ident_go fuel x used) used = false ->
-  ~ In (fresh_ident_go fuel x used) used.
+Lemma max_ident_index_ge : forall base n used,
+  In (base, n) used ->
+  n <= max_ident_index base used.
 Proof.
-  intros fuel x used H.
-  apply ident_in_false_not_in. exact H.
+  intros base n used. induction used as [| [base0 n0] used IH]; intros Hin.
+  - contradiction.
+  - simpl in Hin.
+    destruct Hin as [Heq | Hin].
+    + inversion Heq; subst. simpl.
+      rewrite String.eqb_refl. lia.
+    + simpl.
+      pose proof (IH Hin) as Hle.
+      destruct (String.eqb base base0); lia.
+Qed.
+
+Lemma fresh_ident_not_in : forall x used,
+  ~ In (fresh_ident x used) used.
+Proof.
+  intros [base n] used Hin.
+  unfold fresh_ident in Hin. simpl in Hin.
+  pose proof (max_ident_index_ge base (S (max_ident_index base used))
+    used Hin).
+  lia.
 Qed.
 
 Inductive ctx_alpha : rename_env -> ctx -> ctx -> Prop :=
@@ -181,7 +198,7 @@ Proof.
   induction Γ as [| [[n T] b] Γ IH]; intros x Γ' Hconsume.
   - simpl in Hconsume. discriminate.
   - simpl in Hconsume.
-    destruct (String.eqb x n).
+    destruct (ident_eqb x n).
     + injection Hconsume as <-. reflexivity.
     + destruct (ctx_consume x Γ) as [Γt |] eqn:Htail.
       2: discriminate.
@@ -273,7 +290,7 @@ Proof.
   induction ρ as [| [old fresh] ρ IH].
   - simpl. right. reflexivity.
   - simpl.
-    destruct (String.eqb x old) eqn:Heq.
+    destruct (ident_eqb x old) eqn:Heq.
     + left. left. reflexivity.
     + destruct IH as [Hin | Heq_lookup].
       * left. right. exact Hin.
@@ -306,18 +323,18 @@ Proof.
     { intro Heq. apply Hsafe. left. symmetry. exact Heq. }
     assert (Hsafe_tail : ~ In y (rename_range ρ)).
     { intro Hin. apply Hsafe. right. exact Hin. }
-    destruct (String.eqb y x) eqn:Hyx.
-    + apply String.eqb_eq in Hyx. subst y.
+    destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx. subst y.
       simpl in Hlookup.
-      rewrite String.eqb_refl in Hlookup.
-      simpl. rewrite String.eqb_refl. exact Hlookup.
+      rewrite ident_eqb_refl in Hlookup.
+      simpl. rewrite ident_eqb_refl. exact Hlookup.
     + simpl in Hlookup.
       assert (Hneq_lookup :
-        String.eqb (lookup_rename y ρ) xr = false).
-      { apply String.eqb_neq.
+        ident_eqb (lookup_rename y ρ) xr = false).
+      { apply ident_eqb_neq.
         apply lookup_rename_not_in_range_neq.
         - exact H0.
-        - apply String.eqb_neq in Hyx. intro Heq. subst y. contradiction.
+        - apply ident_eqb_neq in Hyx. intro Heq. subst y. contradiction.
       }
       rewrite Hneq_lookup in Hlookup.
       simpl.
@@ -344,22 +361,22 @@ Proof.
     { intro Heq. apply Hsafe. left. symmetry. exact Heq. }
     assert (Hsafe_tail : ~ In y (rename_range ρ)).
     { intro Hin. apply Hsafe. right. exact Hin. }
-    destruct (String.eqb y x) eqn:Hyx.
-    + apply String.eqb_eq in Hyx. subst y.
+    destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx. subst y.
       simpl in Hconsume.
-      rewrite String.eqb_refl in Hconsume.
+      rewrite ident_eqb_refl in Hconsume.
       injection Hconsume as <-.
       exists ((x, T, true) :: Γ).
       split.
-      * simpl. rewrite String.eqb_refl. reflexivity.
+      * simpl. rewrite ident_eqb_refl. reflexivity.
       * constructor; assumption.
     + simpl in Hconsume.
       assert (Hneq_lookup :
-        String.eqb (lookup_rename y ρ) xr = false).
-      { apply String.eqb_neq.
+        ident_eqb (lookup_rename y ρ) xr = false).
+      { apply ident_eqb_neq.
         apply lookup_rename_not_in_range_neq.
         - exact H0.
-        - apply String.eqb_neq in Hyx. intro Heq. subst y. contradiction.
+        - apply ident_eqb_neq in Hyx. intro Heq. subst y. contradiction.
       }
       rewrite Hneq_lookup in Hconsume.
       destruct (ctx_consume (lookup_rename y ρ) Γr) as [Γrt |] eqn:Hconsume_tail.
@@ -385,8 +402,8 @@ Lemma ctx_alpha_remove_head : forall ρ Γ Γr x xr T b,
 Proof.
   intros ρ Γ Γr x xr T b Halpha.
   simpl.
-  rewrite String.eqb_refl.
-  rewrite String.eqb_refl.
+  rewrite ident_eqb_refl.
+  rewrite ident_eqb_refl.
   exact Halpha.
 Qed.
 

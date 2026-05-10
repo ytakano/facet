@@ -31,7 +31,7 @@ Definition store := list store_entry.
 Fixpoint store_lookup (x : ident) (s : store) : option store_entry :=
   match s with
   | []     => None
-  | e :: t => if String.eqb x (se_name e) then Some e
+  | e :: t => if ident_eqb x (se_name e) then Some e
               else store_lookup x t
   end.
 
@@ -39,7 +39,7 @@ Fixpoint store_mark_used (x : ident) (s : store) : store :=
   match s with
   | []     => []
   | e :: t =>
-      if String.eqb x (se_name e)
+      if ident_eqb x (se_name e)
       then MkStoreEntry (se_name e) (se_ty e) (se_val e) true :: t
       else e :: store_mark_used x t
   end.
@@ -48,7 +48,7 @@ Fixpoint store_update_val (x : ident) (v : value) (s : store) : option store :=
   match s with
   | []     => None
   | e :: t =>
-      if String.eqb x (se_name e)
+      if ident_eqb x (se_name e)
       then Some (MkStoreEntry (se_name e) (se_ty e) v (se_used e) :: t)
       else match store_update_val x v t with
            | None    => None
@@ -63,7 +63,7 @@ Fixpoint store_remove (x : ident) (s : store) : store :=
   match s with
   | []     => []
   | e :: t =>
-      if String.eqb x (se_name e) then t
+      if ident_eqb x (se_name e) then t
       else e :: store_remove x t
   end.
 
@@ -90,7 +90,7 @@ Definition needs_consume (T : Ty) : bool :=
 Fixpoint lookup_fn (name : ident) (fenv : list fn_def) : option fn_def :=
   match fenv with
   | []     => None
-  | f :: t => if String.eqb name (fn_name f) then Some f
+  | f :: t => if ident_eqb name (fn_name f) then Some f
               else lookup_fn name t
   end.
 

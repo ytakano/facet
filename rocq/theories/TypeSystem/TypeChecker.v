@@ -41,7 +41,7 @@ Definition ty_core_eqb (c1 c2 : TypeCore Ty) : bool :=
 Fixpoint ctx_lookup_b (x : ident) (Γ : ctx) : option (Ty * bool) :=
   match Γ with
   | []              => None
-  | (n, T, b) :: t => if String.eqb x n then Some (T, b)
+  | (n, T, b) :: t => if ident_eqb x n then Some (T, b)
                       else ctx_lookup_b x t
   end.
 
@@ -49,7 +49,7 @@ Fixpoint ctx_consume_b (x : ident) (Γ : ctx) : option ctx :=
   match Γ with
   | []              => None
   | (n, T, b) :: t =>
-      if String.eqb x n
+      if ident_eqb x n
       then Some ((n, T, true) :: t)
       else match ctx_consume_b x t with
            | None    => None
@@ -64,7 +64,7 @@ Fixpoint ctx_remove_b (x : ident) (Γ : ctx) : ctx :=
   match Γ with
   | []              => []
   | (n, T, b) :: t =>
-      if String.eqb x n then t
+      if ident_eqb x n then t
       else (n, T, b) :: ctx_remove_b x t
   end.
 
@@ -88,7 +88,7 @@ Definition ctx_check_ok (x : ident) (T : Ty) (Γ : ctx) : bool :=
 Fixpoint lookup_fn_b (name : ident) (fenv : list fn_def) : option fn_def :=
   match fenv with
   | []     => None
-  | f :: t => if String.eqb name (fn_name f) then Some f
+  | f :: t => if ident_eqb name (fn_name f) then Some f
               else lookup_fn_b name t
   end.
 
@@ -101,28 +101,27 @@ Definition rename_env : Type := list (ident * ident).
 Fixpoint ident_in (x : ident) (xs : list ident) : bool :=
   match xs with
   | [] => false
-  | y :: ys => if String.eqb x y then true else ident_in x ys
+  | y :: ys => if ident_eqb x y then true else ident_in x ys
   end.
 
 Fixpoint lookup_rename (x : ident) (ρ : rename_env) : ident :=
   match ρ with
   | [] => x
   | (old, fresh) :: ρ' =>
-      if String.eqb x old then fresh else lookup_rename x ρ'
+      if ident_eqb x old then fresh else lookup_rename x ρ'
   end.
 
-Fixpoint fresh_ident_go (fuel : nat) (candidate : ident)
-    (used : list ident) : ident :=
-  match fuel with
-  | O => candidate
-  | S fuel' =>
-      if ident_in candidate used
-      then fresh_ident_go fuel' (String.append candidate "_") used
-      else candidate
+Fixpoint max_ident_index (base : string) (used : list ident) : nat :=
+  match used with
+  | [] => O
+  | (base0, n) :: used' =>
+      if String.eqb base base0
+      then Nat.max n (max_ident_index base used')
+      else max_ident_index base used'
   end.
 
 Definition fresh_ident (x : ident) (used : list ident) : ident :=
-  fresh_ident_go (S (List.length used)) x used.
+  (fst x, S (max_ident_index (fst x) used)).
 
 Fixpoint ctx_names (Γ : ctx) : list ident :=
   match Γ with

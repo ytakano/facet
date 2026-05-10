@@ -19,7 +19,7 @@ Definition ctx : Type := list ctx_entry.
 Fixpoint ctx_lookup (x : ident) (Γ : ctx) : option (Ty * bool) :=
   match Γ with
   | []              => None
-  | (n, T, b) :: t => if String.eqb x n then Some (T, b)
+  | (n, T, b) :: t => if ident_eqb x n then Some (T, b)
                       else ctx_lookup x t
   end.
 
@@ -28,7 +28,7 @@ Fixpoint ctx_consume (x : ident) (Γ : ctx) : option ctx :=
   match Γ with
   | []              => None
   | (n, T, b) :: t =>
-      if String.eqb x n
+      if ident_eqb x n
       then Some ((n, T, true) :: t)
       else match ctx_consume x t with
            | None    => None
@@ -45,7 +45,7 @@ Fixpoint ctx_remove (x : ident) (Γ : ctx) : ctx :=
   match Γ with
   | []              => []
   | (n, T, b) :: t =>
-      if String.eqb x n then t
+      if ident_eqb x n then t
       else (n, T, b) :: ctx_remove x t
   end.
 

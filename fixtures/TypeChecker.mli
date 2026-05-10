@@ -14,15 +14,24 @@ type 'a option =
 type ('a, 'b) prod =
 | Pair of 'a * 'b
 
+val fst : ('a1, 'a2) prod -> 'a1
+
+val snd : ('a1, 'a2) prod -> 'a2
+
 type 'a list =
 | Nil
 | Cons of 'a * 'a list
 
-val length : 'a1 list -> nat
-
 val app : 'a1 list -> 'a1 list -> 'a1 list
 
 val eqb : bool -> bool -> bool
+
+module Nat :
+ sig
+  val eqb : nat -> nat -> bool
+
+  val max : nat -> nat -> nat
+ end
 
 type positive =
 | XI of positive
@@ -44,8 +53,6 @@ type string =
 | String of ascii * string
 
 val eqb1 : string -> string -> bool
-
-val append : string -> string -> string
 
 type mutability =
 | MImmutable
@@ -75,7 +82,9 @@ val ty_usage : ty -> usage
 
 val ty_core : ty -> ty typeCore
 
-type ident = string
+type ident = (string, nat) prod
+
+val ident_eqb : ident -> ident -> bool
 
 type literal =
 | LInt of z
@@ -126,11 +135,9 @@ val lookup_fn_b : ident -> fn_def list -> fn_def option
 
 type rename_env = (ident, ident) prod list
 
-val ident_in : ident -> ident list -> bool
-
 val lookup_rename : ident -> rename_env -> ident
 
-val fresh_ident_go : nat -> ident -> ident list -> ident
+val max_ident_index : string -> ident list -> nat
 
 val fresh_ident : ident -> ident list -> ident
 

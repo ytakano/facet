@@ -14,15 +14,19 @@ type 'a option =
 type ('a, 'b) prod =
 | Pair of 'a * 'b
 
+(** val fst : ('a1, 'a2) prod -> 'a1 **)
+
+let fst = function
+| Pair (x, _) -> x
+
+(** val snd : ('a1, 'a2) prod -> 'a2 **)
+
+let snd = function
+| Pair (_, y) -> y
+
 type 'a list =
 | Nil
 | Cons of 'a * 'a list
-
-(** val length : 'a1 list -> nat **)
-
-let rec length = function
-| Nil -> O
-| Cons (_, l') -> S (length l')
 
 (** val app : 'a1 list -> 'a1 list -> 'a1 list **)
 
@@ -39,6 +43,29 @@ let eqb b1 b2 =
   | False -> (match b2 with
               | True -> False
               | False -> True)
+
+module Nat =
+ struct
+  (** val eqb : nat -> nat -> bool **)
+
+  let rec eqb n m =
+    match n with
+    | O -> (match m with
+            | O -> True
+            | S _ -> False)
+    | S n' -> (match m with
+               | O -> False
+               | S m' -> eqb n' m')
+
+  (** val max : nat -> nat -> nat **)
+
+  let rec max n m =
+    match n with
+    | O -> m
+    | S n' -> (match m with
+               | O -> n
+               | S m' -> S (max n' m'))
+ end
 
 type positive =
 | XI of positive
@@ -94,13 +121,6 @@ let rec eqb1 s1 s2 =
         | True -> eqb1 s1' s2'
         | False -> False))
 
-(** val append : string -> string -> string **)
-
-let rec append s1 s2 =
-  match s1 with
-  | EmptyString -> s2
-  | String (c, s1') -> String (c, (append s1' s2))
-
 type mutability =
 | MImmutable
 | MMutable
@@ -135,7 +155,14 @@ let ty_usage = function
 let ty_core = function
 | MkTy (_, c) -> c
 
-type ident = string
+type ident = (string, nat) prod
+
+(** val ident_eqb : ident -> ident -> bool **)
+
+let ident_eqb x y =
+  match eqb1 (fst x) (fst y) with
+  | True -> Nat.eqb (snd x) (snd y)
+  | False -> False
 
 type literal =
 | LInt of z
@@ -217,7 +244,7 @@ let rec ctx_lookup_b x = function
 | Cons (c, t) ->
   let Pair (p, b) = c in
   let Pair (n, t0) = p in
-  (match eqb1 x n with
+  (match ident_eqb x n with
    | True -> Some (Pair (t0, b))
    | False -> ctx_lookup_b x t)
 
@@ -228,7 +255,7 @@ let rec ctx_consume_b x = function
 | Cons (c, t) ->
   let Pair (p, b) = c in
   let Pair (n, t0) = p in
-  (match eqb1 x n with
+  (match ident_eqb x n with
    | True -> Some (Cons ((Pair ((Pair (n, t0)), True)), t))
    | False ->
      (match ctx_consume_b x t with
@@ -247,7 +274,7 @@ let rec ctx_remove_b x = function
 | Cons (c, t) ->
   let Pair (p, b) = c in
   let Pair (n, t0) = p in
-  (match eqb1 x n with
+  (match ident_eqb x n with
    | True -> t
    | False -> Cons ((Pair ((Pair (n, t0)), b)), (ctx_remove_b x t)))
 
@@ -266,19 +293,11 @@ let ctx_check_ok x t _UU0393_ =
 let rec lookup_fn_b name = function
 | Nil -> None
 | Cons (f, t) ->
-  (match eqb1 name f.fn_name with
+  (match ident_eqb name f.fn_name with
    | True -> Some f
    | False -> lookup_fn_b name t)
 
 type rename_env = (ident, ident) prod list
-
-(** val ident_in : ident -> ident list -> bool **)
-
-let rec ident_in x = function
-| Nil -> False
-| Cons (y, ys) -> (match eqb1 x y with
-                   | True -> True
-                   | False -> ident_in x ys)
 
 (** val lookup_rename : ident -> rename_env -> ident **)
 
@@ -286,28 +305,24 @@ let rec lookup_rename x = function
 | Nil -> x
 | Cons (p, _UU03c1_') ->
   let Pair (old, fresh) = p in
-  (match eqb1 x old with
+  (match ident_eqb x old with
    | True -> fresh
    | False -> lookup_rename x _UU03c1_')
 
-(** val fresh_ident_go : nat -> ident -> ident list -> ident **)
+(** val max_ident_index : string -> ident list -> nat **)
 
-let rec fresh_ident_go fuel candidate used =
-  match fuel with
-  | O -> candidate
-  | S fuel' ->
-    (match ident_in candidate used with
-     | True ->
-       fresh_ident_go fuel'
-         (append candidate (String ((Ascii (True, True, True, True, True,
-           False, True, False)), EmptyString)))
-         used
-     | False -> candidate)
+let rec max_ident_index base = function
+| Nil -> O
+| Cons (i, used') ->
+  let Pair (base0, n) = i in
+  (match eqb1 base base0 with
+   | True -> Nat.max n (max_ident_index base used')
+   | False -> max_ident_index base used')
 
 (** val fresh_ident : ident -> ident list -> ident **)
 
 let fresh_ident x used =
-  fresh_ident_go (S (length used)) x used
+  Pair ((fst x), (S (max_ident_index (fst x) used)))
 
 (** val ctx_names : ctx -> ident list **)
 

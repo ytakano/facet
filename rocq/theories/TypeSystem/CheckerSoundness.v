@@ -320,11 +320,18 @@ Proof.
         -- exact H0.
 Qed.
 
-Lemma ctx_alpha_remove_backward : forall ρ Γ Γr x,
+Lemma ctx_alpha_remove_head : forall ρ Γ Γr x xr T b,
   ctx_alpha ρ Γ Γr ->
-  ctx_alpha ρ (ctx_remove x Γ) (ctx_remove (lookup_rename x ρ) Γr).
+  ctx_alpha ρ
+    (ctx_remove x ((x, T, b) :: Γ))
+    (ctx_remove xr ((xr, T, b) :: Γr)).
 Proof.
-Admitted.
+  intros ρ Γ Γr x xr T b Halpha.
+  simpl.
+  rewrite String.eqb_refl.
+  rewrite String.eqb_refl.
+  exact Halpha.
+Qed.
 
 Lemma ctx_alpha_is_ok_backward : forall ρ Γ Γr x T,
   ctx_alpha ρ Γ Γr ->

@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import CheckerSoundness.
+From Facet.TypeSystem Require Import Types Syntax TypingRules TypeChecker CheckerSoundness.
 From Stdlib Require Import List String Bool.
 Import ListNotations.
 

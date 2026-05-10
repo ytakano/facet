@@ -90,6 +90,199 @@ Proof.
 Qed.
 
 (* ------------------------------------------------------------------ *)
+(* Alpha-renaming preservation helpers                                  *)
+(* ------------------------------------------------------------------ *)
+
+Fixpoint rename_range (ρ : rename_env) : list ident :=
+  match ρ with
+  | [] => []
+  | (_, xr) :: ρ' => xr :: rename_range ρ'
+  end.
+
+Inductive ctx_alpha : rename_env -> ctx -> ctx -> Prop :=
+  | CtxAlpha_Base : forall Γ,
+      ctx_alpha [] Γ Γ
+  | CtxAlpha_Bind : forall ρ Γ Γr x xr T,
+      ctx_alpha ρ Γ Γr ->
+      ~ In xr (ctx_names Γr) ->
+      ~ In xr (rename_range ρ) ->
+      ctx_alpha ((x, xr) :: ρ) (ctx_add x T Γ) (ctx_add xr T Γr).
+
+Lemma ctx_alpha_nil_eq : forall Γ Γr,
+  ctx_alpha [] Γ Γr ->
+  Γ = Γr.
+Proof.
+  intros Γ Γr H.
+  inversion H. reflexivity.
+Qed.
+
+Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
+  | EA_Unit : forall ρ,
+      expr_alpha ρ EUnit EUnit
+  | EA_Lit : forall ρ l,
+      expr_alpha ρ (ELit l) (ELit l)
+  | EA_Var : forall ρ x,
+      expr_alpha ρ (EVar x) (EVar (lookup_rename x ρ))
+  | EA_Let : forall ρ m x xr T e1 e1r e2 e2r,
+      expr_alpha ρ e1 e1r ->
+      expr_alpha ((x, xr) :: ρ) e2 e2r ->
+      expr_alpha ρ (ELet m x T e1 e2) (ELet m xr T e1r e2r)
+  | EA_LetInfer : forall ρ m x xr e1 e1r e2 e2r,
+      expr_alpha ρ e1 e1r ->
+      expr_alpha ((x, xr) :: ρ) e2 e2r ->
+      expr_alpha ρ (ELetInfer m x e1 e2) (ELetInfer m xr e1r e2r)
+  | EA_Call : forall ρ fname args argsr,
+      exprs_alpha ρ args argsr ->
+      expr_alpha ρ (ECall fname args) (ECall fname argsr)
+  | EA_Replace : forall ρ x e er,
+      expr_alpha ρ e er ->
+      expr_alpha ρ (EReplace (PVar x) e)
+        (EReplace (PVar (lookup_rename x ρ)) er)
+  | EA_Drop : forall ρ e er,
+      expr_alpha ρ e er ->
+      expr_alpha ρ (EDrop e) (EDrop er)
+with exprs_alpha : rename_env -> list expr -> list expr -> Prop :=
+  | EAs_Nil : forall ρ,
+      exprs_alpha ρ [] []
+  | EAs_Cons : forall ρ e er es esr,
+      expr_alpha ρ e er ->
+      exprs_alpha ρ es esr ->
+      exprs_alpha ρ (e :: es) (er :: esr).
+
+Definition same_param_shape (p pr : param) : Prop :=
+  param_mutability p = param_mutability pr /\
+  param_ty p = param_ty pr.
+
+Inductive params_alpha : list param -> list param -> Prop :=
+  | ParamsAlpha_Nil :
+      params_alpha [] []
+  | ParamsAlpha_Cons : forall p pr ps psr,
+      same_param_shape p pr ->
+      params_alpha ps psr ->
+      params_alpha (p :: ps) (pr :: psr).
+
+Definition same_fn_shape (f fr : fn_def) : Prop :=
+  fn_name f = fn_name fr /\
+  fn_ret f = fn_ret fr /\
+  params_alpha (fn_params f) (fn_params fr).
+
+Inductive fenv_alpha : list fn_def -> list fn_def -> Prop :=
+  | FenvAlpha_Nil :
+      fenv_alpha [] []
+  | FenvAlpha_Cons : forall f fr fs fsr,
+      same_fn_shape f fr ->
+      fenv_alpha fs fsr ->
+      fenv_alpha (f :: fs) (fr :: fsr).
+
+Lemma fenv_alpha_in_backward : forall fenv fenvr fr,
+  fenv_alpha fenv fenvr ->
+  In fr fenvr ->
+  exists f,
+    In f fenv /\
+    same_fn_shape f fr.
+Proof.
+  intros fenv fenvr fr Halpha Hin.
+  induction Halpha.
+  - contradiction.
+  - simpl in Hin.
+    destruct Hin as [Heq | Hin].
+    + subst fr. exists f. split; [left; reflexivity | assumption].
+    + destruct (IHHalpha Hin) as [f0 [Hin0 Hshape]].
+      exists f0. split; [right; exact Hin0 | exact Hshape].
+Qed.
+
+Lemma ctx_alpha_lookup_backward : forall ρ Γ Γr x T b,
+  ctx_alpha ρ Γ Γr ->
+  ctx_lookup (lookup_rename x ρ) Γr = Some (T, b) ->
+  ctx_lookup x Γ = Some (T, b).
+Proof.
+Admitted.
+
+Lemma ctx_alpha_consume_backward : forall ρ Γ Γr x Γr',
+  ctx_alpha ρ Γ Γr ->
+  ctx_consume (lookup_rename x ρ) Γr = Some Γr' ->
+  exists Γ',
+    ctx_consume x Γ = Some Γ' /\
+    ctx_alpha ρ Γ' Γr'.
+Proof.
+Admitted.
+
+Lemma ctx_alpha_remove_backward : forall ρ Γ Γr x,
+  ctx_alpha ρ Γ Γr ->
+  ctx_alpha ρ (ctx_remove x Γ) (ctx_remove (lookup_rename x ρ) Γr).
+Proof.
+Admitted.
+
+Lemma ctx_alpha_is_ok_backward : forall ρ Γ Γr x T,
+  ctx_alpha ρ Γ Γr ->
+  ctx_is_ok (lookup_rename x ρ) T Γr ->
+  ctx_is_ok x T Γ.
+Proof.
+Admitted.
+
+Lemma alpha_rename_expr_sound : forall ρ used e er used',
+  alpha_rename_expr ρ used e = (er, used') ->
+  expr_alpha ρ e er.
+Proof.
+Admitted.
+
+Lemma alpha_rename_params_shape : forall ρ used ps psr ρ' used',
+  alpha_rename_params ρ used ps = (psr, ρ', used') ->
+  params_alpha ps psr.
+Proof.
+Admitted.
+
+Lemma alpha_rename_fn_def_shape : forall used f fr used',
+  alpha_rename_fn_def used f = (fr, used') ->
+  same_fn_shape f fr.
+Proof.
+Admitted.
+
+Lemma alpha_rename_syntax_go_shape : forall used fenv fenvr used',
+  alpha_rename_syntax_go used fenv = (fenvr, used') ->
+  fenv_alpha fenv fenvr.
+Proof.
+Admitted.
+
+Lemma alpha_rename_for_infer_sound : forall fenv Γ e fenvr er,
+  alpha_rename_for_infer Γ fenv e = (fenvr, er) ->
+  fenv_alpha fenv fenvr /\ expr_alpha [] e er.
+Proof.
+  intros fenv Γ e fenvr er Hrename.
+  unfold alpha_rename_for_infer in Hrename.
+  destruct (alpha_rename_syntax_go (ctx_names Γ) fenv) as [fenv1 used]
+    eqn:Hfenv.
+  destruct (alpha_rename_expr [] used e) as [er1 used'] eqn:He.
+  injection Hrename as <- <-.
+  split.
+  - eapply alpha_rename_syntax_go_shape. exact Hfenv.
+  - eapply alpha_rename_expr_sound. exact He.
+Qed.
+
+Lemma typed_alpha_backward :
+  (forall fenv Γ e T Γr,
+      typed fenv Γ e T Γr ->
+      forall fenv0 ρ Γ0 e0,
+        fenv_alpha fenv0 fenv ->
+        ctx_alpha ρ Γ0 Γ ->
+        expr_alpha ρ e0 e ->
+        exists Γ0',
+          typed fenv0 Γ0 e0 T Γ0' /\
+          ctx_alpha ρ Γ0' Γr) /\
+  (forall fenv Γ es ps Γr,
+      typed_args fenv Γ es ps Γr ->
+      forall fenv0 ρ Γ0 es0 ps0,
+        fenv_alpha fenv0 fenv ->
+        ctx_alpha ρ Γ0 Γ ->
+        exprs_alpha ρ es0 es ->
+        params_alpha ps0 ps ->
+        exists Γ0',
+          typed_args fenv0 Γ0 es0 ps0 Γ0' /\
+          ctx_alpha ρ Γ0' Γr).
+Proof.
+Admitted.
+
+(* ------------------------------------------------------------------ *)
 (* Main theorem: infer_core is sound w.r.t. typed                             *)
 (* ------------------------------------------------------------------ *)
 
@@ -186,8 +379,32 @@ Admitted.
 (* Public infer runs alpha-renaming before infer_core. The proof requires
    alpha-renaming preservation for typing; keep it isolated from the
    infer_core soundness argument above. *)
+Lemma alpha_rename_for_infer_typed_backward : forall fenv Γ e fenv' e' T Γ',
+  alpha_rename_for_infer Γ fenv e = (fenv', e') ->
+  typed fenv' Γ e' T Γ' ->
+  typed fenv Γ e T Γ'.
+Proof.
+  intros fenv Γ e fenv' e' T Γ' Hrename Htyped.
+  pose proof (alpha_rename_for_infer_sound
+    fenv Γ e fenv' e' Hrename) as [Hfenv_alpha Hexpr_alpha].
+  destruct typed_alpha_backward as [Htyped_backward _].
+  pose proof (Htyped_backward
+    fenv' Γ e' T Γ' Htyped
+    fenv [] Γ e Hfenv_alpha (CtxAlpha_Base Γ) Hexpr_alpha)
+    as [Γ0 [Htyped0 Hctx_alpha]].
+  pose proof (ctx_alpha_nil_eq Γ0 Γ' Hctx_alpha) as Heq.
+  subst Γ0.
+  exact Htyped0.
+Qed.
+
 Theorem infer_public_sound : forall fenv Γ e T Γ',
   infer fenv Γ e = Some (T, Γ') ->
   typed fenv Γ e T Γ'.
 Proof.
-Admitted.
+  intros fenv Γ e T Γ' Hinfer.
+  unfold infer in Hinfer.
+  destruct (alpha_rename_for_infer Γ fenv e) as [fenv' e'] eqn:Hrename.
+  apply (alpha_rename_for_infer_typed_backward
+    fenv Γ e fenv' e' T Γ' Hrename).
+  apply infer_sound. exact Hinfer.
+Qed.

@@ -230,19 +230,54 @@ Lemma alpha_rename_params_shape : forall ρ used ps psr ρ' used',
   alpha_rename_params ρ used ps = (psr, ρ', used') ->
   params_alpha ps psr.
 Proof.
-Admitted.
+  intros ρ used ps. revert ρ used.
+  induction ps as [| p ps IH]; intros ρ used psr ρ' used' H.
+  - simpl in H. inversion H. constructor.
+  - destruct p as [m x T].
+    simpl in H.
+    destruct (alpha_rename_params
+      ((x, fresh_ident x used) :: ρ) (fresh_ident x used :: used) ps)
+      as [[ps'' ρ''] used''] eqn:Hps.
+    inversion H; subst.
+    constructor.
+    + unfold same_param_shape. simpl. split; reflexivity.
+    + eapply IH. exact Hps.
+Qed.
 
 Lemma alpha_rename_fn_def_shape : forall used f fr used',
   alpha_rename_fn_def used f = (fr, used') ->
   same_fn_shape f fr.
 Proof.
-Admitted.
+  intros used f fr used' H.
+  destruct f as [fname ps ret body].
+  unfold alpha_rename_fn_def in H.
+  simpl in H.
+  destruct (alpha_rename_params []
+    (param_names ps ++ free_vars_expr body ++ used) ps)
+    as [[ps' ρ] used1] eqn:Hps.
+  destruct (alpha_rename_expr ρ used1 body) as [body' used2] eqn:Hbody.
+  inversion H; subst.
+  unfold same_fn_shape. simpl.
+  split; [reflexivity |].
+  split; [reflexivity |].
+  eapply alpha_rename_params_shape. exact Hps.
+Qed.
 
 Lemma alpha_rename_syntax_go_shape : forall used fenv fenvr used',
   alpha_rename_syntax_go used fenv = (fenvr, used') ->
   fenv_alpha fenv fenvr.
 Proof.
-Admitted.
+  intros used fenv. revert used.
+  induction fenv as [| f fs IH]; intros used fenvr used' H.
+  - simpl in H. inversion H. constructor.
+  - simpl in H.
+    destruct (alpha_rename_fn_def used f) as [f' used1] eqn:Hf.
+    destruct (alpha_rename_syntax_go used1 fs) as [fs' used2] eqn:Hfs.
+    inversion H; subst.
+    constructor.
+    + eapply alpha_rename_fn_def_shape. exact Hf.
+    + eapply IH. exact Hfs.
+Qed.
 
 Lemma alpha_rename_for_infer_sound : forall fenv Γ e fenvr er,
   alpha_rename_for_infer Γ fenv e = (fenvr, er) ->

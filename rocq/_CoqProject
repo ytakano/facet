@@ -5,3 +5,4 @@ theories/TypeSystem/OperationalSemantics.v
 theories/TypeSystem/TypingRules.v
 theories/TypeSystem/TypeChecker.v
 theories/TypeSystem/CheckerSoundness.v
+theories/TypeSystem/CheckerUsageSoundness.v

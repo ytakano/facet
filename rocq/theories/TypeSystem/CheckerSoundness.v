@@ -90,11 +90,11 @@ Proof.
 Qed.
 
 (* ------------------------------------------------------------------ *)
-(* Main theorem: infer is sound w.r.t. typed                             *)
+(* Main theorem: infer_core is sound w.r.t. typed                             *)
 (* ------------------------------------------------------------------ *)
 
 Theorem infer_sound : forall fenv Γ e T Γ',
-  infer fenv Γ e = Some (T, Γ') ->
+  infer_core fenv Γ e = Some (T, Γ') ->
   typed fenv Γ e T Γ'.
 Proof.
   intros fenv Γ e. revert Γ.
@@ -130,13 +130,13 @@ Proof.
 
   (* ELet m i t e1 e2 *)
   - rename i into x.
-    destruct (infer fenv Γ e1) as [[T1 Γ1] |] eqn:He1.
+    destruct (infer_core fenv Γ e1) as [[T1 Γ1] |] eqn:He1.
     2: discriminate.
     destruct (ty_core_eqb (ty_core T1) (ty_core t) &&
               usage_sub_bool (ty_usage T1) (ty_usage t)) eqn:Hcheck.
     2: discriminate.
     apply andb_prop in Hcheck as [Hcore Hsub].
-    destruct (infer fenv (ctx_add_b x t Γ1) e2) as [[T2 Γ2] |] eqn:He2.
+    destruct (infer_core fenv (ctx_add_b x t Γ1) e2) as [[T2 Γ2] |] eqn:He2.
     2: discriminate.
     destruct (ctx_check_ok x t Γ2) eqn:Hok.
     2: discriminate.
@@ -152,7 +152,7 @@ Proof.
   (* ELetInfer: out of scope *)
   - discriminate.
 
-  (* ECall: admitted — the inline 'go' fixpoint inside infer is not
+  (* ECall: admitted — the inline 'go' fixpoint inside infer_core is not
      directly accessible for inversion in this proof.
      A complete proof would require an auxiliary lemma relating 'go'
      to typed_args. *)
@@ -163,7 +163,7 @@ Proof.
     destruct (ctx_lookup_b px Γ) as [[T_x b] |] eqn:Hlx_b.
     2: discriminate.
     destruct b; [discriminate |].
-    destruct (infer fenv Γ e) as [[T_new Γ1] |] eqn:He.
+    destruct (infer_core fenv Γ e) as [[T_new Γ1] |] eqn:He.
     2: discriminate.
     destruct (ty_core_eqb (ty_core T_new) (ty_core T_x) &&
               usage_sub_bool (ty_usage T_new) (ty_usage T_x)) eqn:Hcheck.
@@ -177,7 +177,7 @@ Proof.
     + apply usage_sub_bool_sound. exact Hsub.
 
   (* EDrop e *)
-  - destruct (infer fenv Γ e) as [[Te Γ1] |] eqn:He.
+  - destruct (infer_core fenv Γ e) as [[Te Γ1] |] eqn:He.
     2: discriminate.
     injection Hinfer as <- <-.
     eapply T_Drop. apply IHe. exact He.
@@ -203,7 +203,7 @@ Admitted.
 (* ------------------------------------------------------------------ *)
 
 Corollary infer_usage_safe : forall fenv Γ e T Γ' x Tx,
-  infer fenv Γ e = Some (T, Γ') ->
+  infer_core fenv Γ e = Some (T, Γ') ->
   ctx_lookup x Γ = Some (Tx, false) ->
   ty_usage Tx = ULinear ->
   ctx_lookup x Γ' = Some (Tx, true) \/

@@ -3,6 +3,10 @@ type bool =
 | True
 | False
 
+type nat =
+| O
+| S of nat
+
 type 'a option =
 | Some of 'a
 | None
@@ -13,6 +17,8 @@ type ('a, 'b) prod =
 type 'a list =
 | Nil
 | Cons of 'a * 'a list
+
+val length : 'a1 list -> nat
 
 val eqb : bool -> bool -> bool
 
@@ -36,6 +42,8 @@ type string =
 | String of ascii * string
 
 val eqb1 : string -> string -> bool
+
+val append : string -> string -> string
 
 type mutability =
 | MImmutable
@@ -90,6 +98,8 @@ type param = { param_mutability : mutability; param_name : ident;
 type fn_def = { fn_name : ident; fn_params : param list; fn_ret : ty;
                 fn_body : expr }
 
+type syntax = fn_def list
+
 type ctx_entry = ((ident, ty) prod, bool) prod
 
 type ctx = ctx_entry list
@@ -111,5 +121,35 @@ val ctx_remove_b : ident -> ctx -> ctx
 val ctx_check_ok : ident -> ty -> ctx -> bool
 
 val lookup_fn_b : ident -> fn_def list -> fn_def option
+
+type rename_env = (ident, ident) prod list
+
+val ident_in : ident -> ident list -> bool
+
+val lookup_rename : ident -> rename_env -> ident
+
+val fresh_ident_go : nat -> ident -> ident list -> ident
+
+val fresh_ident : ident -> ident list -> ident
+
+val ctx_names : ctx -> ident list
+
+val rename_place : rename_env -> place -> place
+
+val alpha_rename_expr :
+  rename_env -> ident list -> expr -> (expr, ident list) prod
+
+val alpha_rename_params :
+  rename_env -> ident list -> param list -> ((param list, rename_env) prod,
+  ident list) prod
+
+val alpha_rename_fn_def : ident list -> fn_def -> (fn_def, ident list) prod
+
+val alpha_rename_syntax_go : ident list -> syntax -> (syntax, ident list) prod
+
+val alpha_rename_for_infer :
+  ctx -> fn_def list -> expr -> (fn_def list, expr) prod
+
+val infer_core : fn_def list -> ctx -> expr -> (ty, ctx) prod option
 
 val infer : fn_def list -> ctx -> expr -> (ty, ctx) prod option

@@ -155,6 +155,9 @@ Proof.
   - exact Hlin.
 Qed.
 
+(* If infer accepts a function, every linear let-binding tracked by
+   expr_linear_lets_used is used before leaving its scope, and every linear
+   function parameter is marked used in the final body context. *)
 Theorem infer_checked_fn_linear_usage : forall fenv f,
   infer_fn_def_ok fenv f ->
   expr_linear_lets_used fenv (fn_body f) /\

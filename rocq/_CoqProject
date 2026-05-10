@@ -1,0 +1,7 @@
+-R theories Facet
+theories/TypeSystem/Types.v
+theories/TypeSystem/Syntax.v
+theories/TypeSystem/OperationalSemantics.v
+theories/TypeSystem/TypingRules.v
+theories/TypeSystem/TypeChecker.v
+theories/TypeSystem/CheckerSoundness.v

@@ -24,6 +24,13 @@ let rec length = function
 | Nil -> O
 | Cons (_, l') -> S (length l')
 
+(** val app : 'a1 list -> 'a1 list -> 'a1 list **)
+
+let rec app l m =
+  match l with
+  | Nil -> m
+  | Cons (a, l1) -> Cons (a, (app l1 m))
+
 (** val eqb : bool -> bool -> bool **)
 
 let eqb b1 b2 =
@@ -310,6 +317,34 @@ let rec ctx_names = function
   let Pair (p, _) = c in
   let Pair (x, _) = p in Cons (x, (ctx_names _UU0393_'))
 
+(** val place_name : place -> ident **)
+
+let place_name p =
+  p
+
+(** val free_vars_expr : expr -> ident list **)
+
+let rec free_vars_expr = function
+| EVar x -> Cons (x, Nil)
+| ELet (_, x, _, e1, e2) ->
+  Cons (x, (app (free_vars_expr e1) (free_vars_expr e2)))
+| ELetInfer (_, x, e1, e2) ->
+  Cons (x, (app (free_vars_expr e1) (free_vars_expr e2)))
+| ECall (_, args) ->
+  let rec go = function
+  | Nil -> Nil
+  | Cons (arg, rest) -> app (free_vars_expr arg) (go rest)
+  in go args
+| EReplace (p, e_new) -> Cons ((place_name p), (free_vars_expr e_new))
+| EDrop e1 -> free_vars_expr e1
+| _ -> Nil
+
+(** val param_names : param list -> ident list **)
+
+let rec param_names = function
+| Nil -> Nil
+| Cons (p, ps') -> Cons (p.param_name, (param_names ps'))
+
 (** val rename_place : rename_env -> place -> place **)
 
 let rename_place _UU03c1_ p =
@@ -322,16 +357,18 @@ let rec alpha_rename_expr _UU03c1_ used = function
 | EVar x -> Pair ((EVar (lookup_rename x _UU03c1_)), used)
 | ELet (m, x, t, e1, e2) ->
   let Pair (e1', used1) = alpha_rename_expr _UU03c1_ used e1 in
-  let x' = fresh_ident x used1 in
-  let used2 = Cons (x', used1) in
+  let used1' = app (free_vars_expr e2) used1 in
+  let x' = fresh_ident x used1' in
+  let used2 = Cons (x', used1') in
   let Pair (e2', used3) =
     alpha_rename_expr (Cons ((Pair (x, x')), _UU03c1_)) used2 e2
   in
   Pair ((ELet (m, x', t, e1', e2')), used3)
 | ELetInfer (m, x, e1, e2) ->
   let Pair (e1', used1) = alpha_rename_expr _UU03c1_ used e1 in
-  let x' = fresh_ident x used1 in
-  let used2 = Cons (x', used1) in
+  let used1' = app (free_vars_expr e2) used1 in
+  let x' = fresh_ident x used1' in
+  let used2 = Cons (x', used1') in
   let Pair (e2', used3) =
     alpha_rename_expr (Cons ((Pair (x, x')), _UU03c1_)) used2 e2
   in
@@ -379,7 +416,10 @@ let rec alpha_rename_params _UU03c1_ used = function
     ident list -> fn_def -> (fn_def, ident list) prod **)
 
 let alpha_rename_fn_def used f =
-  let Pair (p, used1) = alpha_rename_params Nil used f.fn_params in
+  let used0 =
+    app (param_names f.fn_params) (app (free_vars_expr f.fn_body) used)
+  in
+  let Pair (p, used1) = alpha_rename_params Nil used0 f.fn_params in
   let Pair (params', _UU03c1_) = p in
   let Pair (body', used2) = alpha_rename_expr _UU03c1_ used1 f.fn_body in
   Pair ({ fn_name = f.fn_name; fn_params = params'; fn_ret = f.fn_ret;
@@ -399,7 +439,9 @@ let rec alpha_rename_syntax_go used = function
     ctx -> fn_def list -> expr -> (fn_def list, expr) prod **)
 
 let alpha_rename_for_infer _UU0393_ fenv e =
-  let Pair (fenv', used) = alpha_rename_syntax_go (ctx_names _UU0393_) fenv in
+  let Pair (fenv', used) =
+    alpha_rename_syntax_go (app (free_vars_expr e) (ctx_names _UU0393_)) fenv
+  in
   let Pair (e', _) = alpha_rename_expr Nil used e in Pair (fenv', e')
 
 (** val infer_core : fn_def list -> ctx -> expr -> (ty, ctx) prod option **)

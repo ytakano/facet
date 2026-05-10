@@ -130,6 +130,35 @@ Fixpoint ctx_names (Γ : ctx) : list ident :=
   | (x, _, _) :: Γ' => x :: ctx_names Γ'
   end.
 
+Definition place_name (p : place) : ident :=
+  match p with
+  | PVar x => x
+  end.
+
+Fixpoint free_vars_expr (e : expr) : list ident :=
+  match e with
+  | EUnit => []
+  | ELit _ => []
+  | EVar x => [x]
+  | ELet _ x _ e1 e2 => x :: free_vars_expr e1 ++ free_vars_expr e2
+  | ELetInfer _ x e1 e2 => x :: free_vars_expr e1 ++ free_vars_expr e2
+  | ECall _ args =>
+      let fix go (args0 : list expr) : list ident :=
+        match args0 with
+        | [] => []
+        | arg :: rest => free_vars_expr arg ++ go rest
+        end
+      in go args
+  | EReplace p e_new => place_name p :: free_vars_expr e_new
+  | EDrop e1 => free_vars_expr e1
+  end.
+
+Fixpoint param_names (ps : list param) : list ident :=
+  match ps with
+  | [] => []
+  | p :: ps' => param_name p :: param_names ps'
+  end.
+
 Definition rename_place (ρ : rename_env) (p : place) : place :=
   match p with
   | PVar x => PVar (lookup_rename x ρ)
@@ -162,14 +191,16 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
       (EDrop e1', used')
   | ELet m x T e1 e2 =>
       let (e1', used1) := alpha_rename_expr ρ used e1 in
-      let x' := fresh_ident x used1 in
-      let used2 := x' :: used1 in
+      let used1' := free_vars_expr e2 ++ used1 in
+      let x' := fresh_ident x used1' in
+      let used2 := x' :: used1' in
       let (e2', used3) := alpha_rename_expr ((x, x') :: ρ) used2 e2 in
       (ELet m x' T e1' e2', used3)
   | ELetInfer m x e1 e2 =>
       let (e1', used1) := alpha_rename_expr ρ used e1 in
-      let x' := fresh_ident x used1 in
-      let used2 := x' :: used1 in
+      let used1' := free_vars_expr e2 ++ used1 in
+      let x' := fresh_ident x used1' in
+      let used2 := x' :: used1' in
       let (e2', used3) := alpha_rename_expr ((x, x') :: ρ) used2 e2 in
       (ELetInfer m x' e1' e2', used3)
   end.
@@ -189,7 +220,8 @@ Fixpoint alpha_rename_params (ρ : rename_env) (used : list ident)
 
 Definition alpha_rename_fn_def (used : list ident)
     (f : fn_def) : fn_def * list ident :=
-  let '(params', ρ, used1) := alpha_rename_params [] used (fn_params f) in
+  let used0 := param_names (fn_params f) ++ free_vars_expr (fn_body f) ++ used in
+  let '(params', ρ, used1) := alpha_rename_params [] used0 (fn_params f) in
   let (body', used2) := alpha_rename_expr ρ used1 (fn_body f) in
   (MkFnDef (fn_name f) params' (fn_ret f) body', used2).
 
@@ -208,7 +240,8 @@ Definition alpha_rename_syntax (s : Syntax) : Syntax :=
 
 Definition alpha_rename_for_infer (Γ : ctx) (fenv : list fn_def)
     (e : expr) : list fn_def * expr :=
-  let (fenv', used) := alpha_rename_syntax_go (ctx_names Γ) fenv in
+  let (fenv', used) :=
+    alpha_rename_syntax_go (free_vars_expr e ++ ctx_names Γ) fenv in
   let (e', _) := alpha_rename_expr [] used e in
   (fenv', e').
 

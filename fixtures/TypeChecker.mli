@@ -20,6 +20,8 @@ type 'a list =
 
 val length : 'a1 list -> nat
 
+val app : 'a1 list -> 'a1 list -> 'a1 list
+
 val eqb : bool -> bool -> bool
 
 type positive =
@@ -133,6 +135,12 @@ val fresh_ident_go : nat -> ident -> ident list -> ident
 val fresh_ident : ident -> ident list -> ident
 
 val ctx_names : ctx -> ident list
+
+val place_name : place -> ident
+
+val free_vars_expr : expr -> ident list
+
+val param_names : param list -> ident list
 
 val rename_place : rename_env -> place -> place
 

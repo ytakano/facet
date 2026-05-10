@@ -188,7 +188,8 @@ Theorem infer_affine_value_at_most_once : forall fenv Γ e T Γ' x Tx,
 Proof.
   intros fenv Γ e T Γ' x Tx _ _ Haff Hused.
   unfold infer, alpha_rename_for_infer.
-  destruct (alpha_rename_syntax_go (ctx_names Γ') fenv) as [fenv' used].
+  destruct (alpha_rename_syntax_go (free_vars_expr (EVar x) ++ ctx_names Γ') fenv)
+    as [fenv' used].
   simpl.
   rewrite ctx_lookup_b_eq.
   rewrite Hused.

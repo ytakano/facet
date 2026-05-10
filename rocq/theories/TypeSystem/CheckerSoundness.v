@@ -250,8 +250,8 @@ Lemma alpha_rename_for_infer_sound : forall fenv Γ e fenvr er,
 Proof.
   intros fenv Γ e fenvr er Hrename.
   unfold alpha_rename_for_infer in Hrename.
-  destruct (alpha_rename_syntax_go (ctx_names Γ) fenv) as [fenv1 used]
-    eqn:Hfenv.
+  destruct (alpha_rename_syntax_go (free_vars_expr e ++ ctx_names Γ) fenv)
+    as [fenv1 used] eqn:Hfenv.
   destruct (alpha_rename_expr [] used e) as [er1 used'] eqn:He.
   injection Hrename as <- <-.
   split.

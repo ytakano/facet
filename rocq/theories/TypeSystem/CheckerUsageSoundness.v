@@ -174,3 +174,24 @@ Proof.
   - intros p Hin Hlin.
     exact (infer_checked_fn_linear_params_used fenv f p Hinfer_fn Hin Hlin).
 Qed.
+
+(* Affine values are consumed through the same context flag as linear values.
+   Once infer succeeds with an affine binding marked consumed in the output
+   context, checking the same variable again fails because EVar requires an
+   unconsumed affine/linear binding. *)
+Theorem infer_affine_value_at_most_once : forall fenv Γ e T Γ' x Tx,
+  infer fenv Γ e = Some (T, Γ') ->
+  ctx_lookup x Γ = Some (Tx, false) ->
+  ty_usage Tx = UAffine ->
+  ctx_lookup x Γ' = Some (Tx, true) ->
+  infer fenv Γ' (EVar x) = None.
+Proof.
+  intros fenv Γ e T Γ' x Tx _ _ Haff Hused.
+  unfold infer, alpha_rename_for_infer.
+  destruct (alpha_rename_syntax_go (ctx_names Γ') fenv) as [fenv' used].
+  simpl.
+  rewrite ctx_lookup_b_eq.
+  rewrite Hused.
+  rewrite Haff.
+  reflexivity.
+Qed.

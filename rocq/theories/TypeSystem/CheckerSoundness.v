@@ -173,6 +173,7 @@ Proof.
   lia.
 Qed.
 
+
 Inductive ctx_alpha : rename_env -> ctx -> ctx -> Prop :=
   | CtxAlpha_Base : forall Γ,
       ctx_alpha [] Γ Γ

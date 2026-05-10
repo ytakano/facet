@@ -102,11 +102,11 @@ Fixpoint rename_range (ρ : rename_env) : list ident :=
 Inductive ctx_alpha : rename_env -> ctx -> ctx -> Prop :=
   | CtxAlpha_Base : forall Γ,
       ctx_alpha [] Γ Γ
-  | CtxAlpha_Bind : forall ρ Γ Γr x xr T,
+  | CtxAlpha_Bind : forall ρ Γ Γr x xr T b,
       ctx_alpha ρ Γ Γr ->
       ~ In xr (ctx_names Γr) ->
       ~ In xr (rename_range ρ) ->
-      ctx_alpha ((x, xr) :: ρ) (ctx_add x T Γ) (ctx_add xr T Γr).
+      ctx_alpha ((x, xr) :: ρ) ((x, T, b) :: Γ) ((xr, T, b) :: Γr).
 
 Lemma ctx_alpha_nil_eq : forall Γ Γr,
   ctx_alpha [] Γ Γr ->
@@ -114,6 +114,22 @@ Lemma ctx_alpha_nil_eq : forall Γ Γr,
 Proof.
   intros Γ Γr H.
   inversion H. reflexivity.
+Qed.
+
+Lemma ctx_consume_preserves_names : forall x Γ Γ',
+  ctx_consume x Γ = Some Γ' ->
+  ctx_names Γ' = ctx_names Γ.
+Proof.
+  intros x Γ. revert x.
+  induction Γ as [| [[n T] b] Γ IH]; intros x Γ' Hconsume.
+  - simpl in Hconsume. discriminate.
+  - simpl in Hconsume.
+    destruct (String.eqb x n).
+    + injection Hconsume as <-. reflexivity.
+    + destruct (ctx_consume x Γ) as [Γt |] eqn:Htail.
+      2: discriminate.
+      injection Hconsume as <-.
+      simpl. rewrite (IH x Γt Htail). reflexivity.
 Qed.
 
 Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
@@ -262,7 +278,47 @@ Lemma ctx_alpha_consume_backward : forall ρ Γ Γr x Γr',
     ctx_consume x Γ = Some Γ' /\
     ctx_alpha ρ Γ' Γr'.
 Proof.
-Admitted.
+  intros ρ Γ Γr x Γr' Halpha.
+  revert x Γr'.
+  induction Halpha; intros y Γr' Hsafe Hconsume.
+  - simpl in Hconsume. exists Γr'. split; [exact Hconsume | constructor].
+  - simpl in Hsafe, Hconsume.
+    assert (Hneq_y_xr : y <> xr).
+    { intro Heq. apply Hsafe. left. symmetry. exact Heq. }
+    assert (Hsafe_tail : ~ In y (rename_range ρ)).
+    { intro Hin. apply Hsafe. right. exact Hin. }
+    destruct (String.eqb y x) eqn:Hyx.
+    + apply String.eqb_eq in Hyx. subst y.
+      simpl in Hconsume.
+      rewrite String.eqb_refl in Hconsume.
+      injection Hconsume as <-.
+      exists ((x, T, true) :: Γ).
+      split.
+      * simpl. rewrite String.eqb_refl. reflexivity.
+      * constructor; assumption.
+    + simpl in Hconsume.
+      assert (Hneq_lookup :
+        String.eqb (lookup_rename y ρ) xr = false).
+      { apply String.eqb_neq.
+        apply lookup_rename_not_in_range_neq.
+        - exact H0.
+        - apply String.eqb_neq in Hyx. intro Heq. subst y. contradiction.
+      }
+      rewrite Hneq_lookup in Hconsume.
+      destruct (ctx_consume (lookup_rename y ρ) Γr) as [Γrt |] eqn:Hconsume_tail.
+      2: discriminate.
+      injection Hconsume as <-.
+      destruct (IHHalpha y Γrt Hsafe_tail Hconsume_tail)
+        as [Γ' [Hconsume0 Halpha0]].
+      exists ((x, T, b) :: Γ').
+      split.
+      * simpl. rewrite Hyx. rewrite Hconsume0. reflexivity.
+      * constructor.
+        -- exact Halpha0.
+        -- rewrite (ctx_consume_preserves_names
+             (lookup_rename y ρ) Γr Γrt Hconsume_tail). exact H.
+        -- exact H0.
+Qed.
 
 Lemma ctx_alpha_remove_backward : forall ρ Γ Γr x,
   ctx_alpha ρ Γ Γr ->

@@ -1,0 +1,4 @@
+fn f(x: linear isize) -> unrestricted () {
+  let a: linear isize = x;
+  ()
+}

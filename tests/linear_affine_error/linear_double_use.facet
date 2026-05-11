@@ -1,0 +1,5 @@
+fn f(x: linear isize) -> linear isize {
+  let a: linear isize = x;
+  let b: linear isize = x;
+  a
+}

@@ -1,0 +1,9 @@
+fn consume2(a: linear isize, b: linear isize) -> unrestricted () {
+  (drop a);
+  (drop b);
+  ()
+}
+
+fn f(x: linear isize) -> unrestricted () {
+  (consume2 x x)
+}

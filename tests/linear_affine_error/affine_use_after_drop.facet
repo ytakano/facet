@@ -1,0 +1,4 @@
+fn f(x: affine isize) -> affine isize {
+  (drop x);
+  x
+}

@@ -1,0 +1,4 @@
+fn f(x: linear isize) -> affine isize {
+  let y: affine isize = x;
+  y
+}

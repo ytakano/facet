@@ -1,0 +1,8 @@
+fn identity(x: linear isize) -> linear isize {
+  x
+}
+
+fn f(x: linear isize) -> linear isize {
+  let result: linear isize = (identity x);
+  x
+}

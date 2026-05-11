@@ -1,0 +1,4 @@
+fn f(x: linear isize) -> linear isize {
+  (drop x);
+  x
+}

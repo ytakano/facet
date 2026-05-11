@@ -149,6 +149,11 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
   | EA_Drop : forall ρ e er,
       expr_alpha ρ e er ->
       expr_alpha ρ (EDrop e) (EDrop er)
+  | EA_If : forall ρ e1 e1r e2 e2r e3 e3r,
+      expr_alpha ρ e1 e1r ->
+      expr_alpha ρ e2 e2r ->
+      expr_alpha ρ e3 e3r ->
+      expr_alpha ρ (EIf e1 e2 e3) (EIf e1r e2r e3r)
 with exprs_alpha : rename_env -> list expr -> list expr -> Prop :=
   | EAs_Nil : forall ρ,
       exprs_alpha ρ [] []
@@ -422,6 +427,24 @@ Proof.
   simpl. rewrite ident_eqb_refl. assumption.
 Qed.
 
+Lemma ctx_merge_same_bindings : forall Γ2 Γ3 Γ4,
+  ctx_merge Γ2 Γ3 = Some Γ4 ->
+  ctx_same_bindings Γ2 Γ4.
+Proof.
+  intros Γ2. induction Γ2 as [| [[n T] b2] t2 IH]; intros Γ3 Γ4 Hmerge.
+  - destruct Γ3; simpl in Hmerge; [injection Hmerge as <-; constructor | discriminate].
+  - destruct Γ3 as [| [[n' T'] b3] t3]; [discriminate |].
+    simpl in Hmerge.
+    destruct (ident_eqb n n') eqn:Hnn'; [|discriminate].
+    simpl in Hmerge.
+    destruct (ctx_merge t2 t3) as [rest |] eqn:Hrest; [|discriminate].
+    destruct (ty_usage T) eqn:Hu.
+    + destruct (Bool.eqb b2 b3) eqn:Heqb; [|discriminate].
+      injection Hmerge as <-. constructor. eapply IH. exact Hrest.
+    + injection Hmerge as <-. constructor. eapply IH. exact Hrest.
+    + injection Hmerge as <-. constructor. eapply IH. exact Hrest.
+Qed.
+
 Lemma typed_same_bindings :
   (forall fenv Γ e T Γ',
       typed fenv Γ e T Γ' ->
@@ -456,7 +479,18 @@ Proof.
             | eapply ctx_same_bindings_remove_head; exact Hbody ]
         end
       ];
-      try solve [eapply ctx_same_bindings_trans; eassumption].
+      try solve [eapply ctx_same_bindings_trans; eassumption];
+      try solve [
+        match goal with
+        | H1 : ctx_same_bindings ?Γ ?Γ1,
+          H2 : ctx_same_bindings ?Γ1 ?Γ2,
+          Hm : ctx_merge ?Γ2 _ = Some ?Γ4
+          |- ctx_same_bindings ?Γ ?Γ4 =>
+            eapply ctx_same_bindings_trans;
+            [ eapply ctx_same_bindings_trans; [exact H1 | exact H2]
+            | eapply ctx_merge_same_bindings; exact Hm ]
+        end
+      ].
   }
   split; intros fenv; destruct (H fenv) as [Ht Hargs]; [apply Ht | apply Hargs].
 Qed.
@@ -476,6 +510,7 @@ Fixpoint expr_size (e : expr) : nat :=
             end) args)
   | EReplace _ e => S (expr_size e)
   | EDrop e => S (expr_size e)
+  | EIf e1 e2 e3 => S (expr_size e1 + expr_size e2 + expr_size e3)
   end.
 
 Lemma expr_size_call_arg_lt : forall fname args arg,
@@ -612,6 +647,20 @@ Proof.
     * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
     * exact He.
     * exact Hin.
+  + destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
+    destruct (alpha_rename_expr ρ used1 e2) as [e2r used2] eqn:He2.
+    destruct (alpha_rename_expr ρ used2 e3) as [e3r used3] eqn:He3.
+    injection Hrename as _ <-.
+    eapply IH.
+    * simpl in Hlt. assert (expr_size e3 < n) as Hlt_e3 by lia. exact Hlt_e3.
+    * exact He3.
+    * eapply IH.
+      -- simpl in Hlt. assert (expr_size e2 < n) as Hlt_e2 by lia. exact Hlt_e2.
+      -- exact He2.
+      -- eapply IH.
+         ++ simpl in Hlt. assert (expr_size e1 < n) as Hlt_e1 by lia. exact Hlt_e1.
+         ++ exact He1.
+         ++ exact Hin.
   }
   intros ρ used e er used' Hrename x Hin.
   eapply (Hsize (S (expr_size e))).
@@ -843,6 +892,20 @@ Proof.
     * simpl in Hlt. lia.
     * exact Hdisj.
     * exact He.
+  + destruct (disjoint_names_app_l (free_vars_expr e1)
+      (free_vars_expr e2 ++ free_vars_expr e3) (rename_range ρ)) as [Hdisj1 Hdisj23].
+    { intros x Hin. apply Hdisj. simpl. exact Hin. }
+    destruct (disjoint_names_app_l (free_vars_expr e2) (free_vars_expr e3)
+      (rename_range ρ)) as [Hdisj2 Hdisj3].
+    { exact Hdisj23. }
+    destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
+    destruct (alpha_rename_expr ρ used1 e2) as [e2r used2] eqn:He2.
+    destruct (alpha_rename_expr ρ used2 e3) as [e3r used3] eqn:He3.
+    injection Hrename as <- _.
+    constructor.
+    * eapply IH; [simpl in Hlt; lia | exact Hdisj1 | exact He1].
+    * eapply IH; [simpl in Hlt; lia | exact Hdisj2 | exact He2].
+    * eapply IH; [simpl in Hlt; lia | exact Hdisj3 | exact He3].
   }
   intros ρ used e er used' Hdisj Hrename.
   eapply (Hsize (S (expr_size e))).
@@ -1083,6 +1146,56 @@ Proof.
         -- exact Hctx_tail.
 Qed.
 
+Lemma ctx_alpha_merge_backward : forall ρ Γ02 Γ2r Γ03 Γ3r Γ4r,
+  ctx_alpha ρ Γ02 Γ2r ->
+  ctx_alpha ρ Γ03 Γ3r ->
+  ctx_merge Γ2r Γ3r = Some Γ4r ->
+  exists Γ04, ctx_merge Γ02 Γ03 = Some Γ04 /\ ctx_alpha ρ Γ04 Γ4r.
+Proof.
+  intros ρ Γ02 Γ2r Γ03 Γ3r Γ4r Halpha2 Halpha3 Hmerge.
+  revert Γ03 Γ3r Γ4r Halpha3 Hmerge.
+  induction Halpha2 as [Γ02 | ρ' Γ02' Γ2r' x xr T b2 Halpha2' IH2 Hxr_ctx Hxr_range];
+    intros Γ03 Γ3r Γ4r Halpha3 Hmerge.
+  - (* CtxAlpha_Base: Γ02 = Γ2r *)
+    inversion Halpha3; subst.
+    exists Γ4r. split; [exact Hmerge | constructor].
+  - (* CtxAlpha_Bind: Γ02 = (x,T,b2)::Γ02', Γ2r = (xr,T,b2)::Γ2r' *)
+    (* After inversion+subst on Halpha3: Γ03/Γ3r are substituted away,
+       fresh tail vars (auto-named) appear *)
+    inversion Halpha3; subst.
+    simpl in Hmerge. rewrite ident_eqb_refl in Hmerge. simpl in Hmerge.
+    lazymatch goal with
+    | H_alpha3' : ctx_alpha ρ' ?Γ03t ?Γ3rt |- _ =>
+        destruct (ctx_merge Γ2r' Γ3rt) as [rest4r |] eqn:Hmerge_rest;
+        [| discriminate];
+        destruct (IH2 Γ03t Γ3rt rest4r H_alpha3' Hmerge_rest) as [rest04 [Hmerge04 Hctx04]];
+        assert (Hrest_names : ~ In xr (ctx_names rest4r)) by
+          (rewrite (ctx_same_bindings_names _ _
+             (ctx_merge_same_bindings _ Γ3rt _ Hmerge_rest));
+           exact Hxr_ctx)
+    end.
+    simpl. rewrite ident_eqb_refl. simpl. rewrite Hmerge04.
+    destruct (ty_usage T) eqn:Hu.
+    + (* ULinear: Hmerge has the form (if Bool.eqb b2 ?b then ... else ...) = Some _ *)
+      lazymatch goal with
+      | Hm : (if Bool.eqb b2 ?bX then _ else _) = Some _ |- _ =>
+          destruct (Bool.eqb b2 bX) eqn:Heqb;
+          [injection Hm as <-;
+           eexists; split;
+           [reflexivity |
+            constructor; [exact Hctx04 | exact Hrest_names | exact Hxr_range]]
+          | discriminate]
+      end.
+    + (* UAffine *)
+      injection Hmerge as <-.
+      eexists. split. reflexivity.
+      constructor; [exact Hctx04 | exact Hrest_names | exact Hxr_range].
+    + (* UUnrestricted *)
+      injection Hmerge as <-.
+      eexists. split. reflexivity.
+      constructor; [exact Hctx04 | exact Hrest_names | exact Hxr_range].
+Qed.
+
 Lemma alpha_rename_typed_backward : forall fenv0 fenvr ρ Γ0 Γr e er used used' T Γr',
   fenv_alpha fenv0 fenvr ->
   ctx_alpha ρ Γ0 Γr ->
@@ -1117,6 +1230,7 @@ Proof.
     eexists. split; [constructor | exact Hctx].
   + injection Hrename as <- _.
     inversion Htyped; subst.
+    * exists Γ0. split; [constructor | exact Hctx].
     * exists Γ0. split; [constructor | exact Hctx].
     * exists Γ0. split; [constructor | exact Hctx].
   + injection Hrename as <- _.
@@ -1415,6 +1529,76 @@ Proof.
       Hfenv Hctx Hctx_used Hrange_used Hdisj He H1)
       as [Γ0' [Htyped0 Hctx0]].
     exists Γ0'. split; [eapply T_Drop; exact Htyped0 | exact Hctx0].
+  + (* EIf e1 e2 e3 *)
+    destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
+    destruct (alpha_rename_expr ρ used1 e2) as [e2r used2] eqn:He2.
+    destruct (alpha_rename_expr ρ used2 e3) as [e3r used3] eqn:He3.
+    injection Hrename as <- _.
+    inversion Htyped; subst.
+    (* Decompose disjointness from free_vars(EIf e1 e2 e3) = fv(e1) ++ fv(e2) ++ fv(e3) *)
+    destruct (disjoint_names_app_l (free_vars_expr e1)
+      (free_vars_expr e2 ++ free_vars_expr e3) (rename_range ρ)) as [Hdisj1 Hdisj23].
+    { intros x Hin. apply Hdisj. simpl. exact Hin. }
+    destruct (disjoint_names_app_l (free_vars_expr e2) (free_vars_expr e3)
+      (rename_range ρ)) as [Hdisj2 Hdisj3].
+    { exact Hdisj23. }
+    (* Apply IH to e1 *)
+    lazymatch goal with
+    | Hte1 : typed fenvr Γr e1r ?Tcr ?Γ1r |- _ =>
+      destruct (IH fenv0 fenvr ρ Γ0 Γr e1 e1r used used1 Tcr Γ1r
+        ltac:(simpl in Hlt; lia)
+        Hfenv Hctx Hctx_used Hrange_used Hdisj1 He1 Hte1)
+        as [Γ01 [Htyped1 Hctx1]]
+    end.
+    (* Build Hctx_used1: ctx_names(Γ1) ⊆ used1 *)
+    assert (Hctx_used1 : forall x, In x (ctx_names Γ1) -> In x used1).
+    { intros x Hin.
+      eapply alpha_rename_expr_used_extends. exact He1.
+      apply Hctx_used.
+      rewrite <- (ctx_same_bindings_names Γr Γ1).
+      - exact Hin.
+      - destruct typed_same_bindings as [Hsame _].
+        lazymatch goal with
+        | Hte1 : typed fenvr Γr e1r _ _ |- _ => eapply Hsame; exact Hte1
+        end. }
+    assert (Hrange_used1 : forall x, In x (rename_range ρ) -> In x used1).
+    { intros x Hinr. eapply alpha_rename_expr_used_extends; [exact He1 | exact (Hrange_used x Hinr)]. }
+    (* Apply IH to e2 (starting from Γ01/Γ1) *)
+    lazymatch goal with
+    | Hte2 : typed fenvr Γ1 e2r ?T2r ?Γ2r |- _ =>
+      destruct (IH fenv0 fenvr ρ Γ01 Γ1 e2 e2r used1 used2 T2r Γ2r
+        ltac:(simpl in Hlt; lia)
+        Hfenv Hctx1 Hctx_used1 Hrange_used1 Hdisj2 He2 Hte2)
+        as [Γ02 [Htyped2 Hctx2]]
+    end.
+    (* Build Hctx_used2: ctx_names(Γ1) ⊆ used2 *)
+    assert (Hctx_used2 : forall x, In x (ctx_names Γ1) -> In x used2).
+    { intros x Hin. eapply alpha_rename_expr_used_extends; [exact He2 | exact (Hctx_used1 x Hin)]. }
+    assert (Hrange_used2 : forall x, In x (rename_range ρ) -> In x used2).
+    { intros x Hinr. eapply alpha_rename_expr_used_extends; [exact He2 | exact (Hrange_used1 x Hinr)]. }
+    (* Apply IH to e3 (starting from Γ01/Γ1) *)
+    lazymatch goal with
+    | Hte3 : typed fenvr Γ1 e3r ?T3r ?Γ3r |- _ =>
+      destruct (IH fenv0 fenvr ρ Γ01 Γ1 e3 e3r used2 used3 T3r Γ3r
+        ltac:(simpl in Hlt; lia)
+        Hfenv Hctx1 Hctx_used2 Hrange_used2 Hdisj3 He3 Hte3)
+        as [Γ03 [Htyped3 Hctx3]]
+    end.
+    (* Merge backward: ctx_alpha ρ Γ02 Γ2 ∧ ctx_alpha ρ Γ03 Γ3 → merge Γ02 Γ03 works *)
+    lazymatch goal with
+    | Hmerge : ctx_merge ?Γ2r ?Γ3r = Some ?Γ4r |- _ =>
+      destruct (ctx_alpha_merge_backward ρ Γ02 Γ2r Γ03 Γ3r Γ4r Hctx2 Hctx3 Hmerge)
+        as [Γ04 [Hmerge04 Hctx4]]
+    end.
+    exists Γ04. split.
+    { lazymatch goal with
+      | Hbool : ty_core _ = TBooleans,
+        Hcore : ty_core ?T2_ = ty_core ?T3_ |- _ =>
+        eapply T_If;
+        [exact Htyped1 | exact Hbool | exact Htyped2 | exact Htyped3
+        | exact Hcore | exact Hmerge04]
+      end. }
+    { exact Hctx4. }
   }
   intros fenv0 fenvr ρ Γ0 Γr e er used used' T Γr'
     Hfenv Hctx Hctx_used Hrange_used Hdisj Hrename Htyped.

@@ -30,6 +30,7 @@ Definition ty_core_eqb (c1 c2 : TypeCore Ty) : bool :=
   | TUnits,    TUnits    => true
   | TIntegers, TIntegers => true
   | TFloats,   TFloats   => true
+  | TBooleans, TBooleans => true
   | TNamed s1, TNamed s2 => String.eqb s1 s2
   | _,         _         => false
   end.
@@ -171,6 +172,7 @@ Fixpoint free_vars_expr (e : expr) : list ident :=
       in go args
   | EReplace p e_new => place_name p :: free_vars_expr e_new
   | EDrop e1 => free_vars_expr e1
+  | EIf e1 e2 e3 => free_vars_expr e1 ++ free_vars_expr e2 ++ free_vars_expr e3
   end.
 
 Fixpoint param_names (ps : list param) : list ident :=
@@ -223,6 +225,11 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
       let used2 := x' :: used1' in
       let (e2', used3) := alpha_rename_expr ((x, x') :: ρ) used2 e2 in
       (ELetInfer m x' e1' e2', used3)
+  | EIf e1 e2 e3 =>
+      let (e1', used1) := alpha_rename_expr ρ used e1 in
+      let (e2', used2) := alpha_rename_expr ρ used1 e2 in
+      let (e3', used3) := alpha_rename_expr ρ used2 e3 in
+      (EIf e1' e2' e3', used3)
   end.
 
 Fixpoint alpha_rename_params (ρ : rename_env) (used : list ident)
@@ -289,6 +296,9 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
 
   | ELit (LFloat _) =>
       infer_ok (MkTy UUnrestricted TFloats, Γ)
+
+  | ELit (LBool _) =>
+      infer_ok (MkTy UUnrestricted TBooleans, Γ)
 
   | EVar x =>
       match ctx_lookup_b x Γ with
@@ -387,6 +397,30 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
               then infer_ok (T2, ctx_remove_b x Γ2)
               else infer_err ErrContextCheckFailed
           end
+      end
+
+  | EIf e1 e2 e3 =>
+      match infer_core fenv Γ e1 with
+      | infer_err err => infer_err err
+      | infer_ok (T_cond, Γ1) =>
+          if ty_core_eqb (ty_core T_cond) TBooleans then
+            match infer_core fenv Γ1 e2 with
+            | infer_err err => infer_err err
+            | infer_ok (T2, Γ2) =>
+                match infer_core fenv Γ1 e3 with
+                | infer_err err => infer_err err
+                | infer_ok (T3, Γ3) =>
+                    if ty_core_eqb (ty_core T2) (ty_core T3) then
+                      match ctx_merge Γ2 Γ3 with
+                      | None    => infer_err ErrContextCheckFailed
+                      | Some Γ4 =>
+                          infer_ok (MkTy (usage_max (ty_usage T2) (ty_usage T3))
+                                         (ty_core T2), Γ4)
+                      end
+                    else infer_err (ErrTypeMismatch (ty_core T2) (ty_core T3))
+                end
+            end
+          else infer_err (ErrTypeMismatch (ty_core T_cond) TBooleans)
       end
 
   end.

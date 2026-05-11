@@ -42,6 +42,8 @@ let rec convert (scope : scope) (e : named_expr) : expr =
     let (scope', d) = add_binding scope name in
     let e2' = convert scope' e2 in
     ELetInfer (m, make_ident name d, e1', e2')
+  | NIf (cond, then_e, else_e) ->
+    EIf (convert scope cond, convert scope then_e, convert scope else_e)
 
 let convert_fn_def (f : named_fn_def) : fn_def =
   let (scope, params) = List.fold_left

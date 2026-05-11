@@ -1,0 +1,3 @@
+fn f(cond: unrestricted bool, x: linear isize) -> unrestricted () {
+  if cond { (drop x) } else { () }
+}

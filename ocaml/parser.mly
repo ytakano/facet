@@ -14,6 +14,7 @@ let desugar_stmt item cont =
 
 %token KW_FN KW_LET KW_IN KW_MUT KW_DROP KW_REPLACE
 %token KW_AFFINE KW_LINEAR KW_UNRESTRICTED KW_ISIZE KW_F64
+%token KW_IF KW_ELSE KW_TRUE KW_FALSE KW_BOOL
 %token LPAREN RPAREN LBRACE RBRACE
 %token ARROW AMP
 %token COMMA COLON EQUAL SEMI UNDERSCORE
@@ -94,6 +95,10 @@ atom_expr:
     { NLit (LInt n) }
   | f = FLOAT_LIT
     { NLit (LFloat f) }
+  | KW_TRUE
+    { NLit (LBool true) }
+  | KW_FALSE
+    { NLit (LBool false) }
   | x = ID
     { NVar x }
   | LPAREN; KW_DROP; e = expr; RPAREN
@@ -102,6 +107,11 @@ atom_expr:
     { NReplace (x, e) }
   | LPAREN; f = ID; args = list(atom_expr); RPAREN
     { NCall (f, args) }
+  | KW_IF; cond = atom_expr; LBRACE; then_e = block; RBRACE;
+    KW_ELSE; LBRACE; else_e = block; RBRACE
+    { NIf (cond, then_e, else_e) }
+  | KW_IF; cond = atom_expr; LBRACE; then_e = block; RBRACE
+    { NIf (cond, then_e, NUnit) }
 
 ty:
   | KW_AFFINE;       c = ty_core { MkTy (UAffine,       c) }
@@ -111,6 +121,7 @@ ty:
 ty_core:
   | KW_ISIZE { TIntegers }
   | KW_F64   { TFloats }
+  | KW_BOOL  { TBooleans }
   | LPAREN; RPAREN { TUnits }
   | AMP; t = ty { TRef (RShared, t) }
   | AMP; KW_MUT; t = ty { TRef (RUnique, t) }

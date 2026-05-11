@@ -96,6 +96,36 @@ Inductive usage_sub : usage -> usage -> Prop :=
   | US_aff_lin :              usage_sub UAffine       ULinear
   | US_unr_lin :              usage_sub UUnrestricted ULinear.
 
+Definition usage_max (u1 u2 : usage) : usage :=
+  match u1, u2 with
+  | ULinear,       _             => ULinear
+  | _,             ULinear       => ULinear
+  | UAffine,       _             => UAffine
+  | _,             UAffine       => UAffine
+  | UUnrestricted, UUnrestricted => UUnrestricted
+  end.
+
+(* Merge two output contexts from if-branches.
+   Linear variables must have the same consumed state in both branches.
+   Affine/unrestricted variables: consumed if consumed in either branch. *)
+Fixpoint ctx_merge (Γ2 Γ3 : ctx) : option ctx :=
+  match Γ2, Γ3 with
+  | [], [] => Some []
+  | (n, T, b2) :: t2, (n', _, b3) :: t3 =>
+      if negb (ident_eqb n n') then None
+      else
+        match ctx_merge t2 t3 with
+        | None => None
+        | Some rest =>
+            match ty_usage T with
+            | ULinear =>
+                if Bool.eqb b2 b3 then Some ((n, T, b2) :: rest) else None
+            | _ => Some ((n, T, orb b2 b3) :: rest)
+            end
+        end
+  | _, _ => None
+  end.
+
 (* ------------------------------------------------------------------ *)
 (* Typing judgement                                                      *)
 (*                                                                      *)
@@ -115,6 +145,9 @@ Inductive typed (fenv : list fn_def) : ctx -> expr -> Ty -> ctx -> Prop :=
 
   | T_LitFloat : forall Γ f,
       typed fenv Γ (ELit (LFloat f)) (MkTy UUnrestricted TFloats) Γ
+
+  | T_LitBool : forall Γ b,
+      typed fenv Γ (ELit (LBool b)) (MkTy UUnrestricted TBooleans) Γ
 
   (* Linear/affine variable: consume the binding. *)
   | T_Var_Consume : forall Γ Γ' x T,
@@ -166,6 +199,21 @@ Inductive typed (fenv : list fn_def) : ctx -> expr -> Ty -> ctx -> Prop :=
       ty_core T_new = ty_core T ->
       usage_sub (ty_usage T_new) (ty_usage T) ->
       typed fenv Γ (EReplace (PVar x) e_new) T Γ'
+
+  (* if e1 { e2 } else { e3 }:
+     - e1 must have bool type (any usage)
+     - e2, e3 must have the same core type
+     - linear variables must be consumed by both branches or neither
+     - result usage = max(usage of e2, usage of e3) *)
+  | T_If : forall Γ Γ1 Γ2 Γ3 Γ4 e1 e2 e3 T_cond T2 T3,
+      typed fenv Γ e1 T_cond Γ1 ->
+      ty_core T_cond = TBooleans ->
+      typed fenv Γ1 e2 T2 Γ2 ->
+      typed fenv Γ1 e3 T3 Γ3 ->
+      ty_core T2 = ty_core T3 ->
+      ctx_merge Γ2 Γ3 = Some Γ4 ->
+      typed fenv Γ (EIf e1 e2 e3)
+           (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2)) Γ4
 
   (* f(args): look up function definition, type-check arguments. *)
   | T_Call : forall Γ Γ' fname fdef args,

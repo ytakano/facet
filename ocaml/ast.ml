@@ -8,6 +8,7 @@ type named_expr =
   | NCall   of name * named_expr list
   | NReplace of name * named_expr
   | NDrop   of named_expr
+  | NIf     of named_expr * named_expr * named_expr
 
 type named_param = {
   np_mutability : TypeChecker.mutability;

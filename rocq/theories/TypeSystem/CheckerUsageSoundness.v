@@ -115,6 +115,10 @@ Fixpoint expr_linear_lets_used (fenv : list fn_def) (e : expr) {struct e}
   | ECall _ _ => True
   | EReplace _ e_new => expr_linear_lets_used fenv e_new
   | EDrop e1 => expr_linear_lets_used fenv e1
+  | EIf e1 e2 e3 =>
+      expr_linear_lets_used fenv e1 /\
+      expr_linear_lets_used fenv e2 /\
+      expr_linear_lets_used fenv e3
   end.
 
 Fixpoint expr_linear_lets_used_sound (fenv : list fn_def) (e : expr)
@@ -130,6 +134,7 @@ Proof.
   - split; apply expr_linear_lets_used_sound.
   - apply expr_linear_lets_used_sound.
   - apply expr_linear_lets_used_sound.
+  - repeat split; apply expr_linear_lets_used_sound.
 Qed.
 
 Theorem infer_checked_fn_linear_lets_used : forall fenv f,

@@ -1,0 +1,3 @@
+fn f(cond: unrestricted bool) -> unrestricted isize {
+  if cond { 1 } else { 1.0 }
+}

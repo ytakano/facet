@@ -86,6 +86,7 @@ Proof.
   - reflexivity.
   - reflexivity.
   - reflexivity.
+  - reflexivity.
   - apply String.eqb_eq in H. subst. reflexivity.
 Qed.
 
@@ -175,6 +176,7 @@ Proof.
 
   (* ELit *)
   + destruct l.
+    * injection Hinfer as <- <-. constructor.
     * injection Hinfer as <- <-. constructor.
     * injection Hinfer as <- <-. constructor.
 
@@ -327,6 +329,28 @@ Proof.
       eapply IH.
       * simpl in Hlt. lia.
       * exact He.
+
+  (* EIf e1 e2 e3 *)
+  + destruct (infer_core fenv Γ e1) as [[Tcond Γ1] | ] eqn:He1.
+    2: discriminate.
+    destruct (ty_core_eqb (ty_core Tcond) TBooleans) eqn:Hbool.
+    2: discriminate.
+    destruct (infer_core fenv Γ1 e2) as [[T2 Γ2] | ] eqn:He2.
+    2: { simpl in Hinfer. inversion Hinfer. }
+    destruct (infer_core fenv Γ1 e3) as [[T3 Γ3] | ] eqn:He3.
+    2: { simpl in Hinfer. inversion Hinfer. }
+    destruct (ty_core_eqb (ty_core T2) (ty_core T3)) eqn:Hcore.
+    2: discriminate.
+    destruct (ctx_merge Γ2 Γ3) as [Γ4 |] eqn:Hmerge.
+    2: discriminate.
+    simpl in Hinfer. injection Hinfer as <- <-.
+    eapply T_If.
+    * eapply IH. simpl in Hlt; lia. exact He1.
+    * apply ty_core_eqb_true. exact Hbool.
+    * eapply IH. simpl in Hlt; lia. exact He2.
+    * eapply IH. simpl in Hlt; lia. exact He3.
+    * apply ty_core_eqb_true. exact Hcore.
+    * exact Hmerge.
   }
   intros fenv Γ e T Γ' Hinfer.
   eapply (Hsize (S (expr_size e))).

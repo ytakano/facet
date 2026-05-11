@@ -34,6 +34,11 @@ let keywords = [
   "unrestricted", Parser.KW_UNRESTRICTED;
   "isize",        Parser.KW_ISIZE;
   "f64",          Parser.KW_F64;
+  "if",           Parser.KW_IF;
+  "else",         Parser.KW_ELSE;
+  "true",         Parser.KW_TRUE;
+  "false",        Parser.KW_FALSE;
+  "bool",         Parser.KW_BOOL;
 ]
 
 let id_or_kw s =

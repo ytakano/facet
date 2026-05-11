@@ -1,9 +1,13 @@
 
+val negb : bool -> bool
+
 val fst : ('a1 * 'a2) -> 'a1
 
 val snd : ('a1 * 'a2) -> 'a2
 
 val app : 'a1 list -> 'a1 list -> 'a1 list
+
+val eqb : bool -> bool -> bool
 
 module Nat :
  sig
@@ -29,6 +33,7 @@ type 'a typeCore =
 | TUnits
 | TIntegers
 | TFloats
+| TBooleans
 | TNamed of string
 | TFn of 'a list * 'a
 | TRef of ref_kind * 'a
@@ -47,6 +52,7 @@ val ident_eqb : ident -> ident -> bool
 type literal =
 | LInt of Big_int_Z.big_int
 | LFloat of string
+| LBool of bool
 
 type place = ident
   (* singleton inductive, whose constructor was PVar *)
@@ -60,6 +66,7 @@ type expr =
 | ECall of ident * expr list
 | EReplace of place * expr
 | EDrop of expr
+| EIf of expr * expr * expr
 
 type param = { param_mutability : mutability; param_name : ident;
                param_ty : ty }
@@ -72,6 +79,10 @@ type syntax = fn_def list
 type ctx_entry = (ident * ty) * bool
 
 type ctx = ctx_entry list
+
+val usage_max : usage -> usage -> usage
+
+val ctx_merge : ctx -> ctx -> ctx option
 
 val usage_eqb : usage -> usage -> bool
 

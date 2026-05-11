@@ -1,4 +1,10 @@
 
+(** val negb : bool -> bool **)
+
+let negb = function
+| true -> false
+| false -> true
+
 (** val fst : ('a1 * 'a2) -> 'a1 **)
 
 let fst = function
@@ -15,6 +21,11 @@ let rec app l m =
   match l with
   | [] -> m
   | a :: l1 -> a :: (app l1 m)
+
+(** val eqb : bool -> bool -> bool **)
+
+let eqb b1 b2 =
+  if b1 then b2 else if b2 then false else true
 
 module Nat =
  struct
@@ -55,6 +66,7 @@ type 'a typeCore =
 | TUnits
 | TIntegers
 | TFloats
+| TBooleans
 | TNamed of string
 | TFn of 'a list * 'a
 | TRef of ref_kind * 'a
@@ -82,6 +94,7 @@ let ident_eqb x y =
 type literal =
 | LInt of Big_int_Z.big_int
 | LFloat of string
+| LBool of bool
 
 type place = ident
   (* singleton inductive, whose constructor was PVar *)
@@ -95,6 +108,7 @@ type expr =
 | ECall of ident * expr list
 | EReplace of place * expr
 | EDrop of expr
+| EIf of expr * expr * expr
 
 type param = { param_mutability : mutability; param_name : ident;
                param_ty : ty }
@@ -107,6 +121,41 @@ type syntax = fn_def list
 type ctx_entry = (ident * ty) * bool
 
 type ctx = ctx_entry list
+
+(** val usage_max : usage -> usage -> usage **)
+
+let usage_max u1 u2 =
+  match u1 with
+  | ULinear -> ULinear
+  | UAffine -> (match u2 with
+                | ULinear -> ULinear
+                | _ -> UAffine)
+  | UUnrestricted -> u2
+
+(** val ctx_merge : ctx -> ctx -> ctx option **)
+
+let rec ctx_merge _UU0393_2 _UU0393_3 =
+  match _UU0393_2 with
+  | [] -> (match _UU0393_3 with
+           | [] -> Some []
+           | _ :: _ -> None)
+  | c :: t2 ->
+    let (p, b2) = c in
+    let (n, t) = p in
+    (match _UU0393_3 with
+     | [] -> None
+     | c0 :: t3 ->
+       let (p0, b3) = c0 in
+       let (n', _) = p0 in
+       if negb (ident_eqb n n')
+       then None
+       else (match ctx_merge t2 t3 with
+             | Some rest ->
+               (match ty_usage t with
+                | ULinear ->
+                  if eqb b2 b3 then Some (((n, t), b2) :: rest) else None
+                | _ -> Some (((n, t), ((||) b2 b3)) :: rest))
+             | None -> None))
 
 (** val usage_eqb : usage -> usage -> bool **)
 
@@ -147,6 +196,9 @@ let ty_core_eqb c1 c2 =
   | TFloats -> (match c2 with
                 | TFloats -> true
                 | _ -> false)
+  | TBooleans -> (match c2 with
+                  | TBooleans -> true
+                  | _ -> false)
   | TNamed s1 -> (match c2 with
                   | TNamed s2 -> (=) s1 s2
                   | _ -> false)
@@ -268,6 +320,8 @@ let rec free_vars_expr = function
   in go args
 | EReplace (p, e_new) -> (place_name p) :: (free_vars_expr e_new)
 | EDrop e1 -> free_vars_expr e1
+| EIf (e1, e2, e3) ->
+  app (free_vars_expr e1) (app (free_vars_expr e2) (free_vars_expr e3))
 | _ -> []
 
 (** val param_names : param list -> ident list **)
@@ -316,6 +370,11 @@ let rec alpha_rename_expr _UU03c1_ used = function
 | EDrop e1 ->
   let (e1', used') = alpha_rename_expr _UU03c1_ used e1 in
   ((EDrop e1'), used')
+| EIf (e1, e2, e3) ->
+  let (e1', used1) = alpha_rename_expr _UU03c1_ used e1 in
+  let (e2', used2) = alpha_rename_expr _UU03c1_ used1 e2 in
+  let (e3', used3) = alpha_rename_expr _UU03c1_ used2 e3 in
+  ((EIf (e1', e2', e3')), used3)
 | x -> (x, used)
 
 (** val alpha_rename_params :
@@ -371,7 +430,8 @@ let rec infer_core fenv _UU0393_ = function
 | ELit l ->
   (match l with
    | LInt _ -> Infer_ok ((MkTy (UUnrestricted, TIntegers)), _UU0393_)
-   | LFloat _ -> Infer_ok ((MkTy (UUnrestricted, TFloats)), _UU0393_))
+   | LFloat _ -> Infer_ok ((MkTy (UUnrestricted, TFloats)), _UU0393_)
+   | LBool _ -> Infer_ok ((MkTy (UUnrestricted, TBooleans)), _UU0393_))
 | EVar x ->
   (match ctx_lookup_b x _UU0393_ with
    | Some p ->
@@ -465,6 +525,29 @@ let rec infer_core fenv _UU0393_ = function
    | Infer_ok p ->
      let (_, _UU0393_') = p in
      Infer_ok ((MkTy (UUnrestricted, TUnits)), _UU0393_')
+   | Infer_err err -> Infer_err err)
+| EIf (e1, e2, e3) ->
+  (match infer_core fenv _UU0393_ e1 with
+   | Infer_ok p ->
+     let (t_cond, _UU0393_1) = p in
+     if ty_core_eqb (ty_core t_cond) TBooleans
+     then (match infer_core fenv _UU0393_1 e2 with
+           | Infer_ok p0 ->
+             let (t2, _UU0393_2) = p0 in
+             (match infer_core fenv _UU0393_1 e3 with
+              | Infer_ok p1 ->
+                let (t3, _UU0393_3) = p1 in
+                if ty_core_eqb (ty_core t2) (ty_core t3)
+                then (match ctx_merge _UU0393_2 _UU0393_3 with
+                      | Some _UU0393_4 ->
+                        Infer_ok ((MkTy
+                          ((usage_max (ty_usage t2) (ty_usage t3)),
+                          (ty_core t2))), _UU0393_4)
+                      | None -> Infer_err ErrContextCheckFailed)
+                else Infer_err (ErrTypeMismatch ((ty_core t2), (ty_core t3)))
+              | Infer_err err -> Infer_err err)
+           | Infer_err err -> Infer_err err)
+     else Infer_err (ErrTypeMismatch ((ty_core t_cond), TBooleans))
    | Infer_err err -> Infer_err err)
 
 (** val infer : fn_def list -> ctx -> expr -> (ty * ctx) infer_result **)

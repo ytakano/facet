@@ -38,7 +38,8 @@ Qed.
 
 Inductive literal : Type :=
 | LInt   : Z -> literal
-| LFloat : string -> literal.
+| LFloat : string -> literal
+| LBool  : bool -> literal.
 
 Inductive place : Type :=
 | PVar : ident -> place.
@@ -51,7 +52,8 @@ Inductive expr : Type :=
 | ELetInfer : mutability -> ident -> expr -> expr -> expr
 | ECall     : ident -> list expr -> expr
 | EReplace  : place -> expr -> expr
-| EDrop     : expr -> expr.
+| EDrop     : expr -> expr
+| EIf       : expr -> expr -> expr -> expr.
 
 Record param : Type := MkParam {
   param_mutability : mutability;

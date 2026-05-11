@@ -17,6 +17,7 @@ Inductive TypeCore (A : Type) : Type :=
 | TUnits    : TypeCore A
 | TIntegers : TypeCore A
 | TFloats   : TypeCore A
+| TBooleans : TypeCore A
 | TNamed    : string -> TypeCore A
 | TFn       : list A -> A -> TypeCore A
 | TRef      : ref_kind -> A -> TypeCore A.
@@ -24,6 +25,7 @@ Inductive TypeCore (A : Type) : Type :=
 Arguments TUnits {A}.
 Arguments TIntegers {A}.
 Arguments TFloats {A}.
+Arguments TBooleans {A}.
 Arguments TNamed {A} _.
 Arguments TFn {A} _ _.
 Arguments TRef {A} _ _.

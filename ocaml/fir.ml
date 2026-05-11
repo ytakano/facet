@@ -17,6 +17,9 @@ type fir_instr =
   | FICall    of ident * ty * ident * fir_tval list
   | FIDrop    of ident * ident * ty
   | FIReplace of ident * ty * ident * ty * fir_tval
+  | FILabel   of string
+  | FIGoto    of string
+  | FIIf      of fir_tval * string * string
 
 type fir_fn = {
   ff_name   : ident;
@@ -41,11 +44,17 @@ let unit_ty = MkTy (UUnrestricted, TUnits)
 let lit_ty = function
   | LInt _   -> MkTy (UUnrestricted, TIntegers)
   | LFloat _ -> MkTy (UUnrestricted, TFloats)
+  | LBool _  -> MkTy (UUnrestricted, TBooleans)
 
 let fresh_id env =
   let n = env.counter in
   env.counter <- n + 1;
   ("%t" ^ string_of_int n, Big_int_Z.big_int_of_int 0)
+
+let fresh_label env prefix =
+  let n = env.counter in
+  env.counter <- n + 1;
+  prefix ^ string_of_int n
 
 let emit env i = env.instrs <- i :: env.instrs
 
@@ -109,6 +118,28 @@ let rec to_value env = function
     let tmp = fresh_id env in
     emit env (FIReplace (tmp, p_ty, place, p_ty, v_new));
     { fv = FVVar tmp; ft = p_ty }
+  | EIf (e1, e2, e3) ->
+    let result_ty = match infer_core env.fenv env.ctx (EIf (e1, e2, e3)) with
+      | Infer_ok (t, _) -> t
+      | Infer_err _ -> unit_ty
+    in
+    let cond_val = to_value env e1 in
+    let then_lbl = fresh_label env "if_then_" in
+    let else_lbl = fresh_label env "if_else_" in
+    let end_lbl  = fresh_label env "if_end_"  in
+    let result_tmp = fresh_id env in
+    let saved_ctx = env.ctx in
+    emit env (FIIf (cond_val, then_lbl, else_lbl));
+    emit env (FILabel then_lbl);
+    let then_val = to_value env e2 in
+    emit env (FILet (result_tmp, result_ty, then_val));
+    emit env (FIGoto end_lbl);
+    env.ctx <- saved_ctx;
+    emit env (FILabel else_lbl);
+    let else_val = to_value env e3 in
+    emit env (FILet (result_tmp, result_ty, else_val));
+    emit env (FILabel end_lbl);
+    { fv = FVVar result_tmp; ft = result_ty }
 
 and emit_into env x t = function
   | EUnit | ELit _ | EVar _ as e ->
@@ -154,6 +185,7 @@ and pp_ty_core = function
   | TUnits    -> "unit"
   | TIntegers -> "isize"
   | TFloats   -> "f64"
+  | TBooleans -> "bool"
   | TNamed s  -> s
   | TFn (ts, r) ->
     "fn(" ^ String.concat ", " (List.map pp_ty ts) ^ ") -> " ^ pp_ty r
@@ -169,6 +201,7 @@ let pp_tval tv =
     | FVUnit      -> "()"
     | FVLit (LInt n)   -> Big_int_Z.string_of_big_int n
     | FVLit (LFloat f) -> f
+    | FVLit (LBool b)  -> string_of_bool b
     | FVVar x     -> pp_ident x
   in
   vs ^ " as " ^ pp_ty tv.ft
@@ -189,6 +222,10 @@ let pp_instr = function
   | FIReplace (r, r_ty, tgt, tgt_ty, v_new) ->
     Printf.sprintf "  replace %s as %s = %s as %s with %s"
       (pp_ident r) (pp_ty r_ty) (pp_ident tgt) (pp_ty tgt_ty) (pp_tval v_new)
+  | FILabel lbl -> Printf.sprintf "%s:" lbl
+  | FIGoto  lbl -> Printf.sprintf "  goto %s" lbl
+  | FIIf (cond, then_lbl, else_lbl) ->
+    Printf.sprintf "  if %s goto %s else %s" (pp_tval cond) then_lbl else_lbl
 
 let pp_param p =
   let mut = if p.param_mutability = MMutable then "mut " else "" in

@@ -9,7 +9,8 @@ Import ListNotations.
 Inductive value : Type :=
   | VUnit  : value
   | VInt   : Z -> value
-  | VFloat : string -> value.
+  | VFloat : string -> value
+  | VBool  : bool -> value.
 
 (* ------------------------------------------------------------------ *)
 (* Runtime store                                                        *)
@@ -115,6 +116,9 @@ Inductive eval (fenv : list fn_def) : store -> expr -> store -> value -> Prop :=
   | Eval_LitFloat : forall s f,
       eval fenv s (ELit (LFloat f)) s (VFloat f)
 
+  | Eval_LitBool : forall s b,
+      eval fenv s (ELit (LBool b)) s (VBool b)
+
   (* Unrestricted variable: copy without consuming. *)
   | Eval_Var_Copy : forall s x e,
       store_lookup x s = Some e ->
@@ -146,6 +150,16 @@ Inductive eval (fenv : list fn_def) : store -> expr -> store -> value -> Prop :=
       eval fenv s e_new s1 v_new ->
       store_update_val x v_new s1 = Some s2 ->
       eval fenv s (EReplace (PVar x) e_new) s2 (se_val old_e)
+
+  | Eval_If_True : forall s s1 s2 e1 e2 e3 v,
+      eval fenv s e1 s1 (VBool true) ->
+      eval fenv s1 e2 s2 v ->
+      eval fenv s (EIf e1 e2 e3) s2 v
+
+  | Eval_If_False : forall s s1 s2 e1 e2 e3 v,
+      eval fenv s e1 s1 (VBool false) ->
+      eval fenv s1 e3 s2 v ->
+      eval fenv s (EIf e1 e2 e3) s2 v
 
   (* f(args): look up function, evaluate arguments, evaluate body. *)
   | Eval_Call : forall s s_args s_body fname fdef args vs ret,

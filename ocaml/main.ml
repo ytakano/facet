@@ -14,6 +14,7 @@ let rec string_of_ty_core : ty typeCore -> string = function
   | TUnits      -> "()"
   | TIntegers   -> "isize"
   | TFloats     -> "f64"
+  | TBooleans   -> "bool"
   | TNamed s    -> s
   | TFn (ts, r) ->
     Printf.sprintf "fn(%s) -> %s"

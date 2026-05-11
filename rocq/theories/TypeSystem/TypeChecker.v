@@ -190,14 +190,14 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
       (EDrop e1', used')
   | ELet m x T e1 e2 =>
       let (e1', used1) := alpha_rename_expr ρ used e1 in
-      let used1' := free_vars_expr e2 ++ used1 in
+      let used1' := x :: free_vars_expr e2 ++ used1 in
       let x' := fresh_ident x used1' in
       let used2 := x' :: used1' in
       let (e2', used3) := alpha_rename_expr ((x, x') :: ρ) used2 e2 in
       (ELet m x' T e1' e2', used3)
   | ELetInfer m x e1 e2 =>
       let (e1', used1) := alpha_rename_expr ρ used e1 in
-      let used1' := free_vars_expr e2 ++ used1 in
+      let used1' := x :: free_vars_expr e2 ++ used1 in
       let x' := fresh_ident x used1' in
       let used2 := x' :: used1' in
       let (e2', used3) := alpha_rename_expr ((x, x') :: ρ) used2 e2 in

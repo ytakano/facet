@@ -372,7 +372,7 @@ let rec alpha_rename_expr _UU03c1_ used = function
 | EVar x -> Pair ((EVar (lookup_rename x _UU03c1_)), used)
 | ELet (m, x, t, e1, e2) ->
   let Pair (e1', used1) = alpha_rename_expr _UU03c1_ used e1 in
-  let used1' = app (free_vars_expr e2) used1 in
+  let used1' = Cons (x, (app (free_vars_expr e2) used1)) in
   let x' = fresh_ident x used1' in
   let used2 = Cons (x', used1') in
   let Pair (e2', used3) =
@@ -381,7 +381,7 @@ let rec alpha_rename_expr _UU03c1_ used = function
   Pair ((ELet (m, x', t, e1', e2')), used3)
 | ELetInfer (m, x, e1, e2) ->
   let Pair (e1', used1) = alpha_rename_expr _UU03c1_ used e1 in
-  let used1' = app (free_vars_expr e2) used1 in
+  let used1' = Cons (x, (app (free_vars_expr e2) used1)) in
   let x' = fresh_ident x used1' in
   let used2 = Cons (x', used1') in
   let Pair (e2', used3) =

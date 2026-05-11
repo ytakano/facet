@@ -79,7 +79,7 @@ Qed.
 Definition infer_fn_def_ok (fenv : list fn_def) (f : fn_def) : Prop :=
   exists Γ',
     infer fenv (params_ctx (fn_params f)) (fn_body f) =
-      Some (fn_ret f, Γ') /\
+      infer_ok (fn_ret f, Γ') /\
     params_ok (fn_params f) Γ'.
 
 Lemma infer_fn_def_ok_sound : forall fenv f,
@@ -180,11 +180,11 @@ Qed.
    context, checking the same variable again fails because EVar requires an
    unconsumed affine/linear binding. *)
 Theorem infer_affine_value_at_most_once : forall fenv Γ e T Γ' x Tx,
-  infer fenv Γ e = Some (T, Γ') ->
+  infer fenv Γ e = infer_ok (T, Γ') ->
   ctx_lookup x Γ = Some (Tx, false) ->
   ty_usage Tx = UAffine ->
   ctx_lookup x Γ' = Some (Tx, true) ->
-  infer fenv Γ' (EVar x) = None.
+  infer fenv Γ' (EVar x) = infer_err (ErrAlreadyConsumed x).
 Proof.
   intros fenv Γ e T Γ' x Tx _ _ Haff Hused.
   unfold infer, alpha_rename_for_infer.
@@ -194,5 +194,6 @@ Proof.
   rewrite ctx_lookup_b_eq.
   rewrite Hused.
   rewrite Haff.
+  simpl.
   reflexivity.
 Qed.

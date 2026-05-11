@@ -109,24 +109,25 @@ Qed.
 Lemma infer_call_args_sound : forall fenv Γ args params Γ',
   (forall Γ0 e T Γ1,
       In e args ->
-      infer_core fenv Γ0 e = Some (T, Γ1) ->
+      infer_core fenv Γ0 e = infer_ok (T, Γ1) ->
       typed fenv Γ0 e T Γ1) ->
   ((fix go (Γ0 : ctx) (as_ : list expr) (ps : list param)
-      : option ctx :=
+      : infer_result ctx :=
       match as_, ps with
-      | [], [] => Some Γ0
-      | [], _ :: _ => None
-      | _ :: _, [] => None
+      | [],       []       => infer_ok Γ0
+      | [],       _ :: _   => infer_err ErrArityMismatch
+      | _ :: _,   []       => infer_err ErrArityMismatch
       | e' :: es, p :: ps' =>
           match infer_core fenv Γ0 e' with
-          | None => None
-          | Some (T_e, Γ1) =>
-              if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) &&
-                 usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))
-              then go Γ1 es ps'
-              else None
+          | infer_err err            => infer_err err
+          | infer_ok (T_e, Γ1) =>
+              if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) then
+                if usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))
+                then go Γ1 es ps'
+                else infer_err (ErrUsageMismatch (ty_usage T_e) (ty_usage (param_ty p)))
+              else infer_err (ErrTypeMismatch (ty_core T_e) (ty_core (param_ty p)))
           end
-      end) Γ args params) = Some Γ' ->
+      end) Γ args params) = infer_ok Γ' ->
   typed_args fenv Γ args params Γ'.
 Proof.
   intros fenv Γ args.
@@ -136,20 +137,18 @@ Proof.
   - injection Hgo as <-. constructor.
   - destruct (infer_core fenv Γ e) as [[T_e Γ1] |] eqn:He;
       try discriminate.
-    destruct (ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) &&
-              usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p)))
-      eqn:Hcheck; try discriminate.
-    apply andb_prop in Hcheck as [Hcore Hsub].
+    destruct (ty_core_eqb (ty_core T_e) (ty_core (param_ty p))) eqn:Hcore; [|discriminate].
+    destruct (usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))) eqn:Hsub; [|discriminate].
     eapply TArgs_Cons.
     + eapply Hexpr.
       * left. reflexivity.
       * exact He.
-    + apply ty_core_eqb_true. exact Hcore.
+    + exact (ty_core_eqb_true _ _ Hcore).
     + apply usage_sub_bool_sound. exact Hsub.
     + eapply IH.
       * intros Γ0 e0 T0 Γ0' Hin Hinfer0.
         eapply Hexpr.
-        -- right. exact Hin.
+        -- right; exact Hin.
         -- exact Hinfer0.
       * exact Hgo.
 Qed.
@@ -159,12 +158,12 @@ Qed.
 (* ------------------------------------------------------------------ *)
 
 Theorem infer_sound : forall fenv Γ e T Γ',
-  infer_core fenv Γ e = Some (T, Γ') ->
+  infer_core fenv Γ e = infer_ok (T, Γ') ->
   typed fenv Γ e T Γ'.
 Proof.
   assert (Hsize : forall n fenv Γ e T Γ',
     expr_size e < n ->
-    infer_core fenv Γ e = Some (T, Γ') ->
+    infer_core fenv Γ e = infer_ok (T, Γ') ->
     typed fenv Γ e T Γ').
   {
   induction n as [| n IH]; intros fenv Γ e T Γ' Hlt Hinfer.
@@ -201,16 +200,29 @@ Proof.
 
   (* ELet m i t e1 e2 *)
   + rename i into x.
-    destruct (infer_core fenv Γ e1) as [[T1 Γ1] |] eqn:He1.
+    destruct (infer_core fenv Γ e1) as [[T1 Γ1] | err1] eqn:He1.
     2: discriminate.
-    destruct (ty_core_eqb (ty_core T1) (ty_core t) &&
-              usage_sub_bool (ty_usage T1) (ty_usage t)) eqn:Hcheck.
-    2: discriminate.
-    apply andb_prop in Hcheck as [Hcore Hsub].
-    destruct (infer_core fenv (ctx_add_b x t Γ1) e2) as [[T2 Γ2] |] eqn:He2.
-    2: discriminate.
+    destruct (ty_core_eqb (ty_core T1) (ty_core t)) eqn:Hcore.
+    2: {
+      simpl in Hinfer.
+      inversion Hinfer.
+    }
+    destruct (usage_sub_bool (ty_usage T1) (ty_usage t)) eqn:Hsub.
+    2: {
+      simpl in Hinfer.
+      inversion Hinfer.
+    }
+    destruct (infer_core fenv (ctx_add_b x t Γ1) e2) as [[T2 Γ2] | err2] eqn:He2.
+    2: {
+      simpl in Hinfer.
+      inversion Hinfer.
+    }
     destruct (ctx_check_ok x t Γ2) eqn:Hok.
-    2: discriminate.
+    2: {
+      simpl in Hinfer.
+      inversion Hinfer.
+    }
+    simpl in Hinfer.
     injection Hinfer as <- <-.
     rewrite ctx_remove_b_eq.
     eapply T_Let.
@@ -223,7 +235,6 @@ Proof.
       -- simpl in Hlt. lia.
       -- exact He2.
     * apply ctx_check_ok_sound. exact Hok.
-
   (* ELetInfer: out of scope *)
   + discriminate.
 
@@ -232,22 +243,23 @@ Proof.
     2: discriminate.
     remember
       ((fix go (Γ0 : ctx) (as_ : list expr) (ps : list param)
-          : option ctx :=
+          : infer_result ctx :=
           match as_, ps with
-          | [], [] => Some Γ0
-          | [], _ :: _ => None
-          | _ :: _, [] => None
+          | [], [] => infer_ok Γ0
+          | [], _ :: _ => infer_err ErrArityMismatch
+          | _ :: _, [] => infer_err ErrArityMismatch
           | e' :: es, p :: ps' =>
               match infer_core fenv Γ0 e' with
-              | None => None
-              | Some (T_e, Γ1) =>
-                  if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) &&
-                     usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))
-                  then go Γ1 es ps'
-                  else None
+              | infer_err err => infer_err err
+              | infer_ok (T_e, Γ1) =>
+                  if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) then
+                    if usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))
+                    then go Γ1 es ps'
+                    else infer_err (ErrUsageMismatch (ty_usage T_e) (ty_usage (param_ty p)))
+                  else infer_err (ErrTypeMismatch (ty_core T_e) (ty_core (param_ty p)))
               end
           end) Γ l (fn_params fdef)) as r eqn:Hgo.
-    destruct r as [Γcall |]; try discriminate.
+    destruct r as [Γcall | err]; [|discriminate].
     injection Hinfer as <- <-.
     destruct (lookup_fn_b_sound i fenv fdef Hlookup) as [Hin Hname].
     eapply T_Call.
@@ -267,12 +279,13 @@ Proof.
     destruct (ctx_lookup_b px Γ) as [[T_x b] |] eqn:Hlx_b.
     2: discriminate.
     destruct b; [discriminate |].
-    destruct (infer_core fenv Γ e) as [[T_new Γ1] |] eqn:He.
+    destruct (infer_core fenv Γ e) as [Htyped3 | err3] eqn:He.
     2: discriminate.
-    destruct (ty_core_eqb (ty_core T_new) (ty_core T_x) &&
-              usage_sub_bool (ty_usage T_new) (ty_usage T_x)) eqn:Hcheck.
+    destruct Htyped3 as [T_new Γ1].
+    destruct (ty_core_eqb (ty_core T_new) (ty_core T_x)) eqn:Hcore.
     2: discriminate.
-    apply andb_prop in Hcheck as [Hcore Hsub].
+    destruct (usage_sub_bool (ty_usage T_new) (ty_usage T_x)) eqn:Hsub.
+    2: discriminate.
     injection Hinfer as <- <-.
     apply T_Replace with (T_new := T_new).
     * rewrite <- ctx_lookup_b_eq. exact Hlx_b.
@@ -283,13 +296,14 @@ Proof.
     * apply usage_sub_bool_sound. exact Hsub.
 
   (* EDrop e *)
-  + destruct (infer_core fenv Γ e) as [[Te Γ1] |] eqn:He.
+  + destruct (infer_core fenv Γ e) as [Htyped4 | err4] eqn:He.
     2: discriminate.
-    injection Hinfer as <- <-.
-    eapply T_Drop.
-    eapply IH.
-    * simpl in Hlt. lia.
-    * exact He.
+    destruct Htyped4 as [Te Γ1].
+      injection Hinfer as <- <-.
+      eapply T_Drop.
+      eapply IH.
+      * simpl in Hlt. lia.
+      * exact He.
   }
   intros fenv Γ e T Γ' Hinfer.
   eapply (Hsize (S (expr_size e))).
@@ -301,7 +315,7 @@ Qed.
    alpha-renaming preservation for typing; keep it isolated from the
    infer_core soundness argument above. *)
 Theorem infer_public_sound : forall fenv Γ e T Γ',
-  infer fenv Γ e = Some (T, Γ') ->
+  infer fenv Γ e = infer_ok (T, Γ') ->
   typed fenv Γ e T Γ'.
 Proof.
   intros fenv Γ e T Γ' Hinfer.

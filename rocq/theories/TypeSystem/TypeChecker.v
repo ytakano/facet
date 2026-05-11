@@ -376,7 +376,18 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
           end
       end
 
-  | ELetInfer _ _ _ _ => infer_err ErrNotImplemented  (* out of scope *)
+  | ELetInfer m x e1 e2 =>
+      match infer_core fenv Γ e1 with
+      | infer_err err => infer_err err
+      | infer_ok (T1, Γ1) =>
+          match infer_core fenv (ctx_add_b x T1 Γ1) e2 with
+          | infer_err err => infer_err err
+          | infer_ok (T2, Γ2) =>
+              if ctx_check_ok x T1 Γ2
+              then infer_ok (T2, ctx_remove_b x Γ2)
+              else infer_err ErrContextCheckFailed
+          end
+      end
 
   end.
 

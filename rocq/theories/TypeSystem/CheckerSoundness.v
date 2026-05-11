@@ -235,8 +235,31 @@ Proof.
       -- simpl in Hlt. lia.
       -- exact He2.
     * apply ctx_check_ok_sound. exact Hok.
-  (* ELetInfer: out of scope *)
-  + discriminate.
+  (* ELetInfer m x e1 e2 *)
+  + rename i into x.
+    destruct (infer_core fenv Γ e1) as [[T1 Γ1] | err1] eqn:He1.
+    2: discriminate.
+    destruct (infer_core fenv (ctx_add_b x T1 Γ1) e2) as [[T2 Γ2] | err2] eqn:He2.
+    2: {
+      simpl in Hinfer.
+      inversion Hinfer.
+    }
+    destruct (ctx_check_ok x T1 Γ2) eqn:Hok.
+    2: {
+      simpl in Hinfer.
+      inversion Hinfer.
+    }
+    simpl in Hinfer.
+    injection Hinfer as <- <-.
+    rewrite ctx_remove_b_eq.
+    eapply T_LetInfer.
+    * eapply IH.
+      -- simpl in Hlt. lia.
+      -- exact He1.
+    * eapply IH.
+      -- simpl in Hlt. lia.
+      -- exact He2.
+    * apply ctx_check_ok_sound. exact Hok.
 
   (* ECall *)
   + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup.

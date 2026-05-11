@@ -143,6 +143,13 @@ Inductive typed (fenv : list fn_def) : ctx -> expr -> Ty -> ctx -> Prop :=
       ctx_is_ok x T Γ2 ->
       typed fenv Γ (ELet m x T e1 e2) T2 (ctx_remove x Γ2)
 
+  (* let x = e1 in e2 (no annotation): infer T1 from e1, bind x:T1. *)
+  | T_LetInfer : forall Γ Γ1 Γ2 m x T1 e1 e2 T2,
+      typed fenv Γ e1 T1 Γ1 ->
+      typed fenv (ctx_add x T1 Γ1) e2 T2 Γ2 ->
+      ctx_is_ok x T1 Γ2 ->
+      typed fenv Γ (ELetInfer m x e1 e2) T2 (ctx_remove x Γ2)
+
   (* drop(e): evaluate e (consuming it) and return unit. *)
   | T_Drop : forall Γ Γ' e T,
       typed fenv Γ e T Γ' ->

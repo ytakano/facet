@@ -400,7 +400,18 @@ let rec infer_core fenv _UU0393_ = function
           else Infer_err (ErrUsageMismatch ((ty_usage t1), (ty_usage t)))
      else Infer_err (ErrTypeMismatch ((ty_core t1), (ty_core t)))
    | Infer_err err -> Infer_err err)
-| ELetInfer (_, _, _, _) -> Infer_err ErrNotImplemented
+| ELetInfer (_, x, e1, e2) ->
+  (match infer_core fenv _UU0393_ e1 with
+   | Infer_ok p ->
+     let (t1, _UU0393_1) = p in
+     (match infer_core fenv (ctx_add_b x t1 _UU0393_1) e2 with
+      | Infer_ok p0 ->
+        let (t2, _UU0393_2) = p0 in
+        if ctx_check_ok x t1 _UU0393_2
+        then Infer_ok (t2, (ctx_remove_b x _UU0393_2))
+        else Infer_err ErrContextCheckFailed
+      | Infer_err err -> Infer_err err)
+   | Infer_err err -> Infer_err err)
 | ECall (fname, args) ->
   (match lookup_fn_b fname fenv with
    | Some fdef ->

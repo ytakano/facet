@@ -1244,7 +1244,88 @@ Proof.
        i :: free_vars_expr e2 ++ used1) e2)
       as [e2r used2] eqn:He2.
     injection Hrename as <- _.
-    inversion Htyped.
+    inversion Htyped; subst.
+    destruct (disjoint_names_app_l (free_vars_expr e1) (free_vars_expr e2)
+      (rename_range ρ)) as [Hdisj1 Hdisj2].
+    { intros x Hin. apply Hdisj. simpl. right. exact Hin. }
+    lazymatch goal with
+    | Hte1 : typed fenvr Γr e1r ?T1r ?Γ1r |- _ =>
+      destruct (IH fenv0 fenvr ρ Γ0 Γr e1 e1r used used1 T1r Γ1r
+        ltac:(simpl in Hlt; lia)
+        Hfenv Hctx Hctx_used Hrange_used Hdisj1 He1 Hte1)
+        as [Γ01 [Htyped1 Hctx1]]
+    end.
+    set (xr := fresh_ident i (i :: free_vars_expr e2 ++ used1)).
+    assert (Hctx1_names : forall x, In x (ctx_names Γ1) -> In x used1).
+    { intros x Hin.
+      eapply alpha_rename_expr_used_extends.
+      - exact He1.
+      - apply Hctx_used.
+        rewrite <- (ctx_same_bindings_names Γr Γ1).
+        + exact Hin.
+        + destruct typed_same_bindings as [Hsame _].
+          lazymatch goal with
+          | Hte1 : typed fenvr Γr e1r _ _ |- _ => eapply Hsame; exact Hte1
+          end. }
+    assert (Hxr_ctx : ~ In xr (ctx_names Γ1)).
+    { unfold xr. intros Hin.
+      apply (fresh_ident_not_in i (i :: free_vars_expr e2 ++ used1)).
+      right. apply in_or_app. right. apply Hctx1_names. exact Hin. }
+    assert (Hxr_range : ~ In xr (rename_range ρ)).
+    { unfold xr. intros Hin.
+      apply (fresh_ident_not_in i (i :: free_vars_expr e2 ++ used1)).
+      right. apply in_or_app. right.
+      eapply alpha_rename_expr_used_extends.
+      - exact He1.
+      - apply Hrange_used. exact Hin. }
+    assert (Hctx_ext :
+      ctx_alpha ((i, xr) :: ρ)
+        (ctx_add i T1 Γ01) (ctx_add xr T1 Γ1)).
+    { constructor; exact Hctx1 || exact Hxr_ctx || exact Hxr_range. }
+    assert (Hctx_ext_used :
+      forall x, In x (ctx_names (ctx_add xr T1 Γ1)) ->
+        In x (xr :: i :: free_vars_expr e2 ++ used1)).
+    { intros x [Hx | Hin]; [left; exact Hx |].
+      right. right. apply in_or_app. right. apply Hctx1_names. exact Hin. }
+    assert (Hrange_ext_used :
+      forall x, In x (rename_range ((i, xr) :: ρ)) ->
+        In x (xr :: i :: free_vars_expr e2 ++ used1)).
+    { intros x [Hx | Hin]; [left; exact Hx |].
+      right. right. apply in_or_app. right.
+      eapply alpha_rename_expr_used_extends.
+      - exact He1.
+      - apply Hrange_used. exact Hin. }
+    assert (Hdisj2_ext :
+      disjoint_names (free_vars_expr e2) (rename_range ((i, xr) :: ρ))).
+    { intros x Hin [Hx | Hinr].
+      - subst x. unfold xr in *.
+        apply (fresh_ident_not_in i (i :: free_vars_expr e2 ++ used1)).
+        right. apply in_or_app. left. exact Hin.
+      - exact (Hdisj2 x Hin Hinr). }
+    lazymatch goal with
+    | Hte2 : typed fenvr (ctx_add _ T1 Γ1) e2r ?T2r ?Γ2r |- _ =>
+      destruct (IH fenv0 fenvr ((i, xr) :: ρ)
+        (ctx_add i T1 Γ01) (ctx_add xr T1 Γ1)
+        e2 e2r (xr :: i :: free_vars_expr e2 ++ used1) used2 T2r Γ2r
+        ltac:(simpl in Hlt; lia)
+        Hfenv Hctx_ext Hctx_ext_used Hrange_ext_used Hdisj2_ext He2 Hte2)
+        as [Γ02 [Htyped2 Hctx2]]
+    end.
+    exists (ctx_remove i Γ02). split.
+    { eapply T_LetInfer.
+      - exact Htyped1.
+      - exact Htyped2.
+      - eapply ctx_alpha_is_ok_backward.
+        + exact Hctx2.
+        + simpl. intros [Heq | Hinr].
+          * apply (fresh_ident_not_in i (i :: free_vars_expr e2 ++ used1)).
+            fold xr. rewrite Heq. left. reflexivity.
+          * apply (Hdisj i); simpl; [left; reflexivity | exact Hinr].
+        + simpl. rewrite ident_eqb_refl.
+          lazymatch goal with
+          | Hok : ctx_is_ok _ _ _ |- _ => exact Hok
+          end. }
+    { eapply ctx_alpha_remove_bound. exact Hctx2. }
   + remember
       ((fix go (used0 : list ident) (args0 : list expr)
           : list expr * list ident :=

@@ -1,0 +1,109 @@
+open TypeChecker
+
+let params_to_ctx (params : param list) : ctx =
+  List.map (fun p ->
+    ((p.param_name, p.param_ty), false)
+  ) params
+
+let string_of_usage = function
+  | ULinear       -> "linear"
+  | UAffine       -> "affine"
+  | UUnrestricted -> "unrestricted"
+
+let rec string_of_ty_core : ty typeCore -> string = function
+  | TUnits      -> "()"
+  | TIntegers   -> "isize"
+  | TFloats     -> "f64"
+  | TNamed s    -> s
+  | TFn (ts, r) ->
+    Printf.sprintf "fn(%s) -> %s"
+      (String.concat ", " (List.map string_of_ty ts))
+      (string_of_ty r)
+  | TRef (RShared, t) -> "&" ^ string_of_ty t
+  | TRef (RUnique, t) -> "&mut " ^ string_of_ty t
+
+and string_of_ty (MkTy (u, c)) =
+  string_of_usage u ^ " " ^ string_of_ty_core c
+
+let string_of_ident (name, idx) =
+  Printf.sprintf "%s#%s" name (Big_int_Z.string_of_big_int idx)
+
+let string_of_infer_error = function
+  | ErrUnknownVar id      ->
+    Printf.sprintf "unknown variable: %s" (string_of_ident id)
+  | ErrAlreadyConsumed id ->
+    Printf.sprintf "variable already consumed: %s" (string_of_ident id)
+  | ErrTypeMismatch (c1, c2) ->
+    Printf.sprintf "type mismatch: expected %s, got %s"
+      (string_of_ty_core c1) (string_of_ty_core c2)
+  | ErrUsageMismatch (u1, u2) ->
+    Printf.sprintf "usage mismatch: expected %s, got %s"
+      (string_of_usage u1) (string_of_usage u2)
+  | ErrFunctionNotFound id ->
+    Printf.sprintf "function not found: %s" (string_of_ident id)
+  | ErrArityMismatch      -> "arity mismatch"
+  | ErrContextCheckFailed -> "context check failed (linear variable not consumed)"
+  | ErrNotImplemented     -> "not implemented (type inference for let without annotation)"
+
+let () =
+  let args = Sys.argv in
+  if Array.length args >= 2 && args.(1) = "--generate-grammar" then begin
+    Grammar.print_grammar ();
+    exit 0
+  end;
+  if Array.length args < 2 then begin
+    Printf.eprintf "Usage: %s [--generate-grammar] FILE\n" args.(0);
+    exit 1
+  end;
+  let filename = args.(1) in
+  let ic = try open_in filename
+    with Sys_error msg ->
+      Printf.eprintf "Error: cannot open file: %s\n" msg;
+      exit 1
+  in
+  let content = really_input_string ic (in_channel_length ic) in
+  close_in ic;
+  let buf = Sedlexing.Utf8.from_string content in
+  Sedlexing.set_filename buf filename;
+  let state = Lexer.make_state filename buf in
+  let lexer_fn = Lexer.provider state in
+  let named_defs =
+    try MenhirLib.Convert.Simplified.traditional2revised Parser.program lexer_fn
+    with
+    | Lexer.LexError (pos, msg) ->
+      Printf.eprintf "Lex error at %s:%d:%d: %s\n"
+        pos.Lexer.pos_fname
+        pos.Lexer.pos_lnum
+        (pos.Lexer.pos_cnum - pos.Lexer.pos_bol)
+        msg;
+      exit 1
+    | Parser.Error ->
+      let (start, _) = Sedlexing.lexing_positions buf in
+      Printf.eprintf "Parse error at %s:%d:%d\n"
+        filename
+        start.Lexing.pos_lnum
+        (start.Lexing.pos_cnum - start.Lexing.pos_bol);
+      exit 1
+  in
+  let fn_defs = List.map Debruijn.convert_fn_def named_defs in
+  let ok = ref true in
+  List.iter (fun f ->
+    let ctx = params_to_ctx f.fn_params in
+    let (fname, _) = f.fn_name in
+    match infer fn_defs ctx f.fn_body with
+    | Infer_err e ->
+      Printf.eprintf "Type error in function '%s': %s\n"
+        fname (string_of_infer_error e);
+      ok := false
+    | Infer_ok (_, out_ctx) ->
+      let param_ok = List.for_all (fun p ->
+        TypeChecker.ctx_check_ok p.param_name p.param_ty out_ctx
+      ) f.fn_params in
+      if param_ok then
+        Printf.printf "OK: %s\n" fname
+      else begin
+        Printf.eprintf "Type error in function '%s': context check failed (linear parameter not consumed)\n" fname;
+        ok := false
+      end
+  ) fn_defs;
+  if not !ok then exit 1

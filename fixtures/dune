@@ -1,0 +1,7 @@
+(library
+ (name type_checker)
+ (modules TypeChecker)
+ (wrapped false)
+ (libraries zarith)
+ (ocamlopt_flags (:standard -w -39))
+ (ocamlc_flags (:standard -w -39)))

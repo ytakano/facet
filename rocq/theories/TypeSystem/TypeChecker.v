@@ -413,4 +413,7 @@ Fixpoint infer_args (fenv : list fn_def) (Γ : ctx)
 
 Require Extraction.
 Extraction Language OCaml.
+From Stdlib Require Import ExtrOcamlNativeString.
+From Stdlib Require Import ExtrOcamlNatBigInt.
+From Stdlib Require Import ExtrOcamlZBigInt.
 Extraction "../fixtures/TypeChecker.ml" infer.

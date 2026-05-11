@@ -1,0 +1,6 @@
+(executable
+ (name main)
+ (libraries type_checker sedlex menhirLib zarith)
+ (preprocess (pps sedlex.ppx)))
+
+(menhir (modules parser))

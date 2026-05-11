@@ -1,0 +1,59 @@
+open Ast
+open TypeChecker
+
+(* scope maps name -> current de Bruijn index (shadow-counting) *)
+type scope = (string * int) list
+
+let current_depth scope name =
+  match List.assoc_opt name scope with
+  | Some d -> d
+  | None   -> -1
+
+let add_binding scope name =
+  if name = "_" then (scope, 0)
+  else
+    let d = current_depth scope name + 1 in
+    ((name, d) :: scope, d)
+
+let lookup scope name =
+  if name = "_" then 0
+  else max 0 (current_depth scope name)
+
+let make_ident name d : ident =
+  (name, Big_int_Z.big_int_of_int d)
+
+let rec convert (scope : scope) (e : named_expr) : expr =
+  match e with
+  | NUnit           -> EUnit
+  | NLit l          -> ELit l
+  | NVar name       -> EVar (make_ident name (lookup scope name))
+  | NDrop e1        -> EDrop (convert scope e1)
+  | NReplace (id, e1) ->
+    EReplace (make_ident id (lookup scope id), convert scope e1)
+  | NCall (f, args) ->
+    ECall (make_ident f 0, List.map (convert scope) args)
+  | NLet (m, name, Some ty, e1, e2) ->
+    let e1' = convert scope e1 in
+    let (scope', d) = add_binding scope name in
+    let e2' = convert scope' e2 in
+    ELet (m, make_ident name d, ty, e1', e2')
+  | NLet (m, name, None, e1, e2) ->
+    let e1' = convert scope e1 in
+    let (scope', d) = add_binding scope name in
+    let e2' = convert scope' e2 in
+    ELetInfer (m, make_ident name d, e1', e2')
+
+let convert_fn_def (f : named_fn_def) : fn_def =
+  let (scope, params) = List.fold_left
+    (fun (sc, acc) np ->
+      let (sc', d) = add_binding sc np.np_name in
+      let p = { param_mutability = np.np_mutability;
+                param_name       = make_ident np.np_name d;
+                param_ty         = np.np_ty } in
+      (sc', acc @ [p]))
+    ([], []) f.nf_params
+  in
+  { fn_name   = make_ident f.nf_name 0;
+    fn_params = params;
+    fn_ret    = f.nf_ret;
+    fn_body   = convert scope f.nf_body }

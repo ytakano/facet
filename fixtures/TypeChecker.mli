@@ -1,58 +1,16 @@
 
-type bool =
-| True
-| False
+val fst : ('a1 * 'a2) -> 'a1
 
-type nat =
-| O
-| S of nat
-
-type 'a option =
-| Some of 'a
-| None
-
-type ('a, 'b) prod =
-| Pair of 'a * 'b
-
-val fst : ('a1, 'a2) prod -> 'a1
-
-val snd : ('a1, 'a2) prod -> 'a2
-
-type 'a list =
-| Nil
-| Cons of 'a * 'a list
+val snd : ('a1 * 'a2) -> 'a2
 
 val app : 'a1 list -> 'a1 list -> 'a1 list
 
-val eqb : bool -> bool -> bool
-
 module Nat :
  sig
-  val eqb : nat -> nat -> bool
+  val eqb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool
 
-  val max : nat -> nat -> nat
+  val max : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
  end
-
-type positive =
-| XI of positive
-| XO of positive
-| XH
-
-type z =
-| Z0
-| Zpos of positive
-| Zneg of positive
-
-type ascii =
-| Ascii of bool * bool * bool * bool * bool * bool * bool * bool
-
-val eqb0 : ascii -> ascii -> bool
-
-type string =
-| EmptyString
-| String of ascii * string
-
-val eqb1 : string -> string -> bool
 
 type mutability =
 | MImmutable
@@ -82,12 +40,12 @@ val ty_usage : ty -> usage
 
 val ty_core : ty -> ty typeCore
 
-type ident = (string, nat) prod
+type ident = string * Big_int_Z.big_int
 
 val ident_eqb : ident -> ident -> bool
 
 type literal =
-| LInt of z
+| LInt of Big_int_Z.big_int
 | LFloat of string
 
 type place = ident
@@ -111,7 +69,7 @@ type fn_def = { fn_name : ident; fn_params : param list; fn_ret : ty;
 
 type syntax = fn_def list
 
-type ctx_entry = ((ident, ty) prod, bool) prod
+type ctx_entry = (ident * ty) * bool
 
 type ctx = ctx_entry list
 
@@ -121,7 +79,7 @@ val usage_sub_bool : usage -> usage -> bool
 
 val ty_core_eqb : ty typeCore -> ty typeCore -> bool
 
-val ctx_lookup_b : ident -> ctx -> (ty, bool) prod option
+val ctx_lookup_b : ident -> ctx -> (ty * bool) option
 
 val ctx_consume_b : ident -> ctx -> ctx option
 
@@ -133,11 +91,11 @@ val ctx_check_ok : ident -> ty -> ctx -> bool
 
 val lookup_fn_b : ident -> fn_def list -> fn_def option
 
-type rename_env = (ident, ident) prod list
+type rename_env = (ident * ident) list
 
 val lookup_rename : ident -> rename_env -> ident
 
-val max_ident_index : string -> ident list -> nat
+val max_ident_index : string -> ident list -> Big_int_Z.big_int
 
 val fresh_ident : ident -> ident list -> ident
 
@@ -165,20 +123,18 @@ val param_names : param list -> ident list
 
 val rename_place : rename_env -> place -> place
 
-val alpha_rename_expr :
-  rename_env -> ident list -> expr -> (expr, ident list) prod
+val alpha_rename_expr : rename_env -> ident list -> expr -> expr * ident list
 
 val alpha_rename_params :
-  rename_env -> ident list -> param list -> ((param list, rename_env) prod,
-  ident list) prod
+  rename_env -> ident list -> param list -> (param list * rename_env) * ident
+  list
 
-val alpha_rename_fn_def : ident list -> fn_def -> (fn_def, ident list) prod
+val alpha_rename_fn_def : ident list -> fn_def -> fn_def * ident list
 
-val alpha_rename_syntax_go : ident list -> syntax -> (syntax, ident list) prod
+val alpha_rename_syntax_go : ident list -> syntax -> syntax * ident list
 
-val alpha_rename_for_infer :
-  ctx -> fn_def list -> expr -> (fn_def list, expr) prod
+val alpha_rename_for_infer : ctx -> fn_def list -> expr -> fn_def list * expr
 
-val infer_core : fn_def list -> ctx -> expr -> (ty, ctx) prod infer_result
+val infer_core : fn_def list -> ctx -> expr -> (ty * ctx) infer_result
 
-val infer : fn_def list -> ctx -> expr -> (ty, ctx) prod infer_result
+val infer : fn_def list -> ctx -> expr -> (ty * ctx) infer_result

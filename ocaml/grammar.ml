@@ -65,10 +65,14 @@ expr ::= atom_expr
 atom_expr ::= "()"
             | INT_LIT
             | FLOAT_LIT
+            | "true"
+            | "false"
             | ID
             | "(" "drop" expr ")"
             | "(" "replace" ID atom_expr ")"
             | "(" ID atom_expr* ")"
+            | "if" atom_expr "{" block "}" "else" "{" block "}"
+            | "if" atom_expr "{" block "}"
 ```
 
 ## ty
@@ -82,6 +86,7 @@ ty ::= "affine"       ty_core
 ```
 ty_core ::= "isize"
            | "f64"
+           | "bool"
            | "()"
            | "&" ty
            | "&" "mut" ty
@@ -103,7 +108,7 @@ ID        ::= (alpha | "_") (alpha | digit | "_")*
 
 ## Reserved words
 `fn`, `let`, `in`, `mut`, `drop`, `replace`, `affine`, `linear`,
-`unrestricted`, `isize`, `f64`
+`unrestricted`, `isize`, `f64`, `if`, `else`, `true`, `false`, `bool`
 |}
 
 let print_grammar () = print_string grammar

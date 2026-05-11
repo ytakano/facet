@@ -337,6 +337,20 @@ let rec ctx_names = function
 let place_name p =
   p
 
+type infer_error =
+| ErrUnknownVar of ident
+| ErrAlreadyConsumed of ident
+| ErrTypeMismatch of ty typeCore * ty typeCore
+| ErrUsageMismatch of usage * usage
+| ErrFunctionNotFound of ident
+| ErrArityMismatch
+| ErrContextCheckFailed
+| ErrNotImplemented
+
+type 'a infer_result =
+| Infer_ok of 'a
+| Infer_err of infer_error
+
 (** val free_vars_expr : expr -> ident list **)
 
 let rec free_vars_expr = function
@@ -459,100 +473,111 @@ let alpha_rename_for_infer _UU0393_ fenv e =
   in
   let Pair (e', _) = alpha_rename_expr Nil used e in Pair (fenv', e')
 
-(** val infer_core : fn_def list -> ctx -> expr -> (ty, ctx) prod option **)
+(** val infer_core :
+    fn_def list -> ctx -> expr -> (ty, ctx) prod infer_result **)
 
 let rec infer_core fenv _UU0393_ = function
-| EUnit -> Some (Pair ((MkTy (UUnrestricted, TUnits)), _UU0393_))
+| EUnit -> Infer_ok (Pair ((MkTy (UUnrestricted, TUnits)), _UU0393_))
 | ELit l ->
   (match l with
-   | LInt _ -> Some (Pair ((MkTy (UUnrestricted, TIntegers)), _UU0393_))
-   | LFloat _ -> Some (Pair ((MkTy (UUnrestricted, TFloats)), _UU0393_)))
+   | LInt _ -> Infer_ok (Pair ((MkTy (UUnrestricted, TIntegers)), _UU0393_))
+   | LFloat _ -> Infer_ok (Pair ((MkTy (UUnrestricted, TFloats)), _UU0393_)))
 | EVar x ->
   (match ctx_lookup_b x _UU0393_ with
    | Some p ->
      let Pair (t, b) = p in
      (match usage_eqb (ty_usage t) UUnrestricted with
-      | True -> Some (Pair (t, _UU0393_))
+      | True -> Infer_ok (Pair (t, _UU0393_))
       | False ->
         (match b with
-         | True -> None
+         | True -> Infer_err (ErrAlreadyConsumed x)
          | False ->
            (match ctx_consume_b x _UU0393_ with
-            | Some _UU0393_' -> Some (Pair (t, _UU0393_'))
-            | None -> None)))
-   | None -> None)
+            | Some _UU0393_' -> Infer_ok (Pair (t, _UU0393_'))
+            | None -> Infer_err (ErrUnknownVar x))))
+   | None -> Infer_err (ErrUnknownVar x))
 | ELet (_, x, t, e1, e2) ->
   (match infer_core fenv _UU0393_ e1 with
-   | Some p ->
+   | Infer_ok p ->
      let Pair (t1, _UU0393_1) = p in
-     (match match ty_core_eqb (ty_core t1) (ty_core t) with
-            | True -> usage_sub_bool (ty_usage t1) (ty_usage t)
-            | False -> False with
+     (match ty_core_eqb (ty_core t1) (ty_core t) with
       | True ->
-        (match infer_core fenv (ctx_add_b x t _UU0393_1) e2 with
-         | Some p0 ->
-           let Pair (t2, _UU0393_2) = p0 in
-           (match ctx_check_ok x t _UU0393_2 with
-            | True -> Some (Pair (t2, (ctx_remove_b x _UU0393_2)))
-            | False -> None)
-         | None -> None)
-      | False -> None)
-   | None -> None)
-| ELetInfer (_, _, _, _) -> None
+        (match usage_sub_bool (ty_usage t1) (ty_usage t) with
+         | True ->
+           (match infer_core fenv (ctx_add_b x t _UU0393_1) e2 with
+            | Infer_ok p0 ->
+              let Pair (t2, _UU0393_2) = p0 in
+              (match ctx_check_ok x t _UU0393_2 with
+               | True -> Infer_ok (Pair (t2, (ctx_remove_b x _UU0393_2)))
+               | False -> Infer_err ErrContextCheckFailed)
+            | Infer_err err -> Infer_err err)
+         | False -> Infer_err (ErrUsageMismatch ((ty_usage t1), (ty_usage t))))
+      | False -> Infer_err (ErrTypeMismatch ((ty_core t1), (ty_core t))))
+   | Infer_err err -> Infer_err err)
+| ELetInfer (_, _, _, _) -> Infer_err ErrNotImplemented
 | ECall (fname, args) ->
   (match lookup_fn_b fname fenv with
    | Some fdef ->
      let go =
        let rec go _UU0393_0 as_ ps =
          match as_ with
-         | Nil -> (match ps with
-                   | Nil -> Some _UU0393_0
-                   | Cons (_, _) -> None)
+         | Nil ->
+           (match ps with
+            | Nil -> Infer_ok _UU0393_0
+            | Cons (_, _) -> Infer_err ErrArityMismatch)
          | Cons (e', es) ->
            (match ps with
-            | Nil -> None
+            | Nil -> Infer_err ErrArityMismatch
             | Cons (p, ps') ->
               (match infer_core fenv _UU0393_0 e' with
-               | Some p0 ->
+               | Infer_ok p0 ->
                  let Pair (t_e, _UU0393_1) = p0 in
-                 (match match ty_core_eqb (ty_core t_e) (ty_core p.param_ty) with
-                        | True ->
-                          usage_sub_bool (ty_usage t_e) (ty_usage p.param_ty)
-                        | False -> False with
-                  | True -> go _UU0393_1 es ps'
-                  | False -> None)
-               | None -> None))
+                 (match ty_core_eqb (ty_core t_e) (ty_core p.param_ty) with
+                  | True ->
+                    (match usage_sub_bool (ty_usage t_e) (ty_usage p.param_ty) with
+                     | True -> go _UU0393_1 es ps'
+                     | False ->
+                       Infer_err (ErrUsageMismatch ((ty_usage t_e),
+                         (ty_usage p.param_ty))))
+                  | False ->
+                    Infer_err (ErrTypeMismatch ((ty_core t_e),
+                      (ty_core p.param_ty))))
+               | Infer_err err -> Infer_err err))
        in go
      in
      (match go _UU0393_ args fdef.fn_params with
-      | Some _UU0393_' -> Some (Pair (fdef.fn_ret, _UU0393_'))
-      | None -> None)
-   | None -> None)
+      | Infer_ok _UU0393_' -> Infer_ok (Pair (fdef.fn_ret, _UU0393_'))
+      | Infer_err err -> Infer_err err)
+   | None -> Infer_err (ErrFunctionNotFound fname))
 | EReplace (p, e_new) ->
   (match ctx_lookup_b p _UU0393_ with
    | Some p0 ->
      let Pair (t_x, b) = p0 in
      (match b with
-      | True -> None
+      | True -> Infer_err (ErrAlreadyConsumed p)
       | False ->
         (match infer_core fenv _UU0393_ e_new with
-         | Some p1 ->
+         | Infer_ok p1 ->
            let Pair (t_new, _UU0393_') = p1 in
-           (match match ty_core_eqb (ty_core t_new) (ty_core t_x) with
-                  | True -> usage_sub_bool (ty_usage t_new) (ty_usage t_x)
-                  | False -> False with
-            | True -> Some (Pair (t_x, _UU0393_'))
-            | False -> None)
-         | None -> None))
-   | None -> None)
+           (match ty_core_eqb (ty_core t_new) (ty_core t_x) with
+            | True ->
+              (match usage_sub_bool (ty_usage t_new) (ty_usage t_x) with
+               | True -> Infer_ok (Pair (t_x, _UU0393_'))
+               | False ->
+                 Infer_err (ErrUsageMismatch ((ty_usage t_new),
+                   (ty_usage t_x))))
+            | False ->
+              Infer_err (ErrTypeMismatch ((ty_core t_new), (ty_core t_x))))
+         | Infer_err err -> Infer_err err))
+   | None -> Infer_err (ErrUnknownVar p))
 | EDrop e1 ->
   (match infer_core fenv _UU0393_ e1 with
-   | Some p ->
+   | Infer_ok p ->
      let Pair (_, _UU0393_') = p in
-     Some (Pair ((MkTy (UUnrestricted, TUnits)), _UU0393_'))
-   | None -> None)
+     Infer_ok (Pair ((MkTy (UUnrestricted, TUnits)), _UU0393_'))
+   | Infer_err err -> Infer_err err)
 
-(** val infer : fn_def list -> ctx -> expr -> (ty, ctx) prod option **)
+(** val infer : fn_def list -> ctx -> expr -> (ty, ctx) prod infer_result **)
 
 let infer fenv _UU0393_ e =
   let Pair (fenv', e') = alpha_rename_for_infer _UU0393_ fenv e in

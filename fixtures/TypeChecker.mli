@@ -145,6 +145,20 @@ val ctx_names : ctx -> ident list
 
 val place_name : place -> ident
 
+type infer_error =
+| ErrUnknownVar of ident
+| ErrAlreadyConsumed of ident
+| ErrTypeMismatch of ty typeCore * ty typeCore
+| ErrUsageMismatch of usage * usage
+| ErrFunctionNotFound of ident
+| ErrArityMismatch
+| ErrContextCheckFailed
+| ErrNotImplemented
+
+type 'a infer_result =
+| Infer_ok of 'a
+| Infer_err of infer_error
+
 val free_vars_expr : expr -> ident list
 
 val param_names : param list -> ident list
@@ -165,6 +179,6 @@ val alpha_rename_syntax_go : ident list -> syntax -> (syntax, ident list) prod
 val alpha_rename_for_infer :
   ctx -> fn_def list -> expr -> (fn_def list, expr) prod
 
-val infer_core : fn_def list -> ctx -> expr -> (ty, ctx) prod option
+val infer_core : fn_def list -> ctx -> expr -> (ty, ctx) prod infer_result
 
-val infer : fn_def list -> ctx -> expr -> (ty, ctx) prod option
+val infer : fn_def list -> ctx -> expr -> (ty, ctx) prod infer_result

@@ -134,6 +134,27 @@ Definition place_name (p : place) : ident :=
   | PVar x => x
   end.
 
+(* ------------------------------------------------------------------ *)
+(* Checker result/error types                                            *)
+(* ------------------------------------------------------------------ *)
+
+Inductive infer_error : Type :=
+  | ErrUnknownVar : ident -> infer_error
+  | ErrAlreadyConsumed : ident -> infer_error
+  | ErrTypeMismatch : TypeCore Ty -> TypeCore Ty -> infer_error
+  | ErrUsageMismatch : usage -> usage -> infer_error
+  | ErrFunctionNotFound : ident -> infer_error
+  | ErrArityMismatch : infer_error
+  | ErrContextCheckFailed : infer_error
+  | ErrNotImplemented : infer_error.
+
+Inductive infer_result (A : Type) : Type :=
+  | infer_ok : A -> infer_result A
+  | infer_err : infer_error -> infer_result A.
+
+Arguments infer_ok {_} _.
+Arguments infer_err {_} _.
+
 Fixpoint free_vars_expr (e : expr) : list ident :=
   match e with
   | EUnit => []
@@ -248,8 +269,8 @@ Definition alpha_rename_for_infer (Γ : ctx) (fenv : list fn_def)
 (* Type inference                                                        *)
 (*                                                                      *)
 (* infer_core fenv Γ e = Some (T, Γ')                                   *)
-(*   Returns the type T and the updated context Γ' after e is typed.    *)
-(* Returns None on any type or usage error.                              *)
+(*   Returns the type T and the updated context Γ' after e is typed.      *)
+(*   Returns infer_err on any type or usage error.                       *)
 (*                                                                      *)
 (* The ECall case uses an inline local fixpoint to process the argument  *)
 (* list without requiring a mutual fixpoint (which complicates           *)
@@ -257,106 +278,110 @@ Definition alpha_rename_for_infer (Γ : ctx) (fenv : list fn_def)
 (* ------------------------------------------------------------------ *)
 
 Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
-    : option (Ty * ctx) :=
+    : infer_result (Ty * ctx) :=
   match e with
 
   | EUnit =>
-      Some (MkTy UUnrestricted TUnits, Γ)
+      infer_ok (MkTy UUnrestricted TUnits, Γ)
 
   | ELit (LInt _) =>
-      Some (MkTy UUnrestricted TIntegers, Γ)
+      infer_ok (MkTy UUnrestricted TIntegers, Γ)
 
   | ELit (LFloat _) =>
-      Some (MkTy UUnrestricted TFloats, Γ)
+      infer_ok (MkTy UUnrestricted TFloats, Γ)
 
   | EVar x =>
       match ctx_lookup_b x Γ with
-      | None        => None
+      | None        => infer_err (ErrUnknownVar x)
       | Some (T, b) =>
           if usage_eqb (ty_usage T) UUnrestricted
-          then Some (T, Γ)
+          then infer_ok (T, Γ)
           else if b
-               then None  (* already consumed *)
+               then infer_err (ErrAlreadyConsumed x)
                else match ctx_consume_b x Γ with
-                    | None    => None
-                    | Some Γ' => Some (T, Γ')
+                    | None    => infer_err (ErrUnknownVar x)
+                    | Some Γ' => infer_ok (T, Γ')
                     end
       end
 
   | ELet m x T e1 e2 =>
       match infer_core fenv Γ e1 with
-      | None          => None
-      | Some (T1, Γ1) =>
-          if ty_core_eqb (ty_core T1) (ty_core T) &&
-             usage_sub_bool (ty_usage T1) (ty_usage T)
-          then
+      | infer_err err          => infer_err err
+      | infer_ok (T1, Γ1) =>
+          if ty_core_eqb (ty_core T1) (ty_core T) then
+            if usage_sub_bool (ty_usage T1) (ty_usage T) then
             match infer_core fenv (ctx_add_b x T Γ1) e2 with
-            | None          => None
-            | Some (T2, Γ2) =>
+            | infer_err err          => infer_err err
+            | infer_ok (T2, Γ2) =>
                 if ctx_check_ok x T Γ2
-                then Some (T2, ctx_remove_b x Γ2)
-                else None
+                then infer_ok (T2, ctx_remove_b x Γ2)
+                else infer_err ErrContextCheckFailed
             end
-          else None
+            else infer_err (ErrUsageMismatch (ty_usage T1) (ty_usage T))
+          else infer_err (ErrTypeMismatch (ty_core T1) (ty_core T))
       end
 
   | EDrop e1 =>
       match infer_core fenv Γ e1 with
-      | None         => None
-      | Some (_, Γ') => Some (MkTy UUnrestricted TUnits, Γ')
+      | infer_err err          => infer_err err
+      | infer_ok (_, Γ') => infer_ok (MkTy UUnrestricted TUnits, Γ')
       end
 
   | EReplace (PVar x) e_new =>
       match ctx_lookup_b x Γ with
-      | None              => None
-      | Some (_, true)    => None
+      | None              => infer_err (ErrUnknownVar x)
+      | Some (_, true)    => infer_err (ErrAlreadyConsumed x)
       | Some (T_x, false) =>
           match infer_core fenv Γ e_new with
-          | None            => None
-          | Some (T_new, Γ') =>
-              if ty_core_eqb (ty_core T_new) (ty_core T_x) &&
-                 usage_sub_bool (ty_usage T_new) (ty_usage T_x)
-              then Some (T_x, Γ')
-              else None
+          | infer_err err            => infer_err err
+          | infer_ok (T_new, Γ') =>
+              if ty_core_eqb (ty_core T_new) (ty_core T_x) then
+                if usage_sub_bool (ty_usage T_new) (ty_usage T_x)
+                then infer_ok (T_x, Γ')
+                else infer_err (ErrUsageMismatch (ty_usage T_new) (ty_usage T_x))
+              else infer_err (ErrTypeMismatch (ty_core T_new) (ty_core T_x))
           end
       end
 
   | ECall fname args =>
       match lookup_fn_b fname fenv with
-      | None      => None
+      | None      => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
           (* Process argument list with an inline fixpoint so that
              Rocq's termination checker sees the structural recursion
              clearly: each arg is a sub-term of the args field of ECall. *)
           let fix go (Γ0 : ctx) (as_ : list expr) (ps : list param)
-              : option ctx :=
+              : infer_result ctx :=
             match as_, ps with
-            | [],       []       => Some Γ0
-            | [],       _ :: _   => None
-            | _ :: _,   []       => None
+            | [],       []       => infer_ok Γ0
+            | [],       _ :: _   => infer_err ErrArityMismatch
+            | _ :: _,   []       => infer_err ErrArityMismatch
             | e' :: es, p :: ps' =>
                 match infer_core fenv Γ0 e' with
-                | None            => None
-                | Some (T_e, Γ1) =>
-                    if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) &&
-                       usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))
-                    then go Γ1 es ps'
-                    else None
+                | infer_err err            => infer_err err
+                | infer_ok (T_e, Γ1) =>
+                    if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) then
+                      if usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))
+                      then go Γ1 es ps'
+                      else infer_err
+                        (ErrUsageMismatch (ty_usage T_e) (ty_usage (param_ty p)))
+                    else infer_err
+                      (ErrTypeMismatch (ty_core T_e) (ty_core (param_ty p)))
                 end
             end
           in
           match go Γ args (fn_params fdef) with
-          | None    => None
-          | Some Γ' => Some (fn_ret fdef, Γ')
+          | infer_err err => infer_err err
+          | infer_ok Γ' => infer_ok (fn_ret fdef, Γ')
           end
       end
 
-  | ELetInfer _ _ _ _ => None  (* out of scope *)
+  | ELetInfer _ _ _ _ => infer_err ErrNotImplemented  (* out of scope *)
 
   end.
 
 Definition infer (fenv : list fn_def) (Γ : ctx) (e : expr)
-    : option (Ty * ctx) :=
+    : infer_result (Ty * ctx) :=
   let (fenv', e') := alpha_rename_for_infer Γ fenv e in
   infer_core fenv' Γ e'.
 
@@ -365,19 +390,20 @@ Definition infer (fenv : list fn_def) (Γ : ctx) (e : expr)
 (* ------------------------------------------------------------------ *)
 
 Fixpoint infer_args (fenv : list fn_def) (Γ : ctx)
-    (args : list expr) (params : list param) : option ctx :=
+    (args : list expr) (params : list param) : infer_result ctx :=
   match args, params with
-  | [],       []       => Some Γ
-  | [],       _ :: _   => None
-  | _ :: _,   []       => None
+  | [],       []       => infer_ok Γ
+  | [],       _ :: _   => infer_err ErrArityMismatch
+  | _ :: _,   []       => infer_err ErrArityMismatch
   | e :: es,  p :: ps  =>
       match infer_core fenv Γ e with
-      | None           => None
-      | Some (T_e, Γ1) =>
-          if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) &&
-             usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))
-          then infer_args fenv Γ1 es ps
-          else None
+      | infer_err err            => infer_err err
+      | infer_ok (T_e, Γ1) =>
+          if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) then
+            if usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))
+            then infer_args fenv Γ1 es ps
+            else infer_err (ErrUsageMismatch (ty_usage T_e) (ty_usage (param_ty p)))
+          else infer_err (ErrTypeMismatch (ty_core T_e) (ty_core (param_ty p)))
       end
   end.
 

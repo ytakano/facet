@@ -51,11 +51,28 @@ let () =
     Grammar.print_grammar ();
     exit 0
   end;
-  if Array.length args < 2 then begin
-    Printf.eprintf "Usage: %s [--generate-grammar] FILE\n" args.(0);
+  (* Parse optional --emit-fir <outfile> before the source file argument *)
+  let emit_fir_file = ref None in
+  let i = ref 1 in
+  while !i < Array.length args && String.length args.(!i) > 0
+        && args.(!i).[0] = '-' do
+    if args.(!i) = "--emit-fir" then begin
+      if !i + 1 >= Array.length args then begin
+        Printf.eprintf "Error: --emit-fir requires a filename argument\n";
+        exit 1
+      end;
+      emit_fir_file := Some args.(!i + 1);
+      i := !i + 2
+    end else begin
+      Printf.eprintf "Error: unknown option: %s\n" args.(!i);
+      exit 1
+    end
+  done;
+  if !i >= Array.length args then begin
+    Printf.eprintf "Usage: %s [--emit-fir <outfile>] [--generate-grammar] FILE\n" args.(0);
     exit 1
   end;
-  let filename = args.(1) in
+  let filename = args.(!i) in
   let ic = try open_in filename
     with Sys_error msg ->
       Printf.eprintf "Error: cannot open file: %s\n" msg;
@@ -106,4 +123,5 @@ let () =
         ok := false
       end
   ) fn_defs;
-  if not !ok then exit 1
+  if not !ok then exit 1;
+  Option.iter (fun fname -> Fir.emit_fir fname fn_defs) !emit_fir_file

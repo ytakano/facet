@@ -1876,11 +1876,11 @@ Proof.
          { intros Hin. apply (Hdisj px); simpl; [left; reflexivity | exact Hin]. }
          exists Γ0. split.
          { eapply T_BorrowShared.
-           - lazymatch goal with
+           lazymatch goal with
              | Hlookup : ctx_lookup (lookup_rename px ρ) ?Γrx = Some (?Tx, false) |- _ =>
                exact (ctx_alpha_lookup_backward ρ Γ0 Γrx px Tx false Hctx Hsafe Hlookup)
              end.
-           - assumption. }
+         }
          { exact Hctx. }
       -- (* T_BorrowMut *)
          assert (Hsafe : ~ In px (rename_range ρ)).
@@ -1891,7 +1891,6 @@ Proof.
              | Hlookup : ctx_lookup (lookup_rename px ρ) ?Γrx = Some (?Tx, false) |- _ =>
                exact (ctx_alpha_lookup_backward ρ Γ0 Γrx px Tx false Hctx Hsafe Hlookup)
              end.
-           - assumption.
            - lazymatch goal with
              | Hmut : ctx_lookup_mut (lookup_rename px ρ) ?Γrx = Some ?m |- _ =>
                exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γrx px m Hctx Hsafe Hmut)
@@ -1905,11 +1904,11 @@ Proof.
            apply (Hdisj (place_name q)); simpl; [left; reflexivity | exact Hin]. }
          exists Γ0. split.
          { eapply T_ReBorrowShared.
-           - lazymatch goal with
+           lazymatch goal with
              | Hplace : typed_place fenvr n ?Γrx (rename_place ρ q) _ |- _ =>
                exact (alpha_rename_typed_place_backward fenv0 fenvr n ρ Γ0 Γrx q _ Hctx Hsafe Hplace)
              end.
-           - assumption. }
+         }
          { exact Hctx. }
       -- (* T_ReBorrowMut *)
          assert (Hsafe : ~ In (place_root q) (rename_range ρ)).
@@ -1917,11 +1916,11 @@ Proof.
            apply (Hdisj (place_name q)); simpl; [left; reflexivity | exact Hin]. }
          exists Γ0. split.
          { eapply T_ReBorrowMut.
-           - lazymatch goal with
+           lazymatch goal with
              | Hplace : typed_place fenvr n ?Γrx (rename_place ρ q) _ |- _ =>
                exact (alpha_rename_typed_place_backward fenv0 fenvr n ρ Γ0 Γrx q _ Hctx Hsafe Hplace)
              end.
-           - assumption. }
+         }
          { exact Hctx. }
   + (* EDeref *)
     destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.

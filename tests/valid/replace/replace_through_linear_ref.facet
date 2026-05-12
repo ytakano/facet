@@ -1,0 +1,6 @@
+fn f(mut x: linear isize, y: linear isize) -> unrestricted () {
+    let r: affine &mut linear isize = (&mut x);
+    let old: linear isize = (replace *r y);
+    (drop old);
+    (drop x)
+}

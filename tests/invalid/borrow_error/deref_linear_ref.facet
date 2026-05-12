@@ -1,0 +1,4 @@
+fn bad(x: linear isize) -> linear isize {
+    let r: unrestricted &linear isize = (&x) in
+    (*r)
+}

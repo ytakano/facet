@@ -1,0 +1,4 @@
+fn f(x: linear isize) -> unrestricted () {
+    let r: unrestricted &linear isize = (&x) in
+    (drop x)
+}

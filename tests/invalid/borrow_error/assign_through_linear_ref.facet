@@ -1,0 +1,4 @@
+fn bad(mut x: linear isize, y: linear isize) -> unrestricted () {
+    let r: affine &mut linear isize = (&mut x) in
+    (*r = y)
+}

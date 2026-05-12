@@ -259,7 +259,6 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
      - result type is &'n T where LVar n is the function's local lifetime *)
   | T_BorrowShared : forall Γ x T,
       ctx_lookup x Γ = Some (T, false) ->
-      ty_usage T <> ULinear ->
       typed fenv n Γ (EBorrow RShared (PVar x))
         (MkTy UUnrestricted (TRef (LVar n) RShared T)) Γ
 
@@ -271,7 +270,6 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
      - result type is &'n mut T *)
   | T_BorrowMut : forall Γ x T,
       ctx_lookup x Γ = Some (T, false) ->
-      ty_usage T <> ULinear ->
       ctx_lookup_mut x Γ = Some MMutable ->
       typed fenv n Γ (EBorrow RUnique (PVar x))
         (MkTy UAffine (TRef (LVar n) RUnique T)) Γ
@@ -296,14 +294,12 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
   (* &*p — shared re-borrow: p has any reference type &'a rk T *)
   | T_ReBorrowShared : forall Γ p la rk T u_r,
       typed_place fenv n Γ p (MkTy u_r (TRef la rk T)) ->
-      ty_usage (MkTy u_r (TRef la rk T)) <> ULinear ->
       typed fenv n Γ (EBorrow RShared (PDeref p))
         (MkTy UUnrestricted (TRef (LVar n) RShared T)) Γ
 
   (* &mut *p — mutable re-borrow: p must have &mut T *)
   | T_ReBorrowMut : forall Γ p la T u_r,
       typed_place fenv n Γ p (MkTy u_r (TRef la RUnique T)) ->
-      ty_usage (MkTy u_r (TRef la RUnique T)) <> ULinear ->
       typed fenv n Γ (EBorrow RUnique (PDeref p))
         (MkTy UAffine (TRef (LVar n) RUnique T)) Γ
 

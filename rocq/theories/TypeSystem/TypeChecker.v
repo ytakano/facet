@@ -704,20 +704,17 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
       | None              => infer_err (ErrUnknownVar x)
       | Some (_, true)    => infer_err (ErrAlreadyConsumed x)
       | Some (T_x, false) =>
-          if usage_eqb (ty_usage T_x) ULinear
-          then infer_err (ErrUsageMismatch (ty_usage T_x) UAffine)
-          else
-            match rk with
-            | RUnique =>
-                (* &mut requires a mutable binding *)
-                match ctx_lookup_mut_b x Γ with
-                | Some MMutable =>
-                    infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_x), Γ)
-                | _ => infer_err (ErrImmutableBorrow x)
-                end
-            | RShared =>
-                infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_x), Γ)
-            end
+          match rk with
+          | RUnique =>
+              (* &mut requires a mutable binding *)
+              match ctx_lookup_mut_b x Γ with
+              | Some MMutable =>
+                  infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_x), Γ)
+              | _ => infer_err (ErrImmutableBorrow x)
+              end
+          | RShared =>
+              infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_x), Γ)
+          end
       end
 
   (* &*p (shared re-borrow): p has &T or &mut T, produce &T *)
@@ -727,9 +724,7 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
       | infer_ok T_p =>
           match ty_core T_p with
           | TRef _ _ T_inner =>
-              if usage_eqb (ty_usage T_p) ULinear
-              then infer_err (ErrUsageMismatch (ty_usage T_p) UAffine)
-              else infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_inner), Γ)
+              infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_inner), Γ)
           | c => infer_err (ErrNotAReference c)
           end
       end
@@ -741,9 +736,7 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
       | infer_ok T_p =>
           match ty_core T_p with
           | TRef _ RUnique T_inner =>
-              if usage_eqb (ty_usage T_p) ULinear
-              then infer_err (ErrUsageMismatch (ty_usage T_p) UAffine)
-              else infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_inner), Γ)
+              infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_inner), Γ)
           | c => infer_err (ErrNotAReference c)
           end
       end

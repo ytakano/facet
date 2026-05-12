@@ -617,22 +617,39 @@ Proof.
          end.
 
   (* EDeref e *)
-  + destruct (infer_core fenv n Γ e) as [[T_r Γ1] | err] eqn:He.
-    2: discriminate.
-    destruct (ty_core T_r) eqn:HcoreR; try discriminate.
-    lazymatch type of HcoreR with
-    | ty_core T_r = TRef ?la ?rk ?T_inner =>
-        destruct (usage_eqb (ty_usage T_inner) UUnrestricted) eqn:Hunr;
-        [| discriminate];
-        injection Hinfer as <- <-;
-        assert (Hte : typed fenv n Γ e T_r Γ1)
-          by (eapply IH; [simpl in Hlt; lia | exact He]);
-        assert (HTeq : T_r = MkTy (ty_usage T_r) (TRef la rk T_inner))
-          by (destruct T_r as [u c]; simpl in HcoreR; rewrite HcoreR; reflexivity);
-        rewrite HTeq in Hte;
-        eapply T_Deref;
-        [apply usage_eqb_true; exact Hunr | exact Hte]
-    end.
+  + destruct (expr_as_place e) as [p |] eqn:Hplace_expr.
+    * destruct (infer_place Γ p) as [T_r | err] eqn:Hplace; [|discriminate].
+      destruct (ty_core T_r) eqn:HcoreR; try discriminate.
+      lazymatch type of HcoreR with
+      | ty_core T_r = TRef ?la ?rk ?T_inner =>
+          destruct (usage_eqb (ty_usage T_inner) UUnrestricted) eqn:Hunr;
+          [| discriminate];
+          injection Hinfer as <- <-;
+          assert (HTeq : T_r = MkTy (ty_usage T_r) (TRef la rk T_inner))
+            by (destruct T_r as [u c]; simpl in HcoreR; rewrite HcoreR; reflexivity);
+          eapply T_Deref_Place with (p := p) (u_r := ty_usage T_r);
+          [ exact Hplace_expr
+          | apply usage_eqb_true; exact Hunr
+          | rewrite <- HTeq; eapply infer_place_sound; exact Hplace ]
+      end.
+    * destruct (infer_core fenv n Γ e) as [[T_r Γ1] | err] eqn:He.
+      2: discriminate.
+      destruct (ty_core T_r) eqn:HcoreR; try discriminate.
+      lazymatch type of HcoreR with
+      | ty_core T_r = TRef ?la ?rk ?T_inner =>
+          destruct (usage_eqb (ty_usage T_inner) UUnrestricted) eqn:Hunr;
+          [| discriminate];
+          injection Hinfer as <- <-;
+          assert (Hte : typed fenv n Γ e T_r Γ1)
+            by (eapply IH; [simpl in Hlt; lia | exact He]);
+          assert (HTeq : T_r = MkTy (ty_usage T_r) (TRef la rk T_inner))
+            by (destruct T_r as [u c]; simpl in HcoreR; rewrite HcoreR; reflexivity);
+          rewrite HTeq in Hte;
+          eapply T_Deref;
+          [ exact Hplace_expr
+          | apply usage_eqb_true; exact Hunr
+          | exact Hte]
+      end.
 
   (* EDrop e *)
   + destruct (infer_core fenv n Γ e) as [Htyped4 | err4] eqn:He.

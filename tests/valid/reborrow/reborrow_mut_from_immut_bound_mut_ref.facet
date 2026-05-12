@@ -1,5 +1,5 @@
 fn f(mut x: unrestricted isize) -> unrestricted () {
-    let r: unrestricted &mut unrestricted isize = (&mut x) in
-    let r2: unrestricted &mut unrestricted isize = (&mut *r) in
+    let r: affine &mut unrestricted isize = (&mut x) in
+    let r2: affine &mut unrestricted isize = (&mut *r) in
     (*r2 = 42)
 }

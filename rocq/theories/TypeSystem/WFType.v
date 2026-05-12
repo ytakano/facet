@@ -19,6 +19,7 @@ Inductive wf_type (Δ : region_ctx) : Ty -> Prop :=
     wf_type Δ ret ->
     wf_type Δ (MkTy u (TFn params ret))
 | WF_Ref      : forall u l rk T,
+    ref_usage_ok_b u rk = true ->
     wf_lifetime Δ l ->
     wf_type Δ T ->
     wf_type Δ (MkTy u (TRef l rk T)).
@@ -31,6 +32,7 @@ Example wf_shared_ref_isize :
   wf_type [] (MkTy UUnrestricted (TRef LStatic RShared (MkTy UUnrestricted TIntegers))).
 Proof.
   apply WF_Ref.
+  - reflexivity.
   - apply WF_LStatic.
   - apply WF_Integers.
 Qed.

@@ -167,8 +167,8 @@ Definition wf_lifetime_b (Δ : region_ctx) (l : lifetime) : bool :=
 
 Fixpoint wf_type_b (Δ : region_ctx) (T : Ty) : bool :=
   match T with
-  | MkTy _ (TRef l _ T_inner) =>
-      wf_lifetime_b Δ l && wf_type_b Δ T_inner
+  | MkTy u (TRef l rk T_inner) =>
+      ref_usage_ok_b u rk && wf_lifetime_b Δ l && wf_type_b Δ T_inner
   | MkTy _ (TFn ts r) =>
       forallb (wf_type_b Δ) ts && wf_type_b Δ r
   | _ => true
@@ -712,7 +712,7 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
                 (* &mut requires a mutable binding *)
                 match ctx_lookup_mut_b x Γ with
                 | Some MMutable =>
-                    infer_ok (MkTy UUnrestricted (TRef (LVar n) RUnique T_x), Γ)
+                    infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_x), Γ)
                 | _ => infer_err (ErrImmutableBorrow x)
                 end
             | RShared =>
@@ -743,23 +743,38 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
           | TRef _ RUnique T_inner =>
               if usage_eqb (ty_usage T_p) ULinear
               then infer_err (ErrUsageMismatch (ty_usage T_p) UAffine)
-              else infer_ok (MkTy UUnrestricted (TRef (LVar n) RUnique T_inner), Γ)
+              else infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_inner), Γ)
           | c => infer_err (ErrNotAReference c)
           end
       end
 
   | EDeref r =>
-      match infer_core fenv n Γ r with
-      | infer_err err => infer_err err
-      | infer_ok (T_r, Γ') =>
-          match ty_core T_r with
-          | TRef _ _ T_inner =>
-              (* Move-out through a reference is forbidden;
-                 only UUnrestricted inner types may be read via deref *)
-              if usage_eqb (ty_usage T_inner) UUnrestricted
-              then infer_ok (T_inner, Γ')
-              else infer_err (ErrUsageMismatch (ty_usage T_inner) UUnrestricted)
-          | c => infer_err (ErrNotAReference c)
+      match expr_as_place r with
+      | Some p =>
+          match infer_place Γ p with
+          | infer_err err => infer_err err
+          | infer_ok T_r =>
+              match ty_core T_r with
+              | TRef _ _ T_inner =>
+                  if usage_eqb (ty_usage T_inner) UUnrestricted
+                  then infer_ok (T_inner, Γ)
+                  else infer_err (ErrUsageMismatch (ty_usage T_inner) UUnrestricted)
+              | c => infer_err (ErrNotAReference c)
+              end
+          end
+      | None =>
+          match infer_core fenv n Γ r with
+          | infer_err err => infer_err err
+          | infer_ok (T_r, Γ') =>
+              match ty_core T_r with
+              | TRef _ _ T_inner =>
+                  (* Move-out through a reference is forbidden;
+                     only UUnrestricted inner types may be read via deref *)
+                  if usage_eqb (ty_usage T_inner) UUnrestricted
+                  then infer_ok (T_inner, Γ')
+                  else infer_err (ErrUsageMismatch (ty_usage T_inner) UUnrestricted)
+              | c => infer_err (ErrNotAReference c)
+              end
           end
       end
 

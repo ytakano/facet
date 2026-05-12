@@ -430,6 +430,117 @@ Proof.
     + exact H0.
 Qed.
 
+Lemma expr_as_place_alpha_rename_some_backward : forall ρ used e er used' pr,
+  alpha_rename_expr ρ used e = (er, used') ->
+  expr_as_place er = Some pr ->
+  exists p, expr_as_place e = Some p /\ pr = rename_place ρ p.
+Proof.
+  intros ρ used e. revert used.
+  induction e; intros used er used' pr Hrename Hplace; simpl in Hrename;
+    try (injection Hrename as <- _; simpl in Hplace; discriminate).
+  - injection Hrename as <- _. simpl in Hplace.
+    injection Hplace as <-.
+    exists (PVar i). split; reflexivity.
+  - destruct (alpha_rename_expr ρ used e1) as [e1r used1].
+    destruct (alpha_rename_expr
+      ((i, fresh_ident i (i :: free_vars_expr e2 ++ used1)) :: ρ)
+      (fresh_ident i (i :: free_vars_expr e2 ++ used1) ::
+       i :: free_vars_expr e2 ++ used1) e2).
+    injection Hrename as <- _. simpl in Hplace. discriminate.
+  - destruct (alpha_rename_expr ρ used e1) as [e1r used1].
+    destruct (alpha_rename_expr
+      ((i, fresh_ident i (i :: free_vars_expr e2 ++ used1)) :: ρ)
+      (fresh_ident i (i :: free_vars_expr e2 ++ used1) ::
+       i :: free_vars_expr e2 ++ used1) e2).
+    injection Hrename as <- _. simpl in Hplace. discriminate.
+  - destruct ((fix go (used0 : list ident) (args0 : list expr)
+                : list expr * list ident :=
+                 match args0 with
+                 | [] => ([], used0)
+                 | arg :: rest =>
+                     let (arg', used1) := alpha_rename_expr ρ used0 arg in
+                     let (rest', used2) := go used1 rest in
+                     (arg' :: rest', used2)
+                 end) used l).
+    injection Hrename as <- _. simpl in Hplace. discriminate.
+  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+    injection Hrename as <- _. simpl in Hplace. discriminate.
+  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+    injection Hrename as <- _. simpl in Hplace. discriminate.
+  - destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
+    injection Hrename as <- <-. simpl in Hplace.
+    destruct (expr_as_place er0) as [pr0 |] eqn:Hpr0; [|discriminate].
+    injection Hplace as <-.
+    destruct (IHe used er0 used0 pr0 He Hpr0) as [p [Hp Hrename_p]].
+    exists (PDeref p). split.
+    + simpl. rewrite Hp. reflexivity.
+    + simpl. rewrite Hrename_p. reflexivity.
+  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+    injection Hrename as <- _. simpl in Hplace. discriminate.
+  - destruct (alpha_rename_expr ρ used e1) as [e1r used1].
+    destruct (alpha_rename_expr ρ used1 e2) as [e2r used2].
+    destruct (alpha_rename_expr ρ used2 e3) as [e3r used3].
+    injection Hrename as <- _. simpl in Hplace. discriminate.
+Qed.
+
+Lemma expr_as_place_alpha_rename_none_backward : forall ρ used e er used',
+  alpha_rename_expr ρ used e = (er, used') ->
+  expr_as_place er = None ->
+  expr_as_place e = None.
+Proof.
+  intros ρ used e. revert used.
+  induction e; intros used er used' Hrename Hnone; simpl in Hrename;
+    try (injection Hrename as <- _; reflexivity).
+  - injection Hrename as <- _. simpl in Hnone. discriminate.
+  - destruct (alpha_rename_expr ρ used e1) as [e1r used1].
+    destruct (alpha_rename_expr
+      ((i, fresh_ident i (i :: free_vars_expr e2 ++ used1)) :: ρ)
+      (fresh_ident i (i :: free_vars_expr e2 ++ used1) ::
+       i :: free_vars_expr e2 ++ used1) e2).
+    injection Hrename as <- _. reflexivity.
+  - destruct (alpha_rename_expr ρ used e1) as [e1r used1].
+    destruct (alpha_rename_expr
+      ((i, fresh_ident i (i :: free_vars_expr e2 ++ used1)) :: ρ)
+      (fresh_ident i (i :: free_vars_expr e2 ++ used1) ::
+       i :: free_vars_expr e2 ++ used1) e2).
+    injection Hrename as <- _. reflexivity.
+  - destruct ((fix go (used0 : list ident) (args0 : list expr)
+                : list expr * list ident :=
+                 match args0 with
+                 | [] => ([], used0)
+                 | arg :: rest =>
+                     let (arg', used1) := alpha_rename_expr ρ used0 arg in
+                     let (rest', used2) := go used1 rest in
+                     (arg' :: rest', used2)
+                 end) used l).
+    injection Hrename as <- _. reflexivity.
+  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+    injection Hrename as <- _. reflexivity.
+  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+    injection Hrename as <- _. reflexivity.
+  - destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
+    injection Hrename as <- <-. simpl in Hnone.
+    destruct (expr_as_place er0) as [pr |] eqn:Hpr; [discriminate |].
+    simpl. rewrite (IHe used er0 used0 He Hpr). reflexivity.
+  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+    injection Hrename as <- _. reflexivity.
+  - destruct (alpha_rename_expr ρ used e1) as [e1r used1].
+    destruct (alpha_rename_expr ρ used1 e2) as [e2r used2].
+    destruct (alpha_rename_expr ρ used2 e3) as [e3r used3].
+    injection Hrename as <- _. reflexivity.
+Qed.
+
+Lemma expr_as_place_place_name_in_free_vars : forall e p,
+  expr_as_place e = Some p ->
+  In (place_name p) (free_vars_expr e).
+Proof.
+  induction e; intros p0 Hplace; simpl in Hplace; try discriminate.
+  - injection Hplace as <-. simpl. left. reflexivity.
+  - destruct (expr_as_place e) as [p1 |] eqn:Hp1; [|discriminate].
+    injection Hplace as <-. simpl.
+    exact (IHe p1 eq_refl).
+Qed.
+
 Lemma ctx_alpha_is_ok_backward : forall ρ Γ Γr x T,
   ctx_alpha ρ Γ Γr ->
   ~ In x (rename_range ρ) ->
@@ -1812,19 +1923,40 @@ Proof.
              end.
            - assumption. }
          { exact Hctx. }
-  + (* EDeref: like EDrop but uses T_Deref *)
+  + (* EDeref *)
     destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as <- _.
     inversion Htyped; subst.
-    lazymatch goal with
-    | Hte : typed fenvr n Γr er0 (MkTy ?u_r (TRef ?la ?rk T)) ?Γr1 |- _ =>
-      destruct (IH fenv0 fenvr n ρ Γ0 Γr e er0 used used0 (MkTy u_r (TRef la rk T)) Γr1
-        ltac:(simpl in Hlt; lia)
-        Hfenv Hctx Hctx_used Hrange_used Hdisj He Hte) as [Γ0' [Htyped0 Hctx0]]
-    end.
-    exists Γ0'. split.
-    { eapply T_Deref; [assumption | exact Htyped0]. }
-    { exact Hctx0. }
+    * lazymatch goal with
+      | Hte : typed fenvr n Γr er0 (MkTy ?u_r (TRef ?la ?rk T)) ?Γr1 |- _ =>
+        destruct (IH fenv0 fenvr n ρ Γ0 Γr e er0 used used0 (MkTy u_r (TRef la rk T)) Γr1
+          ltac:(simpl in Hlt; lia)
+          Hfenv Hctx Hctx_used Hrange_used Hdisj He Hte) as [Γ0' [Htyped0 Hctx0]]
+      end.
+      exists Γ0'. split.
+      { eapply T_Deref.
+        - eapply expr_as_place_alpha_rename_none_backward; eauto.
+        - assumption.
+        - exact Htyped0. }
+      { exact Hctx0. }
+    * destruct (expr_as_place_alpha_rename_some_backward ρ used e er0 used0 p He H0)
+        as [p0 [Hp0 Hpr]].
+      subst p.
+      assert (Hsafe : ~ In (place_root p0) (rename_range ρ)).
+      { rewrite <- place_name_root.
+        intros Hin.
+        apply (Hdisj (place_name p0)).
+        - simpl. eapply expr_as_place_place_name_in_free_vars. exact Hp0.
+        - exact Hin. }
+      exists Γ0. split.
+      { eapply T_Deref_Place.
+        - exact Hp0.
+        - assumption.
+        - lazymatch goal with
+          | Hplace : typed_place fenvr n ?Γrx (rename_place ρ p0) _ |- _ =>
+            exact (alpha_rename_typed_place_backward fenv0 fenvr n ρ Γ0 Γrx p0 _ Hctx Hsafe Hplace)
+          end. }
+      { exact Hctx. }
   + destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as <- _.
     inversion Htyped; subst.

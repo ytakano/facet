@@ -1,6 +1,6 @@
 fn bad(mut x: unrestricted isize) -> unrestricted isize {
-    let mut r: unrestricted &mut unrestricted isize = (&mut x) in
-    let mut rr: unrestricted &mut unrestricted &mut unrestricted isize = (&mut r) in
+    let mut r: affine &mut unrestricted isize = (&mut x) in
+    let mut rr: affine &mut affine &mut unrestricted isize = (&mut r) in
     let child: unrestricted &unrestricted isize = (&**rr) in
     (replace **rr 99)
 }

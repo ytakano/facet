@@ -1,5 +1,5 @@
 fn nested_assign(mut x: unrestricted isize) -> unrestricted () {
-    let mut r: unrestricted &mut unrestricted isize = (&mut x) in
-    let mut rr: unrestricted &mut unrestricted &mut unrestricted isize = (&mut r) in
+    let mut r: affine &mut unrestricted isize = (&mut x) in
+    let mut rr: affine &mut affine &mut unrestricted isize = (&mut r) in
     (**rr = 42)
 }

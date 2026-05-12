@@ -1,5 +1,5 @@
 fn mut_while_shared(mut x: unrestricted isize) -> unrestricted isize {
     let r1: unrestricted &unrestricted isize = (&x) in
-    let r2: unrestricted &mut unrestricted isize = (&mut x) in
+    let r2: affine &mut unrestricted isize = (&mut x) in
     (*r1)
 }

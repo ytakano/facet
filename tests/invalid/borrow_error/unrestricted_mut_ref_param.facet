@@ -1,0 +1,3 @@
+fn bad(r: unrestricted &mut unrestricted isize) -> unrestricted isize {
+    (*r)
+}

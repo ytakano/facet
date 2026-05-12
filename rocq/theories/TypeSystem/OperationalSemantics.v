@@ -198,7 +198,15 @@ Inductive eval (fenv : list fn_def) : store -> expr -> store -> value -> Prop :=
   (* *r: evaluate r to VRef x, then copy the value of x from the store.
      Only applicable when the inner type is UUnrestricted (copy semantics).
      The type checker enforces this; the store is unchanged. *)
+  | Eval_Deref_Place : forall s r p x e,
+      expr_as_place r = Some p ->
+      eval_place s p x ->
+      store_lookup x s = Some e ->
+      ty_usage (se_ty e) = UUnrestricted ->
+      eval fenv s (EDeref r) s (se_val e)
+
   | Eval_Deref : forall s s_r r x e,
+      expr_as_place r = None ->
       eval fenv s r s_r (VRef x) ->
       store_lookup x s_r = Some e ->
       ty_usage (se_ty e) = UUnrestricted ->

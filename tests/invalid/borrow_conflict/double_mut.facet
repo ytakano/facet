@@ -1,5 +1,5 @@
 fn double_mut(mut x: unrestricted isize) -> unrestricted isize {
-    let r1: unrestricted &mut unrestricted isize = (&mut x) in
-    let r2: unrestricted &mut unrestricted isize = (&mut x) in
+    let r1: affine &mut unrestricted isize = (&mut x) in
+    let r2: affine &mut unrestricted isize = (&mut x) in
     (*r1)
 }

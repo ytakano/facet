@@ -77,6 +77,8 @@ val ty_usage : ty -> usage
 
 val ty_core : ty -> ty typeCore
 
+val ref_usage_ok_b : usage -> ref_kind -> bool
+
 val apply_lt_lifetime : lifetime list -> lifetime -> lifetime
 
 val apply_lt_ty : lifetime list -> ty -> ty
@@ -107,6 +109,8 @@ type expr =
 | EDeref of expr
 | EDrop of expr
 | EIf of expr * expr * expr
+
+val expr_as_place : expr -> place option
 
 type param = { param_mutability : mutability; param_name : ident;
                param_ty : ty }

@@ -59,6 +59,17 @@ Inductive expr : Type :=
 | EDrop     : expr -> expr
 | EIf       : expr -> expr -> expr -> expr.
 
+Fixpoint expr_as_place (e : expr) : option place :=
+  match e with
+  | EVar x => Some (PVar x)
+  | EDeref e' =>
+      match expr_as_place e' with
+      | Some p => Some (PDeref p)
+      | None => None
+      end
+  | _ => None
+  end.
+
 Record param : Type := MkParam {
   param_mutability : mutability;
   param_name       : ident;

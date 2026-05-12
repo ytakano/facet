@@ -188,6 +188,14 @@ let ty_usage = function
 let ty_core = function
 | MkTy (_, c) -> c
 
+(** val ref_usage_ok_b : usage -> ref_kind -> bool **)
+
+let ref_usage_ok_b u = function
+| RShared -> true
+| RUnique -> (match u with
+              | UUnrestricted -> false
+              | _ -> true)
+
 (** val apply_lt_lifetime : lifetime list -> lifetime -> lifetime **)
 
 let rec apply_lt_lifetime _UU03c3_ = function
@@ -243,6 +251,16 @@ type expr =
 | EDeref of expr
 | EDrop of expr
 | EIf of expr * expr * expr
+
+(** val expr_as_place : expr -> place option **)
+
+let rec expr_as_place = function
+| EVar x -> Some (PVar x)
+| EDeref e' ->
+  (match expr_as_place e' with
+   | Some p -> Some (PDeref p)
+   | None -> None)
+| _ -> None
 
 type param = { param_mutability : mutability; param_name : ident;
                param_ty : ty }
@@ -607,12 +625,13 @@ let wf_lifetime_b _UU0394_ l = match l with
 (** val wf_type_b : region_ctx -> ty -> bool **)
 
 let rec wf_type_b _UU0394_ = function
-| MkTy (_, t0) ->
+| MkTy (u, t0) ->
   (match t0 with
    | TFn (ts, r) ->
      (&&) (forallb (wf_type_b _UU0394_) ts) (wf_type_b _UU0394_ r)
-   | TRef (l, _, t_inner) ->
-     (&&) (wf_lifetime_b _UU0394_ l) (wf_type_b _UU0394_ t_inner)
+   | TRef (l, rk, t_inner) ->
+     (&&) ((&&) (ref_usage_ok_b u rk) (wf_lifetime_b _UU0394_ l))
+       (wf_type_b _UU0394_ t_inner)
    | _ -> true)
 
 type rename_env = (ident * ident) list
@@ -1115,8 +1134,8 @@ let rec infer_core fenv n _UU0393_ = function
                            (match m with
                             | MImmutable -> Infer_err (ErrImmutableBorrow x)
                             | MMutable ->
-                              Infer_ok ((MkTy (UUnrestricted, (TRef ((LVar
-                                n), RUnique, t_x)))), _UU0393_))
+                              Infer_ok ((MkTy (UAffine, (TRef ((LVar n),
+                                RUnique, t_x)))), _UU0393_))
                          | None -> Infer_err (ErrImmutableBorrow x)))
          | None -> Infer_err (ErrUnknownVar x))
       | PDeref p ->
@@ -1150,8 +1169,8 @@ let rec infer_core fenv n _UU0393_ = function
                            (match m with
                             | MImmutable -> Infer_err (ErrImmutableBorrow x)
                             | MMutable ->
-                              Infer_ok ((MkTy (UUnrestricted, (TRef ((LVar
-                                n), RUnique, t_x)))), _UU0393_))
+                              Infer_ok ((MkTy (UAffine, (TRef ((LVar n),
+                                RUnique, t_x)))), _UU0393_))
                          | None -> Infer_err (ErrImmutableBorrow x)))
          | None -> Infer_err (ErrUnknownVar x))
       | PDeref p ->
@@ -1165,21 +1184,35 @@ let rec infer_core fenv n _UU0393_ = function
                | RUnique ->
                  if usage_eqb (ty_usage t_p) ULinear
                  then Infer_err (ErrUsageMismatch ((ty_usage t_p), UAffine))
-                 else Infer_ok ((MkTy (UUnrestricted, (TRef ((LVar n),
-                        RUnique, t_inner)))), _UU0393_))
+                 else Infer_ok ((MkTy (UAffine, (TRef ((LVar n), RUnique,
+                        t_inner)))), _UU0393_))
             | x -> Infer_err (ErrNotAReference x))
          | Infer_err err -> Infer_err err)))
 | EDeref r ->
-  (match infer_core fenv n _UU0393_ r with
-   | Infer_ok p ->
-     let (t_r, _UU0393_') = p in
-     (match ty_core t_r with
-      | TRef (_, _, t_inner) ->
-        if usage_eqb (ty_usage t_inner) UUnrestricted
-        then Infer_ok (t_inner, _UU0393_')
-        else Infer_err (ErrUsageMismatch ((ty_usage t_inner), UUnrestricted))
-      | x -> Infer_err (ErrNotAReference x))
-   | Infer_err err -> Infer_err err)
+  (match expr_as_place r with
+   | Some p ->
+     (match infer_place _UU0393_ p with
+      | Infer_ok t_r ->
+        (match ty_core t_r with
+         | TRef (_, _, t_inner) ->
+           if usage_eqb (ty_usage t_inner) UUnrestricted
+           then Infer_ok (t_inner, _UU0393_)
+           else Infer_err (ErrUsageMismatch ((ty_usage t_inner),
+                  UUnrestricted))
+         | x -> Infer_err (ErrNotAReference x))
+      | Infer_err err -> Infer_err err)
+   | None ->
+     (match infer_core fenv n _UU0393_ r with
+      | Infer_ok p ->
+        let (t_r, _UU0393_') = p in
+        (match ty_core t_r with
+         | TRef (_, _, t_inner) ->
+           if usage_eqb (ty_usage t_inner) UUnrestricted
+           then Infer_ok (t_inner, _UU0393_')
+           else Infer_err (ErrUsageMismatch ((ty_usage t_inner),
+                  UUnrestricted))
+         | x -> Infer_err (ErrNotAReference x))
+      | Infer_err err -> Infer_err err))
 | EDrop e1 ->
   (match infer_core fenv n _UU0393_ e1 with
    | Infer_ok p ->

@@ -274,7 +274,7 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
       ty_usage T <> ULinear ->
       ctx_lookup_mut x Γ = Some MMutable ->
       typed fenv n Γ (EBorrow RUnique (PVar x))
-        (MkTy UUnrestricted (TRef (LVar n) RUnique T)) Γ
+        (MkTy UAffine (TRef (LVar n) RUnique T)) Γ
 
   (* *r — dereference
      - r has reference type &'a rk T (with any usage u_r)
@@ -282,9 +282,16 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
        (Rust semantics; affine/linear values can only be accessed via EReplace)
      - the reference usage u_r determines whether r itself is consumed *)
   | T_Deref : forall Γ Γ' r la rk T u_r,
+      expr_as_place r = None ->
       ty_usage T = UUnrestricted ->
       typed fenv n Γ r (MkTy u_r (TRef la rk T)) Γ' ->
       typed fenv n Γ (EDeref r) T Γ'
+
+  | T_Deref_Place : forall Γ r p la rk T u_r,
+      expr_as_place r = Some p ->
+      ty_usage T = UUnrestricted ->
+      typed_place fenv n Γ p (MkTy u_r (TRef la rk T)) ->
+      typed fenv n Γ (EDeref r) T Γ
 
   (* &*p — shared re-borrow: p has any reference type &'a rk T *)
   | T_ReBorrowShared : forall Γ p la rk T u_r,
@@ -298,7 +305,7 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
       typed_place fenv n Γ p (MkTy u_r (TRef la RUnique T)) ->
       ty_usage (MkTy u_r (TRef la RUnique T)) <> ULinear ->
       typed fenv n Γ (EBorrow RUnique (PDeref p))
-        (MkTy UUnrestricted (TRef (LVar n) RUnique T)) Γ
+        (MkTy UAffine (TRef (LVar n) RUnique T)) Γ
 
   (* *p <- e_new where p : &mut T: write through mutable reference, return old T *)
   | T_Replace_Deref : forall Γ Γ' p la T T_new e_new u_r,

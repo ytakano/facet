@@ -1,0 +1,5 @@
+fn bad(mut x: unrestricted isize) -> unrestricted isize {
+    let r: affine &mut unrestricted isize = (&mut x) in
+    let s: affine &mut unrestricted isize = r in
+    (*r)
+}

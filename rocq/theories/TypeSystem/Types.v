@@ -46,6 +46,16 @@ match T with
 | MkTy _ c => c
 end.
 
+Definition ref_usage_ok_b (u : usage) (rk : ref_kind) : bool :=
+  match rk with
+  | RShared => true
+  | RUnique =>
+      match u with
+      | UUnrestricted => false
+      | UAffine | ULinear => true
+      end
+  end.
+
 
 (* ------------------------------------------------------------------ *)
 (* Lifetime substitution on types                                        *)

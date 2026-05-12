@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Types Syntax TypingRules.
+From Facet.TypeSystem Require Import Lifetime Types Syntax TypingRules.
 From Stdlib Require Import List String Bool ZArith.
 Import ListNotations.
 
@@ -48,7 +48,8 @@ Fixpoint ty_eqb (T1 T2 : Ty) {struct T1} : bool :=
              | t1 :: l1', t2 :: l2' => ty_eqb t1 t2 && go l1' l2'
              | _, _ => false
              end) ts1 ts2 && ty_eqb r1 r2
-      | TRef k1 t1, TRef k2 t2 => ref_kind_eqb k1 k2 && ty_eqb t1 t2
+      | TRef l1 k1 t1, TRef l2 k2 t2 =>
+          lifetime_eqb l1 l2 && ref_kind_eqb k1 k2 && ty_eqb t1 t2
       | _, _ => false
       end
   end.
@@ -67,7 +68,8 @@ Definition ty_core_eqb (c1 c2 : TypeCore Ty) : bool :=
          | t1 :: l1', t2 :: l2' => ty_eqb t1 t2 && go l1' l2'
          | _, _ => false
          end) ts1 ts2 && ty_eqb r1 r2
-  | TRef k1 t1, TRef k2 t2 => ref_kind_eqb k1 k2 && ty_eqb t1 t2
+  | TRef l1 k1 t1, TRef l2 k2 t2 =>
+      lifetime_eqb l1 l2 && ref_kind_eqb k1 k2 && ty_eqb t1 t2
   | _, _ => false
   end.
 
@@ -602,7 +604,7 @@ Fixpoint ty_depth (T : Ty) : nat :=
                | [] => ty_depth r
                | t :: l' => S (ty_depth t) + go l'
                end) ts)
-      | TRef _ t => S (ty_depth t)
+      | TRef _ _ t => S (ty_depth t)
       | _ => 1
       end
   end.

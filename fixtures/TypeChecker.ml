@@ -55,6 +55,21 @@ let rec forallb f = function
 | [] -> true
 | a :: l0 -> (&&) (f a) (forallb f l0)
 
+type lifetime =
+| LStatic
+| LVar of Big_int_Z.big_int
+
+(** val lifetime_eqb : lifetime -> lifetime -> bool **)
+
+let lifetime_eqb l1 l2 =
+  match l1 with
+  | LStatic -> (match l2 with
+                | LStatic -> true
+                | LVar _ -> false)
+  | LVar n1 -> (match l2 with
+                | LStatic -> false
+                | LVar n2 -> Nat.eqb n1 n2)
+
 type mutability =
 | MImmutable
 | MMutable
@@ -75,7 +90,7 @@ type 'a typeCore =
 | TBooleans
 | TNamed of string
 | TFn of 'a list * 'a
-| TRef of ref_kind * 'a
+| TRef of lifetime * ref_kind * 'a
 
 type ty =
 | MkTy of usage * ty typeCore
@@ -252,9 +267,10 @@ let rec ty_eqb t1 t2 =
              in go ts1 ts2)
             (ty_eqb r1 r2)
         | _ -> false)
-     | TRef (k1, t3) ->
+     | TRef (l1, k1, t3) ->
        (match c2 with
-        | TRef (k2, t4) -> (&&) (ref_kind_eqb k1 k2) (ty_eqb t3 t4)
+        | TRef (l2, k2, t4) ->
+          (&&) ((&&) (lifetime_eqb l1 l2) (ref_kind_eqb k1 k2)) (ty_eqb t3 t4)
         | _ -> false))
 
 (** val ty_core_eqb : ty typeCore -> ty typeCore -> bool **)
@@ -292,9 +308,10 @@ let ty_core_eqb c1 c2 =
           in go ts1 ts2)
          (ty_eqb r1 r2)
      | _ -> false)
-  | TRef (k1, t1) ->
+  | TRef (l1, k1, t1) ->
     (match c2 with
-     | TRef (k2, t2) -> (&&) (ref_kind_eqb k1 k2) (ty_eqb t1 t2)
+     | TRef (l2, k2, t2) ->
+       (&&) ((&&) (lifetime_eqb l1 l2) (ref_kind_eqb k1 k2)) (ty_eqb t1 t2)
      | _ -> false)
 
 (** val ctx_lookup_b : ident -> ctx -> (ty * bool) option **)

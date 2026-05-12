@@ -1,4 +1,5 @@
 From Stdlib.Strings Require Import String.
+From Facet.TypeSystem Require Import Lifetime.
 
 Inductive mutability :=
 | MImmutable
@@ -20,7 +21,7 @@ Inductive TypeCore (A : Type) : Type :=
 | TBooleans : TypeCore A
 | TNamed    : string -> TypeCore A
 | TFn       : list A -> A -> TypeCore A
-| TRef      : ref_kind -> A -> TypeCore A.
+| TRef      : lifetime -> ref_kind -> A -> TypeCore A.
 
 Arguments TUnits {A}.
 Arguments TIntegers {A}.
@@ -28,7 +29,7 @@ Arguments TFloats {A}.
 Arguments TBooleans {A}.
 Arguments TNamed {A} _.
 Arguments TFn {A} _ _.
-Arguments TRef {A} _ _.
+Arguments TRef {A} _ _ _.
 
 Inductive Ty : Type :=
 | MkTy : usage -> TypeCore Ty -> Ty.

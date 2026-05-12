@@ -203,8 +203,8 @@ and pp_ty_core = function
   | TNamed s  -> s
   | TFn (ts, r) ->
     "fn(" ^ String.concat ", " (List.map pp_ty ts) ^ ") -> " ^ pp_ty r
-  | TRef (RShared, t) -> "& " ^ pp_ty t
-  | TRef (RUnique, t) -> "&mut " ^ pp_ty t
+  | TRef (_, RShared, t) -> "& " ^ pp_ty t
+  | TRef (_, RUnique, t) -> "&mut " ^ pp_ty t
 
 let pp_ident (name, idx) =
   if name = "_" then "_"

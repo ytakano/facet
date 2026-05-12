@@ -18,6 +18,12 @@ module Nat :
 
 val forallb : ('a1 -> bool) -> 'a1 list -> bool
 
+type lifetime =
+| LStatic
+| LVar of Big_int_Z.big_int
+
+val lifetime_eqb : lifetime -> lifetime -> bool
+
 type mutability =
 | MImmutable
 | MMutable
@@ -38,7 +44,7 @@ type 'a typeCore =
 | TBooleans
 | TNamed of string
 | TFn of 'a list * 'a
-| TRef of ref_kind * 'a
+| TRef of lifetime * ref_kind * 'a
 
 type ty =
 | MkTy of usage * ty typeCore

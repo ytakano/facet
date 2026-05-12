@@ -125,8 +125,8 @@ ty_core:
   | KW_F64   { TFloats }
   | KW_BOOL  { TBooleans }
   | LPAREN; RPAREN { TUnits }
-  | AMP; t = ty { TRef (RShared, t) }
-  | AMP; KW_MUT; t = ty { TRef (RUnique, t) }
+  | AMP; t = ty { TRef (LStatic, RShared, t) }
+  | AMP; KW_MUT; t = ty { TRef (LStatic, RUnique, t) }
   | KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty
     { TFn (ts, ret) }
 

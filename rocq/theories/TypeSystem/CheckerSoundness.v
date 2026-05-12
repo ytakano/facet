@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Types Syntax TypingRules TypeChecker AlphaRenaming.
+From Facet.TypeSystem Require Import Lifetime Types Syntax TypingRules TypeChecker AlphaRenaming.
 From Stdlib Require Import List String Bool Lia PeanoNat Program.Equality.
 Import ListNotations.
 
@@ -131,8 +131,8 @@ Proof.
         (destruct u1, u2; simpl in Hu; try discriminate; reflexivity).
       subst u2.
       f_equal.
-      destruct c1 as [| | | | s1 | ts1 r1 | k1 t1],
-               c2 as [| | | | s2 | ts2 r2 | k2 t2];
+      destruct c1 as [| | | | s1 | ts1 r1 | l1 k1 t1],
+               c2 as [| | | | s2 | ts2 r2 | l2 k2 t2];
         simpl in Hc; try discriminate.
       + reflexivity.
       + reflexivity.
@@ -155,7 +155,9 @@ Proof.
           { apply IHts;
             [ exact (Nat.lt_trans _ _ _ (ty_depth_fn_cons_lt u1 t1 ts1' r1) Hlt)
             | exact Hts]. }
-      + apply andb_true_iff in Hc as [Hk Ht].
+      + apply andb_true_iff in Hc as [Hlk Ht].
+        apply andb_true_iff in Hlk as [Hl Hk].
+        apply lifetime_eqb_eq in Hl. subst l2.
         apply ref_kind_eqb_true in Hk. subst k2.
         f_equal. apply IH; [simpl in Hlt; lia | exact Ht].
   }
@@ -167,8 +169,8 @@ Lemma ty_core_eqb_true : forall c1 c2,
   ty_core_eqb c1 c2 = true -> c1 = c2.
 Proof.
   intros c1 c2 H.
-  destruct c1 as [| | | | s1 | ts1 r1 | k1 t1],
-           c2 as [| | | | s2 | ts2 r2 | k2 t2];
+  destruct c1 as [| | | | s1 | ts1 r1 | l1 k1 t1],
+           c2 as [| | | | s2 | ts2 r2 | l2 k2 t2];
     simpl in H; try discriminate.
   - reflexivity.
   - reflexivity.
@@ -186,7 +188,9 @@ Proof.
       f_equal.
       * apply ty_eqb_true. exact Ht.
       * apply IHts. exact Hts.
-  - apply andb_true_iff in H as [Hk Ht].
+  - apply andb_true_iff in H as [Hlk Ht].
+    apply andb_true_iff in Hlk as [Hl Hk].
+    apply lifetime_eqb_eq in Hl. subst l2.
     apply ref_kind_eqb_true in Hk. subst k2.
     f_equal. apply ty_eqb_true. exact Ht.
 Qed.

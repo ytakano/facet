@@ -15,8 +15,8 @@ let rec string_of_ty_core : ty typeCore -> string = function
     Printf.sprintf "fn(%s) -> %s"
       (String.concat ", " (List.map string_of_ty ts))
       (string_of_ty r)
-  | TRef (RShared, t) -> "&" ^ string_of_ty t
-  | TRef (RUnique, t) -> "&mut " ^ string_of_ty t
+  | TRef (_, RShared, t) -> "&" ^ string_of_ty t
+  | TRef (_, RUnique, t) -> "&mut " ^ string_of_ty t
 
 and string_of_ty (MkTy (u, c)) =
   string_of_usage u ^ " " ^ string_of_ty_core c

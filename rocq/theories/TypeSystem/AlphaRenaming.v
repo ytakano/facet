@@ -1105,8 +1105,7 @@ Lemma typed_args_cons_inv : forall fenv n Γ er ers pr psr Γ',
   typed_args fenv n Γ (er :: ers) (pr :: psr) Γ' ->
   exists T Γ1,
     typed fenv n Γ er T Γ1 /\
-    ty_core T = ty_core (param_ty pr) /\
-    usage_sub (ty_usage T) (ty_usage (param_ty pr)) /\
+    ty_compatible T (param_ty pr) /\
     typed_args fenv n Γ1 ers psr Γ'.
 Proof.
   intros fenv n Γ er ers pr psr Γ' Htyped.
@@ -1212,7 +1211,7 @@ Proof.
       as [p [ps [Hps0 [Hshape Hparams_tail]]]].
     subst ps0.
     destruct (typed_args_cons_inv fenvr n Γr ar restr pr psr_tail Γr' Htyped_args)
-      as [Targ [Γr1 [Htyped_arg_r [Hcore [Hsub Htyped_tail_r]]]]].
+      as [Targ [Γr1 [Htyped_arg_r [Hcompat Htyped_tail_r]]]].
     destruct (Hexpr Γ0 Γr used arg ar used1 Targ Γr1)
       as [Γ01 [Htyped_arg Hctx_arg]].
     + left. reflexivity.
@@ -1258,8 +1257,7 @@ Proof.
       * exists Γ02. split.
         -- eapply TArgs_Cons.
            ++ exact Htyped_arg.
-           ++ destruct Hshape as [_ HT]. simpl in HT. rewrite HT. exact Hcore.
-           ++ destruct Hshape as [_ HT]. simpl in HT. rewrite HT. exact Hsub.
+           ++ destruct Hshape as [_ HT]. simpl in HT. rewrite HT. exact Hcompat.
            ++ exact Htyped_tail.
         -- exact Hctx_tail.
 Qed.
@@ -1459,7 +1457,6 @@ Proof.
 	    { eapply T_Let.
 	      - exact Htyped1.
 	      - assumption.
-	      - assumption.
 	      - exact Htyped2.
 	      - eapply ctx_alpha_is_ok_backward.
 	        + exact Hctx2.
@@ -1467,7 +1464,10 @@ Proof.
 	          * apply (fresh_ident_not_in i (i :: free_vars_expr e2 ++ used1)).
 	            fold xr. rewrite Heq. left. reflexivity.
 	          * apply (Hdisj i); simpl; [left; reflexivity | exact Hinr].
-	        + simpl. rewrite ident_eqb_refl. exact H11. }
+	        + simpl. rewrite ident_eqb_refl.
+	          lazymatch goal with
+	          | Hok : ctx_is_ok _ _ _ |- _ => exact Hok
+	          end. }
 	    { eapply ctx_alpha_remove_bound. exact Hctx2. }
   + destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
     destruct (alpha_rename_expr
@@ -1646,7 +1646,6 @@ Proof.
             exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γr px m Hctx Hsafe Hmut)
           end.
         - exact Htyped0.
-        - assumption.
         - assumption. }
       { exact Hctx0. }
     * (* PDeref q → T_Replace_Deref (or impossible for deeper nesting) *)
@@ -1673,9 +1672,8 @@ Proof.
            - lazymatch goal with
              | Hmut : ctx_lookup_mut (lookup_rename rvar ρ) Γr = Some ?m |- _ =>
                exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γr rvar m Hctx Hsafe Hmut)
-             end.
+           end.
            - exact Htyped0.
-           - assumption.
            - assumption. }
          { exact Hctx0. }
       -- (* PDeref (PDeref ...) — no typing rule, contradiction *)
@@ -1708,7 +1706,6 @@ Proof.
           end.
         - assumption.
         - exact Htyped0.
-        - assumption.
         - assumption. }
       { exact Hctx0. }
     * (* PDeref q *)
@@ -1734,10 +1731,9 @@ Proof.
            - lazymatch goal with
              | Hmut : ctx_lookup_mut (lookup_rename rvar ρ) Γr = Some ?m |- _ =>
                exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γr rvar m Hctx Hsafe Hmut)
-             end.
+           end.
            - assumption.
            - exact Htyped0.
-           - assumption.
            - assumption. }
          { exact Hctx0. }
       -- inversion Htyped.

@@ -60,15 +60,15 @@ Lemma typed_linear_param_used : forall fenv f p,
   typed_fn_def fenv f ->
   In p (fn_params f) ->
   ty_usage (param_ty p) = ULinear ->
-  exists Γ' Tx,
-    typed fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) (fn_ret f) Γ' /\
+  exists T_body Γ' Tx,
+    typed fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
     ctx_lookup (param_name p) Γ' = Some (Tx, true).
 Proof.
   intros fenv f p Htyped_fn Hin Hlin.
-  destruct Htyped_fn as [Γ' [Hbody Hparams]].
+  destruct Htyped_fn as [T_body [Γ' [Hbody [_ Hparams]]]].
   pose proof (params_ok_linear_param_used
     (fn_params f) Γ' p Hin Hparams Hlin) as [Tx Hlookup].
-  exists Γ', Tx.
+  exists T_body, Γ', Tx.
   split; assumption.
 Qed.
 
@@ -87,9 +87,12 @@ Lemma infer_fn_def_ok_sound : forall fenv f,
   typed_fn_def fenv f.
 Proof.
   intros fenv f [Γ' [Hinfer Hparams]].
-  exists Γ'.
-  split.
+  exists (fn_ret f), Γ'.
+  repeat split.
   - apply infer_body_sound. exact Hinfer.
+  - destruct (fn_ret f) as [u c]. apply TC_Core.
+    + apply US_refl.
+    + reflexivity.
   - exact Hparams.
 Qed.
 
@@ -154,8 +157,8 @@ Theorem infer_checked_fn_linear_params_used : forall fenv f p,
   infer_fn_def_ok fenv f ->
   In p (fn_params f) ->
   ty_usage (param_ty p) = ULinear ->
-  exists Γ' Tx,
-    typed fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) (fn_ret f) Γ' /\
+  exists T_body Γ' Tx,
+    typed fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
     ctx_lookup (param_name p) Γ' = Some (Tx, true).
 Proof.
   intros fenv f p Hinfer_fn Hin Hlin.
@@ -174,8 +177,8 @@ Theorem infer_checked_fn_linear_usage : forall fenv f,
   (forall p,
       In p (fn_params f) ->
       ty_usage (param_ty p) = ULinear ->
-      exists Γ' Tx,
-        typed fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) (fn_ret f) Γ' /\
+      exists T_body Γ' Tx,
+        typed fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
         ctx_lookup (param_name p) Γ' = Some (Tx, true)).
 Proof.
   intros fenv f Hinfer_fn.

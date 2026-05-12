@@ -1,0 +1,7 @@
+fn use_same<'a>(r: unrestricted &'a unrestricted isize) -> unrestricted &'a unrestricted isize {
+    r
+}
+
+fn caller<'a>(x: unrestricted &'a unrestricted isize) -> unrestricted &'a unrestricted isize {
+    (use_same x)
+}

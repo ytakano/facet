@@ -73,6 +73,14 @@ Definition ty_core_eqb (c1 c2 : TypeCore Ty) : bool :=
   | _, _ => false
   end.
 
+Fixpoint ty_compatible_b (T_actual T_expected : Ty) {struct T_actual} : bool :=
+  usage_sub_bool (ty_usage T_actual) (ty_usage T_expected) &&
+  match ty_core T_actual, ty_core T_expected with
+  | TRef la rka Ta, TRef lb rkb Tb =>
+      outlives_b la lb && ref_kind_eqb rka rkb && ty_compatible_b Ta Tb
+  | ca, cb => ty_core_eqb ca cb
+  end.
+
 (* ------------------------------------------------------------------ *)
 (* Decidable context operations                                          *)
 (* ------------------------------------------------------------------ *)
@@ -229,6 +237,11 @@ Inductive infer_error : Type :=
   | ErrLifetimeLeak : infer_error                 (* return type references a local lifetime *)
   | ErrLifetimeConflict : infer_error.            (* unification conflict in call lifetime substitution *)
 
+Definition compatible_error (T_actual T_expected : Ty) : infer_error :=
+  if ty_core_eqb (ty_core T_actual) (ty_core T_expected)
+  then ErrUsageMismatch (ty_usage T_actual) (ty_usage T_expected)
+  else ErrTypeMismatch (ty_core T_actual) (ty_core T_expected).
+
 (* ------------------------------------------------------------------ *)
 (* Lifetime substitution helpers for ECall                               *)
 (* ------------------------------------------------------------------ *)
@@ -307,11 +320,9 @@ Fixpoint check_args (arg_tys : list Ty) (params : list param)
   match arg_tys, params with
   | [], [] => None
   | t :: ts, p :: ps =>
-      if ty_core_eqb (ty_core t) (ty_core (param_ty p)) then
-        if usage_sub_bool (ty_usage t) (ty_usage (param_ty p)) then
-          check_args ts ps
-        else Some (ErrUsageMismatch (ty_usage t) (ty_usage (param_ty p)))
-      else Some (ErrTypeMismatch (ty_core t) (ty_core (param_ty p)))
+      if ty_compatible_b t (param_ty p)
+      then check_args ts ps
+      else Some (compatible_error t (param_ty p))
   | _, _ => Some ErrArityMismatch
   end.
 
@@ -496,8 +507,7 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
       match infer_core fenv n Γ e1 with
       | infer_err err          => infer_err err
       | infer_ok (T1, Γ1) =>
-          if ty_core_eqb (ty_core T1) (ty_core T) then
-            if usage_sub_bool (ty_usage T1) (ty_usage T) then
+          if ty_compatible_b T1 T then
             match infer_core fenv n (ctx_add_b x T m Γ1) e2 with
             | infer_err err          => infer_err err
             | infer_ok (T2, Γ2) =>
@@ -505,8 +515,7 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
                 then infer_ok (T2, ctx_remove_b x Γ2)
                 else infer_err ErrContextCheckFailed
             end
-            else infer_err (ErrUsageMismatch (ty_usage T1) (ty_usage T))
-          else infer_err (ErrTypeMismatch (ty_core T1) (ty_core T))
+          else infer_err (compatible_error T1 T)
       end
 
   | EDrop e1 =>
@@ -527,11 +536,9 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
               match infer_core fenv n Γ e_new with
               | infer_err err            => infer_err err
               | infer_ok (T_new, Γ') =>
-                  if ty_core_eqb (ty_core T_new) (ty_core T_x) then
-                    if usage_sub_bool (ty_usage T_new) (ty_usage T_x)
-                    then infer_ok (T_x, Γ')
-                    else infer_err (ErrUsageMismatch (ty_usage T_new) (ty_usage T_x))
-                  else infer_err (ErrTypeMismatch (ty_core T_new) (ty_core T_x))
+                  if ty_compatible_b T_new T_x
+                  then infer_ok (T_x, Γ')
+                  else infer_err (compatible_error T_new T_x)
               end
           end
       end
@@ -551,11 +558,9 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
                   match infer_core fenv n Γ e_new with
                   | infer_err err => infer_err err
                   | infer_ok (T_new, Γ') =>
-                      if ty_core_eqb (ty_core T_new) (ty_core T_inner) then
-                        if usage_sub_bool (ty_usage T_new) (ty_usage T_inner)
-                        then infer_ok (T_inner, Γ')
-                        else infer_err (ErrUsageMismatch (ty_usage T_new) (ty_usage T_inner))
-                      else infer_err (ErrTypeMismatch (ty_core T_new) (ty_core T_inner))
+                      if ty_compatible_b T_new T_inner
+                      then infer_ok (T_inner, Γ')
+                      else infer_err (compatible_error T_new T_inner)
                   end
               end
           | c => infer_err (ErrNotAReference c)
@@ -579,11 +584,9 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
                 match infer_core fenv n Γ e_new with
                 | infer_err err => infer_err err
                 | infer_ok (T_new, Γ') =>
-                    if ty_core_eqb (ty_core T_new) (ty_core T_x) then
-                      if usage_sub_bool (ty_usage T_new) (ty_usage T_x)
-                      then infer_ok (MkTy UUnrestricted TUnits, Γ')
-                      else infer_err (ErrUsageMismatch (ty_usage T_new) (ty_usage T_x))
-                    else infer_err (ErrTypeMismatch (ty_core T_new) (ty_core T_x))
+                    if ty_compatible_b T_new T_x
+                    then infer_ok (MkTy UUnrestricted TUnits, Γ')
+                    else infer_err (compatible_error T_new T_x)
                 end
           end
       end
@@ -606,11 +609,9 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
                     match infer_core fenv n Γ e_new with
                     | infer_err err => infer_err err
                     | infer_ok (T_new, Γ') =>
-                        if ty_core_eqb (ty_core T_new) (ty_core T_inner) then
-                          if usage_sub_bool (ty_usage T_new) (ty_usage T_inner)
-                          then infer_ok (MkTy UUnrestricted TUnits, Γ')
-                          else infer_err (ErrUsageMismatch (ty_usage T_new) (ty_usage T_inner))
-                        else infer_err (ErrTypeMismatch (ty_core T_new) (ty_core T_inner))
+                        if ty_compatible_b T_new T_inner
+                        then infer_ok (MkTy UUnrestricted TUnits, Γ')
+                        else infer_err (compatible_error T_new T_inner)
                     end
               end
           | c => infer_err (ErrNotAReference c)
@@ -789,11 +790,9 @@ Fixpoint infer_args (fenv : list fn_def) (n : nat) (Γ : ctx)
       match infer_core fenv n Γ e with
       | infer_err err            => infer_err err
       | infer_ok (T_e, Γ1) =>
-          if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) then
-            if usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))
-            then infer_args fenv n Γ1 es ps
-            else infer_err (ErrUsageMismatch (ty_usage T_e) (ty_usage (param_ty p)))
-          else infer_err (ErrTypeMismatch (ty_core T_e) (ty_core (param_ty p)))
+          if ty_compatible_b T_e (param_ty p)
+          then infer_args fenv n Γ1 es ps
+          else infer_err (compatible_error T_e (param_ty p))
       end
   end.
 
@@ -828,6 +827,12 @@ Fixpoint params_ok_b (ps : list param) (Γ : ctx) : bool :=
       params_ok_b ps' Γ
   end.
 
+Fixpoint wf_params_b (Δ : region_ctx) (ps : list param) : bool :=
+  match ps with
+  | [] => true
+  | p :: ps' => wf_type_b Δ (param_ty p) && wf_params_b Δ ps'
+  end.
+
 (* Check a single function definition:
    - infer the body type
    - verify it matches fn_ret (core type + exact usage)
@@ -839,19 +844,20 @@ Definition infer (fenv : list fn_def) (f : fn_def)
   if negb (wf_type_b Δ (fn_ret f))
   then infer_err ErrLifetimeLeak
   else
+  if negb (wf_params_b Δ (fn_params f))
+  then infer_err ErrLifetimeLeak
+  else
   match infer_body fenv n (params_ctx (fn_params f)) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out) =>
       if negb (wf_type_b Δ T_body)
       then infer_err ErrLifetimeLeak
       else
-      if ty_core_eqb (ty_core T_body) (ty_core (fn_ret f)) then
-        if usage_eqb (ty_usage T_body) (ty_usage (fn_ret f)) then
-          if params_ok_b (fn_params f) Γ_out
-          then infer_ok (fn_ret f, Γ_out)
-          else infer_err ErrContextCheckFailed
-        else infer_err (ErrUsageMismatch (ty_usage (fn_ret f)) (ty_usage T_body))
-      else infer_err (ErrTypeMismatch (ty_core (fn_ret f)) (ty_core T_body))
+      if ty_compatible_b T_body (fn_ret f) then
+        if params_ok_b (fn_params f) Γ_out
+        then infer_ok (fn_ret f, Γ_out)
+        else infer_err ErrContextCheckFailed
+      else infer_err (compatible_error T_body (fn_ret f))
   end.
 
 (* Check all functions in the program *)
@@ -1012,19 +1018,20 @@ Definition infer_direct (fenv : list fn_def) (f : fn_def)
   if negb (wf_type_b Δ (fn_ret f))
   then infer_err ErrLifetimeLeak
   else
+  if negb (wf_params_b Δ (fn_params f))
+  then infer_err ErrLifetimeLeak
+  else
   match infer_core fenv n (params_ctx (fn_params f)) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out) =>
       if negb (wf_type_b Δ T_body)
       then infer_err ErrLifetimeLeak
       else
-      if ty_core_eqb (ty_core T_body) (ty_core (fn_ret f)) then
-        if usage_eqb (ty_usage T_body) (ty_usage (fn_ret f)) then
-          if params_ok_b (fn_params f) Γ_out
-          then infer_ok (fn_ret f, Γ_out)
-          else infer_err ErrContextCheckFailed
-        else infer_err (ErrUsageMismatch (ty_usage (fn_ret f)) (ty_usage T_body))
-      else infer_err (ErrTypeMismatch (ty_core (fn_ret f)) (ty_core T_body))
+      if ty_compatible_b T_body (fn_ret f) then
+        if params_ok_b (fn_params f) Γ_out
+        then infer_ok (fn_ret f, Γ_out)
+        else infer_err ErrContextCheckFailed
+      else infer_err (compatible_error T_body (fn_ret f))
   end.
 
 (* ------------------------------------------------------------------ *)

@@ -199,6 +199,44 @@ Lemma usage_eqb_true : forall u1 u2,
   usage_eqb u1 u2 = true -> u1 = u2.
 Proof. destruct u1, u2; simpl; intros H; try discriminate; reflexivity. Qed.
 
+Lemma ty_compatible_b_sound : forall T_actual T_expected,
+  ty_compatible_b T_actual T_expected = true ->
+  ty_compatible T_actual T_expected.
+Proof.
+  assert (Hsize : forall n T_actual T_expected,
+      ty_depth T_actual < n ->
+      ty_compatible_b T_actual T_expected = true ->
+      ty_compatible T_actual T_expected).
+  {
+    induction n as [| n IH]; intros T_actual T_expected Hlt H.
+    - destruct T_actual as [? c]; destruct c; simpl in Hlt; lia.
+    - destruct T_actual as [ua ca], T_expected as [ue ce].
+      simpl in H. apply andb_true_iff in H as [Hu Hc].
+      destruct ca as [| | | | sa | tsa ra | la rka Ta],
+               ce as [| | | | se | tse re | lb rkb Tb];
+        simpl in Hc; try discriminate;
+        try (apply TC_Core;
+             [apply usage_sub_bool_sound; exact Hu | reflexivity]).
+      + apply String.eqb_eq in Hc. subst.
+        apply TC_Core; [apply usage_sub_bool_sound; exact Hu | reflexivity].
+      + apply TC_Core.
+        * apply usage_sub_bool_sound. exact Hu.
+        * apply ty_core_eqb_true. exact Hc.
+      + apply andb_true_iff in Hc as [Hlr HT].
+        apply andb_true_iff in Hlr as [Hl Hr].
+        apply ref_kind_eqb_true in Hr. subst rkb.
+        apply TC_Ref.
+        * apply usage_sub_bool_sound. exact Hu.
+        * apply outlives_b_sound. exact Hl.
+        * apply IH.
+          -- simpl in Hlt. lia.
+          -- exact HT.
+  }
+  intros T_actual T_expected H.
+  exact (Hsize (S (ty_depth T_actual)) T_actual T_expected
+    (Nat.lt_succ_diag_r _) H).
+Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Auxiliary: ctx_check_ok implies ctx_is_ok                             *)
 (* ------------------------------------------------------------------ *)
@@ -259,67 +297,18 @@ Proof.
     injection Hcollect as <- <-.
     destruct params as [| p ps]; [discriminate |].
     simpl in Hcheck.
-    destruct (ty_core_eqb (ty_core T_e) (ty_core (param_ty p))) eqn:Hcore; [|discriminate].
-    destruct (usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))) eqn:Hsub; [|discriminate].
+    destruct (ty_compatible_b T_e (param_ty p)) eqn:Hcompat;
+      [| discriminate].
     eapply TArgs_Cons.
     + eapply Hexpr.
       * left. reflexivity.
       * exact He.
-    + exact (ty_core_eqb_true _ _ Hcore).
-    + apply usage_sub_bool_sound. exact Hsub.
+    + apply ty_compatible_b_sound. exact Hcompat.
     + eapply IH.
       * exact Htail.
       * intros Γ0 e0 T0 Γ0' Hin Hinfer0.
         eapply Hexpr. right; exact Hin. exact Hinfer0.
       * exact Hcheck.
-Qed.
-
-(* ------------------------------------------------------------------ *)
-Lemma infer_call_args_sound : forall fenv n Γ args params Γ',
-  (forall Γ0 e T Γ1,
-      In e args ->
-      infer_core fenv n Γ0 e = infer_ok (T, Γ1) ->
-      typed fenv n Γ0 e T Γ1) ->
-  ((fix go (Γ0 : ctx) (as_ : list expr) (ps : list param)
-      : infer_result ctx :=
-      match as_, ps with
-      | [],       []       => infer_ok Γ0
-      | [],       _ :: _   => infer_err ErrArityMismatch
-      | _ :: _,   []       => infer_err ErrArityMismatch
-      | e' :: es, p :: ps' =>
-          match infer_core fenv n Γ0 e' with
-          | infer_err err            => infer_err err
-          | infer_ok (T_e, Γ1) =>
-              if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) then
-                if usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))
-                then go Γ1 es ps'
-                else infer_err (ErrUsageMismatch (ty_usage T_e) (ty_usage (param_ty p)))
-              else infer_err (ErrTypeMismatch (ty_core T_e) (ty_core (param_ty p)))
-          end
-      end) Γ args params) = infer_ok Γ' ->
-  typed_args fenv n Γ args params Γ'.
-Proof.
-  intros fenv n Γ args.
-  revert Γ.
-  induction args as [| e es IH]; intros Γ params Γ' Hexpr Hgo;
-    destruct params as [| p ps]; simpl in Hgo; try discriminate.
-  - injection Hgo as <-. constructor.
-  - destruct (infer_core fenv n Γ e) as [[T_e Γ1] |] eqn:He;
-      try discriminate.
-    destruct (ty_core_eqb (ty_core T_e) (ty_core (param_ty p))) eqn:Hcore; [|discriminate].
-    destruct (usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))) eqn:Hsub; [|discriminate].
-    eapply TArgs_Cons.
-    + eapply Hexpr.
-      * left. reflexivity.
-      * exact He.
-    + exact (ty_core_eqb_true _ _ Hcore).
-    + apply usage_sub_bool_sound. exact Hsub.
-    + eapply IH.
-      * intros Γ0 e0 T0 Γ0' Hin Hinfer0.
-        eapply Hexpr.
-        -- right; exact Hin.
-        -- exact Hinfer0.
-      * exact Hgo.
 Qed.
 
 (* ------------------------------------------------------------------ *)
@@ -372,12 +361,7 @@ Proof.
   + rename i into x.
     destruct (infer_core fenv n Γ e1) as [[T1 Γ1] | err1] eqn:He1.
     2: discriminate.
-    destruct (ty_core_eqb (ty_core T1) (ty_core t)) eqn:Hcore.
-    2: {
-      simpl in Hinfer.
-      inversion Hinfer.
-    }
-    destruct (usage_sub_bool (ty_usage T1) (ty_usage t)) eqn:Hsub.
+    destruct (ty_compatible_b T1 t) eqn:Hcompat.
     2: {
       simpl in Hinfer.
       inversion Hinfer.
@@ -399,8 +383,7 @@ Proof.
     * eapply IH.
       -- simpl in Hlt. lia.
       -- exact He1.
-    * apply ty_core_eqb_true. exact Hcore.
-    * apply usage_sub_bool_sound. exact Hsub.
+    * apply ty_compatible_b_sound. exact Hcompat.
     * eapply IH.
       -- simpl in Hlt. lia.
       -- exact He2.
@@ -472,17 +455,13 @@ Proof.
       destruct (infer_core fenv n Γ e) as [Htyped3 | err3] eqn:He.
       2: discriminate.
       destruct Htyped3 as [T_new Γ1].
-      destruct (ty_core_eqb (ty_core T_new) (ty_core T_x)) eqn:Hcore.
-      2: discriminate.
-      destruct (usage_sub_bool (ty_usage T_new) (ty_usage T_x)) eqn:Hsub.
-      2: discriminate.
+      destruct (ty_compatible_b T_new T_x) eqn:Hcompat; [|discriminate].
       injection Hinfer as <- <-.
       apply T_Replace with (T_new := T_new).
       -- rewrite <- ctx_lookup_b_eq. exact Hlx_b.
       -- rewrite <- ctx_lookup_mut_b_eq. exact Hmut_b.
       -- eapply IH. simpl in Hlt; lia. exact He.
-      -- apply ty_core_eqb_true. exact Hcore.
-      -- apply usage_sub_bool_sound. exact Hsub.
+      -- apply ty_compatible_b_sound. exact Hcompat.
     * (* PDeref q *)
       destruct q as [rv | q2].
       -- (* PDeref (PVar rv) → T_Replace_Deref *)
@@ -502,17 +481,14 @@ Proof.
          destruct (infer_core fenv n Γ e) as [[T_new Γ1] |] eqn:He; [| discriminate].
          lazymatch type of HcoreR with
          | ty_core T_r = TRef ?la ?rk ?T_inner =>
-             destruct (ty_core_eqb (ty_core T_new) (ty_core T_inner)) eqn:Hcore;
-               [| discriminate];
-             destruct (usage_sub_bool (ty_usage T_new) (ty_usage T_inner)) eqn:Hsub;
+             destruct (ty_compatible_b T_new T_inner) eqn:Hcompat;
                [| discriminate];
              injection Hinfer as <- <-;
              eapply T_Replace_Deref with (u_r := ty_usage T_r);
              [ rewrite <- ctx_lookup_b_eq; rewrite <- HTeq; exact Hlr_b
              | rewrite <- ctx_lookup_mut_b_eq; exact Hmut_b
              | eapply IH; [simpl in Hlt; lia | exact He]
-             | apply ty_core_eqb_true; exact Hcore
-             | apply usage_sub_bool_sound; exact Hsub ]
+             | apply ty_compatible_b_sound; exact Hcompat ]
          end.
       -- (* PDeref (PDeref _) → ErrNotImplemented *)
          discriminate.
@@ -529,18 +505,14 @@ Proof.
       destruct (usage_eqb (ty_usage T_x) ULinear) eqn:Hlin; [discriminate |].
       destruct (infer_core fenv n Γ e) as [[T_new Γ1] |] eqn:He.
       2: discriminate.
-      destruct (ty_core_eqb (ty_core T_new) (ty_core T_x)) eqn:Hcore.
-      2: discriminate.
-      destruct (usage_sub_bool (ty_usage T_new) (ty_usage T_x)) eqn:Hsub.
-      2: discriminate.
+      destruct (ty_compatible_b T_new T_x) eqn:Hcompat; [|discriminate].
       injection Hinfer as <- <-.
       eapply T_Assign with (T := T_x) (T_new := T_new).
       -- rewrite <- ctx_lookup_b_eq. exact Hlx_b.
       -- rewrite <- ctx_lookup_mut_b_eq. exact Hmut_b.
       -- intro Heq. rewrite Heq in Hlin. simpl in Hlin. discriminate.
       -- eapply IH. simpl in Hlt; lia. exact He.
-      -- apply ty_core_eqb_true. exact Hcore.
-      -- apply usage_sub_bool_sound. exact Hsub.
+      -- apply ty_compatible_b_sound. exact Hcompat.
     * (* PDeref q *)
       destruct q as [rv | q2].
       -- (* PDeref (PVar rv) → T_Assign_Deref *)
@@ -560,9 +532,7 @@ Proof.
          | ty_core T_r = TRef ?la ?rk ?T_inner =>
              destruct (usage_eqb (ty_usage T_inner) ULinear) eqn:Hlin; [discriminate |];
              destruct (infer_core fenv n Γ e) as [[T_new Γ1] |] eqn:He; [| discriminate];
-             destruct (ty_core_eqb (ty_core T_new) (ty_core T_inner)) eqn:Hcore;
-               [| discriminate];
-             destruct (usage_sub_bool (ty_usage T_new) (ty_usage T_inner)) eqn:Hsub;
+             destruct (ty_compatible_b T_new T_inner) eqn:Hcompat;
                [| discriminate];
              injection Hinfer as <- <-;
              eapply T_Assign_Deref with (u_r := ty_usage T_r);
@@ -570,8 +540,7 @@ Proof.
              | rewrite <- ctx_lookup_mut_b_eq; exact Hmut_b
              | intro Heq; rewrite Heq in Hlin; simpl in Hlin; discriminate
              | eapply IH; [simpl in Hlt; lia | exact He]
-             | apply ty_core_eqb_true; exact Hcore
-             | apply usage_sub_bool_sound; exact Hsub ]
+             | apply ty_compatible_b_sound; exact Hcompat ]
          end.
       -- discriminate.
 
@@ -724,12 +693,6 @@ Qed.
 (* Function-definition-level soundness                                   *)
 (* ------------------------------------------------------------------ *)
 
-Lemma Ty_eq : forall T1 T2,
-  ty_core T1 = ty_core T2 -> ty_usage T1 = ty_usage T2 -> T1 = T2.
-Proof.
-  destruct T1 as [u1 c1], T2 as [u2 c2]; simpl; intros -> ->; reflexivity.
-Qed.
-
 Lemma params_ok_b_sound : forall ps Γ,
   params_ok_b ps Γ = true -> params_ok ps Γ.
 Proof.
@@ -748,19 +711,18 @@ Proof.
   unfold infer in Hcheck.
   destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f))) eqn:Hwf_ret.
   { discriminate. }
+  destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_params f))) eqn:Hwf_params.
+  { discriminate. }
   destruct (infer_body fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f))
     as [[T_body Γ_out] | err] eqn:Hinfer.
   - destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) T_body)) eqn:Hwf_body.
     { discriminate. }
-    destruct (ty_core_eqb _ _) eqn:Hcore; [|discriminate].
-    destruct (usage_eqb _ _) eqn:Husage; [|discriminate].
+    destruct (ty_compatible_b T_body (fn_ret f)) eqn:Hcompat; [|discriminate].
     destruct (params_ok_b _ _) eqn:Hparams; [|discriminate].
     apply infer_body_sound in Hinfer as Htyped.
-    apply ty_core_eqb_true in Hcore.
-    apply usage_eqb_true in Husage.
-    assert (T_body = fn_ret f) by (apply Ty_eq; assumption). subst T_body.
+    apply ty_compatible_b_sound in Hcompat.
     apply params_ok_b_sound in Hparams.
-    exists Γ_out. exact (conj Htyped Hparams).
+    exists T_body, Γ_out. repeat split; assumption.
   - discriminate.
 Qed.
 
@@ -785,18 +747,17 @@ Proof.
   unfold infer_direct in Hcheck.
   destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f))) eqn:Hwf_ret.
   { discriminate. }
+  destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_params f))) eqn:Hwf_params.
+  { discriminate. }
   destruct (infer_core fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f))
     as [[T_body Γ_out] | err] eqn:Hinfer.
   - destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) T_body)) eqn:Hwf_body.
     { discriminate. }
-    destruct (ty_core_eqb _ _) eqn:Hcore; [|discriminate].
-    destruct (usage_eqb _ _) eqn:Husage; [|discriminate].
+    destruct (ty_compatible_b T_body (fn_ret f)) eqn:Hcompat; [|discriminate].
     destruct (params_ok_b _ _) eqn:Hparams; [|discriminate].
     apply infer_sound in Hinfer as Htyped.
-    apply ty_core_eqb_true in Hcore.
-    apply usage_eqb_true in Husage.
-    assert (T_body = fn_ret f) by (apply Ty_eq; assumption). subst T_body.
+    apply ty_compatible_b_sound in Hcompat.
     apply params_ok_b_sound in Hparams.
-    exists Γ_out. exact (conj Htyped Hparams).
+    exists T_body, Γ_out. repeat split; assumption.
   - discriminate.
 Qed.

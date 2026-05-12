@@ -1,0 +1,7 @@
+fn needs_mut<'a>(r: unrestricted &'a mut unrestricted isize) -> unrestricted &'a mut unrestricted isize {
+    r
+}
+
+fn bad<'a>(x: unrestricted &'a unrestricted isize) -> unrestricted &'a mut unrestricted isize {
+    (needs_mut x)
+}

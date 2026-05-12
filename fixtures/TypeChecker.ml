@@ -144,6 +144,15 @@ let lifetime_eqb l1 l2 =
 
 type region_ctx = lifetime list
 
+(** val outlives_b : lifetime -> lifetime -> bool **)
+
+let outlives_b a b =
+  match a with
+  | LStatic -> true
+  | LVar n -> (match b with
+               | LStatic -> false
+               | LVar m -> Nat.eqb n m)
+
 type mutability =
 | MImmutable
 | MMutable
@@ -490,6 +499,20 @@ let ty_core_eqb c1 c2 =
        (&&) ((&&) (lifetime_eqb l1 l2) (ref_kind_eqb k1 k2)) (ty_eqb t1 t2)
      | _ -> false)
 
+(** val ty_compatible_b : ty -> ty -> bool **)
+
+let rec ty_compatible_b t_actual t_expected =
+  (&&) (usage_sub_bool (ty_usage t_actual) (ty_usage t_expected))
+    (match ty_core t_actual with
+     | TRef (la, rka, ta) ->
+       let ca = TRef (la, rka, ta) in
+       (match ty_core t_expected with
+        | TRef (lb, rkb, tb) ->
+          (&&) ((&&) (outlives_b la lb) (ref_kind_eqb rka rkb))
+            (ty_compatible_b ta tb)
+        | x -> ty_core_eqb ca x)
+     | x -> ty_core_eqb x (ty_core t_expected))
+
 (** val ctx_lookup_b : ident -> ctx -> (ty * bool) option **)
 
 let rec ctx_lookup_b x = function
@@ -634,6 +657,13 @@ type infer_error =
 | ErrLifetimeLeak
 | ErrLifetimeConflict
 
+(** val compatible_error : ty -> ty -> infer_error **)
+
+let compatible_error t_actual t_expected =
+  if ty_core_eqb (ty_core t_actual) (ty_core t_expected)
+  then ErrUsageMismatch ((ty_usage t_actual), (ty_usage t_expected))
+  else ErrTypeMismatch ((ty_core t_actual), (ty_core t_expected))
+
 (** val list_set_nth : Big_int_Z.big_int -> 'a1 -> 'a1 list -> 'a1 list **)
 
 let rec list_set_nth i v l =
@@ -729,11 +759,9 @@ let rec check_args arg_tys params =
     (match params with
      | [] -> Some ErrArityMismatch
      | p :: ps ->
-       if ty_core_eqb (ty_core t) (ty_core p.param_ty)
-       then if usage_sub_bool (ty_usage t) (ty_usage p.param_ty)
-            then check_args ts ps
-            else Some (ErrUsageMismatch ((ty_usage t), (ty_usage p.param_ty)))
-       else Some (ErrTypeMismatch ((ty_core t), (ty_core p.param_ty))))
+       if ty_compatible_b t p.param_ty
+       then check_args ts ps
+       else Some (compatible_error t p.param_ty))
 
 type 'a infer_result =
 | Infer_ok of 'a
@@ -893,17 +921,15 @@ let rec infer_core fenv n _UU0393_ = function
   (match infer_core fenv n _UU0393_ e1 with
    | Infer_ok p ->
      let (t1, _UU0393_1) = p in
-     if ty_core_eqb (ty_core t1) (ty_core t)
-     then if usage_sub_bool (ty_usage t1) (ty_usage t)
-          then (match infer_core fenv n (ctx_add_b x t m _UU0393_1) e2 with
-                | Infer_ok p0 ->
-                  let (t2, _UU0393_2) = p0 in
-                  if ctx_check_ok x t _UU0393_2
-                  then Infer_ok (t2, (ctx_remove_b x _UU0393_2))
-                  else Infer_err ErrContextCheckFailed
-                | Infer_err err -> Infer_err err)
-          else Infer_err (ErrUsageMismatch ((ty_usage t1), (ty_usage t)))
-     else Infer_err (ErrTypeMismatch ((ty_core t1), (ty_core t)))
+     if ty_compatible_b t1 t
+     then (match infer_core fenv n (ctx_add_b x t m _UU0393_1) e2 with
+           | Infer_ok p0 ->
+             let (t2, _UU0393_2) = p0 in
+             if ctx_check_ok x t _UU0393_2
+             then Infer_ok (t2, (ctx_remove_b x _UU0393_2))
+             else Infer_err ErrContextCheckFailed
+           | Infer_err err -> Infer_err err)
+     else Infer_err (compatible_error t1 t)
    | Infer_err err -> Infer_err err)
 | ELetInfer (m, x, e1, e2) ->
   (match infer_core fenv n _UU0393_ e1 with
@@ -967,13 +993,9 @@ let rec infer_core fenv n _UU0393_ = function
                    (match infer_core fenv n _UU0393_ e_new with
                     | Infer_ok p1 ->
                       let (t_new, _UU0393_') = p1 in
-                      if ty_core_eqb (ty_core t_new) (ty_core t_x)
-                      then if usage_sub_bool (ty_usage t_new) (ty_usage t_x)
-                           then Infer_ok (t_x, _UU0393_')
-                           else Infer_err (ErrUsageMismatch
-                                  ((ty_usage t_new), (ty_usage t_x)))
-                      else Infer_err (ErrTypeMismatch ((ty_core t_new),
-                             (ty_core t_x)))
+                      if ty_compatible_b t_new t_x
+                      then Infer_ok (t_x, _UU0393_')
+                      else Infer_err (compatible_error t_new t_x)
                     | Infer_err err -> Infer_err err))
               | None -> Infer_err (ErrUnknownVar x))
       | None -> Infer_err (ErrUnknownVar x))
@@ -1000,16 +1022,9 @@ let rec infer_core fenv n _UU0393_ = function
                             (match infer_core fenv n _UU0393_ e_new with
                              | Infer_ok p2 ->
                                let (t_new, _UU0393_') = p2 in
-                               if ty_core_eqb (ty_core t_new)
-                                    (ty_core t_inner)
-                               then if usage_sub_bool (ty_usage t_new)
-                                         (ty_usage t_inner)
-                                    then Infer_ok (t_inner, _UU0393_')
-                                    else Infer_err (ErrUsageMismatch
-                                           ((ty_usage t_new),
-                                           (ty_usage t_inner)))
-                               else Infer_err (ErrTypeMismatch
-                                      ((ty_core t_new), (ty_core t_inner)))
+                               if ty_compatible_b t_new t_inner
+                               then Infer_ok (t_inner, _UU0393_')
+                               else Infer_err (compatible_error t_new t_inner)
                              | Infer_err err -> Infer_err err))
                        | None -> Infer_err (ErrUnknownVar r)))
                  | x -> Infer_err (ErrNotAReference x))
@@ -1033,15 +1048,10 @@ let rec infer_core fenv n _UU0393_ = function
                    else (match infer_core fenv n _UU0393_ e_new with
                          | Infer_ok p1 ->
                            let (t_new, _UU0393_') = p1 in
-                           if ty_core_eqb (ty_core t_new) (ty_core t_x)
-                           then if usage_sub_bool (ty_usage t_new)
-                                     (ty_usage t_x)
-                                then Infer_ok ((MkTy (UUnrestricted,
-                                       TUnits)), _UU0393_')
-                                else Infer_err (ErrUsageMismatch
-                                       ((ty_usage t_new), (ty_usage t_x)))
-                           else Infer_err (ErrTypeMismatch ((ty_core t_new),
-                                  (ty_core t_x)))
+                           if ty_compatible_b t_new t_x
+                           then Infer_ok ((MkTy (UUnrestricted, TUnits)),
+                                  _UU0393_')
+                           else Infer_err (compatible_error t_new t_x)
                          | Infer_err err -> Infer_err err))
               | None -> Infer_err (ErrUnknownVar x))
       | None -> Infer_err (ErrUnknownVar x))
@@ -1071,18 +1081,11 @@ let rec infer_core fenv n _UU0393_ = function
                             else (match infer_core fenv n _UU0393_ e_new with
                                   | Infer_ok p2 ->
                                     let (t_new, _UU0393_') = p2 in
-                                    if ty_core_eqb (ty_core t_new)
-                                         (ty_core t_inner)
-                                    then if usage_sub_bool (ty_usage t_new)
-                                              (ty_usage t_inner)
-                                         then Infer_ok ((MkTy (UUnrestricted,
-                                                TUnits)), _UU0393_')
-                                         else Infer_err (ErrUsageMismatch
-                                                ((ty_usage t_new),
-                                                (ty_usage t_inner)))
-                                    else Infer_err (ErrTypeMismatch
-                                           ((ty_core t_new),
-                                           (ty_core t_inner)))
+                                    if ty_compatible_b t_new t_inner
+                                    then Infer_ok ((MkTy (UUnrestricted,
+                                           TUnits)), _UU0393_')
+                                    else Infer_err
+                                           (compatible_error t_new t_inner)
                                   | Infer_err err -> Infer_err err))
                        | None -> Infer_err (ErrUnknownVar r)))
                  | x -> Infer_err (ErrNotAReference x))
@@ -1244,6 +1247,12 @@ let rec params_ok_b ps _UU0393_ =
     (&&) (ctx_check_ok p.param_name p.param_ty _UU0393_)
       (params_ok_b ps' _UU0393_)
 
+(** val wf_params_b : region_ctx -> param list -> bool **)
+
+let rec wf_params_b _UU0394_ = function
+| [] -> true
+| p :: ps' -> (&&) (wf_type_b _UU0394_ p.param_ty) (wf_params_b _UU0394_ ps')
+
 (** val infer : fn_def list -> fn_def -> (ty * ctx) infer_result **)
 
 let infer fenv f =
@@ -1251,21 +1260,19 @@ let infer fenv f =
   let _UU0394_ = mk_region_ctx n in
   if negb (wf_type_b _UU0394_ f.fn_ret)
   then Infer_err ErrLifetimeLeak
-  else (match infer_body fenv n (params_ctx f.fn_params) f.fn_body with
-        | Infer_ok p ->
-          let (t_body, _UU0393__out) = p in
-          if negb (wf_type_b _UU0394_ t_body)
-          then Infer_err ErrLifetimeLeak
-          else if ty_core_eqb (ty_core t_body) (ty_core f.fn_ret)
-               then if usage_eqb (ty_usage t_body) (ty_usage f.fn_ret)
+  else if negb (wf_params_b _UU0394_ f.fn_params)
+       then Infer_err ErrLifetimeLeak
+       else (match infer_body fenv n (params_ctx f.fn_params) f.fn_body with
+             | Infer_ok p ->
+               let (t_body, _UU0393__out) = p in
+               if negb (wf_type_b _UU0394_ t_body)
+               then Infer_err ErrLifetimeLeak
+               else if ty_compatible_b t_body f.fn_ret
                     then if params_ok_b f.fn_params _UU0393__out
                          then Infer_ok (f.fn_ret, _UU0393__out)
                          else Infer_err ErrContextCheckFailed
-                    else Infer_err (ErrUsageMismatch ((ty_usage f.fn_ret),
-                           (ty_usage t_body)))
-               else Infer_err (ErrTypeMismatch ((ty_core f.fn_ret),
-                      (ty_core t_body)))
-        | Infer_err err -> Infer_err err)
+                    else Infer_err (compatible_error t_body f.fn_ret)
+             | Infer_err err -> Infer_err err)
 
 (** val check_program : fn_def list -> bool **)
 
@@ -1390,18 +1397,16 @@ let infer_direct fenv f =
   let _UU0394_ = mk_region_ctx n in
   if negb (wf_type_b _UU0394_ f.fn_ret)
   then Infer_err ErrLifetimeLeak
-  else (match infer_core fenv n (params_ctx f.fn_params) f.fn_body with
-        | Infer_ok p ->
-          let (t_body, _UU0393__out) = p in
-          if negb (wf_type_b _UU0394_ t_body)
-          then Infer_err ErrLifetimeLeak
-          else if ty_core_eqb (ty_core t_body) (ty_core f.fn_ret)
-               then if usage_eqb (ty_usage t_body) (ty_usage f.fn_ret)
+  else if negb (wf_params_b _UU0394_ f.fn_params)
+       then Infer_err ErrLifetimeLeak
+       else (match infer_core fenv n (params_ctx f.fn_params) f.fn_body with
+             | Infer_ok p ->
+               let (t_body, _UU0393__out) = p in
+               if negb (wf_type_b _UU0394_ t_body)
+               then Infer_err ErrLifetimeLeak
+               else if ty_compatible_b t_body f.fn_ret
                     then if params_ok_b f.fn_params _UU0393__out
                          then Infer_ok (f.fn_ret, _UU0393__out)
                          else Infer_err ErrContextCheckFailed
-                    else Infer_err (ErrUsageMismatch ((ty_usage f.fn_ret),
-                           (ty_usage t_body)))
-               else Infer_err (ErrTypeMismatch ((ty_core f.fn_ret),
-                      (ty_core t_body)))
-        | Infer_err err -> Infer_err err)
+                    else Infer_err (compatible_error t_body f.fn_ret)
+             | Infer_err err -> Infer_err err)

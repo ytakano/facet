@@ -1,0 +1,7 @@
+fn needs_b<'b>(r: unrestricted &'b unrestricted isize) -> unrestricted &'b unrestricted isize {
+    r
+}
+
+fn bad<'a, 'b>(x: unrestricted &'a unrestricted isize) -> unrestricted &'b unrestricted isize {
+    (needs_b x)
+}

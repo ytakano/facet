@@ -102,6 +102,17 @@ Inductive usage_sub : usage -> usage -> Prop :=
   | US_aff_lin :              usage_sub UAffine       ULinear
   | US_unr_lin :              usage_sub UUnrestricted ULinear.
 
+Inductive ty_compatible : Ty -> Ty -> Prop :=
+  | TC_Core : forall ua ue ca ce,
+      usage_sub ua ue ->
+      ca = ce ->
+      ty_compatible (MkTy ua ca) (MkTy ue ce)
+  | TC_Ref : forall ua ue la lb rk Ta Tb,
+      usage_sub ua ue ->
+      outlives la lb ->
+      ty_compatible Ta Tb ->
+      ty_compatible (MkTy ua (TRef la rk Ta)) (MkTy ue (TRef lb rk Tb)).
+
 Definition usage_max (u1 u2 : usage) : usage :=
   match u1, u2 with
   | ULinear,       _             => ULinear
@@ -188,8 +199,7 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
      4. Remove x from the output context. *)
   | T_Let : forall Γ Γ1 Γ2 m x T T1 e1 e2 T2,
       typed fenv n Γ e1 T1 Γ1 ->
-      ty_core T1 = ty_core T ->
-      usage_sub (ty_usage T1) (ty_usage T) ->
+      ty_compatible T1 T ->
       typed fenv n (ctx_add x T m Γ1) e2 T2 Γ2 ->
       ctx_is_ok x T Γ2 ->
       typed fenv n Γ (ELet m x T e1 e2) T2 (ctx_remove x Γ2)
@@ -216,8 +226,7 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
       ctx_lookup x Γ = Some (T, false) ->
       ctx_lookup_mut x Γ = Some MMutable ->
       typed fenv n Γ e_new T_new Γ' ->
-      ty_core T_new = ty_core T ->
-      usage_sub (ty_usage T_new) (ty_usage T) ->
+      ty_compatible T_new T ->
       typed fenv n Γ (EReplace (PVar x) e_new) T Γ'
 
   | T_Assign : forall Γ Γ' x T T_new e_new,
@@ -225,8 +234,7 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
       ctx_lookup_mut x Γ = Some MMutable ->
       ty_usage T <> ULinear ->
       typed fenv n Γ e_new T_new Γ' ->
-      ty_core T_new = ty_core T ->
-      usage_sub (ty_usage T_new) (ty_usage T) ->
+      ty_compatible T_new T ->
       typed fenv n Γ (EAssign (PVar x) e_new) (MkTy UUnrestricted TUnits) Γ'
 
   (* &x — shared borrow
@@ -283,8 +291,7 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
       ctx_lookup r Γ = Some (MkTy u_r (TRef la RUnique T), false) ->
       ctx_lookup_mut r Γ = Some MMutable ->
       typed fenv n Γ e_new T_new Γ' ->
-      ty_core T_new = ty_core T ->
-      usage_sub (ty_usage T_new) (ty_usage T) ->
+      ty_compatible T_new T ->
       typed fenv n Γ (EReplace (PDeref (PVar r)) e_new) T Γ'
 
   (* *r = e_new where r : &mut T (non-linear): assign through reference, return unit *)
@@ -293,8 +300,7 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
       ctx_lookup_mut r Γ = Some MMutable ->
       ty_usage T <> ULinear ->
       typed fenv n Γ e_new T_new Γ' ->
-      ty_core T_new = ty_core T ->
-      usage_sub (ty_usage T_new) (ty_usage T) ->
+      ty_compatible T_new T ->
       typed fenv n Γ (EAssign (PDeref (PVar r)) e_new) (MkTy UUnrestricted TUnits) Γ'
 
   (* if e1 { e2 } else { e3 }:
@@ -332,14 +338,14 @@ with typed_args (fenv : list fn_def) (n : nat)
 
   | TArgs_Cons : forall Γ Γ1 Γ2 e es p ps T_e,
       typed fenv n Γ e T_e Γ1 ->
-      ty_core T_e = ty_core (param_ty p) ->
-      usage_sub (ty_usage T_e) (ty_usage (param_ty p)) ->
+      ty_compatible T_e (param_ty p) ->
       typed_args fenv n Γ1 es ps Γ2 ->
       typed_args fenv n Γ (e :: es) (p :: ps) Γ2.
 
 Definition typed_fn_def (fenv : list fn_def) (f : fn_def) : Prop :=
-  exists Γ',
-    typed fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) (fn_ret f) Γ' /\
+  exists T_body Γ',
+    typed fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
+    ty_compatible T_body (fn_ret f) /\
     params_ok (fn_params f) Γ'.
 
 (* ------------------------------------------------------------------ *)

@@ -50,6 +50,31 @@ Inductive outlives : lifetime -> lifetime -> Prop :=
 | Outlives_trans : forall a b c, outlives a b -> outlives b c -> outlives a c
 | Outlives_static : forall a,    outlives LStatic a.
 
+Definition outlives_b (a b : lifetime) : bool :=
+  match a, b with
+  | LStatic, _ => true
+  | LVar n, LVar m => Nat.eqb n m
+  | LVar _, LStatic => false
+  end.
+
+Lemma outlives_b_sound : forall a b,
+  outlives_b a b = true -> outlives a b.
+Proof.
+  intros a b H.
+  destruct a, b; simpl in H; try discriminate.
+  - apply Outlives_refl.
+  - apply Outlives_static.
+  - apply Nat.eqb_eq in H. subst. apply Outlives_refl.
+Qed.
+
+Example outlives_b_static_var :
+  outlives_b LStatic (LVar 0) = true.
+Proof. reflexivity. Qed.
+
+Example outlives_b_var_static_false :
+  outlives_b (LVar 0) LStatic = false.
+Proof. reflexivity. Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Well-formed lifetime                                                 *)
 (* ------------------------------------------------------------------ *)

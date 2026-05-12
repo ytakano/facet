@@ -46,6 +46,8 @@ val lifetime_eqb : lifetime -> lifetime -> bool
 
 type region_ctx = lifetime list
 
+val outlives_b : lifetime -> lifetime -> bool
+
 type mutability =
 | MImmutable
 | MMutable
@@ -160,6 +162,8 @@ val ty_eqb : ty -> ty -> bool
 
 val ty_core_eqb : ty typeCore -> ty typeCore -> bool
 
+val ty_compatible_b : ty -> ty -> bool
+
 val ctx_lookup_b : ident -> ctx -> (ty * bool) option
 
 val ctx_consume_b : ident -> ctx -> ctx option
@@ -208,6 +212,8 @@ type infer_error =
 | ErrLifetimeLeak
 | ErrLifetimeConflict
 
+val compatible_error : ty -> ty -> infer_error
+
 val list_set_nth : Big_int_Z.big_int -> 'a1 -> 'a1 list -> 'a1 list
 
 val lt_subst_vec_add :
@@ -255,6 +261,8 @@ val infer_body :
   fn_def list -> Big_int_Z.big_int -> ctx -> expr -> (ty * ctx) infer_result
 
 val params_ok_b : param list -> ctx -> bool
+
+val wf_params_b : region_ctx -> param list -> bool
 
 val infer : fn_def list -> fn_def -> (ty * ctx) infer_result
 

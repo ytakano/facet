@@ -216,11 +216,11 @@ Proof.
 Qed.
 
 (* ------------------------------------------------------------------ *)
-Lemma infer_call_args_sound : forall fenv Γ args params Γ',
+Lemma infer_call_args_sound : forall fenv n Γ args params Γ',
   (forall Γ0 e T Γ1,
       In e args ->
-      infer_core fenv Γ0 e = infer_ok (T, Γ1) ->
-      typed fenv Γ0 e T Γ1) ->
+      infer_core fenv n Γ0 e = infer_ok (T, Γ1) ->
+      typed fenv n Γ0 e T Γ1) ->
   ((fix go (Γ0 : ctx) (as_ : list expr) (ps : list param)
       : infer_result ctx :=
       match as_, ps with
@@ -228,7 +228,7 @@ Lemma infer_call_args_sound : forall fenv Γ args params Γ',
       | [],       _ :: _   => infer_err ErrArityMismatch
       | _ :: _,   []       => infer_err ErrArityMismatch
       | e' :: es, p :: ps' =>
-          match infer_core fenv Γ0 e' with
+          match infer_core fenv n Γ0 e' with
           | infer_err err            => infer_err err
           | infer_ok (T_e, Γ1) =>
               if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) then
@@ -238,14 +238,14 @@ Lemma infer_call_args_sound : forall fenv Γ args params Γ',
               else infer_err (ErrTypeMismatch (ty_core T_e) (ty_core (param_ty p)))
           end
       end) Γ args params) = infer_ok Γ' ->
-  typed_args fenv Γ args params Γ'.
+  typed_args fenv n Γ args params Γ'.
 Proof.
-  intros fenv Γ args.
+  intros fenv n Γ args.
   revert Γ.
   induction args as [| e es IH]; intros Γ params Γ' Hexpr Hgo;
     destruct params as [| p ps]; simpl in Hgo; try discriminate.
   - injection Hgo as <-. constructor.
-  - destruct (infer_core fenv Γ e) as [[T_e Γ1] |] eqn:He;
+  - destruct (infer_core fenv n Γ e) as [[T_e Γ1] |] eqn:He;
       try discriminate.
     destruct (ty_core_eqb (ty_core T_e) (ty_core (param_ty p))) eqn:Hcore; [|discriminate].
     destruct (usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))) eqn:Hsub; [|discriminate].
@@ -267,16 +267,16 @@ Qed.
 (* Main theorem: infer_core is sound w.r.t. typed                             *)
 (* ------------------------------------------------------------------ *)
 
-Theorem infer_sound : forall fenv Γ e T Γ',
-  infer_core fenv Γ e = infer_ok (T, Γ') ->
-  typed fenv Γ e T Γ'.
+Theorem infer_sound : forall fenv n Γ e T Γ',
+  infer_core fenv n Γ e = infer_ok (T, Γ') ->
+  typed fenv n Γ e T Γ'.
 Proof.
-  assert (Hsize : forall n fenv Γ e T Γ',
-    expr_size e < n ->
-    infer_core fenv Γ e = infer_ok (T, Γ') ->
-    typed fenv Γ e T Γ').
+  assert (Hsize : forall sz fenv n Γ e T Γ',
+    expr_size e < sz ->
+    infer_core fenv n Γ e = infer_ok (T, Γ') ->
+    typed fenv n Γ e T Γ').
   {
-  induction n as [| n IH]; intros fenv Γ e T Γ' Hlt Hinfer.
+  induction sz as [| sz IH]; intros fenv n Γ e T Γ' Hlt Hinfer.
   - lia.
   - destruct e; simpl in Hinfer.
 
@@ -311,7 +311,7 @@ Proof.
 
   (* ELet m i t e1 e2 *)
   + rename i into x.
-    destruct (infer_core fenv Γ e1) as [[T1 Γ1] | err1] eqn:He1.
+    destruct (infer_core fenv n Γ e1) as [[T1 Γ1] | err1] eqn:He1.
     2: discriminate.
     destruct (ty_core_eqb (ty_core T1) (ty_core t)) eqn:Hcore.
     2: {
@@ -323,7 +323,7 @@ Proof.
       simpl in Hinfer.
       inversion Hinfer.
     }
-    destruct (infer_core fenv (ctx_add_b x t m Γ1) e2) as [[T2 Γ2] | err2] eqn:He2.
+    destruct (infer_core fenv n (ctx_add_b x t m Γ1) e2) as [[T2 Γ2] | err2] eqn:He2.
     2: {
       simpl in Hinfer.
       inversion Hinfer.
@@ -348,9 +348,9 @@ Proof.
     * apply ctx_check_ok_sound. exact Hok.
   (* ELetInfer m x e1 e2 *)
   + rename i into x.
-    destruct (infer_core fenv Γ e1) as [[T1 Γ1] | err1] eqn:He1.
+    destruct (infer_core fenv n Γ e1) as [[T1 Γ1] | err1] eqn:He1.
     2: discriminate.
-    destruct (infer_core fenv (ctx_add_b x T1 m Γ1) e2) as [[T2 Γ2] | err2] eqn:He2.
+    destruct (infer_core fenv n (ctx_add_b x T1 m Γ1) e2) as [[T2 Γ2] | err2] eqn:He2.
     2: {
       simpl in Hinfer.
       inversion Hinfer.
@@ -383,7 +383,7 @@ Proof.
           | [], _ :: _ => infer_err ErrArityMismatch
           | _ :: _, [] => infer_err ErrArityMismatch
           | e' :: es, p :: ps' =>
-              match infer_core fenv Γ0 e' with
+              match infer_core fenv n Γ0 e' with
               | infer_err err => infer_err err
               | infer_ok (T_e, Γ1) =>
                   if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) then
@@ -403,7 +403,7 @@ Proof.
       -- intros Γ0 e0 T0 Γ0' Hin_arg Hinfer0.
          eapply IH.
          ++ pose proof (expr_size_call_arg_lt i l e0 Hin_arg) as Harg_lt.
-            assert (expr_size e0 < n) as Hlt_arg by lia.
+            assert (expr_size e0 < sz) as Hlt_arg by lia.
             exact Hlt_arg.
          ++ exact Hinfer0.
       -- symmetry. exact Hgo.
@@ -417,7 +417,7 @@ Proof.
       destruct (ctx_lookup_mut_b px Γ) as [mut |] eqn:Hmut_b.
       2: discriminate.
       destruct mut; [discriminate |].
-      destruct (infer_core fenv Γ e) as [Htyped3 | err3] eqn:He.
+      destruct (infer_core fenv n Γ e) as [Htyped3 | err3] eqn:He.
       2: discriminate.
       destruct Htyped3 as [T_new Γ1].
       destruct (ty_core_eqb (ty_core T_new) (ty_core T_x)) eqn:Hcore.
@@ -447,7 +447,7 @@ Proof.
          end.
          destruct (ctx_lookup_mut_b rv Γ) as [mut |] eqn:Hmut_b; [| discriminate].
          destruct mut; [discriminate |].
-         destruct (infer_core fenv Γ e) as [[T_new Γ1] |] eqn:He; [| discriminate].
+         destruct (infer_core fenv n Γ e) as [[T_new Γ1] |] eqn:He; [| discriminate].
          lazymatch type of HcoreR with
          | ty_core T_r = TRef ?la ?rk ?T_inner =>
              destruct (ty_core_eqb (ty_core T_new) (ty_core T_inner)) eqn:Hcore;
@@ -475,7 +475,7 @@ Proof.
       2: discriminate.
       destruct mut; [discriminate |].
       destruct (usage_eqb (ty_usage T_x) ULinear) eqn:Hlin; [discriminate |].
-      destruct (infer_core fenv Γ e) as [[T_new Γ1] |] eqn:He.
+      destruct (infer_core fenv n Γ e) as [[T_new Γ1] |] eqn:He.
       2: discriminate.
       destruct (ty_core_eqb (ty_core T_new) (ty_core T_x)) eqn:Hcore.
       2: discriminate.
@@ -507,7 +507,7 @@ Proof.
          lazymatch type of HcoreR with
          | ty_core T_r = TRef ?la ?rk ?T_inner =>
              destruct (usage_eqb (ty_usage T_inner) ULinear) eqn:Hlin; [discriminate |];
-             destruct (infer_core fenv Γ e) as [[T_new Γ1] |] eqn:He; [| discriminate];
+             destruct (infer_core fenv n Γ e) as [[T_new Γ1] |] eqn:He; [| discriminate];
              destruct (ty_core_eqb (ty_core T_new) (ty_core T_inner)) eqn:Hcore;
                [| discriminate];
              destruct (usage_sub_bool (ty_usage T_new) (ty_usage T_inner)) eqn:Hsub;
@@ -598,7 +598,7 @@ Proof.
       -- destruct r; cbn in Hinfer; discriminate.
 
   (* EDeref e *)
-  + destruct (infer_core fenv Γ e) as [[T_r Γ1] | err] eqn:He.
+  + destruct (infer_core fenv n Γ e) as [[T_r Γ1] | err] eqn:He.
     2: discriminate.
     destruct (ty_core T_r) eqn:HcoreR; try discriminate.
     lazymatch type of HcoreR with
@@ -606,7 +606,7 @@ Proof.
         destruct (usage_eqb (ty_usage T_inner) UUnrestricted) eqn:Hunr;
         [| discriminate];
         injection Hinfer as <- <-;
-        assert (Hte : typed fenv Γ e T_r Γ1)
+        assert (Hte : typed fenv n Γ e T_r Γ1)
           by (eapply IH; [simpl in Hlt; lia | exact He]);
         assert (HTeq : T_r = MkTy (ty_usage T_r) (TRef la rk T_inner))
           by (destruct T_r as [u c]; simpl in HcoreR; rewrite HcoreR; reflexivity);
@@ -616,7 +616,7 @@ Proof.
     end.
 
   (* EDrop e *)
-  + destruct (infer_core fenv Γ e) as [Htyped4 | err4] eqn:He.
+  + destruct (infer_core fenv n Γ e) as [Htyped4 | err4] eqn:He.
     2: discriminate.
     destruct Htyped4 as [Te Γ1].
       injection Hinfer as <- <-.
@@ -626,13 +626,13 @@ Proof.
       * exact He.
 
   (* EIf e1 e2 e3 *)
-  + destruct (infer_core fenv Γ e1) as [[Tcond Γ1] | ] eqn:He1.
+  + destruct (infer_core fenv n Γ e1) as [[Tcond Γ1] | ] eqn:He1.
     2: discriminate.
     destruct (ty_core_eqb (ty_core Tcond) TBooleans) eqn:Hbool.
     2: discriminate.
-    destruct (infer_core fenv Γ1 e2) as [[T2 Γ2] | ] eqn:He2.
+    destruct (infer_core fenv n Γ1 e2) as [[T2 Γ2] | ] eqn:He2.
     2: { simpl in Hinfer. inversion Hinfer. }
-    destruct (infer_core fenv Γ1 e3) as [[T3 Γ3] | ] eqn:He3.
+    destruct (infer_core fenv n Γ1 e3) as [[T3 Γ3] | ] eqn:He3.
     2: { simpl in Hinfer. inversion Hinfer. }
     destruct (ty_core_eqb (ty_core T2) (ty_core T3)) eqn:Hcore.
     2: discriminate.
@@ -647,7 +647,7 @@ Proof.
     * apply ty_core_eqb_true. exact Hcore.
     * exact Hmerge.
   }
-  intros fenv Γ e T Γ' Hinfer.
+  intros fenv n Γ e T Γ' Hinfer.
   eapply (Hsize (S (expr_size e))).
   - lia.
   - exact Hinfer.
@@ -656,15 +656,15 @@ Qed.
 (* infer_body runs alpha-renaming before infer_core. The proof requires
    alpha-renaming preservation for typing; keep it isolated from the
    infer_core soundness argument above. *)
-Theorem infer_body_sound : forall fenv Γ e T Γ',
-  infer_body fenv Γ e = infer_ok (T, Γ') ->
-  typed fenv Γ e T Γ'.
+Theorem infer_body_sound : forall fenv n Γ e T Γ',
+  infer_body fenv n Γ e = infer_ok (T, Γ') ->
+  typed fenv n Γ e T Γ'.
 Proof.
-  intros fenv Γ e T Γ' Hinfer.
+  intros fenv n Γ e T Γ' Hinfer.
   unfold infer_body in Hinfer.
   destruct (alpha_rename_for_infer Γ fenv e) as [fenv' e'] eqn:Hrename.
-  apply (alpha_rename_for_infer_typed_backward
-    fenv Γ e fenv' e' T Γ' Hrename).
+  apply (alpha_rename_for_infer_typed_backward fenv n
+    Γ e fenv' e' T Γ' Hrename).
   apply infer_sound. exact Hinfer.
 Qed.
 
@@ -694,9 +694,13 @@ Theorem infer_fn_def_sound : forall fenv f T Γ',
 Proof.
   intros fenv f T Γ' Hcheck.
   unfold infer in Hcheck.
-  destruct (infer_body fenv (params_ctx (fn_params f)) (fn_body f))
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f))) eqn:Hwf_ret.
+  { discriminate. }
+  destruct (infer_body fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f))
     as [[T_body Γ_out] | err] eqn:Hinfer.
-  - destruct (ty_core_eqb _ _) eqn:Hcore; [|discriminate].
+  - destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) T_body)) eqn:Hwf_body.
+    { discriminate. }
+    destruct (ty_core_eqb _ _) eqn:Hcore; [|discriminate].
     destruct (usage_eqb _ _) eqn:Husage; [|discriminate].
     destruct (params_ok_b _ _) eqn:Hparams; [|discriminate].
     apply infer_body_sound in Hinfer as Htyped.
@@ -727,9 +731,13 @@ Theorem infer_direct_sound : forall fenv f T Γ',
 Proof.
   intros fenv f T Γ' Hcheck.
   unfold infer_direct in Hcheck.
-  destruct (infer_core fenv (params_ctx (fn_params f)) (fn_body f))
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f))) eqn:Hwf_ret.
+  { discriminate. }
+  destruct (infer_core fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f))
     as [[T_body Γ_out] | err] eqn:Hinfer.
-  - destruct (ty_core_eqb _ _) eqn:Hcore; [|discriminate].
+  - destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) T_body)) eqn:Hwf_body.
+    { discriminate. }
+    destruct (ty_core_eqb _ _) eqn:Hcore; [|discriminate].
     destruct (usage_eqb _ _) eqn:Husage; [|discriminate].
     destruct (params_ok_b _ _) eqn:Hparams; [|discriminate].
     apply infer_sound in Hinfer as Htyped.

@@ -48,6 +48,8 @@ let string_of_infer_error = function
     Printf.sprintf "type is not a reference: %s" (string_of_ty_core c)
   | ErrBorrowConflict id  ->
     Printf.sprintf "borrow conflict: %s is already borrowed incompatibly" (string_of_ident id)
+  | ErrLifetimeLeak ->
+    "lifetime leak: function returns a reference to a local (dangling reference)"
 
 let check_alpha_consistency fname fenv f =
   let r1 = infer fenv f in

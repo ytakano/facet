@@ -507,20 +507,20 @@ Proof.
 Qed.
 
 Lemma typed_same_bindings :
-  (forall fenv Γ e T Γ',
-      typed fenv Γ e T Γ' ->
+  (forall fenv n Γ e T Γ',
+      typed fenv n Γ e T Γ' ->
       ctx_same_bindings Γ Γ') /\
-  (forall fenv Γ es ps Γ',
-      typed_args fenv Γ es ps Γ' ->
+  (forall fenv n Γ es ps Γ',
+      typed_args fenv n Γ es ps Γ' ->
       ctx_same_bindings Γ Γ').
 Proof.
-  assert (H : forall fenv,
+  assert (H : forall fenv n,
     (forall Γ e T Γ',
-        typed fenv Γ e T Γ' -> ctx_same_bindings Γ Γ') /\
+        typed fenv n Γ e T Γ' -> ctx_same_bindings Γ Γ') /\
     (forall Γ es ps Γ',
-        typed_args fenv Γ es ps Γ' -> ctx_same_bindings Γ Γ')).
+        typed_args fenv n Γ es ps Γ' -> ctx_same_bindings Γ Γ')).
   {
-    intro fenv.
+    intros fenv n.
     apply typed_typed_args_ind; intros; simpl;
       try solve [apply ctx_same_bindings_refl];
       try solve [eassumption];
@@ -553,7 +553,7 @@ Proof.
         end
       ].
   }
-  split; intros fenv; destruct (H fenv) as [Ht Hargs]; [apply Ht | apply Hargs].
+  split; intros fenv n; destruct (H fenv n) as [Ht Hargs]; [apply Ht | apply Hargs].
 Qed.
 
 Fixpoint expr_size (e : expr) : nat :=
@@ -772,7 +772,7 @@ Lemma alpha_rename_fn_def_used_extends : forall used f fr used',
   forall x, In x used -> In x used'.
 Proof.
   intros used f fr used' Hrename x Hin.
-  destruct f as [fname ps ret body].
+  destruct f as [fname lifetimes ps ret body].
   unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
   destruct (alpha_rename_params []
     (param_names ps ++ free_vars_expr body ++ used) ps)
@@ -1040,7 +1040,7 @@ Lemma alpha_rename_fn_def_shape : forall used f fr used',
   same_fn_shape f fr.
 Proof.
   intros used f fr used' H.
-  destruct f as [fname ps ret body].
+  destruct f as [fname lifetimes ps ret body].
   unfold alpha_rename_fn_def in H.
   simpl in H.
   destruct (alpha_rename_params []
@@ -1101,33 +1101,33 @@ Proof.
   split; assumption.
 Qed.
 
-Lemma typed_args_cons_inv : forall fenv Γ er ers pr psr Γ',
-  typed_args fenv Γ (er :: ers) (pr :: psr) Γ' ->
+Lemma typed_args_cons_inv : forall fenv n Γ er ers pr psr Γ',
+  typed_args fenv n Γ (er :: ers) (pr :: psr) Γ' ->
   exists T Γ1,
-    typed fenv Γ er T Γ1 /\
+    typed fenv n Γ er T Γ1 /\
     ty_core T = ty_core (param_ty pr) /\
     usage_sub (ty_usage T) (ty_usage (param_ty pr)) /\
-    typed_args fenv Γ1 ers psr Γ'.
+    typed_args fenv n Γ1 ers psr Γ'.
 Proof.
-  intros fenv Γ er ers pr psr Γ' Htyped.
+  intros fenv n Γ er ers pr psr Γ' Htyped.
   inversion Htyped; subst.
   exists T_e, Γ1. repeat split; assumption.
 Qed.
 
-Lemma typed_call_inv : forall fenv Γ fname args T Γ',
-  typed fenv Γ (ECall fname args) T Γ' ->
+Lemma typed_call_inv : forall fenv n Γ fname args T Γ',
+  typed fenv n Γ (ECall fname args) T Γ' ->
   exists fdef,
     In fdef fenv /\
     fn_name fdef = fname /\
     fn_ret fdef = T /\
-    typed_args fenv Γ args (fn_params fdef) Γ'.
+    typed_args fenv n Γ args (fn_params fdef) Γ'.
 Proof.
-  intros fenv Γ fname args T Γ' Htyped.
+  intros fenv n Γ fname args T Γ' Htyped.
   inversion Htyped; subst.
   exists fdef. repeat split; assumption.
 Qed.
 
-Lemma alpha_rename_call_args_typed_backward : forall fenv0 fenvr ρ Γ0 Γr args argsr used used' ps0 psr Γr',
+Lemma alpha_rename_call_args_typed_backward : forall fenv0 fenvr n ρ Γ0 Γr args argsr used used' ps0 psr Γr',
   (forall Γa Γb used0 e er used1 T Γb',
       In e args ->
       ctx_alpha ρ Γa Γb ->
@@ -1135,9 +1135,9 @@ Lemma alpha_rename_call_args_typed_backward : forall fenv0 fenvr ρ Γ0 Γr args
       (forall x, In x (rename_range ρ) -> In x used0) ->
       disjoint_names (free_vars_expr e) (rename_range ρ) ->
       alpha_rename_expr ρ used0 e = (er, used1) ->
-      typed fenvr Γb er T Γb' ->
+      typed fenvr n Γb er T Γb' ->
       exists Γa',
-        typed fenv0 Γa e T Γa' /\
+        typed fenv0 n Γa e T Γa' /\
         ctx_alpha ρ Γa' Γb') ->
   fenv_alpha fenv0 fenvr ->
   ctx_alpha ρ Γ0 Γr ->
@@ -1160,12 +1160,12 @@ Lemma alpha_rename_call_args_typed_backward : forall fenv0 fenvr ρ Γ0 Γr args
           let (rest', used2) := go used1 rest in
           (arg' :: rest', used2)
       end) used args) = (argsr, used') ->
-  typed_args fenvr Γr argsr psr Γr' ->
+  typed_args fenvr n Γr argsr psr Γr' ->
   exists Γ0',
-    typed_args fenv0 Γ0 args ps0 Γ0' /\
+    typed_args fenv0 n Γ0 args ps0 Γ0' /\
     ctx_alpha ρ Γ0' Γr'.
 Proof.
-  intros fenv0 fenvr ρ Γ0 Γr args.
+  intros fenv0 fenvr n ρ Γ0 Γr args.
   revert Γ0 Γr.
   induction args as [| arg rest IH]; intros Γ0 Γr argsr used used' ps0 psr Γr'
     Hexpr Hfenv Hctx Hctx_used Hrange_used Hdisj Hparams Hrename Htyped_args;
@@ -1196,7 +1196,7 @@ Proof.
     destruct (params_alpha_cons_inv ps0 pr psr_tail Hparams)
       as [p [ps [Hps0 [Hshape Hparams_tail]]]].
     subst ps0.
-    destruct (typed_args_cons_inv fenvr Γr ar restr pr psr_tail Γr' Htyped_args)
+    destruct (typed_args_cons_inv fenvr n Γr ar restr pr psr_tail Γr' Htyped_args)
       as [Targ [Γr1 [Htyped_arg_r [Hcore [Hsub Htyped_tail_r]]]]].
     destruct (Hexpr Γ0 Γr used arg ar used1 Targ Γr1)
       as [Γ01 [Htyped_arg Hctx_arg]].
@@ -1299,32 +1299,32 @@ Proof.
       constructor; [exact Hctx04 | exact Hrest_names | exact Hxr_range].
 Qed.
 
-Lemma alpha_rename_typed_backward : forall fenv0 fenvr ρ Γ0 Γr e er used used' T Γr',
+Lemma alpha_rename_typed_backward : forall fenv0 fenvr n ρ Γ0 Γr e er used used' T Γr',
   fenv_alpha fenv0 fenvr ->
   ctx_alpha ρ Γ0 Γr ->
   (forall x, In x (ctx_names Γr) -> In x used) ->
   (forall x, In x (rename_range ρ) -> In x used) ->
   disjoint_names (free_vars_expr e) (rename_range ρ) ->
   alpha_rename_expr ρ used e = (er, used') ->
-  typed fenvr Γr er T Γr' ->
+  typed fenvr n Γr er T Γr' ->
   exists Γ0',
-    typed fenv0 Γ0 e T Γ0' /\
+    typed fenv0 n Γ0 e T Γ0' /\
     ctx_alpha ρ Γ0' Γr'.
 Proof.
-  assert (Hsize : forall n fenv0 fenvr ρ Γ0 Γr e er used used' T Γr',
-    expr_size e < n ->
+  assert (Hsize : forall sz fenv0 fenvr n ρ Γ0 Γr e er used used' T Γr',
+    expr_size e < sz ->
     fenv_alpha fenv0 fenvr ->
     ctx_alpha ρ Γ0 Γr ->
     (forall x, In x (ctx_names Γr) -> In x used) ->
     (forall x, In x (rename_range ρ) -> In x used) ->
     disjoint_names (free_vars_expr e) (rename_range ρ) ->
     alpha_rename_expr ρ used e = (er, used') ->
-    typed fenvr Γr er T Γr' ->
+    typed fenvr n Γr er T Γr' ->
     exists Γ0',
-      typed fenv0 Γ0 e T Γ0' /\
+      typed fenv0 n Γ0 e T Γ0' /\
       ctx_alpha ρ Γ0' Γr').
   {
-  induction n as [| n IH]; intros fenv0 fenvr ρ Γ0 Γr e er used used' T Γr'
+  induction sz as [| sz IH]; intros fenv0 fenvr n ρ Γ0 Γr e er used used' T Γr'
     Hlt Hfenv Hctx Hctx_used Hrange_used Hdisj Hrename Htyped.
   - lia.
   - destruct e; simpl in Hrename.
@@ -1378,8 +1378,8 @@ Proof.
       (rename_range ρ)) as [Hdisj1 Hdisj2].
     { intros x Hin. apply Hdisj. simpl. right. exact Hin. }
     lazymatch goal with
-    | Hte1 : typed fenvr Γr e1r ?T1r ?Γ1r |- _ =>
-      destruct (IH fenv0 fenvr ρ Γ0 Γr e1 e1r used used1 T1r Γ1r
+    | Hte1 : typed fenvr n Γr e1r ?T1r ?Γ1r |- _ =>
+      destruct (IH fenv0 fenvr n ρ Γ0 Γr e1 e1r used used1 T1r Γ1r
         ltac:(simpl in Hlt; lia)
         Hfenv Hctx Hctx_used Hrange_used Hdisj1 He1 Hte1)
         as [Γ01 [Htyped1 Hctx1]]
@@ -1394,7 +1394,7 @@ Proof.
         + exact Hin.
         + destruct typed_same_bindings as [Hsame _].
           lazymatch goal with
-          | Hte1 : typed fenvr Γr e1r _ _ |- _ => eapply Hsame; exact Hte1
+          | Hte1 : typed fenvr n Γr e1r _ _ |- _ => eapply Hsame; exact Hte1
           end. }
     assert (Hxr_ctx : ~ In xr (ctx_names Γ1)).
     { unfold xr. intros Hin.
@@ -1432,8 +1432,8 @@ Proof.
         right. apply in_or_app. left. exact Hin.
       - exact (Hdisj2 x Hin Hinr). }
     lazymatch goal with
-    | Hte2 : typed fenvr (ctx_add ?xrr t m Γ1) e2r ?T2r ?Γ2r |- _ =>
-      destruct (IH fenv0 fenvr ((i, xr) :: ρ)
+    | Hte2 : typed fenvr n (ctx_add ?xrr t m Γ1) e2r ?T2r ?Γ2r |- _ =>
+      destruct (IH fenv0 fenvr n ((i, xr) :: ρ)
         (ctx_add i t m Γ01) (ctx_add xrr t m Γ1)
         e2 e2r (xr :: i :: free_vars_expr e2 ++ used1) used2 T2r Γ2r
         ltac:(simpl in Hlt; lia)
@@ -1466,8 +1466,8 @@ Proof.
       (rename_range ρ)) as [Hdisj1 Hdisj2].
     { intros x Hin. apply Hdisj. simpl. right. exact Hin. }
     lazymatch goal with
-    | Hte1 : typed fenvr Γr e1r ?T1r ?Γ1r |- _ =>
-      destruct (IH fenv0 fenvr ρ Γ0 Γr e1 e1r used used1 T1r Γ1r
+    | Hte1 : typed fenvr n Γr e1r ?T1r ?Γ1r |- _ =>
+      destruct (IH fenv0 fenvr n ρ Γ0 Γr e1 e1r used used1 T1r Γ1r
         ltac:(simpl in Hlt; lia)
         Hfenv Hctx Hctx_used Hrange_used Hdisj1 He1 Hte1)
         as [Γ01 [Htyped1 Hctx1]]
@@ -1482,7 +1482,7 @@ Proof.
         + exact Hin.
         + destruct typed_same_bindings as [Hsame _].
           lazymatch goal with
-          | Hte1 : typed fenvr Γr e1r _ _ |- _ => eapply Hsame; exact Hte1
+          | Hte1 : typed fenvr n Γr e1r _ _ |- _ => eapply Hsame; exact Hte1
           end. }
     assert (Hxr_ctx : ~ In xr (ctx_names Γ1)).
     { unfold xr. intros Hin.
@@ -1520,8 +1520,8 @@ Proof.
         right. apply in_or_app. left. exact Hin.
       - exact (Hdisj2 x Hin Hinr). }
     lazymatch goal with
-    | Hte2 : typed fenvr (ctx_add _ T1 m Γ1) e2r ?T2r ?Γ2r |- _ =>
-      destruct (IH fenv0 fenvr ((i, xr) :: ρ)
+    | Hte2 : typed fenvr n (ctx_add _ T1 m Γ1) e2r ?T2r ?Γ2r |- _ =>
+      destruct (IH fenv0 fenvr n ((i, xr) :: ρ)
         (ctx_add i T1 m Γ01) (ctx_add xr T1 m Γ1)
         e2 e2r (xr :: i :: free_vars_expr e2 ++ used1) used2 T2r Γ2r
         ltac:(simpl in Hlt; lia)
@@ -1556,8 +1556,8 @@ Proof.
     destruct r as [argsr used_args].
     injection Hrename as <- _.
     lazymatch goal with
-    | Htyped_call : typed fenvr Γr (ECall ?fname argsr) T Γr' |- _ =>
-      destruct (typed_call_inv fenvr Γr fname argsr T Γr' Htyped_call)
+    | Htyped_call : typed fenvr n Γr (ECall ?fname argsr) T Γr' |- _ =>
+      destruct (typed_call_inv fenvr n Γr fname argsr T Γr' Htyped_call)
         as [fdef [Hinr [Hname_r [Hret_r Hargs_typed]]]];
       destruct (fenv_alpha_in_backward fenv0 fenvr fdef Hfenv Hinr)
         as [fdef0 [Hin0 Hshape]];
@@ -1565,9 +1565,9 @@ Proof.
     end.
     assert (Hargs_back :
       exists Γ0',
-        typed_args fenv0 Γ0 l (fn_params fdef0) Γ0' /\
+        typed_args fenv0 n Γ0 l (fn_params fdef0) Γ0' /\
         ctx_alpha ρ Γ0' Γr').
-    { eapply alpha_rename_call_args_typed_backward.
+    { eapply alpha_rename_call_args_typed_backward with (n := n).
       - intros Γa Γb used0 e er used1 T0 Γb' Hin Halpha Hcu Hru Hd Hr Ht.
         eapply IH.
         + pose proof (expr_size_call_arg_lt i l e Hin) as Harg_lt.
@@ -1589,7 +1589,7 @@ Proof.
       - exact Hparams.
       - symmetry. exact Hargs.
       - lazymatch goal with
-        | Hargs_typed : typed_args fenvr Γr argsr _ Γr' |- _ => exact Hargs_typed
+        | Hargs_typed : typed_args fenvr n Γr argsr _ Γr' |- _ => exact Hargs_typed
         end. }
     destruct Hargs_back as [Γ0' [Htyped_args0 Hctx0]].
     exists Γ0'. split.
@@ -1610,8 +1610,8 @@ Proof.
       assert (Hdisj_e : disjoint_names (free_vars_expr e) (rename_range ρ)).
       { intros x Hin Hinr. exact (Hdisj x (or_intror Hin) Hinr). }
       lazymatch goal with
-      | Hte : typed fenvr Γr er0 ?Tnew ?Γr1 |- _ =>
-        destruct (IH fenv0 fenvr ρ Γ0 Γr e er0 used used0 Tnew Γr1
+      | Hte : typed fenvr n Γr er0 ?Tnew ?Γr1 |- _ =>
+        destruct (IH fenv0 fenvr n ρ Γ0 Γr e er0 used used0 Tnew Γr1
           ltac:(simpl in Hlt; lia)
           Hfenv Hctx Hctx_used Hrange_used
           Hdisj_e He Hte) as [Γ0' [Htyped0 Hctx0]]
@@ -1639,8 +1639,8 @@ Proof.
          assert (Hdisj_e : disjoint_names (free_vars_expr e) (rename_range ρ)).
          { intros x Hin Hinr. exact (Hdisj x (or_intror Hin) Hinr). }
          lazymatch goal with
-         | Hte : typed fenvr Γr er0 ?Tnew ?Γr1 |- _ =>
-           destruct (IH fenv0 fenvr ρ Γ0 Γr e er0 used used0 Tnew Γr1
+         | Hte : typed fenvr n Γr er0 ?Tnew ?Γr1 |- _ =>
+           destruct (IH fenv0 fenvr n ρ Γ0 Γr e er0 used used0 Tnew Γr1
              ltac:(simpl in Hlt; lia)
              Hfenv Hctx Hctx_used Hrange_used
              Hdisj_e He Hte) as [Γ0' [Htyped0 Hctx0]]
@@ -1672,8 +1672,8 @@ Proof.
       assert (Hdisj_e : disjoint_names (free_vars_expr e) (rename_range ρ)).
       { intros x Hin Hinr. exact (Hdisj x (or_intror Hin) Hinr). }
       lazymatch goal with
-      | Hte : typed fenvr Γr er0 ?Tnew ?Γr1 |- _ =>
-        destruct (IH fenv0 fenvr ρ Γ0 Γr e er0 used used0 Tnew Γr1
+      | Hte : typed fenvr n Γr er0 ?Tnew ?Γr1 |- _ =>
+        destruct (IH fenv0 fenvr n ρ Γ0 Γr e er0 used used0 Tnew Γr1
           ltac:(simpl in Hlt; lia)
           Hfenv Hctx Hctx_used Hrange_used Hdisj_e He Hte) as [Γ0' [Htyped0 Hctx0]]
       end.
@@ -1701,8 +1701,8 @@ Proof.
          assert (Hdisj_e : disjoint_names (free_vars_expr e) (rename_range ρ)).
          { intros x Hin Hinr. exact (Hdisj x (or_intror Hin) Hinr). }
          lazymatch goal with
-         | Hte : typed fenvr Γr er0 ?Tnew ?Γr1 |- _ =>
-           destruct (IH fenv0 fenvr ρ Γ0 Γr e er0 used used0 Tnew Γr1
+         | Hte : typed fenvr n Γr er0 ?Tnew ?Γr1 |- _ =>
+           destruct (IH fenv0 fenvr n ρ Γ0 Γr e er0 used used0 Tnew Γr1
              ltac:(simpl in Hlt; lia)
              Hfenv Hctx Hctx_used Hrange_used Hdisj_e He Hte) as [Γ0' [Htyped0 Hctx0]]
          end.
@@ -1790,8 +1790,8 @@ Proof.
     injection Hrename as <- _.
     inversion Htyped; subst.
     lazymatch goal with
-    | Hte : typed fenvr Γr er0 (MkTy ?u_r (TRef ?la ?rk T)) ?Γr1 |- _ =>
-      destruct (IH fenv0 fenvr ρ Γ0 Γr e er0 used used0 (MkTy u_r (TRef la rk T)) Γr1
+    | Hte : typed fenvr n Γr er0 (MkTy ?u_r (TRef ?la ?rk T)) ?Γr1 |- _ =>
+      destruct (IH fenv0 fenvr n ρ Γ0 Γr e er0 used used0 (MkTy u_r (TRef la rk T)) Γr1
         ltac:(simpl in Hlt; lia)
         Hfenv Hctx Hctx_used Hrange_used Hdisj He Hte) as [Γ0' [Htyped0 Hctx0]]
     end.
@@ -1801,7 +1801,7 @@ Proof.
   + destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as <- _.
     inversion Htyped; subst.
-    destruct (IH fenv0 fenvr ρ Γ0 Γr e er0 used used0 T0 Γr'
+    destruct (IH fenv0 fenvr n ρ Γ0 Γr e er0 used used0 T0 Γr'
       ltac:(simpl in Hlt; lia)
       Hfenv Hctx Hctx_used Hrange_used Hdisj He H1)
       as [Γ0' [Htyped0 Hctx0]].
@@ -1821,8 +1821,8 @@ Proof.
     { exact Hdisj23. }
     (* Apply IH to e1 *)
     lazymatch goal with
-    | Hte1 : typed fenvr Γr e1r ?Tcr ?Γ1r |- _ =>
-      destruct (IH fenv0 fenvr ρ Γ0 Γr e1 e1r used used1 Tcr Γ1r
+    | Hte1 : typed fenvr n Γr e1r ?Tcr ?Γ1r |- _ =>
+      destruct (IH fenv0 fenvr n ρ Γ0 Γr e1 e1r used used1 Tcr Γ1r
         ltac:(simpl in Hlt; lia)
         Hfenv Hctx Hctx_used Hrange_used Hdisj1 He1 Hte1)
         as [Γ01 [Htyped1 Hctx1]]
@@ -1836,14 +1836,14 @@ Proof.
       - exact Hin.
       - destruct typed_same_bindings as [Hsame _].
         lazymatch goal with
-        | Hte1 : typed fenvr Γr e1r _ _ |- _ => eapply Hsame; exact Hte1
+        | Hte1 : typed fenvr n Γr e1r _ _ |- _ => eapply Hsame; exact Hte1
         end. }
     assert (Hrange_used1 : forall x, In x (rename_range ρ) -> In x used1).
     { intros x Hinr. eapply alpha_rename_expr_used_extends; [exact He1 | exact (Hrange_used x Hinr)]. }
     (* Apply IH to e2 (starting from Γ01/Γ1) *)
     lazymatch goal with
-    | Hte2 : typed fenvr Γ1 e2r ?T2r ?Γ2r |- _ =>
-      destruct (IH fenv0 fenvr ρ Γ01 Γ1 e2 e2r used1 used2 T2r Γ2r
+    | Hte2 : typed fenvr n Γ1 e2r ?T2r ?Γ2r |- _ =>
+      destruct (IH fenv0 fenvr n ρ Γ01 Γ1 e2 e2r used1 used2 T2r Γ2r
         ltac:(simpl in Hlt; lia)
         Hfenv Hctx1 Hctx_used1 Hrange_used1 Hdisj2 He2 Hte2)
         as [Γ02 [Htyped2 Hctx2]]
@@ -1855,8 +1855,8 @@ Proof.
     { intros x Hinr. eapply alpha_rename_expr_used_extends; [exact He2 | exact (Hrange_used1 x Hinr)]. }
     (* Apply IH to e3 (starting from Γ01/Γ1) *)
     lazymatch goal with
-    | Hte3 : typed fenvr Γ1 e3r ?T3r ?Γ3r |- _ =>
-      destruct (IH fenv0 fenvr ρ Γ01 Γ1 e3 e3r used2 used3 T3r Γ3r
+    | Hte3 : typed fenvr n Γ1 e3r ?T3r ?Γ3r |- _ =>
+      destruct (IH fenv0 fenvr n ρ Γ01 Γ1 e3 e3r used2 used3 T3r Γ3r
         ltac:(simpl in Hlt; lia)
         Hfenv Hctx1 Hctx_used2 Hrange_used2 Hdisj3 He3 Hte3)
         as [Γ03 [Htyped3 Hctx3]]
@@ -1877,7 +1877,7 @@ Proof.
       end. }
     { exact Hctx4. }
   }
-  intros fenv0 fenvr ρ Γ0 Γr e er used used' T Γr'
+  intros fenv0 fenvr n ρ Γ0 Γr e er used used' T Γr'
     Hfenv Hctx Hctx_used Hrange_used Hdisj Hrename Htyped.
   eapply (Hsize (S (expr_size e))).
   - apply Nat.lt_succ_diag_r.
@@ -1890,12 +1890,12 @@ Proof.
   - exact Htyped.
 Qed.
 
-Theorem alpha_rename_for_infer_typed_backward : forall fenv Γ e fenv' e' T Γ',
+Theorem alpha_rename_for_infer_typed_backward : forall fenv n Γ e fenv' e' T Γ',
   alpha_rename_for_infer Γ fenv e = (fenv', e') ->
-  typed fenv' Γ e' T Γ' ->
-  typed fenv Γ e T Γ'.
+  typed fenv' n Γ e' T Γ' ->
+  typed fenv n Γ e T Γ'.
 Proof.
-  intros fenv Γ e fenv' e' T Γ' Hrename Htyped.
+  intros fenv n Γ e fenv' e' T Γ' Hrename Htyped.
   unfold alpha_rename_for_infer in Hrename.
   destruct (alpha_rename_syntax_go (free_vars_expr e ++ ctx_names Γ) fenv)
     as [fenv0 used] eqn:Hfenv.
@@ -1913,7 +1913,7 @@ Proof.
   assert (Hdisj : disjoint_names (free_vars_expr e) (rename_range [])).
   { apply disjoint_names_nil_r. }
   pose proof (alpha_rename_typed_backward
-    fenv fenv0 [] Γ Γ e er used used' T Γ'
+    fenv fenv0 n [] Γ Γ e er used used' T Γ'
     Hfenv_alpha (CtxAlpha_Base Γ)
     Hctx_used Hrange_used Hdisj He Htyped)
     as [Γ0 [Htyped0 Hctx_alpha]].

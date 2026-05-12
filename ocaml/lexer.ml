@@ -79,6 +79,11 @@ let rec tokenize st =
   | '{' -> Parser.LBRACE
   | '}' -> Parser.RBRACE
   | '&' -> Parser.AMP
+  | '<' -> Parser.LANGLE
+  | '>' -> Parser.RANGLE
+  | '\'', alpha, Star alnum ->
+    let s = Sedlexing.Utf8.lexeme buf in
+    Parser.LIFETIME (String.sub s 1 (String.length s - 1))
   | '*' -> Parser.STAR
   | ',' -> Parser.COMMA
   | ':' -> Parser.COLON

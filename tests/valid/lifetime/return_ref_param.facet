@@ -1,0 +1,6 @@
+// Function with an explicit lifetime parameter 'a.
+// The reference argument r is returned directly — valid because the return type
+// carries the same lifetime 'a, which is in scope.
+fn f<'a>(r: unrestricted &'a unrestricted isize) -> unrestricted &'a unrestricted isize {
+    r
+}

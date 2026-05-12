@@ -10,15 +10,27 @@ let desugar_stmt item cont =
   match item with
   | LetStmt (m, x, ty_opt, e) -> NLet (m, x, ty_opt, e, cont)
   | ExprStmt e                -> NLet (MImmutable, "_", None, e, cont)
+
+(* Mutable state for lifetime name resolution within the current fn_def *)
+let current_lifetimes : string list ref = ref []
+
+let resolve_lt_name (name : string) : Big_int_Z.big_int =
+  let rec aux i = function
+    | [] -> failwith (Printf.sprintf "undefined lifetime '%s" name)
+    | h :: _ when h = name -> Big_int_Z.big_int_of_int i
+    | _ :: t -> aux (i+1) t
+  in
+  aux 0 !current_lifetimes
 %}
 
 %token KW_FN KW_LET KW_IN KW_MUT KW_DROP KW_REPLACE
 %token KW_AFFINE KW_LINEAR KW_UNRESTRICTED KW_ISIZE KW_F64
 %token KW_IF KW_ELSE KW_TRUE KW_FALSE KW_BOOL
-%token LPAREN RPAREN LBRACE RBRACE
+%token LPAREN RPAREN LBRACE RBRACE LANGLE RANGLE
 %token ARROW AMP STAR
 %token COMMA COLON EQUAL SEMI UNDERSCORE
 %token <string> ID
+%token <string> LIFETIME
 %token <Big_int_Z.big_int> INT_LIT
 %token <string> FLOAT_LIT
 %token EOF
@@ -31,9 +43,19 @@ program:
   | defs = list(fn_def); EOF { defs }
 
 fn_def:
-  | KW_FN; name = ID; LPAREN; ps = params; RPAREN;
+  | KW_FN; name = ID; lt_names = opt_lifetime_params;
+    LPAREN; ps = params; RPAREN;
     ARROW; ret = ty; LBRACE; body = block; RBRACE
-    { { nf_name = name; nf_params = ps; nf_ret = ret; nf_body = body } }
+    { { nf_name = name; nf_lifetime_names = lt_names;
+        nf_params = ps; nf_ret = ret; nf_body = body } }
+
+opt_lifetime_params:
+  | { current_lifetimes := []; [] }
+  | LANGLE; names = separated_nonempty_list(COMMA, lifetime_name); RANGLE
+    { current_lifetimes := names; names }
+
+lifetime_name:
+  | lt = LIFETIME { lt }
 
 params:
   | { [] }
@@ -139,8 +161,10 @@ ty_core:
   | KW_F64   { TFloats }
   | KW_BOOL  { TBooleans }
   | LPAREN; RPAREN { TUnits }
-  | AMP; t = ty { TRef (LStatic, RShared, t) }
-  | AMP; KW_MUT; t = ty { TRef (LStatic, RUnique, t) }
+  | AMP; t = ty { TRef (LVar Big_int_Z.zero_big_int, RShared, t) }
+  | AMP; KW_MUT; t = ty { TRef (LVar Big_int_Z.zero_big_int, RUnique, t) }
+  | AMP; lt = LIFETIME; t = ty { TRef (LVar (resolve_lt_name lt), RShared, t) }
+  | AMP; lt = LIFETIME; KW_MUT; t = ty { TRef (LVar (resolve_lt_name lt), RUnique, t) }
   | KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty
     { TFn (ts, ret) }
 

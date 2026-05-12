@@ -138,6 +138,35 @@ Fixpoint lookup_fn_b (name : ident) (fenv : list fn_def) : option fn_def :=
   end.
 
 (* ------------------------------------------------------------------ *)
+(* Lifetime well-formedness                                              *)
+(*                                                                      *)
+(* mk_region_ctx n  =  [LVar 0; LVar 1; ...; LVar (n-1)]              *)
+(* wf_type_b Δ T    =  true iff every reference lifetime in T is       *)
+(*                      LStatic or a member of Δ.                      *)
+(* ------------------------------------------------------------------ *)
+
+Fixpoint mk_region_ctx (n : nat) : region_ctx :=
+  match n with
+  | O    => []
+  | S k  => mk_region_ctx k ++ [LVar k]
+  end.
+
+Definition wf_lifetime_b (Δ : region_ctx) (l : lifetime) : bool :=
+  match l with
+  | LStatic => true
+  | LVar _  => existsb (lifetime_eqb l) Δ
+  end.
+
+Fixpoint wf_type_b (Δ : region_ctx) (T : Ty) : bool :=
+  match T with
+  | MkTy _ (TRef l _ T_inner) =>
+      wf_lifetime_b Δ l && wf_type_b Δ T_inner
+  | MkTy _ (TFn ts r) =>
+      forallb (wf_type_b Δ) ts && wf_type_b Δ r
+  | _ => true
+  end.
+
+(* ------------------------------------------------------------------ *)
 (* Alpha renaming                                                       *)
 (* ------------------------------------------------------------------ *)
 
@@ -196,7 +225,8 @@ Inductive infer_error : Type :=
   | ErrNotImplemented : infer_error
   | ErrImmutableBorrow : ident -> infer_error       (* &mut x where x is immutable *)
   | ErrNotAReference : TypeCore Ty -> infer_error   (* *e where e is not a reference type *)
-  | ErrBorrowConflict : ident -> infer_error.       (* borrow conflicts with existing active borrow *)
+  | ErrBorrowConflict : ident -> infer_error       (* borrow conflicts with existing active borrow *)
+  | ErrLifetimeLeak : infer_error.                 (* return type references a local lifetime *)
 
 Inductive infer_result (A : Type) : Type :=
   | infer_ok : A -> infer_result A
@@ -311,7 +341,7 @@ Definition alpha_rename_fn_def (used : list ident)
   let used0 := param_names (fn_params f) ++ free_vars_expr (fn_body f) ++ used in
   let '(params', ρ, used1) := alpha_rename_params [] used0 (fn_params f) in
   let (body', used2) := alpha_rename_expr ρ used1 (fn_body f) in
-  (MkFnDef (fn_name f) params' (fn_ret f) body', used2).
+  (MkFnDef (fn_name f) (fn_lifetimes f) params' (fn_ret f) body', used2).
 
 Fixpoint alpha_rename_syntax_go (used : list ident) (s : Syntax)
     : Syntax * list ident :=
@@ -345,7 +375,7 @@ Definition alpha_rename_for_infer (Γ : ctx) (fenv : list fn_def)
 (* termination checking).                                                *)
 (* ------------------------------------------------------------------ *)
 
-Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
+Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
     : infer_result (Ty * ctx) :=
   match e with
 
@@ -376,12 +406,12 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
       end
 
   | ELet m x T e1 e2 =>
-      match infer_core fenv Γ e1 with
+      match infer_core fenv n Γ e1 with
       | infer_err err          => infer_err err
       | infer_ok (T1, Γ1) =>
           if ty_core_eqb (ty_core T1) (ty_core T) then
             if usage_sub_bool (ty_usage T1) (ty_usage T) then
-            match infer_core fenv (ctx_add_b x T m Γ1) e2 with
+            match infer_core fenv n (ctx_add_b x T m Γ1) e2 with
             | infer_err err          => infer_err err
             | infer_ok (T2, Γ2) =>
                 if ctx_check_ok x T Γ2
@@ -393,7 +423,7 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
       end
 
   | EDrop e1 =>
-      match infer_core fenv Γ e1 with
+      match infer_core fenv n Γ e1 with
       | infer_err err          => infer_err err
       | infer_ok (_, Γ') => infer_ok (MkTy UUnrestricted TUnits, Γ')
       end
@@ -407,7 +437,7 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
           | None => infer_err (ErrUnknownVar x)
           | Some MImmutable => infer_err (ErrNotMutable x)
           | Some MMutable =>
-              match infer_core fenv Γ e_new with
+              match infer_core fenv n Γ e_new with
               | infer_err err            => infer_err err
               | infer_ok (T_new, Γ') =>
                   if ty_core_eqb (ty_core T_new) (ty_core T_x) then
@@ -431,7 +461,7 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
               | None => infer_err (ErrUnknownVar r)
               | Some MImmutable => infer_err (ErrNotMutable r)
               | Some MMutable =>
-                  match infer_core fenv Γ e_new with
+                  match infer_core fenv n Γ e_new with
                   | infer_err err => infer_err err
                   | infer_ok (T_new, Γ') =>
                       if ty_core_eqb (ty_core T_new) (ty_core T_inner) then
@@ -459,7 +489,7 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
               if usage_eqb (ty_usage T_x) ULinear
               then infer_err (ErrUsageMismatch (ty_usage T_x) UAffine)
               else
-                match infer_core fenv Γ e_new with
+                match infer_core fenv n Γ e_new with
                 | infer_err err => infer_err err
                 | infer_ok (T_new, Γ') =>
                     if ty_core_eqb (ty_core T_new) (ty_core T_x) then
@@ -486,7 +516,7 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
                   if usage_eqb (ty_usage T_inner) ULinear
                   then infer_err (ErrUsageMismatch (ty_usage T_inner) UAffine)
                   else
-                    match infer_core fenv Γ e_new with
+                    match infer_core fenv n Γ e_new with
                     | infer_err err => infer_err err
                     | infer_ok (T_new, Γ') =>
                         if ty_core_eqb (ty_core T_new) (ty_core T_inner) then
@@ -516,7 +546,7 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
             | [],       _ :: _   => infer_err ErrArityMismatch
             | _ :: _,   []       => infer_err ErrArityMismatch
             | e' :: es, p :: ps' =>
-                match infer_core fenv Γ0 e' with
+                match infer_core fenv n Γ0 e' with
                 | infer_err err            => infer_err err
                 | infer_ok (T_e, Γ1) =>
                     if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) then
@@ -536,10 +566,10 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
       end
 
   | ELetInfer m x e1 e2 =>
-      match infer_core fenv Γ e1 with
+      match infer_core fenv n Γ e1 with
       | infer_err err => infer_err err
       | infer_ok (T1, Γ1) =>
-          match infer_core fenv (ctx_add_b x T1 m Γ1) e2 with
+          match infer_core fenv n (ctx_add_b x T1 m Γ1) e2 with
           | infer_err err => infer_err err
           | infer_ok (T2, Γ2) =>
               if ctx_check_ok x T1 Γ2
@@ -549,14 +579,14 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
       end
 
   | EIf e1 e2 e3 =>
-      match infer_core fenv Γ e1 with
+      match infer_core fenv n Γ e1 with
       | infer_err err => infer_err err
       | infer_ok (T_cond, Γ1) =>
           if ty_core_eqb (ty_core T_cond) TBooleans then
-            match infer_core fenv Γ1 e2 with
+            match infer_core fenv n Γ1 e2 with
             | infer_err err => infer_err err
             | infer_ok (T2, Γ2) =>
-                match infer_core fenv Γ1 e3 with
+                match infer_core fenv n Γ1 e3 with
                 | infer_err err => infer_err err
                 | infer_ok (T3, Γ3) =>
                     if ty_core_eqb (ty_core T2) (ty_core T3) then
@@ -585,11 +615,11 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
                 (* &mut requires a mutable binding *)
                 match ctx_lookup_mut_b x Γ with
                 | Some MMutable =>
-                    infer_ok (MkTy UUnrestricted (TRef LStatic RUnique T_x), Γ)
+                    infer_ok (MkTy UUnrestricted (TRef (LVar n) RUnique T_x), Γ)
                 | _ => infer_err (ErrImmutableBorrow x)
                 end
             | RShared =>
-                infer_ok (MkTy UUnrestricted (TRef LStatic RShared T_x), Γ)
+                infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_x), Γ)
             end
       end
 
@@ -603,7 +633,7 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
           | TRef _ _ T_inner =>
               if usage_eqb (ty_usage T_r) ULinear
               then infer_err (ErrUsageMismatch (ty_usage T_r) UAffine)
-              else infer_ok (MkTy UUnrestricted (TRef LStatic RShared T_inner), Γ)
+              else infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_inner), Γ)
           | c => infer_err (ErrNotAReference c)
           end
       end
@@ -621,7 +651,7 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
               else
                 match ctx_lookup_mut_b r Γ with
                 | Some MMutable =>
-                    infer_ok (MkTy UUnrestricted (TRef LStatic RUnique T_inner), Γ)
+                    infer_ok (MkTy UUnrestricted (TRef (LVar n) RUnique T_inner), Γ)
                 | _ => infer_err (ErrImmutableBorrow r)
                 end
           | c => infer_err (ErrNotAReference c)
@@ -631,7 +661,7 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
   | EBorrow _ (PDeref (PDeref _)) => infer_err ErrNotImplemented
 
   | EDeref r =>
-      match infer_core fenv Γ r with
+      match infer_core fenv n Γ r with
       | infer_err err => infer_err err
       | infer_ok (T_r, Γ') =>
           match ty_core T_r with
@@ -647,28 +677,28 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
 
   end.
 
-Definition infer_body (fenv : list fn_def) (Γ : ctx) (e : expr)
+Definition infer_body (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
     : infer_result (Ty * ctx) :=
   let (fenv', e') := alpha_rename_for_infer Γ fenv e in
-  infer_core fenv' Γ e'.
+  infer_core fenv' n Γ e'.
 
 (* ------------------------------------------------------------------ *)
 (* Expose infer_args as a top-level definition for CheckerSoundness      *)
 (* ------------------------------------------------------------------ *)
 
-Fixpoint infer_args (fenv : list fn_def) (Γ : ctx)
+Fixpoint infer_args (fenv : list fn_def) (n : nat) (Γ : ctx)
     (args : list expr) (params : list param) : infer_result ctx :=
   match args, params with
   | [],       []       => infer_ok Γ
   | [],       _ :: _   => infer_err ErrArityMismatch
   | _ :: _,   []       => infer_err ErrArityMismatch
   | e :: es,  p :: ps  =>
-      match infer_core fenv Γ e with
+      match infer_core fenv n Γ e with
       | infer_err err            => infer_err err
       | infer_ok (T_e, Γ1) =>
           if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) then
             if usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))
-            then infer_args fenv Γ1 es ps
+            then infer_args fenv n Γ1 es ps
             else infer_err (ErrUsageMismatch (ty_usage T_e) (ty_usage (param_ty p)))
           else infer_err (ErrTypeMismatch (ty_core T_e) (ty_core (param_ty p)))
       end
@@ -692,9 +722,17 @@ Fixpoint params_ok_b (ps : list param) (Γ : ctx) : bool :=
    - verify all linear/affine parameters are consumed *)
 Definition infer (fenv : list fn_def) (f : fn_def)
     : infer_result (Ty * ctx) :=
-  match infer_body fenv (params_ctx (fn_params f)) (fn_body f) with
+  let n := fn_lifetimes f in
+  let Δ := mk_region_ctx n in
+  if negb (wf_type_b Δ (fn_ret f))
+  then infer_err ErrLifetimeLeak
+  else
+  match infer_body fenv n (params_ctx (fn_params f)) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out) =>
+      if negb (wf_type_b Δ T_body)
+      then infer_err ErrLifetimeLeak
+      else
       if ty_core_eqb (ty_core T_body) (ty_core (fn_ret f)) then
         if usage_eqb (ty_usage T_body) (ty_usage (fn_ret f)) then
           if params_ok_b (fn_params f) Γ_out
@@ -857,9 +895,17 @@ Definition infer_full (fenv : list fn_def) (f : fn_def)
    validate that alpha renaming is indeed a no-op. *)
 Definition infer_direct (fenv : list fn_def) (f : fn_def)
     : infer_result (Ty * ctx) :=
-  match infer_core fenv (params_ctx (fn_params f)) (fn_body f) with
+  let n := fn_lifetimes f in
+  let Δ := mk_region_ctx n in
+  if negb (wf_type_b Δ (fn_ret f))
+  then infer_err ErrLifetimeLeak
+  else
+  match infer_core fenv n (params_ctx (fn_params f)) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out) =>
+      if negb (wf_type_b Δ T_body)
+      then infer_err ErrLifetimeLeak
+      else
       if ty_core_eqb (ty_core T_body) (ty_core (fn_ret f)) then
         if usage_eqb (ty_usage T_body) (ty_usage (fn_ret f)) then
           if params_ok_b (fn_params f) Γ_out

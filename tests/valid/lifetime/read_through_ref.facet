@@ -1,0 +1,6 @@
+// Local borrow: create a reference, dereference it, return the value (not the ref).
+// fn_lifetimes = 0 — no exportable lifetime, but the ref is consumed locally.
+fn f(x: unrestricted isize) -> unrestricted isize {
+    let r: unrestricted &unrestricted isize = (&x) in
+    (*r)
+}

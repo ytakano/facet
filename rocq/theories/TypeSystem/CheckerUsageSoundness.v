@@ -21,15 +21,15 @@ Proof.
   - contradiction.
 Qed.
 
-Lemma typed_linear_let_binding_used : forall fenv Γ Γout m x T e1 e2 T2,
-  typed fenv Γ (ELet m x T e1 e2) T2 Γout ->
+Lemma typed_linear_let_binding_used : forall fenv n Γ Γout m x T e1 e2 T2,
+  typed fenv n Γ (ELet m x T e1 e2) T2 Γout ->
   ty_usage T = ULinear ->
   exists Γ1 Γ2 T1 Tx,
-    typed fenv Γ e1 T1 Γ1 /\
-    typed fenv (ctx_add x T m Γ1) e2 T2 Γ2 /\
+    typed fenv n Γ e1 T1 Γ1 /\
+    typed fenv n (ctx_add x T m Γ1) e2 T2 Γ2 /\
   ctx_lookup x Γ2 = Some (Tx, true).
 Proof.
-  intros fenv Γ Γout m x T e1 e2 T2 Htyped Hlin.
+  intros fenv n Γ Γout m x T e1 e2 T2 Htyped Hlin.
   inversion Htyped; subst.
   match goal with
   | H : ctx_is_ok x T Γ2 |- _ =>
@@ -61,7 +61,7 @@ Lemma typed_linear_param_used : forall fenv f p,
   In p (fn_params f) ->
   ty_usage (param_ty p) = ULinear ->
   exists Γ' Tx,
-    typed fenv (params_ctx (fn_params f)) (fn_body f) (fn_ret f) Γ' /\
+    typed fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) (fn_ret f) Γ' /\
     ctx_lookup (param_name p) Γ' = Some (Tx, true).
 Proof.
   intros fenv f p Htyped_fn Hin Hlin.
@@ -78,7 +78,7 @@ Qed.
 
 Definition infer_fn_def_ok (fenv : list fn_def) (f : fn_def) : Prop :=
   exists Γ',
-    infer_body fenv (params_ctx (fn_params f)) (fn_body f) =
+    infer_body fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) =
       infer_ok (fn_ret f, Γ') /\
     params_ok (fn_params f) Γ'.
 
@@ -101,11 +101,11 @@ Fixpoint expr_linear_lets_used (fenv : list fn_def) (e : expr) {struct e}
   | EVar _ => True
   | ELet m x T e1 e2 =>
       (ty_usage T = ULinear ->
-       forall Γ Γout T2,
-         typed fenv Γ (ELet m x T e1 e2) T2 Γout ->
+       forall n Γ Γout T2,
+         typed fenv n Γ (ELet m x T e1 e2) T2 Γout ->
          exists Γ1 Γ2 T1 Tx,
-           typed fenv Γ e1 T1 Γ1 /\
-           typed fenv (ctx_add x T m Γ1) e2 T2 Γ2 /\
+           typed fenv n Γ e1 T1 Γ1 /\
+           typed fenv n (ctx_add x T m Γ1) e2 T2 Γ2 /\
            ctx_lookup x Γ2 = Some (Tx, true)) /\
       expr_linear_lets_used fenv e1 /\
       expr_linear_lets_used fenv e2
@@ -129,9 +129,9 @@ Fixpoint expr_linear_lets_used_sound (fenv : list fn_def) (e : expr)
 Proof.
   destruct e; simpl; try exact I.
   - repeat split.
-    + intros Hlin Γ Γout T2 Htyped.
+    + intros Hlin n Γ Γout T2 Htyped.
       exact (typed_linear_let_binding_used
-        fenv Γ Γout m i t e1 e2 T2 Htyped Hlin).
+        fenv n Γ Γout m i t e1 e2 T2 Htyped Hlin).
     + apply expr_linear_lets_used_sound.
     + apply expr_linear_lets_used_sound.
   - split; apply expr_linear_lets_used_sound.
@@ -155,7 +155,7 @@ Theorem infer_checked_fn_linear_params_used : forall fenv f p,
   In p (fn_params f) ->
   ty_usage (param_ty p) = ULinear ->
   exists Γ' Tx,
-    typed fenv (params_ctx (fn_params f)) (fn_body f) (fn_ret f) Γ' /\
+    typed fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) (fn_ret f) Γ' /\
     ctx_lookup (param_name p) Γ' = Some (Tx, true).
 Proof.
   intros fenv f p Hinfer_fn Hin Hlin.
@@ -175,7 +175,7 @@ Theorem infer_checked_fn_linear_usage : forall fenv f,
       In p (fn_params f) ->
       ty_usage (param_ty p) = ULinear ->
       exists Γ' Tx,
-        typed fenv (params_ctx (fn_params f)) (fn_body f) (fn_ret f) Γ' /\
+        typed fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) (fn_ret f) Γ' /\
         ctx_lookup (param_name p) Γ' = Some (Tx, true)).
 Proof.
   intros fenv f Hinfer_fn.
@@ -189,14 +189,14 @@ Qed.
    Once infer succeeds with an affine binding marked consumed in the output
    context, checking the same variable again fails because EVar requires an
    unconsumed affine/linear binding. *)
-Theorem infer_affine_value_at_most_once : forall fenv Γ e T Γ' x Tx,
-  infer_body fenv Γ e = infer_ok (T, Γ') ->
+Theorem infer_affine_value_at_most_once : forall fenv n Γ e T Γ' x Tx,
+  infer_body fenv n Γ e = infer_ok (T, Γ') ->
   ctx_lookup x Γ = Some (Tx, false) ->
   ty_usage Tx = UAffine ->
   ctx_lookup x Γ' = Some (Tx, true) ->
-  infer_body fenv Γ' (EVar x) = infer_err (ErrAlreadyConsumed x).
+  infer_body fenv n Γ' (EVar x) = infer_err (ErrAlreadyConsumed x).
 Proof.
-  intros fenv Γ e T Γ' x Tx _ _ Haff Hused.
+  intros fenv n Γ e T Γ' x Tx _ _ Haff Hused.
   unfold infer_body, alpha_rename_for_infer.
   destruct (alpha_rename_syntax_go (free_vars_expr (EVar x) ++ ctx_names Γ') fenv)
     as [fenv' used].

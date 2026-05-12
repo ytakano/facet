@@ -8,7 +8,13 @@ program ::= fn_def*
 
 ## fn_def
 ```
-fn_def ::= "fn" ID "(" params ")" "->" ty "{" block "}"
+fn_def ::= "fn" ID opt_lifetime_params "(" params ")" "->" ty "{" block "}"
+```
+
+## opt_lifetime_params
+```
+opt_lifetime_params ::= ""
+                      | "<" LIFETIME ("," LIFETIME)* ">"
 ```
 
 ## params
@@ -91,6 +97,8 @@ ty_core ::= "isize"
            | "()"
            | "&" ty
            | "&" "mut" ty
+           | "&" LIFETIME ty
+           | "&" LIFETIME "mut" ty
            | "fn" "(" ty_list ")" "->" ty
 ```
 
@@ -105,6 +113,7 @@ ty_list ::= ""
 INT_LIT   ::= ["-"] digit+
 FLOAT_LIT ::= ["-"] digit+ "." digit+
 ID        ::= (alpha | "_") (alpha | digit | "_")*
+LIFETIME  ::= "'" alpha (alpha | digit | "_")*
 ```
 
 ## Reserved words

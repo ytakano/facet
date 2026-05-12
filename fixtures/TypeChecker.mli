@@ -34,6 +34,8 @@ type lifetime =
 
 val lifetime_eqb : lifetime -> lifetime -> bool
 
+type region_ctx = lifetime list
+
 type mutability =
 | MImmutable
 | MMutable
@@ -93,8 +95,8 @@ type expr =
 type param = { param_mutability : mutability; param_name : ident;
                param_ty : ty }
 
-type fn_def = { fn_name : ident; fn_params : param list; fn_ret : ty;
-                fn_body : expr }
+type fn_def = { fn_name : ident; fn_lifetimes : Big_int_Z.big_int;
+                fn_params : param list; fn_ret : ty; fn_body : expr }
 
 type syntax = fn_def list
 
@@ -154,6 +156,12 @@ val ctx_check_ok : ident -> ty -> ctx -> bool
 
 val lookup_fn_b : ident -> fn_def list -> fn_def option
 
+val mk_region_ctx : Big_int_Z.big_int -> region_ctx
+
+val wf_lifetime_b : region_ctx -> lifetime -> bool
+
+val wf_type_b : region_ctx -> ty -> bool
+
 type rename_env = (ident * ident) list
 
 val lookup_rename : ident -> rename_env -> ident
@@ -179,6 +187,7 @@ type infer_error =
 | ErrImmutableBorrow of ident
 | ErrNotAReference of ty typeCore
 | ErrBorrowConflict of ident
+| ErrLifetimeLeak
 
 type 'a infer_result =
 | Infer_ok of 'a
@@ -202,9 +211,11 @@ val alpha_rename_syntax_go : ident list -> syntax -> syntax * ident list
 
 val alpha_rename_for_infer : ctx -> fn_def list -> expr -> fn_def list * expr
 
-val infer_core : fn_def list -> ctx -> expr -> (ty * ctx) infer_result
+val infer_core :
+  fn_def list -> Big_int_Z.big_int -> ctx -> expr -> (ty * ctx) infer_result
 
-val infer_body : fn_def list -> ctx -> expr -> (ty * ctx) infer_result
+val infer_body :
+  fn_def list -> Big_int_Z.big_int -> ctx -> expr -> (ty * ctx) infer_result
 
 val params_ok_b : param list -> ctx -> bool
 

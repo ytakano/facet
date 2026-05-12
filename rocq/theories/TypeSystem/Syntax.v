@@ -66,10 +66,11 @@ Record param : Type := MkParam {
 }.
 
 Record fn_def : Type := MkFnDef {
-  fn_name   : ident;
-  fn_params : list param;
-  fn_ret    : Ty;
-  fn_body   : expr
+  fn_name      : ident;
+  fn_lifetimes : nat;
+  fn_params    : list param;
+  fn_ret       : Ty;
+  fn_body      : expr
 }.
 
 Definition Syntax := list fn_def.

@@ -23,8 +23,9 @@ type named_param = {
 }
 
 type named_fn_def = {
-  nf_name   : name;
-  nf_params : named_param list;
-  nf_ret    : TypeChecker.ty;
-  nf_body   : named_expr;
+  nf_name           : name;
+  nf_lifetime_names : string list;
+  nf_params         : named_param list;
+  nf_ret            : TypeChecker.ty;
+  nf_body           : named_expr;
 }

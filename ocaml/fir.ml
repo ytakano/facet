@@ -36,6 +36,7 @@ type fir_fn = {
 
 type conv_env = {
   fenv            : fn_def list;
+  lifetimes       : Big_int_Z.big_int;
   mutable ctx     : ctx;
   mutable counter : int;
   mutable instrs  : fir_instr list;
@@ -96,7 +97,7 @@ let rec to_value env = function
     env.ctx <- ctx_add_b x t m env.ctx;
     to_value env e2
   | ELetInfer (m, x, e1, e2) ->
-    let ty1 = match infer_core env.fenv env.ctx e1 with
+    let ty1 = match infer_core env.fenv env.lifetimes env.ctx e1 with
       | Infer_ok (t, _) -> t
       | Infer_err _ -> unit_ty
     in
@@ -147,7 +148,7 @@ let rec to_value env = function
     emit env (FIDeref (tmp, inner_ty, ident_of_tval env v, v.ft));
     { fv = FVVar tmp; ft = inner_ty }
   | EIf (e1, e2, e3) ->
-    let result_ty = match infer_core env.fenv env.ctx (EIf (e1, e2, e3)) with
+    let result_ty = match infer_core env.fenv env.lifetimes env.ctx (EIf (e1, e2, e3)) with
       | Infer_ok (t, _) -> t
       | Infer_err _ -> unit_ty
     in
@@ -198,7 +199,8 @@ let params_to_ctx params =
   List.map (fun p -> (((p.param_name, p.param_ty), false), p.param_mutability)) params
 
 let convert_fn fenv fn_def =
-  let env = { fenv; ctx = params_to_ctx fn_def.fn_params;
+  let env = { fenv; lifetimes = fn_def.fn_lifetimes;
+              ctx = params_to_ctx fn_def.fn_params;
               counter = 0; instrs = [] } in
   let final_val = to_value env fn_def.fn_body in
   emit env (FIReturn final_val);

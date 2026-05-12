@@ -11,13 +11,17 @@ type fir_value =
 
 type fir_tval = { fv : fir_value; ft : ty }
 
+type fir_place =
+  | FIPVar of ident
+  | FIPDeref of fir_place
+
 type fir_instr =
   | FILet     of ident * ty * fir_tval
   | FIReturn  of fir_tval
   | FICall    of ident * ty * ident * fir_tval list
   | FIDrop    of ident * ident * ty
-  | FIReplace of ident * ty * ident * ty * fir_tval
-  | FIBorrow  of ident * ref_kind * ident * ty
+  | FIReplace of ident * ty * fir_place * ty * fir_tval
+  | FIBorrow  of ident * ref_kind * fir_place * ty
   | FIDeref   of ident * ty * ident * ty
   | FILabel   of string
   | FIGoto    of string
@@ -66,10 +70,16 @@ let get_var_ty env x =
   | Some (ty, _) -> ty
   | None -> failwith ("FIR: unbound variable: " ^ fst x)
 
-let fir_place_name = function
-  | PVar id -> id
-  | PDeref (PVar id) -> id
-  | PDeref _ -> failwith "FIR: nested places are not supported yet"
+let rec lower_place = function
+  | PVar id -> FIPVar id
+  | PDeref place -> FIPDeref (lower_place place)
+
+let rec infer_place_ty env = function
+  | PVar id -> get_var_ty env id
+  | PDeref place ->
+    match ty_core (infer_place_ty env place) with
+    | TRef (_, _, inner_ty) -> inner_ty
+    | _ -> failwith "FIR: dereference target is not a reference"
 
 let consume_if_needed env x ty =
   if ty_usage ty <> UUnrestricted then
@@ -121,27 +131,27 @@ let rec to_value env = function
     emit env (FIDrop (tmp, ident_of_tval env v, v.ft));
     { fv = FVVar tmp; ft = unit_ty }
   | EReplace (place, e_new) ->
-    let id = fir_place_name place in
-    let p_ty = get_var_ty env id in
+    let fir_place = lower_place place in
+    let p_ty = infer_place_ty env place in
     let v_new = to_value env e_new in
     let tmp = fresh_id env in
-    emit env (FIReplace (tmp, p_ty, id, p_ty, v_new));
+    emit env (FIReplace (tmp, p_ty, fir_place, p_ty, v_new));
     { fv = FVVar tmp; ft = p_ty }
   | EAssign (place, e_new) ->
-    let id = fir_place_name place in
-    let p_ty = get_var_ty env id in
+    let fir_place = lower_place place in
+    let p_ty = infer_place_ty env place in
     let v_new = to_value env e_new in
     let old_tmp = fresh_id env in
-    emit env (FIReplace (old_tmp, p_ty, id, p_ty, v_new));
+    emit env (FIReplace (old_tmp, p_ty, fir_place, p_ty, v_new));
     let drop_tmp = fresh_id env in
     emit env (FIDrop (drop_tmp, old_tmp, p_ty));
     { fv = FVVar drop_tmp; ft = unit_ty }
   | EBorrow (rk, place) ->
-    let id = fir_place_name place in
-    let p_ty = get_var_ty env id in
+    let fir_place = lower_place place in
+    let p_ty = infer_place_ty env place in
     let ref_ty = MkTy (UUnrestricted, TRef (LStatic, rk, p_ty)) in
     let tmp = fresh_id env in
-    emit env (FIBorrow (tmp, rk, id, p_ty));
+    emit env (FIBorrow (tmp, rk, fir_place, p_ty));
     { fv = FVVar tmp; ft = ref_ty }
   | EDeref inner ->
     let v = to_value env inner in
@@ -185,16 +195,16 @@ and emit_into env x t = function
     let v = to_value env inner in
     emit env (FIDrop (x, ident_of_tval env v, v.ft))
   | EReplace (place, e_new) ->
-    let id = fir_place_name place in
-    let p_ty = get_var_ty env id in
+    let fir_place = lower_place place in
+    let p_ty = infer_place_ty env place in
     let v_new = to_value env e_new in
-    emit env (FIReplace (x, p_ty, id, p_ty, v_new))
+    emit env (FIReplace (x, p_ty, fir_place, p_ty, v_new))
   | EAssign (place, e_new) ->
-    let id = fir_place_name place in
-    let p_ty = get_var_ty env id in
+    let fir_place = lower_place place in
+    let p_ty = infer_place_ty env place in
     let v_new = to_value env e_new in
     let old_tmp = fresh_id env in
-    emit env (FIReplace (old_tmp, p_ty, id, p_ty, v_new));
+    emit env (FIReplace (old_tmp, p_ty, fir_place, p_ty, v_new));
     emit env (FIDrop (x, old_tmp, p_ty))
   | e ->
     let v = to_value env e in
@@ -239,6 +249,10 @@ let pp_ident (name, idx) =
   if name = "_" then "_"
   else name ^ "#" ^ Big_int_Z.string_of_big_int idx
 
+let rec pp_place = function
+  | FIPVar id -> pp_ident id
+  | FIPDeref place -> "*" ^ pp_place place
+
 let pp_tval tv =
   let vs = match tv.fv with
     | FVUnit      -> "()"
@@ -264,13 +278,13 @@ let pp_instr = function
       (pp_ident r) (pp_ident src) (pp_ty src_ty)
   | FIReplace (r, r_ty, tgt, tgt_ty, v_new) ->
     Printf.sprintf "  replace %s as %s = %s as %s with %s"
-      (pp_ident r) (pp_ty r_ty) (pp_ident tgt) (pp_ty tgt_ty) (pp_tval v_new)
+      (pp_ident r) (pp_ty r_ty) (pp_place tgt) (pp_ty tgt_ty) (pp_tval v_new)
   | FIBorrow (r, RShared, src, src_ty) ->
     Printf.sprintf "  borrow %s = &%s as %s"
-      (pp_ident r) (pp_ident src) (pp_ty src_ty)
+      (pp_ident r) (pp_place src) (pp_ty src_ty)
   | FIBorrow (r, RUnique, src, src_ty) ->
     Printf.sprintf "  borrow %s = &mut %s as %s"
-      (pp_ident r) (pp_ident src) (pp_ty src_ty)
+      (pp_ident r) (pp_place src) (pp_ty src_ty)
   | FIDeref (r, r_ty, src, src_ty) ->
     Printf.sprintf "  deref %s as %s = *%s as %s"
       (pp_ident r) (pp_ty r_ty) (pp_ident src) (pp_ty src_ty)

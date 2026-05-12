@@ -1699,11 +1699,6 @@ Proof.
           | Hplace : typed_place fenvr n Γr (rename_place ρ q) _ |- _ =>
             exact (alpha_rename_typed_place_backward fenv0 fenvr n ρ Γ0 Γr q _ Hctx Hsafe Hplace)
           end.
-        - lazymatch goal with
-          | Hmut : ctx_lookup_mut (place_root (rename_place ρ q)) Γr = Some ?m |- _ =>
-            rewrite place_root_rename_place in Hmut;
-            exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γr (place_root q) m Hctx Hsafe Hmut)
-          end.
         - exact Htyped0.
         - assumption. }
       { exact Hctx0. }
@@ -1755,11 +1750,6 @@ Proof.
         - lazymatch goal with
           | Hplace : typed_place fenvr n Γr (rename_place ρ q) _ |- _ =>
             exact (alpha_rename_typed_place_backward fenv0 fenvr n ρ Γ0 Γr q _ Hctx Hsafe Hplace)
-          end.
-        - lazymatch goal with
-          | Hmut : ctx_lookup_mut (place_root (rename_place ρ q)) Γr = Some ?m |- _ =>
-            rewrite place_root_rename_place in Hmut;
-            exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γr (place_root q) m Hctx Hsafe Hmut)
           end.
         - assumption.
         - exact Htyped0.
@@ -1820,12 +1810,7 @@ Proof.
              | Hplace : typed_place fenvr n ?Γrx (rename_place ρ q) _ |- _ =>
                exact (alpha_rename_typed_place_backward fenv0 fenvr n ρ Γ0 Γrx q _ Hctx Hsafe Hplace)
              end.
-           - assumption.
-           - lazymatch goal with
-             | Hmut : ctx_lookup_mut (place_root (rename_place ρ q)) ?Γrx = Some ?m |- _ =>
-               rewrite place_root_rename_place in Hmut;
-               exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γrx (place_root q) m Hctx Hsafe Hmut)
-             end. }
+           - assumption. }
          { exact Hctx. }
   + (* EDeref: like EDrop but uses T_Deref *)
     destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.

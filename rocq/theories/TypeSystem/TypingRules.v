@@ -293,18 +293,16 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
       typed fenv n Γ (EBorrow RShared (PDeref p))
         (MkTy UUnrestricted (TRef (LVar n) RShared T)) Γ
 
-  (* &mut *p — mutable re-borrow: p must have &mut T and root must be mutable *)
+  (* &mut *p — mutable re-borrow: p must have &mut T *)
   | T_ReBorrowMut : forall Γ p la T u_r,
       typed_place fenv n Γ p (MkTy u_r (TRef la RUnique T)) ->
       ty_usage (MkTy u_r (TRef la RUnique T)) <> ULinear ->
-      ctx_lookup_mut (place_root p) Γ = Some MMutable ->
       typed fenv n Γ (EBorrow RUnique (PDeref p))
         (MkTy UUnrestricted (TRef (LVar n) RUnique T)) Γ
 
   (* *p <- e_new where p : &mut T: write through mutable reference, return old T *)
   | T_Replace_Deref : forall Γ Γ' p la T T_new e_new u_r,
       typed_place fenv n Γ p (MkTy u_r (TRef la RUnique T)) ->
-      ctx_lookup_mut (place_root p) Γ = Some MMutable ->
       typed fenv n Γ e_new T_new Γ' ->
       ty_compatible T_new T ->
       typed fenv n Γ (EReplace (PDeref p) e_new) T Γ'
@@ -312,7 +310,6 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
   (* *r = e_new where r : &mut T (non-linear): assign through reference, return unit *)
   | T_Assign_Deref : forall Γ Γ' p la T T_new e_new u_r,
       typed_place fenv n Γ p (MkTy u_r (TRef la RUnique T)) ->
-      ctx_lookup_mut (place_root p) Γ = Some MMutable ->
       ty_usage T <> ULinear ->
       typed fenv n Γ e_new T_new Γ' ->
       ty_compatible T_new T ->

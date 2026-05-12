@@ -1038,19 +1038,13 @@ let rec infer_core fenv n _UU0393_ = function
             | RShared ->
               Infer_err (ErrNotAReference (TRef (l, RShared, t_inner)))
             | RUnique ->
-              (match ctx_lookup_mut_b (place_root p) _UU0393_ with
-               | Some m ->
-                 (match m with
-                  | MImmutable -> Infer_err (ErrNotMutable (place_root p))
-                  | MMutable ->
-                    (match infer_core fenv n _UU0393_ e_new with
-                     | Infer_ok p1 ->
-                       let (t_new, _UU0393_') = p1 in
-                       if ty_compatible_b t_new t_inner
-                       then Infer_ok (t_inner, _UU0393_')
-                       else Infer_err (compatible_error t_new t_inner)
-                     | Infer_err err -> Infer_err err))
-               | None -> Infer_err (ErrUnknownVar (place_root p))))
+              (match infer_core fenv n _UU0393_ e_new with
+               | Infer_ok p1 ->
+                 let (t_new, _UU0393_') = p1 in
+                 if ty_compatible_b t_new t_inner
+                 then Infer_ok (t_inner, _UU0393_')
+                 else Infer_err (compatible_error t_new t_inner)
+               | Infer_err err -> Infer_err err))
          | x -> Infer_err (ErrNotAReference x))
       | Infer_err err -> Infer_err err))
 | EAssign (p0, e_new) ->
@@ -1087,23 +1081,16 @@ let rec infer_core fenv n _UU0393_ = function
             | RShared ->
               Infer_err (ErrNotAReference (TRef (l, RShared, t_inner)))
             | RUnique ->
-              (match ctx_lookup_mut_b (place_root p) _UU0393_ with
-               | Some m ->
-                 (match m with
-                  | MImmutable -> Infer_err (ErrNotMutable (place_root p))
-                  | MMutable ->
-                    if usage_eqb (ty_usage t_inner) ULinear
-                    then Infer_err (ErrUsageMismatch ((ty_usage t_inner),
-                           UAffine))
-                    else (match infer_core fenv n _UU0393_ e_new with
-                          | Infer_ok p1 ->
-                            let (t_new, _UU0393_') = p1 in
-                            if ty_compatible_b t_new t_inner
-                            then Infer_ok ((MkTy (UUnrestricted, TUnits)),
-                                   _UU0393_')
-                            else Infer_err (compatible_error t_new t_inner)
-                          | Infer_err err -> Infer_err err))
-               | None -> Infer_err (ErrUnknownVar (place_root p))))
+              if usage_eqb (ty_usage t_inner) ULinear
+              then Infer_err (ErrUsageMismatch ((ty_usage t_inner), UAffine))
+              else (match infer_core fenv n _UU0393_ e_new with
+                    | Infer_ok p1 ->
+                      let (t_new, _UU0393_') = p1 in
+                      if ty_compatible_b t_new t_inner
+                      then Infer_ok ((MkTy (UUnrestricted, TUnits)),
+                             _UU0393_')
+                      else Infer_err (compatible_error t_new t_inner)
+                    | Infer_err err -> Infer_err err))
          | x -> Infer_err (ErrNotAReference x))
       | Infer_err err -> Infer_err err))
 | EBorrow (rk, p0) ->
@@ -1178,15 +1165,8 @@ let rec infer_core fenv n _UU0393_ = function
                | RUnique ->
                  if usage_eqb (ty_usage t_p) ULinear
                  then Infer_err (ErrUsageMismatch ((ty_usage t_p), UAffine))
-                 else (match ctx_lookup_mut_b (place_root p) _UU0393_ with
-                       | Some m ->
-                         (match m with
-                          | MImmutable ->
-                            Infer_err (ErrImmutableBorrow (place_root p))
-                          | MMutable ->
-                            Infer_ok ((MkTy (UUnrestricted, (TRef ((LVar n),
-                              RUnique, t_inner)))), _UU0393_))
-                       | None -> Infer_err (ErrImmutableBorrow (place_root p))))
+                 else Infer_ok ((MkTy (UUnrestricted, (TRef ((LVar n),
+                        RUnique, t_inner)))), _UU0393_))
             | x -> Infer_err (ErrNotAReference x))
          | Infer_err err -> Infer_err err)))
 | EDeref r ->

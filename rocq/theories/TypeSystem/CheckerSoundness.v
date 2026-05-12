@@ -498,8 +498,6 @@ Proof.
           assert (HTeq : T_p = MkTy (ty_usage T_p) (TRef la RUnique T_inner))
             by (destruct T_p as [u c]; simpl in HcoreP; rewrite HcoreP; reflexivity)
       end.
-      destruct (ctx_lookup_mut_b (place_root q) Γ) as [mut |] eqn:Hmut_b; [| discriminate].
-      destruct mut; [discriminate |].
       destruct (infer_core fenv n Γ e) as [[T_new Γ1] |] eqn:He; [| discriminate].
       lazymatch type of HcoreP with
       | ty_core T_p = TRef ?la ?rk ?T_inner =>
@@ -508,7 +506,6 @@ Proof.
           injection Hinfer as <- <-;
           eapply T_Replace_Deref with (u_r := ty_usage T_p);
           [ rewrite <- HTeq; eapply infer_place_sound; exact Hplace
-          | rewrite <- ctx_lookup_mut_b_eq; exact Hmut_b
           | eapply IH; [simpl in Hlt; lia | exact He]
           | apply ty_compatible_b_sound; exact Hcompat ]
       end.
@@ -543,8 +540,6 @@ Proof.
           assert (HTeq : T_p = MkTy (ty_usage T_p) (TRef la RUnique T_inner))
             by (destruct T_p as [u c]; simpl in HcoreP; rewrite HcoreP; reflexivity)
       end.
-      destruct (ctx_lookup_mut_b (place_root q) Γ) as [mut |] eqn:Hmut_b; [| discriminate].
-      destruct mut; [discriminate |].
       lazymatch type of HcoreP with
       | ty_core T_p = TRef ?la ?rk ?T_inner =>
           destruct (usage_eqb (ty_usage T_inner) ULinear) eqn:Hlin; [discriminate |];
@@ -554,7 +549,6 @@ Proof.
           injection Hinfer as <- <-;
           eapply T_Assign_Deref with (u_r := ty_usage T_p);
           [ rewrite <- HTeq; eapply infer_place_sound; exact Hplace
-          | rewrite <- ctx_lookup_mut_b_eq; exact Hmut_b
           | intro Heq; rewrite Heq in Hlin; simpl in Hlin; discriminate
           | eapply IH; [simpl in Hlt; lia | exact He]
           | apply ty_compatible_b_sound; exact Hcompat ]
@@ -611,8 +605,6 @@ Proof.
              destruct rk; [discriminate |]
          end.
          destruct (usage_eqb (ty_usage T_p) ULinear) eqn:Hlin; [discriminate |].
-         destruct (ctx_lookup_mut_b (place_root q) Γ) as [mut |] eqn:Hmut_b; [| discriminate].
-         destruct mut; [discriminate |].
          injection Hinfer as <- <-.
          lazymatch type of HcoreP with
          | ty_core T_p = TRef ?la RUnique ?T_inner =>
@@ -621,8 +613,7 @@ Proof.
              eapply T_ReBorrowMut with (u_r := ty_usage T_p);
              [ rewrite <- HTeq; eapply infer_place_sound; exact Hplace
              | rewrite HTeq; simpl; intro Heq;
-               rewrite Heq in Hlin; simpl in Hlin; discriminate
-             | rewrite <- ctx_lookup_mut_b_eq; exact Hmut_b ]
+               rewrite Heq in Hlin; simpl in Hlin; discriminate ]
          end.
 
   (* EDeref e *)

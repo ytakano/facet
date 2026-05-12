@@ -78,6 +78,7 @@ Fixpoint infer_place (Γ : ctx) (p : place) : infer_result Ty :=
 `EBorrow RShared (PDeref p)` は、`p` が参照型を持つなら共有 re-borrow を許す。
 
 `EBorrow RUnique (PDeref p)` は、`p` が `&mut T` に辿れる場合のみ許す。
+Rust と同様に、`p` の root binding 自体が `mut` であることは要求しない。
 
 ### 3. Recursive freeze checks
 
@@ -286,4 +287,3 @@ bash tests/run.sh
 ```
 
 `tests/run.sh` がまだ実行可能ビットを持たない場合は `bash tests/run.sh` で実行する。
-

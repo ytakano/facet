@@ -569,17 +569,12 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
       | infer_ok T_p =>
           match ty_core T_p with
           | TRef _ RUnique T_inner =>
-              match ctx_lookup_mut_b (place_root p) Γ with
-              | None => infer_err (ErrUnknownVar (place_root p))
-              | Some MImmutable => infer_err (ErrNotMutable (place_root p))
-              | Some MMutable =>
-                  match infer_core fenv n Γ e_new with
-                  | infer_err err => infer_err err
-                  | infer_ok (T_new, Γ') =>
-                      if ty_compatible_b T_new T_inner
-                      then infer_ok (T_inner, Γ')
-                      else infer_err (compatible_error T_new T_inner)
-                  end
+              match infer_core fenv n Γ e_new with
+              | infer_err err => infer_err err
+              | infer_ok (T_new, Γ') =>
+                  if ty_compatible_b T_new T_inner
+                  then infer_ok (T_inner, Γ')
+                  else infer_err (compatible_error T_new T_inner)
               end
           | c => infer_err (ErrNotAReference c)
           end
@@ -614,23 +609,18 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
       | infer_ok T_p =>
           match ty_core T_p with
           | TRef _ RUnique T_inner =>
-              match ctx_lookup_mut_b (place_root p) Γ with
-              | None => infer_err (ErrUnknownVar (place_root p))
-              | Some MImmutable => infer_err (ErrNotMutable (place_root p))
-              | Some MMutable =>
-                  if usage_eqb (ty_usage T_inner) ULinear
-                  then infer_err (ErrUsageMismatch (ty_usage T_inner) UAffine)
-                  else
-                    match infer_core fenv n Γ e_new with
-                    | infer_err err => infer_err err
-                    | infer_ok (T_new, Γ') =>
-                        if ty_compatible_b T_new T_inner
-                        then infer_ok (MkTy UUnrestricted TUnits, Γ')
-                        else infer_err (compatible_error T_new T_inner)
-                    end
-              end
-          | c => infer_err (ErrNotAReference c)
-          end
+              if usage_eqb (ty_usage T_inner) ULinear
+              then infer_err (ErrUsageMismatch (ty_usage T_inner) UAffine)
+              else
+                match infer_core fenv n Γ e_new with
+                | infer_err err => infer_err err
+	                | infer_ok (T_new, Γ') =>
+	                    if ty_compatible_b T_new T_inner
+	                    then infer_ok (MkTy UUnrestricted TUnits, Γ')
+	                    else infer_err (compatible_error T_new T_inner)
+	                end
+	          | c => infer_err (ErrNotAReference c)
+	          end
       end
 
   | ECall fname args =>
@@ -744,7 +734,7 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
           end
       end
 
-  (* &mut *p (mutable re-borrow): p must have &mut T and root must be mutable *)
+  (* &mut *p (mutable re-borrow): p must have &mut T *)
   | EBorrow RUnique (PDeref p) =>
       match infer_place Γ p with
       | infer_err err => infer_err err
@@ -753,12 +743,7 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
           | TRef _ RUnique T_inner =>
               if usage_eqb (ty_usage T_p) ULinear
               then infer_err (ErrUsageMismatch (ty_usage T_p) UAffine)
-              else
-                match ctx_lookup_mut_b (place_root p) Γ with
-                | Some MMutable =>
-                    infer_ok (MkTy UUnrestricted (TRef (LVar n) RUnique T_inner), Γ)
-                | _ => infer_err (ErrImmutableBorrow (place_root p))
-                end
+              else infer_ok (MkTy UUnrestricted (TRef (LVar n) RUnique T_inner), Γ)
           | c => infer_err (ErrNotAReference c)
           end
       end

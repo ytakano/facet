@@ -200,6 +200,60 @@ let usage_sub_bool u1 u2 =
                 | _ -> true)
   | UUnrestricted -> true
 
+(** val ref_kind_eqb : ref_kind -> ref_kind -> bool **)
+
+let ref_kind_eqb k1 k2 =
+  match k1 with
+  | RShared -> (match k2 with
+                | RShared -> true
+                | RUnique -> false)
+  | RUnique -> (match k2 with
+                | RShared -> false
+                | RUnique -> true)
+
+(** val ty_eqb : ty -> ty -> bool **)
+
+let rec ty_eqb t1 t2 =
+  let MkTy (u1, c1) = t1 in
+  let MkTy (u2, c2) = t2 in
+  (&&) (usage_eqb u1 u2)
+    (match c1 with
+     | TUnits -> (match c2 with
+                  | TUnits -> true
+                  | _ -> false)
+     | TIntegers -> (match c2 with
+                     | TIntegers -> true
+                     | _ -> false)
+     | TFloats -> (match c2 with
+                   | TFloats -> true
+                   | _ -> false)
+     | TBooleans -> (match c2 with
+                     | TBooleans -> true
+                     | _ -> false)
+     | TNamed s1 -> (match c2 with
+                     | TNamed s2 -> (=) s1 s2
+                     | _ -> false)
+     | TFn (ts1, r1) ->
+       (match c2 with
+        | TFn (ts2, r2) ->
+          (&&)
+            (let rec go l1 l2 =
+               match l1 with
+               | [] -> (match l2 with
+                        | [] -> true
+                        | _ :: _ -> false)
+               | t3 :: l1' ->
+                 (match l2 with
+                  | [] -> false
+                  | t4 :: l2' -> (&&) (ty_eqb t3 t4) (go l1' l2'))
+             in go ts1 ts2)
+            (ty_eqb r1 r2)
+        | _ -> false)
+     | TRef (k1, t3) ->
+       (match c2 with
+        | TRef (k2, t4) -> (&&) (ref_kind_eqb k1 k2) (ty_eqb t3 t4)
+        | _ -> false))
+
 (** val ty_core_eqb : ty typeCore -> ty typeCore -> bool **)
 
 let ty_core_eqb c1 c2 =
@@ -219,7 +273,26 @@ let ty_core_eqb c1 c2 =
   | TNamed s1 -> (match c2 with
                   | TNamed s2 -> (=) s1 s2
                   | _ -> false)
-  | _ -> false
+  | TFn (ts1, r1) ->
+    (match c2 with
+     | TFn (ts2, r2) ->
+       (&&)
+         (let rec go l1 l2 =
+            match l1 with
+            | [] -> (match l2 with
+                     | [] -> true
+                     | _ :: _ -> false)
+            | t1 :: l1' ->
+              (match l2 with
+               | [] -> false
+               | t2 :: l2' -> (&&) (ty_eqb t1 t2) (go l1' l2'))
+          in go ts1 ts2)
+         (ty_eqb r1 r2)
+     | _ -> false)
+  | TRef (k1, t1) ->
+    (match c2 with
+     | TRef (k2, t2) -> (&&) (ref_kind_eqb k1 k2) (ty_eqb t1 t2)
+     | _ -> false)
 
 (** val ctx_lookup_b : ident -> ctx -> (ty * bool) option **)
 

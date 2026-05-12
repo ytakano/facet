@@ -44,6 +44,13 @@ dune exec ocaml/main.exe -- --emit-fir output.fir path/to/file.facet
 
 # Print the language grammar
 dune exec ocaml/main.exe -- --generate-grammar
+
+# Differential-test alpha-renaming path against direct path
+dune exec ocaml/main.exe -- --debug-alpha path/to/file.facet
+
+# Run all .facet tests (expect exit 0 for valid/, exit 1 for invalid/)
+for f in tests/valid/**/*.facet; do dune exec ocaml/main.exe -- "$f" || echo "FAIL: $f"; done
+for f in tests/invalid/**/*.facet; do dune exec ocaml/main.exe -- "$f" && echo "FAIL (expected error): $f"; done
 ```
 
 ### Docker Development Environment
@@ -143,6 +150,7 @@ Pipeline stages:
 **Alpha renaming in the type checker**:
 - `infer_core` calls `alpha_rename_for_infer` to rename free variables before processing function bodies
 - Prevents capture of type variables in nested scopes
+- `infer_direct` in `TypeChecker.v` is the non-renaming path; `--debug-alpha` in the OCaml frontend runs both and reports any disagreement (differential testing)
 
 **Out of scope (Rocq formalization)**:
 - `TRef`, `TFn` type inference, mutability checking, borrowing/ownership
@@ -158,7 +166,8 @@ Pipeline stages:
 | `fixtures/TypeChecker.mli` | **Generated** OCaml interface; updated by make |
 | `fixtures/dune` | Wraps extracted OCaml as `type_checker` library for dune |
 | `ocaml/fir.ml` | Flat IR lowering from `expr` tree to linear instruction list |
-| `plan/` | Design notes; `if_expression.md`, `let_type_infer.md`, `typed_ir.md` describe recent features |
+| `ocaml/grammar.ml` | Embedded EBNF grammar string; printed by `--generate-grammar` |
+| `plan/` | Design notes: `if_expression.md`, `let_type_infer.md`, `typed_ir.md`, `alpha_renaming_lemmnas.md`; `simple_lifetime_and_borowwing/` for future work |
 
 ## Important Conventions
 
@@ -190,7 +199,7 @@ Running `make` in `rocq/` regenerates fixtures automatically.
 cd rocq && make
 ```
 
-**Facet source tests**: `tests/` contains `.facet` files grouped by error category (e.g., `tests/linear_affine_error/`, `tests/if_expression/`). Run the OCaml frontend against them to check expected errors are reported.
+**Facet source tests**: `tests/valid/` contains programs that must type-check cleanly (exit 0); `tests/invalid/` contains programs that must produce a type error (exit 1). Subdirectories group by error category (e.g., `linear_affine_error/`, `shadowing_error/`, `if_expression/`). There is no automated test runner; invoke the OCaml frontend per file as shown in the OCaml commands section above.
 
 **Validation checklist**:
 1. All `.v` files compile (no errors, no admitted theorems in core files)

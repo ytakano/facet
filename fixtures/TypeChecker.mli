@@ -94,6 +94,10 @@ val usage_eqb : usage -> usage -> bool
 
 val usage_sub_bool : usage -> usage -> bool
 
+val ref_kind_eqb : ref_kind -> ref_kind -> bool
+
+val ty_eqb : ty -> ty -> bool
+
 val ty_core_eqb : ty typeCore -> ty typeCore -> bool
 
 val ctx_lookup_b : ident -> ctx -> (ty * bool) option

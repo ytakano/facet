@@ -75,19 +75,112 @@ Lemma ctx_add_b_eq : forall x T Γ,
 Proof. reflexivity. Qed.
 
 (* ------------------------------------------------------------------ *)
-(* Auxiliary: ty_core_eqb correctness                                    *)
+(* Auxiliary: ref_kind_eqb, ty_eqb, ty_core_eqb correctness             *)
 (* ------------------------------------------------------------------ *)
+
+Lemma ref_kind_eqb_true : forall k1 k2,
+  ref_kind_eqb k1 k2 = true -> k1 = k2.
+Proof.
+  destruct k1, k2; simpl; intros H; try discriminate; reflexivity.
+Qed.
+
+Lemma ty_depth_fn_arg_lt : forall u ts r t,
+  In t ts -> ty_depth t < ty_depth (MkTy u (TFn ts r)).
+Proof.
+  intros u ts. induction ts as [| t1 ts' IH]; intros r t Hin.
+  - contradiction.
+  - simpl. destruct Hin as [<- | Hin].
+    + lia.
+    + specialize (IH r t Hin). simpl in IH. lia.
+Qed.
+
+Lemma ty_depth_fn_ret_lt : forall u ts r,
+  ty_depth r < ty_depth (MkTy u (TFn ts r)).
+Proof.
+  intros u ts. induction ts as [| t1 ts' IH]; intros r.
+  - simpl. lia.
+  - simpl. specialize (IH r). simpl in IH. lia.
+Qed.
+
+Lemma ty_depth_fn_cons_lt : forall u t ts r,
+  ty_depth (MkTy u (TFn ts r)) < ty_depth (MkTy u (TFn (t :: ts) r)).
+Proof.
+  intros u t ts. induction ts as [| t1 ts' IH]; intros r; simpl; lia.
+Qed.
+
+Lemma ty_eqb_true : forall T1 T2,
+  ty_eqb T1 T2 = true -> T1 = T2.
+Proof.
+  assert (Hsize : forall n T1 T2,
+      ty_depth T1 < n ->
+      ty_eqb T1 T2 = true -> T1 = T2).
+  {
+    induction n as [| n IH]; intros T1 T2 Hlt H.
+    - destruct T1 as [? c]; destruct c; simpl in Hlt; lia.
+    - destruct T1 as [u1 c1], T2 as [u2 c2].
+      simpl in H. apply andb_true_iff in H as [Hu Hc].
+      assert (Hequ : u1 = u2) by
+        (destruct u1, u2; simpl in Hu; try discriminate; reflexivity).
+      subst u2.
+      f_equal.
+      destruct c1 as [| | | | s1 | ts1 r1 | k1 t1],
+               c2 as [| | | | s2 | ts2 r2 | k2 t2];
+        simpl in Hc; try discriminate.
+      + reflexivity.
+      + reflexivity.
+      + reflexivity.
+      + reflexivity.
+      + apply String.eqb_eq in Hc. subst. reflexivity.
+      + apply andb_true_iff in Hc as [Hlist Hr].
+        assert (Heqr : r1 = r2) by
+          (apply IH; [pose proof (ty_depth_fn_ret_lt u1 ts1 r1); lia | exact Hr]).
+        subst r2. f_equal.
+        revert ts2 Hlt Hlist.
+        induction ts1 as [| t1 ts1' IHts]; intros ts2 Hlt Hlist.
+        * destruct ts2; [reflexivity | discriminate].
+        * destruct ts2 as [| t2 ts2']; [discriminate |].
+          simpl in Hlist. apply andb_true_iff in Hlist as [Ht Hts].
+          f_equal.
+          { apply IH;
+            [pose proof (ty_depth_fn_arg_lt u1 (t1::ts1') r1 t1 (or_introl eq_refl)); lia
+            | exact Ht]. }
+          { apply IHts;
+            [ exact (Nat.lt_trans _ _ _ (ty_depth_fn_cons_lt u1 t1 ts1' r1) Hlt)
+            | exact Hts]. }
+      + apply andb_true_iff in Hc as [Hk Ht].
+        apply ref_kind_eqb_true in Hk. subst k2.
+        f_equal. apply IH; [simpl in Hlt; lia | exact Ht].
+  }
+  intros T1 T2 H.
+  exact (Hsize (S (ty_depth T1)) T1 T2 (Nat.lt_succ_diag_r _) H).
+Qed.
 
 Lemma ty_core_eqb_true : forall c1 c2,
   ty_core_eqb c1 c2 = true -> c1 = c2.
 Proof.
   intros c1 c2 H.
-  destruct c1, c2; simpl in H; try discriminate.
+  destruct c1 as [| | | | s1 | ts1 r1 | k1 t1],
+           c2 as [| | | | s2 | ts2 r2 | k2 t2];
+    simpl in H; try discriminate.
   - reflexivity.
   - reflexivity.
   - reflexivity.
   - reflexivity.
   - apply String.eqb_eq in H. subst. reflexivity.
+  - apply andb_true_iff in H as [Hlist Hr].
+    assert (Heqr : r1 = r2) by (apply ty_eqb_true; exact Hr). subst r2.
+    f_equal.
+    revert ts2 Hlist.
+    induction ts1 as [| t1 ts1' IHts]; intros ts2 Hlist.
+    + destruct ts2; [reflexivity | discriminate].
+    + destruct ts2 as [| t2 ts2']; [discriminate |].
+      simpl in Hlist. apply andb_true_iff in Hlist as [Ht Hts].
+      f_equal.
+      * apply ty_eqb_true. exact Ht.
+      * apply IHts. exact Hts.
+  - apply andb_true_iff in H as [Hk Ht].
+    apply ref_kind_eqb_true in Hk. subst k2.
+    f_equal. apply ty_eqb_true. exact Ht.
 Qed.
 
 (* ------------------------------------------------------------------ *)

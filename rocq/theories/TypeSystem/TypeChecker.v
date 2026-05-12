@@ -24,7 +24,35 @@ Definition usage_sub_bool (u1 u2 : usage) : bool :=
   | _,             _          => false
   end.
 
-(* Compare cores; TFn/TRef are out of scope so we return false for them. *)
+Definition ref_kind_eqb (k1 k2 : ref_kind) : bool :=
+  match k1, k2 with
+  | RShared, RShared => true
+  | RUnique, RUnique => true
+  | _, _ => false
+  end.
+
+Fixpoint ty_eqb (T1 T2 : Ty) {struct T1} : bool :=
+  match T1, T2 with
+  | MkTy u1 c1, MkTy u2 c2 =>
+      usage_eqb u1 u2 &&
+      match c1, c2 with
+      | TUnits,    TUnits    => true
+      | TIntegers, TIntegers => true
+      | TFloats,   TFloats   => true
+      | TBooleans, TBooleans => true
+      | TNamed s1, TNamed s2 => String.eqb s1 s2
+      | TFn ts1 r1, TFn ts2 r2 =>
+          (fix go (l1 l2 : list Ty) : bool :=
+             match l1, l2 with
+             | [], [] => true
+             | t1 :: l1', t2 :: l2' => ty_eqb t1 t2 && go l1' l2'
+             | _, _ => false
+             end) ts1 ts2 && ty_eqb r1 r2
+      | TRef k1 t1, TRef k2 t2 => ref_kind_eqb k1 k2 && ty_eqb t1 t2
+      | _, _ => false
+      end
+  end.
+
 Definition ty_core_eqb (c1 c2 : TypeCore Ty) : bool :=
   match c1, c2 with
   | TUnits,    TUnits    => true
@@ -32,7 +60,15 @@ Definition ty_core_eqb (c1 c2 : TypeCore Ty) : bool :=
   | TFloats,   TFloats   => true
   | TBooleans, TBooleans => true
   | TNamed s1, TNamed s2 => String.eqb s1 s2
-  | _,         _         => false
+  | TFn ts1 r1, TFn ts2 r2 =>
+      (fix go (l1 l2 : list Ty) : bool :=
+         match l1, l2 with
+         | [], [] => true
+         | t1 :: l1', t2 :: l2' => ty_eqb t1 t2 && go l1' l2'
+         | _, _ => false
+         end) ts1 ts2 && ty_eqb r1 r2
+  | TRef k1 t1, TRef k2 t2 => ref_kind_eqb k1 k2 && ty_eqb t1 t2
+  | _, _ => false
   end.
 
 (* ------------------------------------------------------------------ *)
@@ -510,6 +546,25 @@ Definition infer_direct (fenv : list fn_def) (f : fn_def)
           else infer_err ErrContextCheckFailed
         else infer_err (ErrUsageMismatch (ty_usage (fn_ret f)) (ty_usage T_body))
       else infer_err (ErrTypeMismatch (ty_core (fn_ret f)) (ty_core T_body))
+  end.
+
+(* ------------------------------------------------------------------ *)
+(* Depth measure for Ty (used in soundness proofs)                       *)
+(* ------------------------------------------------------------------ *)
+
+Fixpoint ty_depth (T : Ty) : nat :=
+  match T with
+  | MkTy _ c =>
+      match c with
+      | TFn ts r =>
+          S ((fix go (l : list Ty) : nat :=
+               match l with
+               | [] => ty_depth r
+               | t :: l' => S (ty_depth t) + go l'
+               end) ts)
+      | TRef _ t => S (ty_depth t)
+      | _ => 1
+      end
   end.
 
 (* ------------------------------------------------------------------ *)

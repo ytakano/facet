@@ -19,24 +19,22 @@ let lookup scope name =
 let make_ident name d : ident =
   (name, Big_int_Z.big_int_of_int d)
 
+let rec convert_place scope = function
+  | NPVar name -> PVar (make_ident name (lookup scope name))
+  | NPDeref p -> PDeref (convert_place scope p)
+
 let rec convert (scope : scope) (e : named_expr) : expr =
   match e with
   | NUnit           -> EUnit
   | NLit l          -> ELit l
   | NVar name       -> EVar (make_ident name (lookup scope name))
   | NDrop e1        -> EDrop (convert scope e1)
-  | NReplace (id, e1) ->
-    EReplace (PVar (make_ident id (lookup scope id)), convert scope e1)
-  | NAssign (id, e1) ->
-    EAssign (PVar (make_ident id (lookup scope id)), convert scope e1)
-  | NBorrow (rk, id) ->
-    EBorrow (rk, PVar (make_ident id (lookup scope id)))
-  | NReplaceDeref (id, e1) ->
-    EReplace (PDeref (PVar (make_ident id (lookup scope id))), convert scope e1)
-  | NAssignDeref (id, e1) ->
-    EAssign (PDeref (PVar (make_ident id (lookup scope id))), convert scope e1)
-  | NReBorrow (rk, id) ->
-    EBorrow (rk, PDeref (PVar (make_ident id (lookup scope id))))
+  | NReplace (p, e1) ->
+    EReplace (convert_place scope p, convert scope e1)
+  | NAssign (p, e1) ->
+    EAssign (convert_place scope p, convert scope e1)
+  | NBorrow (rk, p) ->
+    EBorrow (rk, convert_place scope p)
   | NDeref e1 ->
     EDeref (convert scope e1)
   | NCall (f, args) ->

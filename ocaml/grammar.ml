@@ -75,11 +75,20 @@ atom_expr ::= "()"
             | "false"
             | ID
             | "(" "drop" expr ")"
-            | "(" "replace" ID atom_expr ")"
-            | "(" ID "=" atom_expr ")"
+            | "(" "replace" place atom_expr ")"
+            | "(" place "=" atom_expr ")"
+            | "(" "&" place ")"
+            | "(" "&" "mut" place ")"
+            | "(" "*" expr ")"
             | "(" ID atom_expr* ")"
             | "if" atom_expr "{" block "}" "else" "{" block "}"
             | "if" atom_expr "{" block "}"
+```
+
+## place
+```
+place ::= ID
+        | "*" place
 ```
 
 ## ty

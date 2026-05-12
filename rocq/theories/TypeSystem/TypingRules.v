@@ -143,6 +143,21 @@ Fixpoint ctx_merge (Γ2 Γ3 : ctx) : option ctx :=
   | _, _ => None
   end.
 
+Fixpoint place_root (p : place) : ident :=
+  match p with
+  | PVar x => x
+  | PDeref q => place_root q
+  end.
+
+Inductive typed_place (fenv : list fn_def) (n : nat) (Γ : ctx)
+    : place -> Ty -> Prop :=
+  | TP_Var : forall x T,
+      ctx_lookup x Γ = Some (T, false) ->
+      typed_place fenv n Γ (PVar x) T
+  | TP_Deref : forall p la rk T u,
+      typed_place fenv n Γ p (MkTy u (TRef la rk T)) ->
+      typed_place fenv n Γ (PDeref p) T.
+
 (* ------------------------------------------------------------------ *)
 (* Lifetime substitution on parameters                                   *)
 (* ------------------------------------------------------------------ *)
@@ -271,37 +286,37 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
       typed fenv n Γ r (MkTy u_r (TRef la rk T)) Γ' ->
       typed fenv n Γ (EDeref r) T Γ'
 
-  (* &*r — shared re-borrow: r has any reference type &'a rk T *)
-  | T_ReBorrowShared : forall Γ r la rk T u_r,
-      ctx_lookup r Γ = Some (MkTy u_r (TRef la rk T), false) ->
+  (* &*p — shared re-borrow: p has any reference type &'a rk T *)
+  | T_ReBorrowShared : forall Γ p la rk T u_r,
+      typed_place fenv n Γ p (MkTy u_r (TRef la rk T)) ->
       ty_usage (MkTy u_r (TRef la rk T)) <> ULinear ->
-      typed fenv n Γ (EBorrow RShared (PDeref (PVar r)))
+      typed fenv n Γ (EBorrow RShared (PDeref p))
         (MkTy UUnrestricted (TRef (LVar n) RShared T)) Γ
 
-  (* &mut *r — mutable re-borrow: r must have &mut T and be mutable *)
-  | T_ReBorrowMut : forall Γ r la T u_r,
-      ctx_lookup r Γ = Some (MkTy u_r (TRef la RUnique T), false) ->
+  (* &mut *p — mutable re-borrow: p must have &mut T and root must be mutable *)
+  | T_ReBorrowMut : forall Γ p la T u_r,
+      typed_place fenv n Γ p (MkTy u_r (TRef la RUnique T)) ->
       ty_usage (MkTy u_r (TRef la RUnique T)) <> ULinear ->
-      ctx_lookup_mut r Γ = Some MMutable ->
-      typed fenv n Γ (EBorrow RUnique (PDeref (PVar r)))
+      ctx_lookup_mut (place_root p) Γ = Some MMutable ->
+      typed fenv n Γ (EBorrow RUnique (PDeref p))
         (MkTy UUnrestricted (TRef (LVar n) RUnique T)) Γ
 
-  (* *r <- e_new where r : &mut T: write through mutable reference, return old T *)
-  | T_Replace_Deref : forall Γ Γ' r la T T_new e_new u_r,
-      ctx_lookup r Γ = Some (MkTy u_r (TRef la RUnique T), false) ->
-      ctx_lookup_mut r Γ = Some MMutable ->
+  (* *p <- e_new where p : &mut T: write through mutable reference, return old T *)
+  | T_Replace_Deref : forall Γ Γ' p la T T_new e_new u_r,
+      typed_place fenv n Γ p (MkTy u_r (TRef la RUnique T)) ->
+      ctx_lookup_mut (place_root p) Γ = Some MMutable ->
       typed fenv n Γ e_new T_new Γ' ->
       ty_compatible T_new T ->
-      typed fenv n Γ (EReplace (PDeref (PVar r)) e_new) T Γ'
+      typed fenv n Γ (EReplace (PDeref p) e_new) T Γ'
 
   (* *r = e_new where r : &mut T (non-linear): assign through reference, return unit *)
-  | T_Assign_Deref : forall Γ Γ' r la T T_new e_new u_r,
-      ctx_lookup r Γ = Some (MkTy u_r (TRef la RUnique T), false) ->
-      ctx_lookup_mut r Γ = Some MMutable ->
+  | T_Assign_Deref : forall Γ Γ' p la T T_new e_new u_r,
+      typed_place fenv n Γ p (MkTy u_r (TRef la RUnique T)) ->
+      ctx_lookup_mut (place_root p) Γ = Some MMutable ->
       ty_usage T <> ULinear ->
       typed fenv n Γ e_new T_new Γ' ->
       ty_compatible T_new T ->
-      typed fenv n Γ (EAssign (PDeref (PVar r)) e_new) (MkTy UUnrestricted TUnits) Γ'
+      typed fenv n Γ (EAssign (PDeref p) e_new) (MkTy UUnrestricted TUnits) Γ'
 
   (* if e1 { e2 } else { e3 }:
      - e1 must have bool type (any usage)
@@ -394,11 +409,18 @@ Definition bs_can_shared (x : ident) (bs : borrow_state) : Prop :=
 Definition bs_can_mut (x : ident) (bs : borrow_state) : Prop :=
   bs_has_any x bs = false.
 
-(* EDeref e is safe: if e = EVar r, r must not be mutably re-borrowed *)
-Definition borrow_ok_deref_check (BS : borrow_state) (e : expr) : Prop :=
+Fixpoint expr_ref_root (e : expr) : option ident :=
   match e with
-  | EVar r => bs_can_shared r BS   (* = bs_has_mut r BS = false *)
-  | _      => True
+  | EVar r => Some r
+  | EDeref e' => expr_ref_root e'
+  | _ => None
+  end.
+
+(* EDeref e is safe if the root reference is not mutably re-borrowed. *)
+Definition borrow_ok_deref_check (BS : borrow_state) (e : expr) : Prop :=
+  match expr_ref_root e with
+  | Some r => bs_can_shared r BS
+  | None => True
   end.
 
 Fixpoint bs_remove_one (e : borrow_entry) (bs : borrow_state) : borrow_state :=
@@ -465,26 +487,28 @@ Inductive borrow_ok (fenv : list fn_def)
       borrow_ok fenv BS Γ e_new BS' ->
       borrow_ok fenv BS Γ (EAssign (PVar x) e_new) BS'
 
-  (* write-through-reference: blocked if r has active re-borrow *)
-  | BO_Replace_Deref : forall BS BS' Γ r e_new,
-      bs_can_mut r BS ->
+  (* write-through-reference: blocked if root has active re-borrow *)
+  | BO_Replace_Deref : forall BS BS' Γ p e_new,
+      bs_can_mut (place_root p) BS ->
       borrow_ok fenv BS Γ e_new BS' ->
-      borrow_ok fenv BS Γ (EReplace (PDeref (PVar r)) e_new) BS'
+      borrow_ok fenv BS Γ (EReplace (PDeref p) e_new) BS'
 
-  | BO_Assign_Deref : forall BS BS' Γ r e_new,
-      bs_can_mut r BS ->
+  | BO_Assign_Deref : forall BS BS' Γ p e_new,
+      bs_can_mut (place_root p) BS ->
       borrow_ok fenv BS Γ e_new BS' ->
-      borrow_ok fenv BS Γ (EAssign (PDeref (PVar r)) e_new) BS'
+      borrow_ok fenv BS Γ (EAssign (PDeref p) e_new) BS'
 
   (* shared re-borrow: OK if no active mut borrow on r *)
-  | BO_ReBorrowShared : forall BS Γ r,
-      bs_can_shared r BS ->
-      borrow_ok fenv BS Γ (EBorrow RShared (PDeref (PVar r))) (BEShared r :: BS)
+  | BO_ReBorrowShared : forall BS Γ p,
+      bs_can_shared (place_root p) BS ->
+      borrow_ok fenv BS Γ (EBorrow RShared (PDeref p))
+        (BEShared (place_root p) :: BS)
 
   (* mutable re-borrow: OK if no active borrow of any kind on r *)
-  | BO_ReBorrowMut : forall BS Γ r,
-      bs_can_mut r BS ->
-      borrow_ok fenv BS Γ (EBorrow RUnique (PDeref (PVar r))) (BEMut r :: BS)
+  | BO_ReBorrowMut : forall BS Γ p,
+      bs_can_mut (place_root p) BS ->
+      borrow_ok fenv BS Γ (EBorrow RUnique (PDeref p))
+        (BEMut (place_root p) :: BS)
 
   (* let: e1 produces BS1; e2 (with x in ctx) produces BS2.
      On scope exit, borrows introduced by e1 are released. *)

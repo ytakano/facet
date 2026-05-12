@@ -1,0 +1,6 @@
+fn nested_replace(mut x: unrestricted isize) -> unrestricted isize {
+    let mut r: unrestricted &mut unrestricted isize = (&mut x) in
+    let mut rr: unrestricted &mut unrestricted &mut unrestricted isize = (&mut r) in
+    let old: unrestricted isize = (replace **rr 42) in
+    old
+}

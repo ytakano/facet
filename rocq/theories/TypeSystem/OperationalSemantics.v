@@ -96,6 +96,16 @@ Fixpoint lookup_fn (name : ident) (fenv : list fn_def) : option fn_def :=
               else lookup_fn name t
   end.
 
+Inductive eval_place : store -> place -> ident -> Prop :=
+  | EvalPlace_Var : forall s x e,
+      store_lookup x s = Some e ->
+      eval_place s (PVar x) x
+  | EvalPlace_Deref : forall s p r x se_r,
+      eval_place s p r ->
+      store_lookup r s = Some se_r ->
+      se_val se_r = VRef x ->
+      eval_place s (PDeref p) x.
+
 (* ------------------------------------------------------------------ *)
 (* Big-step evaluation                                                  *)
 (*                                                                      *)
@@ -164,29 +174,26 @@ Inductive eval (fenv : list fn_def) : store -> expr -> store -> value -> Prop :=
       store_lookup x s = Some e ->
       eval fenv s (EBorrow rk (PVar x)) s (VRef x)
 
-  (* *r <- e_new: r holds VRef x, write through to x, return old value *)
-  | Eval_Replace_Deref : forall s s1 s2 r x se_r old_e e_new v_new,
-      store_lookup r s = Some se_r ->
-      se_val se_r = VRef x ->
+  (* *p <- e_new: p resolves to a reference target x, return old value *)
+  | Eval_Replace_Deref : forall s s1 s2 p x old_e e_new v_new,
+      eval_place s (PDeref p) x ->
       store_lookup x s = Some old_e ->
       eval fenv s e_new s1 v_new ->
       store_update_val x v_new s1 = Some s2 ->
-      eval fenv s (EReplace (PDeref (PVar r)) e_new) s2 (se_val old_e)
+      eval fenv s (EReplace (PDeref p) e_new) s2 (se_val old_e)
 
-  (* *r = e_new: r holds VRef x, assign through to x, return unit *)
-  | Eval_Assign_Deref : forall s s1 s2 r x se_r old_e e_new v_new,
-      store_lookup r s = Some se_r ->
-      se_val se_r = VRef x ->
+  (* *p = e_new: p resolves to a reference target x, return unit *)
+  | Eval_Assign_Deref : forall s s1 s2 p x old_e e_new v_new,
+      eval_place s (PDeref p) x ->
       store_lookup x s = Some old_e ->
       eval fenv s e_new s1 v_new ->
       store_update_val x v_new s1 = Some s2 ->
-      eval fenv s (EAssign (PDeref (PVar r)) e_new) s2 VUnit
+      eval fenv s (EAssign (PDeref p) e_new) s2 VUnit
 
-  (* &*r — re-borrow: r holds VRef x, return VRef x *)
-  | Eval_ReBorrow : forall s r x se_r rk,
-      store_lookup r s = Some se_r ->
-      se_val se_r = VRef x ->
-      eval fenv s (EBorrow rk (PDeref (PVar r))) s (VRef x)
+  (* &*p — re-borrow: p resolves to a reference target x *)
+  | Eval_ReBorrow : forall s p x rk,
+      eval_place s (PDeref p) x ->
+      eval fenv s (EBorrow rk (PDeref p)) s (VRef x)
 
   (* *r: evaluate r to VRef x, then copy the value of x from the store.
      Only applicable when the inner type is UUnrestricted (copy semantics).

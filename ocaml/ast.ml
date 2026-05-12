@@ -1,17 +1,18 @@
 type name = string
 
+type named_place =
+  | NPVar of name
+  | NPDeref of named_place
+
 type named_expr =
   | NUnit
   | NLit    of TypeChecker.literal
   | NVar    of name
   | NLet    of TypeChecker.mutability * name * TypeChecker.ty option * named_expr * named_expr
   | NCall   of name * named_expr list
-  | NReplace of name * named_expr
-  | NAssign of name * named_expr
-  | NBorrow of TypeChecker.ref_kind * name
-  | NReplaceDeref of name * named_expr       (* write through mutable ref: replace *x e *)
-  | NAssignDeref  of name * named_expr       (* assign through mutable ref: ( *x = e ) *)
-  | NReBorrow     of TypeChecker.ref_kind * name  (* re-borrow through ref: & *x or &mut *x *)
+  | NReplace of named_place * named_expr
+  | NAssign of named_place * named_expr
+  | NBorrow of TypeChecker.ref_kind * named_place
   | NDeref  of named_expr
   | NDrop   of named_expr
   | NIf     of named_expr * named_expr * named_expr

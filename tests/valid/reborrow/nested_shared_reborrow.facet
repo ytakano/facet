@@ -1,0 +1,6 @@
+fn nested_shared(mut x: unrestricted isize) -> unrestricted isize {
+    let mut r: unrestricted &mut unrestricted isize = (&mut x) in
+    let rr: unrestricted &unrestricted &mut unrestricted isize = (&r) in
+    let s: unrestricted &unrestricted isize = (&**rr) in
+    (*s)
+}

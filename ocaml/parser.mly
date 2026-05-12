@@ -125,22 +125,14 @@ atom_expr:
     { NVar x }
   | LPAREN; KW_DROP; e = expr; RPAREN
     { NDrop e }
-  | LPAREN; KW_REPLACE; x = ID; e = atom_expr; RPAREN
-    { NReplace (x, e) }
-  | LPAREN; KW_REPLACE; STAR; x = ID; e = atom_expr; RPAREN
-    { NReplaceDeref (x, e) }
-  | LPAREN; x = ID; EQUAL; e = atom_expr; RPAREN
-    { NAssign (x, e) }
-  | LPAREN; AMP; x = ID; RPAREN
-    { NBorrow (RShared, x) }
-  | LPAREN; AMP; KW_MUT; x = ID; RPAREN
-    { NBorrow (RUnique, x) }
-  | LPAREN; AMP; STAR; x = ID; RPAREN
-    { NReBorrow (RShared, x) }
-  | LPAREN; AMP; KW_MUT; STAR; x = ID; RPAREN
-    { NReBorrow (RUnique, x) }
-  | LPAREN; STAR; x = ID; EQUAL; e = atom_expr; RPAREN
-    { NAssignDeref (x, e) }
+  | LPAREN; KW_REPLACE; p = place; e = atom_expr; RPAREN
+    { NReplace (p, e) }
+  | LPAREN; p = place; EQUAL; e = atom_expr; RPAREN
+    { NAssign (p, e) }
+  | LPAREN; AMP; p = place; RPAREN
+    { NBorrow (RShared, p) }
+  | LPAREN; AMP; KW_MUT; p = place; RPAREN
+    { NBorrow (RUnique, p) }
   | LPAREN; STAR; e = expr; RPAREN
     { NDeref e }
   | LPAREN; f = ID; args = list(atom_expr); RPAREN
@@ -150,6 +142,12 @@ atom_expr:
     { NIf (cond, then_e, else_e) }
   | KW_IF; cond = atom_expr; LBRACE; then_e = block; RBRACE
     { NIf (cond, then_e, NUnit) }
+
+place:
+  | x = ID
+    { NPVar x }
+  | STAR; p = place
+    { NPDeref p }
 
 ty:
   | KW_AFFINE;       c = ty_core { MkTy (UAffine,       c) }

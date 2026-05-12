@@ -66,6 +66,11 @@ let get_var_ty env x =
   | Some (ty, _) -> ty
   | None -> failwith ("FIR: unbound variable: " ^ fst x)
 
+let fir_place_name = function
+  | PVar id -> id
+  | PDeref (PVar id) -> id
+  | PDeref _ -> failwith "FIR: nested places are not supported yet"
+
 let consume_if_needed env x ty =
   if ty_usage ty <> UUnrestricted then
     match ctx_consume_b x env.ctx with
@@ -116,14 +121,14 @@ let rec to_value env = function
     emit env (FIDrop (tmp, ident_of_tval env v, v.ft));
     { fv = FVVar tmp; ft = unit_ty }
   | EReplace (place, e_new) ->
-    let id = place_name place in
+    let id = fir_place_name place in
     let p_ty = get_var_ty env id in
     let v_new = to_value env e_new in
     let tmp = fresh_id env in
     emit env (FIReplace (tmp, p_ty, id, p_ty, v_new));
     { fv = FVVar tmp; ft = p_ty }
   | EAssign (place, e_new) ->
-    let id = place_name place in
+    let id = fir_place_name place in
     let p_ty = get_var_ty env id in
     let v_new = to_value env e_new in
     let old_tmp = fresh_id env in
@@ -132,7 +137,7 @@ let rec to_value env = function
     emit env (FIDrop (drop_tmp, old_tmp, p_ty));
     { fv = FVVar drop_tmp; ft = unit_ty }
   | EBorrow (rk, place) ->
-    let id = place_name place in
+    let id = fir_place_name place in
     let p_ty = get_var_ty env id in
     let ref_ty = MkTy (UUnrestricted, TRef (LStatic, rk, p_ty)) in
     let tmp = fresh_id env in
@@ -180,12 +185,12 @@ and emit_into env x t = function
     let v = to_value env inner in
     emit env (FIDrop (x, ident_of_tval env v, v.ft))
   | EReplace (place, e_new) ->
-    let id = place_name place in
+    let id = fir_place_name place in
     let p_ty = get_var_ty env id in
     let v_new = to_value env e_new in
     emit env (FIReplace (x, p_ty, id, p_ty, v_new))
   | EAssign (place, e_new) ->
-    let id = place_name place in
+    let id = fir_place_name place in
     let p_ty = get_var_ty env id in
     let v_new = to_value env e_new in
     let old_tmp = fresh_id env in

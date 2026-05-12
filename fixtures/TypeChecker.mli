@@ -128,6 +128,8 @@ val usage_max : usage -> usage -> usage
 
 val ctx_merge : ctx -> ctx -> ctx option
 
+val place_root : place -> ident
+
 val apply_lt_param : lifetime list -> param -> param
 
 val apply_lt_params : lifetime list -> param list -> param list
@@ -145,6 +147,8 @@ val bs_eqb : borrow_state -> borrow_state -> bool
 val bs_has_mut : ident -> borrow_state -> bool
 
 val bs_has_any : ident -> borrow_state -> bool
+
+val expr_ref_root : expr -> ident option
 
 val bs_remove_one : borrow_entry -> borrow_state -> borrow_state
 
@@ -235,6 +239,8 @@ val check_args : ty list -> param list -> infer_error option
 type 'a infer_result =
 | Infer_ok of 'a
 | Infer_err of infer_error
+
+val infer_place : ctx -> place -> ty infer_result
 
 val free_vars_expr : expr -> ident list
 

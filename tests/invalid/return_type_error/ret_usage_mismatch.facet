@@ -1,3 +1,3 @@
-fn bar() -> linear isize {
-  42
+fn bar(x: linear isize) -> unrestricted isize {
+  x
 }

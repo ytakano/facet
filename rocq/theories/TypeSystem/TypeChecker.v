@@ -749,14 +749,23 @@ Fixpoint borrow_check (fenv : list fn_def) (BS : borrow_state) (Γ : ctx)
 
   | EBorrow _ (PDeref (PDeref _)) => infer_err ErrNotImplemented
 
+  (* EDeref (EVar r): block if r is mutably re-borrowed *)
+  | EDeref (EVar r) =>
+      if bs_has_mut r BS
+      then infer_err (ErrBorrowConflict r)
+      else infer_ok BS
+
   | EDeref e1 | EDrop e1 =>
       borrow_check fenv BS Γ e1
 
   | EReplace (PVar _) e_new | EAssign (PVar _) e_new =>
       borrow_check fenv BS Γ e_new
 
-  | EReplace (PDeref (PVar _)) e_new | EAssign (PDeref (PVar _)) e_new =>
-      borrow_check fenv BS Γ e_new
+  (* write-through blocked if r has any active re-borrow *)
+  | EReplace (PDeref (PVar r)) e_new | EAssign (PDeref (PVar r)) e_new =>
+      if bs_has_any r BS
+      then infer_err (ErrBorrowConflict r)
+      else borrow_check fenv BS Γ e_new
 
   | EReplace (PDeref (PDeref _)) _ | EAssign (PDeref (PDeref _)) _ =>
       infer_err ErrNotImplemented

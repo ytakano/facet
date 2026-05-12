@@ -375,6 +375,13 @@ Definition bs_can_shared (x : ident) (bs : borrow_state) : Prop :=
 Definition bs_can_mut (x : ident) (bs : borrow_state) : Prop :=
   bs_has_any x bs = false.
 
+(* EDeref e is safe: if e = EVar r, r must not be mutably re-borrowed *)
+Definition borrow_ok_deref_check (BS : borrow_state) (e : expr) : Prop :=
+  match e with
+  | EVar r => bs_can_shared r BS   (* = bs_has_mut r BS = false *)
+  | _      => True
+  end.
+
 Fixpoint bs_remove_one (e : borrow_entry) (bs : borrow_state) : borrow_state :=
   match bs with
   | []     => []
@@ -423,6 +430,7 @@ Inductive borrow_ok (fenv : list fn_def)
       borrow_ok fenv BS Γ (EBorrow RUnique (PVar x)) (BEMut x :: BS)
 
   | BO_Deref : forall BS BS' Γ e,
+      borrow_ok_deref_check BS e ->
       borrow_ok fenv BS Γ e BS' ->
       borrow_ok fenv BS Γ (EDeref e) BS'
 
@@ -438,12 +446,14 @@ Inductive borrow_ok (fenv : list fn_def)
       borrow_ok fenv BS Γ e_new BS' ->
       borrow_ok fenv BS Γ (EAssign (PVar x) e_new) BS'
 
-  (* write-through-reference: borrow check only traverses e_new *)
+  (* write-through-reference: blocked if r has active re-borrow *)
   | BO_Replace_Deref : forall BS BS' Γ r e_new,
+      bs_can_mut r BS ->
       borrow_ok fenv BS Γ e_new BS' ->
       borrow_ok fenv BS Γ (EReplace (PDeref (PVar r)) e_new) BS'
 
   | BO_Assign_Deref : forall BS BS' Γ r e_new,
+      bs_can_mut r BS ->
       borrow_ok fenv BS Γ e_new BS' ->
       borrow_ok fenv BS Γ (EAssign (PDeref (PVar r)) e_new) BS'
 

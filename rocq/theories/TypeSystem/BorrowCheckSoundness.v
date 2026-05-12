@@ -113,8 +113,12 @@ Proof.
     * apply BO_Replace.
       apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
     * destruct q as [rv | q2].
-      -- apply BO_Replace_Deref.
-         apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
+      -- (* EReplace (PDeref (PVar rv)) e: new freeze check *)
+         simpl in Hcheck.
+         destruct (bs_has_any rv BS) eqn:Hany; [discriminate|].
+         apply BO_Replace_Deref.
+         ** unfold bs_can_mut. exact Hany.
+         ** apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
       -- discriminate.
 
   (* EAssign *)
@@ -122,8 +126,12 @@ Proof.
     * apply BO_Assign.
       apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
     * destruct q as [rv | q2].
-      -- apply BO_Assign_Deref.
-         apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
+      -- (* EAssign (PDeref (PVar rv)) e: new freeze check *)
+         simpl in Hcheck.
+         destruct (bs_has_any rv BS) eqn:Hany; [discriminate|].
+         apply BO_Assign_Deref.
+         ** unfold bs_can_mut. exact Hany.
+         ** apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
       -- discriminate.
 
   (* EBorrow *)
@@ -152,8 +160,18 @@ Proof.
       -- discriminate.
 
   (* EDeref *)
-  + apply BO_Deref.
-    apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
+  + destruct e as [| | r | | | | | | | | |].
+    (* goal 3 = EVar r: need freeze check *)
+    3: { simpl in Hcheck.
+         destruct (bs_has_mut r BS) eqn:Hmut; [discriminate|].
+         injection Hcheck as <-.
+         apply BO_Deref.
+         - unfold borrow_ok_deref_check, bs_can_shared. exact Hmut.
+         - apply BO_Var. }
+    (* all non-EVar cases: borrow_ok_deref_check = True, recurse *)
+    all: (simpl in Hcheck;
+          apply BO_Deref; [ exact I
+                          | apply IH; [ simpl in Hlt |- *; lia | exact Hcheck ] ]).
 
   (* EDrop *)
   + apply BO_Drop.
@@ -213,8 +231,14 @@ Proof.
     simpl. unfold bs_can_mut in Hcan. rewrite Hcan. reflexivity.
 
   (* BO_Deref *)
-  - intros BS BS' Γ e _ IH.
-    simpl. exact IH.
+  - intros BS BS' Γ e Hfreeze _ IH.
+    (* destruct inner expr: EVar r vs all others *)
+    destruct e as [| | r | | | | | | | | |].
+    all: try (simpl; exact IH).
+    (* EVar r case: borrow_check returns infer_ok BS, need to show rewrite works *)
+    simpl.
+    unfold borrow_ok_deref_check, bs_can_shared in Hfreeze.
+    rewrite Hfreeze. exact IH.
 
   (* BO_Drop *)
   - intros BS BS' Γ e _ IH.
@@ -229,12 +253,12 @@ Proof.
     simpl. exact IH.
 
   (* BO_Replace_Deref *)
-  - intros BS BS' Γ r e_new _ IH.
-    simpl. exact IH.
+  - intros BS BS' Γ r e_new Hcanmut _ IH.
+    simpl. unfold bs_can_mut in Hcanmut. rewrite Hcanmut. exact IH.
 
   (* BO_Assign_Deref *)
-  - intros BS BS' Γ r e_new _ IH.
-    simpl. exact IH.
+  - intros BS BS' Γ r e_new Hcanmut _ IH.
+    simpl. unfold bs_can_mut in Hcanmut. rewrite Hcanmut. exact IH.
 
   (* BO_ReBorrowShared *)
   - intros BS Γ r Hcan.

@@ -1091,14 +1091,20 @@ let rec borrow_check fenv bS _UU0393_ = function
    | PVar _ -> borrow_check fenv bS _UU0393_ e_new
    | PDeref p0 ->
      (match p0 with
-      | PVar _ -> borrow_check fenv bS _UU0393_ e_new
+      | PVar r ->
+        if bs_has_any r bS
+        then Infer_err (ErrBorrowConflict r)
+        else borrow_check fenv bS _UU0393_ e_new
       | PDeref _ -> Infer_err ErrNotImplemented))
 | EAssign (p, e_new) ->
   (match p with
    | PVar _ -> borrow_check fenv bS _UU0393_ e_new
    | PDeref p0 ->
      (match p0 with
-      | PVar _ -> borrow_check fenv bS _UU0393_ e_new
+      | PVar r ->
+        if bs_has_any r bS
+        then Infer_err (ErrBorrowConflict r)
+        else borrow_check fenv bS _UU0393_ e_new
       | PDeref _ -> Infer_err ErrNotImplemented))
 | EBorrow (r0, p) ->
   (match r0 with
@@ -1128,7 +1134,11 @@ let rec borrow_check fenv bS _UU0393_ = function
            then Infer_err (ErrBorrowConflict r)
            else Infer_ok ((BEMut r) :: bS)
          | PDeref _ -> Infer_err ErrNotImplemented)))
-| EDeref e1 -> borrow_check fenv bS _UU0393_ e1
+| EDeref e1 ->
+  (match e1 with
+   | EVar r ->
+     if bs_has_mut r bS then Infer_err (ErrBorrowConflict r) else Infer_ok bS
+   | _ -> borrow_check fenv bS _UU0393_ e1)
 | EDrop e1 -> borrow_check fenv bS _UU0393_ e1
 | EIf (e1, e2, e3) ->
   (match borrow_check fenv bS _UU0393_ e1 with

@@ -1,0 +1,4 @@
+fn f(mut x: unrestricted isize) -> unrestricted () {
+    (replace x 3.14);
+    ()
+}

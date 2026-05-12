@@ -1,0 +1,4 @@
+fn f(mut x: affine isize) -> unrestricted () {
+    let old: affine isize = (replace x 42);
+    (drop old)
+}

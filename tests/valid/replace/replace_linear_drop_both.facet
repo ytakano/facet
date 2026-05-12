@@ -1,0 +1,5 @@
+fn f(mut x: linear isize) -> unrestricted () {
+    let old: linear isize = (replace x 10);
+    (drop old);
+    (drop x)
+}

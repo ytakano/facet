@@ -1,0 +1,4 @@
+fn f(mut target: unrestricted isize, source: linear isize) -> unrestricted isize {
+    let old: unrestricted isize = (replace target source);
+    old
+}

@@ -1,0 +1,4 @@
+fn f(mut x: unrestricted isize) -> unrestricted isize {
+    let _: unrestricted isize = (replace x 42);
+    x
+}

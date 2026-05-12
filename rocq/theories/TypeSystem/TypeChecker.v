@@ -194,7 +194,8 @@ Inductive infer_error : Type :=
   | ErrContextCheckFailed : infer_error
   | ErrNotImplemented : infer_error
   | ErrImmutableBorrow : ident -> infer_error       (* &mut x where x is immutable *)
-  | ErrNotAReference : TypeCore Ty -> infer_error.  (* *e where e is not a reference type *)
+  | ErrNotAReference : TypeCore Ty -> infer_error   (* *e where e is not a reference type *)
+  | ErrBorrowConflict : ident -> infer_error.       (* borrow conflicts with existing active borrow *)
 
 Inductive infer_result (A : Type) : Type :=
   | infer_ok : A -> infer_result A
@@ -614,6 +615,112 @@ Definition check_program (fenv : list fn_def) : bool :=
     end) fenv.
 
 (* ------------------------------------------------------------------ *)
+(* Borrow conflict checker                                               *)
+(*                                                                      *)
+(* borrow_check traverses an expression and maintains a borrow_state.   *)
+(* It is run after infer succeeds (infer handles structural well-        *)
+(* formedness; borrow_check handles aliasing constraints).               *)
+(* ------------------------------------------------------------------ *)
+
+Fixpoint borrow_check (fenv : list fn_def) (BS : borrow_state) (Γ : ctx)
+    (e : expr) : infer_result borrow_state :=
+  match e with
+  | EUnit | ELit _ | EVar _ => infer_ok BS
+
+  | EBorrow RShared (PVar x) =>
+      if bs_has_mut x BS
+      then infer_err (ErrBorrowConflict x)
+      else infer_ok (BEShared x :: BS)
+
+  | EBorrow RUnique (PVar x) =>
+      if bs_has_any x BS
+      then infer_err (ErrBorrowConflict x)
+      else infer_ok (BEMut x :: BS)
+
+  | EDeref e1 | EDrop e1 =>
+      borrow_check fenv BS Γ e1
+
+  | EReplace (PVar _) e_new | EAssign (PVar _) e_new =>
+      borrow_check fenv BS Γ e_new
+
+  | ELet m x T e1 e2 =>
+      match borrow_check fenv BS Γ e1 with
+      | infer_err err => infer_err err
+      | infer_ok BS1 =>
+          let new_from_e1 := bs_new_entries BS BS1 in
+          match borrow_check fenv BS1 (ctx_add_b x T m Γ) e2 with
+          | infer_err err => infer_err err
+          | infer_ok BS2  => infer_ok (bs_remove_all new_from_e1 BS2)
+          end
+      end
+
+  | ELetInfer m x e1 e2 =>
+      match borrow_check fenv BS Γ e1 with
+      | infer_err err => infer_err err
+      | infer_ok BS1 =>
+          let new_from_e1 := bs_new_entries BS BS1 in
+          match borrow_check fenv BS1 Γ e2 with
+          | infer_err err => infer_err err
+          | infer_ok BS2  => infer_ok (bs_remove_all new_from_e1 BS2)
+          end
+      end
+
+  | EIf e1 e2 e3 =>
+      match borrow_check fenv BS Γ e1 with
+      | infer_err err => infer_err err
+      | infer_ok BS1  =>
+          match borrow_check fenv BS1 Γ e2,
+                borrow_check fenv BS1 Γ e3 with
+          | infer_ok BS2, infer_ok BS3 =>
+              if bs_eqb BS2 BS3
+              then infer_ok BS2
+              else infer_err ErrContextCheckFailed
+          | infer_err err, _ | _, infer_err err => infer_err err
+          end
+      end
+
+  | ECall _ args =>
+      let fix go (BS0 : borrow_state) (as_ : list expr) : infer_result borrow_state :=
+        match as_ with
+        | []      => infer_ok BS0
+        | a :: rest =>
+            match borrow_check fenv BS0 Γ a with
+            | infer_err err => infer_err err
+            | infer_ok BS1  => go BS1 rest
+            end
+        end
+      in go BS args
+  end.
+
+(* Separate top-level borrow_check_args for BorrowCheckSoundness proofs. *)
+Fixpoint borrow_check_args (fenv : list fn_def) (BS : borrow_state) (Γ : ctx)
+    (args : list expr) : infer_result borrow_state :=
+  match args with
+  | []       => infer_ok BS
+  | a :: rest =>
+      match borrow_check fenv BS Γ a with
+      | infer_err err => infer_err err
+      | infer_ok BS1  => borrow_check_args fenv BS1 Γ rest
+      end
+  end.
+
+(* ------------------------------------------------------------------ *)
+(* Combined type + borrow checker                                        *)
+(* ------------------------------------------------------------------ *)
+
+Definition infer_full (fenv : list fn_def) (f : fn_def)
+    : infer_result (Ty * ctx) :=
+  match infer fenv f with
+  | infer_err err => infer_err err
+  | infer_ok res  =>
+      let Γ := params_ctx (fn_params f) in
+      match borrow_check fenv [] Γ (fn_body f) with
+      | infer_err err => infer_err err
+      | infer_ok _    => infer_ok res
+      end
+  end.
+
+(* ------------------------------------------------------------------ *)
 (* Direct variant (no alpha renaming) — for differential testing only   *)
 (* ------------------------------------------------------------------ *)
 
@@ -663,4 +770,4 @@ Extraction Language OCaml.
 From Stdlib Require Import ExtrOcamlNativeString.
 From Stdlib Require Import ExtrOcamlNatBigInt.
 From Stdlib Require Import ExtrOcamlZBigInt.
-Extraction "../fixtures/TypeChecker.ml" infer check_program infer_direct.
+Extraction "../fixtures/TypeChecker.ml" infer check_program infer_direct borrow_check infer_full.

@@ -5,7 +5,11 @@ val fst : ('a1 * 'a2) -> 'a1
 
 val snd : ('a1 * 'a2) -> 'a2
 
+val length : 'a1 list -> Big_int_Z.big_int
+
 val app : 'a1 list -> 'a1 list -> 'a1 list
+
+val sub : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
 
 val eqb : bool -> bool -> bool
 
@@ -15,6 +19,12 @@ module Nat :
 
   val max : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
  end
+
+val firstn : Big_int_Z.big_int -> 'a1 list -> 'a1 list
+
+val fold_left : ('a1 -> 'a2 -> 'a1) -> 'a2 list -> 'a1 -> 'a1
+
+val existsb : ('a1 -> bool) -> 'a1 list -> bool
 
 val forallb : ('a1 -> bool) -> 'a1 list -> bool
 
@@ -99,6 +109,26 @@ val usage_max : usage -> usage -> usage
 
 val ctx_merge : ctx -> ctx -> ctx option
 
+type borrow_entry =
+| BEShared of ident
+| BEMut of ident
+
+type borrow_state = borrow_entry list
+
+val be_eqb : borrow_entry -> borrow_entry -> bool
+
+val bs_eqb : borrow_state -> borrow_state -> bool
+
+val bs_has_mut : ident -> borrow_state -> bool
+
+val bs_has_any : ident -> borrow_state -> bool
+
+val bs_remove_one : borrow_entry -> borrow_state -> borrow_state
+
+val bs_remove_all : borrow_state -> borrow_state -> borrow_state
+
+val bs_new_entries : borrow_state -> borrow_state -> borrow_state
+
 val usage_eqb : usage -> usage -> bool
 
 val usage_sub_bool : usage -> usage -> bool
@@ -147,6 +177,7 @@ type infer_error =
 | ErrNotImplemented
 | ErrImmutableBorrow of ident
 | ErrNotAReference of ty typeCore
+| ErrBorrowConflict of ident
 
 type 'a infer_result =
 | Infer_ok of 'a
@@ -179,5 +210,10 @@ val params_ok_b : param list -> ctx -> bool
 val infer : fn_def list -> fn_def -> (ty * ctx) infer_result
 
 val check_program : fn_def list -> bool
+
+val borrow_check :
+  fn_def list -> borrow_state -> ctx -> expr -> borrow_state infer_result
+
+val infer_full : fn_def list -> fn_def -> (ty * ctx) infer_result
 
 val infer_direct : fn_def list -> fn_def -> (ty * ctx) infer_result

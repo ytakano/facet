@@ -1,0 +1,5 @@
+fn shared_after_mut(mut x: unrestricted isize) -> unrestricted isize {
+    let r1: unrestricted &mut unrestricted isize = (&mut x) in
+    let r2: unrestricted &unrestricted isize = (&x) in
+    (*r2)
+}

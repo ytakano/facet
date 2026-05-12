@@ -46,6 +46,8 @@ let string_of_infer_error = function
     Printf.sprintf "cannot borrow immutable variable as mutable: %s" (string_of_ident id)
   | ErrNotAReference c    ->
     Printf.sprintf "type is not a reference: %s" (string_of_ty_core c)
+  | ErrBorrowConflict id  ->
+    Printf.sprintf "borrow conflict: %s is already borrowed incompatibly" (string_of_ident id)
 
 let check_alpha_consistency fname fenv f =
   let r1 = infer fenv f in
@@ -127,7 +129,7 @@ let () =
     let (fname, _) = f.fn_name in
     if !debug_alpha then
       check_alpha_consistency fname fn_defs f;
-    match infer fn_defs f with
+    match infer_full fn_defs f with
     | Infer_err e ->
       Printf.eprintf "Type error in function '%s': %s\n"
         fname (string_of_infer_error e);

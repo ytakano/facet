@@ -294,3 +294,155 @@ Definition typed_fn_def (fenv : list fn_def) (f : fn_def) : Prop :=
   exists Γ',
     typed fenv (params_ctx (fn_params f)) (fn_body f) (fn_ret f) Γ' /\
     params_ok (fn_params f) Γ'.
+
+(* ------------------------------------------------------------------ *)
+(* BorrowState: track active borrows for conflict checking              *)
+(*                                                                      *)
+(* borrow_ok is a separate judgment from typed; a well-typed program    *)
+(* must satisfy both. This avoids changing typed's signature and        *)
+(* breaking existing proofs.                                             *)
+(* ------------------------------------------------------------------ *)
+
+Inductive borrow_entry : Type :=
+  | BEShared : ident -> borrow_entry   (* &x is active    *)
+  | BEMut    : ident -> borrow_entry.  (* &mut x is active *)
+
+Definition borrow_state := list borrow_entry.
+
+Definition be_eqb (e1 e2 : borrow_entry) : bool :=
+  match e1, e2 with
+  | BEShared x, BEShared y => ident_eqb x y
+  | BEMut x,    BEMut y    => ident_eqb x y
+  | _,          _          => false
+  end.
+
+Fixpoint bs_eqb (bs1 bs2 : borrow_state) : bool :=
+  match bs1, bs2 with
+  | [],       []       => true
+  | e1 :: t1, e2 :: t2 => be_eqb e1 e2 && bs_eqb t1 t2
+  | _,        _        => false
+  end.
+
+(* x has an active mutable borrow *)
+Definition bs_has_mut (x : ident) (bs : borrow_state) : bool :=
+  existsb (fun e => match e with
+    | BEMut y => ident_eqb x y | _ => false end) bs.
+
+(* x has any active borrow (shared or mutable) *)
+Definition bs_has_any (x : ident) (bs : borrow_state) : bool :=
+  existsb (fun e => match e with
+    | BEShared y | BEMut y => ident_eqb x y end) bs.
+
+(* shared borrow allowed: no active mut borrow on x *)
+Definition bs_can_shared (x : ident) (bs : borrow_state) : Prop :=
+  bs_has_mut x bs = false.
+
+(* mutable borrow allowed: no active borrow of any kind on x *)
+Definition bs_can_mut (x : ident) (bs : borrow_state) : Prop :=
+  bs_has_any x bs = false.
+
+Fixpoint bs_remove_one (e : borrow_entry) (bs : borrow_state) : borrow_state :=
+  match bs with
+  | []     => []
+  | h :: t => if be_eqb e h then t else h :: bs_remove_one e t
+  end.
+
+(* Remove all entries in to_remove from bs (scope-exit release) *)
+Definition bs_remove_all (to_remove bs : borrow_state) : borrow_state :=
+  fold_left (fun acc e => bs_remove_one e acc) to_remove bs.
+
+(* Entries prepended to bs by a sub-expression.
+   Relies on prepend-only invariant: bs_after = new ++ bs_before. *)
+Definition bs_new_entries (bs_before bs_after : borrow_state) : borrow_state :=
+  firstn (List.length bs_after - List.length bs_before) bs_after.
+
+(* ------------------------------------------------------------------ *)
+(* borrow_ok judgment                                                    *)
+(*                                                                      *)
+(* borrow_ok fenv BS Γ e BS'                                            *)
+(*   Starting with borrow state BS and typing context Γ,                *)
+(*   expression e is borrow-conflict-free and produces borrow state BS'. *)
+(*   ctx Γ is input-only (no output Γ'); context changes are tracked    *)
+(*   by typed separately.                                                *)
+(* ------------------------------------------------------------------ *)
+
+Inductive borrow_ok (fenv : list fn_def)
+    : borrow_state -> ctx -> expr -> borrow_state -> Prop :=
+
+  | BO_Unit : forall BS Γ,
+      borrow_ok fenv BS Γ EUnit BS
+
+  | BO_Lit : forall BS Γ l,
+      borrow_ok fenv BS Γ (ELit l) BS
+
+  | BO_Var : forall BS Γ x,
+      borrow_ok fenv BS Γ (EVar x) BS
+
+  (* shared borrow: OK if no active mut borrow on x *)
+  | BO_BorrowShared : forall BS Γ x,
+      bs_can_shared x BS ->
+      borrow_ok fenv BS Γ (EBorrow RShared (PVar x)) (BEShared x :: BS)
+
+  (* mutable borrow: OK if no active borrow of any kind on x *)
+  | BO_BorrowMut : forall BS Γ x,
+      bs_can_mut x BS ->
+      borrow_ok fenv BS Γ (EBorrow RUnique (PVar x)) (BEMut x :: BS)
+
+  | BO_Deref : forall BS BS' Γ e,
+      borrow_ok fenv BS Γ e BS' ->
+      borrow_ok fenv BS Γ (EDeref e) BS'
+
+  | BO_Drop : forall BS BS' Γ e,
+      borrow_ok fenv BS Γ e BS' ->
+      borrow_ok fenv BS Γ (EDrop e) BS'
+
+  | BO_Replace : forall BS BS' Γ x e_new,
+      borrow_ok fenv BS Γ e_new BS' ->
+      borrow_ok fenv BS Γ (EReplace (PVar x) e_new) BS'
+
+  | BO_Assign : forall BS BS' Γ x e_new,
+      borrow_ok fenv BS Γ e_new BS' ->
+      borrow_ok fenv BS Γ (EAssign (PVar x) e_new) BS'
+
+  (* let: e1 produces BS1; e2 (with x in ctx) produces BS2.
+     On scope exit, borrows introduced by e1 are released. *)
+  | BO_Let : forall BS BS1 BS2 Γ m x T e1 e2,
+      borrow_ok fenv BS Γ e1 BS1 ->
+      borrow_ok fenv BS1 (ctx_add x T m Γ) e2 BS2 ->
+      borrow_ok fenv BS Γ (ELet m x T e1 e2)
+                (bs_remove_all (bs_new_entries BS BS1) BS2)
+
+  (* let-infer: type of e1 not needed for borrow checking,
+     so we do not extend Γ for e2 (conservative). *)
+  | BO_LetInfer : forall BS BS1 BS2 Γ m x e1 e2,
+      borrow_ok fenv BS Γ e1 BS1 ->
+      borrow_ok fenv BS1 Γ e2 BS2 ->
+      borrow_ok fenv BS Γ (ELetInfer m x e1 e2)
+                (bs_remove_all (bs_new_entries BS BS1) BS2)
+
+  (* if: both branches must produce the same borrow state *)
+  | BO_If : forall BS BS1 BS2 BS3 Γ e1 e2 e3,
+      borrow_ok fenv BS  Γ e1 BS1 ->
+      borrow_ok fenv BS1 Γ e2 BS2 ->
+      borrow_ok fenv BS1 Γ e3 BS3 ->
+      BS2 = BS3 ->
+      borrow_ok fenv BS Γ (EIf e1 e2 e3) BS2
+
+  | BO_Call : forall BS BS' Γ fname args,
+      borrow_ok_args fenv BS Γ args BS' ->
+      borrow_ok fenv BS Γ (ECall fname args) BS'
+
+with borrow_ok_args (fenv : list fn_def)
+    : borrow_state -> ctx -> list expr -> borrow_state -> Prop :=
+
+  | BO_Args_Nil : forall BS Γ,
+      borrow_ok_args fenv BS Γ [] BS
+
+  | BO_Args_Cons : forall BS BS1 BS2 Γ a rest,
+      borrow_ok fenv BS Γ a BS1 ->
+      borrow_ok_args fenv BS1 Γ rest BS2 ->
+      borrow_ok_args fenv BS Γ (a :: rest) BS2.
+
+Definition borrow_ok_fn_def (fenv : list fn_def) (f : fn_def) : Prop :=
+  exists BS',
+    borrow_ok fenv [] (params_ctx (fn_params f)) (fn_body f) BS'.

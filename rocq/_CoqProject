@@ -9,3 +9,4 @@ theories/TypeSystem/WFType.v
 theories/TypeSystem/AlphaRenaming.v
 theories/TypeSystem/CheckerSoundness.v
 theories/TypeSystem/CheckerUsageSoundness.v
+theories/TypeSystem/BorrowCheckSoundness.v

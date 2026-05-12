@@ -15,12 +15,23 @@ let fst = function
 let snd = function
 | (_, y) -> y
 
+(** val length : 'a1 list -> Big_int_Z.big_int **)
+
+let rec length = function
+| [] -> Big_int_Z.zero_big_int
+| _ :: l' -> Big_int_Z.succ_big_int (length l')
+
 (** val app : 'a1 list -> 'a1 list -> 'a1 list **)
 
 let rec app l m =
   match l with
   | [] -> m
   | a :: l1 -> a :: (app l1 m)
+
+(** val sub : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
+
+let rec sub = (fun n m -> Big_int_Z.max_big_int Big_int_Z.zero_big_int
+  (Big_int_Z.sub_big_int n m))
 
 (** val eqb : bool -> bool -> bool **)
 
@@ -48,6 +59,30 @@ module Nat =
         m)
       n
  end
+
+(** val firstn : Big_int_Z.big_int -> 'a1 list -> 'a1 list **)
+
+let rec firstn n l =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> [])
+    (fun n0 -> match l with
+               | [] -> []
+               | a :: l0 -> a :: (firstn n0 l0))
+    n
+
+(** val fold_left : ('a1 -> 'a2 -> 'a1) -> 'a2 list -> 'a1 -> 'a1 **)
+
+let rec fold_left f l a0 =
+  match l with
+  | [] -> a0
+  | b :: l0 -> fold_left f l0 (f a0 b)
+
+(** val existsb : ('a1 -> bool) -> 'a1 list -> bool **)
+
+let rec existsb f = function
+| [] -> false
+| a :: l0 -> (||) (f a) (existsb f l0)
 
 (** val forallb : ('a1 -> bool) -> 'a1 list -> bool **)
 
@@ -193,6 +228,68 @@ let rec ctx_merge _UU0393_2 _UU0393_3 =
                   if eqb b2 b3 then Some ((((n, t), b2), m) :: rest) else None
                 | _ -> Some ((((n, t), ((||) b2 b3)), m) :: rest))
              | None -> None))
+
+type borrow_entry =
+| BEShared of ident
+| BEMut of ident
+
+type borrow_state = borrow_entry list
+
+(** val be_eqb : borrow_entry -> borrow_entry -> bool **)
+
+let be_eqb e1 e2 =
+  match e1 with
+  | BEShared x ->
+    (match e2 with
+     | BEShared y -> ident_eqb x y
+     | BEMut _ -> false)
+  | BEMut x -> (match e2 with
+                | BEShared _ -> false
+                | BEMut y -> ident_eqb x y)
+
+(** val bs_eqb : borrow_state -> borrow_state -> bool **)
+
+let rec bs_eqb bs1 bs2 =
+  match bs1 with
+  | [] -> (match bs2 with
+           | [] -> true
+           | _ :: _ -> false)
+  | e1 :: t1 ->
+    (match bs2 with
+     | [] -> false
+     | e2 :: t2 -> (&&) (be_eqb e1 e2) (bs_eqb t1 t2))
+
+(** val bs_has_mut : ident -> borrow_state -> bool **)
+
+let bs_has_mut x bs =
+  existsb (fun e ->
+    match e with
+    | BEShared _ -> false
+    | BEMut y -> ident_eqb x y) bs
+
+(** val bs_has_any : ident -> borrow_state -> bool **)
+
+let bs_has_any x bs =
+  existsb (fun e ->
+    match e with
+    | BEShared y -> ident_eqb x y
+    | BEMut y -> ident_eqb x y) bs
+
+(** val bs_remove_one : borrow_entry -> borrow_state -> borrow_state **)
+
+let rec bs_remove_one e = function
+| [] -> []
+| h :: t -> if be_eqb e h then t else h :: (bs_remove_one e t)
+
+(** val bs_remove_all : borrow_state -> borrow_state -> borrow_state **)
+
+let bs_remove_all to_remove bs =
+  fold_left (fun acc e -> bs_remove_one e acc) to_remove bs
+
+(** val bs_new_entries : borrow_state -> borrow_state -> borrow_state **)
+
+let bs_new_entries bs_before bs_after =
+  firstn (sub (length bs_after) (length bs_before)) bs_after
 
 (** val usage_eqb : usage -> usage -> bool **)
 
@@ -429,6 +526,7 @@ type infer_error =
 | ErrNotImplemented
 | ErrImmutableBorrow of ident
 | ErrNotAReference of ty typeCore
+| ErrBorrowConflict of ident
 
 type 'a infer_result =
 | Infer_ok of 'a
@@ -793,6 +891,74 @@ let check_program fenv =
     match infer fenv f with
     | Infer_ok _ -> true
     | Infer_err _ -> false) fenv
+
+(** val borrow_check :
+    fn_def list -> borrow_state -> ctx -> expr -> borrow_state infer_result **)
+
+let rec borrow_check fenv bS _UU0393_ = function
+| ELet (m, x, t, e1, e2) ->
+  (match borrow_check fenv bS _UU0393_ e1 with
+   | Infer_ok bS1 ->
+     let new_from_e1 = bs_new_entries bS bS1 in
+     (match borrow_check fenv bS1 (ctx_add_b x t m _UU0393_) e2 with
+      | Infer_ok bS2 -> Infer_ok (bs_remove_all new_from_e1 bS2)
+      | Infer_err err -> Infer_err err)
+   | Infer_err err -> Infer_err err)
+| ELetInfer (_, _, e1, e2) ->
+  (match borrow_check fenv bS _UU0393_ e1 with
+   | Infer_ok bS1 ->
+     let new_from_e1 = bs_new_entries bS bS1 in
+     (match borrow_check fenv bS1 _UU0393_ e2 with
+      | Infer_ok bS2 -> Infer_ok (bs_remove_all new_from_e1 bS2)
+      | Infer_err err -> Infer_err err)
+   | Infer_err err -> Infer_err err)
+| ECall (_, args) ->
+  let rec go bS0 = function
+  | [] -> Infer_ok bS0
+  | a :: rest ->
+    (match borrow_check fenv bS0 _UU0393_ a with
+     | Infer_ok bS1 -> go bS1 rest
+     | Infer_err err -> Infer_err err)
+  in go bS args
+| EReplace (_, e_new) -> borrow_check fenv bS _UU0393_ e_new
+| EAssign (_, e_new) -> borrow_check fenv bS _UU0393_ e_new
+| EBorrow (r, p) ->
+  (match r with
+   | RShared ->
+     if bs_has_mut p bS
+     then Infer_err (ErrBorrowConflict p)
+     else Infer_ok ((BEShared p) :: bS)
+   | RUnique ->
+     if bs_has_any p bS
+     then Infer_err (ErrBorrowConflict p)
+     else Infer_ok ((BEMut p) :: bS))
+| EDeref e1 -> borrow_check fenv bS _UU0393_ e1
+| EDrop e1 -> borrow_check fenv bS _UU0393_ e1
+| EIf (e1, e2, e3) ->
+  (match borrow_check fenv bS _UU0393_ e1 with
+   | Infer_ok bS1 ->
+     (match borrow_check fenv bS1 _UU0393_ e2 with
+      | Infer_ok bS2 ->
+        (match borrow_check fenv bS1 _UU0393_ e3 with
+         | Infer_ok bS3 ->
+           if bs_eqb bS2 bS3
+           then Infer_ok bS2
+           else Infer_err ErrContextCheckFailed
+         | Infer_err err -> Infer_err err)
+      | Infer_err err -> Infer_err err)
+   | Infer_err err -> Infer_err err)
+| _ -> Infer_ok bS
+
+(** val infer_full : fn_def list -> fn_def -> (ty * ctx) infer_result **)
+
+let infer_full fenv f =
+  match infer fenv f with
+  | Infer_ok res ->
+    let _UU0393_ = params_ctx f.fn_params in
+    (match borrow_check fenv [] _UU0393_ f.fn_body with
+     | Infer_ok _ -> Infer_ok res
+     | Infer_err err -> Infer_err err)
+  | Infer_err err -> Infer_err err
 
 (** val infer_direct : fn_def list -> fn_def -> (ty * ctx) infer_result **)
 

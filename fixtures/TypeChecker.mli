@@ -17,10 +17,20 @@ module Nat :
  sig
   val eqb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool
 
+  val leb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool
+
+  val ltb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool
+
   val max : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
  end
 
+val map : ('a1 -> 'a2) -> 'a1 list -> 'a2 list
+
+val repeat : 'a1 -> Big_int_Z.big_int -> 'a1 list
+
 val firstn : Big_int_Z.big_int -> 'a1 list -> 'a1 list
+
+val nth_error : 'a1 list -> Big_int_Z.big_int -> 'a1 option
 
 val fold_left : ('a1 -> 'a2 -> 'a1) -> 'a2 list -> 'a1 -> 'a1
 
@@ -64,6 +74,10 @@ type ty =
 val ty_usage : ty -> usage
 
 val ty_core : ty -> ty typeCore
+
+val apply_lt_lifetime : lifetime list -> lifetime -> lifetime
+
+val apply_lt_ty : lifetime list -> ty -> ty
 
 type ident = string * Big_int_Z.big_int
 
@@ -111,6 +125,10 @@ val params_ctx : param list -> ctx
 val usage_max : usage -> usage -> usage
 
 val ctx_merge : ctx -> ctx -> ctx option
+
+val apply_lt_param : lifetime list -> param -> param
+
+val apply_lt_params : lifetime list -> param list -> param list
 
 type borrow_entry =
 | BEShared of ident
@@ -188,6 +206,25 @@ type infer_error =
 | ErrNotAReference of ty typeCore
 | ErrBorrowConflict of ident
 | ErrLifetimeLeak
+| ErrLifetimeConflict
+
+val list_set_nth : Big_int_Z.big_int -> 'a1 -> 'a1 list -> 'a1 list
+
+val lt_subst_vec_add :
+  lifetime option list -> Big_int_Z.big_int -> lifetime -> lifetime option
+  list option
+
+val unify_lt :
+  Big_int_Z.big_int -> lifetime option list -> ty -> ty -> lifetime option
+  list option
+
+val finalize_subst : lifetime option list -> lifetime list
+
+val build_sigma :
+  Big_int_Z.big_int -> lifetime option list -> ty list -> param list ->
+  lifetime option list option
+
+val check_args : ty list -> param list -> infer_error option
 
 type 'a infer_result =
 | Infer_ok of 'a

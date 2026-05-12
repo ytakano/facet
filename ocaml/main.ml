@@ -50,6 +50,8 @@ let string_of_infer_error = function
     Printf.sprintf "borrow conflict: %s is already borrowed incompatibly" (string_of_ident id)
   | ErrLifetimeLeak ->
     "lifetime leak: function returns a reference to a local (dangling reference)"
+  | ErrLifetimeConflict ->
+    "lifetime conflict: conflicting lifetime constraints in function call"
 
 let check_alpha_consistency fname fenv f =
   let r1 = infer fenv f in

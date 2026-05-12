@@ -1116,15 +1116,30 @@ Qed.
 
 Lemma typed_call_inv : forall fenv n Γ fname args T Γ',
   typed fenv n Γ (ECall fname args) T Γ' ->
-  exists fdef,
+  exists fdef σ,
     In fdef fenv /\
     fn_name fdef = fname /\
-    fn_ret fdef = T /\
-    typed_args fenv n Γ args (fn_params fdef) Γ'.
+    apply_lt_ty σ (fn_ret fdef) = T /\
+    typed_args fenv n Γ args (apply_lt_params σ (fn_params fdef)) Γ'.
 Proof.
   intros fenv n Γ fname args T Γ' Htyped.
   inversion Htyped; subst.
-  exists fdef. repeat split; assumption.
+  exists fdef, σ. repeat split; assumption.
+Qed.
+
+Lemma params_alpha_apply_lt_compat : forall σ ps psr,
+  params_alpha ps psr ->
+  params_alpha (apply_lt_params σ ps) (apply_lt_params σ psr).
+Proof.
+  intros σ ps psr H.
+  induction H as [| p pr ps' psr' Hshape Htail IH].
+  - constructor.
+  - simpl. constructor.
+    + unfold same_param_shape in *. destruct Hshape as [Hmut Hty].
+      split.
+      * exact Hmut.
+      * simpl. now rewrite Hty.
+    + exact IH.
 Qed.
 
 Lemma alpha_rename_call_args_typed_backward : forall fenv0 fenvr n ρ Γ0 Γr args argsr used used' ps0 psr Γr',
@@ -1558,14 +1573,18 @@ Proof.
     lazymatch goal with
     | Htyped_call : typed fenvr n Γr (ECall ?fname argsr) T Γr' |- _ =>
       destruct (typed_call_inv fenvr n Γr fname argsr T Γr' Htyped_call)
-        as [fdef [Hinr [Hname_r [Hret_r Hargs_typed]]]];
+        as [fdef [σ [Hinr [Hname_r [Hret_r Hargs_typed]]]]];
       destruct (fenv_alpha_in_backward fenv0 fenvr fdef Hfenv Hinr)
         as [fdef0 [Hin0 Hshape]];
       destruct Hshape as [Hname [Hret Hparams]]
     end.
+    assert (Hparams_lt :
+      params_alpha (apply_lt_params σ (fn_params fdef0))
+                   (apply_lt_params σ (fn_params fdef))).
+    { apply params_alpha_apply_lt_compat. exact Hparams. }
     assert (Hargs_back :
       exists Γ0',
-        typed_args fenv0 n Γ0 l (fn_params fdef0) Γ0' /\
+        typed_args fenv0 n Γ0 l (apply_lt_params σ (fn_params fdef0)) Γ0' /\
         ctx_alpha ρ Γ0' Γr').
     { eapply alpha_rename_call_args_typed_backward with (n := n).
       - intros Γa Γb used0 e er used1 T0 Γb' Hin Halpha Hcu Hru Hd Hr Ht.
@@ -1586,7 +1605,7 @@ Proof.
       - exact Hctx_used.
       - exact Hrange_used.
       - exact Hdisj.
-      - exact Hparams.
+      - exact Hparams_lt.
       - symmetry. exact Hargs.
       - lazymatch goal with
         | Hargs_typed : typed_args fenvr n Γr argsr _ Γr' |- _ => exact Hargs_typed
@@ -1594,7 +1613,7 @@ Proof.
     destruct Hargs_back as [Γ0' [Htyped_args0 Hctx0]].
     exists Γ0'. split.
     * rewrite <- Hret_r. rewrite <- Hret.
-      eapply T_Call.
+      eapply T_Call_Lt with (σ := σ).
       -- exact Hin0.
       -- rewrite Hname. exact Hname_r.
       -- exact Htyped_args0.

@@ -226,7 +226,94 @@ Inductive infer_error : Type :=
   | ErrImmutableBorrow : ident -> infer_error       (* &mut x where x is immutable *)
   | ErrNotAReference : TypeCore Ty -> infer_error   (* *e where e is not a reference type *)
   | ErrBorrowConflict : ident -> infer_error       (* borrow conflicts with existing active borrow *)
-  | ErrLifetimeLeak : infer_error.                 (* return type references a local lifetime *)
+  | ErrLifetimeLeak : infer_error                 (* return type references a local lifetime *)
+  | ErrLifetimeConflict : infer_error.            (* unification conflict in call lifetime substitution *)
+
+(* ------------------------------------------------------------------ *)
+(* Lifetime substitution helpers for ECall                               *)
+(* ------------------------------------------------------------------ *)
+
+Fixpoint list_set_nth {A : Type} (i : nat) (v : A) (l : list A) : list A :=
+  match i, l with
+  | O, _ :: t => v :: t
+  | O, [] => []
+  | S i', h :: t => h :: list_set_nth i' v t
+  | S _, [] => []
+  end.
+
+Definition lt_subst_vec_add
+    (σ : list (option lifetime))
+    (i : nat)
+    (l_a : lifetime)
+    : option (list (option lifetime)) :=
+  match nth_error σ i with
+  | None => None
+  | Some None => Some (list_set_nth i (Some l_a) σ)
+  | Some (Some l') =>
+      if lifetime_eqb l' l_a then Some σ else None
+  end.
+
+Fixpoint unify_lt (m : nat) (σ : list (option lifetime))
+    (T_param T_e : Ty) {struct T_param} : option (list (option lifetime)) :=
+  match T_param with
+  | MkTy _ (TRef l_p rk T_p_inner) =>
+      match T_e with
+      | MkTy _ (TRef l_a rk' T_e_inner) =>
+          if negb (ref_kind_eqb rk rk') then None
+          else
+            match l_p with
+            | LVar i =>
+                if Nat.ltb i m then
+                  match lt_subst_vec_add σ i l_a with
+                  | None => None
+                  | Some σ' => unify_lt m σ' T_p_inner T_e_inner
+                  end
+                else if lifetime_eqb (LVar i) l_a
+                     then unify_lt m σ T_p_inner T_e_inner
+                     else None
+            | LStatic =>
+                if lifetime_eqb LStatic l_a
+                then unify_lt m σ T_p_inner T_e_inner
+                else None
+            end
+      | _ => None
+      end
+  | _ =>
+      if ty_core_eqb (ty_core T_param) (ty_core T_e) then Some σ else None
+  end.
+
+Fixpoint finalize_subst (σ : list (option lifetime)) : list lifetime :=
+  match σ with
+  | [] => []
+  | None :: rest => LStatic :: finalize_subst rest
+  | Some l :: rest => l :: finalize_subst rest
+  end.
+
+Fixpoint build_sigma (m : nat) (σ_acc : list (option lifetime))
+    (arg_tys : list Ty) (params : list param)
+    : option (list (option lifetime)) :=
+  match arg_tys, params with
+  | [], [] => Some σ_acc
+  | t :: ts, p :: ps =>
+      match unify_lt m σ_acc (param_ty p) t with
+      | None => None
+      | Some σ' => build_sigma m σ' ts ps
+      end
+  | _, _ => None
+  end.
+
+Fixpoint check_args (arg_tys : list Ty) (params : list param)
+    : option infer_error :=
+  match arg_tys, params with
+  | [], [] => None
+  | t :: ts, p :: ps =>
+      if ty_core_eqb (ty_core t) (ty_core (param_ty p)) then
+        if usage_sub_bool (ty_usage t) (ty_usage (param_ty p)) then
+          check_args ts ps
+        else Some (ErrUsageMismatch (ty_usage t) (ty_usage (param_ty p)))
+      else Some (ErrTypeMismatch (ty_core t) (ty_core (param_ty p)))
+  | _, _ => Some ErrArityMismatch
+  end.
 
 Inductive infer_result (A : Type) : Type :=
   | infer_ok : A -> infer_result A
@@ -536,32 +623,38 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
       match lookup_fn_b fname fenv with
       | None      => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          (* Process argument list with an inline fixpoint so that
-             Rocq's termination checker sees the structural recursion
-             clearly: each arg is a sub-term of the args field of ECall. *)
-          let fix go (Γ0 : ctx) (as_ : list expr) (ps : list param)
-              : infer_result ctx :=
-            match as_, ps with
-            | [],       []       => infer_ok Γ0
-            | [],       _ :: _   => infer_err ErrArityMismatch
-            | _ :: _,   []       => infer_err ErrArityMismatch
-            | e' :: es, p :: ps' =>
+          let m := fn_lifetimes fdef in
+          let fix collect (Γ0 : ctx) (as_ : list expr)
+              : infer_result (list Ty * ctx) :=
+            match as_ with
+            | []      => infer_ok ([], Γ0)
+            | e' :: es =>
                 match infer_core fenv n Γ0 e' with
-                | infer_err err            => infer_err err
+                | infer_err err => infer_err err
                 | infer_ok (T_e, Γ1) =>
-                    if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) then
-                      if usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))
-                      then go Γ1 es ps'
-                      else infer_err
-                        (ErrUsageMismatch (ty_usage T_e) (ty_usage (param_ty p)))
-                    else infer_err
-                      (ErrTypeMismatch (ty_core T_e) (ty_core (param_ty p)))
+                    match collect Γ1 es with
+                    | infer_err err => infer_err err
+                    | infer_ok (tys, Γ2) => infer_ok (T_e :: tys, Γ2)
+                    end
                 end
             end
           in
-          match go Γ args (fn_params fdef) with
+          match collect Γ args with
           | infer_err err => infer_err err
-          | infer_ok Γ' => infer_ok (fn_ret fdef, Γ')
+          | infer_ok (arg_tys, Γ') =>
+              match build_sigma m (repeat None m) arg_tys (fn_params fdef) with
+              | None => infer_err ErrLifetimeConflict
+              | Some σ_acc =>
+                  let σ := finalize_subst σ_acc in
+                  let ps_subst := apply_lt_params σ (fn_params fdef) in
+                  match check_args arg_tys ps_subst with
+                  | Some err => infer_err err
+                  | None =>
+                      if forallb (wf_lifetime_b (mk_region_ctx n)) σ
+                      then infer_ok (apply_lt_ty σ (fn_ret fdef), Γ')
+                      else infer_err ErrLifetimeLeak
+                  end
+              end
           end
       end
 
@@ -701,6 +794,25 @@ Fixpoint infer_args (fenv : list fn_def) (n : nat) (Γ : ctx)
             then infer_args fenv n Γ1 es ps
             else infer_err (ErrUsageMismatch (ty_usage T_e) (ty_usage (param_ty p)))
           else infer_err (ErrTypeMismatch (ty_core T_e) (ty_core (param_ty p)))
+      end
+  end.
+
+(* ------------------------------------------------------------------ *)
+(* Argument collection helper for ECall soundness                        *)
+(* ------------------------------------------------------------------ *)
+
+Fixpoint infer_args_collect (fenv : list fn_def) (n : nat) (Γ : ctx)
+    (args : list expr) : infer_result (list Ty * ctx) :=
+  match args with
+  | [] => infer_ok ([], Γ)
+  | e :: es =>
+      match infer_core fenv n Γ e with
+      | infer_err err => infer_err err
+      | infer_ok (T_e, Γ1) =>
+          match infer_args_collect fenv n Γ1 es with
+          | infer_err err => infer_err err
+          | infer_ok (tys, Γ2) => infer_ok (T_e :: tys, Γ2)
+          end
       end
   end.
 

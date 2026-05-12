@@ -216,6 +216,65 @@ Proof.
 Qed.
 
 (* ------------------------------------------------------------------ *)
+(* Auxiliary for v6 ECall                                                *)
+(* ------------------------------------------------------------------ *)
+
+Lemma ecall_collect_eq : forall fenv n args Γ,
+  (fix collect (Γ0 : ctx) (as_ : list expr) : infer_result (list Ty * ctx) :=
+     match as_ with
+     | [] => infer_ok ([], Γ0)
+     | e' :: es =>
+         match infer_core fenv n Γ0 e' with
+         | infer_err err => infer_err err
+         | infer_ok (T_e, Γ1) =>
+             match collect Γ1 es with
+             | infer_err err => infer_err err
+             | infer_ok (tys, Γ2) => infer_ok (T_e :: tys, Γ2)
+             end
+         end
+     end) Γ args = infer_args_collect fenv n Γ args.
+Proof.
+  intros fenv n args. induction args as [| e es IH]; intros Γ; simpl.
+  - reflexivity.
+  - destruct (infer_core fenv n Γ e) as [[T_e Γ1] | err] eqn:He; [rewrite IH |]; reflexivity.
+Qed.
+
+Lemma infer_call_args_sound_v2 : forall fenv n Γ args arg_tys params Γ',
+  infer_args_collect fenv n Γ args = infer_ok (arg_tys, Γ') ->
+  (forall Γ0 e T Γ1,
+      In e args ->
+      infer_core fenv n Γ0 e = infer_ok (T, Γ1) ->
+      typed fenv n Γ0 e T Γ1) ->
+  check_args arg_tys params = None ->
+  typed_args fenv n Γ args params Γ'.
+Proof.
+  intros fenv n Γ args.
+  revert Γ.
+  induction args as [| e es IH]; intros Γ arg_tys params Γ' Hcollect Hexpr Hcheck.
+  - simpl in Hcollect. injection Hcollect as <- <-.
+    destruct params; simpl in Hcheck; [constructor | discriminate].
+  - simpl in Hcollect.
+    destruct (infer_core fenv n Γ e) as [[T_e Γ1] | err] eqn:He; [|discriminate].
+    destruct (infer_args_collect fenv n Γ1 es) as [[tys Γ2] | err'] eqn:Htail; [|discriminate].
+    injection Hcollect as <- <-.
+    destruct params as [| p ps]; [discriminate |].
+    simpl in Hcheck.
+    destruct (ty_core_eqb (ty_core T_e) (ty_core (param_ty p))) eqn:Hcore; [|discriminate].
+    destruct (usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))) eqn:Hsub; [|discriminate].
+    eapply TArgs_Cons.
+    + eapply Hexpr.
+      * left. reflexivity.
+      * exact He.
+    + exact (ty_core_eqb_true _ _ Hcore).
+    + apply usage_sub_bool_sound. exact Hsub.
+    + eapply IH.
+      * exact Htail.
+      * intros Γ0 e0 T0 Γ0' Hin Hinfer0.
+        eapply Hexpr. right; exact Hin. exact Hinfer0.
+      * exact Hcheck.
+Qed.
+
+(* ------------------------------------------------------------------ *)
 Lemma infer_call_args_sound : forall fenv n Γ args params Γ',
   (forall Γ0 e T Γ1,
       In e args ->
@@ -375,38 +434,31 @@ Proof.
   (* ECall *)
   + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup.
     2: discriminate.
-    remember
-      ((fix go (Γ0 : ctx) (as_ : list expr) (ps : list param)
-          : infer_result ctx :=
-          match as_, ps with
-          | [], [] => infer_ok Γ0
-          | [], _ :: _ => infer_err ErrArityMismatch
-          | _ :: _, [] => infer_err ErrArityMismatch
-          | e' :: es, p :: ps' =>
-              match infer_core fenv n Γ0 e' with
-              | infer_err err => infer_err err
-              | infer_ok (T_e, Γ1) =>
-                  if ty_core_eqb (ty_core T_e) (ty_core (param_ty p)) then
-                    if usage_sub_bool (ty_usage T_e) (ty_usage (param_ty p))
-                    then go Γ1 es ps'
-                    else infer_err (ErrUsageMismatch (ty_usage T_e) (ty_usage (param_ty p)))
-                  else infer_err (ErrTypeMismatch (ty_core T_e) (ty_core (param_ty p)))
-              end
-          end) Γ l (fn_params fdef)) as r eqn:Hgo.
-    destruct r as [Γcall | err]; [|discriminate].
+    rewrite ecall_collect_eq in Hinfer.
+    destruct (infer_args_collect fenv n Γ l) as [[arg_tys Γcall] | err] eqn:Hcoll.
+    2: discriminate.
+    destruct (build_sigma (fn_lifetimes fdef) (repeat None (fn_lifetimes fdef)) arg_tys (fn_params fdef)) as [σ_acc |] eqn:Hbuild.
+    2: discriminate.
+    remember (finalize_subst σ_acc) as σ eqn:Hsigma.
+    remember (apply_lt_params σ (fn_params fdef)) as ps_subst eqn:Hps.
+    destruct (check_args arg_tys ps_subst) as [err' |] eqn:Hcheck.
+    2: destruct (forallb (wf_lifetime_b (mk_region_ctx n)) σ) eqn:Hwf; simpl in Hinfer.
+    all: try discriminate.
     injection Hinfer as <- <-.
     destruct (lookup_fn_b_sound i fenv fdef Hlookup) as [Hin Hname].
-    eapply T_Call.
+    eapply T_Call_Lt with (σ := σ).
     * exact Hin.
     * exact Hname.
-    * eapply infer_call_args_sound.
+    * rewrite <- Hps.
+      eapply infer_call_args_sound_v2.
+      -- exact Hcoll.
       -- intros Γ0 e0 T0 Γ0' Hin_arg Hinfer0.
          eapply IH.
          ++ pose proof (expr_size_call_arg_lt i l e0 Hin_arg) as Harg_lt.
             assert (expr_size e0 < sz) as Hlt_arg by lia.
             exact Hlt_arg.
          ++ exact Hinfer0.
-      -- symmetry. exact Hgo.
+      -- exact Hcheck.
 
   (* EReplace p e: PVar or PDeref (PVar) *)
   + destruct p as [px | q].

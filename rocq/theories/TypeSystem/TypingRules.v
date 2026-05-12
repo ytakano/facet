@@ -133,6 +133,18 @@ Fixpoint ctx_merge (Γ2 Γ3 : ctx) : option ctx :=
   end.
 
 (* ------------------------------------------------------------------ *)
+(* Lifetime substitution on parameters                                   *)
+(* ------------------------------------------------------------------ *)
+
+Definition apply_lt_param (σ : list lifetime) (p : param) : param :=
+  {| param_mutability := param_mutability p;
+     param_name := param_name p;
+     param_ty := apply_lt_ty σ (param_ty p) |}.
+
+Definition apply_lt_params (σ : list lifetime) (ps : list param) : list param :=
+  map (apply_lt_param σ) ps.
+
+(* ------------------------------------------------------------------ *)
 (* Typing judgement                                                      *)
 (*                                                                      *)
 (* typed fenv Γ e T Γ'                                                   *)
@@ -300,12 +312,13 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
       typed fenv n Γ (EIf e1 e2 e3)
            (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2)) Γ4
 
-  (* f(args): look up function definition, type-check arguments. *)
-  | T_Call : forall Γ Γ' fname fdef args,
+  (* f(args): look up function definition, infer a lifetime substitution,
+     and type-check arguments against substituted parameter types. *)
+  | T_Call_Lt : forall Γ Γ' fname fdef args (σ : list lifetime),
       In fdef fenv ->
       fn_name fdef = fname ->
-      typed_args fenv n Γ args (fn_params fdef) Γ' ->
-      typed fenv n Γ (ECall fname args) (fn_ret fdef) Γ'
+      typed_args fenv n Γ args (apply_lt_params σ (fn_params fdef)) Γ' ->
+      typed fenv n Γ (ECall fname args) (apply_lt_ty σ (fn_ret fdef)) Γ'
 
 (* Type-check a list of arguments against a list of parameters.
    Each argument's type must have the same core type as the parameter's

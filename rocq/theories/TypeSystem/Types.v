@@ -1,4 +1,6 @@
 From Stdlib.Strings Require Import String.
+From Stdlib Require Import List.
+Import ListNotations.
 From Facet.TypeSystem Require Import Lifetime.
 
 Inductive mutability :=
@@ -43,3 +45,37 @@ Definition ty_core (T : Ty) : TypeCore Ty :=
 match T with
 | MkTy _ c => c
 end.
+
+
+(* ------------------------------------------------------------------ *)
+(* Lifetime substitution on types                                        *)
+(* ------------------------------------------------------------------ *)
+
+Fixpoint apply_lt_lifetime (σ : list lifetime) (l : lifetime) : lifetime :=
+  match l with
+  | LStatic => LStatic
+  | LVar i  =>
+      match nth_error σ i with
+      | Some l' => l'
+      | None    => LVar i
+      end
+  end.
+
+Fixpoint apply_lt_ty (σ : list lifetime) (T : Ty) {struct T} : Ty :=
+  match T with
+  | MkTy u TUnits => MkTy u TUnits
+  | MkTy u TIntegers => MkTy u TIntegers
+  | MkTy u TFloats => MkTy u TFloats
+  | MkTy u TBooleans => MkTy u TBooleans
+  | MkTy u (TNamed s) => MkTy u (TNamed s)
+  | MkTy u (TFn ts r) =>
+      let fix map_lt (xs : list Ty) : list Ty :=
+        match xs with
+        | [] => []
+        | x :: xs' => apply_lt_ty σ x :: map_lt xs'
+        end
+      in
+      MkTy u (TFn (map_lt ts) (apply_lt_ty σ r))
+  | MkTy u (TRef l rk t) =>
+      MkTy u (TRef (apply_lt_lifetime σ l) rk (apply_lt_ty σ t))
+  end.

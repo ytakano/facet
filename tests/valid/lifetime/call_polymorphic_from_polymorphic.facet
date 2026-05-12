@@ -1,0 +1,7 @@
+fn identity<'a>(r: unrestricted &'a unrestricted isize) -> unrestricted &'a unrestricted isize {
+    r
+}
+
+fn caller<'a, 'b>(x: unrestricted &'a unrestricted isize, y: unrestricted &'b unrestricted isize) -> unrestricted &'b unrestricted isize {
+    (identity y)
+}

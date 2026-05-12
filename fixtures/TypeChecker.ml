@@ -44,6 +44,15 @@ module Nat =
 
   let rec eqb = Big_int_Z.eq_big_int
 
+  (** val leb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool **)
+
+  let rec leb = Big_int_Z.le_big_int
+
+  (** val ltb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool **)
+
+  let ltb n m =
+    leb (Big_int_Z.succ_big_int n) m
+
   (** val max :
       Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
 
@@ -60,6 +69,21 @@ module Nat =
       n
  end
 
+(** val map : ('a1 -> 'a2) -> 'a1 list -> 'a2 list **)
+
+let rec map f = function
+| [] -> []
+| a :: l0 -> (f a) :: (map f l0)
+
+(** val repeat : 'a1 -> Big_int_Z.big_int -> 'a1 list **)
+
+let rec repeat x n =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> [])
+    (fun k -> x :: (repeat x k))
+    n
+
 (** val firstn : Big_int_Z.big_int -> 'a1 list -> 'a1 list **)
 
 let rec firstn n l =
@@ -69,6 +93,19 @@ let rec firstn n l =
     (fun n0 -> match l with
                | [] -> []
                | a :: l0 -> a :: (firstn n0 l0))
+    n
+
+(** val nth_error : 'a1 list -> Big_int_Z.big_int -> 'a1 option **)
+
+let rec nth_error l n =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> match l with
+              | [] -> None
+              | x :: _ -> Some x)
+    (fun n0 -> match l with
+               | [] -> None
+               | _ :: l' -> nth_error l' n0)
     n
 
 (** val fold_left : ('a1 -> 'a2 -> 'a1) -> 'a2 list -> 'a1 -> 'a1 **)
@@ -141,6 +178,32 @@ let ty_usage = function
 
 let ty_core = function
 | MkTy (_, c) -> c
+
+(** val apply_lt_lifetime : lifetime list -> lifetime -> lifetime **)
+
+let rec apply_lt_lifetime _UU03c3_ = function
+| LStatic -> LStatic
+| LVar i -> (match nth_error _UU03c3_ i with
+             | Some l' -> l'
+             | None -> LVar i)
+
+(** val apply_lt_ty : lifetime list -> ty -> ty **)
+
+let rec apply_lt_ty _UU03c3_ = function
+| MkTy (u, t0) ->
+  (match t0 with
+   | TFn (ts, r) ->
+     let map_lt =
+       let rec map_lt = function
+       | [] -> []
+       | x :: xs' -> (apply_lt_ty _UU03c3_ x) :: (map_lt xs')
+       in map_lt
+     in
+     MkTy (u, (TFn ((map_lt ts), (apply_lt_ty _UU03c3_ r))))
+   | TRef (l, rk, t1) ->
+     MkTy (u, (TRef ((apply_lt_lifetime _UU03c3_ l), rk,
+       (apply_lt_ty _UU03c3_ t1))))
+   | x -> MkTy (u, x))
 
 type ident = string * Big_int_Z.big_int
 
@@ -231,6 +294,17 @@ let rec ctx_merge _UU0393_2 _UU0393_3 =
                   if eqb b2 b3 then Some ((((n, t), b2), m) :: rest) else None
                 | _ -> Some ((((n, t), ((||) b2 b3)), m) :: rest))
              | None -> None))
+
+(** val apply_lt_param : lifetime list -> param -> param **)
+
+let apply_lt_param _UU03c3_ p =
+  { param_mutability = p.param_mutability; param_name = p.param_name;
+    param_ty = (apply_lt_ty _UU03c3_ p.param_ty) }
+
+(** val apply_lt_params : lifetime list -> param list -> param list **)
+
+let apply_lt_params _UU03c3_ ps =
+  map (apply_lt_param _UU03c3_) ps
 
 type borrow_entry =
 | BEShared of ident
@@ -558,6 +632,108 @@ type infer_error =
 | ErrNotAReference of ty typeCore
 | ErrBorrowConflict of ident
 | ErrLifetimeLeak
+| ErrLifetimeConflict
+
+(** val list_set_nth : Big_int_Z.big_int -> 'a1 -> 'a1 list -> 'a1 list **)
+
+let rec list_set_nth i v l =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> match l with
+              | [] -> []
+              | _ :: t -> v :: t)
+    (fun i' -> match l with
+               | [] -> []
+               | h :: t -> h :: (list_set_nth i' v t))
+    i
+
+(** val lt_subst_vec_add :
+    lifetime option list -> Big_int_Z.big_int -> lifetime -> lifetime option
+    list option **)
+
+let lt_subst_vec_add _UU03c3_ i l_a =
+  match nth_error _UU03c3_ i with
+  | Some o ->
+    (match o with
+     | Some l' -> if lifetime_eqb l' l_a then Some _UU03c3_ else None
+     | None -> Some (list_set_nth i (Some l_a) _UU03c3_))
+  | None -> None
+
+(** val unify_lt :
+    Big_int_Z.big_int -> lifetime option list -> ty -> ty -> lifetime option
+    list option **)
+
+let rec unify_lt m _UU03c3_ t_param t_e =
+  let MkTy (_, t) = t_param in
+  (match t with
+   | TRef (l_p, rk, t_p_inner) ->
+     let MkTy (_, t0) = t_e in
+     (match t0 with
+      | TRef (l_a, rk', t_e_inner) ->
+        if negb (ref_kind_eqb rk rk')
+        then None
+        else (match l_p with
+              | LStatic ->
+                if lifetime_eqb LStatic l_a
+                then unify_lt m _UU03c3_ t_p_inner t_e_inner
+                else None
+              | LVar i ->
+                if Nat.ltb i m
+                then (match lt_subst_vec_add _UU03c3_ i l_a with
+                      | Some _UU03c3_' ->
+                        unify_lt m _UU03c3_' t_p_inner t_e_inner
+                      | None -> None)
+                else if lifetime_eqb (LVar i) l_a
+                     then unify_lt m _UU03c3_ t_p_inner t_e_inner
+                     else None)
+      | _ -> None)
+   | _ ->
+     if ty_core_eqb (ty_core t_param) (ty_core t_e)
+     then Some _UU03c3_
+     else None)
+
+(** val finalize_subst : lifetime option list -> lifetime list **)
+
+let rec finalize_subst = function
+| [] -> []
+| o :: rest ->
+  (match o with
+   | Some l -> l :: (finalize_subst rest)
+   | None -> LStatic :: (finalize_subst rest))
+
+(** val build_sigma :
+    Big_int_Z.big_int -> lifetime option list -> ty list -> param list ->
+    lifetime option list option **)
+
+let rec build_sigma m _UU03c3__acc arg_tys params =
+  match arg_tys with
+  | [] -> (match params with
+           | [] -> Some _UU03c3__acc
+           | _ :: _ -> None)
+  | t :: ts ->
+    (match params with
+     | [] -> None
+     | p :: ps ->
+       (match unify_lt m _UU03c3__acc p.param_ty t with
+        | Some _UU03c3_' -> build_sigma m _UU03c3_' ts ps
+        | None -> None))
+
+(** val check_args : ty list -> param list -> infer_error option **)
+
+let rec check_args arg_tys params =
+  match arg_tys with
+  | [] -> (match params with
+           | [] -> None
+           | _ :: _ -> Some ErrArityMismatch)
+  | t :: ts ->
+    (match params with
+     | [] -> Some ErrArityMismatch
+     | p :: ps ->
+       if ty_core_eqb (ty_core t) (ty_core p.param_ty)
+       then if usage_sub_bool (ty_usage t) (ty_usage p.param_ty)
+            then check_args ts ps
+            else Some (ErrUsageMismatch ((ty_usage t), (ty_usage p.param_ty)))
+       else Some (ErrTypeMismatch ((ty_core t), (ty_core p.param_ty))))
 
 type 'a infer_result =
 | Infer_ok of 'a
@@ -744,32 +920,35 @@ let rec infer_core fenv n _UU0393_ = function
 | ECall (fname, args) ->
   (match lookup_fn_b fname fenv with
    | Some fdef ->
-     let go =
-       let rec go _UU0393_0 as_ ps =
-         match as_ with
-         | [] ->
-           (match ps with
-            | [] -> Infer_ok _UU0393_0
-            | _ :: _ -> Infer_err ErrArityMismatch)
-         | e' :: es ->
-           (match ps with
-            | [] -> Infer_err ErrArityMismatch
-            | p :: ps' ->
-              (match infer_core fenv n _UU0393_0 e' with
-               | Infer_ok p0 ->
-                 let (t_e, _UU0393_1) = p0 in
-                 if ty_core_eqb (ty_core t_e) (ty_core p.param_ty)
-                 then if usage_sub_bool (ty_usage t_e) (ty_usage p.param_ty)
-                      then go _UU0393_1 es ps'
-                      else Infer_err (ErrUsageMismatch ((ty_usage t_e),
-                             (ty_usage p.param_ty)))
-                 else Infer_err (ErrTypeMismatch ((ty_core t_e),
-                        (ty_core p.param_ty)))
-               | Infer_err err -> Infer_err err))
-       in go
+     let m = fdef.fn_lifetimes in
+     let collect =
+       let rec collect _UU0393_0 = function
+       | [] -> Infer_ok ([], _UU0393_0)
+       | e' :: es ->
+         (match infer_core fenv n _UU0393_0 e' with
+          | Infer_ok p ->
+            let (t_e, _UU0393_1) = p in
+            (match collect _UU0393_1 es with
+             | Infer_ok p0 ->
+               let (tys, _UU0393_2) = p0 in Infer_ok ((t_e :: tys), _UU0393_2)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       in collect
      in
-     (match go _UU0393_ args fdef.fn_params with
-      | Infer_ok _UU0393_' -> Infer_ok (fdef.fn_ret, _UU0393_')
+     (match collect _UU0393_ args with
+      | Infer_ok p ->
+        let (arg_tys, _UU0393_') = p in
+        (match build_sigma m (repeat None m) arg_tys fdef.fn_params with
+         | Some _UU03c3__acc ->
+           let _UU03c3_ = finalize_subst _UU03c3__acc in
+           let ps_subst = apply_lt_params _UU03c3_ fdef.fn_params in
+           (match check_args arg_tys ps_subst with
+            | Some err -> Infer_err err
+            | None ->
+              if forallb (wf_lifetime_b (mk_region_ctx n)) _UU03c3_
+              then Infer_ok ((apply_lt_ty _UU03c3_ fdef.fn_ret), _UU0393_')
+              else Infer_err ErrLifetimeLeak)
+         | None -> Infer_err ErrLifetimeConflict)
       | Infer_err err -> Infer_err err)
    | None -> Infer_err (ErrFunctionNotFound fname))
 | EReplace (p, e_new) ->

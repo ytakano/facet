@@ -21,15 +21,15 @@ Proof.
   - contradiction.
 Qed.
 
-Lemma typed_linear_let_binding_used : forall fenv n Γ Γout m x T e1 e2 T2,
-  typed fenv n Γ (ELet m x T e1 e2) T2 Γout ->
+Lemma typed_linear_let_binding_used : forall fenv Ω n Γ Γout m x T e1 e2 T2,
+  typed fenv Ω n Γ (ELet m x T e1 e2) T2 Γout ->
   ty_usage T = ULinear ->
   exists Γ1 Γ2 T1 Tx,
-    typed fenv n Γ e1 T1 Γ1 /\
-    typed fenv n (ctx_add x T m Γ1) e2 T2 Γ2 /\
+    typed fenv Ω n Γ e1 T1 Γ1 /\
+    typed fenv Ω n (ctx_add x T m Γ1) e2 T2 Γ2 /\
   ctx_lookup x Γ2 = Some (Tx, true).
 Proof.
-  intros fenv n Γ Γout m x T e1 e2 T2 Htyped Hlin.
+  intros fenv Ω n Γ Γout m x T e1 e2 T2 Htyped Hlin.
   inversion Htyped; subst.
   match goal with
   | H : ctx_is_ok x T Γ2 |- _ =>
@@ -61,7 +61,7 @@ Lemma typed_linear_param_used : forall fenv f p,
   In p (fn_params f) ->
   ty_usage (param_ty p) = ULinear ->
   exists T_body Γ' Tx,
-    typed fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
+    typed fenv (fn_outlives f) (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
     ctx_lookup (param_name p) Γ' = Some (Tx, true).
 Proof.
   intros fenv f p Htyped_fn Hin Hlin.
@@ -78,7 +78,7 @@ Qed.
 
 Definition infer_fn_def_ok (fenv : list fn_def) (f : fn_def) : Prop :=
   exists Γ',
-    infer_body fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) =
+    infer_body fenv (fn_outlives f) (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) =
       infer_ok (fn_ret f, Γ') /\
     params_ok (fn_params f) Γ'.
 
@@ -104,11 +104,11 @@ Fixpoint expr_linear_lets_used (fenv : list fn_def) (e : expr) {struct e}
   | EVar _ => True
   | ELet m x T e1 e2 =>
       (ty_usage T = ULinear ->
-       forall n Γ Γout T2,
-         typed fenv n Γ (ELet m x T e1 e2) T2 Γout ->
+       forall Ω n Γ Γout T2,
+         typed fenv Ω n Γ (ELet m x T e1 e2) T2 Γout ->
          exists Γ1 Γ2 T1 Tx,
-           typed fenv n Γ e1 T1 Γ1 /\
-           typed fenv n (ctx_add x T m Γ1) e2 T2 Γ2 /\
+           typed fenv Ω n Γ e1 T1 Γ1 /\
+           typed fenv Ω n (ctx_add x T m Γ1) e2 T2 Γ2 /\
            ctx_lookup x Γ2 = Some (Tx, true)) /\
       expr_linear_lets_used fenv e1 /\
       expr_linear_lets_used fenv e2
@@ -132,15 +132,15 @@ Fixpoint expr_linear_lets_used_sound (fenv : list fn_def) (e : expr)
 Proof.
   destruct e; simpl; try exact I.
   - repeat split.
-    + intros Hlin n Γ Γout T2 Htyped.
+    + intros Hlin Ω n Γ Γout T2 Htyped.
       exact (typed_linear_let_binding_used
-        fenv n Γ Γout m i t e1 e2 T2 Htyped Hlin).
+        fenv Ω n Γ Γout m i t e1 e2 T2 Htyped Hlin).
     + apply expr_linear_lets_used_sound.
     + apply expr_linear_lets_used_sound.
   - split; apply expr_linear_lets_used_sound.
   - apply expr_linear_lets_used_sound.
   - apply expr_linear_lets_used_sound.
-  - apply expr_linear_lets_used_sound.  (* EDeref *)
+  - apply expr_linear_lets_used_sound.
   - apply expr_linear_lets_used_sound.
   - repeat split; apply expr_linear_lets_used_sound.
 Qed.
@@ -158,14 +158,11 @@ Theorem infer_checked_fn_linear_params_used : forall fenv f p,
   In p (fn_params f) ->
   ty_usage (param_ty p) = ULinear ->
   exists T_body Γ' Tx,
-    typed fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
+    typed fenv (fn_outlives f) (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
     ctx_lookup (param_name p) Γ' = Some (Tx, true).
 Proof.
-  intros fenv f p Hinfer_fn Hin Hlin.
-  apply typed_linear_param_used.
-  - apply infer_fn_def_ok_sound. exact Hinfer_fn.
-  - exact Hin.
-  - exact Hlin.
+  intros fenv f p Hok Hin Hlin.
+  apply typed_linear_param_used; [apply infer_fn_def_ok_sound | |]; assumption.
 Qed.
 
 (* If infer accepts a function, every linear let-binding tracked by
@@ -178,35 +175,34 @@ Theorem infer_checked_fn_linear_usage : forall fenv f,
       In p (fn_params f) ->
       ty_usage (param_ty p) = ULinear ->
       exists T_body Γ' Tx,
-        typed fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
+        typed fenv (fn_outlives f) (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
         ctx_lookup (param_name p) Γ' = Some (Tx, true)).
 Proof.
-  intros fenv f Hinfer_fn.
+  intros fenv f Hok.
   split.
-  - apply infer_checked_fn_linear_lets_used. exact Hinfer_fn.
+  - apply infer_checked_fn_linear_lets_used. exact Hok.
   - intros p Hin Hlin.
-    exact (infer_checked_fn_linear_params_used fenv f p Hinfer_fn Hin Hlin).
+    eapply infer_checked_fn_linear_params_used; eauto.
 Qed.
 
 (* Affine values are consumed through the same context flag as linear values.
    Once infer succeeds with an affine binding marked consumed in the output
    context, checking the same variable again fails because EVar requires an
    unconsumed affine/linear binding. *)
-Theorem infer_affine_value_at_most_once : forall fenv n Γ e T Γ' x Tx,
-  infer_body fenv n Γ e = infer_ok (T, Γ') ->
+Theorem infer_affine_value_at_most_once : forall fenv Ω n Γ e T Γ' x Tx,
+  infer_body fenv Ω n Γ e = infer_ok (T, Γ') ->
   ctx_lookup x Γ = Some (Tx, false) ->
   ty_usage Tx = UAffine ->
   ctx_lookup x Γ' = Some (Tx, true) ->
-  infer_body fenv n Γ' (EVar x) = infer_err (ErrAlreadyConsumed x).
+  infer_body fenv Ω n Γ' (EVar x) = infer_err (ErrAlreadyConsumed x).
 Proof.
-  intros fenv n Γ e T Γ' x Tx _ _ Haff Hused.
+  intros fenv Ω n Γ e T Γ' x Tx _ _ Haff Hlookup'.
   unfold infer_body, alpha_rename_for_infer.
   destruct (alpha_rename_syntax_go (free_vars_expr (EVar x) ++ ctx_names Γ') fenv)
-    as [fenv' used].
+    as [fenv' used] eqn:Hrename.
   simpl.
   rewrite ctx_lookup_b_eq.
-  rewrite Hused.
+  rewrite Hlookup'.
   rewrite Haff.
-  simpl.
   reflexivity.
 Qed.

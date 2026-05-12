@@ -89,3 +89,7 @@ Fixpoint apply_lt_ty (σ : list lifetime) (T : Ty) {struct T} : Ty :=
   | MkTy u (TRef l rk t) =>
       MkTy u (TRef (apply_lt_lifetime σ l) rk (apply_lt_ty σ t))
   end.
+
+
+Definition apply_lt_outlives (σ : list lifetime) (Ω : outlives_ctx) : outlives_ctx :=
+  map (fun '(a, b) => (apply_lt_lifetime σ a, apply_lt_lifetime σ b)) Ω.

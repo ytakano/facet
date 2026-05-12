@@ -64,6 +64,7 @@ let convert_fn_def (f : named_fn_def) : fn_def =
   in
   { fn_name      = make_ident f.nf_name 0;
     fn_lifetimes = Big_int_Z.big_int_of_int (List.length f.nf_lifetime_names);
+    fn_outlives = f.nf_outlives;
     fn_params    = params;
     fn_ret       = f.nf_ret;
     fn_body      = convert scope f.nf_body }

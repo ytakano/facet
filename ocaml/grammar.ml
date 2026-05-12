@@ -8,7 +8,7 @@ program ::= fn_def*
 
 ## fn_def
 ```
-fn_def ::= "fn" ID opt_lifetime_params "(" params ")" "->" ty "{" block "}"
+fn_def ::= "fn" ID opt_lifetime_params "(" params ")" "->" ty opt_where_outlives "{" block "}"
 ```
 
 ## opt_lifetime_params
@@ -127,7 +127,7 @@ LIFETIME  ::= "'" alpha (alpha | digit | "_")*
 
 ## Reserved words
 `fn`, `let`, `in`, `mut`, `drop`, `replace`, `affine`, `linear`,
-`unrestricted`, `isize`, `f64`, `if`, `else`, `true`, `false`, `bool`
+`unrestricted`, `isize`, `f64`, `if`, `else`, `true`, `false`, `bool`, `where`
 |}
 
 let print_grammar () = print_string grammar

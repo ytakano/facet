@@ -1,0 +1,3 @@
+fn f<'a, 'b, 'c>(r: unrestricted &'a unrestricted isize) -> unrestricted &'c unrestricted isize where 'a: 'b, 'b: 'c {
+    r
+}

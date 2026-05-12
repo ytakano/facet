@@ -1,0 +1,3 @@
+fn bad<'a, 'b>(r: unrestricted &'a unrestricted isize) -> unrestricted &'b unrestricted isize {
+    r
+}

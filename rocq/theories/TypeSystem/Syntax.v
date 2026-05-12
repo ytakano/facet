@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Types.
+From Facet.TypeSystem Require Import Lifetime Types.
 From Stdlib Require Import String ZArith Bool PeanoNat.
 
 Definition ident := (string * nat)%type.
@@ -79,6 +79,7 @@ Record param : Type := MkParam {
 Record fn_def : Type := MkFnDef {
   fn_name      : ident;
   fn_lifetimes : nat;
+  fn_outlives  : outlives_ctx;
   fn_params    : list param;
   fn_ret       : Ty;
   fn_body      : expr

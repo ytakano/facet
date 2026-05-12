@@ -20,8 +20,6 @@ module Nat :
   val leb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool
 
   val ltb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool
-
-  val max : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
  end
 
 val map : ('a1 -> 'a2) -> 'a1 list -> 'a2 list
@@ -46,7 +44,14 @@ val lifetime_eqb : lifetime -> lifetime -> bool
 
 type region_ctx = lifetime list
 
-val outlives_b : lifetime -> lifetime -> bool
+type outlives_ctx = (lifetime * lifetime) list
+
+val outlives_direct_b : outlives_ctx -> lifetime -> lifetime -> bool
+
+val outlives_b_fuel :
+  Big_int_Z.big_int -> outlives_ctx -> lifetime -> lifetime -> bool
+
+val outlives_b : outlives_ctx -> lifetime -> lifetime -> bool
 
 type mutability =
 | MImmutable
@@ -83,6 +88,8 @@ val apply_lt_lifetime : lifetime list -> lifetime -> lifetime
 
 val apply_lt_ty : lifetime list -> ty -> ty
 
+val apply_lt_outlives : lifetime list -> outlives_ctx -> outlives_ctx
+
 type ident = string * Big_int_Z.big_int
 
 val ident_eqb : ident -> ident -> bool
@@ -116,9 +123,8 @@ type param = { param_mutability : mutability; param_name : ident;
                param_ty : ty }
 
 type fn_def = { fn_name : ident; fn_lifetimes : Big_int_Z.big_int;
-                fn_params : param list; fn_ret : ty; fn_body : expr }
-
-type syntax = fn_def list
+                fn_outlives : outlives_ctx; fn_params : param list;
+                fn_ret : ty; fn_body : expr }
 
 type ctx_entry = ((ident * ty) * bool) * mutability
 
@@ -170,7 +176,7 @@ val ty_eqb : ty -> ty -> bool
 
 val ty_core_eqb : ty typeCore -> ty typeCore -> bool
 
-val ty_compatible_b : ty -> ty -> bool
+val ty_compatible_b : outlives_ctx -> ty -> ty -> bool
 
 val ctx_lookup_b : ident -> ctx -> (ty * bool) option
 
@@ -191,18 +197,6 @@ val mk_region_ctx : Big_int_Z.big_int -> region_ctx
 val wf_lifetime_b : region_ctx -> lifetime -> bool
 
 val wf_type_b : region_ctx -> ty -> bool
-
-type rename_env = (ident * ident) list
-
-val lookup_rename : ident -> rename_env -> ident
-
-val max_ident_index : string -> ident list -> Big_int_Z.big_int
-
-val fresh_ident : ident -> ident list -> ident
-
-val ctx_names : ctx -> ident list
-
-val place_name : place -> ident
 
 type infer_error =
 | ErrUnknownVar of ident
@@ -238,7 +232,7 @@ val build_sigma :
   Big_int_Z.big_int -> lifetime option list -> ty list -> param list ->
   lifetime option list option
 
-val check_args : ty list -> param list -> infer_error option
+val check_args : outlives_ctx -> ty list -> param list -> infer_error option
 
 type 'a infer_result =
 | Infer_ok of 'a
@@ -246,29 +240,17 @@ type 'a infer_result =
 
 val infer_place : ctx -> place -> ty infer_result
 
-val free_vars_expr : expr -> ident list
+val wf_outlives_b : region_ctx -> outlives_ctx -> bool
 
-val param_names : param list -> ident list
-
-val rename_place : rename_env -> place -> place
-
-val alpha_rename_expr : rename_env -> ident list -> expr -> expr * ident list
-
-val alpha_rename_params :
-  rename_env -> ident list -> param list -> (param list * rename_env) * ident
-  list
-
-val alpha_rename_fn_def : ident list -> fn_def -> fn_def * ident list
-
-val alpha_rename_syntax_go : ident list -> syntax -> syntax * ident list
-
-val alpha_rename_for_infer : ctx -> fn_def list -> expr -> fn_def list * expr
+val outlives_constraints_hold_b : outlives_ctx -> outlives_ctx -> bool
 
 val infer_core :
-  fn_def list -> Big_int_Z.big_int -> ctx -> expr -> (ty * ctx) infer_result
+  fn_def list -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
+  (ty * ctx) infer_result
 
 val infer_body :
-  fn_def list -> Big_int_Z.big_int -> ctx -> expr -> (ty * ctx) infer_result
+  fn_def list -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
+  (ty * ctx) infer_result
 
 val params_ok_b : param list -> ctx -> bool
 

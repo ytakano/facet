@@ -102,16 +102,16 @@ Inductive usage_sub : usage -> usage -> Prop :=
   | US_aff_lin :              usage_sub UAffine       ULinear
   | US_unr_lin :              usage_sub UUnrestricted ULinear.
 
-Inductive ty_compatible : Ty -> Ty -> Prop :=
+Inductive ty_compatible (Ω : outlives_ctx) : Ty -> Ty -> Prop :=
   | TC_Core : forall ua ue ca ce,
       usage_sub ua ue ->
       ca = ce ->
-      ty_compatible (MkTy ua ca) (MkTy ue ce)
+      ty_compatible Ω (MkTy ua ca) (MkTy ue ce)
   | TC_Ref : forall ua ue la lb rk Ta Tb,
       usage_sub ua ue ->
-      outlives la lb ->
-      ty_compatible Ta Tb ->
-      ty_compatible (MkTy ua (TRef la rk Ta)) (MkTy ue (TRef lb rk Tb)).
+      outlives Ω la lb ->
+      ty_compatible Ω Ta Tb ->
+      ty_compatible Ω (MkTy ua (TRef la rk Ta)) (MkTy ue (TRef lb rk Tb)).
 
 Definition usage_max (u1 u2 : usage) : usage :=
   match u1, u2 with
@@ -179,32 +179,32 @@ Definition apply_lt_params (σ : list lifetime) (ps : list param) : list param :
 (*   accounting for variable consumption.                                *)
 (* ------------------------------------------------------------------ *)
 
-Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Prop :=
+Inductive typed (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) : ctx -> expr -> Ty -> ctx -> Prop :=
 
   | T_Unit : forall Γ,
-      typed fenv n Γ EUnit (MkTy UUnrestricted TUnits) Γ
+      typed fenv Ω n Γ EUnit (MkTy UUnrestricted TUnits) Γ
 
   | T_LitInt : forall Γ i,
-      typed fenv n Γ (ELit (LInt i)) (MkTy UUnrestricted TIntegers) Γ
+      typed fenv Ω n Γ (ELit (LInt i)) (MkTy UUnrestricted TIntegers) Γ
 
   | T_LitFloat : forall Γ f,
-      typed fenv n Γ (ELit (LFloat f)) (MkTy UUnrestricted TFloats) Γ
+      typed fenv Ω n Γ (ELit (LFloat f)) (MkTy UUnrestricted TFloats) Γ
 
   | T_LitBool : forall Γ b,
-      typed fenv n Γ (ELit (LBool b)) (MkTy UUnrestricted TBooleans) Γ
+      typed fenv Ω n Γ (ELit (LBool b)) (MkTy UUnrestricted TBooleans) Γ
 
   (* Linear/affine variable: consume the binding. *)
   | T_Var_Consume : forall Γ Γ' x T,
       ctx_lookup x Γ = Some (T, false) ->
       ty_usage T <> UUnrestricted ->
       ctx_consume x Γ = Some Γ' ->
-      typed fenv n Γ (EVar x) T Γ'
+      typed fenv Ω n Γ (EVar x) T Γ'
 
   (* Unrestricted variable: copy without consuming. *)
   | T_Var_Copy : forall Γ x T b,
       ctx_lookup x Γ = Some (T, b) ->
       ty_usage T = UUnrestricted ->
-      typed fenv n Γ (EVar x) T Γ
+      typed fenv Ω n Γ (EVar x) T Γ
 
   (* let x: T = e1 in e2
      1. Type e1; the result type T1 must have the same core type as T
@@ -213,23 +213,23 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
      3. Type e2; afterwards check that x satisfies its usage constraint.
      4. Remove x from the output context. *)
   | T_Let : forall Γ Γ1 Γ2 m x T T1 e1 e2 T2,
-      typed fenv n Γ e1 T1 Γ1 ->
-      ty_compatible T1 T ->
-      typed fenv n (ctx_add x T m Γ1) e2 T2 Γ2 ->
+      typed fenv Ω n Γ e1 T1 Γ1 ->
+      ty_compatible Ω T1 T ->
+      typed fenv Ω n (ctx_add x T m Γ1) e2 T2 Γ2 ->
       ctx_is_ok x T Γ2 ->
-      typed fenv n Γ (ELet m x T e1 e2) T2 (ctx_remove x Γ2)
+      typed fenv Ω n Γ (ELet m x T e1 e2) T2 (ctx_remove x Γ2)
 
   (* let x = e1 in e2 (no annotation): infer T1 from e1, bind x:T1. *)
   | T_LetInfer : forall Γ Γ1 Γ2 m x T1 e1 e2 T2,
-      typed fenv n Γ e1 T1 Γ1 ->
-      typed fenv n (ctx_add x T1 m Γ1) e2 T2 Γ2 ->
+      typed fenv Ω n Γ e1 T1 Γ1 ->
+      typed fenv Ω n (ctx_add x T1 m Γ1) e2 T2 Γ2 ->
       ctx_is_ok x T1 Γ2 ->
-      typed fenv n Γ (ELetInfer m x e1 e2) T2 (ctx_remove x Γ2)
+      typed fenv Ω n Γ (ELetInfer m x e1 e2) T2 (ctx_remove x Γ2)
 
   (* drop(e): evaluate e (consuming it) and return unit. *)
   | T_Drop : forall Γ Γ' e T,
-      typed fenv n Γ e T Γ' ->
-      typed fenv n Γ (EDrop e) (MkTy UUnrestricted TUnits) Γ'
+      typed fenv Ω n Γ e T Γ' ->
+      typed fenv Ω n Γ (EDrop e) (MkTy UUnrestricted TUnits) Γ'
 
   (* replace(x, e_new):
      - x must be present and unconsumed (it is NOT consumed by replace).
@@ -240,17 +240,17 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
   | T_Replace : forall Γ Γ' x T T_new e_new,
       ctx_lookup x Γ = Some (T, false) ->
       ctx_lookup_mut x Γ = Some MMutable ->
-      typed fenv n Γ e_new T_new Γ' ->
-      ty_compatible T_new T ->
-      typed fenv n Γ (EReplace (PVar x) e_new) T Γ'
+      typed fenv Ω n Γ e_new T_new Γ' ->
+      ty_compatible Ω T_new T ->
+      typed fenv Ω n Γ (EReplace (PVar x) e_new) T Γ'
 
   | T_Assign : forall Γ Γ' x T T_new e_new,
       ctx_lookup x Γ = Some (T, false) ->
       ctx_lookup_mut x Γ = Some MMutable ->
       ty_usage T <> ULinear ->
-      typed fenv n Γ e_new T_new Γ' ->
-      ty_compatible T_new T ->
-      typed fenv n Γ (EAssign (PVar x) e_new) (MkTy UUnrestricted TUnits) Γ'
+      typed fenv Ω n Γ e_new T_new Γ' ->
+      ty_compatible Ω T_new T ->
+      typed fenv Ω n Γ (EAssign (PVar x) e_new) (MkTy UUnrestricted TUnits) Γ'
 
   (* &x — shared borrow
      - x is present and unconsumed
@@ -259,7 +259,7 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
      - result type is &'n T where LVar n is the function's local lifetime *)
   | T_BorrowShared : forall Γ x T,
       ctx_lookup x Γ = Some (T, false) ->
-      typed fenv n Γ (EBorrow RShared (PVar x))
+      typed fenv Ω n Γ (EBorrow RShared (PVar x))
         (MkTy UUnrestricted (TRef (LVar n) RShared T)) Γ
 
   (* &mut x — mutable borrow
@@ -271,7 +271,7 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
   | T_BorrowMut : forall Γ x T,
       ctx_lookup x Γ = Some (T, false) ->
       ctx_lookup_mut x Γ = Some MMutable ->
-      typed fenv n Γ (EBorrow RUnique (PVar x))
+      typed fenv Ω n Γ (EBorrow RUnique (PVar x))
         (MkTy UAffine (TRef (LVar n) RUnique T)) Γ
 
   (* *r — dereference
@@ -282,41 +282,41 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
   | T_Deref : forall Γ Γ' r la rk T u_r,
       expr_as_place r = None ->
       ty_usage T = UUnrestricted ->
-      typed fenv n Γ r (MkTy u_r (TRef la rk T)) Γ' ->
-      typed fenv n Γ (EDeref r) T Γ'
+      typed fenv Ω n Γ r (MkTy u_r (TRef la rk T)) Γ' ->
+      typed fenv Ω n Γ (EDeref r) T Γ'
 
   | T_Deref_Place : forall Γ r p la rk T u_r,
       expr_as_place r = Some p ->
       ty_usage T = UUnrestricted ->
       typed_place fenv n Γ p (MkTy u_r (TRef la rk T)) ->
-      typed fenv n Γ (EDeref r) T Γ
+      typed fenv Ω n Γ (EDeref r) T Γ
 
   (* &*p — shared re-borrow: p has any reference type &'a rk T *)
   | T_ReBorrowShared : forall Γ p la rk T u_r,
       typed_place fenv n Γ p (MkTy u_r (TRef la rk T)) ->
-      typed fenv n Γ (EBorrow RShared (PDeref p))
+      typed fenv Ω n Γ (EBorrow RShared (PDeref p))
         (MkTy UUnrestricted (TRef (LVar n) RShared T)) Γ
 
   (* &mut *p — mutable re-borrow: p must have &mut T *)
   | T_ReBorrowMut : forall Γ p la T u_r,
       typed_place fenv n Γ p (MkTy u_r (TRef la RUnique T)) ->
-      typed fenv n Γ (EBorrow RUnique (PDeref p))
+      typed fenv Ω n Γ (EBorrow RUnique (PDeref p))
         (MkTy UAffine (TRef (LVar n) RUnique T)) Γ
 
   (* *p <- e_new where p : &mut T: write through mutable reference, return old T *)
   | T_Replace_Deref : forall Γ Γ' p la T T_new e_new u_r,
       typed_place fenv n Γ p (MkTy u_r (TRef la RUnique T)) ->
-      typed fenv n Γ e_new T_new Γ' ->
-      ty_compatible T_new T ->
-      typed fenv n Γ (EReplace (PDeref p) e_new) T Γ'
+      typed fenv Ω n Γ e_new T_new Γ' ->
+      ty_compatible Ω T_new T ->
+      typed fenv Ω n Γ (EReplace (PDeref p) e_new) T Γ'
 
   (* *r = e_new where r : &mut T (non-linear): assign through reference, return unit *)
   | T_Assign_Deref : forall Γ Γ' p la T T_new e_new u_r,
       typed_place fenv n Γ p (MkTy u_r (TRef la RUnique T)) ->
       ty_usage T <> ULinear ->
-      typed fenv n Γ e_new T_new Γ' ->
-      ty_compatible T_new T ->
-      typed fenv n Γ (EAssign (PDeref p) e_new) (MkTy UUnrestricted TUnits) Γ'
+      typed fenv Ω n Γ e_new T_new Γ' ->
+      ty_compatible Ω T_new T ->
+      typed fenv Ω n Γ (EAssign (PDeref p) e_new) (MkTy UUnrestricted TUnits) Γ'
 
   (* if e1 { e2 } else { e3 }:
      - e1 must have bool type (any usage)
@@ -324,13 +324,13 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
      - linear variables must be consumed by both branches or neither
      - result usage = max(usage of e2, usage of e3) *)
   | T_If : forall Γ Γ1 Γ2 Γ3 Γ4 e1 e2 e3 T_cond T2 T3,
-      typed fenv n Γ e1 T_cond Γ1 ->
+      typed fenv Ω n Γ e1 T_cond Γ1 ->
       ty_core T_cond = TBooleans ->
-      typed fenv n Γ1 e2 T2 Γ2 ->
-      typed fenv n Γ1 e3 T3 Γ3 ->
+      typed fenv Ω n Γ1 e2 T2 Γ2 ->
+      typed fenv Ω n Γ1 e3 T3 Γ3 ->
       ty_core T2 = ty_core T3 ->
       ctx_merge Γ2 Γ3 = Some Γ4 ->
-      typed fenv n Γ (EIf e1 e2 e3)
+      typed fenv Ω n Γ (EIf e1 e2 e3)
            (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2)) Γ4
 
   (* f(args): look up function definition, infer a lifetime substitution,
@@ -338,29 +338,30 @@ Inductive typed (fenv : list fn_def) (n : nat) : ctx -> expr -> Ty -> ctx -> Pro
   | T_Call_Lt : forall Γ Γ' fname fdef args (σ : list lifetime),
       In fdef fenv ->
       fn_name fdef = fname ->
-      typed_args fenv n Γ args (apply_lt_params σ (fn_params fdef)) Γ' ->
-      typed fenv n Γ (ECall fname args) (apply_lt_ty σ (fn_ret fdef)) Γ'
+      typed_args fenv Ω n Γ args (apply_lt_params σ (fn_params fdef)) Γ' ->
+      Forall (fun '(a, b) => outlives Ω a b) (apply_lt_outlives σ (fn_outlives fdef)) ->
+      typed fenv Ω n Γ (ECall fname args) (apply_lt_ty σ (fn_ret fdef)) Γ'
 
 (* Type-check a list of arguments against a list of parameters.
    Each argument's type must have the same core type as the parameter's
    declared type and a compatible usage (subtype). The context threads
    through left-to-right, consuming linear/affine arguments. *)
-with typed_args (fenv : list fn_def) (n : nat)
+with typed_args (fenv : list fn_def) (Ω : outlives_ctx) (n : nat)
     : ctx -> list expr -> list param -> ctx -> Prop :=
 
   | TArgs_Nil : forall Γ,
-      typed_args fenv n Γ [] [] Γ
+      typed_args fenv Ω n Γ [] [] Γ
 
   | TArgs_Cons : forall Γ Γ1 Γ2 e es p ps T_e,
-      typed fenv n Γ e T_e Γ1 ->
-      ty_compatible T_e (param_ty p) ->
-      typed_args fenv n Γ1 es ps Γ2 ->
-      typed_args fenv n Γ (e :: es) (p :: ps) Γ2.
+      typed fenv Ω n Γ e T_e Γ1 ->
+      ty_compatible Ω T_e (param_ty p) ->
+      typed_args fenv Ω n Γ1 es ps Γ2 ->
+      typed_args fenv Ω n Γ (e :: es) (p :: ps) Γ2.
 
 Definition typed_fn_def (fenv : list fn_def) (f : fn_def) : Prop :=
   exists T_body Γ',
-    typed fenv (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
-    ty_compatible T_body (fn_ret f) /\
+    typed fenv (fn_outlives f) (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
+    ty_compatible (fn_outlives f) T_body (fn_ret f) /\
     params_ok (fn_params f) Γ'.
 
 (* ------------------------------------------------------------------ *)

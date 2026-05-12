@@ -1,0 +1,7 @@
+fn shorten<'a, 'b>(r: unrestricted &'a unrestricted isize, s: unrestricted &'b unrestricted isize) -> unrestricted &'b unrestricted isize where 'a: 'b {
+    s
+}
+
+fn caller<'x, 'y>(r: unrestricted &'x unrestricted isize, s: unrestricted &'y unrestricted isize) -> unrestricted &'y unrestricted isize where 'x: 'y {
+    (shorten r s)
+}

@@ -25,7 +25,7 @@ let resolve_lt_name (name : string) : Big_int_Z.big_int =
 
 %token KW_FN KW_LET KW_IN KW_MUT KW_DROP KW_REPLACE
 %token KW_AFFINE KW_LINEAR KW_UNRESTRICTED KW_ISIZE KW_F64
-%token KW_IF KW_ELSE KW_TRUE KW_FALSE KW_BOOL
+%token KW_IF KW_ELSE KW_TRUE KW_FALSE KW_BOOL KW_WHERE
 %token LPAREN RPAREN LBRACE RBRACE LANGLE RANGLE
 %token ARROW AMP STAR
 %token COMMA COLON EQUAL SEMI UNDERSCORE
@@ -45,8 +45,8 @@ program:
 fn_def:
   | KW_FN; name = ID; lt_names = opt_lifetime_params;
     LPAREN; ps = params; RPAREN;
-    ARROW; ret = ty; LBRACE; body = block; RBRACE
-    { { nf_name = name; nf_lifetime_names = lt_names;
+    ARROW; ret = ty; outs = opt_where_outlives; LBRACE; body = block; RBRACE
+    { { nf_name = name; nf_lifetime_names = lt_names; nf_outlives = outs;
         nf_params = ps; nf_ret = ret; nf_body = body } }
 
 opt_lifetime_params:
@@ -56,6 +56,14 @@ opt_lifetime_params:
 
 lifetime_name:
   | lt = LIFETIME { lt }
+
+opt_where_outlives:
+  | { [] }
+  | KW_WHERE; cs = separated_nonempty_list(COMMA, outlives_constraint) { cs }
+
+outlives_constraint:
+  | a = LIFETIME; COLON; b = LIFETIME
+    { (LVar (resolve_lt_name a), LVar (resolve_lt_name b)) }
 
 params:
   | { [] }

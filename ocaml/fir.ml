@@ -112,7 +112,7 @@ let rec to_value env = function
     env.ctx <- ctx_add_b x t m env.ctx;
     to_value env e2
   | ELetInfer (m, x, e1, e2) ->
-    let ty1 = match infer_core env.fenv env.lifetimes env.ctx e1 with
+    let ty1 = match infer_core env.fenv [] env.lifetimes env.ctx e1 with
       | Infer_ok (t, _) -> t
       | Infer_err _ -> unit_ty
     in
@@ -163,7 +163,7 @@ let rec to_value env = function
     emit env (FIDeref (tmp, inner_ty, ident_of_tval env v, v.ft));
     { fv = FVVar tmp; ft = inner_ty }
   | EIf (e1, e2, e3) ->
-    let result_ty = match infer_core env.fenv env.lifetimes env.ctx (EIf (e1, e2, e3)) with
+    let result_ty = match infer_core env.fenv [] env.lifetimes env.ctx (EIf (e1, e2, e3)) with
       | Infer_ok (t, _) -> t
       | Infer_err _ -> unit_ty
     in

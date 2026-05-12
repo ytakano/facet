@@ -52,21 +52,6 @@ module Nat =
 
   let ltb n m =
     leb (Big_int_Z.succ_big_int n) m
-
-  (** val max :
-      Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
-
-  let rec max n m =
-    (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
-  else fS (Big_int_Z.pred_big_int n))
-      (fun _ -> m)
-      (fun n' ->
-      (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
-  else fS (Big_int_Z.pred_big_int n))
-        (fun _ -> n)
-        (fun m' -> Big_int_Z.succ_big_int (max n' m'))
-        m)
-      n
  end
 
 (** val map : ('a1 -> 'a2) -> 'a1 list -> 'a2 list **)
@@ -144,14 +129,38 @@ let lifetime_eqb l1 l2 =
 
 type region_ctx = lifetime list
 
-(** val outlives_b : lifetime -> lifetime -> bool **)
+type outlives_ctx = (lifetime * lifetime) list
 
-let outlives_b a b =
-  match a with
-  | LStatic -> true
-  | LVar n -> (match b with
-               | LStatic -> false
-               | LVar m -> Nat.eqb n m)
+(** val outlives_direct_b : outlives_ctx -> lifetime -> lifetime -> bool **)
+
+let outlives_direct_b _UU03a9_ a b =
+  (||) (lifetime_eqb a b)
+    (match a with
+     | LStatic -> true
+     | LVar _ ->
+       existsb (fun pat ->
+         let (x, y) = pat in (&&) (lifetime_eqb a x) (lifetime_eqb b y))
+         _UU03a9_)
+
+(** val outlives_b_fuel :
+    Big_int_Z.big_int -> outlives_ctx -> lifetime -> lifetime -> bool **)
+
+let rec outlives_b_fuel fuel _UU03a9_ a b =
+  (||) (outlives_direct_b _UU03a9_ a b)
+    ((fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+       (fun _ -> false)
+       (fun fuel' ->
+       existsb (fun pat ->
+         let (x, y) = pat in
+         (&&) (lifetime_eqb a x) (outlives_b_fuel fuel' _UU03a9_ y b))
+         _UU03a9_)
+       fuel)
+
+(** val outlives_b : outlives_ctx -> lifetime -> lifetime -> bool **)
+
+let outlives_b _UU03a9_ a b =
+  outlives_b_fuel (length _UU03a9_) _UU03a9_ a b
 
 type mutability =
 | MImmutable
@@ -222,6 +231,13 @@ let rec apply_lt_ty _UU03c3_ = function
        (apply_lt_ty _UU03c3_ t1))))
    | x -> MkTy (u, x))
 
+(** val apply_lt_outlives : lifetime list -> outlives_ctx -> outlives_ctx **)
+
+let apply_lt_outlives _UU03c3_ _UU03a9_ =
+  map (fun pat ->
+    let (a, b) = pat in
+    ((apply_lt_lifetime _UU03c3_ a), (apply_lt_lifetime _UU03c3_ b))) _UU03a9_
+
 type ident = string * Big_int_Z.big_int
 
 (** val ident_eqb : ident -> ident -> bool **)
@@ -266,9 +282,8 @@ type param = { param_mutability : mutability; param_name : ident;
                param_ty : ty }
 
 type fn_def = { fn_name : ident; fn_lifetimes : Big_int_Z.big_int;
-                fn_params : param list; fn_ret : ty; fn_body : expr }
-
-type syntax = fn_def list
+                fn_outlives : outlives_ctx; fn_params : param list;
+                fn_ret : ty; fn_body : expr }
 
 type ctx_entry = ((ident * ty) * bool) * mutability
 
@@ -530,17 +545,17 @@ let ty_core_eqb c1 c2 =
        (&&) ((&&) (lifetime_eqb l1 l2) (ref_kind_eqb k1 k2)) (ty_eqb t1 t2)
      | _ -> false)
 
-(** val ty_compatible_b : ty -> ty -> bool **)
+(** val ty_compatible_b : outlives_ctx -> ty -> ty -> bool **)
 
-let rec ty_compatible_b t_actual t_expected =
+let rec ty_compatible_b _UU03a9_ t_actual t_expected =
   (&&) (usage_sub_bool (ty_usage t_actual) (ty_usage t_expected))
     (match ty_core t_actual with
      | TRef (la, rka, ta) ->
        let ca = TRef (la, rka, ta) in
        (match ty_core t_expected with
         | TRef (lb, rkb, tb) ->
-          (&&) ((&&) (outlives_b la lb) (ref_kind_eqb rka rkb))
-            (ty_compatible_b ta tb)
+          (&&) ((&&) (outlives_b _UU03a9_ la lb) (ref_kind_eqb rka rkb))
+            (ty_compatible_b _UU03a9_ ta tb)
         | x -> ty_core_eqb ca x)
      | x -> ty_core_eqb x (ty_core t_expected))
 
@@ -633,45 +648,6 @@ let rec wf_type_b _UU0394_ = function
      (&&) ((&&) (ref_usage_ok_b u rk) (wf_lifetime_b _UU0394_ l))
        (wf_type_b _UU0394_ t_inner)
    | _ -> true)
-
-type rename_env = (ident * ident) list
-
-(** val lookup_rename : ident -> rename_env -> ident **)
-
-let rec lookup_rename x = function
-| [] -> x
-| p :: _UU03c1_' ->
-  let (old, fresh) = p in
-  if ident_eqb x old then fresh else lookup_rename x _UU03c1_'
-
-(** val max_ident_index : string -> ident list -> Big_int_Z.big_int **)
-
-let rec max_ident_index base = function
-| [] -> Big_int_Z.zero_big_int
-| i :: used' ->
-  let (base0, n) = i in
-  if (=) base base0
-  then Nat.max n (max_ident_index base used')
-  else max_ident_index base used'
-
-(** val fresh_ident : ident -> ident list -> ident **)
-
-let fresh_ident x used =
-  ((fst x), (Big_int_Z.succ_big_int (max_ident_index (fst x) used)))
-
-(** val ctx_names : ctx -> ident list **)
-
-let rec ctx_names = function
-| [] -> []
-| c :: _UU0393_' ->
-  let (p, _) = c in
-  let (p0, _) = p in let (x, _) = p0 in x :: (ctx_names _UU0393_')
-
-(** val place_name : place -> ident **)
-
-let rec place_name = function
-| PVar x -> x
-| PDeref q -> place_name q
 
 type infer_error =
 | ErrUnknownVar of ident
@@ -780,9 +756,10 @@ let rec build_sigma m _UU03c3__acc arg_tys params =
         | Some _UU03c3_' -> build_sigma m _UU03c3_' ts ps
         | None -> None))
 
-(** val check_args : ty list -> param list -> infer_error option **)
+(** val check_args :
+    outlives_ctx -> ty list -> param list -> infer_error option **)
 
-let rec check_args arg_tys params =
+let rec check_args _UU03a9_ arg_tys params =
   match arg_tys with
   | [] -> (match params with
            | [] -> None
@@ -791,8 +768,8 @@ let rec check_args arg_tys params =
     (match params with
      | [] -> Some ErrArityMismatch
      | p :: ps ->
-       if ty_compatible_b t p.param_ty
-       then check_args ts ps
+       if ty_compatible_b _UU03a9_ t p.param_ty
+       then check_args _UU03a9_ ts ps
        else Some (compatible_error t p.param_ty))
 
 type 'a infer_result =
@@ -816,138 +793,23 @@ let rec infer_place _UU0393_ = function
       | x -> Infer_err (ErrNotAReference x))
    | Infer_err err -> Infer_err err)
 
-(** val free_vars_expr : expr -> ident list **)
+(** val wf_outlives_b : region_ctx -> outlives_ctx -> bool **)
 
-let rec free_vars_expr = function
-| EVar x -> x :: []
-| ELet (_, x, _, e1, e2) -> x :: (app (free_vars_expr e1) (free_vars_expr e2))
-| ELetInfer (_, x, e1, e2) ->
-  x :: (app (free_vars_expr e1) (free_vars_expr e2))
-| ECall (_, args) ->
-  let rec go = function
-  | [] -> []
-  | arg :: rest -> app (free_vars_expr arg) (go rest)
-  in go args
-| EReplace (p, e_new) -> (place_name p) :: (free_vars_expr e_new)
-| EAssign (p, e_new) -> (place_name p) :: (free_vars_expr e_new)
-| EBorrow (_, p) -> (place_name p) :: []
-| EDeref e1 -> free_vars_expr e1
-| EDrop e1 -> free_vars_expr e1
-| EIf (e1, e2, e3) ->
-  app (free_vars_expr e1) (app (free_vars_expr e2) (free_vars_expr e3))
-| _ -> []
+let wf_outlives_b _UU0394_ _UU03a9_ =
+  forallb (fun pat ->
+    let (a, b) = pat in
+    (&&) (wf_lifetime_b _UU0394_ a) (wf_lifetime_b _UU0394_ b)) _UU03a9_
 
-(** val param_names : param list -> ident list **)
+(** val outlives_constraints_hold_b : outlives_ctx -> outlives_ctx -> bool **)
 
-let rec param_names = function
-| [] -> []
-| p :: ps' -> p.param_name :: (param_names ps')
-
-(** val rename_place : rename_env -> place -> place **)
-
-let rec rename_place _UU03c1_ = function
-| PVar x -> PVar (lookup_rename x _UU03c1_)
-| PDeref q -> PDeref (rename_place _UU03c1_ q)
-
-(** val alpha_rename_expr :
-    rename_env -> ident list -> expr -> expr * ident list **)
-
-let rec alpha_rename_expr _UU03c1_ used = function
-| EVar x -> ((EVar (lookup_rename x _UU03c1_)), used)
-| ELet (m, x, t, e1, e2) ->
-  let (e1', used1) = alpha_rename_expr _UU03c1_ used e1 in
-  let used1' = x :: (app (free_vars_expr e2) used1) in
-  let x' = fresh_ident x used1' in
-  let used2 = x' :: used1' in
-  let (e2', used3) = alpha_rename_expr ((x, x') :: _UU03c1_) used2 e2 in
-  ((ELet (m, x', t, e1', e2')), used3)
-| ELetInfer (m, x, e1, e2) ->
-  let (e1', used1) = alpha_rename_expr _UU03c1_ used e1 in
-  let used1' = x :: (app (free_vars_expr e2) used1) in
-  let x' = fresh_ident x used1' in
-  let used2 = x' :: used1' in
-  let (e2', used3) = alpha_rename_expr ((x, x') :: _UU03c1_) used2 e2 in
-  ((ELetInfer (m, x', e1', e2')), used3)
-| ECall (fname, args) ->
-  let go =
-    let rec go used0 = function
-    | [] -> ([], used0)
-    | arg :: rest ->
-      let (arg', used1) = alpha_rename_expr _UU03c1_ used0 arg in
-      let (rest', used2) = go used1 rest in ((arg' :: rest'), used2)
-    in go
-  in
-  let (args', used') = go used args in ((ECall (fname, args')), used')
-| EReplace (p, e_new) ->
-  let (e_new', used') = alpha_rename_expr _UU03c1_ used e_new in
-  ((EReplace ((rename_place _UU03c1_ p), e_new')), used')
-| EAssign (p, e_new) ->
-  let (e_new', used') = alpha_rename_expr _UU03c1_ used e_new in
-  ((EAssign ((rename_place _UU03c1_ p), e_new')), used')
-| EBorrow (rk, p) -> ((EBorrow (rk, (rename_place _UU03c1_ p))), used)
-| EDeref e1 ->
-  let (e1', used') = alpha_rename_expr _UU03c1_ used e1 in
-  ((EDeref e1'), used')
-| EDrop e1 ->
-  let (e1', used') = alpha_rename_expr _UU03c1_ used e1 in
-  ((EDrop e1'), used')
-| EIf (e1, e2, e3) ->
-  let (e1', used1) = alpha_rename_expr _UU03c1_ used e1 in
-  let (e2', used2) = alpha_rename_expr _UU03c1_ used1 e2 in
-  let (e3', used3) = alpha_rename_expr _UU03c1_ used2 e3 in
-  ((EIf (e1', e2', e3')), used3)
-| x -> (x, used)
-
-(** val alpha_rename_params :
-    rename_env -> ident list -> param list -> (param
-    list * rename_env) * ident list **)
-
-let rec alpha_rename_params _UU03c1_ used = function
-| [] -> (([], _UU03c1_), used)
-| p :: ps' ->
-  let x = p.param_name in
-  let x' = fresh_ident x used in
-  let p' = { param_mutability = p.param_mutability; param_name = x';
-    param_ty = p.param_ty }
-  in
-  let (p0, used') = alpha_rename_params ((x, x') :: _UU03c1_) (x' :: used) ps'
-  in
-  let (ps'', _UU03c1_') = p0 in (((p' :: ps''), _UU03c1_'), used')
-
-(** val alpha_rename_fn_def : ident list -> fn_def -> fn_def * ident list **)
-
-let alpha_rename_fn_def used f =
-  let used0 =
-    app (param_names f.fn_params) (app (free_vars_expr f.fn_body) used)
-  in
-  let (p, used1) = alpha_rename_params [] used0 f.fn_params in
-  let (params', _UU03c1_) = p in
-  let (body', used2) = alpha_rename_expr _UU03c1_ used1 f.fn_body in
-  ({ fn_name = f.fn_name; fn_lifetimes = f.fn_lifetimes; fn_params = params';
-  fn_ret = f.fn_ret; fn_body = body' }, used2)
-
-(** val alpha_rename_syntax_go :
-    ident list -> syntax -> syntax * ident list **)
-
-let rec alpha_rename_syntax_go used = function
-| [] -> ([], used)
-| f :: fs ->
-  let (f', used1) = alpha_rename_fn_def used f in
-  let (fs', used2) = alpha_rename_syntax_go used1 fs in ((f' :: fs'), used2)
-
-(** val alpha_rename_for_infer :
-    ctx -> fn_def list -> expr -> fn_def list * expr **)
-
-let alpha_rename_for_infer _UU0393_ fenv e =
-  let (fenv', used) =
-    alpha_rename_syntax_go (app (free_vars_expr e) (ctx_names _UU0393_)) fenv
-  in
-  let (e', _) = alpha_rename_expr [] used e in (fenv', e')
+let outlives_constraints_hold_b _UU03a9_ constraints =
+  forallb (fun pat -> let (a, b) = pat in outlives_b _UU03a9_ a b) constraints
 
 (** val infer_core :
-    fn_def list -> Big_int_Z.big_int -> ctx -> expr -> (ty * ctx) infer_result **)
+    fn_def list -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
+    (ty * ctx) infer_result **)
 
-let rec infer_core fenv n _UU0393_ = function
+let rec infer_core fenv _UU03a9_ n _UU0393_ = function
 | EUnit -> Infer_ok ((MkTy (UUnrestricted, TUnits)), _UU0393_)
 | ELit l ->
   (match l with
@@ -967,11 +829,11 @@ let rec infer_core fenv n _UU0393_ = function
                 | None -> Infer_err (ErrUnknownVar x))
    | None -> Infer_err (ErrUnknownVar x))
 | ELet (m, x, t, e1, e2) ->
-  (match infer_core fenv n _UU0393_ e1 with
+  (match infer_core fenv _UU03a9_ n _UU0393_ e1 with
    | Infer_ok p ->
      let (t1, _UU0393_1) = p in
-     if ty_compatible_b t1 t
-     then (match infer_core fenv n (ctx_add_b x t m _UU0393_1) e2 with
+     if ty_compatible_b _UU03a9_ t1 t
+     then (match infer_core fenv _UU03a9_ n (ctx_add_b x t m _UU0393_1) e2 with
            | Infer_ok p0 ->
              let (t2, _UU0393_2) = p0 in
              if ctx_check_ok x t _UU0393_2
@@ -981,10 +843,10 @@ let rec infer_core fenv n _UU0393_ = function
      else Infer_err (compatible_error t1 t)
    | Infer_err err -> Infer_err err)
 | ELetInfer (m, x, e1, e2) ->
-  (match infer_core fenv n _UU0393_ e1 with
+  (match infer_core fenv _UU03a9_ n _UU0393_ e1 with
    | Infer_ok p ->
      let (t1, _UU0393_1) = p in
-     (match infer_core fenv n (ctx_add_b x t1 m _UU0393_1) e2 with
+     (match infer_core fenv _UU03a9_ n (ctx_add_b x t1 m _UU0393_1) e2 with
       | Infer_ok p0 ->
         let (t2, _UU0393_2) = p0 in
         if ctx_check_ok x t1 _UU0393_2
@@ -1000,7 +862,7 @@ let rec infer_core fenv n _UU0393_ = function
        let rec collect _UU0393_0 = function
        | [] -> Infer_ok ([], _UU0393_0)
        | e' :: es ->
-         (match infer_core fenv n _UU0393_0 e' with
+         (match infer_core fenv _UU03a9_ n _UU0393_0 e' with
           | Infer_ok p ->
             let (t_e, _UU0393_1) = p in
             (match collect _UU0393_1 es with
@@ -1017,11 +879,17 @@ let rec infer_core fenv n _UU0393_ = function
          | Some _UU03c3__acc ->
            let _UU03c3_ = finalize_subst _UU03c3__acc in
            let ps_subst = apply_lt_params _UU03c3_ fdef.fn_params in
-           (match check_args arg_tys ps_subst with
+           (match check_args _UU03a9_ arg_tys ps_subst with
             | Some err -> Infer_err err
             | None ->
               if forallb (wf_lifetime_b (mk_region_ctx n)) _UU03c3_
-              then Infer_ok ((apply_lt_ty _UU03c3_ fdef.fn_ret), _UU0393_')
+              then let _UU03a9__subst =
+                     apply_lt_outlives _UU03c3_ fdef.fn_outlives
+                   in
+                   if outlives_constraints_hold_b _UU03a9_ _UU03a9__subst
+                   then Infer_ok ((apply_lt_ty _UU03c3_ fdef.fn_ret),
+                          _UU0393_')
+                   else Infer_err ErrLifetimeConflict
               else Infer_err ErrLifetimeLeak)
          | None -> Infer_err ErrLifetimeConflict)
       | Infer_err err -> Infer_err err)
@@ -1039,10 +907,10 @@ let rec infer_core fenv n _UU0393_ = function
                 (match m with
                  | MImmutable -> Infer_err (ErrNotMutable x)
                  | MMutable ->
-                   (match infer_core fenv n _UU0393_ e_new with
+                   (match infer_core fenv _UU03a9_ n _UU0393_ e_new with
                     | Infer_ok p1 ->
                       let (t_new, _UU0393_') = p1 in
-                      if ty_compatible_b t_new t_x
+                      if ty_compatible_b _UU03a9_ t_new t_x
                       then Infer_ok (t_x, _UU0393_')
                       else Infer_err (compatible_error t_new t_x)
                     | Infer_err err -> Infer_err err))
@@ -1057,10 +925,10 @@ let rec infer_core fenv n _UU0393_ = function
             | RShared ->
               Infer_err (ErrNotAReference (TRef (l, RShared, t_inner)))
             | RUnique ->
-              (match infer_core fenv n _UU0393_ e_new with
+              (match infer_core fenv _UU03a9_ n _UU0393_ e_new with
                | Infer_ok p1 ->
                  let (t_new, _UU0393_') = p1 in
-                 if ty_compatible_b t_new t_inner
+                 if ty_compatible_b _UU03a9_ t_new t_inner
                  then Infer_ok (t_inner, _UU0393_')
                  else Infer_err (compatible_error t_new t_inner)
                | Infer_err err -> Infer_err err))
@@ -1081,10 +949,10 @@ let rec infer_core fenv n _UU0393_ = function
                  | MMutable ->
                    if usage_eqb (ty_usage t_x) ULinear
                    then Infer_err (ErrUsageMismatch ((ty_usage t_x), UAffine))
-                   else (match infer_core fenv n _UU0393_ e_new with
+                   else (match infer_core fenv _UU03a9_ n _UU0393_ e_new with
                          | Infer_ok p1 ->
                            let (t_new, _UU0393_') = p1 in
-                           if ty_compatible_b t_new t_x
+                           if ty_compatible_b _UU03a9_ t_new t_x
                            then Infer_ok ((MkTy (UUnrestricted, TUnits)),
                                   _UU0393_')
                            else Infer_err (compatible_error t_new t_x)
@@ -1102,10 +970,10 @@ let rec infer_core fenv n _UU0393_ = function
             | RUnique ->
               if usage_eqb (ty_usage t_inner) ULinear
               then Infer_err (ErrUsageMismatch ((ty_usage t_inner), UAffine))
-              else (match infer_core fenv n _UU0393_ e_new with
+              else (match infer_core fenv _UU03a9_ n _UU0393_ e_new with
                     | Infer_ok p1 ->
                       let (t_new, _UU0393_') = p1 in
-                      if ty_compatible_b t_new t_inner
+                      if ty_compatible_b _UU03a9_ t_new t_inner
                       then Infer_ok ((MkTy (UUnrestricted, TUnits)),
                              _UU0393_')
                       else Infer_err (compatible_error t_new t_inner)
@@ -1194,7 +1062,7 @@ let rec infer_core fenv n _UU0393_ = function
          | x -> Infer_err (ErrNotAReference x))
       | Infer_err err -> Infer_err err)
    | None ->
-     (match infer_core fenv n _UU0393_ r with
+     (match infer_core fenv _UU03a9_ n _UU0393_ r with
       | Infer_ok p ->
         let (t_r, _UU0393_') = p in
         (match ty_core t_r with
@@ -1206,20 +1074,20 @@ let rec infer_core fenv n _UU0393_ = function
          | x -> Infer_err (ErrNotAReference x))
       | Infer_err err -> Infer_err err))
 | EDrop e1 ->
-  (match infer_core fenv n _UU0393_ e1 with
+  (match infer_core fenv _UU03a9_ n _UU0393_ e1 with
    | Infer_ok p ->
      let (_, _UU0393_') = p in
      Infer_ok ((MkTy (UUnrestricted, TUnits)), _UU0393_')
    | Infer_err err -> Infer_err err)
 | EIf (e1, e2, e3) ->
-  (match infer_core fenv n _UU0393_ e1 with
+  (match infer_core fenv _UU03a9_ n _UU0393_ e1 with
    | Infer_ok p ->
      let (t_cond, _UU0393_1) = p in
      if ty_core_eqb (ty_core t_cond) TBooleans
-     then (match infer_core fenv n _UU0393_1 e2 with
+     then (match infer_core fenv _UU03a9_ n _UU0393_1 e2 with
            | Infer_ok p0 ->
              let (t2, _UU0393_2) = p0 in
-             (match infer_core fenv n _UU0393_1 e3 with
+             (match infer_core fenv _UU03a9_ n _UU0393_1 e3 with
               | Infer_ok p1 ->
                 let (t3, _UU0393_3) = p1 in
                 if ty_core_eqb (ty_core t2) (ty_core t3)
@@ -1236,11 +1104,11 @@ let rec infer_core fenv n _UU0393_ = function
    | Infer_err err -> Infer_err err)
 
 (** val infer_body :
-    fn_def list -> Big_int_Z.big_int -> ctx -> expr -> (ty * ctx) infer_result **)
+    fn_def list -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
+    (ty * ctx) infer_result **)
 
-let infer_body fenv n _UU0393_ e =
-  let (fenv', e') = alpha_rename_for_infer _UU0393_ fenv e in
-  infer_core fenv' n _UU0393_ e'
+let infer_body =
+  infer_core
 
 (** val params_ok_b : param list -> ctx -> bool **)
 
@@ -1261,22 +1129,29 @@ let rec wf_params_b _UU0394_ = function
 
 let infer fenv f =
   let n = f.fn_lifetimes in
+  let _UU03a9_ = f.fn_outlives in
   let _UU0394_ = mk_region_ctx n in
-  if negb (wf_type_b _UU0394_ f.fn_ret)
+  if negb (wf_outlives_b _UU0394_ _UU03a9_)
   then Infer_err ErrLifetimeLeak
-  else if negb (wf_params_b _UU0394_ f.fn_params)
+  else if negb (wf_outlives_b _UU0394_ _UU03a9_)
        then Infer_err ErrLifetimeLeak
-       else (match infer_body fenv n (params_ctx f.fn_params) f.fn_body with
-             | Infer_ok p ->
-               let (t_body, _UU0393__out) = p in
-               if negb (wf_type_b _UU0394_ t_body)
-               then Infer_err ErrLifetimeLeak
-               else if ty_compatible_b t_body f.fn_ret
-                    then if params_ok_b f.fn_params _UU0393__out
-                         then Infer_ok (f.fn_ret, _UU0393__out)
-                         else Infer_err ErrContextCheckFailed
-                    else Infer_err (compatible_error t_body f.fn_ret)
-             | Infer_err err -> Infer_err err)
+       else if negb (wf_type_b _UU0394_ f.fn_ret)
+            then Infer_err ErrLifetimeLeak
+            else if negb (wf_params_b _UU0394_ f.fn_params)
+                 then Infer_err ErrLifetimeLeak
+                 else (match infer_body fenv _UU03a9_ n
+                               (params_ctx f.fn_params) f.fn_body with
+                       | Infer_ok p ->
+                         let (t_body, _UU0393__out) = p in
+                         if negb (wf_type_b _UU0394_ t_body)
+                         then Infer_err ErrLifetimeLeak
+                         else if ty_compatible_b _UU03a9_ t_body f.fn_ret
+                              then if params_ok_b f.fn_params _UU0393__out
+                                   then Infer_ok (f.fn_ret, _UU0393__out)
+                                   else Infer_err ErrContextCheckFailed
+                              else Infer_err
+                                     (compatible_error t_body f.fn_ret)
+                       | Infer_err err -> Infer_err err)
 
 (** val check_program : fn_def list -> bool **)
 
@@ -1392,19 +1267,26 @@ let infer_full fenv f =
 
 let infer_direct fenv f =
   let n = f.fn_lifetimes in
+  let _UU03a9_ = f.fn_outlives in
   let _UU0394_ = mk_region_ctx n in
-  if negb (wf_type_b _UU0394_ f.fn_ret)
+  if negb (wf_outlives_b _UU0394_ _UU03a9_)
   then Infer_err ErrLifetimeLeak
-  else if negb (wf_params_b _UU0394_ f.fn_params)
+  else if negb (wf_outlives_b _UU0394_ _UU03a9_)
        then Infer_err ErrLifetimeLeak
-       else (match infer_core fenv n (params_ctx f.fn_params) f.fn_body with
-             | Infer_ok p ->
-               let (t_body, _UU0393__out) = p in
-               if negb (wf_type_b _UU0394_ t_body)
-               then Infer_err ErrLifetimeLeak
-               else if ty_compatible_b t_body f.fn_ret
-                    then if params_ok_b f.fn_params _UU0393__out
-                         then Infer_ok (f.fn_ret, _UU0393__out)
-                         else Infer_err ErrContextCheckFailed
-                    else Infer_err (compatible_error t_body f.fn_ret)
-             | Infer_err err -> Infer_err err)
+       else if negb (wf_type_b _UU0394_ f.fn_ret)
+            then Infer_err ErrLifetimeLeak
+            else if negb (wf_params_b _UU0394_ f.fn_params)
+                 then Infer_err ErrLifetimeLeak
+                 else (match infer_core fenv _UU03a9_ n
+                               (params_ctx f.fn_params) f.fn_body with
+                       | Infer_ok p ->
+                         let (t_body, _UU0393__out) = p in
+                         if negb (wf_type_b _UU0394_ t_body)
+                         then Infer_err ErrLifetimeLeak
+                         else if ty_compatible_b _UU03a9_ t_body f.fn_ret
+                              then if params_ok_b f.fn_params _UU0393__out
+                                   then Infer_ok (f.fn_ret, _UU0393__out)
+                                   else Infer_err ErrContextCheckFailed
+                              else Infer_err
+                                     (compatible_error t_body f.fn_ret)
+                       | Infer_err err -> Infer_err err)

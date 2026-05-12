@@ -73,11 +73,11 @@ Definition ty_core_eqb (c1 c2 : TypeCore Ty) : bool :=
   | _, _ => false
   end.
 
-Fixpoint ty_compatible_b (T_actual T_expected : Ty) {struct T_actual} : bool :=
+Fixpoint ty_compatible_b (Ω : outlives_ctx) (T_actual T_expected : Ty) {struct T_actual} : bool :=
   usage_sub_bool (ty_usage T_actual) (ty_usage T_expected) &&
   match ty_core T_actual, ty_core T_expected with
   | TRef la rka Ta, TRef lb rkb Tb =>
-      outlives_b la lb && ref_kind_eqb rka rkb && ty_compatible_b Ta Tb
+      outlives_b Ω la lb && ref_kind_eqb rka rkb && ty_compatible_b Ω Ta Tb
   | ca, cb => ty_core_eqb ca cb
   end.
 
@@ -315,13 +315,13 @@ Fixpoint build_sigma (m : nat) (σ_acc : list (option lifetime))
   | _, _ => None
   end.
 
-Fixpoint check_args (arg_tys : list Ty) (params : list param)
+Fixpoint check_args (Ω : outlives_ctx) (arg_tys : list Ty) (params : list param)
     : option infer_error :=
   match arg_tys, params with
   | [], [] => None
   | t :: ts, p :: ps =>
-      if ty_compatible_b t (param_ty p)
-      then check_args ts ps
+      if ty_compatible_b Ω t (param_ty p)
+      then check_args Ω ts ps
       else Some (compatible_error t (param_ty p))
   | _, _ => Some ErrArityMismatch
   end.
@@ -458,7 +458,7 @@ Definition alpha_rename_fn_def (used : list ident)
   let used0 := param_names (fn_params f) ++ free_vars_expr (fn_body f) ++ used in
   let '(params', ρ, used1) := alpha_rename_params [] used0 (fn_params f) in
   let (body', used2) := alpha_rename_expr ρ used1 (fn_body f) in
-  (MkFnDef (fn_name f) (fn_lifetimes f) params' (fn_ret f) body', used2).
+  (MkFnDef (fn_name f) (fn_lifetimes f) (fn_outlives f) params' (fn_ret f) body', used2).
 
 Fixpoint alpha_rename_syntax_go (used : list ident) (s : Syntax)
     : Syntax * list ident :=
@@ -480,6 +480,12 @@ Definition alpha_rename_for_infer (Γ : ctx) (fenv : list fn_def)
   let (e', _) := alpha_rename_expr [] used e in
   (fenv', e').
 
+Definition wf_outlives_b (Δ : region_ctx) (Ω : outlives_ctx) : bool :=
+  forallb (fun '(a, b) => wf_lifetime_b Δ a && wf_lifetime_b Δ b) Ω.
+
+Definition outlives_constraints_hold_b (Ω : outlives_ctx) (constraints : outlives_ctx) : bool :=
+  forallb (fun '(a, b) => outlives_b Ω a b) constraints.
+
 (* ------------------------------------------------------------------ *)
 (* Type inference                                                        *)
 (*                                                                      *)
@@ -492,7 +498,7 @@ Definition alpha_rename_for_infer (Γ : ctx) (fenv : list fn_def)
 (* termination checking).                                                *)
 (* ------------------------------------------------------------------ *)
 
-Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
+Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx) (e : expr)
     : infer_result (Ty * ctx) :=
   match e with
 
@@ -523,11 +529,11 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
       end
 
   | ELet m x T e1 e2 =>
-      match infer_core fenv n Γ e1 with
+      match infer_core fenv Ω n Γ e1 with
       | infer_err err          => infer_err err
       | infer_ok (T1, Γ1) =>
-          if ty_compatible_b T1 T then
-            match infer_core fenv n (ctx_add_b x T m Γ1) e2 with
+          if ty_compatible_b Ω T1 T then
+            match infer_core fenv Ω n (ctx_add_b x T m Γ1) e2 with
             | infer_err err          => infer_err err
             | infer_ok (T2, Γ2) =>
                 if ctx_check_ok x T Γ2
@@ -538,7 +544,7 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
       end
 
   | EDrop e1 =>
-      match infer_core fenv n Γ e1 with
+      match infer_core fenv Ω n Γ e1 with
       | infer_err err          => infer_err err
       | infer_ok (_, Γ') => infer_ok (MkTy UUnrestricted TUnits, Γ')
       end
@@ -552,10 +558,10 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
           | None => infer_err (ErrUnknownVar x)
           | Some MImmutable => infer_err (ErrNotMutable x)
           | Some MMutable =>
-              match infer_core fenv n Γ e_new with
+              match infer_core fenv Ω n Γ e_new with
               | infer_err err            => infer_err err
               | infer_ok (T_new, Γ') =>
-                  if ty_compatible_b T_new T_x
+                  if ty_compatible_b Ω T_new T_x
                   then infer_ok (T_x, Γ')
                   else infer_err (compatible_error T_new T_x)
               end
@@ -569,10 +575,10 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
       | infer_ok T_p =>
           match ty_core T_p with
           | TRef _ RUnique T_inner =>
-              match infer_core fenv n Γ e_new with
+              match infer_core fenv Ω n Γ e_new with
               | infer_err err => infer_err err
               | infer_ok (T_new, Γ') =>
-                  if ty_compatible_b T_new T_inner
+                  if ty_compatible_b Ω T_new T_inner
                   then infer_ok (T_inner, Γ')
                   else infer_err (compatible_error T_new T_inner)
               end
@@ -592,10 +598,10 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
               if usage_eqb (ty_usage T_x) ULinear
               then infer_err (ErrUsageMismatch (ty_usage T_x) UAffine)
               else
-                match infer_core fenv n Γ e_new with
+                match infer_core fenv Ω n Γ e_new with
                 | infer_err err => infer_err err
                 | infer_ok (T_new, Γ') =>
-                    if ty_compatible_b T_new T_x
+                    if ty_compatible_b Ω T_new T_x
                     then infer_ok (MkTy UUnrestricted TUnits, Γ')
                     else infer_err (compatible_error T_new T_x)
                 end
@@ -612,10 +618,10 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
               if usage_eqb (ty_usage T_inner) ULinear
               then infer_err (ErrUsageMismatch (ty_usage T_inner) UAffine)
               else
-                match infer_core fenv n Γ e_new with
+                match infer_core fenv Ω n Γ e_new with
                 | infer_err err => infer_err err
 	                | infer_ok (T_new, Γ') =>
-	                    if ty_compatible_b T_new T_inner
+	                    if ty_compatible_b Ω T_new T_inner
 	                    then infer_ok (MkTy UUnrestricted TUnits, Γ')
 	                    else infer_err (compatible_error T_new T_inner)
 	                end
@@ -633,7 +639,7 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
             match as_ with
             | []      => infer_ok ([], Γ0)
             | e' :: es =>
-                match infer_core fenv n Γ0 e' with
+                match infer_core fenv Ω n Γ0 e' with
                 | infer_err err => infer_err err
                 | infer_ok (T_e, Γ1) =>
                     match collect Γ1 es with
@@ -651,11 +657,15 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
               | Some σ_acc =>
                   let σ := finalize_subst σ_acc in
                   let ps_subst := apply_lt_params σ (fn_params fdef) in
-                  match check_args arg_tys ps_subst with
+                  match check_args Ω arg_tys ps_subst with
                   | Some err => infer_err err
                   | None =>
                       if forallb (wf_lifetime_b (mk_region_ctx n)) σ
-                      then infer_ok (apply_lt_ty σ (fn_ret fdef), Γ')
+                      then
+                        let Ω_subst := apply_lt_outlives σ (fn_outlives fdef) in
+                        if outlives_constraints_hold_b Ω Ω_subst
+                        then infer_ok (apply_lt_ty σ (fn_ret fdef), Γ')
+                        else infer_err ErrLifetimeConflict
                       else infer_err ErrLifetimeLeak
                   end
               end
@@ -663,10 +673,10 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
       end
 
   | ELetInfer m x e1 e2 =>
-      match infer_core fenv n Γ e1 with
+      match infer_core fenv Ω n Γ e1 with
       | infer_err err => infer_err err
       | infer_ok (T1, Γ1) =>
-          match infer_core fenv n (ctx_add_b x T1 m Γ1) e2 with
+          match infer_core fenv Ω n (ctx_add_b x T1 m Γ1) e2 with
           | infer_err err => infer_err err
           | infer_ok (T2, Γ2) =>
               if ctx_check_ok x T1 Γ2
@@ -676,14 +686,14 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
       end
 
   | EIf e1 e2 e3 =>
-      match infer_core fenv n Γ e1 with
+      match infer_core fenv Ω n Γ e1 with
       | infer_err err => infer_err err
       | infer_ok (T_cond, Γ1) =>
           if ty_core_eqb (ty_core T_cond) TBooleans then
-            match infer_core fenv n Γ1 e2 with
+            match infer_core fenv Ω n Γ1 e2 with
             | infer_err err => infer_err err
             | infer_ok (T2, Γ2) =>
-                match infer_core fenv n Γ1 e3 with
+                match infer_core fenv Ω n Γ1 e3 with
                 | infer_err err => infer_err err
                 | infer_ok (T3, Γ3) =>
                     if ty_core_eqb (ty_core T2) (ty_core T3) then
@@ -756,7 +766,7 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
               end
           end
       | None =>
-          match infer_core fenv n Γ r with
+          match infer_core fenv Ω n Γ r with
           | infer_err err => infer_err err
           | infer_ok (T_r, Γ') =>
               match ty_core T_r with
@@ -773,27 +783,26 @@ Fixpoint infer_core (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
 
   end.
 
-Definition infer_body (fenv : list fn_def) (n : nat) (Γ : ctx) (e : expr)
+Definition infer_body (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx) (e : expr)
     : infer_result (Ty * ctx) :=
-  let (fenv', e') := alpha_rename_for_infer Γ fenv e in
-  infer_core fenv' n Γ e'.
+  infer_core fenv Ω n Γ e.
 
 (* ------------------------------------------------------------------ *)
 (* Expose infer_args as a top-level definition for CheckerSoundness      *)
 (* ------------------------------------------------------------------ *)
 
-Fixpoint infer_args (fenv : list fn_def) (n : nat) (Γ : ctx)
+Fixpoint infer_args (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx)
     (args : list expr) (params : list param) : infer_result ctx :=
   match args, params with
   | [],       []       => infer_ok Γ
   | [],       _ :: _   => infer_err ErrArityMismatch
   | _ :: _,   []       => infer_err ErrArityMismatch
   | e :: es,  p :: ps  =>
-      match infer_core fenv n Γ e with
+      match infer_core fenv Ω n Γ e with
       | infer_err err            => infer_err err
       | infer_ok (T_e, Γ1) =>
-          if ty_compatible_b T_e (param_ty p)
-          then infer_args fenv n Γ1 es ps
+          if ty_compatible_b Ω T_e (param_ty p)
+          then infer_args fenv Ω n Γ1 es ps
           else infer_err (compatible_error T_e (param_ty p))
       end
   end.
@@ -802,15 +811,15 @@ Fixpoint infer_args (fenv : list fn_def) (n : nat) (Γ : ctx)
 (* Argument collection helper for ECall soundness                        *)
 (* ------------------------------------------------------------------ *)
 
-Fixpoint infer_args_collect (fenv : list fn_def) (n : nat) (Γ : ctx)
+Fixpoint infer_args_collect (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx)
     (args : list expr) : infer_result (list Ty * ctx) :=
   match args with
   | [] => infer_ok ([], Γ)
   | e :: es =>
-      match infer_core fenv n Γ e with
+      match infer_core fenv Ω n Γ e with
       | infer_err err => infer_err err
       | infer_ok (T_e, Γ1) =>
-          match infer_args_collect fenv n Γ1 es with
+          match infer_args_collect fenv Ω n Γ1 es with
           | infer_err err => infer_err err
           | infer_ok (tys, Γ2) => infer_ok (T_e :: tys, Γ2)
           end
@@ -835,6 +844,7 @@ Fixpoint wf_params_b (Δ : region_ctx) (ps : list param) : bool :=
   | p :: ps' => wf_type_b Δ (param_ty p) && wf_params_b Δ ps'
   end.
 
+
 (* Check a single function definition:
    - infer the body type
    - verify it matches fn_ret (core type + exact usage)
@@ -842,20 +852,27 @@ Fixpoint wf_params_b (Δ : region_ctx) (ps : list param) : bool :=
 Definition infer (fenv : list fn_def) (f : fn_def)
     : infer_result (Ty * ctx) :=
   let n := fn_lifetimes f in
+  let Ω := fn_outlives f in
   let Δ := mk_region_ctx n in
+  if negb (wf_outlives_b Δ Ω)
+  then infer_err ErrLifetimeLeak
+  else
+  if negb (wf_outlives_b Δ Ω)
+  then infer_err ErrLifetimeLeak
+  else
   if negb (wf_type_b Δ (fn_ret f))
   then infer_err ErrLifetimeLeak
   else
   if negb (wf_params_b Δ (fn_params f))
   then infer_err ErrLifetimeLeak
   else
-  match infer_body fenv n (params_ctx (fn_params f)) (fn_body f) with
+  match infer_body fenv Ω n (params_ctx (fn_params f)) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out) =>
       if negb (wf_type_b Δ T_body)
       then infer_err ErrLifetimeLeak
       else
-      if ty_compatible_b T_body (fn_ret f) then
+      if ty_compatible_b Ω T_body (fn_ret f) then
         if params_ok_b (fn_params f) Γ_out
         then infer_ok (fn_ret f, Γ_out)
         else infer_err ErrContextCheckFailed
@@ -1016,20 +1033,27 @@ Definition infer_full (fenv : list fn_def) (f : fn_def)
 Definition infer_direct (fenv : list fn_def) (f : fn_def)
     : infer_result (Ty * ctx) :=
   let n := fn_lifetimes f in
+  let Ω := fn_outlives f in
   let Δ := mk_region_ctx n in
+  if negb (wf_outlives_b Δ Ω)
+  then infer_err ErrLifetimeLeak
+  else
+  if negb (wf_outlives_b Δ Ω)
+  then infer_err ErrLifetimeLeak
+  else
   if negb (wf_type_b Δ (fn_ret f))
   then infer_err ErrLifetimeLeak
   else
   if negb (wf_params_b Δ (fn_params f))
   then infer_err ErrLifetimeLeak
   else
-  match infer_core fenv n (params_ctx (fn_params f)) (fn_body f) with
+  match infer_core fenv Ω n (params_ctx (fn_params f)) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out) =>
       if negb (wf_type_b Δ T_body)
       then infer_err ErrLifetimeLeak
       else
-      if ty_compatible_b T_body (fn_ret f) then
+      if ty_compatible_b Ω T_body (fn_ret f) then
         if params_ok_b (fn_params f) Γ_out
         then infer_ok (fn_ret f, Γ_out)
         else infer_err ErrContextCheckFailed

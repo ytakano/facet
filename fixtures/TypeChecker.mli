@@ -161,3 +161,5 @@ val params_ok_b : param list -> ctx -> bool
 val infer : fn_def list -> fn_def -> (ty * ctx) infer_result
 
 val check_program : fn_def list -> bool
+
+val infer_direct : fn_def list -> fn_def -> (ty * ctx) infer_result

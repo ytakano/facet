@@ -491,6 +491,28 @@ Definition check_program (fenv : list fn_def) : bool :=
     end) fenv.
 
 (* ------------------------------------------------------------------ *)
+(* Direct variant (no alpha renaming) — for differential testing only   *)
+(* ------------------------------------------------------------------ *)
+
+(* infer_direct skips alpha_rename_for_infer and calls infer_core directly.
+   If the parser's de Bruijn indexing is correct, infer_direct fenv f and
+   infer fenv f should always agree.  Run both at development time to
+   validate that alpha renaming is indeed a no-op. *)
+Definition infer_direct (fenv : list fn_def) (f : fn_def)
+    : infer_result (Ty * ctx) :=
+  match infer_core fenv (params_ctx (fn_params f)) (fn_body f) with
+  | infer_err err => infer_err err
+  | infer_ok (T_body, Γ_out) =>
+      if ty_core_eqb (ty_core T_body) (ty_core (fn_ret f)) then
+        if usage_eqb (ty_usage T_body) (ty_usage (fn_ret f)) then
+          if params_ok_b (fn_params f) Γ_out
+          then infer_ok (fn_ret f, Γ_out)
+          else infer_err ErrContextCheckFailed
+        else infer_err (ErrUsageMismatch (ty_usage (fn_ret f)) (ty_usage T_body))
+      else infer_err (ErrTypeMismatch (ty_core (fn_ret f)) (ty_core T_body))
+  end.
+
+(* ------------------------------------------------------------------ *)
 (* OCaml extraction                                                      *)
 (* ------------------------------------------------------------------ *)
 
@@ -499,4 +521,4 @@ Extraction Language OCaml.
 From Stdlib Require Import ExtrOcamlNativeString.
 From Stdlib Require Import ExtrOcamlNatBigInt.
 From Stdlib Require Import ExtrOcamlZBigInt.
-Extraction "../fixtures/TypeChecker.ml" infer check_program.
+Extraction "../fixtures/TypeChecker.ml" infer check_program infer_direct.

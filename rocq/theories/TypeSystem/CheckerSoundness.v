@@ -428,3 +428,24 @@ Proof.
   - eapply infer_fn_def_sound. exact Hinfer.
   - simpl in H. discriminate.
 Qed.
+
+(* infer_direct skips alpha renaming, so its soundness proof goes through
+   infer_sound (infer_core soundness) directly, without AlphaRenaming lemmas. *)
+Theorem infer_direct_sound : forall fenv f T Γ',
+  infer_direct fenv f = infer_ok (T, Γ') -> typed_fn_def fenv f.
+Proof.
+  intros fenv f T Γ' Hcheck.
+  unfold infer_direct in Hcheck.
+  destruct (infer_core fenv (params_ctx (fn_params f)) (fn_body f))
+    as [[T_body Γ_out] | err] eqn:Hinfer.
+  - destruct (ty_core_eqb _ _) eqn:Hcore; [|discriminate].
+    destruct (usage_eqb _ _) eqn:Husage; [|discriminate].
+    destruct (params_ok_b _ _) eqn:Hparams; [|discriminate].
+    apply infer_sound in Hinfer as Htyped.
+    apply ty_core_eqb_true in Hcore.
+    apply usage_eqb_true in Husage.
+    assert (T_body = fn_ret f) by (apply Ty_eq; assumption). subst T_body.
+    apply params_ok_b_sound in Hparams.
+    exists Γ_out. exact (conj Htyped Hparams).
+  - discriminate.
+Qed.

@@ -605,3 +605,19 @@ let check_program fenv =
     match infer fenv f with
     | Infer_ok _ -> true
     | Infer_err _ -> false) fenv
+
+(** val infer_direct : fn_def list -> fn_def -> (ty * ctx) infer_result **)
+
+let infer_direct fenv f =
+  match infer_core fenv (params_ctx f.fn_params) f.fn_body with
+  | Infer_ok p ->
+    let (t_body, _UU0393__out) = p in
+    if ty_core_eqb (ty_core t_body) (ty_core f.fn_ret)
+    then if usage_eqb (ty_usage t_body) (ty_usage f.fn_ret)
+         then if params_ok_b f.fn_params _UU0393__out
+              then Infer_ok (f.fn_ret, _UU0393__out)
+              else Infer_err ErrContextCheckFailed
+         else Infer_err (ErrUsageMismatch ((ty_usage f.fn_ret),
+                (ty_usage t_body)))
+    else Infer_err (ErrTypeMismatch ((ty_core f.fn_ret), (ty_core t_body)))
+  | Infer_err err -> Infer_err err

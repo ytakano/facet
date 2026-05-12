@@ -105,6 +105,8 @@ atom_expr:
     { NDrop e }
   | LPAREN; KW_REPLACE; x = ID; e = atom_expr; RPAREN
     { NReplace (x, e) }
+  | LPAREN; x = ID; EQUAL; e = atom_expr; RPAREN
+    { NAssign (x, e) }
   | LPAREN; f = ID; args = list(atom_expr); RPAREN
     { NCall (f, args) }
   | KW_IF; cond = atom_expr; LBRACE; then_e = block; RBRACE;

@@ -67,6 +67,7 @@ type expr =
 | ELetInfer of mutability * ident * expr * expr
 | ECall of ident * expr list
 | EReplace of place * expr
+| EAssign of place * expr
 | EDrop of expr
 | EIf of expr * expr * expr
 
@@ -78,7 +79,7 @@ type fn_def = { fn_name : ident; fn_params : param list; fn_ret : ty;
 
 type syntax = fn_def list
 
-type ctx_entry = (ident * ty) * bool
+type ctx_entry = ((ident * ty) * bool) * mutability
 
 type ctx = ctx_entry list
 
@@ -104,7 +105,9 @@ val ctx_lookup_b : ident -> ctx -> (ty * bool) option
 
 val ctx_consume_b : ident -> ctx -> ctx option
 
-val ctx_add_b : ident -> ty -> ctx -> ctx
+val ctx_lookup_mut_b : ident -> ctx -> mutability option
+
+val ctx_add_b : ident -> ty -> mutability -> ctx -> ctx
 
 val ctx_remove_b : ident -> ctx -> ctx
 
@@ -128,6 +131,7 @@ type infer_error =
 | ErrUnknownVar of ident
 | ErrAlreadyConsumed of ident
 | ErrTypeMismatch of ty typeCore * ty typeCore
+| ErrNotMutable of ident
 | ErrUsageMismatch of usage * usage
 | ErrFunctionNotFound of ident
 | ErrArityMismatch

@@ -52,6 +52,7 @@ Inductive expr : Type :=
 | ELetInfer : mutability -> ident -> expr -> expr -> expr
 | ECall     : ident -> list expr -> expr
 | EReplace  : place -> expr -> expr
+| EAssign   : place -> expr -> expr
 | EDrop     : expr -> expr
 | EIf       : expr -> expr -> expr -> expr.
 

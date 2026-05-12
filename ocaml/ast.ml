@@ -7,6 +7,7 @@ type named_expr =
   | NLet    of TypeChecker.mutability * name * TypeChecker.ty option * named_expr * named_expr
   | NCall   of name * named_expr list
   | NReplace of name * named_expr
+  | NAssign of name * named_expr
   | NDrop   of named_expr
   | NIf     of named_expr * named_expr * named_expr
 

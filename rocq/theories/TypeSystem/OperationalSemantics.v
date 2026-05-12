@@ -151,6 +151,12 @@ Inductive eval (fenv : list fn_def) : store -> expr -> store -> value -> Prop :=
       store_update_val x v_new s1 = Some s2 ->
       eval fenv s (EReplace (PVar x) e_new) s2 (se_val old_e)
 
+  | Eval_Assign : forall s s1 s2 x old_e e_new v_new,
+      store_lookup x s = Some old_e ->
+      eval fenv s e_new s1 v_new ->
+      store_update_val x v_new s1 = Some s2 ->
+      eval fenv s (EAssign (PVar x) e_new) s2 VUnit
+
   | Eval_If_True : forall s s1 s2 e1 e2 e3 v,
       eval fenv s e1 s1 (VBool true) ->
       eval fenv s1 e2 s2 v ->

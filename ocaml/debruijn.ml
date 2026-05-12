@@ -30,6 +30,8 @@ let rec convert (scope : scope) (e : named_expr) : expr =
   | NDrop e1        -> EDrop (convert scope e1)
   | NReplace (id, e1) ->
     EReplace (make_ident id (lookup scope id), convert scope e1)
+  | NAssign (id, e1) ->
+    EAssign (make_ident id (lookup scope id), convert scope e1)
   | NCall (f, args) ->
     ECall (make_ident f 0, List.map (convert scope) args)
   | NLet (m, name, Some ty, e1, e2) ->

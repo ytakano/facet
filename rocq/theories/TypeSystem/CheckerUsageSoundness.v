@@ -26,7 +26,7 @@ Lemma typed_linear_let_binding_used : forall fenv Γ Γout m x T e1 e2 T2,
   ty_usage T = ULinear ->
   exists Γ1 Γ2 T1 Tx,
     typed fenv Γ e1 T1 Γ1 /\
-    typed fenv (ctx_add x T Γ1) e2 T2 Γ2 /\
+    typed fenv (ctx_add x T m Γ1) e2 T2 Γ2 /\
   ctx_lookup x Γ2 = Some (Tx, true).
 Proof.
   intros fenv Γ Γout m x T e1 e2 T2 Htyped Hlin.
@@ -105,7 +105,7 @@ Fixpoint expr_linear_lets_used (fenv : list fn_def) (e : expr) {struct e}
          typed fenv Γ (ELet m x T e1 e2) T2 Γout ->
          exists Γ1 Γ2 T1 Tx,
            typed fenv Γ e1 T1 Γ1 /\
-           typed fenv (ctx_add x T Γ1) e2 T2 Γ2 /\
+           typed fenv (ctx_add x T m Γ1) e2 T2 Γ2 /\
            ctx_lookup x Γ2 = Some (Tx, true)) /\
       expr_linear_lets_used fenv e1 /\
       expr_linear_lets_used fenv e2
@@ -114,6 +114,7 @@ Fixpoint expr_linear_lets_used (fenv : list fn_def) (e : expr) {struct e}
       expr_linear_lets_used fenv e2
   | ECall _ _ => True
   | EReplace _ e_new => expr_linear_lets_used fenv e_new
+  | EAssign _ e_new => expr_linear_lets_used fenv e_new
   | EDrop e1 => expr_linear_lets_used fenv e1
   | EIf e1 e2 e3 =>
       expr_linear_lets_used fenv e1 /\
@@ -132,6 +133,7 @@ Proof.
     + apply expr_linear_lets_used_sound.
     + apply expr_linear_lets_used_sound.
   - split; apply expr_linear_lets_used_sound.
+  - apply expr_linear_lets_used_sound.
   - apply expr_linear_lets_used_sound.
   - apply expr_linear_lets_used_sound.
   - repeat split; apply expr_linear_lets_used_sound.

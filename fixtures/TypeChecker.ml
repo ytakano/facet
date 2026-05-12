@@ -113,6 +113,7 @@ type expr =
 | ELetInfer of mutability * ident * expr * expr
 | ECall of ident * expr list
 | EReplace of place * expr
+| EAssign of place * expr
 | EDrop of expr
 | EIf of expr * expr * expr
 
@@ -124,14 +125,14 @@ type fn_def = { fn_name : ident; fn_params : param list; fn_ret : ty;
 
 type syntax = fn_def list
 
-type ctx_entry = (ident * ty) * bool
+type ctx_entry = ((ident * ty) * bool) * mutability
 
 type ctx = ctx_entry list
 
 (** val param_ctx_entry : param -> ctx_entry **)
 
 let param_ctx_entry p =
-  ((p.param_name, p.param_ty), false)
+  (((p.param_name, p.param_ty), false), p.param_mutability)
 
 (** val params_ctx : param list -> ctx **)
 
@@ -157,21 +158,23 @@ let rec ctx_merge _UU0393_2 _UU0393_3 =
            | [] -> Some []
            | _ :: _ -> None)
   | c :: t2 ->
-    let (p, b2) = c in
-    let (n, t) = p in
+    let (p, m) = c in
+    let (p0, b2) = p in
+    let (n, t) = p0 in
     (match _UU0393_3 with
      | [] -> None
      | c0 :: t3 ->
-       let (p0, b3) = c0 in
-       let (n', _) = p0 in
+       let (p1, _) = c0 in
+       let (p2, b3) = p1 in
+       let (n', _) = p2 in
        if negb (ident_eqb n n')
        then None
        else (match ctx_merge t2 t3 with
              | Some rest ->
                (match ty_usage t with
                 | ULinear ->
-                  if eqb b2 b3 then Some (((n, t), b2) :: rest) else None
-                | _ -> Some (((n, t), ((||) b2 b3)) :: rest))
+                  if eqb b2 b3 then Some ((((n, t), b2), m) :: rest) else None
+                | _ -> Some ((((n, t), ((||) b2 b3)), m) :: rest))
              | None -> None))
 
 (** val usage_eqb : usage -> usage -> bool **)
@@ -299,35 +302,47 @@ let ty_core_eqb c1 c2 =
 let rec ctx_lookup_b x = function
 | [] -> None
 | c :: t ->
-  let (p, b) = c in
-  let (n, t0) = p in if ident_eqb x n then Some (t0, b) else ctx_lookup_b x t
+  let (p, _) = c in
+  let (p0, b) = p in
+  let (n, t0) = p0 in if ident_eqb x n then Some (t0, b) else ctx_lookup_b x t
 
 (** val ctx_consume_b : ident -> ctx -> ctx option **)
 
 let rec ctx_consume_b x = function
 | [] -> None
 | c :: t ->
-  let (p, b) = c in
-  let (n, t0) = p in
+  let (p, m) = c in
+  let (p0, b) = p in
+  let (n, t0) = p0 in
   if ident_eqb x n
-  then Some (((n, t0), true) :: t)
+  then Some ((((n, t0), true), m) :: t)
   else (match ctx_consume_b x t with
-        | Some t' -> Some (((n, t0), b) :: t')
+        | Some t' -> Some ((((n, t0), b), m) :: t')
         | None -> None)
 
-(** val ctx_add_b : ident -> ty -> ctx -> ctx **)
+(** val ctx_lookup_mut_b : ident -> ctx -> mutability option **)
 
-let ctx_add_b x t _UU0393_ =
-  ((x, t), false) :: _UU0393_
+let rec ctx_lookup_mut_b x = function
+| [] -> None
+| c :: t ->
+  let (p, m) = c in
+  let (p0, _) = p in
+  let (n, _) = p0 in if ident_eqb x n then Some m else ctx_lookup_mut_b x t
+
+(** val ctx_add_b : ident -> ty -> mutability -> ctx -> ctx **)
+
+let ctx_add_b x t m _UU0393_ =
+  (((x, t), false), m) :: _UU0393_
 
 (** val ctx_remove_b : ident -> ctx -> ctx **)
 
 let rec ctx_remove_b x = function
 | [] -> []
 | c :: t ->
-  let (p, b) = c in
-  let (n, t0) = p in
-  if ident_eqb x n then t else ((n, t0), b) :: (ctx_remove_b x t)
+  let (p, m) = c in
+  let (p0, b) = p in
+  let (n, t0) = p0 in
+  if ident_eqb x n then t else (((n, t0), b), m) :: (ctx_remove_b x t)
 
 (** val ctx_check_ok : ident -> ty -> ctx -> bool **)
 
@@ -375,7 +390,8 @@ let fresh_ident x used =
 let rec ctx_names = function
 | [] -> []
 | c :: _UU0393_' ->
-  let (p, _) = c in let (x, _) = p in x :: (ctx_names _UU0393_')
+  let (p, _) = c in
+  let (p0, _) = p in let (x, _) = p0 in x :: (ctx_names _UU0393_')
 
 (** val place_name : place -> ident **)
 
@@ -386,6 +402,7 @@ type infer_error =
 | ErrUnknownVar of ident
 | ErrAlreadyConsumed of ident
 | ErrTypeMismatch of ty typeCore * ty typeCore
+| ErrNotMutable of ident
 | ErrUsageMismatch of usage * usage
 | ErrFunctionNotFound of ident
 | ErrArityMismatch
@@ -409,6 +426,7 @@ let rec free_vars_expr = function
   | arg :: rest -> app (free_vars_expr arg) (go rest)
   in go args
 | EReplace (p, e_new) -> (place_name p) :: (free_vars_expr e_new)
+| EAssign (p, e_new) -> (place_name p) :: (free_vars_expr e_new)
 | EDrop e1 -> free_vars_expr e1
 | EIf (e1, e2, e3) ->
   app (free_vars_expr e1) (app (free_vars_expr e2) (free_vars_expr e3))
@@ -457,6 +475,9 @@ let rec alpha_rename_expr _UU03c1_ used = function
 | EReplace (p, e_new) ->
   let (e_new', used') = alpha_rename_expr _UU03c1_ used e_new in
   ((EReplace ((rename_place _UU03c1_ p), e_new')), used')
+| EAssign (p, e_new) ->
+  let (e_new', used') = alpha_rename_expr _UU03c1_ used e_new in
+  ((EAssign ((rename_place _UU03c1_ p), e_new')), used')
 | EDrop e1 ->
   let (e1', used') = alpha_rename_expr _UU03c1_ used e1 in
   ((EDrop e1'), used')
@@ -534,13 +555,13 @@ let rec infer_core fenv _UU0393_ = function
                 | Some _UU0393_' -> Infer_ok (t, _UU0393_')
                 | None -> Infer_err (ErrUnknownVar x))
    | None -> Infer_err (ErrUnknownVar x))
-| ELet (_, x, t, e1, e2) ->
+| ELet (m, x, t, e1, e2) ->
   (match infer_core fenv _UU0393_ e1 with
    | Infer_ok p ->
      let (t1, _UU0393_1) = p in
      if ty_core_eqb (ty_core t1) (ty_core t)
      then if usage_sub_bool (ty_usage t1) (ty_usage t)
-          then (match infer_core fenv (ctx_add_b x t _UU0393_1) e2 with
+          then (match infer_core fenv (ctx_add_b x t m _UU0393_1) e2 with
                 | Infer_ok p0 ->
                   let (t2, _UU0393_2) = p0 in
                   if ctx_check_ok x t _UU0393_2
@@ -550,11 +571,11 @@ let rec infer_core fenv _UU0393_ = function
           else Infer_err (ErrUsageMismatch ((ty_usage t1), (ty_usage t)))
      else Infer_err (ErrTypeMismatch ((ty_core t1), (ty_core t)))
    | Infer_err err -> Infer_err err)
-| ELetInfer (_, x, e1, e2) ->
+| ELetInfer (m, x, e1, e2) ->
   (match infer_core fenv _UU0393_ e1 with
    | Infer_ok p ->
      let (t1, _UU0393_1) = p in
-     (match infer_core fenv (ctx_add_b x t1 _UU0393_1) e2 with
+     (match infer_core fenv (ctx_add_b x t1 m _UU0393_1) e2 with
       | Infer_ok p0 ->
         let (t2, _UU0393_2) = p0 in
         if ctx_check_ok x t1 _UU0393_2
@@ -609,6 +630,33 @@ let rec infer_core fenv _UU0393_ = function
                          (ty_usage t_x)))
              else Infer_err (ErrTypeMismatch ((ty_core t_new), (ty_core t_x)))
            | Infer_err err -> Infer_err err)
+   | None -> Infer_err (ErrUnknownVar p))
+| EAssign (p, e_new) ->
+  (match ctx_lookup_b p _UU0393_ with
+   | Some p0 ->
+     let (t_x, b) = p0 in
+     if b
+     then Infer_err (ErrAlreadyConsumed p)
+     else (match ctx_lookup_mut_b p _UU0393_ with
+           | Some m ->
+             (match m with
+              | MImmutable -> Infer_err (ErrNotMutable p)
+              | MMutable ->
+                if usage_eqb (ty_usage t_x) ULinear
+                then Infer_err (ErrUsageMismatch ((ty_usage t_x), UAffine))
+                else (match infer_core fenv _UU0393_ e_new with
+                      | Infer_ok p1 ->
+                        let (t_new, _UU0393_') = p1 in
+                        if ty_core_eqb (ty_core t_new) (ty_core t_x)
+                        then if usage_sub_bool (ty_usage t_new) (ty_usage t_x)
+                             then Infer_ok ((MkTy (UUnrestricted, TUnits)),
+                                    _UU0393_')
+                             else Infer_err (ErrUsageMismatch
+                                    ((ty_usage t_new), (ty_usage t_x)))
+                        else Infer_err (ErrTypeMismatch ((ty_core t_new),
+                               (ty_core t_x)))
+                      | Infer_err err -> Infer_err err))
+           | None -> Infer_err (ErrUnknownVar p))
    | None -> Infer_err (ErrUnknownVar p))
 | EDrop e1 ->
   (match infer_core fenv _UU0393_ e1 with

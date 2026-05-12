@@ -70,6 +70,7 @@ atom_expr ::= "()"
             | ID
             | "(" "drop" expr ")"
             | "(" "replace" ID atom_expr ")"
+            | "(" ID "=" atom_expr ")"
             | "(" ID atom_expr* ")"
             | "if" atom_expr "{" block "}" "else" "{" block "}"
             | "if" atom_expr "{" block "}"

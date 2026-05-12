@@ -1,0 +1,4 @@
+fn f(mut x: unrestricted isize) -> unrestricted isize {
+    (x = 42);
+    x
+}

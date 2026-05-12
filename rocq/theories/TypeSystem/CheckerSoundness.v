@@ -46,7 +46,7 @@ Qed.
 Lemma ctx_lookup_b_eq : forall x Γ,
   ctx_lookup_b x Γ = ctx_lookup x Γ.
 Proof.
-  intros x Γ. induction Γ as [| [[n T] b] t IH].
+  intros x Γ. induction Γ as [| [[[n T] b] m] t IH].
   - reflexivity.
   - simpl. destruct (ident_eqb x n); [reflexivity | apply IH].
 Qed.
@@ -54,7 +54,7 @@ Qed.
 Lemma ctx_consume_b_eq : forall x Γ,
   ctx_consume_b x Γ = ctx_consume x Γ.
 Proof.
-  intros x Γ. induction Γ as [| [[n T] b] t IH].
+  intros x Γ. induction Γ as [| [[[n T] b] m] t IH].
   - reflexivity.
   - simpl. destruct (ident_eqb x n).
     + reflexivity.
@@ -64,15 +64,23 @@ Qed.
 Lemma ctx_remove_b_eq : forall x Γ,
   ctx_remove_b x Γ = ctx_remove x Γ.
 Proof.
-  intros x Γ. induction Γ as [| [[n T] b] t IH].
+  intros x Γ. induction Γ as [| [[[n T] b] m] t IH].
   - reflexivity.
   - simpl. destruct (ident_eqb x n); [reflexivity | rewrite IH; reflexivity].
 Qed.
 
 (* ctx_add_b and ctx_add are definitionally equal. *)
-Lemma ctx_add_b_eq : forall x T Γ,
-  ctx_add_b x T Γ = ctx_add x T Γ.
+Lemma ctx_add_b_eq : forall x T m Γ,
+  ctx_add_b x T m Γ = ctx_add x T m Γ.
 Proof. reflexivity. Qed.
+
+Lemma ctx_lookup_mut_b_eq : forall x Γ,
+  ctx_lookup_mut_b x Γ = ctx_lookup_mut x Γ.
+Proof.
+  intros x Γ. induction Γ as [| [[[n T] b] m] t IH].
+  - reflexivity.
+  - simpl. destruct (ident_eqb x n); [reflexivity | apply IH].
+Qed.
 
 (* ------------------------------------------------------------------ *)
 (* Auxiliary: ref_kind_eqb, ty_eqb, ty_core_eqb correctness             *)
@@ -307,7 +315,7 @@ Proof.
       simpl in Hinfer.
       inversion Hinfer.
     }
-    destruct (infer_core fenv (ctx_add_b x t Γ1) e2) as [[T2 Γ2] | err2] eqn:He2.
+    destruct (infer_core fenv (ctx_add_b x t m Γ1) e2) as [[T2 Γ2] | err2] eqn:He2.
     2: {
       simpl in Hinfer.
       inversion Hinfer.
@@ -334,7 +342,7 @@ Proof.
   + rename i into x.
     destruct (infer_core fenv Γ e1) as [[T1 Γ1] | err1] eqn:He1.
     2: discriminate.
-    destruct (infer_core fenv (ctx_add_b x T1 Γ1) e2) as [[T2 Γ2] | err2] eqn:He2.
+    destruct (infer_core fenv (ctx_add_b x T1 m Γ1) e2) as [[T2 Γ2] | err2] eqn:He2.
     2: {
       simpl in Hinfer.
       inversion Hinfer.
@@ -410,6 +418,30 @@ Proof.
     * eapply IH.
       -- simpl in Hlt. lia.
       -- exact He.
+    * apply ty_core_eqb_true. exact Hcore.
+    * apply usage_sub_bool_sound. exact Hsub.
+
+  (* EAssign (PVar px) e *)
+  + destruct p as [px].
+    destruct (ctx_lookup_b px Γ) as [[T_x b] |] eqn:Hlx_b.
+    2: discriminate.
+    destruct b; [discriminate |].
+    destruct (ctx_lookup_mut_b px Γ) as [mut |] eqn:Hmut_b.
+    2: discriminate.
+    destruct mut; [discriminate |].
+    destruct (usage_eqb (ty_usage T_x) ULinear) eqn:Hlin; [discriminate |].
+    destruct (infer_core fenv Γ e) as [[T_new Γ1] |] eqn:He.
+    2: discriminate.
+    destruct (ty_core_eqb (ty_core T_new) (ty_core T_x)) eqn:Hcore.
+    2: discriminate.
+    destruct (usage_sub_bool (ty_usage T_new) (ty_usage T_x)) eqn:Hsub.
+    2: discriminate.
+    injection Hinfer as <- <-.
+    eapply T_Assign with (T := T_x) (T_new := T_new).
+    * rewrite <- ctx_lookup_b_eq. exact Hlx_b.
+    * rewrite <- ctx_lookup_mut_b_eq. exact Hmut_b.
+    * intro Heq. rewrite Heq in Hlin. simpl in Hlin. discriminate.
+    * eapply IH. simpl in Hlt; lia. exact He.
     * apply ty_core_eqb_true. exact Hcore.
     * apply usage_sub_bool_sound. exact Hsub.
 

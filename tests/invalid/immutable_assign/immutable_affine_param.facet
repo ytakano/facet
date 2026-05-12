@@ -1,0 +1,4 @@
+fn f(x: affine isize) -> unrestricted () {
+    (x = 99);
+    (drop x)
+}

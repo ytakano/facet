@@ -32,6 +32,8 @@ let string_of_infer_error = function
   | ErrTypeMismatch (c1, c2) ->
     Printf.sprintf "type mismatch: expected %s, got %s"
       (string_of_ty_core c1) (string_of_ty_core c2)
+  | ErrNotMutable id ->
+    Printf.sprintf "assignment target is not mutable: %s" (string_of_ident id)
   | ErrUsageMismatch (u1, u2) ->
     Printf.sprintf "usage mismatch: expected %s, got %s"
       (string_of_usage u1) (string_of_usage u2)

@@ -92,11 +92,11 @@ Qed.
 Inductive ctx_alpha : rename_env -> ctx -> ctx -> Prop :=
   | CtxAlpha_Base : forall Γ,
       ctx_alpha [] Γ Γ
-  | CtxAlpha_Bind : forall ρ Γ Γr x xr T b,
+  | CtxAlpha_Bind : forall ρ Γ Γr x xr T b m,
       ctx_alpha ρ Γ Γr ->
       ~ In xr (ctx_names Γr) ->
       ~ In xr (rename_range ρ) ->
-      ctx_alpha ((x, xr) :: ρ) ((x, T, b) :: Γ) ((xr, T, b) :: Γr).
+      ctx_alpha ((x, xr) :: ρ) ((x, T, b, m) :: Γ) ((xr, T, b, m) :: Γr).
 
 Lemma ctx_alpha_nil_eq : forall Γ Γr,
   ctx_alpha [] Γ Γr ->
@@ -111,7 +111,7 @@ Lemma ctx_consume_preserves_names : forall x Γ Γ',
   ctx_names Γ' = ctx_names Γ.
 Proof.
   intros x Γ. revert x.
-  induction Γ as [| [[n T] b] Γ IH]; intros x Γ' Hconsume.
+  induction Γ as [| [[[n T] b] m] Γ IH]; intros x Γ' Hconsume.
   - simpl in Hconsume. discriminate.
   - simpl in Hconsume.
     destruct (ident_eqb x n).
@@ -146,6 +146,11 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
       expr_alpha ρ e er ->
       expr_alpha ρ (EReplace (PVar x) e)
         (EReplace (PVar (lookup_rename x ρ)) er)
+  | EA_Assign : forall ρ x e er,
+      ~ In x (rename_range ρ) ->
+      expr_alpha ρ e er ->
+      expr_alpha ρ (EAssign (PVar x) e)
+        (EAssign (PVar (lookup_rename x ρ)) er)
   | EA_Drop : forall ρ e er,
       expr_alpha ρ e er ->
       expr_alpha ρ (EDrop e) (EDrop er)
@@ -287,7 +292,7 @@ Proof.
       simpl in Hconsume.
       rewrite ident_eqb_refl in Hconsume.
       injection Hconsume as <-.
-      exists ((x, T, true) :: Γ).
+      exists ((x, T, true, m) :: Γ).
       split.
       * simpl. rewrite ident_eqb_refl. reflexivity.
       * constructor; assumption.
@@ -305,7 +310,7 @@ Proof.
       injection Hconsume as <-.
       destruct (IHHalpha y Γrt Hsafe_tail Hconsume_tail)
         as [Γ' [Hconsume0 Halpha0]].
-      exists ((x, T, b) :: Γ').
+      exists ((x, T, b, m) :: Γ').
       split.
       * simpl. rewrite Hyx. rewrite Hconsume0. reflexivity.
       * constructor.
@@ -315,13 +320,13 @@ Proof.
         -- exact H0.
 Qed.
 
-Lemma ctx_alpha_remove_head : forall ρ Γ Γr x xr T b,
+Lemma ctx_alpha_remove_head : forall ρ Γ Γr x xr T b m,
   ctx_alpha ρ Γ Γr ->
   ctx_alpha ρ
-    (ctx_remove x ((x, T, b) :: Γ))
-    (ctx_remove xr ((xr, T, b) :: Γr)).
+    (ctx_remove x ((x, T, b, m) :: Γ))
+    (ctx_remove xr ((xr, T, b, m) :: Γr)).
 Proof.
-  intros ρ Γ Γr x xr T b Halpha.
+  intros ρ Γ Γr x xr T b m Halpha.
   simpl.
   rewrite ident_eqb_refl.
   rewrite ident_eqb_refl.
@@ -336,6 +341,38 @@ Proof.
   inversion Halpha; subst.
   simpl. rewrite ident_eqb_refl. rewrite ident_eqb_refl.
   assumption.
+Qed.
+
+Lemma ctx_alpha_lookup_mut_backward : forall ρ Γ Γr x m,
+  ctx_alpha ρ Γ Γr ->
+  ~ In x (rename_range ρ) ->
+  ctx_lookup_mut (lookup_rename x ρ) Γr = Some m ->
+  ctx_lookup_mut x Γ = Some m.
+Proof.
+  intros ρ Γ Γr x m Halpha.
+  revert x m.
+  induction Halpha; intros y m0 Hsafe Hlookup.
+  - simpl in Hlookup. exact Hlookup.
+  - simpl in Hsafe, Hlookup.
+    assert (Hneq_y_xr : y <> xr).
+    { intro Heq. apply Hsafe. left. symmetry. exact Heq. }
+    assert (Hsafe_tail : ~ In y (rename_range ρ)).
+    { intro Hin. apply Hsafe. right. exact Hin. }
+    destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx. subst y.
+      simpl in Hlookup. rewrite ident_eqb_refl in Hlookup.
+      simpl. rewrite ident_eqb_refl. exact Hlookup.
+    + simpl in Hlookup.
+      assert (Hneq_lookup : ident_eqb (lookup_rename y ρ) xr = false).
+      { apply ident_eqb_neq.
+        apply lookup_rename_not_in_range_neq.
+        - exact H0.
+        - exact Hneq_y_xr. }
+      rewrite Hneq_lookup in Hlookup.
+      simpl. rewrite Hyx.
+      apply IHHalpha.
+      * exact Hsafe_tail.
+      * exact Hlookup.
 Qed.
 
 Lemma ctx_alpha_is_ok_backward : forall ρ Γ Γr x T,
@@ -357,14 +394,14 @@ Qed.
 Inductive ctx_same_bindings : ctx -> ctx -> Prop :=
   | CtxSame_Nil :
       ctx_same_bindings [] []
-  | CtxSame_Cons : forall x T b b' Γ Γ',
+  | CtxSame_Cons : forall x T b b' m Γ Γ',
       ctx_same_bindings Γ Γ' ->
-      ctx_same_bindings ((x, T, b) :: Γ) ((x, T, b') :: Γ').
+      ctx_same_bindings ((x, T, b, m) :: Γ) ((x, T, b', m) :: Γ').
 
 Lemma ctx_same_bindings_refl : forall Γ,
   ctx_same_bindings Γ Γ.
 Proof.
-  induction Γ as [| [[x T] b] Γ IH].
+  induction Γ as [| [[[x T] b] m] Γ IH].
   - constructor.
   - constructor. exact IH.
 Qed.
@@ -385,7 +422,7 @@ Lemma ctx_same_bindings_trans : forall Γ1 Γ2 Γ3,
 Proof.
   intros Γ1 Γ2 Γ3 H12 H23.
   revert Γ3 H23.
-  induction H12 as [| x T b b' Γ Γ' H12 IH]; intros Γ3 H23.
+  induction H12 as [| x T b b' m Γ Γ' H12 IH]; intros Γ3 H23.
   - inversion H23; subst. constructor.
   - inversion H23; subst. constructor.
     match goal with
@@ -398,7 +435,7 @@ Lemma ctx_consume_same_bindings : forall x Γ Γ',
   ctx_same_bindings Γ Γ'.
 Proof.
   intros x Γ. revert x.
-  induction Γ as [| [[n T] b] Γ IH]; intros x Γ' Hconsume.
+  induction Γ as [| [[[n T] b] m] Γ IH]; intros x Γ' Hconsume.
   - discriminate.
   - simpl in Hconsume.
     destruct (ident_eqb x n).
@@ -409,20 +446,20 @@ Proof.
       constructor. eapply IH. exact Htail.
 Qed.
 
-Lemma ctx_remove_same_bindings_head : forall x T b b' Γ Γ',
+Lemma ctx_remove_same_bindings_head : forall x T b b' m Γ Γ',
   ctx_same_bindings Γ Γ' ->
-  ctx_remove x ((x, T, b) :: Γ) = Γ ->
-  ctx_remove x ((x, T, b') :: Γ') = Γ'.
+  ctx_remove x ((x, T, b, m) :: Γ) = Γ ->
+  ctx_remove x ((x, T, b', m) :: Γ') = Γ'.
 Proof.
-  intros x T b b' Γ Γ' _ _.
+  intros x T b b' m Γ Γ' _ _.
   simpl. rewrite ident_eqb_refl. reflexivity.
 Qed.
 
-Lemma ctx_same_bindings_remove_head : forall x T b Γ Γ',
-  ctx_same_bindings ((x, T, b) :: Γ) Γ' ->
+Lemma ctx_same_bindings_remove_head : forall x T b m Γ Γ',
+  ctx_same_bindings ((x, T, b, m) :: Γ) Γ' ->
   ctx_same_bindings Γ (ctx_remove x Γ').
 Proof.
-  intros x T b Γ Γ' Hsame.
+  intros x T b m Γ Γ' Hsame.
   inversion Hsame; subst.
   simpl. rewrite ident_eqb_refl. assumption.
 Qed.
@@ -431,9 +468,9 @@ Lemma ctx_merge_same_bindings : forall Γ2 Γ3 Γ4,
   ctx_merge Γ2 Γ3 = Some Γ4 ->
   ctx_same_bindings Γ2 Γ4.
 Proof.
-  intros Γ2. induction Γ2 as [| [[n T] b2] t2 IH]; intros Γ3 Γ4 Hmerge.
+  intros Γ2. induction Γ2 as [| [[[n T] b2] m] t2 IH]; intros Γ3 Γ4 Hmerge.
   - destruct Γ3; simpl in Hmerge; [injection Hmerge as <-; constructor | discriminate].
-  - destruct Γ3 as [| [[n' T'] b3] t3]; [discriminate |].
+  - destruct Γ3 as [| [[[n' T'] b3] m3] t3]; [discriminate |].
     simpl in Hmerge.
     destruct (ident_eqb n n') eqn:Hnn'; [|discriminate].
     simpl in Hmerge.
@@ -472,7 +509,7 @@ Proof.
       try solve [
         match goal with
         | Hhead : ctx_same_bindings ?Γ ?Γ1,
-          Hbody : ctx_same_bindings (ctx_add ?x ?T ?Γ1) ?Γ2
+          Hbody : ctx_same_bindings (ctx_add ?x ?T ?m ?Γ1) ?Γ2
           |- ctx_same_bindings ?Γ (ctx_remove ?x ?Γ2) =>
             eapply ctx_same_bindings_trans;
             [ exact Hhead
@@ -509,6 +546,7 @@ Fixpoint expr_size (e : expr) : nat :=
             | arg :: rest => expr_size arg + go rest
             end) args)
   | EReplace _ e => S (expr_size e)
+  | EAssign _ e => S (expr_size e)
   | EDrop e => S (expr_size e)
   | EIf e1 e2 e3 => S (expr_size e1 + expr_size e2 + expr_size e3)
   end.
@@ -634,6 +672,12 @@ Proof.
         exact Hlt_arg.
       -- exact Hrename0.
     * symmetry. exact Hargs.
+    * exact Hin.
+  + destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
+    injection Hrename as _ <-.
+    eapply IH.
+    * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
+    * exact He.
     * exact Hin.
   + destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as _ <-.
@@ -874,6 +918,17 @@ Proof.
       -- exact Hrename0.
     * exact Hdisj.
     * symmetry. exact Hargs.
+  + destruct p as [px].
+    destruct (disjoint_names_cons_l px (free_vars_expr e)
+      (rename_range ρ) Hdisj) as [Hpx Hdisj_e].
+    destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
+    injection Hrename as <- _.
+    constructor.
+    * exact Hpx.
+    * eapply IH.
+      -- simpl in Hlt. lia.
+      -- exact Hdisj_e.
+      -- exact He.
   + destruct p as [px].
     destruct (disjoint_names_cons_l px (free_vars_expr e)
       (rename_range ρ) Hdisj) as [Hpx Hdisj_e].
@@ -1154,7 +1209,7 @@ Lemma ctx_alpha_merge_backward : forall ρ Γ02 Γ2r Γ03 Γ3r Γ4r,
 Proof.
   intros ρ Γ02 Γ2r Γ03 Γ3r Γ4r Halpha2 Halpha3 Hmerge.
   revert Γ03 Γ3r Γ4r Halpha3 Hmerge.
-  induction Halpha2 as [Γ02 | ρ' Γ02' Γ2r' x xr T b2 Halpha2' IH2 Hxr_ctx Hxr_range];
+  induction Halpha2 as [Γ02 | ρ' Γ02' Γ2r' x xr T b2 m2 Halpha2' IH2 Hxr_ctx Hxr_range];
     intros Γ03 Γ3r Γ4r Halpha3 Hmerge.
   - (* CtxAlpha_Base: Γ02 = Γ2r *)
     inversion Halpha3; subst.
@@ -1306,10 +1361,10 @@ Proof.
       - apply Hrange_used. exact Hin. }
     assert (Hctx_ext :
       ctx_alpha ((i, xr) :: ρ)
-        (ctx_add i t Γ01) (ctx_add xr t Γ1)).
+        (ctx_add i t m Γ01) (ctx_add xr t m Γ1)).
     { constructor; exact Hctx1 || exact Hxr_ctx || exact Hxr_range. }
     assert (Hctx_ext_used :
-      forall x, In x (ctx_names (ctx_add xr t Γ1)) ->
+      forall x, In x (ctx_names (ctx_add xr t m Γ1)) ->
         In x (xr :: i :: free_vars_expr e2 ++ used1)).
     { intros x [Hx | Hin]; [left; exact Hx |].
       right. right. apply in_or_app. right. apply Hctx1_names. exact Hin. }
@@ -1329,9 +1384,9 @@ Proof.
         right. apply in_or_app. left. exact Hin.
       - exact (Hdisj2 x Hin Hinr). }
     lazymatch goal with
-    | Hte2 : typed fenvr (ctx_add ?xrr t Γ1) e2r ?T2r ?Γ2r |- _ =>
+    | Hte2 : typed fenvr (ctx_add ?xrr t m Γ1) e2r ?T2r ?Γ2r |- _ =>
       destruct (IH fenv0 fenvr ((i, xr) :: ρ)
-        (ctx_add i t Γ01) (ctx_add xrr t Γ1)
+        (ctx_add i t m Γ01) (ctx_add xrr t m Γ1)
         e2 e2r (xr :: i :: free_vars_expr e2 ++ used1) used2 T2r Γ2r
         ltac:(simpl in Hlt; lia)
         Hfenv Hctx_ext Hctx_ext_used Hrange_ext_used Hdisj2_ext He2 Hte2)
@@ -1394,10 +1449,10 @@ Proof.
       - apply Hrange_used. exact Hin. }
     assert (Hctx_ext :
       ctx_alpha ((i, xr) :: ρ)
-        (ctx_add i T1 Γ01) (ctx_add xr T1 Γ1)).
+        (ctx_add i T1 m Γ01) (ctx_add xr T1 m Γ1)).
     { constructor; exact Hctx1 || exact Hxr_ctx || exact Hxr_range. }
     assert (Hctx_ext_used :
-      forall x, In x (ctx_names (ctx_add xr T1 Γ1)) ->
+      forall x, In x (ctx_names (ctx_add xr T1 m Γ1)) ->
         In x (xr :: i :: free_vars_expr e2 ++ used1)).
     { intros x [Hx | Hin]; [left; exact Hx |].
       right. right. apply in_or_app. right. apply Hctx1_names. exact Hin. }
@@ -1417,9 +1472,9 @@ Proof.
         right. apply in_or_app. left. exact Hin.
       - exact (Hdisj2 x Hin Hinr). }
     lazymatch goal with
-    | Hte2 : typed fenvr (ctx_add _ T1 Γ1) e2r ?T2r ?Γ2r |- _ =>
+    | Hte2 : typed fenvr (ctx_add _ T1 m Γ1) e2r ?T2r ?Γ2r |- _ =>
       destruct (IH fenv0 fenvr ((i, xr) :: ρ)
-        (ctx_add i T1 Γ01) (ctx_add xr T1 Γ1)
+        (ctx_add i T1 m Γ01) (ctx_add xr T1 m Γ1)
         e2 e2r (xr :: i :: free_vars_expr e2 ++ used1) used2 T2r Γ2r
         ltac:(simpl in Hlt; lia)
         Hfenv Hctx_ext Hctx_ext_used Hrange_ext_used Hdisj2_ext He2 Hte2)
@@ -1517,6 +1572,35 @@ Proof.
         | Hlookup : ctx_lookup (lookup_rename px ρ) Γr = Some (?Tx, false) |- _ =>
           exact (ctx_alpha_lookup_backward ρ Γ0 Γr px Tx false Hctx Hsafe Hlookup)
         end.
+      - exact Htyped0.
+      - assumption.
+      - assumption. }
+    { exact Hctx0. }
+  + destruct p as [px].
+    destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
+    injection Hrename as <- _.
+    inversion Htyped; subst.
+    assert (Hsafe : ~ In px (rename_range ρ)).
+    { intros Hin. apply (Hdisj px); simpl; [left; reflexivity | exact Hin]. }
+    assert (Hdisj_e : disjoint_names (free_vars_expr e) (rename_range ρ)).
+    { intros x Hin Hinr. exact (Hdisj x (or_intror Hin) Hinr). }
+    lazymatch goal with
+    | Hte : typed fenvr Γr er0 ?Tnew ?Γr1 |- _ =>
+      destruct (IH fenv0 fenvr ρ Γ0 Γr e er0 used used0 Tnew Γr1
+        ltac:(simpl in Hlt; lia)
+        Hfenv Hctx Hctx_used Hrange_used Hdisj_e He Hte) as [Γ0' [Htyped0 Hctx0]]
+    end.
+    exists Γ0'. split.
+    { eapply T_Assign.
+      - lazymatch goal with
+        | Hlookup : ctx_lookup (lookup_rename px ρ) Γr = Some (?Tx, false) |- _ =>
+          exact (ctx_alpha_lookup_backward ρ Γ0 Γr px Tx false Hctx Hsafe Hlookup)
+        end.
+      - lazymatch goal with
+        | Hmut : ctx_lookup_mut (lookup_rename px ρ) Γr = Some ?m |- _ =>
+          exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γr px m Hctx Hsafe Hmut)
+        end.
+      - assumption.
       - exact Htyped0.
       - assumption.
       - assumption. }

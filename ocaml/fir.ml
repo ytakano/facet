@@ -89,17 +89,17 @@ let rec to_value env = function
     let ty = get_var_ty env x in
     consume_if_needed env x ty;
     { fv = FVVar x; ft = ty }
-  | ELet (_, x, t, e1, e2) ->
+  | ELet (m, x, t, e1, e2) ->
     emit_into env x t e1;
-    env.ctx <- ctx_add_b x t env.ctx;
+    env.ctx <- ctx_add_b x t m env.ctx;
     to_value env e2
-  | ELetInfer (_, x, e1, e2) ->
+  | ELetInfer (m, x, e1, e2) ->
     let ty1 = match infer_core env.fenv env.ctx e1 with
       | Infer_ok (t, _) -> t
       | Infer_err _ -> unit_ty
     in
     emit_into env x ty1 e1;
-    env.ctx <- ctx_add_b x ty1 env.ctx;
+    env.ctx <- ctx_add_b x ty1 m env.ctx;
     to_value env e2
   | ECall (f, args) ->
     let ret = get_fn_ret env f in
@@ -118,6 +118,14 @@ let rec to_value env = function
     let tmp = fresh_id env in
     emit env (FIReplace (tmp, p_ty, place, p_ty, v_new));
     { fv = FVVar tmp; ft = p_ty }
+  | EAssign (place, e_new) ->
+    let p_ty = get_var_ty env place in
+    let v_new = to_value env e_new in
+    let old_tmp = fresh_id env in
+    emit env (FIReplace (old_tmp, p_ty, place, p_ty, v_new));
+    let drop_tmp = fresh_id env in
+    emit env (FIDrop (drop_tmp, old_tmp, p_ty));
+    { fv = FVVar drop_tmp; ft = unit_ty }
   | EIf (e1, e2, e3) ->
     let result_ty = match infer_core env.fenv env.ctx (EIf (e1, e2, e3)) with
       | Infer_ok (t, _) -> t
@@ -154,12 +162,18 @@ and emit_into env x t = function
     let p_ty = get_var_ty env place in
     let v_new = to_value env e_new in
     emit env (FIReplace (x, p_ty, place, p_ty, v_new))
+  | EAssign (place, e_new) ->
+    let p_ty = get_var_ty env place in
+    let v_new = to_value env e_new in
+    let old_tmp = fresh_id env in
+    emit env (FIReplace (old_tmp, p_ty, place, p_ty, v_new));
+    emit env (FIDrop (x, old_tmp, p_ty))
   | e ->
     let v = to_value env e in
     emit env (FILet (x, t, v))
 
 let params_to_ctx params =
-  List.map (fun p -> ((p.param_name, p.param_ty), false)) params
+  List.map (fun p -> (((p.param_name, p.param_ty), false), p.param_mutability)) params
 
 let convert_fn fenv fn_def =
   let env = { fenv; ctx = params_to_ctx fn_def.fn_params;

@@ -78,31 +78,37 @@ Definition ty_core_eqb (c1 c2 : TypeCore Ty) : bool :=
 Fixpoint ctx_lookup_b (x : ident) (Γ : ctx) : option (Ty * bool) :=
   match Γ with
   | []              => None
-  | (n, T, b) :: t => if ident_eqb x n then Some (T, b)
+  | (n, T, b, _) :: t => if ident_eqb x n then Some (T, b)
                       else ctx_lookup_b x t
   end.
 
 Fixpoint ctx_consume_b (x : ident) (Γ : ctx) : option ctx :=
   match Γ with
   | []              => None
-  | (n, T, b) :: t =>
+  | (n, T, b, m) :: t =>
       if ident_eqb x n
-      then Some ((n, T, true) :: t)
+      then Some ((n, T, true, m) :: t)
       else match ctx_consume_b x t with
            | None    => None
-           | Some t' => Some ((n, T, b) :: t')
+           | Some t' => Some ((n, T, b, m) :: t')
            end
   end.
 
-Definition ctx_add_b (x : ident) (T : Ty) (Γ : ctx) : ctx :=
-  (x, T, false) :: Γ.
+Fixpoint ctx_lookup_mut_b (x : ident) (Γ : ctx) : option mutability :=
+  match Γ with
+  | [] => None
+  | (n, _, _, m) :: t => if ident_eqb x n then Some m else ctx_lookup_mut_b x t
+  end.
+
+Definition ctx_add_b (x : ident) (T : Ty) (m : mutability) (Γ : ctx) : ctx :=
+  (x, T, false, m) :: Γ.
 
 Fixpoint ctx_remove_b (x : ident) (Γ : ctx) : ctx :=
   match Γ with
   | []              => []
-  | (n, T, b) :: t =>
+  | (n, T, b, m) :: t =>
       if ident_eqb x n then t
-      else (n, T, b) :: ctx_remove_b x t
+      else (n, T, b, m) :: ctx_remove_b x t
   end.
 
 (* Returns true iff x's usage constraint is satisfied after its scope:
@@ -163,7 +169,7 @@ Definition fresh_ident (x : ident) (used : list ident) : ident :=
 Fixpoint ctx_names (Γ : ctx) : list ident :=
   match Γ with
   | [] => []
-  | (x, _, _) :: Γ' => x :: ctx_names Γ'
+  | (x, _, _, _) :: Γ' => x :: ctx_names Γ'
   end.
 
 Definition place_name (p : place) : ident :=
@@ -179,6 +185,7 @@ Inductive infer_error : Type :=
   | ErrUnknownVar : ident -> infer_error
   | ErrAlreadyConsumed : ident -> infer_error
   | ErrTypeMismatch : TypeCore Ty -> TypeCore Ty -> infer_error
+  | ErrNotMutable : ident -> infer_error
   | ErrUsageMismatch : usage -> usage -> infer_error
   | ErrFunctionNotFound : ident -> infer_error
   | ErrArityMismatch : infer_error
@@ -207,6 +214,7 @@ Fixpoint free_vars_expr (e : expr) : list ident :=
         end
       in go args
   | EReplace p e_new => place_name p :: free_vars_expr e_new
+  | EAssign p e_new => place_name p :: free_vars_expr e_new
   | EDrop e1 => free_vars_expr e1
   | EIf e1 e2 e3 => free_vars_expr e1 ++ free_vars_expr e2 ++ free_vars_expr e3
   end.
@@ -244,6 +252,9 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
   | EReplace p e_new =>
       let (e_new', used') := alpha_rename_expr ρ used e_new in
       (EReplace (rename_place ρ p) e_new', used')
+  | EAssign p e_new =>
+      let (e_new', used') := alpha_rename_expr ρ used e_new in
+      (EAssign (rename_place ρ p) e_new', used')
   | EDrop e1 =>
       let (e1', used') := alpha_rename_expr ρ used e1 in
       (EDrop e1', used')
@@ -356,7 +367,7 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
       | infer_ok (T1, Γ1) =>
           if ty_core_eqb (ty_core T1) (ty_core T) then
             if usage_sub_bool (ty_usage T1) (ty_usage T) then
-            match infer_core fenv (ctx_add_b x T Γ1) e2 with
+            match infer_core fenv (ctx_add_b x T m Γ1) e2 with
             | infer_err err          => infer_err err
             | infer_ok (T2, Γ2) =>
                 if ctx_check_ok x T Γ2
@@ -386,6 +397,30 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
                 then infer_ok (T_x, Γ')
                 else infer_err (ErrUsageMismatch (ty_usage T_new) (ty_usage T_x))
               else infer_err (ErrTypeMismatch (ty_core T_new) (ty_core T_x))
+          end
+      end
+
+  | EAssign (PVar x) e_new =>
+      match ctx_lookup_b x Γ with
+      | None => infer_err (ErrUnknownVar x)
+      | Some (_, true) => infer_err (ErrAlreadyConsumed x)
+      | Some (T_x, false) =>
+          match ctx_lookup_mut_b x Γ with
+          | None => infer_err (ErrUnknownVar x)
+          | Some MImmutable => infer_err (ErrNotMutable x)
+          | Some MMutable =>
+              if usage_eqb (ty_usage T_x) ULinear
+              then infer_err (ErrUsageMismatch (ty_usage T_x) UAffine)
+              else
+                match infer_core fenv Γ e_new with
+                | infer_err err => infer_err err
+                | infer_ok (T_new, Γ') =>
+                    if ty_core_eqb (ty_core T_new) (ty_core T_x) then
+                      if usage_sub_bool (ty_usage T_new) (ty_usage T_x)
+                      then infer_ok (MkTy UUnrestricted TUnits, Γ')
+                      else infer_err (ErrUsageMismatch (ty_usage T_new) (ty_usage T_x))
+                    else infer_err (ErrTypeMismatch (ty_core T_new) (ty_core T_x))
+                end
           end
       end
 
@@ -426,7 +461,7 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
       match infer_core fenv Γ e1 with
       | infer_err err => infer_err err
       | infer_ok (T1, Γ1) =>
-          match infer_core fenv (ctx_add_b x T1 Γ1) e2 with
+          match infer_core fenv (ctx_add_b x T1 m Γ1) e2 with
           | infer_err err => infer_err err
           | infer_ok (T2, Γ2) =>
               if ctx_check_ok x T1 Γ2

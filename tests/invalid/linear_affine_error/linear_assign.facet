@@ -1,0 +1,4 @@
+fn f(mut x: linear isize) -> linear isize {
+    (x = 42);
+    x
+}

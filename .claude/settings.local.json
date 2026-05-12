@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rocq print *)",
+      "Bash(rocq repl *)",
+      "Bash(grep -E \"^[A-Za-z_][A-Za-z0-9_]*$\")",
+      "Bash(coqc --version)",
+      "Read(//usr/local/bin/**)",
+      "Read(//root/.opam/default/**)",
+      "Read(//usr/**)",
+      "Bash(/home/ytakano/.opam/default/bin/rocq --version)"
+    ]
+  }
+}

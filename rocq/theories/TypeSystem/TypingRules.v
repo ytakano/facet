@@ -9,7 +9,7 @@ Import ListNotations.
 (* consumed = true means the binding has been moved/used.               *)
 (* ------------------------------------------------------------------ *)
 
-Definition ctx_entry : Type := (ident * Ty * bool)%type.
+Definition ctx_entry : Type := (ident * Ty * bool * mutability)%type.
 Definition ctx : Type := list ctx_entry.
 
 (* ------------------------------------------------------------------ *)
@@ -19,7 +19,7 @@ Definition ctx : Type := list ctx_entry.
 Fixpoint ctx_lookup (x : ident) (Γ : ctx) : option (Ty * bool) :=
   match Γ with
   | []              => None
-  | (n, T, b) :: t => if ident_eqb x n then Some (T, b)
+  | (n, T, b, _) :: t => if ident_eqb x n then Some (T, b)
                       else ctx_lookup x t
   end.
 
@@ -27,26 +27,32 @@ Fixpoint ctx_lookup (x : ident) (Γ : ctx) : option (Ty * bool) :=
 Fixpoint ctx_consume (x : ident) (Γ : ctx) : option ctx :=
   match Γ with
   | []              => None
-  | (n, T, b) :: t =>
+  | (n, T, b, m) :: t =>
       if ident_eqb x n
-      then Some ((n, T, true) :: t)
+      then Some ((n, T, true, m) :: t)
       else match ctx_consume x t with
            | None    => None
-           | Some t' => Some ((n, T, b) :: t')
+           | Some t' => Some ((n, T, b, m) :: t')
            end
   end.
 
+Fixpoint ctx_lookup_mut (x : ident) (Γ : ctx) : option mutability :=
+  match Γ with
+  | [] => None
+  | (n, _, _, m) :: t => if ident_eqb x n then Some m else ctx_lookup_mut x t
+  end.
+
 (* Add a fresh (unconsumed) binding at the front. *)
-Definition ctx_add (x : ident) (T : Ty) (Γ : ctx) : ctx :=
-  (x, T, false) :: Γ.
+Definition ctx_add (x : ident) (T : Ty) (m : mutability) (Γ : ctx) : ctx :=
+  (x, T, false, m) :: Γ.
 
 (* Remove the first occurrence of x. *)
 Fixpoint ctx_remove (x : ident) (Γ : ctx) : ctx :=
   match Γ with
   | []              => []
-  | (n, T, b) :: t =>
+  | (n, T, b, m) :: t =>
       if ident_eqb x n then t
-      else (n, T, b) :: ctx_remove x t
+      else (n, T, b, m) :: ctx_remove x t
   end.
 
 (* Check scope-exit constraint for variable x with declared type T.
@@ -66,7 +72,7 @@ Definition ctx_is_ok (x : ident) (T : Ty) (Γ : ctx) : Prop :=
 (* Build the initial context for checking a function body from its
    parameters. Scope-exit checks reuse ctx_is_ok for each parameter. *)
 Definition param_ctx_entry (p : param) : ctx_entry :=
-  (param_name p, param_ty p, false).
+  (param_name p, param_ty p, false, param_mutability p).
 
 Fixpoint params_ctx (ps : list param) : ctx :=
   match ps with
@@ -111,7 +117,7 @@ Definition usage_max (u1 u2 : usage) : usage :=
 Fixpoint ctx_merge (Γ2 Γ3 : ctx) : option ctx :=
   match Γ2, Γ3 with
   | [], [] => Some []
-  | (n, T, b2) :: t2, (n', _, b3) :: t3 =>
+  | (n, T, b2, m) :: t2, (n', _, b3, _) :: t3 =>
       if negb (ident_eqb n n') then None
       else
         match ctx_merge t2 t3 with
@@ -119,8 +125,8 @@ Fixpoint ctx_merge (Γ2 Γ3 : ctx) : option ctx :=
         | Some rest =>
             match ty_usage T with
             | ULinear =>
-                if Bool.eqb b2 b3 then Some ((n, T, b2) :: rest) else None
-            | _ => Some ((n, T, orb b2 b3) :: rest)
+                if Bool.eqb b2 b3 then Some ((n, T, b2, m) :: rest) else None
+            | _ => Some ((n, T, orb b2 b3, m) :: rest)
             end
         end
   | _, _ => None
@@ -172,14 +178,14 @@ Inductive typed (fenv : list fn_def) : ctx -> expr -> Ty -> ctx -> Prop :=
       typed fenv Γ e1 T1 Γ1 ->
       ty_core T1 = ty_core T ->
       usage_sub (ty_usage T1) (ty_usage T) ->
-      typed fenv (ctx_add x T Γ1) e2 T2 Γ2 ->
+      typed fenv (ctx_add x T m Γ1) e2 T2 Γ2 ->
       ctx_is_ok x T Γ2 ->
       typed fenv Γ (ELet m x T e1 e2) T2 (ctx_remove x Γ2)
 
   (* let x = e1 in e2 (no annotation): infer T1 from e1, bind x:T1. *)
   | T_LetInfer : forall Γ Γ1 Γ2 m x T1 e1 e2 T2,
       typed fenv Γ e1 T1 Γ1 ->
-      typed fenv (ctx_add x T1 Γ1) e2 T2 Γ2 ->
+      typed fenv (ctx_add x T1 m Γ1) e2 T2 Γ2 ->
       ctx_is_ok x T1 Γ2 ->
       typed fenv Γ (ELetInfer m x e1 e2) T2 (ctx_remove x Γ2)
 
@@ -199,6 +205,15 @@ Inductive typed (fenv : list fn_def) : ctx -> expr -> Ty -> ctx -> Prop :=
       ty_core T_new = ty_core T ->
       usage_sub (ty_usage T_new) (ty_usage T) ->
       typed fenv Γ (EReplace (PVar x) e_new) T Γ'
+
+  | T_Assign : forall Γ Γ' x T T_new e_new,
+      ctx_lookup x Γ = Some (T, false) ->
+      ctx_lookup_mut x Γ = Some MMutable ->
+      ty_usage T <> ULinear ->
+      typed fenv Γ e_new T_new Γ' ->
+      ty_core T_new = ty_core T ->
+      usage_sub (ty_usage T_new) (ty_usage T) ->
+      typed fenv Γ (EAssign (PVar x) e_new) (MkTy UUnrestricted TUnits) Γ'
 
   (* if e1 { e2 } else { e3 }:
      - e1 must have bool type (any usage)

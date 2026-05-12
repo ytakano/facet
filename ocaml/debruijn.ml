@@ -10,14 +10,11 @@ let current_depth scope name =
   | None   -> -1
 
 let add_binding scope name =
-  if name = "_" then (scope, 0)
-  else
-    let d = current_depth scope name + 1 in
-    ((name, d) :: scope, d)
+  let d = current_depth scope name + 1 in
+  ((name, d) :: scope, d)
 
 let lookup scope name =
-  if name = "_" then 0
-  else max 0 (current_depth scope name)
+  max 0 (current_depth scope name)
 
 let make_ident name d : ident =
   (name, Big_int_Z.big_int_of_int d)

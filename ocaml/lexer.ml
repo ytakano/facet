@@ -51,7 +51,7 @@ exception LexError of position * string
 let digit  = [%sedlex.regexp? '0'..'9']
 let alpha  = [%sedlex.regexp? 'a'..'z' | 'A'..'Z']
 let alnum  = [%sedlex.regexp? alpha | digit | '_']
-let ident  = [%sedlex.regexp? (alpha | '_'), Star alnum]
+let ident  = [%sedlex.regexp? alpha, Star alnum | '_', Plus alnum]
 
 let rec tokenize st =
   let buf = st.buf in

@@ -1,0 +1,5 @@
+fn f(x: unrestricted isize, y: unrestricted isize) -> unrestricted isize {
+    (drop x);
+    (drop y);
+    42
+}

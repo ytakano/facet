@@ -1,0 +1,5 @@
+fn f(x: linear isize) -> unrestricted isize {
+    (drop x);
+    let x: linear isize = 42;
+    0
+}

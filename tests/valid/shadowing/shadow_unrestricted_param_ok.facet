@@ -1,0 +1,4 @@
+fn f(x: unrestricted isize) -> unrestricted isize {
+    let x: unrestricted isize = 42;
+    x
+}

@@ -466,6 +466,120 @@ let check_fn fenv f =
 
 ---
 
+### 参照経由の replace / assign（`place` 拡張が前提）
+
+> **注意**: この機能は `place` 型（現在は `ident` のみ）を `PDeref : ident -> place` に拡張することを要件とする。
+> v2 の borrow_ok・borrow_check が完成した後の追加実装として計画する。
+
+#### 必要な Rocq 変更（place 拡張）
+
+```coq
+(* Syntax.v: place に PDeref を追加 *)
+(* 現在: Definition place := ident. *)
+Inductive place : Type :=
+  | PVar   : ident -> place    (* 直接変数: x *)
+  | PDeref : ident -> place.   (* 参照を通じたアクセス: *r *)
+
+(* TypingRules.v: T_Replace_Deref *)
+(* r: &'a mut T が条件。T_Replace_Deref は T_Replace を PDeref に拡張する *)
+| T_Replace_Deref : forall Γ Γ' r T T_new la e_new,
+    ctx_lookup r Γ = Some (MkTy _ (TRef la RUnique T), false) ->
+    typed fenv Γ e_new T_new Γ' ->
+    ty_core T_new = ty_core T ->
+    usage_sub (ty_usage T_new) (ty_usage T) ->
+    typed fenv Γ (EReplace (PDeref r) e_new) T Γ'
+
+(* TypingRules.v: T_Assign_Deref *)
+| T_Assign_Deref : forall Γ Γ' r T T_new la e_new,
+    ctx_lookup r Γ = Some (MkTy _ (TRef la RUnique T), false) ->
+    ty_usage T <> ULinear ->      (* linear な古い値を暗黙 drop 禁止 *)
+    typed fenv Γ e_new T_new Γ' ->
+    ty_core T_new = ty_core T ->
+    usage_sub (ty_usage T_new) (ty_usage T) ->
+    typed fenv Γ (EAssign (PDeref r) e_new) (MkTy UUnrestricted TUnits) Γ'
+```
+
+> `T_Replace_Deref` は `r` を消費しない（参照は unrestricted なのでコピー可能）。
+> `T_Assign_Deref` は `ty_usage T <> ULinear` を要求（linear な古い値を暗黙 drop できないため）。
+
+#### 追加構文（OCaml パーサー）
+
+```
+atom_expr:
+  | LPAREN; KW_REPLACE; STAR; r = ID; e = atom_expr; RPAREN
+    { NReplace_Deref (r, e) }
+  | LPAREN; STAR; r = ID; EQUAL; e = atom_expr; RPAREN
+    { NAssign_Deref (r, e) }
+```
+
+#### valid テスト（`tests/valid/replace/`）
+
+- `replace_via_mut_ref.facet` — mutable reference を通じた replace
+  ```
+  fn f(mut x: unrestricted isize) -> unrestricted isize {
+      let r: unrestricted &mut unrestricted isize = (&mut x);
+      let old: unrestricted isize = (replace *r 42);
+      old
+  }
+  ```
+  `r` が `&mut` → `T_Replace_Deref` が適用。古い値（42 以前の x の値）を返す。
+
+- `replace_linear_via_mut_ref.facet` — linear 変数を mutable reference 経由で replace
+  ```
+  fn f(mut x: linear isize) -> unrestricted () {
+      let r: unrestricted &mut linear isize = (&mut x);
+      let old: linear isize = (replace *r 99);
+      (drop old);
+      (drop x)
+  }
+  ```
+  `r` が `&mut linear isize`。replace で返った old（linear）を drop、最後に x も drop。
+
+- `assign_via_mut_ref.facet` — mutable reference を通じた assign（古い値は unrestricted）
+  ```
+  fn f(mut x: unrestricted isize) -> unrestricted () {
+      let r: unrestricted &mut unrestricted isize = (&mut x);
+      (*r = 42);
+      ()
+  }
+  ```
+  unrestricted な古い値は暗黙 drop。unit を返す。
+
+#### invalid テスト（`tests/invalid/replace_error/` または `borrow_error/`）
+
+- `replace_via_shared_ref.facet` — shared reference を通じた replace はエラー
+  ```
+  fn f(x: unrestricted isize) -> unrestricted isize {
+      let r: unrestricted &unrestricted isize = (&x);
+      let old: unrestricted isize = (replace *r 42);
+      old
+  }
+  ```
+  エラー: `r` は `&T`（shared reference）。`T_Replace_Deref` は `&mut T` のみ適用可能。
+
+- `assign_via_shared_ref.facet` — shared reference を通じた assign はエラー
+  ```
+  fn f(x: unrestricted isize) -> unrestricted () {
+      let r: unrestricted &unrestricted isize = (&x);
+      (*r = 42);
+      ()
+  }
+  ```
+  エラー: `r` は `&T`（shared reference）。mutable reference にのみ書き込み可能。
+
+- `assign_linear_via_mut_ref.facet` — linear な古い値を暗黙 drop する assign はエラー
+  ```
+  fn f(mut x: linear isize) -> unrestricted () {
+      let r: unrestricted &mut linear isize = (&mut x);
+      (*r = 99);   (* エラー: linear な古い値を暗黙 drop できない *)
+      (drop x)
+  }
+  ```
+  エラー: `T_Assign_Deref` は `ty_usage T <> ULinear` を要求。linear 値は明示 drop が必要。
+  代替: `(replace *r 99)` で old を受け取り `(drop old)` する。
+
+---
+
 ## 9. 影響範囲まとめ
 
 | ファイル | 変更内容 | 重さ |

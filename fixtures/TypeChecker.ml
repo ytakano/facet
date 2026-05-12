@@ -620,16 +620,23 @@ let rec infer_core fenv _UU0393_ = function
      let (t_x, b) = p0 in
      if b
      then Infer_err (ErrAlreadyConsumed p)
-     else (match infer_core fenv _UU0393_ e_new with
-           | Infer_ok p1 ->
-             let (t_new, _UU0393_') = p1 in
-             if ty_core_eqb (ty_core t_new) (ty_core t_x)
-             then if usage_sub_bool (ty_usage t_new) (ty_usage t_x)
-                  then Infer_ok (t_x, _UU0393_')
-                  else Infer_err (ErrUsageMismatch ((ty_usage t_new),
-                         (ty_usage t_x)))
-             else Infer_err (ErrTypeMismatch ((ty_core t_new), (ty_core t_x)))
-           | Infer_err err -> Infer_err err)
+     else (match ctx_lookup_mut_b p _UU0393_ with
+           | Some m ->
+             (match m with
+              | MImmutable -> Infer_err (ErrNotMutable p)
+              | MMutable ->
+                (match infer_core fenv _UU0393_ e_new with
+                 | Infer_ok p1 ->
+                   let (t_new, _UU0393_') = p1 in
+                   if ty_core_eqb (ty_core t_new) (ty_core t_x)
+                   then if usage_sub_bool (ty_usage t_new) (ty_usage t_x)
+                        then Infer_ok (t_x, _UU0393_')
+                        else Infer_err (ErrUsageMismatch ((ty_usage t_new),
+                               (ty_usage t_x)))
+                   else Infer_err (ErrTypeMismatch ((ty_core t_new),
+                          (ty_core t_x)))
+                 | Infer_err err -> Infer_err err))
+           | None -> Infer_err (ErrUnknownVar p))
    | None -> Infer_err (ErrUnknownVar p))
 | EAssign (p, e_new) ->
   (match ctx_lookup_b p _UU0393_ with

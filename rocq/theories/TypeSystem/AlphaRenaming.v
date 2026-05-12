@@ -1572,6 +1572,10 @@ Proof.
         | Hlookup : ctx_lookup (lookup_rename px ρ) Γr = Some (?Tx, false) |- _ =>
           exact (ctx_alpha_lookup_backward ρ Γ0 Γr px Tx false Hctx Hsafe Hlookup)
         end.
+      - lazymatch goal with
+        | Hmut : ctx_lookup_mut (lookup_rename px ρ) Γr = Some ?m |- _ =>
+          exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γr px m Hctx Hsafe Hmut)
+        end.
       - exact Htyped0.
       - assumption.
       - assumption. }

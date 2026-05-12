@@ -196,11 +196,13 @@ Inductive typed (fenv : list fn_def) : ctx -> expr -> Ty -> ctx -> Prop :=
 
   (* replace(x, e_new):
      - x must be present and unconsumed (it is NOT consumed by replace).
+     - x must be mutable.
      - The new value's core type must match x's core type.
      - The new value's usage must be a subtype of x's usage.
      - Returns the old value of x (same type as x). *)
   | T_Replace : forall Γ Γ' x T T_new e_new,
       ctx_lookup x Γ = Some (T, false) ->
+      ctx_lookup_mut x Γ = Some MMutable ->
       typed fenv Γ e_new T_new Γ' ->
       ty_core T_new = ty_core T ->
       usage_sub (ty_usage T_new) (ty_usage T) ->

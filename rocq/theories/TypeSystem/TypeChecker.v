@@ -389,14 +389,19 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
       | None              => infer_err (ErrUnknownVar x)
       | Some (_, true)    => infer_err (ErrAlreadyConsumed x)
       | Some (T_x, false) =>
-          match infer_core fenv Γ e_new with
-          | infer_err err            => infer_err err
-          | infer_ok (T_new, Γ') =>
-              if ty_core_eqb (ty_core T_new) (ty_core T_x) then
-                if usage_sub_bool (ty_usage T_new) (ty_usage T_x)
-                then infer_ok (T_x, Γ')
-                else infer_err (ErrUsageMismatch (ty_usage T_new) (ty_usage T_x))
-              else infer_err (ErrTypeMismatch (ty_core T_new) (ty_core T_x))
+          match ctx_lookup_mut_b x Γ with
+          | None => infer_err (ErrUnknownVar x)
+          | Some MImmutable => infer_err (ErrNotMutable x)
+          | Some MMutable =>
+              match infer_core fenv Γ e_new with
+              | infer_err err            => infer_err err
+              | infer_ok (T_new, Γ') =>
+                  if ty_core_eqb (ty_core T_new) (ty_core T_x) then
+                    if usage_sub_bool (ty_usage T_new) (ty_usage T_x)
+                    then infer_ok (T_x, Γ')
+                    else infer_err (ErrUsageMismatch (ty_usage T_new) (ty_usage T_x))
+                  else infer_err (ErrTypeMismatch (ty_core T_new) (ty_core T_x))
+              end
           end
       end
 

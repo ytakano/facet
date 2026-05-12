@@ -405,6 +405,9 @@ Proof.
     destruct (ctx_lookup_b px Γ) as [[T_x b] |] eqn:Hlx_b.
     2: discriminate.
     destruct b; [discriminate |].
+    destruct (ctx_lookup_mut_b px Γ) as [mut |] eqn:Hmut_b.
+    2: discriminate.
+    destruct mut; [discriminate |].
     destruct (infer_core fenv Γ e) as [Htyped3 | err3] eqn:He.
     2: discriminate.
     destruct Htyped3 as [T_new Γ1].
@@ -415,6 +418,7 @@ Proof.
     injection Hinfer as <- <-.
     apply T_Replace with (T_new := T_new).
     * rewrite <- ctx_lookup_b_eq. exact Hlx_b.
+    * rewrite <- ctx_lookup_mut_b_eq. exact Hmut_b.
     * eapply IH.
       -- simpl in Hlt. lia.
       -- exact He.

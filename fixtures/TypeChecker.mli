@@ -16,6 +16,8 @@ module Nat :
   val max : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
  end
 
+val forallb : ('a1 -> bool) -> 'a1 list -> bool
+
 type mutability =
 | MImmutable
 | MMutable
@@ -79,6 +81,10 @@ type syntax = fn_def list
 type ctx_entry = (ident * ty) * bool
 
 type ctx = ctx_entry list
+
+val param_ctx_entry : param -> ctx_entry
+
+val params_ctx : param list -> ctx
 
 val usage_max : usage -> usage -> usage
 
@@ -148,4 +154,10 @@ val alpha_rename_for_infer : ctx -> fn_def list -> expr -> fn_def list * expr
 
 val infer_core : fn_def list -> ctx -> expr -> (ty * ctx) infer_result
 
-val infer : fn_def list -> ctx -> expr -> (ty * ctx) infer_result
+val infer_body : fn_def list -> ctx -> expr -> (ty * ctx) infer_result
+
+val params_ok_b : param list -> ctx -> bool
+
+val infer : fn_def list -> fn_def -> (ty * ctx) infer_result
+
+val check_program : fn_def list -> bool

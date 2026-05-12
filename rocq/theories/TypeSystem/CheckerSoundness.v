@@ -358,17 +358,73 @@ Proof.
   - exact Hinfer.
 Qed.
 
-(* Public infer runs alpha-renaming before infer_core. The proof requires
+(* infer_body runs alpha-renaming before infer_core. The proof requires
    alpha-renaming preservation for typing; keep it isolated from the
    infer_core soundness argument above. *)
-Theorem infer_public_sound : forall fenv Γ e T Γ',
-  infer fenv Γ e = infer_ok (T, Γ') ->
+Theorem infer_body_sound : forall fenv Γ e T Γ',
+  infer_body fenv Γ e = infer_ok (T, Γ') ->
   typed fenv Γ e T Γ'.
 Proof.
   intros fenv Γ e T Γ' Hinfer.
-  unfold infer in Hinfer.
+  unfold infer_body in Hinfer.
   destruct (alpha_rename_for_infer Γ fenv e) as [fenv' e'] eqn:Hrename.
   apply (alpha_rename_for_infer_typed_backward
     fenv Γ e fenv' e' T Γ' Hrename).
   apply infer_sound. exact Hinfer.
+Qed.
+
+(* ------------------------------------------------------------------ *)
+(* Function-definition-level soundness                                   *)
+(* ------------------------------------------------------------------ *)
+
+Lemma usage_eqb_true : forall u1 u2,
+  usage_eqb u1 u2 = true -> u1 = u2.
+Proof. destruct u1, u2; simpl; intros H; try discriminate; reflexivity. Qed.
+
+Lemma Ty_eq : forall T1 T2,
+  ty_core T1 = ty_core T2 -> ty_usage T1 = ty_usage T2 -> T1 = T2.
+Proof.
+  destruct T1 as [u1 c1], T2 as [u2 c2]; simpl; intros -> ->; reflexivity.
+Qed.
+
+Lemma params_ok_b_sound : forall ps Γ,
+  params_ok_b ps Γ = true -> params_ok ps Γ.
+Proof.
+  induction ps as [|p ps' IH]; simpl; intros Γ H.
+  - exact I.
+  - apply andb_true_iff in H as [Hok H'].
+    split.
+    + apply ctx_check_ok_sound. exact Hok.
+    + apply IH. exact H'.
+Qed.
+
+Theorem infer_fn_def_sound : forall fenv f T Γ',
+  infer fenv f = infer_ok (T, Γ') -> typed_fn_def fenv f.
+Proof.
+  intros fenv f T Γ' Hcheck.
+  unfold infer in Hcheck.
+  destruct (infer_body fenv (params_ctx (fn_params f)) (fn_body f))
+    as [[T_body Γ_out] | err] eqn:Hinfer.
+  - destruct (ty_core_eqb _ _) eqn:Hcore; [|discriminate].
+    destruct (usage_eqb _ _) eqn:Husage; [|discriminate].
+    destruct (params_ok_b _ _) eqn:Hparams; [|discriminate].
+    apply infer_body_sound in Hinfer as Htyped.
+    apply ty_core_eqb_true in Hcore.
+    apply usage_eqb_true in Husage.
+    assert (T_body = fn_ret f) by (apply Ty_eq; assumption). subst T_body.
+    apply params_ok_b_sound in Hparams.
+    exists Γ_out. exact (conj Htyped Hparams).
+  - discriminate.
+Qed.
+
+Theorem check_program_sound : forall fenv,
+  check_program fenv = true -> Forall (typed_fn_def fenv) fenv.
+Proof.
+  intros fenv H.
+  apply Forall_forall. intros f Hf.
+  unfold check_program in H.
+  apply forallb_forall with (x := f) in H; [|exact Hf].
+  destruct (infer fenv f) as [[T Γ'] | err] eqn:Hinfer.
+  - eapply infer_fn_def_sound. exact Hinfer.
+  - simpl in H. discriminate.
 Qed.

@@ -78,7 +78,7 @@ Qed.
 
 Definition infer_fn_def_ok (fenv : list fn_def) (f : fn_def) : Prop :=
   exists Γ',
-    infer fenv (params_ctx (fn_params f)) (fn_body f) =
+    infer_body fenv (params_ctx (fn_params f)) (fn_body f) =
       infer_ok (fn_ret f, Γ') /\
     params_ok (fn_params f) Γ'.
 
@@ -89,7 +89,7 @@ Proof.
   intros fenv f [Γ' [Hinfer Hparams]].
   exists Γ'.
   split.
-  - apply infer_public_sound. exact Hinfer.
+  - apply infer_body_sound. exact Hinfer.
   - exact Hparams.
 Qed.
 
@@ -185,14 +185,14 @@ Qed.
    context, checking the same variable again fails because EVar requires an
    unconsumed affine/linear binding. *)
 Theorem infer_affine_value_at_most_once : forall fenv Γ e T Γ' x Tx,
-  infer fenv Γ e = infer_ok (T, Γ') ->
+  infer_body fenv Γ e = infer_ok (T, Γ') ->
   ctx_lookup x Γ = Some (Tx, false) ->
   ty_usage Tx = UAffine ->
   ctx_lookup x Γ' = Some (Tx, true) ->
-  infer fenv Γ' (EVar x) = infer_err (ErrAlreadyConsumed x).
+  infer_body fenv Γ' (EVar x) = infer_err (ErrAlreadyConsumed x).
 Proof.
   intros fenv Γ e T Γ' x Tx _ _ Haff Hused.
-  unfold infer, alpha_rename_for_infer.
+  unfold infer_body, alpha_rename_for_infer.
   destruct (alpha_rename_syntax_go (free_vars_expr (EVar x) ++ ctx_names Γ') fenv)
     as [fenv' used].
   simpl.

@@ -1,10 +1,5 @@
 open TypeChecker
 
-let params_to_ctx (params : param list) : ctx =
-  List.map (fun p ->
-    ((p.param_name, p.param_ty), false)
-  ) params
-
 let string_of_usage = function
   | ULinear       -> "linear"
   | UAffine       -> "affine"
@@ -106,23 +101,14 @@ let () =
   let fn_defs = List.map Debruijn.convert_fn_def named_defs in
   let ok = ref true in
   List.iter (fun f ->
-    let ctx = params_to_ctx f.fn_params in
     let (fname, _) = f.fn_name in
-    match infer fn_defs ctx f.fn_body with
+    match infer fn_defs f with
     | Infer_err e ->
       Printf.eprintf "Type error in function '%s': %s\n"
         fname (string_of_infer_error e);
       ok := false
-    | Infer_ok (_, out_ctx) ->
-      let param_ok = List.for_all (fun p ->
-        TypeChecker.ctx_check_ok p.param_name p.param_ty out_ctx
-      ) f.fn_params in
-      if param_ok then
-        Printf.printf "OK: %s\n" fname
-      else begin
-        Printf.eprintf "Type error in function '%s': context check failed (linear parameter not consumed)\n" fname;
-        ok := false
-      end
+    | Infer_ok _ ->
+      Printf.printf "OK: %s\n" fname
   ) fn_defs;
   if not !ok then exit 1;
   Option.iter (fun fname -> Fir.emit_fir fname fn_defs) !emit_fir_file

@@ -49,6 +49,12 @@ module Nat =
       n
  end
 
+(** val forallb : ('a1 -> bool) -> 'a1 list -> bool **)
+
+let rec forallb f = function
+| [] -> true
+| a :: l0 -> (&&) (f a) (forallb f l0)
+
 type mutability =
 | MImmutable
 | MMutable
@@ -121,6 +127,17 @@ type syntax = fn_def list
 type ctx_entry = (ident * ty) * bool
 
 type ctx = ctx_entry list
+
+(** val param_ctx_entry : param -> ctx_entry **)
+
+let param_ctx_entry p =
+  ((p.param_name, p.param_ty), false)
+
+(** val params_ctx : param list -> ctx **)
+
+let rec params_ctx = function
+| [] -> []
+| p :: ps' -> (param_ctx_entry p) :: (params_ctx ps')
 
 (** val usage_max : usage -> usage -> usage **)
 
@@ -550,8 +567,41 @@ let rec infer_core fenv _UU0393_ = function
      else Infer_err (ErrTypeMismatch ((ty_core t_cond), TBooleans))
    | Infer_err err -> Infer_err err)
 
-(** val infer : fn_def list -> ctx -> expr -> (ty * ctx) infer_result **)
+(** val infer_body : fn_def list -> ctx -> expr -> (ty * ctx) infer_result **)
 
-let infer fenv _UU0393_ e =
+let infer_body fenv _UU0393_ e =
   let (fenv', e') = alpha_rename_for_infer _UU0393_ fenv e in
   infer_core fenv' _UU0393_ e'
+
+(** val params_ok_b : param list -> ctx -> bool **)
+
+let rec params_ok_b ps _UU0393_ =
+  match ps with
+  | [] -> true
+  | p :: ps' ->
+    (&&) (ctx_check_ok p.param_name p.param_ty _UU0393_)
+      (params_ok_b ps' _UU0393_)
+
+(** val infer : fn_def list -> fn_def -> (ty * ctx) infer_result **)
+
+let infer fenv f =
+  match infer_body fenv (params_ctx f.fn_params) f.fn_body with
+  | Infer_ok p ->
+    let (t_body, _UU0393__out) = p in
+    if ty_core_eqb (ty_core t_body) (ty_core f.fn_ret)
+    then if usage_eqb (ty_usage t_body) (ty_usage f.fn_ret)
+         then if params_ok_b f.fn_params _UU0393__out
+              then Infer_ok (f.fn_ret, _UU0393__out)
+              else Infer_err ErrContextCheckFailed
+         else Infer_err (ErrUsageMismatch ((ty_usage f.fn_ret),
+                (ty_usage t_body)))
+    else Infer_err (ErrTypeMismatch ((ty_core f.fn_ret), (ty_core t_body)))
+  | Infer_err err -> Infer_err err
+
+(** val check_program : fn_def list -> bool **)
+
+let check_program fenv =
+  forallb (fun f ->
+    match infer fenv f with
+    | Infer_ok _ -> true
+    | Infer_err _ -> false) fenv

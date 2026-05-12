@@ -425,7 +425,7 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
 
   end.
 
-Definition infer (fenv : list fn_def) (Γ : ctx) (e : expr)
+Definition infer_body (fenv : list fn_def) (Γ : ctx) (e : expr)
     : infer_result (Ty * ctx) :=
   let (fenv', e') := alpha_rename_for_infer Γ fenv e in
   infer_core fenv' Γ e'.
@@ -453,6 +453,44 @@ Fixpoint infer_args (fenv : list fn_def) (Γ : ctx)
   end.
 
 (* ------------------------------------------------------------------ *)
+(* Function-definition-level type checker                                *)
+(* ------------------------------------------------------------------ *)
+
+Fixpoint params_ok_b (ps : list param) (Γ : ctx) : bool :=
+  match ps with
+  | [] => true
+  | p :: ps' =>
+      ctx_check_ok (param_name p) (param_ty p) Γ &&
+      params_ok_b ps' Γ
+  end.
+
+(* Check a single function definition:
+   - infer the body type
+   - verify it matches fn_ret (core type + exact usage)
+   - verify all linear/affine parameters are consumed *)
+Definition infer (fenv : list fn_def) (f : fn_def)
+    : infer_result (Ty * ctx) :=
+  match infer_body fenv (params_ctx (fn_params f)) (fn_body f) with
+  | infer_err err => infer_err err
+  | infer_ok (T_body, Γ_out) =>
+      if ty_core_eqb (ty_core T_body) (ty_core (fn_ret f)) then
+        if usage_eqb (ty_usage T_body) (ty_usage (fn_ret f)) then
+          if params_ok_b (fn_params f) Γ_out
+          then infer_ok (fn_ret f, Γ_out)
+          else infer_err ErrContextCheckFailed
+        else infer_err (ErrUsageMismatch (ty_usage (fn_ret f)) (ty_usage T_body))
+      else infer_err (ErrTypeMismatch (ty_core (fn_ret f)) (ty_core T_body))
+  end.
+
+(* Check all functions in the program *)
+Definition check_program (fenv : list fn_def) : bool :=
+  forallb (fun f =>
+    match infer fenv f with
+    | infer_ok _ => true
+    | infer_err _ => false
+    end) fenv.
+
+(* ------------------------------------------------------------------ *)
 (* OCaml extraction                                                      *)
 (* ------------------------------------------------------------------ *)
 
@@ -461,4 +499,4 @@ Extraction Language OCaml.
 From Stdlib Require Import ExtrOcamlNativeString.
 From Stdlib Require Import ExtrOcamlNatBigInt.
 From Stdlib Require Import ExtrOcamlZBigInt.
-Extraction "../fixtures/TypeChecker.ml" infer.
+Extraction "../fixtures/TypeChecker.ml" infer check_program.

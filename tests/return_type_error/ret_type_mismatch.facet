@@ -1,0 +1,3 @@
+fn foo() -> unrestricted isize {
+  true
+}

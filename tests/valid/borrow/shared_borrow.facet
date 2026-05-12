@@ -1,0 +1,3 @@
+fn f(x: unrestricted isize) -> unrestricted &unrestricted isize {
+    (&x)
+}

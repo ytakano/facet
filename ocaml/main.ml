@@ -42,6 +42,10 @@ let string_of_infer_error = function
   | ErrArityMismatch      -> "arity mismatch"
   | ErrContextCheckFailed -> "context check failed (linear variable not consumed)"
   | ErrNotImplemented     -> "not implemented (type inference for let without annotation)"
+  | ErrImmutableBorrow id ->
+    Printf.sprintf "cannot borrow immutable variable as mutable: %s" (string_of_ident id)
+  | ErrNotAReference c    ->
+    Printf.sprintf "type is not a reference: %s" (string_of_ty_core c)
 
 let check_alpha_consistency fname fenv f =
   let r1 = infer fenv f in

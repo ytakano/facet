@@ -74,6 +74,8 @@ type expr =
 | ECall of ident * expr list
 | EReplace of place * expr
 | EAssign of place * expr
+| EBorrow of ref_kind * place
+| EDeref of expr
 | EDrop of expr
 | EIf of expr * expr * expr
 
@@ -143,6 +145,8 @@ type infer_error =
 | ErrArityMismatch
 | ErrContextCheckFailed
 | ErrNotImplemented
+| ErrImmutableBorrow of ident
+| ErrNotAReference of ty typeCore
 
 type 'a infer_result =
 | Infer_ok of 'a

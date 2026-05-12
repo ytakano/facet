@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Types Syntax.
+From Facet.TypeSystem Require Import Lifetime Types Syntax.
 From Stdlib Require Import List String Bool.
 Import ListNotations.
 
@@ -216,6 +216,40 @@ Inductive typed (fenv : list fn_def) : ctx -> expr -> Ty -> ctx -> Prop :=
       ty_core T_new = ty_core T ->
       usage_sub (ty_usage T_new) (ty_usage T) ->
       typed fenv Γ (EAssign (PVar x) e_new) (MkTy UUnrestricted TUnits) Γ'
+
+  (* &x — shared borrow
+     - x is present and unconsumed
+     - x must not be linear (linear values must be consumed, not borrowed)
+     - x is NOT consumed; ownership stays with the original binding
+     - result type is &'static T (LStatic is a v1 approximation) *)
+  | T_BorrowShared : forall Γ x T,
+      ctx_lookup x Γ = Some (T, false) ->
+      ty_usage T <> ULinear ->
+      typed fenv Γ (EBorrow RShared (PVar x))
+        (MkTy UUnrestricted (TRef LStatic RShared T)) Γ
+
+  (* &mut x — mutable borrow
+     - x is present and unconsumed
+     - x must not be linear
+     - x must be declared mutable (Rust: cannot &mut an immutable binding)
+     - x is NOT consumed
+     - result type is &'static mut T *)
+  | T_BorrowMut : forall Γ x T,
+      ctx_lookup x Γ = Some (T, false) ->
+      ty_usage T <> ULinear ->
+      ctx_lookup_mut x Γ = Some MMutable ->
+      typed fenv Γ (EBorrow RUnique (PVar x))
+        (MkTy UUnrestricted (TRef LStatic RUnique T)) Γ
+
+  (* *r — dereference
+     - r has reference type &'a rk T (with any usage u_r)
+     - T must be UUnrestricted: move-out through a reference is forbidden
+       (Rust semantics; affine/linear values can only be accessed via EReplace)
+     - the reference usage u_r determines whether r itself is consumed *)
+  | T_Deref : forall Γ Γ' r la rk T u_r,
+      ty_usage T = UUnrestricted ->
+      typed fenv Γ r (MkTy u_r (TRef la rk T)) Γ' ->
+      typed fenv Γ (EDeref r) T Γ'
 
   (* if e1 { e2 } else { e3 }:
      - e1 must have bool type (any usage)

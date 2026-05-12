@@ -1,0 +1,3 @@
+fn f(mut x: unrestricted isize) -> unrestricted &mut unrestricted isize {
+    (&mut x)
+}

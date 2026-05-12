@@ -53,6 +53,8 @@ Inductive expr : Type :=
 | ECall     : ident -> list expr -> expr
 | EReplace  : place -> expr -> expr
 | EAssign   : place -> expr -> expr
+| EBorrow   : ref_kind -> place -> expr
+| EDeref    : expr -> expr
 | EDrop     : expr -> expr
 | EIf       : expr -> expr -> expr -> expr.
 

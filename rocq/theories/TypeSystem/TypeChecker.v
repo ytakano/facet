@@ -192,7 +192,9 @@ Inductive infer_error : Type :=
   | ErrFunctionNotFound : ident -> infer_error
   | ErrArityMismatch : infer_error
   | ErrContextCheckFailed : infer_error
-  | ErrNotImplemented : infer_error.
+  | ErrNotImplemented : infer_error
+  | ErrImmutableBorrow : ident -> infer_error       (* &mut x where x is immutable *)
+  | ErrNotAReference : TypeCore Ty -> infer_error.  (* *e where e is not a reference type *)
 
 Inductive infer_result (A : Type) : Type :=
   | infer_ok : A -> infer_result A
@@ -217,6 +219,8 @@ Fixpoint free_vars_expr (e : expr) : list ident :=
       in go args
   | EReplace p e_new => place_name p :: free_vars_expr e_new
   | EAssign p e_new => place_name p :: free_vars_expr e_new
+  | EBorrow _ p => [place_name p]
+  | EDeref e1 => free_vars_expr e1
   | EDrop e1 => free_vars_expr e1
   | EIf e1 e2 e3 => free_vars_expr e1 ++ free_vars_expr e2 ++ free_vars_expr e3
   end.
@@ -257,6 +261,11 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
   | EAssign p e_new =>
       let (e_new', used') := alpha_rename_expr ρ used e_new in
       (EAssign (rename_place ρ p) e_new', used')
+  | EBorrow rk p =>
+      (EBorrow rk (rename_place ρ p), used)
+  | EDeref e1 =>
+      let (e1', used') := alpha_rename_expr ρ used e1 in
+      (EDeref e1', used')
   | EDrop e1 =>
       let (e1', used') := alpha_rename_expr ρ used e1 in
       (EDrop e1', used')
@@ -499,6 +508,42 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
                 end
             end
           else infer_err (ErrTypeMismatch (ty_core T_cond) TBooleans)
+      end
+
+  | EBorrow rk (PVar x) =>
+      match ctx_lookup_b x Γ with
+      | None              => infer_err (ErrUnknownVar x)
+      | Some (_, true)    => infer_err (ErrAlreadyConsumed x)
+      | Some (T_x, false) =>
+          if usage_eqb (ty_usage T_x) ULinear
+          then infer_err (ErrUsageMismatch (ty_usage T_x) UAffine)
+          else
+            match rk with
+            | RUnique =>
+                (* &mut requires a mutable binding *)
+                match ctx_lookup_mut_b x Γ with
+                | Some MMutable =>
+                    infer_ok (MkTy UUnrestricted (TRef LStatic RUnique T_x), Γ)
+                | _ => infer_err (ErrImmutableBorrow x)
+                end
+            | RShared =>
+                infer_ok (MkTy UUnrestricted (TRef LStatic RShared T_x), Γ)
+            end
+      end
+
+  | EDeref r =>
+      match infer_core fenv Γ r with
+      | infer_err err => infer_err err
+      | infer_ok (T_r, Γ') =>
+          match ty_core T_r with
+          | TRef _ _ T_inner =>
+              (* Move-out through a reference is forbidden;
+                 only UUnrestricted inner types may be read via deref *)
+              if usage_eqb (ty_usage T_inner) UUnrestricted
+              then infer_ok (T_inner, Γ')
+              else infer_err (ErrUsageMismatch (ty_usage T_inner) UUnrestricted)
+          | c => infer_err (ErrNotAReference c)
+          end
       end
 
   end.

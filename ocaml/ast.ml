@@ -8,6 +8,8 @@ type named_expr =
   | NCall   of name * named_expr list
   | NReplace of name * named_expr
   | NAssign of name * named_expr
+  | NBorrow of TypeChecker.ref_kind * name
+  | NDeref  of named_expr
   | NDrop   of named_expr
   | NIf     of named_expr * named_expr * named_expr
 

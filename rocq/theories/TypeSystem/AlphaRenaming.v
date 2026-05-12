@@ -151,6 +151,13 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
       expr_alpha ρ e er ->
       expr_alpha ρ (EAssign (PVar x) e)
         (EAssign (PVar (lookup_rename x ρ)) er)
+  | EA_Borrow : forall ρ rk x,
+      ~ In x (rename_range ρ) ->
+      expr_alpha ρ (EBorrow rk (PVar x))
+        (EBorrow rk (PVar (lookup_rename x ρ)))
+  | EA_Deref : forall ρ e er,
+      expr_alpha ρ e er ->
+      expr_alpha ρ (EDeref e) (EDeref er)
   | EA_Drop : forall ρ e er,
       expr_alpha ρ e er ->
       expr_alpha ρ (EDrop e) (EDrop er)
@@ -547,6 +554,8 @@ Fixpoint expr_size (e : expr) : nat :=
             end) args)
   | EReplace _ e => S (expr_size e)
   | EAssign _ e => S (expr_size e)
+  | EBorrow _ _ => 1
+  | EDeref e => S (expr_size e)
   | EDrop e => S (expr_size e)
   | EIf e1 e2 e3 => S (expr_size e1 + expr_size e2 + expr_size e3)
   end.
@@ -680,6 +689,15 @@ Proof.
     * exact He.
     * exact Hin.
   + destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
+    injection Hrename as _ <-.
+    eapply IH.
+    * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
+    * exact He.
+    * exact Hin.
+  + (* EBorrow: returns used unchanged *)
+    injection Hrename as _ <-. exact Hin.
+  + (* EDeref: like EDrop *)
+    destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as _ <-.
     eapply IH.
     * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
@@ -940,6 +958,19 @@ Proof.
       -- simpl in Hlt. lia.
       -- exact Hdisj_e.
       -- exact He.
+  + (* EBorrow: no sub-expression, just rename place *)
+    destruct p as [px].
+    injection Hrename as <- _.
+    constructor.
+    exact (Hdisj px (in_eq px [])).
+  + (* EDeref: like EDrop *)
+    destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
+    injection Hrename as <- _.
+    constructor.
+    eapply IH.
+    * simpl in Hlt. lia.
+    * exact Hdisj.
+    * exact He.
   + destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as <- _.
     constructor.
@@ -1608,6 +1639,49 @@ Proof.
       - exact Htyped0.
       - assumption.
       - assumption. }
+    { exact Hctx0. }
+  + (* EBorrow *)
+    destruct p as [px].
+    injection Hrename as <- _.
+    inversion Htyped; subst.
+    * (* T_BorrowShared *)
+      assert (Hsafe : ~ In px (rename_range ρ)).
+      { intros Hin. apply (Hdisj px); simpl; [left; reflexivity | exact Hin]. }
+      exists Γ0. split.
+      { eapply T_BorrowShared.
+        - lazymatch goal with
+          | Hlookup : ctx_lookup (lookup_rename px ρ) ?Γrx = Some (?Tx, false) |- _ =>
+            exact (ctx_alpha_lookup_backward ρ Γ0 Γrx px Tx false Hctx Hsafe Hlookup)
+          end.
+        - assumption. }
+      { exact Hctx. }
+    * (* T_BorrowMut *)
+      assert (Hsafe : ~ In px (rename_range ρ)).
+      { intros Hin. apply (Hdisj px); simpl; [left; reflexivity | exact Hin]. }
+      exists Γ0. split.
+      { eapply T_BorrowMut.
+        - lazymatch goal with
+          | Hlookup : ctx_lookup (lookup_rename px ρ) ?Γrx = Some (?Tx, false) |- _ =>
+            exact (ctx_alpha_lookup_backward ρ Γ0 Γrx px Tx false Hctx Hsafe Hlookup)
+          end.
+        - assumption.
+        - lazymatch goal with
+          | Hmut : ctx_lookup_mut (lookup_rename px ρ) ?Γrx = Some ?m |- _ =>
+            exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γrx px m Hctx Hsafe Hmut)
+          end. }
+      { exact Hctx. }
+  + (* EDeref: like EDrop but uses T_Deref *)
+    destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
+    injection Hrename as <- _.
+    inversion Htyped; subst.
+    lazymatch goal with
+    | Hte : typed fenvr Γr er0 (MkTy ?u_r (TRef ?la ?rk T)) ?Γr1 |- _ =>
+      destruct (IH fenv0 fenvr ρ Γ0 Γr e er0 used used0 (MkTy u_r (TRef la rk T)) Γr1
+        ltac:(simpl in Hlt; lia)
+        Hfenv Hctx Hctx_used Hrange_used Hdisj He Hte) as [Γ0' [Htyped0 Hctx0]]
+    end.
+    exists Γ0'. split.
+    { eapply T_Deref; [assumption | exact Htyped0]. }
     { exact Hctx0. }
   + destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as <- _.

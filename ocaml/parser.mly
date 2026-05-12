@@ -16,7 +16,7 @@ let desugar_stmt item cont =
 %token KW_AFFINE KW_LINEAR KW_UNRESTRICTED KW_ISIZE KW_F64
 %token KW_IF KW_ELSE KW_TRUE KW_FALSE KW_BOOL
 %token LPAREN RPAREN LBRACE RBRACE
-%token ARROW AMP
+%token ARROW AMP STAR
 %token COMMA COLON EQUAL SEMI UNDERSCORE
 %token <string> ID
 %token <Big_int_Z.big_int> INT_LIT
@@ -107,6 +107,12 @@ atom_expr:
     { NReplace (x, e) }
   | LPAREN; x = ID; EQUAL; e = atom_expr; RPAREN
     { NAssign (x, e) }
+  | LPAREN; AMP; x = ID; RPAREN
+    { NBorrow (RShared, x) }
+  | LPAREN; AMP; KW_MUT; x = ID; RPAREN
+    { NBorrow (RUnique, x) }
+  | LPAREN; STAR; e = expr; RPAREN
+    { NDeref e }
   | LPAREN; f = ID; args = list(atom_expr); RPAREN
     { NCall (f, args) }
   | KW_IF; cond = atom_expr; LBRACE; then_e = block; RBRACE;

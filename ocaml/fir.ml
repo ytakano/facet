@@ -17,6 +17,8 @@ type fir_instr =
   | FICall    of ident * ty * ident * fir_tval list
   | FIDrop    of ident * ident * ty
   | FIReplace of ident * ty * ident * ty * fir_tval
+  | FIBorrow  of ident * ref_kind * ident * ty
+  | FIDeref   of ident * ty * ident * ty
   | FILabel   of string
   | FIGoto    of string
   | FIIf      of fir_tval * string * string
@@ -126,6 +128,21 @@ let rec to_value env = function
     let drop_tmp = fresh_id env in
     emit env (FIDrop (drop_tmp, old_tmp, p_ty));
     { fv = FVVar drop_tmp; ft = unit_ty }
+  | EBorrow (rk, place) ->
+    let p_ty = get_var_ty env place in
+    let ref_ty = MkTy (UUnrestricted, TRef (LStatic, rk, p_ty)) in
+    let tmp = fresh_id env in
+    emit env (FIBorrow (tmp, rk, place, p_ty));
+    { fv = FVVar tmp; ft = ref_ty }
+  | EDeref inner ->
+    let v = to_value env inner in
+    let inner_ty = match ty_core v.ft with
+      | TRef (_, _, t) -> t
+      | _ -> failwith "FIR: EDeref requires a reference type"
+    in
+    let tmp = fresh_id env in
+    emit env (FIDeref (tmp, inner_ty, ident_of_tval env v, v.ft));
+    { fv = FVVar tmp; ft = inner_ty }
   | EIf (e1, e2, e3) ->
     let result_ty = match infer_core env.fenv env.ctx (EIf (e1, e2, e3)) with
       | Infer_ok (t, _) -> t
@@ -236,6 +253,15 @@ let pp_instr = function
   | FIReplace (r, r_ty, tgt, tgt_ty, v_new) ->
     Printf.sprintf "  replace %s as %s = %s as %s with %s"
       (pp_ident r) (pp_ty r_ty) (pp_ident tgt) (pp_ty tgt_ty) (pp_tval v_new)
+  | FIBorrow (r, RShared, src, src_ty) ->
+    Printf.sprintf "  borrow %s = &%s as %s"
+      (pp_ident r) (pp_ident src) (pp_ty src_ty)
+  | FIBorrow (r, RUnique, src, src_ty) ->
+    Printf.sprintf "  borrow %s = &mut %s as %s"
+      (pp_ident r) (pp_ident src) (pp_ty src_ty)
+  | FIDeref (r, r_ty, src, src_ty) ->
+    Printf.sprintf "  deref %s as %s = *%s as %s"
+      (pp_ident r) (pp_ty r_ty) (pp_ident src) (pp_ty src_ty)
   | FILabel lbl -> Printf.sprintf "%s:" lbl
   | FIGoto  lbl -> Printf.sprintf "  goto %s" lbl
   | FIIf (cond, then_lbl, else_lbl) ->

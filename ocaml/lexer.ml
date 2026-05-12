@@ -79,6 +79,7 @@ let rec tokenize st =
   | '{' -> Parser.LBRACE
   | '}' -> Parser.RBRACE
   | '&' -> Parser.AMP
+  | '*' -> Parser.STAR
   | ',' -> Parser.COMMA
   | ':' -> Parser.COLON
   | '=' -> Parser.EQUAL

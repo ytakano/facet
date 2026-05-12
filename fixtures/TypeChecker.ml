@@ -129,6 +129,8 @@ type expr =
 | ECall of ident * expr list
 | EReplace of place * expr
 | EAssign of place * expr
+| EBorrow of ref_kind * place
+| EDeref of expr
 | EDrop of expr
 | EIf of expr * expr * expr
 
@@ -425,6 +427,8 @@ type infer_error =
 | ErrArityMismatch
 | ErrContextCheckFailed
 | ErrNotImplemented
+| ErrImmutableBorrow of ident
+| ErrNotAReference of ty typeCore
 
 type 'a infer_result =
 | Infer_ok of 'a
@@ -444,6 +448,8 @@ let rec free_vars_expr = function
   in go args
 | EReplace (p, e_new) -> (place_name p) :: (free_vars_expr e_new)
 | EAssign (p, e_new) -> (place_name p) :: (free_vars_expr e_new)
+| EBorrow (_, p) -> (place_name p) :: []
+| EDeref e1 -> free_vars_expr e1
 | EDrop e1 -> free_vars_expr e1
 | EIf (e1, e2, e3) ->
   app (free_vars_expr e1) (app (free_vars_expr e2) (free_vars_expr e3))
@@ -495,6 +501,10 @@ let rec alpha_rename_expr _UU03c1_ used = function
 | EAssign (p, e_new) ->
   let (e_new', used') = alpha_rename_expr _UU03c1_ used e_new in
   ((EAssign ((rename_place _UU03c1_ p), e_new')), used')
+| EBorrow (rk, p) -> ((EBorrow (rk, (rename_place _UU03c1_ p))), used)
+| EDeref e1 ->
+  let (e1', used') = alpha_rename_expr _UU03c1_ used e1 in
+  ((EDeref e1'), used')
 | EDrop e1 ->
   let (e1', used') = alpha_rename_expr _UU03c1_ used e1 in
   ((EDrop e1'), used')
@@ -682,6 +692,39 @@ let rec infer_core fenv _UU0393_ = function
                       | Infer_err err -> Infer_err err))
            | None -> Infer_err (ErrUnknownVar p))
    | None -> Infer_err (ErrUnknownVar p))
+| EBorrow (rk, p) ->
+  (match ctx_lookup_b p _UU0393_ with
+   | Some p0 ->
+     let (t_x, b) = p0 in
+     if b
+     then Infer_err (ErrAlreadyConsumed p)
+     else if usage_eqb (ty_usage t_x) ULinear
+          then Infer_err (ErrUsageMismatch ((ty_usage t_x), UAffine))
+          else (match rk with
+                | RShared ->
+                  Infer_ok ((MkTy (UUnrestricted, (TRef (LStatic, RShared,
+                    t_x)))), _UU0393_)
+                | RUnique ->
+                  (match ctx_lookup_mut_b p _UU0393_ with
+                   | Some m ->
+                     (match m with
+                      | MImmutable -> Infer_err (ErrImmutableBorrow p)
+                      | MMutable ->
+                        Infer_ok ((MkTy (UUnrestricted, (TRef (LStatic,
+                          RUnique, t_x)))), _UU0393_))
+                   | None -> Infer_err (ErrImmutableBorrow p)))
+   | None -> Infer_err (ErrUnknownVar p))
+| EDeref r ->
+  (match infer_core fenv _UU0393_ r with
+   | Infer_ok p ->
+     let (t_r, _UU0393_') = p in
+     (match ty_core t_r with
+      | TRef (_, _, t_inner) ->
+        if usage_eqb (ty_usage t_inner) UUnrestricted
+        then Infer_ok (t_inner, _UU0393_')
+        else Infer_err (ErrUsageMismatch ((ty_usage t_inner), UUnrestricted))
+      | x -> Infer_err (ErrNotAReference x))
+   | Infer_err err -> Infer_err err)
 | EDrop e1 ->
   (match infer_core fenv _UU0393_ e1 with
    | Infer_ok p ->

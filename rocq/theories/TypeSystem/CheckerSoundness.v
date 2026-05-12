@@ -195,6 +195,10 @@ Proof.
     f_equal. apply ty_eqb_true. exact Ht.
 Qed.
 
+Lemma usage_eqb_true : forall u1 u2,
+  usage_eqb u1 u2 = true -> u1 = u2.
+Proof. destruct u1, u2; simpl; intros H; try discriminate; reflexivity. Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Auxiliary: ctx_check_ok implies ctx_is_ok                             *)
 (* ------------------------------------------------------------------ *)
@@ -453,6 +457,46 @@ Proof.
     * apply ty_core_eqb_true. exact Hcore.
     * apply usage_sub_bool_sound. exact Hsub.
 
+  (* EBorrow rk (PVar px) *)
+  + destruct p as [px].
+    destruct (ctx_lookup_b px Γ) as [[T_x b] |] eqn:Hlx_b.
+    2: discriminate.
+    destruct b; [discriminate |].
+    destruct (usage_eqb (ty_usage T_x) ULinear) eqn:Hlin; [discriminate |].
+    destruct r; simpl in Hinfer.
+    * (* RShared *)
+      injection Hinfer as <- <-.
+      eapply T_BorrowShared.
+      -- rewrite <- ctx_lookup_b_eq. exact Hlx_b.
+      -- intro Heq. rewrite Heq in Hlin. simpl in Hlin. discriminate.
+    * (* RUnique *)
+      destruct (ctx_lookup_mut_b px Γ) as [mut |] eqn:Hmut_b.
+      2: discriminate.
+      destruct mut; [discriminate |].
+      injection Hinfer as <- <-.
+      eapply T_BorrowMut.
+      -- rewrite <- ctx_lookup_b_eq. exact Hlx_b.
+      -- intro Heq. rewrite Heq in Hlin. simpl in Hlin. discriminate.
+      -- rewrite <- ctx_lookup_mut_b_eq. exact Hmut_b.
+
+  (* EDeref e *)
+  + destruct (infer_core fenv Γ e) as [[T_r Γ1] | err] eqn:He.
+    2: discriminate.
+    destruct (ty_core T_r) eqn:HcoreR; try discriminate.
+    lazymatch type of HcoreR with
+    | ty_core T_r = TRef ?la ?rk ?T_inner =>
+        destruct (usage_eqb (ty_usage T_inner) UUnrestricted) eqn:Hunr;
+        [| discriminate];
+        injection Hinfer as <- <-;
+        assert (Hte : typed fenv Γ e T_r Γ1)
+          by (eapply IH; [simpl in Hlt; lia | exact He]);
+        assert (HTeq : T_r = MkTy (ty_usage T_r) (TRef la rk T_inner))
+          by (destruct T_r as [u c]; simpl in HcoreR; rewrite HcoreR; reflexivity);
+        rewrite HTeq in Hte;
+        eapply T_Deref;
+        [apply usage_eqb_true; exact Hunr | exact Hte]
+    end.
+
   (* EDrop e *)
   + destruct (infer_core fenv Γ e) as [Htyped4 | err4] eqn:He.
     2: discriminate.
@@ -509,10 +553,6 @@ Qed.
 (* ------------------------------------------------------------------ *)
 (* Function-definition-level soundness                                   *)
 (* ------------------------------------------------------------------ *)
-
-Lemma usage_eqb_true : forall u1 u2,
-  usage_eqb u1 u2 = true -> u1 = u2.
-Proof. destruct u1, u2; simpl; intros H; try discriminate; reflexivity. Qed.
 
 Lemma Ty_eq : forall T1 T2,
   ty_core T1 = ty_core T2 -> ty_usage T1 = ty_usage T2 -> T1 = T2.

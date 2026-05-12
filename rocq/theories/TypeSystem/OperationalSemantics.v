@@ -10,7 +10,8 @@ Inductive value : Type :=
   | VUnit  : value
   | VInt   : Z -> value
   | VFloat : string -> value
-  | VBool  : bool -> value.
+  | VBool  : bool -> value
+  | VRef   : ident -> value.   (* reference: holds the name of the referred variable *)
 
 (* ------------------------------------------------------------------ *)
 (* Runtime store                                                        *)
@@ -156,6 +157,21 @@ Inductive eval (fenv : list fn_def) : store -> expr -> store -> value -> Prop :=
       eval fenv s e_new s1 v_new ->
       store_update_val x v_new s1 = Some s2 ->
       eval fenv s (EAssign (PVar x) e_new) s2 VUnit
+
+  (* &x or &mut x: confirm x exists in the store, return VRef x.
+     The store is unchanged — borrowing does not transfer ownership. *)
+  | Eval_Borrow : forall s x e rk,
+      store_lookup x s = Some e ->
+      eval fenv s (EBorrow rk (PVar x)) s (VRef x)
+
+  (* *r: evaluate r to VRef x, then copy the value of x from the store.
+     Only applicable when the inner type is UUnrestricted (copy semantics).
+     The type checker enforces this; the store is unchanged. *)
+  | Eval_Deref : forall s s_r r x e,
+      eval fenv s r s_r (VRef x) ->
+      store_lookup x s_r = Some e ->
+      ty_usage (se_ty e) = UUnrestricted ->
+      eval fenv s (EDeref r) s_r (se_val e)
 
   | Eval_If_True : forall s s1 s2 e1 e2 e3 v,
       eval fenv s e1 s1 (VBool true) ->

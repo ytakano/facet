@@ -251,6 +251,40 @@ Inductive typed (fenv : list fn_def) : ctx -> expr -> Ty -> ctx -> Prop :=
       typed fenv Γ r (MkTy u_r (TRef la rk T)) Γ' ->
       typed fenv Γ (EDeref r) T Γ'
 
+  (* &*r — shared re-borrow: r has any reference type &'a rk T *)
+  | T_ReBorrowShared : forall Γ r la rk T u_r,
+      ctx_lookup r Γ = Some (MkTy u_r (TRef la rk T), false) ->
+      ty_usage (MkTy u_r (TRef la rk T)) <> ULinear ->
+      typed fenv Γ (EBorrow RShared (PDeref (PVar r)))
+        (MkTy UUnrestricted (TRef LStatic RShared T)) Γ
+
+  (* &mut *r — mutable re-borrow: r must have &mut T and be mutable *)
+  | T_ReBorrowMut : forall Γ r la T u_r,
+      ctx_lookup r Γ = Some (MkTy u_r (TRef la RUnique T), false) ->
+      ty_usage (MkTy u_r (TRef la RUnique T)) <> ULinear ->
+      ctx_lookup_mut r Γ = Some MMutable ->
+      typed fenv Γ (EBorrow RUnique (PDeref (PVar r)))
+        (MkTy UUnrestricted (TRef LStatic RUnique T)) Γ
+
+  (* *r <- e_new where r : &mut T: write through mutable reference, return old T *)
+  | T_Replace_Deref : forall Γ Γ' r la T T_new e_new u_r,
+      ctx_lookup r Γ = Some (MkTy u_r (TRef la RUnique T), false) ->
+      ctx_lookup_mut r Γ = Some MMutable ->
+      typed fenv Γ e_new T_new Γ' ->
+      ty_core T_new = ty_core T ->
+      usage_sub (ty_usage T_new) (ty_usage T) ->
+      typed fenv Γ (EReplace (PDeref (PVar r)) e_new) T Γ'
+
+  (* *r = e_new where r : &mut T (non-linear): assign through reference, return unit *)
+  | T_Assign_Deref : forall Γ Γ' r la T T_new e_new u_r,
+      ctx_lookup r Γ = Some (MkTy u_r (TRef la RUnique T), false) ->
+      ctx_lookup_mut r Γ = Some MMutable ->
+      ty_usage T <> ULinear ->
+      typed fenv Γ e_new T_new Γ' ->
+      ty_core T_new = ty_core T ->
+      usage_sub (ty_usage T_new) (ty_usage T) ->
+      typed fenv Γ (EAssign (PDeref (PVar r)) e_new) (MkTy UUnrestricted TUnits) Γ'
+
   (* if e1 { e2 } else { e3 }:
      - e1 must have bool type (any usage)
      - e2, e3 must have the same core type
@@ -403,6 +437,25 @@ Inductive borrow_ok (fenv : list fn_def)
   | BO_Assign : forall BS BS' Γ x e_new,
       borrow_ok fenv BS Γ e_new BS' ->
       borrow_ok fenv BS Γ (EAssign (PVar x) e_new) BS'
+
+  (* write-through-reference: borrow check only traverses e_new *)
+  | BO_Replace_Deref : forall BS BS' Γ r e_new,
+      borrow_ok fenv BS Γ e_new BS' ->
+      borrow_ok fenv BS Γ (EReplace (PDeref (PVar r)) e_new) BS'
+
+  | BO_Assign_Deref : forall BS BS' Γ r e_new,
+      borrow_ok fenv BS Γ e_new BS' ->
+      borrow_ok fenv BS Γ (EAssign (PDeref (PVar r)) e_new) BS'
+
+  (* shared re-borrow: OK if no active mut borrow on r *)
+  | BO_ReBorrowShared : forall BS Γ r,
+      bs_can_shared r BS ->
+      borrow_ok fenv BS Γ (EBorrow RShared (PDeref (PVar r))) (BEShared r :: BS)
+
+  (* mutable re-borrow: OK if no active borrow of any kind on r *)
+  | BO_ReBorrowMut : forall BS Γ r,
+      bs_can_mut r BS ->
+      borrow_ok fenv BS Γ (EBorrow RUnique (PDeref (PVar r))) (BEMut r :: BS)
 
   (* let: e1 produces BS1; e2 (with x in ctx) produces BS2.
      On scope exit, borrows introduced by e1 are released. *)

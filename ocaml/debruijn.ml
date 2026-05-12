@@ -26,11 +26,17 @@ let rec convert (scope : scope) (e : named_expr) : expr =
   | NVar name       -> EVar (make_ident name (lookup scope name))
   | NDrop e1        -> EDrop (convert scope e1)
   | NReplace (id, e1) ->
-    EReplace (make_ident id (lookup scope id), convert scope e1)
+    EReplace (PVar (make_ident id (lookup scope id)), convert scope e1)
   | NAssign (id, e1) ->
-    EAssign (make_ident id (lookup scope id), convert scope e1)
+    EAssign (PVar (make_ident id (lookup scope id)), convert scope e1)
   | NBorrow (rk, id) ->
-    EBorrow (rk, make_ident id (lookup scope id))
+    EBorrow (rk, PVar (make_ident id (lookup scope id)))
+  | NReplaceDeref (id, e1) ->
+    EReplace (PDeref (PVar (make_ident id (lookup scope id))), convert scope e1)
+  | NAssignDeref (id, e1) ->
+    EAssign (PDeref (PVar (make_ident id (lookup scope id))), convert scope e1)
+  | NReBorrow (rk, id) ->
+    EBorrow (rk, PDeref (PVar (make_ident id (lookup scope id))))
   | NDeref e1 ->
     EDeref (convert scope e1)
   | NCall (f, args) ->

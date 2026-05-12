@@ -72,8 +72,9 @@ type literal =
 | LFloat of string
 | LBool of bool
 
-type place = ident
-  (* singleton inductive, whose constructor was PVar *)
+type place =
+| PVar of ident
+| PDeref of place
 
 type expr =
 | EUnit

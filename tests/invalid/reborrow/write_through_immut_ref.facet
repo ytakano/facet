@@ -1,0 +1,5 @@
+fn f(x: unrestricted isize) -> unrestricted () {
+    let r: unrestricted &unrestricted isize = (&x) in
+    let _: unrestricted () = (*r = 42) in
+    ()
+}

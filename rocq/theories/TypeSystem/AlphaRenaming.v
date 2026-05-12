@@ -122,6 +122,26 @@ Proof.
       simpl. rewrite (IH x Γt Htail). reflexivity.
 Qed.
 
+(* Alpha-renaming relation for places: rename_place ρ maps PVar x to
+   PVar (lookup_rename x ρ) and PDeref recursively. *)
+Inductive place_alpha (ρ : rename_env) : place -> place -> Prop :=
+  | PA_Var : forall x,
+      ~ In x (rename_range ρ) ->
+      place_alpha ρ (PVar x) (PVar (lookup_rename x ρ))
+  | PA_Deref : forall p pr,
+      place_alpha ρ p pr ->
+      place_alpha ρ (PDeref p) (PDeref pr).
+
+(* place_name gives the root variable; disjointness of root ↔ place_alpha holds. *)
+Lemma rename_place_alpha_sound : forall ρ p,
+  ~ In (place_name p) (rename_range ρ) ->
+  place_alpha ρ p (rename_place ρ p).
+Proof.
+  intros ρ p Hdisj. induction p; simpl in *.
+  - apply PA_Var. exact Hdisj.
+  - apply PA_Deref. apply IHp. exact Hdisj.
+Qed.
+
 Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
   | EA_Unit : forall ρ,
       expr_alpha ρ EUnit EUnit
@@ -141,20 +161,17 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
   | EA_Call : forall ρ fname args argsr,
       exprs_alpha ρ args argsr ->
       expr_alpha ρ (ECall fname args) (ECall fname argsr)
-  | EA_Replace : forall ρ x e er,
-      ~ In x (rename_range ρ) ->
+  | EA_Replace : forall ρ p pr e er,
+      place_alpha ρ p pr ->
       expr_alpha ρ e er ->
-      expr_alpha ρ (EReplace (PVar x) e)
-        (EReplace (PVar (lookup_rename x ρ)) er)
-  | EA_Assign : forall ρ x e er,
-      ~ In x (rename_range ρ) ->
+      expr_alpha ρ (EReplace p e) (EReplace pr er)
+  | EA_Assign : forall ρ p pr e er,
+      place_alpha ρ p pr ->
       expr_alpha ρ e er ->
-      expr_alpha ρ (EAssign (PVar x) e)
-        (EAssign (PVar (lookup_rename x ρ)) er)
-  | EA_Borrow : forall ρ rk x,
-      ~ In x (rename_range ρ) ->
-      expr_alpha ρ (EBorrow rk (PVar x))
-        (EBorrow rk (PVar (lookup_rename x ρ)))
+      expr_alpha ρ (EAssign p e) (EAssign pr er)
+  | EA_Borrow : forall ρ rk p pr,
+      place_alpha ρ p pr ->
+      expr_alpha ρ (EBorrow rk p) (EBorrow rk pr)
   | EA_Deref : forall ρ e er,
       expr_alpha ρ e er ->
       expr_alpha ρ (EDeref e) (EDeref er)
@@ -936,33 +953,33 @@ Proof.
       -- exact Hrename0.
     * exact Hdisj.
     * symmetry. exact Hargs.
-  + destruct p as [px].
-    destruct (disjoint_names_cons_l px (free_vars_expr e)
+  + (* EReplace p e *)
+    destruct (disjoint_names_cons_l (place_name p) (free_vars_expr e)
       (rename_range ρ) Hdisj) as [Hpx Hdisj_e].
     destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as <- _.
     constructor.
-    * exact Hpx.
+    * apply rename_place_alpha_sound. exact Hpx.
     * eapply IH.
       -- simpl in Hlt. lia.
       -- exact Hdisj_e.
       -- exact He.
-  + destruct p as [px].
-    destruct (disjoint_names_cons_l px (free_vars_expr e)
+  + (* EAssign p e *)
+    destruct (disjoint_names_cons_l (place_name p) (free_vars_expr e)
       (rename_range ρ) Hdisj) as [Hpx Hdisj_e].
     destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as <- _.
     constructor.
-    * exact Hpx.
+    * apply rename_place_alpha_sound. exact Hpx.
     * eapply IH.
       -- simpl in Hlt. lia.
       -- exact Hdisj_e.
       -- exact He.
   + (* EBorrow: no sub-expression, just rename place *)
-    destruct p as [px].
     injection Hrename as <- _.
     constructor.
-    exact (Hdisj px (in_eq px [])).
+    apply rename_place_alpha_sound.
+    exact (Hdisj (place_name p) (in_eq (place_name p) [])). 
   + (* EDeref: like EDrop *)
     destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as <- _.
@@ -1582,94 +1599,192 @@ Proof.
       -- rewrite Hname. exact Hname_r.
       -- exact Htyped_args0.
     * exact Hctx0.
-  + destruct p as [px].
+  + (* EReplace p e *)
     destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as <- _.
-    inversion Htyped; subst.
-    assert (Hsafe : ~ In px (rename_range ρ)).
-    { intros Hin. apply (Hdisj px); simpl; [left; reflexivity | exact Hin]. }
-    assert (Hdisj_e : disjoint_names (free_vars_expr e) (rename_range ρ)).
-    { intros x Hin Hinr. exact (Hdisj x (or_intror Hin) Hinr). }
-    lazymatch goal with
-    | Hte : typed fenvr Γr er0 ?Tnew ?Γr1 |- _ =>
-      destruct (IH fenv0 fenvr ρ Γ0 Γr e er0 used used0 Tnew Γr1
-        ltac:(simpl in Hlt; lia)
-        Hfenv Hctx Hctx_used Hrange_used
-        Hdisj_e He Hte) as [Γ0' [Htyped0 Hctx0]]
-    end.
-    exists Γ0'. split.
-    { eapply T_Replace.
-      - lazymatch goal with
-        | Hlookup : ctx_lookup (lookup_rename px ρ) Γr = Some (?Tx, false) |- _ =>
-          exact (ctx_alpha_lookup_backward ρ Γ0 Γr px Tx false Hctx Hsafe Hlookup)
-        end.
-      - lazymatch goal with
-        | Hmut : ctx_lookup_mut (lookup_rename px ρ) Γr = Some ?m |- _ =>
-          exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γr px m Hctx Hsafe Hmut)
-        end.
-      - exact Htyped0.
-      - assumption.
-      - assumption. }
-    { exact Hctx0. }
-  + destruct p as [px].
-    destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
-    injection Hrename as <- _.
-    inversion Htyped; subst.
-    assert (Hsafe : ~ In px (rename_range ρ)).
-    { intros Hin. apply (Hdisj px); simpl; [left; reflexivity | exact Hin]. }
-    assert (Hdisj_e : disjoint_names (free_vars_expr e) (rename_range ρ)).
-    { intros x Hin Hinr. exact (Hdisj x (or_intror Hin) Hinr). }
-    lazymatch goal with
-    | Hte : typed fenvr Γr er0 ?Tnew ?Γr1 |- _ =>
-      destruct (IH fenv0 fenvr ρ Γ0 Γr e er0 used used0 Tnew Γr1
-        ltac:(simpl in Hlt; lia)
-        Hfenv Hctx Hctx_used Hrange_used Hdisj_e He Hte) as [Γ0' [Htyped0 Hctx0]]
-    end.
-    exists Γ0'. split.
-    { eapply T_Assign.
-      - lazymatch goal with
-        | Hlookup : ctx_lookup (lookup_rename px ρ) Γr = Some (?Tx, false) |- _ =>
-          exact (ctx_alpha_lookup_backward ρ Γ0 Γr px Tx false Hctx Hsafe Hlookup)
-        end.
-      - lazymatch goal with
-        | Hmut : ctx_lookup_mut (lookup_rename px ρ) Γr = Some ?m |- _ =>
-          exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γr px m Hctx Hsafe Hmut)
-        end.
-      - assumption.
-      - exact Htyped0.
-      - assumption.
-      - assumption. }
-    { exact Hctx0. }
-  + (* EBorrow *)
-    destruct p as [px].
-    injection Hrename as <- _.
-    inversion Htyped; subst.
-    * (* T_BorrowShared *)
+    destruct p as [px | q].
+    * (* PVar px → T_Replace *)
+      inversion Htyped; subst.
       assert (Hsafe : ~ In px (rename_range ρ)).
       { intros Hin. apply (Hdisj px); simpl; [left; reflexivity | exact Hin]. }
-      exists Γ0. split.
-      { eapply T_BorrowShared.
+      assert (Hdisj_e : disjoint_names (free_vars_expr e) (rename_range ρ)).
+      { intros x Hin Hinr. exact (Hdisj x (or_intror Hin) Hinr). }
+      lazymatch goal with
+      | Hte : typed fenvr Γr er0 ?Tnew ?Γr1 |- _ =>
+        destruct (IH fenv0 fenvr ρ Γ0 Γr e er0 used used0 Tnew Γr1
+          ltac:(simpl in Hlt; lia)
+          Hfenv Hctx Hctx_used Hrange_used
+          Hdisj_e He Hte) as [Γ0' [Htyped0 Hctx0]]
+      end.
+      exists Γ0'. split.
+      { eapply T_Replace.
         - lazymatch goal with
-          | Hlookup : ctx_lookup (lookup_rename px ρ) ?Γrx = Some (?Tx, false) |- _ =>
-            exact (ctx_alpha_lookup_backward ρ Γ0 Γrx px Tx false Hctx Hsafe Hlookup)
+          | Hlookup : ctx_lookup (lookup_rename px ρ) Γr = Some (?Tx, false) |- _ =>
+            exact (ctx_alpha_lookup_backward ρ Γ0 Γr px Tx false Hctx Hsafe Hlookup)
           end.
+        - lazymatch goal with
+          | Hmut : ctx_lookup_mut (lookup_rename px ρ) Γr = Some ?m |- _ =>
+            exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γr px m Hctx Hsafe Hmut)
+          end.
+        - exact Htyped0.
+        - assumption.
         - assumption. }
-      { exact Hctx. }
-    * (* T_BorrowMut *)
+      { exact Hctx0. }
+    * (* PDeref q → T_Replace_Deref (or impossible for deeper nesting) *)
+      destruct q as [rvar | q2].
+      -- (* PDeref (PVar r) → T_Replace_Deref *)
+         inversion Htyped; subst.
+         assert (Hsafe : ~ In rvar (rename_range ρ)).
+         { intros Hin. apply (Hdisj rvar); simpl; [left; reflexivity | exact Hin]. }
+         assert (Hdisj_e : disjoint_names (free_vars_expr e) (rename_range ρ)).
+         { intros x Hin Hinr. exact (Hdisj x (or_intror Hin) Hinr). }
+         lazymatch goal with
+         | Hte : typed fenvr Γr er0 ?Tnew ?Γr1 |- _ =>
+           destruct (IH fenv0 fenvr ρ Γ0 Γr e er0 used used0 Tnew Γr1
+             ltac:(simpl in Hlt; lia)
+             Hfenv Hctx Hctx_used Hrange_used
+             Hdisj_e He Hte) as [Γ0' [Htyped0 Hctx0]]
+         end.
+         exists Γ0'. split.
+         { eapply T_Replace_Deref.
+           - lazymatch goal with
+             | Hlookup : ctx_lookup (lookup_rename rvar ρ) Γr = Some (MkTy ?u_r (TRef ?la ?rk ?T), false) |- _ =>
+               exact (ctx_alpha_lookup_backward ρ Γ0 Γr rvar (MkTy u_r (TRef la rk T)) false Hctx Hsafe Hlookup)
+             end.
+           - lazymatch goal with
+             | Hmut : ctx_lookup_mut (lookup_rename rvar ρ) Γr = Some ?m |- _ =>
+               exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γr rvar m Hctx Hsafe Hmut)
+             end.
+           - exact Htyped0.
+           - assumption.
+           - assumption. }
+         { exact Hctx0. }
+      -- (* PDeref (PDeref ...) — no typing rule, contradiction *)
+         inversion Htyped.
+  + (* EAssign p e *)
+    destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
+    injection Hrename as <- _.
+    destruct p as [px | q].
+    * (* PVar px → T_Assign *)
+      inversion Htyped; subst.
       assert (Hsafe : ~ In px (rename_range ρ)).
       { intros Hin. apply (Hdisj px); simpl; [left; reflexivity | exact Hin]. }
-      exists Γ0. split.
-      { eapply T_BorrowMut.
+      assert (Hdisj_e : disjoint_names (free_vars_expr e) (rename_range ρ)).
+      { intros x Hin Hinr. exact (Hdisj x (or_intror Hin) Hinr). }
+      lazymatch goal with
+      | Hte : typed fenvr Γr er0 ?Tnew ?Γr1 |- _ =>
+        destruct (IH fenv0 fenvr ρ Γ0 Γr e er0 used used0 Tnew Γr1
+          ltac:(simpl in Hlt; lia)
+          Hfenv Hctx Hctx_used Hrange_used Hdisj_e He Hte) as [Γ0' [Htyped0 Hctx0]]
+      end.
+      exists Γ0'. split.
+      { eapply T_Assign.
         - lazymatch goal with
-          | Hlookup : ctx_lookup (lookup_rename px ρ) ?Γrx = Some (?Tx, false) |- _ =>
-            exact (ctx_alpha_lookup_backward ρ Γ0 Γrx px Tx false Hctx Hsafe Hlookup)
+          | Hlookup : ctx_lookup (lookup_rename px ρ) Γr = Some (?Tx, false) |- _ =>
+            exact (ctx_alpha_lookup_backward ρ Γ0 Γr px Tx false Hctx Hsafe Hlookup)
+          end.
+        - lazymatch goal with
+          | Hmut : ctx_lookup_mut (lookup_rename px ρ) Γr = Some ?m |- _ =>
+            exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γr px m Hctx Hsafe Hmut)
           end.
         - assumption.
-        - lazymatch goal with
-          | Hmut : ctx_lookup_mut (lookup_rename px ρ) ?Γrx = Some ?m |- _ =>
-            exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γrx px m Hctx Hsafe Hmut)
-          end. }
-      { exact Hctx. }
+        - exact Htyped0.
+        - assumption.
+        - assumption. }
+      { exact Hctx0. }
+    * (* PDeref q *)
+      destruct q as [rvar | q2].
+      -- (* PDeref (PVar r) → T_Assign_Deref *)
+         inversion Htyped; subst.
+         assert (Hsafe : ~ In rvar (rename_range ρ)).
+         { intros Hin. apply (Hdisj rvar); simpl; [left; reflexivity | exact Hin]. }
+         assert (Hdisj_e : disjoint_names (free_vars_expr e) (rename_range ρ)).
+         { intros x Hin Hinr. exact (Hdisj x (or_intror Hin) Hinr). }
+         lazymatch goal with
+         | Hte : typed fenvr Γr er0 ?Tnew ?Γr1 |- _ =>
+           destruct (IH fenv0 fenvr ρ Γ0 Γr e er0 used used0 Tnew Γr1
+             ltac:(simpl in Hlt; lia)
+             Hfenv Hctx Hctx_used Hrange_used Hdisj_e He Hte) as [Γ0' [Htyped0 Hctx0]]
+         end.
+         exists Γ0'. split.
+         { eapply T_Assign_Deref.
+           - lazymatch goal with
+             | Hlookup : ctx_lookup (lookup_rename rvar ρ) Γr = Some (MkTy ?u_r (TRef ?la ?rk ?T), false) |- _ =>
+               exact (ctx_alpha_lookup_backward ρ Γ0 Γr rvar (MkTy u_r (TRef la rk T)) false Hctx Hsafe Hlookup)
+             end.
+           - lazymatch goal with
+             | Hmut : ctx_lookup_mut (lookup_rename rvar ρ) Γr = Some ?m |- _ =>
+               exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γr rvar m Hctx Hsafe Hmut)
+             end.
+           - assumption.
+           - exact Htyped0.
+           - assumption.
+           - assumption. }
+         { exact Hctx0. }
+      -- inversion Htyped.
+  + (* EBorrow rk p *)
+    injection Hrename as <- _.
+    destruct p as [px | q].
+    * (* PVar px → T_BorrowShared or T_BorrowMut *)
+      inversion Htyped; subst.
+      -- (* T_BorrowShared *)
+         assert (Hsafe : ~ In px (rename_range ρ)).
+         { intros Hin. apply (Hdisj px); simpl; [left; reflexivity | exact Hin]. }
+         exists Γ0. split.
+         { eapply T_BorrowShared.
+           - lazymatch goal with
+             | Hlookup : ctx_lookup (lookup_rename px ρ) ?Γrx = Some (?Tx, false) |- _ =>
+               exact (ctx_alpha_lookup_backward ρ Γ0 Γrx px Tx false Hctx Hsafe Hlookup)
+             end.
+           - assumption. }
+         { exact Hctx. }
+      -- (* T_BorrowMut *)
+         assert (Hsafe : ~ In px (rename_range ρ)).
+         { intros Hin. apply (Hdisj px); simpl; [left; reflexivity | exact Hin]. }
+         exists Γ0. split.
+         { eapply T_BorrowMut.
+           - lazymatch goal with
+             | Hlookup : ctx_lookup (lookup_rename px ρ) ?Γrx = Some (?Tx, false) |- _ =>
+               exact (ctx_alpha_lookup_backward ρ Γ0 Γrx px Tx false Hctx Hsafe Hlookup)
+             end.
+           - assumption.
+           - lazymatch goal with
+             | Hmut : ctx_lookup_mut (lookup_rename px ρ) ?Γrx = Some ?m |- _ =>
+               exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γrx px m Hctx Hsafe Hmut)
+             end. }
+         { exact Hctx. }
+    * (* PDeref q → T_ReBorrowShared or T_ReBorrowMut *)
+      destruct q as [rvar | q2].
+      -- inversion Htyped; subst.
+         { (* T_ReBorrowShared *)
+           assert (Hsafe : ~ In rvar (rename_range ρ)).
+           { intros Hin. apply (Hdisj rvar); simpl; [left; reflexivity | exact Hin]. }
+           exists Γ0. split.
+           { eapply T_ReBorrowShared.
+             - lazymatch goal with
+               | Hlookup : ctx_lookup (lookup_rename rvar ρ) ?Γrx = Some (MkTy ?u_r (TRef ?la ?rk ?T), false) |- _ =>
+                 exact (ctx_alpha_lookup_backward ρ Γ0 Γrx rvar (MkTy u_r (TRef la rk T)) false Hctx Hsafe Hlookup)
+               end.
+             - assumption. }
+           { exact Hctx. }
+         }
+         { (* T_ReBorrowMut *)
+           assert (Hsafe : ~ In rvar (rename_range ρ)).
+           { intros Hin. apply (Hdisj rvar); simpl; [left; reflexivity | exact Hin]. }
+           exists Γ0. split.
+           { eapply T_ReBorrowMut.
+             - lazymatch goal with
+               | Hlookup : ctx_lookup (lookup_rename rvar ρ) ?Γrx = Some (MkTy ?u_r (TRef ?la ?rk ?T), false) |- _ =>
+                 exact (ctx_alpha_lookup_backward ρ Γ0 Γrx rvar (MkTy u_r (TRef la rk T)) false Hctx Hsafe Hlookup)
+               end.
+             - assumption.
+             - lazymatch goal with
+               | Hmut : ctx_lookup_mut (lookup_rename rvar ρ) ?Γrx = Some ?m |- _ =>
+                 exact (ctx_alpha_lookup_mut_backward ρ Γ0 Γrx rvar m Hctx Hsafe Hmut)
+               end. }
+           { exact Hctx. }
+         }
+      -- inversion Htyped.
   + (* EDeref: like EDrop but uses T_Deref *)
     destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as <- _.

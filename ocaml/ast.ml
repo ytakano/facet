@@ -9,6 +9,9 @@ type named_expr =
   | NReplace of name * named_expr
   | NAssign of name * named_expr
   | NBorrow of TypeChecker.ref_kind * name
+  | NReplaceDeref of name * named_expr       (* write through mutable ref: replace *x e *)
+  | NAssignDeref  of name * named_expr       (* assign through mutable ref: ( *x = e ) *)
+  | NReBorrow     of TypeChecker.ref_kind * name  (* re-borrow through ref: & *x or &mut *x *)
   | NDeref  of named_expr
   | NDrop   of named_expr
   | NIf     of named_expr * named_expr * named_expr

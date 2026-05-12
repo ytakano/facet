@@ -174,9 +174,10 @@ Fixpoint ctx_names (Γ : ctx) : list ident :=
   | (x, _, _, _) :: Γ' => x :: ctx_names Γ'
   end.
 
-Definition place_name (p : place) : ident :=
+Fixpoint place_name (p : place) : ident :=
   match p with
-  | PVar x => x
+  | PVar x    => x
+  | PDeref q  => place_name q
   end.
 
 (* ------------------------------------------------------------------ *)
@@ -232,9 +233,10 @@ Fixpoint param_names (ps : list param) : list ident :=
   | p :: ps' => param_name p :: param_names ps'
   end.
 
-Definition rename_place (ρ : rename_env) (p : place) : place :=
+Fixpoint rename_place (ρ : rename_env) (p : place) : place :=
   match p with
-  | PVar x => PVar (lookup_rename x ρ)
+  | PVar x   => PVar (lookup_rename x ρ)
+  | PDeref q => PDeref (rename_place ρ q)
   end.
 
 Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
@@ -417,6 +419,34 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
           end
       end
 
+  (* *r <- e_new where r : &mut T: write through mutable reference, return old T *)
+  | EReplace (PDeref (PVar r)) e_new =>
+      match ctx_lookup_b r Γ with
+      | None              => infer_err (ErrUnknownVar r)
+      | Some (_, true)    => infer_err (ErrAlreadyConsumed r)
+      | Some (T_r, false) =>
+          match ty_core T_r with
+          | TRef _ RUnique T_inner =>
+              match ctx_lookup_mut_b r Γ with
+              | None => infer_err (ErrUnknownVar r)
+              | Some MImmutable => infer_err (ErrNotMutable r)
+              | Some MMutable =>
+                  match infer_core fenv Γ e_new with
+                  | infer_err err => infer_err err
+                  | infer_ok (T_new, Γ') =>
+                      if ty_core_eqb (ty_core T_new) (ty_core T_inner) then
+                        if usage_sub_bool (ty_usage T_new) (ty_usage T_inner)
+                        then infer_ok (T_inner, Γ')
+                        else infer_err (ErrUsageMismatch (ty_usage T_new) (ty_usage T_inner))
+                      else infer_err (ErrTypeMismatch (ty_core T_new) (ty_core T_inner))
+                  end
+              end
+          | c => infer_err (ErrNotAReference c)
+          end
+      end
+
+  | EReplace (PDeref (PDeref _)) _ => infer_err ErrNotImplemented
+
   | EAssign (PVar x) e_new =>
       match ctx_lookup_b x Γ with
       | None => infer_err (ErrUnknownVar x)
@@ -440,6 +470,37 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
                 end
           end
       end
+
+  (* *r = e_new where r : &mut T (non-linear): assign through mutable reference, return unit *)
+  | EAssign (PDeref (PVar r)) e_new =>
+      match ctx_lookup_b r Γ with
+      | None              => infer_err (ErrUnknownVar r)
+      | Some (_, true)    => infer_err (ErrAlreadyConsumed r)
+      | Some (T_r, false) =>
+          match ty_core T_r with
+          | TRef _ RUnique T_inner =>
+              match ctx_lookup_mut_b r Γ with
+              | None => infer_err (ErrUnknownVar r)
+              | Some MImmutable => infer_err (ErrNotMutable r)
+              | Some MMutable =>
+                  if usage_eqb (ty_usage T_inner) ULinear
+                  then infer_err (ErrUsageMismatch (ty_usage T_inner) UAffine)
+                  else
+                    match infer_core fenv Γ e_new with
+                    | infer_err err => infer_err err
+                    | infer_ok (T_new, Γ') =>
+                        if ty_core_eqb (ty_core T_new) (ty_core T_inner) then
+                          if usage_sub_bool (ty_usage T_new) (ty_usage T_inner)
+                          then infer_ok (MkTy UUnrestricted TUnits, Γ')
+                          else infer_err (ErrUsageMismatch (ty_usage T_new) (ty_usage T_inner))
+                        else infer_err (ErrTypeMismatch (ty_core T_new) (ty_core T_inner))
+                    end
+              end
+          | c => infer_err (ErrNotAReference c)
+          end
+      end
+
+  | EAssign (PDeref (PDeref _)) _ => infer_err ErrNotImplemented
 
   | ECall fname args =>
       match lookup_fn_b fname fenv with
@@ -531,6 +592,43 @@ Fixpoint infer_core (fenv : list fn_def) (Γ : ctx) (e : expr)
                 infer_ok (MkTy UUnrestricted (TRef LStatic RShared T_x), Γ)
             end
       end
+
+  (* &*r (shared re-borrow): r has &T or &mut T, produce &T *)
+  | EBorrow RShared (PDeref (PVar r)) =>
+      match ctx_lookup_b r Γ with
+      | None              => infer_err (ErrUnknownVar r)
+      | Some (_, true)    => infer_err (ErrAlreadyConsumed r)
+      | Some (T_r, false) =>
+          match ty_core T_r with
+          | TRef _ _ T_inner =>
+              if usage_eqb (ty_usage T_r) ULinear
+              then infer_err (ErrUsageMismatch (ty_usage T_r) UAffine)
+              else infer_ok (MkTy UUnrestricted (TRef LStatic RShared T_inner), Γ)
+          | c => infer_err (ErrNotAReference c)
+          end
+      end
+
+  (* &mut *r (mutable re-borrow): r must have &mut T and be mutable *)
+  | EBorrow RUnique (PDeref (PVar r)) =>
+      match ctx_lookup_b r Γ with
+      | None              => infer_err (ErrUnknownVar r)
+      | Some (_, true)    => infer_err (ErrAlreadyConsumed r)
+      | Some (T_r, false) =>
+          match ty_core T_r with
+          | TRef _ RUnique T_inner =>
+              if usage_eqb (ty_usage T_r) ULinear
+              then infer_err (ErrUsageMismatch (ty_usage T_r) UAffine)
+              else
+                match ctx_lookup_mut_b r Γ with
+                | Some MMutable =>
+                    infer_ok (MkTy UUnrestricted (TRef LStatic RUnique T_inner), Γ)
+                | _ => infer_err (ErrImmutableBorrow r)
+                end
+          | c => infer_err (ErrNotAReference c)
+          end
+      end
+
+  | EBorrow _ (PDeref (PDeref _)) => infer_err ErrNotImplemented
 
   | EDeref r =>
       match infer_core fenv Γ r with
@@ -637,11 +735,31 @@ Fixpoint borrow_check (fenv : list fn_def) (BS : borrow_state) (Γ : ctx)
       then infer_err (ErrBorrowConflict x)
       else infer_ok (BEMut x :: BS)
 
+  (* &*r (shared re-borrow): treat r as the borrow target *)
+  | EBorrow RShared (PDeref (PVar r)) =>
+      if bs_has_mut r BS
+      then infer_err (ErrBorrowConflict r)
+      else infer_ok (BEShared r :: BS)
+
+  (* &mut *r (mutable re-borrow): treat r as the borrow target *)
+  | EBorrow RUnique (PDeref (PVar r)) =>
+      if bs_has_any r BS
+      then infer_err (ErrBorrowConflict r)
+      else infer_ok (BEMut r :: BS)
+
+  | EBorrow _ (PDeref (PDeref _)) => infer_err ErrNotImplemented
+
   | EDeref e1 | EDrop e1 =>
       borrow_check fenv BS Γ e1
 
   | EReplace (PVar _) e_new | EAssign (PVar _) e_new =>
       borrow_check fenv BS Γ e_new
+
+  | EReplace (PDeref (PVar _)) e_new | EAssign (PDeref (PVar _)) e_new =>
+      borrow_check fenv BS Γ e_new
+
+  | EReplace (PDeref (PDeref _)) _ | EAssign (PDeref (PDeref _)) _ =>
+      infer_err ErrNotImplemented
 
   | ELet m x T e1 e2 =>
       match borrow_check fenv BS Γ e1 with

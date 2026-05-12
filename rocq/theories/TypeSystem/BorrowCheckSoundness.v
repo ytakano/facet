@@ -109,25 +109,47 @@ Proof.
          exact Ha.
       -- apply IHargs; [simpl; simpl in Hlt; lia | exact Hcheck].
   (* EReplace *)
-  + destruct p.
-    apply BO_Replace.
-    apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
+  + destruct p as [x | q].
+    * apply BO_Replace.
+      apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
+    * destruct q as [rv | q2].
+      -- apply BO_Replace_Deref.
+         apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
+      -- discriminate.
 
   (* EAssign *)
-  + destruct p.
-    apply BO_Assign.
-    apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
+  + destruct p as [x | q].
+    * apply BO_Assign.
+      apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
+    * destruct q as [rv | q2].
+      -- apply BO_Assign_Deref.
+         apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
+      -- discriminate.
 
   (* EBorrow *)
-  + destruct r, p.
-    * (* RShared *)
-      destruct (bs_has_mut i BS) eqn:Hmut; [discriminate|].
+  + destruct r; destruct p as [x | q].
+    * (* RShared, PVar → BO_BorrowShared *)
+      destruct (bs_has_mut x BS) eqn:Hmut; [discriminate|].
       injection Hcheck as <-.
       apply BO_BorrowShared. unfold bs_can_shared. exact Hmut.
-    * (* RUnique *)
-      destruct (bs_has_any i BS) eqn:Hany; [discriminate|].
+    * (* RShared, PDeref q *)
+      destruct q as [rv | q2].
+      -- (* RShared, PDeref (PVar rv) → BO_ReBorrowShared *)
+         destruct (bs_has_mut rv BS) eqn:Hmut; [discriminate|].
+         injection Hcheck as <-.
+         apply BO_ReBorrowShared. unfold bs_can_shared. exact Hmut.
+      -- discriminate.
+    * (* RUnique, PVar → BO_BorrowMut *)
+      destruct (bs_has_any x BS) eqn:Hany; [discriminate|].
       injection Hcheck as <-.
       apply BO_BorrowMut. unfold bs_can_mut. exact Hany.
+    * (* RUnique, PDeref q *)
+      destruct q as [rv | q2].
+      -- (* RUnique, PDeref (PVar rv) → BO_ReBorrowMut *)
+         destruct (bs_has_any rv BS) eqn:Hany; [discriminate|].
+         injection Hcheck as <-.
+         apply BO_ReBorrowMut. unfold bs_can_mut. exact Hany.
+      -- discriminate.
 
   (* EDeref *)
   + apply BO_Deref.
@@ -205,6 +227,22 @@ Proof.
   (* BO_Assign *)
   - intros BS BS' Γ x e_new _ IH.
     simpl. exact IH.
+
+  (* BO_Replace_Deref *)
+  - intros BS BS' Γ r e_new _ IH.
+    simpl. exact IH.
+
+  (* BO_Assign_Deref *)
+  - intros BS BS' Γ r e_new _ IH.
+    simpl. exact IH.
+
+  (* BO_ReBorrowShared *)
+  - intros BS Γ r Hcan.
+    simpl. unfold bs_can_shared in Hcan. rewrite Hcan. reflexivity.
+
+  (* BO_ReBorrowMut *)
+  - intros BS Γ r Hcan.
+    simpl. unfold bs_can_mut in Hcan. rewrite Hcan. reflexivity.
 
   (* BO_Let *)
   - intros BS BS1 BS2 Γ m x T e1 e2 _ IH1 _ IH2.

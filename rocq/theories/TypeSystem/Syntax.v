@@ -42,7 +42,8 @@ Inductive literal : Type :=
 | LBool  : bool -> literal.
 
 Inductive place : Type :=
-| PVar : ident -> place.
+| PVar   : ident -> place
+| PDeref : place -> place.
 
 Inductive expr : Type :=
 | EUnit     : expr

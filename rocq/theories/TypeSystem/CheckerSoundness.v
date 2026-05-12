@@ -408,76 +408,194 @@ Proof.
          ++ exact Hinfer0.
       -- symmetry. exact Hgo.
 
-  (* EReplace (PVar px) e *)
-  + destruct p as [px].
-    destruct (ctx_lookup_b px Γ) as [[T_x b] |] eqn:Hlx_b.
-    2: discriminate.
-    destruct b; [discriminate |].
-    destruct (ctx_lookup_mut_b px Γ) as [mut |] eqn:Hmut_b.
-    2: discriminate.
-    destruct mut; [discriminate |].
-    destruct (infer_core fenv Γ e) as [Htyped3 | err3] eqn:He.
-    2: discriminate.
-    destruct Htyped3 as [T_new Γ1].
-    destruct (ty_core_eqb (ty_core T_new) (ty_core T_x)) eqn:Hcore.
-    2: discriminate.
-    destruct (usage_sub_bool (ty_usage T_new) (ty_usage T_x)) eqn:Hsub.
-    2: discriminate.
-    injection Hinfer as <- <-.
-    apply T_Replace with (T_new := T_new).
-    * rewrite <- ctx_lookup_b_eq. exact Hlx_b.
-    * rewrite <- ctx_lookup_mut_b_eq. exact Hmut_b.
-    * eapply IH.
-      -- simpl in Hlt. lia.
-      -- exact He.
-    * apply ty_core_eqb_true. exact Hcore.
-    * apply usage_sub_bool_sound. exact Hsub.
-
-  (* EAssign (PVar px) e *)
-  + destruct p as [px].
-    destruct (ctx_lookup_b px Γ) as [[T_x b] |] eqn:Hlx_b.
-    2: discriminate.
-    destruct b; [discriminate |].
-    destruct (ctx_lookup_mut_b px Γ) as [mut |] eqn:Hmut_b.
-    2: discriminate.
-    destruct mut; [discriminate |].
-    destruct (usage_eqb (ty_usage T_x) ULinear) eqn:Hlin; [discriminate |].
-    destruct (infer_core fenv Γ e) as [[T_new Γ1] |] eqn:He.
-    2: discriminate.
-    destruct (ty_core_eqb (ty_core T_new) (ty_core T_x)) eqn:Hcore.
-    2: discriminate.
-    destruct (usage_sub_bool (ty_usage T_new) (ty_usage T_x)) eqn:Hsub.
-    2: discriminate.
-    injection Hinfer as <- <-.
-    eapply T_Assign with (T := T_x) (T_new := T_new).
-    * rewrite <- ctx_lookup_b_eq. exact Hlx_b.
-    * rewrite <- ctx_lookup_mut_b_eq. exact Hmut_b.
-    * intro Heq. rewrite Heq in Hlin. simpl in Hlin. discriminate.
-    * eapply IH. simpl in Hlt; lia. exact He.
-    * apply ty_core_eqb_true. exact Hcore.
-    * apply usage_sub_bool_sound. exact Hsub.
-
-  (* EBorrow rk (PVar px) *)
-  + destruct p as [px].
-    destruct (ctx_lookup_b px Γ) as [[T_x b] |] eqn:Hlx_b.
-    2: discriminate.
-    destruct b; [discriminate |].
-    destruct (usage_eqb (ty_usage T_x) ULinear) eqn:Hlin; [discriminate |].
-    destruct r; simpl in Hinfer.
-    * (* RShared *)
-      injection Hinfer as <- <-.
-      eapply T_BorrowShared.
-      -- rewrite <- ctx_lookup_b_eq. exact Hlx_b.
-      -- intro Heq. rewrite Heq in Hlin. simpl in Hlin. discriminate.
-    * (* RUnique *)
+  (* EReplace p e: PVar or PDeref (PVar) *)
+  + destruct p as [px | q].
+    * (* PVar px → T_Replace *)
+      destruct (ctx_lookup_b px Γ) as [[T_x b] |] eqn:Hlx_b.
+      2: discriminate.
+      destruct b; [discriminate |].
       destruct (ctx_lookup_mut_b px Γ) as [mut |] eqn:Hmut_b.
       2: discriminate.
       destruct mut; [discriminate |].
+      destruct (infer_core fenv Γ e) as [Htyped3 | err3] eqn:He.
+      2: discriminate.
+      destruct Htyped3 as [T_new Γ1].
+      destruct (ty_core_eqb (ty_core T_new) (ty_core T_x)) eqn:Hcore.
+      2: discriminate.
+      destruct (usage_sub_bool (ty_usage T_new) (ty_usage T_x)) eqn:Hsub.
+      2: discriminate.
       injection Hinfer as <- <-.
-      eapply T_BorrowMut.
+      apply T_Replace with (T_new := T_new).
       -- rewrite <- ctx_lookup_b_eq. exact Hlx_b.
-      -- intro Heq. rewrite Heq in Hlin. simpl in Hlin. discriminate.
       -- rewrite <- ctx_lookup_mut_b_eq. exact Hmut_b.
+      -- eapply IH. simpl in Hlt; lia. exact He.
+      -- apply ty_core_eqb_true. exact Hcore.
+      -- apply usage_sub_bool_sound. exact Hsub.
+    * (* PDeref q *)
+      destruct q as [rv | q2].
+      -- (* PDeref (PVar rv) → T_Replace_Deref *)
+         simpl in Hinfer.
+         destruct (ctx_lookup_b rv Γ) as [[T_r b] |] eqn:Hlr_b;
+           [| discriminate].
+         destruct b; [discriminate |].
+         destruct (ty_core T_r) eqn:HcoreR; try discriminate.
+         lazymatch type of HcoreR with
+         | ty_core T_r = TRef ?la ?rk ?T_inner =>
+             destruct rk; [discriminate |];
+             assert (HTeq : T_r = MkTy (ty_usage T_r) (TRef la RUnique T_inner))
+               by (destruct T_r as [u c]; simpl in HcoreR; rewrite HcoreR; reflexivity)
+         end.
+         destruct (ctx_lookup_mut_b rv Γ) as [mut |] eqn:Hmut_b; [| discriminate].
+         destruct mut; [discriminate |].
+         destruct (infer_core fenv Γ e) as [[T_new Γ1] |] eqn:He; [| discriminate].
+         lazymatch type of HcoreR with
+         | ty_core T_r = TRef ?la ?rk ?T_inner =>
+             destruct (ty_core_eqb (ty_core T_new) (ty_core T_inner)) eqn:Hcore;
+               [| discriminate];
+             destruct (usage_sub_bool (ty_usage T_new) (ty_usage T_inner)) eqn:Hsub;
+               [| discriminate];
+             injection Hinfer as <- <-;
+             eapply T_Replace_Deref with (u_r := ty_usage T_r);
+             [ rewrite <- ctx_lookup_b_eq; rewrite <- HTeq; exact Hlr_b
+             | rewrite <- ctx_lookup_mut_b_eq; exact Hmut_b
+             | eapply IH; [simpl in Hlt; lia | exact He]
+             | apply ty_core_eqb_true; exact Hcore
+             | apply usage_sub_bool_sound; exact Hsub ]
+         end.
+      -- (* PDeref (PDeref _) → ErrNotImplemented *)
+         discriminate.
+
+  (* EAssign p e: PVar or PDeref (PVar) *)
+  + destruct p as [px | q].
+    * (* PVar px → T_Assign *)
+      destruct (ctx_lookup_b px Γ) as [[T_x b] |] eqn:Hlx_b.
+      2: discriminate.
+      destruct b; [discriminate |].
+      destruct (ctx_lookup_mut_b px Γ) as [mut |] eqn:Hmut_b.
+      2: discriminate.
+      destruct mut; [discriminate |].
+      destruct (usage_eqb (ty_usage T_x) ULinear) eqn:Hlin; [discriminate |].
+      destruct (infer_core fenv Γ e) as [[T_new Γ1] |] eqn:He.
+      2: discriminate.
+      destruct (ty_core_eqb (ty_core T_new) (ty_core T_x)) eqn:Hcore.
+      2: discriminate.
+      destruct (usage_sub_bool (ty_usage T_new) (ty_usage T_x)) eqn:Hsub.
+      2: discriminate.
+      injection Hinfer as <- <-.
+      eapply T_Assign with (T := T_x) (T_new := T_new).
+      -- rewrite <- ctx_lookup_b_eq. exact Hlx_b.
+      -- rewrite <- ctx_lookup_mut_b_eq. exact Hmut_b.
+      -- intro Heq. rewrite Heq in Hlin. simpl in Hlin. discriminate.
+      -- eapply IH. simpl in Hlt; lia. exact He.
+      -- apply ty_core_eqb_true. exact Hcore.
+      -- apply usage_sub_bool_sound. exact Hsub.
+    * (* PDeref q *)
+      destruct q as [rv | q2].
+      -- (* PDeref (PVar rv) → T_Assign_Deref *)
+         simpl in Hinfer.
+         destruct (ctx_lookup_b rv Γ) as [[T_r b] |] eqn:Hlr_b; [| discriminate].
+         destruct b; [discriminate |].
+         destruct (ty_core T_r) eqn:HcoreR; try discriminate.
+         lazymatch type of HcoreR with
+         | ty_core T_r = TRef ?la ?rk ?T_inner =>
+             destruct rk; [discriminate |];
+             assert (HTeq : T_r = MkTy (ty_usage T_r) (TRef la RUnique T_inner))
+               by (destruct T_r as [u c]; simpl in HcoreR; rewrite HcoreR; reflexivity)
+         end.
+         destruct (ctx_lookup_mut_b rv Γ) as [mut |] eqn:Hmut_b; [| discriminate].
+         destruct mut; [discriminate |].
+         lazymatch type of HcoreR with
+         | ty_core T_r = TRef ?la ?rk ?T_inner =>
+             destruct (usage_eqb (ty_usage T_inner) ULinear) eqn:Hlin; [discriminate |];
+             destruct (infer_core fenv Γ e) as [[T_new Γ1] |] eqn:He; [| discriminate];
+             destruct (ty_core_eqb (ty_core T_new) (ty_core T_inner)) eqn:Hcore;
+               [| discriminate];
+             destruct (usage_sub_bool (ty_usage T_new) (ty_usage T_inner)) eqn:Hsub;
+               [| discriminate];
+             injection Hinfer as <- <-;
+             eapply T_Assign_Deref with (u_r := ty_usage T_r);
+             [ rewrite <- ctx_lookup_b_eq; rewrite <- HTeq; exact Hlr_b
+             | rewrite <- ctx_lookup_mut_b_eq; exact Hmut_b
+             | intro Heq; rewrite Heq in Hlin; simpl in Hlin; discriminate
+             | eapply IH; [simpl in Hlt; lia | exact He]
+             | apply ty_core_eqb_true; exact Hcore
+             | apply usage_sub_bool_sound; exact Hsub ]
+         end.
+      -- discriminate.
+
+  (* EBorrow rk p *)
+  + destruct p as [px | q].
+    * (* PVar px → T_BorrowShared or T_BorrowMut *)
+      (* destruct r first so infer_core reduces to the ctx_lookup match *)
+      destruct r; simpl in Hinfer.
+      -- (* RShared *)
+         destruct (ctx_lookup_b px Γ) as [[T_x b] |] eqn:Hlx_b.
+         2: discriminate.
+         destruct b; [discriminate |].
+         destruct (usage_eqb (ty_usage T_x) ULinear) eqn:Hlin; [discriminate |].
+         injection Hinfer as <- <-.
+         eapply T_BorrowShared.
+         ++ rewrite <- ctx_lookup_b_eq. exact Hlx_b.
+         ++ intro Heq. rewrite Heq in Hlin. simpl in Hlin. discriminate.
+      -- (* RUnique *)
+         destruct (ctx_lookup_b px Γ) as [[T_x b] |] eqn:Hlx_b.
+         2: discriminate.
+         destruct b; [discriminate |].
+         destruct (usage_eqb (ty_usage T_x) ULinear) eqn:Hlin; [discriminate |].
+         destruct (ctx_lookup_mut_b px Γ) as [mut |] eqn:Hmut_b.
+         2: discriminate.
+         destruct mut; [discriminate |].
+         injection Hinfer as <- <-.
+         eapply T_BorrowMut.
+         ++ rewrite <- ctx_lookup_b_eq. exact Hlx_b.
+         ++ intro Heq. rewrite Heq in Hlin. simpl in Hlin. discriminate.
+         ++ rewrite <- ctx_lookup_mut_b_eq. exact Hmut_b.
+    * (* PDeref q → T_ReBorrowShared or T_ReBorrowMut *)
+      destruct q as [rv | q2].
+      -- (* PDeref (PVar rv): destruct r first so infer_core reduces *)
+         destruct r; simpl in Hinfer.
+         ++ (* EBorrow RShared (PDeref (PVar rv)) → T_ReBorrowShared *)
+            destruct (ctx_lookup_b rv Γ) as [[T_r b] |] eqn:Hlr_b.
+            2: discriminate.
+            destruct b; [discriminate |].
+            destruct (ty_core T_r) eqn:HcoreR; try discriminate.
+            destruct (usage_eqb (ty_usage T_r) ULinear) eqn:Hlin; [discriminate |].
+            injection Hinfer as <- <-.
+            lazymatch type of HcoreR with
+            | ty_core T_r = TRef ?la ?rk ?T_inner =>
+                assert (HTeq : T_r = MkTy (ty_usage T_r) (TRef la rk T_inner))
+                  by (destruct T_r as [u c]; simpl in HcoreR; rewrite HcoreR; reflexivity);
+                eapply T_ReBorrowShared with (u_r := ty_usage T_r);
+                [ rewrite <- ctx_lookup_b_eq; rewrite <- HTeq; exact Hlr_b
+                | rewrite HTeq; simpl; intro Heq;
+                  rewrite Heq in Hlin; simpl in Hlin; discriminate ]
+            end.
+         ++ (* EBorrow RUnique (PDeref (PVar rv)) → T_ReBorrowMut *)
+            destruct (ctx_lookup_b rv Γ) as [[T_r b] |] eqn:Hlr_b.
+            2: discriminate.
+            destruct b; [discriminate |].
+            destruct (ty_core T_r) eqn:HcoreR; try discriminate.
+            (* infer_core for RUnique requires TRef _ RUnique T_inner;
+               destruct rk before usage check so Hinfer can reduce *)
+            lazymatch type of HcoreR with
+            | ty_core T_r = TRef ?la ?rk ?T_inner =>
+                destruct rk; [discriminate |]
+            end.
+            destruct (usage_eqb (ty_usage T_r) ULinear) eqn:Hlin; [discriminate |].
+            destruct (ctx_lookup_mut_b rv Γ) as [mut |] eqn:Hmut_b; [| discriminate].
+            destruct mut; [discriminate |].
+            injection Hinfer as <- <-.
+            lazymatch type of HcoreR with
+            | ty_core T_r = TRef ?la RUnique ?T_inner =>
+                assert (HTeq : T_r = MkTy (ty_usage T_r) (TRef la RUnique T_inner))
+                  by (destruct T_r as [u c]; simpl in HcoreR; rewrite HcoreR; reflexivity);
+                eapply T_ReBorrowMut with (u_r := ty_usage T_r);
+                [ rewrite <- ctx_lookup_b_eq; rewrite <- HTeq; exact Hlr_b
+                | rewrite HTeq; simpl; intro Heq;
+                  rewrite Heq in Hlin; simpl in Hlin; discriminate
+                | rewrite <- ctx_lookup_mut_b_eq; exact Hmut_b ]
+            end.
+      -- destruct r; cbn in Hinfer; discriminate.
 
   (* EDeref e *)
   + destruct (infer_core fenv Γ e) as [[T_r Γ1] | err] eqn:He.

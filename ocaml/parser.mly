@@ -105,12 +105,20 @@ atom_expr:
     { NDrop e }
   | LPAREN; KW_REPLACE; x = ID; e = atom_expr; RPAREN
     { NReplace (x, e) }
+  | LPAREN; KW_REPLACE; STAR; x = ID; e = atom_expr; RPAREN
+    { NReplaceDeref (x, e) }
   | LPAREN; x = ID; EQUAL; e = atom_expr; RPAREN
     { NAssign (x, e) }
   | LPAREN; AMP; x = ID; RPAREN
     { NBorrow (RShared, x) }
   | LPAREN; AMP; KW_MUT; x = ID; RPAREN
     { NBorrow (RUnique, x) }
+  | LPAREN; AMP; STAR; x = ID; RPAREN
+    { NReBorrow (RShared, x) }
+  | LPAREN; AMP; KW_MUT; STAR; x = ID; RPAREN
+    { NReBorrow (RUnique, x) }
+  | LPAREN; STAR; x = ID; EQUAL; e = atom_expr; RPAREN
+    { NAssignDeref (x, e) }
   | LPAREN; STAR; e = expr; RPAREN
     { NDeref e }
   | LPAREN; f = ID; args = list(atom_expr); RPAREN

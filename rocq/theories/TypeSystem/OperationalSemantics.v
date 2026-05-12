@@ -164,6 +164,30 @@ Inductive eval (fenv : list fn_def) : store -> expr -> store -> value -> Prop :=
       store_lookup x s = Some e ->
       eval fenv s (EBorrow rk (PVar x)) s (VRef x)
 
+  (* *r <- e_new: r holds VRef x, write through to x, return old value *)
+  | Eval_Replace_Deref : forall s s1 s2 r x se_r old_e e_new v_new,
+      store_lookup r s = Some se_r ->
+      se_val se_r = VRef x ->
+      store_lookup x s = Some old_e ->
+      eval fenv s e_new s1 v_new ->
+      store_update_val x v_new s1 = Some s2 ->
+      eval fenv s (EReplace (PDeref (PVar r)) e_new) s2 (se_val old_e)
+
+  (* *r = e_new: r holds VRef x, assign through to x, return unit *)
+  | Eval_Assign_Deref : forall s s1 s2 r x se_r old_e e_new v_new,
+      store_lookup r s = Some se_r ->
+      se_val se_r = VRef x ->
+      store_lookup x s = Some old_e ->
+      eval fenv s e_new s1 v_new ->
+      store_update_val x v_new s1 = Some s2 ->
+      eval fenv s (EAssign (PDeref (PVar r)) e_new) s2 VUnit
+
+  (* &*r — re-borrow: r holds VRef x, return VRef x *)
+  | Eval_ReBorrow : forall s r x se_r rk,
+      store_lookup r s = Some se_r ->
+      se_val se_r = VRef x ->
+      eval fenv s (EBorrow rk (PDeref (PVar r))) s (VRef x)
+
   (* *r: evaluate r to VRef x, then copy the value of x from the store.
      Only applicable when the inner type is UUnrestricted (copy semantics).
      The type checker enforces this; the store is unchanged. *)

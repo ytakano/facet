@@ -79,7 +79,7 @@ Theorem infer_full_env_structural_sound :
    - `PBShared` / `PBMut` の path prefix conflict lemma を追加する。
    - `pbs_new_entries`, `pbs_remove_all`, `pbs_eqb` の soundness を追加し、scope exit と branch equality を Prop に落とす。
 
-7. **P6: validator と full checker の統合**
+7. **P6: validator と full checker の統合** [done]
    - `ValidatorSoundness.v` の `validate_env_sound` を、現状の component 分解から `ValidEnv env` と checker 前提に使える形へ強化する。
    - `infer_env` 成功から `typed_fn_env_structural` を証明する。
    - `infer_full_env` 成功から `checked_fn_env_structural` を証明する。

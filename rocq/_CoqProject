@@ -15,6 +15,7 @@ theories/TypeSystem/CheckerSoundness.v
 theories/TypeSystem/EnvSoundnessFacts.v
 theories/TypeSystem/EnvTypingSoundness.v
 theories/TypeSystem/EnvBorrowSoundness.v
+theories/TypeSystem/EnvFullSoundness.v
 theories/TypeSystem/CheckerUsageSoundness.v
 theories/TypeSystem/BorrowCheckSoundness.v
 theories/Validation/Validator.v

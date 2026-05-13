@@ -1,4 +1,5 @@
-From Facet.TypeSystem Require Import Program.
+From Facet.TypeSystem Require Import Program TypeChecker EnvStructuralRules
+  EnvFullSoundness.
 From Facet.Validation Require Import Validator.
 From Stdlib Require Import Bool List.
 
@@ -59,4 +60,33 @@ Proof.
   unfold validate_fns in H.
   apply validate_env_sound in H.
   exact H.
+Qed.
+
+Theorem infer_full_env_structural_sound : forall env f T Γ',
+  ValidEnv env ->
+  infer_full_env env f = infer_ok (T, Γ') ->
+  checked_fn_env_structural env f.
+Proof.
+  intros env f T Γ' _ Hfull.
+  eapply infer_full_env_structural_sound_unvalidated. exact Hfull.
+Qed.
+
+Theorem validate_env_infer_full_env_structural_sound : forall env env' f T Γ',
+  validate_env env = Some env' ->
+  infer_full_env env' f = infer_ok (T, Γ') ->
+  checked_fn_env_structural env' f.
+Proof.
+  intros env env' f T Γ' Hvalidate Hfull.
+  destruct (validate_env_sound env env' Hvalidate) as [_ Hvalid].
+  eapply infer_full_env_structural_sound; eassumption.
+Qed.
+
+Theorem validate_fns_infer_full_env_structural_sound : forall fenv env f T Γ',
+  validate_fns fenv = Some env ->
+  infer_full_env env f = infer_ok (T, Γ') ->
+  checked_fn_env_structural env f.
+Proof.
+  intros fenv env f T Γ' Hvalidate Hfull.
+  destruct (validate_fns_sound fenv env Hvalidate) as [_ Hvalid].
+  eapply infer_full_env_structural_sound; eassumption.
 Qed.

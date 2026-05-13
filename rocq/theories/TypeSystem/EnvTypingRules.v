@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Lifetime Types Syntax Program TypingRules TypeChecker.
+From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program TypingRules TypeChecker.
 From Stdlib Require Import List String Bool.
 Import ListNotations.
 

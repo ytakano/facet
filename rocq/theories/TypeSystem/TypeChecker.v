@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Lifetime Types Syntax Program TypingRules.
+From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program TypingRules.
 From Stdlib Require Import List String Bool ZArith.
 Import ListNotations.
 
@@ -182,19 +182,19 @@ Definition ty_compatible_b (Ω : outlives_ctx) (T_actual T_expected : Ty) : bool
 Fixpoint ctx_lookup_b (x : ident) (Γ : ctx) : option (Ty * bool) :=
   match Γ with
   | []              => None
-  | (n, T, b, _) :: t => if ident_eqb x n then Some (T, b)
-                      else ctx_lookup_b x t
+  | (n, T, st, _) :: t =>
+      if ident_eqb x n then Some (T, st_consumed st) else ctx_lookup_b x t
   end.
 
 Fixpoint ctx_consume_b (x : ident) (Γ : ctx) : option ctx :=
   match Γ with
   | []              => None
-  | (n, T, b, m) :: t =>
+  | (n, T, st, m) :: t =>
       if ident_eqb x n
-      then Some ((n, T, true, m) :: t)
+      then Some ((n, T, state_consume_path [] st, m) :: t)
       else match ctx_consume_b x t with
            | None    => None
-           | Some t' => Some ((n, T, b, m) :: t')
+           | Some t' => Some ((n, T, st, m) :: t')
            end
   end.
 
@@ -205,14 +205,14 @@ Fixpoint ctx_lookup_mut_b (x : ident) (Γ : ctx) : option mutability :=
   end.
 
 Definition ctx_add_b (x : ident) (T : Ty) (m : mutability) (Γ : ctx) : ctx :=
-  (x, T, false, m) :: Γ.
+  (x, T, binding_state_of_bool false, m) :: Γ.
 
 Fixpoint ctx_remove_b (x : ident) (Γ : ctx) : ctx :=
   match Γ with
   | []              => []
-  | (n, T, b, m) :: t =>
+  | (n, T, st, m) :: t =>
       if ident_eqb x n then t
-      else (n, T, b, m) :: ctx_remove_b x t
+      else (n, T, st, m) :: ctx_remove_b x t
   end.
 
 (* Returns true iff x's usage constraint is satisfied after its scope:
@@ -221,8 +221,8 @@ Fixpoint ctx_remove_b (x : ident) (Γ : ctx) : ctx :=
 Definition ctx_check_ok (x : ident) (T : Ty) (Γ : ctx) : bool :=
   match ty_usage T with
   | ULinear =>
-      match ctx_lookup_b x Γ with
-      | Some (_, true) => true
+      match ctx_lookup_state x Γ with
+      | Some (_, st) => st_consumed st || path_conflicts_any_b [] (st_moved_paths st)
       | _              => false
       end
   | _ => true
@@ -1576,113 +1576,27 @@ Fixpoint infer_core_env_fuel (fuel : nat)
   end
   end.
 
-Definition field_path := list string.
+Definition sctx_entry : Type := ctx_entry.
+Definition sctx : Type := ctx.
 
-Definition path_segment_eqb (a b : string) : bool := String.eqb a b.
+Definition sctx_of_ctx (Γ : ctx) : sctx := Γ.
+Definition ctx_of_sctx (Σ : sctx) : ctx := Σ.
 
-Fixpoint path_eqb (p q : field_path) : bool :=
-  match p, q with
-  | [], [] => true
-  | x :: xs, y :: ys => path_segment_eqb x y && path_eqb xs ys
-  | _, _ => false
-  end.
+Definition sctx_lookup (x : ident) (Σ : sctx) : option (Ty * binding_state) :=
+  ctx_lookup_state x Σ.
 
-Fixpoint path_prefix_b (prefix path : field_path) : bool :=
-  match prefix, path with
-  | [], _ => true
-  | x :: xs, y :: ys => path_segment_eqb x y && path_prefix_b xs ys
-  | _ :: _, [] => false
-  end.
-
-Definition path_conflict_b (p q : field_path) : bool :=
-  path_prefix_b p q || path_prefix_b q p.
-
-Fixpoint path_conflicts_any_b (p : field_path) (paths : list field_path) : bool :=
-  match paths with
-  | [] => false
-  | q :: rest => path_conflict_b p q || path_conflicts_any_b p rest
-  end.
-
-Fixpoint remove_restored_paths (p : field_path) (paths : list field_path) : list field_path :=
-  match paths with
-  | [] => []
-  | q :: rest =>
-      if path_prefix_b p q
-      then remove_restored_paths p rest
-      else q :: remove_restored_paths p rest
-  end.
-
-Record binding_state : Type := MkBindingState {
-  st_consumed : bool;
-  st_moved_paths : list field_path
-}.
-
-Definition binding_available_b (st : binding_state) (p : field_path) : bool :=
-  negb (st_consumed st) && negb (path_conflicts_any_b p (st_moved_paths st)).
-
-Definition state_consume_path (p : field_path) (st : binding_state) : binding_state :=
-  match p with
-  | [] => MkBindingState true (st_moved_paths st)
-  | _ => MkBindingState (st_consumed st) (p :: st_moved_paths st)
-  end.
-
-Definition state_restore_path (p : field_path) (st : binding_state) : binding_state :=
-  MkBindingState (st_consumed st) (remove_restored_paths p (st_moved_paths st)).
-
-Definition sctx_entry : Type := (ident * Ty * binding_state * mutability)%type.
-Definition sctx : Type := list sctx_entry.
-
-Definition binding_state_of_bool (b : bool) : binding_state :=
-  MkBindingState b [].
-
-Fixpoint sctx_of_ctx (Γ : ctx) : sctx :=
-  match Γ with
-  | [] => []
-  | (x, T, b, m) :: rest => (x, T, binding_state_of_bool b, m) :: sctx_of_ctx rest
-  end.
-
-Fixpoint ctx_of_sctx (Σ : sctx) : ctx :=
-  match Σ with
-  | [] => []
-  | (x, T, st, m) :: rest => (x, T, st_consumed st, m) :: ctx_of_sctx rest
-  end.
-
-Fixpoint sctx_lookup (x : ident) (Σ : sctx) : option (Ty * binding_state) :=
-  match Σ with
-  | [] => None
-  | (y, T, st, _) :: rest =>
-      if ident_eqb x y then Some (T, st) else sctx_lookup x rest
-  end.
-
-Fixpoint sctx_lookup_mut (x : ident) (Σ : sctx) : option mutability :=
-  match Σ with
-  | [] => None
-  | (y, _, _, m) :: rest =>
-      if ident_eqb x y then Some m else sctx_lookup_mut x rest
-  end.
+Definition sctx_lookup_mut (x : ident) (Σ : sctx) : option mutability :=
+  ctx_lookup_mut x Σ.
 
 Definition sctx_add (x : ident) (T : Ty) (m : mutability) (Σ : sctx) : sctx :=
-  (x, T, MkBindingState false [], m) :: Σ.
+  ctx_add x T m Σ.
 
-Fixpoint sctx_remove (x : ident) (Σ : sctx) : sctx :=
-  match Σ with
-  | [] => []
-  | (y, T, st, m) :: rest =>
-      if ident_eqb x y then rest else (y, T, st, m) :: sctx_remove x rest
-  end.
+Definition sctx_remove (x : ident) (Σ : sctx) : sctx :=
+  ctx_remove x Σ.
 
-Fixpoint sctx_update_state (x : ident) (f : binding_state -> binding_state) (Σ : sctx)
+Definition sctx_update_state (x : ident) (f : binding_state -> binding_state) (Σ : sctx)
     : option sctx :=
-  match Σ with
-  | [] => None
-  | (y, T, st, m) :: rest =>
-      if ident_eqb x y
-      then Some ((y, T, f st, m) :: rest)
-      else match sctx_update_state x f rest with
-           | Some rest' => Some ((y, T, st, m) :: rest')
-           | None => None
-           end
-  end.
+  ctx_update_state x f Σ.
 
 Definition sctx_check_ok (x : ident) (T : Ty) (Σ : sctx) : bool :=
   match ty_usage T with
@@ -1698,24 +1612,6 @@ Fixpoint params_ok_sctx_b (ps : list param) (Σ : sctx) : bool :=
   match ps with
   | [] => true
   | p :: rest => sctx_check_ok (param_name p) (param_ty p) Σ && params_ok_sctx_b rest Σ
-  end.
-
-Fixpoint place_path (p : place) : option (ident * field_path) :=
-  match p with
-  | PVar x => Some (x, [])
-  | PField q f =>
-      match place_path q with
-      | Some (x, path) => Some (x, path ++ [f])
-      | None => None
-      end
-  | PDeref _ => None
-  end.
-
-Fixpoint place_suffix_path (p : place) : field_path :=
-  match p with
-  | PVar _ => []
-  | PDeref _ => []
-  | PField q f => place_suffix_path q ++ [f]
   end.
 
 Definition sctx_path_available (Σ : sctx) (x : ident) (p : field_path) : infer_result unit :=
@@ -2342,11 +2238,13 @@ Proof. vm_compute. reflexivity. Qed.
 
 Example infer_core_env_struct_field_ok :
   infer_core_env ex_env_struct_pair [] 0
-    [((("p"%string), 0), MkTy UUnrestricted (TStruct ("Pair"%string) [] []), false, MImmutable)]
+    [((("p"%string), 0), MkTy UUnrestricted (TStruct ("Pair"%string) [] []),
+      binding_state_of_bool false, MImmutable)]
     (EPlace (PField (PVar (("p"%string), 0)) ("x"%string))) =
   infer_ok
     (MkTy UUnrestricted TIntegers,
-     [((("p"%string), 0), MkTy UUnrestricted (TStruct ("Pair"%string) [] []), false, MImmutable)]).
+     [((("p"%string), 0), MkTy UUnrestricted (TStruct ("Pair"%string) [] []),
+       binding_state_of_bool false, MImmutable)]).
 Proof. vm_compute. reflexivity. Qed.
 
 (* ------------------------------------------------------------------ *)
@@ -2692,7 +2590,10 @@ Definition ex_split_ty : Ty :=
   MkTy UAffine (TStruct ("Split"%string) [] []).
 
 Definition ex_split_ctx : ctx :=
-  [((("p"%string), 0), ex_split_ty, false, MMutable)].
+  [((("p"%string), 0), ex_split_ty, binding_state_of_bool false, MMutable)].
+
+Definition ex_split_ctx_x_moved : ctx :=
+  [((("p"%string), 0), ex_split_ty, MkBindingState false [["x"%string]], MMutable)].
 
 Example infer_core_env_struct_instance_usage_after_args :
   infer_core_env
@@ -2712,7 +2613,7 @@ Example infer_core_env_moved_field_sibling_available :
     (ELetInfer MImmutable (("tmp"%string), 0)
       (EPlace (PField (PVar (("p"%string), 0)) ("x"%string)))
       (EPlace (PField (PVar (("p"%string), 0)) ("y"%string)))) =
-  infer_ok (MkTy UUnrestricted TBooleans, ex_split_ctx).
+  infer_ok (MkTy UUnrestricted TBooleans, ex_split_ctx_x_moved).
 Proof. vm_compute. reflexivity. Qed.
 
 Example infer_core_env_moved_field_blocks_parent_borrow :

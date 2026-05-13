@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Types Syntax TypingRules TypeChecker.
+From Facet.TypeSystem Require Import Types Syntax PathState TypingRules TypeChecker.
 From Stdlib Require Import List String Bool Lia PeanoNat Program.Equality.
 Import ListNotations.
 
@@ -311,7 +311,7 @@ Proof.
       { apply ident_eqb_neq.
         apply lookup_rename_not_in_range_neq.
         - exact H0.
-        - apply ident_eqb_neq in Hyx. intro Heq. subst y. contradiction.
+        - intro Heq. apply Hsafe. left. symmetry. exact Heq.
       }
       rewrite Hneq_lookup in Hlookup.
       simpl.
@@ -319,6 +319,37 @@ Proof.
       apply IHHalpha.
       * exact Hsafe_tail.
       * exact Hlookup.
+Qed.
+
+Lemma ctx_alpha_lookup_state_backward : forall ρ Γ Γr x T st,
+  ctx_alpha ρ Γ Γr ->
+  ~ In x (rename_range ρ) ->
+  ctx_lookup_state (lookup_rename x ρ) Γr = Some (T, st) ->
+  ctx_lookup_state x Γ = Some (T, st).
+Proof.
+  intros ρ Γ Γr x T st Halpha.
+  revert x T st.
+  induction Halpha; intros y T0 st0 Hsafe Hlookup.
+  - simpl in Hlookup. exact Hlookup.
+  - simpl in Hsafe, Hlookup.
+    assert (Hsafe_tail : ~ In y (rename_range ρ)).
+    { intro Hin. apply Hsafe. right. exact Hin. }
+    destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx. subst y.
+      simpl in Hlookup.
+      rewrite ident_eqb_refl in Hlookup.
+      simpl. rewrite ident_eqb_refl. exact Hlookup.
+    + simpl in Hlookup.
+      assert (Hneq_lookup :
+        ident_eqb (lookup_rename y ρ) xr = false).
+      { apply ident_eqb_neq.
+        apply lookup_rename_not_in_range_neq.
+        - exact H0.
+        - intro Heq. apply Hsafe. left. symmetry. exact Heq.
+      }
+      rewrite Hneq_lookup in Hlookup.
+      simpl. rewrite Hyx.
+      apply IHHalpha; assumption.
 Qed.
 
 Lemma ctx_alpha_consume_backward : forall ρ Γ Γr x Γr',
@@ -343,7 +374,7 @@ Proof.
       simpl in Hconsume.
       rewrite ident_eqb_refl in Hconsume.
       injection Hconsume as <-.
-      exists ((x, T, true, m) :: Γ).
+      exists ((x, T, state_consume_path [] b, m) :: Γ).
       split.
       * simpl. rewrite ident_eqb_refl. reflexivity.
       * constructor; assumption.
@@ -353,7 +384,7 @@ Proof.
       { apply ident_eqb_neq.
         apply lookup_rename_not_in_range_neq.
         - exact H0.
-        - apply ident_eqb_neq in Hyx. intro Heq. subst y. contradiction.
+        - intro Heq. apply Hsafe. left. symmetry. exact Heq.
       }
       rewrite Hneq_lookup in Hconsume.
       destruct (ctx_consume (lookup_rename y ρ) Γr) as [Γrt |] eqn:Hconsume_tail.
@@ -443,7 +474,8 @@ Proof.
     + exact Hctx.
     + exact Hsafe.
     + exact H0.
-  - simpl in Htyped_place. inversion Htyped_place.
+  - simpl in Htyped_place. inversion Htyped_place; subst.
+    eapply TP_Field; eauto.
 Qed.
 
 Lemma expr_as_place_alpha_rename_some_backward : forall ρ used e er used' pr,
@@ -613,11 +645,10 @@ Proof.
   intros ρ Γ Γr x T Halpha Hsafe Hok.
   unfold ctx_is_ok in *.
   destruct (ty_usage T); try exact I.
-  destruct (ctx_lookup (lookup_rename x ρ) Γr) as [[Tx b] |] eqn:Hlookup;
+  destruct (ctx_lookup_state (lookup_rename x ρ) Γr) as [[Tx st] |] eqn:Hlookup;
     try contradiction.
-  destruct b; try contradiction.
-  rewrite (ctx_alpha_lookup_backward ρ Γ Γr x Tx true Halpha Hsafe Hlookup).
-  exact I.
+  rewrite (ctx_alpha_lookup_state_backward ρ Γ Γr x Tx st Halpha Hsafe Hlookup).
+  exact Hok.
 Qed.
 
 Inductive ctx_same_bindings : ctx -> ctx -> Prop :=
@@ -705,7 +736,7 @@ Proof.
     simpl in Hmerge.
     destruct (ctx_merge t2 t3) as [rest |] eqn:Hrest; [|discriminate].
     destruct (ty_usage T) eqn:Hu.
-    + destruct (Bool.eqb b2 b3) eqn:Heqb; [|discriminate].
+    + destruct (Bool.eqb (st_consumed b2) (st_consumed b3)) eqn:Heqb; [|discriminate].
       injection Hmerge as <-. constructor. eapply IH. exact Hrest.
     + injection Hmerge as <-. constructor. eapply IH. exact Hrest.
     + injection Hmerge as <-. constructor. eapply IH. exact Hrest.
@@ -1692,10 +1723,10 @@ Proof.
     end.
     simpl. rewrite ident_eqb_refl. simpl. rewrite Hmerge04.
     destruct (ty_usage T) eqn:Hu.
-    + (* ULinear: Hmerge has the form (if Bool.eqb b2 ?b then ... else ...) = Some _ *)
+    + (* ULinear: Hmerge has the form (if Bool.eqb consumed flags then ... else ...) = Some _ *)
       lazymatch goal with
-      | Hm : (if Bool.eqb b2 ?bX then _ else _) = Some _ |- _ =>
-          destruct (Bool.eqb b2 bX) eqn:Heqb;
+      | Hm : (if Bool.eqb (st_consumed b2) (st_consumed ?bX) then _ else _) = Some _ |- _ =>
+          destruct (Bool.eqb (st_consumed b2) (st_consumed bX)) eqn:Heqb;
           [injection Hm as <-;
            eexists; split;
            [reflexivity |

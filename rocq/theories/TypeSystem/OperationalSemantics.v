@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Types Syntax.
+From Facet.TypeSystem Require Import Types Syntax PathState.
 From Stdlib Require Import List String ZArith Bool.
 Import ListNotations.
 
@@ -11,10 +11,11 @@ Inductive value : Type :=
   | VInt     : Z -> value
   | VFloat   : string -> value
   | VBool    : bool -> value
+  | VStruct  : string -> list (string * value) -> value
   | VRef     : ident -> value
   | VClosure : ident -> list store_entry -> value
 with store_entry : Type :=
-  | MkStoreEntry : ident -> Ty -> value -> bool -> store_entry.
+  | MkStoreEntry : ident -> Ty -> value -> binding_state -> store_entry.
 
 Definition se_name (e : store_entry) : ident :=
   match e with
@@ -31,10 +32,13 @@ Definition se_val (e : store_entry) : value :=
   | MkStoreEntry _ _ v _ => v
   end.
 
-Definition se_used (e : store_entry) : bool :=
+Definition se_state (e : store_entry) : binding_state :=
   match e with
-  | MkStoreEntry _ _ _ b => b
+  | MkStoreEntry _ _ _ st => st
   end.
+
+Definition se_used (e : store_entry) : bool :=
+  st_consumed (se_state e).
 
 (* ------------------------------------------------------------------ *)
 (* Runtime store                                                        *)
@@ -58,7 +62,8 @@ Fixpoint store_mark_used (x : ident) (s : store) : store :=
   | []     => []
   | e :: t =>
       if ident_eqb x (se_name e)
-      then MkStoreEntry (se_name e) (se_ty e) (se_val e) true :: t
+      then MkStoreEntry (se_name e) (se_ty e) (se_val e)
+             (state_consume_path [] (se_state e)) :: t
       else e :: store_mark_used x t
   end.
 
@@ -67,7 +72,7 @@ Fixpoint store_update_val (x : ident) (v : value) (s : store) : option store :=
   | []     => None
   | e :: t =>
       if ident_eqb x (se_name e)
-      then Some (MkStoreEntry (se_name e) (se_ty e) v (se_used e) :: t)
+      then Some (MkStoreEntry (se_name e) (se_ty e) v (se_state e) :: t)
       else match store_update_val x v t with
            | None    => None
            | Some t' => Some (e :: t')
@@ -75,7 +80,78 @@ Fixpoint store_update_val (x : ident) (v : value) (s : store) : option store :=
   end.
 
 Definition store_add (x : ident) (T : Ty) (v : value) (s : store) : store :=
-  MkStoreEntry x T v false :: s.
+  MkStoreEntry x T v (binding_state_of_bool false) :: s.
+
+Fixpoint value_lookup_path (v : value) (p : field_path) : option value :=
+  match p with
+  | [] => Some v
+  | f :: rest =>
+      match v with
+      | VStruct _ fields =>
+          let fix lookup (fields : list (string * value)) : option value :=
+              match fields with
+              | [] => None
+              | (name, fv) :: tail =>
+                  if String.eqb f name then Some fv else lookup tail
+              end
+          in match lookup fields with
+          | Some fv => value_lookup_path fv rest
+          | None => None
+          end
+      | _ => None
+      end
+  end.
+
+Fixpoint value_update_path (v : value) (p : field_path) (v_new : value) : option value :=
+  match p with
+  | [] => Some v_new
+  | f :: rest =>
+      match v with
+      | VStruct sname fields =>
+          let fix update (fields : list (string * value)) : option (list (string * value)) :=
+            match fields with
+            | [] => None
+            | (name, fv) :: tail =>
+                if String.eqb f name
+                then match value_update_path fv rest v_new with
+                     | Some fv' => Some ((name, fv') :: tail)
+                     | None => None
+                     end
+                else match update tail with
+                     | Some tail' => Some ((name, fv) :: tail')
+                     | None => None
+                     end
+            end
+          in
+          match update fields with
+          | Some fields' => Some (VStruct sname fields')
+          | None => None
+          end
+      | _ => None
+      end
+  end.
+
+Definition store_lookup_path (x : ident) (p : field_path) (s : store) : option value :=
+  match store_lookup x s with
+  | Some e => value_lookup_path (se_val e) p
+  | None => None
+  end.
+
+Fixpoint store_update_path (x : ident) (p : field_path) (v_new : value) (s : store)
+    : option store :=
+  match s with
+  | [] => None
+  | e :: t =>
+      if ident_eqb x (se_name e)
+      then match value_update_path (se_val e) p v_new with
+           | Some v' => Some (MkStoreEntry (se_name e) (se_ty e) v' (se_state e) :: t)
+           | None => None
+           end
+      else match store_update_path x p v_new t with
+           | Some t' => Some (e :: t')
+           | None => None
+           end
+  end.
 
 Fixpoint store_remove (x : ident) (s : store) : store :=
   match s with
@@ -159,6 +235,16 @@ Inductive eval (fenv : list fn_def) : store -> expr -> store -> value -> Prop :=
       se_used e = false ->
       eval fenv s (EVar x) (store_mark_used x s) (se_val e)
 
+  | Eval_Place : forall s p x path e v,
+      place_path p = Some (x, path) ->
+      store_lookup x s = Some e ->
+      value_lookup_path (se_val e) path = Some v ->
+      eval fenv s (EPlace p) s v
+
+  | Eval_Struct : forall s s' name lts args fields values,
+      eval_struct_fields fenv s fields s' values ->
+      eval fenv s (EStruct name lts args fields) s' (VStruct name values)
+
   (* let x: T = e1 in e2 *)
   | Eval_Let : forall s s1 s2 m x T e1 e2 v1 v2,
       eval fenv s e1 s1 v1 ->
@@ -183,6 +269,19 @@ Inductive eval (fenv : list fn_def) : store -> expr -> store -> value -> Prop :=
       eval fenv s e_new s1 v_new ->
       store_update_val x v_new s1 = Some s2 ->
       eval fenv s (EAssign (PVar x) e_new) s2 VUnit
+
+  | Eval_Replace_Field : forall s s1 s2 p x path old_v e_new v_new,
+      place_path p = Some (x, path) ->
+      store_lookup_path x path s = Some old_v ->
+      eval fenv s e_new s1 v_new ->
+      store_update_path x path v_new s1 = Some s2 ->
+      eval fenv s (EReplace p e_new) s2 old_v
+
+  | Eval_Assign_Field : forall s s1 s2 p x path e_new v_new,
+      place_path p = Some (x, path) ->
+      eval fenv s e_new s1 v_new ->
+      store_update_path x path v_new s1 = Some s2 ->
+      eval fenv s (EAssign p e_new) s2 VUnit
 
   (* &x or &mut x: confirm x exists in the store, return VRef x.
      The store is unchanged — borrowing does not transfer ownership. *)
@@ -269,4 +368,15 @@ with eval_args (fenv : list fn_def)
   | EvalArgs_Cons : forall s s1 s2 e es v vs,
       eval fenv s e s1 v ->
       eval_args fenv s1 es s2 vs ->
-      eval_args fenv s (e :: es) s2 (v :: vs).
+      eval_args fenv s (e :: es) s2 (v :: vs)
+
+with eval_struct_fields (fenv : list fn_def)
+    : store -> list (string * expr) -> store -> list (string * value) -> Prop :=
+
+  | EvalStructFields_Nil : forall s,
+      eval_struct_fields fenv s [] s []
+
+  | EvalStructFields_Cons : forall s s1 s2 name e rest v values,
+      eval fenv s e s1 v ->
+      eval_struct_fields fenv s1 rest s2 values ->
+      eval_struct_fields fenv s ((name, e) :: rest) s2 ((name, v) :: values).

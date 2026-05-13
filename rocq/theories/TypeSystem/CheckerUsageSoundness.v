@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Types Syntax TypingRules TypeChecker CheckerSoundness.
+From Facet.TypeSystem Require Import Types Syntax PathState TypingRules TypeChecker CheckerSoundness.
 From Stdlib Require Import List String Bool.
 Import ListNotations.
 
@@ -9,33 +9,34 @@ Import ListNotations.
 Lemma ctx_is_ok_linear_used : forall x T Γ,
   ty_usage T = ULinear ->
   ctx_is_ok x T Γ ->
-  exists Tx, ctx_lookup x Γ = Some (Tx, true).
+  exists Tx st,
+    ctx_lookup_state x Γ = Some (Tx, st) /\
+    (st_consumed st = true \/ path_conflicts_any_b [] (st_moved_paths st) = true).
 Proof.
   intros x T Γ Hlin Hok.
   unfold ctx_is_ok in Hok.
   rewrite Hlin in Hok.
-  destruct (ctx_lookup x Γ) as [[Tx b] |] eqn:Hlookup.
-  - destruct b.
-    + exists Tx. reflexivity.
-    + contradiction.
+  destruct (ctx_lookup_state x Γ) as [[Tx st] |] eqn:Hlookup.
+  - exists Tx, st. split; [reflexivity | exact Hok].
   - contradiction.
 Qed.
 
 Lemma typed_linear_let_binding_used : forall fenv Ω n Γ Γout m x T e1 e2 T2,
   typed fenv Ω n Γ (ELet m x T e1 e2) T2 Γout ->
   ty_usage T = ULinear ->
-  exists Γ1 Γ2 T1 Tx,
+  exists Γ1 Γ2 T1 Tx st,
     typed fenv Ω n Γ e1 T1 Γ1 /\
     typed fenv Ω n (ctx_add x T m Γ1) e2 T2 Γ2 /\
-  ctx_lookup x Γ2 = Some (Tx, true).
+    ctx_lookup_state x Γ2 = Some (Tx, st) /\
+    (st_consumed st = true \/ path_conflicts_any_b [] (st_moved_paths st) = true).
 Proof.
   intros fenv Ω n Γ Γout m x T e1 e2 T2 Htyped Hlin.
   inversion Htyped; subst.
   match goal with
   | H : ctx_is_ok x T Γ2 |- _ =>
-      pose proof (ctx_is_ok_linear_used x T Γ2 Hlin H) as [Tx Hlookup]
+      pose proof (ctx_is_ok_linear_used x T Γ2 Hlin H) as [Tx [st [Hlookup Hok_state]]]
   end.
-  exists Γ1, Γ2, T1, Tx.
+  exists Γ1, Γ2, T1, Tx, st.
   repeat split; assumption.
 Qed.
 
@@ -43,7 +44,9 @@ Lemma params_ok_linear_param_used : forall ps Γ p,
   In p ps ->
   params_ok ps Γ ->
   ty_usage (param_ty p) = ULinear ->
-  exists Tx, ctx_lookup (param_name p) Γ = Some (Tx, true).
+  exists Tx st,
+    ctx_lookup_state (param_name p) Γ = Some (Tx, st) /\
+    (st_consumed st = true \/ path_conflicts_any_b [] (st_moved_paths st) = true).
 Proof.
   intros ps Γ p Hin Hok Hlin.
   induction ps as [| p0 ps IH].
@@ -60,16 +63,17 @@ Lemma typed_linear_param_used : forall fenv f p,
   typed_fn_def fenv f ->
   In p (fn_params f) ->
   ty_usage (param_ty p) = ULinear ->
-  exists T_body Γ' Tx,
+  exists T_body Γ' Tx st,
     typed fenv (fn_outlives f) (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
-    ctx_lookup (param_name p) Γ' = Some (Tx, true).
+    ctx_lookup_state (param_name p) Γ' = Some (Tx, st) /\
+    (st_consumed st = true \/ path_conflicts_any_b [] (st_moved_paths st) = true).
 Proof.
   intros fenv f p Htyped_fn Hin Hlin.
   destruct Htyped_fn as [T_body [Γ' [Hbody [_ Hparams]]]].
   pose proof (params_ok_linear_param_used
-    (fn_params f) Γ' p Hin Hparams Hlin) as [Tx Hlookup].
-  exists T_body, Γ', Tx.
-  split; assumption.
+    (fn_params f) Γ' p Hin Hparams Hlin) as [Tx [st [Hlookup Hok_state]]].
+  exists T_body, Γ', Tx, st.
+  repeat split; assumption.
 Qed.
 
 (* ------------------------------------------------------------------ *)
@@ -108,10 +112,11 @@ Fixpoint expr_linear_lets_used (fenv : list fn_def) (e : expr) {struct e}
       (ty_usage T = ULinear ->
        forall Ω n Γ Γout T2,
          typed fenv Ω n Γ (ELet m x T e1 e2) T2 Γout ->
-         exists Γ1 Γ2 T1 Tx,
+         exists Γ1 Γ2 T1 Tx st,
            typed fenv Ω n Γ e1 T1 Γ1 /\
            typed fenv Ω n (ctx_add x T m Γ1) e2 T2 Γ2 /\
-           ctx_lookup x Γ2 = Some (Tx, true)) /\
+           ctx_lookup_state x Γ2 = Some (Tx, st) /\
+           (st_consumed st = true \/ path_conflicts_any_b [] (st_moved_paths st) = true)) /\
       expr_linear_lets_used fenv e1 /\
       expr_linear_lets_used fenv e2
   | ELetInfer _ _ e1 e2 =>
@@ -161,9 +166,10 @@ Theorem infer_checked_fn_linear_params_used : forall fenv f p,
   infer_fn_def_ok fenv f ->
   In p (fn_params f) ->
   ty_usage (param_ty p) = ULinear ->
-  exists T_body Γ' Tx,
+  exists T_body Γ' Tx st,
     typed fenv (fn_outlives f) (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
-    ctx_lookup (param_name p) Γ' = Some (Tx, true).
+    ctx_lookup_state (param_name p) Γ' = Some (Tx, st) /\
+    (st_consumed st = true \/ path_conflicts_any_b [] (st_moved_paths st) = true).
 Proof.
   intros fenv f p Hok Hin Hlin.
   apply typed_linear_param_used; [apply infer_fn_def_ok_sound | |]; assumption.
@@ -178,9 +184,10 @@ Theorem infer_checked_fn_linear_usage : forall fenv f,
   (forall p,
       In p (fn_params f) ->
       ty_usage (param_ty p) = ULinear ->
-      exists T_body Γ' Tx,
+      exists T_body Γ' Tx st,
         typed fenv (fn_outlives f) (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
-        ctx_lookup (param_name p) Γ' = Some (Tx, true)).
+        ctx_lookup_state (param_name p) Γ' = Some (Tx, st) /\
+        (st_consumed st = true \/ path_conflicts_any_b [] (st_moved_paths st) = true)).
 Proof.
   intros fenv f Hok.
   split.

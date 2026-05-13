@@ -211,6 +211,34 @@ type fn_def = { fn_name : ident; fn_lifetimes : Big_int_Z.big_int;
                 fn_outlives : outlives_ctx; fn_params : param list;
                 fn_ret : ty; fn_body : expr }
 
+type field_path = string list
+
+val path_segment_eqb : string -> string -> bool
+
+val path_eqb : field_path -> field_path -> bool
+
+val path_prefix_b : field_path -> field_path -> bool
+
+val path_conflict_b : field_path -> field_path -> bool
+
+val path_conflicts_any_b : field_path -> field_path list -> bool
+
+val remove_restored_paths : field_path -> field_path list -> field_path list
+
+type binding_state = { st_consumed : bool; st_moved_paths : field_path list }
+
+val binding_state_of_bool : bool -> binding_state
+
+val binding_available_b : binding_state -> field_path -> bool
+
+val state_consume_path : field_path -> binding_state -> binding_state
+
+val state_restore_path : field_path -> binding_state -> binding_state
+
+val place_path : place -> (ident * field_path) option
+
+val place_suffix_path : place -> field_path
+
 type field_def = { field_name : string; field_mutability : mutability;
                    field_ty : ty }
 
@@ -246,9 +274,20 @@ val subst_type_params_ty : ty list -> ty -> ty
 
 val instantiate_struct_field_ty : lifetime list -> ty list -> field_def -> ty
 
-type ctx_entry = ((ident * ty) * bool) * mutability
+type ctx_entry = ((ident * ty) * binding_state) * mutability
 
 type ctx = ctx_entry list
+
+val ctx_lookup_state : ident -> ctx -> (ty * binding_state) option
+
+val ctx_update_state :
+  ident -> (binding_state -> binding_state) -> ctx -> ctx option
+
+val ctx_lookup_mut : ident -> ctx -> mutability option
+
+val ctx_add : ident -> ty -> mutability -> ctx -> ctx
+
+val ctx_remove : ident -> ctx -> ctx
 
 val param_ctx_entry : param -> ctx_entry
 
@@ -428,33 +467,7 @@ val infer_core :
   fn_def list -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
   (ty * ctx) infer_result
 
-type field_path = string list
-
-val path_segment_eqb : string -> string -> bool
-
-val path_eqb : field_path -> field_path -> bool
-
-val path_prefix_b : field_path -> field_path -> bool
-
-val path_conflict_b : field_path -> field_path -> bool
-
-val path_conflicts_any_b : field_path -> field_path list -> bool
-
-val remove_restored_paths : field_path -> field_path list -> field_path list
-
-type binding_state = { st_consumed : bool; st_moved_paths : field_path list }
-
-val binding_available_b : binding_state -> field_path -> bool
-
-val state_consume_path : field_path -> binding_state -> binding_state
-
-val state_restore_path : field_path -> binding_state -> binding_state
-
-type sctx_entry = ((ident * ty) * binding_state) * mutability
-
-type sctx = sctx_entry list
-
-val binding_state_of_bool : bool -> binding_state
+type sctx = ctx
 
 val sctx_of_ctx : ctx -> sctx
 
@@ -472,10 +485,6 @@ val sctx_update_state :
   ident -> (binding_state -> binding_state) -> sctx -> sctx option
 
 val sctx_check_ok : ident -> ty -> sctx -> bool
-
-val place_path : place -> (ident * field_path) option
-
-val place_suffix_path : place -> field_path
 
 val sctx_path_available : sctx -> ident -> field_path -> unit infer_result
 

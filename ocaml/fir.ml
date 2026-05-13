@@ -377,7 +377,9 @@ and emit_into env x t = function
     emit env (FILet (x, t, v))
 
 let params_to_ctx params =
-  List.map (fun p -> (((p.param_name, p.param_ty), false), p.param_mutability)) params
+  List.map
+    (fun p -> (((p.param_name, p.param_ty), binding_state_of_bool false), p.param_mutability))
+    params
 
 let convert_fn global_env fn_def =
   let env = { env = global_env; fenv = global_env.env_fns; lifetimes = fn_def.fn_lifetimes;

@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Lifetime Types Syntax.
+From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program.
 From Stdlib Require Import List String Bool.
 Import ListNotations.
 Local Open Scope string_scope.
@@ -6,11 +6,10 @@ Local Open Scope string_scope.
 (* ------------------------------------------------------------------ *)
 (* Typing context                                                        *)
 (*                                                                      *)
-(* Each entry is (variable_name, type, consumed?).                      *)
-(* consumed = true means the binding has been moved/used.               *)
+(* Each entry is (variable_name, type, path-aware state).                *)
 (* ------------------------------------------------------------------ *)
 
-Definition ctx_entry : Type := (ident * Ty * bool * mutability)%type.
+Definition ctx_entry : Type := (ident * Ty * binding_state * mutability)%type.
 Definition ctx : Type := list ctx_entry.
 
 (* ------------------------------------------------------------------ *)
@@ -20,22 +19,60 @@ Definition ctx : Type := list ctx_entry.
 Fixpoint ctx_lookup (x : ident) (Γ : ctx) : option (Ty * bool) :=
   match Γ with
   | []              => None
-  | (n, T, b, _) :: t => if ident_eqb x n then Some (T, b)
-                      else ctx_lookup x t
+  | (n, T, st, _) :: t =>
+      if ident_eqb x n then Some (T, st_consumed st) else ctx_lookup x t
+  end.
+
+Fixpoint ctx_lookup_state (x : ident) (Γ : ctx) : option (Ty * binding_state) :=
+  match Γ with
+  | [] => None
+  | (n, T, st, _) :: t =>
+      if ident_eqb x n then Some (T, st) else ctx_lookup_state x t
   end.
 
 (* Mark variable x as consumed. Returns None if x is not found. *)
 Fixpoint ctx_consume (x : ident) (Γ : ctx) : option ctx :=
   match Γ with
   | []              => None
-  | (n, T, b, m) :: t =>
+  | (n, T, st, m) :: t =>
       if ident_eqb x n
-      then Some ((n, T, true, m) :: t)
+      then Some ((n, T, state_consume_path [] st, m) :: t)
       else match ctx_consume x t with
            | None    => None
-           | Some t' => Some ((n, T, b, m) :: t')
+           | Some t' => Some ((n, T, st, m) :: t')
            end
   end.
+
+Definition ctx_path_available (Γ : ctx) (x : ident) (p : field_path) : Prop :=
+  match ctx_lookup_state x Γ with
+  | Some (_, st) => binding_available_b st p = true
+  | None => False
+  end.
+
+Fixpoint ctx_update_state (x : ident) (f : binding_state -> binding_state) (Γ : ctx)
+    : option ctx :=
+  match Γ with
+  | [] => None
+  | (n, T, st, m) :: t =>
+      if ident_eqb x n
+      then Some ((n, T, f st, m) :: t)
+      else match ctx_update_state x f t with
+           | Some t' => Some ((n, T, st, m) :: t')
+           | None => None
+           end
+  end.
+
+Definition ctx_consume_path (Γ : ctx) (x : ident) (p : field_path) : option ctx :=
+  match ctx_lookup_state x Γ with
+  | Some (_, st) =>
+      if binding_available_b st p
+      then ctx_update_state x (state_consume_path p) Γ
+      else None
+  | None => None
+  end.
+
+Definition ctx_restore_path (Γ : ctx) (x : ident) (p : field_path) : option ctx :=
+  ctx_update_state x (state_restore_path p) Γ.
 
 Fixpoint ctx_lookup_mut (x : ident) (Γ : ctx) : option mutability :=
   match Γ with
@@ -45,15 +82,15 @@ Fixpoint ctx_lookup_mut (x : ident) (Γ : ctx) : option mutability :=
 
 (* Add a fresh (unconsumed) binding at the front. *)
 Definition ctx_add (x : ident) (T : Ty) (m : mutability) (Γ : ctx) : ctx :=
-  (x, T, false, m) :: Γ.
+  (x, T, binding_state_of_bool false, m) :: Γ.
 
 (* Remove the first occurrence of x. *)
 Fixpoint ctx_remove (x : ident) (Γ : ctx) : ctx :=
   match Γ with
   | []              => []
-  | (n, T, b, m) :: t =>
+  | (n, T, st, m) :: t =>
       if ident_eqb x n then t
-      else (n, T, b, m) :: ctx_remove x t
+      else (n, T, st, m) :: ctx_remove x t
   end.
 
 (* Check scope-exit constraint for variable x with declared type T.
@@ -63,8 +100,9 @@ Fixpoint ctx_remove (x : ident) (Γ : ctx) : ctx :=
 Definition ctx_is_ok (x : ident) (T : Ty) (Γ : ctx) : Prop :=
   match ty_usage T with
   | ULinear =>
-      match ctx_lookup x Γ with
-      | Some (_, true) => True
+      match ctx_lookup_state x Γ with
+      | Some (_, st) =>
+          st_consumed st = true \/ path_conflicts_any_b [] (st_moved_paths st) = true
       | _              => False
       end
   | _ => True
@@ -73,7 +111,7 @@ Definition ctx_is_ok (x : ident) (T : Ty) (Γ : ctx) : Prop :=
 (* Build the initial context for checking a function body from its
    parameters. Scope-exit checks reuse ctx_is_ok for each parameter. *)
 Definition param_ctx_entry (p : param) : ctx_entry :=
-  (param_name p, param_ty p, false, param_mutability p).
+  (param_name p, param_ty p, binding_state_of_bool false, param_mutability p).
 
 Fixpoint params_ctx (ps : list param) : ctx :=
   match ps with
@@ -93,8 +131,8 @@ Fixpoint params_ok (ps : list param) (Γ : ctx) : Prop :=
 (*                                                                      *)
 (* unrestricted <: affine <: linear                                      *)
 (*                                                                      *)
-(* u1 <: u2 means "a value with qualifier u1 may be used where          *)
-(* qualifier u2 is expected."                                            *)
+(* u1 <: u2 means a value with qualifier u1 may be used where            *)
+(* qualifier u2 is expected.                                             *)
 (* ------------------------------------------------------------------ *)
 
 Inductive usage_sub : usage -> usage -> Prop :=
@@ -149,7 +187,7 @@ Definition usage_max (u1 u2 : usage) : usage :=
 Fixpoint ctx_merge (Γ2 Γ3 : ctx) : option ctx :=
   match Γ2, Γ3 with
   | [], [] => Some []
-  | (n, T, b2, m) :: t2, (n', _, b3, _) :: t3 =>
+  | (n, T, st2, m) :: t2, (n', _, st3, _) :: t3 =>
       if negb (ident_eqb n n') then None
       else
         match ctx_merge t2 t3 with
@@ -157,8 +195,14 @@ Fixpoint ctx_merge (Γ2 Γ3 : ctx) : option ctx :=
         | Some rest =>
             match ty_usage T with
             | ULinear =>
-                if Bool.eqb b2 b3 then Some ((n, T, b2, m) :: rest) else None
-            | _ => Some ((n, T, orb b2 b3, m) :: rest)
+                if Bool.eqb (st_consumed st2) (st_consumed st3)
+                then Some ((n, T,
+                  MkBindingState (st_consumed st2)
+                    (st_moved_paths st2 ++ st_moved_paths st3), m) :: rest)
+                else None
+            | _ => Some ((n, T,
+                    MkBindingState (orb (st_consumed st2) (st_consumed st3))
+                      (st_moved_paths st2 ++ st_moved_paths st3), m) :: rest)
             end
         end
   | _, _ => None
@@ -194,7 +238,13 @@ Inductive typed_place (fenv : list fn_def) (n : nat) (Γ : ctx)
       typed_place fenv n Γ (PVar x) T
   | TP_Deref : forall p la rk T u,
       typed_place fenv n Γ p (MkTy u (TRef la rk T)) ->
-      typed_place fenv n Γ (PDeref p) T.
+      typed_place fenv n Γ (PDeref p) T
+  | TP_Field : forall p s lts args sdef fdef,
+      typed_place fenv n Γ p (MkTy (usage_max_list (struct_fields sdef)) (TStruct s lts args)) ->
+      struct_name sdef = s ->
+      lookup_field (field_name fdef) (struct_fields sdef) = Some fdef ->
+      typed_place fenv n Γ (PField p (field_name fdef))
+        (instantiate_struct_field_ty lts args fdef).
 
 (* ------------------------------------------------------------------ *)
 (* Lifetime substitution on parameters                                   *)
@@ -414,6 +464,31 @@ with typed_args (fenv : list fn_def) (Ω : outlives_ctx) (n : nat)
       ty_compatible Ω T_e (param_ty p) ->
       typed_args fenv Ω n Γ1 es ps Γ2 ->
       typed_args fenv Ω n Γ (e :: es) (p :: ps) Γ2.
+
+(* Struct literal fields are checked in declaration order.  Source order is
+   represented by lookup over the literal field list, matching the executable
+   checker. *)
+Inductive typed_struct_fields (fenv : list fn_def) (Ω : outlives_ctx) (n : nat)
+    (lts : list lifetime) (args : list Ty)
+    : ctx -> list (string * expr) -> list field_def -> ctx -> Prop :=
+  | TSFields_Nil : forall Γ fields,
+      typed_struct_fields fenv Ω n lts args Γ fields [] Γ
+  | TSFields_Cons : forall Γ Γ1 Γ2 fields f rest e_field T_field,
+      lookup_field (field_name f) (struct_fields (MkStructDef "" 0 0 [] (f :: rest))) =
+        Some f ->
+      In (field_name f, e_field) fields ->
+      typed fenv Ω n Γ e_field T_field Γ1 ->
+      ty_compatible Ω T_field (instantiate_struct_field_ty lts args f) ->
+      typed_struct_fields fenv Ω n lts args Γ1 fields rest Γ2 ->
+      typed_struct_fields fenv Ω n lts args Γ fields (f :: rest) Γ2.
+
+Inductive typed_struct_literal (fenv : list fn_def) (Ω : outlives_ctx) (n : nat)
+    : ctx -> string -> list lifetime -> list Ty -> list (string * expr) -> Ty -> ctx -> Prop :=
+  | TStructLiteral : forall Γ Γ' s lts args fields sdef,
+      struct_name sdef = s ->
+      typed_struct_fields fenv Ω n lts args Γ fields (struct_fields sdef) Γ' ->
+      typed_struct_literal fenv Ω n Γ s lts args fields
+        (instantiate_struct_ty sdef lts args) Γ'.
 
 Definition typed_fn_def (fenv : list fn_def) (f : fn_def) : Prop :=
   exists T_body Γ',

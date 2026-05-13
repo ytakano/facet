@@ -461,9 +461,8 @@ Proof.
   intros x T Γ H.
   unfold ctx_check_ok, ctx_is_ok in *.
   destruct (ty_usage T) eqn:Hu; try exact I.
-  rewrite ctx_lookup_b_eq in H.
-  destruct (ctx_lookup x Γ) as [[T' b] |] eqn:Hl.
-  - destruct b; [exact I | discriminate].
+  destruct (ctx_lookup_state x Γ) as [[T' st] |] eqn:Hl.
+  - apply orb_true_iff in H. exact H.
   - discriminate.
 Qed.
 

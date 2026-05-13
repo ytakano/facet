@@ -809,6 +809,99 @@ type fn_def = { fn_name : ident; fn_lifetimes : Big_int_Z.big_int;
                 fn_outlives : outlives_ctx; fn_params : param list;
                 fn_ret : ty; fn_body : expr }
 
+type field_path = string list
+
+(** val path_segment_eqb : string -> string -> bool **)
+
+let path_segment_eqb =
+  (=)
+
+(** val path_eqb : field_path -> field_path -> bool **)
+
+let rec path_eqb p q =
+  match p with
+  | [] -> (match q with
+           | [] -> true
+           | _ :: _ -> false)
+  | x :: xs ->
+    (match q with
+     | [] -> false
+     | y :: ys -> (&&) (path_segment_eqb x y) (path_eqb xs ys))
+
+(** val path_prefix_b : field_path -> field_path -> bool **)
+
+let rec path_prefix_b prefix path =
+  match prefix with
+  | [] -> true
+  | x :: xs ->
+    (match path with
+     | [] -> false
+     | y :: ys -> (&&) (path_segment_eqb x y) (path_prefix_b xs ys))
+
+(** val path_conflict_b : field_path -> field_path -> bool **)
+
+let path_conflict_b p q =
+  (||) (path_prefix_b p q) (path_prefix_b q p)
+
+(** val path_conflicts_any_b : field_path -> field_path list -> bool **)
+
+let rec path_conflicts_any_b p = function
+| [] -> false
+| q :: rest -> (||) (path_conflict_b p q) (path_conflicts_any_b p rest)
+
+(** val remove_restored_paths :
+    field_path -> field_path list -> field_path list **)
+
+let rec remove_restored_paths p = function
+| [] -> []
+| q :: rest ->
+  if path_prefix_b p q
+  then remove_restored_paths p rest
+  else q :: (remove_restored_paths p rest)
+
+type binding_state = { st_consumed : bool; st_moved_paths : field_path list }
+
+(** val binding_state_of_bool : bool -> binding_state **)
+
+let binding_state_of_bool b =
+  { st_consumed = b; st_moved_paths = [] }
+
+(** val binding_available_b : binding_state -> field_path -> bool **)
+
+let binding_available_b st p =
+  (&&) (negb st.st_consumed) (negb (path_conflicts_any_b p st.st_moved_paths))
+
+(** val state_consume_path : field_path -> binding_state -> binding_state **)
+
+let state_consume_path p st =
+  match p with
+  | [] -> { st_consumed = true; st_moved_paths = st.st_moved_paths }
+  | _ :: _ ->
+    { st_consumed = st.st_consumed; st_moved_paths =
+      (p :: st.st_moved_paths) }
+
+(** val state_restore_path : field_path -> binding_state -> binding_state **)
+
+let state_restore_path p st =
+  { st_consumed = st.st_consumed; st_moved_paths =
+    (remove_restored_paths p st.st_moved_paths) }
+
+(** val place_path : place -> (ident * field_path) option **)
+
+let rec place_path = function
+| PVar x -> Some (x, [])
+| PDeref _ -> None
+| PField (q, f) ->
+  (match place_path q with
+   | Some p0 -> let (x, path) = p0 in Some (x, (app path (f :: [])))
+   | None -> None)
+
+(** val place_suffix_path : place -> field_path **)
+
+let rec place_suffix_path = function
+| PField (q, f) -> app (place_suffix_path q) (f :: [])
+| _ -> []
+
 type field_def = { field_name : string; field_mutability : mutability;
                    field_ty : ty }
 
@@ -890,14 +983,64 @@ let rec subst_type_params_ty _UU03c3_ = function
 let instantiate_struct_field_ty lifetime_args type_args f =
   subst_type_params_ty type_args (apply_lt_ty lifetime_args f.field_ty)
 
-type ctx_entry = ((ident * ty) * bool) * mutability
+type ctx_entry = ((ident * ty) * binding_state) * mutability
 
 type ctx = ctx_entry list
+
+(** val ctx_lookup_state : ident -> ctx -> (ty * binding_state) option **)
+
+let rec ctx_lookup_state x = function
+| [] -> None
+| c :: t ->
+  let (p, _) = c in
+  let (p0, st) = p in
+  let (n, t0) = p0 in
+  if ident_eqb x n then Some (t0, st) else ctx_lookup_state x t
+
+(** val ctx_update_state :
+    ident -> (binding_state -> binding_state) -> ctx -> ctx option **)
+
+let rec ctx_update_state x f = function
+| [] -> None
+| c :: t ->
+  let (p, m) = c in
+  let (p0, st) = p in
+  let (n, t0) = p0 in
+  if ident_eqb x n
+  then Some ((((n, t0), (f st)), m) :: t)
+  else (match ctx_update_state x f t with
+        | Some t' -> Some ((((n, t0), st), m) :: t')
+        | None -> None)
+
+(** val ctx_lookup_mut : ident -> ctx -> mutability option **)
+
+let rec ctx_lookup_mut x = function
+| [] -> None
+| c :: t ->
+  let (p, m) = c in
+  let (p0, _) = p in
+  let (n, _) = p0 in if ident_eqb x n then Some m else ctx_lookup_mut x t
+
+(** val ctx_add : ident -> ty -> mutability -> ctx -> ctx **)
+
+let ctx_add x t m _UU0393_ =
+  (((x, t), (binding_state_of_bool false)), m) :: _UU0393_
+
+(** val ctx_remove : ident -> ctx -> ctx **)
+
+let rec ctx_remove x = function
+| [] -> []
+| c :: t ->
+  let (p, m) = c in
+  let (p0, st) = p in
+  let (n, t0) = p0 in
+  if ident_eqb x n then t else (((n, t0), st), m) :: (ctx_remove x t)
 
 (** val param_ctx_entry : param -> ctx_entry **)
 
 let param_ctx_entry p =
-  (((p.param_name, p.param_ty), false), p.param_mutability)
+  (((p.param_name, p.param_ty), (binding_state_of_bool false)),
+    p.param_mutability)
 
 (** val params_ctx : param list -> ctx **)
 
@@ -924,13 +1067,13 @@ let rec ctx_merge _UU0393_2 _UU0393_3 =
            | _ :: _ -> None)
   | c :: t2 ->
     let (p, m) = c in
-    let (p0, b2) = p in
+    let (p0, st2) = p in
     let (n, t) = p0 in
     (match _UU0393_3 with
      | [] -> None
      | c0 :: t3 ->
        let (p1, _) = c0 in
-       let (p2, b3) = p1 in
+       let (p2, st3) = p1 in
        let (n', _) = p2 in
        if negb (ident_eqb n n')
        then None
@@ -938,8 +1081,17 @@ let rec ctx_merge _UU0393_2 _UU0393_3 =
              | Some rest ->
                (match ty_usage t with
                 | ULinear ->
-                  if eqb b2 b3 then Some ((((n, t), b2), m) :: rest) else None
-                | _ -> Some ((((n, t), ((||) b2 b3)), m) :: rest))
+                  if eqb st2.st_consumed st3.st_consumed
+                  then Some ((((n, t), { st_consumed = st2.st_consumed;
+                         st_moved_paths =
+                         (app st2.st_moved_paths st3.st_moved_paths) }),
+                         m) :: rest)
+                  else None
+                | _ ->
+                  Some ((((n, t), { st_consumed =
+                    ((||) st2.st_consumed st3.st_consumed); st_moved_paths =
+                    (app st2.st_moved_paths st3.st_moved_paths) }),
+                    m) :: rest))
              | None -> None))
 
 (** val fn_value_ty : fn_def -> ty **)
@@ -1415,8 +1567,9 @@ let rec ctx_lookup_b x = function
 | [] -> None
 | c :: t ->
   let (p, _) = c in
-  let (p0, b) = p in
-  let (n, t0) = p0 in if ident_eqb x n then Some (t0, b) else ctx_lookup_b x t
+  let (p0, st) = p in
+  let (n, t0) = p0 in
+  if ident_eqb x n then Some (t0, st.st_consumed) else ctx_lookup_b x t
 
 (** val ctx_consume_b : ident -> ctx -> ctx option **)
 
@@ -1424,12 +1577,12 @@ let rec ctx_consume_b x = function
 | [] -> None
 | c :: t ->
   let (p, m) = c in
-  let (p0, b) = p in
+  let (p0, st) = p in
   let (n, t0) = p0 in
   if ident_eqb x n
-  then Some ((((n, t0), true), m) :: t)
+  then Some ((((n, t0), (state_consume_path [] st)), m) :: t)
   else (match ctx_consume_b x t with
-        | Some t' -> Some ((((n, t0), b), m) :: t')
+        | Some t' -> Some ((((n, t0), st), m) :: t')
         | None -> None)
 
 (** val ctx_lookup_mut_b : ident -> ctx -> mutability option **)
@@ -1444,7 +1597,7 @@ let rec ctx_lookup_mut_b x = function
 (** val ctx_add_b : ident -> ty -> mutability -> ctx -> ctx **)
 
 let ctx_add_b x t m _UU0393_ =
-  (((x, t), false), m) :: _UU0393_
+  (((x, t), (binding_state_of_bool false)), m) :: _UU0393_
 
 (** val ctx_remove_b : ident -> ctx -> ctx **)
 
@@ -1452,17 +1605,19 @@ let rec ctx_remove_b x = function
 | [] -> []
 | c :: t ->
   let (p, m) = c in
-  let (p0, b) = p in
+  let (p0, st) = p in
   let (n, t0) = p0 in
-  if ident_eqb x n then t else (((n, t0), b), m) :: (ctx_remove_b x t)
+  if ident_eqb x n then t else (((n, t0), st), m) :: (ctx_remove_b x t)
 
 (** val ctx_check_ok : ident -> ty -> ctx -> bool **)
 
 let ctx_check_ok x t _UU0393_ =
   match ty_usage t with
   | ULinear ->
-    (match ctx_lookup_b x _UU0393_ with
-     | Some p -> let (_, b) = p in b
+    (match ctx_lookup_state x _UU0393_ with
+     | Some p ->
+       let (_, st) = p in
+       (||) st.st_consumed (path_conflicts_any_b [] st.st_moved_paths)
      | None -> false)
   | _ -> true
 
@@ -2242,152 +2397,43 @@ let rec infer_core fenv _UU03a9_ n _UU0393_ = function
    | Infer_err err -> Infer_err err)
 | _ -> Infer_err ErrNotImplemented
 
-type field_path = string list
-
-(** val path_segment_eqb : string -> string -> bool **)
-
-let path_segment_eqb =
-  (=)
-
-(** val path_eqb : field_path -> field_path -> bool **)
-
-let rec path_eqb p q =
-  match p with
-  | [] -> (match q with
-           | [] -> true
-           | _ :: _ -> false)
-  | x :: xs ->
-    (match q with
-     | [] -> false
-     | y :: ys -> (&&) (path_segment_eqb x y) (path_eqb xs ys))
-
-(** val path_prefix_b : field_path -> field_path -> bool **)
-
-let rec path_prefix_b prefix path =
-  match prefix with
-  | [] -> true
-  | x :: xs ->
-    (match path with
-     | [] -> false
-     | y :: ys -> (&&) (path_segment_eqb x y) (path_prefix_b xs ys))
-
-(** val path_conflict_b : field_path -> field_path -> bool **)
-
-let path_conflict_b p q =
-  (||) (path_prefix_b p q) (path_prefix_b q p)
-
-(** val path_conflicts_any_b : field_path -> field_path list -> bool **)
-
-let rec path_conflicts_any_b p = function
-| [] -> false
-| q :: rest -> (||) (path_conflict_b p q) (path_conflicts_any_b p rest)
-
-(** val remove_restored_paths :
-    field_path -> field_path list -> field_path list **)
-
-let rec remove_restored_paths p = function
-| [] -> []
-| q :: rest ->
-  if path_prefix_b p q
-  then remove_restored_paths p rest
-  else q :: (remove_restored_paths p rest)
-
-type binding_state = { st_consumed : bool; st_moved_paths : field_path list }
-
-(** val binding_available_b : binding_state -> field_path -> bool **)
-
-let binding_available_b st p =
-  (&&) (negb st.st_consumed) (negb (path_conflicts_any_b p st.st_moved_paths))
-
-(** val state_consume_path : field_path -> binding_state -> binding_state **)
-
-let state_consume_path p st =
-  match p with
-  | [] -> { st_consumed = true; st_moved_paths = st.st_moved_paths }
-  | _ :: _ ->
-    { st_consumed = st.st_consumed; st_moved_paths =
-      (p :: st.st_moved_paths) }
-
-(** val state_restore_path : field_path -> binding_state -> binding_state **)
-
-let state_restore_path p st =
-  { st_consumed = st.st_consumed; st_moved_paths =
-    (remove_restored_paths p st.st_moved_paths) }
-
-type sctx_entry = ((ident * ty) * binding_state) * mutability
-
-type sctx = sctx_entry list
-
-(** val binding_state_of_bool : bool -> binding_state **)
-
-let binding_state_of_bool b =
-  { st_consumed = b; st_moved_paths = [] }
+type sctx = ctx
 
 (** val sctx_of_ctx : ctx -> sctx **)
 
-let rec sctx_of_ctx = function
-| [] -> []
-| c :: rest ->
-  let (p, m) = c in
-  let (p0, b) = p in
-  ((p0, (binding_state_of_bool b)), m) :: (sctx_of_ctx rest)
+let sctx_of_ctx _UU0393_ =
+  _UU0393_
 
 (** val ctx_of_sctx : sctx -> ctx **)
 
-let rec ctx_of_sctx = function
-| [] -> []
-| s :: rest ->
-  let (p, m) = s in
-  let (p0, st) = p in ((p0, st.st_consumed), m) :: (ctx_of_sctx rest)
+let ctx_of_sctx _UU03a3_ =
+  _UU03a3_
 
 (** val sctx_lookup : ident -> sctx -> (ty * binding_state) option **)
 
-let rec sctx_lookup x = function
-| [] -> None
-| s :: rest ->
-  let (p, _) = s in
-  let (p0, st) = p in
-  let (y, t) = p0 in
-  if ident_eqb x y then Some (t, st) else sctx_lookup x rest
+let sctx_lookup =
+  ctx_lookup_state
 
 (** val sctx_lookup_mut : ident -> sctx -> mutability option **)
 
-let rec sctx_lookup_mut x = function
-| [] -> None
-| s :: rest ->
-  let (p, m) = s in
-  let (p0, _) = p in
-  let (y, _) = p0 in if ident_eqb x y then Some m else sctx_lookup_mut x rest
+let sctx_lookup_mut =
+  ctx_lookup_mut
 
 (** val sctx_add : ident -> ty -> mutability -> sctx -> sctx **)
 
-let sctx_add x t m _UU03a3_ =
-  (((x, t), { st_consumed = false; st_moved_paths = [] }), m) :: _UU03a3_
+let sctx_add =
+  ctx_add
 
 (** val sctx_remove : ident -> sctx -> sctx **)
 
-let rec sctx_remove x = function
-| [] -> []
-| s :: rest ->
-  let (p, m) = s in
-  let (p0, st) = p in
-  let (y, t) = p0 in
-  if ident_eqb x y then rest else (((y, t), st), m) :: (sctx_remove x rest)
+let sctx_remove =
+  ctx_remove
 
 (** val sctx_update_state :
     ident -> (binding_state -> binding_state) -> sctx -> sctx option **)
 
-let rec sctx_update_state x f = function
-| [] -> None
-| s :: rest ->
-  let (p, m) = s in
-  let (p0, st) = p in
-  let (y, t) = p0 in
-  if ident_eqb x y
-  then Some ((((y, t), (f st)), m) :: rest)
-  else (match sctx_update_state x f rest with
-        | Some rest' -> Some ((((y, t), st), m) :: rest')
-        | None -> None)
+let sctx_update_state =
+  ctx_update_state
 
 (** val sctx_check_ok : ident -> ty -> sctx -> bool **)
 
@@ -2400,22 +2446,6 @@ let sctx_check_ok x t _UU03a3_ =
        (||) st.st_consumed (path_conflicts_any_b [] st.st_moved_paths)
      | None -> false)
   | _ -> true
-
-(** val place_path : place -> (ident * field_path) option **)
-
-let rec place_path = function
-| PVar x -> Some (x, [])
-| PDeref _ -> None
-| PField (q, f) ->
-  (match place_path q with
-   | Some p0 -> let (x, path) = p0 in Some (x, (app path (f :: [])))
-   | None -> None)
-
-(** val place_suffix_path : place -> field_path **)
-
-let rec place_suffix_path = function
-| PField (q, f) -> app (place_suffix_path q) (f :: [])
-| _ -> []
 
 (** val sctx_path_available :
     sctx -> ident -> field_path -> unit infer_result **)

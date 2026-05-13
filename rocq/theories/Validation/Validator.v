@@ -54,6 +54,56 @@ Fixpoint field_names (fields : list field_def) : list string :=
   | f :: rest => field_name f :: field_names rest
   end.
 
+Fixpoint type_struct_refs (T : Ty) : list string :=
+  match T with
+  | MkTy _ (TStruct name _ args) =>
+      name ::
+      fold_right (fun T acc => type_struct_refs T ++ acc) [] args
+  | MkTy _ (TFn args ret) =>
+      fold_right (fun T acc => type_struct_refs T ++ acc) (type_struct_refs ret) args
+  | MkTy _ (TForall _ _ body) => type_struct_refs body
+  | MkTy _ (TRef _ _ inner) => type_struct_refs inner
+  | _ => []
+  end.
+
+Fixpoint fields_struct_refs (fields : list field_def) : list string :=
+  match fields with
+  | [] => []
+  | f :: rest => type_struct_refs (field_ty f) ++ fields_struct_refs rest
+  end.
+
+Definition struct_deps (s : struct_def) : list string :=
+  fields_struct_refs (struct_fields s).
+
+Fixpoint lookup_struct_local (name : string) (structs : list struct_def) : option struct_def :=
+  match structs with
+  | [] => None
+  | s :: rest =>
+      if String.eqb name (struct_name s) then Some s else lookup_struct_local name rest
+  end.
+
+Fixpoint reaches_struct_b
+    (structs : list struct_def) (fuel : nat) (target current : string) (seen : list string)
+    : bool :=
+  match fuel with
+  | O => false
+  | S fuel' =>
+      if string_mem_b current seen then false else
+      match lookup_struct_local current structs with
+      | None => false
+      | Some s =>
+          let deps := struct_deps s in
+          if string_mem_b target deps then true
+          else existsb (fun dep => reaches_struct_b structs fuel' target dep (current :: seen)) deps
+      end
+  end.
+
+Definition struct_acyclic_b (structs : list struct_def) (s : struct_def) : bool :=
+  negb (reaches_struct_b structs (S (List.length structs)) (struct_name s) (struct_name s) []).
+
+Definition structs_acyclic_b (structs : list struct_def) : bool :=
+  forallb (struct_acyclic_b structs) structs.
+
 (* ------------------------------------------------------------------ *)
 (* Type parameter and lifetime reference collection                      *)
 (* ------------------------------------------------------------------ *)
@@ -151,7 +201,14 @@ Definition trait_wf_b (traits : list trait_def) (t : trait_def) : bool :=
 Definition impl_key_eqb (a b : impl_def) : bool :=
   String.eqb (impl_trait_name a) (impl_trait_name b) &&
   Nat.eqb (impl_lifetimes a) (impl_lifetimes b) &&
-  Nat.eqb (impl_type_params a) (impl_type_params b).
+  Nat.eqb (impl_type_params a) (impl_type_params b) &&
+  ty_eqb_decl (impl_for_ty a) (impl_for_ty b) &&
+  (fix go (xs ys : list Ty) : bool :=
+     match xs, ys with
+     | [], [] => true
+     | x :: xs', y :: ys' => ty_eqb_decl x y && go xs' ys'
+     | _, _ => false
+     end) (impl_trait_args a) (impl_trait_args b).
 
 Fixpoint impl_mem_b (x : impl_def) (xs : list impl_def) : bool :=
   match xs with
@@ -173,6 +230,7 @@ Definition global_names (env : global_env) : list string :=
 
 Definition valid_global_env_b (env : global_env) : bool :=
   string_no_dup_b (global_names env) &&
+  structs_acyclic_b (env_structs env) &&
   forallb (struct_wf_b (env_traits env)) (env_structs env) &&
   forallb (trait_wf_b (env_traits env)) (env_traits env) &&
   impl_no_dup_b (env_impls env) &&
@@ -186,3 +244,43 @@ Definition validate_fns (fenv : list fn_def) : option global_env :=
 
 Definition ValidEnv (env : global_env) : Prop :=
   valid_global_env_b env = true.
+
+(* ------------------------------------------------------------------ *)
+(* Smoke examples checked by Rocq compilation                            *)
+(* ------------------------------------------------------------------ *)
+
+Definition ex_trait_show : trait_def :=
+  MkTraitDef "Show" 0 [].
+
+Definition ex_struct_box : struct_def :=
+  MkStructDef "Box" 0 1 [] [MkFieldDef "value" MImmutable (MkTy UUnrestricted (TParam 0))].
+
+Definition ex_impl_show_box : impl_def :=
+  MkImplDef 0 1 "Show" []
+    (MkTy UUnrestricted (TStruct "Box" [] [MkTy UUnrestricted (TParam 0)])).
+
+Definition ex_env_show_box : global_env :=
+  MkGlobalEnv [ex_struct_box] [ex_trait_show] [ex_impl_show_box] [].
+
+Example validate_env_show_box :
+  validate_env ex_env_show_box = Some ex_env_show_box.
+Proof. reflexivity. Qed.
+
+Example resolve_impl_show_box_isize :
+  resolve_impl ex_env_show_box "Show" []
+    (MkTy UUnrestricted (TStruct "Box" [] [MkTy UUnrestricted TIntegers])) =
+  Some ex_impl_show_box.
+Proof. reflexivity. Qed.
+
+Definition ex_struct_a : struct_def :=
+  MkStructDef "A" 0 0 [] [MkFieldDef "b" MImmutable (MkTy UUnrestricted (TStruct "B" [] []))].
+
+Definition ex_struct_b : struct_def :=
+  MkStructDef "B" 0 0 [] [MkFieldDef "a" MImmutable (MkTy UUnrestricted (TStruct "A" [] []))].
+
+Definition ex_env_recursive : global_env :=
+  MkGlobalEnv [ex_struct_a; ex_struct_b] [] [] [].
+
+Example validate_env_rejects_recursive_structs :
+  validate_env ex_env_recursive = None.
+Proof. reflexivity. Qed.

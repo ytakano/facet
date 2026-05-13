@@ -252,6 +252,11 @@ let validate_env env =
   | Some name -> Some ("duplicate top-level name: " ^ name)
   | None ->
     let trait_names = List.map (fun t -> t.trait_name) env.env_traits in
+    let zero = Big_int_Z.zero_big_int in
+    let big_len xs = Big_int_Z.big_int_of_int (List.length xs) in
+    let find_struct name =
+      List.find_opt (fun s -> s.struct_name = name) env.env_structs
+    in
     let validate_bound max_ty_params b =
       if Big_int_Z.ge_big_int b.bound_type_index max_ty_params
       then Some "trait bound refers to an out-of-range type parameter"
@@ -264,10 +269,97 @@ let validate_env env =
       | [] -> None
       | x :: xs -> begin match x with Some _ -> x | None -> first_some xs end
     in
+    let lifetime_error lt_params bound_depth = function
+      | LStatic -> None
+      | LVar i ->
+        if Big_int_Z.lt_big_int i lt_params then None
+        else Some "lifetime parameter index out of range"
+      | LBound i ->
+        if Big_int_Z.lt_big_int i bound_depth then None
+        else Some "bound lifetime index out of range"
+    in
+    let outlives_error lt_params bound_depth outs =
+      first_some
+        (List.map
+           (fun (a, b) ->
+             match lifetime_error lt_params bound_depth a with
+             | Some _ as err -> err
+             | None -> lifetime_error lt_params bound_depth b)
+           outs)
+    in
+    let rec type_error ty_params lt_params bound_depth (MkTy (_, core)) =
+      match core with
+      | TUnits | TIntegers | TFloats | TBooleans -> None
+      | TNamed name -> Some ("unknown type: " ^ name)
+      | TParam i ->
+        if Big_int_Z.lt_big_int i ty_params then None
+        else Some "type parameter index out of range"
+      | TStruct (name, lts, args) ->
+        begin match find_struct name with
+        | None -> Some ("unknown struct type: " ^ name)
+        | Some s ->
+          if not (Big_int_Z.eq_big_int (big_len lts) s.struct_lifetimes)
+          then Some ("struct lifetime arity mismatch: " ^ name)
+          else if not (Big_int_Z.eq_big_int (big_len args) s.struct_type_params)
+          then Some ("struct type arity mismatch: " ^ name)
+          else
+            first_some
+              (List.map (lifetime_error lt_params bound_depth) lts @
+               List.map (type_error ty_params lt_params bound_depth) args)
+        end
+      | TFn (args, ret) ->
+        first_some
+          (List.map (type_error ty_params lt_params bound_depth) args @
+           [type_error ty_params lt_params bound_depth ret])
+      | TForall (n, outs, body) ->
+        let bound_depth' = Big_int_Z.add_big_int n bound_depth in
+        begin match outlives_error lt_params bound_depth' outs with
+        | Some _ as err -> err
+        | None -> type_error ty_params lt_params bound_depth' body
+        end
+      | TRef (lt, _, inner) ->
+        begin match lifetime_error lt_params bound_depth lt with
+        | Some _ as err -> err
+        | None -> type_error ty_params lt_params bound_depth inner
+        end
+    in
+    let rec type_struct_refs (MkTy (_, core)) =
+      match core with
+      | TStruct (name, _, args) ->
+        name :: List.concat_map type_struct_refs args
+      | TFn (args, ret) ->
+        List.concat_map type_struct_refs args @ type_struct_refs ret
+      | TForall (_, _, body) -> type_struct_refs body
+      | TRef (_, _, inner) -> type_struct_refs inner
+      | TUnits | TIntegers | TFloats | TBooleans | TNamed _ | TParam _ -> []
+    in
+    let struct_deps s =
+      List.concat_map (fun f -> type_struct_refs f.field_ty) s.struct_fields
+    in
+    let rec reaches_struct seen target current =
+      if List.mem current seen then false
+      else
+        match find_struct current with
+        | None -> false
+        | Some s ->
+          let deps = struct_deps s in
+          List.mem target deps ||
+          List.exists (reaches_struct (current :: seen) target) deps
+    in
+    let validate_acyclic_struct s =
+      if reaches_struct [] s.struct_name s.struct_name
+      then Some ("recursive struct: " ^ s.struct_name)
+      else None
+    in
     let validate_struct s =
       match duplicate_name (List.map (fun f -> f.field_name) s.struct_fields) with
       | Some field -> Some ("duplicate field in struct " ^ s.struct_name ^ ": " ^ field)
-      | None -> first_some (List.map (validate_bound s.struct_type_params) s.struct_bounds)
+      | None ->
+        first_some
+          (List.map
+             (fun f -> type_error s.struct_type_params s.struct_lifetimes zero f.field_ty)
+             s.struct_fields @
+           List.map (validate_bound s.struct_type_params) s.struct_bounds)
     in
     let validate_trait t =
       first_some (List.map (validate_bound t.trait_type_params) t.trait_bounds)
@@ -275,11 +367,26 @@ let validate_env env =
     let validate_impl i =
       if not (List.mem i.impl_trait_name trait_names)
       then Some ("unknown trait in impl: " ^ i.impl_trait_name)
-      else None
+      else
+        first_some
+          (List.map
+             (type_error i.impl_type_params i.impl_lifetimes zero)
+             i.impl_trait_args @
+           [type_error i.impl_type_params i.impl_lifetimes zero i.impl_for_ty])
     in
-    match first_some (List.map validate_struct env.env_structs @
+    let validate_fn f =
+      first_some
+        (List.map
+           (fun p -> type_error zero f.fn_lifetimes zero p.param_ty)
+           f.fn_params @
+         [type_error zero f.fn_lifetimes zero f.fn_ret;
+          outlives_error f.fn_lifetimes zero f.fn_outlives])
+    in
+    match first_some (List.map validate_acyclic_struct env.env_structs @
+                      List.map validate_struct env.env_structs @
                       List.map validate_trait env.env_traits @
-                      List.map validate_impl env.env_impls) with
+                      List.map validate_impl env.env_impls @
+                      List.map validate_fn env.env_fns) with
     | Some _ as err -> err
     | None ->
       let impl_key_eq a b =

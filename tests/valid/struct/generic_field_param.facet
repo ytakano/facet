@@ -1,0 +1,7 @@
+struct Box<T> {
+  value: affine T
+}
+
+fn main() -> affine Box<affine isize> {
+  Box<affine isize> { value = 1 }
+}

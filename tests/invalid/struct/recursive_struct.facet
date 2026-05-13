@@ -1,0 +1,7 @@
+struct Node {
+  next: unrestricted Node
+}
+
+fn main() -> unrestricted () {
+  ()
+}

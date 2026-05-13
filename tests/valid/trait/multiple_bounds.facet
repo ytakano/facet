@@ -1,0 +1,10 @@
+trait Show;
+trait Debug;
+
+struct Box<T> where T: Show + Debug {
+  value: affine T
+}
+
+fn main() -> unrestricted () {
+  ()
+}

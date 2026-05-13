@@ -1,0 +1,7 @@
+struct Box {
+  value: unrestricted Missing
+}
+
+fn main() -> unrestricted () {
+  ()
+}

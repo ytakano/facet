@@ -1,0 +1,12 @@
+struct Inner {
+  value: unrestricted isize
+}
+
+struct Outer {
+  inner: unrestricted Inner
+}
+
+fn main() -> unrestricted isize {
+  let o: unrestricted Outer = Outer { inner = Inner { value = 1 } };
+  o.inner.value
+}

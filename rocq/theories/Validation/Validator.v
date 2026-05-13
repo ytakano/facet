@@ -105,6 +105,67 @@ Definition structs_acyclic_b (structs : list struct_def) : bool :=
   forallb (struct_acyclic_b structs) structs.
 
 (* ------------------------------------------------------------------ *)
+(* Type well-formedness against the collected top-level environment      *)
+(* ------------------------------------------------------------------ *)
+
+Definition lifetime_wf_b (lt_params bound_depth : nat) (l : lifetime) : bool :=
+  match l with
+  | LStatic => true
+  | LVar i => Nat.ltb i lt_params
+  | LBound i => Nat.ltb i bound_depth
+  end.
+
+Fixpoint outlives_wf_b (lt_params bound_depth : nat) (Ω : outlives_ctx) : bool :=
+  match Ω with
+  | [] => true
+  | (a, b) :: rest =>
+      lifetime_wf_b lt_params bound_depth a &&
+      lifetime_wf_b lt_params bound_depth b &&
+      outlives_wf_b lt_params bound_depth rest
+  end.
+
+Fixpoint type_env_wf_b
+    (structs : list struct_def) (ty_params lt_params bound_depth : nat) (T : Ty)
+    {struct T} : bool :=
+  match T with
+  | MkTy _ TUnits | MkTy _ TIntegers | MkTy _ TFloats | MkTy _ TBooleans => true
+  | MkTy _ (TNamed _) => false
+  | MkTy _ (TParam i) => Nat.ltb i ty_params
+  | MkTy _ (TStruct name lts args) =>
+      match lookup_struct_local name structs with
+      | None => false
+      | Some s =>
+          Nat.eqb (List.length lts) (struct_lifetimes s) &&
+          Nat.eqb (List.length args) (struct_type_params s) &&
+          forallb (lifetime_wf_b lt_params bound_depth) lts &&
+          forallb (type_env_wf_b structs ty_params lt_params bound_depth) args
+      end
+  | MkTy _ (TFn args ret) =>
+      forallb (type_env_wf_b structs ty_params lt_params bound_depth) args &&
+      type_env_wf_b structs ty_params lt_params bound_depth ret
+  | MkTy _ (TForall n Ω body) =>
+      outlives_wf_b lt_params (n + bound_depth) Ω &&
+      type_env_wf_b structs ty_params lt_params (n + bound_depth) body
+  | MkTy _ (TRef l _ inner) =>
+      lifetime_wf_b lt_params bound_depth l &&
+      type_env_wf_b structs ty_params lt_params bound_depth inner
+  end.
+
+Definition field_type_wf_b (structs : list struct_def) (s : struct_def)
+    (f : field_def) : bool :=
+  type_env_wf_b structs (struct_type_params s) (struct_lifetimes s) 0 (field_ty f).
+
+Definition struct_field_types_wf_b (structs : list struct_def) (s : struct_def) : bool :=
+  forallb (field_type_wf_b structs s) (struct_fields s).
+
+Definition param_type_wf_b (structs : list struct_def) (n : nat) (p : param) : bool :=
+  type_env_wf_b structs 0 n 0 (param_ty p).
+
+Definition fn_types_wf_b (structs : list struct_def) (f : fn_def) : bool :=
+  forallb (param_type_wf_b structs (fn_lifetimes f)) (fn_params f) &&
+  type_env_wf_b structs 0 (fn_lifetimes f) 0 (fn_ret f).
+
+(* ------------------------------------------------------------------ *)
 (* Type parameter and lifetime reference collection                      *)
 (* ------------------------------------------------------------------ *)
 
@@ -190,8 +251,9 @@ Definition struct_params_ok_b (s : struct_def) : bool :=
 Definition trait_bounds_wf_b (traits : list trait_def) (bounds : list trait_bound) : bool :=
   forallb (fun b => forallb (fun t => string_mem_b t (trait_names traits)) (bound_traits b)) bounds.
 
-Definition struct_wf_b (traits : list trait_def) (s : struct_def) : bool :=
+Definition struct_wf_b (structs : list struct_def) (traits : list trait_def) (s : struct_def) : bool :=
   string_no_dup_b (field_names (struct_fields s)) &&
+  struct_field_types_wf_b structs s &&
   trait_bounds_wf_b traits (struct_bounds s) &&
   struct_params_ok_b s.
 
@@ -222,8 +284,11 @@ Fixpoint impl_no_dup_b (xs : list impl_def) : bool :=
   | x :: rest => negb (impl_mem_b x rest) && impl_no_dup_b rest
   end.
 
-Definition impl_wf_b (traits : list trait_def) (i : impl_def) : bool :=
-  string_mem_b (impl_trait_name i) (trait_names traits).
+Definition impl_wf_b (structs : list struct_def) (traits : list trait_def) (i : impl_def) : bool :=
+  string_mem_b (impl_trait_name i) (trait_names traits) &&
+  forallb (type_env_wf_b structs (impl_type_params i) (impl_lifetimes i) 0)
+    (impl_trait_args i) &&
+  type_env_wf_b structs (impl_type_params i) (impl_lifetimes i) 0 (impl_for_ty i).
 
 Definition global_names (env : global_env) : list string :=
   struct_names (env_structs env) ++ trait_names (env_traits env) ++ fn_names (env_fns env).
@@ -231,10 +296,11 @@ Definition global_names (env : global_env) : list string :=
 Definition valid_global_env_b (env : global_env) : bool :=
   string_no_dup_b (global_names env) &&
   structs_acyclic_b (env_structs env) &&
-  forallb (struct_wf_b (env_traits env)) (env_structs env) &&
+  forallb (struct_wf_b (env_structs env) (env_traits env)) (env_structs env) &&
   forallb (trait_wf_b (env_traits env)) (env_traits env) &&
   impl_no_dup_b (env_impls env) &&
-  forallb (impl_wf_b (env_traits env)) (env_impls env).
+  forallb (impl_wf_b (env_structs env) (env_traits env)) (env_impls env) &&
+  forallb (fn_types_wf_b (env_structs env)) (env_fns env).
 
 Definition validate_env (env : global_env) : option global_env :=
   if valid_global_env_b env then Some env else None.

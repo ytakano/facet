@@ -1,0 +1,7 @@
+struct Box<T> where T: Missing {
+  value: affine T
+}
+
+fn main() -> unrestricted () {
+  ()
+}

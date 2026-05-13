@@ -1,0 +1,7 @@
+trait Show;
+
+impl Show for unrestricted Missing;
+
+fn main() -> unrestricted () {
+  ()
+}

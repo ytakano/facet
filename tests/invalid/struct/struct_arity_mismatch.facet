@@ -1,0 +1,11 @@
+struct Box<T> {
+  value: affine T
+}
+
+struct Bad {
+  value: unrestricted Box
+}
+
+fn main() -> unrestricted () {
+  ()
+}

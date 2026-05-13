@@ -1,0 +1,9 @@
+struct Box {
+  value: unrestricted isize
+}
+
+impl Missing for unrestricted Box;
+
+fn main() -> unrestricted () {
+  ()
+}

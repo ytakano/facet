@@ -1,0 +1,9 @@
+struct Pair {
+  x: affine isize,
+  y: affine bool
+}
+
+fn main() -> unrestricted () {
+  let p: affine Pair = Pair { x = 1, y = true };
+  (drop p)
+}

@@ -99,31 +99,6 @@ let check_alpha_consistency fname fenv f =
     Printf.eprintf "ALPHA-DIFF in '%s': infer=Err(%s), infer_direct=OK\n"
       fname (string_of_infer_error e)
 
-let expr_has_struct_surface =
-  let rec place = function
-    | PVar _ -> false
-    | PDeref p -> place p
-    | PField _ -> true
-  in
-  let rec expr = function
-    | EUnit | ELit _ | EVar _ | EFn _ -> false
-    | EPlace p -> place p
-    | ELet (_, _, _, e1, e2) | ELetInfer (_, _, e1, e2) ->
-      expr e1 || expr e2
-    | ECall (_, args) -> List.exists expr args
-    | ECallExpr (callee, args) -> expr callee || List.exists expr args
-    | EStruct _ -> true
-    | EReplace (p, e) | EAssign (p, e) -> place p || expr e
-    | EBorrow (_, p) -> place p
-    | EDeref e | EDrop e -> expr e
-    | EIf (e1, e2, e3) -> expr e1 || expr e2 || expr e3
-  in
-  expr
-
-let env_needs_fir_struct_support env =
-  env.env_structs <> [] || env.env_traits <> [] || env.env_impls <> [] ||
-  List.exists (fun f -> expr_has_struct_surface f.fn_body) env.env_fns
-
 let () =
   let args = Sys.argv in
   if Array.length args >= 2 && args.(1) = "--generate-grammar" then begin
@@ -211,11 +186,4 @@ let () =
       Printf.printf "OK: %s\n" fname
   ) fn_defs;
   if not !ok then exit 1;
-  Option.iter
-    (fun fname ->
-      if env_needs_fir_struct_support env then begin
-        Printf.eprintf "Error: --emit-fir does not support struct/trait/field programs yet\n";
-        exit 1
-      end;
-      Fir.emit_fir fname fn_defs)
-    !emit_fir_file
+  Option.iter (fun fname -> Fir.emit_fir fname env) !emit_fir_file

@@ -1,0 +1,10 @@
+struct Pair {
+  x: unrestricted isize,
+  y: unrestricted bool
+}
+
+fn main() -> unrestricted () {
+  let p: unrestricted Pair = Pair { x = 1, y = true };
+  let _ = (&p.y);
+  ()
+}

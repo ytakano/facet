@@ -162,6 +162,8 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
   | EA_Var : forall ρ x,
       ~ In x (rename_range ρ) ->
       expr_alpha ρ (EVar x) (EVar (lookup_rename x ρ))
+  | EA_Fn : forall ρ fname,
+      expr_alpha ρ (EFn fname) (EFn fname)
   | EA_Let : forall ρ m x xr T e1 e1r e2 e2r,
       expr_alpha ρ e1 e1r ->
       expr_alpha ((x, xr) :: ρ) e2 e2r ->
@@ -173,6 +175,10 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
   | EA_Call : forall ρ fname args argsr,
       exprs_alpha ρ args argsr ->
       expr_alpha ρ (ECall fname args) (ECall fname argsr)
+  | EA_CallExpr : forall ρ callee calleer args argsr,
+      expr_alpha ρ callee calleer ->
+      exprs_alpha ρ args argsr ->
+      expr_alpha ρ (ECallExpr callee args) (ECallExpr calleer argsr)
   | EA_Replace : forall ρ p pr e er,
       place_alpha ρ p pr ->
       expr_alpha ρ e er ->
@@ -464,6 +470,17 @@ Proof.
                  end) used l).
     injection Hrename as <- _. simpl in Hplace. discriminate.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+    destruct ((fix go (used0 : list ident) (args0 : list expr)
+                : list expr * list ident :=
+                 match args0 with
+                 | [] => ([], used0)
+                 | arg :: rest =>
+                     let (arg', used1) := alpha_rename_expr ρ used0 arg in
+                     let (rest', used2) := go used1 rest in
+                     (arg' :: rest', used2)
+                 end) used0 l).
+    injection Hrename as <- _. simpl in Hplace. discriminate.
+  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
     injection Hrename as <- _. simpl in Hplace. discriminate.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
     injection Hrename as <- _. simpl in Hplace. discriminate.
@@ -513,6 +530,17 @@ Proof.
                      let (rest', used2) := go used1 rest in
                      (arg' :: rest', used2)
                  end) used l).
+    injection Hrename as <- _. reflexivity.
+  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+    destruct ((fix go (used0 : list ident) (args0 : list expr)
+                : list expr * list ident :=
+                 match args0 with
+                 | [] => ([], used0)
+                 | arg :: rest =>
+                     let (arg', used1) := alpha_rename_expr ρ used0 arg in
+                     let (rest', used2) := go used1 rest in
+                     (arg' :: rest', used2)
+                 end) used0 l).
     injection Hrename as <- _. reflexivity.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
     injection Hrename as <- _. reflexivity.
@@ -703,10 +731,18 @@ Fixpoint expr_size (e : expr) : nat :=
   | EUnit => 1
   | ELit _ => 1
   | EVar _ => 1
+  | EFn _ => 1
   | ELet _ _ _ e1 e2 => S (expr_size e1 + expr_size e2)
   | ELetInfer _ _ e1 e2 => S (expr_size e1 + expr_size e2)
   | ECall _ args =>
       S ((fix go (args0 : list expr) : nat :=
+            match args0 with
+            | [] => 0
+            | arg :: rest => expr_size arg + go rest
+            end) args)
+  | ECallExpr callee args =>
+      S (expr_size callee +
+         (fix go (args0 : list expr) : nat :=
             match args0 with
             | [] => 0
             | arg :: rest => expr_size arg + go rest
@@ -724,6 +760,24 @@ Lemma expr_size_call_arg_lt : forall fname args arg,
   expr_size arg < expr_size (ECall fname args).
 Proof.
   intros fname args.
+  induction args as [| a rest IH]; intros arg Hin.
+  - contradiction.
+  - simpl in *. destruct Hin as [<- | Hin].
+    + lia.
+    + specialize (IH arg Hin). simpl in IH. lia.
+Qed.
+
+Lemma expr_size_callexpr_callee_lt : forall callee args,
+  expr_size callee < expr_size (ECallExpr callee args).
+Proof.
+  intros. simpl. lia.
+Qed.
+
+Lemma expr_size_callexpr_arg_lt : forall callee args arg,
+  In arg args ->
+  expr_size arg < expr_size (ECallExpr callee args).
+Proof.
+  intros callee args.
   induction args as [| a rest IH]; intros arg Hin.
   - contradiction.
   - simpl in *. destruct Hin as [<- | Hin].
@@ -820,6 +874,7 @@ Proof.
       -- simpl in Hlt. assert (expr_size e1 < n) as Hlt_e1 by lia. exact Hlt_e1.
       -- exact He1.
       -- exact Hin.
+  + injection Hrename as _ <-. exact Hin.
   + remember
       ((fix go (used0 : list ident) (args0 : list expr)
           : list expr * list ident :=
@@ -841,6 +896,33 @@ Proof.
       -- exact Hrename0.
     * symmetry. exact Hargs.
     * exact Hin.
+  + destruct (alpha_rename_expr ρ used e) as [callee_r used0] eqn:Hcallee.
+    remember
+      ((fix go (used0 : list ident) (args0 : list expr)
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used0)
+          | arg :: rest =>
+              let (arg', used1) := alpha_rename_expr ρ used0 arg in
+              let (rest', used2) := go used1 rest in
+              (arg' :: rest', used2)
+          end) used0 l) as r eqn:Hargs.
+    destruct r as [argsr used_args].
+    injection Hrename as _ <-.
+    eapply alpha_rename_call_args_used_extends.
+    * intros used_arg earg er0 used_tail Hin_arg Hrename0.
+      eapply IH.
+      -- pose proof (expr_size_callexpr_arg_lt e l earg Hin_arg) as Harg_lt.
+        assert (expr_size earg < n) as Hlt_arg by lia.
+        exact Hlt_arg.
+      -- exact Hrename0.
+    * symmetry. exact Hargs.
+    * eapply IH.
+      -- pose proof (expr_size_callexpr_callee_lt e l) as Hcallee_lt.
+        assert (expr_size e < n) as Hlt_callee by lia.
+        exact Hlt_callee.
+      -- exact Hcallee.
+      -- exact Hin.
   + destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as _ <-.
     eapply IH.
@@ -1072,6 +1154,7 @@ Proof.
            right. apply in_or_app. left. exact Hin.
         ++ exact (Hdisj2 x Hin Hin_range).
       -- exact He2.
+  + injection Hrename as <- _. constructor.
   + remember
       ((fix go (used0 : list ident) (args0 : list expr)
           : list expr * list ident :=
@@ -1095,6 +1178,42 @@ Proof.
       -- exact Hrename0.
     * exact Hdisj.
     * symmetry. exact Hargs.
+  + destruct (disjoint_names_app_l (free_vars_expr e)
+      ((fix go (args0 : list expr) : list ident :=
+          match args0 with
+          | [] => []
+          | arg :: rest => free_vars_expr arg ++ go rest
+          end) l) (rename_range ρ) Hdisj) as [Hdisj_callee Hdisj_args].
+    destruct (alpha_rename_expr ρ used e) as [callee_r used0] eqn:Hcallee.
+    remember
+      ((fix go (used0 : list ident) (args0 : list expr)
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used0)
+          | arg :: rest =>
+              let (arg', used1) := alpha_rename_expr ρ used0 arg in
+              let (rest', used2) := go used1 rest in
+              (arg' :: rest', used2)
+          end) used0 l) as r eqn:Hargs.
+    destruct r as [argsr used_args].
+    injection Hrename as <- _.
+    constructor.
+    * eapply IH.
+      -- pose proof (expr_size_callexpr_callee_lt e l) as Hcallee_lt.
+         assert (expr_size e < n) as Hlt_callee by lia.
+         exact Hlt_callee.
+      -- exact Hdisj_callee.
+      -- exact Hcallee.
+    * eapply alpha_rename_call_args_sound.
+      -- intros used_arg earg er0 used_tail Hin_arg Hdisj0 Hrename0.
+         eapply IH.
+         ++ pose proof (expr_size_callexpr_arg_lt e l earg Hin_arg) as Harg_lt.
+            assert (expr_size earg < n) as Hlt_arg by lia.
+            exact Hlt_arg.
+         ++ exact Hdisj0.
+         ++ exact Hrename0.
+      -- exact Hdisj_args.
+      -- symmetry. exact Hargs.
   + (* EReplace p e *)
     destruct (disjoint_names_cons_l (place_name p) (free_vars_expr e)
       (rename_range ρ) Hdisj) as [Hpx Hdisj_e].
@@ -1453,4 +1572,3 @@ Proof.
       eexists. split. reflexivity.
       constructor; [exact Hctx04 | exact Hrest_names | exact Hxr_range].
 Qed.
-

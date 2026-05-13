@@ -51,7 +51,9 @@ Inductive expr : Type :=
 | EVar      : ident -> expr
 | ELet      : mutability -> ident -> Ty -> expr -> expr -> expr
 | ELetInfer : mutability -> ident -> expr -> expr -> expr
+| EFn       : ident -> expr
 | ECall     : ident -> list expr -> expr
+| ECallExpr : expr -> list expr -> expr
 | EReplace  : place -> expr -> expr
 | EAssign   : place -> expr -> expr
 | EBorrow   : ref_kind -> place -> expr

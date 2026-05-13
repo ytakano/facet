@@ -52,6 +52,8 @@ let string_of_infer_error = function
     Printf.sprintf "cannot borrow immutable variable as mutable: %s" (string_of_ident id)
   | ErrNotAReference c    ->
     Printf.sprintf "type is not a reference: %s" (string_of_ty_core c)
+  | ErrNotAFunction c    ->
+    Printf.sprintf "type is not a function: %s" (string_of_ty_core c)
   | ErrBorrowConflict id  ->
     Printf.sprintf "borrow conflict: %s is already borrowed incompatibly" (string_of_ident id)
   | ErrLifetimeLeak ->
@@ -133,7 +135,7 @@ let () =
         (start.Lexing.pos_cnum - start.Lexing.pos_bol);
       exit 1
   in
-  let fn_defs = List.map Debruijn.convert_fn_def named_defs in
+  let fn_defs = Debruijn.convert_program named_defs in
   let ok = ref true in
   List.iter (fun f ->
     let (fname, _) = f.fn_name in

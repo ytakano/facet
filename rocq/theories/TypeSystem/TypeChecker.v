@@ -261,6 +261,7 @@ Inductive infer_error : Type :=
   | ErrNotImplemented : infer_error
   | ErrImmutableBorrow : ident -> infer_error       (* &mut x where x is immutable *)
   | ErrNotAReference : TypeCore Ty -> infer_error   (* *e where e is not a reference type *)
+  | ErrNotAFunction : TypeCore Ty -> infer_error
   | ErrBorrowConflict : ident -> infer_error       (* borrow conflicts with existing active borrow *)
   | ErrLifetimeLeak : infer_error                 (* return type references a local lifetime *)
   | ErrLifetimeConflict : infer_error.            (* unification conflict in call lifetime substitution *)
@@ -269,6 +270,11 @@ Definition compatible_error (T_actual T_expected : Ty) : infer_error :=
   if ty_core_eqb (ty_core T_actual) (ty_core T_expected)
   then ErrUsageMismatch (ty_usage T_actual) (ty_usage T_expected)
   else ErrTypeMismatch (ty_core T_actual) (ty_core T_expected).
+
+(* ------------------------------------------------------------------ *)
+(* Higher-rank lifetime helpers                                          *)
+(* ------------------------------------------------------------------ *)
+
 
 (* ------------------------------------------------------------------ *)
 (* Lifetime substitution helpers for ECall                               *)
@@ -347,6 +353,66 @@ Fixpoint build_sigma (m : nat) (σ_acc : list (option lifetime))
   | _, _ => None
   end.
 
+Definition bound_subst_vec_add
+    (σ : list (option lifetime))
+    (i : nat)
+    (l_a : lifetime)
+    : option (list (option lifetime)) :=
+  lt_subst_vec_add σ i l_a.
+
+Fixpoint unify_bound_lt (σ : list (option lifetime))
+    (T_param T_e : Ty) {struct T_param} : option (list (option lifetime)) :=
+  match T_param with
+  | MkTy _ (TRef l_p rk T_p_inner) =>
+      match T_e with
+      | MkTy _ (TRef l_a rk' T_e_inner) =>
+          if negb (ref_kind_eqb rk rk') then None
+          else
+            match l_p with
+            | LBound i =>
+                match bound_subst_vec_add σ i l_a with
+                | None => None
+                | Some σ' => unify_bound_lt σ' T_p_inner T_e_inner
+                end
+            | _ =>
+                if lifetime_eqb l_p l_a
+                then unify_bound_lt σ T_p_inner T_e_inner
+                else None
+            end
+      | _ => None
+      end
+  | MkTy _ (TFn ps pr) =>
+      match T_e with
+      | MkTy _ (TFn es er) =>
+          let fix go (σ0 : list (option lifetime)) ps0 es0 :=
+            match ps0, es0 with
+            | [], [] => unify_bound_lt σ0 pr er
+            | p :: ps', e :: es' =>
+                match unify_bound_lt σ0 p e with
+                | None => None
+                | Some σ' => go σ' ps' es'
+                end
+            | _, _ => None
+            end
+          in go σ ps es
+      | _ => None
+      end
+  | _ =>
+      if ty_core_eqb (ty_core T_param) (ty_core T_e) then Some σ else None
+  end.
+
+Fixpoint build_bound_sigma (σ_acc : list (option lifetime))
+    (arg_tys params : list Ty) : option (list (option lifetime)) :=
+  match arg_tys, params with
+  | [], [] => Some σ_acc
+  | t :: ts, p :: ps =>
+      match unify_bound_lt σ_acc p t with
+      | None => None
+      | Some σ' => build_bound_sigma σ' ts ps
+      end
+  | _, _ => None
+  end.
+
 Fixpoint check_args (Ω : outlives_ctx) (arg_tys : list Ty) (params : list param)
     : option infer_error :=
   match arg_tys, params with
@@ -355,6 +421,17 @@ Fixpoint check_args (Ω : outlives_ctx) (arg_tys : list Ty) (params : list param
       if ty_compatible_b Ω t (param_ty p)
       then check_args Ω ts ps
       else Some (compatible_error t (param_ty p))
+  | _, _ => Some ErrArityMismatch
+  end.
+
+Fixpoint check_arg_tys (Ω : outlives_ctx) (arg_tys params : list Ty)
+    : option infer_error :=
+  match arg_tys, params with
+  | [], [] => None
+  | t :: ts, p :: ps =>
+      if ty_compatible_b Ω t p
+      then check_arg_tys Ω ts ps
+      else Some (compatible_error t p)
   | _, _ => Some ErrArityMismatch
   end.
 
@@ -389,6 +466,7 @@ Fixpoint free_vars_expr (e : expr) : list ident :=
   | EUnit => []
   | ELit _ => []
   | EVar x => [x]
+  | EFn _ => []
   | ELet _ x _ e1 e2 => x :: free_vars_expr e1 ++ free_vars_expr e2
   | ELetInfer _ x e1 e2 => x :: free_vars_expr e1 ++ free_vars_expr e2
   | ECall _ args =>
@@ -398,6 +476,13 @@ Fixpoint free_vars_expr (e : expr) : list ident :=
         | arg :: rest => free_vars_expr arg ++ go rest
         end
       in go args
+  | ECallExpr callee args =>
+      let fix go (args0 : list expr) : list ident :=
+        match args0 with
+        | [] => []
+        | arg :: rest => free_vars_expr arg ++ go rest
+        end
+      in free_vars_expr callee ++ go args
   | EReplace p e_new => place_name p :: free_vars_expr e_new
   | EAssign p e_new => place_name p :: free_vars_expr e_new
   | EBorrow _ p => [place_name p]
@@ -424,6 +509,7 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
   | EUnit => (EUnit, used)
   | ELit l => (ELit l, used)
   | EVar x => (EVar (lookup_rename x ρ), used)
+  | EFn fname => (EFn fname, used)
   | ECall fname args =>
       let fix go (used0 : list ident) (args0 : list expr)
           : list expr * list ident :=
@@ -437,6 +523,20 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
       in
       let (args', used') := go used args in
       (ECall fname args', used')
+  | ECallExpr callee args =>
+      let (callee', used1) := alpha_rename_expr ρ used callee in
+      let fix go (used0 : list ident) (args0 : list expr)
+          : list expr * list ident :=
+        match args0 with
+        | [] => ([], used0)
+        | arg :: rest =>
+            let (arg', used1') := alpha_rename_expr ρ used0 arg in
+            let (rest', used2) := go used1' rest in
+            (arg' :: rest', used2)
+        end
+      in
+      let (args', used') := go used1 args in
+      (ECallExpr callee' args', used')
   | EReplace p e_new =>
       let (e_new', used') := alpha_rename_expr ρ used e_new in
       (EReplace (rename_place ρ p) e_new', used')
@@ -558,6 +658,12 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
                     | None    => infer_err (ErrUnknownVar x)
                     | Some Γ' => infer_ok (T, Γ')
                     end
+      end
+
+  | EFn fname =>
+      match lookup_fn_b fname fenv with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef => infer_ok (fn_value_ty fdef, Γ)
       end
 
   | ELet m x T e1 e2 =>
@@ -700,6 +806,60 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
                         else infer_err ErrLifetimeConflict
                       else infer_err ErrLifetimeLeak
                   end
+              end
+          end
+      end
+
+  | ECallExpr callee args =>
+      match infer_core fenv Ω n Γ callee with
+      | infer_err err => infer_err err
+      | infer_ok (T_callee, Γc) =>
+          let fix collect (Γ0 : ctx) (as_ : list expr)
+              : infer_result (list Ty * ctx) :=
+            match as_ with
+            | []      => infer_ok ([], Γ0)
+            | e' :: es =>
+                match infer_core fenv Ω n Γ0 e' with
+                | infer_err err => infer_err err
+                | infer_ok (T_e, Γ1) =>
+                    match collect Γ1 es with
+                    | infer_err err => infer_err err
+                    | infer_ok (tys, Γ2) => infer_ok (T_e :: tys, Γ2)
+                    end
+                end
+            end
+          in
+          match collect Γc args with
+          | infer_err err => infer_err err
+          | infer_ok (arg_tys, Γ') =>
+              match ty_core T_callee with
+              | TFn param_tys ret =>
+                  match check_arg_tys Ω arg_tys param_tys with
+                  | Some err => infer_err err
+                  | None => infer_ok (ret, Γ')
+                  end
+              | TForall m bounds body =>
+                  match ty_core body with
+                  | TFn param_tys ret =>
+                      match build_bound_sigma (repeat None m) arg_tys param_tys with
+                      | None => infer_err ErrLifetimeConflict
+                      | Some σ =>
+                          let param_tys_open := map (open_bound_ty σ) param_tys in
+                          match check_arg_tys Ω arg_tys param_tys_open with
+                          | Some err => infer_err err
+                          | None =>
+                              let ret_open := open_bound_ty σ ret in
+                              let bounds_open := open_bound_outlives σ bounds in
+                              if contains_lbound_ty ret_open || contains_lbound_outlives bounds_open
+                              then infer_err ErrLifetimeLeak
+                              else if outlives_constraints_hold_b Ω bounds_open
+                                   then infer_ok (ret_open, Γ')
+                                   else infer_err ErrLifetimeConflict
+                          end
+                      end
+                  | c => infer_err (ErrNotAFunction c)
+                  end
+              | c => infer_err (ErrNotAFunction c)
               end
           end
       end
@@ -931,6 +1091,7 @@ Fixpoint borrow_check (fenv : list fn_def) (BS : borrow_state) (Γ : ctx)
     (e : expr) : infer_result borrow_state :=
   match e with
   | EUnit | ELit _ | EVar _ => infer_ok BS
+  | EFn _ => infer_ok BS
 
   | EBorrow RShared (PVar x) =>
       if bs_has_mut x BS
@@ -1024,6 +1185,21 @@ Fixpoint borrow_check (fenv : list fn_def) (BS : borrow_state) (Γ : ctx)
             end
         end
       in go BS args
+  | ECallExpr callee args =>
+      match borrow_check fenv BS Γ callee with
+      | infer_err err => infer_err err
+      | infer_ok BS1 =>
+          let fix go (BS0 : borrow_state) (as_ : list expr) : infer_result borrow_state :=
+            match as_ with
+            | []      => infer_ok BS0
+            | a :: rest =>
+                match borrow_check fenv BS0 Γ a with
+                | infer_err err => infer_err err
+                | infer_ok BS2  => go BS2 rest
+                end
+            end
+          in go BS1 args
+      end
   end.
 
 (* Separate top-level borrow_check_args for BorrowCheckSoundness proofs. *)

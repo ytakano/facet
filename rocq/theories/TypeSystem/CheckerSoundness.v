@@ -384,6 +384,16 @@ Proof.
       * exact Hcheck.
 Qed.
 
+Lemma check_arg_tys_params_of_tys : forall Ω arg_tys param_tys,
+  check_arg_tys Ω arg_tys param_tys =
+  check_args Ω arg_tys (params_of_tys param_tys).
+Proof.
+  intros Ω arg_tys. induction arg_tys as [| a arg_tys IH]; intros param_tys.
+  - destruct param_tys; reflexivity.
+  - destruct param_tys as [| p ps]; [reflexivity |].
+    simpl. destruct (ty_compatible_b Ω a p); [apply IH | reflexivity].
+Qed.
+
 Lemma outlives_constraints_hold_b_sound : forall Ω constraints,
   outlives_constraints_hold_b Ω constraints = true ->
   Forall (fun '(a, b) => outlives Ω a b) constraints.
@@ -446,6 +456,12 @@ Proof.
         * eapply IH; [simpl in Hlt; lia | exact He2].
         * apply ctx_check_ok_sound. exact Hok.
       + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
+        injection Hinfer as <- <-.
+        destruct (lookup_fn_b_sound i fenv fdef Hlookup) as [Hin Hname].
+        eapply T_FnValue.
+        * exact Hin.
+        * exact Hname.
+      + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
         destruct (infer_args_collect fenv Ω n Γ l) as [[arg_tys Γcall] | err] eqn:Hcollect.
         2:{
           rewrite (ecall_collect_eq fenv Ω n l Γ) in Hinfer.
@@ -474,6 +490,64 @@ Proof.
              ++ exact Hinfer_arg.
           -- exact Hcheck.
         * subst Ω_subst. apply outlives_constraints_hold_b_sound. exact Hout.
+      + destruct (infer_core fenv Ω n Γ e) as [[Tcallee Γcallee] | err] eqn:Hcallee; [|discriminate].
+        destruct (infer_args_collect fenv Ω n Γcallee l) as [[arg_tys Γcall] | err] eqn:Hcollect.
+        2:{
+          rewrite (ecall_collect_eq fenv Ω n l Γcallee) in Hinfer.
+          rewrite Hcollect in Hinfer. discriminate.
+        }
+        rewrite (ecall_collect_eq fenv Ω n l Γcallee) in Hinfer.
+        rewrite Hcollect in Hinfer.
+        destruct (ty_core Tcallee) eqn:Hcore.
+        * discriminate.
+        * discriminate.
+        * discriminate.
+        * discriminate.
+        * discriminate.
+        * destruct (check_arg_tys Ω arg_tys l0) as [err |] eqn:Hcheck; [discriminate |].
+          injection Hinfer as <- <-.
+          eapply T_CallExpr_Fn.
+          -- replace (MkTy (ty_usage Tcallee) (TFn l0 t)) with Tcallee.
+             2:{ destruct Tcallee as [u c]. simpl in Hcore. rewrite Hcore. reflexivity. }
+             eapply IH.
+             ++ pose proof (expr_size_callexpr_callee_lt e l). lia.
+             ++ exact Hcallee.
+          -- eapply infer_call_args_sound_v2.
+             ++ exact Hcollect.
+             ++ intros Γ0 e0 T0 Γ1 Hin_arg Hinfer_arg.
+                eapply IH.
+                ** pose proof (expr_size_callexpr_arg_lt e l e0 Hin_arg). lia.
+                ** exact Hinfer_arg.
+             ++ rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
+        * destruct (ty_core t) eqn:Hbody; try discriminate.
+          destruct (build_bound_sigma (repeat None n0) arg_tys l0) as [σ |] eqn:Hbuild; [|discriminate].
+          remember (map (open_bound_ty σ) l0) as params_open.
+          destruct (check_arg_tys Ω arg_tys params_open) as [err |] eqn:Hcheck; [discriminate |].
+          remember (open_bound_ty σ t0) as ret_open.
+          remember (open_bound_outlives σ o) as bounds_open.
+          destruct (contains_lbound_ty ret_open || contains_lbound_outlives bounds_open) eqn:Hleak; [discriminate |].
+          destruct (outlives_constraints_hold_b Ω bounds_open) eqn:Hout; [|discriminate].
+          injection Hinfer as <- <-.
+          apply orb_false_iff in Hleak as [Hret Hbounds].
+          subst params_open ret_open bounds_open.
+          eapply T_CallExpr_Forall with (σ := σ) (param_tys := l0).
+          -- replace (MkTy (ty_usage Tcallee) (TForall n0 o t)) with Tcallee.
+             2:{ destruct Tcallee as [u c]. simpl in Hcore. rewrite Hcore. reflexivity. }
+             eapply IH.
+             ++ pose proof (expr_size_callexpr_callee_lt e l). lia.
+             ++ exact Hcallee.
+          -- exact Hbody.
+          -- eapply infer_call_args_sound_v2.
+             ++ exact Hcollect.
+             ++ intros Γ0 e0 T0 Γ1 Hin_arg Hinfer_arg.
+                eapply IH.
+                ** pose proof (expr_size_callexpr_arg_lt e l e0 Hin_arg). lia.
+                ** exact Hinfer_arg.
+             ++ rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
+          -- exact Hret.
+          -- exact Hbounds.
+          -- apply outlives_constraints_hold_b_sound. exact Hout.
+        * discriminate.
       + destruct p as [x | p].
         * destruct (ctx_lookup_b x Γ) as [[Tx bx] |] eqn:Hlookup; [|discriminate].
           destruct bx; [discriminate |].

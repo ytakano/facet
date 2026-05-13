@@ -1,6 +1,7 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax.
 From Stdlib Require Import List String Bool.
 Import ListNotations.
+Local Open Scope string_scope.
 
 (* ------------------------------------------------------------------ *)
 (* Typing context                                                        *)
@@ -149,6 +150,22 @@ Fixpoint ctx_merge (Γ2 Γ3 : ctx) : option ctx :=
   | _, _ => None
   end.
 
+Definition fn_value_ty (f : fn_def) : Ty :=
+  let m := fn_lifetimes f in
+  let body :=
+    close_fn_ty m
+      (MkTy UUnrestricted (TFn (map param_ty (fn_params f)) (fn_ret f))) in
+  match m with
+  | O => body
+  | S _ => MkTy UUnrestricted (TForall m (close_fn_outlives m (fn_outlives f)) body)
+  end.
+
+Fixpoint params_of_tys (ts : list Ty) : list param :=
+  match ts with
+  | [] => []
+  | t :: ts' => MkParam MImmutable ("_", 0) t :: params_of_tys ts'
+  end.
+
 Fixpoint place_root (p : place) : ident :=
   match p with
   | PVar x => x
@@ -211,6 +228,11 @@ Inductive typed (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) : ctx -> expr
       ctx_lookup x Γ = Some (T, b) ->
       ty_usage T = UUnrestricted ->
       typed fenv Ω n Γ (EVar x) T Γ
+
+  | T_FnValue : forall Γ fname fdef,
+      In fdef fenv ->
+      fn_name fdef = fname ->
+      typed fenv Ω n Γ (EFn fname) (fn_value_ty fdef) Γ
 
   (* let x: T = e1 in e2
      1. Type e1; the result type T1 must have the same core type as T
@@ -348,6 +370,20 @@ Inductive typed (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) : ctx -> expr
       Forall (fun '(a, b) => outlives Ω a b) (apply_lt_outlives σ (fn_outlives fdef)) ->
       typed fenv Ω n Γ (ECall fname args) (apply_lt_ty σ (fn_ret fdef)) Γ'
 
+  | T_CallExpr_Fn : forall Γ Γ1 Γ' callee args u param_tys ret,
+      typed fenv Ω n Γ callee (MkTy u (TFn param_tys ret)) Γ1 ->
+      typed_args fenv Ω n Γ1 args (params_of_tys param_tys) Γ' ->
+      typed fenv Ω n Γ (ECallExpr callee args) ret Γ'
+
+  | T_CallExpr_Forall : forall Γ Γ1 Γ' callee args u m bounds body param_tys ret σ,
+      typed fenv Ω n Γ callee (MkTy u (TForall m bounds body)) Γ1 ->
+      ty_core body = TFn param_tys ret ->
+      typed_args fenv Ω n Γ1 args (params_of_tys (map (open_bound_ty σ) param_tys)) Γ' ->
+      contains_lbound_ty (open_bound_ty σ ret) = false ->
+      contains_lbound_outlives (open_bound_outlives σ bounds) = false ->
+      Forall (fun '(a, b) => outlives Ω a b) (open_bound_outlives σ bounds) ->
+      typed fenv Ω n Γ (ECallExpr callee args) (open_bound_ty σ ret) Γ'
+
 (* Type-check a list of arguments against a list of parameters.
    Each argument's type must have the same core type as the parameter's
    declared type and a compatible usage (subtype). The context threads
@@ -467,6 +503,9 @@ Inductive borrow_ok (fenv : list fn_def)
   | BO_Var : forall BS Γ x,
       borrow_ok fenv BS Γ (EVar x) BS
 
+  | BO_Fn : forall BS Γ fname,
+      borrow_ok fenv BS Γ (EFn fname) BS
+
   (* shared borrow: OK if no active mut borrow on x *)
   | BO_BorrowShared : forall BS Γ x,
       bs_can_shared x BS ->
@@ -544,6 +583,11 @@ Inductive borrow_ok (fenv : list fn_def)
   | BO_Call : forall BS BS' Γ fname args,
       borrow_ok_args fenv BS Γ args BS' ->
       borrow_ok fenv BS Γ (ECall fname args) BS'
+
+  | BO_CallExpr : forall BS BS1 BS2 Γ callee args,
+      borrow_ok fenv BS Γ callee BS1 ->
+      borrow_ok_args fenv BS1 Γ args BS2 ->
+      borrow_ok fenv BS Γ (ECallExpr callee args) BS2
 
 with borrow_ok_args (fenv : list fn_def)
     : borrow_state -> ctx -> list expr -> borrow_state -> Prop :=

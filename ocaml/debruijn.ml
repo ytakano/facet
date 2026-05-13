@@ -23,36 +23,43 @@ let rec convert_place scope = function
   | NPVar name -> PVar (make_ident name (lookup scope name))
   | NPDeref p -> PDeref (convert_place scope p)
 
-let rec convert (scope : scope) (e : named_expr) : expr =
+let in_scope scope name = current_depth scope name >= 0
+
+let rec convert (fn_names : string list) (scope : scope) (e : named_expr) : expr =
   match e with
   | NUnit           -> EUnit
   | NLit l          -> ELit l
-  | NVar name       -> EVar (make_ident name (lookup scope name))
-  | NDrop e1        -> EDrop (convert scope e1)
+  | NVar name       ->
+    if in_scope scope name then EVar (make_ident name (lookup scope name))
+    else if List.mem name fn_names then EFn (make_ident name 0)
+    else EVar (make_ident name (lookup scope name))
+  | NDrop e1        -> EDrop (convert fn_names scope e1)
   | NReplace (p, e1) ->
-    EReplace (convert_place scope p, convert scope e1)
+    EReplace (convert_place scope p, convert fn_names scope e1)
   | NAssign (p, e1) ->
-    EAssign (convert_place scope p, convert scope e1)
+    EAssign (convert_place scope p, convert fn_names scope e1)
   | NBorrow (rk, p) ->
     EBorrow (rk, convert_place scope p)
   | NDeref e1 ->
-    EDeref (convert scope e1)
+    EDeref (convert fn_names scope e1)
   | NCall (f, args) ->
-    ECall (make_ident f 0, List.map (convert scope) args)
+    let args' = List.map (convert fn_names scope) args in
+    if in_scope scope f then ECallExpr (EVar (make_ident f (lookup scope f)), args')
+    else ECall (make_ident f 0, args')
   | NLet (m, name, Some ty, e1, e2) ->
-    let e1' = convert scope e1 in
+    let e1' = convert fn_names scope e1 in
     let (scope', d) = add_binding scope name in
-    let e2' = convert scope' e2 in
+    let e2' = convert fn_names scope' e2 in
     ELet (m, make_ident name d, ty, e1', e2')
   | NLet (m, name, None, e1, e2) ->
-    let e1' = convert scope e1 in
+    let e1' = convert fn_names scope e1 in
     let (scope', d) = add_binding scope name in
-    let e2' = convert scope' e2 in
+    let e2' = convert fn_names scope' e2 in
     ELetInfer (m, make_ident name d, e1', e2')
   | NIf (cond, then_e, else_e) ->
-    EIf (convert scope cond, convert scope then_e, convert scope else_e)
+    EIf (convert fn_names scope cond, convert fn_names scope then_e, convert fn_names scope else_e)
 
-let convert_fn_def (f : named_fn_def) : fn_def =
+let convert_fn_def_with_names fn_names (f : named_fn_def) : fn_def =
   let (scope, params) = List.fold_left
     (fun (sc, acc) np ->
       let (sc', d) = add_binding sc np.np_name in
@@ -67,4 +74,10 @@ let convert_fn_def (f : named_fn_def) : fn_def =
     fn_outlives = f.nf_outlives;
     fn_params    = params;
     fn_ret       = f.nf_ret;
-    fn_body      = convert scope f.nf_body }
+    fn_body      = convert fn_names scope f.nf_body }
+
+let convert_program (fs : named_fn_def list) : fn_def list =
+  let fn_names = List.map (fun f -> f.nf_name) fs in
+  List.map (convert_fn_def_with_names fn_names) fs
+
+let convert_fn_def f = convert_fn_def_with_names [] f

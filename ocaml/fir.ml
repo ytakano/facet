@@ -8,6 +8,7 @@ type fir_value =
   | FVUnit
   | FVLit of literal
   | FVVar of ident
+  | FVFn of ident
 
 type fir_tval = { fv : fir_value; ft : ty }
 
@@ -92,9 +93,15 @@ let get_fn_ret env f =
   | Some fd -> fd.fn_ret
   | None -> failwith ("FIR: function not found: " ^ fst f)
 
+let get_fn_value_ty env f =
+  match lookup_fn_b f env.fenv with
+  | Some fd -> fn_value_ty fd
+  | None -> failwith ("FIR: function not found: " ^ fst f)
+
 let ident_of_tval env tv =
   match tv.fv with
   | FVVar x -> x
+  | FVFn _ -> failwith "FIR: function value cannot be used as a variable"
   | _ ->
     let tmp = fresh_id env in
     emit env (FILet (tmp, tv.ft, tv));
@@ -107,6 +114,8 @@ let rec to_value env = function
     let ty = get_var_ty env x in
     consume_if_needed env x ty;
     { fv = FVVar x; ft = ty }
+  | EFn f ->
+    { fv = FVFn f; ft = get_fn_value_ty env f }
   | ELet (m, x, t, e1, e2) ->
     emit_into env x t e1;
     env.ctx <- ctx_add_b x t m env.ctx;
@@ -125,6 +134,20 @@ let rec to_value env = function
     let tmp = fresh_id env in
     emit env (FICall (tmp, ret, f, flat));
     { fv = FVVar tmp; ft = ret }
+  | ECallExpr (callee, args) ->
+    let callee_val = to_value env callee in
+    let f = match callee_val.fv with
+      | FVFn f -> f
+      | _ -> failwith "FIR: dynamic function values are not lowered"
+    in
+    let result_ty = match infer_core env.fenv [] env.lifetimes env.ctx (ECallExpr (callee, args)) with
+      | Infer_ok (t, _) -> t
+      | Infer_err _ -> get_fn_ret env f
+    in
+    let flat = List.map (to_value env) args in
+    let tmp = fresh_id env in
+    emit env (FICall (tmp, result_ty, f, flat));
+    { fv = FVVar tmp; ft = result_ty }
   | EDrop inner ->
     let v = to_value env inner in
     let tmp = fresh_id env in
@@ -266,6 +289,7 @@ let pp_tval tv =
     | FVLit (LFloat f) -> f
     | FVLit (LBool b)  -> string_of_bool b
     | FVVar x     -> pp_ident x
+    | FVFn f      -> "fn " ^ pp_ident f
   in
   vs ^ " as " ^ pp_ty tv.ft
 

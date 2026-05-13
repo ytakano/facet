@@ -229,6 +229,12 @@ let apply_lt_outlives _UU03c3_ _UU03a9_ =
     let (a, b) = pat in
     ((apply_lt_lifetime _UU03c3_ a), (apply_lt_lifetime _UU03c3_ b))) _UU03a9_
 
+(** val close_fn_lifetime : Big_int_Z.big_int -> lifetime -> lifetime **)
+
+let close_fn_lifetime m l = match l with
+| LVar i -> if Nat.ltb i m then LBound i else l
+| _ -> l
+
 (** val apply_lt_ty : lifetime list -> ty -> ty **)
 
 let rec apply_lt_ty _UU03c3_ = function
@@ -249,6 +255,90 @@ let rec apply_lt_ty _UU03c3_ = function
      MkTy (u, (TRef ((apply_lt_lifetime _UU03c3_ l), rk,
        (apply_lt_ty _UU03c3_ t1))))
    | x -> MkTy (u, x))
+
+(** val map_lifetimes_ty : (lifetime -> lifetime) -> ty -> ty **)
+
+let rec map_lifetimes_ty f = function
+| MkTy (u, t0) ->
+  (match t0 with
+   | TFn (ts, r) ->
+     let go =
+       let rec go = function
+       | [] -> []
+       | x :: xs' -> (map_lifetimes_ty f x) :: (go xs')
+       in go
+     in
+     MkTy (u, (TFn ((go ts), (map_lifetimes_ty f r))))
+   | TForall (n, _UU03a9_, body) ->
+     MkTy (u, (TForall (n,
+       (map (fun pat -> let (a, b) = pat in ((f a), (f b))) _UU03a9_),
+       (map_lifetimes_ty f body))))
+   | TRef (l, rk, t1) -> MkTy (u, (TRef ((f l), rk, (map_lifetimes_ty f t1))))
+   | x -> MkTy (u, x))
+
+(** val close_fn_ty : Big_int_Z.big_int -> ty -> ty **)
+
+let close_fn_ty m t =
+  map_lifetimes_ty (close_fn_lifetime m) t
+
+(** val close_fn_outlives :
+    Big_int_Z.big_int -> outlives_ctx -> outlives_ctx **)
+
+let close_fn_outlives m _UU03a9_ =
+  map (fun pat ->
+    let (a, b) = pat in ((close_fn_lifetime m a), (close_fn_lifetime m b)))
+    _UU03a9_
+
+(** val open_bound_lifetime : lifetime option list -> lifetime -> lifetime **)
+
+let open_bound_lifetime _UU03c3_ l = match l with
+| LBound i ->
+  (match nth_error _UU03c3_ i with
+   | Some o -> (match o with
+                | Some l' -> l'
+                | None -> LBound i)
+   | None -> LBound i)
+| _ -> l
+
+(** val open_bound_ty : lifetime option list -> ty -> ty **)
+
+let open_bound_ty _UU03c3_ t =
+  map_lifetimes_ty (open_bound_lifetime _UU03c3_) t
+
+(** val open_bound_outlives :
+    lifetime option list -> outlives_ctx -> outlives_ctx **)
+
+let open_bound_outlives _UU03c3_ _UU03a9_ =
+  map (fun pat ->
+    let (a, b) = pat in
+    ((open_bound_lifetime _UU03c3_ a), (open_bound_lifetime _UU03c3_ b)))
+    _UU03a9_
+
+(** val contains_lbound_lifetime : lifetime -> bool **)
+
+let contains_lbound_lifetime = function
+| LBound _ -> true
+| _ -> false
+
+(** val contains_lbound_outlives : outlives_ctx -> bool **)
+
+let contains_lbound_outlives _UU03a9_ =
+  existsb (fun pat ->
+    let (a, b) = pat in
+    (||) (contains_lbound_lifetime a) (contains_lbound_lifetime b)) _UU03a9_
+
+(** val contains_lbound_ty : ty -> bool **)
+
+let rec contains_lbound_ty = function
+| MkTy (_, t0) ->
+  (match t0 with
+   | TFn (ts, r) ->
+     (||) (existsb contains_lbound_ty ts) (contains_lbound_ty r)
+   | TForall (_, _UU03a9_, body) ->
+     (||) (contains_lbound_outlives _UU03a9_) (contains_lbound_ty body)
+   | TRef (l, _, t1) ->
+     (||) (contains_lbound_lifetime l) (contains_lbound_ty t1)
+   | _ -> false)
 
 type ident = string * Big_int_Z.big_int
 
@@ -272,7 +362,9 @@ type expr =
 | EVar of ident
 | ELet of mutability * ident * ty * expr * expr
 | ELetInfer of mutability * ident * expr * expr
+| EFn of ident
 | ECall of ident * expr list
+| ECallExpr of expr * expr list
 | EReplace of place * expr
 | EAssign of place * expr
 | EBorrow of ref_kind * place
@@ -348,6 +440,21 @@ let rec ctx_merge _UU0393_2 _UU0393_3 =
                   if eqb b2 b3 then Some ((((n, t), b2), m) :: rest) else None
                 | _ -> Some ((((n, t), ((||) b2 b3)), m) :: rest))
              | None -> None))
+
+(** val fn_value_ty : fn_def -> ty **)
+
+let fn_value_ty f =
+  let m = f.fn_lifetimes in
+  let body =
+    close_fn_ty m (MkTy (UUnrestricted, (TFn
+      ((map (fun p -> p.param_ty) f.fn_params), f.fn_ret))))
+  in
+  ((fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+     (fun _ -> body)
+     (fun _ -> MkTy (UUnrestricted, (TForall (m,
+     (close_fn_outlives m f.fn_outlives), body))))
+     m)
 
 (** val place_root : place -> ident **)
 
@@ -738,6 +845,7 @@ type infer_error =
 | ErrNotImplemented
 | ErrImmutableBorrow of ident
 | ErrNotAReference of ty typeCore
+| ErrNotAFunction of ty typeCore
 | ErrBorrowConflict of ident
 | ErrLifetimeLeak
 | ErrLifetimeConflict
@@ -833,6 +941,76 @@ let rec build_sigma m _UU03c3__acc arg_tys params =
         | Some _UU03c3_' -> build_sigma m _UU03c3_' ts ps
         | None -> None))
 
+(** val bound_subst_vec_add :
+    lifetime option list -> Big_int_Z.big_int -> lifetime -> lifetime option
+    list option **)
+
+let bound_subst_vec_add =
+  lt_subst_vec_add
+
+(** val unify_bound_lt :
+    lifetime option list -> ty -> ty -> lifetime option list option **)
+
+let rec unify_bound_lt _UU03c3_ t_param t_e =
+  let MkTy (_, t) = t_param in
+  (match t with
+   | TFn (ps, pr) ->
+     let MkTy (_, t0) = t_e in
+     (match t0 with
+      | TFn (es, er) ->
+        let rec go _UU03c3_0 ps0 es0 =
+          match ps0 with
+          | [] ->
+            (match es0 with
+             | [] -> unify_bound_lt _UU03c3_0 pr er
+             | _ :: _ -> None)
+          | p :: ps' ->
+            (match es0 with
+             | [] -> None
+             | e :: es' ->
+               (match unify_bound_lt _UU03c3_0 p e with
+                | Some _UU03c3_' -> go _UU03c3_' ps' es'
+                | None -> None))
+        in go _UU03c3_ ps es
+      | _ -> None)
+   | TRef (l_p, rk, t_p_inner) ->
+     let MkTy (_, t0) = t_e in
+     (match t0 with
+      | TRef (l_a, rk', t_e_inner) ->
+        if negb (ref_kind_eqb rk rk')
+        then None
+        else (match l_p with
+              | LBound i ->
+                (match bound_subst_vec_add _UU03c3_ i l_a with
+                 | Some _UU03c3_' ->
+                   unify_bound_lt _UU03c3_' t_p_inner t_e_inner
+                 | None -> None)
+              | _ ->
+                if lifetime_eqb l_p l_a
+                then unify_bound_lt _UU03c3_ t_p_inner t_e_inner
+                else None)
+      | _ -> None)
+   | _ ->
+     if ty_core_eqb (ty_core t_param) (ty_core t_e)
+     then Some _UU03c3_
+     else None)
+
+(** val build_bound_sigma :
+    lifetime option list -> ty list -> ty list -> lifetime option list option **)
+
+let rec build_bound_sigma _UU03c3__acc arg_tys params =
+  match arg_tys with
+  | [] -> (match params with
+           | [] -> Some _UU03c3__acc
+           | _ :: _ -> None)
+  | t :: ts ->
+    (match params with
+     | [] -> None
+     | p :: ps ->
+       (match unify_bound_lt _UU03c3__acc p t with
+        | Some _UU03c3_' -> build_bound_sigma _UU03c3_' ts ps
+        | None -> None))
+
 (** val check_args :
     outlives_ctx -> ty list -> param list -> infer_error option **)
 
@@ -848,6 +1026,22 @@ let rec check_args _UU03a9_ arg_tys params =
        if ty_compatible_b _UU03a9_ t p.param_ty
        then check_args _UU03a9_ ts ps
        else Some (compatible_error t p.param_ty))
+
+(** val check_arg_tys :
+    outlives_ctx -> ty list -> ty list -> infer_error option **)
+
+let rec check_arg_tys _UU03a9_ arg_tys params =
+  match arg_tys with
+  | [] -> (match params with
+           | [] -> None
+           | _ :: _ -> Some ErrArityMismatch)
+  | t :: ts ->
+    (match params with
+     | [] -> Some ErrArityMismatch
+     | p :: ps ->
+       if ty_compatible_b _UU03a9_ t p
+       then check_arg_tys _UU03a9_ ts ps
+       else Some (compatible_error t p))
 
 type 'a infer_result =
 | Infer_ok of 'a
@@ -929,6 +1123,10 @@ let rec infer_core fenv _UU03a9_ n _UU0393_ = function
         else Infer_err ErrContextCheckFailed
       | Infer_err err -> Infer_err err)
    | Infer_err err -> Infer_err err)
+| EFn fname ->
+  (match lookup_fn_b fname fenv with
+   | Some fdef -> Infer_ok ((fn_value_ty fdef), _UU0393_)
+   | None -> Infer_err (ErrFunctionNotFound fname))
 | ECall (fname, args) ->
   (match lookup_fn_b fname fenv with
    | Some fdef ->
@@ -969,6 +1167,55 @@ let rec infer_core fenv _UU03a9_ n _UU0393_ = function
          | None -> Infer_err ErrLifetimeConflict)
       | Infer_err err -> Infer_err err)
    | None -> Infer_err (ErrFunctionNotFound fname))
+| ECallExpr (callee, args) ->
+  (match infer_core fenv _UU03a9_ n _UU0393_ callee with
+   | Infer_ok p ->
+     let (t_callee, _UU0393_c) = p in
+     let collect =
+       let rec collect _UU0393_0 = function
+       | [] -> Infer_ok ([], _UU0393_0)
+       | e' :: es ->
+         (match infer_core fenv _UU03a9_ n _UU0393_0 e' with
+          | Infer_ok p0 ->
+            let (t_e, _UU0393_1) = p0 in
+            (match collect _UU0393_1 es with
+             | Infer_ok p1 ->
+               let (tys, _UU0393_2) = p1 in Infer_ok ((t_e :: tys), _UU0393_2)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       in collect
+     in
+     (match collect _UU0393_c args with
+      | Infer_ok p0 ->
+        let (arg_tys, _UU0393_') = p0 in
+        (match ty_core t_callee with
+         | TFn (param_tys, ret) ->
+           (match check_arg_tys _UU03a9_ arg_tys param_tys with
+            | Some err -> Infer_err err
+            | None -> Infer_ok (ret, _UU0393_'))
+         | TForall (m, bounds, body) ->
+           (match ty_core body with
+            | TFn (param_tys, ret) ->
+              (match build_bound_sigma (repeat None m) arg_tys param_tys with
+               | Some _UU03c3_ ->
+                 let param_tys_open = map (open_bound_ty _UU03c3_) param_tys
+                 in
+                 (match check_arg_tys _UU03a9_ arg_tys param_tys_open with
+                  | Some err -> Infer_err err
+                  | None ->
+                    let ret_open = open_bound_ty _UU03c3_ ret in
+                    let bounds_open = open_bound_outlives _UU03c3_ bounds in
+                    if (||) (contains_lbound_ty ret_open)
+                         (contains_lbound_outlives bounds_open)
+                    then Infer_err ErrLifetimeLeak
+                    else if outlives_constraints_hold_b _UU03a9_ bounds_open
+                         then Infer_ok (ret_open, _UU0393_')
+                         else Infer_err ErrLifetimeConflict)
+               | None -> Infer_err ErrLifetimeConflict)
+            | x -> Infer_err (ErrNotAFunction x))
+         | x -> Infer_err (ErrNotAFunction x))
+      | Infer_err err -> Infer_err err)
+   | Infer_err err -> Infer_err err)
 | EReplace (p0, e_new) ->
   (match p0 with
    | PVar x ->
@@ -1264,6 +1511,17 @@ let rec borrow_check fenv bS _UU0393_ = function
      | Infer_ok bS1 -> go bS1 rest
      | Infer_err err -> Infer_err err)
   in go bS args
+| ECallExpr (callee, args) ->
+  (match borrow_check fenv bS _UU0393_ callee with
+   | Infer_ok bS1 ->
+     let rec go bS0 = function
+     | [] -> Infer_ok bS0
+     | a :: rest ->
+       (match borrow_check fenv bS0 _UU0393_ a with
+        | Infer_ok bS2 -> go bS2 rest
+        | Infer_err err -> Infer_err err)
+     in go bS1 args
+   | Infer_err err -> Infer_err err)
 | EReplace (p0, e_new) ->
   (match p0 with
    | PVar _ -> borrow_check fenv bS _UU0393_ e_new

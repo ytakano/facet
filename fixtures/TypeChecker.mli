@@ -92,7 +92,27 @@ val apply_lt_lifetime : lifetime list -> lifetime -> lifetime
 
 val apply_lt_outlives : lifetime list -> outlives_ctx -> outlives_ctx
 
+val close_fn_lifetime : Big_int_Z.big_int -> lifetime -> lifetime
+
 val apply_lt_ty : lifetime list -> ty -> ty
+
+val map_lifetimes_ty : (lifetime -> lifetime) -> ty -> ty
+
+val close_fn_ty : Big_int_Z.big_int -> ty -> ty
+
+val close_fn_outlives : Big_int_Z.big_int -> outlives_ctx -> outlives_ctx
+
+val open_bound_lifetime : lifetime option list -> lifetime -> lifetime
+
+val open_bound_ty : lifetime option list -> ty -> ty
+
+val open_bound_outlives : lifetime option list -> outlives_ctx -> outlives_ctx
+
+val contains_lbound_lifetime : lifetime -> bool
+
+val contains_lbound_outlives : outlives_ctx -> bool
+
+val contains_lbound_ty : ty -> bool
 
 type ident = string * Big_int_Z.big_int
 
@@ -113,7 +133,9 @@ type expr =
 | EVar of ident
 | ELet of mutability * ident * ty * expr * expr
 | ELetInfer of mutability * ident * expr * expr
+| EFn of ident
 | ECall of ident * expr list
+| ECallExpr of expr * expr list
 | EReplace of place * expr
 | EAssign of place * expr
 | EBorrow of ref_kind * place
@@ -141,6 +163,8 @@ val params_ctx : param list -> ctx
 val usage_max : usage -> usage -> usage
 
 val ctx_merge : ctx -> ctx -> ctx option
+
+val fn_value_ty : fn_def -> ty
 
 val place_root : place -> ident
 
@@ -224,6 +248,7 @@ type infer_error =
 | ErrNotImplemented
 | ErrImmutableBorrow of ident
 | ErrNotAReference of ty typeCore
+| ErrNotAFunction of ty typeCore
 | ErrBorrowConflict of ident
 | ErrLifetimeLeak
 | ErrLifetimeConflict
@@ -246,7 +271,19 @@ val build_sigma :
   Big_int_Z.big_int -> lifetime option list -> ty list -> param list ->
   lifetime option list option
 
+val bound_subst_vec_add :
+  lifetime option list -> Big_int_Z.big_int -> lifetime -> lifetime option
+  list option
+
+val unify_bound_lt :
+  lifetime option list -> ty -> ty -> lifetime option list option
+
+val build_bound_sigma :
+  lifetime option list -> ty list -> ty list -> lifetime option list option
+
 val check_args : outlives_ctx -> ty list -> param list -> infer_error option
+
+val check_arg_tys : outlives_ctx -> ty list -> ty list -> infer_error option
 
 type 'a infer_result =
 | Infer_ok of 'a

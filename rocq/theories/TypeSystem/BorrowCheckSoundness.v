@@ -94,6 +94,9 @@ Proof.
     * apply IH with (e := e1). simpl in Hlt; lia. exact He1.
     * apply IH with (e := e2). simpl in Hlt; lia. exact He2.
 
+  (* EFn *)
+  + injection Hcheck as <-. constructor.
+
   (* ECall *)
   + apply BO_Call.
     apply borrow_check_call_go in Hcheck.
@@ -108,6 +111,25 @@ Proof.
          simpl in Hlt. lia.
          exact Ha.
       -- apply IHargs; [simpl; simpl in Hlt; lia | exact Hcheck].
+
+  (* ECallExpr *)
+  + destruct (borrow_check fenv BS Γ e) as [BScallee|] eqn:Hcallee; [|discriminate].
+    apply BO_CallExpr with (BS1 := BScallee).
+    * apply IH with (e := e).
+      -- pose proof (expr_size_callexpr_callee_lt e l). lia.
+      -- exact Hcallee.
+    * clear Hcallee. apply borrow_check_call_go in Hcheck.
+      revert BScallee BS' Hcheck.
+      induction l as [| a rest IHargs]; intros BScallee BS' Hcheck.
+      -- simpl in Hcheck. injection Hcheck as <-. constructor.
+      -- simpl in Hcheck.
+         destruct (borrow_check fenv BScallee Γ a) as [BS1|] eqn:Ha; [|discriminate].
+         apply BO_Args_Cons with (BS1 := BS1).
+         ++ apply IH with (e := a).
+            pose proof (expr_size_callexpr_arg_lt e (a :: rest) a (or_introl eq_refl)) as Harg_lt.
+            simpl in Hlt. lia.
+            exact Ha.
+         ++ apply IHargs; [simpl; simpl in Hlt; lia | exact Hcheck].
   (* EReplace *)
   + destruct p as [x | q].
     * apply BO_Replace.
@@ -208,6 +230,9 @@ Proof.
   (* BO_Var *)
   - intros. reflexivity.
 
+  (* BO_Fn *)
+  - intros. reflexivity.
+
   (* BO_BorrowShared *)
   - intros BS Γ x Hcan.
     simpl. unfold bs_can_shared in Hcan. rewrite Hcan. reflexivity.
@@ -271,6 +296,12 @@ Proof.
   (* BO_Call *)
   - intros BS BS' Γ fname args _ IHargs.
     simpl.
+    apply borrow_check_call_go.
+    exact IHargs.
+
+  (* BO_CallExpr *)
+  - intros BS BS1 BS2 Γ callee args _ IHcallee _ IHargs.
+    simpl. rewrite IHcallee.
     apply borrow_check_call_go.
     exact IHargs.
 

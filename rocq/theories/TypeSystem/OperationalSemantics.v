@@ -11,7 +11,8 @@ Inductive value : Type :=
   | VInt   : Z -> value
   | VFloat : string -> value
   | VBool  : bool -> value
-  | VRef   : ident -> value.   (* reference: holds the name of the referred variable *)
+  | VRef   : ident -> value
+  | VFn    : ident -> value.   (* zero-capture function item pointer *)
 
 (* ------------------------------------------------------------------ *)
 (* Runtime store                                                        *)
@@ -212,6 +213,9 @@ Inductive eval (fenv : list fn_def) : store -> expr -> store -> value -> Prop :=
       ty_usage (se_ty e) = UUnrestricted ->
       eval fenv s (EDeref r) s_r (se_val e)
 
+  | Eval_Fn : forall s fname,
+      eval fenv s (EFn fname) s (VFn fname)
+
   | Eval_If_True : forall s s1 s2 e1 e2 e3 v,
       eval fenv s e1 s1 (VBool true) ->
       eval fenv s1 e2 s2 v ->
@@ -229,6 +233,15 @@ Inductive eval (fenv : list fn_def) : store -> expr -> store -> value -> Prop :=
       eval fenv (bind_params (fn_params fdef) vs s_args)
                 (fn_body fdef) s_body ret ->
       eval fenv s (ECall fname args)
+               (store_remove_params (fn_params fdef) s_body) ret
+
+  | Eval_CallExpr : forall s s_fn s_args s_body callee args fname fdef vs ret,
+      eval fenv s callee s_fn (VFn fname) ->
+      lookup_fn fname fenv = Some fdef ->
+      eval_args fenv s_fn args s_args vs ->
+      eval fenv (bind_params (fn_params fdef) vs s_args)
+                (fn_body fdef) s_body ret ->
+      eval fenv s (ECallExpr callee args)
                (store_remove_params (fn_params fdef) s_body) ret
 
 (* Evaluate argument list left-to-right, threading the store. *)

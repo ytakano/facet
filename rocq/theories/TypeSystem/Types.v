@@ -1,5 +1,5 @@
 From Stdlib.Strings Require Import String.
-From Stdlib Require Import List.
+From Stdlib Require Import List PeanoNat Bool.
 Import ListNotations.
 From Facet.TypeSystem Require Import Lifetime.
 
@@ -77,6 +77,12 @@ Fixpoint apply_lt_lifetime (σ : list lifetime) (l : lifetime) : lifetime :=
 Definition apply_lt_outlives (σ : list lifetime) (Ω : outlives_ctx) : outlives_ctx :=
   map (fun '(a, b) => (apply_lt_lifetime σ a, apply_lt_lifetime σ b)) Ω.
 
+Definition close_fn_lifetime (m : nat) (l : lifetime) : lifetime :=
+  match l with
+  | LVar i => if Nat.ltb i m then LBound i else l
+  | _ => l
+  end.
+
 Fixpoint apply_lt_ty (σ : list lifetime) (T : Ty) {struct T} : Ty :=
   match T with
   | MkTy u TUnits => MkTy u TUnits
@@ -96,4 +102,69 @@ Fixpoint apply_lt_ty (σ : list lifetime) (T : Ty) {struct T} : Ty :=
       MkTy u (TForall n (apply_lt_outlives σ Ω) (apply_lt_ty σ body))
   | MkTy u (TRef l rk t) =>
       MkTy u (TRef (apply_lt_lifetime σ l) rk (apply_lt_ty σ t))
+  end.
+
+Fixpoint map_lifetimes_ty
+    (f : lifetime -> lifetime) (T : Ty) {struct T} : Ty :=
+  match T with
+  | MkTy u TUnits => MkTy u TUnits
+  | MkTy u TIntegers => MkTy u TIntegers
+  | MkTy u TFloats => MkTy u TFloats
+  | MkTy u TBooleans => MkTy u TBooleans
+  | MkTy u (TNamed s) => MkTy u (TNamed s)
+  | MkTy u (TFn ts r) =>
+      let fix go (xs : list Ty) : list Ty :=
+        match xs with
+        | [] => []
+        | x :: xs' => map_lifetimes_ty f x :: go xs'
+        end
+      in
+      MkTy u (TFn (go ts) (map_lifetimes_ty f r))
+  | MkTy u (TForall n Ω body) =>
+      MkTy u (TForall n (map (fun '(a, b) => (f a, f b)) Ω)
+        (map_lifetimes_ty f body))
+  | MkTy u (TRef l rk t) =>
+      MkTy u (TRef (f l) rk (map_lifetimes_ty f t))
+  end.
+
+Definition close_fn_ty (m : nat) (T : Ty) : Ty :=
+  map_lifetimes_ty (close_fn_lifetime m) T.
+
+Definition close_fn_outlives (m : nat) (Ω : outlives_ctx) : outlives_ctx :=
+  map (fun '(a, b) => (close_fn_lifetime m a, close_fn_lifetime m b)) Ω.
+
+Definition open_bound_lifetime (σ : list (option lifetime)) (l : lifetime) : lifetime :=
+  match l with
+  | LBound i =>
+      match nth_error σ i with
+      | Some (Some l') => l'
+      | _ => LBound i
+      end
+  | _ => l
+  end.
+
+Definition open_bound_ty (σ : list (option lifetime)) (T : Ty) : Ty :=
+  map_lifetimes_ty (open_bound_lifetime σ) T.
+
+Definition open_bound_outlives (σ : list (option lifetime)) (Ω : outlives_ctx) : outlives_ctx :=
+  map (fun '(a, b) => (open_bound_lifetime σ a, open_bound_lifetime σ b)) Ω.
+
+Definition contains_lbound_lifetime (l : lifetime) : bool :=
+  match l with
+  | LBound _ => true
+  | _ => false
+  end.
+
+Definition contains_lbound_outlives (Ω : outlives_ctx) : bool :=
+  existsb (fun '(a, b) => contains_lbound_lifetime a || contains_lbound_lifetime b) Ω.
+
+Fixpoint contains_lbound_ty (T : Ty) : bool :=
+  match T with
+  | MkTy _ (TFn ts r) =>
+      existsb contains_lbound_ty ts || contains_lbound_ty r
+  | MkTy _ (TForall _ Ω body) =>
+      contains_lbound_outlives Ω || contains_lbound_ty body
+  | MkTy _ (TRef l _ t) =>
+      contains_lbound_lifetime l || contains_lbound_ty t
+  | _ => false
   end.

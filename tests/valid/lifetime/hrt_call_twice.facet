@@ -1,0 +1,19 @@
+fn id<'a>(r: unrestricted &'a unrestricted isize) -> unrestricted &'a unrestricted isize {
+    r
+}
+
+fn call_twice<'x, 'y>(
+    f: unrestricted for<'a> fn(unrestricted &'a unrestricted isize) -> unrestricted &'a unrestricted isize,
+    r: unrestricted &'x unrestricted isize,
+    s: unrestricted &'y unrestricted isize
+) -> unrestricted &'y unrestricted isize {
+    let _ = (f r);
+    (f s)
+}
+
+fn caller<'x, 'y>(
+    r: unrestricted &'x unrestricted isize,
+    s: unrestricted &'y unrestricted isize
+) -> unrestricted &'y unrestricted isize {
+    (call_twice id r s)
+}

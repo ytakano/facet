@@ -73,7 +73,7 @@ Theorem infer_full_env_structural_sound :
    - trait bound checked struct literal について、`check_struct_bounds` 成功から `struct_bounds_resolved_env` を導くことを main proof に組み込む。
    - `EnvTypingSoundness.v` に `struct_expr` fragment の `infer_core_env_state_fuel_struct_structural_sound` を追加し、struct literal、field replace/assign、shared/unique borrow を structural rule へ接続する。
 
-6. **P5: borrow checker env soundness**
+6. **P5: borrow checker env soundness** [done]
    - `borrow_check_env` の全ケースを `borrow_ok_env_structural` に対して証明する。
    - `EUnit`, `ELit`, `EVar`, `EFn`, `EPlace`, `EStruct`, `EDrop`, `EDeref`, `ELet`, `ELetInfer`, `EIf`, `ECall`, `ECallExpr` を網羅する。
    - `PBShared` / `PBMut` の path prefix conflict lemma を追加する。

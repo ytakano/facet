@@ -7,10 +7,12 @@ theories/TypeSystem/Program.v
 theories/TypeSystem/OperationalSemantics.v
 theories/TypeSystem/TypingRules.v
 theories/TypeSystem/TypeChecker.v
+theories/TypeSystem/EnvStructuralRules.v
 theories/TypeSystem/EnvTypingRules.v
 theories/TypeSystem/WFType.v
 theories/TypeSystem/AlphaRenaming.v
 theories/TypeSystem/CheckerSoundness.v
+theories/TypeSystem/EnvSoundnessFacts.v
 theories/TypeSystem/CheckerUsageSoundness.v
 theories/TypeSystem/BorrowCheckSoundness.v
 theories/Validation/Validator.v

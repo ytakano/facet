@@ -39,13 +39,13 @@ Theorem infer_full_env_structural_sound :
 
 ## Milestones
 
-1. **P0: 仕様の分離**
+1. **P0: 仕様の分離** [done]
    - `EnvTypingRules.v` に wrapper-free な `typed_env_structural` を追加する。
    - 既存の `typed_env` は互換用に残すか、`typed_env_checker` に rename するかを決める。
    - `typed_place_env` / `typed_place_type_env` も wrapper-free 規則を追加し、field lookup、deref、path availability を Prop として表す。
    - `borrow_ok_env_structural` / `borrow_ok_fields_env_structural` を追加し、`BOE_Checker` を使わない borrow 仕様を定義する。
 
-2. **P1: bool/option helper soundness**
+2. **P1: bool/option helper soundness** [done]
    - `ty_compatible_b_sound`, `check_arg_tys` soundness, `check_args` soundness を env proof から再利用できる位置へ整理する。
    - `sctx_lookup`, `sctx_consume_path`, `sctx_restore_path`, `sctx_check_ok`, `ctx_merge` の Prop 対応 lemma を追加する。
    - `lookup_struct`, `lookup_field`, `lookup_field_b`, `first_duplicate_field`, `first_unknown_field`, `first_missing_field` の成功時 soundness を追加する。

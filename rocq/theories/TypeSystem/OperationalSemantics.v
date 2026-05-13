@@ -7,23 +7,38 @@ Import ListNotations.
 (* ------------------------------------------------------------------ *)
 
 Inductive value : Type :=
-  | VUnit  : value
-  | VInt   : Z -> value
-  | VFloat : string -> value
-  | VBool  : bool -> value
-  | VRef   : ident -> value
-  | VFn    : ident -> value.   (* zero-capture function item pointer *)
+  | VUnit    : value
+  | VInt     : Z -> value
+  | VFloat   : string -> value
+  | VBool    : bool -> value
+  | VRef     : ident -> value
+  | VClosure : ident -> list store_entry -> value
+with store_entry : Type :=
+  | MkStoreEntry : ident -> Ty -> value -> bool -> store_entry.
+
+Definition se_name (e : store_entry) : ident :=
+  match e with
+  | MkStoreEntry x _ _ _ => x
+  end.
+
+Definition se_ty (e : store_entry) : Ty :=
+  match e with
+  | MkStoreEntry _ T _ _ => T
+  end.
+
+Definition se_val (e : store_entry) : value :=
+  match e with
+  | MkStoreEntry _ _ v _ => v
+  end.
+
+Definition se_used (e : store_entry) : bool :=
+  match e with
+  | MkStoreEntry _ _ _ b => b
+  end.
 
 (* ------------------------------------------------------------------ *)
 (* Runtime store                                                        *)
 (* ------------------------------------------------------------------ *)
-
-Record store_entry : Type := MkStoreEntry {
-  se_name : ident;
-  se_ty   : Ty;
-  se_val  : value;
-  se_used : bool   (* true = already consumed *)
-}.
 
 Definition store := list store_entry.
 
@@ -214,7 +229,7 @@ Inductive eval (fenv : list fn_def) : store -> expr -> store -> value -> Prop :=
       eval fenv s (EDeref r) s_r (se_val e)
 
   | Eval_Fn : forall s fname,
-      eval fenv s (EFn fname) s (VFn fname)
+      eval fenv s (EFn fname) s (VClosure fname [])
 
   | Eval_If_True : forall s s1 s2 e1 e2 e3 v,
       eval fenv s e1 s1 (VBool true) ->
@@ -235,11 +250,11 @@ Inductive eval (fenv : list fn_def) : store -> expr -> store -> value -> Prop :=
       eval fenv s (ECall fname args)
                (store_remove_params (fn_params fdef) s_body) ret
 
-  | Eval_CallExpr : forall s s_fn s_args s_body callee args fname fdef vs ret,
-      eval fenv s callee s_fn (VFn fname) ->
+  | Eval_CallExpr : forall s s_fn s_args s_body callee args fname captured fdef vs ret,
+      eval fenv s callee s_fn (VClosure fname captured) ->
       lookup_fn fname fenv = Some fdef ->
       eval_args fenv s_fn args s_args vs ->
-      eval fenv (bind_params (fn_params fdef) vs s_args)
+      eval fenv (bind_params (fn_params fdef) vs (captured ++ s_args))
                 (fn_body fdef) s_body ret ->
       eval fenv s (ECallExpr callee args)
                (store_remove_params (fn_params fdef) s_body) ret

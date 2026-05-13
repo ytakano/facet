@@ -8,9 +8,8 @@ type fir_value =
   | FVUnit
   | FVLit of literal
   | FVVar of ident
-  | FVFn of ident
-
-type fir_tval = { fv : fir_value; ft : ty }
+  | FVClosure of ident * fir_tval list
+and fir_tval = { fv : fir_value; ft : ty }
 
 type fir_place =
   | FIPVar of ident
@@ -102,7 +101,7 @@ let get_fn_value_ty env f =
 let ident_of_tval env tv =
   match tv.fv with
   | FVVar x -> x
-  | FVFn _ ->
+  | FVClosure _ ->
     let tmp = fresh_id env in
     emit env (FILet (tmp, tv.ft, tv));
     tmp
@@ -119,7 +118,7 @@ let rec to_value env = function
     consume_if_needed env x ty;
     { fv = FVVar x; ft = ty }
   | EFn f ->
-    { fv = FVFn f; ft = get_fn_value_ty env f }
+    { fv = FVClosure (f, []); ft = get_fn_value_ty env f }
   | ELet (m, x, t, e1, e2) ->
     emit_into env x t e1;
     env.ctx <- ctx_add_b x t m env.ctx;
@@ -282,14 +281,21 @@ let rec pp_place = function
   | FIPVar id -> pp_ident id
   | FIPDeref place -> "*" ^ pp_place place
 
-let pp_tval tv =
+let rec pp_tval tv =
   let vs = match tv.fv with
     | FVUnit      -> "()"
     | FVLit (LInt n)   -> Big_int_Z.string_of_big_int n
     | FVLit (LFloat f) -> f
     | FVLit (LBool b)  -> string_of_bool b
     | FVVar x     -> pp_ident x
-    | FVFn f      -> "fn " ^ pp_ident f
+    | FVClosure (f, captured) ->
+      let captures =
+        match captured with
+        | [] -> ""
+        | _ ->
+          "[" ^ String.concat ", " (List.map pp_tval captured) ^ "]"
+      in
+      "closure " ^ pp_ident f ^ captures
   in
   vs ^ " as " ^ pp_ty tv.ft
 

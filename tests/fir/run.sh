@@ -32,6 +32,8 @@ run_case tests/valid/replace/replace_through_nested_ref.facet "replace old#0 as 
 run_case tests/valid/replace/replace_through_immut_bound_nested_mut_ref.facet "replace old#0 as unrestricted isize = **rr#0 as unrestricted isize"
 run_case tests/valid/assign/assign_through_nested_ref.facet "= **rr#0 as unrestricted isize with 42"
 run_case tests/valid/reborrow/reborrow_mut_from_immut_bound_nested_mut_ref.facet "= &mut **rr#0 as unrestricted isize"
+run_case tests/fir/function_value_call.facet "let f#0 as unrestricted fn(unrestricted isize) -> unrestricted isize = closure id#0 as unrestricted fn(unrestricted isize) -> unrestricted isize"
 run_case tests/fir/function_value_call.facet "call %t0#0 as unrestricted isize = f#0 as unrestricted fn(unrestricted isize) -> unrestricted isize"
+run_case tests/fir/hrt_function_value_param.facet "call %t0#0 as unrestricted & unrestricted isize = f#0 as unrestricted for<'_0> unrestricted fn(unrestricted & unrestricted isize) -> unrestricted & unrestricted isize"
 
 exit "$status"

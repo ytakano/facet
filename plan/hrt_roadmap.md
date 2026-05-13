@@ -140,17 +140,25 @@ for<'a, 'b> fn(...) -> ... where 'a: 'b
 
 ### HRT v10: FIR/runtime limitation cleanup
 
-- Runtime semantics supports zero-capture function values.
+- Runtime semantics represents function values as closure objects.
 - FIR lowering now has explicit `FICallValue` instructions for calls
   through function values.
 - Calls through function-valued variables are emitted faithfully for
   zero-capture function values.
 - Added FIR coverage for function-valued variable calls.
 
+### HRT v11: Closure object foundation
+
+- Function item values are represented as empty-capture closures.
+- Dynamic `ECallExpr` dispatch evaluates the callee to a closure object
+  and invokes the closure target.
+- FIR printing exposes `closure f` values so dynamic call sites no longer
+  look like static function item calls.
+
 ## Remaining Tasks
 
 - Closure capture for function values.
-- Dynamic runtime dispatch beyond zero-capture function item values.
+- Full captured-environment typing and borrow semantics for closures.
 - More granular proof cleanup for HRT opening/substitution lemmas.
 - Optional syntax sugar for function-definition-level `for<'a> fn f(...)`.
 

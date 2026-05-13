@@ -1,0 +1,10 @@
+fn id<'a>(r: unrestricted &'a unrestricted isize) -> unrestricted &'a unrestricted isize {
+    r
+}
+
+fn apply<'x>(
+    f: unrestricted for<'a> fn(unrestricted &'a unrestricted isize) -> unrestricted &'a unrestricted isize,
+    r: unrestricted &'x unrestricted isize
+) -> unrestricted &'x unrestricted isize {
+    (f r)
+}

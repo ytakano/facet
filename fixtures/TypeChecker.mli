@@ -210,6 +210,10 @@ val ty_core_eqb : ty typeCore -> ty typeCore -> bool
 
 val ty_depth : ty -> Big_int_Z.big_int
 
+val ty_compatible_args_contra_b_fuel :
+  (outlives_ctx -> ty -> ty -> bool) -> outlives_ctx -> ty list -> ty list ->
+  bool
+
 val ty_compatible_b_fuel :
   Big_int_Z.big_int -> outlives_ctx -> ty -> ty -> bool
 

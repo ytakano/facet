@@ -134,9 +134,11 @@ for<'a, 'b> fn(...) -> ... where 'a: 'b
   soundness proofs.
 - Function variance and unused-bound generalization are covered by
   `ty_compatible_b_sound`.
-- Dedicated helper lemmas exist for boolean outlives constraints and
-  checker argument typing; deeper opening/substitution lemmas remain a
-  future proof-quality cleanup, not a soundness blocker.
+- Dedicated helper lemmas now cover boolean outlives constraints,
+  checker argument typing, contravariant function argument compatibility,
+  unused-bound generalization, and opened-call no-leak splitting.
+- Deeper wf/opening/substitution lemmas remain a future proof-quality
+  cleanup, not a soundness blocker.
 
 ### HRT v10: FIR/runtime limitation cleanup
 
@@ -159,7 +161,7 @@ for<'a, 'b> fn(...) -> ... where 'a: 'b
 
 - Closure capture for function values.
 - Full captured-environment typing and borrow semantics for closures.
-- More granular proof cleanup for HRT opening/substitution lemmas.
+- More granular proof cleanup for HRT wf/opening/substitution lemmas.
 - Optional syntax sugar for function-definition-level `for<'a> fn f(...)`.
 
 ## Current Test Coverage

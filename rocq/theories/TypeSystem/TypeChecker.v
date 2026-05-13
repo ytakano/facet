@@ -103,6 +103,18 @@ Fixpoint ty_depth (T : Ty) : nat :=
       end
   end.
 
+Fixpoint ty_compatible_args_contra_b_fuel
+    (compat : outlives_ctx -> Ty -> Ty -> bool)
+    (Ω : outlives_ctx)
+    (actual expected : list Ty) : bool :=
+  match actual, expected with
+  | [], [] => true
+  | a :: actual', e :: expected' =>
+      compat Ω e a &&
+      ty_compatible_args_contra_b_fuel compat Ω actual' expected'
+  | _, _ => false
+  end.
+
 Fixpoint ty_compatible_b_fuel (fuel : nat) (Ω : outlives_ctx)
     (T_actual T_expected : Ty) : bool :=
   match fuel with
@@ -114,13 +126,7 @@ Fixpoint ty_compatible_b_fuel (fuel : nat) (Ω : outlives_ctx)
           outlives_b Ω la lb && ref_kind_eqb rka rkb &&
           ty_compatible_b_fuel fuel' Ω Ta Tb
       | TFn params_a ret_a, TFn params_e ret_e =>
-          (fix go (actual expected : list Ty) : bool :=
-             match actual, expected with
-             | [], [] => true
-             | a :: actual', e :: expected' =>
-                 ty_compatible_b_fuel fuel' Ω e a && go actual' expected'
-             | _, _ => false
-             end) params_a params_e &&
+          ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel') Ω params_a params_e &&
           ty_compatible_b_fuel fuel' Ω ret_a ret_e
       | TForall na Ωa Ta, TForall nb Ωb Tb =>
           Nat.eqb na nb && outlives_ctx_eqb Ωa Ωb &&

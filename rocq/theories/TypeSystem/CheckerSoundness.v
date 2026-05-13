@@ -262,6 +262,49 @@ Lemma usage_eqb_true : forall u1 u2,
   usage_eqb u1 u2 = true -> u1 = u2.
 Proof. destruct u1, u2; simpl; intros H; try discriminate; reflexivity. Qed.
 
+Lemma ty_compatible_args_contra_b_sound : forall compat Ω actual expected,
+  (forall Ω T_actual T_expected,
+      compat Ω T_actual T_expected = true ->
+      ty_compatible Ω T_actual T_expected) ->
+  ty_compatible_args_contra_b_fuel compat Ω actual expected = true ->
+  Forall2 (fun expected actual => ty_compatible Ω expected actual) expected actual.
+Proof.
+  intros compat Ω actual.
+  induction actual as [| a actual IH]; intros expected Hcompat Hargs.
+  - destruct expected; simpl in Hargs; try discriminate. constructor.
+  - destruct expected as [| e expected]; simpl in Hargs; try discriminate.
+    apply andb_true_iff in Hargs as [Hhead Htail].
+    constructor.
+    + apply Hcompat. exact Hhead.
+    + eapply IH.
+      * exact Hcompat.
+      * exact Htail.
+Qed.
+
+Lemma ty_compatible_forall_generalize_unused_sound :
+  forall Ω ua ue n ca body,
+    usage_sub_bool ua ue = true ->
+    contains_lbound_ty body = false ->
+    ty_compatible Ω (MkTy ua ca) body ->
+    ty_compatible Ω (MkTy ua ca) (MkTy ue (TForall n [] body)).
+Proof.
+  intros Ω ua ue n ca body Hu Hnob Hcompat.
+  eapply TC_Forall_GeneralizeUnused.
+  - apply usage_sub_bool_sound. exact Hu.
+  - exact Hnob.
+  - exact Hcompat.
+Qed.
+
+Lemma opened_call_no_lbound_sound : forall ret_open bounds_open,
+  contains_lbound_ty ret_open ||
+  contains_lbound_outlives bounds_open = false ->
+  contains_lbound_ty ret_open = false /\
+  contains_lbound_outlives bounds_open = false.
+Proof.
+  intros ret_open bounds_open H.
+  apply orb_false_iff in H. exact H.
+Qed.
+
 Lemma ty_compatible_b_sound : forall Ω T_actual T_expected,
   ty_compatible_b Ω T_actual T_expected = true ->
   ty_compatible Ω T_actual T_expected.
@@ -284,55 +327,51 @@ Proof.
     + destruct Ωb as [|p Ωb]; [|discriminate].
       apply andb_true_iff in Hc as [Hnob Hrec].
       apply negb_true_iff in Hnob.
-      eapply TC_Forall_GeneralizeUnused.
-      * apply usage_sub_bool_sound. exact Hu.
+      eapply ty_compatible_forall_generalize_unused_sound.
+      * exact Hu.
       * exact Hnob.
       * eapply IH. exact Hrec.
     + destruct Ωb as [|p Ωb]; [|discriminate].
       apply andb_true_iff in Hc as [Hnob Hrec].
       apply negb_true_iff in Hnob.
-      eapply TC_Forall_GeneralizeUnused.
-      * apply usage_sub_bool_sound. exact Hu.
+      eapply ty_compatible_forall_generalize_unused_sound.
+      * exact Hu.
       * exact Hnob.
       * eapply IH. exact Hrec.
     + destruct Ωb as [|p Ωb]; [|discriminate].
       apply andb_true_iff in Hc as [Hnob Hrec].
       apply negb_true_iff in Hnob.
-      eapply TC_Forall_GeneralizeUnused.
-      * apply usage_sub_bool_sound. exact Hu.
+      eapply ty_compatible_forall_generalize_unused_sound.
+      * exact Hu.
       * exact Hnob.
       * eapply IH. exact Hrec.
     + destruct Ωb as [|p Ωb]; [|discriminate].
       apply andb_true_iff in Hc as [Hnob Hrec].
       apply negb_true_iff in Hnob.
-      eapply TC_Forall_GeneralizeUnused.
-      * apply usage_sub_bool_sound. exact Hu.
+      eapply ty_compatible_forall_generalize_unused_sound.
+      * exact Hu.
       * exact Hnob.
       * eapply IH. exact Hrec.
     + destruct Ωb as [|p Ωb]; [|discriminate].
       apply andb_true_iff in Hc as [Hnob Hrec].
       apply negb_true_iff in Hnob.
-      eapply TC_Forall_GeneralizeUnused.
-      * apply usage_sub_bool_sound. exact Hu.
+      eapply ty_compatible_forall_generalize_unused_sound.
+      * exact Hu.
       * exact Hnob.
       * eapply IH. exact Hrec.
     + apply andb_true_iff in Hc as [Hargs Hret].
       apply TC_Fn.
       * apply usage_sub_bool_sound. exact Hu.
-      * revert tse Hargs.
-        induction tsa as [| ta tsa IHargs]; intros tse Hargs.
-        -- destruct tse; simpl in Hargs; try discriminate. constructor.
-        -- destruct tse as [| te tse]; simpl in Hargs; try discriminate.
-           apply andb_true_iff in Hargs as [Hhead Htail].
-           constructor.
-           ++ eapply IH. exact Hhead.
-           ++ apply IHargs. exact Htail.
+      * eapply ty_compatible_args_contra_b_sound.
+        -- intros Ω0 T_actual0 T_expected0 Hcompat.
+           eapply IH. exact Hcompat.
+        -- exact Hargs.
       * eapply IH. exact Hret.
     + destruct Ωb as [|p Ωb]; [|discriminate].
       apply andb_true_iff in Hc as [Hnob Hrec].
       apply negb_true_iff in Hnob.
-      eapply TC_Forall_GeneralizeUnused.
-      * apply usage_sub_bool_sound. exact Hu.
+      eapply ty_compatible_forall_generalize_unused_sound.
+      * exact Hu.
       * exact Hnob.
       * eapply IH. exact Hrec.
     + apply andb_true_iff in Hc as [HnΩ HT].
@@ -345,8 +384,8 @@ Proof.
     + destruct Ωb as [|p Ωb]; [|discriminate].
       apply andb_true_iff in Hc as [Hnob Hrec].
       apply negb_true_iff in Hnob.
-      eapply TC_Forall_GeneralizeUnused.
-      * apply usage_sub_bool_sound. exact Hu.
+      eapply ty_compatible_forall_generalize_unused_sound.
+      * exact Hu.
       * exact Hnob.
       * eapply IH. exact Hrec.
     + apply andb_true_iff in Hc as [Hlr HT].
@@ -576,7 +615,7 @@ Proof.
           destruct (contains_lbound_ty ret_open || contains_lbound_outlives bounds_open) eqn:Hleak; [discriminate |].
           destruct (outlives_constraints_hold_b Ω bounds_open) eqn:Hout; [|discriminate].
           injection Hinfer as <- <-.
-          apply orb_false_iff in Hleak as [Hret Hbounds].
+          apply opened_call_no_lbound_sound in Hleak as [Hret Hbounds].
           subst params_open ret_open bounds_open.
           eapply T_CallExpr_Forall with (σ := σ) (param_tys := l0).
           -- replace (MkTy (ty_usage Tcallee) (TForall n0 o t)) with Tcallee.

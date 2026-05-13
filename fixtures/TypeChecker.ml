@@ -711,6 +711,22 @@ let rec ty_depth = function
    | TRef (_, _, t0) -> Big_int_Z.succ_big_int (ty_depth t0)
    | _ -> Big_int_Z.succ_big_int Big_int_Z.zero_big_int)
 
+(** val ty_compatible_args_contra_b_fuel :
+    (outlives_ctx -> ty -> ty -> bool) -> outlives_ctx -> ty list -> ty list
+    -> bool **)
+
+let rec ty_compatible_args_contra_b_fuel compat _UU03a9_ actual expected =
+  match actual with
+  | [] -> (match expected with
+           | [] -> true
+           | _ :: _ -> false)
+  | a :: actual' ->
+    (match expected with
+     | [] -> false
+     | e :: expected' ->
+       (&&) (compat _UU03a9_ e a)
+         (ty_compatible_args_contra_b_fuel compat _UU03a9_ actual' expected'))
+
 (** val ty_compatible_b_fuel :
     Big_int_Z.big_int -> outlives_ctx -> ty -> ty -> bool **)
 
@@ -776,18 +792,8 @@ let rec ty_compatible_b_fuel fuel _UU03a9_ t_actual t_expected =
          (match ty_core t_expected with
           | TFn (params_e, ret_e) ->
             (&&)
-              (let rec go actual expected =
-                 match actual with
-                 | [] -> (match expected with
-                          | [] -> true
-                          | _ :: _ -> false)
-                 | a :: actual' ->
-                   (match expected with
-                    | [] -> false
-                    | e :: expected' ->
-                      (&&) (ty_compatible_b_fuel fuel' _UU03a9_ e a)
-                        (go actual' expected'))
-               in go params_a params_e)
+              (ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel')
+                _UU03a9_ params_a params_e)
               (ty_compatible_b_fuel fuel' _UU03a9_ ret_a ret_e)
           | TForall (n, o, tb) ->
             (match o with

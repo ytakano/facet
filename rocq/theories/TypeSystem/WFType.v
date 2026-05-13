@@ -14,6 +14,11 @@ Inductive wf_type (Δ : region_ctx) : Ty -> Prop :=
 | WF_Floats   : forall u,   wf_type Δ (MkTy u TFloats)
 | WF_Booleans : forall u,   wf_type Δ (MkTy u TBooleans)
 | WF_Named    : forall u s, wf_type Δ (MkTy u (TNamed s))
+| WF_Param    : forall u i, wf_type Δ (MkTy u (TParam i))
+| WF_Struct   : forall u name lts args,
+    Forall (wf_lifetime Δ) lts ->
+    Forall (wf_type Δ) args ->
+    wf_type Δ (MkTy u (TStruct name lts args))
 | WF_Fn       : forall u params ret,
     Forall (wf_type Δ) params ->
     wf_type Δ ret ->

@@ -189,6 +189,8 @@ type 'a typeCore =
 | TFloats
 | TBooleans
 | TNamed of string
+| TParam of Big_int_Z.big_int
+| TStruct of string * lifetime list * 'a list
 | TFn of 'a list * 'a
 | TForall of Big_int_Z.big_int * outlives_ctx * 'a
 | TRef of lifetime * ref_kind * 'a
@@ -240,6 +242,15 @@ let close_fn_lifetime m l = match l with
 let rec apply_lt_ty _UU03c3_ = function
 | MkTy (u, t0) ->
   (match t0 with
+   | TStruct (name, lts, args) ->
+     let map_lt =
+       let rec map_lt = function
+       | [] -> []
+       | x :: xs' -> (apply_lt_ty _UU03c3_ x) :: (map_lt xs')
+       in map_lt
+     in
+     MkTy (u, (TStruct (name, (map (apply_lt_lifetime _UU03c3_) lts),
+     (map_lt args))))
    | TFn (ts, r) ->
      let map_lt =
        let rec map_lt = function
@@ -261,6 +272,14 @@ let rec apply_lt_ty _UU03c3_ = function
 let rec map_lifetimes_ty f = function
 | MkTy (u, t0) ->
   (match t0 with
+   | TStruct (name, lts, args) ->
+     let go =
+       let rec go = function
+       | [] -> []
+       | x :: xs' -> (map_lifetimes_ty f x) :: (go xs')
+       in go
+     in
+     MkTy (u, (TStruct (name, (map f lts), (go args))))
    | TFn (ts, r) ->
      let go =
        let rec go = function
@@ -332,6 +351,9 @@ let contains_lbound_outlives _UU03a9_ =
 let rec contains_lbound_ty = function
 | MkTy (_, t0) ->
   (match t0 with
+   | TStruct (_, lts, args) ->
+     (||) (existsb contains_lbound_lifetime lts)
+       (existsb contains_lbound_ty args)
    | TFn (ts, r) ->
      (||) (existsb contains_lbound_ty ts) (contains_lbound_ty r)
    | TForall (_, _UU03a9_, body) ->
@@ -388,6 +410,31 @@ type param = { param_mutability : mutability; param_name : ident;
 type fn_def = { fn_name : ident; fn_lifetimes : Big_int_Z.big_int;
                 fn_outlives : outlives_ctx; fn_params : param list;
                 fn_ret : ty; fn_body : expr }
+
+type field_def = { field_name : string; field_mutability : mutability;
+                   field_ty : ty }
+
+type trait_bound = { bound_type_index : Big_int_Z.big_int;
+                     bound_traits : string list }
+
+type struct_def = { struct_name : string;
+                    struct_lifetimes : Big_int_Z.big_int;
+                    struct_type_params : Big_int_Z.big_int;
+                    struct_bounds : trait_bound list;
+                    struct_fields : field_def list }
+
+type trait_def = { trait_name : string;
+                   trait_type_params : Big_int_Z.big_int;
+                   trait_bounds : trait_bound list }
+
+type impl_def = { impl_lifetimes : Big_int_Z.big_int;
+                  impl_type_params : Big_int_Z.big_int;
+                  impl_trait_name : string; impl_trait_args : ty list;
+                  impl_for_ty : ty }
+
+type global_env = { env_structs : struct_def list;
+                    env_traits : trait_def list; env_impls : impl_def list;
+                    env_fns : fn_def list }
 
 type ctx_entry = ((ident * ty) * bool) * mutability
 
@@ -598,6 +645,18 @@ let rec outlives_ctx_eqb _UU03a9_1 _UU03a9_2 =
      | p2 :: _UU03a9_2' ->
        (&&) (lifetime_pair_eqb p1 p2) (outlives_ctx_eqb _UU03a9_1' _UU03a9_2'))
 
+(** val lifetime_list_eqb : lifetime list -> lifetime list -> bool **)
+
+let rec lifetime_list_eqb l1 l2 =
+  match l1 with
+  | [] -> (match l2 with
+           | [] -> true
+           | _ :: _ -> false)
+  | lt1 :: l1' ->
+    (match l2 with
+     | [] -> false
+     | lt2 :: l2' -> (&&) (lifetime_eqb lt1 lt2) (lifetime_list_eqb l1' l2'))
+
 (** val ty_eqb : ty -> ty -> bool **)
 
 let rec ty_eqb t1 t2 =
@@ -620,6 +679,24 @@ let rec ty_eqb t1 t2 =
      | TNamed s1 -> (match c2 with
                      | TNamed s2 -> (=) s1 s2
                      | _ -> false)
+     | TParam i1 -> (match c2 with
+                     | TParam i2 -> Nat.eqb i1 i2
+                     | _ -> false)
+     | TStruct (name1, lts1, args1) ->
+       (match c2 with
+        | TStruct (name2, lts2, args2) ->
+          (&&) ((&&) ((=) name1 name2) (lifetime_list_eqb lts1 lts2))
+            (let rec go_args l1 l2 =
+               match l1 with
+               | [] -> (match l2 with
+                        | [] -> true
+                        | _ :: _ -> false)
+               | t3 :: l1' ->
+                 (match l2 with
+                  | [] -> false
+                  | t4 :: l2' -> (&&) (ty_eqb t3 t4) (go_args l1' l2'))
+             in go_args args1 args2)
+        | _ -> false)
      | TFn (ts1, r1) ->
        (match c2 with
         | TFn (ts2, r2) ->
@@ -667,6 +744,24 @@ let ty_core_eqb c1 c2 =
   | TNamed s1 -> (match c2 with
                   | TNamed s2 -> (=) s1 s2
                   | _ -> false)
+  | TParam i1 -> (match c2 with
+                  | TParam i2 -> Nat.eqb i1 i2
+                  | _ -> false)
+  | TStruct (name1, lts1, args1) ->
+    (match c2 with
+     | TStruct (name2, lts2, args2) ->
+       (&&) ((&&) ((=) name1 name2) (lifetime_list_eqb lts1 lts2))
+         (let rec go_args l1 l2 =
+            match l1 with
+            | [] -> (match l2 with
+                     | [] -> true
+                     | _ :: _ -> false)
+            | t1 :: l1' ->
+              (match l2 with
+               | [] -> false
+               | t2 :: l2' -> (&&) (ty_eqb t1 t2) (go_args l1' l2'))
+          in go_args args1 args2)
+     | _ -> false)
   | TFn (ts1, r1) ->
     (match c2 with
      | TFn (ts2, r2) ->
@@ -700,6 +795,13 @@ let ty_core_eqb c1 c2 =
 let rec ty_depth = function
 | MkTy (_, c) ->
   (match c with
+   | TStruct (_, lts, args) ->
+     Big_int_Z.succ_big_int
+       (add (length lts)
+         (let rec go = function
+          | [] -> Big_int_Z.zero_big_int
+          | t0 :: l' -> add (Big_int_Z.succ_big_int (ty_depth t0)) (go l')
+          in go args))
    | TFn (ts, r) ->
      Big_int_Z.succ_big_int
        (let rec go = function
@@ -786,6 +888,26 @@ let rec ty_compatible_b_fuel fuel _UU03a9_ t_actual t_expected =
                (&&) (negb (contains_lbound_ty tb))
                  (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
              | p :: l -> ty_core_eqb ca (TForall (n, (p :: l), tb)))
+          | x -> ty_core_eqb ca x)
+       | TParam n ->
+         let ca = TParam n in
+         (match ty_core t_expected with
+          | TForall (n0, o, tb) ->
+            (match o with
+             | [] ->
+               (&&) (negb (contains_lbound_ty tb))
+                 (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
+             | p :: l -> ty_core_eqb ca (TForall (n0, (p :: l), tb)))
+          | x -> ty_core_eqb ca x)
+       | TStruct (s, l, l0) ->
+         let ca = TStruct (s, l, l0) in
+         (match ty_core t_expected with
+          | TForall (n, o, tb) ->
+            (match o with
+             | [] ->
+               (&&) (negb (contains_lbound_ty tb))
+                 (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
+             | p :: l1 -> ty_core_eqb ca (TForall (n, (p :: l1), tb)))
           | x -> ty_core_eqb ca x)
        | TFn (params_a, ret_a) ->
          let ca = TFn (params_a, ret_a) in
@@ -926,6 +1048,9 @@ let wf_outlives_at_b bound_depth _UU0394_ _UU03a9_ =
 let rec wf_type_at_b bound_depth _UU0394_ = function
 | MkTy (u, t0) ->
   (match t0 with
+   | TStruct (_, lts, args) ->
+     (&&) (forallb (wf_lifetime_at_b bound_depth _UU0394_) lts)
+       (forallb (wf_type_at_b bound_depth _UU0394_) args)
    | TFn (ts, r) ->
      (&&) (forallb (wf_type_at_b bound_depth _UU0394_) ts)
        (wf_type_at_b bound_depth _UU0394_ r)
@@ -1625,6 +1750,16 @@ let check_program fenv =
     match infer fenv f with
     | Infer_ok _ -> true
     | Infer_err _ -> false) fenv
+
+(** val infer_env : global_env -> fn_def -> (ty * ctx) infer_result **)
+
+let infer_env env f =
+  infer env.env_fns f
+
+(** val check_program_env : global_env -> bool **)
+
+let check_program_env env =
+  check_program env.env_fns
 
 (** val borrow_check :
     fn_def list -> borrow_state -> ctx -> expr -> borrow_state infer_result **)

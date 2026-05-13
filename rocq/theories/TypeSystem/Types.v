@@ -22,6 +22,8 @@ Inductive TypeCore (A : Type) : Type :=
 | TFloats   : TypeCore A
 | TBooleans : TypeCore A
 | TNamed    : string -> TypeCore A
+| TParam    : nat -> TypeCore A
+| TStruct   : string -> list lifetime -> list A -> TypeCore A
 | TFn       : list A -> A -> TypeCore A
 | TForall   : nat -> outlives_ctx -> A -> TypeCore A
 | TRef      : lifetime -> ref_kind -> A -> TypeCore A.
@@ -31,6 +33,8 @@ Arguments TIntegers {A}.
 Arguments TFloats {A}.
 Arguments TBooleans {A}.
 Arguments TNamed {A} _.
+Arguments TParam {A} _.
+Arguments TStruct {A} _ _ _.
 Arguments TFn {A} _ _.
 Arguments TForall {A} _ _ _.
 Arguments TRef {A} _ _ _.
@@ -90,6 +94,15 @@ Fixpoint apply_lt_ty (σ : list lifetime) (T : Ty) {struct T} : Ty :=
   | MkTy u TFloats => MkTy u TFloats
   | MkTy u TBooleans => MkTy u TBooleans
   | MkTy u (TNamed s) => MkTy u (TNamed s)
+  | MkTy u (TParam i) => MkTy u (TParam i)
+  | MkTy u (TStruct name lts args) =>
+      let fix map_lt (xs : list Ty) : list Ty :=
+        match xs with
+        | [] => []
+        | x :: xs' => apply_lt_ty σ x :: map_lt xs'
+        end
+      in
+      MkTy u (TStruct name (map (apply_lt_lifetime σ) lts) (map_lt args))
   | MkTy u (TFn ts r) =>
       let fix map_lt (xs : list Ty) : list Ty :=
         match xs with
@@ -112,6 +125,15 @@ Fixpoint map_lifetimes_ty
   | MkTy u TFloats => MkTy u TFloats
   | MkTy u TBooleans => MkTy u TBooleans
   | MkTy u (TNamed s) => MkTy u (TNamed s)
+  | MkTy u (TParam i) => MkTy u (TParam i)
+  | MkTy u (TStruct name lts args) =>
+      let fix go (xs : list Ty) : list Ty :=
+        match xs with
+        | [] => []
+        | x :: xs' => map_lifetimes_ty f x :: go xs'
+        end
+      in
+      MkTy u (TStruct name (map f lts) (go args))
   | MkTy u (TFn ts r) =>
       let fix go (xs : list Ty) : list Ty :=
         match xs with
@@ -160,6 +182,8 @@ Definition contains_lbound_outlives (Ω : outlives_ctx) : bool :=
 
 Fixpoint contains_lbound_ty (T : Ty) : bool :=
   match T with
+  | MkTy _ (TStruct _ lts args) =>
+      existsb contains_lbound_lifetime lts || existsb contains_lbound_ty args
   | MkTy _ (TFn ts r) =>
       existsb contains_lbound_ty ts || contains_lbound_ty r
   | MkTy _ (TForall _ Ω body) =>

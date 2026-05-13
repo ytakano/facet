@@ -75,6 +75,8 @@ type 'a typeCore =
 | TFloats
 | TBooleans
 | TNamed of string
+| TParam of Big_int_Z.big_int
+| TStruct of string * lifetime list * 'a list
 | TFn of 'a list * 'a
 | TForall of Big_int_Z.big_int * outlives_ctx * 'a
 | TRef of lifetime * ref_kind * 'a
@@ -152,6 +154,31 @@ type fn_def = { fn_name : ident; fn_lifetimes : Big_int_Z.big_int;
                 fn_outlives : outlives_ctx; fn_params : param list;
                 fn_ret : ty; fn_body : expr }
 
+type field_def = { field_name : string; field_mutability : mutability;
+                   field_ty : ty }
+
+type trait_bound = { bound_type_index : Big_int_Z.big_int;
+                     bound_traits : string list }
+
+type struct_def = { struct_name : string;
+                    struct_lifetimes : Big_int_Z.big_int;
+                    struct_type_params : Big_int_Z.big_int;
+                    struct_bounds : trait_bound list;
+                    struct_fields : field_def list }
+
+type trait_def = { trait_name : string;
+                   trait_type_params : Big_int_Z.big_int;
+                   trait_bounds : trait_bound list }
+
+type impl_def = { impl_lifetimes : Big_int_Z.big_int;
+                  impl_type_params : Big_int_Z.big_int;
+                  impl_trait_name : string; impl_trait_args : ty list;
+                  impl_for_ty : ty }
+
+type global_env = { env_structs : struct_def list;
+                    env_traits : trait_def list; env_impls : impl_def list;
+                    env_fns : fn_def list }
+
 type ctx_entry = ((ident * ty) * bool) * mutability
 
 type ctx = ctx_entry list
@@ -203,6 +230,8 @@ val ref_kind_eqb : ref_kind -> ref_kind -> bool
 val lifetime_pair_eqb : (lifetime * lifetime) -> (lifetime * lifetime) -> bool
 
 val outlives_ctx_eqb : outlives_ctx -> outlives_ctx -> bool
+
+val lifetime_list_eqb : lifetime list -> lifetime list -> bool
 
 val ty_eqb : ty -> ty -> bool
 
@@ -323,6 +352,10 @@ val wf_params_b : region_ctx -> param list -> bool
 val infer : fn_def list -> fn_def -> (ty * ctx) infer_result
 
 val check_program : fn_def list -> bool
+
+val infer_env : global_env -> fn_def -> (ty * ctx) infer_result
+
+val check_program_env : global_env -> bool
 
 val borrow_check :
   fn_def list -> borrow_state -> ctx -> expr -> borrow_state infer_result

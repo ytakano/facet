@@ -11,6 +11,15 @@ let rec string_of_ty_core : ty typeCore -> string = function
   | TFloats     -> "f64"
   | TBooleans   -> "bool"
   | TNamed s    -> s
+  | TParam i    -> Printf.sprintf "T%s" (Big_int_Z.string_of_big_int i)
+  | TStruct (name, lts, args) ->
+    let lt_s =
+      List.map (fun _ -> "'_") lts
+    in
+    let arg_s = List.map string_of_ty args in
+    let all = lt_s @ arg_s in
+    if all = [] then name
+    else Printf.sprintf "%s<%s>" name (String.concat ", " all)
   | TFn (ts, r) ->
     Printf.sprintf "fn(%s) -> %s"
       (String.concat ", " (List.map string_of_ty ts))

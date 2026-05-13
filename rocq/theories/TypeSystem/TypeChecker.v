@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Lifetime Types Syntax TypingRules.
+From Facet.TypeSystem Require Import Lifetime Types Syntax Program TypingRules.
 From Stdlib Require Import List String Bool ZArith.
 Import ListNotations.
 
@@ -41,6 +41,13 @@ Fixpoint outlives_ctx_eqb (Ω1 Ω2 : outlives_ctx) : bool :=
   | _, _ => false
   end.
 
+Fixpoint lifetime_list_eqb (l1 l2 : list lifetime) : bool :=
+  match l1, l2 with
+  | [], [] => true
+  | lt1 :: l1', lt2 :: l2' => lifetime_eqb lt1 lt2 && lifetime_list_eqb l1' l2'
+  | _, _ => false
+  end.
+
 Fixpoint ty_eqb (T1 T2 : Ty) {struct T1} : bool :=
   match T1, T2 with
   | MkTy u1 c1, MkTy u2 c2 =>
@@ -51,6 +58,16 @@ Fixpoint ty_eqb (T1 T2 : Ty) {struct T1} : bool :=
       | TFloats,   TFloats   => true
       | TBooleans, TBooleans => true
       | TNamed s1, TNamed s2 => String.eqb s1 s2
+      | TParam i1, TParam i2 => Nat.eqb i1 i2
+      | TStruct name1 lts1 args1, TStruct name2 lts2 args2 =>
+          String.eqb name1 name2 &&
+          lifetime_list_eqb lts1 lts2 &&
+          (fix go_args (l1 l2 : list Ty) : bool :=
+             match l1, l2 with
+             | [], [] => true
+             | t1 :: l1', t2 :: l2' => ty_eqb t1 t2 && go_args l1' l2'
+             | _, _ => false
+             end) args1 args2
       | TFn ts1 r1, TFn ts2 r2 =>
           (fix go (l1 l2 : list Ty) : bool :=
              match l1, l2 with
@@ -73,6 +90,16 @@ Definition ty_core_eqb (c1 c2 : TypeCore Ty) : bool :=
   | TFloats,   TFloats   => true
   | TBooleans, TBooleans => true
   | TNamed s1, TNamed s2 => String.eqb s1 s2
+  | TParam i1, TParam i2 => Nat.eqb i1 i2
+  | TStruct name1 lts1 args1, TStruct name2 lts2 args2 =>
+      String.eqb name1 name2 &&
+      lifetime_list_eqb lts1 lts2 &&
+      (fix go_args (l1 l2 : list Ty) : bool :=
+         match l1, l2 with
+         | [], [] => true
+         | t1 :: l1', t2 :: l2' => ty_eqb t1 t2 && go_args l1' l2'
+         | _, _ => false
+         end) args1 args2
   | TFn ts1 r1, TFn ts2 r2 =>
       (fix go (l1 l2 : list Ty) : bool :=
          match l1, l2 with
@@ -97,6 +124,13 @@ Fixpoint ty_depth (T : Ty) : nat :=
                | [] => ty_depth r
                | t :: l' => S (ty_depth t) + go l'
                end) ts)
+      | TStruct _ lts args =>
+          S (List.length lts +
+             (fix go (l : list Ty) : nat :=
+                match l with
+                | [] => 0
+                | t :: l' => S (ty_depth t) + go l'
+                end) args)
       | TRef _ _ t => S (ty_depth t)
       | TForall _ Ω body => S (List.length Ω + ty_depth body)
       | _ => 1
@@ -231,6 +265,9 @@ Definition wf_outlives_at_b (bound_depth : nat) (Δ : region_ctx) (Ω : outlives
 
 Fixpoint wf_type_at_b (bound_depth : nat) (Δ : region_ctx) (T : Ty) : bool :=
   match T with
+  | MkTy _ (TStruct _ lts args) =>
+      forallb (wf_lifetime_at_b bound_depth Δ) lts &&
+      forallb (wf_type_at_b bound_depth Δ) args
   | MkTy u (TRef l rk T_inner) =>
       ref_usage_ok_b u rk && wf_lifetime_at_b bound_depth Δ l && wf_type_at_b bound_depth Δ T_inner
   | MkTy _ (TFn ts r) =>
@@ -1138,6 +1175,13 @@ Definition check_program (fenv : list fn_def) : bool :=
     | infer_err _ => false
     end) fenv.
 
+Definition infer_env (env : global_env) (f : fn_def)
+    : infer_result (Ty * ctx) :=
+  infer (env_fns env) f.
+
+Definition check_program_env (env : global_env) : bool :=
+  check_program (env_fns env).
+
 (* ------------------------------------------------------------------ *)
 (* Borrow conflict checker                                               *)
 (*                                                                      *)
@@ -1336,4 +1380,4 @@ Extraction Language OCaml.
 From Stdlib Require Import ExtrOcamlNativeString.
 From Stdlib Require Import ExtrOcamlNatBigInt.
 From Stdlib Require Import ExtrOcamlZBigInt.
-Extraction "../fixtures/TypeChecker.ml" infer check_program infer_direct borrow_check infer_full.
+Extraction "../fixtures/TypeChecker.ml" infer check_program infer_env check_program_env infer_direct borrow_check infer_full.

@@ -75,6 +75,28 @@ Definition checked_fn_env (env : global_env) (f : fn_def) : Prop :=
   exists PBS',
     borrow_ok_env env [] (params_ctx (fn_params f)) (fn_body f) PBS'.
 
+Definition trait_impl_resolved_env
+    (env : global_env) (trait_name : string) (for_ty : Ty) : Prop :=
+  exists i, matching_impls trait_name [] for_ty (env_impls env) = [i].
+
+Definition struct_bounds_ok_env
+    (env : global_env) (bounds : list trait_bound) (args : list Ty) : Prop :=
+  check_struct_bounds env bounds args = None.
+
+Definition trait_names_resolved_env
+    (env : global_env) (traits : list string) (for_ty : Ty) : Prop :=
+  Forall (fun trait_name => trait_impl_resolved_env env trait_name for_ty) traits.
+
+Definition struct_bound_resolved_env
+    (env : global_env) (args : list Ty) (b : trait_bound) : Prop :=
+  exists for_ty,
+    nth_error args (bound_type_index b) = Some for_ty /\
+    trait_names_resolved_env env (bound_traits b) for_ty.
+
+Definition struct_bounds_resolved_env
+    (env : global_env) (bounds : list trait_bound) (args : list Ty) : Prop :=
+  Forall (struct_bound_resolved_env env args) bounds.
+
 (* ------------------------------------------------------------------ *)
 (* Local soundness of executable env checker                             *)
 (* ------------------------------------------------------------------ *)
@@ -110,6 +132,69 @@ Proof.
   destruct (infer_core_env_state_fuel 10000 env Ω n Γ e)
     as [[T0 Γ0] | err] eqn:Hcore; inversion H; subst.
   eapply infer_core_env_state_fuel_sound. exact Hcore.
+Qed.
+
+Lemma trait_impl_error_none_sound : forall env trait_name for_ty,
+  trait_impl_error env trait_name for_ty = None ->
+  trait_impl_resolved_env env trait_name for_ty.
+Proof.
+  unfold trait_impl_error, trait_impl_resolved_env.
+  intros env trait_name for_ty H.
+  destruct (matching_impls trait_name [] for_ty (env_impls env))
+    as [|i rest] eqn:Hmatches; try discriminate.
+  destruct rest as [|i' rest']; try discriminate.
+  exists i. reflexivity.
+Qed.
+
+Lemma check_trait_names_for_ty_sound : forall env traits for_ty,
+  check_trait_names_for_ty env traits for_ty = None ->
+  trait_names_resolved_env env traits for_ty.
+Proof.
+  unfold trait_names_resolved_env.
+  induction traits as [|trait_name rest IH]; simpl; intros for_ty H.
+  - constructor.
+  - destruct (trait_impl_error env trait_name for_ty) eqn:Himpl; try discriminate.
+    constructor.
+    + apply trait_impl_error_none_sound. exact Himpl.
+    + apply IH. exact H.
+Qed.
+
+Lemma check_struct_bounds_sound : forall env bounds args,
+  check_struct_bounds env bounds args = None ->
+  struct_bounds_resolved_env env bounds args.
+Proof.
+  unfold struct_bounds_resolved_env, struct_bound_resolved_env.
+  induction bounds as [|b rest IH]; simpl; intros args H.
+  - constructor.
+  - destruct (nth_error args (bound_type_index b)) as [for_ty|] eqn:Hnth;
+      try discriminate.
+    destruct (check_trait_names_for_ty env (bound_traits b) for_ty) eqn:Htraits;
+      try discriminate.
+    constructor.
+    + exists for_ty. split.
+      * exact Hnth.
+      * apply check_trait_names_for_ty_sound. exact Htraits.
+    + apply IH. exact H.
+Qed.
+
+Lemma infer_core_env_state_struct_bounds_sound :
+  forall fuel env Ω n Σ sname lts args fields T Σ' s,
+    infer_core_env_state_fuel fuel env Ω n Σ
+      (EStruct sname lts args fields) = infer_ok (T, Σ') ->
+    lookup_struct sname env = Some s ->
+    struct_bounds_ok_env env (struct_bounds s) args.
+Proof.
+  unfold struct_bounds_ok_env.
+  intros fuel env Ω n Σ sname lts args fields T Σ' s Hinfer Hlookup.
+  destruct fuel as [|fuel']; simpl in Hinfer; try discriminate.
+  rewrite Hlookup in Hinfer.
+  destruct (negb (Nat.eqb (Datatypes.length lts) (struct_lifetimes s)));
+    try discriminate.
+  destruct (negb (Nat.eqb (Datatypes.length args) (struct_type_params s)));
+    try discriminate.
+  destruct (check_struct_bounds env (struct_bounds s) args) eqn:Hbounds;
+    try discriminate.
+  reflexivity.
 Qed.
 
 Theorem infer_env_sound : forall env f T Γ',

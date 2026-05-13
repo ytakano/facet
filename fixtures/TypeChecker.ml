@@ -853,22 +853,6 @@ let rec lookup_field name = function
 | f :: rest ->
   if (=) name f.field_name then Some f else lookup_field name rest
 
-(** val usage_max_decl : usage -> usage -> usage **)
-
-let usage_max_decl u1 u2 =
-  match u1 with
-  | ULinear -> ULinear
-  | UAffine -> (match u2 with
-                | ULinear -> ULinear
-                | _ -> UAffine)
-  | UUnrestricted -> u2
-
-(** val usage_max_list : field_def list -> usage **)
-
-let rec usage_max_list = function
-| [] -> UUnrestricted
-| f :: rest -> usage_max_decl (ty_usage f.field_ty) (usage_max_list rest)
-
 (** val subst_type_params_ty : ty list -> ty -> ty **)
 
 let rec subst_type_params_ty _UU03c3_ = function
@@ -905,13 +889,6 @@ let rec subst_type_params_ty _UU03c3_ = function
 
 let instantiate_struct_field_ty lifetime_args type_args f =
   subst_type_params_ty type_args (apply_lt_ty lifetime_args f.field_ty)
-
-(** val instantiate_struct_ty :
-    struct_def -> lifetime list -> ty list -> ty **)
-
-let instantiate_struct_ty s lifetime_args type_args =
-  MkTy ((usage_max_list s.struct_fields), (TStruct (s.struct_name,
-    lifetime_args, type_args)))
 
 type ctx_entry = ((ident * ty) * bool) * mutability
 
@@ -2265,105 +2242,407 @@ let rec infer_core fenv _UU03a9_ n _UU0393_ = function
    | Infer_err err -> Infer_err err)
 | _ -> Infer_err ErrNotImplemented
 
-(** val infer_core_env_fuel :
-    Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
-    ctx -> expr -> (ty * ctx) infer_result **)
+type field_path = string list
 
-let rec infer_core_env_fuel fuel env _UU03a9_ n _UU0393_ e =
+(** val path_segment_eqb : string -> string -> bool **)
+
+let path_segment_eqb =
+  (=)
+
+(** val path_eqb : field_path -> field_path -> bool **)
+
+let rec path_eqb p q =
+  match p with
+  | [] -> (match q with
+           | [] -> true
+           | _ :: _ -> false)
+  | x :: xs ->
+    (match q with
+     | [] -> false
+     | y :: ys -> (&&) (path_segment_eqb x y) (path_eqb xs ys))
+
+(** val path_prefix_b : field_path -> field_path -> bool **)
+
+let rec path_prefix_b prefix path =
+  match prefix with
+  | [] -> true
+  | x :: xs ->
+    (match path with
+     | [] -> false
+     | y :: ys -> (&&) (path_segment_eqb x y) (path_prefix_b xs ys))
+
+(** val path_conflict_b : field_path -> field_path -> bool **)
+
+let path_conflict_b p q =
+  (||) (path_prefix_b p q) (path_prefix_b q p)
+
+(** val path_conflicts_any_b : field_path -> field_path list -> bool **)
+
+let rec path_conflicts_any_b p = function
+| [] -> false
+| q :: rest -> (||) (path_conflict_b p q) (path_conflicts_any_b p rest)
+
+(** val remove_restored_paths :
+    field_path -> field_path list -> field_path list **)
+
+let rec remove_restored_paths p = function
+| [] -> []
+| q :: rest ->
+  if path_prefix_b p q
+  then remove_restored_paths p rest
+  else q :: (remove_restored_paths p rest)
+
+type binding_state = { st_consumed : bool; st_moved_paths : field_path list }
+
+(** val binding_available_b : binding_state -> field_path -> bool **)
+
+let binding_available_b st p =
+  (&&) (negb st.st_consumed) (negb (path_conflicts_any_b p st.st_moved_paths))
+
+(** val state_consume_path : field_path -> binding_state -> binding_state **)
+
+let state_consume_path p st =
+  match p with
+  | [] -> { st_consumed = true; st_moved_paths = st.st_moved_paths }
+  | _ :: _ ->
+    { st_consumed = st.st_consumed; st_moved_paths =
+      (p :: st.st_moved_paths) }
+
+(** val state_restore_path : field_path -> binding_state -> binding_state **)
+
+let state_restore_path p st =
+  { st_consumed = st.st_consumed; st_moved_paths =
+    (remove_restored_paths p st.st_moved_paths) }
+
+type sctx_entry = ((ident * ty) * binding_state) * mutability
+
+type sctx = sctx_entry list
+
+(** val binding_state_of_bool : bool -> binding_state **)
+
+let binding_state_of_bool b =
+  { st_consumed = b; st_moved_paths = [] }
+
+(** val sctx_of_ctx : ctx -> sctx **)
+
+let rec sctx_of_ctx = function
+| [] -> []
+| c :: rest ->
+  let (p, m) = c in
+  let (p0, b) = p in
+  ((p0, (binding_state_of_bool b)), m) :: (sctx_of_ctx rest)
+
+(** val ctx_of_sctx : sctx -> ctx **)
+
+let rec ctx_of_sctx = function
+| [] -> []
+| s :: rest ->
+  let (p, m) = s in
+  let (p0, st) = p in ((p0, st.st_consumed), m) :: (ctx_of_sctx rest)
+
+(** val sctx_lookup : ident -> sctx -> (ty * binding_state) option **)
+
+let rec sctx_lookup x = function
+| [] -> None
+| s :: rest ->
+  let (p, _) = s in
+  let (p0, st) = p in
+  let (y, t) = p0 in
+  if ident_eqb x y then Some (t, st) else sctx_lookup x rest
+
+(** val sctx_lookup_mut : ident -> sctx -> mutability option **)
+
+let rec sctx_lookup_mut x = function
+| [] -> None
+| s :: rest ->
+  let (p, m) = s in
+  let (p0, _) = p in
+  let (y, _) = p0 in if ident_eqb x y then Some m else sctx_lookup_mut x rest
+
+(** val sctx_add : ident -> ty -> mutability -> sctx -> sctx **)
+
+let sctx_add x t m _UU03a3_ =
+  (((x, t), { st_consumed = false; st_moved_paths = [] }), m) :: _UU03a3_
+
+(** val sctx_remove : ident -> sctx -> sctx **)
+
+let rec sctx_remove x = function
+| [] -> []
+| s :: rest ->
+  let (p, m) = s in
+  let (p0, st) = p in
+  let (y, t) = p0 in
+  if ident_eqb x y then rest else (((y, t), st), m) :: (sctx_remove x rest)
+
+(** val sctx_update_state :
+    ident -> (binding_state -> binding_state) -> sctx -> sctx option **)
+
+let rec sctx_update_state x f = function
+| [] -> None
+| s :: rest ->
+  let (p, m) = s in
+  let (p0, st) = p in
+  let (y, t) = p0 in
+  if ident_eqb x y
+  then Some ((((y, t), (f st)), m) :: rest)
+  else (match sctx_update_state x f rest with
+        | Some rest' -> Some ((((y, t), st), m) :: rest')
+        | None -> None)
+
+(** val sctx_check_ok : ident -> ty -> sctx -> bool **)
+
+let sctx_check_ok x t _UU03a3_ =
+  match ty_usage t with
+  | ULinear ->
+    (match sctx_lookup x _UU03a3_ with
+     | Some p ->
+       let (_, st) = p in
+       (||) st.st_consumed (path_conflicts_any_b [] st.st_moved_paths)
+     | None -> false)
+  | _ -> true
+
+(** val place_path : place -> (ident * field_path) option **)
+
+let rec place_path = function
+| PVar x -> Some (x, [])
+| PDeref _ -> None
+| PField (q, f) ->
+  (match place_path q with
+   | Some p0 -> let (x, path) = p0 in Some (x, (app path (f :: [])))
+   | None -> None)
+
+(** val place_suffix_path : place -> field_path **)
+
+let rec place_suffix_path = function
+| PField (q, f) -> app (place_suffix_path q) (f :: [])
+| _ -> []
+
+(** val sctx_path_available :
+    sctx -> ident -> field_path -> unit infer_result **)
+
+let sctx_path_available _UU03a3_ x p =
+  match sctx_lookup x _UU03a3_ with
+  | Some p0 ->
+    let (_, st) = p0 in
+    if binding_available_b st p
+    then Infer_ok ()
+    else Infer_err (ErrAlreadyConsumed x)
+  | None -> Infer_err (ErrUnknownVar x)
+
+(** val sctx_consume_path :
+    sctx -> ident -> field_path -> sctx infer_result **)
+
+let sctx_consume_path _UU03a3_ x p =
+  match sctx_path_available _UU03a3_ x p with
+  | Infer_ok _ ->
+    (match sctx_update_state x (state_consume_path p) _UU03a3_ with
+     | Some _UU03a3_' -> Infer_ok _UU03a3_'
+     | None -> Infer_err (ErrUnknownVar x))
+  | Infer_err err -> Infer_err err
+
+(** val sctx_restore_path :
+    sctx -> ident -> field_path -> sctx infer_result **)
+
+let sctx_restore_path _UU03a3_ x p =
+  match sctx_update_state x (state_restore_path p) _UU03a3_ with
+  | Some _UU03a3_' -> Infer_ok _UU03a3_'
+  | None -> Infer_err (ErrUnknownVar x)
+
+(** val infer_place_sctx : global_env -> sctx -> place -> ty infer_result **)
+
+let rec infer_place_sctx env _UU03a3_ = function
+| PVar x ->
+  (match sctx_lookup x _UU03a3_ with
+   | Some p0 ->
+     let (t, st) = p0 in
+     if binding_available_b st []
+     then Infer_ok t
+     else Infer_err (ErrAlreadyConsumed x)
+   | None -> Infer_err (ErrUnknownVar x))
+| PDeref q ->
+  (match infer_place_sctx env _UU03a3_ q with
+   | Infer_ok tq ->
+     (match ty_core tq with
+      | TRef (_, _, t) -> Infer_ok t
+      | x -> Infer_err (ErrNotAReference x))
+   | Infer_err err -> Infer_err err)
+| PField (q, field) ->
+  (match infer_place_env env (ctx_of_sctx _UU03a3_) q with
+   | Infer_ok tq ->
+     (match ty_core tq with
+      | TStruct (sname, lts, args) ->
+        (match lookup_struct sname env with
+         | Some s ->
+           (match lookup_field field s.struct_fields with
+            | Some f ->
+              (match place_path (PField (q, field)) with
+               | Some p0 ->
+                 let (x, path) = p0 in
+                 (match sctx_path_available _UU03a3_ x path with
+                  | Infer_ok _ ->
+                    Infer_ok (instantiate_struct_field_ty lts args f)
+                  | Infer_err err -> Infer_err err)
+               | None -> Infer_ok (instantiate_struct_field_ty lts args f))
+            | None -> Infer_err (ErrFieldNotFound field))
+         | None -> Infer_err (ErrStructNotFound sname))
+      | x -> Infer_err (ErrTypeMismatch (x, (TStruct ("", [], [])))))
+   | Infer_err err -> Infer_err err)
+
+(** val infer_place_type_sctx :
+    global_env -> sctx -> place -> ty infer_result **)
+
+let rec infer_place_type_sctx env _UU03a3_ = function
+| PVar x ->
+  (match sctx_lookup x _UU03a3_ with
+   | Some p0 -> let (t, _) = p0 in Infer_ok t
+   | None -> Infer_err (ErrUnknownVar x))
+| PDeref q ->
+  (match infer_place_type_sctx env _UU03a3_ q with
+   | Infer_ok tq ->
+     (match ty_core tq with
+      | TRef (_, _, t) -> Infer_ok t
+      | x -> Infer_err (ErrNotAReference x))
+   | Infer_err err -> Infer_err err)
+| PField (q, field) ->
+  (match infer_place_type_sctx env _UU03a3_ q with
+   | Infer_ok tq ->
+     (match ty_core tq with
+      | TStruct (sname, lts, args) ->
+        (match lookup_struct sname env with
+         | Some s ->
+           (match lookup_field field s.struct_fields with
+            | Some f -> Infer_ok (instantiate_struct_field_ty lts args f)
+            | None -> Infer_err (ErrFieldNotFound field))
+         | None -> Infer_err (ErrStructNotFound sname))
+      | x -> Infer_err (ErrTypeMismatch (x, (TStruct ("", [], [])))))
+   | Infer_err err -> Infer_err err)
+
+(** val place_under_unique_ref_b : global_env -> sctx -> place -> bool **)
+
+let rec place_under_unique_ref_b env _UU03a3_ = function
+| PVar _ -> false
+| PDeref q ->
+  (match infer_place_sctx env _UU03a3_ q with
+   | Infer_ok tq ->
+     (match ty_core tq with
+      | TRef (_, r, _) -> (match r with
+                           | RShared -> false
+                           | RUnique -> true)
+      | _ -> false)
+   | Infer_err _ -> false)
+| PField (q, _) -> place_under_unique_ref_b env _UU03a3_ q
+
+(** val consume_place_value :
+    global_env -> sctx -> place -> ty -> sctx infer_result **)
+
+let consume_place_value _ _UU03a3_ p t =
+  if usage_eqb (ty_usage t) UUnrestricted
+  then Infer_ok _UU03a3_
+  else (match place_path p with
+        | Some p0 -> let (x, path) = p0 in sctx_consume_path _UU03a3_ x path
+        | None -> Infer_err (ErrUsageMismatch ((ty_usage t), UUnrestricted)))
+
+(** val usage_max_tys : ty list -> usage **)
+
+let rec usage_max_tys = function
+| [] -> UUnrestricted
+| t :: rest -> usage_max (ty_usage t) (usage_max_tys rest)
+
+(** val instantiate_struct_instance_ty :
+    struct_def -> lifetime list -> ty list -> ty **)
+
+let instantiate_struct_instance_ty s lifetime_args type_args =
+  MkTy
+    ((usage_max_tys
+       (map (instantiate_struct_field_ty lifetime_args type_args)
+         s.struct_fields)),
+    (TStruct (s.struct_name, lifetime_args, type_args)))
+
+(** val infer_core_env_state_fuel :
+    Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+    sctx -> expr -> (ty * sctx) infer_result **)
+
+let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
   (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
   else fS (Big_int_Z.pred_big_int n))
     (fun _ -> Infer_err ErrNotImplemented)
     (fun fuel' ->
     match e with
-    | EUnit -> Infer_ok ((MkTy (UUnrestricted, TUnits)), _UU0393_)
+    | EUnit -> Infer_ok ((MkTy (UUnrestricted, TUnits)), _UU03a3_)
     | ELit l ->
       (match l with
-       | LInt _ -> Infer_ok ((MkTy (UUnrestricted, TIntegers)), _UU0393_)
-       | LFloat _ -> Infer_ok ((MkTy (UUnrestricted, TFloats)), _UU0393_)
-       | LBool _ -> Infer_ok ((MkTy (UUnrestricted, TBooleans)), _UU0393_))
+       | LInt _ -> Infer_ok ((MkTy (UUnrestricted, TIntegers)), _UU03a3_)
+       | LFloat _ -> Infer_ok ((MkTy (UUnrestricted, TFloats)), _UU03a3_)
+       | LBool _ -> Infer_ok ((MkTy (UUnrestricted, TBooleans)), _UU03a3_))
     | EVar x ->
-      (match ctx_lookup_b x _UU0393_ with
-       | Some p ->
-         let (t, b) = p in
-         if usage_eqb (ty_usage t) UUnrestricted
-         then Infer_ok (t, _UU0393_)
-         else if b
-              then Infer_err (ErrAlreadyConsumed x)
-              else (match ctx_consume_b x _UU0393_ with
-                    | Some _UU0393_' -> Infer_ok (t, _UU0393_')
-                    | None -> Infer_err (ErrUnknownVar x))
-       | None -> Infer_err (ErrUnknownVar x))
+      (match infer_place_sctx env _UU03a3_ (PVar x) with
+       | Infer_ok t ->
+         (match consume_place_value env _UU03a3_ (PVar x) t with
+          | Infer_ok _UU03a3_' -> Infer_ok (t, _UU03a3_')
+          | Infer_err err -> Infer_err err)
+       | Infer_err err -> Infer_err err)
     | ELet (m, x, t, e1, e2) ->
-      (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_ e1 with
+      (match infer_core_env_state_fuel fuel' env _UU03a9_ n _UU03a3_ e1 with
        | Infer_ok p ->
-         let (t1, _UU0393_1) = p in
+         let (t1, _UU03a3_1) = p in
          if ty_compatible_b _UU03a9_ t1 t
-         then (match infer_core_env_fuel fuel' env _UU03a9_ n
-                       (ctx_add_b x t m _UU0393_1) e2 with
+         then (match infer_core_env_state_fuel fuel' env _UU03a9_ n
+                       (sctx_add x t m _UU03a3_1) e2 with
                | Infer_ok p0 ->
-                 let (t2, _UU0393_2) = p0 in
-                 if ctx_check_ok x t _UU0393_2
-                 then Infer_ok (t2, (ctx_remove_b x _UU0393_2))
+                 let (t2, _UU03a3_2) = p0 in
+                 if sctx_check_ok x t _UU03a3_2
+                 then Infer_ok (t2, (sctx_remove x _UU03a3_2))
                  else Infer_err ErrContextCheckFailed
                | Infer_err err -> Infer_err err)
          else Infer_err (compatible_error t1 t)
        | Infer_err err -> Infer_err err)
     | ELetInfer (m, x, e1, e2) ->
-      (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_ e1 with
+      (match infer_core_env_state_fuel fuel' env _UU03a9_ n _UU03a3_ e1 with
        | Infer_ok p ->
-         let (t1, _UU0393_1) = p in
-         (match infer_core_env_fuel fuel' env _UU03a9_ n
-                  (ctx_add_b x t1 m _UU0393_1) e2 with
+         let (t1, _UU03a3_1) = p in
+         (match infer_core_env_state_fuel fuel' env _UU03a9_ n
+                  (sctx_add x t1 m _UU03a3_1) e2 with
           | Infer_ok p0 ->
-            let (t2, _UU0393_2) = p0 in
-            if ctx_check_ok x t1 _UU0393_2
-            then Infer_ok (t2, (ctx_remove_b x _UU0393_2))
+            let (t2, _UU03a3_2) = p0 in
+            if sctx_check_ok x t1 _UU03a3_2
+            then Infer_ok (t2, (sctx_remove x _UU03a3_2))
             else Infer_err ErrContextCheckFailed
           | Infer_err err -> Infer_err err)
        | Infer_err err -> Infer_err err)
     | EFn fname ->
       (match lookup_fn_b fname env.env_fns with
-       | Some fdef -> Infer_ok ((fn_value_ty fdef), _UU0393_)
+       | Some fdef -> Infer_ok ((fn_value_ty fdef), _UU03a3_)
        | None -> Infer_err (ErrFunctionNotFound fname))
     | EPlace p ->
-      (match infer_place_env env _UU0393_ p with
+      (match infer_place_sctx env _UU03a3_ p with
        | Infer_ok t ->
-         if usage_eqb (ty_usage t) UUnrestricted
-         then Infer_ok (t, _UU0393_)
-         else (match p with
-               | PVar x ->
-                 (match ctx_consume_b x _UU0393_ with
-                  | Some _UU0393_' -> Infer_ok (t, _UU0393_')
-                  | None -> Infer_err (ErrUnknownVar x))
-               | PDeref _ ->
-                 Infer_err (ErrUsageMismatch ((ty_usage t), UUnrestricted))
-               | PField (q, _) ->
-                 (match ctx_consume_b (place_name q) _UU0393_ with
-                  | Some _UU0393_' -> Infer_ok (t, _UU0393_')
-                  | None -> Infer_err (ErrUnknownVar (place_name q))))
+         (match consume_place_value env _UU03a3_ p t with
+          | Infer_ok _UU03a3_' -> Infer_ok (t, _UU03a3_')
+          | Infer_err err -> Infer_err err)
        | Infer_err err -> Infer_err err)
     | ECall (fname, args) ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
          let m = fdef.fn_lifetimes in
          let collect =
-           let rec collect _UU0393_0 = function
-           | [] -> Infer_ok ([], _UU0393_0)
+           let rec collect _UU03a3_0 = function
+           | [] -> Infer_ok ([], _UU03a3_0)
            | e' :: es ->
-             (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_0 e' with
+             (match infer_core_env_state_fuel fuel' env _UU03a9_ n _UU03a3_0
+                      e' with
               | Infer_ok p ->
-                let (t_e, _UU0393_1) = p in
-                (match collect _UU0393_1 es with
+                let (t_e, _UU03a3_1) = p in
+                (match collect _UU03a3_1 es with
                  | Infer_ok p0 ->
-                   let (tys, _UU0393_2) = p0 in
-                   Infer_ok ((t_e :: tys), _UU0393_2)
+                   let (tys, _UU03a3_2) = p0 in
+                   Infer_ok ((t_e :: tys), _UU03a3_2)
                  | Infer_err err -> Infer_err err)
               | Infer_err err -> Infer_err err)
            in collect
          in
-         (match collect _UU0393_ args with
+         (match collect _UU03a3_ args with
           | Infer_ok p ->
-            let (arg_tys, _UU0393_') = p in
+            let (arg_tys, _UU03a3_') = p in
             (match build_sigma m (repeat None m) arg_tys fdef.fn_params with
              | Some _UU03c3__acc ->
                let _UU03c3_ = finalize_subst _UU03c3__acc in
@@ -2377,39 +2656,40 @@ let rec infer_core_env_fuel fuel env _UU03a9_ n _UU0393_ e =
                        in
                        if outlives_constraints_hold_b _UU03a9_ _UU03a9__subst
                        then Infer_ok ((apply_lt_ty _UU03c3_ fdef.fn_ret),
-                              _UU0393_')
+                              _UU03a3_')
                        else Infer_err ErrHrtBoundUnsatisfied
                   else Infer_err ErrLifetimeLeak)
              | None -> Infer_err ErrLifetimeConflict)
           | Infer_err err -> Infer_err err)
        | None -> Infer_err (ErrFunctionNotFound fname))
     | ECallExpr (callee, args) ->
-      (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_ callee with
+      (match infer_core_env_state_fuel fuel' env _UU03a9_ n _UU03a3_ callee with
        | Infer_ok p ->
-         let (t_callee, _UU0393_c) = p in
+         let (t_callee, _UU03a3_c) = p in
          let collect =
-           let rec collect _UU0393_0 = function
-           | [] -> Infer_ok ([], _UU0393_0)
+           let rec collect _UU03a3_0 = function
+           | [] -> Infer_ok ([], _UU03a3_0)
            | e' :: es ->
-             (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_0 e' with
+             (match infer_core_env_state_fuel fuel' env _UU03a9_ n _UU03a3_0
+                      e' with
               | Infer_ok p0 ->
-                let (t_e, _UU0393_1) = p0 in
-                (match collect _UU0393_1 es with
+                let (t_e, _UU03a3_1) = p0 in
+                (match collect _UU03a3_1 es with
                  | Infer_ok p1 ->
-                   let (tys, _UU0393_2) = p1 in
-                   Infer_ok ((t_e :: tys), _UU0393_2)
+                   let (tys, _UU03a3_2) = p1 in
+                   Infer_ok ((t_e :: tys), _UU03a3_2)
                  | Infer_err err -> Infer_err err)
               | Infer_err err -> Infer_err err)
            in collect
          in
-         (match collect _UU0393_c args with
+         (match collect _UU03a3_c args with
           | Infer_ok p0 ->
-            let (arg_tys, _UU0393_') = p0 in
+            let (arg_tys, _UU03a3_') = p0 in
             (match ty_core t_callee with
              | TFn (param_tys, ret) ->
                (match check_arg_tys _UU03a9_ arg_tys param_tys with
                 | Some err -> Infer_err err
-                | None -> Infer_ok (ret, _UU0393_'))
+                | None -> Infer_ok (ret, _UU03a3_'))
              | x -> Infer_err (ErrNotAFunction x))
           | Infer_err err -> Infer_err err)
        | Infer_err err -> Infer_err err)
@@ -2430,21 +2710,21 @@ let rec infer_core_env_fuel fuel env _UU03a9_ n _UU0393_ e =
                           | Some name -> Infer_err (ErrMissingField name)
                           | None ->
                             let go =
-                              let rec go _UU0393_0 = function
-                              | [] -> Infer_ok _UU0393_0
+                              let rec go _UU03a3_0 = function
+                              | [] -> Infer_ok _UU03a3_0
                               | f :: rest ->
                                 (match lookup_field_b f.field_name fields with
                                  | Some e_field ->
-                                   (match infer_core_env_fuel fuel' env
-                                            _UU03a9_ n _UU0393_0 e_field with
+                                   (match infer_core_env_state_fuel fuel' env
+                                            _UU03a9_ n _UU03a3_0 e_field with
                                     | Infer_ok p ->
-                                      let (t_field, _UU0393_1) = p in
+                                      let (t_field, _UU03a3_1) = p in
                                       let t_expected =
                                         instantiate_struct_field_ty lts args f
                                       in
                                       if ty_compatible_b _UU03a9_ t_field
                                            t_expected
-                                      then go _UU0393_1 rest
+                                      then go _UU03a3_1 rest
                                       else Infer_err
                                              (compatible_error t_field
                                                t_expected)
@@ -2453,209 +2733,161 @@ let rec infer_core_env_fuel fuel env _UU03a9_ n _UU0393_ e =
                                    Infer_err (ErrMissingField f.field_name))
                               in go
                             in
-                            (match go _UU0393_ s.struct_fields with
-                             | Infer_ok _UU0393_' ->
-                               Infer_ok ((instantiate_struct_ty s lts args),
-                                 _UU0393_')
+                            (match go _UU03a3_ s.struct_fields with
+                             | Infer_ok _UU03a3_' ->
+                               Infer_ok
+                                 ((instantiate_struct_instance_ty s lts args),
+                                 _UU03a3_')
                              | Infer_err err -> Infer_err err))))
        | None -> Infer_err (ErrStructNotFound sname))
-    | EReplace (p0, e_new) ->
-      (match p0 with
-       | PVar x ->
-         (match ctx_lookup_b x _UU0393_ with
-          | Some p ->
-            let (t_x, b) = p in
-            if b
-            then Infer_err (ErrAlreadyConsumed x)
-            else (match ctx_lookup_mut_b x _UU0393_ with
+    | EReplace (p, e_new) ->
+      (match infer_place_type_sctx env _UU03a3_ p with
+       | Infer_ok t_old ->
+         let root = place_name p in
+         (match place_path p with
+          | Some p0 ->
+            let (x, path) = p0 in
+            (match sctx_lookup_mut x _UU03a3_ with
+             | Some m ->
+               (match m with
+                | MImmutable -> Infer_err (ErrNotMutable x)
+                | MMutable ->
+                  (match infer_core_env_state_fuel fuel' env _UU03a9_ n
+                           _UU03a3_ e_new with
+                   | Infer_ok p1 ->
+                     let (t_new, _UU03a3_1) = p1 in
+                     if ty_compatible_b _UU03a9_ t_new t_old
+                     then (match sctx_restore_path _UU03a3_1 x path with
+                           | Infer_ok _UU03a3_2 -> Infer_ok (t_old, _UU03a3_2)
+                           | Infer_err err -> Infer_err err)
+                     else Infer_err (compatible_error t_new t_old)
+                   | Infer_err err -> Infer_err err))
+             | None -> Infer_err (ErrUnknownVar x))
+          | None ->
+            if place_under_unique_ref_b env _UU03a3_ p
+            then (match infer_core_env_state_fuel fuel' env _UU03a9_ n
+                          _UU03a3_ e_new with
+                  | Infer_ok p0 ->
+                    let (t_new, _UU03a3_1) = p0 in
+                    if ty_compatible_b _UU03a9_ t_new t_old
+                    then Infer_ok (t_old, _UU03a3_1)
+                    else Infer_err (compatible_error t_new t_old)
+                  | Infer_err err -> Infer_err err)
+            else Infer_err (ErrNotMutable root))
+       | Infer_err err -> Infer_err err)
+    | EAssign (p, e_new) ->
+      (match infer_place_sctx env _UU03a3_ p with
+       | Infer_ok t_old ->
+         if usage_eqb (ty_usage t_old) ULinear
+         then Infer_err (ErrUsageMismatch ((ty_usage t_old), UAffine))
+         else let root = place_name p in
+              (match place_path p with
+               | Some p0 ->
+                 let (x, _) = p0 in
+                 (match sctx_lookup_mut x _UU03a3_ with
                   | Some m ->
                     (match m with
                      | MImmutable -> Infer_err (ErrNotMutable x)
                      | MMutable ->
-                       (match infer_core_env_fuel fuel' env _UU03a9_ n
-                                _UU0393_ e_new with
+                       (match infer_core_env_state_fuel fuel' env _UU03a9_ n
+                                _UU03a3_ e_new with
                         | Infer_ok p1 ->
-                          let (t_new, _UU0393_') = p1 in
-                          if ty_compatible_b _UU03a9_ t_new t_x
-                          then Infer_ok (t_x, _UU0393_')
-                          else Infer_err (compatible_error t_new t_x)
+                          let (t_new, _UU03a3_1) = p1 in
+                          if ty_compatible_b _UU03a9_ t_new t_old
+                          then Infer_ok ((MkTy (UUnrestricted, TUnits)),
+                                 _UU03a3_1)
+                          else Infer_err (compatible_error t_new t_old)
                         | Infer_err err -> Infer_err err))
                   | None -> Infer_err (ErrUnknownVar x))
-          | None -> Infer_err (ErrUnknownVar x))
-       | PDeref p ->
-         (match infer_place_env env _UU0393_ p with
-          | Infer_ok t_p ->
-            (match ty_core t_p with
-             | TRef (l, r, t_inner) ->
-               (match r with
-                | RShared ->
-                  Infer_err (ErrNotAReference (TRef (l, RShared, t_inner)))
-                | RUnique ->
-                  (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_
-                           e_new with
-                   | Infer_ok p1 ->
-                     let (t_new, _UU0393_') = p1 in
-                     if ty_compatible_b _UU03a9_ t_new t_inner
-                     then Infer_ok (t_inner, _UU0393_')
-                     else Infer_err (compatible_error t_new t_inner)
-                   | Infer_err err -> Infer_err err))
-             | x -> Infer_err (ErrNotAReference x))
-          | Infer_err err -> Infer_err err)
-       | PField (p, field) ->
-         (match infer_place_env env _UU0393_ (PField (p, field)) with
-          | Infer_ok t_field ->
-            (match ctx_lookup_mut_b (place_name p) _UU0393_ with
-             | Some m ->
-               (match m with
-                | MImmutable -> Infer_err (ErrNotMutable (place_name p))
-                | MMutable ->
-                  (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_
-                           e_new with
-                   | Infer_ok p1 ->
-                     let (t_new, _UU0393_') = p1 in
-                     if ty_compatible_b _UU03a9_ t_new t_field
-                     then Infer_ok (t_field, _UU0393_')
-                     else Infer_err (compatible_error t_new t_field)
-                   | Infer_err err -> Infer_err err))
-             | None -> Infer_err (ErrUnknownVar (place_name p)))
-          | Infer_err err -> Infer_err err))
-    | EAssign (p0, e_new) ->
-      (match p0 with
-       | PVar x ->
-         (match ctx_lookup_b x _UU0393_ with
-          | Some p ->
-            let (t_x, b) = p in
-            if b
-            then Infer_err (ErrAlreadyConsumed x)
-            else (match ctx_lookup_mut_b x _UU0393_ with
-                  | Some m ->
-                    (match m with
-                     | MImmutable -> Infer_err (ErrNotMutable x)
-                     | MMutable ->
-                       if usage_eqb (ty_usage t_x) ULinear
-                       then Infer_err (ErrUsageMismatch ((ty_usage t_x),
-                              UAffine))
-                       else (match infer_core_env_fuel fuel' env _UU03a9_ n
-                                     _UU0393_ e_new with
-                             | Infer_ok p1 ->
-                               let (t_new, _UU0393_') = p1 in
-                               if ty_compatible_b _UU03a9_ t_new t_x
-                               then Infer_ok ((MkTy (UUnrestricted, TUnits)),
-                                      _UU0393_')
-                               else Infer_err (compatible_error t_new t_x)
-                             | Infer_err err -> Infer_err err))
-                  | None -> Infer_err (ErrUnknownVar x))
-          | None -> Infer_err (ErrUnknownVar x))
-       | PDeref p ->
-         (match infer_place_env env _UU0393_ p with
-          | Infer_ok t_p ->
-            (match ty_core t_p with
-             | TRef (l, r, t_inner) ->
-               (match r with
-                | RShared ->
-                  Infer_err (ErrNotAReference (TRef (l, RShared, t_inner)))
-                | RUnique ->
-                  if usage_eqb (ty_usage t_inner) ULinear
-                  then Infer_err (ErrUsageMismatch ((ty_usage t_inner),
-                         UAffine))
-                  else (match infer_core_env_fuel fuel' env _UU03a9_ n
-                                _UU0393_ e_new with
-                        | Infer_ok p1 ->
-                          let (t_new, _UU0393_') = p1 in
-                          if ty_compatible_b _UU03a9_ t_new t_inner
-                          then Infer_ok ((MkTy (UUnrestricted, TUnits)),
-                                 _UU0393_')
-                          else Infer_err (compatible_error t_new t_inner)
-                        | Infer_err err -> Infer_err err))
-             | x -> Infer_err (ErrNotAReference x))
-          | Infer_err err -> Infer_err err)
-       | PField (p, field) ->
-         (match infer_place_env env _UU0393_ (PField (p, field)) with
-          | Infer_ok t_field ->
-            (match ctx_lookup_mut_b (place_name p) _UU0393_ with
-             | Some m ->
-               (match m with
-                | MImmutable -> Infer_err (ErrNotMutable (place_name p))
-                | MMutable ->
-                  if usage_eqb (ty_usage t_field) ULinear
-                  then Infer_err (ErrUsageMismatch ((ty_usage t_field),
-                         UAffine))
-                  else (match infer_core_env_fuel fuel' env _UU03a9_ n
-                                _UU0393_ e_new with
-                        | Infer_ok p1 ->
-                          let (t_new, _UU0393_') = p1 in
-                          if ty_compatible_b _UU03a9_ t_new t_field
-                          then Infer_ok ((MkTy (UUnrestricted, TUnits)),
-                                 _UU0393_')
-                          else Infer_err (compatible_error t_new t_field)
-                        | Infer_err err -> Infer_err err))
-             | None -> Infer_err (ErrUnknownVar (place_name p)))
-          | Infer_err err -> Infer_err err))
+               | None ->
+                 if place_under_unique_ref_b env _UU03a3_ p
+                 then (match infer_core_env_state_fuel fuel' env _UU03a9_ n
+                               _UU03a3_ e_new with
+                       | Infer_ok p0 ->
+                         let (t_new, _UU03a3_1) = p0 in
+                         if ty_compatible_b _UU03a9_ t_new t_old
+                         then Infer_ok ((MkTy (UUnrestricted, TUnits)),
+                                _UU03a3_1)
+                         else Infer_err (compatible_error t_new t_old)
+                       | Infer_err err -> Infer_err err)
+                 else Infer_err (ErrNotMutable root))
+       | Infer_err err -> Infer_err err)
     | EBorrow (rk, p) ->
-      (match infer_place_env env _UU0393_ p with
+      (match infer_place_sctx env _UU03a3_ p with
        | Infer_ok t_p ->
          (match rk with
           | RShared ->
             Infer_ok ((MkTy (UUnrestricted, (TRef ((LVar n), RShared,
-              t_p)))), _UU0393_)
+              t_p)))), _UU03a3_)
           | RUnique ->
-            (match ctx_lookup_mut_b (place_name p) _UU0393_ with
-             | Some m ->
-               (match m with
-                | MImmutable -> Infer_err (ErrImmutableBorrow (place_name p))
-                | MMutable ->
-                  Infer_ok ((MkTy (UAffine, (TRef ((LVar n), RUnique,
-                    t_p)))), _UU0393_))
-             | None -> Infer_err (ErrUnknownVar (place_name p))))
+            (match place_path p with
+             | Some p0 ->
+               let (x, _) = p0 in
+               (match sctx_lookup_mut x _UU03a3_ with
+                | Some m ->
+                  (match m with
+                   | MImmutable -> Infer_err (ErrImmutableBorrow x)
+                   | MMutable ->
+                     Infer_ok ((MkTy (UAffine, (TRef ((LVar n), RUnique,
+                       t_p)))), _UU03a3_))
+                | None -> Infer_err (ErrUnknownVar x))
+             | None ->
+               if place_under_unique_ref_b env _UU03a3_ p
+               then Infer_ok ((MkTy (UAffine, (TRef ((LVar n), RUnique,
+                      t_p)))), _UU03a3_)
+               else Infer_err (ErrImmutableBorrow (place_name p))))
        | Infer_err err -> Infer_err err)
     | EDeref r ->
       (match expr_as_place r with
        | Some p ->
-         (match infer_place_env env _UU0393_ p with
+         (match infer_place_sctx env _UU03a3_ p with
           | Infer_ok t_r ->
             (match ty_core t_r with
              | TRef (_, _, t_inner) ->
                if usage_eqb (ty_usage t_inner) UUnrestricted
-               then Infer_ok (t_inner, _UU0393_)
+               then Infer_ok (t_inner, _UU03a3_)
                else Infer_err (ErrUsageMismatch ((ty_usage t_inner),
                       UUnrestricted))
              | x -> Infer_err (ErrNotAReference x))
           | Infer_err err -> Infer_err err)
        | None ->
-         (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_ r with
+         (match infer_core_env_state_fuel fuel' env _UU03a9_ n _UU03a3_ r with
           | Infer_ok p ->
-            let (t_r, _UU0393_') = p in
+            let (t_r, _UU03a3_') = p in
             (match ty_core t_r with
              | TRef (_, _, t_inner) ->
                if usage_eqb (ty_usage t_inner) UUnrestricted
-               then Infer_ok (t_inner, _UU0393_')
+               then Infer_ok (t_inner, _UU03a3_')
                else Infer_err (ErrUsageMismatch ((ty_usage t_inner),
                       UUnrestricted))
              | x -> Infer_err (ErrNotAReference x))
           | Infer_err err -> Infer_err err))
     | EDrop e1 ->
-      (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_ e1 with
+      (match infer_core_env_state_fuel fuel' env _UU03a9_ n _UU03a3_ e1 with
        | Infer_ok p ->
-         let (_, _UU0393_') = p in
-         Infer_ok ((MkTy (UUnrestricted, TUnits)), _UU0393_')
+         let (_, _UU03a3_') = p in
+         Infer_ok ((MkTy (UUnrestricted, TUnits)), _UU03a3_')
        | Infer_err err -> Infer_err err)
     | EIf (e1, e2, e3) ->
-      (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_ e1 with
+      (match infer_core_env_state_fuel fuel' env _UU03a9_ n _UU03a3_ e1 with
        | Infer_ok p ->
-         let (t_cond, _UU0393_1) = p in
+         let (t_cond, _UU03a3_1) = p in
          if ty_core_eqb (ty_core t_cond) TBooleans
-         then (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_1 e2 with
+         then (match infer_core_env_state_fuel fuel' env _UU03a9_ n _UU03a3_1
+                       e2 with
                | Infer_ok p0 ->
-                 let (t2, _UU0393_2) = p0 in
-                 (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_1 e3 with
+                 let (t2, _UU03a3_2) = p0 in
+                 (match infer_core_env_state_fuel fuel' env _UU03a9_ n
+                          _UU03a3_1 e3 with
                   | Infer_ok p1 ->
-                    let (t3, _UU0393_3) = p1 in
+                    let (t3, _UU03a3_3) = p1 in
                     if ty_core_eqb (ty_core t2) (ty_core t3)
-                    then (match ctx_merge _UU0393_2 _UU0393_3 with
+                    then (match ctx_merge (ctx_of_sctx _UU03a3_2)
+                                  (ctx_of_sctx _UU03a3_3) with
                           | Some _UU0393_4 ->
                             Infer_ok ((MkTy
                               ((usage_max (ty_usage t2) (ty_usage t3)),
-                              (ty_core t2))), _UU0393_4)
+                              (ty_core t2))), (sctx_of_ctx _UU0393_4))
                           | None -> Infer_err ErrContextCheckFailed)
                     else Infer_err (ErrTypeMismatch ((ty_core t2),
                            (ty_core t3)))
@@ -2670,9 +2902,12 @@ let rec infer_core_env_fuel fuel env _UU03a9_ n _UU0393_ e =
     (ty * ctx) infer_result **)
 
 let infer_core_env env _UU03a9_ n _UU0393_ e =
-  infer_core_env_fuel
-    (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) env _UU03a9_ n
-    _UU0393_ e
+  match infer_core_env_state_fuel
+          (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) env
+          _UU03a9_ n (sctx_of_ctx _UU0393_) e with
+  | Infer_ok p ->
+    let (t, _UU03a3_) = p in Infer_ok (t, (ctx_of_sctx _UU03a3_))
+  | Infer_err err -> Infer_err err
 
 (** val infer_body :
     fn_def list -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
@@ -2756,14 +2991,6 @@ let infer_env env f =
                               else Infer_err ErrContextCheckFailed
                          else Infer_err (compatible_error t_body f.fn_ret)
                   | Infer_err err -> Infer_err err)
-
-(** val check_program_env : global_env -> bool **)
-
-let check_program_env env =
-  forallb (fun f ->
-    match infer_env env f with
-    | Infer_ok _ -> true
-    | Infer_err _ -> false) env.env_fns
 
 (** val borrow_check :
     fn_def list -> borrow_state -> ctx -> expr -> borrow_state infer_result **)
@@ -2872,6 +3099,176 @@ let rec borrow_check fenv bS _UU0393_ = function
    | Infer_err err -> Infer_err err)
 | _ -> Infer_ok bS
 
+type path_borrow_entry =
+| PBShared of ident * field_path
+| PBMut of ident * field_path
+
+type path_borrow_state = path_borrow_entry list
+
+(** val pbe_target_eqb : ident -> field_path -> path_borrow_entry -> bool **)
+
+let pbe_target_eqb x p = function
+| PBShared (y, q) -> (&&) (ident_eqb x y) (path_conflict_b p q)
+| PBMut (y, q) -> (&&) (ident_eqb x y) (path_conflict_b p q)
+
+(** val pbs_has_mut : ident -> field_path -> path_borrow_state -> bool **)
+
+let pbs_has_mut x p pBS =
+  existsb (fun e ->
+    match e with
+    | PBShared (_, _) -> false
+    | PBMut (y, q) -> (&&) (ident_eqb x y) (path_conflict_b p q)) pBS
+
+(** val pbs_has_any : ident -> field_path -> path_borrow_state -> bool **)
+
+let pbs_has_any x p pBS =
+  existsb (pbe_target_eqb x p) pBS
+
+(** val borrow_target_of_place : place -> ident * field_path **)
+
+let borrow_target_of_place p =
+  ((place_root p), (place_suffix_path p))
+
+(** val path_borrow_entry_eqb :
+    path_borrow_entry -> path_borrow_entry -> bool **)
+
+let path_borrow_entry_eqb a b =
+  match a with
+  | PBShared (x, p) ->
+    (match b with
+     | PBShared (y, q) -> (&&) (ident_eqb x y) (path_eqb p q)
+     | PBMut (_, _) -> false)
+  | PBMut (x, p) ->
+    (match b with
+     | PBShared (_, _) -> false
+     | PBMut (y, q) -> (&&) (ident_eqb x y) (path_eqb p q))
+
+(** val pbs_remove_one :
+    path_borrow_entry -> path_borrow_state -> path_borrow_state **)
+
+let rec pbs_remove_one e = function
+| [] -> []
+| h :: rest ->
+  if path_borrow_entry_eqb e h then rest else h :: (pbs_remove_one e rest)
+
+(** val pbs_remove_all :
+    path_borrow_state -> path_borrow_state -> path_borrow_state **)
+
+let pbs_remove_all to_remove pBS =
+  fold_left (fun acc e -> pbs_remove_one e acc) to_remove pBS
+
+(** val pbs_new_entries :
+    path_borrow_state -> path_borrow_state -> path_borrow_state **)
+
+let pbs_new_entries before after =
+  firstn (sub (length after) (length before)) after
+
+(** val pbs_eqb : path_borrow_state -> path_borrow_state -> bool **)
+
+let rec pbs_eqb a b =
+  match a with
+  | [] -> (match b with
+           | [] -> true
+           | _ :: _ -> false)
+  | x :: xs ->
+    (match b with
+     | [] -> false
+     | y :: ys -> (&&) (path_borrow_entry_eqb x y) (pbs_eqb xs ys))
+
+(** val borrow_check_env :
+    global_env -> path_borrow_state -> ctx -> expr -> path_borrow_state
+    infer_result **)
+
+let rec borrow_check_env env pBS _UU0393_ = function
+| ELet (m, x, t, e1, e2) ->
+  (match borrow_check_env env pBS _UU0393_ e1 with
+   | Infer_ok pBS1 ->
+     let new_from_e1 = pbs_new_entries pBS pBS1 in
+     (match borrow_check_env env pBS1 (ctx_add_b x t m _UU0393_) e2 with
+      | Infer_ok pBS2 -> Infer_ok (pbs_remove_all new_from_e1 pBS2)
+      | Infer_err err -> Infer_err err)
+   | Infer_err err -> Infer_err err)
+| ELetInfer (_, _, e1, e2) ->
+  (match borrow_check_env env pBS _UU0393_ e1 with
+   | Infer_ok pBS1 ->
+     let new_from_e1 = pbs_new_entries pBS pBS1 in
+     (match borrow_check_env env pBS1 _UU0393_ e2 with
+      | Infer_ok pBS2 -> Infer_ok (pbs_remove_all new_from_e1 pBS2)
+      | Infer_err err -> Infer_err err)
+   | Infer_err err -> Infer_err err)
+| ECall (_, args) ->
+  let rec go pBS0 = function
+  | [] -> Infer_ok pBS0
+  | a :: rest ->
+    (match borrow_check_env env pBS0 _UU0393_ a with
+     | Infer_ok pBS1 -> go pBS1 rest
+     | Infer_err err -> Infer_err err)
+  in go pBS args
+| ECallExpr (callee, args) ->
+  (match borrow_check_env env pBS _UU0393_ callee with
+   | Infer_ok pBS1 ->
+     let rec go pBS0 = function
+     | [] -> Infer_ok pBS0
+     | a :: rest ->
+       (match borrow_check_env env pBS0 _UU0393_ a with
+        | Infer_ok pBS2 -> go pBS2 rest
+        | Infer_err err -> Infer_err err)
+     in go pBS1 args
+   | Infer_err err -> Infer_err err)
+| EStruct (_, _, _, fields) ->
+  let rec go pBS0 = function
+  | [] -> Infer_ok pBS0
+  | p :: rest ->
+    let (_, e_field) = p in
+    (match borrow_check_env env pBS0 _UU0393_ e_field with
+     | Infer_ok pBS1 -> go pBS1 rest
+     | Infer_err err -> Infer_err err)
+  in go pBS fields
+| EReplace (p, e_new) ->
+  let (x, path) = borrow_target_of_place p in
+  if pbs_has_any x path pBS
+  then Infer_err (ErrBorrowConflict x)
+  else borrow_check_env env pBS _UU0393_ e_new
+| EAssign (p, e_new) ->
+  let (x, path) = borrow_target_of_place p in
+  if pbs_has_any x path pBS
+  then Infer_err (ErrBorrowConflict x)
+  else borrow_check_env env pBS _UU0393_ e_new
+| EBorrow (r, p) ->
+  (match r with
+   | RShared ->
+     let (x, path) = borrow_target_of_place p in
+     if pbs_has_mut x path pBS
+     then Infer_err (ErrBorrowConflict x)
+     else Infer_ok ((PBShared (x, path)) :: pBS)
+   | RUnique ->
+     let (x, path) = borrow_target_of_place p in
+     if pbs_has_any x path pBS
+     then Infer_err (ErrBorrowConflict x)
+     else Infer_ok ((PBMut (x, path)) :: pBS))
+| EDeref e1 ->
+  (match expr_ref_root e1 with
+   | Some r ->
+     if pbs_has_mut r [] pBS
+     then Infer_err (ErrBorrowConflict r)
+     else borrow_check_env env pBS _UU0393_ e1
+   | None -> borrow_check_env env pBS _UU0393_ e1)
+| EDrop e1 -> borrow_check_env env pBS _UU0393_ e1
+| EIf (e1, e2, e3) ->
+  (match borrow_check_env env pBS _UU0393_ e1 with
+   | Infer_ok pBS1 ->
+     (match borrow_check_env env pBS1 _UU0393_ e2 with
+      | Infer_ok pBS2 ->
+        (match borrow_check_env env pBS1 _UU0393_ e3 with
+         | Infer_ok pBS3 ->
+           if pbs_eqb pBS2 pBS3
+           then Infer_ok pBS2
+           else Infer_err ErrContextCheckFailed
+         | Infer_err err -> Infer_err err)
+      | Infer_err err -> Infer_err err)
+   | Infer_err err -> Infer_err err)
+| _ -> Infer_ok pBS
+
 (** val infer_full : fn_def list -> fn_def -> (ty * ctx) infer_result **)
 
 let infer_full fenv f =
@@ -2882,6 +3279,24 @@ let infer_full fenv f =
      | Infer_ok _ -> Infer_ok res
      | Infer_err err -> Infer_err err)
   | Infer_err err -> Infer_err err
+
+(** val infer_full_env : global_env -> fn_def -> (ty * ctx) infer_result **)
+
+let infer_full_env env f =
+  match infer_env env f with
+  | Infer_ok res ->
+    (match borrow_check_env env [] (params_ctx f.fn_params) f.fn_body with
+     | Infer_ok _ -> Infer_ok res
+     | Infer_err err -> Infer_err err)
+  | Infer_err err -> Infer_err err
+
+(** val check_program_env : global_env -> bool **)
+
+let check_program_env env =
+  forallb (fun f ->
+    match infer_full_env env f with
+    | Infer_ok _ -> true
+    | Infer_err _ -> false) env.env_fns
 
 (** val infer_direct : fn_def list -> fn_def -> (ty * ctx) infer_result **)
 

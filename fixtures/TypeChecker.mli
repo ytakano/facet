@@ -242,15 +242,9 @@ val lookup_struct : string -> global_env -> struct_def option
 
 val lookup_field : string -> field_def list -> field_def option
 
-val usage_max_decl : usage -> usage -> usage
-
-val usage_max_list : field_def list -> usage
-
 val subst_type_params_ty : ty list -> ty -> ty
 
 val instantiate_struct_field_ty : lifetime list -> ty list -> field_def -> ty
-
-val instantiate_struct_ty : struct_def -> lifetime list -> ty list -> ty
 
 type ctx_entry = ((ident * ty) * bool) * mutability
 
@@ -434,9 +428,78 @@ val infer_core :
   fn_def list -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
   (ty * ctx) infer_result
 
-val infer_core_env_fuel :
-  Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int -> ctx
-  -> expr -> (ty * ctx) infer_result
+type field_path = string list
+
+val path_segment_eqb : string -> string -> bool
+
+val path_eqb : field_path -> field_path -> bool
+
+val path_prefix_b : field_path -> field_path -> bool
+
+val path_conflict_b : field_path -> field_path -> bool
+
+val path_conflicts_any_b : field_path -> field_path list -> bool
+
+val remove_restored_paths : field_path -> field_path list -> field_path list
+
+type binding_state = { st_consumed : bool; st_moved_paths : field_path list }
+
+val binding_available_b : binding_state -> field_path -> bool
+
+val state_consume_path : field_path -> binding_state -> binding_state
+
+val state_restore_path : field_path -> binding_state -> binding_state
+
+type sctx_entry = ((ident * ty) * binding_state) * mutability
+
+type sctx = sctx_entry list
+
+val binding_state_of_bool : bool -> binding_state
+
+val sctx_of_ctx : ctx -> sctx
+
+val ctx_of_sctx : sctx -> ctx
+
+val sctx_lookup : ident -> sctx -> (ty * binding_state) option
+
+val sctx_lookup_mut : ident -> sctx -> mutability option
+
+val sctx_add : ident -> ty -> mutability -> sctx -> sctx
+
+val sctx_remove : ident -> sctx -> sctx
+
+val sctx_update_state :
+  ident -> (binding_state -> binding_state) -> sctx -> sctx option
+
+val sctx_check_ok : ident -> ty -> sctx -> bool
+
+val place_path : place -> (ident * field_path) option
+
+val place_suffix_path : place -> field_path
+
+val sctx_path_available : sctx -> ident -> field_path -> unit infer_result
+
+val sctx_consume_path : sctx -> ident -> field_path -> sctx infer_result
+
+val sctx_restore_path : sctx -> ident -> field_path -> sctx infer_result
+
+val infer_place_sctx : global_env -> sctx -> place -> ty infer_result
+
+val infer_place_type_sctx : global_env -> sctx -> place -> ty infer_result
+
+val place_under_unique_ref_b : global_env -> sctx -> place -> bool
+
+val consume_place_value :
+  global_env -> sctx -> place -> ty -> sctx infer_result
+
+val usage_max_tys : ty list -> usage
+
+val instantiate_struct_instance_ty :
+  struct_def -> lifetime list -> ty list -> ty
+
+val infer_core_env_state_fuel :
+  Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+  sctx -> expr -> (ty * sctx) infer_result
 
 val infer_core_env :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
@@ -456,11 +519,44 @@ val check_program : fn_def list -> bool
 
 val infer_env : global_env -> fn_def -> (ty * ctx) infer_result
 
-val check_program_env : global_env -> bool
-
 val borrow_check :
   fn_def list -> borrow_state -> ctx -> expr -> borrow_state infer_result
 
+type path_borrow_entry =
+| PBShared of ident * field_path
+| PBMut of ident * field_path
+
+type path_borrow_state = path_borrow_entry list
+
+val pbe_target_eqb : ident -> field_path -> path_borrow_entry -> bool
+
+val pbs_has_mut : ident -> field_path -> path_borrow_state -> bool
+
+val pbs_has_any : ident -> field_path -> path_borrow_state -> bool
+
+val borrow_target_of_place : place -> ident * field_path
+
+val path_borrow_entry_eqb : path_borrow_entry -> path_borrow_entry -> bool
+
+val pbs_remove_one :
+  path_borrow_entry -> path_borrow_state -> path_borrow_state
+
+val pbs_remove_all :
+  path_borrow_state -> path_borrow_state -> path_borrow_state
+
+val pbs_new_entries :
+  path_borrow_state -> path_borrow_state -> path_borrow_state
+
+val pbs_eqb : path_borrow_state -> path_borrow_state -> bool
+
+val borrow_check_env :
+  global_env -> path_borrow_state -> ctx -> expr -> path_borrow_state
+  infer_result
+
 val infer_full : fn_def list -> fn_def -> (ty * ctx) infer_result
+
+val infer_full_env : global_env -> fn_def -> (ty * ctx) infer_result
+
+val check_program_env : global_env -> bool
 
 val infer_direct : fn_def list -> fn_def -> (ty * ctx) infer_result

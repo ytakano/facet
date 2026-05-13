@@ -1,0 +1,3 @@
+fn touch(a: unrestricted &unrestricted isize, b: unrestricted &unrestricted isize) -> unrestricted () {
+    ()
+}

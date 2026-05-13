@@ -1,0 +1,3 @@
+fn bad() -> unrestricted &unrestricted isize {
+    1
+}

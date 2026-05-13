@@ -66,7 +66,7 @@ program:
 fn_def:
   | KW_FN; name = ID; lt_names = opt_lifetime_params;
     LPAREN; ps = params; RPAREN;
-    ARROW; ret = ty; outs = opt_where_outlives; LBRACE; body = block; RBRACE
+    ARROW; ret = signature_ty; outs = opt_where_outlives; LBRACE; body = block; RBRACE
     { { nf_name = name; nf_lifetime_names = lt_names; nf_outlives = outs;
         nf_params = ps; nf_ret = ret; nf_body = body } }
 
@@ -99,7 +99,7 @@ params:
   | ps = separated_nonempty_list(COMMA, param) { ps }
 
 param:
-  | m = opt_mut; name = ID; COLON; t = ty
+  | m = opt_mut; name = ID; COLON; t = signature_ty
     { { np_mutability = m; np_name = name; np_ty = t } }
 
 opt_mut:
@@ -206,6 +206,27 @@ ty_core:
     { let (names, prev) = h in
       current_hrt_lifetimes := prev;
       TForall (Big_int_Z.big_int_of_int (List.length names), outs, MkTy (UUnrestricted, TFn (ts, ret))) }
+
+signature_ty:
+  | KW_AFFINE;       c = signature_ty_core { NTy (UAffine,       c) }
+  | KW_LINEAR;       c = signature_ty_core { NTy (ULinear,       c) }
+  | KW_UNRESTRICTED; c = signature_ty_core { NTy (UUnrestricted, c) }
+
+signature_ty_core:
+  | KW_ISIZE { NTIntegers }
+  | KW_F64   { NTFloats }
+  | KW_BOOL  { NTBooleans }
+  | LPAREN; RPAREN { NTUnits }
+  | AMP; t = signature_ty { NTRef (None, RShared, t) }
+  | AMP; KW_MUT; t = signature_ty { NTRef (None, RUnique, t) }
+  | AMP; lt = LIFETIME; t = signature_ty { NTRef (Some lt, RShared, t) }
+  | AMP; lt = LIFETIME; KW_MUT; t = signature_ty { NTRef (Some lt, RUnique, t) }
+  | KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty
+    { NTFn (ts, ret) }
+  | h = hrt_lifetime_params; KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty; outs = opt_hrt_where_outlives
+    { let (names, prev) = h in
+      current_hrt_lifetimes := prev;
+      NTForall (Big_int_Z.big_int_of_int (List.length names), outs, MkTy (UUnrestricted, TFn (ts, ret))) }
 
 hrt_lifetime_params:
   | KW_FOR; LANGLE; names = separated_nonempty_list(COMMA, lifetime_name); RANGLE

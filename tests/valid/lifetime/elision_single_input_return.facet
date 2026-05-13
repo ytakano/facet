@@ -1,0 +1,7 @@
+fn id(r: unrestricted &unrestricted isize) -> unrestricted &unrestricted isize {
+    r
+}
+
+fn caller<'a>(r: unrestricted &'a unrestricted isize) -> unrestricted &'a unrestricted isize {
+    (id r)
+}

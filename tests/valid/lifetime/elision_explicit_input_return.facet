@@ -1,0 +1,3 @@
+fn id<'a>(r: unrestricted &'a unrestricted isize) -> unrestricted &unrestricted isize {
+    r
+}

@@ -1,0 +1,3 @@
+fn bad(a: unrestricted &unrestricted isize, b: unrestricted &unrestricted isize) -> unrestricted &unrestricted isize {
+    a
+}

@@ -18,6 +18,11 @@ Inductive wf_type (Δ : region_ctx) : Ty -> Prop :=
     Forall (wf_type Δ) params ->
     wf_type Δ ret ->
     wf_type Δ (MkTy u (TFn params ret))
+| WF_Forall   : forall u n Ω body,
+    wf_type ((map LBound (seq 0 n)) ++ Δ) body ->
+    Forall (fun '(a, b) => wf_lifetime ((map LBound (seq 0 n)) ++ Δ) a /\
+                            wf_lifetime ((map LBound (seq 0 n)) ++ Δ) b) Ω ->
+    wf_type Δ (MkTy u (TForall n Ω body))
 | WF_Ref      : forall u l rk T,
     ref_usage_ok_b u rk = true ->
     wf_lifetime Δ l ->

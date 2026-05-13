@@ -1,0 +1,3 @@
+fn accept(f: unrestricted for<'a, 'b> fn(unrestricted &'a unrestricted isize, unrestricted &'b unrestricted isize) -> unrestricted &'a unrestricted isize) -> unrestricted () {
+    ()
+}

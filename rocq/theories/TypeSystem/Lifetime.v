@@ -7,14 +7,17 @@ Import ListNotations.
 
 (* LStatic is the 'static lifetime that outlives all others.           *)
 (* LVar n  represents the n-th lifetime parameter (0-indexed).         *)
+(* LBound n represents the n-th lifetime bound by a higher-rank type.  *)
 Inductive lifetime : Type :=
 | LStatic
-| LVar : nat -> lifetime.
+| LVar : nat -> lifetime
+| LBound : nat -> lifetime.
 
 Definition lifetime_eqb (l1 l2 : lifetime) : bool :=
   match l1, l2 with
   | LStatic,  LStatic  => true
   | LVar n1, LVar n2   => Nat.eqb n1 n2
+  | LBound n1, LBound n2 => Nat.eqb n1 n2
   | _,        _        => false
   end.
 
@@ -26,9 +29,15 @@ Proof.
     + reflexivity.
     + discriminate.
     + discriminate.
+    + discriminate.
+    + apply Nat.eqb_eq in H. subst. reflexivity.
+    + discriminate.
+    + discriminate.
+    + discriminate.
     + apply Nat.eqb_eq in H. subst. reflexivity.
   - intros <-. destruct l1; simpl.
     + reflexivity.
+    + apply Nat.eqb_refl.
     + apply Nat.eqb_refl.
 Qed.
 
@@ -58,7 +67,7 @@ Definition outlives_direct_b (Ω : outlives_ctx) (a b : lifetime) : bool :=
   lifetime_eqb a b ||
   match a with
   | LStatic => true
-  | LVar _ => existsb (fun '(x, y) => lifetime_eqb a x && lifetime_eqb b y) Ω
+  | LVar _ | LBound _ => existsb (fun '(x, y) => lifetime_eqb a x && lifetime_eqb b y) Ω
   end.
 
 Fixpoint outlives_b_fuel (fuel : nat) (Ω : outlives_ctx) (a b : lifetime) : bool :=
@@ -83,6 +92,10 @@ Proof.
   - apply lifetime_eqb_eq in Heq. subst. apply Outlives_refl.
   - destruct a.
     + apply Outlives_static.
+    + apply existsb_exists in Hdirect as [[x y] [Hin Hxy]].
+      apply andb_true_iff in Hxy as [Hx Hy].
+      apply lifetime_eqb_eq in Hx. apply lifetime_eqb_eq in Hy. subst.
+      apply Outlives_constraint. exact Hin.
     + apply existsb_exists in Hdirect as [[x y] [Hin Hxy]].
       apply andb_true_iff in Hxy as [Hx Hy].
       apply lifetime_eqb_eq in Hx. apply lifetime_eqb_eq in Hy. subst.
@@ -128,4 +141,5 @@ Proof. reflexivity. Qed.
 (* wf_lifetime Δ l holds when l is a valid lifetime in Δ.             *)
 Inductive wf_lifetime (Δ : region_ctx) : lifetime -> Prop :=
 | WF_LStatic : wf_lifetime Δ LStatic
-| WF_LVar    : forall n, In (LVar n) Δ -> wf_lifetime Δ (LVar n).
+| WF_LVar    : forall n, In (LVar n) Δ -> wf_lifetime Δ (LVar n)
+| WF_LBound  : forall n, In (LBound n) Δ -> wf_lifetime Δ (LBound n).

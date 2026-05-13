@@ -1,0 +1,3 @@
+fn bad<'a>(r: unrestricted &'a unrestricted isize) -> unrestricted &'missing unrestricted isize {
+    r
+}

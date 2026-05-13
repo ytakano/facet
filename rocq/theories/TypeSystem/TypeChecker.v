@@ -31,6 +31,16 @@ Definition ref_kind_eqb (k1 k2 : ref_kind) : bool :=
   | _, _ => false
   end.
 
+Definition lifetime_pair_eqb (p1 p2 : lifetime * lifetime) : bool :=
+  lifetime_eqb (fst p1) (fst p2) && lifetime_eqb (snd p1) (snd p2).
+
+Fixpoint outlives_ctx_eqb (Ω1 Ω2 : outlives_ctx) : bool :=
+  match Ω1, Ω2 with
+  | [], [] => true
+  | p1 :: Ω1', p2 :: Ω2' => lifetime_pair_eqb p1 p2 && outlives_ctx_eqb Ω1' Ω2'
+  | _, _ => false
+  end.
+
 Fixpoint ty_eqb (T1 T2 : Ty) {struct T1} : bool :=
   match T1, T2 with
   | MkTy u1 c1, MkTy u2 c2 =>
@@ -48,6 +58,8 @@ Fixpoint ty_eqb (T1 T2 : Ty) {struct T1} : bool :=
              | t1 :: l1', t2 :: l2' => ty_eqb t1 t2 && go l1' l2'
              | _, _ => false
              end) ts1 ts2 && ty_eqb r1 r2
+      | TForall n1 Ω1 b1, TForall n2 Ω2 b2 =>
+          Nat.eqb n1 n2 && outlives_ctx_eqb Ω1 Ω2 && ty_eqb b1 b2
       | TRef l1 k1 t1, TRef l2 k2 t2 =>
           lifetime_eqb l1 l2 && ref_kind_eqb k1 k2 && ty_eqb t1 t2
       | _, _ => false
@@ -68,6 +80,8 @@ Definition ty_core_eqb (c1 c2 : TypeCore Ty) : bool :=
          | t1 :: l1', t2 :: l2' => ty_eqb t1 t2 && go l1' l2'
          | _, _ => false
          end) ts1 ts2 && ty_eqb r1 r2
+  | TForall n1 Ω1 b1, TForall n2 Ω2 b2 =>
+      Nat.eqb n1 n2 && outlives_ctx_eqb Ω1 Ω2 && ty_eqb b1 b2
   | TRef l1 k1 t1, TRef l2 k2 t2 =>
       lifetime_eqb l1 l2 && ref_kind_eqb k1 k2 && ty_eqb t1 t2
   | _, _ => false
@@ -78,6 +92,8 @@ Fixpoint ty_compatible_b (Ω : outlives_ctx) (T_actual T_expected : Ty) {struct 
   match ty_core T_actual, ty_core T_expected with
   | TRef la rka Ta, TRef lb rkb Tb =>
       outlives_b Ω la lb && ref_kind_eqb rka rkb && ty_compatible_b Ω Ta Tb
+  | TForall na Ωa Ta, TForall nb Ωb Tb =>
+      Nat.eqb na nb && outlives_ctx_eqb Ωa Ωb && ty_compatible_b Ω Ta Tb
   | ca, cb => ty_core_eqb ca cb
   end.
 
@@ -159,20 +175,32 @@ Fixpoint mk_region_ctx (n : nat) : region_ctx :=
   | S k  => mk_region_ctx k ++ [LVar k]
   end.
 
-Definition wf_lifetime_b (Δ : region_ctx) (l : lifetime) : bool :=
+Definition wf_lifetime_at_b (bound_depth : nat) (Δ : region_ctx) (l : lifetime) : bool :=
   match l with
   | LStatic => true
   | LVar _  => existsb (lifetime_eqb l) Δ
+  | LBound i => Nat.ltb i bound_depth
   end.
 
-Fixpoint wf_type_b (Δ : region_ctx) (T : Ty) : bool :=
+Definition wf_outlives_at_b (bound_depth : nat) (Δ : region_ctx) (Ω : outlives_ctx) : bool :=
+  forallb (fun '(a, b) => wf_lifetime_at_b bound_depth Δ a && wf_lifetime_at_b bound_depth Δ b) Ω.
+
+Fixpoint wf_type_at_b (bound_depth : nat) (Δ : region_ctx) (T : Ty) : bool :=
   match T with
   | MkTy u (TRef l rk T_inner) =>
-      ref_usage_ok_b u rk && wf_lifetime_b Δ l && wf_type_b Δ T_inner
+      ref_usage_ok_b u rk && wf_lifetime_at_b bound_depth Δ l && wf_type_at_b bound_depth Δ T_inner
   | MkTy _ (TFn ts r) =>
-      forallb (wf_type_b Δ) ts && wf_type_b Δ r
+      forallb (wf_type_at_b bound_depth Δ) ts && wf_type_at_b bound_depth Δ r
+  | MkTy _ (TForall n Ω body) =>
+      wf_outlives_at_b (n + bound_depth) Δ Ω && wf_type_at_b (n + bound_depth) Δ body
   | _ => true
   end.
+
+Definition wf_lifetime_b (Δ : region_ctx) (l : lifetime) : bool :=
+  wf_lifetime_at_b 0 Δ l.
+
+Definition wf_type_b (Δ : region_ctx) (T : Ty) : bool :=
+  wf_type_at_b 0 Δ T.
 
 (* ------------------------------------------------------------------ *)
 (* Alpha renaming                                                       *)
@@ -286,6 +314,10 @@ Fixpoint unify_lt (m : nat) (σ : list (option lifetime))
                      else None
             | LStatic =>
                 if lifetime_eqb LStatic l_a
+                then unify_lt m σ T_p_inner T_e_inner
+                else None
+            | LBound i =>
+                if lifetime_eqb (LBound i) l_a
                 then unify_lt m σ T_p_inner T_e_inner
                 else None
             end
@@ -481,7 +513,7 @@ Definition alpha_rename_for_infer (Γ : ctx) (fenv : list fn_def)
   (fenv', e').
 
 Definition wf_outlives_b (Δ : region_ctx) (Ω : outlives_ctx) : bool :=
-  forallb (fun '(a, b) => wf_lifetime_b Δ a && wf_lifetime_b Δ b) Ω.
+  wf_outlives_at_b 0 Δ Ω.
 
 Definition outlives_constraints_hold_b (Ω : outlives_ctx) (constraints : outlives_ctx) : bool :=
   forallb (fun '(a, b) => outlives_b Ω a b) constraints.
@@ -1075,6 +1107,7 @@ Fixpoint ty_depth (T : Ty) : nat :=
                | t :: l' => S (ty_depth t) + go l'
                end) ts)
       | TRef _ _ t => S (ty_depth t)
+      | TForall _ Ω body => S (List.length Ω + ty_depth body)
       | _ => 1
       end
   end.

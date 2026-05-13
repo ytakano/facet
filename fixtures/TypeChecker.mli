@@ -9,6 +9,8 @@ val length : 'a1 list -> Big_int_Z.big_int
 
 val app : 'a1 list -> 'a1 list -> 'a1 list
 
+val add : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
+
 val sub : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
 
 val eqb : bool -> bool -> bool
@@ -39,6 +41,7 @@ val forallb : ('a1 -> bool) -> 'a1 list -> bool
 type lifetime =
 | LStatic
 | LVar of Big_int_Z.big_int
+| LBound of Big_int_Z.big_int
 
 val lifetime_eqb : lifetime -> lifetime -> bool
 
@@ -73,6 +76,7 @@ type 'a typeCore =
 | TBooleans
 | TNamed of string
 | TFn of 'a list * 'a
+| TForall of Big_int_Z.big_int * outlives_ctx * 'a
 | TRef of lifetime * ref_kind * 'a
 
 type ty =
@@ -86,9 +90,9 @@ val ref_usage_ok_b : usage -> ref_kind -> bool
 
 val apply_lt_lifetime : lifetime list -> lifetime -> lifetime
 
-val apply_lt_ty : lifetime list -> ty -> ty
-
 val apply_lt_outlives : lifetime list -> outlives_ctx -> outlives_ctx
+
+val apply_lt_ty : lifetime list -> ty -> ty
 
 type ident = string * Big_int_Z.big_int
 
@@ -172,6 +176,10 @@ val usage_sub_bool : usage -> usage -> bool
 
 val ref_kind_eqb : ref_kind -> ref_kind -> bool
 
+val lifetime_pair_eqb : (lifetime * lifetime) -> (lifetime * lifetime) -> bool
+
+val outlives_ctx_eqb : outlives_ctx -> outlives_ctx -> bool
+
 val ty_eqb : ty -> ty -> bool
 
 val ty_core_eqb : ty typeCore -> ty typeCore -> bool
@@ -193,6 +201,12 @@ val ctx_check_ok : ident -> ty -> ctx -> bool
 val lookup_fn_b : ident -> fn_def list -> fn_def option
 
 val mk_region_ctx : Big_int_Z.big_int -> region_ctx
+
+val wf_lifetime_at_b : Big_int_Z.big_int -> region_ctx -> lifetime -> bool
+
+val wf_outlives_at_b : Big_int_Z.big_int -> region_ctx -> outlives_ctx -> bool
+
+val wf_type_at_b : Big_int_Z.big_int -> region_ctx -> ty -> bool
 
 val wf_lifetime_b : region_ctx -> lifetime -> bool
 

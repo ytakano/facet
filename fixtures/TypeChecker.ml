@@ -28,6 +28,10 @@ let rec app l m =
   | [] -> m
   | a :: l1 -> a :: (app l1 m)
 
+(** val add : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
+
+let rec add = Big_int_Z.add_big_int
+
 (** val sub : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
 
 let rec sub = (fun n m -> Big_int_Z.max_big_int Big_int_Z.zero_big_int
@@ -115,6 +119,7 @@ let rec forallb f = function
 type lifetime =
 | LStatic
 | LVar of Big_int_Z.big_int
+| LBound of Big_int_Z.big_int
 
 (** val lifetime_eqb : lifetime -> lifetime -> bool **)
 
@@ -122,10 +127,13 @@ let lifetime_eqb l1 l2 =
   match l1 with
   | LStatic -> (match l2 with
                 | LStatic -> true
-                | LVar _ -> false)
+                | _ -> false)
   | LVar n1 -> (match l2 with
-                | LStatic -> false
-                | LVar n2 -> Nat.eqb n1 n2)
+                | LVar n2 -> Nat.eqb n1 n2
+                | _ -> false)
+  | LBound n1 -> (match l2 with
+                  | LBound n2 -> Nat.eqb n1 n2
+                  | _ -> false)
 
 type region_ctx = lifetime list
 
@@ -137,7 +145,7 @@ let outlives_direct_b _UU03a9_ a b =
   (||) (lifetime_eqb a b)
     (match a with
      | LStatic -> true
-     | LVar _ ->
+     | _ ->
        existsb (fun pat ->
          let (x, y) = pat in (&&) (lifetime_eqb a x) (lifetime_eqb b y))
          _UU03a9_)
@@ -182,6 +190,7 @@ type 'a typeCore =
 | TBooleans
 | TNamed of string
 | TFn of 'a list * 'a
+| TForall of Big_int_Z.big_int * outlives_ctx * 'a
 | TRef of lifetime * ref_kind * 'a
 
 type ty =
@@ -208,10 +217,17 @@ let ref_usage_ok_b u = function
 (** val apply_lt_lifetime : lifetime list -> lifetime -> lifetime **)
 
 let rec apply_lt_lifetime _UU03c3_ = function
-| LStatic -> LStatic
 | LVar i -> (match nth_error _UU03c3_ i with
              | Some l' -> l'
              | None -> LVar i)
+| x -> x
+
+(** val apply_lt_outlives : lifetime list -> outlives_ctx -> outlives_ctx **)
+
+let apply_lt_outlives _UU03c3_ _UU03a9_ =
+  map (fun pat ->
+    let (a, b) = pat in
+    ((apply_lt_lifetime _UU03c3_ a), (apply_lt_lifetime _UU03c3_ b))) _UU03a9_
 
 (** val apply_lt_ty : lifetime list -> ty -> ty **)
 
@@ -226,17 +242,13 @@ let rec apply_lt_ty _UU03c3_ = function
        in map_lt
      in
      MkTy (u, (TFn ((map_lt ts), (apply_lt_ty _UU03c3_ r))))
+   | TForall (n, _UU03a9_, body) ->
+     MkTy (u, (TForall (n, (apply_lt_outlives _UU03c3_ _UU03a9_),
+       (apply_lt_ty _UU03c3_ body))))
    | TRef (l, rk, t1) ->
      MkTy (u, (TRef ((apply_lt_lifetime _UU03c3_ l), rk,
        (apply_lt_ty _UU03c3_ t1))))
    | x -> MkTy (u, x))
-
-(** val apply_lt_outlives : lifetime list -> outlives_ctx -> outlives_ctx **)
-
-let apply_lt_outlives _UU03c3_ _UU03a9_ =
-  map (fun pat ->
-    let (a, b) = pat in
-    ((apply_lt_lifetime _UU03c3_ a), (apply_lt_lifetime _UU03c3_ b))) _UU03a9_
 
 type ident = string * Big_int_Z.big_int
 
@@ -460,6 +472,25 @@ let ref_kind_eqb k1 k2 =
                 | RShared -> false
                 | RUnique -> true)
 
+(** val lifetime_pair_eqb :
+    (lifetime * lifetime) -> (lifetime * lifetime) -> bool **)
+
+let lifetime_pair_eqb p1 p2 =
+  (&&) (lifetime_eqb (fst p1) (fst p2)) (lifetime_eqb (snd p1) (snd p2))
+
+(** val outlives_ctx_eqb : outlives_ctx -> outlives_ctx -> bool **)
+
+let rec outlives_ctx_eqb _UU03a9_1 _UU03a9_2 =
+  match _UU03a9_1 with
+  | [] -> (match _UU03a9_2 with
+           | [] -> true
+           | _ :: _ -> false)
+  | p1 :: _UU03a9_1' ->
+    (match _UU03a9_2 with
+     | [] -> false
+     | p2 :: _UU03a9_2' ->
+       (&&) (lifetime_pair_eqb p1 p2) (outlives_ctx_eqb _UU03a9_1' _UU03a9_2'))
+
 (** val ty_eqb : ty -> ty -> bool **)
 
 let rec ty_eqb t1 t2 =
@@ -497,6 +528,12 @@ let rec ty_eqb t1 t2 =
                   | t4 :: l2' -> (&&) (ty_eqb t3 t4) (go l1' l2'))
              in go ts1 ts2)
             (ty_eqb r1 r2)
+        | _ -> false)
+     | TForall (n1, _UU03a9_1, b1) ->
+       (match c2 with
+        | TForall (n2, _UU03a9_2, b2) ->
+          (&&) ((&&) (Nat.eqb n1 n2) (outlives_ctx_eqb _UU03a9_1 _UU03a9_2))
+            (ty_eqb b1 b2)
         | _ -> false)
      | TRef (l1, k1, t3) ->
        (match c2 with
@@ -539,6 +576,12 @@ let ty_core_eqb c1 c2 =
           in go ts1 ts2)
          (ty_eqb r1 r2)
      | _ -> false)
+  | TForall (n1, _UU03a9_1, b1) ->
+    (match c2 with
+     | TForall (n2, _UU03a9_2, b2) ->
+       (&&) ((&&) (Nat.eqb n1 n2) (outlives_ctx_eqb _UU03a9_1 _UU03a9_2))
+         (ty_eqb b1 b2)
+     | _ -> false)
   | TRef (l1, k1, t1) ->
     (match c2 with
      | TRef (l2, k2, t2) ->
@@ -550,6 +593,13 @@ let ty_core_eqb c1 c2 =
 let rec ty_compatible_b _UU03a9_ t_actual t_expected =
   (&&) (usage_sub_bool (ty_usage t_actual) (ty_usage t_expected))
     (match ty_core t_actual with
+     | TForall (na, _UU03a9_a, ta) ->
+       let ca = TForall (na, _UU03a9_a, ta) in
+       (match ty_core t_expected with
+        | TForall (nb, _UU03a9_b, tb) ->
+          (&&) ((&&) (Nat.eqb na nb) (outlives_ctx_eqb _UU03a9_a _UU03a9_b))
+            (ty_compatible_b _UU03a9_ ta tb)
+        | x -> ty_core_eqb ca x)
      | TRef (la, rka, ta) ->
        let ca = TRef (la, rka, ta) in
        (match ty_core t_expected with
@@ -631,23 +681,50 @@ let rec mk_region_ctx n =
     (fun k -> app (mk_region_ctx k) ((LVar k) :: []))
     n
 
-(** val wf_lifetime_b : region_ctx -> lifetime -> bool **)
+(** val wf_lifetime_at_b :
+    Big_int_Z.big_int -> region_ctx -> lifetime -> bool **)
 
-let wf_lifetime_b _UU0394_ l = match l with
+let wf_lifetime_at_b bound_depth _UU0394_ l = match l with
 | LStatic -> true
 | LVar _ -> existsb (lifetime_eqb l) _UU0394_
+| LBound i -> Nat.ltb i bound_depth
 
-(** val wf_type_b : region_ctx -> ty -> bool **)
+(** val wf_outlives_at_b :
+    Big_int_Z.big_int -> region_ctx -> outlives_ctx -> bool **)
 
-let rec wf_type_b _UU0394_ = function
+let wf_outlives_at_b bound_depth _UU0394_ _UU03a9_ =
+  forallb (fun pat ->
+    let (a, b) = pat in
+    (&&) (wf_lifetime_at_b bound_depth _UU0394_ a)
+      (wf_lifetime_at_b bound_depth _UU0394_ b))
+    _UU03a9_
+
+(** val wf_type_at_b : Big_int_Z.big_int -> region_ctx -> ty -> bool **)
+
+let rec wf_type_at_b bound_depth _UU0394_ = function
 | MkTy (u, t0) ->
   (match t0 with
    | TFn (ts, r) ->
-     (&&) (forallb (wf_type_b _UU0394_) ts) (wf_type_b _UU0394_ r)
+     (&&) (forallb (wf_type_at_b bound_depth _UU0394_) ts)
+       (wf_type_at_b bound_depth _UU0394_ r)
+   | TForall (n, _UU03a9_, body) ->
+     (&&) (wf_outlives_at_b (add n bound_depth) _UU0394_ _UU03a9_)
+       (wf_type_at_b (add n bound_depth) _UU0394_ body)
    | TRef (l, rk, t_inner) ->
-     (&&) ((&&) (ref_usage_ok_b u rk) (wf_lifetime_b _UU0394_ l))
-       (wf_type_b _UU0394_ t_inner)
+     (&&)
+       ((&&) (ref_usage_ok_b u rk) (wf_lifetime_at_b bound_depth _UU0394_ l))
+       (wf_type_at_b bound_depth _UU0394_ t_inner)
    | _ -> true)
+
+(** val wf_lifetime_b : region_ctx -> lifetime -> bool **)
+
+let wf_lifetime_b _UU0394_ l =
+  wf_lifetime_at_b Big_int_Z.zero_big_int _UU0394_ l
+
+(** val wf_type_b : region_ctx -> ty -> bool **)
+
+let wf_type_b _UU0394_ t =
+  wf_type_at_b Big_int_Z.zero_big_int _UU0394_ t
 
 type infer_error =
 | ErrUnknownVar of ident
@@ -711,10 +788,6 @@ let rec unify_lt m _UU03c3_ t_param t_e =
         if negb (ref_kind_eqb rk rk')
         then None
         else (match l_p with
-              | LStatic ->
-                if lifetime_eqb LStatic l_a
-                then unify_lt m _UU03c3_ t_p_inner t_e_inner
-                else None
               | LVar i ->
                 if Nat.ltb i m
                 then (match lt_subst_vec_add _UU03c3_ i l_a with
@@ -723,7 +796,11 @@ let rec unify_lt m _UU03c3_ t_param t_e =
                       | None -> None)
                 else if lifetime_eqb (LVar i) l_a
                      then unify_lt m _UU03c3_ t_p_inner t_e_inner
-                     else None)
+                     else None
+              | x ->
+                if lifetime_eqb x l_a
+                then unify_lt m _UU03c3_ t_p_inner t_e_inner
+                else None)
       | _ -> None)
    | _ ->
      if ty_core_eqb (ty_core t_param) (ty_core t_e)
@@ -796,9 +873,7 @@ let rec infer_place _UU0393_ = function
 (** val wf_outlives_b : region_ctx -> outlives_ctx -> bool **)
 
 let wf_outlives_b _UU0394_ _UU03a9_ =
-  forallb (fun pat ->
-    let (a, b) = pat in
-    (&&) (wf_lifetime_b _UU0394_ a) (wf_lifetime_b _UU0394_ b)) _UU03a9_
+  wf_outlives_at_b Big_int_Z.zero_big_int _UU0394_ _UU03a9_
 
 (** val outlives_constraints_hold_b : outlives_ctx -> outlives_ctx -> bool **)
 

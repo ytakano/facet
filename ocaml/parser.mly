@@ -13,17 +13,38 @@ let desugar_stmt item cont =
 
 (* Mutable state for lifetime name resolution within the current fn_def *)
 let current_lifetimes : string list ref = ref []
+let current_hrt_lifetimes : string list ref = ref []
 
-let resolve_lt_name (name : string) : Big_int_Z.big_int =
+let check_unique_lifetimes names =
+  let rec go seen = function
+    | [] -> ()
+    | x :: xs ->
+      if List.mem x seen
+      then failwith (Printf.sprintf "duplicate lifetime '%s" x)
+      else go (x :: seen) xs
+  in
+  go [] names
+
+let resolve_fn_lt_name (name : string) : Big_int_Z.big_int =
   let rec aux i = function
     | [] -> failwith (Printf.sprintf "undefined lifetime '%s" name)
     | h :: _ when h = name -> Big_int_Z.big_int_of_int i
     | _ :: t -> aux (i+1) t
   in
   aux 0 !current_lifetimes
+
+let resolve_lifetime (name : string) : lifetime =
+  let rec aux_bound i = function
+    | [] -> None
+    | h :: _ when h = name -> Some (LBound (Big_int_Z.big_int_of_int i))
+    | _ :: t -> aux_bound (i+1) t
+  in
+  match aux_bound 0 !current_hrt_lifetimes with
+  | Some l -> l
+  | None -> LVar (resolve_fn_lt_name name)
 %}
 
-%token KW_FN KW_LET KW_IN KW_MUT KW_DROP KW_REPLACE
+%token KW_FN KW_FOR KW_LET KW_IN KW_MUT KW_DROP KW_REPLACE
 %token KW_AFFINE KW_LINEAR KW_UNRESTRICTED KW_ISIZE KW_F64
 %token KW_IF KW_ELSE KW_TRUE KW_FALSE KW_BOOL KW_WHERE
 %token LPAREN RPAREN LBRACE RBRACE LANGLE RANGLE
@@ -52,7 +73,7 @@ fn_def:
 opt_lifetime_params:
   | { current_lifetimes := []; [] }
   | LANGLE; names = separated_nonempty_list(COMMA, lifetime_name); RANGLE
-    { current_lifetimes := names; names }
+    { check_unique_lifetimes names; current_lifetimes := names; names }
 
 lifetime_name:
   | lt = LIFETIME { lt }
@@ -63,7 +84,7 @@ opt_where_outlives:
 
 outlives_constraint:
   | a = LIFETIME; COLON; b = LIFETIME
-    { (LVar (resolve_lt_name a), LVar (resolve_lt_name b)) }
+    { (LVar (resolve_fn_lt_name a), LVar (resolve_fn_lt_name b)) }
 
 params:
   | { [] }
@@ -169,10 +190,21 @@ ty_core:
   | LPAREN; RPAREN { TUnits }
   | AMP; t = ty { TRef (LVar Big_int_Z.zero_big_int, RShared, t) }
   | AMP; KW_MUT; t = ty { TRef (LVar Big_int_Z.zero_big_int, RUnique, t) }
-  | AMP; lt = LIFETIME; t = ty { TRef (LVar (resolve_lt_name lt), RShared, t) }
-  | AMP; lt = LIFETIME; KW_MUT; t = ty { TRef (LVar (resolve_lt_name lt), RUnique, t) }
+  | AMP; lt = LIFETIME; t = ty { TRef (resolve_lifetime lt, RShared, t) }
+  | AMP; lt = LIFETIME; KW_MUT; t = ty { TRef (resolve_lifetime lt, RUnique, t) }
   | KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty
     { TFn (ts, ret) }
+  | h = hrt_lifetime_params; KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty
+    { let (names, prev) = h in
+      current_hrt_lifetimes := prev;
+      TForall (Big_int_Z.big_int_of_int (List.length names), [], MkTy (UUnrestricted, TFn (ts, ret))) }
+
+hrt_lifetime_params:
+  | KW_FOR; LANGLE; names = separated_nonempty_list(COMMA, lifetime_name); RANGLE
+    { check_unique_lifetimes names;
+      let prev = !current_hrt_lifetimes in
+      current_hrt_lifetimes := names;
+      (names, prev) }
 
 ty_list:
   | { [] }

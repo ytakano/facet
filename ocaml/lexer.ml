@@ -24,6 +24,7 @@ let current_pos st =
 
 let keywords = [
   "fn",           Parser.KW_FN;
+  "for",          Parser.KW_FOR;
   "let",          Parser.KW_LET;
   "in",           Parser.KW_IN;
   "mut",          Parser.KW_MUT;

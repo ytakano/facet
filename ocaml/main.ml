@@ -15,6 +15,12 @@ let rec string_of_ty_core : ty typeCore -> string = function
     Printf.sprintf "fn(%s) -> %s"
       (String.concat ", " (List.map string_of_ty ts))
       (string_of_ty r)
+  | TForall (n, _, body) ->
+    Printf.sprintf "for<%s> %s"
+      (String.concat ", "
+         (List.init (Big_int_Z.int_of_big_int n)
+            (fun i -> Printf.sprintf "'_%d" i)))
+      (string_of_ty body)
   | TRef (_, RShared, t) -> "&" ^ string_of_ty t
   | TRef (_, RUnique, t) -> "&mut " ^ string_of_ty t
 

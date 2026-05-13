@@ -23,6 +23,7 @@ Inductive TypeCore (A : Type) : Type :=
 | TBooleans : TypeCore A
 | TNamed    : string -> TypeCore A
 | TFn       : list A -> A -> TypeCore A
+| TForall   : nat -> outlives_ctx -> A -> TypeCore A
 | TRef      : lifetime -> ref_kind -> A -> TypeCore A.
 
 Arguments TUnits {A}.
@@ -31,6 +32,7 @@ Arguments TFloats {A}.
 Arguments TBooleans {A}.
 Arguments TNamed {A} _.
 Arguments TFn {A} _ _.
+Arguments TForall {A} _ _ _.
 Arguments TRef {A} _ _ _.
 
 Inductive Ty : Type :=
@@ -69,7 +71,11 @@ Fixpoint apply_lt_lifetime (σ : list lifetime) (l : lifetime) : lifetime :=
       | Some l' => l'
       | None    => LVar i
       end
+  | LBound i => LBound i
   end.
+
+Definition apply_lt_outlives (σ : list lifetime) (Ω : outlives_ctx) : outlives_ctx :=
+  map (fun '(a, b) => (apply_lt_lifetime σ a, apply_lt_lifetime σ b)) Ω.
 
 Fixpoint apply_lt_ty (σ : list lifetime) (T : Ty) {struct T} : Ty :=
   match T with
@@ -86,10 +92,8 @@ Fixpoint apply_lt_ty (σ : list lifetime) (T : Ty) {struct T} : Ty :=
         end
       in
       MkTy u (TFn (map_lt ts) (apply_lt_ty σ r))
+  | MkTy u (TForall n Ω body) =>
+      MkTy u (TForall n (apply_lt_outlives σ Ω) (apply_lt_ty σ body))
   | MkTy u (TRef l rk t) =>
       MkTy u (TRef (apply_lt_lifetime σ l) rk (apply_lt_ty σ t))
   end.
-
-
-Definition apply_lt_outlives (σ : list lifetime) (Ω : outlives_ctx) : outlives_ctx :=
-  map (fun '(a, b) => (apply_lt_lifetime σ a, apply_lt_lifetime σ b)) Ω.

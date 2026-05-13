@@ -1,0 +1,6 @@
+fn accept<'a>(
+    f: unrestricted for<'a> fn(unrestricted &'a unrestricted isize) -> unrestricted &'a unrestricted isize,
+    r: unrestricted &'a unrestricted isize
+) -> unrestricted &'a unrestricted isize {
+    r
+}

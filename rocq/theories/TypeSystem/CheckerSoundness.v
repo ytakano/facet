@@ -118,6 +118,26 @@ Proof.
   destruct k1, k2; simpl; intros H; try discriminate; reflexivity.
 Qed.
 
+Lemma lifetime_pair_eqb_true : forall p1 p2,
+  lifetime_pair_eqb p1 p2 = true -> p1 = p2.
+Proof.
+  intros [a1 b1] [a2 b2] H. unfold lifetime_pair_eqb in H. simpl in H.
+  apply andb_true_iff in H as [Ha Hb].
+  apply lifetime_eqb_eq in Ha. apply lifetime_eqb_eq in Hb. subst.
+  reflexivity.
+Qed.
+
+Lemma outlives_ctx_eqb_true : forall Ω1 Ω2,
+  outlives_ctx_eqb Ω1 Ω2 = true -> Ω1 = Ω2.
+Proof.
+  induction Ω1 as [|p1 Ω1 IH]; intros Ω2 H.
+  - destruct Ω2; simpl in H; try discriminate; reflexivity.
+  - destruct Ω2 as [|p2 Ω2]; simpl in H; try discriminate.
+    apply andb_true_iff in H as [Hp HΩ].
+    apply lifetime_pair_eqb_true in Hp. subst p2.
+    f_equal. apply IH. exact HΩ.
+Qed.
+
 Lemma ty_depth_fn_arg_lt : forall u ts r t,
   In t ts -> ty_depth t < ty_depth (MkTy u (TFn ts r)).
 Proof.
@@ -142,6 +162,12 @@ Proof.
   intros u t ts. induction ts as [| t1 ts' IH]; intros r; simpl; lia.
 Qed.
 
+Lemma ty_depth_forall_body_lt : forall u n Ω body,
+  ty_depth body < ty_depth (MkTy u (TForall n Ω body)).
+Proof.
+  intros. simpl. lia.
+Qed.
+
 Lemma ty_eqb_true : forall T1 T2,
   ty_eqb T1 T2 = true -> T1 = T2.
 Proof.
@@ -157,8 +183,8 @@ Proof.
         (destruct u1, u2; simpl in Hu; try discriminate; reflexivity).
       subst u2.
       f_equal.
-      destruct c1 as [| | | | s1 | ts1 r1 | l1 k1 t1],
-               c2 as [| | | | s2 | ts2 r2 | l2 k2 t2];
+      destruct c1 as [| | | | s1 | ts1 r1 | n1 Ω1 b1 | l1 k1 t1],
+               c2 as [| | | | s2 | ts2 r2 | n2 Ω2 b2 | l2 k2 t2];
         simpl in Hc; try discriminate.
       + reflexivity.
       + reflexivity.
@@ -182,6 +208,12 @@ Proof.
             [ exact (Nat.lt_trans _ _ _ (ty_depth_fn_cons_lt u1 t1 ts1' r1) Hlt)
             | exact Hts]. }
       + apply andb_true_iff in Hc as [Hlk Ht].
+        apply andb_true_iff in Hlk as [Hn HΩ].
+        apply Nat.eqb_eq in Hn. subst n2.
+        apply outlives_ctx_eqb_true in HΩ. subst Ω2.
+        f_equal. apply IH;
+          [pose proof (ty_depth_forall_body_lt u1 n1 Ω1 b1); lia | exact Ht].
+      + apply andb_true_iff in Hc as [Hlk Ht].
         apply andb_true_iff in Hlk as [Hl Hk].
         apply lifetime_eqb_eq in Hl. subst l2.
         apply ref_kind_eqb_true in Hk. subst k2.
@@ -195,8 +227,8 @@ Lemma ty_core_eqb_true : forall c1 c2,
   ty_core_eqb c1 c2 = true -> c1 = c2.
 Proof.
   intros c1 c2 H.
-  destruct c1 as [| | | | s1 | ts1 r1 | l1 k1 t1],
-           c2 as [| | | | s2 | ts2 r2 | l2 k2 t2];
+  destruct c1 as [| | | | s1 | ts1 r1 | n1 Ω1 b1 | l1 k1 t1],
+           c2 as [| | | | s2 | ts2 r2 | n2 Ω2 b2 | l2 k2 t2];
     simpl in H; try discriminate.
   - reflexivity.
   - reflexivity.
@@ -214,6 +246,11 @@ Proof.
       f_equal.
       * apply ty_eqb_true. exact Ht.
       * apply IHts. exact Hts.
+  - apply andb_true_iff in H as [Hlk Ht].
+    apply andb_true_iff in Hlk as [Hn HΩ].
+    apply Nat.eqb_eq in Hn. subst n2.
+    apply outlives_ctx_eqb_true in HΩ. subst Ω2.
+    f_equal. apply ty_eqb_true. exact Ht.
   - apply andb_true_iff in H as [Hlk Ht].
     apply andb_true_iff in Hlk as [Hl Hk].
     apply lifetime_eqb_eq in Hl. subst l2.
@@ -239,8 +276,8 @@ Proof.
     - destruct T_actual as [? c]; destruct c; simpl in Hlt; lia.
     - destruct T_actual as [ua ca], T_expected as [ue ce].
       simpl in H. apply andb_true_iff in H as [Hu Hc].
-      destruct ca as [| | | | sa | tsa ra | la rka Ta],
-               ce as [| | | | se | tse re | lb rkb Tb];
+      destruct ca as [| | | | sa | tsa ra | na Ωa body_a | la rka Ta],
+               ce as [| | | | se | tse re | nb Ωb body_b | lb rkb Tb];
         simpl in Hc; try discriminate;
         try (apply TC_Core;
              [apply usage_sub_bool_sound; exact Hu | reflexivity]).
@@ -249,6 +286,15 @@ Proof.
       + apply TC_Core.
         * apply usage_sub_bool_sound. exact Hu.
         * apply ty_core_eqb_true. exact Hc.
+      + apply andb_true_iff in Hc as [HnΩ HT].
+        apply andb_true_iff in HnΩ as [Hn HΩ].
+        apply Nat.eqb_eq in Hn. subst nb.
+        apply outlives_ctx_eqb_true in HΩ. subst Ωb.
+        apply TC_Forall.
+        * apply usage_sub_bool_sound. exact Hu.
+        * apply IH.
+          -- simpl in Hlt. lia.
+          -- exact HT.
       + apply andb_true_iff in Hc as [Hlr HT].
         apply andb_true_iff in Hlr as [Hl Hr].
         apply ref_kind_eqb_true in Hr. subst rkb.

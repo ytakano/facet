@@ -1,0 +1,3 @@
+fn bad(f: unrestricted for<'a, 'a> fn(unrestricted &'a unrestricted isize) -> unrestricted &'a unrestricted isize) -> unrestricted () {
+    ()
+}

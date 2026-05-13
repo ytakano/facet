@@ -61,6 +61,15 @@ Fixpoint lookup_struct_in (name : string) (structs : list struct_def) : option s
 Definition lookup_struct (name : string) (env : global_env) : option struct_def :=
   lookup_struct_in name (env_structs env).
 
+Fixpoint lookup_field (name : string) (fields : list field_def) : option field_def :=
+  match fields with
+  | [] => None
+  | f :: rest =>
+      if String.eqb name (field_name f)
+      then Some f
+      else lookup_field name rest
+  end.
+
 Fixpoint lookup_trait_in (name : string) (traits : list trait_def) : option trait_def :=
   match traits with
   | [] => None
@@ -93,6 +102,49 @@ Fixpoint usage_max_list (fields : list field_def) : usage :=
   | [] => UUnrestricted
   | f :: rest => usage_max_decl (ty_usage (field_ty f)) (usage_max_list rest)
   end.
+
+Fixpoint subst_type_params_ty (σ : list Ty) (T : Ty) {struct T} : Ty :=
+  match T with
+  | MkTy u TUnits => MkTy u TUnits
+  | MkTy u TIntegers => MkTy u TIntegers
+  | MkTy u TFloats => MkTy u TFloats
+  | MkTy u TBooleans => MkTy u TBooleans
+  | MkTy u (TNamed s) => MkTy u (TNamed s)
+  | MkTy u (TParam i) =>
+      match nth_error σ i with
+      | Some T' => MkTy u (ty_core T')
+      | None => MkTy u (TParam i)
+      end
+  | MkTy u (TStruct name lts args) =>
+      let fix go (xs : list Ty) : list Ty :=
+        match xs with
+        | [] => []
+        | x :: xs' => subst_type_params_ty σ x :: go xs'
+        end
+      in
+      MkTy u (TStruct name lts (go args))
+  | MkTy u (TFn ps r) =>
+      let fix go (xs : list Ty) : list Ty :=
+        match xs with
+        | [] => []
+        | x :: xs' => subst_type_params_ty σ x :: go xs'
+        end
+      in
+      MkTy u (TFn (go ps) (subst_type_params_ty σ r))
+  | MkTy u (TForall n Ω body) =>
+      MkTy u (TForall n Ω (subst_type_params_ty σ body))
+  | MkTy u (TRef l rk inner) =>
+      MkTy u (TRef l rk (subst_type_params_ty σ inner))
+  end.
+
+Definition instantiate_struct_field_ty
+    (lifetime_args : list lifetime) (type_args : list Ty) (f : field_def) : Ty :=
+  subst_type_params_ty type_args (apply_lt_ty lifetime_args (field_ty f)).
+
+Definition instantiate_struct_ty
+    (s : struct_def) (lifetime_args : list lifetime) (type_args : list Ty) : Ty :=
+  MkTy (usage_max_list (struct_fields s))
+       (TStruct (struct_name s) lifetime_args type_args).
 
 (* ------------------------------------------------------------------ *)
 (* Decidable matching helpers for generic impl lookup                    *)

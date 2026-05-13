@@ -43,7 +43,8 @@ Inductive literal : Type :=
 
 Inductive place : Type :=
 | PVar   : ident -> place
-| PDeref : place -> place.
+| PDeref : place -> place
+| PField : place -> string -> place.
 
 Inductive expr : Type :=
 | EUnit     : expr
@@ -52,8 +53,10 @@ Inductive expr : Type :=
 | ELet      : mutability -> ident -> Ty -> expr -> expr -> expr
 | ELetInfer : mutability -> ident -> expr -> expr -> expr
 | EFn       : ident -> expr
+| EPlace    : place -> expr
 | ECall     : ident -> list expr -> expr
 | ECallExpr : expr -> list expr -> expr
+| EStruct   : string -> list lifetime -> list Ty -> list (string * expr) -> expr
 | EReplace  : place -> expr -> expr
 | EAssign   : place -> expr -> expr
 | EBorrow   : ref_kind -> place -> expr
@@ -69,6 +72,7 @@ Fixpoint expr_as_place (e : expr) : option place :=
       | Some p => Some (PDeref p)
       | None => None
       end
+  | EPlace p => Some p
   | _ => None
   end.
 

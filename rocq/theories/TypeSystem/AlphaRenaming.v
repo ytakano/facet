@@ -130,7 +130,10 @@ Inductive place_alpha (ρ : rename_env) : place -> place -> Prop :=
       place_alpha ρ (PVar x) (PVar (lookup_rename x ρ))
   | PA_Deref : forall p pr,
       place_alpha ρ p pr ->
-      place_alpha ρ (PDeref p) (PDeref pr).
+      place_alpha ρ (PDeref p) (PDeref pr)
+  | PA_Field : forall p pr f,
+      place_alpha ρ p pr ->
+      place_alpha ρ (PField p f) (PField pr f).
 
 (* place_name gives the root variable; disjointness of root ↔ place_alpha holds. *)
 Lemma rename_place_alpha_sound : forall ρ p,
@@ -140,6 +143,7 @@ Proof.
   intros ρ p Hdisj. induction p; simpl in *.
   - apply PA_Var. exact Hdisj.
   - apply PA_Deref. apply IHp. exact Hdisj.
+  - apply PA_Field. apply IHp. exact Hdisj.
 Qed.
 
 Lemma place_name_root : forall p,
@@ -164,6 +168,9 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
       expr_alpha ρ (EVar x) (EVar (lookup_rename x ρ))
   | EA_Fn : forall ρ fname,
       expr_alpha ρ (EFn fname) (EFn fname)
+  | EA_Place : forall ρ p pr,
+      place_alpha ρ p pr ->
+      expr_alpha ρ (EPlace p) (EPlace pr)
   | EA_Let : forall ρ m x xr T e1 e1r e2 e2r,
       expr_alpha ρ e1 e1r ->
       expr_alpha ((x, xr) :: ρ) e2 e2r ->
@@ -179,6 +186,8 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
       expr_alpha ρ callee calleer ->
       exprs_alpha ρ args argsr ->
       expr_alpha ρ (ECallExpr callee args) (ECallExpr calleer argsr)
+  | EA_Struct : forall ρ name lts args fields fieldsr,
+      expr_alpha ρ (EStruct name lts args fields) (EStruct name lts args fieldsr)
   | EA_Replace : forall ρ p pr e er,
       place_alpha ρ p pr ->
       expr_alpha ρ e er ->
@@ -424,7 +433,7 @@ Lemma alpha_rename_typed_place_backward : forall fenv0 fenvr n ρ Γ0 Γr p T,
   typed_place fenv0 n Γ0 p T.
 Proof.
   intros fenv0 fenvr n ρ Γ0 Γr p.
-  induction p as [x | p IH]; intros T Hctx Hsafe Htyped_place.
+  induction p as [x | p IH | p IH f]; intros T Hctx Hsafe Htyped_place.
   - simpl in Htyped_place. inversion Htyped_place; subst.
     apply TP_Var.
     eapply ctx_alpha_lookup_backward; eauto.
@@ -434,6 +443,7 @@ Proof.
     + exact Hctx.
     + exact Hsafe.
     + exact H0.
+  - simpl in Htyped_place. inversion Htyped_place.
 Qed.
 
 Lemma expr_as_place_alpha_rename_some_backward : forall ρ used e er used' pr,
@@ -459,6 +469,9 @@ Proof.
       (fresh_ident i (i :: free_vars_expr e2 ++ used1) ::
        i :: free_vars_expr e2 ++ used1) e2).
     injection Hrename as <- _. simpl in Hplace. discriminate.
+  - injection Hrename as <- _. simpl in Hplace.
+    injection Hplace as <-.
+    exists p. split; reflexivity.
   - destruct ((fix go (used0 : list ident) (args0 : list expr)
                 : list expr * list ident :=
                  match args0 with
@@ -479,6 +492,16 @@ Proof.
                      let (rest', used2) := go used1 rest in
                      (arg' :: rest', used2)
                  end) used0 l).
+    injection Hrename as <- _. simpl in Hplace. discriminate.
+  - destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+                : list (string * expr) * list ident :=
+                 match fields0 with
+                 | [] => ([], used0)
+                 | (fname, e0) :: rest =>
+                     let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+                     let (rest', used2) := go used1 rest in
+                     ((fname, e0') :: rest', used2)
+                 end) used l1).
     injection Hrename as <- _. simpl in Hplace. discriminate.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
     injection Hrename as <- _. simpl in Hplace. discriminate.
@@ -521,6 +544,7 @@ Proof.
       (fresh_ident i (i :: free_vars_expr e2 ++ used1) ::
        i :: free_vars_expr e2 ++ used1) e2).
     injection Hrename as <- _. reflexivity.
+  - injection Hrename as <- _. simpl in Hnone. discriminate.
   - destruct ((fix go (used0 : list ident) (args0 : list expr)
                 : list expr * list ident :=
                  match args0 with
@@ -541,6 +565,16 @@ Proof.
                      let (rest', used2) := go used1 rest in
                      (arg' :: rest', used2)
                  end) used0 l).
+    injection Hrename as <- _. reflexivity.
+  - destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+                : list (string * expr) * list ident :=
+                 match fields0 with
+                 | [] => ([], used0)
+                 | (fname, e0) :: rest =>
+                     let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+                     let (rest', used2) := go used1 rest in
+                     ((fname, e0') :: rest', used2)
+                 end) used l1).
     injection Hrename as <- _. reflexivity.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
     injection Hrename as <- _. reflexivity.
@@ -563,6 +597,7 @@ Lemma expr_as_place_place_name_in_free_vars : forall e p,
   In (place_name p) (free_vars_expr e).
 Proof.
   induction e; intros p0 Hplace; simpl in Hplace; try discriminate.
+  - injection Hplace as <-. simpl. left. reflexivity.
   - injection Hplace as <-. simpl. left. reflexivity.
   - destruct (expr_as_place e) as [p1 |] eqn:Hp1; [|discriminate].
     injection Hplace as <-. simpl.
@@ -732,6 +767,7 @@ Fixpoint expr_size (e : expr) : nat :=
   | ELit _ => 1
   | EVar _ => 1
   | EFn _ => 1
+  | EPlace _ => 1
   | ELet _ _ _ e1 e2 => S (expr_size e1 + expr_size e2)
   | ELetInfer _ _ e1 e2 => S (expr_size e1 + expr_size e2)
   | ECall _ args =>
@@ -747,6 +783,12 @@ Fixpoint expr_size (e : expr) : nat :=
             | [] => 0
             | arg :: rest => expr_size arg + go rest
             end) args)
+  | EStruct _ _ _ fields =>
+      S ((fix go (fields0 : list (string * expr)) : nat :=
+            match fields0 with
+            | [] => 0
+            | (_, e) :: rest => expr_size e + go rest
+            end) fields)
   | EReplace _ e => S (expr_size e)
   | EAssign _ e => S (expr_size e)
   | EBorrow _ _ => 1
@@ -783,6 +825,18 @@ Proof.
   - simpl in *. destruct Hin as [<- | Hin].
     + lia.
     + specialize (IH arg Hin). simpl in IH. lia.
+Qed.
+
+Lemma expr_size_struct_field_lt : forall name lts args fields fname field_expr,
+  In (fname, field_expr) fields ->
+  expr_size field_expr < expr_size (EStruct name lts args fields).
+Proof.
+  intros name lts args fields.
+  induction fields as [| [fname0 e0] rest IH]; intros fname field_expr Hin.
+  - contradiction.
+  - simpl in *. destruct Hin as [Heq | Hin].
+    + injection Heq as _ <-. lia.
+    + specialize (IH fname field_expr Hin). simpl in IH. lia.
 Qed.
 
 Lemma alpha_rename_call_args_used_extends : forall ρ used args argsr used',
@@ -826,6 +880,50 @@ Proof.
     + eapply Hexpr.
       * left. reflexivity.
       * exact Harg.
+      * exact Hin.
+Qed.
+
+Lemma alpha_rename_struct_fields_used_extends : forall ρ used fields fieldsr used',
+  (forall used0 fname e er used1,
+      In (fname, e) fields ->
+      alpha_rename_expr ρ used0 e = (er, used1) ->
+      forall x, In x used0 -> In x used1) ->
+  ((fix go (used0 : list ident) (fields0 : list (string * expr))
+      : list (string * expr) * list ident :=
+      match fields0 with
+      | [] => ([], used0)
+      | (fname, e) :: rest =>
+          let (e', used1) := alpha_rename_expr ρ used0 e in
+          let (rest', used2) := go used1 rest in
+          ((fname, e') :: rest', used2)
+      end) used fields) = (fieldsr, used') ->
+  forall x, In x used -> In x used'.
+Proof.
+  intros ρ used fields.
+  revert used.
+  induction fields as [| [fname e] rest IH]; intros used fieldsr used' Hexpr Hrename x Hin;
+    simpl in Hrename.
+  - injection Hrename as _ <-. exact Hin.
+  - destruct (alpha_rename_expr ρ used e) as [er used1] eqn:He.
+    destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+          : list (string * expr) * list ident :=
+          match fields0 with
+          | [] => ([], used0)
+          | (fname0, e0) :: rest0 =>
+              let (e0', used2) := alpha_rename_expr ρ used0 e0 in
+              let (rest', used3) := go used2 rest0 in
+              ((fname0, e0') :: rest', used3)
+          end) used1 rest) as [restr used2] eqn:Hrest.
+    injection Hrename as _ <-.
+    eapply IH.
+    + intros used0 fname0 e0 er0 used_tail Hin_rest Hrename0.
+      eapply Hexpr.
+      * right. exact Hin_rest.
+      * exact Hrename0.
+    + exact Hrest.
+    + eapply Hexpr.
+      * left. reflexivity.
+      * exact He.
       * exact Hin.
 Qed.
 
@@ -874,8 +972,9 @@ Proof.
       -- simpl in Hlt. assert (expr_size e1 < n) as Hlt_e1 by lia. exact Hlt_e1.
       -- exact He1.
       -- exact Hin.
-  + injection Hrename as _ <-. exact Hin.
-  + remember
+	  + injection Hrename as _ <-. exact Hin.
+	  + injection Hrename as _ <-. exact Hin.
+	  + remember
       ((fix go (used0 : list ident) (args0 : list expr)
           : list expr * list ident :=
           match args0 with
@@ -923,6 +1022,27 @@ Proof.
         exact Hlt_callee.
       -- exact Hcallee.
       -- exact Hin.
+  + remember
+      ((fix go (used0 : list ident) (fields0 : list (string * expr))
+          : list (string * expr) * list ident :=
+          match fields0 with
+          | [] => ([], used0)
+          | (fname, e0) :: rest =>
+              let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+              let (rest', used2) := go used1 rest in
+              ((fname, e0') :: rest', used2)
+          end) used l1) as r eqn:Hfields.
+    destruct r as [fieldsr used_fields].
+    injection Hrename as _ <-.
+    eapply alpha_rename_struct_fields_used_extends.
+    * intros used0 fname efield er0 used1 Hin_field Hrename0.
+      eapply IH.
+      -- pose proof (expr_size_struct_field_lt s l l0 l1 fname efield Hin_field) as Hfield_lt.
+         assert (expr_size efield < n) as Hlt_field by lia.
+         exact Hlt_field.
+      -- exact Hrename0.
+    * symmetry. exact Hfields.
+    * exact Hin.
   + destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as _ <-.
     eapply IH.
@@ -1154,8 +1274,14 @@ Proof.
            right. apply in_or_app. left. exact Hin.
         ++ exact (Hdisj2 x Hin Hin_range).
       -- exact He2.
-  + injection Hrename as <- _. constructor.
-  + remember
+	  + injection Hrename as <- _. constructor.
+	  + injection Hrename as <- _.
+	    apply EA_Place.
+	    apply rename_place_alpha_sound.
+	    intros Hin_range. apply (Hdisj (place_name p)).
+	    * simpl. left. reflexivity.
+	    * exact Hin_range.
+	  + remember
       ((fix go (used0 : list ident) (args0 : list expr)
           : list expr * list ident :=
           match args0 with
@@ -1212,9 +1338,22 @@ Proof.
             exact Hlt_arg.
          ++ exact Hdisj0.
          ++ exact Hrename0.
-      -- exact Hdisj_args.
-      -- symmetry. exact Hargs.
-  + (* EReplace p e *)
+	      -- exact Hdisj_args.
+	      -- symmetry. exact Hargs.
+	  + remember
+	      ((fix go (used0 : list ident) (fields0 : list (string * expr))
+	          : list (string * expr) * list ident :=
+	          match fields0 with
+	          | [] => ([], used0)
+	          | (fname, e0) :: rest =>
+	              let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+	              let (rest', used2) := go used1 rest in
+	              ((fname, e0') :: rest', used2)
+	          end) used l1) as r eqn:Hfields.
+	    destruct r as [fieldsr used_fields].
+	    injection Hrename as <- _.
+	    apply EA_Struct.
+	  + (* EReplace p e *)
     destruct (disjoint_names_cons_l (place_name p) (free_vars_expr e)
       (rename_range ρ) Hdisj) as [Hpx Hdisj_e].
     destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.

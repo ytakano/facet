@@ -324,6 +324,7 @@ Fixpoint place_name (p : place) : ident :=
   match p with
   | PVar x    => x
   | PDeref q  => place_name q
+  | PField q _ => place_name q
   end.
 
 (* ------------------------------------------------------------------ *)
@@ -349,7 +350,11 @@ Inductive infer_error : Type :=
   | ErrHrtBoundUnsatisfied : infer_error
   | ErrHrtUnresolvedBound : infer_error
   | ErrHrtMonomorphicUsedBound : infer_error
-  | ErrMalformedHrtBody : TypeCore Ty -> infer_error.
+  | ErrMalformedHrtBody : TypeCore Ty -> infer_error
+  | ErrStructNotFound : string -> infer_error
+  | ErrFieldNotFound : string -> infer_error
+  | ErrDuplicateField : string -> infer_error
+  | ErrMissingField : string -> infer_error.
 
 Definition compatible_error (T_actual T_expected : Ty) : infer_error :=
   match ty_core T_actual, ty_core T_expected with
@@ -555,6 +560,95 @@ Fixpoint infer_place (Γ : ctx) (p : place) : infer_result Ty :=
           | c => infer_err (ErrNotAReference c)
           end
       end
+  | PField _ _ => infer_err ErrNotImplemented
+  end.
+
+Definition lookup_field_b (name : string) (fields : list (string * expr)) : option expr :=
+  let fix go fields0 :=
+    match fields0 with
+    | [] => None
+    | (fname, e) :: rest =>
+        if String.eqb name fname then Some e else go rest
+    end
+  in go fields.
+
+Definition has_field_b (name : string) (fields : list (string * expr)) : bool :=
+  match lookup_field_b name fields with
+  | Some _ => true
+  | None => false
+  end.
+
+Fixpoint field_names_unique_b (fields : list (string * expr)) : bool :=
+  match fields with
+  | [] => true
+  | (name, _) :: rest =>
+      negb (has_field_b name rest) && field_names_unique_b rest
+  end.
+
+Definition first_duplicate_field (fields : list (string * expr)) : option string :=
+  let fix go fields0 :=
+    match fields0 with
+    | [] => None
+    | (name, _) :: rest =>
+        if has_field_b name rest then Some name else go rest
+    end
+  in go fields.
+
+Fixpoint first_unknown_field
+    (fields : list (string * expr)) (defs : list field_def) : option string :=
+  match fields with
+  | [] => None
+  | (name, _) :: rest =>
+      match lookup_field name defs with
+      | Some _ => first_unknown_field rest defs
+      | None => Some name
+      end
+  end.
+
+Fixpoint first_missing_field
+    (defs : list field_def) (fields : list (string * expr)) : option string :=
+  match defs with
+  | [] => None
+  | f :: rest =>
+      if has_field_b (field_name f) fields
+      then first_missing_field rest fields
+      else Some (field_name f)
+  end.
+
+Fixpoint infer_place_env (env : global_env) (Γ : ctx) (p : place) : infer_result Ty :=
+  match p with
+  | PVar x =>
+      match ctx_lookup_b x Γ with
+      | None => infer_err (ErrUnknownVar x)
+      | Some (_, true) => infer_err (ErrAlreadyConsumed x)
+      | Some (T, false) => infer_ok T
+      end
+  | PDeref q =>
+      match infer_place_env env Γ q with
+      | infer_err err => infer_err err
+      | infer_ok Tq =>
+          match ty_core Tq with
+          | TRef _ _ T => infer_ok T
+          | c => infer_err (ErrNotAReference c)
+          end
+      end
+  | PField q field =>
+      match infer_place_env env Γ q with
+      | infer_err err => infer_err err
+      | infer_ok Tq =>
+          match ty_core Tq with
+          | TStruct sname lts args =>
+              match lookup_struct sname env with
+              | None => infer_err (ErrStructNotFound sname)
+              | Some s =>
+                  match lookup_field field (struct_fields s) with
+                  | None => infer_err (ErrFieldNotFound field)
+                  | Some f => infer_ok (instantiate_struct_field_ty lts args f)
+                  end
+              end
+          | c => infer_err (ErrTypeMismatch c (TStruct "" [] []))
+          end
+      end
   end.
 
 Fixpoint free_vars_expr (e : expr) : list ident :=
@@ -563,6 +657,7 @@ Fixpoint free_vars_expr (e : expr) : list ident :=
   | ELit _ => []
   | EVar x => [x]
   | EFn _ => []
+  | EPlace p => [place_name p]
   | ELet _ x _ e1 e2 => x :: free_vars_expr e1 ++ free_vars_expr e2
   | ELetInfer _ x e1 e2 => x :: free_vars_expr e1 ++ free_vars_expr e2
   | ECall _ args =>
@@ -579,6 +674,13 @@ Fixpoint free_vars_expr (e : expr) : list ident :=
         | arg :: rest => free_vars_expr arg ++ go rest
         end
       in free_vars_expr callee ++ go args
+  | EStruct _ _ _ fields =>
+      let fix go (fields0 : list (string * expr)) : list ident :=
+        match fields0 with
+        | [] => []
+        | (_, e) :: rest => free_vars_expr e ++ go rest
+        end
+      in go fields
   | EReplace p e_new => place_name p :: free_vars_expr e_new
   | EAssign p e_new => place_name p :: free_vars_expr e_new
   | EBorrow _ p => [place_name p]
@@ -597,6 +699,7 @@ Fixpoint rename_place (ρ : rename_env) (p : place) : place :=
   match p with
   | PVar x   => PVar (lookup_rename x ρ)
   | PDeref q => PDeref (rename_place ρ q)
+  | PField q f => PField (rename_place ρ q) f
   end.
 
 Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
@@ -606,6 +709,7 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
   | ELit l => (ELit l, used)
   | EVar x => (EVar (lookup_rename x ρ), used)
   | EFn fname => (EFn fname, used)
+  | EPlace p => (EPlace (rename_place ρ p), used)
   | ECall fname args =>
       let fix go (used0 : list ident) (args0 : list expr)
           : list expr * list ident :=
@@ -633,6 +737,19 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
       in
       let (args', used') := go used1 args in
       (ECallExpr callee' args', used')
+  | EStruct name lts args fields =>
+      let fix go (used0 : list ident) (fields0 : list (string * expr))
+          : list (string * expr) * list ident :=
+        match fields0 with
+        | [] => ([], used0)
+        | (fname, e) :: rest =>
+            let (e', used1) := alpha_rename_expr ρ used0 e in
+            let (rest', used2) := go used1 rest in
+            ((fname, e') :: rest', used2)
+        end
+      in
+      let (fields', used') := go used fields in
+      (EStruct name lts args fields', used')
   | EReplace p e_new =>
       let (e_new', used') := alpha_rename_expr ρ used e_new in
       (EReplace (rename_place ρ p) e_new', used')
@@ -762,6 +879,10 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
       | Some fdef => infer_ok (fn_value_ty fdef, Γ)
       end
 
+  | EPlace _ => infer_err ErrNotImplemented
+
+  | EStruct _ _ _ _ => infer_err ErrNotImplemented
+
   | ELet m x T e1 e2 =>
       match infer_core fenv Ω n Γ e1 with
       | infer_err err          => infer_err err
@@ -820,6 +941,8 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
           end
       end
 
+  | EReplace (PField _ _) _ => infer_err ErrNotImplemented
+
   | EAssign (PVar x) e_new =>
       match ctx_lookup_b x Γ with
       | None => infer_err (ErrUnknownVar x)
@@ -862,6 +985,8 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
 	          | c => infer_err (ErrNotAReference c)
 	          end
       end
+
+  | EAssign (PField _ _) _ => infer_err ErrNotImplemented
 
   | ECall fname args =>
       match lookup_fn_b fname fenv with
@@ -1039,6 +1164,8 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
           end
       end
 
+  | EBorrow _ (PField _ _) => infer_err ErrNotImplemented
+
   | EDeref r =>
       match expr_as_place r with
       | Some p =>
@@ -1070,6 +1197,389 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
       end
 
   end.
+
+Fixpoint infer_core_env_fuel (fuel : nat)
+    (env : global_env) (Ω : outlives_ctx) (n : nat) (Γ : ctx) (e : expr)
+    : infer_result (Ty * ctx) :=
+  match fuel with
+  | O => infer_err ErrNotImplemented
+  | S fuel' =>
+  match e with
+  | EUnit =>
+      infer_ok (MkTy UUnrestricted TUnits, Γ)
+  | ELit (LInt _) =>
+      infer_ok (MkTy UUnrestricted TIntegers, Γ)
+  | ELit (LFloat _) =>
+      infer_ok (MkTy UUnrestricted TFloats, Γ)
+  | ELit (LBool _) =>
+      infer_ok (MkTy UUnrestricted TBooleans, Γ)
+  | EVar x =>
+      match ctx_lookup_b x Γ with
+      | None => infer_err (ErrUnknownVar x)
+      | Some (T, b) =>
+          if usage_eqb (ty_usage T) UUnrestricted
+          then infer_ok (T, Γ)
+          else if b
+               then infer_err (ErrAlreadyConsumed x)
+               else match ctx_consume_b x Γ with
+                    | Some Γ' => infer_ok (T, Γ')
+                    | None => infer_err (ErrUnknownVar x)
+                    end
+      end
+  | EPlace p =>
+      match infer_place_env env Γ p with
+      | infer_err err => infer_err err
+      | infer_ok T =>
+          if usage_eqb (ty_usage T) UUnrestricted
+          then infer_ok (T, Γ)
+          else match p with
+               | PVar x =>
+                   match ctx_consume_b x Γ with
+                   | Some Γ' => infer_ok (T, Γ')
+                   | None => infer_err (ErrUnknownVar x)
+                   end
+               | PField q _ =>
+                   match ctx_consume_b (place_name q) Γ with
+                   | Some Γ' => infer_ok (T, Γ')
+                   | None => infer_err (ErrUnknownVar (place_name q))
+                   end
+               | PDeref _ => infer_err (ErrUsageMismatch (ty_usage T) UUnrestricted)
+               end
+      end
+  | EFn fname =>
+      match lookup_fn_b fname (env_fns env) with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef => infer_ok (fn_value_ty fdef, Γ)
+      end
+  | EStruct sname lts args fields =>
+      match lookup_struct sname env with
+      | None => infer_err (ErrStructNotFound sname)
+      | Some s =>
+          if negb (Nat.eqb (List.length lts) (struct_lifetimes s))
+          then infer_err ErrArityMismatch
+          else if negb (Nat.eqb (List.length args) (struct_type_params s))
+          then infer_err ErrArityMismatch
+          else
+          match first_duplicate_field fields with
+          | Some name => infer_err (ErrDuplicateField name)
+          | None =>
+              match first_unknown_field fields (struct_fields s) with
+              | Some name => infer_err (ErrFieldNotFound name)
+              | None =>
+                  match first_missing_field (struct_fields s) fields with
+                  | Some name => infer_err (ErrMissingField name)
+                  | None =>
+                      let fix go (Γ0 : ctx) (defs : list field_def)
+                          : infer_result ctx :=
+                        match defs with
+                        | [] => infer_ok Γ0
+                        | f :: rest =>
+                            match lookup_field_b (field_name f) fields with
+                            | None => infer_err (ErrMissingField (field_name f))
+                            | Some e_field =>
+                                match infer_core_env_fuel fuel' env Ω n Γ0 e_field with
+                                | infer_err err => infer_err err
+                                | infer_ok (T_field, Γ1) =>
+                                    let T_expected := instantiate_struct_field_ty lts args f in
+                                    if ty_compatible_b Ω T_field T_expected
+                                    then go Γ1 rest
+                                    else infer_err (compatible_error T_field T_expected)
+                                end
+                            end
+                        end
+                      in
+                      match go Γ (struct_fields s) with
+                      | infer_err err => infer_err err
+                      | infer_ok Γ' => infer_ok (instantiate_struct_ty s lts args, Γ')
+                      end
+                  end
+              end
+          end
+      end
+  | ELet m x T e1 e2 =>
+      match infer_core_env_fuel fuel' env Ω n Γ e1 with
+      | infer_err err => infer_err err
+      | infer_ok (T1, Γ1) =>
+          if ty_compatible_b Ω T1 T
+          then match infer_core_env_fuel fuel' env Ω n (ctx_add_b x T m Γ1) e2 with
+               | infer_err err => infer_err err
+               | infer_ok (T2, Γ2) =>
+                   if ctx_check_ok x T Γ2
+                   then infer_ok (T2, ctx_remove_b x Γ2)
+                   else infer_err ErrContextCheckFailed
+               end
+          else infer_err (compatible_error T1 T)
+      end
+  | ELetInfer m x e1 e2 =>
+      match infer_core_env_fuel fuel' env Ω n Γ e1 with
+      | infer_err err => infer_err err
+      | infer_ok (T1, Γ1) =>
+          match infer_core_env_fuel fuel' env Ω n (ctx_add_b x T1 m Γ1) e2 with
+          | infer_err err => infer_err err
+          | infer_ok (T2, Γ2) =>
+              if ctx_check_ok x T1 Γ2
+              then infer_ok (T2, ctx_remove_b x Γ2)
+              else infer_err ErrContextCheckFailed
+          end
+      end
+  | EDrop e1 =>
+      match infer_core_env_fuel fuel' env Ω n Γ e1 with
+      | infer_err err => infer_err err
+      | infer_ok (_, Γ') => infer_ok (MkTy UUnrestricted TUnits, Γ')
+      end
+  | EReplace (PVar x) e_new =>
+      match ctx_lookup_b x Γ with
+      | None => infer_err (ErrUnknownVar x)
+      | Some (_, true) => infer_err (ErrAlreadyConsumed x)
+      | Some (T_x, false) =>
+          match ctx_lookup_mut_b x Γ with
+          | Some MMutable =>
+              match infer_core_env_fuel fuel' env Ω n Γ e_new with
+              | infer_err err => infer_err err
+              | infer_ok (T_new, Γ') =>
+                  if ty_compatible_b Ω T_new T_x
+                  then infer_ok (T_x, Γ')
+                  else infer_err (compatible_error T_new T_x)
+              end
+          | Some MImmutable => infer_err (ErrNotMutable x)
+          | None => infer_err (ErrUnknownVar x)
+          end
+      end
+  | EReplace (PDeref p) e_new =>
+      match infer_place_env env Γ p with
+      | infer_err err => infer_err err
+      | infer_ok T_p =>
+          match ty_core T_p with
+          | TRef _ RUnique T_inner =>
+              match infer_core_env_fuel fuel' env Ω n Γ e_new with
+              | infer_err err => infer_err err
+              | infer_ok (T_new, Γ') =>
+                  if ty_compatible_b Ω T_new T_inner
+                  then infer_ok (T_inner, Γ')
+                  else infer_err (compatible_error T_new T_inner)
+              end
+          | c => infer_err (ErrNotAReference c)
+          end
+      end
+  | EReplace (PField p field) e_new =>
+      match infer_place_env env Γ (PField p field) with
+      | infer_err err => infer_err err
+      | infer_ok T_field =>
+          match ctx_lookup_mut_b (place_name p) Γ with
+          | Some MMutable =>
+              match infer_core_env_fuel fuel' env Ω n Γ e_new with
+              | infer_err err => infer_err err
+              | infer_ok (T_new, Γ') =>
+                  if ty_compatible_b Ω T_new T_field
+                  then infer_ok (T_field, Γ')
+                  else infer_err (compatible_error T_new T_field)
+              end
+          | Some MImmutable => infer_err (ErrNotMutable (place_name p))
+          | None => infer_err (ErrUnknownVar (place_name p))
+          end
+      end
+  | EAssign (PVar x) e_new =>
+      match ctx_lookup_b x Γ with
+      | None => infer_err (ErrUnknownVar x)
+      | Some (_, true) => infer_err (ErrAlreadyConsumed x)
+      | Some (T_x, false) =>
+          match ctx_lookup_mut_b x Γ with
+          | Some MMutable =>
+              if usage_eqb (ty_usage T_x) ULinear
+              then infer_err (ErrUsageMismatch (ty_usage T_x) UAffine)
+              else match infer_core_env_fuel fuel' env Ω n Γ e_new with
+                   | infer_err err => infer_err err
+                   | infer_ok (T_new, Γ') =>
+                       if ty_compatible_b Ω T_new T_x
+                       then infer_ok (MkTy UUnrestricted TUnits, Γ')
+                       else infer_err (compatible_error T_new T_x)
+                   end
+          | Some MImmutable => infer_err (ErrNotMutable x)
+          | None => infer_err (ErrUnknownVar x)
+          end
+      end
+  | EAssign (PDeref p) e_new =>
+      match infer_place_env env Γ p with
+      | infer_err err => infer_err err
+      | infer_ok T_p =>
+          match ty_core T_p with
+          | TRef _ RUnique T_inner =>
+              if usage_eqb (ty_usage T_inner) ULinear
+              then infer_err (ErrUsageMismatch (ty_usage T_inner) UAffine)
+              else match infer_core_env_fuel fuel' env Ω n Γ e_new with
+                   | infer_err err => infer_err err
+                   | infer_ok (T_new, Γ') =>
+                       if ty_compatible_b Ω T_new T_inner
+                       then infer_ok (MkTy UUnrestricted TUnits, Γ')
+                       else infer_err (compatible_error T_new T_inner)
+                   end
+          | c => infer_err (ErrNotAReference c)
+          end
+      end
+  | EAssign (PField p field) e_new =>
+      match infer_place_env env Γ (PField p field) with
+      | infer_err err => infer_err err
+      | infer_ok T_field =>
+          match ctx_lookup_mut_b (place_name p) Γ with
+          | Some MMutable =>
+              if usage_eqb (ty_usage T_field) ULinear
+              then infer_err (ErrUsageMismatch (ty_usage T_field) UAffine)
+              else match infer_core_env_fuel fuel' env Ω n Γ e_new with
+                   | infer_err err => infer_err err
+                   | infer_ok (T_new, Γ') =>
+                       if ty_compatible_b Ω T_new T_field
+                       then infer_ok (MkTy UUnrestricted TUnits, Γ')
+                       else infer_err (compatible_error T_new T_field)
+                   end
+          | Some MImmutable => infer_err (ErrNotMutable (place_name p))
+          | None => infer_err (ErrUnknownVar (place_name p))
+          end
+      end
+  | EBorrow rk p =>
+      match infer_place_env env Γ p with
+      | infer_err err => infer_err err
+      | infer_ok T_p =>
+          match rk with
+          | RShared => infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_p), Γ)
+          | RUnique =>
+              match ctx_lookup_mut_b (place_name p) Γ with
+              | Some MMutable => infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Γ)
+              | Some MImmutable => infer_err (ErrImmutableBorrow (place_name p))
+              | None => infer_err (ErrUnknownVar (place_name p))
+              end
+          end
+      end
+  | EDeref r =>
+      match expr_as_place r with
+      | Some p =>
+          match infer_place_env env Γ p with
+          | infer_err err => infer_err err
+          | infer_ok T_r =>
+              match ty_core T_r with
+              | TRef _ _ T_inner =>
+                  if usage_eqb (ty_usage T_inner) UUnrestricted
+                  then infer_ok (T_inner, Γ)
+                  else infer_err (ErrUsageMismatch (ty_usage T_inner) UUnrestricted)
+              | c => infer_err (ErrNotAReference c)
+              end
+          end
+      | None =>
+          match infer_core_env_fuel fuel' env Ω n Γ r with
+          | infer_err err => infer_err err
+          | infer_ok (T_r, Γ') =>
+              match ty_core T_r with
+              | TRef _ _ T_inner =>
+                  if usage_eqb (ty_usage T_inner) UUnrestricted
+                  then infer_ok (T_inner, Γ')
+                  else infer_err (ErrUsageMismatch (ty_usage T_inner) UUnrestricted)
+              | c => infer_err (ErrNotAReference c)
+              end
+          end
+      end
+  | EIf e1 e2 e3 =>
+      match infer_core_env_fuel fuel' env Ω n Γ e1 with
+      | infer_err err => infer_err err
+      | infer_ok (T_cond, Γ1) =>
+          if ty_core_eqb (ty_core T_cond) TBooleans
+          then match infer_core_env_fuel fuel' env Ω n Γ1 e2 with
+               | infer_err err => infer_err err
+               | infer_ok (T2, Γ2) =>
+                   match infer_core_env_fuel fuel' env Ω n Γ1 e3 with
+                   | infer_err err => infer_err err
+                   | infer_ok (T3, Γ3) =>
+                       if ty_core_eqb (ty_core T2) (ty_core T3)
+                       then match ctx_merge Γ2 Γ3 with
+                            | Some Γ4 =>
+                                infer_ok (MkTy (usage_max (ty_usage T2) (ty_usage T3))
+                                               (ty_core T2), Γ4)
+                            | None => infer_err ErrContextCheckFailed
+                            end
+                       else infer_err (ErrTypeMismatch (ty_core T2) (ty_core T3))
+                   end
+               end
+          else infer_err (ErrTypeMismatch (ty_core T_cond) TBooleans)
+      end
+  | ECall fname args =>
+      match lookup_fn_b fname (env_fns env) with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef =>
+          let m := fn_lifetimes fdef in
+          let fix collect (Γ0 : ctx) (as_ : list expr)
+              : infer_result (list Ty * ctx) :=
+            match as_ with
+            | [] => infer_ok ([], Γ0)
+            | e' :: es =>
+                match infer_core_env_fuel fuel' env Ω n Γ0 e' with
+                | infer_err err => infer_err err
+                | infer_ok (T_e, Γ1) =>
+                    match collect Γ1 es with
+                    | infer_err err => infer_err err
+                    | infer_ok (tys, Γ2) => infer_ok (T_e :: tys, Γ2)
+                    end
+                end
+            end
+          in
+          match collect Γ args with
+          | infer_err err => infer_err err
+          | infer_ok (arg_tys, Γ') =>
+              match build_sigma m (repeat None m) arg_tys (fn_params fdef) with
+              | None => infer_err ErrLifetimeConflict
+              | Some σ_acc =>
+                  let σ := finalize_subst σ_acc in
+                  let ps_subst := apply_lt_params σ (fn_params fdef) in
+                  match check_args Ω arg_tys ps_subst with
+                  | Some err => infer_err err
+                  | None =>
+                      if forallb (wf_lifetime_b (mk_region_ctx n)) σ
+                      then
+                        let Ω_subst := apply_lt_outlives σ (fn_outlives fdef) in
+                        if outlives_constraints_hold_b Ω Ω_subst
+                        then infer_ok (apply_lt_ty σ (fn_ret fdef), Γ')
+                        else infer_err ErrHrtBoundUnsatisfied
+                      else infer_err ErrLifetimeLeak
+                  end
+              end
+          end
+      end
+  | ECallExpr callee args =>
+      match infer_core_env_fuel fuel' env Ω n Γ callee with
+      | infer_err err => infer_err err
+      | infer_ok (T_callee, Γc) =>
+          let fix collect (Γ0 : ctx) (as_ : list expr)
+              : infer_result (list Ty * ctx) :=
+            match as_ with
+            | [] => infer_ok ([], Γ0)
+            | e' :: es =>
+                match infer_core_env_fuel fuel' env Ω n Γ0 e' with
+                | infer_err err => infer_err err
+                | infer_ok (T_e, Γ1) =>
+                    match collect Γ1 es with
+                    | infer_err err => infer_err err
+                    | infer_ok (tys, Γ2) => infer_ok (T_e :: tys, Γ2)
+                    end
+                end
+            end
+          in
+          match collect Γc args with
+          | infer_err err => infer_err err
+          | infer_ok (arg_tys, Γ') =>
+              match ty_core T_callee with
+              | TFn param_tys ret =>
+                  match check_arg_tys Ω arg_tys param_tys with
+                  | Some err => infer_err err
+                  | None => infer_ok (ret, Γ')
+                  end
+              | c => infer_err (ErrNotAFunction c)
+              end
+          end
+      end
+  end
+  end.
+
+Definition infer_core_env
+    (env : global_env) (Ω : outlives_ctx) (n : nat) (Γ : ctx) (e : expr)
+    : infer_result (Ty * ctx) :=
+  infer_core_env_fuel 10000 env Ω n Γ e.
 
 Definition infer_body (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx) (e : expr)
     : infer_result (Ty * ctx) :=
@@ -1177,10 +1687,62 @@ Definition check_program (fenv : list fn_def) : bool :=
 
 Definition infer_env (env : global_env) (f : fn_def)
     : infer_result (Ty * ctx) :=
-  infer (env_fns env) f.
+  let n := fn_lifetimes f in
+  let Ω := fn_outlives f in
+  let Δ := mk_region_ctx n in
+  if negb (wf_outlives_b Δ Ω)
+  then infer_err ErrLifetimeLeak
+  else
+  if negb (wf_type_b Δ (fn_ret f))
+  then infer_err ErrLifetimeLeak
+  else
+  if negb (wf_params_b Δ (fn_params f))
+  then infer_err ErrLifetimeLeak
+  else
+  match infer_core_env env Ω n (params_ctx (fn_params f)) (fn_body f) with
+  | infer_err err => infer_err err
+  | infer_ok (T_body, Γ_out) =>
+      if negb (wf_type_b Δ T_body)
+      then infer_err ErrLifetimeLeak
+      else
+      if ty_compatible_b Ω T_body (fn_ret f) then
+        if params_ok_b (fn_params f) Γ_out
+        then infer_ok (fn_ret f, Γ_out)
+        else infer_err ErrContextCheckFailed
+      else infer_err (compatible_error T_body (fn_ret f))
+  end.
 
 Definition check_program_env (env : global_env) : bool :=
-  check_program (env_fns env).
+  forallb (fun f =>
+    match infer_env env f with
+    | infer_ok _ => true
+    | infer_err _ => false
+    end) (env_fns env).
+
+Definition ex_struct_pair : struct_def :=
+  MkStructDef ("Pair"%string) 0 0 []
+    [ MkFieldDef ("x"%string) MImmutable (MkTy UUnrestricted TIntegers)
+    ; MkFieldDef ("y"%string) MImmutable (MkTy UUnrestricted TBooleans)
+    ].
+
+Definition ex_env_struct_pair : global_env :=
+  MkGlobalEnv [ex_struct_pair] [] [] [].
+
+Example infer_core_env_struct_literal_ok :
+  infer_core_env ex_env_struct_pair [] 0 []
+    (EStruct ("Pair"%string) [] []
+      [(("y"%string), ELit (LBool true)); (("x"%string), ELit (LInt 1))]) =
+  infer_ok (MkTy UUnrestricted (TStruct ("Pair"%string) [] []), []).
+Proof. reflexivity. Qed.
+
+Example infer_core_env_struct_field_ok :
+  infer_core_env ex_env_struct_pair [] 0
+    [((("p"%string), 0), MkTy UUnrestricted (TStruct ("Pair"%string) [] []), false, MImmutable)]
+    (EPlace (PField (PVar (("p"%string), 0)) ("x"%string))) =
+  infer_ok
+    (MkTy UUnrestricted TIntegers,
+     [((("p"%string), 0), MkTy UUnrestricted (TStruct ("Pair"%string) [] []), false, MImmutable)]).
+Proof. reflexivity. Qed.
 
 (* ------------------------------------------------------------------ *)
 (* Borrow conflict checker                                               *)
@@ -1193,8 +1755,9 @@ Definition check_program_env (env : global_env) : bool :=
 Fixpoint borrow_check (fenv : list fn_def) (BS : borrow_state) (Γ : ctx)
     (e : expr) : infer_result borrow_state :=
   match e with
-  | EUnit | ELit _ | EVar _ => infer_ok BS
+  | EUnit | ELit _ | EVar _ | EPlace _ => infer_ok BS
   | EFn _ => infer_ok BS
+  | EStruct _ _ _ _ => infer_err ErrNotImplemented
 
   | EBorrow RShared (PVar x) =>
       if bs_has_mut x BS
@@ -1219,6 +1782,8 @@ Fixpoint borrow_check (fenv : list fn_def) (BS : borrow_state) (Γ : ctx)
       then infer_err (ErrBorrowConflict r)
       else infer_ok (BEMut r :: BS)
 
+  | EBorrow _ (PField _ _) => infer_err ErrNotImplemented
+
   | EDeref e1 =>
       match expr_ref_root e1 with
       | Some r =>
@@ -1240,6 +1805,9 @@ Fixpoint borrow_check (fenv : list fn_def) (BS : borrow_state) (Γ : ctx)
       if bs_has_any r BS
       then infer_err (ErrBorrowConflict r)
       else borrow_check fenv BS Γ e_new
+
+  | EReplace (PField _ _) _ | EAssign (PField _ _) _ =>
+      infer_err ErrNotImplemented
 
   | ELet m x T e1 e2 =>
       match borrow_check fenv BS Γ e1 with

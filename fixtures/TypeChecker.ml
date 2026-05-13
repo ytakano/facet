@@ -28,6 +28,42 @@ let rec app l m =
   | [] -> m
   | a :: l1 -> a :: (app l1 m)
 
+type uint =
+| Nil
+| D0 of uint
+| D1 of uint
+| D2 of uint
+| D3 of uint
+| D4 of uint
+| D5 of uint
+| D6 of uint
+| D7 of uint
+| D8 of uint
+| D9 of uint
+
+type uint0 =
+| Nil0
+| D10 of uint0
+| D11 of uint0
+| D12 of uint0
+| D13 of uint0
+| D14 of uint0
+| D15 of uint0
+| D16 of uint0
+| D17 of uint0
+| D18 of uint0
+| D19 of uint0
+| Da of uint0
+| Db of uint0
+| Dc of uint0
+| Dd of uint0
+| De of uint0
+| Df of uint0
+
+type uint1 =
+| UIntDecimal of uint
+| UIntHexadecimal of uint0
+
 (** val add : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
 
 let rec add = Big_int_Z.add_big_int
@@ -36,6 +72,364 @@ let rec add = Big_int_Z.add_big_int
 
 let rec sub = (fun n m -> Big_int_Z.max_big_int Big_int_Z.zero_big_int
   (Big_int_Z.sub_big_int n m))
+
+(** val tail_add :
+    Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
+
+let rec tail_add n m =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> m)
+    (fun n0 -> tail_add n0 (Big_int_Z.succ_big_int m))
+    n
+
+(** val tail_addmul :
+    Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int ->
+    Big_int_Z.big_int **)
+
+let rec tail_addmul r n m =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> r)
+    (fun n0 -> tail_addmul (tail_add m r) n0 m)
+    n
+
+(** val tail_mul :
+    Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
+
+let tail_mul n m =
+  tail_addmul Big_int_Z.zero_big_int n m
+
+(** val of_uint_acc : uint -> Big_int_Z.big_int -> Big_int_Z.big_int **)
+
+let rec of_uint_acc d acc =
+  match d with
+  | Nil -> acc
+  | D0 d0 ->
+    of_uint_acc d0
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))) acc)
+  | D1 d0 ->
+    of_uint_acc d0 (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))) acc))
+  | D2 d0 ->
+    of_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))) acc)))
+  | D3 d0 ->
+    of_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))) acc))))
+  | D4 d0 ->
+    of_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))) acc)))))
+  | D5 d0 ->
+    of_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))) acc))))))
+  | D6 d0 ->
+    of_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))) acc)))))))
+  | D7 d0 ->
+    of_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))) acc))))))))
+  | D8 d0 ->
+    of_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))) acc)))))))))
+  | D9 d0 ->
+    of_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))) acc))))))))))
+
+(** val of_uint : uint -> Big_int_Z.big_int **)
+
+let of_uint d =
+  of_uint_acc d Big_int_Z.zero_big_int
+
+(** val of_hex_uint_acc : uint0 -> Big_int_Z.big_int -> Big_int_Z.big_int **)
+
+let rec of_hex_uint_acc d acc =
+  match d with
+  | Nil0 -> acc
+  | D10 d0 ->
+    of_hex_uint_acc d0
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))))))))) acc)
+  | D11 d0 ->
+    of_hex_uint_acc d0 (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))))))))) acc))
+  | D12 d0 ->
+    of_hex_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))))))))) acc)))
+  | D13 d0 ->
+    of_hex_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))))))))) acc))))
+  | D14 d0 ->
+    of_hex_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))))))))) acc)))))
+  | D15 d0 ->
+    of_hex_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))))))))) acc))))))
+  | D16 d0 ->
+    of_hex_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))))))))) acc)))))))
+  | D17 d0 ->
+    of_hex_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))))))))) acc))))))))
+  | D18 d0 ->
+    of_hex_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))))))))) acc)))))))))
+  | D19 d0 ->
+    of_hex_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))))))))) acc))))))))))
+  | Da d0 ->
+    of_hex_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))))))))) acc)))))))))))
+  | Db d0 ->
+    of_hex_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))))))))) acc))))))))))))
+  | Dc d0 ->
+    of_hex_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))))))))) acc)))))))))))))
+  | Dd d0 ->
+    of_hex_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))))))))) acc))))))))))))))
+  | De d0 ->
+    of_hex_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))))))))) acc)))))))))))))))
+  | Df d0 ->
+    of_hex_uint_acc d0 (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+      (Big_int_Z.succ_big_int
+      (tail_mul (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        (Big_int_Z.succ_big_int (Big_int_Z.succ_big_int
+        Big_int_Z.zero_big_int)))))))))))))))) acc))))))))))))))))
+
+(** val of_hex_uint : uint0 -> Big_int_Z.big_int **)
+
+let of_hex_uint d =
+  of_hex_uint_acc d Big_int_Z.zero_big_int
+
+(** val of_num_uint : uint1 -> Big_int_Z.big_int **)
+
+let of_num_uint = function
+| UIntDecimal d0 -> of_uint d0
+| UIntHexadecimal d0 -> of_hex_uint d0
 
 (** val eqb : bool -> bool -> bool **)
 
@@ -377,6 +771,7 @@ type literal =
 type place =
 | PVar of ident
 | PDeref of place
+| PField of place * string
 
 type expr =
 | EUnit
@@ -385,8 +780,10 @@ type expr =
 | ELet of mutability * ident * ty * expr * expr
 | ELetInfer of mutability * ident * expr * expr
 | EFn of ident
+| EPlace of place
 | ECall of ident * expr list
 | ECallExpr of expr * expr list
+| EStruct of string * lifetime list * ty list * (string * expr) list
 | EReplace of place * expr
 | EAssign of place * expr
 | EBorrow of ref_kind * place
@@ -398,6 +795,7 @@ type expr =
 
 let rec expr_as_place = function
 | EVar x -> Some (PVar x)
+| EPlace p -> Some p
 | EDeref e' ->
   (match expr_as_place e' with
    | Some p -> Some (PDeref p)
@@ -435,6 +833,85 @@ type impl_def = { impl_lifetimes : Big_int_Z.big_int;
 type global_env = { env_structs : struct_def list;
                     env_traits : trait_def list; env_impls : impl_def list;
                     env_fns : fn_def list }
+
+(** val lookup_struct_in : string -> struct_def list -> struct_def option **)
+
+let rec lookup_struct_in name = function
+| [] -> None
+| s :: rest ->
+  if (=) name s.struct_name then Some s else lookup_struct_in name rest
+
+(** val lookup_struct : string -> global_env -> struct_def option **)
+
+let lookup_struct name env =
+  lookup_struct_in name env.env_structs
+
+(** val lookup_field : string -> field_def list -> field_def option **)
+
+let rec lookup_field name = function
+| [] -> None
+| f :: rest ->
+  if (=) name f.field_name then Some f else lookup_field name rest
+
+(** val usage_max_decl : usage -> usage -> usage **)
+
+let usage_max_decl u1 u2 =
+  match u1 with
+  | ULinear -> ULinear
+  | UAffine -> (match u2 with
+                | ULinear -> ULinear
+                | _ -> UAffine)
+  | UUnrestricted -> u2
+
+(** val usage_max_list : field_def list -> usage **)
+
+let rec usage_max_list = function
+| [] -> UUnrestricted
+| f :: rest -> usage_max_decl (ty_usage f.field_ty) (usage_max_list rest)
+
+(** val subst_type_params_ty : ty list -> ty -> ty **)
+
+let rec subst_type_params_ty _UU03c3_ = function
+| MkTy (u, t0) ->
+  (match t0 with
+   | TParam i ->
+     (match nth_error _UU03c3_ i with
+      | Some t' -> MkTy (u, (ty_core t'))
+      | None -> MkTy (u, (TParam i)))
+   | TStruct (name, lts, args) ->
+     let go =
+       let rec go = function
+       | [] -> []
+       | x :: xs' -> (subst_type_params_ty _UU03c3_ x) :: (go xs')
+       in go
+     in
+     MkTy (u, (TStruct (name, lts, (go args))))
+   | TFn (ps, r) ->
+     let go =
+       let rec go = function
+       | [] -> []
+       | x :: xs' -> (subst_type_params_ty _UU03c3_ x) :: (go xs')
+       in go
+     in
+     MkTy (u, (TFn ((go ps), (subst_type_params_ty _UU03c3_ r))))
+   | TForall (n, _UU03a9_, body) ->
+     MkTy (u, (TForall (n, _UU03a9_, (subst_type_params_ty _UU03c3_ body))))
+   | TRef (l, rk, inner) ->
+     MkTy (u, (TRef (l, rk, (subst_type_params_ty _UU03c3_ inner))))
+   | x -> MkTy (u, x))
+
+(** val instantiate_struct_field_ty :
+    lifetime list -> ty list -> field_def -> ty **)
+
+let instantiate_struct_field_ty lifetime_args type_args f =
+  subst_type_params_ty type_args (apply_lt_ty lifetime_args f.field_ty)
+
+(** val instantiate_struct_ty :
+    struct_def -> lifetime list -> ty list -> ty **)
+
+let instantiate_struct_ty s lifetime_args type_args =
+  MkTy ((usage_max_list s.struct_fields), (TStruct (s.struct_name,
+    lifetime_args, type_args)))
 
 type ctx_entry = ((ident * ty) * bool) * mutability
 
@@ -508,6 +985,7 @@ let fn_value_ty f =
 let rec place_root = function
 | PVar x -> x
 | PDeref q -> place_root q
+| PField (q, _) -> place_root q
 
 (** val apply_lt_param : lifetime list -> param -> param **)
 
@@ -570,6 +1048,7 @@ let bs_has_any x bs =
 
 let rec expr_ref_root = function
 | EVar r -> Some r
+| EPlace p -> Some (place_root p)
 | EDeref e' -> expr_ref_root e'
 | _ -> None
 
@@ -1073,6 +1552,13 @@ let wf_lifetime_b _UU0394_ l =
 let wf_type_b _UU0394_ t =
   wf_type_at_b Big_int_Z.zero_big_int _UU0394_ t
 
+(** val place_name : place -> ident **)
+
+let rec place_name = function
+| PVar x -> x
+| PDeref q -> place_name q
+| PField (q, _) -> place_name q
+
 type infer_error =
 | ErrUnknownVar of ident
 | ErrAlreadyConsumed of ident
@@ -1093,6 +1579,10 @@ type infer_error =
 | ErrHrtUnresolvedBound
 | ErrHrtMonomorphicUsedBound
 | ErrMalformedHrtBody of ty typeCore
+| ErrStructNotFound of string
+| ErrFieldNotFound of string
+| ErrDuplicateField of string
+| ErrMissingField of string
 
 (** val compatible_error : ty -> ty -> infer_error **)
 
@@ -1331,6 +1821,83 @@ let rec infer_place _UU0393_ = function
       | TRef (_, _, t) -> Infer_ok t
       | x -> Infer_err (ErrNotAReference x))
    | Infer_err err -> Infer_err err)
+| PField (_, _) -> Infer_err ErrNotImplemented
+
+(** val lookup_field_b : string -> (string * expr) list -> expr option **)
+
+let rec lookup_field_b name = function
+| [] -> None
+| y :: rest ->
+  let (fname, e) = y in
+  if (=) name fname then Some e else lookup_field_b name rest
+
+(** val has_field_b : string -> (string * expr) list -> bool **)
+
+let has_field_b name fields =
+  match lookup_field_b name fields with
+  | Some _ -> true
+  | None -> false
+
+(** val first_duplicate_field : (string * expr) list -> string option **)
+
+let rec first_duplicate_field = function
+| [] -> None
+| y :: rest ->
+  let (name, _) = y in
+  if has_field_b name rest then Some name else first_duplicate_field rest
+
+(** val first_unknown_field :
+    (string * expr) list -> field_def list -> string option **)
+
+let rec first_unknown_field fields defs =
+  match fields with
+  | [] -> None
+  | p :: rest ->
+    let (name, _) = p in
+    (match lookup_field name defs with
+     | Some _ -> first_unknown_field rest defs
+     | None -> Some name)
+
+(** val first_missing_field :
+    field_def list -> (string * expr) list -> string option **)
+
+let rec first_missing_field defs fields =
+  match defs with
+  | [] -> None
+  | f :: rest ->
+    if has_field_b f.field_name fields
+    then first_missing_field rest fields
+    else Some f.field_name
+
+(** val infer_place_env : global_env -> ctx -> place -> ty infer_result **)
+
+let rec infer_place_env env _UU0393_ = function
+| PVar x ->
+  (match ctx_lookup_b x _UU0393_ with
+   | Some p0 ->
+     let (t, b) = p0 in
+     if b then Infer_err (ErrAlreadyConsumed x) else Infer_ok t
+   | None -> Infer_err (ErrUnknownVar x))
+| PDeref q ->
+  (match infer_place_env env _UU0393_ q with
+   | Infer_ok tq ->
+     (match ty_core tq with
+      | TRef (_, _, t) -> Infer_ok t
+      | x -> Infer_err (ErrNotAReference x))
+   | Infer_err err -> Infer_err err)
+| PField (q, field) ->
+  (match infer_place_env env _UU0393_ q with
+   | Infer_ok tq ->
+     (match ty_core tq with
+      | TStruct (sname, lts, args) ->
+        (match lookup_struct sname env with
+         | Some s ->
+           (match lookup_field field s.struct_fields with
+            | Some f -> Infer_ok (instantiate_struct_field_ty lts args f)
+            | None -> Infer_err (ErrFieldNotFound field))
+         | None -> Infer_err (ErrStructNotFound sname))
+      | x -> Infer_err (ErrTypeMismatch (x, (TStruct ("", [], [])))))
+   | Infer_err err -> Infer_err err)
 
 (** val wf_outlives_b : region_ctx -> outlives_ctx -> bool **)
 
@@ -1523,7 +2090,8 @@ let rec infer_core fenv _UU03a9_ n _UU0393_ = function
                  else Infer_err (compatible_error t_new t_inner)
                | Infer_err err -> Infer_err err))
          | x -> Infer_err (ErrNotAReference x))
-      | Infer_err err -> Infer_err err))
+      | Infer_err err -> Infer_err err)
+   | PField (_, _) -> Infer_err ErrNotImplemented)
 | EAssign (p0, e_new) ->
   (match p0 with
    | PVar x ->
@@ -1569,7 +2137,8 @@ let rec infer_core fenv _UU03a9_ n _UU0393_ = function
                       else Infer_err (compatible_error t_new t_inner)
                     | Infer_err err -> Infer_err err))
          | x -> Infer_err (ErrNotAReference x))
-      | Infer_err err -> Infer_err err))
+      | Infer_err err -> Infer_err err)
+   | PField (_, _) -> Infer_err ErrNotImplemented)
 | EBorrow (rk, p0) ->
   (match rk with
    | RShared ->
@@ -1602,7 +2171,8 @@ let rec infer_core fenv _UU03a9_ n _UU0393_ = function
               Infer_ok ((MkTy (UUnrestricted, (TRef ((LVar n), RShared,
                 t_inner)))), _UU0393_)
             | x -> Infer_err (ErrNotAReference x))
-         | Infer_err err -> Infer_err err))
+         | Infer_err err -> Infer_err err)
+      | PField (_, _) -> Infer_err ErrNotImplemented)
    | RUnique ->
      (match p0 with
       | PVar x ->
@@ -1637,7 +2207,8 @@ let rec infer_core fenv _UU03a9_ n _UU0393_ = function
                  Infer_ok ((MkTy (UAffine, (TRef ((LVar n), RUnique,
                    t_inner)))), _UU0393_))
             | x -> Infer_err (ErrNotAReference x))
-         | Infer_err err -> Infer_err err)))
+         | Infer_err err -> Infer_err err)
+      | PField (_, _) -> Infer_err ErrNotImplemented))
 | EDeref r ->
   (match expr_as_place r with
    | Some p ->
@@ -1692,6 +2263,416 @@ let rec infer_core fenv _UU03a9_ n _UU0393_ = function
            | Infer_err err -> Infer_err err)
      else Infer_err (ErrTypeMismatch ((ty_core t_cond), TBooleans))
    | Infer_err err -> Infer_err err)
+| _ -> Infer_err ErrNotImplemented
+
+(** val infer_core_env_fuel :
+    Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+    ctx -> expr -> (ty * ctx) infer_result **)
+
+let rec infer_core_env_fuel fuel env _UU03a9_ n _UU0393_ e =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> Infer_err ErrNotImplemented)
+    (fun fuel' ->
+    match e with
+    | EUnit -> Infer_ok ((MkTy (UUnrestricted, TUnits)), _UU0393_)
+    | ELit l ->
+      (match l with
+       | LInt _ -> Infer_ok ((MkTy (UUnrestricted, TIntegers)), _UU0393_)
+       | LFloat _ -> Infer_ok ((MkTy (UUnrestricted, TFloats)), _UU0393_)
+       | LBool _ -> Infer_ok ((MkTy (UUnrestricted, TBooleans)), _UU0393_))
+    | EVar x ->
+      (match ctx_lookup_b x _UU0393_ with
+       | Some p ->
+         let (t, b) = p in
+         if usage_eqb (ty_usage t) UUnrestricted
+         then Infer_ok (t, _UU0393_)
+         else if b
+              then Infer_err (ErrAlreadyConsumed x)
+              else (match ctx_consume_b x _UU0393_ with
+                    | Some _UU0393_' -> Infer_ok (t, _UU0393_')
+                    | None -> Infer_err (ErrUnknownVar x))
+       | None -> Infer_err (ErrUnknownVar x))
+    | ELet (m, x, t, e1, e2) ->
+      (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_ e1 with
+       | Infer_ok p ->
+         let (t1, _UU0393_1) = p in
+         if ty_compatible_b _UU03a9_ t1 t
+         then (match infer_core_env_fuel fuel' env _UU03a9_ n
+                       (ctx_add_b x t m _UU0393_1) e2 with
+               | Infer_ok p0 ->
+                 let (t2, _UU0393_2) = p0 in
+                 if ctx_check_ok x t _UU0393_2
+                 then Infer_ok (t2, (ctx_remove_b x _UU0393_2))
+                 else Infer_err ErrContextCheckFailed
+               | Infer_err err -> Infer_err err)
+         else Infer_err (compatible_error t1 t)
+       | Infer_err err -> Infer_err err)
+    | ELetInfer (m, x, e1, e2) ->
+      (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_ e1 with
+       | Infer_ok p ->
+         let (t1, _UU0393_1) = p in
+         (match infer_core_env_fuel fuel' env _UU03a9_ n
+                  (ctx_add_b x t1 m _UU0393_1) e2 with
+          | Infer_ok p0 ->
+            let (t2, _UU0393_2) = p0 in
+            if ctx_check_ok x t1 _UU0393_2
+            then Infer_ok (t2, (ctx_remove_b x _UU0393_2))
+            else Infer_err ErrContextCheckFailed
+          | Infer_err err -> Infer_err err)
+       | Infer_err err -> Infer_err err)
+    | EFn fname ->
+      (match lookup_fn_b fname env.env_fns with
+       | Some fdef -> Infer_ok ((fn_value_ty fdef), _UU0393_)
+       | None -> Infer_err (ErrFunctionNotFound fname))
+    | EPlace p ->
+      (match infer_place_env env _UU0393_ p with
+       | Infer_ok t ->
+         if usage_eqb (ty_usage t) UUnrestricted
+         then Infer_ok (t, _UU0393_)
+         else (match p with
+               | PVar x ->
+                 (match ctx_consume_b x _UU0393_ with
+                  | Some _UU0393_' -> Infer_ok (t, _UU0393_')
+                  | None -> Infer_err (ErrUnknownVar x))
+               | PDeref _ ->
+                 Infer_err (ErrUsageMismatch ((ty_usage t), UUnrestricted))
+               | PField (q, _) ->
+                 (match ctx_consume_b (place_name q) _UU0393_ with
+                  | Some _UU0393_' -> Infer_ok (t, _UU0393_')
+                  | None -> Infer_err (ErrUnknownVar (place_name q))))
+       | Infer_err err -> Infer_err err)
+    | ECall (fname, args) ->
+      (match lookup_fn_b fname env.env_fns with
+       | Some fdef ->
+         let m = fdef.fn_lifetimes in
+         let collect =
+           let rec collect _UU0393_0 = function
+           | [] -> Infer_ok ([], _UU0393_0)
+           | e' :: es ->
+             (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_0 e' with
+              | Infer_ok p ->
+                let (t_e, _UU0393_1) = p in
+                (match collect _UU0393_1 es with
+                 | Infer_ok p0 ->
+                   let (tys, _UU0393_2) = p0 in
+                   Infer_ok ((t_e :: tys), _UU0393_2)
+                 | Infer_err err -> Infer_err err)
+              | Infer_err err -> Infer_err err)
+           in collect
+         in
+         (match collect _UU0393_ args with
+          | Infer_ok p ->
+            let (arg_tys, _UU0393_') = p in
+            (match build_sigma m (repeat None m) arg_tys fdef.fn_params with
+             | Some _UU03c3__acc ->
+               let _UU03c3_ = finalize_subst _UU03c3__acc in
+               let ps_subst = apply_lt_params _UU03c3_ fdef.fn_params in
+               (match check_args _UU03a9_ arg_tys ps_subst with
+                | Some err -> Infer_err err
+                | None ->
+                  if forallb (wf_lifetime_b (mk_region_ctx n)) _UU03c3_
+                  then let _UU03a9__subst =
+                         apply_lt_outlives _UU03c3_ fdef.fn_outlives
+                       in
+                       if outlives_constraints_hold_b _UU03a9_ _UU03a9__subst
+                       then Infer_ok ((apply_lt_ty _UU03c3_ fdef.fn_ret),
+                              _UU0393_')
+                       else Infer_err ErrHrtBoundUnsatisfied
+                  else Infer_err ErrLifetimeLeak)
+             | None -> Infer_err ErrLifetimeConflict)
+          | Infer_err err -> Infer_err err)
+       | None -> Infer_err (ErrFunctionNotFound fname))
+    | ECallExpr (callee, args) ->
+      (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_ callee with
+       | Infer_ok p ->
+         let (t_callee, _UU0393_c) = p in
+         let collect =
+           let rec collect _UU0393_0 = function
+           | [] -> Infer_ok ([], _UU0393_0)
+           | e' :: es ->
+             (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_0 e' with
+              | Infer_ok p0 ->
+                let (t_e, _UU0393_1) = p0 in
+                (match collect _UU0393_1 es with
+                 | Infer_ok p1 ->
+                   let (tys, _UU0393_2) = p1 in
+                   Infer_ok ((t_e :: tys), _UU0393_2)
+                 | Infer_err err -> Infer_err err)
+              | Infer_err err -> Infer_err err)
+           in collect
+         in
+         (match collect _UU0393_c args with
+          | Infer_ok p0 ->
+            let (arg_tys, _UU0393_') = p0 in
+            (match ty_core t_callee with
+             | TFn (param_tys, ret) ->
+               (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                | Some err -> Infer_err err
+                | None -> Infer_ok (ret, _UU0393_'))
+             | x -> Infer_err (ErrNotAFunction x))
+          | Infer_err err -> Infer_err err)
+       | Infer_err err -> Infer_err err)
+    | EStruct (sname, lts, args, fields) ->
+      (match lookup_struct sname env with
+       | Some s ->
+         if negb (Nat.eqb (length lts) s.struct_lifetimes)
+         then Infer_err ErrArityMismatch
+         else if negb (Nat.eqb (length args) s.struct_type_params)
+              then Infer_err ErrArityMismatch
+              else (match first_duplicate_field fields with
+                    | Some name -> Infer_err (ErrDuplicateField name)
+                    | None ->
+                      (match first_unknown_field fields s.struct_fields with
+                       | Some name -> Infer_err (ErrFieldNotFound name)
+                       | None ->
+                         (match first_missing_field s.struct_fields fields with
+                          | Some name -> Infer_err (ErrMissingField name)
+                          | None ->
+                            let go =
+                              let rec go _UU0393_0 = function
+                              | [] -> Infer_ok _UU0393_0
+                              | f :: rest ->
+                                (match lookup_field_b f.field_name fields with
+                                 | Some e_field ->
+                                   (match infer_core_env_fuel fuel' env
+                                            _UU03a9_ n _UU0393_0 e_field with
+                                    | Infer_ok p ->
+                                      let (t_field, _UU0393_1) = p in
+                                      let t_expected =
+                                        instantiate_struct_field_ty lts args f
+                                      in
+                                      if ty_compatible_b _UU03a9_ t_field
+                                           t_expected
+                                      then go _UU0393_1 rest
+                                      else Infer_err
+                                             (compatible_error t_field
+                                               t_expected)
+                                    | Infer_err err -> Infer_err err)
+                                 | None ->
+                                   Infer_err (ErrMissingField f.field_name))
+                              in go
+                            in
+                            (match go _UU0393_ s.struct_fields with
+                             | Infer_ok _UU0393_' ->
+                               Infer_ok ((instantiate_struct_ty s lts args),
+                                 _UU0393_')
+                             | Infer_err err -> Infer_err err))))
+       | None -> Infer_err (ErrStructNotFound sname))
+    | EReplace (p0, e_new) ->
+      (match p0 with
+       | PVar x ->
+         (match ctx_lookup_b x _UU0393_ with
+          | Some p ->
+            let (t_x, b) = p in
+            if b
+            then Infer_err (ErrAlreadyConsumed x)
+            else (match ctx_lookup_mut_b x _UU0393_ with
+                  | Some m ->
+                    (match m with
+                     | MImmutable -> Infer_err (ErrNotMutable x)
+                     | MMutable ->
+                       (match infer_core_env_fuel fuel' env _UU03a9_ n
+                                _UU0393_ e_new with
+                        | Infer_ok p1 ->
+                          let (t_new, _UU0393_') = p1 in
+                          if ty_compatible_b _UU03a9_ t_new t_x
+                          then Infer_ok (t_x, _UU0393_')
+                          else Infer_err (compatible_error t_new t_x)
+                        | Infer_err err -> Infer_err err))
+                  | None -> Infer_err (ErrUnknownVar x))
+          | None -> Infer_err (ErrUnknownVar x))
+       | PDeref p ->
+         (match infer_place_env env _UU0393_ p with
+          | Infer_ok t_p ->
+            (match ty_core t_p with
+             | TRef (l, r, t_inner) ->
+               (match r with
+                | RShared ->
+                  Infer_err (ErrNotAReference (TRef (l, RShared, t_inner)))
+                | RUnique ->
+                  (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_
+                           e_new with
+                   | Infer_ok p1 ->
+                     let (t_new, _UU0393_') = p1 in
+                     if ty_compatible_b _UU03a9_ t_new t_inner
+                     then Infer_ok (t_inner, _UU0393_')
+                     else Infer_err (compatible_error t_new t_inner)
+                   | Infer_err err -> Infer_err err))
+             | x -> Infer_err (ErrNotAReference x))
+          | Infer_err err -> Infer_err err)
+       | PField (p, field) ->
+         (match infer_place_env env _UU0393_ (PField (p, field)) with
+          | Infer_ok t_field ->
+            (match ctx_lookup_mut_b (place_name p) _UU0393_ with
+             | Some m ->
+               (match m with
+                | MImmutable -> Infer_err (ErrNotMutable (place_name p))
+                | MMutable ->
+                  (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_
+                           e_new with
+                   | Infer_ok p1 ->
+                     let (t_new, _UU0393_') = p1 in
+                     if ty_compatible_b _UU03a9_ t_new t_field
+                     then Infer_ok (t_field, _UU0393_')
+                     else Infer_err (compatible_error t_new t_field)
+                   | Infer_err err -> Infer_err err))
+             | None -> Infer_err (ErrUnknownVar (place_name p)))
+          | Infer_err err -> Infer_err err))
+    | EAssign (p0, e_new) ->
+      (match p0 with
+       | PVar x ->
+         (match ctx_lookup_b x _UU0393_ with
+          | Some p ->
+            let (t_x, b) = p in
+            if b
+            then Infer_err (ErrAlreadyConsumed x)
+            else (match ctx_lookup_mut_b x _UU0393_ with
+                  | Some m ->
+                    (match m with
+                     | MImmutable -> Infer_err (ErrNotMutable x)
+                     | MMutable ->
+                       if usage_eqb (ty_usage t_x) ULinear
+                       then Infer_err (ErrUsageMismatch ((ty_usage t_x),
+                              UAffine))
+                       else (match infer_core_env_fuel fuel' env _UU03a9_ n
+                                     _UU0393_ e_new with
+                             | Infer_ok p1 ->
+                               let (t_new, _UU0393_') = p1 in
+                               if ty_compatible_b _UU03a9_ t_new t_x
+                               then Infer_ok ((MkTy (UUnrestricted, TUnits)),
+                                      _UU0393_')
+                               else Infer_err (compatible_error t_new t_x)
+                             | Infer_err err -> Infer_err err))
+                  | None -> Infer_err (ErrUnknownVar x))
+          | None -> Infer_err (ErrUnknownVar x))
+       | PDeref p ->
+         (match infer_place_env env _UU0393_ p with
+          | Infer_ok t_p ->
+            (match ty_core t_p with
+             | TRef (l, r, t_inner) ->
+               (match r with
+                | RShared ->
+                  Infer_err (ErrNotAReference (TRef (l, RShared, t_inner)))
+                | RUnique ->
+                  if usage_eqb (ty_usage t_inner) ULinear
+                  then Infer_err (ErrUsageMismatch ((ty_usage t_inner),
+                         UAffine))
+                  else (match infer_core_env_fuel fuel' env _UU03a9_ n
+                                _UU0393_ e_new with
+                        | Infer_ok p1 ->
+                          let (t_new, _UU0393_') = p1 in
+                          if ty_compatible_b _UU03a9_ t_new t_inner
+                          then Infer_ok ((MkTy (UUnrestricted, TUnits)),
+                                 _UU0393_')
+                          else Infer_err (compatible_error t_new t_inner)
+                        | Infer_err err -> Infer_err err))
+             | x -> Infer_err (ErrNotAReference x))
+          | Infer_err err -> Infer_err err)
+       | PField (p, field) ->
+         (match infer_place_env env _UU0393_ (PField (p, field)) with
+          | Infer_ok t_field ->
+            (match ctx_lookup_mut_b (place_name p) _UU0393_ with
+             | Some m ->
+               (match m with
+                | MImmutable -> Infer_err (ErrNotMutable (place_name p))
+                | MMutable ->
+                  if usage_eqb (ty_usage t_field) ULinear
+                  then Infer_err (ErrUsageMismatch ((ty_usage t_field),
+                         UAffine))
+                  else (match infer_core_env_fuel fuel' env _UU03a9_ n
+                                _UU0393_ e_new with
+                        | Infer_ok p1 ->
+                          let (t_new, _UU0393_') = p1 in
+                          if ty_compatible_b _UU03a9_ t_new t_field
+                          then Infer_ok ((MkTy (UUnrestricted, TUnits)),
+                                 _UU0393_')
+                          else Infer_err (compatible_error t_new t_field)
+                        | Infer_err err -> Infer_err err))
+             | None -> Infer_err (ErrUnknownVar (place_name p)))
+          | Infer_err err -> Infer_err err))
+    | EBorrow (rk, p) ->
+      (match infer_place_env env _UU0393_ p with
+       | Infer_ok t_p ->
+         (match rk with
+          | RShared ->
+            Infer_ok ((MkTy (UUnrestricted, (TRef ((LVar n), RShared,
+              t_p)))), _UU0393_)
+          | RUnique ->
+            (match ctx_lookup_mut_b (place_name p) _UU0393_ with
+             | Some m ->
+               (match m with
+                | MImmutable -> Infer_err (ErrImmutableBorrow (place_name p))
+                | MMutable ->
+                  Infer_ok ((MkTy (UAffine, (TRef ((LVar n), RUnique,
+                    t_p)))), _UU0393_))
+             | None -> Infer_err (ErrUnknownVar (place_name p))))
+       | Infer_err err -> Infer_err err)
+    | EDeref r ->
+      (match expr_as_place r with
+       | Some p ->
+         (match infer_place_env env _UU0393_ p with
+          | Infer_ok t_r ->
+            (match ty_core t_r with
+             | TRef (_, _, t_inner) ->
+               if usage_eqb (ty_usage t_inner) UUnrestricted
+               then Infer_ok (t_inner, _UU0393_)
+               else Infer_err (ErrUsageMismatch ((ty_usage t_inner),
+                      UUnrestricted))
+             | x -> Infer_err (ErrNotAReference x))
+          | Infer_err err -> Infer_err err)
+       | None ->
+         (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_ r with
+          | Infer_ok p ->
+            let (t_r, _UU0393_') = p in
+            (match ty_core t_r with
+             | TRef (_, _, t_inner) ->
+               if usage_eqb (ty_usage t_inner) UUnrestricted
+               then Infer_ok (t_inner, _UU0393_')
+               else Infer_err (ErrUsageMismatch ((ty_usage t_inner),
+                      UUnrestricted))
+             | x -> Infer_err (ErrNotAReference x))
+          | Infer_err err -> Infer_err err))
+    | EDrop e1 ->
+      (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_ e1 with
+       | Infer_ok p ->
+         let (_, _UU0393_') = p in
+         Infer_ok ((MkTy (UUnrestricted, TUnits)), _UU0393_')
+       | Infer_err err -> Infer_err err)
+    | EIf (e1, e2, e3) ->
+      (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_ e1 with
+       | Infer_ok p ->
+         let (t_cond, _UU0393_1) = p in
+         if ty_core_eqb (ty_core t_cond) TBooleans
+         then (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_1 e2 with
+               | Infer_ok p0 ->
+                 let (t2, _UU0393_2) = p0 in
+                 (match infer_core_env_fuel fuel' env _UU03a9_ n _UU0393_1 e3 with
+                  | Infer_ok p1 ->
+                    let (t3, _UU0393_3) = p1 in
+                    if ty_core_eqb (ty_core t2) (ty_core t3)
+                    then (match ctx_merge _UU0393_2 _UU0393_3 with
+                          | Some _UU0393_4 ->
+                            Infer_ok ((MkTy
+                              ((usage_max (ty_usage t2) (ty_usage t3)),
+                              (ty_core t2))), _UU0393_4)
+                          | None -> Infer_err ErrContextCheckFailed)
+                    else Infer_err (ErrTypeMismatch ((ty_core t2),
+                           (ty_core t3)))
+                  | Infer_err err -> Infer_err err)
+               | Infer_err err -> Infer_err err)
+         else Infer_err (ErrTypeMismatch ((ty_core t_cond), TBooleans))
+       | Infer_err err -> Infer_err err))
+    fuel
+
+(** val infer_core_env :
+    global_env -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
+    (ty * ctx) infer_result **)
+
+let infer_core_env env _UU03a9_ n _UU0393_ e =
+  infer_core_env_fuel
+    (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) env _UU03a9_ n
+    _UU0393_ e
 
 (** val infer_body :
     fn_def list -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
@@ -1754,12 +2735,35 @@ let check_program fenv =
 (** val infer_env : global_env -> fn_def -> (ty * ctx) infer_result **)
 
 let infer_env env f =
-  infer env.env_fns f
+  let n = f.fn_lifetimes in
+  let _UU03a9_ = f.fn_outlives in
+  let _UU0394_ = mk_region_ctx n in
+  if negb (wf_outlives_b _UU0394_ _UU03a9_)
+  then Infer_err ErrLifetimeLeak
+  else if negb (wf_type_b _UU0394_ f.fn_ret)
+       then Infer_err ErrLifetimeLeak
+       else if negb (wf_params_b _UU0394_ f.fn_params)
+            then Infer_err ErrLifetimeLeak
+            else (match infer_core_env env _UU03a9_ n
+                          (params_ctx f.fn_params) f.fn_body with
+                  | Infer_ok p ->
+                    let (t_body, _UU0393__out) = p in
+                    if negb (wf_type_b _UU0394_ t_body)
+                    then Infer_err ErrLifetimeLeak
+                    else if ty_compatible_b _UU03a9_ t_body f.fn_ret
+                         then if params_ok_b f.fn_params _UU0393__out
+                              then Infer_ok (f.fn_ret, _UU0393__out)
+                              else Infer_err ErrContextCheckFailed
+                         else Infer_err (compatible_error t_body f.fn_ret)
+                  | Infer_err err -> Infer_err err)
 
 (** val check_program_env : global_env -> bool **)
 
 let check_program_env env =
-  check_program env.env_fns
+  forallb (fun f ->
+    match infer_env env f with
+    | Infer_ok _ -> true
+    | Infer_err _ -> false) env.env_fns
 
 (** val borrow_check :
     fn_def list -> borrow_state -> ctx -> expr -> borrow_state infer_result **)
@@ -1800,6 +2804,7 @@ let rec borrow_check fenv bS _UU0393_ = function
         | Infer_err err -> Infer_err err)
      in go bS1 args
    | Infer_err err -> Infer_err err)
+| EStruct (_, _, _, _) -> Infer_err ErrNotImplemented
 | EReplace (p0, e_new) ->
   (match p0 with
    | PVar _ -> borrow_check fenv bS _UU0393_ e_new
@@ -1807,7 +2812,8 @@ let rec borrow_check fenv bS _UU0393_ = function
      let r = place_root p in
      if bs_has_any r bS
      then Infer_err (ErrBorrowConflict r)
-     else borrow_check fenv bS _UU0393_ e_new)
+     else borrow_check fenv bS _UU0393_ e_new
+   | PField (_, _) -> Infer_err ErrNotImplemented)
 | EAssign (p0, e_new) ->
   (match p0 with
    | PVar _ -> borrow_check fenv bS _UU0393_ e_new
@@ -1815,7 +2821,8 @@ let rec borrow_check fenv bS _UU0393_ = function
      let r = place_root p in
      if bs_has_any r bS
      then Infer_err (ErrBorrowConflict r)
-     else borrow_check fenv bS _UU0393_ e_new)
+     else borrow_check fenv bS _UU0393_ e_new
+   | PField (_, _) -> Infer_err ErrNotImplemented)
 | EBorrow (r, p0) ->
   (match r with
    | RShared ->
@@ -1828,7 +2835,8 @@ let rec borrow_check fenv bS _UU0393_ = function
         let r0 = place_root p in
         if bs_has_mut r0 bS
         then Infer_err (ErrBorrowConflict r0)
-        else Infer_ok ((BEShared r0) :: bS))
+        else Infer_ok ((BEShared r0) :: bS)
+      | PField (_, _) -> Infer_err ErrNotImplemented)
    | RUnique ->
      (match p0 with
       | PVar x ->
@@ -1839,7 +2847,8 @@ let rec borrow_check fenv bS _UU0393_ = function
         let r0 = place_root p in
         if bs_has_any r0 bS
         then Infer_err (ErrBorrowConflict r0)
-        else Infer_ok ((BEMut r0) :: bS)))
+        else Infer_ok ((BEMut r0) :: bS)
+      | PField (_, _) -> Infer_err ErrNotImplemented))
 | EDeref e1 ->
   (match expr_ref_root e1 with
    | Some r ->

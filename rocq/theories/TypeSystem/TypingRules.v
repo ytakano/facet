@@ -184,6 +184,7 @@ Fixpoint place_root (p : place) : ident :=
   match p with
   | PVar x => x
   | PDeref q => place_root q
+  | PField q _ => place_root q
   end.
 
 Inductive typed_place (fenv : list fn_def) (n : nat) (Γ : ctx)
@@ -469,6 +470,7 @@ Definition bs_can_mut (x : ident) (bs : borrow_state) : Prop :=
 Fixpoint expr_ref_root (e : expr) : option ident :=
   match e with
   | EVar r => Some r
+  | EPlace p => Some (place_root p)
   | EDeref e' => expr_ref_root e'
   | _ => None
   end.
@@ -516,6 +518,9 @@ Inductive borrow_ok (fenv : list fn_def)
 
   | BO_Var : forall BS Γ x,
       borrow_ok fenv BS Γ (EVar x) BS
+
+  | BO_Place : forall BS Γ p,
+      borrow_ok fenv BS Γ (EPlace p) BS
 
   | BO_Fn : forall BS Γ fname,
       borrow_ok fenv BS Γ (EFn fname) BS

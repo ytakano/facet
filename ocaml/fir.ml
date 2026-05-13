@@ -74,13 +74,16 @@ let get_var_ty env x =
 let rec lower_place = function
   | PVar id -> FIPVar id
   | PDeref place -> FIPDeref (lower_place place)
+  | PField _ -> failwith "FIR: field places are not lowered yet"
 
 let rec infer_place_ty env = function
   | PVar id -> get_var_ty env id
   | PDeref place ->
-    match ty_core (infer_place_ty env place) with
+    begin match ty_core (infer_place_ty env place) with
     | TRef (_, _, inner_ty) -> inner_ty
     | _ -> failwith "FIR: dereference target is not a reference"
+    end
+  | PField _ -> failwith "FIR: field places are not lowered yet"
 
 let consume_if_needed env x ty =
   if ty_usage ty <> UUnrestricted then
@@ -117,6 +120,8 @@ let rec to_value env = function
     let ty = get_var_ty env x in
     consume_if_needed env x ty;
     { fv = FVVar x; ft = ty }
+  | EPlace _ ->
+    failwith "FIR: place expressions are not lowered yet"
   | EFn f ->
     { fv = FVClosure (f, []); ft = get_fn_value_ty env f }
   | ELet (m, x, t, e1, e2) ->
@@ -147,6 +152,8 @@ let rec to_value env = function
     let tmp = fresh_id env in
     emit env (FICallValue (tmp, result_ty, callee_val, flat));
     { fv = FVVar tmp; ft = result_ty }
+  | EStruct _ ->
+    failwith "FIR: struct literals are not lowered yet"
   | EDrop inner ->
     let v = to_value env inner in
     let tmp = fresh_id env in

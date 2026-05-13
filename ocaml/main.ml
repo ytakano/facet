@@ -77,6 +77,14 @@ let string_of_infer_error = function
     "monomorphic function cannot be used where a higher-rank function with used bound lifetimes is required"
   | ErrMalformedHrtBody c ->
     Printf.sprintf "higher-rank type body is not a function: %s" (string_of_ty_core c)
+  | ErrStructNotFound name ->
+    Printf.sprintf "struct not found: %s" name
+  | ErrFieldNotFound name ->
+    Printf.sprintf "field not found: %s" name
+  | ErrDuplicateField name ->
+    Printf.sprintf "duplicate field: %s" name
+  | ErrMissingField name ->
+    Printf.sprintf "missing field: %s" name
 
 let check_alpha_consistency fname fenv f =
   let r1 = infer fenv f in

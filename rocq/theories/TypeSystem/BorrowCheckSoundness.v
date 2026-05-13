@@ -97,6 +97,9 @@ Proof.
   (* EFn *)
   + injection Hcheck as <-. constructor.
 
+  (* EPlace *)
+  + injection Hcheck as <-. constructor.
+
   (* ECall *)
   + apply BO_Call.
     apply borrow_check_call_go in Hcheck.
@@ -124,14 +127,16 @@ Proof.
       -- simpl in Hcheck. injection Hcheck as <-. constructor.
       -- simpl in Hcheck.
          destruct (borrow_check fenv BScallee Γ a) as [BS1|] eqn:Ha; [|discriminate].
-         apply BO_Args_Cons with (BS1 := BS1).
-         ++ apply IH with (e := a).
-            pose proof (expr_size_callexpr_arg_lt e (a :: rest) a (or_introl eq_refl)) as Harg_lt.
-            simpl in Hlt. lia.
-            exact Ha.
-         ++ apply IHargs; [simpl; simpl in Hlt; lia | exact Hcheck].
+	         apply BO_Args_Cons with (BS1 := BS1).
+	         ++ apply IH with (e := a).
+	            pose proof (expr_size_callexpr_arg_lt e (a :: rest) a (or_introl eq_refl)) as Harg_lt.
+	            simpl in Hlt. lia.
+	            exact Ha.
+	         ++ apply IHargs; [simpl; simpl in Hlt; lia | exact Hcheck].
+  (* EStruct *)
+  + discriminate.
   (* EReplace *)
-  + destruct p as [x | q].
+  + destruct p as [x | q | q f].
     * apply BO_Replace.
       apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
     * simpl in Hcheck.
@@ -139,9 +144,10 @@ Proof.
       apply BO_Replace_Deref.
       -- unfold bs_can_mut. exact Hany.
       -- apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
+    * discriminate.
 
   (* EAssign *)
-  + destruct p as [x | q].
+  + destruct p as [x | q | q f].
     * apply BO_Assign.
       apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
     * simpl in Hcheck.
@@ -149,9 +155,10 @@ Proof.
       apply BO_Assign_Deref.
       -- unfold bs_can_mut. exact Hany.
       -- apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
+    * discriminate.
 
   (* EBorrow *)
-  + destruct r; destruct p as [x | q].
+  + destruct r; destruct p as [x | q | q f].
     * (* RShared, PVar → BO_BorrowShared *)
       destruct (bs_has_mut x BS) eqn:Hmut; [discriminate|].
       injection Hcheck as <-.
@@ -160,6 +167,7 @@ Proof.
       destruct (bs_has_mut (place_root q) BS) eqn:Hmut; [discriminate|].
       injection Hcheck as <-.
       apply BO_ReBorrowShared. unfold bs_can_shared. exact Hmut.
+    * discriminate.
     * (* RUnique, PVar → BO_BorrowMut *)
       destruct (bs_has_any x BS) eqn:Hany; [discriminate|].
       injection Hcheck as <-.
@@ -168,6 +176,7 @@ Proof.
       destruct (bs_has_any (place_root q) BS) eqn:Hany; [discriminate|].
       injection Hcheck as <-.
       apply BO_ReBorrowMut. unfold bs_can_mut. exact Hany.
+    * discriminate.
 
   (* EDeref *)
   + simpl in Hcheck.
@@ -228,6 +237,9 @@ Proof.
   - intros. reflexivity.
 
   (* BO_Var *)
+  - intros. reflexivity.
+
+  (* BO_Place *)
   - intros. reflexivity.
 
   (* BO_Fn *)

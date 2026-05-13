@@ -9,9 +9,63 @@ val length : 'a1 list -> Big_int_Z.big_int
 
 val app : 'a1 list -> 'a1 list -> 'a1 list
 
+type uint =
+| Nil
+| D0 of uint
+| D1 of uint
+| D2 of uint
+| D3 of uint
+| D4 of uint
+| D5 of uint
+| D6 of uint
+| D7 of uint
+| D8 of uint
+| D9 of uint
+
+type uint0 =
+| Nil0
+| D10 of uint0
+| D11 of uint0
+| D12 of uint0
+| D13 of uint0
+| D14 of uint0
+| D15 of uint0
+| D16 of uint0
+| D17 of uint0
+| D18 of uint0
+| D19 of uint0
+| Da of uint0
+| Db of uint0
+| Dc of uint0
+| Dd of uint0
+| De of uint0
+| Df of uint0
+
+type uint1 =
+| UIntDecimal of uint
+| UIntHexadecimal of uint0
+
 val add : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
 
 val sub : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
+
+val tail_add : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
+
+val tail_addmul :
+  Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int ->
+  Big_int_Z.big_int
+
+val tail_mul : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
+
+val of_uint_acc : uint -> Big_int_Z.big_int -> Big_int_Z.big_int
+
+val of_uint : uint -> Big_int_Z.big_int
+
+val of_hex_uint_acc : uint0 -> Big_int_Z.big_int -> Big_int_Z.big_int
+
+val of_hex_uint : uint0 -> Big_int_Z.big_int
+
+val of_num_uint : uint1 -> Big_int_Z.big_int
 
 val eqb : bool -> bool -> bool
 
@@ -128,6 +182,7 @@ type literal =
 type place =
 | PVar of ident
 | PDeref of place
+| PField of place * string
 
 type expr =
 | EUnit
@@ -136,8 +191,10 @@ type expr =
 | ELet of mutability * ident * ty * expr * expr
 | ELetInfer of mutability * ident * expr * expr
 | EFn of ident
+| EPlace of place
 | ECall of ident * expr list
 | ECallExpr of expr * expr list
+| EStruct of string * lifetime list * ty list * (string * expr) list
 | EReplace of place * expr
 | EAssign of place * expr
 | EBorrow of ref_kind * place
@@ -178,6 +235,22 @@ type impl_def = { impl_lifetimes : Big_int_Z.big_int;
 type global_env = { env_structs : struct_def list;
                     env_traits : trait_def list; env_impls : impl_def list;
                     env_fns : fn_def list }
+
+val lookup_struct_in : string -> struct_def list -> struct_def option
+
+val lookup_struct : string -> global_env -> struct_def option
+
+val lookup_field : string -> field_def list -> field_def option
+
+val usage_max_decl : usage -> usage -> usage
+
+val usage_max_list : field_def list -> usage
+
+val subst_type_params_ty : ty list -> ty -> ty
+
+val instantiate_struct_field_ty : lifetime list -> ty list -> field_def -> ty
+
+val instantiate_struct_ty : struct_def -> lifetime list -> ty list -> ty
 
 type ctx_entry = ((ident * ty) * bool) * mutability
 
@@ -274,6 +347,8 @@ val wf_lifetime_b : region_ctx -> lifetime -> bool
 
 val wf_type_b : region_ctx -> ty -> bool
 
+val place_name : place -> ident
+
 type infer_error =
 | ErrUnknownVar of ident
 | ErrAlreadyConsumed of ident
@@ -294,6 +369,10 @@ type infer_error =
 | ErrHrtUnresolvedBound
 | ErrHrtMonomorphicUsedBound
 | ErrMalformedHrtBody of ty typeCore
+| ErrStructNotFound of string
+| ErrFieldNotFound of string
+| ErrDuplicateField of string
+| ErrMissingField of string
 
 val compatible_error : ty -> ty -> infer_error
 
@@ -333,12 +412,34 @@ type 'a infer_result =
 
 val infer_place : ctx -> place -> ty infer_result
 
+val lookup_field_b : string -> (string * expr) list -> expr option
+
+val has_field_b : string -> (string * expr) list -> bool
+
+val first_duplicate_field : (string * expr) list -> string option
+
+val first_unknown_field :
+  (string * expr) list -> field_def list -> string option
+
+val first_missing_field :
+  field_def list -> (string * expr) list -> string option
+
+val infer_place_env : global_env -> ctx -> place -> ty infer_result
+
 val wf_outlives_b : region_ctx -> outlives_ctx -> bool
 
 val outlives_constraints_hold_b : outlives_ctx -> outlives_ctx -> bool
 
 val infer_core :
   fn_def list -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
+  (ty * ctx) infer_result
+
+val infer_core_env_fuel :
+  Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int -> ctx
+  -> expr -> (ty * ctx) infer_result
+
+val infer_core_env :
+  global_env -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
   (ty * ctx) infer_result
 
 val infer_body :

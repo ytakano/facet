@@ -103,6 +103,7 @@ Fixpoint expr_linear_lets_used (fenv : list fn_def) (e : expr) {struct e}
   | ELit _ => True
   | EVar _ => True
   | EFn _ => True
+  | EPlace _ => True
   | ELet m x T e1 e2 =>
       (ty_usage T = ULinear ->
        forall Ω n Γ Γout T2,
@@ -118,6 +119,7 @@ Fixpoint expr_linear_lets_used (fenv : list fn_def) (e : expr) {struct e}
       expr_linear_lets_used fenv e2
   | ECall _ _ => True
   | ECallExpr _ _ => True
+  | EStruct _ _ _ _ => True
   | EReplace _ e_new => expr_linear_lets_used fenv e_new
   | EAssign _ e_new => expr_linear_lets_used fenv e_new
   | EBorrow _ _ => True

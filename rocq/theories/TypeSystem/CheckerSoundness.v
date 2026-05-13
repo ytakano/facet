@@ -87,7 +87,7 @@ Lemma infer_place_sound : forall fenv n Γ p T,
   typed_place fenv n Γ p T.
 Proof.
   intros fenv n Γ p. revert Γ.
-  induction p as [x | p IH]; intros Γ T Hinfer.
+  induction p as [x | p IH | p IH f]; intros Γ T Hinfer.
   - simpl in Hinfer.
     destruct (ctx_lookup_b x Γ) as [[Tx b] |] eqn:Hlookup; [|discriminate].
     destruct b; [discriminate |].
@@ -106,6 +106,7 @@ Proof.
         apply IH;
         exact Hp
     end.
+  - simpl in Hinfer. discriminate.
 Qed.
 
 (* ------------------------------------------------------------------ *)
@@ -598,10 +599,11 @@ Proof.
       + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
         injection Hinfer as <- <-.
         destruct (lookup_fn_b_sound i fenv fdef Hlookup) as [Hin Hname].
-        eapply T_FnValue.
-        * exact Hin.
-        * exact Hname.
-      + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
+	        eapply T_FnValue.
+	        * exact Hin.
+	        * exact Hname.
+	      + discriminate.
+	      + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
         destruct (infer_args_collect fenv Ω n Γ l) as [[arg_tys Γcall] | err] eqn:Hcollect.
         2:{
           rewrite (ecall_collect_eq fenv Ω n l Γ) in Hinfer.
@@ -690,7 +692,8 @@ Proof.
           -- exact Hbounds.
           -- apply outlives_constraints_hold_b_sound. exact Hout.
         * discriminate.
-      + destruct p as [x | p].
+	      + discriminate.
+	      + destruct p as [x | p | p f].
         * destruct (ctx_lookup_b x Γ) as [[Tx bx] |] eqn:Hlookup; [|discriminate].
           destruct bx; [discriminate |].
           destruct (ctx_lookup_mut_b x Γ) as [mx |] eqn:Hmut; [|discriminate].
@@ -713,9 +716,10 @@ Proof.
           -- replace (MkTy (ty_usage Tp) (TRef l RUnique t)) with Tp.
              ++ apply infer_place_sound. exact Hp.
              ++ destruct Tp as [u c]. simpl in Hcore. rewrite Hcore. reflexivity.
-          -- eapply IH; [simpl in Hlt; lia | exact Hnew].
-          -- apply ty_compatible_b_sound. exact Hcompat.
-      + destruct p as [x | p].
+	          -- eapply IH; [simpl in Hlt; lia | exact Hnew].
+	          -- apply ty_compatible_b_sound. exact Hcompat.
+	        * simpl in Hinfer. discriminate.
+	      + destruct p as [x | p | p f].
         * destruct (ctx_lookup_b x Γ) as [[Tx bx] |] eqn:Hlookup; [|discriminate].
           destruct bx; [discriminate |].
           destruct (ctx_lookup_mut_b x Γ) as [mx |] eqn:Hmut; [|discriminate].
@@ -728,9 +732,9 @@ Proof.
           -- rewrite <- ctx_lookup_b_eq. exact Hlookup.
           -- rewrite <- ctx_lookup_mut_b_eq. exact Hmut.
           -- intro Hu. rewrite Hu in Hlin. simpl in Hlin. discriminate.
-          -- eapply IH; [simpl in Hlt; lia | exact Hnew].
-          -- apply ty_compatible_b_sound. exact Hcompat.
-        * destruct (infer_place Γ p) as [Tp | err] eqn:Hp; [|discriminate].
+	          -- eapply IH; [simpl in Hlt; lia | exact Hnew].
+	          -- apply ty_compatible_b_sound. exact Hcompat.
+	        * destruct (infer_place Γ p) as [Tp | err] eqn:Hp; [|discriminate].
           destruct (ty_core Tp) eqn:Hcore; try discriminate.
           destruct r; [discriminate |].
           destruct (usage_eqb (ty_usage t) ULinear) eqn:Hlin; [discriminate |].
@@ -742,9 +746,10 @@ Proof.
              ++ apply infer_place_sound. exact Hp.
              ++ destruct Tp as [u c]. simpl in Hcore. rewrite Hcore. reflexivity.
           -- intro Hu. rewrite Hu in Hlin. simpl in Hlin. discriminate.
-          -- eapply IH; [simpl in Hlt; lia | exact Hnew].
-          -- apply ty_compatible_b_sound. exact Hcompat.
-      + destruct p as [x | p].
+	          -- eapply IH; [simpl in Hlt; lia | exact Hnew].
+	          -- apply ty_compatible_b_sound. exact Hcompat.
+	        * simpl in Hinfer. discriminate.
+	      + destruct p as [x | p | p f].
         * destruct (ctx_lookup_b x Γ) as [[Tx bx] |] eqn:Hlookup.
           2:{ destruct r; discriminate. }
           destruct bx.
@@ -769,10 +774,11 @@ Proof.
              destruct (ty_core Tp) eqn:Hcore; try discriminate.
              destruct r; [discriminate |].
              injection Hinfer as <- <-.
-             eapply T_ReBorrowMut.
-             replace (MkTy (ty_usage Tp) (TRef l RUnique t)) with Tp.
-             ++ apply infer_place_sound. exact Hp.
-             ++ destruct Tp as [u c]. simpl in Hcore. rewrite Hcore. reflexivity.
+	             eapply T_ReBorrowMut.
+	             replace (MkTy (ty_usage Tp) (TRef l RUnique t)) with Tp.
+	             ++ apply infer_place_sound. exact Hp.
+	             ++ destruct Tp as [u c]. simpl in Hcore. rewrite Hcore. reflexivity.
+	        * destruct r; discriminate.
       + destruct (expr_as_place e) as [p |] eqn:Hplace.
         * destruct (infer_place Γ p) as [Tr | err] eqn:Hp; [|discriminate].
           destruct (ty_core Tr) eqn:Hcore; try discriminate.

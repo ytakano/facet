@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Types Syntax PathState.
+From Facet.TypeSystem Require Import Types Syntax PathState Program.
 From Stdlib Require Import List String ZArith Bool.
 Import ListNotations.
 
@@ -12,7 +12,7 @@ Inductive value : Type :=
   | VFloat   : string -> value
   | VBool    : bool -> value
   | VStruct  : string -> list (string * value) -> value
-  | VRef     : ident -> value
+  | VRef     : ident -> field_path -> value
   | VClosure : ident -> list store_entry -> value
 with store_entry : Type :=
   | MkStoreEntry : ident -> Ty -> value -> binding_state -> store_entry.
@@ -66,6 +66,31 @@ Fixpoint store_mark_used (x : ident) (s : store) : store :=
              (state_consume_path [] (se_state e)) :: t
       else e :: store_mark_used x t
   end.
+
+Fixpoint store_update_state (x : ident) (f : binding_state -> binding_state) (s : store)
+    : option store :=
+  match s with
+  | [] => None
+  | e :: t =>
+      if ident_eqb x (se_name e)
+      then Some (MkStoreEntry (se_name e) (se_ty e) (se_val e) (f (se_state e)) :: t)
+      else match store_update_state x f t with
+           | Some t' => Some (e :: t')
+           | None => None
+           end
+  end.
+
+Definition store_consume_path (x : ident) (p : field_path) (s : store) : option store :=
+  match store_lookup x s with
+  | Some e =>
+      if binding_available_b (se_state e) p
+      then store_update_state x (state_consume_path p) s
+      else None
+  | None => None
+  end.
+
+Definition store_restore_path (x : ident) (p : field_path) (s : store) : option store :=
+  store_update_state x (state_restore_path p) s.
 
 Fixpoint store_update_val (x : ident) (v : value) (s : store) : option store :=
   match s with
@@ -188,195 +213,223 @@ Fixpoint lookup_fn (name : ident) (fenv : list fn_def) : option fn_def :=
               else lookup_fn name t
   end.
 
-Inductive eval_place : store -> place -> ident -> Prop :=
+Fixpoint lookup_expr_field (name : string) (fields : list (string * expr)) : option expr :=
+  match fields with
+  | [] => None
+  | (field_name, e) :: rest =>
+      if String.eqb name field_name then Some e else lookup_expr_field name rest
+  end.
+
+Fixpoint type_lookup_path (env : global_env) (T : Ty) (p : field_path) : option Ty :=
+  match p with
+  | [] => Some T
+  | f :: rest =>
+      match ty_core T with
+      | TStruct sname lts args =>
+          match lookup_struct sname env with
+          | Some sdef =>
+              match lookup_field f (struct_fields sdef) with
+              | Some fdef =>
+                  type_lookup_path env (instantiate_struct_field_ty lts args fdef) rest
+              | None => None
+              end
+          | None => None
+          end
+      | _ => None
+      end
+  end.
+
+Inductive eval_place : store -> place -> ident -> field_path -> Prop :=
   | EvalPlace_Var : forall s x e,
       store_lookup x s = Some e ->
-      eval_place s (PVar x) x
-  | EvalPlace_Deref : forall s p r x se_r,
-      eval_place s p r ->
+      eval_place s (PVar x) x []
+  | EvalPlace_Field : forall s p x path f,
+      eval_place s p x path ->
+      eval_place s (PField p f) x (path ++ [f])
+  | EvalPlace_Deref : forall s p r rpath x path se_r,
+      eval_place s p r rpath ->
       store_lookup r s = Some se_r ->
-      se_val se_r = VRef x ->
-      eval_place s (PDeref p) x.
+      value_lookup_path (se_val se_r) rpath = Some (VRef x path) ->
+      eval_place s (PDeref p) x path.
 
 (* ------------------------------------------------------------------ *)
 (* Big-step evaluation                                                  *)
 (*                                                                      *)
-(* eval fenv s e s' v                                                   *)
+(* eval env s e s' v                                                    *)
 (*   Expression e evaluates to v, transforming store s into s'.         *)
 (*                                                                      *)
 (* Usage violations result in no derivation (evaluation gets stuck):    *)
 (*   - reading an already-consumed affine/linear variable               *)
 (* ------------------------------------------------------------------ *)
 
-Inductive eval (fenv : list fn_def) : store -> expr -> store -> value -> Prop :=
+Inductive eval (env : global_env) : store -> expr -> store -> value -> Prop :=
 
   | Eval_Unit : forall s,
-      eval fenv s EUnit s VUnit
+      eval env s EUnit s VUnit
 
   | Eval_LitInt : forall s n,
-      eval fenv s (ELit (LInt n)) s (VInt n)
+      eval env s (ELit (LInt n)) s (VInt n)
 
   | Eval_LitFloat : forall s f,
-      eval fenv s (ELit (LFloat f)) s (VFloat f)
+      eval env s (ELit (LFloat f)) s (VFloat f)
 
   | Eval_LitBool : forall s b,
-      eval fenv s (ELit (LBool b)) s (VBool b)
+      eval env s (ELit (LBool b)) s (VBool b)
 
   (* Unrestricted variable: copy without consuming. *)
   | Eval_Var_Copy : forall s x e,
       store_lookup x s = Some e ->
       needs_consume (se_ty e) = false ->
-      eval fenv s (EVar x) s (se_val e)
+      eval env s (EVar x) s (se_val e)
 
   (* Linear/affine variable: consume on read (must not be consumed yet). *)
   | Eval_Var_Consume : forall s x e,
       store_lookup x s = Some e ->
       needs_consume (se_ty e) = true ->
       se_used e = false ->
-      eval fenv s (EVar x) (store_mark_used x s) (se_val e)
+      eval env s (EVar x) (store_mark_used x s) (se_val e)
 
-  | Eval_Place : forall s p x path e v,
-      place_path p = Some (x, path) ->
+  | Eval_Place_Copy : forall s p x path e T v,
+      eval_place s p x path ->
       store_lookup x s = Some e ->
+      binding_available_b (se_state e) path = true ->
+      type_lookup_path env (se_ty e) path = Some T ->
+      needs_consume T = false ->
       value_lookup_path (se_val e) path = Some v ->
-      eval fenv s (EPlace p) s v
+      eval env s (EPlace p) s v
 
-  | Eval_Struct : forall s s' name lts args fields values,
-      eval_struct_fields fenv s fields s' values ->
-      eval fenv s (EStruct name lts args fields) s' (VStruct name values)
+  | Eval_Place_Consume : forall s s' p x path e T v,
+      eval_place s p x path ->
+      store_lookup x s = Some e ->
+      binding_available_b (se_state e) path = true ->
+      type_lookup_path env (se_ty e) path = Some T ->
+      needs_consume T = true ->
+      value_lookup_path (se_val e) path = Some v ->
+      store_consume_path x path s = Some s' ->
+      eval env s (EPlace p) s' v
+
+  | Eval_Struct : forall s s' name lts args fields values sdef,
+      lookup_struct name env = Some sdef ->
+      eval_struct_fields env s fields (struct_fields sdef) s' values ->
+      eval env s (EStruct name lts args fields) s' (VStruct name values)
 
   (* let x: T = e1 in e2 *)
   | Eval_Let : forall s s1 s2 m x T e1 e2 v1 v2,
-      eval fenv s e1 s1 v1 ->
-      eval fenv (store_add x T v1 s1) e2 s2 v2 ->
-      eval fenv s (ELet m x T e1 e2) (store_remove x s2) v2
+      eval env s e1 s1 v1 ->
+      eval env (store_add x T v1 s1) e2 s2 v2 ->
+      eval env s (ELet m x T e1 e2) (store_remove x s2) v2
 
   (* drop(e): evaluate and discard. *)
   | Eval_Drop : forall s s' e v,
-      eval fenv s e s' v ->
-      eval fenv s (EDrop e) s' VUnit
+      eval env s e s' v ->
+      eval env s (EDrop e) s' VUnit
 
   (* replace(x, e_new): update x in-place, return old value.
      x itself is NOT consumed. *)
   | Eval_Replace : forall s s1 s2 x old_e e_new v_new,
       store_lookup x s = Some old_e ->
-      eval fenv s e_new s1 v_new ->
+      eval env s e_new s1 v_new ->
       store_update_val x v_new s1 = Some s2 ->
-      eval fenv s (EReplace (PVar x) e_new) s2 (se_val old_e)
+      eval env s (EReplace (PVar x) e_new) s2 (se_val old_e)
 
   | Eval_Assign : forall s s1 s2 x old_e e_new v_new,
       store_lookup x s = Some old_e ->
-      eval fenv s e_new s1 v_new ->
+      eval env s e_new s1 v_new ->
       store_update_val x v_new s1 = Some s2 ->
-      eval fenv s (EAssign (PVar x) e_new) s2 VUnit
+      eval env s (EAssign (PVar x) e_new) s2 VUnit
 
-  | Eval_Replace_Field : forall s s1 s2 p x path old_v e_new v_new,
-      place_path p = Some (x, path) ->
+  | Eval_Replace_Place : forall s s1 s2 s3 p x path old_v e_new v_new,
+      eval_place s p x path ->
       store_lookup_path x path s = Some old_v ->
-      eval fenv s e_new s1 v_new ->
+      eval env s e_new s1 v_new ->
       store_update_path x path v_new s1 = Some s2 ->
-      eval fenv s (EReplace p e_new) s2 old_v
+      store_restore_path x path s2 = Some s3 ->
+      eval env s (EReplace p e_new) s3 old_v
 
-  | Eval_Assign_Field : forall s s1 s2 p x path e_new v_new,
-      place_path p = Some (x, path) ->
-      eval fenv s e_new s1 v_new ->
+  | Eval_Assign_Place : forall s s1 s2 p x path e_new v_new,
+      eval_place s p x path ->
+      eval env s e_new s1 v_new ->
       store_update_path x path v_new s1 = Some s2 ->
-      eval fenv s (EAssign p e_new) s2 VUnit
+      eval env s (EAssign p e_new) s2 VUnit
 
-  (* &x or &mut x: confirm x exists in the store, return VRef x.
+  (* &p or &mut p: confirm p exists in the store, return a path reference.
      The store is unchanged — borrowing does not transfer ownership. *)
-  | Eval_Borrow : forall s x e rk,
-      store_lookup x s = Some e ->
-      eval fenv s (EBorrow rk (PVar x)) s (VRef x)
-
-  (* *p <- e_new: p resolves to a reference target x, return old value *)
-  | Eval_Replace_Deref : forall s s1 s2 p x old_e e_new v_new,
-      eval_place s (PDeref p) x ->
-      store_lookup x s = Some old_e ->
-      eval fenv s e_new s1 v_new ->
-      store_update_val x v_new s1 = Some s2 ->
-      eval fenv s (EReplace (PDeref p) e_new) s2 (se_val old_e)
-
-  (* *p = e_new: p resolves to a reference target x, return unit *)
-  | Eval_Assign_Deref : forall s s1 s2 p x old_e e_new v_new,
-      eval_place s (PDeref p) x ->
-      store_lookup x s = Some old_e ->
-      eval fenv s e_new s1 v_new ->
-      store_update_val x v_new s1 = Some s2 ->
-      eval fenv s (EAssign (PDeref p) e_new) s2 VUnit
-
-  (* &*p — re-borrow: p resolves to a reference target x *)
-  | Eval_ReBorrow : forall s p x rk,
-      eval_place s (PDeref p) x ->
-      eval fenv s (EBorrow rk (PDeref p)) s (VRef x)
+  | Eval_Borrow : forall s p x path rk,
+      eval_place s p x path ->
+      eval env s (EBorrow rk p) s (VRef x path)
 
   (* *r: evaluate r to VRef x, then copy the value of x from the store.
      Only applicable when the inner type is UUnrestricted (copy semantics).
      The type checker enforces this; the store is unchanged. *)
-  | Eval_Deref_Place : forall s r p x e,
+  | Eval_Deref_Place : forall s r p x path e v T,
       expr_as_place r = Some p ->
-      eval_place s p x ->
+      eval_place s (PDeref p) x path ->
       store_lookup x s = Some e ->
-      ty_usage (se_ty e) = UUnrestricted ->
-      eval fenv s (EDeref r) s (se_val e)
+      value_lookup_path (se_val e) path = Some v ->
+      type_lookup_path env (se_ty e) path = Some T ->
+      ty_usage T = UUnrestricted ->
+      eval env s (EDeref r) s v
 
-  | Eval_Deref : forall s s_r r x e,
+  | Eval_Deref : forall s s_r r x path e v T,
       expr_as_place r = None ->
-      eval fenv s r s_r (VRef x) ->
+      eval env s r s_r (VRef x path) ->
       store_lookup x s_r = Some e ->
-      ty_usage (se_ty e) = UUnrestricted ->
-      eval fenv s (EDeref r) s_r (se_val e)
+      value_lookup_path (se_val e) path = Some v ->
+      type_lookup_path env (se_ty e) path = Some T ->
+      ty_usage T = UUnrestricted ->
+      eval env s (EDeref r) s_r v
 
   | Eval_Fn : forall s fname,
-      eval fenv s (EFn fname) s (VClosure fname [])
+      eval env s (EFn fname) s (VClosure fname [])
 
   | Eval_If_True : forall s s1 s2 e1 e2 e3 v,
-      eval fenv s e1 s1 (VBool true) ->
-      eval fenv s1 e2 s2 v ->
-      eval fenv s (EIf e1 e2 e3) s2 v
+      eval env s e1 s1 (VBool true) ->
+      eval env s1 e2 s2 v ->
+      eval env s (EIf e1 e2 e3) s2 v
 
   | Eval_If_False : forall s s1 s2 e1 e2 e3 v,
-      eval fenv s e1 s1 (VBool false) ->
-      eval fenv s1 e3 s2 v ->
-      eval fenv s (EIf e1 e2 e3) s2 v
+      eval env s e1 s1 (VBool false) ->
+      eval env s1 e3 s2 v ->
+      eval env s (EIf e1 e2 e3) s2 v
 
   (* f(args): look up function, evaluate arguments, evaluate body. *)
   | Eval_Call : forall s s_args s_body fname fdef args vs ret,
-      lookup_fn fname fenv = Some fdef ->
-      eval_args fenv s args s_args vs ->
-      eval fenv (bind_params (fn_params fdef) vs s_args)
+      lookup_fn fname (env_fns env) = Some fdef ->
+      eval_args env s args s_args vs ->
+      eval env (bind_params (fn_params fdef) vs s_args)
                 (fn_body fdef) s_body ret ->
-      eval fenv s (ECall fname args)
+      eval env s (ECall fname args)
                (store_remove_params (fn_params fdef) s_body) ret
 
   | Eval_CallExpr : forall s s_fn s_args s_body callee args fname captured fdef vs ret,
-      eval fenv s callee s_fn (VClosure fname captured) ->
-      lookup_fn fname fenv = Some fdef ->
-      eval_args fenv s_fn args s_args vs ->
-      eval fenv (bind_params (fn_params fdef) vs (captured ++ s_args))
+      eval env s callee s_fn (VClosure fname captured) ->
+      lookup_fn fname (env_fns env) = Some fdef ->
+      eval_args env s_fn args s_args vs ->
+      eval env (bind_params (fn_params fdef) vs (captured ++ s_args))
                 (fn_body fdef) s_body ret ->
-      eval fenv s (ECallExpr callee args)
+      eval env s (ECallExpr callee args)
                (store_remove_params (fn_params fdef) s_body) ret
 
 (* Evaluate argument list left-to-right, threading the store. *)
-with eval_args (fenv : list fn_def)
+with eval_args (env : global_env)
     : store -> list expr -> store -> list value -> Prop :=
 
   | EvalArgs_Nil : forall s,
-      eval_args fenv s [] s []
+      eval_args env s [] s []
 
   | EvalArgs_Cons : forall s s1 s2 e es v vs,
-      eval fenv s e s1 v ->
-      eval_args fenv s1 es s2 vs ->
-      eval_args fenv s (e :: es) s2 (v :: vs)
+      eval env s e s1 v ->
+      eval_args env s1 es s2 vs ->
+      eval_args env s (e :: es) s2 (v :: vs)
 
-with eval_struct_fields (fenv : list fn_def)
-    : store -> list (string * expr) -> store -> list (string * value) -> Prop :=
+with eval_struct_fields (env : global_env)
+    : store -> list (string * expr) -> list field_def -> store -> list (string * value) -> Prop :=
 
   | EvalStructFields_Nil : forall s,
-      eval_struct_fields fenv s [] s []
+      eval_struct_fields env s [] [] s []
 
-  | EvalStructFields_Cons : forall s s1 s2 name e rest v values,
-      eval fenv s e s1 v ->
-      eval_struct_fields fenv s1 rest s2 values ->
-      eval_struct_fields fenv s ((name, e) :: rest) s2 ((name, v) :: values).
+  | EvalStructFields_Cons : forall s s1 s2 fields f rest e v values,
+      lookup_expr_field (field_name f) fields = Some e ->
+      eval env s e s1 v ->
+      eval_struct_fields env s1 fields rest s2 values ->
+      eval_struct_fields env s fields (f :: rest) s2 ((field_name f, v) :: values).

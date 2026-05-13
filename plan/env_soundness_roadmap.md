@@ -66,11 +66,12 @@ Theorem infer_full_env_structural_sound :
    - HRT fixture に対応する theorem-level regression examples を `EnvTypingRules.v` または専用 proof file に追加する。
    - `EnvTypingSoundness.v` に `call_expr` fragment の `infer_core_env_state_fuel_call_structural_sound` を追加し、`ECall`、`ECallExpr TFn`、`ECallExpr TForall` を structural rule へ接続する。
 
-5. **P4: struct / field typing soundness**
+5. **P4: struct / field typing soundness** [done]
    - struct literal の arity、duplicate/unknown/missing field 検査から `typed_fields_env_structural` へ接続する。
    - field access の copy/move、partial move、restore、parent availability を Prop 化する。
    - `EReplace`, `EAssign`, `EBorrow` の path-aware typing soundness を wrapper なしで証明する。
    - trait bound checked struct literal について、`check_struct_bounds` 成功から `struct_bounds_resolved_env` を導くことを main proof に組み込む。
+   - `EnvTypingSoundness.v` に `struct_expr` fragment の `infer_core_env_state_fuel_struct_structural_sound` を追加し、struct literal、field replace/assign、shared/unique borrow を structural rule へ接続する。
 
 6. **P5: borrow checker env soundness**
    - `borrow_check_env` の全ケースを `borrow_ok_env_structural` に対して証明する。

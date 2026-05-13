@@ -49,6 +49,15 @@ Inductive typed_place_env_structural (env : global_env) (Σ : sctx)
       place_path (PField p (field_name fdef)) = None ->
       typed_place_env_structural env Σ (PField p (field_name fdef))
         (instantiate_struct_field_ty lts args fdef).
+Inductive place_under_unique_ref_structural (env : global_env) (Σ : sctx)
+    : place -> Prop :=
+  | PUURS_Deref : forall p la T u,
+      typed_place_env_structural env Σ p (MkTy u (TRef la RUnique T)) ->
+      place_under_unique_ref_structural env Σ (PDeref p)
+  | PUURS_Field : forall p f,
+      place_under_unique_ref_structural env Σ p ->
+      place_under_unique_ref_structural env Σ (PField p f).
+
 Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
     : sctx -> expr -> Ty -> sctx -> Prop :=
   | TES_Unit : forall Σ,
@@ -112,11 +121,26 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       ty_compatible_b Ω T_new T_old = true ->
       sctx_restore_path Σ1 x path = infer_ok Σ2 ->
       typed_env_structural env Ω n Σ (EReplace p e_new) T_old Σ2
+  | TES_Replace_Indirect : forall Σ Σ' p e_new T_old T_new,
+      typed_place_type_env_structural env Σ p T_old ->
+      place_path p = None ->
+      place_under_unique_ref_structural env Σ p ->
+      typed_env_structural env Ω n Σ e_new T_new Σ' ->
+      ty_compatible_b Ω T_new T_old = true ->
+      typed_env_structural env Ω n Σ (EReplace p e_new) T_old Σ'
   | TES_Assign_Path : forall Σ Σ' p e_new T_old T_new x path,
       typed_place_env_structural env Σ p T_old ->
       ty_usage T_old <> ULinear ->
       place_path p = Some (x, path) ->
       sctx_lookup_mut x Σ = Some MMutable ->
+      typed_env_structural env Ω n Σ e_new T_new Σ' ->
+      ty_compatible_b Ω T_new T_old = true ->
+      typed_env_structural env Ω n Σ (EAssign p e_new) (MkTy UUnrestricted TUnits) Σ'
+  | TES_Assign_Indirect : forall Σ Σ' p e_new T_old T_new,
+      typed_place_env_structural env Σ p T_old ->
+      ty_usage T_old <> ULinear ->
+      place_path p = None ->
+      place_under_unique_ref_structural env Σ p ->
       typed_env_structural env Ω n Σ e_new T_new Σ' ->
       ty_compatible_b Ω T_new T_old = true ->
       typed_env_structural env Ω n Σ (EAssign p e_new) (MkTy UUnrestricted TUnits) Σ'
@@ -128,6 +152,12 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_place_env_structural env Σ p T ->
       place_path p = Some (x, path) ->
       sctx_lookup_mut x Σ = Some MMutable ->
+      typed_env_structural env Ω n Σ (EBorrow RUnique p)
+        (MkTy UAffine (TRef (LVar n) RUnique T)) Σ
+  | TES_BorrowUnique_Indirect : forall Σ p T,
+      typed_place_env_structural env Σ p T ->
+      place_path p = None ->
+      place_under_unique_ref_structural env Σ p ->
       typed_env_structural env Ω n Σ (EBorrow RUnique p)
         (MkTy UAffine (TRef (LVar n) RUnique T)) Σ
   | TES_Deref_Place : forall Σ r p la rk T u,

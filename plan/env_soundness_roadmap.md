@@ -58,12 +58,13 @@ Theorem infer_full_env_structural_sound :
    - fuel が減る再帰呼び出しを扱うため、旧 `CheckerSoundness.v` と同様に expression size か fuel induction を固定する。
    - `EnvTypingSoundness.v` に `basic_expr` fragment の `infer_core_env_state_fuel_basic_structural_sound` を追加し、call/HRT、struct literal、field mutation/borrow は P3-P5 に残す。
 
-4. **P3: call と HRT soundness**
+4. **P3: call と HRT soundness** [done]
    - `ECall` の `build_sigma`, `finalize_subst`, `apply_lt_params`, `apply_lt_ty`, `apply_lt_outlives` の soundness を証明する。
    - `ECallExpr` の `TFn` case を構造規則へ接続する。
    - `ECallExpr` の `TForall` case を旧 `CheckerSoundness.v` の `T_CallExpr_Forall` 証明相当で env/stateful 版へ移植する。
    - `build_bound_sigma`, `open_bound_ty`, `open_bound_outlives`, `contains_lbound_ty`, `contains_lbound_outlives`, `outlives_constraints_hold_b` の補題を追加する。
    - HRT fixture に対応する theorem-level regression examples を `EnvTypingRules.v` または専用 proof file に追加する。
+   - `EnvTypingSoundness.v` に `call_expr` fragment の `infer_core_env_state_fuel_call_structural_sound` を追加し、`ECall`、`ECallExpr TFn`、`ECallExpr TForall` を structural rule へ接続する。
 
 5. **P4: struct / field typing soundness**
    - struct literal の arity、duplicate/unknown/missing field 検査から `typed_fields_env_structural` へ接続する。

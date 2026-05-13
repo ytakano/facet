@@ -1,367 +1,212 @@
-# HRT Roadmap: Higher-Rank Lifetimes Full Implementation
+# HRT Roadmap: Higher-Rank Lifetimes
 
 ## Summary
 
-This roadmap defines the path to fully implement higher-rank lifetimes
-for Facet. The target surface form is:
+Facet now has the core higher-rank lifetime machinery in place. The
+current design separates definition-site lifetime polymorphism from
+type-site higher-rank function types:
 
 ```facet
-for<'a, 'b> fn(&'a T, &'b U) -> &'a T
+fn id<'a>(r: unrestricted &'a unrestricted isize)
+  -> unrestricted &'a unrestricted isize {
+    r
+}
+
+fn accept(
+  f: unrestricted for<'a> fn(unrestricted &'a unrestricted isize)
+       -> unrestricted &'a unrestricted isize
+) -> unrestricted () {
+    ()
+}
 ```
 
-The current implementation already has `TFn` and explicit outlives
-constraints, but it does not yet have first-class function values,
-function-typed parameters, variable-position calls, or lifetime binders
-inside function types. Full HRT therefore needs to be implemented in
-stages rather than as a parser-only extension.
+`fn id<'a>(...)` defines a lifetime-polymorphic function item. When the
+function item is used as a value, the checker closes its item lifetimes
+into a `TForall` function value type. `for<'a> fn(...) -> ...` is a type
+syntax, not a function-definition syntax.
 
-## Goals
-
-- Add higher-rank lifetime binders to function types.
-- Support `for<'a> fn(...) -> ...` as a type.
-- Preserve lifetime soundness without using `Axiom` or `Admitted`.
-- Support passing polymorphic functions as values.
-- Support calling function-typed variables after instantiating their
-  higher-rank lifetime binders.
-- Prevent bound lifetime leakage.
-- Integrate HRT with explicit outlives constraints.
-
-## Non-goals for the first complete milestone
-
-- Closure capture.
-- Higher-rank type variables.
-- Lifetime elision inside HRT types.
-- Full variance inference for arbitrary function subtyping.
-- Trait-style lifetime bounds.
-
-## Phase 0: Baseline and invariants
-
-Before changing HRT-related definitions, preserve the current lifetime
-checker baseline.
-
-- Keep `Axiom` and `Admitted` out of `rocq/theories/TypeSystem`.
-- Keep the v11 explicit outlives design as the foundation.
-- Treat `fn_outlives` as item-level lifetime assumptions.
-- Treat HRT bounds as type-level lifetime assumptions scoped under the
-  HRT binder.
-- Keep `&mut` affine-or-linear and maintain the existing replace-only
-  policy for linear referents.
-
-Expected validation:
-
-- `cd rocq && make`
-- `bash tests/run.sh`
-- `bash tests/fir/run.sh`
-
-## Phase 1: Type-level HRT representation
-
-Add an explicit higher-rank lifetime binder to the core type language.
-
-Recommended representation:
-
-```coq
-| TForall : nat -> outlives_ctx -> TypeCore A -> TypeCore A
-```
-
-The `nat` is the number of bound lifetime variables. The `outlives_ctx`
-contains bounds between lifetimes in the scope extended by the bound
-variables. The body is normally a `TFn`, but the representation should
-not rely on that invariant unless the checker enforces it separately.
-
-Tasks:
-
-- Extend `TypeCore` with `TForall`.
-- Extend type equality and usage computation over `TForall`.
-- Extend lifetime substitution so outer substitutions do not capture or
-  rewrite bound lifetimes incorrectly.
-- Extend `wf_type_b` and related well-formedness predicates.
-- Extend pretty-printing and extraction artifacts through the normal
-  Rocq build.
-
-Initial restriction:
-
-- Accept only `TForall _ _ (TFn _ _)` at the surface syntax level.
-
-## Phase 2: Parser and concrete syntax
-
-Add parser support for higher-rank function types.
-
-Target syntax:
+The implemented HRT surface syntax for type-level bounds is:
 
 ```facet
-for<'a> fn(&'a T) -> &'a T
-for<'a, 'b> fn(&'a T, &'b U) -> &'a T
-for<'a where 'a: 'static> fn(&'a T) -> &'static T
+for<'a, 'b> fn(...) -> ... where 'a: 'b
 ```
 
-If the final `where` placement is too invasive, start with the simpler
-syntax and add bounds in a follow-up:
+This roadmap tracks what is done, what is currently in progress, and
+what remains.
+
+## Implemented
+
+### HRT v1: Type-level representation
+
+- Added `LBound nat` for lifetimes bound by higher-rank function types.
+- Added `TForall nat outlives_ctx Ty`.
+- Added parser support for `for<'a> fn(...) -> ...`.
+- Added well-formedness, equality, lifetime substitution, no-capture
+  handling, pretty-printing, and extraction support.
+- Added conservative `TForall` compatibility for matching arity, bounds,
+  and body structure.
+- Added valid/invalid tests for parsing, duplicate bound lifetimes,
+  unknown lifetimes, and bound lifetime escape.
+
+### HRT v2: Function values
+
+- Added `EFn ident` for zero-capture function item values.
+- Function items with lifetime parameters are exposed as `TForall`
+  function value types.
+- Bare identifier resolution prefers local bindings; otherwise it can
+  resolve to a function item value.
+- Existing direct calls remain compatible when no local binding shadows
+  the function name.
+
+### HRT v3: Function-typed calls
+
+- Added `ECallExpr expr (list expr)` for calls through function-typed
+  expressions.
+- Calls through `TFn` values are checked against parameter types.
+- Calls through `TForall` values instantiate bound lifetimes per call
+  site using argument types.
+- The checker rejects calls whose return type or opened bounds still
+  contain unresolved `LBound`.
+- Added `ErrNotAFunction` for non-function callees.
+- Added operational semantics, alpha-renaming, checker soundness, borrow
+  soundness, and usage proof support for `EFn` / `ECallExpr`.
+
+## In Progress
+
+### HRT v4: Bounds
+
+- HRT bounds use postfix syntax:
 
 ```facet
-for<'a> fn(&'a T) -> &'a T
+for<'a, 'b> fn(unrestricted &'a T) -> unrestricted &'b T where 'a: 'b
 ```
 
-Tasks:
-
-- Parse `for<'a, ...> fn(...) -> ...`.
-- Map bound lifetime names to local HRT indices.
-- Reject duplicate bound lifetime names.
-- Reject references to HRT-bound lifetimes outside the binder.
-- Reject malformed HRT bodies that are not function types.
-- Add valid and invalid parser/checker tests under `tests/`.
-
-## Phase 3: Lifetime opening and closing
-
-Define the operations needed to instantiate HRT types safely.
-
-Tasks:
-
-- Add an operation to open a `TForall` body with fresh or caller-chosen
-  lifetime variables.
-- Add an operation to substitute HRT-bound lifetimes with concrete
-  caller lifetimes.
-- Prove that opening preserves well-formedness when the instantiation
-  satisfies the HRT bounds.
-- Prove that opening commutes with ordinary lifetime substitution where
-  required.
-- Define and check the no-leak condition for HRT-bound lifetimes.
-
-Key invariant:
-
-- A lifetime bound by `for<'a>` must not appear in an inferred result
-  type unless it has been substituted with a caller-visible lifetime.
-
-## Phase 4: Compatibility and subtyping
-
-Extend `ty_compatible` and `ty_compatible_b` with HRT-aware behavior.
-
-Initial conservative rule:
-
-- Two HRT function types are compatible when they have the same binder
-  arity, compatible HRT bounds, and compatible opened bodies under a
-  shared fresh lifetime context.
-
-Instantiation rule:
-
-- A value of type `for<'a> fn(&'a T) -> &'a T` may be used where a
-  monomorphic function type is required if opening the HRT type with the
-  required lifetimes yields a compatible function type.
-
-Tasks:
-
-- Add HRT cases to `ty_compatible`.
-- Add boolean checker cases to `ty_compatible_b`.
-- Prove the boolean cases sound.
-- Keep function argument variance conservative at first.
-
-Initial variance policy:
-
-- Require same argument structure and use existing type compatibility
-  for argument and return positions.
-- Defer full contravariant argument subtyping until the first HRT
-  milestone is stable.
-
-## Phase 5: Function values
-
-The existing `ECall` calls named function items directly. HRT needs
-function values so polymorphic functions can be passed as arguments.
-
-Tasks:
-
-- Add an expression form for function item values, for example:
-
-```coq
-| EFn : ident -> expr
-```
-
-- Type `EFn f` as a function type derived from the function definition.
-- If `f` has lifetime parameters, expose it as a `TForall`.
-- Preserve existing direct `ECall f args` behavior for compatibility.
-- Add tests for assigning and passing function item values.
-
-Design point:
-
-- `EFn f` should be a zero-capture function pointer, not a closure.
-  This avoids adding environments to the operational semantics in the
-  first HRT implementation.
-
-## Phase 6: Function-typed calls
-
-Add calls through function-typed expressions or variables.
-
-Possible AST direction:
-
-```coq
-| ECallExpr : expr -> list expr -> expr
-```
-
-Tasks:
-
-- Infer the callee expression.
-- If the callee has `TFn args ret`, check arguments against `args`.
-- If the callee has `TForall n bounds (TFn args ret)`, instantiate the
-  HRT binders before checking arguments.
-- Ensure instantiated lifetimes satisfy HRT bounds under the caller
+- Parser support resolves HRT-bound lifetimes as `LBound` and outer
+  function lifetimes as `LVar`.
+- `TForall n bounds body` stores HRT bounds in the core type.
+- Function item `fn_outlives` constraints are closed into function value
+  `TForall` bounds.
+- Function-value calls open HRT bounds and check them against the caller
   outlives context.
-- Reject non-function callees.
-- Reject calls whose inferred return type leaks an uninstantiated HRT
-  lifetime.
+- Bounds that still contain unresolved `LBound` after opening are treated
+  as lifetime leaks.
 
-Tests:
+### HRT v5a: Unused-bound generalization
 
-- Call a function-valued variable.
-- Pass a polymorphic identity function and call it at two different
-  lifetimes.
-- Reject a monomorphic function where an HRT function is required.
+- Allow conservative generalization from `TFn` to `TForall` only when the
+  expected `TForall` has empty bounds and its body contains no `LBound`.
+- This permits `fn(isize) -> isize` where
+  `for<'a> fn(isize) -> isize` is expected.
+- This still rejects monomorphic functions for HRT types whose bound
+  lifetimes occur in argument or return positions.
 
-## Phase 7: Checker integration
+## Remaining Tasks
 
-Integrate HRT into the executable checker.
+### Variance improvement
 
-Tasks:
+- Current function compatibility remains conservative.
+- Add proper function variance later:
+  - argument types should be contravariant;
+  - return types should be covariant;
+  - HRT binder/bounds compatibility must remain sound.
+- Implement this incrementally behind tests so existing conservative
+  behavior does not regress unexpectedly.
 
-- Extend `infer_core` with `EFn` and function-typed calls.
-- Extend lifetime unification or instantiation to account for HRT
-  binders.
-- Reuse explicit outlives checking for HRT bounds.
-- Add a checker error for non-function callees if the existing errors
-  are too ambiguous.
-- Keep existing direct function calls working unchanged.
+### Diagnostics improvement
 
-Important behavior:
+- Current HRT failures can still collapse into broad errors such as
+  `ErrLifetimeConflict` or `ErrLifetimeLeak`.
+- Add more specific errors for:
+  - HRT bound not satisfied;
+  - unresolved HRT-bound lifetime;
+  - monomorphic function used where used-bound HRT is required;
+  - non-function callee;
+  - malformed HRT function body.
+- Keep existing errors as fallbacks for compatibility.
 
-- Direct item calls can continue using item-level `fn_lifetimes` and
-  `fn_outlives`.
-- Function-value calls should use the type carried by the callee
-  expression.
-- HRT instantiation must happen at each call site, not when the function
-  value is created.
+### HRT bounds syntax cleanup
 
-## Phase 8: Operational semantics
+- Normalize documentation and examples to postfix `where`:
 
-Extend runtime semantics minimally for function values.
+```facet
+for<'a, 'b> fn(...) -> ... where 'a: 'b
+```
 
-Tasks:
+- Update grammar documentation to match the implemented syntax.
+- Avoid the older roadmap example `for<'a where ...> fn(...) -> ...`
+  unless that syntax is intentionally added as sugar later.
 
-- Add values for function items.
-- Evaluate `EFn f` to a function value.
-- Evaluate function-typed calls by dispatching to the named function
-  body.
-- Avoid closure environments in the first implementation.
-- Prove preservation/progress extensions needed by checker soundness.
+### Proof refinement
 
-Design constraint:
+- The implementation is soundness-backed and uses no `Axiom` or
+  `Admitted`, but several HRT facts are still embedded inside checker
+  soundness proofs.
+- Extract dedicated lemmas for:
+  - opening preserves well-formedness;
+  - opening commutes with ordinary lifetime substitution where needed;
+  - no-leak checking implies no unresolved `LBound`;
+  - opened HRT bounds satisfaction implies Prop-level `outlives`;
+  - unused-bound generalization soundness.
+- Prefer small local lemmas over broad proof rewrites.
 
-- Function item values are copyable only if their type usage allows it.
-  Since they contain no runtime-owned resource, their usage should be
-  determined by the function type, not by hidden captured state.
+### FIR/runtime limitation cleanup
 
-## Phase 9: Soundness proofs
+- Runtime semantics supports zero-capture function values.
+- FIR lowering currently handles function items and static function
+  dispatch, but dynamic function values through variables are still
+  limited.
+- Add explicit FIR representation for function values if function-valued
+  variables must be emitted faithfully.
+- Add FIR tests for:
+  - function item values;
+  - function-valued parameters;
+  - calls through function-valued variables;
+  - HRT function values with bounds.
 
-Extend proof coverage without weakening the current no-axiom standard.
+## Current Test Coverage
 
-Tasks:
-
-- Prove HRT well-formedness lemmas.
-- Prove substitution/opening lemmas for HRT-bound lifetimes.
-- Prove HRT cases for `ty_compatible_b_sound`.
-- Prove checker soundness for `EFn`.
-- Prove checker soundness for function-typed calls.
-- Prove no-leak lemmas for instantiated HRT lifetimes.
-
-Proof strategy:
-
-- Keep the first HRT compatibility rule structurally conservative.
-- Avoid adding general-purpose variance proofs until required.
-- Prefer local lemmas around opening/substitution over broad rewrites of
-  existing soundness proofs.
-
-## Phase 10: Tests
-
-Add tests under `tests/` in the existing style.
-
-Valid tests:
-
-- Parse and typecheck `for<'a> fn(&'a T) -> &'a T`.
-- Pass a polymorphic identity function to a function expecting an HRT
-  function.
-- Call one HRT function value with arguments from different lifetimes.
-- Use HRT bounds that are satisfied by caller outlives constraints.
-- Preserve existing direct function call behavior.
-
-Invalid tests:
-
-- Use an HRT-bound lifetime outside its binder.
-- Return a value whose type leaks an uninstantiated HRT lifetime.
-- Pass `fn(&'x T) -> &'x T` where `for<'a> fn(&'a T) -> &'a T` is
-  required.
-- Instantiate an HRT function in a way that violates its bounds.
-- Call a non-function value.
-
-Suggested file names:
+Valid HRT tests include:
 
 - `tests/valid/lifetime/hrt_parse_fn_type.facet`
 - `tests/valid/lifetime/hrt_pass_poly_identity.facet`
+- `tests/valid/lifetime/hrt_call_function_param.facet`
 - `tests/valid/lifetime/hrt_call_twice.facet`
-- `tests/valid/lifetime/hrt_outlives_bound.facet`
+- `tests/valid/lifetime/hrt_direct_call_unchanged.facet`
+- `tests/valid/lifetime/hrt_bound_satisfied.facet`
+- `tests/valid/lifetime/hrt_item_bounds_as_value.facet`
+- `tests/valid/lifetime/hrt_monomorphic_as_unused_poly.facet`
+
+Invalid HRT tests include:
+
+- `tests/invalid/lifetime/hrt_duplicate_lifetime.facet`
+- `tests/invalid/lifetime/hrt_unknown_lifetime.facet`
+- `tests/invalid/lifetime/hrt_bound_lifetime_escape.facet`
 - `tests/invalid/lifetime/hrt_lifetime_leak.facet`
-- `tests/invalid/lifetime/hrt_monomorphic_as_poly.facet`
-- `tests/invalid/lifetime/hrt_bound_unsatisfied.facet`
 - `tests/invalid/lifetime/hrt_call_non_function.facet`
+- `tests/invalid/lifetime/hrt_monomorphic_as_used_poly.facet`
+- `tests/invalid/lifetime/hrt_bound_unsatisfied.facet`
+- `tests/invalid/lifetime/hrt_bound_leak.facet`
+- `tests/invalid/lifetime/hrt_bound_unknown_lifetime.facet`
 
-## Recommended implementation order
+## Validation Baseline
 
-1. Add `TForall` and make the Rocq build compile.
-2. Add parser support for `for<'a> fn(...) -> ...`.
-3. Add well-formedness and substitution support.
-4. Add conservative HRT compatibility.
-5. Add `EFn` function item values.
-6. Add calls through function-typed expressions.
-7. Add HRT instantiation at call sites.
-8. Extend soundness proofs.
-9. Add the full valid and invalid test set.
-10. Regenerate extraction through `cd rocq && make`.
+For HRT changes, run:
 
-## Risks
+```sh
+cd rocq && make
+bash tests/run.sh
+bash tests/fir/run.sh
+rg -n "\bAxiom\b|Admitted\." rocq/theories/TypeSystem
+```
 
-- Lifetime substitution under binders can easily become unsound if bound
-  and free lifetimes share the same representation.
-- Adding function values affects both typing and operational semantics.
-- Full function subtyping variance can expand the proof burden
-  substantially.
-- If HRT bounds are added too early, parser and checker changes may
-  become coupled to proof-heavy outlives work.
+The final `rg` command should produce no matches.
 
-## Milestone split
+## Non-goals
 
-### HRT v1
+- Closure capture.
+- Higher-rank type variables.
+- Trait-style lifetime bounds.
+- Lifetime elision.
+- Function-definition syntax of the form `for<'a> fn f(...)`.
 
-- `TForall`
-- Parser support for `for<'a> fn(...) -> ...`
-- Well-formedness
-- Conservative compatibility
-- No function values yet
-
-### HRT v2
-
-- Function item values
-- Function-typed parameters
-- Passing HRT functions as values
-
-### HRT v3
-
-- Calls through function-typed variables
-- Per-call HRT instantiation
-- No-leak checking
-
-### HRT v4
-
-- HRT outlives bounds
-- Bound satisfaction checking
-- Full soundness lemmas
-
-### HRT v5
-
-- More precise function variance
-- Better diagnostics
-- Larger integration tests
+These can be added later as independent extensions if needed.

@@ -86,6 +86,14 @@ outlives_constraint:
   | a = LIFETIME; COLON; b = LIFETIME
     { (LVar (resolve_fn_lt_name a), LVar (resolve_fn_lt_name b)) }
 
+hrt_outlives_constraint:
+  | a = LIFETIME; COLON; b = LIFETIME
+    { (resolve_lifetime a, resolve_lifetime b) }
+
+opt_hrt_where_outlives:
+  | { [] }
+  | KW_WHERE; cs = separated_nonempty_list(COMMA, hrt_outlives_constraint) { cs }
+
 params:
   | { [] }
   | ps = separated_nonempty_list(COMMA, param) { ps }
@@ -194,10 +202,10 @@ ty_core:
   | AMP; lt = LIFETIME; KW_MUT; t = ty { TRef (resolve_lifetime lt, RUnique, t) }
   | KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty
     { TFn (ts, ret) }
-  | h = hrt_lifetime_params; KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty
+  | h = hrt_lifetime_params; KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty; outs = opt_hrt_where_outlives
     { let (names, prev) = h in
       current_hrt_lifetimes := prev;
-      TForall (Big_int_Z.big_int_of_int (List.length names), [], MkTy (UUnrestricted, TFn (ts, ret))) }
+      TForall (Big_int_Z.big_int_of_int (List.length names), outs, MkTy (UUnrestricted, TFn (ts, ret))) }
 
 hrt_lifetime_params:
   | KW_FOR; LANGLE; names = separated_nonempty_list(COMMA, lifetime_name); RANGLE

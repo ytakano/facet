@@ -1,0 +1,11 @@
+fn mono(x: unrestricted isize) -> unrestricted isize {
+    x
+}
+
+fn accept(f: unrestricted for<'a> fn(unrestricted &'a unrestricted isize) -> unrestricted &'a unrestricted isize) -> unrestricted () {
+    ()
+}
+
+fn bad() -> unrestricted () {
+    (accept mono)
+}

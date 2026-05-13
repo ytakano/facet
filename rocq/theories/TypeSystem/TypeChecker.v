@@ -87,15 +87,44 @@ Definition ty_core_eqb (c1 c2 : TypeCore Ty) : bool :=
   | _, _ => false
   end.
 
-Fixpoint ty_compatible_b (Ω : outlives_ctx) (T_actual T_expected : Ty) {struct T_actual} : bool :=
-  usage_sub_bool (ty_usage T_actual) (ty_usage T_expected) &&
-  match ty_core T_actual, ty_core T_expected with
-  | TRef la rka Ta, TRef lb rkb Tb =>
-      outlives_b Ω la lb && ref_kind_eqb rka rkb && ty_compatible_b Ω Ta Tb
-  | TForall na Ωa Ta, TForall nb Ωb Tb =>
-      Nat.eqb na nb && outlives_ctx_eqb Ωa Ωb && ty_compatible_b Ω Ta Tb
-  | ca, cb => ty_core_eqb ca cb
+Fixpoint ty_depth (T : Ty) : nat :=
+  match T with
+  | MkTy _ c =>
+      match c with
+      | TFn ts r =>
+          S ((fix go (l : list Ty) : nat :=
+               match l with
+               | [] => ty_depth r
+               | t :: l' => S (ty_depth t) + go l'
+               end) ts)
+      | TRef _ _ t => S (ty_depth t)
+      | TForall _ Ω body => S (List.length Ω + ty_depth body)
+      | _ => 1
+      end
   end.
+
+Fixpoint ty_compatible_b_fuel (fuel : nat) (Ω : outlives_ctx)
+    (T_actual T_expected : Ty) : bool :=
+  match fuel with
+  | O => false
+  | S fuel' =>
+      usage_sub_bool (ty_usage T_actual) (ty_usage T_expected) &&
+      match ty_core T_actual, ty_core T_expected with
+      | TRef la rka Ta, TRef lb rkb Tb =>
+          outlives_b Ω la lb && ref_kind_eqb rka rkb &&
+          ty_compatible_b_fuel fuel' Ω Ta Tb
+      | TForall na Ωa Ta, TForall nb Ωb Tb =>
+          Nat.eqb na nb && outlives_ctx_eqb Ωa Ωb &&
+          ty_compatible_b_fuel fuel' Ω Ta Tb
+      | _, TForall _ [] Tb =>
+          negb (contains_lbound_ty Tb) &&
+          ty_compatible_b_fuel fuel' Ω T_actual Tb
+      | ca, cb => ty_core_eqb ca cb
+      end
+  end.
+
+Definition ty_compatible_b (Ω : outlives_ctx) (T_actual T_expected : Ty) : bool :=
+  ty_compatible_b_fuel (ty_depth T_actual + ty_depth T_expected) Ω T_actual T_expected.
 
 (* ------------------------------------------------------------------ *)
 (* Decidable context operations                                          *)
@@ -303,6 +332,10 @@ Definition lt_subst_vec_add
 Fixpoint unify_lt (m : nat) (σ : list (option lifetime))
     (T_param T_e : Ty) {struct T_param} : option (list (option lifetime)) :=
   match T_param with
+  | MkTy _ (TForall _ [] body) =>
+      if negb (contains_lbound_ty body)
+      then unify_lt m σ body T_e
+      else if ty_core_eqb (ty_core T_param) (ty_core T_e) then Some σ else None
   | MkTy _ (TRef l_p rk T_p_inner) =>
       match T_e with
       | MkTy _ (TRef l_a rk' T_e_inner) =>
@@ -1266,26 +1299,6 @@ Definition infer_direct (fenv : list fn_def) (f : fn_def)
         then infer_ok (fn_ret f, Γ_out)
         else infer_err ErrContextCheckFailed
       else infer_err (compatible_error T_body (fn_ret f))
-  end.
-
-(* ------------------------------------------------------------------ *)
-(* Depth measure for Ty (used in soundness proofs)                       *)
-(* ------------------------------------------------------------------ *)
-
-Fixpoint ty_depth (T : Ty) : nat :=
-  match T with
-  | MkTy _ c =>
-      match c with
-      | TFn ts r =>
-          S ((fix go (l : list Ty) : nat :=
-               match l with
-               | [] => ty_depth r
-               | t :: l' => S (ty_depth t) + go l'
-               end) ts)
-      | TRef _ _ t => S (ty_depth t)
-      | TForall _ Ω body => S (List.length Ω + ty_depth body)
-      | _ => 1
-      end
   end.
 
 (* ------------------------------------------------------------------ *)

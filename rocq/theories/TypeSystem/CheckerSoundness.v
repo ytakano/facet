@@ -266,48 +266,84 @@ Lemma ty_compatible_b_sound : forall Ω T_actual T_expected,
   ty_compatible_b Ω T_actual T_expected = true ->
   ty_compatible Ω T_actual T_expected.
 Proof.
-  intros Ω.
-  assert (Hsize : forall n T_actual T_expected,
-      ty_depth T_actual < n ->
-      ty_compatible_b Ω T_actual T_expected = true ->
-      ty_compatible Ω T_actual T_expected).
-  {
-    induction n as [| n IH]; intros T_actual T_expected Hlt H.
-    - destruct T_actual as [? c]; destruct c; simpl in Hlt; lia.
-    - destruct T_actual as [ua ca], T_expected as [ue ce].
-      simpl in H. apply andb_true_iff in H as [Hu Hc].
-      destruct ca as [| | | | sa | tsa ra | na Ωa body_a | la rka Ta],
-               ce as [| | | | se | tse re | nb Ωb body_b | lb rkb Tb];
-        simpl in Hc; try discriminate;
-        try (apply TC_Core;
-             [apply usage_sub_bool_sound; exact Hu | reflexivity]).
-      + apply String.eqb_eq in Hc. subst.
-        apply TC_Core; [apply usage_sub_bool_sound; exact Hu | reflexivity].
-      + apply TC_Core.
-        * apply usage_sub_bool_sound. exact Hu.
-        * apply ty_core_eqb_true. exact Hc.
-      + apply andb_true_iff in Hc as [HnΩ HT].
-        apply andb_true_iff in HnΩ as [Hn HΩ].
-        apply Nat.eqb_eq in Hn. subst nb.
-        apply outlives_ctx_eqb_true in HΩ. subst Ωb.
-        apply TC_Forall.
-        * apply usage_sub_bool_sound. exact Hu.
-        * apply IH.
-          -- simpl in Hlt. lia.
-          -- exact HT.
-      + apply andb_true_iff in Hc as [Hlr HT].
-        apply andb_true_iff in Hlr as [Hl Hr].
-        apply ref_kind_eqb_true in Hr. subst rkb.
-        apply TC_Ref.
-        * apply usage_sub_bool_sound. exact Hu.
-        * apply outlives_b_sound. exact Hl.
-        * apply IH.
-          -- simpl in Hlt. lia.
-          -- exact HT.
-  }
-  intros T_actual T_expected H.
-  exact (Hsize (S (ty_depth T_actual)) T_actual T_expected
-    (Nat.lt_succ_diag_r _) H).
+  intros Ω T_actual T_expected H.
+  unfold ty_compatible_b in H.
+  set (fuel := ty_depth T_actual + ty_depth T_expected) in H.
+  clearbody fuel.
+  revert Ω T_actual T_expected H.
+  induction fuel as [| fuel IH]; intros Ω T_actual T_expected H.
+  - simpl in H. discriminate.
+  - destruct T_actual as [ua ca], T_expected as [ue ce].
+    simpl in H. apply andb_true_iff in H as [Hu Hc].
+    destruct ca as [| | | | sa | tsa ra | na Ωa body_a | la rka Ta],
+             ce as [| | | | se | tse re | nb Ωb body_b | lb rkb Tb];
+      simpl in Hc; try discriminate;
+      try (apply TC_Core;
+           [apply usage_sub_bool_sound; exact Hu
+           | apply ty_core_eqb_true; exact Hc]).
+    + destruct Ωb as [|p Ωb]; [|discriminate].
+      apply andb_true_iff in Hc as [Hnob Hrec].
+      apply negb_true_iff in Hnob.
+      eapply TC_Forall_GeneralizeUnused.
+      * apply usage_sub_bool_sound. exact Hu.
+      * exact Hnob.
+      * eapply IH. exact Hrec.
+    + destruct Ωb as [|p Ωb]; [|discriminate].
+      apply andb_true_iff in Hc as [Hnob Hrec].
+      apply negb_true_iff in Hnob.
+      eapply TC_Forall_GeneralizeUnused.
+      * apply usage_sub_bool_sound. exact Hu.
+      * exact Hnob.
+      * eapply IH. exact Hrec.
+    + destruct Ωb as [|p Ωb]; [|discriminate].
+      apply andb_true_iff in Hc as [Hnob Hrec].
+      apply negb_true_iff in Hnob.
+      eapply TC_Forall_GeneralizeUnused.
+      * apply usage_sub_bool_sound. exact Hu.
+      * exact Hnob.
+      * eapply IH. exact Hrec.
+    + destruct Ωb as [|p Ωb]; [|discriminate].
+      apply andb_true_iff in Hc as [Hnob Hrec].
+      apply negb_true_iff in Hnob.
+      eapply TC_Forall_GeneralizeUnused.
+      * apply usage_sub_bool_sound. exact Hu.
+      * exact Hnob.
+      * eapply IH. exact Hrec.
+    + destruct Ωb as [|p Ωb]; [|discriminate].
+      apply andb_true_iff in Hc as [Hnob Hrec].
+      apply negb_true_iff in Hnob.
+      eapply TC_Forall_GeneralizeUnused.
+      * apply usage_sub_bool_sound. exact Hu.
+      * exact Hnob.
+      * eapply IH. exact Hrec.
+    + destruct Ωb as [|p Ωb]; [|discriminate].
+      apply andb_true_iff in Hc as [Hnob Hrec].
+      apply negb_true_iff in Hnob.
+      eapply TC_Forall_GeneralizeUnused.
+      * apply usage_sub_bool_sound. exact Hu.
+      * exact Hnob.
+      * eapply IH. exact Hrec.
+    + apply andb_true_iff in Hc as [HnΩ HT].
+      apply andb_true_iff in HnΩ as [Hn HΩ].
+      apply Nat.eqb_eq in Hn. subst nb.
+      apply outlives_ctx_eqb_true in HΩ. subst Ωb.
+      apply TC_Forall.
+      * apply usage_sub_bool_sound. exact Hu.
+      * eapply IH. exact HT.
+    + destruct Ωb as [|p Ωb]; [|discriminate].
+      apply andb_true_iff in Hc as [Hnob Hrec].
+      apply negb_true_iff in Hnob.
+      eapply TC_Forall_GeneralizeUnused.
+      * apply usage_sub_bool_sound. exact Hu.
+      * exact Hnob.
+      * eapply IH. exact Hrec.
+    + apply andb_true_iff in Hc as [Hlr HT].
+      apply andb_true_iff in Hlr as [Hl Hr].
+      apply ref_kind_eqb_true in Hr. subst rkb.
+      apply TC_Ref.
+      * apply usage_sub_bool_sound. exact Hu.
+      * apply outlives_b_sound. exact Hl.
+      * eapply IH. exact HT.
 Qed.
 
 (* ------------------------------------------------------------------ *)

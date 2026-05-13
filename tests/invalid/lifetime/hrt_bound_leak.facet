@@ -1,0 +1,7 @@
+fn bad<'x>(
+    r: unrestricted &'x unrestricted isize,
+    f: unrestricted for<'a, 'b> fn(unrestricted &'a unrestricted isize) -> unrestricted &'b unrestricted isize where 'a: 'b
+) -> unrestricted () {
+    let _ = (f r);
+    ()
+}

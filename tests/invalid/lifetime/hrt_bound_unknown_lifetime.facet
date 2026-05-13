@@ -1,0 +1,3 @@
+fn bad(f: unrestricted for<'a> fn() -> unrestricted () where 'a: 'missing) -> unrestricted () {
+    ()
+}

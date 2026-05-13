@@ -695,26 +695,120 @@ let ty_core_eqb c1 c2 =
        (&&) ((&&) (lifetime_eqb l1 l2) (ref_kind_eqb k1 k2)) (ty_eqb t1 t2)
      | _ -> false)
 
+(** val ty_depth : ty -> Big_int_Z.big_int **)
+
+let rec ty_depth = function
+| MkTy (_, c) ->
+  (match c with
+   | TFn (ts, r) ->
+     Big_int_Z.succ_big_int
+       (let rec go = function
+        | [] -> ty_depth r
+        | t0 :: l' -> add (Big_int_Z.succ_big_int (ty_depth t0)) (go l')
+        in go ts)
+   | TForall (_, _UU03a9_, body) ->
+     Big_int_Z.succ_big_int (add (length _UU03a9_) (ty_depth body))
+   | TRef (_, _, t0) -> Big_int_Z.succ_big_int (ty_depth t0)
+   | _ -> Big_int_Z.succ_big_int Big_int_Z.zero_big_int)
+
+(** val ty_compatible_b_fuel :
+    Big_int_Z.big_int -> outlives_ctx -> ty -> ty -> bool **)
+
+let rec ty_compatible_b_fuel fuel _UU03a9_ t_actual t_expected =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> false)
+    (fun fuel' ->
+    (&&) (usage_sub_bool (ty_usage t_actual) (ty_usage t_expected))
+      (match ty_core t_actual with
+       | TUnits ->
+         let ca = TUnits in
+         (match ty_core t_expected with
+          | TForall (n, o, tb) ->
+            (match o with
+             | [] ->
+               (&&) (negb (contains_lbound_ty tb))
+                 (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
+             | p :: l -> ty_core_eqb ca (TForall (n, (p :: l), tb)))
+          | x -> ty_core_eqb ca x)
+       | TIntegers ->
+         let ca = TIntegers in
+         (match ty_core t_expected with
+          | TForall (n, o, tb) ->
+            (match o with
+             | [] ->
+               (&&) (negb (contains_lbound_ty tb))
+                 (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
+             | p :: l -> ty_core_eqb ca (TForall (n, (p :: l), tb)))
+          | x -> ty_core_eqb ca x)
+       | TFloats ->
+         let ca = TFloats in
+         (match ty_core t_expected with
+          | TForall (n, o, tb) ->
+            (match o with
+             | [] ->
+               (&&) (negb (contains_lbound_ty tb))
+                 (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
+             | p :: l -> ty_core_eqb ca (TForall (n, (p :: l), tb)))
+          | x -> ty_core_eqb ca x)
+       | TBooleans ->
+         let ca = TBooleans in
+         (match ty_core t_expected with
+          | TForall (n, o, tb) ->
+            (match o with
+             | [] ->
+               (&&) (negb (contains_lbound_ty tb))
+                 (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
+             | p :: l -> ty_core_eqb ca (TForall (n, (p :: l), tb)))
+          | x -> ty_core_eqb ca x)
+       | TNamed s ->
+         let ca = TNamed s in
+         (match ty_core t_expected with
+          | TForall (n, o, tb) ->
+            (match o with
+             | [] ->
+               (&&) (negb (contains_lbound_ty tb))
+                 (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
+             | p :: l -> ty_core_eqb ca (TForall (n, (p :: l), tb)))
+          | x -> ty_core_eqb ca x)
+       | TFn (l, t) ->
+         let ca = TFn (l, t) in
+         (match ty_core t_expected with
+          | TForall (n, o, tb) ->
+            (match o with
+             | [] ->
+               (&&) (negb (contains_lbound_ty tb))
+                 (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
+             | p :: l0 -> ty_core_eqb ca (TForall (n, (p :: l0), tb)))
+          | x -> ty_core_eqb ca x)
+       | TForall (na, _UU03a9_a, ta) ->
+         let ca = TForall (na, _UU03a9_a, ta) in
+         (match ty_core t_expected with
+          | TForall (nb, _UU03a9_b, tb) ->
+            (&&)
+              ((&&) (Nat.eqb na nb) (outlives_ctx_eqb _UU03a9_a _UU03a9_b))
+              (ty_compatible_b_fuel fuel' _UU03a9_ ta tb)
+          | x -> ty_core_eqb ca x)
+       | TRef (la, rka, ta) ->
+         let ca = TRef (la, rka, ta) in
+         (match ty_core t_expected with
+          | TForall (n, o, tb) ->
+            (match o with
+             | [] ->
+               (&&) (negb (contains_lbound_ty tb))
+                 (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
+             | p :: l -> ty_core_eqb ca (TForall (n, (p :: l), tb)))
+          | TRef (lb, rkb, tb) ->
+            (&&) ((&&) (outlives_b _UU03a9_ la lb) (ref_kind_eqb rka rkb))
+              (ty_compatible_b_fuel fuel' _UU03a9_ ta tb)
+          | x -> ty_core_eqb ca x)))
+    fuel
+
 (** val ty_compatible_b : outlives_ctx -> ty -> ty -> bool **)
 
-let rec ty_compatible_b _UU03a9_ t_actual t_expected =
-  (&&) (usage_sub_bool (ty_usage t_actual) (ty_usage t_expected))
-    (match ty_core t_actual with
-     | TForall (na, _UU03a9_a, ta) ->
-       let ca = TForall (na, _UU03a9_a, ta) in
-       (match ty_core t_expected with
-        | TForall (nb, _UU03a9_b, tb) ->
-          (&&) ((&&) (Nat.eqb na nb) (outlives_ctx_eqb _UU03a9_a _UU03a9_b))
-            (ty_compatible_b _UU03a9_ ta tb)
-        | x -> ty_core_eqb ca x)
-     | TRef (la, rka, ta) ->
-       let ca = TRef (la, rka, ta) in
-       (match ty_core t_expected with
-        | TRef (lb, rkb, tb) ->
-          (&&) ((&&) (outlives_b _UU03a9_ la lb) (ref_kind_eqb rka rkb))
-            (ty_compatible_b _UU03a9_ ta tb)
-        | x -> ty_core_eqb ca x)
-     | x -> ty_core_eqb x (ty_core t_expected))
+let ty_compatible_b _UU03a9_ t_actual t_expected =
+  ty_compatible_b_fuel (add (ty_depth t_actual) (ty_depth t_expected))
+    _UU03a9_ t_actual t_expected
 
 (** val ctx_lookup_b : ident -> ctx -> (ty * bool) option **)
 
@@ -889,6 +983,18 @@ let lt_subst_vec_add _UU03c3_ i l_a =
 let rec unify_lt m _UU03c3_ t_param t_e =
   let MkTy (_, t) = t_param in
   (match t with
+   | TForall (_, o, body) ->
+     (match o with
+      | [] ->
+        if negb (contains_lbound_ty body)
+        then unify_lt m _UU03c3_ body t_e
+        else if ty_core_eqb (ty_core t_param) (ty_core t_e)
+             then Some _UU03c3_
+             else None
+      | _ :: _ ->
+        if ty_core_eqb (ty_core t_param) (ty_core t_e)
+        then Some _UU03c3_
+        else None)
    | TRef (l_p, rk, t_p_inner) ->
      let MkTy (_, t0) = t_e in
      (match t0 with

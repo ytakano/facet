@@ -1,0 +1,21 @@
+fn shorten<'a, 'b>(
+    r: unrestricted &'a unrestricted isize,
+    s: unrestricted &'b unrestricted isize
+) -> unrestricted &'b unrestricted isize where 'a: 'b {
+    s
+}
+
+fn accept<'x, 'y>(
+    r: unrestricted &'x unrestricted isize,
+    s: unrestricted &'y unrestricted isize,
+    f: unrestricted for<'a, 'b> fn(unrestricted &'a unrestricted isize, unrestricted &'b unrestricted isize) -> unrestricted &'b unrestricted isize where 'a: 'b
+) -> unrestricted &'y unrestricted isize where 'x: 'y {
+    (f r s)
+}
+
+fn caller<'x, 'y>(
+    r: unrestricted &'x unrestricted isize,
+    s: unrestricted &'y unrestricted isize
+) -> unrestricted &'y unrestricted isize where 'x: 'y {
+    (accept r s shorten)
+}

@@ -118,7 +118,14 @@ Inductive ty_compatible (Ω : outlives_ctx) : Ty -> Ty -> Prop :=
       ty_compatible Ω body_a body_e ->
       ty_compatible Ω
         (MkTy ua (TForall n Ω_forall body_a))
-        (MkTy ue (TForall n Ω_forall body_e)).
+        (MkTy ue (TForall n Ω_forall body_e))
+  | TC_Forall_GeneralizeUnused : forall ua ue n ca body,
+      usage_sub ua ue ->
+      contains_lbound_ty body = false ->
+      ty_compatible Ω (MkTy ua ca) body ->
+      ty_compatible Ω
+        (MkTy ua ca)
+        (MkTy ue (TForall n [] body)).
 
 Definition usage_max (u1 u2 : usage) : usage :=
   match u1, u2 with

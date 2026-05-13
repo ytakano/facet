@@ -1,0 +1,11 @@
+struct Split {
+  x: affine isize,
+  y: unrestricted bool
+}
+
+fn main() -> unrestricted () {
+  let p: affine Split = Split { x = 1, y = true };
+  let _ = p.x;
+  let _ = (&p);
+  ()
+}

@@ -1,0 +1,8 @@
+struct Split {
+  x: affine isize,
+  y: unrestricted bool
+}
+
+fn main() -> unrestricted Split {
+  Split { x = 1, y = true }
+}

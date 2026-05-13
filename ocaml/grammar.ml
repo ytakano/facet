@@ -147,9 +147,8 @@ LIFETIME  ::= "'" alpha (alpha | digit | "_")*
 
 ## Reserved words
 `fn`, `let`, `in`, `mut`, `drop`, `replace`, `affine`, `linear`,
-`struct`, `trait`, `impl`, `fn`, `for`, `let`, `in`, `mut`, `drop`,
-`replace`, `affine`, `linear`, `unrestricted`, `isize`, `f64`, `if`, `else`,
-`true`, `false`, `bool`, `where`
+`unrestricted`, `isize`, `f64`, `bool`, `true`, `false`, `if`, `else`,
+`struct`, `trait`, `impl`, `for`, `where`
 |}
 
 let print_grammar () = print_string grammar

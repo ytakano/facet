@@ -354,7 +354,9 @@ Inductive infer_error : Type :=
   | ErrStructNotFound : string -> infer_error
   | ErrFieldNotFound : string -> infer_error
   | ErrDuplicateField : string -> infer_error
-  | ErrMissingField : string -> infer_error.
+  | ErrMissingField : string -> infer_error
+  | ErrTraitImplNotFound : string -> Ty -> infer_error
+  | ErrTraitImplAmbiguous : string -> Ty -> infer_error.
 
 Definition compatible_error (T_actual T_expected : Ty) : infer_error :=
   match ty_core T_actual, ty_core T_expected with
@@ -366,6 +368,41 @@ Definition compatible_error (T_actual T_expected : Ty) : infer_error :=
       if ty_core_eqb (ty_core T_actual) (ty_core T_expected)
       then ErrUsageMismatch (ty_usage T_actual) (ty_usage T_expected)
       else ErrTypeMismatch (ty_core T_actual) (ty_core T_expected)
+  end.
+
+Definition trait_impl_error
+    (env : global_env) (trait_name : string) (for_ty : Ty) : option infer_error :=
+  match matching_impls trait_name [] for_ty (env_impls env) with
+  | [] => Some (ErrTraitImplNotFound trait_name for_ty)
+  | [_] => None
+  | _ :: _ :: _ => Some (ErrTraitImplAmbiguous trait_name for_ty)
+  end.
+
+Fixpoint check_trait_names_for_ty
+    (env : global_env) (traits : list string) (for_ty : Ty) : option infer_error :=
+  match traits with
+  | [] => None
+  | trait_name :: rest =>
+      match trait_impl_error env trait_name for_ty with
+      | Some err => Some err
+      | None => check_trait_names_for_ty env rest for_ty
+      end
+  end.
+
+Fixpoint check_struct_bounds
+    (env : global_env) (bounds : list trait_bound) (args : list Ty)
+    : option infer_error :=
+  match bounds with
+  | [] => None
+  | b :: rest =>
+      match nth_error args (bound_type_index b) with
+      | None => Some ErrArityMismatch
+      | Some for_ty =>
+          match check_trait_names_for_ty env (bound_traits b) for_ty with
+          | Some err => Some err
+          | None => check_struct_bounds env rest args
+          end
+      end
   end.
 
 (* ------------------------------------------------------------------ *)
@@ -1260,38 +1297,42 @@ Fixpoint infer_core_env_fuel (fuel : nat)
           else if negb (Nat.eqb (List.length args) (struct_type_params s))
           then infer_err ErrArityMismatch
           else
-          match first_duplicate_field fields with
-          | Some name => infer_err (ErrDuplicateField name)
+          match check_struct_bounds env (struct_bounds s) args with
+          | Some err => infer_err err
           | None =>
-              match first_unknown_field fields (struct_fields s) with
-              | Some name => infer_err (ErrFieldNotFound name)
+              match first_duplicate_field fields with
+              | Some name => infer_err (ErrDuplicateField name)
               | None =>
-                  match first_missing_field (struct_fields s) fields with
-                  | Some name => infer_err (ErrMissingField name)
+                  match first_unknown_field fields (struct_fields s) with
+                  | Some name => infer_err (ErrFieldNotFound name)
                   | None =>
-                      let fix go (Γ0 : ctx) (defs : list field_def)
-                          : infer_result ctx :=
-                        match defs with
-                        | [] => infer_ok Γ0
-                        | f :: rest =>
-                            match lookup_field_b (field_name f) fields with
-                            | None => infer_err (ErrMissingField (field_name f))
-                            | Some e_field =>
-                                match infer_core_env_fuel fuel' env Ω n Γ0 e_field with
-                                | infer_err err => infer_err err
-                                | infer_ok (T_field, Γ1) =>
-                                    let T_expected := instantiate_struct_field_ty lts args f in
-                                    if ty_compatible_b Ω T_field T_expected
-                                    then go Γ1 rest
-                                    else infer_err (compatible_error T_field T_expected)
+                      match first_missing_field (struct_fields s) fields with
+                      | Some name => infer_err (ErrMissingField name)
+                      | None =>
+                          let fix go (Γ0 : ctx) (defs : list field_def)
+                              : infer_result ctx :=
+                            match defs with
+                            | [] => infer_ok Γ0
+                            | f :: rest =>
+                                match lookup_field_b (field_name f) fields with
+                                | None => infer_err (ErrMissingField (field_name f))
+                                | Some e_field =>
+                                    match infer_core_env_fuel fuel' env Ω n Γ0 e_field with
+                                    | infer_err err => infer_err err
+                                    | infer_ok (T_field, Γ1) =>
+                                        let T_expected := instantiate_struct_field_ty lts args f in
+                                        if ty_compatible_b Ω T_field T_expected
+                                        then go Γ1 rest
+                                        else infer_err (compatible_error T_field T_expected)
+                                    end
                                 end
                             end
+                          in
+                          match go Γ (struct_fields s) with
+                          | infer_err err => infer_err err
+                          | infer_ok Γ' => infer_ok (instantiate_struct_ty s lts args, Γ')
+                          end
                         end
-                      in
-                      match go Γ (struct_fields s) with
-                      | infer_err err => infer_err err
-                      | infer_ok Γ' => infer_ok (instantiate_struct_ty s lts args, Γ')
-                      end
                   end
               end
           end
@@ -1798,38 +1839,42 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
           else if negb (Nat.eqb (List.length args) (struct_type_params s))
           then infer_err ErrArityMismatch
           else
-          match first_duplicate_field fields with
-          | Some name => infer_err (ErrDuplicateField name)
+          match check_struct_bounds env (struct_bounds s) args with
+          | Some err => infer_err err
           | None =>
-              match first_unknown_field fields (struct_fields s) with
-              | Some name => infer_err (ErrFieldNotFound name)
+              match first_duplicate_field fields with
+              | Some name => infer_err (ErrDuplicateField name)
               | None =>
-                  match first_missing_field (struct_fields s) fields with
-                  | Some name => infer_err (ErrMissingField name)
+                  match first_unknown_field fields (struct_fields s) with
+                  | Some name => infer_err (ErrFieldNotFound name)
                   | None =>
-                      let fix go (Σ0 : sctx) (defs : list field_def)
-                          : infer_result sctx :=
-                        match defs with
-                        | [] => infer_ok Σ0
-                        | f :: rest =>
-                            match lookup_field_b (field_name f) fields with
-                            | None => infer_err (ErrMissingField (field_name f))
-                            | Some e_field =>
-                                match infer_core_env_state_fuel fuel' env Ω n Σ0 e_field with
-                                | infer_err err => infer_err err
-                                | infer_ok (T_field, Σ1) =>
-                                    let T_expected := instantiate_struct_field_ty lts args f in
-                                    if ty_compatible_b Ω T_field T_expected
-                                    then go Σ1 rest
-                                    else infer_err (compatible_error T_field T_expected)
+                      match first_missing_field (struct_fields s) fields with
+                      | Some name => infer_err (ErrMissingField name)
+                      | None =>
+                          let fix go (Σ0 : sctx) (defs : list field_def)
+                              : infer_result sctx :=
+                            match defs with
+                            | [] => infer_ok Σ0
+                            | f :: rest =>
+                                match lookup_field_b (field_name f) fields with
+                                | None => infer_err (ErrMissingField (field_name f))
+                                | Some e_field =>
+                                    match infer_core_env_state_fuel fuel' env Ω n Σ0 e_field with
+                                    | infer_err err => infer_err err
+                                    | infer_ok (T_field, Σ1) =>
+                                        let T_expected := instantiate_struct_field_ty lts args f in
+                                        if ty_compatible_b Ω T_field T_expected
+                                        then go Σ1 rest
+                                        else infer_err (compatible_error T_field T_expected)
+                                    end
                                 end
                             end
+                          in
+                          match go Σ (struct_fields s) with
+                          | infer_err err => infer_err err
+                          | infer_ok Σ' => infer_ok (instantiate_struct_instance_ty s lts args, Σ')
+                          end
                         end
-                      in
-                      match go Σ (struct_fields s) with
-                      | infer_err err => infer_err err
-                      | infer_ok Σ' => infer_ok (instantiate_struct_instance_ty s lts args, Σ')
-                      end
                   end
               end
           end

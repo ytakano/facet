@@ -85,6 +85,10 @@ let string_of_infer_error = function
     Printf.sprintf "duplicate field: %s" name
   | ErrMissingField name ->
     Printf.sprintf "missing field: %s" name
+  | ErrTraitImplNotFound (name, ty) ->
+    Printf.sprintf "trait impl not found: %s for %s" name (string_of_ty ty)
+  | ErrTraitImplAmbiguous (name, ty) ->
+    Printf.sprintf "trait impl is ambiguous: %s for %s" name (string_of_ty ty)
 
 let check_alpha_consistency fname fenv f =
   let r1 = infer fenv f in

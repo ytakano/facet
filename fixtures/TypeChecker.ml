@@ -73,6 +73,44 @@ let rec add = Big_int_Z.add_big_int
 let rec sub = (fun n m -> Big_int_Z.max_big_int Big_int_Z.zero_big_int
   (Big_int_Z.sub_big_int n m))
 
+(** val eqb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool **)
+
+let rec eqb n m =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ ->
+    (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+      (fun _ -> true)
+      (fun _ -> false)
+      m)
+    (fun n' ->
+    (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+      (fun _ -> false)
+      (fun m' -> eqb n' m')
+      m)
+    n
+
+(** val leb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool **)
+
+let rec leb n m =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> true)
+    (fun n' ->
+    (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+      (fun _ -> false)
+      (fun m' -> leb n' m')
+      m)
+    n
+
+(** val ltb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool **)
+
+let ltb n m =
+  leb (Big_int_Z.succ_big_int n) m
+
 (** val tail_add :
     Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
 
@@ -431,9 +469,9 @@ let of_num_uint = function
 | UIntDecimal d0 -> of_uint d0
 | UIntHexadecimal d0 -> of_hex_uint d0
 
-(** val eqb : bool -> bool -> bool **)
+(** val eqb0 : bool -> bool -> bool **)
 
-let eqb b1 b2 =
+let eqb0 b1 b2 =
   if b1 then b2 else if b2 then false else true
 
 module Nat =
@@ -497,6 +535,12 @@ let rec fold_left f l a0 =
   match l with
   | [] -> a0
   | b :: l0 -> fold_left f l0 (f a0 b)
+
+(** val fold_right : ('a2 -> 'a1 -> 'a1) -> 'a1 -> 'a2 list -> 'a1 **)
+
+let rec fold_right f a0 = function
+| [] -> a0
+| b :: l0 -> f b (fold_right f a0 l0)
 
 (** val existsb : ('a1 -> bool) -> 'a1 list -> bool **)
 
@@ -983,6 +1027,366 @@ let rec subst_type_params_ty _UU03c3_ = function
 let instantiate_struct_field_ty lifetime_args type_args f =
   subst_type_params_ty type_args (apply_lt_ty lifetime_args f.field_ty)
 
+(** val usage_eqb_decl : usage -> usage -> bool **)
+
+let usage_eqb_decl u1 u2 =
+  match u1 with
+  | ULinear -> (match u2 with
+                | ULinear -> true
+                | _ -> false)
+  | UAffine -> (match u2 with
+                | UAffine -> true
+                | _ -> false)
+  | UUnrestricted -> (match u2 with
+                      | UUnrestricted -> true
+                      | _ -> false)
+
+(** val ref_kind_eqb_decl : ref_kind -> ref_kind -> bool **)
+
+let ref_kind_eqb_decl k1 k2 =
+  match k1 with
+  | RShared -> (match k2 with
+                | RShared -> true
+                | RUnique -> false)
+  | RUnique -> (match k2 with
+                | RShared -> false
+                | RUnique -> true)
+
+(** val lifetime_list_eqb_decl : lifetime list -> lifetime list -> bool **)
+
+let rec lifetime_list_eqb_decl l1 l2 =
+  match l1 with
+  | [] -> (match l2 with
+           | [] -> true
+           | _ :: _ -> false)
+  | x :: xs ->
+    (match l2 with
+     | [] -> false
+     | y :: ys -> (&&) (lifetime_eqb x y) (lifetime_list_eqb_decl xs ys))
+
+(** val outlives_ctx_eqb_decl : outlives_ctx -> outlives_ctx -> bool **)
+
+let rec outlives_ctx_eqb_decl _UU03a9_1 _UU03a9_2 =
+  match _UU03a9_1 with
+  | [] -> (match _UU03a9_2 with
+           | [] -> true
+           | _ :: _ -> false)
+  | p :: xs ->
+    let (a1, b1) = p in
+    (match _UU03a9_2 with
+     | [] -> false
+     | p0 :: ys ->
+       let (a2, b2) = p0 in
+       (&&) ((&&) (lifetime_eqb a1 a2) (lifetime_eqb b1 b2))
+         (outlives_ctx_eqb_decl xs ys))
+
+(** val ty_eqb_decl : ty -> ty -> bool **)
+
+let rec ty_eqb_decl t1 t2 =
+  let MkTy (u1, c1) = t1 in
+  let MkTy (u2, c2) = t2 in
+  (&&) (usage_eqb_decl u1 u2)
+    (match c1 with
+     | TUnits -> (match c2 with
+                  | TUnits -> true
+                  | _ -> false)
+     | TIntegers -> (match c2 with
+                     | TIntegers -> true
+                     | _ -> false)
+     | TFloats -> (match c2 with
+                   | TFloats -> true
+                   | _ -> false)
+     | TBooleans -> (match c2 with
+                     | TBooleans -> true
+                     | _ -> false)
+     | TNamed s1 -> (match c2 with
+                     | TNamed s2 -> (=) s1 s2
+                     | _ -> false)
+     | TParam i1 -> (match c2 with
+                     | TParam i2 -> eqb i1 i2
+                     | _ -> false)
+     | TStruct (n1, lts1, args1) ->
+       (match c2 with
+        | TStruct (n2, lts2, args2) ->
+          (&&) ((&&) ((=) n1 n2) (lifetime_list_eqb_decl lts1 lts2))
+            (let rec go xs ys =
+               match xs with
+               | [] -> (match ys with
+                        | [] -> true
+                        | _ :: _ -> false)
+               | x :: xs' ->
+                 (match ys with
+                  | [] -> false
+                  | y :: ys' -> (&&) (ty_eqb_decl x y) (go xs' ys'))
+             in go args1 args2)
+        | _ -> false)
+     | TFn (ps1, r1) ->
+       (match c2 with
+        | TFn (ps2, r2) ->
+          (&&)
+            (let rec go xs ys =
+               match xs with
+               | [] -> (match ys with
+                        | [] -> true
+                        | _ :: _ -> false)
+               | x :: xs' ->
+                 (match ys with
+                  | [] -> false
+                  | y :: ys' -> (&&) (ty_eqb_decl x y) (go xs' ys'))
+             in go ps1 ps2)
+            (ty_eqb_decl r1 r2)
+        | _ -> false)
+     | TForall (n1, _UU03a9_1, b1) ->
+       (match c2 with
+        | TForall (n2, _UU03a9_2, b2) ->
+          (&&) ((&&) (eqb n1 n2) (outlives_ctx_eqb_decl _UU03a9_1 _UU03a9_2))
+            (ty_eqb_decl b1 b2)
+        | _ -> false)
+     | TRef (l1, rk1, t3) ->
+       (match c2 with
+        | TRef (l2, rk2, t4) ->
+          (&&) ((&&) (lifetime_eqb l1 l2) (ref_kind_eqb_decl rk1 rk2))
+            (ty_eqb_decl t3 t4)
+        | _ -> false))
+
+type type_subst = ty option list
+
+type lifetime_subst = lifetime option list
+
+(** val repeat_none : Big_int_Z.big_int -> 'a1 option list **)
+
+let rec repeat_none n =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> [])
+    (fun n' -> None :: (repeat_none n'))
+    n
+
+(** val list_set_nth : Big_int_Z.big_int -> 'a1 -> 'a1 list -> 'a1 list **)
+
+let rec list_set_nth i v xs =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> match xs with
+              | [] -> []
+              | _ :: rest -> v :: rest)
+    (fun i' ->
+    match xs with
+    | [] -> []
+    | x :: rest -> x :: (list_set_nth i' v rest))
+    i
+
+(** val bind_type_param :
+    Big_int_Z.big_int -> ty -> type_subst -> type_subst option **)
+
+let bind_type_param i t _UU03c3_ =
+  match nth_error _UU03c3_ i with
+  | Some o ->
+    (match o with
+     | Some t' -> if ty_eqb_decl t t' then Some _UU03c3_ else None
+     | None -> Some (list_set_nth i (Some t) _UU03c3_))
+  | None -> None
+
+(** val bind_lifetime_param :
+    Big_int_Z.big_int -> lifetime -> lifetime_subst -> lifetime_subst option **)
+
+let bind_lifetime_param i l _UU03c3_ =
+  match nth_error _UU03c3_ i with
+  | Some o ->
+    (match o with
+     | Some l' -> if lifetime_eqb l l' then Some _UU03c3_ else None
+     | None -> Some (list_set_nth i (Some l) _UU03c3_))
+  | None -> None
+
+type impl_match_state = type_subst * lifetime_subst
+
+(** val match_lifetime :
+    Big_int_Z.big_int -> lifetime -> lifetime -> impl_match_state ->
+    impl_match_state option **)
+
+let match_lifetime lt_params pattern actual st = match st with
+| (ty_UU03c3_, lt_UU03c3_) ->
+  (match pattern with
+   | LVar i ->
+     if ltb i lt_params
+     then (match bind_lifetime_param i actual lt_UU03c3_ with
+           | Some lt_UU03c3_' -> Some (ty_UU03c3_, lt_UU03c3_')
+           | None -> None)
+     else if lifetime_eqb pattern actual then Some st else None
+   | _ -> if lifetime_eqb pattern actual then Some st else None)
+
+(** val match_lifetimes :
+    Big_int_Z.big_int -> lifetime list -> lifetime list -> impl_match_state
+    -> impl_match_state option **)
+
+let rec match_lifetimes lt_params patterns actuals st =
+  match patterns with
+  | [] -> (match actuals with
+           | [] -> Some st
+           | _ :: _ -> None)
+  | p :: ps ->
+    (match actuals with
+     | [] -> None
+     | a :: as_ ->
+       (match match_lifetime lt_params p a st with
+        | Some st' -> match_lifetimes lt_params ps as_ st'
+        | None -> None))
+
+(** val match_ty :
+    Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int -> ty -> ty
+    -> impl_match_state -> impl_match_state option **)
+
+let rec match_ty ty_params lt_params fuel pattern actual st =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> None)
+    (fun fuel' ->
+    let MkTy (u_p, c_p) = pattern in
+    (match c_p with
+     | TParam i ->
+       if ltb i ty_params
+       then if usage_eqb_decl u_p (ty_usage actual)
+            then let (ty_UU03c3_, lt_UU03c3_) = st in
+                 (match bind_type_param i actual ty_UU03c3_ with
+                  | Some ty_UU03c3_' -> Some (ty_UU03c3_', lt_UU03c3_)
+                  | None -> None)
+            else None
+       else if ty_eqb_decl pattern actual then Some st else None
+     | _ ->
+       let MkTy (u_a, c_a) = actual in
+       if negb (usage_eqb_decl u_p u_a)
+       then None
+       else (match c_p with
+             | TUnits -> (match c_a with
+                          | TUnits -> Some st
+                          | _ -> None)
+             | TIntegers -> (match c_a with
+                             | TIntegers -> Some st
+                             | _ -> None)
+             | TFloats -> (match c_a with
+                           | TFloats -> Some st
+                           | _ -> None)
+             | TBooleans -> (match c_a with
+                             | TBooleans -> Some st
+                             | _ -> None)
+             | TNamed s1 ->
+               (match c_a with
+                | TNamed s2 -> if (=) s1 s2 then Some st else None
+                | _ -> None)
+             | TParam _ -> None
+             | TStruct (n1, lts1, args1) ->
+               (match c_a with
+                | TStruct (n2, lts2, args2) ->
+                  if (=) n1 n2
+                  then (match match_lifetimes lt_params lts1 lts2 st with
+                        | Some st' ->
+                          match_tys ty_params lt_params fuel' args1 args2 st'
+                        | None -> None)
+                  else None
+                | _ -> None)
+             | TFn (ps1, r1) ->
+               (match c_a with
+                | TFn (ps2, r2) ->
+                  (match match_tys ty_params lt_params fuel' ps1 ps2 st with
+                   | Some st' -> match_ty ty_params lt_params fuel' r1 r2 st'
+                   | None -> None)
+                | _ -> None)
+             | TForall (n1, _UU03a9_1, b1) ->
+               (match c_a with
+                | TForall (n2, _UU03a9_2, b2) ->
+                  if (&&) (eqb n1 n2)
+                       (outlives_ctx_eqb_decl _UU03a9_1 _UU03a9_2)
+                  then match_ty ty_params lt_params fuel' b1 b2 st
+                  else None
+                | _ -> None)
+             | TRef (l1, rk1, t1) ->
+               (match c_a with
+                | TRef (l2, rk2, t2) ->
+                  if ref_kind_eqb_decl rk1 rk2
+                  then (match match_lifetime lt_params l1 l2 st with
+                        | Some st' ->
+                          match_ty ty_params lt_params fuel' t1 t2 st'
+                        | None -> None)
+                  else None
+                | _ -> None))))
+    fuel
+
+(** val match_tys :
+    Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int -> ty list ->
+    ty list -> impl_match_state -> impl_match_state option **)
+
+and match_tys ty_params lt_params fuel patterns actuals st =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> None)
+    (fun fuel' ->
+    match patterns with
+    | [] -> (match actuals with
+             | [] -> Some st
+             | _ :: _ -> None)
+    | p :: ps ->
+      (match actuals with
+       | [] -> None
+       | a :: as_ ->
+         (match match_ty ty_params lt_params fuel' p a st with
+          | Some st' -> match_tys ty_params lt_params fuel' ps as_ st'
+          | None -> None)))
+    fuel
+
+(** val ty_match_fuel : ty -> Big_int_Z.big_int **)
+
+let rec ty_match_fuel = function
+| MkTy (_, t0) ->
+  (match t0 with
+   | TStruct (_, lts, args) ->
+     Big_int_Z.succ_big_int
+       (add (length lts)
+         (fold_right (fun t1 acc -> add (ty_match_fuel t1) acc)
+           Big_int_Z.zero_big_int args))
+   | TFn (ps, r) ->
+     Big_int_Z.succ_big_int
+       (add (ty_match_fuel r)
+         (fold_right (fun t1 acc -> add (ty_match_fuel t1) acc)
+           Big_int_Z.zero_big_int ps))
+   | TForall (_, _UU03a9_, body) ->
+     Big_int_Z.succ_big_int (add (length _UU03a9_) (ty_match_fuel body))
+   | TRef (_, _, inner) -> Big_int_Z.succ_big_int (ty_match_fuel inner)
+   | _ -> Big_int_Z.succ_big_int Big_int_Z.zero_big_int)
+
+(** val impl_matches_b : string -> ty list -> ty -> impl_def -> bool **)
+
+let impl_matches_b trait_name0 trait_args for_ty i =
+  if negb ((=) trait_name0 i.impl_trait_name)
+  then false
+  else let st0 = ((repeat_none i.impl_type_params),
+         (repeat_none i.impl_lifetimes))
+       in
+       let fuel = Big_int_Z.succ_big_int
+         (add
+           (add (add (ty_match_fuel for_ty) (ty_match_fuel i.impl_for_ty))
+             (fold_right (fun t acc -> add (ty_match_fuel t) acc)
+               Big_int_Z.zero_big_int trait_args))
+           (fold_right (fun t acc -> add (ty_match_fuel t) acc)
+             Big_int_Z.zero_big_int i.impl_trait_args))
+       in
+       (match match_tys i.impl_type_params i.impl_lifetimes fuel
+                i.impl_trait_args trait_args st0 with
+        | Some st1 ->
+          (match match_ty i.impl_type_params i.impl_lifetimes fuel
+                   i.impl_for_ty for_ty st1 with
+           | Some _ -> true
+           | None -> false)
+        | None -> false)
+
+(** val matching_impls :
+    string -> ty list -> ty -> impl_def list -> impl_def list **)
+
+let rec matching_impls trait_name0 trait_args for_ty = function
+| [] -> []
+| i :: rest ->
+  let rest' = matching_impls trait_name0 trait_args for_ty rest in
+  if impl_matches_b trait_name0 trait_args for_ty i then i :: rest' else rest'
+
 type ctx_entry = ((ident * ty) * binding_state) * mutability
 
 type ctx = ctx_entry list
@@ -1081,7 +1485,7 @@ let rec ctx_merge _UU0393_2 _UU0393_3 =
              | Some rest ->
                (match ty_usage t with
                 | ULinear ->
-                  if eqb st2.st_consumed st3.st_consumed
+                  if eqb0 st2.st_consumed st3.st_consumed
                   then Some ((((n, t), { st_consumed = st2.st_consumed;
                          st_moved_paths =
                          (app st2.st_moved_paths st3.st_moved_paths) }),
@@ -1715,6 +2119,8 @@ type infer_error =
 | ErrFieldNotFound of string
 | ErrDuplicateField of string
 | ErrMissingField of string
+| ErrTraitImplNotFound of string * ty
+| ErrTraitImplAmbiguous of string * ty
 
 (** val compatible_error : ty -> ty -> infer_error **)
 
@@ -1735,9 +2141,45 @@ let compatible_error t_actual t_expected =
     then ErrUsageMismatch ((ty_usage t_actual), (ty_usage t_expected))
     else ErrTypeMismatch ((ty_core t_actual), (ty_core t_expected))
 
-(** val list_set_nth : Big_int_Z.big_int -> 'a1 -> 'a1 list -> 'a1 list **)
+(** val trait_impl_error :
+    global_env -> string -> ty -> infer_error option **)
 
-let rec list_set_nth i v l =
+let trait_impl_error env trait_name0 for_ty =
+  match matching_impls trait_name0 [] for_ty env.env_impls with
+  | [] -> Some (ErrTraitImplNotFound (trait_name0, for_ty))
+  | _ :: l ->
+    (match l with
+     | [] -> None
+     | _ :: _ -> Some (ErrTraitImplAmbiguous (trait_name0, for_ty)))
+
+(** val check_trait_names_for_ty :
+    global_env -> string list -> ty -> infer_error option **)
+
+let rec check_trait_names_for_ty env traits for_ty =
+  match traits with
+  | [] -> None
+  | trait_name0 :: rest ->
+    (match trait_impl_error env trait_name0 for_ty with
+     | Some err -> Some err
+     | None -> check_trait_names_for_ty env rest for_ty)
+
+(** val check_struct_bounds :
+    global_env -> trait_bound list -> ty list -> infer_error option **)
+
+let rec check_struct_bounds env bounds args =
+  match bounds with
+  | [] -> None
+  | b :: rest ->
+    (match nth_error args b.bound_type_index with
+     | Some for_ty ->
+       (match check_trait_names_for_ty env b.bound_traits for_ty with
+        | Some err -> Some err
+        | None -> check_struct_bounds env rest args)
+     | None -> Some ErrArityMismatch)
+
+(** val list_set_nth0 : Big_int_Z.big_int -> 'a1 -> 'a1 list -> 'a1 list **)
+
+let rec list_set_nth0 i v l =
   (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
   else fS (Big_int_Z.pred_big_int n))
     (fun _ -> match l with
@@ -1745,7 +2187,7 @@ let rec list_set_nth i v l =
               | _ :: t -> v :: t)
     (fun i' -> match l with
                | [] -> []
-               | h :: t -> h :: (list_set_nth i' v t))
+               | h :: t -> h :: (list_set_nth0 i' v t))
     i
 
 (** val lt_subst_vec_add :
@@ -1757,7 +2199,7 @@ let lt_subst_vec_add _UU03c3_ i l_a =
   | Some o ->
     (match o with
      | Some l' -> if lifetime_eqb l' l_a then Some _UU03c3_ else None
-     | None -> Some (list_set_nth i (Some l_a) _UU03c3_))
+     | None -> Some (list_set_nth0 i (Some l_a) _UU03c3_))
   | None -> None
 
 (** val unify_lt :
@@ -2730,45 +3172,51 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
          then Infer_err ErrArityMismatch
          else if negb (Nat.eqb (length args) s.struct_type_params)
               then Infer_err ErrArityMismatch
-              else (match first_duplicate_field fields with
-                    | Some name -> Infer_err (ErrDuplicateField name)
+              else (match check_struct_bounds env s.struct_bounds args with
+                    | Some err -> Infer_err err
                     | None ->
-                      (match first_unknown_field fields s.struct_fields with
-                       | Some name -> Infer_err (ErrFieldNotFound name)
+                      (match first_duplicate_field fields with
+                       | Some name -> Infer_err (ErrDuplicateField name)
                        | None ->
-                         (match first_missing_field s.struct_fields fields with
-                          | Some name -> Infer_err (ErrMissingField name)
+                         (match first_unknown_field fields s.struct_fields with
+                          | Some name -> Infer_err (ErrFieldNotFound name)
                           | None ->
-                            let go =
-                              let rec go _UU03a3_0 = function
-                              | [] -> Infer_ok _UU03a3_0
-                              | f :: rest ->
-                                (match lookup_field_b f.field_name fields with
-                                 | Some e_field ->
-                                   (match infer_core_env_state_fuel fuel' env
-                                            _UU03a9_ n _UU03a3_0 e_field with
-                                    | Infer_ok p ->
-                                      let (t_field, _UU03a3_1) = p in
-                                      let t_expected =
-                                        instantiate_struct_field_ty lts args f
-                                      in
-                                      if ty_compatible_b _UU03a9_ t_field
-                                           t_expected
-                                      then go _UU03a3_1 rest
-                                      else Infer_err
-                                             (compatible_error t_field
-                                               t_expected)
-                                    | Infer_err err -> Infer_err err)
-                                 | None ->
-                                   Infer_err (ErrMissingField f.field_name))
-                              in go
-                            in
-                            (match go _UU03a3_ s.struct_fields with
-                             | Infer_ok _UU03a3_' ->
-                               Infer_ok
-                                 ((instantiate_struct_instance_ty s lts args),
-                                 _UU03a3_')
-                             | Infer_err err -> Infer_err err))))
+                            (match first_missing_field s.struct_fields fields with
+                             | Some name -> Infer_err (ErrMissingField name)
+                             | None ->
+                               let go =
+                                 let rec go _UU03a3_0 = function
+                                 | [] -> Infer_ok _UU03a3_0
+                                 | f :: rest ->
+                                   (match lookup_field_b f.field_name fields with
+                                    | Some e_field ->
+                                      (match infer_core_env_state_fuel fuel'
+                                               env _UU03a9_ n _UU03a3_0
+                                               e_field with
+                                       | Infer_ok p ->
+                                         let (t_field, _UU03a3_1) = p in
+                                         let t_expected =
+                                           instantiate_struct_field_ty lts
+                                             args f
+                                         in
+                                         if ty_compatible_b _UU03a9_ t_field
+                                              t_expected
+                                         then go _UU03a3_1 rest
+                                         else Infer_err
+                                                (compatible_error t_field
+                                                  t_expected)
+                                       | Infer_err err -> Infer_err err)
+                                    | None ->
+                                      Infer_err (ErrMissingField f.field_name))
+                                 in go
+                               in
+                               (match go _UU03a3_ s.struct_fields with
+                                | Infer_ok _UU03a3_' ->
+                                  Infer_ok
+                                    ((instantiate_struct_instance_ty s lts
+                                       args),
+                                    _UU03a3_')
+                                | Infer_err err -> Infer_err err)))))
        | None -> Infer_err (ErrStructNotFound sname))
     | EReplace (p, e_new) ->
       (match infer_place_type_sctx env _UU03a3_ p with

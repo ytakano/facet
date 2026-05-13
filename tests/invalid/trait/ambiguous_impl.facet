@@ -4,7 +4,7 @@ struct Box<T> where T: Show {
   value: affine T
 }
 
-impl<T> Show for affine Box<affine T>;
+impl<T> Show for affine T;
 impl Show for affine isize;
 
 fn main() -> affine Box<affine isize> {

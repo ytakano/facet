@@ -49,6 +49,12 @@ val add : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
 
 val sub : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
 
+val eqb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool
+
+val leb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool
+
+val ltb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool
+
 val tail_add : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
 
 val tail_addmul :
@@ -67,7 +73,7 @@ val of_hex_uint : uint0 -> Big_int_Z.big_int
 
 val of_num_uint : uint1 -> Big_int_Z.big_int
 
-val eqb : bool -> bool -> bool
+val eqb0 : bool -> bool -> bool
 
 module Nat :
  sig
@@ -87,6 +93,8 @@ val firstn : Big_int_Z.big_int -> 'a1 list -> 'a1 list
 val nth_error : 'a1 list -> Big_int_Z.big_int -> 'a1 option
 
 val fold_left : ('a1 -> 'a2 -> 'a1) -> 'a2 list -> 'a1 -> 'a1
+
+val fold_right : ('a2 -> 'a1 -> 'a1) -> 'a1 -> 'a2 list -> 'a1
 
 val existsb : ('a1 -> bool) -> 'a1 list -> bool
 
@@ -274,6 +282,54 @@ val subst_type_params_ty : ty list -> ty -> ty
 
 val instantiate_struct_field_ty : lifetime list -> ty list -> field_def -> ty
 
+val usage_eqb_decl : usage -> usage -> bool
+
+val ref_kind_eqb_decl : ref_kind -> ref_kind -> bool
+
+val lifetime_list_eqb_decl : lifetime list -> lifetime list -> bool
+
+val outlives_ctx_eqb_decl : outlives_ctx -> outlives_ctx -> bool
+
+val ty_eqb_decl : ty -> ty -> bool
+
+type type_subst = ty option list
+
+type lifetime_subst = lifetime option list
+
+val repeat_none : Big_int_Z.big_int -> 'a1 option list
+
+val list_set_nth : Big_int_Z.big_int -> 'a1 -> 'a1 list -> 'a1 list
+
+val bind_type_param :
+  Big_int_Z.big_int -> ty -> type_subst -> type_subst option
+
+val bind_lifetime_param :
+  Big_int_Z.big_int -> lifetime -> lifetime_subst -> lifetime_subst option
+
+type impl_match_state = type_subst * lifetime_subst
+
+val match_lifetime :
+  Big_int_Z.big_int -> lifetime -> lifetime -> impl_match_state ->
+  impl_match_state option
+
+val match_lifetimes :
+  Big_int_Z.big_int -> lifetime list -> lifetime list -> impl_match_state ->
+  impl_match_state option
+
+val match_ty :
+  Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int -> ty -> ty ->
+  impl_match_state -> impl_match_state option
+
+val match_tys :
+  Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int -> ty list ->
+  ty list -> impl_match_state -> impl_match_state option
+
+val ty_match_fuel : ty -> Big_int_Z.big_int
+
+val impl_matches_b : string -> ty list -> ty -> impl_def -> bool
+
+val matching_impls : string -> ty list -> ty -> impl_def list -> impl_def list
+
 type ctx_entry = ((ident * ty) * binding_state) * mutability
 
 type ctx = ctx_entry list
@@ -406,10 +462,20 @@ type infer_error =
 | ErrFieldNotFound of string
 | ErrDuplicateField of string
 | ErrMissingField of string
+| ErrTraitImplNotFound of string * ty
+| ErrTraitImplAmbiguous of string * ty
 
 val compatible_error : ty -> ty -> infer_error
 
-val list_set_nth : Big_int_Z.big_int -> 'a1 -> 'a1 list -> 'a1 list
+val trait_impl_error : global_env -> string -> ty -> infer_error option
+
+val check_trait_names_for_ty :
+  global_env -> string list -> ty -> infer_error option
+
+val check_struct_bounds :
+  global_env -> trait_bound list -> ty list -> infer_error option
+
+val list_set_nth0 : Big_int_Z.big_int -> 'a1 -> 'a1 list -> 'a1 list
 
 val lt_subst_vec_add :
   lifetime option list -> Big_int_Z.big_int -> lifetime -> lifetime option

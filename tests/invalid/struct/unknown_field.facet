@@ -1,0 +1,8 @@
+struct Pair {
+  x: unrestricted isize
+}
+
+fn main() -> unrestricted isize {
+  let p: unrestricted Pair = Pair { x = 1 };
+  p.y
+}

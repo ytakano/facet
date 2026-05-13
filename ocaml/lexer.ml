@@ -25,6 +25,9 @@ let current_pos st =
 let keywords = [
   "fn",           Parser.KW_FN;
   "for",          Parser.KW_FOR;
+  "struct",       Parser.KW_STRUCT;
+  "trait",        Parser.KW_TRAIT;
+  "impl",         Parser.KW_IMPL;
   "let",          Parser.KW_LET;
   "in",           Parser.KW_IN;
   "mut",          Parser.KW_MUT;
@@ -87,6 +90,8 @@ let rec tokenize st =
     let s = Sedlexing.Utf8.lexeme buf in
     Parser.LIFETIME (String.sub s 1 (String.length s - 1))
   | '*' -> Parser.STAR
+  | '.' -> Parser.DOT
+  | '+' -> Parser.PLUS
   | ',' -> Parser.COMMA
   | ':' -> Parser.COLON
   | '=' -> Parser.EQUAL

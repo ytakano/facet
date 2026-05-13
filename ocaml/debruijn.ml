@@ -4,6 +4,11 @@ open TypeChecker
 (* scope maps name -> current de Bruijn index (shadow-counting) *)
 type scope = (string * int) list
 
+type ty_scope = {
+  type_params  : string list;
+  struct_names : string list;
+}
+
 let current_depth scope name =
   match List.assoc_opt name scope with
   | Some d -> d
@@ -22,16 +27,9 @@ let make_ident name d : ident =
 let rec convert_place scope = function
   | NPVar name -> PVar (make_ident name (lookup scope name))
   | NPDeref p -> PDeref (convert_place scope p)
+  | NPField (p, field) -> PField (convert_place scope p, field)
 
 let in_scope scope name = current_depth scope name >= 0
-
-let resolve_lifetime_name names name =
-  let rec aux i = function
-    | [] -> failwith ("undefined lifetime '" ^ name)
-    | h :: _ when h = name -> i
-    | _ :: rest -> aux (i + 1) rest
-  in
-  aux 0 names
 
 let lifetime_mem l lifetimes =
   List.exists (fun l' -> l' = l) lifetimes
@@ -39,37 +37,74 @@ let lifetime_mem l lifetimes =
 let lifetime_add l lifetimes =
   if lifetime_mem l lifetimes then lifetimes else l :: lifetimes
 
-let lower_named_ty_core c =
+let index_of name names =
+  let rec aux i = function
+    | [] -> None
+    | h :: _ when h = name -> Some i
+    | _ :: rest -> aux (i + 1) rest
+  in
+  aux 0 names
+
+let rec lower_named_ty ty_scope (NTy (u, c)) =
+  MkTy (u, lower_named_ty_core ty_scope c)
+
+and lower_named_ty_core ty_scope c =
   match c with
   | NTUnits -> TUnits
   | NTIntegers -> TIntegers
   | NTFloats -> TFloats
   | NTBooleans -> TBooleans
-  | NTNamed s -> TNamed s
-  | NTFn (ts, ret) -> TFn (ts, ret)
-  | NTForall (n, outs, body) -> TForall (n, outs, body)
-  | NTRef _ -> failwith "internal error: NTRef must be lowered with context"
+  | NTNamed (s, args) ->
+    begin match index_of s ty_scope.type_params with
+    | Some i ->
+      if args <> [] then failwith ("type parameter cannot take arguments: " ^ s);
+      TParam (Big_int_Z.big_int_of_int i)
+    | None ->
+      let (lts, tys) = split_type_args ty_scope args in
+      if List.mem s ty_scope.struct_names || args <> []
+      then TStruct (s, lts, tys)
+      else TNamed s
+    end
+  | NTFn (ts, ret) ->
+    TFn (List.map (lower_named_ty ty_scope) ts, lower_named_ty ty_scope ret)
+  | NTForall (n, outs, body) ->
+    TForall (n, outs, lower_named_ty ty_scope body)
+  | NTRef (lt_opt, rk, inner) ->
+    let lt =
+      match lt_opt with
+      | Some lt -> lt
+      | None -> LVar Big_int_Z.zero_big_int
+    in
+    TRef (lt, rk, lower_named_ty ty_scope inner)
 
-let rec lower_input_ty lifetime_names next input_lts (NTy (u, c)) =
+and split_type_args ty_scope args =
+  let rec go lts tys = function
+    | [] -> (List.rev lts, List.rev tys)
+    | NTArgLifetime lt :: rest -> go (lt :: lts) tys rest
+    | NTArgTy ty :: rest -> go lts (lower_named_ty ty_scope ty :: tys) rest
+  in
+  go [] [] args
+
+let rec lower_input_ty ty_scope next input_lts (NTy (u, c)) =
   match c with
   | NTRef (lt_opt, rk, inner) ->
-    let (inner_ty, next', input_lts') = lower_input_ty lifetime_names next input_lts inner in
+    let (inner_ty, next', input_lts') = lower_input_ty ty_scope next input_lts inner in
     let (lt, next'') =
       match lt_opt with
-      | Some name -> (LVar (Big_int_Z.big_int_of_int (resolve_lifetime_name lifetime_names name)), next')
+      | Some lt -> (lt, next')
       | None -> (LVar (Big_int_Z.big_int_of_int next'), next' + 1)
     in
     (MkTy (u, TRef (lt, rk, inner_ty)), next'', lifetime_add lt input_lts')
   | _ ->
-    (MkTy (u, lower_named_ty_core c), next, input_lts)
+    (MkTy (u, lower_named_ty_core ty_scope c), next, input_lts)
 
-let rec lower_output_ty lifetime_names input_lts (NTy (u, c)) =
+let rec lower_output_ty ty_scope input_lts (NTy (u, c)) =
   match c with
   | NTRef (lt_opt, rk, inner) ->
-    let inner_ty = lower_output_ty lifetime_names input_lts inner in
+    let inner_ty = lower_output_ty ty_scope input_lts inner in
     let lt =
       match lt_opt with
-      | Some name -> LVar (Big_int_Z.big_int_of_int (resolve_lifetime_name lifetime_names name))
+      | Some lt -> lt
       | None ->
         match input_lts with
         | [only] -> only
@@ -78,9 +113,32 @@ let rec lower_output_ty lifetime_names input_lts (NTy (u, c)) =
     in
     MkTy (u, TRef (lt, rk, inner_ty))
   | _ ->
-    MkTy (u, lower_named_ty_core c)
+    MkTy (u, lower_named_ty_core ty_scope c)
 
-let rec convert (fn_names : string list) (scope : scope) (e : named_expr) : expr =
+let split_generics generics =
+  let rec go lts tys = function
+    | [] -> (List.rev lts, List.rev tys)
+    | NGLifetime lt :: rest -> go (lt :: lts) tys rest
+    | NGType ty :: rest -> go lts (ty :: tys) rest
+  in
+  go [] [] generics
+
+let trait_bound_of_named type_params b =
+  match index_of b.ntb_type_name type_params with
+  | None -> failwith ("unknown type parameter in trait bound: " ^ b.ntb_type_name)
+  | Some i ->
+    { bound_type_index = Big_int_Z.big_int_of_int i;
+      bound_traits = b.ntb_traits }
+
+let split_expr_type_args ty_scope args =
+  let rec go lts tys = function
+    | [] -> (List.rev lts, List.rev tys)
+    | NTArgLifetime lt :: rest -> go (lt :: lts) tys rest
+    | NTArgTy ty :: rest -> go lts (lower_named_ty ty_scope ty :: tys) rest
+  in
+  go [] [] args
+
+let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (e : named_expr) : expr =
   match e with
   | NUnit           -> EUnit
   | NLit l          -> ELit l
@@ -88,38 +146,49 @@ let rec convert (fn_names : string list) (scope : scope) (e : named_expr) : expr
     if in_scope scope name then EVar (make_ident name (lookup scope name))
     else if List.mem name fn_names then EFn (make_ident name 0)
     else EVar (make_ident name (lookup scope name))
-  | NDrop e1        -> EDrop (convert fn_names scope e1)
+  | NPlace p        -> EPlace (convert_place scope p)
+  | NDrop e1        -> EDrop (convert fn_names ty_scope scope e1)
   | NReplace (p, e1) ->
-    EReplace (convert_place scope p, convert fn_names scope e1)
+    EReplace (convert_place scope p, convert fn_names ty_scope scope e1)
   | NAssign (p, e1) ->
-    EAssign (convert_place scope p, convert fn_names scope e1)
+    EAssign (convert_place scope p, convert fn_names ty_scope scope e1)
   | NBorrow (rk, p) ->
     EBorrow (rk, convert_place scope p)
   | NDeref e1 ->
-    EDeref (convert fn_names scope e1)
+    EDeref (convert fn_names ty_scope scope e1)
   | NCall (f, args) ->
-    let args' = List.map (convert fn_names scope) args in
+    let args' = List.map (convert fn_names ty_scope scope) args in
     if in_scope scope f then ECallExpr (EVar (make_ident f (lookup scope f)), args')
     else ECall (make_ident f 0, args')
+  | NStruct (name, args, fields) ->
+    let (lts, tys) = split_expr_type_args ty_scope args in
+    EStruct (name, lts, tys,
+      List.map (fun (field, e1) -> (field, convert fn_names ty_scope scope e1)) fields)
   | NLet (m, name, Some ty, e1, e2) ->
-    let e1' = convert fn_names scope e1 in
+    let e1' = convert fn_names ty_scope scope e1 in
     let (scope', d) = add_binding scope name in
-    let e2' = convert fn_names scope' e2 in
-    ELet (m, make_ident name d, ty, e1', e2')
+    let e2' = convert fn_names ty_scope scope' e2 in
+    ELet (m, make_ident name d, lower_named_ty ty_scope ty, e1', e2')
   | NLet (m, name, None, e1, e2) ->
-    let e1' = convert fn_names scope e1 in
+    let e1' = convert fn_names ty_scope scope e1 in
     let (scope', d) = add_binding scope name in
-    let e2' = convert fn_names scope' e2 in
+    let e2' = convert fn_names ty_scope scope' e2 in
     ELetInfer (m, make_ident name d, e1', e2')
   | NIf (cond, then_e, else_e) ->
-    EIf (convert fn_names scope cond, convert fn_names scope then_e, convert fn_names scope else_e)
+    EIf (convert fn_names ty_scope scope cond,
+         convert fn_names ty_scope scope then_e,
+         convert fn_names ty_scope scope else_e)
 
-let convert_fn_def_with_names fn_names (f : named_fn_def) : fn_def =
+let convert_fn_def_with_names struct_names fn_names (f : named_fn_def) : fn_def =
+  let ty_scope = {
+    type_params = [];
+    struct_names;
+  } in
   let (scope, params, next_lifetime, input_lts) = List.fold_left
     (fun (sc, acc, next_lt, input_lts) np ->
       let (sc', d) = add_binding sc np.np_name in
       let (param_ty, next_lt', input_lts') =
-        lower_input_ty f.nf_lifetime_names next_lt input_lts np.np_ty
+        lower_input_ty ty_scope next_lt input_lts np.np_ty
       in
       let p = { param_mutability = np.np_mutability;
                 param_name       = make_ident np.np_name d;
@@ -127,16 +196,122 @@ let convert_fn_def_with_names fn_names (f : named_fn_def) : fn_def =
       (sc', acc @ [p], next_lt', input_lts'))
     ([], [], List.length f.nf_lifetime_names, []) f.nf_params
   in
-  let ret_ty = lower_output_ty f.nf_lifetime_names input_lts f.nf_ret in
+  let ret_ty = lower_output_ty ty_scope input_lts f.nf_ret in
   { fn_name      = make_ident f.nf_name 0;
     fn_lifetimes = Big_int_Z.big_int_of_int next_lifetime;
     fn_outlives = f.nf_outlives;
     fn_params    = params;
     fn_ret       = ret_ty;
-    fn_body      = convert fn_names scope f.nf_body }
+    fn_body      = convert fn_names ty_scope scope f.nf_body }
 
-let convert_program (fs : named_fn_def list) : fn_def list =
-  let fn_names = List.map (fun f -> f.nf_name) fs in
-  List.map (convert_fn_def_with_names fn_names) fs
+let convert_struct struct_names s =
+  let (lts, tys) = split_generics s.ns_generics in
+  let ty_scope = { type_params = tys; struct_names } in
+  { struct_name = s.ns_name;
+    struct_lifetimes = Big_int_Z.big_int_of_int (List.length lts);
+    struct_type_params = Big_int_Z.big_int_of_int (List.length tys);
+    struct_bounds = List.map (trait_bound_of_named tys) s.ns_bounds;
+    struct_fields =
+      List.map
+        (fun f ->
+          { field_name = f.nfield_name;
+            field_mutability = f.nfield_mutability;
+            field_ty = lower_named_ty ty_scope f.nfield_ty })
+        s.ns_fields }
 
-let convert_fn_def f = convert_fn_def_with_names [] f
+let convert_trait t =
+  let (_lts, tys) = split_generics t.nt_generics in
+  { trait_name = t.nt_name;
+    trait_type_params = Big_int_Z.big_int_of_int (List.length tys);
+    trait_bounds = List.map (trait_bound_of_named tys) t.nt_bounds }
+
+let convert_impl struct_names i =
+  let (lts, tys) = split_generics i.ni_generics in
+  let ty_scope = { type_params = tys; struct_names } in
+  let (_trait_lts, trait_args) = split_expr_type_args ty_scope i.ni_trait_args in
+  { impl_lifetimes = Big_int_Z.big_int_of_int (List.length lts);
+    impl_type_params = Big_int_Z.big_int_of_int (List.length tys);
+    impl_trait_name = i.ni_trait_name;
+    impl_trait_args = trait_args;
+    impl_for_ty = lower_named_ty ty_scope i.ni_for_ty }
+
+let duplicate_name names =
+  let rec go seen = function
+    | [] -> None
+    | x :: xs -> if List.mem x seen then Some x else go (x :: seen) xs
+  in
+  go [] names
+
+let validate_env env =
+  let top_names =
+    List.map (fun s -> s.struct_name) env.env_structs @
+    List.map (fun t -> t.trait_name) env.env_traits @
+    List.map (fun f -> fst f.fn_name) env.env_fns
+  in
+  match duplicate_name top_names with
+  | Some name -> Some ("duplicate top-level name: " ^ name)
+  | None ->
+    let trait_names = List.map (fun t -> t.trait_name) env.env_traits in
+    let validate_bound max_ty_params b =
+      if Big_int_Z.ge_big_int b.bound_type_index max_ty_params
+      then Some "trait bound refers to an out-of-range type parameter"
+      else
+        match List.find_opt (fun tr -> not (List.mem tr trait_names)) b.bound_traits with
+        | Some tr -> Some ("unknown trait in bound: " ^ tr)
+        | None -> None
+    in
+    let rec first_some = function
+      | [] -> None
+      | x :: xs -> begin match x with Some _ -> x | None -> first_some xs end
+    in
+    let validate_struct s =
+      match duplicate_name (List.map (fun f -> f.field_name) s.struct_fields) with
+      | Some field -> Some ("duplicate field in struct " ^ s.struct_name ^ ": " ^ field)
+      | None -> first_some (List.map (validate_bound s.struct_type_params) s.struct_bounds)
+    in
+    let validate_trait t =
+      first_some (List.map (validate_bound t.trait_type_params) t.trait_bounds)
+    in
+    let validate_impl i =
+      if not (List.mem i.impl_trait_name trait_names)
+      then Some ("unknown trait in impl: " ^ i.impl_trait_name)
+      else None
+    in
+    match first_some (List.map validate_struct env.env_structs @
+                      List.map validate_trait env.env_traits @
+                      List.map validate_impl env.env_impls) with
+    | Some _ as err -> err
+    | None ->
+      let impl_key_eq a b =
+        a.impl_trait_name = b.impl_trait_name &&
+        List.length a.impl_trait_args = List.length b.impl_trait_args &&
+        List.for_all2 ty_eqb a.impl_trait_args b.impl_trait_args &&
+        ty_eqb a.impl_for_ty b.impl_for_ty
+      in
+      let rec dup_impl = function
+        | [] -> false
+        | x :: xs -> List.exists (impl_key_eq x) xs || dup_impl xs
+      in
+      if dup_impl env.env_impls then Some "duplicate impl" else None
+
+let convert_program_items (items : named_item list) : global_env =
+  let structs = List.filter_map (function NIStruct s -> Some s | _ -> None) items in
+  let traits = List.filter_map (function NITrait t -> Some t | _ -> None) items in
+  let impls = List.filter_map (function NIImpl i -> Some i | _ -> None) items in
+  let fns = List.filter_map (function NIFn f -> Some f | _ -> None) items in
+  let struct_names = List.map (fun s -> s.ns_name) structs in
+  let fn_names = List.map (fun f -> f.nf_name) fns in
+  let env = {
+    env_structs = List.map (convert_struct struct_names) structs;
+    env_traits = List.map convert_trait traits;
+    env_impls = List.map (convert_impl struct_names) impls;
+    env_fns = List.map (convert_fn_def_with_names struct_names fn_names) fns;
+  } in
+  match validate_env env with
+  | None -> env
+  | Some msg -> failwith msg
+
+let convert_program (items : named_item list) : fn_def list =
+  (convert_program_items items).env_fns
+
+let convert_fn_def f = convert_fn_def_with_names [] [] f

@@ -1,0 +1,11 @@
+trait Show;
+
+struct Box<T> where T: Show {
+  value: affine T
+}
+
+impl<T> Show for affine Box<affine T>;
+
+fn main() -> affine Box<affine isize> {
+  Box<affine isize> { value = 1 }
+}

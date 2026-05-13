@@ -1,0 +1,10 @@
+struct Slot {
+  x: affine isize,
+  y: unrestricted bool
+}
+
+fn main() -> affine isize {
+  let mut p: affine Slot = Slot { x = 1, y = true };
+  let _ = p.x;
+  (replace p.x 2)
+}

@@ -1,0 +1,12 @@
+trait Show;
+
+struct Pair {
+  x: unrestricted isize
+}
+
+impl Show for unrestricted Pair;
+impl Show for unrestricted Pair;
+
+fn main() -> unrestricted () {
+  ()
+}

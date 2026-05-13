@@ -3,7 +3,7 @@ open Ast
 open TypeChecker
 
 type stmt_item =
-  | LetStmt of mutability * name * ty option * named_expr
+  | LetStmt of mutability * name * named_ty option * named_expr
   | ExprStmt of named_expr
 
 let desugar_stmt item cont =
@@ -42,26 +42,58 @@ let resolve_lifetime (name : string) : lifetime =
   match aux_bound 0 !current_hrt_lifetimes with
   | Some l -> l
   | None -> LVar (resolve_fn_lt_name name)
+
+let split_generics params =
+  let rec go lts tys = function
+    | [] -> (List.rev lts, List.rev tys)
+    | NGLifetime lt :: rest -> go (lt :: lts) tys rest
+    | NGType ty :: rest -> go lts (ty :: tys) rest
+  in
+  go [] [] params
+
+let check_unique_type_params names =
+  let rec go seen = function
+    | [] -> ()
+    | x :: xs ->
+      if List.mem x seen
+      then failwith (Printf.sprintf "duplicate type parameter %s" x)
+      else go (x :: seen) xs
+  in
+  go [] names
+
+let install_generics params =
+  let (lts, tys) = split_generics params in
+  check_unique_lifetimes lts;
+  check_unique_type_params tys;
+  current_lifetimes := lts;
+  params
+
 %}
 
-%token KW_FN KW_FOR KW_LET KW_IN KW_MUT KW_DROP KW_REPLACE
+%token KW_FN KW_FOR KW_STRUCT KW_TRAIT KW_IMPL KW_LET KW_IN KW_MUT KW_DROP KW_REPLACE
 %token KW_AFFINE KW_LINEAR KW_UNRESTRICTED KW_ISIZE KW_F64
 %token KW_IF KW_ELSE KW_TRUE KW_FALSE KW_BOOL KW_WHERE
 %token LPAREN RPAREN LBRACE RBRACE LANGLE RANGLE
 %token ARROW AMP STAR
-%token COMMA COLON EQUAL SEMI UNDERSCORE
+%token COMMA COLON EQUAL SEMI UNDERSCORE DOT PLUS
 %token <string> ID
 %token <string> LIFETIME
 %token <Big_int_Z.big_int> INT_LIT
 %token <string> FLOAT_LIT
 %token EOF
 
-%start <Ast.named_fn_def list> program
+%start <Ast.named_item list> program
 
 %%
 
 program:
-  | defs = list(fn_def); EOF { defs }
+  | items = list(top_item); EOF { items }
+
+top_item:
+  | f = fn_def { NIFn f }
+  | s = struct_def { NIStruct s }
+  | t = trait_def { NITrait t }
+  | i = impl_def { NIImpl i }
 
 fn_def:
   | KW_FN; name = ID; lt_names = opt_lifetime_params;
@@ -69,6 +101,42 @@ fn_def:
     ARROW; ret = signature_ty; outs = opt_where_outlives; LBRACE; body = block; RBRACE
     { { nf_name = name; nf_lifetime_names = lt_names; nf_outlives = outs;
         nf_params = ps; nf_ret = ret; nf_body = body } }
+
+struct_def:
+  | KW_STRUCT; name = ID; generics = opt_generic_params;
+    bounds = opt_trait_bounds; LBRACE; fields = separated_list(COMMA, struct_field); RBRACE
+    { { ns_name = name; ns_generics = generics; ns_bounds = bounds; ns_fields = fields } }
+
+trait_def:
+  | KW_TRAIT; name = ID; generics = opt_generic_params; bounds = opt_trait_bounds; SEMI
+    { { nt_name = name; nt_generics = generics; nt_bounds = bounds } }
+
+impl_def:
+  | KW_IMPL; generics = opt_generic_params; trait_name = ID; trait_args = opt_type_args;
+    KW_FOR; for_ty = ty; SEMI
+    { { ni_generics = generics; ni_trait_name = trait_name;
+        ni_trait_args = trait_args; ni_for_ty = for_ty } }
+
+opt_generic_params:
+  | { current_lifetimes := []; [] }
+  | LANGLE; params = separated_nonempty_list(COMMA, generic_param); RANGLE
+    { install_generics params }
+
+generic_param:
+  | lt = LIFETIME { NGLifetime lt }
+  | name = ID { NGType name }
+
+opt_trait_bounds:
+  | { [] }
+  | KW_WHERE; bounds = separated_nonempty_list(COMMA, trait_bound) { bounds }
+
+trait_bound:
+  | type_name = ID; COLON; traits = separated_nonempty_list(PLUS, ID)
+    { { ntb_type_name = type_name; ntb_traits = traits } }
+
+struct_field:
+  | m = opt_mut; name = ID; COLON; t = ty
+    { { nfield_mutability = m; nfield_name = name; nfield_ty = t } }
 
 opt_lifetime_params:
   | { current_lifetimes := []; [] }
@@ -158,8 +226,15 @@ atom_expr:
     { NLit (LBool true) }
   | KW_FALSE
     { NLit (LBool false) }
-  | x = ID
-    { NVar x }
+  | name = ID; LBRACE; fields = separated_list(COMMA, struct_literal_field); RBRACE
+    { NStruct (name, [], fields) }
+  | name = ID; LANGLE; args = separated_nonempty_list(COMMA, type_arg); RANGLE;
+    LBRACE; fields = separated_list(COMMA, struct_literal_field); RBRACE
+    { NStruct (name, args, fields) }
+  | p = place
+    { match p with
+      | NPVar x -> NVar x
+      | _ -> NPlace p }
   | LPAREN; KW_DROP; e = expr; RPAREN
     { NDrop e }
   | LPAREN; KW_REPLACE; p = place; e = atom_expr; RPAREN
@@ -181,31 +256,42 @@ atom_expr:
     { NIf (cond, then_e, NUnit) }
 
 place:
+  | p = place_base; fields = list(field_suffix)
+    { List.fold_left (fun acc f -> NPField (acc, f)) p fields }
+
+place_base:
   | x = ID
     { NPVar x }
   | STAR; p = place
     { NPDeref p }
 
+field_suffix:
+  | DOT; f = ID { f }
+
+struct_literal_field:
+  | name = ID; EQUAL; e = expr { (name, e) }
+
 ty:
-  | KW_AFFINE;       c = ty_core { MkTy (UAffine,       c) }
-  | KW_LINEAR;       c = ty_core { MkTy (ULinear,       c) }
-  | KW_UNRESTRICTED; c = ty_core { MkTy (UUnrestricted, c) }
+  | KW_AFFINE;       c = ty_core { NTy (UAffine,       c) }
+  | KW_LINEAR;       c = ty_core { NTy (ULinear,       c) }
+  | KW_UNRESTRICTED; c = ty_core { NTy (UUnrestricted, c) }
 
 ty_core:
-  | KW_ISIZE { TIntegers }
-  | KW_F64   { TFloats }
-  | KW_BOOL  { TBooleans }
-  | LPAREN; RPAREN { TUnits }
-  | AMP; t = ty { TRef (LVar Big_int_Z.zero_big_int, RShared, t) }
-  | AMP; KW_MUT; t = ty { TRef (LVar Big_int_Z.zero_big_int, RUnique, t) }
-  | AMP; lt = LIFETIME; t = ty { TRef (resolve_lifetime lt, RShared, t) }
-  | AMP; lt = LIFETIME; KW_MUT; t = ty { TRef (resolve_lifetime lt, RUnique, t) }
+  | KW_ISIZE { NTIntegers }
+  | KW_F64   { NTFloats }
+  | KW_BOOL  { NTBooleans }
+  | LPAREN; RPAREN { NTUnits }
+  | name = ID; args = opt_type_args { NTNamed (name, args) }
+  | AMP; t = ty { NTRef (None, RShared, t) }
+  | AMP; KW_MUT; t = ty { NTRef (None, RUnique, t) }
+  | AMP; lt = LIFETIME; t = ty { NTRef (Some (resolve_lifetime lt), RShared, t) }
+  | AMP; lt = LIFETIME; KW_MUT; t = ty { NTRef (Some (resolve_lifetime lt), RUnique, t) }
   | KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty
-    { TFn (ts, ret) }
+    { NTFn (ts, ret) }
   | h = hrt_lifetime_params; KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty; outs = opt_hrt_where_outlives
     { let (names, prev) = h in
       current_hrt_lifetimes := prev;
-      TForall (Big_int_Z.big_int_of_int (List.length names), outs, MkTy (UUnrestricted, TFn (ts, ret))) }
+      NTForall (Big_int_Z.big_int_of_int (List.length names), outs, NTy (UUnrestricted, NTFn (ts, ret))) }
 
 signature_ty:
   | KW_AFFINE;       c = signature_ty_core { NTy (UAffine,       c) }
@@ -217,16 +303,25 @@ signature_ty_core:
   | KW_F64   { NTFloats }
   | KW_BOOL  { NTBooleans }
   | LPAREN; RPAREN { NTUnits }
+  | name = ID; args = opt_type_args { NTNamed (name, args) }
   | AMP; t = signature_ty { NTRef (None, RShared, t) }
   | AMP; KW_MUT; t = signature_ty { NTRef (None, RUnique, t) }
-  | AMP; lt = LIFETIME; t = signature_ty { NTRef (Some lt, RShared, t) }
-  | AMP; lt = LIFETIME; KW_MUT; t = signature_ty { NTRef (Some lt, RUnique, t) }
+  | AMP; lt = LIFETIME; t = signature_ty { NTRef (Some (resolve_lifetime lt), RShared, t) }
+  | AMP; lt = LIFETIME; KW_MUT; t = signature_ty { NTRef (Some (resolve_lifetime lt), RUnique, t) }
   | KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty
     { NTFn (ts, ret) }
   | h = hrt_lifetime_params; KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty; outs = opt_hrt_where_outlives
     { let (names, prev) = h in
       current_hrt_lifetimes := prev;
-      NTForall (Big_int_Z.big_int_of_int (List.length names), outs, MkTy (UUnrestricted, TFn (ts, ret))) }
+      NTForall (Big_int_Z.big_int_of_int (List.length names), outs, NTy (UUnrestricted, NTFn (ts, ret))) }
+
+opt_type_args:
+  | { [] }
+  | LANGLE; args = separated_nonempty_list(COMMA, type_arg); RANGLE { args }
+
+type_arg:
+  | lt = LIFETIME { NTArgLifetime (resolve_lifetime lt) }
+  | t = ty { NTArgTy t }
 
 hrt_lifetime_params:
   | KW_FOR; LANGLE; names = separated_nonempty_list(COMMA, lifetime_name); RANGLE

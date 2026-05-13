@@ -1,0 +1,8 @@
+struct Pair {
+  x: unrestricted isize,
+  x: unrestricted bool
+}
+
+fn main() -> unrestricted () {
+  ()
+}

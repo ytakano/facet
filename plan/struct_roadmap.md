@@ -117,5 +117,5 @@ rg -n "\bAxiom\b|Admitted\." rocq/theories
 
 ## Remaining Non-Blocking Tasks
 
-- legacy `infer_body` / `borrow_check` に残る struct/field `ErrNotImplemented` を埋めるか、env checker への移行完了として削除方針を決める。
+- legacy `infer_body` / `borrow_check` は OCaml CLI と extraction public roots から外した。Rocq proof compatibility 用に残すか、旧 proof と一緒に削除するかを決める。
 - `TypingRules.v` の旧 `typed` / `borrow_ok` を env/stateful 系に統合するか、legacy 仕様として固定するかを整理する。

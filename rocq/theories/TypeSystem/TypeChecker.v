@@ -2119,6 +2119,27 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
                   | Some err => infer_err err
                   | None => infer_ok (ret, Σ')
                   end
+              | TForall m bounds body =>
+                  match ty_core body with
+                  | TFn param_tys ret =>
+                      match build_bound_sigma (repeat None m) arg_tys param_tys with
+                      | None => infer_err ErrLifetimeConflict
+                      | Some σ =>
+                          let param_tys_open := map (open_bound_ty σ) param_tys in
+                          match check_arg_tys Ω arg_tys param_tys_open with
+                          | Some err => infer_err err
+                          | None =>
+                              let ret_open := open_bound_ty σ ret in
+                              let bounds_open := open_bound_outlives σ bounds in
+                              if contains_lbound_ty ret_open || contains_lbound_outlives bounds_open
+                              then infer_err ErrHrtUnresolvedBound
+                              else if outlives_constraints_hold_b Ω bounds_open
+                                   then infer_ok (ret_open, Σ')
+                                   else infer_err ErrHrtBoundUnsatisfied
+                          end
+                      end
+                  | c => infer_err (ErrMalformedHrtBody c)
+                  end
               | c => infer_err (ErrNotAFunction c)
               end
           end
@@ -2592,6 +2613,8 @@ Fixpoint borrow_check_env (env : global_env) (PBS : path_borrow_state) (Γ : ctx
 (* Combined type + borrow checker                                        *)
 (* ------------------------------------------------------------------ *)
 
+(* Legacy checker retained for proof compatibility only.  The OCaml CLI
+   and extraction roots use the env/stateful checker below. *)
 Definition infer_full (fenv : list fn_def) (f : fn_def)
     : infer_result (Ty * ctx) :=
   match infer fenv f with
@@ -2743,4 +2766,4 @@ Extraction Language OCaml.
 From Stdlib Require Import ExtrOcamlNativeString.
 From Stdlib Require Import ExtrOcamlNatBigInt.
 From Stdlib Require Import ExtrOcamlZBigInt.
-Extraction "../fixtures/TypeChecker.ml" infer check_program infer_env check_program_env infer_direct borrow_check infer_full.
+Extraction "../fixtures/TypeChecker.ml" infer_env infer_full_env check_program_env.

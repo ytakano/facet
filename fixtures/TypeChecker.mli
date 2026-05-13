@@ -361,27 +361,7 @@ val apply_lt_param : lifetime list -> param -> param
 
 val apply_lt_params : lifetime list -> param list -> param list
 
-type borrow_entry =
-| BEShared of ident
-| BEMut of ident
-
-type borrow_state = borrow_entry list
-
-val be_eqb : borrow_entry -> borrow_entry -> bool
-
-val bs_eqb : borrow_state -> borrow_state -> bool
-
-val bs_has_mut : ident -> borrow_state -> bool
-
-val bs_has_any : ident -> borrow_state -> bool
-
 val expr_ref_root : expr -> ident option
-
-val bs_remove_one : borrow_entry -> borrow_state -> borrow_state
-
-val bs_remove_all : borrow_state -> borrow_state -> borrow_state
-
-val bs_new_entries : borrow_state -> borrow_state -> borrow_state
 
 val usage_eqb : usage -> usage -> bool
 
@@ -412,13 +392,7 @@ val ty_compatible_b : outlives_ctx -> ty -> ty -> bool
 
 val ctx_lookup_b : ident -> ctx -> (ty * bool) option
 
-val ctx_consume_b : ident -> ctx -> ctx option
-
-val ctx_lookup_mut_b : ident -> ctx -> mutability option
-
 val ctx_add_b : ident -> ty -> mutability -> ctx -> ctx
-
-val ctx_remove_b : ident -> ctx -> ctx
 
 val ctx_check_ok : ident -> ty -> ctx -> bool
 
@@ -509,8 +483,6 @@ type 'a infer_result =
 | Infer_ok of 'a
 | Infer_err of infer_error
 
-val infer_place : ctx -> place -> ty infer_result
-
 val lookup_field_b : string -> (string * expr) list -> expr option
 
 val has_field_b : string -> (string * expr) list -> bool
@@ -528,10 +500,6 @@ val infer_place_env : global_env -> ctx -> place -> ty infer_result
 val wf_outlives_b : region_ctx -> outlives_ctx -> bool
 
 val outlives_constraints_hold_b : outlives_ctx -> outlives_ctx -> bool
-
-val infer_core :
-  fn_def list -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
-  (ty * ctx) infer_result
 
 type sctx = ctx
 
@@ -580,22 +548,11 @@ val infer_core_env :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
   (ty * ctx) infer_result
 
-val infer_body :
-  fn_def list -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
-  (ty * ctx) infer_result
-
 val params_ok_b : param list -> ctx -> bool
 
 val wf_params_b : region_ctx -> param list -> bool
 
-val infer : fn_def list -> fn_def -> (ty * ctx) infer_result
-
-val check_program : fn_def list -> bool
-
 val infer_env : global_env -> fn_def -> (ty * ctx) infer_result
-
-val borrow_check :
-  fn_def list -> borrow_state -> ctx -> expr -> borrow_state infer_result
 
 type path_borrow_entry =
 | PBShared of ident * field_path
@@ -628,10 +585,6 @@ val borrow_check_env :
   global_env -> path_borrow_state -> ctx -> expr -> path_borrow_state
   infer_result
 
-val infer_full : fn_def list -> fn_def -> (ty * ctx) infer_result
-
 val infer_full_env : global_env -> fn_def -> (ty * ctx) infer_result
 
 val check_program_env : global_env -> bool
-
-val infer_direct : fn_def list -> fn_def -> (ty * ctx) infer_result

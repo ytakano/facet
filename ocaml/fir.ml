@@ -95,11 +95,7 @@ let rec infer_place_ty env = function
     end
 
 let infer_expr_ty env e =
-  let result =
-    if env.env.env_structs = [] && env.env.env_traits = [] && env.env.env_impls = []
-    then infer_core env.fenv [] env.lifetimes env.ctx e
-    else infer_core_env env.env [] env.lifetimes env.ctx e
-  in
+  let result = infer_core_env env.env [] env.lifetimes env.ctx e in
   match result with
   | Infer_ok (ty, _) -> ty
   | Infer_err _ -> unit_ty
@@ -144,7 +140,7 @@ let path_moved env root path =
 
 let consume_if_needed env x ty =
   if ty_usage ty <> UUnrestricted then
-    match ctx_consume_b x env.ctx with
+    match ctx_update_state x (state_consume_path []) env.ctx with
     | Some ctx' -> env.ctx <- ctx'
     | None -> ()
 

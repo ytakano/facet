@@ -90,19 +90,6 @@ let string_of_infer_error = function
   | ErrTraitImplAmbiguous (name, ty) ->
     Printf.sprintf "trait impl is ambiguous: %s for %s" name (string_of_ty ty)
 
-let check_alpha_consistency fname fenv f =
-  let r1 = infer fenv f in
-  let r2 = infer_direct fenv f in
-  match r1, r2 with
-  | Infer_ok _, Infer_ok _ -> ()
-  | Infer_err _, Infer_err _ -> ()
-  | Infer_ok _, Infer_err e ->
-    Printf.eprintf "ALPHA-DIFF in '%s': infer=OK, infer_direct=Err(%s)\n"
-      fname (string_of_infer_error e)
-  | Infer_err e, Infer_ok _ ->
-    Printf.eprintf "ALPHA-DIFF in '%s': infer=Err(%s), infer_direct=OK\n"
-      fname (string_of_infer_error e)
-
 let () =
   let args = Sys.argv in
   if Array.length args >= 2 && args.(1) = "--generate-grammar" then begin
@@ -111,7 +98,6 @@ let () =
   end;
   (* Parse optional flags before the source file argument *)
   let emit_fir_file = ref None in
-  let debug_alpha = ref false in
   let i = ref 1 in
   while !i < Array.length args && String.length args.(!i) > 0
         && args.(!i).[0] = '-' do
@@ -122,16 +108,13 @@ let () =
       end;
       emit_fir_file := Some args.(!i + 1);
       i := !i + 2
-    end else if args.(!i) = "--debug-alpha" then begin
-      debug_alpha := true;
-      i := !i + 1
     end else begin
       Printf.eprintf "Error: unknown option: %s\n" args.(!i);
       exit 1
     end
   done;
   if !i >= Array.length args then begin
-    Printf.eprintf "Usage: %s [--emit-fir <outfile>] [--debug-alpha] [--generate-grammar] FILE\n" args.(0);
+    Printf.eprintf "Usage: %s [--emit-fir <outfile>] [--generate-grammar] FILE\n" args.(0);
     exit 1
   end;
   let filename = args.(!i) in
@@ -174,13 +157,7 @@ let () =
   let ok = ref true in
   List.iter (fun f ->
     let (fname, _) = f.fn_name in
-    if !debug_alpha then
-      check_alpha_consistency fname fn_defs f;
-    let result =
-      if env.env_structs = [] && env.env_traits = [] && env.env_impls = []
-      then infer_full fn_defs f
-      else infer_full_env env f
-    in
+    let result = infer_full_env env f in
     match result with
     | Infer_err e ->
       Printf.eprintf "Type error in function '%s': %s\n"

@@ -51,11 +51,12 @@ Theorem infer_full_env_structural_sound :
    - `lookup_struct`, `lookup_field`, `lookup_field_b`, `first_duplicate_field`, `first_unknown_field`, `first_missing_field` の成功時 soundness を追加する。
    - `check_struct_bounds_sound` と trait impl 解決 soundness を最終 theorem で使える形に強化する。
 
-3. **P2: 基本式の typing soundness**
+3. **P2: 基本式の typing soundness** [done]
    - `EUnit`, `ELit`, `EVar`, `EPlace`, `EFn` の checker 分岐から構造規則を導く。
    - `ELet`, `ELetInfer`, `EDrop`, `EDeref`, `EIf` の帰納ケースを証明する。
    - `ctx_merge` 後の branch context soundness を追加する。
    - fuel が減る再帰呼び出しを扱うため、旧 `CheckerSoundness.v` と同様に expression size か fuel induction を固定する。
+   - `EnvTypingSoundness.v` に `basic_expr` fragment の `infer_core_env_state_fuel_basic_structural_sound` を追加し、call/HRT、struct literal、field mutation/borrow は P3-P5 に残す。
 
 4. **P3: call と HRT soundness**
    - `ECall` の `build_sigma`, `finalize_subst`, `apply_lt_params`, `apply_lt_ty`, `apply_lt_outlives` の soundness を証明する。

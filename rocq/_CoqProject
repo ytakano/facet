@@ -13,6 +13,7 @@ theories/TypeSystem/WFType.v
 theories/TypeSystem/AlphaRenaming.v
 theories/TypeSystem/CheckerSoundness.v
 theories/TypeSystem/EnvSoundnessFacts.v
+theories/TypeSystem/EnvTypingSoundness.v
 theories/TypeSystem/CheckerUsageSoundness.v
 theories/TypeSystem/BorrowCheckSoundness.v
 theories/Validation/Validator.v

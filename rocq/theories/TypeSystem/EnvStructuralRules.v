@@ -6,26 +6,6 @@ Import ListNotations.
 (* Wrapper-free env/stateful typing specification                       *)
 (* ------------------------------------------------------------------ *)
 
-Inductive typed_place_env_structural (env : global_env) (Σ : sctx)
-    : place -> Ty -> Prop :=
-  | TPES_Var : forall x T st,
-      sctx_lookup x Σ = Some (T, st) ->
-      binding_available_b st [] = true ->
-      typed_place_env_structural env Σ (PVar x) T
-  | TPES_Deref : forall p la rk T u,
-      typed_place_env_structural env Σ p (MkTy u (TRef la rk T)) ->
-      typed_place_env_structural env Σ (PDeref p) T
-  | TPES_Field : forall p sname lts args sdef fdef x path st T_parent,
-      typed_place_env_structural env Σ p T_parent ->
-      ty_core T_parent = TStruct sname lts args ->
-      lookup_struct sname env = Some sdef ->
-      lookup_field (field_name fdef) (struct_fields sdef) = Some fdef ->
-      place_path (PField p (field_name fdef)) = Some (x, path) ->
-      sctx_lookup x Σ = Some (T_parent, st) ->
-      binding_available_b st path = true ->
-      typed_place_env_structural env Σ (PField p (field_name fdef))
-        (instantiate_struct_field_ty lts args fdef).
-
 Inductive typed_place_type_env_structural (env : global_env) (Σ : sctx)
     : place -> Ty -> Prop :=
   | TPTES_Var : forall x T st,
@@ -42,6 +22,33 @@ Inductive typed_place_type_env_structural (env : global_env) (Σ : sctx)
       typed_place_type_env_structural env Σ (PField p (field_name fdef))
         (instantiate_struct_field_ty lts args fdef).
 
+Inductive typed_place_env_structural (env : global_env) (Σ : sctx)
+    : place -> Ty -> Prop :=
+  | TPES_Var : forall x T st,
+      sctx_lookup x Σ = Some (T, st) ->
+      binding_available_b st [] = true ->
+      typed_place_env_structural env Σ (PVar x) T
+  | TPES_Deref : forall p la rk T u,
+      typed_place_env_structural env Σ p (MkTy u (TRef la rk T)) ->
+      typed_place_env_structural env Σ (PDeref p) T
+  | TPES_Field : forall p sname lts args sdef fdef x path T_root st T_parent,
+      typed_place_type_env_structural env Σ p T_parent ->
+      ty_core T_parent = TStruct sname lts args ->
+      lookup_struct sname env = Some sdef ->
+      lookup_field (field_name fdef) (struct_fields sdef) = Some fdef ->
+      place_path (PField p (field_name fdef)) = Some (x, path) ->
+      sctx_lookup x Σ = Some (T_root, st) ->
+      binding_available_b st path = true ->
+      typed_place_env_structural env Σ (PField p (field_name fdef))
+        (instantiate_struct_field_ty lts args fdef)
+  | TPES_Field_Indirect : forall p sname lts args sdef fdef T_parent,
+      typed_place_type_env_structural env Σ p T_parent ->
+      ty_core T_parent = TStruct sname lts args ->
+      lookup_struct sname env = Some sdef ->
+      lookup_field (field_name fdef) (struct_fields sdef) = Some fdef ->
+      place_path (PField p (field_name fdef)) = None ->
+      typed_place_env_structural env Σ (PField p (field_name fdef))
+        (instantiate_struct_field_ty lts args fdef).
 Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
     : sctx -> expr -> Ty -> sctx -> Prop :=
   | TES_Unit : forall Σ,
@@ -123,10 +130,16 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       sctx_lookup_mut x Σ = Some MMutable ->
       typed_env_structural env Ω n Σ (EBorrow RUnique p)
         (MkTy UAffine (TRef (LVar n) RUnique T)) Σ
-  | TES_Deref : forall Σ p la rk T u,
+  | TES_Deref_Place : forall Σ r p la rk T u,
+      expr_as_place r = Some p ->
       typed_place_env_structural env Σ p (MkTy u (TRef la rk T)) ->
       ty_usage T = UUnrestricted ->
-      typed_env_structural env Ω n Σ (EDeref (EPlace p)) T Σ
+      typed_env_structural env Ω n Σ (EDeref r) T Σ
+  | TES_Deref_Expr : forall Σ Σ' r la rk T u,
+      expr_as_place r = None ->
+      typed_env_structural env Ω n Σ r (MkTy u (TRef la rk T)) Σ' ->
+      ty_usage T = UUnrestricted ->
+      typed_env_structural env Ω n Σ (EDeref r) T Σ'
   | TES_If : forall Σ Σ1 Σ2 Σ3 Σ4 e1 e2 e3 T_cond T2 T3,
       typed_env_structural env Ω n Σ e1 T_cond Σ1 ->
       ty_core T_cond = TBooleans ->

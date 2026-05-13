@@ -257,6 +257,10 @@ type infer_error =
 | ErrBorrowConflict of ident
 | ErrLifetimeLeak
 | ErrLifetimeConflict
+| ErrHrtBoundUnsatisfied
+| ErrHrtUnresolvedBound
+| ErrHrtMonomorphicUsedBound
+| ErrMalformedHrtBody of ty typeCore
 
 val compatible_error : ty -> ty -> infer_error
 

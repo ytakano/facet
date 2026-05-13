@@ -1,0 +1,13 @@
+fn consume(x: linear isize) -> linear isize {
+    x
+}
+
+fn ret_unrestricted(x: unrestricted isize) -> unrestricted isize {
+    x
+}
+
+fn main() -> unrestricted () {
+    let f: unrestricted fn(affine isize) -> linear isize = consume in
+    let g: unrestricted fn(unrestricted isize) -> affine isize = ret_unrestricted in
+    ()
+}

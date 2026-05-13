@@ -771,15 +771,30 @@ let rec ty_compatible_b_fuel fuel _UU03a9_ t_actual t_expected =
                  (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
              | p :: l -> ty_core_eqb ca (TForall (n, (p :: l), tb)))
           | x -> ty_core_eqb ca x)
-       | TFn (l, t) ->
-         let ca = TFn (l, t) in
+       | TFn (params_a, ret_a) ->
+         let ca = TFn (params_a, ret_a) in
          (match ty_core t_expected with
+          | TFn (params_e, ret_e) ->
+            (&&)
+              (let rec go actual expected =
+                 match actual with
+                 | [] -> (match expected with
+                          | [] -> true
+                          | _ :: _ -> false)
+                 | a :: actual' ->
+                   (match expected with
+                    | [] -> false
+                    | e :: expected' ->
+                      (&&) (ty_compatible_b_fuel fuel' _UU03a9_ e a)
+                        (go actual' expected'))
+               in go params_a params_e)
+              (ty_compatible_b_fuel fuel' _UU03a9_ ret_a ret_e)
           | TForall (n, o, tb) ->
             (match o with
              | [] ->
                (&&) (negb (contains_lbound_ty tb))
                  (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
-             | p :: l0 -> ty_core_eqb ca (TForall (n, (p :: l0), tb)))
+             | p :: l -> ty_core_eqb ca (TForall (n, (p :: l), tb)))
           | x -> ty_core_eqb ca x)
        | TForall (na, _UU03a9_a, ta) ->
          let ca = TForall (na, _UU03a9_a, ta) in
@@ -943,13 +958,29 @@ type infer_error =
 | ErrBorrowConflict of ident
 | ErrLifetimeLeak
 | ErrLifetimeConflict
+| ErrHrtBoundUnsatisfied
+| ErrHrtUnresolvedBound
+| ErrHrtMonomorphicUsedBound
+| ErrMalformedHrtBody of ty typeCore
 
 (** val compatible_error : ty -> ty -> infer_error **)
 
 let compatible_error t_actual t_expected =
-  if ty_core_eqb (ty_core t_actual) (ty_core t_expected)
-  then ErrUsageMismatch ((ty_usage t_actual), (ty_usage t_expected))
-  else ErrTypeMismatch ((ty_core t_actual), (ty_core t_expected))
+  match ty_core t_actual with
+  | TFn (_, _) ->
+    (match ty_core t_expected with
+     | TForall (_, _, body) ->
+       if contains_lbound_ty body
+       then ErrHrtMonomorphicUsedBound
+       else ErrTypeMismatch ((ty_core t_actual), (ty_core t_expected))
+     | _ ->
+       if ty_core_eqb (ty_core t_actual) (ty_core t_expected)
+       then ErrUsageMismatch ((ty_usage t_actual), (ty_usage t_expected))
+       else ErrTypeMismatch ((ty_core t_actual), (ty_core t_expected)))
+  | _ ->
+    if ty_core_eqb (ty_core t_actual) (ty_core t_expected)
+    then ErrUsageMismatch ((ty_usage t_actual), (ty_usage t_expected))
+    else ErrTypeMismatch ((ty_core t_actual), (ty_core t_expected))
 
 (** val list_set_nth : Big_int_Z.big_int -> 'a1 -> 'a1 list -> 'a1 list **)
 
@@ -1268,7 +1299,7 @@ let rec infer_core fenv _UU03a9_ n _UU0393_ = function
                    if outlives_constraints_hold_b _UU03a9_ _UU03a9__subst
                    then Infer_ok ((apply_lt_ty _UU03c3_ fdef.fn_ret),
                           _UU0393_')
-                   else Infer_err ErrLifetimeConflict
+                   else Infer_err ErrHrtBoundUnsatisfied
               else Infer_err ErrLifetimeLeak)
          | None -> Infer_err ErrLifetimeConflict)
       | Infer_err err -> Infer_err err)
@@ -1313,12 +1344,12 @@ let rec infer_core fenv _UU03a9_ n _UU0393_ = function
                     let bounds_open = open_bound_outlives _UU03c3_ bounds in
                     if (||) (contains_lbound_ty ret_open)
                          (contains_lbound_outlives bounds_open)
-                    then Infer_err ErrLifetimeLeak
+                    then Infer_err ErrHrtUnresolvedBound
                     else if outlives_constraints_hold_b _UU03a9_ bounds_open
                          then Infer_ok (ret_open, _UU0393_')
-                         else Infer_err ErrLifetimeConflict)
+                         else Infer_err ErrHrtBoundUnsatisfied)
                | None -> Infer_err ErrLifetimeConflict)
-            | x -> Infer_err (ErrNotAFunction x))
+            | x -> Infer_err (ErrMalformedHrtBody x))
          | x -> Infer_err (ErrNotAFunction x))
       | Infer_err err -> Infer_err err)
    | Infer_err err -> Infer_err err)

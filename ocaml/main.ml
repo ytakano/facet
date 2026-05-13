@@ -60,6 +60,14 @@ let string_of_infer_error = function
     "lifetime leak: function returns a reference to a local (dangling reference)"
   | ErrLifetimeConflict ->
     "lifetime conflict: conflicting lifetime constraints in function call"
+  | ErrHrtBoundUnsatisfied ->
+    "higher-rank lifetime bound is not satisfied at this call site"
+  | ErrHrtUnresolvedBound ->
+    "higher-rank lifetime could not be resolved from the call arguments"
+  | ErrHrtMonomorphicUsedBound ->
+    "monomorphic function cannot be used where a higher-rank function with used bound lifetimes is required"
+  | ErrMalformedHrtBody c ->
+    Printf.sprintf "higher-rank type body is not a function: %s" (string_of_ty_core c)
 
 let check_alpha_consistency fname fenv f =
   let r1 = infer fenv f in

@@ -71,7 +71,7 @@ what remains.
 - Added operational semantics, alpha-renaming, checker soundness, borrow
   soundness, and usage proof support for `EFn` / `ECallExpr`.
 
-## In Progress
+## Implemented
 
 ### HRT v4: Bounds
 
@@ -100,31 +100,22 @@ for<'a, 'b> fn(unrestricted &'a T) -> unrestricted &'b T where 'a: 'b
 - This still rejects monomorphic functions for HRT types whose bound
   lifetimes occur in argument or return positions.
 
-## Remaining Tasks
+### HRT v6: Variance improvement
 
-### Variance improvement
+- Function compatibility now uses contravariant argument types and
+  covariant return types.
+- `TForall` binder/bounds compatibility remains conservative: arity and
+  stored bounds must still match structurally.
+- Added tests for contravariant function arguments and covariant returns.
 
-- Current function compatibility remains conservative.
-- Add proper function variance later:
-  - argument types should be contravariant;
-  - return types should be covariant;
-  - HRT binder/bounds compatibility must remain sound.
-- Implement this incrementally behind tests so existing conservative
-  behavior does not regress unexpectedly.
+### HRT v7: Diagnostics improvement
 
-### Diagnostics improvement
-
-- Current HRT failures can still collapse into broad errors such as
-  `ErrLifetimeConflict` or `ErrLifetimeLeak`.
-- Add more specific errors for:
-  - HRT bound not satisfied;
-  - unresolved HRT-bound lifetime;
-  - monomorphic function used where used-bound HRT is required;
-  - non-function callee;
-  - malformed HRT function body.
+- Added specific checker errors for unsatisfied HRT bounds, unresolved
+  HRT-bound lifetimes, monomorphic functions used where used-bound HRT is
+  required, and malformed HRT bodies.
 - Keep existing errors as fallbacks for compatibility.
 
-### HRT bounds syntax cleanup
+### HRT v8: HRT bounds syntax cleanup
 
 - Normalize documentation and examples to postfix `where`:
 
@@ -136,32 +127,32 @@ for<'a, 'b> fn(...) -> ... where 'a: 'b
 - Avoid the older roadmap example `for<'a where ...> fn(...) -> ...`
   unless that syntax is intentionally added as sugar later.
 
-### Proof refinement
+### HRT v9: Proof refinement
 
 - The implementation is soundness-backed and uses no `Axiom` or
   `Admitted`, but several HRT facts are still embedded inside checker
   soundness proofs.
-- Extract dedicated lemmas for:
-  - opening preserves well-formedness;
-  - opening commutes with ordinary lifetime substitution where needed;
-  - no-leak checking implies no unresolved `LBound`;
-  - opened HRT bounds satisfaction implies Prop-level `outlives`;
-  - unused-bound generalization soundness.
-- Prefer small local lemmas over broad proof rewrites.
+- Function variance and unused-bound generalization are covered by
+  `ty_compatible_b_sound`.
+- Dedicated helper lemmas exist for boolean outlives constraints and
+  checker argument typing; deeper opening/substitution lemmas remain a
+  future proof-quality cleanup, not a soundness blocker.
 
-### FIR/runtime limitation cleanup
+### HRT v10: FIR/runtime limitation cleanup
 
 - Runtime semantics supports zero-capture function values.
-- FIR lowering currently handles function items and static function
-  dispatch, but dynamic function values through variables are still
-  limited.
-- Add explicit FIR representation for function values if function-valued
-  variables must be emitted faithfully.
-- Add FIR tests for:
-  - function item values;
-  - function-valued parameters;
-  - calls through function-valued variables;
-  - HRT function values with bounds.
+- FIR lowering now has explicit `FICallValue` instructions for calls
+  through function values.
+- Calls through function-valued variables are emitted faithfully for
+  zero-capture function values.
+- Added FIR coverage for function-valued variable calls.
+
+## Remaining Tasks
+
+- Closure capture for function values.
+- Dynamic runtime dispatch beyond zero-capture function item values.
+- More granular proof cleanup for HRT opening/substitution lemmas.
+- Optional syntax sugar for function-definition-level `for<'a> fn f(...)`.
 
 ## Current Test Coverage
 
@@ -175,6 +166,7 @@ Valid HRT tests include:
 - `tests/valid/lifetime/hrt_bound_satisfied.facet`
 - `tests/valid/lifetime/hrt_item_bounds_as_value.facet`
 - `tests/valid/lifetime/hrt_monomorphic_as_unused_poly.facet`
+- `tests/valid/lifetime/hrt_fn_variance.facet`
 
 Invalid HRT tests include:
 
@@ -187,6 +179,7 @@ Invalid HRT tests include:
 - `tests/invalid/lifetime/hrt_bound_unsatisfied.facet`
 - `tests/invalid/lifetime/hrt_bound_leak.facet`
 - `tests/invalid/lifetime/hrt_bound_unknown_lifetime.facet`
+- `tests/invalid/lifetime/hrt_fn_variance_arg.facet`
 
 ## Validation Baseline
 

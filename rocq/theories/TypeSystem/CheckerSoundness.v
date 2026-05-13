@@ -316,6 +316,18 @@ Proof.
       * apply usage_sub_bool_sound. exact Hu.
       * exact Hnob.
       * eapply IH. exact Hrec.
+    + apply andb_true_iff in Hc as [Hargs Hret].
+      apply TC_Fn.
+      * apply usage_sub_bool_sound. exact Hu.
+      * revert tse Hargs.
+        induction tsa as [| ta tsa IHargs]; intros tse Hargs.
+        -- destruct tse; simpl in Hargs; try discriminate. constructor.
+        -- destruct tse as [| te tse]; simpl in Hargs; try discriminate.
+           apply andb_true_iff in Hargs as [Hhead Htail].
+           constructor.
+           ++ eapply IH. exact Hhead.
+           ++ apply IHargs. exact Htail.
+      * eapply IH. exact Hret.
     + destruct Ωb as [|p Ωb]; [|discriminate].
       apply andb_true_iff in Hc as [Hnob Hrec].
       apply negb_true_iff in Hnob.

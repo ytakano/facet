@@ -20,6 +20,7 @@ type fir_instr =
   | FILet     of ident * ty * fir_tval
   | FIReturn  of fir_tval
   | FICall    of ident * ty * ident * fir_tval list
+  | FICallValue of ident * ty * fir_tval * fir_tval list
   | FIDrop    of ident * ident * ty
   | FIReplace of ident * ty * fir_place * ty * fir_tval
   | FIBorrow  of ident * ref_kind * fir_place * ty
@@ -101,7 +102,10 @@ let get_fn_value_ty env f =
 let ident_of_tval env tv =
   match tv.fv with
   | FVVar x -> x
-  | FVFn _ -> failwith "FIR: function value cannot be used as a variable"
+  | FVFn _ ->
+    let tmp = fresh_id env in
+    emit env (FILet (tmp, tv.ft, tv));
+    tmp
   | _ ->
     let tmp = fresh_id env in
     emit env (FILet (tmp, tv.ft, tv));
@@ -136,17 +140,13 @@ let rec to_value env = function
     { fv = FVVar tmp; ft = ret }
   | ECallExpr (callee, args) ->
     let callee_val = to_value env callee in
-    let f = match callee_val.fv with
-      | FVFn f -> f
-      | _ -> failwith "FIR: dynamic function values are not lowered"
-    in
     let result_ty = match infer_core env.fenv [] env.lifetimes env.ctx (ECallExpr (callee, args)) with
       | Infer_ok (t, _) -> t
-      | Infer_err _ -> get_fn_ret env f
+      | Infer_err _ -> unit_ty
     in
     let flat = List.map (to_value env) args in
     let tmp = fresh_id env in
-    emit env (FICall (tmp, result_ty, f, flat));
+    emit env (FICallValue (tmp, result_ty, callee_val, flat));
     { fv = FVVar tmp; ft = result_ty }
   | EDrop inner ->
     let v = to_value env inner in
@@ -302,6 +302,11 @@ let pp_instr = function
     let lhs = if fst x = "_" then "_ as " ^ pp_ty t
               else pp_ident x ^ " as " ^ pp_ty t in
     Printf.sprintf "  call %s = %s (%s)" lhs (pp_ident f)
+      (String.concat ", " (List.map pp_tval args))
+  | FICallValue (x, t, f, args) ->
+    let lhs = if fst x = "_" then "_ as " ^ pp_ty t
+              else pp_ident x ^ " as " ^ pp_ty t in
+    Printf.sprintf "  call %s = %s (%s)" lhs (pp_tval f)
       (String.concat ", " (List.map pp_tval args))
   | FIDrop (r, src, src_ty) ->
     Printf.sprintf "  drop %s as unrestricted unit = %s as %s"

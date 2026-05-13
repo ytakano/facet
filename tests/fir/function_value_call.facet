@@ -1,0 +1,9 @@
+fn id(x: unrestricted isize) -> unrestricted isize {
+    x
+}
+
+fn main() -> unrestricted isize {
+    let f: unrestricted fn(unrestricted isize) -> unrestricted isize = id in
+    let result: unrestricted isize = (f 1) in
+    result
+}

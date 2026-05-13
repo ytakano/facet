@@ -1,0 +1,8 @@
+fn accept_affine(x: affine isize) -> unrestricted () {
+    ()
+}
+
+fn main() -> unrestricted () {
+    let f: unrestricted fn(linear isize) -> unrestricted () = accept_affine in
+    ()
+}

@@ -113,6 +113,15 @@ Fixpoint ty_compatible_b_fuel (fuel : nat) (Ω : outlives_ctx)
       | TRef la rka Ta, TRef lb rkb Tb =>
           outlives_b Ω la lb && ref_kind_eqb rka rkb &&
           ty_compatible_b_fuel fuel' Ω Ta Tb
+      | TFn params_a ret_a, TFn params_e ret_e =>
+          (fix go (actual expected : list Ty) : bool :=
+             match actual, expected with
+             | [], [] => true
+             | a :: actual', e :: expected' =>
+                 ty_compatible_b_fuel fuel' Ω e a && go actual' expected'
+             | _, _ => false
+             end) params_a params_e &&
+          ty_compatible_b_fuel fuel' Ω ret_a ret_e
       | TForall na Ωa Ta, TForall nb Ωb Tb =>
           Nat.eqb na nb && outlives_ctx_eqb Ωa Ωb &&
           ty_compatible_b_fuel fuel' Ω Ta Tb
@@ -293,12 +302,23 @@ Inductive infer_error : Type :=
   | ErrNotAFunction : TypeCore Ty -> infer_error
   | ErrBorrowConflict : ident -> infer_error       (* borrow conflicts with existing active borrow *)
   | ErrLifetimeLeak : infer_error                 (* return type references a local lifetime *)
-  | ErrLifetimeConflict : infer_error.            (* unification conflict in call lifetime substitution *)
+  | ErrLifetimeConflict : infer_error             (* unification conflict in call lifetime substitution *)
+  | ErrHrtBoundUnsatisfied : infer_error
+  | ErrHrtUnresolvedBound : infer_error
+  | ErrHrtMonomorphicUsedBound : infer_error
+  | ErrMalformedHrtBody : TypeCore Ty -> infer_error.
 
 Definition compatible_error (T_actual T_expected : Ty) : infer_error :=
-  if ty_core_eqb (ty_core T_actual) (ty_core T_expected)
-  then ErrUsageMismatch (ty_usage T_actual) (ty_usage T_expected)
-  else ErrTypeMismatch (ty_core T_actual) (ty_core T_expected).
+  match ty_core T_actual, ty_core T_expected with
+  | TFn _ _, TForall _ _ body =>
+      if contains_lbound_ty body
+      then ErrHrtMonomorphicUsedBound
+      else ErrTypeMismatch (ty_core T_actual) (ty_core T_expected)
+  | _, _ =>
+      if ty_core_eqb (ty_core T_actual) (ty_core T_expected)
+      then ErrUsageMismatch (ty_usage T_actual) (ty_usage T_expected)
+      else ErrTypeMismatch (ty_core T_actual) (ty_core T_expected)
+  end.
 
 (* ------------------------------------------------------------------ *)
 (* Higher-rank lifetime helpers                                          *)
@@ -836,7 +856,7 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
                         let Ω_subst := apply_lt_outlives σ (fn_outlives fdef) in
                         if outlives_constraints_hold_b Ω Ω_subst
                         then infer_ok (apply_lt_ty σ (fn_ret fdef), Γ')
-                        else infer_err ErrLifetimeConflict
+                        else infer_err ErrHrtBoundUnsatisfied
                       else infer_err ErrLifetimeLeak
                   end
               end
@@ -884,13 +904,13 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
                               let ret_open := open_bound_ty σ ret in
                               let bounds_open := open_bound_outlives σ bounds in
                               if contains_lbound_ty ret_open || contains_lbound_outlives bounds_open
-                              then infer_err ErrLifetimeLeak
+                              then infer_err ErrHrtUnresolvedBound
                               else if outlives_constraints_hold_b Ω bounds_open
                                    then infer_ok (ret_open, Γ')
-                                   else infer_err ErrLifetimeConflict
+                                   else infer_err ErrHrtBoundUnsatisfied
                           end
                       end
-                  | c => infer_err (ErrNotAFunction c)
+                  | c => infer_err (ErrMalformedHrtBody c)
                   end
               | c => infer_err (ErrNotAFunction c)
               end

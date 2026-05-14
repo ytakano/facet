@@ -930,7 +930,7 @@ Proof.
         -- exact Hfields.
         -- intros Σ0 e0 T0 Σ1 Hexpr Hinfer0.
            eapply IH; [exact Hexpr | exact Hinfer0].
-    + destruct (infer_place_type_sctx env Σ p) as [Told | err] eqn:Hptype; try discriminate.
+    + destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
       destruct (place_path p) as [[x path] |] eqn:Hpath.
       * destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
         destruct mut; try discriminate.
@@ -940,7 +940,7 @@ Proof.
         destruct (sctx_restore_path Σ1 x path) as [Σ2 | err] eqn:Hrestore; try discriminate.
         inversion Hinfer; subst.
         eapply TES_Replace_Path.
-        -- eapply infer_place_type_sctx_structural_sound. exact Hptype.
+        -- eapply infer_place_sctx_structural_sound. exact Hplace.
         -- exact Hpath.
         -- exact Hmut.
         -- eapply IH; [exact Hstruct | exact Hnew].
@@ -952,7 +952,7 @@ Proof.
         destruct (ty_compatible_b Ω Tnew Told) eqn:Hcompat; try discriminate.
         inversion Hinfer; subst.
         eapply TES_Replace_Indirect.
-        -- eapply infer_place_type_sctx_structural_sound. exact Hptype.
+        -- eapply infer_place_sctx_structural_sound. exact Hplace.
         -- exact Hpath.
         -- apply place_under_unique_ref_b_sound. exact Hunique.
         -- eapply IH; [exact Hstruct | exact Hnew].

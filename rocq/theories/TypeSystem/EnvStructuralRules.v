@@ -114,7 +114,7 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_env_structural env Ω n Σ e T Σ' ->
       typed_env_structural env Ω n Σ (EDrop e) (MkTy UUnrestricted TUnits) Σ'
   | TES_Replace_Path : forall Σ Σ1 Σ2 p e_new T_old T_new x path,
-      typed_place_type_env_structural env Σ p T_old ->
+      typed_place_env_structural env Σ p T_old ->
       place_path p = Some (x, path) ->
       sctx_lookup_mut x Σ = Some MMutable ->
       typed_env_structural env Ω n Σ e_new T_new Σ1 ->
@@ -122,7 +122,7 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       sctx_restore_path Σ1 x path = infer_ok Σ2 ->
       typed_env_structural env Ω n Σ (EReplace p e_new) T_old Σ2
   | TES_Replace_Indirect : forall Σ Σ' p e_new T_old T_new,
-      typed_place_type_env_structural env Σ p T_old ->
+      typed_place_env_structural env Σ p T_old ->
       place_path p = None ->
       place_under_unique_ref_structural env Σ p ->
       typed_env_structural env Ω n Σ e_new T_new Σ' ->

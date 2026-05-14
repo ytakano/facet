@@ -528,8 +528,6 @@ val sctx_restore_path : sctx -> ident -> field_path -> sctx infer_result
 
 val infer_place_sctx : global_env -> sctx -> place -> ty infer_result
 
-val infer_place_type_sctx : global_env -> sctx -> place -> ty infer_result
-
 val place_under_unique_ref_b : global_env -> sctx -> place -> bool
 
 val consume_place_value :

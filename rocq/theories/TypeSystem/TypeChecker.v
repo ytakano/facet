@@ -1911,7 +1911,7 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
       | infer_ok (_, Σ') => infer_ok (MkTy UUnrestricted TUnits, Σ')
       end
   | EReplace p e_new =>
-      match infer_place_type_sctx env Σ p with
+      match infer_place_sctx env Σ p with
       | infer_err err => infer_err err
       | infer_ok T_old =>
           let root := place_name p in
@@ -2692,15 +2692,14 @@ Example infer_core_env_moved_field_blocks_parent_borrow :
   infer_err (ErrAlreadyConsumed (("p"%string), 0)).
 Proof. vm_compute. reflexivity. Qed.
 
-Example infer_core_env_replace_restores_moved_field :
+Example infer_core_env_replace_rejects_moved_field :
   infer_core_env ex_env_split [] 0 ex_split_ctx
     (ELetInfer MImmutable (("tmp"%string), 0)
       (EPlace (PField (PVar (("p"%string), 0)) ("x"%string)))
       (ELetInfer MImmutable (("old"%string), 0)
         (EReplace (PField (PVar (("p"%string), 0)) ("x"%string)) (ELit (LInt 1)))
         (EBorrow RShared (PVar (("p"%string), 0))))) =
-  infer_ok
-    (MkTy UUnrestricted (TRef (LVar 0) RShared ex_split_ty), ex_split_ctx).
+  infer_err (ErrAlreadyConsumed (("p"%string), 0)).
 Proof. vm_compute. reflexivity. Qed.
 
 Example borrow_check_env_sibling_fields_do_not_conflict :

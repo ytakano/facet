@@ -326,11 +326,12 @@ Inductive eval (env : global_env) : store -> expr -> store -> value -> Prop :=
 
   (* replace(x, e_new): update x in-place, return old value.
      x itself is NOT consumed. *)
-  | Eval_Replace : forall s s1 s2 x old_e e_new v_new,
+  | Eval_Replace : forall s s1 s2 s3 x old_e e_new v_new,
       store_lookup x s = Some old_e ->
       eval env s e_new s1 v_new ->
       store_update_val x v_new s1 = Some s2 ->
-      eval env s (EReplace (PVar x) e_new) s2 (se_val old_e)
+      store_restore_path x [] s2 = Some s3 ->
+      eval env s (EReplace (PVar x) e_new) s3 (se_val old_e)
 
   | Eval_Assign : forall s s1 s2 x old_e e_new v_new,
       store_lookup x s = Some old_e ->

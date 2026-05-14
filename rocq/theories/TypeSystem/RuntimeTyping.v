@@ -26,6 +26,10 @@ Inductive value_has_type (env : global_env) (s : store) : value -> Ty -> Prop :=
   | VHT_ClosureEmpty : forall fname fdef,
       lookup_fn fname (env_fns env) = Some fdef ->
       value_has_type env s (VClosure fname []) (fn_value_ty fdef)
+  | VHT_ClosureIn : forall fname fdef,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      value_has_type env s (VClosure fname []) (fn_value_ty fdef)
   | VHT_Compatible : forall Ω v T_actual T_expected,
       value_has_type env s v T_actual ->
       ty_compatible Ω T_actual T_expected ->

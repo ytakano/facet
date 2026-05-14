@@ -22,11 +22,11 @@
 
 ## Current Status
 
-Last updated implementation point: current workspace after `308496a` linear partial-move obligation helper/checker fix.
+Last updated implementation point: `4947081` ready mutual preservation theorem.
 
 - S0: `[done]` runtime value/store typing と runtime reference well-formedness の仕様は導入済み。
 - S1: `[done]` path/value/store helper の主要部分と linear partial-move obligation helper/checker fix は導入済み。
-- S2: `[partial]` 個別 preservation helper は基本式から direct/root assign/replace まで進行中。same-bindings helper と unique-ref invariance は導入済み。full mutual theorem は未完了。
+- S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。full unrestricted theorem は未完了。
 - S3: `[todo]` call/closure preservation は未着手。ただし empty closure value typing helper は一部存在する。
 - S4-S6: `[todo]` checker-to-runtime safety、runtime reference safety、small-step progress は未着手。
 
@@ -96,9 +96,14 @@ Theorem step_progress :
    - `[done]` `EBorrow` は shared/unique/direct/indirect の result typing helper を追加済み。
    - `[done]` direct path `EAssign` / `EReplace` を path-aware store helper へ接続済み。
    - `[done]` root `Eval_Assign` / `Eval_Replace` 用 preservation helper を追加済み。
+   - `[done]` `eval_args_preserves_typing` と `eval_args_values_have_types` を追加済み（`68dfd35`）。
+   - `[done]` direct assign/replace の full `eval` derivation を root/path helper へ接続する bridge lemma を追加済み（`f17beb2`）。
+   - `[done]` runtime/static copy-vs-move mismatch contradiction helper を追加済み（`855577d`）。
+   - `[done]` `preservation_ready_expr` / `preservation_ready_args` / `preservation_ready_fields` と field lookup helper を追加済み（`4675b39`）。
    - `[done]` `replace p e_new` は target path が `e_new` 評価後も available であることを typing premise として preservation に使う。これは自己消費する `replace s.f s.f` を拒否する既存ガードの証明側の対応である。
    - `[done]` direct `assign p e_new` も target path が `e_new` 評価後も available であることを typing premise として要求する。
-   - `[todo]` `eval`, `eval_args`, `eval_struct_fields` の相互 induction で `eval_preserves_typing` を証明する。
+   - `[done]` `eval`, `eval_args`, `eval_struct_fields` の相互 induction で ready subset 用の `eval_preserves_typing_ready_mutual` を証明済み（`4947081`）。
+   - `[todo]` ready restriction のない full `eval_preserves_typing` を証明する。
    - `[done]` `typed_env_structural` が binding lookup/type を保存する same-bindings helper を追加し、現在 explicit premise にしている lookup 条件を theorem 本体で導出できるようにした。
    - `[done]` `EIf` false branch の `store_typed_ctx_merge_right` 用 type-equality premise は branch typing から導出できる helper を追加済み。
    - `[todo]` indirect `EReplace` / `EAssign`、`EDeref`、`ECall` / `ECallExpr` を preservation theorem へ接続する。
@@ -160,11 +165,12 @@ Theorem step_progress :
 1. `[done]` `RuntimeTyping.v` を追加して S0/S1 の定義と主要 store helper を証明する。
 2. `[partial]` `TypeSafety.v` を追加して S2 の個別 preservation helper を基本式から始める。
 3. `[done]` `typed_env_structural` の same-bindings lookup helper を追加し、assign/replace helper の explicit lookup premise を theorem 本体で導出できるようにする。
-4. `[current]` `eval`, `eval_args`, `eval_struct_fields` の mutual preservation theorem scaffold を追加し、既存 helper を constructor ごとに接続する。
-5. `[todo]` call/closure 関連の S3 を追加する。
-6. `[todo]` `EnvFullSoundness.v` / `ValidatorSoundness.v` と接続して S4 を証明する。
-7. `[todo]` borrow/runtime reference safety を S5 として別 theorem 群にする。
-8. `[todo]` small-step semantics が必要になった時点で S6 を開始する。
+4. `[done]` `eval`, `eval_args`, `eval_struct_fields` の ready restricted mutual preservation theorem を追加し、既存 helper を constructor ごとに接続する。
+5. `[current]` full preservation に残る indirect update / deref / call blocker を S2/S3/S5 に分解する。
+6. `[todo]` call/closure 関連の S3 を追加する。
+7. `[todo]` `EnvFullSoundness.v` / `ValidatorSoundness.v` と接続して S4 を証明する。
+8. `[todo]` borrow/runtime reference safety を S5 として別 theorem 群にする。
+9. `[todo]` small-step semantics が必要になった時点で S6 を開始する。
 
 ## Acceptance Criteria
 
@@ -198,7 +204,8 @@ review 指摘に対応する regression:
 
 型安全性 roadmap の初期完了条件:
 
-- `[todo]` `eval_preserves_typing` が `typed_env_structural` から証明されている。
+- `[done]` ready restricted `eval_preserves_typing_ready_mutual` が `typed_env_structural` から証明されている。
+- `[todo]` unrestricted `eval_preserves_typing` が `typed_env_structural` から証明されている。
 - `[todo]` `infer_full_env_big_step_safe` が checker 成功 theorem と接続されている。
 - `[todo]` `VRef` の dangling reference safety が theorem として独立している。
 - `[done]` progress は small-step milestone へ明示的に分離されている。

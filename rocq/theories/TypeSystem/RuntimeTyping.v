@@ -126,6 +126,95 @@ Proof.
     + apply IHForall2.
 Qed.
 
+Lemma store_typed_lookup :
+  forall env s Σ x se,
+    store_typed env s Σ ->
+    store_lookup x s = Some se ->
+    exists (T : Ty) (st : binding_state) (m : mutability),
+      sctx_lookup x Σ = Some (T, st) /\
+      se_name se = x /\
+      se_ty se = T /\
+      se_state se = st /\
+      value_has_type env s (se_val se) T.
+Proof.
+  intros env s Σ x se Htyped.
+  induction Htyped as [|se0 ce s_tail Σ_tail Hentry Htail IH]; intros Hlookup.
+  - discriminate.
+  - destruct se0 as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [Hst Hv]]].
+    simpl in Hlookup.
+    destruct (ident_eqb x sx) eqn:Hsx.
+    + inversion Hlookup; subst se.
+      exists cT, cst, cm.
+      apply ident_eqb_eq in Hsx.
+      repeat split.
+      * simpl. rewrite <- Hname. rewrite <- Hsx. rewrite ident_eqb_refl. reflexivity.
+      * simpl. symmetry. exact Hsx.
+      * simpl. exact HT.
+      * simpl. exact Hst.
+      * simpl. rewrite <- HT.
+        eapply value_has_type_store_irrelevant. exact Hv.
+    + destruct (IH Hlookup) as [T [st [m [HΣ [Hn [HTy [Hst' Hv']]]]]]].
+      exists T, st, m.
+      repeat split.
+      * simpl.
+        destruct (ident_eqb x cx) eqn:Hcx.
+        -- apply ident_eqb_eq in Hcx.
+           apply ident_eqb_neq in Hsx. exfalso. apply Hsx.
+           rewrite Hname. exact Hcx.
+        -- exact HΣ.
+      * exact Hn.
+      * exact HTy.
+      * exact Hst'.
+      * eapply value_has_type_store_irrelevant. exact Hv'.
+Qed.
+
+Lemma store_typed_lookup_sctx :
+  forall env s Σ x T st,
+    store_typed env s Σ ->
+    sctx_lookup x Σ = Some (T, st) ->
+    exists se,
+      store_lookup x s = Some se /\
+      se_name se = x /\
+      se_ty se = T /\
+      se_state se = st /\
+      value_has_type env s (se_val se) T.
+Proof.
+  intros env s Σ x T st Htyped.
+  induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH]; intros Hlookup.
+  - discriminate.
+  - destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [Hst Hv]]].
+    simpl in Hlookup.
+    destruct (ident_eqb x cx) eqn:Hcx.
+    + inversion Hlookup; subst T st.
+      exists (MkStoreEntry sx sT sv sst).
+      repeat split.
+      * simpl. rewrite Hname. rewrite Hcx. reflexivity.
+      * simpl. apply ident_eqb_eq in Hcx. rewrite Hname. symmetry. exact Hcx.
+      * simpl. exact HT.
+      * simpl. exact Hst.
+      * simpl. rewrite <- HT.
+        eapply value_has_type_store_irrelevant. exact Hv.
+    + destruct (IH Hlookup) as [se' [Hs [Hn [HTy [Hst' Hv']]]]].
+      exists se'.
+      repeat split.
+      * simpl.
+        destruct (ident_eqb x sx) eqn:Hsx.
+        -- apply ident_eqb_eq in Hsx.
+           apply ident_eqb_neq in Hcx. exfalso. apply Hcx.
+           rewrite <- Hname. exact Hsx.
+        -- exact Hs.
+      * exact Hn.
+      * exact HTy.
+      * exact Hst'.
+      * eapply value_has_type_store_irrelevant. exact Hv'.
+Qed.
+
 Lemma store_typed_add :
   forall env s Σ x T m v,
     store_typed env s Σ ->
@@ -246,6 +335,46 @@ Proof.
   eapply store_typed_update_state; eassumption.
 Qed.
 
+Lemma store_typed_mark_used :
+  forall env s Σ x Σ',
+    store_typed env s Σ ->
+    sctx_update_state x (state_consume_path []) Σ = Some Σ' ->
+    store_typed env (store_mark_used x s) Σ'.
+Proof.
+  intros env s Σ x Σ' Htyped HΣ.
+  revert Σ' HΣ.
+  induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH]; intros Σ' HΣ.
+  - discriminate.
+  - destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [Hst Hv]]].
+    simpl in HΣ.
+    simpl.
+    destruct (ident_eqb x sx) eqn:Hsx;
+      destruct (ident_eqb x cx) eqn:Hcx.
+    + inversion HΣ; subst Σ'.
+      constructor.
+      * simpl. repeat split.
+        -- exact Hname.
+        -- exact HT.
+        -- rewrite Hst. reflexivity.
+        -- eapply value_has_type_store_irrelevant. exact Hv.
+      * eapply store_typed_store_param_irrelevant. exact Htail.
+    + apply ident_eqb_eq in Hsx. apply ident_eqb_neq in Hcx. subst sx.
+      contradiction.
+    + apply ident_eqb_neq in Hsx. apply ident_eqb_eq in Hcx.
+      subst cx. exfalso. apply Hsx. exact Hcx.
+    + destruct (sctx_update_state x (state_consume_path []) Σ_tail)
+        as [Σ_tail' |] eqn:Htail_update; try discriminate.
+      inversion HΣ; subst Σ'.
+      constructor.
+      * simpl. repeat split; try assumption.
+        eapply value_has_type_store_irrelevant. exact Hv.
+      * eapply store_typed_store_param_irrelevant.
+        apply IH. reflexivity.
+Qed.
+
 Lemma store_typed_update_val :
   forall env s Σ x v T st s',
     store_typed env s Σ ->
@@ -290,6 +419,102 @@ Proof.
         -- reflexivity.
         -- exact Hlookup.
         -- eapply value_has_type_store_irrelevant. exact Hv.
+Qed.
+
+Lemma store_typed_lookup_path :
+  forall env s Σ x path v,
+    store_typed env s Σ ->
+    store_lookup_path x path s = Some v ->
+    exists (se : store_entry) (T_root : Ty) (st : binding_state) (m : mutability),
+      sctx_lookup x Σ = Some (T_root, st) /\
+      se_name se = x /\
+      se_ty se = T_root /\
+      store_lookup x s = Some se /\
+      value_lookup_path (se_val se) path = Some v.
+Proof.
+  intros env s Σ x path v Htyped Hpath.
+  unfold store_lookup_path in Hpath.
+  destruct (store_lookup x s) as [se |] eqn:Hlookup; try discriminate.
+  destruct (store_typed_lookup env s Σ x se Htyped Hlookup)
+    as [T_root [st [m [HΣ [Hn [HTy [Hst Hv]]]]]]].
+  exists se, T_root, st, m.
+  repeat split; try assumption.
+Qed.
+
+Lemma value_lookup_path_nil :
+  forall v,
+    value_lookup_path v [] = Some v.
+Proof.
+  destruct v; reflexivity.
+Qed.
+
+Lemma value_update_path_nil :
+  forall v v_new,
+    value_update_path v [] v_new = Some v_new.
+Proof.
+  destruct v; reflexivity.
+Qed.
+
+Lemma store_typed_update_path :
+  forall env s Σ x path v_new s',
+    store_typed env s Σ ->
+    (forall se T st,
+      store_lookup x s = Some se ->
+      sctx_lookup x Σ = Some (T, st) ->
+      forall v_root,
+        value_update_path (se_val se) path v_new = Some v_root ->
+        value_has_type env s v_root T) ->
+    store_update_path x path v_new s = Some s' ->
+    store_typed env s' Σ.
+Proof.
+  intros env s Σ x path v_new s' Htyped Hroot Hupdate.
+  revert s' Hupdate Hroot.
+  induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH];
+    intros s' Hupdate Hroot.
+  - discriminate.
+  - destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [Hst Hv]]].
+    simpl in Hupdate.
+    destruct (ident_eqb x sx) eqn:Hsx.
+    + destruct (value_update_path sv path v_new) as [v_root |] eqn:Hvalue;
+        try discriminate.
+      inversion Hupdate; subst s'.
+      constructor.
+      * simpl. repeat split.
+        -- exact Hname.
+        -- exact HT.
+        -- exact Hst.
+        -- rewrite HT.
+           eapply value_has_type_store_irrelevant.
+           eapply Hroot.
+           ++ simpl. rewrite Hsx. reflexivity.
+           ++ simpl. rewrite <- Hname.
+              apply ident_eqb_eq in Hsx.
+              rewrite <- Hsx. rewrite ident_eqb_refl. reflexivity.
+           ++ exact Hvalue.
+      * eapply store_typed_store_param_irrelevant. exact Htail.
+    + destruct (store_update_path x path v_new s_tail) as [s_tail' |]
+        eqn:Htail_update; try discriminate.
+      inversion Hupdate; subst s'.
+      constructor.
+      * simpl. repeat split; try assumption.
+        eapply value_has_type_store_irrelevant. exact Hv.
+      * eapply store_typed_store_param_irrelevant.
+        eapply IH.
+        -- reflexivity.
+        -- intros se0 T st Hlookup HΣ v_root Hvalue.
+           eapply value_has_type_store_irrelevant.
+           eapply Hroot.
+           ++ simpl. rewrite Hsx. exact Hlookup.
+           ++ simpl.
+              destruct (ident_eqb x cx) eqn:Hcx.
+              ** apply ident_eqb_eq in Hcx.
+                 apply ident_eqb_neq in Hsx. exfalso. apply Hsx.
+                 rewrite Hname. exact Hcx.
+              ** exact HΣ.
+           ++ exact Hvalue.
 Qed.
 
 (* ------------------------------------------------------------------ *)

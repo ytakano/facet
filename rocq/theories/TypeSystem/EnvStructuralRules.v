@@ -69,6 +69,11 @@ Inductive sctx_entry_same_binding : sctx_entry -> sctx_entry -> Prop :=
 Definition sctx_same_bindings (Σ1 Σ2 : sctx) : Prop :=
   Forall2 sctx_entry_same_binding Σ1 Σ2.
 
+Definition sctx_entry_type_eq (ce1 ce2 : sctx_entry) : Prop :=
+  match ce1, ce2 with
+  | (_, T1, _, _), (_, T2, _, _) => T1 = T2
+  end.
+
 Lemma sctx_entry_same_binding_refl :
   forall ce,
     sctx_entry_same_binding ce ce.
@@ -154,6 +159,39 @@ Proof.
     | |- context[ident_eqb x ?y] => destruct (ident_eqb x y)
     end; [exact Hlookup |].
     eapply IHHsame. exact Hlookup.
+Qed.
+
+Lemma sctx_same_bindings_type_eq :
+  forall Σ1 Σ2,
+    sctx_same_bindings Σ1 Σ2 ->
+    Forall2 sctx_entry_type_eq Σ1 Σ2.
+Proof.
+  intros Σ1 Σ2 Hsame.
+  induction Hsame.
+  - constructor.
+  - constructor.
+    + inversion H; subst. reflexivity.
+    + exact IHHsame.
+Qed.
+
+Lemma sctx_same_bindings_common_type_eq :
+  forall Σ Σ1 Σ2,
+    sctx_same_bindings Σ Σ1 ->
+    sctx_same_bindings Σ Σ2 ->
+    Forall2 sctx_entry_type_eq Σ1 Σ2.
+Proof.
+  intros Σ Σ1 Σ2 Hleft.
+  revert Σ2.
+  induction Hleft as [|ce ce1 Σ_tail Σ1_tail Hhead_left Htail_left IH];
+    intros Σ2 Hright.
+  - inversion Hright; subst. constructor.
+  - inversion Hright as [|ce' ce2 Σ_tail' Σ2_tail Hhead_right Htail_right];
+      subst.
+    constructor.
+    + inversion Hhead_left; subst.
+      inversion Hhead_right; subst.
+      reflexivity.
+    + eapply IH. exact Htail_right.
 Qed.
 
 Lemma sctx_update_state_same_bindings :
@@ -492,6 +530,18 @@ Proof.
     + eapply sctx_same_bindings_trans.
       * eapply typed_env_structural_same_bindings. exact H0.
       * exact IHHtyped.
+Qed.
+
+Lemma typed_env_structural_branch_type_eq :
+  forall env Ω n Σ e2 T2 Σ2 e3 T3 Σ3,
+    typed_env_structural env Ω n Σ e2 T2 Σ2 ->
+    typed_env_structural env Ω n Σ e3 T3 Σ3 ->
+    Forall2 sctx_entry_type_eq Σ2 Σ3.
+Proof.
+  intros env Ω n Σ e2 T2 Σ2 e3 T3 Σ3 Htyped_left Htyped_right.
+  eapply sctx_same_bindings_common_type_eq.
+  - eapply typed_env_structural_same_bindings. exact Htyped_left.
+  - eapply typed_env_structural_same_bindings. exact Htyped_right.
 Qed.
 
 Inductive borrow_ok_env_structural (env : global_env)

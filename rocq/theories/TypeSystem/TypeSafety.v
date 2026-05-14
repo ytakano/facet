@@ -663,6 +663,7 @@ Lemma eval_if_false_preserves_typing :
      eval env s e1 s1 (VBool false) ->
      store_typed env s1 Σ1 /\
      value_has_type env s1 (VBool false) T_cond) ->
+    typed_env_structural env Ω n Σ1 e2 T2 Σ2 ->
     typed_env_structural env Ω n Σ1 e3 T3 Σ3 ->
     eval env s1 e3 s2 v ->
     (store_typed env s1 Σ1 ->
@@ -670,21 +671,20 @@ Lemma eval_if_false_preserves_typing :
      eval env s1 e3 s2 v ->
      store_typed env s2 Σ3 /\ value_has_type env s2 v T3) ->
     ty_core T2 = ty_core T3 ->
-    Forall2
-      (fun ce2 ce3 =>
-        match ce2, ce3 with
-        | (_, T2_entry, _, _), (_, T3_entry, _, _) => T2_entry = T3_entry
-        end) Σ2 Σ3 ->
     ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
     store_typed env s2 Σ4 /\
     value_has_type env s2 v
       (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2)).
 Proof.
   intros env Ω n Σ Σ1 Σ2 Σ3 Σ4 s s1 s2 e1 e2 e3 T_cond T2 T3 v
-    Hstore Htyped_cond Heval_cond Hpres_cond Htyped_else Heval_else
-    Hpres_else Hcore Htypes Hmerge.
+    Hstore Htyped_cond Heval_cond Hpres_cond Htyped_then Htyped_else Heval_else
+    Hpres_else Hcore Hmerge.
   destruct (Hpres_cond Hstore Htyped_cond Heval_cond) as [Hstore1 _].
   destruct (Hpres_else Hstore1 Htyped_else Heval_else) as [Hstore3 Hv].
+  assert (Htypes : Forall2 sctx_entry_type_eq Σ2 Σ3).
+  { eapply typed_env_structural_branch_type_eq.
+    - exact Htyped_then.
+    - exact Htyped_else. }
   split.
   - eapply store_typed_ctx_merge_right; eassumption.
   - eapply value_has_type_if_right_result; eassumption.

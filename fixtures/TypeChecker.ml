@@ -2760,8 +2760,12 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
                    | Infer_ok p1 ->
                      let (t_new, _UU03a3_1) = p1 in
                      if ty_compatible_b _UU03a9_ t_new t_old
-                     then (match sctx_restore_path _UU03a3_1 x path with
-                           | Infer_ok _UU03a3_2 -> Infer_ok (t_old, _UU03a3_2)
+                     then (match sctx_path_available _UU03a3_1 x path with
+                           | Infer_ok _ ->
+                             (match sctx_restore_path _UU03a3_1 x path with
+                              | Infer_ok _UU03a3_2 ->
+                                Infer_ok (t_old, _UU03a3_2)
+                              | Infer_err err -> Infer_err err)
                            | Infer_err err -> Infer_err err)
                      else Infer_err (compatible_error t_new t_old)
                    | Infer_err err -> Infer_err err))

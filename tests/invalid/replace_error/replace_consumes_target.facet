@@ -1,0 +1,3 @@
+fn f(mut x: affine isize) -> affine isize {
+    (replace x x)
+}

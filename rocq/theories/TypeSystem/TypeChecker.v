@@ -1923,9 +1923,13 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
                   | infer_err err => infer_err err
                   | infer_ok (T_new, Σ1) =>
                       if ty_compatible_b Ω T_new T_old
-                      then match sctx_restore_path Σ1 x path with
-                           | infer_ok Σ2 => infer_ok (T_old, Σ2)
+                      then match sctx_path_available Σ1 x path with
                            | infer_err err => infer_err err
+                           | infer_ok _ =>
+                               match sctx_restore_path Σ1 x path with
+                               | infer_ok Σ2 => infer_ok (T_old, Σ2)
+                               | infer_err err => infer_err err
+                               end
                            end
                       else infer_err (compatible_error T_new T_old)
                   end

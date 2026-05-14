@@ -75,7 +75,7 @@ Proof.
     try discriminate.
   destruct (ty_compatible_b (fn_outlives f) T_body (fn_ret f))
     eqn:Hcompatible; try discriminate.
-  destruct (params_ok_b (fn_params f) Γ_out) eqn:Hparams; try discriminate.
+  destruct (params_ok_env_b env (fn_params f) Γ_out) eqn:Hparams; try discriminate.
   inversion Hinfer; subst.
   exists T_body, Γ'.
   repeat split.

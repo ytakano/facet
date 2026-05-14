@@ -394,8 +394,6 @@ val ctx_lookup_b : ident -> ctx -> (ty * bool) option
 
 val ctx_add_b : ident -> ty -> mutability -> ctx -> ctx
 
-val ctx_check_ok : ident -> ty -> ctx -> bool
-
 val lookup_fn_b : ident -> fn_def list -> fn_def option
 
 val mk_region_ctx : Big_int_Z.big_int -> region_ctx
@@ -518,7 +516,25 @@ val sctx_remove : ident -> sctx -> sctx
 val sctx_update_state :
   ident -> (binding_state -> binding_state) -> sctx -> sctx option
 
-val sctx_check_ok : ident -> ty -> sctx -> bool
+val prefix_obligation_paths : field_path -> field_path list -> field_path list
+
+val linear_obligation_paths_fuel :
+  Big_int_Z.big_int -> global_env -> ty -> field_path list
+
+val linear_obligation_paths : global_env -> ty -> field_path list
+
+val moved_path_satisfies_obligation_b : field_path list -> field_path -> bool
+
+val moved_paths_satisfy_obligations_b :
+  field_path list -> field_path list -> bool
+
+val linear_scope_ok_b : global_env -> ty -> binding_state -> bool
+
+val sctx_check_ok : global_env -> ident -> ty -> sctx -> bool
+
+val params_ok_sctx_b : global_env -> param list -> sctx -> bool
+
+val params_ok_env_b : global_env -> param list -> ctx -> bool
 
 val sctx_path_available : sctx -> ident -> field_path -> unit infer_result
 
@@ -545,8 +561,6 @@ val infer_core_env_state_fuel :
 val infer_core_env :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
   (ty * ctx) infer_result
-
-val params_ok_b : param list -> ctx -> bool
 
 val wf_params_b : region_ctx -> param list -> bool
 

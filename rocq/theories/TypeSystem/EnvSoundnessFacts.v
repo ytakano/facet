@@ -37,18 +37,17 @@ Proof.
 Qed.
 
 Lemma sctx_check_ok_linear_success :
-  forall Σ x T,
-    sctx_check_ok x T Σ = true ->
+  forall env Σ x T,
+    sctx_check_ok env x T Σ = true ->
     ty_usage T = ULinear ->
     exists Tx st,
       sctx_lookup x Σ = Some (Tx, st) /\
-      (st_consumed st = true \/ path_conflicts_any_b [] (st_moved_paths st) = true).
+      linear_scope_ok_b env T st = true.
 Proof.
-  intros Σ x T Hcheck Hlin.
+  intros env Σ x T Hcheck Hlin.
   unfold sctx_check_ok in Hcheck.
   rewrite Hlin in Hcheck.
   destruct (sctx_lookup x Σ) as [[Tx st] |] eqn:Hlookup; try discriminate.
-  apply orb_true_iff in Hcheck.
   exists Tx, st. split; [reflexivity | exact Hcheck].
 Qed.
 

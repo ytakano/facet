@@ -101,8 +101,7 @@ Definition ctx_is_ok (x : ident) (T : Ty) (Γ : ctx) : Prop :=
   match ty_usage T with
   | ULinear =>
       match ctx_lookup_state x Γ with
-      | Some (_, st) =>
-          st_consumed st = true \/ path_conflicts_any_b [] (st_moved_paths st) = true
+      | Some (_, st) => st_consumed st = true
       | _              => False
       end
   | _ => True

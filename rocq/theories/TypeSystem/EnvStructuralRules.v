@@ -283,12 +283,12 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_env_structural env Ω n Σ e1 T1 Σ1 ->
       ty_compatible_b Ω T1 T = true ->
       typed_env_structural env Ω n (sctx_add x T m Σ1) e2 T2 Σ2 ->
-      sctx_check_ok x T Σ2 = true ->
+      sctx_check_ok env x T Σ2 = true ->
       typed_env_structural env Ω n Σ (ELet m x T e1 e2) T2 (sctx_remove x Σ2)
   | TES_LetInfer : forall Σ Σ1 Σ2 m x T1 e1 e2 T2,
       typed_env_structural env Ω n Σ e1 T1 Σ1 ->
       typed_env_structural env Ω n (sctx_add x T1 m Σ1) e2 T2 Σ2 ->
-      sctx_check_ok x T1 Σ2 = true ->
+      sctx_check_ok env x T1 Σ2 = true ->
       typed_env_structural env Ω n Σ (ELetInfer m x e1 e2) T2 (sctx_remove x Σ2)
   | TES_Drop : forall Σ Σ' e T,
       typed_env_structural env Ω n Σ e T Σ' ->
@@ -583,7 +583,7 @@ Definition typed_fn_env_structural (env : global_env) (f : fn_def) : Prop :=
       (sctx_of_ctx (params_ctx (fn_params f)))
       (fn_body f) T_body (sctx_of_ctx Γ_out) /\
     ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
-    params_ok_b (fn_params f) Γ_out = true.
+    params_ok_env_b env (fn_params f) Γ_out = true.
 
 Definition checked_fn_env_structural (env : global_env) (f : fn_def) : Prop :=
   typed_fn_env_structural env f /\

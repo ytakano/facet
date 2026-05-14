@@ -467,7 +467,7 @@ Proof.
   unfold ctx_check_ok, ctx_is_ok in *.
   destruct (ty_usage T) eqn:Hu; try exact I.
   destruct (ctx_lookup_state x Γ) as [[T' st] |] eqn:Hl.
-  - apply orb_true_iff in H. exact H.
+  - exact H.
   - discriminate.
 Qed.
 

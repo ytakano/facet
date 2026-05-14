@@ -225,7 +225,7 @@ Definition ctx_check_ok (x : ident) (T : Ty) (Γ : ctx) : bool :=
   match ty_usage T with
   | ULinear =>
       match ctx_lookup_state x Γ with
-      | Some (_, st) => st_consumed st || path_conflicts_any_b [] (st_moved_paths st)
+      | Some (_, st) => st_consumed st
       | _              => false
       end
   | _ => true
@@ -1642,21 +1642,90 @@ Definition sctx_update_state (x : ident) (f : binding_state -> binding_state) (�
     : option sctx :=
   ctx_update_state x f Σ.
 
-Definition sctx_check_ok (x : ident) (T : Ty) (Σ : sctx) : bool :=
+Fixpoint prefix_obligation_paths (prefix : field_path) (paths : list field_path)
+    : list field_path :=
+  match paths with
+  | [] => []
+  | p :: rest => (prefix ++ p) :: prefix_obligation_paths prefix rest
+  end.
+
+Fixpoint linear_obligation_paths_fuel (fuel : nat) (env : global_env) (T : Ty)
+    {struct fuel} : list field_path :=
+  match ty_usage T with
+  | ULinear =>
+      match ty_core T with
+      | TStruct sname lts args =>
+          match fuel with
+          | O => [[]]
+          | S fuel' =>
+              match lookup_struct sname env with
+              | Some s =>
+                  if Nat.eqb (List.length lts) (struct_lifetimes s) &&
+                     Nat.eqb (List.length args) (struct_type_params s)
+                  then
+                    let fix go (fields : list field_def) : list field_path :=
+                      match fields with
+                      | [] => []
+                      | f :: rest =>
+                          prefix_obligation_paths [field_name f]
+                            (linear_obligation_paths_fuel fuel' env
+                              (instantiate_struct_field_ty lts args f)) ++ go rest
+                      end
+                    in
+                    match go (struct_fields s) with
+                    | [] => [[]]
+                    | obligations => obligations
+                    end
+                  else [[]]
+              | None => [[]]
+              end
+          end
+      | _ => [[]]
+      end
+  | _ => []
+  end.
+
+Definition linear_obligation_paths (env : global_env) (T : Ty) : list field_path :=
+  linear_obligation_paths_fuel (S (List.length (env_structs env) + ty_depth T)) env T.
+
+Definition moved_path_satisfies_obligation_b
+    (moved_paths : list field_path) (obligation : field_path) : bool :=
+  existsb (fun moved => path_prefix_b moved obligation) moved_paths.
+
+Fixpoint moved_paths_satisfy_obligations_b
+    (moved_paths obligations : list field_path) : bool :=
+  match obligations with
+  | [] => true
+  | obligation :: rest =>
+      moved_path_satisfies_obligation_b moved_paths obligation &&
+      moved_paths_satisfy_obligations_b moved_paths rest
+  end.
+
+Definition linear_scope_ok_b (env : global_env) (T : Ty) (st : binding_state) : bool :=
+  st_consumed st ||
+  moved_paths_satisfy_obligations_b
+    (st_moved_paths st) (linear_obligation_paths env T).
+
+Definition sctx_check_ok (env : global_env) (x : ident) (T : Ty) (Σ : sctx) : bool :=
   match ty_usage T with
   | ULinear =>
       match sctx_lookup x Σ with
-      | Some (_, st) => st_consumed st || path_conflicts_any_b [] (st_moved_paths st)
+      | Some (_, st) => linear_scope_ok_b env T st
       | None => false
       end
   | _ => true
   end.
 
-Fixpoint params_ok_sctx_b (ps : list param) (Σ : sctx) : bool :=
+Fixpoint params_ok_sctx_b (env : global_env) (ps : list param) (Σ : sctx) : bool :=
   match ps with
   | [] => true
-  | p :: rest => sctx_check_ok (param_name p) (param_ty p) Σ && params_ok_sctx_b rest Σ
+  | p :: rest =>
+      sctx_check_ok env (param_name p) (param_ty p) Σ &&
+      params_ok_sctx_b env rest Σ
   end.
+
+Definition params_ok_env_b (env : global_env) (ps : list param) (Γ : ctx) : bool :=
+  params_ok_sctx_b env ps (sctx_of_ctx Γ).
 
 Definition sctx_path_available (Σ : sctx) (x : ident) (p : field_path) : infer_result unit :=
   match sctx_lookup x Σ with
@@ -1890,7 +1959,7 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
           then match infer_core_env_state_fuel fuel' env Ω n (sctx_add x T m Σ1) e2 with
                | infer_err err => infer_err err
                | infer_ok (T2, Σ2) =>
-                   if sctx_check_ok x T Σ2
+                   if sctx_check_ok env x T Σ2
                    then infer_ok (T2, sctx_remove x Σ2)
                    else infer_err ErrContextCheckFailed
                end
@@ -1903,7 +1972,7 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
           match infer_core_env_state_fuel fuel' env Ω n (sctx_add x T1 m Σ1) e2 with
           | infer_err err => infer_err err
           | infer_ok (T2, Σ2) =>
-              if sctx_check_ok x T1 Σ2
+              if sctx_check_ok env x T1 Σ2
               then infer_ok (T2, sctx_remove x Σ2)
               else infer_err ErrContextCheckFailed
           end
@@ -2290,7 +2359,7 @@ Definition infer_env (env : global_env) (f : fn_def)
       then infer_err ErrLifetimeLeak
       else
       if ty_compatible_b Ω T_body (fn_ret f) then
-        if params_ok_b (fn_params f) Γ_out
+        if params_ok_env_b env (fn_params f) Γ_out
         then infer_ok (fn_ret f, Γ_out)
         else infer_err ErrContextCheckFailed
       else infer_err (compatible_error T_body (fn_ret f))

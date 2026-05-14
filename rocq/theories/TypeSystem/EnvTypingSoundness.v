@@ -476,7 +476,7 @@ Proof.
       destruct (ty_compatible_b Ω T1 t) eqn:Hcompat; try discriminate.
       destruct (infer_core_env_state_fuel fuel' env Ω n (sctx_add i t m Σ1) e2)
         as [[T2 Σ2] | err2] eqn:He2; try discriminate.
-      destruct (sctx_check_ok i t Σ2) eqn:Hcheck; try discriminate.
+      destruct (sctx_check_ok env i t Σ2) eqn:Hcheck; try discriminate.
       inversion Hinfer; subst.
       eapply TES_Let.
       * eapply IH; [exact Hbasic1 | exact He1].
@@ -488,7 +488,7 @@ Proof.
         eqn:He1; try discriminate.
       destruct (infer_core_env_state_fuel fuel' env Ω n (sctx_add i T1 m Σ1) e2)
         as [[T2 Σ2] | err2] eqn:He2; try discriminate.
-      destruct (sctx_check_ok i T1 Σ2) eqn:Hcheck; try discriminate.
+      destruct (sctx_check_ok env i T1 Σ2) eqn:Hcheck; try discriminate.
       inversion Hinfer; subst.
       eapply TES_LetInfer.
       * eapply IH; [exact Hbasic1 | exact He1].
@@ -601,7 +601,7 @@ Proof.
       destruct (ty_compatible_b Ω T1 t) eqn:Hcompat; try discriminate.
       destruct (infer_core_env_state_fuel fuel' env Ω n (sctx_add i t m Σ1) e2)
         as [[T2 Σ2] | err2] eqn:He2; try discriminate.
-      destruct (sctx_check_ok i t Σ2) eqn:Hcheck; try discriminate.
+      destruct (sctx_check_ok env i t Σ2) eqn:Hcheck; try discriminate.
       inversion Hinfer; subst.
       eapply TES_Let.
       * eapply IH; [exact Hcall1 | exact He1].
@@ -613,7 +613,7 @@ Proof.
         eqn:He1; try discriminate.
       destruct (infer_core_env_state_fuel fuel' env Ω n (sctx_add i T1 m Σ1) e2)
         as [[T2 Σ2] | err2] eqn:He2; try discriminate.
-      destruct (sctx_check_ok i T1 Σ2) eqn:Hcheck; try discriminate.
+      destruct (sctx_check_ok env i T1 Σ2) eqn:Hcheck; try discriminate.
       inversion Hinfer; subst.
       eapply TES_LetInfer.
       * eapply IH; [exact Hcall1 | exact He1].
@@ -793,7 +793,7 @@ Proof.
       destruct (ty_compatible_b Ω T1 t) eqn:Hcompat; try discriminate.
       destruct (infer_core_env_state_fuel fuel' env Ω n (sctx_add i t m Σ1) e2)
         as [[T2 Σ2] | err2] eqn:He2; try discriminate.
-      destruct (sctx_check_ok i t Σ2) eqn:Hcheck; try discriminate.
+      destruct (sctx_check_ok env i t Σ2) eqn:Hcheck; try discriminate.
       inversion Hinfer; subst.
       eapply TES_Let.
       * eapply IH; [exact Hstruct1 | exact He1].
@@ -805,7 +805,7 @@ Proof.
         eqn:He1; try discriminate.
       destruct (infer_core_env_state_fuel fuel' env Ω n (sctx_add i T1 m Σ1) e2)
         as [[T2 Σ2] | err2] eqn:He2; try discriminate.
-      destruct (sctx_check_ok i T1 Σ2) eqn:Hcheck; try discriminate.
+      destruct (sctx_check_ok env i T1 Σ2) eqn:Hcheck; try discriminate.
       inversion Hinfer; subst.
       eapply TES_LetInfer.
       * eapply IH; [exact Hstruct1 | exact He1].

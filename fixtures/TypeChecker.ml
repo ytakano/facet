@@ -1920,18 +1920,6 @@ let rec ctx_lookup_b x = function
 let ctx_add_b x t m _UU0393_ =
   (((x, t), (binding_state_of_bool false)), m) :: _UU0393_
 
-(** val ctx_check_ok : ident -> ty -> ctx -> bool **)
-
-let ctx_check_ok x t _UU0393_ =
-  match ty_usage t with
-  | ULinear ->
-    (match ctx_lookup_state x _UU0393_ with
-     | Some p ->
-       let (_, st) = p in
-       (||) st.st_consumed (path_conflicts_any_b [] st.st_moved_paths)
-     | None -> false)
-  | _ -> true
-
 (** val lookup_fn_b : ident -> fn_def list -> fn_def option **)
 
 let rec lookup_fn_b name = function
@@ -2410,17 +2398,100 @@ let sctx_remove =
 let sctx_update_state =
   ctx_update_state
 
-(** val sctx_check_ok : ident -> ty -> sctx -> bool **)
+(** val prefix_obligation_paths :
+    field_path -> field_path list -> field_path list **)
 
-let sctx_check_ok x t _UU03a3_ =
+let rec prefix_obligation_paths prefix = function
+| [] -> []
+| p :: rest -> (app prefix p) :: (prefix_obligation_paths prefix rest)
+
+(** val linear_obligation_paths_fuel :
+    Big_int_Z.big_int -> global_env -> ty -> field_path list **)
+
+let rec linear_obligation_paths_fuel fuel env t =
+  match ty_usage t with
+  | ULinear ->
+    (match ty_core t with
+     | TStruct (sname, lts, args) ->
+       ((fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+          (fun _ -> [] :: [])
+          (fun fuel' ->
+          match lookup_struct sname env with
+          | Some s ->
+            if (&&) (Nat.eqb (length lts) s.struct_lifetimes)
+                 (Nat.eqb (length args) s.struct_type_params)
+            then let go =
+                   let rec go = function
+                   | [] -> []
+                   | f :: rest ->
+                     app
+                       (prefix_obligation_paths (f.field_name :: [])
+                         (linear_obligation_paths_fuel fuel' env
+                           (instantiate_struct_field_ty lts args f)))
+                       (go rest)
+                   in go
+                 in
+                 (match go s.struct_fields with
+                  | [] -> [] :: []
+                  | f :: l -> f :: l)
+            else [] :: []
+          | None -> [] :: [])
+          fuel)
+     | _ -> [] :: [])
+  | _ -> []
+
+(** val linear_obligation_paths : global_env -> ty -> field_path list **)
+
+let linear_obligation_paths env t =
+  linear_obligation_paths_fuel (Big_int_Z.succ_big_int
+    (add (length env.env_structs) (ty_depth t))) env t
+
+(** val moved_path_satisfies_obligation_b :
+    field_path list -> field_path -> bool **)
+
+let moved_path_satisfies_obligation_b moved_paths obligation =
+  existsb (fun moved -> path_prefix_b moved obligation) moved_paths
+
+(** val moved_paths_satisfy_obligations_b :
+    field_path list -> field_path list -> bool **)
+
+let rec moved_paths_satisfy_obligations_b moved_paths = function
+| [] -> true
+| obligation :: rest ->
+  (&&) (moved_path_satisfies_obligation_b moved_paths obligation)
+    (moved_paths_satisfy_obligations_b moved_paths rest)
+
+(** val linear_scope_ok_b : global_env -> ty -> binding_state -> bool **)
+
+let linear_scope_ok_b env t st =
+  (||) st.st_consumed
+    (moved_paths_satisfy_obligations_b st.st_moved_paths
+      (linear_obligation_paths env t))
+
+(** val sctx_check_ok : global_env -> ident -> ty -> sctx -> bool **)
+
+let sctx_check_ok env x t _UU03a3_ =
   match ty_usage t with
   | ULinear ->
     (match sctx_lookup x _UU03a3_ with
-     | Some p ->
-       let (_, st) = p in
-       (||) st.st_consumed (path_conflicts_any_b [] st.st_moved_paths)
+     | Some p -> let (_, st) = p in linear_scope_ok_b env t st
      | None -> false)
   | _ -> true
+
+(** val params_ok_sctx_b : global_env -> param list -> sctx -> bool **)
+
+let rec params_ok_sctx_b env ps _UU03a3_ =
+  match ps with
+  | [] -> true
+  | p :: rest ->
+    (&&) (sctx_check_ok env p.param_name p.param_ty _UU03a3_)
+      (params_ok_sctx_b env rest _UU03a3_)
+
+(** val params_ok_env_b : global_env -> param list -> ctx -> bool **)
+
+let params_ok_env_b env ps _UU0393_ =
+  params_ok_sctx_b env ps (sctx_of_ctx _UU0393_)
 
 (** val sctx_path_available :
     sctx -> ident -> field_path -> unit infer_result **)
@@ -2566,7 +2637,7 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
                        (sctx_add x t m _UU03a3_1) e2 with
                | Infer_ok p0 ->
                  let (t2, _UU03a3_2) = p0 in
-                 if sctx_check_ok x t _UU03a3_2
+                 if sctx_check_ok env x t _UU03a3_2
                  then Infer_ok (t2, (sctx_remove x _UU03a3_2))
                  else Infer_err ErrContextCheckFailed
                | Infer_err err -> Infer_err err)
@@ -2580,7 +2651,7 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
                   (sctx_add x t1 m _UU03a3_1) e2 with
           | Infer_ok p0 ->
             let (t2, _UU03a3_2) = p0 in
-            if sctx_check_ok x t1 _UU03a3_2
+            if sctx_check_ok env x t1 _UU03a3_2
             then Infer_ok (t2, (sctx_remove x _UU03a3_2))
             else Infer_err ErrContextCheckFailed
           | Infer_err err -> Infer_err err)
@@ -2921,15 +2992,6 @@ let infer_core_env env _UU03a9_ n _UU0393_ e =
     let (t, _UU03a3_) = p in Infer_ok (t, (ctx_of_sctx _UU03a3_))
   | Infer_err err -> Infer_err err
 
-(** val params_ok_b : param list -> ctx -> bool **)
-
-let rec params_ok_b ps _UU0393_ =
-  match ps with
-  | [] -> true
-  | p :: ps' ->
-    (&&) (ctx_check_ok p.param_name p.param_ty _UU0393_)
-      (params_ok_b ps' _UU0393_)
-
 (** val wf_params_b : region_ctx -> param list -> bool **)
 
 let rec wf_params_b _UU0394_ = function
@@ -2955,7 +3017,7 @@ let infer_env env f =
                     if negb (wf_type_b _UU0394_ t_body)
                     then Infer_err ErrLifetimeLeak
                     else if ty_compatible_b _UU03a9_ t_body f.fn_ret
-                         then if params_ok_b f.fn_params _UU0393__out
+                         then if params_ok_env_b env f.fn_params _UU0393__out
                               then Infer_ok (f.fn_ret, _UU0393__out)
                               else Infer_err ErrContextCheckFailed
                          else Infer_err (compatible_error t_body f.fn_ret)

@@ -78,6 +78,42 @@ Proof.
   - rewrite H3 in Hpath. discriminate.
 Qed.
 
+Lemma typed_env_structural_preserves_direct_path_target :
+  forall env (Ω : outlives_ctx) (n : nat) Σ Σ1 e_new T_new p T_old x path,
+    typed_place_env_structural env Σ p T_old ->
+    place_path p = Some (x, path) ->
+    typed_env_structural env Ω n Σ e_new T_new Σ1 ->
+    exists T_root st,
+      sctx_lookup x Σ1 = Some (T_root, st) /\
+      type_lookup_path env T_root path = Some T_old.
+Proof.
+  intros env Ω n Σ Σ1 e_new T_new p T_old x path Hplace Hpath Htyped.
+  destruct (typed_place_direct_lookup env Σ p T_old x path Hplace Hpath)
+    as [T_root [st [Hlookup [_ Htype_path]]]].
+  destruct (sctx_same_bindings_lookup Σ Σ1 x T_root st
+              (typed_env_structural_same_bindings env Ω n Σ e_new T_new Σ1 Htyped)
+              Hlookup)
+    as [st1 Hlookup1].
+  exists T_root, st1. split; assumption.
+Qed.
+
+Lemma typed_env_structural_preserves_var_target :
+  forall env (Ω : outlives_ctx) (n : nat) Σ Σ1 e_new T_new x T_old,
+    typed_place_env_structural env Σ (PVar x) T_old ->
+    typed_env_structural env Ω n Σ e_new T_new Σ1 ->
+    exists st,
+      sctx_lookup x Σ1 = Some (T_old, st).
+Proof.
+  intros env Ω n Σ Σ1 e_new T_new x T_old Hplace Htyped.
+  destruct (typed_env_structural_preserves_direct_path_target
+              env Ω n Σ Σ1 e_new T_new (PVar x) T_old x []
+              Hplace eq_refl Htyped)
+    as [T_root [st [Hlookup Htype_path]]].
+  simpl in Htype_path.
+  inversion Htype_path; subst T_root.
+  exists st. exact Hlookup.
+Qed.
+
 Lemma sctx_path_available_success :
   forall Σ x path,
     sctx_path_available Σ x path = infer_ok tt ->

@@ -58,6 +58,186 @@ Inductive place_under_unique_ref_structural (env : global_env) (Σ : sctx)
       place_under_unique_ref_structural env Σ p ->
       place_under_unique_ref_structural env Σ (PField p f).
 
+(* ------------------------------------------------------------------ *)
+(* Context shape preservation                                           *)
+(* ------------------------------------------------------------------ *)
+
+Inductive sctx_entry_same_binding : sctx_entry -> sctx_entry -> Prop :=
+  | SESB : forall x T st1 st2 m,
+      sctx_entry_same_binding (x, T, st1, m) (x, T, st2, m).
+
+Definition sctx_same_bindings (Σ1 Σ2 : sctx) : Prop :=
+  Forall2 sctx_entry_same_binding Σ1 Σ2.
+
+Lemma sctx_entry_same_binding_refl :
+  forall ce,
+    sctx_entry_same_binding ce ce.
+Proof.
+  intros [[[x T] st] m]. constructor.
+Qed.
+
+Lemma sctx_same_bindings_refl :
+  forall Σ,
+    sctx_same_bindings Σ Σ.
+Proof.
+  intros Σ.
+  induction Σ as [|ce rest IH].
+  - constructor.
+  - constructor.
+    + apply sctx_entry_same_binding_refl.
+    + exact IH.
+Qed.
+
+Lemma sctx_entry_same_binding_trans :
+  forall ce1 ce2 ce3,
+    sctx_entry_same_binding ce1 ce2 ->
+    sctx_entry_same_binding ce2 ce3 ->
+    sctx_entry_same_binding ce1 ce3.
+Proof.
+  intros [[[x1 T1] st1] m1] [[[x2 T2] st2] m2] [[[x3 T3] st3] m3] H12 H23.
+  inversion H12; subst.
+  inversion H23; subst.
+  constructor.
+Qed.
+
+Lemma sctx_same_bindings_trans :
+  forall Σ1 Σ2 Σ3,
+    sctx_same_bindings Σ1 Σ2 ->
+    sctx_same_bindings Σ2 Σ3 ->
+    sctx_same_bindings Σ1 Σ3.
+Proof.
+  intros Σ1 Σ2 Σ3 H12.
+  revert Σ3.
+  induction H12 as [|ce1 ce2 Σ1_tail Σ2_tail Hhead Htail IH]; intros Σ3 H23.
+  - inversion H23; subst. constructor.
+  - inversion H23; subst.
+    constructor.
+    + eapply sctx_entry_same_binding_trans; eassumption.
+    + eapply IH.
+      match goal with
+      | H : Forall2 sctx_entry_same_binding Σ2_tail _ |- _ => exact H
+      end.
+Qed.
+
+Lemma sctx_same_bindings_lookup :
+  forall Σ1 Σ2 x T st,
+    sctx_same_bindings Σ1 Σ2 ->
+    sctx_lookup x Σ1 = Some (T, st) ->
+    exists st',
+      sctx_lookup x Σ2 = Some (T, st').
+Proof.
+  intros Σ1 Σ2 x T st Hsame.
+  induction Hsame; intros Hlookup.
+  - discriminate.
+  - destruct H.
+    simpl in Hlookup |- *.
+    match goal with
+    | |- context[ident_eqb x ?y] => destruct (ident_eqb x y) eqn:Hx
+    end.
+    + inversion Hlookup; subst.
+      eexists. reflexivity.
+    + eapply IHHsame. exact Hlookup.
+Qed.
+
+Lemma sctx_same_bindings_lookup_mut :
+  forall Σ1 Σ2 x m,
+    sctx_same_bindings Σ1 Σ2 ->
+    sctx_lookup_mut x Σ1 = Some m ->
+    sctx_lookup_mut x Σ2 = Some m.
+Proof.
+  intros Σ1 Σ2 x m Hsame.
+  induction Hsame; intros Hlookup.
+  - discriminate.
+  - destruct H.
+    simpl in Hlookup |- *.
+    match goal with
+    | |- context[ident_eqb x ?y] => destruct (ident_eqb x y)
+    end; [exact Hlookup |].
+    eapply IHHsame. exact Hlookup.
+Qed.
+
+Lemma sctx_update_state_same_bindings :
+  forall Σ x f Σ',
+    sctx_update_state x f Σ = Some Σ' ->
+    sctx_same_bindings Σ Σ'.
+Proof.
+  unfold sctx_update_state.
+  intros Σ x f.
+  induction Σ as [|[[[y T] st] m] rest IH]; intros Σ' Hupdate.
+  - discriminate.
+  - simpl in Hupdate.
+    destruct (ident_eqb x y).
+    + inversion Hupdate; subst. constructor.
+      * constructor.
+      * apply sctx_same_bindings_refl.
+    + destruct (ctx_update_state x f rest) as [rest' |] eqn:Htail; try discriminate.
+      inversion Hupdate; subst.
+      constructor.
+      * constructor.
+      * apply IH. reflexivity.
+Qed.
+
+Lemma sctx_consume_path_same_bindings :
+  forall Σ x path Σ',
+    sctx_consume_path Σ x path = infer_ok Σ' ->
+    sctx_same_bindings Σ Σ'.
+Proof.
+  intros Σ x path Σ' Hconsume.
+  unfold sctx_consume_path in Hconsume.
+  destruct (sctx_path_available Σ x path) as [[] | err]; try discriminate.
+  destruct (sctx_update_state x (state_consume_path path) Σ) as [Σ0 |] eqn:Hupdate;
+    try discriminate.
+  inversion Hconsume; subst.
+  eapply sctx_update_state_same_bindings. exact Hupdate.
+Qed.
+
+Lemma sctx_restore_path_same_bindings :
+  forall Σ x path Σ',
+    sctx_restore_path Σ x path = infer_ok Σ' ->
+    sctx_same_bindings Σ Σ'.
+Proof.
+  intros Σ x path Σ' Hrestore.
+  unfold sctx_restore_path in Hrestore.
+  destruct (sctx_update_state x (state_restore_path path) Σ) as [Σ0 |] eqn:Hupdate;
+    try discriminate.
+  inversion Hrestore; subst.
+  eapply sctx_update_state_same_bindings. exact Hupdate.
+Qed.
+
+Lemma sctx_same_bindings_remove_added :
+  forall Σ Σ1 Σ2 x T m,
+    sctx_same_bindings Σ Σ1 ->
+    sctx_same_bindings (sctx_add x T m Σ1) Σ2 ->
+    sctx_same_bindings Σ (sctx_remove x Σ2).
+Proof.
+  intros Σ Σ1 Σ2 x T m Hsame Hadded.
+  inversion Hadded; subst.
+  inversion H1; subst.
+  simpl.
+  rewrite ident_eqb_refl.
+  eapply sctx_same_bindings_trans; eassumption.
+Qed.
+
+Lemma ctx_merge_same_bindings_left :
+  forall Σ2 Σ3 Σ4,
+    ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
+    sctx_same_bindings Σ2 Σ4.
+Proof.
+  intros Σ2.
+  induction Σ2 as [|[[[x T] st2] m] tail2 IH]; intros Σ3 Σ4 Hmerge.
+  - destruct Σ3 as [|ce3 tail3]; simpl in Hmerge; try discriminate.
+    inversion Hmerge; subst. constructor.
+  - destruct Σ3 as [|[[[x3 T3] st3] m3] tail3]; simpl in Hmerge; try discriminate.
+    destruct (negb (ident_eqb x x3)) eqn:Hneq; try discriminate.
+    destruct (ctx_merge tail2 tail3) as [tail4 |] eqn:Htail; try discriminate.
+    destruct (ty_usage T); try (inversion Hmerge; subst; constructor; [constructor | eapply IH; exact Htail]).
+    destruct (Bool.eqb (st_consumed st2) (st_consumed st3)); try discriminate.
+    inversion Hmerge; subst.
+    constructor.
+    + constructor.
+    + eapply IH. exact Htail.
+Qed.
+
 Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
     : sctx -> expr -> Ty -> sctx -> Prop :=
   | TES_Unit : forall Σ,
@@ -220,6 +400,99 @@ with typed_fields_env_structural
       ty_compatible_b Ω T_field (instantiate_struct_field_ty lts args f) = true ->
       typed_fields_env_structural env Ω n lts args Σ1 fields rest Σ2 ->
       typed_fields_env_structural env Ω n lts args Σ fields (f :: rest) Σ2.
+
+Lemma typed_env_structural_same_bindings :
+  forall env Ω n Σ e T Σ',
+    typed_env_structural env Ω n Σ e T Σ' ->
+    sctx_same_bindings Σ Σ'
+with typed_args_env_structural_same_bindings :
+  forall env Ω n Σ args ps Σ',
+    typed_args_env_structural env Ω n Σ args ps Σ' ->
+    sctx_same_bindings Σ Σ'
+with typed_fields_env_structural_same_bindings :
+  forall env Ω n lts args Σ fields defs Σ',
+    typed_fields_env_structural env Ω n lts args Σ fields defs Σ' ->
+    sctx_same_bindings Σ Σ'.
+Proof.
+  - intros env Ω n Σ e T Σ' Htyped.
+    induction Htyped.
+    + apply sctx_same_bindings_refl.
+    + apply sctx_same_bindings_refl.
+    + apply sctx_same_bindings_refl.
+    + apply sctx_same_bindings_refl.
+    + apply sctx_same_bindings_refl.
+    + eapply sctx_consume_path_same_bindings.
+      match goal with
+      | H : sctx_consume_path _ _ [] = infer_ok _ |- _ => exact H
+      end.
+    + apply sctx_same_bindings_refl.
+    + eapply sctx_consume_path_same_bindings.
+      match goal with
+      | H : sctx_consume_path _ _ _ = infer_ok _ |- _ => exact H
+      end.
+    + apply sctx_same_bindings_refl.
+    + eapply typed_fields_env_structural_same_bindings.
+      match goal with
+      | H : typed_fields_env_structural _ _ _ _ _ _ _ _ _ |- _ => exact H
+      end.
+    + eapply sctx_same_bindings_remove_added.
+      * exact IHHtyped1.
+      * exact IHHtyped2.
+    + eapply sctx_same_bindings_remove_added.
+      * exact IHHtyped1.
+      * exact IHHtyped2.
+    + exact IHHtyped.
+    + eapply sctx_same_bindings_trans.
+      * exact IHHtyped.
+      * eapply sctx_restore_path_same_bindings.
+        match goal with
+        | H : sctx_restore_path _ _ _ = infer_ok _ |- _ => exact H
+        end.
+    + exact IHHtyped.
+    + exact IHHtyped.
+    + exact IHHtyped.
+    + apply sctx_same_bindings_refl.
+    + apply sctx_same_bindings_refl.
+    + apply sctx_same_bindings_refl.
+    + apply sctx_same_bindings_refl.
+    + exact IHHtyped.
+    + eapply sctx_same_bindings_trans.
+      * eapply sctx_same_bindings_trans.
+        -- exact IHHtyped1.
+        -- exact IHHtyped2.
+      * eapply ctx_merge_same_bindings_left.
+        match goal with
+        | H : ctx_merge _ _ = Some _ |- _ => exact H
+        end.
+    + eapply typed_args_env_structural_same_bindings.
+      match goal with
+      | H : typed_args_env_structural _ _ _ _ _ _ _ |- _ => exact H
+      end.
+    + eapply sctx_same_bindings_trans.
+      * exact IHHtyped.
+      * eapply typed_args_env_structural_same_bindings.
+        match goal with
+        | H : typed_args_env_structural _ _ _ _ _ _ _ |- _ => exact H
+        end.
+    + eapply sctx_same_bindings_trans.
+      * exact IHHtyped.
+      * eapply typed_args_env_structural_same_bindings.
+        match goal with
+        | H : typed_args_env_structural _ _ _ _ _ _ _ |- _ => exact H
+        end.
+  - intros env Ω n Σ args ps Σ' Htyped.
+    induction Htyped.
+    + apply sctx_same_bindings_refl.
+    + eapply sctx_same_bindings_trans.
+      * eapply typed_env_structural_same_bindings. exact H.
+      * exact IHHtyped.
+  - intros env Ω n lts args Σ fields defs Σ' Htyped.
+    induction Htyped.
+    + apply sctx_same_bindings_refl.
+    + eapply sctx_same_bindings_trans.
+      * eapply typed_env_structural_same_bindings. exact H0.
+      * exact IHHtyped.
+Qed.
 
 Inductive borrow_ok_env_structural (env : global_env)
     : path_borrow_state -> ctx -> expr -> path_borrow_state -> Prop :=

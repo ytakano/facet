@@ -95,6 +95,17 @@ Proof.
   - exact Hbinding.
 Qed.
 
+Lemma lookup_field_b_lookup_expr_field :
+  forall name fields,
+    lookup_field_b name fields = lookup_expr_field name fields.
+Proof.
+  intros name fields.
+  unfold lookup_field_b.
+  induction fields as [|[fname e] rest IH]; simpl.
+  - reflexivity.
+  - destruct (String.eqb name fname); [reflexivity | exact IH].
+Qed.
+
 Lemma runtime_path_lookup_typing :
   forall env s,
   (forall v T,
@@ -213,6 +224,84 @@ Lemma value_lookup_path_has_type :
 Proof.
   intros env s path v T v_path T_path Htyped Hvalue Htype.
   exact (proj1 (runtime_path_lookup_typing env s) v T Htyped path v_path T_path Hvalue Htype).
+Qed.
+
+Lemma eval_struct_fields_preserves_typing :
+  forall env (Ω : outlives_ctx) (n : nat) lts args Σ Σ' s fields defs
+      s' values,
+    store_typed env s Σ ->
+    typed_fields_env_structural env Ω n lts args Σ fields defs Σ' ->
+    eval_struct_fields env s fields defs s' values ->
+    (forall Σ0 s0 e T Σ1 s1 v,
+      store_typed env s0 Σ0 ->
+      typed_env_structural env Ω n Σ0 e T Σ1 ->
+      eval env s0 e s1 v ->
+      store_typed env s1 Σ1 /\ value_has_type env s1 v T) ->
+    store_typed env s' Σ' /\
+    struct_fields_have_type env s' lts args values defs.
+Proof.
+  intros env Ω n lts args Σ Σ' s fields defs s' values
+    Hstore Htyped Heval Hpres.
+  revert s s' values Hstore Heval.
+  induction Htyped as
+      [lts args Σ fields
+      | lts args Σ Σ1 Σ2 fields f rest e_field T_field
+          Hlookup Htyped_field Hcompat Htyped_rest IH];
+    intros s s' values Hstore Heval.
+  - inversion Heval; subst.
+    split; [exact Hstore | constructor].
+  - inversion Heval; subst.
+    rewrite lookup_field_b_lookup_expr_field in Hlookup.
+    match goal with
+    | Hexpr : lookup_expr_field (field_name f) fields = Some _ |- _ =>
+        rewrite Hlookup in Hexpr; inversion Hexpr; subst
+    end.
+    match goal with
+    | Htyped_e : typed_env_structural env Ω n Σ ?e T_field Σ1,
+      Heval_field : eval env s ?e ?s1 ?v,
+      Heval_rest : eval_struct_fields env ?s1 fields rest s' ?values_tail |- _ =>
+        destruct (Hpres Σ s e T_field Σ1 s1 v
+                    Hstore Htyped_e Heval_field)
+          as [Hstore1 Hvalue];
+        destruct (IH s1 s' values_tail Hstore1 Heval_rest)
+          as [Hstore2 Hfields];
+        split;
+        [ exact Hstore2
+        | constructor;
+          [ reflexivity
+          | eapply value_has_type_store_irrelevant;
+            eapply value_has_type_compatible;
+            [ exact Hvalue
+            | apply ty_compatible_b_sound with (Ω := Ω); exact Hcompat ]
+          | exact Hfields ] ]
+    end.
+Qed.
+
+Lemma eval_struct_preserves_typing :
+  forall env (Ω : outlives_ctx) (n : nat) Σ Σ' s s'
+      name lts args fields values sdef,
+    store_typed env s Σ ->
+    lookup_struct name env = Some sdef ->
+    typed_fields_env_structural env Ω n lts args Σ fields (struct_fields sdef) Σ' ->
+    eval_struct_fields env s fields (struct_fields sdef) s' values ->
+    (forall Σ0 s0 e T Σ1 s1 v,
+      store_typed env s0 Σ0 ->
+      typed_env_structural env Ω n Σ0 e T Σ1 ->
+      eval env s0 e s1 v ->
+      store_typed env s1 Σ1 /\ value_has_type env s1 v T) ->
+    store_typed env s' Σ' /\
+    value_has_type env s' (VStruct name values)
+      (instantiate_struct_instance_ty sdef lts args).
+Proof.
+  intros env Ω n Σ Σ' s s' name lts args fields values sdef
+    Hstore Hlookup Htyped_fields Heval_fields Hpres.
+  destruct (eval_struct_fields_preserves_typing env Ω n lts args
+              Σ Σ' s fields (struct_fields sdef) s' values
+              Hstore Htyped_fields Heval_fields Hpres)
+    as [Hstore' Hfields].
+  split.
+  - exact Hstore'.
+  - econstructor; eassumption.
 Qed.
 
 (* ------------------------------------------------------------------ *)

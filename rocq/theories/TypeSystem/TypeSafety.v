@@ -985,6 +985,176 @@ Proof.
   - eapply value_has_type_store_irrelevant. exact Hold.
 Qed.
 
+Lemma eval_assign_direct_case_preserves_typing :
+  forall env (Ω : outlives_ctx) (n : nat) Σ Σ' s s' p e_new x path,
+    store_typed env s Σ ->
+    place_path p = Some (x, path) ->
+    typed_env_structural env Ω n Σ (EAssign p e_new)
+      (MkTy UUnrestricted TUnits) Σ' ->
+    eval env s (EAssign p e_new) s' VUnit ->
+    (forall Σ0 s0 e T Σ1 s1 v,
+      store_typed env s0 Σ0 ->
+      typed_env_structural env Ω n Σ0 e T Σ1 ->
+      eval env s0 e s1 v ->
+      store_typed env s1 Σ1 /\ value_has_type env s1 v T) ->
+    store_typed env s' Σ' /\
+    value_has_type env s' VUnit (MkTy UUnrestricted TUnits).
+Proof.
+  intros env Ω n Σ Σ' s s' p e_new x path
+    Hstore Hpath Htyped Heval Hpres.
+  inversion Htyped; subst; try discriminate.
+  - inversion Heval; subst; try discriminate.
+    + simpl in Hpath. inversion Hpath; subst.
+      simpl in *.
+      repeat match goal with
+      | H : Some _ = Some _ |- _ => inversion H; subst; clear H
+      end.
+      match goal with
+      | Hplace : typed_place_env_structural env Σ (PVar ?x_root) ?T_old,
+        Htyped_new : typed_env_structural env Ω n Σ e_new ?T_new Σ',
+        Heval_new : eval env s e_new ?s1 ?v_new,
+        Hcompat : ty_compatible_b Ω ?T_new ?T_old = true,
+        Hlookup : store_lookup ?x_root s = Some ?old_e,
+        Hupdate : store_update_val ?x_root ?v_new ?s1 = Some s' |- _ =>
+          destruct (typed_env_structural_preserves_var_target
+                      env Ω n Σ Σ' e_new T_new x_root T_old
+                      Hplace Htyped_new)
+            as [st Htarget];
+          eapply eval_assign_var_preserves_typing
+            with (old_e := old_e);
+          [ exact Hstore
+          | exact Hplace
+          | exact Htyped_new
+          | exact Heval_new
+          | intros Hstore0 Htyped0 Heval0;
+            eapply Hpres; eassumption
+          | exact Hcompat
+          | exists st; exact Htarget
+          | exact Hlookup
+          | exact Hupdate ]
+      end.
+    + match goal with
+      | Hplace : typed_place_env_structural env Σ p ?T_old,
+        Hdirect : place_path p = Some (?x_static, ?path_static),
+        Htyped_new : typed_env_structural env Ω n Σ e_new ?T_new Σ',
+        Heval_new : eval env s e_new ?s1 ?v_new,
+        Heval_place : eval_place s p ?x_eval ?path_eval,
+        Hcompat : ty_compatible_b Ω ?T_new ?T_old = true,
+        Hupdate : store_update_path ?x_eval ?path_eval ?v_new ?s1 = Some s' |- _ =>
+          destruct (typed_env_structural_preserves_direct_path_target
+                      env Ω n Σ Σ' e_new T_new p T_old x_static path_static
+                      Hplace Hdirect Htyped_new)
+            as [T_root [st Htarget]];
+          eapply eval_assign_path_preserves_typing;
+          [ exact Hstore
+          | exact Hplace
+          | exact Hdirect
+          | exact Htyped_new
+          | exact Heval_new
+          | intros Hstore0 Htyped0 Heval0;
+            eapply Hpres; eassumption
+          | exact Hcompat
+          | exists T_root, st; exact Htarget
+          | exact Heval_place
+          | exact Hupdate ]
+      end.
+  - match goal with
+    | Hnone : place_path p = None |- _ =>
+        rewrite Hpath in Hnone; discriminate
+    end.
+Qed.
+
+Lemma eval_replace_direct_case_preserves_typing :
+  forall env (Ω : outlives_ctx) (n : nat) Σ Σ' s s' p e_new T_old x path v,
+    store_typed env s Σ ->
+    place_path p = Some (x, path) ->
+    typed_env_structural env Ω n Σ (EReplace p e_new) T_old Σ' ->
+    eval env s (EReplace p e_new) s' v ->
+    (forall Σ0 s0 e T Σ1 s1 v1,
+      store_typed env s0 Σ0 ->
+      typed_env_structural env Ω n Σ0 e T Σ1 ->
+      eval env s0 e s1 v1 ->
+      store_typed env s1 Σ1 /\ value_has_type env s1 v1 T) ->
+    store_typed env s' Σ' /\ value_has_type env s' v T_old.
+Proof.
+  intros env Ω n Σ Σ' s s' p e_new T_old x path v
+    Hstore Hpath Htyped Heval Hpres.
+  inversion Htyped; subst; try discriminate.
+  - inversion Heval; subst; try discriminate.
+    + simpl in Hpath. inversion Hpath; subst.
+      simpl in *.
+      repeat match goal with
+      | H : Some _ = Some _ |- _ => inversion H; subst; clear H
+      end.
+      match goal with
+      | Hplace : typed_place_env_structural env Σ (PVar ?x_root) T_old,
+        Htyped_new : typed_env_structural env Ω n Σ e_new ?T_new ?Σ1,
+        Heval_new : eval env s e_new ?s1 ?v_new,
+        Hcompat : ty_compatible_b Ω ?T_new T_old = true,
+        Havailable : sctx_path_available ?Σ1 ?x_root [] = infer_ok tt,
+        Hrestore : sctx_restore_path ?Σ1 ?x_root [] = infer_ok Σ',
+        Hlookup : store_lookup ?x_root s = Some ?old_e,
+        Hupdate : store_update_val ?x_root ?v_new ?s1 = Some ?s2,
+        Hstore_restore : store_restore_path ?x_root [] ?s2 = Some s' |- _ =>
+          destruct (typed_env_structural_preserves_var_target
+                      env Ω n Σ Σ1 e_new T_new x_root T_old
+                      Hplace Htyped_new)
+            as [st Htarget];
+          eapply eval_replace_var_preserves_typing
+            with (old_e := old_e);
+          [ exact Hstore
+          | exact Hplace
+          | exact Htyped_new
+          | exact Heval_new
+          | intros Hstore0 Htyped0 Heval0;
+            eapply Hpres; eassumption
+          | exact Hcompat
+          | exists st; exact Htarget
+          | exact Havailable
+          | exact Hrestore
+          | exact Hlookup
+          | exact Hupdate
+          | exact Hstore_restore ]
+      end.
+    + match goal with
+      | Hplace : typed_place_env_structural env Σ p T_old,
+        Hdirect : place_path p = Some (?x_static, ?path_static),
+        Htyped_new : typed_env_structural env Ω n Σ e_new ?T_new ?Σ1,
+        Heval_new : eval env s e_new ?s1 ?v_new,
+        Heval_place : eval_place s p ?x_eval ?path_eval,
+        Hcompat : ty_compatible_b Ω ?T_new T_old = true,
+        Havailable : sctx_path_available ?Σ1 ?x_static ?path_static = infer_ok tt,
+        Hrestore : sctx_restore_path ?Σ1 ?x_static ?path_static = infer_ok Σ',
+        Hlookup : store_lookup_path ?x_eval ?path_eval s = Some ?old_v,
+        Hupdate : store_update_path ?x_eval ?path_eval ?v_new ?s1 = Some ?s2,
+        Hstore_restore : store_restore_path ?x_eval ?path_eval ?s2 = Some s' |- _ =>
+          destruct (typed_env_structural_preserves_direct_path_target
+                      env Ω n Σ Σ1 e_new T_new p T_old x_static path_static
+                      Hplace Hdirect Htyped_new)
+            as [T_root [st Htarget]];
+          eapply eval_replace_path_preserves_typing;
+          [ exact Hstore
+          | exact Hplace
+          | exact Hdirect
+          | exact Htyped_new
+          | exact Heval_new
+          | intros Hstore0 Htyped0 Heval0;
+            eapply Hpres; eassumption
+          | exact Hcompat
+          | exists T_root, st; exact Htarget
+          | exact Havailable
+          | exact Hrestore
+          | exact Heval_place
+          | exact Hlookup
+          | exact Hupdate
+          | exact Hstore_restore ]
+      end.
+  - match goal with
+    | Hnone : place_path p = None |- _ =>
+        rewrite Hpath in Hnone; discriminate
+    end.
+Qed.
+
 Lemma eval_letinfer_preserves_typing :
   forall env (Ω : outlives_ctx) (n : nat) Σ Σ' s s'
       m x e1 e2 T v,

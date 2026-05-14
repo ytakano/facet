@@ -390,6 +390,77 @@ Proof.
   exact (proj1 (runtime_path_lookup_typing env s) v T Htyped path v_path T_path Hvalue Htype).
 Qed.
 
+Inductive preservation_ready_expr : expr -> Prop :=
+  | PRE_Unit :
+      preservation_ready_expr EUnit
+  | PRE_Lit : forall lit,
+      preservation_ready_expr (ELit lit)
+  | PRE_Var : forall x,
+      preservation_ready_expr (EVar x)
+  | PRE_Fn : forall fname,
+      preservation_ready_expr (EFn fname)
+  | PRE_Place_Direct : forall p x path,
+      place_path p = Some (x, path) ->
+      preservation_ready_expr (EPlace p)
+  | PRE_Struct : forall sname lts args fields,
+      preservation_ready_fields fields ->
+      preservation_ready_expr (EStruct sname lts args fields)
+  | PRE_Let : forall m x T e1 e2,
+      preservation_ready_expr e1 ->
+      preservation_ready_expr e2 ->
+      preservation_ready_expr (ELet m x T e1 e2)
+  | PRE_LetInfer : forall m x e1 e2,
+      preservation_ready_expr e1 ->
+      preservation_ready_expr e2 ->
+      preservation_ready_expr (ELetInfer m x e1 e2)
+  | PRE_Drop : forall e,
+      preservation_ready_expr e ->
+      preservation_ready_expr (EDrop e)
+  | PRE_Replace_Direct : forall p e_new x path,
+      place_path p = Some (x, path) ->
+      preservation_ready_expr e_new ->
+      preservation_ready_expr (EReplace p e_new)
+  | PRE_Assign_Direct : forall p e_new x path,
+      place_path p = Some (x, path) ->
+      preservation_ready_expr e_new ->
+      preservation_ready_expr (EAssign p e_new)
+  | PRE_Borrow : forall rk p,
+      preservation_ready_expr (EBorrow rk p)
+  | PRE_If : forall e1 e2 e3,
+      preservation_ready_expr e1 ->
+      preservation_ready_expr e2 ->
+      preservation_ready_expr e3 ->
+      preservation_ready_expr (EIf e1 e2 e3)
+with preservation_ready_args : list expr -> Prop :=
+  | PRA_Nil :
+      preservation_ready_args []
+  | PRA_Cons : forall e rest,
+      preservation_ready_expr e ->
+      preservation_ready_args rest ->
+      preservation_ready_args (e :: rest)
+with preservation_ready_fields : list (string * expr) -> Prop :=
+  | PRF_Nil :
+      preservation_ready_fields []
+  | PRF_Cons : forall name e rest,
+      preservation_ready_expr e ->
+      preservation_ready_fields rest ->
+      preservation_ready_fields ((name, e) :: rest).
+
+Lemma preservation_ready_fields_lookup :
+  forall fields name e,
+    preservation_ready_fields fields ->
+    lookup_expr_field name fields = Some e ->
+    preservation_ready_expr e.
+Proof.
+  intros fields name e Hready.
+  induction Hready as [| fname field_expr rest Hexpr _ IH];
+    simpl; intros Hlookup.
+  - discriminate.
+  - destruct (String.eqb name fname) eqn:Hname.
+    + inversion Hlookup; subst. exact Hexpr.
+    + apply IH. exact Hlookup.
+Qed.
+
 Inductive eval_args_values_have_types
     (env : global_env) (Ω : outlives_ctx) (s : store)
     : list value -> list param -> Prop :=

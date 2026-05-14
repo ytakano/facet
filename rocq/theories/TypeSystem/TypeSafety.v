@@ -548,6 +548,50 @@ Proof.
   - eapply value_has_type_if_right_result; eassumption.
 Qed.
 
+Lemma eval_borrow_shared_preserves_typing :
+  forall env (Ω : outlives_ctx) (n : nat) Σ s p T x path,
+    store_typed env s Σ ->
+    typed_place_env_structural env Σ p T ->
+    eval_place s p x path ->
+    store_typed env s Σ /\
+    value_has_type env s (VRef x path)
+      (MkTy UUnrestricted (TRef (LVar n) RShared T)).
+Proof.
+  intros env Ω n Σ s p T x path Hstore _ _.
+  split; [exact Hstore | constructor].
+Qed.
+
+Lemma eval_borrow_unique_preserves_typing :
+  forall env (Ω : outlives_ctx) (n : nat) Σ s p T x_static path_static x_eval path_eval,
+    store_typed env s Σ ->
+    typed_place_env_structural env Σ p T ->
+    place_path p = Some (x_static, path_static) ->
+    sctx_lookup_mut x_static Σ = Some MMutable ->
+    eval_place s p x_eval path_eval ->
+    store_typed env s Σ /\
+    value_has_type env s (VRef x_eval path_eval)
+      (MkTy UAffine (TRef (LVar n) RUnique T)).
+Proof.
+  intros env Ω n Σ s p T x_static path_static x_eval path_eval
+    Hstore _ _ _ _.
+  split; [exact Hstore | constructor].
+Qed.
+
+Lemma eval_borrow_unique_indirect_preserves_typing :
+  forall env (Ω : outlives_ctx) (n : nat) Σ s p T x path,
+    store_typed env s Σ ->
+    typed_place_env_structural env Σ p T ->
+    place_path p = None ->
+    place_under_unique_ref_structural env Σ p ->
+    eval_place s p x path ->
+    store_typed env s Σ /\
+    value_has_type env s (VRef x path)
+      (MkTy UAffine (TRef (LVar n) RUnique T)).
+Proof.
+  intros env Ω n Σ s p T x path Hstore _ _ _ _.
+  split; [exact Hstore | constructor].
+Qed.
+
 Lemma eval_letinfer_preserves_typing :
   forall env (Ω : outlives_ctx) (n : nat) Σ Σ' s s'
       m x e1 e2 T v,

@@ -83,6 +83,133 @@ Proof.
 Qed.
 
 (* ------------------------------------------------------------------ *)
+(* Runtime struct field helpers                                         *)
+(* ------------------------------------------------------------------ *)
+
+Fixpoint lookup_value_field (name : string) (fields : list (string * value))
+    : option value :=
+  match fields with
+  | [] => None
+  | (field_name, v) :: rest =>
+      if String.eqb name field_name then Some v else lookup_value_field name rest
+  end.
+
+Fixpoint update_value_field
+    (name : string) (v_new : value) (fields : list (string * value))
+    : option (list (string * value)) :=
+  match fields with
+  | [] => None
+  | (field_name, v) :: rest =>
+      if String.eqb name field_name
+      then Some ((field_name, v_new) :: rest)
+      else match update_value_field name v_new rest with
+           | Some rest' => Some ((field_name, v) :: rest')
+           | None => None
+           end
+  end.
+
+Lemma lookup_value_field_local :
+  forall name fields,
+    (let fix lookup (fields : list (string * value)) : option value :=
+       match fields with
+       | [] => None
+       | (field_name, v) :: rest =>
+           if String.eqb name field_name then Some v else lookup rest
+       end
+     in lookup fields) = lookup_value_field name fields.
+Proof.
+  intros name fields.
+  induction fields as [|[field_name v] rest IH]; simpl.
+  - reflexivity.
+  - destruct (String.eqb name field_name); [reflexivity | exact IH].
+Qed.
+
+Lemma value_lookup_path_struct_cons :
+  forall sname fields name rest,
+    value_lookup_path (VStruct sname fields) (name :: rest) =
+    match lookup_value_field name fields with
+    | Some v => value_lookup_path v rest
+    | None => None
+    end.
+Proof.
+  intros sname fields name rest.
+  simpl.
+  rewrite lookup_value_field_local.
+  reflexivity.
+Qed.
+
+Lemma struct_fields_have_type_lookup :
+  forall env s lts args fields defs name v fdef,
+    struct_fields_have_type env s lts args fields defs ->
+    lookup_value_field name fields = Some v ->
+    lookup_field name defs = Some fdef ->
+    value_has_type env s v (instantiate_struct_field_ty lts args fdef).
+Proof.
+  intros env s lts args fields defs name v fdef Htyped.
+  induction Htyped as [lts args|lts args runtime_name fv fields f defs Hname Hv Hfields IH];
+    intros Hvalue Hfield.
+  - discriminate.
+  - simpl in Hvalue, Hfield.
+    destruct (String.eqb name runtime_name) eqn:Hvalue_name;
+      destruct (String.eqb name (field_name f)) eqn:Hfield_name.
+    + inversion Hvalue; subst fv.
+      inversion Hfield; subst fdef.
+      exact Hv.
+    + apply String.eqb_eq in Hvalue_name.
+      assert (name = field_name f) by congruence.
+      rewrite H in Hfield_name.
+      rewrite String.eqb_refl in Hfield_name.
+      discriminate.
+    + apply String.eqb_eq in Hfield_name.
+      assert (name = runtime_name) by congruence.
+      rewrite H in Hvalue_name.
+      rewrite String.eqb_refl in Hvalue_name.
+      discriminate.
+    + eapply IH; eassumption.
+Qed.
+
+Lemma struct_fields_have_type_update :
+  forall env s lts args fields defs name v_new fields' fdef,
+    struct_fields_have_type env s lts args fields defs ->
+    lookup_field name defs = Some fdef ->
+    value_has_type env s v_new (instantiate_struct_field_ty lts args fdef) ->
+    update_value_field name v_new fields = Some fields' ->
+    struct_fields_have_type env s lts args fields' defs.
+Proof.
+  intros env s lts args fields defs name v_new fields' fdef Htyped.
+  revert name v_new fields' fdef.
+  induction Htyped as [lts args|lts args runtime_name fv fields f defs Hname Hv Hfields IH];
+    intros name v_new fields' fdef Hfield Hvnew Hupdate.
+  - discriminate.
+  - simpl in Hfield, Hupdate.
+    destruct (String.eqb name runtime_name) eqn:Hvalue_name;
+      destruct (String.eqb name (field_name f)) eqn:Hfield_name.
+    + inversion Hfield; subst fdef.
+      inversion Hupdate; subst fields'.
+      constructor.
+      * exact Hname.
+      * exact Hvnew.
+      * exact Hfields.
+    + apply String.eqb_eq in Hvalue_name.
+      assert (name = field_name f) by congruence.
+      rewrite H in Hfield_name.
+      rewrite String.eqb_refl in Hfield_name.
+      discriminate.
+    + apply String.eqb_eq in Hfield_name.
+      assert (name = runtime_name) by congruence.
+      rewrite H in Hvalue_name.
+      rewrite String.eqb_refl in Hvalue_name.
+      discriminate.
+    + destruct (update_value_field name v_new fields) as [fields_tail' |] eqn:Htail;
+        try discriminate.
+      inversion Hupdate; subst fields'.
+      constructor.
+      * exact Hname.
+      * exact Hv.
+      * eapply IH; eassumption.
+Qed.
+
+(* ------------------------------------------------------------------ *)
 (* Runtime store typing                                                 *)
 (* ------------------------------------------------------------------ *)
 
@@ -515,6 +642,53 @@ Proof.
                  rewrite Hname. exact Hcx.
               ** exact HΣ.
            ++ exact Hvalue.
+Qed.
+
+Lemma type_lookup_path_compatible :
+  forall env Ω T_actual T_expected path T_path,
+    ty_compatible Ω T_actual T_expected ->
+    type_lookup_path env T_expected path = Some T_path ->
+    exists T_actual_path,
+      type_lookup_path env T_actual path = Some T_actual_path /\
+      ty_compatible Ω T_actual_path T_path.
+Proof.
+  intros env Ω T_actual T_expected path T_path Hcompat.
+  revert path T_path.
+  induction Hcompat; intros path T_path Hlookup.
+  - destruct path as [|seg rest].
+    + simpl in Hlookup. inversion Hlookup; subst T_path.
+      exists (MkTy ua ca). split.
+      * reflexivity.
+      * apply TC_Core; [exact H | exact H0].
+    + subst ce.
+      exists T_path. split.
+      * exact Hlookup.
+      * destruct T_path as [u c].
+        apply TC_Core; [apply US_refl | reflexivity].
+  - destruct path as [|seg rest].
+    + simpl in Hlookup. inversion Hlookup; subst T_path.
+      exists (MkTy ua (TRef la rk Ta)). split.
+      * reflexivity.
+      * eapply TC_Ref; eassumption.
+    + simpl in Hlookup. discriminate.
+  - destruct path as [|seg rest].
+    + simpl in Hlookup. inversion Hlookup; subst T_path.
+      exists (MkTy ua (TFn params_a ret_a)). split.
+      * reflexivity.
+      * eapply TC_Fn; eassumption.
+    + simpl in Hlookup. discriminate.
+  - destruct path as [|seg rest].
+    + simpl in Hlookup. inversion Hlookup; subst T_path.
+      exists (MkTy ua (TForall n Ω_forall body_a)). split.
+      * reflexivity.
+      * eapply TC_Forall; eassumption.
+    + simpl in Hlookup. discriminate.
+  - destruct path as [|seg rest].
+    + simpl in Hlookup. inversion Hlookup; subst T_path.
+      exists (MkTy ua ca). split.
+      * reflexivity.
+      * eapply TC_Forall_GeneralizeUnused; eassumption.
+    + simpl in Hlookup. discriminate.
 Qed.
 
 (* ------------------------------------------------------------------ *)

@@ -102,19 +102,19 @@ Theorem step_progress :
    - `[done]` `preservation_ready_expr` / `preservation_ready_args` / `preservation_ready_fields` と field lookup helper を追加済み（`4675b39`）。
    - `[done]` `replace p e_new` は target path が `e_new` 評価後も available であることを typing premise として preservation に使う。これは自己消費する `replace s.f s.f` を拒否する既存ガードの証明側の対応である。
    - `[done]` direct `assign p e_new` も target path が `e_new` 評価後も available であることを typing premise として要求する。
-   - `[done]` `eval`, `eval_args`, `eval_struct_fields` の相互 induction で ready subset 用の `eval_preserves_typing_ready_mutual` を証明済み（`4947081`）。
+   - `[done]` `eval`, `eval_args`, `eval_struct_fields` の相互 induction で ready subset 用の `eval_preserves_typing_ready_mutual` を証明済み（`4947081`）。強化後は各 branch が `store_ref_targets_preserved` も返す形に更新済み。
    - `[done]` `VHT_Ref` を強化し、`VRef x path` が `store_lookup x s`、`value_lookup_path`、`type_lookup_path` で実在する runtime target を指すことを要求するようにした。これに伴い、古い `value_has_type_store_irrelevant` は削除し、`store_ref_targets_preserved` 前提付きの `value_has_type_store_preserved` に置き換えた。
    - `[done]` `store_update_state` / `store_mark_used` / restore 系の state-only 更新が `store_ref_targets_preserved` を満たす補題を追加済み。
-   - `[partial]` direct `assign` / `replace` / `let` / borrow / args / struct fields は、強化後の reference preservation obligation を露出する形に補題を弱めた。未証明 obligation は explicit premise にし、ready subset からは外している。
+   - `[partial]` direct `assign` / `replace` / `let` / borrow は、強化後の reference preservation obligation を露出する形に補題を弱めた。`assign` / `replace` の update obligation は typed update 補題で解消済みだが、ready subset への再接続には bridge lemma の result に `store_ref_targets_preserved` を追加する必要がある。
    - `[todo]` ready restriction のない full `eval_preserves_typing` を証明する。
    - `[done]` `typed_env_structural` が binding lookup/type を保存する same-bindings helper を追加し、現在 explicit premise にしている lookup 条件を theorem 本体で導出できるようにした。
    - `[done]` `EIf` false branch の `store_typed_ctx_merge_right` 用 type-equality premise は branch typing から導出できる helper を追加済み。
    - `[todo]` indirect `EReplace` / `EAssign`、`EDeref`、`ECall` / `ECallExpr` を preservation theorem へ接続する。
    - `[todo]` `ELetInfer` の現在の contradiction-only helper を実証明に置き換える。
    - `[todo]` `let` の local binding への reference escape を禁止する typing/borrow invariant を追加し、`store_remove` が `store_ref_targets_preserved` を満たすことを証明する。
-   - `[todo]` `assign` / `replace` の value update が既存 reference target を壊さないことを示すため、`value_has_type` から `type_lookup_path` 対応 path の runtime value 存在を導く補題と、`store_update_val` / `store_update_path` の `store_ref_targets_preserved` 補題を追加する。
+   - `[done]` `assign` / `replace` の value update が既存 reference target を壊さないことを示すため、`value_has_type` から `type_lookup_path` 対応 path の runtime value 存在を導く補題と、typed `store_update_val` / `store_update_path` の `store_ref_targets_preserved` 補題を追加済み。
    - `[todo]` `borrow` preservation は、`eval_place` が返す `(x,path)` に対して store target が存在することを typing/store から導出する補題を追加して ready subset に戻す。
-   - `[todo]` `eval_args` / `eval_struct_fields` の sequencing は、各 step が `store_ref_targets_preserved` を返す相互 preservation theorem に強めてから ready subset に戻す。
+   - `[done]` `eval_args` / `eval_struct_fields` の sequencing は、各 step が `store_ref_targets_preserved` を返す相互 preservation theorem に強め、非空 args/fields の ready constructor を復元済み。
    - `[done]` `EReplace` / `EAssign` は root binding の mutability だけでなく、target path 上の struct field mutability を検査する。少なくとも最終 field は `MMutable` を必須にする。
    - `[done]` `&mut T` の referent type は invariant にする。`&shared T` は inner type の covariant compatibility を維持してよいが、unique reference は usage/core/lifetime の厳密一致または invariant relation だけを許す。
    - theorem は `typed_env_structural` から始め、checker theorem は使わない。

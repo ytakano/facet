@@ -967,6 +967,7 @@ Proof.
         destruct (infer_core_env_state_fuel fuel' env Ω n Σ e) as [[Tnew Σ1] | err]
           eqn:Hnew; try discriminate.
         destruct (ty_compatible_b Ω Tnew Told) eqn:Hcompat; try discriminate.
+        destruct (sctx_path_available Σ1 x path) as [[] | err] eqn:Havailable; try discriminate.
         inversion Hinfer; subst.
         eapply TES_Assign_Path.
         -- eapply infer_place_sctx_structural_sound. exact Hplace.
@@ -975,6 +976,7 @@ Proof.
         -- exact Hmut.
         -- eapply IH; [exact Hstruct | exact Hnew].
         -- exact Hcompat.
+        -- exact Havailable.
       * destruct (place_under_unique_ref_b env Σ p) eqn:Hunique; try discriminate.
         destruct (infer_core_env_state_fuel fuel' env Ω n Σ e) as [[Tnew Σ1] | err]
           eqn:Hnew; try discriminate.

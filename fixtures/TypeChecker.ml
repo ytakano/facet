@@ -2790,7 +2790,7 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
          else let root = place_name p in
               (match place_path p with
                | Some p0 ->
-                 let (x, _) = p0 in
+                 let (x, path) = p0 in
                  (match sctx_lookup_mut x _UU03a3_ with
                   | Some m ->
                     (match m with
@@ -2801,8 +2801,11 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
                         | Infer_ok p1 ->
                           let (t_new, _UU03a3_1) = p1 in
                           if ty_compatible_b _UU03a9_ t_new t_old
-                          then Infer_ok ((MkTy (UUnrestricted, TUnits)),
-                                 _UU03a3_1)
+                          then (match sctx_path_available _UU03a3_1 x path with
+                                | Infer_ok _ ->
+                                  Infer_ok ((MkTy (UUnrestricted, TUnits)),
+                                    _UU03a3_1)
+                                | Infer_err err -> Infer_err err)
                           else Infer_err (compatible_error t_new t_old)
                         | Infer_err err -> Infer_err err))
                   | None -> Infer_err (ErrUnknownVar x))

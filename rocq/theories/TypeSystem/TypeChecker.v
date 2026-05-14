@@ -1957,14 +1957,17 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
           else
           let root := place_name p in
           match place_path p with
-          | Some (x, _) =>
+          | Some (x, path) =>
               match sctx_lookup_mut x Σ with
               | Some MMutable =>
                   match infer_core_env_state_fuel fuel' env Ω n Σ e_new with
                   | infer_err err => infer_err err
                   | infer_ok (T_new, Σ1) =>
                       if ty_compatible_b Ω T_new T_old
-                      then infer_ok (MkTy UUnrestricted TUnits, Σ1)
+                      then match sctx_path_available Σ1 x path with
+                           | infer_err err => infer_err err
+                           | infer_ok _ => infer_ok (MkTy UUnrestricted TUnits, Σ1)
+                           end
                       else infer_err (compatible_error T_new T_old)
                   end
               | Some MImmutable => infer_err (ErrNotMutable x)
@@ -2703,6 +2706,14 @@ Example infer_core_env_replace_rejects_moved_field :
       (ELetInfer MImmutable (("old"%string), 0)
         (EReplace (PField (PVar (("p"%string), 0)) ("x"%string)) (ELit (LInt 1)))
         (EBorrow RShared (PVar (("p"%string), 0))))) =
+  infer_err (ErrAlreadyConsumed (("p"%string), 0)).
+Proof. vm_compute. reflexivity. Qed.
+
+Example infer_core_env_assign_rejects_moved_field :
+  infer_core_env ex_env_split [] 0 ex_split_ctx
+    (ELetInfer MImmutable (("tmp"%string), 0)
+      (EPlace (PField (PVar (("p"%string), 0)) ("x"%string)))
+      (EAssign (PField (PVar (("p"%string), 0)) ("x"%string)) (ELit (LInt 1)))) =
   infer_err (ErrAlreadyConsumed (("p"%string), 0)).
 Proof. vm_compute. reflexivity. Qed.
 

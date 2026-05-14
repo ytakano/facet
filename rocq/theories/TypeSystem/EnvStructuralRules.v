@@ -136,6 +136,7 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       sctx_lookup_mut x Σ = Some MMutable ->
       typed_env_structural env Ω n Σ e_new T_new Σ' ->
       ty_compatible_b Ω T_new T_old = true ->
+      sctx_path_available Σ' x path = infer_ok tt ->
       typed_env_structural env Ω n Σ (EAssign p e_new) (MkTy UUnrestricted TUnits) Σ'
   | TES_Assign_Indirect : forall Σ Σ' p e_new T_old T_new,
       typed_place_env_structural env Σ p T_old ->

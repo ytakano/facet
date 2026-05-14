@@ -22,11 +22,11 @@
 
 ## Current Status
 
-Last updated implementation point: `4947081` ready mutual preservation theorem.
+Last updated implementation point: strengthened runtime `VHT_Ref` target invariant.
 
 - S0: `[done]` runtime value/store typing と runtime reference well-formedness の仕様は導入済み。
 - S1: `[done]` path/value/store helper の主要部分と linear partial-move obligation helper/checker fix は導入済み。
-- S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。full unrestricted theorem は未完了。
+- S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。`VHT_Ref` は runtime store 内の参照先 path の存在・型対応を要求する形に強化済み。full unrestricted theorem は未完了。
 - S3: `[todo]` call/closure preservation は未着手。ただし empty closure value typing helper は一部存在する。
 - S4-S6: `[todo]` checker-to-runtime safety、runtime reference safety、small-step progress は未着手。
 
@@ -103,11 +103,18 @@ Theorem step_progress :
    - `[done]` `replace p e_new` は target path が `e_new` 評価後も available であることを typing premise として preservation に使う。これは自己消費する `replace s.f s.f` を拒否する既存ガードの証明側の対応である。
    - `[done]` direct `assign p e_new` も target path が `e_new` 評価後も available であることを typing premise として要求する。
    - `[done]` `eval`, `eval_args`, `eval_struct_fields` の相互 induction で ready subset 用の `eval_preserves_typing_ready_mutual` を証明済み（`4947081`）。
+   - `[done]` `VHT_Ref` を強化し、`VRef x path` が `store_lookup x s`、`value_lookup_path`、`type_lookup_path` で実在する runtime target を指すことを要求するようにした。これに伴い、古い `value_has_type_store_irrelevant` は削除し、`store_ref_targets_preserved` 前提付きの `value_has_type_store_preserved` に置き換えた。
+   - `[done]` `store_update_state` / `store_mark_used` / restore 系の state-only 更新が `store_ref_targets_preserved` を満たす補題を追加済み。
+   - `[partial]` direct `assign` / `replace` / `let` / borrow / args / struct fields は、強化後の reference preservation obligation を露出する形に補題を弱めた。未証明 obligation は explicit premise にし、ready subset からは外している。
    - `[todo]` ready restriction のない full `eval_preserves_typing` を証明する。
    - `[done]` `typed_env_structural` が binding lookup/type を保存する same-bindings helper を追加し、現在 explicit premise にしている lookup 条件を theorem 本体で導出できるようにした。
    - `[done]` `EIf` false branch の `store_typed_ctx_merge_right` 用 type-equality premise は branch typing から導出できる helper を追加済み。
    - `[todo]` indirect `EReplace` / `EAssign`、`EDeref`、`ECall` / `ECallExpr` を preservation theorem へ接続する。
    - `[todo]` `ELetInfer` の現在の contradiction-only helper を実証明に置き換える。
+   - `[todo]` `let` の local binding への reference escape を禁止する typing/borrow invariant を追加し、`store_remove` が `store_ref_targets_preserved` を満たすことを証明する。
+   - `[todo]` `assign` / `replace` の value update が既存 reference target を壊さないことを示すため、`value_has_type` から `type_lookup_path` 対応 path の runtime value 存在を導く補題と、`store_update_val` / `store_update_path` の `store_ref_targets_preserved` 補題を追加する。
+   - `[todo]` `borrow` preservation は、`eval_place` が返す `(x,path)` に対して store target が存在することを typing/store から導出する補題を追加して ready subset に戻す。
+   - `[todo]` `eval_args` / `eval_struct_fields` の sequencing は、各 step が `store_ref_targets_preserved` を返す相互 preservation theorem に強めてから ready subset に戻す。
    - `[done]` `EReplace` / `EAssign` は root binding の mutability だけでなく、target path 上の struct field mutability を検査する。少なくとも最終 field は `MMutable` を必須にする。
    - `[done]` `&mut T` の referent type は invariant にする。`&shared T` は inner type の covariant compatibility を維持してよいが、unique reference は usage/core/lifetime の厳密一致または invariant relation だけを許す。
    - theorem は `typed_env_structural` から始め、checker theorem は使わない。
@@ -217,3 +224,4 @@ review 指摘に対応する regression:
 - `VClosure fname captured` は将来の closure 実装で大きく変わる可能性があるため、captured store invariant を早めに固定する必要がある。
 - borrow checker の static `path_borrow_state` と runtime refs の対応は未定義なので、aliasing safety は preservation とは別 milestone にする。
 - `plan/review.md` の指摘は古い extracted artifact の行番号を参照しているため、roadmap では行番号ではなく semantic issue として追跡する。
+- 強化後の `VHT_Ref` により、従来の「value typing は store に依存しない」という仮定は使えない。今後の preservation は store typing だけでなく、評価が既存 reference target を保存することを明示的に運ぶ必要がある。

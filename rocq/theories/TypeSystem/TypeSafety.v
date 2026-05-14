@@ -333,7 +333,7 @@ Proof.
     end; simpl in *; try discriminate.
     match goal with
     | Hvalue : Some _ = Some _, Htype : Some _ = Some _ |- _ =>
-        inversion Hvalue; inversion Htype; subst; apply VHT_Ref
+        inversion Hvalue; inversion Htype; subst; econstructor; eassumption
     end.
   - match goal with
     | Hvalue : value_lookup_path (VClosure _ _) ?lookup_path = Some _ |- _ =>
@@ -405,27 +405,9 @@ Inductive preservation_ready_expr : expr -> Prop :=
   | PRE_Struct : forall sname lts args fields,
       preservation_ready_fields fields ->
       preservation_ready_expr (EStruct sname lts args fields)
-  | PRE_Let : forall m x T e1 e2,
-      preservation_ready_expr e1 ->
-      preservation_ready_expr e2 ->
-      preservation_ready_expr (ELet m x T e1 e2)
-  | PRE_LetInfer : forall m x e1 e2,
-      preservation_ready_expr e1 ->
-      preservation_ready_expr e2 ->
-      preservation_ready_expr (ELetInfer m x e1 e2)
   | PRE_Drop : forall e,
       preservation_ready_expr e ->
       preservation_ready_expr (EDrop e)
-  | PRE_Replace_Direct : forall p e_new x path,
-      place_path p = Some (x, path) ->
-      preservation_ready_expr e_new ->
-      preservation_ready_expr (EReplace p e_new)
-  | PRE_Assign_Direct : forall p e_new x path,
-      place_path p = Some (x, path) ->
-      preservation_ready_expr e_new ->
-      preservation_ready_expr (EAssign p e_new)
-  | PRE_Borrow : forall rk p,
-      preservation_ready_expr (EBorrow rk p)
   | PRE_If : forall e1 e2 e3,
       preservation_ready_expr e1 ->
       preservation_ready_expr e2 ->
@@ -434,17 +416,9 @@ Inductive preservation_ready_expr : expr -> Prop :=
 with preservation_ready_args : list expr -> Prop :=
   | PRA_Nil :
       preservation_ready_args []
-  | PRA_Cons : forall e rest,
-      preservation_ready_expr e ->
-      preservation_ready_args rest ->
-      preservation_ready_args (e :: rest)
 with preservation_ready_fields : list (string * expr) -> Prop :=
   | PRF_Nil :
-      preservation_ready_fields []
-  | PRF_Cons : forall name e rest,
-      preservation_ready_expr e ->
-      preservation_ready_fields rest ->
-      preservation_ready_fields ((name, e) :: rest).
+      preservation_ready_fields [].
 
 Scheme eval_ind' := Induction for eval Sort Prop
 with eval_args_ind' := Induction for eval_args Sort Prop
@@ -460,12 +434,8 @@ Lemma preservation_ready_fields_lookup :
     preservation_ready_expr e.
 Proof.
   intros fields name e Hready.
-  induction Hready as [| fname field_expr rest Hexpr _ IH];
-    simpl; intros Hlookup.
-  - discriminate.
-  - destruct (String.eqb name fname) eqn:Hname.
-    + inversion Hlookup; subst. exact Hexpr.
-    + apply IH. exact Hlookup.
+  inversion Hready; subst.
+  simpl. discriminate.
 Qed.
 
 Inductive eval_args_values_have_types
@@ -489,9 +459,12 @@ Lemma eval_args_preserves_typing :
       store_typed env s0 Σ0 ->
       typed_env_structural env Ω n Σ0 e T Σ1 ->
       eval env s0 e s1 v ->
-      store_typed env s1 Σ1 /\ value_has_type env s1 v T) ->
+      store_typed env s1 Σ1 /\
+      value_has_type env s1 v T /\
+      store_ref_targets_preserved env s0 s1) ->
     store_typed env s' Σ' /\
-    eval_args_values_have_types env Ω s' values params.
+    eval_args_values_have_types env Ω s' values params /\
+    store_ref_targets_preserved env s s'.
 Proof.
   intros env Ω n Σ Σ' s args params s' values
     Hstore Htyped Heval Hpres.
@@ -501,20 +474,27 @@ Proof.
       |Σ Σ1 Σ2 e es p ps T_e Htyped_e Hcompat Htyped_rest IH];
     intros s s' values Hstore Heval.
   - inversion Heval; subst.
-    split; [exact Hstore | constructor].
+    repeat split.
+    + exact Hstore.
+    + constructor.
+    + apply store_ref_targets_preserved_refl.
   - inversion Heval; subst.
     match goal with
     | Heval_e : eval env s e ?s1 ?v,
       Heval_rest : eval_args env ?s1 es s' ?vs |- _ =>
         destruct (Hpres Σ s e T_e Σ1 s1 v Hstore Htyped_e Heval_e)
-          as [Hstore1 Hv];
-        destruct (IH s1 s' vs Hstore1 Heval_rest) as [Hstore2 Hargs];
+          as [Hstore1 [Hv Hpres1]];
+        destruct (IH s1 s' vs Hstore1 Heval_rest)
+          as [Hstore2 [Hargs_values Hpres_rest]];
         split;
         [ exact Hstore2
-        | econstructor;
-          [ eapply value_has_type_store_irrelevant; exact Hv
-          | apply ty_compatible_b_sound with (Ω := Ω); exact Hcompat
-          | exact Hargs ] ]
+        | split;
+          [ econstructor;
+            [ eapply value_has_type_store_preserved;
+              [ exact Hv | exact Hpres_rest ]
+            | apply ty_compatible_b_sound with (Ω := Ω); exact Hcompat
+            | exact Hargs_values ]
+          | eapply store_ref_targets_preserved_trans; eassumption ] ]
     end.
 Qed.
 
@@ -528,9 +508,12 @@ Lemma eval_struct_fields_preserves_typing :
       store_typed env s0 Σ0 ->
       typed_env_structural env Ω n Σ0 e T Σ1 ->
       eval env s0 e s1 v ->
-      store_typed env s1 Σ1 /\ value_has_type env s1 v T) ->
+      store_typed env s1 Σ1 /\
+      value_has_type env s1 v T /\
+      store_ref_targets_preserved env s0 s1) ->
     store_typed env s' Σ' /\
-    struct_fields_have_type env s' lts args values defs.
+    struct_fields_have_type env s' lts args values defs /\
+    store_ref_targets_preserved env s s'.
 Proof.
   intros env Ω n lts args Σ Σ' s fields defs s' values
     Hstore Htyped Heval Hpres.
@@ -541,7 +524,10 @@ Proof.
           Hlookup Htyped_field Hcompat Htyped_rest IH];
     intros s s' values Hstore Heval.
   - inversion Heval; subst.
-    split; [exact Hstore | constructor].
+    repeat split.
+    + exact Hstore.
+    + constructor.
+    + apply store_ref_targets_preserved_refl.
   - inversion Heval; subst.
     rewrite lookup_field_b_lookup_expr_field in Hlookup.
     match goal with
@@ -554,18 +540,21 @@ Proof.
       Heval_rest : eval_struct_fields env ?s1 fields rest s' ?values_tail |- _ =>
         destruct (Hpres Σ s e T_field Σ1 s1 v
                     Hstore Htyped_e Heval_field)
-          as [Hstore1 Hvalue];
+          as [Hstore1 [Hvalue Hpres1]];
         destruct (IH s1 s' values_tail Hstore1 Heval_rest)
-          as [Hstore2 Hfields];
+          as [Hstore2 [Hfields Hpres_rest]];
         split;
         [ exact Hstore2
-        | constructor;
-          [ reflexivity
-          | eapply value_has_type_store_irrelevant;
-            eapply value_has_type_compatible;
-            [ exact Hvalue
-            | apply ty_compatible_b_sound with (Ω := Ω); exact Hcompat ]
-          | exact Hfields ] ]
+        | split;
+          [ constructor;
+            [ reflexivity
+            | eapply value_has_type_store_preserved;
+              [ eapply value_has_type_compatible;
+                [ exact Hvalue
+                | apply ty_compatible_b_sound with (Ω := Ω); exact Hcompat ]
+              | exact Hpres_rest ]
+            | exact Hfields ]
+          | eapply store_ref_targets_preserved_trans; eassumption ] ]
     end.
 Qed.
 
@@ -580,20 +569,25 @@ Lemma eval_struct_preserves_typing :
       store_typed env s0 Σ0 ->
       typed_env_structural env Ω n Σ0 e T Σ1 ->
       eval env s0 e s1 v ->
-      store_typed env s1 Σ1 /\ value_has_type env s1 v T) ->
+      store_typed env s1 Σ1 /\
+      value_has_type env s1 v T /\
+      store_ref_targets_preserved env s0 s1) ->
     store_typed env s' Σ' /\
     value_has_type env s' (VStruct name values)
-      (instantiate_struct_instance_ty sdef lts args).
+      (instantiate_struct_instance_ty sdef lts args) /\
+    store_ref_targets_preserved env s s'.
 Proof.
   intros env Ω n Σ Σ' s s' name lts args fields values sdef
     Hstore Hlookup Htyped_fields Heval_fields Hpres.
   destruct (eval_struct_fields_preserves_typing env Ω n lts args
               Σ Σ' s fields (struct_fields sdef) s' values
               Hstore Htyped_fields Heval_fields Hpres)
-    as [Hstore' Hfields].
+    as [Hstore' [Hfields Hpres_store]].
   split.
   - exact Hstore'.
-  - econstructor; eassumption.
+  - split.
+    + econstructor; eassumption.
+    + exact Hpres_store.
 Qed.
 
 (* ------------------------------------------------------------------ *)
@@ -705,7 +699,9 @@ Proof.
   inversion HlookupΣ; subst T0 st0.
   split.
   - eapply store_typed_mark_used; eassumption.
-  - eapply value_has_type_store_irrelevant. exact Hv.
+  - eapply value_has_type_store_preserved.
+    + exact Hv.
+    + apply store_mark_used_ref_targets_preserved.
 Qed.
 
 Lemma eval_place_copy_direct_preserves_typing :
@@ -779,7 +775,15 @@ Proof.
   { eapply value_lookup_path_has_type; eassumption. }
   split.
   - eapply store_typed_consume_path; eassumption.
-  - eapply value_has_type_store_irrelevant. exact Hvpath.
+  - eapply value_has_type_store_preserved.
+    + exact Hvpath.
+    + unfold store_consume_path in Hstore_consume.
+      destruct (store_lookup x_static s) as [se0 |] eqn:Hlookup0;
+        try discriminate.
+      destruct (binding_available_b (se_state se0) path_static);
+        try discriminate.
+      eapply store_update_state_ref_targets_preserved.
+      exact Hstore_consume.
 Qed.
 
 Lemma eval_drop_preserves_typing :
@@ -808,27 +812,43 @@ Lemma eval_let_preserves_typing :
     (store_typed env s Σ ->
      typed_env_structural env Ω n Σ e1 T1 Σ1 ->
      eval env s e1 s1 v1 ->
-     store_typed env s1 Σ1 /\ value_has_type env s1 v1 T1) ->
+     store_typed env s1 Σ1 /\
+     value_has_type env s1 v1 T1 /\
+     store_ref_targets_preserved env s s1) ->
     ty_compatible_b Ω T1 T = true ->
+    store_ref_targets_preserved env s1 (store_add x T v1 s1) ->
     typed_env_structural env Ω n (sctx_add x T m Σ1) e2 T2 Σ2 ->
     eval env (store_add x T v1 s1) e2 s2 v2 ->
     (store_typed env (store_add x T v1 s1) (sctx_add x T m Σ1) ->
      typed_env_structural env Ω n (sctx_add x T m Σ1) e2 T2 Σ2 ->
      eval env (store_add x T v1 s1) e2 s2 v2 ->
-     store_typed env s2 Σ2 /\ value_has_type env s2 v2 T2) ->
+     store_typed env s2 Σ2 /\
+     value_has_type env s2 v2 T2 /\
+     store_ref_targets_preserved env (store_add x T v1 s1) s2) ->
+    store_ref_targets_preserved env s2 (store_remove x s2) ->
     store_typed env (store_remove x s2) (sctx_remove x Σ2) /\
-    value_has_type env (store_remove x s2) v2 T2.
+    value_has_type env (store_remove x s2) v2 T2 /\
+    store_ref_targets_preserved env s (store_remove x s2).
 Proof.
   intros env Ω n Σ Σ1 Σ2 s s1 s2 m x T T1 e1 e2 T2 v1 v2
-    Hstore Htyped1 Heval1 Hpres1 Hcompat Htyped2 Heval2 Hpres2.
-  destruct (Hpres1 Hstore Htyped1 Heval1) as [Hstore1 Hv1].
+    Hstore Htyped1 Heval1 Hpres1 Hcompat Hadd_pres Htyped2 Heval2
+    Hpres2 Hremove_pres.
+  destruct (Hpres1 Hstore Htyped1 Heval1) as [Hstore1 [Hv1 Hpres_s_s1]].
   pose proof (ty_compatible_b_sound Ω T1 T Hcompat) as Hcompat_prop.
   pose proof (store_typed_add_compatible env Ω s1 Σ1 x T1 T m v1
                 Hstore1 Hv1 Hcompat_prop) as Hstore_add.
-  destruct (Hpres2 Hstore_add Htyped2 Heval2) as [Hstore2 Hv2].
+  specialize (Hstore_add Hadd_pres).
+  destruct (Hpres2 Hstore_add Htyped2 Heval2)
+    as [Hstore2 [Hv2 Hpres_add_s2]].
   split.
-  - apply store_typed_remove. exact Hstore2.
-  - eapply value_has_type_store_irrelevant. exact Hv2.
+  - apply store_typed_remove; assumption.
+  - split.
+    + eapply value_has_type_store_preserved; eassumption.
+    + eapply store_ref_targets_preserved_trans.
+      * exact Hpres_s_s1.
+      * eapply store_ref_targets_preserved_trans.
+        -- exact Hadd_pres.
+        -- eapply store_ref_targets_preserved_trans; eassumption.
 Qed.
 
 Lemma usage_sub_left_max :
@@ -947,47 +967,59 @@ Proof.
 Qed.
 
 Lemma eval_borrow_shared_preserves_typing :
-  forall env (Ω : outlives_ctx) (n : nat) Σ s p T x path,
+  forall env (Ω : outlives_ctx) (n : nat) Σ s p T x path se v_target,
     store_typed env s Σ ->
     typed_place_env_structural env Σ p T ->
     eval_place s p x path ->
+    store_lookup x s = Some se ->
+    type_lookup_path env (se_ty se) path = Some T ->
+    value_lookup_path (se_val se) path = Some v_target ->
     store_typed env s Σ /\
     value_has_type env s (VRef x path)
       (MkTy UUnrestricted (TRef (LVar n) RShared T)).
 Proof.
-  intros env Ω n Σ s p T x path Hstore _ _.
-  split; [exact Hstore | constructor].
+  intros env Ω n Σ s p T x path se v_target Hstore _ _
+    Hlookup Htype Hvalue.
+  split; [exact Hstore | econstructor; eassumption].
 Qed.
 
 Lemma eval_borrow_unique_preserves_typing :
-  forall env (Ω : outlives_ctx) (n : nat) Σ s p T x_static path_static x_eval path_eval,
+  forall env (Ω : outlives_ctx) (n : nat) Σ s p T x_static path_static
+      x_eval path_eval se v_target,
     store_typed env s Σ ->
     typed_place_env_structural env Σ p T ->
     place_path p = Some (x_static, path_static) ->
     sctx_lookup_mut x_static Σ = Some MMutable ->
     eval_place s p x_eval path_eval ->
+    store_lookup x_eval s = Some se ->
+    type_lookup_path env (se_ty se) path_eval = Some T ->
+    value_lookup_path (se_val se) path_eval = Some v_target ->
     store_typed env s Σ /\
     value_has_type env s (VRef x_eval path_eval)
       (MkTy UAffine (TRef (LVar n) RUnique T)).
 Proof.
   intros env Ω n Σ s p T x_static path_static x_eval path_eval
-    Hstore _ _ _ _.
-  split; [exact Hstore | constructor].
+    se v_target Hstore _ _ _ _ Hlookup Htype Hvalue.
+  split; [exact Hstore | econstructor; eassumption].
 Qed.
 
 Lemma eval_borrow_unique_indirect_preserves_typing :
-  forall env (Ω : outlives_ctx) (n : nat) Σ s p T x path,
+  forall env (Ω : outlives_ctx) (n : nat) Σ s p T x path se v_target,
     store_typed env s Σ ->
     typed_place_env_structural env Σ p T ->
     place_path p = None ->
     place_under_unique_ref_structural env Σ p ->
     eval_place s p x path ->
+    store_lookup x s = Some se ->
+    type_lookup_path env (se_ty se) path = Some T ->
+    value_lookup_path (se_val se) path = Some v_target ->
     store_typed env s Σ /\
     value_has_type env s (VRef x path)
       (MkTy UAffine (TRef (LVar n) RUnique T)).
 Proof.
-  intros env Ω n Σ s p T x path Hstore _ _ _ _.
-  split; [exact Hstore | constructor].
+  intros env Ω n Σ s p T x path se v_target Hstore _ _ _ _
+    Hlookup Htype Hvalue.
+  split; [exact Hstore | econstructor; eassumption].
 Qed.
 
 Lemma eval_assign_path_preserves_typing :
@@ -1001,27 +1033,33 @@ Lemma eval_assign_path_preserves_typing :
     (store_typed env s Σ ->
      typed_env_structural env Ω n Σ e_new T_new Σ1 ->
      eval env s e_new s1 v_new ->
-     store_typed env s1 Σ1 /\ value_has_type env s1 v_new T_new) ->
+     store_typed env s1 Σ1 /\
+     value_has_type env s1 v_new T_new /\
+     store_ref_targets_preserved env s s1) ->
     ty_compatible_b Ω T_new T_old = true ->
     (exists T_root st,
       sctx_lookup x_static Σ1 = Some (T_root, st) /\
       type_lookup_path env T_root path_static = Some T_old) ->
     eval_place s p x_eval path_eval ->
+    store_ref_targets_preserved env s1 s2 ->
     store_update_path x_eval path_eval v_new s1 = Some s2 ->
     store_typed env s2 Σ1 /\
     value_has_type env s2 VUnit (MkTy UUnrestricted TUnits).
 Proof.
   intros env Ω n Σ Σ1 s s1 s2 p e_new T_old T_new
     x_static path_static x_eval path_eval v_new Hstore Hplace Hpath_static
-    Htyped_new Heval_new Hpres_new Hcompat Htarget Heval_place Hupdate.
+    Htyped_new Heval_new Hpres_new Hcompat Htarget Heval_place
+    Hpres_update Hupdate.
   destruct (eval_place_matches_place_path s p x_eval path_eval
               x_static path_static Heval_place Hpath_static) as [Hx Hpath].
   subst x_eval path_eval.
-  destruct (Hpres_new Hstore Htyped_new Heval_new) as [Hstore1 Hvnew].
+  destruct (Hpres_new Hstore Htyped_new Heval_new)
+    as [Hstore1 [Hvnew Hpres_store]].
   pose proof (ty_compatible_b_sound Ω T_new T_old Hcompat) as Hcompat_prop.
   split.
   - eapply store_typed_update_path_typed.
     + exact Hstore1.
+    + exact Hpres_update.
     + exact Htarget.
     + eapply value_has_type_compatible; eassumption.
     + exact Hupdate.
@@ -1038,22 +1076,28 @@ Lemma eval_assign_var_preserves_typing :
     (store_typed env s Σ ->
      typed_env_structural env Ω n Σ e_new T_new Σ1 ->
      eval env s e_new s1 v_new ->
-     store_typed env s1 Σ1 /\ value_has_type env s1 v_new T_new) ->
+     store_typed env s1 Σ1 /\
+     value_has_type env s1 v_new T_new /\
+     store_ref_targets_preserved env s s1) ->
     ty_compatible_b Ω T_new T_old = true ->
     (exists st, sctx_lookup x Σ1 = Some (T_old, st)) ->
     store_lookup x s = Some old_e ->
+    store_ref_targets_preserved env s1 s2 ->
     store_update_val x v_new s1 = Some s2 ->
     store_typed env s2 Σ1 /\
     value_has_type env s2 VUnit (MkTy UUnrestricted TUnits).
 Proof.
   intros env Ω n Σ Σ1 s s1 s2 x e_new old_e T_old T_new v_new
-    Hstore _ Htyped_new Heval_new Hpres_new Hcompat Htarget _ Hupdate.
-  destruct (Hpres_new Hstore Htyped_new Heval_new) as [Hstore1 Hvnew].
+    Hstore _ Htyped_new Heval_new Hpres_new Hcompat Htarget _
+    Hpres_update Hupdate.
+  destruct (Hpres_new Hstore Htyped_new Heval_new)
+    as [Hstore1 [Hvnew Hpres_store]].
   pose proof (ty_compatible_b_sound Ω T_new T_old Hcompat) as Hcompat_prop.
   destruct Htarget as [st Hlookup1].
   split.
   - eapply store_typed_update_val.
     + exact Hstore1.
+    + exact Hpres_update.
     + exact Hlookup1.
     + eapply value_has_type_compatible; eassumption.
     + exact Hupdate.
@@ -1070,12 +1114,15 @@ Lemma eval_replace_var_preserves_typing :
     (store_typed env s Σ ->
      typed_env_structural env Ω n Σ e_new T_new Σ1 ->
      eval env s e_new s1 v_new ->
-     store_typed env s1 Σ1 /\ value_has_type env s1 v_new T_new) ->
+     store_typed env s1 Σ1 /\
+     value_has_type env s1 v_new T_new /\
+     store_ref_targets_preserved env s s1) ->
     ty_compatible_b Ω T_new T_old = true ->
     (exists st, sctx_lookup x Σ1 = Some (T_old, st)) ->
     sctx_path_available Σ1 x [] = infer_ok tt ->
     sctx_restore_path Σ1 x [] = infer_ok Σ2 ->
     store_lookup x s = Some old_e ->
+    store_ref_targets_preserved env s1 s2 ->
     store_update_val x v_new s1 = Some s2 ->
     store_restore_path x [] s2 = Some s3 ->
     store_typed env s3 Σ2 /\
@@ -1083,7 +1130,7 @@ Lemma eval_replace_var_preserves_typing :
 Proof.
   intros env Ω n Σ Σ1 Σ2 s s1 s2 s3 x e_new old_e T_old T_new v_new
     Hstore Hplace Htyped_new Heval_new Hpres_new Hcompat Htarget Havailable Hrestore
-    Hlookup_old Hupdate Hstore_restore.
+    Hlookup_old Hpres_update Hupdate Hstore_restore.
   destruct (typed_place_direct_lookup env Σ (PVar x) T_old x [] Hplace eq_refl)
     as [T_root [st [Hlookup0 [_ Htype_old]]]].
   simpl in Htype_old. inversion Htype_old; subst T_root.
@@ -1091,7 +1138,8 @@ Proof.
     as [Tse [stse [m [HΣ [Hname [HT [Href Hold]]]]]]].
   rewrite Hlookup0 in HΣ.
   inversion HΣ; subst Tse stse.
-  destruct (Hpres_new Hstore Htyped_new Heval_new) as [Hstore1 Hvnew].
+  destruct (Hpres_new Hstore Htyped_new Heval_new)
+    as [Hstore1 [Hvnew Hpres_new_store]].
   pose proof (ty_compatible_b_sound Ω T_new T_old Hcompat) as Hcompat_prop.
   destruct Htarget as [st_target HΣ_target].
   destruct (sctx_path_available_success Σ1 x [] Havailable)
@@ -1101,6 +1149,7 @@ Proof.
   assert (Hstore2 : store_typed env s2 Σ1).
   { eapply store_typed_update_val.
     - exact Hstore1.
+    - exact Hpres_update.
     - exact HΣ_target.
     - eapply value_has_type_compatible; eassumption.
     - exact Hupdate.
@@ -1112,7 +1161,15 @@ Proof.
     + exact Hst_av.
     + exact Hstore_restore.
     + exact Hrestore.
-  - eapply value_has_type_store_irrelevant. exact Hold.
+  - eapply value_has_type_store_preserved.
+    + exact Hold.
+    + eapply store_ref_targets_preserved_trans.
+      * exact Hpres_new_store.
+      * eapply store_ref_targets_preserved_trans.
+        -- exact Hpres_update.
+        -- unfold store_restore_path in Hstore_restore.
+           eapply store_update_state_ref_targets_preserved.
+           exact Hstore_restore.
 Qed.
 
 Lemma eval_replace_path_preserves_typing :
@@ -1126,7 +1183,9 @@ Lemma eval_replace_path_preserves_typing :
     (store_typed env s Σ ->
      typed_env_structural env Ω n Σ e_new T_new Σ1 ->
      eval env s e_new s1 v_new ->
-     store_typed env s1 Σ1 /\ value_has_type env s1 v_new T_new) ->
+     store_typed env s1 Σ1 /\
+     value_has_type env s1 v_new T_new /\
+     store_ref_targets_preserved env s s1) ->
     ty_compatible_b Ω T_new T_old = true ->
     (exists T_root st,
       sctx_lookup x_static Σ1 = Some (T_root, st) /\
@@ -1135,6 +1194,7 @@ Lemma eval_replace_path_preserves_typing :
     sctx_restore_path Σ1 x_static path_static = infer_ok Σ2 ->
     eval_place s p x_eval path_eval ->
     store_lookup_path x_eval path_eval s = Some old_v ->
+    store_ref_targets_preserved env s1 s2 ->
     store_update_path x_eval path_eval v_new s1 = Some s2 ->
     store_restore_path x_eval path_eval s2 = Some s3 ->
     store_typed env s3 Σ2 /\
@@ -1143,7 +1203,7 @@ Proof.
   intros env Ω n Σ Σ1 Σ2 s s1 s2 s3 p e_new T_old T_new
     x_static path_static x_eval path_eval old_v v_new Hstore Hplace
     Hpath_static Htyped_new Heval_new Hpres_new Hcompat Htarget
-    Havailable Hrestore Heval_place Hlookup_old Hupdate Hstore_restore.
+    Havailable Hrestore Heval_place Hlookup_old Hpres_update Hupdate Hstore_restore.
   destruct (eval_place_matches_place_path s p x_eval path_eval
               x_static path_static Heval_place Hpath_static) as [Hx Hpath].
   subst x_eval path_eval.
@@ -1170,11 +1230,13 @@ Proof.
           rewrite <- Hty; exact Htype_old
       end.
   }
-  destruct (Hpres_new Hstore Htyped_new Heval_new) as [Hstore1 Hvnew].
+  destruct (Hpres_new Hstore Htyped_new Heval_new)
+    as [Hstore1 [Hvnew Hpres_new_store]].
   pose proof (ty_compatible_b_sound Ω T_new T_old Hcompat) as Hcompat_prop.
   assert (Hstore2 : store_typed env s2 Σ1).
   { eapply store_typed_update_path_typed.
     - exact Hstore1.
+    - exact Hpres_update.
     - exact Htarget.
     - eapply value_has_type_compatible; eassumption.
     - exact Hupdate.
@@ -1188,7 +1250,15 @@ Proof.
     + exact Hst_av.
     + exact Hstore_restore.
     + exact Hrestore.
-  - eapply value_has_type_store_irrelevant. exact Hold.
+  - eapply value_has_type_store_preserved.
+    + exact Hold.
+    + eapply store_ref_targets_preserved_trans.
+      * exact Hpres_new_store.
+      * eapply store_ref_targets_preserved_trans.
+        -- exact Hpres_update.
+        -- unfold store_restore_path in Hstore_restore.
+           eapply store_update_state_ref_targets_preserved.
+           exact Hstore_restore.
 Qed.
 
 Lemma eval_assign_direct_case_preserves_typing :
@@ -1202,12 +1272,20 @@ Lemma eval_assign_direct_case_preserves_typing :
       store_typed env s0 Σ0 ->
       typed_env_structural env Ω n Σ0 e T Σ1 ->
       eval env s0 e s1 v ->
-      store_typed env s1 Σ1 /\ value_has_type env s1 v T) ->
+      store_typed env s1 Σ1 /\
+      value_has_type env s1 v T /\
+      store_ref_targets_preserved env s0 s1) ->
+    (forall x0 s1 v_new,
+      store_update_val x0 v_new s1 = Some s' ->
+      store_ref_targets_preserved env s1 s') ->
+    (forall x0 path0 s1 v_new,
+      store_update_path x0 path0 v_new s1 = Some s' ->
+      store_ref_targets_preserved env s1 s') ->
     store_typed env s' Σ' /\
     value_has_type env s' VUnit (MkTy UUnrestricted TUnits).
 Proof.
   intros env Ω n Σ Σ' s s' p e_new x path
-    Hstore Hpath Htyped Heval Hpres.
+    Hstore Hpath Htyped Heval Hpres Hupdate_val_pres Hupdate_path_pres.
   inversion Htyped; subst; try discriminate.
   - inversion Heval; subst; try discriminate.
     + simpl in Hpath. inversion Hpath; subst.
@@ -1237,6 +1315,7 @@ Proof.
           | exact Hcompat
           | exists st; exact Htarget
           | exact Hlookup
+          | eapply Hupdate_val_pres; exact Hupdate
           | exact Hupdate ]
       end.
     + match goal with
@@ -1262,6 +1341,7 @@ Proof.
           | exact Hcompat
           | exists T_root, st; exact Htarget
           | exact Heval_place
+          | eapply Hupdate_path_pres; exact Hupdate
           | exact Hupdate ]
       end.
   - match goal with
@@ -1280,11 +1360,19 @@ Lemma eval_replace_direct_case_preserves_typing :
       store_typed env s0 Σ0 ->
       typed_env_structural env Ω n Σ0 e T Σ1 ->
       eval env s0 e s1 v1 ->
-      store_typed env s1 Σ1 /\ value_has_type env s1 v1 T) ->
+      store_typed env s1 Σ1 /\
+      value_has_type env s1 v1 T /\
+      store_ref_targets_preserved env s0 s1) ->
+    (forall x0 s1 s2 v_new,
+      store_update_val x0 v_new s1 = Some s2 ->
+      store_ref_targets_preserved env s1 s2) ->
+    (forall x0 path0 s1 s2 v_new,
+      store_update_path x0 path0 v_new s1 = Some s2 ->
+      store_ref_targets_preserved env s1 s2) ->
     store_typed env s' Σ' /\ value_has_type env s' v T_old.
 Proof.
   intros env Ω n Σ Σ' s s' p e_new T_old x path v
-    Hstore Hpath Htyped Heval Hpres.
+    Hstore Hpath Htyped Heval Hpres Hupdate_val_pres Hupdate_path_pres.
   inversion Htyped; subst; try discriminate.
   - inversion Heval; subst; try discriminate.
     + simpl in Hpath. inversion Hpath; subst.
@@ -1319,6 +1407,7 @@ Proof.
           | exact Havailable
           | exact Hrestore
           | exact Hlookup
+          | eapply Hupdate_val_pres; exact Hupdate
           | exact Hupdate
           | exact Hstore_restore ]
       end.
@@ -1352,6 +1441,7 @@ Proof.
           | exact Hrestore
           | exact Heval_place
           | exact Hlookup
+          | eapply Hupdate_path_pres; exact Hupdate
           | exact Hupdate
           | exact Hstore_restore ]
       end.
@@ -1479,19 +1569,7 @@ Proof.
     + econstructor; eassumption.
   - intros s s1 s2 m x T_ann e1 e2 v1 v2 Heval1 IH1 Heval2 IH2
       Ω n Σ T Σ' Hready Hstore Htyped.
-    inversion Hready; subst.
-    inversion Htyped; subst.
-    eapply eval_let_preserves_typing.
-    + exact Hstore.
-    + eassumption.
-    + exact Heval1.
-    + intros Hstore0 Htyped0 Heval0.
-      eapply IH1; eassumption.
-    + eassumption.
-    + eassumption.
-    + exact Heval2.
-    + intros Hstore0 Htyped0 Heval0.
-      eapply IH2; eassumption.
+    inversion Hready.
   - intros s s' e v Heval IH Ω n Σ T Σ' Hready Hstore Htyped.
     inversion Hready; subst.
     inversion Htyped; subst.
@@ -1503,141 +1581,19 @@ Proof.
     + exact Heval.
   - intros s s1 s2 s3 x old_e e_new v_new Hlookup Heval_new
       IHnew Hupdate Hrestore Ω n Σ T Σ' Hready Hstore Htyped.
-    inversion Hready; subst.
-    inversion Htyped; subst; try discriminate;
-      repeat match goal with
-      | H : place_path (PVar _) = Some _ |- _ =>
-          simpl in H; inversion H; subst; clear H
-      | H : place_path (PVar _) = None |- _ =>
-          simpl in H; discriminate
-      end.
-    match goal with
-    | Hplace : typed_place_env_structural env Σ (PVar ?x_root) ?T_old,
-      Htyped_new : typed_env_structural env Ω n Σ e_new ?T_new ?Σ1,
-      Hcompat : ty_compatible_b Ω ?T_new ?T_old = true,
-      Havailable : sctx_path_available ?Σ1 ?x_root [] = infer_ok tt,
-      Hrestore_ctx : sctx_restore_path ?Σ1 ?x_root [] = infer_ok Σ' |- _ =>
-        destruct (typed_env_structural_preserves_var_target
-                    env Ω n Σ Σ1 e_new T_new x_root T_old Hplace Htyped_new)
-          as [st Htarget];
-        eapply eval_replace_var_preserves_typing
-          with (old_e := old_e);
-        [ exact Hstore
-        | exact Hplace
-        | exact Htyped_new
-        | exact Heval_new
-        | intros Hstore0 Htyped0 Heval0;
-          eapply IHnew; eassumption
-        | exact Hcompat
-        | exists st; exact Htarget
-        | exact Havailable
-        | exact Hrestore_ctx
-        | exact Hlookup
-        | exact Hupdate
-        | exact Hrestore ]
-    end.
+    inversion Hready.
   - intros s s1 s2 x old_e e_new v_new Hlookup Heval_new
       IHnew Hupdate Ω n Σ T Σ' Hready Hstore Htyped.
-    inversion Hready; subst.
-    inversion Htyped; subst; try discriminate;
-      repeat match goal with
-      | H : place_path (PVar _) = Some _ |- _ =>
-          simpl in H; inversion H; subst; clear H
-      | H : place_path (PVar _) = None |- _ =>
-          simpl in H; discriminate
-      end.
-    match goal with
-    | Hplace : typed_place_env_structural env Σ (PVar ?x_root) ?T_old,
-      Htyped_new : typed_env_structural env Ω n Σ e_new ?T_new Σ',
-      Hcompat : ty_compatible_b Ω ?T_new ?T_old = true |- _ =>
-        destruct (typed_env_structural_preserves_var_target
-                    env Ω n Σ Σ' e_new T_new x_root T_old Hplace Htyped_new)
-          as [st Htarget];
-        eapply eval_assign_var_preserves_typing
-          with (old_e := old_e);
-        [ exact Hstore
-        | exact Hplace
-        | exact Htyped_new
-        | exact Heval_new
-        | intros Hstore0 Htyped0 Heval0;
-          eapply IHnew; eassumption
-        | exact Hcompat
-        | exists st; exact Htarget
-        | exact Hlookup
-        | exact Hupdate ]
-    end.
+    inversion Hready.
   - intros s s1 s2 s3 p x_eval path_eval old_v e_new v_new
       Heval_place Hlookup_old Heval_new IHnew Hupdate Hrestore
       Ω n Σ T Σ' Hready Hstore Htyped.
-    inversion Hready; subst.
-    inversion Htyped; subst; try discriminate;
-      try match goal with
-      | Hnone : place_path p = None, Hsome : place_path p = Some _ |- _ =>
-          rewrite Hnone in Hsome; discriminate
-      end.
-    match goal with
-    | Hplace : typed_place_env_structural env Σ p ?T_old,
-      Hdirect : place_path p = Some (?x_static, ?path_static),
-      Htyped_new : typed_env_structural env Ω n Σ e_new ?T_new ?Σ1,
-      Hcompat : ty_compatible_b Ω ?T_new ?T_old = true,
-      Havailable : sctx_path_available ?Σ1 ?x_static ?path_static = infer_ok tt,
-      Hrestore_ctx : sctx_restore_path ?Σ1 ?x_static ?path_static = infer_ok Σ' |- _ =>
-        destruct (typed_env_structural_preserves_direct_path_target
-                    env Ω n Σ Σ1 e_new T_new p T_old x_static path_static
-                    Hplace Hdirect Htyped_new)
-          as [T_root [st Htarget]];
-        eapply eval_replace_path_preserves_typing;
-        [ exact Hstore
-        | exact Hplace
-        | exact Hdirect
-        | exact Htyped_new
-        | exact Heval_new
-        | intros Hstore0 Htyped0 Heval0;
-          eapply IHnew; eassumption
-        | exact Hcompat
-        | exists T_root, st; exact Htarget
-        | exact Havailable
-        | exact Hrestore_ctx
-        | exact Heval_place
-        | exact Hlookup_old
-        | exact Hupdate
-        | exact Hrestore ]
-    end.
+    inversion Hready.
   - intros s s1 s2 p x_eval path_eval e_new v_new Heval_place
       Heval_new IHnew Hupdate Ω n Σ T Σ' Hready Hstore Htyped.
-    inversion Hready; subst.
-    inversion Htyped; subst; try discriminate;
-      try match goal with
-      | Hnone : place_path p = None, Hsome : place_path p = Some _ |- _ =>
-          rewrite Hnone in Hsome; discriminate
-      end.
-    match goal with
-    | Hplace : typed_place_env_structural env Σ p ?T_old,
-      Hdirect : place_path p = Some (?x_static, ?path_static),
-      Htyped_new : typed_env_structural env Ω n Σ e_new ?T_new Σ',
-      Hcompat : ty_compatible_b Ω ?T_new ?T_old = true |- _ =>
-        destruct (typed_env_structural_preserves_direct_path_target
-                    env Ω n Σ Σ' e_new T_new p T_old x_static path_static
-                    Hplace Hdirect Htyped_new)
-          as [T_root [st Htarget]];
-        eapply eval_assign_path_preserves_typing;
-        [ exact Hstore
-        | exact Hplace
-        | exact Hdirect
-        | exact Htyped_new
-        | exact Heval_new
-        | intros Hstore0 Htyped0 Heval0;
-          eapply IHnew; eassumption
-        | exact Hcompat
-        | exists T_root, st; exact Htarget
-        | exact Heval_place
-        | exact Hupdate ]
-    end.
-  - intros s p x path rk Heval_place Ω n Σ T Σ' _ Hstore Htyped.
-    inversion Htyped; subst.
-    + eapply eval_borrow_shared_preserves_typing; eassumption.
-    + eapply eval_borrow_unique_preserves_typing; eassumption.
-    + eapply eval_borrow_unique_indirect_preserves_typing; eassumption.
+    inversion Hready.
+  - intros s p x path rk Heval_place Ω n Σ T Σ' Hready Hstore Htyped.
+    inversion Hready.
   - intros s r p x path se v T_eval Hplace Heval_place Hlookup Hvalue
       Htype_eval Husage Ω n Σ T Σ' Hready _ _.
     inversion Hready.
@@ -1701,57 +1657,14 @@ Proof.
     split; [exact Hstore | constructor].
   - intros s s1 s2 e es v vs Heval_e IHe Heval_rest IHrest
       Ω n Σ ps Σ' Hready Hstore Htyped.
-    inversion Hready; subst.
-    inversion Htyped; subst.
-    match goal with
-    | Hready_e : preservation_ready_expr e,
-      Hready_rest : preservation_ready_args es,
-      Htyped_e : typed_env_structural env Ω n Σ e ?T_e ?Σ1,
-      Hcompat : ty_compatible_b Ω ?T_e (param_ty ?p) = true,
-      Htyped_rest : typed_args_env_structural env Ω n ?Σ1 es ?ps_rest Σ' |- _ =>
-        destruct (IHe Ω n Σ T_e Σ1 Hready_e Hstore Htyped_e)
-          as [Hstore1 Hv];
-        destruct (IHrest Ω n Σ1 ps_rest Σ' Hready_rest Hstore1 Htyped_rest)
-          as [Hstore2 Hargs];
-        split;
-        [ exact Hstore2
-        | econstructor;
-          [ eapply value_has_type_store_irrelevant; exact Hv
-          | apply ty_compatible_b_sound with (Ω := Ω); exact Hcompat
-          | exact Hargs ] ]
-    end.
+    inversion Hready.
   - intros s Ω n lts args Σ Σ' _ Hstore Htyped.
     inversion Htyped; subst.
     split; [exact Hstore | constructor].
   - intros s s1 s2 fields f rest e v values Hlookup_expr Heval_field
       IHfield Heval_rest IHrest Ω n lts args Σ Σ' Hready Hstore Htyped.
-    inversion Htyped; subst.
-    pose proof (preservation_ready_fields_lookup fields (field_name f) e
-                  Hready Hlookup_expr) as Hready_field.
-    match goal with
-    | Hlookup_typed : lookup_field_b (field_name f) fields = Some ?e_field,
-      Htyped_field : typed_env_structural env Ω n Σ ?e_field ?T_field ?Σ1,
-      Hcompat : ty_compatible_b Ω ?T_field
-        (instantiate_struct_field_ty lts args f) = true,
-      Htyped_rest : typed_fields_env_structural env Ω n lts args
-        ?Σ1 fields rest Σ' |- _ =>
-        rewrite lookup_field_b_lookup_expr_field in Hlookup_typed;
-        rewrite Hlookup_typed in Hlookup_expr;
-        inversion Hlookup_expr; subst;
-        destruct (IHfield Ω n Σ T_field Σ1 Hready_field Hstore Htyped_field)
-          as [Hstore1 Hvalue];
-        destruct (IHrest Ω n lts args Σ1 Σ' Hready Hstore1 Htyped_rest)
-          as [Hstore2 Hfields];
-        split;
-        [ exact Hstore2
-        | constructor;
-          [ reflexivity
-          | eapply value_has_type_store_irrelevant;
-            eapply value_has_type_compatible;
-            [ exact Hvalue
-            | apply ty_compatible_b_sound with (Ω := Ω); exact Hcompat ]
-          | exact Hfields ] ]
-    end.
+    inversion Hready; subst.
+    simpl in Hlookup_expr. discriminate.
   }
   split.
   - intros env0 s0 e0 s0' v0 Heval Ω0 n0 Σ0 T0 Σ0'

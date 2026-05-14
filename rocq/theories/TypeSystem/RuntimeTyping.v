@@ -21,7 +21,10 @@ Inductive value_has_type (env : global_env) (s : store) : value -> Ty -> Prop :=
       struct_fields_have_type env s lts args fields (struct_fields sdef) ->
       value_has_type env s (VStruct name fields)
         (instantiate_struct_instance_ty sdef lts args)
-  | VHT_Ref : forall u la rk x path T,
+  | VHT_Ref : forall u la rk x path se v T,
+      store_lookup x s = Some se ->
+      value_lookup_path (se_val se) path = Some v ->
+      type_lookup_path env (se_ty se) path = Some T ->
       value_has_type env s (VRef x path) (MkTy u (TRef la rk T))
   | VHT_ClosureEmpty : forall fname fdef,
       lookup_fn fname (env_fns env) = Some fdef ->
@@ -51,29 +54,76 @@ with struct_fields_have_type_ind' := Induction for struct_fields_have_type Sort 
 Combined Scheme runtime_typing_ind
   from value_has_type_ind', struct_fields_have_type_ind'.
 
-Lemma runtime_typing_store_irrelevant :
+Definition store_ref_targets_preserved
+    (env : global_env) (s s' : store) : Prop :=
+  forall x path se v T,
+    store_lookup x s = Some se ->
+    value_lookup_path (se_val se) path = Some v ->
+    type_lookup_path env (se_ty se) path = Some T ->
+    exists se' v',
+      store_lookup x s' = Some se' /\
+      value_lookup_path (se_val se') path = Some v' /\
+      type_lookup_path env (se_ty se') path = Some T.
+
+Lemma store_ref_targets_preserved_refl :
+  forall env s,
+    store_ref_targets_preserved env s s.
+Proof.
+  unfold store_ref_targets_preserved.
+  intros env s x path se v T Hlookup Hvalue Htype.
+  exists se, v. repeat split; assumption.
+Qed.
+
+Lemma store_ref_targets_preserved_trans :
+  forall env s1 s2 s3,
+    store_ref_targets_preserved env s1 s2 ->
+    store_ref_targets_preserved env s2 s3 ->
+    store_ref_targets_preserved env s1 s3.
+Proof.
+  unfold store_ref_targets_preserved.
+  intros env s1 s2 s3 H12 H23 x path se v T Hlookup Hvalue Htype.
+  destruct (H12 x path se v T Hlookup Hvalue Htype)
+    as [se2 [v2 [Hlookup2 [Hvalue2 Htype2]]]].
+  destruct (H23 x path se2 v2 T Hlookup2 Hvalue2 Htype2)
+    as [se3 [v3 [Hlookup3 [Hvalue3 Htype3]]]].
+  exists se3, v3. repeat split; assumption.
+Qed.
+
+Lemma runtime_typing_store_preserved :
   forall env s,
   (forall v T,
     value_has_type env s v T ->
     forall s',
+      store_ref_targets_preserved env s s' ->
       value_has_type env s' v T) /\
   (forall lts args fields defs,
     struct_fields_have_type env s lts args fields defs ->
     forall s',
+      store_ref_targets_preserved env s s' ->
       struct_fields_have_type env s' lts args fields defs).
 Proof.
   intros env s.
   apply runtime_typing_ind; intros; eauto using value_has_type, struct_fields_have_type.
+  - match goal with
+    | Hpres : store_ref_targets_preserved env s ?s',
+      Hlookup : store_lookup x s = Some se,
+      Hvalue : value_lookup_path (se_val se) path = Some v,
+      Htype : type_lookup_path env (se_ty se) path = Some T |- _ =>
+        destruct (Hpres x path se v T Hlookup Hvalue Htype)
+          as [se' [v' [Hlookup' [Hvalue' Htype']]]]
+    end.
+    eapply VHT_Ref; eassumption.
 Qed.
 
-Lemma value_has_type_store_irrelevant :
+Lemma value_has_type_store_preserved :
   forall env s v T,
     value_has_type env s v T ->
     forall s',
+      store_ref_targets_preserved env s s' ->
       value_has_type env s' v T.
 Proof.
-  intros env s v T H s'.
-  exact (proj1 (runtime_typing_store_irrelevant env s) v T H s').
+  intros env s v T H s' Hpres.
+  exact (proj1 (runtime_typing_store_preserved env s) v T H s' Hpres).
 Qed.
 
 Lemma value_has_type_compatible :
@@ -86,14 +136,16 @@ Proof.
   eapply VHT_Compatible; eassumption.
 Qed.
 
-Lemma struct_fields_have_type_store_irrelevant :
+Lemma struct_fields_have_type_store_preserved :
   forall env s lts args fields defs,
     struct_fields_have_type env s lts args fields defs ->
     forall s',
+      store_ref_targets_preserved env s s' ->
       struct_fields_have_type env s' lts args fields defs.
 Proof.
-  intros env s lts args fields defs H s'.
-  exact (proj2 (runtime_typing_store_irrelevant env s) lts args fields defs H s').
+  intros env s lts args fields defs H s' Hpres.
+  exact (proj2 (runtime_typing_store_preserved env s)
+    lts args fields defs H s' Hpres).
 Qed.
 
 (* ------------------------------------------------------------------ *)
@@ -533,45 +585,47 @@ Definition store_entry_typed
 Definition store_typed (env : global_env) (s : store) (Σ : sctx) : Prop :=
   Forall2 (store_entry_typed env s) s Σ.
 
-Lemma store_entry_typed_store_irrelevant :
+Lemma store_entry_typed_store_preserved :
   forall env s se ce,
     store_entry_typed env s se ce ->
     forall s',
+      store_ref_targets_preserved env s s' ->
       store_entry_typed env s' se ce.
 Proof.
-  intros env s [sx sT sv sst] [[[cx cT] cst] cm] H s'.
+  intros env s [sx sT sv sst] [[[cx cT] cst] cm] H s' Hpres.
   simpl in *.
   destruct H as [Hname [HT [Hst Hv]]].
   repeat split; try assumption.
-  eapply value_has_type_store_irrelevant. exact Hv.
+  eapply value_has_type_store_preserved; eassumption.
 Qed.
 
-Lemma store_typed_store_param_irrelevant :
+Lemma store_typed_store_param_preserved :
   forall env s_param s_entries Σ,
     Forall2 (store_entry_typed env s_param) s_entries Σ ->
     forall s_param',
+      store_ref_targets_preserved env s_param s_param' ->
       Forall2 (store_entry_typed env s_param') s_entries Σ.
 Proof.
   intros env s_param s_entries Σ H.
-  induction H; intros s'.
+  induction H; intros s' Hpres.
   - constructor.
   - constructor.
-    + eapply store_entry_typed_store_irrelevant. exact H.
-    + apply IHForall2.
+    + eapply store_entry_typed_store_preserved; eassumption.
+    + apply IHForall2. exact Hpres.
 Qed.
 
-Lemma store_typed_lookup :
-  forall env s Σ x se,
-    store_typed env s Σ ->
-    store_lookup x s = Some se ->
+Lemma store_typed_lookup_entries :
+  forall env s_param entries Σ x se,
+    Forall2 (store_entry_typed env s_param) entries Σ ->
+    store_lookup x entries = Some se ->
     exists (T : Ty) (st : binding_state) (m : mutability),
       sctx_lookup x Σ = Some (T, st) /\
       se_name se = x /\
       se_ty se = T /\
       binding_state_refines (se_state se) st /\
-      value_has_type env s (se_val se) T.
+      value_has_type env s_param (se_val se) T.
 Proof.
-  intros env s Σ x se Htyped.
+  intros env s_param entries Σ x se Htyped.
   induction Htyped as [|se0 ce s_tail Σ_tail Hentry Htail IH]; intros Hlookup.
   - discriminate.
   - destruct se0 as [sx sT sv sst].
@@ -588,8 +642,7 @@ Proof.
       * simpl. symmetry. exact Hsx.
       * simpl. exact HT.
       * simpl. exact Hst.
-      * simpl. rewrite <- HT.
-        eapply value_has_type_store_irrelevant. exact Hv.
+      * simpl. rewrite <- HT. exact Hv.
     + destruct (IH Hlookup) as [T [st [m [HΣ [Hn [HTy [Hst' Hv']]]]]]].
       exists T, st, m.
       repeat split.
@@ -602,21 +655,36 @@ Proof.
       * exact Hn.
       * exact HTy.
       * exact Hst'.
-      * eapply value_has_type_store_irrelevant. exact Hv'.
+      * exact Hv'.
 Qed.
 
-Lemma store_typed_lookup_sctx :
-  forall env s Σ x T st,
+Lemma store_typed_lookup :
+  forall env s Σ x se,
     store_typed env s Σ ->
-    sctx_lookup x Σ = Some (T, st) ->
-    exists se,
-      store_lookup x s = Some se /\
+    store_lookup x s = Some se ->
+    exists (T : Ty) (st : binding_state) (m : mutability),
+      sctx_lookup x Σ = Some (T, st) /\
       se_name se = x /\
       se_ty se = T /\
       binding_state_refines (se_state se) st /\
       value_has_type env s (se_val se) T.
 Proof.
-  intros env s Σ x T st Htyped.
+  intros env s Σ x se Htyped Hlookup.
+  eapply store_typed_lookup_entries; eassumption.
+Qed.
+
+Lemma store_typed_lookup_sctx_entries :
+  forall env s_param entries Σ x T st,
+    Forall2 (store_entry_typed env s_param) entries Σ ->
+    sctx_lookup x Σ = Some (T, st) ->
+    exists se,
+      store_lookup x entries = Some se /\
+      se_name se = x /\
+      se_ty se = T /\
+      binding_state_refines (se_state se) st /\
+      value_has_type env s_param (se_val se) T.
+Proof.
+  intros env s_param entries Σ x T st Htyped.
   induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH]; intros Hlookup.
   - discriminate.
   - destruct se as [sx sT sv sst].
@@ -632,8 +700,7 @@ Proof.
       * simpl. apply ident_eqb_eq in Hcx. rewrite Hname. symmetry. exact Hcx.
       * simpl. exact HT.
       * simpl. exact Hst.
-      * simpl. rewrite <- HT.
-        eapply value_has_type_store_irrelevant. exact Hv.
+      * simpl. rewrite <- HT. exact Hv.
     + destruct (IH Hlookup) as [se' [Hs [Hn [HTy [Hst' Hv']]]]].
       exists se'.
       repeat split.
@@ -646,21 +713,37 @@ Proof.
       * exact Hn.
       * exact HTy.
       * exact Hst'.
-      * eapply value_has_type_store_irrelevant. exact Hv'.
+      * exact Hv'.
+Qed.
+
+Lemma store_typed_lookup_sctx :
+  forall env s Σ x T st,
+    store_typed env s Σ ->
+    sctx_lookup x Σ = Some (T, st) ->
+    exists se,
+      store_lookup x s = Some se /\
+      se_name se = x /\
+      se_ty se = T /\
+      binding_state_refines (se_state se) st /\
+      value_has_type env s (se_val se) T.
+Proof.
+  intros env s Σ x T st Htyped Hlookup.
+  eapply store_typed_lookup_sctx_entries; eassumption.
 Qed.
 
 Lemma store_typed_add :
   forall env s Σ x T m v,
     store_typed env s Σ ->
     value_has_type env s v T ->
+    store_ref_targets_preserved env s (store_add x T v s) ->
     store_typed env (store_add x T v s) (sctx_add x T m Σ).
 Proof.
-  intros env s Σ x T m v Htyped Hv.
+  intros env s Σ x T m v Htyped Hv Hpres.
   unfold store_add, sctx_add, store_typed.
   constructor.
   - simpl. repeat split; try reflexivity.
-    eapply value_has_type_store_irrelevant. exact Hv.
-  - eapply store_typed_store_param_irrelevant. exact Htyped.
+    eapply value_has_type_store_preserved; eassumption.
+  - eapply store_typed_store_param_preserved; eassumption.
 Qed.
 
 Lemma store_typed_add_compatible :
@@ -668,21 +751,25 @@ Lemma store_typed_add_compatible :
     store_typed env s Σ ->
     value_has_type env s v T_actual ->
     ty_compatible Ω T_actual T_expected ->
+    store_ref_targets_preserved env s (store_add x T_expected v s) ->
     store_typed env (store_add x T_expected v s)
       (sctx_add x T_expected m Σ).
 Proof.
-  intros env Ω s Σ x T_actual T_expected m v Hstore Hv Hcompat.
+  intros env Ω s Σ x T_actual T_expected m v Hstore Hv Hcompat Hpres.
   eapply store_typed_add.
   - exact Hstore.
   - eapply value_has_type_compatible; eassumption.
+  - exact Hpres.
 Qed.
 
-Lemma store_typed_remove :
-  forall env s Σ x,
-    store_typed env s Σ ->
-    store_typed env (store_remove x s) (sctx_remove x Σ).
+Lemma store_typed_remove_entries :
+  forall env s_param s_target entries Σ x,
+    Forall2 (store_entry_typed env s_param) entries Σ ->
+    store_ref_targets_preserved env s_param s_target ->
+    Forall2 (store_entry_typed env s_target)
+      (store_remove x entries) (sctx_remove x Σ).
 Proof.
-  intros env s Σ x Htyped.
+  intros env s_param s_target entries Σ x Htyped Hpres.
   induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH].
   - constructor.
   - destruct se as [sx sT sv sst].
@@ -692,15 +779,116 @@ Proof.
     simpl.
     destruct (ident_eqb x sx) eqn:Hsx;
       destruct (ident_eqb x cx) eqn:Hcx.
-    + eapply store_typed_store_param_irrelevant. exact Htail.
+    + eapply store_typed_store_param_preserved; eassumption.
     + apply ident_eqb_eq in Hsx. apply ident_eqb_neq in Hcx. subst sx.
       contradiction.
     + apply ident_eqb_neq in Hsx. apply ident_eqb_eq in Hcx.
       subst cx. exfalso. apply Hsx. exact Hcx.
     + constructor.
       * simpl. repeat split; try assumption.
-        eapply value_has_type_store_irrelevant. exact Hv.
-      * eapply store_typed_store_param_irrelevant. exact IH.
+        eapply value_has_type_store_preserved; eassumption.
+      * eapply store_typed_store_param_preserved.
+        -- exact IH.
+        -- apply store_ref_targets_preserved_refl.
+Qed.
+
+Lemma store_typed_remove :
+  forall env s Σ x,
+    store_typed env s Σ ->
+    store_ref_targets_preserved env s (store_remove x s) ->
+    store_typed env (store_remove x s) (sctx_remove x Σ).
+Proof.
+  intros env s Σ x Htyped Hpres.
+  eapply store_typed_remove_entries; eassumption.
+Qed.
+
+Lemma store_update_state_ref_targets_preserved :
+  forall env s x f s',
+    store_update_state x f s = Some s' ->
+    store_ref_targets_preserved env s s'.
+Proof.
+  unfold store_ref_targets_preserved.
+  intros env s x f s' Hupdate y path se v T Hlookup Hvalue Htype.
+  revert s' Hupdate Hlookup.
+  induction s as [|e tail IH]; intros s' Hupdate Hlookup.
+  - discriminate.
+  - simpl in Hupdate, Hlookup.
+    destruct e as [ex eT ev est].
+    simpl in Hupdate, Hlookup.
+    destruct (ident_eqb x ex) eqn:Hx.
+    + inversion Hupdate; subst.
+      destruct (ident_eqb y ex) eqn:Hy.
+      * inversion Hlookup; subst.
+        exists (MkStoreEntry ex eT ev (f est)), v.
+        split; [simpl; rewrite Hy; reflexivity |].
+        split; simpl; assumption.
+      * exists se.
+        exists v.
+        split; [simpl; rewrite Hy; exact Hlookup |].
+        split; assumption.
+    + destruct (store_update_state x f tail) as [tail' |] eqn:Htail;
+        try discriminate.
+      inversion Hupdate; subst.
+      destruct (ident_eqb y ex) eqn:Hy.
+      * inversion Hlookup; subst.
+        exists (MkStoreEntry ex eT ev est), v.
+        split; [simpl; rewrite Hy; reflexivity |].
+        split; simpl; assumption.
+      * destruct (IH tail' eq_refl Hlookup)
+          as [se' [v' [Hlookup' [Hvalue' Htype']]]].
+        exists se', v'.
+        split; [simpl; rewrite Hy; exact Hlookup' |].
+        split; assumption.
+Qed.
+
+Lemma store_typed_update_state_entries :
+  forall env s_param s_target entries Σ x f entries' Σ',
+    Forall2 (store_entry_typed env s_param) entries Σ ->
+    store_ref_targets_preserved env s_param s_target ->
+    (forall runtime static,
+      binding_state_refines runtime static ->
+      binding_state_refines (f runtime) (f static)) ->
+    store_update_state x f entries = Some entries' ->
+    sctx_update_state x f Σ = Some Σ' ->
+    Forall2 (store_entry_typed env s_target) entries' Σ'.
+Proof.
+  intros env s_param s_target entries Σ x f entries' Σ' Htyped Hpres Hrefines.
+  revert entries' Σ'.
+  induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH];
+    intros entries' Σ' Hs HΣ.
+  - discriminate.
+  - destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [Hst Hv]]].
+    simpl in Hs, HΣ.
+    destruct (ident_eqb x sx) eqn:Hsx;
+      destruct (ident_eqb x cx) eqn:Hcx.
+    + inversion Hs; subst entries'.
+      inversion HΣ; subst Σ'.
+      constructor.
+      * simpl. repeat split.
+        -- exact Hname.
+        -- exact HT.
+        -- apply Hrefines. exact Hst.
+        -- eapply value_has_type_store_preserved; eassumption.
+      * eapply store_typed_store_param_preserved; eassumption.
+    + apply ident_eqb_eq in Hsx. apply ident_eqb_neq in Hcx. subst sx.
+      contradiction.
+    + apply ident_eqb_neq in Hsx. apply ident_eqb_eq in Hcx.
+      subst cx. exfalso. apply Hsx. exact Hcx.
+    + destruct (store_update_state x f s_tail) as [s_tail' |] eqn:Hs_tail;
+        try discriminate.
+      destruct (sctx_update_state x f Σ_tail) as [Σ_tail' |] eqn:HΣ_tail;
+        try discriminate.
+      inversion Hs; subst entries'.
+      inversion HΣ; subst Σ'.
+      constructor.
+      * simpl. repeat split; try assumption.
+        eapply value_has_type_store_preserved; eassumption.
+      * eapply IH.
+        -- reflexivity.
+        -- reflexivity.
 Qed.
 
 Lemma store_typed_update_state :
@@ -713,41 +901,13 @@ Lemma store_typed_update_state :
     sctx_update_state x f Σ = Some Σ' ->
     store_typed env s' Σ'.
 Proof.
-  intros env s Σ x f s' Σ' Htyped Hrefines.
-  revert s' Σ'.
-  induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH]; intros s' Σ' Hs HΣ.
-  - discriminate.
-  - destruct se as [sx sT sv sst].
-    destruct ce as [[[cx cT] cst] cm].
-    simpl in Hentry.
-    destruct Hentry as [Hname [HT [Hst Hv]]].
-    simpl in Hs, HΣ.
-    destruct (ident_eqb x sx) eqn:Hsx;
-      destruct (ident_eqb x cx) eqn:Hcx.
-    + inversion Hs; subst s'.
-      inversion HΣ; subst Σ'.
-      constructor.
-      * simpl. repeat split.
-        -- exact Hname.
-        -- exact HT.
-        -- apply Hrefines. exact Hst.
-        -- eapply value_has_type_store_irrelevant. exact Hv.
-      * eapply store_typed_store_param_irrelevant. exact Htail.
-    + apply ident_eqb_eq in Hsx. apply ident_eqb_neq in Hcx. subst sx.
-      contradiction.
-    + apply ident_eqb_neq in Hsx. apply ident_eqb_eq in Hcx.
-      subst cx. exfalso. apply Hsx. exact Hcx.
-    + destruct (store_update_state x f s_tail) as [s_tail' |] eqn:Hs_tail;
-        try discriminate.
-      destruct (sctx_update_state x f Σ_tail) as [Σ_tail' |] eqn:HΣ_tail;
-        try discriminate.
-      inversion Hs; subst s'.
-      inversion HΣ; subst Σ'.
-      constructor.
-      * simpl. repeat split; try assumption.
-        eapply value_has_type_store_irrelevant. exact Hv.
-      * eapply store_typed_store_param_irrelevant.
-        apply IH; reflexivity.
+  intros env s Σ x f s' Σ' Htyped Hrefines Hs HΣ.
+  eapply store_typed_update_state_entries.
+  - exact Htyped.
+  - eapply store_update_state_ref_targets_preserved. exact Hs.
+  - exact Hrefines.
+  - exact Hs.
+  - exact HΣ.
 Qed.
 
 Lemma store_typed_restore_path :
@@ -771,19 +931,21 @@ Proof.
   eapply store_typed_update_state; eassumption.
 Qed.
 
-Lemma store_typed_update_restore_available :
-  forall env s Σ x p T st s' Σ',
-    store_typed env s Σ ->
+Lemma store_typed_update_restore_available_entries :
+  forall env s_param s_target entries Σ x p T st entries' Σ',
+    Forall2 (store_entry_typed env s_param) entries Σ ->
+    store_ref_targets_preserved env s_param s_target ->
     sctx_lookup x Σ = Some (T, st) ->
     binding_available_b st p = true ->
-    store_update_state x (state_restore_path p) s = Some s' ->
+    store_update_state x (state_restore_path p) entries = Some entries' ->
     sctx_update_state x (state_restore_path p) Σ = Some Σ' ->
-    store_typed env s' Σ'.
+    Forall2 (store_entry_typed env s_target) entries' Σ'.
 Proof.
-  intros env s Σ x p T st s' Σ' Htyped Hlookup Havailable.
-  revert s' Σ' Hlookup.
+  intros env s_param s_target entries Σ x p T st entries' Σ'
+    Htyped Hpres Hlookup Havailable.
+  revert entries' Σ' Hlookup.
   induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH];
-    intros s' Σ' Hlookup Hs HΣ.
+    intros entries' Σ' Hlookup Hs HΣ.
   - discriminate.
   - destruct se as [sx sT sv sst].
     destruct ce as [[[cx cT] cst] cm].
@@ -793,15 +955,15 @@ Proof.
     destruct (ident_eqb x sx) eqn:Hsx;
       destruct (ident_eqb x cx) eqn:Hcx.
     + inversion Hlookup; subst T st.
-      inversion Hs; subst s'.
+      inversion Hs; subst entries'.
       inversion HΣ; subst Σ'.
       constructor.
       * simpl. repeat split.
         -- exact Hname.
         -- exact HT.
         -- apply binding_state_refines_restore_path_available; assumption.
-        -- eapply value_has_type_store_irrelevant. exact Hv.
-      * eapply store_typed_store_param_irrelevant. exact Htail.
+        -- eapply value_has_type_store_preserved; eassumption.
+      * eapply store_typed_store_param_preserved; eassumption.
     + apply ident_eqb_eq in Hsx. apply ident_eqb_neq in Hcx. subst sx.
       contradiction.
     + apply ident_eqb_neq in Hsx. apply ident_eqb_eq in Hcx.
@@ -810,16 +972,34 @@ Proof.
         as [s_tail' |] eqn:Hs_tail; try discriminate.
       destruct (sctx_update_state x (state_restore_path p) Σ_tail)
         as [Σ_tail' |] eqn:HΣ_tail; try discriminate.
-      inversion Hs; subst s'.
+      inversion Hs; subst entries'.
       inversion HΣ; subst Σ'.
       constructor.
       * simpl. repeat split; try assumption.
-        eapply value_has_type_store_irrelevant. exact Hv.
-      * eapply store_typed_store_param_irrelevant.
-        eapply IH.
+        eapply value_has_type_store_preserved; eassumption.
+      * eapply IH.
         -- exact Hlookup.
         -- reflexivity.
         -- reflexivity.
+Qed.
+
+Lemma store_typed_update_restore_available :
+  forall env s Σ x p T st s' Σ',
+    store_typed env s Σ ->
+    sctx_lookup x Σ = Some (T, st) ->
+    binding_available_b st p = true ->
+    store_update_state x (state_restore_path p) s = Some s' ->
+    sctx_update_state x (state_restore_path p) Σ = Some Σ' ->
+    store_typed env s' Σ'.
+Proof.
+  intros env s Σ x p T st s' Σ' Htyped Hlookup Havailable Hs HΣ.
+  eapply store_typed_update_restore_available_entries.
+  - exact Htyped.
+  - eapply store_update_state_ref_targets_preserved. exact Hs.
+  - exact Hlookup.
+  - exact Havailable.
+  - exact Hs.
+  - exact HΣ.
 Qed.
 
 Lemma store_typed_restore_available_path :
@@ -865,13 +1045,45 @@ Proof.
   - exact Hupdate.
 Qed.
 
-Lemma store_typed_mark_used :
-  forall env s Σ x Σ',
-    store_typed env s Σ ->
-    sctx_update_state x (state_consume_path []) Σ = Some Σ' ->
-    store_typed env (store_mark_used x s) Σ'.
+Lemma store_mark_used_ref_targets_preserved :
+  forall env s x,
+    store_ref_targets_preserved env s (store_mark_used x s).
 Proof.
-  intros env s Σ x Σ' Htyped HΣ.
+  unfold store_ref_targets_preserved.
+  intros env s x y path se v T Hlookup Hvalue Htype.
+  induction s as [|e tail IH].
+  - discriminate.
+  - simpl in Hlookup |- *.
+    destruct e as [ex eT ev est].
+    simpl in Hlookup |- *.
+    destruct (ident_eqb x ex) eqn:Hx;
+      destruct (ident_eqb y ex) eqn:Hy.
+    + inversion Hlookup; subst.
+      exists (MkStoreEntry ex eT ev (state_consume_path [] est)), v.
+      split; [simpl; rewrite Hy; reflexivity |].
+      split; simpl; assumption.
+    + exists se.
+      exists v.
+      split; [simpl; rewrite Hy; exact Hlookup |].
+      split; assumption.
+    + inversion Hlookup; subst.
+      exists (MkStoreEntry ex eT ev est), v.
+      split; [simpl; rewrite Hy; reflexivity |].
+      split; simpl; assumption.
+    + destruct (IH Hlookup) as [se' [v' [Hlookup' [Hvalue' Htype']]]].
+      exists se', v'.
+      split; [simpl; rewrite Hy; exact Hlookup' |].
+      split; assumption.
+Qed.
+
+Lemma store_typed_mark_used_entries :
+  forall env s_param s_target entries Σ x Σ',
+    Forall2 (store_entry_typed env s_param) entries Σ ->
+    store_ref_targets_preserved env s_param s_target ->
+    sctx_update_state x (state_consume_path []) Σ = Some Σ' ->
+    Forall2 (store_entry_typed env s_target) (store_mark_used x entries) Σ'.
+Proof.
+  intros env s_param s_target entries Σ x Σ' Htyped Hpres HΣ.
   revert Σ' HΣ.
   induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH]; intros Σ' HΣ.
   - discriminate.
@@ -890,8 +1102,8 @@ Proof.
         -- exact HT.
         -- unfold binding_state_refines. intros p Havailable.
            simpl in Havailable. discriminate.
-        -- eapply value_has_type_store_irrelevant. exact Hv.
-      * eapply store_typed_store_param_irrelevant. exact Htail.
+        -- eapply value_has_type_store_preserved; eassumption.
+      * eapply store_typed_store_param_preserved; eassumption.
     + apply ident_eqb_eq in Hsx. apply ident_eqb_neq in Hcx. subst sx.
       contradiction.
     + apply ident_eqb_neq in Hsx. apply ident_eqb_eq in Hcx.
@@ -901,23 +1113,37 @@ Proof.
       inversion HΣ; subst Σ'.
       constructor.
       * simpl. repeat split; try assumption.
-        eapply value_has_type_store_irrelevant. exact Hv.
-      * eapply store_typed_store_param_irrelevant.
-        apply IH. reflexivity.
+        eapply value_has_type_store_preserved; eassumption.
+      * apply IH. reflexivity.
 Qed.
 
-Lemma store_typed_update_val :
-  forall env s Σ x v T st s',
+Lemma store_typed_mark_used :
+  forall env s Σ x Σ',
     store_typed env s Σ ->
-    sctx_lookup x Σ = Some (T, st) ->
-    value_has_type env s v T ->
-    store_update_val x v s = Some s' ->
-    store_typed env s' Σ.
+    sctx_update_state x (state_consume_path []) Σ = Some Σ' ->
+    store_typed env (store_mark_used x s) Σ'.
 Proof.
-  intros env s Σ x v T st s' Htyped Hlookup Hv Hupdate.
-  revert s' Hupdate T st Hlookup Hv.
+  intros env s Σ x Σ' Htyped HΣ.
+  eapply store_typed_mark_used_entries.
+  - exact Htyped.
+  - apply store_mark_used_ref_targets_preserved.
+  - exact HΣ.
+Qed.
+
+Lemma store_typed_update_val_entries :
+  forall env s_param s_target entries Σ x v T st entries',
+    Forall2 (store_entry_typed env s_param) entries Σ ->
+    store_ref_targets_preserved env s_param s_target ->
+    sctx_lookup x Σ = Some (T, st) ->
+    value_has_type env s_param v T ->
+    store_update_val x v entries = Some entries' ->
+    Forall2 (store_entry_typed env s_target) entries' Σ.
+Proof.
+  intros env s_param s_target entries Σ x v T st entries'
+    Htyped Hpres Hlookup Hv Hupdate.
+  revert entries' Hupdate T st Hlookup Hv.
   induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH];
-    intros s' Hupdate T st Hlookup Hv.
+    intros entries' Hupdate T st Hlookup Hv.
   - discriminate.
   - destruct se as [sx sT sv sst].
     destruct ce as [[[cx cT] cst] cm].
@@ -926,30 +1152,42 @@ Proof.
     simpl in Hupdate, Hlookup.
     destruct (ident_eqb x sx) eqn:Hsx;
       destruct (ident_eqb x cx) eqn:Hcx.
-    + inversion Hupdate; subst s'.
+    + inversion Hupdate; subst entries'.
       inversion Hlookup; subst T st.
       constructor.
       * simpl. repeat split.
         -- exact Hname.
         -- exact HT.
         -- exact Hst.
-        -- rewrite HT. eapply value_has_type_store_irrelevant. exact Hv.
-      * eapply store_typed_store_param_irrelevant. exact Htail.
+        -- rewrite HT. eapply value_has_type_store_preserved; eassumption.
+      * eapply store_typed_store_param_preserved; eassumption.
     + apply ident_eqb_eq in Hsx. apply ident_eqb_neq in Hcx. subst sx.
       contradiction.
     + apply ident_eqb_neq in Hsx. apply ident_eqb_eq in Hcx.
       subst cx. exfalso. apply Hsx. exact Hcx.
     + destruct (store_update_val x v s_tail) as [s_tail' |] eqn:Htail_update;
         try discriminate.
-      inversion Hupdate; subst s'.
+      inversion Hupdate; subst entries'.
       constructor.
       * simpl. repeat split; try assumption.
-        eapply value_has_type_store_irrelevant. exact Hsv.
-      * eapply store_typed_store_param_irrelevant.
-        eapply IH.
+        eapply value_has_type_store_preserved; eassumption.
+      * eapply IH.
         -- reflexivity.
         -- exact Hlookup.
-        -- eapply value_has_type_store_irrelevant. exact Hv.
+        -- exact Hv.
+Qed.
+
+Lemma store_typed_update_val :
+  forall env s Σ x v T st s',
+    store_typed env s Σ ->
+    store_ref_targets_preserved env s s' ->
+    sctx_lookup x Σ = Some (T, st) ->
+    value_has_type env s v T ->
+    store_update_val x v s = Some s' ->
+    store_typed env s' Σ.
+Proof.
+  intros env s Σ x v T st s' Htyped Hpres Hlookup Hv Hupdate.
+  eapply store_typed_update_val_entries; eassumption.
 Qed.
 
 Lemma store_typed_lookup_path :
@@ -986,22 +1224,24 @@ Proof.
   destruct v; reflexivity.
 Qed.
 
-Lemma store_typed_update_path :
-  forall env s Σ x path v_new s',
-    store_typed env s Σ ->
+Lemma store_typed_update_path_entries :
+  forall env s_param s_target entries Σ x path v_new entries',
+    Forall2 (store_entry_typed env s_param) entries Σ ->
+    store_ref_targets_preserved env s_param s_target ->
     (forall se T st,
-      store_lookup x s = Some se ->
+      store_lookup x entries = Some se ->
       sctx_lookup x Σ = Some (T, st) ->
       forall v_root,
         value_update_path (se_val se) path v_new = Some v_root ->
-        value_has_type env s v_root T) ->
-    store_update_path x path v_new s = Some s' ->
-    store_typed env s' Σ.
+        value_has_type env s_param v_root T) ->
+    store_update_path x path v_new entries = Some entries' ->
+    Forall2 (store_entry_typed env s_target) entries' Σ.
 Proof.
-  intros env s Σ x path v_new s' Htyped Hroot Hupdate.
-  revert s' Hupdate Hroot.
+  intros env s_param s_target entries Σ x path v_new entries'
+    Htyped Hpres Hroot Hupdate.
+  revert entries' Hupdate Hroot.
   induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH];
-    intros s' Hupdate Hroot.
+    intros entries' Hupdate Hroot.
   - discriminate.
   - destruct se as [sx sT sv sst].
     destruct ce as [[[cx cT] cst] cm].
@@ -1011,32 +1251,31 @@ Proof.
     destruct (ident_eqb x sx) eqn:Hsx.
     + destruct (value_update_path sv path v_new) as [v_root |] eqn:Hvalue;
         try discriminate.
-      inversion Hupdate; subst s'.
+      inversion Hupdate; subst entries'.
       constructor.
       * simpl. repeat split.
         -- exact Hname.
         -- exact HT.
         -- exact Hst.
         -- rewrite HT.
-           eapply value_has_type_store_irrelevant.
-           eapply Hroot.
-           ++ simpl. rewrite Hsx. reflexivity.
-           ++ simpl. rewrite <- Hname.
-              apply ident_eqb_eq in Hsx.
-              rewrite <- Hsx. rewrite ident_eqb_refl. reflexivity.
-           ++ exact Hvalue.
-      * eapply store_typed_store_param_irrelevant. exact Htail.
+           eapply value_has_type_store_preserved.
+           ++ eapply Hroot.
+              ** simpl. rewrite Hsx. reflexivity.
+              ** simpl. rewrite <- Hname.
+                 apply ident_eqb_eq in Hsx.
+                 rewrite <- Hsx. rewrite ident_eqb_refl. reflexivity.
+              ** exact Hvalue.
+           ++ exact Hpres.
+      * eapply store_typed_store_param_preserved; eassumption.
     + destruct (store_update_path x path v_new s_tail) as [s_tail' |]
         eqn:Htail_update; try discriminate.
-      inversion Hupdate; subst s'.
+      inversion Hupdate; subst entries'.
       constructor.
       * simpl. repeat split; try assumption.
-        eapply value_has_type_store_irrelevant. exact Hv.
-      * eapply store_typed_store_param_irrelevant.
-        eapply IH.
+        eapply value_has_type_store_preserved; eassumption.
+      * eapply IH.
         -- reflexivity.
         -- intros se0 T st Hlookup HΣ v_root Hvalue.
-           eapply value_has_type_store_irrelevant.
            eapply Hroot.
            ++ simpl. rewrite Hsx. exact Hlookup.
            ++ simpl.
@@ -1048,19 +1287,36 @@ Proof.
            ++ exact Hvalue.
 Qed.
 
-Lemma store_typed_ctx_merge_left :
-  forall env s Σ2 Σ3 Σ4,
-    store_typed env s Σ2 ->
-    ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
-    store_typed env s Σ4.
+Lemma store_typed_update_path :
+  forall env s Σ x path v_new s',
+    store_typed env s Σ ->
+    store_ref_targets_preserved env s s' ->
+    (forall se T st,
+      store_lookup x s = Some se ->
+      sctx_lookup x Σ = Some (T, st) ->
+      forall v_root,
+        value_update_path (se_val se) path v_new = Some v_root ->
+        value_has_type env s v_root T) ->
+    store_update_path x path v_new s = Some s' ->
+    store_typed env s' Σ.
 Proof.
-  intros env s Σ2 Σ3 Σ4 Htyped.
+  intros env s Σ x path v_new s' Htyped Hpres Hroot Hupdate.
+  eapply store_typed_update_path_entries; eassumption.
+Qed.
+
+Lemma store_typed_ctx_merge_left_entries :
+  forall env s_param entries Σ2 Σ3 Σ4,
+    Forall2 (store_entry_typed env s_param) entries Σ2 ->
+    ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
+    Forall2 (store_entry_typed env s_param) entries Σ4.
+Proof.
+  intros env s_param entries Σ2 Σ3 Σ4 Htyped.
   revert Σ3 Σ4.
   induction Htyped as [|se ce2 s_tail Σ2_tail Hentry Htail IH];
     intros Σ3 Σ4 Hmerge.
   - destruct Σ3 as [|[[[cx3 cT3] cst3] cm3] Σ3_tail];
       simpl in Hmerge; try discriminate.
-    inversion Hmerge; subst; unfold store_typed; apply Forall2_nil.
+    inversion Hmerge; subst; constructor.
   - destruct se as [sx sT sv sst].
     destruct ce2 as [[[cx2 cT2] cst2] cm2].
     destruct Σ3 as [|[[[cx3 cT3] cst3] cm3] Σ3_tail];
@@ -1091,9 +1347,8 @@ Proof.
              (MkBindingState (st_consumed cst2)
                (st_moved_paths cst2 ++ st_moved_paths cst3))
              Href Hmerge_ref).
-        -- eapply value_has_type_store_irrelevant. exact Hv.
-      * eapply store_typed_store_param_irrelevant.
-        eapply IH. exact Htail_merge.
+        -- exact Hv.
+      * eapply IH. exact Htail_merge.
     + simpl in Hmerge. inversion Hmerge; subst Σ4.
       constructor.
       * simpl. repeat split.
@@ -1103,9 +1358,8 @@ Proof.
           (MkBindingState (st_consumed cst2 || st_consumed cst3)
             (st_moved_paths cst2 ++ st_moved_paths cst3))
           Href (binding_state_refines_merge_left cst2 cst3 _ eq_refl)).
-        -- eapply value_has_type_store_irrelevant. exact Hv.
-      * eapply store_typed_store_param_irrelevant.
-        eapply IH. exact Htail_merge.
+        -- exact Hv.
+      * eapply IH. exact Htail_merge.
     + simpl in Hmerge. inversion Hmerge; subst Σ4.
       constructor.
       * simpl. repeat split.
@@ -1115,29 +1369,38 @@ Proof.
           (MkBindingState (st_consumed cst2 || st_consumed cst3)
             (st_moved_paths cst2 ++ st_moved_paths cst3))
           Href (binding_state_refines_merge_left cst2 cst3 _ eq_refl)).
-        -- eapply value_has_type_store_irrelevant. exact Hv.
-      * eapply store_typed_store_param_irrelevant.
-        eapply IH. exact Htail_merge.
+        -- exact Hv.
+      * eapply IH. exact Htail_merge.
 Qed.
 
-Lemma store_typed_ctx_merge_right :
+Lemma store_typed_ctx_merge_left :
   forall env s Σ2 Σ3 Σ4,
-    store_typed env s Σ3 ->
+    store_typed env s Σ2 ->
+    ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
+    store_typed env s Σ4.
+Proof.
+  intros env s Σ2 Σ3 Σ4 Htyped Hmerge.
+  eapply store_typed_ctx_merge_left_entries; eassumption.
+Qed.
+
+Lemma store_typed_ctx_merge_right_entries :
+  forall env s_param entries Σ2 Σ3 Σ4,
+    Forall2 (store_entry_typed env s_param) entries Σ3 ->
     Forall2
       (fun ce2 ce3 =>
         match ce2, ce3 with
         | (_, T2, _, _), (_, T3, _, _) => T2 = T3
         end) Σ2 Σ3 ->
     ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
-    store_typed env s Σ4.
+    Forall2 (store_entry_typed env s_param) entries Σ4.
 Proof.
-  intros env s Σ2 Σ3 Σ4 Htyped.
+  intros env s_param entries Σ2 Σ3 Σ4 Htyped.
   revert Σ2 Σ4.
   induction Htyped as [|se ce3 s_tail Σ3_tail Hentry Htail IH];
     intros Σ2 Σ4 Htypes Hmerge.
   - destruct Σ2 as [|[[[cx2 cT2] cst2] cm2] Σ2_tail];
       simpl in Hmerge; try discriminate.
-    inversion Hmerge; subst; unfold store_typed; apply Forall2_nil.
+    inversion Hmerge; subst; constructor.
   - destruct se as [sx sT sv sst].
     destruct ce3 as [[[cx3 cT3] cst3] cm3].
     inversion Htypes as [|ce2_head ce3_head Σ2_tail' Σ3_tail' Htype_head Htypes_tail];
@@ -1175,11 +1438,8 @@ Proof.
              (MkBindingState (st_consumed cst2)
                (st_moved_paths cst2 ++ st_moved_paths cst3))
              Href Hmerge_ref).
-        -- eapply value_has_type_store_irrelevant. exact Hv.
-      * eapply store_typed_store_param_irrelevant.
-        eapply IH.
-        -- exact Htypes_tail.
-        -- exact Htail_merge.
+        -- exact Hv.
+      * eapply IH; eassumption.
     + simpl in Hmerge. inversion Hmerge; subst Σ4.
       constructor.
       * simpl. repeat split.
@@ -1189,11 +1449,8 @@ Proof.
              (MkBindingState (st_consumed cst2 || st_consumed cst3)
                (st_moved_paths cst2 ++ st_moved_paths cst3))
              Href (binding_state_refines_merge_right cst2 cst3 _ eq_refl)).
-        -- eapply value_has_type_store_irrelevant. exact Hv.
-      * eapply store_typed_store_param_irrelevant.
-        eapply IH.
-        -- exact Htypes_tail.
-        -- exact Htail_merge.
+        -- exact Hv.
+      * eapply IH; eassumption.
     + simpl in Hmerge. inversion Hmerge; subst Σ4.
       constructor.
       * simpl. repeat split.
@@ -1203,11 +1460,23 @@ Proof.
              (MkBindingState (st_consumed cst2 || st_consumed cst3)
                (st_moved_paths cst2 ++ st_moved_paths cst3))
              Href (binding_state_refines_merge_right cst2 cst3 _ eq_refl)).
-        -- eapply value_has_type_store_irrelevant. exact Hv.
-      * eapply store_typed_store_param_irrelevant.
-        eapply IH.
-        -- exact Htypes_tail.
-        -- exact Htail_merge.
+        -- exact Hv.
+      * eapply IH; eassumption.
+Qed.
+
+Lemma store_typed_ctx_merge_right :
+  forall env s Σ2 Σ3 Σ4,
+    store_typed env s Σ3 ->
+    Forall2
+      (fun ce2 ce3 =>
+        match ce2, ce3 with
+        | (_, T2, _, _), (_, T3, _, _) => T2 = T3
+        end) Σ2 Σ3 ->
+    ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
+    store_typed env s Σ4.
+Proof.
+  intros env s Σ2 Σ3 Σ4 Htyped Htypes Hmerge.
+  eapply store_typed_ctx_merge_right_entries; eassumption.
 Qed.
 
 Lemma type_lookup_path_compatible :
@@ -1403,6 +1672,7 @@ Qed.
 Lemma store_typed_update_path_typed :
   forall env s Σ x path v_new T_path s',
     store_typed env s Σ ->
+    store_ref_targets_preserved env s s' ->
     (exists T_root st,
       sctx_lookup x Σ = Some (T_root, st) /\
       type_lookup_path env T_root path = Some T_path) ->
@@ -1410,10 +1680,11 @@ Lemma store_typed_update_path_typed :
     store_update_path x path v_new s = Some s' ->
     store_typed env s' Σ.
 Proof.
-  intros env s Σ x path v_new T_path s' Hstore Htarget Hvnew Hupdate.
+  intros env s Σ x path v_new T_path s' Hstore Hpres Htarget Hvnew Hupdate.
   destruct Htarget as [T_root [st [HΣ Htype_path]]].
   eapply store_typed_update_path.
   - exact Hstore.
+  - exact Hpres.
   - intros se T st0 Hlookup HΣ0 v_root Hvalue_update.
     rewrite HΣ in HΣ0.
     inversion HΣ0; subst T st0.

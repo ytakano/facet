@@ -20,6 +20,16 @@
 - closure、variant、effect、function generics は、導入と同時に safety invariant を更新する。
 - `Admitted` / `Axiom` は使わない。
 
+## Current Status
+
+Last updated implementation point: `fb7498a guard assign after rhs moves`.
+
+- S0: `[done]` runtime value/store typing と runtime reference well-formedness の仕様は導入済み。
+- S1: `[partial]` path/value/store helper の主要部分は導入済み。linear struct の残余 obligation は未完了。
+- S2: `[partial]` 個別 preservation helper は基本式から direct/root assign/replace まで進行中。full mutual theorem は未完了。
+- S3: `[todo]` call/closure preservation は未着手。ただし empty closure value typing helper は一部存在する。
+- S4-S6: `[todo]` checker-to-runtime safety、runtime reference safety、small-step progress は未着手。
+
 ## Target Theorems
 
 最初に欲しい theorem:
@@ -63,45 +73,53 @@ Theorem step_progress :
 
 ## Milestones
 
-1. **S0: safety statement 固定**
-   - `RuntimeTyping.v` を追加し、runtime value/store の型付け仕様を定義する。
-   - `value_has_type env s v T` を定義する。
-   - `store_typed env s Σ` を定義し、store entry と `sctx` entry の name/type/state が一致することを表す。
-   - `runtime_refs_wf env s v` / `store_refs_wf env s` を定義する。
+1. **S0: safety statement 固定** `[done]`
+   - `RuntimeTyping.v` を追加し、runtime value/store の型付け仕様を定義済み。
+   - `value_has_type env s v T` を定義済み。
+   - `store_typed env s Σ` は state 完全一致ではなく `binding_state_refines runtime static` ベースで定義済み。
+   - `runtime_refs_wf env s v` / `store_refs_wf env s` を定義済み。
    - `borrow_ok_env_structural` は ownership/aliasing invariant として後続 theorem で使い、typing preservation の最小 theorem には混ぜない。
 
-2. **S1: value/path/store helper**
-   - `value_lookup_path` と `type_lookup_path` の対応を証明する。
-   - `value_update_path` が `value_has_type` を保存することを証明する。
-   - `store_lookup`, `store_update_val`, `store_update_path`, `store_consume_path`, `store_restore_path`, `store_add`, `store_remove` が `store_typed` を保存することを証明する。
-   - struct field value list と `struct_fields` の対応関係を定義し、field lookup/update の補題を追加する。
-   - linear struct の partial move は、親 binding 全体の消費ではなく、型に基づく linear component ごとの消費義務として表す。
-   - `sctx_check_ok` が `st_moved_paths` の prefix conflict だけで linear binding を OK にしないよう、残余 linear obligation を計算する helper と soundness 補題を追加する。
+2. **S1: value/path/store helper** `[partial]`
+   - `[done]` `value_lookup_path` と `type_lookup_path` の対応を証明済み。
+   - `[done]` `value_update_path` が `value_has_type` を保存することを証明済み。
+   - `[done]` `store_lookup`, `store_update_val`, `store_update_path`, `store_consume_path`, `store_add`, `store_remove` の `store_typed` 保存補題を追加済み。
+   - `[done]` `store_restore_path` は availability 前提付きの `store_typed_restore_available_path` を追加済み。
+   - `[done]` `ctx_merge` 後の store typing は then/else 両側補題を追加済み。
+   - `[done]` struct field value list と `struct_fields` の lookup/update helper を追加済み。
+   - `[todo]` linear struct の partial move は、親 binding 全体の消費ではなく、型に基づく linear component ごとの消費義務として表す。
+   - `[todo]` `sctx_check_ok` が `st_moved_paths` の prefix conflict だけで linear binding を OK にしないよう、残余 linear obligation を計算する helper と soundness 補題を追加する。
 
-3. **S2: big-step preservation / result typing**
-   - `eval`, `eval_args`, `eval_struct_fields` の相互 induction で preservation を証明する。
-   - `EUnit`, literal, `EVar`, `EPlace`, `ELet`, `ELetInfer`, `EDrop`, `EIf` を先に通す。
-   - struct literal と field access/move の store state 対応を証明する。
-   - `EReplace`, `EAssign`, `EBorrow`, `EDeref` を path-aware store helper へ接続する。
-   - `replace p e_new` は、target path が `e_new` 評価後も available であることを typing premise として preservation に使う。これは自己消費する `replace s.f s.f` を拒否する既存ガードの証明側の対応である。
-   - `EReplace` / `EAssign` は root binding の mutability だけでなく、target path 上の struct field mutability を検査する。少なくとも最終 field は `MMutable` を必須にする。
-   - `&mut T` の referent type は invariant にする。`&shared T` は inner type の covariant compatibility を維持してよいが、unique reference は usage/core/lifetime の厳密一致または invariant relation だけを許す。
+3. **S2: big-step preservation / result typing** `[partial]`
+   - `[done]` `EUnit`, literal, `EFn`, `EVar`, direct `EPlace`, `ELet`, `EDrop`, `EIf` の個別 preservation helper を追加済み。
+   - `[done]` struct literal と `eval_struct_fields` の preservation helper を追加済み。
+   - `[done]` `EBorrow` は shared/unique/direct/indirect の result typing helper を追加済み。
+   - `[done]` direct path `EAssign` / `EReplace` を path-aware store helper へ接続済み。
+   - `[done]` root `Eval_Assign` / `Eval_Replace` 用 preservation helper を追加済み。
+   - `[done]` `replace p e_new` は target path が `e_new` 評価後も available であることを typing premise として preservation に使う。これは自己消費する `replace s.f s.f` を拒否する既存ガードの証明側の対応である。
+   - `[done]` direct `assign p e_new` も target path が `e_new` 評価後も available であることを typing premise として要求する。
+   - `[todo]` `eval`, `eval_args`, `eval_struct_fields` の相互 induction で `eval_preserves_typing` を証明する。
+   - `[todo]` `typed_env_structural` が binding lookup/type を保存する same-bindings helper を追加し、現在 explicit premise にしている lookup 条件を theorem 本体で導出する。
+   - `[todo]` indirect `EReplace` / `EAssign`、`EDeref`、`ECall` / `ECallExpr` を preservation theorem へ接続する。
+   - `[todo]` `ELetInfer` の現在の contradiction-only helper を実証明に置き換える。
+   - `[todo]` `EReplace` / `EAssign` は root binding の mutability だけでなく、target path 上の struct field mutability を検査する。少なくとも最終 field は `MMutable` を必須にする。
+   - `[todo]` `&mut T` の referent type は invariant にする。`&shared T` は inner type の covariant compatibility を維持してよいが、unique reference は usage/core/lifetime の厳密一致または invariant relation だけを許す。
    - theorem は `typed_env_structural` から始め、checker theorem は使わない。
 
-4. **S3: function call / current closure value safety**
+4. **S3: function call / current closure value safety** `[todo]`
    - `VClosure fname captured` の runtime typing を定義する。
-   - 現状の `EFn` は empty capture を返すため、まず `captured = []` の closure safety を証明する。
+   - `[partial]` 現状の `EFn` は empty capture を返すため、まず `captured = []` の closure safety を証明する。`VClosure fname []` の value typing helper は一部追加済み。
    - `bind_params` と `store_remove_params` が `store_typed` を保存する補題を追加する。
    - `ECall` / `ECallExpr` の preservation を証明する。
    - 将来の closure 導入前に、captured store の型付け invariant をこの milestone で固定する。
 
-5. **S4: checker-to-runtime end-to-end safety**
+5. **S4: checker-to-runtime end-to-end safety** `[todo]`
    - `infer_full_env_structural_sound` を使って、checker 成功から big-step safety theorem へ接続する。
    - `initial_store_for_fn f s` を定義し、関数引数 store と `params_ctx` の対応を証明する。
    - `infer_full_env_big_step_safe` を追加する。
    - Validator 経由 theorem として `validate_env` / `validate_fns` 成功後の safety theorem を追加する。
 
-6. **S5: borrow/runtime reference safety**
+6. **S5: borrow/runtime reference safety** `[todo]`
    - `VRef x path` が指す store path が存在し、型が `TRef` の inner type と対応することを証明する。
    - `refs_in_value` / `refs_in_store` を定義する。
    - `borrow_ok_env_structural` と runtime refs の対応 invariant を導入する。
@@ -112,13 +130,13 @@ Theorem step_progress :
    - dangling reference が評価結果・store に残らないことを theorem 化する。
    - path prefix conflict に基づく aliasing safety は、shared/mut の runtime ref set を導入して段階的に証明する。
 
-7. **S6: small-step semantics と progress**
+7. **S6: small-step semantics と progress** `[todo]`
    - `StepSemantics.v` を追加し、`step env s e s' e'` と `terminal` を定義する。
    - big-step preservation で得た helper を再利用し、small-step preservation を証明する。
    - closed expression または well-typed runtime configuration に対して `progress` / `not_stuck` を証明する。
    - divergence は progress theorem で扱い、big-step result theorem とは分離する。
 
-8. **S7: future feature gates**
+8. **S7: future feature gates** `[todo]`
    - closure:
      - captured environment の store typing と borrow invariant を追加する。
      - closure escaping と lifetime/borrow の関係を safety theorem に反映する。
@@ -138,12 +156,14 @@ Theorem step_progress :
 
 ## Implementation Order
 
-1. `RuntimeTyping.v` を追加して S0/S1 の定義と store helper を証明する。
-2. `TypeSafety.v` を追加して S2 の big-step preservation を基本式から始める。
-3. call/closure 関連の S3 を追加する。
-4. `EnvFullSoundness.v` / `ValidatorSoundness.v` と接続して S4 を証明する。
-5. borrow/runtime reference safety を S5 として別 theorem 群にする。
-6. small-step semantics が必要になった時点で S6 を開始する。
+1. `[done]` `RuntimeTyping.v` を追加して S0/S1 の定義と主要 store helper を証明する。
+2. `[partial]` `TypeSafety.v` を追加して S2 の個別 preservation helper を基本式から始める。
+3. `[next]` `typed_env_structural` の same-bindings lookup helper を追加し、assign/replace helper の explicit lookup premise を theorem 本体で導出できるようにする。
+4. `[next]` `eval`, `eval_args`, `eval_struct_fields` の mutual preservation theorem scaffold を追加し、既存 helper を constructor ごとに接続する。
+5. `[todo]` call/closure 関連の S3 を追加する。
+6. `[todo]` `EnvFullSoundness.v` / `ValidatorSoundness.v` と接続して S4 を証明する。
+7. `[todo]` borrow/runtime reference safety を S5 として別 theorem 群にする。
+8. `[todo]` small-step semantics が必要になった時点で S6 を開始する。
 
 ## Acceptance Criteria
 
@@ -165,21 +185,22 @@ sh tests/fir/run.sh
 
 review 指摘に対応する regression:
 
-- borrow 中の root/field を move/read する式は拒否される。
-- inner `let` の local binding への reference が外側へ escape する式は拒否される。
-- linear struct の一部 field だけを move/drop して残りの linear field を放置する式は拒否される。
-- `replace x x` / `replace s.f s.f` のように target を new value 評価中に消費する式は拒否され続ける。
-- immutable field への assign/replace は、root binding が mutable でも拒否される。
-- `&mut unrestricted T` を `&mut affine T` など異なる referent type として使う式は拒否される。
-- local annotation の elided lifetime は拒否される。
-- generic trait は arity・type argument・bounds の validation が入るまで soundness 対象から外す。
+- `[todo]` borrow 中の root/field を move/read する式は拒否される。
+- `[todo]` inner `let` の local binding への reference が外側へ escape する式は拒否される。
+- `[todo]` linear struct の一部 field だけを move/drop して残りの linear field を放置する式は拒否される。
+- `[done]` `replace x x` / `replace s.f s.f` のように target を new value 評価中に消費する式は拒否され続ける。
+- `[done]` moved target への direct `assign` は拒否される。
+- `[todo]` immutable field への assign/replace は、root binding が mutable でも拒否される。
+- `[todo]` `&mut unrestricted T` を `&mut affine T` など異なる referent type として使う式は拒否される。
+- `[todo]` local annotation の elided lifetime は拒否される。
+- `[todo]` generic trait は arity・type argument・bounds の validation が入るまで soundness 対象から外す。
 
 型安全性 roadmap の初期完了条件:
 
-- `eval_preserves_typing` が `typed_env_structural` から証明されている。
-- `infer_full_env_big_step_safe` が checker 成功 theorem と接続されている。
-- `VRef` の dangling reference safety が theorem として独立している。
-- progress は small-step milestone へ明示的に分離されている。
+- `[todo]` `eval_preserves_typing` が `typed_env_structural` から証明されている。
+- `[todo]` `infer_full_env_big_step_safe` が checker 成功 theorem と接続されている。
+- `[todo]` `VRef` の dangling reference safety が theorem として独立している。
+- `[done]` progress は small-step milestone へ明示的に分離されている。
 
 ## Known Risks
 

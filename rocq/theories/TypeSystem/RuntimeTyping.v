@@ -695,6 +695,25 @@ Proof.
     + simpl in Hlookup. discriminate.
 Qed.
 
+Lemma type_lookup_path_app :
+  forall env T p q,
+    type_lookup_path env T (p ++ q) =
+    match type_lookup_path env T p with
+    | Some T' => type_lookup_path env T' q
+    | None => None
+    end.
+Proof.
+  intros env T p.
+  revert T.
+  induction p as [|seg rest IH]; intros T q.
+  - reflexivity.
+  - simpl.
+    destruct (ty_core T); try reflexivity.
+    destruct (lookup_struct s env) as [sdef |]; try reflexivity.
+    destruct (lookup_field seg (struct_fields sdef)) as [fdef |]; try reflexivity.
+    apply IH.
+Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Runtime reference well-formedness                                    *)
 (* ------------------------------------------------------------------ *)

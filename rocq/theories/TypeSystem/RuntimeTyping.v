@@ -373,6 +373,63 @@ Proof.
   apply H12. apply H23. exact Havailable.
 Qed.
 
+Lemma path_prefix_conflicts :
+  forall p q,
+    path_prefix_b p q = true ->
+    path_conflict_b p q = true.
+Proof.
+  intros p q Hprefix.
+  unfold path_conflict_b.
+  rewrite Hprefix. reflexivity.
+Qed.
+
+Lemma remove_restored_paths_available_noop :
+  forall p paths,
+    path_conflicts_any_b p paths = false ->
+    remove_restored_paths p paths = paths.
+Proof.
+  intros p paths.
+  induction paths as [|q rest IH]; intros Hconflicts.
+  - reflexivity.
+  - simpl in Hconflicts.
+    destruct (path_conflict_b p q) eqn:Hconflict; try discriminate.
+    simpl.
+    destruct (path_prefix_b p q) eqn:Hprefix.
+    + rewrite (path_prefix_conflicts p q Hprefix) in Hconflict. discriminate.
+    + f_equal. apply IH. exact Hconflicts.
+Qed.
+
+Lemma state_restore_path_available_noop :
+  forall st p,
+    binding_available_b st p = true ->
+    state_restore_path p st = st.
+Proof.
+  intros [consumed moved] p Havailable.
+  unfold binding_available_b in Havailable.
+  simpl in Havailable.
+  destruct consumed; simpl in Havailable; try discriminate.
+  destruct (path_conflicts_any_b p moved) eqn:Hconflicts; simpl in Havailable;
+    try discriminate.
+  unfold state_restore_path. simpl.
+  rewrite (remove_restored_paths_available_noop p moved Hconflicts).
+  reflexivity.
+Qed.
+
+Lemma binding_state_refines_restore_path_available :
+  forall runtime static p,
+    binding_state_refines runtime static ->
+    binding_available_b static p = true ->
+    binding_state_refines
+      (state_restore_path p runtime)
+      (state_restore_path p static).
+Proof.
+  intros runtime static p Href Havailable_static.
+  pose proof (Href p Havailable_static) as Havailable_runtime.
+  rewrite (state_restore_path_available_noop static p Havailable_static).
+  rewrite (state_restore_path_available_noop runtime p Havailable_runtime).
+  exact Href.
+Qed.
+
 Lemma path_conflicts_any_app :
   forall p paths1 paths2,
     path_conflicts_any_b p (paths1 ++ paths2) =
@@ -712,6 +769,75 @@ Proof.
     try discriminate.
   inversion HΣ; subst Σ0.
   eapply store_typed_update_state; eassumption.
+Qed.
+
+Lemma store_typed_update_restore_available :
+  forall env s Σ x p T st s' Σ',
+    store_typed env s Σ ->
+    sctx_lookup x Σ = Some (T, st) ->
+    binding_available_b st p = true ->
+    store_update_state x (state_restore_path p) s = Some s' ->
+    sctx_update_state x (state_restore_path p) Σ = Some Σ' ->
+    store_typed env s' Σ'.
+Proof.
+  intros env s Σ x p T st s' Σ' Htyped Hlookup Havailable.
+  revert s' Σ' Hlookup.
+  induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH];
+    intros s' Σ' Hlookup Hs HΣ.
+  - discriminate.
+  - destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [Href Hv]]].
+    simpl in Hlookup, Hs, HΣ.
+    destruct (ident_eqb x sx) eqn:Hsx;
+      destruct (ident_eqb x cx) eqn:Hcx.
+    + inversion Hlookup; subst T st.
+      inversion Hs; subst s'.
+      inversion HΣ; subst Σ'.
+      constructor.
+      * simpl. repeat split.
+        -- exact Hname.
+        -- exact HT.
+        -- apply binding_state_refines_restore_path_available; assumption.
+        -- eapply value_has_type_store_irrelevant. exact Hv.
+      * eapply store_typed_store_param_irrelevant. exact Htail.
+    + apply ident_eqb_eq in Hsx. apply ident_eqb_neq in Hcx. subst sx.
+      contradiction.
+    + apply ident_eqb_neq in Hsx. apply ident_eqb_eq in Hcx.
+      subst cx. exfalso. apply Hsx. exact Hcx.
+    + destruct (store_update_state x (state_restore_path p) s_tail)
+        as [s_tail' |] eqn:Hs_tail; try discriminate.
+      destruct (sctx_update_state x (state_restore_path p) Σ_tail)
+        as [Σ_tail' |] eqn:HΣ_tail; try discriminate.
+      inversion Hs; subst s'.
+      inversion HΣ; subst Σ'.
+      constructor.
+      * simpl. repeat split; try assumption.
+        eapply value_has_type_store_irrelevant. exact Hv.
+      * eapply store_typed_store_param_irrelevant.
+        eapply IH.
+        -- exact Hlookup.
+        -- reflexivity.
+        -- reflexivity.
+Qed.
+
+Lemma store_typed_restore_available_path :
+  forall env s Σ x p T st s' Σ',
+    store_typed env s Σ ->
+    sctx_lookup x Σ = Some (T, st) ->
+    binding_available_b st p = true ->
+    store_restore_path x p s = Some s' ->
+    sctx_restore_path Σ x p = infer_ok Σ' ->
+    store_typed env s' Σ'.
+Proof.
+  intros env s Σ x p T st s' Σ' Htyped Hlookup Havailable Hs HΣ.
+  unfold store_restore_path in Hs.
+  unfold sctx_restore_path in HΣ.
+  destruct (sctx_update_state x (state_restore_path p) Σ) as [Σ0 |] eqn:Hupdate;
+    try discriminate.
+  inversion HΣ; subst Σ0.
+  eapply store_typed_update_restore_available; eassumption.
 Qed.
 
 Lemma store_typed_consume_path :

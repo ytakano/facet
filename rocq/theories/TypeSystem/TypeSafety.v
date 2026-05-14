@@ -78,6 +78,23 @@ Proof.
   - rewrite H3 in Hpath. discriminate.
 Qed.
 
+Lemma sctx_path_available_success :
+  forall Σ x path,
+    sctx_path_available Σ x path = infer_ok tt ->
+    exists T st,
+      sctx_lookup x Σ = Some (T, st) /\
+      binding_available_b st path = true.
+Proof.
+  intros Σ x path Havailable.
+  unfold sctx_path_available in Havailable.
+  destruct (sctx_lookup x Σ) as [[T st] |] eqn:Hlookup; try discriminate.
+  destruct (binding_available_b st path) eqn:Hbinding; try discriminate.
+  inversion Havailable; subst.
+  exists T, st. split.
+  - reflexivity.
+  - exact Hbinding.
+Qed.
+
 Lemma runtime_path_lookup_typing :
   forall env s,
   (forall v T,
@@ -628,6 +645,82 @@ Proof.
     + eapply value_has_type_compatible; eassumption.
     + exact Hupdate.
   - constructor.
+Qed.
+
+Lemma eval_replace_path_preserves_typing :
+  forall env (Ω : outlives_ctx) (n : nat) Σ Σ1 Σ2 s s1 s2 s3 p e_new
+      T_old T_new x_static path_static x_eval path_eval old_v v_new,
+    store_typed env s Σ ->
+    typed_place_env_structural env Σ p T_old ->
+    place_path p = Some (x_static, path_static) ->
+    typed_env_structural env Ω n Σ e_new T_new Σ1 ->
+    eval env s e_new s1 v_new ->
+    (store_typed env s Σ ->
+     typed_env_structural env Ω n Σ e_new T_new Σ1 ->
+     eval env s e_new s1 v_new ->
+     store_typed env s1 Σ1 /\ value_has_type env s1 v_new T_new) ->
+    ty_compatible_b Ω T_new T_old = true ->
+    (exists T_root st,
+      sctx_lookup x_static Σ1 = Some (T_root, st) /\
+      type_lookup_path env T_root path_static = Some T_old) ->
+    sctx_path_available Σ1 x_static path_static = infer_ok tt ->
+    sctx_restore_path Σ1 x_static path_static = infer_ok Σ2 ->
+    eval_place s p x_eval path_eval ->
+    store_lookup_path x_eval path_eval s = Some old_v ->
+    store_update_path x_eval path_eval v_new s1 = Some s2 ->
+    store_restore_path x_eval path_eval s2 = Some s3 ->
+    store_typed env s3 Σ2 /\
+    value_has_type env s3 old_v T_old.
+Proof.
+  intros env Ω n Σ Σ1 Σ2 s s1 s2 s3 p e_new T_old T_new
+    x_static path_static x_eval path_eval old_v v_new Hstore Hplace
+    Hpath_static Htyped_new Heval_new Hpres_new Hcompat Htarget
+    Havailable Hrestore Heval_place Hlookup_old Hupdate Hstore_restore.
+  destruct (eval_place_matches_place_path s p x_eval path_eval
+              x_static path_static Heval_place Hpath_static) as [Hx Hpath].
+  subst x_eval path_eval.
+  destruct (typed_place_direct_lookup env Σ p T_old x_static path_static
+              Hplace Hpath_static)
+    as [T_root0 [st0 [HΣ0 [_ Htype_old]]]].
+  destruct (store_typed_lookup_path env s Σ x_static path_static old_v
+              Hstore Hlookup_old)
+    as [se [T_root [st [m [HΣ [Hname [HTy [Hstore_lookup Hvalue_lookup]]]]]]]].
+  rewrite HΣ0 in HΣ.
+  inversion HΣ; subst T_root st.
+  destruct (store_typed_lookup env s Σ x_static se Hstore Hstore_lookup)
+    as [Tse [stse [mse [HΣlookup [_ [HTse [_ Hvroot]]]]]]].
+  rewrite HΣ0 in HΣlookup.
+  inversion HΣlookup; subst Tse stse.
+  assert (Hold : value_has_type env s old_v T_old).
+  { eapply value_lookup_path_has_type.
+    - exact Hvroot.
+    - exact Hvalue_lookup.
+    - match goal with
+      | Hty : se_ty se = T_root0 |- _ =>
+          rewrite Hty; exact Htype_old
+      | Hty : T_root0 = se_ty se |- _ =>
+          rewrite <- Hty; exact Htype_old
+      end.
+  }
+  destruct (Hpres_new Hstore Htyped_new Heval_new) as [Hstore1 Hvnew].
+  pose proof (ty_compatible_b_sound Ω T_new T_old Hcompat) as Hcompat_prop.
+  assert (Hstore2 : store_typed env s2 Σ1).
+  { eapply store_typed_update_path_typed.
+    - exact Hstore1.
+    - exact Htarget.
+    - eapply value_has_type_compatible; eassumption.
+    - exact Hupdate.
+  }
+  destruct (sctx_path_available_success Σ1 x_static path_static Havailable)
+    as [T_av [st_av [HΣ_av Hst_av]]].
+  split.
+  - eapply store_typed_restore_available_path.
+    + exact Hstore2.
+    + exact HΣ_av.
+    + exact Hst_av.
+    + exact Hstore_restore.
+    + exact Hrestore.
+  - eapply value_has_type_store_irrelevant. exact Hold.
 Qed.
 
 Lemma eval_letinfer_preserves_typing :

@@ -262,6 +262,56 @@ Proof.
   exact (proj1 (runtime_path_lookup_typing env s) v T Htyped path v_path T_path Hvalue Htype).
 Qed.
 
+Inductive eval_args_values_have_types
+    (env : global_env) (Ω : outlives_ctx) (s : store)
+    : list value -> list param -> Prop :=
+  | AHT_Nil :
+      eval_args_values_have_types env Ω s [] []
+  | AHT_Cons : forall v vs p ps T_actual,
+      value_has_type env s v T_actual ->
+      ty_compatible Ω T_actual (param_ty p) ->
+      eval_args_values_have_types env Ω s vs ps ->
+      eval_args_values_have_types env Ω s (v :: vs) (p :: ps).
+
+Lemma eval_args_preserves_typing :
+  forall env (Ω : outlives_ctx) (n : nat) Σ Σ' s args params
+      s' values,
+    store_typed env s Σ ->
+    typed_args_env_structural env Ω n Σ args params Σ' ->
+    eval_args env s args s' values ->
+    (forall Σ0 s0 e T Σ1 s1 v,
+      store_typed env s0 Σ0 ->
+      typed_env_structural env Ω n Σ0 e T Σ1 ->
+      eval env s0 e s1 v ->
+      store_typed env s1 Σ1 /\ value_has_type env s1 v T) ->
+    store_typed env s' Σ' /\
+    eval_args_values_have_types env Ω s' values params.
+Proof.
+  intros env Ω n Σ Σ' s args params s' values
+    Hstore Htyped Heval Hpres.
+  revert s s' values Hstore Heval.
+  induction Htyped as
+      [Σ
+      |Σ Σ1 Σ2 e es p ps T_e Htyped_e Hcompat Htyped_rest IH];
+    intros s s' values Hstore Heval.
+  - inversion Heval; subst.
+    split; [exact Hstore | constructor].
+  - inversion Heval; subst.
+    match goal with
+    | Heval_e : eval env s e ?s1 ?v,
+      Heval_rest : eval_args env ?s1 es s' ?vs |- _ =>
+        destruct (Hpres Σ s e T_e Σ1 s1 v Hstore Htyped_e Heval_e)
+          as [Hstore1 Hv];
+        destruct (IH s1 s' vs Hstore1 Heval_rest) as [Hstore2 Hargs];
+        split;
+        [ exact Hstore2
+        | econstructor;
+          [ eapply value_has_type_store_irrelevant; exact Hv
+          | apply ty_compatible_b_sound with (Ω := Ω); exact Hcompat
+          | exact Hargs ] ]
+    end.
+Qed.
+
 Lemma eval_struct_fields_preserves_typing :
   forall env (Ω : outlives_ctx) (n : nat) lts args Σ Σ' s fields defs
       s' values,

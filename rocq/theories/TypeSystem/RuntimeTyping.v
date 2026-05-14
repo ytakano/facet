@@ -122,6 +122,23 @@ Fixpoint update_value_field
            end
   end.
 
+Fixpoint update_value_field_path
+    (name : string) (path : field_path) (v_new : value)
+    (fields : list (string * value)) : option (list (string * value)) :=
+  match fields with
+  | [] => None
+  | (field_name, v) :: rest =>
+      if String.eqb name field_name
+      then match value_update_path v path v_new with
+           | Some v' => Some ((field_name, v') :: rest)
+           | None => None
+           end
+      else match update_value_field_path name path v_new rest with
+           | Some rest' => Some ((field_name, v) :: rest')
+           | None => None
+           end
+  end.
+
 Lemma lookup_value_field_local :
   forall name fields,
     (let fix lookup (fields : list (string * value)) : option value :=
@@ -149,6 +166,61 @@ Proof.
   intros sname fields name rest.
   simpl.
   rewrite lookup_value_field_local.
+  reflexivity.
+Qed.
+
+Lemma update_value_field_path_local :
+  forall name rest v_new fields,
+    (let fix update (fields0 : list (string * value)) : option (list (string * value)) :=
+       match fields0 with
+       | [] => None
+       | (name0, fv) :: tail =>
+           if String.eqb name name0
+           then match value_update_path fv rest v_new with
+                | Some fv' => Some ((name0, fv') :: tail)
+                | None => None
+                end
+           else match update tail with
+                | Some tail' => Some ((name0, fv) :: tail')
+                | None => None
+                end
+       end
+     in update fields) = update_value_field_path name rest v_new fields.
+Proof.
+  intros name rest v_new fields.
+  induction fields as [|[field_name v] tail IH]; simpl.
+  - reflexivity.
+  - destruct (String.eqb name field_name); [reflexivity |].
+    replace ((fix update (fields0 : list (string * value)) :
+                option (list (string * value)) :=
+                match fields0 with
+                | [] => None
+                | (name0, fv) :: tail0 =>
+                    if String.eqb name name0
+                    then match value_update_path fv rest v_new with
+                         | Some fv' => Some ((name0, fv') :: tail0)
+                         | None => None
+                         end
+                    else match update tail0 with
+                         | Some tail' => Some ((name0, fv) :: tail')
+                         | None => None
+                         end
+                end) tail)
+      with (update_value_field_path name rest v_new tail).
+    reflexivity.
+Qed.
+
+Lemma value_update_path_struct_cons :
+  forall sname fields name rest v_new,
+    value_update_path (VStruct sname fields) (name :: rest) v_new =
+    match update_value_field_path name rest v_new fields with
+    | Some fields' => Some (VStruct sname fields')
+    | None => None
+    end.
+Proof.
+  intros sname fields name rest v_new.
+  simpl.
+  rewrite update_value_field_path_local.
   reflexivity.
 Qed.
 
@@ -221,6 +293,30 @@ Proof.
       * exact Hname.
       * exact Hv.
       * eapply IH; eassumption.
+Qed.
+
+Lemma runtime_lookup_struct_in_success :
+  forall name structs sdef,
+    lookup_struct_in name structs = Some sdef ->
+    struct_name sdef = name.
+Proof.
+  intros name structs.
+  induction structs as [|h rest IH]; intros sdef Hlookup; simpl in Hlookup.
+  - discriminate.
+  - destruct (String.eqb name (struct_name h)) eqn:Hname.
+    + inversion Hlookup; subst.
+      apply String.eqb_eq in Hname. symmetry. exact Hname.
+    + eapply IH. exact Hlookup.
+Qed.
+
+Lemma runtime_lookup_struct_success :
+  forall env name sdef,
+    lookup_struct name env = Some sdef ->
+    struct_name sdef = name.
+Proof.
+  unfold lookup_struct.
+  intros env name sdef Hlookup.
+  eapply runtime_lookup_struct_in_success. exact Hlookup.
 Qed.
 
 (* ------------------------------------------------------------------ *)
@@ -1052,6 +1148,159 @@ Proof.
     destruct (lookup_struct s env) as [sdef |]; try reflexivity.
     destruct (lookup_field seg (struct_fields sdef)) as [fdef |]; try reflexivity.
     apply IH.
+Qed.
+
+Lemma runtime_path_update_typing :
+  forall env s,
+  (forall v T,
+    value_has_type env s v T ->
+    forall upd_path v_new T_path v',
+      type_lookup_path env T upd_path = Some T_path ->
+      value_has_type env s v_new T_path ->
+      value_update_path v upd_path v_new = Some v' ->
+      value_has_type env s v' T) /\
+  (forall lts args fields defs,
+    struct_fields_have_type env s lts args fields defs ->
+    forall name rest v_new fields' fdef T_path,
+      lookup_field name defs = Some fdef ->
+      type_lookup_path env (instantiate_struct_field_ty lts args fdef) rest =
+        Some T_path ->
+      value_has_type env s v_new T_path ->
+      update_value_field_path name rest v_new fields = Some fields' ->
+      struct_fields_have_type env s lts args fields' defs).
+Proof.
+  intros env s.
+  apply runtime_typing_ind; intros; subst; simpl in *; try discriminate.
+  - destruct upd_path; simpl in *; try discriminate.
+    inversion H; inversion H1; subst. exact H0.
+  - destruct upd_path; simpl in *; try discriminate.
+    inversion H; inversion H1; subst. exact H0.
+  - destruct upd_path; simpl in *; try discriminate.
+    inversion H; inversion H1; subst. exact H0.
+  - destruct upd_path; simpl in *; try discriminate.
+    inversion H; inversion H1; subst. exact H0.
+  - destruct upd_path as [|seg rest].
+    + simpl in *.
+      repeat match goal with
+      | Hsome : Some _ = Some _ |- _ => inversion Hsome; clear Hsome; subst
+      end.
+      match goal with
+      | Htyped : value_has_type env s v' (instantiate_struct_instance_ty sdef lts args) |- _ =>
+          exact Htyped
+      end.
+    + simpl in *.
+      rewrite update_value_field_path_local in *.
+      pose proof (runtime_lookup_struct_success env name sdef e)
+        as Hstruct_name.
+      rewrite Hstruct_name in H0.
+      simpl in H0.
+      rewrite e in H0.
+      destruct (lookup_field seg (struct_fields sdef)) as [fdef |] eqn:Hfield;
+        try discriminate.
+      destruct (update_value_field_path seg rest v_new fields)
+        as [fields' |] eqn:Hupdate_fields; try discriminate.
+      inversion H2; subst v'.
+      econstructor.
+      * exact e.
+      * eapply H; eassumption.
+  - destruct upd_path; simpl in *; try discriminate.
+    inversion H; inversion H1; subst. exact H0.
+  - destruct upd_path; simpl in *; try discriminate.
+    inversion H; inversion H1; subst. exact H0.
+  - destruct upd_path; simpl in *; try discriminate.
+    inversion H; inversion H1; subst. exact H0.
+  - destruct upd_path as [|seg rest].
+    + simpl in *.
+      destruct v; simpl in *;
+      repeat match goal with
+      | Hsome : Some _ = Some _ |- _ => inversion Hsome; clear Hsome; subst
+      end; eassumption.
+    + match goal with
+      | Hcompat : ty_compatible _ _ _ |- _ => inversion Hcompat; subst; clear Hcompat
+      end; simpl in *; try discriminate.
+      apply (VHT_Compatible env s Ω v' (MkTy ua ce) (MkTy ue ce)).
+      * apply (H (seg :: rest) v_new T_path v').
+        -- simpl. eassumption.
+        -- eassumption.
+        -- eassumption.
+      * apply TC_Core; [assumption | reflexivity].
+  - simpl in *.
+    destruct (String.eqb name0 (field_name f)) eqn:Hname_field.
+    + match goal with
+      | Hfield : Some f = Some fdef |- _ => inversion Hfield; subst fdef
+      end.
+      destruct (value_update_path v rest v_new) as [v' |] eqn:Hupdate_value;
+        try discriminate.
+      match goal with
+      | Hupdate : Some ((field_name f, v') :: fields) = Some fields' |- _ =>
+          inversion Hupdate; subst fields'
+      end.
+      constructor.
+      * reflexivity.
+      * eapply H; eassumption.
+      * exact s0.
+    + destruct (update_value_field_path name0 rest v_new fields)
+        as [fields_tail' |] eqn:Hupdate_tail; try discriminate.
+      match goal with
+      | Hupdate : Some ((field_name f, v) :: fields_tail') = Some fields' |- _ =>
+          inversion Hupdate; subst fields'
+      end.
+      constructor.
+      * reflexivity.
+      * exact v0.
+      * eapply H0.
+        -- eassumption.
+        -- eassumption.
+        -- eassumption.
+        -- exact Hupdate_tail.
+Qed.
+
+Lemma value_update_path_has_type :
+  forall env s v T path v_new T_path v',
+    value_has_type env s v T ->
+    type_lookup_path env T path = Some T_path ->
+    value_has_type env s v_new T_path ->
+    value_update_path v path v_new = Some v' ->
+    value_has_type env s v' T.
+Proof.
+  intros env s v T path v_new T_path v' Htyped Hpath Hvnew Hupdate.
+  exact (proj1 (runtime_path_update_typing env s)
+    v T Htyped path v_new T_path v' Hpath Hvnew Hupdate).
+Qed.
+
+Lemma store_typed_update_path_typed :
+  forall env s Σ x path v_new T_path s',
+    store_typed env s Σ ->
+    (exists T_root st,
+      sctx_lookup x Σ = Some (T_root, st) /\
+      type_lookup_path env T_root path = Some T_path) ->
+    value_has_type env s v_new T_path ->
+    store_update_path x path v_new s = Some s' ->
+    store_typed env s' Σ.
+Proof.
+  intros env s Σ x path v_new T_path s' Hstore Htarget Hvnew Hupdate.
+  destruct Htarget as [T_root [st [HΣ Htype_path]]].
+  eapply store_typed_update_path.
+  - exact Hstore.
+  - intros se T st0 Hlookup HΣ0 v_root Hvalue_update.
+    rewrite HΣ in HΣ0.
+    inversion HΣ0; subst T st0.
+    destruct (store_typed_lookup env s Σ x se Hstore Hlookup)
+      as [Tse [stse [m [HΣlookup [Hname [HT [Href Hvroot]]]]]]].
+    rewrite HΣ in HΣlookup.
+    inversion HΣlookup; subst Tse stse.
+    eapply (value_update_path_has_type env s (se_val se) (se_ty se)
+      path v_new T_path v_root).
+    + exact Hvroot.
+    + match goal with
+      | Hty : T_root = se_ty se |- _ =>
+          rewrite <- Hty; exact Htype_path
+      | Hty : se_ty se = T_root |- _ =>
+          rewrite Hty; exact Htype_path
+      end.
+    + exact Hvnew.
+    + exact Hvalue_update.
+  - exact Hupdate.
 Qed.
 
 (* ------------------------------------------------------------------ *)

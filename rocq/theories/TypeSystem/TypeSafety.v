@@ -592,6 +592,44 @@ Proof.
   split; [exact Hstore | constructor].
 Qed.
 
+Lemma eval_assign_path_preserves_typing :
+  forall env (Ω : outlives_ctx) (n : nat) Σ Σ1 s s1 s2 p e_new
+      T_old T_new x_static path_static x_eval path_eval v_new,
+    store_typed env s Σ ->
+    typed_place_env_structural env Σ p T_old ->
+    place_path p = Some (x_static, path_static) ->
+    typed_env_structural env Ω n Σ e_new T_new Σ1 ->
+    eval env s e_new s1 v_new ->
+    (store_typed env s Σ ->
+     typed_env_structural env Ω n Σ e_new T_new Σ1 ->
+     eval env s e_new s1 v_new ->
+     store_typed env s1 Σ1 /\ value_has_type env s1 v_new T_new) ->
+    ty_compatible_b Ω T_new T_old = true ->
+    (exists T_root st,
+      sctx_lookup x_static Σ1 = Some (T_root, st) /\
+      type_lookup_path env T_root path_static = Some T_old) ->
+    eval_place s p x_eval path_eval ->
+    store_update_path x_eval path_eval v_new s1 = Some s2 ->
+    store_typed env s2 Σ1 /\
+    value_has_type env s2 VUnit (MkTy UUnrestricted TUnits).
+Proof.
+  intros env Ω n Σ Σ1 s s1 s2 p e_new T_old T_new
+    x_static path_static x_eval path_eval v_new Hstore Hplace Hpath_static
+    Htyped_new Heval_new Hpres_new Hcompat Htarget Heval_place Hupdate.
+  destruct (eval_place_matches_place_path s p x_eval path_eval
+              x_static path_static Heval_place Hpath_static) as [Hx Hpath].
+  subst x_eval path_eval.
+  destruct (Hpres_new Hstore Htyped_new Heval_new) as [Hstore1 Hvnew].
+  pose proof (ty_compatible_b_sound Ω T_new T_old Hcompat) as Hcompat_prop.
+  split.
+  - eapply store_typed_update_path_typed.
+    + exact Hstore1.
+    + exact Htarget.
+    + eapply value_has_type_compatible; eassumption.
+    + exact Hupdate.
+  - constructor.
+Qed.
+
 Lemma eval_letinfer_preserves_typing :
   forall env (Ω : outlives_ctx) (n : nat) Σ Σ' s s'
       m x e1 e2 T v,

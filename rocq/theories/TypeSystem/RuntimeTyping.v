@@ -76,6 +76,16 @@ Proof.
   exact (proj1 (runtime_typing_store_irrelevant env s) v T H s').
 Qed.
 
+Lemma value_has_type_compatible :
+  forall env s Ω v T_actual T_expected,
+    value_has_type env s v T_actual ->
+    ty_compatible Ω T_actual T_expected ->
+    value_has_type env s v T_expected.
+Proof.
+  intros env s Ω v T_actual T_expected Htyped Hcompat.
+  eapply VHT_Compatible; eassumption.
+Qed.
+
 Lemma struct_fields_have_type_store_irrelevant :
   forall env s lts args fields defs,
     struct_fields_have_type env s lts args fields defs ->
@@ -358,6 +368,20 @@ Proof.
   - simpl. repeat split; try reflexivity.
     eapply value_has_type_store_irrelevant. exact Hv.
   - eapply store_typed_store_param_irrelevant. exact Htyped.
+Qed.
+
+Lemma store_typed_add_compatible :
+  forall env Ω s Σ x T_actual T_expected m v,
+    store_typed env s Σ ->
+    value_has_type env s v T_actual ->
+    ty_compatible Ω T_actual T_expected ->
+    store_typed env (store_add x T_expected v s)
+      (sctx_add x T_expected m Σ).
+Proof.
+  intros env Ω s Σ x T_actual T_expected m v Hstore Hv Hcompat.
+  eapply store_typed_add.
+  - exact Hstore.
+  - eapply value_has_type_compatible; eassumption.
 Qed.
 
 Lemma store_typed_remove :

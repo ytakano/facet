@@ -1,6 +1,6 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   OperationalSemantics TypingRules TypeChecker RuntimeTyping EnvStructuralRules
-  EnvSoundnessFacts.
+  EnvSoundnessFacts CheckerSoundness.
 From Stdlib Require Import List Bool ZArith String.
 Import ListNotations.
 
@@ -382,4 +382,65 @@ Proof.
   split.
   - eapply store_typed_consume_path; eassumption.
   - eapply value_has_type_store_irrelevant. exact Hvpath.
+Qed.
+
+Lemma eval_drop_preserves_typing :
+  forall env (Ω : outlives_ctx) (n : nat) Σ Σ' s s' e T v,
+    (store_typed env s Σ ->
+     typed_env_structural env Ω n Σ e T Σ' ->
+     eval env s e s' v ->
+     store_typed env s' Σ' /\ value_has_type env s' v T) ->
+    store_typed env s Σ ->
+    typed_env_structural env Ω n Σ e T Σ' ->
+    eval env s e s' v ->
+    store_typed env s' Σ' /\
+    value_has_type env s' VUnit (MkTy UUnrestricted TUnits).
+Proof.
+  intros env Ω n Σ Σ' s s' e T v Hpres Hstore Htyped Heval.
+  destruct (Hpres Hstore Htyped Heval) as [Hstore' _].
+  split; [exact Hstore' | constructor].
+Qed.
+
+Lemma eval_let_preserves_typing :
+  forall env (Ω : outlives_ctx) (n : nat) Σ Σ1 Σ2 s s1 s2
+      m x T T1 e1 e2 T2 v1 v2,
+    store_typed env s Σ ->
+    typed_env_structural env Ω n Σ e1 T1 Σ1 ->
+    eval env s e1 s1 v1 ->
+    (store_typed env s Σ ->
+     typed_env_structural env Ω n Σ e1 T1 Σ1 ->
+     eval env s e1 s1 v1 ->
+     store_typed env s1 Σ1 /\ value_has_type env s1 v1 T1) ->
+    ty_compatible_b Ω T1 T = true ->
+    typed_env_structural env Ω n (sctx_add x T m Σ1) e2 T2 Σ2 ->
+    eval env (store_add x T v1 s1) e2 s2 v2 ->
+    (store_typed env (store_add x T v1 s1) (sctx_add x T m Σ1) ->
+     typed_env_structural env Ω n (sctx_add x T m Σ1) e2 T2 Σ2 ->
+     eval env (store_add x T v1 s1) e2 s2 v2 ->
+     store_typed env s2 Σ2 /\ value_has_type env s2 v2 T2) ->
+    store_typed env (store_remove x s2) (sctx_remove x Σ2) /\
+    value_has_type env (store_remove x s2) v2 T2.
+Proof.
+  intros env Ω n Σ Σ1 Σ2 s s1 s2 m x T T1 e1 e2 T2 v1 v2
+    Hstore Htyped1 Heval1 Hpres1 Hcompat Htyped2 Heval2 Hpres2.
+  destruct (Hpres1 Hstore Htyped1 Heval1) as [Hstore1 Hv1].
+  pose proof (ty_compatible_b_sound Ω T1 T Hcompat) as Hcompat_prop.
+  pose proof (store_typed_add_compatible env Ω s1 Σ1 x T1 T m v1
+                Hstore1 Hv1 Hcompat_prop) as Hstore_add.
+  destruct (Hpres2 Hstore_add Htyped2 Heval2) as [Hstore2 Hv2].
+  split.
+  - apply store_typed_remove. exact Hstore2.
+  - eapply value_has_type_store_irrelevant. exact Hv2.
+Qed.
+
+Lemma eval_letinfer_preserves_typing :
+  forall env (Ω : outlives_ctx) (n : nat) Σ Σ' s s'
+      m x e1 e2 T v,
+    store_typed env s Σ ->
+    typed_env_structural env Ω n Σ (ELetInfer m x e1 e2) T Σ' ->
+    eval env s (ELetInfer m x e1 e2) s' v ->
+    store_typed env s' Σ' /\ value_has_type env s' v T.
+Proof.
+  intros env Ω n Σ Σ' s s' m x e1 e2 T v _ _ Heval.
+  inversion Heval.
 Qed.

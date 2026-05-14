@@ -1233,9 +1233,15 @@ Proof.
         apply TC_Core; [apply US_refl | reflexivity].
   - destruct path as [|seg rest].
     + simpl in Hlookup. inversion Hlookup; subst T_path.
-      exists (MkTy ua (TRef la rk Ta)). split.
+      exists (MkTy ua (TRef la RShared Ta)). split.
       * reflexivity.
-      * eapply TC_Ref; eassumption.
+      * eapply TC_Ref_Shared; eassumption.
+    + simpl in Hlookup. discriminate.
+  - destruct path as [|seg rest].
+    + simpl in Hlookup. inversion Hlookup; subst T_path.
+      exists (MkTy ua (TRef la RUnique Ta)). split.
+      * reflexivity.
+      * eapply TC_Ref_Unique; eassumption.
     + simpl in Hlookup. discriminate.
   - destruct path as [|seg rest].
     + simpl in Hlookup. inversion Hlookup; subst T_path.

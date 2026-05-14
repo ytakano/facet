@@ -1893,7 +1893,9 @@ let rec ty_compatible_b_fuel fuel _UU03a9_ t_actual t_expected =
              | p :: l -> ty_core_eqb ca (TForall (n, (p :: l), tb)))
           | TRef (lb, rkb, tb) ->
             (&&) ((&&) (outlives_b _UU03a9_ la lb) (ref_kind_eqb rka rkb))
-              (ty_compatible_b_fuel fuel' _UU03a9_ ta tb)
+              (match rka with
+               | RShared -> ty_compatible_b_fuel fuel' _UU03a9_ ta tb
+               | RUnique -> ty_eqb ta tb)
           | x -> ty_core_eqb ca x)))
     fuel
 

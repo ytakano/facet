@@ -158,7 +158,10 @@ Fixpoint ty_compatible_b_fuel (fuel : nat) (Ω : outlives_ctx)
       match ty_core T_actual, ty_core T_expected with
       | TRef la rka Ta, TRef lb rkb Tb =>
           outlives_b Ω la lb && ref_kind_eqb rka rkb &&
-          ty_compatible_b_fuel fuel' Ω Ta Tb
+          match rka with
+          | RShared => ty_compatible_b_fuel fuel' Ω Ta Tb
+          | RUnique => ty_eqb Ta Tb
+          end
       | TFn params_a ret_a, TFn params_e ret_e =>
           ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel') Ω params_a params_e &&
           ty_compatible_b_fuel fuel' Ω ret_a ret_e
@@ -2318,6 +2321,22 @@ Example infer_core_env_struct_field_ok :
     (MkTy UUnrestricted TIntegers,
      [((("p"%string), 0), MkTy UUnrestricted (TStruct ("Pair"%string) [] []),
        binding_state_of_bool false, MImmutable)]).
+Proof. vm_compute. reflexivity. Qed.
+
+Example ty_compatible_b_shared_ref_covariant_inner :
+  ty_compatible_b []
+    (MkTy UUnrestricted
+      (TRef LStatic RShared (MkTy UUnrestricted TIntegers)))
+    (MkTy UUnrestricted
+      (TRef LStatic RShared (MkTy UAffine TIntegers))) = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ty_compatible_b_unique_ref_invariant_inner :
+  ty_compatible_b []
+    (MkTy UUnrestricted
+      (TRef LStatic RUnique (MkTy UUnrestricted TIntegers)))
+    (MkTy UUnrestricted
+      (TRef LStatic RUnique (MkTy UAffine TIntegers))) = false.
 Proof. vm_compute. reflexivity. Qed.
 
 (* ------------------------------------------------------------------ *)

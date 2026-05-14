@@ -146,11 +146,15 @@ Inductive ty_compatible (Ω : outlives_ctx) : Ty -> Ty -> Prop :=
       usage_sub ua ue ->
       ca = ce ->
       ty_compatible Ω (MkTy ua ca) (MkTy ue ce)
-  | TC_Ref : forall ua ue la lb rk Ta Tb,
+  | TC_Ref_Shared : forall ua ue la lb Ta Tb,
       usage_sub ua ue ->
       outlives Ω la lb ->
       ty_compatible Ω Ta Tb ->
-      ty_compatible Ω (MkTy ua (TRef la rk Ta)) (MkTy ue (TRef lb rk Tb))
+      ty_compatible Ω (MkTy ua (TRef la RShared Ta)) (MkTy ue (TRef lb RShared Tb))
+  | TC_Ref_Unique : forall ua ue la lb Ta,
+      usage_sub ua ue ->
+      outlives Ω la lb ->
+      ty_compatible Ω (MkTy ua (TRef la RUnique Ta)) (MkTy ue (TRef lb RUnique Ta))
   | TC_Fn : forall ua ue params_a params_e ret_a ret_e,
       usage_sub ua ue ->
       Forall2 (fun expected actual => ty_compatible Ω expected actual) params_e params_a ->

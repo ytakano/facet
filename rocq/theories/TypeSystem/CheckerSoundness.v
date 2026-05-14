@@ -445,10 +445,15 @@ Proof.
     + apply andb_true_iff in Hc as [Hlr HT].
       apply andb_true_iff in Hlr as [Hl Hr].
       apply ref_kind_eqb_true in Hr. subst rkb.
-      apply TC_Ref.
-      * apply usage_sub_bool_sound. exact Hu.
-      * apply outlives_b_sound. exact Hl.
-      * eapply IH. exact HT.
+      destruct rka.
+      * apply TC_Ref_Shared.
+        -- apply usage_sub_bool_sound. exact Hu.
+        -- apply outlives_b_sound. exact Hl.
+        -- eapply IH. exact HT.
+      * apply ty_eqb_true in HT. subst Tb.
+        apply TC_Ref_Unique.
+        -- apply usage_sub_bool_sound. exact Hu.
+        -- apply outlives_b_sound. exact Hl.
 Qed.
 
 (* ------------------------------------------------------------------ *)

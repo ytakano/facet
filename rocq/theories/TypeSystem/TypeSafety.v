@@ -131,6 +131,134 @@ Proof.
   - exact Hbinding.
 Qed.
 
+Lemma needs_consume_false_usage :
+  forall T,
+    needs_consume T = false ->
+    ty_usage T = UUnrestricted.
+Proof.
+  intros [u c] Hconsume.
+  destruct u; simpl in Hconsume; try discriminate; reflexivity.
+Qed.
+
+Lemma needs_consume_true_usage :
+  forall T,
+    needs_consume T = true ->
+    ty_usage T <> UUnrestricted.
+Proof.
+  intros [u c] Hconsume Husage.
+  destruct u; simpl in Hconsume; discriminate.
+Qed.
+
+Lemma eval_var_consume_static_copy_contradiction :
+  forall env Σ s x T se,
+    store_typed env s Σ ->
+    typed_place_env_structural env Σ (PVar x) T ->
+    ty_usage T = UUnrestricted ->
+    store_lookup x s = Some se ->
+    needs_consume (se_ty se) = true ->
+    False.
+Proof.
+  intros env Σ s x T se Hstore Hplace Husage Hlookup Hconsume.
+  inversion Hplace; subst; clear Hplace.
+  destruct (store_typed_lookup env s Σ x se Hstore Hlookup)
+    as [Tse [stse [m [HΣ [Hname [HT [Hst Hv]]]]]]].
+  match goal with
+  | Hsctx : sctx_lookup x Σ = Some (T, ?st) |- _ =>
+      rewrite Hsctx in HΣ
+  end.
+  inversion HΣ; subst Tse stse.
+  match goal with
+  | Heq : T = se_ty se |- _ => rewrite Heq in Husage
+  end.
+  exact (needs_consume_true_usage (se_ty se) Hconsume Husage).
+Qed.
+
+Lemma eval_var_copy_static_move_contradiction :
+  forall env Σ s x T se,
+    store_typed env s Σ ->
+    typed_place_env_structural env Σ (PVar x) T ->
+    ty_usage T <> UUnrestricted ->
+    store_lookup x s = Some se ->
+    needs_consume (se_ty se) = false ->
+    False.
+Proof.
+  intros env Σ s x T se Hstore Hplace Husage Hlookup Hconsume.
+  inversion Hplace; subst; clear Hplace.
+  destruct (store_typed_lookup env s Σ x se Hstore Hlookup)
+    as [Tse [stse [m [HΣ [Hname [HT [Hst Hv]]]]]]].
+  match goal with
+  | Hsctx : sctx_lookup x Σ = Some (T, ?st) |- _ =>
+      rewrite Hsctx in HΣ
+  end.
+  inversion HΣ; subst Tse stse.
+  match goal with
+  | Heq : T = se_ty se |- _ => rewrite Heq in Husage
+  end.
+  apply Husage.
+  exact (needs_consume_false_usage (se_ty se) Hconsume).
+Qed.
+
+Lemma eval_place_consume_static_copy_direct_contradiction :
+  forall env Σ s p T x_static path_static x_eval path_eval se T_eval,
+    store_typed env s Σ ->
+    typed_place_env_structural env Σ p T ->
+    ty_usage T = UUnrestricted ->
+    place_path p = Some (x_static, path_static) ->
+    eval_place s p x_eval path_eval ->
+    store_lookup x_eval s = Some se ->
+    type_lookup_path env (se_ty se) path_eval = Some T_eval ->
+    needs_consume T_eval = true ->
+    False.
+Proof.
+  intros env Σ s p T x_static path_static x_eval path_eval se T_eval
+    Hstore Hplace Husage Hpath_static Heval Hlookup Htype_eval Hconsume.
+  destruct (eval_place_matches_place_path s p x_eval path_eval
+              x_static path_static Heval Hpath_static) as [Hx Hpath].
+  subst x_eval path_eval.
+  destruct (store_typed_lookup env s Σ x_static se Hstore Hlookup)
+    as [T_root [st [m [HΣ [Hname [HTy [Hst Hvroot]]]]]]].
+  destruct (typed_place_direct_lookup env Σ p T x_static path_static
+              Hplace Hpath_static)
+    as [T_static [st_static [HΣstatic [_ Htype_static]]]].
+  rewrite HΣstatic in HΣ.
+  inversion HΣ; subst T_static st_static.
+  rewrite HTy in Htype_eval.
+  rewrite Htype_static in Htype_eval.
+  inversion Htype_eval; subst T_eval.
+  apply (needs_consume_true_usage T Hconsume Husage).
+Qed.
+
+Lemma eval_place_copy_static_move_direct_contradiction :
+  forall env Σ s p T x_static path_static x_eval path_eval se T_eval,
+    store_typed env s Σ ->
+    typed_place_env_structural env Σ p T ->
+    ty_usage T <> UUnrestricted ->
+    place_path p = Some (x_static, path_static) ->
+    eval_place s p x_eval path_eval ->
+    store_lookup x_eval s = Some se ->
+    type_lookup_path env (se_ty se) path_eval = Some T_eval ->
+    needs_consume T_eval = false ->
+    False.
+Proof.
+  intros env Σ s p T x_static path_static x_eval path_eval se T_eval
+    Hstore Hplace Husage Hpath_static Heval Hlookup Htype_eval Hconsume.
+  destruct (eval_place_matches_place_path s p x_eval path_eval
+              x_static path_static Heval Hpath_static) as [Hx Hpath].
+  subst x_eval path_eval.
+  destruct (store_typed_lookup env s Σ x_static se Hstore Hlookup)
+    as [T_root [st [m [HΣ [Hname [HTy [Hst Hvroot]]]]]]].
+  destruct (typed_place_direct_lookup env Σ p T x_static path_static
+              Hplace Hpath_static)
+    as [T_static [st_static [HΣstatic [_ Htype_static]]]].
+  rewrite HΣstatic in HΣ.
+  inversion HΣ; subst T_static st_static.
+  rewrite HTy in Htype_eval.
+  rewrite Htype_static in Htype_eval.
+  inversion Htype_eval; subst T_eval.
+  apply Husage.
+  exact (needs_consume_false_usage T Hconsume).
+Qed.
+
 Lemma lookup_field_b_lookup_expr_field :
   forall name fields,
     lookup_field_b name fields = lookup_expr_field name fields.

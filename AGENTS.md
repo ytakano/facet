@@ -45,3 +45,68 @@ The current history uses short imperative commit messages, for example `add dock
 ## Agent-Specific Instructions
 
 Respect generated files: edit Rocq sources first and let `make` update extraction outputs. Avoid broad rewrites of proof files unless required by the change, and keep module order consistent with `_CoqProject`. Keep Rocq and OCaml pipelines in order: run Rocq extraction before relying on dune builds that consume `fixtures/TypeChecker.ml`.
+
+# Sub-agent policy
+
+Use sub-agents only for implementation tasks.
+
+Allowed:
+- Implementing isolated features
+- Refactoring code
+- Writing tests
+- Fixing concrete bugs after the main agent has identified the issue
+
+Not allowed:
+- Research
+- Design investigation
+- Reading papers or docs to decide an approach
+- Comparing alternatives
+- Architectural decisions
+- Summarizing repository-wide findings
+
+For investigation, analysis, design, and planning, the main agent must do the work itself and report the reasoning before assigning implementation work to any sub-agent.
+
+When delegating to a sub-agent, provide a narrow implementation task with:
+- target files
+- expected behavior
+- tests to run
+- constraints
+
+# Facet development rules
+
+## Source of truth
+
+The Rocq definitions are the source of truth for the core type system.
+
+The extracted OCaml checker is the implementation of the verified checker.
+
+Generated OCaml files must not be edited manually.
+
+## Trusted boundary
+
+Trusted:
+- Rocq kernel
+- accepted Rocq proofs
+- extraction mechanism, subject to configured extraction mappings
+
+Less trusted:
+- parser
+- desugarer
+- OCaml CLI
+- pretty printer
+- test harness
+- generated witness files, if any
+
+## Required checks
+
+Before completing a type-system-related change, run:
+
+- Rocq build
+- extraction
+- OCaml build
+- OCaml test suite
+- end-to-end CLI tests
+
+## Rule
+
+Do not duplicate type-checking logic in OCaml.

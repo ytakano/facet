@@ -439,6 +439,43 @@ Proof.
   - apply PUURS_Field. apply IH. exact Hunique.
 Qed.
 
+Lemma writable_place_b_sound :
+  forall env Σ p,
+    writable_place_b env Σ p = true ->
+    writable_place_env_structural env Σ p.
+Proof.
+  intros env Σ p.
+  induction p as [x | p IH | p IH field]; intros Hwrite; simpl in Hwrite.
+  - destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
+    destruct mut; try discriminate.
+    apply WPES_Var. exact Hmut.
+  - destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
+    destruct Tp as [u c]; simpl in Hwrite.
+    destruct c; try discriminate.
+    destruct r; try discriminate.
+    eapply WPES_Deref.
+    eapply infer_place_sctx_structural_sound. exact Hplace.
+  - destruct (writable_place_b env Σ p) eqn:Hparent; try discriminate.
+    destruct (infer_place_type_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
+    destruct (ty_core Tp) eqn:Hcore; try discriminate.
+    destruct (lookup_struct s env) as [sdef |] eqn:Hstruct; try discriminate.
+    destruct (lookup_field field (struct_fields sdef)) as [fdef |] eqn:Hfield;
+      try discriminate.
+    destruct (field_mutability fdef) eqn:Hmut; try discriminate.
+    destruct (lookup_field_success field (struct_fields sdef) fdef Hfield)
+      as [_ Hfname].
+    subst field.
+    eapply WPES_Field.
+    + apply IH. reflexivity.
+    + replace (MkTy (ty_usage Tp) (TStruct s l l0)) with Tp
+        by (destruct Tp as [u c]; simpl in Hcore; rewrite Hcore; reflexivity).
+      eapply infer_place_type_sctx_structural_sound. exact Hplace.
+    + simpl. exact Hcore.
+    + exact Hstruct.
+    + exact Hfield.
+    + exact Hmut.
+Qed.
+
 Theorem infer_core_env_state_fuel_basic_structural_sound :
   forall fuel env Ω n Σ e T Σ',
     basic_expr e = true ->
@@ -934,6 +971,7 @@ Proof.
       destruct (place_path p) as [[x path] |] eqn:Hpath.
       * destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
         destruct mut; try discriminate.
+        destruct (writable_place_b env Σ p) eqn:Hwrite; try discriminate.
         destruct (infer_core_env_state_fuel fuel' env Ω n Σ e) as [[Tnew Σ1] | err]
           eqn:Hnew; try discriminate.
         destruct (ty_compatible_b Ω Tnew Told) eqn:Hcompat; try discriminate.
@@ -943,12 +981,12 @@ Proof.
         eapply TES_Replace_Path.
         -- eapply infer_place_sctx_structural_sound. exact Hplace.
         -- exact Hpath.
-        -- exact Hmut.
+        -- apply writable_place_b_sound. exact Hwrite.
         -- eapply IH; [exact Hstruct | exact Hnew].
         -- exact Hcompat.
         -- exact Havailable.
         -- exact Hrestore.
-      * destruct (place_under_unique_ref_b env Σ p) eqn:Hunique; try discriminate.
+      * destruct (writable_place_b env Σ p) eqn:Hwrite; try discriminate.
         destruct (infer_core_env_state_fuel fuel' env Ω n Σ e) as [[Tnew Σ1] | err]
           eqn:Hnew; try discriminate.
         destruct (ty_compatible_b Ω Tnew Told) eqn:Hcompat; try discriminate.
@@ -956,7 +994,7 @@ Proof.
         eapply TES_Replace_Indirect.
         -- eapply infer_place_sctx_structural_sound. exact Hplace.
         -- exact Hpath.
-        -- apply place_under_unique_ref_b_sound. exact Hunique.
+        -- apply writable_place_b_sound. exact Hwrite.
         -- eapply IH; [exact Hstruct | exact Hnew].
         -- exact Hcompat.
     + destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
@@ -964,6 +1002,7 @@ Proof.
       destruct (place_path p) as [[x path] |] eqn:Hpath.
       * destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
         destruct mut; try discriminate.
+        destruct (writable_place_b env Σ p) eqn:Hwrite; try discriminate.
         destruct (infer_core_env_state_fuel fuel' env Ω n Σ e) as [[Tnew Σ1] | err]
           eqn:Hnew; try discriminate.
         destruct (ty_compatible_b Ω Tnew Told) eqn:Hcompat; try discriminate.
@@ -973,11 +1012,11 @@ Proof.
         -- eapply infer_place_sctx_structural_sound. exact Hplace.
         -- intro Hu. rewrite Hu in Hlinear. simpl in Hlinear. discriminate.
         -- exact Hpath.
-        -- exact Hmut.
+        -- apply writable_place_b_sound. exact Hwrite.
         -- eapply IH; [exact Hstruct | exact Hnew].
         -- exact Hcompat.
         -- exact Havailable.
-      * destruct (place_under_unique_ref_b env Σ p) eqn:Hunique; try discriminate.
+      * destruct (writable_place_b env Σ p) eqn:Hwrite; try discriminate.
         destruct (infer_core_env_state_fuel fuel' env Ω n Σ e) as [[Tnew Σ1] | err]
           eqn:Hnew; try discriminate.
         destruct (ty_compatible_b Ω Tnew Told) eqn:Hcompat; try discriminate.
@@ -986,7 +1025,7 @@ Proof.
         -- eapply infer_place_sctx_structural_sound. exact Hplace.
         -- intro Hu. rewrite Hu in Hlinear. simpl in Hlinear. discriminate.
         -- exact Hpath.
-        -- apply place_under_unique_ref_b_sound. exact Hunique.
+        -- apply writable_place_b_sound. exact Hwrite.
         -- eapply IH; [exact Hstruct | exact Hnew].
         -- exact Hcompat.
     + destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.

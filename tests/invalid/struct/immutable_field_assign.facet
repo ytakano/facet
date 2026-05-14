@@ -1,0 +1,8 @@
+struct Slot {
+  x: unrestricted isize
+}
+
+fn main() -> unrestricted () {
+  let mut s: unrestricted Slot = Slot { x = 0 };
+  (s.x = 1)
+}

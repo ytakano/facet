@@ -2564,6 +2564,35 @@ let rec infer_place_sctx env _UU03a3_ = function
       | x -> Infer_err (ErrTypeMismatch (x, (TStruct ("", [], [])))))
    | Infer_err err -> Infer_err err)
 
+(** val infer_place_type_sctx :
+    global_env -> sctx -> place -> ty infer_result **)
+
+let rec infer_place_type_sctx env _UU03a3_ = function
+| PVar x ->
+  (match sctx_lookup x _UU03a3_ with
+   | Some p0 -> let (t, _) = p0 in Infer_ok t
+   | None -> Infer_err (ErrUnknownVar x))
+| PDeref q ->
+  (match infer_place_type_sctx env _UU03a3_ q with
+   | Infer_ok tq ->
+     (match ty_core tq with
+      | TRef (_, _, t) -> Infer_ok t
+      | x -> Infer_err (ErrNotAReference x))
+   | Infer_err err -> Infer_err err)
+| PField (q, field) ->
+  (match infer_place_type_sctx env _UU03a3_ q with
+   | Infer_ok tq ->
+     (match ty_core tq with
+      | TStruct (sname, lts, args) ->
+        (match lookup_struct sname env with
+         | Some s ->
+           (match lookup_field field s.struct_fields with
+            | Some f -> Infer_ok (instantiate_struct_field_ty lts args f)
+            | None -> Infer_err (ErrFieldNotFound field))
+         | None -> Infer_err (ErrStructNotFound sname))
+      | x -> Infer_err (ErrTypeMismatch (x, (TStruct ("", [], [])))))
+   | Infer_err err -> Infer_err err)
+
 (** val place_under_unique_ref_b : global_env -> sctx -> place -> bool **)
 
 let rec place_under_unique_ref_b env _UU03a3_ = function
@@ -2578,6 +2607,43 @@ let rec place_under_unique_ref_b env _UU03a3_ = function
       | _ -> false)
    | Infer_err _ -> false)
 | PField (q, _) -> place_under_unique_ref_b env _UU03a3_ q
+
+(** val writable_place_b : global_env -> sctx -> place -> bool **)
+
+let rec writable_place_b env _UU03a3_ = function
+| PVar x ->
+  (match sctx_lookup_mut x _UU03a3_ with
+   | Some m -> (match m with
+                | MImmutable -> false
+                | MMutable -> true)
+   | None -> false)
+| PDeref q ->
+  (match infer_place_sctx env _UU03a3_ q with
+   | Infer_ok tq ->
+     (match ty_core tq with
+      | TRef (_, r, _) -> (match r with
+                           | RShared -> false
+                           | RUnique -> true)
+      | _ -> false)
+   | Infer_err _ -> false)
+| PField (q, field) ->
+  if writable_place_b env _UU03a3_ q
+  then (match infer_place_type_sctx env _UU03a3_ q with
+        | Infer_ok tq ->
+          (match ty_core tq with
+           | TStruct (sname, _, _) ->
+             (match lookup_struct sname env with
+              | Some s ->
+                (match lookup_field field s.struct_fields with
+                 | Some f ->
+                   (match f.field_mutability with
+                    | MImmutable -> false
+                    | MMutable -> true)
+                 | None -> false)
+              | None -> false)
+           | _ -> false)
+        | Infer_err _ -> false)
+  else false
 
 (** val consume_place_value :
     global_env -> sctx -> place -> ty -> sctx infer_result **)
@@ -2828,23 +2894,25 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
                (match m with
                 | MImmutable -> Infer_err (ErrNotMutable x)
                 | MMutable ->
-                  (match infer_core_env_state_fuel fuel' env _UU03a9_ n
-                           _UU03a3_ e_new with
-                   | Infer_ok p1 ->
-                     let (t_new, _UU03a3_1) = p1 in
-                     if ty_compatible_b _UU03a9_ t_new t_old
-                     then (match sctx_path_available _UU03a3_1 x path with
-                           | Infer_ok _ ->
-                             (match sctx_restore_path _UU03a3_1 x path with
-                              | Infer_ok _UU03a3_2 ->
-                                Infer_ok (t_old, _UU03a3_2)
-                              | Infer_err err -> Infer_err err)
-                           | Infer_err err -> Infer_err err)
-                     else Infer_err (compatible_error t_new t_old)
-                   | Infer_err err -> Infer_err err))
+                  if writable_place_b env _UU03a3_ p
+                  then (match infer_core_env_state_fuel fuel' env _UU03a9_ n
+                                _UU03a3_ e_new with
+                        | Infer_ok p1 ->
+                          let (t_new, _UU03a3_1) = p1 in
+                          if ty_compatible_b _UU03a9_ t_new t_old
+                          then (match sctx_path_available _UU03a3_1 x path with
+                                | Infer_ok _ ->
+                                  (match sctx_restore_path _UU03a3_1 x path with
+                                   | Infer_ok _UU03a3_2 ->
+                                     Infer_ok (t_old, _UU03a3_2)
+                                   | Infer_err err -> Infer_err err)
+                                | Infer_err err -> Infer_err err)
+                          else Infer_err (compatible_error t_new t_old)
+                        | Infer_err err -> Infer_err err)
+                  else Infer_err (ErrNotMutable x))
              | None -> Infer_err (ErrUnknownVar x))
           | None ->
-            if place_under_unique_ref_b env _UU03a3_ p
+            if writable_place_b env _UU03a3_ p
             then (match infer_core_env_state_fuel fuel' env _UU03a9_ n
                           _UU03a3_ e_new with
                   | Infer_ok p0 ->
@@ -2869,21 +2937,24 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
                     (match m with
                      | MImmutable -> Infer_err (ErrNotMutable x)
                      | MMutable ->
-                       (match infer_core_env_state_fuel fuel' env _UU03a9_ n
-                                _UU03a3_ e_new with
-                        | Infer_ok p1 ->
-                          let (t_new, _UU03a3_1) = p1 in
-                          if ty_compatible_b _UU03a9_ t_new t_old
-                          then (match sctx_path_available _UU03a3_1 x path with
-                                | Infer_ok _ ->
-                                  Infer_ok ((MkTy (UUnrestricted, TUnits)),
-                                    _UU03a3_1)
-                                | Infer_err err -> Infer_err err)
-                          else Infer_err (compatible_error t_new t_old)
-                        | Infer_err err -> Infer_err err))
+                       if writable_place_b env _UU03a3_ p
+                       then (match infer_core_env_state_fuel fuel' env
+                                     _UU03a9_ n _UU03a3_ e_new with
+                             | Infer_ok p1 ->
+                               let (t_new, _UU03a3_1) = p1 in
+                               if ty_compatible_b _UU03a9_ t_new t_old
+                               then (match sctx_path_available _UU03a3_1 x
+                                             path with
+                                     | Infer_ok _ ->
+                                       Infer_ok ((MkTy (UUnrestricted,
+                                         TUnits)), _UU03a3_1)
+                                     | Infer_err err -> Infer_err err)
+                               else Infer_err (compatible_error t_new t_old)
+                             | Infer_err err -> Infer_err err)
+                       else Infer_err (ErrNotMutable x))
                   | None -> Infer_err (ErrUnknownVar x))
                | None ->
-                 if place_under_unique_ref_b env _UU03a3_ p
+                 if writable_place_b env _UU03a3_ p
                  then (match infer_core_env_state_fuel fuel' env _UU03a9_ n
                                _UU03a3_ e_new with
                        | Infer_ok p0 ->

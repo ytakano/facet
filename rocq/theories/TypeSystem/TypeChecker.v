@@ -1848,6 +1848,48 @@ Fixpoint place_under_unique_ref_b (env : global_env) (Σ : sctx) (p : place) : b
       end
   end.
 
+Fixpoint writable_place_b (env : global_env) (Σ : sctx) (p : place) : bool :=
+  match p with
+  | PVar x =>
+      match sctx_lookup_mut x Σ with
+      | Some MMutable => true
+      | _ => false
+      end
+  | PDeref q =>
+      match infer_place_sctx env Σ q with
+      | infer_ok Tq =>
+          match ty_core Tq with
+          | TRef _ RUnique _ => true
+          | _ => false
+          end
+      | infer_err _ => false
+      end
+  | PField q field =>
+      if writable_place_b env Σ q
+      then
+        match infer_place_type_sctx env Σ q with
+        | infer_ok Tq =>
+            match ty_core Tq with
+            | TStruct sname _ _ =>
+                match lookup_struct sname env with
+                | Some s =>
+                    match lookup_field field (struct_fields s) with
+                    | Some f =>
+                        match field_mutability f with
+                        | MMutable => true
+                        | MImmutable => false
+                        end
+                    | None => false
+                    end
+                | None => false
+                end
+            | _ => false
+            end
+        | infer_err _ => false
+        end
+      else false
+  end.
+
 Definition consume_place_value (env : global_env) (Σ : sctx) (p : place) (T : Ty)
     : infer_result sctx :=
   if usage_eqb (ty_usage T) UUnrestricted
@@ -1991,25 +2033,27 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
           | Some (x, path) =>
               match sctx_lookup_mut x Σ with
               | Some MMutable =>
-                  match infer_core_env_state_fuel fuel' env Ω n Σ e_new with
-                  | infer_err err => infer_err err
-                  | infer_ok (T_new, Σ1) =>
-                      if ty_compatible_b Ω T_new T_old
-                      then match sctx_path_available Σ1 x path with
-                           | infer_err err => infer_err err
-                           | infer_ok _ =>
-                               match sctx_restore_path Σ1 x path with
-                               | infer_ok Σ2 => infer_ok (T_old, Σ2)
-                               | infer_err err => infer_err err
-                               end
-                           end
-                      else infer_err (compatible_error T_new T_old)
-                  end
+                  if writable_place_b env Σ p
+                  then match infer_core_env_state_fuel fuel' env Ω n Σ e_new with
+                       | infer_err err => infer_err err
+                       | infer_ok (T_new, Σ1) =>
+                           if ty_compatible_b Ω T_new T_old
+                           then match sctx_path_available Σ1 x path with
+                                | infer_err err => infer_err err
+                                | infer_ok _ =>
+                                    match sctx_restore_path Σ1 x path with
+                                    | infer_ok Σ2 => infer_ok (T_old, Σ2)
+                                    | infer_err err => infer_err err
+                                    end
+                                end
+                           else infer_err (compatible_error T_new T_old)
+                       end
+                  else infer_err (ErrNotMutable x)
               | Some MImmutable => infer_err (ErrNotMutable x)
               | None => infer_err (ErrUnknownVar x)
               end
           | None =>
-              if place_under_unique_ref_b env Σ p
+              if writable_place_b env Σ p
               then match infer_core_env_state_fuel fuel' env Ω n Σ e_new with
                    | infer_err err => infer_err err
                    | infer_ok (T_new, Σ1) =>
@@ -2032,21 +2076,23 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
           | Some (x, path) =>
               match sctx_lookup_mut x Σ with
               | Some MMutable =>
-                  match infer_core_env_state_fuel fuel' env Ω n Σ e_new with
-                  | infer_err err => infer_err err
-                  | infer_ok (T_new, Σ1) =>
-                      if ty_compatible_b Ω T_new T_old
-                      then match sctx_path_available Σ1 x path with
-                           | infer_err err => infer_err err
-                           | infer_ok _ => infer_ok (MkTy UUnrestricted TUnits, Σ1)
-                           end
-                      else infer_err (compatible_error T_new T_old)
-                  end
+                  if writable_place_b env Σ p
+                  then match infer_core_env_state_fuel fuel' env Ω n Σ e_new with
+                       | infer_err err => infer_err err
+                       | infer_ok (T_new, Σ1) =>
+                           if ty_compatible_b Ω T_new T_old
+                           then match sctx_path_available Σ1 x path with
+                                | infer_err err => infer_err err
+                                | infer_ok _ => infer_ok (MkTy UUnrestricted TUnits, Σ1)
+                                end
+                           else infer_err (compatible_error T_new T_old)
+                       end
+                  else infer_err (ErrNotMutable x)
               | Some MImmutable => infer_err (ErrNotMutable x)
               | None => infer_err (ErrUnknownVar x)
               end
           | None =>
-              if place_under_unique_ref_b env Σ p
+              if writable_place_b env Σ p
               then match infer_core_env_state_fuel fuel' env Ω n Σ e_new with
                    | infer_err err => infer_err err
                    | infer_ok (T_new, Σ1) =>

@@ -58,6 +58,23 @@ Inductive place_under_unique_ref_structural (env : global_env) (Σ : sctx)
       place_under_unique_ref_structural env Σ p ->
       place_under_unique_ref_structural env Σ (PField p f).
 
+Inductive writable_place_env_structural (env : global_env) (Σ : sctx)
+    : place -> Prop :=
+  | WPES_Var : forall x,
+      sctx_lookup_mut x Σ = Some MMutable ->
+      writable_place_env_structural env Σ (PVar x)
+  | WPES_Deref : forall p la T u,
+      typed_place_env_structural env Σ p (MkTy u (TRef la RUnique T)) ->
+      writable_place_env_structural env Σ (PDeref p)
+  | WPES_Field : forall p sname lts args sdef fdef T_parent,
+      writable_place_env_structural env Σ p ->
+      typed_place_type_env_structural env Σ p T_parent ->
+      ty_core T_parent = TStruct sname lts args ->
+      lookup_struct sname env = Some sdef ->
+      lookup_field (field_name fdef) (struct_fields sdef) = Some fdef ->
+      field_mutability fdef = MMutable ->
+      writable_place_env_structural env Σ (PField p (field_name fdef)).
+
 (* ------------------------------------------------------------------ *)
 (* Context shape preservation                                           *)
 (* ------------------------------------------------------------------ *)
@@ -334,7 +351,7 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
   | TES_Replace_Path : forall Σ Σ1 Σ2 p e_new T_old T_new x path,
       typed_place_env_structural env Σ p T_old ->
       place_path p = Some (x, path) ->
-      sctx_lookup_mut x Σ = Some MMutable ->
+      writable_place_env_structural env Σ p ->
       typed_env_structural env Ω n Σ e_new T_new Σ1 ->
       ty_compatible_b Ω T_new T_old = true ->
       sctx_path_available Σ1 x path = infer_ok tt ->
@@ -343,7 +360,7 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
   | TES_Replace_Indirect : forall Σ Σ' p e_new T_old T_new,
       typed_place_env_structural env Σ p T_old ->
       place_path p = None ->
-      place_under_unique_ref_structural env Σ p ->
+      writable_place_env_structural env Σ p ->
       typed_env_structural env Ω n Σ e_new T_new Σ' ->
       ty_compatible_b Ω T_new T_old = true ->
       typed_env_structural env Ω n Σ (EReplace p e_new) T_old Σ'
@@ -351,7 +368,7 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_place_env_structural env Σ p T_old ->
       ty_usage T_old <> ULinear ->
       place_path p = Some (x, path) ->
-      sctx_lookup_mut x Σ = Some MMutable ->
+      writable_place_env_structural env Σ p ->
       typed_env_structural env Ω n Σ e_new T_new Σ' ->
       ty_compatible_b Ω T_new T_old = true ->
       sctx_path_available Σ' x path = infer_ok tt ->
@@ -360,7 +377,7 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_place_env_structural env Σ p T_old ->
       ty_usage T_old <> ULinear ->
       place_path p = None ->
-      place_under_unique_ref_structural env Σ p ->
+      writable_place_env_structural env Σ p ->
       typed_env_structural env Ω n Σ e_new T_new Σ' ->
       ty_compatible_b Ω T_new T_old = true ->
       typed_env_structural env Ω n Σ (EAssign p e_new) (MkTy UUnrestricted TUnits) Σ'

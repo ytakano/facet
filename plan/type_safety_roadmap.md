@@ -103,7 +103,7 @@ Theorem step_progress :
    - `[done]` `EIf` false branch の `store_typed_ctx_merge_right` 用 type-equality premise は branch typing から導出できる helper を追加済み。
    - `[todo]` indirect `EReplace` / `EAssign`、`EDeref`、`ECall` / `ECallExpr` を preservation theorem へ接続する。
    - `[todo]` `ELetInfer` の現在の contradiction-only helper を実証明に置き換える。
-   - `[todo]` `EReplace` / `EAssign` は root binding の mutability だけでなく、target path 上の struct field mutability を検査する。少なくとも最終 field は `MMutable` を必須にする。
+   - `[done]` `EReplace` / `EAssign` は root binding の mutability だけでなく、target path 上の struct field mutability を検査する。少なくとも最終 field は `MMutable` を必須にする。
    - `[done]` `&mut T` の referent type は invariant にする。`&shared T` は inner type の covariant compatibility を維持してよいが、unique reference は usage/core/lifetime の厳密一致または invariant relation だけを許す。
    - theorem は `typed_env_structural` から始め、checker theorem は使わない。
 
@@ -191,7 +191,7 @@ review 指摘に対応する regression:
 - `[done]` linear struct の一部 field だけを move/drop して残りの linear field を放置する式は拒否される。
 - `[done]` `replace x x` / `replace s.f s.f` のように target を new value 評価中に消費する式は拒否され続ける。
 - `[done]` moved target への direct `assign` は拒否される。
-- `[todo]` immutable field への assign/replace は、root binding が mutable でも拒否される。
+- `[done]` immutable field への assign/replace は、root binding が mutable でも拒否される。
 - `[done]` `&mut unrestricted T` を `&mut affine T` など異なる referent type として使う式は拒否される。
 - `[todo]` local annotation の elided lifetime は拒否される。
 - `[todo]` generic trait は arity・type argument・bounds の validation が入るまで soundness 対象から外す。

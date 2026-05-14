@@ -227,13 +227,153 @@ Qed.
 (* Runtime store typing                                                 *)
 (* ------------------------------------------------------------------ *)
 
+Definition binding_state_refines (runtime static : binding_state) : Prop :=
+  forall p,
+    binding_available_b static p = true ->
+    binding_available_b runtime p = true.
+
+Lemma binding_state_refines_refl :
+  forall st,
+    binding_state_refines st st.
+Proof.
+  unfold binding_state_refines. auto.
+Qed.
+
+Lemma binding_state_refines_consume_path :
+  forall runtime static p,
+    binding_state_refines runtime static ->
+    binding_state_refines
+      (state_consume_path p runtime)
+      (state_consume_path p static).
+Proof.
+  intros [rconsumed rmoved] [sconsumed smoved] p Href q Havailable.
+  unfold binding_state_refines in Href.
+  destruct p as [|seg rest]; simpl.
+  - discriminate.
+  - unfold binding_available_b in Havailable.
+    simpl in Havailable.
+    destruct sconsumed; simpl in Havailable; try discriminate.
+    destruct (path_conflict_b q (seg :: rest)) eqn:Hconflict; simpl in Havailable; try discriminate.
+    destruct (path_conflicts_any_b q smoved) eqn:Hstatic; simpl in Havailable; try discriminate.
+    assert (Hstatic_available :
+      binding_available_b {| st_consumed := false; st_moved_paths := smoved |} q = true).
+    { unfold binding_available_b. simpl. rewrite Hstatic. reflexivity. }
+    specialize (Href q Hstatic_available).
+    destruct rconsumed; simpl in Href |- *; try discriminate.
+    unfold binding_available_b in Href |- *.
+    simpl in Href |- *.
+    rewrite Hconflict.
+    exact Href.
+Qed.
+
+Lemma binding_state_refines_trans :
+  forall st1 st2 st3,
+    binding_state_refines st1 st2 ->
+    binding_state_refines st2 st3 ->
+    binding_state_refines st1 st3.
+Proof.
+  unfold binding_state_refines.
+  intros st1 st2 st3 H12 H23 p Havailable.
+  apply H12. apply H23. exact Havailable.
+Qed.
+
+Lemma path_conflicts_any_app :
+  forall p paths1 paths2,
+    path_conflicts_any_b p (paths1 ++ paths2) =
+    path_conflicts_any_b p paths1 || path_conflicts_any_b p paths2.
+Proof.
+  intros p paths1.
+  induction paths1 as [|q rest IH]; intros paths2.
+  - reflexivity.
+  - simpl. rewrite IH.
+    destruct (path_conflict_b p q); reflexivity.
+Qed.
+
+Lemma binding_state_refines_merge_left :
+  forall st2 st3 st4,
+    st4 =
+      MkBindingState (st_consumed st2 || st_consumed st3)
+        (st_moved_paths st2 ++ st_moved_paths st3) ->
+    binding_state_refines st2 st4.
+Proof.
+  intros [consumed2 moved2] [consumed3 moved3] st4 Hst4 p Havailable.
+  subst st4.
+  unfold binding_state_refines, binding_available_b in *.
+  simpl in *.
+  rewrite path_conflicts_any_app in Havailable.
+  destruct consumed2;
+    destruct consumed3;
+    destruct (path_conflicts_any_b p moved2);
+    destruct (path_conflicts_any_b p moved3);
+    simpl in *; try discriminate; reflexivity.
+Qed.
+
+Lemma binding_state_refines_merge_right :
+  forall st2 st3 st4,
+    st4 =
+      MkBindingState (st_consumed st2 || st_consumed st3)
+        (st_moved_paths st2 ++ st_moved_paths st3) ->
+    binding_state_refines st3 st4.
+Proof.
+  intros [consumed2 moved2] [consumed3 moved3] st4 Hst4 p Havailable.
+  subst st4.
+  unfold binding_state_refines, binding_available_b in *.
+  simpl in *.
+  rewrite path_conflicts_any_app in Havailable.
+  destruct consumed2;
+    destruct consumed3;
+    destruct (path_conflicts_any_b p moved2);
+    destruct (path_conflicts_any_b p moved3);
+    simpl in *; try discriminate; reflexivity.
+Qed.
+
+Lemma binding_state_refines_merge_linear_left :
+  forall st2 st3 st4,
+    st_consumed st2 = st_consumed st3 ->
+    st4 =
+      MkBindingState (st_consumed st2)
+        (st_moved_paths st2 ++ st_moved_paths st3) ->
+    binding_state_refines st2 st4.
+Proof.
+  intros [consumed2 moved2] [consumed3 moved3] st4 Hconsumed Hst4 p Havailable.
+  simpl in Hconsumed. subst consumed3.
+  subst st4.
+  unfold binding_available_b in *.
+  simpl in *.
+  rewrite path_conflicts_any_app in Havailable.
+  destruct consumed2;
+    destruct (path_conflicts_any_b p moved2);
+    destruct (path_conflicts_any_b p moved3);
+    simpl in *; try discriminate; reflexivity.
+Qed.
+
+Lemma binding_state_refines_merge_linear_right :
+  forall st2 st3 st4,
+    st_consumed st2 = st_consumed st3 ->
+    st4 =
+      MkBindingState (st_consumed st2)
+        (st_moved_paths st2 ++ st_moved_paths st3) ->
+    binding_state_refines st3 st4.
+Proof.
+  intros [consumed2 moved2] [consumed3 moved3] st4 Hconsumed Hst4 p Havailable.
+  simpl in Hconsumed. subst consumed3.
+  subst st4.
+  unfold binding_available_b in *.
+  simpl in *.
+  rewrite path_conflicts_any_app in Havailable.
+  destruct consumed2;
+    destruct (path_conflicts_any_b p moved2);
+    destruct (path_conflicts_any_b p moved3);
+    simpl in *; try discriminate; reflexivity.
+Qed.
+
 Definition store_entry_typed
     (env : global_env) (s : store) (se : store_entry) (ce : sctx_entry) : Prop :=
   match se, ce with
   | MkStoreEntry sx sT sv sst, (cx, cT, cst, _) =>
       sx = cx /\
       sT = cT /\
-      sst = cst /\
+      binding_state_refines sst cst /\
       value_has_type env s sv sT
   end.
 
@@ -275,7 +415,7 @@ Lemma store_typed_lookup :
       sctx_lookup x Σ = Some (T, st) /\
       se_name se = x /\
       se_ty se = T /\
-      se_state se = st /\
+      binding_state_refines (se_state se) st /\
       value_has_type env s (se_val se) T.
 Proof.
   intros env s Σ x se Htyped.
@@ -320,7 +460,7 @@ Lemma store_typed_lookup_sctx :
       store_lookup x s = Some se /\
       se_name se = x /\
       se_ty se = T /\
-      se_state se = st /\
+      binding_state_refines (se_state se) st /\
       value_has_type env s (se_val se) T.
 Proof.
   intros env s Σ x T st Htyped.
@@ -413,11 +553,14 @@ Qed.
 Lemma store_typed_update_state :
   forall env s Σ x f s' Σ',
     store_typed env s Σ ->
+    (forall runtime static,
+      binding_state_refines runtime static ->
+      binding_state_refines (f runtime) (f static)) ->
     store_update_state x f s = Some s' ->
     sctx_update_state x f Σ = Some Σ' ->
     store_typed env s' Σ'.
 Proof.
-  intros env s Σ x f s' Σ' Htyped.
+  intros env s Σ x f s' Σ' Htyped Hrefines.
   revert s' Σ'.
   induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH]; intros s' Σ' Hs HΣ.
   - discriminate.
@@ -434,7 +577,7 @@ Proof.
       * simpl. repeat split.
         -- exact Hname.
         -- exact HT.
-        -- rewrite Hst. reflexivity.
+        -- apply Hrefines. exact Hst.
         -- eapply value_has_type_store_irrelevant. exact Hv.
       * eapply store_typed_store_param_irrelevant. exact Htail.
     + apply ident_eqb_eq in Hsx. apply ident_eqb_neq in Hcx. subst sx.
@@ -457,11 +600,16 @@ Qed.
 Lemma store_typed_restore_path :
   forall env s Σ x p s' Σ',
     store_typed env s Σ ->
+    (forall runtime static,
+      binding_state_refines runtime static ->
+      binding_state_refines
+        (state_restore_path p runtime)
+        (state_restore_path p static)) ->
     store_restore_path x p s = Some s' ->
     sctx_restore_path Σ x p = infer_ok Σ' ->
     store_typed env s' Σ'.
 Proof.
-  intros env s Σ x p s' Σ' Htyped Hs HΣ.
+  intros env s Σ x p s' Σ' Htyped Hrestore_refines Hs HΣ.
   unfold store_restore_path in Hs.
   unfold sctx_restore_path in HΣ.
   destruct (sctx_update_state x (state_restore_path p) Σ) as [Σ0 |] eqn:Hupdate;
@@ -487,7 +635,12 @@ Proof.
   destruct (sctx_update_state x (state_consume_path p) Σ) as [Σ0 |] eqn:Hupdate;
     try discriminate.
   inversion HΣ; subst Σ0.
-  eapply store_typed_update_state; eassumption.
+  eapply store_typed_update_state.
+  - exact Htyped.
+  - intros runtime static Href.
+    apply binding_state_refines_consume_path. exact Href.
+  - exact Hs.
+  - exact Hupdate.
 Qed.
 
 Lemma store_typed_mark_used :
@@ -513,7 +666,8 @@ Proof.
       * simpl. repeat split.
         -- exact Hname.
         -- exact HT.
-        -- rewrite Hst. reflexivity.
+        -- unfold binding_state_refines. intros p Havailable.
+           simpl in Havailable. discriminate.
         -- eapply value_has_type_store_irrelevant. exact Hv.
       * eapply store_typed_store_param_irrelevant. exact Htail.
     + apply ident_eqb_eq in Hsx. apply ident_eqb_neq in Hcx. subst sx.
@@ -670,6 +824,168 @@ Proof.
                  rewrite Hname. exact Hcx.
               ** exact HΣ.
            ++ exact Hvalue.
+Qed.
+
+Lemma store_typed_ctx_merge_left :
+  forall env s Σ2 Σ3 Σ4,
+    store_typed env s Σ2 ->
+    ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
+    store_typed env s Σ4.
+Proof.
+  intros env s Σ2 Σ3 Σ4 Htyped.
+  revert Σ3 Σ4.
+  induction Htyped as [|se ce2 s_tail Σ2_tail Hentry Htail IH];
+    intros Σ3 Σ4 Hmerge.
+  - destruct Σ3 as [|[[[cx3 cT3] cst3] cm3] Σ3_tail];
+      simpl in Hmerge; try discriminate.
+    inversion Hmerge; subst; unfold store_typed; apply Forall2_nil.
+  - destruct se as [sx sT sv sst].
+    destruct ce2 as [[[cx2 cT2] cst2] cm2].
+    destruct Σ3 as [|[[[cx3 cT3] cst3] cm3] Σ3_tail];
+      simpl in Hmerge; try discriminate.
+    destruct (negb (ident_eqb cx2 cx3)) eqn:Hneq; try discriminate.
+    destruct (ctx_merge Σ2_tail Σ3_tail) as [Σtail4 |] eqn:Htail_merge;
+      try discriminate.
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [Href Hv]]].
+    destruct (ty_usage cT2) eqn:Husage.
+    + destruct (Bool.eqb (st_consumed cst2) (st_consumed cst3)) eqn:Hconsumed;
+        try discriminate.
+      simpl in Hmerge. inversion Hmerge; subst Σ4.
+      constructor.
+      * simpl. repeat split.
+        -- exact Hname.
+        -- exact HT.
+        -- assert (Hmerge_ref :
+          binding_state_refines cst2
+            (MkBindingState (st_consumed cst2)
+              (st_moved_paths cst2 ++ st_moved_paths cst3))).
+           { apply (binding_state_refines_merge_linear_left cst2 cst3
+                (MkBindingState (st_consumed cst2)
+                  (st_moved_paths cst2 ++ st_moved_paths cst3))).
+             - apply Bool.eqb_true_iff. exact Hconsumed.
+             - reflexivity. }
+           exact (binding_state_refines_trans sst cst2
+             (MkBindingState (st_consumed cst2)
+               (st_moved_paths cst2 ++ st_moved_paths cst3))
+             Href Hmerge_ref).
+        -- eapply value_has_type_store_irrelevant. exact Hv.
+      * eapply store_typed_store_param_irrelevant.
+        eapply IH. exact Htail_merge.
+    + simpl in Hmerge. inversion Hmerge; subst Σ4.
+      constructor.
+      * simpl. repeat split.
+        -- exact Hname.
+        -- exact HT.
+        -- exact (binding_state_refines_trans sst cst2
+          (MkBindingState (st_consumed cst2 || st_consumed cst3)
+            (st_moved_paths cst2 ++ st_moved_paths cst3))
+          Href (binding_state_refines_merge_left cst2 cst3 _ eq_refl)).
+        -- eapply value_has_type_store_irrelevant. exact Hv.
+      * eapply store_typed_store_param_irrelevant.
+        eapply IH. exact Htail_merge.
+    + simpl in Hmerge. inversion Hmerge; subst Σ4.
+      constructor.
+      * simpl. repeat split.
+        -- exact Hname.
+        -- exact HT.
+        -- exact (binding_state_refines_trans sst cst2
+          (MkBindingState (st_consumed cst2 || st_consumed cst3)
+            (st_moved_paths cst2 ++ st_moved_paths cst3))
+          Href (binding_state_refines_merge_left cst2 cst3 _ eq_refl)).
+        -- eapply value_has_type_store_irrelevant. exact Hv.
+      * eapply store_typed_store_param_irrelevant.
+        eapply IH. exact Htail_merge.
+Qed.
+
+Lemma store_typed_ctx_merge_right :
+  forall env s Σ2 Σ3 Σ4,
+    store_typed env s Σ3 ->
+    Forall2
+      (fun ce2 ce3 =>
+        match ce2, ce3 with
+        | (_, T2, _, _), (_, T3, _, _) => T2 = T3
+        end) Σ2 Σ3 ->
+    ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
+    store_typed env s Σ4.
+Proof.
+  intros env s Σ2 Σ3 Σ4 Htyped.
+  revert Σ2 Σ4.
+  induction Htyped as [|se ce3 s_tail Σ3_tail Hentry Htail IH];
+    intros Σ2 Σ4 Htypes Hmerge.
+  - destruct Σ2 as [|[[[cx2 cT2] cst2] cm2] Σ2_tail];
+      simpl in Hmerge; try discriminate.
+    inversion Hmerge; subst; unfold store_typed; apply Forall2_nil.
+  - destruct se as [sx sT sv sst].
+    destruct ce3 as [[[cx3 cT3] cst3] cm3].
+    inversion Htypes as [|ce2_head ce3_head Σ2_tail' Σ3_tail' Htype_head Htypes_tail];
+      subst; clear Htypes.
+    destruct ce2_head as [[[cx2 cT2] cst2] cm2].
+    simpl in Htype_head.
+    rename Σ2_tail' into Σ2_tail.
+    simpl in Hmerge.
+    destruct (negb (ident_eqb cx2 cx3)) eqn:Hneq; try discriminate.
+    destruct (ctx_merge Σ2_tail Σ3_tail) as [Σtail4 |] eqn:Htail_merge;
+      try discriminate.
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [Href Hv]]].
+    apply negb_false_iff in Hneq.
+    apply ident_eqb_eq in Hneq.
+    assert (HT_left : cT2 = sT) by (rewrite Htype_head; symmetry; exact HT).
+    destruct (ty_usage cT2) eqn:Husage.
+    + destruct (Bool.eqb (st_consumed cst2) (st_consumed cst3)) eqn:Hconsumed;
+        try discriminate.
+      simpl in Hmerge. inversion Hmerge; subst Σ4.
+      constructor.
+      * simpl. repeat split.
+        -- transitivity cx3; [exact Hname | symmetry; exact Hneq].
+        -- symmetry. exact HT_left.
+        -- assert (Hmerge_ref :
+             binding_state_refines cst3
+               (MkBindingState (st_consumed cst2)
+                 (st_moved_paths cst2 ++ st_moved_paths cst3))).
+           { apply (binding_state_refines_merge_linear_right cst2 cst3
+                (MkBindingState (st_consumed cst2)
+                  (st_moved_paths cst2 ++ st_moved_paths cst3))).
+             - apply Bool.eqb_true_iff. exact Hconsumed.
+             - reflexivity. }
+           exact (binding_state_refines_trans sst cst3
+             (MkBindingState (st_consumed cst2)
+               (st_moved_paths cst2 ++ st_moved_paths cst3))
+             Href Hmerge_ref).
+        -- eapply value_has_type_store_irrelevant. exact Hv.
+      * eapply store_typed_store_param_irrelevant.
+        eapply IH.
+        -- exact Htypes_tail.
+        -- exact Htail_merge.
+    + simpl in Hmerge. inversion Hmerge; subst Σ4.
+      constructor.
+      * simpl. repeat split.
+        -- transitivity cx3; [exact Hname | symmetry; exact Hneq].
+        -- symmetry. exact HT_left.
+        -- exact (binding_state_refines_trans sst cst3
+             (MkBindingState (st_consumed cst2 || st_consumed cst3)
+               (st_moved_paths cst2 ++ st_moved_paths cst3))
+             Href (binding_state_refines_merge_right cst2 cst3 _ eq_refl)).
+        -- eapply value_has_type_store_irrelevant. exact Hv.
+      * eapply store_typed_store_param_irrelevant.
+        eapply IH.
+        -- exact Htypes_tail.
+        -- exact Htail_merge.
+    + simpl in Hmerge. inversion Hmerge; subst Σ4.
+      constructor.
+      * simpl. repeat split.
+        -- transitivity cx3; [exact Hname | symmetry; exact Hneq].
+        -- symmetry. exact HT_left.
+        -- exact (binding_state_refines_trans sst cst3
+             (MkBindingState (st_consumed cst2 || st_consumed cst3)
+               (st_moved_paths cst2 ++ st_moved_paths cst3))
+             Href (binding_state_refines_merge_right cst2 cst3 _ eq_refl)).
+        -- eapply value_has_type_store_irrelevant. exact Hv.
+      * eapply store_typed_store_param_irrelevant.
+        eapply IH.
+        -- exact Htypes_tail.
+        -- exact Htail_merge.
 Qed.
 
 Lemma type_lookup_path_compatible :

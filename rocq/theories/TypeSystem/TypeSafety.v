@@ -433,6 +433,121 @@ Proof.
   - eapply value_has_type_store_irrelevant. exact Hv2.
 Qed.
 
+Lemma usage_sub_left_max :
+  forall u1 u2,
+    usage_sub u1 (usage_max u1 u2).
+Proof.
+  destruct u1, u2; simpl; constructor.
+Qed.
+
+Lemma usage_sub_right_max :
+  forall u1 u2,
+    usage_sub u2 (usage_max u1 u2).
+Proof.
+  destruct u1, u2; simpl; constructor.
+Qed.
+
+Lemma value_has_type_if_left_result :
+  forall env s v T2 T3,
+    value_has_type env s v T2 ->
+    value_has_type env s v
+      (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2)).
+Proof.
+  intros env s v [u2 c2] [u3 c3] Hv.
+  eapply value_has_type_compatible with (Ω := []).
+  - exact Hv.
+  - apply TC_Core.
+    + apply usage_sub_left_max.
+    + reflexivity.
+Qed.
+
+Lemma value_has_type_if_right_result :
+  forall env s v T2 T3,
+    value_has_type env s v T3 ->
+    ty_core T2 = ty_core T3 ->
+    value_has_type env s v
+      (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2)).
+Proof.
+  intros env s v [u2 c2] [u3 c3] Hv Hcore.
+  simpl in Hcore. subst c3.
+  eapply value_has_type_compatible with (Ω := []).
+  - exact Hv.
+  - apply TC_Core.
+    + apply usage_sub_right_max.
+    + reflexivity.
+Qed.
+
+Lemma eval_if_true_preserves_typing :
+  forall env (Ω : outlives_ctx) (n : nat)
+      Σ Σ1 Σ2 Σ3 Σ4 s s1 s2 (e1 e2 e3 : expr) T_cond T2 T3 v,
+    store_typed env s Σ ->
+    typed_env_structural env Ω n Σ e1 T_cond Σ1 ->
+    eval env s e1 s1 (VBool true) ->
+    (store_typed env s Σ ->
+     typed_env_structural env Ω n Σ e1 T_cond Σ1 ->
+     eval env s e1 s1 (VBool true) ->
+     store_typed env s1 Σ1 /\
+     value_has_type env s1 (VBool true) T_cond) ->
+    typed_env_structural env Ω n Σ1 e2 T2 Σ2 ->
+    eval env s1 e2 s2 v ->
+    (store_typed env s1 Σ1 ->
+     typed_env_structural env Ω n Σ1 e2 T2 Σ2 ->
+     eval env s1 e2 s2 v ->
+     store_typed env s2 Σ2 /\ value_has_type env s2 v T2) ->
+    ty_core T2 = ty_core T3 ->
+    ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
+    store_typed env s2 Σ4 /\
+    value_has_type env s2 v
+      (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2)).
+Proof.
+  intros env Ω n Σ Σ1 Σ2 Σ3 Σ4 s s1 s2 e1 e2 e3 T_cond T2 T3 v
+    Hstore Htyped_cond Heval_cond Hpres_cond Htyped_then Heval_then
+    Hpres_then _ Hmerge.
+  destruct (Hpres_cond Hstore Htyped_cond Heval_cond) as [Hstore1 _].
+  destruct (Hpres_then Hstore1 Htyped_then Heval_then) as [Hstore2 Hv].
+  split.
+  - eapply store_typed_ctx_merge_left; eassumption.
+  - eapply value_has_type_if_left_result. exact Hv.
+Qed.
+
+Lemma eval_if_false_preserves_typing :
+  forall env (Ω : outlives_ctx) (n : nat)
+      Σ Σ1 Σ2 Σ3 Σ4 s s1 s2 (e1 e2 e3 : expr) T_cond T2 T3 v,
+    store_typed env s Σ ->
+    typed_env_structural env Ω n Σ e1 T_cond Σ1 ->
+    eval env s e1 s1 (VBool false) ->
+    (store_typed env s Σ ->
+     typed_env_structural env Ω n Σ e1 T_cond Σ1 ->
+     eval env s e1 s1 (VBool false) ->
+     store_typed env s1 Σ1 /\
+     value_has_type env s1 (VBool false) T_cond) ->
+    typed_env_structural env Ω n Σ1 e3 T3 Σ3 ->
+    eval env s1 e3 s2 v ->
+    (store_typed env s1 Σ1 ->
+     typed_env_structural env Ω n Σ1 e3 T3 Σ3 ->
+     eval env s1 e3 s2 v ->
+     store_typed env s2 Σ3 /\ value_has_type env s2 v T3) ->
+    ty_core T2 = ty_core T3 ->
+    Forall2
+      (fun ce2 ce3 =>
+        match ce2, ce3 with
+        | (_, T2_entry, _, _), (_, T3_entry, _, _) => T2_entry = T3_entry
+        end) Σ2 Σ3 ->
+    ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
+    store_typed env s2 Σ4 /\
+    value_has_type env s2 v
+      (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2)).
+Proof.
+  intros env Ω n Σ Σ1 Σ2 Σ3 Σ4 s s1 s2 e1 e2 e3 T_cond T2 T3 v
+    Hstore Htyped_cond Heval_cond Hpres_cond Htyped_else Heval_else
+    Hpres_else Hcore Htypes Hmerge.
+  destruct (Hpres_cond Hstore Htyped_cond Heval_cond) as [Hstore1 _].
+  destruct (Hpres_else Hstore1 Htyped_else Heval_else) as [Hstore3 Hv].
+  split.
+  - eapply store_typed_ctx_merge_right; eassumption.
+  - eapply value_has_type_if_right_result; eassumption.
+Qed.
+
 Lemma eval_letinfer_preserves_typing :
   forall env (Ω : outlives_ctx) (n : nat) Σ Σ' s s'
       m x e1 e2 T v,

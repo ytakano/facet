@@ -165,6 +165,7 @@ Theorem step_progress :
    - `borrow_ok_env_structural` と runtime refs の対応 invariant を導入する。
    - `[done]` borrow 中の元 place に対する通常の `EVar` / direct `EPlace` read/move を active borrow state と照合する。
    - `[done]` conflicting unique borrow がある direct place は read/copy/move/update を禁止する。conflicting shared borrow がある direct place は affine/linear move と mutable update を禁止し、unrestricted copy は許可する。indirect place は後続 slice に残す。
+   - reference value の `drop` は borrow release として扱わない。`drop r; drop x` のように参照の最後の使用後に元 place を再利用するケースは、後続の non-lexical lifetime / last-use analysis で borrow end point を推論して解決する。
    - `let` 境界で、削除される local binding に由来する reference が body result や store に escape しないことを検査・証明する。必要なら fresh let-region を導入するが、最初は escape check で進める。
    - local type annotation の lifetime elision が `LVar 0` 固定にならないよう、local annotation 内の elided lifetime は当面拒否する。fresh local region 導入は後続拡張に残す。
    - dangling reference が評価結果・store に残らないことを theorem 化する。
@@ -214,7 +215,7 @@ Theorem step_progress :
 16. `[done]` sidecar checker 成功から `typed_env_roots` を導く soundness theorem を追加する。
 17. `[done]` sidecar root soundness を使って S4 の checker-to-runtime 接続を ready fragment で開始する。
 18. `[partial]` `EnvRuntimeSafety.v` に root sidecar / ready fragment の `infer_full_env_roots_big_step_safe_ready` を追加する。full `infer_full_env_big_step_safe` と `ValidatorSoundness.v` 経由 theorem は未完了。
-19. `[partial]` `RuntimeRefSafety.v` に ready/root-provenance fragment の no-dangling runtime reference theorem 群と direct ref membership target theorem 群を追加し、`BorrowStateSafety.v` に static borrow-state no-conflict invariant と pairwise conflict corollary を追加する。`borrow_check_env` は direct `EVar` / `EPlace` access を active borrow state と照合済み。runtime aliasing correspondence、indirect place access、captured closure refs は未完了。
+19. `[partial]` `RuntimeRefSafety.v` に ready/root-provenance fragment の no-dangling runtime reference theorem 群と direct ref membership target theorem 群を追加し、`BorrowStateSafety.v` に static borrow-state no-conflict invariant と pairwise conflict corollary を追加する。`borrow_check_env` は direct `EVar` / `EPlace` access を active borrow state と照合済み。runtime aliasing correspondence、non-lexical lifetime / last-use based borrow end points、indirect place access、captured closure refs は未完了。
 20. `[todo]` small-step semantics が必要になった時点で S6 を開始する。
 
 ## Acceptance Criteria
@@ -238,6 +239,7 @@ sh tests/fir/run.sh
 review 指摘に対応する regression:
 
 - `[done]` borrow 中の direct root/field を move/read する式は拒否される。indirect place は後続 slice。
+- `[todo]` reference の最後の使用後に元 root/field の direct move/read を再び許可する。これは `drop` を release primitive にせず、non-lexical lifetime / last-use analysis で解決する。
 - `[todo]` inner `let` の local binding への reference が外側へ escape する式は拒否される。
 - `[done]` linear struct の一部 field だけを move/drop して残りの linear field を放置する式は拒否される。
 - `[done]` `replace x x` / `replace s.f s.f` のように target を new value 評価中に消費する式は拒否され続ける。

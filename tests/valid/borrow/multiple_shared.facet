@@ -1,6 +1,4 @@
 fn multiple_shared(x: unrestricted isize) -> unrestricted isize {
-    let r1: unrestricted &unrestricted isize = (&x) in
-    let r2: unrestricted &unrestricted isize = (&x) in
-    let v1: unrestricted isize = (*r1) in
-    (*r2)
+    let v1: unrestricted isize = (*(&x)) in
+    (*(&x))
 }

@@ -85,6 +85,27 @@ and split_type_args ty_scope args =
   in
   go [] [] args
 
+let rec named_ty_has_elided_ref_lifetime (NTy (_, c)) =
+  named_ty_core_has_elided_ref_lifetime c
+
+and named_ty_core_has_elided_ref_lifetime c =
+  match c with
+  | NTUnits | NTIntegers | NTFloats | NTBooleans -> false
+  | NTNamed (_, args) ->
+    List.exists named_type_arg_has_elided_ref_lifetime args
+  | NTFn (ts, ret) ->
+    List.exists named_ty_has_elided_ref_lifetime ts ||
+    named_ty_has_elided_ref_lifetime ret
+  | NTForall (_, _, body) ->
+    named_ty_has_elided_ref_lifetime body
+  | NTRef (None, _, _) -> true
+  | NTRef (Some _, _, inner) ->
+    named_ty_has_elided_ref_lifetime inner
+
+and named_type_arg_has_elided_ref_lifetime = function
+  | NTArgLifetime _ -> false
+  | NTArgTy ty -> named_ty_has_elided_ref_lifetime ty
+
 let rec lower_input_ty ty_scope next input_lts (NTy (u, c)) =
   match c with
   | NTRef (lt_opt, rk, inner) ->
@@ -165,6 +186,8 @@ let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (
     EStruct (name, lts, tys,
       List.map (fun (field, e1) -> (field, convert fn_names ty_scope scope e1)) fields)
   | NLet (m, name, Some ty, e1, e2) ->
+    if named_ty_has_elided_ref_lifetime ty
+    then failwith "cannot elide lifetime in local type annotation";
     let e1' = convert fn_names ty_scope scope e1 in
     let (scope', d) = add_binding scope name in
     let e2' = convert fn_names ty_scope scope' e2 in

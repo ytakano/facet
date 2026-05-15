@@ -1,5 +1,3 @@
 fn f(x: unrestricted isize) -> unrestricted isize {
-    let r: unrestricted &unrestricted isize = (&x) in
-    let r2: unrestricted &unrestricted isize = (&*r) in
-    (*r2)
+    (*(&x))
 }

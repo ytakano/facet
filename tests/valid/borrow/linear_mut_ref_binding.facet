@@ -1,4 +1,4 @@
 fn f(mut x: unrestricted isize) -> unrestricted () {
-    let r: linear &mut unrestricted isize = (&mut x) in
-    (drop r)
+    let mut r = (&mut x) in
+    (*r = 1)
 }

@@ -1142,6 +1142,55 @@ Proof.
     + right. exact Hin.
 Qed.
 
+Lemma alpha_rename_params_names_fresh_used : forall ρ used ps psr ρ' used',
+  alpha_rename_params ρ used ps = (psr, ρ', used') ->
+  forall x, In x (ctx_names (params_ctx psr)) -> ~ In x used.
+Proof.
+  intros ρ used ps.
+  revert ρ used.
+  induction ps as [| p ps IH]; intros ρ used psr ρ' used' Hrename x Hin Hused.
+  - simpl in Hrename. inversion Hrename; subst.
+    simpl in Hin. contradiction.
+  - destruct p as [m xp T].
+    simpl in Hrename.
+    destruct (alpha_rename_params
+      ((xp, fresh_ident xp used) :: ρ) (fresh_ident xp used :: used) ps)
+      as [[ps0 ρ0] used0] eqn:Hps.
+    inversion Hrename; subst.
+    simpl in Hin.
+    destruct Hin as [Heq | Hin].
+    + subst x. eapply fresh_ident_not_in. exact Hused.
+    + eapply IH.
+      * exact Hps.
+      * exact Hin.
+      * right. exact Hused.
+Qed.
+
+Lemma alpha_rename_params_names_nodup : forall ρ used ps psr ρ' used',
+  alpha_rename_params ρ used ps = (psr, ρ', used') ->
+  NoDup (ctx_names (params_ctx psr)).
+Proof.
+  intros ρ used ps.
+  revert ρ used.
+  induction ps as [| p ps IH]; intros ρ used psr ρ' used' Hrename.
+  - simpl in Hrename. inversion Hrename; subst.
+    constructor.
+  - destruct p as [m xp T].
+    simpl in Hrename.
+    destruct (alpha_rename_params
+      ((xp, fresh_ident xp used) :: ρ) (fresh_ident xp used :: used) ps)
+      as [[ps0 ρ0] used0] eqn:Hps.
+    inversion Hrename; subst.
+    simpl.
+    constructor.
+    + intro Hin.
+      eapply alpha_rename_params_names_fresh_used.
+      * exact Hps.
+      * exact Hin.
+      * left. reflexivity.
+    + eapply IH. exact Hps.
+Qed.
+
 Lemma alpha_rename_fn_def_used_extends : forall used f fr used',
   alpha_rename_fn_def used f = (fr, used') ->
   forall x, In x used -> In x used'.
@@ -1159,6 +1208,39 @@ Proof.
   - eapply alpha_rename_params_used_extends.
     + exact Hps.
     + apply in_or_app. right. apply in_or_app. right. exact Hin.
+Qed.
+
+Lemma alpha_rename_fn_def_params_fresh_used : forall used f fr used',
+  alpha_rename_fn_def used f = (fr, used') ->
+  forall x, In x (ctx_names (params_ctx (fn_params fr))) -> ~ In x used.
+Proof.
+  intros used f fr used' Hrename x Hin Hused.
+  destruct f as [fname lifetimes outs ps ret body].
+  unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
+  destruct (alpha_rename_params []
+    (param_names ps ++ free_vars_expr body ++ used) ps)
+    as [[psr ρ] used1] eqn:Hps.
+  destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
+  inversion Hrename; subst. simpl in Hin.
+  eapply alpha_rename_params_names_fresh_used.
+  - exact Hps.
+  - exact Hin.
+  - apply in_or_app. right. apply in_or_app. right. exact Hused.
+Qed.
+
+Lemma alpha_rename_fn_def_params_nodup : forall used f fr used',
+  alpha_rename_fn_def used f = (fr, used') ->
+  NoDup (ctx_names (params_ctx (fn_params fr))).
+Proof.
+  intros used f fr used' Hrename.
+  destruct f as [fname lifetimes outs ps ret body].
+  unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
+  destruct (alpha_rename_params []
+    (param_names ps ++ free_vars_expr body ++ used) ps)
+    as [[psr ρ] used1] eqn:Hps.
+  destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
+  inversion Hrename; subst. simpl.
+  eapply alpha_rename_params_names_nodup. exact Hps.
 Qed.
 
 Lemma alpha_rename_syntax_go_used_extends : forall used fenv fenvr used',

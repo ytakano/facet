@@ -1,6 +1,6 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules TypeChecker RuntimeTyping RootProvenance
-  EnvStructuralRules EnvSoundnessFacts CheckerSoundness.
+  EnvStructuralRules AlphaRenaming EnvSoundnessFacts CheckerSoundness.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
@@ -2319,6 +2319,26 @@ Proof.
       * apply ty_lifetime_equiv_sym.
         apply ty_lifetime_equiv_apply_lt_ty.
     + apply ty_compatible_refl.
+    + apply IH. exact Htail.
+Qed.
+
+Lemma eval_args_values_have_types_params_alpha :
+  forall env Ω s vs ps psr,
+    params_alpha ps psr ->
+    eval_args_values_have_types env Ω s vs ps ->
+    eval_args_values_have_types env Ω s vs psr.
+Proof.
+  intros env Ω s vs ps psr Halpha Hargs.
+  revert vs Hargs.
+  induction Halpha as [| p pr ps psr Hshape Halpha IH];
+    intros vs Hargs.
+  - inversion Hargs; subst. constructor.
+  - inversion Hargs as [| v vs_tail p0 ps0 T_actual Hv Hcompat Htail];
+      subst; clear Hargs.
+    destruct Hshape as [_ Hty].
+    eapply AHT_Cons with (T_actual := T_actual).
+    + exact Hv.
+    + rewrite <- Hty. exact Hcompat.
     + apply IH. exact Htail.
 Qed.
 

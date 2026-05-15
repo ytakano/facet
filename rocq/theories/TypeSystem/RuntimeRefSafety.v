@@ -181,6 +181,7 @@ Proof.
   - constructor. constructor.
   - constructor. constructor.
   - assumption.
+  - assumption.
   - constructor.
   - constructor; assumption.
 Qed.

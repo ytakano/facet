@@ -463,6 +463,22 @@ Proof.
           eapply IHvalue; eassumption
       end.
     + exact Hcompat_path.
+  - match goal with
+    | Heq : ty_lifetime_equiv ?T_actual ?T_expected,
+      Htype : type_lookup_path env ?T_expected ?lookup_path = Some ?T_path |- _ =>
+        destruct (type_lookup_path_lifetime_equiv env T_actual T_expected
+                    lookup_path T_path Heq Htype)
+          as [T_actual_path [Hactual_path Heq_path]]
+    end.
+    eapply (VHT_LifetimeEquiv env s v_path T_actual_path T_path).
+    + match goal with
+      | IHvalue : forall path v_path T_path,
+          value_lookup_path _ path = Some v_path ->
+          type_lookup_path env _ path = Some T_path ->
+          value_has_type env s v_path T_path |- _ =>
+          eapply IHvalue; eassumption
+      end.
+    + exact Heq_path.
   - destruct (String.eqb name0 (field_name f)) eqn:Hfield_name.
     + inversion H1; subst field_value.
       inversion H2; subst fdef.

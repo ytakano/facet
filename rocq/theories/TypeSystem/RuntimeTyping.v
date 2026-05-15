@@ -1,11 +1,383 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   OperationalSemantics TypingRules TypeChecker.
-From Stdlib Require Import List String Bool.
+From Stdlib Require Import List String Bool Lia.
 Import ListNotations.
 
 (* ------------------------------------------------------------------ *)
 (* Runtime value typing                                                 *)
 (* ------------------------------------------------------------------ *)
+
+Inductive ty_lifetime_equiv : Ty -> Ty -> Prop :=
+  | TLE_Units : forall u,
+      ty_lifetime_equiv (MkTy u TUnits) (MkTy u TUnits)
+  | TLE_Integers : forall u,
+      ty_lifetime_equiv (MkTy u TIntegers) (MkTy u TIntegers)
+  | TLE_Floats : forall u,
+      ty_lifetime_equiv (MkTy u TFloats) (MkTy u TFloats)
+  | TLE_Booleans : forall u,
+      ty_lifetime_equiv (MkTy u TBooleans) (MkTy u TBooleans)
+  | TLE_Named : forall u name,
+      ty_lifetime_equiv (MkTy u (TNamed name)) (MkTy u (TNamed name))
+  | TLE_Param : forall u i,
+      ty_lifetime_equiv (MkTy u (TParam i)) (MkTy u (TParam i))
+  | TLE_Struct : forall u name lts_actual lts_expected args_actual args_expected,
+      Forall2 ty_lifetime_equiv args_actual args_expected ->
+      ty_lifetime_equiv
+        (MkTy u (TStruct name lts_actual args_actual))
+        (MkTy u (TStruct name lts_expected args_expected))
+  | TLE_Fn : forall u params_actual params_expected ret_actual ret_expected,
+      Forall2 ty_lifetime_equiv params_actual params_expected ->
+      ty_lifetime_equiv ret_actual ret_expected ->
+      ty_lifetime_equiv
+        (MkTy u (TFn params_actual ret_actual))
+        (MkTy u (TFn params_expected ret_expected))
+  | TLE_Forall : forall u n Ω_actual Ω_expected body_actual body_expected,
+      ty_lifetime_equiv body_actual body_expected ->
+      ty_lifetime_equiv
+        (MkTy u (TForall n Ω_actual body_actual))
+        (MkTy u (TForall n Ω_expected body_expected))
+  | TLE_Ref : forall u l_actual l_expected rk T_actual T_expected,
+      ty_lifetime_equiv T_actual T_expected ->
+      ty_lifetime_equiv
+        (MkTy u (TRef l_actual rk T_actual))
+        (MkTy u (TRef l_expected rk T_expected)).
+
+Fixpoint ty_lifetime_equiv_refl (T : Ty) : ty_lifetime_equiv T T :=
+  match T with
+  | MkTy u TUnits => TLE_Units u
+  | MkTy u TIntegers => TLE_Integers u
+  | MkTy u TFloats => TLE_Floats u
+  | MkTy u TBooleans => TLE_Booleans u
+  | MkTy u (TNamed name) => TLE_Named u name
+  | MkTy u (TParam i) => TLE_Param u i
+  | MkTy u (TStruct name lts args) =>
+      let fix go (xs : list Ty) : Forall2 ty_lifetime_equiv xs xs :=
+        match xs with
+        | [] => @Forall2_nil Ty Ty ty_lifetime_equiv
+        | x :: xs' => @Forall2_cons Ty Ty ty_lifetime_equiv x x xs' xs'
+            (ty_lifetime_equiv_refl x) (go xs')
+        end
+      in
+      TLE_Struct u name lts lts args args (go args)
+  | MkTy u (TFn params ret) =>
+      let fix go (xs : list Ty) : Forall2 ty_lifetime_equiv xs xs :=
+        match xs with
+        | [] => @Forall2_nil Ty Ty ty_lifetime_equiv
+        | x :: xs' => @Forall2_cons Ty Ty ty_lifetime_equiv x x xs' xs'
+            (ty_lifetime_equiv_refl x) (go xs')
+        end
+      in
+      TLE_Fn u params params ret ret (go params) (ty_lifetime_equiv_refl ret)
+  | MkTy u (TForall n Ω body) =>
+      TLE_Forall u n Ω Ω body body (ty_lifetime_equiv_refl body)
+  | MkTy u (TRef l rk Tinner) =>
+      TLE_Ref u l l rk Tinner Tinner (ty_lifetime_equiv_refl Tinner)
+  end.
+
+Fixpoint ty_lifetime_equiv_apply_lt_ty
+    (σ : list lifetime) (T : Ty)
+    : ty_lifetime_equiv T (apply_lt_ty σ T) :=
+  match T with
+  | MkTy u TUnits => TLE_Units u
+  | MkTy u TIntegers => TLE_Integers u
+  | MkTy u TFloats => TLE_Floats u
+  | MkTy u TBooleans => TLE_Booleans u
+  | MkTy u (TNamed name) => TLE_Named u name
+  | MkTy u (TParam i) => TLE_Param u i
+  | MkTy u (TStruct name lts args) =>
+      let fix go (xs : list Ty)
+          : Forall2 ty_lifetime_equiv
+              xs
+              ((fix map_lt (ys : list Ty) : list Ty :=
+                  match ys with
+                  | [] => []
+                  | y :: ys' => apply_lt_ty σ y :: map_lt ys'
+                  end) xs) :=
+        match xs with
+        | [] => @Forall2_nil Ty Ty ty_lifetime_equiv
+        | x :: xs' => @Forall2_cons Ty Ty ty_lifetime_equiv
+            x (apply_lt_ty σ x) xs'
+            ((fix map_lt (ys : list Ty) : list Ty :=
+                match ys with
+                | [] => []
+                | y :: ys' => apply_lt_ty σ y :: map_lt ys'
+                end) xs')
+            (ty_lifetime_equiv_apply_lt_ty σ x) (go xs')
+        end
+      in
+      TLE_Struct u name lts (map (apply_lt_lifetime σ) lts)
+        args
+        ((fix map_lt (xs : list Ty) : list Ty :=
+            match xs with
+            | [] => []
+            | x :: xs' => apply_lt_ty σ x :: map_lt xs'
+            end) args)
+        (go args)
+  | MkTy u (TFn params ret) =>
+      let fix go (xs : list Ty)
+          : Forall2 ty_lifetime_equiv
+              xs
+              ((fix map_lt (ys : list Ty) : list Ty :=
+                  match ys with
+                  | [] => []
+                  | y :: ys' => apply_lt_ty σ y :: map_lt ys'
+                  end) xs) :=
+        match xs with
+        | [] => @Forall2_nil Ty Ty ty_lifetime_equiv
+        | x :: xs' => @Forall2_cons Ty Ty ty_lifetime_equiv
+            x (apply_lt_ty σ x) xs'
+            ((fix map_lt (ys : list Ty) : list Ty :=
+                match ys with
+                | [] => []
+                | y :: ys' => apply_lt_ty σ y :: map_lt ys'
+                end) xs')
+            (ty_lifetime_equiv_apply_lt_ty σ x) (go xs')
+        end
+      in
+      TLE_Fn u params
+        ((fix map_lt (xs : list Ty) : list Ty :=
+            match xs with
+            | [] => []
+            | x :: xs' => apply_lt_ty σ x :: map_lt xs'
+            end) params)
+        ret (apply_lt_ty σ ret)
+        (go params) (ty_lifetime_equiv_apply_lt_ty σ ret)
+  | MkTy u (TForall n Ω body) =>
+      TLE_Forall u n Ω (apply_lt_outlives σ Ω)
+        body (apply_lt_ty σ body)
+        (ty_lifetime_equiv_apply_lt_ty σ body)
+  | MkTy u (TRef l rk Tinner) =>
+      TLE_Ref u l (apply_lt_lifetime σ l) rk
+        Tinner (apply_lt_ty σ Tinner)
+        (ty_lifetime_equiv_apply_lt_ty σ Tinner)
+  end.
+
+Lemma ty_lifetime_equiv_with_usage :
+  forall u T_actual T_expected,
+    ty_lifetime_equiv T_actual T_expected ->
+    ty_lifetime_equiv
+      (MkTy u (ty_core T_actual))
+      (MkTy u (ty_core T_expected)).
+Proof.
+  intros u T_actual T_expected Heq.
+  inversion Heq; subst; simpl; eauto using ty_lifetime_equiv.
+Qed.
+
+Lemma ty_lifetime_equiv_sym :
+  forall T_actual T_expected,
+    ty_lifetime_equiv T_actual T_expected ->
+    ty_lifetime_equiv T_expected T_actual.
+Proof.
+  fix IH 3.
+  intros T_actual T_expected Heq.
+  destruct Heq.
+  - constructor.
+  - constructor.
+  - constructor.
+  - constructor.
+  - constructor.
+  - constructor.
+  - constructor. induction H; constructor; eauto.
+  - constructor.
+    + induction H; constructor; eauto.
+    + apply IH. exact Heq.
+  - constructor. apply IH. exact Heq.
+  - constructor. apply IH. exact Heq.
+Qed.
+
+Fixpoint ty_lifetime_equiv_apply_lt_ty_two
+    (σ_actual σ_expected : list lifetime) (T : Ty)
+    : ty_lifetime_equiv (apply_lt_ty σ_actual T) (apply_lt_ty σ_expected T) :=
+  match T with
+  | MkTy u TUnits => TLE_Units u
+  | MkTy u TIntegers => TLE_Integers u
+  | MkTy u TFloats => TLE_Floats u
+  | MkTy u TBooleans => TLE_Booleans u
+  | MkTy u (TNamed name) => TLE_Named u name
+  | MkTy u (TParam i) => TLE_Param u i
+  | MkTy u (TStruct name lts args) =>
+      let fix go (xs : list Ty)
+          : Forall2 ty_lifetime_equiv
+              ((fix map_lt (ys : list Ty) : list Ty :=
+                  match ys with
+                  | [] => []
+                  | y :: ys' => apply_lt_ty σ_actual y :: map_lt ys'
+                  end) xs)
+              ((fix map_lt (ys : list Ty) : list Ty :=
+                  match ys with
+                  | [] => []
+                  | y :: ys' => apply_lt_ty σ_expected y :: map_lt ys'
+                  end) xs) :=
+        match xs with
+        | [] => @Forall2_nil Ty Ty ty_lifetime_equiv
+        | x :: xs' => @Forall2_cons Ty Ty ty_lifetime_equiv
+            (apply_lt_ty σ_actual x) (apply_lt_ty σ_expected x)
+            ((fix map_lt (ys : list Ty) : list Ty :=
+                match ys with
+                | [] => []
+                | y :: ys' => apply_lt_ty σ_actual y :: map_lt ys'
+                end) xs')
+            ((fix map_lt (ys : list Ty) : list Ty :=
+                match ys with
+                | [] => []
+                | y :: ys' => apply_lt_ty σ_expected y :: map_lt ys'
+                end) xs')
+            (ty_lifetime_equiv_apply_lt_ty_two σ_actual σ_expected x)
+            (go xs')
+        end
+      in
+      TLE_Struct u name
+        (map (apply_lt_lifetime σ_actual) lts)
+        (map (apply_lt_lifetime σ_expected) lts)
+        ((fix map_lt (xs : list Ty) : list Ty :=
+            match xs with
+            | [] => []
+            | x :: xs' => apply_lt_ty σ_actual x :: map_lt xs'
+            end) args)
+        ((fix map_lt (xs : list Ty) : list Ty :=
+            match xs with
+            | [] => []
+            | x :: xs' => apply_lt_ty σ_expected x :: map_lt xs'
+            end) args)
+        (go args)
+  | MkTy u (TFn params ret) =>
+      let fix go (xs : list Ty)
+          : Forall2 ty_lifetime_equiv
+              ((fix map_lt (ys : list Ty) : list Ty :=
+                  match ys with
+                  | [] => []
+                  | y :: ys' => apply_lt_ty σ_actual y :: map_lt ys'
+                  end) xs)
+              ((fix map_lt (ys : list Ty) : list Ty :=
+                  match ys with
+                  | [] => []
+                  | y :: ys' => apply_lt_ty σ_expected y :: map_lt ys'
+                  end) xs) :=
+        match xs with
+        | [] => @Forall2_nil Ty Ty ty_lifetime_equiv
+        | x :: xs' => @Forall2_cons Ty Ty ty_lifetime_equiv
+            (apply_lt_ty σ_actual x) (apply_lt_ty σ_expected x)
+            ((fix map_lt (ys : list Ty) : list Ty :=
+                match ys with
+                | [] => []
+                | y :: ys' => apply_lt_ty σ_actual y :: map_lt ys'
+                end) xs')
+            ((fix map_lt (ys : list Ty) : list Ty :=
+                match ys with
+                | [] => []
+                | y :: ys' => apply_lt_ty σ_expected y :: map_lt ys'
+                end) xs')
+            (ty_lifetime_equiv_apply_lt_ty_two σ_actual σ_expected x)
+            (go xs')
+        end
+      in
+      TLE_Fn u
+        ((fix map_lt (xs : list Ty) : list Ty :=
+            match xs with
+            | [] => []
+            | x :: xs' => apply_lt_ty σ_actual x :: map_lt xs'
+            end) params)
+        ((fix map_lt (xs : list Ty) : list Ty :=
+            match xs with
+            | [] => []
+            | x :: xs' => apply_lt_ty σ_expected x :: map_lt xs'
+            end) params)
+        (apply_lt_ty σ_actual ret) (apply_lt_ty σ_expected ret)
+        (go params)
+        (ty_lifetime_equiv_apply_lt_ty_two σ_actual σ_expected ret)
+  | MkTy u (TForall n Ω body) =>
+      TLE_Forall u n
+        (apply_lt_outlives σ_actual Ω)
+        (apply_lt_outlives σ_expected Ω)
+        (apply_lt_ty σ_actual body)
+        (apply_lt_ty σ_expected body)
+        (ty_lifetime_equiv_apply_lt_ty_two σ_actual σ_expected body)
+  | MkTy u (TRef l rk Tinner) =>
+      TLE_Ref u (apply_lt_lifetime σ_actual l)
+        (apply_lt_lifetime σ_expected l) rk
+        (apply_lt_ty σ_actual Tinner)
+        (apply_lt_ty σ_expected Tinner)
+        (ty_lifetime_equiv_apply_lt_ty_two σ_actual σ_expected Tinner)
+  end.
+
+Lemma nth_error_forall2_ty_lifetime_equiv :
+  forall args_actual args_expected i T_actual T_expected,
+    Forall2 ty_lifetime_equiv args_actual args_expected ->
+    nth_error args_actual i = Some T_actual ->
+    nth_error args_expected i = Some T_expected ->
+    ty_lifetime_equiv T_actual T_expected.
+Proof.
+  intros args_actual.
+  induction args_actual as [|Ta args_actual IH];
+    intros args_expected [|i] T_actual T_expected Hargs Ha He;
+    inversion Hargs; subst; simpl in *; try discriminate.
+  - inversion Ha; inversion He; subst. assumption.
+  - eapply IH; eassumption.
+Qed.
+
+Lemma subst_type_params_param_lifetime_equiv :
+  forall args_actual args_expected i u,
+    Forall2 ty_lifetime_equiv args_actual args_expected ->
+    ty_lifetime_equiv
+      match nth_error args_actual i with
+      | Some T' => MkTy u (ty_core T')
+      | None => MkTy u (TParam i)
+      end
+      match nth_error args_expected i with
+      | Some T' => MkTy u (ty_core T')
+      | None => MkTy u (TParam i)
+      end.
+Proof.
+  intros args_actual args_expected i u Hargs.
+  assert (Hlen : List.length args_actual = List.length args_expected).
+  { induction Hargs; simpl; congruence. }
+  destruct (nth_error args_actual i) as [Ta |] eqn:Ha;
+    destruct (nth_error args_expected i) as [Te |] eqn:He.
+  - apply ty_lifetime_equiv_with_usage.
+    eapply nth_error_forall2_ty_lifetime_equiv; eassumption.
+  - assert (Ha_some : i < List.length args_actual).
+    { apply nth_error_Some. rewrite Ha. discriminate. }
+    apply nth_error_None in He.
+    rewrite <- Hlen in He. lia.
+  - apply nth_error_None in Ha.
+    assert (He_some : i < List.length args_expected).
+    { apply nth_error_Some. rewrite He. discriminate. }
+    rewrite Hlen in Ha. lia.
+  - constructor.
+Qed.
+
+Lemma subst_type_params_ty_lifetime_equiv :
+  forall args_actual args_expected T_actual T_expected,
+    Forall2 ty_lifetime_equiv args_actual args_expected ->
+    ty_lifetime_equiv T_actual T_expected ->
+    ty_lifetime_equiv
+      (subst_type_params_ty args_actual T_actual)
+      (subst_type_params_ty args_expected T_expected).
+Proof.
+  fix IH 6.
+  intros args_actual args_expected T_actual T_expected Hargs Heq.
+  destruct Heq; simpl; eauto using ty_lifetime_equiv,
+    subst_type_params_param_lifetime_equiv.
+  - apply TLE_Struct.
+    induction H; simpl; constructor; eauto.
+  - apply TLE_Fn.
+    + induction H; simpl; constructor; eauto.
+    + eapply IH; eassumption.
+Qed.
+
+Lemma instantiate_struct_field_ty_lifetime_equiv :
+  forall lts_actual lts_expected args_actual args_expected fdef,
+    Forall2 ty_lifetime_equiv args_actual args_expected ->
+    ty_lifetime_equiv
+      (instantiate_struct_field_ty lts_actual args_actual fdef)
+      (instantiate_struct_field_ty lts_expected args_expected fdef).
+Proof.
+  intros lts_actual lts_expected args_actual args_expected fdef Hargs.
+  unfold instantiate_struct_field_ty.
+  apply subst_type_params_ty_lifetime_equiv.
+  - exact Hargs.
+  - apply ty_lifetime_equiv_apply_lt_ty_two.
+Qed.
 
 Inductive value_has_type (env : global_env) (s : store) : value -> Ty -> Prop :=
   | VHT_Unit : forall u,
@@ -36,6 +408,10 @@ Inductive value_has_type (env : global_env) (s : store) : value -> Ty -> Prop :=
   | VHT_Compatible : forall Ω v T_actual T_expected,
       value_has_type env s v T_actual ->
       ty_compatible Ω T_actual T_expected ->
+      value_has_type env s v T_expected
+  | VHT_LifetimeEquiv : forall v T_actual T_expected,
+      value_has_type env s v T_actual ->
+      ty_lifetime_equiv T_actual T_expected ->
       value_has_type env s v T_expected
 with struct_fields_have_type
     (env : global_env) (s : store)
@@ -259,11 +635,12 @@ Qed.
 Lemma value_has_type_apply_lt_ty :
   forall env s σ v T,
     value_has_type env s v T ->
-    apply_lt_ty σ T = T ->
     value_has_type env s v (apply_lt_ty σ T).
 Proof.
-  intros env s σ v T Htyped Hstable.
-  rewrite Hstable. exact Htyped.
+  intros env s σ v T Htyped.
+  eapply VHT_LifetimeEquiv.
+  - exact Htyped.
+  - apply ty_lifetime_equiv_apply_lt_ty.
 Qed.
 
 Lemma struct_fields_have_type_store_preserved :
@@ -2219,6 +2596,33 @@ Proof.
     + simpl in Hlookup. discriminate.
 Qed.
 
+Lemma type_lookup_path_lifetime_equiv :
+  forall env T_actual T_expected path T_path,
+    ty_lifetime_equiv T_actual T_expected ->
+    type_lookup_path env T_expected path = Some T_path ->
+    exists T_actual_path,
+      type_lookup_path env T_actual path = Some T_actual_path /\
+      ty_lifetime_equiv T_actual_path T_path.
+Proof.
+  intros env T_actual T_expected path.
+  revert T_actual T_expected.
+  induction path as [|seg rest IH];
+    intros T_actual T_expected T_path Heq Hlookup.
+  - simpl in Hlookup. inversion Hlookup; subst T_path.
+    exists T_actual. split; [reflexivity | exact Heq].
+  - inversion Heq; subst; simpl in Hlookup; try discriminate.
+    simpl.
+    destruct (lookup_struct name env) as [sdef |] eqn:Hstruct;
+      try discriminate.
+    destruct (lookup_field seg (struct_fields sdef)) as [fdef |] eqn:Hfield;
+      try discriminate.
+    apply IH with
+      (T_expected := instantiate_struct_field_ty lts_expected args_expected fdef).
+    + apply instantiate_struct_field_ty_lifetime_equiv.
+      exact H.
+    + exact Hlookup.
+Qed.
+
 Lemma type_lookup_path_app :
   forall env T p q,
     type_lookup_path env T (p ++ q) =
@@ -2332,6 +2736,18 @@ Proof.
     exists v_path. split.
     + exact Hvalue.
     + eapply VHT_Compatible; eassumption.
+  - match goal with
+    | Heq : ty_lifetime_equiv T_actual T_expected,
+      Htype : type_lookup_path env T_expected lookup_path = Some T_path |- _ =>
+        destruct (type_lookup_path_lifetime_equiv env T_actual T_expected
+                  lookup_path T_path Heq Htype)
+          as [T_actual_path [Hactual_path Heq_path]]
+    end.
+    destruct (H lookup_path T_actual_path Hactual_path)
+      as [v_path [Hvalue Hv]].
+    exists v_path. split.
+    + exact Hvalue.
+    + eapply VHT_LifetimeEquiv; eassumption.
   - destruct (String.eqb name0 (field_name f)) eqn:Hfield_name.
     + inversion H1; subst fdef.
       destruct (H rest T_path H2) as [v_path [Hvalue Hv]].
@@ -2448,6 +2864,21 @@ Proof.
         -- eassumption.
         -- eassumption.
       * apply TC_Core; [assumption | reflexivity].
+  - match goal with
+    | Heq : ty_lifetime_equiv T_actual T_expected,
+      Htype : type_lookup_path env T_expected upd_path = Some T_path |- _ =>
+        destruct (type_lookup_path_lifetime_equiv env T_actual T_expected
+                  upd_path T_path Heq Htype)
+          as [T_actual_path [Hactual_path Heq_path]]
+    end.
+    eapply VHT_LifetimeEquiv.
+    + eapply H.
+      * exact Hactual_path.
+      * eapply VHT_LifetimeEquiv.
+        -- eassumption.
+        -- apply ty_lifetime_equiv_sym. exact Heq_path.
+      * eassumption.
+    + eassumption.
   - simpl in *.
     destruct (String.eqb name0 (field_name f)) eqn:Hname_field.
     + match goal with

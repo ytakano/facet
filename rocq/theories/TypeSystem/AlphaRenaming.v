@@ -513,6 +513,117 @@ Proof.
         -- exact H0.
 Qed.
 
+Lemma ctx_alpha_update_state_forward : forall ρ Γ Γr x f Γ',
+  ctx_alpha ρ Γ Γr ->
+  ~ In x (rename_range ρ) ->
+  sctx_update_state x f Γ = Some Γ' ->
+  exists Γr',
+    sctx_update_state (lookup_rename x ρ) f Γr = Some Γr' /\
+    ctx_alpha ρ Γ' Γr'.
+Proof.
+  intros ρ Γ Γr x f Γ' Halpha.
+  revert x Γ'.
+  induction Halpha; intros y Γ' Hsafe Hupdate.
+  - simpl in Hupdate. exists Γ'. split; [exact Hupdate | constructor].
+  - simpl in Hsafe, Hupdate.
+    assert (Hneq_y_xr : y <> xr).
+    { intro Heq. apply Hsafe. left. symmetry. exact Heq. }
+    assert (Hsafe_tail : ~ In y (rename_range ρ)).
+    { intro Hin. apply Hsafe. right. exact Hin. }
+    destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx. subst y.
+      injection Hupdate as <-.
+      exists ((xr, T, f b, m) :: Γr).
+      split.
+      * simpl. rewrite ident_eqb_refl. rewrite ident_eqb_refl. reflexivity.
+      * constructor; assumption.
+    + destruct (sctx_update_state y f Γ) as [Γt |] eqn:Hupdate_tail.
+      2: discriminate.
+      injection Hupdate as <-.
+      destruct (IHHalpha y Γt Hsafe_tail Hupdate_tail)
+        as [Γrt [Hupdate_r_tail Halpha0]].
+      exists ((xr, T, b, m) :: Γrt).
+      split.
+      * simpl. rewrite Hyx.
+        assert (Hneq_lookup :
+          ident_eqb (lookup_rename y ρ) xr = false).
+        { apply ident_eqb_neq.
+          apply lookup_rename_not_in_range_neq.
+          - exact H0.
+          - exact Hneq_y_xr.
+        }
+        rewrite Hneq_lookup. rewrite Hupdate_r_tail. reflexivity.
+      * constructor.
+        -- exact Halpha0.
+        -- rewrite (sctx_update_state_names
+             (lookup_rename y ρ) f Γr Γrt Hupdate_r_tail). exact H.
+        -- exact H0.
+Qed.
+
+Lemma ctx_alpha_path_available_forward : forall ρ Γ Γr x path,
+  ctx_alpha ρ Γ Γr ->
+  ~ In x (rename_range ρ) ->
+  sctx_path_available Γ x path = infer_ok tt ->
+  sctx_path_available Γr (lookup_rename x ρ) path = infer_ok tt.
+Proof.
+  intros ρ Γ Γr x path Halpha Hsafe Havailable.
+  unfold sctx_path_available, sctx_lookup in *.
+  destruct (ctx_lookup_state x Γ) as [[T st] |] eqn:Hlookup;
+    try discriminate.
+  pose proof (ctx_alpha_lookup_state_forward
+    ρ Γ Γr x T st Halpha Hsafe Hlookup) as Hlookup_r.
+  rewrite Hlookup_r.
+  destruct (binding_available_b st path); inversion Havailable.
+  reflexivity.
+Qed.
+
+Lemma ctx_alpha_consume_path_forward : forall ρ Γ Γr x path Γ',
+  ctx_alpha ρ Γ Γr ->
+  ~ In x (rename_range ρ) ->
+  sctx_consume_path Γ x path = infer_ok Γ' ->
+  exists Γr',
+    sctx_consume_path Γr (lookup_rename x ρ) path = infer_ok Γr' /\
+    ctx_alpha ρ Γ' Γr'.
+Proof.
+  intros ρ Γ Γr x path Γ' Halpha Hsafe Hconsume.
+  unfold sctx_consume_path in Hconsume.
+  destruct (sctx_path_available Γ x path) as [[] | err] eqn:Havailable;
+    try discriminate.
+  destruct (sctx_update_state x (state_consume_path path) Γ)
+    as [Γ0 |] eqn:Hupdate; try discriminate.
+  injection Hconsume as <-.
+  destruct (ctx_alpha_update_state_forward
+    ρ Γ Γr x (state_consume_path path) Γ0 Halpha Hsafe Hupdate)
+    as [Γr' [Hupdate_r Halpha_r]].
+  exists Γr'. split.
+  - unfold sctx_consume_path.
+    rewrite (ctx_alpha_path_available_forward
+      ρ Γ Γr x path Halpha Hsafe Havailable).
+    rewrite Hupdate_r. reflexivity.
+  - exact Halpha_r.
+Qed.
+
+Lemma ctx_alpha_restore_path_forward : forall ρ Γ Γr x path Γ',
+  ctx_alpha ρ Γ Γr ->
+  ~ In x (rename_range ρ) ->
+  sctx_restore_path Γ x path = infer_ok Γ' ->
+  exists Γr',
+    sctx_restore_path Γr (lookup_rename x ρ) path = infer_ok Γr' /\
+    ctx_alpha ρ Γ' Γr'.
+Proof.
+  intros ρ Γ Γr x path Γ' Halpha Hsafe Hrestore.
+  unfold sctx_restore_path in Hrestore.
+  destruct (sctx_update_state x (state_restore_path path) Γ)
+    as [Γ0 |] eqn:Hupdate; try discriminate.
+  injection Hrestore as <-.
+  destruct (ctx_alpha_update_state_forward
+    ρ Γ Γr x (state_restore_path path) Γ0 Halpha Hsafe Hupdate)
+    as [Γr' [Hupdate_r Halpha_r]].
+  exists Γr'. split.
+  - unfold sctx_restore_path. rewrite Hupdate_r. reflexivity.
+  - exact Halpha_r.
+Qed.
+
 Lemma ctx_alpha_remove_head : forall ρ Γ Γr x xr T b m,
   ctx_alpha ρ Γ Γr ->
   ctx_alpha ρ

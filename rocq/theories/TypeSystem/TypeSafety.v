@@ -5,6 +5,64 @@ From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
 (* ------------------------------------------------------------------ *)
+(* Function environment lookup facts                                   *)
+(* ------------------------------------------------------------------ *)
+
+Definition fn_env_unique_by_name (env : global_env) : Prop :=
+  forall f1 f2,
+    In f1 (env_fns env) ->
+    In f2 (env_fns env) ->
+    fn_name f1 = fn_name f2 ->
+    f1 = f2.
+
+Lemma lookup_fn_in_name :
+  forall fname fenv f_lookup,
+    lookup_fn fname fenv = Some f_lookup ->
+    In f_lookup fenv /\ fn_name f_lookup = fname.
+Proof.
+  intros fname fenv.
+  induction fenv as [| f rest IH]; intros f_lookup Hlookup.
+  - simpl in Hlookup. discriminate.
+  - simpl in Hlookup.
+    destruct (ident_eqb fname (fn_name f)) eqn:Hname.
+    + inversion Hlookup; subst f_lookup.
+      split.
+      * left. reflexivity.
+      * symmetry. apply ident_eqb_eq. exact Hname.
+    + destruct (IH f_lookup Hlookup) as [Hin Hfn].
+      split.
+      * right. exact Hin.
+      * exact Hfn.
+Qed.
+
+Lemma lookup_fn_unique_by_name :
+  forall env fname f_lookup f_typed,
+    lookup_fn fname (env_fns env) = Some f_lookup ->
+    In f_typed (env_fns env) ->
+    fn_name f_typed = fname ->
+    fn_env_unique_by_name env ->
+    f_lookup = f_typed.
+Proof.
+  intros env fname f_lookup f_typed Hlookup Hin_typed Hname_typed Hunique.
+  destruct (lookup_fn_in_name fname (env_fns env) f_lookup Hlookup)
+    as [Hin_lookup Hname_lookup].
+  apply Hunique; try assumption.
+  rewrite Hname_lookup. symmetry. exact Hname_typed.
+Qed.
+
+Lemma lookup_fn_typed_structural :
+  forall env fname f_lookup,
+    lookup_fn fname (env_fns env) = Some f_lookup ->
+    env_fns_typed_structural env ->
+    typed_fn_env_structural env f_lookup.
+Proof.
+  intros env fname f_lookup Hlookup Henv_typed.
+  destruct (lookup_fn_in_name fname (env_fns env) f_lookup Hlookup)
+    as [Hin_lookup _].
+  apply Henv_typed. exact Hin_lookup.
+Qed.
+
+(* ------------------------------------------------------------------ *)
 (* Direct place helper facts                                            *)
 (* ------------------------------------------------------------------ *)
 

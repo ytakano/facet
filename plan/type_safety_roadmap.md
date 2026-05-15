@@ -22,11 +22,11 @@
 
 ## Current Status
 
-Last updated implementation point: added a top-level roots-ready `ELet` preservation helper that instantiates the roots-aware `ELet` bridge using the existing structural-ready theorem for ready subexpressions. The remaining reconnection work is still to lift this bridge into a fully recursive roots-aware ready mutual preservation theorem.
+Last updated implementation point: added `eval_preserves_typing_roots_ready_mutual`, a roots-aware ready mutual preservation theorem that combines typing preservation with root preservation and reconnects `ELet` through the roots-aware bridge. The next boundary is checker-facing root provenance, which still needs an executable interface/soundness design before implementation.
 
 - S0: `[done]` runtime value/store typing と runtime reference well-formedness の仕様は導入済み。
 - S1: `[done]` path/value/store helper の主要部分と linear partial-move obligation helper/checker fix は導入済み。
-- S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。`VHT_Ref` は runtime store 内の参照先 path の存在・型対応を要求する形に強化済み。direct assign/replace は concrete RHS preservation evidence 経由で ready subset に再接続済み。`store_remove` 用の root-exclusion runtime helper、static root provenance judgment、runtime root-within-to-exclusion bridge、ready fragment の root preservation theorem、roots-aware `ELet` bridge、top-level roots-ready `ELet` helper は追加済み。次は roots-aware ready mutual preservation theorem へ bridge を組み込む。full unrestricted theorem は未完了。
+- S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。`VHT_Ref` は runtime store 内の参照先 path の存在・型対応を要求する形に強化済み。direct assign/replace は concrete RHS preservation evidence 経由で ready subset に再接続済み。`store_remove` 用の root-exclusion runtime helper、static root provenance judgment、runtime root-within-to-exclusion bridge、ready fragment の root preservation theorem、roots-aware `ELet` bridge、top-level roots-ready `ELet` helper、roots-aware ready mutual preservation theorem は追加済み。full unrestricted theorem と checker-facing root provenance は未完了。
 - S3: `[todo]` call/closure preservation は未着手。ただし empty closure value typing helper は一部存在する。
 - S4-S6: `[todo]` checker-to-runtime safety、runtime reference safety、small-step progress は未着手。
 
@@ -123,7 +123,7 @@ Theorem step_progress :
    - `[done]` `typed_env_roots` を使う strengthened preservation theorem として `eval_preserves_roots_ready_mutual` を追加し、評価結果と出力 store が static root summaries に収まることを `eval` / `eval_args` / `eval_struct_fields` の相互 induction で証明済み。
    - `[done]` `eval_preserves_roots_ready_mutual` を使って `ELet` の root-exclusion premise を discharge する `eval_let_roots_preserves_typing` を追加済み。
    - `[done]` subexpression が既存 structural-ready subset に入る top-level `ELet` について、`eval_let_roots_ready_preserves_typing` を追加済み。
-   - `[todo]` `eval_let_roots_preserves_typing` を roots-aware ready mutual preservation theorem に組み込み、`ELet` を recursive preservation に戻す。
+   - `[done]` `eval_let_roots_preserves_typing` を roots-aware ready mutual preservation theorem に組み込み、`ELet` を recursive preservation に戻す。
    - `[todo]` ready restriction のない full `eval_preserves_typing` を証明する。
    - `[done]` `typed_env_structural` が binding lookup/type を保存する same-bindings helper を追加し、現在 explicit premise にしている lookup 条件を theorem 本体で導出できるようにした。
    - `[done]` `EIf` false branch の `store_typed_ctx_merge_right` 用 type-equality premise は branch typing から導出できる helper を追加済み。
@@ -200,8 +200,8 @@ Theorem step_progress :
 11. `[done]` `store_update_val` / `store_update_path` の roots-aware preservation helper を no-shadow 前提で証明する。
 12. `[done]` update alignment helper を追加して provenance-aware preservation theorem を完成させ、評価結果と出力 store が static root summaries に収まることを証明する。
 13. `[done]` `eval_preserves_roots_ready_mutual` を使って `ELet` の root-exclusion premise を discharge する bridge を追加する。
-14. `[current]` roots-aware ready mutual preservation theorem を追加し、`ELet` bridge を recursive preservation に組み込む。
-15. `[todo]` checker が root provenance を返す executable interface と soundness theorem を追加する。
+14. `[done]` roots-aware ready mutual preservation theorem を追加し、`ELet` bridge を recursive preservation に組み込む。
+15. `[current]` checker が root provenance を返す executable interface と soundness theorem を追加する。
 16. `[todo]` call/closure 関連の S3 を追加する。
 17. `[todo]` `EnvFullSoundness.v` / `ValidatorSoundness.v` と接続して S4 を証明する。
 18. `[todo]` borrow/runtime reference safety を S5 として別 theorem 群にする。

@@ -2211,6 +2211,39 @@ Proof.
   - simpl. rewrite IH. reflexivity.
 Qed.
 
+Lemma store_remove_params_bind_params :
+  forall env Ω s vs ps,
+    eval_args_values_have_types env Ω s vs ps ->
+    store_remove_params ps (bind_params ps vs s) = s.
+Proof.
+  intros env Ω s vs ps Hargs.
+  induction Hargs as [| v vs p ps T_actual _ _ _ IH].
+  - reflexivity.
+  - simpl. rewrite ident_eqb_refl. exact IH.
+Qed.
+
+Lemma store_names_remove_params_bind_params :
+  forall env Ω s vs ps,
+    eval_args_values_have_types env Ω s vs ps ->
+    store_names (store_remove_params ps (bind_params ps vs s)) =
+      store_names s.
+Proof.
+  intros env Ω s vs ps Hargs.
+  rewrite (store_remove_params_bind_params env Ω s vs ps Hargs).
+  reflexivity.
+Qed.
+
+Lemma store_typed_remove_params_bind_params :
+  forall env Ω s Σ vs ps,
+    store_typed env s Σ ->
+    eval_args_values_have_types env Ω s vs ps ->
+    store_typed env (store_remove_params ps (bind_params ps vs s)) Σ.
+Proof.
+  intros env Ω s Σ vs ps Htyped Hargs.
+  rewrite (store_remove_params_bind_params env Ω s vs ps Hargs).
+  exact Htyped.
+Qed.
+
 Lemma bind_params_head_fresh_in_tail :
   forall env Ω s p ps vs,
     NoDup (ctx_names (params_ctx (p :: ps))) ->

@@ -22,11 +22,11 @@
 
 ## Current Status
 
-Last updated implementation point: strengthened direct update bridge lemmas for ref-target preservation.
+Last updated implementation point: reconnected direct assign/replace to the ready preservation theorem with concrete RHS preservation evidence.
 
 - S0: `[done]` runtime value/store typing と runtime reference well-formedness の仕様は導入済み。
 - S1: `[done]` path/value/store helper の主要部分と linear partial-move obligation helper/checker fix は導入済み。
-- S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。`VHT_Ref` は runtime store 内の参照先 path の存在・型対応を要求する形に強化済み。direct update bridge は `store_ref_targets_preserved` も返す形に強化済み。full unrestricted theorem は未完了。
+- S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。`VHT_Ref` は runtime store 内の参照先 path の存在・型対応を要求する形に強化済み。direct assign/replace は concrete RHS preservation evidence 経由で ready subset に再接続済み。full unrestricted theorem は未完了。
 - S3: `[todo]` call/closure preservation は未着手。ただし empty closure value typing helper は一部存在する。
 - S4-S6: `[todo]` checker-to-runtime safety、runtime reference safety、small-step progress は未着手。
 
@@ -105,7 +105,8 @@ Theorem step_progress :
    - `[done]` `eval`, `eval_args`, `eval_struct_fields` の相互 induction で ready subset 用の `eval_preserves_typing_ready_mutual` を証明済み（`4947081`）。強化後は各 branch が `store_ref_targets_preserved` も返す形に更新済み。
    - `[done]` `VHT_Ref` を強化し、`VRef x path` が `store_lookup x s`、`value_lookup_path`、`type_lookup_path` で実在する runtime target を指すことを要求するようにした。これに伴い、古い `value_has_type_store_irrelevant` は削除し、`store_ref_targets_preserved` 前提付きの `value_has_type_store_preserved` に置き換えた。
    - `[done]` `store_update_state` / `store_mark_used` / restore 系の state-only 更新が `store_ref_targets_preserved` を満たす補題を追加済み。
-   - `[partial]` direct `assign` / `replace` / `let` は、強化後の reference preservation obligation を露出する形に補題を弱めた。`assign` / `replace` の update obligation と bridge lemma の `store_ref_targets_preserved` result は解消済み。ただし ready subset への再接続は、相互 induction の IH が具体的な RHS 評価 derivation に対するものなのに対し、bridge lemma callback が任意の RHS 評価へ一般化されているため、bridge lemma の shape を具体的 derivation 向けに分ける必要がある。
+   - `[done]` direct `assign` / `replace` は、強化後の reference preservation obligation を露出する形に helper を弱め、concrete RHS preservation evidence を渡して root/path の update・restore obligation と ready subset への再接続を完了済み。
+   - `[partial]` direct `let` は、強化後の reference preservation obligation に対する local binding removal / escape invariant が未解決。
    - `[todo]` ready restriction のない full `eval_preserves_typing` を証明する。
    - `[done]` `typed_env_structural` が binding lookup/type を保存する same-bindings helper を追加し、現在 explicit premise にしている lookup 条件を theorem 本体で導出できるようにした。
    - `[done]` `EIf` false branch の `store_typed_ctx_merge_right` 用 type-equality premise は branch typing から導出できる helper を追加済み。
@@ -173,11 +174,12 @@ Theorem step_progress :
 2. `[partial]` `TypeSafety.v` を追加して S2 の個別 preservation helper を基本式から始める。
 3. `[done]` `typed_env_structural` の same-bindings lookup helper を追加し、assign/replace helper の explicit lookup premise を theorem 本体で導出できるようにする。
 4. `[done]` `eval`, `eval_args`, `eval_struct_fields` の ready restricted mutual preservation theorem を追加し、既存 helper を constructor ごとに接続する。
-5. `[current]` direct update bridge の callback shape を concrete RHS evaluation 用に分け、direct assign/replace を ready subset に戻す。
-6. `[todo]` call/closure 関連の S3 を追加する。
-7. `[todo]` `EnvFullSoundness.v` / `ValidatorSoundness.v` と接続して S4 を証明する。
-8. `[todo]` borrow/runtime reference safety を S5 として別 theorem 群にする。
-9. `[todo]` small-step semantics が必要になった時点で S6 を開始する。
+5. `[done]` direct update bridge の callback shape を concrete RHS evaluation 用に分け、direct assign/replace を ready subset に戻す。
+6. `[current]` `ELet` / `ELetInfer` の local binding removal と reference escape invariant を整理して ready theorem の残りを詰める。
+7. `[todo]` call/closure 関連の S3 を追加する。
+8. `[todo]` `EnvFullSoundness.v` / `ValidatorSoundness.v` と接続して S4 を証明する。
+9. `[todo]` borrow/runtime reference safety を S5 として別 theorem 群にする。
+10. `[todo]` small-step semantics が必要になった時点で S6 を開始する。
 
 ## Acceptance Criteria
 

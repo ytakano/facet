@@ -1450,6 +1450,51 @@ Proof.
     + simpl in Hupdate. rewrite Heq in Hupdate. discriminate.
 Qed.
 
+Lemma eval_place_lookup_path_roots_within :
+  forall R s p x_static path_static x_eval path_eval old_v roots,
+    store_roots_within R s ->
+    place_path p = Some (x_static, path_static) ->
+    eval_place s p x_eval path_eval ->
+    store_lookup_path x_eval path_eval s = Some old_v ->
+    root_env_lookup x_static R = Some roots ->
+    value_roots_within roots old_v.
+Proof.
+  intros R s p x_static path_static x_eval path_eval old_v roots
+    Hwithin Hpath_static Heval_place Hlookup_path Hroot_lookup.
+  destruct (eval_place_matches_place_path s p x_eval path_eval
+              x_static path_static Heval_place Hpath_static)
+    as [Hx Hpath].
+  subst x_eval path_eval.
+  unfold store_lookup_path in Hlookup_path.
+  destruct (store_lookup x_static s) as [se |] eqn:Hstore_lookup; try discriminate.
+  eapply value_lookup_path_roots_within.
+  - eapply store_roots_within_lookup_value; eassumption.
+  - exact Hlookup_path.
+Qed.
+
+Lemma eval_place_update_path_roots_within_union :
+  forall R1 s s1 s2 p x_static path_static x_eval path_eval
+      v_new roots_old roots_new,
+    store_roots_within R1 s1 ->
+    store_no_shadow s1 ->
+    place_path p = Some (x_static, path_static) ->
+    eval_place s p x_eval path_eval ->
+    root_env_lookup x_static R1 = Some roots_old ->
+    value_roots_within roots_new v_new ->
+    store_update_path x_eval path_eval v_new s1 = Some s2 ->
+    store_roots_within
+      (root_env_update x_static (root_set_union roots_old roots_new) R1) s2.
+Proof.
+  intros R1 s s1 s2 p x_static path_static x_eval path_eval
+    v_new roots_old roots_new Hwithin Hnodup Hpath_static Heval_place
+    Hroot_lookup Hvalue_new Hupdate.
+  destruct (eval_place_matches_place_path s p x_eval path_eval
+              x_static path_static Heval_place Hpath_static)
+    as [Hx Hpath].
+  subst x_eval path_eval.
+  eapply store_update_path_roots_within_union; eassumption.
+Qed.
+
 Inductive preservation_ready_expr : expr -> Prop :=
   | PRE_Unit :
       preservation_ready_expr EUnit
@@ -1591,6 +1636,512 @@ Proof.
   - destruct (String.eqb name fname) eqn:Hname.
     + inversion Hlookup; subst. exact Hexpr.
     + apply IH. exact Hlookup.
+Qed.
+
+Theorem eval_preserves_roots_ready_mutual :
+  (forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      provenance_ready_expr e ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R') /\
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ ps Σ' R' roots,
+      provenance_ready_args args ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+      store_roots_within R' s' /\
+      Forall2 value_roots_within roots vs /\
+      store_no_shadow s' /\
+      root_env_no_shadow R') /\
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots,
+      provenance_ready_fields fields ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+      store_roots_within R' s' /\
+      value_fields_roots_within roots values /\
+      store_no_shadow s' /\
+      root_env_no_shadow R').
+Proof.
+  assert (Hmut : forall env,
+    (forall s e s' v,
+      eval env s e s' v ->
+      forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+        provenance_ready_expr e ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+        store_roots_within R' s' /\
+        value_roots_within roots v /\
+        store_no_shadow s' /\
+        root_env_no_shadow R') /\
+    (forall s args s' vs,
+      eval_args env s args s' vs ->
+      forall (Ω : outlives_ctx) (n : nat) R Σ ps Σ' R' roots,
+        provenance_ready_args args ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+        store_roots_within R' s' /\
+        Forall2 value_roots_within roots vs /\
+        store_no_shadow s' /\
+        root_env_no_shadow R') /\
+    (forall s fields defs s' values,
+      eval_struct_fields env s fields defs s' values ->
+      forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots,
+        provenance_ready_fields fields ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+        store_roots_within R' s' /\
+        value_fields_roots_within roots values /\
+        store_no_shadow s' /\
+        root_env_no_shadow R')).
+  { intro env.
+    apply eval_eval_args_eval_struct_fields_ind.
+  - intros s Ω n R Σ T Σ' R' roots _ Hroots Hnodup Hrn Htyped.
+    inversion Htyped; subst. repeat split; try assumption; constructor.
+  - intros s i Ω n R Σ T Σ' R' roots _ Hroots Hnodup Hrn Htyped.
+    inversion Htyped; subst. repeat split; try assumption; constructor.
+  - intros s f Ω n R Σ T Σ' R' roots _ Hroots Hnodup Hrn Htyped.
+    inversion Htyped; subst. repeat split; try assumption; constructor.
+  - intros s b Ω n R Σ T Σ' R' roots _ Hroots Hnodup Hrn Htyped.
+    inversion Htyped; subst. repeat split; try assumption; constructor.
+  - intros s x se Hlookup Hconsume Ω n R Σ T Σ' R' roots
+      _ Hroots Hnodup Hrn Htyped.
+    inversion Htyped; subst.
+    all: repeat split; try assumption;
+      eapply store_roots_within_lookup_value; eassumption.
+  - intros s x se Hlookup Hconsume Hused Ω n R Σ T Σ' R' roots
+      _ Hroots Hnodup Hrn Htyped.
+    inversion Htyped; subst.
+    all: repeat split; try (apply store_mark_used_roots_within; exact Hroots);
+      try (eapply store_roots_within_lookup_value; eassumption);
+      try (apply store_no_shadow_mark_used; exact Hnodup);
+      try exact Hrn.
+  - intros s p x_eval path_eval se T_eval v Heval_place Hlookup
+      Havailable Htype_eval Hconsume Hvalue Ω n R Σ T Σ' R' roots
+      Hready Hroots Hnodup Hrn Htyped.
+    inversion Hready; subst; try discriminate.
+    inversion Htyped; subst.
+    all: repeat split; try assumption;
+      match goal with
+      | Hpath_typed : place_path ?p_typed = Some (?root, ?path_typed),
+        Heval_p : eval_place ?s_typed ?p_typed ?x_eval0 ?path_eval0,
+        Hvalue_path : value_lookup_path (se_val ?se0) ?path_eval0 = Some ?v_target,
+        Hroot_lookup : root_env_lookup ?root ?Rcur = Some ?roots_cur
+        |- value_roots_within ?roots_cur ?v_target =>
+          destruct (eval_place_matches_place_path s_typed p_typed x_eval0 path_eval0
+                      root path_typed Heval_p Hpath_typed) as [Hx Hpath];
+          subst x_eval0 path_eval0;
+          eapply value_lookup_path_roots_within;
+          [ eapply store_roots_within_lookup_value; eassumption
+          | exact Hvalue_path ]
+      end.
+  - intros s s' p x_eval path_eval se T_eval v Heval_place Hlookup
+      Havailable Htype_eval Hconsume Hvalue Hstore_consume
+      Ω n R Σ T Σ' R' roots Hready Hroots Hnodup Hrn Htyped.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    all: repeat split; try exact Hrn;
+      try
+        (unfold store_consume_path in Hstore_consume;
+         destruct (store_lookup x_eval s) as [se0 |] eqn:Hlookup0;
+           try discriminate;
+         destruct (binding_available_b (se_state se0) path_eval);
+           try discriminate;
+         eapply store_update_state_roots_within; eassumption);
+      try
+        (unfold store_consume_path in Hstore_consume;
+         destruct (store_lookup x_eval s) as [se0 |] eqn:Hlookup0;
+           try discriminate;
+         destruct (binding_available_b (se_state se0) path_eval);
+           try discriminate;
+         eapply store_no_shadow_update_state; eassumption);
+      match goal with
+      | Hpath_typed : place_path ?p_typed = Some (?root, ?path_typed),
+        Heval_p : eval_place ?s_typed ?p_typed ?x_eval0 ?path_eval0,
+        Hvalue_path : value_lookup_path (se_val ?se0) ?path_eval0 = Some ?v_target,
+        Hroot_lookup : root_env_lookup ?root ?Rcur = Some ?roots_cur
+        |- value_roots_within ?roots_cur ?v_target =>
+          destruct (eval_place_matches_place_path s_typed p_typed x_eval0 path_eval0
+                      root path_typed Heval_p Hpath_typed) as [Hx Hpath];
+          subst x_eval0 path_eval0;
+          eapply value_lookup_path_roots_within;
+          [ eapply store_roots_within_lookup_value; eassumption
+          | exact Hvalue_path ]
+      end.
+  - intros s s' name lts args fields values sdef Hlookup Heval_fields
+      IHfields Ω n R Σ T Σ' R' roots Hready Hroots Hnodup Hrn Htyped.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    match goal with
+    | Hlookup_typed : lookup_struct name env = Some ?sdef_typed |- _ =>
+        rewrite Hlookup in Hlookup_typed; inversion Hlookup_typed; subst sdef_typed
+    end.
+    match goal with
+    | Hready_fields : provenance_ready_fields fields,
+      Htyped_fields : typed_fields_roots env Ω n lts args R Σ fields
+        (struct_fields sdef) Σ' R' roots |- _ =>
+        destruct (IHfields Ω n lts args R Σ Σ' R' roots
+                    Hready_fields Hroots Hnodup Hrn Htyped_fields)
+          as [Hroots' [Hvals [Hnodup' Hrn']]]
+    end.
+    repeat split; try assumption.
+    constructor. exact Hvals.
+  - intros s s1 s2 m x T_ann e1 e2 v1 v2 Heval1 IH1 Heval2 IH2
+      Ω n R Σ T Σ' R' roots Hready Hroots Hnodup Hrn Htyped.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    match goal with
+    | Hready1 : provenance_ready_expr e1,
+      Htyped1 : typed_env_roots env Ω n R Σ e1 ?T1_expr ?Σ1_expr
+        ?R1_expr ?roots1_expr |- _ =>
+        destruct (IH1 Ω n R Σ T1_expr Σ1_expr R1_expr roots1_expr
+                    Hready1 Hroots Hnodup Hrn Htyped1)
+          as [Hroots1 [Hv1 [Hnodup1 Hrn1]]]
+    end.
+    assert (Hfresh_store : store_lookup x s1 = None)
+      by (eapply store_roots_within_lookup_none; eassumption).
+    assert (Hadd_roots :
+      store_roots_within (root_env_add x roots1 R1)
+        (store_add x T_ann v1 s1))
+      by (eapply store_add_roots_within; eassumption).
+    assert (Hadd_nodup : store_no_shadow (store_add x T_ann v1 s1))
+      by (apply store_no_shadow_add; assumption).
+    assert (Hadd_rn : root_env_no_shadow (root_env_add x roots1 R1))
+      by (apply root_env_no_shadow_add; assumption).
+    match goal with
+    | Hready2 : provenance_ready_expr e2,
+      Htyped2 : typed_env_roots env Ω n (root_env_add x roots1 R1)
+        (sctx_add x T_ann m Σ1) e2 ?T_body ?Σ2_body ?R2_body
+        ?roots2_body |- _ =>
+        destruct (IH2 Ω n (root_env_add x roots1 R1)
+                    (sctx_add x T_ann m Σ1) T_body Σ2_body R2_body
+                    roots2_body Hready2 Hadd_roots Hadd_nodup Hadd_rn Htyped2)
+          as [Hroots2 [Hv2 [Hnodup2 Hrn2]]]
+    end.
+    repeat split.
+    + eapply store_remove_roots_within.
+      * exact Hroots2.
+      * apply store_no_shadow_remove_no_name. exact Hnodup2.
+    + exact Hv2.
+    + apply store_no_shadow_remove. exact Hnodup2.
+    + apply root_env_no_shadow_remove. exact Hrn2.
+  - intros s s' e v Heval IH Ω n R Σ T Σ' R' roots Hready
+      Hroots Hnodup Hrn Htyped.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    match goal with
+    | Hready_e : provenance_ready_expr e,
+      Htyped_e : typed_env_roots env Ω n R Σ e ?T_e ?Σ_e ?R_e ?roots_e |- _ =>
+        destruct (IH Ω n R Σ T_e Σ_e R_e roots_e Hready_e
+                    Hroots Hnodup Hrn Htyped_e)
+          as [Hroots' [_ [Hnodup' Hrn']]]
+    end.
+    repeat split; try assumption; constructor.
+  - intros s s1 s2 s3 x old_e e_new v_new Hlookup Heval_new
+      IHnew Hupdate Hrestore Ω n R Σ T Σ' R' roots Hready
+      Hroots Hnodup Hrn Htyped.
+    dependent destruction Hready.
+    inversion Htyped; subst; try discriminate.
+    match goal with
+    | Hpath_var : place_path (PVar _) = Some _ |- _ =>
+        simpl in Hpath_var; inversion Hpath_var; subst; clear Hpath_var
+    end.
+    match goal with
+    | Hready_new : provenance_ready_expr e_new,
+      Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new0 ?Σ1_new
+        ?R1_new ?roots_new0 |- _ =>
+        destruct (IHnew Ω n R Σ T_new0 Σ1_new R1_new roots_new0
+                    Hready_new Hroots Hnodup Hrn Htyped_new)
+          as [Hroots1 [Hvnew [Hnodup1 Hrn1]]]
+    end.
+    assert (Hroots2 : store_roots_within
+      (root_env_update x (root_set_union roots_old roots_new) R1) s2).
+    { eapply store_update_val_roots_within_union; eassumption. }
+    assert (Hnodup2 : store_no_shadow s2)
+      by (eapply store_no_shadow_update_val; eassumption).
+    assert (Hroots3 : store_roots_within
+      (root_env_update x (root_set_union roots_old roots_new) R1) s3).
+    { unfold store_restore_path in Hrestore.
+      eapply store_update_state_roots_within; eassumption. }
+    assert (Hnodup3 : store_no_shadow s3).
+    { unfold store_restore_path in Hrestore.
+      eapply store_no_shadow_update_state; eassumption. }
+    repeat split; try assumption.
+    + eapply store_roots_within_lookup_value.
+      * exact Hroots.
+      * exact Hlookup.
+      * match goal with
+        | Hroot_lookup : root_env_lookup _ R = Some roots |- _ =>
+            exact Hroot_lookup
+        end.
+    + apply root_env_no_shadow_update. exact Hrn1.
+  - intros s s1 s2 x old_e e_new v_new Hlookup Heval_new
+      IHnew Hupdate Ω n R Σ T Σ' R' roots Hready
+      Hroots Hnodup Hrn Htyped.
+    dependent destruction Hready.
+    inversion Htyped; subst; try discriminate.
+    match goal with
+    | Hpath_var : place_path (PVar _) = Some _ |- _ =>
+        simpl in Hpath_var; inversion Hpath_var; subst; clear Hpath_var
+    end.
+    match goal with
+    | Hready_new : provenance_ready_expr e_new,
+      Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new0 ?Σ1_new
+        ?R1_new ?roots_new0 |- _ =>
+        destruct (IHnew Ω n R Σ T_new0 Σ1_new R1_new roots_new0
+                    Hready_new Hroots Hnodup Hrn Htyped_new)
+          as [Hroots1 [Hvnew [Hnodup1 Hrn1]]]
+    end.
+    repeat split.
+    + eapply store_update_val_roots_within_union; eassumption.
+    + constructor.
+    + eapply store_no_shadow_update_val; eassumption.
+    + apply root_env_no_shadow_update. exact Hrn1.
+  - intros s s1 s2 s3 p x_eval path_eval old_v e_new v_new
+      Heval_place Hlookup_old Heval_new IHnew Hupdate Hrestore
+      Ω n R Σ T Σ' R' roots Hready Hroots Hnodup Hrn Htyped.
+    dependent destruction Hready.
+    inversion Htyped; subst; try discriminate.
+    match goal with
+    | Hready_path : place_path p = Some (x, path),
+      Htyped_path : place_path p = Some (?x_typed, ?path_typed) |- _ =>
+        rewrite Hready_path in Htyped_path;
+        inversion Htyped_path; subst x_typed path_typed; clear Htyped_path
+    end.
+    match goal with
+    | Hready_new : provenance_ready_expr e_new,
+      Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new0 ?Σ1_new
+        ?R1_new ?roots_new0 |- _ =>
+        destruct (IHnew Ω n R Σ T_new0 Σ1_new R1_new roots_new0
+                    Hready_new Hroots Hnodup Hrn Htyped_new)
+          as [Hroots1 [Hvnew [Hnodup1 Hrn1]]]
+    end.
+    assert (Hroots2 : store_roots_within
+      (root_env_update x (root_set_union roots_old roots_new) R1) s2).
+    { eapply eval_place_update_path_roots_within_union.
+      - exact Hroots1.
+      - exact Hnodup1.
+      - match goal with
+        | Hpath_static : place_path _ = Some _ |- _ =>
+            exact Hpath_static
+        end.
+      - exact Heval_place.
+      - exact H7.
+      - exact Hvnew.
+      - exact Hupdate. }
+    assert (Hnodup2 : store_no_shadow s2)
+      by (eapply store_no_shadow_update_path; eassumption).
+    assert (Hroots3 : store_roots_within
+      (root_env_update x (root_set_union roots_old roots_new) R1) s3).
+    { unfold store_restore_path in Hrestore.
+      eapply store_update_state_roots_within; eassumption. }
+    assert (Hnodup3 : store_no_shadow s3).
+    { unfold store_restore_path in Hrestore.
+      eapply store_no_shadow_update_state; eassumption. }
+    repeat split; try assumption.
+    + eapply eval_place_lookup_path_roots_within.
+      * exact Hroots.
+      * match goal with
+        | Hpath_static : place_path p = Some (x, path) |- _ =>
+            exact Hpath_static
+        end.
+      * exact Heval_place.
+      * exact Hlookup_old.
+      * match goal with
+        | Hroot_lookup : root_env_lookup x R = Some roots |- _ =>
+            exact Hroot_lookup
+        end.
+    + apply root_env_no_shadow_update. exact Hrn1.
+  - intros s s1 s2 p x_eval path_eval e_new v_new Heval_place
+      Heval_new IHnew Hupdate Ω n R Σ T Σ' R' roots Hready
+      Hroots Hnodup Hrn Htyped.
+    dependent destruction Hready.
+    inversion Htyped; subst; try discriminate.
+    match goal with
+    | Hready_path : place_path p = Some (x, path),
+      Htyped_path : place_path p = Some (?x_typed, ?path_typed) |- _ =>
+        rewrite Hready_path in Htyped_path;
+        inversion Htyped_path; subst x_typed path_typed; clear Htyped_path
+    end.
+    match goal with
+    | Hready_new : provenance_ready_expr e_new,
+      Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new0 ?Σ1_new
+        ?R1_new ?roots_new0 |- _ =>
+        destruct (IHnew Ω n R Σ T_new0 Σ1_new R1_new roots_new0
+                    Hready_new Hroots Hnodup Hrn Htyped_new)
+          as [Hroots1 [Hvnew [Hnodup1 Hrn1]]]
+    end.
+    repeat split.
+    + eapply eval_place_update_path_roots_within_union; eassumption.
+    + constructor.
+    + eapply store_no_shadow_update_path; eassumption.
+    + apply root_env_no_shadow_update. exact Hrn1.
+  - intros s p x path rk Heval_place Ω n R Σ T Σ' R' roots Hready
+      Hroots Hnodup Hrn Htyped.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    + repeat split; try assumption.
+      match goal with
+      | Hpath_static : place_path p = Some (?x_static, ?path_static) |- _ =>
+          destruct (eval_place_matches_place_path s p x path
+                      x_static path_static Heval_place Hpath_static)
+            as [Hx Hpath];
+          subst x path;
+          unfold root_of_place;
+          rewrite Hpath_static;
+          constructor; simpl; left; reflexivity
+      end.
+    + repeat split; try assumption.
+      match goal with
+      | Hpath_static : place_path p = Some (?x_static, ?path_static) |- _ =>
+          destruct (eval_place_matches_place_path s p x path
+                      x_static path_static Heval_place Hpath_static)
+            as [Hx Hpath];
+          subst x path;
+          constructor; simpl; left; reflexivity
+      end.
+  - intros s r p x path se v T_eval Hplace Heval_place Hlookup Hvalue
+      Htype_eval Husage Ω n R Σ T Σ' R' roots Hready _ _ _ _.
+    inversion Hready.
+  - intros s s_r r x path se v T_eval Hnot_place Heval_r IHr Hlookup
+      Hvalue Htype_eval Husage Ω n R Σ T Σ' R' roots Hready _ _ _ _.
+    inversion Hready.
+  - intros s fname Ω n R Σ T Σ' R' roots _ Hroots Hnodup Hrn Htyped.
+    inversion Htyped; subst. repeat split; try assumption; constructor.
+  - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_then IHthen
+      Ω n R Σ T Σ' R' roots Hready Hroots Hnodup Hrn Htyped.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    match goal with
+    | Hready_cond : provenance_ready_expr e1,
+      Htyped_cond : typed_env_roots env Ω n R Σ e1 ?T_cond0 ?Σ1_cond
+        ?R1_cond ?roots_cond0 |- _ =>
+        destruct (IHcond Ω n R Σ T_cond0 Σ1_cond R1_cond roots_cond0
+                    Hready_cond Hroots Hnodup Hrn Htyped_cond)
+          as [Hroots1 [_ [Hnodup1 Hrn1]]]
+    end.
+    match goal with
+    | Hready_then : provenance_ready_expr e2,
+      Htyped_then : typed_env_roots env Ω n ?R1_cond ?Σ1_cond e2
+        ?T2_then ?Σ2_then ?R2_then ?roots2_then |- _ =>
+        destruct (IHthen Ω n R1_cond Σ1_cond T2_then Σ2_then R2_then
+                    roots2_then Hready_then Hroots1 Hnodup1 Hrn1 Htyped_then)
+          as [Hroots2 [Hv2 [Hnodup2 Hrn2]]]
+    end.
+    repeat split; try assumption.
+    + apply value_roots_within_union_l. exact Hv2.
+  - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_else IHelse
+      Ω n R Σ T Σ' R' roots Hready Hroots Hnodup Hrn Htyped.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    match goal with
+    | Hready_cond : provenance_ready_expr e1,
+      Htyped_cond : typed_env_roots env Ω n R Σ e1 ?T_cond0 ?Σ1_cond
+        ?R1_cond ?roots_cond0 |- _ =>
+        destruct (IHcond Ω n R Σ T_cond0 Σ1_cond R1_cond roots_cond0
+                    Hready_cond Hroots Hnodup Hrn Htyped_cond)
+          as [Hroots1 [_ [Hnodup1 Hrn1]]]
+    end.
+    match goal with
+    | Hready_else : provenance_ready_expr e3,
+      Htyped_else : typed_env_roots env Ω n ?R1_cond ?Σ1_cond e3
+        ?T3_else ?Σ3_else ?R3_else ?roots3_else |- _ =>
+        destruct (IHelse Ω n R1_cond Σ1_cond T3_else Σ3_else R3_else
+                    roots3_else Hready_else Hroots1 Hnodup1 Hrn1 Htyped_else)
+          as [Hroots3 [Hv3 [Hnodup3 Hrn3]]]
+    end.
+    repeat split; try assumption.
+    apply value_roots_within_union_r. exact Hv3.
+  - intros s s_args s_body fname fdef args0 vs ret Hlookup Heval_args
+      IHargs Heval_body IHbody Ω n R Σ T Σ' R' roots Hready _ _ _ _.
+    inversion Hready.
+  - intros s s_fn s_args s_body callee args0 fname captured fdef vs ret
+      Heval_callee IHcallee Hlookup Heval_args IHargs Heval_body IHbody
+      Ω n R Σ T Σ' R' roots Hready _ _ _ _.
+    inversion Hready.
+  - intros s Ω n R Σ ps Σ' R' roots _ Hroots Hnodup Hrn Htyped.
+    inversion Htyped; subst. repeat split; try assumption; constructor.
+  - intros s s1 s2 e es v vs Heval_e IHe Heval_rest IHrest
+      Ω n R Σ ps Σ' R' roots Hready Hroots Hnodup Hrn Htyped.
+    inversion Hready; subst.
+    inversion Htyped; subst.
+    match goal with
+    | Hready_e : provenance_ready_expr e,
+      Hready_rest : provenance_ready_args es,
+      Htyped_e : typed_env_roots env Ω n R Σ e ?T_e ?Σ1_e ?R1_e ?roots_e,
+      Htyped_rest : typed_args_roots env Ω n ?R1_e ?Σ1_e es ?ps_rest
+        Σ' R' ?roots_rest |- _ =>
+        destruct (IHe Ω n R Σ T_e Σ1_e R1_e roots_e
+                    Hready_e Hroots Hnodup Hrn Htyped_e)
+          as [Hroots1 [Hv [Hnodup1 Hrn1]]];
+        destruct (IHrest Ω n R1_e Σ1_e ps_rest Σ' R' roots_rest
+                    Hready_rest Hroots1 Hnodup1 Hrn1 Htyped_rest)
+          as [Hroots2 [Hvs [Hnodup2 Hrn2]]]
+    end.
+    repeat split; try assumption.
+    constructor; assumption.
+  - intros s Ω n lts args0 R Σ Σ' R' roots _ Hroots Hnodup Hrn Htyped.
+    inversion Htyped; subst. repeat split; try assumption; constructor.
+  - intros s s1 s2 fields f rest e v values Hlookup_expr Heval_field
+      IHfield Heval_rest IHrest Ω n lts args0 R Σ Σ' R' roots Hready
+      Hroots Hnodup Hrn Htyped.
+    pose proof (provenance_ready_fields_lookup fields (field_name f) e
+                  Hready Hlookup_expr) as Hready_field.
+    inversion Htyped; subst.
+    match goal with
+    | Hlookup_typed : lookup_field_b (field_name f) ?fields0 = Some ?e_field,
+      Htyped_field : typed_env_roots env Ω n R Σ ?e_field ?T_field ?Σ1_field
+        ?R1_field ?roots_field,
+      Htyped_rest : typed_fields_roots env Ω n lts args0 ?R1_field ?Σ1_field
+        ?fields0 rest Σ' R' ?roots_rest |- _ =>
+        rewrite lookup_field_b_lookup_expr_field in Hlookup_typed;
+        rewrite Hlookup_typed in Hlookup_expr;
+        inversion Hlookup_expr; subst e_field;
+        destruct (IHfield Ω n R Σ T_field Σ1_field R1_field roots_field
+                    Hready_field Hroots Hnodup Hrn Htyped_field)
+          as [Hroots1 [Hv [Hnodup1 Hrn1]]];
+        destruct (IHrest Ω n lts args0 R1_field Σ1_field Σ' R' roots_rest
+                    Hready Hroots1 Hnodup1 Hrn1 Htyped_rest)
+          as [Hroots2 [Hvals [Hnodup2 Hrn2]]]
+    end.
+    repeat split; try assumption.
+    constructor.
+    + apply value_roots_within_union_l. exact Hv.
+    + apply value_fields_roots_within_union_r. exact Hvals.
+  }
+  split.
+  - intros env0 s0 e0 s0' v0 Heval Ω0 n0 R0 Σ0 T0 Σ0' R0' roots0
+      Hready Hroots Hnodup Hrn Htyped.
+    destruct (Hmut env0) as [Hexpr [_ _]].
+    eapply Hexpr; eassumption.
+  - split.
+    + intros env0 s0 args0 s0' vs0 Heval Ω0 n0 R0 Σ0 ps0 Σ0'
+        R0' roots0 Hready Hroots Hnodup Hrn Htyped.
+      destruct (Hmut env0) as [_ [Hargs _]].
+      eapply Hargs; eassumption.
+    + intros env0 s0 fields0 defs0 s0' values0 Heval Ω0 n0 lts0
+        args0 R0 Σ0 Σ0' R0' roots0 Hready Hroots Hnodup Hrn Htyped.
+      destruct (Hmut env0) as [_ [_ Hfields]].
+      eapply Hfields; eassumption.
 Qed.
 
 

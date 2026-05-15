@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Lifetime Types Syntax Program.
+From Facet.TypeSystem Require Import Lifetime Types Syntax Program TypeChecker.
 From Stdlib Require Import List String Bool.
 Import ListNotations.
 
@@ -248,17 +248,35 @@ Definition struct_params_ok_b (s : struct_def) : bool :=
   type_params_ok_b (struct_type_params s) tys &&
   lifetime_params_ok_b (struct_lifetimes s) tys.
 
-Definition trait_bounds_wf_b (traits : list trait_def) (bounds : list trait_bound) : bool :=
-  forallb (fun b => forallb (fun t => string_mem_b t (trait_names traits)) (bound_traits b)) bounds.
+Definition trait_ref_wf_b
+    (structs : list struct_def) (traits : list trait_def)
+    (ty_params lt_params : nat) (tr : trait_ref) : bool :=
+  match lookup_trait_in (trait_ref_name tr) traits with
+  | None => false
+  | Some t =>
+      Nat.eqb (Datatypes.length (trait_ref_args tr)) (trait_type_params t) &&
+      forallb (type_env_wf_b structs ty_params lt_params 0) (trait_ref_args tr)
+  end.
+
+Definition trait_bounds_wf_b
+    (structs : list struct_def) (traits : list trait_def)
+    (ty_params lt_params : nat) (bounds : list trait_bound) : bool :=
+  forallb
+    (fun b =>
+       forallb (trait_ref_wf_b structs traits ty_params lt_params)
+         (bound_traits b))
+    bounds.
 
 Definition struct_wf_b (structs : list struct_def) (traits : list trait_def) (s : struct_def) : bool :=
   string_no_dup_b (field_names (struct_fields s)) &&
   struct_field_types_wf_b structs s &&
-  trait_bounds_wf_b traits (struct_bounds s) &&
+  trait_bounds_wf_b structs traits (struct_type_params s) (struct_lifetimes s)
+    (struct_bounds s) &&
   struct_params_ok_b s.
 
-Definition trait_wf_b (traits : list trait_def) (t : trait_def) : bool :=
-  trait_bounds_wf_b traits (trait_bounds t).
+Definition trait_wf_b (structs : list struct_def) (traits : list trait_def)
+    (t : trait_def) : bool :=
+  trait_bounds_wf_b structs traits (trait_type_params t) 0 (trait_bounds t).
 
 Definition impl_key_eqb (a b : impl_def) : bool :=
   String.eqb (impl_trait_name a) (impl_trait_name b) &&
@@ -284,11 +302,21 @@ Fixpoint impl_no_dup_b (xs : list impl_def) : bool :=
   | x :: rest => negb (impl_mem_b x rest) && impl_no_dup_b rest
   end.
 
-Definition impl_wf_b (structs : list struct_def) (traits : list trait_def) (i : impl_def) : bool :=
-  string_mem_b (impl_trait_name i) (trait_names traits) &&
-  forallb (type_env_wf_b structs (impl_type_params i) (impl_lifetimes i) 0)
-    (impl_trait_args i) &&
-  type_env_wf_b structs (impl_type_params i) (impl_lifetimes i) 0 (impl_for_ty i).
+Definition impl_wf_b (env : global_env) (i : impl_def) : bool :=
+  match lookup_trait (impl_trait_name i) env with
+  | None => false
+  | Some t =>
+      Nat.eqb (Datatypes.length (impl_trait_args i)) (trait_type_params t) &&
+      forallb (type_env_wf_b (env_structs env)
+                 (impl_type_params i) (impl_lifetimes i) 0)
+        (impl_trait_args i) &&
+      type_env_wf_b (env_structs env)
+        (impl_type_params i) (impl_lifetimes i) 0 (impl_for_ty i) &&
+      match check_struct_bounds env (trait_bounds t) (impl_trait_args i) with
+      | None => true
+      | Some _ => false
+      end
+  end.
 
 Definition global_names (env : global_env) : list string :=
   struct_names (env_structs env) ++ trait_names (env_traits env) ++ fn_names (env_fns env).
@@ -297,9 +325,9 @@ Definition valid_global_env_b (env : global_env) : bool :=
   string_no_dup_b (global_names env) &&
   structs_acyclic_b (env_structs env) &&
   forallb (struct_wf_b (env_structs env) (env_traits env)) (env_structs env) &&
-  forallb (trait_wf_b (env_traits env)) (env_traits env) &&
+  forallb (trait_wf_b (env_structs env) (env_traits env)) (env_traits env) &&
   impl_no_dup_b (env_impls env) &&
-  forallb (impl_wf_b (env_structs env) (env_traits env)) (env_impls env) &&
+  forallb (impl_wf_b env) (env_impls env) &&
   forallb (fn_types_wf_b (env_structs env)) (env_fns env).
 
 Definition validate_env (env : global_env) : option global_env :=

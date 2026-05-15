@@ -1,0 +1,12 @@
+trait Show;
+trait Convert<T> where T: Show;
+
+struct Box {
+  value: affine isize
+}
+
+impl Convert<affine isize> for affine Box;
+
+fn main() -> unrestricted () {
+  ()
+}

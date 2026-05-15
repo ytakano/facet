@@ -1,0 +1,9 @@
+trait Convert<T>;
+
+struct Box<T> where T: Convert<affine Missing> {
+  value: affine T
+}
+
+fn main() -> unrestricted () {
+  ()
+}

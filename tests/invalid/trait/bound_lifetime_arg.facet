@@ -1,0 +1,9 @@
+trait Show;
+
+struct Box<'a, T> where T: Show<'a> {
+  value: affine T
+}
+
+fn main() -> unrestricted () {
+  ()
+}

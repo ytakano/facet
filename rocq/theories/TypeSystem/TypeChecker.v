@@ -373,22 +373,43 @@ Definition compatible_error (T_actual T_expected : Ty) : infer_error :=
       else ErrTypeMismatch (ty_core T_actual) (ty_core T_expected)
   end.
 
-Definition trait_impl_error
-    (env : global_env) (trait_name : string) (for_ty : Ty) : option infer_error :=
-  match matching_impls trait_name [] for_ty (env_impls env) with
-  | [] => Some (ErrTraitImplNotFound trait_name for_ty)
-  | [_] => None
-  | _ :: _ :: _ => Some (ErrTraitImplAmbiguous trait_name for_ty)
+Definition trait_impl_error_with_args
+    (env : global_env) (trait_name : string) (trait_args : list Ty)
+    (for_ty : Ty) : option infer_error :=
+  match lookup_trait trait_name env with
+  | None => Some (ErrTraitImplNotFound trait_name for_ty)
+  | Some t =>
+      if negb (Nat.eqb (List.length trait_args) (trait_type_params t))
+      then Some ErrArityMismatch
+      else
+      match matching_impls trait_name trait_args for_ty (env_impls env) with
+      | [] => Some (ErrTraitImplNotFound trait_name for_ty)
+      | [_] => None
+      | _ :: _ :: _ => Some (ErrTraitImplAmbiguous trait_name for_ty)
+      end
   end.
 
-Fixpoint check_trait_names_for_ty
-    (env : global_env) (traits : list string) (for_ty : Ty) : option infer_error :=
+Definition trait_impl_error
+    (env : global_env) (trait_name : string) (for_ty : Ty) : option infer_error :=
+  trait_impl_error_with_args env trait_name [] for_ty.
+
+Definition instantiate_trait_ref (args : list Ty) (tr : trait_ref) : trait_ref :=
+  MkTraitRef (trait_ref_name tr)
+    (map (subst_type_params_ty args) (trait_ref_args tr)).
+
+Definition check_trait_ref_for_ty
+    (env : global_env) (tr : trait_ref) (for_ty : Ty) : option infer_error :=
+  trait_impl_error_with_args env (trait_ref_name tr) (trait_ref_args tr) for_ty.
+
+Fixpoint check_trait_refs_for_ty
+    (env : global_env) (traits : list trait_ref) (for_ty : Ty)
+    : option infer_error :=
   match traits with
   | [] => None
-  | trait_name :: rest =>
-      match trait_impl_error env trait_name for_ty with
+  | tr :: rest =>
+      match check_trait_ref_for_ty env tr for_ty with
       | Some err => Some err
-      | None => check_trait_names_for_ty env rest for_ty
+      | None => check_trait_refs_for_ty env rest for_ty
       end
   end.
 
@@ -401,7 +422,8 @@ Fixpoint check_struct_bounds
       match nth_error args (bound_type_index b) with
       | None => Some ErrArityMismatch
       | Some for_ty =>
-          match check_trait_names_for_ty env (bound_traits b) for_ty with
+          let traits := map (instantiate_trait_ref args) (bound_traits b) in
+          match check_trait_refs_for_ty env traits for_ty with
           | Some err => Some err
           | None => check_struct_bounds env rest args
           end

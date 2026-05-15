@@ -1,0 +1,11 @@
+trait Convert<T>;
+
+struct Box<T, U> where T: Convert<affine U> {
+  value: affine T
+}
+
+impl Convert<affine bool> for affine isize;
+
+fn main() -> affine Box<affine isize, affine bool> {
+  Box<affine isize, affine bool> { value = 1 }
+}

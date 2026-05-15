@@ -131,8 +131,12 @@ opt_trait_bounds:
   | KW_WHERE; bounds = separated_nonempty_list(COMMA, trait_bound) { bounds }
 
 trait_bound:
-  | type_name = ID; COLON; traits = separated_nonempty_list(PLUS, ID)
+  | type_name = ID; COLON; traits = separated_nonempty_list(PLUS, trait_ref)
     { { ntb_type_name = type_name; ntb_traits = traits } }
+
+trait_ref:
+  | name = ID; args = opt_type_args
+    { { ntr_name = name; ntr_args = args } }
 
 struct_field:
   | m = opt_mut; name = ID; COLON; t = ty

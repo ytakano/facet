@@ -250,8 +250,10 @@ val place_suffix_path : place -> field_path
 type field_def = { field_name : string; field_mutability : mutability;
                    field_ty : ty }
 
+type trait_ref = { trait_ref_name : string; trait_ref_args : ty list }
+
 type trait_bound = { bound_type_index : Big_int_Z.big_int;
-                     bound_traits : string list }
+                     bound_traits : trait_ref list }
 
 type struct_def = { struct_name : string;
                     struct_lifetimes : Big_int_Z.big_int;
@@ -277,6 +279,10 @@ val lookup_struct_in : string -> struct_def list -> struct_def option
 val lookup_struct : string -> global_env -> struct_def option
 
 val lookup_field : string -> field_def list -> field_def option
+
+val lookup_trait_in : string -> trait_def list -> trait_def option
+
+val lookup_trait : string -> global_env -> trait_def option
 
 val subst_type_params_ty : ty list -> ty -> ty
 
@@ -453,10 +459,16 @@ type infer_error =
 
 val compatible_error : ty -> ty -> infer_error
 
-val trait_impl_error : global_env -> string -> ty -> infer_error option
+val trait_impl_error_with_args :
+  global_env -> string -> ty list -> ty -> infer_error option
 
-val check_trait_names_for_ty :
-  global_env -> string list -> ty -> infer_error option
+val instantiate_trait_ref : ty list -> trait_ref -> trait_ref
+
+val check_trait_ref_for_ty :
+  global_env -> trait_ref -> ty -> infer_error option
+
+val check_trait_refs_for_ty :
+  global_env -> trait_ref list -> ty -> infer_error option
 
 val check_struct_bounds :
   global_env -> trait_bound list -> ty list -> infer_error option

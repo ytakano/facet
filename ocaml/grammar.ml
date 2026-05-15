@@ -14,7 +14,8 @@ struct_def ::= "struct" ID opt_generic_params opt_trait_bounds "{" struct_field 
 trait_def ::= "trait" ID opt_generic_params opt_trait_bounds ";"
 impl_def ::= "impl" opt_generic_params ID opt_type_args "for" ty ";"
 struct_field ::= opt_mut ID ":" ty
-trait_bound ::= ID ":" ID ("+" ID)*
+trait_bound ::= ID ":" trait_ref ("+" trait_ref)*
+trait_ref ::= ID opt_type_args
 ```
 
 ## generic params and bounds

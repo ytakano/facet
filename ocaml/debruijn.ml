@@ -85,6 +85,13 @@ and split_type_args ty_scope args =
   in
   go [] [] args
 
+let trait_ref_of_named ty_scope r =
+  let (lts, args) = split_type_args ty_scope r.ntr_args in
+  if lts <> []
+  then failwith ("trait bound cannot take lifetime arguments: " ^ r.ntr_name);
+  { trait_ref_name = r.ntr_name;
+    trait_ref_args = args }
+
 let rec named_ty_has_elided_ref_lifetime (NTy (_, c)) =
   named_ty_core_has_elided_ref_lifetime c
 
@@ -144,12 +151,12 @@ let split_generics generics =
   in
   go [] [] generics
 
-let trait_bound_of_named type_params b =
+let trait_bound_of_named ty_scope type_params b =
   match index_of b.ntb_type_name type_params with
   | None -> failwith ("unknown type parameter in trait bound: " ^ b.ntb_type_name)
   | Some i ->
     { bound_type_index = Big_int_Z.big_int_of_int i;
-      bound_traits = b.ntb_traits }
+      bound_traits = List.map (trait_ref_of_named ty_scope) b.ntb_traits }
 
 let split_expr_type_args ty_scope args =
   let rec go lts tys = function
@@ -233,7 +240,7 @@ let convert_struct struct_names s =
   { struct_name = s.ns_name;
     struct_lifetimes = Big_int_Z.big_int_of_int (List.length lts);
     struct_type_params = Big_int_Z.big_int_of_int (List.length tys);
-    struct_bounds = List.map (trait_bound_of_named tys) s.ns_bounds;
+    struct_bounds = List.map (trait_bound_of_named ty_scope tys) s.ns_bounds;
     struct_fields =
       List.map
         (fun f ->
@@ -242,11 +249,12 @@ let convert_struct struct_names s =
             field_ty = lower_named_ty ty_scope f.nfield_ty })
         s.ns_fields }
 
-let convert_trait t =
+let convert_trait struct_names t =
   let (_lts, tys) = split_generics t.nt_generics in
+  let ty_scope = { type_params = tys; struct_names } in
   { trait_name = t.nt_name;
     trait_type_params = Big_int_Z.big_int_of_int (List.length tys);
-    trait_bounds = List.map (trait_bound_of_named tys) t.nt_bounds }
+    trait_bounds = List.map (trait_bound_of_named ty_scope tys) t.nt_bounds }
 
 let convert_impl struct_names i =
   let (lts, tys) = split_generics i.ni_generics in
@@ -276,7 +284,6 @@ let validate_env env =
   match duplicate_name top_names with
   | Some name -> Some ("duplicate top-level name: " ^ name)
   | None ->
-    let trait_names = List.map (fun t -> t.trait_name) env.env_traits in
     let zero = Big_int_Z.zero_big_int in
     let big_len xs = Big_int_Z.big_int_of_int (List.length xs) in
     let find_struct name =
@@ -284,14 +291,6 @@ let validate_env env =
     in
     let find_trait name =
       List.find_opt (fun t -> t.trait_name = name) env.env_traits
-    in
-    let validate_bound max_ty_params b =
-      if Big_int_Z.ge_big_int b.bound_type_index max_ty_params
-      then Some "trait bound refers to an out-of-range type parameter"
-      else
-        match List.find_opt (fun tr -> not (List.mem tr trait_names)) b.bound_traits with
-        | Some tr -> Some ("unknown trait in bound: " ^ tr)
-        | None -> None
     in
     let rec first_some = function
       | [] -> None
@@ -351,6 +350,22 @@ let validate_env env =
         | None -> type_error ty_params lt_params bound_depth inner
         end
     in
+    let validate_bound ty_params lt_params b =
+      if Big_int_Z.ge_big_int b.bound_type_index ty_params
+      then Some "trait bound refers to an out-of-range type parameter"
+      else
+        let validate_trait_ref tr =
+          match find_trait tr.trait_ref_name with
+          | None -> Some ("unknown trait in bound: " ^ tr.trait_ref_name)
+          | Some trait_def ->
+            if not (Big_int_Z.eq_big_int (big_len tr.trait_ref_args) trait_def.trait_type_params)
+            then Some ("trait bound arity mismatch: " ^ tr.trait_ref_name)
+            else
+              first_some
+                (List.map (type_error ty_params lt_params zero) tr.trait_ref_args)
+        in
+        first_some (List.map validate_trait_ref b.bound_traits)
+    in
     let rec type_struct_refs (MkTy (_, core)) =
       match core with
       | TStruct (name, _, args) ->
@@ -387,10 +402,10 @@ let validate_env env =
           (List.map
              (fun f -> type_error s.struct_type_params s.struct_lifetimes zero f.field_ty)
              s.struct_fields @
-           List.map (validate_bound s.struct_type_params) s.struct_bounds)
+           List.map (validate_bound s.struct_type_params s.struct_lifetimes) s.struct_bounds)
     in
     let validate_trait t =
-      first_some (List.map (validate_bound t.trait_type_params) t.trait_bounds)
+      first_some (List.map (validate_bound t.trait_type_params zero) t.trait_bounds)
     in
     let validate_impl i =
       match find_trait i.impl_trait_name with
@@ -399,11 +414,17 @@ let validate_env env =
         if not (Big_int_Z.eq_big_int (big_len i.impl_trait_args) trait_def.trait_type_params)
         then Some ("trait type arity mismatch: " ^ i.impl_trait_name)
         else
-        first_some
-          (List.map
-             (type_error i.impl_type_params i.impl_lifetimes zero)
-             i.impl_trait_args @
-           [type_error i.impl_type_params i.impl_lifetimes zero i.impl_for_ty])
+          let own_bound_error =
+            match check_struct_bounds env trait_def.trait_bounds i.impl_trait_args with
+            | None -> None
+            | Some _ -> Some ("trait own bound not satisfied: " ^ i.impl_trait_name)
+          in
+          first_some
+            (List.map
+               (type_error i.impl_type_params i.impl_lifetimes zero)
+               i.impl_trait_args @
+             [type_error i.impl_type_params i.impl_lifetimes zero i.impl_for_ty;
+              own_bound_error])
     in
     let validate_fn f =
       first_some
@@ -441,7 +462,7 @@ let convert_program_items (items : named_item list) : global_env =
   let fn_names = List.map (fun f -> f.nf_name) fns in
   let env = {
     env_structs = List.map (convert_struct struct_names) structs;
-    env_traits = List.map convert_trait traits;
+    env_traits = List.map (convert_trait struct_names) traits;
     env_impls = List.map (convert_impl struct_names) impls;
     env_fns = List.map (convert_fn_def_with_names struct_names fn_names) fns;
   } in

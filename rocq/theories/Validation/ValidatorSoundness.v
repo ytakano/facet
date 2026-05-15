@@ -8,9 +8,9 @@ Theorem valid_global_env_components : forall env,
   string_no_dup_b (global_names env) = true /\
   structs_acyclic_b (env_structs env) = true /\
   forallb (struct_wf_b (env_structs env) (env_traits env)) (env_structs env) = true /\
-  forallb (trait_wf_b (env_traits env)) (env_traits env) = true /\
+  forallb (trait_wf_b (env_structs env) (env_traits env)) (env_traits env) = true /\
   impl_no_dup_b (env_impls env) = true /\
-  forallb (impl_wf_b (env_structs env) (env_traits env)) (env_impls env) = true /\
+  forallb (impl_wf_b env) (env_impls env) = true /\
   forallb (fn_types_wf_b (env_structs env)) (env_fns env) = true.
 Proof.
   intros env H.
@@ -30,9 +30,9 @@ Theorem validate_env_components : forall env env',
   string_no_dup_b (global_names env') = true /\
   structs_acyclic_b (env_structs env') = true /\
   forallb (struct_wf_b (env_structs env') (env_traits env')) (env_structs env') = true /\
-  forallb (trait_wf_b (env_traits env')) (env_traits env') = true /\
+  forallb (trait_wf_b (env_structs env') (env_traits env')) (env_traits env') = true /\
   impl_no_dup_b (env_impls env') = true /\
-  forallb (impl_wf_b (env_structs env') (env_traits env')) (env_impls env') = true /\
+  forallb (impl_wf_b env') (env_impls env') = true /\
   forallb (fn_types_wf_b (env_structs env')) (env_fns env') = true.
 Proof.
   intros env env' H.

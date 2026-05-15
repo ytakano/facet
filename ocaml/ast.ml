@@ -56,7 +56,12 @@ type named_generic_param =
 
 type named_trait_bound = {
   ntb_type_name : string;
-  ntb_traits    : string list;
+  ntb_traits    : named_trait_ref list;
+}
+
+and named_trait_ref = {
+  ntr_name : string;
+  ntr_args : named_type_arg list;
 }
 
 type named_field_def = {

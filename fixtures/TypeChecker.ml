@@ -949,8 +949,10 @@ let rec place_suffix_path = function
 type field_def = { field_name : string; field_mutability : mutability;
                    field_ty : ty }
 
+type trait_ref = { trait_ref_name : string; trait_ref_args : ty list }
+
 type trait_bound = { bound_type_index : Big_int_Z.big_int;
-                     bound_traits : string list }
+                     bound_traits : trait_ref list }
 
 type struct_def = { struct_name : string;
                     struct_lifetimes : Big_int_Z.big_int;
@@ -989,6 +991,18 @@ let rec lookup_field name = function
 | [] -> None
 | f :: rest ->
   if (=) name f.field_name then Some f else lookup_field name rest
+
+(** val lookup_trait_in : string -> trait_def list -> trait_def option **)
+
+let rec lookup_trait_in name = function
+| [] -> None
+| t :: rest ->
+  if (=) name t.trait_name then Some t else lookup_trait_in name rest
+
+(** val lookup_trait : string -> global_env -> trait_def option **)
+
+let lookup_trait name env =
+  lookup_trait_in name env.env_traits
 
 (** val subst_type_params_ty : ty list -> ty -> ty **)
 
@@ -2081,27 +2095,44 @@ let compatible_error t_actual t_expected =
     then ErrUsageMismatch ((ty_usage t_actual), (ty_usage t_expected))
     else ErrTypeMismatch ((ty_core t_actual), (ty_core t_expected))
 
-(** val trait_impl_error :
-    global_env -> string -> ty -> infer_error option **)
+(** val trait_impl_error_with_args :
+    global_env -> string -> ty list -> ty -> infer_error option **)
 
-let trait_impl_error env trait_name0 for_ty =
-  match matching_impls trait_name0 [] for_ty env.env_impls with
-  | [] -> Some (ErrTraitImplNotFound (trait_name0, for_ty))
-  | _ :: l ->
-    (match l with
-     | [] -> None
-     | _ :: _ -> Some (ErrTraitImplAmbiguous (trait_name0, for_ty)))
+let trait_impl_error_with_args env trait_name0 trait_args for_ty =
+  match lookup_trait trait_name0 env with
+  | Some t ->
+    if negb (Nat.eqb (length trait_args) t.trait_type_params)
+    then Some ErrArityMismatch
+    else (match matching_impls trait_name0 trait_args for_ty env.env_impls with
+          | [] -> Some (ErrTraitImplNotFound (trait_name0, for_ty))
+          | _ :: l ->
+            (match l with
+             | [] -> None
+             | _ :: _ -> Some (ErrTraitImplAmbiguous (trait_name0, for_ty))))
+  | None -> Some (ErrTraitImplNotFound (trait_name0, for_ty))
 
-(** val check_trait_names_for_ty :
-    global_env -> string list -> ty -> infer_error option **)
+(** val instantiate_trait_ref : ty list -> trait_ref -> trait_ref **)
 
-let rec check_trait_names_for_ty env traits for_ty =
+let instantiate_trait_ref args tr =
+  { trait_ref_name = tr.trait_ref_name; trait_ref_args =
+    (map (subst_type_params_ty args) tr.trait_ref_args) }
+
+(** val check_trait_ref_for_ty :
+    global_env -> trait_ref -> ty -> infer_error option **)
+
+let check_trait_ref_for_ty env tr for_ty =
+  trait_impl_error_with_args env tr.trait_ref_name tr.trait_ref_args for_ty
+
+(** val check_trait_refs_for_ty :
+    global_env -> trait_ref list -> ty -> infer_error option **)
+
+let rec check_trait_refs_for_ty env traits for_ty =
   match traits with
   | [] -> None
-  | trait_name0 :: rest ->
-    (match trait_impl_error env trait_name0 for_ty with
+  | tr :: rest ->
+    (match check_trait_ref_for_ty env tr for_ty with
      | Some err -> Some err
-     | None -> check_trait_names_for_ty env rest for_ty)
+     | None -> check_trait_refs_for_ty env rest for_ty)
 
 (** val check_struct_bounds :
     global_env -> trait_bound list -> ty list -> infer_error option **)
@@ -2112,7 +2143,8 @@ let rec check_struct_bounds env bounds args =
   | b :: rest ->
     (match nth_error args b.bound_type_index with
      | Some for_ty ->
-       (match check_trait_names_for_ty env b.bound_traits for_ty with
+       let traits = map (instantiate_trait_ref args) b.bound_traits in
+       (match check_trait_refs_for_ty env traits for_ty with
         | Some err -> Some err
         | None -> check_struct_bounds env rest args)
      | None -> Some ErrArityMismatch)

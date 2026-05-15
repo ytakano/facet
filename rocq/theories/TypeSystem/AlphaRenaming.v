@@ -6,6 +6,14 @@ Scheme typed_ind' := Induction for typed Sort Prop
 with typed_args_ind' := Induction for typed_args Sort Prop.
 Combined Scheme typed_typed_args_ind from typed_ind', typed_args_ind'.
 
+Scheme typed_env_structural_ind' := Induction for typed_env_structural Sort Prop
+with typed_args_env_structural_ind' := Induction for typed_args_env_structural Sort Prop
+with typed_fields_env_structural_ind' := Induction for typed_fields_env_structural Sort Prop.
+Combined Scheme typed_env_structural_mutind from
+  typed_env_structural_ind',
+  typed_args_env_structural_ind',
+  typed_fields_env_structural_ind'.
+
 (* ------------------------------------------------------------------ *)
 
 Fixpoint rename_range (ρ : rename_env) : list ident :=
@@ -622,6 +630,20 @@ Proof.
   exists Γr'. split.
   - unfold sctx_restore_path. rewrite Hupdate_r. reflexivity.
   - exact Halpha_r.
+Qed.
+
+Lemma ctx_alpha_check_ok_forward : forall env ρ Γ Γr x T,
+  ctx_alpha ρ Γ Γr ->
+  ~ In x (rename_range ρ) ->
+  sctx_check_ok env x T Γ = true ->
+  sctx_check_ok env (lookup_rename x ρ) T Γr = true.
+Proof.
+  intros env ρ Γ Γr x T Halpha Hsafe Hok.
+  unfold sctx_check_ok, sctx_lookup in *.
+  destruct (ty_usage T); try exact Hok.
+  destruct (ctx_lookup_state x Γ) as [[Tx st] |] eqn:Hlookup; try discriminate.
+  rewrite (ctx_alpha_lookup_state_forward ρ Γ Γr x Tx st Halpha Hsafe Hlookup).
+  exact Hok.
 Qed.
 
 Lemma ctx_alpha_add_fresh_forward : forall ρ Γ Γr x xr T m,
@@ -1385,6 +1407,60 @@ Proof.
       * left. reflexivity.
       * exact He.
       * exact Hin.
+Qed.
+
+Lemma alpha_rename_struct_fields_lookup_forward : forall ρ used fields fieldsr used' fname e er,
+  ((fix go (used0 : list ident) (fields0 : list (string * expr))
+      : list (string * expr) * list ident :=
+      match fields0 with
+      | [] => ([], used0)
+      | (fname0, e0) :: rest =>
+          let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+          let (rest', used2) := go used1 rest in
+          ((fname0, e0') :: rest', used2)
+      end) used fields) = (fieldsr, used') ->
+  lookup_field_b fname fields = Some e ->
+  (forall used0 e0 er0 used1,
+      In e0 (map snd fields) ->
+      alpha_rename_expr ρ used0 e0 = (er0, used1) ->
+      e0 = e ->
+      er0 = er) ->
+  lookup_field_b fname fieldsr = Some er.
+Proof.
+  intros ρ used fields.
+  revert used.
+  induction fields as [| [fname0 e0] rest IH]; intros used fieldsr used' fname e er Hrename Hlookup Hexpr;
+    simpl in Hrename, Hlookup.
+  - discriminate.
+  - destruct (alpha_rename_expr ρ used e0) as [e0r used1] eqn:He0.
+    destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+          : list (string * expr) * list ident :=
+          match fields0 with
+          | [] => ([], used0)
+          | (fname1, e1) :: rest1 =>
+              let (e1', used2) := alpha_rename_expr ρ used0 e1 in
+              let (rest', used3) := go used2 rest1 in
+              ((fname1, e1') :: rest', used3)
+          end) used1 rest) as [restr used2] eqn:Hrest.
+    injection Hrename as <- <-.
+    simpl.
+    destruct (String.eqb fname fname0) eqn:Hname.
+    + injection Hlookup as <-.
+      pose proof (Hexpr used e0 e0r used1) as Heq_er.
+      assert (e0r = er) as ->.
+      { apply Heq_er.
+        - simpl. left. reflexivity.
+        - exact He0.
+        - reflexivity. }
+      reflexivity.
+    + eapply IH.
+      * exact Hrest.
+      * exact Hlookup.
+      * intros used0 e1 er1 used_tail Hin Hren Heq.
+        eapply Hexpr.
+        -- simpl. right. exact Hin.
+        -- exact Hren.
+        -- exact Heq.
 Qed.
 
 Lemma alpha_rename_expr_used_extends : forall ρ used e er used',
@@ -2326,4 +2402,48 @@ Proof.
       injection Hmerge as <-.
       eexists. split. reflexivity.
       constructor; [exact Hctx04 | exact Hrest_names | exact Hxr_range].
+Qed.
+
+Lemma ctx_alpha_merge_forward : forall ρ Γ02 Γ2r Γ03 Γ3r Γ4,
+  ctx_alpha ρ Γ02 Γ2r ->
+  ctx_alpha ρ Γ03 Γ3r ->
+  ctx_merge Γ02 Γ03 = Some Γ4 ->
+  exists Γ4r, ctx_merge Γ2r Γ3r = Some Γ4r /\ ctx_alpha ρ Γ4 Γ4r.
+Proof.
+  intros ρ Γ02 Γ2r Γ03 Γ3r Γ4 Halpha2.
+  revert Γ03 Γ3r Γ4.
+  induction Halpha2 as [Γ02 | ρ' Γ02' Γ2r' x xr T b2 m2 Halpha2' IH2 Hxr_ctx Hxr_range];
+    intros Γ03 Γ3r Γ4 Halpha3 Hmerge.
+  - inversion Halpha3; subst.
+    exists Γ4. split; [exact Hmerge | constructor].
+  - inversion Halpha3; subst.
+    simpl in Hmerge. rewrite ident_eqb_refl in Hmerge. simpl in Hmerge.
+    lazymatch goal with
+    | H_alpha3' : ctx_alpha ρ' ?Γ03t ?Γ3rt |- _ =>
+        destruct (ctx_merge Γ02' Γ03t) as [rest4 |] eqn:Hmerge_rest;
+        [| discriminate];
+        destruct (IH2 Γ03t Γ3rt rest4 H_alpha3' Hmerge_rest)
+          as [rest4r [Hmerge4r Hctx4r]];
+        assert (Hrest_names : ~ In xr (ctx_names rest4r)) by
+          (rewrite (ctx_same_bindings_names _ _
+             (ctx_merge_same_bindings _ Γ3rt _ Hmerge4r));
+           exact Hxr_ctx)
+    end.
+    simpl. rewrite ident_eqb_refl. simpl. rewrite Hmerge4r.
+    destruct (ty_usage T) eqn:Hu.
+    + lazymatch goal with
+      | Hm : (if Bool.eqb (st_consumed b2) (st_consumed ?bX) then _ else _) = Some _ |- _ =>
+          destruct (Bool.eqb (st_consumed b2) (st_consumed bX)) eqn:Heqb;
+          [injection Hm as <-;
+           eexists; split;
+           [reflexivity |
+            constructor; [exact Hctx4r | exact Hrest_names | exact Hxr_range]]
+          | discriminate]
+      end.
+    + injection Hmerge as <-.
+      eexists. split. reflexivity.
+      constructor; [exact Hctx4r | exact Hrest_names | exact Hxr_range].
+    + injection Hmerge as <-.
+      eexists. split. reflexivity.
+      constructor; [exact Hctx4r | exact Hrest_names | exact Hxr_range].
 Qed.

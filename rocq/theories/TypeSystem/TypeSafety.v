@@ -2309,6 +2309,69 @@ Proof.
   constructor; assumption.
 Qed.
 
+Definition root_env_covers_params (ps : list param) (R : root_env) : Prop :=
+  forall x,
+    In x (ctx_names (params_ctx ps)) ->
+    exists roots, root_env_lookup x R = Some roots.
+
+Lemma root_env_covers_params_update :
+  forall ps R x roots,
+    root_env_covers_params ps R ->
+    root_env_covers_params ps (root_env_update x roots R).
+Proof.
+  intros ps R x roots Hcovers y Hy.
+  destruct (Hcovers y Hy) as [roots_old Hlookup].
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst y.
+    exists roots.
+    eapply root_env_lookup_update_eq. exact Hlookup.
+  - exists roots_old.
+    rewrite root_env_lookup_update_neq.
+    + exact Hlookup.
+    + apply ident_eqb_neq. exact Heq.
+Qed.
+
+Lemma root_env_covers_params_add :
+  forall ps R x roots,
+    root_env_covers_params ps R ->
+    root_env_covers_params ps (root_env_add x roots R).
+Proof.
+  intros ps R x roots Hcovers y Hy.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst y.
+    exists roots. apply root_env_lookup_add_eq.
+  - destruct (Hcovers y Hy) as [roots_old Hlookup].
+    exists roots_old.
+    rewrite root_env_lookup_add_neq.
+    + exact Hlookup.
+    + apply ident_eqb_neq. exact Heq.
+Qed.
+
+Lemma root_env_covers_params_remove_non_param :
+  forall ps R x,
+    root_env_covers_params ps R ->
+    ~ In x (ctx_names (params_ctx ps)) ->
+    root_env_covers_params ps (root_env_remove x R).
+Proof.
+  intros ps R x Hcovers Hnotin y Hy.
+  destruct (Hcovers y Hy) as [roots_old Hlookup].
+  exists roots_old.
+  rewrite root_env_lookup_remove_neq.
+  - exact Hlookup.
+  - intros Heq. subst y. contradiction.
+Qed.
+
+Lemma root_env_covers_params_lookup_none_not_in :
+  forall ps R x,
+    root_env_covers_params ps R ->
+    root_env_lookup x R = None ->
+    ~ In x (ctx_names (params_ctx ps)).
+Proof.
+  intros ps R x Hcovers Hlookup_none Hin.
+  destruct (Hcovers x Hin) as [roots Hlookup].
+  rewrite Hlookup_none in Hlookup. discriminate.
+Qed.
+
 Lemma store_remove_params_cons_non_param :
   forall ps se s,
     ~ In (se_name se) (ctx_names (params_ctx ps)) ->
@@ -2669,6 +2732,369 @@ Proof.
   destruct (binding_available_b (se_state se) path) eqn:Havailable;
     try discriminate.
   eapply store_param_scope_update_state; eassumption.
+Qed.
+
+Theorem eval_preserves_param_scope_roots_ready_mutual :
+  (forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots
+        ps frame,
+      provenance_ready_expr e ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      root_env_covers_params ps R ->
+      store_param_scope ps s frame ->
+      exists frame', store_param_scope ps s' frame') /\
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ params Σ' R' roots
+        ps frame,
+      provenance_ready_args args ->
+      typed_args_roots env Ω n R Σ args params Σ' R' roots ->
+      root_env_covers_params ps R ->
+      store_param_scope ps s frame ->
+      exists frame', store_param_scope ps s' frame') /\
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots
+        ps frame,
+      provenance_ready_fields fields ->
+      typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+      root_env_covers_params ps R ->
+      store_param_scope ps s frame ->
+      exists frame', store_param_scope ps s' frame').
+Proof.
+  assert (Hmut : forall env,
+    (forall s e s' v,
+      eval env s e s' v ->
+      forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots
+          ps frame,
+        provenance_ready_expr e ->
+        typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+        root_env_covers_params ps R ->
+        store_param_scope ps s frame ->
+        root_env_covers_params ps R' /\
+        exists frame', store_param_scope ps s' frame') /\
+    (forall s args s' vs,
+      eval_args env s args s' vs ->
+      forall (Ω : outlives_ctx) (n : nat) R Σ params Σ' R' roots
+          ps frame,
+        provenance_ready_args args ->
+        typed_args_roots env Ω n R Σ args params Σ' R' roots ->
+        root_env_covers_params ps R ->
+        store_param_scope ps s frame ->
+        root_env_covers_params ps R' /\
+        exists frame', store_param_scope ps s' frame') /\
+    (forall s fields defs s' values,
+      eval_struct_fields env s fields defs s' values ->
+      forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots
+          ps frame,
+        provenance_ready_fields fields ->
+        typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+        root_env_covers_params ps R ->
+        store_param_scope ps s frame ->
+        root_env_covers_params ps R' /\
+        exists frame', store_param_scope ps s' frame')).
+  { intro env.
+    apply eval_eval_args_eval_struct_fields_ind.
+  - intros s Ω n R Σ T Σ' R' roots ps frame _ Htyped Hcover Hscope.
+    inversion Htyped; subst. split; [exact Hcover | exists frame; exact Hscope].
+  - intros s i Ω n R Σ T Σ' R' roots ps frame _ Htyped Hcover Hscope.
+    inversion Htyped; subst. split; [exact Hcover | exists frame; exact Hscope].
+  - intros s f Ω n R Σ T Σ' R' roots ps frame _ Htyped Hcover Hscope.
+    inversion Htyped; subst. split; [exact Hcover | exists frame; exact Hscope].
+  - intros s b Ω n R Σ T Σ' R' roots ps frame _ Htyped Hcover Hscope.
+    inversion Htyped; subst. split; [exact Hcover | exists frame; exact Hscope].
+  - intros s x se Hlookup Hconsume Ω n R Σ T Σ' R' roots ps frame
+      _ Htyped Hcover Hscope.
+    inversion Htyped; subst.
+    all: split; [exact Hcover | exists frame; exact Hscope].
+  - intros s x se Hlookup Hconsume Hused Ω n R Σ T Σ' R' roots
+      ps frame _ Htyped Hcover Hscope.
+    inversion Htyped; subst.
+    all: split; [exact Hcover | eapply store_param_scope_mark_used; exact Hscope].
+  - intros s p x_eval path_eval se T_eval v Heval_place Hlookup
+      Havailable Htype_eval Hconsume Hvalue Ω n R Σ T Σ' R' roots
+      ps frame Hready Htyped Hcover Hscope.
+    inversion Hready; subst; try discriminate.
+    inversion Htyped; subst.
+    all: split; [exact Hcover | exists frame; exact Hscope].
+  - intros s s' p x_eval path_eval se T_eval v Heval_place Hlookup
+      Havailable Htype_eval Hconsume Hvalue Hstore_consume
+      Ω n R Σ T Σ' R' roots ps frame Hready Htyped Hcover Hscope.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    all: split; [exact Hcover | eapply store_param_scope_consume_path; eassumption].
+  - intros s s' name lts args fields values sdef Hlookup Heval_fields
+      IHfields Ω n R Σ T Σ' R' roots ps frame Hready Htyped
+      Hcover Hscope.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    match goal with
+    | Hlookup_typed : lookup_struct name env = Some ?sdef_typed |- _ =>
+        rewrite Hlookup in Hlookup_typed; inversion Hlookup_typed; subst sdef_typed
+    end.
+    match goal with
+    | Hready_fields : provenance_ready_fields fields,
+      Htyped_fields : typed_fields_roots env Ω n lts args R Σ fields
+        (struct_fields sdef) Σ' R' roots |- _ =>
+        exact (IHfields Ω n lts args R Σ Σ' R' roots ps frame
+          Hready_fields Htyped_fields Hcover Hscope)
+    end.
+  - intros s s1 s2 m x T_ann e1 e2 v1 v2 Heval1 IH1 Heval2 IH2
+      Ω n R Σ T Σ' R' roots ps frame Hready Htyped Hcover Hscope.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    match goal with
+    | Hready1 : provenance_ready_expr e1,
+      Hready2 : provenance_ready_expr e2,
+      Htyped1 : typed_env_roots env Ω n R Σ e1 ?T1_body ?Σ1_body
+        ?R1_body ?roots1_body,
+      Hfresh : root_env_lookup x ?R1_body = None,
+      Htyped2 : typed_env_roots env Ω n
+        (root_env_add x ?roots1_body ?R1_body)
+        (sctx_add x T_ann m ?Σ1_body) e2 ?T2_body ?Σ2_body
+        ?R2_body ?roots2_body |- _ =>
+        destruct (IH1 Ω n R Σ T1_body Σ1_body R1_body roots1_body
+                    ps frame Hready1 Htyped1 Hcover Hscope)
+          as [Hcover1 [frame1 Hscope1]];
+        pose proof (root_env_covers_params_lookup_none_not_in
+                      ps R1_body x Hcover1 Hfresh) as Hnotin;
+        pose proof (root_env_covers_params_add
+                      ps R1_body x roots1_body Hcover1) as Hcover_add;
+        pose proof (store_param_scope_add
+                      ps s1 frame1 x T_ann v1 Hnotin Hscope1) as Hscope_add;
+        destruct (IH2 Ω n (root_env_add x roots1_body R1_body)
+                    (sctx_add x T_ann m Σ1_body) T2_body Σ2_body
+                    R2_body roots2_body ps frame1 Hready2 Htyped2
+                    Hcover_add Hscope_add)
+          as [Hcover2 [frame2 Hscope2]];
+        split;
+        [ eapply root_env_covers_params_remove_non_param; eassumption
+        | eapply store_param_scope_remove_non_param; eassumption ]
+    end.
+  - intros s s' e v Heval IH Ω n R Σ T Σ' R' roots ps frame
+      Hready Htyped Hcover Hscope.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    match goal with
+    | Hready_e : provenance_ready_expr e,
+      Htyped_e : typed_env_roots env Ω n R Σ e ?T_e Σ' R' ?roots_e |- _ =>
+        exact (IH Ω n R Σ T_e Σ' R' roots_e ps frame
+                 Hready_e Htyped_e Hcover Hscope)
+    end.
+  - intros s s1 s2 s3 x old_e e_new v_new Hlookup Heval_new
+      IHnew Hupdate Hrestore Ω n R Σ T Σ' R' roots ps frame
+      Hready Htyped Hcover Hscope.
+    dependent destruction Hready.
+    inversion Htyped; subst; try discriminate.
+    match goal with
+    | Hpath_var : place_path (PVar _) = Some _ |- _ =>
+        simpl in Hpath_var; inversion Hpath_var; subst; clear Hpath_var
+    end.
+    assert (Hready_new : provenance_ready_expr e_new) by assumption.
+    match goal with
+    | Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new ?Σ1
+        ?R1 ?roots_new |- _ =>
+        destruct (IHnew Ω n R Σ T_new Σ1 R1 roots_new ps frame
+                    Hready_new Htyped_new Hcover Hscope)
+          as [Hcover1 [frame1 Hscope1]];
+        destruct (store_param_scope_update_val
+                    ps s1 frame1 x v_new s2 Hscope1 Hupdate)
+          as [frame2 Hscope2];
+        destruct (store_param_scope_restore_path
+                    ps s2 frame2 x [] s3 Hscope2 Hrestore)
+          as [frame3 Hscope3];
+        split;
+        [ apply root_env_covers_params_update; exact Hcover1
+        | exists frame3; exact Hscope3 ]
+    end.
+  - intros s s1 s2 x old_e e_new v_new Hlookup Heval_new
+      IHnew Hupdate Ω n R Σ T Σ' R' roots ps frame Hready Htyped
+      Hcover Hscope.
+    dependent destruction Hready.
+    inversion Htyped; subst; try discriminate.
+    match goal with
+    | Hpath_var : place_path (PVar _) = Some _ |- _ =>
+        simpl in Hpath_var; inversion Hpath_var; subst; clear Hpath_var
+    end.
+    assert (Hready_new : provenance_ready_expr e_new) by assumption.
+    match goal with
+    | Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new Σ' ?R1
+        ?roots_new |- _ =>
+        destruct (IHnew Ω n R Σ T_new Σ' R1 roots_new ps frame
+                    Hready_new Htyped_new Hcover Hscope)
+          as [Hcover1 [frame1 Hscope1]];
+        destruct (store_param_scope_update_val
+                    ps s1 frame1 x v_new s2 Hscope1 Hupdate)
+          as [frame2 Hscope2];
+        split;
+        [ apply root_env_covers_params_update; exact Hcover1
+        | exists frame2; exact Hscope2 ]
+    end.
+  - intros s s1 s2 s3 p x_eval path_eval old_v e_new v_new
+      Heval_place Hlookup_old Heval_new IHnew Hupdate Hrestore
+      Ω n R Σ T Σ' R' roots ps frame Hready Htyped Hcover Hscope.
+    dependent destruction Hready.
+    inversion Htyped; subst; try discriminate.
+    assert (Hready_new : provenance_ready_expr e_new) by assumption.
+    match goal with
+    | Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new ?Σ1
+        ?R1 ?roots_new |- _ =>
+        destruct (IHnew Ω n R Σ T_new Σ1 R1 roots_new ps frame
+                    Hready_new Htyped_new Hcover Hscope)
+          as [Hcover1 [frame1 Hscope1]];
+        destruct (store_param_scope_update_path
+                    ps s1 frame1 x_eval path_eval v_new s2 Hscope1 Hupdate)
+          as [frame2 Hscope2];
+        destruct (store_param_scope_restore_path
+                    ps s2 frame2 x_eval path_eval s3 Hscope2 Hrestore)
+          as [frame3 Hscope3];
+        split;
+        [ apply root_env_covers_params_update; exact Hcover1
+        | exists frame3; exact Hscope3 ]
+    end.
+  - intros s s1 s2 p x_eval path_eval e_new v_new Heval_place
+      Heval_new IHnew Hupdate Ω n R Σ T Σ' R' roots ps frame
+      Hready Htyped Hcover Hscope.
+    dependent destruction Hready.
+    inversion Htyped; subst; try discriminate.
+    assert (Hready_new : provenance_ready_expr e_new) by assumption.
+    match goal with
+    | Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new Σ' ?R1
+        ?roots_new |- _ =>
+        destruct (IHnew Ω n R Σ T_new Σ' R1 roots_new ps frame
+                    Hready_new Htyped_new Hcover Hscope)
+          as [Hcover1 [frame1 Hscope1]];
+        destruct (store_param_scope_update_path
+                    ps s1 frame1 x_eval path_eval v_new s2 Hscope1 Hupdate)
+          as [frame2 Hscope2];
+        split;
+        [ apply root_env_covers_params_update; exact Hcover1
+        | exists frame2; exact Hscope2 ]
+    end.
+  - intros s p x path rk Heval_place Ω n R Σ T Σ' R' roots ps frame
+      Hready Htyped Hcover Hscope.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    all: split; [exact Hcover | exists frame; exact Hscope].
+  - intros s r p x path se v T_eval Hplace Heval_place Hlookup Hvalue
+      Htype_eval Husage Ω n R Σ T Σ' R' roots ps frame Hready _ _ _.
+    inversion Hready.
+  - intros s s_r r x path se v T_eval Hnot_place Heval_r IHr Hlookup
+      Hvalue Htype_eval Husage Ω n R Σ T Σ' R' roots ps frame
+      Hready _ _ _.
+    inversion Hready.
+  - intros s fname Ω n R Σ T Σ' R' roots ps frame _ Htyped Hcover Hscope.
+    inversion Htyped; subst. split; [exact Hcover | exists frame; exact Hscope].
+  - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_then IHthen
+      Ω n R Σ T Σ' R' roots ps frame Hready Htyped Hcover Hscope.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    match goal with
+    | Hready_cond : provenance_ready_expr e1,
+      Hready_then : provenance_ready_expr e2,
+      Htyped_cond : typed_env_roots env Ω n R Σ e1 ?T_cond ?Σ1
+        ?R1 ?roots_cond,
+      Htyped_then : typed_env_roots env Ω n ?R1 ?Σ1 e2 ?T2 ?Σ2
+        ?R2 ?roots2 |- _ =>
+        destruct (IHcond Ω n R Σ T_cond Σ1 R1 roots_cond ps frame
+                    Hready_cond Htyped_cond Hcover Hscope)
+          as [Hcover1 [frame1 Hscope1]];
+        exact (IHthen Ω n R1 Σ1 T2 Σ2 R2 roots2 ps frame1
+                 Hready_then Htyped_then Hcover1 Hscope1)
+    end.
+  - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_else IHelse
+      Ω n R Σ T Σ' R' roots ps frame Hready Htyped Hcover Hscope.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    match goal with
+    | Hready_cond : provenance_ready_expr e1,
+      Hready_else : provenance_ready_expr e3,
+      Htyped_cond : typed_env_roots env Ω n R Σ e1 ?T_cond ?Σ1
+        ?R1 ?roots_cond,
+      Htyped_else : typed_env_roots env Ω n ?R1 ?Σ1 e3 ?T3 ?Σ3
+        ?R3 ?roots3 |- _ =>
+        destruct (IHcond Ω n R Σ T_cond Σ1 R1 roots_cond ps frame
+                    Hready_cond Htyped_cond Hcover Hscope)
+          as [Hcover1 [frame1 Hscope1]];
+        exact (IHelse Ω n R1 Σ1 T3 Σ3 R3 roots3 ps frame1
+                 Hready_else Htyped_else Hcover1 Hscope1)
+    end.
+  - intros s s_args s_body fname fdef args0 vs ret Hlookup Heval_args
+      IHargs Heval_body IHbody Ω n R Σ T Σ' R' roots ps frame
+      Hready _ _ _.
+    inversion Hready.
+  - intros s s_fn s_args s_body callee args0 fname captured fdef vs ret
+      Heval_callee IHcallee Hlookup Heval_args IHargs Heval_body IHbody
+      Ω n R Σ T Σ' R' roots ps frame Hready _ _ _.
+    inversion Hready.
+  - intros s Ω n R Σ params Σ' R' roots ps frame _ Htyped Hcover Hscope.
+    inversion Htyped; subst. split; [exact Hcover | exists frame; exact Hscope].
+  - intros s s1 s2 e es v vs Heval_e IHe Heval_rest IHrest
+      Ω n R Σ params Σ' R' roots ps frame Hready Htyped Hcover Hscope.
+    inversion Hready; subst.
+    inversion Htyped; subst.
+    match goal with
+    | Hready_e : provenance_ready_expr e,
+      Hready_rest : provenance_ready_args es,
+      Htyped_e : typed_env_roots env Ω n R Σ e ?T_e ?Σ1 ?R1 ?roots_e,
+      Htyped_rest : typed_args_roots env Ω n ?R1 ?Σ1 es ?params_rest
+        Σ' R' ?roots_rest |- _ =>
+        destruct (IHe Ω n R Σ T_e Σ1 R1 roots_e ps frame
+                    Hready_e Htyped_e Hcover Hscope)
+          as [Hcover1 [frame1 Hscope1]];
+        exact (IHrest Ω n R1 Σ1 params_rest Σ' R' roots_rest ps frame1
+                 Hready_rest Htyped_rest Hcover1 Hscope1)
+    end.
+  - intros s Ω n lts args0 R Σ Σ' R' roots ps frame _ Htyped Hcover Hscope.
+    inversion Htyped; subst. split; [exact Hcover | exists frame; exact Hscope].
+  - intros s s1 s2 fields f rest e v values Hlookup_expr Heval_field
+      IHfield Heval_rest IHrest Ω n lts args0 R Σ Σ' R' roots ps frame
+      Hready Htyped Hcover Hscope.
+    pose proof (provenance_ready_fields_lookup fields (field_name f) e
+                  Hready Hlookup_expr) as Hready_field.
+    inversion Htyped; subst.
+    match goal with
+    | Hlookup_typed : lookup_field_b (field_name f) ?fields0 = Some ?e_field,
+      Htyped_field : typed_env_roots env Ω n R Σ ?e_field ?T_field ?Σ1
+        ?R1 ?roots_field,
+      Htyped_rest : typed_fields_roots env Ω n lts args0 ?R1 ?Σ1
+        ?fields0 rest Σ' R' ?roots_rest |- _ =>
+        rewrite lookup_field_b_lookup_expr_field in Hlookup_typed;
+        rewrite Hlookup_typed in Hlookup_expr;
+        inversion Hlookup_expr; subst e_field;
+        destruct (IHfield Ω n R Σ T_field Σ1 R1 roots_field ps frame
+                    Hready_field Htyped_field Hcover Hscope)
+          as [Hcover1 [frame1 Hscope1]];
+        exact (IHrest Ω n lts args0 R1 Σ1 Σ' R' roots_rest ps frame1
+                 Hready Htyped_rest Hcover1 Hscope1)
+    end.
+  }
+  split.
+  - intros env0 s0 e0 s0' v0 Heval Ω0 n0 R0 Σ0 T0 Σ0' R0'
+      roots0 ps0 frame0 Hready Htyped Hcover Hscope.
+    destruct (Hmut env0) as [Hexpr [_ _]].
+    destruct (Hexpr s0 e0 s0' v0 Heval Ω0 n0 R0 Σ0 T0 Σ0' R0'
+                roots0 ps0 frame0 Hready Htyped Hcover Hscope)
+      as [_ Hscope'].
+    exact Hscope'.
+  - split.
+    + intros env0 s0 args0 s0' vs0 Heval Ω0 n0 R0 Σ0 params0
+        Σ0' R0' roots0 ps0 frame0 Hready Htyped Hcover Hscope.
+      destruct (Hmut env0) as [_ [Hargs _]].
+      destruct (Hargs s0 args0 s0' vs0 Heval Ω0 n0 R0 Σ0 params0
+                  Σ0' R0' roots0 ps0 frame0 Hready Htyped Hcover Hscope)
+        as [_ Hscope'].
+      exact Hscope'.
+    + intros env0 s0 fields0 defs0 s0' values0 Heval Ω0 n0 lts0
+        args0 R0 Σ0 Σ0' R0' roots0 ps0 frame0 Hready Htyped
+        Hcover Hscope.
+      destruct (Hmut env0) as [_ [_ Hfields]].
+      destruct (Hfields s0 fields0 defs0 s0' values0 Heval Ω0 n0 lts0
+                  args0 R0 Σ0 Σ0' R0' roots0 ps0 frame0 Hready Htyped
+                  Hcover Hscope)
+        as [_ Hscope'].
+      exact Hscope'.
 Qed.
 
 Lemma bind_params_head_fresh_in_tail :

@@ -67,6 +67,134 @@ Definition root_of_place (p : place) : root_set :=
   | None => [place_name p]
   end.
 
+Lemma root_set_union_in_r :
+  forall x a b,
+    In x b ->
+    In x (root_set_union a b).
+Proof.
+  intros x a.
+  induction a as [| y ys IH]; intros b Hin; simpl.
+  - exact Hin.
+  - destruct (existsb (ident_eqb y) b).
+    + apply IH. exact Hin.
+    + simpl. right. apply IH. exact Hin.
+Qed.
+
+Lemma root_set_union_in_l :
+  forall x a b,
+    In x a ->
+    In x (root_set_union a b).
+Proof.
+  intros x a.
+  induction a as [| y ys IH]; intros b Hin; simpl in *.
+  - contradiction.
+  - destruct Hin as [Heq | Hin].
+    + subst y.
+      destruct (existsb (ident_eqb x) b) eqn:Hexists.
+      * apply root_set_union_in_r.
+        apply existsb_exists in Hexists.
+        destruct Hexists as [z [Hin_z Heq_z]].
+        apply ident_eqb_eq in Heq_z. subst z.
+        exact Hin_z.
+      * simpl. left. reflexivity.
+    + destruct (existsb (ident_eqb y) b).
+      * apply IH. exact Hin.
+      * simpl. right. apply IH. exact Hin.
+Qed.
+
+Lemma roots_exclude_union :
+  forall x a b,
+    roots_exclude x a ->
+    roots_exclude x b ->
+    roots_exclude x (root_set_union a b).
+Proof.
+  unfold roots_exclude.
+  intros x a.
+  induction a as [| y ys IH]; intros b Ha Hb Hin; simpl in *.
+  - apply Hb. exact Hin.
+  - destruct (existsb (ident_eqb y) b) eqn:Hexists.
+    + eapply IH.
+      * intros Hin_y. apply Ha. right. exact Hin_y.
+      * exact Hb.
+      * exact Hin.
+    + simpl in Hin.
+      destruct Hin as [Heq | Hin].
+      * apply Ha. left. exact Heq.
+      * eapply IH.
+        -- intros Hin_y. apply Ha. right. exact Hin_y.
+        -- exact Hb.
+        -- exact Hin.
+Qed.
+
+Lemma root_env_lookup_add_eq :
+  forall x roots R,
+    root_env_lookup x (root_env_add x roots R) = Some roots.
+Proof.
+  intros x roots R.
+  unfold root_env_add. simpl.
+  rewrite ident_eqb_refl. reflexivity.
+Qed.
+
+Lemma root_env_lookup_add_neq :
+  forall x y roots R,
+    x <> y ->
+    root_env_lookup x (root_env_add y roots R) = root_env_lookup x R.
+Proof.
+  intros x y roots R Hneq.
+  unfold root_env_add. simpl.
+  destruct (ident_eqb x y) eqn:Heq; try reflexivity.
+  apply ident_eqb_eq in Heq. contradiction.
+Qed.
+
+Lemma root_env_lookup_update_eq :
+  forall x roots R old_roots,
+    root_env_lookup x R = Some old_roots ->
+    root_env_lookup x (root_env_update x roots R) = Some roots.
+Proof.
+  intros x roots R.
+  induction R as [| [y roots_y] rest IH]; intros old_roots Hlookup;
+    simpl in *; try discriminate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - simpl. rewrite Heq. reflexivity.
+  - simpl. rewrite Heq. eapply IH. exact Hlookup.
+Qed.
+
+Lemma root_env_lookup_update_neq :
+  forall x y roots R,
+    x <> y ->
+    root_env_lookup x (root_env_update y roots R) = root_env_lookup x R.
+Proof.
+  intros x y roots R Hneq.
+  induction R as [| [z roots_z] rest IH]; simpl; try reflexivity.
+  destruct (ident_eqb y z) eqn:Hy.
+  - simpl.
+    destruct (ident_eqb x z) eqn:Hx.
+    + apply ident_eqb_eq in Hy. apply ident_eqb_eq in Hx. subst.
+      contradiction.
+    + reflexivity.
+  - simpl.
+    destruct (ident_eqb x z); try reflexivity.
+    exact IH.
+Qed.
+
+Lemma root_env_lookup_remove_neq :
+  forall x y R,
+    x <> y ->
+    root_env_lookup x (root_env_remove y R) = root_env_lookup x R.
+Proof.
+  intros x y R Hneq.
+  induction R as [| [z roots] rest IH]; simpl; try reflexivity.
+  destruct (ident_eqb y z) eqn:Hy.
+  - apply ident_eqb_eq in Hy. subst z.
+    simpl.
+    destruct (ident_eqb x y) eqn:Hx.
+    + apply ident_eqb_eq in Hx. contradiction.
+    + reflexivity.
+  - simpl.
+    destruct (ident_eqb x z); try reflexivity.
+    exact IH.
+Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Wrapper-free env/stateful typing specification                       *)
 (* ------------------------------------------------------------------ *)
@@ -574,6 +702,7 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
   | TER_Let : forall R R1 R2 Σ Σ1 Σ2 m x T T1 e1 e2 T2 roots1 roots2,
       typed_env_roots env Ω n R Σ e1 T1 Σ1 R1 roots1 ->
       ty_compatible_b Ω T1 T = true ->
+      root_env_lookup x R1 = None ->
       typed_env_roots env Ω n (root_env_add x roots1 R1)
         (sctx_add x T m Σ1) e2 T2 Σ2 R2 roots2 ->
       sctx_check_ok env x T Σ2 = true ->
@@ -583,6 +712,7 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
         (sctx_remove x Σ2) (root_env_remove x R2) roots2
   | TER_LetInfer : forall R R1 R2 Σ Σ1 Σ2 m x T1 e1 e2 T2 roots1 roots2,
       typed_env_roots env Ω n R Σ e1 T1 Σ1 R1 roots1 ->
+      root_env_lookup x R1 = None ->
       typed_env_roots env Ω n (root_env_add x roots1 R1)
         (sctx_add x T1 m Σ1) e2 T2 Σ2 R2 roots2 ->
       sctx_check_ok env x T1 Σ2 = true ->
@@ -594,26 +724,31 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_env_roots env Ω n R Σ e T Σ' R' roots ->
       typed_env_roots env Ω n R Σ (EDrop e)
         (MkTy UUnrestricted TUnits) Σ' R' []
-  | TER_Replace_Path : forall R R1 Σ Σ1 Σ2 p e_new T_old T_new x path roots_new,
+  | TER_Replace_Path : forall R R1 Σ Σ1 Σ2 p e_new T_old T_new
+      x path roots_old roots_new,
       typed_place_env_structural env Σ p T_old ->
       place_path p = Some (x, path) ->
       writable_place_env_structural env Σ p ->
       typed_env_roots env Ω n R Σ e_new T_new Σ1 R1 roots_new ->
+      root_env_lookup x R1 = Some roots_old ->
       ty_compatible_b Ω T_new T_old = true ->
       sctx_path_available Σ1 x path = infer_ok tt ->
       sctx_restore_path Σ1 x path = infer_ok Σ2 ->
       typed_env_roots env Ω n R Σ (EReplace p e_new) T_old Σ2
-        (root_env_update x roots_new R1) []
-  | TER_Assign_Path : forall R R1 Σ Σ' p e_new T_old T_new x path roots_new,
+        (root_env_update x (root_set_union roots_old roots_new) R1) []
+  | TER_Assign_Path : forall R R1 Σ Σ' p e_new T_old T_new
+      x path roots_old roots_new,
       typed_place_env_structural env Σ p T_old ->
       ty_usage T_old <> ULinear ->
       place_path p = Some (x, path) ->
       writable_place_env_structural env Σ p ->
       typed_env_roots env Ω n R Σ e_new T_new Σ' R1 roots_new ->
+      root_env_lookup x R1 = Some roots_old ->
       ty_compatible_b Ω T_new T_old = true ->
       sctx_path_available Σ' x path = infer_ok tt ->
       typed_env_roots env Ω n R Σ (EAssign p e_new)
-        (MkTy UUnrestricted TUnits) Σ' (root_env_update x roots_new R1) []
+        (MkTy UUnrestricted TUnits) Σ'
+        (root_env_update x (root_set_union roots_old roots_new) R1) []
   | TER_BorrowShared : forall R Σ p T,
       typed_place_env_structural env Σ p T ->
       typed_env_roots env Ω n R Σ (EBorrow RShared p)

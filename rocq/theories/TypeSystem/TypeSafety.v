@@ -498,7 +498,7 @@ Lemma value_roots_within_excludes :
 Proof.
   apply value_roots_within_mutind; intros;
     try solve [constructor; eauto].
-  - constructor.
+  - econstructor.
     destruct (ident_eqb root x) eqn:Hroot; try reflexivity.
     apply ident_eqb_eq in Hroot. subst x. contradiction.
   - constructor. constructor.
@@ -529,6 +529,274 @@ Proof.
   intros R s root Hwithin Hexclude Hnames.
   exact (proj1 (proj2 (proj2 value_roots_within_excludes))
     R s Hwithin root Hexclude Hnames).
+Qed.
+
+Lemma root_set_union_in_right :
+  forall x roots_left roots_right,
+    In x roots_right ->
+    In x (root_set_union roots_left roots_right).
+Proof.
+  intros x roots_left roots_right Hin.
+  induction roots_left as [| y ys IH]; simpl; try assumption.
+  destruct (existsb (ident_eqb y) roots_right).
+  - apply IH.
+  - right. apply IH.
+Qed.
+
+Lemma root_set_union_in_left :
+  forall x roots_left roots_right,
+    In x roots_left ->
+    In x (root_set_union roots_left roots_right).
+Proof.
+  intros x roots_left roots_right Hin.
+  induction roots_left as [| y ys IH]; simpl in *; try contradiction.
+  destruct Hin as [Hin | Hin].
+  - subst y.
+    destruct (existsb (ident_eqb x) roots_right) eqn:Hexists.
+    + apply root_set_union_in_right.
+      apply existsb_exists in Hexists.
+      destruct Hexists as [z [Hz_in Hz_eq]].
+      apply ident_eqb_eq in Hz_eq. subst z. exact Hz_in.
+    + simpl. left. reflexivity.
+  - destruct (existsb (ident_eqb y) roots_right).
+    + apply IH. exact Hin.
+    + simpl. right. apply IH. exact Hin.
+Qed.
+
+Lemma value_roots_within_weaken :
+  (forall roots v,
+    value_roots_within roots v ->
+    forall roots',
+      (forall x, In x roots -> In x roots') ->
+      value_roots_within roots' v) /\
+  (forall R se,
+    store_entry_roots_within R se ->
+    forall R',
+      (forall x roots, root_env_lookup x R = Some roots ->
+        exists roots', root_env_lookup x R' = Some roots' /\
+          forall y, In y roots -> In y roots') ->
+      store_entry_roots_within R' se) /\
+  (forall R s,
+    store_roots_within R s ->
+    forall R',
+      (forall x roots, root_env_lookup x R = Some roots ->
+        exists roots', root_env_lookup x R' = Some roots' /\
+          forall y, In y roots -> In y roots') ->
+      store_roots_within R' s) /\
+  (forall roots fields,
+    value_fields_roots_within roots fields ->
+    forall roots',
+      (forall x, In x roots -> In x roots') ->
+      value_fields_roots_within roots' fields).
+Proof.
+  apply value_roots_within_mutind; intros; try solve [constructor; eauto].
+  - destruct (H0 sx roots e) as [roots' [Hlookup Hincl]].
+    eapply SERW_Entry.
+    + exact Hlookup.
+    + eapply H. exact Hincl.
+Qed.
+
+Lemma root_env_lookup_add_eq :
+  forall x roots R,
+    root_env_lookup x (root_env_add x roots R) = Some roots.
+Proof.
+  intros x roots R. unfold root_env_add. simpl.
+  rewrite ident_eqb_refl. reflexivity.
+Qed.
+
+Lemma root_env_lookup_add_neq :
+  forall x y roots R,
+    x <> y ->
+    root_env_lookup y (root_env_add x roots R) = root_env_lookup y R.
+Proof.
+  intros x y roots R Hneq. unfold root_env_add. simpl.
+  destruct (ident_eqb y x) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst y. contradiction Hneq. reflexivity.
+  - reflexivity.
+Qed.
+
+Lemma root_env_lookup_update_eq :
+  forall x roots R roots_old,
+    root_env_lookup x R = Some roots_old ->
+    root_env_lookup x (root_env_update x roots R) = Some roots.
+Proof.
+  intros x roots R.
+  induction R as [| [y roots_y] rest IH]; intros roots_old Hlookup;
+    simpl in *; try discriminate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - simpl. rewrite Heq. reflexivity.
+  - simpl. rewrite Heq. exact (IH roots_old Hlookup).
+Qed.
+
+Lemma root_env_lookup_update_neq :
+  forall x y roots R,
+    x <> y ->
+    root_env_lookup y (root_env_update x roots R) = root_env_lookup y R.
+Proof.
+  intros x y roots R Hneq.
+  induction R as [| [z roots_z] rest IH]; simpl; try reflexivity.
+  destruct (ident_eqb x z) eqn:Hxz; simpl.
+  - destruct (ident_eqb y z) eqn:Hyz.
+    + apply ident_eqb_eq in Hxz. apply ident_eqb_eq in Hyz.
+      subst z. subst y. contradiction Hneq. reflexivity.
+    + reflexivity.
+  - destruct (ident_eqb y z); try reflexivity.
+    exact IH.
+Qed.
+
+Lemma root_env_lookup_remove_neq :
+  forall x y R,
+    x <> y ->
+    root_env_lookup y (root_env_remove x R) = root_env_lookup y R.
+Proof.
+  intros x y R Hneq.
+  induction R as [| [z roots_z] rest IH]; simpl; try reflexivity.
+  destruct (ident_eqb x z) eqn:Hxz.
+  - apply ident_eqb_eq in Hxz. subst z.
+    destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx. subst y. contradiction Hneq. reflexivity.
+    + reflexivity.
+  - simpl.
+    destruct (ident_eqb y z); try reflexivity.
+    exact IH.
+Qed.
+
+Lemma store_roots_within_lookup_none :
+  forall R s x,
+    store_roots_within R s ->
+    root_env_lookup x R = None ->
+    store_lookup x s = None.
+Proof.
+  intros R s x Hwithin Hlookup_none.
+  induction Hwithin as [R | R se rest Hentry Hrest IH]; simpl.
+  - reflexivity.
+  - inversion Hentry; subst.
+    destruct (ident_eqb x sx) eqn:Heq.
+    + apply ident_eqb_eq in Heq. subst sx.
+      rewrite Hlookup_none in H. discriminate.
+    + simpl. rewrite Heq. apply IH. exact Hlookup_none.
+Qed.
+
+Lemma store_roots_within_add_env :
+  forall R s x roots,
+    store_roots_within R s ->
+    root_env_lookup x R = None ->
+    store_roots_within (root_env_add x roots R) s.
+Proof.
+  intros R s x roots Hwithin Hfresh.
+  induction Hwithin as [R | R se rest Hentry Hrest IH].
+  - constructor.
+  - inversion Hentry; subst.
+    constructor.
+    + eapply SERW_Entry.
+      * rewrite (root_env_lookup_add_neq x sx roots R).
+        -- exact H.
+        -- intros Heq. subst sx. rewrite Hfresh in H. discriminate.
+      * exact H0.
+    + apply IH. exact Hfresh.
+Qed.
+
+Lemma store_add_roots_within :
+  forall R s x T v roots,
+    store_roots_within R s ->
+    root_env_lookup x R = None ->
+    value_roots_within roots v ->
+    store_roots_within (root_env_add x roots R) (store_add x T v s).
+Proof.
+  intros R s x T v roots Hstore Hfresh Hvalue.
+  unfold store_add.
+  constructor.
+  - exact (SERW_Entry (root_env_add x roots R) x T v
+      (binding_state_of_bool false) roots
+      (root_env_lookup_add_eq x roots R) Hvalue).
+  - apply store_roots_within_add_env; assumption.
+Qed.
+
+Lemma store_roots_within_remove_env :
+  forall R s x,
+    store_roots_within R s ->
+    (forall se, In se s -> se_name se <> x) ->
+    store_roots_within (root_env_remove x R) s.
+Proof.
+  intros R s x Hwithin Hnames.
+  induction Hwithin as [R | R se rest Hentry Hrest IH].
+  - constructor.
+  - inversion Hentry; subst.
+    constructor.
+    + eapply SERW_Entry.
+      * rewrite (root_env_lookup_remove_neq x sx R).
+        -- exact H.
+        -- intros Hsame. subst sx.
+           apply (Hnames (MkStoreEntry x sT sv sst)).
+           ++ simpl. left. reflexivity.
+           ++ reflexivity.
+      * exact H0.
+    + apply IH.
+      intros se Hin. apply Hnames. simpl. right. exact Hin.
+Qed.
+
+Lemma store_remove_roots_within :
+  forall R s x,
+    store_roots_within R s ->
+    (forall se, In se (store_remove x s) -> se_name se <> x) ->
+    store_roots_within (root_env_remove x R) (store_remove x s).
+Proof.
+  intros R s x Hwithin Hnames.
+  induction Hwithin as [R | R se rest Hentry Hrest IH]; simpl.
+  - constructor.
+  - destruct (ident_eqb x (se_name se)) eqn:Heq.
+    + apply store_roots_within_remove_env.
+      * exact Hrest.
+      * intros se0 Hin. apply Hnames. simpl. rewrite Heq. exact Hin.
+    + constructor.
+      * inversion Hentry; subst.
+        eapply SERW_Entry.
+        -- rewrite (root_env_lookup_remove_neq x sx R).
+           ++ exact H.
+           ++ intros Hsame. subst sx.
+              rewrite ident_eqb_refl in Heq. discriminate.
+        -- exact H0.
+      * apply IH.
+        intros se0 Hin. apply Hnames. simpl.
+        rewrite Heq. right. exact Hin.
+Qed.
+
+Lemma store_update_state_roots_within :
+  forall R s x f s',
+    store_roots_within R s ->
+    store_update_state x f s = Some s' ->
+    store_roots_within R s'.
+Proof.
+  intros R s x f s' Hwithin Hupdate.
+  revert s' Hupdate.
+  induction Hwithin as [R | R se rest Hentry Hrest IH]; intros s' Hupdate;
+    simpl in Hupdate; try discriminate.
+  destruct (ident_eqb x (se_name se)) eqn:Heq.
+  - inversion Hupdate; subst. inversion Hentry; subst.
+    constructor.
+    + eapply SERW_Entry; eassumption.
+    + exact Hrest.
+  - destruct (store_update_state x f rest) as [rest' |] eqn:Htail;
+      try discriminate.
+    inversion Hupdate; subst.
+    constructor; eauto.
+Qed.
+
+Lemma store_mark_used_roots_within :
+  forall R s x,
+    store_roots_within R s ->
+    store_roots_within R (store_mark_used x s).
+Proof.
+  intros R s x Hwithin.
+  induction Hwithin as [R | R se rest Hentry Hrest IH]; simpl.
+  - constructor.
+  - destruct (ident_eqb x (se_name se)); inversion Hentry; subst.
+    + constructor.
+      * econstructor; eassumption.
+      * exact Hrest.
+    + constructor.
+      * econstructor; eassumption.
+      * exact IH.
 Qed.
 
 Inductive preservation_ready_expr : expr -> Prop :=

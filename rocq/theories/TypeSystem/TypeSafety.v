@@ -799,6 +799,326 @@ Proof.
       * exact IH.
 Qed.
 
+Fixpoint store_names (s : store) : list ident :=
+  match s with
+  | [] => []
+  | se :: rest => se_name se :: store_names rest
+  end.
+
+Definition store_no_shadow (s : store) : Prop :=
+  NoDup (store_names s).
+
+Lemma store_typed_names :
+  forall env s Σ,
+    store_typed env s Σ ->
+    store_names s = ctx_names Σ.
+Proof.
+  intros env s Σ Htyped.
+  induction Htyped as [| se ce s_tail Σ_tail Hentry _ IH].
+  - reflexivity.
+  - destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname _].
+    simpl. rewrite Hname, IH. reflexivity.
+Qed.
+
+Lemma store_typed_sctx_no_shadow :
+  forall env s Σ,
+    store_typed env s Σ ->
+    store_no_shadow s ->
+    sctx_no_shadow Σ.
+Proof.
+  unfold store_no_shadow, sctx_no_shadow.
+  intros env s Σ Htyped Hnodup.
+  rewrite <- (store_typed_names env s Σ Htyped).
+  exact Hnodup.
+Qed.
+
+Lemma store_typed_store_no_shadow :
+  forall env s Σ,
+    store_typed env s Σ ->
+    sctx_no_shadow Σ ->
+    store_no_shadow s.
+Proof.
+  unfold store_no_shadow, sctx_no_shadow.
+  intros env s Σ Htyped Hnodup.
+  rewrite (store_typed_names env s Σ Htyped).
+  exact Hnodup.
+Qed.
+
+Lemma store_lookup_not_in_names :
+  forall x s,
+    ~ In x (store_names s) ->
+    store_lookup x s = None.
+Proof.
+  intros x s Hnotin.
+  induction s as [| se rest IH]; simpl; try reflexivity.
+  destruct (ident_eqb x (se_name se)) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst x.
+    contradiction Hnotin. left. reflexivity.
+  - apply IH.
+    intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma store_lookup_none_not_in_names :
+  forall x s,
+    store_lookup x s = None ->
+    ~ In x (store_names s).
+Proof.
+  intros x s Hlookup.
+  induction s as [| se rest IH]; simpl in *.
+  - intros Hin. exact Hin.
+  - destruct (ident_eqb x (se_name se)) eqn:Heq; try discriminate.
+    intros [Hin | Hin].
+    + subst x. rewrite ident_eqb_refl in Heq. discriminate.
+    + apply (IH Hlookup Hin).
+Qed.
+
+Lemma store_names_add :
+  forall x T v s,
+    store_names (store_add x T v s) = x :: store_names s.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma store_names_mark_used :
+  forall x s,
+    store_names (store_mark_used x s) = store_names s.
+Proof.
+  intros x s.
+  induction s as [| se rest IH]; simpl; try reflexivity.
+  destruct (ident_eqb x (se_name se)); simpl; try reflexivity.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma store_names_update_state :
+  forall x f s s',
+    store_update_state x f s = Some s' ->
+    store_names s' = store_names s.
+Proof.
+  intros x f s.
+  induction s as [| se rest IH]; intros s' Hupdate; simpl in Hupdate;
+    try discriminate.
+  destruct (ident_eqb x (se_name se)) eqn:Heq.
+  - inversion Hupdate; subst. simpl. reflexivity.
+  - destruct (store_update_state x f rest) as [rest' |] eqn:Htail;
+      try discriminate.
+    inversion Hupdate; subst. simpl.
+    rewrite (IH rest' eq_refl). reflexivity.
+Qed.
+
+Lemma store_names_update_val :
+  forall x v s s',
+    store_update_val x v s = Some s' ->
+    store_names s' = store_names s.
+Proof.
+  intros x v s.
+  induction s as [| se rest IH]; intros s' Hupdate; simpl in Hupdate;
+    try discriminate.
+  destruct (ident_eqb x (se_name se)) eqn:Heq.
+  - inversion Hupdate; subst. simpl. reflexivity.
+  - destruct (store_update_val x v rest) as [rest' |] eqn:Htail;
+      try discriminate.
+    inversion Hupdate; subst. simpl.
+    rewrite (IH rest' eq_refl). reflexivity.
+Qed.
+
+Lemma store_names_update_path :
+  forall x path v s s',
+    store_update_path x path v s = Some s' ->
+    store_names s' = store_names s.
+Proof.
+  intros x path v s.
+  induction s as [| se rest IH]; intros s' Hupdate; simpl in Hupdate;
+    try discriminate.
+  destruct (ident_eqb x (se_name se)) eqn:Heq.
+  - destruct (value_update_path (se_val se) path v) as [v' |] eqn:Hvalue;
+      try discriminate.
+    inversion Hupdate; subst. simpl. reflexivity.
+  - destruct (store_update_path x path v rest) as [rest' |] eqn:Htail;
+      try discriminate.
+    inversion Hupdate; subst. simpl.
+    rewrite (IH rest' eq_refl). reflexivity.
+Qed.
+
+Lemma store_no_shadow_add :
+  forall x T v s,
+    store_no_shadow s ->
+    store_lookup x s = None ->
+    store_no_shadow (store_add x T v s).
+Proof.
+  unfold store_no_shadow.
+  intros x T v s Hnodup Hlookup.
+  rewrite store_names_add.
+  constructor.
+  - eapply store_lookup_none_not_in_names. exact Hlookup.
+  - exact Hnodup.
+Qed.
+
+Lemma store_no_shadow_remove :
+  forall x s,
+    store_no_shadow s ->
+    store_no_shadow (store_remove x s).
+Proof.
+  unfold store_no_shadow.
+  intros x s.
+  induction s as [| se rest IH]; intros Hnodup; simpl in *.
+  - constructor.
+  - inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
+    destruct (ident_eqb x (se_name se)).
+    + exact Hnodup_tail.
+    + simpl. constructor.
+      * intros Hin. apply Hnotin.
+        clear -Hin.
+        induction rest as [| se' rest IHrest]; simpl in *.
+        -- contradiction.
+        -- destruct (ident_eqb x (se_name se')).
+           ++ right. exact Hin.
+           ++ destruct Hin as [Hin | Hin].
+              ** left. exact Hin.
+              ** right. apply IHrest. exact Hin.
+      * apply IH. exact Hnodup_tail.
+Qed.
+
+Lemma store_no_shadow_mark_used :
+  forall x s,
+    store_no_shadow s ->
+    store_no_shadow (store_mark_used x s).
+Proof.
+  unfold store_no_shadow.
+  intros x s Hnodup.
+  rewrite store_names_mark_used. exact Hnodup.
+Qed.
+
+Lemma store_no_shadow_update_state :
+  forall x f s s',
+    store_no_shadow s ->
+    store_update_state x f s = Some s' ->
+    store_no_shadow s'.
+Proof.
+  unfold store_no_shadow.
+  intros x f s s' Hnodup Hupdate.
+  rewrite (store_names_update_state x f s s' Hupdate). exact Hnodup.
+Qed.
+
+Lemma store_no_shadow_update_val :
+  forall x v s s',
+    store_no_shadow s ->
+    store_update_val x v s = Some s' ->
+    store_no_shadow s'.
+Proof.
+  unfold store_no_shadow.
+  intros x v s s' Hnodup Hupdate.
+  rewrite (store_names_update_val x v s s' Hupdate). exact Hnodup.
+Qed.
+
+Lemma store_no_shadow_update_path :
+  forall x path v s s',
+    store_no_shadow s ->
+    store_update_path x path v s = Some s' ->
+    store_no_shadow s'.
+Proof.
+  unfold store_no_shadow.
+  intros x path v s s' Hnodup Hupdate.
+  rewrite (store_names_update_path x path v s s' Hupdate). exact Hnodup.
+Qed.
+
+Lemma store_entry_name_in_store_names :
+  forall se s,
+    In se s ->
+    In (se_name se) (store_names s).
+Proof.
+  intros se s Hin.
+  induction s as [| se' rest IH]; simpl in *; try contradiction.
+  destruct Hin as [Hin | Hin].
+  - subst se'. left. reflexivity.
+  - right. apply IH. exact Hin.
+Qed.
+
+Lemma store_no_shadow_remove_no_name :
+  forall x s,
+    store_no_shadow s ->
+    forall se,
+      In se (store_remove x s) ->
+      se_name se <> x.
+Proof.
+  intros x s Hnodup se Hin.
+  unfold store_no_shadow in Hnodup.
+  induction s as [| se' rest IH]; simpl in *; try contradiction.
+  inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
+  destruct (ident_eqb x (se_name se')) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst x.
+    intros Hsame. apply Hnotin.
+    rewrite <- Hsame.
+    eapply store_entry_name_in_store_names. exact Hin.
+  - simpl in Hin.
+    destruct Hin as [Hin | Hin].
+    + subst se'. intros Hsame. subst x.
+      rewrite ident_eqb_refl in Heq. discriminate.
+    + apply IH; assumption.
+Qed.
+
+Lemma store_no_shadow_remove_lookup_none :
+  forall x s,
+    store_no_shadow s ->
+    store_lookup x (store_remove x s) = None.
+Proof.
+  intros x s Hnodup.
+  unfold store_no_shadow in Hnodup.
+  induction s as [| se rest IH]; simpl in *; try reflexivity.
+  inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
+  destruct (ident_eqb x (se_name se)) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst x.
+    apply store_lookup_not_in_names. exact Hnotin.
+  - simpl. rewrite Heq. apply IH. exact Hnodup_tail.
+Qed.
+
+Lemma store_roots_within_update_env_neq :
+  forall R s x roots_update,
+    store_roots_within R s ->
+    (forall se, In se s -> se_name se <> x) ->
+    store_roots_within (root_env_update x roots_update R) s.
+Proof.
+  intros R s x roots_update Hwithin Hnames.
+  induction Hwithin as [R | R se rest Hentry Hrest IH].
+  - constructor.
+  - inversion Hentry; subst.
+    constructor.
+    + eapply SERW_Entry.
+      * rewrite root_env_lookup_update_neq.
+        -- exact H.
+        -- intros Hsame. subst sx.
+           apply (Hnames (MkStoreEntry x sT sv sst)).
+           ++ simpl. left. reflexivity.
+           ++ reflexivity.
+      * exact H0.
+    + apply IH.
+      intros se0 Hin. apply Hnames. simpl. right. exact Hin.
+Qed.
+
+Lemma value_roots_within_union_l :
+  forall roots_old roots_new v,
+    value_roots_within roots_old v ->
+    value_roots_within (root_set_union roots_old roots_new) v.
+Proof.
+  intros roots_old roots_new v Hwithin.
+  eapply (proj1 value_roots_within_weaken).
+  - exact Hwithin.
+  - intros x Hin. apply root_set_union_in_left. exact Hin.
+Qed.
+
+Lemma value_roots_within_union_r :
+  forall roots_old roots_new v,
+    value_roots_within roots_new v ->
+    value_roots_within (root_set_union roots_old roots_new) v.
+Proof.
+  intros roots_old roots_new v Hwithin.
+  eapply (proj1 value_roots_within_weaken).
+  - exact Hwithin.
+  - intros x Hin. apply root_set_union_in_right. exact Hin.
+Qed.
+
 Inductive preservation_ready_expr : expr -> Prop :=
   | PRE_Unit :
       preservation_ready_expr EUnit

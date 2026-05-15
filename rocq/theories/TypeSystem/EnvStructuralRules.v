@@ -9,6 +9,18 @@ Import ListNotations.
 Definition root_set := list ident.
 Definition root_env := list (ident * root_set).
 
+Fixpoint root_env_names (R : root_env) : list ident :=
+  match R with
+  | [] => []
+  | (x, _) :: rest => x :: root_env_names rest
+  end.
+
+Definition root_env_no_shadow (R : root_env) : Prop :=
+  NoDup (root_env_names R).
+
+Definition sctx_no_shadow (Σ : sctx) : Prop :=
+  NoDup (ctx_names Σ).
+
 Fixpoint root_set_union (a b : root_set) : root_set :=
   match a with
   | [] => b
@@ -193,6 +205,240 @@ Proof.
   - simpl.
     destruct (ident_eqb x z); try reflexivity.
     exact IH.
+Qed.
+
+Lemma root_env_lookup_not_in_names :
+  forall x R,
+    ~ In x (root_env_names R) ->
+    root_env_lookup x R = None.
+Proof.
+  intros x R.
+  induction R as [| [y roots] rest IH]; intros Hnotin; simpl in *.
+  - reflexivity.
+  - destruct (ident_eqb x y) eqn:Heq.
+    + apply ident_eqb_eq in Heq. subst y.
+      exfalso. apply Hnotin. left. reflexivity.
+    + apply IH. intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma root_env_lookup_none_not_in_names :
+  forall x R,
+    root_env_lookup x R = None ->
+    ~ In x (root_env_names R).
+Proof.
+  intros x R.
+  induction R as [| [y roots] rest IH]; intros Hlookup Hin; simpl in *.
+  - contradiction.
+  - destruct Hin as [Heq | Hin].
+    + subst y. rewrite ident_eqb_refl in Hlookup. discriminate.
+    + destruct (ident_eqb x y); try discriminate.
+      eapply IH; eassumption.
+Qed.
+
+Lemma root_env_names_update :
+  forall x roots R,
+    root_env_names (root_env_update x roots R) = root_env_names R.
+Proof.
+  intros x roots R.
+  induction R as [| [y roots_y] rest IH]; simpl; try reflexivity.
+  destruct (ident_eqb x y); simpl; try reflexivity.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma root_env_no_shadow_update :
+  forall x roots R,
+    root_env_no_shadow R ->
+    root_env_no_shadow (root_env_update x roots R).
+Proof.
+  unfold root_env_no_shadow.
+  intros x roots R Hnodup.
+  rewrite root_env_names_update. exact Hnodup.
+Qed.
+
+Lemma root_env_no_shadow_add :
+  forall x roots R,
+    root_env_no_shadow R ->
+    root_env_lookup x R = None ->
+    root_env_no_shadow (root_env_add x roots R).
+Proof.
+  unfold root_env_no_shadow, root_env_add.
+  intros x roots R Hnodup Hlookup.
+  simpl. constructor.
+  - eapply root_env_lookup_none_not_in_names. exact Hlookup.
+  - exact Hnodup.
+Qed.
+
+Lemma root_env_no_shadow_remove :
+  forall x R,
+    root_env_no_shadow R ->
+    root_env_no_shadow (root_env_remove x R).
+Proof.
+  unfold root_env_no_shadow.
+  intros x R.
+  induction R as [| [y roots] rest IH]; intros Hnodup; simpl in *.
+  - constructor.
+  - inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
+    destruct (ident_eqb x y).
+    + exact Hnodup_tail.
+    + simpl. constructor.
+      * intros Hin. apply Hnotin.
+        clear -Hin.
+        induction rest as [| [z roots_z] rest IHrest]; simpl in *.
+        -- contradiction.
+        -- destruct (ident_eqb x z) eqn:Heq.
+           ++ apply ident_eqb_eq in Heq. subst z.
+              right. exact Hin.
+           ++ destruct Hin as [Hin | Hin].
+              ** left. exact Hin.
+              ** right. apply IHrest. exact Hin.
+      * apply IH. exact Hnodup_tail.
+Qed.
+
+Lemma root_env_lookup_remove_eq_no_shadow :
+  forall x R,
+    root_env_no_shadow R ->
+    root_env_lookup x (root_env_remove x R) = None.
+Proof.
+  intros x R Hnodup.
+  induction R as [| [y roots] rest IH]; simpl; try reflexivity.
+  unfold root_env_no_shadow in Hnodup.
+  simpl in Hnodup.
+  inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst y.
+    apply root_env_lookup_not_in_names. exact Hnotin.
+  - simpl. rewrite Heq.
+    apply IH.
+    unfold root_env_no_shadow. exact Hnodup_tail.
+Qed.
+
+Lemma sctx_lookup_not_in_names :
+  forall x Σ,
+    ~ In x (ctx_names Σ) ->
+    sctx_lookup x Σ = None.
+Proof.
+  intros x Σ.
+  induction Σ as [| [[[y T] st] m] rest IH]; intros Hnotin;
+    simpl in *; try reflexivity.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst y.
+    exfalso. apply Hnotin. left. reflexivity.
+  - apply IH. intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma sctx_lookup_none_not_in_names :
+  forall x Σ,
+    sctx_lookup x Σ = None ->
+    ~ In x (ctx_names Σ).
+Proof.
+  intros x Σ.
+  induction Σ as [| [[[y T] st] m] rest IH]; intros Hlookup Hin;
+    simpl in *.
+  - contradiction.
+  - destruct Hin as [Heq | Hin].
+    + subst y. rewrite ident_eqb_refl in Hlookup. discriminate.
+    + destruct (ident_eqb x y); try discriminate.
+      eapply IH; eassumption.
+Qed.
+
+Lemma sctx_no_shadow_add :
+  forall x T m Σ,
+    sctx_no_shadow Σ ->
+    sctx_lookup x Σ = None ->
+    sctx_no_shadow (sctx_add x T m Σ).
+Proof.
+  unfold sctx_no_shadow, sctx_add, ctx_add.
+  intros x T m Σ Hnodup Hlookup.
+  simpl. constructor.
+  - eapply sctx_lookup_none_not_in_names. exact Hlookup.
+  - exact Hnodup.
+Qed.
+
+Lemma sctx_no_shadow_remove :
+  forall x Σ,
+    sctx_no_shadow Σ ->
+    sctx_no_shadow (sctx_remove x Σ).
+Proof.
+  unfold sctx_no_shadow, sctx_remove.
+  intros x Σ.
+  induction Σ as [| [[[y T] st] m] rest IH]; intros Hnodup;
+    simpl in *.
+  - constructor.
+  - inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
+    destruct (ident_eqb x y).
+    + exact Hnodup_tail.
+    + simpl. constructor.
+      * intros Hin. apply Hnotin.
+        clear -Hin.
+        induction rest as [| [[[z Tz] stz] mz] rest IHrest];
+          simpl in *.
+        -- contradiction.
+        -- destruct (ident_eqb x z) eqn:Heq.
+           ++ apply ident_eqb_eq in Heq. subst z.
+              right. exact Hin.
+           ++ destruct Hin as [Hin | Hin].
+              ** left. exact Hin.
+              ** right. apply IHrest. exact Hin.
+      * apply IH. exact Hnodup_tail.
+Qed.
+
+Lemma sctx_update_state_names :
+  forall x f Σ Σ',
+    sctx_update_state x f Σ = Some Σ' ->
+    ctx_names Σ' = ctx_names Σ.
+Proof.
+  intros x f Σ.
+  induction Σ as [| [[[y T] st] m] rest IH]; intros Σ' Hupdate;
+    simpl in Hupdate; try discriminate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - inversion Hupdate; subst. reflexivity.
+  - destruct (sctx_update_state x f rest) as [rest' |] eqn:Htail;
+      try discriminate.
+    inversion Hupdate; subst. simpl.
+    rewrite (IH rest' eq_refl). reflexivity.
+Qed.
+
+Lemma sctx_update_state_no_shadow :
+  forall x f Σ Σ',
+    sctx_no_shadow Σ ->
+    sctx_update_state x f Σ = Some Σ' ->
+    sctx_no_shadow Σ'.
+Proof.
+  unfold sctx_no_shadow.
+  intros x f Σ Σ' Hnodup Hupdate.
+  rewrite (sctx_update_state_names x f Σ Σ' Hupdate).
+  exact Hnodup.
+Qed.
+
+Lemma sctx_consume_path_no_shadow :
+  forall Σ Σ' x path,
+    sctx_no_shadow Σ ->
+    sctx_consume_path Σ x path = infer_ok Σ' ->
+    sctx_no_shadow Σ'.
+Proof.
+  intros Σ Σ' x path Hnodup Hconsume.
+  unfold sctx_consume_path in Hconsume.
+  unfold sctx_path_available in Hconsume.
+  destruct (sctx_lookup x Σ) as [[T st] |] eqn:Hlookup; try discriminate.
+  destruct (binding_available_b st path); try discriminate.
+  destruct (sctx_update_state x (state_consume_path path) Σ) as [Σ0 |]
+    eqn:Hupdate; try discriminate.
+  inversion Hconsume; subst.
+  eapply sctx_update_state_no_shadow; eassumption.
+Qed.
+
+Lemma sctx_restore_path_no_shadow :
+  forall Σ Σ' x path,
+    sctx_no_shadow Σ ->
+    sctx_restore_path Σ x path = infer_ok Σ' ->
+    sctx_no_shadow Σ'.
+Proof.
+  intros Σ Σ' x path Hnodup Hrestore.
+  unfold sctx_restore_path in Hrestore.
+  destruct (sctx_update_state x (state_restore_path path) Σ) as [Σ0 |]
+    eqn:Hupdate; try discriminate.
+  inversion Hrestore; subst.
+  eapply sctx_update_state_no_shadow; eassumption.
 Qed.
 
 (* ------------------------------------------------------------------ *)

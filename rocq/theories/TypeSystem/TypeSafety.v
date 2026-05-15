@@ -1119,6 +1119,234 @@ Proof.
   - intros x Hin. apply root_set_union_in_right. exact Hin.
 Qed.
 
+Lemma value_update_path_roots_within_union :
+  forall roots_old roots_new v path v_new v',
+    value_roots_within roots_old v ->
+    value_roots_within roots_new v_new ->
+    value_update_path v path v_new = Some v' ->
+    value_roots_within (root_set_union roots_old roots_new) v'.
+Proof.
+  intros roots_old roots_new v path.
+  revert roots_old roots_new v.
+  induction path as [| f rest IH]; intros roots_old roots_new v v_new v'
+    Hwithin_old Hwithin_new Hupdate; simpl in Hupdate.
+  - destruct v; simpl in Hupdate; injection Hupdate as Hsame; subst v';
+      apply value_roots_within_union_r; exact Hwithin_new.
+  - inversion Hwithin_old; subst; try discriminate.
+    simpl in Hupdate.
+    remember (
+      fix update (fields0 : list (string * value)) : option (list (string * value)) :=
+        match fields0 with
+        | [] => None
+        | (name, fv) :: tail =>
+            if String.eqb f name
+            then match value_update_path fv rest v_new with
+                 | Some fv' => Some ((name, fv') :: tail)
+                 | None => None
+                 end
+            else match update tail with
+                 | Some tail' => Some ((name, fv) :: tail')
+                 | None => None
+                 end
+        end) as update.
+    assert (Hfields :
+      forall fs fs',
+        value_fields_roots_within roots_old fs ->
+        update fs = Some fs' ->
+        value_fields_roots_within (root_set_union roots_old roots_new) fs').
+    { intros fs. subst update.
+      induction fs as [| [fname fv] tail IHfields];
+        intros fs' Hfields_roots Hfields_update; simpl in Hfields_update.
+      - discriminate.
+      - inversion Hfields_roots; subst.
+        destruct (String.eqb f fname) eqn:Hname.
+        + destruct (value_update_path fv rest v_new) as [fv' |] eqn:Hfv_update;
+            try discriminate.
+          inversion Hfields_update; subst.
+          constructor.
+          * eapply IH; eauto.
+          * eapply (proj2 (proj2 (proj2 value_roots_within_weaken))).
+            -- match goal with
+               | H : value_fields_roots_within roots_old tail |- _ => exact H
+               end.
+            -- intros x Hin. apply root_set_union_in_left. exact Hin.
+        + destruct ((
+            fix update (fields0 : list (string * value)) : option (list (string * value)) :=
+              match fields0 with
+              | [] => None
+              | (name0, fv0) :: tail0 =>
+                  if String.eqb f name0
+                  then match value_update_path fv0 rest v_new with
+                       | Some fv' => Some ((name0, fv') :: tail0)
+                       | None => None
+                       end
+                  else match update tail0 with
+                       | Some tail' => Some ((name0, fv0) :: tail')
+                       | None => None
+                       end
+              end) tail) as [tail' |] eqn:Htail_update; try discriminate.
+          inversion Hfields_update; subst.
+          constructor.
+          * apply value_roots_within_union_l.
+            match goal with
+            | H : value_roots_within roots_old fv |- _ => exact H
+            end.
+          * eapply IHfields; eauto. }
+    destruct (update fields) as [fields' |] eqn:Hfields_update; try discriminate.
+    inversion Hupdate; subst.
+    constructor.
+    eapply Hfields; eauto.
+Qed.
+
+Lemma store_update_val_roots_within_union :
+  forall R s x v s' roots_old roots_new,
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_lookup x R = Some roots_old ->
+    value_roots_within roots_new v ->
+    store_update_val x v s = Some s' ->
+    store_roots_within
+      (root_env_update x (root_set_union roots_old roots_new) R) s'.
+Proof.
+  intros R s x v s' roots_old roots_new Hwithin Hnodup
+    Hlookup_x Hvalue Hupdate.
+  revert s' Hupdate.
+  induction Hwithin as [R | R se rest Hentry Hrest IH]; intros s' Hupdate;
+    simpl in Hupdate; try discriminate.
+  unfold store_no_shadow in Hnodup. simpl in Hnodup.
+  inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
+  inversion Hentry as [R0 sx sT sv sst roots Hlookup_se Hvalue_se]; subst R0 se.
+  destruct (ident_eqb x sx) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst sx.
+    rewrite ident_eqb_refl in Hupdate.
+    rewrite Hlookup_x in Hlookup_se. inversion Hlookup_se; subst roots.
+    inversion Hupdate; subst.
+    assert (Hentry_up : store_entry_roots_within
+      (root_env_update x (root_set_union roots_old roots_new) R)
+      (MkStoreEntry x sT v sst)).
+    { exact (SERW_Entry
+        (root_env_update x (root_set_union roots_old roots_new) R)
+        x sT v sst (root_set_union roots_old roots_new)
+        (root_env_lookup_update_eq x (root_set_union roots_old roots_new)
+          R roots_old Hlookup_x)
+        (value_roots_within_union_r roots_old roots_new v Hvalue)). }
+    assert (Hrest_up : store_roots_within
+      (root_env_update x (root_set_union roots_old roots_new) R) rest).
+    { eapply (store_roots_within_update_env_neq R rest x
+        (root_set_union roots_old roots_new)).
+      * exact Hrest.
+      * intros se Hin Hsame.
+        apply Hnotin.
+        pose proof (store_entry_name_in_store_names se rest Hin) as Hin_name.
+        rewrite Hsame in Hin_name. exact Hin_name. }
+    exact (SRW_Cons
+      (root_env_update x (root_set_union roots_old roots_new) R)
+      (MkStoreEntry x sT v sst) rest Hentry_up Hrest_up).
+  - destruct (store_update_val x v rest) as [rest' |] eqn:Htail.
+    + simpl in Hupdate. rewrite Heq in Hupdate.
+      inversion Hupdate; subst.
+    assert (Hentry_up : store_entry_roots_within
+      (root_env_update x (root_set_union roots_old roots_new) R)
+      (MkStoreEntry sx sT sv sst)).
+    { assert (Hlookup_up :
+        root_env_lookup sx
+          (root_env_update x (root_set_union roots_old roots_new) R) =
+        Some roots).
+      { rewrite root_env_lookup_update_neq.
+        - exact Hlookup_se.
+        - intros Hsame. subst sx. rewrite ident_eqb_refl in Heq. discriminate. }
+      exact (SERW_Entry
+        (root_env_update x (root_set_union roots_old roots_new) R)
+        sx sT sv sst roots Hlookup_up Hvalue_se). }
+    assert (Hrest_up : store_roots_within
+      (root_env_update x (root_set_union roots_old roots_new) R) rest').
+    { apply IH.
+      * unfold store_no_shadow. exact Hnodup_tail.
+      * exact Hlookup_x.
+      * reflexivity. }
+    exact (SRW_Cons
+      (root_env_update x (root_set_union roots_old roots_new) R)
+      (MkStoreEntry sx sT sv sst) rest' Hentry_up Hrest_up).
+    + simpl in Hupdate. rewrite Heq in Hupdate. discriminate.
+Qed.
+
+Lemma store_update_path_roots_within_union :
+  forall R s x path v_new s' roots_old roots_new,
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_lookup x R = Some roots_old ->
+    value_roots_within roots_new v_new ->
+    store_update_path x path v_new s = Some s' ->
+    store_roots_within
+      (root_env_update x (root_set_union roots_old roots_new) R) s'.
+Proof.
+  intros R s x path v_new s' roots_old roots_new Hwithin Hnodup
+    Hlookup_x Hvalue_new Hupdate.
+  revert s' Hupdate.
+  induction Hwithin as [R | R se rest Hentry Hrest IH]; intros s' Hupdate;
+    simpl in Hupdate; try discriminate.
+  unfold store_no_shadow in Hnodup. simpl in Hnodup.
+  inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
+  inversion Hentry as [R0 sx sT sv sst roots Hlookup_se Hvalue_se]; subst R0 se.
+  destruct (ident_eqb x sx) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst sx.
+    rewrite ident_eqb_refl in Hupdate.
+    rewrite Hlookup_x in Hlookup_se. inversion Hlookup_se; subst roots.
+    destruct (value_update_path sv path v_new) as [sv' |] eqn:Hvalue_update.
+    + simpl in Hupdate. rewrite Hvalue_update in Hupdate.
+      inversion Hupdate; subst.
+      assert (Hentry_up : store_entry_roots_within
+      (root_env_update x (root_set_union roots_old roots_new) R)
+      (MkStoreEntry x sT sv' sst)).
+      { exact (SERW_Entry
+        (root_env_update x (root_set_union roots_old roots_new) R)
+        x sT sv' sst (root_set_union roots_old roots_new)
+        (root_env_lookup_update_eq x (root_set_union roots_old roots_new)
+          R roots_old Hlookup_x)
+        (value_update_path_roots_within_union
+          roots_old roots_new sv path v_new sv'
+          Hvalue_se Hvalue_new Hvalue_update)). }
+      assert (Hrest_up : store_roots_within
+      (root_env_update x (root_set_union roots_old roots_new) R) rest).
+      { eapply (store_roots_within_update_env_neq R rest x
+        (root_set_union roots_old roots_new)).
+        * exact Hrest.
+        * intros se Hin Hsame.
+        apply Hnotin.
+        pose proof (store_entry_name_in_store_names se rest Hin) as Hin_name.
+        rewrite Hsame in Hin_name. exact Hin_name. }
+      exact (SRW_Cons
+      (root_env_update x (root_set_union roots_old roots_new) R)
+      (MkStoreEntry x sT sv' sst) rest Hentry_up Hrest_up).
+    + simpl in Hupdate. rewrite Hvalue_update in Hupdate. discriminate.
+  - destruct (store_update_path x path v_new rest) as [rest' |] eqn:Htail.
+    + simpl in Hupdate. rewrite Heq in Hupdate.
+      inversion Hupdate; subst.
+      assert (Hentry_up : store_entry_roots_within
+        (root_env_update x (root_set_union roots_old roots_new) R)
+        (MkStoreEntry sx sT sv sst)).
+      { assert (Hlookup_up :
+          root_env_lookup sx
+            (root_env_update x (root_set_union roots_old roots_new) R) =
+          Some roots).
+        { rewrite root_env_lookup_update_neq.
+          - exact Hlookup_se.
+          - intros Hsame. subst sx. rewrite ident_eqb_refl in Heq. discriminate. }
+        exact (SERW_Entry
+          (root_env_update x (root_set_union roots_old roots_new) R)
+          sx sT sv sst roots Hlookup_up Hvalue_se). }
+      assert (Hrest_up : store_roots_within
+        (root_env_update x (root_set_union roots_old roots_new) R) rest').
+      { apply IH.
+        * unfold store_no_shadow. exact Hnodup_tail.
+        * exact Hlookup_x.
+        * reflexivity. }
+      exact (SRW_Cons
+        (root_env_update x (root_set_union roots_old roots_new) R)
+        (MkStoreEntry sx sT sv sst) rest' Hentry_up Hrest_up).
+    + simpl in Hupdate. rewrite Heq in Hupdate. discriminate.
+Qed.
+
 Inductive preservation_ready_expr : expr -> Prop :=
   | PRE_Unit :
       preservation_ready_expr EUnit

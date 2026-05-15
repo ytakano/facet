@@ -1710,6 +1710,32 @@ Proof.
     + eapply IH. exact Hps.
 Qed.
 
+Lemma alpha_rename_params_names_in_used : forall ρ used ps psr ρ' used',
+  alpha_rename_params ρ used ps = (psr, ρ', used') ->
+  forall x, In x (ctx_names (params_ctx psr)) -> In x used'.
+Proof.
+  intros ρ used ps.
+  revert ρ used.
+  induction ps as [| p ps IH]; intros ρ used psr ρ' used' Hrename x Hin.
+  - simpl in Hrename. inversion Hrename; subst.
+    simpl in Hin. contradiction.
+  - destruct p as [m xp T].
+    simpl in Hrename.
+    destruct (alpha_rename_params
+      ρ (fresh_ident xp used :: used) ps)
+      as [[ps0 ρ0] used0] eqn:Hps.
+    inversion Hrename; subst.
+    simpl in Hin.
+    destruct Hin as [Heq | Hin].
+    + subst x.
+      eapply alpha_rename_params_used_extends.
+      * exact Hps.
+      * simpl. left. reflexivity.
+    + eapply IH.
+      * exact Hps.
+      * exact Hin.
+Qed.
+
 Lemma alpha_rename_params_range_ctx_or_tail : forall ρ used ps psr ρ' used',
   alpha_rename_params ρ used ps = (psr, ρ', used') ->
   forall x, In x (rename_range ρ') ->
@@ -1765,6 +1791,156 @@ Proof.
         -- exact Hctx.
         -- left. reflexivity.
       * simpl in Htail. contradiction.
+Qed.
+
+Lemma alpha_rename_params_range_in_used_nil : forall used ps psr ρ' used',
+  alpha_rename_params [] used ps = (psr, ρ', used') ->
+  forall x, In x (rename_range ρ') -> In x used'.
+Proof.
+  intros used ps psr ρ' used' Hrename x Hin.
+  destruct (alpha_rename_params_range_ctx_or_tail
+    _ _ _ _ _ _ Hrename _ Hin) as [Hctx | Htail].
+  - eapply alpha_rename_params_names_in_used; eauto.
+  - simpl in Htail. contradiction.
+Qed.
+
+Lemma alpha_rename_params_range_fresh_used_nil : forall used ps psr ρ' used',
+  alpha_rename_params [] used ps = (psr, ρ', used') ->
+  forall x, In x (rename_range ρ') -> ~ In x used.
+Proof.
+  intros used ps psr ρ' used' Hrename x Hin Hused.
+  destruct (alpha_rename_params_range_ctx_or_tail
+    _ _ _ _ _ _ Hrename _ Hin) as [Hctx | Htail].
+  - eapply alpha_rename_params_names_fresh_used; eauto.
+  - simpl in Htail. contradiction.
+Qed.
+
+Lemma params_ctx_names_param_names : forall ps,
+  ctx_names (params_ctx ps) = param_names ps.
+Proof.
+  induction ps as [| p ps IH].
+  - reflexivity.
+  - simpl. rewrite IH. reflexivity.
+Qed.
+
+Lemma sctx_check_ok_cons_ne : forall env x y T Ty st m Σ,
+  x <> y ->
+  sctx_check_ok env x T ((y, Ty, st, m) :: Σ) =
+  sctx_check_ok env x T Σ.
+Proof.
+  intros env x y T Ty st m Σ Hneq.
+  unfold sctx_check_ok, sctx_lookup.
+  destruct (ty_usage T); try reflexivity.
+  simpl.
+  destruct (ident_eqb x y) eqn:Hxy.
+  - apply ident_eqb_eq in Hxy. contradiction.
+  - reflexivity.
+Qed.
+
+Lemma params_ok_sctx_b_cons_notin : forall env ps y T st m Σ,
+  ~ In y (param_names ps) ->
+  params_ok_sctx_b env ps ((y, T, st, m) :: Σ) =
+  params_ok_sctx_b env ps Σ.
+Proof.
+  intros env ps.
+  induction ps as [| p ps IH]; intros y T st m Σ Hnotin.
+  - reflexivity.
+  - simpl in Hnotin |- *.
+    rewrite sctx_check_ok_cons_ne.
+    + rewrite IH.
+      * reflexivity.
+      * intros Hin. apply Hnotin. right. exact Hin.
+    + intros Heq. apply Hnotin. left. exact Heq.
+Qed.
+
+Lemma alpha_rename_params_params_ok_sctx_b_forward :
+  forall env used ps psr ρ used' Σ Σr,
+    alpha_rename_params [] used ps = (psr, ρ, used') ->
+    NoDup (param_names ps) ->
+    (forall x, In x (param_names ps) -> In x used) ->
+    ctx_alpha ρ Σ Σr ->
+    params_ok_sctx_b env ps Σ = true ->
+    params_ok_sctx_b env psr Σr = true.
+Proof.
+  intros env used ps.
+  revert used.
+  induction ps as [| p ps IH]; intros used psr ρ used' Σ Σr
+    Hrename Hnodup Hused Halpha Hparams.
+  - simpl in Hrename. inversion Hrename; subst.
+    inversion Halpha; subst. reflexivity.
+  - destruct p as [m xp T].
+    simpl in Hrename.
+    destruct (alpha_rename_params [] (fresh_ident xp used :: used) ps)
+      as [[ps0 ρ0] used0] eqn:Hps.
+    inversion Hrename; subst. simpl in Hparams.
+    inversion Hnodup as [| ? ? Hxp_notin Hnodup_tail]; subst.
+    inversion Halpha as [| ? Γ Γr ? xr Tctx stctx mctx Halpha_tail
+      Hfresh_ctx Hfresh_range]; subst.
+    simpl.
+    apply andb_true_iff in Hparams as [Hhead Htail_full].
+    assert (Hxp_used : In xp used).
+    { apply Hused. simpl. left. reflexivity. }
+    assert (Hsafe_xp : ~ In xp (rename_range ((xp, fresh_ident xp used) :: ρ0))).
+    { simpl. intros [Heq | Hin].
+      - apply (fresh_ident_not_in xp used). rewrite Heq. exact Hxp_used.
+      - eapply alpha_rename_params_range_fresh_used_nil.
+        + exact Hps.
+        + exact Hin.
+        + simpl. right. exact Hxp_used. }
+    assert (Hhead_r :
+      sctx_check_ok env (fresh_ident xp used) T
+        ((fresh_ident xp used, Tctx, stctx, mctx) :: Γr) = true).
+    { assert (Hlookup_xp :
+        lookup_rename xp ((xp, fresh_ident xp used) :: ρ0) =
+        fresh_ident xp used).
+      { simpl. rewrite ident_eqb_refl. reflexivity. }
+      assert (Hhead_lookup :
+        sctx_check_ok env
+          (lookup_rename xp ((xp, fresh_ident xp used) :: ρ0)) T
+          ((fresh_ident xp used, Tctx, stctx, mctx) :: Γr) = true).
+      { eapply ctx_alpha_check_ok_forward.
+        - exact Halpha.
+        - exact Hsafe_xp.
+        - exact Hhead. }
+      rewrite Hlookup_xp in Hhead_lookup.
+      exact Hhead_lookup. }
+    rewrite Hhead_r.
+    rewrite (params_ok_sctx_b_cons_notin env ps0 (fresh_ident xp used)
+      Tctx stctx mctx Γr).
+    + eapply IH.
+      * exact Hps.
+      * exact Hnodup_tail.
+      * intros x Hin. simpl. right. apply Hused. simpl. right. exact Hin.
+      * exact Halpha_tail.
+      * rewrite <- (params_ok_sctx_b_cons_notin env ps xp
+          Tctx stctx mctx Γ).
+        -- exact Htail_full.
+        -- exact Hxp_notin.
+    + rewrite <- params_ctx_names_param_names.
+      intro Hin.
+      eapply alpha_rename_params_names_fresh_used.
+      * exact Hps.
+      * exact Hin.
+      * simpl. left. reflexivity.
+Qed.
+
+Lemma alpha_rename_params_params_ok_env_b_forward :
+  forall env used ps psr ρ used' Γ Γr,
+    alpha_rename_params [] used ps = (psr, ρ, used') ->
+    NoDup (ctx_names (params_ctx ps)) ->
+    (forall x, In x (param_names ps) -> In x used) ->
+    ctx_alpha ρ (sctx_of_ctx Γ) (sctx_of_ctx Γr) ->
+    params_ok_env_b env ps Γ = true ->
+    params_ok_env_b env psr Γr = true.
+Proof.
+  intros env used ps psr ρ used' Γ Γr Hrename Hnodup Hused Halpha Hparams.
+  unfold params_ok_env_b in *.
+  eapply alpha_rename_params_params_ok_sctx_b_forward.
+  - exact Hrename.
+  - rewrite <- params_ctx_names_param_names. exact Hnodup.
+  - exact Hused.
+  - exact Halpha.
+  - exact Hparams.
 Qed.
 
 Lemma alpha_rename_fn_def_used_extends : forall used f fr used',
@@ -3542,4 +3718,54 @@ Proof.
   intros env Ω n ρ Σ Σr e er used used' T Σ'
     Hctx Hctx_used Hrange_used Hdisj Hrename Htyped.
   eapply (Hsize (S (expr_size e))); eauto.
+Qed.
+
+Lemma alpha_rename_fn_def_typed_structural_forward :
+  forall env used f fr used',
+    alpha_rename_fn_def used f = (fr, used') ->
+    NoDup (ctx_names (params_ctx (fn_params f))) ->
+    typed_fn_env_structural env f ->
+    typed_fn_env_structural env fr.
+Proof.
+  intros env used f fr used' Hrename Hnodup Htyped.
+  destruct f as [fname lifetimes outs ps ret body].
+  unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
+  destruct (alpha_rename_params []
+    (param_names ps ++ free_vars_expr body ++ used) ps)
+    as [[psr ρ] used1] eqn:Hps.
+  destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
+  injection Hrename as <- <-.
+  unfold typed_fn_env_structural in *. simpl in *.
+  destruct Htyped as [T_body [Γ_out [Htyped_body [Hcompat Hparams]]]].
+  destruct (alpha_rename_typed_env_structural_forward
+    env outs lifetimes ρ
+    (sctx_of_ctx (params_ctx ps)) (sctx_of_ctx (params_ctx psr))
+    body bodyr used1 used2 T_body (sctx_of_ctx Γ_out))
+    as [Σr_out [Htyped_body_r Hctx_out_r]].
+  - eapply alpha_rename_params_ctx_alpha_nil. exact Hps.
+  - intros x Hin.
+    eapply alpha_rename_params_names_in_used.
+    + exact Hps.
+    + exact Hin.
+  - intros x Hin.
+    eapply alpha_rename_params_range_in_used_nil.
+    + exact Hps.
+    + exact Hin.
+  - intros x Hfree Hrange.
+    eapply alpha_rename_params_range_fresh_used_nil.
+    + exact Hps.
+    + exact Hrange.
+    + apply in_or_app. right. apply in_or_app. left. exact Hfree.
+  - exact Hbody.
+  - exact Htyped_body.
+  - exists T_body, Σr_out. repeat split.
+    + exact Htyped_body_r.
+    + exact Hcompat.
+    + eapply alpha_rename_params_params_ok_env_b_forward.
+      * exact Hps.
+      * exact Hnodup.
+      * intros x Hin.
+        apply in_or_app. left. exact Hin.
+      * exact Hctx_out_r.
+      * exact Hparams.
 Qed.

@@ -13,6 +13,86 @@ Definition initial_root_env_for_params (ps : list param) : root_env :=
 Definition initial_root_env_for_fn (f : fn_def) : root_env :=
   initial_root_env_for_params (fn_params f).
 
+Lemma initial_root_env_for_params_names :
+  forall ps,
+    root_env_names (initial_root_env_for_params ps) =
+    ctx_names (params_ctx ps).
+Proof.
+  induction ps as [| p ps IH].
+  - reflexivity.
+  - simpl. rewrite IH. reflexivity.
+Qed.
+
+Lemma initial_root_env_for_params_no_shadow :
+  forall ps,
+    NoDup (ctx_names (params_ctx ps)) ->
+    root_env_no_shadow (initial_root_env_for_params ps).
+Proof.
+  intros ps Hnodup.
+  unfold root_env_no_shadow.
+  rewrite initial_root_env_for_params_names.
+  exact Hnodup.
+Qed.
+
+Lemma initial_root_env_for_params_covers :
+  forall ps,
+    root_env_covers_params ps (initial_root_env_for_params ps).
+Proof.
+  induction ps as [| p ps IH]; intros x Hin.
+  - inversion Hin.
+  - simpl in Hin.
+    destruct Hin as [Hx | Hin].
+    + subst x. exists [param_name p].
+      simpl. rewrite ident_eqb_refl. reflexivity.
+    + simpl.
+      destruct (ident_eqb x (param_name p)) eqn:Heq.
+      * exists [param_name p]. reflexivity.
+      * destruct (IH x Hin) as [roots Hlookup].
+        exists roots. exact Hlookup.
+Qed.
+
+Lemma initial_root_env_for_fn_names :
+  forall f,
+    root_env_names (initial_root_env_for_fn f) =
+    ctx_names (params_ctx (fn_params f)).
+Proof.
+  intros f.
+  unfold initial_root_env_for_fn.
+  apply initial_root_env_for_params_names.
+Qed.
+
+Lemma initial_root_env_for_fn_no_shadow :
+  forall f,
+    NoDup (ctx_names (params_ctx (fn_params f))) ->
+    root_env_no_shadow (initial_root_env_for_fn f).
+Proof.
+  intros f Hnodup.
+  unfold initial_root_env_for_fn.
+  apply initial_root_env_for_params_no_shadow.
+  exact Hnodup.
+Qed.
+
+Lemma initial_root_env_for_fn_covers :
+  forall f,
+    root_env_covers_params (fn_params f) (initial_root_env_for_fn f).
+Proof.
+  intros f.
+  unfold initial_root_env_for_fn.
+  apply initial_root_env_for_params_covers.
+Qed.
+
+Lemma call_body_start_state_param_scope :
+  forall env Ω s_args vs ps,
+    eval_args_values_have_types env Ω s_args vs ps ->
+    store_param_scope ps (bind_params ps vs s_args) s_args /\
+    root_env_covers_params ps (initial_root_env_for_params ps).
+Proof.
+  intros env Ω s_args vs ps Hargs.
+  split.
+  - eapply store_param_scope_bind_params. exact Hargs.
+  - apply initial_root_env_for_params_covers.
+Qed.
+
 Theorem infer_full_env_roots_big_step_safe_ready :
   forall env f R0 T Γ' R' roots s s' v,
     infer_full_env_roots env f R0 = infer_ok (T, Γ', R', roots) ->

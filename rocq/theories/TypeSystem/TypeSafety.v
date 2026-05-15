@@ -2244,6 +2244,59 @@ Proof.
   exact Htyped.
 Qed.
 
+Inductive store_param_prefix : list param -> store -> store -> Prop :=
+  | SPP_Nil : forall s,
+      store_param_prefix [] s s
+  | SPP_Cons : forall p ps v st s_param s,
+      store_param_prefix ps s_param s ->
+      store_param_prefix (p :: ps)
+        (MkStoreEntry (param_name p) (param_ty p) v st :: s_param)
+        s.
+
+Lemma store_param_prefix_bind_params :
+  forall env Ω s vs ps,
+    eval_args_values_have_types env Ω s vs ps ->
+    store_param_prefix ps (bind_params ps vs s) s.
+Proof.
+  intros env Ω s vs ps Hargs.
+  induction Hargs as [| v vs p ps T_actual _ _ _ IH].
+  - constructor.
+  - simpl. constructor. exact IH.
+Qed.
+
+Lemma store_names_store_param_prefix :
+  forall ps s_param s,
+    store_param_prefix ps s_param s ->
+    store_names s_param = ctx_names (params_ctx ps) ++ store_names s.
+Proof.
+  intros ps s_param s Hprefix.
+  induction Hprefix as [s | p ps v st s_param s _ IH].
+  - reflexivity.
+  - simpl. rewrite IH. reflexivity.
+Qed.
+
+Lemma store_remove_params_store_param_prefix :
+  forall ps s_param s,
+    store_param_prefix ps s_param s ->
+    store_remove_params ps s_param = s.
+Proof.
+  intros ps s_param s Hprefix.
+  induction Hprefix as [s | p ps v st s_param s _ IH].
+  - reflexivity.
+  - simpl. rewrite ident_eqb_refl. exact IH.
+Qed.
+
+Lemma store_typed_remove_params_store_param_prefix :
+  forall env ps s_param s Σ,
+    store_typed env s Σ ->
+    store_param_prefix ps s_param s ->
+    store_typed env (store_remove_params ps s_param) Σ.
+Proof.
+  intros env ps s_param s Σ Htyped Hprefix.
+  rewrite (store_remove_params_store_param_prefix ps s_param s Hprefix).
+  exact Htyped.
+Qed.
+
 Lemma bind_params_head_fresh_in_tail :
   forall env Ω s p ps vs,
     NoDup (ctx_names (params_ctx (p :: ps))) ->

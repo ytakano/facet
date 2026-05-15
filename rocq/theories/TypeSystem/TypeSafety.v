@@ -1777,6 +1777,35 @@ with preservation_ready_fields : list (string * expr) -> Prop :=
 Definition env_fns_preservation_ready (env : global_env) : Prop :=
   forall f, In f (env_fns env) -> preservation_ready_expr (fn_body f).
 
+Inductive preservation_direct_call_ready_expr : expr -> Prop :=
+  | PDCR_Ready : forall e,
+      preservation_ready_expr e ->
+      preservation_direct_call_ready_expr e
+  | PDCR_Call : forall fname args,
+      preservation_ready_args args ->
+      preservation_direct_call_ready_expr (ECall fname args).
+
+Lemma preservation_ready_direct_call_ready :
+  forall e,
+    preservation_ready_expr e ->
+    preservation_direct_call_ready_expr e.
+Proof.
+  intros e Hready.
+  apply PDCR_Ready. exact Hready.
+Qed.
+
+Lemma preservation_direct_call_ready_not_call_inv :
+  forall e,
+    preservation_direct_call_ready_expr e ->
+    (forall fname args, e <> ECall fname args) ->
+    preservation_ready_expr e.
+Proof.
+  intros e Hready Hnot_call.
+  inversion Hready; subst.
+  - exact H.
+  - exfalso. apply (Hnot_call fname args). reflexivity.
+Qed.
+
 Lemma place_path_rename_place_some :
   forall ρ p x path,
     place_path p = Some (x, path) ->
@@ -1790,6 +1819,207 @@ Proof.
     inversion Hpath; subst x path.
     destruct (IHp root subpath eq_refl) as [xr Hrenamed].
     simpl. rewrite Hrenamed. exists xr. reflexivity.
+Qed.
+
+Lemma alpha_rename_preservation_ready_expr :
+  forall ρ used e er used',
+    alpha_rename_expr ρ used e = (er, used') ->
+    preservation_ready_expr e ->
+    preservation_ready_expr er
+with alpha_rename_preservation_ready_args :
+  forall ρ used args argsr used',
+    (fix go (used0 : list ident) (args0 : list expr)
+        {struct args0} : list expr * list ident :=
+       match args0 with
+       | [] => ([], used0)
+       | arg :: rest =>
+           let (arg', used1) := alpha_rename_expr ρ used0 arg in
+           let (rest', used2) := go used1 rest in
+           (arg' :: rest', used2)
+       end) used args = (argsr, used') ->
+    preservation_ready_args args ->
+    preservation_ready_args argsr
+with alpha_rename_preservation_ready_fields :
+  forall ρ used fields fieldsr used',
+    (fix go (used0 : list ident) (fields0 : list (string * expr))
+        {struct fields0} : list (string * expr) * list ident :=
+       match fields0 with
+       | [] => ([], used0)
+       | (fname, e) :: rest =>
+           let (e', used1) := alpha_rename_expr ρ used0 e in
+           let (rest', used2) := go used1 rest in
+           ((fname, e') :: rest', used2)
+       end) used fields = (fieldsr, used') ->
+    preservation_ready_fields fields ->
+    preservation_ready_fields fieldsr.
+Proof.
+  - intros ρ used e er used' Hrename Hready.
+    destruct Hready; simpl in Hrename.
+    + inversion Hrename; subst. constructor.
+    + inversion Hrename; subst. constructor.
+    + inversion Hrename; subst. constructor.
+    + inversion Hrename; subst. constructor.
+    + inversion Hrename; subst.
+      destruct (place_path_rename_place_some ρ p x path H)
+        as [xr Hpath].
+      eapply PRE_Place_Direct. exact Hpath.
+    + inversion Hrename; subst.
+      destruct (place_path_rename_place_some ρ p x path H)
+        as [xr Hpath].
+      eapply PRE_Borrow. exact Hpath.
+    + destruct
+        ((fix go (used0 : list ident) (fields0 : list (string * expr))
+             {struct fields0} : list (string * expr) * list ident :=
+            match fields0 with
+            | [] => ([], used0)
+            | (fname, e) :: rest =>
+                let (e', used1) := alpha_rename_expr ρ used0 e in
+                let (rest', used2) := go used1 rest in
+                ((fname, e') :: rest', used2)
+            end) used fields)
+        as [fieldsr used_fields] eqn:Hfields.
+      inversion Hrename; subst.
+      apply PRE_Struct.
+      eapply alpha_rename_preservation_ready_fields; eauto.
+    + destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
+      inversion Hrename; subst.
+      apply PRE_Drop.
+      eapply alpha_rename_preservation_ready_expr; eauto.
+    + destruct (alpha_rename_expr ρ used e_new) as [er_new used_new]
+        eqn:Hnew.
+      inversion Hrename; subst.
+      destruct (place_path_rename_place_some ρ p x path H)
+        as [xr Hpath].
+      eapply PRE_Assign.
+      * exact Hpath.
+      * eapply alpha_rename_preservation_ready_expr; eauto.
+    + destruct (alpha_rename_expr ρ used e_new) as [er_new used_new]
+        eqn:Hnew.
+      inversion Hrename; subst.
+      destruct (place_path_rename_place_some ρ p x path H)
+        as [xr Hpath].
+      eapply PRE_Replace.
+      * exact Hpath.
+      * eapply alpha_rename_preservation_ready_expr; eauto.
+    + destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
+      destruct (alpha_rename_expr ρ used1 e2) as [e2r used2] eqn:He2.
+      destruct (alpha_rename_expr ρ used2 e3) as [e3r used3] eqn:He3.
+      inversion Hrename; subst.
+      apply PRE_If.
+      * eapply alpha_rename_preservation_ready_expr; eauto.
+      * eapply alpha_rename_preservation_ready_expr; eauto.
+      * eapply alpha_rename_preservation_ready_expr; eauto.
+  - intros ρ used args argsr used' Hrename Hready.
+    destruct Hready as [| arg rest Harg Hrest]; simpl in Hrename.
+    + inversion Hrename; subst. constructor.
+    + destruct (alpha_rename_expr ρ used arg) as [ar used1] eqn:Harg_ren.
+      destruct
+        ((fix go (used0 : list ident) (args0 : list expr)
+             {struct args0} : list expr * list ident :=
+            match args0 with
+            | [] => ([], used0)
+            | arg0 :: rest0 =>
+                let (arg', used2) := alpha_rename_expr ρ used0 arg0 in
+                let (rest', used3) := go used2 rest0 in
+                (arg' :: rest', used3)
+            end) used1 rest)
+        as [restr used2] eqn:Hrest_ren.
+      inversion Hrename; subst.
+      constructor.
+      * eapply alpha_rename_preservation_ready_expr; eauto.
+      * eapply alpha_rename_preservation_ready_args; eauto.
+  - intros ρ used fields fieldsr used' Hrename Hready.
+    destruct Hready as [| name e rest He Hrest]; simpl in Hrename.
+    + inversion Hrename; subst. constructor.
+    + destruct (alpha_rename_expr ρ used e) as [er used1] eqn:He_ren.
+      destruct
+        ((fix go (used0 : list ident) (fields0 : list (string * expr))
+             {struct fields0} : list (string * expr) * list ident :=
+            match fields0 with
+            | [] => ([], used0)
+            | (fname, e0) :: rest0 =>
+                let (e', used2) := alpha_rename_expr ρ used0 e0 in
+                let (rest', used3) := go used2 rest0 in
+                ((fname, e') :: rest', used3)
+            end) used1 rest)
+        as [restr used2] eqn:Hrest_ren.
+      inversion Hrename; subst.
+      constructor.
+      * eapply alpha_rename_preservation_ready_expr; eauto.
+      * eapply alpha_rename_preservation_ready_fields; eauto.
+Qed.
+
+Lemma alpha_rename_fn_def_preservation_ready_body :
+  forall used f fr used',
+    alpha_rename_fn_def used f = (fr, used') ->
+    preservation_ready_expr (fn_body f) ->
+    preservation_ready_expr (fn_body fr).
+Proof.
+  intros used f fr used' Hrename Hready.
+  unfold alpha_rename_fn_def in Hrename.
+  destruct (alpha_rename_params [] (param_names (fn_params f) ++
+             free_vars_expr (fn_body f) ++ used) (fn_params f))
+    as [[paramsr ρ] used1] eqn:Hparams.
+  destruct (alpha_rename_expr ρ used1 (fn_body f)) as [bodyr used2]
+    eqn:Hbody.
+  inversion Hrename; subst. simpl.
+  eapply alpha_rename_preservation_ready_expr; eauto.
+Qed.
+
+Lemma alpha_rename_direct_call_ready_expr :
+  forall ρ used e er used',
+    alpha_rename_expr ρ used e = (er, used') ->
+    preservation_direct_call_ready_expr e ->
+    preservation_direct_call_ready_expr er.
+Proof.
+  intros ρ used e er used' Hrename Hready.
+  inversion Hready; subst.
+  - apply PDCR_Ready.
+    eapply alpha_rename_preservation_ready_expr; eassumption.
+  - simpl in Hrename.
+    destruct
+      ((fix go (used0 : list ident) (args0 : list expr)
+          {struct args0} : list expr * list ident :=
+         match args0 with
+         | [] => ([], used0)
+         | arg :: rest =>
+             let (arg', used1) := alpha_rename_expr ρ used0 arg in
+             let (rest', used2) := go used1 rest in
+             (arg' :: rest', used2)
+         end) used args)
+      as [argsr used_args] eqn:Hargs.
+    inversion Hrename; subst.
+    apply PDCR_Call.
+    eapply alpha_rename_preservation_ready_args; eassumption.
+Qed.
+
+Lemma lookup_alpha_rename_fn_def_preservation_ready_body :
+  forall env fname fdef fcall used used',
+    lookup_fn fname (env_fns env) = Some fdef ->
+    env_fns_preservation_ready env ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    preservation_ready_expr (fn_body fcall).
+Proof.
+  intros env fname fdef fcall used used' Hlookup Henv_ready Hrename.
+  destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+    as [Hin _].
+  eapply alpha_rename_fn_def_preservation_ready_body.
+  - exact Hrename.
+  - apply Henv_ready. exact Hin.
+Qed.
+
+Lemma lookup_alpha_rename_fn_def_typed_structural :
+  forall env fname fdef fcall used used',
+    lookup_fn fname (env_fns env) = Some fdef ->
+    env_fns_checked_structural env ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    typed_fn_env_structural env fcall.
+Proof.
+  intros env fname fdef fcall used used' Hlookup Henv_checked Hrename.
+  eapply alpha_rename_fn_def_typed_structural_forward.
+  - exact Hrename.
+  - eapply lookup_fn_checked_structural_params_nodup; eassumption.
+  - eapply lookup_fn_checked_structural_typed; eassumption.
 Qed.
 
 Scheme eval_ind' := Induction for eval Sort Prop

@@ -1553,6 +1553,13 @@ let rec expr_ref_root = function
 | EDeref e' -> expr_ref_root e'
 | _ -> None
 
+(** val place_name : place -> ident **)
+
+let rec place_name = function
+| PVar x -> x
+| PDeref q -> place_name q
+| PField (q, _) -> place_name q
+
 type root_set = ident list
 
 type root_env = (ident * root_set) list
@@ -2041,13 +2048,6 @@ let wf_lifetime_b _UU0394_ l =
 
 let wf_type_b _UU0394_ t =
   wf_type_at_b Big_int_Z.zero_big_int _UU0394_ t
-
-(** val place_name : place -> ident **)
-
-let rec place_name = function
-| PVar x -> x
-| PDeref q -> place_name q
-| PField (q, _) -> place_name q
 
 type infer_error =
 | ErrUnknownVar of ident

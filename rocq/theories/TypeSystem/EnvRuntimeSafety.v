@@ -1,5 +1,5 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
-  OperationalSemantics TypingRules RootProvenance TypeChecker RuntimeTyping
+  Renaming OperationalSemantics TypingRules RootProvenance TypeChecker RuntimeTyping
   EnvStructuralRules CheckerSoundness TypeSafety EnvRootSoundness.
 From Stdlib Require Import List.
 Import ListNotations.

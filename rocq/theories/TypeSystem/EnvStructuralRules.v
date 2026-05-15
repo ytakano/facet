@@ -1,5 +1,5 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
-  TypingRules RootProvenance TypeChecker.
+  Renaming TypingRules RootProvenance TypeChecker.
 From Stdlib Require Import List String.
 Import ListNotations.
 

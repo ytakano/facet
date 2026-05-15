@@ -4,6 +4,7 @@ theories/TypeSystem/Types.v
 theories/TypeSystem/Syntax.v
 theories/TypeSystem/PathState.v
 theories/TypeSystem/Program.v
+theories/TypeSystem/Renaming.v
 theories/TypeSystem/OperationalSemantics.v
 theories/TypeSystem/TypingRules.v
 theories/TypeSystem/RootProvenance.v

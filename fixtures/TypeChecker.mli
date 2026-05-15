@@ -369,6 +369,8 @@ val apply_lt_params : lifetime list -> param list -> param list
 
 val expr_ref_root : expr -> ident option
 
+val place_name : place -> ident
+
 type root_set = ident list
 
 type root_env = (ident * root_set) list
@@ -427,8 +429,6 @@ val wf_type_at_b : Big_int_Z.big_int -> region_ctx -> ty -> bool
 val wf_lifetime_b : region_ctx -> lifetime -> bool
 
 val wf_type_b : region_ctx -> ty -> bool
-
-val place_name : place -> ident
 
 type infer_error =
 | ErrUnknownVar of ident

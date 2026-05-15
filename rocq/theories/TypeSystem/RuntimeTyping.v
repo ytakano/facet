@@ -256,6 +256,16 @@ Proof.
   eapply VHT_Compatible; eassumption.
 Qed.
 
+Lemma value_has_type_apply_lt_ty :
+  forall env s σ v T,
+    value_has_type env s v T ->
+    apply_lt_ty σ T = T ->
+    value_has_type env s v (apply_lt_ty σ T).
+Proof.
+  intros env s σ v T Htyped Hstable.
+  rewrite Hstable. exact Htyped.
+Qed.
+
 Lemma struct_fields_have_type_store_preserved :
   forall env s lts args fields defs,
     struct_fields_have_type env s lts args fields defs ->

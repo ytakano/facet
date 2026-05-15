@@ -4785,6 +4785,56 @@ Proof.
       eapply Hfields; eassumption.
 Qed.
 
+Theorem eval_preserves_typing_ready_with_call_invariants_mutual :
+  (forall env s e s' v,
+    eval env s e s' v ->
+    env_fns_typed_structural env ->
+    fn_env_unique_by_name env ->
+    forall (Ω : outlives_ctx) (n : nat) Σ T Σ',
+      preservation_ready_expr e ->
+      store_typed env s Σ ->
+      typed_env_structural env Ω n Σ e T Σ' ->
+      store_typed env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s') /\
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    env_fns_typed_structural env ->
+    fn_env_unique_by_name env ->
+    forall (Ω : outlives_ctx) (n : nat) Σ ps Σ',
+      preservation_ready_args args ->
+      store_typed env s Σ ->
+      typed_args_env_structural env Ω n Σ args ps Σ' ->
+      store_typed env s' Σ' /\
+      eval_args_values_have_types env Ω s' vs ps /\
+      store_ref_targets_preserved env s s') /\
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    env_fns_typed_structural env ->
+    fn_env_unique_by_name env ->
+    forall (Ω : outlives_ctx) (n : nat) lts args Σ Σ',
+      preservation_ready_fields fields ->
+      store_typed env s Σ ->
+      typed_fields_env_structural env Ω n lts args Σ fields defs Σ' ->
+      store_typed env s' Σ' /\
+      struct_fields_have_type env s' lts args values defs /\
+      store_ref_targets_preserved env s s').
+Proof.
+  split.
+  - intros env s e s' v Heval _ _ Ω n Σ T Σ' Hready Hstore Htyped.
+    exact (proj1 eval_preserves_typing_ready_mutual env s e s' v Heval
+      Ω n Σ T Σ' Hready Hstore Htyped).
+  - split.
+    + intros env s args s' vs Heval _ _ Ω n Σ ps Σ' Hready Hstore Htyped.
+      exact (proj1 (proj2 eval_preserves_typing_ready_mutual)
+        env s args s' vs Heval Ω n Σ ps Σ' Hready Hstore Htyped).
+    + intros env s fields defs s' values Heval _ _ Ω n lts args Σ Σ'
+        Hready Hstore Htyped.
+      exact (proj2 (proj2 eval_preserves_typing_ready_mutual)
+        env s fields defs s' values Heval Ω n lts args Σ Σ'
+        Hready Hstore Htyped).
+Qed.
+
 Lemma eval_let_roots_ready_preserves_typing :
   forall env (Ω : outlives_ctx) (n : nat) R R' Σ Σ' s s'
       m x T_ann e1 e2 T roots v,

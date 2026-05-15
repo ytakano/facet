@@ -22,11 +22,11 @@
 
 ## Current Status
 
-Last updated implementation point: reconnected direct assign/replace to the ready preservation theorem with concrete RHS preservation evidence.
+Last updated implementation point: added scoped runtime root-exclusion removal lemmas; `ELet` remains blocked on missing static root provenance.
 
 - S0: `[done]` runtime value/store typing と runtime reference well-formedness の仕様は導入済み。
 - S1: `[done]` path/value/store helper の主要部分と linear partial-move obligation helper/checker fix は導入済み。
-- S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。`VHT_Ref` は runtime store 内の参照先 path の存在・型対応を要求する形に強化済み。direct assign/replace は concrete RHS preservation evidence 経由で ready subset に再接続済み。full unrestricted theorem は未完了。
+- S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。`VHT_Ref` は runtime store 内の参照先 path の存在・型対応を要求する形に強化済み。direct assign/replace は concrete RHS preservation evidence 経由で ready subset に再接続済み。`store_remove` 用の root-exclusion runtime helper は追加済みだが、`ELet` 再接続には static root provenance invariant が必要。full unrestricted theorem は未完了。
 - S3: `[todo]` call/closure preservation は未着手。ただし empty closure value typing helper は一部存在する。
 - S4-S6: `[todo]` checker-to-runtime safety、runtime reference safety、small-step progress は未着手。
 
@@ -106,7 +106,8 @@ Theorem step_progress :
    - `[done]` `VHT_Ref` を強化し、`VRef x path` が `store_lookup x s`、`value_lookup_path`、`type_lookup_path` で実在する runtime target を指すことを要求するようにした。これに伴い、古い `value_has_type_store_irrelevant` は削除し、`store_ref_targets_preserved` 前提付きの `value_has_type_store_preserved` に置き換えた。
    - `[done]` `store_update_state` / `store_mark_used` / restore 系の state-only 更新が `store_ref_targets_preserved` を満たす補題を追加済み。
    - `[done]` direct `assign` / `replace` は、強化後の reference preservation obligation を露出する形に helper を弱め、concrete RHS preservation evidence を渡して root/path の update・restore obligation と ready subset への再接続を完了済み。
-   - `[partial]` direct `let` は、強化後の reference preservation obligation に対する local binding removal / escape invariant が未解決。
+   - `[partial]` direct `let` は、強化後の reference preservation obligation に対する local binding removal / escape invariant が未解決。runtime 側には `value_refs_exclude_root` / `store_refs_exclude_root` と scoped `store_remove` helper を追加済みで、`eval_let_preserves_typing` は false な global remove-preservation premise ではなく root-exclusion premise を要求する形に弱めた。
+   - `[todo]` `ELet` / `ELetInfer` を ready theorem に戻すには、typing/checker が expression result と surviving bindings の参照 root provenance を運び、let-bound root `x` が escape しないことを `TES_Let` / `TES_LetInfer` から導出できるようにする必要がある。
    - `[todo]` ready restriction のない full `eval_preserves_typing` を証明する。
    - `[done]` `typed_env_structural` が binding lookup/type を保存する same-bindings helper を追加し、現在 explicit premise にしている lookup 条件を theorem 本体で導出できるようにした。
    - `[done]` `EIf` false branch の `store_typed_ctx_merge_right` 用 type-equality premise は branch typing から導出できる helper を追加済み。
@@ -175,11 +176,12 @@ Theorem step_progress :
 3. `[done]` `typed_env_structural` の same-bindings lookup helper を追加し、assign/replace helper の explicit lookup premise を theorem 本体で導出できるようにする。
 4. `[done]` `eval`, `eval_args`, `eval_struct_fields` の ready restricted mutual preservation theorem を追加し、既存 helper を constructor ごとに接続する。
 5. `[done]` direct update bridge の callback shape を concrete RHS evaluation 用に分け、direct assign/replace を ready subset に戻す。
-6. `[current]` `ELet` / `ELetInfer` の local binding removal と reference escape invariant を整理して ready theorem の残りを詰める。
-7. `[todo]` call/closure 関連の S3 を追加する。
-8. `[todo]` `EnvFullSoundness.v` / `ValidatorSoundness.v` と接続して S4 を証明する。
-9. `[todo]` borrow/runtime reference safety を S5 として別 theorem 群にする。
-10. `[todo]` small-step semantics が必要になった時点で S6 を開始する。
+6. `[partial]` `ELet` / `ELetInfer` の local binding removal 用 runtime root-exclusion helper を追加し、let preservation helper を scoped premise へ弱める。
+7. `[current]` root-sensitive provenance summary を typing/checker/soundness に追加し、`ELet` / `ELetInfer` で let-bound root が result と surviving bindings へ escape しないことを証明する。
+8. `[todo]` call/closure 関連の S3 を追加する。
+9. `[todo]` `EnvFullSoundness.v` / `ValidatorSoundness.v` と接続して S4 を証明する。
+10. `[todo]` borrow/runtime reference safety を S5 として別 theorem 群にする。
+11. `[todo]` small-step semantics が必要になった時点で S6 を開始する。
 
 ## Acceptance Criteria
 
@@ -227,3 +229,4 @@ review 指摘に対応する regression:
 - borrow checker の static `path_borrow_state` と runtime refs の対応は未定義なので、aliasing safety は preservation とは別 milestone にする。
 - `plan/review.md` の指摘は古い extracted artifact の行番号を参照しているため、roadmap では行番号ではなく semantic issue として追跡する。
 - 強化後の `VHT_Ref` により、従来の「value typing は store に依存しない」という仮定は使えない。今後の preservation は store typing だけでなく、評価が既存 reference target を保存することを明示的に運ぶ必要がある。
+- `store_remove x` は `VRef x _` を含む surviving value があると `value_has_type` を壊すため、global な `store_ref_targets_preserved env s (store_remove x s)` は false。`ELet` preservation は root-sensitive provenance summary を static typing/checker に追加するまで ready theorem へ再接続できない。

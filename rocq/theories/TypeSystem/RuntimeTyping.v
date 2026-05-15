@@ -54,6 +54,46 @@ with struct_fields_have_type_ind' := Induction for struct_fields_have_type Sort 
 Combined Scheme runtime_typing_ind
   from value_has_type_ind', struct_fields_have_type_ind'.
 
+(* References in surviving runtime values must not point at a removed
+   store root. *)
+Inductive value_refs_exclude_root (root : ident) : value -> Prop :=
+  | VRE_Unit :
+      value_refs_exclude_root root VUnit
+  | VRE_Int : forall i,
+      value_refs_exclude_root root (VInt i)
+  | VRE_Float : forall f,
+      value_refs_exclude_root root (VFloat f)
+  | VRE_Bool : forall b,
+      value_refs_exclude_root root (VBool b)
+  | VRE_Struct : forall name fields,
+      value_fields_refs_exclude_root root fields ->
+      value_refs_exclude_root root (VStruct name fields)
+  | VRE_Ref : forall x path,
+      ident_eqb root x = false ->
+      value_refs_exclude_root root (VRef x path)
+  | VRE_Closure : forall fname captures,
+      store_refs_exclude_root root captures ->
+      value_refs_exclude_root root (VClosure fname captures)
+with store_entry_refs_exclude_root (root : ident) : store_entry -> Prop :=
+  | SERE_Entry : forall sx sT sv sst,
+      value_refs_exclude_root root sv ->
+      store_entry_refs_exclude_root root (MkStoreEntry sx sT sv sst)
+with store_refs_exclude_root (root : ident) : store -> Prop :=
+  | SRE_Nil :
+      store_refs_exclude_root root []
+  | SRE_Cons : forall se rest,
+      store_entry_refs_exclude_root root se ->
+      store_refs_exclude_root root rest ->
+      store_refs_exclude_root root (se :: rest)
+with value_fields_refs_exclude_root
+    (root : ident) : list (string * value) -> Prop :=
+  | VFRE_Nil :
+      value_fields_refs_exclude_root root []
+  | VFRE_Cons : forall name v rest,
+      value_refs_exclude_root root v ->
+      value_fields_refs_exclude_root root rest ->
+      value_fields_refs_exclude_root root ((name, v) :: rest).
+
 Definition store_ref_targets_preserved
     (env : global_env) (s s' : store) : Prop :=
   forall x path se v T,
@@ -124,6 +164,86 @@ Lemma value_has_type_store_preserved :
 Proof.
   intros env s v T H s' Hpres.
   exact (proj1 (runtime_typing_store_preserved env s) v T H s' Hpres).
+Qed.
+
+Lemma store_lookup_remove_neq :
+  forall s root x,
+    ident_eqb root x = false ->
+    store_lookup x (store_remove root s) = store_lookup x s.
+Proof.
+  induction s as [|se rest IH]; intros root x Hneq.
+  - reflexivity.
+  - simpl.
+    destruct (ident_eqb root (se_name se)) eqn:Hroot.
+    + destruct (ident_eqb x (se_name se)) eqn:Hx.
+      * assert (root = x).
+        { apply ident_eqb_eq in Hroot.
+          apply ident_eqb_eq in Hx.
+          congruence. }
+        subst x.
+        rewrite ident_eqb_refl in Hneq.
+        discriminate.
+      * reflexivity.
+    + simpl.
+      destruct (ident_eqb x (se_name se)); [reflexivity |].
+      apply IH. exact Hneq.
+Qed.
+
+Lemma runtime_typing_store_remove_excluding_root :
+  forall env s root,
+  (forall v T,
+    value_has_type env s v T ->
+    value_refs_exclude_root root v ->
+    value_has_type env (store_remove root s) v T) /\
+  (forall lts args fields defs,
+    struct_fields_have_type env s lts args fields defs ->
+    value_fields_refs_exclude_root root fields ->
+    struct_fields_have_type env (store_remove root s) lts args fields defs).
+Proof.
+  intros env s root.
+  apply runtime_typing_ind; intros;
+    eauto using value_has_type, struct_fields_have_type.
+  - apply VHT_Struct with (sdef := sdef); [assumption |].
+    match goal with
+    | Hexclude : value_refs_exclude_root root (VStruct _ _) |- _ =>
+        inversion Hexclude; subst
+    end.
+    eauto.
+  - match goal with
+    | Hexclude : value_refs_exclude_root root (VRef _ _) |- _ =>
+        inversion Hexclude; subst
+    end.
+    eapply VHT_Ref.
+    + rewrite store_lookup_remove_neq; eassumption.
+    + eassumption.
+    + eassumption.
+  - match goal with
+    | Hexclude : value_fields_refs_exclude_root root ((_ , _) :: _) |- _ =>
+        inversion Hexclude; subst
+    end.
+    econstructor; eauto.
+Qed.
+
+Lemma value_has_type_store_remove_excluding_root :
+  forall env s root v T,
+    value_has_type env s v T ->
+    value_refs_exclude_root root v ->
+    value_has_type env (store_remove root s) v T.
+Proof.
+  intros env s root v T Htyped Hexclude.
+  exact (proj1 (runtime_typing_store_remove_excluding_root env s root)
+    v T Htyped Hexclude).
+Qed.
+
+Lemma struct_fields_have_type_store_remove_excluding_root :
+  forall env s root lts args fields defs,
+    struct_fields_have_type env s lts args fields defs ->
+    value_fields_refs_exclude_root root fields ->
+    struct_fields_have_type env (store_remove root s) lts args fields defs.
+Proof.
+  intros env s root lts args fields defs Htyped Hexclude.
+  exact (proj2 (runtime_typing_store_remove_excluding_root env s root)
+    lts args fields defs Htyped Hexclude).
 Qed.
 
 Lemma value_has_type_compatible :
@@ -800,6 +920,92 @@ Lemma store_typed_remove :
 Proof.
   intros env s Σ x Htyped Hpres.
   eapply store_typed_remove_entries; eassumption.
+Qed.
+
+Lemma store_entry_typed_store_remove_excluding_root :
+  forall env s root se ce,
+    store_entry_typed env s se ce ->
+    store_entry_refs_exclude_root root se ->
+    store_entry_typed env (store_remove root s) se ce.
+Proof.
+  intros env s root [sx sT sv sst] [[[cx cT] cst] cm] Htyped Hexclude.
+  simpl in *.
+  destruct Htyped as [Hname [HT [Hst Hv]]].
+  inversion Hexclude; subst.
+  repeat split; try assumption.
+  eapply value_has_type_store_remove_excluding_root; eassumption.
+Qed.
+
+Lemma store_typed_store_param_remove_excluding_root :
+  forall env s_param entries Σ root,
+    Forall2 (store_entry_typed env s_param) entries Σ ->
+    store_refs_exclude_root root entries ->
+    Forall2 (store_entry_typed env (store_remove root s_param)) entries Σ.
+Proof.
+  intros env s_param entries Σ root Htyped.
+  induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH]; intros Hexclude.
+  - constructor.
+  - inversion Hexclude; subst.
+    constructor.
+    + eapply store_entry_typed_store_remove_excluding_root; eassumption.
+    + apply IH. assumption.
+Qed.
+
+Lemma store_typed_remove_entries_excluding_root :
+  forall env s_param entries Σ root,
+    Forall2 (store_entry_typed env s_param) entries Σ ->
+    store_refs_exclude_root root (store_remove root entries) ->
+    Forall2 (store_entry_typed env (store_remove root s_param))
+      (store_remove root entries) (sctx_remove root Σ).
+Proof.
+  intros env s_param entries Σ root Htyped.
+  induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH]; intros Hexclude.
+  - constructor.
+  - destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [Hst Hv]]].
+    simpl in Hexclude |- *.
+    destruct (ident_eqb root sx) eqn:Hsx;
+      destruct (ident_eqb root cx) eqn:Hcx.
+    + eapply store_typed_store_param_remove_excluding_root; eassumption.
+    + apply ident_eqb_eq in Hsx. apply ident_eqb_neq in Hcx. subst sx.
+      contradiction.
+    + apply ident_eqb_neq in Hsx. apply ident_eqb_eq in Hcx.
+      subst cx. exfalso. apply Hsx. exact Hcx.
+    + inversion Hexclude; subst.
+      constructor.
+      * eapply store_entry_typed_store_remove_excluding_root.
+        -- simpl. repeat split; try assumption.
+        -- assumption.
+      * apply IH. assumption.
+Qed.
+
+Lemma store_typed_remove_excluding_root :
+  forall env s Σ root,
+    store_typed env s Σ ->
+    store_refs_exclude_root root (store_remove root s) ->
+    store_typed env (store_remove root s) (sctx_remove root Σ).
+Proof.
+  intros env s Σ root Htyped Hexclude.
+  eapply store_typed_remove_entries_excluding_root; eassumption.
+Qed.
+
+Lemma store_ref_targets_preserved_remove_after_absent_root :
+  forall env s s' root,
+    store_ref_targets_preserved env s s' ->
+    store_lookup root s = None ->
+    store_ref_targets_preserved env s (store_remove root s').
+Proof.
+  unfold store_ref_targets_preserved.
+  intros env s s' root Hpres Habsent x path se v T Hlookup Hvalue Htype.
+  destruct (ident_eqb root x) eqn:Hroot.
+  - apply ident_eqb_eq in Hroot. subst x.
+    rewrite Hlookup in Habsent. discriminate.
+  - destruct (Hpres x path se v T Hlookup Hvalue Htype)
+      as [se' [v' [Hlookup' [Hvalue' Htype']]]].
+    exists se', v'. repeat split; try assumption.
+    rewrite store_lookup_remove_neq; assumption.
 Qed.
 
 Lemma store_update_state_ref_targets_preserved :

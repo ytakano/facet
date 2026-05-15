@@ -881,14 +881,16 @@ Lemma eval_let_preserves_typing :
      store_typed env s2 Σ2 /\
      value_has_type env s2 v2 T2 /\
      store_ref_targets_preserved env (store_add x T v1 s1) s2) ->
-    store_ref_targets_preserved env s2 (store_remove x s2) ->
+    store_lookup x s = None ->
+    value_refs_exclude_root x v2 ->
+    store_refs_exclude_root x (store_remove x s2) ->
     store_typed env (store_remove x s2) (sctx_remove x Σ2) /\
     value_has_type env (store_remove x s2) v2 T2 /\
     store_ref_targets_preserved env s (store_remove x s2).
 Proof.
   intros env Ω n Σ Σ1 Σ2 s s1 s2 m x T T1 e1 e2 T2 v1 v2
     Hstore Htyped1 Heval1 Hpres1 Hcompat Hadd_pres Htyped2 Heval2
-    Hpres2 Hremove_pres.
+    Hpres2 Hfresh Hexclude_v Hexclude_store.
   destruct (Hpres1 Hstore Htyped1 Heval1) as [Hstore1 [Hv1 Hpres_s_s1]].
   pose proof (ty_compatible_b_sound Ω T1 T Hcompat) as Hcompat_prop.
   pose proof (store_typed_add_compatible env Ω s1 Σ1 x T1 T m v1
@@ -897,14 +899,16 @@ Proof.
   destruct (Hpres2 Hstore_add Htyped2 Heval2)
     as [Hstore2 [Hv2 Hpres_add_s2]].
   split.
-  - apply store_typed_remove; assumption.
+  - eapply store_typed_remove_excluding_root; eassumption.
   - split.
-    + eapply value_has_type_store_preserved; eassumption.
-    + eapply store_ref_targets_preserved_trans.
-      * exact Hpres_s_s1.
+    + eapply value_has_type_store_remove_excluding_root; eassumption.
+    + eapply store_ref_targets_preserved_remove_after_absent_root.
       * eapply store_ref_targets_preserved_trans.
-        -- exact Hadd_pres.
-        -- eapply store_ref_targets_preserved_trans; eassumption.
+        -- exact Hpres_s_s1.
+        -- eapply store_ref_targets_preserved_trans.
+           ++ exact Hadd_pres.
+           ++ exact Hpres_add_s2.
+      * exact Hfresh.
 Qed.
 
 Lemma usage_sub_left_max :

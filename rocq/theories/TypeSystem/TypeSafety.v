@@ -2275,6 +2275,136 @@ Proof.
   - simpl. rewrite IH. reflexivity.
 Qed.
 
+Inductive store_param_scope : list param -> store -> store -> Prop :=
+  | SPS_Prefix : forall ps s_param s,
+      store_param_prefix ps s_param s ->
+      store_param_scope ps s_param s
+  | SPS_Local : forall ps se s_param s,
+      ~ In (se_name se) (ctx_names (params_ctx ps)) ->
+      store_param_scope ps s_param s ->
+      store_param_scope ps
+        (se :: s_param)
+        s.
+
+Lemma store_param_scope_bind_params :
+  forall env Ω s vs ps,
+    eval_args_values_have_types env Ω s vs ps ->
+    store_param_scope ps (bind_params ps vs s) s.
+Proof.
+  intros env Ω s vs ps Hargs.
+  constructor.
+  eapply store_param_prefix_bind_params. exact Hargs.
+Qed.
+
+Lemma store_param_scope_add :
+  forall ps s_param s x T v,
+    ~ In x (ctx_names (params_ctx ps)) ->
+    store_param_scope ps s_param s ->
+    store_param_scope ps
+      (store_add x T v s_param)
+      s.
+Proof.
+  intros ps s_param s x T v Hnotin Hscope.
+  unfold store_add.
+  constructor; assumption.
+Qed.
+
+Lemma store_remove_params_cons_non_param :
+  forall ps se s,
+    ~ In (se_name se) (ctx_names (params_ctx ps)) ->
+    store_remove_params ps (se :: s) =
+      se :: store_remove_params ps s.
+Proof.
+  intros ps se.
+  induction ps as [| p ps IH].
+  - intros s Hnotin. reflexivity.
+  - intros s Hnotin. simpl in *.
+    destruct (ident_eqb (param_name p) (se_name se)) eqn:Heq.
+    + apply ident_eqb_eq in Heq. contradiction Hnotin.
+      left. exact Heq.
+    + rewrite IH.
+      * reflexivity.
+      * intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma store_remove_params_store_param_scope :
+  forall ps s_param s,
+    store_param_scope ps s_param s ->
+    exists locals,
+      store_remove_params ps s_param = locals ++ s.
+Proof.
+  intros ps s_param s Hscope.
+  induction Hscope as
+    [ps s_param s Hprefix
+    | ps se s_param s Hnotin _ IH].
+  - induction Hprefix as [s | p ps v st s_param s _ IH].
+    + exists []. reflexivity.
+    + simpl. rewrite ident_eqb_refl. exact IH.
+  - simpl. rewrite store_remove_params_cons_non_param.
+    + destruct IH as [locals IH].
+      exists (se :: locals). rewrite IH. reflexivity.
+    + exact Hnotin.
+Qed.
+
+Lemma store_names_store_param_scope :
+  forall ps s_param s,
+    store_param_scope ps s_param s ->
+    exists local_names,
+      store_names s_param =
+        local_names ++ ctx_names (params_ctx ps) ++ store_names s.
+Proof.
+  intros ps s_param s Hscope.
+  induction Hscope as
+    [ps s_param s Hprefix
+    | ps se s_param s _ _ IH].
+  - exists [].
+    rewrite (store_names_store_param_prefix ps s_param s Hprefix).
+    reflexivity.
+  - destruct IH as [local_names IH].
+    exists (se_name se :: local_names).
+    simpl. rewrite IH. reflexivity.
+Qed.
+
+Lemma store_param_prefix_remove_non_param :
+  forall ps s_param s x,
+    store_param_prefix ps s_param s ->
+    ~ In x (ctx_names (params_ctx ps)) ->
+    store_param_prefix ps (store_remove x s_param) (store_remove x s).
+Proof.
+  intros ps s_param s x Hprefix.
+  induction Hprefix as [s | p ps v st s_param s _ IH]; intros Hnotin.
+  - constructor.
+  - simpl in Hnotin.
+    simpl.
+    destruct (ident_eqb x (param_name p)) eqn:Heq.
+    + apply ident_eqb_eq in Heq. subst x.
+      contradiction Hnotin. left. reflexivity.
+    + constructor. apply IH.
+      intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma store_param_scope_remove_non_param :
+  forall ps s_param s x,
+    store_param_scope ps s_param s ->
+    ~ In x (ctx_names (params_ctx ps)) ->
+    exists frame',
+      store_param_scope ps (store_remove x s_param) frame'.
+Proof.
+  intros ps s_param s x Hscope Hnotin.
+  induction Hscope as
+    [ps s_param s Hprefix
+    | ps se s_param s Hse_notin Hscope_tail IH].
+  - exists (store_remove x s).
+    constructor.
+    eapply store_param_prefix_remove_non_param; eassumption.
+  - simpl.
+    destruct (ident_eqb x (se_name se)) eqn:Heq.
+    + exists s. exact Hscope_tail.
+    + destruct (IH Hnotin) as [frame' Hscope'].
+      exists frame'.
+      constructor; assumption.
+Qed.
+
 Lemma store_remove_params_store_param_prefix :
   forall ps s_param s,
     store_param_prefix ps s_param s ->

@@ -2057,6 +2057,7 @@ type infer_error =
 | ErrUsageMismatch of usage * usage
 | ErrFunctionNotFound of ident
 | ErrArityMismatch
+| ErrDuplicateParam of ident
 | ErrContextCheckFailed
 | ErrNotImplemented
 | ErrImmutableBorrow of ident
@@ -3542,6 +3543,27 @@ let rec wf_params_b _UU0394_ = function
 | [] -> true
 | p :: ps' -> (&&) (wf_type_b _UU0394_ p.param_ty) (wf_params_b _UU0394_ ps')
 
+(** val string_in : string -> string list -> bool **)
+
+let rec string_in x = function
+| [] -> false
+| y :: ys -> if (=) x y then true else string_in x ys
+
+(** val duplicate_param_name_aux :
+    string list -> param list -> ident option **)
+
+let rec duplicate_param_name_aux seen = function
+| [] -> None
+| p :: ps' ->
+  if string_in (fst p.param_name) seen
+  then Some p.param_name
+  else duplicate_param_name_aux ((fst p.param_name) :: seen) ps'
+
+(** val duplicate_param_name : param list -> ident option **)
+
+let duplicate_param_name ps =
+  duplicate_param_name_aux [] ps
+
 (** val infer_env : global_env -> fn_def -> (ty * ctx) infer_result **)
 
 let infer_env env f =
@@ -3554,18 +3576,22 @@ let infer_env env f =
        then Infer_err ErrLifetimeLeak
        else if negb (wf_params_b _UU0394_ f.fn_params)
             then Infer_err ErrLifetimeLeak
-            else (match infer_core_env env _UU03a9_ n
-                          (params_ctx f.fn_params) f.fn_body with
-                  | Infer_ok p ->
-                    let (t_body, _UU0393__out) = p in
-                    if negb (wf_type_b _UU0394_ t_body)
-                    then Infer_err ErrLifetimeLeak
-                    else if ty_compatible_b _UU03a9_ t_body f.fn_ret
-                         then if params_ok_env_b env f.fn_params _UU0393__out
-                              then Infer_ok (f.fn_ret, _UU0393__out)
-                              else Infer_err ErrContextCheckFailed
-                         else Infer_err (compatible_error t_body f.fn_ret)
-                  | Infer_err err -> Infer_err err)
+            else (match duplicate_param_name f.fn_params with
+                  | Some x -> Infer_err (ErrDuplicateParam x)
+                  | None ->
+                    (match infer_core_env env _UU03a9_ n
+                             (params_ctx f.fn_params) f.fn_body with
+                     | Infer_ok p ->
+                       let (t_body, _UU0393__out) = p in
+                       if negb (wf_type_b _UU0394_ t_body)
+                       then Infer_err ErrLifetimeLeak
+                       else if ty_compatible_b _UU03a9_ t_body f.fn_ret
+                            then if params_ok_env_b env f.fn_params
+                                      _UU0393__out
+                                 then Infer_ok (f.fn_ret, _UU0393__out)
+                                 else Infer_err ErrContextCheckFailed
+                            else Infer_err (compatible_error t_body f.fn_ret)
+                     | Infer_err err -> Infer_err err))
 
 (** val infer_env_roots :
     global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
@@ -3581,21 +3607,25 @@ let infer_env_roots env f r0 =
        then Infer_err ErrLifetimeLeak
        else if negb (wf_params_b _UU0394_ f.fn_params)
             then Infer_err ErrLifetimeLeak
-            else (match infer_core_env_roots env _UU03a9_ n r0
-                          (params_ctx f.fn_params) f.fn_body with
-                  | Infer_ok p ->
-                    let (p0, roots) = p in
-                    let (p1, r_out) = p0 in
-                    let (t_body, _UU0393__out) = p1 in
-                    if negb (wf_type_b _UU0394_ t_body)
-                    then Infer_err ErrLifetimeLeak
-                    else if ty_compatible_b _UU03a9_ t_body f.fn_ret
-                         then if params_ok_env_b env f.fn_params _UU0393__out
-                              then Infer_ok (((f.fn_ret, _UU0393__out),
-                                     r_out), roots)
-                              else Infer_err ErrContextCheckFailed
-                         else Infer_err (compatible_error t_body f.fn_ret)
-                  | Infer_err err -> Infer_err err)
+            else (match duplicate_param_name f.fn_params with
+                  | Some x -> Infer_err (ErrDuplicateParam x)
+                  | None ->
+                    (match infer_core_env_roots env _UU03a9_ n r0
+                             (params_ctx f.fn_params) f.fn_body with
+                     | Infer_ok p ->
+                       let (p0, roots) = p in
+                       let (p1, r_out) = p0 in
+                       let (t_body, _UU0393__out) = p1 in
+                       if negb (wf_type_b _UU0394_ t_body)
+                       then Infer_err ErrLifetimeLeak
+                       else if ty_compatible_b _UU03a9_ t_body f.fn_ret
+                            then if params_ok_env_b env f.fn_params
+                                      _UU0393__out
+                                 then Infer_ok (((f.fn_ret, _UU0393__out),
+                                        r_out), roots)
+                                 else Infer_err ErrContextCheckFailed
+                            else Infer_err (compatible_error t_body f.fn_ret)
+                     | Infer_err err -> Infer_err err))
 
 type path_borrow_entry =
 | PBShared of ident * field_path

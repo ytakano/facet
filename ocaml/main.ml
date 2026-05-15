@@ -83,6 +83,8 @@ let string_of_infer_error = function
     Printf.sprintf "field not found: %s" name
   | ErrDuplicateField name ->
     Printf.sprintf "duplicate field: %s" name
+  | ErrDuplicateParam id ->
+    Printf.sprintf "duplicate parameter: %s" (string_of_ident id)
   | ErrMissingField name ->
     Printf.sprintf "missing field: %s" name
   | ErrTraitImplNotFound (name, ty) ->

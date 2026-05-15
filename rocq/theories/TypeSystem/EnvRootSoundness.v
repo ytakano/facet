@@ -451,6 +451,8 @@ Proof.
     try discriminate.
   destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_params f)));
     try discriminate.
+  destruct (duplicate_param_name (fn_params f));
+    try discriminate.
   destruct (infer_core_env_roots env (fn_outlives f) (fn_lifetimes f)
       R0 (params_ctx (fn_params f)) (fn_body f))
     as [[[[T_body Γ_body] R_body] roots_body] | err] eqn:Hcore; try discriminate.

@@ -298,6 +298,7 @@ Inductive infer_error : Type :=
   | ErrUsageMismatch : usage -> usage -> infer_error
   | ErrFunctionNotFound : ident -> infer_error
   | ErrArityMismatch : infer_error
+  | ErrDuplicateParam : ident -> infer_error
   | ErrContextCheckFailed : infer_error
   | ErrNotImplemented : infer_error
   | ErrImmutableBorrow : ident -> infer_error       (* &mut x where x is immutable *)
@@ -2484,6 +2485,24 @@ Fixpoint wf_params_b (Δ : region_ctx) (ps : list param) : bool :=
   | p :: ps' => wf_type_b Δ (param_ty p) && wf_params_b Δ ps'
   end.
 
+Fixpoint string_in (x : string) (xs : list string) : bool :=
+  match xs with
+  | [] => false
+  | y :: ys => if String.eqb x y then true else string_in x ys
+  end.
+
+Fixpoint duplicate_param_name_aux (seen : list string) (ps : list param) : option ident :=
+  match ps with
+  | [] => None
+  | p :: ps' =>
+      if string_in (fst (param_name p)) seen
+      then Some (param_name p)
+      else duplicate_param_name_aux (fst (param_name p) :: seen) ps'
+  end.
+
+Definition duplicate_param_name (ps : list param) : option ident :=
+  duplicate_param_name_aux [] ps.
+
 
 (* Check a single function definition:
    - infer the body type
@@ -2506,6 +2525,9 @@ Definition infer (fenv : list fn_def) (f : fn_def)
   if negb (wf_params_b Δ (fn_params f))
   then infer_err ErrLifetimeLeak
   else
+  match duplicate_param_name (fn_params f) with
+  | Some x => infer_err (ErrDuplicateParam x)
+  | None =>
   match infer_body fenv Ω n (params_ctx (fn_params f)) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out) =>
@@ -2517,6 +2539,7 @@ Definition infer (fenv : list fn_def) (f : fn_def)
         then infer_ok (fn_ret f, Γ_out)
         else infer_err ErrContextCheckFailed
       else infer_err (compatible_error T_body (fn_ret f))
+  end
   end.
 
 (* Check all functions in the program *)
@@ -2541,6 +2564,9 @@ Definition infer_env (env : global_env) (f : fn_def)
   if negb (wf_params_b Δ (fn_params f))
   then infer_err ErrLifetimeLeak
   else
+  match duplicate_param_name (fn_params f) with
+  | Some x => infer_err (ErrDuplicateParam x)
+  | None =>
   match infer_core_env env Ω n (params_ctx (fn_params f)) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out) =>
@@ -2552,6 +2578,7 @@ Definition infer_env (env : global_env) (f : fn_def)
         then infer_ok (fn_ret f, Γ_out)
         else infer_err ErrContextCheckFailed
       else infer_err (compatible_error T_body (fn_ret f))
+  end
   end.
 
 Definition infer_env_roots (env : global_env) (f : fn_def) (R0 : root_env)
@@ -2568,6 +2595,9 @@ Definition infer_env_roots (env : global_env) (f : fn_def) (R0 : root_env)
   if negb (wf_params_b Δ (fn_params f))
   then infer_err ErrLifetimeLeak
   else
+  match duplicate_param_name (fn_params f) with
+  | Some x => infer_err (ErrDuplicateParam x)
+  | None =>
   match infer_core_env_roots env Ω n R0 (params_ctx (fn_params f)) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out, R_out, roots) =>
@@ -2579,6 +2609,7 @@ Definition infer_env_roots (env : global_env) (f : fn_def) (R0 : root_env)
         then infer_ok (fn_ret f, Γ_out, R_out, roots)
         else infer_err ErrContextCheckFailed
       else infer_err (compatible_error T_body (fn_ret f))
+  end
   end.
 
 Definition ex_struct_pair : struct_def :=
@@ -3125,6 +3156,9 @@ Definition infer_direct (fenv : list fn_def) (f : fn_def)
   if negb (wf_params_b Δ (fn_params f))
   then infer_err ErrLifetimeLeak
   else
+  match duplicate_param_name (fn_params f) with
+  | Some x => infer_err (ErrDuplicateParam x)
+  | None =>
   match infer_core fenv Ω n (params_ctx (fn_params f)) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out) =>
@@ -3136,6 +3170,7 @@ Definition infer_direct (fenv : list fn_def) (f : fn_def)
         then infer_ok (fn_ret f, Γ_out)
         else infer_err ErrContextCheckFailed
       else infer_err (compatible_error T_body (fn_ret f))
+  end
   end.
 
 (* ------------------------------------------------------------------ *)

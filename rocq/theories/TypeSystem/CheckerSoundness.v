@@ -865,6 +865,7 @@ Proof.
   destruct (negb (wf_outlives_b Δ Ω)) eqn:Hwf_out; [discriminate |].
   destruct (negb (wf_type_b Δ (fn_ret f))) eqn:Hwf_ret; [discriminate |].
   destruct (negb (wf_params_b Δ (fn_params f))) eqn:Hwf_params; [discriminate |].
+  destruct (duplicate_param_name (fn_params f)) as [dup |] eqn:Hdup_params; [discriminate |].
   destruct (infer_body fenv Ω (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f))
     as [[T_body Γ_out] | err] eqn:Hinfer; [|discriminate].
   destruct (negb (wf_type_b Δ T_body)) eqn:Hwf_body; [discriminate |].
@@ -902,6 +903,7 @@ Proof.
   destruct (negb (wf_outlives_b Δ Ω)) eqn:Hwf_out; [discriminate |].
   destruct (negb (wf_type_b Δ (fn_ret f))) eqn:Hwf_ret; [discriminate |].
   destruct (negb (wf_params_b Δ (fn_params f))) eqn:Hwf_params; [discriminate |].
+  destruct (duplicate_param_name (fn_params f)) as [dup |] eqn:Hdup_params; [discriminate |].
   destruct (infer_core fenv Ω (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f))
     as [[T_body Γ_out] | err] eqn:Hinfer; [|discriminate].
   destruct (negb (wf_type_b Δ T_body)) eqn:Hwf_body; [discriminate |].

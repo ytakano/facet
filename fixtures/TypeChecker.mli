@@ -438,6 +438,7 @@ type infer_error =
 | ErrUsageMismatch of usage * usage
 | ErrFunctionNotFound of ident
 | ErrArityMismatch
+| ErrDuplicateParam of ident
 | ErrContextCheckFailed
 | ErrNotImplemented
 | ErrImmutableBorrow of ident
@@ -618,6 +619,12 @@ val infer_core_env_roots :
   -> (((ty * ctx) * root_env) * root_set) infer_result
 
 val wf_params_b : region_ctx -> param list -> bool
+
+val string_in : string -> string list -> bool
+
+val duplicate_param_name_aux : string list -> param list -> ident option
+
+val duplicate_param_name : param list -> ident option
 
 val infer_env : global_env -> fn_def -> (ty * ctx) infer_result
 

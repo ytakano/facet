@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program TypingRules
+From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program Renaming TypingRules
   RootProvenance TypeChecker EnvStructuralRules CheckerSoundness
   EnvTypingSoundness EnvBorrowSoundness.
 From Stdlib Require Import Bool List String PeanoNat.
@@ -408,8 +408,9 @@ Definition typed_fn_env_roots (env : global_env) (f : fn_def)
 Definition checked_fn_env_roots (env : global_env) (f : fn_def)
     (R0 R_out : root_env) (roots : root_set) : Prop :=
   typed_fn_env_roots env f R0 R_out roots /\
-  exists PBS',
-    borrow_ok_env_structural env [] (params_ctx (fn_params f)) (fn_body f) PBS'.
+  (exists PBS',
+    borrow_ok_env_structural env [] (params_ctx (fn_params f)) (fn_body f) PBS') /\
+  NoDup (ctx_names (params_ctx (fn_params f))).
 
 Lemma typed_fn_env_roots_structural :
   forall env f R0 R_out roots,
@@ -483,5 +484,7 @@ Proof.
   inversion Hfull; subst.
   split.
   - eapply infer_env_roots_sound. exact Hinfer.
-  - exists PBS'. eapply borrow_check_env_structural_sound. exact Hborrow.
+  - split.
+    + exists PBS'. eapply borrow_check_env_structural_sound. exact Hborrow.
+    + eapply infer_env_roots_params_nodup. exact Hinfer.
 Qed.

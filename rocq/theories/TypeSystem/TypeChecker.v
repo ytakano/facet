@@ -2503,6 +2503,74 @@ Fixpoint duplicate_param_name_aux (seen : list string) (ps : list param) : optio
 Definition duplicate_param_name (ps : list param) : option ident :=
   duplicate_param_name_aux [] ps.
 
+Lemma string_in_false_not_in : forall x xs,
+  string_in x xs = false ->
+  ~ In x xs.
+Proof.
+  intros x xs.
+  induction xs as [| y ys IH]; simpl; intros H Hin.
+  - contradiction.
+  - destruct (String.eqb x y) eqn:Heq.
+    + discriminate.
+    + destruct Hin as [Heq_xy | Hin].
+      * subst y. rewrite String.eqb_refl in Heq. discriminate.
+      * apply (IH H). exact Hin.
+Qed.
+
+Lemma ctx_names_params_ctx_param_names : forall ps,
+  ctx_names (params_ctx ps) = param_names ps.
+Proof.
+  induction ps as [| p ps IH].
+  - reflexivity.
+  - simpl. rewrite IH. reflexivity.
+Qed.
+
+Lemma duplicate_param_name_aux_none_no_seen : forall seen ps x,
+  duplicate_param_name_aux seen ps = None ->
+  In x (param_names ps) ->
+  ~ In (fst x) seen.
+Proof.
+  intros seen ps.
+  revert seen.
+  induction ps as [| p ps IH]; simpl; intros seen x Hnone Hin.
+  - contradiction.
+  - destruct (string_in (fst (param_name p)) seen) eqn:Hseen;
+      try discriminate.
+    destruct Hin as [Hx | Hin].
+    + subst x. apply string_in_false_not_in. exact Hseen.
+    + specialize (IH (fst (param_name p) :: seen) x Hnone Hin).
+      intros Hfst. apply IH. right. exact Hfst.
+Qed.
+
+Lemma duplicate_param_name_aux_none_nodup_param_names : forall seen ps,
+  duplicate_param_name_aux seen ps = None ->
+  NoDup (param_names ps).
+Proof.
+  intros seen ps.
+  revert seen.
+  induction ps as [| p ps IH]; simpl; intros seen Hnone.
+  - constructor.
+  - destruct (string_in (fst (param_name p)) seen) eqn:Hseen;
+      try discriminate.
+    constructor.
+    + intros Hin.
+      pose proof (duplicate_param_name_aux_none_no_seen
+        (fst (param_name p) :: seen) ps (param_name p) Hnone Hin) as Hfresh.
+      apply Hfresh. left. reflexivity.
+    + apply (IH (fst (param_name p) :: seen)). exact Hnone.
+Qed.
+
+Lemma duplicate_param_name_none_nodup_params_ctx : forall ps,
+  duplicate_param_name ps = None ->
+  NoDup (ctx_names (params_ctx ps)).
+Proof.
+  intros ps Hnone.
+  rewrite ctx_names_params_ctx_param_names.
+  unfold duplicate_param_name in Hnone.
+  eapply duplicate_param_name_aux_none_nodup_param_names.
+  exact Hnone.
+Qed.
+
 
 (* Check a single function definition:
    - infer the body type
@@ -2611,6 +2679,40 @@ Definition infer_env_roots (env : global_env) (f : fn_def) (R0 : root_env)
       else infer_err (compatible_error T_body (fn_ret f))
   end
   end.
+
+Lemma infer_env_params_nodup : forall env f T Γ',
+  infer_env env f = infer_ok (T, Γ') ->
+  NoDup (ctx_names (params_ctx (fn_params f))).
+Proof.
+  intros env f T Γ' Hinfer.
+  unfold infer_env in Hinfer.
+  destruct (negb (wf_outlives_b (mk_region_ctx (fn_lifetimes f)) (fn_outlives f)));
+    try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f)));
+    try discriminate.
+  destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_params f)));
+    try discriminate.
+  destruct (duplicate_param_name (fn_params f)) as [dup |] eqn:Hdup;
+    try discriminate.
+  apply duplicate_param_name_none_nodup_params_ctx. exact Hdup.
+Qed.
+
+Lemma infer_env_roots_params_nodup : forall env f R0 T Γ' R' roots,
+  infer_env_roots env f R0 = infer_ok (T, Γ', R', roots) ->
+  NoDup (ctx_names (params_ctx (fn_params f))).
+Proof.
+  intros env f R0 T Γ' R' roots Hinfer.
+  unfold infer_env_roots in Hinfer.
+  destruct (negb (wf_outlives_b (mk_region_ctx (fn_lifetimes f)) (fn_outlives f)));
+    try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f)));
+    try discriminate.
+  destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_params f)));
+    try discriminate.
+  destruct (duplicate_param_name (fn_params f)) as [dup |] eqn:Hdup;
+    try discriminate.
+  apply duplicate_param_name_none_nodup_params_ctx. exact Hdup.
+Qed.
 
 Definition ex_struct_pair : struct_def :=
   MkStructDef ("Pair"%string) 0 0 []

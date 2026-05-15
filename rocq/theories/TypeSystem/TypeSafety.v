@@ -62,6 +62,40 @@ Proof.
   apply Henv_typed. exact Hin_lookup.
 Qed.
 
+Lemma lookup_fn_checked_structural :
+  forall env fname f_lookup,
+    lookup_fn fname (env_fns env) = Some f_lookup ->
+    env_fns_checked_structural env ->
+    checked_fn_env_structural env f_lookup.
+Proof.
+  intros env fname f_lookup Hlookup Henv_checked.
+  destruct (lookup_fn_in_name fname (env_fns env) f_lookup)
+    as [Hin_lookup _]; [exact Hlookup |].
+  apply Henv_checked. exact Hin_lookup.
+Qed.
+
+Lemma lookup_fn_checked_structural_typed :
+  forall env fname f_lookup,
+    lookup_fn fname (env_fns env) = Some f_lookup ->
+    env_fns_checked_structural env ->
+    typed_fn_env_structural env f_lookup.
+Proof.
+  intros env fname f_lookup Hlookup Henv_checked.
+  eapply checked_fn_env_structural_typed.
+  eapply lookup_fn_checked_structural; eassumption.
+Qed.
+
+Lemma lookup_fn_checked_structural_params_nodup :
+  forall env fname f_lookup,
+    lookup_fn fname (env_fns env) = Some f_lookup ->
+    env_fns_checked_structural env ->
+    NoDup (ctx_names (params_ctx (fn_params f_lookup))).
+Proof.
+  intros env fname f_lookup Hlookup Henv_checked.
+  eapply checked_fn_env_structural_params_nodup.
+  eapply lookup_fn_checked_structural; eassumption.
+Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Direct place helper facts                                            *)
 (* ------------------------------------------------------------------ *)

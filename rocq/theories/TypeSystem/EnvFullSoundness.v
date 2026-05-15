@@ -97,5 +97,7 @@ Proof.
     as [PBS' | err] eqn:Hborrow; try discriminate.
   split.
   - eapply infer_env_structural_sound. exact Hinfer.
-  - exists PBS'. eapply borrow_check_env_structural_sound. exact Hborrow.
+  - split.
+    + exists PBS'. eapply borrow_check_env_structural_sound. exact Hborrow.
+    + eapply infer_env_params_nodup. exact Hinfer.
 Qed.

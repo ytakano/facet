@@ -346,7 +346,7 @@ Corollary checked_fn_env_roots_borrow_state_no_conflicts :
       pbs_no_conflicts PBS'.
 Proof.
   intros env f R0 R_out roots Hchecked.
-  destruct Hchecked as [_ [PBS' Hborrow]].
+  destruct Hchecked as [_ [[PBS' Hborrow] _]].
   exists PBS'.
   split.
   - exact Hborrow.

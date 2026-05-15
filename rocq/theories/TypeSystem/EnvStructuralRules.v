@@ -1049,5 +1049,37 @@ Definition env_fns_typed_structural (env : global_env) : Prop :=
 
 Definition checked_fn_env_structural (env : global_env) (f : fn_def) : Prop :=
   typed_fn_env_structural env f /\
-  exists PBS',
-    borrow_ok_env_structural env [] (params_ctx (fn_params f)) (fn_body f) PBS'.
+  (exists PBS',
+    borrow_ok_env_structural env [] (params_ctx (fn_params f)) (fn_body f) PBS') /\
+  NoDup (ctx_names (params_ctx (fn_params f))).
+
+Definition env_fns_checked_structural (env : global_env) : Prop :=
+  forall f, In f (env_fns env) -> checked_fn_env_structural env f.
+
+Lemma checked_fn_env_structural_typed :
+  forall env f,
+    checked_fn_env_structural env f ->
+    typed_fn_env_structural env f.
+Proof.
+  intros env f Hchecked.
+  exact (proj1 Hchecked).
+Qed.
+
+Lemma checked_fn_env_structural_params_nodup :
+  forall env f,
+    checked_fn_env_structural env f ->
+    NoDup (ctx_names (params_ctx (fn_params f))).
+Proof.
+  intros env f Hchecked.
+  exact (proj2 (proj2 Hchecked)).
+Qed.
+
+Lemma env_fns_checked_structural_typed :
+  forall env,
+    env_fns_checked_structural env ->
+    env_fns_typed_structural env.
+Proof.
+  intros env Hchecked f Hin.
+  apply checked_fn_env_structural_typed.
+  apply Hchecked. exact Hin.
+Qed.

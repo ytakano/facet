@@ -240,6 +240,37 @@ Proof.
   destruct u; simpl in Hconsume; discriminate.
 Qed.
 
+Fixpoint ty_compatible_refl (Ω : outlives_ctx) (T : Ty)
+    {struct T} : ty_compatible Ω T T :=
+  match T with
+  | MkTy u (TRef l RShared Tinner) =>
+      TC_Ref_Shared Ω u u l l Tinner Tinner
+        (US_refl u) (Outlives_refl Ω l) (ty_compatible_refl Ω Tinner)
+  | MkTy u (TRef l RUnique Tinner) =>
+      TC_Ref_Unique Ω u u l l Tinner
+        (US_refl u) (Outlives_refl Ω l)
+  | MkTy u (TFn params ret) =>
+      let fix go (xs : list Ty)
+          : Forall2 (fun expected actual => ty_compatible Ω expected actual)
+              xs xs :=
+        match xs with
+        | [] =>
+            @Forall2_nil Ty Ty
+              (fun expected actual => ty_compatible Ω expected actual)
+        | x :: xs' =>
+            @Forall2_cons Ty Ty
+              (fun expected actual => ty_compatible Ω expected actual)
+              x x xs' xs' (ty_compatible_refl Ω x) (go xs')
+        end in
+      TC_Fn Ω u u params params ret ret
+        (US_refl u) (go params) (ty_compatible_refl Ω ret)
+  | MkTy u (TForall n Ω_forall body) =>
+      TC_Forall Ω u u n Ω_forall body body
+        (US_refl u) (ty_compatible_refl Ω body)
+  | MkTy u core =>
+      TC_Core Ω u u core core (US_refl u) eq_refl
+  end.
+
 Lemma eval_var_consume_static_copy_contradiction :
   forall env Σ s x T se,
     store_typed env s Σ ->
@@ -2272,6 +2303,29 @@ Inductive eval_args_values_have_types
       ty_compatible Ω T_actual (param_ty p) ->
       eval_args_values_have_types env Ω s vs ps ->
       eval_args_values_have_types env Ω s (v :: vs) (p :: ps).
+
+Lemma eval_args_values_have_types_apply_lt_params_inv :
+  forall env Ω s vs σ ps,
+    eval_args_values_have_types env Ω s vs (apply_lt_params σ ps) ->
+    eval_args_values_have_types env Ω s vs ps.
+Proof.
+  intros env Ω s vs σ ps.
+  revert vs.
+  induction ps as [| p ps IH]; intros vs Hargs; simpl in Hargs.
+  - inversion Hargs; subst. constructor.
+  - inversion Hargs as [| v vs' p_subst ps_subst T_actual Hvalue Hcompat Htail];
+      subst; clear Hargs.
+    simpl in Hcompat.
+    eapply AHT_Cons with (T_actual := param_ty p).
+    + eapply VHT_LifetimeEquiv.
+      * eapply value_has_type_compatible.
+        -- exact Hvalue.
+        -- exact Hcompat.
+      * apply ty_lifetime_equiv_sym.
+        apply ty_lifetime_equiv_apply_lt_ty.
+    + apply ty_compatible_refl.
+    + apply IH. exact Htail.
+Qed.
 
 Lemma store_names_bind_params :
   forall env Ω s vs ps,

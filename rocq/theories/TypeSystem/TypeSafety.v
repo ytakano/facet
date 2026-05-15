@@ -423,6 +423,114 @@ Proof.
   exact (proj1 (runtime_path_lookup_typing env s) v T Htyped path v_path T_path Hvalue Htype).
 Qed.
 
+Inductive value_roots_within : root_set -> value -> Prop :=
+  | VRW_Unit :
+      forall roots,
+      value_roots_within roots VUnit
+  | VRW_Int : forall roots i,
+      value_roots_within roots (VInt i)
+  | VRW_Float : forall roots f,
+      value_roots_within roots (VFloat f)
+  | VRW_Bool : forall roots b,
+      value_roots_within roots (VBool b)
+  | VRW_Struct : forall roots name fields,
+      value_fields_roots_within roots fields ->
+      value_roots_within roots (VStruct name fields)
+  | VRW_Ref : forall roots x path,
+      In x roots ->
+      value_roots_within roots (VRef x path)
+  | VRW_ClosureEmpty : forall roots fname,
+      value_roots_within roots (VClosure fname [])
+with store_entry_roots_within : root_env -> store_entry -> Prop :=
+  | SERW_Entry : forall R sx sT sv sst roots,
+      root_env_lookup sx R = Some roots ->
+      value_roots_within roots sv ->
+      store_entry_roots_within R (MkStoreEntry sx sT sv sst)
+with store_roots_within : root_env -> store -> Prop :=
+  | SRW_Nil :
+      forall R,
+      store_roots_within R []
+  | SRW_Cons : forall R se rest,
+      store_entry_roots_within R se ->
+      store_roots_within R rest ->
+      store_roots_within R (se :: rest)
+with value_fields_roots_within
+    : root_set -> list (string * value) -> Prop :=
+  | VFRW_Nil :
+      forall roots,
+      value_fields_roots_within roots []
+  | VFRW_Cons : forall roots name v rest,
+      value_roots_within roots v ->
+      value_fields_roots_within roots rest ->
+      value_fields_roots_within roots ((name, v) :: rest).
+
+Scheme value_roots_within_ind' := Induction for value_roots_within Sort Prop
+with store_entry_roots_within_ind' := Induction for store_entry_roots_within Sort Prop
+with store_roots_within_ind' := Induction for store_roots_within Sort Prop
+with value_fields_roots_within_ind' := Induction for value_fields_roots_within Sort Prop.
+Combined Scheme value_roots_within_mutind
+  from value_roots_within_ind', store_entry_roots_within_ind',
+       store_roots_within_ind', value_fields_roots_within_ind'.
+
+Lemma value_roots_within_excludes :
+  (forall roots v,
+    value_roots_within roots v ->
+    forall root,
+      roots_exclude root roots ->
+      value_refs_exclude_root root v) /\
+  (forall R se,
+    store_entry_roots_within R se ->
+    forall root,
+      root_env_excludes root R ->
+      se_name se <> root ->
+      store_entry_refs_exclude_root root se) /\
+  (forall R s,
+    store_roots_within R s ->
+    forall root,
+      root_env_excludes root R ->
+      (forall se, In se s -> se_name se <> root) ->
+      store_refs_exclude_root root s) /\
+  (forall roots fields,
+    value_fields_roots_within roots fields ->
+    forall root,
+      roots_exclude root roots ->
+      value_fields_refs_exclude_root root fields).
+Proof.
+  apply value_roots_within_mutind; intros;
+    try solve [constructor; eauto].
+  - constructor.
+    destruct (ident_eqb root x) eqn:Hroot; try reflexivity.
+    apply ident_eqb_eq in Hroot. subst x. contradiction.
+  - constructor. constructor.
+  - constructor.
+    { eapply H; eauto.
+      eapply H2. simpl. left. reflexivity. }
+    { eapply H0; eauto.
+      intros se0 Hin. eapply H2. simpl. right. exact Hin. }
+Qed.
+
+Lemma value_roots_exclude_root :
+  forall roots v root,
+    value_roots_within roots v ->
+    roots_exclude root roots ->
+    value_refs_exclude_root root v.
+Proof.
+  intros roots v root Hwithin Hexclude.
+  exact (proj1 value_roots_within_excludes roots v Hwithin root Hexclude).
+Qed.
+
+Lemma store_roots_exclude_root :
+  forall R s root,
+    store_roots_within R s ->
+    root_env_excludes root R ->
+    (forall se, In se s -> se_name se <> root) ->
+    store_refs_exclude_root root s.
+Proof.
+  intros R s root Hwithin Hexclude Hnames.
+  exact (proj1 (proj2 (proj2 value_roots_within_excludes))
+    R s Hwithin root Hexclude Hnames).
+Qed.
+
 Inductive preservation_ready_expr : expr -> Prop :=
   | PRE_Unit :
       preservation_ready_expr EUnit

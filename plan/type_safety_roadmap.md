@@ -22,11 +22,11 @@
 
 ## Current Status
 
-Last updated implementation point: added static root provenance summaries and projection to structural typing; `ELet` remains blocked on root-to-runtime preservation integration.
+Last updated implementation point: added static root provenance summaries plus runtime root-within-to-exclusion bridge; `ELet` remains blocked on provenance-preserving evaluation.
 
 - S0: `[done]` runtime value/store typing と runtime reference well-formedness の仕様は導入済み。
 - S1: `[done]` path/value/store helper の主要部分と linear partial-move obligation helper/checker fix は導入済み。
-- S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。`VHT_Ref` は runtime store 内の参照先 path の存在・型対応を要求する形に強化済み。direct assign/replace は concrete RHS preservation evidence 経由で ready subset に再接続済み。`store_remove` 用の root-exclusion runtime helper と static root provenance judgment は追加済みだが、`ELet` 再接続には provenance と runtime exclusion を結ぶ preservation proof が必要。full unrestricted theorem は未完了。
+- S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。`VHT_Ref` は runtime store 内の参照先 path の存在・型対応を要求する形に強化済み。direct assign/replace は concrete RHS preservation evidence 経由で ready subset に再接続済み。`store_remove` 用の root-exclusion runtime helper、static root provenance judgment、runtime root-within-to-exclusion bridge は追加済み。`ELet` 再接続には evaluation が root provenance を保存する theorem が必要。full unrestricted theorem は未完了。
 - S3: `[todo]` call/closure preservation は未着手。ただし empty closure value typing helper は一部存在する。
 - S4-S6: `[todo]` checker-to-runtime safety、runtime reference safety、small-step progress は未着手。
 
@@ -108,7 +108,8 @@ Theorem step_progress :
    - `[done]` direct `assign` / `replace` は、強化後の reference preservation obligation を露出する形に helper を弱め、concrete RHS preservation evidence を渡して root/path の update・restore obligation と ready subset への再接続を完了済み。
    - `[partial]` direct `let` は、強化後の reference preservation obligation に対する local binding removal / escape invariant が未解決。runtime 側には `value_refs_exclude_root` / `store_refs_exclude_root` と scoped `store_remove` helper を追加済みで、`eval_let_preserves_typing` は false な global remove-preservation premise ではなく root-exclusion premise を要求する形に弱めた。
    - `[partial]` static root provenance として `root_set` / `root_env`、`typed_env_roots` / `typed_args_roots` / `typed_fields_roots`、および既存 `typed_env_structural` への projection lemma を追加済み。checker 出力はまだ変更していないため、これは Prop-level API である。
-   - `[todo]` `ELet` / `ELetInfer` を ready theorem に戻すには、`typed_env_roots` を使う strengthened preservation theorem を追加し、provenance から `value_refs_exclude_root` / `store_refs_exclude_root` を導出する runtime bridge を証明する必要がある。
+   - `[done]` `typed_env_roots` の root summaries を runtime 側の `value_refs_exclude_root` / `store_refs_exclude_root` premise へ変換するため、`TypeSafety.v` に `value_roots_within` / `store_roots_within` と exclusion bridge lemma を追加済み。
+   - `[todo]` `ELet` / `ELetInfer` を ready theorem に戻すには、`typed_env_roots` を使う strengthened preservation theorem を追加し、評価結果と出力 store が static root summaries に収まることを各 eval constructor で保存する必要がある。
    - `[todo]` ready restriction のない full `eval_preserves_typing` を証明する。
    - `[done]` `typed_env_structural` が binding lookup/type を保存する same-bindings helper を追加し、現在 explicit premise にしている lookup 条件を theorem 本体で導出できるようにした。
    - `[done]` `EIf` false branch の `store_typed_ctx_merge_right` 用 type-equality premise は branch typing から導出できる helper を追加済み。
@@ -179,12 +180,13 @@ Theorem step_progress :
 5. `[done]` direct update bridge の callback shape を concrete RHS evaluation 用に分け、direct assign/replace を ready subset に戻す。
 6. `[partial]` `ELet` / `ELetInfer` の local binding removal 用 runtime root-exclusion helper を追加し、let preservation helper を scoped premise へ弱める。
 7. `[partial]` root-sensitive provenance summary を Prop-level typing に追加し、既存 structural typing へ project できることを証明する。
-8. `[current]` provenance-aware preservation theorem を追加し、`ELet` / `ELetInfer` で let-bound root が result と surviving bindings へ escape しないことを runtime exclusion へ接続する。
-9. `[todo]` checker が root provenance を返す executable interface と soundness theorem を追加する。
-10. `[todo]` call/closure 関連の S3 を追加する。
-11. `[todo]` `EnvFullSoundness.v` / `ValidatorSoundness.v` と接続して S4 を証明する。
-12. `[todo]` borrow/runtime reference safety を S5 として別 theorem 群にする。
-13. `[todo]` small-step semantics が必要になった時点で S6 を開始する。
+8. `[partial]` root summaries から runtime exclusion への bridge を追加する。
+9. `[current]` provenance-aware preservation theorem を追加し、評価結果と出力 store が static root summaries に収まることを証明して `ELet` / `ELetInfer` を ready theorem に戻す。
+10. `[todo]` checker が root provenance を返す executable interface と soundness theorem を追加する。
+11. `[todo]` call/closure 関連の S3 を追加する。
+12. `[todo]` `EnvFullSoundness.v` / `ValidatorSoundness.v` と接続して S4 を証明する。
+13. `[todo]` borrow/runtime reference safety を S5 として別 theorem 群にする。
+14. `[todo]` small-step semantics が必要になった時点で S6 を開始する。
 
 ## Acceptance Criteria
 

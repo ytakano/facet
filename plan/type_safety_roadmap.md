@@ -142,9 +142,10 @@ Theorem step_progress :
 4. **S3: function call / current closure value safety** `[todo]`
    - `VClosure fname captured` の runtime typing を定義する。
    - `[partial]` 現状の `EFn` は empty capture を返すため、まず `captured = []` の closure safety を証明する。`VClosure fname []` の value typing helper は一部追加済み。
-   - `[partial]` `bind_params` は複数 parameter でも `params_ctx` と同じ順序で store entry を追加するよう修正済み。次は `store_remove_params` と合わせた frame-aware store typing 補題を追加する。
+   - `[partial]` `bind_params` は複数 parameter でも `params_ctx` と同じ順序で store entry を追加するよう修正済み。
+   - `[partial]` call body の runtime store が caller store tail を保持するケースに備え、static context が visible prefix だけを記述する `store_typed_prefix` と基本 lookup/add 補題を追加済み。次は `bind_params` / `store_remove_params` と合わせた frame-aware store typing 補題を追加する。
    - `ECall` preservation は、関数 body が typed 済みであることを表す環境前提（例: `env_fns_typed_structural`）を使って証明する。`TES_Call` 単体は callee body typing を含まない。
-   - call body の runtime store は caller store tail を保持するため、`store_typed` の exact `Forall2` だけでは不足する。parameter prefix だけを visible context として型付けする frame/prefix relation を導入してから保存補題へ進む。
+   - `bind_params` の typed-prefix preservation は、parameter 名が caller store tail を shadow しない freshness/no-shadow 前提を固定してから接続する。
    - lifetime substitution 済み引数を元の `fn_params` に bind する箇所は、runtime value typing が lifetime substitution と両立する補題を追加してから接続する。
    - `ECall` / `ECallExpr` の preservation を証明する。
    - 将来の closure 導入前に、captured store の型付け invariant をこの milestone で固定する。

@@ -705,6 +705,11 @@ Definition store_entry_typed
 Definition store_typed (env : global_env) (s : store) (Σ : sctx) : Prop :=
   Forall2 (store_entry_typed env s) s Σ.
 
+Definition store_typed_prefix (env : global_env) (s : store) (Σ : sctx) : Prop :=
+  exists entries frame,
+    s = entries ++ frame /\
+    Forall2 (store_entry_typed env s) entries Σ.
+
 Lemma store_entry_typed_store_preserved :
   forall env s se ce,
     store_entry_typed env s se ce ->
@@ -732,6 +737,42 @@ Proof.
   - constructor.
     + eapply store_entry_typed_store_preserved; eassumption.
     + apply IHForall2. exact Hpres.
+Qed.
+
+Lemma store_typed_prefix_empty :
+  forall env s,
+    store_typed_prefix env s [].
+Proof.
+  intros env s.
+  unfold store_typed_prefix.
+  exists [], s.
+  split; constructor.
+Qed.
+
+Lemma store_typed_prefix_exact :
+  forall env s Σ,
+    store_typed env s Σ ->
+    store_typed_prefix env s Σ.
+Proof.
+  intros env s Σ Htyped.
+  unfold store_typed_prefix.
+  exists s, [].
+  split.
+  - rewrite app_nil_r. reflexivity.
+  - exact Htyped.
+Qed.
+
+Lemma store_lookup_app_some :
+  forall x entries frame se,
+    store_lookup x entries = Some se ->
+    store_lookup x (entries ++ frame) = Some se.
+Proof.
+  intros x entries.
+  induction entries as [|entry rest IH]; intros frame se Hlookup.
+  - discriminate.
+  - simpl in Hlookup |- *.
+    destruct (ident_eqb x (se_name entry)); [exact Hlookup |].
+    apply IH. exact Hlookup.
 Qed.
 
 Lemma store_typed_lookup_entries :
@@ -851,6 +892,28 @@ Proof.
   eapply store_typed_lookup_sctx_entries; eassumption.
 Qed.
 
+Lemma store_typed_prefix_lookup_sctx :
+  forall env s Σ x T st,
+    store_typed_prefix env s Σ ->
+    sctx_lookup x Σ = Some (T, st) ->
+    exists se,
+      store_lookup x s = Some se /\
+      se_name se = x /\
+      se_ty se = T /\
+      binding_state_refines (se_state se) st /\
+      value_has_type env s (se_val se) T.
+Proof.
+  intros env s Σ x T st Htyped Hlookup.
+  unfold store_typed_prefix in Htyped.
+  destruct Htyped as [entries [frame [Hs Hentries]]].
+  destruct (store_typed_lookup_sctx_entries env s entries Σ x T st
+    Hentries Hlookup) as [se [Hstore [Hname [HT [Hst Hv]]]]].
+  exists se.
+  repeat split; try assumption.
+  subst s.
+  apply store_lookup_app_some. exact Hstore.
+Qed.
+
 Lemma store_typed_add :
   forall env s Σ x T m v,
     store_typed env s Σ ->
@@ -866,6 +929,26 @@ Proof.
   - eapply store_typed_store_param_preserved; eassumption.
 Qed.
 
+Lemma store_typed_prefix_add :
+  forall env s Σ x T m v,
+    store_typed_prefix env s Σ ->
+    value_has_type env s v T ->
+    store_ref_targets_preserved env s (store_add x T v s) ->
+    store_typed_prefix env (store_add x T v s) (sctx_add x T m Σ).
+Proof.
+  intros env s Σ x T m v Htyped Hv Hpres.
+  unfold store_typed_prefix in Htyped.
+  destruct Htyped as [entries [frame [Hs Hentries]]].
+  unfold store_typed_prefix, store_add, sctx_add.
+  exists (MkStoreEntry x T v (binding_state_of_bool false) :: entries), frame.
+  split.
+  - simpl. subst s. reflexivity.
+  - constructor.
+    + simpl. repeat split; try reflexivity.
+      eapply value_has_type_store_preserved; eassumption.
+    + eapply store_typed_store_param_preserved; eassumption.
+Qed.
+
 Lemma store_typed_add_compatible :
   forall env Ω s Σ x T_actual T_expected m v,
     store_typed env s Σ ->
@@ -877,6 +960,22 @@ Lemma store_typed_add_compatible :
 Proof.
   intros env Ω s Σ x T_actual T_expected m v Hstore Hv Hcompat Hpres.
   eapply store_typed_add.
+  - exact Hstore.
+  - eapply value_has_type_compatible; eassumption.
+  - exact Hpres.
+Qed.
+
+Lemma store_typed_prefix_add_compatible :
+  forall env Ω s Σ x T_actual T_expected m v,
+    store_typed_prefix env s Σ ->
+    value_has_type env s v T_actual ->
+    ty_compatible Ω T_actual T_expected ->
+    store_ref_targets_preserved env s (store_add x T_expected v s) ->
+    store_typed_prefix env (store_add x T_expected v s)
+      (sctx_add x T_expected m Σ).
+Proof.
+  intros env Ω s Σ x T_actual T_expected m v Hstore Hv Hcompat Hpres.
+  eapply store_typed_prefix_add.
   - exact Hstore.
   - eapply value_has_type_compatible; eassumption.
   - exact Hpres.

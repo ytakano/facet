@@ -1130,13 +1130,13 @@ Proof.
   intros ρ used ps.
   revert ρ used.
   induction ps as [| p ps IH]; intros ρ used psr ρ' used' Hrename x Hin.
-  - simpl in Hrename. injection Hrename as _ _ <-. exact Hin.
+  - simpl in Hrename. inversion Hrename; subst. exact Hin.
   - simpl in Hrename.
     destruct (alpha_rename_params
-      ((param_name p, fresh_ident (param_name p) used) :: ρ)
+      ρ
       (fresh_ident (param_name p) used :: used) ps)
       as [[ps0 ρ0] used0] eqn:Hps.
-    injection Hrename as _ _ <-.
+    inversion Hrename; subst.
     eapply IH.
     + exact Hps.
     + right. exact Hin.
@@ -1154,7 +1154,7 @@ Proof.
   - destruct p as [m xp T].
     simpl in Hrename.
     destruct (alpha_rename_params
-      ((xp, fresh_ident xp used) :: ρ) (fresh_ident xp used :: used) ps)
+      ρ (fresh_ident xp used :: used) ps)
       as [[ps0 ρ0] used0] eqn:Hps.
     inversion Hrename; subst.
     simpl in Hin.
@@ -1178,7 +1178,7 @@ Proof.
   - destruct p as [m xp T].
     simpl in Hrename.
     destruct (alpha_rename_params
-      ((xp, fresh_ident xp used) :: ρ) (fresh_ident xp used :: used) ps)
+      ρ (fresh_ident xp used :: used) ps)
       as [[ps0 ρ0] used0] eqn:Hps.
     inversion Hrename; subst.
     simpl.
@@ -1540,7 +1540,7 @@ Proof.
   - destruct p as [m x T].
     simpl in H.
     destruct (alpha_rename_params
-      ((x, fresh_ident x used) :: ρ) (fresh_ident x used :: used) ps)
+      ρ (fresh_ident x used :: used) ps)
       as [[ps'' ρ''] used''] eqn:Hps.
     inversion H; subst.
     constructor.

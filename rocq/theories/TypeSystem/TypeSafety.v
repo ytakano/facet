@@ -993,6 +993,60 @@ Definition params_fresh_in_store (ps : list param) (s : store) : Prop :=
     In x (ctx_names (params_ctx ps)) ->
     ~ In x (store_names s).
 
+Lemma ctx_names_params_ctx_apply_lt_params :
+  forall σ ps,
+    ctx_names (params_ctx (apply_lt_params σ ps)) =
+    ctx_names (params_ctx ps).
+Proof.
+  intros σ ps.
+  induction ps as [| p ps IH]; simpl.
+  - reflexivity.
+  - rewrite IH. reflexivity.
+Qed.
+
+Lemma params_fresh_in_store_apply_lt_params :
+  forall σ ps s,
+    params_fresh_in_store ps s ->
+    params_fresh_in_store (apply_lt_params σ ps) s.
+Proof.
+  unfold params_fresh_in_store.
+  intros σ ps s Hfresh x Hin.
+  rewrite ctx_names_params_ctx_apply_lt_params in Hin.
+  exact (Hfresh x Hin).
+Qed.
+
+Lemma params_ctx_names_nodup_apply_lt_params :
+  forall σ ps,
+    NoDup (ctx_names (params_ctx ps)) ->
+    NoDup (ctx_names (params_ctx (apply_lt_params σ ps))).
+Proof.
+  intros σ ps Hnodup.
+  rewrite ctx_names_params_ctx_apply_lt_params.
+  exact Hnodup.
+Qed.
+
+Lemma alpha_rename_fn_def_params_fresh_in_store :
+  forall s f fr used',
+    alpha_rename_fn_def (store_names s) f = (fr, used') ->
+    params_fresh_in_store (fn_params fr) s.
+Proof.
+  unfold params_fresh_in_store.
+  intros s f fr used' Hrename x Hin.
+  eapply alpha_rename_fn_def_params_fresh_used.
+  - exact Hrename.
+  - exact Hin.
+Qed.
+
+Lemma alpha_rename_fn_def_params_nodup_ctx_names :
+  forall s f fr used',
+    alpha_rename_fn_def (store_names s) f = (fr, used') ->
+    NoDup (ctx_names (params_ctx (fn_params fr))).
+Proof.
+  intros s f fr used' Hrename.
+  eapply alpha_rename_fn_def_params_nodup.
+  exact Hrename.
+Qed.
+
 Lemma params_fresh_in_store_tail :
   forall p ps s,
     params_fresh_in_store (p :: ps) s ->
@@ -2340,6 +2394,32 @@ Proof.
     + exact Hv.
     + rewrite <- Hty. exact Hcompat.
     + apply IH. exact Htail.
+Qed.
+
+Lemma alpha_rename_fn_def_call_bind_params_premises :
+  forall env Ω s vs σ f fr used',
+    eval_args_values_have_types env Ω s vs
+      (apply_lt_params σ (fn_params f)) ->
+    same_fn_shape f fr ->
+    alpha_rename_fn_def (store_names s) f = (fr, used') ->
+    NoDup (ctx_names (params_ctx (apply_lt_params σ (fn_params fr)))) /\
+    params_fresh_in_store (apply_lt_params σ (fn_params fr)) s /\
+    eval_args_values_have_types env Ω s vs
+      (apply_lt_params σ (fn_params fr)).
+Proof.
+  intros env Ω s vs σ f fr used' Hargs Hshape Hrename.
+  destruct Hshape as [_ [_ Hparams_alpha]].
+  repeat split.
+  - apply params_ctx_names_nodup_apply_lt_params.
+    eapply alpha_rename_fn_def_params_nodup_ctx_names.
+    exact Hrename.
+  - apply params_fresh_in_store_apply_lt_params.
+    eapply alpha_rename_fn_def_params_fresh_in_store.
+    exact Hrename.
+  - eapply eval_args_values_have_types_params_alpha.
+    + apply params_alpha_apply_lt_compat.
+      exact Hparams_alpha.
+    + exact Hargs.
 Qed.
 
 Lemma store_names_bind_params :

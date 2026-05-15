@@ -189,8 +189,8 @@ Fixpoint alpha_rename_params (ρ : rename_env) (used : list ident)
       let x' := fresh_ident x used in
       let p' := MkParam (param_mutability p) x' (param_ty p) in
       let '(ps'', ρ', used') :=
-        alpha_rename_params ((x, x') :: ρ) (x' :: used) ps' in
-      (p' :: ps'', ρ', used')
+        alpha_rename_params ρ (x' :: used) ps' in
+      (p' :: ps'', (x, x') :: ρ', used')
   end.
 
 Definition alpha_rename_fn_def (used : list ident)

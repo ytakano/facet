@@ -1774,6 +1774,24 @@ with preservation_ready_fields : list (string * expr) -> Prop :=
       preservation_ready_fields rest ->
       preservation_ready_fields ((name, e) :: rest).
 
+Definition env_fns_preservation_ready (env : global_env) : Prop :=
+  forall f, In f (env_fns env) -> preservation_ready_expr (fn_body f).
+
+Lemma place_path_rename_place_some :
+  forall ρ p x path,
+    place_path p = Some (x, path) ->
+    exists xr, place_path (rename_place ρ p) = Some (xr, path).
+Proof.
+  intros ρ p.
+  induction p as [root | p IHp | p IHp f]; intros x path Hpath; simpl in Hpath.
+  - inversion Hpath; subst. eexists. reflexivity.
+  - discriminate.
+  - destruct (place_path p) as [[root subpath] |] eqn:Hsub; try discriminate.
+    inversion Hpath; subst x path.
+    destruct (IHp root subpath eq_refl) as [xr Hrenamed].
+    simpl. rewrite Hrenamed. exists xr. reflexivity.
+Qed.
+
 Scheme eval_ind' := Induction for eval Sort Prop
 with eval_args_ind' := Induction for eval_args Sort Prop
 with eval_struct_fields_ind' := Induction for eval_struct_fields Sort Prop.

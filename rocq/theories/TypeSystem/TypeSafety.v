@@ -1,6 +1,6 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
-  OperationalSemantics TypingRules TypeChecker RuntimeTyping EnvStructuralRules
-  EnvSoundnessFacts CheckerSoundness.
+  OperationalSemantics TypingRules TypeChecker RuntimeTyping RootProvenance
+  EnvStructuralRules EnvSoundnessFacts CheckerSoundness.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 

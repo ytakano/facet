@@ -3,6 +3,71 @@ From Stdlib Require Import List String.
 Import ListNotations.
 
 (* ------------------------------------------------------------------ *)
+(* Root provenance summaries                                            *)
+(* ------------------------------------------------------------------ *)
+
+Definition root_set := list ident.
+Definition root_env := list (ident * root_set).
+
+Fixpoint root_set_union (a b : root_set) : root_set :=
+  match a with
+  | [] => b
+  | x :: xs =>
+      if existsb (ident_eqb x) b
+      then root_set_union xs b
+      else x :: root_set_union xs b
+  end.
+
+Fixpoint root_sets_union (sets : list root_set) : root_set :=
+  match sets with
+  | [] => []
+  | roots :: rest => root_set_union roots (root_sets_union rest)
+  end.
+
+Fixpoint root_env_lookup (x : ident) (R : root_env) : option root_set :=
+  match R with
+  | [] => None
+  | (y, roots) :: rest =>
+      if ident_eqb x y then Some roots else root_env_lookup x rest
+  end.
+
+Definition root_env_add (x : ident) (roots : root_set) (R : root_env)
+    : root_env :=
+  (x, roots) :: R.
+
+Fixpoint root_env_update (x : ident) (roots : root_set) (R : root_env)
+    : root_env :=
+  match R with
+  | [] => []
+  | (y, roots_y) :: rest =>
+      if ident_eqb x y
+      then (y, roots) :: rest
+      else (y, roots_y) :: root_env_update x roots rest
+  end.
+
+Fixpoint root_env_remove (x : ident) (R : root_env) : root_env :=
+  match R with
+  | [] => []
+  | (y, roots) :: rest =>
+      if ident_eqb x y then rest else (y, roots) :: root_env_remove x rest
+  end.
+
+Definition roots_exclude (x : ident) (roots : root_set) : Prop :=
+  ~ In x roots.
+
+Definition root_env_excludes (x : ident) (R : root_env) : Prop :=
+  forall y roots,
+    root_env_lookup y R = Some roots ->
+    y <> x ->
+    roots_exclude x roots.
+
+Definition root_of_place (p : place) : root_set :=
+  match place_path p with
+  | Some (x, _) => [x]
+  | None => [place_name p]
+  end.
+
+(* ------------------------------------------------------------------ *)
 (* Wrapper-free env/stateful typing specification                       *)
 (* ------------------------------------------------------------------ *)
 
@@ -455,6 +520,197 @@ with typed_fields_env_structural
       ty_compatible_b Ω T_field (instantiate_struct_field_ty lts args f) = true ->
       typed_fields_env_structural env Ω n lts args Σ1 fields rest Σ2 ->
       typed_fields_env_structural env Ω n lts args Σ fields (f :: rest) Σ2.
+
+Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
+    : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set -> Prop :=
+  | TER_Unit : forall R Σ,
+      typed_env_roots env Ω n R Σ EUnit
+        (MkTy UUnrestricted TUnits) Σ R []
+  | TER_LitInt : forall R Σ i,
+      typed_env_roots env Ω n R Σ (ELit (LInt i))
+        (MkTy UUnrestricted TIntegers) Σ R []
+  | TER_LitFloat : forall R Σ f,
+      typed_env_roots env Ω n R Σ (ELit (LFloat f))
+        (MkTy UUnrestricted TFloats) Σ R []
+  | TER_LitBool : forall R Σ b,
+      typed_env_roots env Ω n R Σ (ELit (LBool b))
+        (MkTy UUnrestricted TBooleans) Σ R []
+  | TER_Var_Copy : forall R Σ x T roots,
+      typed_place_env_structural env Σ (PVar x) T ->
+      ty_usage T = UUnrestricted ->
+      root_env_lookup x R = Some roots ->
+      typed_env_roots env Ω n R Σ (EVar x) T Σ R roots
+  | TER_Var_Move : forall R Σ Σ' x T roots,
+      typed_place_env_structural env Σ (PVar x) T ->
+      ty_usage T <> UUnrestricted ->
+      sctx_consume_path Σ x [] = infer_ok Σ' ->
+      root_env_lookup x R = Some roots ->
+      typed_env_roots env Ω n R Σ (EVar x) T Σ' R roots
+  | TER_Place_Copy : forall R Σ p T x path roots,
+      typed_place_env_structural env Σ p T ->
+      ty_usage T = UUnrestricted ->
+      place_path p = Some (x, path) ->
+      root_env_lookup x R = Some roots ->
+      typed_env_roots env Ω n R Σ (EPlace p) T Σ R roots
+  | TER_Place_Move : forall R Σ Σ' p T x path roots,
+      typed_place_env_structural env Σ p T ->
+      ty_usage T <> UUnrestricted ->
+      place_path p = Some (x, path) ->
+      sctx_consume_path Σ x path = infer_ok Σ' ->
+      root_env_lookup x R = Some roots ->
+      typed_env_roots env Ω n R Σ (EPlace p) T Σ' R roots
+  | TER_Fn : forall R Σ fname fdef,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      typed_env_roots env Ω n R Σ (EFn fname) (fn_value_ty fdef) Σ R []
+  | TER_Struct : forall R R' Σ Σ' sname lts args fields sdef roots,
+      lookup_struct sname env = Some sdef ->
+      Datatypes.length lts = struct_lifetimes sdef ->
+      Datatypes.length args = struct_type_params sdef ->
+      check_struct_bounds env (struct_bounds sdef) args = None ->
+      typed_fields_roots env Ω n lts args R Σ fields (struct_fields sdef) Σ' R' roots ->
+      typed_env_roots env Ω n R Σ (EStruct sname lts args fields)
+        (instantiate_struct_instance_ty sdef lts args) Σ' R' roots
+  | TER_Let : forall R R1 R2 Σ Σ1 Σ2 m x T T1 e1 e2 T2 roots1 roots2,
+      typed_env_roots env Ω n R Σ e1 T1 Σ1 R1 roots1 ->
+      ty_compatible_b Ω T1 T = true ->
+      typed_env_roots env Ω n (root_env_add x roots1 R1)
+        (sctx_add x T m Σ1) e2 T2 Σ2 R2 roots2 ->
+      sctx_check_ok env x T Σ2 = true ->
+      roots_exclude x roots2 ->
+      root_env_excludes x (root_env_remove x R2) ->
+      typed_env_roots env Ω n R Σ (ELet m x T e1 e2) T2
+        (sctx_remove x Σ2) (root_env_remove x R2) roots2
+  | TER_LetInfer : forall R R1 R2 Σ Σ1 Σ2 m x T1 e1 e2 T2 roots1 roots2,
+      typed_env_roots env Ω n R Σ e1 T1 Σ1 R1 roots1 ->
+      typed_env_roots env Ω n (root_env_add x roots1 R1)
+        (sctx_add x T1 m Σ1) e2 T2 Σ2 R2 roots2 ->
+      sctx_check_ok env x T1 Σ2 = true ->
+      roots_exclude x roots2 ->
+      root_env_excludes x (root_env_remove x R2) ->
+      typed_env_roots env Ω n R Σ (ELetInfer m x e1 e2) T2
+        (sctx_remove x Σ2) (root_env_remove x R2) roots2
+  | TER_Drop : forall R R' Σ Σ' e T roots,
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      typed_env_roots env Ω n R Σ (EDrop e)
+        (MkTy UUnrestricted TUnits) Σ' R' []
+  | TER_Replace_Path : forall R R1 Σ Σ1 Σ2 p e_new T_old T_new x path roots_new,
+      typed_place_env_structural env Σ p T_old ->
+      place_path p = Some (x, path) ->
+      writable_place_env_structural env Σ p ->
+      typed_env_roots env Ω n R Σ e_new T_new Σ1 R1 roots_new ->
+      ty_compatible_b Ω T_new T_old = true ->
+      sctx_path_available Σ1 x path = infer_ok tt ->
+      sctx_restore_path Σ1 x path = infer_ok Σ2 ->
+      typed_env_roots env Ω n R Σ (EReplace p e_new) T_old Σ2
+        (root_env_update x roots_new R1) []
+  | TER_Assign_Path : forall R R1 Σ Σ' p e_new T_old T_new x path roots_new,
+      typed_place_env_structural env Σ p T_old ->
+      ty_usage T_old <> ULinear ->
+      place_path p = Some (x, path) ->
+      writable_place_env_structural env Σ p ->
+      typed_env_roots env Ω n R Σ e_new T_new Σ' R1 roots_new ->
+      ty_compatible_b Ω T_new T_old = true ->
+      sctx_path_available Σ' x path = infer_ok tt ->
+      typed_env_roots env Ω n R Σ (EAssign p e_new)
+        (MkTy UUnrestricted TUnits) Σ' (root_env_update x roots_new R1) []
+  | TER_BorrowShared : forall R Σ p T,
+      typed_place_env_structural env Σ p T ->
+      typed_env_roots env Ω n R Σ (EBorrow RShared p)
+        (MkTy UUnrestricted (TRef (LVar n) RShared T)) Σ R (root_of_place p)
+  | TER_BorrowUnique : forall R Σ p T x path,
+      typed_place_env_structural env Σ p T ->
+      place_path p = Some (x, path) ->
+      sctx_lookup_mut x Σ = Some MMutable ->
+      typed_env_roots env Ω n R Σ (EBorrow RUnique p)
+        (MkTy UAffine (TRef (LVar n) RUnique T)) Σ R [x]
+  | TER_If : forall R R1 R2 R3 Σ Σ1 Σ2 Σ3 Σ4 e1 e2 e3
+      T_cond T2 T3 roots_cond roots2 roots3,
+      typed_env_roots env Ω n R Σ e1 T_cond Σ1 R1 roots_cond ->
+      ty_core T_cond = TBooleans ->
+      typed_env_roots env Ω n R1 Σ1 e2 T2 Σ2 R2 roots2 ->
+      typed_env_roots env Ω n R1 Σ1 e3 T3 Σ3 R3 roots3 ->
+      ty_core T2 = ty_core T3 ->
+      ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
+      R2 = R3 ->
+      typed_env_roots env Ω n R Σ (EIf e1 e2 e3)
+        (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2))
+        Σ4 R2 (root_set_union roots2 roots3)
+with typed_args_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
+    : root_env -> sctx -> list expr -> list param -> sctx -> root_env -> list root_set -> Prop :=
+  | TERArgs_Nil : forall R Σ,
+      typed_args_roots env Ω n R Σ [] [] Σ R []
+  | TERArgs_Cons : forall R R1 R2 Σ Σ1 Σ2 e es p ps T_e roots roots_rest,
+      typed_env_roots env Ω n R Σ e T_e Σ1 R1 roots ->
+      ty_compatible_b Ω T_e (param_ty p) = true ->
+      typed_args_roots env Ω n R1 Σ1 es ps Σ2 R2 roots_rest ->
+      typed_args_roots env Ω n R Σ (e :: es) (p :: ps) Σ2 R2 (roots :: roots_rest)
+with typed_fields_roots
+    (env : global_env) (Ω : outlives_ctx) (n : nat)
+    : list lifetime -> list Ty -> root_env -> sctx -> list (string * expr) ->
+      list field_def -> sctx -> root_env -> root_set -> Prop :=
+  | TERFields_Nil : forall lts args R Σ fields,
+      typed_fields_roots env Ω n lts args R Σ fields [] Σ R []
+  | TERFields_Cons : forall lts args R R1 R2 Σ Σ1 Σ2 fields f rest
+      e_field T_field roots_field roots_rest,
+      lookup_field_b (field_name f) fields = Some e_field ->
+      typed_env_roots env Ω n R Σ e_field T_field Σ1 R1 roots_field ->
+      ty_compatible_b Ω T_field (instantiate_struct_field_ty lts args f) = true ->
+      typed_fields_roots env Ω n lts args R1 Σ1 fields rest Σ2 R2 roots_rest ->
+      typed_fields_roots env Ω n lts args R Σ fields (f :: rest) Σ2 R2
+        (root_set_union roots_field roots_rest).
+
+Scheme typed_env_roots_ind' := Induction for typed_env_roots Sort Prop
+with typed_args_roots_ind' := Induction for typed_args_roots Sort Prop
+with typed_fields_roots_ind' := Induction for typed_fields_roots Sort Prop.
+Combined Scheme typed_roots_ind
+  from typed_env_roots_ind', typed_args_roots_ind', typed_fields_roots_ind'.
+
+Lemma typed_roots_structural :
+  forall env Ω n,
+  (forall R Σ e T Σ' R' roots,
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    typed_env_structural env Ω n Σ e T Σ') /\
+  (forall R Σ args ps Σ' R' roots,
+    typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+    typed_args_env_structural env Ω n Σ args ps Σ') /\
+  (forall lts args R Σ fields defs Σ' R' roots,
+    typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+    typed_fields_env_structural env Ω n lts args Σ fields defs Σ').
+Proof.
+  intros env Ω n.
+  apply typed_roots_ind;
+    intros; econstructor; eauto.
+Qed.
+
+Lemma typed_env_roots_structural :
+  forall env Ω n R Σ e T Σ' R' roots,
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    typed_env_structural env Ω n Σ e T Σ'.
+Proof.
+  intros env Ω n R Σ e T Σ' R' roots H.
+  exact (proj1 (typed_roots_structural env Ω n) R Σ e T Σ' R' roots H).
+Qed.
+
+Lemma typed_args_roots_structural :
+  forall env Ω n R Σ args ps Σ' R' roots,
+    typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+    typed_args_env_structural env Ω n Σ args ps Σ'.
+Proof.
+  intros env Ω n R Σ args ps Σ' R' roots H.
+  exact (proj1 (proj2 (typed_roots_structural env Ω n))
+    R Σ args ps Σ' R' roots H).
+Qed.
+
+Lemma typed_fields_roots_structural :
+  forall env Ω n lts args R Σ fields defs Σ' R' roots,
+    typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+    typed_fields_env_structural env Ω n lts args Σ fields defs Σ'.
+Proof.
+  intros env Ω n lts args R Σ fields defs Σ' R' roots H.
+  exact (proj2 (proj2 (typed_roots_structural env Ω n))
+    lts args R Σ fields defs Σ' R' roots H).
+Qed.
 
 Lemma typed_env_structural_same_bindings :
   forall env Ω n Σ e T Σ',

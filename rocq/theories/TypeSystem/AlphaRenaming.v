@@ -321,6 +321,39 @@ Proof.
       * exact Hlookup.
 Qed.
 
+Lemma ctx_alpha_lookup_forward : forall ρ Γ Γr x T b,
+  ctx_alpha ρ Γ Γr ->
+  ~ In x (rename_range ρ) ->
+  ctx_lookup x Γ = Some (T, b) ->
+  ctx_lookup (lookup_rename x ρ) Γr = Some (T, b).
+Proof.
+  intros ρ Γ Γr x T b Halpha.
+  revert x T b.
+  induction Halpha; intros y T0 b0 Hsafe Hlookup.
+  - simpl in Hlookup. exact Hlookup.
+  - simpl in Hsafe, Hlookup.
+    assert (Hneq_y_xr : y <> xr).
+    { intro Heq. apply Hsafe. left. symmetry. exact Heq. }
+    assert (Hsafe_tail : ~ In y (rename_range ρ)).
+    { intro Hin. apply Hsafe. right. exact Hin. }
+    destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx. subst y.
+      simpl. rewrite ident_eqb_refl. rewrite ident_eqb_refl.
+      exact Hlookup.
+    + simpl. rewrite Hyx.
+      assert (Hneq_lookup :
+        ident_eqb (lookup_rename y ρ) xr = false).
+      { apply ident_eqb_neq.
+        apply lookup_rename_not_in_range_neq.
+        - exact H0.
+        - exact Hneq_y_xr.
+      }
+      rewrite Hneq_lookup.
+      apply IHHalpha.
+      * exact Hsafe_tail.
+      * exact Hlookup.
+Qed.
+
 Lemma ctx_alpha_lookup_state_backward : forall ρ Γ Γr x T st,
   ctx_alpha ρ Γ Γr ->
   ~ In x (rename_range ρ) ->
@@ -349,6 +382,37 @@ Proof.
       }
       rewrite Hneq_lookup in Hlookup.
       simpl. rewrite Hyx.
+      apply IHHalpha; assumption.
+Qed.
+
+Lemma ctx_alpha_lookup_state_forward : forall ρ Γ Γr x T st,
+  ctx_alpha ρ Γ Γr ->
+  ~ In x (rename_range ρ) ->
+  ctx_lookup_state x Γ = Some (T, st) ->
+  ctx_lookup_state (lookup_rename x ρ) Γr = Some (T, st).
+Proof.
+  intros ρ Γ Γr x T st Halpha.
+  revert x T st.
+  induction Halpha; intros y T0 st0 Hsafe Hlookup.
+  - simpl in Hlookup. exact Hlookup.
+  - simpl in Hsafe, Hlookup.
+    assert (Hneq_y_xr : y <> xr).
+    { intro Heq. apply Hsafe. left. symmetry. exact Heq. }
+    assert (Hsafe_tail : ~ In y (rename_range ρ)).
+    { intro Hin. apply Hsafe. right. exact Hin. }
+    destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx. subst y.
+      simpl. rewrite ident_eqb_refl. rewrite ident_eqb_refl.
+      exact Hlookup.
+    + simpl. rewrite Hyx.
+      assert (Hneq_lookup :
+        ident_eqb (lookup_rename y ρ) xr = false).
+      { apply ident_eqb_neq.
+        apply lookup_rename_not_in_range_neq.
+        - exact H0.
+        - exact Hneq_y_xr.
+      }
+      rewrite Hneq_lookup.
       apply IHHalpha; assumption.
 Qed.
 
@@ -402,6 +466,53 @@ Proof.
         -- exact H0.
 Qed.
 
+Lemma ctx_alpha_consume_forward : forall ρ Γ Γr x Γ',
+  ctx_alpha ρ Γ Γr ->
+  ~ In x (rename_range ρ) ->
+  ctx_consume x Γ = Some Γ' ->
+  exists Γr',
+    ctx_consume (lookup_rename x ρ) Γr = Some Γr' /\
+    ctx_alpha ρ Γ' Γr'.
+Proof.
+  intros ρ Γ Γr x Γ' Halpha.
+  revert x Γ'.
+  induction Halpha; intros y Γ' Hsafe Hconsume.
+  - simpl in Hconsume. exists Γ'. split; [exact Hconsume | constructor].
+  - simpl in Hsafe, Hconsume.
+    assert (Hneq_y_xr : y <> xr).
+    { intro Heq. apply Hsafe. left. symmetry. exact Heq. }
+    assert (Hsafe_tail : ~ In y (rename_range ρ)).
+    { intro Hin. apply Hsafe. right. exact Hin. }
+    destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx. subst y.
+      injection Hconsume as <-.
+      exists ((xr, T, state_consume_path [] b, m) :: Γr).
+      split.
+      * simpl. rewrite ident_eqb_refl. rewrite ident_eqb_refl. reflexivity.
+      * constructor; assumption.
+    + destruct (ctx_consume y Γ) as [Γt |] eqn:Hconsume_tail.
+      2: discriminate.
+      injection Hconsume as <-.
+      destruct (IHHalpha y Γt Hsafe_tail Hconsume_tail)
+        as [Γrt [Hconsume_r_tail Halpha0]].
+      exists ((xr, T, b, m) :: Γrt).
+      split.
+      * simpl. rewrite Hyx.
+        assert (Hneq_lookup :
+          ident_eqb (lookup_rename y ρ) xr = false).
+        { apply ident_eqb_neq.
+          apply lookup_rename_not_in_range_neq.
+          - exact H0.
+          - exact Hneq_y_xr.
+        }
+        rewrite Hneq_lookup. rewrite Hconsume_r_tail. reflexivity.
+      * constructor.
+        -- exact Halpha0.
+        -- rewrite (ctx_consume_preserves_names
+             (lookup_rename y ρ) Γr Γrt Hconsume_r_tail). exact H.
+        -- exact H0.
+Qed.
+
 Lemma ctx_alpha_remove_head : forall ρ Γ Γr x xr T b m,
   ctx_alpha ρ Γ Γr ->
   ctx_alpha ρ
@@ -452,6 +563,37 @@ Proof.
         - exact Hneq_y_xr. }
       rewrite Hneq_lookup in Hlookup.
       simpl. rewrite Hyx.
+      apply IHHalpha.
+      * exact Hsafe_tail.
+      * exact Hlookup.
+Qed.
+
+Lemma ctx_alpha_lookup_mut_forward : forall ρ Γ Γr x m,
+  ctx_alpha ρ Γ Γr ->
+  ~ In x (rename_range ρ) ->
+  ctx_lookup_mut x Γ = Some m ->
+  ctx_lookup_mut (lookup_rename x ρ) Γr = Some m.
+Proof.
+  intros ρ Γ Γr x m Halpha.
+  revert x m.
+  induction Halpha; intros y m0 Hsafe Hlookup.
+  - simpl in Hlookup. exact Hlookup.
+  - simpl in Hsafe, Hlookup.
+    assert (Hneq_y_xr : y <> xr).
+    { intro Heq. apply Hsafe. left. symmetry. exact Heq. }
+    assert (Hsafe_tail : ~ In y (rename_range ρ)).
+    { intro Hin. apply Hsafe. right. exact Hin. }
+    destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx. subst y.
+      simpl. rewrite ident_eqb_refl. rewrite ident_eqb_refl.
+      exact Hlookup.
+    + simpl. rewrite Hyx.
+      assert (Hneq_lookup : ident_eqb (lookup_rename y ρ) xr = false).
+      { apply ident_eqb_neq.
+        apply lookup_rename_not_in_range_neq.
+        - exact H0.
+        - exact Hneq_y_xr. }
+      rewrite Hneq_lookup.
       apply IHHalpha.
       * exact Hsafe_tail.
       * exact Hlookup.

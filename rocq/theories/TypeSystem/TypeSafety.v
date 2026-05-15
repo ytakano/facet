@@ -2297,6 +2297,120 @@ Proof.
   exact Htyped.
 Qed.
 
+Lemma store_param_prefix_update_state :
+  forall ps s_param s x f s',
+    store_param_prefix ps s_param s ->
+    store_update_state x f s_param = Some s' ->
+    exists frame',
+      store_param_prefix ps s' frame'.
+Proof.
+  intros ps s_param s x f s' Hprefix.
+  revert x f s'.
+  induction Hprefix as [s | p ps v st s_param s Hprefix_tail IH];
+    intros x f s' Hupdate.
+  - exists s'. constructor.
+  - simpl in Hupdate.
+    destruct (ident_eqb x (param_name p)) eqn:Hx.
+    + inversion Hupdate; subst s'.
+      exists s. constructor. exact Hprefix_tail.
+    + destruct (store_update_state x f s_param) as [s_param' |] eqn:Htail;
+        try discriminate.
+      inversion Hupdate; subst s'.
+      destruct (IH x f s_param' Htail) as [frame' Hprefix'].
+      exists frame'. constructor. exact Hprefix'.
+Qed.
+
+Lemma store_param_prefix_mark_used :
+  forall ps s_param s x,
+    store_param_prefix ps s_param s ->
+    exists frame',
+      store_param_prefix ps (store_mark_used x s_param) frame'.
+Proof.
+  intros ps s_param s x Hprefix.
+  induction Hprefix as [s | p ps v st s_param s Hprefix_tail IH].
+  - exists (store_mark_used x s). constructor.
+  - simpl.
+    destruct (ident_eqb x (param_name p)) eqn:Hx.
+    + exists s. constructor. exact Hprefix_tail.
+    + destruct IH as [frame' Hprefix'].
+      exists frame'. constructor. exact Hprefix'.
+Qed.
+
+Lemma store_param_prefix_update_val :
+  forall ps s_param s x v_new s',
+    store_param_prefix ps s_param s ->
+    store_update_val x v_new s_param = Some s' ->
+    exists frame',
+      store_param_prefix ps s' frame'.
+Proof.
+  intros ps s_param s x v_new s' Hprefix.
+  revert x v_new s'.
+  induction Hprefix as [s | p ps v st s_param s Hprefix_tail IH];
+    intros x v_new s' Hupdate.
+  - exists s'. constructor.
+  - simpl in Hupdate.
+    destruct (ident_eqb x (param_name p)) eqn:Hx.
+    + inversion Hupdate; subst s'.
+      exists s. constructor. exact Hprefix_tail.
+    + destruct (store_update_val x v_new s_param) as [s_param' |] eqn:Htail;
+        try discriminate.
+      inversion Hupdate; subst s'.
+      destruct (IH x v_new s_param' Htail) as [frame' Hprefix'].
+      exists frame'. constructor. exact Hprefix'.
+Qed.
+
+Lemma store_param_prefix_update_path :
+  forall ps s_param s x path v_new s',
+    store_param_prefix ps s_param s ->
+    store_update_path x path v_new s_param = Some s' ->
+    exists frame',
+      store_param_prefix ps s' frame'.
+Proof.
+  intros ps s_param s x path v_new s' Hprefix.
+  revert x path v_new s'.
+  induction Hprefix as [s | p ps v st s_param s Hprefix_tail IH];
+    intros x path v_new s' Hupdate.
+  - exists s'. constructor.
+  - simpl in Hupdate.
+    destruct (ident_eqb x (param_name p)) eqn:Hx.
+    + destruct (value_update_path v path v_new) as [v' |] eqn:Hvalue;
+        try discriminate.
+      inversion Hupdate; subst s'.
+      exists s. constructor. exact Hprefix_tail.
+    + destruct (store_update_path x path v_new s_param) as [s_param' |]
+        eqn:Htail; try discriminate.
+      inversion Hupdate; subst s'.
+      destruct (IH x path v_new s_param' Htail) as [frame' Hprefix'].
+      exists frame'. constructor. exact Hprefix'.
+Qed.
+
+Lemma store_param_prefix_restore_path :
+  forall ps s_param s x path s',
+    store_param_prefix ps s_param s ->
+    store_restore_path x path s_param = Some s' ->
+    exists frame',
+      store_param_prefix ps s' frame'.
+Proof.
+  intros ps s_param s x path s' Hprefix Hrestore.
+  unfold store_restore_path in Hrestore.
+  eapply store_param_prefix_update_state; eassumption.
+Qed.
+
+Lemma store_param_prefix_consume_path :
+  forall ps s_param s x path s',
+    store_param_prefix ps s_param s ->
+    store_consume_path x path s_param = Some s' ->
+    exists frame',
+      store_param_prefix ps s' frame'.
+Proof.
+  intros ps s_param s x path s' Hprefix Hconsume.
+  unfold store_consume_path in Hconsume.
+  destruct (store_lookup x s_param) as [se |] eqn:Hlookup; try discriminate.
+  destruct (binding_available_b (se_state se) path) eqn:Havailable;
+    try discriminate.
+  eapply store_param_prefix_update_state; eassumption.
+Qed.
+
 Lemma bind_params_head_fresh_in_tail :
   forall env Ω s p ps vs,
     NoDup (ctx_names (params_ctx (p :: ps))) ->

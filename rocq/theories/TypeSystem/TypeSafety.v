@@ -889,6 +889,49 @@ Fixpoint store_names (s : store) : list ident :=
 Definition store_no_shadow (s : store) : Prop :=
   NoDup (store_names s).
 
+Definition params_fresh_in_store (ps : list param) (s : store) : Prop :=
+  forall x,
+    In x (ctx_names (params_ctx ps)) ->
+    ~ In x (store_names s).
+
+Lemma params_fresh_in_store_tail :
+  forall p ps s,
+    params_fresh_in_store (p :: ps) s ->
+    params_fresh_in_store ps s.
+Proof.
+  unfold params_fresh_in_store.
+  intros p ps s Hfresh x Hin.
+  apply Hfresh. simpl. right. exact Hin.
+Qed.
+
+Lemma params_fresh_in_store_head :
+  forall p ps s,
+    params_fresh_in_store (p :: ps) s ->
+    ~ In (param_name p) (store_names s).
+Proof.
+  unfold params_fresh_in_store.
+  intros p ps s Hfresh.
+  apply Hfresh. simpl. left. reflexivity.
+Qed.
+
+Lemma params_ctx_names_nodup_tail :
+  forall p ps,
+    NoDup (ctx_names (params_ctx (p :: ps))) ->
+    NoDup (ctx_names (params_ctx ps)).
+Proof.
+  intros p ps Hnodup.
+  simpl in Hnodup. inversion Hnodup; subst. assumption.
+Qed.
+
+Lemma params_ctx_names_nodup_head_not_tail :
+  forall p ps,
+    NoDup (ctx_names (params_ctx (p :: ps))) ->
+    ~ In (param_name p) (ctx_names (params_ctx ps)).
+Proof.
+  intros p ps Hnodup.
+  simpl in Hnodup. inversion Hnodup; subst. assumption.
+Qed.
+
 Lemma store_typed_names :
   forall env s Σ,
     store_typed env s Σ ->
@@ -2155,6 +2198,82 @@ Inductive eval_args_values_have_types
       ty_compatible Ω T_actual (param_ty p) ->
       eval_args_values_have_types env Ω s vs ps ->
       eval_args_values_have_types env Ω s (v :: vs) (p :: ps).
+
+Lemma store_names_bind_params :
+  forall env Ω s vs ps,
+    eval_args_values_have_types env Ω s vs ps ->
+    store_names (bind_params ps vs s) =
+      ctx_names (params_ctx ps) ++ store_names s.
+Proof.
+  intros env Ω s vs ps Hargs.
+  induction Hargs as [| v vs p ps T_actual _ _ _ IH].
+  - reflexivity.
+  - simpl. rewrite IH. reflexivity.
+Qed.
+
+Lemma bind_params_head_fresh_in_tail :
+  forall env Ω s p ps vs,
+    NoDup (ctx_names (params_ctx (p :: ps))) ->
+    params_fresh_in_store (p :: ps) s ->
+    eval_args_values_have_types env Ω s vs ps ->
+    ~ In (param_name p) (store_names (bind_params ps vs s)).
+Proof.
+  intros env Ω s p ps vs Hnodup Hfresh Hargs.
+  rewrite (store_names_bind_params env Ω s vs ps Hargs).
+  rewrite in_app_iff.
+  intros [Hin_params | Hin_store].
+  - exact (params_ctx_names_nodup_head_not_tail p ps Hnodup Hin_params).
+  - exact (params_fresh_in_store_head p ps s Hfresh Hin_store).
+Qed.
+
+Lemma bind_params_ref_targets_preserved :
+  forall env Ω s vs ps,
+    NoDup (ctx_names (params_ctx ps)) ->
+    params_fresh_in_store ps s ->
+    eval_args_values_have_types env Ω s vs ps ->
+    store_ref_targets_preserved env s (bind_params ps vs s).
+Proof.
+  intros env Ω s vs ps Hnodup Hfresh Hargs.
+  induction Hargs as [| v vs p ps T_actual Hv Hcompat Hargs IH].
+  - apply store_ref_targets_preserved_refl.
+  - simpl.
+    eapply store_ref_targets_preserved_trans.
+    + apply IH.
+      * eapply params_ctx_names_nodup_tail. exact Hnodup.
+      * eapply params_fresh_in_store_tail. exact Hfresh.
+    + apply store_add_fresh_ref_targets_preserved.
+      apply store_lookup_not_in_names.
+      eapply bind_params_head_fresh_in_tail; eassumption.
+Qed.
+
+Lemma bind_params_store_typed_prefix :
+  forall env Ω s vs ps,
+    NoDup (ctx_names (params_ctx ps)) ->
+    params_fresh_in_store ps s ->
+    eval_args_values_have_types env Ω s vs ps ->
+    store_typed_prefix env (bind_params ps vs s) (sctx_of_ctx (params_ctx ps)).
+Proof.
+  intros env Ω s vs ps Hnodup Hfresh Hargs.
+  induction Hargs as [| v vs p ps T_actual Hv Hcompat Hargs IH].
+  - simpl. unfold store_typed_prefix. exists [], s. split.
+    + reflexivity.
+    + constructor.
+  - simpl.
+    eapply store_typed_prefix_add_compatible.
+    + apply IH.
+      * eapply params_ctx_names_nodup_tail. exact Hnodup.
+      * eapply params_fresh_in_store_tail. exact Hfresh.
+    + eapply value_has_type_store_preserved.
+      * exact Hv.
+      * eapply bind_params_ref_targets_preserved.
+        -- eapply params_ctx_names_nodup_tail. exact Hnodup.
+        -- eapply params_fresh_in_store_tail. exact Hfresh.
+        -- exact Hargs.
+    + exact Hcompat.
+    + apply store_add_fresh_ref_targets_preserved.
+      apply store_lookup_not_in_names.
+      eapply bind_params_head_fresh_in_tail; eassumption.
+Qed.
 
 Lemma eval_args_preserves_typing :
   forall env (Ω : outlives_ctx) (n : nat) Σ Σ' s args params

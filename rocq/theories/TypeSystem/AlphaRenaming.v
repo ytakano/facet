@@ -2447,3 +2447,309 @@ Proof.
       eexists. split. reflexivity.
       constructor; [exact Hctx4r | exact Hrest_names | exact Hxr_range].
 Qed.
+
+Lemma sctx_same_bindings_names_alpha : forall Σ Σ',
+  sctx_same_bindings Σ Σ' ->
+  ctx_names Σ' = ctx_names Σ.
+Proof.
+  intros Σ Σ' Hsame.
+  induction Hsame as [| [[[x T] st] m] [[[x' T'] st'] m'] Σ Σ'
+      Hentry Htail IH].
+  - reflexivity.
+  - inversion Hentry; subst. simpl. rewrite IH. reflexivity.
+Qed.
+
+Lemma lookup_field_b_in_alpha : forall fname fields e,
+  lookup_field_b fname fields = Some e ->
+  In e (map snd fields).
+Proof.
+  intros fname fields.
+  induction fields as [| [fname0 e0] rest IH]; intros e Hlookup;
+    simpl in Hlookup.
+  - discriminate.
+  - destruct (String.eqb fname fname0) eqn:Hname.
+    + injection Hlookup as <-. simpl. left. reflexivity.
+    + simpl. right. eapply IH. exact Hlookup.
+Qed.
+
+Lemma alpha_rename_struct_fields_lookup_exists_forward :
+  forall ρ used fields fieldsr used' fname e,
+  ((fix go (used0 : list ident) (fields0 : list (string * expr))
+      : list (string * expr) * list ident :=
+      match fields0 with
+      | [] => ([], used0)
+      | (fname0, e0) :: rest =>
+          let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+          let (rest', used2) := go used1 rest in
+          ((fname0, e0') :: rest', used2)
+      end) used fields) = (fieldsr, used') ->
+  lookup_field_b fname fields = Some e ->
+  exists er used0 used1,
+    lookup_field_b fname fieldsr = Some er /\
+    alpha_rename_expr ρ used0 e = (er, used1) /\
+    (forall x, In x used -> In x used0).
+Proof.
+  intros ρ used fields.
+  revert used.
+  induction fields as [| [fname0 e0] rest IH]; intros used fieldsr used' fname e
+    Hrename Hlookup; simpl in Hrename, Hlookup.
+  - discriminate.
+  - destruct (alpha_rename_expr ρ used e0) as [e0r used1] eqn:He0.
+    destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+          : list (string * expr) * list ident :=
+          match fields0 with
+          | [] => ([], used0)
+          | (fname1, e1) :: rest1 =>
+              let (e1', used2) := alpha_rename_expr ρ used0 e1 in
+              let (rest', used3) := go used2 rest1 in
+              ((fname1, e1') :: rest', used3)
+          end) used1 rest) as [restr used2] eqn:Hrest.
+    injection Hrename as <- <-.
+    destruct (String.eqb fname fname0) eqn:Hname.
+    + injection Hlookup as <-.
+      exists e0r, used, used1. repeat split.
+      * simpl. rewrite Hname. reflexivity.
+      * exact He0.
+      * intros x Hin. exact Hin.
+    + destruct (IH used1 restr used2 fname e Hrest Hlookup)
+        as [er [used0 [used_tail [Hlookup_r [Hren Hused]]]]].
+      exists er, used0, used_tail. repeat split.
+      * simpl. rewrite Hname. exact Hlookup_r.
+      * exact Hren.
+      * intros x Hin. apply Hused.
+        eapply alpha_rename_expr_used_extends.
+        -- exact He0.
+        -- exact Hin.
+Qed.
+
+Lemma typed_args_env_structural_cons_inv :
+  forall env Ω n Σ e es p ps Σ',
+  typed_args_env_structural env Ω n Σ (e :: es) (p :: ps) Σ' ->
+  exists T_e Σ1,
+    typed_env_structural env Ω n Σ e T_e Σ1 /\
+    ty_compatible_b Ω T_e (param_ty p) = true /\
+    typed_args_env_structural env Ω n Σ1 es ps Σ'.
+Proof.
+  intros env Ω n Σ e es p ps Σ' Htyped.
+  inversion Htyped; subst.
+  exists T_e, Σ1. repeat split; assumption.
+Qed.
+
+Lemma alpha_rename_typed_args_env_structural_forward :
+  forall env Ω n ρ Σ Σr args argsr used used' ps psr Σ',
+  (forall Σa Σb used0 e er used1 T Σa',
+      In e args ->
+      ctx_alpha ρ Σa Σb ->
+      (forall x, In x (ctx_names Σb) -> In x used0) ->
+      (forall x, In x (rename_range ρ) -> In x used0) ->
+      disjoint_names (free_vars_expr e) (rename_range ρ) ->
+      alpha_rename_expr ρ used0 e = (er, used1) ->
+      typed_env_structural env Ω n Σa e T Σa' ->
+      exists Σb',
+        typed_env_structural env Ω n Σb er T Σb' /\
+        ctx_alpha ρ Σa' Σb') ->
+  ctx_alpha ρ Σ Σr ->
+  (forall x, In x (ctx_names Σr) -> In x used) ->
+  (forall x, In x (rename_range ρ) -> In x used) ->
+  disjoint_names
+    ((fix go (args0 : list expr) : list ident :=
+        match args0 with
+        | [] => []
+        | arg :: rest => free_vars_expr arg ++ go rest
+        end) args)
+    (rename_range ρ) ->
+  params_alpha ps psr ->
+  ((fix go (used0 : list ident) (args0 : list expr)
+      : list expr * list ident :=
+      match args0 with
+      | [] => ([], used0)
+      | arg :: rest =>
+          let (arg', used1) := alpha_rename_expr ρ used0 arg in
+          let (rest', used2) := go used1 rest in
+          (arg' :: rest', used2)
+      end) used args) = (argsr, used') ->
+  typed_args_env_structural env Ω n Σ args ps Σ' ->
+  exists Σr',
+    typed_args_env_structural env Ω n Σr argsr psr Σr' /\
+    ctx_alpha ρ Σ' Σr'.
+Proof.
+  intros env Ω n ρ Σ Σr args.
+  revert Σ Σr.
+  induction args as [| arg rest IH]; intros Σ Σr argsr used used' ps psr Σ'
+    Hexpr Hctx Hctx_used Hrange_used Hdisj Hparams Hrename Htyped_args;
+    simpl in Hrename.
+  - injection Hrename as <- <-.
+    inversion Htyped_args; subst.
+    inversion Hparams; subst.
+    exists Σr. split; [constructor | exact Hctx].
+  - destruct (disjoint_names_app_l (free_vars_expr arg)
+      ((fix go (args0 : list expr) : list ident :=
+          match args0 with
+          | [] => []
+          | arg0 :: rest0 => free_vars_expr arg0 ++ go rest0
+          end) rest) (rename_range ρ) Hdisj) as [Hdisj_arg Hdisj_rest].
+    destruct (alpha_rename_expr ρ used arg) as [ar used1] eqn:Harg.
+    destruct ((fix go (used0 : list ident) (args0 : list expr)
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used0)
+          | arg0 :: rest0 =>
+              let (arg', used2) := alpha_rename_expr ρ used0 arg0 in
+              let (rest', used3) := go used2 rest0 in
+              (arg' :: rest', used3)
+          end) used1 rest) as [restr used2] eqn:Hrest.
+    injection Hrename as <- <-.
+    destruct ps as [| p ps_tail].
+    { inversion Htyped_args. }
+    destruct psr as [| pr psr_tail].
+    { inversion Hparams. }
+    destruct (params_alpha_cons_inv (p :: ps_tail) pr psr_tail Hparams)
+      as [p0 [ps0 [Hps [Hshape Hparams_tail]]]].
+    injection Hps as <- <-.
+    destruct (typed_args_env_structural_cons_inv env Ω n Σ arg rest p ps_tail Σ'
+      Htyped_args) as [Targ [Σ1 [Htyped_arg [Hcompat Htyped_tail]]]].
+    destruct (Hexpr Σ Σr used arg ar used1 Targ Σ1)
+      as [Σr1 [Htyped_arg_r Hctx_arg]].
+    + left. reflexivity.
+    + exact Hctx.
+    + exact Hctx_used.
+    + exact Hrange_used.
+    + exact Hdisj_arg.
+    + exact Harg.
+    + exact Htyped_arg.
+    + assert (Hctx_used_tail : forall x, In x (ctx_names Σr1) -> In x used1).
+      { intros x Hin.
+        eapply alpha_rename_expr_used_extends.
+        - exact Harg.
+        - apply Hctx_used.
+          rewrite <- (sctx_same_bindings_names_alpha Σr Σr1).
+          + exact Hin.
+          + eapply typed_env_structural_same_bindings. exact Htyped_arg_r. }
+      assert (Hrange_used_tail : forall x, In x (rename_range ρ) -> In x used1).
+      { intros x Hin.
+        eapply alpha_rename_expr_used_extends.
+        - exact Harg.
+        - apply Hrange_used. exact Hin. }
+      destruct (IH Σ1 Σr1 restr used1 used2 ps_tail psr_tail Σ')
+        as [Σr2 [Htyped_tail_r Hctx_tail]].
+      * intros Σa Σb used0 e er used_tail T Σa' Hin Halpha Hcu Hru Hd Hr Ht.
+        eapply Hexpr.
+        -- right. exact Hin.
+        -- exact Halpha.
+        -- exact Hcu.
+        -- exact Hru.
+        -- exact Hd.
+        -- exact Hr.
+        -- exact Ht.
+      * exact Hctx_arg.
+      * exact Hctx_used_tail.
+      * exact Hrange_used_tail.
+      * exact Hdisj_rest.
+      * exact Hparams_tail.
+      * exact Hrest.
+      * exact Htyped_tail.
+      * exists Σr2. split.
+        -- eapply TESArgs_Cons.
+           ++ exact Htyped_arg_r.
+           ++ destruct Hshape as [_ HT]. simpl in HT. rewrite <- HT.
+              exact Hcompat.
+           ++ exact Htyped_tail_r.
+        -- exact Hctx_tail.
+Qed.
+
+Lemma alpha_rename_typed_fields_env_structural_forward :
+  forall env Ω n ρ lts args_ty Σ Σr fields fieldsr used used' defs Σ',
+  (forall Σa Σb used0 e er used1 T Σa',
+      In e (map snd fields) ->
+      ctx_alpha ρ Σa Σb ->
+      (forall x, In x (ctx_names Σb) -> In x used0) ->
+      (forall x, In x (rename_range ρ) -> In x used0) ->
+      disjoint_names (free_vars_expr e) (rename_range ρ) ->
+      alpha_rename_expr ρ used0 e = (er, used1) ->
+      typed_env_structural env Ω n Σa e T Σa' ->
+      exists Σb',
+        typed_env_structural env Ω n Σb er T Σb' /\
+        ctx_alpha ρ Σa' Σb') ->
+  ctx_alpha ρ Σ Σr ->
+  (forall x, In x (ctx_names Σr) -> In x used) ->
+  (forall x, In x (rename_range ρ) -> In x used) ->
+  disjoint_names
+    ((fix go (fields0 : list (string * expr)) : list ident :=
+        match fields0 with
+        | [] => []
+        | (_, e) :: rest => free_vars_expr e ++ go rest
+        end) fields)
+    (rename_range ρ) ->
+  ((fix go (used0 : list ident) (fields0 : list (string * expr))
+      : list (string * expr) * list ident :=
+      match fields0 with
+      | [] => ([], used0)
+      | (fname, e) :: rest =>
+          let (e', used1) := alpha_rename_expr ρ used0 e in
+          let (rest', used2) := go used1 rest in
+          ((fname, e') :: rest', used2)
+      end) used fields) = (fieldsr, used') ->
+  typed_fields_env_structural env Ω n lts args_ty Σ fields defs Σ' ->
+  exists Σr',
+    typed_fields_env_structural env Ω n lts args_ty Σr fieldsr defs Σr' /\
+    ctx_alpha ρ Σ' Σr'.
+Proof.
+  intros env Ω n ρ lts args_ty Σ Σr fields fieldsr used used' defs Σ'
+    Hexpr Hctx Hctx_used Hrange_used Hdisj Hrename Htyped_fields.
+  revert Σr used fieldsr used' Hctx Hctx_used Hrange_used Hrename.
+  induction Htyped_fields; intros Σr0 used0 fieldsr0 used_out
+    Hctx Hctx_used Hrange_used Hrename.
+  - exists Σr0. split; [constructor | exact Hctx].
+  - destruct (alpha_rename_struct_fields_lookup_exists_forward ρ used0 fields
+      fieldsr0 used_out (Program.field_name f) e_field Hrename H)
+      as [e_fieldr [used_field [used_field_out
+        [Hlookup_r [Hrename_field Hused_prefix]]]]].
+    assert (Hfield_in : In e_field (map snd fields)).
+    { eapply lookup_field_b_in_alpha. exact H. }
+    destruct (Hexpr Σ Σr0 used_field e_field e_fieldr used_field_out
+      T_field Σ1)
+      as [Σr1 [Htyped_field_r Hctx_field]].
+    + exact Hfield_in.
+    + exact Hctx.
+    + intros x Hin. apply Hused_prefix. apply Hctx_used. exact Hin.
+    + intros x Hin. apply Hused_prefix. apply Hrange_used. exact Hin.
+    + clear -H Hdisj.
+      induction fields as [| [fname0 e0] rest IH]; simpl in H, Hdisj.
+      * discriminate.
+      * destruct (String.eqb (Program.field_name f) fname0) eqn:Hname.
+        -- injection H as <-.
+           destruct (disjoint_names_app_l (free_vars_expr e0)
+             ((fix go (fields0 : list (string * expr)) : list ident :=
+                 match fields0 with
+                 | [] => []
+                 | (_, e) :: rest0 => free_vars_expr e ++ go rest0
+                 end) rest) (rename_range ρ) Hdisj) as [Hfield_disj _].
+           exact Hfield_disj.
+        -- destruct (disjoint_names_app_l (free_vars_expr e0)
+             ((fix go (fields0 : list (string * expr)) : list ident :=
+                 match fields0 with
+                 | [] => []
+                 | (_, e) :: rest0 => free_vars_expr e ++ go rest0
+                 end) rest) (rename_range ρ) Hdisj) as [_ Hrest_disj].
+           eapply IH.
+           ++ exact Hrest_disj.
+           ++ exact H.
+    + exact Hrename_field.
+    + exact H0.
+    + assert (Hctx_used_tail : forall x, In x (ctx_names Σr1) -> In x used0).
+      { intros x Hin.
+        apply Hctx_used.
+        rewrite <- (sctx_same_bindings_names_alpha Σr0 Σr1).
+        - exact Hin.
+        - eapply typed_env_structural_same_bindings. exact Htyped_field_r. }
+      destruct (IHHtyped_fields Hexpr Hdisj Σr1 used0 fieldsr0 used_out
+        Hctx_field Hctx_used_tail Hrange_used Hrename)
+        as [Σr2 [Htyped_rest_r Hctx_rest]].
+      exists Σr2. split.
+      * eapply TESFields_Cons.
+        -- exact Hlookup_r.
+        -- exact Htyped_field_r.
+        -- exact H1.
+        -- exact Htyped_rest_r.
+      * exact Hctx_rest.
+Qed.

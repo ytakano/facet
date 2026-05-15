@@ -783,6 +783,51 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma update_value_field_path_exists :
+  forall name fields fv rest v_new fv',
+    lookup_value_field name fields = Some fv ->
+    value_update_path fv rest v_new = Some fv' ->
+    exists fields',
+      update_value_field_path name rest v_new fields = Some fields'.
+Proof.
+  intros name fields.
+  induction fields as [|[field_name field_value] tail IH];
+    intros fv rest v_new fv' Hlookup Hupdate.
+  - discriminate.
+  - simpl in Hlookup |- *.
+    destruct (String.eqb name field_name) eqn:Hname.
+    + inversion Hlookup; subst field_value.
+      rewrite Hupdate.
+      eexists. reflexivity.
+    + destruct (IH fv rest v_new fv' Hlookup Hupdate)
+        as [tail' Htail].
+      rewrite Htail.
+      eexists. reflexivity.
+Qed.
+
+Lemma value_lookup_path_update_exists :
+  forall v path v_old v_new,
+    value_lookup_path v path = Some v_old ->
+    exists v',
+      value_update_path v path v_new = Some v'.
+Proof.
+  intros v path.
+  revert v.
+  induction path as [|seg rest IH]; intros v v_old v_new Hlookup.
+  - destruct v; simpl; eexists; reflexivity.
+  - destruct v; simpl in Hlookup; try discriminate.
+    rewrite lookup_value_field_local in Hlookup.
+    rewrite value_update_path_struct_cons.
+    destruct (lookup_value_field seg l) as [field_value |] eqn:Hfield;
+      try discriminate.
+    destruct (IH field_value v_old v_new Hlookup) as [field_value' Hupdate].
+    destruct (update_value_field_path_exists seg l field_value rest v_new
+                field_value' Hfield Hupdate)
+      as [fields' Hfields].
+    rewrite Hfields.
+    eexists. reflexivity.
+Qed.
+
 Lemma struct_fields_have_type_lookup :
   forall env s lts args fields defs name v fdef,
     struct_fields_have_type env s lts args fields defs ->
@@ -1159,6 +1204,19 @@ Proof.
   - discriminate.
   - simpl in Hlookup |- *.
     destruct (ident_eqb x (se_name entry)); [exact Hlookup |].
+    apply IH. exact Hlookup.
+Qed.
+
+Lemma store_lookup_app_none :
+  forall x entries frame,
+    store_lookup x entries = None ->
+    store_lookup x (entries ++ frame) = store_lookup x frame.
+Proof.
+  intros x entries.
+  induction entries as [|entry rest IH]; intros frame Hlookup.
+  - reflexivity.
+  - simpl in Hlookup |- *.
+    destruct (ident_eqb x (se_name entry)); try discriminate.
     apply IH. exact Hlookup.
 Qed.
 
@@ -2169,6 +2227,81 @@ Proof.
         -- exists frame'. split; [exact Hframe | reflexivity].
 Qed.
 
+Lemma store_update_val_lookup_none :
+  forall x v entries entries' y,
+    store_update_val x v entries = Some entries' ->
+    store_lookup y entries = None ->
+    store_lookup y entries' = None.
+Proof.
+  intros x v entries.
+  revert x v.
+  induction entries as [|se rest IH]; intros x v entries' y Hupdate Hlookup.
+  - discriminate.
+  - destruct se as [sx sT sv sst].
+    simpl in Hupdate, Hlookup |- *.
+    destruct (ident_eqb x sx) eqn:Hsx.
+    + inversion Hupdate; subst entries'.
+      simpl.
+      destruct (ident_eqb y sx); try discriminate.
+      exact Hlookup.
+    + remember (store_update_val x v rest) as updated eqn:Htail.
+      symmetry in Htail.
+      destruct updated as [rest' |]; try discriminate.
+      inversion Hupdate; subst entries'.
+      destruct (ident_eqb y sx) eqn:Hy; try discriminate.
+      simpl. rewrite Hy. exact (IH x v rest' y Htail Hlookup).
+Qed.
+
+Lemma store_update_path_lookup_none :
+  forall x path v_new entries entries' y,
+    store_update_path x path v_new entries = Some entries' ->
+    store_lookup y entries = None ->
+    store_lookup y entries' = None.
+Proof.
+  intros x path v_new entries.
+  revert x path v_new.
+  induction entries as [|se rest IH];
+    intros x path v_new entries' y Hupdate Hlookup.
+  - discriminate.
+  - destruct se as [sx sT sv sst].
+    simpl in Hupdate, Hlookup |- *.
+    destruct (ident_eqb x sx) eqn:Hsx.
+    + destruct (value_update_path sv path v_new) as [v_root |]
+        eqn:Hvalue; try discriminate.
+      inversion Hupdate; subst entries'.
+      simpl.
+      destruct (ident_eqb y sx); try discriminate.
+      exact Hlookup.
+    + remember (store_update_path x path v_new rest) as updated eqn:Htail.
+      symmetry in Htail.
+      destruct updated as [rest' |]; try discriminate.
+      inversion Hupdate; subst entries'.
+      destruct (ident_eqb y sx) eqn:Hy; try discriminate.
+      simpl. rewrite Hy. exact (IH x path v_new rest' y Htail Hlookup).
+Qed.
+
+Lemma store_update_path_exists_from_lookup :
+  forall x path v_new entries se v_root,
+    store_lookup x entries = Some se ->
+    value_update_path (se_val se) path v_new = Some v_root ->
+    exists entries',
+      store_update_path x path v_new entries = Some entries'.
+Proof.
+  intros x path v_new entries.
+  induction entries as [|entry rest IH]; intros se v_root Hlookup Hvalue.
+  - discriminate.
+  - destruct entry as [sx sT sv sst].
+    simpl in Hlookup |- *.
+    destruct (ident_eqb x sx) eqn:Hsx.
+    + inversion Hlookup; subst se.
+      simpl in Hvalue.
+      rewrite Hvalue.
+      eexists. reflexivity.
+    + destruct (IH se v_root Hlookup Hvalue) as [rest' Hrest].
+      rewrite Hrest.
+      eexists. reflexivity.
+Qed.
+
 Lemma store_typed_prefix_update_state :
   forall env s Σ x f s' Σ',
     store_typed_prefix env s Σ ->
@@ -3088,6 +3221,117 @@ Lemma store_update_path_ref_targets_preserved :
 Proof.
   intros env s Σ x path_update v_new T_update s' Htyped Htarget Hvnew Hupdate.
   eapply store_update_path_ref_targets_preserved_entries; eassumption.
+Qed.
+
+Lemma store_update_val_ref_targets_preserved_prefix :
+  forall env s Σ x v T st s',
+    store_typed_prefix env s Σ ->
+    sctx_lookup x Σ = Some (T, st) ->
+    value_has_type env s v T ->
+    store_update_val x v s = Some s' ->
+    store_ref_targets_preserved env s s'.
+Proof.
+  intros env s Σ x v T st s' Htyped HΣ Hv Hupdate.
+  unfold store_typed_prefix in Htyped.
+  destruct Htyped as [entries [frame [Hs Hentries]]].
+  subst s.
+  destruct (store_update_val_prefix_hit env (entries ++ frame)
+    entries Σ frame x v T st s' Hentries HΣ Hupdate)
+    as [entries' [Hentries_update Hs']].
+  subst s'.
+  pose proof (store_update_val_ref_targets_preserved_entries
+    env (entries ++ frame) entries Σ x v T st entries'
+    Hentries HΣ Hv Hentries_update) as Hpres_entries.
+  unfold store_ref_targets_preserved in *.
+  intros y path se_old v_old T_path Hlookup Hvalue Htype.
+  destruct (store_lookup y entries) as [se_entries |] eqn:Hentries_lookup.
+  - assert (se_entries = se_old) as ->.
+    { pose proof (store_lookup_app_some y entries frame se_entries
+        Hentries_lookup) as Happ.
+      rewrite Hlookup in Happ.
+      inversion Happ. reflexivity. }
+    destruct (Hpres_entries y path se_old v_old T_path
+      Hentries_lookup Hvalue Htype)
+      as [se' [v' [Hlookup' [Hvalue' Htype']]]].
+    exists se', v'.
+    repeat split; try assumption.
+    apply store_lookup_app_some. exact Hlookup'.
+  - pose proof (store_lookup_app_none y entries frame Hentries_lookup)
+      as Hsource_app.
+    rewrite Hsource_app in Hlookup.
+    assert (Hentries'_lookup : store_lookup y entries' = None).
+    { eapply store_update_val_lookup_none; eassumption. }
+    exists se_old, v_old.
+    repeat split; try assumption.
+    rewrite (store_lookup_app_none y entries' frame Hentries'_lookup).
+    exact Hlookup.
+Qed.
+
+Lemma store_update_path_ref_targets_preserved_prefix :
+  forall env s Σ x path_update v_new T_update s',
+    store_typed_prefix env s Σ ->
+    (exists T_root st,
+      sctx_lookup x Σ = Some (T_root, st) /\
+      type_lookup_path env T_root path_update = Some T_update) ->
+    value_has_type env s v_new T_update ->
+    store_update_path x path_update v_new s = Some s' ->
+    store_ref_targets_preserved env s s'.
+Proof.
+  intros env s Σ x path_update v_new T_update s'
+    Htyped Htarget Hvnew Hupdate.
+  unfold store_typed_prefix in Htyped.
+  destruct Htyped as [entries [frame [Hs Hentries]]].
+  subst s.
+  destruct Htarget as [T_root [st [HΣ Htype_update]]].
+  assert (Htarget_entries :
+    exists T_root0 st0,
+      sctx_lookup x Σ = Some (T_root0, st0) /\
+      type_lookup_path env T_root0 path_update = Some T_update).
+  { exists T_root, st. split; assumption. }
+  destruct (store_update_path_prefix_split x path_update v_new entries frame
+    s' Hupdate)
+    as [[entries' [Hentries_update Hs']]
+       | [Hentries_none [frame' [Hframe_update Hs']]]].
+  - subst s'.
+    pose proof (store_update_path_ref_targets_preserved_entries
+      env (entries ++ frame) entries Σ x path_update v_new T_update entries'
+      Hentries Htarget_entries Hvnew Hentries_update) as Hpres_entries.
+    unfold store_ref_targets_preserved in *.
+    intros y path se_old v_old T_path Hlookup Hvalue Htype.
+    destruct (store_lookup y entries) as [se_entries |] eqn:Hentries_lookup.
+    + assert (se_entries = se_old) as ->.
+      { pose proof (store_lookup_app_some y entries frame se_entries
+          Hentries_lookup) as Happ.
+        rewrite Hlookup in Happ.
+        inversion Happ. reflexivity. }
+      destruct (Hpres_entries y path se_old v_old T_path
+        Hentries_lookup Hvalue Htype)
+        as [se' [v' [Hlookup' [Hvalue' Htype']]]].
+      exists se', v'.
+      repeat split; try assumption.
+      apply store_lookup_app_some. exact Hlookup'.
+    + pose proof (store_lookup_app_none y entries frame Hentries_lookup)
+        as Hsource_app.
+      rewrite Hsource_app in Hlookup.
+      assert (Hentries'_lookup : store_lookup y entries' = None).
+      { eapply store_update_path_lookup_none; eassumption. }
+      exists se_old, v_old.
+      repeat split; try assumption.
+      rewrite (store_lookup_app_none y entries' frame Hentries'_lookup).
+      exact Hlookup.
+  - destruct (store_typed_lookup_sctx_entries
+      env (entries ++ frame) entries Σ x T_root st Hentries HΣ)
+      as [se [Hstore [Hname [HT [Href Hse]]]]].
+    destruct (value_has_type_path_exists env (entries ++ frame)
+      (se_val se) T_root path_update T_update Hse Htype_update)
+      as [v_old [Hvalue_old Hv_old]].
+    destruct (value_lookup_path_update_exists
+      (se_val se) path_update v_old v_new Hvalue_old)
+      as [v_root Hvalue_update].
+    destruct (store_update_path_exists_from_lookup x path_update v_new
+      entries se v_root Hstore Hvalue_update)
+      as [entries' Hentries_update].
+    rewrite Hentries_update in Hentries_none. discriminate.
 Qed.
 
 Lemma store_typed_update_path_typed :

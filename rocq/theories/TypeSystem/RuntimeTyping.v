@@ -2676,6 +2676,41 @@ Proof.
   eapply store_typed_ctx_merge_right_entries; eassumption.
 Qed.
 
+Lemma store_typed_prefix_ctx_merge_left :
+  forall env s Σ2 Σ3 Σ4,
+    store_typed_prefix env s Σ2 ->
+    ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
+    store_typed_prefix env s Σ4.
+Proof.
+  intros env s Σ2 Σ3 Σ4 Htyped Hmerge.
+  unfold store_typed_prefix in Htyped.
+  destruct Htyped as [entries [frame [Hs Hentries]]].
+  unfold store_typed_prefix.
+  exists entries, frame.
+  split; [exact Hs |].
+  eapply store_typed_ctx_merge_left_entries; eassumption.
+Qed.
+
+Lemma store_typed_prefix_ctx_merge_right :
+  forall env s Σ2 Σ3 Σ4,
+    store_typed_prefix env s Σ3 ->
+    Forall2
+      (fun ce2 ce3 =>
+        match ce2, ce3 with
+        | (_, T2, _, _), (_, T3, _, _) => T2 = T3
+        end) Σ2 Σ3 ->
+    ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
+    store_typed_prefix env s Σ4.
+Proof.
+  intros env s Σ2 Σ3 Σ4 Htyped Htypes Hmerge.
+  unfold store_typed_prefix in Htyped.
+  destruct Htyped as [entries [frame [Hs Hentries]]].
+  unfold store_typed_prefix.
+  exists entries, frame.
+  split; [exact Hs |].
+  eapply store_typed_ctx_merge_right_entries; eassumption.
+Qed.
+
 Lemma type_lookup_path_compatible :
   forall env Ω T_actual T_expected path T_path,
     ty_compatible Ω T_actual T_expected ->

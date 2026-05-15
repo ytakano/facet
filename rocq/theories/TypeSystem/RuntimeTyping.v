@@ -1609,6 +1609,378 @@ Proof.
   eapply store_typed_update_path_entries; eassumption.
 Qed.
 
+Lemma store_update_state_prefix_hit :
+  forall env s_param entries Σ frame x f s' Σ',
+    Forall2 (store_entry_typed env s_param) entries Σ ->
+    store_update_state x f (entries ++ frame) = Some s' ->
+    sctx_update_state x f Σ = Some Σ' ->
+    exists entries',
+      store_update_state x f entries = Some entries' /\
+      s' = entries' ++ frame.
+Proof.
+  intros env s_param entries Σ frame x f s' Σ' Htyped.
+  revert s' Σ'.
+  induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH];
+    intros s' Σ' Hs HΣ.
+  - discriminate.
+  - destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [Hst Hv]]].
+    simpl in Hs, HΣ.
+    destruct (ident_eqb x sx) eqn:Hsx;
+      destruct (ident_eqb x cx) eqn:Hcx.
+    + inversion Hs; subst s'.
+      inversion HΣ; subst Σ'.
+      exists (MkStoreEntry sx sT sv (f sst) :: s_tail).
+      split; [simpl; rewrite Hsx; reflexivity | reflexivity].
+    + apply ident_eqb_eq in Hsx. apply ident_eqb_neq in Hcx. subst sx.
+      contradiction.
+    + apply ident_eqb_neq in Hsx. apply ident_eqb_eq in Hcx.
+      subst cx. exfalso. apply Hsx. exact Hcx.
+    + destruct (store_update_state x f (s_tail ++ frame)) as [s_tail' |]
+        eqn:Hs_tail; try discriminate.
+      destruct (sctx_update_state x f Σ_tail) as [Σ_tail' |]
+        eqn:HΣ_tail; try discriminate.
+      inversion Hs; subst s'.
+      inversion HΣ; subst Σ'.
+      destruct (IH s_tail' Σ_tail' eq_refl eq_refl)
+        as [entries' [Hentries Hs']].
+      subst s_tail'.
+      exists (MkStoreEntry sx sT sv sst :: entries').
+      split.
+      * simpl. rewrite Hsx. rewrite Hentries. reflexivity.
+      * reflexivity.
+Qed.
+
+Lemma store_update_restore_available_prefix_hit :
+  forall env s_param entries Σ frame x p T st s' Σ',
+    Forall2 (store_entry_typed env s_param) entries Σ ->
+    sctx_lookup x Σ = Some (T, st) ->
+    store_update_state x (state_restore_path p) (entries ++ frame) = Some s' ->
+    sctx_update_state x (state_restore_path p) Σ = Some Σ' ->
+    exists entries',
+      store_update_state x (state_restore_path p) entries = Some entries' /\
+      s' = entries' ++ frame.
+Proof.
+  intros env s_param entries Σ frame x p T st s' Σ'
+    Htyped Hlookup Hs HΣ.
+  eapply store_update_state_prefix_hit; eassumption.
+Qed.
+
+Lemma store_mark_used_prefix_hit :
+  forall env s_param entries Σ frame x Σ',
+    Forall2 (store_entry_typed env s_param) entries Σ ->
+    sctx_update_state x (state_consume_path []) Σ = Some Σ' ->
+    store_mark_used x (entries ++ frame) = store_mark_used x entries ++ frame.
+Proof.
+  intros env s_param entries Σ frame x Σ' Htyped.
+  revert Σ'.
+  induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH]; intros Σ' HΣ.
+  - discriminate.
+  - destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [Hst Hv]]].
+    simpl in HΣ.
+    simpl.
+    destruct (ident_eqb x sx) eqn:Hsx;
+      destruct (ident_eqb x cx) eqn:Hcx.
+    + reflexivity.
+    + apply ident_eqb_eq in Hsx. apply ident_eqb_neq in Hcx. subst sx.
+      contradiction.
+    + apply ident_eqb_neq in Hsx. apply ident_eqb_eq in Hcx.
+      subst cx. exfalso. apply Hsx. exact Hcx.
+    + destruct (sctx_update_state x (state_consume_path []) Σ_tail)
+        as [Σ_tail' |] eqn:HΣ_tail; try discriminate.
+      rewrite (IH Σ_tail' eq_refl).
+      reflexivity.
+Qed.
+
+Lemma store_update_val_prefix_hit :
+  forall env s_param entries Σ frame x v T st s',
+    Forall2 (store_entry_typed env s_param) entries Σ ->
+    sctx_lookup x Σ = Some (T, st) ->
+    store_update_val x v (entries ++ frame) = Some s' ->
+    exists entries',
+      store_update_val x v entries = Some entries' /\
+      s' = entries' ++ frame.
+Proof.
+  intros env s_param entries Σ frame x v T st s' Htyped.
+  revert s' T st.
+  induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH];
+    intros s' T st Hlookup Hupdate.
+  - discriminate.
+  - destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [Hst Hv]]].
+    simpl in Hlookup, Hupdate.
+    destruct (ident_eqb x sx) eqn:Hsx;
+      destruct (ident_eqb x cx) eqn:Hcx.
+    + inversion Hupdate; subst s'.
+      exists (MkStoreEntry sx sT v sst :: s_tail).
+      split; [simpl; rewrite Hsx; reflexivity | reflexivity].
+    + apply ident_eqb_eq in Hsx. apply ident_eqb_neq in Hcx. subst sx.
+      contradiction.
+    + apply ident_eqb_neq in Hsx. apply ident_eqb_eq in Hcx.
+      subst cx. exfalso. apply Hsx. exact Hcx.
+    + destruct (store_update_val x v (s_tail ++ frame)) as [s_tail' |]
+        eqn:Htail_update; try discriminate.
+      inversion Hupdate; subst s'.
+      destruct (IH s_tail' T st Hlookup eq_refl)
+        as [entries' [Hentries Hs']].
+      subst s_tail'.
+      exists (MkStoreEntry sx sT sv sst :: entries').
+      split.
+      * simpl. rewrite Hsx. rewrite Hentries. reflexivity.
+      * reflexivity.
+Qed.
+
+Lemma store_update_path_prefix_split :
+  forall x path v_new entries frame s',
+    store_update_path x path v_new (entries ++ frame) = Some s' ->
+    (exists entries',
+      store_update_path x path v_new entries = Some entries' /\
+      s' = entries' ++ frame) \/
+    (store_update_path x path v_new entries = None /\
+     exists frame',
+       store_update_path x path v_new frame = Some frame' /\
+       s' = entries ++ frame').
+Proof.
+  intros x path v_new entries.
+  induction entries as [|se s_tail IH]; intros frame s' Hupdate.
+  - right.
+    split; [reflexivity |].
+    exists s'. split; [exact Hupdate | reflexivity].
+  - simpl in Hupdate.
+    destruct se as [sx sT sv sst].
+    simpl in Hupdate.
+    destruct (ident_eqb x sx) eqn:Hsx.
+    + destruct (value_update_path sv path v_new) as [v_root |]
+        eqn:Hvalue; try discriminate.
+      inversion Hupdate; subst s'.
+      left.
+      exists (MkStoreEntry sx sT v_root sst :: s_tail).
+      split; [simpl; rewrite Hsx; rewrite Hvalue; reflexivity | reflexivity].
+    + destruct (store_update_path x path v_new (s_tail ++ frame))
+        as [s_tail_frame' |] eqn:Htail; try discriminate.
+      inversion Hupdate; subst s'.
+      destruct (IH frame s_tail_frame' Htail)
+        as [[entries' [Hentries Hs']]
+           | [Hentries_none [frame' [Hframe Hs']]]].
+      * subst s_tail_frame'.
+        left.
+        exists (MkStoreEntry sx sT sv sst :: entries').
+        split.
+        -- simpl. rewrite Hsx. rewrite Hentries. reflexivity.
+        -- reflexivity.
+      * subst s_tail_frame'.
+        right.
+        split.
+        -- simpl. rewrite Hsx. rewrite Hentries_none. reflexivity.
+        -- exists frame'. split; [exact Hframe | reflexivity].
+Qed.
+
+Lemma store_typed_prefix_update_state :
+  forall env s Σ x f s' Σ',
+    store_typed_prefix env s Σ ->
+    (forall runtime static,
+      binding_state_refines runtime static ->
+      binding_state_refines (f runtime) (f static)) ->
+    store_update_state x f s = Some s' ->
+    sctx_update_state x f Σ = Some Σ' ->
+    store_typed_prefix env s' Σ'.
+Proof.
+  intros env s Σ x f s' Σ' Htyped Hrefines Hs HΣ.
+  unfold store_typed_prefix in Htyped.
+  destruct Htyped as [entries [frame [Hs_eq Hentries]]].
+  subst s.
+  destruct (store_update_state_prefix_hit env (entries ++ frame)
+    entries Σ frame x f s' Σ' Hentries Hs HΣ)
+    as [entries' [Hentries_update Hs']].
+  subst s'.
+  unfold store_typed_prefix.
+  exists entries', frame.
+  split; [reflexivity |].
+  eapply store_typed_update_state_entries.
+  - exact Hentries.
+  - eapply store_update_state_ref_targets_preserved.
+    exact Hs.
+  - exact Hrefines.
+  - exact Hentries_update.
+  - exact HΣ.
+Qed.
+
+Lemma store_typed_prefix_restore_path :
+  forall env s Σ x p s' Σ',
+    store_typed_prefix env s Σ ->
+    (forall runtime static,
+      binding_state_refines runtime static ->
+      binding_state_refines
+        (state_restore_path p runtime)
+        (state_restore_path p static)) ->
+    store_restore_path x p s = Some s' ->
+    sctx_restore_path Σ x p = infer_ok Σ' ->
+    store_typed_prefix env s' Σ'.
+Proof.
+  intros env s Σ x p s' Σ' Htyped Hrestore_refines Hs HΣ.
+  unfold store_restore_path in Hs.
+  unfold sctx_restore_path in HΣ.
+  destruct (sctx_update_state x (state_restore_path p) Σ) as [Σ0 |] eqn:Hupdate;
+    try discriminate.
+  inversion HΣ; subst Σ0.
+  eapply store_typed_prefix_update_state; eassumption.
+Qed.
+
+Lemma store_typed_prefix_restore_available_path :
+  forall env s Σ x p T st s' Σ',
+    store_typed_prefix env s Σ ->
+    sctx_lookup x Σ = Some (T, st) ->
+    binding_available_b st p = true ->
+    store_restore_path x p s = Some s' ->
+    sctx_restore_path Σ x p = infer_ok Σ' ->
+    store_typed_prefix env s' Σ'.
+Proof.
+  intros env s Σ x p T st s' Σ' Htyped Hlookup Havailable Hs HΣ.
+  unfold store_restore_path in Hs.
+  unfold sctx_restore_path in HΣ.
+  destruct (sctx_update_state x (state_restore_path p) Σ) as [Σ0 |] eqn:Hupdate;
+    try discriminate.
+  inversion HΣ; subst Σ0.
+  unfold store_typed_prefix in Htyped.
+  destruct Htyped as [entries [frame [Hs_eq Hentries]]].
+  subst s.
+  destruct (store_update_restore_available_prefix_hit env (entries ++ frame)
+    entries Σ frame x p T st s' Σ' Hentries Hlookup Hs Hupdate)
+    as [entries' [Hentries_update Hs']].
+  subst s'.
+  unfold store_typed_prefix.
+  exists entries', frame.
+  split; [reflexivity |].
+  eapply store_typed_update_restore_available_entries.
+  - exact Hentries.
+  - eapply store_update_state_ref_targets_preserved.
+    exact Hs.
+  - exact Hlookup.
+  - exact Havailable.
+  - exact Hentries_update.
+  - exact Hupdate.
+Qed.
+
+Lemma store_typed_prefix_consume_path :
+  forall env s Σ x p s' Σ',
+    store_typed_prefix env s Σ ->
+    store_consume_path x p s = Some s' ->
+    sctx_consume_path Σ x p = infer_ok Σ' ->
+    store_typed_prefix env s' Σ'.
+Proof.
+  intros env s Σ x p s' Σ' Htyped Hs HΣ.
+  unfold store_consume_path in Hs.
+  unfold sctx_consume_path, sctx_path_available in HΣ.
+  destruct (store_lookup x s) as [se |] eqn:Hslookup; try discriminate.
+  destruct (sctx_lookup x Σ) as [[T st] |] eqn:HΣlookup; try discriminate.
+  destruct (binding_available_b (se_state se) p) eqn:Hsavailable; try discriminate.
+  destruct (binding_available_b st p) eqn:HΣavailable; try discriminate.
+  destruct (sctx_update_state x (state_consume_path p) Σ) as [Σ0 |]
+    eqn:Hupdate; try discriminate.
+  inversion HΣ; subst Σ0.
+  eapply store_typed_prefix_update_state.
+  - exact Htyped.
+  - intros runtime static Href.
+    apply binding_state_refines_consume_path. exact Href.
+  - exact Hs.
+  - exact Hupdate.
+Qed.
+
+Lemma store_typed_prefix_mark_used :
+  forall env s Σ x Σ',
+    store_typed_prefix env s Σ ->
+    sctx_update_state x (state_consume_path []) Σ = Some Σ' ->
+    store_typed_prefix env (store_mark_used x s) Σ'.
+Proof.
+  intros env s Σ x Σ' Htyped HΣ.
+  unfold store_typed_prefix in Htyped.
+  destruct Htyped as [entries [frame [Hs Hentries]]].
+  subst s.
+  rewrite (store_mark_used_prefix_hit env (entries ++ frame)
+    entries Σ frame x Σ' Hentries HΣ).
+  unfold store_typed_prefix.
+  exists (store_mark_used x entries), frame.
+  split; [reflexivity |].
+  eapply store_typed_mark_used_entries.
+  - exact Hentries.
+  - rewrite <- (store_mark_used_prefix_hit env (entries ++ frame)
+      entries Σ frame x Σ' Hentries HΣ).
+    apply store_mark_used_ref_targets_preserved.
+  - exact HΣ.
+Qed.
+
+Lemma store_typed_prefix_update_val :
+  forall env s Σ x v T st s',
+    store_typed_prefix env s Σ ->
+    store_ref_targets_preserved env s s' ->
+    sctx_lookup x Σ = Some (T, st) ->
+    value_has_type env s v T ->
+    store_update_val x v s = Some s' ->
+    store_typed_prefix env s' Σ.
+Proof.
+  intros env s Σ x v T st s' Htyped Hpres Hlookup Hv Hupdate.
+  unfold store_typed_prefix in Htyped.
+  destruct Htyped as [entries [frame [Hs Hentries]]].
+  subst s.
+  destruct (store_update_val_prefix_hit env (entries ++ frame)
+    entries Σ frame x v T st s' Hentries Hlookup Hupdate)
+    as [entries' [Hentries_update Hs']].
+  subst s'.
+  unfold store_typed_prefix.
+  exists entries', frame.
+  split; [reflexivity |].
+  eapply store_typed_update_val_entries; eassumption.
+Qed.
+
+Lemma store_typed_prefix_update_path :
+  forall env s Σ x path v_new s',
+    store_typed_prefix env s Σ ->
+    store_ref_targets_preserved env s s' ->
+    (forall se T st,
+      store_lookup x s = Some se ->
+      sctx_lookup x Σ = Some (T, st) ->
+      forall v_root,
+        value_update_path (se_val se) path v_new = Some v_root ->
+        value_has_type env s v_root T) ->
+    store_update_path x path v_new s = Some s' ->
+    store_typed_prefix env s' Σ.
+Proof.
+  intros env s Σ x path v_new s' Htyped Hpres Hroot Hupdate.
+  unfold store_typed_prefix in Htyped.
+  destruct Htyped as [entries [frame [Hs Hentries]]].
+  subst s.
+  destruct (store_update_path_prefix_split x path v_new entries frame s' Hupdate)
+    as [[entries' [Hentries_update Hs']]
+       | [Hentries_none [frame' [Hframe_update Hs']]]].
+  - subst s'.
+    unfold store_typed_prefix.
+    exists entries', frame.
+    split; [reflexivity |].
+    eapply store_typed_update_path_entries.
+    + exact Hentries.
+    + exact Hpres.
+    + intros se T st Hlookup HΣ v_root Hvalue.
+      eapply Hroot.
+      * apply store_lookup_app_some. exact Hlookup.
+      * exact HΣ.
+      * exact Hvalue.
+    + exact Hentries_update.
+  - subst s'.
+    unfold store_typed_prefix.
+    exists entries, frame'.
+    split; [reflexivity |].
+    eapply store_typed_store_param_preserved.
+    + exact Hentries.
+    + exact Hpres.
+Qed.
+
 Lemma store_typed_ctx_merge_left_entries :
   forall env s_param entries Σ2 Σ3 Σ4,
     Forall2 (store_entry_typed env s_param) entries Σ2 ->

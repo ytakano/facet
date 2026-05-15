@@ -624,6 +624,17 @@ Proof.
   - exact Halpha_r.
 Qed.
 
+Lemma ctx_alpha_add_fresh_forward : forall ρ Γ Γr x xr T m,
+  ctx_alpha ρ Γ Γr ->
+  ~ In xr (ctx_names Γr) ->
+  ~ In xr (rename_range ρ) ->
+  ctx_alpha ((x, xr) :: ρ)
+    (sctx_add x T m Γ) (sctx_add xr T m Γr).
+Proof.
+  intros ρ Γ Γr x xr T m Halpha Hfresh_ctx Hfresh_range.
+  unfold sctx_add, ctx_add. constructor; assumption.
+Qed.
+
 Lemma ctx_alpha_remove_head : forall ρ Γ Γr x xr T b m,
   ctx_alpha ρ Γ Γr ->
   ctx_alpha ρ

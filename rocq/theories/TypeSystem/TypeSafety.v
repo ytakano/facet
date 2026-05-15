@@ -114,6 +114,39 @@ Proof.
   exists st. exact Hlookup.
 Qed.
 
+Lemma eval_place_direct_runtime_target_exists :
+  forall env Σ s p T x_static path_static x_eval path_eval,
+    store_typed env s Σ ->
+    typed_place_env_structural env Σ p T ->
+    place_path p = Some (x_static, path_static) ->
+    eval_place s p x_eval path_eval ->
+    exists se v_target,
+      store_lookup x_eval s = Some se /\
+      value_lookup_path (se_val se) path_eval = Some v_target /\
+      type_lookup_path env (se_ty se) path_eval = Some T.
+Proof.
+  intros env Σ s p T x_static path_static x_eval path_eval
+    Hstore Hplace Hpath_static Heval_place.
+  destruct (eval_place_matches_place_path s p x_eval path_eval
+              x_static path_static Heval_place Hpath_static)
+    as [Hx Hpath].
+  subst x_eval path_eval.
+  destruct (typed_place_direct_lookup env Σ p T x_static path_static
+              Hplace Hpath_static)
+    as [T_root [st [HΣ [_ Htype_path]]]].
+  destruct (store_typed_lookup_sctx env s Σ x_static T_root st Hstore HΣ)
+    as [se [Hlookup [_ [Hse_ty [_ Hvroot]]]]].
+  assert (Hvroot_se : value_has_type env s (se_val se) (se_ty se)).
+  { rewrite Hse_ty. exact Hvroot. }
+  assert (Htype_path_se : type_lookup_path env (se_ty se) path_static = Some T).
+  { rewrite Hse_ty. exact Htype_path. }
+  destruct (value_has_type_path_exists env s (se_val se) (se_ty se)
+              path_static T Hvroot_se Htype_path_se)
+    as [v_target [Hvalue_path _]].
+  exists se, v_target.
+  repeat split; assumption.
+Qed.
+
 Lemma sctx_path_available_success :
   forall Σ x path,
     sctx_path_available Σ x path = infer_ok tt ->
@@ -402,6 +435,9 @@ Inductive preservation_ready_expr : expr -> Prop :=
   | PRE_Place_Direct : forall p x path,
       place_path p = Some (x, path) ->
       preservation_ready_expr (EPlace p)
+  | PRE_Borrow : forall rk p x path,
+      place_path p = Some (x, path) ->
+      preservation_ready_expr (EBorrow rk p)
   | PRE_Struct : forall sname lts args fields,
       preservation_ready_fields fields ->
       preservation_ready_expr (EStruct sname lts args fields)
@@ -1611,29 +1647,56 @@ Proof.
     + exact Hpres.
   - intros s s1 s2 s3 x old_e e_new v_new Hlookup Heval_new
       IHnew Hupdate Hrestore Ω n Σ T Σ' Hready Hstore Htyped.
-    remember (EReplace (PVar x) e_new) as e_replace eqn:Heq.
-    change (preservation_ready_expr e_replace) in Hready.
-    destruct Hready; discriminate.
+    inversion Hready.
   - intros s s1 s2 x old_e e_new v_new Hlookup Heval_new
       IHnew Hupdate Ω n Σ T Σ' Hready Hstore Htyped.
-    remember (EAssign (PVar x) e_new) as e_assign eqn:Heq.
-    change (preservation_ready_expr e_assign) in Hready.
-    destruct Hready; discriminate.
+    inversion Hready.
   - intros s s1 s2 s3 p x_eval path_eval old_v e_new v_new
       Heval_place Hlookup_old Heval_new IHnew Hupdate Hrestore
       Ω n Σ T Σ' Hready Hstore Htyped.
-    remember (EReplace p e_new) as e_replace eqn:Heq.
-    change (preservation_ready_expr e_replace) in Hready.
-    destruct Hready; discriminate.
+    inversion Hready.
   - intros s s1 s2 p x_eval path_eval e_new v_new Heval_place
       Heval_new IHnew Hupdate Ω n Σ T Σ' Hready Hstore Htyped.
-    remember (EAssign p e_new) as e_assign eqn:Heq.
-    change (preservation_ready_expr e_assign) in Hready.
-    destruct Hready; discriminate.
+    inversion Hready.
   - intros s p x path rk Heval_place Ω n Σ T Σ' Hready Hstore Htyped.
-    remember (EBorrow rk p) as e_borrow eqn:Heq.
-    change (preservation_ready_expr e_borrow) in Hready.
-    destruct Hready; discriminate.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    + match goal with
+      | Hstore0 : store_typed env s ?Σ0,
+        Hplace : typed_place_env_structural env ?Σ0 p ?T_place,
+        Hpath : place_path p = Some (?x_static, ?path_static) |- _ =>
+          destruct (eval_place_direct_runtime_target_exists
+                      env Σ0 s p T_place x_static path_static x path
+                      Hstore0 Hplace Hpath Heval_place)
+            as [se [v_target [Hlookup [Hvalue Htype_eval]]]];
+          destruct (eval_borrow_shared_preserves_typing
+                      env Ω n Σ0 s p T_place x path se v_target
+                      Hstore0 Hplace Heval_place Hlookup Htype_eval Hvalue)
+            as [Hstore' Hv];
+          repeat split; try assumption;
+          apply store_ref_targets_preserved_refl
+      end.
+    + match goal with
+      | Hstore0 : store_typed env s ?Σ0,
+        Hplace : typed_place_env_structural env ?Σ0 p ?T_place,
+        Hpath : place_path p = Some (?x_static, ?path_static),
+        Hmut : sctx_lookup_mut ?x_static ?Σ0 = Some MMutable |- _ =>
+          destruct (eval_place_direct_runtime_target_exists
+                      env Σ0 s p T_place x_static path_static x path
+                      Hstore0 Hplace Hpath Heval_place)
+            as [se [v_target [Hlookup [Hvalue Htype_eval]]]];
+          destruct (eval_borrow_unique_preserves_typing
+                      env Ω n Σ0 s p T_place x_static path_static x path
+                      se v_target Hstore0 Hplace Hpath Hmut Heval_place
+                      Hlookup Htype_eval Hvalue)
+            as [Hstore' Hv];
+          repeat split; try assumption;
+          apply store_ref_targets_preserved_refl
+      end.
+    + match goal with
+      | Hsome : place_path p = Some _, Hnone : place_path p = None |- _ =>
+          rewrite Hsome in Hnone; discriminate
+      end.
   - intros s r p x path se v T_eval Hplace Heval_place Hlookup Hvalue
       Htype_eval Husage Ω n Σ T Σ' Hready _ _.
     inversion Hready.

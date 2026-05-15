@@ -105,7 +105,7 @@ Theorem step_progress :
    - `[done]` `eval`, `eval_args`, `eval_struct_fields` の相互 induction で ready subset 用の `eval_preserves_typing_ready_mutual` を証明済み（`4947081`）。強化後は各 branch が `store_ref_targets_preserved` も返す形に更新済み。
    - `[done]` `VHT_Ref` を強化し、`VRef x path` が `store_lookup x s`、`value_lookup_path`、`type_lookup_path` で実在する runtime target を指すことを要求するようにした。これに伴い、古い `value_has_type_store_irrelevant` は削除し、`store_ref_targets_preserved` 前提付きの `value_has_type_store_preserved` に置き換えた。
    - `[done]` `store_update_state` / `store_mark_used` / restore 系の state-only 更新が `store_ref_targets_preserved` を満たす補題を追加済み。
-   - `[partial]` direct `assign` / `replace` / `let` / borrow は、強化後の reference preservation obligation を露出する形に補題を弱めた。`assign` / `replace` の update obligation と bridge lemma の `store_ref_targets_preserved` result は解消済み。ただし ready subset への再接続は、相互 induction の IH が具体的な RHS 評価 derivation に対するものなのに対し、bridge lemma callback が任意の RHS 評価へ一般化されているため、bridge lemma の shape を具体的 derivation 向けに分ける必要がある。
+   - `[partial]` direct `assign` / `replace` / `let` は、強化後の reference preservation obligation を露出する形に補題を弱めた。`assign` / `replace` の update obligation と bridge lemma の `store_ref_targets_preserved` result は解消済み。ただし ready subset への再接続は、相互 induction の IH が具体的な RHS 評価 derivation に対するものなのに対し、bridge lemma callback が任意の RHS 評価へ一般化されているため、bridge lemma の shape を具体的 derivation 向けに分ける必要がある。
    - `[todo]` ready restriction のない full `eval_preserves_typing` を証明する。
    - `[done]` `typed_env_structural` が binding lookup/type を保存する same-bindings helper を追加し、現在 explicit premise にしている lookup 条件を theorem 本体で導出できるようにした。
    - `[done]` `EIf` false branch の `store_typed_ctx_merge_right` 用 type-equality premise は branch typing から導出できる helper を追加済み。
@@ -113,7 +113,7 @@ Theorem step_progress :
    - `[todo]` `ELetInfer` の現在の contradiction-only helper を実証明に置き換える。
    - `[todo]` `let` の local binding への reference escape を禁止する typing/borrow invariant を追加し、`store_remove` が `store_ref_targets_preserved` を満たすことを証明する。
    - `[done]` `assign` / `replace` の value update が既存 reference target を壊さないことを示すため、`value_has_type` から `type_lookup_path` 対応 path の runtime value 存在を導く補題と、typed `store_update_val` / `store_update_path` の `store_ref_targets_preserved` 補題を追加済み。
-   - `[partial]` `borrow` preservation は、direct place の `eval_place` が返す `(x,path)` に対して store target が存在することを typing/store から導出する補題を追加済み。ready subset への再接続は direct update bridge の IH shape 修正後に行う。
+   - `[done]` `borrow` preservation は、direct place の `eval_place` が返す `(x,path)` に対して store target が存在することを typing/store から導出する補題を追加し、direct shared/unique borrow を ready subset に再接続済み。
    - `[done]` `eval_args` / `eval_struct_fields` の sequencing は、各 step が `store_ref_targets_preserved` を返す相互 preservation theorem に強め、非空 args/fields の ready constructor を復元済み。
    - `[done]` `EReplace` / `EAssign` は root binding の mutability だけでなく、target path 上の struct field mutability を検査する。少なくとも最終 field は `MMutable` を必須にする。
    - `[done]` `&mut T` の referent type は invariant にする。`&shared T` は inner type の covariant compatibility を維持してよいが、unique reference は usage/core/lifetime の厳密一致または invariant relation だけを許す。
@@ -173,7 +173,7 @@ Theorem step_progress :
 2. `[partial]` `TypeSafety.v` を追加して S2 の個別 preservation helper を基本式から始める。
 3. `[done]` `typed_env_structural` の same-bindings lookup helper を追加し、assign/replace helper の explicit lookup premise を theorem 本体で導出できるようにする。
 4. `[done]` `eval`, `eval_args`, `eval_struct_fields` の ready restricted mutual preservation theorem を追加し、既存 helper を constructor ごとに接続する。
-5. `[current]` direct update bridge の callback shape を concrete RHS evaluation 用に分け、direct assign/replace/borrow を ready subset に戻す。
+5. `[current]` direct update bridge の callback shape を concrete RHS evaluation 用に分け、direct assign/replace を ready subset に戻す。
 6. `[todo]` call/closure 関連の S3 を追加する。
 7. `[todo]` `EnvFullSoundness.v` / `ValidatorSoundness.v` と接続して S4 を証明する。
 8. `[todo]` borrow/runtime reference safety を S5 として別 theorem 群にする。

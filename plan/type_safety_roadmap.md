@@ -22,14 +22,14 @@
 
 ## Current Status
 
-Last updated implementation point: started S5 runtime reference safety for the root-provenance ready fragment. `RuntimeRefSafety.v` proves that runtime value/store typing implies concrete runtime reference well-formedness, then connects `eval_preserves_typing_roots_ready_mutual` and `infer_full_env_roots_sound` to ready no-dangling-reference theorems. The next boundary is either expanding these results beyond `provenance_ready_expr` or adding borrow-state/aliasing invariants.
+Last updated implementation point: extended S5 runtime reference safety with direct runtime reference membership. `RuntimeRefSafety.v` now defines `refs_in_value` / `refs_in_store` for the non-captured closure fragment and proves that every reported direct runtime reference has a concrete target in the current store. Captured closure refs remain deferred until closure store-scope invariants are fixed.
 
 - S0: `[done]` runtime value/store typing と runtime reference well-formedness の仕様は導入済み。
 - S1: `[done]` path/value/store helper の主要部分と linear partial-move obligation helper/checker fix は導入済み。
 - S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。`VHT_Ref` は runtime store 内の参照先 path の存在・型対応を要求する形に強化済み。direct assign/replace は concrete RHS preservation evidence 経由で ready subset に再接続済み。`store_remove` 用の root-exclusion runtime helper、static root provenance judgment、runtime root-within-to-exclusion bridge、ready fragment の root preservation theorem、roots-aware `ELet` bridge、top-level roots-ready `ELet` helper、roots-aware ready mutual preservation theorem、checker-facing root provenance sidecar API と soundness theorem は追加済み。full unrestricted theorem は未完了。
 - S3: `[todo]` call/closure preservation は未着手。ただし empty closure value typing helper は一部存在する。
 - S4: `[partial]` checker-to-runtime safety は root sidecar / ready fragment で接続済み。full unrestricted theorem と validator 経由 theorem は未着手。
-- S5: `[partial]` ready/root-provenance fragment で runtime refs の no-dangling theorem は追加済み。borrow-state/aliasing safety は未着手。
+- S5: `[partial]` ready/root-provenance fragment で runtime refs の no-dangling theorem と direct ref membership target theorem は追加済み。borrow-state/aliasing safety と captured closure refs は未着手。
 - S6: `[todo]` small-step progress は未着手。
 
 ## Target Theorems
@@ -158,8 +158,8 @@ Theorem step_progress :
    - `[done]` `value_has_type` / `store_typed` から `runtime_refs_wf` / `store_refs_wf` を導く bridge lemma を追加する。
    - `[done]` ready/root-provenance fragment の `eval_no_dangling_refs_roots_ready` を追加する。
    - `[done]` root sidecar checker 成功から ready fragment の no-dangling refs を導く `infer_full_env_roots_no_dangling_refs_ready` を追加する。
-   - `VRef x path` が指す store path が存在し、型が `TRef` の inner type と対応することを theorem 化する。
-   - `refs_in_value` / `refs_in_store` を定義する。
+   - `[done]` direct `VRef x path` が指す store path が存在し、型が対応することを `runtime_refs_wf_ref_target` と refs-in target theorem 群で証明する。
+   - `[done]` non-captured closure fragment 用の `refs_in_value` / `refs_in_store` を定義する。captured closure refs は scoped closure-store invariant まで defer する。
    - `borrow_ok_env_structural` と runtime refs の対応 invariant を導入する。
    - borrow 中の元 place に対する通常の `EVar` / `EPlace` read/move を active borrow state と照合する。
    - conflicting unique borrow がある place は read/copy/move/update を禁止する。conflicting shared borrow がある place は affine/linear move と mutable update を禁止し、unrestricted copy の扱いは仕様として明示する。
@@ -212,7 +212,7 @@ Theorem step_progress :
 16. `[done]` sidecar checker 成功から `typed_env_roots` を導く soundness theorem を追加する。
 17. `[done]` sidecar root soundness を使って S4 の checker-to-runtime 接続を ready fragment で開始する。
 18. `[partial]` `EnvRuntimeSafety.v` に root sidecar / ready fragment の `infer_full_env_roots_big_step_safe_ready` を追加する。full `infer_full_env_big_step_safe` と `ValidatorSoundness.v` 経由 theorem は未完了。
-19. `[partial]` `RuntimeRefSafety.v` に ready/root-provenance fragment の no-dangling runtime reference theorem 群を追加する。borrow-state/aliasing safety は未完了。
+19. `[partial]` `RuntimeRefSafety.v` に ready/root-provenance fragment の no-dangling runtime reference theorem 群と direct ref membership target theorem 群を追加する。borrow-state/aliasing safety と captured closure refs は未完了。
 20. `[todo]` small-step semantics が必要になった時点で S6 を開始する。
 
 ## Acceptance Criteria

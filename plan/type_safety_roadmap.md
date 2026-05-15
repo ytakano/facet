@@ -22,13 +22,14 @@
 
 ## Current Status
 
-Last updated implementation point: proved the checker-facing root provenance sidecar sound with respect to `typed_env_roots` through `infer_core_env_state_fuel_roots_sound`, `infer_core_env_roots_sound`, `infer_env_roots_sound`, and `infer_full_env_roots_sound`. The next boundary is deciding whether to connect sidecar root soundness into checker-to-runtime safety or continue expanding preservation beyond the ready fragment.
+Last updated implementation point: added the first checker-to-runtime bridge for the root-provenance ready fragment. `EnvRuntimeSafety.v` defines `initial_store_for_fn`, initial root environment helpers, and proves `infer_full_env_roots_big_step_safe_ready` from `infer_full_env_roots_sound` plus `eval_preserves_typing_roots_ready_mutual`. The next boundary is either expanding this bridge beyond `provenance_ready_expr` or starting S5 runtime reference safety.
 
 - S0: `[done]` runtime value/store typing と runtime reference well-formedness の仕様は導入済み。
 - S1: `[done]` path/value/store helper の主要部分と linear partial-move obligation helper/checker fix は導入済み。
 - S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。`VHT_Ref` は runtime store 内の参照先 path の存在・型対応を要求する形に強化済み。direct assign/replace は concrete RHS preservation evidence 経由で ready subset に再接続済み。`store_remove` 用の root-exclusion runtime helper、static root provenance judgment、runtime root-within-to-exclusion bridge、ready fragment の root preservation theorem、roots-aware `ELet` bridge、top-level roots-ready `ELet` helper、roots-aware ready mutual preservation theorem、checker-facing root provenance sidecar API と soundness theorem は追加済み。full unrestricted theorem は未完了。
 - S3: `[todo]` call/closure preservation は未着手。ただし empty closure value typing helper は一部存在する。
-- S4-S6: `[todo]` checker-to-runtime safety、runtime reference safety、small-step progress は未着手。
+- S4: `[partial]` checker-to-runtime safety は root sidecar / ready fragment で接続済み。full unrestricted theorem と validator 経由 theorem は未着手。
+- S5-S6: `[todo]` runtime reference safety、small-step progress は未着手。
 
 ## Target Theorems
 
@@ -144,9 +145,11 @@ Theorem step_progress :
    - `ECall` / `ECallExpr` の preservation を証明する。
    - 将来の closure 導入前に、captured store の型付け invariant をこの milestone で固定する。
 
-5. **S4: checker-to-runtime end-to-end safety** `[todo]`
+5. **S4: checker-to-runtime end-to-end safety** `[partial]`
    - `infer_full_env_structural_sound` を使って、checker 成功から big-step safety theorem へ接続する。
-   - `initial_store_for_fn f s` を定義し、関数引数 store と `params_ctx` の対応を証明する。
+   - `[done]` `initial_store_for_fn env f s` を定義し、関数引数 store と `params_ctx` の対応を runtime store typing として固定する。
+   - `[done]` `initial_root_env_for_params` / `initial_root_env_for_fn` を定義する。
+   - `[done]` root sidecar checker 成功から ready fragment の big-step result typing を導く `infer_full_env_roots_big_step_safe_ready` を追加する。
    - `infer_full_env_big_step_safe` を追加する。
    - Validator 経由 theorem として `validate_env` / `validate_fns` 成功後の safety theorem を追加する。
 
@@ -203,8 +206,8 @@ Theorem step_progress :
 14. `[done]` roots-aware ready mutual preservation theorem を追加し、`ELet` bridge を recursive preservation に組み込む。
 15. `[done]` checker が root provenance を返す executable interface を追加する。`infer_core_env_roots` / `infer_env_roots` / `infer_full_env_roots` は追加済み。
 16. `[done]` sidecar checker 成功から `typed_env_roots` を導く soundness theorem を追加する。
-17. `[current]` call/closure 関連の S3 を追加するか、sidecar root soundness を使って S4 の checker-to-runtime 接続を開始する。
-18. `[todo]` `EnvFullSoundness.v` / `ValidatorSoundness.v` と接続して S4 を証明する。
+17. `[done]` sidecar root soundness を使って S4 の checker-to-runtime 接続を ready fragment で開始する。
+18. `[partial]` `EnvRuntimeSafety.v` に root sidecar / ready fragment の `infer_full_env_roots_big_step_safe_ready` を追加する。full `infer_full_env_big_step_safe` と `ValidatorSoundness.v` 経由 theorem は未完了。
 19. `[todo]` borrow/runtime reference safety を S5 として別 theorem 群にする。
 20. `[todo]` small-step semantics が必要になった時点で S6 を開始する。
 

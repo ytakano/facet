@@ -2532,7 +2532,7 @@ Lemma eval_let_preserves_typing :
      store_typed env s2 Σ2 /\
      value_has_type env s2 v2 T2 /\
      store_ref_targets_preserved env (store_add x T v1 s1) s2) ->
-    store_lookup x s = None ->
+    store_lookup x s1 = None ->
     value_refs_exclude_root x v2 ->
     store_refs_exclude_root x (store_remove x s2) ->
     store_typed env (store_remove x s2) (sctx_remove x Σ2) /\
@@ -2553,13 +2553,99 @@ Proof.
   - eapply store_typed_remove_excluding_root; eassumption.
   - split.
     + eapply value_has_type_store_remove_excluding_root; eassumption.
-    + eapply store_ref_targets_preserved_remove_after_absent_root.
-      * eapply store_ref_targets_preserved_trans.
-        -- exact Hpres_s_s1.
+    + eapply store_ref_targets_preserved_trans.
+      * exact Hpres_s_s1.
+      * eapply store_ref_targets_preserved_remove_after_absent_root.
         -- eapply store_ref_targets_preserved_trans.
            ++ exact Hadd_pres.
            ++ exact Hpres_add_s2.
-      * exact Hfresh.
+        -- exact Hfresh.
+Qed.
+
+Lemma eval_let_roots_preserves_typing :
+  forall env (Ω : outlives_ctx) (n : nat) R R1 R2 Σ Σ1 Σ2 s s1 s2
+      m x T T1 e1 e2 T2 roots1 roots2 v1 v2,
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    typed_env_roots env Ω n R Σ e1 T1 Σ1 R1 roots1 ->
+    ty_compatible_b Ω T1 T = true ->
+    root_env_lookup x R1 = None ->
+    typed_env_roots env Ω n (root_env_add x roots1 R1)
+      (sctx_add x T m Σ1) e2 T2 Σ2 R2 roots2 ->
+    sctx_check_ok env x T Σ2 = true ->
+    roots_exclude x roots2 ->
+    root_env_excludes x (root_env_remove x R2) ->
+    provenance_ready_expr e1 ->
+    provenance_ready_expr e2 ->
+    eval env s e1 s1 v1 ->
+    eval env (store_add x T v1 s1) e2 s2 v2 ->
+    (store_typed env s Σ ->
+     typed_env_structural env Ω n Σ e1 T1 Σ1 ->
+     eval env s e1 s1 v1 ->
+     store_typed env s1 Σ1 /\
+     value_has_type env s1 v1 T1 /\
+     store_ref_targets_preserved env s s1) ->
+    (store_typed env (store_add x T v1 s1) (sctx_add x T m Σ1) ->
+     typed_env_structural env Ω n (sctx_add x T m Σ1) e2 T2 Σ2 ->
+     eval env (store_add x T v1 s1) e2 s2 v2 ->
+     store_typed env s2 Σ2 /\
+     value_has_type env s2 v2 T2 /\
+     store_ref_targets_preserved env (store_add x T v1 s1) s2) ->
+    store_typed env (store_remove x s2) (sctx_remove x Σ2) /\
+    value_has_type env (store_remove x s2) v2 T2 /\
+    store_ref_targets_preserved env s (store_remove x s2).
+Proof.
+  intros env Ω n R R1 R2 Σ Σ1 Σ2 s s1 s2 m x T T1 e1 e2 T2
+    roots1 roots2 v1 v2 Hstore Hroots Hnodup Hrn Htyped1 Hcompat
+    Hfresh_root Htyped2 _ Hexclude_roots Hexclude_env Hready1 Hready2
+    Heval1 Heval2 Hpres1 Hpres2.
+  destruct (proj1 eval_preserves_roots_ready_mutual env s e1 s1 v1 Heval1
+              Ω n R Σ T1 Σ1 R1 roots1 Hready1 Hroots Hnodup Hrn Htyped1)
+    as [Hroots1_runtime [Hv1_roots [Hnodup1 Hrn1]]].
+  assert (Hfresh_store : store_lookup x s1 = None)
+    by (eapply store_roots_within_lookup_none; eassumption).
+  assert (Hadd_pres :
+    store_ref_targets_preserved env s1 (store_add x T v1 s1))
+    by (apply store_add_fresh_ref_targets_preserved; exact Hfresh_store).
+  assert (Hadd_roots :
+    store_roots_within (root_env_add x roots1 R1)
+      (store_add x T v1 s1))
+    by (eapply store_add_roots_within; eassumption).
+  assert (Hadd_nodup : store_no_shadow (store_add x T v1 s1))
+    by (apply store_no_shadow_add; assumption).
+  assert (Hadd_rn : root_env_no_shadow (root_env_add x roots1 R1))
+    by (apply root_env_no_shadow_add; assumption).
+  destruct (proj1 eval_preserves_roots_ready_mutual env
+              (store_add x T v1 s1) e2 s2 v2 Heval2
+              Ω n (root_env_add x roots1 R1) (sctx_add x T m Σ1)
+              T2 Σ2 R2 roots2 Hready2 Hadd_roots Hadd_nodup Hadd_rn
+              Htyped2)
+    as [Hroots2_runtime [Hv2_roots [Hnodup2 _]]].
+  assert (Hremove_names :
+    forall se, In se (store_remove x s2) -> se_name se <> x)
+    by (apply store_no_shadow_remove_no_name; exact Hnodup2).
+  assert (Hroots_removed :
+    store_roots_within (root_env_remove x R2) (store_remove x s2))
+    by (eapply store_remove_roots_within; eassumption).
+  assert (Hexclude_v : value_refs_exclude_root x v2)
+    by (eapply value_roots_exclude_root; eassumption).
+  assert (Hexclude_store : store_refs_exclude_root x (store_remove x s2))
+    by (eapply store_roots_exclude_root; eassumption).
+  eapply eval_let_preserves_typing.
+  - exact Hstore.
+  - eapply typed_env_roots_structural. exact Htyped1.
+  - exact Heval1.
+  - exact Hpres1.
+  - exact Hcompat.
+  - exact Hadd_pres.
+  - eapply typed_env_roots_structural. exact Htyped2.
+  - exact Heval2.
+  - exact Hpres2.
+  - exact Hfresh_store.
+  - exact Hexclude_v.
+  - exact Hexclude_store.
 Qed.
 
 Lemma usage_sub_left_max :

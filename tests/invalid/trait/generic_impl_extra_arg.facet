@@ -1,0 +1,11 @@
+trait Convert<T>;
+
+struct Box {
+  value: unrestricted isize
+}
+
+impl Convert<affine isize, affine bool> for affine Box;
+
+fn main() -> unrestricted () {
+  ()
+}

@@ -1,0 +1,11 @@
+trait Convert<T>;
+
+struct Box<T> {
+  value: affine T
+}
+
+impl<T> Convert<affine T> for affine Box<affine T>;
+
+fn main() -> unrestricted () {
+  ()
+}

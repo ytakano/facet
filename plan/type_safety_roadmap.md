@@ -22,7 +22,7 @@
 
 ## Current Status
 
-Last updated implementation point: local type annotations now reject elided reference lifetimes. `BorrowStateSafety.v` defines `pbs_no_conflicts` for active path borrows and pairwise conflict facts; `borrow_check_env` checks direct `EVar` / `EPlace` access against active path borrows; OCaml de Bruijn lowering rejects local annotated `let` types that contain `&T` / `&mut T` without explicit lifetime. Runtime aliasing correspondence is still future work.
+Last updated implementation point: generic trait impl validation now rejects impls whose trait type-argument count does not match the trait definition, and rejects lifetime arguments on trait impl targets. `BorrowStateSafety.v` defines `pbs_no_conflicts` for active path borrows and pairwise conflict facts; `borrow_check_env` checks direct `EVar` / `EPlace` access against active path borrows; OCaml de Bruijn lowering rejects local annotated `let` types that contain `&T` / `&mut T` without explicit lifetime. Runtime aliasing correspondence is still future work.
 
 - S0: `[done]` runtime value/store typing と runtime reference well-formedness の仕様は導入済み。
 - S1: `[done]` path/value/store helper の主要部分と linear partial-move obligation helper/checker fix は導入済み。
@@ -185,7 +185,7 @@ Theorem step_progress :
      - runtime type erasure の補題を追加する。
      - type/lifetime substitution が `value_has_type` と `store_typed` を保存することを証明する。
    - generic trait:
-     - trait impl の type argument 数が trait 定義と一致することを検証する。
+     - `[done]` trait impl の type argument 数が trait 定義と一致することを OCaml frontend validation で検証する。trait impl target の lifetime argument は、Rocq `trait_def` が type parameter だけを持つため拒否する。
      - bound 側で `Trait<Args...>` を表現できるようにし、impl/use 時に trait 自身の bounds を反映する。
      - generic trait の checker/runtime 接続は、arity・bounds・impl validation が揃うまで feature gate として扱う。
    - variant:
@@ -247,7 +247,7 @@ review 指摘に対応する regression:
 - `[done]` immutable field への assign/replace は、root binding が mutable でも拒否される。
 - `[done]` `&mut unrestricted T` を `&mut affine T` など異なる referent type として使う式は拒否される。
 - `[done]` local annotation の elided lifetime は拒否される。
-- `[todo]` generic trait は arity・type argument・bounds の validation が入るまで soundness 対象から外す。
+- `[partial]` generic trait は impl arity/type argument validation 済み。bound 側 `Trait<Args...>` と trait 自身の bounds 反映が入るまで soundness 対象から外す。
 
 型安全性 roadmap の初期完了条件:
 

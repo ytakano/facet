@@ -1,0 +1,11 @@
+trait Show;
+
+struct Box {
+  value: unrestricted isize
+}
+
+impl<'a> Show<'a> for affine Box;
+
+fn main() -> unrestricted () {
+  ()
+}

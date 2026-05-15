@@ -251,7 +251,9 @@ let convert_trait t =
 let convert_impl struct_names i =
   let (lts, tys) = split_generics i.ni_generics in
   let ty_scope = { type_params = tys; struct_names } in
-  let (_trait_lts, trait_args) = split_expr_type_args ty_scope i.ni_trait_args in
+  let (trait_lts, trait_args) = split_expr_type_args ty_scope i.ni_trait_args in
+  if trait_lts <> []
+  then failwith ("trait impl target cannot take lifetime arguments: " ^ i.ni_trait_name);
   { impl_lifetimes = Big_int_Z.big_int_of_int (List.length lts);
     impl_type_params = Big_int_Z.big_int_of_int (List.length tys);
     impl_trait_name = i.ni_trait_name;
@@ -279,6 +281,9 @@ let validate_env env =
     let big_len xs = Big_int_Z.big_int_of_int (List.length xs) in
     let find_struct name =
       List.find_opt (fun s -> s.struct_name = name) env.env_structs
+    in
+    let find_trait name =
+      List.find_opt (fun t -> t.trait_name = name) env.env_traits
     in
     let validate_bound max_ty_params b =
       if Big_int_Z.ge_big_int b.bound_type_index max_ty_params
@@ -388,9 +393,12 @@ let validate_env env =
       first_some (List.map (validate_bound t.trait_type_params) t.trait_bounds)
     in
     let validate_impl i =
-      if not (List.mem i.impl_trait_name trait_names)
-      then Some ("unknown trait in impl: " ^ i.impl_trait_name)
-      else
+      match find_trait i.impl_trait_name with
+      | None -> Some ("unknown trait in impl: " ^ i.impl_trait_name)
+      | Some trait_def ->
+        if not (Big_int_Z.eq_big_int (big_len i.impl_trait_args) trait_def.trait_type_params)
+        then Some ("trait type arity mismatch: " ^ i.impl_trait_name)
+        else
         first_some
           (List.map
              (type_error i.impl_type_params i.impl_lifetimes zero)

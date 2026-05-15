@@ -985,12 +985,6 @@ Proof.
       * exact IH.
 Qed.
 
-Fixpoint store_names (s : store) : list ident :=
-  match s with
-  | [] => []
-  | se :: rest => se_name se :: store_names rest
-  end.
-
 Definition store_no_shadow (s : store) : Prop :=
   NoDup (store_names s).
 
@@ -2219,12 +2213,13 @@ Proof.
     end.
     repeat split; try assumption.
     apply value_roots_within_union_r. exact Hv3.
-  - intros s s_args s_body fname fdef args0 vs ret Hlookup Heval_args
-      IHargs Heval_body IHbody Ω n R Σ T Σ' R' roots Hready _ _ _ _.
+  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
+      Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R' roots
+      Hready _ _ _ _.
     inversion Hready.
-  - intros s s_fn s_args s_body callee args0 fname captured fdef vs ret
-      Heval_callee IHcallee Hlookup Heval_args IHargs Heval_body IHbody
-      Ω n R Σ T Σ' R' roots Hready _ _ _ _.
+  - intros s s_fn s_args s_body callee args0 fname captured fdef fcall vs ret
+      used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
+      Heval_body IHbody Ω n R Σ T Σ' R' roots Hready _ _ _ _.
     inversion Hready.
   - intros s Ω n R Σ ps Σ' R' roots _ Hroots Hnodup Hrn Htyped.
     inversion Htyped; subst. repeat split; try assumption; constructor.
@@ -3148,13 +3143,13 @@ Proof.
         exact (IHelse Ω n R1 Σ1 T3 Σ3 R3 roots3 ps frame1
                  Hready_else Htyped_else Hcover1 Hscope1)
     end.
-  - intros s s_args s_body fname fdef args0 vs ret Hlookup Heval_args
-      IHargs Heval_body IHbody Ω n R Σ T Σ' R' roots ps frame
-      Hready _ _ _.
+  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
+      Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R' roots
+      ps frame Hready _ _ _.
     inversion Hready.
-  - intros s s_fn s_args s_body callee args0 fname captured fdef vs ret
-      Heval_callee IHcallee Hlookup Heval_args IHargs Heval_body IHbody
-      Ω n R Σ T Σ' R' roots ps frame Hready _ _ _.
+  - intros s s_fn s_args s_body callee args0 fname captured fdef fcall vs ret
+      used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
+      Heval_body IHbody Ω n R Σ T Σ' R' roots ps frame Hready _ _ _.
     inversion Hready.
   - intros s Ω n R Σ params Σ' R' roots ps frame _ Htyped Hcover Hscope.
     inversion Htyped; subst. split; [exact Hcover | exists frame; exact Hscope].
@@ -4761,12 +4756,12 @@ Proof.
           [ eapply value_has_type_if_right_result; eassumption
           | eapply store_ref_targets_preserved_trans; eassumption ] ]
     end.
-  - intros s s_args s_body fname fdef args vs ret Hlookup Heval_args
-      IHargs Heval_body IHbody Ω n Σ T Σ' Hready _ _.
+  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
+      Heval_args IHargs Hrename Heval_body IHbody Ω n Σ T Σ' Hready _ _.
     inversion Hready.
-  - intros s s_fn s_args s_body callee args fname captured fdef vs ret
-      Heval_callee IHcallee Hlookup Heval_args IHargs Heval_body IHbody
-      Ω n Σ T Σ' Hready _ _.
+  - intros s s_fn s_args s_body callee args fname captured fdef fcall vs ret
+      used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
+      Heval_body IHbody Ω n Σ T Σ' Hready _ _.
     inversion Hready.
   - intros s Ω n Σ ps Σ' _ Hstore Htyped.
     inversion Htyped; subst.
@@ -5523,12 +5518,13 @@ Proof.
           [ eapply value_has_type_if_right_result; eassumption
           | eapply store_ref_targets_preserved_trans; eassumption ] ]
     end.
-  - intros s s_args s_body fname fdef args0 vs ret Hlookup Heval_args
-      IHargs Heval_body IHbody Ω n R Σ T Σ' R' roots Hready _ _ _ _ _.
+  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
+      Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R' roots
+      Hready _ _ _ _ _.
     inversion Hready.
-  - intros s s_fn s_args s_body callee args0 fname captured fdef vs ret
-      Heval_callee IHcallee Hlookup Heval_args IHargs Heval_body IHbody
-      Ω n R Σ T Σ' R' roots Hready _ _ _ _ _.
+  - intros s s_fn s_args s_body callee args0 fname captured fdef fcall vs ret
+      used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
+      Heval_body IHbody Ω n R Σ T Σ' R' roots Hready _ _ _ _ _.
     inversion Hready.
   - intros s Ω n R Σ ps Σ' R' roots _ Hstore _ _ _ Htyped.
     inversion Htyped; subst.

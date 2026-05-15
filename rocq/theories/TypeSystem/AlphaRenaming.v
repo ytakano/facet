@@ -1320,6 +1320,21 @@ Proof.
     + specialize (IH fname field_expr Hin). simpl in IH. lia.
 Qed.
 
+Lemma expr_size_struct_field_snd_lt : forall name lts args fields field_expr,
+  In field_expr (map snd fields) ->
+  expr_size field_expr < expr_size (EStruct name lts args fields).
+Proof.
+  intros name lts args fields.
+  induction fields as [| [fname e] rest IH]; intros field_expr Hin.
+  - contradiction.
+  - simpl in Hin. destruct Hin as [Heq | Hin].
+    + subst field_expr. simpl. lia.
+    + specialize (IH field_expr Hin).
+      eapply Nat.lt_le_trans.
+      * exact IH.
+      * simpl. lia.
+Qed.
+
 Lemma alpha_rename_call_args_used_extends : forall ρ used args argsr used',
   (forall used0 e er used1,
       In e args ->
@@ -2903,4 +2918,628 @@ Proof.
     destruct (alpha_rename_expr ρ used1 e2) as [e2r used2].
     destruct (alpha_rename_expr ρ used2 e3) as [e3r used3].
     injection Hrename as <- _. reflexivity.
+Qed.
+
+Lemma alpha_rename_let_body_disjoint_forward :
+  forall ρ used1 x xr e2,
+    xr = fresh_ident x (x :: free_vars_expr e2 ++ used1) ->
+    disjoint_names (free_vars_expr e2) (rename_range ρ) ->
+    disjoint_names (free_vars_expr e2) (rename_range ((x, xr) :: ρ)).
+Proof.
+  intros ρ used1 x xr e2 Hxr Hdisj y Hy Hin.
+  simpl in Hin.
+  destruct Hin as [Heq | Hin].
+  - subst y.
+    eapply fresh_ident_not_in.
+    rewrite <- Hxr.
+    right. apply in_or_app. left. exact Hy.
+  - eapply Hdisj; eauto.
+Qed.
+
+Lemma alpha_rename_let_bound_safe_forward :
+  forall ρ used1 x xr e2,
+    xr = fresh_ident x (x :: free_vars_expr e2 ++ used1) ->
+    ~ In x (rename_range ρ) ->
+    ~ In x (rename_range ((x, xr) :: ρ)).
+Proof.
+  intros ρ used1 x xr e2 Hxr Hsafe Hin.
+  simpl in Hin.
+  destruct Hin as [Heq | Hin].
+  -
+    eapply fresh_ident_not_in.
+    rewrite <- Hxr.
+    rewrite <- Heq.
+    simpl. left. reflexivity.
+  - exact (Hsafe Hin).
+Qed.
+
+Lemma alpha_rename_typed_env_structural_forward :
+  forall env Ω n ρ Σ Σr e er used used' T Σ',
+    ctx_alpha ρ Σ Σr ->
+    (forall x, In x (ctx_names Σr) -> In x used) ->
+    (forall x, In x (rename_range ρ) -> In x used) ->
+    disjoint_names (free_vars_expr e) (rename_range ρ) ->
+    alpha_rename_expr ρ used e = (er, used') ->
+    typed_env_structural env Ω n Σ e T Σ' ->
+    exists Σr',
+      typed_env_structural env Ω n Σr er T Σr' /\
+      ctx_alpha ρ Σ' Σr'.
+Proof.
+  assert (Hsize : forall fuel env Ω n ρ Σ Σr e er used used' T Σ',
+    expr_size e < fuel ->
+    ctx_alpha ρ Σ Σr ->
+    (forall x, In x (ctx_names Σr) -> In x used) ->
+    (forall x, In x (rename_range ρ) -> In x used) ->
+    disjoint_names (free_vars_expr e) (rename_range ρ) ->
+    alpha_rename_expr ρ used e = (er, used') ->
+    typed_env_structural env Ω n Σ e T Σ' ->
+    exists Σr',
+      typed_env_structural env Ω n Σr er T Σr' /\
+      ctx_alpha ρ Σ' Σr').
+  {
+    induction fuel as [| fuel IH]; intros env Ω n ρ Σ Σr e er used used' T Σ'
+      Hlt Hctx Hctx_used Hrange_used Hdisj Hrename Htyped.
+    - lia.
+    - destruct Htyped; simpl in Hrename.
+      + injection Hrename as <- <-.
+        exists Σr. split; [constructor | exact Hctx].
+      + injection Hrename as <- <-.
+        exists Σr. split; [constructor | exact Hctx].
+      + injection Hrename as <- <-.
+        exists Σr. split; [constructor | exact Hctx].
+      + injection Hrename as <- <-.
+        exists Σr. split; [constructor | exact Hctx].
+      + injection Hrename as <- <-.
+        exists Σr. split.
+        * eapply TES_Var_Copy.
+          -- change (typed_place_env_structural env Σr
+               (PVar (lookup_rename x ρ)) T) with
+               (typed_place_env_structural env Σr
+                 (rename_place ρ (PVar x)) T).
+             eapply alpha_rename_typed_place_env_structural_forward.
+             ++ exact Hctx.
+             ++ apply Hdisj. simpl. left. reflexivity.
+             ++ exact H.
+          -- exact H0.
+        * exact Hctx.
+      + injection Hrename as <- <-.
+        assert (Hsafe : ~ In x (rename_range ρ)).
+        { apply Hdisj. simpl. left. reflexivity. }
+        destruct (ctx_alpha_consume_path_forward
+          ρ Σ Σr x [] Σ' Hctx Hsafe H1) as [Σr' [Hconsume_r Hctx_r]].
+        exists Σr'. split.
+        * eapply TES_Var_Move.
+          -- change (typed_place_env_structural env Σr
+               (PVar (lookup_rename x ρ)) T) with
+               (typed_place_env_structural env Σr
+                 (rename_place ρ (PVar x)) T).
+             eapply alpha_rename_typed_place_env_structural_forward; eauto.
+          -- exact H0.
+          -- exact Hconsume_r.
+        * exact Hctx_r.
+      + injection Hrename as <- <-.
+        exists Σr. split.
+        * eapply TES_Place_Copy.
+          -- eapply alpha_rename_typed_place_env_structural_forward.
+             ++ exact Hctx.
+             ++ rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity.
+             ++ exact H.
+          -- exact H0.
+        * exact Hctx.
+      + injection Hrename as <- <-.
+        assert (Hsafe_root : ~ In (place_root p) (rename_range ρ)).
+        { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+        destruct (ctx_alpha_consume_path_forward
+          ρ Σ Σr x path Σ' Hctx
+          ltac:(rewrite <- (place_path_root p x path H1); exact Hsafe_root)
+          H2) as [Σr' [Hconsume_r Hctx_r]].
+        exists Σr'. split.
+        * eapply TES_Place_Move.
+          -- eapply alpha_rename_typed_place_env_structural_forward; eauto.
+          -- exact H0.
+          -- eapply place_path_rename_place_some. exact H1.
+          -- exact Hconsume_r.
+        * exact Hctx_r.
+      + injection Hrename as <- <-.
+        exists Σr. split; [econstructor; eauto | exact Hctx].
+      + destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+                    : list (string * expr) * list ident :=
+                    match fields0 with
+                    | [] => ([], used0)
+                    | (fname, e) :: rest =>
+                        let (e', used1) := alpha_rename_expr ρ used0 e in
+                        let (rest', used2) := go used1 rest in
+                        ((fname, e') :: rest', used2)
+                    end) used fields) as [fieldsr used_fields] eqn:Hfields.
+        injection Hrename as <- <-.
+        destruct (alpha_rename_typed_fields_env_structural_forward
+          env Ω n ρ lts args Σ Σr fields fieldsr used used_fields
+          (Facet.TypeSystem.Program.struct_fields sdef) Σ') as [Σr' [Hfields_r Hctx_r]].
+        * intros Σa Σb used0 e0 er0 used1 T0 Σa' Hin Halpha Hcu Hru Hd Hr Ht.
+          eapply IH.
+          -- pose proof (expr_size_struct_field_snd_lt sname lts args fields e0 Hin)
+               as Hfield_lt.
+             eapply Nat.lt_le_trans.
+             ++ exact Hfield_lt.
+             ++ apply Nat.lt_succ_r. exact Hlt.
+          -- exact Halpha.
+          -- exact Hcu.
+          -- exact Hru.
+          -- exact Hd.
+          -- exact Hr.
+          -- exact Ht.
+        * exact Hctx.
+        * exact Hctx_used.
+        * exact Hrange_used.
+        * exact Hdisj.
+        * exact Hfields.
+        * exact H3.
+        * exists Σr'. split.
+          -- eapply TES_Struct; eauto.
+          -- exact Hctx_r.
+      + destruct (disjoint_names_app_l (free_vars_expr e1) (free_vars_expr e2)
+          (rename_range ρ)) as [Hdisj1 Hdisj2].
+        { intros y Hy. apply Hdisj. simpl. right. exact Hy. }
+        destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
+        remember (fresh_ident x (x :: free_vars_expr e2 ++ used1)) as xr eqn:Hxr.
+        remember (xr :: x :: free_vars_expr e2 ++ used1) as used2 eqn:Hused2.
+        destruct (alpha_rename_expr ((x, xr) :: ρ) used2 e2)
+          as [e2r used3] eqn:He2.
+        injection Hrename as <- <-.
+        destruct (IH env Ω n ρ Σ Σr e1 e1r used used1 T1 Σ1)
+          as [Σr1 [Htyped1_r Hctx1_r]]; try solve [simpl in Hlt; lia | eauto].
+        assert (Hctx_used1 : forall y, In y (ctx_names Σr1) -> In y used1).
+        { intros y Hy.
+          eapply alpha_rename_expr_used_extends.
+          - exact He1.
+          - apply Hctx_used.
+            rewrite <- (sctx_same_bindings_names_alpha Σr Σr1).
+            + exact Hy.
+            + eapply typed_env_structural_same_bindings. exact Htyped1_r. }
+        assert (Hrange_used1 : forall y, In y (rename_range ρ) -> In y used1).
+        { intros y Hy. eapply alpha_rename_expr_used_extends; eauto. }
+        assert (Hfresh_ctx : ~ In xr (ctx_names Σr1)).
+        { subst xr. intro Hin.
+          apply (fresh_ident_not_in x (x :: free_vars_expr e2 ++ used1)).
+          right. apply in_or_app. right.
+          apply Hctx_used1. exact Hin. }
+        assert (Hfresh_range : ~ In xr (rename_range ρ)).
+        { subst xr. intro Hin.
+          apply (fresh_ident_not_in x (x :: free_vars_expr e2 ++ used1)).
+          right. apply in_or_app. right.
+          apply Hrange_used1. exact Hin. }
+        assert (Hctx_body : ctx_alpha ((x, xr) :: ρ)
+          (sctx_add x T m Σ1) (sctx_add xr T m Σr1)).
+        { eapply ctx_alpha_add_fresh_forward; eauto. }
+        assert (Hctx_used2 : forall y,
+          In y (ctx_names (sctx_add xr T m Σr1)) -> In y used2).
+        { subst used2. intros y Hy. simpl in Hy.
+          destruct Hy as [Hy | Hy]; [left; exact Hy |].
+          right. right. apply in_or_app. right.
+          apply Hctx_used1. exact Hy. }
+        assert (Hrange_used2 : forall y,
+          In y (rename_range ((x, xr) :: ρ)) -> In y used2).
+        { subst used2. intros y Hy. simpl in Hy.
+          destruct Hy as [Hy | Hy].
+          - left. exact Hy.
+          - right. right. apply in_or_app. right.
+            apply Hrange_used1. exact Hy. }
+        destruct (IH env Ω n ((x, xr) :: ρ)
+          (sctx_add x T m Σ1) (sctx_add xr T m Σr1)
+          e2 e2r used2 used3 T2 Σ2) as [Σr2 [Htyped2_r Hctx2_r]].
+        * simpl in Hlt. lia.
+        * exact Hctx_body.
+        * exact Hctx_used2.
+        * exact Hrange_used2.
+        * eapply alpha_rename_let_body_disjoint_forward; eauto.
+        * exact He2.
+        * exact Htyped2.
+        * exists (sctx_remove xr Σr2). split.
+          -- eapply TES_Let.
+             ++ exact Htyped1_r.
+             ++ exact H.
+             ++ exact Htyped2_r.
+             ++ assert (Hlookup_xr :
+                  lookup_rename x ((x, xr) :: ρ) = xr).
+                { simpl. rewrite ident_eqb_refl. reflexivity. }
+                rewrite <- Hlookup_xr.
+                eapply ctx_alpha_check_ok_forward.
+                ** exact Hctx2_r.
+                ** eapply alpha_rename_let_bound_safe_forward.
+                   --- exact Hxr.
+                   --- apply Hdisj. simpl. left. reflexivity.
+                ** exact H0.
+          -- eapply ctx_alpha_remove_bound. exact Hctx2_r.
+      + destruct (disjoint_names_app_l (free_vars_expr e1) (free_vars_expr e2)
+          (rename_range ρ)) as [Hdisj1 Hdisj2].
+        { intros y Hy. apply Hdisj. simpl. right. exact Hy. }
+        destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
+        remember (fresh_ident x (x :: free_vars_expr e2 ++ used1)) as xr eqn:Hxr.
+        remember (xr :: x :: free_vars_expr e2 ++ used1) as used2 eqn:Hused2.
+        destruct (alpha_rename_expr ((x, xr) :: ρ) used2 e2)
+          as [e2r used3] eqn:He2.
+        injection Hrename as <- <-.
+        destruct (IH env Ω n ρ Σ Σr e1 e1r used used1 T1 Σ1)
+          as [Σr1 [Htyped1_r Hctx1_r]]; try solve [simpl in Hlt; lia | eauto].
+        assert (Hctx_used1 : forall y, In y (ctx_names Σr1) -> In y used1).
+        { intros y Hy.
+          eapply alpha_rename_expr_used_extends.
+          - exact He1.
+          - apply Hctx_used.
+            rewrite <- (sctx_same_bindings_names_alpha Σr Σr1).
+            + exact Hy.
+            + eapply typed_env_structural_same_bindings. exact Htyped1_r. }
+        assert (Hrange_used1 : forall y, In y (rename_range ρ) -> In y used1).
+        { intros y Hy. eapply alpha_rename_expr_used_extends; eauto. }
+        assert (Hfresh_ctx : ~ In xr (ctx_names Σr1)).
+        { subst xr. intro Hin.
+          apply (fresh_ident_not_in x (x :: free_vars_expr e2 ++ used1)).
+          right. apply in_or_app. right.
+          apply Hctx_used1. exact Hin. }
+        assert (Hfresh_range : ~ In xr (rename_range ρ)).
+        { subst xr. intro Hin.
+          apply (fresh_ident_not_in x (x :: free_vars_expr e2 ++ used1)).
+          right. apply in_or_app. right.
+          apply Hrange_used1. exact Hin. }
+        assert (Hctx_body : ctx_alpha ((x, xr) :: ρ)
+          (sctx_add x T1 m Σ1) (sctx_add xr T1 m Σr1)).
+        { eapply ctx_alpha_add_fresh_forward; eauto. }
+        assert (Hctx_used2 : forall y,
+          In y (ctx_names (sctx_add xr T1 m Σr1)) -> In y used2).
+        { subst used2. intros y Hy. simpl in Hy.
+          destruct Hy as [Hy | Hy]; [left; exact Hy |].
+          right. right. apply in_or_app. right.
+          apply Hctx_used1. exact Hy. }
+        assert (Hrange_used2 : forall y,
+          In y (rename_range ((x, xr) :: ρ)) -> In y used2).
+        { subst used2. intros y Hy. simpl in Hy.
+          destruct Hy as [Hy | Hy].
+          - left. exact Hy.
+          - right. right. apply in_or_app. right.
+            apply Hrange_used1. exact Hy. }
+        destruct (IH env Ω n ((x, xr) :: ρ)
+          (sctx_add x T1 m Σ1) (sctx_add xr T1 m Σr1)
+          e2 e2r used2 used3 T2 Σ2) as [Σr2 [Htyped2_r Hctx2_r]].
+        * simpl in Hlt. lia.
+        * exact Hctx_body.
+        * exact Hctx_used2.
+        * exact Hrange_used2.
+        * eapply alpha_rename_let_body_disjoint_forward; eauto.
+        * exact He2.
+        * exact Htyped2.
+        * exists (sctx_remove xr Σr2). split.
+          -- eapply TES_LetInfer.
+             ++ exact Htyped1_r.
+             ++ exact Htyped2_r.
+             ++ assert (Hlookup_xr :
+                  lookup_rename x ((x, xr) :: ρ) = xr).
+                { simpl. rewrite ident_eqb_refl. reflexivity. }
+                rewrite <- Hlookup_xr.
+                eapply ctx_alpha_check_ok_forward.
+                ** exact Hctx2_r.
+                ** eapply alpha_rename_let_bound_safe_forward.
+                   --- exact Hxr.
+                   --- apply Hdisj. simpl. left. reflexivity.
+                ** exact H.
+          -- eapply ctx_alpha_remove_bound. exact Hctx2_r.
+      + destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
+        injection Hrename as <- <-.
+        destruct (IH env Ω n ρ Σ Σr e er0 used used0 T Σ')
+          as [Σr' [Htyped_r Hctx_r]]; try solve [simpl in Hlt; lia | eauto].
+        exists Σr'. split; [eapply TES_Drop; exact Htyped_r | exact Hctx_r].
+      + destruct (disjoint_names_cons_l (place_name p) (free_vars_expr e_new)
+          (rename_range ρ) Hdisj) as [Hdisj_p Hdisj_new].
+        destruct (alpha_rename_expr ρ used e_new) as [er_new used_new] eqn:Hnew.
+        injection Hrename as <- <-.
+        assert (Hsafe_p : ~ In (place_root p) (rename_range ρ)).
+        { rewrite <- place_name_root. exact Hdisj_p. }
+        destruct (IH env Ω n ρ Σ Σr e_new er_new used used_new T_new Σ1)
+          as [Σr1 [Htyped_new_r Hctx_new_r]]; try solve [simpl in Hlt; lia | eauto].
+        assert (Hsafe_x : ~ In x (rename_range ρ)).
+        { rewrite <- (place_path_root p x path H0). exact Hsafe_p. }
+        destruct (ctx_alpha_restore_path_forward
+          ρ Σ1 Σr1 x path Σ2 Hctx_new_r Hsafe_x H4)
+          as [Σr2 [Hrestore_r Hctx_restore]].
+        exists Σr2. split.
+        * eapply TES_Replace_Path.
+          -- eapply alpha_rename_typed_place_env_structural_forward; eauto.
+          -- eapply place_path_rename_place_some. exact H0.
+          -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
+          -- exact Htyped_new_r.
+          -- exact H2.
+          -- eapply ctx_alpha_path_available_forward; eauto.
+          -- exact Hrestore_r.
+        * exact Hctx_restore.
+      + destruct (disjoint_names_cons_l (place_name p) (free_vars_expr e_new)
+          (rename_range ρ) Hdisj) as [Hdisj_p Hdisj_new].
+        destruct (alpha_rename_expr ρ used e_new) as [er_new used_new] eqn:Hnew.
+        injection Hrename as <- <-.
+        assert (Hsafe_p : ~ In (place_root p) (rename_range ρ)).
+        { rewrite <- place_name_root. exact Hdisj_p. }
+        destruct (IH env Ω n ρ Σ Σr e_new er_new used used_new T_new Σ')
+          as [Σr' [Htyped_new_r Hctx_new_r]]; try solve [simpl in Hlt; lia | eauto].
+        exists Σr'. split.
+        * eapply TES_Replace_Indirect.
+          -- eapply alpha_rename_typed_place_env_structural_forward; eauto.
+          -- eapply place_path_rename_place_none. exact H0.
+          -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
+          -- exact Htyped_new_r.
+          -- exact H2.
+        * exact Hctx_new_r.
+      + destruct (disjoint_names_cons_l (place_name p) (free_vars_expr e_new)
+          (rename_range ρ) Hdisj) as [Hdisj_p Hdisj_new].
+        destruct (alpha_rename_expr ρ used e_new) as [er_new used_new] eqn:Hnew.
+        injection Hrename as <- <-.
+        assert (Hsafe_p : ~ In (place_root p) (rename_range ρ)).
+        { rewrite <- place_name_root. exact Hdisj_p. }
+        destruct (IH env Ω n ρ Σ Σr e_new er_new used used_new T_new Σ')
+          as [Σr' [Htyped_new_r Hctx_new_r]]; try solve [simpl in Hlt; lia | eauto].
+        assert (Hsafe_x : ~ In x (rename_range ρ)).
+        { rewrite <- (place_path_root p x path H1). exact Hsafe_p. }
+        exists Σr'. split.
+        * eapply TES_Assign_Path.
+          -- eapply alpha_rename_typed_place_env_structural_forward; eauto.
+          -- exact H0.
+          -- eapply place_path_rename_place_some. exact H1.
+          -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
+          -- exact Htyped_new_r.
+          -- exact H3.
+          -- eapply ctx_alpha_path_available_forward; eauto.
+        * exact Hctx_new_r.
+      + destruct (disjoint_names_cons_l (place_name p) (free_vars_expr e_new)
+          (rename_range ρ) Hdisj) as [Hdisj_p Hdisj_new].
+        destruct (alpha_rename_expr ρ used e_new) as [er_new used_new] eqn:Hnew.
+        injection Hrename as <- <-.
+        assert (Hsafe_p : ~ In (place_root p) (rename_range ρ)).
+        { rewrite <- place_name_root. exact Hdisj_p. }
+        destruct (IH env Ω n ρ Σ Σr e_new er_new used used_new T_new Σ')
+          as [Σr' [Htyped_new_r Hctx_new_r]]; try solve [simpl in Hlt; lia | eauto].
+        exists Σr'. split.
+        * eapply TES_Assign_Indirect.
+          -- eapply alpha_rename_typed_place_env_structural_forward; eauto.
+          -- exact H0.
+          -- eapply place_path_rename_place_none. exact H1.
+          -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
+          -- exact Htyped_new_r.
+          -- exact H3.
+        * exact Hctx_new_r.
+      + injection Hrename as <- <-.
+        assert (Hsafe_p : ~ In (place_root p) (rename_range ρ)).
+        { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+        exists Σr. split.
+        * eapply TES_BorrowShared.
+          eapply alpha_rename_typed_place_env_structural_forward; eauto.
+        * exact Hctx.
+      + injection Hrename as <- <-.
+        assert (Hsafe_p : ~ In (place_root p) (rename_range ρ)).
+        { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+        exists Σr. split.
+        * eapply TES_BorrowUnique.
+          -- eapply alpha_rename_typed_place_env_structural_forward; eauto.
+          -- eapply place_path_rename_place_some. exact H0.
+          -- eapply ctx_alpha_lookup_mut_forward.
+             ++ exact Hctx.
+             ++ rewrite <- (place_path_root p x path H0). exact Hsafe_p.
+             ++ exact H1.
+        * exact Hctx.
+      + injection Hrename as <- <-.
+        assert (Hsafe_p : ~ In (place_root p) (rename_range ρ)).
+        { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+        exists Σr. split.
+        * eapply TES_BorrowUnique_Indirect.
+          -- eapply alpha_rename_typed_place_env_structural_forward; eauto.
+          -- eapply place_path_rename_place_none. exact H0.
+          -- eapply alpha_rename_place_under_unique_ref_structural_forward; eauto.
+        * exact Hctx.
+      + destruct (alpha_rename_expr ρ used r) as [rr usedr] eqn:Hr.
+        injection Hrename as <- <-.
+        assert (Hplace_r : expr_as_place rr = Some (rename_place ρ p)).
+        { eapply expr_as_place_alpha_rename_some_forward; eauto. }
+        assert (Hsafe_p : ~ In (place_root p) (rename_range ρ)).
+        { rewrite <- place_name_root.
+          apply Hdisj.
+          simpl.
+          eapply expr_as_place_place_name_in_free_vars. exact H. }
+        exists Σr. split.
+        * eapply TES_Deref_Place.
+          -- exact Hplace_r.
+          -- eapply alpha_rename_typed_place_env_structural_forward; eauto.
+          -- exact H1.
+        * exact Hctx.
+      + destruct (alpha_rename_expr ρ used r) as [rr usedr] eqn:Hr.
+        injection Hrename as <- <-.
+        destruct (IH env Ω n ρ Σ Σr r rr used usedr
+          (MkTy u (TRef la rk T)) Σ') as [Σr' [Htyped_r Hctx_r]];
+          try solve [simpl in Hlt; lia | eauto].
+        exists Σr'. split.
+        * eapply TES_Deref_Expr.
+          -- eapply expr_as_place_alpha_rename_none_forward; eauto.
+          -- exact Htyped_r.
+          -- exact H0.
+        * exact Hctx_r.
+      + destruct (disjoint_names_app_l (free_vars_expr e1)
+          (free_vars_expr e2 ++ free_vars_expr e3) (rename_range ρ))
+          as [Hdisj1 Hdisj23].
+        { intros y Hy. apply Hdisj. simpl. exact Hy. }
+        destruct (disjoint_names_app_l (free_vars_expr e2) (free_vars_expr e3)
+          (rename_range ρ) Hdisj23) as [Hdisj2 Hdisj3].
+        destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
+        destruct (alpha_rename_expr ρ used1 e2) as [e2r used2] eqn:He2.
+        destruct (alpha_rename_expr ρ used2 e3) as [e3r used3] eqn:He3.
+        injection Hrename as <- <-.
+        destruct (IH env Ω n ρ Σ Σr e1 e1r used used1 T_cond Σ1)
+          as [Σr1 [Htyped1_r Hctx1_r]]; try solve [simpl in Hlt; lia | eauto].
+        assert (Hctx_used1 : forall y, In y (ctx_names Σr1) -> In y used1).
+        { intros y Hy.
+          eapply alpha_rename_expr_used_extends.
+          - exact He1.
+          - apply Hctx_used.
+            rewrite <- (sctx_same_bindings_names_alpha Σr Σr1).
+            + exact Hy.
+            + eapply typed_env_structural_same_bindings. exact Htyped1_r. }
+        assert (Hrange_used1 : forall y, In y (rename_range ρ) -> In y used1).
+        { intros y Hy. eapply alpha_rename_expr_used_extends; eauto. }
+        destruct (IH env Ω n ρ Σ1 Σr1 e2 e2r used1 used2 T2 Σ2)
+          as [Σr2 [Htyped2_r Hctx2_r]]; try solve [simpl in Hlt; lia | eauto].
+        assert (Hctx_used2 : forall y, In y (ctx_names Σr1) -> In y used2).
+        { intros y Hy.
+          eapply alpha_rename_expr_used_extends; [exact He2 |].
+          apply Hctx_used1. exact Hy. }
+        assert (Hrange_used2 : forall y, In y (rename_range ρ) -> In y used2).
+        { intros y Hy. eapply alpha_rename_expr_used_extends; eauto. }
+        destruct (IH env Ω n ρ Σ1 Σr1 e3 e3r used2 used3 T3 Σ3)
+          as [Σr3 [Htyped3_r Hctx3_r]]; try solve [simpl in Hlt; lia | eauto].
+        destruct (ctx_alpha_merge_forward
+          ρ Σ2 Σr2 Σ3 Σr3 Σ4 Hctx2_r Hctx3_r H1)
+          as [Σr4 [Hmerge_r Hctx_merge]].
+        exists Σr4. split.
+        * eapply TES_If; eauto.
+        * exact Hctx_merge.
+      + destruct ((fix go (used0 : list ident) (args0 : list expr)
+                    : list expr * list ident :=
+                    match args0 with
+                    | [] => ([], used0)
+                    | arg :: rest =>
+                        let (arg', used1) := alpha_rename_expr ρ used0 arg in
+                        let (rest', used2) := go used1 rest in
+                        (arg' :: rest', used2)
+                    end) used args) as [argsr used_args] eqn:Hargs.
+        injection Hrename as <- <-.
+        destruct (alpha_rename_typed_args_env_structural_forward
+          env Ω n ρ Σ Σr args argsr used used_args
+          (apply_lt_params σ (fn_params fdef))
+          (apply_lt_params σ (fn_params fdef)) Σ') as [Σr' [Hargs_r Hctx_r]].
+        * intros Σa Σb used0 e0 er0 used1 T0 Σa' Hin Halpha Hcu Hru Hd Hr Ht.
+          eapply IH.
+          -- pose proof (expr_size_call_arg_lt fname args e0 Hin) as Harg_lt.
+             eapply Nat.lt_le_trans.
+             ++ exact Harg_lt.
+             ++ apply Nat.lt_succ_r. exact Hlt.
+          -- exact Halpha.
+          -- exact Hcu.
+          -- exact Hru.
+          -- exact Hd.
+          -- exact Hr.
+          -- exact Ht.
+        * exact Hctx.
+        * exact Hctx_used.
+        * exact Hrange_used.
+        * exact Hdisj.
+        * apply params_alpha_refl.
+        * exact Hargs.
+        * exact H1.
+        * exists Σr'. split; [econstructor; eauto | exact Hctx_r].
+      + destruct (disjoint_names_app_l (free_vars_expr callee)
+          ((fix go (args0 : list expr) : list ident :=
+              match args0 with
+              | [] => []
+              | arg :: rest => free_vars_expr arg ++ go rest
+              end) args) (rename_range ρ) Hdisj) as [Hdisj_callee Hdisj_args].
+        destruct (alpha_rename_expr ρ used callee) as [calleer used1] eqn:Hcallee.
+        destruct ((fix go (used0 : list ident) (args0 : list expr)
+                    : list expr * list ident :=
+                    match args0 with
+                    | [] => ([], used0)
+                    | arg :: rest =>
+                        let (arg', used2) := alpha_rename_expr ρ used0 arg in
+                        let (rest', used3) := go used2 rest in
+                        (arg' :: rest', used3)
+                    end) used1 args) as [argsr used_args] eqn:Hargs.
+        injection Hrename as <- <-.
+        destruct (IH env Ω n ρ Σ Σr callee calleer used used1
+          (MkTy u (TFn param_tys ret)) Σ1) as [Σr1 [Hcallee_r Hctx1_r]];
+          try solve [simpl in Hlt; lia | eauto].
+        assert (Hctx_used1 : forall y, In y (ctx_names Σr1) -> In y used1).
+        { intros y Hy.
+          eapply alpha_rename_expr_used_extends.
+          - exact Hcallee.
+          - apply Hctx_used.
+            rewrite <- (sctx_same_bindings_names_alpha Σr Σr1).
+            + exact Hy.
+            + eapply typed_env_structural_same_bindings. exact Hcallee_r. }
+        assert (Hrange_used1 : forall y, In y (rename_range ρ) -> In y used1).
+        { intros y Hy. eapply alpha_rename_expr_used_extends; eauto. }
+        destruct (alpha_rename_typed_args_env_structural_forward
+          env Ω n ρ Σ1 Σr1 args argsr used1 used_args
+          (params_of_tys param_tys) (params_of_tys param_tys) Σ')
+          as [Σr' [Hargs_r Hctx_r]].
+        * intros Σa Σb used0 e0 er0 used_tail T0 Σa' Hin Halpha Hcu Hru Hd Hr Ht.
+          eapply IH.
+          -- pose proof (expr_size_callexpr_arg_lt callee args e0 Hin) as Harg_lt.
+             eapply Nat.lt_le_trans.
+             ++ exact Harg_lt.
+             ++ apply Nat.lt_succ_r. exact Hlt.
+          -- exact Halpha.
+          -- exact Hcu.
+          -- exact Hru.
+          -- exact Hd.
+          -- exact Hr.
+          -- exact Ht.
+        * exact Hctx1_r.
+        * exact Hctx_used1.
+        * exact Hrange_used1.
+        * exact Hdisj_args.
+        * apply params_alpha_refl.
+        * exact Hargs.
+        * assumption.
+        * exists Σr'. split; [eapply TES_CallExpr_Fn; eauto | exact Hctx_r].
+      + destruct (disjoint_names_app_l (free_vars_expr callee)
+          ((fix go (args0 : list expr) : list ident :=
+              match args0 with
+              | [] => []
+              | arg :: rest => free_vars_expr arg ++ go rest
+              end) args) (rename_range ρ) Hdisj) as [Hdisj_callee Hdisj_args].
+        destruct (alpha_rename_expr ρ used callee) as [calleer used1] eqn:Hcallee.
+        destruct ((fix go (used0 : list ident) (args0 : list expr)
+                    : list expr * list ident :=
+                    match args0 with
+                    | [] => ([], used0)
+                    | arg :: rest =>
+                        let (arg', used2) := alpha_rename_expr ρ used0 arg in
+                        let (rest', used3) := go used2 rest in
+                        (arg' :: rest', used3)
+                    end) used1 args) as [argsr used_args] eqn:Hargs.
+        injection Hrename as <- <-.
+        destruct (IH env Ω n ρ Σ Σr callee calleer used used1
+          (MkTy u (TForall m bounds body)) Σ1) as [Σr1 [Hcallee_r Hctx1_r]];
+          try solve [simpl in Hlt; lia | eauto].
+        assert (Hctx_used1 : forall y, In y (ctx_names Σr1) -> In y used1).
+        { intros y Hy.
+          eapply alpha_rename_expr_used_extends.
+          - exact Hcallee.
+          - apply Hctx_used.
+            rewrite <- (sctx_same_bindings_names_alpha Σr Σr1).
+            + exact Hy.
+            + eapply typed_env_structural_same_bindings. exact Hcallee_r. }
+        assert (Hrange_used1 : forall y, In y (rename_range ρ) -> In y used1).
+        { intros y Hy. eapply alpha_rename_expr_used_extends; eauto. }
+        destruct (alpha_rename_typed_args_env_structural_forward
+          env Ω n ρ Σ1 Σr1 args argsr used1 used_args
+          (params_of_tys (map (open_bound_ty σ) param_tys))
+          (params_of_tys (map (open_bound_ty σ) param_tys)) Σ')
+          as [Σr' [Hargs_r Hctx_r]].
+        * intros Σa Σb used0 e0 er0 used_tail T0 Σa' Hin Halpha Hcu Hru Hd Hr Ht.
+          eapply IH.
+          -- pose proof (expr_size_callexpr_arg_lt callee args e0 Hin) as Harg_lt.
+             eapply Nat.lt_le_trans.
+             ++ exact Harg_lt.
+             ++ apply Nat.lt_succ_r. exact Hlt.
+          -- exact Halpha.
+          -- exact Hcu.
+          -- exact Hru.
+          -- exact Hd.
+          -- exact Hr.
+          -- exact Ht.
+        * exact Hctx1_r.
+        * exact Hctx_used1.
+        * exact Hrange_used1.
+        * exact Hdisj_args.
+        * apply params_alpha_refl.
+        * exact Hargs.
+        * assumption.
+        * exists Σr'. split; [eapply TES_CallExpr_Forall; eauto | exact Hctx_r].
+  }
+  intros env Ω n ρ Σ Σr e er used used' T Σ'
+    Hctx Hctx_used Hrange_used Hdisj Hrename Htyped.
+  eapply (Hsize (S (expr_size e))); eauto.
 Qed.

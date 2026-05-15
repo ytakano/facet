@@ -1191,6 +1191,63 @@ Proof.
     + eapply IH. exact Hps.
 Qed.
 
+Lemma alpha_rename_params_range_ctx_or_tail : forall ρ used ps psr ρ' used',
+  alpha_rename_params ρ used ps = (psr, ρ', used') ->
+  forall x, In x (rename_range ρ') ->
+    In x (ctx_names (params_ctx psr)) \/ In x (rename_range ρ).
+Proof.
+  intros ρ used ps.
+  revert ρ used.
+  induction ps as [| p ps IH]; intros ρ used psr ρ' used' Hrename x Hin.
+  - simpl in Hrename. inversion Hrename; subst.
+    right. exact Hin.
+  - destruct p as [m xp T].
+    simpl in Hrename.
+    destruct (alpha_rename_params
+      ρ (fresh_ident xp used :: used) ps)
+      as [[ps0 ρ0] used0] eqn:Hps.
+    inversion Hrename; subst.
+    simpl in Hin.
+    destruct Hin as [Heq | Hin].
+    + subst x. left. simpl. left. reflexivity.
+    + destruct (IH _ _ _ _ _ Hps _ Hin) as [Hctx | Hrange].
+      * left. simpl. right. exact Hctx.
+      * right. exact Hrange.
+Qed.
+
+Lemma alpha_rename_params_ctx_alpha_nil : forall used ps psr ρ' used',
+  alpha_rename_params [] used ps = (psr, ρ', used') ->
+  ctx_alpha ρ' (params_ctx ps) (params_ctx psr).
+Proof.
+  intros used ps.
+  revert used.
+  induction ps as [| p ps IH]; intros used psr ρ' used' Hrename.
+  - simpl in Hrename. inversion Hrename; subst.
+    constructor.
+  - destruct p as [m xp T].
+    simpl in Hrename.
+    destruct (alpha_rename_params
+      [] (fresh_ident xp used :: used) ps)
+      as [[ps0 ρ0] used0] eqn:Hps.
+    inversion Hrename; subst.
+    simpl.
+    constructor.
+    + eapply IH. exact Hps.
+    + intro Hin.
+      eapply alpha_rename_params_names_fresh_used.
+      * exact Hps.
+      * exact Hin.
+      * left. reflexivity.
+    + intro Hin.
+      destruct (alpha_rename_params_range_ctx_or_tail
+        _ _ _ _ _ _ Hps _ Hin) as [Hctx | Htail].
+      * eapply alpha_rename_params_names_fresh_used.
+        -- exact Hps.
+        -- exact Hctx.
+        -- left. reflexivity.
+      * simpl in Htail. contradiction.
+Qed.
+
 Lemma alpha_rename_fn_def_used_extends : forall used f fr used',
   alpha_rename_fn_def used f = (fr, used') ->
   forall x, In x used -> In x used'.
@@ -1241,6 +1298,23 @@ Proof.
   destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
   inversion Hrename; subst. simpl.
   eapply alpha_rename_params_names_nodup. exact Hps.
+Qed.
+
+Lemma alpha_rename_fn_def_params_ctx_alpha : forall used f fr used',
+  alpha_rename_fn_def used f = (fr, used') ->
+  exists ρ, ctx_alpha ρ
+    (params_ctx (fn_params f)) (params_ctx (fn_params fr)).
+Proof.
+  intros used f fr used' Hrename.
+  destruct f as [fname lifetimes outs ps ret body].
+  unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
+  destruct (alpha_rename_params []
+    (param_names ps ++ free_vars_expr body ++ used) ps)
+    as [[psr ρ] used1] eqn:Hps.
+  destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
+  inversion Hrename; subst. simpl.
+  exists ρ.
+  eapply alpha_rename_params_ctx_alpha_nil. exact Hps.
 Qed.
 
 Lemma alpha_rename_syntax_go_used_extends : forall used fenv fenvr used',

@@ -22,11 +22,11 @@
 
 ## Current Status
 
-Last updated implementation point: added a checker-facing root provenance sidecar API (`infer_core_env_roots`, `infer_env_roots`, `infer_full_env_roots`) that returns output context, output root environment, and result root summary for the provenance-ready fragment. The next boundary is proving this executable sidecar sound with respect to `typed_env_roots`.
+Last updated implementation point: proved the checker-facing root provenance sidecar sound with respect to `typed_env_roots` through `infer_core_env_state_fuel_roots_sound`, `infer_core_env_roots_sound`, `infer_env_roots_sound`, and `infer_full_env_roots_sound`. The next boundary is deciding whether to connect sidecar root soundness into checker-to-runtime safety or continue expanding preservation beyond the ready fragment.
 
 - S0: `[done]` runtime value/store typing と runtime reference well-formedness の仕様は導入済み。
 - S1: `[done]` path/value/store helper の主要部分と linear partial-move obligation helper/checker fix は導入済み。
-- S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。`VHT_Ref` は runtime store 内の参照先 path の存在・型対応を要求する形に強化済み。direct assign/replace は concrete RHS preservation evidence 経由で ready subset に再接続済み。`store_remove` 用の root-exclusion runtime helper、static root provenance judgment、runtime root-within-to-exclusion bridge、ready fragment の root preservation theorem、roots-aware `ELet` bridge、top-level roots-ready `ELet` helper、roots-aware ready mutual preservation theorem、checker-facing root provenance sidecar API は追加済み。full unrestricted theorem と sidecar soundness theorem は未完了。
+- S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。`VHT_Ref` は runtime store 内の参照先 path の存在・型対応を要求する形に強化済み。direct assign/replace は concrete RHS preservation evidence 経由で ready subset に再接続済み。`store_remove` 用の root-exclusion runtime helper、static root provenance judgment、runtime root-within-to-exclusion bridge、ready fragment の root preservation theorem、roots-aware `ELet` bridge、top-level roots-ready `ELet` helper、roots-aware ready mutual preservation theorem、checker-facing root provenance sidecar API と soundness theorem は追加済み。full unrestricted theorem は未完了。
 - S3: `[todo]` call/closure preservation は未着手。ただし empty closure value typing helper は一部存在する。
 - S4-S6: `[todo]` checker-to-runtime safety、runtime reference safety、small-step progress は未着手。
 
@@ -107,7 +107,7 @@ Theorem step_progress :
    - `[done]` `store_update_state` / `store_mark_used` / restore 系の state-only 更新が `store_ref_targets_preserved` を満たす補題を追加済み。
    - `[done]` direct `assign` / `replace` は、強化後の reference preservation obligation を露出する形に helper を弱め、concrete RHS preservation evidence を渡して root/path の update・restore obligation と ready subset への再接続を完了済み。
    - `[partial]` direct `let` は、強化後の reference preservation obligation に対する local binding removal / escape invariant が未解決。runtime 側には `value_refs_exclude_root` / `store_refs_exclude_root` と scoped `store_remove` helper を追加済みで、`eval_let_preserves_typing` は false な global remove-preservation premise ではなく root-exclusion premise を要求する形に弱めた。
-   - `[partial]` static root provenance として `root_set` / `root_env`、`typed_env_roots` / `typed_args_roots` / `typed_fields_roots`、および既存 `typed_env_structural` への projection lemma を追加済み。checker-facing API として別名 sidecar `infer_core_env_roots` / `infer_env_roots` / `infer_full_env_roots` も追加済みだが、soundness theorem は未完了。
+   - `[done]` static root provenance として `root_set` / `root_env`、`typed_env_roots` / `typed_args_roots` / `typed_fields_roots`、および既存 `typed_env_structural` への projection lemma を追加済み。checker-facing API として別名 sidecar `infer_core_env_roots` / `infer_env_roots` / `infer_full_env_roots` を追加し、sidecar 成功から `typed_env_roots` を導く soundness theorem も追加済み。
    - `[done]` `typed_env_roots` の path assign/replace は、field-insensitive summary が untouched field 内の reference root を忘れないよう、既存 binding roots と RHS roots の union で更新する形に修正済み。
    - `[done]` `typed_env_roots` の `ELet` / `ELetInfer` は、body store に local binding を追加する前に `root_env_lookup x R1 = None` を要求するよう強化済み。
    - `[done]` `typed_env_roots` の root summaries を runtime 側の `value_refs_exclude_root` / `store_refs_exclude_root` premise へ変換するため、`TypeSafety.v` に `value_roots_within` / `store_roots_within` と exclusion bridge lemma を追加済み。
@@ -201,9 +201,9 @@ Theorem step_progress :
 12. `[done]` update alignment helper を追加して provenance-aware preservation theorem を完成させ、評価結果と出力 store が static root summaries に収まることを証明する。
 13. `[done]` `eval_preserves_roots_ready_mutual` を使って `ELet` の root-exclusion premise を discharge する bridge を追加する。
 14. `[done]` roots-aware ready mutual preservation theorem を追加し、`ELet` bridge を recursive preservation に組み込む。
-15. `[partial]` checker が root provenance を返す executable interface を追加する。`infer_core_env_roots` / `infer_env_roots` / `infer_full_env_roots` は追加済みで、sidecar soundness theorem は未完了。
-16. `[current]` sidecar checker 成功から `typed_env_roots` を導く soundness theorem を追加する。
-17. `[todo]` call/closure 関連の S3 を追加する。
+15. `[done]` checker が root provenance を返す executable interface を追加する。`infer_core_env_roots` / `infer_env_roots` / `infer_full_env_roots` は追加済み。
+16. `[done]` sidecar checker 成功から `typed_env_roots` を導く soundness theorem を追加する。
+17. `[current]` call/closure 関連の S3 を追加するか、sidecar root soundness を使って S4 の checker-to-runtime 接続を開始する。
 18. `[todo]` `EnvFullSoundness.v` / `ValidatorSoundness.v` と接続して S4 を証明する。
 19. `[todo]` borrow/runtime reference safety を S5 として別 theorem 群にする。
 20. `[todo]` small-step semantics が必要になった時点で S6 を開始する。
@@ -255,4 +255,4 @@ review 指摘に対応する regression:
 - `plan/review.md` の指摘は古い extracted artifact の行番号を参照しているため、roadmap では行番号ではなく semantic issue として追跡する。
 - 強化後の `VHT_Ref` により、従来の「value typing は store に依存しない」という仮定は使えない。今後の preservation は store typing だけでなく、評価が既存 reference target を保存することを明示的に運ぶ必要がある。
 - `store_remove x` は `VRef x _` を含む surviving value があると `value_has_type` を壊すため、global な `store_ref_targets_preserved env s (store_remove x s)` は false。`ELet` preservation は root-sensitive provenance summary を static typing/checker に追加するまで ready theorem へ再接続できない。
-- root provenance は Prop-level API と別名 sidecar checker API の両方に存在するが、両者の soundness theorem はまだ未証明。checker-to-runtime theorem へ接続する前に、sidecar 成功から `typed_env_roots` を導く必要がある。
+- root provenance は Prop-level API と別名 sidecar checker API の両方に存在し、sidecar 成功から `typed_env_roots` を導く soundness theorem は追加済み。checker-to-runtime theorem へ接続するには、初期 root environment と runtime store root invariant の対応を固定する必要がある。

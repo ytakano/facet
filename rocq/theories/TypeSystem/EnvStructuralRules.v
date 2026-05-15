@@ -958,10 +958,12 @@ Inductive borrow_ok_env_structural (env : global_env)
   | BOES_Lit : forall PBS Γ l,
       borrow_ok_env_structural env PBS Γ (ELit l) PBS
   | BOES_Var : forall PBS Γ x,
+      borrow_check_place_access env PBS Γ (PVar x) = infer_ok tt ->
       borrow_ok_env_structural env PBS Γ (EVar x) PBS
   | BOES_Fn : forall PBS Γ fname,
       borrow_ok_env_structural env PBS Γ (EFn fname) PBS
   | BOES_Place : forall PBS Γ p,
+      borrow_check_place_access env PBS Γ p = infer_ok tt ->
       borrow_ok_env_structural env PBS Γ (EPlace p) PBS
   | BOES_Struct : forall PBS PBS' Γ sname lts args fields,
       borrow_ok_fields_env_structural env PBS Γ fields PBS' ->

@@ -640,6 +640,12 @@ val pbs_new_entries :
 
 val pbs_eqb : path_borrow_state -> path_borrow_state -> bool
 
+val pbs_access_allowed_b :
+  ident -> field_path -> path_borrow_state -> ty -> bool
+
+val borrow_check_place_access :
+  global_env -> path_borrow_state -> ctx -> place -> unit infer_result
+
 val borrow_check_env :
   global_env -> path_borrow_state -> ctx -> expr -> path_borrow_state
   infer_result

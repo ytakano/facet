@@ -139,7 +139,9 @@ Proof.
   + injection Hcheck as <-. constructor.
 
   (* EVar *)
-  + injection Hcheck as <-. constructor.
+  + destruct (borrow_check_place_access env PBS Γ (PVar i)) as [[] | err] eqn:Haccess;
+      try discriminate.
+    injection Hcheck as <-. constructor. exact Haccess.
 
   (* ELet *)
   + destruct (borrow_check_env env PBS Γ e1) as [PBS1|] eqn:He1; [|discriminate].
@@ -162,7 +164,9 @@ Proof.
   + injection Hcheck as <-. constructor.
 
   (* EPlace *)
-  + injection Hcheck as <-. constructor.
+  + destruct (borrow_check_place_access env PBS Γ p) as [[] | err] eqn:Haccess;
+      try discriminate.
+    injection Hcheck as <-. constructor. exact Haccess.
 
   (* ECall *)
   + apply BOES_Call.

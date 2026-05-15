@@ -3641,11 +3641,37 @@ let rec pbs_eqb a b =
      | [] -> false
      | y :: ys -> (&&) (path_borrow_entry_eqb x y) (pbs_eqb xs ys))
 
+(** val pbs_access_allowed_b :
+    ident -> field_path -> path_borrow_state -> ty -> bool **)
+
+let pbs_access_allowed_b x p pBS t =
+  (&&) (negb (pbs_has_mut x p pBS))
+    ((||) (usage_eqb (ty_usage t) UUnrestricted) (negb (pbs_has_any x p pBS)))
+
+(** val borrow_check_place_access :
+    global_env -> path_borrow_state -> ctx -> place -> unit infer_result **)
+
+let borrow_check_place_access env pBS _UU0393_ p =
+  match place_path p with
+  | Some p0 ->
+    let (x, path) = p0 in
+    (match infer_place_env env _UU0393_ p with
+     | Infer_ok t ->
+       if pbs_access_allowed_b x path pBS t
+       then Infer_ok ()
+       else Infer_err (ErrBorrowConflict x)
+     | Infer_err err -> Infer_err err)
+  | None -> Infer_ok ()
+
 (** val borrow_check_env :
     global_env -> path_borrow_state -> ctx -> expr -> path_borrow_state
     infer_result **)
 
 let rec borrow_check_env env pBS _UU0393_ = function
+| EVar x ->
+  (match borrow_check_place_access env pBS _UU0393_ (PVar x) with
+   | Infer_ok _ -> Infer_ok pBS
+   | Infer_err err -> Infer_err err)
 | ELet (m, x, t, e1, e2) ->
   (match borrow_check_env env pBS _UU0393_ e1 with
    | Infer_ok pBS1 ->
@@ -3661,6 +3687,10 @@ let rec borrow_check_env env pBS _UU0393_ = function
      (match borrow_check_env env pBS1 _UU0393_ e2 with
       | Infer_ok pBS2 -> Infer_ok (pbs_remove_all new_from_e1 pBS2)
       | Infer_err err -> Infer_err err)
+   | Infer_err err -> Infer_err err)
+| EPlace p ->
+  (match borrow_check_place_access env pBS _UU0393_ p with
+   | Infer_ok _ -> Infer_ok pBS
    | Infer_err err -> Infer_err err)
 | ECall (_, args) ->
   let rec go pBS0 = function

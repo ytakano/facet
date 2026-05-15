@@ -3035,10 +3035,40 @@ Fixpoint pbs_eqb (a b : path_borrow_state) : bool :=
   | _, _ => false
   end.
 
+Definition pbs_access_allowed_b
+    (x : ident) (p : field_path) (PBS : path_borrow_state) (T : Ty) : bool :=
+  negb (pbs_has_mut x p PBS) &&
+  (usage_eqb (ty_usage T) UUnrestricted || negb (pbs_has_any x p PBS)).
+
+Definition borrow_check_place_access
+    (env : global_env) (PBS : path_borrow_state) (Γ : ctx) (p : place)
+    : infer_result unit :=
+  match place_path p with
+  | None => infer_ok tt
+  | Some (x, path) =>
+      match infer_place_env env Γ p with
+      | infer_err err => infer_err err
+      | infer_ok T =>
+          if pbs_access_allowed_b x path PBS T
+          then infer_ok tt
+          else infer_err (ErrBorrowConflict x)
+      end
+  end.
+
 Fixpoint borrow_check_env (env : global_env) (PBS : path_borrow_state) (Γ : ctx)
     (e : expr) : infer_result path_borrow_state :=
   match e with
-  | EUnit | ELit _ | EVar _ | EFn _ | EPlace _ => infer_ok PBS
+  | EUnit | ELit _ | EFn _ => infer_ok PBS
+  | EVar x =>
+      match borrow_check_place_access env PBS Γ (PVar x) with
+      | infer_ok _ => infer_ok PBS
+      | infer_err err => infer_err err
+      end
+  | EPlace p =>
+      match borrow_check_place_access env PBS Γ p with
+      | infer_ok _ => infer_ok PBS
+      | infer_err err => infer_err err
+      end
   | EStruct _ _ _ fields =>
       let fix go (PBS0 : path_borrow_state) (fields0 : list (string * expr))
           : infer_result path_borrow_state :=

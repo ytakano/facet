@@ -1,0 +1,11 @@
+struct Box {
+  x: linear isize,
+  y: unrestricted bool
+}
+
+fn main() -> unrestricted () {
+  let p: linear Box = Box { x = 1, y = true };
+  let r: unrestricted &linear isize = (&p.x) in
+  let x: linear isize = p.x in
+  (drop x)
+}

@@ -1,0 +1,5 @@
+fn f(x: affine isize) -> unrestricted () {
+    let r: unrestricted &affine isize = (&x) in
+    let y: affine isize = x in
+    (drop y)
+}

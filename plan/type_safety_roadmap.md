@@ -22,14 +22,14 @@
 
 ## Current Status
 
-Last updated implementation point: extended the static borrow-state safety invariant with pairwise conflict facts. `BorrowStateSafety.v` defines `pbs_no_conflicts` for active path borrows, proves structural borrow checking preserves it, derives shared/mut and distinct mut/mut no-conflict corollaries, and connects those facts to `borrow_check_env` and root-sidecar checked functions. Runtime aliasing correspondence is still future work.
+Last updated implementation point: active borrow state now rejects conflicting direct reads and moves. `BorrowStateSafety.v` defines `pbs_no_conflicts` for active path borrows and pairwise conflict facts; `borrow_check_env` now checks direct `EVar` / `EPlace` access against active path borrows, rejecting all access under conflicting mutable borrows and rejecting affine/linear moves under shared borrows. Runtime aliasing correspondence is still future work.
 
 - S0: `[done]` runtime value/store typing と runtime reference well-formedness の仕様は導入済み。
 - S1: `[done]` path/value/store helper の主要部分と linear partial-move obligation helper/checker fix は導入済み。
 - S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。`VHT_Ref` は runtime store 内の参照先 path の存在・型対応を要求する形に強化済み。direct assign/replace は concrete RHS preservation evidence 経由で ready subset に再接続済み。`store_remove` 用の root-exclusion runtime helper、static root provenance judgment、runtime root-within-to-exclusion bridge、ready fragment の root preservation theorem、roots-aware `ELet` bridge、top-level roots-ready `ELet` helper、roots-aware ready mutual preservation theorem、checker-facing root provenance sidecar API と soundness theorem は追加済み。full unrestricted theorem は未完了。
 - S3: `[todo]` call/closure preservation は未着手。ただし empty closure value typing helper は一部存在する。
 - S4: `[partial]` checker-to-runtime safety は root sidecar / ready fragment で接続済み。full unrestricted theorem と validator 経由 theorem は未着手。
-- S5: `[partial]` ready/root-provenance fragment で runtime refs の no-dangling theorem、direct ref membership target theorem、static borrow-state no-conflict invariant と pairwise conflict corollary は追加済み。runtime aliasing correspondence と captured closure refs は未着手。
+- S5: `[partial]` ready/root-provenance fragment で runtime refs の no-dangling theorem、direct ref membership target theorem、static borrow-state no-conflict invariant、pairwise conflict corollary、direct access guard は追加済み。runtime aliasing correspondence と captured closure refs は未着手。
 - S6: `[todo]` small-step progress は未着手。
 
 ## Target Theorems
@@ -163,8 +163,8 @@ Theorem step_progress :
    - `[done]` static active borrow state の no-conflict invariant `pbs_no_conflicts` を定義し、`borrow_ok_env_structural` / `borrow_check_env` が保存することを証明する。
    - `[done]` `pbs_no_conflicts` から shared/mut と distinct mut/mut の pairwise no-conflict corollary を導き、`borrow_check_env` 成功後にも接続する。
    - `borrow_ok_env_structural` と runtime refs の対応 invariant を導入する。
-   - borrow 中の元 place に対する通常の `EVar` / `EPlace` read/move を active borrow state と照合する。
-   - conflicting unique borrow がある place は read/copy/move/update を禁止する。conflicting shared borrow がある place は affine/linear move と mutable update を禁止し、unrestricted copy の扱いは仕様として明示する。
+   - `[done]` borrow 中の元 place に対する通常の `EVar` / direct `EPlace` read/move を active borrow state と照合する。
+   - `[done]` conflicting unique borrow がある direct place は read/copy/move/update を禁止する。conflicting shared borrow がある direct place は affine/linear move と mutable update を禁止し、unrestricted copy は許可する。indirect place は後続 slice に残す。
    - `let` 境界で、削除される local binding に由来する reference が body result や store に escape しないことを検査・証明する。必要なら fresh let-region を導入するが、最初は escape check で進める。
    - local type annotation の lifetime elision が `LVar 0` 固定にならないよう、local annotation 内の elided lifetime は当面拒否する。fresh local region 導入は後続拡張に残す。
    - dangling reference が評価結果・store に残らないことを theorem 化する。
@@ -214,7 +214,7 @@ Theorem step_progress :
 16. `[done]` sidecar checker 成功から `typed_env_roots` を導く soundness theorem を追加する。
 17. `[done]` sidecar root soundness を使って S4 の checker-to-runtime 接続を ready fragment で開始する。
 18. `[partial]` `EnvRuntimeSafety.v` に root sidecar / ready fragment の `infer_full_env_roots_big_step_safe_ready` を追加する。full `infer_full_env_big_step_safe` と `ValidatorSoundness.v` 経由 theorem は未完了。
-19. `[partial]` `RuntimeRefSafety.v` に ready/root-provenance fragment の no-dangling runtime reference theorem 群と direct ref membership target theorem 群を追加し、`BorrowStateSafety.v` に static borrow-state no-conflict invariant と pairwise conflict corollary を追加する。runtime aliasing correspondence と captured closure refs は未完了。
+19. `[partial]` `RuntimeRefSafety.v` に ready/root-provenance fragment の no-dangling runtime reference theorem 群と direct ref membership target theorem 群を追加し、`BorrowStateSafety.v` に static borrow-state no-conflict invariant と pairwise conflict corollary を追加する。`borrow_check_env` は direct `EVar` / `EPlace` access を active borrow state と照合済み。runtime aliasing correspondence、indirect place access、captured closure refs は未完了。
 20. `[todo]` small-step semantics が必要になった時点で S6 を開始する。
 
 ## Acceptance Criteria
@@ -237,7 +237,7 @@ sh tests/fir/run.sh
 
 review 指摘に対応する regression:
 
-- `[todo]` borrow 中の root/field を move/read する式は拒否される。
+- `[done]` borrow 中の direct root/field を move/read する式は拒否される。indirect place は後続 slice。
 - `[todo]` inner `let` の local binding への reference が外側へ escape する式は拒否される。
 - `[done]` linear struct の一部 field だけを move/drop して残りの linear field を放置する式は拒否される。
 - `[done]` `replace x x` / `replace s.f s.f` のように target を new value 評価中に消費する式は拒否され続ける。

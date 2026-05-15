@@ -1,0 +1,4 @@
+fn f(mut x: unrestricted isize) -> unrestricted isize {
+    let r: affine &mut unrestricted isize = (&mut x) in
+    x
+}

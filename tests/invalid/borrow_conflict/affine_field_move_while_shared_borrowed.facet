@@ -1,0 +1,12 @@
+struct Box {
+  x: affine isize,
+  y: unrestricted bool
+}
+
+fn main() -> unrestricted bool {
+  let p: affine Box = Box { x = 1, y = true };
+  let r: unrestricted &affine isize = (&p.x) in
+  let x: affine isize = p.x in
+  (drop x);
+  p.y
+}

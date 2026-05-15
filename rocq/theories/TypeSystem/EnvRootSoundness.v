@@ -411,6 +411,33 @@ Definition checked_fn_env_roots (env : global_env) (f : fn_def)
   exists PBS',
     borrow_ok_env_structural env [] (params_ctx (fn_params f)) (fn_body f) PBS'.
 
+Lemma typed_fn_env_roots_structural :
+  forall env f R0 R_out roots,
+    typed_fn_env_roots env f R0 R_out roots ->
+    typed_fn_env_structural env f.
+Proof.
+  unfold typed_fn_env_roots, typed_fn_env_structural.
+  intros env f R0 R_out roots Htyped.
+  destruct Htyped as [T_body [Γ_out [Htyped [Hcompat Hparams]]]].
+  exists T_body, Γ_out.
+  repeat split.
+  - eapply typed_env_roots_structural. exact Htyped.
+  - exact Hcompat.
+  - exact Hparams.
+Qed.
+
+Lemma checked_fn_env_roots_structural :
+  forall env f R0 R_out roots,
+    checked_fn_env_roots env f R0 R_out roots ->
+    checked_fn_env_structural env f.
+Proof.
+  unfold checked_fn_env_roots, checked_fn_env_structural.
+  intros env f R0 R_out roots [Htyped Hborrow].
+  split.
+  - eapply typed_fn_env_roots_structural. exact Htyped.
+  - exact Hborrow.
+Qed.
+
 Theorem infer_env_roots_sound :
   forall env f R0 T Γ_out R_out roots,
     infer_env_roots env f R0 = infer_ok (T, Γ_out, R_out, roots) ->

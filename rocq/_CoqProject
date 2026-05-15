@@ -19,6 +19,7 @@ theories/TypeSystem/EnvTypingSoundness.v
 theories/TypeSystem/EnvBorrowSoundness.v
 theories/TypeSystem/EnvRootSoundness.v
 theories/TypeSystem/EnvRuntimeSafety.v
+theories/TypeSystem/RuntimeRefSafety.v
 theories/TypeSystem/EnvFullSoundness.v
 theories/TypeSystem/CheckerUsageSoundness.v
 theories/TypeSystem/BorrowCheckSoundness.v

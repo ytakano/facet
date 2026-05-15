@@ -363,6 +363,20 @@ val apply_lt_params : lifetime list -> param list -> param list
 
 val expr_ref_root : expr -> ident option
 
+type root_set = ident list
+
+type root_env = (ident * root_set) list
+
+val root_set_union : root_set -> root_set -> root_set
+
+val root_env_lookup : ident -> root_env -> root_set option
+
+val root_env_add : ident -> root_set -> root_env -> root_env
+
+val root_env_update : ident -> root_set -> root_env -> root_env
+
+val root_env_remove : ident -> root_env -> root_env
+
 val usage_eqb : usage -> usage -> bool
 
 val usage_sub_bool : usage -> usage -> bool
@@ -566,9 +580,38 @@ val infer_core_env :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
   (ty * ctx) infer_result
 
+val root_set_eqb : root_set -> root_set -> bool
+
+val root_env_eqb : root_env -> root_env -> bool
+
+val roots_exclude_b : ident -> root_set -> bool
+
+val root_env_excludes_b : ident -> root_env -> bool
+
+val infer_place_roots :
+  global_env -> sctx -> root_env -> place ->
+  (((ty * ident) * field_path) * root_set) infer_result
+
+val consume_direct_place_value_roots :
+  global_env -> sctx -> root_env -> place -> ((ty * sctx) * root_set)
+  infer_result
+
+val infer_core_env_state_fuel_roots :
+  Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+  root_env -> sctx -> expr -> (((ty * sctx) * root_env) * root_set)
+  infer_result
+
+val infer_core_env_roots :
+  global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
+  -> (((ty * ctx) * root_env) * root_set) infer_result
+
 val wf_params_b : region_ctx -> param list -> bool
 
 val infer_env : global_env -> fn_def -> (ty * ctx) infer_result
+
+val infer_env_roots :
+  global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
+  infer_result
 
 type path_borrow_entry =
 | PBShared of ident * field_path
@@ -602,5 +645,9 @@ val borrow_check_env :
   infer_result
 
 val infer_full_env : global_env -> fn_def -> (ty * ctx) infer_result
+
+val infer_full_env_roots :
+  global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
+  infer_result
 
 val check_program_env : global_env -> bool

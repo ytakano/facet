@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program TypingRules.
+From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program TypingRules RootProvenance.
 From Stdlib Require Import List String Bool ZArith.
 Import ListNotations.
 
@@ -2280,6 +2280,345 @@ Definition infer_core_env
   | infer_err err => infer_err err
   end.
 
+Fixpoint root_set_eqb (a b : root_set) : bool :=
+  match a, b with
+  | [], [] => true
+  | x :: xs, y :: ys => ident_eqb x y && root_set_eqb xs ys
+  | _, _ => false
+  end.
+
+Fixpoint root_env_eqb (R1 R2 : root_env) : bool :=
+  match R1, R2 with
+  | [], [] => true
+  | (x1, roots1) :: rest1, (x2, roots2) :: rest2 =>
+      ident_eqb x1 x2 && root_set_eqb roots1 roots2 && root_env_eqb rest1 rest2
+  | _, _ => false
+  end.
+
+Definition roots_exclude_b (x : ident) (roots : root_set) : bool :=
+  negb (existsb (ident_eqb x) roots).
+
+Fixpoint root_env_excludes_b (x : ident) (R : root_env) : bool :=
+  match R with
+  | [] => true
+  | (y, roots) :: rest =>
+      (if ident_eqb x y then true else roots_exclude_b x roots) &&
+      root_env_excludes_b x rest
+  end.
+
+Definition infer_place_roots (env : global_env) (Σ : sctx)
+    (R : root_env) (p : place) : infer_result (Ty * ident * field_path * root_set) :=
+  match place_path p with
+  | None => infer_err ErrNotImplemented
+  | Some (x, path) =>
+      match infer_place_sctx env Σ p with
+      | infer_err err => infer_err err
+      | infer_ok T =>
+          match root_env_lookup x R with
+          | Some roots => infer_ok (T, x, path, roots)
+          | None => infer_err ErrContextCheckFailed
+          end
+      end
+  end.
+
+Definition consume_direct_place_value_roots (env : global_env) (Σ : sctx)
+    (R : root_env) (p : place)
+    : infer_result (Ty * sctx * root_set) :=
+  match infer_place_roots env Σ R p with
+  | infer_err err => infer_err err
+  | infer_ok (T, x, path, roots) =>
+      if usage_eqb (ty_usage T) UUnrestricted
+      then infer_ok (T, Σ, roots)
+      else
+        match sctx_consume_path Σ x path with
+        | infer_ok Σ' => infer_ok (T, Σ', roots)
+        | infer_err err => infer_err err
+        end
+  end.
+
+Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
+    (env : global_env) (Ω : outlives_ctx) (n : nat)
+    (R : root_env) (Σ : sctx) (e : expr)
+    : infer_result (Ty * sctx * root_env * root_set) :=
+  match fuel with
+  | O => infer_err ErrNotImplemented
+  | S fuel' =>
+  match e with
+  | EUnit => infer_ok (MkTy UUnrestricted TUnits, Σ, R, [])
+  | ELit (LInt _) => infer_ok (MkTy UUnrestricted TIntegers, Σ, R, [])
+  | ELit (LFloat _) => infer_ok (MkTy UUnrestricted TFloats, Σ, R, [])
+  | ELit (LBool _) => infer_ok (MkTy UUnrestricted TBooleans, Σ, R, [])
+  | EVar x =>
+      match consume_direct_place_value_roots env Σ R (PVar x) with
+      | infer_ok (T, Σ', roots) => infer_ok (T, Σ', R, roots)
+      | infer_err err => infer_err err
+      end
+  | EPlace p =>
+      match consume_direct_place_value_roots env Σ R p with
+      | infer_ok (T, Σ', roots) => infer_ok (T, Σ', R, roots)
+      | infer_err err => infer_err err
+      end
+  | EFn fname =>
+      match lookup_fn_b fname (env_fns env) with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef => infer_ok (fn_value_ty fdef, Σ, R, [])
+      end
+  | EStruct sname lts args fields =>
+      match lookup_struct sname env with
+      | None => infer_err (ErrStructNotFound sname)
+      | Some s =>
+          if negb (Nat.eqb (List.length lts) (struct_lifetimes s))
+          then infer_err ErrArityMismatch
+          else if negb (Nat.eqb (List.length args) (struct_type_params s))
+          then infer_err ErrArityMismatch
+          else
+          match check_struct_bounds env (struct_bounds s) args with
+          | Some err => infer_err err
+          | None =>
+              match first_duplicate_field fields with
+              | Some name => infer_err (ErrDuplicateField name)
+              | None =>
+                  match first_unknown_field fields (struct_fields s) with
+                  | Some name => infer_err (ErrFieldNotFound name)
+                  | None =>
+                      match first_missing_field (struct_fields s) fields with
+                      | Some name => infer_err (ErrMissingField name)
+                      | None =>
+                          let fix go (Σ0 : sctx) (R0 : root_env)
+                              (defs : list field_def)
+                              : infer_result (sctx * root_env * root_set) :=
+                            match defs with
+                            | [] => infer_ok (Σ0, R0, [])
+                            | f :: rest =>
+                                match lookup_field_b (field_name f) fields with
+                                | None => infer_err (ErrMissingField (field_name f))
+                                | Some e_field =>
+                                    match infer_core_env_state_fuel_roots
+                                            fuel' env Ω n R0 Σ0 e_field with
+                                    | infer_err err => infer_err err
+                                    | infer_ok (T_field, Σ1, R1, roots_field) =>
+                                        let T_expected :=
+                                          instantiate_struct_field_ty lts args f in
+                                        if ty_compatible_b Ω T_field T_expected
+                                        then
+                                          match go Σ1 R1 rest with
+                                          | infer_err err => infer_err err
+                                          | infer_ok (Σ2, R2, roots_rest) =>
+                                              infer_ok
+                                                (Σ2, R2,
+                                                 root_set_union roots_field roots_rest)
+                                          end
+                                        else infer_err (compatible_error T_field T_expected)
+                                    end
+                                end
+                            end
+                          in
+                          match go Σ R (struct_fields s) with
+                          | infer_err err => infer_err err
+                          | infer_ok (Σ', R', roots) =>
+                              infer_ok
+                                (instantiate_struct_instance_ty s lts args, Σ', R', roots)
+                          end
+                        end
+                  end
+              end
+          end
+      end
+  | ELet m x T e1 e2 =>
+      match infer_core_env_state_fuel_roots fuel' env Ω n R Σ e1 with
+      | infer_err err => infer_err err
+      | infer_ok (T1, Σ1, R1, roots1) =>
+          if ty_compatible_b Ω T1 T
+          then
+            match root_env_lookup x R1 with
+            | Some _ => infer_err ErrContextCheckFailed
+            | None =>
+                match infer_core_env_state_fuel_roots fuel' env Ω n
+                        (root_env_add x roots1 R1) (sctx_add x T m Σ1) e2 with
+                | infer_err err => infer_err err
+                | infer_ok (T2, Σ2, R2, roots2) =>
+                    if sctx_check_ok env x T Σ2 &&
+                       roots_exclude_b x roots2 &&
+                       root_env_excludes_b x (root_env_remove x R2)
+                    then infer_ok (T2, sctx_remove x Σ2, root_env_remove x R2, roots2)
+                    else infer_err ErrContextCheckFailed
+                end
+            end
+          else infer_err (compatible_error T1 T)
+      end
+  | ELetInfer m x e1 e2 =>
+      match infer_core_env_state_fuel_roots fuel' env Ω n R Σ e1 with
+      | infer_err err => infer_err err
+      | infer_ok (T1, Σ1, R1, roots1) =>
+          match root_env_lookup x R1 with
+          | Some _ => infer_err ErrContextCheckFailed
+          | None =>
+              match infer_core_env_state_fuel_roots fuel' env Ω n
+                      (root_env_add x roots1 R1) (sctx_add x T1 m Σ1) e2 with
+              | infer_err err => infer_err err
+              | infer_ok (T2, Σ2, R2, roots2) =>
+                  if sctx_check_ok env x T1 Σ2 &&
+                     roots_exclude_b x roots2 &&
+                     root_env_excludes_b x (root_env_remove x R2)
+                  then infer_ok (T2, sctx_remove x Σ2, root_env_remove x R2, roots2)
+                  else infer_err ErrContextCheckFailed
+              end
+          end
+      end
+  | EDrop e1 =>
+      match infer_core_env_state_fuel_roots fuel' env Ω n R Σ e1 with
+      | infer_err err => infer_err err
+      | infer_ok (_, Σ', R', _) => infer_ok (MkTy UUnrestricted TUnits, Σ', R', [])
+      end
+  | EReplace p e_new =>
+      match place_path p with
+      | None => infer_err ErrNotImplemented
+      | Some (x, path) =>
+          match infer_place_sctx env Σ p with
+          | infer_err err => infer_err err
+          | infer_ok T_old =>
+              match root_env_lookup x R with
+              | None => infer_err ErrContextCheckFailed
+              | Some roots_result =>
+                  match sctx_lookup_mut x Σ with
+                  | Some MMutable =>
+                      if writable_place_b env Σ p
+                      then
+                        match infer_core_env_state_fuel_roots fuel' env Ω n R Σ e_new with
+                        | infer_err err => infer_err err
+                        | infer_ok (T_new, Σ1, R1, roots_new) =>
+                            match root_env_lookup x R1 with
+                            | None => infer_err ErrContextCheckFailed
+                            | Some roots_old =>
+                                if ty_compatible_b Ω T_new T_old
+                                then
+                                  match sctx_path_available Σ1 x path with
+                                  | infer_err err => infer_err err
+                                  | infer_ok _ =>
+                                      match sctx_restore_path Σ1 x path with
+                                      | infer_ok Σ2 =>
+                                          infer_ok
+                                            (T_old, Σ2,
+                                             root_env_update x
+                                               (root_set_union roots_old roots_new) R1,
+                                             roots_result)
+                                      | infer_err err => infer_err err
+                                      end
+                                  end
+                                else infer_err (compatible_error T_new T_old)
+                            end
+                        end
+                      else infer_err (ErrNotMutable x)
+                  | Some MImmutable => infer_err (ErrNotMutable x)
+                  | None => infer_err (ErrUnknownVar x)
+                  end
+              end
+          end
+      end
+  | EAssign p e_new =>
+      match place_path p with
+      | None => infer_err ErrNotImplemented
+      | Some (x, path) =>
+          match infer_place_sctx env Σ p with
+          | infer_err err => infer_err err
+          | infer_ok T_old =>
+              if usage_eqb (ty_usage T_old) ULinear
+              then infer_err (ErrUsageMismatch (ty_usage T_old) UAffine)
+              else
+              match sctx_lookup_mut x Σ with
+              | Some MMutable =>
+                  if writable_place_b env Σ p
+                  then
+                    match infer_core_env_state_fuel_roots fuel' env Ω n R Σ e_new with
+                    | infer_err err => infer_err err
+                    | infer_ok (T_new, Σ1, R1, roots_new) =>
+                        match root_env_lookup x R1 with
+                        | None => infer_err ErrContextCheckFailed
+                        | Some roots_old =>
+                            if ty_compatible_b Ω T_new T_old
+                            then
+                              match sctx_path_available Σ1 x path with
+                              | infer_err err => infer_err err
+                              | infer_ok _ =>
+                                  infer_ok
+                                    (MkTy UUnrestricted TUnits, Σ1,
+                                     root_env_update x
+                                       (root_set_union roots_old roots_new) R1,
+                                     [])
+                              end
+                            else infer_err (compatible_error T_new T_old)
+                        end
+                    end
+                  else infer_err (ErrNotMutable x)
+              | Some MImmutable => infer_err (ErrNotMutable x)
+              | None => infer_err (ErrUnknownVar x)
+              end
+          end
+      end
+  | EBorrow rk p =>
+      match place_path p with
+      | None => infer_err ErrNotImplemented
+      | Some (x, _) =>
+          match infer_place_sctx env Σ p with
+          | infer_err err => infer_err err
+          | infer_ok T_p =>
+              match rk with
+              | RShared =>
+                  infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_p), Σ, R, [x])
+              | RUnique =>
+                  match sctx_lookup_mut x Σ with
+                  | Some MMutable =>
+                      infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, [x])
+                  | Some MImmutable => infer_err (ErrImmutableBorrow x)
+                  | None => infer_err (ErrUnknownVar x)
+                  end
+              end
+          end
+      end
+  | EDeref _ => infer_err ErrNotImplemented
+  | EIf e1 e2 e3 =>
+      match infer_core_env_state_fuel_roots fuel' env Ω n R Σ e1 with
+      | infer_err err => infer_err err
+      | infer_ok (T_cond, Σ1, R1, _) =>
+          if ty_core_eqb (ty_core T_cond) TBooleans
+          then
+            match infer_core_env_state_fuel_roots fuel' env Ω n R1 Σ1 e2 with
+            | infer_err err => infer_err err
+            | infer_ok (T2, Σ2, R2, roots2) =>
+                match infer_core_env_state_fuel_roots fuel' env Ω n R1 Σ1 e3 with
+                | infer_err err => infer_err err
+                | infer_ok (T3, Σ3, R3, roots3) =>
+                    if ty_core_eqb (ty_core T2) (ty_core T3)
+                    then
+                      if root_env_eqb R2 R3
+                      then
+                        match ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) with
+                        | Some Γ4 =>
+                            infer_ok
+                              (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2),
+                               sctx_of_ctx Γ4, R2, root_set_union roots2 roots3)
+                        | None => infer_err ErrContextCheckFailed
+                        end
+                      else infer_err ErrContextCheckFailed
+                    else infer_err (ErrTypeMismatch (ty_core T2) (ty_core T3))
+                end
+            end
+          else infer_err (ErrTypeMismatch (ty_core T_cond) TBooleans)
+      end
+  | ECall _ _ => infer_err ErrNotImplemented
+  | ECallExpr _ _ => infer_err ErrNotImplemented
+  end
+  end.
+
+Definition infer_core_env_roots
+    (env : global_env) (Ω : outlives_ctx) (n : nat)
+    (R : root_env) (Γ : ctx) (e : expr)
+    : infer_result (Ty * ctx * root_env * root_set) :=
+  match infer_core_env_state_fuel_roots 10000 env Ω n R (sctx_of_ctx Γ) e with
+  | infer_ok (T, Σ, R', roots) => infer_ok (T, ctx_of_sctx Σ, R', roots)
+  | infer_err err => infer_err err
+  end.
+
 Definition infer_body (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx) (e : expr)
     : infer_result (Ty * ctx) :=
   infer_core fenv Ω n Γ e.
@@ -2411,6 +2750,33 @@ Definition infer_env (env : global_env) (f : fn_def)
       else infer_err (compatible_error T_body (fn_ret f))
   end.
 
+Definition infer_env_roots (env : global_env) (f : fn_def) (R0 : root_env)
+    : infer_result (Ty * ctx * root_env * root_set) :=
+  let n := fn_lifetimes f in
+  let Ω := fn_outlives f in
+  let Δ := mk_region_ctx n in
+  if negb (wf_outlives_b Δ Ω)
+  then infer_err ErrLifetimeLeak
+  else
+  if negb (wf_type_b Δ (fn_ret f))
+  then infer_err ErrLifetimeLeak
+  else
+  if negb (wf_params_b Δ (fn_params f))
+  then infer_err ErrLifetimeLeak
+  else
+  match infer_core_env_roots env Ω n R0 (params_ctx (fn_params f)) (fn_body f) with
+  | infer_err err => infer_err err
+  | infer_ok (T_body, Γ_out, R_out, roots) =>
+      if negb (wf_type_b Δ T_body)
+      then infer_err ErrLifetimeLeak
+      else
+      if ty_compatible_b Ω T_body (fn_ret f) then
+        if params_ok_env_b env (fn_params f) Γ_out
+        then infer_ok (fn_ret f, Γ_out, R_out, roots)
+        else infer_err ErrContextCheckFailed
+      else infer_err (compatible_error T_body (fn_ret f))
+  end.
+
 Definition ex_struct_pair : struct_def :=
   MkStructDef ("Pair"%string) 0 0 []
     [ MkFieldDef ("x"%string) MImmutable (MkTy UUnrestricted TIntegers)
@@ -2419,6 +2785,28 @@ Definition ex_struct_pair : struct_def :=
 
 Definition ex_env_struct_pair : global_env :=
   MkGlobalEnv [ex_struct_pair] [] [] [].
+
+Example infer_core_env_roots_var_summary_ok :
+  infer_core_env_roots ex_env_struct_pair [] 0
+    [((("x"%string), 0), [(("x"%string), 0)])]
+    [((("x"%string), 0), MkTy UUnrestricted TIntegers,
+      binding_state_of_bool false, MImmutable)]
+    (EVar (("x"%string), 0)) =
+  infer_ok
+    (MkTy UUnrestricted TIntegers,
+     [((("x"%string), 0), MkTy UUnrestricted TIntegers,
+       binding_state_of_bool false, MImmutable)],
+     [((("x"%string), 0), [(("x"%string), 0)])],
+     [(("x"%string), 0)]).
+Proof. vm_compute. reflexivity. Qed.
+
+Example infer_core_env_roots_let_escape_rejected :
+  infer_core_env_roots ex_env_struct_pair [] 0 [] []
+    (ELet MImmutable (("x"%string), 0) (MkTy UUnrestricted TIntegers)
+      (ELit (LInt 1))
+      (EBorrow RShared (PVar (("x"%string), 0)))) =
+  infer_err ErrContextCheckFailed.
+Proof. vm_compute. reflexivity. Qed.
 
 Example infer_core_env_struct_literal_ok :
   infer_core_env ex_env_struct_pair [] 0 []
@@ -2779,6 +3167,17 @@ Definition infer_full_env (env : global_env) (f : fn_def)
       end
   end.
 
+Definition infer_full_env_roots (env : global_env) (f : fn_def) (R0 : root_env)
+    : infer_result (Ty * ctx * root_env * root_set) :=
+  match infer_env_roots env f R0 with
+  | infer_err err => infer_err err
+  | infer_ok res =>
+      match borrow_check_env env [] (params_ctx (fn_params f)) (fn_body f) with
+      | infer_err err => infer_err err
+      | infer_ok _ => infer_ok res
+      end
+  end.
+
 Definition check_program_env (env : global_env) : bool :=
   forallb (fun f =>
     match infer_full_env env f with
@@ -2914,4 +3313,6 @@ Extraction Language OCaml.
 From Stdlib Require Import ExtrOcamlNativeString.
 From Stdlib Require Import ExtrOcamlNatBigInt.
 From Stdlib Require Import ExtrOcamlZBigInt.
-Extraction "../fixtures/TypeChecker.ml" infer_env infer_full_env check_program_env.
+Extraction "../fixtures/TypeChecker.ml"
+  infer_core_env_roots infer_env_roots infer_full_env_roots
+  infer_env infer_full_env check_program_env.

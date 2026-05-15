@@ -971,17 +971,19 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_env_roots env Ω n R Σ (EDrop e)
         (MkTy UUnrestricted TUnits) Σ' R' []
   | TER_Replace_Path : forall R R1 Σ Σ1 Σ2 p e_new T_old T_new
-      x path roots_old roots_new,
+      x path roots_result roots_old roots_new,
       typed_place_env_structural env Σ p T_old ->
       place_path p = Some (x, path) ->
       writable_place_env_structural env Σ p ->
+      root_env_lookup x R = Some roots_result ->
       typed_env_roots env Ω n R Σ e_new T_new Σ1 R1 roots_new ->
       root_env_lookup x R1 = Some roots_old ->
       ty_compatible_b Ω T_new T_old = true ->
       sctx_path_available Σ1 x path = infer_ok tt ->
       sctx_restore_path Σ1 x path = infer_ok Σ2 ->
       typed_env_roots env Ω n R Σ (EReplace p e_new) T_old Σ2
-        (root_env_update x (root_set_union roots_old roots_new) R1) []
+        (root_env_update x (root_set_union roots_old roots_new) R1)
+        roots_result
   | TER_Assign_Path : forall R R1 Σ Σ' p e_new T_old T_new
       x path roots_old roots_new,
       typed_place_env_structural env Σ p T_old ->
@@ -1090,6 +1092,59 @@ Lemma typed_fields_roots_structural :
 Proof.
   intros env Ω n lts args R Σ fields defs Σ' R' roots H.
   exact (proj2 (proj2 (typed_roots_structural env Ω n))
+    lts args R Σ fields defs Σ' R' roots H).
+Qed.
+
+Lemma typed_roots_no_shadow :
+  forall env Ω n,
+  (forall R Σ e T Σ' R' roots,
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_no_shadow R') /\
+  (forall R Σ args ps Σ' R' roots,
+    typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_no_shadow R') /\
+  (forall lts args R Σ fields defs Σ' R' roots,
+    typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_no_shadow R').
+Proof.
+  intros env Ω n.
+  apply typed_roots_ind; intros;
+    eauto using root_env_no_shadow_add, root_env_no_shadow_remove,
+      root_env_no_shadow_update.
+Qed.
+
+Lemma typed_env_roots_no_shadow :
+  forall env Ω n R Σ e T Σ' R' roots,
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_no_shadow R'.
+Proof.
+  intros env Ω n R Σ e T Σ' R' roots H.
+  exact (proj1 (typed_roots_no_shadow env Ω n) R Σ e T Σ' R' roots H).
+Qed.
+
+Lemma typed_args_roots_no_shadow :
+  forall env Ω n R Σ args ps Σ' R' roots,
+    typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_no_shadow R'.
+Proof.
+  intros env Ω n R Σ args ps Σ' R' roots H.
+  exact (proj1 (proj2 (typed_roots_no_shadow env Ω n))
+    R Σ args ps Σ' R' roots H).
+Qed.
+
+Lemma typed_fields_roots_no_shadow :
+  forall env Ω n lts args R Σ fields defs Σ' R' roots,
+    typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_no_shadow R'.
+Proof.
+  intros env Ω n lts args R Σ fields defs Σ' R' roots H.
+  exact (proj2 (proj2 (typed_roots_no_shadow env Ω n))
     lts args R Σ fields defs Σ' R' roots H).
 Qed.
 

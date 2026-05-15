@@ -22,7 +22,7 @@
 
 ## Current Status
 
-Last updated implementation point: added roots-aware `store_update_val` / `store_update_path` preservation helpers under no-shadow invariants. `ELet` remains blocked on the strengthened provenance preservation theorem.
+Last updated implementation point: fixed `typed_env_roots` replace result roots, added root-env no-shadow preservation for root typing, and added provenance-ready/root lookup helper infrastructure. `ELet` remains blocked on completing the strengthened provenance preservation theorem's update-place alignment cases.
 
 - S0: `[done]` runtime value/store typing と runtime reference well-formedness の仕様は導入済み。
 - S1: `[done]` path/value/store helper の主要部分と linear partial-move obligation helper/checker fix は導入済み。
@@ -116,7 +116,11 @@ Theorem step_progress :
    - `[done]` no-shadow 前提付きで、`root_env_remove x` / `store_remove x` 後に `x` lookup が消えることを証明済み。
    - `[done]` roots-aware update preservation 用に、store 内に対象名が存在しない場合の `root_env_update` 保存 helper と、`value_roots_within` の union weakening helper は追加済み。
    - `[done]` `value_update_path` / `store_update_val` / `store_update_path` が `store_roots_within` を union summary に対して保存する helper を no-shadow 前提で証明済み。
-   - `[todo]` `typed_env_roots` を使う strengthened preservation theorem を追加し、評価結果と出力 store が static root summaries に収まることを各 eval constructor で保存する。
+   - `[done]` `replace p e_new` の result root summary は `[]` ではなく、置換前 target binding の root summary を返すよう修正済み。
+   - `[done]` `typed_env_roots` / `typed_args_roots` / `typed_fields_roots` が `root_env_no_shadow` を保存する helper を追加済み。
+   - `[done]` provenance-aware preservation theorem 用に、`provenance_ready_*` predicate、field lookup helper、`store_add` の fresh reference-target preservation、store/value path root lookup helper を追加済み。
+   - `[partial]` `typed_env_roots` を使う strengthened preservation theorem は、basic/var/place/struct/let/drop/update の proof outline まで試作したが、direct/path update case で runtime `eval_place` が返す `(x,path)` と static `typed_env_roots` summary の alignment を汎用 helper 化する必要があり、未コミット theorem としては入れていない。
+   - `[todo]` update alignment helper を追加し、評価結果と出力 store が static root summaries に収まる strengthened preservation theorem を完成させる。
    - `[todo]` ready restriction のない full `eval_preserves_typing` を証明する。
    - `[done]` `typed_env_structural` が binding lookup/type を保存する same-bindings helper を追加し、現在 explicit premise にしている lookup 条件を theorem 本体で導出できるようにした。
    - `[done]` `EIf` false branch の `store_typed_ctx_merge_right` 用 type-equality premise は branch typing から導出できる helper を追加済み。
@@ -191,7 +195,7 @@ Theorem step_progress :
 9. `[done]` root provenance の path update rules を union ベースに直し、let freshness premise と runtime root helper を追加する。
 10. `[done]` `root_env` / `store` / `sctx` の no-shadow/no-duplicate binding invariant を追加し、`root_env_remove` / name-preserving store/context update helper をその invariant 前提で証明する。
 11. `[done]` `store_update_val` / `store_update_path` の roots-aware preservation helper を no-shadow 前提で証明する。
-12. `[current]` provenance-aware preservation theorem を追加し、評価結果と出力 store が static root summaries に収まることを証明して `ELet` / `ELetInfer` を ready theorem に戻す。
+12. `[current]` update alignment helper を追加して provenance-aware preservation theorem を完成させ、評価結果と出力 store が static root summaries に収まることを証明して `ELet` / `ELetInfer` を ready theorem に戻す。
 13. `[todo]` checker が root provenance を返す executable interface と soundness theorem を追加する。
 14. `[todo]` call/closure 関連の S3 を追加する。
 15. `[todo]` `EnvFullSoundness.v` / `ValidatorSoundness.v` と接続して S4 を証明する。

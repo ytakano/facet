@@ -677,6 +677,71 @@ Proof.
     + simpl. rewrite Heq. apply IH. exact Hlookup_none.
 Qed.
 
+Lemma store_roots_within_lookup_value :
+  forall R s x se roots,
+    store_roots_within R s ->
+    store_lookup x s = Some se ->
+    root_env_lookup x R = Some roots ->
+    value_roots_within roots (se_val se).
+Proof.
+  intros R s x se roots Hwithin Hlookup Hroot.
+  revert x se roots Hlookup Hroot.
+  induction Hwithin as [R | R se_head rest Hentry Hrest IH];
+    intros x se roots Hlookup Hroot; simpl in Hlookup; try discriminate.
+  destruct se_head as [sx sT sv sst].
+  simpl in Hlookup.
+  inversion Hentry; subst.
+  destruct (ident_eqb x sx) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst x.
+    inversion Hlookup; subst se.
+    match goal with
+    | Hlookup_se : root_env_lookup sx R = Some ?roots_se,
+      Hvalue_se : value_roots_within ?roots_se sv |- _ =>
+        rewrite Hroot in Hlookup_se;
+        inversion Hlookup_se; subst;
+        exact Hvalue_se
+    end.
+  - eapply IH; eassumption.
+Qed.
+
+Lemma value_lookup_path_roots_within :
+  forall roots v path v_path,
+    value_roots_within roots v ->
+    value_lookup_path v path = Some v_path ->
+    value_roots_within roots v_path.
+Proof.
+  intros roots v path.
+  revert roots v.
+  induction path as [| f rest IH]; intros roots v v_path Hwithin Hlookup;
+    simpl in Hlookup.
+  - inversion Hlookup; subst. exact Hwithin.
+  - inversion Hwithin; subst; try discriminate.
+    simpl in Hlookup.
+    remember (
+      fix lookup (fields0 : list (string * value)) : option value :=
+        match fields0 with
+        | [] => None
+        | (name, fv) :: tail =>
+            if String.eqb f name then Some fv else lookup tail
+        end) as lookup.
+    assert (Hfields :
+      forall fs fv,
+        value_fields_roots_within roots fs ->
+        lookup fs = Some fv ->
+        value_roots_within roots fv).
+    { intros fs. subst lookup.
+      induction fs as [| [fname fv] tail IHfields]; intros fv_path
+        Hfields_roots Hfields_lookup; simpl in Hfields_lookup; try discriminate.
+      inversion Hfields_roots; subst.
+      destruct (String.eqb f fname) eqn:Hname.
+      - inversion Hfields_lookup; subst. assumption.
+      - eapply IHfields; eassumption. }
+    destruct (lookup fields) as [fv |] eqn:Hfield_lookup; try discriminate.
+    eapply IH.
+    + eapply Hfields; eassumption.
+    + exact Hlookup.
+Qed.
+
 Lemma store_roots_within_add_env :
   forall R s x roots,
     store_roots_within R s ->
@@ -710,6 +775,22 @@ Proof.
       (binding_state_of_bool false) roots
       (root_env_lookup_add_eq x roots R) Hvalue).
   - apply store_roots_within_add_env; assumption.
+Qed.
+
+Lemma store_add_fresh_ref_targets_preserved :
+  forall env s x T v,
+    store_lookup x s = None ->
+    store_ref_targets_preserved env s (store_add x T v s).
+Proof.
+  unfold store_ref_targets_preserved.
+  intros env s x T v Hfresh y path se v_old T_old Hlookup Hvalue Htype.
+  exists se, v_old.
+  repeat split; try assumption.
+  unfold store_add. simpl.
+  destruct (ident_eqb y x) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst y.
+    rewrite Hlookup in Hfresh. discriminate.
+  - exact Hlookup.
 Qed.
 
 Lemma store_roots_within_remove_env :
@@ -1119,6 +1200,28 @@ Proof.
   - intros x Hin. apply root_set_union_in_right. exact Hin.
 Qed.
 
+Lemma value_fields_roots_within_union_l :
+  forall roots_old roots_new fields,
+    value_fields_roots_within roots_old fields ->
+    value_fields_roots_within (root_set_union roots_old roots_new) fields.
+Proof.
+  intros roots_old roots_new fields Hwithin.
+  eapply (proj2 (proj2 (proj2 value_roots_within_weaken))).
+  - exact Hwithin.
+  - intros x Hin. apply root_set_union_in_left. exact Hin.
+Qed.
+
+Lemma value_fields_roots_within_union_r :
+  forall roots_old roots_new fields,
+    value_fields_roots_within roots_new fields ->
+    value_fields_roots_within (root_set_union roots_old roots_new) fields.
+Proof.
+  intros roots_old roots_new fields Hwithin.
+  eapply (proj2 (proj2 (proj2 value_roots_within_weaken))).
+  - exact Hwithin.
+  - intros x Hin. apply root_set_union_in_right. exact Hin.
+Qed.
+
 Lemma value_update_path_roots_within_union :
   forall roots_old roots_new v path v_new v',
     value_roots_within roots_old v ->
@@ -1403,6 +1506,63 @@ with eval_struct_fields_ind' := Induction for eval_struct_fields Sort Prop.
 Combined Scheme eval_eval_args_eval_struct_fields_ind
   from eval_ind', eval_args_ind', eval_struct_fields_ind'.
 
+Inductive provenance_ready_expr : expr -> Prop :=
+  | ProvReady_Unit :
+      provenance_ready_expr EUnit
+  | ProvReady_Lit : forall lit,
+      provenance_ready_expr (ELit lit)
+  | ProvReady_Var : forall x,
+      provenance_ready_expr (EVar x)
+  | ProvReady_Fn : forall fname,
+      provenance_ready_expr (EFn fname)
+  | ProvReady_Place_Direct : forall p x path,
+      place_path p = Some (x, path) ->
+      provenance_ready_expr (EPlace p)
+  | ProvReady_Borrow : forall rk p x path,
+      place_path p = Some (x, path) ->
+      provenance_ready_expr (EBorrow rk p)
+  | ProvReady_Struct : forall sname lts args fields,
+      provenance_ready_fields fields ->
+      provenance_ready_expr (EStruct sname lts args fields)
+  | ProvReady_Let : forall m x T e1 e2,
+      provenance_ready_expr e1 ->
+      provenance_ready_expr e2 ->
+      provenance_ready_expr (ELet m x T e1 e2)
+  | ProvReady_LetInfer : forall m x e1 e2,
+      provenance_ready_expr e1 ->
+      provenance_ready_expr e2 ->
+      provenance_ready_expr (ELetInfer m x e1 e2)
+  | ProvReady_Drop : forall e,
+      provenance_ready_expr e ->
+      provenance_ready_expr (EDrop e)
+  | ProvReady_Assign : forall p e_new x path,
+      place_path p = Some (x, path) ->
+      provenance_ready_expr e_new ->
+      provenance_ready_expr (EAssign p e_new)
+  | ProvReady_Replace : forall p e_new x path,
+      place_path p = Some (x, path) ->
+      provenance_ready_expr e_new ->
+      provenance_ready_expr (EReplace p e_new)
+  | ProvReady_If : forall e1 e2 e3,
+      provenance_ready_expr e1 ->
+      provenance_ready_expr e2 ->
+      provenance_ready_expr e3 ->
+      provenance_ready_expr (EIf e1 e2 e3)
+with provenance_ready_args : list expr -> Prop :=
+  | ProvReadyArgs_Nil :
+      provenance_ready_args []
+  | ProvReadyArgs_Cons : forall e rest,
+      provenance_ready_expr e ->
+      provenance_ready_args rest ->
+      provenance_ready_args (e :: rest)
+with provenance_ready_fields : list (string * expr) -> Prop :=
+  | ProvReadyFields_Nil :
+      provenance_ready_fields []
+  | ProvReadyFields_Cons : forall name e rest,
+      provenance_ready_expr e ->
+      provenance_ready_fields rest ->
+      provenance_ready_fields ((name, e) :: rest).
+
 Lemma preservation_ready_fields_lookup :
   forall fields name e,
     preservation_ready_fields fields ->
@@ -1417,6 +1577,22 @@ Proof.
     + inversion Hlookup; subst. exact Hexpr.
     + apply IH. exact Hlookup.
 Qed.
+
+Lemma provenance_ready_fields_lookup :
+  forall fields name e,
+    provenance_ready_fields fields ->
+    lookup_expr_field name fields = Some e ->
+    provenance_ready_expr e.
+Proof.
+  intros fields name e Hready.
+  induction Hready as [| fname field_expr rest Hexpr _ IH];
+    simpl; intros Hlookup.
+  - discriminate.
+  - destruct (String.eqb name fname) eqn:Hname.
+    + inversion Hlookup; subst. exact Hexpr.
+    + apply IH. exact Hlookup.
+Qed.
+
 
 Inductive eval_args_values_have_types
     (env : global_env) (Ω : outlives_ctx) (s : store)

@@ -22,12 +22,12 @@
 
 ## Current Status
 
-Last updated implementation point: generic trait bounds now carry trait type arguments, `check_struct_bounds` resolves bounds with those arguments, and frontend validation rejects malformed bound refs while checking trait-own bounds on impls. `BorrowStateSafety.v` defines `pbs_no_conflicts` for active path borrows and pairwise conflict facts; `borrow_check_env` checks direct `EVar` / `EPlace` access against active path borrows; OCaml de Bruijn lowering rejects local annotated `let` types that contain `&T` / `&mut T` without explicit lifetime. Runtime aliasing correspondence is still future work.
+Last updated implementation point: call runtime semantics now freshens callee function bodies against caller/captured store names before binding parameters, using shared `Renaming.v` definitions. Freshened parameter names are proved fresh/no-duplicate for `bind_params`, and alpha-renamed parameter contexts are connected to `ctx_alpha`. Runtime aliasing correspondence and full call preservation remain future work.
 
 - S0: `[done]` runtime value/store typing と runtime reference well-formedness の仕様は導入済み。
 - S1: `[done]` path/value/store helper の主要部分と linear partial-move obligation helper/checker fix は導入済み。
 - S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。`VHT_Ref` は runtime store 内の参照先 path の存在・型対応を要求する形に強化済み。direct assign/replace は concrete RHS preservation evidence 経由で ready subset に再接続済み。`store_remove` 用の root-exclusion runtime helper、static root provenance judgment、runtime root-within-to-exclusion bridge、ready fragment の root preservation theorem、roots-aware `ELet` bridge、top-level roots-ready `ELet` helper、roots-aware ready mutual preservation theorem、checker-facing root provenance sidecar API と soundness theorem は追加済み。full unrestricted theorem は未完了。
-- S3: `[todo]` call/closure preservation は未着手。ただし empty closure value typing helper は一部存在する。
+- S3: `[partial]` call/closure preservation は runtime freshening と parameter freshness/`ctx_alpha` bridge まで実装済み。full call preservation は freshened body typing を `typed_env_structural` へ接続する alpha-renaming forward theorem または body 専用 invariant の固定が次の blocker。
 - S4: `[partial]` checker-to-runtime safety は root sidecar / ready fragment で接続済み。full unrestricted theorem と validator 経由 theorem は未着手。
 - S5: `[partial]` ready/root-provenance fragment で runtime refs の no-dangling theorem、direct ref membership target theorem、static borrow-state no-conflict invariant、pairwise conflict corollary、direct access guard、local annotation lifetime elision rejection は追加済み。runtime aliasing correspondence と captured closure refs は未着手。
 - S6: `[todo]` small-step progress は未着手。
@@ -147,7 +147,10 @@ Theorem step_progress :
    - `[partial]` `ECall` preservation は、関数 body が typed 済みであることを表す環境前提（`env_fns_typed_structural`）と、runtime `lookup_fn` が typing witness と一致するための関数名一意性前提（`fn_env_unique_by_name`）を使う方針に固定済み。operational lookup helper と、この明示前提を受け取る preservation wrapper API も追加済み。`TES_Call` 単体は callee body typing を含まない。
    - `bind_params` の typed-prefix preservation は、parameter 名が caller store tail を shadow しない freshness/no-shadow 明示前提で接続済み。次はこの前提を call preservation theorem 側でどの invariant から供給するかを固定する。
    - `[done]` lifetime substitution 済み引数を元の `fn_params` に bind する bridge として、runtime type 側に lifetime-erased equivalence `ty_lifetime_equiv` を導入し、`VHT_LifetimeEquiv`、`value_has_type_apply_lt_ty`、`eval_args_values_have_types_apply_lt_params_inv` で接続済み。
-   - `[todo]` full `ECall` preservation では、callee parameter 名が caller store tail を shadow しない freshness/no-shadow 前提と、body 評価後の `store_remove_params` が caller-visible store typing/reference preservation に戻る cleanup invariant を固定する必要がある。ここは soundness invariant の選択を伴うため、次の implementation-only task に分解する前に main 側で仕様を確定する。
+   - `[done]` callee parameter 名が caller/captured store tail を shadow しないよう、runtime `ECall` / `ECallExpr` は callee `fn_def` を caller/captured `store_names` に対して freshen してから `bind_params` と body evaluation を行う。
+   - `[done]` freshened parameter は caller store tail に対して fresh/no-dup であること、`apply_lt_params` 後も名前集合が変わらないこと、`eval_args_values_have_types` を `params_alpha` で freshened parameters へ移せることを証明済み。
+   - `[done]` `alpha_rename_params` の返す rename environment を parameter context 順にし、freshened parameter context が元 parameter context の `ctx_alpha` であることを証明済み。
+   - `[todo]` full `ECall` preservation では、freshened callee body の typing を `typed_env_structural` へ接続する alpha-renaming forward theorem、または call body 専用 invariant を固定する必要がある。ここは proof architecture の選択を伴うため、次の implementation-only task に分解する前に main 側で仕様を確定する。
    - `ECall` / `ECallExpr` の preservation を証明する。
    - 将来の closure 導入前に、captured store の型付け invariant をこの milestone で固定する。
 
@@ -222,8 +225,11 @@ Theorem step_progress :
 17. `[done]` sidecar root soundness を使って S4 の checker-to-runtime 接続を ready fragment で開始する。
 18. `[partial]` `EnvRuntimeSafety.v` に root sidecar / ready fragment の `infer_full_env_roots_big_step_safe_ready` を追加する。full `infer_full_env_big_step_safe` と `ValidatorSoundness.v` 経由 theorem は未完了。
 19. `[partial]` `RuntimeRefSafety.v` に ready/root-provenance fragment の no-dangling runtime reference theorem 群と direct ref membership target theorem 群を追加し、`BorrowStateSafety.v` に static borrow-state no-conflict invariant と pairwise conflict corollary を追加する。`borrow_check_env` は direct `EVar` / `EPlace` access を active borrow state と照合済み。OCaml lowering は local annotation の elided reference lifetime を拒否済み。runtime aliasing correspondence、non-lexical lifetime / last-use based borrow end points、indirect place access、captured closure refs は未完了。
-20. `[partial]` S3 call preservation の準備として、typed prefix の value/path update が caller tail 内の reference target を保存する補題を追加する。残りは parameter freshness/no-shadow と body cleanup invariant の固定。
-21. `[todo]` small-step semantics が必要になった時点で S6 を開始する。
+20. `[partial]` S3 call preservation の準備として、typed prefix の value/path update が caller tail 内の reference target を保存する補題を追加する。
+21. `[done]` call runtime semantics で callee `fn_def` を caller/captured store names に対して freshen し、freshened parameters の no-shadow/no-dup と `bind_params` premise bridge を追加する。
+22. `[done]` freshened parameter context を `ctx_alpha` に接続する補題を追加する。
+23. `[todo]` freshened callee body typing を `typed_env_structural` へ移す alpha-renaming forward theorem か、call body 専用 invariant を固定してから full `ECall` / `ECallExpr` preservation へ進む。
+24. `[todo]` small-step semantics が必要になった時点で S6 を開始する。
 
 ## Acceptance Criteria
 

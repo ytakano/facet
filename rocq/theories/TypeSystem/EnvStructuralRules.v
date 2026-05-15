@@ -1044,6 +1044,9 @@ Definition typed_fn_env_structural (env : global_env) (f : fn_def) : Prop :=
     ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
     params_ok_env_b env (fn_params f) Γ_out = true.
 
+Definition env_fns_typed_structural (env : global_env) : Prop :=
+  forall f, In f (env_fns env) -> typed_fn_env_structural env f.
+
 Definition checked_fn_env_structural (env : global_env) (f : fn_def) : Prop :=
   typed_fn_env_structural env f /\
   exists PBS',

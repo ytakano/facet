@@ -197,8 +197,28 @@ Fixpoint bind_params (params : list param) (vs : list value) (s : store) : store
   | [],      _        => s
   | _,       []       => s
   | p :: ps, v :: vs' =>
-      bind_params ps vs' (store_add (param_name p) (param_ty p) v s)
+      store_add (param_name p) (param_ty p) v (bind_params ps vs' s)
   end.
+
+Definition ex_param_x : param :=
+  MkParam MImmutable (("x"%string), 0) (MkTy UUnrestricted TIntegers).
+
+Definition ex_param_y : param :=
+  MkParam MImmutable (("y"%string), 0) (MkTy UUnrestricted TBooleans).
+
+Example bind_params_two_params_preserves_order :
+  bind_params [ex_param_x; ex_param_y] [VInt 1; VBool true] [] =
+    [ MkStoreEntry (("x"%string), 0) (MkTy UUnrestricted TIntegers)
+        (VInt 1) (binding_state_of_bool false)
+    ; MkStoreEntry (("y"%string), 0) (MkTy UUnrestricted TBooleans)
+        (VBool true) (binding_state_of_bool false)
+    ].
+Proof. reflexivity. Qed.
+
+Example store_remove_params_cleans_bound_params :
+  store_remove_params [ex_param_x; ex_param_y]
+    (bind_params [ex_param_x; ex_param_y] [VInt 1; VBool true] []) = [].
+Proof. reflexivity. Qed.
 
 Definition needs_consume (T : Ty) : bool :=
   match ty_usage T with

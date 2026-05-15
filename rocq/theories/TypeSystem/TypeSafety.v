@@ -2541,6 +2541,136 @@ Proof.
   eapply store_param_prefix_update_state; eassumption.
 Qed.
 
+Lemma store_param_scope_update_state :
+  forall ps s_param s x f s',
+    store_param_scope ps s_param s ->
+    store_update_state x f s_param = Some s' ->
+    exists frame',
+      store_param_scope ps s' frame'.
+Proof.
+  intros ps s_param s x f s' Hscope.
+  revert x f s'.
+  induction Hscope as
+    [ps s_param s Hprefix
+    | ps se s_param s Hse_notin Hscope_tail IH];
+    intros x f s' Hupdate.
+  - destruct (store_param_prefix_update_state
+      ps s_param s x f s' Hprefix Hupdate) as [frame' Hprefix'].
+    exists frame'. constructor. exact Hprefix'.
+  - simpl in Hupdate.
+    destruct (ident_eqb x (se_name se)) eqn:Hx.
+    + inversion Hupdate; subst s'.
+      exists s. constructor; assumption.
+    + destruct (store_update_state x f s_param) as [s_param' |] eqn:Htail;
+        try discriminate.
+      inversion Hupdate; subst s'.
+      destruct (IH x f s_param' Htail) as [frame' Hscope'].
+      exists frame'. constructor; assumption.
+Qed.
+
+Lemma store_param_scope_mark_used :
+  forall ps s_param s x,
+    store_param_scope ps s_param s ->
+    exists frame',
+      store_param_scope ps (store_mark_used x s_param) frame'.
+Proof.
+  intros ps s_param s x Hscope.
+  induction Hscope as
+    [ps s_param s Hprefix
+    | ps se s_param s Hse_notin Hscope_tail IH].
+  - destruct (store_param_prefix_mark_used
+      ps s_param s x Hprefix) as [frame' Hprefix'].
+    exists frame'. constructor. exact Hprefix'.
+  - simpl.
+    destruct (ident_eqb x (se_name se)) eqn:Hx.
+    + exists s. constructor; assumption.
+    + destruct IH as [frame' Hscope'].
+      exists frame'. constructor; assumption.
+Qed.
+
+Lemma store_param_scope_update_val :
+  forall ps s_param s x v_new s',
+    store_param_scope ps s_param s ->
+    store_update_val x v_new s_param = Some s' ->
+    exists frame',
+      store_param_scope ps s' frame'.
+Proof.
+  intros ps s_param s x v_new s' Hscope.
+  revert x v_new s'.
+  induction Hscope as
+    [ps s_param s Hprefix
+    | ps se s_param s Hse_notin Hscope_tail IH];
+    intros x v_new s' Hupdate.
+  - destruct (store_param_prefix_update_val
+      ps s_param s x v_new s' Hprefix Hupdate) as [frame' Hprefix'].
+    exists frame'. constructor. exact Hprefix'.
+  - simpl in Hupdate.
+    destruct (ident_eqb x (se_name se)) eqn:Hx.
+    + inversion Hupdate; subst s'.
+      exists s. constructor; assumption.
+    + destruct (store_update_val x v_new s_param) as [s_param' |] eqn:Htail;
+        try discriminate.
+      inversion Hupdate; subst s'.
+      destruct (IH x v_new s_param' Htail) as [frame' Hscope'].
+      exists frame'. constructor; assumption.
+Qed.
+
+Lemma store_param_scope_update_path :
+  forall ps s_param s x path v_new s',
+    store_param_scope ps s_param s ->
+    store_update_path x path v_new s_param = Some s' ->
+    exists frame',
+      store_param_scope ps s' frame'.
+Proof.
+  intros ps s_param s x path v_new s' Hscope.
+  revert x path v_new s'.
+  induction Hscope as
+    [ps s_param s Hprefix
+    | ps se s_param s Hse_notin Hscope_tail IH];
+    intros x path v_new s' Hupdate.
+  - destruct (store_param_prefix_update_path
+      ps s_param s x path v_new s' Hprefix Hupdate) as [frame' Hprefix'].
+    exists frame'. constructor. exact Hprefix'.
+  - simpl in Hupdate.
+    destruct (ident_eqb x (se_name se)) eqn:Hx.
+    + destruct (value_update_path (se_val se) path v_new) as [v' |]
+        eqn:Hvalue; try discriminate.
+      inversion Hupdate; subst s'.
+      exists s. constructor; assumption.
+    + destruct (store_update_path x path v_new s_param) as [s_param' |]
+        eqn:Htail; try discriminate.
+      inversion Hupdate; subst s'.
+      destruct (IH x path v_new s_param' Htail) as [frame' Hscope'].
+      exists frame'. constructor; assumption.
+Qed.
+
+Lemma store_param_scope_restore_path :
+  forall ps s_param s x path s',
+    store_param_scope ps s_param s ->
+    store_restore_path x path s_param = Some s' ->
+    exists frame',
+      store_param_scope ps s' frame'.
+Proof.
+  intros ps s_param s x path s' Hscope Hrestore.
+  unfold store_restore_path in Hrestore.
+  eapply store_param_scope_update_state; eassumption.
+Qed.
+
+Lemma store_param_scope_consume_path :
+  forall ps s_param s x path s',
+    store_param_scope ps s_param s ->
+    store_consume_path x path s_param = Some s' ->
+    exists frame',
+      store_param_scope ps s' frame'.
+Proof.
+  intros ps s_param s x path s' Hscope Hconsume.
+  unfold store_consume_path in Hconsume.
+  destruct (store_lookup x s_param) as [se |] eqn:Hlookup; try discriminate.
+  destruct (binding_available_b (se_state se) path) eqn:Havailable;
+    try discriminate.
+  eapply store_param_scope_update_state; eassumption.
+Qed.
+
 Lemma bind_params_head_fresh_in_tail :
   forall env Ω s p ps vs,
     NoDup (ctx_names (params_ctx (p :: ps))) ->

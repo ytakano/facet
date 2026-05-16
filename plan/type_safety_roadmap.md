@@ -31,8 +31,10 @@ bound-parameter store/root facts locally through
 
 The next unresolved point is deriving `direct_call_callee_body_root_evidence`
 from a root-aware function-environment invariant or checker-facing sidecar
-theorem. Do not treat this premise as discharged by the checker until that
-bridge exists.
+theorem. Lifetime inference alone does not discharge this premise: it chooses
+the lifetime substitution `σ`, but it does not identify the runtime roots that
+flow through same-lifetime values. Do not treat this premise as discharged by
+the checker until the root-provenance bridge exists.
 
 Important boundaries:
 
@@ -51,6 +53,21 @@ freshened callee body:
 
 - `typed_env_roots env ... (fn_body fcall) ... R_body roots_body`
 - parameter-root exclusion for `roots_body` and `R_body`
+
+Lifetime inference remains responsible for choosing the call substitution
+`σ`, via the existing `build_sigma` / `apply_lt_*` flow. Root provenance is a
+separate sidecar obligation: arguments produce `arg_roots`, the call-site root
+environment is instantiated as
+`call_param_root_env (fn_params fcall) arg_roots R_args`, and the freshened
+callee body must be root-typed under that environment.
+
+Do not replace this with a global "callee params must never appear in returned
+roots" rejection in `infer_env_roots`. A valid function may return a reference
+derived from a parameter lifetime; the call-site root evidence must track which
+argument roots that reference can point to. The short-term bridge should stay a
+Prop-level call-site invariant. A later executable design may cache
+root-polymorphic function summaries and instantiate their symbolic parameter
+roots at call sites.
 
 `TypeSafety.v` currently has structural lookup bridges for freshened callees,
 but it cannot import `EnvRootSoundness.v` because `_CoqProject` orders
@@ -78,8 +95,13 @@ duplicating checker logic in OCaml.
   - `infer_env_roots`
   - `infer_full_env_roots`
 - Updating the sidecar API requires updating its soundness theorem.
+- Lifetime inference and root provenance inference are separate: lifetime
+  inference determines `σ`; root inference determines which runtime roots flow
+  through the call.
 - Direct `ECall` root typing uses argument-root overapproximation:
   `root_sets_union arg_roots`.
+- Direct `ECall` callee body evidence is instantiated at the call site with
+  `call_param_root_env (fn_params fcall) arg_roots R_args`.
 - Runtime call semantics freshens callee function definitions against
   caller/captured store names before `bind_params`.
 - Direct-call preservation uses freshened callee body evidence obtained through
@@ -178,6 +200,12 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      derives the bound-parameter store/root facts itself.
    - Remaining: prove or expose a root-aware function-environment invariant
      that implies `direct_call_callee_body_root_evidence`.
+   - Chosen direction: keep lifetime substitution inference as-is, derive root
+     evidence from call-site argument roots plus
+     `call_param_root_env`, and eventually consider root-polymorphic function
+     summaries for an executable checker-facing bridge.
+   - Do not attempt to discharge the evidence with lifetime inference alone,
+     and do not globally reject parameter roots in `infer_env_roots`.
    - Stop if the current root sidecar API cannot express freshened callee body
      roots and parameter-root exclusion without a new invariant.
 

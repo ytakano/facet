@@ -10341,6 +10341,7 @@ Definition direct_call_callee_body_root_evidence (env : global_env) : Prop :=
     typed_args_roots env Ω n R Σ args
       (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
     eval_args env s args s_args vs ->
+    root_env_store_roots_named R s ->
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
     callee_body_root_ready_at env fcall
       (call_param_root_env (fn_params fcall) arg_roots R_args).
@@ -11260,6 +11261,7 @@ Theorem eval_preserves_typing_direct_call_roots_ready :
       store_roots_within R s ->
       store_no_shadow s ->
       root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
       typed_env_roots env Ω n R Σ e T Σ' R' roots ->
       fn_env_unique_by_name env ->
       env_fns_preservation_ready env ->
@@ -11269,7 +11271,7 @@ Theorem eval_preserves_typing_direct_call_roots_ready :
       store_ref_targets_preserved env s s'.
 Proof.
   intros env s e s' v Heval Ω n R Σ T Σ' R' roots Hready Hstore
-    Hroots Hshadow Hrn Htyped Hunique _ Hcallee_roots.
+    Hroots Hshadow Hrn Hnamed Htyped Hunique _ Hcallee_roots.
   inversion Hready as [e_ready Hpres_ready | fname args Hready_args]; subst.
   - pose proof (preservation_ready_implies_provenance_ready e Hpres_ready)
       as Hprov.
@@ -11308,7 +11310,8 @@ Proof.
         (?fcall, ?used') |- _ =>
         pose proof (Hcallee_roots Ω n R Σ Σ' R' arg_roots
                       (fn_name fdef) args_call fdef fcall σ s s_args vs
-                      used' Htyped_args Heval_args Hrename) as Hbody_ready;
+                      used' Htyped_args Heval_args Hnamed Hrename)
+          as Hbody_ready;
         unfold callee_body_root_ready_at in Hbody_ready;
         destruct Hbody_ready
           as (T_body & Γ_out & R_body & roots_body &

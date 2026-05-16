@@ -190,9 +190,12 @@ Already available for the direct `ECall` proof:
   call-site root environment.
 - `direct_call_callee_body_root_evidence` is now the explicit TypeSafety
   premise that supplies `callee_body_root_ready_at` under
-  `call_param_root_env`.
+  `call_param_root_env`; it also receives the caller-side
+  `root_env_store_roots_named R s` invariant needed by the cached-summary
+  bridge.
 - `eval_preserves_typing_direct_call_roots_ready` connects
-  `preservation_direct_call_ready_expr` to the cleanup bridge.
+  `preservation_direct_call_ready_expr` to the cleanup bridge and threads
+  caller root-name evidence to direct-call callee evidence.
 - `callee_body_root_check_ready_at` and
   `direct_call_callee_body_root_check_evidence` expose a checker-facing
   call-site bridge: for each freshened callee and call-site root environment,
@@ -284,6 +287,11 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      (`fn_root_summary_check_ready`, `env_fns_root_summary_check_ready`) with
      a bridge from checker summaries to original-function
      `callee_body_root_ready_at`.
+   - Done: strengthened `direct_call_callee_body_root_evidence`,
+     `eval_preserves_typing_direct_call_roots_ready`, and
+     `infer_full_env_roots_big_step_safe_direct_call_ready` to carry
+     `root_env_store_roots_named R s`, so later summary instantiation can use
+     preserved call-site root names to prove freshened-parameter exclusion.
    - Chosen design: replace the call-site evidence premise with cached
      root-polymorphic summaries using the tagged-root representation.
    - Remaining blocker: prove the root-aware alpha-renaming/instantiation

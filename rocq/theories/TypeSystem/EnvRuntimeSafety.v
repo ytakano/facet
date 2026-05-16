@@ -62,6 +62,7 @@ Definition direct_call_callee_body_root_check_evidence
     typed_args_roots env Ω n R Σ args
       (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
     eval_args env s args s_args vs ->
+    root_env_store_roots_named R s ->
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
     callee_body_root_check_ready_at env fcall
       (call_param_root_env (fn_params fcall) arg_roots R_args).
@@ -155,7 +156,7 @@ Lemma direct_call_callee_body_root_evidence_of_check :
     direct_call_callee_body_root_evidence env.
 Proof.
   intros env Hcheck Ω n R Σ Σ_args R_args arg_roots fname args fdef fcall
-    σ s s_args vs used' Htyped_args Heval_args Hrename.
+    σ s s_args vs used' Htyped_args Heval_args Hnamed Hrename.
   apply callee_body_root_ready_at_of_check_ready_at.
   eapply Hcheck; eassumption.
 Qed.
@@ -197,6 +198,7 @@ Theorem infer_full_env_roots_big_step_safe_direct_call_ready :
     store_roots_within R0 s ->
     store_no_shadow s ->
     root_env_no_shadow R0 ->
+    root_env_store_roots_named R0 s ->
     fn_env_unique_by_name env ->
     env_fns_preservation_ready env ->
     direct_call_callee_body_root_check_evidence env ->
@@ -204,7 +206,7 @@ Theorem infer_full_env_roots_big_step_safe_direct_call_ready :
     value_has_type env s' v (fn_ret f).
 Proof.
   intros env f R0 T Γ' R' roots s s' v
-    Hinfer Hstore Hready Hroots Hstore_shadow Hroot_shadow Hunique
+    Hinfer Hstore Hready Hroots Hstore_shadow Hroot_shadow Hnamed Hunique
     Hfns_ready Hcallee_body_roots Heval.
   pose proof (infer_full_env_roots_sound env f R0 T Γ' R' roots Hinfer)
     as [Htyped_fn _].
@@ -215,7 +217,7 @@ Proof.
       (fn_outlives f) (fn_lifetimes f) R0
       (sctx_of_ctx (params_ctx (fn_params f)))
       T_body (sctx_of_ctx Γ_out) R' roots
-      Hready Hstore Hroots Hstore_shadow Hroot_shadow Htyped
+      Hready Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Htyped
       Hunique Hfns_ready
       (direct_call_callee_body_root_evidence_of_check env
         Hcallee_body_roots))

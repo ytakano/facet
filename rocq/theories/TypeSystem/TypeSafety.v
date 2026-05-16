@@ -1968,6 +1968,70 @@ Proof.
       * eapply IH; eassumption.
 Qed.
 
+Lemma root_set_instantiate_single_param_equiv :
+  forall rho x roots,
+    root_subst_lookup x rho = roots ->
+    root_set_equiv (root_set_instantiate rho [RParam x]) roots.
+Proof.
+  intros rho x roots Hlookup.
+  simpl. rewrite Hlookup.
+  eapply root_set_equiv_trans.
+  - apply root_set_union_equiv_app.
+  - simpl. rewrite app_nil_r. apply root_set_equiv_refl.
+Qed.
+
+Lemma root_env_instantiate_cons_initial_origin_notin :
+  forall x roots rho ps_orig ps_current,
+    ~ In x (ctx_names (params_ctx ps_orig)) ->
+    root_env_instantiate ((x, roots) :: rho)
+      (initial_root_env_for_params_origin ps_orig ps_current) =
+    root_env_instantiate rho
+      (initial_root_env_for_params_origin ps_orig ps_current).
+Proof.
+  intros x roots rho ps_orig.
+  induction ps_orig as [| p ps_orig IH]; intros ps_current Hnotin;
+    destruct ps_current as [| pc ps_current]; simpl in *; try reflexivity.
+  assert (Hneq : param_name p <> x).
+  { intros Heq. apply Hnotin. left. exact Heq. }
+  assert (Htail : ~ In x (ctx_names (params_ctx ps_orig))).
+  { intros Hin. apply Hnotin. right. exact Hin. }
+  destruct (ident_eqb (param_name p) x) eqn:Heq.
+  - apply ident_eqb_eq in Heq. contradiction.
+  - rewrite IH; [reflexivity | exact Htail].
+Qed.
+
+Lemma root_env_instantiate_initial_origin_equiv_add_params_roots :
+  forall ps_orig ps_current arg_roots,
+    params_alpha ps_orig ps_current ->
+    NoDup (ctx_names (params_ctx ps_orig)) ->
+    List.length arg_roots = List.length ps_orig ->
+    root_env_equiv
+      (root_env_instantiate (root_subst_of_params ps_orig arg_roots)
+        (initial_root_env_for_params_origin ps_orig ps_current))
+      (root_env_add_params_roots ps_current arg_roots []).
+Proof.
+  intros ps_orig ps_current arg_roots Halpha Hnodup.
+  revert arg_roots.
+  induction Halpha as [| p pr ps psr Hshape Halpha_tail IH];
+    intros arg_roots Hlen.
+  - destruct arg_roots as [| roots arg_roots]; simpl in Hlen; try discriminate.
+    simpl. apply root_env_equiv_refl.
+  - destruct arg_roots as [| roots arg_roots]; simpl in Hlen; try discriminate.
+    inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
+    inversion Hlen as [Hlen_tail].
+    unfold root_env_equiv. intros x. simpl.
+    destruct (ident_eqb x (param_name pr)) eqn:Heq.
+    + rewrite ident_eqb_refl.
+      eapply root_set_equiv_trans.
+      * apply root_set_union_equiv_app.
+      * simpl. rewrite app_nil_r. apply root_set_equiv_refl.
+    + rewrite root_env_instantiate_cons_initial_origin_notin.
+      * specialize (IH Hnodup_tail arg_roots Hlen_tail).
+        unfold root_env_equiv in IH.
+        apply IH.
+      * exact Hnotin.
+Qed.
+
 Lemma root_env_add_params_roots_no_shadow :
   forall ps roots_list R,
     NoDup (ctx_names (params_ctx ps)) ->

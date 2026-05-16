@@ -129,8 +129,14 @@ false lemma.
      intended proof shape:
      - `RStore x` is concrete runtime storage.
      - `RParam x` is symbolic parameter-value provenance.
-   - Call-site instantiation may replace only `RParam fresh_param` with the
-     corresponding argument roots.
+   - `RParam` names stay tied to the original function parameters through
+     alpha-renaming. Call-site instantiation must therefore build
+     `root_subst_of_params` from the original parameters, not the freshened
+     call-site parameters.
+   - Done: added the root-env algebra helper showing that instantiating
+     `initial_root_env_for_params_origin` with original-parameter substitutions
+     yields the fresh/current parameter root environment, under the required
+     argument-root length and original-parameter `NoDup` premises.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

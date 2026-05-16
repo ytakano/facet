@@ -1456,6 +1456,169 @@ Proof.
     unfold root_env_no_shadow. exact Hnodup_tail.
 Qed.
 
+Definition root_env_equiv (R R' : root_env) : Prop :=
+  forall x,
+    match root_env_lookup x R, root_env_lookup x R' with
+    | Some roots, Some roots' => root_set_equiv roots roots'
+    | None, None => True
+    | _, _ => False
+    end.
+
+Lemma root_env_equiv_refl :
+  forall R,
+    root_env_equiv R R.
+Proof.
+  unfold root_env_equiv.
+  intros R x.
+  destruct (root_env_lookup x R) as [roots |].
+  - apply root_set_equiv_refl.
+  - exact I.
+Qed.
+
+Lemma root_env_equiv_sym :
+  forall R R',
+    root_env_equiv R R' ->
+    root_env_equiv R' R.
+Proof.
+  unfold root_env_equiv.
+  intros R R' Heq x.
+  specialize (Heq x).
+  destruct (root_env_lookup x R) as [roots |];
+    destruct (root_env_lookup x R') as [roots' |]; try contradiction.
+  - apply root_set_equiv_sym. exact Heq.
+  - exact I.
+Qed.
+
+Lemma root_env_equiv_trans :
+  forall R R' R'',
+    root_env_equiv R R' ->
+    root_env_equiv R' R'' ->
+    root_env_equiv R R''.
+Proof.
+  unfold root_env_equiv.
+  intros R R' R'' HRR' HR'R'' x.
+  specialize (HRR' x).
+  specialize (HR'R'' x).
+  destruct (root_env_lookup x R) as [roots |];
+    destruct (root_env_lookup x R') as [roots' |];
+    destruct (root_env_lookup x R'') as [roots'' |]; try contradiction.
+  - eapply root_set_equiv_trans; eassumption.
+  - exact I.
+Qed.
+
+Lemma root_env_equiv_lookup_l :
+  forall R R' x roots,
+    root_env_equiv R R' ->
+    root_env_lookup x R = Some roots ->
+    exists roots',
+      root_env_lookup x R' = Some roots' /\
+      root_set_equiv roots roots'.
+Proof.
+  unfold root_env_equiv.
+  intros R R' x roots Heq Hlookup.
+  specialize (Heq x).
+  rewrite Hlookup in Heq.
+  destruct (root_env_lookup x R') as [roots' |] eqn:Hlookup';
+    try contradiction.
+  exists roots'. split.
+  - reflexivity.
+  - exact Heq.
+Qed.
+
+Lemma root_env_equiv_lookup_r :
+  forall R R' x roots',
+    root_env_equiv R R' ->
+    root_env_lookup x R' = Some roots' ->
+    exists roots,
+      root_env_lookup x R = Some roots /\
+      root_set_equiv roots roots'.
+Proof.
+  unfold root_env_equiv.
+  intros R R' x roots' Heq Hlookup'.
+  specialize (Heq x).
+  rewrite Hlookup' in Heq.
+  destruct (root_env_lookup x R) as [roots |] eqn:Hlookup;
+    try contradiction.
+  exists roots. split.
+  - reflexivity.
+  - exact Heq.
+Qed.
+
+Lemma root_env_equiv_add :
+  forall x roots roots' R R',
+    root_set_equiv roots roots' ->
+    root_env_equiv R R' ->
+    root_env_equiv
+      (root_env_add x roots R)
+      (root_env_add x roots' R').
+Proof.
+  unfold root_env_equiv, root_env_add.
+  intros x roots roots' R R' Hroots HRR' y.
+  simpl.
+  destruct (ident_eqb y x) eqn:Hyx.
+  - exact Hroots.
+  - apply HRR'.
+Qed.
+
+Lemma root_env_equiv_update :
+  forall x roots roots' R R',
+    root_set_equiv roots roots' ->
+    root_env_equiv R R' ->
+    root_env_equiv
+      (root_env_update x roots R)
+      (root_env_update x roots' R').
+Proof.
+  intros x roots roots' R R' Hroots HRR'.
+  unfold root_env_equiv.
+  intros y.
+  destruct (ident_eqb y x) eqn:Hyx.
+  - apply ident_eqb_eq in Hyx. subst y.
+    assert (Hnone_update :
+      forall R0 roots0,
+        root_env_lookup x R0 = None ->
+        root_env_lookup x (root_env_update x roots0 R0) = None).
+    { intros R0 roots0.
+      induction R0 as [| [z roots_z] rest IH]; intros Hlookup;
+        simpl in *; try reflexivity.
+      destruct (ident_eqb x z) eqn:Hxz; try discriminate.
+      simpl. rewrite Hxz. apply IH. exact Hlookup. }
+    specialize (HRR' x).
+    destruct (root_env_lookup x R) as [old_roots |] eqn:Hlookup;
+      destruct (root_env_lookup x R') as [old_roots' |] eqn:Hlookup';
+      try contradiction.
+    + rewrite (root_env_lookup_update_eq x roots R old_roots Hlookup).
+      rewrite (root_env_lookup_update_eq x roots' R' old_roots' Hlookup').
+      exact Hroots.
+    + rewrite (Hnone_update R roots Hlookup).
+      rewrite (Hnone_update R' roots' Hlookup').
+      exact I.
+  - apply ident_eqb_neq in Hyx.
+    rewrite (root_env_lookup_update_neq y x roots R Hyx).
+    rewrite (root_env_lookup_update_neq y x roots' R' Hyx).
+    apply HRR'.
+Qed.
+
+Lemma root_env_equiv_remove :
+  forall x R R',
+    root_env_no_shadow R ->
+    root_env_no_shadow R' ->
+    root_env_equiv R R' ->
+    root_env_equiv (root_env_remove x R) (root_env_remove x R').
+Proof.
+  intros x R R' Hnodup Hnodup' HRR'.
+  unfold root_env_equiv.
+  intros y.
+  destruct (ident_eqb y x) eqn:Hyx.
+  - apply ident_eqb_eq in Hyx. subst y.
+    rewrite (root_env_lookup_remove_eq_no_shadow x R Hnodup).
+    rewrite (root_env_lookup_remove_eq_no_shadow x R' Hnodup').
+    exact I.
+  - apply ident_eqb_neq in Hyx.
+    rewrite (root_env_lookup_remove_neq y x R Hyx).
+    rewrite (root_env_lookup_remove_neq y x R' Hyx).
+    apply HRR'.
+Qed.
+
 Lemma root_subst_of_params_lookup_head :
   forall p ps roots arg_roots,
     root_subst_lookup (param_name p)

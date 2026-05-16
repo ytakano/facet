@@ -1009,6 +1009,28 @@ Proof.
   - contradiction.
 Qed.
 
+Lemma root_set_store_roots_named_equiv :
+  forall roots roots' s,
+    root_set_equiv roots roots' ->
+    root_set_store_roots_named roots s ->
+    root_set_store_roots_named roots' s.
+Proof.
+  unfold root_set_store_roots_named.
+  intros roots roots' s Heq Hnamed z Hin.
+  apply Hnamed. apply Heq. exact Hin.
+Qed.
+
+Lemma root_set_ctx_roots_named_equiv :
+  forall roots roots' Σ,
+    root_set_equiv roots roots' ->
+    root_set_ctx_roots_named roots Σ ->
+    root_set_ctx_roots_named roots' Σ.
+Proof.
+  unfold root_set_ctx_roots_named.
+  intros roots roots' Σ Heq Hnamed z Hin.
+  apply Hnamed. apply Heq. exact Hin.
+Qed.
+
 Lemma root_set_store_roots_named_union :
   forall roots_left roots_right s,
     root_set_store_roots_named roots_left s ->

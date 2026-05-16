@@ -507,6 +507,19 @@ Fixpoint root_subst_of_params (ps : list param) (arg_roots : list root_set)
 Definition roots_exclude (x : ident) (roots : root_set) : Prop :=
   ~ In (RStore x) roots.
 
+Lemma root_set_excludes_atom_of_roots_exclude_no_param :
+  forall x roots,
+    roots_exclude x roots ->
+    (forall y, In (RParam y) roots -> y <> x) ->
+    root_set_excludes_atom x roots.
+Proof.
+  unfold roots_exclude, root_set_excludes_atom, root_atom_mentions.
+  intros x roots Hstore Hparam atom Hin Hmentions.
+  destruct atom as [y | y]; simpl in Hmentions.
+  - subst y. apply Hstore. exact Hin.
+  - apply (Hparam y Hin). exact Hmentions.
+Qed.
+
 Definition root_subst_images_exclude (x : ident) (rho : root_subst)
     : Prop :=
   forall param roots,
@@ -598,6 +611,62 @@ Definition root_env_excludes (x : ident) (R : root_env) : Prop :=
     root_env_lookup y R = Some roots ->
     y <> x ->
     roots_exclude x roots.
+
+Lemma root_env_lookup_in_no_shadow :
+  forall y roots R,
+    root_env_no_shadow R ->
+    In (y, roots) R ->
+    root_env_lookup y R = Some roots.
+Proof.
+  intros y roots R.
+  induction R as [| [z roots_z] rest IH]; intros Hnodup Hin;
+    simpl in *; try contradiction.
+  unfold root_env_no_shadow in Hnodup.
+  simpl in Hnodup.
+  inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
+  destruct Hin as [Hin | Hin].
+  - inversion Hin. subst z roots_z.
+    rewrite ident_eqb_refl. reflexivity.
+  - destruct (ident_eqb y z) eqn:Hyz.
+    + apply ident_eqb_eq in Hyz. subst z.
+      exfalso. apply Hnotin.
+      clear -Hin.
+      induction rest as [| [z roots_z] rest IH]; simpl in *;
+        try contradiction.
+      destruct Hin as [Hin | Hin].
+      * inversion Hin. subst. left. reflexivity.
+      * right. apply IH. exact Hin.
+    + apply IH.
+      * unfold root_env_no_shadow. exact Hnodup_tail.
+      * exact Hin.
+Qed.
+
+Lemma root_env_excludes_atom_of_root_env_excludes_no_param :
+  forall x R,
+    root_env_no_shadow R ->
+    root_env_lookup x R = None ->
+    root_env_excludes x R ->
+    (forall y roots,
+      root_env_lookup y R = Some roots ->
+      y <> x ->
+      forall z,
+        In (RParam z) roots ->
+        z <> x) ->
+    root_env_excludes_atom x R.
+Proof.
+  unfold root_env_excludes, root_env_excludes_atom.
+  intros x R Hnodup Hlookup_x Hexcl Hparam y roots Hin.
+  assert (Hlookup_y : root_env_lookup y R = Some roots).
+  { eapply root_env_lookup_in_no_shadow; eassumption. }
+  assert (Hyx : y <> x).
+  { intros Heq. subst y. rewrite Hlookup_y in Hlookup_x. discriminate. }
+  split.
+  - exact Hyx.
+  - apply root_set_excludes_atom_of_roots_exclude_no_param.
+    + eapply Hexcl; eassumption.
+    + intros z Hin_param.
+      eapply Hparam; eassumption.
+Qed.
 
 Lemma roots_exclude_equiv :
   forall x roots roots',

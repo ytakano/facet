@@ -313,6 +313,9 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      `RootProvenance.v` for instantiated root sets and root-set unions:
      `root_set_instantiate_equiv`, `root_set_instantiate_union_equiv`, and
      `root_sets_instantiate_union_equiv`.
+   - Done: added root-env instantiation exchange helpers for
+     `root_env_add`, `root_env_remove`, and `root_env_update`, so the upcoming
+     `typed_env_roots` instantiation transport can mirror let/update cases.
    - Chosen design: replace the call-site evidence premise with cached
      root-polymorphic summaries using the tagged-root representation.
    - Remaining blocker: prove the root-aware alpha-renaming/instantiation

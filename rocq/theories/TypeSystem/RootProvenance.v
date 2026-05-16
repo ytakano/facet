@@ -909,6 +909,38 @@ Proof.
         -- exact Hzx.
 Qed.
 
+Lemma root_env_instantiate_add :
+  forall rho x roots R,
+    root_env_instantiate rho (root_env_add x roots R) =
+    root_env_add x (root_set_instantiate rho roots)
+      (root_env_instantiate rho R).
+Proof.
+  reflexivity.
+Qed.
+
+Lemma root_env_instantiate_remove :
+  forall rho x R,
+    root_env_instantiate rho (root_env_remove x R) =
+    root_env_remove x (root_env_instantiate rho R).
+Proof.
+  intros rho x R.
+  induction R as [| [y roots_y] rest IH]; simpl; try reflexivity.
+  destruct (ident_eqb x y); simpl; try reflexivity.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma root_env_instantiate_update :
+  forall rho x roots R,
+    root_env_instantiate rho (root_env_update x roots R) =
+    root_env_update x (root_set_instantiate rho roots)
+      (root_env_instantiate rho R).
+Proof.
+  intros rho x roots R.
+  induction R as [| [y roots_y] rest IH]; simpl; try reflexivity.
+  destruct (ident_eqb x y); simpl; try reflexivity.
+  rewrite IH. reflexivity.
+Qed.
+
 Lemma root_env_excludes_rename :
   forall rho x R,
     root_env_no_shadow R ->

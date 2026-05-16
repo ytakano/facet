@@ -3017,6 +3017,21 @@ Definition store_frame_static_fresh (Σ : sctx) (frame : store) : Prop :=
     In x (ctx_names Σ) ->
     ~ In x (store_names frame).
 
+Lemma sctx_lookup_in_ctx_names :
+  forall x Σ T st,
+    sctx_lookup x Σ = Some (T, st) ->
+    In x (ctx_names Σ).
+Proof.
+  unfold sctx_lookup.
+  intros x Σ.
+  induction Σ as [| [[[y Ty] sty] my] rest IH]; intros T st Hlookup;
+    simpl in *; try discriminate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst y.
+    left. reflexivity.
+  - right. eapply IH. exact Hlookup.
+Qed.
+
 Lemma store_frame_static_fresh_same_names :
   forall Σ Σ' frame,
     ctx_names Σ' = ctx_names Σ ->
@@ -3068,6 +3083,26 @@ Proof.
       * right. apply IH. exact Hin.
 Qed.
 
+Lemma ctx_names_remove_preserve_neq :
+  forall x y Σ,
+    x <> y ->
+    In y (ctx_names Σ) ->
+    In y (ctx_names (sctx_remove x Σ)).
+Proof.
+  unfold sctx_remove.
+  intros x y Σ Hneq.
+  induction Σ as [| [[[z T] st] m] rest IH]; intros Hin; simpl in *.
+  - contradiction.
+  - destruct Hin as [Heq | Hin].
+    + subst y.
+      destruct (ident_eqb x z) eqn:Hxz.
+      * apply ident_eqb_eq in Hxz. exfalso. apply Hneq. exact Hxz.
+      * simpl. left. reflexivity.
+    + destruct (ident_eqb x z) eqn:Hxz.
+      * exact Hin.
+      * simpl. right. apply IH. exact Hin.
+Qed.
+
 Lemma store_frame_static_fresh_remove :
   forall Σ frame x,
     store_frame_static_fresh Σ frame ->
@@ -3076,6 +3111,16 @@ Proof.
   unfold store_frame_static_fresh.
   intros Σ frame x Hfresh y Hin.
   apply Hfresh. eapply ctx_names_remove_in. exact Hin.
+Qed.
+
+Lemma params_fresh_in_store_frame_static_fresh :
+  forall ps frame,
+    params_fresh_in_store ps frame ->
+    store_frame_static_fresh (sctx_of_ctx (params_ctx ps)) frame.
+Proof.
+  unfold params_fresh_in_store, store_frame_static_fresh, sctx_of_ctx.
+  intros ps frame Hfresh x Hin.
+  apply Hfresh. exact Hin.
 Qed.
 
 Lemma store_update_state_not_in_names :
@@ -3426,6 +3471,60 @@ Proof.
       * apply IH. exact Hfresh.
 Qed.
 
+Lemma store_frame_scope_remove_context_absent :
+  forall ps Σ s frame x,
+    ~ In x (store_names s) ->
+    store_frame_scope ps Σ s frame ->
+    store_frame_scope ps (sctx_remove x Σ) s frame.
+Proof.
+  intros ps Σ s frame x Hnotin Hscope.
+  induction Hscope as
+    [s_param frame Hprefix
+    | se s_param frame Hse_notin Hin_se Hscope_tail IH].
+  - constructor. exact Hprefix.
+  - simpl in Hnotin.
+    econstructor 2.
+    + exact Hse_notin.
+    + apply ctx_names_remove_preserve_neq.
+      * intros Heq. subst x. apply Hnotin. left. reflexivity.
+      * exact Hin_se.
+    + apply IH. intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma store_frame_scope_remove_non_param_sctx_remove :
+  forall ps Σ s frame x,
+    In x (ctx_names Σ) ->
+    store_no_shadow s ->
+    store_frame_static_fresh Σ frame ->
+    store_frame_scope ps Σ s frame ->
+    ~ In x (ctx_names (params_ctx ps)) ->
+    store_frame_scope ps (sctx_remove x Σ) (store_remove x s) frame.
+Proof.
+  intros ps Σ s frame x HinΣ Hshadow Hfresh Hscope Hnotin.
+  induction Hscope as
+    [s_param frame Hprefix
+    | se s_param frame Hse_notin Hin_se Hscope_tail IH].
+  - constructor.
+    eapply store_param_prefix_remove_non_param_same_frame.
+    + exact Hprefix.
+    + exact Hnotin.
+    + apply Hfresh. exact HinΣ.
+  - simpl in Hshadow.
+    inversion Hshadow as [| ? ? Hhead_notin Htail_shadow]; subst.
+    simpl. destruct (ident_eqb x (se_name se)) eqn:Heq.
+    + apply store_frame_scope_remove_context_absent.
+      * apply ident_eqb_eq in Heq. subst x. exact Hhead_notin.
+      * exact Hscope_tail.
+    + econstructor 2.
+      * exact Hse_notin.
+      * apply ctx_names_remove_preserve_neq.
+        -- apply ident_eqb_neq in Heq. exact Heq.
+        -- exact Hin_se.
+      * apply IH.
+        -- exact Htail_shadow.
+        -- exact Hfresh.
+Qed.
+
 Lemma store_param_prefix_lookup_param_or_frame :
   forall ps s_param frame x se,
     store_param_prefix ps s_param frame ->
@@ -3444,6 +3543,45 @@ Proof.
     + destruct (IH Hlookup) as [Hin | Hframe].
       * left. simpl. right. exact Hin.
       * right. exact Hframe.
+Qed.
+
+Lemma store_frame_scope_lookup_absent_in_frame :
+  forall ps Σ s frame x,
+    store_frame_scope ps Σ s frame ->
+    store_lookup x s = None ->
+    ~ In x (ctx_names (params_ctx ps)) ->
+    ~ In x (store_names frame).
+Proof.
+  intros ps Σ s frame x Hscope.
+  induction Hscope as
+    [s_param frame Hprefix
+    | se s_param frame Hnotin _ Hscope_tail IH];
+    intros Hlookup Hnotparam.
+  - intros Hin_frame.
+    pose proof (store_lookup_none_not_in_names x s_param Hlookup)
+      as Hnotin_s_param.
+    apply Hnotin_s_param.
+    rewrite (store_names_store_param_prefix ps s_param frame Hprefix).
+    apply in_or_app. right. exact Hin_frame.
+  - simpl in Hlookup.
+    destruct (ident_eqb x (se_name se)); try discriminate.
+    eapply IH; eassumption.
+Qed.
+
+Lemma store_frame_scope_remove_non_param_after_same_bindings :
+  forall ps Σ_body Σ_after s frame x,
+    In x (ctx_names Σ_body) ->
+    store_frame_static_fresh Σ_body frame ->
+    store_frame_scope ps Σ_body s frame ->
+    store_no_shadow s ->
+    ~ In x (ctx_names (params_ctx ps)) ->
+    sctx_same_bindings Σ_after (sctx_remove x Σ_body) ->
+    store_frame_scope ps Σ_after (store_remove x s) frame.
+Proof.
+  intros ps Σ_body Σ_after s frame x Hin Hfresh Hscope Hshadow Hnotin Hsame.
+  eapply store_frame_scope_same_names.
+  - symmetry. apply sctx_same_bindings_names_alpha. exact Hsame.
+  - eapply store_frame_scope_remove_non_param_sctx_remove; eassumption.
 Qed.
 
 Lemma sctx_same_bindings_params_ctx_names :

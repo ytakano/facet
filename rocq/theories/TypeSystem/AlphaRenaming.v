@@ -2672,7 +2672,7 @@ Lemma alpha_rename_fn_def_initial_root_env_rename :
         (param_names (fn_params f) ++ free_vars_expr (fn_body f) ++ used)
         (fn_params f) = (fn_params fr, rho, used_params) /\
       root_env_rename rho (initial_root_env_for_fn f) =
-        initial_root_env_for_fn fr.
+        initial_root_env_for_params_origin (fn_params f) (fn_params fr).
 Proof.
   intros used f fr used' Hrename Hnodup.
   destruct f as [fname lifetimes outs ps ret body].

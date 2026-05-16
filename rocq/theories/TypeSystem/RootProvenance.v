@@ -13,8 +13,17 @@ Inductive root_atom : Type :=
 Definition root_set := list root_atom.
 Definition root_env := list (ident * root_set).
 
+Fixpoint initial_root_env_for_params_origin
+    (ps_orig ps_current : list param) : root_env :=
+  match ps_orig, ps_current with
+  | p_orig :: ps_orig', p_current :: ps_current' =>
+      (param_name p_current, [RParam (param_name p_orig)])
+        :: initial_root_env_for_params_origin ps_orig' ps_current'
+  | _, _ => []
+  end.
+
 Definition initial_root_env_for_params (ps : list param) : root_env :=
-  map (fun p => (param_name p, [RParam (param_name p)])) ps.
+  initial_root_env_for_params_origin ps ps.
 
 Definition initial_root_env_for_fn (f : fn_def) : root_env :=
   initial_root_env_for_params (fn_params f).
@@ -23,7 +32,7 @@ Definition root_atom_rename (rho : rename_env) (atom : root_atom)
     : root_atom :=
   match atom with
   | RStore x => RStore (lookup_rename x rho)
-  | RParam x => RParam (lookup_rename x rho)
+  | RParam x => RParam x
   end.
 
 Fixpoint root_set_rename (rho : rename_env) (roots : root_set)
@@ -74,19 +83,25 @@ Fixpoint root_env_names (R : root_env) : list ident :=
 Definition root_env_no_shadow (R : root_env) : Prop :=
   NoDup (root_env_names R).
 
-Lemma root_env_rename_cons_initial_root_env_for_params_notin :
-  forall x x' rho ps,
-    ~ In x (ctx_names (params_ctx ps)) ->
-    root_env_rename ((x, x') :: rho) (initial_root_env_for_params ps) =
-    root_env_rename rho (initial_root_env_for_params ps).
+Lemma root_env_rename_cons_initial_root_env_for_params_origin_notin :
+  forall x x' rho ps_orig ps_current,
+    ~ In x (ctx_names (params_ctx ps_current)) ->
+    root_env_rename ((x, x') :: rho)
+      (initial_root_env_for_params_origin ps_orig ps_current) =
+    root_env_rename rho
+      (initial_root_env_for_params_origin ps_orig ps_current).
 Proof.
-  intros x x' rho ps.
-  induction ps as [| p ps IH]; intros Hnotin; simpl.
+  intros x x' rho ps_orig.
+  induction ps_orig as [| p_orig ps_orig IH];
+    intros ps_current Hnotin; destruct ps_current as [| p_current ps_current];
+    simpl in *.
   - reflexivity.
-  - destruct p as [m y T]. simpl in Hnotin.
+  - reflexivity.
+  - reflexivity.
+  - destruct p_current as [m y T].
     assert (Hy : y <> x).
     { intros Heq. apply Hnotin. subst. left. reflexivity. }
-    assert (Htail : ~ In x (ctx_names (params_ctx ps))).
+    assert (Htail : ~ In x (ctx_names (params_ctx ps_current))).
     { intros Hin. apply Hnotin. right. exact Hin. }
     simpl. unfold root_atom_rename. simpl.
     destruct (ident_eqb y x) eqn:Hyx.
@@ -94,12 +109,23 @@ Proof.
     + rewrite IH; [reflexivity | exact Htail].
 Qed.
 
+Lemma root_env_rename_cons_initial_root_env_for_params_notin :
+  forall x x' rho ps,
+    ~ In x (ctx_names (params_ctx ps)) ->
+    root_env_rename ((x, x') :: rho) (initial_root_env_for_params ps) =
+    root_env_rename rho (initial_root_env_for_params ps).
+Proof.
+  intros x x' rho ps Hnotin.
+  apply root_env_rename_cons_initial_root_env_for_params_origin_notin.
+  exact Hnotin.
+Qed.
+
 Lemma alpha_rename_params_initial_root_env_rename :
   forall rho used ps psr rho' used',
     NoDup (ctx_names (params_ctx ps)) ->
     alpha_rename_params rho used ps = (psr, rho', used') ->
     root_env_rename rho' (initial_root_env_for_params ps) =
-    initial_root_env_for_params psr.
+    initial_root_env_for_params_origin ps psr.
 Proof.
   intros rho used ps. revert rho used.
   induction ps as [| p ps IH]; intros rho used psr rho' used' Hnodup Hrename.
@@ -110,8 +136,11 @@ Proof.
     inversion Hrename; subst. simpl.
     inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
     repeat rewrite ident_eqb_refl.
-    rewrite root_env_rename_cons_initial_root_env_for_params_notin.
-    + rewrite (IH rho (fresh_ident x used :: used)
+    rewrite root_env_rename_cons_initial_root_env_for_params_origin_notin.
+    + change (root_env_rename rho''
+        (initial_root_env_for_params_origin ps ps)) with
+        (root_env_rename rho'' (initial_root_env_for_params ps)).
+      rewrite (IH rho (fresh_ident x used :: used)
         ps'' rho'' used' Hnodup_tail Hps).
       reflexivity.
     + exact Hnotin.
@@ -124,7 +153,9 @@ Lemma initial_root_env_for_params_names :
 Proof.
   induction ps as [| p ps IH]; simpl.
   - reflexivity.
-  - rewrite IH. reflexivity.
+  - change (root_env_names (initial_root_env_for_params_origin ps ps))
+      with (root_env_names (initial_root_env_for_params ps)).
+    rewrite IH. reflexivity.
 Qed.
 
 Lemma initial_root_env_for_params_no_shadow :

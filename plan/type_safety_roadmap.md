@@ -396,25 +396,27 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      rename case: `root_atom_mentions`, `root_set_excludes_atom`,
      `root_env_excludes_atom`, `root_set_rename_cons_excluded`,
      `root_env_rename_cons_excluded`, and add/remove wrappers.
-   - Current blocker after the helper layer: the existing naming invariants
+   - Done: fixed the `RParam` shadowing design by making `RParam x` a stable
+     original-parameter provenance symbol. Local binder alpha-renaming now
+     renames only `RStore` atoms, not `RParam` atoms. Added
+     `initial_root_env_for_params_origin` so freshened parameter environments
+     can use fresh root-env keys while preserving original symbolic parameter
+     provenance.
+   - Resolved blocker after the helper layer: the existing naming invariants
      (`root_set_ctx_roots_named`, `root_env_ctx_roots_named`, and store-name
-     variants) only track `RStore` atoms. The extended rename proof must also
-     rule out `RParam x` when the let binder extends the rename environment.
-     The existing let escape premises (`roots_exclude x roots2` and
-     `root_env_excludes x (root_env_remove x R2)`) are not enough by
-     themselves, because they exclude `RStore x` but intentionally do not
-     exclude `RParam x`.
-   - Implementation checkpoint: add only conservative helper lemmas that turn
-     `roots_exclude` / `root_env_excludes` into atom-wide exclusion under an
-     explicit no-`RParam x` premise. Do not use those helpers to complete the
-     `ELet` / `ELetInfer` alpha-transport cases until a sound source for the
-     no-`RParam x` premise is identified.
-   - Design blocker: decide how `RParam` names are scoped under local
-     shadowing. Either make local binders fresh against all symbolic parameter
-     atoms that may survive in roots, or introduce a scope-aware parameter root
-     representation so `RParam x` from an outer function parameter cannot be
-     confused with a let-bound `x`. Do not force a broad
-     `typed_env_roots` atom-exclusion theorem from the current rules.
+     variants) only track `RStore` atoms, which is now sufficient for local
+     binder alpha-renaming because `RParam` atoms are no longer renamed by the
+     extended let environment.
+   - Done: kept the conservative helper lemmas that turn `roots_exclude` /
+     `root_env_excludes` into atom-wide exclusion under an explicit
+     no-`RParam x` premise, but the stable-`RParam` design means the
+     `ELet` / `ELetInfer` alpha-transport proof should no longer need to
+     derive such a premise from `typed_env_roots`.
+   - Next alpha-transport checkpoint: update the `ELet` / `ELetInfer` proof
+     plan to use stable `RParam` semantics. The extended rename proof should
+     rely on `roots_exclude` / `root_env_excludes` for `RStore` cleanup and
+     should not attempt to prove a broad no-`RParam x` theorem from
+     `typed_env_roots`.
    - Chosen direction: keep lifetime substitution inference as-is, derive root
      evidence from call-site argument roots plus
      `call_param_root_env`, then instantiate cached root-polymorphic summaries

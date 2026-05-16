@@ -132,13 +132,13 @@ Theorem infer_full_env_roots_big_step_safe_direct_call_ready :
     root_env_no_shadow R0 ->
     fn_env_unique_by_name env ->
     env_fns_preservation_ready env ->
-    direct_call_callee_root_evidence env ->
+    direct_call_callee_body_root_evidence env ->
     eval env s (fn_body f) s' v ->
     value_has_type env s' v (fn_ret f).
 Proof.
   intros env f R0 T Γ' R' roots s s' v
     Hinfer Hstore Hready Hroots Hstore_shadow Hroot_shadow Hunique
-    Hfns_ready Hcallee_roots Heval.
+    Hfns_ready Hcallee_body_roots Heval.
   pose proof (infer_full_env_roots_sound env f R0 T Γ' R' roots Hinfer)
     as [Htyped_fn _].
   unfold typed_fn_env_roots in Htyped_fn.
@@ -149,7 +149,7 @@ Proof.
       (sctx_of_ctx (params_ctx (fn_params f)))
       T_body (sctx_of_ctx Γ_out) R' roots
       Hready Hstore Hroots Hstore_shadow Hroot_shadow Htyped
-      Hunique Hfns_ready Hcallee_roots)
+      Hunique Hfns_ready Hcallee_body_roots)
     as [_ [Hv _]].
   eapply VHT_Compatible.
   - exact Hv.

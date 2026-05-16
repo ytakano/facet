@@ -271,6 +271,13 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
    - Done: added root-renaming transport helpers for root sets, root exclusion,
      and root-environment exclusion, plus `root_sets_union` equivalence for
      call argument roots.
+   - Done: added guarded alpha-renaming helpers for canonical symbolic
+     parameter root environments:
+     `alpha_rename_params_initial_root_env_rename` and
+     `alpha_rename_fn_def_initial_root_env_rename`. These require parameter
+     `NoDup`, matching the existing duplicate-parameter rejection invariant,
+     and avoid the false unguarded statement where duplicate original names
+     would be shadowed by `lookup_rename`.
    - Done: added Prop-level function summary evidence in `TypeSafety.v`
      (`callee_body_root_summary`, `env_fns_root_summary_evidence`) and
      checker-facing summary evidence in `EnvRuntimeSafety.v`
@@ -284,6 +291,11 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      `initial_root_env_for_fn fdef` into freshened call-site evidence at
      `call_param_root_env (fn_params fcall) arg_roots R_args`. Do not replace
      `direct_call_callee_body_root_evidence` until this theorem exists.
+   - Current blocker detail: the parameter-environment rename part now has a
+     compiled helper, but the body evidence still needs a root-aware transport
+     theorem for `typed_env_roots` itself, including result root/env transport
+     modulo `root_set_equiv` and call-site instantiation with
+     `root_subst_of_params`.
    - Chosen direction: keep lifetime substitution inference as-is, derive root
      evidence from call-site argument roots plus
      `call_param_root_env`, then instantiate cached root-polymorphic summaries

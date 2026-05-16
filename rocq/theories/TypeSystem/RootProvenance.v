@@ -74,6 +74,49 @@ Fixpoint root_env_names (R : root_env) : list ident :=
 Definition root_env_no_shadow (R : root_env) : Prop :=
   NoDup (root_env_names R).
 
+Lemma root_env_rename_cons_initial_root_env_for_params_notin :
+  forall x x' rho ps,
+    ~ In x (ctx_names (params_ctx ps)) ->
+    root_env_rename ((x, x') :: rho) (initial_root_env_for_params ps) =
+    root_env_rename rho (initial_root_env_for_params ps).
+Proof.
+  intros x x' rho ps.
+  induction ps as [| p ps IH]; intros Hnotin; simpl.
+  - reflexivity.
+  - destruct p as [m y T]. simpl in Hnotin.
+    assert (Hy : y <> x).
+    { intros Heq. apply Hnotin. subst. left. reflexivity. }
+    assert (Htail : ~ In x (ctx_names (params_ctx ps))).
+    { intros Hin. apply Hnotin. right. exact Hin. }
+    simpl. unfold root_atom_rename. simpl.
+    destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx. exfalso. apply Hy. exact Hyx.
+    + rewrite IH; [reflexivity | exact Htail].
+Qed.
+
+Lemma alpha_rename_params_initial_root_env_rename :
+  forall rho used ps psr rho' used',
+    NoDup (ctx_names (params_ctx ps)) ->
+    alpha_rename_params rho used ps = (psr, rho', used') ->
+    root_env_rename rho' (initial_root_env_for_params ps) =
+    initial_root_env_for_params psr.
+Proof.
+  intros rho used ps. revert rho used.
+  induction ps as [| p ps IH]; intros rho used psr rho' used' Hnodup Hrename.
+  - simpl in Hrename. inversion Hrename. reflexivity.
+  - destruct p as [m x T]. simpl in Hrename.
+    destruct (alpha_rename_params rho (fresh_ident x used :: used) ps)
+      as [[ps'' rho''] used''] eqn:Hps.
+    inversion Hrename; subst. simpl.
+    inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
+    repeat rewrite ident_eqb_refl.
+    rewrite root_env_rename_cons_initial_root_env_for_params_notin.
+    + rewrite (IH rho (fresh_ident x used :: used)
+        ps'' rho'' used' Hnodup_tail Hps).
+      reflexivity.
+    + exact Hnotin.
+Qed.
+
 Lemma initial_root_env_for_params_names :
   forall ps,
     root_env_names (initial_root_env_for_params ps) =

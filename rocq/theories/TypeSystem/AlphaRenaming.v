@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Types Syntax PathState Renaming TypingRules TypeChecker EnvStructuralRules.
+From Facet.TypeSystem Require Import Types Syntax PathState Renaming TypingRules RootProvenance TypeChecker EnvStructuralRules.
 From Stdlib Require Import List String Bool Lia PeanoNat Program.Equality.
 Import ListNotations.
 
@@ -2334,6 +2334,33 @@ Proof.
   split; [reflexivity |].
   split; [reflexivity |].
   eapply alpha_rename_params_shape. exact Hps.
+Qed.
+
+Lemma alpha_rename_fn_def_initial_root_env_rename :
+  forall used f fr used',
+    alpha_rename_fn_def used f = (fr, used') ->
+    NoDup (ctx_names (params_ctx (fn_params f))) ->
+    exists rho used_params,
+      alpha_rename_params []
+        (param_names (fn_params f) ++ free_vars_expr (fn_body f) ++ used)
+        (fn_params f) = (fn_params fr, rho, used_params) /\
+      root_env_rename rho (initial_root_env_for_fn f) =
+        initial_root_env_for_fn fr.
+Proof.
+  intros used f fr used' Hrename Hnodup.
+  destruct f as [fname lifetimes outs ps ret body].
+  unfold alpha_rename_fn_def in Hrename.
+  simpl in Hrename.
+  destruct (alpha_rename_params []
+    (param_names ps ++ free_vars_expr body ++ used) ps)
+    as [[ps' rho] used_params] eqn:Hps.
+  destruct (alpha_rename_expr rho used_params body)
+    as [body' used_body] eqn:Hbody.
+  inversion Hrename; subst. simpl.
+  exists rho, used_params.
+  split; [exact Hps |].
+  unfold initial_root_env_for_fn. simpl.
+  eapply alpha_rename_params_initial_root_env_rename; eassumption.
 Qed.
 
 Lemma alpha_rename_syntax_go_shape : forall used fenv fenvr used',

@@ -8778,6 +8778,15 @@ Definition callee_body_root_ready_at
     roots_exclude_params (fn_params fcall) roots_body /\
     root_env_excludes_params (fn_params fcall) R_body.
 
+Definition callee_body_root_summary (env : global_env) (fdef : fn_def)
+    : Prop :=
+  callee_body_root_ready_at env fdef (initial_root_env_for_fn fdef).
+
+Definition env_fns_root_summary_evidence (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_summary env fdef.
+
 Definition direct_call_callee_body_root_evidence (env : global_env) : Prop :=
   forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
       (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs

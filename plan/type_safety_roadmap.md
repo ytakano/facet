@@ -256,15 +256,35 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      parameter-value roots. The Prop-level root rules, executable root checker,
      root soundness theorem, runtime reference root membership, and initial
      parameter root environments now agree on the tagged representation.
+   - Done: moved the canonical symbolic parameter root environment into
+     `RootProvenance.v` as `initial_root_env_for_params` /
+     `initial_root_env_for_fn`, and added conservative root-renaming helpers
+     for the cached-summary alpha-renaming bridge.
+   - Done: added local root helper lemmas for the bridge:
+     `root_set_equiv`, root-env rename lookup under an explicit no-collision
+     premise, `root_of_place` renaming, root instantiation inversion, and
+     instantiation/exclusion preservation for root sets, root environments, and
+     `root_subst_of_params`.
+   - Done: added Prop-level function summary evidence in `TypeSafety.v`
+     (`callee_body_root_summary`, `env_fns_root_summary_evidence`) and
+     checker-facing summary evidence in `EnvRuntimeSafety.v`
+     (`fn_root_summary_check_ready`, `env_fns_root_summary_check_ready`) with
+     a bridge from checker summaries to original-function
+     `callee_body_root_ready_at`.
    - Chosen design: replace the call-site evidence premise with cached
      root-polymorphic summaries using the tagged-root representation.
+   - Remaining blocker: prove the root-aware alpha-renaming/instantiation
+     bridge that turns an original-function summary at
+     `initial_root_env_for_fn fdef` into freshened call-site evidence at
+     `call_param_root_env (fn_params fcall) arg_roots R_args`. Do not replace
+     `direct_call_callee_body_root_evidence` until this theorem exists.
    - Chosen direction: keep lifetime substitution inference as-is, derive root
      evidence from call-site argument roots plus
      `call_param_root_env`, then instantiate cached root-polymorphic summaries
      with `root_subst_of_params`.
-   - Remaining: define the cached root-polymorphic summary shape and prove that
-     instantiating a freshened callee summary with `root_subst_of_params`
-     supplies `callee_body_root_ready_at`.
+   - Remaining: prove that alpha-renaming plus `root_subst_of_params`
+     instantiation supplies `callee_body_root_ready_at` for the freshened
+     call-site environment.
    - Do not attempt to discharge the evidence with lifetime inference alone,
      and do not globally reject parameter roots in `infer_env_roots`.
    - Stop if the current root sidecar API cannot express freshened callee body

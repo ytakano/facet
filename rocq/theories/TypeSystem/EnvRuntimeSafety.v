@@ -7,33 +7,6 @@ Import ListNotations.
 Definition initial_store_for_fn (env : global_env) (f : fn_def) (s : store) : Prop :=
   store_typed env s (sctx_of_ctx (params_ctx (fn_params f))).
 
-Definition initial_root_env_for_params (ps : list param) : root_env :=
-  map (fun p => (param_name p, [RParam (param_name p)])) ps.
-
-Definition initial_root_env_for_fn (f : fn_def) : root_env :=
-  initial_root_env_for_params (fn_params f).
-
-Lemma initial_root_env_for_params_names :
-  forall ps,
-    root_env_names (initial_root_env_for_params ps) =
-    ctx_names (params_ctx ps).
-Proof.
-  induction ps as [| p ps IH].
-  - reflexivity.
-  - simpl. rewrite IH. reflexivity.
-Qed.
-
-Lemma initial_root_env_for_params_no_shadow :
-  forall ps,
-    NoDup (ctx_names (params_ctx ps)) ->
-    root_env_no_shadow (initial_root_env_for_params ps).
-Proof.
-  intros ps Hnodup.
-  unfold root_env_no_shadow.
-  rewrite initial_root_env_for_params_names.
-  exact Hnodup.
-Qed.
-
 Lemma initial_root_env_for_params_covers :
   forall ps,
     root_env_covers_params ps (initial_root_env_for_params ps).
@@ -49,27 +22,6 @@ Proof.
       * exists [RParam (param_name p)]. reflexivity.
       * destruct (IH x Hin) as [roots Hlookup].
         exists roots. exact Hlookup.
-Qed.
-
-Lemma initial_root_env_for_fn_names :
-  forall f,
-    root_env_names (initial_root_env_for_fn f) =
-    ctx_names (params_ctx (fn_params f)).
-Proof.
-  intros f.
-  unfold initial_root_env_for_fn.
-  apply initial_root_env_for_params_names.
-Qed.
-
-Lemma initial_root_env_for_fn_no_shadow :
-  forall f,
-    NoDup (ctx_names (params_ctx (fn_params f))) ->
-    root_env_no_shadow (initial_root_env_for_fn f).
-Proof.
-  intros f Hnodup.
-  unfold initial_root_env_for_fn.
-  apply initial_root_env_for_params_no_shadow.
-  exact Hnodup.
 Qed.
 
 Lemma initial_root_env_for_fn_covers :
@@ -141,6 +93,60 @@ Proof.
     exact Hexclude_roots.
   - apply root_env_excludes_params_b_sound.
     exact Hexclude_env.
+Qed.
+
+Definition fn_root_summary_check_ready
+    (env : global_env) (fdef : fn_def) : Prop :=
+  exists T_body Γ_out R_body roots_body,
+    infer_env_roots env fdef (initial_root_env_for_fn fdef) =
+      infer_ok (T_body, Γ_out, R_body, roots_body) /\
+    preservation_ready_expr (fn_body fdef) /\
+    roots_exclude_params_b (fn_params fdef) roots_body = true /\
+    root_env_excludes_params_b (fn_params fdef) R_body = true.
+
+Definition env_fns_root_summary_check_ready (env : global_env) : Prop :=
+  forall fdef,
+    In fdef (env_fns env) ->
+    fn_root_summary_check_ready env fdef.
+
+Lemma callee_body_root_ready_at_of_fn_root_summary_check :
+  forall env fdef,
+    fn_root_summary_check_ready env fdef ->
+    callee_body_root_ready_at env fdef (initial_root_env_for_fn fdef).
+Proof.
+  intros env fdef Hsummary.
+  unfold fn_root_summary_check_ready in Hsummary.
+  destruct Hsummary as
+    (T_body & Γ_out & R_body & roots_body &
+      Hinfer & Hready & Hexclude_roots & Hexclude_env).
+  apply callee_body_root_ready_at_of_check_ready_at.
+  unfold callee_body_root_check_ready_at.
+  exists T_body, Γ_out, R_body, roots_body.
+  repeat split; assumption.
+Qed.
+
+Lemma callee_body_root_ready_at_of_env_root_summary_check :
+  forall env fdef,
+    env_fns_root_summary_check_ready env ->
+    In fdef (env_fns env) ->
+    callee_body_root_ready_at env fdef (initial_root_env_for_fn fdef).
+Proof.
+  intros env fdef Hsummary Hin.
+  apply callee_body_root_ready_at_of_fn_root_summary_check.
+  exact (Hsummary fdef Hin).
+Qed.
+
+Lemma env_fns_root_summary_evidence_of_check :
+  forall env,
+    env_fns_root_summary_check_ready env ->
+    env_fns_root_summary_evidence env.
+Proof.
+  intros env Hsummary fname fdef Hlookup.
+  unfold env_fns_root_summary_evidence, callee_body_root_summary.
+  apply callee_body_root_ready_at_of_env_root_summary_check.
+  - exact Hsummary.
+  - apply lookup_fn_in_name in Hlookup.
+    exact (proj1 Hlookup).
 Qed.
 
 Lemma direct_call_callee_body_root_evidence_of_check :

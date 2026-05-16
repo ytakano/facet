@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Syntax PathState.
+From Facet.TypeSystem Require Import Syntax PathState Renaming TypingRules.
 From Stdlib Require Import List.
 Import ListNotations.
 
@@ -12,6 +12,35 @@ Inductive root_atom : Type :=
 
 Definition root_set := list root_atom.
 Definition root_env := list (ident * root_set).
+
+Definition initial_root_env_for_params (ps : list param) : root_env :=
+  map (fun p => (param_name p, [RParam (param_name p)])) ps.
+
+Definition initial_root_env_for_fn (f : fn_def) : root_env :=
+  initial_root_env_for_params (fn_params f).
+
+Definition root_atom_rename (rho : rename_env) (atom : root_atom)
+    : root_atom :=
+  match atom with
+  | RStore x => RStore (lookup_rename x rho)
+  | RParam x => RParam (lookup_rename x rho)
+  end.
+
+Fixpoint root_set_rename (rho : rename_env) (roots : root_set)
+    : root_set :=
+  match roots with
+  | [] => []
+  | atom :: rest => root_atom_rename rho atom :: root_set_rename rho rest
+  end.
+
+Fixpoint root_env_rename (rho : rename_env) (R : root_env)
+    : root_env :=
+  match R with
+  | [] => []
+  | (x, roots) :: rest =>
+      (lookup_rename x rho, root_set_rename rho roots)
+        :: root_env_rename rho rest
+  end.
 
 Definition root_atom_eqb (a b : root_atom) : bool :=
   match a, b with
@@ -44,6 +73,100 @@ Fixpoint root_env_names (R : root_env) : list ident :=
 
 Definition root_env_no_shadow (R : root_env) : Prop :=
   NoDup (root_env_names R).
+
+Lemma initial_root_env_for_params_names :
+  forall ps,
+    root_env_names (initial_root_env_for_params ps) =
+    ctx_names (params_ctx ps).
+Proof.
+  induction ps as [| p ps IH]; simpl.
+  - reflexivity.
+  - rewrite IH. reflexivity.
+Qed.
+
+Lemma initial_root_env_for_params_no_shadow :
+  forall ps,
+    NoDup (ctx_names (params_ctx ps)) ->
+    root_env_no_shadow (initial_root_env_for_params ps).
+Proof.
+  intros ps Hnodup.
+  unfold root_env_no_shadow.
+  rewrite initial_root_env_for_params_names.
+  exact Hnodup.
+Qed.
+
+Lemma initial_root_env_for_fn_names :
+  forall f,
+    root_env_names (initial_root_env_for_fn f) =
+    ctx_names (params_ctx (fn_params f)).
+Proof.
+  intros f.
+  unfold initial_root_env_for_fn.
+  apply initial_root_env_for_params_names.
+Qed.
+
+Lemma initial_root_env_for_fn_no_shadow :
+  forall f,
+    NoDup (ctx_names (params_ctx (fn_params f))) ->
+    root_env_no_shadow (initial_root_env_for_fn f).
+Proof.
+  intros f Hnodup.
+  unfold initial_root_env_for_fn.
+  apply initial_root_env_for_params_no_shadow.
+  exact Hnodup.
+Qed.
+
+Lemma root_env_rename_names :
+  forall rho R,
+    root_env_names (root_env_rename rho R) =
+    map (fun x => lookup_rename x rho) (root_env_names R).
+Proof.
+  intros rho R.
+  induction R as [| [x roots] rest IH]; simpl.
+  - reflexivity.
+  - rewrite IH. reflexivity.
+Qed.
+
+Definition root_set_equiv (a b : root_set) : Prop :=
+  forall atom, In atom a <-> In atom b.
+
+Lemma root_set_equiv_refl :
+  forall roots,
+    root_set_equiv roots roots.
+Proof.
+  intros roots atom. split; intro H; exact H.
+Qed.
+
+Lemma root_set_equiv_sym :
+  forall a b,
+    root_set_equiv a b ->
+    root_set_equiv b a.
+Proof.
+  intros a b Heq atom.
+  destruct (Heq atom) as [Hab Hba].
+  split; assumption.
+Qed.
+
+Lemma root_set_equiv_trans :
+  forall a b c,
+    root_set_equiv a b ->
+    root_set_equiv b c ->
+    root_set_equiv a c.
+Proof.
+  intros a b c Hab Hbc atom.
+  destruct (Hab atom) as [Hab1 Hab2].
+  destruct (Hbc atom) as [Hbc1 Hbc2].
+  split; intro H.
+  - apply Hbc1. apply Hab1. exact H.
+  - apply Hab2. apply Hbc2. exact H.
+Qed.
+
+Definition rename_no_collision_for
+    (rho : rename_env) (x : ident) (names : list ident) : Prop :=
+  forall y,
+    In y names ->
+    y <> x ->
+    lookup_rename y rho <> lookup_rename x rho.
 
 Fixpoint root_set_union (a b : root_set) : root_set :=
   match a with
@@ -146,6 +269,63 @@ Definition root_of_place (p : place) : root_set :=
   | None => [RStore (root_provenance_place_name p)]
   end.
 
+Lemma root_provenance_place_name_rename_place :
+  forall rho p,
+    root_provenance_place_name (rename_place rho p) =
+    lookup_rename (root_provenance_place_name p) rho.
+Proof.
+  intros rho p.
+  induction p as [x | p IH | p IH f]; simpl.
+  - reflexivity.
+  - exact IH.
+  - exact IH.
+Qed.
+
+Lemma place_path_rename_place_some :
+  forall rho p x path,
+    place_path p = Some (x, path) ->
+    place_path (rename_place rho p) = Some (lookup_rename x rho, path).
+Proof.
+  intros rho p.
+  induction p as [y | p IH | p IH f]; intros x path Hpath; simpl in *.
+  - inversion Hpath. reflexivity.
+  - discriminate.
+  - destruct (place_path p) as [[y parent_path] |] eqn:Hparent;
+      try discriminate.
+    inversion Hpath. subst x path.
+    rewrite (IH y parent_path eq_refl).
+    reflexivity.
+Qed.
+
+Lemma place_path_rename_place_none :
+  forall rho p,
+    place_path p = None ->
+    place_path (rename_place rho p) = None.
+Proof.
+  intros rho p.
+  induction p as [y | p IH | p IH f]; intros Hpath; simpl in *.
+  - discriminate.
+  - reflexivity.
+  - destruct (place_path p) as [[y parent_path] |] eqn:Hparent;
+      try discriminate.
+    rewrite (IH eq_refl). reflexivity.
+Qed.
+
+Lemma root_of_place_rename_place :
+  forall rho p,
+    root_of_place (rename_place rho p) =
+    root_set_rename rho (root_of_place p).
+Proof.
+  intros rho p.
+  unfold root_of_place.
+  destruct (place_path p) as [[x path] |] eqn:Hpath.
+  - rewrite (place_path_rename_place_some rho p x path Hpath).
+    reflexivity.
+  - rewrite (place_path_rename_place_none rho p Hpath).
+    simpl. rewrite root_provenance_place_name_rename_place.
+    reflexivity.
+Qed.
+
 Lemma root_set_union_in_r :
   forall x a b,
     In x b ->
@@ -203,6 +383,70 @@ Proof.
         -- intros Hin_y. apply Ha. right. exact Hin_y.
         -- exact Hb.
         -- exact Hin.
+Qed.
+
+Lemma root_set_union_in_inv :
+  forall x a b,
+    In x (root_set_union a b) ->
+    In x a \/ In x b.
+Proof.
+  intros x a.
+  induction a as [| y ys IH]; intros b Hin; simpl in *.
+  - right. exact Hin.
+  - destruct (existsb (root_atom_eqb y) b) eqn:Hexists.
+    + destruct (IH b Hin) as [Hin_y | Hin_b].
+      * left. right. exact Hin_y.
+      * right. exact Hin_b.
+    + simpl in Hin.
+      destruct Hin as [Heq | Hin].
+      * left. left. exact Heq.
+      * destruct (IH b Hin) as [Hin_y | Hin_b].
+        -- left. right. exact Hin_y.
+        -- right. exact Hin_b.
+Qed.
+
+Lemma root_set_union_equiv_app :
+  forall a b,
+    root_set_equiv (root_set_union a b) (a ++ b).
+Proof.
+  intros a b atom. split; intro Hin.
+  - apply in_or_app.
+    apply root_set_union_in_inv. exact Hin.
+  - apply in_app_or in Hin.
+    destruct Hin as [Hin | Hin].
+    + apply root_set_union_in_l. exact Hin.
+    + apply root_set_union_in_r. exact Hin.
+Qed.
+
+Lemma root_env_lookup_rename :
+  forall rho R x roots,
+    rename_no_collision_for rho x (root_env_names R) ->
+    root_env_lookup x R = Some roots ->
+    root_env_lookup (lookup_rename x rho) (root_env_rename rho R) =
+      Some (root_set_rename rho roots).
+Proof.
+  intros rho R.
+  induction R as [| [y roots_y] rest IH]; intros x roots Hnocoll Hlookup;
+    simpl in *; try discriminate.
+  destruct (ident_eqb x y) eqn:Hxy.
+  - apply ident_eqb_eq in Hxy. subst y.
+    simpl. rewrite ident_eqb_refl.
+    inversion Hlookup. reflexivity.
+  - simpl.
+    destruct (ident_eqb (lookup_rename x rho) (lookup_rename y rho))
+      eqn:Hren.
+    + apply ident_eqb_eq in Hren.
+      exfalso.
+      apply (Hnocoll y).
+      * left. reflexivity.
+      * intros Heq. subst y. rewrite ident_eqb_refl in Hxy. discriminate.
+      * symmetry. exact Hren.
+    + apply IH.
+      * intros z Hin Hzx.
+        apply (Hnocoll z).
+        -- right. exact Hin.
+        -- exact Hzx.
+      * exact Hlookup.
 Qed.
 
 Lemma root_env_lookup_add_eq :
@@ -385,6 +629,95 @@ Proof.
   apply IH. exact Hlookup.
 Qed.
 
+Lemma root_env_lookup_instantiate_inv :
+  forall x rho R roots_inst,
+    root_env_lookup x (root_env_instantiate rho R) = Some roots_inst ->
+    exists roots,
+      root_env_lookup x R = Some roots /\
+      roots_inst = root_set_instantiate rho roots.
+Proof.
+  intros x rho R.
+  induction R as [| [y roots_y] rest IH]; intros roots_inst Hlookup;
+    simpl in *; try discriminate.
+  destruct (ident_eqb x y) eqn:Hxy.
+  - inversion Hlookup. subst roots_inst.
+    exists roots_y. split.
+    + reflexivity.
+    + reflexivity.
+  - destruct (IH roots_inst Hlookup) as [roots [Horig Heq]].
+    exists roots. split.
+    + exact Horig.
+    + exact Heq.
+Qed.
+
+Lemma root_subst_lookup_excludes :
+  forall x y rho,
+    (forall param roots,
+      In (param, roots) rho ->
+      roots_exclude x roots) ->
+    roots_exclude x (root_subst_lookup y rho).
+Proof.
+  unfold roots_exclude.
+  intros x y rho Himages.
+  induction rho as [| [param roots] rest IH]; simpl.
+  - intros Hin. destruct Hin as [Hin | Hin]; try discriminate.
+    contradiction.
+  - destruct (ident_eqb y param) eqn:Hy.
+    + exact (Himages param roots (or_introl eq_refl)).
+    + apply IH. intros param' roots' Hin.
+      exact (Himages param' roots' (or_intror Hin)).
+Qed.
+
+Lemma root_set_instantiate_excludes :
+  forall x rho roots,
+    roots_exclude x roots ->
+    (forall param roots_image,
+      In (param, roots_image) rho ->
+      roots_exclude x roots_image) ->
+    roots_exclude x (root_set_instantiate rho roots).
+Proof.
+  intros x rho roots.
+  induction roots as [| atom rest IH]; intros Hroots Himages; simpl in *.
+  - unfold roots_exclude. intros Hin. contradiction.
+  - destruct atom as [store_x | param_x].
+    + change (roots_exclude x
+        (root_set_union [RStore store_x]
+          (root_set_instantiate rho rest))).
+      apply roots_exclude_union.
+      * unfold roots_exclude. intros Hstore.
+        destruct Hstore as [Hstore | Hstore]; try contradiction.
+        apply Hroots. left. exact Hstore.
+      * apply IH.
+        -- intros Hbad. apply Hroots. right. exact Hbad.
+        -- exact Himages.
+    + change (roots_exclude x
+        (root_set_union (root_subst_lookup param_x rho)
+          (root_set_instantiate rho rest))).
+      apply roots_exclude_union.
+      * apply root_subst_lookup_excludes. exact Himages.
+      * apply IH.
+        -- intros Hbad. apply Hroots. right. exact Hbad.
+        -- exact Himages.
+Qed.
+
+Lemma root_env_instantiate_excludes :
+  forall x rho R,
+    root_env_excludes x R ->
+    (forall param roots_image,
+      In (param, roots_image) rho ->
+      roots_exclude x roots_image) ->
+    root_env_excludes x (root_env_instantiate rho R).
+Proof.
+  unfold root_env_excludes.
+  intros x rho R Hexcl Himages y roots_inst Hlookup Hyx.
+  destruct (root_env_lookup_instantiate_inv y rho R roots_inst Hlookup)
+    as [roots [Hlookup_orig Heq]].
+  subst roots_inst.
+  apply root_set_instantiate_excludes.
+  - eapply Hexcl; eassumption.
+  - exact Himages.
+Qed.
+
 Lemma root_env_no_shadow_add :
   forall x roots R,
     root_env_no_shadow R ->
@@ -464,4 +797,44 @@ Proof.
     exfalso. apply (Hnotin p); simpl; auto.
   - apply IH. intros q Hinq.
     apply Hnotin. simpl. right. exact Hinq.
+Qed.
+
+Lemma root_subst_of_params_lookup_tail_neq :
+  forall p ps roots arg_roots x,
+    x <> param_name p ->
+    root_subst_lookup x
+      (root_subst_of_params (p :: ps) (roots :: arg_roots)) =
+    root_subst_lookup x (root_subst_of_params ps arg_roots).
+Proof.
+  intros p ps roots arg_roots x Hneq. simpl.
+  destruct (ident_eqb x (param_name p)) eqn:Heq; try reflexivity.
+  apply ident_eqb_eq in Heq. contradiction.
+Qed.
+
+Lemma root_subst_of_params_image_excludes :
+  forall ps arg_roots x param roots,
+    Forall (roots_exclude x) arg_roots ->
+    In (param, roots) (root_subst_of_params ps arg_roots) ->
+    roots_exclude x roots.
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros arg_roots x param roots Hforall Hin;
+    destruct arg_roots as [| roots_head arg_roots]; simpl in *;
+    try contradiction.
+  inversion Hforall as [| ? ? Hhead Htail]; subst.
+  destruct Hin as [Hin | Hin].
+  - inversion Hin. subst. exact Hhead.
+  - eapply IH; eassumption.
+Qed.
+
+Lemma root_subst_of_params_lookup_excludes :
+  forall ps arg_roots x y,
+    Forall (roots_exclude x) arg_roots ->
+    roots_exclude x
+      (root_subst_lookup y (root_subst_of_params ps arg_roots)).
+Proof.
+  intros ps arg_roots x y Hforall.
+  apply root_subst_lookup_excludes.
+  intros param roots Hin.
+  eapply root_subst_of_params_image_excludes; eassumption.
 Qed.

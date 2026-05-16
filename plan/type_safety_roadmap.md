@@ -358,11 +358,17 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      `typed_env_roots` across `root_env_instantiate` modulo `root_env_equiv`
      and `root_set_equiv`, provided every substitution image excludes the
      let-bound/callee-local store roots collected from the expression.
-   - Current blocker detail: the parameter-environment rename part and
-     guarded root-instantiation part now have compiled helpers. The remaining
-     bridge must combine alpha-renaming with `root_subst_of_params`, and must
-     prove the required substitution-image freshness from call-site argument
-     root-name preservation and freshened callee parameter/local names.
+   - Done: added alpha-renaming freshness helpers for body-local store names:
+     `alpha_rename_expr_local_store_names_fresh_used` and
+     `alpha_rename_fn_def_body_local_store_names_fresh_used`.
+   - Done: added call-site freshness bridge helpers from argument root naming
+     to `root_subst_of_params` substitution-image freshness, including
+     `alpha_rename_fn_def_body_root_subst_images_exclude_names_from_store_roots`.
+   - Current blocker detail: the parameter-environment rename part, guarded
+     root-instantiation part, and substitution-image freshness part now have
+     compiled helpers. The remaining bridge must prove root-aware
+     alpha-renaming transport for `typed_env_roots` itself and combine it with
+     the guarded instantiation theorem.
    - Chosen direction: keep lifetime substitution inference as-is, derive root
      evidence from call-site argument roots plus
      `call_param_root_env`, then instantiate cached root-polymorphic summaries

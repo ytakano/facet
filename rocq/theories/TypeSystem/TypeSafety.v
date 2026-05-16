@@ -7152,7 +7152,10 @@ Proof.
                 Hcover Hroots Hshadow Hrn Hscope Hfresh)
       as [Hcover1 [Hscope1 Hfresh1]].
     pose proof (root_env_covers_params_lookup_none_not_in
-                  ps R1 x Hcover1 H8) as Hnotin.
+                  ps R1 x Hcover1
+                  ltac:(match goal with
+                    | H : root_env_lookup x R1 = None |- _ => exact H
+                    end)) as Hnotin.
     assert (Hlookup_fresh : store_lookup x s1 = None)
       by (eapply store_roots_within_lookup_none; eassumption).
     assert (Hnot_frame : ~ In x (store_names frame))
@@ -7178,15 +7181,23 @@ Proof.
     assert (Hfresh_add :
       store_frame_static_fresh (sctx_add x T_ann m Σ1) frame)
       by (eapply store_frame_static_fresh_add; eassumption).
+    assert (Htyped_body :
+      typed_env_roots env Ω n (root_env_add x roots1 R1)
+        (sctx_add x T_ann m Σ1) e2 T Σ2 R2 roots).
+    { match goal with
+      | H : typed_env_roots env Ω n (root_env_add x roots1 R1)
+              (sctx_add x T_ann m Σ1) e2 T Σ2 R2 roots |- _ =>
+          exact H
+      end. }
     destruct (proj1 eval_preserves_roots_ready_mutual env
                 (store_add x T_ann v1 s1) e2 s2 v2 Heval2
                 Ω n (root_env_add x roots1 R1)
                 (sctx_add x T_ann m Σ1) T Σ2 R2 roots Hready2
-                Hadd_roots Hadd_shadow Hadd_rn H13)
+                Hadd_roots Hadd_shadow Hadd_rn Htyped_body)
       as [Hroots2 [_ [Hshadow2 Hrn2]]].
     destruct (IH2 Ω n (root_env_add x roots1 R1)
                 (sctx_add x T_ann m Σ1) T Σ2 R2 roots ps frame
-                Hready2 H13
+                Hready2 Htyped_body
                 (root_env_covers_params_add ps R1 x roots1 Hcover1)
                 Hadd_roots Hadd_shadow Hadd_rn Hscope_add Hfresh_add)
       as [Hcover2 [Hscope2 Hfresh2]].
@@ -7195,7 +7206,8 @@ Proof.
                     (sctx_add x T_ann m Σ1) e2 T Σ2
                     (typed_env_roots_structural env Ω n
                       (root_env_add x roots1 R1)
-                      (sctx_add x T_ann m Σ1) e2 T Σ2 R2 roots H13))
+                      (sctx_add x T_ann m Σ1) e2 T Σ2 R2 roots
+                      Htyped_body))
         as Hsame_body.
       pose proof (sctx_same_bindings_names_alpha
                     (sctx_add x T_ann m Σ1) Σ2 Hsame_body) as Hnames.

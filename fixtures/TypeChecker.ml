@@ -3272,21 +3272,23 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
          then (match root_env_lookup x r1 with
                | Some _ -> Infer_err ErrContextCheckFailed
                | None ->
-                 (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
-                          (root_env_add x roots1 r1)
-                          (sctx_add x t m _UU03a3_1) e2 with
-                  | Infer_ok p2 ->
-                    let (p3, roots2) = p2 in
-                    let (p4, r2) = p3 in
-                    let (t2, _UU03a3_2) = p4 in
-                    if (&&)
-                         ((&&) (sctx_check_ok env x t _UU03a3_2)
-                           (roots_exclude_b x roots2))
-                         (root_env_excludes_b x (root_env_remove x r2))
-                    then Infer_ok (((t2, (sctx_remove x _UU03a3_2)),
-                           (root_env_remove x r2)), roots2)
-                    else Infer_err ErrContextCheckFailed
-                  | Infer_err err -> Infer_err err))
+                 if roots_exclude_b x roots1
+                 then (match infer_core_env_state_fuel_roots fuel' env
+                               _UU03a9_ n (root_env_add x roots1 r1)
+                               (sctx_add x t m _UU03a3_1) e2 with
+                       | Infer_ok p2 ->
+                         let (p3, roots2) = p2 in
+                         let (p4, r2) = p3 in
+                         let (t2, _UU03a3_2) = p4 in
+                         if (&&)
+                              ((&&) (sctx_check_ok env x t _UU03a3_2)
+                                (roots_exclude_b x roots2))
+                              (root_env_excludes_b x (root_env_remove x r2))
+                         then Infer_ok (((t2, (sctx_remove x _UU03a3_2)),
+                                (root_env_remove x r2)), roots2)
+                         else Infer_err ErrContextCheckFailed
+                       | Infer_err err -> Infer_err err)
+                 else Infer_err ErrContextCheckFailed)
          else Infer_err (compatible_error t1 t)
        | Infer_err err -> Infer_err err)
     | ELetInfer (m, x, e1, e2) ->
@@ -3299,20 +3301,23 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
          (match root_env_lookup x r1 with
           | Some _ -> Infer_err ErrContextCheckFailed
           | None ->
-            (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
-                     (root_env_add x roots1 r1) (sctx_add x t1 m _UU03a3_1) e2 with
-             | Infer_ok p2 ->
-               let (p3, roots2) = p2 in
-               let (p4, r2) = p3 in
-               let (t2, _UU03a3_2) = p4 in
-               if (&&)
-                    ((&&) (sctx_check_ok env x t1 _UU03a3_2)
-                      (roots_exclude_b x roots2))
-                    (root_env_excludes_b x (root_env_remove x r2))
-               then Infer_ok (((t2, (sctx_remove x _UU03a3_2)),
-                      (root_env_remove x r2)), roots2)
-               else Infer_err ErrContextCheckFailed
-             | Infer_err err -> Infer_err err))
+            if roots_exclude_b x roots1
+            then (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                          (root_env_add x roots1 r1)
+                          (sctx_add x t1 m _UU03a3_1) e2 with
+                  | Infer_ok p2 ->
+                    let (p3, roots2) = p2 in
+                    let (p4, r2) = p3 in
+                    let (t2, _UU03a3_2) = p4 in
+                    if (&&)
+                         ((&&) (sctx_check_ok env x t1 _UU03a3_2)
+                           (roots_exclude_b x roots2))
+                         (root_env_excludes_b x (root_env_remove x r2))
+                    then Infer_ok (((t2, (sctx_remove x _UU03a3_2)),
+                           (root_env_remove x r2)), roots2)
+                    else Infer_err ErrContextCheckFailed
+                  | Infer_err err -> Infer_err err)
+            else Infer_err ErrContextCheckFailed)
        | Infer_err err -> Infer_err err)
     | EFn fname ->
       (match lookup_fn_b fname env.env_fns with

@@ -417,6 +417,11 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      rely on `roots_exclude` / `root_env_excludes` for `RStore` cleanup and
      should not attempt to prove a broad no-`RParam x` theorem from
      `typed_env_roots`.
+   - Done: strengthened the `ELet` / `ELetInfer` root rules and executable
+     root checker so the initializer result roots must satisfy
+     `roots_exclude x roots1` before adding the let binding. This prevents the
+     extended body rename `((x, xr) :: rho)` from rewriting an initializer root
+     that still points at the old `RStore x`.
    - Chosen direction: keep lifetime substitution inference as-is, derive root
      evidence from call-site argument roots plus
      `call_param_root_env`, then instantiate cached root-polymorphic summaries

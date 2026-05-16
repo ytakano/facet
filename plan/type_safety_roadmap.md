@@ -333,6 +333,12 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
     via `root_env_eqb`; added the required equivalence transport helpers for
     root-env exclusion, parameter coverage, store roots, and downstream
     preservation proofs.
+  - Done: tightened the direct-call root evidence interfaces so
+    `direct_call_callee_body_root_evidence` and the checker-facing
+    `direct_call_callee_body_root_check_evidence` receive the callee
+    membership/name facts already present in `TER_Call`. This makes the next
+    summary bridge target `env_fns_root_summary_evidence` directly, without
+    requiring evidence for arbitrary functions outside `env`.
    - Chosen design: replace the call-site evidence premise with cached
      root-polymorphic summaries using the tagged-root representation.
    - Remaining blocker: prove the root-aware alpha-renaming/instantiation
@@ -352,6 +358,11 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
    - Remaining: prove that alpha-renaming plus `root_subst_of_params`
      instantiation supplies `callee_body_root_ready_at` for the freshened
      call-site environment.
+   - Current implementation blocker: no root-aware transport theorem currently
+     exists for `typed_env_roots` across alpha-renaming plus
+     `root_env_instantiate`. The next implementation slice must introduce that
+     theorem, or smaller constructor-family helpers for it, before adding
+     `env_fns_root_summary_evidence -> direct_call_callee_body_root_evidence`.
    - New blocker exposed by the rename helper layer: transporting
      `root_env_excludes` through alpha-renaming needs an explicit root-atom
      no-collision premise. The bridge must prove that no `RStore z` inside a

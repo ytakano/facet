@@ -10642,6 +10642,8 @@ Definition direct_call_callee_body_root_evidence (env : global_env) : Prop :=
   forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
       (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs
       used',
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
     typed_args_roots env Ω n R Σ args
       (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
     eval_args env s args s_args vs ->
@@ -11687,10 +11689,27 @@ Proof.
         (apply_lt_params ?σ (fn_params ?fdef)) Σ' R' ?arg_roots,
       Heval_args : eval_args env s ?args_call ?s_args ?vs,
       Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
-        (?fcall, ?used') |- _ =>
+        (?fcall, ?used'),
+      Hin : In ?fdef (env_fns env),
+      Hfname : fn_name ?fdef = ?fname_call |- _ =>
+        pose proof (Hcallee_roots Ω n R Σ Σ' R' arg_roots
+                      fname_call args_call fdef fcall σ s s_args vs
+                      used' Hin Hfname Htyped_args Heval_args Hnamed Hrename)
+          as Hbody_ready;
+        unfold callee_body_root_ready_at in Hbody_ready;
+        destruct Hbody_ready
+          as (T_body & Γ_out & R_body & roots_body &
+              Hprov_body & Hready_body & Htyped_body & Hcompat_body &
+              Hexclude_ret & Hexclude_env)
+    | Htyped_args : typed_args_roots env Ω n R Σ ?args_call
+        (apply_lt_params ?σ (fn_params ?fdef)) Σ' R' ?arg_roots,
+      Heval_args : eval_args env s ?args_call ?s_args ?vs,
+      Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
+        (?fcall, ?used'),
+      Hin : In ?fdef (env_fns env) |- _ =>
         pose proof (Hcallee_roots Ω n R Σ Σ' R' arg_roots
                       (fn_name fdef) args_call fdef fcall σ s s_args vs
-                      used' Htyped_args Heval_args Hnamed Hrename)
+                      used' Hin eq_refl Htyped_args Heval_args Hnamed Hrename)
           as Hbody_ready;
         unfold callee_body_root_ready_at in Hbody_ready;
         destruct Hbody_ready

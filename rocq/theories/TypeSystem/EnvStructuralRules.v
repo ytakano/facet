@@ -889,6 +889,459 @@ Proof.
     lts args R Σ fields defs Σ' R' roots H).
 Qed.
 
+Theorem typed_roots_instantiate_fresh_mutual :
+  forall env Ω n rho,
+  (forall R Σ e T Σ' R' roots,
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    root_subst_images_exclude_names (expr_local_store_names e) rho ->
+    forall R0,
+      root_env_no_shadow R ->
+      root_env_no_shadow R0 ->
+      root_env_equiv R0 (root_env_instantiate rho R) ->
+      exists R0' roots0,
+        typed_env_roots env Ω n R0 Σ e T Σ' R0' roots0 /\
+        root_env_no_shadow R0' /\
+        root_env_equiv R0' (root_env_instantiate rho R') /\
+        root_set_equiv roots0 (root_set_instantiate rho roots)) /\
+  (forall R Σ args ps Σ' R' roots,
+    typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+    root_subst_images_exclude_names (args_local_store_names args) rho ->
+    forall R0,
+      root_env_no_shadow R ->
+      root_env_no_shadow R0 ->
+      root_env_equiv R0 (root_env_instantiate rho R) ->
+      exists R0' roots0,
+        typed_args_roots env Ω n R0 Σ args ps Σ' R0' roots0 /\
+        root_env_no_shadow R0' /\
+        root_env_equiv R0' (root_env_instantiate rho R') /\
+        Forall2 root_set_equiv roots0
+          (map (root_set_instantiate rho) roots)) /\
+  (forall lts args R Σ fields defs Σ' R' roots,
+    typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+    root_subst_images_exclude_names (fields_local_store_names fields) rho ->
+    forall R0,
+      root_env_no_shadow R ->
+      root_env_no_shadow R0 ->
+      root_env_equiv R0 (root_env_instantiate rho R) ->
+      exists R0' roots0,
+        typed_fields_roots env Ω n lts args R0 Σ fields defs Σ' R0' roots0 /\
+        root_env_no_shadow R0' /\
+        root_env_equiv R0' (root_env_instantiate rho R') /\
+        root_set_equiv roots0 (root_set_instantiate rho roots)).
+Proof.
+  intros env Ω n rho.
+  apply typed_roots_ind.
+  - intros R Σ Hfresh R0 HnsR HnsR0 HR0.
+    exists R0, []. split; [| split; [| split]].
+    + constructor.
+    + exact HnsR0.
+    + exact HR0.
+    + apply root_set_equiv_refl.
+  - intros R Σ i Hfresh R0 HnsR HnsR0 HR0.
+    exists R0, []. split; [| split; [| split]].
+    + constructor.
+    + exact HnsR0.
+    + exact HR0.
+    + apply root_set_equiv_refl.
+  - intros R Σ f Hfresh R0 HnsR HnsR0 HR0.
+    exists R0, []. split; [| split; [| split]].
+    + constructor.
+    + exact HnsR0.
+    + exact HR0.
+    + apply root_set_equiv_refl.
+  - intros R Σ b Hfresh R0 HnsR HnsR0 HR0.
+    exists R0, []. split; [| split; [| split]].
+    + constructor.
+    + exact HnsR0.
+    + exact HR0.
+    + apply root_set_equiv_refl.
+  - intros R Σ x T roots Hplace Husage Hlookup Hfresh R0 HnsR HnsR0 HR0.
+    assert (Hlookup_inst :
+      root_env_lookup x (root_env_instantiate rho R) =
+      Some (root_set_instantiate rho roots)).
+    { apply root_env_lookup_instantiate. exact Hlookup. }
+    destruct (root_env_equiv_lookup_r R0 (root_env_instantiate rho R)
+      x (root_set_instantiate rho roots) HR0 Hlookup_inst)
+      as [roots0 [Hlookup0 Hroots0]].
+    exists R0, roots0. split; [| split; [| split]].
+    + eapply TER_Var_Copy; eauto.
+    + exact HnsR0.
+    + exact HR0.
+    + exact Hroots0.
+  - intros R Σ Σ' x T roots Hplace Husage Hconsume Hlookup
+      Hfresh R0 HnsR HnsR0 HR0.
+    assert (Hlookup_inst :
+      root_env_lookup x (root_env_instantiate rho R) =
+      Some (root_set_instantiate rho roots)).
+    { apply root_env_lookup_instantiate. exact Hlookup. }
+    destruct (root_env_equiv_lookup_r R0 (root_env_instantiate rho R)
+      x (root_set_instantiate rho roots) HR0 Hlookup_inst)
+      as [roots0 [Hlookup0 Hroots0]].
+    exists R0, roots0. split; [| split; [| split]].
+    + eapply TER_Var_Move; eauto.
+    + exact HnsR0.
+    + exact HR0.
+    + exact Hroots0.
+  - intros R Σ p T x path roots Hplace Husage Hpath Hlookup
+      Hfresh R0 HnsR HnsR0 HR0.
+    assert (Hlookup_inst :
+      root_env_lookup x (root_env_instantiate rho R) =
+      Some (root_set_instantiate rho roots)).
+    { apply root_env_lookup_instantiate. exact Hlookup. }
+    destruct (root_env_equiv_lookup_r R0 (root_env_instantiate rho R)
+      x (root_set_instantiate rho roots) HR0 Hlookup_inst)
+      as [roots0 [Hlookup0 Hroots0]].
+    exists R0, roots0. split; [| split; [| split]].
+    + eapply TER_Place_Copy; eauto.
+    + exact HnsR0.
+    + exact HR0.
+    + exact Hroots0.
+  - intros R Σ Σ' p T x path roots Hplace Husage Hpath Hconsume Hlookup
+      Hfresh R0 HnsR HnsR0 HR0.
+    assert (Hlookup_inst :
+      root_env_lookup x (root_env_instantiate rho R) =
+      Some (root_set_instantiate rho roots)).
+    { apply root_env_lookup_instantiate. exact Hlookup. }
+    destruct (root_env_equiv_lookup_r R0 (root_env_instantiate rho R)
+      x (root_set_instantiate rho roots) HR0 Hlookup_inst)
+      as [roots0 [Hlookup0 Hroots0]].
+    exists R0, roots0. split; [| split; [| split]].
+    + eapply TER_Place_Move; eauto.
+    + exact HnsR0.
+    + exact HR0.
+    + exact Hroots0.
+  - intros R R' Σ Σ' fname fdef args σ arg_roots Hin Hfname Hargs IHargs
+      Houtlives Hfresh R0 HnsR HnsR0 HR0.
+    rewrite expr_local_store_names_call in Hfresh.
+    destruct (IHargs Hfresh R0 HnsR HnsR0 HR0)
+      as [R0' [arg_roots0 [Hargs0 [HnsR0' [HR0' Harg_roots0]]]]].
+    exists R0', (root_sets_union arg_roots0). split; [| split; [| split]].
+    + eapply TER_Call; eauto.
+    + exact HnsR0'.
+    + exact HR0'.
+    + eapply root_set_equiv_trans.
+      * apply root_sets_union_equiv. exact Harg_roots0.
+      * apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
+  - intros R Σ fname fdef Hin Hfname Hfresh R0 HnsR HnsR0 HR0.
+    exists R0, []. split; [| split; [| split]].
+    + eapply TER_Fn; eauto.
+    + exact HnsR0.
+    + exact HR0.
+    + apply root_set_equiv_refl.
+  - intros R R' Σ Σ' sname lts args fields sdef roots Hlookup Hlen_lts
+      Hlen_args Hbounds Hfields IHfields Hfresh R0 HnsR HnsR0 HR0.
+    rewrite expr_local_store_names_struct in Hfresh.
+    destruct (IHfields Hfresh R0 HnsR HnsR0 HR0)
+      as [R0' [roots0 [Hfields0 [HnsR0' [HR0' Hroots0]]]]].
+    exists R0', roots0. split; [| split; [| split]].
+    + eapply TER_Struct; eauto.
+    + exact HnsR0'.
+    + exact HR0'.
+    + exact Hroots0.
+  - intros R R1 R2 Σ Σ1 Σ2 m x T T1 e1 e2 T2 roots1 roots2
+      He1 IHe1 Hcompat Hlookup_none He2 IHe2 Hcheck Hexcl_roots Hexcl_env
+      Hfresh R0 HnsR HnsR0 HR0.
+    destruct (root_subst_images_exclude_names_app_inv
+      (expr_local_store_names e1) (x :: expr_local_store_names e2) rho
+      Hfresh) as [Hfresh1 Hfresh_tail].
+    destruct (root_subst_images_exclude_names_cons_inv
+      x (expr_local_store_names e2) rho Hfresh_tail)
+      as [Hfresh_x Hfresh2].
+    destruct (IHe1 Hfresh1 R0 HnsR HnsR0 HR0)
+      as [R10 [roots10 [He10 [HnsR10 [HR10 Hroots10]]]]].
+    assert (Hlookup_inst_none :
+      root_env_lookup x (root_env_instantiate rho R1) = None).
+    { apply root_env_lookup_instantiate_none. exact Hlookup_none. }
+    assert (Hlookup_R10_none : root_env_lookup x R10 = None).
+    { eapply root_env_equiv_lookup_none_r; eassumption. }
+    assert (Hns_add : root_env_no_shadow (root_env_add x roots10 R10)).
+    { apply root_env_no_shadow_add; assumption. }
+    assert (Heq_add :
+      root_env_equiv (root_env_add x roots10 R10)
+        (root_env_instantiate rho (root_env_add x roots1 R1))).
+    { eapply root_env_equiv_trans.
+      - apply root_env_equiv_add.
+        + exact Hroots10.
+        + exact HR10.
+      - apply root_env_equiv_sym.
+        apply root_env_instantiate_add_equiv.
+        + apply root_set_equiv_refl.
+        + apply root_env_equiv_refl. }
+    assert (Hns_R1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow; eassumption. }
+    assert (Hns_R2 : root_env_no_shadow R2).
+    { eapply typed_env_roots_no_shadow.
+      - exact He2.
+      - apply root_env_no_shadow_add; assumption. }
+    destruct (IHe2 Hfresh2 (root_env_add x roots10 R10)
+      (root_env_no_shadow_add x roots1 R1 Hns_R1 Hlookup_none)
+      Hns_add Heq_add)
+      as [R20 [roots20 [He20 [HnsR20 [HR20 Hroots20]]]]].
+    exists (root_env_remove x R20), roots20. split; [| split; [| split]].
+    + eapply TER_Let; eauto.
+      * eapply roots_exclude_equiv.
+        -- apply root_set_equiv_sym. exact Hroots20.
+        -- eapply root_set_instantiate_excludes_images; eassumption.
+      * eapply root_env_excludes_equiv.
+        -- apply root_env_equiv_sym.
+           apply (root_env_equiv_remove x R20
+             (root_env_instantiate rho R2)).
+           ++ exact HnsR20.
+           ++ apply root_env_instantiate_no_shadow. exact Hns_R2.
+           ++ exact HR20.
+        -- rewrite <- root_env_instantiate_remove.
+           eapply root_env_instantiate_excludes_images; eassumption.
+    + apply root_env_no_shadow_remove. exact HnsR20.
+    + eapply root_env_equiv_trans.
+      * apply root_env_equiv_remove.
+        -- exact HnsR20.
+        -- apply root_env_instantiate_no_shadow. exact Hns_R2.
+        -- exact HR20.
+      * apply root_env_equiv_sym.
+        apply root_env_instantiate_remove_equiv.
+        -- exact Hns_R2.
+        -- exact Hns_R2.
+        -- apply root_env_equiv_refl.
+    + exact Hroots20.
+  - intros R R1 R2 Σ Σ1 Σ2 m x T1 e1 e2 T2 roots1 roots2
+      He1 IHe1 Hlookup_none He2 IHe2 Hcheck Hexcl_roots Hexcl_env
+      Hfresh R0 HnsR HnsR0 HR0.
+    destruct (root_subst_images_exclude_names_app_inv
+      (expr_local_store_names e1) (x :: expr_local_store_names e2) rho
+      Hfresh) as [Hfresh1 Hfresh_tail].
+    destruct (root_subst_images_exclude_names_cons_inv
+      x (expr_local_store_names e2) rho Hfresh_tail)
+      as [Hfresh_x Hfresh2].
+    destruct (IHe1 Hfresh1 R0 HnsR HnsR0 HR0)
+      as [R10 [roots10 [He10 [HnsR10 [HR10 Hroots10]]]]].
+    assert (Hlookup_inst_none :
+      root_env_lookup x (root_env_instantiate rho R1) = None).
+    { apply root_env_lookup_instantiate_none. exact Hlookup_none. }
+    assert (Hlookup_R10_none : root_env_lookup x R10 = None).
+    { eapply root_env_equiv_lookup_none_r; eassumption. }
+    assert (Hns_add : root_env_no_shadow (root_env_add x roots10 R10)).
+    { apply root_env_no_shadow_add; assumption. }
+    assert (Heq_add :
+      root_env_equiv (root_env_add x roots10 R10)
+        (root_env_instantiate rho (root_env_add x roots1 R1))).
+    { eapply root_env_equiv_trans.
+      - apply root_env_equiv_add.
+        + exact Hroots10.
+        + exact HR10.
+      - apply root_env_equiv_sym.
+        apply root_env_instantiate_add_equiv.
+        + apply root_set_equiv_refl.
+        + apply root_env_equiv_refl. }
+    assert (Hns_R1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow; eassumption. }
+    assert (Hns_R2 : root_env_no_shadow R2).
+    { eapply typed_env_roots_no_shadow.
+      - exact He2.
+      - apply root_env_no_shadow_add; assumption. }
+    destruct (IHe2 Hfresh2 (root_env_add x roots10 R10)
+      (root_env_no_shadow_add x roots1 R1 Hns_R1 Hlookup_none)
+      Hns_add Heq_add)
+      as [R20 [roots20 [He20 [HnsR20 [HR20 Hroots20]]]]].
+    exists (root_env_remove x R20), roots20. split; [| split; [| split]].
+    + eapply TER_LetInfer; eauto.
+      * eapply roots_exclude_equiv.
+        -- apply root_set_equiv_sym. exact Hroots20.
+        -- eapply root_set_instantiate_excludes_images; eassumption.
+      * eapply root_env_excludes_equiv.
+        -- apply root_env_equiv_sym.
+           apply (root_env_equiv_remove x R20
+             (root_env_instantiate rho R2)).
+           ++ exact HnsR20.
+           ++ apply root_env_instantiate_no_shadow. exact Hns_R2.
+           ++ exact HR20.
+        -- rewrite <- root_env_instantiate_remove.
+           eapply root_env_instantiate_excludes_images; eassumption.
+    + apply root_env_no_shadow_remove. exact HnsR20.
+    + eapply root_env_equiv_trans.
+      * apply root_env_equiv_remove.
+        -- exact HnsR20.
+        -- apply root_env_instantiate_no_shadow. exact Hns_R2.
+        -- exact HR20.
+      * apply root_env_equiv_sym.
+        apply root_env_instantiate_remove_equiv.
+        -- exact Hns_R2.
+        -- exact Hns_R2.
+        -- apply root_env_equiv_refl.
+    + exact Hroots20.
+  - intros R R' Σ Σ' e T roots He IHe Hfresh R0 HnsR HnsR0 HR0.
+    destruct (IHe Hfresh R0 HnsR HnsR0 HR0)
+      as [R0' [roots0 [He0 [HnsR0' [HR0' Hroots0]]]]].
+    exists R0', []. split; [| split; [| split]].
+    + apply TER_Drop with (T := T) (roots := roots0). exact He0.
+    + exact HnsR0'.
+    + exact HR0'.
+    + apply root_set_equiv_refl.
+  - intros R R1 Σ Σ1 Σ2 p e_new T_old T_new x path roots_result
+      roots_old roots_new Hplace Hpath Hwritable Hlookup_result He_new IHe_new
+      Hlookup_old Hcompat Havailable Hrestore Hfresh R0 HnsR HnsR0 HR0.
+    assert (Hlookup_result_inst :
+      root_env_lookup x (root_env_instantiate rho R) =
+      Some (root_set_instantiate rho roots_result)).
+    { apply root_env_lookup_instantiate. exact Hlookup_result. }
+    destruct (root_env_equiv_lookup_r R0 (root_env_instantiate rho R)
+      x (root_set_instantiate rho roots_result) HR0 Hlookup_result_inst)
+      as [roots_result0 [Hlookup_result0 Hroots_result0]].
+    destruct (IHe_new Hfresh R0 HnsR HnsR0 HR0)
+      as [R10 [roots_new0 [He_new0 [HnsR10 [HR10 Hroots_new0]]]]].
+    assert (Hlookup_old_inst :
+      root_env_lookup x (root_env_instantiate rho R1) =
+      Some (root_set_instantiate rho roots_old)).
+    { apply root_env_lookup_instantiate. exact Hlookup_old. }
+    destruct (root_env_equiv_lookup_r R10 (root_env_instantiate rho R1)
+      x (root_set_instantiate rho roots_old) HR10 Hlookup_old_inst)
+      as [roots_old0 [Hlookup_old0 Hroots_old0]].
+    exists (root_env_update x (root_set_union roots_old0 roots_new0) R10),
+      roots_result0.
+    split; [| split; [| split]].
+    + eapply TER_Replace_Path; eauto.
+    + apply root_env_no_shadow_update. exact HnsR10.
+    + eapply root_env_equiv_trans with
+        (R' := root_env_update x
+          (root_set_union
+            (root_set_instantiate rho roots_old)
+            (root_set_instantiate rho roots_new))
+          (root_env_instantiate rho R1)).
+      * apply root_env_equiv_update.
+        -- apply root_set_union_equiv; assumption.
+        -- exact HR10.
+      * apply root_env_equiv_sym.
+        apply root_env_instantiate_update_union_equiv.
+    + exact Hroots_result0.
+  - intros R R1 Σ Σ' p e_new T_old T_new x path roots_old roots_new
+      Hplace Husage Hpath Hwritable He_new IHe_new Hlookup_old Hcompat
+      Havailable Hfresh R0 HnsR HnsR0 HR0.
+    destruct (IHe_new Hfresh R0 HnsR HnsR0 HR0)
+      as [R10 [roots_new0 [He_new0 [HnsR10 [HR10 Hroots_new0]]]]].
+    assert (Hlookup_old_inst :
+      root_env_lookup x (root_env_instantiate rho R1) =
+      Some (root_set_instantiate rho roots_old)).
+    { apply root_env_lookup_instantiate. exact Hlookup_old. }
+    destruct (root_env_equiv_lookup_r R10 (root_env_instantiate rho R1)
+      x (root_set_instantiate rho roots_old) HR10 Hlookup_old_inst)
+      as [roots_old0 [Hlookup_old0 Hroots_old0]].
+    exists (root_env_update x (root_set_union roots_old0 roots_new0) R10),
+      [].
+    split; [| split; [| split]].
+    + eapply TER_Assign_Path; eauto.
+    + apply root_env_no_shadow_update. exact HnsR10.
+    + eapply root_env_equiv_trans with
+        (R' := root_env_update x
+          (root_set_union
+            (root_set_instantiate rho roots_old)
+            (root_set_instantiate rho roots_new))
+          (root_env_instantiate rho R1)).
+      * apply root_env_equiv_update.
+        -- apply root_set_union_equiv; assumption.
+        -- exact HR10.
+      * apply root_env_equiv_sym.
+        apply root_env_instantiate_update_union_equiv.
+    + apply root_set_equiv_refl.
+  - intros R Σ p T Hplace Hfresh R0 HnsR HnsR0 HR0.
+    exists R0, (root_of_place p). split; [| split; [| split]].
+    + constructor. exact Hplace.
+    + exact HnsR0.
+    + exact HR0.
+    + apply root_set_equiv_sym. apply root_set_instantiate_root_of_place_equiv.
+  - intros R Σ p T x path Hplace Hpath Hmut Hfresh R0 HnsR HnsR0 HR0.
+    exists R0, [RStore x]. split; [| split; [| split]].
+    + eapply TER_BorrowUnique; eauto.
+    + exact HnsR0.
+    + exact HR0.
+    + apply root_set_equiv_sym. apply root_set_instantiate_store_singleton_equiv.
+  - intros R R1 R2 R3 Σ Σ1 Σ2 Σ3 Σ4 e1 e2 e3 T_cond T2 T3
+      roots_cond roots2 roots3 He1 IHe1 Hcond He2 IHe2 He3 IHe3 Hcore
+      Hmerge HR23 Hfresh R0 HnsR HnsR0 HR0.
+    destruct (root_subst_images_exclude_names_app_inv
+      (expr_local_store_names e1)
+      (expr_local_store_names e2 ++ expr_local_store_names e3) rho
+      Hfresh) as [Hfresh1 Hfresh23].
+    destruct (root_subst_images_exclude_names_app_inv
+      (expr_local_store_names e2) (expr_local_store_names e3) rho
+      Hfresh23) as [Hfresh2 Hfresh3].
+    destruct (IHe1 Hfresh1 R0 HnsR HnsR0 HR0)
+      as [R10 [roots_cond0 [He10 [HnsR10 [HR10 Hroots_cond0]]]]].
+    assert (Hns_R1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow; eassumption. }
+    destruct (IHe2 Hfresh2 R10 Hns_R1 HnsR10 HR10)
+      as [R20 [roots20 [He20 [HnsR20 [HR20 Hroots20]]]]].
+    destruct (IHe3 Hfresh3 R10 Hns_R1 HnsR10 HR10)
+      as [R30 [roots30 [He30 [HnsR30 [HR30 Hroots30]]]]].
+    exists R20, (root_set_union roots20 roots30). split; [| split; [| split]].
+    + eapply TER_If; eauto.
+      eapply root_env_equiv_trans.
+      * exact HR20.
+      * eapply root_env_equiv_trans.
+        -- apply root_env_equiv_instantiate. exact HR23.
+        -- apply root_env_equiv_sym. exact HR30.
+    + exact HnsR20.
+    + exact HR20.
+    + eapply root_set_equiv_trans.
+      * apply root_set_union_equiv; eassumption.
+      * apply root_set_equiv_sym. apply root_set_instantiate_union_equiv.
+  - intros R Σ Hfresh R0 HnsR HnsR0 HR0.
+    exists R0, []. split; [| split; [| split]].
+    + constructor.
+    + exact HnsR0.
+    + exact HR0.
+    + constructor.
+  - intros R R1 R2 Σ Σ1 Σ2 e es p ps T_e roots roots_rest
+      He IHe Hcompat Hes IHes Hfresh R0 HnsR HnsR0 HR0.
+    destruct (root_subst_images_exclude_names_args_cons_inv
+      e es rho Hfresh) as [Hfresh_e Hfresh_es].
+    destruct (IHe Hfresh_e R0 HnsR HnsR0 HR0)
+      as [R10 [roots0 [He0 [HnsR10 [HR10 Hroots0]]]]].
+    assert (Hns_R1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow; eassumption. }
+    destruct (IHes Hfresh_es R10 Hns_R1 HnsR10 HR10)
+      as [R20 [roots_rest0 [Hes0 [HnsR20 [HR20 Hroots_rest0]]]]].
+    exists R20, (roots0 :: roots_rest0). split; [| split; [| split]].
+    + eapply TERArgs_Cons; eauto.
+    + exact HnsR20.
+    + exact HR20.
+    + constructor; assumption.
+  - intros lts args R Σ fields Hfresh R0 HnsR HnsR0 HR0.
+    exists R0, []. split; [| split; [| split]].
+    + constructor.
+    + exact HnsR0.
+    + exact HR0.
+    + apply root_set_equiv_refl.
+  - intros lts args R R1 R2 Σ Σ1 Σ2 fields f rest e_field T_field
+      roots_field roots_rest Hlookup He_field IHe_field Hcompat Hfields IHfields
+      Hfresh R0 HnsR HnsR0 HR0.
+    assert (Hfresh_field :
+      root_subst_images_exclude_names (expr_local_store_names e_field) rho).
+    { unfold lookup_field_b in Hlookup.
+      clear Hfields IHfields.
+      induction fields as [| [field_name0 e0] fields IH]; simpl in *;
+        try discriminate.
+      destruct (String.eqb (field_name f) field_name0) eqn:Hfield.
+      - inversion Hlookup. subst e0.
+        apply root_subst_images_exclude_names_app_inv in Hfresh.
+        exact (proj1 Hfresh).
+      - apply IH.
+        + exact Hlookup.
+        + apply root_subst_images_exclude_names_app_inv in Hfresh.
+          exact (proj2 Hfresh). }
+    destruct (IHe_field Hfresh_field R0 HnsR HnsR0 HR0)
+      as [R10 [roots_field0 [He_field0 [HnsR10 [HR10 Hroots_field0]]]]].
+    assert (Hns_R1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow; eassumption. }
+    destruct (IHfields Hfresh R10 Hns_R1 HnsR10 HR10)
+      as [R20 [roots_rest0 [Hfields0 [HnsR20 [HR20 Hroots_rest0]]]]].
+    exists R20, (root_set_union roots_field0 roots_rest0). split; [| split; [| split]].
+    + eapply TERFields_Cons; eauto.
+    + exact HnsR20.
+    + exact HR20.
+    + eapply root_set_equiv_trans.
+      * apply root_set_union_equiv; eassumption.
+      * apply root_set_equiv_sym. apply root_set_instantiate_union_equiv.
+Qed.
+
 Lemma typed_env_structural_same_bindings :
   forall env Ω n Σ e T Σ',
     typed_env_structural env Ω n Σ e T Σ' ->

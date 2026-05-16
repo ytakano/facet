@@ -300,9 +300,13 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      local preservation helpers across root-env add/remove/update and store
      add/remove/mark-used operations. This gives the bridge a way to derive
      parameter-root exclusion from `R_args` and `params_fresh_in_store`.
+   - Done: added the companion root-set invariant
+     `root_set_store_roots_named`, with union, singleton, root-set-list, and
+     store add/remove/mark-used preservation helpers.
    - Remaining: thread `root_env_store_roots_named` through
-     `eval_preserves_roots_ready_mutual` before using it at the direct-call
-     site.
+     `eval_preserves_roots_ready_mutual` together with
+     `root_set_store_roots_named` for expression results and argument root
+     lists before using it at the direct-call site.
    - Do not attempt to discharge the evidence with lifetime inference alone,
      and do not globally reject parameter roots in `infer_env_roots`.
    - Stop if the current root sidecar API cannot express freshened callee body

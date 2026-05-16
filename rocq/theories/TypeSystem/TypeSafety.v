@@ -723,6 +723,11 @@ Definition root_env_store_roots_named (R : root_env) (s : store) : Prop :=
     In (RStore z) roots ->
     In z (store_names s).
 
+Definition root_set_store_roots_named (roots : root_set) (s : store) : Prop :=
+  forall z,
+    In (RStore z) roots ->
+    In z (store_names s).
+
 Lemma value_roots_within_excludes :
   (forall roots v,
     value_roots_within roots v ->
@@ -866,6 +871,109 @@ Proof.
   apply Hincl. eapply Hnamed; eassumption.
 Qed.
 
+Lemma root_set_store_roots_named_weaken_store :
+  forall roots s s',
+    root_set_store_roots_named roots s ->
+    (forall z, In z (store_names s) -> In z (store_names s')) ->
+    root_set_store_roots_named roots s'.
+Proof.
+  unfold root_set_store_roots_named.
+  intros roots s s' Hnamed Hincl z Hin.
+  apply Hincl. apply Hnamed. exact Hin.
+Qed.
+
+Lemma root_set_store_roots_named_nil :
+  forall s,
+    root_set_store_roots_named [] s.
+Proof.
+  unfold root_set_store_roots_named.
+  intros s z Hin. contradiction.
+Qed.
+
+Lemma root_set_store_roots_named_single :
+  forall s x,
+    In x (store_names s) ->
+    root_set_store_roots_named [RStore x] s.
+Proof.
+  unfold root_set_store_roots_named.
+  intros s x Hin_store z Hin.
+  simpl in Hin.
+  destruct Hin as [Hin | Hin]; try contradiction.
+  inversion Hin. subst z. exact Hin_store.
+Qed.
+
+Lemma root_set_store_roots_named_param_single :
+  forall s x,
+    root_set_store_roots_named [RParam x] s.
+Proof.
+  unfold root_set_store_roots_named.
+  intros s x z Hin.
+  simpl in Hin.
+  destruct Hin as [Hin | Hin].
+  - inversion Hin.
+  - contradiction.
+Qed.
+
+Lemma root_set_store_roots_named_union :
+  forall roots_left roots_right s,
+    root_set_store_roots_named roots_left s ->
+    root_set_store_roots_named roots_right s ->
+    root_set_store_roots_named
+      (root_set_union roots_left roots_right) s.
+Proof.
+  unfold root_set_store_roots_named.
+  intros roots_left roots_right s Hleft Hright z Hin.
+  apply root_set_union_in_inv in Hin.
+  destruct Hin as [Hin | Hin].
+  - apply Hleft. exact Hin.
+  - apply Hright. exact Hin.
+Qed.
+
+Lemma root_set_store_roots_named_union_inv_l :
+  forall roots_left roots_right s,
+    root_set_store_roots_named (root_set_union roots_left roots_right) s ->
+    root_set_store_roots_named roots_left s.
+Proof.
+  unfold root_set_store_roots_named.
+  intros roots_left roots_right s Hnamed z Hin.
+  apply Hnamed. apply root_set_union_in_l. exact Hin.
+Qed.
+
+Lemma root_set_store_roots_named_union_inv_r :
+  forall roots_left roots_right s,
+    root_set_store_roots_named (root_set_union roots_left roots_right) s ->
+    root_set_store_roots_named roots_right s.
+Proof.
+  unfold root_set_store_roots_named.
+  intros roots_left roots_right s Hnamed z Hin.
+  apply Hnamed. apply root_set_union_in_r. exact Hin.
+Qed.
+
+Lemma root_sets_store_roots_named_union :
+  forall sets s,
+    Forall (fun roots => root_set_store_roots_named roots s) sets ->
+    root_set_store_roots_named (root_sets_union sets) s.
+Proof.
+  intros sets s Hsets.
+  induction Hsets as [| roots rest Hroot Hrest IH]; simpl.
+  - apply root_set_store_roots_named_nil.
+  - apply root_set_store_roots_named_union; assumption.
+Qed.
+
+Lemma root_sets_store_roots_named_weaken_store :
+  forall sets s s',
+    Forall (fun roots => root_set_store_roots_named roots s) sets ->
+    (forall z, In z (store_names s) -> In z (store_names s')) ->
+    Forall (fun roots => root_set_store_roots_named roots s') sets.
+Proof.
+  intros sets s s' Hsets Hincl.
+  induction Hsets as [| roots rest Hroot Hrest IH].
+  - constructor.
+  - constructor.
+    + eapply root_set_store_roots_named_weaken_store; eassumption.
+    + apply IH.
+Qed.
+
 Lemma root_env_store_roots_named_store_add :
   forall R s x T v,
     root_env_store_roots_named R s ->
@@ -873,6 +981,17 @@ Lemma root_env_store_roots_named_store_add :
 Proof.
   intros R s x T v Hnamed.
   eapply root_env_store_roots_named_weaken_store.
+  - exact Hnamed.
+  - intros z Hin. simpl. right. exact Hin.
+Qed.
+
+Lemma root_set_store_roots_named_store_add :
+  forall roots s x T v,
+    root_set_store_roots_named roots s ->
+    root_set_store_roots_named roots (store_add x T v s).
+Proof.
+  intros roots s x T v Hnamed.
+  eapply root_set_store_roots_named_weaken_store.
   - exact Hnamed.
   - intros z Hin. simpl. right. exact Hin.
 Qed.
@@ -896,6 +1015,23 @@ Proof.
   - intros Heq. subst z.
     unfold roots_exclude in Hexcludes.
     eapply Hexcludes; eassumption.
+Qed.
+
+Lemma root_set_store_roots_named_store_remove_excluding :
+  forall roots s x,
+    roots_exclude x roots ->
+    root_set_store_roots_named roots s ->
+    (forall z,
+      In z (store_names s) ->
+      z <> x ->
+      In z (store_names (store_remove x s))) ->
+    root_set_store_roots_named roots (store_remove x s).
+Proof.
+  unfold root_set_store_roots_named, roots_exclude.
+  intros roots s x Hexclude Hnamed Hremain z Hin.
+  apply Hremain.
+  - apply Hnamed. exact Hin.
+  - intros Heq. subst z. apply Hexclude. exact Hin.
 Qed.
 
 Lemma root_env_store_roots_named_store_mark_used :
@@ -922,6 +1058,81 @@ Proof.
   - exact Hincl.
 Qed.
 
+Lemma root_set_store_roots_named_store_mark_used :
+  forall roots s x,
+    root_set_store_roots_named roots s ->
+    root_set_store_roots_named roots (store_mark_used x s).
+Proof.
+  intros roots s x Hnamed.
+  assert (Hincl :
+    forall z,
+      In z (store_names s) ->
+      In z (store_names (store_mark_used x s))).
+  {
+    clear roots Hnamed.
+    induction s as [| se rest IH]; intros z Hin; simpl in *; try contradiction.
+    destruct (ident_eqb x (se_name se)); simpl in *.
+    - exact Hin.
+    - destruct Hin as [Hin | Hin].
+      + left. exact Hin.
+      + right. apply IH. exact Hin.
+  }
+  eapply root_set_store_roots_named_weaken_store.
+  - exact Hnamed.
+  - exact Hincl.
+Qed.
+
+Lemma root_sets_store_roots_named_store_add :
+  forall sets s x T v,
+    Forall (fun roots => root_set_store_roots_named roots s) sets ->
+    Forall
+      (fun roots => root_set_store_roots_named roots (store_add x T v s))
+      sets.
+Proof.
+  intros sets s x T v Hsets.
+  induction Hsets as [| roots rest Hroot Hrest IH].
+  - constructor.
+  - constructor.
+    + apply root_set_store_roots_named_store_add. exact Hroot.
+    + apply IH.
+Qed.
+
+Lemma root_sets_store_roots_named_store_mark_used :
+  forall sets s x,
+    Forall (fun roots => root_set_store_roots_named roots s) sets ->
+    Forall
+      (fun roots => root_set_store_roots_named roots (store_mark_used x s))
+      sets.
+Proof.
+  intros sets s x Hsets.
+  induction Hsets as [| roots rest Hroot Hrest IH].
+  - constructor.
+  - constructor.
+    + apply root_set_store_roots_named_store_mark_used. exact Hroot.
+    + apply IH.
+Qed.
+
+Lemma root_sets_store_roots_named_store_remove_excluding :
+  forall sets s x,
+    Forall (roots_exclude x) sets ->
+    Forall (fun roots => root_set_store_roots_named roots s) sets ->
+    (forall z,
+      In z (store_names s) ->
+      z <> x ->
+      In z (store_names (store_remove x s))) ->
+    Forall
+      (fun roots => root_set_store_roots_named roots (store_remove x s))
+      sets.
+Proof.
+  intros sets s x Hexcludes Hsets Hremain.
+  induction Hsets as [| roots rest Hroot Hrest IH].
+  - constructor.
+  - inversion Hexcludes as [| ? ? Hexclude Hrest_excludes]. subst.
+    constructor.
+    + eapply root_set_store_roots_named_store_remove_excluding; eassumption.
+    + apply IH. exact Hrest_excludes.
+Qed.
+
 Lemma root_env_store_roots_named_add_env :
   forall R s x roots,
     root_env_store_roots_named R s ->
@@ -934,6 +1145,18 @@ Proof.
   destruct (ident_eqb y x) eqn:Hyx.
   - inversion Hlookup. subst roots_y. apply Hroots. exact Hin.
   - eapply Hnamed; eassumption.
+Qed.
+
+Lemma root_env_store_roots_named_add_env_named :
+  forall R s x roots,
+    root_env_store_roots_named R s ->
+    root_set_store_roots_named roots s ->
+    root_env_store_roots_named (root_env_add x roots R) s.
+Proof.
+  intros R s x roots Henv Hroots.
+  apply root_env_store_roots_named_add_env.
+  - exact Henv.
+  - exact Hroots.
 Qed.
 
 Lemma root_env_store_roots_named_remove_env :
@@ -1013,6 +1236,17 @@ Proof.
            ++ rewrite Hy0r. exact Hlookup0.
         -- exact Hin0.
       * exact Hlookup.
+Qed.
+
+Lemma root_env_store_roots_named_update_env_named :
+  forall R s x roots,
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_set_store_roots_named roots s ->
+    root_env_store_roots_named (root_env_update x roots R) s.
+Proof.
+  intros R s x roots Hrn Henv Hroots.
+  apply root_env_store_roots_named_update_env; assumption.
 Qed.
 
 Lemma root_env_lookup_add_neq :

@@ -2088,7 +2088,7 @@ Definition infer_core_env
 Fixpoint root_set_eqb (a b : root_set) : bool :=
   match a, b with
   | [], [] => true
-  | x :: xs, y :: ys => ident_eqb x y && root_set_eqb xs ys
+  | x :: xs, y :: ys => root_atom_eqb x y && root_set_eqb xs ys
   | _, _ => false
   end.
 
@@ -2101,7 +2101,7 @@ Fixpoint root_env_eqb (R1 R2 : root_env) : bool :=
   end.
 
 Definition roots_exclude_b (x : ident) (roots : root_set) : bool :=
-  negb (existsb (ident_eqb x) roots).
+  negb (existsb (root_atom_eqb (RStore x)) roots).
 
 Fixpoint root_env_excludes_b (x : ident) (R : root_env) : bool :=
   match R with
@@ -2415,11 +2415,11 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
           | infer_ok T_p =>
               match rk with
               | RShared =>
-                  infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_p), Σ, R, [x])
+                  infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_p), Σ, R, [RStore x])
               | RUnique =>
                   match sctx_lookup_mut x Σ with
                   | Some MMutable =>
-                      infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, [x])
+                      infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, [RStore x])
                   | Some MImmutable => infer_err (ErrImmutableBorrow x)
                   | None => infer_err (ErrUnknownVar x)
                   end
@@ -2770,7 +2770,7 @@ Definition ex_env_struct_pair : global_env :=
 
 Example infer_core_env_roots_var_summary_ok :
   infer_core_env_roots ex_env_struct_pair [] 0
-    [((("x"%string), 0), [(("x"%string), 0)])]
+    [((("x"%string), 0), [RStore (("x"%string), 0)])]
     [((("x"%string), 0), MkTy UUnrestricted TIntegers,
       binding_state_of_bool false, MImmutable)]
     (EVar (("x"%string), 0)) =
@@ -2778,8 +2778,8 @@ Example infer_core_env_roots_var_summary_ok :
     (MkTy UUnrestricted TIntegers,
      [((("x"%string), 0), MkTy UUnrestricted TIntegers,
        binding_state_of_bool false, MImmutable)],
-     [((("x"%string), 0), [(("x"%string), 0)])],
-     [(("x"%string), 0)]).
+     [((("x"%string), 0), [RStore (("x"%string), 0)])],
+     [RStore (("x"%string), 0)]).
 Proof. vm_compute. reflexivity. Qed.
 
 Example infer_core_env_roots_let_escape_rejected :

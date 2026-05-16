@@ -12,7 +12,7 @@ Proof.
   induction a as [| x xs IH]; intros b Heq; destruct b as [| y ys];
     simpl in Heq; try discriminate; try reflexivity.
   apply andb_true_iff in Heq as [Hxy Hxs].
-  apply ident_eqb_eq in Hxy.
+  apply root_atom_eqb_eq in Hxy.
   apply IH in Hxs.
   subst. reflexivity.
 Qed.
@@ -41,11 +41,11 @@ Proof.
   unfold roots_exclude_b, roots_exclude.
   intros x roots Hnot Hin.
   apply negb_true_iff in Hnot.
-  assert (existsb (ident_eqb x) roots = true) as Hexists.
+  assert (existsb (root_atom_eqb (RStore x)) roots = true) as Hexists.
   { apply existsb_exists.
-    exists x. split.
+    exists (RStore x). split.
     - exact Hin.
-    - apply ident_eqb_refl. }
+    - apply root_atom_eqb_refl. }
   rewrite Hexists in Hnot. discriminate.
 Qed.
 
@@ -72,7 +72,7 @@ Qed.
 Lemma root_of_place_direct :
   forall p x path,
     place_path p = Some (x, path) ->
-    root_of_place p = [x].
+    root_of_place p = [RStore x].
 Proof.
   intros p x path Hpath.
   unfold root_of_place.
@@ -453,7 +453,7 @@ Proof.
       destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
       destruct r.
       * inversion Hinfer; subst.
-        replace [x] with (root_of_place p).
+        replace [RStore x] with (root_of_place p).
         -- eapply TER_BorrowShared.
            eapply infer_place_sctx_structural_sound. exact Hplace.
         -- eapply root_of_place_direct. exact Hpath.

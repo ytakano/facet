@@ -682,7 +682,7 @@ Inductive value_roots_within : root_set -> value -> Prop :=
       value_fields_roots_within roots fields ->
       value_roots_within roots (VStruct name fields)
   | VRW_Ref : forall roots x path,
-      In x roots ->
+      In (RStore x) roots ->
       value_roots_within roots (VRef x path)
   | VRW_ClosureEmpty : forall roots fname,
       value_roots_within roots (VClosure fname [])
@@ -783,7 +783,7 @@ Lemma root_set_union_in_right :
 Proof.
   intros x roots_left roots_right Hin.
   induction roots_left as [| y ys IH]; simpl; try assumption.
-  destruct (existsb (ident_eqb y) roots_right).
+  destruct (existsb (root_atom_eqb y) roots_right).
   - apply IH.
   - right. apply IH.
 Qed.
@@ -797,13 +797,13 @@ Proof.
   induction roots_left as [| y ys IH]; simpl in *; try contradiction.
   destruct Hin as [Hin | Hin].
   - subst y.
-    destruct (existsb (ident_eqb x) roots_right) eqn:Hexists.
+    destruct (existsb (root_atom_eqb x) roots_right) eqn:Hexists.
     + apply root_set_union_in_right.
       apply existsb_exists in Hexists.
       destruct Hexists as [z [Hz_in Hz_eq]].
-      apply ident_eqb_eq in Hz_eq. subst z. exact Hz_in.
+      apply root_atom_eqb_eq in Hz_eq. subst z. exact Hz_in.
     + simpl. left. reflexivity.
-  - destruct (existsb (ident_eqb y) roots_right).
+  - destruct (existsb (root_atom_eqb y) roots_right).
     + apply IH. exact Hin.
     + simpl. right. apply IH. exact Hin.
 Qed.
@@ -3842,11 +3842,11 @@ Proof.
   unfold roots_exclude_b, roots_exclude.
   intros x roots Hexclude Hin.
   apply negb_true_iff in Hexclude.
-  assert (existsb (ident_eqb x) roots = true) as Hexists.
+  assert (existsb (root_atom_eqb (RStore x)) roots = true) as Hexists.
   { apply existsb_exists.
-    exists x. split.
+    exists (RStore x). split.
     - exact Hin.
-    - apply ident_eqb_refl. }
+    - apply root_atom_eqb_refl. }
   rewrite Hexists in Hexclude. discriminate.
 Qed.
 

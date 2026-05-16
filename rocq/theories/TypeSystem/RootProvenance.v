@@ -6,8 +6,35 @@ Import ListNotations.
 (* Root provenance summaries                                            *)
 (* ------------------------------------------------------------------ *)
 
-Definition root_set := list ident.
+Inductive root_atom : Type :=
+  | RStore : ident -> root_atom
+  | RParam : ident -> root_atom.
+
+Definition root_set := list root_atom.
 Definition root_env := list (ident * root_set).
+
+Definition root_atom_eqb (a b : root_atom) : bool :=
+  match a, b with
+  | RStore x, RStore y => ident_eqb x y
+  | RParam x, RParam y => ident_eqb x y
+  | _, _ => false
+  end.
+
+Lemma root_atom_eqb_eq :
+  forall a b,
+    root_atom_eqb a b = true ->
+    a = b.
+Proof.
+  intros [x | x] [y | y] Heq; simpl in Heq; try discriminate;
+    apply ident_eqb_eq in Heq; subst; reflexivity.
+Qed.
+
+Lemma root_atom_eqb_refl :
+  forall a,
+    root_atom_eqb a a = true.
+Proof.
+  intros [x | x]; simpl; apply ident_eqb_refl.
+Qed.
 
 Fixpoint root_env_names (R : root_env) : list ident :=
   match R with
@@ -22,7 +49,7 @@ Fixpoint root_set_union (a b : root_set) : root_set :=
   match a with
   | [] => b
   | x :: xs =>
-      if existsb (ident_eqb x) b
+      if existsb (root_atom_eqb x) b
       then root_set_union xs b
       else x :: root_set_union xs b
   end.
@@ -65,7 +92,7 @@ Definition root_subst := list (ident * root_set).
 
 Fixpoint root_subst_lookup (x : ident) (rho : root_subst) : root_set :=
   match rho with
-  | [] => [x]
+  | [] => [RParam x]
   | (y, roots) :: rest =>
       if ident_eqb x y then roots else root_subst_lookup x rest
   end.
@@ -74,7 +101,9 @@ Fixpoint root_set_instantiate (rho : root_subst) (roots : root_set)
     : root_set :=
   match roots with
   | [] => []
-  | x :: rest =>
+  | RStore x :: rest =>
+      root_set_union [RStore x] (root_set_instantiate rho rest)
+  | RParam x :: rest =>
       root_set_union (root_subst_lookup x rho)
         (root_set_instantiate rho rest)
   end.
@@ -96,7 +125,7 @@ Fixpoint root_subst_of_params (ps : list param) (arg_roots : list root_set)
   end.
 
 Definition roots_exclude (x : ident) (roots : root_set) : Prop :=
-  ~ In x roots.
+  ~ In (RStore x) roots.
 
 Definition root_env_excludes (x : ident) (R : root_env) : Prop :=
   forall y roots,
@@ -113,8 +142,8 @@ Fixpoint root_provenance_place_name (p : place) : ident :=
 
 Definition root_of_place (p : place) : root_set :=
   match place_path p with
-  | Some (x, _) => [x]
-  | None => [root_provenance_place_name p]
+  | Some (x, _) => [RStore x]
+  | None => [RStore (root_provenance_place_name p)]
   end.
 
 Lemma root_set_union_in_r :
@@ -125,7 +154,7 @@ Proof.
   intros x a.
   induction a as [| y ys IH]; intros b Hin; simpl.
   - exact Hin.
-  - destruct (existsb (ident_eqb y) b).
+  - destruct (existsb (root_atom_eqb y) b).
     + apply IH. exact Hin.
     + simpl. right. apply IH. exact Hin.
 Qed.
@@ -140,14 +169,14 @@ Proof.
   - contradiction.
   - destruct Hin as [Heq | Hin].
     + subst y.
-      destruct (existsb (ident_eqb x) b) eqn:Hexists.
+      destruct (existsb (root_atom_eqb x) b) eqn:Hexists.
       * apply root_set_union_in_r.
         apply existsb_exists in Hexists.
         destruct Hexists as [z [Hin_z Heq_z]].
-        apply ident_eqb_eq in Heq_z. subst z.
+        apply root_atom_eqb_eq in Heq_z. subst z.
         exact Hin_z.
       * simpl. left. reflexivity.
-    + destruct (existsb (ident_eqb y) b).
+    + destruct (existsb (root_atom_eqb y) b).
       * apply IH. exact Hin.
       * simpl. right. apply IH. exact Hin.
 Qed.
@@ -162,7 +191,7 @@ Proof.
   intros x a.
   induction a as [| y ys IH]; intros b Ha Hb Hin; simpl in *.
   - apply Hb. exact Hin.
-  - destruct (existsb (ident_eqb y) b) eqn:Hexists.
+  - destruct (existsb (root_atom_eqb y) b) eqn:Hexists.
     + eapply IH.
       * intros Hin_y. apply Ha. right. exact Hin_y.
       * exact Hb.
@@ -425,7 +454,7 @@ Qed.
 Lemma root_subst_of_params_lookup_not_in :
   forall ps arg_roots x,
     (forall p, In p ps -> param_name p <> x) ->
-    root_subst_lookup x (root_subst_of_params ps arg_roots) = [x].
+    root_subst_lookup x (root_subst_of_params ps arg_roots) = [RParam x].
 Proof.
   intros ps.
   induction ps as [| p ps IH]; intros arg_roots x Hnotin;

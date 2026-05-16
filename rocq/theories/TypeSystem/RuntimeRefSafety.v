@@ -141,12 +141,12 @@ Lemma value_roots_within_refs_in :
   forall roots v x path,
     value_roots_within roots v ->
     refs_in_value v x path ->
-    In x roots
+    In (RStore x) roots
 with value_fields_roots_within_refs_in :
   forall roots fields x path,
     value_fields_roots_within roots fields ->
     refs_in_fields fields x path ->
-    In x roots.
+    In (RStore x) roots.
 Proof.
   - intros roots v x path Hwithin Hrefs.
     destruct Hrefs.

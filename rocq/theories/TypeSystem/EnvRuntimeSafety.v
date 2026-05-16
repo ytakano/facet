@@ -8,7 +8,7 @@ Definition initial_store_for_fn (env : global_env) (f : fn_def) (s : store) : Pr
   store_typed env s (sctx_of_ctx (params_ctx (fn_params f))).
 
 Definition initial_root_env_for_params (ps : list param) : root_env :=
-  map (fun p => (param_name p, [param_name p])) ps.
+  map (fun p => (param_name p, [RParam (param_name p)])) ps.
 
 Definition initial_root_env_for_fn (f : fn_def) : root_env :=
   initial_root_env_for_params (fn_params f).
@@ -42,11 +42,11 @@ Proof.
   - inversion Hin.
   - simpl in Hin.
     destruct Hin as [Hx | Hin].
-    + subst x. exists [param_name p].
+    + subst x. exists [RParam (param_name p)].
       simpl. rewrite ident_eqb_refl. reflexivity.
     + simpl.
       destruct (ident_eqb x (param_name p)) eqn:Heq.
-      * exists [param_name p]. reflexivity.
+      * exists [RParam (param_name p)]. reflexivity.
       * destruct (IH x Hin) as [roots Hlookup].
         exists roots. exact Hlookup.
 Qed.

@@ -747,7 +747,7 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       place_path p = Some (x, path) ->
       sctx_lookup_mut x Σ = Some MMutable ->
       typed_env_roots env Ω n R Σ (EBorrow RUnique p)
-        (MkTy UAffine (TRef (LVar n) RUnique T)) Σ R [x]
+        (MkTy UAffine (TRef (LVar n) RUnique T)) Σ R [RStore x]
   | TER_If : forall R R1 R2 R3 Σ Σ1 Σ2 Σ3 Σ4 e1 e2 e3
       T_cond T2 T3 roots_cond roots2 roots3,
       typed_env_roots env Ω n R Σ e1 T_cond Σ1 R1 roots_cond ->

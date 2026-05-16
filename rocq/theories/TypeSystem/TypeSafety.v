@@ -2935,6 +2935,128 @@ Proof.
   constructor; assumption.
 Qed.
 
+Inductive store_frame_scope (ps : list param) (Σ : sctx) :
+    store -> store -> Prop :=
+  | SFS_Prefix : forall s_param frame,
+      store_param_prefix ps s_param frame ->
+      store_frame_scope ps Σ s_param frame
+  | SFS_Local : forall se s_param frame,
+      ~ In (se_name se) (ctx_names (params_ctx ps)) ->
+      In (se_name se) (ctx_names Σ) ->
+      store_frame_scope ps Σ s_param frame ->
+      store_frame_scope ps Σ (se :: s_param) frame.
+
+Lemma store_frame_scope_bind_params :
+  forall env Ω s vs ps Σ,
+    eval_args_values_have_types env Ω s vs ps ->
+    store_frame_scope ps Σ (bind_params ps vs s) s.
+Proof.
+  intros env Ω s vs ps Σ Hargs.
+  constructor.
+  eapply store_param_prefix_bind_params. exact Hargs.
+Qed.
+
+Lemma store_frame_scope_add :
+  forall ps Σ s_param frame x T v,
+    ~ In x (ctx_names (params_ctx ps)) ->
+    In x (ctx_names Σ) ->
+    store_frame_scope ps Σ s_param frame ->
+    store_frame_scope ps Σ
+      (store_add x T v s_param)
+      frame.
+Proof.
+  intros ps Σ s_param frame x T v Hnotin Hin Hscope.
+  unfold store_add.
+  constructor; assumption.
+Qed.
+
+Lemma store_frame_scope_param_scope :
+  forall ps Σ s frame,
+    store_frame_scope ps Σ s frame ->
+    store_param_scope ps s frame.
+Proof.
+  intros ps Σ s frame Hscope.
+  induction Hscope as
+    [s_param frame Hprefix
+    | se s_param frame Hnotin _ _ IH].
+  - constructor. exact Hprefix.
+  - constructor; assumption.
+Qed.
+
+Lemma store_frame_scope_same_names :
+  forall ps Σ Σ' s frame,
+    ctx_names Σ' = ctx_names Σ ->
+    store_frame_scope ps Σ s frame ->
+    store_frame_scope ps Σ' s frame.
+Proof.
+  intros ps Σ Σ' s frame Hnames Hscope.
+  induction Hscope as
+    [s_param frame Hprefix
+    | se s_param frame Hnotin Hin Hscope IH].
+  - constructor. exact Hprefix.
+  - econstructor 2.
+    + exact Hnotin.
+    + rewrite Hnames. exact Hin.
+    + exact IH.
+Qed.
+
+Lemma store_frame_scope_same_bindings :
+  forall ps Σ Σ' s frame,
+    sctx_same_bindings Σ Σ' ->
+    store_frame_scope ps Σ s frame ->
+    store_frame_scope ps Σ' s frame.
+Proof.
+  intros ps Σ Σ' s frame Hsame Hscope.
+  eapply store_frame_scope_same_names.
+  - apply sctx_same_bindings_names_alpha. exact Hsame.
+  - exact Hscope.
+Qed.
+
+Lemma store_param_prefix_lookup_param_or_frame :
+  forall ps s_param frame x se,
+    store_param_prefix ps s_param frame ->
+    store_lookup x s_param = Some se ->
+    In x (ctx_names (params_ctx ps)) \/
+    store_lookup x frame = Some se.
+Proof.
+  intros ps s_param frame x se Hprefix.
+  induction Hprefix as [frame | p ps v st s_param frame Hprefix IH];
+    intros Hlookup.
+  - right. exact Hlookup.
+  - simpl in Hlookup.
+    destruct (ident_eqb x (param_name p)) eqn:Heq.
+    + apply ident_eqb_eq in Heq. subst x.
+      left. simpl. left. reflexivity.
+    + destruct (IH Hlookup) as [Hin | Hframe].
+      * left. simpl. right. exact Hin.
+      * right. exact Hframe.
+Qed.
+
+Lemma sctx_same_bindings_params_ctx_names :
+  forall ps Σ,
+    sctx_same_bindings (sctx_of_ctx (params_ctx ps)) Σ ->
+    ctx_names Σ = ctx_names (params_ctx ps).
+Proof.
+  intros ps Σ Hsame.
+  pose proof (sctx_same_bindings_names_alpha
+                (sctx_of_ctx (params_ctx ps)) Σ Hsame) as Hnames.
+  unfold sctx_of_ctx in Hnames. exact Hnames.
+Qed.
+
+Lemma store_frame_scope_no_local_under_params :
+  forall ps Σ se s_param frame,
+    sctx_same_bindings (sctx_of_ctx (params_ctx ps)) Σ ->
+    ~ In (se_name se) (ctx_names (params_ctx ps)) ->
+    In (se_name se) (ctx_names Σ) ->
+    store_frame_scope ps Σ (se :: s_param) frame ->
+    False.
+Proof.
+  intros ps Σ se s_param frame Hsame Hnotin HinΣ _.
+  apply Hnotin.
+  rewrite <- (sctx_same_bindings_params_ctx_names ps Σ Hsame).
+  exact HinΣ.
+Qed.
+
 Definition root_env_covers_params (ps : list param) (R : root_env) : Prop :=
   forall x,
     In x (ctx_names (params_ctx ps)) ->
@@ -3378,6 +3500,24 @@ Proof.
   induction Hprefix as [s | p ps v st s_param s _ IH].
   - reflexivity.
   - simpl. rewrite ident_eqb_refl. exact IH.
+Qed.
+
+Lemma store_remove_params_store_frame_scope_exact :
+  forall ps Σ s_param frame,
+    sctx_same_bindings (sctx_of_ctx (params_ctx ps)) Σ ->
+    store_param_scope ps s_param frame ->
+    store_frame_scope ps Σ s_param frame ->
+    store_remove_params ps s_param = frame.
+Proof.
+  intros ps Σ s_param frame Hsame Hparam_scope Hframe_scope.
+  induction Hframe_scope as
+    [s_param frame Hprefix
+    | se s_param frame Hnotin HinΣ Hframe_scope_tail IH].
+  - eapply store_remove_params_store_param_prefix. exact Hprefix.
+  - exfalso.
+    apply Hnotin.
+    rewrite <- (sctx_same_bindings_params_ctx_names ps Σ Hsame).
+    exact HinΣ.
 Qed.
 
 Lemma store_typed_remove_params_store_param_prefix :
@@ -6860,11 +7000,14 @@ Lemma eval_direct_call_body_cleanup_preserves_value_and_refs :
       R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
+    store_frame_scope (fn_params fcall) (sctx_of_ctx Γ_out)
+      s_body s_args ->
     roots_exclude_params (fn_params fcall) roots_body ->
     root_env_excludes_params (fn_params fcall) R_body ->
     eval env (bind_params (fn_params fcall) vs s_args)
       (fn_body fcall) s_body ret ->
     store_typed env s_args Σ_args /\
+    store_typed env (store_remove_params (fn_params fcall) s_body) Σ_args /\
     store_typed_prefix env s_body (sctx_of_ctx Γ_out) /\
     store_roots_within R_body s_body /\
     store_no_shadow s_body /\
@@ -6884,8 +7027,8 @@ Proof.
     s s_args s_body vs ret used' T_body Γ_out R_params R_body roots_body
     Hstore Hroots Hshadow Hrn Hprov_args Hready_args Htyped_args Heval_args
     Hrename Hroots_bind Hshadow_bind Hrn_params Hcover_params Hprov_body
-    Hready_body Htyped_body Hcompat_body Hexclude_ret Hexclude_env
-    Heval_body.
+    Hready_body Htyped_body Hcompat_body Hframe_scope Hexclude_ret
+    Hexclude_env Heval_body.
   destruct (proj1 (proj2 eval_preserves_typing_ready_mutual)
               env s args s_args vs Heval_args Ω n Σ
               (apply_lt_params σ (fn_params fdef)) Σ_args
@@ -6991,6 +7134,21 @@ Proof.
       (store_remove_params (fn_params fcall) s_body)).
   { eapply store_ref_targets_preserved_remove_params_after_absent;
       eassumption. }
+  assert (Hsame_body :
+    sctx_same_bindings
+      (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (sctx_of_ctx Γ_out)).
+  { eapply typed_env_structural_same_bindings.
+    eapply typed_env_roots_structural. exact Htyped_body. }
+  assert (Hremoved_exact :
+    store_remove_params (fn_params fcall) s_body = s_args).
+  { eapply store_remove_params_store_frame_scope_exact.
+    - exact Hsame_body.
+    - eapply store_frame_scope_param_scope. exact Hframe_scope.
+    - exact Hframe_scope. }
+  assert (Hstore_final :
+    store_typed env (store_remove_params (fn_params fcall) s_body) Σ_args).
+  { rewrite Hremoved_exact. exact Hstore_args. }
   repeat split; try assumption.
   - eapply store_ref_targets_preserved_trans; eassumption.
   - exists frame_final, locals. repeat split; assumption.

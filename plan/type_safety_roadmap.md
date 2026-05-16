@@ -1,131 +1,69 @@
 # Type Safety Roadmap
 
-## Codex Implementation Guide
+This file is the active Codex-facing implementation guide. Historical notes,
+completed proof inventory, and older milestone logs live in
+`plan/type_safety_roadmap_history.md`.
 
-This top section is the canonical guide for the next implementation turns. The
-older milestone log below is retained as historical detail; prefer this section
-when deciding the next task.
+## Purpose
 
-Treat Rocq definitions as the source of truth. Do not add `Axiom`, `Admitted`,
-or `Abort`, and do not weaken linearity, borrow, or reference-target safety to
-make a proof pass.
+The primary goal is to prove operational type safety for the user-facing,
+ordinary checker pipeline.
 
-If a task requires deciding a new invariant, changing semantics, or choosing
-between proof strategies, stop and report the design issue. Use sub-agents only
-for implementation-only tasks whose target files, expected behavior, and proof
-shape are already fixed.
-
-### Active Slice
-
-Direct `ECall fname args` preservation is connected through an explicit
-callee-body root evidence premise:
-
-- `direct_call_callee_body_root_evidence`
-- `eval_preserves_typing_direct_call_roots_ready`
-- `infer_full_env_roots_big_step_safe_direct_call_ready`
-
-The older `direct_call_callee_root_evidence` definition is retained as a
-stronger compatibility premise, but the active wrapper derives the
-bound-parameter store/root facts locally through
-`eval_args_bind_params_call_param_root_env_ready`.
-
-The next unresolved point is deriving `direct_call_callee_body_root_evidence`
-from a root-aware function-environment invariant or checker-facing sidecar
-theorem. Lifetime inference alone does not discharge this premise: it chooses
-the lifetime substitution `σ`, but it does not identify the runtime roots that
-flow through same-lifetime values. Do not treat this premise as discharged by
-the checker until the root-provenance bridge exists.
-
-Important boundaries:
-
-- Do not add direct calls to `preservation_ready_expr`.
-- Keep `eval_preserves_typing_ready_mutual` call-free.
-- Use the separate direct-call wrapper, currently
-  `preservation_direct_call_ready_expr`.
-- Do not start `ECallExpr` in the active slice.
-- Do not handle non-empty captured closure stores until a captured-store
-  invariant is designed.
-
-### Direct ECall Root Evidence Policy
-
-The direct `ECall` cleanup bridge requires root-aware evidence for the
-freshened callee body:
-
-- `typed_env_roots env ... (fn_body fcall) ... R_body roots_body`
-- parameter-root exclusion for `roots_body` and `R_body`
-
-Lifetime inference remains responsible for choosing the call substitution
-`σ`, via the existing `build_sigma` / `apply_lt_*` flow. Root provenance is a
-separate sidecar obligation: arguments produce `arg_roots`, the call-site root
-environment is instantiated as
-`call_param_root_env (fn_params fcall) arg_roots R_args`, and the freshened
-callee body must be root-typed under that environment.
-
-Do not replace this with a global "callee params must never appear in returned
-roots" rejection in `infer_env_roots`. A valid function may return a reference
-derived from a parameter lifetime; the call-site root evidence must track which
-argument roots that reference can point to. The short-term bridge should stay a
-Prop-level call-site invariant. A later executable design may cache
-root-polymorphic function summaries and instantiate their symbolic parameter
-roots at call sites.
-
-Cached root-polymorphic summaries must distinguish concrete callee storage
-from symbolic parameter-value provenance. Do not use plain `ident` roots for
-the executable summary bridge. The chosen root shape is:
+Canonical target:
 
 ```coq
-Inductive root_atom :=
-  | RStore : ident -> root_atom
-  | RParam : ident -> root_atom.
+infer_full_env env f = infer_ok (T, Γ')
+  -> initial_store_for_fn f s
+  -> eval env s (fn_body f) s' v
+  -> value_has_type env s' v (fn_ret f).
 ```
 
-`RStore x` means a concrete runtime storage root, including a reference
-created by `&x` or `&param`. `RParam x` means the symbolic roots already inside
-the value passed through parameter `x`. Call-site instantiation may replace
-only `RParam fresh_param` with the corresponding argument roots. It must not
-replace `RStore fresh_param`; those concrete freshened parameter-storage roots
-must be excluded from the returned roots and surviving root environment before
-callee cleanup. This is what keeps `return r` valid when `r` contains a
-caller-rooted reference while still rejecting or requiring evidence against
-escaping `return &r` / `return &local`.
+The root checker is not the language definition and is not a substitute for
+ordinary checker safety. Root provenance remains auxiliary evidence used for
+runtime reference safety, let-local escape checks, and direct-call cleanup
+proofs. If a future design promotes the root checker to the canonical route,
+that decision must be made explicitly and this file must be rewritten around
+that theorem.
 
-`TypeSafety.v` currently has structural lookup bridges for freshened callees,
-but it cannot import `EnvRootSoundness.v` because `_CoqProject` orders
-`EnvRootSoundness.v` after `TypeSafety.v`. Do not solve this by creating an
-import cycle.
+## Canonical Route
 
-The short-term proof shape is to make the missing callee root evidence an
-explicit root-aware function-environment invariant/premise in `TypeSafety.v`.
-The direct-call wrapper should use that invariant to connect
-`preservation_direct_call_ready_expr` to
-`eval_direct_call_body_cleanup_preserves_value_and_refs`.
+1. Prove preservation and runtime safety from the Prop-level ordinary typing
+   rules used by checker soundness.
+2. Connect ordinary checker soundness to the preservation theorem.
+3. Use root provenance only when the operational proof needs reference-target
+   or cleanup evidence that ordinary typing does not currently expose.
+4. Keep root-checker success as a sidecar theorem unless the project explicitly
+   changes the user-facing checker contract.
 
-The checker-facing theorem in `EnvRuntimeSafety.v` should then either require
-or derive this invariant. If the current root sidecar checker/API cannot derive
-it, stop and report the missing invariant instead of weakening root safety or
-duplicating checker logic in OCaml.
+Do not make the root checker stricter than the ordinary checker to patch a
+proof gap. If ordinary checker safety needs an invariant, expose that invariant
+in the ordinary typing/checker route or prove that the existing checker already
+establishes it.
 
-### Fixed Design Decisions
+## Fixed Design Decisions
 
 - Big-step preservation comes before progress.
 - Progress is deferred until a future small-step semantics exists.
-- Checker soundness and runtime type safety stay separate.
+- Checker soundness and operational type safety stay separate until the final
+  checker-to-runtime theorem connects them.
+- The ordinary checker is the primary accepted-program interface.
 - Root provenance is a sidecar API:
   - `infer_core_env_roots`
   - `infer_env_roots`
   - `infer_full_env_roots`
 - Updating the sidecar API requires updating its soundness theorem.
 - Lifetime inference and root provenance inference are separate: lifetime
-  inference determines `σ`; root inference determines which runtime roots flow
-  through the call.
-- Direct `ECall` root typing uses argument-root overapproximation:
-  `root_sets_union arg_roots`.
-- Direct `ECall` callee body evidence is instantiated at the call site with
-  `call_param_root_env (fn_params fcall) arg_roots R_args`.
-- Runtime call semantics freshens callee function definitions against
-  caller/captured store names before `bind_params`.
-- Direct-call preservation uses freshened callee body evidence obtained through
-  alpha-renaming bridges.
+  inference determines lifetime substitution; root provenance determines which
+  runtime roots flow through references.
+- Runtime calls freshen callee function definitions against caller/captured
+  store names before `bind_params`.
+- Root provenance should run on alpha-renamed, shadow-free core terms when root
+  evidence is needed.
+- `let x = &x` is not inherently unsafe. After alpha-renaming-before-checking,
+  the internal shape is `let x_fresh = &x`, so initializer roots do not collide
+  with the binder being introduced.
+- Do not reject initializer roots merely because they mention the source binder
+  name of a shadowing `let`.
 - Reference `drop` does not release a borrow. Cases like `drop r; drop x` are
   deferred to future non-lexical lifetime / last-use analysis.
 - Local annotation lifetime elision remains rejected until fresh local lifetime
@@ -133,439 +71,75 @@ duplicating checker logic in OCaml.
 - Same-argument-name parameters in one function are rejected.
 - Duplicate-parameter and shadowing errors should stay distinguishable.
 
-### Current Proof Inventory
+## Active Implementation Queue
 
-Already available for the direct `ECall` proof:
+Follow this order. Stop and report if a step exposes a missing invariant or a
+false lemma.
 
-- Runtime `ECall` / `ECallExpr` freshens callee `fn_def` against
-  caller/captured store names before binding parameters.
-- `bind_params` preserves parameter order and has typed-prefix preservation
-  under no-dup/freshness premises.
-- `store_typed_prefix` describes a caller tail behind visible callee parameters.
-- Prefix helpers exist for store add/remove/update/consume/restore/mark
-  operations.
-- Scoped parameter-prefix helpers support `ELet` local bindings inside a callee.
-- `eval_preserves_param_scope_roots_ready_mutual` preserves parameter scope for
-  roots-ready body evaluation.
-- Lifetime-erased equivalence bridges runtime argument typing after lifetime
-  substitution:
-  - `ty_lifetime_equiv`
-  - `VHT_LifetimeEquiv`
-  - `value_has_type_apply_lt_ty`
-  - `eval_args_values_have_types_apply_lt_params_inv`
-- Freshened parameters are proved no-dup/fresh, and parameter contexts are
-  connected by `ctx_alpha`.
-- Forward alpha-renaming infrastructure exists for structural typing:
-  `ctx_alpha`, typed places, args, fields, `expr_as_place`, and
-  `typed_env_structural`.
-- Function-level alpha-renaming bridge exists under original parameter `NoDup`.
-- Function-environment invariants preserve original parameter `NoDup`.
-- Readiness is preserved by alpha-renaming:
-  - `alpha_rename_preservation_ready_expr`
-  - args/fields variants
-  - `alpha_rename_fn_def_preservation_ready_body`
-- Lookup bridges turn `env_fns_preservation_ready` and
-  `env_fns_checked_structural` into ready/typed evidence for the freshened
-  callee body.
-- Ready-fragment prefix preservation exists for body evaluation.
-- Direct `ECall` pre-cleanup callee body preservation is connected through
-  `bind_params_store_typed_prefix`.
-- Root sidecar checker and Prop-level root typing accept direct `ECall`.
-- Parameter-set root exclusion and cleanup helpers exist for
-  `store_remove_params`.
-- Cleanup preserves return value typing and caller-visible reference targets.
-- `store_frame_scope` / `store_frame_static_fresh` exact-frame infrastructure
-  exists.
-- `eval_preserves_frame_scope_roots_ready_mutual` derives exact caller-frame
-  evidence from ready/root-aware callee body evaluation.
-- The cleanup bridge no longer takes an explicit `store_frame_scope` premise.
-- `call_param_root_env` and its helper lemmas construct the root environment
-  for freshened call parameters from evaluated argument roots and the
-  post-argument root environment.
-- `eval_args_bind_params_call_param_root_env_ready` derives bound-parameter
-  store/root readiness from argument evaluation, argument root preservation,
-  freshened parameter freshness, and alpha-renamed argument typing.
-- `callee_body_root_ready_at` packages the freshened callee body readiness,
-  root typing, return compatibility, and parameter-root exclusion facts at a
-  call-site root environment.
-- `direct_call_callee_body_root_evidence` is now the explicit TypeSafety
-  premise that supplies `callee_body_root_ready_at` under
-  `call_param_root_env`; it also receives the caller-side
-  `root_env_store_roots_named R s` invariant needed by the cached-summary
-  bridge.
-- `eval_preserves_typing_direct_call_roots_ready` connects
-  `preservation_direct_call_ready_expr` to the cleanup bridge and threads
-  caller root-name evidence to direct-call callee evidence.
-- `callee_body_root_check_ready_at` and
-  `direct_call_callee_body_root_check_evidence` expose a checker-facing
-  call-site bridge: for each freshened callee and call-site root environment,
-  `infer_env_roots` plus boolean parameter-root exclusion imply
-  `direct_call_callee_body_root_evidence`.
-- `infer_full_env_roots_big_step_safe_direct_call_ready` exposes the
-  checker-facing direct-call-ready theorem, now requiring
-  `direct_call_callee_body_root_check_evidence`.
-- `RootProvenance.v` now has the root-polymorphic summary instantiation helper
-  layer:
-  - `root_atom`
-  - `root_subst`
-  - `root_subst_lookup`
-  - `root_set_instantiate`
-  - `root_env_instantiate`
-  - `root_subst_of_params`
-  `root_set` is now `list root_atom`. `RStore x` represents concrete runtime
-  storage roots and is what cleanup exclusion checks; `RParam x` represents
-  symbolic parameter-value roots and is the only atom instantiated by
-  `root_set_instantiate`.
-- Tagged roots are reflected through the Prop-level root rules, executable root
-  checker, root soundness theorem, runtime reference root membership, and
-  initial parameter root environments.
-- Prop-level `TER_If` now accepts `root_env_equiv R2 R3` instead of syntactic
-  root-environment equality. The executable checker remains conservative with
-  `root_env_eqb` for now; soundness bridges checker equality into
-  `root_env_equiv`, and preservation proofs transport root/store facts across
-  equivalent branch environments.
+1. Revert the temporary root-checker restriction on shadowing `let`
+   initializers.
+   - Target files:
+     - `rocq/theories/TypeSystem/EnvStructuralRules.v`
+     - `rocq/theories/TypeSystem/TypeChecker.v`
+     - `rocq/theories/TypeSystem/EnvRootSoundness.v`
+     - `rocq/theories/TypeSystem/TypeSafety.v`
+     - regenerated `fixtures/TypeChecker.ml`
+     - regenerated `fixtures/TypeChecker.mli` if extraction changes it
+   - Remove the conservative `roots_exclude x roots1` premise/check from
+     `TER_Let` / `TER_LetInfer` and the executable root checker.
+   - Remove or update the regression example that expects `let x = &x` style
+     initializer-root shadowing to be rejected.
+   - Preserve the existing let-local escape checks for body results and
+     surviving store roots.
 
-### Next Implementation Queue
+2. Add the alpha-first root-evidence bridge.
+   - Target files:
+     - `rocq/theories/TypeSystem/AlphaRenaming.v`
+     - `rocq/theories/TypeSystem/RootProvenance.v`
+     - `rocq/theories/TypeSystem/EnvRootSoundness.v`
+     - `rocq/theories/TypeSystem/TypeSafety.v`
+   - Prove or expose a bridge that root-checks the alpha-renamed/freshened
+     expression or function body.
+   - The bridge should explain how source checker success maps to root evidence
+     on the freshened core term when root evidence is needed.
+   - Do not encode this by rejecting valid source shadowing patterns.
 
-Follow this order. Stop when a step exposes a missing invariant or false lemma.
-
-1. `[done]` Direct `ECall` final wrapper
-   - Target file: `rocq/theories/TypeSystem/TypeSafety.v`.
-   - Connect the existing cleanup bridge to `preservation_direct_call_ready_expr`.
-   - Use existing freshened callee ready/typed lookup bridges, prefix
-     preservation, root preservation, frame-scope preservation, and cleanup
-     theorem.
-   - Do not modify `preservation_ready_expr`.
-   - Do not start `ECallExpr` in this step.
-
-2. `[done]` Direct-call checker-to-runtime ready/root theorem update
-   - Target file: `rocq/theories/TypeSystem/EnvRuntimeSafety.v`.
-   - Connect the direct-call wrapper to the ready/root checker-facing theorem if
-     the theorem still excludes direct calls.
-
-3. `[partial, design blocker]` Derive direct-call callee root evidence
-   - Target files: likely `rocq/theories/TypeSystem/TypeSafety.v` and
-     `rocq/theories/TypeSystem/EnvRootSoundness.v`.
-   - Done: narrowed the active premise to
-     `direct_call_callee_body_root_evidence`; the direct-call wrapper now
-     derives the bound-parameter store/root facts itself.
-   - Done: factored the callee body facts into
-     `callee_body_root_ready_at`, so the active premise now exposes the
-     call-site body root-readiness shape directly.
-   - Done: added the call-site checker-facing bridge
-     `direct_call_callee_body_root_check_evidence`, which derives
-     `direct_call_callee_body_root_evidence` from `infer_env_roots` at
-     `call_param_root_env` plus parameter-root exclusion booleans.
-   - Done: added the root-substitution helper layer in `RootProvenance.v`:
-     `root_subst`, `root_set_instantiate`, `root_env_instantiate`, and
-     `root_subst_of_params`, with lookup/name/no-shadow preservation lemmas.
-   - Done: migrated root provenance to tagged atoms:
-     `RStore` for concrete runtime storage roots and `RParam` for symbolic
-     parameter-value roots. The Prop-level root rules, executable root checker,
-     root soundness theorem, runtime reference root membership, and initial
-     parameter root environments now agree on the tagged representation.
-   - Done: moved the canonical symbolic parameter root environment into
-     `RootProvenance.v` as `initial_root_env_for_params` /
-     `initial_root_env_for_fn`, and added conservative root-renaming helpers
-     for the cached-summary alpha-renaming bridge.
-   - Done: added local root helper lemmas for the bridge:
-     `root_set_equiv`, root-env rename lookup under an explicit no-collision
-     premise, `root_of_place` renaming, root instantiation inversion, and
-     instantiation/exclusion preservation for root sets, root environments, and
-     `root_subst_of_params`.
-   - Done: added root-set equivalence transport lemmas for cons, append, union,
-     and `roots_exclude`, so future root-aware alpha proofs can reason modulo
-     `root_set_union` ordering/deduplication instead of exact list equality.
-   - Done: added root-renaming transport helpers for root sets, root exclusion,
-     and root-environment exclusion, plus `root_sets_union` equivalence for
-     call argument roots.
-   - Done: added root-renaming compatibility helpers for the root-aware alpha
-     proof: `root_set_rename_app`, `root_set_union_rename_equiv`,
-     `root_env_lookup_rename_none`, and rename transport for root-env
-     add/remove/update under explicit no-collision premises.
-   - Done: added guarded alpha-renaming helpers for canonical symbolic
-     parameter root environments:
-     `alpha_rename_params_initial_root_env_rename` and
-     `alpha_rename_fn_def_initial_root_env_rename`. These require parameter
-     `NoDup`, matching the existing duplicate-parameter rejection invariant,
-     and avoid the false unguarded statement where duplicate original names
-     would be shadowed by `lookup_rename`.
-   - Done: added Prop-level function summary evidence in `TypeSafety.v`
-     (`callee_body_root_summary`, `env_fns_root_summary_evidence`) and
-     checker-facing summary evidence in `EnvRuntimeSafety.v`
-     (`fn_root_summary_check_ready`, `env_fns_root_summary_check_ready`) with
-     a bridge from checker summaries to original-function
-     `callee_body_root_ready_at`.
-   - Done: strengthened `direct_call_callee_body_root_evidence`,
-     `eval_preserves_typing_direct_call_roots_ready`, and
-     `infer_full_env_roots_big_step_safe_direct_call_ready` to carry
-     `root_env_store_roots_named R s`, so later summary instantiation can use
-     preserved call-site root names to prove freshened-parameter exclusion.
-   - Done: added the root-env key naming invariant
-     `root_env_keys_named`, with ctx/store specializations
-     (`root_env_ctx_keys_named`, `root_env_store_keys_named`) and preservation
-     helpers for add/remove/update/rename/instantiate. This separates
-     root-env key alignment from the existing `RStore`-atom naming invariant.
-   - Done: proved `typed_roots_ctx_keys_named_mutual`, so Prop-level
-     root-aware expression/argument/field typing preserves the root-env key
-     naming invariant across context-consuming, let-binding, update, merge, and
-     structural traversal cases.
-   - Done: proved `eval_preserves_root_keys_named_ready_mutual`, so ready
-     evaluation transports `root_env_store_keys_named` for expressions,
-     argument lists, and struct fields using the static key-preservation theorem
-     plus final `store_typed` facts.
-   - Done: added root instantiation/equivalence helper lemmas in
-     `RootProvenance.v` for instantiated root sets and root-set unions:
-     `root_set_instantiate_equiv`, `root_set_instantiate_union_equiv`, and
-     `root_sets_instantiate_union_equiv`.
-   - Done: added root-env instantiation exchange helpers for
-     `root_env_add`, `root_env_remove`, and `root_env_update`, so the upcoming
-     `typed_env_roots` instantiation transport can mirror let/update cases.
-   - Done: added `root_env_equiv` plus lookup/add/update/remove transport
-     helpers, and ctx/store root-name transport over `root_set_equiv`, so the
-     upcoming root-aware typing transport can relate instantiated root
-     environments modulo root-set representation rather than exact list order.
-  - Done: added root-env equivalence composition helpers for instantiation,
-    update/union, add, and remove, connecting `root_env_instantiate` with
-    `root_env_equiv` for the upcoming `typed_env_roots` transport proof.
-  - Done: added `root_set_instantiate_root_of_place_equiv`, so shared-borrow
-    result roots based on concrete places are stable under parameter-root
-    instantiation.
-  - Done: relaxed the Prop-level if rule from branch root-env equality to
-    `root_env_equiv R2 R3`, while keeping the executable checker conservative
-    via `root_env_eqb`; added the required equivalence transport helpers for
-    root-env exclusion, parameter coverage, store roots, and downstream
-    preservation proofs.
-  - Done: tightened the direct-call root evidence interfaces so
-    `direct_call_callee_body_root_evidence` and the checker-facing
-    `direct_call_callee_body_root_check_evidence` receive the callee
-    membership/name facts already present in `TER_Call`. This makes the next
-    summary bridge target `env_fns_root_summary_evidence` directly, without
-    requiring evidence for arbitrary functions outside `env`.
-   - Chosen design: replace the call-site evidence premise with cached
-     root-polymorphic summaries using the tagged-root representation.
-   - Remaining blocker: prove the root-aware alpha-renaming/instantiation
-     bridge that turns an original-function summary at
-     `initial_root_env_for_fn fdef` into freshened call-site evidence at
-     `call_param_root_env (fn_params fcall) arg_roots R_args`. Do not replace
-     `direct_call_callee_body_root_evidence` until this theorem exists.
-   - Done: added the guarded root-substitution freshness layer:
-     `root_subst_images_exclude`, `root_subst_images_exclude_names`, local
-     store-name collectors for expressions/args/fields, and wrappers from
-     substitution-image freshness to root-set/root-env exclusion preservation.
-   - Done: proved `typed_roots_instantiate_fresh_mutual` plus projection
-     lemmas for expressions, arguments, and fields. This transports
-     `typed_env_roots` across `root_env_instantiate` modulo `root_env_equiv`
-     and `root_set_equiv`, provided every substitution image excludes the
-     let-bound/callee-local store roots collected from the expression.
-   - Done: added alpha-renaming freshness helpers for body-local store names:
-     `alpha_rename_expr_local_store_names_fresh_used` and
-     `alpha_rename_fn_def_body_local_store_names_fresh_used`.
-   - Done: added call-site freshness bridge helpers from argument root naming
-     to `root_subst_of_params` substitution-image freshness, including
-     `alpha_rename_fn_def_body_root_subst_images_exclude_names_from_store_roots`.
-   - Current blocker detail: the parameter-environment rename part, guarded
-     root-instantiation part, and substitution-image freshness part now have
-     compiled helpers. The remaining bridge must prove root-aware
-     alpha-renaming transport for `typed_env_roots` itself and combine it with
-     the guarded instantiation theorem.
-   - Done: added root-env rename helper infrastructure:
-     `rename_no_collision_on`, `root_env_rename_no_shadow`,
-     `root_env_lookup_rename_inv`, and `root_env_equiv_rename`.
-   - Done: factored the call-site evidence replacement into explicit bridge
-     obligations:
-     `direct_call_callee_body_root_summary_bridge` and
-     `direct_call_callee_body_root_check_summary_bridge`. The old direct-call
-     evidence premises remain in use until these bridges are proved.
-   - Done: added the first root-aware alpha-transport constructor helpers:
-     `root_env_equiv_rename_lookup_forward`,
-     `root_sets_union_rename_equiv`,
-     `alpha_rename_typed_env_roots_var_forward`,
-     `alpha_rename_typed_env_roots_place_forward`, and
-     `alpha_rename_typed_env_roots_borrow_forward`.
-   - Current alpha-transport blocker: the full
-     `alpha_rename_typed_env_roots_forward` theorem reaches `ELet` /
-     `ELetInfer` and needs a stronger extended-rename invariant for
-     `((x, xr) :: rho)`. In particular, the proof must relate
-     `root_env_add x roots1 R1` to
-     `root_env_add xr roots1r R1r`, preserve no-collision/no-shadow across
-     the extension, and then remove the renamed binding after the body. Do not
-     try another monolithic proof until the add/remove helper layer for this
-     extended rename case is compiled.
-   - Done: added the root atom exclusion helper layer for that extended
-     rename case: `root_atom_mentions`, `root_set_excludes_atom`,
-     `root_env_excludes_atom`, `root_set_rename_cons_excluded`,
-     `root_env_rename_cons_excluded`, and add/remove wrappers.
-   - Done: fixed the `RParam` shadowing design by making `RParam x` a stable
-     original-parameter provenance symbol. Local binder alpha-renaming now
-     renames only `RStore` atoms, not `RParam` atoms. Added
-     `initial_root_env_for_params_origin` so freshened parameter environments
-     can use fresh root-env keys while preserving original symbolic parameter
-     provenance.
-   - Resolved blocker after the helper layer: the existing naming invariants
-     (`root_set_ctx_roots_named`, `root_env_ctx_roots_named`, and store-name
-     variants) only track `RStore` atoms, which is now sufficient for local
-     binder alpha-renaming because `RParam` atoms are no longer renamed by the
-     extended let environment.
-   - Done: kept the conservative helper lemmas that turn `roots_exclude` /
-     `root_env_excludes` into atom-wide exclusion under an explicit
-     no-`RParam x` premise, but the stable-`RParam` design means the
-     `ELet` / `ELetInfer` alpha-transport proof should no longer need to
-     derive such a premise from `typed_env_roots`.
-   - Corrected design direction: do not make `ELet` / `ELetInfer` reject
-     initializer roots that mention the binder name. A source program such as
-     `let x = &x; ...` is not inherently type-unsafe or root-unsafe; the
-     conflict only appears when trying to transport root typing from the
-     shadowed source program after the fact.
-   - New canonical approach: alpha-rename before root checking. The checker
-     pipeline should first produce a shadow-free/freshened core program, then
-     run root provenance analysis on that freshened program. Under this shape,
-     `let x = &x; ...` is internally checked as `let x_fresh = &x; ...`, so
-     initializer roots such as `RStore x` do not collide with the let binder.
-   - Next implementation checkpoint: revert the conservative
-     `roots_exclude x roots1` strengthening from `TER_Let` / `TER_LetInfer`
-     and the executable root checker. Replace the proof obligation with a
-     bridge from the existing alpha-renaming pass to root checking on the
-     freshened expression/function body.
-   - Do not use root checker restrictions as a substitute for ordinary checker
-     safety. The eventual target is that the user-facing checker pipeline
-     establishes operational type safety and, where root safety is claimed,
-     obtains the required root evidence from the alpha-renamed program.
-   - Chosen direction: keep lifetime substitution inference as-is, derive root
-     evidence from call-site argument roots plus
-     `call_param_root_env`, then instantiate cached root-polymorphic summaries
-     with `root_subst_of_params`.
-   - Remaining: prove that alpha-renaming plus `root_subst_of_params`
-     instantiation supplies `callee_body_root_ready_at` for the freshened
-     call-site environment.
-   - Resolved blocker from attempting the unrestricted instantiation theorem:
-     arbitrary
-     `root_subst` instantiation does not preserve let-bound/callee-local
-     exclusion facts. In `ELet` / `ELetInfer`, the premise
-     `roots_exclude x roots2` is not enough to prove
-     `roots_exclude x (root_set_instantiate rho roots2)` because a
-     substitution image may itself contain `RStore x`. The implemented
-     guarded theorem carries the required substitution-image freshness premise
-     over collected local store names. Do not state or prove an unrestricted
-     `typed_roots_instantiate_mutual`; that statement remains false.
-   - New blocker exposed by the rename helper layer: transporting
-     `root_env_excludes` through alpha-renaming needs an explicit root-atom
-     no-collision premise. The bridge must prove that no `RStore z` inside a
-     callee body root summary can rename to the freshened parameter store root
-     unless it was the excluded parameter itself.
-   - Done: introduced the Prop invariant `root_env_store_roots_named`, plus
-     local preservation helpers across root-env add/remove/update and store
-     add/remove/mark-used operations. This gives the bridge a way to derive
-     parameter-root exclusion from `R_args` and `params_fresh_in_store`.
-   - Done: added the companion root-set invariant
-     `root_set_store_roots_named`, with union, singleton, root-set-list, and
-     store add/remove/mark-used preservation helpers.
-   - Done: added store-name preservation and root-name transport helpers for
-     `store_update_state`, `store_update_val`, `store_update_path`,
-     `store_restore_path`, and `store_consume_path`, plus the
-     `eval_place_root_name_in_store_names` bridge.
-   - Done: added the ctx-side root-name helper layer
-     (`root_env_ctx_roots_named` / `root_set_ctx_roots_named`), including
-     root-set/root-env transport, store-typed bridges via `store_typed_names`,
-     remove-excluding helpers, and `root_of_place` ctx naming.
-   - Remaining: thread `root_env_store_roots_named` through
-     `eval_preserves_roots_ready_mutual` together with
-     `root_set_store_roots_named` for expression results and argument root
-     lists before using it at the direct-call site.
-   - Next proof slice: prove a standalone
-     `eval_preserves_root_names_ready_mutual` theorem that transports
-     `root_env_store_roots_named` and expression/argument/field
-     `root_set_store_roots_named` facts across ready evaluation, using the
-     ctx-side helper layer to bridge final `store_typed` facts back to
-     runtime store names. Keep it separate from the direct-call wrapper until
-     the theorem is complete.
-   - Implementation correction: do not try to prove the static bridge as one
-     large `typed_roots_ctx_roots_named_mutual` proof script first. A direct
-     mutual proof is too brittle because `typed_roots_ind` exposes different
-     generated hypothesis names and different ctx/root obligations for
-     copy/move, let, replace/assign, borrow, if, args, and fields. The previous
-     attempt failed for this reason and was reverted rather than leaving a
-     fragile partial proof.
-   - Revised static-bridge plan:
-     1. Add small constructor-family helper lemmas first:
-        copy/move root lookup, let/let-infer add/remove,
-        replace/assign root-env update, borrow result roots, if branch merge,
-        and args/fields aggregation.
-     2. Each helper should state the exact ctx-name obligation for its
-        constructor family and hide details such as
-        `sctx_consume_path_same_bindings`,
-        `sctx_restore_path_same_bindings`, root-env removal, and
-        `root_env_excludes` strengthening.
-     3. After those helpers compile, make
-        `typed_roots_ctx_roots_named_mutual` a thin wrapper over them, with no
-        generated-name-dependent `H0` / `H1` proof scripting.
-     4. Only then add `eval_preserves_root_names_ready_mutual`, using
-        `eval_preserves_typing_roots_ready_mutual` for final `store_typed`
-        facts and the ctx/store naming bridge helpers to recover
-        `root_env_store_roots_named` and `root_set_store_roots_named`.
-     5. Finally add the call-site preparation lemma that derives
-        `root_env_excludes_params` from preserved root names plus
-        `params_fresh_in_store`.
-   - Suggested checkpoint order for the revised static bridge:
-     - `[done]` copy/move/root-lookup ctx-name helpers
-     - `[done]` let/let-infer add/remove ctx-name helpers
-     - `[done]` replace/assign update ctx-name helpers
-     - `[done]` borrow result-root ctx-name helpers
-     - `[done]` if/args/fields aggregation ctx-name helpers
-     - `[done]` thin `typed_roots_ctx_roots_named_mutual`
-     - `[done]` `eval_preserves_root_names_ready_mutual`
-     - `[done]` direct-call call-site exclusion preparation lemma
-   - Do not attempt to discharge the evidence with lifetime inference alone,
-     and do not globally reject parameter roots in `infer_env_roots`.
-   - Stop if the current root sidecar API cannot express freshened callee body
-     roots and parameter-root exclusion without a new invariant.
-
-4. `[design blocker]` Empty-capture `ECallExpr`
+3. Continue the ordinary-checker safety theorem.
    - Target files:
      - `rocq/theories/TypeSystem/TypeSafety.v`
-     - possibly `rocq/theories/TypeSystem/RuntimeTyping.v`
-   - Only handle `VClosure fname []`.
-   - Reuse direct `ECall` machinery.
-   - Current blocker: `infer_core_env_roots` still returns `ErrNotImplemented`
-     for `ECallExpr`, and `preservation_direct_call_ready_expr` only admits
-     direct `ECall`. Decide the root-checker/readiness surface before assigning
-     implementation.
-   - If non-empty captured stores are needed, stop and report the missing
-     captured-store invariant instead of inventing one.
+     - `rocq/theories/TypeSystem/EnvRuntimeSafety.v`
+   - Keep the main theorem focused on ordinary checker success:
 
-5. `[done]` Runtime typing for empty closure values
-   - Target file: `rocq/theories/TypeSystem/RuntimeTyping.v`.
-   - `VHT_ClosureEmpty`, `VHT_ClosureIn`, and `eval_fn_preserves_typing`
-     already cover `VClosure fname []`.
-   - Non-empty capture safety remains intentionally undefined until the
-     captured-store invariant is fixed.
+     ```coq
+     infer_full_env env f = infer_ok (T, Γ')
+       -> initial_store_for_fn f s
+       -> eval env s (fn_body f) s' v
+       -> value_has_type env s' v (fn_ret f).
+     ```
 
-6. `[later]` Indirect update and deref preservation
-   - Target file: `rocq/theories/TypeSystem/TypeSafety.v`.
-   - Connect indirect `EAssign`, indirect `EReplace`, and `EDeref` to the
-     reference-target strengthened runtime typing.
-   - Stop if runtime aliasing correspondence is required.
+   - Use sidecar root evidence only for sublemmas that explicitly require
+     reference provenance.
 
-7. `[later]` `ELetInfer` preservation
-   - Replace contradiction-only helper with a real preservation proof.
+4. Direct-call root evidence remains a supporting obligation.
+   - Existing direct-call preservation work may continue, but it must be framed
+     as support for ordinary checker runtime safety.
+   - Cached root-polymorphic summaries with tagged roots remain the current
+     intended proof shape:
+     - `RStore x` is concrete runtime storage.
+     - `RParam x` is symbolic parameter-value provenance.
+   - Call-site instantiation may replace only `RParam fresh_param` with the
+     corresponding argument roots.
+   - Concrete `RStore fresh_param` roots must still be excluded from returned
+     roots and surviving root environments before callee cleanup.
 
-8. `[later]` Let-local reference escape
-   - Add typing/borrow invariant that prevents references to removed local
-     bindings from escaping in result values or remaining store entries.
-   - Prefer an escape check first. Introduce fresh let-regions only after the
-     invariant is explicitly designed.
+5. Defer unrelated expansion.
+   - Do not start `ECallExpr` until the direct-call and root-evidence route is
+     stable.
+   - Do not handle non-empty captured closure stores until a captured-store
+     invariant is designed.
+   - Do not attempt small-step progress before preservation is stable.
 
-9. `[later]` Full unrestricted preservation
-   - Prove `eval_preserves_typing` after direct calls, deref, indirect updates,
-     and let escape are handled.
-
-10. `[later]` Runtime aliasing correspondence
-   - Connect static borrow states to runtime refs and path-prefix conflict.
-
-11. `[future]` Small-step progress
-    - Start only after preservation and runtime reference safety are stable.
-
-### Main Target Theorems
+## Main Target Theorems
 
 Long-term preservation target:
 
@@ -578,7 +152,7 @@ Theorem eval_preserves_typing :
     store_typed env s' Σ' /\ value_has_type env s' v T.
 ```
 
-Long-term checker-to-runtime target:
+Long-term ordinary-checker-to-runtime target:
 
 ```coq
 Theorem infer_full_env_big_step_safe :
@@ -590,7 +164,7 @@ Theorem infer_full_env_big_step_safe :
     value_has_type env s' v (fn_ret f).
 ```
 
-Long-term runtime reference target:
+Runtime reference target:
 
 ```coq
 Theorem eval_no_dangling_refs :
@@ -614,7 +188,33 @@ Theorem step_progress :
 
 `step_progress` must wait for `StepSemantics.v`.
 
-### Required Checks
+## Sub-Agent Policy
+
+Use sub-agents only after the design route is fixed and the task is
+implementation-only.
+
+Before spawning any sub-agent, state why the delegated task is
+implementation-only. Example:
+
+> This task is implementation-only because the canonical checker-safety route
+> and target files are fixed; the worker is only reverting the temporary
+> `roots_exclude x roots1` restriction and updating the corresponding tests.
+
+Do not delegate:
+
+- choosing between ordinary-checker safety and root-checker canonical safety
+- deciding a new invariant
+- comparing proof strategies
+- investigating repository-wide design
+
+Allowed delegation examples:
+
+- reverting the known temporary root-checker restriction in fixed files
+- updating focused regression tests after the expected behavior is fixed
+- proving a named helper lemma whose statement and dependencies are already
+  fixed by the main agent
+
+## Required Checks
 
 Before committing type-system work:
 
@@ -633,301 +233,13 @@ For roadmap-only edits, at minimum run:
 git diff --check
 ```
 
-The `rg` command exits with status 1 when no matches are found; that is success.
+The `rg` command exits with status 1 when no matches are found; that is
+success.
 
-### Commit Policy
+## Commit Policy
 
 After implementation and checks pass, commit with GPG signing disabled:
 
 ```sh
 git commit --no-gpg-sign -m "<short imperative subject>"
 ```
-
-## Historical Roadmap Notes
-
-## 方針
-
-現在の env/stateful 経路では、checker soundness は証明済みである。
-
-- `infer_core_env_state_fuel_structural_sound`
-- `borrow_check_env_structural_sound`
-- `infer_full_env_structural_sound`
-
-ただし、これらは「checker が Prop レベル仕様に対して sound」であることを示す theorem であり、operational semantics まで含む型安全性 theorem ではない。
-
-この roadmap では、`OperationalSemantics.v` の big-step `eval` と `EnvStructuralRules.v` の `typed_env_structural` / `borrow_ok_env_structural` を接続し、段階的に preservation、runtime reference safety、aliasing safety、将来の small-step progress へ進む。
-
-原則:
-
-- checker soundness と type safety を分離する。
-- 最初の target は big-step result typing / preservation とする。
-- progress は現状の big-step semantics では直接表現しにくいため、small-step semantics 導入後に扱う。
-- closure、variant、effect、function generics は、導入と同時に safety invariant を更新する。
-- `Admitted` / `Axiom` は使わない。
-
-## Current Status
-
-Last updated implementation point: direct call preservation is now the active S3 slice. Existing `preservation_ready_expr` remains call-free so `eval_preserves_typing_ready_mutual` stays stable; direct `ECall fname args` is exposed through a separate `preservation_direct_call_ready_expr` wrapper rather than by adding `PRE_Call`. Call runtime semantics already freshens callee function bodies against caller/captured store names before binding parameters, using shared `Renaming.v` definitions. Freshened parameter names are proved fresh/no-duplicate for `bind_params`, and alpha-renamed parameter contexts are connected to `ctx_alpha`. Forward alpha-renaming for structural typing is implemented, including the `typed_env_structural` theorem and a function-level bridge from `alpha_rename_fn_def` to `typed_fn_env_structural` under original parameter `NoDup`. TypeSafety now proves readiness preservation under `alpha_rename_expr` / `alpha_rename_fn_def`, including direct-call-ready preservation, adds lookup bridges that turn `env_fns_preservation_ready` / `env_fns_checked_structural` into freshened callee body ready/typed evidence, and proves ready-fragment preservation under `store_typed_prefix`. Direct `ECall` pre-cleanup callee body preservation is connected through `bind_params_store_typed_prefix`. The root sidecar checker now accepts direct `ECall` with argument-root overapproximation and a soundness theorem. TypeSafety now has parameter-set root exclusion / cleanup helpers for `store_remove_params`, a prefix-compatible root preservation bridge, and a direct-call cleanup bridge proving cleanup preserves the return value typing and caller-visible reference targets when freshened callee root evidence excludes parameter roots. A proof-only `store_frame_scope` invariant now lets the cleanup bridge recover exact `store_typed env (store_remove_params ...) Σ_args`; `eval_preserves_frame_scope_roots_ready_mutual` derives that exact caller-frame evidence from ready/root-aware callee body evaluation, so the cleanup bridge no longer takes an explicit frame-scope premise. Runtime aliasing correspondence, `ECallExpr`, and captured closure refs remain future work.
-
-- S0: `[done]` runtime value/store typing と runtime reference well-formedness の仕様は導入済み。
-- S1: `[done]` path/value/store helper の主要部分と linear partial-move obligation helper/checker fix は導入済み。
-- S2: `[partial]` 個別 preservation helper、`eval_args` helper、direct assign/replace bridge、readiness helper、ready restricted mutual preservation theorem は導入済み。`VHT_Ref` は runtime store 内の参照先 path の存在・型対応を要求する形に強化済み。direct assign/replace は concrete RHS preservation evidence 経由で ready subset に再接続済み。`store_remove` 用の root-exclusion runtime helper、static root provenance judgment、runtime root-within-to-exclusion bridge、ready fragment の root preservation theorem、roots-aware `ELet` bridge、top-level roots-ready `ELet` helper、roots-aware ready mutual preservation theorem、checker-facing root provenance sidecar API と soundness theorem は追加済み。full unrestricted theorem は未完了。
-- S3: `[partial]` call/closure preservation は runtime freshening と parameter freshness/`ctx_alpha` bridge まで実装済み。freshened body typing を `typed_env_structural` へ接続する global alpha-renaming forward theorem と function-level bridge は追加済み。checked structural/root invariants は callee の original parameter `NoDup` を保持し、lookup helpers も追加済み。full call preservation は未完了。
-- S4: `[partial]` checker-to-runtime safety は root sidecar / ready fragment で接続済み。full unrestricted theorem と validator 経由 theorem は未着手。
-- S5: `[partial]` ready/root-provenance fragment で runtime refs の no-dangling theorem、direct ref membership target theorem、static borrow-state no-conflict invariant、pairwise conflict corollary、direct access guard、local annotation lifetime elision rejection は追加済み。runtime aliasing correspondence と captured closure refs は未着手。
-- S6: `[todo]` small-step progress は未着手。
-
-## Target Theorems
-
-最初に欲しい theorem:
-
-```coq
-Theorem eval_preserves_typing :
-  forall env Ω n Σ s e T Σ' s' v,
-    store_typed env s Σ ->
-    typed_env_structural env Ω n Σ e T Σ' ->
-    eval env s e s' v ->
-    store_typed env s' Σ' /\ value_has_type env s' v T.
-
-Theorem infer_full_env_big_step_safe :
-  forall env f T Γ' s s' v,
-    ValidEnv env ->
-    infer_full_env env f = infer_ok (T, Γ') ->
-    initial_store_for_fn f s ->
-    eval env s (fn_body f) s' v ->
-    value_has_type env s' v (fn_ret f).
-```
-
-その後に追加する theorem:
-
-```coq
-Theorem eval_no_dangling_refs :
-  forall env Ω n Σ s e T Σ' s' v,
-    store_typed env s Σ ->
-    typed_env_structural env Ω n Σ e T Σ' ->
-    borrow_ok_env_structural env [] (ctx_of_sctx Σ) e [] ->
-    eval env s e s' v ->
-    refs_wf env s' v /\ store_refs_wf env s'.
-
-Theorem step_progress :
-  forall env Ω n Σ e T,
-    store_typed env [] Σ ->
-    typed_env_structural env Ω n Σ e T Σ ->
-    terminal e \/ exists e' s', step env [] e s' e'.
-```
-
-`step_progress` は small-step semantics 導入後の目標とし、初期 milestone では実装しない。
-
-## Milestones
-
-1. **S0: safety statement 固定** `[done]`
-   - `RuntimeTyping.v` を追加し、runtime value/store の型付け仕様を定義済み。
-   - `value_has_type env s v T` を定義済み。
-   - `store_typed env s Σ` は state 完全一致ではなく `binding_state_refines runtime static` ベースで定義済み。
-   - `runtime_refs_wf env s v` / `store_refs_wf env s` を定義済み。
-   - `borrow_ok_env_structural` は ownership/aliasing invariant として後続 theorem で使い、typing preservation の最小 theorem には混ぜない。
-
-2. **S1: value/path/store helper** `[done]`
-   - `[done]` `value_lookup_path` と `type_lookup_path` の対応を証明済み。
-   - `[done]` `value_update_path` が `value_has_type` を保存することを証明済み。
-   - `[done]` `store_lookup`, `store_update_val`, `store_update_path`, `store_consume_path`, `store_add`, `store_remove` の `store_typed` 保存補題を追加済み。
-   - `[done]` `store_restore_path` は availability 前提付きの `store_typed_restore_available_path` を追加済み。
-   - `[done]` `ctx_merge` 後の store typing は then/else 両側補題を追加済み。
-   - `[done]` struct field value list と `struct_fields` の lookup/update helper を追加済み。
-   - `[done]` linear struct の partial move は、親 binding 全体の消費ではなく、型に基づく linear component ごとの消費義務として表す。
-   - `[done]` `sctx_check_ok` が `st_moved_paths` の prefix conflict だけで linear binding を OK にしないよう、残余 linear obligation を計算する helper と soundness 補題を追加済み（`308496a`）。
-
-3. **S2: big-step preservation / result typing** `[partial]`
-   - `[done]` `EUnit`, literal, `EFn`, `EVar`, direct `EPlace`, `ELet`, `EDrop`, `EIf` の個別 preservation helper を追加済み。
-   - `[done]` struct literal と `eval_struct_fields` の preservation helper を追加済み。
-   - `[done]` `EBorrow` は shared/unique/direct/indirect の result typing helper を追加済み。
-   - `[done]` direct path `EAssign` / `EReplace` を path-aware store helper へ接続済み。
-   - `[done]` root `Eval_Assign` / `Eval_Replace` 用 preservation helper を追加済み。
-   - `[done]` `eval_args_preserves_typing` と `eval_args_values_have_types` を追加済み（`68dfd35`）。
-   - `[done]` direct assign/replace の full `eval` derivation を root/path helper へ接続する bridge lemma を追加済み（`f17beb2`）。
-   - `[done]` runtime/static copy-vs-move mismatch contradiction helper を追加済み（`855577d`）。
-   - `[done]` `preservation_ready_expr` / `preservation_ready_args` / `preservation_ready_fields` と field lookup helper を追加済み（`4675b39`）。
-   - `[done]` `replace p e_new` は target path が `e_new` 評価後も available であることを typing premise として preservation に使う。これは自己消費する `replace s.f s.f` を拒否する既存ガードの証明側の対応である。
-   - `[done]` direct `assign p e_new` も target path が `e_new` 評価後も available であることを typing premise として要求する。
-   - `[done]` `eval`, `eval_args`, `eval_struct_fields` の相互 induction で ready subset 用の `eval_preserves_typing_ready_mutual` を証明済み（`4947081`）。強化後は各 branch が `store_ref_targets_preserved` も返す形に更新済み。
-   - `[done]` `VHT_Ref` を強化し、`VRef x path` が `store_lookup x s`、`value_lookup_path`、`type_lookup_path` で実在する runtime target を指すことを要求するようにした。これに伴い、古い `value_has_type_store_irrelevant` は削除し、`store_ref_targets_preserved` 前提付きの `value_has_type_store_preserved` に置き換えた。
-   - `[done]` `store_update_state` / `store_mark_used` / restore 系の state-only 更新が `store_ref_targets_preserved` を満たす補題を追加済み。
-   - `[done]` direct `assign` / `replace` は、強化後の reference preservation obligation を露出する形に helper を弱め、concrete RHS preservation evidence を渡して root/path の update・restore obligation と ready subset への再接続を完了済み。
-   - `[partial]` direct `let` は、強化後の reference preservation obligation に対する local binding removal / escape invariant が未解決。runtime 側には `value_refs_exclude_root` / `store_refs_exclude_root` と scoped `store_remove` helper を追加済みで、`eval_let_preserves_typing` は false な global remove-preservation premise ではなく root-exclusion premise を要求する形に弱めた。
-   - `[done]` static root provenance として `root_set` / `root_env`、`typed_env_roots` / `typed_args_roots` / `typed_fields_roots`、および既存 `typed_env_structural` への projection lemma を追加済み。checker-facing API として別名 sidecar `infer_core_env_roots` / `infer_env_roots` / `infer_full_env_roots` を追加し、sidecar 成功から `typed_env_roots` を導く soundness theorem も追加済み。
-   - `[done]` `typed_env_roots` の path assign/replace は、field-insensitive summary が untouched field 内の reference root を忘れないよう、既存 binding roots と RHS roots の union で更新する形に修正済み。
-   - `[done]` `typed_env_roots` の `ELet` / `ELetInfer` は、body store に local binding を追加する前に `root_env_lookup x R1 = None` を要求するよう強化済み。
-   - `[done]` `typed_env_roots` の root summaries を runtime 側の `value_refs_exclude_root` / `store_refs_exclude_root` premise へ変換するため、`TypeSafety.v` に `value_roots_within` / `store_roots_within` と exclusion bridge lemma を追加済み。
-   - `[done]` `store_roots_within` の weakening、fresh lookup、`store_add` / `store_remove`、state-only update 用 helper を追加済み。
-   - `[done]` `root_env` / `sctx` / runtime `store` の no-shadow/no-duplicate invariant と、add/remove/state-only/value/path update が名前集合を保存する helper を追加済み。
-   - `[done]` no-shadow 前提付きで、`root_env_remove x` / `store_remove x` 後に `x` lookup が消えることを証明済み。
-   - `[done]` roots-aware update preservation 用に、store 内に対象名が存在しない場合の `root_env_update` 保存 helper と、`value_roots_within` の union weakening helper は追加済み。
-   - `[done]` `value_update_path` / `store_update_val` / `store_update_path` が `store_roots_within` を union summary に対して保存する helper を no-shadow 前提で証明済み。
-   - `[done]` `replace p e_new` の result root summary は `[]` ではなく、置換前 target binding の root summary を返すよう修正済み。
-   - `[done]` `typed_env_roots` / `typed_args_roots` / `typed_fields_roots` が `root_env_no_shadow` を保存する helper を追加済み。
-   - `[done]` provenance-aware preservation theorem 用に、`provenance_ready_*` predicate、field lookup helper、`store_add` の fresh reference-target preservation、store/value path root lookup helper を追加済み。
-   - `[done]` update alignment helper を追加し、runtime `eval_place` が返す `(x,path)` と static `typed_env_roots` summary を direct/path update case で接続済み。
-   - `[done]` `typed_env_roots` を使う strengthened preservation theorem として `eval_preserves_roots_ready_mutual` を追加し、評価結果と出力 store が static root summaries に収まることを `eval` / `eval_args` / `eval_struct_fields` の相互 induction で証明済み。
-   - `[done]` `eval_preserves_roots_ready_mutual` を使って `ELet` の root-exclusion premise を discharge する `eval_let_roots_preserves_typing` を追加済み。
-   - `[done]` subexpression が既存 structural-ready subset に入る top-level `ELet` について、`eval_let_roots_ready_preserves_typing` を追加済み。
-   - `[done]` `eval_let_roots_preserves_typing` を roots-aware ready mutual preservation theorem に組み込み、`ELet` を recursive preservation に戻す。
-   - `[todo]` ready restriction のない full `eval_preserves_typing` を証明する。
-   - `[done]` `typed_env_structural` が binding lookup/type を保存する same-bindings helper を追加し、現在 explicit premise にしている lookup 条件を theorem 本体で導出できるようにした。
-   - `[done]` `EIf` false branch の `store_typed_ctx_merge_right` 用 type-equality premise は branch typing から導出できる helper を追加済み。
-   - `[todo]` indirect `EReplace` / `EAssign`、`EDeref`、`ECall` / `ECallExpr` を preservation theorem へ接続する。
-   - `[todo]` `ELetInfer` の現在の contradiction-only helper を実証明に置き換える。
-   - `[todo]` `let` の local binding への reference escape を禁止する typing/borrow invariant を追加し、`store_remove` が `store_ref_targets_preserved` を満たすことを証明する。
-   - `[done]` `assign` / `replace` の value update が既存 reference target を壊さないことを示すため、`value_has_type` から `type_lookup_path` 対応 path の runtime value 存在を導く補題と、typed `store_update_val` / `store_update_path` の `store_ref_targets_preserved` 補題を追加済み。
-   - `[done]` `borrow` preservation は、direct place の `eval_place` が返す `(x,path)` に対して store target が存在することを typing/store から導出する補題を追加し、direct shared/unique borrow を ready subset に再接続済み。
-   - `[done]` `eval_args` / `eval_struct_fields` の sequencing は、各 step が `store_ref_targets_preserved` を返す相互 preservation theorem に強め、非空 args/fields の ready constructor を復元済み。
-   - `[done]` `EReplace` / `EAssign` は root binding の mutability だけでなく、target path 上の struct field mutability を検査する。少なくとも最終 field は `MMutable` を必須にする。
-   - `[done]` `&mut T` の referent type は invariant にする。`&shared T` は inner type の covariant compatibility を維持してよいが、unique reference は usage/core/lifetime の厳密一致または invariant relation だけを許す。
-   - theorem は `typed_env_structural` から始め、checker theorem は使わない。
-
-4. **S3: function call / current closure value safety** `[todo]`
-   - `VClosure fname captured` の runtime typing を定義する。
-   - `[partial]` 現状の `EFn` は empty capture を返すため、まず `captured = []` の closure safety を証明する。`VClosure fname []` の value typing helper は一部追加済み。
-   - `[partial]` `bind_params` は複数 parameter でも `params_ctx` と同じ順序で store entry を追加するよう修正済み。
-   - `[partial]` call body の runtime store が caller store tail を保持するケースに備え、static context が visible prefix だけを記述する `store_typed_prefix` と基本 lookup/add 補題を追加済み。`bind_params` については parameter no-dup と caller store tail freshness 前提の下で typed-prefix preservation を追加済み。`store_remove_params (bind_params ps vs s) = s` の immediate cleanup roundtrip と、parameter prefix が残る store から caller frame を cleanup する `store_param_prefix` 補題も追加済み。state/value/path update・mark/consume/restore が parameter prefix を保存する構造補題と、`ELet` の local binding を parameter prefix の前に許す scoped prefix relation も追加済み。さらに state/value/path update・mark/consume/restore が scoped prefix を保存する構造補題も追加済み。roots-ready fragment では body evaluation 全体が scoped parameter prefix を保存する `eval_preserves_param_scope_roots_ready_mutual` も追加済み。`initial_root_env_for_params` の names/no-shadow/coverage 補題と、call body 開始 store が parameter scope と root coverage を持つ bridge も追加済み。加えて state/value/path update・mark/consume/restore が `store_typed_prefix` を保存する補題も追加済み。typed prefix の value/path update が caller tail 内の reference target を壊さないことを示す `store_update_val_ref_targets_preserved_prefix` / `store_update_path_ref_targets_preserved_prefix` も追加済み。次は full `ECall` / `ECallExpr` preservation へ接続する invariant を固定する。
-   - `[partial]` `ECall` preservation は、関数 body が typed 済みであることを表す環境前提（`env_fns_typed_structural`）と、runtime `lookup_fn` が typing witness と一致するための関数名一意性前提（`fn_env_unique_by_name`）を使う方針に固定済み。operational lookup helper と、この明示前提を受け取る preservation wrapper API も追加済み。`TES_Call` 単体は callee body typing を含まない。
-   - `bind_params` の typed-prefix preservation は、parameter 名が caller store tail を shadow しない freshness/no-shadow 明示前提で接続済み。次はこの前提を call preservation theorem 側でどの invariant から供給するかを固定する。
-   - `[done]` lifetime substitution 済み引数を元の `fn_params` に bind する bridge として、runtime type 側に lifetime-erased equivalence `ty_lifetime_equiv` を導入し、`VHT_LifetimeEquiv`、`value_has_type_apply_lt_ty`、`eval_args_values_have_types_apply_lt_params_inv` で接続済み。
-   - `[done]` callee parameter 名が caller/captured store tail を shadow しないよう、runtime `ECall` / `ECallExpr` は callee `fn_def` を caller/captured `store_names` に対して freshen してから `bind_params` と body evaluation を行う。
-   - `[done]` freshened parameter は caller store tail に対して fresh/no-dup であること、`apply_lt_params` 後も名前集合が変わらないこと、`eval_args_values_have_types` を `params_alpha` で freshened parameters へ移せることを証明済み。
-   - `[done]` `alpha_rename_params` の返す rename environment を parameter context 順にし、freshened parameter context が元 parameter context の `ctx_alpha` であることを証明済み。
-   - `[partial]` full `ECall` preservation では、freshened callee body の typing を `typed_env_structural` へ接続する global alpha-renaming forward theorem を使う方針に固定済み。forward `ctx_alpha` lookup/update/consume/path/merge、forward typed-place、structural args/fields traversal、`expr_as_place` forward helpers、`typed_env_structural` 本体の forward theorem、`alpha_rename_fn_def_typed_structural_forward` は追加済み。function-level bridge は original parameter `NoDup` を前提にする。checked structural/root invariants は `NoDup (ctx_names (params_ctx (fn_params f)))` を保持し、lookup helpers から call preservation theorem 側へ供給できる形になった。TypeSafety には `env_fns_preservation_ready` と direct-place `place_path` alpha-renaming helper も追加済み。
-   - `[done]` alpha-renaming が readiness を保存することを証明する。`alpha_rename_preservation_ready_expr` / args / fields と `alpha_rename_fn_def_preservation_ready_body` を追加済み。
-   - `[done]` 既存の ready predicate には `PRE_Call` を追加しない。direct `ECall fname args` は top-level の `preservation_direct_call_ready_expr` wrapper で扱い、既存 ready mutual theorem を壊さない。
-   - `[done]` operational `lookup_fn` と runtime freshening 後の callee body について、ready / typed evidence を得る bridge を追加済み。
-   - `[done]` ready fragment の `store_typed_prefix` 版 preservation theorem と、direct `ECall` の pre-cleanup callee body preservation bridge を追加済み。freshened body typing、freshened body readiness、`bind_params_store_typed_prefix`、lifetime-substituted argument typing を接続する。
-   - `[done]` root sidecar checker / Prop-level root typing は direct `ECall` を扱う。`typed_args_roots` で引数 root summary を収集し、call result roots は `root_sets_union arg_roots` の安全側 overapproximation とする。`ECallExpr` は引き続き `ErrNotImplemented`。
-   - `[done]` `store_remove_params` 後の final preservation 用に、parameter name set 全体の root exclusion predicate / boolean soundness と `store_remove_params_cleanup_excludes` を追加済み。freshened callee body の prefix-compatible root preservation と parameter-scope evidence を cleanup helper に接続し、cleanup 後の return value typing と caller-visible `store_ref_targets_preserved` は証明済み。`store_frame_scope` evidence から `store_typed env (store_remove_params ...) Σ_args` も復元できる。`store_frame_static_fresh` と exact-frame store operation helper、`ELet` remove/context-remove 対応補題、`eval_preserves_frame_scope_roots_ready_mutual` は追加済み。cleanup bridge は callee body evaluation から exact frame evidence を導出するため、明示 frame premise は不要になった。
-   - `ECallExpr` の preservation は empty-capture closure call から始め、captured store invariant が固定されるまで non-empty capture は扱わない。
-   - 将来の closure 導入前に、captured store の型付け invariant をこの milestone で固定する。
-
-5. **S4: checker-to-runtime end-to-end safety** `[partial]`
-   - `infer_full_env_structural_sound` を使って、checker 成功から big-step safety theorem へ接続する。
-   - `[done]` `initial_store_for_fn env f s` を定義し、関数引数 store と `params_ctx` の対応を runtime store typing として固定する。
-   - `[done]` `initial_root_env_for_params` / `initial_root_env_for_fn` を定義し、names/no-shadow/coverage helper を追加する。
-   - `[done]` root sidecar checker 成功から ready fragment の big-step result typing を導く `infer_full_env_roots_big_step_safe_ready` を追加する。
-   - `infer_full_env_big_step_safe` を追加する。
-   - Validator 経由 theorem として `validate_env` / `validate_fns` 成功後の safety theorem を追加する。
-
-6. **S5: borrow/runtime reference safety** `[partial]`
-   - `[done]` `value_has_type` / `store_typed` から `runtime_refs_wf` / `store_refs_wf` を導く bridge lemma を追加する。
-   - `[done]` ready/root-provenance fragment の `eval_no_dangling_refs_roots_ready` を追加する。
-   - `[done]` root sidecar checker 成功から ready fragment の no-dangling refs を導く `infer_full_env_roots_no_dangling_refs_ready` を追加する。
-   - `[done]` direct `VRef x path` が指す store path が存在し、型が対応することを `runtime_refs_wf_ref_target` と refs-in target theorem 群で証明する。
-   - `[done]` non-captured closure fragment 用の `refs_in_value` / `refs_in_store` を定義する。captured closure refs は scoped closure-store invariant まで defer する。
-   - `[done]` static active borrow state の no-conflict invariant `pbs_no_conflicts` を定義し、`borrow_ok_env_structural` / `borrow_check_env` が保存することを証明する。
-   - `[done]` `pbs_no_conflicts` から shared/mut と distinct mut/mut の pairwise no-conflict corollary を導き、`borrow_check_env` 成功後にも接続する。
-   - `borrow_ok_env_structural` と runtime refs の対応 invariant を導入する。
-   - `[done]` borrow 中の元 place に対する通常の `EVar` / direct `EPlace` read/move を active borrow state と照合する。
-   - `[done]` conflicting unique borrow がある direct place は read/copy/move/update を禁止する。conflicting shared borrow がある direct place は affine/linear move と mutable update を禁止し、unrestricted copy は許可する。indirect place は後続 slice に残す。
-   - reference value の `drop` は borrow release として扱わない。`drop r; drop x` のように参照の最後の使用後に元 place を再利用するケースは、後続の non-lexical lifetime / last-use analysis で borrow end point を推論して解決する。
-   - `let` 境界で、削除される local binding に由来する reference が body result や store に escape しないことを検査・証明する。必要なら fresh let-region を導入するが、最初は escape check で進める。
-   - `[done]` local type annotation の lifetime elision が `LVar 0` 固定にならないよう、local annotation 内の elided lifetime は当面拒否する。fresh local region 導入は後続拡張に残す。
-   - dangling reference が評価結果・store に残らないことを theorem 化する。
-   - path prefix conflict に基づく aliasing safety は、shared/mut の runtime ref set を導入して段階的に証明する。
-
-7. **S6: small-step semantics と progress** `[todo]`
-   - `StepSemantics.v` を追加し、`step env s e s' e'` と `terminal` を定義する。
-   - big-step preservation で得た helper を再利用し、small-step preservation を証明する。
-   - closed expression または well-typed runtime configuration に対して `progress` / `not_stuck` を証明する。
-   - divergence は progress theorem で扱い、big-step result theorem とは分離する。
-
-8. **S7: future feature gates** `[todo]`
-   - closure:
-     - captured environment の store typing と borrow invariant を追加する。
-     - closure escaping と lifetime/borrow の関係を safety theorem に反映する。
-   - function generics:
-     - runtime type erasure の補題を追加する。
-     - type/lifetime substitution が `value_has_type` と `store_typed` を保存することを証明する。
-   - generic trait:
-     - `[done]` trait impl の type argument 数が trait 定義と一致することを OCaml frontend validation で検証する。trait impl target の lifetime argument は、Rocq `trait_def` が type parameter だけを持つため拒否する。
-     - `[done]` bound 側で `Trait<Args...>` を表現し、struct literal の bound check で trait args を使う。
-     - `[done]` frontend / validator で impl の trait 自身の bounds を検査する。
-     - generic trait の checker/runtime 接続は、trait-bound recursion や impl 側 `where` clause が必要になった時点で再評価する。
-   - variant:
-     - variant value typing、constructor typing、match exhaustiveness safety を追加する。
-     - pattern match の preservation/progress を追加する。
-   - effect:
-     - `eval` / `step` の result を value から effectful outcome へ拡張するかを決める。
-     - preservation statement を effect row/capability を含む形に更新する。
-
-## Implementation Order
-
-1. `[done]` `RuntimeTyping.v` を追加して S0/S1 の定義と主要 store helper を証明する。
-2. `[partial]` `TypeSafety.v` を追加して S2 の個別 preservation helper を基本式から始める。
-3. `[done]` `typed_env_structural` の same-bindings lookup helper を追加し、assign/replace helper の explicit lookup premise を theorem 本体で導出できるようにする。
-4. `[done]` `eval`, `eval_args`, `eval_struct_fields` の ready restricted mutual preservation theorem を追加し、既存 helper を constructor ごとに接続する。
-5. `[done]` direct update bridge の callback shape を concrete RHS evaluation 用に分け、direct assign/replace を ready subset に戻す。
-6. `[partial]` `ELet` / `ELetInfer` の local binding removal 用 runtime root-exclusion helper を追加し、let preservation helper を scoped premise へ弱める。
-7. `[partial]` root-sensitive provenance summary を Prop-level typing に追加し、既存 structural typing へ project できることを証明する。
-8. `[partial]` root summaries から runtime exclusion への bridge を追加する。
-9. `[done]` root provenance の path update rules を union ベースに直し、let freshness premise と runtime root helper を追加する。
-10. `[done]` `root_env` / `store` / `sctx` の no-shadow/no-duplicate binding invariant を追加し、`root_env_remove` / name-preserving store/context update helper をその invariant 前提で証明する。
-11. `[done]` `store_update_val` / `store_update_path` の roots-aware preservation helper を no-shadow 前提で証明する。
-12. `[done]` update alignment helper を追加して provenance-aware preservation theorem を完成させ、評価結果と出力 store が static root summaries に収まることを証明する。
-13. `[done]` `eval_preserves_roots_ready_mutual` を使って `ELet` の root-exclusion premise を discharge する bridge を追加する。
-14. `[done]` roots-aware ready mutual preservation theorem を追加し、`ELet` bridge を recursive preservation に組み込む。
-15. `[done]` checker が root provenance を返す executable interface を追加する。`infer_core_env_roots` / `infer_env_roots` / `infer_full_env_roots` は追加済み。
-16. `[done]` sidecar checker 成功から `typed_env_roots` を導く soundness theorem を追加する。
-17. `[done]` sidecar root soundness を使って S4 の checker-to-runtime 接続を ready fragment で開始する。
-18. `[partial]` `EnvRuntimeSafety.v` に root sidecar / ready fragment の `infer_full_env_roots_big_step_safe_ready` を追加する。full `infer_full_env_big_step_safe` と `ValidatorSoundness.v` 経由 theorem は未完了。
-19. `[partial]` `RuntimeRefSafety.v` に ready/root-provenance fragment の no-dangling runtime reference theorem 群と direct ref membership target theorem 群を追加し、`BorrowStateSafety.v` に static borrow-state no-conflict invariant と pairwise conflict corollary を追加する。`borrow_check_env` は direct `EVar` / `EPlace` access を active borrow state と照合済み。OCaml lowering は local annotation の elided reference lifetime を拒否済み。runtime aliasing correspondence、non-lexical lifetime / last-use based borrow end points、indirect place access、captured closure refs は未完了。
-20. `[partial]` S3 call preservation の準備として、typed prefix の value/path update が caller tail 内の reference target を保存する補題を追加する。
-21. `[done]` call runtime semantics で callee `fn_def` を caller/captured store names に対して freshen し、freshened parameters の no-shadow/no-dup と `bind_params` premise bridge を追加する。
-22. `[done]` freshened parameter context を `ctx_alpha` に接続する補題を追加する。
-23. `[partial]` freshened callee body typing を `typed_env_structural` へ移す方針は global alpha-renaming forward theorem に固定済み。forward `ctx_alpha`/typed-place/args/fields/`expr_as_place` helper、`typed_env_structural` 本体の forward theorem、function-level bridge、`env_fns_preservation_ready`、direct-place `place_path` alpha-renaming helper、readiness alpha-renaming preservation、`preservation_direct_call_ready_expr` wrapper、lookup-to-freshened-callee ready/typed bridge、ready-prefix preservation theorem、direct `ECall` pre-cleanup body preservation bridge、root sidecar direct `ECall` checker/soundness、parameter-set cleanup exclusion helpers、prefix-compatible root preservation bridge、cleanup 後の return value / caller-visible reference preservation bridge、`eval_preserves_frame_scope_roots_ready_mutual` による cleanup exact typing bridge、`store_frame_static_fresh` と exact-frame store operation helper、`ELet` remove/context-remove 対応補題は追加済み。次は direct-call preservation wrapper 本体に cleanup result を接続し、`ECallExpr` は captured store invariant 固定後に扱う。
-24. `[todo]` small-step semantics が必要になった時点で S6 を開始する。
-
-## Acceptance Criteria
-
-各 milestone 完了時:
-
-```sh
-cd rocq && make -B
-rg -n "\bAxiom\b|Admitted\." rocq/theories
-git diff --check
-```
-
-S4 以降:
-
-```sh
-dune build
-bash tests/run.sh
-sh tests/fir/run.sh
-```
-
-review 指摘に対応する regression:
-
-- `[done]` borrow 中の direct root/field を move/read する式は拒否される。indirect place は後続 slice。
-- `[todo]` reference の最後の使用後に元 root/field の direct move/read を再び許可する。これは `drop` を release primitive にせず、non-lexical lifetime / last-use analysis で解決する。
-- `[todo]` inner `let` の local binding への reference が外側へ escape する式は拒否される。
-- `[done]` linear struct の一部 field だけを move/drop して残りの linear field を放置する式は拒否される。
-- `[done]` `replace x x` / `replace s.f s.f` のように target を new value 評価中に消費する式は拒否され続ける。
-- `[done]` moved target への direct `assign` は拒否される。
-- `[done]` immutable field への assign/replace は、root binding が mutable でも拒否される。
-- `[done]` `&mut unrestricted T` を `&mut affine T` など異なる referent type として使う式は拒否される。
-- `[done]` local annotation の elided lifetime は拒否される。
-- `[done]` generic trait は impl arity/type argument validation、bound 側 `Trait<Args...>`、trait 自身の bounds 反映を追加済み。
-
-型安全性 roadmap の初期完了条件:
-
-- `[done]` ready restricted `eval_preserves_typing_ready_mutual` が `typed_env_structural` から証明されている。
-- `[todo]` unrestricted `eval_preserves_typing` が `typed_env_structural` から証明されている。
-- `[todo]` `infer_full_env_big_step_safe` が checker 成功 theorem と接続されている。
-- `[todo]` `VRef` の dangling reference safety が theorem として独立している。
-- `[done]` progress は small-step milestone へ明示的に分離されている。
-
-## Known Risks
-
-- 現在の `eval` は big-step なので、非停止や stuck state の一般的な progress は表現できない。
-- `typed_env_structural` は static context、`eval` は runtime store を扱うため、`store_typed` の設計が後続 proof の難易度を決める。
-- `VClosure fname captured` は将来の closure 実装で大きく変わる可能性があるため、captured store invariant を早めに固定する必要がある。
-- borrow checker の static `path_borrow_state` と runtime refs の対応は未定義なので、aliasing safety は preservation とは別 milestone にする。
-- `plan/review.md` の指摘は古い extracted artifact の行番号を参照しているため、roadmap では行番号ではなく semantic issue として追跡する。
-- 強化後の `VHT_Ref` により、従来の「value typing は store に依存しない」という仮定は使えない。今後の preservation は store typing だけでなく、評価が既存 reference target を保存することを明示的に運ぶ必要がある。
-- `store_remove x` は `VRef x _` を含む surviving value があると `value_has_type` を壊すため、global な `store_ref_targets_preserved env s (store_remove x s)` は false。`ELet` preservation は root-sensitive provenance summary を static typing/checker に追加するまで ready theorem へ再接続できない。
-- root provenance は Prop-level API と別名 sidecar checker API の両方に存在し、sidecar 成功から `typed_env_roots` を導く soundness theorem は追加済み。checker-to-runtime theorem へ接続するには、初期 root environment と runtime store root invariant の対応を固定する必要がある。

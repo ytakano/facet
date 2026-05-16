@@ -3012,6 +3012,420 @@ Proof.
   - exact Hscope.
 Qed.
 
+Definition store_frame_static_fresh (Σ : sctx) (frame : store) : Prop :=
+  forall x,
+    In x (ctx_names Σ) ->
+    ~ In x (store_names frame).
+
+Lemma store_frame_static_fresh_same_names :
+  forall Σ Σ' frame,
+    ctx_names Σ' = ctx_names Σ ->
+    store_frame_static_fresh Σ frame ->
+    store_frame_static_fresh Σ' frame.
+Proof.
+  intros Σ Σ' frame Hnames Hfresh x Hin.
+  apply Hfresh. rewrite <- Hnames. exact Hin.
+Qed.
+
+Lemma store_frame_static_fresh_same_bindings :
+  forall Σ Σ' frame,
+    sctx_same_bindings Σ Σ' ->
+    store_frame_static_fresh Σ frame ->
+    store_frame_static_fresh Σ' frame.
+Proof.
+  intros Σ Σ' frame Hsame Hfresh.
+  eapply store_frame_static_fresh_same_names.
+  - apply sctx_same_bindings_names_alpha. exact Hsame.
+  - exact Hfresh.
+Qed.
+
+Lemma store_frame_static_fresh_add :
+  forall Σ frame x T m,
+    store_frame_static_fresh Σ frame ->
+    ~ In x (store_names frame) ->
+    store_frame_static_fresh (sctx_add x T m Σ) frame.
+Proof.
+  unfold store_frame_static_fresh, sctx_add, ctx_add.
+  intros Σ frame x T m Hfresh Hnotin y Hin.
+  simpl in Hin. destruct Hin as [Heq | Hin].
+  - subst y. exact Hnotin.
+  - apply Hfresh. exact Hin.
+Qed.
+
+Lemma ctx_names_remove_in :
+  forall x y Σ,
+    In y (ctx_names (sctx_remove x Σ)) ->
+    In y (ctx_names Σ).
+Proof.
+  unfold sctx_remove.
+  intros x y Σ.
+  induction Σ as [| [[[z T] st] m] rest IH]; intros Hin; simpl in *.
+  - contradiction.
+  - destruct (ident_eqb x z) eqn:Heq.
+    + right. exact Hin.
+    + simpl in Hin. destruct Hin as [Heq_y | Hin].
+      * left. exact Heq_y.
+      * right. apply IH. exact Hin.
+Qed.
+
+Lemma store_frame_static_fresh_remove :
+  forall Σ frame x,
+    store_frame_static_fresh Σ frame ->
+    store_frame_static_fresh (sctx_remove x Σ) frame.
+Proof.
+  unfold store_frame_static_fresh.
+  intros Σ frame x Hfresh y Hin.
+  apply Hfresh. eapply ctx_names_remove_in. exact Hin.
+Qed.
+
+Lemma store_update_state_not_in_names :
+  forall x f s,
+    ~ In x (store_names s) ->
+    store_update_state x f s = None.
+Proof.
+  intros x f s Hnotin.
+  induction s as [| se rest IH]; simpl; try reflexivity.
+  destruct (ident_eqb x (se_name se)) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst x.
+    contradiction Hnotin. left. reflexivity.
+  - rewrite IH; try reflexivity.
+    intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma store_update_val_not_in_names :
+  forall x v s,
+    ~ In x (store_names s) ->
+    store_update_val x v s = None.
+Proof.
+  intros x v s Hnotin.
+  induction s as [| se rest IH]; simpl; try reflexivity.
+  destruct (ident_eqb x (se_name se)) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst x.
+    contradiction Hnotin. left. reflexivity.
+  - rewrite IH; try reflexivity.
+    intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma store_update_path_not_in_names :
+  forall x path v s,
+    ~ In x (store_names s) ->
+    store_update_path x path v s = None.
+Proof.
+  intros x path v s Hnotin.
+  induction s as [| se rest IH]; simpl; try reflexivity.
+  destruct (ident_eqb x (se_name se)) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst x.
+    contradiction Hnotin. left. reflexivity.
+  - rewrite IH; try reflexivity.
+    intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma store_mark_used_not_in_names :
+  forall x s,
+    ~ In x (store_names s) ->
+    store_mark_used x s = s.
+Proof.
+  intros x s Hnotin.
+  induction s as [| se rest IH]; simpl; try reflexivity.
+  destruct (ident_eqb x (se_name se)) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst x.
+    contradiction Hnotin. left. reflexivity.
+  - rewrite IH; try reflexivity.
+    intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma store_remove_not_in_names :
+  forall x s,
+    ~ In x (store_names s) ->
+    store_remove x s = s.
+Proof.
+  intros x s Hnotin.
+  induction s as [| se rest IH]; simpl; try reflexivity.
+  destruct (ident_eqb x (se_name se)) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst x.
+    contradiction Hnotin. left. reflexivity.
+  - rewrite IH; try reflexivity.
+    intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma store_param_prefix_update_state_same_frame :
+  forall ps s_param frame x f s',
+    store_param_prefix ps s_param frame ->
+    ~ In x (store_names frame) ->
+    store_update_state x f s_param = Some s' ->
+    store_param_prefix ps s' frame.
+Proof.
+  intros ps s_param frame x f s' Hprefix.
+  revert x f s'.
+  induction Hprefix as [frame | p ps v st s_param frame Hprefix IH];
+    intros x f s' Hnotin Hupdate.
+  - rewrite store_update_state_not_in_names in Hupdate; try assumption.
+    discriminate.
+  - simpl in Hupdate.
+    destruct (ident_eqb x (param_name p)) eqn:Heq.
+    + inversion Hupdate; subst. constructor. exact Hprefix.
+    + destruct (store_update_state x f s_param) as [s_param' |]
+        eqn:Htail; try discriminate.
+      inversion Hupdate; subst. constructor.
+      eapply IH; eassumption.
+Qed.
+
+Lemma store_param_prefix_mark_used_same_frame :
+  forall ps s_param frame x,
+    store_param_prefix ps s_param frame ->
+    ~ In x (store_names frame) ->
+    store_param_prefix ps (store_mark_used x s_param) frame.
+Proof.
+  intros ps s_param frame x Hprefix.
+  induction Hprefix as [frame | p ps v st s_param frame Hprefix IH];
+    intros Hnotin.
+  - rewrite store_mark_used_not_in_names; [constructor | exact Hnotin].
+  - simpl. destruct (ident_eqb x (param_name p)); constructor.
+    + exact Hprefix.
+    + apply IH. exact Hnotin.
+Qed.
+
+Lemma store_param_prefix_update_val_same_frame :
+  forall ps s_param frame x v_new s',
+    store_param_prefix ps s_param frame ->
+    ~ In x (store_names frame) ->
+    store_update_val x v_new s_param = Some s' ->
+    store_param_prefix ps s' frame.
+Proof.
+  intros ps s_param frame x v_new s' Hprefix.
+  revert x v_new s'.
+  induction Hprefix as [frame | p ps v st s_param frame Hprefix IH];
+    intros x v_new s' Hnotin Hupdate.
+  - rewrite store_update_val_not_in_names in Hupdate; try assumption.
+    discriminate.
+  - simpl in Hupdate.
+    destruct (ident_eqb x (param_name p)) eqn:Heq.
+    + inversion Hupdate; subst. constructor. exact Hprefix.
+    + destruct (store_update_val x v_new s_param) as [s_param' |]
+        eqn:Htail; try discriminate.
+      inversion Hupdate; subst. constructor.
+      eapply IH; eassumption.
+Qed.
+
+Lemma store_param_prefix_update_path_same_frame :
+  forall ps s_param frame x path v_new s',
+    store_param_prefix ps s_param frame ->
+    ~ In x (store_names frame) ->
+    store_update_path x path v_new s_param = Some s' ->
+    store_param_prefix ps s' frame.
+Proof.
+  intros ps s_param frame x path v_new s' Hprefix.
+  revert x path v_new s'.
+  induction Hprefix as [frame | p ps v st s_param frame Hprefix IH];
+    intros x path v_new s' Hnotin Hupdate.
+  - rewrite store_update_path_not_in_names in Hupdate; try assumption.
+    discriminate.
+  - simpl in Hupdate.
+    destruct (ident_eqb x (param_name p)) eqn:Heq.
+    + destruct (value_update_path v path v_new) as [v' |] eqn:Hvalue;
+        try discriminate.
+      inversion Hupdate; subst. constructor. exact Hprefix.
+    + destruct (store_update_path x path v_new s_param) as [s_param' |]
+        eqn:Htail; try discriminate.
+      inversion Hupdate; subst. constructor.
+      eapply IH; eassumption.
+Qed.
+
+Lemma store_param_prefix_remove_non_param_same_frame :
+  forall ps s_param frame x,
+    store_param_prefix ps s_param frame ->
+    ~ In x (ctx_names (params_ctx ps)) ->
+    ~ In x (store_names frame) ->
+    store_param_prefix ps (store_remove x s_param) frame.
+Proof.
+  intros ps s_param frame x Hprefix.
+  induction Hprefix as [frame | p ps v st s_param frame Hprefix IH];
+    intros Hnotin_param Hnotin_frame.
+  - rewrite store_remove_not_in_names; [constructor | exact Hnotin_frame].
+  - simpl in Hnotin_param.
+    simpl. destruct (ident_eqb x (param_name p)) eqn:Heq.
+    + apply ident_eqb_eq in Heq. subst x.
+      contradiction Hnotin_param. left. reflexivity.
+    + constructor. apply IH.
+      * intros Hin. apply Hnotin_param. right. exact Hin.
+      * exact Hnotin_frame.
+Qed.
+
+Lemma store_frame_scope_update_state :
+  forall ps Σ s_param frame x f s',
+    In x (ctx_names Σ) ->
+    store_frame_static_fresh Σ frame ->
+    store_frame_scope ps Σ s_param frame ->
+    store_update_state x f s_param = Some s' ->
+    store_frame_scope ps Σ s' frame.
+Proof.
+  intros ps Σ s_param frame x f s' HinΣ Hfresh Hscope.
+  revert x f s' HinΣ.
+  induction Hscope as
+    [s_param frame Hprefix
+    | se s_param frame Hnotin Hin_se Hscope_tail IH];
+    intros x f s' HinΣ Hupdate.
+  - constructor.
+    eapply store_param_prefix_update_state_same_frame.
+    + exact Hprefix.
+    + apply Hfresh. exact HinΣ.
+    + exact Hupdate.
+  - simpl in Hupdate.
+    destruct (ident_eqb x (se_name se)) eqn:Heq.
+    + inversion Hupdate; subst.
+      econstructor; eassumption.
+    + destruct (store_update_state x f s_param) as [s_param' |]
+        eqn:Htail; try discriminate.
+      inversion Hupdate; subst.
+      econstructor 2.
+      * exact Hnotin.
+      * exact Hin_se.
+      * eapply IH.
+        -- exact Hfresh.
+        -- exact HinΣ.
+        -- exact Htail.
+Qed.
+
+Lemma store_frame_scope_mark_used :
+  forall ps Σ s_param frame x,
+    In x (ctx_names Σ) ->
+    store_frame_static_fresh Σ frame ->
+    store_frame_scope ps Σ s_param frame ->
+    store_frame_scope ps Σ (store_mark_used x s_param) frame.
+Proof.
+  intros ps Σ s_param frame x HinΣ Hfresh Hscope.
+  induction Hscope as
+    [s_param frame Hprefix
+    | se s_param frame Hnotin Hin_se Hscope_tail IH].
+  - constructor.
+    eapply store_param_prefix_mark_used_same_frame.
+    + exact Hprefix.
+    + apply Hfresh. exact HinΣ.
+  - simpl.
+    destruct (ident_eqb x (se_name se)).
+    + econstructor; eassumption.
+    + econstructor 2.
+      * exact Hnotin.
+      * exact Hin_se.
+      * exact (IH Hfresh).
+Qed.
+
+Lemma store_frame_scope_update_val :
+  forall ps Σ s_param frame x v_new s',
+    In x (ctx_names Σ) ->
+    store_frame_static_fresh Σ frame ->
+    store_frame_scope ps Σ s_param frame ->
+    store_update_val x v_new s_param = Some s' ->
+    store_frame_scope ps Σ s' frame.
+Proof.
+  intros ps Σ s_param frame x v_new s' HinΣ Hfresh Hscope.
+  revert x v_new s' HinΣ.
+  induction Hscope as
+    [s_param frame Hprefix
+    | se s_param frame Hnotin Hin_se Hscope_tail IH];
+    intros x v_new s' HinΣ Hupdate.
+  - constructor.
+    eapply store_param_prefix_update_val_same_frame.
+    + exact Hprefix.
+    + apply Hfresh. exact HinΣ.
+    + exact Hupdate.
+  - simpl in Hupdate.
+    destruct (ident_eqb x (se_name se)) eqn:Heq.
+    + inversion Hupdate; subst.
+      econstructor; eassumption.
+    + destruct (store_update_val x v_new s_param) as [s_param' |]
+        eqn:Htail; try discriminate.
+      inversion Hupdate; subst.
+      econstructor 2; try eassumption.
+      eapply IH; eassumption.
+Qed.
+
+Lemma store_frame_scope_update_path :
+  forall ps Σ s_param frame x path v_new s',
+    In x (ctx_names Σ) ->
+    store_frame_static_fresh Σ frame ->
+    store_frame_scope ps Σ s_param frame ->
+    store_update_path x path v_new s_param = Some s' ->
+    store_frame_scope ps Σ s' frame.
+Proof.
+  intros ps Σ s_param frame x path v_new s' HinΣ Hfresh Hscope.
+  revert x path v_new s' HinΣ.
+  induction Hscope as
+    [s_param frame Hprefix
+    | se s_param frame Hnotin Hin_se Hscope_tail IH];
+    intros x path v_new s' HinΣ Hupdate.
+  - constructor.
+    eapply store_param_prefix_update_path_same_frame.
+    + exact Hprefix.
+    + apply Hfresh. exact HinΣ.
+    + exact Hupdate.
+  - simpl in Hupdate.
+    destruct (ident_eqb x (se_name se)) eqn:Heq.
+    + destruct (value_update_path (se_val se) path v_new) as [v' |]
+        eqn:Hvalue; try discriminate.
+      inversion Hupdate; subst.
+      econstructor; eassumption.
+    + destruct (store_update_path x path v_new s_param) as [s_param' |]
+        eqn:Htail; try discriminate.
+      inversion Hupdate; subst.
+      econstructor 2; try eassumption.
+      eapply IH; eassumption.
+Qed.
+
+Lemma store_frame_scope_restore_path :
+  forall ps Σ s_param frame x path s',
+    In x (ctx_names Σ) ->
+    store_frame_static_fresh Σ frame ->
+    store_frame_scope ps Σ s_param frame ->
+    store_restore_path x path s_param = Some s' ->
+    store_frame_scope ps Σ s' frame.
+Proof.
+  intros ps Σ s_param frame x path s' HinΣ Hfresh Hscope Hrestore.
+  unfold store_restore_path in Hrestore.
+  eapply store_frame_scope_update_state; eassumption.
+Qed.
+
+Lemma store_frame_scope_consume_path :
+  forall ps Σ s_param frame x path s',
+    In x (ctx_names Σ) ->
+    store_frame_static_fresh Σ frame ->
+    store_frame_scope ps Σ s_param frame ->
+    store_consume_path x path s_param = Some s' ->
+    store_frame_scope ps Σ s' frame.
+Proof.
+  intros ps Σ s_param frame x path s' HinΣ Hfresh Hscope Hconsume.
+  unfold store_consume_path in Hconsume.
+  destruct (store_lookup x s_param) as [se |] eqn:Hlookup; try discriminate.
+  destruct (binding_available_b (se_state se) path) eqn:Havailable;
+    try discriminate.
+  eapply store_frame_scope_update_state; eassumption.
+Qed.
+
+Lemma store_frame_scope_remove_non_param :
+  forall ps Σ s_param frame x,
+    In x (ctx_names Σ) ->
+    store_frame_static_fresh Σ frame ->
+    store_frame_scope ps Σ s_param frame ->
+    ~ In x (ctx_names (params_ctx ps)) ->
+    store_frame_scope ps Σ (store_remove x s_param) frame.
+Proof.
+  intros ps Σ s_param frame x HinΣ Hfresh Hscope Hnotin.
+  induction Hscope as
+    [s_param frame Hprefix
+    | se s_param frame Hse_notin Hin_se Hscope_tail IH].
+  - constructor.
+    eapply store_param_prefix_remove_non_param_same_frame.
+    + exact Hprefix.
+    + exact Hnotin.
+    + apply Hfresh. exact HinΣ.
+  - simpl. destruct (ident_eqb x (se_name se)) eqn:Heq.
+    + exact Hscope_tail.
+    + econstructor 2.
+      * exact Hse_notin.
+      * exact Hin_se.
+      * apply IH. exact Hfresh.
+Qed.
+
 Lemma store_param_prefix_lookup_param_or_frame :
   forall ps s_param frame x se,
     store_param_prefix ps s_param frame ->

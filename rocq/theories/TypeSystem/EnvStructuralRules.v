@@ -278,6 +278,29 @@ Proof.
       end.
 Qed.
 
+Lemma sctx_entry_same_binding_sym :
+  forall ce1 ce2,
+    sctx_entry_same_binding ce1 ce2 ->
+    sctx_entry_same_binding ce2 ce1.
+Proof.
+  intros [[[x1 T1] st1] m1] [[[x2 T2] st2] m2] Hsame.
+  inversion Hsame; subst.
+  constructor.
+Qed.
+
+Lemma sctx_same_bindings_sym :
+  forall Σ1 Σ2,
+    sctx_same_bindings Σ1 Σ2 ->
+    sctx_same_bindings Σ2 Σ1.
+Proof.
+  intros Σ1 Σ2 Hsame.
+  induction Hsame as [|ce1 ce2 Σ1_tail Σ2_tail Hhead Htail IH].
+  - constructor.
+  - constructor.
+    + apply sctx_entry_same_binding_sym. exact Hhead.
+    + exact IH.
+Qed.
+
 Lemma sctx_same_bindings_lookup :
   forall Σ1 Σ2 x T st,
     sctx_same_bindings Σ1 Σ2 ->
@@ -428,6 +451,18 @@ Proof.
     constructor.
     + constructor.
     + eapply IH. exact Htail.
+Qed.
+
+Lemma ctx_merge_same_bindings_right :
+  forall Σ2 Σ3 Σ4,
+    sctx_same_bindings Σ2 Σ3 ->
+    ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
+    sctx_same_bindings Σ3 Σ4.
+Proof.
+  intros Σ2 Σ3 Σ4 Hsame Hmerge.
+  eapply sctx_same_bindings_trans.
+  - apply sctx_same_bindings_sym. exact Hsame.
+  - eapply ctx_merge_same_bindings_left. exact Hmerge.
 Qed.
 
 Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)

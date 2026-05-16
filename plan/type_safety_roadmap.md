@@ -1,5 +1,244 @@
 # Type Safety Roadmap
 
+## Codex Implementation Guide
+
+This top section is the canonical guide for the next implementation turns. The
+older milestone log below is retained as historical detail; prefer this section
+when deciding the next task.
+
+Treat Rocq definitions as the source of truth. Do not add `Axiom`, `Admitted`,
+or `Abort`, and do not weaken linearity, borrow, or reference-target safety to
+make a proof pass.
+
+If a task requires deciding a new invariant, changing semantics, or choosing
+between proof strategies, stop and report the design issue. Use sub-agents only
+for implementation-only tasks whose target files, expected behavior, and proof
+shape are already fixed.
+
+### Active Slice
+
+Finish direct `ECall fname args` preservation by connecting the existing cleanup
+result into the direct-call preservation wrapper.
+
+Important boundaries:
+
+- Do not add direct calls to `preservation_ready_expr`.
+- Keep `eval_preserves_typing_ready_mutual` call-free.
+- Use the separate direct-call wrapper, currently
+  `preservation_direct_call_ready_expr`.
+- Do not start `ECallExpr` in the active slice.
+- Do not handle non-empty captured closure stores until a captured-store
+  invariant is designed.
+
+### Fixed Design Decisions
+
+- Big-step preservation comes before progress.
+- Progress is deferred until a future small-step semantics exists.
+- Checker soundness and runtime type safety stay separate.
+- Root provenance is a sidecar API:
+  - `infer_core_env_roots`
+  - `infer_env_roots`
+  - `infer_full_env_roots`
+- Updating the sidecar API requires updating its soundness theorem.
+- Direct `ECall` root typing uses argument-root overapproximation:
+  `root_sets_union arg_roots`.
+- Runtime call semantics freshens callee function definitions against
+  caller/captured store names before `bind_params`.
+- Direct-call preservation uses freshened callee body evidence obtained through
+  alpha-renaming bridges.
+- Reference `drop` does not release a borrow. Cases like `drop r; drop x` are
+  deferred to future non-lexical lifetime / last-use analysis.
+- Local annotation lifetime elision remains rejected until fresh local lifetime
+  regions are designed.
+- Same-argument-name parameters in one function are rejected.
+- Duplicate-parameter and shadowing errors should stay distinguishable.
+
+### Current Proof Inventory
+
+Already available for the direct `ECall` proof:
+
+- Runtime `ECall` / `ECallExpr` freshens callee `fn_def` against
+  caller/captured store names before binding parameters.
+- `bind_params` preserves parameter order and has typed-prefix preservation
+  under no-dup/freshness premises.
+- `store_typed_prefix` describes a caller tail behind visible callee parameters.
+- Prefix helpers exist for store add/remove/update/consume/restore/mark
+  operations.
+- Scoped parameter-prefix helpers support `ELet` local bindings inside a callee.
+- `eval_preserves_param_scope_roots_ready_mutual` preserves parameter scope for
+  roots-ready body evaluation.
+- Lifetime-erased equivalence bridges runtime argument typing after lifetime
+  substitution:
+  - `ty_lifetime_equiv`
+  - `VHT_LifetimeEquiv`
+  - `value_has_type_apply_lt_ty`
+  - `eval_args_values_have_types_apply_lt_params_inv`
+- Freshened parameters are proved no-dup/fresh, and parameter contexts are
+  connected by `ctx_alpha`.
+- Forward alpha-renaming infrastructure exists for structural typing:
+  `ctx_alpha`, typed places, args, fields, `expr_as_place`, and
+  `typed_env_structural`.
+- Function-level alpha-renaming bridge exists under original parameter `NoDup`.
+- Function-environment invariants preserve original parameter `NoDup`.
+- Readiness is preserved by alpha-renaming:
+  - `alpha_rename_preservation_ready_expr`
+  - args/fields variants
+  - `alpha_rename_fn_def_preservation_ready_body`
+- Lookup bridges turn `env_fns_preservation_ready` and
+  `env_fns_checked_structural` into ready/typed evidence for the freshened
+  callee body.
+- Ready-fragment prefix preservation exists for body evaluation.
+- Direct `ECall` pre-cleanup callee body preservation is connected through
+  `bind_params_store_typed_prefix`.
+- Root sidecar checker and Prop-level root typing accept direct `ECall`.
+- Parameter-set root exclusion and cleanup helpers exist for
+  `store_remove_params`.
+- Cleanup preserves return value typing and caller-visible reference targets.
+- `store_frame_scope` / `store_frame_static_fresh` exact-frame infrastructure
+  exists.
+- `eval_preserves_frame_scope_roots_ready_mutual` derives exact caller-frame
+  evidence from ready/root-aware callee body evaluation.
+- The cleanup bridge no longer takes an explicit `store_frame_scope` premise.
+
+### Next Implementation Queue
+
+Follow this order. Stop when a step exposes a missing invariant or false lemma.
+
+1. `[active]` Direct `ECall` final wrapper
+   - Target file: `rocq/theories/TypeSystem/TypeSafety.v`.
+   - Connect the existing cleanup bridge to `preservation_direct_call_ready_expr`.
+   - Use existing freshened callee ready/typed lookup bridges, prefix
+     preservation, root preservation, frame-scope preservation, and cleanup
+     theorem.
+   - Do not modify `preservation_ready_expr`.
+   - Do not start `ECallExpr` in this step.
+
+2. `[next]` Direct-call checker-to-runtime ready/root theorem update
+   - Target file: `rocq/theories/TypeSystem/EnvRuntimeSafety.v`.
+   - Connect the direct-call wrapper to the ready/root checker-facing theorem if
+     the theorem still excludes direct calls.
+
+3. `[next]` Empty-capture `ECallExpr`
+   - Target files:
+     - `rocq/theories/TypeSystem/TypeSafety.v`
+     - possibly `rocq/theories/TypeSystem/RuntimeTyping.v`
+   - Only handle `VClosure fname []`.
+   - Reuse direct `ECall` machinery.
+   - If non-empty captured stores are needed, stop and report the missing
+     captured-store invariant instead of inventing one.
+
+4. `[next]` Runtime typing for closure values
+   - Target file: `rocq/theories/TypeSystem/RuntimeTyping.v`.
+   - Define the smallest `VClosure fname []` typing helper needed by the
+     empty-capture `ECallExpr` proof.
+   - Do not define non-empty capture safety until the captured-store invariant is
+     fixed.
+
+5. `[later]` Indirect update and deref preservation
+   - Target file: `rocq/theories/TypeSystem/TypeSafety.v`.
+   - Connect indirect `EAssign`, indirect `EReplace`, and `EDeref` to the
+     reference-target strengthened runtime typing.
+   - Stop if runtime aliasing correspondence is required.
+
+6. `[later]` `ELetInfer` preservation
+   - Replace contradiction-only helper with a real preservation proof.
+
+7. `[later]` Let-local reference escape
+   - Add typing/borrow invariant that prevents references to removed local
+     bindings from escaping in result values or remaining store entries.
+   - Prefer an escape check first. Introduce fresh let-regions only after the
+     invariant is explicitly designed.
+
+8. `[later]` Full unrestricted preservation
+   - Prove `eval_preserves_typing` after direct calls, deref, indirect updates,
+     and let escape are handled.
+
+9. `[later]` Runtime aliasing correspondence
+   - Connect static borrow states to runtime refs and path-prefix conflict.
+
+10. `[future]` Small-step progress
+    - Start only after preservation and runtime reference safety are stable.
+
+### Main Target Theorems
+
+Long-term preservation target:
+
+```coq
+Theorem eval_preserves_typing :
+  forall env Ω n Σ s e T Σ' s' v,
+    store_typed env s Σ ->
+    typed_env_structural env Ω n Σ e T Σ' ->
+    eval env s e s' v ->
+    store_typed env s' Σ' /\ value_has_type env s' v T.
+```
+
+Long-term checker-to-runtime target:
+
+```coq
+Theorem infer_full_env_big_step_safe :
+  forall env f T Γ' s s' v,
+    ValidEnv env ->
+    infer_full_env env f = infer_ok (T, Γ') ->
+    initial_store_for_fn f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+```
+
+Long-term runtime reference target:
+
+```coq
+Theorem eval_no_dangling_refs :
+  forall env Ω n Σ s e T Σ' s' v,
+    store_typed env s Σ ->
+    typed_env_structural env Ω n Σ e T Σ' ->
+    borrow_ok_env_structural env [] (ctx_of_sctx Σ) e [] ->
+    eval env s e s' v ->
+    refs_wf env s' v /\ store_refs_wf env s'.
+```
+
+Future small-step target:
+
+```coq
+Theorem step_progress :
+  forall env Ω n Σ e T,
+    store_typed env [] Σ ->
+    typed_env_structural env Ω n Σ e T Σ ->
+    terminal e \/ exists e' s', step env [] e s' e'.
+```
+
+`step_progress` must wait for `StepSemantics.v`.
+
+### Required Checks
+
+Before committing type-system work:
+
+```sh
+cd rocq && make
+dune build
+bash tests/run.sh
+sh tests/fir/run.sh
+git diff --check
+rg -n "\bAxiom\b|Admitted\.|Abort\.|DEBUG|idtac" rocq/theories
+```
+
+For roadmap-only edits, at minimum run:
+
+```sh
+git diff --check
+```
+
+The `rg` command exits with status 1 when no matches are found; that is success.
+
+### Commit Policy
+
+After implementation and checks pass, commit with GPG signing disabled:
+
+```sh
+git commit --no-gpg-sign -m "<short imperative subject>"
+```
+
+## Historical Roadmap Notes
+
 ## 方針
 
 現在の env/stateful 経路では、checker soundness は証明済みである。

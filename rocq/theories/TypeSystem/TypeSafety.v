@@ -118,6 +118,30 @@ Proof.
   - simpl in Hpath. discriminate.
 Qed.
 
+Lemma store_lookup_some_in_names :
+  forall s x se,
+    store_lookup x s = Some se ->
+    In x (store_names s).
+Proof.
+  induction s as [| se_head rest IH]; intros x se Hlookup;
+    simpl in Hlookup; try discriminate.
+  destruct (ident_eqb x (se_name se_head)) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst x. simpl. left. reflexivity.
+  - simpl. right. eapply IH. exact Hlookup.
+Qed.
+
+Lemma eval_place_root_name_in_store_names :
+  forall s p x path,
+    eval_place s p x path ->
+    In (root_provenance_place_name p) (store_names s).
+Proof.
+  intros s p x path Heval.
+  induction Heval; simpl.
+  - eapply store_lookup_some_in_names. exact H.
+  - exact IHHeval.
+  - exact IHHeval.
+Qed.
+
 Lemma typed_place_type_direct_lookup :
   forall env Σ p T x path T_root st,
     typed_place_type_env_structural env Σ p T ->
@@ -974,6 +998,73 @@ Proof.
     + apply IH.
 Qed.
 
+Lemma store_update_state_names :
+  forall s x f s',
+    store_update_state x f s = Some s' ->
+    store_names s' = store_names s.
+Proof.
+  induction s as [| se rest IH]; intros x f s' Hupdate;
+    simpl in Hupdate; try discriminate.
+  destruct (ident_eqb x (se_name se)) eqn:Heq.
+  - inversion Hupdate. reflexivity.
+  - destruct (store_update_state x f rest) as [rest' |] eqn:Htail;
+      try discriminate.
+    inversion Hupdate. simpl. rewrite (IH x f rest' Htail). reflexivity.
+Qed.
+
+Lemma store_update_val_names :
+  forall s x v s',
+    store_update_val x v s = Some s' ->
+    store_names s' = store_names s.
+Proof.
+  induction s as [| se rest IH]; intros x v s' Hupdate;
+    simpl in Hupdate; try discriminate.
+  destruct (ident_eqb x (se_name se)) eqn:Heq.
+  - inversion Hupdate. reflexivity.
+  - destruct (store_update_val x v rest) as [rest' |] eqn:Htail;
+      try discriminate.
+    inversion Hupdate. simpl. rewrite (IH x v rest' Htail). reflexivity.
+Qed.
+
+Lemma store_update_path_names :
+  forall s x path v s',
+    store_update_path x path v s = Some s' ->
+    store_names s' = store_names s.
+Proof.
+  induction s as [| se rest IH]; intros x path v s' Hupdate;
+    simpl in Hupdate; try discriminate.
+  destruct (ident_eqb x (se_name se)) eqn:Heq.
+  - destruct (value_update_path (se_val se) path v) as [v' |] eqn:Hvalue;
+      try discriminate.
+    inversion Hupdate. reflexivity.
+  - destruct (store_update_path x path v rest) as [rest' |] eqn:Htail;
+      try discriminate.
+    inversion Hupdate. simpl. rewrite (IH x path v rest' Htail). reflexivity.
+Qed.
+
+Lemma store_restore_path_names :
+  forall s x path s',
+    store_restore_path x path s = Some s' ->
+    store_names s' = store_names s.
+Proof.
+  unfold store_restore_path.
+  intros s x path s' Hrestore.
+  eapply store_update_state_names. exact Hrestore.
+Qed.
+
+Lemma store_consume_path_names :
+  forall s x path s',
+    store_consume_path x path s = Some s' ->
+    store_names s' = store_names s.
+Proof.
+  unfold store_consume_path.
+  intros s x path s' Hconsume.
+  destruct (store_lookup x s) as [se |] eqn:Hlookup; try discriminate.
+  destruct (binding_available_b (se_state se) path) eqn:Havailable;
+    try discriminate.
+  eapply store_update_state_names. exact Hconsume.
+Qed.
+
 Lemma root_env_store_roots_named_store_add :
   forall R s x T v,
     root_env_store_roots_named R s ->
@@ -1110,6 +1201,178 @@ Proof.
   - constructor.
     + apply root_set_store_roots_named_store_mark_used. exact Hroot.
     + apply IH.
+Qed.
+
+Lemma root_env_store_roots_named_store_update_state :
+  forall R s x f s',
+    store_update_state x f s = Some s' ->
+    root_env_store_roots_named R s ->
+    root_env_store_roots_named R s'.
+Proof.
+  intros R s x f s' Hupdate Hnamed.
+  eapply root_env_store_roots_named_weaken_store.
+  - exact Hnamed.
+  - intros z Hin. rewrite (store_update_state_names s x f s' Hupdate).
+    exact Hin.
+Qed.
+
+Lemma root_set_store_roots_named_store_update_state :
+  forall roots s x f s',
+    store_update_state x f s = Some s' ->
+    root_set_store_roots_named roots s ->
+    root_set_store_roots_named roots s'.
+Proof.
+  intros roots s x f s' Hupdate Hnamed.
+  eapply root_set_store_roots_named_weaken_store.
+  - exact Hnamed.
+  - intros z Hin. rewrite (store_update_state_names s x f s' Hupdate).
+    exact Hin.
+Qed.
+
+Lemma root_sets_store_roots_named_store_update_state :
+  forall sets s x f s',
+    store_update_state x f s = Some s' ->
+    Forall (fun roots => root_set_store_roots_named roots s) sets ->
+    Forall (fun roots => root_set_store_roots_named roots s') sets.
+Proof.
+  intros sets s x f s' Hupdate Hsets.
+  induction Hsets as [| roots rest Hroot Hrest IH].
+  - constructor.
+  - constructor.
+    + eapply root_set_store_roots_named_store_update_state; eassumption.
+    + apply IH.
+Qed.
+
+Lemma root_env_store_roots_named_store_update_val :
+  forall R s x v s',
+    store_update_val x v s = Some s' ->
+    root_env_store_roots_named R s ->
+    root_env_store_roots_named R s'.
+Proof.
+  intros R s x v s' Hupdate Hnamed.
+  eapply root_env_store_roots_named_weaken_store.
+  - exact Hnamed.
+  - intros z Hin. rewrite (store_update_val_names s x v s' Hupdate).
+    exact Hin.
+Qed.
+
+Lemma root_set_store_roots_named_store_update_val :
+  forall roots s x v s',
+    store_update_val x v s = Some s' ->
+    root_set_store_roots_named roots s ->
+    root_set_store_roots_named roots s'.
+Proof.
+  intros roots s x v s' Hupdate Hnamed.
+  eapply root_set_store_roots_named_weaken_store.
+  - exact Hnamed.
+  - intros z Hin. rewrite (store_update_val_names s x v s' Hupdate).
+    exact Hin.
+Qed.
+
+Lemma root_sets_store_roots_named_store_update_val :
+  forall sets s x v s',
+    store_update_val x v s = Some s' ->
+    Forall (fun roots => root_set_store_roots_named roots s) sets ->
+    Forall (fun roots => root_set_store_roots_named roots s') sets.
+Proof.
+  intros sets s x v s' Hupdate Hsets.
+  induction Hsets as [| roots rest Hroot Hrest IH].
+  - constructor.
+  - constructor.
+    + eapply root_set_store_roots_named_store_update_val; eassumption.
+    + apply IH.
+Qed.
+
+Lemma root_env_store_roots_named_store_update_path :
+  forall R s x path v s',
+    store_update_path x path v s = Some s' ->
+    root_env_store_roots_named R s ->
+    root_env_store_roots_named R s'.
+Proof.
+  intros R s x path v s' Hupdate Hnamed.
+  eapply root_env_store_roots_named_weaken_store.
+  - exact Hnamed.
+  - intros z Hin. rewrite (store_update_path_names s x path v s' Hupdate).
+    exact Hin.
+Qed.
+
+Lemma root_set_store_roots_named_store_update_path :
+  forall roots s x path v s',
+    store_update_path x path v s = Some s' ->
+    root_set_store_roots_named roots s ->
+    root_set_store_roots_named roots s'.
+Proof.
+  intros roots s x path v s' Hupdate Hnamed.
+  eapply root_set_store_roots_named_weaken_store.
+  - exact Hnamed.
+  - intros z Hin. rewrite (store_update_path_names s x path v s' Hupdate).
+    exact Hin.
+Qed.
+
+Lemma root_sets_store_roots_named_store_update_path :
+  forall sets s x path v s',
+    store_update_path x path v s = Some s' ->
+    Forall (fun roots => root_set_store_roots_named roots s) sets ->
+    Forall (fun roots => root_set_store_roots_named roots s') sets.
+Proof.
+  intros sets s x path v s' Hupdate Hsets.
+  induction Hsets as [| roots rest Hroot Hrest IH].
+  - constructor.
+  - constructor.
+    + eapply root_set_store_roots_named_store_update_path; eassumption.
+    + apply IH.
+Qed.
+
+Lemma root_env_store_roots_named_store_restore_path :
+  forall R s x path s',
+    store_restore_path x path s = Some s' ->
+    root_env_store_roots_named R s ->
+    root_env_store_roots_named R s'.
+Proof.
+  intros R s x path s' Hrestore Hnamed.
+  eapply root_env_store_roots_named_weaken_store.
+  - exact Hnamed.
+  - intros z Hin. rewrite (store_restore_path_names s x path s' Hrestore).
+    exact Hin.
+Qed.
+
+Lemma root_set_store_roots_named_store_restore_path :
+  forall roots s x path s',
+    store_restore_path x path s = Some s' ->
+    root_set_store_roots_named roots s ->
+    root_set_store_roots_named roots s'.
+Proof.
+  intros roots s x path s' Hrestore Hnamed.
+  eapply root_set_store_roots_named_weaken_store.
+  - exact Hnamed.
+  - intros z Hin. rewrite (store_restore_path_names s x path s' Hrestore).
+    exact Hin.
+Qed.
+
+Lemma root_env_store_roots_named_store_consume_path :
+  forall R s x path s',
+    store_consume_path x path s = Some s' ->
+    root_env_store_roots_named R s ->
+    root_env_store_roots_named R s'.
+Proof.
+  intros R s x path s' Hconsume Hnamed.
+  eapply root_env_store_roots_named_weaken_store.
+  - exact Hnamed.
+  - intros z Hin. rewrite (store_consume_path_names s x path s' Hconsume).
+    exact Hin.
+Qed.
+
+Lemma root_set_store_roots_named_store_consume_path :
+  forall roots s x path s',
+    store_consume_path x path s = Some s' ->
+    root_set_store_roots_named roots s ->
+    root_set_store_roots_named roots s'.
+Proof.
+  intros roots s x path s' Hconsume Hnamed.
+  eapply root_set_store_roots_named_weaken_store.
+  - exact Hnamed.
+  - intros z Hin. rewrite (store_consume_path_names s x path s' Hconsume).
+    exact Hin.
 Qed.
 
 Lemma root_sets_store_roots_named_store_remove_excluding :

@@ -303,10 +303,19 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
    - Done: added the companion root-set invariant
      `root_set_store_roots_named`, with union, singleton, root-set-list, and
      store add/remove/mark-used preservation helpers.
+   - Done: added store-name preservation and root-name transport helpers for
+     `store_update_state`, `store_update_val`, `store_update_path`,
+     `store_restore_path`, and `store_consume_path`, plus the
+     `eval_place_root_name_in_store_names` bridge.
    - Remaining: thread `root_env_store_roots_named` through
      `eval_preserves_roots_ready_mutual` together with
      `root_set_store_roots_named` for expression results and argument root
      lists before using it at the direct-call site.
+   - Next proof slice: prove a standalone
+     `eval_preserves_root_names_ready_mutual` theorem that transports
+     `root_env_store_roots_named` and expression/argument/field
+     `root_set_store_roots_named` facts across ready evaluation. Keep it
+     separate from the direct-call wrapper until the theorem is complete.
    - Do not attempt to discharge the evidence with lifetime inference alone,
      and do not globally reject parameter roots in `infer_env_roots`.
    - Stop if the current root sidecar API cannot express freshened callee body

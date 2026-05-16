@@ -756,7 +756,7 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_env_roots env Ω n R1 Σ1 e3 T3 Σ3 R3 roots3 ->
       ty_core T2 = ty_core T3 ->
       ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
-      R2 = R3 ->
+      root_env_equiv R2 R3 ->
       typed_env_roots env Ω n R Σ (EIf e1 e2 e3)
         (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2))
         Σ4 R2 (root_set_union roots2 roots3)

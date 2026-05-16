@@ -1544,6 +1544,60 @@ Proof.
   - exact Heq.
 Qed.
 
+Lemma root_env_equiv_lookup_none_l :
+  forall R R' x,
+    root_env_equiv R R' ->
+    root_env_lookup x R = None ->
+    root_env_lookup x R' = None.
+Proof.
+  unfold root_env_equiv.
+  intros R R' x Heq Hlookup.
+  specialize (Heq x).
+  rewrite Hlookup in Heq.
+  destruct (root_env_lookup x R') as [roots' |] eqn:Hlookup';
+    try contradiction.
+  reflexivity.
+Qed.
+
+Lemma root_env_equiv_lookup_none_r :
+  forall R R' x,
+    root_env_equiv R R' ->
+    root_env_lookup x R' = None ->
+    root_env_lookup x R = None.
+Proof.
+  intros R R' x Heq Hlookup.
+  apply root_env_equiv_lookup_none_l with (R := R') (R' := R).
+  - apply root_env_equiv_sym. exact Heq.
+  - exact Hlookup.
+Qed.
+
+Lemma root_env_excludes_equiv :
+  forall x R R',
+    root_env_equiv R R' ->
+    root_env_excludes x R ->
+    root_env_excludes x R'.
+Proof.
+  unfold root_env_excludes.
+  intros x R R' Heq Hexcl y roots' Hlookup' Hneq.
+  destruct (root_env_equiv_lookup_r R R' y roots' Heq Hlookup')
+    as [roots [Hlookup Hroots]].
+  eapply roots_exclude_equiv.
+  - exact Hroots.
+  - eapply Hexcl; eassumption.
+Qed.
+
+Lemma root_env_excludes_equiv_sym :
+  forall x R R',
+    root_env_equiv R R' ->
+    root_env_excludes x R' ->
+    root_env_excludes x R.
+Proof.
+  intros x R R' Heq Hexcl.
+  apply root_env_excludes_equiv with (R := R').
+  - apply root_env_equiv_sym. exact Heq.
+  - exact Hexcl.
+Qed.
+
 Lemma root_env_equiv_add :
   forall x roots roots' R R',
     root_set_equiv roots roots' ->

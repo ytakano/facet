@@ -33,6 +33,16 @@ Proof.
   subst. reflexivity.
 Qed.
 
+Lemma root_env_eqb_true_equiv :
+  forall R1 R2,
+    root_env_eqb R1 R2 = true ->
+    root_env_equiv R1 R2.
+Proof.
+  intros R1 R2 Heq.
+  apply root_env_eqb_true in Heq. subst R2.
+  apply root_env_equiv_refl.
+Qed.
+
 Lemma roots_exclude_b_sound :
   forall x roots,
     roots_exclude_b x roots = true ->
@@ -487,7 +497,7 @@ Proof.
       * eapply IH. exact He3.
       * apply ty_core_eqb_true. exact Hcore.
       * exact Hmerge.
-      * apply root_env_eqb_true. exact Hroot_eq.
+      * apply root_env_eqb_true_equiv. exact Hroot_eq.
 Qed.
 
 Theorem infer_core_env_roots_sound :

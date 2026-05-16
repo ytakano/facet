@@ -1031,6 +1031,24 @@ Proof.
   apply Hnamed. apply Heq. exact Hin.
 Qed.
 
+Lemma store_roots_within_equiv :
+  forall R R' s,
+    root_env_equiv R R' ->
+    store_roots_within R s ->
+    store_roots_within R' s.
+Proof.
+  intros R R' s Heq Hroots.
+  eapply (proj2 (proj2 value_roots_within_weaken)).
+  - exact Hroots.
+  - intros x roots Hlookup.
+    destruct (root_env_equiv_lookup_l R R' x roots Heq Hlookup)
+      as [roots' [Hlookup' Hroots_equiv]].
+    exists roots'. split.
+    + exact Hlookup'.
+    + intros atom Hin.
+      apply Hroots_equiv. exact Hin.
+Qed.
+
 Lemma root_set_store_roots_named_union :
   forall roots_left roots_right s,
     root_set_store_roots_named roots_left s ->
@@ -4008,7 +4026,6 @@ Proof.
           by (eapply typed_env_roots_no_shadow; eassumption);
         destruct (IHthen Hrn1 Henv1) as [Henv2 Hroots2];
         destruct (IHelse Hrn1 Henv1) as [_ Hroots3];
-        subst R3;
         split;
         [ eapply root_env_ctx_roots_named_ctx_merge_left; eassumption
         | eapply root_set_ctx_roots_named_if_merge; eassumption ]
@@ -4623,12 +4640,21 @@ Proof.
     | Hready_else : provenance_ready_expr e3,
       Htyped_else : typed_env_roots env Ω n ?R1_cond ?Σ1_cond e3
         ?T3_else ?Σ3_else ?R3_else ?roots3_else |- _ =>
-        destruct (IHelse Ω n R1_cond Σ1_cond T3_else Σ3_else R3_else
-                    roots3_else Hready_else Hroots1 Hnodup1 Hrn1 Htyped_else)
-          as [Hroots3 [Hv3 [Hnodup3 Hrn3]]]
-    end.
-    repeat split; try assumption.
-    apply value_roots_within_union_r. exact Hv3.
+	        destruct (IHelse Ω n R1_cond Σ1_cond T3_else Σ3_else R3_else
+	                    roots3_else Hready_else Hroots1 Hnodup1 Hrn1 Htyped_else)
+	          as [Hroots3 [Hv3 [Hnodup3 Hrn3]]]
+	    end.
+	    assert (Hrn2 : root_env_no_shadow R')
+	      by (eapply typed_env_roots_no_shadow; eassumption).
+	    assert (Hroots3_out : store_roots_within R' s2).
+	    { eapply store_roots_within_equiv.
+	      - apply root_env_equiv_sym. eassumption.
+	      - exact Hroots3. }
+	    repeat split.
+	    + exact Hroots3_out.
+	    + apply value_roots_within_union_r. exact Hv3.
+	    + exact Hnodup3.
+	    + exact Hrn2.
   - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
       Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R' roots
       Hready _ _ _ _.
@@ -5613,6 +5639,20 @@ Definition root_env_covers_params (ps : list param) (R : root_env) : Prop :=
   forall x,
     In x (ctx_names (params_ctx ps)) ->
     exists roots, root_env_lookup x R = Some roots.
+
+Lemma root_env_covers_params_equiv :
+  forall ps R R',
+    root_env_equiv R R' ->
+    root_env_covers_params ps R ->
+    root_env_covers_params ps R'.
+Proof.
+  unfold root_env_covers_params.
+  intros ps R R' Heq Hcovers x Hin.
+  destruct (Hcovers x Hin) as [roots Hlookup].
+  destruct (root_env_equiv_lookup_l R R' x roots Heq Hlookup)
+    as [roots' [Hlookup' _]].
+  exists roots'. exact Hlookup'.
+Qed.
 
 Definition roots_exclude_params (ps : list param) (roots : root_set) : Prop :=
   forall x,
@@ -6618,37 +6658,27 @@ Proof.
   - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_then IHthen
       Ω n R Σ T Σ' R' roots ps frame Hready Htyped Hcover Hscope.
     dependent destruction Hready.
-    inversion Htyped; subst.
-    match goal with
-    | Hready_cond : provenance_ready_expr e1,
-      Hready_then : provenance_ready_expr e2,
-      Htyped_cond : typed_env_roots env Ω n R Σ e1 ?T_cond ?Σ1
-        ?R1 ?roots_cond,
-      Htyped_then : typed_env_roots env Ω n ?R1 ?Σ1 e2 ?T2 ?Σ2
-        ?R2 ?roots2 |- _ =>
-        destruct (IHcond Ω n R Σ T_cond Σ1 R1 roots_cond ps frame
-                    Hready_cond Htyped_cond Hcover Hscope)
-          as [Hcover1 [frame1 Hscope1]];
-        exact (IHthen Ω n R1 Σ1 T2 Σ2 R2 roots2 ps frame1
-                 Hready_then Htyped_then Hcover1 Hscope1)
-    end.
+    dependent destruction Htyped.
+    destruct (IHcond Ω n R Σ T_cond Σ1 R1 roots_cond ps frame
+                Hready1 Htyped1 Hcover Hscope)
+      as [Hcover1 [frame1 Hscope1]].
+    exact (IHthen Ω n R1 Σ1 T2 Σ2 R2 roots2 ps frame1
+             Hready2 Htyped2 Hcover1 Hscope1).
   - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_else IHelse
       Ω n R Σ T Σ' R' roots ps frame Hready Htyped Hcover Hscope.
     dependent destruction Hready.
-    inversion Htyped; subst.
-    match goal with
-    | Hready_cond : provenance_ready_expr e1,
-      Hready_else : provenance_ready_expr e3,
-      Htyped_cond : typed_env_roots env Ω n R Σ e1 ?T_cond ?Σ1
-        ?R1 ?roots_cond,
-      Htyped_else : typed_env_roots env Ω n ?R1 ?Σ1 e3 ?T3 ?Σ3
-        ?R3 ?roots3 |- _ =>
-        destruct (IHcond Ω n R Σ T_cond Σ1 R1 roots_cond ps frame
-                    Hready_cond Htyped_cond Hcover Hscope)
-          as [Hcover1 [frame1 Hscope1]];
-        exact (IHelse Ω n R1 Σ1 T3 Σ3 R3 roots3 ps frame1
-                 Hready_else Htyped_else Hcover1 Hscope1)
-    end.
+    dependent destruction Htyped.
+    destruct (IHcond Ω n R Σ T_cond Σ1 R1 roots_cond ps frame
+                Hready1 Htyped1 Hcover Hscope)
+      as [Hcover1 [frame1 Hscope1]].
+    destruct (IHelse Ω n R1 Σ1 T3 Σ3 R3 roots3 ps frame1
+                Hready3 Htyped3 Hcover1 Hscope1)
+      as [Hcover3 [frame3 Hscope3]].
+    split.
+    + eapply root_env_covers_params_equiv.
+      * apply root_env_equiv_sym. exact H2.
+      * exact Hcover3.
+    + exists frame3. exact Hscope3.
   - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
       Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R' roots
       ps frame Hready _ _ _.
@@ -7323,7 +7353,9 @@ Proof.
       - eapply typed_env_structural_same_bindings.
         eapply typed_env_roots_structural. exact H5. }
     repeat split.
-    + exact Hcover3.
+    + eapply root_env_covers_params_equiv.
+      * apply root_env_equiv_sym. exact H14.
+      * exact Hcover3.
     + eapply store_frame_scope_same_bindings.
       * eapply ctx_merge_same_bindings_right.
         -- exact Hsame_then_else.

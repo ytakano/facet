@@ -219,6 +219,11 @@ Already available for the direct `ECall` proof:
 - Tagged roots are reflected through the Prop-level root rules, executable root
   checker, root soundness theorem, runtime reference root membership, and
   initial parameter root environments.
+- Prop-level `TER_If` now accepts `root_env_equiv R2 R3` instead of syntactic
+  root-environment equality. The executable checker remains conservative with
+  `root_env_eqb` for now; soundness bridges checker equality into
+  `root_env_equiv`, and preservation proofs transport root/store facts across
+  equivalent branch environments.
 
 ### Next Implementation Queue
 
@@ -320,9 +325,14 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      helpers, and ctx/store root-name transport over `root_set_equiv`, so the
      upcoming root-aware typing transport can relate instantiated root
      environments modulo root-set representation rather than exact list order.
-   - Done: added root-env equivalence composition helpers for instantiation,
-     update/union, add, and remove, connecting `root_env_instantiate` with
-     `root_env_equiv` for the upcoming `typed_env_roots` transport proof.
+  - Done: added root-env equivalence composition helpers for instantiation,
+    update/union, add, and remove, connecting `root_env_instantiate` with
+    `root_env_equiv` for the upcoming `typed_env_roots` transport proof.
+  - Done: relaxed the Prop-level if rule from branch root-env equality to
+    `root_env_equiv R2 R3`, while keeping the executable checker conservative
+    via `root_env_eqb`; added the required equivalence transport helpers for
+    root-env exclusion, parameter coverage, store roots, and downstream
+    preservation proofs.
    - Chosen design: replace the call-site evidence premise with cached
      root-polymorphic summaries using the tagged-root representation.
    - Remaining blocker: prove the root-aware alpha-renaming/instantiation

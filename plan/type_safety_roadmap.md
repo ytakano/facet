@@ -210,6 +210,9 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      evidence from call-site argument roots plus
      `call_param_root_env`, and eventually consider root-polymorphic function
      summaries for an executable checker-facing bridge.
+   - No further implementation-only subtask remains in this item until the
+     root-polymorphic summary shape, or an equivalent Prop-level root-aware
+     function-environment invariant, is fixed.
    - Do not attempt to discharge the evidence with lifetime inference alone,
      and do not globally reject parameter roots in `infer_env_roots`.
    - Stop if the current root sidecar API cannot express freshened callee body
@@ -228,12 +231,12 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
    - If non-empty captured stores are needed, stop and report the missing
      captured-store invariant instead of inventing one.
 
-5. `[next]` Runtime typing for closure values
+5. `[done]` Runtime typing for empty closure values
    - Target file: `rocq/theories/TypeSystem/RuntimeTyping.v`.
-   - Define the smallest `VClosure fname []` typing helper needed by the
-     empty-capture `ECallExpr` proof.
-   - Do not define non-empty capture safety until the captured-store invariant is
-     fixed.
+   - `VHT_ClosureEmpty`, `VHT_ClosureIn`, and `eval_fn_preserves_typing`
+     already cover `VClosure fname []`.
+   - Non-empty capture safety remains intentionally undefined until the
+     captured-store invariant is fixed.
 
 6. `[later]` Indirect update and deref preservation
    - Target file: `rocq/theories/TypeSystem/TypeSafety.v`.

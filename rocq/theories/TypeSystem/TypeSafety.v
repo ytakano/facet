@@ -717,6 +717,12 @@ Combined Scheme value_roots_within_mutind
   from value_roots_within_ind', store_entry_roots_within_ind',
        store_roots_within_ind', value_fields_roots_within_ind'.
 
+Definition root_env_store_roots_named (R : root_env) (s : store) : Prop :=
+  forall x roots z,
+    root_env_lookup x R = Some roots ->
+    In (RStore z) roots ->
+    In z (store_names s).
+
 Lemma value_roots_within_excludes :
   (forall roots v,
     value_roots_within roots v ->
@@ -847,6 +853,166 @@ Lemma root_env_lookup_add_eq :
 Proof.
   intros x roots R. unfold root_env_add. simpl.
   rewrite ident_eqb_refl. reflexivity.
+Qed.
+
+Lemma root_env_store_roots_named_weaken_store :
+  forall R s s',
+    root_env_store_roots_named R s ->
+    (forall z, In z (store_names s) -> In z (store_names s')) ->
+    root_env_store_roots_named R s'.
+Proof.
+  unfold root_env_store_roots_named.
+  intros R s s' Hnamed Hincl x roots z Hlookup Hin.
+  apply Hincl. eapply Hnamed; eassumption.
+Qed.
+
+Lemma root_env_store_roots_named_store_add :
+  forall R s x T v,
+    root_env_store_roots_named R s ->
+    root_env_store_roots_named R (store_add x T v s).
+Proof.
+  intros R s x T v Hnamed.
+  eapply root_env_store_roots_named_weaken_store.
+  - exact Hnamed.
+  - intros z Hin. simpl. right. exact Hin.
+Qed.
+
+Lemma root_env_store_roots_named_store_remove_excluding :
+  forall R s x,
+    (forall y roots,
+      root_env_lookup y R = Some roots ->
+      roots_exclude x roots) ->
+    root_env_store_roots_named R s ->
+    (forall z,
+      In z (store_names s) ->
+      z <> x ->
+      In z (store_names (store_remove x s))) ->
+    root_env_store_roots_named R (store_remove x s).
+Proof.
+  unfold root_env_store_roots_named.
+  intros R s x Hexcludes Hnamed Hremain y roots z Hlookup Hin.
+  apply Hremain.
+  - eapply Hnamed; eassumption.
+  - intros Heq. subst z.
+    unfold roots_exclude in Hexcludes.
+    eapply Hexcludes; eassumption.
+Qed.
+
+Lemma root_env_store_roots_named_store_mark_used :
+  forall R s x,
+    root_env_store_roots_named R s ->
+    root_env_store_roots_named R (store_mark_used x s).
+Proof.
+  intros R s x Hnamed.
+  assert (Hincl :
+    forall z,
+      In z (store_names s) ->
+      In z (store_names (store_mark_used x s))).
+  {
+    clear Hnamed.
+    induction s as [| se rest IH]; intros z Hin; simpl in *; try contradiction.
+    destruct (ident_eqb x (se_name se)); simpl in *.
+    - exact Hin.
+    - destruct Hin as [Hin | Hin].
+      + left. exact Hin.
+      + right. apply IH. exact Hin.
+  }
+  eapply root_env_store_roots_named_weaken_store.
+  - exact Hnamed.
+  - exact Hincl.
+Qed.
+
+Lemma root_env_store_roots_named_add_env :
+  forall R s x roots,
+    root_env_store_roots_named R s ->
+    (forall z, In (RStore z) roots -> In z (store_names s)) ->
+    root_env_store_roots_named (root_env_add x roots R) s.
+Proof.
+  unfold root_env_store_roots_named.
+  intros R s x roots Hnamed Hroots y roots_y z Hlookup Hin.
+  unfold root_env_add in Hlookup. simpl in Hlookup.
+  destruct (ident_eqb y x) eqn:Hyx.
+  - inversion Hlookup. subst roots_y. apply Hroots. exact Hin.
+  - eapply Hnamed; eassumption.
+Qed.
+
+Lemma root_env_store_roots_named_remove_env :
+  forall R s x,
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_roots_named (root_env_remove x R) s.
+Proof.
+  unfold root_env_store_roots_named.
+  intros R s x Hnodup Hnamed y roots z Hlookup Hin.
+  induction R as [| [r roots_r] rest IH]; simpl in *; try discriminate.
+  unfold root_env_no_shadow in Hnodup.
+  simpl in Hnodup.
+  inversion Hnodup as [| ? ? Hr_notin Hnodup_tail]; subst.
+  destruct (ident_eqb x r) eqn:Hxr.
+  - apply ident_eqb_eq in Hxr. subst r.
+    eapply Hnamed.
+    + simpl.
+      destruct (ident_eqb y x) eqn:Hyx.
+      * apply ident_eqb_eq in Hyx. subst y.
+        exfalso. apply Hr_notin.
+        eapply root_env_lookup_some_in_names. exact Hlookup.
+      * rewrite Hyx. exact Hlookup.
+    + exact Hin.
+  - simpl in Hlookup.
+    destruct (ident_eqb y r) eqn:Hyp.
+    + eapply Hnamed.
+      * simpl. rewrite Hyp. exact Hlookup.
+      * exact Hin.
+    + apply IH.
+      * unfold root_env_no_shadow. exact Hnodup_tail.
+      * intros y0 roots0 z0 Hlookup0 Hin0.
+        eapply Hnamed.
+        -- simpl. destruct (ident_eqb y0 r) eqn:Hy0r.
+           ++ apply ident_eqb_eq in Hy0r. subst y0.
+              exfalso. apply Hr_notin.
+              eapply root_env_lookup_some_in_names. exact Hlookup0.
+           ++ rewrite Hy0r. exact Hlookup0.
+        -- exact Hin0.
+      * exact Hlookup.
+Qed.
+
+Lemma root_env_store_roots_named_update_env :
+  forall R s x roots,
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    (forall z, In (RStore z) roots -> In z (store_names s)) ->
+    root_env_store_roots_named (root_env_update x roots R) s.
+Proof.
+  unfold root_env_store_roots_named.
+  intros R s x roots Hnodup Hnamed Hroots y roots_y z Hlookup Hin.
+  induction R as [| [r roots_r] rest IH]; simpl in *; try discriminate.
+  unfold root_env_no_shadow in Hnodup.
+  simpl in Hnodup.
+  inversion Hnodup as [| ? ? Hr_notin Hnodup_tail]; subst.
+  destruct (ident_eqb x r) eqn:Hxr.
+  - simpl in Hlookup.
+    destruct (ident_eqb y r) eqn:Hyp.
+    + inversion Hlookup. subst roots_y. apply Hroots. exact Hin.
+    + eapply Hnamed.
+      * simpl. rewrite Hyp. exact Hlookup.
+      * exact Hin.
+  - simpl in Hlookup.
+    destruct (ident_eqb y r) eqn:Hyp.
+    + inversion Hlookup. subst roots_y.
+      eapply Hnamed.
+      * simpl. rewrite Hyp. reflexivity.
+      * exact Hin.
+    + apply IH.
+      * unfold root_env_no_shadow. exact Hnodup_tail.
+      * intros y0 roots0 z0 Hlookup0 Hin0.
+        eapply Hnamed.
+        -- simpl. destruct (ident_eqb y0 r) eqn:Hy0r.
+           ++ apply ident_eqb_eq in Hy0r. subst y0.
+              exfalso. apply Hr_notin.
+              eapply root_env_lookup_some_in_names. exact Hlookup0.
+           ++ rewrite Hy0r. exact Hlookup0.
+        -- exact Hin0.
+      * exact Hlookup.
 Qed.
 
 Lemma root_env_lookup_add_neq :
@@ -3817,6 +3983,19 @@ Definition root_env_excludes_params (ps : list param) (R : root_env) : Prop :=
   forall x,
     In x (ctx_names (params_ctx ps)) ->
     root_env_excludes x R.
+
+Lemma root_env_store_roots_named_excludes_params :
+  forall ps R s,
+    root_env_store_roots_named R s ->
+    params_fresh_in_store ps s ->
+    root_env_excludes_params ps R.
+Proof.
+  unfold root_env_store_roots_named, params_fresh_in_store,
+    root_env_excludes_params, root_env_excludes, roots_exclude.
+  intros ps R s Hnamed Hfresh x Hparam y roots Hlookup Hyx Hin.
+  apply (Hfresh x Hparam).
+  eapply Hnamed; eassumption.
+Qed.
 
 Definition value_refs_exclude_params (ps : list param) (v : value) : Prop :=
   forall x,

@@ -296,6 +296,13 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      no-collision premise. The bridge must prove that no `RStore z` inside a
      callee body root summary can rename to the freshened parameter store root
      unless it was the excluded parameter itself.
+   - Done: introduced the Prop invariant `root_env_store_roots_named`, plus
+     local preservation helpers across root-env add/remove/update and store
+     add/remove/mark-used operations. This gives the bridge a way to derive
+     parameter-root exclusion from `R_args` and `params_fresh_in_store`.
+   - Remaining: thread `root_env_store_roots_named` through
+     `eval_preserves_roots_ready_mutual` before using it at the direct-call
+     site.
    - Do not attempt to discharge the evidence with lifetime inference alone,
      and do not globally reject parameter roots in `infer_env_roots`.
    - Stop if the current root sidecar API cannot express freshened callee body

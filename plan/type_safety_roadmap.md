@@ -349,11 +349,20 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      `initial_root_env_for_fn fdef` into freshened call-site evidence at
      `call_param_root_env (fn_params fcall) arg_roots R_args`. Do not replace
      `direct_call_callee_body_root_evidence` until this theorem exists.
-   - Current blocker detail: the parameter-environment rename part now has a
-     compiled helper, but the body evidence still needs a root-aware transport
-     theorem for `typed_env_roots` itself, including result root/env transport
-     modulo `root_set_equiv` and call-site instantiation with
-     `root_subst_of_params`.
+   - Done: added the guarded root-substitution freshness layer:
+     `root_subst_images_exclude`, `root_subst_images_exclude_names`, local
+     store-name collectors for expressions/args/fields, and wrappers from
+     substitution-image freshness to root-set/root-env exclusion preservation.
+   - Done: proved `typed_roots_instantiate_fresh_mutual` plus projection
+     lemmas for expressions, arguments, and fields. This transports
+     `typed_env_roots` across `root_env_instantiate` modulo `root_env_equiv`
+     and `root_set_equiv`, provided every substitution image excludes the
+     let-bound/callee-local store roots collected from the expression.
+   - Current blocker detail: the parameter-environment rename part and
+     guarded root-instantiation part now have compiled helpers. The remaining
+     bridge must combine alpha-renaming with `root_subst_of_params`, and must
+     prove the required substitution-image freshness from call-site argument
+     root-name preservation and freshened callee parameter/local names.
    - Chosen direction: keep lifetime substitution inference as-is, derive root
      evidence from call-site argument roots plus
      `call_param_root_env`, then instantiate cached root-polymorphic summaries
@@ -361,23 +370,16 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
    - Remaining: prove that alpha-renaming plus `root_subst_of_params`
      instantiation supplies `callee_body_root_ready_at` for the freshened
      call-site environment.
-   - Current implementation blocker: no root-aware transport theorem currently
-     exists for `typed_env_roots` across alpha-renaming plus
-     `root_env_instantiate`. The next implementation slice must introduce that
-     theorem, or smaller constructor-family helpers for it, before adding
-     `env_fns_root_summary_evidence -> direct_call_callee_body_root_evidence`.
-   - New blocker exposed by attempting the instantiation theorem: arbitrary
+   - Resolved blocker from attempting the unrestricted instantiation theorem:
+     arbitrary
      `root_subst` instantiation does not preserve let-bound/callee-local
      exclusion facts. In `ELet` / `ELetInfer`, the premise
      `roots_exclude x roots2` is not enough to prove
      `roots_exclude x (root_set_instantiate rho roots2)` because a
-     substitution image may itself contain `RStore x`. The same issue applies
-     to `root_env_excludes x (root_env_remove x R2)`. The transport theorem
-     must therefore carry an explicit substitution-image freshness premise,
-     such as "every image in `rho` excludes each locally removed store root",
-     parameterized by the let-bound names and callee cleanup names being
-     removed. Do not state or prove an unrestricted
-     `typed_roots_instantiate_mutual`; that statement is false.
+     substitution image may itself contain `RStore x`. The implemented
+     guarded theorem carries the required substitution-image freshness premise
+     over collected local store names. Do not state or prove an unrestricted
+     `typed_roots_instantiate_mutual`; that statement remains false.
    - New blocker exposed by the rename helper layer: transporting
      `root_env_excludes` through alpha-renaming needs an explicit root-atom
      no-collision premise. The bridge must prove that no `RStore z` inside a

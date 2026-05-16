@@ -392,6 +392,16 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      the extension, and then remove the renamed binding after the body. Do not
      try another monolithic proof until the add/remove helper layer for this
      extended rename case is compiled.
+   - Done: added the root atom exclusion helper layer for that extended
+     rename case: `root_atom_mentions`, `root_set_excludes_atom`,
+     `root_env_excludes_atom`, `root_set_rename_cons_excluded`,
+     `root_env_rename_cons_excluded`, and add/remove wrappers.
+   - Current blocker after the helper layer: the existing naming invariants
+     (`root_set_ctx_roots_named`, `root_env_ctx_roots_named`, and store-name
+     variants) only track `RStore` atoms. The extended rename proof must also
+     rule out `RParam x` when the let binder extends the rename environment.
+     Add a small static atom-exclusion theorem for `typed_env_roots` before
+     attempting the `ELet` / `ELetInfer` alpha-transport cases.
    - Chosen direction: keep lifetime substitution inference as-is, derive root
      evidence from call-site argument roots plus
      `call_param_root_env`, then instantiate cached root-polymorphic summaries

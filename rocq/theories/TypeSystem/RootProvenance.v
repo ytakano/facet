@@ -289,6 +289,17 @@ Proof.
   - apply root_set_rename_in. apply Heq. exact Hin0.
 Qed.
 
+Definition root_atom_mentions (x : ident) (atom : root_atom) : Prop :=
+  match atom with
+  | RStore y => y = x
+  | RParam y => y = x
+  end.
+
+Definition root_set_excludes_atom (x : ident) (roots : root_set) : Prop :=
+  forall atom,
+    In atom roots ->
+    ~ root_atom_mentions x atom.
+
 Lemma root_set_rename_app :
   forall rho a b,
     root_set_rename rho (a ++ b) =
@@ -298,6 +309,32 @@ Proof.
   induction a as [| atom rest IH]; intros b; simpl.
   - reflexivity.
   - rewrite IH. reflexivity.
+Qed.
+
+Lemma root_atom_rename_cons_excluded :
+  forall x xr rho atom,
+    ~ root_atom_mentions x atom ->
+    root_atom_rename ((x, xr) :: rho) atom =
+    root_atom_rename rho atom.
+Proof.
+  intros x xr rho [y | y] Hnot; simpl in *;
+    destruct (ident_eqb y x) eqn:Hyx; try reflexivity;
+    apply ident_eqb_eq in Hyx; subst y; exfalso; apply Hnot; reflexivity.
+Qed.
+
+Lemma root_set_rename_cons_excluded :
+  forall x xr rho roots,
+    root_set_excludes_atom x roots ->
+    root_set_rename ((x, xr) :: rho) roots =
+    root_set_rename rho roots.
+Proof.
+  intros x xr rho roots.
+  induction roots as [| atom rest IH]; intros Hexcl; simpl.
+  - reflexivity.
+  - rewrite root_atom_rename_cons_excluded.
+    + rewrite IH. reflexivity.
+      intros atom0 Hin Hmentions. apply (Hexcl atom0); simpl; auto.
+    + intros Hmentions. apply (Hexcl atom); simpl; auto.
 Qed.
 
 Definition rename_no_collision_for
@@ -371,6 +408,11 @@ Fixpoint root_env_lookup (x : ident) (R : root_env) : option root_set :=
       if ident_eqb x y then Some roots else root_env_lookup x rest
   end.
 
+Definition root_env_excludes_atom (x : ident) (R : root_env) : Prop :=
+  forall y roots,
+    In (y, roots) R ->
+    y <> x /\ root_set_excludes_atom x roots.
+
 Definition root_env_add (x : ident) (roots : root_set) (R : root_env)
     : root_env :=
   (x, roots) :: R.
@@ -391,6 +433,40 @@ Fixpoint root_env_remove (x : ident) (R : root_env) : root_env :=
   | (y, roots) :: rest =>
       if ident_eqb x y then rest else (y, roots) :: root_env_remove x rest
   end.
+
+Lemma root_env_excludes_atom_remove :
+  forall x y R,
+    root_env_excludes_atom x R ->
+    root_env_excludes_atom x (root_env_remove y R).
+Proof.
+  intros x y R.
+  induction R as [| [z roots] rest IH]; intros Hexcl u roots_u Hin;
+    simpl in *; try contradiction.
+  destruct (ident_eqb y z) eqn:Hyz.
+  - apply (Hexcl u roots_u). right. exact Hin.
+  - destruct Hin as [Hin | Hin].
+    + inversion Hin. subst u roots_u.
+      apply (Hexcl z roots). left. reflexivity.
+    + apply IH.
+      * intros u' roots' Hin'.
+        apply (Hexcl u' roots'). right. exact Hin'.
+      * exact Hin.
+Qed.
+
+Lemma root_env_excludes_atom_add :
+  forall x y roots R,
+    y <> x ->
+    root_set_excludes_atom x roots ->
+    root_env_excludes_atom x R ->
+    root_env_excludes_atom x (root_env_add y roots R).
+Proof.
+  intros x y roots R Hyx Hroots Hexcl z roots_z Hin.
+  unfold root_env_add in Hin. simpl in Hin.
+  destruct Hin as [Hin | Hin].
+  - inversion Hin. subst z roots_z.
+    split; assumption.
+  - apply Hexcl. exact Hin.
+Qed.
 
 Definition root_subst := list (ident * root_set).
 
@@ -1048,6 +1124,29 @@ Proof.
       * split.
         -- exact Hx.
         -- exact Hzroots.
+Qed.
+
+Lemma root_env_rename_cons_excluded :
+  forall x xr rho R,
+    root_env_excludes_atom x R ->
+    root_env_rename ((x, xr) :: rho) R =
+    root_env_rename rho R.
+Proof.
+  intros x xr rho R.
+  induction R as [| [y roots] rest IH]; intros Hexcl; simpl.
+  - reflexivity.
+  - destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx.
+      destruct (Hexcl y roots) as [Hyneq _].
+      * left. reflexivity.
+      * contradiction.
+    + rewrite root_set_rename_cons_excluded.
+      * rewrite IH. reflexivity.
+        intros z roots_z Hin.
+        apply (Hexcl z roots_z). right. exact Hin.
+      * destruct (Hexcl y roots) as [_ Hroots].
+        -- left. reflexivity.
+        -- exact Hroots.
 Qed.
 
 Lemma root_env_rename_add :

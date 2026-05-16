@@ -1342,6 +1342,61 @@ Proof.
       * apply root_set_equiv_sym. apply root_set_instantiate_union_equiv.
 Qed.
 
+Lemma typed_env_roots_instantiate_fresh :
+  forall env Ω n rho R Σ e T Σ' R' roots R0,
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    root_subst_images_exclude_names (expr_local_store_names e) rho ->
+    root_env_no_shadow R ->
+    root_env_no_shadow R0 ->
+    root_env_equiv R0 (root_env_instantiate rho R) ->
+    exists R0' roots0,
+      typed_env_roots env Ω n R0 Σ e T Σ' R0' roots0 /\
+      root_env_no_shadow R0' /\
+      root_env_equiv R0' (root_env_instantiate rho R') /\
+      root_set_equiv roots0 (root_set_instantiate rho roots).
+Proof.
+  intros env Ω n rho R Σ e T Σ' R' roots R0 Htyped Hfresh HnsR HnsR0 HR0.
+  exact (proj1 (typed_roots_instantiate_fresh_mutual env Ω n rho)
+    R Σ e T Σ' R' roots Htyped Hfresh R0 HnsR HnsR0 HR0).
+Qed.
+
+Lemma typed_args_roots_instantiate_fresh :
+  forall env Ω n rho R Σ args ps Σ' R' roots R0,
+    typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+    root_subst_images_exclude_names (args_local_store_names args) rho ->
+    root_env_no_shadow R ->
+    root_env_no_shadow R0 ->
+    root_env_equiv R0 (root_env_instantiate rho R) ->
+    exists R0' roots0,
+      typed_args_roots env Ω n R0 Σ args ps Σ' R0' roots0 /\
+      root_env_no_shadow R0' /\
+      root_env_equiv R0' (root_env_instantiate rho R') /\
+      Forall2 root_set_equiv roots0 (map (root_set_instantiate rho) roots).
+Proof.
+  intros env Ω n rho R Σ args ps Σ' R' roots R0 Htyped Hfresh HnsR HnsR0 HR0.
+  exact (proj1 (proj2 (typed_roots_instantiate_fresh_mutual env Ω n rho))
+    R Σ args ps Σ' R' roots Htyped Hfresh R0 HnsR HnsR0 HR0).
+Qed.
+
+Lemma typed_fields_roots_instantiate_fresh :
+  forall env Ω n rho lts args R Σ fields defs Σ' R' roots R0,
+    typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+    root_subst_images_exclude_names (fields_local_store_names fields) rho ->
+    root_env_no_shadow R ->
+    root_env_no_shadow R0 ->
+    root_env_equiv R0 (root_env_instantiate rho R) ->
+    exists R0' roots0,
+      typed_fields_roots env Ω n lts args R0 Σ fields defs Σ' R0' roots0 /\
+      root_env_no_shadow R0' /\
+      root_env_equiv R0' (root_env_instantiate rho R') /\
+      root_set_equiv roots0 (root_set_instantiate rho roots).
+Proof.
+  intros env Ω n rho lts args R Σ fields defs Σ' R' roots R0
+    Htyped Hfresh HnsR HnsR0 HR0.
+  exact (proj2 (proj2 (typed_roots_instantiate_fresh_mutual env Ω n rho))
+    lts args R Σ fields defs Σ' R' roots Htyped Hfresh R0 HnsR HnsR0 HR0).
+Qed.
+
 Lemma typed_env_structural_same_bindings :
   forall env Ω n Σ e T Σ',
     typed_env_structural env Ω n Σ e T Σ' ->

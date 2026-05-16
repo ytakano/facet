@@ -121,3 +121,37 @@ Proof.
   - exact Hv.
   - apply ty_compatible_b_sound. exact Hcompat.
 Qed.
+
+Theorem infer_full_env_roots_big_step_safe_direct_call_ready :
+  forall env f R0 T Γ' R' roots s s' v,
+    infer_full_env_roots env f R0 = infer_ok (T, Γ', R', roots) ->
+    initial_store_for_fn env f s ->
+    preservation_direct_call_ready_expr (fn_body f) ->
+    store_roots_within R0 s ->
+    store_no_shadow s ->
+    root_env_no_shadow R0 ->
+    fn_env_unique_by_name env ->
+    env_fns_preservation_ready env ->
+    direct_call_callee_root_evidence env ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros env f R0 T Γ' R' roots s s' v
+    Hinfer Hstore Hready Hroots Hstore_shadow Hroot_shadow Hunique
+    Hfns_ready Hcallee_roots Heval.
+  pose proof (infer_full_env_roots_sound env f R0 T Γ' R' roots Hinfer)
+    as [Htyped_fn _].
+  unfold typed_fn_env_roots in Htyped_fn.
+  destruct Htyped_fn as [T_body [Γ_out [Htyped [Hcompat _]]]].
+  destruct (eval_preserves_typing_direct_call_roots_ready
+      env s (fn_body f) s' v Heval
+      (fn_outlives f) (fn_lifetimes f) R0
+      (sctx_of_ctx (params_ctx (fn_params f)))
+      T_body (sctx_of_ctx Γ_out) R' roots
+      Hready Hstore Hroots Hstore_shadow Hroot_shadow Htyped
+      Hunique Hfns_ready Hcallee_roots)
+    as [_ [Hv _]].
+  eapply VHT_Compatible.
+  - exact Hv.
+  - apply ty_compatible_b_sound. exact Hcompat.
+Qed.

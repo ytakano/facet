@@ -3653,6 +3653,102 @@ Proof.
   eapply sctx_lookup_in_ctx_names_root_names. exact Hlookup.
 Qed.
 
+Lemma root_set_ctx_roots_named_ctx_merge_left :
+  forall roots Σ2 Σ3 Σ4,
+    ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
+    root_set_ctx_roots_named roots Σ2 ->
+    root_set_ctx_roots_named roots Σ4.
+Proof.
+  intros roots Σ2 Σ3 Σ4 Hmerge Hroots.
+  eapply root_set_ctx_roots_named_same_bindings.
+  - eapply ctx_merge_same_bindings_left. exact Hmerge.
+  - exact Hroots.
+Qed.
+
+Lemma root_env_ctx_roots_named_ctx_merge_left :
+  forall R Σ2 Σ3 Σ4,
+    ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
+    root_env_ctx_roots_named R Σ2 ->
+    root_env_ctx_roots_named R Σ4.
+Proof.
+  intros R Σ2 Σ3 Σ4 Hmerge Henv.
+  eapply root_env_ctx_roots_named_same_bindings.
+  - eapply ctx_merge_same_bindings_left. exact Hmerge.
+  - exact Henv.
+Qed.
+
+Lemma root_set_ctx_roots_named_ctx_merge_right :
+  forall env Ω n R1 Σ1 e2 T2 Σ2 R2 roots2
+      e3 T3 Σ3 R3 roots3 Σ4,
+    typed_env_roots env Ω n R1 Σ1 e2 T2 Σ2 R2 roots2 ->
+    typed_env_roots env Ω n R1 Σ1 e3 T3 Σ3 R3 roots3 ->
+    ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
+    root_set_ctx_roots_named roots3 Σ3 ->
+    root_set_ctx_roots_named roots3 Σ4.
+Proof.
+  intros env Ω n R1 Σ1 e2 T2 Σ2 R2 roots2 e3 T3 Σ3 R3
+    roots3 Σ4 Htyped2 Htyped3 Hmerge Hroots.
+  eapply root_set_ctx_roots_named_same_bindings.
+  - eapply ctx_merge_same_bindings_right.
+    + eapply sctx_same_bindings_trans.
+      * apply sctx_same_bindings_sym.
+        eapply typed_env_structural_same_bindings.
+        eapply typed_env_roots_structural. exact Htyped2.
+      * eapply typed_env_structural_same_bindings.
+        eapply typed_env_roots_structural. exact Htyped3.
+    + exact Hmerge.
+  - exact Hroots.
+Qed.
+
+Lemma root_set_ctx_roots_named_if_merge :
+  forall env Ω n R1 Σ1 e2 T2 Σ2 R2 roots2
+      e3 T3 Σ3 R3 roots3 Σ4,
+    typed_env_roots env Ω n R1 Σ1 e2 T2 Σ2 R2 roots2 ->
+    typed_env_roots env Ω n R1 Σ1 e3 T3 Σ3 R3 roots3 ->
+    ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
+    root_set_ctx_roots_named roots2 Σ2 ->
+    root_set_ctx_roots_named roots3 Σ3 ->
+    root_set_ctx_roots_named (root_set_union roots2 roots3) Σ4.
+Proof.
+  intros env Ω n R1 Σ1 e2 T2 Σ2 R2 roots2 e3 T3 Σ3 R3
+    roots3 Σ4 Htyped2 Htyped3 Hmerge Hroots2 Hroots3.
+  apply root_set_ctx_roots_named_union.
+  - eapply root_set_ctx_roots_named_ctx_merge_left; eassumption.
+  - eapply root_set_ctx_roots_named_ctx_merge_right.
+    + exact Htyped2.
+    + exact Htyped3.
+    + exact Hmerge.
+    + exact Hroots3.
+Qed.
+
+Lemma root_set_ctx_roots_named_typed_args_tail :
+  forall env Ω n Σ1 R1 roots args ps Σ2 R2 roots_rest,
+    typed_args_roots env Ω n R1 Σ1 args ps Σ2 R2 roots_rest ->
+    root_set_ctx_roots_named roots Σ1 ->
+    root_set_ctx_roots_named roots Σ2.
+Proof.
+  intros env Ω n Σ1 R1 roots args ps Σ2 R2 roots_rest Htyped_args Hroots.
+  eapply root_set_ctx_roots_named_same_bindings.
+  - eapply typed_args_env_structural_same_bindings.
+    eapply typed_args_roots_structural. exact Htyped_args.
+  - exact Hroots.
+Qed.
+
+Lemma root_set_ctx_roots_named_typed_fields_tail :
+  forall env Ω n lts ty_args Σ1 R1 roots fields defs Σ2 R2 roots_rest,
+    typed_fields_roots env Ω n lts ty_args R1 Σ1 fields defs Σ2 R2
+      roots_rest ->
+    root_set_ctx_roots_named roots Σ1 ->
+    root_set_ctx_roots_named roots Σ2.
+Proof.
+  intros env Ω n lts ty_args Σ1 R1 roots fields defs Σ2 R2 roots_rest
+    Htyped_fields Hroots.
+  eapply root_set_ctx_roots_named_same_bindings.
+  - eapply typed_fields_env_structural_same_bindings.
+    eapply typed_fields_roots_structural. exact Htyped_fields.
+  - exact Hroots.
+Qed.
+
 Theorem eval_preserves_roots_ready_mutual :
   (forall env s e s' v,
     eval env s e s' v ->

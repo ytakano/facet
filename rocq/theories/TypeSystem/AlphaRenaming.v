@@ -4074,6 +4074,291 @@ Proof.
   eapply (Hsize (S (expr_size e))); eauto.
 Qed.
 
+Lemma root_env_equiv_rename_lookup_forward :
+  forall rho R Rr x roots,
+    root_env_equiv Rr (root_env_rename rho R) ->
+    rename_no_collision_on rho (root_env_names R) ->
+    root_env_lookup x R = Some roots ->
+    exists rootsr,
+      root_env_lookup (lookup_rename x rho) Rr = Some rootsr /\
+      root_set_equiv rootsr (root_set_rename rho roots).
+Proof.
+  intros rho R Rr x roots Heq Hnocoll Hlookup.
+  assert (Hlookup_ren :
+    root_env_lookup (lookup_rename x rho) (root_env_rename rho R) =
+      Some (root_set_rename rho roots)).
+  { eapply root_env_lookup_rename.
+    - apply Hnocoll.
+      eapply root_env_lookup_some_in_names. exact Hlookup.
+    - exact Hlookup. }
+  destruct (root_env_equiv_lookup_r Rr (root_env_rename rho R)
+    (lookup_rename x rho) (root_set_rename rho roots) Heq Hlookup_ren)
+    as [rootsr [Hlookup_r Hroots]].
+  exists rootsr. split.
+  - exact Hlookup_r.
+  - exact Hroots.
+Qed.
+
+Lemma root_sets_union_rename_equiv :
+  forall rho roots rootsr,
+    Forall2 root_set_equiv rootsr (map (root_set_rename rho) roots) ->
+    root_set_equiv (root_sets_union rootsr)
+      (root_set_rename rho (root_sets_union roots)).
+Proof.
+  intros rho roots.
+  induction roots as [| roots_hd roots_tl IH]; intros rootsr Hforall.
+  - inversion Hforall; subst. apply root_set_equiv_refl.
+  - simpl in Hforall |- *.
+    destruct rootsr as [| rootsr_hd rootsr_tl].
+    { inversion Hforall. }
+    inversion Hforall; subst.
+    eapply root_set_equiv_trans.
+    + apply root_set_union_equiv.
+      * match goal with
+        | H : root_set_equiv rootsr_hd (root_set_rename rho roots_hd) |- _ =>
+            exact H
+        end.
+      * apply IH.
+        match goal with
+        | H : Forall2 root_set_equiv rootsr_tl
+              (map (root_set_rename rho) roots_tl) |- _ =>
+            exact H
+        end.
+    + apply root_set_equiv_sym. apply root_set_union_rename_equiv.
+Qed.
+
+Lemma alpha_rename_typed_env_roots_var_forward :
+  forall env Ω n rho R Rr Σ Σr x er used used' T Σ' R' roots,
+    typed_env_roots env Ω n R Σ (EVar x) T Σ' R' roots ->
+    ctx_alpha rho Σ Σr ->
+    root_env_no_shadow R ->
+    root_env_no_shadow Rr ->
+    root_env_equiv Rr (root_env_rename rho R) ->
+    rename_no_collision_on rho (root_env_names R) ->
+    rename_no_collision_on rho (root_env_names R') ->
+    (forall y, In y (ctx_names Σr) -> In y used) ->
+    (forall y, In y (rename_range rho) -> In y used) ->
+    disjoint_names (free_vars_expr (EVar x)) (rename_range rho) ->
+    alpha_rename_expr rho used (EVar x) = (er, used') ->
+    exists Σr' Rr' rootsr,
+      typed_env_roots env Ω n Rr Σr er T Σr' Rr' rootsr /\
+      ctx_alpha rho Σ' Σr' /\
+      root_env_no_shadow Rr' /\
+      root_env_equiv Rr' (root_env_rename rho R') /\
+      root_set_equiv rootsr (root_set_rename rho roots).
+Proof.
+  intros env Ω n rho R Rr Σ Σr x er used used' T Σ' R' roots
+    Htyped Hctx HnsR HnsRr HRr HnocollR HnocollR'
+    Hctx_used Hrange_used Hdisj Hrename.
+  simpl in Hrename. injection Hrename as <- <-.
+  set (R0 := R) in *.
+  set (Rr0 := Rr) in *.
+  inversion Htyped; subst.
+  - destruct (root_env_equiv_rename_lookup_forward rho R0 Rr0 x roots
+      HRr HnocollR
+      ltac:(match goal with
+        | H : root_env_lookup x R0 = Some roots |- _ => exact H
+        end)) as [rootsr [Hlookup_r Hroots_r]].
+    exists Σr, Rr0, rootsr. repeat split.
+    + eapply TER_Var_Copy.
+      * change (typed_place_env_structural env Σr
+          (PVar (lookup_rename x rho)) T) with
+          (typed_place_env_structural env Σr
+            (rename_place rho (PVar x)) T).
+        eapply alpha_rename_typed_place_env_structural_forward.
+        -- exact Hctx.
+        -- apply Hdisj. simpl. left. reflexivity.
+        -- match goal with
+           | H : typed_place_env_structural env _ (PVar x) T |- _ =>
+               exact H
+           end.
+      * match goal with
+        | H : ty_usage T = UUnrestricted |- _ => exact H
+        end.
+      * exact Hlookup_r.
+    + exact Hctx.
+    + exact HnsRr.
+    + exact HRr.
+    + apply Hroots_r.
+    + apply Hroots_r.
+  - assert (Hsafe : ~ In x (rename_range rho)).
+    { apply Hdisj. simpl. left. reflexivity. }
+    destruct (ctx_alpha_consume_path_forward
+      rho _ Σr x [] Σ' Hctx Hsafe
+      ltac:(match goal with
+        | H : sctx_consume_path _ x [] = infer_ok Σ' |- _ => exact H
+        end))
+      as [Σr' [Hconsume_r Hctx_r]].
+    destruct (root_env_equiv_rename_lookup_forward rho R0 Rr0 x roots
+      HRr HnocollR
+      ltac:(match goal with
+        | H : root_env_lookup x R0 = Some roots |- _ => exact H
+        end)) as [rootsr [Hlookup_r Hroots_r]].
+    exists Σr', Rr0, rootsr. repeat split.
+    + eapply TER_Var_Move.
+      * change (typed_place_env_structural env Σr
+          (PVar (lookup_rename x rho)) T) with
+          (typed_place_env_structural env Σr
+            (rename_place rho (PVar x)) T).
+        eapply alpha_rename_typed_place_env_structural_forward; eauto.
+      * match goal with
+        | H : ty_usage T <> UUnrestricted |- _ => exact H
+        end.
+      * exact Hconsume_r.
+      * exact Hlookup_r.
+    + exact Hctx_r.
+    + exact HnsRr.
+    + exact HRr.
+    + apply Hroots_r.
+    + apply Hroots_r.
+Qed.
+
+Lemma alpha_rename_typed_env_roots_place_forward :
+  forall env Ω n rho R Rr Σ Σr p er used used' T Σ' R' roots,
+    typed_env_roots env Ω n R Σ (EPlace p) T Σ' R' roots ->
+    ctx_alpha rho Σ Σr ->
+    root_env_no_shadow R ->
+    root_env_no_shadow Rr ->
+    root_env_equiv Rr (root_env_rename rho R) ->
+    rename_no_collision_on rho (root_env_names R) ->
+    rename_no_collision_on rho (root_env_names R') ->
+    (forall x, In x (ctx_names Σr) -> In x used) ->
+    (forall x, In x (rename_range rho) -> In x used) ->
+    disjoint_names (free_vars_expr (EPlace p)) (rename_range rho) ->
+    alpha_rename_expr rho used (EPlace p) = (er, used') ->
+    exists Σr' Rr' rootsr,
+      typed_env_roots env Ω n Rr Σr er T Σr' Rr' rootsr /\
+      ctx_alpha rho Σ' Σr' /\
+      root_env_no_shadow Rr' /\
+      root_env_equiv Rr' (root_env_rename rho R') /\
+      root_set_equiv rootsr (root_set_rename rho roots).
+Proof.
+  intros env Ω n rho R Rr Σ Σr p er used used' T Σ' R' roots
+    Htyped Hctx HnsR HnsRr HRr HnocollR HnocollR'
+    Hctx_used Hrange_used Hdisj Hrename.
+  simpl in Hrename. injection Hrename as <- <-.
+  set (R0 := R) in *.
+  set (Rr0 := Rr) in *.
+  inversion Htyped; subst.
+  - assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+    { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+    destruct (root_env_equiv_rename_lookup_forward rho R0 Rr0 x roots
+      HRr HnocollR
+      ltac:(match goal with
+        | H : root_env_lookup x R0 = Some roots |- _ => exact H
+        end)) as [rootsr [Hlookup_r Hroots_r]].
+    exists Σr, Rr0, rootsr. repeat split.
+    + eapply TER_Place_Copy.
+      * eapply alpha_rename_typed_place_env_structural_forward; eauto.
+      * match goal with
+        | H : ty_usage T = UUnrestricted |- _ => exact H
+        end.
+      * eapply place_path_rename_place_some.
+        match goal with
+        | H : place_path p = Some (x, path) |- _ => exact H
+        end.
+      * exact Hlookup_r.
+    + exact Hctx.
+    + exact HnsRr.
+    + exact HRr.
+    + apply Hroots_r.
+    + apply Hroots_r.
+  - assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+    { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+    assert (Hsafe_x : ~ In x (rename_range rho)).
+    { rewrite <- (place_path_root p x path
+        ltac:(match goal with
+          | H : place_path p = Some (x, path) |- _ => exact H
+          end)).
+      exact Hsafe_root. }
+    destruct (ctx_alpha_consume_path_forward
+      rho Σ Σr x path Σ' Hctx Hsafe_x
+      ltac:(match goal with
+        | H : sctx_consume_path Σ x path = infer_ok Σ' |- _ => exact H
+        end))
+      as [Σr' [Hconsume_r Hctx_r]].
+    destruct (root_env_equiv_rename_lookup_forward rho R0 Rr0 x roots
+      HRr HnocollR
+      ltac:(match goal with
+        | H : root_env_lookup x R0 = Some roots |- _ => exact H
+        end)) as [rootsr [Hlookup_r Hroots_r]].
+    exists Σr', Rr0, rootsr. repeat split.
+    + eapply TER_Place_Move.
+      * eapply alpha_rename_typed_place_env_structural_forward; eauto.
+      * match goal with
+        | H : ty_usage T <> UUnrestricted |- _ => exact H
+        end.
+      * eapply place_path_rename_place_some.
+        match goal with
+        | H : place_path p = Some (x, path) |- _ => exact H
+        end.
+      * exact Hconsume_r.
+      * exact Hlookup_r.
+    + exact Hctx_r.
+    + exact HnsRr.
+    + exact HRr.
+    + apply Hroots_r.
+    + apply Hroots_r.
+Qed.
+
+Lemma alpha_rename_typed_env_roots_borrow_forward :
+  forall env Ω n rho R Rr Σ Σr rk p er used used' T Σ' R' roots,
+    typed_env_roots env Ω n R Σ (EBorrow rk p) T Σ' R' roots ->
+    ctx_alpha rho Σ Σr ->
+    root_env_no_shadow R ->
+    root_env_no_shadow Rr ->
+    root_env_equiv Rr (root_env_rename rho R) ->
+    rename_no_collision_on rho (root_env_names R) ->
+    rename_no_collision_on rho (root_env_names R') ->
+    (forall x, In x (ctx_names Σr) -> In x used) ->
+    (forall x, In x (rename_range rho) -> In x used) ->
+    disjoint_names (free_vars_expr (EBorrow rk p)) (rename_range rho) ->
+    alpha_rename_expr rho used (EBorrow rk p) = (er, used') ->
+    exists Σr' Rr' rootsr,
+      typed_env_roots env Ω n Rr Σr er T Σr' Rr' rootsr /\
+      ctx_alpha rho Σ' Σr' /\
+      root_env_no_shadow Rr' /\
+      root_env_equiv Rr' (root_env_rename rho R') /\
+      root_set_equiv rootsr (root_set_rename rho roots).
+Proof.
+  intros env Ω n rho R Rr Σ Σr rk p er used used' T Σ' R' roots
+    Htyped Hctx HnsR HnsRr HRr HnocollR HnocollR'
+    Hctx_used Hrange_used Hdisj Hrename.
+  simpl in Hrename. destruct rk; injection Hrename as <- <-;
+    inversion Htyped; subst.
+  - assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+    { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+    exists Σr, Rr, (root_of_place (rename_place rho p)). repeat split.
+    + eapply TER_BorrowShared.
+      eapply alpha_rename_typed_place_env_structural_forward; eauto.
+    + exact Hctx.
+    + exact HnsRr.
+    + exact HRr.
+    + rewrite root_of_place_rename_place. simpl. tauto.
+    + rewrite root_of_place_rename_place. simpl. tauto.
+  - assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+    { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+    assert (Hsafe_x : ~ In x (rename_range rho)).
+    { rewrite <- (place_path_root p x path
+        ltac:(match goal with
+          | H : place_path p = Some (x, path) |- _ => exact H
+          end)).
+      exact Hsafe_root. }
+    exists Σr, Rr, [RStore (lookup_rename x rho)]. repeat split.
+    + eapply TER_BorrowUnique.
+      * eapply alpha_rename_typed_place_env_structural_forward; eauto.
+      * eapply place_path_rename_place_some.
+        match goal with
+        | H : place_path p = Some (x, path) |- _ => exact H
+        end.
+      * eapply ctx_alpha_lookup_mut_forward; eauto.
+    + exact Hctx.
+    + exact HnsRr.
+    + exact HRr.
+    + simpl. tauto.
+    + simpl. tauto.
+Qed.
+
 Lemma alpha_rename_fn_def_typed_structural_forward :
   forall env used f fr used',
     alpha_rename_fn_def used f = (fr, used') ->

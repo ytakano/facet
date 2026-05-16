@@ -307,6 +307,48 @@ Definition rename_no_collision_for
     y <> x ->
     lookup_rename y rho <> lookup_rename x rho.
 
+Definition rename_no_collision_on
+    (rho : rename_env) (names : list ident) : Prop :=
+  forall x,
+    In x names ->
+    rename_no_collision_for rho x names.
+
+Lemma rename_no_collision_on_NoDup_map :
+  forall rho names,
+    NoDup names ->
+    rename_no_collision_on rho names ->
+    NoDup (map (fun x => lookup_rename x rho) names).
+Proof.
+  intros rho names Hnodup Hnocoll.
+  induction Hnodup as [| x names Hnotin Hnodup_tail IH]; simpl.
+  - constructor.
+  - constructor.
+    + intros Hin.
+      apply in_map_iff in Hin.
+      destruct Hin as [y [Hyrename Hyin]].
+      assert (Hyx : y <> x).
+      { intros Heq. subst y. apply Hnotin. exact Hyin. }
+      exfalso.
+      exact (Hnocoll x (or_introl eq_refl)
+        y (or_intror Hyin) Hyx Hyrename).
+    + apply IH.
+      intros y Hyin z Hzin Hzy.
+      exact (Hnocoll y (or_intror Hyin)
+        z (or_intror Hzin) Hzy).
+Qed.
+
+Lemma root_env_rename_no_shadow :
+  forall rho R,
+    root_env_no_shadow R ->
+    rename_no_collision_on rho (root_env_names R) ->
+    root_env_no_shadow (root_env_rename rho R).
+Proof.
+  unfold root_env_no_shadow.
+  intros rho R Hnodup Hnocoll.
+  rewrite root_env_rename_names.
+  apply rename_no_collision_on_NoDup_map; assumption.
+Qed.
+
 Fixpoint root_set_union (a b : root_set) : root_set :=
   match a with
   | [] => b
@@ -968,6 +1010,44 @@ Proof.
       * right. exact Hin.
       * exact Hzx.
     + exact Hlookup.
+Qed.
+
+Lemma root_env_lookup_rename_inv :
+  forall rho R x roots',
+    root_env_no_shadow R ->
+    root_env_lookup x (root_env_rename rho R) = Some roots' ->
+    exists y roots,
+      root_env_lookup y R = Some roots /\
+      x = lookup_rename y rho /\
+      roots' = root_set_rename rho roots.
+Proof.
+  intros rho R.
+  induction R as [| [y roots_y] rest IH]; intros x roots' Hnodup Hlookup;
+    simpl in *; try discriminate.
+  unfold root_env_no_shadow in Hnodup.
+  simpl in Hnodup.
+  inversion Hnodup as [| ? ? Hy_notin Hnodup_tail]; subst.
+  destruct (ident_eqb x (lookup_rename y rho)) eqn:Hxy.
+  - apply ident_eqb_eq in Hxy.
+    inversion Hlookup. subst roots'.
+    exists y, roots_y. split.
+    + simpl. rewrite ident_eqb_refl. reflexivity.
+    + split.
+      * exact Hxy.
+      * reflexivity.
+  - destruct (IH x roots') as [z [roots_z [Hlookup_z [Hx Hzroots]]]].
+    + unfold root_env_no_shadow. exact Hnodup_tail.
+    + exact Hlookup.
+    + exists z, roots_z. split.
+      * simpl.
+        destruct (ident_eqb z y) eqn:Hzy.
+        -- apply ident_eqb_eq in Hzy. subst z.
+           exfalso. apply Hy_notin.
+           eapply root_env_lookup_some_in_names. exact Hlookup_z.
+        -- exact Hlookup_z.
+      * split.
+        -- exact Hx.
+        -- exact Hzroots.
 Qed.
 
 Lemma root_env_rename_add :
@@ -1933,6 +2013,75 @@ Proof.
   - rewrite (root_env_lookup_instantiate_none x rho R Hlookup).
     rewrite (root_env_lookup_instantiate_none x rho R' Hlookup').
     exact I.
+Qed.
+
+Lemma root_env_equiv_rename :
+  forall rho R R',
+    root_env_equiv R R' ->
+    root_env_no_shadow R ->
+    root_env_no_shadow R' ->
+    rename_no_collision_on rho (root_env_names R) ->
+    rename_no_collision_on rho (root_env_names R') ->
+    root_env_equiv
+      (root_env_rename rho R)
+      (root_env_rename rho R').
+Proof.
+  unfold root_env_equiv.
+  intros rho R R' HRR' Hnodup Hnodup' Hnocoll Hnocoll' x.
+  destruct (root_env_lookup x (root_env_rename rho R)) as [roots |]
+    eqn:Hlookup;
+    destruct (root_env_lookup x (root_env_rename rho R')) as [roots' |]
+      eqn:Hlookup'; try exact I.
+  - destruct (root_env_lookup_rename_inv rho R x roots Hnodup Hlookup)
+      as [y [roots_y [Hlookup_y [Hx Hroots]]]].
+    subst roots.
+    specialize (HRR' y).
+    rewrite Hlookup_y in HRR'.
+    destruct (root_env_lookup y R') as [roots_y' |] eqn:Hlookup_y';
+      try contradiction.
+    assert (Hlookup_ren :
+      root_env_lookup (lookup_rename y rho) (root_env_rename rho R') =
+        Some (root_set_rename rho roots_y')).
+    { eapply root_env_lookup_rename.
+      - apply Hnocoll'.
+        eapply root_env_lookup_some_in_names. exact Hlookup_y'.
+      - exact Hlookup_y'. }
+    rewrite <- Hx in Hlookup_ren.
+    rewrite Hlookup' in Hlookup_ren.
+    inversion Hlookup_ren. subst roots'.
+    apply root_set_rename_equiv. exact HRR'.
+  - destruct (root_env_lookup_rename_inv rho R x roots Hnodup Hlookup)
+      as [y [roots_y [Hlookup_y [Hx _]]]].
+    specialize (HRR' y).
+    rewrite Hlookup_y in HRR'.
+    destruct (root_env_lookup y R') as [roots_y' |] eqn:Hlookup_y';
+      try contradiction.
+    assert (Hlookup_ren :
+      root_env_lookup (lookup_rename y rho) (root_env_rename rho R') =
+        Some (root_set_rename rho roots_y')).
+    { eapply root_env_lookup_rename.
+      - apply Hnocoll'.
+        eapply root_env_lookup_some_in_names. exact Hlookup_y'.
+      - exact Hlookup_y'. }
+    rewrite <- Hx in Hlookup_ren.
+    rewrite Hlookup' in Hlookup_ren.
+    discriminate.
+  - destruct (root_env_lookup_rename_inv rho R' x roots' Hnodup' Hlookup')
+      as [y [roots_y' [Hlookup_y' [Hx _]]]].
+    specialize (HRR' y).
+    rewrite Hlookup_y' in HRR'.
+    destruct (root_env_lookup y R) as [roots_y |] eqn:Hlookup_y;
+      try contradiction.
+    assert (Hlookup_ren :
+      root_env_lookup (lookup_rename y rho) (root_env_rename rho R) =
+        Some (root_set_rename rho roots_y)).
+    { eapply root_env_lookup_rename.
+      - apply Hnocoll.
+        eapply root_env_lookup_some_in_names. exact Hlookup_y.
+      - exact Hlookup_y. }
+    rewrite <- Hx in Hlookup_ren.
+    rewrite Hlookup in Hlookup_ren.
+    discriminate.
 Qed.
 
 Lemma root_env_instantiate_update_union_equiv :

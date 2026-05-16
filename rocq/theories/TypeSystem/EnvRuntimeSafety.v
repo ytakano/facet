@@ -112,6 +112,11 @@ Definition env_fns_root_summary_check_ready (env : global_env) : Prop :=
     In fdef (env_fns env) ->
     fn_root_summary_check_ready env fdef.
 
+Definition direct_call_callee_body_root_check_summary_bridge
+    (env : global_env) : Prop :=
+  env_fns_root_summary_check_ready env ->
+  direct_call_callee_body_root_check_evidence env.
+
 Lemma callee_body_root_ready_at_of_fn_root_summary_check :
   forall env fdef,
     fn_root_summary_check_ready env fdef ->

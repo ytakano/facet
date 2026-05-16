@@ -369,6 +369,29 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      compiled helpers. The remaining bridge must prove root-aware
      alpha-renaming transport for `typed_env_roots` itself and combine it with
      the guarded instantiation theorem.
+   - Done: added root-env rename helper infrastructure:
+     `rename_no_collision_on`, `root_env_rename_no_shadow`,
+     `root_env_lookup_rename_inv`, and `root_env_equiv_rename`.
+   - Done: factored the call-site evidence replacement into explicit bridge
+     obligations:
+     `direct_call_callee_body_root_summary_bridge` and
+     `direct_call_callee_body_root_check_summary_bridge`. The old direct-call
+     evidence premises remain in use until these bridges are proved.
+   - Done: added the first root-aware alpha-transport constructor helpers:
+     `root_env_equiv_rename_lookup_forward`,
+     `root_sets_union_rename_equiv`,
+     `alpha_rename_typed_env_roots_var_forward`,
+     `alpha_rename_typed_env_roots_place_forward`, and
+     `alpha_rename_typed_env_roots_borrow_forward`.
+   - Current alpha-transport blocker: the full
+     `alpha_rename_typed_env_roots_forward` theorem reaches `ELet` /
+     `ELetInfer` and needs a stronger extended-rename invariant for
+     `((x, xr) :: rho)`. In particular, the proof must relate
+     `root_env_add x roots1 R1` to
+     `root_env_add xr roots1r R1r`, preserve no-collision/no-shadow across
+     the extension, and then remove the renamed binding after the body. Do not
+     try another monolithic proof until the add/remove helper layer for this
+     extended rename case is compiled.
    - Chosen direction: keep lifetime substitution inference as-is, derive root
      evidence from call-site argument roots plus
      `call_param_root_env`, then instantiate cached root-polymorphic summaries

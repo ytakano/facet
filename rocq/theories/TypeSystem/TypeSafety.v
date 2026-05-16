@@ -10712,6 +10712,22 @@ Definition env_fns_root_summary_evidence (env : global_env) : Prop :=
     lookup_fn fname (env_fns env) = Some fdef ->
     callee_body_root_summary env fdef.
 
+Definition direct_call_callee_body_root_summary_bridge
+    (env : global_env) : Prop :=
+  env_fns_root_summary_evidence env ->
+  forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+      (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs
+      used',
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    typed_args_roots env Ω n R Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    root_env_store_roots_named R s ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    callee_body_root_ready_at env fcall
+      (call_param_root_env (fn_params fcall) arg_roots R_args).
+
 Definition direct_call_callee_body_root_evidence (env : global_env) : Prop :=
   forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
       (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs
@@ -10725,6 +10741,18 @@ Definition direct_call_callee_body_root_evidence (env : global_env) : Prop :=
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
     callee_body_root_ready_at env fcall
       (call_param_root_env (fn_params fcall) arg_roots R_args).
+
+Lemma direct_call_callee_body_root_evidence_of_summary_bridge :
+  forall env,
+    env_fns_root_summary_evidence env ->
+    direct_call_callee_body_root_summary_bridge env ->
+    direct_call_callee_body_root_evidence env.
+Proof.
+  intros env Hsummary Hbridge Ω n R Σ Σ_args R_args arg_roots fname args
+    fdef fcall σ s s_args vs used' Hin Hfname Htyped_args Heval_args
+    Hnamed Hrename.
+  eapply Hbridge; eassumption.
+Qed.
 
 Theorem eval_preserves_typing_ready_with_call_invariants_mutual :
   (forall env s e s' v,

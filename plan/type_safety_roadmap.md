@@ -412,16 +412,25 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      no-`RParam x` premise, but the stable-`RParam` design means the
      `ELet` / `ELetInfer` alpha-transport proof should no longer need to
      derive such a premise from `typed_env_roots`.
-   - Next alpha-transport checkpoint: update the `ELet` / `ELetInfer` proof
-     plan to use stable `RParam` semantics. The extended rename proof should
-     rely on `roots_exclude` / `root_env_excludes` for `RStore` cleanup and
-     should not attempt to prove a broad no-`RParam x` theorem from
-     `typed_env_roots`.
-   - Done: strengthened the `ELet` / `ELetInfer` root rules and executable
-     root checker so the initializer result roots must satisfy
-     `roots_exclude x roots1` before adding the let binding. This prevents the
-     extended body rename `((x, xr) :: rho)` from rewriting an initializer root
-     that still points at the old `RStore x`.
+   - Corrected design direction: do not make `ELet` / `ELetInfer` reject
+     initializer roots that mention the binder name. A source program such as
+     `let x = &x; ...` is not inherently type-unsafe or root-unsafe; the
+     conflict only appears when trying to transport root typing from the
+     shadowed source program after the fact.
+   - New canonical approach: alpha-rename before root checking. The checker
+     pipeline should first produce a shadow-free/freshened core program, then
+     run root provenance analysis on that freshened program. Under this shape,
+     `let x = &x; ...` is internally checked as `let x_fresh = &x; ...`, so
+     initializer roots such as `RStore x` do not collide with the let binder.
+   - Next implementation checkpoint: revert the conservative
+     `roots_exclude x roots1` strengthening from `TER_Let` / `TER_LetInfer`
+     and the executable root checker. Replace the proof obligation with a
+     bridge from the existing alpha-renaming pass to root checking on the
+     freshened expression/function body.
+   - Do not use root checker restrictions as a substitute for ordinary checker
+     safety. The eventual target is that the user-facing checker pipeline
+     establishes operational type safety and, where root safety is claimed,
+     obtains the required root evidence from the alpha-renamed program.
    - Chosen direction: keep lifetime substitution inference as-is, derive root
      evidence from call-site argument roots plus
      `call_param_root_env`, then instantiate cached root-polymorphic summaries

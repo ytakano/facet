@@ -8766,6 +8766,18 @@ Definition direct_call_callee_root_evidence (env : global_env) : Prop :=
       roots_exclude_params (fn_params fcall) roots_body /\
       root_env_excludes_params (fn_params fcall) R_body.
 
+Definition callee_body_root_ready_at
+    (env : global_env) (fcall : fn_def) (R_params : root_env) : Prop :=
+  exists T_body Γ_out R_body roots_body,
+    provenance_ready_expr (fn_body fcall) /\
+    preservation_ready_expr (fn_body fcall) /\
+    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+      R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
+    roots_exclude_params (fn_params fcall) roots_body /\
+    root_env_excludes_params (fn_params fcall) R_body.
+
 Definition direct_call_callee_body_root_evidence (env : global_env) : Prop :=
   forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
       (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs
@@ -8774,16 +8786,8 @@ Definition direct_call_callee_body_root_evidence (env : global_env) : Prop :=
       (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
     eval_args env s args s_args vs ->
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
-    exists T_body Γ_out R_body roots_body,
-      provenance_ready_expr (fn_body fcall) /\
-      preservation_ready_expr (fn_body fcall) /\
-      typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
-        (call_param_root_env (fn_params fcall) arg_roots R_args)
-        (sctx_of_ctx (params_ctx (fn_params fcall)))
-        (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
-      ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
-      roots_exclude_params (fn_params fcall) roots_body /\
-      root_env_excludes_params (fn_params fcall) R_body.
+    callee_body_root_ready_at env fcall
+      (call_param_root_env (fn_params fcall) arg_roots R_args).
 
 Theorem eval_preserves_typing_ready_with_call_invariants_mutual :
   (forall env s e s' v,
@@ -9638,9 +9642,11 @@ Proof.
       Heval_args : eval_args env s ?args_call ?s_args ?vs,
       Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
         (?fcall, ?used') |- _ =>
-        destruct (Hcallee_roots Ω n R Σ Σ' R' arg_roots (fn_name fdef)
-                    args_call fdef fcall σ s s_args vs used' Htyped_args
-                    Heval_args Hrename)
+        pose proof (Hcallee_roots Ω n R Σ Σ' R' arg_roots
+                      (fn_name fdef) args_call fdef fcall σ s s_args vs
+                      used' Htyped_args Heval_args Hrename) as Hbody_ready;
+        unfold callee_body_root_ready_at in Hbody_ready;
+        destruct Hbody_ready
           as (T_body & Γ_out & R_body & roots_body &
               Hprov_body & Hready_body & Htyped_body & Hcompat_body &
               Hexclude_ret & Hexclude_env)

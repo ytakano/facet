@@ -5722,6 +5722,21 @@ Proof.
     + exact IH.
 Qed.
 
+Lemma alpha_rename_fn_def_body_root_subst_images_exclude_names_from_store_roots :
+  forall f fr used' arg_roots s,
+    alpha_rename_fn_def (store_names s) f = (fr, used') ->
+    Forall (fun roots => root_set_store_roots_named roots s) arg_roots ->
+    root_subst_images_exclude_names
+      (expr_local_store_names (fn_body fr))
+      (root_subst_of_params (fn_params fr) arg_roots).
+Proof.
+  intros f fr used' arg_roots s Hrename Hnamed.
+  eapply root_subst_of_params_images_exclude_names_from_store_roots.
+  - exact Hnamed.
+  - eapply alpha_rename_fn_def_body_local_store_names_fresh_used.
+    exact Hrename.
+Qed.
+
 Lemma root_sets_store_roots_named_excludes_params :
   forall ps roots_list s,
     Forall (fun roots => root_set_store_roots_named roots s) roots_list ->

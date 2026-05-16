@@ -274,6 +274,10 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
    - Done: added root-renaming transport helpers for root sets, root exclusion,
      and root-environment exclusion, plus `root_sets_union` equivalence for
      call argument roots.
+   - Done: added root-renaming compatibility helpers for the root-aware alpha
+     proof: `root_set_rename_app`, `root_set_union_rename_equiv`,
+     `root_env_lookup_rename_none`, and rename transport for root-env
+     add/remove/update under explicit no-collision premises.
    - Done: added guarded alpha-renaming helpers for canonical symbolic
      parameter root environments:
      `alpha_rename_params_initial_root_env_rename` and

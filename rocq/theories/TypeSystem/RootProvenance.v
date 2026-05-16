@@ -289,6 +289,17 @@ Proof.
   - apply root_set_rename_in. apply Heq. exact Hin0.
 Qed.
 
+Lemma root_set_rename_app :
+  forall rho a b,
+    root_set_rename rho (a ++ b) =
+    root_set_rename rho a ++ root_set_rename rho b.
+Proof.
+  intros rho a.
+  induction a as [| atom rest IH]; intros b; simpl.
+  - reflexivity.
+  - rewrite IH. reflexivity.
+Qed.
+
 Definition rename_no_collision_for
     (rho : rename_env) (x : ident) (names : list ident) : Prop :=
   forall y,
@@ -595,6 +606,21 @@ Proof.
     + apply root_set_equiv_sym. apply root_set_union_equiv_app.
 Qed.
 
+Lemma root_set_union_rename_equiv :
+  forall rho roots_left roots_right,
+    root_set_equiv
+      (root_set_rename rho (root_set_union roots_left roots_right))
+      (root_set_union (root_set_rename rho roots_left)
+        (root_set_rename rho roots_right)).
+Proof.
+  intros rho roots_left roots_right.
+  eapply root_set_equiv_trans.
+  - apply root_set_rename_equiv.
+    apply root_set_union_equiv_app.
+  - rewrite root_set_rename_app.
+    apply root_set_equiv_sym. apply root_set_union_equiv_app.
+Qed.
+
 Lemma root_sets_union_equiv :
   forall sets sets',
     Forall2 root_set_equiv sets sets' ->
@@ -650,6 +676,101 @@ Proof.
         -- right. exact Hin.
         -- exact Hzx.
       * exact Hlookup.
+Qed.
+
+Lemma root_env_lookup_rename_none :
+  forall rho R x,
+    rename_no_collision_for rho x (root_env_names R) ->
+    root_env_lookup x R = None ->
+    root_env_lookup (lookup_rename x rho) (root_env_rename rho R) = None.
+Proof.
+  intros rho R.
+  induction R as [| [y roots_y] rest IH]; intros x Hnocoll Hlookup;
+    simpl in *; try reflexivity.
+  destruct (ident_eqb x y) eqn:Hxy; try discriminate.
+  simpl.
+  destruct (ident_eqb (lookup_rename x rho) (lookup_rename y rho))
+    eqn:Hren.
+  - apply ident_eqb_eq in Hren.
+    exfalso.
+    apply (Hnocoll y).
+    + left. reflexivity.
+    + intros Heq. subst y. rewrite ident_eqb_refl in Hxy. discriminate.
+    + symmetry. exact Hren.
+  - apply IH.
+    + intros z Hin Hzx.
+      apply (Hnocoll z).
+      * right. exact Hin.
+      * exact Hzx.
+    + exact Hlookup.
+Qed.
+
+Lemma root_env_rename_add :
+  forall rho x roots R,
+    root_env_rename rho (root_env_add x roots R) =
+    root_env_add (lookup_rename x rho) (root_set_rename rho roots)
+      (root_env_rename rho R).
+Proof.
+  reflexivity.
+Qed.
+
+Lemma root_env_rename_remove :
+  forall rho R x,
+    rename_no_collision_for rho x (root_env_names R) ->
+    root_env_rename rho (root_env_remove x R) =
+    root_env_remove (lookup_rename x rho) (root_env_rename rho R).
+Proof.
+  intros rho R.
+  induction R as [| [y roots_y] rest IH]; intros x Hnocoll;
+    simpl; try reflexivity.
+  destruct (ident_eqb x y) eqn:Hxy.
+  - apply ident_eqb_eq in Hxy. subst y.
+    simpl. rewrite ident_eqb_refl. reflexivity.
+  - simpl.
+    destruct (ident_eqb (lookup_rename x rho) (lookup_rename y rho))
+      eqn:Hren.
+    + apply ident_eqb_eq in Hren.
+      exfalso.
+      apply (Hnocoll y).
+      * left. reflexivity.
+      * intros Heq. subst y. rewrite ident_eqb_refl in Hxy. discriminate.
+      * symmetry. exact Hren.
+    + rewrite IH.
+      * reflexivity.
+      * intros z Hin Hzx.
+        apply (Hnocoll z).
+        -- right. exact Hin.
+        -- exact Hzx.
+Qed.
+
+Lemma root_env_rename_update :
+  forall rho R x roots,
+    rename_no_collision_for rho x (root_env_names R) ->
+    root_env_rename rho (root_env_update x roots R) =
+    root_env_update (lookup_rename x rho) (root_set_rename rho roots)
+      (root_env_rename rho R).
+Proof.
+  intros rho R.
+  induction R as [| [y roots_y] rest IH]; intros x roots Hnocoll;
+    simpl; try reflexivity.
+  destruct (ident_eqb x y) eqn:Hxy.
+  - apply ident_eqb_eq in Hxy. subst y.
+    simpl. rewrite ident_eqb_refl. reflexivity.
+  - simpl.
+    destruct (ident_eqb (lookup_rename x rho) (lookup_rename y rho))
+      eqn:Hren.
+    + apply ident_eqb_eq in Hren.
+      exfalso.
+      apply (Hnocoll y).
+      * left. reflexivity.
+      * intros Heq. subst y. rewrite ident_eqb_refl in Hxy. discriminate.
+      * symmetry. exact Hren.
+    + rewrite IH.
+      * reflexivity.
+      * intros z Hin Hzx.
+        apply (Hnocoll z).
+        -- right. exact Hin.
+        -- exact Hzx.
 Qed.
 
 Lemma root_env_excludes_rename :

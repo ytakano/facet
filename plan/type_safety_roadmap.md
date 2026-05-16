@@ -322,6 +322,42 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      ctx-side helper layer to bridge final `store_typed` facts back to
      runtime store names. Keep it separate from the direct-call wrapper until
      the theorem is complete.
+   - Implementation correction: do not try to prove the static bridge as one
+     large `typed_roots_ctx_roots_named_mutual` proof script first. A direct
+     mutual proof is too brittle because `typed_roots_ind` exposes different
+     generated hypothesis names and different ctx/root obligations for
+     copy/move, let, replace/assign, borrow, if, args, and fields. The previous
+     attempt failed for this reason and was reverted rather than leaving a
+     fragile partial proof.
+   - Revised static-bridge plan:
+     1. Add small constructor-family helper lemmas first:
+        copy/move root lookup, let/let-infer add/remove,
+        replace/assign root-env update, borrow result roots, if branch merge,
+        and args/fields aggregation.
+     2. Each helper should state the exact ctx-name obligation for its
+        constructor family and hide details such as
+        `sctx_consume_path_same_bindings`,
+        `sctx_restore_path_same_bindings`, root-env removal, and
+        `root_env_excludes` strengthening.
+     3. After those helpers compile, make
+        `typed_roots_ctx_roots_named_mutual` a thin wrapper over them, with no
+        generated-name-dependent `H0` / `H1` proof scripting.
+     4. Only then add `eval_preserves_root_names_ready_mutual`, using
+        `eval_preserves_typing_roots_ready_mutual` for final `store_typed`
+        facts and the ctx/store naming bridge helpers to recover
+        `root_env_store_roots_named` and `root_set_store_roots_named`.
+     5. Finally add the call-site preparation lemma that derives
+        `root_env_excludes_params` from preserved root names plus
+        `params_fresh_in_store`.
+   - Suggested checkpoint order for the revised static bridge:
+     - `[done]` copy/move/root-lookup ctx-name helpers
+     - `[done]` let/let-infer add/remove ctx-name helpers
+     - `[done]` replace/assign update ctx-name helpers
+     - `[done]` borrow result-root ctx-name helpers
+     - `[todo]` if/args/fields aggregation ctx-name helpers
+     - `[todo]` thin `typed_roots_ctx_roots_named_mutual`
+     - `[todo]` `eval_preserves_root_names_ready_mutual`
+     - `[todo]` direct-call call-site exclusion preparation lemma
    - Do not attempt to discharge the evidence with lifetime inference alone,
      and do not globally reject parameter roots in `infer_env_roots`.
    - Stop if the current root sidecar API cannot express freshened callee body

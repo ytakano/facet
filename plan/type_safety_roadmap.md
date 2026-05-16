@@ -69,6 +69,26 @@ Prop-level call-site invariant. A later executable design may cache
 root-polymorphic function summaries and instantiate their symbolic parameter
 roots at call sites.
 
+Cached root-polymorphic summaries must distinguish concrete callee storage
+from symbolic parameter-value provenance. Do not use plain `ident` roots for
+the executable summary bridge. The chosen root shape is:
+
+```coq
+Inductive root_atom :=
+  | RStore : ident -> root_atom
+  | RParam : ident -> root_atom.
+```
+
+`RStore x` means a concrete runtime storage root, including a reference
+created by `&x` or `&param`. `RParam x` means the symbolic roots already inside
+the value passed through parameter `x`. Call-site instantiation may replace
+only `RParam fresh_param` with the corresponding argument roots. It must not
+replace `RStore fresh_param`; those concrete freshened parameter-storage roots
+must be excluded from the returned roots and surviving root environment before
+callee cleanup. This is what keeps `return r` valid when `r` contains a
+caller-rooted reference while still rejecting or requiring evidence against
+escaping `return &r` / `return &local`.
+
 `TypeSafety.v` currently has structural lookup bridges for freshened callees,
 but it cannot import `EnvRootSoundness.v` because `_CoqProject` orders
 `EnvRootSoundness.v` after `TypeSafety.v`. Do not solve this by creating an
@@ -188,9 +208,11 @@ Already available for the direct `ECall` proof:
   - `root_set_instantiate`
   - `root_env_instantiate`
   - `root_subst_of_params`
-  These helpers give the next executable summary bridge a proof-level API for
-  replacing symbolic parameter roots with call-site argument roots while
-  preserving root-environment names/no-shadow facts.
+  These helpers are provisional because they currently operate on
+  `root_set := list ident`. Before cached executable summaries can replace
+  `direct_call_callee_body_root_check_evidence`, migrate this layer to
+  `root_set := list root_atom` and make substitution instantiate only
+  `RParam` roots while preserving `RStore` roots.
 
 ### Next Implementation Queue
 
@@ -226,17 +248,22 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
    - Done: added the root-substitution helper layer in `RootProvenance.v`:
      `root_subst`, `root_set_instantiate`, `root_env_instantiate`, and
      `root_subst_of_params`, with lookup/name/no-shadow preservation lemmas.
-   - Remaining: decide whether to replace the call-site evidence premise with
-     cached root-polymorphic summaries or another executable root-aware
-     function-environment invariant.
+   - Chosen design: replace the call-site evidence premise with cached
+     root-polymorphic summaries, but only after root provenance uses tagged
+     atoms that distinguish concrete storage roots from symbolic parameter
+     roots.
    - Chosen direction: keep lifetime substitution inference as-is, derive root
      evidence from call-site argument roots plus
-     `call_param_root_env`, and eventually consider root-polymorphic function
-     summaries for an executable checker-facing bridge.
-   - No further implementation-only subtask remains in this item if the goal is
-     to eliminate the call-site evidence premise entirely; that requires fixing
-     the root-polymorphic summary shape, or an equivalent root-aware
-     function-environment invariant.
+     `call_param_root_env`, then instantiate cached root-polymorphic summaries
+     with `root_subst_of_params`.
+   - Next implementation slice: migrate `RootProvenance.v` from
+     `root_set := list ident` to `root_set := list root_atom`; map parameter
+     initial roots to `[RParam param]`; make borrow/place roots produce
+     `RStore`; and make `root_set_instantiate` replace only `RParam` while
+     leaving `RStore` unchanged.
+   - After the tagged-root migration, update `EnvStructuralRules.v`,
+     `TypeChecker.v`, and `EnvRootSoundness.v` together so the Prop-level root
+     rules, executable root checker, and soundness theorem agree.
    - Do not attempt to discharge the evidence with lifetime inference alone,
      and do not globally reject parameter roots in `infer_env_roots`.
    - Stop if the current root sidecar API cannot express freshened callee body

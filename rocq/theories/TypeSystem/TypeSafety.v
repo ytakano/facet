@@ -3749,6 +3749,181 @@ Proof.
   - exact Hroots.
 Qed.
 
+Theorem typed_roots_ctx_roots_named_mutual :
+  forall env Ω n,
+  (forall R Σ e T Σ' R' roots,
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_ctx_roots_named R Σ ->
+    root_env_ctx_roots_named R' Σ' /\
+    root_set_ctx_roots_named roots Σ') /\
+  (forall R Σ args ps Σ' R' roots,
+    typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_ctx_roots_named R Σ ->
+    root_env_ctx_roots_named R' Σ' /\
+    Forall (fun roots => root_set_ctx_roots_named roots Σ') roots) /\
+  (forall lts args R Σ fields defs Σ' R' roots,
+    typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_ctx_roots_named R Σ ->
+    root_env_ctx_roots_named R' Σ' /\
+    root_set_ctx_roots_named roots Σ').
+Proof.
+  intros env Ω n.
+  apply typed_roots_ind; intros; try solve
+    [ split; try assumption; apply root_set_ctx_roots_named_nil ].
+  - split; try assumption.
+    eapply root_env_lookup_ctx_roots_named; eassumption.
+  - split.
+    + eapply root_env_ctx_roots_named_same_bindings.
+      * eapply sctx_consume_path_same_bindings. eassumption.
+      * assumption.
+    + eapply root_env_lookup_ctx_roots_named_consume_path; eassumption.
+  - split; try assumption.
+    eapply root_env_lookup_ctx_roots_named; eassumption.
+  - split.
+    + eapply root_env_ctx_roots_named_same_bindings.
+      * eapply sctx_consume_path_same_bindings. eassumption.
+      * assumption.
+    + eapply root_env_lookup_ctx_roots_named_consume_path; eassumption.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_ctx_roots_named ?R ?Σ ->
+        root_env_ctx_roots_named ?R' ?Σ' /\
+        Forall (fun roots => root_set_ctx_roots_named roots ?Σ') ?arg_roots,
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_ctx_roots_named ?R ?Σ |- _ =>
+        destruct (IH Hrn Henv) as [Henv_args Hroots_args];
+        split; [exact Henv_args | apply root_sets_ctx_roots_named_union; exact Hroots_args]
+    end.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_ctx_roots_named ?R ?Σ ->
+        root_env_ctx_roots_named ?R' ?Σ' /\
+        root_set_ctx_roots_named ?roots ?Σ',
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_ctx_roots_named ?R ?Σ |- _ =>
+        exact (IH Hrn Henv)
+    end.
+  - destruct (H H1 H2) as [Henv1 Hroots1].
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow; eassumption).
+    assert (Henv_add :
+      root_env_ctx_roots_named (root_env_add x roots1 R1)
+        (sctx_add x T m Σ1)).
+    { apply root_env_ctx_roots_named_add_binding; assumption. }
+    assert (Hrn_add : root_env_no_shadow (root_env_add x roots1 R1))
+      by (apply root_env_no_shadow_add; assumption).
+    destruct (H0 Hrn_add Henv_add) as [Henv2 Hroots2].
+    assert (Hrn2 : root_env_no_shadow R2)
+      by (eapply typed_env_roots_no_shadow; eassumption).
+    split.
+    + apply root_env_ctx_roots_named_remove_binding; assumption.
+    + apply root_set_ctx_roots_named_remove_binding; assumption.
+  - destruct (H H1 H2) as [Henv1 Hroots1].
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow; eassumption).
+    assert (Henv_add :
+      root_env_ctx_roots_named (root_env_add x roots1 R1)
+        (sctx_add x T1 m Σ1)).
+    { apply root_env_ctx_roots_named_add_binding; assumption. }
+    assert (Hrn_add : root_env_no_shadow (root_env_add x roots1 R1))
+      by (apply root_env_no_shadow_add; assumption).
+    destruct (H0 Hrn_add Henv_add) as [Henv2 Hroots2].
+    assert (Hrn2 : root_env_no_shadow R2)
+      by (eapply typed_env_roots_no_shadow; eassumption).
+    split.
+    + apply root_env_ctx_roots_named_remove_binding; assumption.
+    + apply root_set_ctx_roots_named_remove_binding; assumption.
+  - destruct (H H0 H1) as [Henv Hroots].
+    split; [exact Henv | apply root_set_ctx_roots_named_nil].
+  - destruct (H H0 H1) as [Henv1 Hroots_new].
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow; eassumption).
+    assert (Hroots_old : root_set_ctx_roots_named roots_old Σ1)
+      by (eapply root_env_lookup_ctx_roots_named; eassumption).
+    split.
+    + eapply root_env_ctx_roots_named_update_union_restore_path;
+        eassumption.
+    + eapply root_env_lookup_result_ctx_roots_named_after_typed_restore_path;
+        eassumption.
+  - destruct (H H0 H1) as [Henv1 Hroots_new].
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow; eassumption).
+    assert (Hroots_old : root_set_ctx_roots_named roots_old Σ')
+      by (eapply root_env_lookup_ctx_roots_named; eassumption).
+    split.
+    + eapply root_env_ctx_roots_named_update_union; eassumption.
+    + apply root_set_ctx_roots_named_nil.
+  - split; try assumption.
+    eapply root_of_place_ctx_roots_named. eassumption.
+  - split; try assumption.
+    eapply root_store_single_ctx_roots_named_of_place_path; eassumption.
+  - match goal with
+    | IHcond : root_env_no_shadow ?R ->
+        root_env_ctx_roots_named ?R ?Σ ->
+        root_env_ctx_roots_named ?R1 ?Σ1 /\
+        root_set_ctx_roots_named ?roots_cond ?Σ1,
+      IHthen : root_env_no_shadow ?R1 ->
+        root_env_ctx_roots_named ?R1 ?Σ1 ->
+        root_env_ctx_roots_named ?R2 ?Σ2 /\
+        root_set_ctx_roots_named ?roots2 ?Σ2,
+      IHelse : root_env_no_shadow ?R1 ->
+        root_env_ctx_roots_named ?R1 ?Σ1 ->
+        root_env_ctx_roots_named ?R3 ?Σ3 /\
+        root_set_ctx_roots_named ?roots3 ?Σ3,
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_ctx_roots_named ?R ?Σ |- _ =>
+        destruct (IHcond Hrn Henv) as [Henv1 _];
+        assert (Hrn1 : root_env_no_shadow R1)
+          by (eapply typed_env_roots_no_shadow; eassumption);
+        destruct (IHthen Hrn1 Henv1) as [Henv2 Hroots2];
+        destruct (IHelse Hrn1 Henv1) as [_ Hroots3];
+        subst R3;
+        split;
+        [ eapply root_env_ctx_roots_named_ctx_merge_left; eassumption
+        | eapply root_set_ctx_roots_named_if_merge; eassumption ]
+    end.
+  - split; try assumption. constructor.
+  - match goal with
+    | IHexpr : root_env_no_shadow ?R ->
+        root_env_ctx_roots_named ?R ?Σ ->
+        root_env_ctx_roots_named ?R1 ?Σ1 /\
+        root_set_ctx_roots_named ?roots ?Σ1,
+      IHargs : root_env_no_shadow ?R1 ->
+        root_env_ctx_roots_named ?R1 ?Σ1 ->
+        root_env_ctx_roots_named ?R2 ?Σ2 /\
+        Forall (fun roots => root_set_ctx_roots_named roots ?Σ2) ?roots_rest,
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_ctx_roots_named ?R ?Σ |- _ =>
+        destruct (IHexpr Hrn Henv) as [Henv1 Hroot];
+        assert (Hrn1 : root_env_no_shadow R1)
+          by (eapply typed_env_roots_no_shadow; eassumption);
+        destruct (IHargs Hrn1 Henv1) as [Henv2 Hroots_rest];
+        split; [exact Henv2 | constructor; [| exact Hroots_rest]];
+        eapply root_set_ctx_roots_named_typed_args_tail; eassumption
+    end.
+  - match goal with
+    | IHexpr : root_env_no_shadow ?R ->
+        root_env_ctx_roots_named ?R ?Σ ->
+        root_env_ctx_roots_named ?R1 ?Σ1 /\
+        root_set_ctx_roots_named ?roots_field ?Σ1,
+      IHfields : root_env_no_shadow ?R1 ->
+        root_env_ctx_roots_named ?R1 ?Σ1 ->
+        root_env_ctx_roots_named ?R2 ?Σ2 /\
+        root_set_ctx_roots_named ?roots_rest ?Σ2,
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_ctx_roots_named ?R ?Σ |- _ =>
+        destruct (IHexpr Hrn Henv) as [Henv1 Hroot];
+        assert (Hrn1 : root_env_no_shadow R1)
+          by (eapply typed_env_roots_no_shadow; eassumption);
+        destruct (IHfields Hrn1 Henv1) as [Henv2 Hroots_rest];
+        split; [exact Henv2 | apply root_set_ctx_roots_named_union; [| exact Hroots_rest]];
+        eapply root_set_ctx_roots_named_typed_fields_tail; eassumption
+    end.
+Qed.
+
 Theorem eval_preserves_roots_ready_mutual :
   (forall env s e s' v,
     eval env s e s' v ->

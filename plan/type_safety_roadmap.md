@@ -355,7 +355,7 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      - `[done]` replace/assign update ctx-name helpers
      - `[done]` borrow result-root ctx-name helpers
      - `[done]` if/args/fields aggregation ctx-name helpers
-     - `[todo]` thin `typed_roots_ctx_roots_named_mutual`
+     - `[done]` thin `typed_roots_ctx_roots_named_mutual`
      - `[todo]` `eval_preserves_root_names_ready_mutual`
      - `[todo]` direct-call call-site exclusion preparation lemma
    - Do not attempt to discharge the evidence with lifetime inference alone,

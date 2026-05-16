@@ -2284,19 +2284,16 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
             match root_env_lookup x R1 with
             | Some _ => infer_err ErrContextCheckFailed
             | None =>
-                if roots_exclude_b x roots1
-                then
-                  match infer_core_env_state_fuel_roots fuel' env Ω n
-                          (root_env_add x roots1 R1) (sctx_add x T m Σ1) e2 with
-                  | infer_err err => infer_err err
-                  | infer_ok (T2, Σ2, R2, roots2) =>
-                      if sctx_check_ok env x T Σ2 &&
-                         roots_exclude_b x roots2 &&
-                         root_env_excludes_b x (root_env_remove x R2)
-                      then infer_ok (T2, sctx_remove x Σ2, root_env_remove x R2, roots2)
-                      else infer_err ErrContextCheckFailed
-                  end
-                else infer_err ErrContextCheckFailed
+                match infer_core_env_state_fuel_roots fuel' env Ω n
+                        (root_env_add x roots1 R1) (sctx_add x T m Σ1) e2 with
+                | infer_err err => infer_err err
+                | infer_ok (T2, Σ2, R2, roots2) =>
+                    if sctx_check_ok env x T Σ2 &&
+                       roots_exclude_b x roots2 &&
+                       root_env_excludes_b x (root_env_remove x R2)
+                    then infer_ok (T2, sctx_remove x Σ2, root_env_remove x R2, roots2)
+                    else infer_err ErrContextCheckFailed
+                end
             end
           else infer_err (compatible_error T1 T)
       end
@@ -2307,19 +2304,16 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
           match root_env_lookup x R1 with
           | Some _ => infer_err ErrContextCheckFailed
           | None =>
-              if roots_exclude_b x roots1
-              then
-                match infer_core_env_state_fuel_roots fuel' env Ω n
-                        (root_env_add x roots1 R1) (sctx_add x T1 m Σ1) e2 with
-                | infer_err err => infer_err err
-                | infer_ok (T2, Σ2, R2, roots2) =>
-                    if sctx_check_ok env x T1 Σ2 &&
-                       roots_exclude_b x roots2 &&
-                       root_env_excludes_b x (root_env_remove x R2)
-                    then infer_ok (T2, sctx_remove x Σ2, root_env_remove x R2, roots2)
-                    else infer_err ErrContextCheckFailed
-                end
-              else infer_err ErrContextCheckFailed
+              match infer_core_env_state_fuel_roots fuel' env Ω n
+                      (root_env_add x roots1 R1) (sctx_add x T1 m Σ1) e2 with
+              | infer_err err => infer_err err
+              | infer_ok (T2, Σ2, R2, roots2) =>
+                  if sctx_check_ok env x T1 Σ2 &&
+                     roots_exclude_b x roots2 &&
+                     root_env_excludes_b x (root_env_remove x R2)
+                  then infer_ok (T2, sctx_remove x Σ2, root_env_remove x R2, roots2)
+                  else infer_err ErrContextCheckFailed
+              end
           end
       end
   | EDrop e1 =>
@@ -2796,14 +2790,19 @@ Example infer_core_env_roots_let_escape_rejected :
   infer_err ErrContextCheckFailed.
 Proof. vm_compute. reflexivity. Qed.
 
-Example infer_core_env_roots_let_initializer_shadow_rejected :
+Example infer_core_env_roots_let_initializer_shadow_accepted :
   infer_core_env_roots ex_env_struct_pair [] 0 []
     [((("x"%string), 0), MkTy UUnrestricted TIntegers,
       binding_state_of_bool false, MImmutable)]
     (ELetInfer MImmutable (("x"%string), 0)
       (EBorrow RShared (PVar (("x"%string), 0)))
       EUnit) =
-  infer_err ErrContextCheckFailed.
+  infer_ok
+    (MkTy UUnrestricted TUnits,
+     [((("x"%string), 0), MkTy UUnrestricted TIntegers,
+       binding_state_of_bool false, MImmutable)],
+     [],
+     []).
 Proof. vm_compute. reflexivity. Qed.
 
 Example infer_core_env_struct_literal_ok :

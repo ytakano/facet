@@ -305,8 +305,6 @@ Proof.
         as [[[[T1 Σ1] R1] roots1] | err1] eqn:He1; try discriminate.
       destruct (ty_compatible_b Ω T1 t) eqn:Hcompat; try discriminate.
       destruct (root_env_lookup i R1) eqn:Hfresh; try discriminate.
-      destruct (roots_exclude_b i roots1) eqn:Hroots1;
-        simpl in Hinfer; try discriminate.
       destruct (infer_core_env_state_fuel_roots fuel' env Ω n
           (root_env_add i roots1 R1) (sctx_add i t m Σ1) e2)
         as [[[[T2 Σ2] R2] roots2] | err2] eqn:He2; try discriminate.
@@ -319,7 +317,6 @@ Proof.
       * eapply IH. exact He1.
       * exact Hcompat.
       * exact Hfresh.
-      * apply roots_exclude_b_sound. exact Hroots1.
       * eapply IH. exact He2.
       * exact Hcheck.
       * apply roots_exclude_b_sound. exact Hroots.
@@ -327,8 +324,6 @@ Proof.
     + destruct (infer_core_env_state_fuel_roots fuel' env Ω n R Σ e1)
         as [[[[T1 Σ1] R1] roots1] | err1] eqn:He1; try discriminate.
       destruct (root_env_lookup i R1) eqn:Hfresh; try discriminate.
-      destruct (roots_exclude_b i roots1) eqn:Hroots1;
-        simpl in Hinfer; try discriminate.
       destruct (infer_core_env_state_fuel_roots fuel' env Ω n
           (root_env_add i roots1 R1) (sctx_add i T1 m Σ1) e2)
         as [[[[T2 Σ2] R2] roots2] | err2] eqn:He2; try discriminate.
@@ -340,7 +335,6 @@ Proof.
       eapply TER_LetInfer.
       * eapply IH. exact He1.
       * exact Hfresh.
-      * apply roots_exclude_b_sound. exact Hroots1.
       * eapply IH. exact He2.
       * exact Hcheck.
       * apply roots_exclude_b_sound. exact Hroots.

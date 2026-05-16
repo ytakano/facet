@@ -76,7 +76,7 @@ establishes it.
 Follow this order. Stop and report if a step exposes a missing invariant or a
 false lemma.
 
-1. Revert the temporary root-checker restriction on shadowing `let`
+1. `[done]` Revert the temporary root-checker restriction on shadowing `let`
    initializers.
    - Target files:
      - `rocq/theories/TypeSystem/EnvStructuralRules.v`
@@ -85,11 +85,11 @@ false lemma.
      - `rocq/theories/TypeSystem/TypeSafety.v`
      - regenerated `fixtures/TypeChecker.ml`
      - regenerated `fixtures/TypeChecker.mli` if extraction changes it
-   - Remove the conservative `roots_exclude x roots1` premise/check from
+   - Removed the conservative `roots_exclude x roots1` premise/check from
      `TER_Let` / `TER_LetInfer` and the executable root checker.
-   - Remove or update the regression example that expects `let x = &x` style
+   - Updated the regression example that expected `let x = &x` style
      initializer-root shadowing to be rejected.
-   - Preserve the existing let-local escape checks for body results and
+   - Preserved the existing let-local escape checks for body results and
      surviving store roots.
 
 2. Add the alpha-first root-evidence bridge.
@@ -103,6 +103,8 @@ false lemma.
    - The bridge should explain how source checker success maps to root evidence
      on the freshened core term when root evidence is needed.
    - Do not encode this by rejecting valid source shadowing patterns.
+   - Do not delegate this step to a sub-agent until the exact theorem statement
+     and proof route are fixed; it still requires uncertainty reduction.
 
 3. Continue the ordinary-checker safety theorem.
    - Target files:

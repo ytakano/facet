@@ -690,7 +690,6 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_env_roots env Ω n R Σ e1 T1 Σ1 R1 roots1 ->
       ty_compatible_b Ω T1 T = true ->
       root_env_lookup x R1 = None ->
-      roots_exclude x roots1 ->
       typed_env_roots env Ω n (root_env_add x roots1 R1)
         (sctx_add x T m Σ1) e2 T2 Σ2 R2 roots2 ->
       sctx_check_ok env x T Σ2 = true ->
@@ -701,7 +700,6 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
   | TER_LetInfer : forall R R1 R2 Σ Σ1 Σ2 m x T1 e1 e2 T2 roots1 roots2,
       typed_env_roots env Ω n R Σ e1 T1 Σ1 R1 roots1 ->
       root_env_lookup x R1 = None ->
-      roots_exclude x roots1 ->
       typed_env_roots env Ω n (root_env_add x roots1 R1)
         (sctx_add x T1 m Σ1) e2 T2 Σ2 R2 roots2 ->
       sctx_check_ok env x T1 Σ2 = true ->
@@ -1041,7 +1039,7 @@ Proof.
     + exact HR0'.
     + exact Hroots0.
   - intros R R1 R2 Σ Σ1 Σ2 m x T T1 e1 e2 T2 roots1 roots2
-      He1 IHe1 Hcompat Hlookup_none Hexcl_roots1 He2 IHe2 Hcheck
+      He1 IHe1 Hcompat Hlookup_none He2 IHe2 Hcheck
       Hexcl_roots Hexcl_env Hfresh R0 HnsR HnsR0 HR0.
     destruct (root_subst_images_exclude_names_app_inv
       (expr_local_store_names e1) (x :: expr_local_store_names e2) rho
@@ -1075,10 +1073,6 @@ Proof.
     { eapply typed_env_roots_no_shadow.
       - exact He2.
       - apply root_env_no_shadow_add; assumption. }
-    assert (Hexcl_roots10 : roots_exclude x roots10).
-    { eapply roots_exclude_equiv.
-      - apply root_set_equiv_sym. exact Hroots10.
-      - eapply root_set_instantiate_excludes_images; eassumption. }
     destruct (IHe2 Hfresh2 (root_env_add x roots10 R10)
       (root_env_no_shadow_add x roots1 R1 Hns_R1 Hlookup_none)
       Hns_add Heq_add)
@@ -1088,7 +1082,6 @@ Proof.
       * exact He10.
       * exact Hcompat.
       * exact Hlookup_R10_none.
-      * exact Hexcl_roots10.
       * exact He20.
       * exact Hcheck.
       * eapply roots_exclude_equiv.
@@ -1116,7 +1109,7 @@ Proof.
         -- apply root_env_equiv_refl.
     + exact Hroots20.
   - intros R R1 R2 Σ Σ1 Σ2 m x T1 e1 e2 T2 roots1 roots2
-      He1 IHe1 Hlookup_none Hexcl_roots1 He2 IHe2 Hcheck
+      He1 IHe1 Hlookup_none He2 IHe2 Hcheck
       Hexcl_roots Hexcl_env Hfresh R0 HnsR HnsR0 HR0.
     destruct (root_subst_images_exclude_names_app_inv
       (expr_local_store_names e1) (x :: expr_local_store_names e2) rho
@@ -1150,10 +1143,6 @@ Proof.
     { eapply typed_env_roots_no_shadow.
       - exact He2.
       - apply root_env_no_shadow_add; assumption. }
-    assert (Hexcl_roots10 : roots_exclude x roots10).
-    { eapply roots_exclude_equiv.
-      - apply root_set_equiv_sym. exact Hroots10.
-      - eapply root_set_instantiate_excludes_images; eassumption. }
     destruct (IHe2 Hfresh2 (root_env_add x roots10 R10)
       (root_env_no_shadow_add x roots1 R1 Hns_R1 Hlookup_none)
       Hns_add Heq_add)
@@ -1162,7 +1151,6 @@ Proof.
     + eapply TER_LetInfer.
       * exact He10.
       * exact Hlookup_R10_none.
-      * exact Hexcl_roots10.
       * exact He20.
       * exact Hcheck.
       * eapply roots_exclude_equiv.

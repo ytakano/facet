@@ -371,9 +371,15 @@ val expr_ref_root : expr -> ident option
 
 val place_name : place -> ident
 
-type root_set = ident list
+type root_atom =
+| RStore of ident
+| RParam of ident
+
+type root_set = root_atom list
 
 type root_env = (ident * root_set) list
+
+val root_atom_eqb : root_atom -> root_atom -> bool
 
 val root_set_union : root_set -> root_set -> root_set
 

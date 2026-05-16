@@ -1560,9 +1560,24 @@ let rec place_name = function
 | PDeref q -> place_name q
 | PField (q, _) -> place_name q
 
-type root_set = ident list
+type root_atom =
+| RStore of ident
+| RParam of ident
+
+type root_set = root_atom list
 
 type root_env = (ident * root_set) list
+
+(** val root_atom_eqb : root_atom -> root_atom -> bool **)
+
+let root_atom_eqb a b =
+  match a with
+  | RStore x -> (match b with
+                 | RStore y -> ident_eqb x y
+                 | RParam _ -> false)
+  | RParam x -> (match b with
+                 | RStore _ -> false
+                 | RParam y -> ident_eqb x y)
 
 (** val root_set_union : root_set -> root_set -> root_set **)
 
@@ -1570,7 +1585,7 @@ let rec root_set_union a b =
   match a with
   | [] -> b
   | x :: xs ->
-    if existsb (ident_eqb x) b
+    if existsb (root_atom_eqb x) b
     then root_set_union xs b
     else x :: (root_set_union xs b)
 
@@ -3157,7 +3172,7 @@ let rec root_set_eqb a b =
   | x :: xs ->
     (match b with
      | [] -> false
-     | y :: ys -> (&&) (ident_eqb x y) (root_set_eqb xs ys))
+     | y :: ys -> (&&) (root_atom_eqb x y) (root_set_eqb xs ys))
 
 (** val root_env_eqb : root_env -> root_env -> bool **)
 
@@ -3178,7 +3193,7 @@ let rec root_env_eqb r1 r2 =
 (** val roots_exclude_b : ident -> root_set -> bool **)
 
 let roots_exclude_b x roots =
-  negb (existsb (ident_eqb x) roots)
+  negb (existsb (root_atom_eqb (RStore x)) roots)
 
 (** val root_env_excludes_b : ident -> root_env -> bool **)
 
@@ -3516,7 +3531,7 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
             (match rk with
              | RShared ->
                Infer_ok ((((MkTy (UUnrestricted, (TRef ((LVar n), RShared,
-                 t_p)))), _UU03a3_), r), (x :: []))
+                 t_p)))), _UU03a3_), r), ((RStore x) :: []))
              | RUnique ->
                (match sctx_lookup_mut x _UU03a3_ with
                 | Some m ->
@@ -3524,7 +3539,7 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                    | MImmutable -> Infer_err (ErrImmutableBorrow x)
                    | MMutable ->
                      Infer_ok ((((MkTy (UAffine, (TRef ((LVar n), RUnique,
-                       t_p)))), _UU03a3_), r), (x :: [])))
+                       t_p)))), _UU03a3_), r), ((RStore x) :: [])))
                 | None -> Infer_err (ErrUnknownVar x)))
           | Infer_err err -> Infer_err err)
        | None -> Infer_err ErrNotImplemented)

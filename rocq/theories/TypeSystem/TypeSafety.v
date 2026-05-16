@@ -4690,6 +4690,114 @@ Proof.
       exact Hscope'.
 Qed.
 
+Definition frame_scope_roots_ready_result
+    (ps : list param) (R : root_env) (Σ : sctx) (s : store)
+    (frame : store) : Prop :=
+  root_env_covers_params ps R /\
+  store_roots_within R s /\
+  store_no_shadow s /\
+  root_env_no_shadow R /\
+  store_frame_scope ps Σ s frame /\
+  store_frame_static_fresh Σ frame.
+
+Definition frame_scope_roots_ready_expr_preservation : Prop :=
+  forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots
+        ps frame,
+      provenance_ready_expr e ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      root_env_covers_params ps R ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      store_frame_scope ps Σ s frame ->
+      store_frame_static_fresh Σ frame ->
+      frame_scope_roots_ready_result ps R' Σ' s' frame.
+
+Theorem eval_preserves_frame_scope_roots_ready_args_fields_from_expr :
+  frame_scope_roots_ready_expr_preservation ->
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ params Σ' R' roots
+        ps frame,
+      provenance_ready_args args ->
+      typed_args_roots env Ω n R Σ args params Σ' R' roots ->
+      root_env_covers_params ps R ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      store_frame_scope ps Σ s frame ->
+      store_frame_static_fresh Σ frame ->
+      frame_scope_roots_ready_result ps R' Σ' s' frame) /\
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots
+        ps frame,
+      provenance_ready_fields fields ->
+      typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+      root_env_covers_params ps R ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      store_frame_scope ps Σ s frame ->
+      store_frame_static_fresh Σ frame ->
+      frame_scope_roots_ready_result ps R' Σ' s' frame).
+Proof.
+  intros Hexpr.
+  split.
+  - intros env s args s' vs Heval.
+    induction Heval as [s | s s1 s2 e es v vs Heval_e Heval_rest IHrest];
+      intros Ω n R Σ params Σ' R' roots ps frame Hready Htyped
+        Hcover Hroots Hshadow Hrn Hscope Hfresh.
+    + inversion Htyped; subst.
+      repeat split; assumption.
+    + dependent destruction Hready.
+      dependent destruction Htyped.
+      match goal with
+      | Hready_e : provenance_ready_expr _,
+        Hready_rest : provenance_ready_args _,
+        Htyped_e : typed_env_roots env Ω n R Σ _ ?T_e ?Σ1 ?R1 ?roots_e,
+        Htyped_rest : typed_args_roots env Ω n ?R1 ?Σ1 _ ?params_rest
+          ?Σ2 ?R2 ?roots_rest |- _ =>
+          destruct (Hexpr env s e s1 v Heval_e Ω n R Σ T_e Σ1 R1
+                      roots_e ps frame Hready_e Htyped_e Hcover Hroots
+                      Hshadow Hrn Hscope Hfresh)
+            as [Hcover1 [Hroots1 [Hshadow1 [Hrn1 [Hscope1 Hfresh1]]]]];
+          exact (IHrest Ω n R1 Σ1 params_rest Σ2 R2 roots_rest ps frame
+                   Hready_rest Htyped_rest Hcover1 Hroots1 Hshadow1 Hrn1
+                   Hscope1 Hfresh1)
+      end.
+  - intros env s fields defs s' values Heval.
+    induction Heval as
+      [s | s s1 s2 fields f rest e v values Hlookup_expr Heval_field
+        Heval_rest IHrest];
+      intros Ω n lts args R Σ Σ' R' roots ps frame Hready Htyped
+        Hcover Hroots Hshadow Hrn Hscope Hfresh.
+    + inversion Htyped; subst.
+      repeat split; assumption.
+    + pose proof (provenance_ready_fields_lookup fields (field_name f) e
+                    Hready Hlookup_expr) as Hready_field.
+      dependent destruction Htyped.
+      match goal with
+      | Hlookup_typed : lookup_field_b (field_name f) ?fields0 = Some ?e_field,
+        Htyped_field : typed_env_roots env Ω n R Σ _ ?T_field ?Σ1
+          ?R1 ?roots_field,
+        Htyped_rest : typed_fields_roots env Ω n lts args ?R1 ?Σ1
+          ?fields0 rest ?Σ2 ?R2 ?roots_rest |- _ =>
+          rewrite lookup_field_b_lookup_expr_field in Hlookup_typed;
+          rewrite Hlookup_typed in Hlookup_expr;
+          inversion Hlookup_expr; subst e_field;
+          destruct (Hexpr env s e s1 v Heval_field Ω n R Σ T_field Σ1
+                      R1 roots_field ps frame Hready_field Htyped_field
+                      Hcover Hroots Hshadow Hrn Hscope Hfresh)
+            as [Hcover1 [Hroots1 [Hshadow1 [Hrn1 [Hscope1 Hfresh1]]]]];
+          exact (IHrest Ω n lts args R1 Σ1 Σ2 R2 roots_rest ps frame
+                   Hready Htyped_rest Hcover1 Hroots1 Hshadow1 Hrn1
+                   Hscope1 Hfresh1)
+      end.
+Qed.
+
 Lemma bind_params_head_fresh_in_tail :
   forall env Ω s p ps vs,
     NoDup (ctx_names (params_ctx (p :: ps))) ->

@@ -988,6 +988,124 @@ Proof.
   rewrite IH. reflexivity.
 Qed.
 
+Definition root_env_keys_named (R : root_env) (names : list ident) : Prop :=
+  forall x, In x (root_env_names R) -> In x names.
+
+Lemma root_env_keys_named_weaken :
+  forall R names names',
+    root_env_keys_named R names ->
+    (forall x, In x names -> In x names') ->
+    root_env_keys_named R names'.
+Proof.
+  unfold root_env_keys_named.
+  intros R names names' Hnamed Hsubset x Hin.
+  apply Hsubset. apply Hnamed. exact Hin.
+Qed.
+
+Lemma root_env_keys_named_lookup :
+  forall x R roots names,
+    root_env_lookup x R = Some roots ->
+    root_env_keys_named R names ->
+    In x names.
+Proof.
+  intros x R roots names Hlookup Hnamed.
+  apply Hnamed.
+  eapply root_env_lookup_some_in_names. exact Hlookup.
+Qed.
+
+Lemma root_env_keys_named_add :
+  forall x roots R names,
+    In x names ->
+    root_env_keys_named R names ->
+    root_env_keys_named (root_env_add x roots R) names.
+Proof.
+  unfold root_env_keys_named, root_env_add.
+  intros x roots R names Hx Hnamed y Hin.
+  simpl in Hin.
+  destruct Hin as [Hy | Hin].
+  - subst y. exact Hx.
+  - apply Hnamed. exact Hin.
+Qed.
+
+Lemma root_env_keys_named_remove :
+  forall x R names,
+    root_env_keys_named R names ->
+    root_env_keys_named (root_env_remove x R) names.
+Proof.
+  unfold root_env_keys_named.
+  intros x R.
+  induction R as [| [y roots] rest IH]; intros names Hnamed z Hin;
+    simpl in *; try contradiction.
+  destruct (ident_eqb x y) eqn:Hxy.
+  - apply Hnamed. right. exact Hin.
+  - simpl in Hin.
+    destruct Hin as [Hz | Hin].
+    + subst z. apply Hnamed. left. reflexivity.
+    + apply IH.
+      * intros w Hw. apply Hnamed. right. exact Hw.
+      * exact Hin.
+Qed.
+
+Lemma root_env_keys_named_update :
+  forall x roots R names,
+    root_env_keys_named R names ->
+    root_env_keys_named (root_env_update x roots R) names.
+Proof.
+  unfold root_env_keys_named.
+  intros x roots R names Hnamed y Hin.
+  rewrite root_env_names_update in Hin.
+  apply Hnamed. exact Hin.
+Qed.
+
+Lemma root_env_keys_named_rename :
+  forall rho R names names',
+    root_env_keys_named R names ->
+    (forall x, In x names -> In (lookup_rename x rho) names') ->
+    root_env_keys_named (root_env_rename rho R) names'.
+Proof.
+  unfold root_env_keys_named.
+  intros rho R names names' Hnamed Hrename x Hin.
+  rewrite root_env_rename_names in Hin.
+  apply in_map_iff in Hin.
+  destruct Hin as [y [Heq Hy]].
+  subst x.
+  apply Hrename. apply Hnamed. exact Hy.
+Qed.
+
+Lemma root_env_keys_named_instantiate :
+  forall rho R names,
+    root_env_keys_named R names ->
+    root_env_keys_named (root_env_instantiate rho R) names.
+Proof.
+  unfold root_env_keys_named.
+  intros rho R names Hnamed x Hin.
+  rewrite root_env_instantiate_names in Hin.
+  apply Hnamed. exact Hin.
+Qed.
+
+Lemma initial_root_env_for_params_keys_named :
+  forall ps,
+    root_env_keys_named
+      (initial_root_env_for_params ps)
+      (ctx_names (params_ctx ps)).
+Proof.
+  unfold root_env_keys_named.
+  intros ps x Hin.
+  rewrite initial_root_env_for_params_names in Hin.
+  exact Hin.
+Qed.
+
+Lemma initial_root_env_for_fn_keys_named :
+  forall f,
+    root_env_keys_named
+      (initial_root_env_for_fn f)
+      (ctx_names (params_ctx (fn_params f))).
+Proof.
+  intros f.
+  unfold initial_root_env_for_fn.
+  apply initial_root_env_for_params_keys_named.
+Qed.
+
 Lemma root_env_instantiate_no_shadow :
   forall rho R,
     root_env_no_shadow R ->

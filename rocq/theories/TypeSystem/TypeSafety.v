@@ -763,6 +763,12 @@ Definition root_set_ctx_roots_named (roots : root_set) (Σ : sctx) : Prop :=
     In (RStore z) roots ->
     In z (ctx_names Σ).
 
+Definition root_env_ctx_keys_named (R : root_env) (Σ : sctx) : Prop :=
+  root_env_keys_named R (ctx_names Σ).
+
+Definition root_env_store_keys_named (R : root_env) (s : store) : Prop :=
+  root_env_keys_named R (store_names s).
+
 Lemma value_roots_within_excludes :
   (forall roots v,
     value_roots_within roots v ->
@@ -3344,6 +3350,36 @@ Proof.
   eapply Hnamed; eassumption.
 Qed.
 
+Lemma root_env_store_keys_named_to_ctx :
+  forall env s Σ R,
+    store_typed env s Σ ->
+    root_env_store_keys_named R s ->
+    root_env_ctx_keys_named R Σ.
+Proof.
+  unfold root_env_store_keys_named, root_env_ctx_keys_named.
+  intros env s Σ R Hstore Hkeys.
+  eapply root_env_keys_named_weaken.
+  - exact Hkeys.
+  - intros x Hin.
+    rewrite <- (store_typed_names env s Σ Hstore).
+    exact Hin.
+Qed.
+
+Lemma root_env_ctx_keys_named_store_typed :
+  forall env s Σ R,
+    store_typed env s Σ ->
+    root_env_ctx_keys_named R Σ ->
+    root_env_store_keys_named R s.
+Proof.
+  unfold root_env_store_keys_named, root_env_ctx_keys_named.
+  intros env s Σ R Hstore Hkeys.
+  eapply root_env_keys_named_weaken.
+  - exact Hkeys.
+  - intros x Hin.
+    rewrite (store_typed_names env s Σ Hstore).
+    exact Hin.
+Qed.
+
 Lemma root_set_store_roots_named_to_ctx :
   forall env s Σ roots,
     store_typed env s Σ ->
@@ -3495,6 +3531,21 @@ Proof.
   eapply Hnamed; eassumption.
 Qed.
 
+Lemma root_env_ctx_keys_named_same_bindings :
+  forall R Σ Σ',
+    sctx_same_bindings Σ Σ' ->
+    root_env_ctx_keys_named R Σ ->
+    root_env_ctx_keys_named R Σ'.
+Proof.
+  unfold root_env_ctx_keys_named.
+  intros R Σ Σ' Hsame Hkeys.
+  eapply root_env_keys_named_weaken.
+  - exact Hkeys.
+  - intros x Hin.
+    rewrite (sctx_same_bindings_names_alpha Σ Σ' Hsame).
+    exact Hin.
+Qed.
+
 Lemma root_set_ctx_roots_named_consume_path :
   forall roots Σ x path Σ',
     sctx_consume_path Σ x path = infer_ok Σ' ->
@@ -3537,6 +3588,21 @@ Proof.
     + intros z Hin. simpl. right. exact Hin.
 Qed.
 
+Lemma root_env_ctx_keys_named_add_binding :
+  forall R Σ x T m roots,
+    root_env_ctx_keys_named R Σ ->
+    root_env_ctx_keys_named (root_env_add x roots R)
+      (sctx_add x T m Σ).
+Proof.
+  intros R Σ x T m roots Hkeys.
+  unfold root_env_ctx_keys_named.
+  apply root_env_keys_named_add.
+  - simpl. left. reflexivity.
+  - eapply root_env_keys_named_weaken.
+    + exact Hkeys.
+    + intros z Hin. simpl. right. exact Hin.
+Qed.
+
 Lemma root_env_remove_excludes_roots_exclude :
   forall R x y roots,
     root_env_no_shadow R ->
@@ -3566,6 +3632,35 @@ Proof.
   - apply root_env_ctx_roots_named_remove_env; assumption.
 Qed.
 
+Lemma root_env_ctx_keys_named_remove_binding :
+  forall R Σ x,
+    root_env_no_shadow R ->
+    root_env_ctx_keys_named R Σ ->
+    root_env_ctx_keys_named (root_env_remove x R) (sctx_remove x Σ).
+Proof.
+  unfold root_env_ctx_keys_named.
+  intros R Σ x Hrn Hkeys.
+  induction R as [| [z roots] rest IH]; intros y Hin; simpl in *;
+    try contradiction.
+  unfold root_env_no_shadow in Hrn. simpl in Hrn.
+  inversion Hrn as [| ? ? Hz_notin Hrn_tail]; subst.
+  destruct (ident_eqb x z) eqn:Hxz.
+  - apply ident_eqb_eq in Hxz. subst z.
+    apply ctx_names_remove_preserve_neq_root_names.
+    + intros Heq. subst y. contradiction.
+    + apply Hkeys. right. exact Hin.
+  - simpl in Hin.
+    destruct Hin as [Hy | Hin].
+    + subst y.
+      apply ctx_names_remove_preserve_neq_root_names.
+      * intros Heq. subst z. rewrite ident_eqb_refl in Hxz. discriminate.
+      * apply Hkeys. left. reflexivity.
+    + apply IH.
+      * exact Hrn_tail.
+      * intros w Hw. apply Hkeys. right. exact Hw.
+      * exact Hin.
+Qed.
+
 Lemma root_set_ctx_roots_named_remove_binding :
   forall roots Σ x,
     roots_exclude x roots ->
@@ -3590,6 +3685,17 @@ Proof.
   - exact Hrn.
   - exact Henv.
   - apply root_set_ctx_roots_named_union; assumption.
+Qed.
+
+Lemma root_env_ctx_keys_named_update :
+  forall R Σ x roots,
+    root_env_ctx_keys_named R Σ ->
+    root_env_ctx_keys_named (root_env_update x roots R) Σ.
+Proof.
+  intros R Σ x roots Hkeys.
+  unfold root_env_ctx_keys_named.
+  apply root_env_keys_named_update.
+  exact Hkeys.
 Qed.
 
 Lemma root_env_ctx_roots_named_update_union_restore_path :

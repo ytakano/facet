@@ -296,6 +296,11 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      `infer_full_env_roots_big_step_safe_direct_call_ready` to carry
      `root_env_store_roots_named R s`, so later summary instantiation can use
      preserved call-site root names to prove freshened-parameter exclusion.
+   - Done: added the root-env key naming invariant
+     `root_env_keys_named`, with ctx/store specializations
+     (`root_env_ctx_keys_named`, `root_env_store_keys_named`) and preservation
+     helpers for add/remove/update/rename/instantiate. This separates
+     root-env key alignment from the existing `RStore`-atom naming invariant.
    - Chosen design: replace the call-site evidence premise with cached
      root-polymorphic summaries using the tagged-root representation.
    - Remaining blocker: prove the root-aware alpha-renaming/instantiation

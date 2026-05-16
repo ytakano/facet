@@ -1,5 +1,5 @@
 From Facet.TypeSystem Require Import Syntax PathState Renaming TypingRules.
-From Stdlib Require Import List.
+From Stdlib Require Import List String.
 Import ListNotations.
 
 (* ------------------------------------------------------------------ *)
@@ -398,6 +398,82 @@ Definition root_subst_images_exclude (x : ident) (rho : root_subst)
 Definition root_subst_images_exclude_names
     (names : list ident) (rho : root_subst) : Prop :=
   Forall (fun x => root_subst_images_exclude x rho) names.
+
+Fixpoint args_local_store_names_with
+    (expr_names : expr -> list ident) (args : list expr) : list ident :=
+  match args with
+  | [] => []
+  | e :: rest => expr_names e ++ args_local_store_names_with expr_names rest
+  end.
+
+Fixpoint fields_local_store_names_with
+    (expr_names : expr -> list ident) (fields : list (string * expr))
+    : list ident :=
+  match fields with
+  | [] => []
+  | (_, e) :: rest =>
+      expr_names e ++ fields_local_store_names_with expr_names rest
+  end.
+
+Fixpoint expr_local_store_names (e : expr) : list ident :=
+  match e with
+  | EUnit => []
+  | ELit _ => []
+  | EVar _ => []
+  | ELet _ x _ e1 e2 =>
+      expr_local_store_names e1 ++ x :: expr_local_store_names e2
+  | ELetInfer _ x e1 e2 =>
+      expr_local_store_names e1 ++ x :: expr_local_store_names e2
+  | EFn _ => []
+  | EPlace _ => []
+  | ECall _ args =>
+      args_local_store_names_with expr_local_store_names args
+  | ECallExpr callee args =>
+      expr_local_store_names callee ++
+      args_local_store_names_with expr_local_store_names args
+  | EStruct _ _ _ fields =>
+      fields_local_store_names_with expr_local_store_names fields
+  | EReplace _ e_new => expr_local_store_names e_new
+  | EAssign _ e_new => expr_local_store_names e_new
+  | EBorrow _ _ => []
+  | EDeref e' => expr_local_store_names e'
+  | EDrop e' => expr_local_store_names e'
+  | EIf e1 e2 e3 =>
+      expr_local_store_names e1 ++
+      expr_local_store_names e2 ++
+      expr_local_store_names e3
+  end.
+
+Definition args_local_store_names (args : list expr) : list ident :=
+  args_local_store_names_with expr_local_store_names args.
+
+Definition fields_local_store_names (fields : list (string * expr))
+    : list ident :=
+  fields_local_store_names_with expr_local_store_names fields.
+
+Lemma expr_local_store_names_call :
+  forall fname args,
+    expr_local_store_names (ECall fname args) =
+    args_local_store_names args.
+Proof.
+  intros fname args. reflexivity.
+Qed.
+
+Lemma expr_local_store_names_call_expr :
+  forall callee args,
+    expr_local_store_names (ECallExpr callee args) =
+    expr_local_store_names callee ++ args_local_store_names args.
+Proof.
+  intros callee args. reflexivity.
+Qed.
+
+Lemma expr_local_store_names_struct :
+  forall sname lts args fields,
+    expr_local_store_names (EStruct sname lts args fields) =
+    fields_local_store_names fields.
+Proof.
+  intros sname lts args fields. reflexivity.
+Qed.
 
 Definition root_env_excludes (x : ident) (R : root_env) : Prop :=
   forall y roots,
@@ -1468,6 +1544,30 @@ Proof.
     destruct Hin as [Hin | Hin].
     + subst. exact Hhead.
     + eapply IH; eassumption.
+Qed.
+
+Lemma root_subst_images_exclude_names_args_cons_inv :
+  forall e args rho,
+    root_subst_images_exclude_names
+      (args_local_store_names (e :: args)) rho ->
+    root_subst_images_exclude_names (expr_local_store_names e) rho /\
+    root_subst_images_exclude_names (args_local_store_names args) rho.
+Proof.
+  intros e args rho Hnames. simpl in Hnames.
+  apply root_subst_images_exclude_names_app_inv in Hnames.
+  exact Hnames.
+Qed.
+
+Lemma root_subst_images_exclude_names_fields_cons_inv :
+  forall field_name e fields rho,
+    root_subst_images_exclude_names
+      (fields_local_store_names ((field_name, e) :: fields)) rho ->
+    root_subst_images_exclude_names (expr_local_store_names e) rho /\
+    root_subst_images_exclude_names (fields_local_store_names fields) rho.
+Proof.
+  intros field_name e fields rho Hnames. simpl in Hnames.
+  apply root_subst_images_exclude_names_app_inv in Hnames.
+  exact Hnames.
 Qed.
 
 Lemma root_set_instantiate_excludes :

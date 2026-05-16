@@ -173,9 +173,14 @@ Already available for the direct `ECall` proof:
   `call_param_root_env`.
 - `eval_preserves_typing_direct_call_roots_ready` connects
   `preservation_direct_call_ready_expr` to the cleanup bridge.
-- `infer_full_env_roots_big_step_safe_direct_call_ready` exposes the
-  checker-facing direct-call-ready theorem, still requiring
+- `callee_body_root_check_ready_at` and
+  `direct_call_callee_body_root_check_evidence` expose a checker-facing
+  call-site bridge: for each freshened callee and call-site root environment,
+  `infer_env_roots` plus boolean parameter-root exclusion imply
   `direct_call_callee_body_root_evidence`.
+- `infer_full_env_roots_big_step_safe_direct_call_ready` exposes the
+  checker-facing direct-call-ready theorem, now requiring
+  `direct_call_callee_body_root_check_evidence`.
 
 ### Next Implementation Queue
 
@@ -204,15 +209,21 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
    - Done: factored the callee body facts into
      `callee_body_root_ready_at`, so the active premise now exposes the
      call-site body root-readiness shape directly.
-   - Remaining: prove or expose a root-aware function-environment invariant
-     that implies `direct_call_callee_body_root_evidence`.
+   - Done: added the call-site checker-facing bridge
+     `direct_call_callee_body_root_check_evidence`, which derives
+     `direct_call_callee_body_root_evidence` from `infer_env_roots` at
+     `call_param_root_env` plus parameter-root exclusion booleans.
+   - Remaining: decide whether to replace the call-site evidence premise with
+     cached root-polymorphic summaries or another executable root-aware
+     function-environment invariant.
    - Chosen direction: keep lifetime substitution inference as-is, derive root
      evidence from call-site argument roots plus
      `call_param_root_env`, and eventually consider root-polymorphic function
      summaries for an executable checker-facing bridge.
-   - No further implementation-only subtask remains in this item until the
-     root-polymorphic summary shape, or an equivalent Prop-level root-aware
-     function-environment invariant, is fixed.
+   - No further implementation-only subtask remains in this item if the goal is
+     to eliminate the call-site evidence premise entirely; that requires fixing
+     the root-polymorphic summary shape, or an equivalent root-aware
+     function-environment invariant.
    - Do not attempt to discharge the evidence with lifetime inference alone,
      and do not globally reject parameter roots in `infer_env_roots`.
    - Stop if the current root sidecar API cannot express freshened callee body

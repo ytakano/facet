@@ -356,8 +356,8 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      - `[done]` borrow result-root ctx-name helpers
      - `[done]` if/args/fields aggregation ctx-name helpers
      - `[done]` thin `typed_roots_ctx_roots_named_mutual`
-     - `[todo]` `eval_preserves_root_names_ready_mutual`
-     - `[todo]` direct-call call-site exclusion preparation lemma
+     - `[done]` `eval_preserves_root_names_ready_mutual`
+     - `[done]` direct-call call-site exclusion preparation lemma
    - Do not attempt to discharge the evidence with lifetime inference alone,
      and do not globally reject parameter roots in `infer_env_roots`.
    - Stop if the current root sidecar API cannot express freshened callee body

@@ -165,9 +165,12 @@ Already available for the direct `ECall` proof:
 - `eval_args_bind_params_call_param_root_env_ready` derives bound-parameter
   store/root readiness from argument evaluation, argument root preservation,
   freshened parameter freshness, and alpha-renamed argument typing.
+- `callee_body_root_ready_at` packages the freshened callee body readiness,
+  root typing, return compatibility, and parameter-root exclusion facts at a
+  call-site root environment.
 - `direct_call_callee_body_root_evidence` is now the explicit TypeSafety
-  premise that supplies freshened callee body root typing and parameter-root
-  exclusion under `call_param_root_env`.
+  premise that supplies `callee_body_root_ready_at` under
+  `call_param_root_env`.
 - `eval_preserves_typing_direct_call_roots_ready` connects
   `preservation_direct_call_ready_expr` to the cleanup bridge.
 - `infer_full_env_roots_big_step_safe_direct_call_ready` exposes the
@@ -198,6 +201,9 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
    - Done: narrowed the active premise to
      `direct_call_callee_body_root_evidence`; the direct-call wrapper now
      derives the bound-parameter store/root facts itself.
+   - Done: factored the callee body facts into
+     `callee_body_root_ready_at`, so the active premise now exposes the
+     call-site body root-readiness shape directly.
    - Remaining: prove or expose a root-aware function-environment invariant
      that implies `direct_call_callee_body_root_evidence`.
    - Chosen direction: keep lifetime substitution inference as-is, derive root

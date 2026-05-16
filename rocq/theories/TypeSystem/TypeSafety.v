@@ -11479,6 +11479,82 @@ Proof.
       * eapply root_set_ctx_roots_named_store_typed; eassumption.
 Qed.
 
+Theorem eval_preserves_root_keys_named_ready_mutual :
+  (forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      provenance_ready_expr e ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      root_env_store_keys_named R' s') /\
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ ps Σ' R' roots,
+      provenance_ready_args args ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_keys_named R s ->
+      typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+      root_env_store_keys_named R' s') /\
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots,
+      provenance_ready_fields fields ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_keys_named R s ->
+      typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+      root_env_store_keys_named R' s').
+Proof.
+  split.
+  - intros env s e s' v Heval Ω n R Σ T Σ' R' roots Hready Hstore
+      Hroots Hnodup Hrn Hnamed Htyped.
+    destruct (proj1 eval_preserves_typing_roots_ready_mutual
+                env s e s' v Heval Ω n R Σ T Σ' R' roots
+                Hready Hstore Hroots Hnodup Hrn Htyped)
+      as [Hstore' _].
+    assert (Hctx_named : root_env_ctx_keys_named R Σ)
+      by (eapply root_env_store_keys_named_to_ctx; eassumption).
+    pose proof (proj1 (typed_roots_ctx_keys_named_mutual env Ω n)
+                  R Σ e T Σ' R' roots Htyped Hrn Hctx_named)
+      as Henv_named.
+    eapply root_env_ctx_keys_named_store_typed; eassumption.
+  - split.
+    + intros env s args s' vs Heval Ω n R Σ ps Σ' R' roots Hready
+        Hstore Hroots Hnodup Hrn Hnamed Htyped.
+      destruct (proj1 (proj2 eval_preserves_typing_roots_ready_mutual)
+                  env s args s' vs Heval Ω n R Σ ps Σ' R' roots
+                  Hready Hstore Hroots Hnodup Hrn Htyped)
+        as [Hstore' _].
+      assert (Hctx_named : root_env_ctx_keys_named R Σ)
+        by (eapply root_env_store_keys_named_to_ctx; eassumption).
+      pose proof (proj1 (proj2 (typed_roots_ctx_keys_named_mutual env Ω n))
+                    R Σ args ps Σ' R' roots Htyped Hrn Hctx_named)
+        as Henv_named.
+      eapply root_env_ctx_keys_named_store_typed; eassumption.
+    + intros env s fields defs s' values Heval Ω n lts args R Σ Σ' R'
+        roots Hready Hstore Hroots Hnodup Hrn Hnamed Htyped.
+      destruct (proj2 (proj2 eval_preserves_typing_roots_ready_mutual)
+                  env s fields defs s' values Heval Ω n lts args R Σ Σ'
+                  R' roots Hready Hstore Hroots Hnodup Hrn Htyped)
+        as [Hstore' _].
+      assert (Hctx_named : root_env_ctx_keys_named R Σ)
+        by (eapply root_env_store_keys_named_to_ctx; eassumption).
+      pose proof (proj2 (proj2 (typed_roots_ctx_keys_named_mutual env Ω n))
+                    lts args R Σ fields defs Σ' R' roots Htyped Hrn
+                    Hctx_named)
+        as Henv_named.
+      eapply root_env_ctx_keys_named_store_typed; eassumption.
+Qed.
+
 Lemma eval_args_root_names_excludes_params_ready :
   forall env s args s_args vs Ω n R Σ ps Σ_args R_args arg_roots
       ps_bind,

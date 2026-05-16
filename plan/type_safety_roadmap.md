@@ -305,6 +305,10 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      root-aware expression/argument/field typing preserves the root-env key
      naming invariant across context-consuming, let-binding, update, merge, and
      structural traversal cases.
+   - Done: proved `eval_preserves_root_keys_named_ready_mutual`, so ready
+     evaluation transports `root_env_store_keys_named` for expressions,
+     argument lists, and struct fields using the static key-preservation theorem
+     plus final `store_typed` facts.
    - Chosen design: replace the call-site evidence premise with cached
      root-polymorphic summaries using the tagged-root representation.
    - Remaining blocker: prove the root-aware alpha-renaming/instantiation

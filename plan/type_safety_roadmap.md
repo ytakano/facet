@@ -181,6 +181,16 @@ Already available for the direct `ECall` proof:
 - `infer_full_env_roots_big_step_safe_direct_call_ready` exposes the
   checker-facing direct-call-ready theorem, now requiring
   `direct_call_callee_body_root_check_evidence`.
+- `RootProvenance.v` now has the root-polymorphic summary instantiation helper
+  layer:
+  - `root_subst`
+  - `root_subst_lookup`
+  - `root_set_instantiate`
+  - `root_env_instantiate`
+  - `root_subst_of_params`
+  These helpers give the next executable summary bridge a proof-level API for
+  replacing symbolic parameter roots with call-site argument roots while
+  preserving root-environment names/no-shadow facts.
 
 ### Next Implementation Queue
 
@@ -213,6 +223,9 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      `direct_call_callee_body_root_check_evidence`, which derives
      `direct_call_callee_body_root_evidence` from `infer_env_roots` at
      `call_param_root_env` plus parameter-root exclusion booleans.
+   - Done: added the root-substitution helper layer in `RootProvenance.v`:
+     `root_subst`, `root_set_instantiate`, `root_env_instantiate`, and
+     `root_subst_of_params`, with lookup/name/no-shadow preservation lemmas.
    - Remaining: decide whether to replace the call-site evidence premise with
      cached root-polymorphic summaries or another executable root-aware
      function-environment invariant.

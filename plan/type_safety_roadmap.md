@@ -265,6 +265,9 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      premise, `root_of_place` renaming, root instantiation inversion, and
      instantiation/exclusion preservation for root sets, root environments, and
      `root_subst_of_params`.
+   - Done: added root-set equivalence transport lemmas for cons, append, union,
+     and `roots_exclude`, so future root-aware alpha proofs can reason modulo
+     `root_set_union` ordering/deduplication instead of exact list equality.
    - Done: added Prop-level function summary evidence in `TypeSafety.v`
      (`callee_body_root_summary`, `env_fns_root_summary_evidence`) and
      checker-facing summary evidence in `EnvRuntimeSafety.v`

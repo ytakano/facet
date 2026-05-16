@@ -161,6 +161,43 @@ Proof.
   - apply Hab2. apply Hbc2. exact H.
 Qed.
 
+Lemma root_set_equiv_cons :
+  forall atom a b,
+    root_set_equiv a b ->
+    root_set_equiv (atom :: a) (atom :: b).
+Proof.
+  intros atom a b Heq atom0.
+  simpl.
+  destruct (Heq atom0) as [Hab Hba].
+  split; intros Hin.
+  - destruct Hin as [Hin | Hin].
+    + left. exact Hin.
+    + right. apply Hab. exact Hin.
+  - destruct Hin as [Hin | Hin].
+    + left. exact Hin.
+    + right. apply Hba. exact Hin.
+Qed.
+
+Lemma root_set_equiv_app :
+  forall a a' b b',
+    root_set_equiv a a' ->
+    root_set_equiv b b' ->
+    root_set_equiv (a ++ b) (a' ++ b').
+Proof.
+  intros a a' b b' Ha Hb atom.
+  split; intros Hin.
+  - apply in_app_or in Hin.
+    apply in_or_app.
+    destruct Hin as [Hin | Hin].
+    + left. apply Ha. exact Hin.
+    + right. apply Hb. exact Hin.
+  - apply in_app_or in Hin.
+    apply in_or_app.
+    destruct Hin as [Hin | Hin].
+    + left. apply Ha. exact Hin.
+    + right. apply Hb. exact Hin.
+Qed.
+
 Definition rename_no_collision_for
     (rho : rename_env) (x : ident) (names : list ident) : Prop :=
   forall y,
@@ -255,6 +292,18 @@ Definition root_env_excludes (x : ident) (R : root_env) : Prop :=
     root_env_lookup y R = Some roots ->
     y <> x ->
     roots_exclude x roots.
+
+Lemma roots_exclude_equiv :
+  forall x roots roots',
+    root_set_equiv roots roots' ->
+    roots_exclude x roots ->
+    roots_exclude x roots'.
+Proof.
+  unfold roots_exclude.
+  intros x roots roots' Heq Hexcl Hin.
+  apply Hexcl.
+  apply Heq. exact Hin.
+Qed.
 
 Fixpoint root_provenance_place_name (p : place) : ident :=
   match p with
@@ -416,6 +465,20 @@ Proof.
     destruct Hin as [Hin | Hin].
     + apply root_set_union_in_l. exact Hin.
     + apply root_set_union_in_r. exact Hin.
+Qed.
+
+Lemma root_set_union_equiv :
+  forall a a' b b',
+    root_set_equiv a a' ->
+    root_set_equiv b b' ->
+    root_set_equiv (root_set_union a b) (root_set_union a' b').
+Proof.
+  intros a a' b b' Ha Hb.
+  eapply root_set_equiv_trans.
+  - apply root_set_union_equiv_app.
+  - eapply root_set_equiv_trans.
+    + apply root_set_equiv_app; eassumption.
+    + apply root_set_equiv_sym. apply root_set_union_equiv_app.
 Qed.
 
 Lemma root_env_lookup_rename :

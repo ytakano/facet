@@ -1968,6 +1968,23 @@ Proof.
       * eapply IH; eassumption.
 Qed.
 
+Lemma root_env_add_params_roots_lookup_remove_neq :
+  forall ps roots_list R x y,
+    x <> y ->
+    root_env_lookup x (root_env_add_params_roots ps roots_list
+      (root_env_remove y R)) =
+    root_env_lookup x (root_env_add_params_roots ps roots_list R).
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros roots_list R x y Hneq;
+    destruct roots_list as [| roots roots_list]; simpl in *.
+  - apply root_env_lookup_remove_neq. intros Heq. apply Hneq. symmetry. exact Heq.
+  - apply root_env_lookup_remove_neq. intros Heq. apply Hneq. symmetry. exact Heq.
+  - apply root_env_lookup_remove_neq. intros Heq. apply Hneq. symmetry. exact Heq.
+  - destruct (ident_eqb x (param_name p)) eqn:Heq; try reflexivity.
+    apply IH. exact Hneq.
+Qed.
+
 Lemma root_set_instantiate_single_param_equiv :
   forall rho x roots,
     root_subst_lookup x rho = roots ->
@@ -2030,6 +2047,55 @@ Proof.
         unfold root_env_equiv in IH.
         apply IH.
       * exact Hnotin.
+Qed.
+
+Lemma root_env_add_params_roots_equiv_call_param_root_env :
+  forall ps roots_list R_tail,
+    List.length roots_list = List.length ps ->
+    root_env_equiv
+      (root_env_add_params_roots ps roots_list R_tail)
+      (call_param_root_env ps roots_list R_tail).
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros roots_list R_tail Hlen;
+    destruct roots_list as [| roots roots_list]; simpl in *; try discriminate.
+  - apply root_env_equiv_refl.
+  - inversion Hlen as [Hlen_tail].
+    unfold root_env_equiv. intros x. simpl.
+    destruct (ident_eqb x (param_name p)) eqn:Heq.
+    + apply root_set_equiv_refl.
+    + apply ident_eqb_neq in Heq.
+      specialize (IH roots_list (root_env_remove (param_name p) R_tail)
+        Hlen_tail).
+      unfold root_env_equiv in IH.
+      specialize (IH x).
+      rewrite root_env_add_params_roots_lookup_remove_neq in IH by exact Heq.
+      exact IH.
+Qed.
+
+Lemma root_env_instantiate_initial_origin_equiv_call_param_root_env_empty :
+  forall ps_orig ps_current arg_roots,
+    params_alpha ps_orig ps_current ->
+    NoDup (ctx_names (params_ctx ps_orig)) ->
+    List.length arg_roots = List.length ps_orig ->
+    root_env_equiv
+      (root_env_instantiate (root_subst_of_params ps_orig arg_roots)
+        (initial_root_env_for_params_origin ps_orig ps_current))
+      (call_param_root_env ps_current arg_roots []).
+Proof.
+  intros ps_orig ps_current arg_roots Halpha Hnodup Hlen.
+  pose proof Halpha as Halpha_len.
+  assert (Hlen_current : List.length arg_roots = List.length ps_current).
+  { assert (Hparams_len : List.length ps_orig = List.length ps_current).
+    { clear Halpha Hnodup Hlen arg_roots.
+      induction Halpha_len; simpl; try reflexivity.
+      f_equal. exact IHHalpha_len. }
+    rewrite <- Hparams_len. exact Hlen. }
+  eapply root_env_equiv_trans.
+  - eapply root_env_instantiate_initial_origin_equiv_add_params_roots;
+      eassumption.
+  - apply root_env_add_params_roots_equiv_call_param_root_env.
+    exact Hlen_current.
 Qed.
 
 Lemma root_env_add_params_roots_no_shadow :

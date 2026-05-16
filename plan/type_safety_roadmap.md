@@ -137,6 +137,12 @@ false lemma.
      `initial_root_env_for_params_origin` with original-parameter substitutions
      yields the fresh/current parameter root environment, under the required
      argument-root length and original-parameter `NoDup` premises.
+   - Done: added the `call_param_root_env` equivalence helper for the empty
+     tail case, so the origin-summary instantiation helper now connects to the
+     call-site root environment shape used by direct-call evidence.
+   - Remaining blocker: state and prove the tail weakening theorem that
+     transports callee-body root typing from the parameter-only root
+     environment to `call_param_root_env` with the caller tail.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

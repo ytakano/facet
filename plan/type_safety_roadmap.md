@@ -17,8 +17,16 @@ shape are already fixed.
 
 ### Active Slice
 
-Finish direct `ECall fname args` preservation by connecting the existing cleanup
-result into the direct-call preservation wrapper.
+Direct `ECall fname args` preservation is connected through an explicit
+callee-root evidence premise:
+
+- `direct_call_callee_root_evidence`
+- `eval_preserves_typing_direct_call_roots_ready`
+- `infer_full_env_roots_big_step_safe_direct_call_ready`
+
+The next unresolved point is deriving `direct_call_callee_root_evidence` from a
+root-aware function-environment invariant or checker-facing sidecar theorem. Do
+not treat this premise as discharged by the checker until that bridge exists.
 
 Important boundaries:
 
@@ -123,12 +131,19 @@ Already available for the direct `ECall` proof:
 - `eval_preserves_frame_scope_roots_ready_mutual` derives exact caller-frame
   evidence from ready/root-aware callee body evaluation.
 - The cleanup bridge no longer takes an explicit `store_frame_scope` premise.
+- `direct_call_callee_root_evidence` is now the explicit TypeSafety premise that
+  supplies freshened callee body root typing and parameter-root exclusion.
+- `eval_preserves_typing_direct_call_roots_ready` connects
+  `preservation_direct_call_ready_expr` to the cleanup bridge.
+- `infer_full_env_roots_big_step_safe_direct_call_ready` exposes the
+  checker-facing direct-call-ready theorem, still requiring
+  `direct_call_callee_root_evidence`.
 
 ### Next Implementation Queue
 
 Follow this order. Stop when a step exposes a missing invariant or false lemma.
 
-1. `[active]` Direct `ECall` final wrapper
+1. `[done]` Direct `ECall` final wrapper
    - Target file: `rocq/theories/TypeSystem/TypeSafety.v`.
    - Connect the existing cleanup bridge to `preservation_direct_call_ready_expr`.
    - Use existing freshened callee ready/typed lookup bridges, prefix
@@ -137,12 +152,20 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
    - Do not modify `preservation_ready_expr`.
    - Do not start `ECallExpr` in this step.
 
-2. `[next]` Direct-call checker-to-runtime ready/root theorem update
+2. `[done]` Direct-call checker-to-runtime ready/root theorem update
    - Target file: `rocq/theories/TypeSystem/EnvRuntimeSafety.v`.
    - Connect the direct-call wrapper to the ready/root checker-facing theorem if
      the theorem still excludes direct calls.
 
-3. `[next]` Empty-capture `ECallExpr`
+3. `[design blocker]` Derive direct-call callee root evidence
+   - Target files: likely `rocq/theories/TypeSystem/TypeSafety.v` and
+     `rocq/theories/TypeSystem/EnvRootSoundness.v`.
+   - Prove or expose a root-aware function-environment invariant that implies
+     `direct_call_callee_root_evidence`.
+   - Stop if the current root sidecar API cannot express freshened callee body
+     roots and parameter-root exclusion without a new invariant.
+
+4. `[next]` Empty-capture `ECallExpr`
    - Target files:
      - `rocq/theories/TypeSystem/TypeSafety.v`
      - possibly `rocq/theories/TypeSystem/RuntimeTyping.v`
@@ -151,36 +174,36 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
    - If non-empty captured stores are needed, stop and report the missing
      captured-store invariant instead of inventing one.
 
-4. `[next]` Runtime typing for closure values
+5. `[next]` Runtime typing for closure values
    - Target file: `rocq/theories/TypeSystem/RuntimeTyping.v`.
    - Define the smallest `VClosure fname []` typing helper needed by the
      empty-capture `ECallExpr` proof.
    - Do not define non-empty capture safety until the captured-store invariant is
      fixed.
 
-5. `[later]` Indirect update and deref preservation
+6. `[later]` Indirect update and deref preservation
    - Target file: `rocq/theories/TypeSystem/TypeSafety.v`.
    - Connect indirect `EAssign`, indirect `EReplace`, and `EDeref` to the
      reference-target strengthened runtime typing.
    - Stop if runtime aliasing correspondence is required.
 
-6. `[later]` `ELetInfer` preservation
+7. `[later]` `ELetInfer` preservation
    - Replace contradiction-only helper with a real preservation proof.
 
-7. `[later]` Let-local reference escape
+8. `[later]` Let-local reference escape
    - Add typing/borrow invariant that prevents references to removed local
      bindings from escaping in result values or remaining store entries.
    - Prefer an escape check first. Introduce fresh let-regions only after the
      invariant is explicitly designed.
 
-8. `[later]` Full unrestricted preservation
+9. `[later]` Full unrestricted preservation
    - Prove `eval_preserves_typing` after direct calls, deref, indirect updates,
      and let escape are handled.
 
-9. `[later]` Runtime aliasing correspondence
+10. `[later]` Runtime aliasing correspondence
    - Connect static borrow states to runtime refs and path-prefix conflict.
 
-10. `[future]` Small-step progress
+11. `[future]` Small-step progress
     - Start only after preservation and runtime reference safety are stable.
 
 ### Main Target Theorems

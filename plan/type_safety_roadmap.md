@@ -320,6 +320,9 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      helpers, and ctx/store root-name transport over `root_set_equiv`, so the
      upcoming root-aware typing transport can relate instantiated root
      environments modulo root-set representation rather than exact list order.
+   - Done: added root-env equivalence composition helpers for instantiation,
+     update/union, add, and remove, connecting `root_env_instantiate` with
+     `root_env_equiv` for the upcoming `typed_env_roots` transport proof.
    - Chosen design: replace the call-site evidence premise with cached
      root-polymorphic summaries using the tagged-root representation.
    - Remaining blocker: prove the root-aware alpha-renaming/instantiation

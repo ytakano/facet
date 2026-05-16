@@ -1619,6 +1619,80 @@ Proof.
     apply HRR'.
 Qed.
 
+Lemma root_env_equiv_instantiate :
+  forall rho R R',
+    root_env_equiv R R' ->
+    root_env_equiv
+      (root_env_instantiate rho R)
+      (root_env_instantiate rho R').
+Proof.
+  unfold root_env_equiv.
+  intros rho R R' HRR' x.
+  specialize (HRR' x).
+  destruct (root_env_lookup x R) as [roots |] eqn:Hlookup;
+    destruct (root_env_lookup x R') as [roots' |] eqn:Hlookup';
+    try contradiction.
+  - rewrite (root_env_lookup_instantiate x rho R roots Hlookup).
+    rewrite (root_env_lookup_instantiate x rho R' roots' Hlookup').
+    apply root_set_instantiate_equiv. exact HRR'.
+  - rewrite (root_env_lookup_instantiate_none x rho R Hlookup).
+    rewrite (root_env_lookup_instantiate_none x rho R' Hlookup').
+    exact I.
+Qed.
+
+Lemma root_env_instantiate_update_union_equiv :
+  forall rho x roots_left roots_right R,
+    root_env_equiv
+      (root_env_instantiate rho
+        (root_env_update x
+          (root_set_union roots_left roots_right) R))
+      (root_env_update x
+        (root_set_union
+          (root_set_instantiate rho roots_left)
+          (root_set_instantiate rho roots_right))
+        (root_env_instantiate rho R)).
+Proof.
+  intros rho x roots_left roots_right R.
+  rewrite root_env_instantiate_update.
+  apply root_env_equiv_update.
+  - apply root_set_instantiate_union_equiv.
+  - apply root_env_equiv_refl.
+Qed.
+
+Lemma root_env_instantiate_add_equiv :
+  forall rho x roots roots' R R',
+    root_set_equiv roots roots' ->
+    root_env_equiv R R' ->
+    root_env_equiv
+      (root_env_instantiate rho (root_env_add x roots R))
+      (root_env_add x
+        (root_set_instantiate rho roots')
+        (root_env_instantiate rho R')).
+Proof.
+  intros rho x roots roots' R R' Hroots HRR'.
+  rewrite root_env_instantiate_add.
+  apply root_env_equiv_add.
+  - apply root_set_instantiate_equiv. exact Hroots.
+  - apply root_env_equiv_instantiate. exact HRR'.
+Qed.
+
+Lemma root_env_instantiate_remove_equiv :
+  forall rho x R R',
+    root_env_no_shadow R ->
+    root_env_no_shadow R' ->
+    root_env_equiv R R' ->
+    root_env_equiv
+      (root_env_instantiate rho (root_env_remove x R))
+      (root_env_remove x (root_env_instantiate rho R')).
+Proof.
+  intros rho x R R' Hnodup Hnodup' HRR'.
+  rewrite root_env_instantiate_remove.
+  apply root_env_equiv_remove.
+  - apply root_env_instantiate_no_shadow. exact Hnodup.
+  - apply root_env_instantiate_no_shadow. exact Hnodup'.
+  - apply root_env_equiv_instantiate. exact HRR'.
+Qed.
+
 Lemma root_subst_of_params_lookup_head :
   forall p ps roots arg_roots,
     root_subst_lookup (param_name p)

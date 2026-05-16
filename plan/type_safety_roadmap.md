@@ -328,6 +328,9 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
   - Done: added root-env equivalence composition helpers for instantiation,
     update/union, add, and remove, connecting `root_env_instantiate` with
     `root_env_equiv` for the upcoming `typed_env_roots` transport proof.
+  - Done: added `root_set_instantiate_root_of_place_equiv`, so shared-borrow
+    result roots based on concrete places are stable under parameter-root
+    instantiation.
   - Done: relaxed the Prop-level if rule from branch root-env equality to
     `root_env_equiv R2 R3`, while keeping the executable checker conservative
     via `root_env_eqb`; added the required equivalence transport helpers for
@@ -363,6 +366,18 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      `root_env_instantiate`. The next implementation slice must introduce that
      theorem, or smaller constructor-family helpers for it, before adding
      `env_fns_root_summary_evidence -> direct_call_callee_body_root_evidence`.
+   - New blocker exposed by attempting the instantiation theorem: arbitrary
+     `root_subst` instantiation does not preserve let-bound/callee-local
+     exclusion facts. In `ELet` / `ELetInfer`, the premise
+     `roots_exclude x roots2` is not enough to prove
+     `roots_exclude x (root_set_instantiate rho roots2)` because a
+     substitution image may itself contain `RStore x`. The same issue applies
+     to `root_env_excludes x (root_env_remove x R2)`. The transport theorem
+     must therefore carry an explicit substitution-image freshness premise,
+     such as "every image in `rho` excludes each locally removed store root",
+     parameterized by the let-bound names and callee cleanup names being
+     removed. Do not state or prove an unrestricted
+     `typed_roots_instantiate_mutual`; that statement is false.
    - New blocker exposed by the rename helper layer: transporting
      `root_env_excludes` through alpha-renaming needs an explicit root-atom
      no-collision premise. The bridge must prove that no `RStore z` inside a

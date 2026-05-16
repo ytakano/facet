@@ -755,6 +755,19 @@ Proof.
     + simpl. exact Hin.
 Qed.
 
+Lemma root_set_instantiate_root_of_place_equiv :
+  forall rho p,
+    root_set_equiv
+      (root_set_instantiate rho (root_of_place p))
+      (root_of_place p).
+Proof.
+  intros rho p.
+  unfold root_of_place.
+  destruct (place_path p) as [[x path] |].
+  - apply root_set_instantiate_store_singleton_equiv.
+  - apply root_set_instantiate_store_singleton_equiv.
+Qed.
+
 Lemma root_set_instantiate_union_equiv :
   forall rho roots_left roots_right,
     root_set_equiv

@@ -80,6 +80,86 @@ Proof.
   reflexivity.
 Qed.
 
+Fixpoint infer_env_args_collect_roots fuel env Ω n
+    (R : root_env) (Σ : sctx) (args : list expr)
+    : infer_result (list Ty * sctx * root_env * list root_set) :=
+  match args with
+  | [] => infer_ok ([], Σ, R, [])
+  | e :: rest =>
+      match infer_core_env_state_fuel_roots fuel env Ω n R Σ e with
+      | infer_err err => infer_err err
+      | infer_ok (T_e, Σ1, R1, roots_e) =>
+          match infer_env_args_collect_roots fuel env Ω n R1 Σ1 rest with
+          | infer_err err => infer_err err
+          | infer_ok (tys, Σ2, R2, roots_rest) =>
+              infer_ok (T_e :: tys, Σ2, R2, roots_e :: roots_rest)
+          end
+      end
+  end.
+
+Lemma infer_env_args_collect_roots_eq :
+  forall fuel env Ω n args R Σ,
+    (fix collect (Σ0 : sctx) (R0 : root_env) (as_ : list expr)
+         : infer_result (list Ty * sctx * root_env * list root_set) :=
+       match as_ with
+       | [] => infer_ok ([], Σ0, R0, [])
+       | e' :: es =>
+           match infer_core_env_state_fuel_roots fuel env Ω n R0 Σ0 e' with
+           | infer_err err => infer_err err
+           | infer_ok (T_e, Σ1, R1, roots_e) =>
+               match collect Σ1 R1 es with
+               | infer_err err => infer_err err
+               | infer_ok (tys, Σ2, R2, roots_es) =>
+                   infer_ok (T_e :: tys, Σ2, R2, roots_e :: roots_es)
+               end
+           end
+       end) Σ R args =
+    infer_env_args_collect_roots fuel env Ω n R Σ args.
+Proof.
+  intros fuel env Ω n args.
+  induction args as [|e rest IH]; intros R Σ; simpl.
+  - reflexivity.
+  - destruct (infer_core_env_state_fuel_roots fuel env Ω n R Σ e)
+      as [[[[T_e Σ1] R1] roots_e] | err] eqn:He;
+      try reflexivity.
+    rewrite IH. reflexivity.
+Qed.
+
+Lemma infer_env_args_collect_roots_sound :
+  forall fuel env Ω n R Σ args arg_tys params Σ' R' arg_roots,
+    infer_env_args_collect_roots fuel env Ω n R Σ args =
+      infer_ok (arg_tys, Σ', R', arg_roots) ->
+    (forall R0 Σ0 e T Σ1 R1 roots1,
+        infer_core_env_state_fuel_roots fuel env Ω n R0 Σ0 e =
+          infer_ok (T, Σ1, R1, roots1) ->
+        typed_env_roots env Ω n R0 Σ0 e T Σ1 R1 roots1) ->
+    check_args Ω arg_tys params = None ->
+    typed_args_roots env Ω n R Σ args params Σ' R' arg_roots.
+Proof.
+  intros fuel env Ω n R Σ args.
+  revert R Σ.
+  induction args as [|e rest IH]; intros R Σ arg_tys params Σ' R' arg_roots
+      Hcollect Hexpr Hcheck.
+  - simpl in Hcollect. inversion Hcollect; subst.
+    destruct params; simpl in Hcheck; try discriminate.
+    constructor.
+  - simpl in Hcollect.
+    destruct (infer_core_env_state_fuel_roots fuel env Ω n R Σ e)
+      as [[[[T_e Σ1] R1] roots_e] | err] eqn:He; try discriminate.
+    destruct (infer_env_args_collect_roots fuel env Ω n R1 Σ1 rest)
+      as [[[[tys Σ2] R2] roots_rest] | err] eqn:Htail; try discriminate.
+    inversion Hcollect; subst.
+    destruct params as [|p ps]; simpl in Hcheck; try discriminate.
+    destruct (ty_compatible_b Ω T_e (param_ty p)) eqn:Hcompat; try discriminate.
+    eapply TERArgs_Cons.
+    + eapply Hexpr. exact He.
+    + exact Hcompat.
+    + eapply IH.
+      * exact Htail.
+      * exact Hexpr.
+      * exact Hcheck.
+Qed.
+
 Fixpoint infer_env_fields_collect_roots fuel env Ω n lts args
     (R : root_env) (Σ : sctx) (fields : list (string * expr))
     (defs : list field_def)
@@ -186,7 +266,9 @@ Theorem infer_core_env_state_fuel_roots_sound :
 Proof.
   induction fuel as [|fuel' IH]; intros env Ω n R Σ e T Σ' R' roots Hinfer.
   - simpl in Hinfer. discriminate.
-  - destruct e; simpl in Hinfer; try discriminate.
+  - destruct e as [|l|i|m i t e1 e2|m i e1 e2|i|p|i l|e l|
+        s l l0 l1|p e|p e|r p|e|e|e1 e2 e3];
+      simpl in Hinfer; try discriminate.
     + inversion Hinfer; subst. constructor.
     + destruct l; inversion Hinfer; subst; constructor.
     + unfold consume_direct_place_value_roots, infer_place_roots in Hinfer.
@@ -271,6 +353,31 @@ Proof.
         -- exact Hpath.
         -- exact Hconsume.
         -- exact Hlookup.
+    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+      rewrite infer_env_args_collect_roots_eq in Hinfer.
+      destruct (infer_env_args_collect_roots fuel' env Ω n R Σ l)
+        as [[[[arg_tys Σargs] Rargs] arg_roots] | err] eqn:Hcollect;
+        try discriminate.
+      destruct (build_sigma (fn_lifetimes fdef) (repeat None (fn_lifetimes fdef))
+          arg_tys (fn_params fdef)) as [σ_acc |] eqn:Hbuild; try discriminate.
+      remember (apply_lt_params (finalize_subst σ_acc) (fn_params fdef)) as ps_subst.
+      destruct (check_args Ω arg_tys ps_subst) as [err |] eqn:Hcheck; try discriminate.
+      destruct (forallb (wf_lifetime_b (mk_region_ctx n)) (finalize_subst σ_acc)) eqn:Hwf;
+        try discriminate.
+      destruct (outlives_constraints_hold_b Ω
+          (apply_lt_outlives (finalize_subst σ_acc) (fn_outlives fdef)))
+        eqn:Hout; try discriminate.
+      inversion Hinfer; subst.
+      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
+      eapply TER_Call with (fdef := fdef) (σ := finalize_subst σ_acc).
+      * exact Hin.
+      * exact Hname.
+      * eapply infer_env_args_collect_roots_sound.
+        -- exact Hcollect.
+        -- intros R0 Σ0 e0 T0 Σ1 R1 roots1 Hinfer0.
+           eapply IH. exact Hinfer0.
+        -- exact Hcheck.
+      * apply outlives_constraints_hold_b_sound. exact Hout.
     + destruct (lookup_struct s env) as [sdef |] eqn:Hlookup; try discriminate.
       destruct (negb (Nat.eqb (Datatypes.length l) (struct_lifetimes sdef))) eqn:Hlts;
         try discriminate.

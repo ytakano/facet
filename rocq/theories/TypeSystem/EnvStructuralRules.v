@@ -631,6 +631,14 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       sctx_consume_path Σ x path = infer_ok Σ' ->
       root_env_lookup x R = Some roots ->
       typed_env_roots env Ω n R Σ (EPlace p) T Σ' R roots
+  | TER_Call : forall R R' Σ Σ' fname fdef args σ arg_roots,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      typed_args_roots env Ω n R Σ args
+        (apply_lt_params σ (fn_params fdef)) Σ' R' arg_roots ->
+      Forall (fun '(a, b) => outlives Ω a b) (apply_lt_outlives σ (fn_outlives fdef)) ->
+      typed_env_roots env Ω n R Σ (ECall fname args)
+        (apply_lt_ty σ (fn_ret fdef)) Σ' R' (root_sets_union arg_roots)
   | TER_Fn : forall R Σ fname fdef,
       In fdef (env_fns env) ->
       fn_name fdef = fname ->

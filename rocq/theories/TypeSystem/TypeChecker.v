@@ -2163,6 +2163,52 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
       | infer_ok (T, Σ', roots) => infer_ok (T, Σ', R, roots)
       | infer_err err => infer_err err
       end
+  | ECall fname args =>
+      match lookup_fn_b fname (env_fns env) with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef =>
+          let m := fn_lifetimes fdef in
+          let fix collect (Σ0 : sctx) (R0 : root_env) (as_ : list expr)
+              : infer_result (list Ty * sctx * root_env * list root_set) :=
+            match as_ with
+            | [] => infer_ok ([], Σ0, R0, [])
+            | e' :: es =>
+                match infer_core_env_state_fuel_roots fuel' env Ω n R0 Σ0 e' with
+                | infer_err err => infer_err err
+                | infer_ok (T_e, Σ1, R1, roots_e) =>
+                    match collect Σ1 R1 es with
+                    | infer_err err => infer_err err
+                    | infer_ok (tys, Σ2, R2, roots_es) =>
+                        infer_ok (T_e :: tys, Σ2, R2, roots_e :: roots_es)
+                    end
+                end
+            end
+          in
+          match collect Σ R args with
+          | infer_err err => infer_err err
+          | infer_ok (arg_tys, Σ', R', arg_roots) =>
+              match build_sigma m (repeat None m) arg_tys (fn_params fdef) with
+              | None => infer_err ErrLifetimeConflict
+              | Some σ_acc =>
+                  let σ := finalize_subst σ_acc in
+                  let ps_subst := apply_lt_params σ (fn_params fdef) in
+                  match check_args Ω arg_tys ps_subst with
+                  | Some err => infer_err err
+                  | None =>
+                      if forallb (wf_lifetime_b (mk_region_ctx n)) σ
+                      then
+                        let Ω_subst := apply_lt_outlives σ (fn_outlives fdef) in
+                        if outlives_constraints_hold_b Ω Ω_subst
+                        then
+                          infer_ok
+                            (apply_lt_ty σ (fn_ret fdef), Σ', R',
+                             root_sets_union arg_roots)
+                        else infer_err ErrHrtBoundUnsatisfied
+                      else infer_err ErrLifetimeLeak
+                  end
+              end
+          end
+      end
   | EFn fname =>
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
@@ -2410,7 +2456,6 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
             end
           else infer_err (ErrTypeMismatch (ty_core T_cond) TBooleans)
       end
-  | ECall _ _ => infer_err ErrNotImplemented
   | ECallExpr _ _ => infer_err ErrNotImplemented
   end
   end.

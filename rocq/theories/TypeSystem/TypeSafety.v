@@ -2940,6 +2940,108 @@ Definition root_env_covers_params (ps : list param) (R : root_env) : Prop :=
     In x (ctx_names (params_ctx ps)) ->
     exists roots, root_env_lookup x R = Some roots.
 
+Definition roots_exclude_params (ps : list param) (roots : root_set) : Prop :=
+  forall x,
+    In x (ctx_names (params_ctx ps)) ->
+    roots_exclude x roots.
+
+Definition root_env_excludes_params (ps : list param) (R : root_env) : Prop :=
+  forall x,
+    In x (ctx_names (params_ctx ps)) ->
+    root_env_excludes x R.
+
+Definition value_refs_exclude_params (ps : list param) (v : value) : Prop :=
+  forall x,
+    In x (ctx_names (params_ctx ps)) ->
+    value_refs_exclude_root x v.
+
+Definition store_refs_exclude_params (ps : list param) (s : store) : Prop :=
+  forall x,
+    In x (ctx_names (params_ctx ps)) ->
+    store_refs_exclude_root x s.
+
+Definition roots_exclude_params_b (ps : list param) (roots : root_set) : bool :=
+  forallb (fun x => roots_exclude_b x roots) (ctx_names (params_ctx ps)).
+
+Definition root_env_excludes_params_b (ps : list param) (R : root_env) : bool :=
+  forallb (fun x => root_env_excludes_b x R) (ctx_names (params_ctx ps)).
+
+Lemma roots_exclude_b_sound_ts :
+  forall x roots,
+    roots_exclude_b x roots = true ->
+    roots_exclude x roots.
+Proof.
+  unfold roots_exclude_b, roots_exclude.
+  intros x roots Hexclude Hin.
+  apply negb_true_iff in Hexclude.
+  assert (existsb (ident_eqb x) roots = true) as Hexists.
+  { apply existsb_exists.
+    exists x. split.
+    - exact Hin.
+    - apply ident_eqb_refl. }
+  rewrite Hexists in Hexclude. discriminate.
+Qed.
+
+Lemma root_env_excludes_b_sound_ts :
+  forall x R,
+    root_env_excludes_b x R = true ->
+    root_env_excludes x R.
+Proof.
+  unfold root_env_excludes.
+  intros x R.
+  induction R as [| [y roots_y] rest IH]; intros Hexclude z roots
+    Hlookup Hneq; simpl in *; try discriminate.
+  apply andb_true_iff in Hexclude as [Hhead Hrest].
+  destruct (ident_eqb z y) eqn:Hz.
+  - inversion Hlookup; subst roots_y; clear Hlookup.
+    destruct (ident_eqb x y) eqn:Hxy.
+    + apply ident_eqb_eq in Hxy. subst y.
+      apply ident_eqb_eq in Hz. subst z.
+      contradiction Hneq. reflexivity.
+    + eapply roots_exclude_b_sound_ts. exact Hhead.
+  - eapply IH; eassumption.
+Qed.
+
+Lemma roots_exclude_params_b_sound :
+  forall ps roots,
+    roots_exclude_params_b ps roots = true ->
+    roots_exclude_params ps roots.
+Proof.
+  assert (Hnames :
+    forall names roots,
+      forallb (fun x => roots_exclude_b x roots) names = true ->
+      forall x, In x names -> roots_exclude x roots).
+  { induction names as [| y ys IH]; intros roots Hparams x Hin;
+      simpl in *; try contradiction.
+    apply andb_true_iff in Hparams as [Hhead Htail].
+    destruct Hin as [Hin | Hin].
+    - subst x. eapply roots_exclude_b_sound_ts. exact Hhead.
+    - eapply IH; eassumption. }
+  unfold roots_exclude_params_b, roots_exclude_params.
+  intros ps roots Hparams x Hin.
+  eapply Hnames; eassumption.
+Qed.
+
+Lemma root_env_excludes_params_b_sound :
+  forall ps R,
+    root_env_excludes_params_b ps R = true ->
+    root_env_excludes_params ps R.
+Proof.
+  assert (Hnames :
+    forall names R,
+      forallb (fun x => root_env_excludes_b x R) names = true ->
+      forall x, In x names -> root_env_excludes x R).
+  { induction names as [| y ys IH]; intros R Hparams x Hin;
+      simpl in *; try contradiction.
+    apply andb_true_iff in Hparams as [Hhead Htail].
+    destruct Hin as [Hin | Hin].
+    - subst x. eapply root_env_excludes_b_sound_ts. exact Hhead.
+    - eapply IH; eassumption. }
+  unfold root_env_excludes_params_b, root_env_excludes_params.
+  intros ps R Hparams x Hin.
+  eapply Hnames; eassumption.
+Qed.
+
 Lemma root_env_covers_params_update :
   forall ps R x roots,
     root_env_covers_params ps R ->
@@ -3033,6 +3135,143 @@ Proof.
     + destruct IH as [locals IH].
       exists (se :: locals). rewrite IH. reflexivity.
     + exact Hnotin.
+Qed.
+
+Lemma store_remove_in_store :
+  forall x s se,
+    In se (store_remove x s) ->
+    In se s.
+Proof.
+  intros x s.
+  induction s as [| se_head rest IH]; intros se Hin;
+    simpl in *; try contradiction.
+  destruct (ident_eqb x (se_name se_head)) eqn:Heq.
+  - right. exact Hin.
+  - simpl in Hin. destruct Hin as [Hin | Hin].
+    + left. exact Hin.
+    + right. apply IH. exact Hin.
+Qed.
+
+Lemma store_remove_params_in_store :
+  forall ps s se,
+    In se (store_remove_params ps s) ->
+    In se s.
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros s se Hin; simpl in *.
+  - exact Hin.
+  - apply store_remove_in_store with (x := param_name p).
+    eapply IH. exact Hin.
+Qed.
+
+Lemma store_remove_roots_within_same_env :
+  forall R s x,
+    store_roots_within R s ->
+    store_roots_within R (store_remove x s).
+Proof.
+  intros R s x Hwithin.
+  induction Hwithin as [R | R se rest Hentry Hrest IH]; simpl.
+  - constructor.
+  - destruct (ident_eqb x (se_name se)).
+    + exact Hrest.
+    + constructor; assumption.
+Qed.
+
+Lemma store_remove_params_roots_within_same_env :
+  forall ps R s,
+    store_roots_within R s ->
+    store_roots_within R (store_remove_params ps s).
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros R s Hwithin; simpl.
+  - exact Hwithin.
+  - apply IH. apply store_remove_roots_within_same_env. exact Hwithin.
+Qed.
+
+Lemma store_remove_params_no_param_names :
+  forall ps s,
+    NoDup (ctx_names (params_ctx ps)) ->
+    store_no_shadow s ->
+    forall x,
+      In x (ctx_names (params_ctx ps)) ->
+      forall se,
+        In se (store_remove_params ps s) ->
+        se_name se <> x.
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros s Hnodup Hshadow x Hin se Hse.
+  - simpl in Hin. contradiction.
+  - simpl in Hnodup, Hin.
+    inversion Hnodup as [| ? ? Hhead_notin Hnodup_tail]; subst.
+    destruct Hin as [Hin | Hin].
+    + subst x.
+      apply store_no_shadow_remove_no_name with (s := s).
+      * exact Hshadow.
+      * eapply store_remove_params_in_store. exact Hse.
+    + eapply IH.
+      * exact Hnodup_tail.
+      * apply store_no_shadow_remove. exact Hshadow.
+      * exact Hin.
+      * exact Hse.
+Qed.
+
+Lemma value_roots_exclude_params :
+  forall ps roots v,
+    value_roots_within roots v ->
+    roots_exclude_params ps roots ->
+    value_refs_exclude_params ps v.
+Proof.
+  unfold value_refs_exclude_params, roots_exclude_params.
+  intros ps roots v Hwithin Hexclude x Hin.
+  eapply value_roots_exclude_root.
+  - exact Hwithin.
+  - apply Hexclude. exact Hin.
+Qed.
+
+Lemma store_roots_exclude_params :
+  forall ps R s,
+    store_roots_within R s ->
+    root_env_excludes_params ps R ->
+    (forall x,
+      In x (ctx_names (params_ctx ps)) ->
+      forall se, In se s -> se_name se <> x) ->
+    store_refs_exclude_params ps s.
+Proof.
+  unfold store_refs_exclude_params, root_env_excludes_params.
+  intros ps R s Hwithin Hexclude Hnames x Hin.
+  eapply store_roots_exclude_root.
+  - exact Hwithin.
+  - apply Hexclude. exact Hin.
+  - intros se Hse. apply Hnames with (x := x); assumption.
+Qed.
+
+Lemma store_remove_params_cleanup_excludes :
+  forall ps s_body frame R roots v,
+    store_param_scope ps s_body frame ->
+    store_roots_within R s_body ->
+    value_roots_within roots v ->
+    store_no_shadow s_body ->
+    NoDup (ctx_names (params_ctx ps)) ->
+    roots_exclude_params ps roots ->
+    root_env_excludes_params ps R ->
+    exists locals,
+      store_remove_params ps s_body = locals ++ frame /\
+      value_refs_exclude_params ps v /\
+      store_refs_exclude_params ps (store_remove_params ps s_body).
+Proof.
+  intros ps s_body frame R roots v Hscope Hstore Hvalue Hshadow Hnodup
+    Hexclude_roots Hexclude_env.
+  destruct (store_remove_params_store_param_scope ps s_body frame Hscope)
+    as [locals Hremoved].
+  exists locals.
+  repeat split.
+  - exact Hremoved.
+  - eapply value_roots_exclude_params; eassumption.
+  - eapply store_roots_exclude_params.
+    + apply store_remove_params_roots_within_same_env. exact Hstore.
+    + exact Hexclude_env.
+    + intros x Hin se Hse.
+      eapply store_remove_params_no_param_names; eassumption.
 Qed.
 
 Lemma store_names_store_param_scope :

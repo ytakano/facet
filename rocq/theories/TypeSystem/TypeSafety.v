@@ -906,6 +906,159 @@ Proof.
     exact IH.
 Qed.
 
+Fixpoint root_env_remove_params (ps : list param) (R : root_env)
+    : root_env :=
+  match ps with
+  | [] => R
+  | p :: ps' => root_env_remove_params ps' (root_env_remove (param_name p) R)
+  end.
+
+Fixpoint root_env_add_params_roots
+    (ps : list param) (roots : list root_set) (R : root_env) : root_env :=
+  match ps, roots with
+  | p :: ps', roots_p :: roots' =>
+      root_env_add (param_name p) roots_p
+        (root_env_add_params_roots ps' roots' R)
+  | _, _ => R
+  end.
+
+Definition call_param_root_env
+    (ps : list param) (arg_roots : list root_set) (R_tail : root_env)
+    : root_env :=
+  root_env_add_params_roots ps arg_roots
+    (root_env_remove_params ps R_tail).
+
+Lemma root_env_remove_params_no_shadow :
+  forall ps R,
+    root_env_no_shadow R ->
+    root_env_no_shadow (root_env_remove_params ps R).
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros R Hnodup; simpl.
+  - exact Hnodup.
+  - apply IH. apply root_env_no_shadow_remove. exact Hnodup.
+Qed.
+
+Lemma root_env_lookup_remove_params_not_in :
+  forall ps R x,
+    ~ In x (ctx_names (params_ctx ps)) ->
+    root_env_lookup x (root_env_remove_params ps R) =
+      root_env_lookup x R.
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros R x Hnotin; simpl in *.
+  - reflexivity.
+  - rewrite IH.
+    + rewrite root_env_lookup_remove_neq.
+      * reflexivity.
+      * intros Heq. subst x. apply Hnotin. left. reflexivity.
+    + intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma root_env_remove_params_lookup_none :
+  forall ps R x,
+    NoDup (ctx_names (params_ctx ps)) ->
+    root_env_no_shadow R ->
+    In x (ctx_names (params_ctx ps)) ->
+    root_env_lookup x (root_env_remove_params ps R) = None.
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros R x Hnodup Hrn Hin; simpl in *.
+  - contradiction.
+  - inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
+    destruct Hin as [Hin | Hin].
+    + subst x.
+      rewrite root_env_lookup_remove_params_not_in.
+      * apply root_env_lookup_remove_eq_no_shadow. exact Hrn.
+      * exact Hnotin.
+    + eapply IH.
+      * exact Hnodup_tail.
+      * apply root_env_no_shadow_remove. exact Hrn.
+      * exact Hin.
+Qed.
+
+Lemma root_env_add_params_roots_lookup_not_in :
+  forall ps roots_list R x,
+    ~ In x (ctx_names (params_ctx ps)) ->
+    root_env_lookup x (root_env_add_params_roots ps roots_list R) =
+      root_env_lookup x R.
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros roots_list R x Hnotin;
+    destruct roots_list as [| roots roots_list]; simpl in *.
+  - reflexivity.
+  - reflexivity.
+  - reflexivity.
+  - destruct (ident_eqb x (param_name p)) eqn:Heq.
+    + apply ident_eqb_eq in Heq. subst x.
+      contradiction Hnotin. left. reflexivity.
+    + apply IH. intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma root_env_add_params_roots_covers_lookup :
+  forall ps roots_list R x,
+    NoDup (ctx_names (params_ctx ps)) ->
+    List.length roots_list = List.length ps ->
+    In x (ctx_names (params_ctx ps)) ->
+    exists roots,
+      root_env_lookup x (root_env_add_params_roots ps roots_list R) =
+        Some roots.
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros roots_list R x Hnodup Hlen Hin;
+    destruct roots_list as [| roots roots_list]; simpl in *; try discriminate.
+  - contradiction.
+  - inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
+    inversion Hlen as [Hlen_tail].
+    destruct Hin as [Hin | Hin].
+    + subst x. exists roots. simpl. rewrite ident_eqb_refl. reflexivity.
+    + simpl.
+      destruct (ident_eqb x (param_name p)) eqn:Heq.
+      * apply ident_eqb_eq in Heq. subst x. contradiction.
+      * eapply IH; eassumption.
+Qed.
+
+Lemma root_env_add_params_roots_no_shadow :
+  forall ps roots_list R,
+    NoDup (ctx_names (params_ctx ps)) ->
+    root_env_no_shadow R ->
+    (forall x,
+      In x (ctx_names (params_ctx ps)) ->
+      root_env_lookup x R = None) ->
+    root_env_no_shadow (root_env_add_params_roots ps roots_list R).
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros roots_list R Hnodup Hrn Hfresh;
+    destruct roots_list as [| roots roots_list]; simpl in *.
+  - exact Hrn.
+  - exact Hrn.
+  - exact Hrn.
+  - inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
+    apply root_env_no_shadow_add.
+    + apply IH.
+      * exact Hnodup_tail.
+      * exact Hrn.
+      * intros x Hin. apply Hfresh. right. exact Hin.
+    + rewrite root_env_add_params_roots_lookup_not_in.
+      * apply Hfresh. left. reflexivity.
+      * exact Hnotin.
+Qed.
+
+Lemma call_param_root_env_no_shadow :
+  forall ps roots R_tail,
+    NoDup (ctx_names (params_ctx ps)) ->
+    root_env_no_shadow R_tail ->
+    root_env_no_shadow (call_param_root_env ps roots R_tail).
+Proof.
+  intros ps roots R_tail Hnodup Hrn.
+  unfold call_param_root_env.
+  apply root_env_add_params_roots_no_shadow.
+  - exact Hnodup.
+  - apply root_env_remove_params_no_shadow. exact Hrn.
+  - intros x Hin.
+    eapply root_env_remove_params_lookup_none; eassumption.
+Qed.
+
 Lemma store_roots_within_lookup_none :
   forall R s x,
     store_roots_within R s ->
@@ -2756,6 +2909,15 @@ Inductive eval_args_values_have_types
       eval_args_values_have_types env Ω s vs ps ->
       eval_args_values_have_types env Ω s (v :: vs) (p :: ps).
 
+Lemma eval_args_values_have_types_length :
+  forall env Ω s vs ps,
+    eval_args_values_have_types env Ω s vs ps ->
+    List.length vs = List.length ps.
+Proof.
+  intros env Ω s vs ps Hargs.
+  induction Hargs; simpl; congruence.
+Qed.
+
 Lemma eval_args_values_have_types_apply_lt_params_inv :
   forall env Ω s vs σ ps,
     eval_args_values_have_types env Ω s vs (apply_lt_params σ ps) ->
@@ -3804,6 +3966,29 @@ Proof.
   intros ps R x Hcovers Hlookup_none Hin.
   destruct (Hcovers x Hin) as [roots Hlookup].
   rewrite Hlookup_none in Hlookup. discriminate.
+Qed.
+
+Lemma root_env_covers_params_add_params_roots :
+  forall ps roots_list R,
+    NoDup (ctx_names (params_ctx ps)) ->
+    List.length roots_list = List.length ps ->
+    root_env_covers_params ps (root_env_add_params_roots ps roots_list R).
+Proof.
+  intros ps roots_list R Hnodup Hlen x Hin.
+  eapply root_env_add_params_roots_covers_lookup; eassumption.
+Qed.
+
+Lemma call_param_root_env_covers_params :
+  forall ps roots_list R_tail,
+    NoDup (ctx_names (params_ctx ps)) ->
+    List.length roots_list = List.length ps ->
+    root_env_covers_params ps (call_param_root_env ps roots_list R_tail).
+Proof.
+  intros ps roots_list R_tail Hnodup Hlen.
+  unfold call_param_root_env.
+  apply root_env_covers_params_add_params_roots.
+  - exact Hnodup.
+  - exact Hlen.
 Qed.
 
 Lemma store_remove_params_cons_non_param :
@@ -5425,6 +5610,116 @@ Proof.
   intros [Hin_params | Hin_store].
   - exact (params_ctx_names_nodup_head_not_tail p ps Hnodup Hin_params).
   - exact (params_fresh_in_store_head p ps s Hfresh Hin_store).
+Qed.
+
+Lemma bind_params_store_no_shadow :
+  forall env Ω s vs ps,
+    NoDup (ctx_names (params_ctx ps)) ->
+    params_fresh_in_store ps s ->
+    eval_args_values_have_types env Ω s vs ps ->
+    store_no_shadow s ->
+    store_no_shadow (bind_params ps vs s).
+Proof.
+  intros env Ω s vs ps Hnodup Hfresh Hargs Hshadow.
+  induction Hargs as [| v vs p ps T_actual Hv Hcompat Hargs IH].
+  - exact Hshadow.
+  - simpl.
+    apply store_no_shadow_add.
+    + apply IH.
+      * eapply params_ctx_names_nodup_tail. exact Hnodup.
+      * eapply params_fresh_in_store_tail. exact Hfresh.
+    + apply store_lookup_not_in_names.
+      eapply bind_params_head_fresh_in_tail; eassumption.
+Qed.
+
+Lemma bind_params_store_roots_within_call_param_root_env :
+  forall env Ω s vs ps R_tail arg_roots,
+    eval_args_values_have_types env Ω s vs ps ->
+    Forall2 value_roots_within arg_roots vs ->
+    store_roots_within R_tail s ->
+    store_no_shadow s ->
+    root_env_no_shadow R_tail ->
+    NoDup (ctx_names (params_ctx ps)) ->
+    params_fresh_in_store ps s ->
+    store_roots_within (call_param_root_env ps arg_roots R_tail)
+      (bind_params ps vs s).
+Proof.
+  intros env Ω s vs ps R_tail arg_roots Hargs Hvalues Hroots Hshadow
+    Hrn Hnodup Hfresh.
+  revert R_tail arg_roots Hroots Hrn Hnodup Hfresh Hvalues.
+  induction Hargs as [| v vs p ps T_actual Hv Hcompat Hargs IH];
+    intros R_tail arg_roots Hroots Hrn Hnodup Hfresh Hvalues; simpl in *.
+  - inversion Hvalues; subst. exact Hroots.
+  - inversion Hvalues as [| ? ? ? ? Hvalue Hvalues_tail]; subst.
+    rename l into arg_roots_tail.
+    inversion Hnodup as [| ? ? Hnotin_tail Hnodup_tail]; subst.
+    assert (Htail_roots_base :
+      store_roots_within (root_env_remove (param_name p) R_tail) s).
+    { apply store_roots_within_remove_env.
+      - exact Hroots.
+      - intros se Hin Heq.
+        pose proof (store_entry_name_in_store_names se s Hin) as Hse_name.
+        rewrite Heq in Hse_name.
+        exact (params_fresh_in_store_head p ps s Hfresh Hse_name). }
+    assert (Htail_roots :
+      store_roots_within
+        (call_param_root_env ps arg_roots_tail
+          (root_env_remove (param_name p) R_tail))
+        (bind_params ps vs s)).
+    { apply IH.
+      - exact Htail_roots_base.
+      - apply root_env_no_shadow_remove. exact Hrn.
+      - exact Hnodup_tail.
+      - eapply params_fresh_in_store_tail. exact Hfresh.
+      - exact Hvalues_tail. }
+    assert (Hparam_fresh_root :
+      root_env_lookup (param_name p)
+        (call_param_root_env ps arg_roots_tail
+          (root_env_remove (param_name p) R_tail)) = None).
+    { unfold call_param_root_env.
+      rewrite root_env_add_params_roots_lookup_not_in.
+      - rewrite root_env_lookup_remove_params_not_in.
+        + apply root_env_lookup_remove_eq_no_shadow. exact Hrn.
+        + exact Hnotin_tail.
+      - exact Hnotin_tail. }
+    apply store_add_roots_within.
+    + exact Htail_roots.
+    + exact Hparam_fresh_root.
+    + exact Hvalue.
+Qed.
+
+Lemma eval_args_bind_params_call_param_root_env_ready :
+  forall env s args s_args vs Ω n R Σ ps Σ_args R_args arg_roots,
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    typed_args_roots env Ω n R Σ args ps Σ_args R_args arg_roots ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    NoDup (ctx_names (params_ctx ps)) ->
+    params_fresh_in_store ps s_args ->
+    eval_args_values_have_types env Ω s_args vs ps ->
+    store_roots_within (call_param_root_env ps arg_roots R_args)
+      (bind_params ps vs s_args) /\
+    store_no_shadow (bind_params ps vs s_args) /\
+    root_env_no_shadow (call_param_root_env ps arg_roots R_args) /\
+    root_env_covers_params ps (call_param_root_env ps arg_roots R_args).
+Proof.
+  intros env s args s_args vs Ω n R Σ ps Σ_args R_args arg_roots
+    Heval_args Hready Htyped_args Hroots Hshadow Hrn Hnodup Hfresh
+    Hargs_values.
+  destruct (proj1 (proj2 eval_preserves_roots_ready_mutual)
+              env s args s_args vs Heval_args Ω n R Σ ps Σ_args R_args
+              arg_roots Hready Hroots Hshadow Hrn Htyped_args)
+    as [Hroots_args [Hvalues [Hshadow_args Hrn_args]]].
+  repeat split.
+  - eapply bind_params_store_roots_within_call_param_root_env; eassumption.
+  - eapply bind_params_store_no_shadow; eassumption.
+  - apply call_param_root_env_no_shadow; assumption.
+  - apply call_param_root_env_covers_params.
+    + exact Hnodup.
+    + rewrite (Forall2_length Hvalues).
+      eapply eval_args_values_have_types_length. exact Hargs_values.
 Qed.
 
 Lemma bind_params_ref_targets_preserved :

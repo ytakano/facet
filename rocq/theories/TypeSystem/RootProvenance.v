@@ -389,6 +389,16 @@ Fixpoint root_subst_of_params (ps : list param) (arg_roots : list root_set)
 Definition roots_exclude (x : ident) (roots : root_set) : Prop :=
   ~ In (RStore x) roots.
 
+Definition root_subst_images_exclude (x : ident) (rho : root_subst)
+    : Prop :=
+  forall param roots,
+    In (param, roots) rho ->
+    roots_exclude x roots.
+
+Definition root_subst_images_exclude_names
+    (names : list ident) (rho : root_subst) : Prop :=
+  Forall (fun x => root_subst_images_exclude x rho) names.
+
 Definition root_env_excludes (x : ident) (R : root_env) : Prop :=
   forall y roots,
     root_env_lookup y R = Some roots ->
@@ -1392,6 +1402,74 @@ Proof.
       exact (Himages param' roots' (or_intror Hin)).
 Qed.
 
+Lemma root_subst_images_exclude_names_nil :
+  forall rho,
+    root_subst_images_exclude_names [] rho.
+Proof.
+  intros rho. constructor.
+Qed.
+
+Lemma root_subst_images_exclude_names_cons_inv :
+  forall x names rho,
+    root_subst_images_exclude_names (x :: names) rho ->
+    root_subst_images_exclude x rho /\
+    root_subst_images_exclude_names names rho.
+Proof.
+  intros x names rho Hnames.
+  inversion Hnames; subst. split; assumption.
+Qed.
+
+Lemma root_subst_images_exclude_names_app_inv :
+  forall names_left names_right rho,
+    root_subst_images_exclude_names (names_left ++ names_right) rho ->
+    root_subst_images_exclude_names names_left rho /\
+    root_subst_images_exclude_names names_right rho.
+Proof.
+  intros names_left.
+  induction names_left as [| x names_left IH];
+    intros names_right rho Hnames; simpl in *.
+  - split.
+    + constructor.
+    + exact Hnames.
+  - inversion Hnames as [| ? ? Hhead Htail]; subst.
+    destruct (IH names_right rho Htail) as [Hleft Hright].
+    split.
+    + constructor; assumption.
+    + exact Hright.
+Qed.
+
+Lemma root_subst_images_exclude_names_app :
+  forall names_left names_right rho,
+    root_subst_images_exclude_names names_left rho ->
+    root_subst_images_exclude_names names_right rho ->
+    root_subst_images_exclude_names (names_left ++ names_right) rho.
+Proof.
+  intros names_left.
+  induction names_left as [| x names_left IH];
+    intros names_right rho Hleft Hright; simpl in *.
+  - exact Hright.
+  - inversion Hleft as [| ? ? Hhead Htail]; subst.
+    constructor.
+    + exact Hhead.
+    + apply IH; assumption.
+Qed.
+
+Lemma root_subst_images_exclude_names_in :
+  forall names rho x,
+    root_subst_images_exclude_names names rho ->
+    In x names ->
+    root_subst_images_exclude x rho.
+Proof.
+  intros names.
+  induction names as [| y names IH]; intros rho x Hnames Hin;
+    simpl in *.
+  - contradiction.
+  - inversion Hnames as [| ? ? Hhead Htail]; subst.
+    destruct Hin as [Hin | Hin].
+    + subst. exact Hhead.
+    + eapply IH; eassumption.
+Qed.
+
 Lemma root_set_instantiate_excludes :
   forall x rho roots,
     roots_exclude x roots ->
@@ -1424,6 +1502,16 @@ Proof.
         -- exact Himages.
 Qed.
 
+Lemma root_set_instantiate_excludes_images :
+  forall x rho roots,
+    roots_exclude x roots ->
+    root_subst_images_exclude x rho ->
+    roots_exclude x (root_set_instantiate rho roots).
+Proof.
+  intros x rho roots Hroots Himages.
+  apply root_set_instantiate_excludes; assumption.
+Qed.
+
 Lemma root_env_instantiate_excludes :
   forall x rho R,
     root_env_excludes x R ->
@@ -1440,6 +1528,16 @@ Proof.
   apply root_set_instantiate_excludes.
   - eapply Hexcl; eassumption.
   - exact Himages.
+Qed.
+
+Lemma root_env_instantiate_excludes_images :
+  forall x rho R,
+    root_env_excludes x R ->
+    root_subst_images_exclude x rho ->
+    root_env_excludes x (root_env_instantiate rho R).
+Proof.
+  intros x rho R HR Himages.
+  apply root_env_instantiate_excludes; assumption.
 Qed.
 
 Lemma root_env_no_shadow_add :
@@ -1840,6 +1938,16 @@ Proof.
   destruct Hin as [Hin | Hin].
   - inversion Hin. subst. exact Hhead.
   - eapply IH; eassumption.
+Qed.
+
+Lemma root_subst_of_params_images_exclude :
+  forall ps arg_roots x,
+    Forall (roots_exclude x) arg_roots ->
+    root_subst_images_exclude x (root_subst_of_params ps arg_roots).
+Proof.
+  unfold root_subst_images_exclude.
+  intros ps arg_roots x Hforall param roots Hin.
+  eapply root_subst_of_params_image_excludes; eassumption.
 Qed.
 
 Lemma root_subst_of_params_lookup_excludes :

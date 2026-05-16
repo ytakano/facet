@@ -309,6 +309,10 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      evaluation transports `root_env_store_keys_named` for expressions,
      argument lists, and struct fields using the static key-preservation theorem
      plus final `store_typed` facts.
+   - Done: added root instantiation/equivalence helper lemmas in
+     `RootProvenance.v` for instantiated root sets and root-set unions:
+     `root_set_instantiate_equiv`, `root_set_instantiate_union_equiv`, and
+     `root_sets_instantiate_union_equiv`.
    - Chosen design: replace the call-site evidence premise with cached
      root-polymorphic summaries using the tagged-root representation.
    - Remaining blocker: prove the root-aware alpha-renaming/instantiation

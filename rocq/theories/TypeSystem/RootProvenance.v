@@ -633,6 +633,142 @@ Proof.
   - apply root_set_union_equiv; assumption.
 Qed.
 
+Lemma root_set_instantiate_in :
+  forall rho atom root roots,
+    In atom roots ->
+    In root
+      (match atom with
+       | RStore x => [RStore x]
+       | RParam x => root_subst_lookup x rho
+       end) ->
+    In root (root_set_instantiate rho roots).
+Proof.
+  intros rho atom root roots.
+  induction roots as [| atom0 rest IH]; intros Hin Hroot; simpl in *.
+  - contradiction.
+  - destruct Hin as [Hin | Hin].
+    + subst atom0.
+      destruct atom as [x | x]; simpl.
+      * change (In root
+          (root_set_union [RStore x] (root_set_instantiate rho rest))).
+        apply root_set_union_in_l. exact Hroot.
+      * change (In root
+          (root_set_union (root_subst_lookup x rho)
+            (root_set_instantiate rho rest))).
+        apply root_set_union_in_l. exact Hroot.
+    + destruct atom0 as [x | x]; simpl.
+      * change (In root
+          (root_set_union [RStore x] (root_set_instantiate rho rest))).
+        apply root_set_union_in_r. apply IH; assumption.
+      * change (In root
+          (root_set_union (root_subst_lookup x rho)
+            (root_set_instantiate rho rest))).
+        apply root_set_union_in_r. apply IH; assumption.
+Qed.
+
+Lemma root_set_instantiate_in_inv :
+  forall rho root roots,
+    In root (root_set_instantiate rho roots) ->
+    exists atom,
+      In atom roots /\
+      In root
+        (match atom with
+         | RStore x => [RStore x]
+         | RParam x => root_subst_lookup x rho
+         end).
+Proof.
+  intros rho root roots.
+  induction roots as [| atom rest IH]; intros Hin; simpl in *.
+  - contradiction.
+  - destruct atom as [x | x].
+    + change (In root
+        (root_set_union [RStore x] (root_set_instantiate rho rest))) in Hin.
+      apply root_set_union_in_inv in Hin.
+      destruct Hin as [Hin | Hin].
+      * exists (RStore x). split.
+        -- left. reflexivity.
+        -- exact Hin.
+      * destruct (IH Hin) as [atom [Hatom Hroot]].
+        exists atom. split.
+        -- right. exact Hatom.
+        -- exact Hroot.
+    + change (In root
+        (root_set_union (root_subst_lookup x rho)
+          (root_set_instantiate rho rest))) in Hin.
+      apply root_set_union_in_inv in Hin.
+      destruct Hin as [Hin | Hin].
+      * exists (RParam x). split.
+        -- left. reflexivity.
+        -- exact Hin.
+      * destruct (IH Hin) as [atom [Hatom Hroot]].
+        exists atom. split.
+        -- right. exact Hatom.
+        -- exact Hroot.
+Qed.
+
+Lemma root_set_instantiate_equiv :
+  forall rho roots roots',
+    root_set_equiv roots roots' ->
+    root_set_equiv
+      (root_set_instantiate rho roots)
+      (root_set_instantiate rho roots').
+Proof.
+  intros rho roots roots' Heq root.
+  split; intros Hin;
+    apply root_set_instantiate_in_inv in Hin;
+    destruct Hin as [atom [Hatom Hroot]].
+  - eapply root_set_instantiate_in.
+    + apply Heq. exact Hatom.
+    + exact Hroot.
+  - eapply root_set_instantiate_in.
+    + apply Heq. exact Hatom.
+    + exact Hroot.
+Qed.
+
+Lemma root_set_instantiate_union_equiv :
+  forall rho roots_left roots_right,
+    root_set_equiv
+      (root_set_instantiate rho (root_set_union roots_left roots_right))
+      (root_set_union (root_set_instantiate rho roots_left)
+        (root_set_instantiate rho roots_right)).
+Proof.
+  intros rho roots_left roots_right root.
+  split; intros Hin.
+  - apply root_set_instantiate_in_inv in Hin.
+    destruct Hin as [atom [Hatom Hroot]].
+    apply root_set_union_in_inv in Hatom.
+    destruct Hatom as [Hatom | Hatom].
+    + apply root_set_union_in_l.
+      eapply root_set_instantiate_in; eassumption.
+    + apply root_set_union_in_r.
+      eapply root_set_instantiate_in; eassumption.
+  - apply root_set_union_in_inv in Hin.
+    destruct Hin as [Hin | Hin];
+      apply root_set_instantiate_in_inv in Hin;
+      destruct Hin as [atom [Hatom Hroot]];
+      eapply root_set_instantiate_in.
+    + apply root_set_union_in_l. exact Hatom.
+    + exact Hroot.
+    + apply root_set_union_in_r. exact Hatom.
+    + exact Hroot.
+Qed.
+
+Lemma root_sets_instantiate_union_equiv :
+  forall rho sets,
+    root_set_equiv
+      (root_set_instantiate rho (root_sets_union sets))
+      (root_sets_union (map (root_set_instantiate rho) sets)).
+Proof.
+  intros rho sets.
+  induction sets as [| roots rest IH]; simpl.
+  - apply root_set_equiv_refl.
+  - eapply root_set_equiv_trans.
+    + apply root_set_instantiate_union_equiv.
+    + apply root_set_union_equiv.
+      * apply root_set_equiv_refl.
+      * exact IH.
+Qed.
+
 Lemma root_env_lookup_some_in_names :
   forall x R roots,
     root_env_lookup x R = Some roots ->

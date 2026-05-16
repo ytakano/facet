@@ -18,15 +18,21 @@ shape are already fixed.
 ### Active Slice
 
 Direct `ECall fname args` preservation is connected through an explicit
-callee-root evidence premise:
+callee-body root evidence premise:
 
-- `direct_call_callee_root_evidence`
+- `direct_call_callee_body_root_evidence`
 - `eval_preserves_typing_direct_call_roots_ready`
 - `infer_full_env_roots_big_step_safe_direct_call_ready`
 
-The next unresolved point is deriving `direct_call_callee_root_evidence` from a
-root-aware function-environment invariant or checker-facing sidecar theorem. Do
-not treat this premise as discharged by the checker until that bridge exists.
+The older `direct_call_callee_root_evidence` definition is retained as a
+stronger compatibility premise, but the active wrapper derives the
+bound-parameter store/root facts locally through
+`eval_args_bind_params_call_param_root_env_ready`.
+
+The next unresolved point is deriving `direct_call_callee_body_root_evidence`
+from a root-aware function-environment invariant or checker-facing sidecar
+theorem. Do not treat this premise as discharged by the checker until that
+bridge exists.
 
 Important boundaries:
 
@@ -131,13 +137,20 @@ Already available for the direct `ECall` proof:
 - `eval_preserves_frame_scope_roots_ready_mutual` derives exact caller-frame
   evidence from ready/root-aware callee body evaluation.
 - The cleanup bridge no longer takes an explicit `store_frame_scope` premise.
-- `direct_call_callee_root_evidence` is now the explicit TypeSafety premise that
-  supplies freshened callee body root typing and parameter-root exclusion.
+- `call_param_root_env` and its helper lemmas construct the root environment
+  for freshened call parameters from evaluated argument roots and the
+  post-argument root environment.
+- `eval_args_bind_params_call_param_root_env_ready` derives bound-parameter
+  store/root readiness from argument evaluation, argument root preservation,
+  freshened parameter freshness, and alpha-renamed argument typing.
+- `direct_call_callee_body_root_evidence` is now the explicit TypeSafety
+  premise that supplies freshened callee body root typing and parameter-root
+  exclusion under `call_param_root_env`.
 - `eval_preserves_typing_direct_call_roots_ready` connects
   `preservation_direct_call_ready_expr` to the cleanup bridge.
 - `infer_full_env_roots_big_step_safe_direct_call_ready` exposes the
   checker-facing direct-call-ready theorem, still requiring
-  `direct_call_callee_root_evidence`.
+  `direct_call_callee_body_root_evidence`.
 
 ### Next Implementation Queue
 
@@ -157,20 +170,27 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
    - Connect the direct-call wrapper to the ready/root checker-facing theorem if
      the theorem still excludes direct calls.
 
-3. `[design blocker]` Derive direct-call callee root evidence
+3. `[partial, design blocker]` Derive direct-call callee root evidence
    - Target files: likely `rocq/theories/TypeSystem/TypeSafety.v` and
      `rocq/theories/TypeSystem/EnvRootSoundness.v`.
-   - Prove or expose a root-aware function-environment invariant that implies
-     `direct_call_callee_root_evidence`.
+   - Done: narrowed the active premise to
+     `direct_call_callee_body_root_evidence`; the direct-call wrapper now
+     derives the bound-parameter store/root facts itself.
+   - Remaining: prove or expose a root-aware function-environment invariant
+     that implies `direct_call_callee_body_root_evidence`.
    - Stop if the current root sidecar API cannot express freshened callee body
      roots and parameter-root exclusion without a new invariant.
 
-4. `[next]` Empty-capture `ECallExpr`
+4. `[design blocker]` Empty-capture `ECallExpr`
    - Target files:
      - `rocq/theories/TypeSystem/TypeSafety.v`
      - possibly `rocq/theories/TypeSystem/RuntimeTyping.v`
    - Only handle `VClosure fname []`.
    - Reuse direct `ECall` machinery.
+   - Current blocker: `infer_core_env_roots` still returns `ErrNotImplemented`
+     for `ECallExpr`, and `preservation_direct_call_ready_expr` only admits
+     direct `ECall`. Decide the root-checker/readiness surface before assigning
+     implementation.
    - If non-empty captured stores are needed, stop and report the missing
      captured-store invariant instead of inventing one.
 

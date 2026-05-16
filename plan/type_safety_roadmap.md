@@ -301,6 +301,10 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
      (`root_env_ctx_keys_named`, `root_env_store_keys_named`) and preservation
      helpers for add/remove/update/rename/instantiate. This separates
      root-env key alignment from the existing `RStore`-atom naming invariant.
+   - Done: proved `typed_roots_ctx_keys_named_mutual`, so Prop-level
+     root-aware expression/argument/field typing preserves the root-env key
+     naming invariant across context-consuming, let-binding, update, merge, and
+     structural traversal cases.
    - Chosen design: replace the call-site evidence premise with cached
      root-polymorphic summaries using the tagged-root representation.
    - Remaining blocker: prove the root-aware alpha-renaming/instantiation

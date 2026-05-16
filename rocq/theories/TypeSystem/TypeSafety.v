@@ -5690,6 +5690,38 @@ Proof.
   apply Hnamed. exact Hin.
 Qed.
 
+Lemma root_set_store_roots_named_excludes_name :
+  forall roots s x,
+    root_set_store_roots_named roots s ->
+    ~ In x (store_names s) ->
+    roots_exclude x roots.
+Proof.
+  unfold root_set_store_roots_named, roots_exclude.
+  intros roots s x Hnamed Hfresh Hin.
+  apply Hfresh.
+  apply Hnamed. exact Hin.
+Qed.
+
+Lemma root_subst_of_params_images_exclude_names_from_store_roots :
+  forall ps arg_roots names s,
+    Forall (fun roots => root_set_store_roots_named roots s) arg_roots ->
+    Forall (fun x => ~ In x (store_names s)) names ->
+    root_subst_images_exclude_names names
+      (root_subst_of_params ps arg_roots).
+Proof.
+  intros ps arg_roots names s Hnamed Hfresh.
+  induction Hfresh as [| x names Hx Hfresh IH].
+  - constructor.
+  - constructor.
+    + apply root_subst_of_params_images_exclude.
+      eapply Forall_impl; [| exact Hnamed].
+      intros roots Hroot.
+      apply (root_set_store_roots_named_excludes_name roots s x).
+      * exact Hroot.
+      * exact Hx.
+    + exact IH.
+Qed.
+
 Lemma root_sets_store_roots_named_excludes_params :
   forall ps roots_list s,
     Forall (fun roots => root_set_store_roots_named roots s) roots_list ->

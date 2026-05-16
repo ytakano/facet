@@ -268,6 +268,9 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
    - Done: added root-set equivalence transport lemmas for cons, append, union,
      and `roots_exclude`, so future root-aware alpha proofs can reason modulo
      `root_set_union` ordering/deduplication instead of exact list equality.
+   - Done: added root-renaming transport helpers for root sets, root exclusion,
+     and root-environment exclusion, plus `root_sets_union` equivalence for
+     call argument roots.
    - Done: added Prop-level function summary evidence in `TypeSafety.v`
      (`callee_body_root_summary`, `env_fns_root_summary_evidence`) and
      checker-facing summary evidence in `EnvRuntimeSafety.v`
@@ -288,6 +291,11 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
    - Remaining: prove that alpha-renaming plus `root_subst_of_params`
      instantiation supplies `callee_body_root_ready_at` for the freshened
      call-site environment.
+   - New blocker exposed by the rename helper layer: transporting
+     `root_env_excludes` through alpha-renaming needs an explicit root-atom
+     no-collision premise. The bridge must prove that no `RStore z` inside a
+     callee body root summary can rename to the freshened parameter store root
+     unless it was the excluded parameter itself.
    - Do not attempt to discharge the evidence with lifetime inference alone,
      and do not globally reject parameter roots in `infer_env_roots`.
    - Stop if the current root sidecar API cannot express freshened callee body

@@ -198,6 +198,54 @@ Proof.
     + right. apply Hb. exact Hin.
 Qed.
 
+Lemma root_set_rename_in :
+  forall rho atom roots,
+    In atom roots ->
+    In (root_atom_rename rho atom) (root_set_rename rho roots).
+Proof.
+  intros rho atom roots.
+  induction roots as [| atom0 rest IH]; intros Hin; simpl in *.
+  - contradiction.
+  - destruct Hin as [Hin | Hin].
+    + subst atom0. left. reflexivity.
+    + right. apply IH. exact Hin.
+Qed.
+
+Lemma root_set_rename_in_inv :
+  forall rho atom roots,
+    In atom (root_set_rename rho roots) ->
+    exists atom0,
+      In atom0 roots /\
+      atom = root_atom_rename rho atom0.
+Proof.
+  intros rho atom roots.
+  induction roots as [| atom0 rest IH]; intros Hin; simpl in *.
+  - contradiction.
+  - destruct Hin as [Hin | Hin].
+    + exists atom0. split.
+      * left. reflexivity.
+      * symmetry. exact Hin.
+    + destruct (IH Hin) as [atom1 [Hin1 Heq]].
+      exists atom1. split.
+      * right. exact Hin1.
+      * exact Heq.
+Qed.
+
+Lemma root_set_rename_equiv :
+  forall rho roots roots',
+    root_set_equiv roots roots' ->
+    root_set_equiv
+      (root_set_rename rho roots)
+      (root_set_rename rho roots').
+Proof.
+  intros rho roots roots' Heq atom.
+  split; intros Hin;
+    apply root_set_rename_in_inv in Hin;
+    destruct Hin as [atom0 [Hin0 Hatom]]; subst atom.
+  - apply root_set_rename_in. apply Heq. exact Hin0.
+  - apply root_set_rename_in. apply Heq. exact Hin0.
+Qed.
+
 Definition rename_no_collision_for
     (rho : rename_env) (x : ident) (names : list ident) : Prop :=
   forall y,
@@ -303,6 +351,29 @@ Proof.
   intros x roots roots' Heq Hexcl Hin.
   apply Hexcl.
   apply Heq. exact Hin.
+Qed.
+
+Lemma roots_exclude_rename :
+  forall rho x roots,
+    (forall y,
+      In (RStore y) roots ->
+      y <> x ->
+      lookup_rename y rho <> lookup_rename x rho) ->
+    roots_exclude x roots ->
+    roots_exclude (lookup_rename x rho) (root_set_rename rho roots).
+Proof.
+  unfold roots_exclude.
+  intros rho x roots Hnocoll Hexcl Hin.
+  apply root_set_rename_in_inv in Hin.
+  destruct Hin as [atom [Hin Hatom]].
+  destruct atom as [y | y]; simpl in Hatom.
+  - inversion Hatom as [Hren].
+    destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx. subst y.
+      apply Hexcl. exact Hin.
+    + apply ident_eqb_neq in Hyx.
+      apply (Hnocoll y Hin Hyx). symmetry. exact Hren.
+  - discriminate.
 Qed.
 
 Fixpoint root_provenance_place_name (p : place) : ident :=
@@ -481,6 +552,32 @@ Proof.
     + apply root_set_equiv_sym. apply root_set_union_equiv_app.
 Qed.
 
+Lemma root_sets_union_equiv :
+  forall sets sets',
+    Forall2 root_set_equiv sets sets' ->
+    root_set_equiv (root_sets_union sets) (root_sets_union sets').
+Proof.
+  intros sets sets' Hsets.
+  induction Hsets as [| roots roots' rest rest' Hroots Hrest IH];
+    simpl.
+  - apply root_set_equiv_refl.
+  - apply root_set_union_equiv; assumption.
+Qed.
+
+Lemma root_env_lookup_some_in_names :
+  forall x R roots,
+    root_env_lookup x R = Some roots ->
+    In x (root_env_names R).
+Proof.
+  intros x R.
+  induction R as [| [y roots_y] rest IH]; intros roots Hlookup;
+    simpl in *; try discriminate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst y.
+    left. reflexivity.
+  - right. eapply IH. exact Hlookup.
+Qed.
+
 Lemma root_env_lookup_rename :
   forall rho R x roots,
     rename_no_collision_for rho x (root_env_names R) ->
@@ -510,6 +607,77 @@ Proof.
         -- right. exact Hin.
         -- exact Hzx.
       * exact Hlookup.
+Qed.
+
+Lemma root_env_excludes_rename :
+  forall rho x R,
+    root_env_no_shadow R ->
+    rename_no_collision_for rho x (root_env_names R) ->
+    (forall y roots z,
+      root_env_lookup y R = Some roots ->
+      y <> x ->
+      In (RStore z) roots ->
+      z <> x ->
+      lookup_rename z rho <> lookup_rename x rho) ->
+    root_env_excludes x R ->
+    root_env_excludes (lookup_rename x rho) (root_env_rename rho R).
+Proof.
+  unfold root_env_excludes.
+  intros rho x R Hnodup Henv_nocoll Hroot_nocoll Hexcl.
+  induction R as [| [y roots_y] rest IH];
+    intros yr roots_r Hlookup Hyrx; simpl in *; try discriminate.
+  unfold root_env_no_shadow in Hnodup.
+  simpl in Hnodup.
+  inversion Hnodup as [| ? ? Hy_notin Hnodup_tail]; subst.
+  destruct (ident_eqb yr (lookup_rename y rho)) eqn:Hyr.
+  - apply ident_eqb_eq in Hyr. subst yr.
+    inversion Hlookup. subst roots_r.
+    destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx. subst y.
+      exfalso. apply Hyrx. reflexivity.
+    + apply ident_eqb_neq in Hyx.
+      apply roots_exclude_rename.
+      * intros z Hin_z Hzx.
+        eapply Hroot_nocoll.
+        -- simpl. rewrite ident_eqb_refl. reflexivity.
+        -- exact Hyx.
+        -- exact Hin_z.
+        -- exact Hzx.
+      * eapply Hexcl.
+        -- simpl. rewrite ident_eqb_refl. reflexivity.
+        -- exact Hyx.
+  - eapply IH.
+    + unfold root_env_no_shadow. exact Hnodup_tail.
+    + intros z Hin Hzx.
+      apply (Henv_nocoll z).
+      * right. exact Hin.
+      * exact Hzx.
+    + intros y0 roots0 z Hlookup0 Hy0x Hin_z Hzx.
+      assert (Hy0_ne_y : y0 <> y).
+      { intros Heq. subst y0.
+        apply Hy_notin.
+        eapply root_env_lookup_some_in_names. exact Hlookup0. }
+      eapply Hroot_nocoll.
+      * simpl.
+        destruct (ident_eqb y0 y) eqn:Hy0y.
+        -- apply ident_eqb_eq in Hy0y. contradiction.
+        -- rewrite Hy0y. exact Hlookup0.
+      * exact Hy0x.
+      * exact Hin_z.
+      * exact Hzx.
+    + intros y0 roots0 Hlookup0 Hy0x.
+      assert (Hy0_ne_y : y0 <> y).
+      { intros Heq. subst y0.
+        apply Hy_notin.
+        eapply root_env_lookup_some_in_names. exact Hlookup0. }
+      eapply Hexcl.
+      * simpl.
+        destruct (ident_eqb y0 y) eqn:Hy0y.
+        -- apply ident_eqb_eq in Hy0y. contradiction.
+        -- rewrite Hy0y. exact Hlookup0.
+      * exact Hy0x.
+    + exact Hlookup.
+    + exact Hyrx.
 Qed.
 
 Lemma root_env_lookup_add_eq :

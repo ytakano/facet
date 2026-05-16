@@ -93,6 +93,67 @@ Proof.
   - apply initial_root_env_for_params_covers.
 Qed.
 
+Definition callee_body_root_check_ready_at
+    (env : global_env) (fcall : fn_def) (R_params : root_env) : Prop :=
+  exists T_body Γ_out R_body roots_body,
+    infer_env_roots env fcall R_params =
+      infer_ok (T_body, Γ_out, R_body, roots_body) /\
+    preservation_ready_expr (fn_body fcall) /\
+    roots_exclude_params_b (fn_params fcall) roots_body = true /\
+    root_env_excludes_params_b (fn_params fcall) R_body = true.
+
+Definition direct_call_callee_body_root_check_evidence
+    (env : global_env) : Prop :=
+  forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+      (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs
+      used',
+    typed_args_roots env Ω n R Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    callee_body_root_check_ready_at env fcall
+      (call_param_root_env (fn_params fcall) arg_roots R_args).
+
+Lemma callee_body_root_ready_at_of_check_ready_at :
+  forall env fcall R_params,
+    callee_body_root_check_ready_at env fcall R_params ->
+    callee_body_root_ready_at env fcall R_params.
+Proof.
+  intros env fcall R_params Hcheck.
+  unfold callee_body_root_check_ready_at in Hcheck.
+  destruct Hcheck as
+    (T_body & Γ_out & R_body & roots_body &
+      Hinfer & Hready & Hexclude_roots & Hexclude_env).
+  pose proof (infer_env_roots_sound env fcall R_params T_body Γ_out
+    R_body roots_body Hinfer) as Htyped_fn.
+  unfold typed_fn_env_roots in Htyped_fn.
+  destruct Htyped_fn as
+    (T_body' & Γ_out' & Htyped & Hcompat & _).
+  unfold callee_body_root_ready_at.
+  exists T_body', Γ_out', R_body, roots_body.
+  repeat split.
+  - apply preservation_ready_implies_provenance_ready.
+    exact Hready.
+  - exact Hready.
+  - exact Htyped.
+  - exact Hcompat.
+  - apply roots_exclude_params_b_sound.
+    exact Hexclude_roots.
+  - apply root_env_excludes_params_b_sound.
+    exact Hexclude_env.
+Qed.
+
+Lemma direct_call_callee_body_root_evidence_of_check :
+  forall env,
+    direct_call_callee_body_root_check_evidence env ->
+    direct_call_callee_body_root_evidence env.
+Proof.
+  intros env Hcheck Ω n R Σ Σ_args R_args arg_roots fname args fdef fcall
+    σ s s_args vs used' Htyped_args Heval_args Hrename.
+  apply callee_body_root_ready_at_of_check_ready_at.
+  eapply Hcheck; eassumption.
+Qed.
+
 Theorem infer_full_env_roots_big_step_safe_ready :
   forall env f R0 T Γ' R' roots s s' v,
     infer_full_env_roots env f R0 = infer_ok (T, Γ', R', roots) ->
@@ -132,7 +193,7 @@ Theorem infer_full_env_roots_big_step_safe_direct_call_ready :
     root_env_no_shadow R0 ->
     fn_env_unique_by_name env ->
     env_fns_preservation_ready env ->
-    direct_call_callee_body_root_evidence env ->
+    direct_call_callee_body_root_check_evidence env ->
     eval env s (fn_body f) s' v ->
     value_has_type env s' v (fn_ret f).
 Proof.
@@ -149,7 +210,9 @@ Proof.
       (sctx_of_ctx (params_ctx (fn_params f)))
       T_body (sctx_of_ctx Γ_out) R' roots
       Hready Hstore Hroots Hstore_shadow Hroot_shadow Htyped
-      Hunique Hfns_ready Hcallee_body_roots)
+      Hunique Hfns_ready
+      (direct_call_callee_body_root_evidence_of_check env
+        Hcallee_body_roots))
     as [_ [Hv _]].
   eapply VHT_Compatible.
   - exact Hv.

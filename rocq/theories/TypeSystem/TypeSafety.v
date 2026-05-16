@@ -3274,6 +3274,42 @@ Proof.
       eapply store_remove_params_no_param_names; eassumption.
 Qed.
 
+Lemma value_has_type_store_remove_params_excluding :
+  forall ps env s v T,
+    value_has_type env s v T ->
+    value_refs_exclude_params ps v ->
+    value_has_type env (store_remove_params ps s) v T.
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros env s v T Hvalue Hexclude.
+  - exact Hvalue.
+  - simpl.
+    apply IH.
+    + eapply value_has_type_store_remove_excluding_root.
+      * exact Hvalue.
+      * apply Hexclude. simpl. left. reflexivity.
+    + intros x Hin.
+      apply Hexclude. simpl. right. exact Hin.
+Qed.
+
+Lemma store_ref_targets_preserved_remove_params_after_absent :
+  forall ps env s s',
+    store_ref_targets_preserved env s s' ->
+    params_fresh_in_store ps s ->
+    store_ref_targets_preserved env s (store_remove_params ps s').
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros env s s' Hpres Hfresh.
+  - exact Hpres.
+  - simpl.
+    apply IH.
+    + eapply store_ref_targets_preserved_remove_after_absent_root.
+      * exact Hpres.
+      * apply store_lookup_not_in_names.
+        eapply params_fresh_in_store_head. exact Hfresh.
+    + eapply params_fresh_in_store_tail. exact Hfresh.
+Qed.
+
 Lemma store_names_store_param_scope :
   forall ps s_param s,
     store_param_scope ps s_param s ->
@@ -6551,6 +6587,146 @@ Proof.
       eapply Hfields; eassumption.
 Qed.
 
+Scheme preservation_ready_expr_ind' :=
+  Induction for preservation_ready_expr Sort Prop
+with preservation_ready_args_ind' :=
+  Induction for preservation_ready_args Sort Prop
+with preservation_ready_fields_ind' :=
+  Induction for preservation_ready_fields Sort Prop.
+Combined Scheme preservation_ready_mutind
+  from preservation_ready_expr_ind', preservation_ready_args_ind',
+       preservation_ready_fields_ind'.
+
+Lemma preservation_ready_implies_provenance_ready_mutual :
+  (forall e,
+    preservation_ready_expr e ->
+    provenance_ready_expr e) /\
+  (forall args,
+    preservation_ready_args args ->
+    provenance_ready_args args) /\
+  (forall fields,
+    preservation_ready_fields fields ->
+    provenance_ready_fields fields).
+Proof.
+  apply preservation_ready_mutind;
+    try solve [econstructor; eauto].
+Qed.
+
+Lemma preservation_ready_implies_provenance_ready :
+  forall e,
+    preservation_ready_expr e ->
+    provenance_ready_expr e.
+Proof.
+  exact (proj1 preservation_ready_implies_provenance_ready_mutual).
+Qed.
+
+Lemma preservation_ready_args_implies_provenance_ready :
+  forall args,
+    preservation_ready_args args ->
+    provenance_ready_args args.
+Proof.
+  exact (proj1 (proj2 preservation_ready_implies_provenance_ready_mutual)).
+Qed.
+
+Lemma preservation_ready_fields_implies_provenance_ready :
+  forall fields,
+    preservation_ready_fields fields ->
+    provenance_ready_fields fields.
+Proof.
+  exact (proj2 (proj2 preservation_ready_implies_provenance_ready_mutual)).
+Qed.
+
+Theorem eval_preserves_roots_ready_prefix_mutual :
+  (forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      provenance_ready_expr e ->
+      preservation_ready_expr e ->
+      store_typed_prefix env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      store_typed_prefix env s' Σ' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R' /\
+      store_ref_targets_preserved env s s') /\
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ ps Σ' R' roots,
+      provenance_ready_args args ->
+      preservation_ready_args args ->
+      store_typed_prefix env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+      store_typed_prefix env s' Σ' /\
+      store_roots_within R' s' /\
+      Forall2 value_roots_within roots vs /\
+      store_no_shadow s' /\
+      root_env_no_shadow R' /\
+      store_ref_targets_preserved env s s') /\
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots,
+      provenance_ready_fields fields ->
+      preservation_ready_fields fields ->
+      store_typed_prefix env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+      store_typed_prefix env s' Σ' /\
+      store_roots_within R' s' /\
+      value_fields_roots_within roots values /\
+      store_no_shadow s' /\
+      root_env_no_shadow R' /\
+      store_ref_targets_preserved env s s').
+Proof.
+  split.
+  - intros env s e s' v Heval Ω n R Σ T Σ' R' roots
+      Hprov Hpres_ready Hstore Hroots Hnodup Hrn Htyped.
+    destruct (proj1 eval_preserves_typing_ready_prefix_mutual
+                env s e s' v Heval Ω n Σ T Σ' Hpres_ready Hstore
+                (typed_env_roots_structural env Ω n R Σ e T Σ' R' roots
+                  Htyped))
+      as [Hstore' [_ Hpres]].
+    destruct (proj1 eval_preserves_roots_ready_mutual
+                env s e s' v Heval Ω n R Σ T Σ' R' roots
+                Hprov Hroots Hnodup Hrn Htyped)
+      as [Hroots' [Hv_roots [Hnodup' Hrn']]].
+    repeat split; assumption.
+  - split.
+    + intros env s args s' vs Heval Ω n R Σ ps Σ' R' roots
+        Hprov Hpres_ready Hstore Hroots Hnodup Hrn Htyped.
+      destruct (proj1 (proj2 eval_preserves_typing_ready_prefix_mutual)
+                  env s args s' vs Heval Ω n Σ ps Σ' Hpres_ready Hstore
+                  (typed_args_roots_structural env Ω n R Σ args ps Σ' R'
+                    roots Htyped))
+        as [Hstore' [_ Hpres]].
+      destruct (proj1 (proj2 eval_preserves_roots_ready_mutual)
+                  env s args s' vs Heval Ω n R Σ ps Σ' R' roots
+                  Hprov Hroots Hnodup Hrn Htyped)
+        as [Hroots' [Hvals_roots [Hnodup' Hrn']]].
+      repeat split; assumption.
+    + intros env s fields defs s' values Heval Ω n lts args R Σ Σ' R'
+        roots Hprov Hpres_ready Hstore Hroots Hnodup Hrn Htyped.
+      destruct (proj2 (proj2 eval_preserves_typing_ready_prefix_mutual)
+                  env s fields defs s' values Heval Ω n lts args Σ Σ'
+                  Hpres_ready Hstore
+                  (typed_fields_roots_structural env Ω n lts args R Σ
+                    fields defs Σ' R' roots Htyped))
+        as [Hstore' [_ Hpres]].
+      destruct (proj2 (proj2 eval_preserves_roots_ready_mutual)
+                  env s fields defs s' values Heval Ω n lts args R Σ Σ' R'
+                  roots Hprov Hroots Hnodup Hrn Htyped)
+        as [Hroots' [Hvals_roots [Hnodup' Hrn']]].
+      repeat split; assumption.
+Qed.
+
 Lemma eval_direct_call_body_preserves_typing_prefix :
   forall env (Ω : outlives_ctx) (n : nat) Σ Σ_args fname args
       fdef fcall σ s s_args s_body vs ret used' T_body Γ_out,
@@ -6658,6 +6834,168 @@ Proof.
   exists Γ_out.
   eapply eval_direct_call_body_preserves_typing_prefix; eassumption.
 Qed.
+
+Lemma eval_direct_call_body_cleanup_preserves_value_and_refs :
+  forall env (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+      (fname : ident) args fdef fcall σ s s_args s_body vs ret used'
+      T_body Γ_out R_params R_body roots_body,
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    provenance_ready_args args ->
+    preservation_ready_args args ->
+    typed_args_roots env Ω n R Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    store_roots_within R_params
+      (bind_params (fn_params fcall) vs s_args) ->
+    store_no_shadow (bind_params (fn_params fcall) vs s_args) ->
+    root_env_no_shadow R_params ->
+    root_env_covers_params (fn_params fcall) R_params ->
+    provenance_ready_expr (fn_body fcall) ->
+    preservation_ready_expr (fn_body fcall) ->
+    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+      R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
+    roots_exclude_params (fn_params fcall) roots_body ->
+    root_env_excludes_params (fn_params fcall) R_body ->
+    eval env (bind_params (fn_params fcall) vs s_args)
+      (fn_body fcall) s_body ret ->
+    store_typed env s_args Σ_args /\
+    store_typed_prefix env s_body (sctx_of_ctx Γ_out) /\
+    store_roots_within R_body s_body /\
+    store_no_shadow s_body /\
+    root_env_no_shadow R_body /\
+    value_has_type env (store_remove_params (fn_params fcall) s_body)
+      ret (apply_lt_ty σ (fn_ret fdef)) /\
+    store_ref_targets_preserved env s
+      (store_remove_params (fn_params fcall) s_body) /\
+    exists frame_final locals,
+      store_param_scope (fn_params fcall) s_body frame_final /\
+      store_remove_params (fn_params fcall) s_body = locals ++ frame_final /\
+      value_refs_exclude_params (fn_params fcall) ret /\
+      store_refs_exclude_params (fn_params fcall)
+        (store_remove_params (fn_params fcall) s_body).
+Proof.
+  intros env Ω n R Σ Σ_args R_args arg_roots fname args fdef fcall σ
+    s s_args s_body vs ret used' T_body Γ_out R_params R_body roots_body
+    Hstore Hroots Hshadow Hrn Hprov_args Hready_args Htyped_args Heval_args
+    Hrename Hroots_bind Hshadow_bind Hrn_params Hcover_params Hprov_body
+    Hready_body Htyped_body Hcompat_body Hexclude_ret Hexclude_env
+    Heval_body.
+  destruct (proj1 (proj2 eval_preserves_typing_ready_mutual)
+              env s args s_args vs Heval_args Ω n Σ
+              (apply_lt_params σ (fn_params fdef)) Σ_args
+              Hready_args Hstore
+              (typed_args_roots_structural env Ω n R Σ args
+                (apply_lt_params σ (fn_params fdef)) Σ_args R_args
+                arg_roots Htyped_args))
+    as [Hstore_args [Hargs_subst Hpres_args]].
+  destruct (proj1 (proj2 eval_preserves_roots_ready_mutual)
+              env s args s_args vs Heval_args Ω n R Σ
+              (apply_lt_params σ (fn_params fdef)) Σ_args R_args
+              arg_roots Hprov_args Hroots Hshadow Hrn Htyped_args)
+    as [_ [_ [Hshadow_args _]]].
+  pose proof (alpha_rename_fn_def_shape (store_names s_args)
+                fdef fcall used' Hrename) as Hshape.
+  destruct Hshape as [_ [Hret Hparams_alpha]].
+  assert (Hargs_unsubst_fdef :
+    eval_args_values_have_types env Ω s_args vs (fn_params fdef)).
+  { eapply eval_args_values_have_types_apply_lt_params_inv.
+    exact Hargs_subst. }
+  assert (Hargs_fcall :
+    eval_args_values_have_types env Ω s_args vs (fn_params fcall)).
+  { eapply eval_args_values_have_types_params_alpha.
+    - exact Hparams_alpha.
+    - exact Hargs_unsubst_fdef. }
+  assert (Hnodup :
+    NoDup (ctx_names (params_ctx (fn_params fcall)))).
+  { eapply alpha_rename_fn_def_params_nodup_ctx_names. exact Hrename. }
+  assert (Hfresh : params_fresh_in_store (fn_params fcall) s_args).
+  { eapply alpha_rename_fn_def_params_fresh_in_store. exact Hrename. }
+  assert (Hstore_bind :
+    store_typed_prefix env (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))).
+  { eapply bind_params_store_typed_prefix; eassumption. }
+  destruct (proj1 eval_preserves_roots_ready_prefix_mutual
+              env (bind_params (fn_params fcall) vs s_args)
+              (fn_body fcall) s_body ret Heval_body
+              (fn_outlives fcall) (fn_lifetimes fcall)
+              R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
+              T_body (sctx_of_ctx Γ_out) R_body roots_body
+              Hprov_body Hready_body Hstore_bind Hroots_bind Hshadow_bind
+              Hrn_params Htyped_body)
+    as [Hstore_body [Hroots_body [Hret_roots
+        [Hshadow_body [Hrn_body Hpres_body]]]]].
+  assert (Hv_body : value_has_type env s_body ret T_body).
+  { destruct (proj1 eval_preserves_typing_ready_prefix_mutual
+                env (bind_params (fn_params fcall) vs s_args)
+                (fn_body fcall) s_body ret Heval_body
+                (fn_outlives fcall) (fn_lifetimes fcall)
+                (sctx_of_ctx (params_ctx (fn_params fcall)))
+                T_body (sctx_of_ctx Γ_out)
+                Hready_body Hstore_bind
+                (typed_env_roots_structural env (fn_outlives fcall)
+                  (fn_lifetimes fcall) R_params
+                  (sctx_of_ctx (params_ctx (fn_params fcall)))
+                  (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body
+                  roots_body Htyped_body)) as [_ [Hv _]].
+    exact Hv. }
+  assert (Hv_ret_fcall : value_has_type env s_body ret (fn_ret fcall)).
+  { eapply value_has_type_compatible.
+    - exact Hv_body.
+    - apply ty_compatible_b_sound with (Ω := fn_outlives fcall).
+      exact Hcompat_body. }
+  assert (Hv_ret_fdef : value_has_type env s_body ret (fn_ret fdef)).
+  { rewrite Hret. exact Hv_ret_fcall. }
+  destruct (eval_preserves_param_scope_roots_ready_mutual)
+    as [Hscope_expr _].
+  assert (Hscope_start :
+    store_param_scope (fn_params fcall)
+      (bind_params (fn_params fcall) vs s_args) s_args).
+  { eapply store_param_scope_bind_params. exact Hargs_fcall. }
+  destruct (Hscope_expr env
+              (bind_params (fn_params fcall) vs s_args)
+              (fn_body fcall) s_body ret Heval_body
+              (fn_outlives fcall) (fn_lifetimes fcall)
+              R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
+              T_body (sctx_of_ctx Γ_out) R_body roots_body
+              (fn_params fcall) s_args Hprov_body Htyped_body)
+              as [frame_final Hscope_body].
+  { exact Hcover_params. }
+  { exact Hscope_start. }
+  destruct (store_remove_params_cleanup_excludes
+              (fn_params fcall) s_body frame_final R_body roots_body ret
+              Hscope_body Hroots_body Hret_roots Hshadow_body Hnodup
+              Hexclude_ret Hexclude_env)
+    as [locals [Hremoved [Hret_exclude Hstore_exclude]]].
+  assert (Hv_final :
+    value_has_type env (store_remove_params (fn_params fcall) s_body)
+      ret (apply_lt_ty σ (fn_ret fdef))).
+  { apply value_has_type_apply_lt_ty.
+    eapply value_has_type_store_remove_params_excluding.
+    - exact Hv_ret_fdef.
+    - exact Hret_exclude. }
+  assert (Hpres_bind :
+    store_ref_targets_preserved env s_args
+      (bind_params (fn_params fcall) vs s_args)).
+  { eapply bind_params_ref_targets_preserved; eassumption. }
+  assert (Hpres_args_body :
+    store_ref_targets_preserved env s_args s_body).
+  { eapply store_ref_targets_preserved_trans; eassumption. }
+  assert (Hpres_args_final :
+    store_ref_targets_preserved env s_args
+      (store_remove_params (fn_params fcall) s_body)).
+  { eapply store_ref_targets_preserved_remove_params_after_absent;
+      eassumption. }
+  repeat split; try assumption.
+  - eapply store_ref_targets_preserved_trans; eassumption.
+  - exists frame_final, locals. repeat split; assumption.
+Qed.
+
 Theorem eval_preserves_typing_ready_with_call_invariants_mutual :
   (forall env s e s' v,
     eval env s e s' v ->

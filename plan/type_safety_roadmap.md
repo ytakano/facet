@@ -203,16 +203,19 @@ Already available for the direct `ECall` proof:
   `direct_call_callee_body_root_check_evidence`.
 - `RootProvenance.v` now has the root-polymorphic summary instantiation helper
   layer:
+  - `root_atom`
   - `root_subst`
   - `root_subst_lookup`
   - `root_set_instantiate`
   - `root_env_instantiate`
   - `root_subst_of_params`
-  These helpers are provisional because they currently operate on
-  `root_set := list ident`. Before cached executable summaries can replace
-  `direct_call_callee_body_root_check_evidence`, migrate this layer to
-  `root_set := list root_atom` and make substitution instantiate only
-  `RParam` roots while preserving `RStore` roots.
+  `root_set` is now `list root_atom`. `RStore x` represents concrete runtime
+  storage roots and is what cleanup exclusion checks; `RParam x` represents
+  symbolic parameter-value roots and is the only atom instantiated by
+  `root_set_instantiate`.
+- Tagged roots are reflected through the Prop-level root rules, executable root
+  checker, root soundness theorem, runtime reference root membership, and
+  initial parameter root environments.
 
 ### Next Implementation Queue
 
@@ -248,22 +251,20 @@ Follow this order. Stop when a step exposes a missing invariant or false lemma.
    - Done: added the root-substitution helper layer in `RootProvenance.v`:
      `root_subst`, `root_set_instantiate`, `root_env_instantiate`, and
      `root_subst_of_params`, with lookup/name/no-shadow preservation lemmas.
+   - Done: migrated root provenance to tagged atoms:
+     `RStore` for concrete runtime storage roots and `RParam` for symbolic
+     parameter-value roots. The Prop-level root rules, executable root checker,
+     root soundness theorem, runtime reference root membership, and initial
+     parameter root environments now agree on the tagged representation.
    - Chosen design: replace the call-site evidence premise with cached
-     root-polymorphic summaries, but only after root provenance uses tagged
-     atoms that distinguish concrete storage roots from symbolic parameter
-     roots.
+     root-polymorphic summaries using the tagged-root representation.
    - Chosen direction: keep lifetime substitution inference as-is, derive root
      evidence from call-site argument roots plus
      `call_param_root_env`, then instantiate cached root-polymorphic summaries
      with `root_subst_of_params`.
-   - Next implementation slice: migrate `RootProvenance.v` from
-     `root_set := list ident` to `root_set := list root_atom`; map parameter
-     initial roots to `[RParam param]`; make borrow/place roots produce
-     `RStore`; and make `root_set_instantiate` replace only `RParam` while
-     leaving `RStore` unchanged.
-   - After the tagged-root migration, update `EnvStructuralRules.v`,
-     `TypeChecker.v`, and `EnvRootSoundness.v` together so the Prop-level root
-     rules, executable root checker, and soundness theorem agree.
+   - Remaining: define the cached root-polymorphic summary shape and prove that
+     instantiating a freshened callee summary with `root_subst_of_params`
+     supplies `callee_body_root_ready_at`.
    - Do not attempt to discharge the evidence with lifetime inference alone,
      and do not globally reject parameter roots in `infer_env_roots`.
    - Stop if the current root sidecar API cannot express freshened callee body

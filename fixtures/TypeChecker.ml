@@ -1574,6 +1574,12 @@ let rec root_set_union a b =
     then root_set_union xs b
     else x :: (root_set_union xs b)
 
+(** val root_sets_union : root_set list -> root_set **)
+
+let rec root_sets_union = function
+| [] -> []
+| roots :: rest -> root_set_union roots (root_sets_union rest)
+
 (** val root_env_lookup : ident -> root_env -> root_set option **)
 
 let rec root_env_lookup x = function
@@ -3301,6 +3307,55 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
       (match consume_direct_place_value_roots env _UU03a3_ r p with
        | Infer_ok p0 -> let (p1, roots) = p0 in Infer_ok ((p1, r), roots)
        | Infer_err err -> Infer_err err)
+    | ECall (fname, args) ->
+      (match lookup_fn_b fname env.env_fns with
+       | Some fdef ->
+         let m = fdef.fn_lifetimes in
+         let collect =
+           let rec collect _UU03a3_0 r0 = function
+           | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+           | e' :: es ->
+             (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r0
+                      _UU03a3_0 e' with
+              | Infer_ok p ->
+                let (p0, roots_e) = p in
+                let (p1, r1) = p0 in
+                let (t_e, _UU03a3_1) = p1 in
+                (match collect _UU03a3_1 r1 es with
+                 | Infer_ok p2 ->
+                   let (p3, roots_es) = p2 in
+                   let (p4, r2) = p3 in
+                   let (tys, _UU03a3_2) = p4 in
+                   Infer_ok ((((t_e :: tys), _UU03a3_2), r2),
+                   (roots_e :: roots_es))
+                 | Infer_err err -> Infer_err err)
+              | Infer_err err -> Infer_err err)
+           in collect
+         in
+         (match collect _UU03a3_ r args with
+          | Infer_ok p ->
+            let (p0, arg_roots) = p in
+            let (p1, r') = p0 in
+            let (arg_tys, _UU03a3_') = p1 in
+            (match build_sigma m (repeat None m) arg_tys fdef.fn_params with
+             | Some _UU03c3__acc ->
+               let _UU03c3_ = finalize_subst _UU03c3__acc in
+               let ps_subst = apply_lt_params _UU03c3_ fdef.fn_params in
+               (match check_args _UU03a9_ arg_tys ps_subst with
+                | Some err -> Infer_err err
+                | None ->
+                  if forallb (wf_lifetime_b (mk_region_ctx n)) _UU03c3_
+                  then let _UU03a9__subst =
+                         apply_lt_outlives _UU03c3_ fdef.fn_outlives
+                       in
+                       if outlives_constraints_hold_b _UU03a9_ _UU03a9__subst
+                       then Infer_ok ((((apply_lt_ty _UU03c3_ fdef.fn_ret),
+                              _UU03a3_'), r'), (root_sets_union arg_roots))
+                       else Infer_err ErrHrtBoundUnsatisfied
+                  else Infer_err ErrLifetimeLeak)
+             | None -> Infer_err ErrLifetimeConflict)
+          | Infer_err err -> Infer_err err)
+       | None -> Infer_err (ErrFunctionNotFound fname))
     | EStruct (sname, lts, args, fields) ->
       (match lookup_struct sname env with
        | Some s ->

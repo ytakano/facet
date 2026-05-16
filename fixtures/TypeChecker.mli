@@ -377,6 +377,8 @@ type root_env = (ident * root_set) list
 
 val root_set_union : root_set -> root_set -> root_set
 
+val root_sets_union : root_set list -> root_set
+
 val root_env_lookup : ident -> root_env -> root_set option
 
 val root_env_add : ident -> root_set -> root_env -> root_env

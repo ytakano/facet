@@ -30,6 +30,30 @@ Important boundaries:
 - Do not handle non-empty captured closure stores until a captured-store
   invariant is designed.
 
+### Direct ECall Root Evidence Policy
+
+The direct `ECall` cleanup bridge requires root-aware evidence for the
+freshened callee body:
+
+- `typed_env_roots env ... (fn_body fcall) ... R_body roots_body`
+- parameter-root exclusion for `roots_body` and `R_body`
+
+`TypeSafety.v` currently has structural lookup bridges for freshened callees,
+but it cannot import `EnvRootSoundness.v` because `_CoqProject` orders
+`EnvRootSoundness.v` after `TypeSafety.v`. Do not solve this by creating an
+import cycle.
+
+The short-term proof shape is to make the missing callee root evidence an
+explicit root-aware function-environment invariant/premise in `TypeSafety.v`.
+The direct-call wrapper should use that invariant to connect
+`preservation_direct_call_ready_expr` to
+`eval_direct_call_body_cleanup_preserves_value_and_refs`.
+
+The checker-facing theorem in `EnvRuntimeSafety.v` should then either require
+or derive this invariant. If the current root sidecar checker/API cannot derive
+it, stop and report the missing invariant instead of weakening root safety or
+duplicating checker logic in OCaml.
+
 ### Fixed Design Decisions
 
 - Big-step preservation comes before progress.

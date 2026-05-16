@@ -8445,6 +8445,29 @@ Proof.
   - exists frame_final, locals. repeat split; assumption.
 Qed.
 
+Definition direct_call_callee_root_evidence (env : global_env) : Prop :=
+  forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+      (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs
+      used',
+    typed_args_roots env Ω n R Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    exists T_body Γ_out R_params R_body roots_body,
+      store_roots_within R_params
+        (bind_params (fn_params fcall) vs s_args) /\
+      store_no_shadow (bind_params (fn_params fcall) vs s_args) /\
+      root_env_no_shadow R_params /\
+      root_env_covers_params (fn_params fcall) R_params /\
+      provenance_ready_expr (fn_body fcall) /\
+      preservation_ready_expr (fn_body fcall) /\
+      typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+        R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
+        (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+      ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
+      roots_exclude_params (fn_params fcall) roots_body /\
+      root_env_excludes_params (fn_params fcall) R_body.
+
 Theorem eval_preserves_typing_ready_with_call_invariants_mutual :
   (forall env s e s' v,
     eval env s e s' v ->
@@ -9241,4 +9264,92 @@ Proof.
                   Σ0 Σ0' R0' roots0 Hready Hroots Hnodup Hrn Htyped)
         as [Hroots' [Hvals_roots [Hnodup' Hrn']]].
       repeat split; assumption.
+Qed.
+
+Theorem eval_preserves_typing_direct_call_roots_ready :
+  forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      preservation_direct_call_ready_expr e ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      env_fns_preservation_ready env ->
+      direct_call_callee_root_evidence env ->
+      store_typed env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s'.
+Proof.
+  intros env s e s' v Heval Ω n R Σ T Σ' R' roots Hready Hstore
+    Hroots Hshadow Hrn Htyped Hunique _ Hcallee_roots.
+  inversion Hready as [e_ready Hpres_ready | fname args Hready_args]; subst.
+  - pose proof (preservation_ready_implies_provenance_ready e Hpres_ready)
+      as Hprov.
+    destruct (proj1 eval_preserves_typing_roots_ready_mutual
+                env s e s' v Heval Ω n R Σ T Σ' R' roots
+                Hprov Hstore Hroots Hshadow Hrn Htyped)
+      as [Hstore' [Hv [Hpres _]]].
+    repeat split; assumption.
+  - dependent destruction Heval.
+    dependent destruction Htyped.
+    repeat match goal with
+    | Hlookup : lookup_fn (fn_name ?f_typed) (env_fns env) =
+        Some ?f_runtime,
+      Hin : In ?f_typed (env_fns env) |- _ =>
+        pose proof (lookup_fn_unique_by_name env (fn_name f_typed)
+          f_runtime f_typed Hlookup Hin eq_refl Hunique) as Hsame;
+        subst f_runtime
+    | Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?f_runtime,
+      Hin : In ?f_typed (env_fns env),
+      Hname : fn_name ?f_typed = ?fname_call |- _ =>
+        pose proof (lookup_fn_unique_by_name env fname_call f_runtime f_typed
+          Hlookup Hin Hname Hunique) as Hsame;
+        subst f_typed
+    | Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?f_runtime,
+      Hin : In ?f_typed (env_fns env),
+      Hname : ?fname_call = fn_name ?f_typed |- _ =>
+        pose proof (lookup_fn_unique_by_name env fname_call f_runtime f_typed
+          Hlookup Hin (eq_sym Hname) Hunique) as Hsame;
+        subst f_typed
+    end.
+    match goal with
+    | Htyped_args : typed_args_roots env Ω n R Σ ?args_call
+        (apply_lt_params ?σ (fn_params ?fdef)) Σ' R' ?arg_roots,
+      Heval_args : eval_args env s ?args_call ?s_args ?vs,
+      Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
+        (?fcall, ?used') |- _ =>
+        destruct (Hcallee_roots Ω n R Σ Σ' R' arg_roots (fn_name fdef)
+                    args_call fdef fcall σ s s_args vs used' Htyped_args
+                    Heval_args Hrename)
+          as (T_body & Γ_out & R_params & R_body & roots_body &
+              Hroots_bind & Hshadow_bind & Hrn_params & Hcover_params &
+              Hprov_body & Hready_body & Htyped_body & Hcompat_body &
+              Hexclude_ret & Hexclude_env)
+    end.
+    match goal with
+    | Htyped_args : typed_args_roots env Ω n R Σ ?args_call
+        (apply_lt_params ?σ (fn_params ?fdef)) Σ' R' ?arg_roots,
+      Heval_args : eval_args env s ?args_call ?s_args ?vs,
+      Hready_args0 : preservation_ready_args ?args_call,
+      Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
+        (?fcall, ?used'),
+      Heval_body : eval env
+        (bind_params (fn_params ?fcall) ?vs ?s_args)
+        (fn_body ?fcall) ?s_body ?ret |- _ =>
+        pose proof (preservation_ready_args_implies_provenance_ready
+                      args_call Hready_args0) as Hprov_args;
+        destruct (eval_direct_call_body_cleanup_preserves_value_and_refs
+                    env Ω n R Σ Σ' R' arg_roots (fn_name fdef) args_call fdef fcall σ
+                    s s_args s_body vs ret used' T_body Γ_out R_params
+                    R_body roots_body Hstore Hroots Hshadow Hrn Hprov_args
+                    Hready_args0 Htyped_args Heval_args Hrename Hroots_bind
+                    Hshadow_bind Hrn_params Hcover_params Hprov_body
+                    Hready_body Htyped_body Hcompat_body Hexclude_ret
+                    Hexclude_env Heval_body)
+          as [_ [Hstore_final [_ [_ [_ [_ [Hv_final [Hpres_final _]]]]]]]]
+    end.
+    repeat split; assumption.
 Qed.

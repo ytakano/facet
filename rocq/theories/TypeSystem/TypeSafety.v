@@ -5677,6 +5677,33 @@ Proof.
   eapply Hnamed; eassumption.
 Qed.
 
+Lemma root_set_store_roots_named_excludes_params :
+  forall ps roots s,
+    root_set_store_roots_named roots s ->
+    params_fresh_in_store ps s ->
+    roots_exclude_params ps roots.
+Proof.
+  unfold root_set_store_roots_named, params_fresh_in_store,
+    roots_exclude_params, roots_exclude.
+  intros ps roots s Hnamed Hfresh x Hparam Hin.
+  apply (Hfresh x Hparam).
+  apply Hnamed. exact Hin.
+Qed.
+
+Lemma root_sets_store_roots_named_excludes_params :
+  forall ps roots_list s,
+    Forall (fun roots => root_set_store_roots_named roots s) roots_list ->
+    params_fresh_in_store ps s ->
+    Forall (roots_exclude_params ps) roots_list.
+Proof.
+  intros ps roots_list s Hnamed Hfresh.
+  induction Hnamed as [| roots roots_list Hroot Hnamed IH].
+  - constructor.
+  - constructor.
+    + eapply root_set_store_roots_named_excludes_params; eassumption.
+    + exact IH.
+Qed.
+
 Definition value_refs_exclude_params (ps : list param) (v : value) : Prop :=
   forall x,
     In x (ctx_names (params_ctx ps)) ->

@@ -725,6 +725,36 @@ Proof.
     + exact Hroot.
 Qed.
 
+Lemma root_set_instantiate_store_singleton_equiv :
+  forall rho x,
+    root_set_equiv
+      (root_set_instantiate rho [RStore x])
+      [RStore x].
+Proof.
+  intros rho x root. split; intros Hin.
+  - apply root_set_instantiate_in_inv in Hin.
+    destruct Hin as [atom [[Hatom | Hatom] Hroot]]; try contradiction.
+    inversion Hatom; subst. simpl in Hroot. exact Hroot.
+  - eapply root_set_instantiate_in.
+    + simpl. left. reflexivity.
+    + simpl. exact Hin.
+Qed.
+
+Lemma root_set_instantiate_param_singleton_equiv :
+  forall rho x,
+    root_set_equiv
+      (root_set_instantiate rho [RParam x])
+      (root_subst_lookup x rho).
+Proof.
+  intros rho x root. split; intros Hin.
+  - apply root_set_instantiate_in_inv in Hin.
+    destruct Hin as [atom [[Hatom | Hatom] Hroot]]; try contradiction.
+    inversion Hatom; subst. simpl in Hroot. exact Hroot.
+  - eapply root_set_instantiate_in.
+    + simpl. left. reflexivity.
+    + simpl. exact Hin.
+Qed.
+
 Lemma root_set_instantiate_union_equiv :
   forall rho roots_left roots_right,
     root_set_equiv

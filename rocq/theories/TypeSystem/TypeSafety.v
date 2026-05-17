@@ -50,6 +50,38 @@ Proof.
   rewrite Hname_lookup. symmetry. exact Hname_typed.
 Qed.
 
+Lemma lookup_fn_none_not_in_name :
+  forall fname fenv fdef,
+    lookup_fn fname fenv = None ->
+    In fdef fenv ->
+    fn_name fdef <> fname.
+Proof.
+  intros fname fenv.
+  induction fenv as [| f rest IH]; intros fdef Hlookup Hin; simpl in *.
+  - contradiction.
+  - destruct (ident_eqb fname (fn_name f)) eqn:Hname; try discriminate.
+    destruct Hin as [Hin | Hin].
+    + subst fdef. intros Hcontra.
+      apply ident_eqb_neq in Hname. apply Hname. symmetry. exact Hcontra.
+    + eapply IH; eassumption.
+Qed.
+
+Lemma lookup_fn_in_unique_by_name :
+  forall env fname fdef,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_env_unique_by_name env ->
+    lookup_fn fname (env_fns env) = Some fdef.
+Proof.
+  intros env fname fdef Hin Hname Hunique.
+  destruct (lookup_fn fname (env_fns env)) as [f_lookup |] eqn:Hlookup.
+  - f_equal. eapply lookup_fn_unique_by_name; eassumption.
+  - exfalso.
+    pose proof (lookup_fn_none_not_in_name fname (env_fns env) fdef
+                  Hlookup Hin) as Hneq.
+    apply Hneq. exact Hname.
+Qed.
+
 Lemma lookup_fn_typed_structural :
   forall env fname f_lookup,
     lookup_fn fname (env_fns env) = Some f_lookup ->
@@ -1856,6 +1888,153 @@ Proof.
     exact IH.
 Qed.
 
+Lemma root_env_lookup_app_left :
+  forall x R1 R2 roots,
+    root_env_lookup x R1 = Some roots ->
+    root_env_lookup x (R1 ++ R2) = Some roots.
+Proof.
+  intros x R1.
+  induction R1 as [| [y roots_y] rest IH]; intros R2 roots Hlookup;
+    simpl in *; try discriminate.
+  destruct (ident_eqb x y); try assumption.
+  apply IH. exact Hlookup.
+Qed.
+
+Lemma root_env_lookup_app_right :
+  forall x R1 R2,
+    root_env_lookup x R1 = None ->
+    root_env_lookup x (R1 ++ R2) = root_env_lookup x R2.
+Proof.
+  intros x R1.
+  induction R1 as [| [y roots_y] rest IH]; intros R2 Hlookup;
+    simpl in *; try reflexivity.
+  destruct (ident_eqb x y); try discriminate.
+  apply IH. exact Hlookup.
+Qed.
+
+Lemma root_env_names_app :
+  forall R1 R2,
+    root_env_names (R1 ++ R2) = root_env_names R1 ++ root_env_names R2.
+Proof.
+  intros R1.
+  induction R1 as [| [x roots] rest IH]; intros R2; simpl.
+  - reflexivity.
+  - rewrite IH. reflexivity.
+Qed.
+
+Lemma root_env_no_shadow_app :
+  forall R1 R2,
+    root_env_no_shadow R1 ->
+    root_env_no_shadow R2 ->
+    (forall x,
+      root_env_lookup x R1 = None \/
+      root_env_lookup x R2 = None) ->
+    root_env_no_shadow (R1 ++ R2).
+Proof.
+  unfold root_env_no_shadow.
+  intros R1.
+  induction R1 as [| [x roots] rest IH]; intros R2 Hrn1 Hrn2 Hdisj;
+    simpl in *.
+  - exact Hrn2.
+  - inversion Hrn1 as [| ? ? Hnotin Hrn_tail]; subst.
+    constructor.
+    + intros Hin.
+      rewrite root_env_names_app in Hin.
+      apply in_app_or in Hin.
+      destruct Hin as [Hin | Hin].
+      * apply Hnotin. exact Hin.
+      * specialize (Hdisj x).
+        simpl in Hdisj.
+        rewrite ident_eqb_refl in Hdisj.
+        destruct Hdisj as [Hnone | Hnone]; try discriminate.
+        eapply root_env_lookup_none_not_in_names; eassumption.
+    + apply IH.
+      * exact Hrn_tail.
+      * exact Hrn2.
+      * intros y.
+        specialize (Hdisj y).
+        simpl in Hdisj.
+        destruct (ident_eqb y x); try exact Hdisj.
+        right. destruct Hdisj as [Hbad | Hnone]; try discriminate.
+        exact Hnone.
+Qed.
+
+Lemma root_env_excludes_app :
+  forall x R1 R2,
+    root_env_excludes x R1 ->
+    root_env_excludes x R2 ->
+    root_env_excludes x (R1 ++ R2).
+Proof.
+  unfold root_env_excludes.
+  intros x R1 R2 Hexcl1 Hexcl2 y roots Hlookup Hyx.
+  destruct (root_env_lookup y R1) as [roots1 |] eqn:Hlookup1.
+  - rewrite (root_env_lookup_app_left y R1 R2 roots1 Hlookup1)
+      in Hlookup.
+    inversion Hlookup. subst roots1. eapply Hexcl1; eassumption.
+  - rewrite (root_env_lookup_app_right y R1 R2 Hlookup1) in Hlookup.
+    eapply Hexcl2; eassumption.
+Qed.
+
+Lemma root_env_equiv_app :
+  forall R1 R1' R2 R2',
+    root_env_equiv R1 R1' ->
+    root_env_equiv R2 R2' ->
+    root_env_equiv (R1 ++ R2) (R1' ++ R2').
+Proof.
+  unfold root_env_equiv.
+  intros R1 R1' R2 R2' Heq1 Heq2 x.
+  specialize (Heq1 x).
+  specialize (Heq2 x).
+  destruct (root_env_lookup x R1) as [roots1 |] eqn:Hlookup1;
+    destruct (root_env_lookup x R1') as [roots1' |] eqn:Hlookup1';
+    try contradiction.
+  - rewrite (root_env_lookup_app_left x R1 R2 roots1 Hlookup1).
+    rewrite (root_env_lookup_app_left x R1' R2' roots1' Hlookup1').
+    exact Heq1.
+  - rewrite (root_env_lookup_app_right x R1 R2 Hlookup1).
+    rewrite (root_env_lookup_app_right x R1' R2' Hlookup1').
+    exact Heq2.
+Qed.
+
+Lemma root_env_remove_lookup_none :
+  forall x R,
+    root_env_lookup x R = None ->
+    root_env_remove x R = R.
+Proof.
+  intros x R.
+  induction R as [| [y roots_y] rest IH]; intros Hlookup; simpl in *.
+  - reflexivity.
+  - destruct (ident_eqb x y); try discriminate.
+    rewrite IH by exact Hlookup. reflexivity.
+Qed.
+
+Lemma root_env_remove_app_left :
+  forall x R1 R2,
+    root_env_lookup x R2 = None ->
+    root_env_remove x (R1 ++ R2) = root_env_remove x R1 ++ R2.
+Proof.
+  intros x R1.
+  induction R1 as [| [y roots_y] rest IH]; intros R2 Hlookup_tail;
+    simpl in *.
+  - apply root_env_remove_lookup_none. exact Hlookup_tail.
+  - destruct (ident_eqb x y); try reflexivity.
+    rewrite IH by exact Hlookup_tail. reflexivity.
+Qed.
+
+Lemma root_env_update_app_left :
+  forall x roots R1 R2 roots_old,
+    root_env_lookup x R1 = Some roots_old ->
+    root_env_update x roots (R1 ++ R2) =
+      root_env_update x roots R1 ++ R2.
+Proof.
+  intros x roots R1.
+  induction R1 as [| [y roots_y] rest IH]; intros R2 roots_old Hlookup;
+    simpl in *; try discriminate.
+  destruct (ident_eqb x y); try reflexivity.
+  rewrite IH with (roots_old := roots_old) by exact Hlookup.
+  reflexivity.
+Qed.
+
 Fixpoint root_env_remove_params (ps : list param) (R : root_env)
     : root_env :=
   match ps with
@@ -1877,6 +2056,256 @@ Definition call_param_root_env
     : root_env :=
   root_env_add_params_roots ps arg_roots
     (root_env_remove_params ps R_tail).
+
+Lemma root_env_add_params_roots_app_tail :
+  forall ps roots_list R_tail,
+    root_env_add_params_roots ps roots_list R_tail =
+      root_env_add_params_roots ps roots_list [] ++ R_tail.
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros roots_list R_tail;
+    destruct roots_list as [| roots roots_list]; simpl; try reflexivity.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma root_env_remove_params_empty :
+  forall ps,
+    root_env_remove_params ps [] = [].
+Proof.
+  induction ps as [| p ps IH]; simpl; try reflexivity.
+  exact IH.
+Qed.
+
+Lemma call_param_root_env_app_tail :
+  forall ps roots_list R_tail,
+    call_param_root_env ps roots_list R_tail =
+      call_param_root_env ps roots_list [] ++
+        root_env_remove_params ps R_tail.
+Proof.
+  intros ps roots_list R_tail.
+  unfold call_param_root_env at 1 2.
+  rewrite root_env_remove_params_empty.
+  apply root_env_add_params_roots_app_tail.
+Qed.
+
+Definition root_env_tail_fresh_names (R_tail : root_env)
+    (names : list ident) : Prop :=
+  forall x,
+    In x names ->
+    root_env_lookup x R_tail = None /\ root_env_excludes x R_tail.
+
+Lemma root_env_tail_fresh_names_app_l :
+  forall R_tail names1 names2,
+    root_env_tail_fresh_names R_tail (names1 ++ names2) ->
+    root_env_tail_fresh_names R_tail names1.
+Proof.
+  unfold root_env_tail_fresh_names.
+  intros R_tail names1 names2 Hfresh x Hin.
+  apply Hfresh. apply in_or_app. left. exact Hin.
+Qed.
+
+Lemma root_env_tail_fresh_names_app_r :
+  forall R_tail names1 names2,
+    root_env_tail_fresh_names R_tail (names1 ++ names2) ->
+    root_env_tail_fresh_names R_tail names2.
+Proof.
+  unfold root_env_tail_fresh_names.
+  intros R_tail names1 names2 Hfresh x Hin.
+  apply Hfresh. apply in_or_app. right. exact Hin.
+Qed.
+
+Lemma root_env_tail_fresh_names_cons_head :
+  forall R_tail x names,
+    root_env_tail_fresh_names R_tail (x :: names) ->
+    root_env_lookup x R_tail = None /\ root_env_excludes x R_tail.
+Proof.
+  unfold root_env_tail_fresh_names.
+  intros R_tail x names Hfresh.
+  apply Hfresh. left. reflexivity.
+Qed.
+
+Lemma root_env_tail_fresh_names_cons_tail :
+  forall R_tail x names,
+    root_env_tail_fresh_names R_tail (x :: names) ->
+    root_env_tail_fresh_names R_tail names.
+Proof.
+  unfold root_env_tail_fresh_names.
+  intros R_tail x names Hfresh y Hin.
+  apply Hfresh. right. exact Hin.
+Qed.
+
+Lemma fields_local_store_names_in_expr :
+  forall fname e fields x,
+    In (fname, e) fields ->
+    In x (expr_local_store_names e) ->
+    In x (fields_local_store_names fields).
+Proof.
+  intros fname e fields x Hin Hx.
+  induction fields as [| [fname' e'] rest IH]; simpl in *.
+  - contradiction.
+  - destruct Hin as [Hin | Hin].
+    + inversion Hin; subst. apply in_or_app. left. exact Hx.
+    + apply in_or_app. right. apply IH. exact Hin.
+Qed.
+
+Lemma root_env_tail_fresh_names_lookup_field :
+  forall R_tail fname fields e,
+    lookup_field_b fname fields = Some e ->
+    root_env_tail_fresh_names R_tail (fields_local_store_names fields) ->
+    root_env_tail_fresh_names R_tail (expr_local_store_names e).
+Proof.
+  unfold root_env_tail_fresh_names.
+  intros R_tail fname fields e Hlookup Hfresh x Hin.
+  apply Hfresh.
+  eapply fields_local_store_names_in_expr.
+  - eapply lookup_field_b_success. exact Hlookup.
+  - exact Hin.
+Qed.
+
+Theorem typed_roots_shadow_safe_tail_frame_mutual :
+  forall env Ω n R_tail,
+  (forall R Σ e T Σ' R' roots,
+    typed_env_roots_shadow_safe env Ω n R Σ e T Σ' R' roots ->
+    root_env_tail_fresh_names R_tail (expr_local_store_names e) ->
+    typed_env_roots_shadow_safe env Ω n (R ++ R_tail) Σ e T Σ'
+      (R' ++ R_tail) roots) /\
+  (forall R Σ args ps Σ' R' roots,
+    typed_args_roots_shadow_safe env Ω n R Σ args ps Σ' R' roots ->
+    root_env_tail_fresh_names R_tail (args_local_store_names args) ->
+    typed_args_roots_shadow_safe env Ω n (R ++ R_tail) Σ args ps Σ'
+      (R' ++ R_tail) roots) /\
+  (forall lts args R Σ fields defs Σ' R' roots,
+    typed_fields_roots_shadow_safe env Ω n lts args R Σ fields defs
+      Σ' R' roots ->
+    root_env_tail_fresh_names R_tail (fields_local_store_names fields) ->
+    typed_fields_roots_shadow_safe env Ω n lts args (R ++ R_tail) Σ
+      fields defs Σ' (R' ++ R_tail) roots).
+Proof.
+  intros env Ω n R_tail.
+  apply typed_roots_shadow_safe_ind; intros; simpl in *.
+  - constructor.
+  - constructor.
+  - constructor.
+  - constructor.
+  - eapply TERS_Var_Copy; eauto.
+    eapply root_env_lookup_app_left; eassumption.
+  - eapply TERS_Var_Move; eauto.
+    eapply root_env_lookup_app_left; eassumption.
+  - eapply TERS_Place_Copy; eauto.
+    eapply root_env_lookup_app_left; eassumption.
+  - eapply TERS_Place_Move; eauto.
+    eapply root_env_lookup_app_left; eassumption.
+  - eapply TERS_Call; eauto.
+  - eapply TERS_Fn; eauto.
+  - eapply TERS_Struct; eauto.
+  - pose proof (root_env_tail_fresh_names_app_l _ _ _ H1) as Hfresh1.
+    pose proof (root_env_tail_fresh_names_app_r _ _ _ H1) as Hfresh_tail.
+    destruct (root_env_tail_fresh_names_cons_head _ _ _ Hfresh_tail)
+      as [Htail_lookup Htail_excl].
+    pose proof (root_env_tail_fresh_names_cons_tail _ _ _ Hfresh_tail)
+      as Hfresh2.
+    replace (root_env_remove x R2 ++ R_tail)
+      with (root_env_remove x (R2 ++ R_tail)).
+    eapply TERS_Let.
+    + apply H. exact Hfresh1.
+    + exact e.
+    + rewrite root_env_lookup_app_right by exact e0.
+      exact Htail_lookup.
+    + exact r.
+    + apply root_env_excludes_app; assumption.
+    + replace (root_env_add x roots1 R1 ++ R_tail)
+        with (root_env_add x roots1 (R1 ++ R_tail)) by reflexivity.
+      apply H0. exact Hfresh2.
+    + exact e3.
+    + exact r1.
+    + rewrite root_env_remove_app_left by exact Htail_lookup.
+      apply root_env_excludes_app; assumption.
+    + rewrite root_env_remove_app_left by exact Htail_lookup.
+      reflexivity.
+  - pose proof (root_env_tail_fresh_names_app_l _ _ _ H1) as Hfresh1.
+    pose proof (root_env_tail_fresh_names_app_r _ _ _ H1) as Hfresh_tail.
+    destruct (root_env_tail_fresh_names_cons_head _ _ _ Hfresh_tail)
+      as [Htail_lookup Htail_excl].
+    pose proof (root_env_tail_fresh_names_cons_tail _ _ _ Hfresh_tail)
+      as Hfresh2.
+    replace (root_env_remove x R2 ++ R_tail)
+      with (root_env_remove x (R2 ++ R_tail)).
+    eapply TERS_LetInfer.
+    + apply H. exact Hfresh1.
+    + rewrite root_env_lookup_app_right by exact e.
+      exact Htail_lookup.
+    + exact r.
+    + apply root_env_excludes_app; assumption.
+    + replace (root_env_add x roots1 R1 ++ R_tail)
+        with (root_env_add x roots1 (R1 ++ R_tail)) by reflexivity.
+      apply H0. exact Hfresh2.
+    + exact e0.
+    + exact r1.
+    + rewrite root_env_remove_app_left by exact Htail_lookup.
+      apply root_env_excludes_app; assumption.
+    + rewrite root_env_remove_app_left by exact Htail_lookup.
+      reflexivity.
+  - eapply TERS_Drop. eauto.
+  - replace (root_env_update x (root_set_union roots_old roots_new) R1 ++
+        R_tail)
+      with (root_env_update x (root_set_union roots_old roots_new)
+        (R1 ++ R_tail)).
+    eapply TERS_Replace_Path; eauto.
+    + eapply root_env_lookup_app_left; eassumption.
+    + eapply root_env_lookup_app_left; eassumption.
+    + rewrite root_env_update_app_left with (roots_old := roots_old)
+        by eassumption.
+      reflexivity.
+  - replace (root_env_update x (root_set_union roots_old roots_new) R1 ++
+        R_tail)
+      with (root_env_update x (root_set_union roots_old roots_new)
+        (R1 ++ R_tail)).
+    eapply TERS_Assign_Path; eauto.
+    + eapply root_env_lookup_app_left; eassumption.
+    + rewrite root_env_update_app_left with (roots_old := roots_old)
+        by eassumption.
+      reflexivity.
+  - eapply TERS_BorrowShared; eauto.
+  - eapply TERS_BorrowUnique; eauto.
+  - pose proof (root_env_tail_fresh_names_app_l _ _ _ H2) as Hfresh1.
+    pose proof (root_env_tail_fresh_names_app_r _ _ _ H2) as Hfresh_tail.
+    pose proof (root_env_tail_fresh_names_app_l _ _ _ Hfresh_tail) as Hfresh2.
+    pose proof (root_env_tail_fresh_names_app_r _ _ _ Hfresh_tail) as Hfresh3.
+    eapply TERS_If.
+    + apply H. exact Hfresh1.
+    + exact e.
+    + apply H0. exact Hfresh2.
+    + apply H1. exact Hfresh3.
+    + exact e0.
+    + exact e4.
+    + apply root_env_equiv_app.
+      * exact r.
+      * apply root_env_equiv_refl.
+  - constructor.
+  - pose proof (root_env_tail_fresh_names_app_l _ _ _ H1) as Hfresh_e.
+    pose proof (root_env_tail_fresh_names_app_r _ _ _ H1) as Hfresh_es.
+    eapply TERSArgs_Cons.
+    + apply H. exact Hfresh_e.
+    + exact e0.
+    + apply H0. exact Hfresh_es.
+  - constructor.
+  - eapply TERSFields_Cons.
+    + exact e.
+    + apply H. eapply root_env_tail_fresh_names_lookup_field; eassumption.
+    + exact e0.
+    + apply H0. exact H1.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_tail_frame :
+  forall env Ω n R_tail R Σ e T Σ' R' roots,
+    typed_env_roots_shadow_safe env Ω n R Σ e T Σ' R' roots ->
+    root_env_tail_fresh_names R_tail (expr_local_store_names e) ->
+    typed_env_roots_shadow_safe env Ω n (R ++ R_tail) Σ e T Σ'
+      (R' ++ R_tail) roots.
+Proof.
+  intros env Ω n R_tail.
+  exact (proj1 (typed_roots_shadow_safe_tail_frame_mutual env Ω n R_tail)).
+Qed.
 
 Lemma root_env_remove_params_no_shadow :
   forall ps R,
@@ -1903,6 +2332,25 @@ Proof.
       * reflexivity.
       * intros Heq. subst x. apply Hnotin. left. reflexivity.
     + intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma root_env_lookup_remove_params_none_preserved :
+  forall ps R x,
+    root_env_lookup x R = None ->
+    root_env_lookup x (root_env_remove_params ps R) = None.
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros R x Hlookup; simpl.
+  - exact Hlookup.
+  - apply IH.
+    destruct (ident_eqb x (param_name p)) eqn:Heq.
+    + apply ident_eqb_eq in Heq. subst x.
+      rewrite root_env_remove_lookup_none by exact Hlookup.
+      exact Hlookup.
+    + rewrite root_env_lookup_remove_neq.
+      * exact Hlookup.
+      * intros Hcontra. subst x.
+        rewrite ident_eqb_refl in Heq. discriminate.
 Qed.
 
 Lemma root_env_remove_params_lookup_none :
@@ -5807,6 +6255,18 @@ Proof.
   eapply Hnamed; eassumption.
 Qed.
 
+Lemma root_env_store_roots_named_excludes_name :
+  forall R s x,
+    root_env_store_roots_named R s ->
+    ~ In x (store_names s) ->
+    root_env_excludes x R.
+Proof.
+  unfold root_env_store_roots_named, root_env_excludes, roots_exclude.
+  intros R s x Hnamed Hfresh y roots Hlookup Hyx Hin.
+  apply Hfresh.
+  eapply Hnamed; eassumption.
+Qed.
+
 Lemma root_set_store_roots_named_excludes_params :
   forall ps roots s,
     root_set_store_roots_named roots s ->
@@ -6071,6 +6531,20 @@ Proof.
       * exact Hlookup.
       * intros Hz. subst z. rewrite ident_eqb_refl in Heq. discriminate.
     + exact Hneq.
+Qed.
+
+Lemma root_env_remove_params_preserves_excludes :
+  forall ps x R,
+    root_env_no_shadow R ->
+    root_env_excludes x R ->
+    root_env_excludes x (root_env_remove_params ps R).
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros x R Hrn Hexcl; simpl.
+  - exact Hexcl.
+  - apply IH.
+    + apply root_env_no_shadow_remove. exact Hrn.
+    + apply root_env_excludes_remove_no_shadow; assumption.
 Qed.
 
 Lemma root_env_remove_params_preserves_excludes_params :
@@ -12146,6 +12620,52 @@ Proof.
   - eapply alpha_rename_fn_def_body_local_store_names_fresh_used.
     exact Hrename.
   - exact Hin.
+Qed.
+
+Lemma eval_args_root_tail_fresh_names_for_fresh_call :
+  forall env Ω n R Σ ps_typed Σ_args R_args arg_roots args s s_args vs
+      fdef fcall used',
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    typed_args_roots env Ω n R Σ args ps_typed Σ_args R_args arg_roots ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    root_env_tail_fresh_names (root_env_remove_params (fn_params fcall) R_args)
+      (expr_local_store_names (fn_body fcall)).
+Proof.
+  unfold root_env_tail_fresh_names.
+  intros env Ω n R Σ ps_typed Σ_args R_args arg_roots args s s_args vs
+    fdef fcall used' Heval_args Hprov_args Hstore Hroots Hshadow Hrn
+    Hnamed Hkeys Htyped_args Hrename x Hin.
+  destruct (proj1 (proj2 eval_preserves_root_names_ready_mutual)
+              env s args s_args vs Heval_args Ω n R Σ ps_typed Σ_args
+              R_args arg_roots Hprov_args Hstore Hroots Hshadow Hrn
+              Hnamed Htyped_args)
+    as [Harg_roots_named _].
+  pose proof (proj1 (proj2 eval_preserves_root_keys_named_ready_mutual)
+                env s args s_args vs Heval_args Ω n R Σ ps_typed Σ_args
+                R_args arg_roots Hprov_args Hstore Hroots Hshadow Hrn
+                Hkeys Htyped_args)
+    as Harg_keys_named.
+  pose proof (alpha_rename_fn_def_body_local_store_names_fresh_used
+                (store_names s_args) fdef fcall used' Hrename)
+    as Hfresh_names.
+  assert (Hfresh_x : ~ In x (store_names s_args)).
+  { apply (proj1 (Forall_forall _ _) Hfresh_names). exact Hin. }
+  assert (Hlookup : root_env_lookup x R_args = None).
+  { eapply root_env_store_keys_named_lookup_excludes_name; eassumption. }
+  assert (Hexcl : root_env_excludes x R_args).
+  { eapply root_env_store_roots_named_excludes_name; eassumption. }
+  split.
+  - apply root_env_lookup_remove_params_none_preserved. exact Hlookup.
+  - apply root_env_remove_params_preserves_excludes.
+    + eapply typed_args_roots_no_shadow; eassumption.
+    + exact Hexcl.
 Qed.
 
 Lemma eval_args_root_names_excludes_params_ready :

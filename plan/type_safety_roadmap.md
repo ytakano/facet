@@ -208,10 +208,25 @@ false lemma.
      `root_env_store_keys_named_lookup_excludes_name`,
      `root_env_store_keys_named_excludes_names`, and
      `eval_args_root_keys_exclude_names_for_fresh_call`.
-   - Remaining blocker: prove the tail weakening theorem and consume these
-     freshness facts in the actual shadow-summary transport, so cached summary
-     evidence can be transported to each freshened direct-call body without
-     assuming the transported evidence as a premise.
+   - Done: added and compiled the shadow-safe tail-frame route in
+     `TypeSafety.v`: root-env append/frame algebra,
+     `root_env_tail_fresh_names`,
+     `typed_roots_shadow_safe_tail_frame_mutual`,
+     `typed_env_roots_shadow_safe_tail_frame`, and
+     `eval_args_root_tail_fresh_names_for_fresh_call`. These facts transport
+     shadow-safe callee body root typing over a caller tail once the freshened
+     body-local names are absent from that tail.
+   - Remaining blocker: consume the tail-frame theorem in the actual
+     shadow-summary transport, so cached summary evidence can be transported to
+     each freshened direct-call body without assuming the transported evidence
+     as a premise.
+   - Remaining blocker refinement: the tail-frame theorem is now available.
+     The remaining bridge work is to package the cached callee summary through
+     `alpha_rename_fn_def`: expose the parameter rename environment, body
+     rename equation, ctx-alpha evidence, used-name facts, and output
+     root-env no-collision/support premises required by
+     `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`, then
+     instantiate the renamed summary and apply the tail frame.
 
 4. Direct-call root evidence remains a supporting obligation.
    - Existing direct-call preservation work may continue, but it must be framed

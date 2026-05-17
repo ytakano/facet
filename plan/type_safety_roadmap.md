@@ -160,23 +160,23 @@ false lemma.
      either prove that the ordinary alpha route establishes the needed sidecar
      root evidence, or keep the final theorem explicitly parameterized by that
      sidecar evidence until the bridge is proved.
-   - Remaining blocker: prove
-     `direct_call_callee_body_root_summary_bridge` for alpha-normalized
-     function bodies, so summary root evidence can be transported to each
-     freshened direct-call body without assuming it as a premise.
-   - Blocker found while attempting that bridge: the available root-summary
-     evidence is ordinary `typed_env_roots`, but the completed whole-expression
-     alpha-renaming theorem requires `typed_env_roots_shadow_safe`. A direct
-     ordinary-to-shadow-safe lift would be a false lemma: ordinary `TER_Let` /
-     `TER_LetInfer` do not record the initializer-side premises
-     `roots_exclude x roots1` and `root_env_excludes x R1` required by
-     shadow-safe `TERS_Let` / `TERS_LetInfer`.
-   - Next implementation step: add a focused executable/root-soundness bridge
-     for alpha-renamed expressions, not a global ordinary-to-shadow-safe lift.
-     The bridge should derive the missing initializer-side exclusions from
-     alpha-renaming freshness plus root/context support for the specific
-     alpha-renamed checker result, then produce shadow-safe evidence only for
-     that alpha-renamed result.
+   - Done: proved and focused-compiled
+     `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`, closing
+     the old blockers around assembling the full shadow-safe
+     `typed_env_roots` alpha-renaming theorem.
+   - Remaining blocker: connect
+     `alpha_rename_typed_env_roots_shadow_safe_full_support_forward` to
+     `direct_call_callee_body_root_summary_bridge` and then to the
+     alpha-normalized ordinary checker safety route, so summary root evidence
+     can be transported to each freshened direct-call body without assuming it
+     as a premise.
+   - Done: added origin/current initial root-env support facts for this bridge:
+     `initial_root_env_for_params_origin_names`,
+     `initial_root_env_for_params_origin_no_shadow`,
+     `initial_root_env_for_params_origin_sctx_keys_named`, and
+     `initial_root_env_for_params_origin_sctx_roots_named`. These cover the
+     parameter-renamed root environment used when cached callee summaries are
+     transported to freshened call bodies.
 
 4. Direct-call root evidence remains a supporting obligation.
    - Existing direct-call preservation work may continue, but it must be framed
@@ -203,9 +203,10 @@ false lemma.
    - Remaining blocker: state and prove the tail weakening theorem that
      transports callee-body root typing from the parameter-only root
      environment to `call_param_root_env` with the caller tail.
-   - Remaining blocker: generalize the root-aware alpha-renaming proof beyond
-     the existing var/place/borrow cases so an entire freshened callee body can
-     be transported from cached summary evidence to call-site evidence.
+   - Done: generalized the root-aware alpha-renaming proof beyond the earlier
+     var/place/borrow cases via
+     `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`, so an
+     entire freshened callee body has the needed shadow-safe transport theorem.
    - Done: added root-env name/no-collision helper lemmas and
      `root_env_equiv_rename_lookup_none_forward`, preparing the let/let-infer
      cases of the full root-aware alpha-renaming theorem.
@@ -237,26 +238,17 @@ false lemma.
    - Done: added the root-aware alpha-renaming wrapper for `TER_If`, including
      branch context merge, branch root-env equivalence under renaming, and
      renamed branch-root union equivalence.
-   - Blocker found while assembling the full theorem: the current
-     `alpha_rename_typed_env_roots_if_shadow_safe_support_forward` callback
-     hides which of `e1`, `e2`, or `e3` is being processed. A local
-     `expr_size`-fuel induction therefore cannot prove the recursive-call
-     decrease for the callback argument.
-   - Next implementation step: split or refine the if wrapper callback so each
-     recursive callback carries a concrete subexpression-size premise, for
-     example `expr_size e0 < expr_size (EIf e1 e2 e3)`, or use three separate
-     callbacks for condition/then/else. After that, reintroduce the full
+   - Done: fixed the former full-theorem assembly blocker where
+     `alpha_rename_typed_env_roots_if_shadow_safe_support_forward` did not
+     expose which `EIf` subexpression was being processed.
+   - Done: refined the if wrapper callback so each recursive callback carries
+     a concrete subexpression-size premise, then used that in the full
      `typed_env_roots_shadow_safe` alpha-renaming theorem.
-   - Blocker found while assembling the full theorem: the plain recursive
-     induction hypothesis for let bodies only returns equivalence under the
-     extended rename `((x, xr) :: rho)`. The final `TER_Let` / `TER_LetInfer`
-     reconstruction also needs to prove that the fresh binder `xr` is excluded
-     from the renamed result roots and surviving root environment. Do not solve
-     this by rejecting source shadowing. Add focused helper lemmas that derive
-     these renamed-exclusion facts from the existing let premises
-     `roots_exclude x roots2` and
-     `root_env_excludes x (root_env_remove x R2)`, plus freshness/no-collision
-     facts from alpha-renaming.
+   - Done: resolved the former full-theorem assembly blocker where let-body
+     recursive hypotheses only returned equivalence under the extended rename
+     `((x, xr) :: rho)`. Focused helper lemmas now derive the renamed
+     result-side exclusion facts from the existing let premises and
+     alpha-renaming freshness/no-collision facts.
    - Done: added weak `RStore`-only rename exclusion helpers for root sets and
      root environments. These deliberately do not require excluding `RParam x`,
      because alpha-renaming leaves `RParam` atoms unchanged.
@@ -286,27 +278,22 @@ false lemma.
      replace/assign, if, call, and struct. These wrappers preserve the existing
      alpha-renaming conclusions while returning `typed_*_roots_shadow_safe`
      evidence, so the full theorem can use shadow-safe support facts directly.
-   - Remaining blocker: assemble the full `typed_env_roots`
-     alpha-renaming theorem, using the accumulated constructor wrappers and
-     root-env algebra helpers in the corresponding constructor cases.
-   - Remaining blocker: use the new shadow-safe support invariant in the
-     `TER_Let` / `TER_LetInfer` cases to derive that the fresh alpha-renamed
-     binder is absent from returned roots and surviving root environments.
-   - Remaining blocker: the existing `alpha_rename_typed_env_roots_let_forward`
+   - Done: assembled the full `typed_env_roots_shadow_safe` alpha-renaming
+     theorem using the accumulated constructor wrappers, support-carrying
+     callbacks, and root-env algebra helpers.
+   - Done: used the shadow-safe support invariant in the `TER_Let` /
+     `TER_LetInfer` cases to derive that the fresh alpha-renamed binder is
+     absent from returned roots and surviving root environments.
+   - Done: bypassed the former mismatch where the existing
+     `alpha_rename_typed_env_roots_let_forward`
      and `alpha_rename_typed_env_roots_letinfer_forward` wrappers are phrased
      over ordinary `typed_env_roots`, while the support invariant is available
-     for `typed_env_roots_shadow_safe`. The full theorem should therefore be
-     assembled directly over `typed_*_roots_shadow_safe`, or the wrappers should
-     get shadow-safe variants that thread the shadow-safe body evidence through
-     the recursive call.
-   - Newly narrowed blocker: the shadow-safe `TER_Let` / `TERS_LetInfer`
-     wrappers cannot be plain copies of the ordinary wrappers. They must either
-     carry renamed-side `root_env_sctx_roots_named` and
-     `root_env_sctx_keys_named` support through the wrapper, or the full theorem
-     must use a stronger support-carrying induction. This is needed to prove the
-     renamed initializer obligations
-     `root_env_lookup xr Rr1 = None`, `roots_exclude xr roots1r`, and
-     `root_env_excludes xr Rr1` from `fresh_ident` context freshness.
+     for `typed_env_roots_shadow_safe`, by assembling the full theorem over
+     `typed_*_roots_shadow_safe` with support-carrying wrappers.
+   - Done: resolved the former narrowed blocker where the shadow-safe
+     `TER_Let` / `TERS_LetInfer` wrappers needed renamed-side
+     `root_env_sctx_roots_named` and `root_env_sctx_keys_named` support to prove
+     the renamed initializer obligations from `fresh_ident` context freshness.
    - Done: added `root_env_sctx_keys_named_fresh_lookup_none` and
      `root_env_sctx_support_fresh_let_init`, which package the initializer-side
      support facts needed by shadow-safe `TER_Let` / `TERS_LetInfer`.

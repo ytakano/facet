@@ -158,6 +158,31 @@ Proof.
     rewrite IH. reflexivity.
 Qed.
 
+Lemma initial_root_env_for_params_origin_names :
+  forall ps_orig ps_current,
+    List.length ps_orig = List.length ps_current ->
+    root_env_names (initial_root_env_for_params_origin ps_orig ps_current) =
+    ctx_names (params_ctx ps_current).
+Proof.
+  induction ps_orig as [| p_orig ps_orig IH];
+    intros ps_current Hlen; destruct ps_current as [| p_current ps_current];
+    simpl in *; try discriminate; try reflexivity.
+  inversion Hlen as [Hlen_tail].
+  rewrite IH; [reflexivity | exact Hlen_tail].
+Qed.
+
+Lemma initial_root_env_for_params_origin_no_shadow :
+  forall ps_orig ps_current,
+    List.length ps_orig = List.length ps_current ->
+    NoDup (ctx_names (params_ctx ps_current)) ->
+    root_env_no_shadow
+      (initial_root_env_for_params_origin ps_orig ps_current).
+Proof.
+  intros ps_orig ps_current Hlen Hnodup.
+  unfold root_env_no_shadow.
+  rewrite initial_root_env_for_params_origin_names; assumption.
+Qed.
+
 Lemma initial_root_env_for_params_no_shadow :
   forall ps,
     NoDup (ctx_names (params_ctx ps)) ->

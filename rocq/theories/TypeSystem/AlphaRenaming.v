@@ -237,6 +237,15 @@ Inductive params_alpha : list param -> list param -> Prop :=
       params_alpha ps psr ->
       params_alpha (p :: ps) (pr :: psr).
 
+Lemma params_alpha_length :
+  forall ps psr,
+    params_alpha ps psr ->
+    List.length ps = List.length psr.
+Proof.
+  intros ps psr Halpha.
+  induction Halpha; simpl; congruence.
+Qed.
+
 Definition same_fn_shape (f fr : fn_def) : Prop :=
   fn_name f = fn_name fr /\
   fn_ret f = fn_ret fr /\
@@ -4447,6 +4456,35 @@ Definition root_env_sctx_roots_named (R : root_env) (Σ : sctx) : Prop :=
 
 Definition root_env_sctx_keys_named (R : root_env) (Σ : sctx) : Prop :=
   root_env_keys_named R (ctx_names Σ).
+
+Lemma initial_root_env_for_params_origin_sctx_keys_named :
+  forall ps_orig ps_current,
+    List.length ps_orig = List.length ps_current ->
+    root_env_sctx_keys_named
+      (initial_root_env_for_params_origin ps_orig ps_current)
+      (sctx_of_ctx (params_ctx ps_current)).
+Proof.
+  unfold root_env_sctx_keys_named, root_env_keys_named, sctx_of_ctx.
+  intros ps_orig ps_current Hlen x Hin.
+  rewrite initial_root_env_for_params_origin_names in Hin; assumption.
+Qed.
+
+Lemma initial_root_env_for_params_origin_sctx_roots_named :
+  forall ps_orig ps_current,
+    root_env_sctx_roots_named
+      (initial_root_env_for_params_origin ps_orig ps_current)
+      (sctx_of_ctx (params_ctx ps_current)).
+Proof.
+  unfold root_env_sctx_roots_named.
+  induction ps_orig as [| p_orig ps_orig IH];
+    intros ps_current x roots z Hlookup Hin;
+    destruct ps_current as [| p_current ps_current]; simpl in *;
+    try discriminate.
+  destruct (ident_eqb x (param_name p_current)) eqn:Heq.
+  - inversion Hlookup; subst roots. simpl in Hin.
+    destruct Hin as [Hin | Hin]; inversion Hin.
+  - right. eapply IH; eassumption.
+Qed.
 
 Lemma root_env_sctx_keys_named_fresh_not_in :
   forall R Σ x,

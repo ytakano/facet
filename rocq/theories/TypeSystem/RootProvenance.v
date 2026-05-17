@@ -1545,6 +1545,65 @@ Proof.
   rewrite IH. reflexivity.
 Qed.
 
+Lemma root_env_names_add :
+  forall x roots R,
+    root_env_names (root_env_add x roots R) = x :: root_env_names R.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma root_env_names_remove_subset :
+  forall x R y,
+    In y (root_env_names (root_env_remove x R)) ->
+    In y (root_env_names R).
+Proof.
+  intros x R.
+  induction R as [| [z roots] rest IH]; intros y Hin; simpl in *.
+  - contradiction.
+  - destruct (ident_eqb x z) eqn:Hxz.
+    + right. exact Hin.
+    + destruct Hin as [Heq | Hin].
+      * left. exact Heq.
+      * right. apply IH. exact Hin.
+Qed.
+
+Lemma rename_no_collision_for_weaken_names :
+  forall rho x names names',
+    rename_no_collision_for rho x names' ->
+    (forall y, In y names -> In y names') ->
+    rename_no_collision_for rho x names.
+Proof.
+  unfold rename_no_collision_for.
+  intros rho x names names' Hnocoll Hsub y Hyin Hyx.
+  apply Hnocoll.
+  - apply Hsub. exact Hyin.
+  - exact Hyx.
+Qed.
+
+Lemma rename_no_collision_on_remove :
+  forall rho x R,
+    rename_no_collision_on rho (root_env_names R) ->
+    rename_no_collision_on rho (root_env_names (root_env_remove x R)).
+Proof.
+  unfold rename_no_collision_on.
+  intros rho x R Hnocoll y Hyin.
+  apply rename_no_collision_for_weaken_names
+    with (names' := root_env_names R).
+  - apply Hnocoll.
+    apply root_env_names_remove_subset with (x := x). exact Hyin.
+  - intros z Hzin.
+    apply root_env_names_remove_subset with (x := x). exact Hzin.
+Qed.
+
+Lemma rename_no_collision_on_update :
+  forall rho x roots R,
+    rename_no_collision_on rho (root_env_names R) ->
+    rename_no_collision_on rho (root_env_names (root_env_update x roots R)).
+Proof.
+  intros rho x roots R Hnocoll.
+  rewrite root_env_names_update. exact Hnocoll.
+Qed.
+
 Lemma root_env_no_shadow_update :
   forall x roots R,
     root_env_no_shadow R ->

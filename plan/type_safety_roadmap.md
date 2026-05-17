@@ -150,6 +150,9 @@ false lemma.
    - Remaining blocker: generalize the root-aware alpha-renaming proof beyond
      the existing var/place/borrow cases so an entire freshened callee body can
      be transported from cached summary evidence to call-site evidence.
+   - Done: added root-env name/no-collision helper lemmas and
+     `root_env_equiv_rename_lookup_none_forward`, preparing the let/let-infer
+     cases of the full root-aware alpha-renaming theorem.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

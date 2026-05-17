@@ -4099,6 +4099,19 @@ Proof.
   - exact Hroots.
 Qed.
 
+Lemma root_env_equiv_rename_lookup_none_forward :
+  forall rho R Rr x,
+    root_env_equiv Rr (root_env_rename rho R) ->
+    rename_no_collision_for rho x (root_env_names R) ->
+    root_env_lookup x R = None ->
+    root_env_lookup (lookup_rename x rho) Rr = None.
+Proof.
+  intros rho R Rr x Heq Hnocoll Hlookup.
+  apply root_env_equiv_lookup_none_r with (R' := root_env_rename rho R).
+  - exact Heq.
+  - apply root_env_lookup_rename_none; assumption.
+Qed.
+
 Lemma root_sets_union_rename_equiv :
   forall rho roots rootsr,
     Forall2 root_set_equiv rootsr (map (root_set_rename rho) roots) ->

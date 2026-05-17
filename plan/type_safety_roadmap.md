@@ -139,6 +139,13 @@ false lemma.
      `infer_full_env_roots_alpha_big_step_safe_direct_call_ready`. These expose
      the existing root-based runtime safety theorem over
      `alpha_normalize_global_env env`.
+   - Done: added
+     `infer_full_env_alpha_big_step_safe_with_root_sidecar`, the current
+     intermediate theorem for the ordinary alpha route. It requires ordinary
+     checker success on `alpha_normalize_global_env env`, plus explicit root
+     sidecar checker success and direct-call root evidence. This is not the
+     final ordinary-checker-only theorem; it documents the exact root evidence
+     still needed by runtime cleanup.
    - Remaining blocker: restate the main theorem over the alpha-normalized
      environment/body produced by `alpha_normalize_global_env`, then connect
      the existing raw `infer_full_env` soundness facts to that route.

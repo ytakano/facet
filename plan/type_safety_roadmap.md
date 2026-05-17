@@ -167,6 +167,9 @@ false lemma.
    - Done: added root-aware alpha-renaming wrappers for trivial expression
      constructors, function values, and drop expressions, with drop parameterized
      by the recursive inner-expression alpha-renaming evidence.
+   - Done: added the root-aware alpha-renaming wrapper for `TER_If`, including
+     branch context merge, branch root-env equivalence under renaming, and
+     renamed branch-root union equivalence.
    - Remaining blocker: assemble the full `typed_env_roots`
      alpha-renaming theorem, using the accumulated constructor wrappers and
      root-env algebra helpers in the corresponding constructor cases.

@@ -176,10 +176,6 @@ false lemma.
      `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`, closing
      the old blockers around assembling the full shadow-safe
      `typed_env_roots` alpha-renaming theorem.
-   - Remaining blocker: prove the actual shadow summary bridge by combining
-     root substitution with tail weakening, so summary root evidence can be
-     transported to each freshened direct-call body without assuming it as a
-     premise.
    - Done: added origin/current initial root-env support facts for this bridge:
      `initial_root_env_for_params_origin_names`,
      `initial_root_env_for_params_origin_no_shadow`,
@@ -187,6 +183,25 @@ false lemma.
      `initial_root_env_for_params_origin_sctx_roots_named`. These cover the
      parameter-renamed root environment used when cached callee summaries are
      transported to freshened call bodies.
+   - Done: added and compiled the shadow-safe root substitution lemmas in
+     `AlphaRenaming.v`: `typed_roots_shadow_safe_instantiate_fresh_mutual`
+     plus wrappers for env, args, and fields. These give the bridge a
+     compiled route for instantiating cached summary roots at freshened
+     direct-call bodies.
+   - Remaining blocker: `direct_call_callee_body_root_shadow_summary_bridge`
+     still has weaker premises than the runtime call case. To use
+     `typed_env_roots_shadow_safe_instantiate_fresh`, the bridge needs evidence
+     that `root_subst_of_params` images exclude the freshened callee body local
+     store names. The runtime call proof can derive that from
+     `provenance_ready_args`, `store_typed`, `store_roots_within`,
+     `store_no_shadow`, `root_env_no_shadow`, and `eval_args`, but the current
+     summary-bridge premise set only exposes `eval_args` and
+     `root_env_store_roots_named`.
+   - Next implementation step: strengthen or refactor the direct-call bridge
+     so it carries the same root/store invariants available at the actual call
+     site, then consume the shadow-safe root substitution lemmas together with
+     tail weakening to transport cached summary evidence to each freshened
+     direct-call body without assuming it as a premise.
 
 4. Direct-call root evidence remains a supporting obligation.
    - Existing direct-call preservation work may continue, but it must be framed
@@ -402,6 +417,11 @@ false lemma.
      `alpha_rename_typed_env_roots_shadow_safe_full_support_forward` using
      the support-carrying wrappers, including the shadow-safe `TER_Let` /
      `TERS_LetInfer` cases and the `EIf` size-premise callback.
+   - Done: added and compiled
+     `typed_roots_shadow_safe_instantiate_fresh_mutual` plus the env, args,
+     and fields wrappers in `AlphaRenaming.v`. These are the substitution-side
+     support needed before the shadow summary bridge can instantiate cached
+     root-polymorphic summaries at freshened direct-call bodies.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

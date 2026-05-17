@@ -111,13 +111,16 @@ shows they are unusable.
   `alpha_rename_fn_def_params_body_facts`,
   `ctx_alpha_no_collision_on`, and
   `alpha_rename_fn_def_initial_support_facts`.
+- The shadow-summary interface now carries callee parameter uniqueness:
+  `callee_body_root_shadow_summary` includes
+  `NoDup (ctx_names (params_ctx (fn_params fdef)))`.
 
 ### Next Implementation Task
 
-Resolve the callee-parameter freshness invariant, then prove the direct-call
-shadow-summary bridge without assuming transported callee body evidence.
+Prove the direct-call shadow-summary bridge without assuming transported callee
+body evidence.
 
-Current blocker:
+Completed prerequisite:
 
 - The bridge needs to apply
   `alpha_rename_typed_env_roots_shadow_safe_full_support_forward` to a cached
@@ -128,30 +131,20 @@ Current blocker:
   `rename_no_collision_on rho (root_env_names (initial_root_env_for_fn fdef))`.
 - These follow from `NoDup (ctx_names (params_ctx (fn_params fdef)))`, and the
   helper `alpha_rename_fn_def_initial_support_facts` packages the proof.
-- However, the current summary interface
-  `callee_body_root_shadow_summary` does not carry parameter `NoDup` or
-  equivalent `root_env_no_shadow (initial_root_env_for_fn fdef)` evidence.
-- Do not bypass this by weakening the alpha theorem or by making root checker
-  behavior stricter. Duplicate parameters are already a user-facing checker
-  rejection; the proof route must expose that invariant explicitly.
+- The cached summary now exposes that `NoDup` premise directly.
 
-Next design/implementation decision:
+Current proof blocker:
 
-1. Prefer strengthening the cached callee summary/evidence interface with a
-   parameter-well-formedness field:
-
-   ```coq
-   Definition callee_body_root_shadow_summary ... :=
-     NoDup (ctx_names (params_ctx (fn_params fdef))) /\
-     callee_body_root_shadow_ready_at env fdef (initial_root_env_for_fn fdef).
-   ```
-
-   or an equivalent named record if the tuple becomes hard to read.
-2. Update the constructors/producers of
-   `env_fns_root_shadow_summary_evidence` so the invariant comes from the
-   ordinary checked/alpha-normalized environment, not from an extra runtime
-   assumption.
-3. Then implement the bridge theorem below.
+- After alpha-renaming and instantiating the cached callee body summary, the
+  bridge must still produce the final
+  `roots_exclude_params (fn_params fcall) roots_body` and
+  `root_env_excludes_params (fn_params fcall) R_body` fields required by
+  `callee_body_root_shadow_ready_at`.
+- This should be handled as proof plumbing from the existing cached
+  `Hexclude_roots` / `Hexclude_env`, alpha-renaming support facts, root
+  instantiate exclusion lemmas, and tail-frame exclusion lemmas.
+- Stop again if this requires a new semantic invariant. Do not weaken checker
+  behavior or the alpha-renaming theorem.
 
 Target theorem:
 
@@ -182,7 +175,10 @@ Required proof route:
    the parameter-only root environment.
 8. Use `eval_args_root_tail_fresh_names_for_fresh_call` and
    `typed_env_roots_shadow_safe_tail_frame` to add the caller tail.
-9. Finish with `call_param_root_env_app_tail`.
+9. Transport the cached return-root and output-root param-exclusion facts
+   through alpha-renaming, root-substitution instantiation, and the caller-tail
+   frame.
+10. Finish with `call_param_root_env_app_tail`.
 
 Stop and report if any step needs a semantic invariant rather than a proof-only
 helper. Do not change checker behavior.

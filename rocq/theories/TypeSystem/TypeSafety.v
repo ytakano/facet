@@ -11466,6 +11466,7 @@ Definition callee_body_root_summary (env : global_env) (fdef : fn_def)
 
 Definition callee_body_root_shadow_summary (env : global_env) (fdef : fn_def)
     : Prop :=
+  NoDup (ctx_names (params_ctx (fn_params fdef))) /\
   callee_body_root_shadow_ready_at env fdef (initial_root_env_for_fn fdef).
 
 Definition env_fns_root_summary_evidence (env : global_env) : Prop :=
@@ -11486,8 +11487,9 @@ Proof.
   intros env Hshadow fname fdef Hlookup.
   unfold env_fns_root_shadow_summary_evidence in Hshadow.
   unfold callee_body_root_summary, callee_body_root_shadow_summary in *.
+  destruct (Hshadow fname fdef Hlookup) as [_ Hready].
   eapply callee_body_root_ready_at_of_shadow_ready_at.
-  eapply Hshadow. exact Hlookup.
+  exact Hready.
 Qed.
 
 Definition direct_call_callee_body_root_summary_bridge

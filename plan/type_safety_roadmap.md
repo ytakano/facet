@@ -92,6 +92,7 @@ shows they are unusable.
   `direct_call_callee_body_root_evidence`,
   `direct_call_callee_body_root_summary_bridge`,
   `direct_call_callee_body_root_shadow_summary_bridge`,
+  `direct_call_callee_body_root_shadow_summary_bridge_of_unique`,
   `infer_full_env_alpha_big_step_safe_with_root_summary_bridge`, and
   `infer_full_env_alpha_big_step_safe_with_root_shadow_summary_bridge`.
 - Shadow-safe root typing and alpha-renaming support exists:
@@ -125,6 +126,13 @@ shows they are unusable.
 - Cached shadow summaries can now be recovered from direct-call
   `In fdef (env_fns env)` evidence under function-name uniqueness via
   `env_fns_root_shadow_summary_evidence_in_unique`.
+- The preferred ordinary alpha route should use the `_of_unique` wrapper and
+  derive the shadow bridge from `fn_env_unique_by_name`; do not add an explicit
+  `direct_call_callee_body_root_shadow_summary_bridge` premise to new
+  ordinary-checker-facing statements.
+- `EnvRuntimeSafety.v` exposes
+  `infer_full_env_alpha_big_step_safe_with_shadow_summary_sidecar` as the
+  preferred ordinary-alpha sidecar theorem name.
 - Call argument root-list length plumbing exists:
   `typed_args_roots_arg_roots_length` and `apply_lt_params_length`.
 
@@ -208,9 +216,17 @@ helper. Do not change checker behavior.
 
 ### Next Implementation Task
 
-Use the new `EnvRuntimeSafety.v` convenience wrapper that derives the shadow
-bridge from `fn_env_unique_by_name` to return to the ordinary checker target
-over `alpha_normalize_global_env`.
+Close the remaining sidecar obligations on the ordinary alpha route:
+
+1. Root sidecar checker success for `alpha_normalize_global_env`.
+2. `env_fns_root_shadow_summary_evidence` for the alpha-normalized function
+   environment.
+
+Use the `_of_unique` wrapper to derive the direct-call shadow bridge from
+`fn_env_unique_by_name`. Do not reintroduce an explicit
+`direct_call_callee_body_root_shadow_summary_bridge` premise, and do not claim
+ordinary-checker-only type safety until both sidecar obligations are removed or
+derived from ordinary checker success.
 
 ## Detailed Status Inventory
 
@@ -281,8 +297,8 @@ verbose than the quick path. Do not use it as the primary implementation order.
      `infer_full_env_alpha_big_step_safe_with_root_sidecar`, the current
      intermediate theorem for the ordinary alpha route. It requires ordinary
      checker success on `alpha_normalize_global_env env`, plus explicit root
-     sidecar checker success and direct-call root evidence. This is not the
-     final ordinary-checker-only theorem; it documents the exact root evidence
+     sidecar checker success and root-summary evidence. This is not the final
+     ordinary-checker-only theorem; it documents the exact sidecar evidence
      still needed by runtime cleanup.
    - Done: added Prop-level direct-call evidence wrappers
      `infer_full_env_roots_big_step_safe_direct_call_evidence` and
@@ -302,14 +318,20 @@ verbose than the quick path. Do not use it as the primary implementation order.
      `infer_full_env_alpha_big_step_safe_with_root_shadow_summary_bridge` in
      `EnvRuntimeSafety.v`, wiring shadow summary evidence into the existing
      direct-call runtime safety route.
-   - Remaining blocker: restate the main theorem over the alpha-normalized
-     environment/body produced by `alpha_normalize_global_env`, then connect
-     the existing raw `infer_full_env` soundness facts to that route.
+   - Done: added the `_of_unique` route
+     `direct_call_callee_body_root_shadow_summary_bridge_of_unique` and the
+     corresponding `EnvRuntimeSafety.v` convenience wrapper, so preferred
+     ordinary-alpha statements can derive direct-call shadow bridge evidence
+     from `fn_env_unique_by_name` instead of requiring an explicit
+     `direct_call_callee_body_root_shadow_summary_bridge` premise.
    - Remaining blocker: ordinary checker success still does not by itself
-     produce the `typed_env_roots` evidence required by direct-call cleanup;
-     either prove that the ordinary alpha route establishes the needed sidecar
-     root evidence, or keep the final theorem explicitly parameterized by that
-     sidecar evidence until the bridge is proved.
+     produce root sidecar checker success for `alpha_normalize_global_env`.
+     Keep the theorem explicitly parameterized by this sidecar success until
+     it is derived from ordinary checker success.
+   - Remaining blocker: ordinary checker success still does not by itself
+     produce `env_fns_root_shadow_summary_evidence` for the alpha-normalized
+     function environment. This is the remaining summary-evidence input after
+     the direct-call bridge is derived through `_of_unique`.
    - Done: proved and focused-compiled
      `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`, closing
      the old blockers around assembling the full shadow-safe
@@ -354,17 +376,10 @@ verbose than the quick path. Do not use it as the primary implementation order.
      `eval_args_root_tail_fresh_names_for_fresh_call`. These facts transport
      shadow-safe callee body root typing over a caller tail once the freshened
      body-local names are absent from that tail.
-   - Remaining blocker: consume the tail-frame theorem in the actual
-     shadow-summary transport, so cached summary evidence can be transported to
-     each freshened direct-call body without assuming the transported evidence
-     as a premise.
-   - Remaining blocker refinement: the tail-frame theorem is now available.
-     The remaining bridge work is to package the cached callee summary through
-     `alpha_rename_fn_def`: expose the parameter rename environment, body
-     rename equation, ctx-alpha evidence, used-name facts, and output
-     root-env no-collision/support premises required by
-     `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`, then
-     instantiate the renamed summary and apply the tail frame.
+   - Done: consumed the tail-frame theorem in the actual shadow-summary
+     transport. Cached summary evidence is now transported to each freshened
+     direct-call body by `direct_call_callee_body_root_shadow_summary_bridge_of_unique`
+     instead of being assumed as an explicit premise.
 
 4. Direct-call root evidence remains a supporting obligation.
    - Existing direct-call preservation work may continue, but it must be framed

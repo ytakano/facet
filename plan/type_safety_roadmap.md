@@ -317,13 +317,17 @@ false lemma.
      no-collision fact plus the original body-result roots/root-env escape
      premises. The full induction callback no longer has to recover these
      actual-result facts from generalized callback parameters.
-   - Remaining narrowed blocker: add focused support-stripping helpers for
-     body results whose `RStore x` roots are excluded, so support facts over an
+   - Done: added focused support-stripping helpers
+     `root_set_sctx_roots_named_strip_added_same_bindings`,
+     `root_env_sctx_roots_named_remove_strip_added_same_bindings`, and
+     `root_env_sctx_keys_named_remove_strip_added_same_bindings` for body
+     results whose `RStore x` roots are excluded, so support facts over an
      actual result context `Σ2` with
      `sctx_same_bindings (sctx_add x T m Σ1) Σ2` can be reused over the
      binder-free context needed by the final let/letinfer escape obligations.
-     Then retry assembling the full support-carrying induction over
-     `typed_*_roots_shadow_safe`.
+   - Remaining narrowed blocker: retry
+     `alpha_rename_typed_env_roots_shadow_safe_full_support_forward` using
+     those helpers in `TER_Let` / `TERS_LetInfer`.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

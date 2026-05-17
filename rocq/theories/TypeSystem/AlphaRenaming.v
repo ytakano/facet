@@ -5423,6 +5423,55 @@ Proof.
   apply root_set_sctx_roots_named_remove_ctx_excluding; assumption.
 Qed.
 
+Lemma root_set_sctx_roots_named_strip_added_same_bindings :
+  forall roots Σ Σ2 x T m,
+    roots_exclude x roots ->
+    root_set_sctx_roots_named roots Σ2 ->
+    sctx_same_bindings (sctx_add x T m Σ) Σ2 ->
+    root_set_sctx_roots_named roots Σ.
+Proof.
+  intros roots Σ Σ2 x T m Hexcl Hroots Hsame.
+  eapply root_set_sctx_roots_named_same_bindings.
+  - apply sctx_same_bindings_sym.
+    eapply sctx_same_bindings_remove_added.
+    + apply sctx_same_bindings_refl.
+    + exact Hsame.
+  - apply root_set_sctx_roots_named_remove_binding; assumption.
+Qed.
+
+Lemma root_env_sctx_roots_named_remove_strip_added_same_bindings :
+  forall R Σ Σ2 x T m,
+    root_env_no_shadow R ->
+    root_env_excludes x (root_env_remove x R) ->
+    root_env_sctx_roots_named R Σ2 ->
+    sctx_same_bindings (sctx_add x T m Σ) Σ2 ->
+    root_env_sctx_roots_named (root_env_remove x R) Σ.
+Proof.
+  intros R Σ Σ2 x T m Hns Hexcl Hroots Hsame.
+  eapply root_env_sctx_roots_named_same_bindings.
+  - apply sctx_same_bindings_sym.
+    eapply sctx_same_bindings_remove_added.
+    + apply sctx_same_bindings_refl.
+    + exact Hsame.
+  - apply root_env_sctx_roots_named_remove_binding; assumption.
+Qed.
+
+Lemma root_env_sctx_keys_named_remove_strip_added_same_bindings :
+  forall R Σ Σ2 x T m,
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R Σ2 ->
+    sctx_same_bindings (sctx_add x T m Σ) Σ2 ->
+    root_env_sctx_keys_named (root_env_remove x R) Σ.
+Proof.
+  intros R Σ Σ2 x T m Hns Hkeys Hsame.
+  eapply root_env_sctx_keys_named_same_bindings.
+  - apply sctx_same_bindings_sym.
+    eapply sctx_same_bindings_remove_added.
+    + apply sctx_same_bindings_refl.
+    + exact Hsame.
+  - apply root_env_sctx_keys_named_remove_binding; assumption.
+Qed.
+
 Lemma root_env_sctx_roots_named_update_union :
   forall R Σ x roots_old roots_new,
     root_env_no_shadow R ->

@@ -106,11 +106,52 @@ shows they are unusable.
   `root_env_tail_fresh_names`,
   `typed_roots_shadow_safe_tail_frame_mutual`, and
   `typed_env_roots_shadow_safe_tail_frame`.
+- Function-level alpha-renaming packaging now exists in `AlphaRenaming.v`:
+  `alpha_rename_fn_def_params_body`,
+  `alpha_rename_fn_def_params_body_facts`,
+  `ctx_alpha_no_collision_on`, and
+  `alpha_rename_fn_def_initial_support_facts`.
 
 ### Next Implementation Task
 
-Prove the direct-call shadow-summary bridge without assuming transported callee
-body evidence.
+Resolve the callee-parameter freshness invariant, then prove the direct-call
+shadow-summary bridge without assuming transported callee body evidence.
+
+Current blocker:
+
+- The bridge needs to apply
+  `alpha_rename_typed_env_roots_shadow_safe_full_support_forward` to a cached
+  callee body summary.
+- That theorem requires the source initial root environment to be no-shadow and
+  no-collision:
+  `root_env_no_shadow (initial_root_env_for_fn fdef)` and
+  `rename_no_collision_on rho (root_env_names (initial_root_env_for_fn fdef))`.
+- These follow from `NoDup (ctx_names (params_ctx (fn_params fdef)))`, and the
+  helper `alpha_rename_fn_def_initial_support_facts` packages the proof.
+- However, the current summary interface
+  `callee_body_root_shadow_summary` does not carry parameter `NoDup` or
+  equivalent `root_env_no_shadow (initial_root_env_for_fn fdef)` evidence.
+- Do not bypass this by weakening the alpha theorem or by making root checker
+  behavior stricter. Duplicate parameters are already a user-facing checker
+  rejection; the proof route must expose that invariant explicitly.
+
+Next design/implementation decision:
+
+1. Prefer strengthening the cached callee summary/evidence interface with a
+   parameter-well-formedness field:
+
+   ```coq
+   Definition callee_body_root_shadow_summary ... :=
+     NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+     callee_body_root_shadow_ready_at env fdef (initial_root_env_for_fn fdef).
+   ```
+
+   or an equivalent named record if the tuple becomes hard to read.
+2. Update the constructors/producers of
+   `env_fns_root_shadow_summary_evidence` so the invariant comes from the
+   ordinary checked/alpha-normalized environment, not from an extra runtime
+   assumption.
+3. Then implement the bridge theorem below.
 
 Target theorem:
 
@@ -125,23 +166,23 @@ Required proof route:
 
 1. Use function-name uniqueness to recover the cached shadow summary for the
    runtime callee.
-2. Package `alpha_rename_fn_def` into a function-level helper that exposes:
-   - the parameter rename environment,
-   - the body rename equation,
-   - `ctx_alpha` for parameter contexts,
-   - used-name / free-variable disjointness facts,
-   - root-env key/root support for
-     `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`.
-3. Apply `alpha_rename_typed_env_roots_shadow_safe_full_support_forward` to the
+2. Destructure the strengthened summary to obtain both the cached body summary
+   and `NoDup (ctx_names (params_ctx (fn_params fdef)))`.
+3. Use `alpha_rename_fn_def_initial_support_facts` to obtain the parameter
+   rename environment, body rename equation, `ctx_alpha`, used/disjoint facts,
+   initial root no-shadow/support facts, and source no-collision.
+4. Derive output root no-collision for the cached body result from typed output
+   support and `ctx_alpha`; add a proof helper if needed.
+5. Apply `alpha_rename_typed_env_roots_shadow_safe_full_support_forward` to the
    cached summary body.
-4. Instantiate the renamed summary with
+6. Instantiate the renamed summary with
    `root_subst_of_params (fn_params fdef) arg_roots`.
-5. Use
+7. Use
    `root_env_instantiate_initial_origin_equiv_call_param_root_env_empty` for
    the parameter-only root environment.
-6. Use `eval_args_root_tail_fresh_names_for_fresh_call` and
+8. Use `eval_args_root_tail_fresh_names_for_fresh_call` and
    `typed_env_roots_shadow_safe_tail_frame` to add the caller tail.
-7. Finish with `call_param_root_env_app_tail`.
+9. Finish with `call_param_root_env_app_tail`.
 
 Stop and report if any step needs a semantic invariant rather than a proof-only
 helper. Do not change checker behavior.

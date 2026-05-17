@@ -2712,6 +2712,79 @@ Proof.
   eapply alpha_rename_params_initial_root_env_rename; eassumption.
 Qed.
 
+Lemma alpha_rename_fn_def_params_body :
+  forall used f fr used',
+    alpha_rename_fn_def used f = (fr, used') ->
+    exists rho used_params,
+      alpha_rename_params []
+        (param_names (fn_params f) ++ free_vars_expr (fn_body f) ++ used)
+        (fn_params f) = (fn_params fr, rho, used_params) /\
+      alpha_rename_expr rho used_params (fn_body f) =
+        (fn_body fr, used').
+Proof.
+  intros used f fr used' Hrename.
+  destruct f as [fname lifetimes outs ps ret body].
+  unfold alpha_rename_fn_def in Hrename.
+  simpl in Hrename.
+  destruct (alpha_rename_params []
+    (param_names ps ++ free_vars_expr body ++ used) ps)
+    as [[ps' rho] used_params] eqn:Hps.
+  destruct (alpha_rename_expr rho used_params body)
+    as [body' used_body] eqn:Hbody.
+  inversion Hrename; subst. simpl.
+  exists rho, used_params.
+  split; assumption.
+Qed.
+
+Lemma alpha_rename_fn_def_params_body_facts :
+  forall used f fr used',
+    alpha_rename_fn_def used f = (fr, used') ->
+    exists rho used_params,
+      alpha_rename_params []
+        (param_names (fn_params f) ++ free_vars_expr (fn_body f) ++ used)
+        (fn_params f) = (fn_params fr, rho, used_params) /\
+      alpha_rename_expr rho used_params (fn_body f) =
+        (fn_body fr, used') /\
+      ctx_alpha rho
+        (sctx_of_ctx (params_ctx (fn_params f)))
+        (sctx_of_ctx (params_ctx (fn_params fr))) /\
+      (forall x,
+        In x (ctx_names
+          (sctx_of_ctx (params_ctx (fn_params fr)))) ->
+        In x used_params) /\
+      (forall x, In x (rename_range rho) -> In x used_params) /\
+      disjoint_names (free_vars_expr (fn_body f)) (rename_range rho).
+Proof.
+  intros used f fr used' Hrename.
+  destruct f as [fname lifetimes outs ps ret body].
+  unfold alpha_rename_fn_def in Hrename.
+  simpl in Hrename.
+  destruct (alpha_rename_params []
+    (param_names ps ++ free_vars_expr body ++ used) ps)
+    as [[psr rho] used_params] eqn:Hps.
+  destruct (alpha_rename_expr rho used_params body)
+    as [bodyr used_body] eqn:Hbody.
+  inversion Hrename; subst. simpl.
+  exists rho, used_params.
+  repeat split.
+  - exact Hps.
+  - exact Hbody.
+  - eapply alpha_rename_params_ctx_alpha_nil. exact Hps.
+  - intros x Hin.
+    eapply alpha_rename_params_names_in_used.
+    + exact Hps.
+    + exact Hin.
+  - intros x Hin.
+    eapply alpha_rename_params_range_in_used_nil.
+    + exact Hps.
+    + exact Hin.
+  - intros x Hfree Hrange.
+    eapply alpha_rename_params_range_fresh_used_nil.
+    + exact Hps.
+    + exact Hrange.
+    + apply in_or_app. right. apply in_or_app. left. exact Hfree.
+Qed.
+
 Lemma alpha_rename_syntax_go_shape : forall used fenv fenvr used',
   alpha_rename_syntax_go used fenv = (fenvr, used') ->
   fenv_alpha fenv fenvr.
@@ -5281,6 +5354,125 @@ Proof.
         { apply ident_eqb_neq. intro Heq. subst x0.
           rewrite ident_eqb_refl in Hx0x. discriminate. }
         rewrite Hxx0. right. apply IHHalpha. exact Hin.
+Qed.
+
+Lemma ctx_alpha_no_collision_on :
+  forall rho Σ Σr,
+    ctx_alpha rho Σ Σr ->
+    NoDup (ctx_names Σ) ->
+    NoDup (ctx_names Σr) ->
+    rename_no_collision_on rho (ctx_names Σ).
+Proof.
+  intros rho Σ Σr Halpha.
+  induction Halpha; intros Hnodup Hnodup_r.
+  - unfold rename_no_collision_on, rename_no_collision_for.
+    intros x Hin y Hyin Hyx Heq. simpl in Heq. contradiction.
+  - inversion Hnodup as [| ? ? Hx_notin Hnodup_tail]; subst.
+    inversion Hnodup_r as [| ? ? Hxr_notin Hnodup_r_tail]; subst.
+    unfold rename_no_collision_on, rename_no_collision_for in *.
+    intros a Ha y Hy Hya Heq.
+    simpl in Ha, Hy.
+    destruct Ha as [Ha | Ha]; destruct Hy as [Hy | Hy].
+    + subst. contradiction.
+    + subst a.
+      assert (Hyx : y <> x).
+      { intros Heq_yx. subst y. contradiction. }
+      simpl in Heq. rewrite ident_eqb_refl in Heq.
+      destruct (ident_eqb y x) eqn:Hyeq.
+      * apply ident_eqb_eq in Hyeq. contradiction.
+      * apply Hxr_notin.
+        rewrite <- Heq.
+        eapply ctx_alpha_lookup_rename_in_names; eassumption.
+    + subst y.
+      assert (Hax : a <> x).
+      { intros Heq_ax. subst a. contradiction. }
+      simpl in Heq. rewrite ident_eqb_refl in Heq.
+      destruct (ident_eqb a x) eqn:Heq_ax.
+      * apply ident_eqb_eq in Heq_ax. contradiction.
+      * apply Hxr_notin.
+        rewrite Heq.
+        eapply ctx_alpha_lookup_rename_in_names; eassumption.
+    + assert (Hax : a <> x).
+      { intros Heq_ax. subst a. contradiction. }
+      assert (Hyx : y <> x).
+      { intros Heq_yx. subst y. contradiction. }
+      simpl in Heq.
+      destruct (ident_eqb a x) eqn:Heq_ax.
+      * apply ident_eqb_eq in Heq_ax. contradiction.
+      * destruct (ident_eqb y x) eqn:Hyeq.
+        -- apply ident_eqb_eq in Hyeq. contradiction.
+        -- pose proof (IHHalpha Hnodup_tail Hnodup_r_tail
+             a Ha y Hy Hya) as Hneq.
+           apply Hneq. exact Heq.
+Qed.
+
+Lemma alpha_rename_fn_def_initial_support_facts :
+  forall used f fr used',
+    alpha_rename_fn_def used f = (fr, used') ->
+    NoDup (ctx_names (params_ctx (fn_params f))) ->
+    exists rho used_params,
+      alpha_rename_params []
+        (param_names (fn_params f) ++ free_vars_expr (fn_body f) ++ used)
+        (fn_params f) = (fn_params fr, rho, used_params) /\
+      alpha_rename_expr rho used_params (fn_body f) =
+        (fn_body fr, used') /\
+      ctx_alpha rho
+        (sctx_of_ctx (params_ctx (fn_params f)))
+        (sctx_of_ctx (params_ctx (fn_params fr))) /\
+      root_env_no_shadow (initial_root_env_for_fn f) /\
+      root_env_no_shadow
+        (initial_root_env_for_params_origin
+          (fn_params f) (fn_params fr)) /\
+      root_env_equiv
+        (initial_root_env_for_params_origin
+          (fn_params f) (fn_params fr))
+        (root_env_rename rho (initial_root_env_for_fn f)) /\
+      root_env_sctx_keys_named (initial_root_env_for_fn f)
+        (sctx_of_ctx (params_ctx (fn_params f))) /\
+      root_env_sctx_roots_named (initial_root_env_for_fn f)
+        (sctx_of_ctx (params_ctx (fn_params f))) /\
+      rename_no_collision_on rho
+        (root_env_names (initial_root_env_for_fn f)) /\
+      (forall x,
+        In x (ctx_names
+          (sctx_of_ctx (params_ctx (fn_params fr)))) ->
+        In x used_params) /\
+      (forall x, In x (rename_range rho) -> In x used_params) /\
+      disjoint_names (free_vars_expr (fn_body f)) (rename_range rho).
+Proof.
+  intros used f fr used' Hrename Hnodup.
+  destruct (alpha_rename_fn_def_params_body_facts
+      used f fr used' Hrename)
+    as (rho & used_params & Hps & Hbody & Halpha & Hctx_used &
+        Hrange_used & Hdisj).
+  exists rho, used_params.
+  repeat split.
+  - exact Hps.
+  - exact Hbody.
+  - exact Halpha.
+  - apply initial_root_env_for_fn_no_shadow. exact Hnodup.
+  - apply initial_root_env_for_params_origin_no_shadow.
+    + apply params_alpha_length.
+      eapply alpha_rename_params_shape. exact Hps.
+    + eapply alpha_rename_params_names_nodup. exact Hps.
+  - destruct (alpha_rename_fn_def_initial_root_env_rename
+        used f fr used' Hrename Hnodup) as
+      [rho0 [used_params0 [Hps0 Hroot_eq]]].
+    rewrite Hps in Hps0. inversion Hps0; subst rho0 used_params0.
+    rewrite Hroot_eq. apply root_env_equiv_refl.
+  - unfold initial_root_env_for_fn.
+    apply initial_root_env_for_params_origin_sctx_keys_named.
+    reflexivity.
+  - unfold initial_root_env_for_fn.
+    apply initial_root_env_for_params_origin_sctx_roots_named.
+  - rewrite initial_root_env_for_fn_names.
+    eapply ctx_alpha_no_collision_on.
+    + exact Halpha.
+    + exact Hnodup.
+    + eapply alpha_rename_params_names_nodup. exact Hps.
+  - exact Hctx_used.
+  - exact Hrange_used.
+  - exact Hdisj.
 Qed.
 
 Lemma root_set_sctx_roots_named_rename :

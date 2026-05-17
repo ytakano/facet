@@ -259,13 +259,6 @@ false lemma.
    - Done: added support-transport helpers for root-set/root-env support under
      `root_set_equiv`, `root_env_equiv`, `root_set_rename`, and
      `root_env_rename` under `ctx_alpha`.
-   - Remaining narrowed blocker: assemble the full theorem over
-     `typed_*_roots_shadow_safe` as a support-carrying induction. The next
-     proof obligation is the let-body recursive call: derive
-     `rename_no_collision_on ((x, xr) :: rho)
-       (root_env_names (root_env_add x roots1 R1))`
-     from the existing outer no-collision facts, `root_env_lookup x R1 = None`,
-     `root_env_excludes x R1`, and freshness of `xr`.
    - Done: added the fixed let-body recursive-call helpers
      `root_env_sctx_keys_named_lookup_rename_fresh`,
      `rename_no_collision_on_cons_lookup_rename_fresh`,
@@ -273,6 +266,11 @@ false lemma.
      `root_env_add_shadow_safe_rename_equiv`. These package the no-collision
      and root-env add/rename equivalence facts needed for the support-carrying
      `TER_Let` / `TERS_LetInfer` cases.
+   - Done: added and compiled
+     `root_env_remove_shadow_safe_rename_no_collision_on`. This helper derives
+     the let-body extended no-collision obligation from the removed result
+     environment, so the body callback can recover the
+     `((x, xr) :: rho)` no-collision fact after removing the let binder.
    - Done: added the body-result equivalence helpers
      `root_set_shadow_safe_rename_body_equiv` and
      `root_env_remove_shadow_safe_rename_body_equiv`. These convert body IH

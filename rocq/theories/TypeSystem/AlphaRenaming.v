@@ -6854,6 +6854,59 @@ Proof.
       * right. apply IH. exact Hin.
 Qed.
 
+Lemma root_env_remove_shadow_safe_rename_no_collision_on :
+  forall rho Σ Σr R x xr T m,
+    ctx_alpha rho Σ Σr ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R (sctx_add x T m Σ) ->
+    ~ In xr (ctx_names Σr) ->
+    rename_no_collision_on rho (root_env_names (root_env_remove x R)) ->
+    rename_no_collision_on ((x, xr) :: rho) (root_env_names R).
+Proof.
+  unfold rename_no_collision_on, rename_no_collision_for.
+  intros rho Σ Σr R x xr T m Halpha Hns Hkeys Hfresh Hnocoll
+    y Hy z Hz Hneq.
+  destruct (ident_eqb y x) eqn:Hxy.
+  - apply ident_eqb_eq in Hxy. subst y.
+    simpl. rewrite ident_eqb_refl.
+    destruct (ident_eqb z x) eqn:Hzx.
+    + apply ident_eqb_eq in Hzx. subst z. contradiction.
+    + assert (Hno :
+        lookup_rename z ((x, xr) :: rho) <> xr).
+      { eapply root_env_sctx_keys_named_added_bound_no_collision.
+        - exact Halpha.
+        - exact Hkeys.
+        - exact Hfresh.
+        - exact Hz.
+        - intros Heq. subst z. rewrite ident_eqb_refl in Hzx.
+          discriminate. }
+      simpl in Hno. rewrite Hzx in Hno. exact Hno.
+  - destruct (ident_eqb z x) eqn:Hzx.
+    + apply ident_eqb_eq in Hzx. subst z.
+      simpl. rewrite Hxy. rewrite ident_eqb_refl.
+      assert (Hno : lookup_rename y ((x, xr) :: rho) <> xr).
+      { eapply root_env_sctx_keys_named_added_bound_no_collision.
+        - exact Halpha.
+        - exact Hkeys.
+        - exact Hfresh.
+        - exact Hy.
+        - intros Heq'. subst y. rewrite ident_eqb_refl in Hxy.
+          discriminate. }
+      simpl in Hno. rewrite Hxy in Hno.
+      intros Heq. apply Hno. symmetry. exact Heq.
+    + simpl. rewrite Hxy. rewrite Hzx.
+      eapply Hnocoll.
+      * eapply root_env_names_remove_preserve_neq.
+        -- intros Heq. subst y. rewrite ident_eqb_refl in Hxy.
+           discriminate.
+        -- exact Hy.
+      * eapply root_env_names_remove_preserve_neq.
+        -- intros Heq. subst z. rewrite ident_eqb_refl in Hzx.
+           discriminate.
+        -- exact Hz.
+      * exact Hneq.
+Qed.
+
 Lemma rename_no_collision_on_weaken_names :
   forall rho names names',
     rename_no_collision_on rho names' ->

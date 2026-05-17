@@ -297,6 +297,12 @@ false lemma.
      root-env/root-set rename equivalences and support facts, and still return
      the fresh renamed-binder lookup/exclusion facts needed by the shadow-safe
      let rules.
+   - Done: added full-induction setup helpers
+     `ctx_alpha_add_fresh_inv` and
+     `root_env_sctx_support_fresh_renamed_let_init`. These package the
+     renamed-tail freshness and renamed initializer lookup/exclusion facts
+     needed when constructing the `TER_Let` / `TERS_LetInfer` body callback
+     inside the full support-carrying induction.
    - Remaining narrowed blocker: assemble the full support-carrying induction
      over `typed_*_roots_shadow_safe`, using the accumulated support-carrying
      constructor wrappers.

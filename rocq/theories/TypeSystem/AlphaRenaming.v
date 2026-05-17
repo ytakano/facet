@@ -656,6 +656,19 @@ Proof.
   unfold sctx_add, ctx_add. constructor; assumption.
 Qed.
 
+Lemma ctx_alpha_add_fresh_inv : forall ρ Γ Γr x xr T m,
+  ctx_alpha ((x, xr) :: ρ)
+    (sctx_add x T m Γ) (sctx_add xr T m Γr) ->
+  ctx_alpha ρ Γ Γr /\
+  ~ In xr (ctx_names Γr) /\
+  ~ In xr (rename_range ρ).
+Proof.
+  intros ρ Γ Γr x xr T m Halpha.
+  unfold sctx_add, ctx_add in Halpha.
+  inversion Halpha; subst.
+  repeat split; assumption.
+Qed.
+
 Lemma ctx_alpha_remove_head : forall ρ Γ Γr x xr T b m,
   ctx_alpha ρ Γ Γr ->
   ctx_alpha ρ
@@ -4741,6 +4754,39 @@ Proof.
     + exact Hkeys.
     + intros x Hin.
       eapply ctx_alpha_lookup_rename_in_names; eassumption.
+Qed.
+
+Lemma root_env_sctx_support_fresh_renamed_let_init :
+  forall rho R Rr roots rootsr Σ Σr xr,
+    ctx_alpha rho Σ Σr ->
+    root_env_no_shadow R ->
+    root_env_no_shadow Rr ->
+    root_env_equiv Rr (root_env_rename rho R) ->
+    root_set_equiv rootsr (root_set_rename rho roots) ->
+    root_env_sctx_keys_named R Σ ->
+    root_env_sctx_roots_named R Σ ->
+    root_set_sctx_roots_named roots Σ ->
+    ~ In xr (ctx_names Σr) ->
+    root_env_lookup xr Rr = None /\
+    roots_exclude xr rootsr /\
+    root_env_excludes xr Rr.
+Proof.
+  intros rho R Rr roots rootsr Σ Σr xr Halpha HnsR HnsRr HRr Hrootsr
+    Hkeys Hroots Hroots_set Hfresh.
+  assert (Hkeys_r : root_env_sctx_keys_named Rr Σr).
+  { eapply root_env_sctx_keys_named_rename; eassumption. }
+  assert (Hroots_r : root_env_sctx_roots_named Rr Σr).
+  { eapply root_env_sctx_roots_named_rename.
+    - exact Halpha.
+    - exact HnsR.
+    - exact HRr.
+    - exact Hroots. }
+  assert (Hroots_set_r : root_set_sctx_roots_named rootsr Σr).
+  { eapply root_set_sctx_roots_named_rename.
+    - exact Halpha.
+    - exact Hrootsr.
+    - exact Hroots_set. }
+  eapply root_env_sctx_support_fresh_let_init; eassumption.
 Qed.
 
 Lemma ctx_alpha_lookup_rename_fresh_neq :

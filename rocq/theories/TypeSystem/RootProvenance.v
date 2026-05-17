@@ -538,6 +538,40 @@ Fixpoint root_subst_of_params (ps : list param) (arg_roots : list root_set)
 Definition roots_exclude (x : ident) (roots : root_set) : Prop :=
   ~ In (RStore x) roots.
 
+Lemma root_set_rename_cons_roots_exclude :
+  forall x xr rho roots,
+    roots_exclude x roots ->
+    root_set_equiv
+      (root_set_rename ((x, xr) :: rho) roots)
+      (root_set_rename rho roots).
+Proof.
+  intros x xr rho roots Hexcl atom.
+  split; intros Hin;
+    apply root_set_rename_in_inv in Hin;
+    destruct Hin as [atom0 [Hin Hatom]];
+    subst atom;
+    destruct atom0 as [y | y]; simpl.
+  - destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx. subst y.
+      exfalso. apply Hexcl. exact Hin.
+    + change (In (root_atom_rename rho (RStore y))
+        (root_set_rename rho roots)).
+      apply root_set_rename_in. exact Hin.
+  - change (In (root_atom_rename rho (RParam y))
+      (root_set_rename rho roots)).
+    apply root_set_rename_in. exact Hin.
+  - destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx. subst y.
+      exfalso. apply Hexcl. exact Hin.
+    + replace (RStore (lookup_rename y rho))
+        with (root_atom_rename ((x, xr) :: rho) (RStore y)).
+      * apply root_set_rename_in. exact Hin.
+      * simpl. rewrite Hyx. reflexivity.
+  - change (In (root_atom_rename ((x, xr) :: rho) (RParam y))
+      (root_set_rename ((x, xr) :: rho) roots)).
+    apply root_set_rename_in. exact Hin.
+Qed.
+
 Lemma root_set_excludes_atom_of_roots_exclude_no_param :
   forall x roots,
     roots_exclude x roots ->
@@ -2052,6 +2086,49 @@ Proof.
   destruct (root_env_lookup x R) as [roots |].
   - apply root_set_equiv_refl.
   - exact I.
+Qed.
+
+Lemma root_env_rename_cons_root_env_excludes :
+  forall x xr rho R,
+    root_env_no_shadow R ->
+    root_env_lookup x R = None ->
+    root_env_excludes x R ->
+    root_env_equiv
+      (root_env_rename ((x, xr) :: rho) R)
+      (root_env_rename rho R).
+Proof.
+  intros x xr rho R Hns Hlookup_none Hexcl.
+  induction R as [| [y roots] rest IH]; simpl in *.
+  - apply root_env_equiv_refl.
+  - inversion Hns as [| ? ? Hy_notin Hns_rest]; subst.
+    destruct (ident_eqb x y) eqn:Hxy; try discriminate.
+    apply ident_eqb_neq in Hxy.
+    simpl.
+    destruct (ident_eqb y x) eqn:Hyx.
+    { apply ident_eqb_eq in Hyx. subst y. contradiction. }
+    assert (Hrest_eq :
+      root_env_equiv (root_env_rename ((x, xr) :: rho) rest)
+        (root_env_rename rho rest)).
+    { apply IH.
+      - exact Hns_rest.
+      - exact Hlookup_none.
+      - intros z roots_z Hlookup_z Hzx.
+        eapply Hexcl.
+        + simpl.
+          destruct (ident_eqb z y) eqn:Hzy.
+          * apply ident_eqb_eq in Hzy. subst z.
+            exfalso. apply Hy_notin.
+            eapply root_env_lookup_some_in_names. exact Hlookup_z.
+          * rewrite Hzy. exact Hlookup_z.
+        + exact Hzx. }
+    unfold root_env_equiv in *.
+    intros z. simpl.
+    destruct (ident_eqb z (lookup_rename y rho)).
+    + apply root_set_rename_cons_roots_exclude.
+      eapply Hexcl.
+      * simpl. rewrite ident_eqb_refl. reflexivity.
+      * intros Heq. apply Hxy. symmetry. exact Heq.
+    + apply Hrest_eq.
 Qed.
 
 Lemma root_env_equiv_sym :

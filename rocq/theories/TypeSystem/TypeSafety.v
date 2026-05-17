@@ -6054,6 +6054,119 @@ Proof.
   - exact Hlen.
 Qed.
 
+Lemma root_env_excludes_remove_no_shadow :
+  forall x y R,
+    root_env_no_shadow R ->
+    root_env_excludes x R ->
+    root_env_excludes x (root_env_remove y R).
+Proof.
+  unfold root_env_excludes.
+  intros x y R Hrn Hexcl z roots Hlookup Hneq.
+  destruct (ident_eqb z y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst z.
+    rewrite root_env_lookup_remove_eq_no_shadow in Hlookup; try discriminate.
+    exact Hrn.
+  - eapply Hexcl.
+    + rewrite (root_env_lookup_remove_neq y z R) in Hlookup.
+      * exact Hlookup.
+      * intros Hz. subst z. rewrite ident_eqb_refl in Heq. discriminate.
+    + exact Hneq.
+Qed.
+
+Lemma root_env_remove_params_preserves_excludes_params :
+  forall remove_ps protected_ps R,
+    root_env_no_shadow R ->
+    root_env_excludes_params protected_ps R ->
+    root_env_excludes_params protected_ps
+      (root_env_remove_params remove_ps R).
+Proof.
+  intros remove_ps.
+  induction remove_ps as [| p remove_ps IH];
+    intros protected_ps R Hrn Hexcl; simpl.
+  - exact Hexcl.
+  - apply IH.
+    + apply root_env_no_shadow_remove. exact Hrn.
+    + unfold root_env_excludes_params in *.
+      intros x Hin.
+      apply root_env_excludes_remove_no_shadow.
+      * exact Hrn.
+      * apply Hexcl. exact Hin.
+Qed.
+
+Lemma root_env_remove_params_excludes_params :
+  forall ps R_tail,
+    root_env_no_shadow R_tail ->
+    root_env_excludes_params ps R_tail ->
+    root_env_excludes_params ps (root_env_remove_params ps R_tail).
+Proof.
+  intros ps R_tail Hrn Hexcl.
+  eapply root_env_remove_params_preserves_excludes_params; eassumption.
+Qed.
+
+Lemma root_env_excludes_add :
+  forall x y roots R,
+    roots_exclude x roots ->
+    root_env_excludes x R ->
+    root_env_excludes x (root_env_add y roots R).
+Proof.
+  unfold root_env_excludes.
+  intros x y roots R Hroots Hexcl z roots_z Hlookup Hneq.
+  unfold root_env_add in Hlookup. simpl in Hlookup.
+  destruct (ident_eqb z y) eqn:Heq.
+  - inversion Hlookup; subst roots_z. exact Hroots.
+  - eapply Hexcl.
+    + exact Hlookup.
+    + exact Hneq.
+Qed.
+
+Lemma root_env_add_params_roots_preserves_excludes_params :
+  forall add_ps roots_list protected_ps R_tail,
+    Forall (roots_exclude_params protected_ps) roots_list ->
+    root_env_excludes_params protected_ps R_tail ->
+    root_env_excludes_params protected_ps
+      (root_env_add_params_roots add_ps roots_list R_tail).
+Proof.
+  intros add_ps.
+  induction add_ps as [| p add_ps IH];
+    intros roots_list protected_ps R_tail Hroots Hexcl;
+    destruct roots_list as [| roots roots_list]; simpl in *.
+  - exact Hexcl.
+  - exact Hexcl.
+  - exact Hexcl.
+  - inversion Hroots as [| ? ? Hroot Hroots_tail]; subst.
+    unfold root_env_excludes_params in *.
+    intros x Hin.
+    apply root_env_excludes_add.
+    + apply Hroot. exact Hin.
+    + exact (IH roots_list protected_ps R_tail Hroots_tail Hexcl x Hin).
+Qed.
+
+Lemma root_env_add_params_roots_excludes_params :
+  forall ps roots_list R_tail,
+    Forall (roots_exclude_params ps) roots_list ->
+    root_env_excludes_params ps R_tail ->
+    root_env_excludes_params ps
+      (root_env_add_params_roots ps roots_list R_tail).
+Proof.
+  intros ps roots_list R_tail Hroots Hexcl.
+  eapply root_env_add_params_roots_preserves_excludes_params; eassumption.
+Qed.
+
+Lemma call_param_root_env_excludes_params :
+  forall ps roots_list R_tail,
+    root_env_no_shadow R_tail ->
+    Forall (roots_exclude_params ps) roots_list ->
+    root_env_excludes_params ps R_tail ->
+    root_env_excludes_params ps
+      (call_param_root_env ps roots_list R_tail).
+Proof.
+  intros ps roots_list R_tail Hrn Hroots Hexcl.
+  unfold call_param_root_env.
+  apply root_env_add_params_roots_excludes_params.
+  - exact Hroots.
+  - apply root_env_remove_params_excludes_params; assumption.
+Qed.
+
 Lemma store_remove_params_cons_non_param :
   forall ps se s,
     ~ In (se_name se) (ctx_names (params_ctx ps)) ->

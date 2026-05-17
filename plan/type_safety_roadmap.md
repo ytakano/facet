@@ -140,9 +140,16 @@ false lemma.
    - Done: added the `call_param_root_env` equivalence helper for the empty
      tail case, so the origin-summary instantiation helper now connects to the
      call-site root environment shape used by direct-call evidence.
+   - Done: added `call_param_root_env_excludes_params`, with the necessary
+     `root_env_no_shadow R_tail` premise. Without no-shadow, removing parameter
+     keys can expose shadowed root-env entries, so the no-shadow invariant is
+     part of the correct tail-exclusion statement.
    - Remaining blocker: state and prove the tail weakening theorem that
      transports callee-body root typing from the parameter-only root
      environment to `call_param_root_env` with the caller tail.
+   - Remaining blocker: generalize the root-aware alpha-renaming proof beyond
+     the existing var/place/borrow cases so an entire freshened callee body can
+     be transported from cached summary evidence to call-site evidence.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

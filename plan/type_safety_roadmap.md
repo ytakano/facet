@@ -292,10 +292,14 @@ false lemma.
      thread `root_env_sctx_keys_named` and `root_env_sctx_roots_named` through
      the non-let recursive wrapper shape without changing the ordinary
      wrappers.
-   - Remaining narrowed blocker: add the support-carrying wrapper shape for
-     `TER_Let` / `TERS_LetInfer`, where the body callback must also return the
-     fresh renamed-binder lookup/exclusion facts, then assemble the full
-     support-carrying induction over `typed_*_roots_shadow_safe`.
+   - Done: added support-carrying wrapper lemmas for `TER_Let` and
+     `TERS_LetInfer`. Their body callbacks receive the initializer-produced
+     root-env/root-set rename equivalences and support facts, and still return
+     the fresh renamed-binder lookup/exclusion facts needed by the shadow-safe
+     let rules.
+   - Remaining narrowed blocker: assemble the full support-carrying induction
+     over `typed_*_roots_shadow_safe`, using the accumulated support-carrying
+     constructor wrappers.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

@@ -4432,6 +4432,20 @@ Definition root_env_sctx_roots_named (R : root_env) (Σ : sctx) : Prop :=
     In (RStore z) roots ->
     In z (ctx_names Σ).
 
+Definition root_env_sctx_keys_named (R : root_env) (Σ : sctx) : Prop :=
+  root_env_keys_named R (ctx_names Σ).
+
+Lemma root_env_sctx_keys_named_fresh_not_in :
+  forall R Σ x,
+    root_env_sctx_keys_named R Σ ->
+    ~ In x (ctx_names Σ) ->
+    ~ In x (root_env_names R).
+Proof.
+  unfold root_env_sctx_keys_named, root_env_keys_named.
+  intros R Σ x Hnamed Hfresh Hin.
+  apply Hfresh. apply Hnamed. exact Hin.
+Qed.
+
 Lemma root_set_sctx_roots_named_nil :
   forall Σ,
     root_set_sctx_roots_named [] Σ.
@@ -4495,6 +4509,21 @@ Proof.
   intros R Σ Σ' Hsame Hnamed x roots z Hlookup Hin.
   rewrite (sctx_same_bindings_names_alpha Σ Σ' Hsame).
   eapply Hnamed; eassumption.
+Qed.
+
+Lemma root_env_sctx_keys_named_same_bindings :
+  forall R Σ Σ',
+    sctx_same_bindings Σ Σ' ->
+    root_env_sctx_keys_named R Σ ->
+    root_env_sctx_keys_named R Σ'.
+Proof.
+  unfold root_env_sctx_keys_named.
+  intros R Σ Σ' Hsame Hkeys.
+  eapply root_env_keys_named_weaken.
+  - exact Hkeys.
+  - intros x Hin.
+    rewrite (sctx_same_bindings_names_alpha Σ Σ' Hsame).
+    exact Hin.
 Qed.
 
 Lemma root_env_lookup_sctx_roots_named :
@@ -4764,6 +4793,21 @@ Proof.
   - simpl. right. eapply Henv; eassumption.
 Qed.
 
+Lemma root_env_sctx_keys_named_add_binding :
+  forall R Σ x T m roots,
+    root_env_sctx_keys_named R Σ ->
+    root_env_sctx_keys_named (root_env_add x roots R)
+      (sctx_add x T m Σ).
+Proof.
+  intros R Σ x T m roots Hkeys.
+  unfold root_env_sctx_keys_named.
+  apply root_env_keys_named_add.
+  - simpl. left. reflexivity.
+  - eapply root_env_keys_named_weaken.
+    + exact Hkeys.
+    + intros z Hin. simpl. right. exact Hin.
+Qed.
+
 Lemma root_env_remove_excludes_roots_exclude_sctx :
   forall R x y roots,
     root_env_no_shadow R ->
@@ -4793,6 +4837,47 @@ Proof.
   - apply root_env_sctx_roots_named_remove_env; assumption.
 Qed.
 
+Lemma root_env_sctx_keys_named_remove_binding :
+  forall R Σ x,
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R Σ ->
+    root_env_sctx_keys_named (root_env_remove x R) (sctx_remove x Σ).
+Proof.
+  unfold root_env_sctx_keys_named.
+  intros R Σ x Hrn Hkeys.
+  induction R as [| [z roots] rest IH]; intros y Hin; simpl in *;
+    try contradiction.
+  unfold root_env_no_shadow in Hrn. simpl in Hrn.
+  inversion Hrn as [| ? ? Hz_notin Hrn_tail]; subst.
+  destruct (ident_eqb x z) eqn:Hxz.
+  - apply ident_eqb_eq in Hxz. subst z.
+    apply ctx_names_remove_preserve_neq_sctx_roots_named.
+    + intros Heq. subst y. contradiction.
+    + apply Hkeys. right. exact Hin.
+  - simpl in Hin.
+    destruct Hin as [Hy | Hin].
+    + subst y.
+      apply ctx_names_remove_preserve_neq_sctx_roots_named.
+      * intros Heq. subst z. rewrite ident_eqb_refl in Hxz. discriminate.
+      * apply Hkeys. left. reflexivity.
+    + apply IH.
+      * exact Hrn_tail.
+      * intros w Hw. apply Hkeys. right. exact Hw.
+      * exact Hin.
+Qed.
+
+Lemma root_env_sctx_keys_named_remove_fresh_not_in :
+  forall R Σ x,
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R Σ ->
+    ~ In x (root_env_names (root_env_remove x R)).
+Proof.
+  intros R Σ x Hrn _.
+  eapply root_env_lookup_none_not_in_names.
+  apply root_env_lookup_remove_eq_no_shadow.
+  exact Hrn.
+Qed.
+
 Lemma root_set_sctx_roots_named_remove_binding :
   forall roots Σ x,
     roots_exclude x roots ->
@@ -4817,6 +4902,17 @@ Proof.
   - exact Hrn.
   - exact Henv.
   - apply root_set_sctx_roots_named_union; assumption.
+Qed.
+
+Lemma root_env_sctx_keys_named_update :
+  forall R Σ x roots,
+    root_env_sctx_keys_named R Σ ->
+    root_env_sctx_keys_named (root_env_update x roots R) Σ.
+Proof.
+  intros R Σ x roots Hkeys.
+  unfold root_env_sctx_keys_named.
+  apply root_env_keys_named_update.
+  exact Hkeys.
 Qed.
 
 Lemma root_env_sctx_roots_named_update_union_restore_path :
@@ -4966,6 +5062,163 @@ Proof.
     eapply typed_fields_roots_structural.
     eapply typed_fields_roots_shadow_safe_roots. exact Htyped_fields.
   - exact Hroots.
+Qed.
+
+Theorem typed_roots_shadow_safe_sctx_keys_named_mutual :
+  forall env Ω n,
+  (forall R Σ e T Σ' R' roots,
+    typed_env_roots_shadow_safe env Ω n R Σ e T Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R Σ ->
+    root_env_sctx_keys_named R' Σ') /\
+  (forall R Σ args ps Σ' R' roots,
+    typed_args_roots_shadow_safe env Ω n R Σ args ps Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R Σ ->
+    root_env_sctx_keys_named R' Σ') /\
+  (forall lts args R Σ fields defs Σ' R' roots,
+    typed_fields_roots_shadow_safe env Ω n lts args R Σ fields defs
+      Σ' R' roots ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R Σ ->
+    root_env_sctx_keys_named R' Σ').
+Proof.
+  intros env Ω n.
+  apply typed_roots_shadow_safe_ind; intros; try assumption.
+  - eapply root_env_sctx_keys_named_same_bindings.
+    + eapply sctx_consume_path_same_bindings. eassumption.
+    + assumption.
+  - eapply root_env_sctx_keys_named_same_bindings.
+    + eapply sctx_consume_path_same_bindings. eassumption.
+    + assumption.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_sctx_keys_named ?R ?Σ ->
+        root_env_sctx_keys_named ?R' ?Σ',
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
+        exact (IH Hrn Henv)
+    end.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_sctx_keys_named ?R ?Σ ->
+        root_env_sctx_keys_named ?R' ?Σ',
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
+        exact (IH Hrn Henv)
+    end.
+  - pose proof (H H1 H2) as Hkeys1.
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow;
+          [eapply typed_env_roots_shadow_safe_roots; exact t | exact H1]).
+    assert (Hkeys_add :
+      root_env_sctx_keys_named (root_env_add x roots1 R1)
+        (sctx_add x T m Σ1)).
+    { apply root_env_sctx_keys_named_add_binding. exact Hkeys1. }
+    assert (Hrn_add : root_env_no_shadow (root_env_add x roots1 R1))
+      by (apply root_env_no_shadow_add; assumption).
+    pose proof (H0 Hrn_add Hkeys_add) as Hkeys2.
+    assert (Hrn2 : root_env_no_shadow R2).
+    { eapply typed_env_roots_no_shadow.
+      - eapply typed_env_roots_shadow_safe_roots. eassumption.
+      - exact Hrn_add. }
+    apply root_env_sctx_keys_named_remove_binding; assumption.
+  - pose proof (H H1 H2) as Hkeys1.
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow;
+          [eapply typed_env_roots_shadow_safe_roots; exact t | exact H1]).
+    assert (Hkeys_add :
+      root_env_sctx_keys_named (root_env_add x roots1 R1)
+        (sctx_add x T1 m Σ1)).
+    { apply root_env_sctx_keys_named_add_binding. exact Hkeys1. }
+    assert (Hrn_add : root_env_no_shadow (root_env_add x roots1 R1))
+      by (apply root_env_no_shadow_add; assumption).
+    pose proof (H0 Hrn_add Hkeys_add) as Hkeys2.
+    assert (Hrn2 : root_env_no_shadow R2).
+    { eapply typed_env_roots_no_shadow.
+      - eapply typed_env_roots_shadow_safe_roots. eassumption.
+      - exact Hrn_add. }
+    apply root_env_sctx_keys_named_remove_binding; assumption.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_sctx_keys_named ?R ?Σ ->
+        root_env_sctx_keys_named ?R' ?Σ',
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
+        exact (IH Hrn Henv)
+    end.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_sctx_keys_named ?R ?Σ ->
+        root_env_sctx_keys_named ?R1 ?Σ',
+      Hrestore : sctx_restore_path ?Σ1 ?x ?path = infer_ok ?Σ2,
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
+        apply root_env_sctx_keys_named_update;
+        eapply root_env_sctx_keys_named_same_bindings;
+        [ eapply sctx_restore_path_same_bindings; exact Hrestore
+        | exact (IH Hrn Henv) ]
+    end.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_sctx_keys_named ?R ?Σ ->
+        root_env_sctx_keys_named ?R1 ?Σ',
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
+        apply root_env_sctx_keys_named_update;
+        exact (IH Hrn Henv)
+    end.
+  - repeat match goal with
+    | Hstep : root_env_no_shadow ?R ->
+        root_env_sctx_keys_named ?R ?Σ ->
+        root_env_sctx_keys_named ?R' ?Σ',
+      Hrn : root_env_no_shadow ?R,
+      Hkeys : root_env_sctx_keys_named ?R ?Σ |- _ =>
+        let Hkeys' := fresh "Hkeys_step" in
+        let Hrn' := fresh "Hrn_step" in
+        pose proof (Hstep Hrn Hkeys) as Hkeys';
+        assert (Hrn' : root_env_no_shadow R')
+          by (eapply typed_env_roots_no_shadow;
+              [eapply typed_env_roots_shadow_safe_roots; eassumption
+              | exact Hrn]);
+        clear Hstep
+    end.
+    eapply root_env_sctx_keys_named_same_bindings.
+    + eapply ctx_merge_same_bindings_left. eassumption.
+    + eassumption.
+  - match goal with
+    | Htyped1 : typed_env_roots_shadow_safe env Ω n ?R ?Σ _ _ ?Σ1 ?R1 _,
+      Hexpr : root_env_no_shadow ?R ->
+        root_env_sctx_keys_named ?R ?Σ ->
+        root_env_sctx_keys_named ?R1 ?Σ1,
+      Hargs : root_env_no_shadow ?R1 ->
+        root_env_sctx_keys_named ?R1 ?Σ1 ->
+        root_env_sctx_keys_named ?R2 ?Σ2,
+      Hrn : root_env_no_shadow ?R,
+      Hkeys : root_env_sctx_keys_named ?R ?Σ |- _ =>
+        pose proof (Hexpr Hrn Hkeys) as Hkeys1;
+        assert (Hrn1 : root_env_no_shadow R1)
+          by (eapply typed_env_roots_no_shadow;
+              [eapply typed_env_roots_shadow_safe_roots; exact Htyped1
+              | exact Hrn]);
+        exact (Hargs Hrn1 Hkeys1)
+    end.
+  - match goal with
+    | Hfield : root_env_no_shadow ?R ->
+        root_env_sctx_keys_named ?R ?Σ ->
+        root_env_sctx_keys_named ?R1 ?Σ1,
+      Hrest : root_env_no_shadow ?R1 ->
+        root_env_sctx_keys_named ?R1 ?Σ1 ->
+        root_env_sctx_keys_named ?R2 ?Σ2,
+      Hrn : root_env_no_shadow ?R,
+      Hkeys : root_env_sctx_keys_named ?R ?Σ |- _ =>
+        pose proof (Hfield Hrn Hkeys) as Hkeys1;
+        assert (Hrn1 : root_env_no_shadow R1)
+          by (eapply typed_env_roots_no_shadow;
+              [eapply typed_env_roots_shadow_safe_roots; eassumption
+              | exact Hrn]);
+        exact (Hrest Hrn1 Hkeys1)
+    end.
 Qed.
 
 Theorem typed_roots_shadow_safe_sctx_roots_named_mutual :

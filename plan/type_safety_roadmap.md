@@ -205,6 +205,11 @@ false lemma.
      from the renamed context. These are the local facts needed to turn
      `fresh_ident` context freshness into the let/let-infer escape checks on
      renamed result roots and surviving root environments.
+   - Done: added the matching shadow-safe root-env key-support invariant and
+     remove-after-let freshness helper in `AlphaRenaming.v`. This records that
+     surviving root-env keys remain backed by structural context names, and
+     that removing a no-shadow let-bound key really removes that key from the
+     surviving root environment.
    - Remaining blocker: assemble the full `typed_env_roots`
      alpha-renaming theorem, using the accumulated constructor wrappers and
      root-env algebra helpers in the corresponding constructor cases.

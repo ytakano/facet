@@ -357,6 +357,35 @@ Proof.
   - exact Hbridge.
 Qed.
 
+Theorem infer_full_env_alpha_big_step_safe_with_root_shadow_summary_bridge :
+  forall env f R0 T Γ' R' roots s s' v,
+    infer_full_env (alpha_normalize_global_env env) f = infer_ok (T, Γ') ->
+    infer_full_env_roots (alpha_normalize_global_env env) f R0 =
+      infer_ok (T, Γ', R', roots) ->
+    env_fns_root_shadow_summary_evidence (alpha_normalize_global_env env) ->
+    direct_call_callee_body_root_shadow_summary_bridge
+      (alpha_normalize_global_env env) ->
+    initial_store_for_fn (alpha_normalize_global_env env) f s ->
+    preservation_direct_call_ready_expr (fn_body f) ->
+    store_roots_within R0 s ->
+    store_no_shadow s ->
+    root_env_no_shadow R0 ->
+    root_env_store_roots_named R0 s ->
+    fn_env_unique_by_name (alpha_normalize_global_env env) ->
+    env_fns_preservation_ready (alpha_normalize_global_env env) ->
+    eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
+    value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
+Proof.
+  intros env f R0 T Γ' R' roots s s' v _ Hroots_infer Hsummary
+    Hbridge Hstore Hready Hroots Hstore_shadow Hroot_shadow Hnamed Hunique
+    Hfns_ready Heval.
+  eapply infer_full_env_roots_alpha_big_step_safe_direct_call_evidence;
+    try eassumption.
+  eapply direct_call_callee_body_root_evidence_of_shadow_summary_bridge.
+  - exact Hsummary.
+  - exact Hbridge.
+Qed.
+
 Theorem infer_full_env_alpha_big_step_safe_with_root_sidecar :
   forall env f R0 T Γ' R' roots s s' v,
     infer_full_env (alpha_normalize_global_env env) f = infer_ok (T, Γ') ->

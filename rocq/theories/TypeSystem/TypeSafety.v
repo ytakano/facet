@@ -10958,14 +10958,63 @@ Definition callee_body_root_ready_at
     roots_exclude_params (fn_params fcall) roots_body /\
     root_env_excludes_params (fn_params fcall) R_body.
 
+Definition callee_body_root_shadow_ready_at
+    (env : global_env) (fcall : fn_def) (R_params : root_env) : Prop :=
+  exists T_body Γ_out R_body roots_body,
+    provenance_ready_expr (fn_body fcall) /\
+    preservation_ready_expr (fn_body fcall) /\
+    typed_env_roots_shadow_safe env (fn_outlives fcall) (fn_lifetimes fcall)
+      R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
+    roots_exclude_params (fn_params fcall) roots_body /\
+    root_env_excludes_params (fn_params fcall) R_body.
+
+Lemma callee_body_root_ready_at_of_shadow_ready_at :
+  forall env fcall R_params,
+    callee_body_root_shadow_ready_at env fcall R_params ->
+    callee_body_root_ready_at env fcall R_params.
+Proof.
+  intros env fcall R_params Hshadow.
+  unfold callee_body_root_shadow_ready_at in Hshadow.
+  destruct Hshadow as
+    (T_body & Γ_out & R_body & roots_body &
+      Hprov & Hready & Htyped & Hcompat & Hexclude_roots & Hexclude_env).
+  unfold callee_body_root_ready_at.
+  exists T_body, Γ_out, R_body, roots_body.
+  repeat split; try assumption.
+  eapply typed_env_roots_shadow_safe_roots. exact Htyped.
+Qed.
+
 Definition callee_body_root_summary (env : global_env) (fdef : fn_def)
     : Prop :=
   callee_body_root_ready_at env fdef (initial_root_env_for_fn fdef).
+
+Definition callee_body_root_shadow_summary (env : global_env) (fdef : fn_def)
+    : Prop :=
+  callee_body_root_shadow_ready_at env fdef (initial_root_env_for_fn fdef).
 
 Definition env_fns_root_summary_evidence (env : global_env) : Prop :=
   forall fname fdef,
     lookup_fn fname (env_fns env) = Some fdef ->
     callee_body_root_summary env fdef.
+
+Definition env_fns_root_shadow_summary_evidence (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_summary env fdef.
+
+Lemma env_fns_root_summary_evidence_of_shadow :
+  forall env,
+    env_fns_root_shadow_summary_evidence env ->
+    env_fns_root_summary_evidence env.
+Proof.
+  intros env Hshadow fname fdef Hlookup.
+  unfold env_fns_root_shadow_summary_evidence in Hshadow.
+  unfold callee_body_root_summary, callee_body_root_shadow_summary in *.
+  eapply callee_body_root_ready_at_of_shadow_ready_at.
+  eapply Hshadow. exact Hlookup.
+Qed.
 
 Definition direct_call_callee_body_root_summary_bridge
     (env : global_env) : Prop :=
@@ -10981,6 +11030,22 @@ Definition direct_call_callee_body_root_summary_bridge
     root_env_store_roots_named R s ->
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
     callee_body_root_ready_at env fcall
+      (call_param_root_env (fn_params fcall) arg_roots R_args).
+
+Definition direct_call_callee_body_root_shadow_summary_bridge
+    (env : global_env) : Prop :=
+  env_fns_root_shadow_summary_evidence env ->
+  forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+      (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs
+      used',
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    typed_args_roots env Ω n R Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    root_env_store_roots_named R s ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    callee_body_root_shadow_ready_at env fcall
       (call_param_root_env (fn_params fcall) arg_roots R_args).
 
 Definition direct_call_callee_body_root_evidence (env : global_env) : Prop :=
@@ -11006,6 +11071,19 @@ Proof.
   intros env Hsummary Hbridge Ω n R Σ Σ_args R_args arg_roots fname args
     fdef fcall σ s s_args vs used' Hin Hfname Htyped_args Heval_args
     Hnamed Hrename.
+  eapply Hbridge; eassumption.
+Qed.
+
+Lemma direct_call_callee_body_root_evidence_of_shadow_summary_bridge :
+  forall env,
+    env_fns_root_shadow_summary_evidence env ->
+    direct_call_callee_body_root_shadow_summary_bridge env ->
+    direct_call_callee_body_root_evidence env.
+Proof.
+  intros env Hsummary Hbridge Ω n R Σ Σ_args R_args arg_roots fname args
+    fdef fcall σ s s_args vs used' Hin Hfname Htyped_args Heval_args
+    Hnamed Hrename.
+  eapply callee_body_root_ready_at_of_shadow_ready_at.
   eapply Hbridge; eassumption.
 Qed.
 

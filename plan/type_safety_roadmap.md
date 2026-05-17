@@ -152,6 +152,18 @@ false lemma.
      `infer_full_env_alpha_big_step_safe_with_root_summary_bridge`. The alpha
      summary wrapper connects executable root-summary checks to Prop-level
      direct-call root evidence through `direct_call_callee_body_root_summary_bridge`.
+   - Done: added the proof-only shadow summary layer and projection bridge in
+     `TypeSafety.v`: `callee_body_root_shadow_ready_at`,
+     `callee_body_root_shadow_summary`,
+     `env_fns_root_shadow_summary_evidence`,
+     `env_fns_root_summary_evidence_of_shadow`,
+     `direct_call_callee_body_root_shadow_summary_bridge`, and
+     `direct_call_callee_body_root_evidence_of_shadow_summary_bridge`. This
+     records the shadow-summary route without changing the executable checker.
+   - Done: added
+     `infer_full_env_alpha_big_step_safe_with_root_shadow_summary_bridge` in
+     `EnvRuntimeSafety.v`, wiring shadow summary evidence into the existing
+     direct-call runtime safety route.
    - Remaining blocker: restate the main theorem over the alpha-normalized
      environment/body produced by `alpha_normalize_global_env`, then connect
      the existing raw `infer_full_env` soundness facts to that route.
@@ -164,12 +176,10 @@ false lemma.
      `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`, closing
      the old blockers around assembling the full shadow-safe
      `typed_env_roots` alpha-renaming theorem.
-   - Remaining blocker: connect
-     `alpha_rename_typed_env_roots_shadow_safe_full_support_forward` to
-     `direct_call_callee_body_root_summary_bridge` and then to the
-     alpha-normalized ordinary checker safety route, so summary root evidence
-     can be transported to each freshened direct-call body without assuming it
-     as a premise.
+   - Remaining blocker: prove the actual shadow summary bridge by combining
+     root substitution with tail weakening, so summary root evidence can be
+     transported to each freshened direct-call body without assuming it as a
+     premise.
    - Done: added origin/current initial root-env support facts for this bridge:
      `initial_root_env_for_params_origin_names`,
      `initial_root_env_for_params_origin_no_shadow`,

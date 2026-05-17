@@ -176,6 +176,16 @@ false lemma.
    - Done: added the root-aware alpha-renaming wrapper for `TER_If`, including
      branch context merge, branch root-env equivalence under renaming, and
      renamed branch-root union equivalence.
+   - Blocker found while assembling the full theorem: the plain recursive
+     induction hypothesis for let bodies only returns equivalence under the
+     extended rename `((x, xr) :: rho)`. The final `TER_Let` / `TER_LetInfer`
+     reconstruction also needs to prove that the fresh binder `xr` is excluded
+     from the renamed result roots and surviving root environment. Do not solve
+     this by rejecting source shadowing. Add focused helper lemmas that derive
+     these renamed-exclusion facts from the existing let premises
+     `roots_exclude x roots2` and
+     `root_env_excludes x (root_env_remove x R2)`, plus freshness/no-collision
+     facts from alpha-renaming.
    - Remaining blocker: assemble the full `typed_env_roots`
      alpha-renaming theorem, using the accumulated constructor wrappers and
      root-env algebra helpers in the corresponding constructor cases.

@@ -194,9 +194,18 @@ false lemma.
      `TER_LetInfer` premises requiring initializer roots and the pre-body root
      environment to exclude the binder. Projection lemmas recover the ordinary
      root typing judgments.
+   - Done: added a shadow-safe root support invariant in `AlphaRenaming.v`.
+     The invariant states that every concrete `RStore z` appearing in a result
+     root set or root environment is named by the corresponding structural
+     context. This mirrors the existing `TypeSafety.v` support theorem, but is
+     local to `AlphaRenaming.v` to avoid importing the runtime safety module
+     into the alpha-renaming proof path.
    - Remaining blocker: assemble the full `typed_env_roots`
      alpha-renaming theorem, using the accumulated constructor wrappers and
      root-env algebra helpers in the corresponding constructor cases.
+   - Remaining blocker: use the new shadow-safe support invariant in the
+     `TER_Let` / `TER_LetInfer` cases to derive that the fresh alpha-renamed
+     binder is absent from returned roots and surviving root environments.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

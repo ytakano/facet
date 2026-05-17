@@ -109,11 +109,14 @@ shows they are unusable.
 - Function-level alpha-renaming packaging now exists in `AlphaRenaming.v`:
   `alpha_rename_fn_def_params_body`,
   `alpha_rename_fn_def_params_body_facts`,
-  `ctx_alpha_no_collision_on`, and
-  `alpha_rename_fn_def_initial_support_facts`.
+  `ctx_alpha_no_collision_on`,
+  `alpha_rename_fn_def_initial_support_facts`, and
+  `alpha_rename_fn_def_static_fields`.
 - The shadow-summary interface now carries callee parameter uniqueness:
   `callee_body_root_shadow_summary` includes
   `NoDup (ctx_names (params_ctx (fn_params fdef)))`.
+- Call argument root-list length plumbing exists:
+  `typed_args_roots_arg_roots_length` and `apply_lt_params_length`.
 
 ### Next Implementation Task
 
@@ -143,6 +146,17 @@ Current proof blocker:
 - This should be handled as proof plumbing from the existing cached
   `Hexclude_roots` / `Hexclude_env`, alpha-renaming support facts, root
   instantiate exclusion lemmas, and tail-frame exclusion lemmas.
+- The remaining missing proof shape is specifically the alpha-renaming step for
+  param-exclusion:
+  from `roots_exclude_params (fn_params fdef) roots_body` and
+  `root_env_excludes_params (fn_params fdef) R_body`, derive the corresponding
+  facts for the alpha-renamed `fn_params fcall` after
+  `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`.
+  Existing `roots_exclude_rename` / `root_env_excludes_rename` need
+  no-collision between renamed parameter names and store roots in the output
+  roots/env. If this cannot be obtained from current support facts, add an
+  explicit proof-only invariant connecting body output roots/env names to
+  parameter names plus expression-local names.
 - Stop again if this requires a new semantic invariant. Do not weaken checker
   behavior or the alpha-renaming theorem.
 
@@ -164,21 +178,25 @@ Required proof route:
 3. Use `alpha_rename_fn_def_initial_support_facts` to obtain the parameter
    rename environment, body rename equation, `ctx_alpha`, used/disjoint facts,
    initial root no-shadow/support facts, and source no-collision.
-4. Derive output root no-collision for the cached body result from typed output
+4. Use `alpha_rename_fn_def_static_fields` to rewrite `fn_lifetimes`,
+   `fn_outlives`, and return type facts for `fcall`.
+5. Derive output root no-collision for the cached body result from typed output
    support and `ctx_alpha`; add a proof helper if needed.
-5. Apply `alpha_rename_typed_env_roots_shadow_safe_full_support_forward` to the
+6. Apply `alpha_rename_typed_env_roots_shadow_safe_full_support_forward` to the
    cached summary body.
-6. Instantiate the renamed summary with
+7. Instantiate the renamed summary with
    `root_subst_of_params (fn_params fdef) arg_roots`.
-7. Use
+8. Use
    `root_env_instantiate_initial_origin_equiv_call_param_root_env_empty` for
    the parameter-only root environment.
-8. Use `eval_args_root_tail_fresh_names_for_fresh_call` and
+9. Use `typed_args_roots_arg_roots_length` plus `apply_lt_params_length` to
+   discharge root-list length premises.
+10. Use `eval_args_root_tail_fresh_names_for_fresh_call` and
    `typed_env_roots_shadow_safe_tail_frame` to add the caller tail.
-9. Transport the cached return-root and output-root param-exclusion facts
+11. Transport the cached return-root and output-root param-exclusion facts
    through alpha-renaming, root-substitution instantiation, and the caller-tail
    frame.
-10. Finish with `call_param_root_env_app_tail`.
+12. Finish with `call_param_root_env_app_tail`.
 
 Stop and report if any step needs a semantic invariant rather than a proof-only
 helper. Do not change checker behavior.

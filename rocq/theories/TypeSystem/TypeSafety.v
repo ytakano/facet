@@ -2825,6 +2825,15 @@ Proof.
   - rewrite IH. reflexivity.
 Qed.
 
+Lemma apply_lt_params_length :
+  forall σ ps,
+    List.length (apply_lt_params σ ps) = List.length ps.
+Proof.
+  intros σ ps.
+  unfold apply_lt_params.
+  rewrite length_map. reflexivity.
+Qed.
+
 Lemma params_fresh_in_store_apply_lt_params :
   forall σ ps s,
     params_fresh_in_store ps s ->
@@ -4471,6 +4480,15 @@ Proof.
   - eapply typed_fields_env_structural_same_bindings.
     eapply typed_fields_roots_structural. exact Htyped_fields.
   - exact Hroots.
+Qed.
+
+Lemma typed_args_roots_arg_roots_length :
+  forall env Ω n R Σ args ps Σ' R' arg_roots,
+    typed_args_roots env Ω n R Σ args ps Σ' R' arg_roots ->
+    List.length arg_roots = List.length ps.
+Proof.
+  intros env Ω n R Σ args ps Σ' R' arg_roots Htyped_args.
+  induction Htyped_args; simpl; auto.
 Qed.
 
 Theorem typed_roots_ctx_roots_named_mutual :

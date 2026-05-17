@@ -2685,6 +2685,25 @@ Proof.
   eapply alpha_rename_params_shape. exact Hps.
 Qed.
 
+Lemma alpha_rename_fn_def_static_fields :
+  forall used f fr used',
+    alpha_rename_fn_def used f = (fr, used') ->
+    fn_name fr = fn_name f /\
+    fn_lifetimes fr = fn_lifetimes f /\
+    fn_outlives fr = fn_outlives f /\
+    fn_ret fr = fn_ret f.
+Proof.
+  intros used f fr used' H.
+  destruct f as [fname lifetimes outs ps ret body].
+  unfold alpha_rename_fn_def in H. simpl in H.
+  destruct (alpha_rename_params []
+    (param_names ps ++ free_vars_expr body ++ used) ps)
+    as [[ps' rho] used1] eqn:Hps.
+  destruct (alpha_rename_expr rho used1 body) as [body' used2] eqn:Hbody.
+  inversion H; subst. simpl.
+  repeat split; reflexivity.
+Qed.
+
 Lemma alpha_rename_fn_def_initial_root_env_rename :
   forall used f fr used',
     alpha_rename_fn_def used f = (fr, used') ->

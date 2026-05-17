@@ -7834,6 +7834,11 @@ Lemma alpha_rename_typed_env_roots_let_shadow_safe_support_forward :
       ctx_alpha ((x, xr) :: rho)
         (sctx_add x Tann m Σ1) (sctx_add xr Tann m Σ1r) ->
       root_env_no_shadow (root_env_add x roots1 R1) ->
+      root_env_no_shadow R1r ->
+      root_env_lookup x R1 = None ->
+      roots_exclude x roots1 ->
+      root_env_excludes x R1 ->
+      rename_no_collision_on rho (root_env_names R1) ->
       root_env_equiv R1r (root_env_rename rho R1) ->
       root_set_equiv roots1r (root_set_rename rho roots1) ->
       root_env_sctx_keys_named R1 Σ1 ->
@@ -8000,6 +8005,17 @@ Proof.
       end.
     + exact Hctx_body.
     + apply root_env_no_shadow_add; assumption.
+    + exact HnsRr1.
+    + match goal with
+      | H : root_env_lookup x R1 = None |- _ => exact H
+      end.
+    + match goal with
+      | H : roots_exclude x roots1 |- _ => exact H
+      end.
+    + match goal with
+      | H : root_env_excludes x R1 |- _ => exact H
+      end.
+    + exact HnocollR1.
     + exact HRr1.
     + exact Hroots1.
     + exact HkeysR1.
@@ -8078,6 +8094,11 @@ Lemma alpha_rename_typed_env_roots_letinfer_shadow_safe_support_forward :
       ctx_alpha ((x, xr) :: rho)
         (sctx_add x T1 m Σ1) (sctx_add xr T1 m Σ1r) ->
       root_env_no_shadow (root_env_add x roots1 R1) ->
+      root_env_no_shadow R1r ->
+      root_env_lookup x R1 = None ->
+      roots_exclude x roots1 ->
+      root_env_excludes x R1 ->
+      rename_no_collision_on rho (root_env_names R1) ->
       root_env_equiv R1r (root_env_rename rho R1) ->
       root_set_equiv roots1r (root_set_rename rho roots1) ->
       root_env_sctx_keys_named R1 Σ1 ->
@@ -8244,6 +8265,17 @@ Proof.
       end.
     + exact Hctx_body.
     + apply root_env_no_shadow_add; assumption.
+    + exact HnsRr1.
+    + match goal with
+      | H : root_env_lookup x R1 = None |- _ => exact H
+      end.
+    + match goal with
+      | H : roots_exclude x roots1 |- _ => exact H
+      end.
+    + match goal with
+      | H : root_env_excludes x R1 |- _ => exact H
+      end.
+    + exact HnocollR1.
     + exact HRr1.
     + exact Hroots1.
     + exact HkeysR1.

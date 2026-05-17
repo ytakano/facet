@@ -295,15 +295,25 @@ false lemma.
      root-env/root-set rename equivalences and support facts, and still return
      the fresh renamed-binder lookup/exclusion facts needed by the shadow-safe
      let rules.
+   - Done: updated the shadow-safe `TER_Let` and `TERS_LetInfer`
+     support-carrying wrappers so their body callbacks receive the
+     initializer-produced renamed-environment no-shadow fact, plus the
+     original binder-side lookup, exclusion, and no-collision facts. This keeps
+     the body callback from having to reconstruct facts that are already known
+     at the let boundary.
    - Done: added full-induction setup helpers
      `ctx_alpha_add_fresh_inv` and
      `root_env_sctx_support_fresh_renamed_let_init`. These package the
      renamed-tail freshness and renamed initializer lookup/exclusion facts
      needed when constructing the `TER_Let` / `TERS_LetInfer` body callback
      inside the full support-carrying induction.
-   - Remaining narrowed blocker: assemble the full support-carrying induction
-     over `typed_*_roots_shadow_safe`, using the accumulated support-carrying
-     constructor wrappers.
+   - Remaining narrowed blocker: while assembling the full support-carrying
+     induction, the body result support facts are for the actual result context
+     `Σ2`, but the existing result-side extended no-collision helper is still
+     too syntactic and tied to an `sctx_add`-shaped result context. Next step:
+     add a same-bindings/generalized helper that derives extended
+     no-collision for `R2` from support over `Σ2` and same-bindings with the
+     let-body input context.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

@@ -7861,6 +7861,9 @@ Lemma alpha_rename_typed_env_roots_let_shadow_safe_support_forward :
       roots_exclude x roots1 ->
       root_env_excludes x R1 ->
       rename_no_collision_on rho (root_env_names R1) ->
+      rename_no_collision_on rho (root_env_names (root_env_remove x R2)) ->
+      roots_exclude x roots2 ->
+      root_env_excludes x (root_env_remove x R2) ->
       root_env_equiv R1r (root_env_rename rho R1) ->
       root_set_equiv roots1r (root_set_rename rho roots1) ->
       root_env_sctx_keys_named R1 Σ1 ->
@@ -8038,6 +8041,13 @@ Proof.
       | H : root_env_excludes x R1 |- _ => exact H
       end.
     + exact HnocollR1.
+    + exact HnocollR'.
+    + match goal with
+      | H : roots_exclude x roots |- _ => exact H
+      end.
+    + match goal with
+      | H : root_env_excludes x (root_env_remove x R2) |- _ => exact H
+      end.
     + exact HRr1.
     + exact Hroots1.
     + exact HkeysR1.
@@ -8121,6 +8131,9 @@ Lemma alpha_rename_typed_env_roots_letinfer_shadow_safe_support_forward :
       roots_exclude x roots1 ->
       root_env_excludes x R1 ->
       rename_no_collision_on rho (root_env_names R1) ->
+      rename_no_collision_on rho (root_env_names (root_env_remove x R2)) ->
+      roots_exclude x roots2 ->
+      root_env_excludes x (root_env_remove x R2) ->
       root_env_equiv R1r (root_env_rename rho R1) ->
       root_set_equiv roots1r (root_set_rename rho roots1) ->
       root_env_sctx_keys_named R1 Σ1 ->
@@ -8298,6 +8311,13 @@ Proof.
       | H : root_env_excludes x R1 |- _ => exact H
       end.
     + exact HnocollR1.
+    + exact HnocollR'.
+    + match goal with
+      | H : roots_exclude x roots |- _ => exact H
+      end.
+    + match goal with
+      | H : root_env_excludes x (root_env_remove x R2) |- _ => exact H
+      end.
     + exact HRr1.
     + exact Hroots1.
     + exact HkeysR1.

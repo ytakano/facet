@@ -312,9 +312,18 @@ false lemma.
      generalizes the result-side extended no-collision helper from an
      `sctx_add`-shaped result context to any same-bindings actual result
      context `Σ2`.
-   - Remaining narrowed blocker: retry assembling the full support-carrying
-     induction over `typed_*_roots_shadow_safe`, using the new same-bindings
-     helper in the `TER_Let` / `TERS_LetInfer` body callbacks.
+   - Done: extended the shadow-safe `TER_Let` and `TERS_LetInfer`
+     support-carrying wrapper callbacks with the body-result removed
+     no-collision fact plus the original body-result roots/root-env escape
+     premises. The full induction callback no longer has to recover these
+     actual-result facts from generalized callback parameters.
+   - Remaining narrowed blocker: add focused support-stripping helpers for
+     body results whose `RStore x` roots are excluded, so support facts over an
+     actual result context `Σ2` with
+     `sctx_same_bindings (sctx_add x T m Σ1) Σ2` can be reused over the
+     binder-free context needed by the final let/letinfer escape obligations.
+     Then retry assembling the full support-carrying induction over
+     `typed_*_roots_shadow_safe`.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

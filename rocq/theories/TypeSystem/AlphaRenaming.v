@@ -5425,6 +5425,21 @@ Proof.
            apply Hneq. exact Heq.
 Qed.
 
+Lemma ctx_alpha_nodup_names :
+  forall rho Σ Σr,
+    ctx_alpha rho Σ Σr ->
+    NoDup (ctx_names Σ) ->
+    NoDup (ctx_names Σr).
+Proof.
+  intros rho Σ Σr Halpha.
+  induction Halpha; intros Hnodup.
+  - exact Hnodup.
+  - inversion Hnodup as [| ? ? _ Hnodup_tail]; subst.
+    simpl. constructor.
+    + exact H.
+    + apply IHHalpha. exact Hnodup_tail.
+Qed.
+
 Lemma ctx_alpha_renamed_name_preimage :
   forall rho Σ Σr xr,
     ctx_alpha rho Σ Σr ->

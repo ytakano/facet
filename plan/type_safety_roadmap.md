@@ -128,12 +128,13 @@ shows they are unusable.
 - Call argument root-list length plumbing exists:
   `typed_args_roots_arg_roots_length` and `apply_lt_params_length`.
 
-### Next Implementation Task
+### Completed Implementation Task
 
-Prove the direct-call shadow-summary bridge without assuming transported callee
-body evidence.
+Done: proved `direct_call_callee_body_root_shadow_summary_bridge_of_unique`,
+the direct-call shadow-summary bridge from function-name uniqueness, without
+assuming transported callee body evidence.
 
-Completed prerequisite:
+Completed prerequisites:
 
 - The bridge needs to apply
   `alpha_rename_typed_env_roots_shadow_safe_full_support_forward` to a cached
@@ -146,14 +147,14 @@ Completed prerequisite:
   helper `alpha_rename_fn_def_initial_support_facts` packages the proof.
 - The cached summary now exposes that `NoDup` premise directly.
 
-Current proof blocker:
+Resolved proof blocker:
 
 - After alpha-renaming and instantiating the cached callee body summary, the
   bridge must still produce the final
   `roots_exclude_params (fn_params fcall) roots_body` and
   `root_env_excludes_params (fn_params fcall) R_body` fields required by
   `callee_body_root_shadow_ready_at`.
-- The remaining work is to use the completed params-level transport helpers
+- This is now handled by using the completed params-level transport helpers
   inside `direct_call_callee_body_root_shadow_summary_bridge_of_unique`:
   transport cached `Hexclude_roots` / `Hexclude_env` through alpha-renaming,
   root-substitution instantiation, and the caller-tail frame with
@@ -162,10 +163,9 @@ Current proof blocker:
   `roots_exclude_params_instantiate`,
   `root_env_excludes_params_instantiate`, and
   `root_env_excludes_params_app`.
-- Stop again if this requires a new semantic invariant. Do not weaken checker
-  behavior or the alpha-renaming theorem.
+- No checker behavior or alpha-renaming theorem behavior was weakened.
 
-Target theorem:
+Completed target theorem:
 
 ```coq
 Lemma direct_call_callee_body_root_shadow_summary_bridge_of_unique :
@@ -174,7 +174,7 @@ Lemma direct_call_callee_body_root_shadow_summary_bridge_of_unique :
     direct_call_callee_body_root_shadow_summary_bridge env.
 ```
 
-Required proof route:
+Completed proof route:
 
 1. Use function-name uniqueness to recover the cached shadow summary for the
    runtime callee.
@@ -206,11 +206,11 @@ Required proof route:
 Stop and report if any step needs a semantic invariant rather than a proof-only
 helper. Do not change checker behavior.
 
-### After That
+### Next Implementation Task
 
-- Add an `EnvRuntimeSafety.v` convenience wrapper that derives the shadow bridge
-  from `fn_env_unique_by_name` instead of requiring the bridge as a premise.
-- Then return to the ordinary checker target over `alpha_normalize_global_env`.
+Use the new `EnvRuntimeSafety.v` convenience wrapper that derives the shadow
+bridge from `fn_env_unique_by_name` to return to the ordinary checker target
+over `alpha_normalize_global_env`.
 
 ## Detailed Status Inventory
 

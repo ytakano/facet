@@ -173,9 +173,24 @@ false lemma.
    - Done: added root-aware alpha-renaming wrappers for `TER_Let` and
      `TER_LetInfer`, preserving alpha-first shadowing behavior while
      transporting let-body root environments through renamed binder add/remove.
+   - Done: factored the extended-rename remove helper
+     `root_env_remove_shadow_safe_rename_body_ext_equiv`. This gives the
+     let/let-infer body proof a direct equivalence for removing the fresh binder
+     under `((x, xr) :: rho)`, while the existing outer-rho helper remains the
+     final binder-removal bridge.
    - Done: added the root-aware alpha-renaming wrapper for `TER_If`, including
      branch context merge, branch root-env equivalence under renaming, and
      renamed branch-root union equivalence.
+   - Blocker found while assembling the full theorem: the current
+     `alpha_rename_typed_env_roots_if_shadow_safe_support_forward` callback
+     hides which of `e1`, `e2`, or `e3` is being processed. A local
+     `expr_size`-fuel induction therefore cannot prove the recursive-call
+     decrease for the callback argument.
+   - Next implementation step: split or refine the if wrapper callback so each
+     recursive callback carries a concrete subexpression-size premise, for
+     example `expr_size e0 < expr_size (EIf e1 e2 e3)`, or use three separate
+     callbacks for condition/then/else. After that, reintroduce the full
+     `typed_env_roots_shadow_safe` alpha-renaming theorem.
    - Blocker found while assembling the full theorem: the plain recursive
      induction hypothesis for let bodies only returns equivalence under the
      extended rename `((x, xr) :: rho)`. The final `TER_Let` / `TER_LetInfer`

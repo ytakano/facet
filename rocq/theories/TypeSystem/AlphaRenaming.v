@@ -5004,6 +5004,29 @@ Proof.
   - apply root_set_rename_cons_roots_exclude. exact Hexcl.
 Qed.
 
+Lemma root_env_remove_shadow_safe_rename_body_ext_equiv :
+  forall rho R Rr x xr,
+    root_env_no_shadow R ->
+    root_env_no_shadow Rr ->
+    rename_no_collision_on ((x, xr) :: rho) (root_env_names R) ->
+    rename_no_collision_for ((x, xr) :: rho) x (root_env_names R) ->
+    root_env_equiv Rr (root_env_rename ((x, xr) :: rho) R) ->
+    root_env_equiv (root_env_remove xr Rr)
+      (root_env_rename ((x, xr) :: rho) (root_env_remove x R)).
+Proof.
+  intros rho R Rr x xr Hns Hnsr Hnocoll Hnocoll_x Heq.
+  rewrite (root_env_rename_remove ((x, xr) :: rho) R x).
+  - replace (lookup_rename x ((x, xr) :: rho)) with xr
+      by (simpl; rewrite ident_eqb_refl; reflexivity).
+    eapply root_env_equiv_remove.
+    + exact Hnsr.
+    + apply root_env_rename_no_shadow.
+      * exact Hns.
+      * exact Hnocoll.
+    + exact Heq.
+  - exact Hnocoll_x.
+Qed.
+
 Lemma root_env_remove_shadow_safe_rename_body_equiv :
   forall rho R Rr x xr,
     root_env_no_shadow R ->
@@ -5019,16 +5042,7 @@ Proof.
   assert (Hremove_ext :
     root_env_equiv (root_env_remove xr Rr)
       (root_env_rename ((x, xr) :: rho) (root_env_remove x R))).
-  { rewrite (root_env_rename_remove ((x, xr) :: rho) R x).
-    - replace (lookup_rename x ((x, xr) :: rho)) with xr
-        by (simpl; rewrite ident_eqb_refl; reflexivity).
-      eapply root_env_equiv_remove.
-      + exact Hnsr.
-      + apply root_env_rename_no_shadow.
-        * exact Hns.
-        * exact Hnocoll.
-      + exact Heq.
-    - exact Hnocoll_x. }
+  { eapply root_env_remove_shadow_safe_rename_body_ext_equiv; eassumption. }
   eapply root_env_equiv_trans.
   - exact Hremove_ext.
   - eapply root_env_rename_cons_root_env_excludes.

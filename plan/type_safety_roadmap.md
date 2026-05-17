@@ -283,9 +283,13 @@ false lemma.
      `root_env_sctx_keys_named_added_no_collision_for_head`. These derive the
      `rename_no_collision_for ((x, xr) :: rho) x ...` obligation for a body
      root environment supported by the extended structural context.
-   - Remaining narrowed blocker: use these add/no-collision and body-result
-     helpers to assemble the full support-carrying induction over
-     `typed_*_roots_shadow_safe`.
+   - Done: added support-carrying wrapper lemmas for trivial expressions,
+     function values, and `drop`. These establish the callback shape that the
+     full induction needs when recursive hypotheses require root-env key/root
+     support premises.
+   - Remaining narrowed blocker: add the same support-carrying wrapper shape
+     for the remaining recursive constructors, then assemble the full
+     support-carrying induction over `typed_*_roots_shadow_safe`.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

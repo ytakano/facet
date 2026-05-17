@@ -1,6 +1,6 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules RootProvenance TypeChecker RuntimeTyping
-  EnvStructuralRules CheckerSoundness TypeSafety EnvRootSoundness.
+  EnvStructuralRules CheckerSoundness AlphaRenaming TypeSafety EnvRootSoundness.
 From Stdlib Require Import List.
 Import ListNotations.
 
@@ -443,6 +443,57 @@ Proof.
     Hfns_ready Heval.
   eapply infer_full_env_alpha_big_step_safe_with_root_shadow_summary_bridge_of_unique;
     eassumption.
+Qed.
+
+Theorem infer_full_env_alpha_big_step_safe_with_shadow_summary_evidence :
+  forall env f T Γ' s s' v,
+    infer_full_env (alpha_normalize_global_env env) f = infer_ok (T, Γ') ->
+    env_fns_root_shadow_summary_evidence (alpha_normalize_global_env env) ->
+    In f (env_fns (alpha_normalize_global_env env)) ->
+    initial_store_for_fn (alpha_normalize_global_env env) f s ->
+    preservation_direct_call_ready_expr (fn_body f) ->
+    store_roots_within (initial_root_env_for_fn f) s ->
+    store_no_shadow s ->
+    root_env_store_roots_named (initial_root_env_for_fn f) s ->
+    root_env_store_keys_named (initial_root_env_for_fn f) s ->
+    fn_env_unique_by_name (alpha_normalize_global_env env) ->
+    env_fns_preservation_ready (alpha_normalize_global_env env) ->
+    eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
+    value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
+Proof.
+  intros env f T Γ' s s' v _ Hsummary Hin Hstore Hready Hroots
+    Hstore_shadow Hnamed Hkeys Hunique Hfns_ready Heval.
+  destruct (env_fns_root_shadow_summary_evidence_in_unique
+              (alpha_normalize_global_env env) Hsummary Hunique
+              (fn_name f) f Hin eq_refl)
+    as [Hnodup Hbody_summary].
+  unfold callee_body_root_shadow_ready_at in Hbody_summary.
+  destruct Hbody_summary as
+    (T_body & Γ_out & R_body & roots_body &
+      _ & _ & Htyped_shadow & Hcompat & _ & _).
+  pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
+  destruct (eval_preserves_typing_direct_call_roots_ready
+      (alpha_normalize_global_env env) s (fn_body f) s' v Heval
+      (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+      (sctx_of_ctx (params_ctx (fn_params f)))
+      T_body (sctx_of_ctx Γ_out) R_body roots_body
+      Hready Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
+      (typed_env_roots_shadow_safe_roots
+        (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
+        (initial_root_env_for_fn f)
+        (sctx_of_ctx (params_ctx (fn_params f)))
+        (fn_body f) T_body (sctx_of_ctx Γ_out) R_body roots_body
+        Htyped_shadow)
+      Hunique Hfns_ready
+      (direct_call_callee_body_root_evidence_of_shadow_summary_bridge
+        (alpha_normalize_global_env env)
+        Hsummary
+        (direct_call_callee_body_root_shadow_summary_bridge_of_unique
+          (alpha_normalize_global_env env) Hunique)))
+    as [_ [Hv _]].
+  eapply VHT_Compatible.
+  - exact Hv.
+  - apply ty_compatible_b_sound. exact Hcompat.
 Qed.
 
 Theorem infer_full_env_alpha_big_step_safe_with_root_sidecar :

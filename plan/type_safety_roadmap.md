@@ -216,17 +216,16 @@ helper. Do not change checker behavior.
 
 ### Next Implementation Task
 
-Close the remaining sidecar obligations on the ordinary alpha route:
+Close the remaining sidecar obligation on the ordinary alpha route:
 
-1. Root sidecar checker success for `alpha_normalize_global_env`.
-2. `env_fns_root_shadow_summary_evidence` for the alpha-normalized function
+1. Derive `env_fns_root_shadow_summary_evidence` for the alpha-normalized function
    environment.
 
 Use the `_of_unique` wrapper to derive the direct-call shadow bridge from
 `fn_env_unique_by_name`. Do not reintroduce an explicit
 `direct_call_callee_body_root_shadow_summary_bridge` premise, and do not claim
-ordinary-checker-only type safety until both sidecar obligations are removed or
-derived from ordinary checker success.
+ordinary-checker-only type safety until the remaining shadow-summary evidence
+obligation is derived from ordinary checker success.
 
 ## Detailed Status Inventory
 
@@ -324,10 +323,10 @@ verbose than the quick path. Do not use it as the primary implementation order.
      ordinary-alpha statements can derive direct-call shadow bridge evidence
      from `fn_env_unique_by_name` instead of requiring an explicit
      `direct_call_callee_body_root_shadow_summary_bridge` premise.
-   - Remaining blocker: ordinary checker success still does not by itself
-     produce root sidecar checker success for `alpha_normalize_global_env`.
-     Keep the theorem explicitly parameterized by this sidecar success until
-     it is derived from ordinary checker success.
+   - Done: the preferred ordinary-alpha theorem no longer has entry-level
+     `infer_full_env_roots ...` root sidecar checker success as a premise.
+     The theorem name is
+     `infer_full_env_alpha_big_step_safe_with_shadow_summary_evidence`.
    - Remaining blocker: ordinary checker success still does not by itself
      produce `env_fns_root_shadow_summary_evidence` for the alpha-normalized
      function environment. This is the remaining summary-evidence input after

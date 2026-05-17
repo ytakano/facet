@@ -236,6 +236,14 @@ false lemma.
      renamed initializer obligations
      `root_env_lookup xr Rr1 = None`, `roots_exclude xr roots1r`, and
      `root_env_excludes xr Rr1` from `fresh_ident` context freshness.
+   - Done: added `root_env_sctx_keys_named_fresh_lookup_none` and
+     `root_env_sctx_support_fresh_let_init`, which package the initializer-side
+     support facts needed by shadow-safe `TER_Let` / `TERS_LetInfer`.
+   - Remaining narrowed blocker: body-result exclusion still needs an explicit
+     no-collision route for concrete `RStore` roots under
+     `((x, xr) :: rho)`. The proof must show that every concrete store root in
+     `roots2` and `root_env_remove x R2`, other than `x`, cannot rename to
+     `xr`; do not assume this from `ctx_alpha` alone without a lemma.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

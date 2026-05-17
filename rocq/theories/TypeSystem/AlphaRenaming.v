@@ -4446,6 +4446,17 @@ Proof.
   apply Hfresh. apply Hnamed. exact Hin.
 Qed.
 
+Lemma root_env_sctx_keys_named_fresh_lookup_none :
+  forall R Σ x,
+    root_env_sctx_keys_named R Σ ->
+    ~ In x (ctx_names Σ) ->
+    root_env_lookup x R = None.
+Proof.
+  intros R Σ x Hkeys Hfresh.
+  apply root_env_lookup_not_in_names.
+  eapply root_env_sctx_keys_named_fresh_not_in; eassumption.
+Qed.
+
 Lemma root_set_sctx_roots_named_nil :
   forall Σ,
     root_set_sctx_roots_named [] Σ.
@@ -4559,6 +4570,23 @@ Proof.
   apply root_set_sctx_roots_named_fresh_exclude with (Σ := Σ).
   - eapply root_env_lookup_sctx_roots_named; eassumption.
   - exact Hfresh.
+Qed.
+
+Lemma root_env_sctx_support_fresh_let_init :
+  forall R roots Σ x,
+    root_env_sctx_keys_named R Σ ->
+    root_env_sctx_roots_named R Σ ->
+    root_set_sctx_roots_named roots Σ ->
+    ~ In x (ctx_names Σ) ->
+    root_env_lookup x R = None /\
+    roots_exclude x roots /\
+    root_env_excludes x R.
+Proof.
+  intros R roots Σ x Hkeys Henv Hroots Hfresh.
+  repeat split.
+  - eapply root_env_sctx_keys_named_fresh_lookup_none; eassumption.
+  - eapply root_set_sctx_roots_named_fresh_exclude; eassumption.
+  - eapply root_env_sctx_roots_named_fresh_excludes; eassumption.
 Qed.
 
 Lemma root_env_sctx_roots_named_add_env_named :

@@ -6260,6 +6260,119 @@ Definition root_env_excludes_params (ps : list param) (R : root_env) : Prop :=
     In x (ctx_names (params_ctx ps)) ->
     root_env_excludes x R.
 
+Lemma roots_exclude_params_rename :
+  forall rho ps psr roots rootsr,
+    ctx_alpha rho
+      (sctx_of_ctx (params_ctx ps))
+      (sctx_of_ctx (params_ctx psr)) ->
+    NoDup (ctx_names (params_ctx ps)) ->
+    root_set_equiv rootsr (root_set_rename rho roots) ->
+    (forall x y,
+      In x (ctx_names (params_ctx ps)) ->
+      In (RStore y) roots ->
+      y <> x ->
+      lookup_rename y rho <> lookup_rename x rho) ->
+    roots_exclude_params ps roots ->
+    roots_exclude_params psr rootsr.
+Proof.
+  unfold roots_exclude_params.
+  intros rho ps psr roots rootsr Halpha Hnodup Heq Hnocoll Hexcl xr Hinr.
+  destruct (ctx_alpha_renamed_name_preimage rho
+              (sctx_of_ctx (params_ctx ps))
+              (sctx_of_ctx (params_ctx psr)) xr Halpha Hnodup Hinr)
+    as [x [Hinx Hlookup]].
+  subst xr.
+  eapply roots_exclude_equiv.
+  - apply root_set_equiv_sym. exact Heq.
+  - apply roots_exclude_rename.
+    + intros y Hy Hyx. eapply Hnocoll; eassumption.
+    + apply Hexcl. exact Hinx.
+Qed.
+
+Lemma root_env_excludes_params_rename :
+  forall rho ps psr R Rr,
+    ctx_alpha rho
+      (sctx_of_ctx (params_ctx ps))
+      (sctx_of_ctx (params_ctx psr)) ->
+    NoDup (ctx_names (params_ctx ps)) ->
+    root_env_no_shadow R ->
+    root_env_equiv Rr (root_env_rename rho R) ->
+    (forall x y,
+      In x (ctx_names (params_ctx ps)) ->
+      In y (root_env_names R) ->
+      y <> x ->
+      lookup_rename y rho <> lookup_rename x rho) ->
+    (forall x y roots z,
+      In x (ctx_names (params_ctx ps)) ->
+      root_env_lookup y R = Some roots ->
+      y <> x ->
+      In (RStore z) roots ->
+      z <> x ->
+      lookup_rename z rho <> lookup_rename x rho) ->
+    root_env_excludes_params ps R ->
+    root_env_excludes_params psr Rr.
+Proof.
+  unfold root_env_excludes_params.
+  intros rho ps psr R Rr Halpha Hnodup Hrn Heq Hkey_nocoll Hroot_nocoll
+    Hexcl xr Hinr.
+  destruct (ctx_alpha_renamed_name_preimage rho
+              (sctx_of_ctx (params_ctx ps))
+              (sctx_of_ctx (params_ctx psr)) xr Halpha Hnodup Hinr)
+    as [x [Hinx Hlookup]].
+  subst xr.
+  eapply root_env_excludes_equiv.
+  - apply root_env_equiv_sym. exact Heq.
+  - eapply root_env_excludes_rename.
+    + exact Hrn.
+    + intros y Hy Hyx. eapply Hkey_nocoll; eassumption.
+    + intros y roots z Hlookup_y Hyx Hin_z Hzx.
+      eapply Hroot_nocoll; eassumption.
+    + apply Hexcl. exact Hinx.
+Qed.
+
+Lemma roots_exclude_params_instantiate :
+  forall ps rho roots,
+    roots_exclude_params ps roots ->
+    (forall x,
+      In x (ctx_names (params_ctx ps)) ->
+      root_subst_images_exclude x rho) ->
+    roots_exclude_params ps (root_set_instantiate rho roots).
+Proof.
+  unfold roots_exclude_params.
+  intros ps rho roots Hexcl Himages x Hin.
+  apply root_set_instantiate_excludes_images.
+  - apply Hexcl. exact Hin.
+  - apply Himages. exact Hin.
+Qed.
+
+Lemma root_env_excludes_params_instantiate :
+  forall ps rho R,
+    root_env_excludes_params ps R ->
+    (forall x,
+      In x (ctx_names (params_ctx ps)) ->
+      root_subst_images_exclude x rho) ->
+    root_env_excludes_params ps (root_env_instantiate rho R).
+Proof.
+  unfold root_env_excludes_params.
+  intros ps rho R Hexcl Himages x Hin.
+  apply root_env_instantiate_excludes_images.
+  - apply Hexcl. exact Hin.
+  - apply Himages. exact Hin.
+Qed.
+
+Lemma root_env_excludes_params_app :
+  forall ps R1 R2,
+    root_env_excludes_params ps R1 ->
+    root_env_excludes_params ps R2 ->
+    root_env_excludes_params ps (R1 ++ R2).
+Proof.
+  unfold root_env_excludes_params.
+  intros ps R1 R2 Hexcl1 Hexcl2 x Hin.
+  apply root_env_excludes_app.
+  - apply Hexcl1. exact Hin.
+  - apply Hexcl2. exact Hin.
+Qed.
+
 Lemma root_env_store_roots_named_excludes_params :
   forall ps R s,
     root_env_store_roots_named R s ->
@@ -11496,6 +11609,21 @@ Definition env_fns_root_shadow_summary_evidence (env : global_env) : Prop :=
   forall fname fdef,
     lookup_fn fname (env_fns env) = Some fdef ->
     callee_body_root_shadow_summary env fdef.
+
+Lemma env_fns_root_shadow_summary_evidence_in_unique :
+  forall env,
+    env_fns_root_shadow_summary_evidence env ->
+    fn_env_unique_by_name env ->
+    forall fname fdef,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      callee_body_root_shadow_summary env fdef.
+Proof.
+  intros env Hsummary Hunique fname fdef Hin Hname.
+  unfold env_fns_root_shadow_summary_evidence in Hsummary.
+  eapply Hsummary.
+  eapply lookup_fn_in_unique_by_name; eassumption.
+Qed.
 
 Lemma env_fns_root_summary_evidence_of_shadow :
   forall env,

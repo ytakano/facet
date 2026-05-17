@@ -110,11 +110,21 @@ shows they are unusable.
   `alpha_rename_fn_def_params_body`,
   `alpha_rename_fn_def_params_body_facts`,
   `ctx_alpha_no_collision_on`,
+  `ctx_alpha_renamed_name_preimage`,
   `alpha_rename_fn_def_initial_support_facts`, and
   `alpha_rename_fn_def_static_fields`.
+- Params-level exclusion transport helpers now exist in `TypeSafety.v`:
+  `roots_exclude_params_rename`,
+  `root_env_excludes_params_rename`,
+  `roots_exclude_params_instantiate`,
+  `root_env_excludes_params_instantiate`, and
+  `root_env_excludes_params_app`.
 - The shadow-summary interface now carries callee parameter uniqueness:
   `callee_body_root_shadow_summary` includes
   `NoDup (ctx_names (params_ctx (fn_params fdef)))`.
+- Cached shadow summaries can now be recovered from direct-call
+  `In fdef (env_fns env)` evidence under function-name uniqueness via
+  `env_fns_root_shadow_summary_evidence_in_unique`.
 - Call argument root-list length plumbing exists:
   `typed_args_roots_arg_roots_length` and `apply_lt_params_length`.
 
@@ -143,20 +153,15 @@ Current proof blocker:
   `roots_exclude_params (fn_params fcall) roots_body` and
   `root_env_excludes_params (fn_params fcall) R_body` fields required by
   `callee_body_root_shadow_ready_at`.
-- This should be handled as proof plumbing from the existing cached
-  `Hexclude_roots` / `Hexclude_env`, alpha-renaming support facts, root
-  instantiate exclusion lemmas, and tail-frame exclusion lemmas.
-- The remaining missing proof shape is specifically the alpha-renaming step for
-  param-exclusion:
-  from `roots_exclude_params (fn_params fdef) roots_body` and
-  `root_env_excludes_params (fn_params fdef) R_body`, derive the corresponding
-  facts for the alpha-renamed `fn_params fcall` after
-  `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`.
-  Existing `roots_exclude_rename` / `root_env_excludes_rename` need
-  no-collision between renamed parameter names and store roots in the output
-  roots/env. If this cannot be obtained from current support facts, add an
-  explicit proof-only invariant connecting body output roots/env names to
-  parameter names plus expression-local names.
+- The remaining work is to use the completed params-level transport helpers
+  inside `direct_call_callee_body_root_shadow_summary_bridge_of_unique`:
+  transport cached `Hexclude_roots` / `Hexclude_env` through alpha-renaming,
+  root-substitution instantiation, and the caller-tail frame with
+  `roots_exclude_params_rename`,
+  `root_env_excludes_params_rename`,
+  `roots_exclude_params_instantiate`,
+  `root_env_excludes_params_instantiate`, and
+  `root_env_excludes_params_app`.
 - Stop again if this requires a new semantic invariant. Do not weaken checker
   behavior or the alpha-renaming theorem.
 

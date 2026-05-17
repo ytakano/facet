@@ -5425,6 +5425,34 @@ Proof.
            apply Hneq. exact Heq.
 Qed.
 
+Lemma ctx_alpha_renamed_name_preimage :
+  forall rho Σ Σr xr,
+    ctx_alpha rho Σ Σr ->
+    NoDup (ctx_names Σ) ->
+    In xr (ctx_names Σr) ->
+    exists x,
+      In x (ctx_names Σ) /\ lookup_rename x rho = xr.
+Proof.
+  intros rho Σ Σr xr Halpha.
+  induction Halpha; intros Hnodup Hin; simpl in *.
+  - exists xr. split; [exact Hin | reflexivity].
+  - inversion Hnodup as [| ? ? Hx_notin Hnodup_tail]; subst.
+    simpl in *.
+    destruct Hin as [Hin | Hin].
+    + subst xr.
+      exists x. split.
+      * left. reflexivity.
+      * simpl. rewrite ident_eqb_refl. reflexivity.
+    + destruct (IHHalpha Hnodup_tail Hin) as [y [Hy Hlookup]].
+      exists y. split.
+      * right. exact Hy.
+      * simpl.
+        destruct (ident_eqb y x) eqn:Hyx.
+        -- apply ident_eqb_eq in Hyx. subst y.
+           contradiction.
+        -- exact Hlookup.
+Qed.
+
 Lemma alpha_rename_fn_def_initial_support_facts :
   forall used f fr used',
     alpha_rename_fn_def used f = (fr, used') ->

@@ -200,12 +200,24 @@ false lemma.
      context. This mirrors the existing `TypeSafety.v` support theorem, but is
      local to `AlphaRenaming.v` to avoid importing the runtime safety module
      into the alpha-renaming proof path.
+   - Done: added helper lemmas deriving `roots_exclude` and
+     `root_env_excludes` from the shadow-safe support invariant plus freshness
+     from the renamed context. These are the local facts needed to turn
+     `fresh_ident` context freshness into the let/let-infer escape checks on
+     renamed result roots and surviving root environments.
    - Remaining blocker: assemble the full `typed_env_roots`
      alpha-renaming theorem, using the accumulated constructor wrappers and
      root-env algebra helpers in the corresponding constructor cases.
    - Remaining blocker: use the new shadow-safe support invariant in the
      `TER_Let` / `TER_LetInfer` cases to derive that the fresh alpha-renamed
      binder is absent from returned roots and surviving root environments.
+   - Remaining blocker: the existing `alpha_rename_typed_env_roots_let_forward`
+     and `alpha_rename_typed_env_roots_letinfer_forward` wrappers are phrased
+     over ordinary `typed_env_roots`, while the support invariant is available
+     for `typed_env_roots_shadow_safe`. The full theorem should therefore be
+     assembled directly over `typed_*_roots_shadow_safe`, or the wrappers should
+     get shadow-safe variants that thread the shadow-safe body evidence through
+     the recursive call.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

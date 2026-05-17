@@ -4508,6 +4508,30 @@ Proof.
   eapply Hnamed; eassumption.
 Qed.
 
+Lemma root_set_sctx_roots_named_fresh_exclude :
+  forall roots Σ x,
+    root_set_sctx_roots_named roots Σ ->
+    ~ In x (ctx_names Σ) ->
+    roots_exclude x roots.
+Proof.
+  unfold root_set_sctx_roots_named, roots_exclude.
+  intros roots Σ x Hnamed Hfresh Hin.
+  apply Hfresh. apply Hnamed. exact Hin.
+Qed.
+
+Lemma root_env_sctx_roots_named_fresh_excludes :
+  forall R Σ x,
+    root_env_sctx_roots_named R Σ ->
+    ~ In x (ctx_names Σ) ->
+    root_env_excludes x R.
+Proof.
+  unfold root_env_excludes.
+  intros R Σ x Hnamed Hfresh y roots Hlookup _.
+  apply root_set_sctx_roots_named_fresh_exclude with (Σ := Σ).
+  - eapply root_env_lookup_sctx_roots_named; eassumption.
+  - exact Hfresh.
+Qed.
+
 Lemma root_env_sctx_roots_named_add_env_named :
   forall R Σ x roots,
     root_env_sctx_roots_named R Σ ->

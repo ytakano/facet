@@ -3205,12 +3205,19 @@ Definition infer_full_env_roots (env : global_env) (f : fn_def) (R0 : root_env)
       end
   end.
 
+Definition alpha_normalize_global_env (env : global_env) : global_env :=
+  MkGlobalEnv (env_structs env) (env_traits env) (env_impls env)
+    (alpha_rename_syntax (env_fns env)).
+
 Definition check_program_env (env : global_env) : bool :=
   forallb (fun f =>
     match infer_full_env env f with
     | infer_ok _ => true
     | infer_err _ => false
     end) (env_fns env).
+
+Definition check_program_env_alpha (env : global_env) : bool :=
+  check_program_env (alpha_normalize_global_env env).
 
 Definition ex_struct_split : struct_def :=
   MkStructDef ("Split"%string) 0 0 []
@@ -3346,4 +3353,5 @@ From Stdlib Require Import ExtrOcamlNatBigInt.
 From Stdlib Require Import ExtrOcamlZBigInt.
 Extraction "../fixtures/TypeChecker.ml"
   infer_core_env_roots infer_env_roots infer_full_env_roots
-  infer_env infer_full_env check_program_env.
+  infer_env infer_full_env check_program_env
+  alpha_normalize_global_env check_program_env_alpha.

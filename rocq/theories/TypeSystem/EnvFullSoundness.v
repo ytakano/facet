@@ -101,3 +101,26 @@ Proof.
     + exists PBS'. eapply borrow_check_env_structural_sound. exact Hborrow.
     + eapply infer_env_params_nodup. exact Hinfer.
 Qed.
+
+Theorem infer_full_env_alpha_structural_sound : forall env f T Γ',
+  infer_full_env (alpha_normalize_global_env env) f = infer_ok (T, Γ') ->
+  checked_fn_env_structural (alpha_normalize_global_env env) f.
+Proof.
+  intros env f T Γ' Hfull.
+  eapply infer_full_env_structural_sound_unvalidated.
+  exact Hfull.
+Qed.
+
+Theorem check_program_env_alpha_checked_structural : forall env,
+  check_program_env_alpha env = true ->
+  env_fns_checked_structural (alpha_normalize_global_env env).
+Proof.
+  unfold check_program_env_alpha, check_program_env,
+    env_fns_checked_structural.
+  intros env Hcheck f Hin.
+  apply forallb_forall with (x := f) in Hcheck; [| exact Hin].
+  destruct (infer_full_env (alpha_normalize_global_env env) f)
+    as [[T Γ'] | err] eqn:Hfull.
+  - exact (infer_full_env_alpha_structural_sound env f T Γ' Hfull).
+  - simpl in Hcheck. discriminate.
+Qed.

@@ -1,0 +1,4 @@
+fn f(x: unrestricted isize) -> unrestricted () {
+  let x = (&x);
+  ()
+}

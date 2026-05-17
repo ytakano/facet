@@ -19,7 +19,7 @@ let add_binding scope name =
   ((name, d) :: scope, d)
 
 let lookup scope name =
-  max 0 (current_depth scope name)
+  Stdlib.max 0 (current_depth scope name)
 
 let make_ident name d : ident =
   (name, Big_int_Z.big_int_of_int d)

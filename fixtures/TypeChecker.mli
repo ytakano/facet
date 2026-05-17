@@ -55,6 +55,8 @@ val leb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool
 
 val ltb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool
 
+val max : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
+
 val tail_add : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
 
 val tail_addmul :
@@ -219,6 +221,8 @@ type fn_def = { fn_name : ident; fn_lifetimes : Big_int_Z.big_int;
                 fn_outlives : outlives_ctx; fn_params : param list;
                 fn_ret : ty; fn_body : expr }
 
+type syntax = fn_def list
+
 type field_path = string list
 
 val path_segment_eqb : string -> string -> bool
@@ -369,7 +373,33 @@ val apply_lt_params : lifetime list -> param list -> param list
 
 val expr_ref_root : expr -> ident option
 
+type rename_env = (ident * ident) list
+
+val lookup_rename : ident -> rename_env -> ident
+
+val max_ident_index : string -> ident list -> Big_int_Z.big_int
+
+val fresh_ident : ident -> ident list -> ident
+
 val place_name : place -> ident
+
+val free_vars_expr : expr -> ident list
+
+val param_names : param list -> ident list
+
+val rename_place : rename_env -> place -> place
+
+val alpha_rename_expr : rename_env -> ident list -> expr -> expr * ident list
+
+val alpha_rename_params :
+  rename_env -> ident list -> param list -> (param list * rename_env) * ident
+  list
+
+val alpha_rename_fn_def : ident list -> fn_def -> fn_def * ident list
+
+val alpha_rename_syntax_go : ident list -> syntax -> syntax * ident list
+
+val alpha_rename_syntax : syntax -> syntax
 
 type root_atom =
 | RStore of ident
@@ -683,4 +713,8 @@ val infer_full_env_roots :
   global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
   infer_result
 
+val alpha_normalize_global_env : global_env -> global_env
+
 val check_program_env : global_env -> bool
+
+val check_program_env_alpha : global_env -> bool

@@ -111,6 +111,10 @@ let rec leb n m =
 let ltb n m =
   leb (Big_int_Z.succ_big_int n) m
 
+(** val max : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
+
+let rec max = Big_int_Z.max_big_int
+
 (** val tail_add :
     Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
 
@@ -853,6 +857,8 @@ type fn_def = { fn_name : ident; fn_lifetimes : Big_int_Z.big_int;
                 fn_outlives : outlives_ctx; fn_params : param list;
                 fn_ret : ty; fn_body : expr }
 
+type syntax = fn_def list
+
 type field_path = string list
 
 (** val path_segment_eqb : string -> string -> bool **)
@@ -1553,12 +1559,201 @@ let rec expr_ref_root = function
 | EDeref e' -> expr_ref_root e'
 | _ -> None
 
+type rename_env = (ident * ident) list
+
+(** val lookup_rename : ident -> rename_env -> ident **)
+
+let rec lookup_rename x = function
+| [] -> x
+| p :: _UU03c1_' ->
+  let (old, fresh) = p in
+  if ident_eqb x old then fresh else lookup_rename x _UU03c1_'
+
+(** val max_ident_index : string -> ident list -> Big_int_Z.big_int **)
+
+let rec max_ident_index base = function
+| [] -> Big_int_Z.zero_big_int
+| i :: used' ->
+  let (base0, n) = i in
+  if (=) base base0
+  then max n (max_ident_index base used')
+  else max_ident_index base used'
+
+(** val fresh_ident : ident -> ident list -> ident **)
+
+let fresh_ident x used =
+  ((fst x), (Big_int_Z.succ_big_int (max_ident_index (fst x) used)))
+
 (** val place_name : place -> ident **)
 
 let rec place_name = function
 | PVar x -> x
 | PDeref q -> place_name q
 | PField (q, _) -> place_name q
+
+(** val free_vars_expr : expr -> ident list **)
+
+let rec free_vars_expr = function
+| EVar x -> x :: []
+| ELet (_, x, _, e1, e2) -> x :: (app (free_vars_expr e1) (free_vars_expr e2))
+| ELetInfer (_, x, e1, e2) ->
+  x :: (app (free_vars_expr e1) (free_vars_expr e2))
+| EPlace p -> (place_name p) :: []
+| ECall (_, args) ->
+  let rec go = function
+  | [] -> []
+  | arg :: rest -> app (free_vars_expr arg) (go rest)
+  in go args
+| ECallExpr (callee, args) ->
+  let go =
+    let rec go = function
+    | [] -> []
+    | arg :: rest -> app (free_vars_expr arg) (go rest)
+    in go
+  in
+  app (free_vars_expr callee) (go args)
+| EStruct (_, _, _, fields) ->
+  let rec go = function
+  | [] -> []
+  | p :: rest -> let (_, e0) = p in app (free_vars_expr e0) (go rest)
+  in go fields
+| EReplace (p, e_new) -> (place_name p) :: (free_vars_expr e_new)
+| EAssign (p, e_new) -> (place_name p) :: (free_vars_expr e_new)
+| EBorrow (_, p) -> (place_name p) :: []
+| EDeref e1 -> free_vars_expr e1
+| EDrop e1 -> free_vars_expr e1
+| EIf (e1, e2, e3) ->
+  app (free_vars_expr e1) (app (free_vars_expr e2) (free_vars_expr e3))
+| _ -> []
+
+(** val param_names : param list -> ident list **)
+
+let rec param_names = function
+| [] -> []
+| p :: ps' -> p.param_name :: (param_names ps')
+
+(** val rename_place : rename_env -> place -> place **)
+
+let rec rename_place _UU03c1_ = function
+| PVar x -> PVar (lookup_rename x _UU03c1_)
+| PDeref q -> PDeref (rename_place _UU03c1_ q)
+| PField (q, f) -> PField ((rename_place _UU03c1_ q), f)
+
+(** val alpha_rename_expr :
+    rename_env -> ident list -> expr -> expr * ident list **)
+
+let rec alpha_rename_expr _UU03c1_ used = function
+| EVar x -> ((EVar (lookup_rename x _UU03c1_)), used)
+| ELet (m, x, t, e1, e2) ->
+  let (e1', used1) = alpha_rename_expr _UU03c1_ used e1 in
+  let used1' = x :: (app (free_vars_expr e2) used1) in
+  let x' = fresh_ident x used1' in
+  let used2 = x' :: used1' in
+  let (e2', used3) = alpha_rename_expr ((x, x') :: _UU03c1_) used2 e2 in
+  ((ELet (m, x', t, e1', e2')), used3)
+| ELetInfer (m, x, e1, e2) ->
+  let (e1', used1) = alpha_rename_expr _UU03c1_ used e1 in
+  let used1' = x :: (app (free_vars_expr e2) used1) in
+  let x' = fresh_ident x used1' in
+  let used2 = x' :: used1' in
+  let (e2', used3) = alpha_rename_expr ((x, x') :: _UU03c1_) used2 e2 in
+  ((ELetInfer (m, x', e1', e2')), used3)
+| EPlace p -> ((EPlace (rename_place _UU03c1_ p)), used)
+| ECall (fname, args) ->
+  let go =
+    let rec go used0 = function
+    | [] -> ([], used0)
+    | arg :: rest ->
+      let (arg', used1) = alpha_rename_expr _UU03c1_ used0 arg in
+      let (rest', used2) = go used1 rest in ((arg' :: rest'), used2)
+    in go
+  in
+  let (args', used') = go used args in ((ECall (fname, args')), used')
+| ECallExpr (callee, args) ->
+  let (callee', used1) = alpha_rename_expr _UU03c1_ used callee in
+  let go =
+    let rec go used0 = function
+    | [] -> ([], used0)
+    | arg :: rest ->
+      let (arg', used1') = alpha_rename_expr _UU03c1_ used0 arg in
+      let (rest', used2) = go used1' rest in ((arg' :: rest'), used2)
+    in go
+  in
+  let (args', used') = go used1 args in ((ECallExpr (callee', args')), used')
+| EStruct (name, lts, args, fields) ->
+  let go =
+    let rec go used0 = function
+    | [] -> ([], used0)
+    | p :: rest ->
+      let (fname, e0) = p in
+      let (e', used1) = alpha_rename_expr _UU03c1_ used0 e0 in
+      let (rest', used2) = go used1 rest in (((fname, e') :: rest'), used2)
+    in go
+  in
+  let (fields', used') = go used fields in
+  ((EStruct (name, lts, args, fields')), used')
+| EReplace (p, e_new) ->
+  let (e_new', used') = alpha_rename_expr _UU03c1_ used e_new in
+  ((EReplace ((rename_place _UU03c1_ p), e_new')), used')
+| EAssign (p, e_new) ->
+  let (e_new', used') = alpha_rename_expr _UU03c1_ used e_new in
+  ((EAssign ((rename_place _UU03c1_ p), e_new')), used')
+| EBorrow (rk, p) -> ((EBorrow (rk, (rename_place _UU03c1_ p))), used)
+| EDeref e1 ->
+  let (e1', used') = alpha_rename_expr _UU03c1_ used e1 in
+  ((EDeref e1'), used')
+| EDrop e1 ->
+  let (e1', used') = alpha_rename_expr _UU03c1_ used e1 in
+  ((EDrop e1'), used')
+| EIf (e1, e2, e3) ->
+  let (e1', used1) = alpha_rename_expr _UU03c1_ used e1 in
+  let (e2', used2) = alpha_rename_expr _UU03c1_ used1 e2 in
+  let (e3', used3) = alpha_rename_expr _UU03c1_ used2 e3 in
+  ((EIf (e1', e2', e3')), used3)
+| x -> (x, used)
+
+(** val alpha_rename_params :
+    rename_env -> ident list -> param list -> (param
+    list * rename_env) * ident list **)
+
+let rec alpha_rename_params _UU03c1_ used = function
+| [] -> (([], _UU03c1_), used)
+| p :: ps' ->
+  let x = p.param_name in
+  let x' = fresh_ident x used in
+  let p' = { param_mutability = p.param_mutability; param_name = x';
+    param_ty = p.param_ty }
+  in
+  let (p0, used') = alpha_rename_params _UU03c1_ (x' :: used) ps' in
+  let (ps'', _UU03c1_') = p0 in
+  (((p' :: ps''), ((x, x') :: _UU03c1_')), used')
+
+(** val alpha_rename_fn_def : ident list -> fn_def -> fn_def * ident list **)
+
+let alpha_rename_fn_def used f =
+  let used0 =
+    app (param_names f.fn_params) (app (free_vars_expr f.fn_body) used)
+  in
+  let (p, used1) = alpha_rename_params [] used0 f.fn_params in
+  let (params', _UU03c1_) = p in
+  let (body', used2) = alpha_rename_expr _UU03c1_ used1 f.fn_body in
+  ({ fn_name = f.fn_name; fn_lifetimes = f.fn_lifetimes; fn_outlives =
+  f.fn_outlives; fn_params = params'; fn_ret = f.fn_ret; fn_body = body' },
+  used2)
+
+(** val alpha_rename_syntax_go :
+    ident list -> syntax -> syntax * ident list **)
+
+let rec alpha_rename_syntax_go used = function
+| [] -> ([], used)
+| f :: fs ->
+  let (f', used1) = alpha_rename_fn_def used f in
+  let (fs', used2) = alpha_rename_syntax_go used1 fs in ((f' :: fs'), used2)
+
+(** val alpha_rename_syntax : syntax -> syntax **)
+
+let alpha_rename_syntax s =
+  fst (alpha_rename_syntax_go [] s)
 
 type root_atom =
 | RStore of ident
@@ -3919,6 +4114,12 @@ let infer_full_env_roots env f r0 =
      | Infer_err err -> Infer_err err)
   | Infer_err err -> Infer_err err
 
+(** val alpha_normalize_global_env : global_env -> global_env **)
+
+let alpha_normalize_global_env env =
+  { env_structs = env.env_structs; env_traits = env.env_traits; env_impls =
+    env.env_impls; env_fns = (alpha_rename_syntax env.env_fns) }
+
 (** val check_program_env : global_env -> bool **)
 
 let check_program_env env =
@@ -3926,3 +4127,8 @@ let check_program_env env =
     match infer_full_env env f with
     | Infer_ok _ -> true
     | Infer_err _ -> false) env.env_fns
+
+(** val check_program_env_alpha : global_env -> bool **)
+
+let check_program_env_alpha env =
+  check_program_env (alpha_normalize_global_env env)

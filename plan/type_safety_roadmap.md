@@ -57,6 +57,9 @@ establishes it.
   runtime roots flow through references.
 - Runtime calls freshen callee function definitions against caller/captured
   store names before `bind_params`.
+- The user-facing checker route should type-check alpha-normalized core.
+  The verified operational target is the alpha-normalized core, not the
+  pre-normalization frontend core.
 - Root provenance should run on alpha-renamed, shadow-free core terms when root
   evidence is needed.
 - `let x = &x` is not inherently unsafe. After alpha-renaming-before-checking,
@@ -121,6 +124,29 @@ false lemma.
 
    - Use sidecar root evidence only for sublemmas that explicitly require
      reference provenance.
+   - Done: added the executable alpha-normalized checker route:
+     `alpha_normalize_global_env`, `check_program_env_alpha`, and extracted
+     OCaml support. The CLI now checks `env_for_checker`, the alpha-normalized
+     global environment, and uses a sidecar diagnostic map only for displaying
+     original source names.
+   - Done: added normalized structural soundness wrappers:
+     `infer_full_env_alpha_structural_sound` and
+     `check_program_env_alpha_checked_structural`. These make
+     `alpha_normalize_global_env env` the explicit checked environment for the
+     ordinary checker route.
+   - Done: added normalized root-runtime wrapper theorems:
+     `infer_full_env_roots_alpha_big_step_safe_ready` and
+     `infer_full_env_roots_alpha_big_step_safe_direct_call_ready`. These expose
+     the existing root-based runtime safety theorem over
+     `alpha_normalize_global_env env`.
+   - Remaining blocker: restate the main theorem over the alpha-normalized
+     environment/body produced by `alpha_normalize_global_env`, then connect
+     the existing raw `infer_full_env` soundness facts to that route.
+   - Remaining blocker: ordinary checker success still does not by itself
+     produce the `typed_env_roots` evidence required by direct-call cleanup;
+     either prove that the ordinary alpha route establishes the needed sidecar
+     root evidence, or keep the final theorem explicitly parameterized by that
+     sidecar evidence until the bridge is proved.
 
 4. Direct-call root evidence remains a supporting obligation.
    - Existing direct-call preservation work may continue, but it must be framed

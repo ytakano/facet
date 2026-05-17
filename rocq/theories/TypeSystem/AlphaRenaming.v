@@ -4589,6 +4589,78 @@ Proof.
   - eapply root_env_sctx_roots_named_fresh_excludes; eassumption.
 Qed.
 
+Lemma ctx_names_remove_not_in_no_shadow :
+  forall x Σ,
+    sctx_no_shadow Σ ->
+    ~ In x (ctx_names (sctx_remove x Σ)).
+Proof.
+  unfold sctx_no_shadow, sctx_remove.
+  intros x Σ Hnodup.
+  induction Σ as [| [[[y T] st] m] rest IH]; simpl in *.
+  - intros Hin. contradiction.
+  - inversion Hnodup as [| ? ? Hy_notin Hnodup_tail]; subst.
+    destruct (ident_eqb x y) eqn:Hxy.
+    + apply ident_eqb_eq in Hxy. subst y. exact Hy_notin.
+    + simpl. intros Hin.
+      destruct Hin as [Hin | Hin].
+      * subst y. rewrite ident_eqb_refl in Hxy. discriminate.
+      * apply IH.
+        -- exact Hnodup_tail.
+        -- exact Hin.
+Qed.
+
+Lemma root_set_sctx_roots_named_equiv :
+  forall roots roots' Σ,
+    root_set_equiv roots roots' ->
+    root_set_sctx_roots_named roots Σ ->
+    root_set_sctx_roots_named roots' Σ.
+Proof.
+  unfold root_set_sctx_roots_named.
+  intros roots roots' Σ Heq Hnamed z Hin.
+  apply Hnamed. apply Heq. exact Hin.
+Qed.
+
+Lemma root_env_sctx_roots_named_equiv :
+  forall R R' Σ,
+    root_env_equiv R R' ->
+    root_env_sctx_roots_named R Σ ->
+    root_env_sctx_roots_named R' Σ.
+Proof.
+  unfold root_env_sctx_roots_named.
+  intros R R' Σ Heq Hnamed x roots z Hlookup Hin.
+  destruct (root_env_equiv_lookup_r R R' x roots Heq Hlookup)
+    as [roots0 [Hlookup0 Hroots]].
+  eapply Hnamed.
+  - exact Hlookup0.
+  - apply Hroots. exact Hin.
+Qed.
+
+Lemma root_env_sctx_keys_named_equiv :
+  forall R R' Σ,
+    root_env_no_shadow R' ->
+    root_env_equiv R R' ->
+    root_env_sctx_keys_named R Σ ->
+    root_env_sctx_keys_named R' Σ.
+Proof.
+  unfold root_env_sctx_keys_named, root_env_keys_named.
+  intros R R' Σ Hns' Heq Hkeys x Hin.
+  assert (Hexists : exists roots, In (x, roots) R').
+  { clear -Hin.
+    induction R' as [| [y roots_y] rest IH]; simpl in *.
+    - contradiction.
+    - destruct Hin as [Hin | Hin].
+      + subst x. exists roots_y. left. reflexivity.
+      + destruct (IH Hin) as [roots Hpair].
+        exists roots. right. exact Hpair. }
+  destruct Hexists as [roots Hpair].
+  assert (Hlookup' : root_env_lookup x R' = Some roots)
+    by (eapply root_env_lookup_in_no_shadow; eassumption).
+  destruct (root_env_equiv_lookup_r R R' x roots Heq Hlookup')
+    as [roots0 [Hlookup _]].
+  apply Hkeys.
+  eapply root_env_lookup_some_in_names. exact Hlookup.
+Qed.
+
 Lemma ctx_alpha_lookup_rename_in_names :
   forall rho Σ Σr x,
     ctx_alpha rho Σ Σr ->
@@ -4608,6 +4680,67 @@ Proof.
         { apply ident_eqb_neq. intro Heq. subst x0.
           rewrite ident_eqb_refl in Hx0x. discriminate. }
         rewrite Hxx0. right. apply IHHalpha. exact Hin.
+Qed.
+
+Lemma root_set_sctx_roots_named_rename :
+  forall rho Σ Σr roots rootsr,
+    ctx_alpha rho Σ Σr ->
+    root_set_equiv rootsr (root_set_rename rho roots) ->
+    root_set_sctx_roots_named roots Σ ->
+    root_set_sctx_roots_named rootsr Σr.
+Proof.
+  unfold root_set_sctx_roots_named.
+  intros rho Σ Σr roots rootsr Halpha Heq Hnamed z Hin.
+  apply Heq in Hin.
+  apply root_set_rename_in_inv in Hin.
+  destruct Hin as [atom [Hin Hatom]].
+  destruct atom as [y | y]; simpl in Hatom; inversion Hatom; subst z.
+  eapply ctx_alpha_lookup_rename_in_names.
+  - exact Halpha.
+  - apply Hnamed. exact Hin.
+Qed.
+
+Lemma root_env_sctx_roots_named_rename :
+  forall rho Σ Σr R Rr,
+    ctx_alpha rho Σ Σr ->
+    root_env_no_shadow R ->
+    root_env_equiv Rr (root_env_rename rho R) ->
+    root_env_sctx_roots_named R Σ ->
+    root_env_sctx_roots_named Rr Σr.
+Proof.
+  unfold root_env_sctx_roots_named.
+  intros rho Σ Σr R Rr Halpha Hns Heq Hnamed x roots z Hlookup Hin.
+  destruct (root_env_equiv_lookup_l Rr (root_env_rename rho R)
+    x roots Heq Hlookup) as [roots_ren [Hlookup_ren Hroots]].
+  destruct (root_env_lookup_rename_inv rho R x roots_ren Hns Hlookup_ren)
+    as [y [roots0 [Hlookup0 [Hx Hroots_ren]]]].
+  subst x roots_ren.
+  apply Hroots in Hin.
+  apply root_set_rename_in_inv in Hin.
+  destruct Hin as [atom [Hin0 Hatom]].
+  destruct atom as [w | w]; simpl in Hatom; inversion Hatom; subst z.
+  eapply ctx_alpha_lookup_rename_in_names.
+  - exact Halpha.
+  - eapply Hnamed; eassumption.
+Qed.
+
+Lemma root_env_sctx_keys_named_rename :
+  forall rho Σ Σr R Rr,
+    ctx_alpha rho Σ Σr ->
+    root_env_no_shadow Rr ->
+    root_env_equiv Rr (root_env_rename rho R) ->
+    root_env_sctx_keys_named R Σ ->
+    root_env_sctx_keys_named Rr Σr.
+Proof.
+  intros rho Σ Σr R Rr Halpha Hns Heq Hkeys.
+  eapply root_env_sctx_keys_named_equiv.
+  - exact Hns.
+  - apply root_env_equiv_sym. exact Heq.
+  - unfold root_env_sctx_keys_named.
+    eapply root_env_keys_named_rename.
+    + exact Hkeys.
+    + intros x Hin.
+      eapply ctx_alpha_lookup_rename_in_names; eassumption.
 Qed.
 
 Lemma ctx_alpha_lookup_rename_fresh_neq :

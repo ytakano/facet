@@ -256,13 +256,16 @@ false lemma.
      wrappers. These mirror the ordinary let wrappers while preserving
      `typed_env_roots_shadow_safe` evidence and threading the renamed
      initializer/body exclusion obligations.
+   - Done: added support-transport helpers for root-set/root-env support under
+     `root_set_equiv`, `root_env_equiv`, `root_set_rename`, and
+     `root_env_rename` under `ctx_alpha`.
    - Remaining narrowed blocker: assemble the full theorem over
-     `typed_*_roots_shadow_safe` as a support-carrying induction. The let cases
-     must derive renamed initializer exclusions before invoking the new wrappers.
-     This requires either adding support-transport lemmas for
-     `root_env_equiv Rr (root_env_rename rho R)` under `ctx_alpha rho Σ Σr`, or
-     carrying `root_env_sctx_roots_named` / `root_env_sctx_keys_named` for the
-     renamed side directly in the mutual induction conclusion.
+     `typed_*_roots_shadow_safe` as a support-carrying induction. The next
+     proof obligation is the let-body recursive call: derive
+     `rename_no_collision_on ((x, xr) :: rho)
+       (root_env_names (root_env_add x roots1 R1))`
+     from the existing outer no-collision facts, `root_env_lookup x R1 = None`,
+     `root_env_excludes x R1`, and freshness of `xr`.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

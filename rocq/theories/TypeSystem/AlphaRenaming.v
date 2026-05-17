@@ -6907,6 +6907,28 @@ Proof.
       * exact Hneq.
 Qed.
 
+Lemma root_env_remove_shadow_safe_rename_no_collision_on_same_bindings :
+  forall rho Σ Σ2 Σr R x xr T m,
+    ctx_alpha rho Σ Σr ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R Σ2 ->
+    sctx_same_bindings (sctx_add x T m Σ) Σ2 ->
+    ~ In xr (ctx_names Σr) ->
+    rename_no_collision_on rho (root_env_names (root_env_remove x R)) ->
+    rename_no_collision_on ((x, xr) :: rho) (root_env_names R).
+Proof.
+  intros rho Σ Σ2 Σr R x xr T m Halpha Hns Hkeys Hsame Hfresh
+    Hnocoll.
+  eapply root_env_remove_shadow_safe_rename_no_collision_on.
+  - exact Halpha.
+  - exact Hns.
+  - eapply root_env_sctx_keys_named_same_bindings.
+    + apply sctx_same_bindings_sym. exact Hsame.
+    + exact Hkeys.
+  - exact Hfresh.
+  - exact Hnocoll.
+Qed.
+
 Lemma rename_no_collision_on_weaken_names :
   forall rho names names',
     rename_no_collision_on rho names' ->

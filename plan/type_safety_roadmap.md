@@ -307,13 +307,14 @@ false lemma.
      renamed-tail freshness and renamed initializer lookup/exclusion facts
      needed when constructing the `TER_Let` / `TERS_LetInfer` body callback
      inside the full support-carrying induction.
-   - Remaining narrowed blocker: while assembling the full support-carrying
-     induction, the body result support facts are for the actual result context
-     `Σ2`, but the existing result-side extended no-collision helper is still
-     too syntactic and tied to an `sctx_add`-shaped result context. Next step:
-     add a same-bindings/generalized helper that derives extended
-     no-collision for `R2` from support over `Σ2` and same-bindings with the
-     let-body input context.
+   - Done: added
+     `root_env_remove_shadow_safe_rename_no_collision_on_same_bindings`. This
+     generalizes the result-side extended no-collision helper from an
+     `sctx_add`-shaped result context to any same-bindings actual result
+     context `Σ2`.
+   - Remaining narrowed blocker: retry assembling the full support-carrying
+     induction over `typed_*_roots_shadow_safe`, using the new same-bindings
+     helper in the `TER_Let` / `TERS_LetInfer` body callbacks.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

@@ -153,6 +153,9 @@ false lemma.
    - Done: added root-env name/no-collision helper lemmas and
      `root_env_equiv_rename_lookup_none_forward`, preparing the let/let-infer
      cases of the full root-aware alpha-renaming theorem.
+   - Done: added root-aware alpha-renaming helpers for `typed_args_roots` and
+     `typed_fields_roots`, so call and struct cases can reuse the same
+     traversal shape as the structural alpha-renaming proof.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

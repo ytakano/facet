@@ -188,20 +188,23 @@ false lemma.
      plus wrappers for env, args, and fields. These give the bridge a
      compiled route for instantiating cached summary roots at freshened
      direct-call bodies.
-   - Remaining blocker: `direct_call_callee_body_root_shadow_summary_bridge`
-     still has weaker premises than the runtime call case. To use
-     `typed_env_roots_shadow_safe_instantiate_fresh`, the bridge needs evidence
-     that `root_subst_of_params` images exclude the freshened callee body local
-     store names. The runtime call proof can derive that from
+   - Done: strengthened `TypeSafety.v` direct-call bridge facts
+     `direct_call_callee_body_root_evidence`,
+     `direct_call_callee_body_root_summary_bridge`, and
+     `direct_call_callee_body_root_shadow_summary_bridge` so they carry the
+     runtime call-site invariants needed for substitution freshness:
      `provenance_ready_args`, `store_typed`, `store_roots_within`,
-     `store_no_shadow`, `root_env_no_shadow`, and `eval_args`, but the current
-     summary-bridge premise set only exposes `eval_args` and
-     `root_env_store_roots_named`.
-   - Next implementation step: strengthen or refactor the direct-call bridge
-     so it carries the same root/store invariants available at the actual call
-     site, then consume the shadow-safe root substitution lemmas together with
-     tail weakening to transport cached summary evidence to each freshened
-     direct-call body without assuming it as a premise.
+     `store_no_shadow`, and `root_env_no_shadow`, in addition to the existing
+     `root_env_store_roots_named`, `eval_args`, and `typed_args_roots`
+     premises.
+   - Done: added and compiled the `TypeSafety.v` helper
+     `eval_args_root_subst_images_exclude_names_for_fresh_call`. This derives
+     `root_subst_images_exclude_names` for freshened callee bodies from the
+     runtime call-site invariants now carried by the direct-call bridge facts.
+   - Remaining blocker: prove the tail weakening theorem and consume these
+     freshness facts in the actual shadow-summary transport, so cached summary
+     evidence can be transported to each freshened direct-call body without
+     assuming the transported evidence as a premise.
 
 4. Direct-call root evidence remains a supporting obligation.
    - Existing direct-call preservation work may continue, but it must be framed

@@ -163,7 +163,8 @@ Lemma direct_call_callee_body_root_evidence_of_check :
     direct_call_callee_body_root_evidence env.
 Proof.
   intros env Hcheck Ω n R Σ Σ_args R_args arg_roots fname args fdef fcall
-    σ s s_args vs used' Hin Hfname Htyped_args Heval_args Hnamed Hrename.
+    σ s s_args vs used' Hin Hfname Htyped_args Heval_args Hprov_args
+    Hstore Hroots Hshadow Hrn Hnamed Hrename.
   apply callee_body_root_ready_at_of_check_ready_at.
   eapply Hcheck; eassumption.
 Qed.

@@ -11027,6 +11027,11 @@ Definition direct_call_callee_body_root_summary_bridge
     typed_args_roots env Ω n R Σ args
       (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
     eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
     root_env_store_roots_named R s ->
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
     callee_body_root_ready_at env fcall
@@ -11043,6 +11048,11 @@ Definition direct_call_callee_body_root_shadow_summary_bridge
     typed_args_roots env Ω n R Σ args
       (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
     eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
     root_env_store_roots_named R s ->
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
     callee_body_root_shadow_ready_at env fcall
@@ -11057,6 +11067,11 @@ Definition direct_call_callee_body_root_evidence (env : global_env) : Prop :=
     typed_args_roots env Ω n R Σ args
       (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
     eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
     root_env_store_roots_named R s ->
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
     callee_body_root_ready_at env fcall
@@ -11070,7 +11085,7 @@ Lemma direct_call_callee_body_root_evidence_of_summary_bridge :
 Proof.
   intros env Hsummary Hbridge Ω n R Σ Σ_args R_args arg_roots fname args
     fdef fcall σ s s_args vs used' Hin Hfname Htyped_args Heval_args
-    Hnamed Hrename.
+    Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hrename.
   eapply Hbridge; eassumption.
 Qed.
 
@@ -11082,7 +11097,7 @@ Lemma direct_call_callee_body_root_evidence_of_shadow_summary_bridge :
 Proof.
   intros env Hsummary Hbridge Ω n R Σ Σ_args R_args arg_roots fname args
     fdef fcall σ s s_args vs used' Hin Hfname Htyped_args Heval_args
-    Hnamed Hrename.
+    Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hrename.
   eapply callee_body_root_ready_at_of_shadow_ready_at.
   eapply Hbridge; eassumption.
 Qed.
@@ -11970,6 +11985,34 @@ Proof.
       * eapply root_set_ctx_roots_named_store_typed; eassumption.
 Qed.
 
+Lemma eval_args_root_subst_images_exclude_names_for_fresh_call :
+  forall env Ω n R Σ ps_typed Σ_args R_args arg_roots args s s_args vs
+      fdef fcall used',
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    typed_args_roots env Ω n R Σ args ps_typed Σ_args R_args arg_roots ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    root_subst_images_exclude_names
+      (expr_local_store_names (fn_body fcall))
+      (root_subst_of_params (fn_params fcall) arg_roots).
+Proof.
+  intros env Ω n R Σ ps_typed Σ_args R_args arg_roots args s s_args vs
+    fdef fcall used' Heval_args Hprov_args Hstore Hroots Hshadow Hrn
+    Hnamed Htyped_args Hrename.
+  destruct (proj1 (proj2 eval_preserves_root_names_ready_mutual)
+              env s args s_args vs Heval_args Ω n R Σ ps_typed Σ_args
+              R_args arg_roots Hprov_args Hstore Hroots Hshadow Hrn
+              Hnamed Htyped_args)
+    as [_ Harg_roots_named].
+  eapply alpha_rename_fn_def_body_root_subst_images_exclude_names_from_store_roots;
+    eassumption.
+Qed.
+
 Theorem eval_preserves_root_keys_named_ready_mutual :
   (forall env s e s' v,
     eval env s e s' v ->
@@ -12099,6 +12142,11 @@ Proof.
     repeat split; assumption.
   - dependent destruction Heval.
     dependent destruction Htyped.
+    match goal with
+    | Hready_args0 : preservation_ready_args ?args_call |- _ =>
+        pose proof (preservation_ready_args_implies_provenance_ready
+                      args_call Hready_args0) as Hprov_args
+    end.
     repeat match goal with
     | Hlookup : lookup_fn (fn_name ?f_typed) (env_fns env) =
         Some ?f_runtime,
@@ -12129,7 +12177,8 @@ Proof.
       Hfname : fn_name ?fdef = ?fname_call |- _ =>
         pose proof (Hcallee_roots Ω n R Σ Σ' R' arg_roots
                       fname_call args_call fdef fcall σ s s_args vs
-                      used' Hin Hfname Htyped_args Heval_args Hnamed Hrename)
+                      used' Hin Hfname Htyped_args Heval_args Hprov_args
+                      Hstore Hroots Hshadow Hrn Hnamed Hrename)
           as Hbody_ready;
         unfold callee_body_root_ready_at in Hbody_ready;
         destruct Hbody_ready
@@ -12144,7 +12193,8 @@ Proof.
       Hin : In ?fdef (env_fns env) |- _ =>
         pose proof (Hcallee_roots Ω n R Σ Σ' R' arg_roots
                       (fn_name fdef) args_call fdef fcall σ s s_args vs
-                      used' Hin eq_refl Htyped_args Heval_args Hnamed Hrename)
+                      used' Hin eq_refl Htyped_args Heval_args Hprov_args
+                      Hstore Hroots Hshadow Hrn Hnamed Hrename)
           as Hbody_ready;
         unfold callee_body_root_ready_at in Hbody_ready;
         destruct Hbody_ready
@@ -12156,18 +12206,15 @@ Proof.
     | Htyped_args : typed_args_roots env Ω n R Σ ?args_call
         (apply_lt_params ?σ (fn_params ?fdef)) Σ' R' ?arg_roots,
       Heval_args : eval_args env s ?args_call ?s_args ?vs,
-      Hready_args0 : preservation_ready_args ?args_call,
       Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
         (?fcall, ?used'),
       Heval_body : eval env
         (bind_params (fn_params ?fcall) ?vs ?s_args)
         (fn_body ?fcall) ?s_body ?ret |- _ =>
-        pose proof (preservation_ready_args_implies_provenance_ready
-                      args_call Hready_args0) as Hprov_args;
         destruct (proj1 (proj2 eval_preserves_typing_ready_mutual)
                     env s args_call s_args vs Heval_args Ω n Σ
                     (apply_lt_params σ (fn_params fdef)) Σ'
-                    Hready_args0 Hstore
+                    Hready_args Hstore
                     (typed_args_roots_structural env Ω n R Σ args_call
                       (apply_lt_params σ (fn_params fdef)) Σ' R'
                       arg_roots Htyped_args))
@@ -12201,7 +12248,7 @@ Proof.
                     s s_args s_body vs ret used' T_body Γ_out
                     (call_param_root_env (fn_params fcall) arg_roots R')
                     R_body roots_body Hstore Hroots Hshadow Hrn Hprov_args
-                    Hready_args0 Htyped_args Heval_args Hrename Hroots_bind
+                    Hready_args Htyped_args Heval_args Hrename Hroots_bind
                     Hshadow_bind Hrn_params Hcover_params Hprov_body
                     Hready_body Htyped_body Hcompat_body Hexclude_ret
                     Hexclude_env Heval_body)

@@ -273,8 +273,14 @@ false lemma.
      `root_env_add_shadow_safe_rename_equiv`. These package the no-collision
      and root-env add/rename equivalence facts needed for the support-carrying
      `TER_Let` / `TERS_LetInfer` cases.
-   - Remaining narrowed blocker: use these add/no-collision helpers to assemble
-     the full support-carrying induction over `typed_*_roots_shadow_safe`.
+   - Done: added the body-result equivalence helpers
+     `root_set_shadow_safe_rename_body_equiv` and
+     `root_env_remove_shadow_safe_rename_body_equiv`. These convert body IH
+     results under `((x, xr) :: rho)` back to the outer `rho` after the let
+     binder is removed, using the original let escape premises.
+   - Remaining narrowed blocker: use these add/no-collision and body-result
+     helpers to assemble the full support-carrying induction over
+     `typed_*_roots_shadow_safe`.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

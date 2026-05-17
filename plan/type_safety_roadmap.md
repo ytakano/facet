@@ -210,6 +210,11 @@ false lemma.
      surviving root-env keys remain backed by structural context names, and
      that removing a no-shadow let-bound key really removes that key from the
      surviving root environment.
+   - Done: added shadow-safe root-aware alpha-renaming wrappers for args,
+     fields, trivial constructors, function values, drop, var/place, borrow,
+     replace/assign, if, call, and struct. These wrappers preserve the existing
+     alpha-renaming conclusions while returning `typed_*_roots_shadow_safe`
+     evidence, so the full theorem can use shadow-safe support facts directly.
    - Remaining blocker: assemble the full `typed_env_roots`
      alpha-renaming theorem, using the accumulated constructor wrappers and
      root-env algebra helpers in the corresponding constructor cases.
@@ -223,6 +228,14 @@ false lemma.
      assembled directly over `typed_*_roots_shadow_safe`, or the wrappers should
      get shadow-safe variants that thread the shadow-safe body evidence through
      the recursive call.
+   - Newly narrowed blocker: the shadow-safe `TER_Let` / `TERS_LetInfer`
+     wrappers cannot be plain copies of the ordinary wrappers. They must either
+     carry renamed-side `root_env_sctx_roots_named` and
+     `root_env_sctx_keys_named` support through the wrapper, or the full theorem
+     must use a stronger support-carrying induction. This is needed to prove the
+     renamed initializer obligations
+     `root_env_lookup xr Rr1 = None`, `roots_exclude xr roots1r`, and
+     `root_env_excludes xr Rr1` from `fresh_ident` context freshness.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

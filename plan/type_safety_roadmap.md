@@ -287,8 +287,14 @@ false lemma.
      function values, and `drop`. These establish the callback shape that the
      full induction needs when recursive hypotheses require root-env key/root
      support premises.
-   - Remaining narrowed blocker: add the same support-carrying wrapper shape
-     for the remaining recursive constructors, then assemble the full
+   - Done: added support-carrying wrapper lemmas for `var`, `place`, `borrow`,
+     `replace`, `assign`, `if`, args, fields, `call`, and `struct`. These
+     thread `root_env_sctx_keys_named` and `root_env_sctx_roots_named` through
+     the non-let recursive wrapper shape without changing the ordinary
+     wrappers.
+   - Remaining narrowed blocker: add the support-carrying wrapper shape for
+     `TER_Let` / `TERS_LetInfer`, where the body callback must also return the
+     fresh renamed-binder lookup/exclusion facts, then assemble the full
      support-carrying induction over `typed_*_roots_shadow_safe`.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.

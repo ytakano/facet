@@ -170,6 +170,9 @@ false lemma.
    - Done: added root-aware alpha-renaming wrappers for `TER_Replace_Path`
      and `TER_Assign_Path`, including path availability/restore transport and
      root-env update rename equivalence.
+   - Done: added root-aware alpha-renaming wrappers for `TER_Let` and
+     `TER_LetInfer`, preserving alpha-first shadowing behavior while
+     transporting let-body root environments through renamed binder add/remove.
    - Done: added the root-aware alpha-renaming wrapper for `TER_If`, including
      branch context merge, branch root-env equivalence under renaming, and
      renamed branch-root union equivalence.

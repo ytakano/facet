@@ -4824,6 +4824,39 @@ Proof.
   - exact Hyx.
 Qed.
 
+Lemma root_env_sctx_keys_named_added_bound_no_collision :
+  forall rho Σ Σr R x xr T m y,
+    ctx_alpha rho Σ Σr ->
+    root_env_sctx_keys_named R (sctx_add x T m Σ) ->
+    ~ In xr (ctx_names Σr) ->
+    In y (root_env_names R) ->
+    y <> x ->
+    lookup_rename y ((x, xr) :: rho) <> xr.
+Proof.
+  intros rho Σ Σr R x xr T m y Halpha Hkeys Hfresh Hin Hyx.
+  eapply ctx_alpha_bound_no_collision_for.
+  - exact Halpha.
+  - exact Hfresh.
+  - specialize (Hkeys y Hin). simpl in Hkeys.
+    destruct Hkeys as [Hkeys | Hkeys].
+    + subst y. contradiction.
+    + exact Hkeys.
+  - exact Hyx.
+Qed.
+
+Lemma root_env_sctx_keys_named_added_no_collision_for_head :
+  forall rho Σ Σr R x xr T m,
+    ctx_alpha rho Σ Σr ->
+    root_env_sctx_keys_named R (sctx_add x T m Σ) ->
+    ~ In xr (ctx_names Σr) ->
+    rename_no_collision_for ((x, xr) :: rho) x (root_env_names R).
+Proof.
+  unfold rename_no_collision_for.
+  intros rho Σ Σr R x xr T m Halpha Hkeys Hfresh y Hin Hyx.
+  simpl. rewrite ident_eqb_refl.
+  eapply root_env_sctx_keys_named_added_bound_no_collision; eassumption.
+Qed.
+
 Lemma root_env_sctx_keys_named_lookup_rename_fresh :
   forall rho Σ Σr R xr,
     ctx_alpha rho Σ Σr ->

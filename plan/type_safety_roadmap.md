@@ -278,6 +278,11 @@ false lemma.
      `root_env_remove_shadow_safe_rename_body_equiv`. These convert body IH
      results under `((x, xr) :: rho)` back to the outer `rho` after the let
      binder is removed, using the original let escape premises.
+   - Done: added head-binder no-collision helpers
+     `root_env_sctx_keys_named_added_bound_no_collision` and
+     `root_env_sctx_keys_named_added_no_collision_for_head`. These derive the
+     `rename_no_collision_for ((x, xr) :: rho) x ...` obligation for a body
+     root environment supported by the extended structural context.
    - Remaining narrowed blocker: use these add/no-collision and body-result
      helpers to assemble the full support-carrying induction over
      `typed_*_roots_shadow_safe`.

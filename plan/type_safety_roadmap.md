@@ -340,9 +340,15 @@ false lemma.
      actual result context `Σ2` with
      `sctx_same_bindings (sctx_add x T m Σ1) Σ2` can be reused over the
      binder-free context needed by the final let/letinfer escape obligations.
-   - Remaining narrowed blocker: retry
+   - Done: refined
+     `alpha_rename_typed_env_roots_if_shadow_safe_support_forward` so its
+     callback carries a concrete subexpression-size premise. This lets the
+     full local fuel induction discharge the `EIf` recursive calls without
+     guessing which branch expression is being processed.
+   - Done: proved
      `alpha_rename_typed_env_roots_shadow_safe_full_support_forward` using
-     those helpers in `TER_Let` / `TERS_LetInfer`.
+     the support-carrying wrappers, including the shadow-safe `TER_Let` /
+     `TERS_LetInfer` cases and the `EIf` size-premise callback.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

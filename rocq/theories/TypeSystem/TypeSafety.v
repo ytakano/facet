@@ -11033,6 +11033,7 @@ Definition direct_call_callee_body_root_summary_bridge
     store_no_shadow s ->
     root_env_no_shadow R ->
     root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
     callee_body_root_ready_at env fcall
       (call_param_root_env (fn_params fcall) arg_roots R_args).
@@ -11054,6 +11055,7 @@ Definition direct_call_callee_body_root_shadow_summary_bridge
     store_no_shadow s ->
     root_env_no_shadow R ->
     root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
     callee_body_root_shadow_ready_at env fcall
       (call_param_root_env (fn_params fcall) arg_roots R_args).
@@ -11073,6 +11075,7 @@ Definition direct_call_callee_body_root_evidence (env : global_env) : Prop :=
     store_no_shadow s ->
     root_env_no_shadow R ->
     root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
     callee_body_root_ready_at env fcall
       (call_param_root_env (fn_params fcall) arg_roots R_args).
@@ -11085,7 +11088,7 @@ Lemma direct_call_callee_body_root_evidence_of_summary_bridge :
 Proof.
   intros env Hsummary Hbridge Ω n R Σ Σ_args R_args arg_roots fname args
     fdef fcall σ s s_args vs used' Hin Hfname Htyped_args Heval_args
-    Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hrename.
+    Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
   eapply Hbridge; eassumption.
 Qed.
 
@@ -11097,7 +11100,7 @@ Lemma direct_call_callee_body_root_evidence_of_shadow_summary_bridge :
 Proof.
   intros env Hsummary Hbridge Ω n R Σ Σ_args R_args arg_roots fname args
     fdef fcall σ s s_args vs used' Hin Hfname Htyped_args Heval_args
-    Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hrename.
+    Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
   eapply callee_body_root_ready_at_of_shadow_ready_at.
   eapply Hbridge; eassumption.
 Qed.
@@ -12089,6 +12092,62 @@ Proof.
       eapply root_env_ctx_keys_named_store_typed; eassumption.
 Qed.
 
+Lemma root_env_store_keys_named_lookup_excludes_name :
+  forall R s x,
+    root_env_store_keys_named R s ->
+    ~ In x (store_names s) ->
+    root_env_lookup x R = None.
+Proof.
+  intros R s x Hnamed Hfresh.
+  destruct (root_env_lookup x R) as [roots |] eqn:Hlookup;
+    try reflexivity.
+  exfalso. apply Hfresh.
+  eapply root_env_keys_named_lookup; eassumption.
+Qed.
+
+Lemma root_env_store_keys_named_excludes_names :
+  forall R s names,
+    root_env_store_keys_named R s ->
+    Forall (fun x => ~ In x (store_names s)) names ->
+    forall x, In x names -> root_env_lookup x R = None.
+Proof.
+  intros R s names Hnamed Hfresh x Hin.
+  eapply root_env_store_keys_named_lookup_excludes_name.
+  - exact Hnamed.
+  - apply (proj1 (Forall_forall _ _) Hfresh). exact Hin.
+Qed.
+
+Lemma eval_args_root_keys_exclude_names_for_fresh_call :
+  forall env Ω n R Σ ps_typed Σ_args R_args arg_roots args s s_args vs
+      fdef fcall used',
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_keys_named R s ->
+    typed_args_roots env Ω n R Σ args ps_typed Σ_args R_args arg_roots ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    forall x,
+      In x (expr_local_store_names (fn_body fcall)) ->
+      root_env_lookup x R_args = None.
+Proof.
+  intros env Ω n R Σ ps_typed Σ_args R_args arg_roots args s s_args vs
+    fdef fcall used' Heval_args Hprov_args Hstore Hroots Hshadow Hrn
+    Hnamed Htyped_args Hrename x Hin.
+  pose proof (proj1 (proj2 eval_preserves_root_keys_named_ready_mutual)
+                env s args s_args vs Heval_args Ω n R Σ ps_typed Σ_args
+                R_args arg_roots Hprov_args Hstore Hroots Hshadow Hrn
+                Hnamed Htyped_args)
+    as Harg_keys_named.
+  eapply root_env_store_keys_named_excludes_names.
+  - exact Harg_keys_named.
+  - eapply alpha_rename_fn_def_body_local_store_names_fresh_used.
+    exact Hrename.
+  - exact Hin.
+Qed.
+
 Lemma eval_args_root_names_excludes_params_ready :
   forall env s args s_args vs Ω n R Σ ps Σ_args R_args arg_roots
       ps_bind,
@@ -12122,6 +12181,7 @@ Theorem eval_preserves_typing_direct_call_roots_ready :
       store_no_shadow s ->
       root_env_no_shadow R ->
       root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
       typed_env_roots env Ω n R Σ e T Σ' R' roots ->
       fn_env_unique_by_name env ->
       env_fns_preservation_ready env ->
@@ -12131,7 +12191,7 @@ Theorem eval_preserves_typing_direct_call_roots_ready :
       store_ref_targets_preserved env s s'.
 Proof.
   intros env s e s' v Heval Ω n R Σ T Σ' R' roots Hready Hstore
-    Hroots Hshadow Hrn Hnamed Htyped Hunique _ Hcallee_roots.
+    Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique _ Hcallee_roots.
   inversion Hready as [e_ready Hpres_ready | fname args Hready_args]; subst.
   - pose proof (preservation_ready_implies_provenance_ready e Hpres_ready)
       as Hprov.
@@ -12178,7 +12238,7 @@ Proof.
         pose proof (Hcallee_roots Ω n R Σ Σ' R' arg_roots
                       fname_call args_call fdef fcall σ s s_args vs
                       used' Hin Hfname Htyped_args Heval_args Hprov_args
-                      Hstore Hroots Hshadow Hrn Hnamed Hrename)
+                      Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename)
           as Hbody_ready;
         unfold callee_body_root_ready_at in Hbody_ready;
         destruct Hbody_ready
@@ -12194,7 +12254,7 @@ Proof.
         pose proof (Hcallee_roots Ω n R Σ Σ' R' arg_roots
                       (fn_name fdef) args_call fdef fcall σ s s_args vs
                       used' Hin eq_refl Htyped_args Heval_args Hprov_args
-                      Hstore Hroots Hshadow Hrn Hnamed Hrename)
+                      Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename)
           as Hbody_ready;
         unfold callee_body_root_ready_at in Hbody_ready;
         destruct Hbody_ready

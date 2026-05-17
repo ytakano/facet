@@ -201,6 +201,13 @@ false lemma.
      `eval_args_root_subst_images_exclude_names_for_fresh_call`. This derives
      `root_subst_images_exclude_names` for freshened callee bodies from the
      runtime call-site invariants now carried by the direct-call bridge facts.
+   - Done: direct-call bridge/evidence and alpha runtime wrappers now carry
+     `root_env_store_keys_named`; `TypeSafety.v` has compiled helpers deriving
+     freshened callee local key exclusion from `eval_args` plus
+     `alpha_rename_fn_def` freshness:
+     `root_env_store_keys_named_lookup_excludes_name`,
+     `root_env_store_keys_named_excludes_names`, and
+     `eval_args_root_keys_exclude_names_for_fresh_call`.
    - Remaining blocker: prove the tail weakening theorem and consume these
      freshness facts in the actual shadow-summary transport, so cached summary
      evidence can be transported to each freshened direct-call body without

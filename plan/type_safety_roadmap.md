@@ -216,16 +216,34 @@ helper. Do not change checker behavior.
 
 ### Next Implementation Task
 
-Close the remaining sidecar obligation on the ordinary alpha route:
+Close the remaining sidecar obligation on the ordinary alpha route by adding
+one of the missing synthesis routes, not by treating ordinary checker success
+as already sufficient.
 
-1. Derive `env_fns_root_shadow_summary_evidence` for the alpha-normalized function
-   environment.
+Current blocker:
+
+- Deriving `env_fns_root_shadow_summary_evidence` from ordinary checker
+  success is not currently a wrapper theorem. Existing facts only project
+  root/shadow-root typing to structural typing; they do not synthesize
+  shadow-root evidence from structural typing.
+- The missing proof ingredient is a structural-to-shadow-root
+  synthesis/completeness theorem over alpha-normalized expressions.
+
+Next implementable target:
+
+1. Prove a fixed theorem family showing that ordinary structural typing on
+   alpha-normalized core can construct `typed_env_roots_shadow_safe` evidence,
+   including root outputs and param-exclusion evidence needed by
+   `env_fns_root_shadow_summary_evidence`.
+2. If that theorem family is not tractable, add an executable alpha
+   root-summary checker plus soundness, and use it as the explicit sidecar
+   evidence source.
 
 Use the `_of_unique` wrapper to derive the direct-call shadow bridge from
 `fn_env_unique_by_name`. Do not reintroduce an explicit
 `direct_call_callee_body_root_shadow_summary_bridge` premise, and do not claim
-ordinary-checker-only type safety until the remaining shadow-summary evidence
-obligation is derived from ordinary checker success.
+ordinary-checker-only type safety is complete until the remaining
+shadow-summary evidence obligation is supplied by one of the routes above.
 
 ## Detailed Status Inventory
 
@@ -329,8 +347,15 @@ verbose than the quick path. Do not use it as the primary implementation order.
      `infer_full_env_alpha_big_step_safe_with_shadow_summary_evidence`.
    - Remaining blocker: ordinary checker success still does not by itself
      produce `env_fns_root_shadow_summary_evidence` for the alpha-normalized
-     function environment. This is the remaining summary-evidence input after
-     the direct-call bridge is derived through `_of_unique`.
+     function environment. This is not currently a wrapper theorem: existing
+     facts only project root/shadow-root typing to structural typing, and the
+     missing theorem is a structural-to-shadow-root synthesis/completeness
+     theorem over alpha-normalized expressions. The next implementable target
+     is either a fixed theorem family proving ordinary structural typing on
+     alpha-normalized core can construct `typed_env_roots_shadow_safe` with
+     root outputs and param-exclusion evidence, or an executable alpha
+     root-summary checker plus soundness. Do not claim ordinary-checker-only
+     type safety is complete until this evidence route exists.
    - Done: proved and focused-compiled
      `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`, closing
      the old blockers around assembling the full shadow-safe

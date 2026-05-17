@@ -4140,6 +4140,191 @@ Proof.
     + apply root_set_equiv_sym. apply root_set_union_rename_equiv.
 Qed.
 
+Lemma root_env_equiv_update_rename_union :
+  forall rho R Rr x roots_old roots_new roots_oldr roots_newr,
+    root_env_equiv Rr (root_env_rename rho R) ->
+    root_set_equiv roots_oldr (root_set_rename rho roots_old) ->
+    root_set_equiv roots_newr (root_set_rename rho roots_new) ->
+    rename_no_collision_for rho x (root_env_names R) ->
+    root_env_equiv
+      (root_env_update (lookup_rename x rho)
+        (root_set_union roots_oldr roots_newr) Rr)
+      (root_env_rename rho
+        (root_env_update x (root_set_union roots_old roots_new) R)).
+Proof.
+  intros rho R Rr x roots_old roots_new roots_oldr roots_newr
+    HRr Hroots_old Hroots_new Hnocoll.
+  rewrite root_env_rename_update.
+  - apply root_env_equiv_update.
+    + eapply root_set_equiv_trans.
+      * apply root_set_union_equiv; eassumption.
+      * apply root_set_equiv_sym. apply root_set_union_rename_equiv.
+    + exact HRr.
+  - exact Hnocoll.
+Qed.
+
+Lemma root_env_equiv_remove_rename :
+  forall rho R Rr x,
+    root_env_no_shadow R ->
+    root_env_no_shadow Rr ->
+    root_env_equiv Rr (root_env_rename rho R) ->
+    rename_no_collision_on rho (root_env_names R) ->
+    rename_no_collision_for rho x (root_env_names R) ->
+    root_env_equiv
+      (root_env_remove (lookup_rename x rho) Rr)
+      (root_env_rename rho (root_env_remove x R)).
+Proof.
+  intros rho R Rr x HnsR HnsRr HRr Hnocoll_on Hnocoll.
+  rewrite root_env_rename_remove.
+  - apply root_env_equiv_remove.
+    + exact HnsRr.
+    + apply root_env_rename_no_shadow.
+      * exact HnsR.
+      * exact Hnocoll_on.
+    + exact HRr.
+  - exact Hnocoll.
+Qed.
+
+Lemma alpha_rename_typed_env_roots_trivial_forward :
+  forall env Ω n rho R Rr Σ Σr e er used used' T Σ' R' roots,
+    (e = EUnit \/ exists l, e = ELit l) ->
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    ctx_alpha rho Σ Σr ->
+    root_env_no_shadow R ->
+    root_env_no_shadow Rr ->
+    root_env_equiv Rr (root_env_rename rho R) ->
+    rename_no_collision_on rho (root_env_names R) ->
+    rename_no_collision_on rho (root_env_names R') ->
+    (forall x, In x (ctx_names Σr) -> In x used) ->
+    (forall x, In x (rename_range rho) -> In x used) ->
+    disjoint_names (free_vars_expr e) (rename_range rho) ->
+    alpha_rename_expr rho used e = (er, used') ->
+    exists Σr' Rr' rootsr,
+      typed_env_roots env Ω n Rr Σr er T Σr' Rr' rootsr /\
+      ctx_alpha rho Σ' Σr' /\
+      root_env_no_shadow Rr' /\
+      root_env_equiv Rr' (root_env_rename rho R') /\
+      root_set_equiv rootsr (root_set_rename rho roots).
+Proof.
+  intros env Ω n rho R Rr Σ Σr e er used used' T Σ' R' roots
+    Hshape Htyped Hctx _ HnsRr HRr _ _ _ _ _ Hrename.
+  destruct Hshape as [Heq | [l Heq]]; subst e.
+  - simpl in Hrename. injection Hrename as <- <-.
+    inversion Htyped; subst.
+    exists Σr, Rr, []. repeat split;
+      try solve [apply TER_Unit | exact Hctx | exact HnsRr | exact HRr |
+        apply root_set_equiv_refl].
+  - simpl in Hrename. injection Hrename as <- <-.
+    destruct l; inversion Htyped; subst;
+      exists Σr, Rr, []; repeat split;
+      try solve [constructor | exact Hctx | exact HnsRr | exact HRr |
+        apply root_set_equiv_refl].
+Qed.
+
+Lemma alpha_rename_typed_env_roots_fn_forward :
+  forall env Ω n rho R Rr Σ Σr fname er used used' T Σ' R' roots,
+    typed_env_roots env Ω n R Σ (EFn fname) T Σ' R' roots ->
+    ctx_alpha rho Σ Σr ->
+    root_env_no_shadow R ->
+    root_env_no_shadow Rr ->
+    root_env_equiv Rr (root_env_rename rho R) ->
+    rename_no_collision_on rho (root_env_names R) ->
+    rename_no_collision_on rho (root_env_names R') ->
+    (forall x, In x (ctx_names Σr) -> In x used) ->
+    (forall x, In x (rename_range rho) -> In x used) ->
+    disjoint_names (free_vars_expr (EFn fname)) (rename_range rho) ->
+    alpha_rename_expr rho used (EFn fname) = (er, used') ->
+    exists Σr' Rr' rootsr,
+      typed_env_roots env Ω n Rr Σr er T Σr' Rr' rootsr /\
+      ctx_alpha rho Σ' Σr' /\
+      root_env_no_shadow Rr' /\
+      root_env_equiv Rr' (root_env_rename rho R') /\
+      root_set_equiv rootsr (root_set_rename rho roots).
+Proof.
+  intros env Ω n rho R Rr Σ Σr fname er used used' T Σ' R' roots
+    Htyped Hctx _ HnsRr HRr _ _ _ _ _ Hrename.
+  simpl in Hrename. injection Hrename as <- <-.
+  inversion Htyped; subst.
+  exists Σr, Rr, [].
+  split; [| split; [| split; [| split]]].
+  - eapply TER_Fn; [eassumption | reflexivity].
+  - exact Hctx.
+  - exact HnsRr.
+  - exact HRr.
+  - apply root_set_equiv_refl.
+Qed.
+
+Lemma alpha_rename_typed_env_roots_drop_forward :
+  forall env Ω n rho R Rr Σ Σr e er used used' T Σ' R' roots,
+  (forall R0 R0r Σa Σb used0 er0 used1 T0 Σa' R0' roots0,
+      typed_env_roots env Ω n R0 Σa e T0 Σa' R0' roots0 ->
+      ctx_alpha rho Σa Σb ->
+      root_env_no_shadow R0 ->
+      root_env_no_shadow R0r ->
+      root_env_equiv R0r (root_env_rename rho R0) ->
+      rename_no_collision_on rho (root_env_names R0) ->
+      rename_no_collision_on rho (root_env_names R0') ->
+      (forall x, In x (ctx_names Σb) -> In x used0) ->
+      (forall x, In x (rename_range rho) -> In x used0) ->
+      disjoint_names (free_vars_expr e) (rename_range rho) ->
+      alpha_rename_expr rho used0 e = (er0, used1) ->
+      exists Σb' R0r' roots0r,
+        typed_env_roots env Ω n R0r Σb er0 T0 Σb' R0r' roots0r /\
+        ctx_alpha rho Σa' Σb' /\
+        root_env_no_shadow R0r' /\
+        root_env_equiv R0r' (root_env_rename rho R0') /\
+        root_set_equiv roots0r (root_set_rename rho roots0)) ->
+    typed_env_roots env Ω n R Σ (EDrop e) T Σ' R' roots ->
+    ctx_alpha rho Σ Σr ->
+    root_env_no_shadow R ->
+    root_env_no_shadow Rr ->
+    root_env_equiv Rr (root_env_rename rho R) ->
+    rename_no_collision_on rho (root_env_names R) ->
+    rename_no_collision_on rho (root_env_names R') ->
+    (forall x, In x (ctx_names Σr) -> In x used) ->
+    (forall x, In x (rename_range rho) -> In x used) ->
+    disjoint_names (free_vars_expr (EDrop e)) (rename_range rho) ->
+    alpha_rename_expr rho used (EDrop e) = (er, used') ->
+    exists Σr' Rr' rootsr,
+      typed_env_roots env Ω n Rr Σr er T Σr' Rr' rootsr /\
+      ctx_alpha rho Σ' Σr' /\
+      root_env_no_shadow Rr' /\
+      root_env_equiv Rr' (root_env_rename rho R') /\
+      root_set_equiv rootsr (root_set_rename rho roots).
+Proof.
+  intros env Ω n rho R Rr Σ Σr e er used used' T Σ' R' roots
+    Hexpr Htyped Hctx HnsR HnsRr HRr HnocollR HnocollR'
+    Hctx_used Hrange_used Hdisj Hrename.
+  simpl in Hrename.
+  destruct (alpha_rename_expr rho used e) as [er0 used1] eqn:Hrename_e.
+  injection Hrename as <- <-.
+  inversion Htyped; subst.
+  destruct (Hexpr R Rr Σ Σr used er0 used1 T0 Σ' R' roots0)
+    as [Σr' [Rr' [rootsr
+      [Htyped_r [Hctx_r [HnsRr' [HRr' _]]]]]]].
+  - match goal with
+    | H : typed_env_roots env Ω n R Σ e T0 Σ' R' roots0 |- _ =>
+        exact H
+    end.
+  - exact Hctx.
+  - exact HnsR.
+  - exact HnsRr.
+  - exact HRr.
+  - exact HnocollR.
+  - exact HnocollR'.
+  - exact Hctx_used.
+  - exact Hrange_used.
+  - exact Hdisj.
+  - exact Hrename_e.
+  - exists Σr', Rr', [].
+    split; [| split; [| split; [| split]]].
+    + eapply TER_Drop. exact Htyped_r.
+    + exact Hctx_r.
+    + exact HnsRr'.
+    + exact HRr'.
+    + apply root_set_equiv_refl.
+Qed.
+
 Lemma alpha_rename_typed_env_roots_var_forward :
   forall env Ω n rho R Rr Σ Σr x er used used' T Σ' R' roots,
     typed_env_roots env Ω n R Σ (EVar x) T Σ' R' roots ->
@@ -4856,7 +5041,7 @@ Proof.
     Hexpr Htyped Hctx HnsR HnsRr HRr HnocollR HnocollR'
     Hctx_used Hrange_used Hdisj Hrename.
   simpl in Hrename.
-  destruct ((fix go (used0 : list ident) (args0 : list expr)
+  destruct ((fix go (used0 : list ident) (args0 : list expr) {struct args0}
               : list expr * list ident :=
               match args0 with
               | [] => ([], used0)
@@ -4945,7 +5130,7 @@ Proof.
     T Σ' R' roots Hexpr Htyped Hctx HnsR HnsRr HRr HnocollR
     HnocollR' Hctx_used Hrange_used Hdisj Hrename.
   simpl in Hrename.
-  destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+  destruct ((fix go (used0 : list ident) (fields0 : list (string * expr)) {struct fields0}
               : list (string * expr) * list ident :=
               match fields0 with
               | [] => ([], used0)

@@ -162,9 +162,14 @@ false lemma.
    - Done: added the let-body no-collision helper that derives collision
      safety for the pre-body root environment from the post-body environment
      with the let-bound key removed.
+   - Done: added root-env rename/update and rename/remove equivalence helpers
+     for replace/assign and let/let-infer result environments.
+   - Done: added root-aware alpha-renaming wrappers for trivial expression
+     constructors, function values, and drop expressions, with drop parameterized
+     by the recursive inner-expression alpha-renaming evidence.
    - Remaining blocker: assemble the full `typed_env_roots`
-     alpha-renaming theorem, using the new call/struct wrappers and
-     let-body no-collision helper in the corresponding constructor cases.
+     alpha-renaming theorem, using the accumulated constructor wrappers and
+     root-env algebra helpers in the corresponding constructor cases.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

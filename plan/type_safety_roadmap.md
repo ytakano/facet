@@ -186,6 +186,14 @@ false lemma.
      `roots_exclude x roots2` and
      `root_env_excludes x (root_env_remove x R2)`, plus freshness/no-collision
      facts from alpha-renaming.
+   - Done: added weak `RStore`-only rename exclusion helpers for root sets and
+     root environments. These deliberately do not require excluding `RParam x`,
+     because alpha-renaming leaves `RParam` atoms unchanged.
+   - Done: added proof-only shadow-safe root typing relations that mirror
+     `typed_env_roots` / args / fields, with extra `TER_Let` and
+     `TER_LetInfer` premises requiring initializer roots and the pre-body root
+     environment to exclude the binder. Projection lemmas recover the ordinary
+     root typing judgments.
    - Remaining blocker: assemble the full `typed_env_roots`
      alpha-renaming theorem, using the accumulated constructor wrappers and
      root-env algebra helpers in the corresponding constructor cases.

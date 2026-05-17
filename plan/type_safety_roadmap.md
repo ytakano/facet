@@ -252,10 +252,17 @@ false lemma.
      can derive renamed `roots_exclude xr roots2r` and
      `root_env_excludes xr ...` from support invariants plus the original let
      premises.
-   - Remaining narrowed blocker: add shadow-safe `TER_Let` / `TERS_LetInfer`
-     wrappers that use the initializer-side support helper and the new
-     body-result no-collision helpers, then assemble the full theorem over
-     `typed_*_roots_shadow_safe`.
+   - Done: added shadow-safe `TER_Let` / `TERS_LetInfer` alpha-renaming
+     wrappers. These mirror the ordinary let wrappers while preserving
+     `typed_env_roots_shadow_safe` evidence and threading the renamed
+     initializer/body exclusion obligations.
+   - Remaining narrowed blocker: assemble the full theorem over
+     `typed_*_roots_shadow_safe` as a support-carrying induction. The let cases
+     must derive renamed initializer exclusions before invoking the new wrappers.
+     This requires either adding support-transport lemmas for
+     `root_env_equiv Rr (root_env_rename rho R)` under `ctx_alpha rho Σ Σr`, or
+     carrying `root_env_sctx_roots_named` / `root_env_sctx_keys_named` for the
+     renamed side directly in the mutual induction conclusion.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

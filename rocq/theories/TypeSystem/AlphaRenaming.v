@@ -4589,6 +4589,167 @@ Proof.
   - eapply root_env_sctx_roots_named_fresh_excludes; eassumption.
 Qed.
 
+Lemma ctx_alpha_lookup_rename_in_names :
+  forall rho Σ Σr x,
+    ctx_alpha rho Σ Σr ->
+    In x (ctx_names Σ) ->
+    In (lookup_rename x rho) (ctx_names Σr).
+Proof.
+  intros rho Σ Σr x Halpha.
+  induction Halpha; intros Hin; simpl in *.
+  - exact Hin.
+  - destruct Hin as [Hin | Hin].
+    + subst x0. simpl. rewrite ident_eqb_refl. left. reflexivity.
+    + destruct (ident_eqb x0 x) eqn:Hx0x.
+      * apply ident_eqb_eq in Hx0x. subst x0.
+        simpl. rewrite ident_eqb_refl. left. reflexivity.
+      * simpl.
+        assert (Hxx0 : ident_eqb x x0 = false).
+        { apply ident_eqb_neq. intro Heq. subst x0.
+          rewrite ident_eqb_refl in Hx0x. discriminate. }
+        rewrite Hxx0. right. apply IHHalpha. exact Hin.
+Qed.
+
+Lemma ctx_alpha_lookup_rename_fresh_neq :
+  forall rho Σ Σr x xr,
+    ctx_alpha rho Σ Σr ->
+    In x (ctx_names Σ) ->
+    ~ In xr (ctx_names Σr) ->
+    lookup_rename x rho <> xr.
+Proof.
+  intros rho Σ Σr x xr Halpha Hin Hfresh Heq.
+  apply Hfresh.
+  rewrite <- Heq.
+  eapply ctx_alpha_lookup_rename_in_names; eassumption.
+Qed.
+
+Lemma ctx_alpha_bound_no_collision_for :
+  forall rho Σ Σr x xr y,
+    ctx_alpha rho Σ Σr ->
+    ~ In xr (ctx_names Σr) ->
+    In y (ctx_names Σ) ->
+    y <> x ->
+    lookup_rename y ((x, xr) :: rho) <> xr.
+Proof.
+  intros rho Σ Σr x xr y Halpha Hfresh Hin Hyx.
+  simpl.
+  destruct (ident_eqb y x) eqn:Hyx_b.
+  - apply ident_eqb_eq in Hyx_b. contradiction.
+  - eapply ctx_alpha_lookup_rename_fresh_neq; eassumption.
+Qed.
+
+Lemma root_set_sctx_roots_named_bound_no_collision :
+  forall rho Σ Σr roots x xr y,
+    ctx_alpha rho Σ Σr ->
+    root_set_sctx_roots_named roots Σ ->
+    ~ In xr (ctx_names Σr) ->
+    In (RStore y) roots ->
+    y <> x ->
+    lookup_rename y ((x, xr) :: rho) <> xr.
+Proof.
+  intros rho Σ Σr roots x xr y Halpha Hroots Hfresh Hin Hyx.
+  eapply ctx_alpha_bound_no_collision_for.
+  - exact Halpha.
+  - exact Hfresh.
+  - apply Hroots. exact Hin.
+  - exact Hyx.
+Qed.
+
+Lemma root_env_sctx_roots_named_bound_no_collision :
+  forall rho Σ Σr R x xr y roots z,
+    ctx_alpha rho Σ Σr ->
+    root_env_sctx_roots_named R Σ ->
+    ~ In xr (ctx_names Σr) ->
+    root_env_lookup y R = Some roots ->
+    In (RStore z) roots ->
+    z <> x ->
+    lookup_rename z ((x, xr) :: rho) <> xr.
+Proof.
+  intros rho Σ Σr R x xr y roots z Halpha Henv Hfresh
+    Hlookup Hin Hzx.
+  eapply ctx_alpha_bound_no_collision_for.
+  - exact Halpha.
+  - exact Hfresh.
+  - eapply Henv; eassumption.
+  - exact Hzx.
+Qed.
+
+Lemma root_env_sctx_keys_named_bound_no_collision :
+  forall rho Σ Σr R x xr y,
+    ctx_alpha rho Σ Σr ->
+    root_env_sctx_keys_named R Σ ->
+    ~ In xr (ctx_names Σr) ->
+    In y (root_env_names R) ->
+    y <> x ->
+    lookup_rename y ((x, xr) :: rho) <> xr.
+Proof.
+  intros rho Σ Σr R x xr y Halpha Hkeys Hfresh Hin Hyx.
+  eapply ctx_alpha_bound_no_collision_for.
+  - exact Halpha.
+  - exact Hfresh.
+  - apply Hkeys. exact Hin.
+  - exact Hyx.
+Qed.
+
+Lemma roots_exclude_shadow_safe_rename_body :
+  forall rho Σ Σr roots rootsr x xr,
+    ctx_alpha rho Σ Σr ->
+    root_set_sctx_roots_named roots Σ ->
+    ~ In xr (ctx_names Σr) ->
+    root_set_equiv rootsr (root_set_rename ((x, xr) :: rho) roots) ->
+    roots_exclude x roots ->
+    roots_exclude xr rootsr.
+Proof.
+  intros rho Σ Σr roots rootsr x xr Halpha Hroots Hfresh Heq Hexcl.
+  eapply roots_exclude_equiv.
+  - apply root_set_equiv_sym. exact Heq.
+  - assert (Hlookup_x : lookup_rename x ((x, xr) :: rho) = xr)
+      by (simpl; rewrite ident_eqb_refl; reflexivity).
+    assert (Hexcl_ren :
+      roots_exclude (lookup_rename x ((x, xr) :: rho))
+        (root_set_rename ((x, xr) :: rho) roots)).
+    { apply roots_exclude_rename.
+      - intros y Hin Hyx.
+        rewrite Hlookup_x.
+        eapply root_set_sctx_roots_named_bound_no_collision;
+          eassumption.
+      - exact Hexcl. }
+    rewrite Hlookup_x in Hexcl_ren. exact Hexcl_ren.
+Qed.
+
+Lemma root_env_excludes_shadow_safe_rename_body :
+  forall rho Σ Σr R Rr x xr,
+    ctx_alpha rho Σ Σr ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R Σ ->
+    root_env_sctx_roots_named R Σ ->
+    ~ In xr (ctx_names Σr) ->
+    root_env_equiv Rr (root_env_rename ((x, xr) :: rho) R) ->
+    root_env_excludes x R ->
+    root_env_excludes xr Rr.
+Proof.
+  intros rho Σ Σr R Rr x xr Halpha Hrn Hkeys Henv Hfresh Heq Hexcl.
+  eapply root_env_excludes_equiv.
+  - apply root_env_equiv_sym. exact Heq.
+  - assert (Hlookup_x : lookup_rename x ((x, xr) :: rho) = xr)
+      by (simpl; rewrite ident_eqb_refl; reflexivity).
+    assert (Hexcl_ren :
+      root_env_excludes (lookup_rename x ((x, xr) :: rho))
+        (root_env_rename ((x, xr) :: rho) R)).
+    { eapply root_env_excludes_rename.
+      - exact Hrn.
+      - intros y Hin Hyx.
+        rewrite Hlookup_x.
+        eapply root_env_sctx_keys_named_bound_no_collision;
+          eassumption.
+      - intros y roots z Hlookup Hyx Hin Hzx.
+        rewrite Hlookup_x.
+        eapply root_env_sctx_roots_named_bound_no_collision;
+          eassumption.
+      - exact Hexcl. }
+    rewrite Hlookup_x in Hexcl_ren. exact Hexcl_ren.
+Qed.
+
 Lemma root_env_sctx_roots_named_add_env_named :
   forall R Σ x roots,
     root_env_sctx_roots_named R Σ ->

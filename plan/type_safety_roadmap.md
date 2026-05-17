@@ -239,11 +239,23 @@ false lemma.
    - Done: added `root_env_sctx_keys_named_fresh_lookup_none` and
      `root_env_sctx_support_fresh_let_init`, which package the initializer-side
      support facts needed by shadow-safe `TER_Let` / `TERS_LetInfer`.
-   - Remaining narrowed blocker: body-result exclusion still needs an explicit
-     no-collision route for concrete `RStore` roots under
-     `((x, xr) :: rho)`. The proof must show that every concrete store root in
-     `roots2` and `root_env_remove x R2`, other than `x`, cannot rename to
-     `xr`; do not assume this from `ctx_alpha` alone without a lemma.
+   - Done: added the explicit body-result no-collision route for concrete
+     `RStore` roots under `((x, xr) :: rho)`. The route is factored through
+     `ctx_alpha_lookup_rename_in_names`,
+     `ctx_alpha_bound_no_collision_for`,
+     `root_set_sctx_roots_named_bound_no_collision`,
+     `root_env_sctx_roots_named_bound_no_collision`, and
+     `root_env_sctx_keys_named_bound_no_collision`.
+   - Done: added body-result transport helpers
+     `roots_exclude_shadow_safe_rename_body` and
+     `root_env_excludes_shadow_safe_rename_body`, so shadow-safe let wrappers
+     can derive renamed `roots_exclude xr roots2r` and
+     `root_env_excludes xr ...` from support invariants plus the original let
+     premises.
+   - Remaining narrowed blocker: add shadow-safe `TER_Let` / `TERS_LetInfer`
+     wrappers that use the initializer-side support helper and the new
+     body-result no-collision helpers, then assemble the full theorem over
+     `typed_*_roots_shadow_safe`.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

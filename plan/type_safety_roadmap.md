@@ -146,6 +146,12 @@ false lemma.
      sidecar checker success and direct-call root evidence. This is not the
      final ordinary-checker-only theorem; it documents the exact root evidence
      still needed by runtime cleanup.
+   - Done: added Prop-level direct-call evidence wrappers
+     `infer_full_env_roots_big_step_safe_direct_call_evidence` and
+     `infer_full_env_roots_alpha_big_step_safe_direct_call_evidence`, plus
+     `infer_full_env_alpha_big_step_safe_with_root_summary_bridge`. The alpha
+     summary wrapper connects executable root-summary checks to Prop-level
+     direct-call root evidence through `direct_call_callee_body_root_summary_bridge`.
    - Remaining blocker: restate the main theorem over the alpha-normalized
      environment/body produced by `alpha_normalize_global_env`, then connect
      the existing raw `infer_full_env` soundness facts to that route.
@@ -154,6 +160,10 @@ false lemma.
      either prove that the ordinary alpha route establishes the needed sidecar
      root evidence, or keep the final theorem explicitly parameterized by that
      sidecar evidence until the bridge is proved.
+   - Remaining blocker: prove
+     `direct_call_callee_body_root_summary_bridge` for alpha-normalized
+     function bodies, so summary root evidence can be transported to each
+     freshened direct-call body without assuming it as a premise.
 
 4. Direct-call root evidence remains a supporting obligation.
    - Existing direct-call preservation work may continue, but it must be framed

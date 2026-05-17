@@ -164,6 +164,19 @@ false lemma.
      `direct_call_callee_body_root_summary_bridge` for alpha-normalized
      function bodies, so summary root evidence can be transported to each
      freshened direct-call body without assuming it as a premise.
+   - Blocker found while attempting that bridge: the available root-summary
+     evidence is ordinary `typed_env_roots`, but the completed whole-expression
+     alpha-renaming theorem requires `typed_env_roots_shadow_safe`. A direct
+     ordinary-to-shadow-safe lift would be a false lemma: ordinary `TER_Let` /
+     `TER_LetInfer` do not record the initializer-side premises
+     `roots_exclude x roots1` and `root_env_excludes x R1` required by
+     shadow-safe `TERS_Let` / `TERS_LetInfer`.
+   - Next implementation step: add a focused executable/root-soundness bridge
+     for alpha-renamed expressions, not a global ordinary-to-shadow-safe lift.
+     The bridge should derive the missing initializer-side exclusions from
+     alpha-renaming freshness plus root/context support for the specific
+     alpha-renamed checker result, then produce shadow-safe evidence only for
+     that alpha-renamed result.
 
 4. Direct-call root evidence remains a supporting obligation.
    - Existing direct-call preservation work may continue, but it must be framed

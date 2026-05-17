@@ -74,10 +74,88 @@ establishes it.
 - Same-argument-name parameters in one function are rejected.
 - Duplicate-parameter and shadowing errors should stay distinguishable.
 
-## Active Implementation Queue
+## Codex Quick Path
 
-Follow this order. Stop and report if a step exposes a missing invariant or a
-false lemma.
+Start here when implementing the next slice. The detailed inventory below is
+reference material, not the implementation order.
+
+### Current Proof State
+
+Available facts; do not re-prove or redesign these unless a compile failure
+shows they are unusable.
+
+- Ordinary checker alpha route exists:
+  `alpha_normalize_global_env`, `check_program_env_alpha`,
+  `infer_full_env_alpha_structural_sound`, and
+  `check_program_env_alpha_checked_structural`.
+- Direct-call root evidence plumbing exists:
+  `direct_call_callee_body_root_evidence`,
+  `direct_call_callee_body_root_summary_bridge`,
+  `direct_call_callee_body_root_shadow_summary_bridge`,
+  `infer_full_env_alpha_big_step_safe_with_root_summary_bridge`, and
+  `infer_full_env_alpha_big_step_safe_with_root_shadow_summary_bridge`.
+- Shadow-safe root typing and alpha-renaming support exists:
+  `typed_env_roots_shadow_safe`,
+  `typed_env_roots_shadow_safe_roots`,
+  `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`, and
+  `typed_roots_shadow_safe_instantiate_fresh_mutual`.
+- Call-site freshness and tail framing exist in `TypeSafety.v`:
+  `eval_args_root_subst_images_exclude_names_for_fresh_call`,
+  `eval_args_root_keys_exclude_names_for_fresh_call`,
+  `eval_args_root_tail_fresh_names_for_fresh_call`,
+  `root_env_tail_fresh_names`,
+  `typed_roots_shadow_safe_tail_frame_mutual`, and
+  `typed_env_roots_shadow_safe_tail_frame`.
+
+### Next Implementation Task
+
+Prove the direct-call shadow-summary bridge without assuming transported callee
+body evidence.
+
+Target theorem:
+
+```coq
+Lemma direct_call_callee_body_root_shadow_summary_bridge_of_unique :
+  forall env,
+    fn_env_unique_by_name env ->
+    direct_call_callee_body_root_shadow_summary_bridge env.
+```
+
+Required proof route:
+
+1. Use function-name uniqueness to recover the cached shadow summary for the
+   runtime callee.
+2. Package `alpha_rename_fn_def` into a function-level helper that exposes:
+   - the parameter rename environment,
+   - the body rename equation,
+   - `ctx_alpha` for parameter contexts,
+   - used-name / free-variable disjointness facts,
+   - root-env key/root support for
+     `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`.
+3. Apply `alpha_rename_typed_env_roots_shadow_safe_full_support_forward` to the
+   cached summary body.
+4. Instantiate the renamed summary with
+   `root_subst_of_params (fn_params fdef) arg_roots`.
+5. Use
+   `root_env_instantiate_initial_origin_equiv_call_param_root_env_empty` for
+   the parameter-only root environment.
+6. Use `eval_args_root_tail_fresh_names_for_fresh_call` and
+   `typed_env_roots_shadow_safe_tail_frame` to add the caller tail.
+7. Finish with `call_param_root_env_app_tail`.
+
+Stop and report if any step needs a semantic invariant rather than a proof-only
+helper. Do not change checker behavior.
+
+### After That
+
+- Add an `EnvRuntimeSafety.v` convenience wrapper that derives the shadow bridge
+  from `fn_env_unique_by_name` instead of requiring the bridge as a premise.
+- Then return to the ordinary checker target over `alpha_normalize_global_env`.
+
+## Detailed Status Inventory
+
+This section records context and completed proof work. It is intentionally more
+verbose than the quick path. Do not use it as the primary implementation order.
 
 1. `[done]` Revert the temporary root-checker restriction on shadowing `let`
    initializers.
@@ -250,9 +328,9 @@ false lemma.
      `root_env_no_shadow R_tail` premise. Without no-shadow, removing parameter
      keys can expose shadowed root-env entries, so the no-shadow invariant is
      part of the correct tail-exclusion statement.
-   - Remaining blocker: state and prove the tail weakening theorem that
-     transports callee-body root typing from the parameter-only root
-     environment to `call_param_root_env` with the caller tail.
+   - Done: added the tail-frame theorem that transports shadow-safe callee-body
+     root typing from the parameter-only root environment to the caller-tail
+     shape used by `call_param_root_env`.
    - Done: generalized the root-aware alpha-renaming proof beyond the earlier
      var/place/borrow cases via
      `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`, so an

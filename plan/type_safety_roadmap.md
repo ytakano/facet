@@ -156,6 +156,15 @@ false lemma.
    - Done: added root-aware alpha-renaming helpers for `typed_args_roots` and
      `typed_fields_roots`, so call and struct cases can reuse the same
      traversal shape as the structural alpha-renaming proof.
+   - Done: added `typed_env_roots` call/struct wrapper lemmas that lift the
+     args/fields root-aware alpha-renaming helpers through `TER_Call` and
+     `TER_Struct`, including `root_sets_union` rename equivalence for calls.
+   - Done: added the let-body no-collision helper that derives collision
+     safety for the pre-body root environment from the post-body environment
+     with the let-bound key removed.
+   - Remaining blocker: assemble the full `typed_env_roots`
+     alpha-renaming theorem, using the new call/struct wrappers and
+     let-body no-collision helper in the corresponding constructor cases.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

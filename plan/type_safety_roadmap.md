@@ -266,6 +266,15 @@ false lemma.
        (root_env_names (root_env_add x roots1 R1))`
      from the existing outer no-collision facts, `root_env_lookup x R1 = None`,
      `root_env_excludes x R1`, and freshness of `xr`.
+   - Done: added the fixed let-body recursive-call helpers
+     `root_env_sctx_keys_named_lookup_rename_fresh`,
+     `rename_no_collision_on_cons_lookup_rename_fresh`,
+     `root_env_add_shadow_safe_rename_no_collision_on`, and
+     `root_env_add_shadow_safe_rename_equiv`. These package the no-collision
+     and root-env add/rename equivalence facts needed for the support-carrying
+     `TER_Let` / `TERS_LetInfer` cases.
+   - Remaining narrowed blocker: use these add/no-collision helpers to assemble
+     the full support-carrying induction over `typed_*_roots_shadow_safe`.
    - Concrete `RStore fresh_param` roots must still be excluded from returned
      roots and surviving root environments before callee cleanup.
 

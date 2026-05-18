@@ -272,22 +272,19 @@ Follow this order before inventing new theorem shapes:
    `VClosure fname []` target is linked to the callee summary. Keep
    function-typed parameters and unknown function values rejected by the
    validator until this theorem shape is stable.
-   Current implementation note: an executable candidate validator now exists
+   Current implementation note: an executable validator now exists
    as
    `check_program_env_alpha_validated_root_shadow_non_capturing_call_provenance_summary`.
    It accepts only the local alias shapes
    `let g: unrestricted fn(...) = EFn fname in ECallExpr (EVar g) args` and
    `let g = EFn fname in ECallExpr (EVar g) args` by root-checking a
    structure-preserving synthetic body where only the call site is changed to
-   `ECall fname args`. This is deliberately not wired to a final safety theorem
-   yet. Annotated aliases with affine or linear outer function-value usage are
-   deliberately rejected by this stage-6a sidecar: the planned proof relies on
+   `ECall fname args`. Annotated aliases with affine or linear outer
+   function-value usage are deliberately rejected by this stage-6a sidecar:
+   the proof relies on
    evaluating `EVar g` by copy, without consuming or changing the caller store.
    Supporting affine/linear function-value aliases belongs to a later theorem
-   that explicitly accounts for callee evaluation effects. The remaining proof
-   task is to add a structure-aware direct-call preservation route for the
-   synthetic `let` body, or an equivalent dedicated `ECallExpr` theorem, without
-   adding general `ECallExpr` to ordinary readiness.
+   that explicitly accounts for callee evaluation effects.
    Current proof progress: the Prop mirror and boolean soundness bridge now
    exist as
    `callee_body_root_shadow_non_capturing_call_provenance_summary`,
@@ -298,26 +295,25 @@ Follow this order before inventing new theorem shapes:
    `eval_local_unrestricted_fn_value_call_as_synthetic_call` showing that the
    unrestricted alias form evaluates like the structure-preserving synthetic
    `let` with an inner `ECall`.
-   The final checked-initial theorem is still blocked because the existing
-   direct-call preservation theorem exposes only `store_typed`,
-   `value_has_type`, and `store_ref_targets_preserved`. The enclosing `let`
-   cleanup proof also needs root/no-shadow/exclusion results for the synthetic
-   inner call so it can justify `store_remove g`. Next implement a stronger
-   direct-call helper that exposes the cleanup data already produced by
-   `eval_direct_call_body_cleanup_preserves_value_and_refs`, or a local
-   non-capturing-let theorem that derives `value_refs_exclude_root g` and
-   `store_refs_exclude_root g (store_remove g s_body)` from the synthetic
-   root-shadow typing evidence.
-   Attempted next step: simply strengthening
+   Current implementation progress: `eval_direct_call_body_cleanup_preserves_value_and_refs`
+   now exposes both the equality
+   `store_remove_params ... s_body = s_args` and the callee-body result-root
+   fact `value_roots_within roots_body ret`. The bridge
+   `direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_with_result_subset`
+   also records that instantiated callee result roots are bounded by
+   `root_sets_union arg_roots`. Consequently
    `eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary`
-   to return `store_roots_within R' s'`, `value_roots_within roots v`,
-   `store_no_shadow s'`, and `root_env_no_shadow R'` is not a mechanical
-   extension. The final-store root/no-shadow facts are reachable because the
-   direct-call cleanup can show `store_remove_params ... s_body = s_args`, but
-   the returned-value root fact needs an additional bridge from callee-body
-   `roots_body` under `call_param_root_env params arg_roots R'` to caller-side
-   `root_sets_union arg_roots`. Do not retry the helper until that
-   root-substitution/result-roots bridge is stated.
+   now returns the stronger package needed by enclosing cleanup:
+   `store_typed`, `value_has_type`, `store_ref_targets_preserved`,
+   `store_roots_within R' s'`, `value_roots_within roots v`,
+   `store_no_shadow s'`, and `root_env_no_shadow R'`.
+   The checked-initial endpoint
+   `check_program_env_alpha_validated_root_shadow_non_capturing_call_provenance_summary_big_step_safe_checked_initial_ready`
+   is now proved. Its local-alias branch inverts the validated synthetic-let
+   shape, converts evaluation with
+   `eval_local_unrestricted_fn_value_call_as_synthetic_call`, applies the
+   strengthened direct-call theorem to the inner `ECall`, and uses the returned
+   result roots plus `TERS_Let` exclusions to type the final `store_remove g`.
 7. **Prove closures with captures.**
    Only after non-capturing function values are stable, add captured-closure
    calls. This requires a captured-store invariant covering typing, root

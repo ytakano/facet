@@ -2,7 +2,7 @@ From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules RootProvenance TypeChecker RuntimeTyping
   EnvStructuralRules CheckerSoundness AlphaRenaming EnvTypingSoundness TypeSafety
   EnvRootSoundness.
-From Stdlib Require Import List Bool.
+From Stdlib Require Import List Bool Lia.
 Import ListNotations.
 
 Definition initial_store_for_fn (env : global_env) (f : fn_def) (s : store) : Prop :=
@@ -597,10 +597,185 @@ Definition initial_root_runtime_ready_for_fn (f : fn_def) (s : store) : Prop :=
   root_env_store_roots_named (initial_root_env_for_fn f) s /\
   root_env_store_keys_named (initial_root_env_for_fn f) s.
 
+Lemma preservation_ready_expr_b_sound :
+  forall e,
+    preservation_ready_expr_b e = true ->
+    preservation_ready_expr e.
+Proof.
+  assert (Hsize : forall n e,
+    expr_size e < n ->
+    preservation_ready_expr_b e = true ->
+    preservation_ready_expr e).
+  {
+    induction n as [| n IH]; intros e Hlt Hready.
+    - lia.
+    - destruct e; simpl in Hready; try discriminate.
+      + constructor.
+      + constructor.
+      + constructor.
+      + constructor.
+      + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
+        eapply PRE_Place_Direct. exact Hpath.
+      + apply PRE_Struct.
+        induction l1 as [| [name field] rest IHfields].
+        * constructor.
+        * simpl in Hready.
+          apply andb_true_iff in Hready as [Hfield Hrest].
+          constructor.
+          -- apply IH with (e := field).
+             ++ pose proof (expr_size_struct_field_lt s l l0
+                  ((name, field) :: rest) name field (or_introl eq_refl)).
+                lia.
+             ++ exact Hfield.
+          -- apply IHfields.
+             ++ simpl. simpl in Hlt. lia.
+             ++ exact Hrest.
+      + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
+        eapply PRE_Replace.
+        * exact Hpath.
+        * apply IH with (e := e); [simpl in Hlt; lia | exact Hready].
+      + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
+        eapply PRE_Assign.
+        * exact Hpath.
+        * apply IH with (e := e); [simpl in Hlt; lia | exact Hready].
+      + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
+        eapply PRE_Borrow. exact Hpath.
+      + apply PRE_Drop.
+        apply IH with (e := e); [simpl in Hlt; lia | exact Hready].
+      + apply andb_true_iff in Hready as [H12 H3].
+        apply andb_true_iff in H12 as [H1 H2].
+        eapply PRE_If.
+        * apply IH with (e := e1); [simpl in Hlt; lia | exact H1].
+        * apply IH with (e := e2); [simpl in Hlt; lia | exact H2].
+        * apply IH with (e := e3); [simpl in Hlt; lia | exact H3].
+  }
+  intros e Hready.
+  eapply Hsize with (n := S (expr_size e)); [lia | exact Hready].
+Qed.
+
+Lemma preservation_ready_args_b_sound :
+  forall args,
+    preservation_ready_args_b args = true ->
+    preservation_ready_args args.
+Proof.
+  unfold preservation_ready_args_b.
+  induction args as [| e rest IH]; simpl; intros Hready.
+  - constructor.
+  - apply andb_true_iff in Hready as [He Hrest].
+    constructor.
+    + apply preservation_ready_expr_b_sound. exact He.
+    + apply IH. exact Hrest.
+Qed.
+
+Lemma preservation_ready_fields_b_sound :
+  forall fields,
+    preservation_ready_fields_b fields = true ->
+    preservation_ready_fields fields.
+Proof.
+  induction fields as [| [name e] rest IH]; simpl; intros Hready.
+  - constructor.
+  - apply andb_true_iff in Hready as [He Hrest].
+    constructor.
+    + apply preservation_ready_expr_b_sound. exact He.
+    + apply IH. exact Hrest.
+Qed.
+
 Definition env_fns_root_shadow_summary_check_ready (env : global_env) : Prop :=
   forall fname fdef,
     lookup_fn fname (env_fns env) = Some fdef ->
     callee_body_root_shadow_summary env fdef.
+
+Lemma fn_params_roots_exclude_b_sound :
+  forall ps roots,
+    fn_params_roots_exclude_b ps roots = true ->
+    roots_exclude_params ps roots.
+Proof.
+  intros ps roots Hexclude.
+  apply roots_exclude_params_b_sound.
+  unfold roots_exclude_params_b, fn_params_roots_exclude_b in *.
+  exact Hexclude.
+Qed.
+
+Lemma fn_params_root_env_excludes_b_sound :
+  forall ps R,
+    fn_params_root_env_excludes_b ps R = true ->
+    root_env_excludes_params ps R.
+Proof.
+  intros ps R Hexclude.
+  apply root_env_excludes_params_b_sound.
+  unfold root_env_excludes_params_b, fn_params_root_env_excludes_b in *.
+  exact Hexclude.
+Qed.
+
+Lemma check_fn_root_shadow_summary_sound :
+  forall env fdef,
+    check_fn_root_shadow_summary env fdef = true ->
+    callee_body_root_shadow_summary env fdef.
+Proof.
+  intros env fdef Hcheck.
+  unfold check_fn_root_shadow_summary in Hcheck.
+  apply andb_true_iff in Hcheck as [Hready Hsummary].
+  destruct (infer_env_roots_shadow_safe env fdef
+    (initial_root_env_for_fn fdef))
+    as [[[[T_check Γ_check] R_out] roots] | err] eqn:Hinfer;
+    try discriminate.
+  apply andb_true_iff in Hsummary as [Hroots Henv].
+  split.
+  - eapply infer_env_roots_shadow_safe_params_nodup. exact Hinfer.
+  - pose proof (infer_env_roots_shadow_safe_sound
+                  env fdef (initial_root_env_for_fn fdef)
+                  T_check Γ_check R_out roots Hinfer) as Htyped_fn.
+    unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
+    destruct Htyped_fn as
+      (T_body & Γ_out & Htyped & Hcompat & _).
+    unfold callee_body_root_shadow_ready_at.
+    exists T_body, Γ_out, R_out, roots.
+    repeat split.
+    + apply preservation_ready_implies_provenance_ready.
+      apply preservation_ready_expr_b_sound. exact Hready.
+    + apply preservation_ready_expr_b_sound. exact Hready.
+    + exact Htyped.
+    + exact Hcompat.
+    + apply fn_params_roots_exclude_b_sound. exact Hroots.
+    + apply fn_params_root_env_excludes_b_sound. exact Henv.
+Qed.
+
+Lemma check_env_root_shadow_summary_ready :
+  forall env,
+    check_env_root_shadow_summary env = true ->
+    env_fns_root_shadow_summary_check_ready env.
+Proof.
+  intros env Hcheck fname fdef Hlookup.
+  unfold check_env_root_shadow_summary in Hcheck.
+  destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+    as [Hin _].
+  apply forallb_forall with (x := fdef) in Hcheck; [| exact Hin].
+  apply check_fn_root_shadow_summary_sound.
+  exact Hcheck.
+Qed.
+
+Lemma check_fn_root_shadow_summary_preservation_ready :
+  forall env fdef,
+    check_fn_root_shadow_summary env fdef = true ->
+    preservation_ready_expr (fn_body fdef).
+Proof.
+  intros env fdef Hcheck.
+  unfold check_fn_root_shadow_summary in Hcheck.
+  apply andb_true_iff in Hcheck as [Hready _].
+  apply preservation_ready_expr_b_sound. exact Hready.
+Qed.
+
+Lemma check_env_root_shadow_summary_preservation_ready :
+  forall env,
+    check_env_root_shadow_summary env = true ->
+    env_fns_preservation_ready env.
+Proof.
+  intros env Hcheck fdef Hin.
+  unfold check_env_root_shadow_summary in Hcheck.
+  apply forallb_forall with (x := fdef) in Hcheck; [| exact Hin].
+  apply check_fn_root_shadow_summary_preservation_ready with (env := env).
+  exact Hcheck.
+Qed.
 
 Definition ordinary_alpha_root_shadow_validator_ready
     (env : global_env) : Prop :=
@@ -610,6 +785,21 @@ Definition ordinary_alpha_direct_call_validated_root_shadow_validator_ready
     (env : global_env) : Prop :=
   ordinary_alpha_root_shadow_validator_ready env /\
   env_fns_preservation_ready (alpha_normalize_global_env env).
+
+Lemma check_program_env_alpha_validated_root_shadow_ready :
+  forall env,
+    check_program_env_alpha_validated_root_shadow env = true ->
+    ordinary_alpha_direct_call_validated_root_shadow_validator_ready env.
+Proof.
+  intros env Hcheck.
+  unfold check_program_env_alpha_validated_root_shadow in Hcheck.
+  apply andb_true_iff in Hcheck as [_ Hshadow].
+  split.
+  - apply check_env_root_shadow_summary_ready.
+    exact Hshadow.
+  - apply check_env_root_shadow_summary_preservation_ready.
+    exact Hshadow.
+Qed.
 
 Definition ordinary_alpha_root_shadow_sidecar_ready (env : global_env) : Prop :=
   env_fns_root_shadow_summary_evidence (alpha_normalize_global_env env).
@@ -935,6 +1125,29 @@ Proof.
   - exact Hcheck.
   - apply ordinary_alpha_direct_call_validated_sidecar_ready_of_root_shadow_validator_ready.
     exact Hvalidator.
+  - exact Hin.
+  - exact Hstore.
+  - exact Hroot_runtime.
+  - exact Heval.
+Qed.
+
+Theorem check_program_env_alpha_validated_root_shadow_big_step_safe :
+  forall env f s s' v,
+    check_program_env_alpha_validated_root_shadow env = true ->
+    In f (env_fns (alpha_normalize_global_env env)) ->
+    initial_store_for_fn (alpha_normalize_global_env env) f s ->
+    initial_root_runtime_ready_for_fn f s ->
+    eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
+    value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hcheck Hin Hstore Hroot_runtime Heval.
+  unfold check_program_env_alpha_validated_root_shadow in Hcheck.
+  apply andb_true_iff in Hcheck as [Hvalidated Hshadow].
+  eapply check_program_env_alpha_validated_big_step_safe_with_root_shadow_validator_ready.
+  - exact Hvalidated.
+  - apply check_program_env_alpha_validated_root_shadow_ready.
+    unfold check_program_env_alpha_validated_root_shadow.
+    apply andb_true_iff. split; assumption.
   - exact Hin.
   - exact Hstore.
   - exact Hroot_runtime.

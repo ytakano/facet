@@ -110,6 +110,10 @@ Use these wrappers before adding new theorem shapes:
   `check_program_env_alpha_validated_big_step_safe_with_direct_call_sidecar_env_ready`.
 - Proof-only root-shadow validator-ready route:
   `check_program_env_alpha_validated_big_step_safe_with_root_shadow_validator_ready`.
+- Executable root-shadow validator route:
+  `check_program_env_alpha_validated_root_shadow_big_step_safe`.
+- Executable root-shadow validator entrypoint:
+  `check_program_env_alpha_validated_root_shadow`.
 - Sidecar package predicates:
   `ordinary_alpha_root_shadow_sidecar_ready`,
   `ordinary_alpha_direct_call_meta_ready`,
@@ -127,12 +131,14 @@ Use these wrappers before adding new theorem shapes:
 
 The top-level name validator route is implemented. `check_program_env_alpha`
 remains unchanged, and `check_program_env_alpha_validated` adds a Rocq-side
-top-level-name uniqueness check over the alpha-normalized environment.
+top-level-name uniqueness check over the alpha-normalized environment. The
+sidecar root-shadow validator route is now executable and also runs on the
+alpha-normalized environment.
 
 The final/current theorem is:
 
 ```coq
-check_program_env_alpha_validated_big_step_safe_with_direct_call_sidecar_env_ready
+check_program_env_alpha_validated_root_shadow_big_step_safe
 ```
 
 Current status:
@@ -148,10 +154,16 @@ Current status:
   `check_program_env_alpha_validated`. The `_env_ready` validated wrapper also
   absorbs per-function direct-call readiness from the package's
   environment-level preservation readiness.
-- The root-shadow validator-ready contract is proof-only. It repackages
-  `env_fns_root_shadow_summary_evidence` behind check-ready names so public
-  wrappers can state where a future validator soundness theorem should plug in;
-  it does not assert that an executable root-shadow validator exists.
+- `check_program_env_alpha_validated_root_shadow` is the executable sidecar
+  validator route. Its soundness derives
+  `ordinary_alpha_direct_call_validated_root_shadow_validator_ready` through
+  `check_program_env_alpha_validated_root_shadow_ready`.
+- The root-shadow validator checks the alpha-normalized environment with
+  `infer_env_roots_shadow_safe`, which mirrors the root checker and adds the
+  initializer-side shadow-safe obligations for `ELet` / `ELetInfer`.
+- The executable validator route absorbs root-shadow summary evidence and
+  environment-level preservation readiness. It still keeps
+  `initial_root_runtime_ready_for_fn` explicit.
 - `initial_root_runtime_ready_for_fn` remains explicit.
    - It cannot be derived from `initial_store_for_fn` alone.
    - Reason: `initial_root_env_for_fn` stores parameter origins as `RParam`,
@@ -159,23 +171,20 @@ Current status:
 
 The current sidecar contract is fixed. The remaining explicit premises are:
 
-- `ordinary_alpha_root_shadow_sidecar_ready`.
-- `env_fns_preservation_ready`, supplied through
-  `ordinary_alpha_direct_call_validated_sidecar_ready`.
 - `initial_root_runtime_ready_for_fn`.
 
-Future reductions require a separate root-summary validator or readiness
-validator design. Do not claim that any remaining premise is eliminated without
-that new design and proof route.
+Future reductions require an initial-runtime-root readiness validator or a
+stronger initial-store contract. Do not claim that
+`initial_root_runtime_ready_for_fn` is eliminated without that new design and
+proof route.
 
 Future work:
 
-- Design an executable root-shadow summary validator.
-- Prove that validator soundness implies
-  `env_fns_root_shadow_summary_check_ready`.
-- Connect the executable validator to the proof-only
-  `ordinary_alpha_root_shadow_validator_ready` route without changing the
-  ordinary checker contract.
+- Decide whether the OCaml CLI should expose the root-shadow sidecar validator
+  as an optional diagnostic/check mode. The ordinary checker contract remains
+  unchanged unless that is explicitly redesigned.
+- Design an executable validator or strengthened setup invariant for
+  `initial_root_runtime_ready_for_fn`.
 
 ### Do Not Do
 

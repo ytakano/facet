@@ -381,6 +381,8 @@ val max_ident_index : string -> ident list -> Big_int_Z.big_int
 
 val fresh_ident : ident -> ident list -> ident
 
+val ctx_names : ctx -> ident list
+
 val place_name : place -> ident
 
 val free_vars_expr : expr -> ident list
@@ -408,6 +410,12 @@ type root_atom =
 type root_set = root_atom list
 
 type root_env = (ident * root_set) list
+
+val initial_root_env_for_params_origin : param list -> param list -> root_env
+
+val initial_root_env_for_params : param list -> root_env
+
+val initial_root_env_for_fn : fn_def -> root_env
 
 val root_atom_eqb : root_atom -> root_atom -> bool
 
@@ -639,6 +647,12 @@ val roots_exclude_b : ident -> root_set -> bool
 
 val root_env_excludes_b : ident -> root_env -> bool
 
+val preservation_ready_expr_b : expr -> bool
+
+val preservation_ready_args_b : expr list -> bool
+
+val preservation_ready_fields_b : (string * expr) list -> bool
+
 val infer_place_roots :
   global_env -> sctx -> root_env -> place ->
   (((ty * ident) * field_path) * root_set) infer_result
@@ -653,6 +667,15 @@ val infer_core_env_state_fuel_roots :
   infer_result
 
 val infer_core_env_roots :
+  global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
+  -> (((ty * ctx) * root_env) * root_set) infer_result
+
+val infer_core_env_state_fuel_roots_shadow_safe :
+  Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+  root_env -> sctx -> expr -> (((ty * sctx) * root_env) * root_set)
+  infer_result
+
+val infer_core_env_roots_shadow_safe :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
   -> (((ty * ctx) * root_env) * root_set) infer_result
 
@@ -675,6 +698,10 @@ val top_level_names_unique_b : global_env -> bool
 val infer_env : global_env -> fn_def -> (ty * ctx) infer_result
 
 val infer_env_roots :
+  global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
+  infer_result
+
+val infer_env_roots_shadow_safe :
   global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
   infer_result
 
@@ -728,3 +755,13 @@ val check_program_env : global_env -> bool
 val check_program_env_alpha : global_env -> bool
 
 val check_program_env_alpha_validated : global_env -> bool
+
+val fn_params_roots_exclude_b : param list -> root_set -> bool
+
+val fn_params_root_env_excludes_b : param list -> root_env -> bool
+
+val check_fn_root_shadow_summary : global_env -> fn_def -> bool
+
+val check_env_root_shadow_summary : global_env -> bool
+
+val check_program_env_alpha_validated_root_shadow : global_env -> bool

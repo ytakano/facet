@@ -75,8 +75,10 @@ Current gap summary:
   acceptance condition.
 - Direct `ECall` has a localized sidecar route. Do not add it to ordinary
   expression readiness.
-- `ECallExpr` remains a design gap because root-provenance typing/checking for
-  call expressions is not implemented.
+- `ECallExpr (EFn fname) args` is closed as syntactic direct-call sugar in the
+  direct-call-local sidecar route.
+- General `ECallExpr callee args` remains a staged design gap: first prove
+  first-class functions without captures, then captured closures.
 
 Next-task rule:
 
@@ -84,8 +86,8 @@ Next-task rule:
    ready-gap matrix.
 2. Before widening any validator, check the ordinary checker review gates.
 3. If the next step requires a new invariant, checker contract change, or
-   theorem shape decision, stop and document the design choice instead of
-   implementing.
+   theorem shape decision beyond the staged `ECallExpr` plan below, stop and
+   document the design choice instead of implementing.
 
 ## Canonical Route
 
@@ -237,12 +239,34 @@ Follow this order before inventing new theorem shapes:
    the ordinary checker must not allow `e_new` to consume or invalidate the
    place being replaced, and any proof route should use that fact directly
    rather than relying on a broad sidecar rejection.
-5. **Handle the `if` root-environment gap last.**
+5. **Closed: `ECallExpr (EFn fname) args` as direct-call sugar.**
+   The direct-call-local sidecar route treats only the syntactic function-name
+   form as equivalent to direct `ECall fname args`. The validator root-checks
+   a synthetic `ECall fname args`, uses the same callee lookup, argument
+   readiness, callee root-shadow provenance summary, and cleanup proof as
+   direct `ECall`, and leaves general `ECallExpr` out of
+   `provenance_ready_expr_b` and `preservation_ready_expr_b`.
+   Current implementation note: `direct_call_target_expr` recognizes direct
+   `ECall` and syntactic `ECallExpr (EFn fname) args`; general function-value
+   calls remain rejected by the direct-call-local summary route.
+6. **Prove first-class functions without captures.**
+   After syntactic function-call sugar is closed, add a function-value
+   provenance route for calls where evaluating `callee` yields a non-capturing
+   top-level function value. The proof must retain evidence connecting the
+   runtime function value to the `fname` whose callee summary is used. Do not
+   use only the function type; type information alone loses the function-name
+   summary needed by cleanup/provenance.
+7. **Prove closures with captures.**
+   Only after non-capturing function values are stable, add captured-closure
+   calls. This requires a captured-store invariant covering typing, root
+   reachability, no-shadow, lifetime validity, and the way captured store is
+   composed with parameters and caller tail during callee execution.
+8. **Handle the `if` root-environment gap last.**
    The known blocker is that ordinary `TES_If` does not expose
    `root_env_equiv R2 R3`, while root/shadow routes require it. Do not
    strengthen `TES_If` or ordinary checker acceptance just to manufacture this
    evidence.
-6. **Treat initial readiness as a separate axis.**
+9. **Treat initial readiness as a separate axis.**
    `initial_root_runtime_ready_for_fn` is about the starting store, not the
    accepted program. Reduce it only through an initial-store contract change or
    an executable initial-state validator such as `check_initial_root_runtime_ready`.
@@ -441,6 +465,8 @@ Future work:
   The provenance-summary route no longer needs the callee-body
   `env_fns_preservation_ready` dependency or the caller
   `preservation_direct_call_ready_expr` premise.
+- General `ECallExpr` work must proceed in two later stages: first-class
+  functions without captures, then closures with captured stores.
 
 ### Ordinary Checker Review Gates
 
@@ -509,12 +535,18 @@ for these gates before treating a newly accepted syntax class as ordinary-safe.
 - The current executable safety validator is stricter than the ordinary checker.
   In particular, `preservation_ready_expr_b` currently rejects `ELet`,
   `ELetInfer`, `ECall`, `ECallExpr`, and `EDeref`.
-- Direct `ECall` should be handled by a localized direct-call sidecar package,
-  not by mixing it into ordinary expression readiness. The next theorem shape
-  should let the caller use `preservation_direct_call_ready_expr` and require
-  root-shadow provenance summary evidence only for the callee body reached by
-  the call. `ECallExpr` remains a separate design gap because root provenance
-  typing/checking for call expressions is not implemented.
+- Direct `ECall` and syntactic `ECallExpr (EFn fname) args` should be handled
+  by a localized direct-call sidecar package, not by mixing calls into ordinary
+  expression readiness. The caller should use the direct-call-local readiness
+  package, while only the reached callee body requires root-shadow provenance
+  summary evidence.
+- General `ECallExpr callee args` is staged future work. The first stage is
+  non-capturing first-class function values: evaluating `callee` must produce a
+  function value carrying the concrete `fname` used to select the callee
+  summary. The second stage is captured closures: the runtime value must carry
+  a captured-store invariant strong enough for typing, root reachability,
+  no-shadow, lifetime validity, and callee execution over parameters plus
+  captured store.
 - `provenance_ready_expr_b` now accepts the narrow `EDeref (EBorrow rk p)`
   pattern with matching root provenance typing rules and runtime preservation
   cases. General `EDeref` remains outside the current validator route.
@@ -976,10 +1008,12 @@ verbose than the quick path. Do not use it as the primary implementation order.
      roots and surviving root environments before callee cleanup.
 
 5. Defer unrelated expansion.
-   - Do not start `ECallExpr` until the direct-call and root-evidence route is
-     stable.
-   - Do not handle non-empty captured closure stores until a captured-store
-     invariant is designed.
+   - The syntactic `ECallExpr (EFn fname) args` direct-call-sugar case is now
+     implemented by the direct-call-local route.
+   - Do not start general `ECallExpr callee args` until the non-capturing
+     function-value provenance route is designed.
+   - Do not handle captured closure stores until a captured-store invariant is
+     designed.
    - Do not attempt small-step progress before preservation is stable.
 
 ## Main Target Theorems

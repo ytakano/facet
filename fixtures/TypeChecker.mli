@@ -796,6 +796,8 @@ val check_fn_root_shadow_provenance_summary : global_env -> fn_def -> bool
 
 val check_env_root_shadow_provenance_summary : global_env -> bool
 
+val direct_call_target_expr : expr -> ((ident * expr list) * expr) option
+
 val direct_call_ready_expr_b : expr -> bool
 
 val check_fn_root_shadow_direct_call_provenance_summary :

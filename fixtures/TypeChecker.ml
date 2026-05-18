@@ -5320,11 +5320,24 @@ let check_fn_root_shadow_provenance_summary env fdef =
 let check_env_root_shadow_provenance_summary env =
   forallb (check_fn_root_shadow_provenance_summary env) env.env_fns
 
+(** val direct_call_target_expr :
+    expr -> ((ident * expr list) * expr) option **)
+
+let direct_call_target_expr = function
+| ECall (fname, args) -> Some ((fname, args), (ECall (fname, args)))
+| ECallExpr (e0, args) ->
+  (match e0 with
+   | EFn fname -> Some ((fname, args), (ECall (fname, args)))
+   | _ -> None)
+| _ -> None
+
 (** val direct_call_ready_expr_b : expr -> bool **)
 
-let direct_call_ready_expr_b = function
-| ECall (_, args) -> preservation_ready_args_b args
-| _ -> false
+let direct_call_ready_expr_b e =
+  match direct_call_target_expr e with
+  | Some p ->
+    let (p0, _) = p in let (_, args) = p0 in preservation_ready_args_b args
+  | None -> false
 
 (** val check_fn_root_shadow_direct_call_provenance_summary :
     global_env -> fn_def -> bool **)
@@ -5332,22 +5345,25 @@ let direct_call_ready_expr_b = function
 let check_fn_root_shadow_direct_call_provenance_summary env fdef =
   if check_fn_root_shadow_provenance_summary env fdef
   then true
-  else (match fdef.fn_body with
-        | ECall (fname, args) ->
+  else (match direct_call_target_expr fdef.fn_body with
+        | Some p ->
+          let (p0, synthetic_body) = p in
+          let (fname, args) = p0 in
           (&&) (preservation_ready_args_b args)
             (match lookup_fn_b fname env.env_fns with
              | Some callee ->
                (&&) (check_fn_root_shadow_provenance_summary env callee)
-                 (match infer_env_roots_shadow_safe env fdef
+                 (match infer_env_roots_shadow_safe env
+                          (fn_with_body fdef synthetic_body)
                           (initial_root_env_for_fn fdef) with
-                  | Infer_ok p ->
-                    let (p0, roots) = p in
-                    let (_, r_out) = p0 in
+                  | Infer_ok p1 ->
+                    let (p2, roots) = p1 in
+                    let (_, r_out) = p2 in
                     (&&) (fn_params_roots_exclude_b fdef.fn_params roots)
                       (fn_params_root_env_excludes_b fdef.fn_params r_out)
                   | Infer_err _ -> false)
              | None -> false)
-        | _ -> false)
+        | None -> false)
 
 (** val check_env_root_shadow_direct_call_provenance_summary :
     global_env -> bool **)

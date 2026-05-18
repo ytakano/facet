@@ -15352,7 +15352,30 @@ Proof.
                     Heval_body)
           as [_ [Hstore_final [_ [_ [_ [_ [Hv_final [Hpres_final _]]]]]]]]
     end.
-    repeat split; assumption.
+  repeat split; assumption.
+Qed.
+
+Lemma eval_call_expr_fn_as_call :
+  forall env s s' v fname args,
+    eval env s (ECallExpr (EFn fname) args) s' v ->
+    eval env s (ECall fname args) s' v.
+Proof.
+  intros env s s' v fname args Heval.
+  dependent destruction Heval.
+  match goal with
+  | Hcallee : eval _ _ (EFn _) _ (VClosure _ _) |- _ =>
+      dependent destruction Hcallee
+  end.
+  match goal with
+  | Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?fdef,
+    Hargs : eval_args env s args ?s_args ?vs,
+    Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
+      (?fcall, ?used'),
+    Hbody : eval env (bind_params (fn_params ?fcall) ?vs ?s_args)
+      (fn_body ?fcall) ?s_body ?ret |- _ =>
+      eapply Eval_Call;
+      [ exact Hlookup | exact Hargs | exact Hrename | exact Hbody ]
+  end.
 Qed.
 
 Theorem eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary :

@@ -135,10 +135,13 @@ Follow this order before inventing new theorem shapes:
    Current implementation note: `provenance_ready_expr_b` now accepts `ELet`
    and `ELetInfer`, and the checker has an executable elaboration route that
    turns inferred lets into annotated `ELet`. Do not wire this into the
-   existing root-shadow validator by simple substitution: the current
-   `callee_body_root_shadow_ready_at` package still requires
-   `preservation_ready_expr`, so a provenance-only validator needs a new
-   theorem/package shape before it can replace `preservation_ready_expr_b`.
+   existing root-shadow validator by simple substitution. The existing
+   preservation-ready root-shadow validator remains unchanged. The additive
+   provenance-only route is now represented by
+   `callee_body_root_shadow_provenance_ready_at`,
+   `callee_body_root_shadow_provenance_summary`, and
+   `check_env_root_shadow_provenance_summary`; use these names for future
+   narrowing of direct-call/root evidence.
 3. **Move the non-direct-call structural route toward no validator.**
    Prefer deriving or eliminating `preservation_ready_expr` obligations from
    ordinary typing/checker success over adding more executable checks.
@@ -184,6 +187,9 @@ Use these wrappers before adding new theorem shapes:
   `check_program_env_alpha_validated_root_shadow_big_step_safe_checked_initial`.
 - Executable root-shadow validator entrypoint:
   `check_program_env_alpha_validated_root_shadow`.
+- Executable provenance-only root-shadow summary entrypoints:
+  `check_fn_root_shadow_provenance_summary` and
+  `check_env_root_shadow_provenance_summary`.
 - Executable initial runtime readiness entrypoint:
   `check_initial_root_runtime_ready`.
 - Executable provenance readiness entrypoints:
@@ -202,6 +208,14 @@ Use these wrappers before adding new theorem shapes:
   `env_fns_root_shadow_summary_check_ready`,
   `ordinary_alpha_root_shadow_validator_ready`, and
   `ordinary_alpha_direct_call_validated_root_shadow_validator_ready`.
+- Proof-only provenance-summary package predicates:
+  `callee_body_root_provenance_ready_at`,
+  `callee_body_root_shadow_provenance_ready_at`,
+  `callee_body_root_provenance_summary`,
+  `callee_body_root_shadow_provenance_summary`,
+  `env_fns_root_provenance_summary_evidence`,
+  `env_fns_root_shadow_provenance_summary_evidence`, and
+  `env_fns_root_shadow_provenance_summary_check_ready`.
 - Direct-call bridge from uniqueness:
   `direct_call_callee_body_root_shadow_summary_bridge_of_unique`.
 
@@ -247,6 +261,11 @@ Current status:
 - The executable validator route absorbs root-shadow summary evidence and
   environment-level preservation readiness. It still keeps
   `initial_root_runtime_ready_for_fn` explicit.
+- The additive provenance-only validator route is implemented for the
+  root-shadow summary evidence that does not require `preservation_ready_expr`.
+  Its checker soundness theorem is
+  `check_env_root_shadow_provenance_summary_ready`, and the original
+  preservation-ready root-shadow validator route is unchanged.
 - `check_program_env_alpha_validated_root_shadow_big_step_safe_checked_initial`
   discharges `initial_root_runtime_ready_for_fn` from the executable
   `check_initial_root_runtime_ready f s`.
@@ -276,11 +295,11 @@ Future work:
   `initial_root_runtime_ready_for_fn`.
 - Bring the safety-validator route closer to the ordinary checker accepted
   range by following the Next Implementation Order above.
-- Split or generalize `callee_body_root_shadow_ready_at` if the elaborated
-  route should use `provenance_ready_expr_b` instead of
-  `preservation_ready_expr_b`. The existing package includes both provenance
-  and preservation readiness, so this is a proof-shape decision, not a boolean
-  checker edit.
+- Connect the provenance-only root-shadow summary route to a future
+  direct-call evidence theorem if direct-call cleanup only needs provenance
+  and shadow-safe root facts. Do not replace the existing preservation-ready
+  public wrappers until the required preservation obligations are either
+  derived from ordinary typing or localized to the subproofs that need them.
 
 ### Ordinary Checker Review Gates
 
@@ -340,6 +359,9 @@ for these gates before treating a newly accepted syntax class as ordinary-safe.
 - The current executable safety validator is stricter than the ordinary checker.
   In particular, `preservation_ready_expr_b` currently rejects `ELet`,
   `ELetInfer`, `ECall`, `ECallExpr`, and `EDeref`.
+- The provenance-only root-shadow summary validator accepts the elaborated
+  ready-gap let example that the preservation-ready root-shadow validator
+  rejects, but it is not yet wired into a final operational safety theorem.
 - The abandoned synthesis route stops at `If`: `TES_If` lacks the
   `root_env_equiv R2 R3` evidence required by `TERS_If`.
 - General root-checker-to-shadow-safe soundness is false for arbitrary core

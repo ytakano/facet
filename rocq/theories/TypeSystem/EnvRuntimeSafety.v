@@ -1076,6 +1076,12 @@ Definition env_fns_root_shadow_summary_check_ready (env : global_env) : Prop :=
     lookup_fn fname (env_fns env) = Some fdef ->
     callee_body_root_shadow_summary env fdef.
 
+Definition env_fns_root_shadow_provenance_summary_check_ready
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_provenance_summary env fdef.
+
 Lemma fn_params_roots_exclude_b_sound :
   forall ps roots,
     fn_params_roots_exclude_b ps roots = true ->
@@ -1131,6 +1137,37 @@ Proof.
     + apply fn_params_root_env_excludes_b_sound. exact Henv.
 Qed.
 
+Lemma check_fn_root_shadow_provenance_summary_sound :
+  forall env fdef,
+    check_fn_root_shadow_provenance_summary env fdef = true ->
+    callee_body_root_shadow_provenance_summary env fdef.
+Proof.
+  intros env fdef Hcheck.
+  unfold check_fn_root_shadow_provenance_summary in Hcheck.
+  apply andb_true_iff in Hcheck as [Hready Hsummary].
+  destruct (infer_env_roots_shadow_safe env fdef
+    (initial_root_env_for_fn fdef))
+    as [[[[T_check Γ_check] R_out] roots] | err] eqn:Hinfer;
+    try discriminate.
+  apply andb_true_iff in Hsummary as [Hroots Henv].
+  split.
+  - eapply infer_env_roots_shadow_safe_params_nodup. exact Hinfer.
+  - pose proof (infer_env_roots_shadow_safe_sound
+                  env fdef (initial_root_env_for_fn fdef)
+                  T_check Γ_check R_out roots Hinfer) as Htyped_fn.
+    unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
+    destruct Htyped_fn as
+      (T_body & Γ_out & Htyped & Hcompat & _).
+    unfold callee_body_root_shadow_provenance_ready_at.
+    exists T_body, Γ_out, R_out, roots.
+    repeat split.
+    + apply provenance_ready_expr_b_sound. exact Hready.
+    + exact Htyped.
+    + exact Hcompat.
+    + apply fn_params_roots_exclude_b_sound. exact Hroots.
+    + apply fn_params_root_env_excludes_b_sound. exact Henv.
+Qed.
+
 Lemma check_env_root_shadow_summary_ready :
   forall env,
     check_env_root_shadow_summary env = true ->
@@ -1142,6 +1179,20 @@ Proof.
     as [Hin _].
   apply forallb_forall with (x := fdef) in Hcheck; [| exact Hin].
   apply check_fn_root_shadow_summary_sound.
+  exact Hcheck.
+Qed.
+
+Lemma check_env_root_shadow_provenance_summary_ready :
+  forall env,
+    check_env_root_shadow_provenance_summary env = true ->
+    env_fns_root_shadow_provenance_summary_check_ready env.
+Proof.
+  intros env Hcheck fname fdef Hlookup.
+  unfold check_env_root_shadow_provenance_summary in Hcheck.
+  destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+    as [Hin _].
+  apply forallb_forall with (x := fdef) in Hcheck; [| exact Hin].
+  apply check_fn_root_shadow_provenance_summary_sound.
   exact Hcheck.
 Qed.
 

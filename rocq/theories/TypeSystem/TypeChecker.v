@@ -4277,6 +4277,20 @@ Definition check_fn_root_shadow_summary (env : global_env) (fdef : fn_def) : boo
 Definition check_env_root_shadow_summary (env : global_env) : bool :=
   forallb (check_fn_root_shadow_summary env) (env_fns env).
 
+Definition check_fn_root_shadow_provenance_summary
+    (env : global_env) (fdef : fn_def) : bool :=
+  provenance_ready_expr_b (fn_body fdef) &&
+  match infer_env_roots_shadow_safe env fdef (initial_root_env_for_fn fdef) with
+  | infer_ok (_, _, R_out, roots) =>
+      fn_params_roots_exclude_b (fn_params fdef) roots &&
+      fn_params_root_env_excludes_b (fn_params fdef) R_out
+  | infer_err _ => false
+  end.
+
+Definition check_env_root_shadow_provenance_summary
+    (env : global_env) : bool :=
+  forallb (check_fn_root_shadow_provenance_summary env) (env_fns env).
+
 Definition check_program_env_alpha_validated_root_shadow (env : global_env) : bool :=
   check_program_env_alpha_validated env &&
   check_env_root_shadow_summary (alpha_normalize_global_env env).
@@ -4297,6 +4311,14 @@ Proof. vm_compute. reflexivity. Qed.
 
 Example check_program_env_alpha_validated_root_shadow_rejects_ready_gap_let :
   check_program_env_alpha_validated_root_shadow ex_ready_gap_let_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Example check_env_root_shadow_provenance_summary_accepts_elab_ready_gap_let :
+  match infer_program_env_alpha_elab ex_ready_gap_let_env with
+  | infer_ok env =>
+      check_env_root_shadow_provenance_summary env
+  | infer_err _ => false
+  end = true.
 Proof. vm_compute. reflexivity. Qed.
 
 Example preservation_ready_expr_b_rejects_ready_gap_let :
@@ -4469,4 +4491,6 @@ Extraction "../fixtures/TypeChecker.ml"
   infer_core_env_state_fuel_roots_shadow_safe
   infer_core_env_roots_shadow_safe infer_env_roots_shadow_safe
   check_fn_root_shadow_summary check_env_root_shadow_summary
+  check_fn_root_shadow_provenance_summary
+  check_env_root_shadow_provenance_summary
   check_program_env_alpha_validated_root_shadow.

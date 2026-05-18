@@ -5242,6 +5242,24 @@ let check_fn_root_shadow_summary env fdef =
 let check_env_root_shadow_summary env =
   forallb (check_fn_root_shadow_summary env) env.env_fns
 
+(** val check_fn_root_shadow_provenance_summary :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_provenance_summary env fdef =
+  (&&) (provenance_ready_expr_b fdef.fn_body)
+    (match infer_env_roots_shadow_safe env fdef (initial_root_env_for_fn fdef) with
+     | Infer_ok p ->
+       let (p0, roots) = p in
+       let (_, r_out) = p0 in
+       (&&) (fn_params_roots_exclude_b fdef.fn_params roots)
+         (fn_params_root_env_excludes_b fdef.fn_params r_out)
+     | Infer_err _ -> false)
+
+(** val check_env_root_shadow_provenance_summary : global_env -> bool **)
+
+let check_env_root_shadow_provenance_summary env =
+  forallb (check_fn_root_shadow_provenance_summary env) env.env_fns
+
 (** val check_program_env_alpha_validated_root_shadow : global_env -> bool **)
 
 let check_program_env_alpha_validated_root_shadow env =

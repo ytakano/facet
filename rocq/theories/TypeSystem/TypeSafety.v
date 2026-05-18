@@ -12175,6 +12175,28 @@ Definition callee_body_root_shadow_ready_at
     roots_exclude_params (fn_params fcall) roots_body /\
     root_env_excludes_params (fn_params fcall) R_body.
 
+Definition callee_body_root_provenance_ready_at
+    (env : global_env) (fcall : fn_def) (R_params : root_env) : Prop :=
+  exists T_body Γ_out R_body roots_body,
+    provenance_ready_expr (fn_body fcall) /\
+    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+      R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
+    roots_exclude_params (fn_params fcall) roots_body /\
+    root_env_excludes_params (fn_params fcall) R_body.
+
+Definition callee_body_root_shadow_provenance_ready_at
+    (env : global_env) (fcall : fn_def) (R_params : root_env) : Prop :=
+  exists T_body Γ_out R_body roots_body,
+    provenance_ready_expr (fn_body fcall) /\
+    typed_env_roots_shadow_safe env (fn_outlives fcall) (fn_lifetimes fcall)
+      R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
+    roots_exclude_params (fn_params fcall) roots_body /\
+    root_env_excludes_params (fn_params fcall) R_body.
+
 Lemma callee_body_root_ready_at_of_shadow_ready_at :
   forall env fcall R_params,
     callee_body_root_shadow_ready_at env fcall R_params ->
@@ -12191,6 +12213,37 @@ Proof.
   eapply typed_env_roots_shadow_safe_roots. exact Htyped.
 Qed.
 
+Lemma callee_body_root_provenance_ready_at_of_shadow_provenance_ready_at :
+  forall env fcall R_params,
+    callee_body_root_shadow_provenance_ready_at env fcall R_params ->
+    callee_body_root_provenance_ready_at env fcall R_params.
+Proof.
+  intros env fcall R_params Hshadow.
+  unfold callee_body_root_shadow_provenance_ready_at in Hshadow.
+  destruct Hshadow as
+    (T_body & Γ_out & R_body & roots_body &
+      Hprov & Htyped & Hcompat & Hexclude_roots & Hexclude_env).
+  unfold callee_body_root_provenance_ready_at.
+  exists T_body, Γ_out, R_body, roots_body.
+  repeat split; try assumption.
+  eapply typed_env_roots_shadow_safe_roots. exact Htyped.
+Qed.
+
+Lemma callee_body_root_shadow_provenance_ready_at_of_ready_at :
+  forall env fcall R_params,
+    callee_body_root_shadow_ready_at env fcall R_params ->
+    callee_body_root_shadow_provenance_ready_at env fcall R_params.
+Proof.
+  intros env fcall R_params Hready.
+  unfold callee_body_root_shadow_ready_at in Hready.
+  destruct Hready as
+    (T_body & Γ_out & R_body & roots_body &
+      Hprov & _ & Htyped & Hcompat & Hexclude_roots & Hexclude_env).
+  unfold callee_body_root_shadow_provenance_ready_at.
+  exists T_body, Γ_out, R_body, roots_body.
+  repeat split; assumption.
+Qed.
+
 Definition callee_body_root_summary (env : global_env) (fdef : fn_def)
     : Prop :=
   callee_body_root_ready_at env fdef (initial_root_env_for_fn fdef).
@@ -12199,6 +12252,16 @@ Definition callee_body_root_shadow_summary (env : global_env) (fdef : fn_def)
     : Prop :=
   NoDup (ctx_names (params_ctx (fn_params fdef))) /\
   callee_body_root_shadow_ready_at env fdef (initial_root_env_for_fn fdef).
+
+Definition callee_body_root_provenance_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  callee_body_root_provenance_ready_at env fdef (initial_root_env_for_fn fdef).
+
+Definition callee_body_root_shadow_provenance_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+  callee_body_root_shadow_provenance_ready_at env fdef
+    (initial_root_env_for_fn fdef).
 
 Definition env_fns_root_summary_evidence (env : global_env) : Prop :=
   forall fname fdef,
@@ -12209,6 +12272,18 @@ Definition env_fns_root_shadow_summary_evidence (env : global_env) : Prop :=
   forall fname fdef,
     lookup_fn fname (env_fns env) = Some fdef ->
     callee_body_root_shadow_summary env fdef.
+
+Definition env_fns_root_provenance_summary_evidence
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_provenance_summary env fdef.
+
+Definition env_fns_root_shadow_provenance_summary_evidence
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_provenance_summary env fdef.
 
 Lemma env_fns_root_shadow_summary_evidence_in_unique :
   forall env,
@@ -12235,6 +12310,36 @@ Proof.
   unfold callee_body_root_summary, callee_body_root_shadow_summary in *.
   destruct (Hshadow fname fdef Hlookup) as [_ Hready].
   eapply callee_body_root_ready_at_of_shadow_ready_at.
+  exact Hready.
+Qed.
+
+Lemma env_fns_root_shadow_provenance_summary_evidence_of_shadow :
+  forall env,
+    env_fns_root_shadow_summary_evidence env ->
+    env_fns_root_shadow_provenance_summary_evidence env.
+Proof.
+  intros env Hshadow fname fdef Hlookup.
+  unfold env_fns_root_shadow_summary_evidence in Hshadow.
+  unfold callee_body_root_shadow_summary,
+    callee_body_root_shadow_provenance_summary in *.
+  destruct (Hshadow fname fdef Hlookup) as [Hnodup Hready].
+  split.
+  - exact Hnodup.
+  - eapply callee_body_root_shadow_provenance_ready_at_of_ready_at.
+    exact Hready.
+Qed.
+
+Lemma env_fns_root_provenance_summary_evidence_of_shadow_provenance :
+  forall env,
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    env_fns_root_provenance_summary_evidence env.
+Proof.
+  intros env Hshadow fname fdef Hlookup.
+  unfold env_fns_root_shadow_provenance_summary_evidence in Hshadow.
+  unfold callee_body_root_provenance_summary,
+    callee_body_root_shadow_provenance_summary in *.
+  destruct (Hshadow fname fdef Hlookup) as [_ Hready].
+  eapply callee_body_root_provenance_ready_at_of_shadow_provenance_ready_at.
   exact Hready.
 Qed.
 

@@ -77,195 +77,89 @@ shadow/root sidecar evidence.
 
 ## Codex Quick Path
 
-Start here when implementing the next slice. The detailed inventory below is
-reference material, not the implementation order.
+Start here. The detailed inventory below is history/reference, not the
+implementation order.
 
-### Current Proof State
+### Current Route
 
-Available facts; do not re-prove or redesign these unless a compile failure
-shows they are unusable.
+The active route is ordinary checker safety over alpha-normalized core:
 
-- Ordinary checker alpha route exists:
-  `alpha_normalize_global_env`, `check_program_env_alpha`,
-  `infer_full_env_alpha_structural_sound`, and
-  `check_program_env_alpha_checked_structural`.
-- Direct-call root evidence plumbing exists:
-  `direct_call_callee_body_root_evidence`,
-  `direct_call_callee_body_root_summary_bridge`,
-  `direct_call_callee_body_root_shadow_summary_bridge`,
-  `direct_call_callee_body_root_shadow_summary_bridge_of_unique`,
-  `infer_full_env_alpha_big_step_safe_with_root_summary_bridge`, and
-  `infer_full_env_alpha_big_step_safe_with_root_shadow_summary_bridge`.
-- Shadow-safe root typing and alpha-renaming support exists:
-  `typed_env_roots_shadow_safe`,
-  `typed_env_roots_shadow_safe_roots`,
-  `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`, and
-  `typed_roots_shadow_safe_instantiate_fresh_mutual`.
-- Call-site freshness and tail framing exist in `TypeSafety.v`:
-  `eval_args_root_subst_images_exclude_names_for_fresh_call`,
-  `eval_args_root_keys_exclude_names_for_fresh_call`,
-  `eval_args_root_tail_fresh_names_for_fresh_call`,
-  `root_env_tail_fresh_names`,
-  `typed_roots_shadow_safe_tail_frame_mutual`, and
-  `typed_env_roots_shadow_safe_tail_frame`.
-- Alpha-local no-shadow predicates and `ELet` / `ELetInfer` decomposition
-  helpers exist in `TypeSafety.v`:
-  `expr_local_no_shadow_from`, `args_local_no_shadow_from`,
-  `fields_local_no_shadow_from`,
-  `expr_local_no_shadow_from_let_init`,
-  `expr_local_no_shadow_from_let_binder_fresh_prefix`,
-  `expr_local_no_shadow_from_letinfer_init`, and
-  `expr_local_no_shadow_from_letinfer_binder_fresh_prefix`.
-- Function-level alpha-renaming packaging now exists in `AlphaRenaming.v`:
-  `alpha_rename_fn_def_params_body`,
-  `alpha_rename_fn_def_params_body_facts`,
-  `ctx_alpha_no_collision_on`,
-  `ctx_alpha_renamed_name_preimage`,
-  `alpha_rename_fn_def_initial_support_facts`,
-  `alpha_rename_fn_def_static_fields`,
-  `alpha_rename_fn_def_body_local_store_names_nodup`, and
-  `alpha_rename_fn_def_params_body_local_store_names_nodup`.
-- Params-level exclusion transport helpers now exist in `TypeSafety.v`:
-  `roots_exclude_params_rename`,
-  `root_env_excludes_params_rename`,
-  `roots_exclude_params_instantiate`,
-  `root_env_excludes_params_instantiate`, and
-  `root_env_excludes_params_app`.
-- The shadow-summary interface now carries callee parameter uniqueness:
-  `callee_body_root_shadow_summary` includes
-  `NoDup (ctx_names (params_ctx (fn_params fdef)))`.
-- Cached shadow summaries can now be recovered from direct-call
-  `In fdef (env_fns env)` evidence under function-name uniqueness via
-  `env_fns_root_shadow_summary_evidence_in_unique`.
-- The preferred ordinary alpha route should use the `_of_unique` wrapper and
-  derive the shadow bridge from `fn_env_unique_by_name`; do not add an explicit
-  `direct_call_callee_body_root_shadow_summary_bridge` premise to new
-  ordinary-checker-facing statements.
-- `EnvRuntimeSafety.v` exposes
-  `infer_full_env_alpha_big_step_safe_with_shadow_summary_sidecar` as the
-  preferred ordinary-alpha sidecar theorem name.
-- Call argument root-list length plumbing exists:
-  `typed_args_roots_arg_roots_length` and `apply_lt_params_length`.
+1. The frontend/checker path checks `alpha_normalize_global_env env`.
+2. Ordinary checker success gives structural typing.
+3. Structural preservation proves `value_has_type`.
+4. Root/shadow evidence is used only as sidecar evidence for direct-call
+   cleanup/provenance.
 
-### Completed Implementation Task
+Do not try to prove `typed_env_structural -> typed_env_roots_shadow_safe` as the
+canonical route.
 
-Done: proved `direct_call_callee_body_root_shadow_summary_bridge_of_unique`,
-the direct-call shadow-summary bridge from function-name uniqueness, without
-assuming transported callee body evidence.
+### Current Public Proof Wrappers
 
-Completed prerequisites:
+Use these wrappers before adding new theorem shapes:
 
-- The bridge needs to apply
-  `alpha_rename_typed_env_roots_shadow_safe_full_support_forward` to a cached
-  callee body summary.
-- That theorem requires the source initial root environment to be no-shadow and
-  no-collision:
-  `root_env_no_shadow (initial_root_env_for_fn fdef)` and
-  `rename_no_collision_on rho (root_env_names (initial_root_env_for_fn fdef))`.
-- These follow from `NoDup (ctx_names (params_ctx (fn_params fdef)))`, and the
-  helper `alpha_rename_fn_def_initial_support_facts` packages the proof.
-- The cached summary now exposes that `NoDup` premise directly.
-
-Resolved proof blocker:
-
-- After alpha-renaming and instantiating the cached callee body summary, the
-  bridge must still produce the final
-  `roots_exclude_params (fn_params fcall) roots_body` and
-  `root_env_excludes_params (fn_params fcall) R_body` fields required by
-  `callee_body_root_shadow_ready_at`.
-- This is now handled by using the completed params-level transport helpers
-  inside `direct_call_callee_body_root_shadow_summary_bridge_of_unique`:
-  transport cached `Hexclude_roots` / `Hexclude_env` through alpha-renaming,
-  root-substitution instantiation, and the caller-tail frame with
-  `roots_exclude_params_rename`,
-  `root_env_excludes_params_rename`,
-  `roots_exclude_params_instantiate`,
-  `root_env_excludes_params_instantiate`, and
-  `root_env_excludes_params_app`.
-- No checker behavior or alpha-renaming theorem behavior was weakened.
-
-Completed target theorem:
-
-```coq
-Lemma direct_call_callee_body_root_shadow_summary_bridge_of_unique :
-  forall env,
-    fn_env_unique_by_name env ->
-    direct_call_callee_body_root_shadow_summary_bridge env.
-```
-
-Completed proof route:
-
-1. Use function-name uniqueness to recover the cached shadow summary for the
-   runtime callee.
-2. Destructure the strengthened summary to obtain both the cached body summary
-   and `NoDup (ctx_names (params_ctx (fn_params fdef)))`.
-3. Use `alpha_rename_fn_def_initial_support_facts` to obtain the parameter
-   rename environment, body rename equation, `ctx_alpha`, used/disjoint facts,
-   initial root no-shadow/support facts, and source no-collision.
-4. Use `alpha_rename_fn_def_static_fields` to rewrite `fn_lifetimes`,
-   `fn_outlives`, and return type facts for `fcall`.
-5. Derive output root no-collision for the cached body result from typed output
-   support and `ctx_alpha`; add a proof helper if needed.
-6. Apply `alpha_rename_typed_env_roots_shadow_safe_full_support_forward` to the
-   cached summary body.
-7. Instantiate the renamed summary with
-   `root_subst_of_params (fn_params fdef) arg_roots`.
-8. Use
-   `root_env_instantiate_initial_origin_equiv_call_param_root_env_empty` for
-   the parameter-only root environment.
-9. Use `typed_args_roots_arg_roots_length` plus `apply_lt_params_length` to
-   discharge root-list length premises.
-10. Use `eval_args_root_tail_fresh_names_for_fresh_call` and
-   `typed_env_roots_shadow_safe_tail_frame` to add the caller tail.
-11. Transport the cached return-root and output-root param-exclusion facts
-   through alpha-renaming, root-substitution instantiation, and the caller-tail
-   frame.
-12. Finish with `call_param_root_env_app_tail`.
-
-Stop and report if any step needs a semantic invariant rather than a proof-only
-helper. Do not change checker behavior.
+- Non-direct-call structural route:
+  `infer_full_env_alpha_big_step_safe_structural_ready`.
+- Direct-call sidecar route:
+  `infer_full_env_alpha_big_step_safe_with_direct_call_sidecar_ready`.
+- Program-level direct-call sidecar route:
+  `check_program_env_alpha_big_step_safe_with_direct_call_sidecar_ready`.
+- Sidecar package predicates:
+  `ordinary_alpha_root_shadow_sidecar_ready`,
+  `ordinary_alpha_direct_call_meta_ready`,
+  `ordinary_alpha_direct_call_sidecar_ready`, and
+  `initial_root_runtime_ready_for_fn`.
+- Direct-call bridge from uniqueness:
+  `direct_call_callee_body_root_shadow_summary_bridge_of_unique`.
 
 ### Next Implementation Task
 
-Proceed with ordinary checker type safety through structural preservation.
-The current implemented target is the non-direct-call alpha route:
-`infer_full_env_alpha_big_step_safe_structural_ready` connects ordinary
-checker success on alpha-normalized core to structural preservation and
-`value_has_type` under `preservation_ready_expr`.
-The direct-call route now has a packaged sidecar wrapper:
-`infer_full_env_alpha_big_step_safe_with_direct_call_sidecar_ready`.
-The program-level checker route now has the matching wrapper:
-`check_program_env_alpha_big_step_safe_with_direct_call_sidecar_ready`.
+The sidecar package has been decomposed. Under the current policy, do not
+reduce these premises by changing ordinary checker acceptance.
 
-Current ordinary-safety blockers:
+Current status:
 
-- Reduce or discharge the packaged sidecar premises where possible.
-- `ordinary_alpha_direct_call_sidecar_ready` still explicitly requires
-  `env_fns_root_shadow_summary_evidence`, function-name uniqueness, and
-  preservation readiness for the alpha-normalized environment.
-- `initial_root_runtime_ready_for_fn` remains an explicit runtime precondition.
-  It cannot be derived from `initial_store_for_fn` alone because the initial
-  root environment stores `RParam` roots while runtime references require
-  concrete `RStore` reachability.
+- `ordinary_alpha_root_shadow_sidecar_ready` isolates
+  `env_fns_root_shadow_summary_evidence`.
+- `ordinary_alpha_direct_call_meta_ready` isolates function-name uniqueness and
+  preservation readiness.
+- `ordinary_alpha_direct_call_sidecar_ready` remains as the compatibility
+  package used by existing public wrappers.
+- `initial_root_runtime_ready_for_fn` remains explicit.
+   - It cannot be derived from `initial_store_for_fn` alone.
+   - Reason: `initial_root_env_for_fn` stores parameter origins as `RParam`,
+     while runtime references require concrete `RStore` reachability.
 
-Do not make full structural-to-shadow-root synthesis the next task. Existing
-root/shadow facts are useful sidecar facts for direct-call cleanup and
-provenance, but ordinary checker safety should not depend on synthesizing
-`typed_env_roots_shadow_safe` for every structurally typed expression.
+Next implementation choices require a new design decision:
 
-The known `If` gap is scoped to the abandoned full synthesis route: `TES_If`
-does not carry the `root_env_equiv R2 R3` branch join evidence required by
-`TERS_If`. That is a limitation of trying to synthesize shadow/root evidence
-from structural typing, not a blocker for ordinary structural preservation.
-Do not strengthen `TES_If`, do not strengthen checker acceptance, and do not
-add a checker invariant merely to satisfy `TERS_If`.
+1. Add a separate validator/theorem for function-name uniqueness and
+   preservation readiness.
+2. Expand structural preservation coverage so `preservation_ready_expr` can be
+   removed from ordinary-facing wrappers.
+3. Keep the current proof wrappers as the explicit sidecar contract.
 
-Use the `_of_unique` wrapper when local root/shadow evidence is needed for
-direct-call cleanup:
-`direct_call_callee_body_root_shadow_summary_bridge_of_unique` derives the
-bridge from `fn_env_unique_by_name`. Do not reintroduce an explicit
-`direct_call_callee_body_root_shadow_summary_bridge` premise to
-ordinary-checker-facing statements.
+Do not pick one of these in implementation mode without user confirmation.
+
+### Do Not Do
+
+- Do not strengthen `TES_If` or ordinary checker acceptance to satisfy
+  root/shadow evidence.
+- Do not restart full structural-to-shadow-root synthesis as the ordinary route.
+- Do not make the root checker stricter than the ordinary checker to close a
+  proof gap.
+- Do not add an explicit `direct_call_callee_body_root_shadow_summary_bridge`
+  premise to ordinary-facing statements; use `_of_unique`.
+
+### Known Sidecar Gaps
+
+- Ordinary checker success does not imply
+  `env_fns_root_shadow_summary_evidence`.
+- Ordinary checker success does not imply `fn_env_unique_by_name` or
+  `env_fns_preservation_ready`.
+- The abandoned synthesis route stops at `If`: `TES_If` lacks the
+  `root_env_equiv R2 R3` evidence required by `TERS_If`.
+- General root-checker-to-shadow-safe soundness is false for arbitrary core
+  because source-level `let x = &x` initializer shadowing is valid before
+  alpha-normalization.
 
 ## Detailed Status Inventory
 
@@ -385,8 +279,17 @@ verbose than the quick path. Do not use it as the primary implementation order.
      which derives per-function `infer_full_env` success from
      `check_program_env_alpha env = true` and then uses the packaged
      direct-call sidecar theorem.
-   - Remaining ordinary-safety blocker: reduce or discharge the packaged
-     direct-call sidecar premises where possible.
+   - Done: decomposed the packaged direct-call sidecar predicates in
+     `EnvRuntimeSafety.v`. `ordinary_alpha_root_shadow_sidecar_ready` now
+     isolates root/shadow summary evidence, while
+     `ordinary_alpha_direct_call_meta_ready` isolates function-name uniqueness
+     and preservation readiness. The compatibility predicate
+     `ordinary_alpha_direct_call_sidecar_ready` remains for existing public
+     wrappers.
+   - Remaining ordinary-safety blocker: under the current ordinary-checker
+     contract, the decomposed sidecar premises stay explicit. Reducing them
+     further requires a separate validator/theorem or broader preservation
+     coverage, not a proof-only wrapper change.
    - Sidecar limitation: ordinary checker success still does not by itself
      produce `env_fns_root_shadow_summary_evidence` for the alpha-normalized
      function environment. Existing facts only project root/shadow-root typing

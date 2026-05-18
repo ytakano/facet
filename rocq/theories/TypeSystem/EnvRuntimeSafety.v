@@ -597,10 +597,141 @@ Definition initial_root_runtime_ready_for_fn (f : fn_def) (s : store) : Prop :=
   root_env_store_roots_named (initial_root_env_for_fn f) s /\
   root_env_store_keys_named (initial_root_env_for_fn f) s.
 
-Definition ordinary_alpha_direct_call_sidecar_ready (env : global_env) : Prop :=
-  env_fns_root_shadow_summary_evidence (alpha_normalize_global_env env) /\
+Definition ordinary_alpha_root_shadow_sidecar_ready (env : global_env) : Prop :=
+  env_fns_root_shadow_summary_evidence (alpha_normalize_global_env env).
+
+Definition ordinary_alpha_direct_call_meta_ready (env : global_env) : Prop :=
   fn_env_unique_by_name (alpha_normalize_global_env env) /\
   env_fns_preservation_ready (alpha_normalize_global_env env).
+
+Definition ordinary_alpha_direct_call_sidecar_ready (env : global_env) : Prop :=
+  ordinary_alpha_root_shadow_sidecar_ready env /\
+  ordinary_alpha_direct_call_meta_ready env.
+
+Lemma ordinary_alpha_root_shadow_sidecar_ready_intro :
+  forall env,
+    env_fns_root_shadow_summary_evidence (alpha_normalize_global_env env) ->
+    ordinary_alpha_root_shadow_sidecar_ready env.
+Proof.
+  intros env Hroot_shadow.
+  exact Hroot_shadow.
+Qed.
+
+Lemma ordinary_alpha_root_shadow_sidecar_ready_evidence :
+  forall env,
+    ordinary_alpha_root_shadow_sidecar_ready env ->
+    env_fns_root_shadow_summary_evidence (alpha_normalize_global_env env).
+Proof.
+  intros env Hroot_shadow.
+  exact Hroot_shadow.
+Qed.
+
+Lemma ordinary_alpha_direct_call_meta_ready_intro :
+  forall env,
+    fn_env_unique_by_name (alpha_normalize_global_env env) ->
+    env_fns_preservation_ready (alpha_normalize_global_env env) ->
+    ordinary_alpha_direct_call_meta_ready env.
+Proof.
+  intros env Hunique Hfns_ready.
+  split; assumption.
+Qed.
+
+Lemma ordinary_alpha_direct_call_meta_ready_unique :
+  forall env,
+    ordinary_alpha_direct_call_meta_ready env ->
+    fn_env_unique_by_name (alpha_normalize_global_env env).
+Proof.
+  intros env Hmeta.
+  destruct Hmeta as [Hunique _].
+  exact Hunique.
+Qed.
+
+Lemma ordinary_alpha_direct_call_meta_ready_preservation_ready :
+  forall env,
+    ordinary_alpha_direct_call_meta_ready env ->
+    env_fns_preservation_ready (alpha_normalize_global_env env).
+Proof.
+  intros env Hmeta.
+  destruct Hmeta as [_ Hfns_ready].
+  exact Hfns_ready.
+Qed.
+
+Lemma ordinary_alpha_direct_call_sidecar_ready_intro :
+  forall env,
+    ordinary_alpha_root_shadow_sidecar_ready env ->
+    ordinary_alpha_direct_call_meta_ready env ->
+    ordinary_alpha_direct_call_sidecar_ready env.
+Proof.
+  intros env Hroot_shadow Hmeta.
+  split; assumption.
+Qed.
+
+Lemma ordinary_alpha_direct_call_sidecar_ready_package :
+  forall env,
+    env_fns_root_shadow_summary_evidence (alpha_normalize_global_env env) ->
+    fn_env_unique_by_name (alpha_normalize_global_env env) ->
+    env_fns_preservation_ready (alpha_normalize_global_env env) ->
+    ordinary_alpha_direct_call_sidecar_ready env.
+Proof.
+  intros env Hroot_shadow Hunique Hfns_ready.
+  apply ordinary_alpha_direct_call_sidecar_ready_intro.
+  - apply ordinary_alpha_root_shadow_sidecar_ready_intro.
+    exact Hroot_shadow.
+  - apply ordinary_alpha_direct_call_meta_ready_intro; assumption.
+Qed.
+
+Lemma ordinary_alpha_direct_call_sidecar_ready_root_shadow :
+  forall env,
+    ordinary_alpha_direct_call_sidecar_ready env ->
+    ordinary_alpha_root_shadow_sidecar_ready env.
+Proof.
+  intros env Hsidecar.
+  destruct Hsidecar as [Hroot_shadow _].
+  exact Hroot_shadow.
+Qed.
+
+Lemma ordinary_alpha_direct_call_sidecar_ready_meta :
+  forall env,
+    ordinary_alpha_direct_call_sidecar_ready env ->
+    ordinary_alpha_direct_call_meta_ready env.
+Proof.
+  intros env Hsidecar.
+  destruct Hsidecar as [_ Hmeta].
+  exact Hmeta.
+Qed.
+
+Lemma ordinary_alpha_direct_call_sidecar_ready_root_shadow_evidence :
+  forall env,
+    ordinary_alpha_direct_call_sidecar_ready env ->
+    env_fns_root_shadow_summary_evidence (alpha_normalize_global_env env).
+Proof.
+  intros env Hsidecar.
+  apply ordinary_alpha_root_shadow_sidecar_ready_evidence.
+  apply ordinary_alpha_direct_call_sidecar_ready_root_shadow.
+  exact Hsidecar.
+Qed.
+
+Lemma ordinary_alpha_direct_call_sidecar_ready_unique :
+  forall env,
+    ordinary_alpha_direct_call_sidecar_ready env ->
+    fn_env_unique_by_name (alpha_normalize_global_env env).
+Proof.
+  intros env Hsidecar.
+  apply ordinary_alpha_direct_call_meta_ready_unique.
+  apply ordinary_alpha_direct_call_sidecar_ready_meta.
+  exact Hsidecar.
+Qed.
+
+Lemma ordinary_alpha_direct_call_sidecar_ready_preservation_ready :
+  forall env,
+    ordinary_alpha_direct_call_sidecar_ready env ->
+    env_fns_preservation_ready (alpha_normalize_global_env env).
+Proof.
+  intros env Hsidecar.
+  apply ordinary_alpha_direct_call_meta_ready_preservation_ready.
+  apply ordinary_alpha_direct_call_sidecar_ready_meta.
+  exact Hsidecar.
+Qed.
 
 Theorem infer_full_env_alpha_big_step_safe_with_direct_call_sidecar_ready :
   forall env f T Γ' s s' v,
@@ -615,7 +746,12 @@ Theorem infer_full_env_alpha_big_step_safe_with_direct_call_sidecar_ready :
 Proof.
   intros env f T Γ' s s' v Hinfer Hsidecar Hin Hstore Hready
     Hroot_runtime Heval.
-  destruct Hsidecar as [Hsummary [Hunique Hfns_ready]].
+  pose proof (ordinary_alpha_direct_call_sidecar_ready_root_shadow_evidence
+                env Hsidecar) as Hsummary.
+  pose proof (ordinary_alpha_direct_call_sidecar_ready_unique env Hsidecar)
+    as Hunique.
+  pose proof (ordinary_alpha_direct_call_sidecar_ready_preservation_ready
+                env Hsidecar) as Hfns_ready.
   destruct Hroot_runtime as [Hroots [Hstore_shadow [Hnamed Hkeys]]].
   eapply infer_full_env_alpha_big_step_safe_with_shadow_summary_evidence;
     eassumption.

@@ -3594,6 +3594,41 @@ Definition infer_env (env : global_env) (f : fn_def)
   end
   end.
 
+Definition fn_with_body (f : fn_def) (body : expr) : fn_def :=
+  MkFnDef (fn_name f) (fn_lifetimes f) (fn_outlives f)
+    (fn_params f) (fn_ret f) body.
+
+Definition infer_env_elab (env : global_env) (f : fn_def)
+    : infer_result (Ty * ctx * fn_def) :=
+  let n := fn_lifetimes f in
+  let Ω := fn_outlives f in
+  let Δ := mk_region_ctx n in
+  if negb (wf_outlives_b Δ Ω)
+  then infer_err ErrLifetimeLeak
+  else
+  if negb (wf_type_b Δ (fn_ret f))
+  then infer_err ErrLifetimeLeak
+  else
+  if negb (wf_params_b Δ (fn_params f))
+  then infer_err ErrLifetimeLeak
+  else
+  match duplicate_param_name (fn_params f) with
+  | Some x => infer_err (ErrDuplicateParam x)
+  | None =>
+  match infer_core_env_elab env Ω n (params_ctx (fn_params f)) (fn_body f) with
+  | infer_err err => infer_err err
+  | infer_ok (T_body, Γ_out, body') =>
+      if negb (wf_type_b Δ T_body)
+      then infer_err ErrLifetimeLeak
+      else
+      if ty_compatible_b Ω T_body (fn_ret f) then
+        if params_ok_env_b env (fn_params f) Γ_out
+        then infer_ok (fn_ret f, Γ_out, fn_with_body f body')
+        else infer_err ErrContextCheckFailed
+      else infer_err (compatible_error T_body (fn_ret f))
+  end
+  end.
+
 Definition infer_env_roots (env : global_env) (f : fn_def) (R0 : root_env)
     : infer_result (Ty * ctx * root_env * root_set) :=
   let n := fn_lifetimes f in
@@ -4153,6 +4188,17 @@ Definition infer_full_env (env : global_env) (f : fn_def)
       end
   end.
 
+Definition infer_full_env_elab (env : global_env) (f : fn_def)
+    : infer_result (Ty * ctx * fn_def) :=
+  match infer_env_elab env f with
+  | infer_err err => infer_err err
+  | infer_ok (T, Γ, f') =>
+      match borrow_check_env env [] (params_ctx (fn_params f')) (fn_body f') with
+      | infer_err err => infer_err err
+      | infer_ok _ => infer_ok (T, Γ, f')
+      end
+  end.
+
 Definition infer_full_env_roots (env : global_env) (f : fn_def) (R0 : root_env)
     : infer_result (Ty * ctx * root_env * root_set) :=
   match infer_env_roots env f R0 with
@@ -4168,6 +4214,31 @@ Definition alpha_normalize_global_env (env : global_env) : global_env :=
   MkGlobalEnv (env_structs env) (env_traits env) (env_impls env)
     (alpha_rename_syntax (env_fns env)).
 
+Fixpoint infer_fns_env_elab (env : global_env) (fns : list fn_def)
+    : infer_result (list fn_def) :=
+  match fns with
+  | [] => infer_ok []
+  | f :: rest =>
+      match infer_full_env_elab env f with
+      | infer_err err => infer_err err
+      | infer_ok (_, _, f') =>
+          match infer_fns_env_elab env rest with
+          | infer_err err => infer_err err
+          | infer_ok rest' => infer_ok (f' :: rest')
+          end
+      end
+  end.
+
+Definition infer_program_env_alpha_elab (env : global_env)
+    : infer_result global_env :=
+  let env_alpha := alpha_normalize_global_env env in
+  match infer_fns_env_elab env_alpha (env_fns env_alpha) with
+  | infer_err err => infer_err err
+  | infer_ok fns' =>
+      infer_ok (MkGlobalEnv (env_structs env_alpha) (env_traits env_alpha)
+        (env_impls env_alpha) fns')
+  end.
+
 Definition check_program_env (env : global_env) : bool :=
   forallb (fun f =>
     match infer_full_env env f with
@@ -4181,6 +4252,12 @@ Definition check_program_env_alpha (env : global_env) : bool :=
 Definition check_program_env_alpha_validated (env : global_env) : bool :=
   top_level_names_unique_b (alpha_normalize_global_env env) &&
   check_program_env_alpha env.
+
+Definition check_program_env_alpha_elab (env : global_env) : bool :=
+  match infer_program_env_alpha_elab env with
+  | infer_ok _ => true
+  | infer_err _ => false
+  end.
 
 Definition fn_params_roots_exclude_b (ps : list param) (roots : root_set) : bool :=
   forallb (fun x => roots_exclude_b x roots) (ctx_names (params_ctx ps)).
@@ -4228,6 +4305,22 @@ Proof. vm_compute. reflexivity. Qed.
 
 Example provenance_ready_expr_b_accepts_ready_gap_let :
   provenance_ready_expr_b (fn_body ex_ready_gap_let_fn) = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example infer_env_elab_ready_gap_let_annotates_body :
+  infer_env_elab ex_ready_gap_let_env ex_ready_gap_let_fn =
+  infer_ok
+    (MkTy UUnrestricted TUnits,
+     [],
+     fn_with_body ex_ready_gap_let_fn
+       (ELet MImmutable (("x"%string), 0)
+         (MkTy UUnrestricted TIntegers)
+         (ELit (LInt 1))
+         EUnit)).
+Proof. vm_compute. reflexivity. Qed.
+
+Example check_program_env_alpha_elab_accepts_ready_gap_let :
+  check_program_env_alpha_elab ex_ready_gap_let_env = true.
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_struct_split : struct_def :=
@@ -4365,6 +4458,8 @@ From Stdlib Require Import ExtrOcamlZBigInt.
 Extraction "../fixtures/TypeChecker.ml"
   infer_core_env_roots infer_env_roots infer_full_env_roots
   infer_env infer_full_env check_program_env
+  infer_core_env_elab infer_env_elab infer_full_env_elab
+  infer_program_env_alpha_elab check_program_env_alpha_elab
   alpha_normalize_global_env check_program_env_alpha
   check_program_env_alpha_validated
   preservation_ready_expr_b preservation_ready_args_b

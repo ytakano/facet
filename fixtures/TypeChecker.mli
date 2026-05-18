@@ -639,6 +639,14 @@ val infer_core_env :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
   (ty * ctx) infer_result
 
+val infer_core_env_state_fuel_elab :
+  Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+  sctx -> expr -> ((ty * sctx) * expr) infer_result
+
+val infer_core_env_elab :
+  global_env -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
+  ((ty * ctx) * expr) infer_result
+
 val root_set_eqb : root_set -> root_set -> bool
 
 val root_env_eqb : root_env -> root_env -> bool
@@ -703,6 +711,11 @@ val top_level_names_unique_b : global_env -> bool
 
 val infer_env : global_env -> fn_def -> (ty * ctx) infer_result
 
+val fn_with_body : fn_def -> expr -> fn_def
+
+val infer_env_elab :
+  global_env -> fn_def -> ((ty * ctx) * fn_def) infer_result
+
 val infer_env_roots :
   global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
   infer_result
@@ -750,17 +763,26 @@ val borrow_check_env :
 
 val infer_full_env : global_env -> fn_def -> (ty * ctx) infer_result
 
+val infer_full_env_elab :
+  global_env -> fn_def -> ((ty * ctx) * fn_def) infer_result
+
 val infer_full_env_roots :
   global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
   infer_result
 
 val alpha_normalize_global_env : global_env -> global_env
 
+val infer_fns_env_elab : global_env -> fn_def list -> fn_def list infer_result
+
+val infer_program_env_alpha_elab : global_env -> global_env infer_result
+
 val check_program_env : global_env -> bool
 
 val check_program_env_alpha : global_env -> bool
 
 val check_program_env_alpha_validated : global_env -> bool
+
+val check_program_env_alpha_elab : global_env -> bool
 
 val fn_params_roots_exclude_b : param list -> root_set -> bool
 

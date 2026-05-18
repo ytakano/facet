@@ -3389,6 +3389,439 @@ let infer_core_env env _UU03a9_ n _UU0393_ e =
     let (t, _UU03a3_) = p in Infer_ok (t, (ctx_of_sctx _UU03a3_))
   | Infer_err err -> Infer_err err
 
+(** val infer_core_env_state_fuel_elab :
+    Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+    sctx -> expr -> ((ty * sctx) * expr) infer_result **)
+
+let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> Infer_err ErrNotImplemented)
+    (fun fuel' ->
+    match e with
+    | EUnit -> Infer_ok (((MkTy (UUnrestricted, TUnits)), _UU03a3_), e)
+    | ELit l ->
+      (match l with
+       | LInt _ -> Infer_ok (((MkTy (UUnrestricted, TIntegers)), _UU03a3_), e)
+       | LFloat _ -> Infer_ok (((MkTy (UUnrestricted, TFloats)), _UU03a3_), e)
+       | LBool _ ->
+         Infer_ok (((MkTy (UUnrestricted, TBooleans)), _UU03a3_), e))
+    | EVar x ->
+      (match infer_place_sctx env _UU03a3_ (PVar x) with
+       | Infer_ok t ->
+         (match consume_place_value env _UU03a3_ (PVar x) t with
+          | Infer_ok _UU03a3_' -> Infer_ok ((t, _UU03a3_'), e)
+          | Infer_err err -> Infer_err err)
+       | Infer_err err -> Infer_err err)
+    | ELet (m, x, t, e1, e2) ->
+      (match infer_core_env_state_fuel_elab fuel' env _UU03a9_ n _UU03a3_ e1 with
+       | Infer_ok p ->
+         let (p0, e1') = p in
+         let (t1, _UU03a3_1) = p0 in
+         if ty_compatible_b _UU03a9_ t1 t
+         then (match infer_core_env_state_fuel_elab fuel' env _UU03a9_ n
+                       (sctx_add x t m _UU03a3_1) e2 with
+               | Infer_ok p1 ->
+                 let (p2, e2') = p1 in
+                 let (t2, _UU03a3_2) = p2 in
+                 if sctx_check_ok env x t _UU03a3_2
+                 then Infer_ok ((t2, (sctx_remove x _UU03a3_2)), (ELet (m, x,
+                        t, e1', e2')))
+                 else Infer_err ErrContextCheckFailed
+               | Infer_err err -> Infer_err err)
+         else Infer_err (compatible_error t1 t)
+       | Infer_err err -> Infer_err err)
+    | ELetInfer (m, x, e1, e2) ->
+      (match infer_core_env_state_fuel_elab fuel' env _UU03a9_ n _UU03a3_ e1 with
+       | Infer_ok p ->
+         let (p0, e1') = p in
+         let (t1, _UU03a3_1) = p0 in
+         (match infer_core_env_state_fuel_elab fuel' env _UU03a9_ n
+                  (sctx_add x t1 m _UU03a3_1) e2 with
+          | Infer_ok p1 ->
+            let (p2, e2') = p1 in
+            let (t2, _UU03a3_2) = p2 in
+            if sctx_check_ok env x t1 _UU03a3_2
+            then Infer_ok ((t2, (sctx_remove x _UU03a3_2)), (ELet (m, x, t1,
+                   e1', e2')))
+            else Infer_err ErrContextCheckFailed
+          | Infer_err err -> Infer_err err)
+       | Infer_err err -> Infer_err err)
+    | EFn fname ->
+      (match lookup_fn_b fname env.env_fns with
+       | Some fdef -> Infer_ok (((fn_value_ty fdef), _UU03a3_), e)
+       | None -> Infer_err (ErrFunctionNotFound fname))
+    | EPlace p ->
+      (match infer_place_sctx env _UU03a3_ p with
+       | Infer_ok t ->
+         (match consume_place_value env _UU03a3_ p t with
+          | Infer_ok _UU03a3_' -> Infer_ok ((t, _UU03a3_'), e)
+          | Infer_err err -> Infer_err err)
+       | Infer_err err -> Infer_err err)
+    | ECall (fname, args) ->
+      (match lookup_fn_b fname env.env_fns with
+       | Some fdef ->
+         let m = fdef.fn_lifetimes in
+         let collect =
+           let rec collect _UU03a3_0 = function
+           | [] -> Infer_ok (([], _UU03a3_0), [])
+           | e' :: es ->
+             (match infer_core_env_state_fuel_elab fuel' env _UU03a9_ n
+                      _UU03a3_0 e' with
+              | Infer_ok p ->
+                let (p0, e_elab) = p in
+                let (t_e, _UU03a3_1) = p0 in
+                (match collect _UU03a3_1 es with
+                 | Infer_ok p1 ->
+                   let (p2, es_elab) = p1 in
+                   let (tys, _UU03a3_2) = p2 in
+                   Infer_ok (((t_e :: tys), _UU03a3_2), (e_elab :: es_elab))
+                 | Infer_err err -> Infer_err err)
+              | Infer_err err -> Infer_err err)
+           in collect
+         in
+         (match collect _UU03a3_ args with
+          | Infer_ok p ->
+            let (p0, args') = p in
+            let (arg_tys, _UU03a3_') = p0 in
+            (match build_sigma m (repeat None m) arg_tys fdef.fn_params with
+             | Some _UU03c3__acc ->
+               let _UU03c3_ = finalize_subst _UU03c3__acc in
+               let ps_subst = apply_lt_params _UU03c3_ fdef.fn_params in
+               (match check_args _UU03a9_ arg_tys ps_subst with
+                | Some err -> Infer_err err
+                | None ->
+                  if forallb (wf_lifetime_b (mk_region_ctx n)) _UU03c3_
+                  then let _UU03a9__subst =
+                         apply_lt_outlives _UU03c3_ fdef.fn_outlives
+                       in
+                       if outlives_constraints_hold_b _UU03a9_ _UU03a9__subst
+                       then Infer_ok (((apply_lt_ty _UU03c3_ fdef.fn_ret),
+                              _UU03a3_'), (ECall (fname, args')))
+                       else Infer_err ErrHrtBoundUnsatisfied
+                  else Infer_err ErrLifetimeLeak)
+             | None -> Infer_err ErrLifetimeConflict)
+          | Infer_err err -> Infer_err err)
+       | None -> Infer_err (ErrFunctionNotFound fname))
+    | ECallExpr (callee, args) ->
+      (match infer_core_env_state_fuel_elab fuel' env _UU03a9_ n _UU03a3_
+               callee with
+       | Infer_ok p ->
+         let (p0, callee') = p in
+         let (t_callee, _UU03a3_c) = p0 in
+         let collect =
+           let rec collect _UU03a3_0 = function
+           | [] -> Infer_ok (([], _UU03a3_0), [])
+           | e' :: es ->
+             (match infer_core_env_state_fuel_elab fuel' env _UU03a9_ n
+                      _UU03a3_0 e' with
+              | Infer_ok p1 ->
+                let (p2, e_elab) = p1 in
+                let (t_e, _UU03a3_1) = p2 in
+                (match collect _UU03a3_1 es with
+                 | Infer_ok p3 ->
+                   let (p4, es_elab) = p3 in
+                   let (tys, _UU03a3_2) = p4 in
+                   Infer_ok (((t_e :: tys), _UU03a3_2), (e_elab :: es_elab))
+                 | Infer_err err -> Infer_err err)
+              | Infer_err err -> Infer_err err)
+           in collect
+         in
+         (match collect _UU03a3_c args with
+          | Infer_ok p1 ->
+            let (p2, args') = p1 in
+            let (arg_tys, _UU03a3_') = p2 in
+            (match ty_core t_callee with
+             | TFn (param_tys, ret) ->
+               (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                | Some err -> Infer_err err
+                | None ->
+                  Infer_ok ((ret, _UU03a3_'), (ECallExpr (callee', args'))))
+             | TForall (m, bounds, body) ->
+               (match ty_core body with
+                | TFn (param_tys, ret) ->
+                  (match build_bound_sigma (repeat None m) arg_tys param_tys with
+                   | Some _UU03c3_ ->
+                     let param_tys_open =
+                       map (open_bound_ty _UU03c3_) param_tys
+                     in
+                     (match check_arg_tys _UU03a9_ arg_tys param_tys_open with
+                      | Some err -> Infer_err err
+                      | None ->
+                        let ret_open = open_bound_ty _UU03c3_ ret in
+                        let bounds_open = open_bound_outlives _UU03c3_ bounds
+                        in
+                        if (||) (contains_lbound_ty ret_open)
+                             (contains_lbound_outlives bounds_open)
+                        then Infer_err ErrHrtUnresolvedBound
+                        else if outlives_constraints_hold_b _UU03a9_
+                                  bounds_open
+                             then Infer_ok ((ret_open, _UU03a3_'), (ECallExpr
+                                    (callee', args')))
+                             else Infer_err ErrHrtBoundUnsatisfied)
+                   | None -> Infer_err ErrLifetimeConflict)
+                | x -> Infer_err (ErrMalformedHrtBody x))
+             | x -> Infer_err (ErrNotAFunction x))
+          | Infer_err err -> Infer_err err)
+       | Infer_err err -> Infer_err err)
+    | EStruct (sname, lts, args, fields) ->
+      (match lookup_struct sname env with
+       | Some s ->
+         if negb (Nat.eqb (length lts) s.struct_lifetimes)
+         then Infer_err ErrArityMismatch
+         else if negb (Nat.eqb (length args) s.struct_type_params)
+              then Infer_err ErrArityMismatch
+              else (match check_struct_bounds env s.struct_bounds args with
+                    | Some err -> Infer_err err
+                    | None ->
+                      (match first_duplicate_field fields with
+                       | Some name -> Infer_err (ErrDuplicateField name)
+                       | None ->
+                         (match first_unknown_field fields s.struct_fields with
+                          | Some name -> Infer_err (ErrFieldNotFound name)
+                          | None ->
+                            (match first_missing_field s.struct_fields fields with
+                             | Some name -> Infer_err (ErrMissingField name)
+                             | None ->
+                               let go =
+                                 let rec go _UU03a3_0 = function
+                                 | [] -> Infer_ok (_UU03a3_0, [])
+                                 | f :: rest ->
+                                   (match lookup_field_b f.field_name fields with
+                                    | Some e_field ->
+                                      (match infer_core_env_state_fuel_elab
+                                               fuel' env _UU03a9_ n _UU03a3_0
+                                               e_field with
+                                       | Infer_ok p ->
+                                         let (p0, e_field') = p in
+                                         let (t_field, _UU03a3_1) = p0 in
+                                         let t_expected =
+                                           instantiate_struct_field_ty lts
+                                             args f
+                                         in
+                                         if ty_compatible_b _UU03a9_ t_field
+                                              t_expected
+                                         then (match go _UU03a3_1 rest with
+                                               | Infer_ok p1 ->
+                                                 let (_UU03a3_2, fields') = p1
+                                                 in
+                                                 Infer_ok (_UU03a3_2,
+                                                 ((f.field_name,
+                                                 e_field') :: fields'))
+                                               | Infer_err err ->
+                                                 Infer_err err)
+                                         else Infer_err
+                                                (compatible_error t_field
+                                                  t_expected)
+                                       | Infer_err err -> Infer_err err)
+                                    | None ->
+                                      Infer_err (ErrMissingField f.field_name))
+                                 in go
+                               in
+                               (match go _UU03a3_ s.struct_fields with
+                                | Infer_ok p ->
+                                  let (_UU03a3_', fields') = p in
+                                  Infer_ok
+                                  (((instantiate_struct_instance_ty s lts
+                                      args),
+                                  _UU03a3_'), (EStruct (sname, lts, args,
+                                  fields')))
+                                | Infer_err err -> Infer_err err)))))
+       | None -> Infer_err (ErrStructNotFound sname))
+    | EReplace (p, e_new) ->
+      (match infer_place_sctx env _UU03a3_ p with
+       | Infer_ok t_old ->
+         let root = place_name p in
+         (match place_path p with
+          | Some p0 ->
+            let (x, path) = p0 in
+            (match sctx_lookup_mut x _UU03a3_ with
+             | Some m ->
+               (match m with
+                | MImmutable -> Infer_err (ErrNotMutable x)
+                | MMutable ->
+                  if writable_place_b env _UU03a3_ p
+                  then (match infer_core_env_state_fuel_elab fuel' env
+                                _UU03a9_ n _UU03a3_ e_new with
+                        | Infer_ok p1 ->
+                          let (p2, e_new') = p1 in
+                          let (t_new, _UU03a3_1) = p2 in
+                          if ty_compatible_b _UU03a9_ t_new t_old
+                          then (match sctx_path_available _UU03a3_1 x path with
+                                | Infer_ok _ ->
+                                  (match sctx_restore_path _UU03a3_1 x path with
+                                   | Infer_ok _UU03a3_2 ->
+                                     Infer_ok ((t_old, _UU03a3_2), (EReplace
+                                       (p, e_new')))
+                                   | Infer_err err -> Infer_err err)
+                                | Infer_err err -> Infer_err err)
+                          else Infer_err (compatible_error t_new t_old)
+                        | Infer_err err -> Infer_err err)
+                  else Infer_err (ErrNotMutable x))
+             | None -> Infer_err (ErrUnknownVar x))
+          | None ->
+            if writable_place_b env _UU03a3_ p
+            then (match infer_core_env_state_fuel_elab fuel' env _UU03a9_ n
+                          _UU03a3_ e_new with
+                  | Infer_ok p0 ->
+                    let (p1, e_new') = p0 in
+                    let (t_new, _UU03a3_1) = p1 in
+                    if ty_compatible_b _UU03a9_ t_new t_old
+                    then Infer_ok ((t_old, _UU03a3_1), (EReplace (p, e_new')))
+                    else Infer_err (compatible_error t_new t_old)
+                  | Infer_err err -> Infer_err err)
+            else Infer_err (ErrNotMutable root))
+       | Infer_err err -> Infer_err err)
+    | EAssign (p, e_new) ->
+      (match infer_place_sctx env _UU03a3_ p with
+       | Infer_ok t_old ->
+         if usage_eqb (ty_usage t_old) ULinear
+         then Infer_err (ErrUsageMismatch ((ty_usage t_old), UAffine))
+         else let root = place_name p in
+              (match place_path p with
+               | Some p0 ->
+                 let (x, path) = p0 in
+                 (match sctx_lookup_mut x _UU03a3_ with
+                  | Some m ->
+                    (match m with
+                     | MImmutable -> Infer_err (ErrNotMutable x)
+                     | MMutable ->
+                       if writable_place_b env _UU03a3_ p
+                       then (match infer_core_env_state_fuel_elab fuel' env
+                                     _UU03a9_ n _UU03a3_ e_new with
+                             | Infer_ok p1 ->
+                               let (p2, e_new') = p1 in
+                               let (t_new, _UU03a3_1) = p2 in
+                               if ty_compatible_b _UU03a9_ t_new t_old
+                               then (match sctx_path_available _UU03a3_1 x
+                                             path with
+                                     | Infer_ok _ ->
+                                       Infer_ok (((MkTy (UUnrestricted,
+                                         TUnits)), _UU03a3_1), (EAssign (p,
+                                         e_new')))
+                                     | Infer_err err -> Infer_err err)
+                               else Infer_err (compatible_error t_new t_old)
+                             | Infer_err err -> Infer_err err)
+                       else Infer_err (ErrNotMutable x))
+                  | None -> Infer_err (ErrUnknownVar x))
+               | None ->
+                 if writable_place_b env _UU03a3_ p
+                 then (match infer_core_env_state_fuel_elab fuel' env
+                               _UU03a9_ n _UU03a3_ e_new with
+                       | Infer_ok p0 ->
+                         let (p1, e_new') = p0 in
+                         let (t_new, _UU03a3_1) = p1 in
+                         if ty_compatible_b _UU03a9_ t_new t_old
+                         then Infer_ok (((MkTy (UUnrestricted, TUnits)),
+                                _UU03a3_1), (EAssign (p, e_new')))
+                         else Infer_err (compatible_error t_new t_old)
+                       | Infer_err err -> Infer_err err)
+                 else Infer_err (ErrNotMutable root))
+       | Infer_err err -> Infer_err err)
+    | EBorrow (rk, p) ->
+      (match infer_place_sctx env _UU03a3_ p with
+       | Infer_ok t_p ->
+         (match rk with
+          | RShared ->
+            Infer_ok (((MkTy (UUnrestricted, (TRef ((LVar n), RShared,
+              t_p)))), _UU03a3_), e)
+          | RUnique ->
+            (match place_path p with
+             | Some p0 ->
+               let (x, _) = p0 in
+               (match sctx_lookup_mut x _UU03a3_ with
+                | Some m ->
+                  (match m with
+                   | MImmutable -> Infer_err (ErrImmutableBorrow x)
+                   | MMutable ->
+                     Infer_ok (((MkTy (UAffine, (TRef ((LVar n), RUnique,
+                       t_p)))), _UU03a3_), e))
+                | None -> Infer_err (ErrUnknownVar x))
+             | None ->
+               if place_under_unique_ref_b env _UU03a3_ p
+               then Infer_ok (((MkTy (UAffine, (TRef ((LVar n), RUnique,
+                      t_p)))), _UU03a3_), e)
+               else Infer_err (ErrImmutableBorrow (place_name p))))
+       | Infer_err err -> Infer_err err)
+    | EDeref r ->
+      (match expr_as_place r with
+       | Some p ->
+         (match infer_place_sctx env _UU03a3_ p with
+          | Infer_ok t_r ->
+            (match ty_core t_r with
+             | TRef (_, _, t_inner) ->
+               if usage_eqb (ty_usage t_inner) UUnrestricted
+               then Infer_ok ((t_inner, _UU03a3_), (EDeref r))
+               else Infer_err (ErrUsageMismatch ((ty_usage t_inner),
+                      UUnrestricted))
+             | x -> Infer_err (ErrNotAReference x))
+          | Infer_err err -> Infer_err err)
+       | None ->
+         (match infer_core_env_state_fuel_elab fuel' env _UU03a9_ n _UU03a3_ r with
+          | Infer_ok p ->
+            let (p0, r') = p in
+            let (t_r, _UU03a3_') = p0 in
+            (match ty_core t_r with
+             | TRef (_, _, t_inner) ->
+               if usage_eqb (ty_usage t_inner) UUnrestricted
+               then Infer_ok ((t_inner, _UU03a3_'), (EDeref r'))
+               else Infer_err (ErrUsageMismatch ((ty_usage t_inner),
+                      UUnrestricted))
+             | x -> Infer_err (ErrNotAReference x))
+          | Infer_err err -> Infer_err err))
+    | EDrop e1 ->
+      (match infer_core_env_state_fuel_elab fuel' env _UU03a9_ n _UU03a3_ e1 with
+       | Infer_ok p ->
+         let (p0, e1') = p in
+         let (_, _UU03a3_') = p0 in
+         Infer_ok (((MkTy (UUnrestricted, TUnits)), _UU03a3_'), (EDrop e1'))
+       | Infer_err err -> Infer_err err)
+    | EIf (e1, e2, e3) ->
+      (match infer_core_env_state_fuel_elab fuel' env _UU03a9_ n _UU03a3_ e1 with
+       | Infer_ok p ->
+         let (p0, e1') = p in
+         let (t_cond, _UU03a3_1) = p0 in
+         if ty_core_eqb (ty_core t_cond) TBooleans
+         then (match infer_core_env_state_fuel_elab fuel' env _UU03a9_ n
+                       _UU03a3_1 e2 with
+               | Infer_ok p1 ->
+                 let (p2, e2') = p1 in
+                 let (t2, _UU03a3_2) = p2 in
+                 (match infer_core_env_state_fuel_elab fuel' env _UU03a9_ n
+                          _UU03a3_1 e3 with
+                  | Infer_ok p3 ->
+                    let (p4, e3') = p3 in
+                    let (t3, _UU03a3_3) = p4 in
+                    if ty_core_eqb (ty_core t2) (ty_core t3)
+                    then (match ctx_merge (ctx_of_sctx _UU03a3_2)
+                                  (ctx_of_sctx _UU03a3_3) with
+                          | Some _UU0393_4 ->
+                            Infer_ok (((MkTy
+                              ((usage_max (ty_usage t2) (ty_usage t3)),
+                              (ty_core t2))), (sctx_of_ctx _UU0393_4)), (EIf
+                              (e1', e2', e3')))
+                          | None -> Infer_err ErrContextCheckFailed)
+                    else Infer_err (ErrTypeMismatch ((ty_core t2),
+                           (ty_core t3)))
+                  | Infer_err err -> Infer_err err)
+               | Infer_err err -> Infer_err err)
+         else Infer_err (ErrTypeMismatch ((ty_core t_cond), TBooleans))
+       | Infer_err err -> Infer_err err))
+    fuel
+
+(** val infer_core_env_elab :
+    global_env -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
+    ((ty * ctx) * expr) infer_result **)
+
+let infer_core_env_elab env _UU03a9_ n _UU0393_ e =
+  match infer_core_env_state_fuel_elab
+          (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) env
+          _UU03a9_ n (sctx_of_ctx _UU0393_) e with
+  | Infer_ok p ->
+    let (p0, e') = p in
+    let (t, _UU03a3_) = p0 in Infer_ok ((t, (ctx_of_sctx _UU03a3_)), e')
+  | Infer_err err -> Infer_err err
+
 (** val root_set_eqb : root_set -> root_set -> bool **)
 
 let rec root_set_eqb a b =
@@ -4384,6 +4817,45 @@ let infer_env env f =
                             else Infer_err (compatible_error t_body f.fn_ret)
                      | Infer_err err -> Infer_err err))
 
+(** val fn_with_body : fn_def -> expr -> fn_def **)
+
+let fn_with_body f body =
+  { fn_name = f.fn_name; fn_lifetimes = f.fn_lifetimes; fn_outlives =
+    f.fn_outlives; fn_params = f.fn_params; fn_ret = f.fn_ret; fn_body =
+    body }
+
+(** val infer_env_elab :
+    global_env -> fn_def -> ((ty * ctx) * fn_def) infer_result **)
+
+let infer_env_elab env f =
+  let n = f.fn_lifetimes in
+  let _UU03a9_ = f.fn_outlives in
+  let _UU0394_ = mk_region_ctx n in
+  if negb (wf_outlives_b _UU0394_ _UU03a9_)
+  then Infer_err ErrLifetimeLeak
+  else if negb (wf_type_b _UU0394_ f.fn_ret)
+       then Infer_err ErrLifetimeLeak
+       else if negb (wf_params_b _UU0394_ f.fn_params)
+            then Infer_err ErrLifetimeLeak
+            else (match duplicate_param_name f.fn_params with
+                  | Some x -> Infer_err (ErrDuplicateParam x)
+                  | None ->
+                    (match infer_core_env_elab env _UU03a9_ n
+                             (params_ctx f.fn_params) f.fn_body with
+                     | Infer_ok p ->
+                       let (p0, body') = p in
+                       let (t_body, _UU0393__out) = p0 in
+                       if negb (wf_type_b _UU0394_ t_body)
+                       then Infer_err ErrLifetimeLeak
+                       else if ty_compatible_b _UU03a9_ t_body f.fn_ret
+                            then if params_ok_env_b env f.fn_params
+                                      _UU0393__out
+                                 then Infer_ok ((f.fn_ret, _UU0393__out),
+                                        (fn_with_body f body'))
+                                 else Infer_err ErrContextCheckFailed
+                            else Infer_err (compatible_error t_body f.fn_ret)
+                     | Infer_err err -> Infer_err err))
+
 (** val infer_env_roots :
     global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
     infer_result **)
@@ -4662,6 +5134,18 @@ let infer_full_env env f =
      | Infer_err err -> Infer_err err)
   | Infer_err err -> Infer_err err
 
+(** val infer_full_env_elab :
+    global_env -> fn_def -> ((ty * ctx) * fn_def) infer_result **)
+
+let infer_full_env_elab env f =
+  match infer_env_elab env f with
+  | Infer_ok p ->
+    let (p0, f') = p in
+    (match borrow_check_env env [] (params_ctx f'.fn_params) f'.fn_body with
+     | Infer_ok _ -> Infer_ok (p0, f')
+     | Infer_err err -> Infer_err err)
+  | Infer_err err -> Infer_err err
+
 (** val infer_full_env_roots :
     global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
     infer_result **)
@@ -4679,6 +5163,31 @@ let infer_full_env_roots env f r0 =
 let alpha_normalize_global_env env =
   { env_structs = env.env_structs; env_traits = env.env_traits; env_impls =
     env.env_impls; env_fns = (alpha_rename_syntax env.env_fns) }
+
+(** val infer_fns_env_elab :
+    global_env -> fn_def list -> fn_def list infer_result **)
+
+let rec infer_fns_env_elab env = function
+| [] -> Infer_ok []
+| f :: rest ->
+  (match infer_full_env_elab env f with
+   | Infer_ok p ->
+     let (_, f') = p in
+     (match infer_fns_env_elab env rest with
+      | Infer_ok rest' -> Infer_ok (f' :: rest')
+      | Infer_err err -> Infer_err err)
+   | Infer_err err -> Infer_err err)
+
+(** val infer_program_env_alpha_elab :
+    global_env -> global_env infer_result **)
+
+let infer_program_env_alpha_elab env =
+  let env_alpha = alpha_normalize_global_env env in
+  (match infer_fns_env_elab env_alpha env_alpha.env_fns with
+   | Infer_ok fns' ->
+     Infer_ok { env_structs = env_alpha.env_structs; env_traits =
+       env_alpha.env_traits; env_impls = env_alpha.env_impls; env_fns = fns' }
+   | Infer_err err -> Infer_err err)
 
 (** val check_program_env : global_env -> bool **)
 
@@ -4698,6 +5207,13 @@ let check_program_env_alpha env =
 let check_program_env_alpha_validated env =
   (&&) (top_level_names_unique_b (alpha_normalize_global_env env))
     (check_program_env_alpha env)
+
+(** val check_program_env_alpha_elab : global_env -> bool **)
+
+let check_program_env_alpha_elab env =
+  match infer_program_env_alpha_elab env with
+  | Infer_ok _ -> true
+  | Infer_err _ -> false
 
 (** val fn_params_roots_exclude_b : param list -> root_set -> bool **)
 

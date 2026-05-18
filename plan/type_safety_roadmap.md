@@ -341,10 +341,13 @@ Follow this order before inventing new theorem shapes:
    for composing `captured ++ s_args` in `Eval_CallExpr`: captured-store
    typing, root reachability, no-shadow, root-env no-shadow, and root/key
    naming. Empty-capture bridge lemmas are the compatibility baseline with the
-   already proved non-capturing route. The remaining blocker is the non-empty
-   composition theorem: prove that a captured frame satisfying this invariant
-   can be safely composed with evaluated arguments and then cleaned up after
-   callee execution.
+   already proved non-capturing route. The non-empty frame-composition step is
+   now represented by `captured_call_frame_ready_compose`, supported by
+   append/weakening helpers for store names, no-shadow, store roots, and
+   root-env naming. The remaining blocker is callee-body cleanup/final-store
+   shape: after evaluating the body over `captured ++ s_args`, prove the exact
+   cleanup theorem needed to remove parameter bindings while preserving or
+   accounting for captured entries in the final store.
 8. **Handle the `if` root-environment gap last.**
    The known blocker is that ordinary `TES_If` does not expose
    `root_env_equiv R2 R3`, while root/shadow routes require it. Do not

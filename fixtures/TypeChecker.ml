@@ -3477,6 +3477,55 @@ let rec preservation_ready_fields_b = function
   let (_, e) = p in
   (&&) (preservation_ready_expr_b e) (preservation_ready_fields_b rest)
 
+(** val provenance_ready_expr_b : expr -> bool **)
+
+let rec provenance_ready_expr_b = function
+| ELet (_, _, _, e1, e2) ->
+  (&&) (provenance_ready_expr_b e1) (provenance_ready_expr_b e2)
+| ELetInfer (_, _, e1, e2) ->
+  (&&) (provenance_ready_expr_b e1) (provenance_ready_expr_b e2)
+| EPlace p -> (match place_path p with
+               | Some _ -> true
+               | None -> false)
+| ECall (_, _) -> false
+| ECallExpr (_, _) -> false
+| EStruct (_, _, _, fields) ->
+  let rec go = function
+  | [] -> true
+  | p :: rest ->
+    let (_, e_field) = p in (&&) (provenance_ready_expr_b e_field) (go rest)
+  in go fields
+| EReplace (p, e_new) ->
+  (match place_path p with
+   | Some _ -> provenance_ready_expr_b e_new
+   | None -> false)
+| EAssign (p, e_new) ->
+  (match place_path p with
+   | Some _ -> provenance_ready_expr_b e_new
+   | None -> false)
+| EBorrow (_, p) -> (match place_path p with
+                     | Some _ -> true
+                     | None -> false)
+| EDeref _ -> false
+| EDrop e1 -> provenance_ready_expr_b e1
+| EIf (e1, e2, e3) ->
+  (&&) ((&&) (provenance_ready_expr_b e1) (provenance_ready_expr_b e2))
+    (provenance_ready_expr_b e3)
+| _ -> true
+
+(** val provenance_ready_args_b : expr list -> bool **)
+
+let provenance_ready_args_b args =
+  forallb provenance_ready_expr_b args
+
+(** val provenance_ready_fields_b : (string * expr) list -> bool **)
+
+let rec provenance_ready_fields_b = function
+| [] -> true
+| p :: rest ->
+  let (_, e) = p in
+  (&&) (provenance_ready_expr_b e) (provenance_ready_fields_b rest)
+
 (** val infer_place_roots :
     global_env -> sctx -> root_env -> place ->
     (((ty * ident) * field_path) * root_set) infer_result **)

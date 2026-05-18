@@ -2170,6 +2170,67 @@ Definition preservation_ready_fields_b (fields : list (string * expr)) : bool :=
     end
   in go fields.
 
+Fixpoint provenance_ready_expr_b (e : expr) : bool :=
+  match e with
+  | EUnit => true
+  | ELit _ => true
+  | EVar _ => true
+  | EFn _ => true
+  | EPlace p =>
+      match place_path p with
+      | Some _ => true
+      | None => false
+      end
+  | EBorrow _ p =>
+      match place_path p with
+      | Some _ => true
+      | None => false
+      end
+  | EStruct _ _ _ fields =>
+      let fix go (fields0 : list (string * expr)) : bool :=
+        match fields0 with
+        | [] => true
+        | (_, e_field) :: rest =>
+            provenance_ready_expr_b e_field && go rest
+        end
+      in go fields
+  | ELet _ _ _ e1 e2 =>
+      provenance_ready_expr_b e1 && provenance_ready_expr_b e2
+  | ELetInfer _ _ e1 e2 =>
+      provenance_ready_expr_b e1 && provenance_ready_expr_b e2
+  | EDrop e1 => provenance_ready_expr_b e1
+  | EAssign p e_new =>
+      match place_path p with
+      | Some _ => provenance_ready_expr_b e_new
+      | None => false
+      end
+  | EReplace p e_new =>
+      match place_path p with
+      | Some _ => provenance_ready_expr_b e_new
+      | None => false
+      end
+  | EIf e1 e2 e3 =>
+      provenance_ready_expr_b e1 &&
+      provenance_ready_expr_b e2 &&
+      provenance_ready_expr_b e3
+  | ECall _ _ => false
+  | ECallExpr _ _ => false
+  | EDeref _ => false
+  end
+.
+
+Definition provenance_ready_args_b (args : list expr) : bool :=
+  forallb provenance_ready_expr_b args.
+
+Definition provenance_ready_fields_b (fields : list (string * expr)) : bool :=
+  let fix go (fields0 : list (string * expr)) : bool :=
+    match fields0 with
+    | [] => true
+    | (_, e) :: rest =>
+        provenance_ready_expr_b e && go rest
+    end
+  in go fields.
+
 Definition infer_place_roots (env : global_env) (Σ : sctx)
     (R : root_env) (p : place) : infer_result (Ty * ident * field_path * root_set) :=
   match place_path p with
@@ -3757,6 +3818,10 @@ Example preservation_ready_expr_b_rejects_ready_gap_let :
   preservation_ready_expr_b (fn_body ex_ready_gap_let_fn) = false.
 Proof. vm_compute. reflexivity. Qed.
 
+Example provenance_ready_expr_b_accepts_ready_gap_let :
+  provenance_ready_expr_b (fn_body ex_ready_gap_let_fn) = true.
+Proof. vm_compute. reflexivity. Qed.
+
 Definition ex_struct_split : struct_def :=
   MkStructDef ("Split"%string) 0 0 []
     [ MkFieldDef ("x"%string) MImmutable (MkTy UAffine TIntegers)
@@ -3896,6 +3961,8 @@ Extraction "../fixtures/TypeChecker.ml"
   check_program_env_alpha_validated
   preservation_ready_expr_b preservation_ready_args_b
   preservation_ready_fields_b
+  provenance_ready_expr_b provenance_ready_args_b
+  provenance_ready_fields_b
   infer_core_env_state_fuel_roots_shadow_safe
   infer_core_env_roots_shadow_safe infer_env_roots_shadow_safe
   check_fn_root_shadow_summary check_env_root_shadow_summary

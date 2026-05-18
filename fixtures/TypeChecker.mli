@@ -653,6 +653,12 @@ val preservation_ready_args_b : expr list -> bool
 
 val preservation_ready_fields_b : (string * expr) list -> bool
 
+val provenance_ready_expr_b : expr -> bool
+
+val provenance_ready_args_b : expr list -> bool
+
+val provenance_ready_fields_b : (string * expr) list -> bool
+
 val infer_place_roots :
   global_env -> sctx -> root_env -> place ->
   (((ty * ident) * field_path) * root_set) infer_result

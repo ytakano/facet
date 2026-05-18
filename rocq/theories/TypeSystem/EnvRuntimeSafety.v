@@ -980,6 +980,97 @@ Proof.
     + apply IH. exact Hrest.
 Qed.
 
+Lemma provenance_ready_expr_b_sound :
+  forall e,
+    provenance_ready_expr_b e = true ->
+    provenance_ready_expr e.
+Proof.
+  assert (Hsize : forall n e,
+    expr_size e < n ->
+    provenance_ready_expr_b e = true ->
+    provenance_ready_expr e).
+  {
+    induction n as [| n IH]; intros e Hlt Hready.
+    - lia.
+    - destruct e; simpl in Hready; try discriminate.
+      + constructor.
+      + constructor.
+      + constructor.
+      + apply andb_true_iff in Hready as [H1 H2].
+        eapply ProvReady_Let.
+        * apply IH with (e := e1); [simpl in Hlt; lia | exact H1].
+        * apply IH with (e := e2); [simpl in Hlt; lia | exact H2].
+      + apply andb_true_iff in Hready as [H1 H2].
+        eapply ProvReady_LetInfer.
+        * apply IH with (e := e1); [simpl in Hlt; lia | exact H1].
+        * apply IH with (e := e2); [simpl in Hlt; lia | exact H2].
+      + constructor.
+      + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
+        eapply ProvReady_Place_Direct. exact Hpath.
+      + apply ProvReady_Struct.
+        induction l1 as [| [name field] rest IHfields].
+        * constructor.
+        * simpl in Hready.
+          apply andb_true_iff in Hready as [Hfield Hrest].
+          constructor.
+          -- apply IH with (e := field).
+             ++ pose proof (expr_size_struct_field_lt s l l0
+                  ((name, field) :: rest) name field (or_introl eq_refl)).
+                lia.
+             ++ exact Hfield.
+          -- apply IHfields.
+             ++ simpl. simpl in Hlt. lia.
+             ++ exact Hrest.
+      + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
+        eapply ProvReady_Replace.
+        * exact Hpath.
+        * apply IH with (e := e); [simpl in Hlt; lia | exact Hready].
+      + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
+        eapply ProvReady_Assign.
+        * exact Hpath.
+        * apply IH with (e := e); [simpl in Hlt; lia | exact Hready].
+      + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
+        eapply ProvReady_Borrow. exact Hpath.
+      + apply ProvReady_Drop.
+        apply IH with (e := e); [simpl in Hlt; lia | exact Hready].
+      + apply andb_true_iff in Hready as [H12 H3].
+        apply andb_true_iff in H12 as [H1 H2].
+        eapply ProvReady_If.
+        * apply IH with (e := e1); [simpl in Hlt; lia | exact H1].
+        * apply IH with (e := e2); [simpl in Hlt; lia | exact H2].
+        * apply IH with (e := e3); [simpl in Hlt; lia | exact H3].
+  }
+  intros e Hready.
+  eapply Hsize with (n := S (expr_size e)); [lia | exact Hready].
+Qed.
+
+Lemma provenance_ready_args_b_sound :
+  forall args,
+    provenance_ready_args_b args = true ->
+    provenance_ready_args args.
+Proof.
+  unfold provenance_ready_args_b.
+  induction args as [| e rest IH]; simpl; intros Hready.
+  - constructor.
+  - apply andb_true_iff in Hready as [He Hrest].
+    constructor.
+    + apply provenance_ready_expr_b_sound. exact He.
+    + apply IH. exact Hrest.
+Qed.
+
+Lemma provenance_ready_fields_b_sound :
+  forall fields,
+    provenance_ready_fields_b fields = true ->
+    provenance_ready_fields fields.
+Proof.
+  induction fields as [| [name e] rest IH]; simpl; intros Hready.
+  - constructor.
+  - apply andb_true_iff in Hready as [He Hrest].
+    constructor.
+    + apply provenance_ready_expr_b_sound. exact He.
+    + apply IH. exact Hrest.
+Qed.
+
 Definition env_fns_root_shadow_summary_check_ready (env : global_env) : Prop :=
   forall fname fdef,
     lookup_fn fname (env_fns env) = Some fdef ->

@@ -132,6 +132,13 @@ Follow this order before inventing new theorem shapes:
    ordinary route account for let-local reference escape, either by proving the
    current checker already rejects it or by adding an executable ordinary
    checker-side escape check.
+   Current implementation note: `provenance_ready_expr_b` now accepts `ELet`
+   and `ELetInfer`, and the checker has an executable elaboration route that
+   turns inferred lets into annotated `ELet`. Do not wire this into the
+   existing root-shadow validator by simple substitution: the current
+   `callee_body_root_shadow_ready_at` package still requires
+   `preservation_ready_expr`, so a provenance-only validator needs a new
+   theorem/package shape before it can replace `preservation_ready_expr_b`.
 3. **Move the non-direct-call structural route toward no validator.**
    Prefer deriving or eliminating `preservation_ready_expr` obligations from
    ordinary typing/checker success over adding more executable checks.
@@ -179,6 +186,12 @@ Use these wrappers before adding new theorem shapes:
   `check_program_env_alpha_validated_root_shadow`.
 - Executable initial runtime readiness entrypoint:
   `check_initial_root_runtime_ready`.
+- Executable provenance readiness entrypoints:
+  `provenance_ready_expr_b`, `provenance_ready_args_b`, and
+  `provenance_ready_fields_b`.
+- Executable inferred-let elaboration entrypoints:
+  `infer_core_env_elab`, `infer_env_elab`, `infer_full_env_elab`,
+  `infer_program_env_alpha_elab`, and `check_program_env_alpha_elab`.
 - Sidecar package predicates:
   `ordinary_alpha_root_shadow_sidecar_ready`,
   `ordinary_alpha_direct_call_meta_ready`,
@@ -226,6 +239,11 @@ Current status:
 - The root-shadow validator checks the alpha-normalized environment with
   `infer_env_roots_shadow_safe`, which mirrors the root checker and adds the
   initializer-side shadow-safe obligations for `ELet` / `ELetInfer`.
+- The checker now also exposes an elaboration route for proof-facing execution:
+  `infer_core_env_elab` recursively preserves checker behavior while replacing
+  successful `ELetInfer` nodes with inferred-type `ELet` nodes, and
+  `infer_program_env_alpha_elab` returns an alpha-normalized elaborated
+  environment.
 - The executable validator route absorbs root-shadow summary evidence and
   environment-level preservation readiness. It still keeps
   `initial_root_runtime_ready_for_fn` explicit.
@@ -258,6 +276,11 @@ Future work:
   `initial_root_runtime_ready_for_fn`.
 - Bring the safety-validator route closer to the ordinary checker accepted
   range by following the Next Implementation Order above.
+- Split or generalize `callee_body_root_shadow_ready_at` if the elaborated
+  route should use `provenance_ready_expr_b` instead of
+  `preservation_ready_expr_b`. The existing package includes both provenance
+  and preservation readiness, so this is a proof-shape decision, not a boolean
+  checker edit.
 
 ### Ordinary Checker Review Gates
 

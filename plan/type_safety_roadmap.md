@@ -231,13 +231,19 @@ Current blocker:
 
 Next implementable target:
 
-1. Prove a fixed theorem family showing that ordinary structural typing on
-   alpha-normalized core can construct `typed_env_roots_shadow_safe` evidence,
-   including root outputs and param-exclusion evidence needed by
-   `env_fns_root_shadow_summary_evidence`.
-2. If that theorem family is not tractable, add an executable alpha
-   root-summary checker plus soundness, and use it as the explicit sidecar
-   evidence source.
+1. Do not try to prove general
+   `infer_core_env_state_fuel_roots -> typed_env_roots_shadow_safe` soundness.
+   That theorem is false for arbitrary core: the root checker deliberately
+   accepts source-level `let x = &x` initializer shadowing, while
+   `typed_env_roots_shadow_safe` requires the initializer roots/root
+   environment to exclude the binder.
+2. Prove a fixed theorem family for alpha-normalized core only. The theorem
+   must carry the freshness invariant needed to discharge the extra
+   `TERS_Let` / `TERS_LetInfer` initializer obligations:
+   `roots_exclude x roots1` and `root_env_excludes x R1`.
+3. If the alpha-normalized theorem family is not tractable, add an executable
+   alpha root-summary checker plus soundness, and use it as the explicit
+   sidecar evidence source.
 
 Use the `_of_unique` wrapper to derive the direct-call shadow bridge from
 `fn_env_unique_by_name`. Do not reintroduce an explicit
@@ -356,6 +362,15 @@ verbose than the quick path. Do not use it as the primary implementation order.
      root outputs and param-exclusion evidence, or an executable alpha
      root-summary checker plus soundness. Do not claim ordinary-checker-only
      type safety is complete until this evidence route exists.
+   - Refined blocker: a general shadow-safe soundness theorem for the existing
+     root checker is false for arbitrary core. In `ELet` / `ELetInfer`, the
+     checker only tests `root_env_lookup x R1 = None` before extending the root
+     environment, plus body-result escape checks. The shadow-safe constructors
+     additionally require initializer-side `roots_exclude x roots1` and
+     `root_env_excludes x R1`. This is intentionally not enforced before
+     alpha-normalization because source-level `let x = &x` initializer
+     shadowing is valid. The next theorem must therefore be restricted to
+     alpha-normalized core or must use a new alpha root-summary checker.
    - Done: proved and focused-compiled
      `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`, closing
      the old blockers around assembling the full shadow-safe

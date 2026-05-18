@@ -238,6 +238,10 @@ Current blocker:
   shadow-root evidence from structural typing.
 - The missing proof ingredient is a structural-to-shadow-root
   synthesis/completeness theorem over alpha-normalized expressions.
+- This synthesis blocker is not only `ELet` / `ELetInfer` freshness. The
+  `TES_If` structural rule does not carry the `root_env_equiv R2 R3` branch
+  join evidence required by `TERS_If`, so full synthesis currently stops at
+  `If`.
 
 Next implementable target:
 
@@ -257,15 +261,19 @@ Next implementable target:
    `alpha_rename_fn_def_params_body_local_store_names_nodup` as the function
    wrapper when proving each `ELet` / `ELetInfer` binder is fresh for the
    current synthesized root environment.
-4. If the alpha-normalized theorem family is not tractable, add an executable
-   alpha root-summary checker plus soundness, and use it as the explicit
-   sidecar evidence source.
+4. Next proof-only work may add no-shadow decomposition helpers for
+   alpha-normalized expressions, args, and fields, but those helpers do not
+   close the full synthesis theorem by themselves. Full structural-to-shadow
+   synthesis stops at `If` unless the project chooses a direct operational
+   proof, an ordinary checker invariant exposing branch root-join evidence, or
+   an alpha root-summary sidecar.
 
 Use the `_of_unique` wrapper to derive the direct-call shadow bridge from
 `fn_env_unique_by_name`. Do not reintroduce an explicit
 `direct_call_callee_body_root_shadow_summary_bridge` premise, and do not claim
 ordinary-checker-only type safety is complete until the remaining
-shadow-summary evidence obligation is supplied by one of the routes above.
+shadow-summary evidence obligation is supplied by one of the routes above,
+including the `If` branch root-join gap.
 
 ## Detailed Status Inventory
 
@@ -375,9 +383,11 @@ verbose than the quick path. Do not use it as the primary implementation order.
      theorem over alpha-normalized expressions. The next implementable target
      is either a fixed theorem family proving ordinary structural typing on
      alpha-normalized core can construct `typed_env_roots_shadow_safe` with
-     root outputs and param-exclusion evidence, or an executable alpha
-     root-summary checker plus soundness. Do not claim ordinary-checker-only
-     type safety is complete until this evidence route exists.
+     root outputs and param-exclusion evidence, or a selected alternate route.
+     However, full synthesis is blocked at `If`: `TES_If` does not expose the
+     `root_env_equiv R2 R3` evidence required by `TERS_If`. Do not claim
+     ordinary-checker-only type safety is complete until this branch root join
+     gap is handled.
    - Refined blocker: a general shadow-safe soundness theorem for the existing
      root checker is false for arbitrary core. In `ELet` / `ELetInfer`, the
      checker only tests `root_env_lookup x R1 = None` before extending the root
@@ -404,7 +414,11 @@ verbose than the quick path. Do not use it as the primary implementation order.
      alpha-normalized expressions. Start with the expression theorem and use
      the `expr_local_no_shadow_from_*` decomposition helpers in the
      `ELet` / `ELetInfer` cases; only add args/fields variants when the
-     call/struct cases require them.
+     call/struct cases require them. These helpers are proof-only prerequisites,
+     not a full route through `If`; after the no-shadow decomposition work,
+     choose a direct operational proof, add an ordinary checker invariant for
+     branch root joins, or add an alpha root-summary sidecar before claiming
+     ordinary-checker-only type safety.
    - Done: proved and focused-compiled
      `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`, closing
      the old blockers around assembling the full shadow-safe

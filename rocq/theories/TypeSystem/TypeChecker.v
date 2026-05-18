@@ -4394,6 +4394,11 @@ Example ready_gap_matrix_annotated_let_validator_rejects :
     ex_ready_gap_let_annotated_env = false.
 Proof. vm_compute. reflexivity. Qed.
 
+Example ready_gap_matrix_annotated_let_provenance_summary_accepts :
+  check_program_env_alpha_validated_root_shadow_provenance_summary
+    ex_ready_gap_let_annotated_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
 Example ready_gap_matrix_infer_let_checker_accepts :
   check_program_env_alpha ex_ready_gap_let_env = true.
 Proof. vm_compute. reflexivity. Qed.
@@ -4401,6 +4406,11 @@ Proof. vm_compute. reflexivity. Qed.
 Example ready_gap_matrix_infer_let_validator_rejects :
   check_program_env_alpha_validated_root_shadow_provenance
     ex_ready_gap_let_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_infer_let_provenance_summary_accepts :
+  check_program_env_alpha_validated_root_shadow_provenance_summary
+    ex_ready_gap_let_env = true.
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_ready_gap_deref_borrow_fn : fn_def :=

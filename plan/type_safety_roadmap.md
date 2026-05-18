@@ -105,6 +105,9 @@ Use these wrappers before adding new theorem shapes:
   `check_program_env_alpha_big_step_safe_with_direct_call_sidecar_ready`.
 - Validated program-level direct-call sidecar route:
   `check_program_env_alpha_validated_big_step_safe_with_direct_call_sidecar_ready`.
+- Validated program-level direct-call sidecar route with environment-level
+  preservation readiness:
+  `check_program_env_alpha_validated_big_step_safe_with_direct_call_sidecar_env_ready`.
 - Sidecar package predicates:
   `ordinary_alpha_root_shadow_sidecar_ready`,
   `ordinary_alpha_direct_call_meta_ready`,
@@ -130,7 +133,9 @@ Current status:
   package used by existing public wrappers.
 - `ordinary_alpha_direct_call_validated_sidecar_ready` removes function-name
   uniqueness from the explicit sidecar package; uniqueness is derived from
-  `check_program_env_alpha_validated`.
+  `check_program_env_alpha_validated`. The `_env_ready` validated wrapper also
+  absorbs per-function direct-call readiness from the package's
+  environment-level preservation readiness.
 - `initial_root_runtime_ready_for_fn` remains explicit.
    - It cannot be derived from `initial_store_for_fn` alone.
    - Reason: `initial_root_env_for_fn` stores parameter origins as `RParam`,
@@ -301,11 +306,17 @@ verbose than the quick path. Do not use it as the primary implementation order.
      This keeps `check_program_env_alpha` unchanged while letting the
      validated wrapper derive `fn_env_unique_by_name` for the
      alpha-normalized environment.
+   - Done: added
+     `check_program_env_alpha_validated_big_step_safe_with_direct_call_sidecar_env_ready`,
+     which derives per-function direct-call readiness from
+     `ordinary_alpha_direct_call_validated_sidecar_ready`, function membership,
+     `env_fns_preservation_ready`, and `preservation_ready_direct_call_ready`.
    - Remaining ordinary-safety blocker: under the current ordinary-checker
-     contract, root/shadow summary evidence, preservation readiness, and
-     initial root/runtime readiness stay explicit. Reducing them further
-     requires a separate validator/theorem or broader preservation coverage,
-     not a proof-only wrapper change.
+     contract, root/shadow summary evidence and initial root/runtime readiness
+     stay explicit. The validated wrapper absorbs per-function readiness, while
+     preservation readiness still enters through the validated sidecar package.
+     Reducing the remaining explicit evidence further requires a separate
+     validator/theorem, not another proof-only wrapper.
    - Sidecar limitation: ordinary checker success still does not by itself
      produce `env_fns_root_shadow_summary_evidence` for the alpha-normalized
      function environment. Existing facts only project root/shadow-root typing

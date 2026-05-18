@@ -36,9 +36,10 @@ that theorem.
    changes the user-facing checker contract.
 
 Do not make the root checker stricter than the ordinary checker to patch a
-proof gap. If ordinary checker safety needs an invariant, expose that invariant
-in the ordinary typing/checker route or prove that the existing checker already
-establishes it.
+proof gap. The ordinary safety route should prove structural preservation from
+the existing structural rules and checker soundness. In particular, do not
+strengthen `TES_If` or ordinary checker acceptance merely to manufacture
+shadow/root sidecar evidence.
 
 ## Fixed Design Decisions
 
@@ -226,54 +227,40 @@ helper. Do not change checker behavior.
 
 ### Next Implementation Task
 
-Close the remaining sidecar obligation on the ordinary alpha route by adding
-one of the missing synthesis routes, not by treating ordinary checker success
-as already sufficient.
+Proceed with ordinary checker type safety through structural preservation.
+The current implemented target is the non-direct-call alpha route:
+`infer_full_env_alpha_big_step_safe_structural_ready` connects ordinary
+checker success on alpha-normalized core to structural preservation and
+`value_has_type` under `preservation_ready_expr`.
 
-Current blocker:
+Current ordinary-safety blockers:
 
-- Deriving `env_fns_root_shadow_summary_evidence` from ordinary checker
-  success is not currently a wrapper theorem. Existing facts only project
-  root/shadow-root typing to structural typing; they do not synthesize
-  shadow-root evidence from structural typing.
-- The missing proof ingredient is a structural-to-shadow-root
-  synthesis/completeness theorem over alpha-normalized expressions.
-- This synthesis blocker is not only `ELet` / `ELetInfer` freshness. The
-  `TES_If` structural rule does not carry the `root_env_equiv R2 R3` branch
-  join evidence required by `TERS_If`, so full synthesis currently stops at
-  `If`.
+- Extend the ordinary-alpha theorem through direct calls without making full
+  structural-to-shadow-root synthesis the canonical route.
+- Runtime reference safety and direct-call cleanup may use local root/shadow
+  sidecar evidence, but that evidence is not the ordinary accepted-program
+  route.
+- Reduce or package the direct-call sidecar premises only where operational
+  cleanup genuinely needs them.
 
-Next implementable target:
+Do not make full structural-to-shadow-root synthesis the next task. Existing
+root/shadow facts are useful sidecar facts for direct-call cleanup and
+provenance, but ordinary checker safety should not depend on synthesizing
+`typed_env_roots_shadow_safe` for every structurally typed expression.
 
-1. Do not try to prove general
-   `infer_core_env_state_fuel_roots -> typed_env_roots_shadow_safe` soundness.
-   That theorem is false for arbitrary core: the root checker deliberately
-   accepts source-level `let x = &x` initializer shadowing, while
-   `typed_env_roots_shadow_safe` requires the initializer roots/root
-   environment to exclude the binder.
-2. Prove a fixed theorem family for alpha-normalized core only. The theorem
-   must carry the freshness invariant needed to discharge the extra
-   `TERS_Let` / `TERS_LetInfer` initializer obligations:
-   `roots_exclude x roots1` and `root_env_excludes x R1`.
-3. Done: the alpha-local freshness support needed by that theorem now exposes
-   both params/body no-shadow and local-local uniqueness for alpha-renamed
-   function bodies. Use
-   `alpha_rename_fn_def_params_body_local_store_names_nodup` as the function
-   wrapper when proving each `ELet` / `ELetInfer` binder is fresh for the
-   current synthesized root environment.
-4. Next proof-only work may add no-shadow decomposition helpers for
-   alpha-normalized expressions, args, and fields, but those helpers do not
-   close the full synthesis theorem by themselves. Full structural-to-shadow
-   synthesis stops at `If` unless the project chooses a direct operational
-   proof, an ordinary checker invariant exposing branch root-join evidence, or
-   an alpha root-summary sidecar.
+The known `If` gap is scoped to the abandoned full synthesis route: `TES_If`
+does not carry the `root_env_equiv R2 R3` branch join evidence required by
+`TERS_If`. That is a limitation of trying to synthesize shadow/root evidence
+from structural typing, not a blocker for ordinary structural preservation.
+Do not strengthen `TES_If`, do not strengthen checker acceptance, and do not
+add a checker invariant merely to satisfy `TERS_If`.
 
-Use the `_of_unique` wrapper to derive the direct-call shadow bridge from
-`fn_env_unique_by_name`. Do not reintroduce an explicit
-`direct_call_callee_body_root_shadow_summary_bridge` premise, and do not claim
-ordinary-checker-only type safety is complete until the remaining
-shadow-summary evidence obligation is supplied by one of the routes above,
-including the `If` branch root-join gap.
+Use the `_of_unique` wrapper when local root/shadow evidence is needed for
+direct-call cleanup:
+`direct_call_callee_body_root_shadow_summary_bridge_of_unique` derives the
+bridge from `fn_env_unique_by_name`. Do not reintroduce an explicit
+`direct_call_callee_body_root_shadow_summary_bridge` premise to
+ordinary-checker-facing statements.
 
 ## Detailed Status Inventory
 
@@ -375,28 +362,34 @@ verbose than the quick path. Do not use it as the primary implementation order.
      `infer_full_env_roots ...` root sidecar checker success as a premise.
      The theorem name is
      `infer_full_env_alpha_big_step_safe_with_shadow_summary_evidence`.
-   - Remaining blocker: ordinary checker success still does not by itself
+   - Done: added the ordinary structural route wrappers
+     `typed_fn_env_structural_big_step_safe_ready`,
+     `checked_fn_env_structural_big_step_safe_ready`, and
+     `infer_full_env_alpha_big_step_safe_structural_ready`. These connect
+     ordinary checker success on alpha-normalized core to structural
+     preservation and `value_has_type` for `preservation_ready_expr`, without
+     routing through `env_fns_root_shadow_summary_evidence`.
+   - Remaining ordinary-safety blocker: extend the theorem shape through
+     direct calls while keeping root/shadow evidence local to direct-call
+     cleanup and provenance.
+   - Sidecar limitation: ordinary checker success still does not by itself
      produce `env_fns_root_shadow_summary_evidence` for the alpha-normalized
-     function environment. This is not currently a wrapper theorem: existing
-     facts only project root/shadow-root typing to structural typing, and the
-     missing theorem is a structural-to-shadow-root synthesis/completeness
-     theorem over alpha-normalized expressions. The next implementable target
-     is either a fixed theorem family proving ordinary structural typing on
-     alpha-normalized core can construct `typed_env_roots_shadow_safe` with
-     root outputs and param-exclusion evidence, or a selected alternate route.
-     However, full synthesis is blocked at `If`: `TES_If` does not expose the
-     `root_env_equiv R2 R3` evidence required by `TERS_If`. Do not claim
-     ordinary-checker-only type safety is complete until this branch root join
-     gap is handled.
-   - Refined blocker: a general shadow-safe soundness theorem for the existing
-     root checker is false for arbitrary core. In `ELet` / `ELetInfer`, the
-     checker only tests `root_env_lookup x R1 = None` before extending the root
-     environment, plus body-result escape checks. The shadow-safe constructors
-     additionally require initializer-side `roots_exclude x roots1` and
-     `root_env_excludes x R1`. This is intentionally not enforced before
-     alpha-normalization because source-level `let x = &x` initializer
-     shadowing is valid. The next theorem must therefore be restricted to
-     alpha-normalized core or must use a new alpha root-summary checker.
+     function environment. Existing facts only project root/shadow-root typing
+     to structural typing; full synthesis in the opposite direction remains
+     incomplete and is no longer the next task.
+   - The `If` branch-root gap belongs to that sidecar synthesis route:
+     `TES_If` does not expose the `root_env_equiv R2 R3` evidence required by
+     `TERS_If`. This is not a blocker for ordinary structural preservation,
+     and the project should not strengthen `TES_If` or checker acceptance just
+     to satisfy shadow/root synthesis.
+   - Refined sidecar limitation: a general shadow-safe soundness theorem for
+     the existing root checker is false for arbitrary core. In `ELet` /
+     `ELetInfer`, the checker only tests `root_env_lookup x R1 = None` before
+     extending the root environment, plus body-result escape checks. The
+     shadow-safe constructors additionally require initializer-side
+     `roots_exclude x roots1` and `root_env_excludes x R1`. This is
+     intentionally not enforced before alpha-normalization because source-level
+     `let x = &x` initializer shadowing is valid.
    - Done: added proof-only coverage/freshness prerequisites for the
      structural-to-shadow route: `root_env_covers_sctx` and basic coverage
      lemmas in `TypeSafety.v`, plus
@@ -409,16 +402,10 @@ verbose than the quick path. Do not use it as the primary implementation order.
      `alpha_rename_fn_def_body_local_store_names_nodup`, and
      `alpha_rename_fn_def_params_body_local_store_names_nodup`. These facts
      are proof-only and do not change checker behavior.
-   - Next proof-only prerequisite: use the new alpha no-shadow facts to state
-     and prove the first structural-to-shadow-root synthesis theorem over
-     alpha-normalized expressions. Start with the expression theorem and use
-     the `expr_local_no_shadow_from_*` decomposition helpers in the
-     `ELet` / `ELetInfer` cases; only add args/fields variants when the
-     call/struct cases require them. These helpers are proof-only prerequisites,
-     not a full route through `If`; after the no-shadow decomposition work,
-     choose a direct operational proof, add an ordinary checker invariant for
-     branch root joins, or add an alpha root-summary sidecar before claiming
-     ordinary-checker-only type safety.
+   - Deferred sidecar work: the alpha no-shadow facts may still help if local
+     root/shadow evidence is needed for direct-call cleanup or provenance.
+     Do not use them to restart full structural-to-shadow-root synthesis as
+     the canonical ordinary-safety route.
    - Done: proved and focused-compiled
      `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`, closing
      the old blockers around assembling the full shadow-safe

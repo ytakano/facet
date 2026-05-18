@@ -2942,7 +2942,7 @@ Proof.
       | Hsome : Some _ = Some _ |- _ => inversion Hsome; clear Hsome; subst
       end.
       split; [reflexivity | eapply VHT_ClosureEmpty; eassumption].
-    + unfold fn_value_ty in *.
+    + unfold fn_value_ty, fn_signature_ty_with_usage in *.
       destruct (fn_lifetimes fdef); simpl in *; discriminate.
   - destruct lookup_path as [|seg rest].
     + simpl in *.
@@ -2954,7 +2954,7 @@ Proof.
       | Hsome : Some _ = Some _ |- _ => inversion Hsome; clear Hsome; subst
       end.
       split; [reflexivity | eapply VHT_ClosureIn; [eassumption | reflexivity]].
-    + unfold fn_value_ty in *.
+    + unfold fn_value_ty, fn_signature_ty_with_usage in *.
       destruct (fn_lifetimes fdef); simpl in *; discriminate.
   - match goal with
     | Hcompat : ty_compatible Ω T_actual T_expected,

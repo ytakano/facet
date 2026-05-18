@@ -184,6 +184,12 @@ Definition usage_max (u1 u2 : usage) : usage :=
   | UUnrestricted, UUnrestricted => UUnrestricted
   end.
 
+Fixpoint closure_capture_usage (captured_tys : list Ty) : usage :=
+  match captured_tys with
+  | [] => UUnrestricted
+  | T :: rest => usage_max (ty_usage T) (closure_capture_usage rest)
+  end.
+
 (* Merge two output contexts from if-branches.
    Linear variables must have the same consumed state in both branches.
    Affine/unrestricted variables: consumed if consumed in either branch. *)
@@ -211,15 +217,24 @@ Fixpoint ctx_merge (Γ2 Γ3 : ctx) : option ctx :=
   | _, _ => None
   end.
 
-Definition fn_value_ty (f : fn_def) : Ty :=
+Definition fn_signature_ty_with_usage (u : usage) (f : fn_def) : Ty :=
   let m := fn_lifetimes f in
   let body :=
     close_fn_ty m
       (MkTy UUnrestricted (TFn (map param_ty (fn_params f)) (fn_ret f))) in
   match m with
-  | O => body
-  | S _ => MkTy UUnrestricted (TForall m (close_fn_outlives m (fn_outlives f)) body)
+  | O =>
+      match body with
+      | MkTy _ core => MkTy u core
+      end
+  | S _ => MkTy u (TForall m (close_fn_outlives m (fn_outlives f)) body)
   end.
+
+Definition closure_value_ty (f : fn_def) (captured_tys : list Ty) : Ty :=
+  fn_signature_ty_with_usage (closure_capture_usage captured_tys) f.
+
+Definition fn_value_ty (f : fn_def) : Ty :=
+  fn_signature_ty_with_usage UUnrestricted f.
 
 Fixpoint params_of_tys (ts : list Ty) : list param :=
   match ts with

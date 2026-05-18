@@ -1518,9 +1518,9 @@ let rec ctx_merge _UU0393_2 _UU0393_3 =
                     m) :: rest))
              | None -> None))
 
-(** val fn_value_ty : fn_def -> ty **)
+(** val fn_signature_ty_with_usage : usage -> fn_def -> ty **)
 
-let fn_value_ty f =
+let fn_signature_ty_with_usage u f =
   let m = f.fn_lifetimes in
   let body =
     close_fn_ty m (MkTy (UUnrestricted, (TFn
@@ -1528,10 +1528,15 @@ let fn_value_ty f =
   in
   ((fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
   else fS (Big_int_Z.pred_big_int n))
-     (fun _ -> body)
-     (fun _ -> MkTy (UUnrestricted, (TForall (m,
-     (close_fn_outlives m f.fn_outlives), body))))
+     (fun _ -> let MkTy (_, core) = body in MkTy (u, core))
+     (fun _ -> MkTy (u, (TForall (m, (close_fn_outlives m f.fn_outlives),
+     body))))
      m)
+
+(** val fn_value_ty : fn_def -> ty **)
+
+let fn_value_ty f =
+  fn_signature_ty_with_usage UUnrestricted f
 
 (** val place_root : place -> ident **)
 

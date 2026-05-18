@@ -363,6 +363,8 @@ val usage_max : usage -> usage -> usage
 
 val ctx_merge : ctx -> ctx -> ctx option
 
+val fn_signature_ty_with_usage : usage -> fn_def -> ty
+
 val fn_value_ty : fn_def -> ty
 
 val place_root : place -> ident

@@ -256,11 +256,50 @@ Follow this order before inventing new theorem shapes:
    runtime function value to the `fname` whose callee summary is used. Do not
    use only the function type; type information alone loses the function-name
    summary needed by cleanup/provenance.
+   Current implementation blocker: do not implement this by recognizing
+   `let g = EFn fname in ECallExpr (EVar g) args` and rewriting the whole
+   expression to `ECall fname args`. That rewrite is not semantics-preserving:
+   the real `ECallExpr` evaluates the callee first, then evaluates arguments
+   and freshens the callee body with `store_names (captured ++ s_args)`, while
+   the direct `ECall` route freshens with `store_names s_args`. Even for
+   empty captures, a local function-value binding can leave extra caller-frame
+   names in scope before argument evaluation. The next implementation must
+   prove a dedicated non-capturing `ECallExpr` preservation lemma that keeps
+   the evaluated callee store in the proof, instead of converting the source
+   expression to direct `ECall`.
+   Stage 6a target: support only statically traced, empty-capture function
+   values whose callee evaluation is proven store-preserving and whose
+   `VClosure fname []` target is linked to the callee summary. Keep
+   function-typed parameters and unknown function values rejected by the
+   validator until this theorem shape is stable.
+   Current implementation note: an executable candidate validator now exists
+   as
+   `check_program_env_alpha_validated_root_shadow_non_capturing_call_provenance_summary`.
+   It accepts only the local alias shapes
+   `let g: unrestricted fn(...) = EFn fname in ECallExpr (EVar g) args` and
+   `let g = EFn fname in ECallExpr (EVar g) args` by root-checking a
+   structure-preserving synthetic body where only the call site is changed to
+   `ECall fname args`. This is deliberately not wired to a final safety theorem
+   yet. Annotated aliases with affine or linear outer function-value usage are
+   deliberately rejected by this stage-6a sidecar: the planned proof relies on
+   evaluating `EVar g` by copy, without consuming or changing the caller store.
+   Supporting affine/linear function-value aliases belongs to a later theorem
+   that explicitly accounts for callee evaluation effects. The remaining proof
+   task is to add a structure-aware direct-call preservation route for the
+   synthetic `let` body, or an equivalent dedicated `ECallExpr` theorem, without
+   adding general `ECallExpr` to ordinary readiness.
 7. **Prove closures with captures.**
    Only after non-capturing function values are stable, add captured-closure
    calls. This requires a captured-store invariant covering typing, root
    reachability, no-shadow, lifetime validity, and the way captured store is
    composed with parameters and caller tail during callee execution.
+   Captured closure values must be usage-polymorphic like structs: compute the
+   closure value's outer usage as the maximum usage of captured values.
+   `closure_capture_usage` and `closure_value_ty` are the specification helpers
+   for this shape; `fn_value_ty` remains the empty-capture unrestricted function
+   item wrapper. For polymorphic closure values, put the captured-usage result
+   on the outer `TForall` wrapper while keeping the inner `TFn` body shape
+   unchanged.
 8. **Handle the `if` root-environment gap last.**
    The known blocker is that ordinary `TES_If` does not expose
    `root_env_equiv R2 R3`, while root/shadow routes require it. Do not

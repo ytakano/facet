@@ -4384,9 +4384,53 @@ Definition check_fn_root_shadow_direct_call_provenance_summary
       end
   end.
 
+Definition local_fn_value_call_target_expr
+    (e : expr) : option (ident * list expr * expr) :=
+  match e with
+  | ELet m x T (EFn fname) (ECallExpr (EVar y) args) =>
+      if ident_eqb x y && usage_eqb (ty_usage T) UUnrestricted
+      then Some (fname, args, ELet m x T (EFn fname) (ECall fname args))
+      else None
+  | ELetInfer m x (EFn fname) (ECallExpr (EVar y) args) =>
+      if ident_eqb x y
+      then Some (fname, args, ELetInfer m x (EFn fname) (ECall fname args))
+      else None
+  | _ => None
+  end.
+
+Definition check_fn_root_shadow_non_capturing_call_provenance_summary
+    (env : global_env) (fdef : fn_def) : bool :=
+  match check_fn_root_shadow_direct_call_provenance_summary env fdef with
+  | true => true
+  | false =>
+      match local_fn_value_call_target_expr (fn_body fdef) with
+      | Some (fname, args, synthetic_body) =>
+          preservation_ready_args_b args &&
+          match lookup_fn_b fname (env_fns env) with
+          | None => false
+          | Some callee =>
+              check_fn_root_shadow_provenance_summary env callee &&
+              match infer_env_roots_shadow_safe env
+                      (fn_with_body fdef synthetic_body)
+                      (initial_root_env_for_fn fdef) with
+              | infer_ok (_, _, R_out, roots) =>
+                  fn_params_roots_exclude_b (fn_params fdef) roots &&
+                  fn_params_root_env_excludes_b (fn_params fdef) R_out
+              | infer_err _ => false
+              end
+          end
+      | None => false
+      end
+  end.
+
 Definition check_env_root_shadow_direct_call_provenance_summary
     (env : global_env) : bool :=
   forallb (check_fn_root_shadow_direct_call_provenance_summary env)
+    (env_fns env).
+
+Definition check_env_root_shadow_non_capturing_call_provenance_summary
+    (env : global_env) : bool :=
+  forallb (check_fn_root_shadow_non_capturing_call_provenance_summary env)
     (env_fns env).
 
 Definition check_env_preservation_ready (env : global_env) : bool :=
@@ -4406,6 +4450,12 @@ Definition check_program_env_alpha_validated_root_shadow_direct_call_provenance_
     (env : global_env) : bool :=
   check_program_env_alpha_validated env &&
   check_env_root_shadow_direct_call_provenance_summary
+    (alpha_normalize_global_env env).
+
+Definition check_program_env_alpha_validated_root_shadow_non_capturing_call_provenance_summary
+    (env : global_env) : bool :=
+  check_program_env_alpha_validated env &&
+  check_env_root_shadow_non_capturing_call_provenance_summary
     (alpha_normalize_global_env env).
 
 Definition check_program_env_alpha_validated_root_shadow_provenance
@@ -4610,6 +4660,35 @@ Proof. vm_compute. reflexivity. Qed.
 Example ready_gap_matrix_function_value_call_direct_call_summary_rejects :
   check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary
     ex_ready_gap_function_value_call_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_function_value_call_non_capturing_summary_accepts :
+  check_program_env_alpha_validated_root_shadow_non_capturing_call_provenance_summary
+    ex_ready_gap_function_value_call_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Definition ex_ready_gap_function_value_call_affine_annotated_fn : fn_def :=
+  MkFnDef (("ready_gap_function_value_call_affine_annotated"%string), 0) 0 [] []
+    (MkTy UUnrestricted TUnits)
+    (ELet MImmutable (("g"%string), 0)
+      (MkTy UAffine (ty_core (fn_value_ty ex_ready_gap_call_callee_fn)))
+      (EFn (("ready_gap_call_callee"%string), 0))
+      (ECallExpr (EVar (("g"%string), 0)) [])).
+
+Definition ex_ready_gap_function_value_call_affine_annotated_env : global_env :=
+  MkGlobalEnv [] [] []
+    [ ex_ready_gap_call_callee_fn
+    ; ex_ready_gap_function_value_call_affine_annotated_fn
+    ].
+
+Example ready_gap_matrix_function_value_call_affine_annotation_checker_accepts :
+  check_program_env_alpha
+    ex_ready_gap_function_value_call_affine_annotated_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_function_value_call_affine_annotation_non_capturing_summary_rejects :
+  check_program_env_alpha_validated_root_shadow_non_capturing_call_provenance_summary
+    ex_ready_gap_function_value_call_affine_annotated_env = false.
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_struct_split : struct_def :=

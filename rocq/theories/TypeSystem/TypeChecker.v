@@ -4299,6 +4299,11 @@ Definition check_program_env_alpha_validated_root_shadow (env : global_env) : bo
   check_program_env_alpha_validated env &&
   check_env_root_shadow_summary (alpha_normalize_global_env env).
 
+Definition check_program_env_alpha_validated_root_shadow_provenance_summary
+    (env : global_env) : bool :=
+  check_program_env_alpha_validated env &&
+  check_env_root_shadow_provenance_summary (alpha_normalize_global_env env).
+
 Definition check_program_env_alpha_validated_root_shadow_provenance
     (env : global_env) : bool :=
   check_program_env_alpha_validated env &&
@@ -4607,4 +4612,5 @@ Extraction "../fixtures/TypeChecker.ml"
   check_env_root_shadow_provenance_summary
   check_env_preservation_ready
   check_program_env_alpha_validated_root_shadow
+  check_program_env_alpha_validated_root_shadow_provenance_summary
   check_program_env_alpha_validated_root_shadow_provenance.

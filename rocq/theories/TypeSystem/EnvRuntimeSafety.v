@@ -1252,6 +1252,11 @@ Definition ordinary_alpha_direct_call_validated_root_shadow_validator_ready
   ordinary_alpha_root_shadow_validator_ready env /\
   env_fns_preservation_ready (alpha_normalize_global_env env).
 
+Definition ordinary_alpha_root_shadow_provenance_validator_ready
+    (env : global_env) : Prop :=
+  env_fns_root_shadow_provenance_summary_check_ready
+    (alpha_normalize_global_env env).
+
 Lemma check_program_env_alpha_validated_root_shadow_ready :
   forall env,
     check_program_env_alpha_validated_root_shadow env = true ->
@@ -1265,6 +1270,19 @@ Proof.
     exact Hshadow.
   - apply check_env_root_shadow_summary_preservation_ready.
     exact Hshadow.
+Qed.
+
+Lemma check_program_env_alpha_validated_root_shadow_provenance_summary_ready :
+  forall env,
+    check_program_env_alpha_validated_root_shadow_provenance_summary env = true ->
+    ordinary_alpha_root_shadow_provenance_validator_ready env.
+Proof.
+  intros env Hcheck.
+  unfold check_program_env_alpha_validated_root_shadow_provenance_summary
+    in Hcheck.
+  apply andb_true_iff in Hcheck as [_ Hprov].
+  apply check_env_root_shadow_provenance_summary_ready.
+  exact Hprov.
 Qed.
 
 Lemma check_program_env_alpha_validated_root_shadow_provenance_ready :

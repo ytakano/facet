@@ -5271,6 +5271,14 @@ let check_program_env_alpha_validated_root_shadow env =
   (&&) (check_program_env_alpha_validated env)
     (check_env_root_shadow_summary (alpha_normalize_global_env env))
 
+(** val check_program_env_alpha_validated_root_shadow_provenance_summary :
+    global_env -> bool **)
+
+let check_program_env_alpha_validated_root_shadow_provenance_summary env =
+  (&&) (check_program_env_alpha_validated env)
+    (check_env_root_shadow_provenance_summary
+      (alpha_normalize_global_env env))
+
 (** val check_program_env_alpha_validated_root_shadow_provenance :
     global_env -> bool **)
 

@@ -1724,12 +1724,10 @@ Theorem check_program_env_alpha_validated_big_step_safe_with_root_shadow_provena
     check_initial_root_runtime_ready f s = true ->
     In f (env_fns (alpha_normalize_global_env env)) ->
     initial_store_for_fn (alpha_normalize_global_env env) f s ->
-    preservation_direct_call_ready_expr (fn_body f) ->
     eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
     value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
 Proof.
-  intros env f s s' v Hvalidated Hvalidator Hinitial Hin Hstore Hready
-    Heval.
+  intros env f s s' v Hvalidated Hvalidator Hinitial Hin Hstore Heval.
   pose proof (check_program_env_alpha_validated_unique env Hvalidated)
     as Hunique.
   pose proof
@@ -1743,23 +1741,22 @@ Proof.
   unfold callee_body_root_shadow_provenance_ready_at in Hbody_summary.
   destruct Hbody_summary as
     (T_body & Γ_out & R_body & roots_body &
-      _ & Htyped_shadow & Hcompat & _ & _).
+      Hprov_body & Htyped_shadow & Hcompat & _ & _).
   pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
   destruct (check_initial_root_runtime_ready_sound f s Hinitial) as
     [Hroots [Hstore_shadow [Hnamed Hkeys]]].
-  destruct (eval_preserves_typing_direct_call_roots_provenance_ready
+  destruct (proj1 eval_preserves_typing_roots_ready_mutual
       (alpha_normalize_global_env env) s (fn_body f) s' v Heval
       (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
       (sctx_of_ctx (params_ctx (fn_params f)))
       T_body (sctx_of_ctx Γ_out) R_body roots_body
-      Hready Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
+      Hprov_body Hstore Hroots Hstore_shadow Hroot_shadow
       (typed_env_roots_shadow_safe_roots
         (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
         (initial_root_env_for_fn f)
         (sctx_of_ctx (params_ctx (fn_params f)))
         (fn_body f) T_body (sctx_of_ctx Γ_out) R_body roots_body
-        Htyped_shadow)
-      Hunique Hsummary)
+        Htyped_shadow))
     as [_ [Hv _]].
   eapply VHT_Compatible.
   - exact Hv.
@@ -1772,11 +1769,10 @@ Theorem check_program_env_alpha_validated_root_shadow_provenance_summary_big_ste
     check_initial_root_runtime_ready f s = true ->
     In f (env_fns (alpha_normalize_global_env env)) ->
     initial_store_for_fn (alpha_normalize_global_env env) f s ->
-    preservation_direct_call_ready_expr (fn_body f) ->
     eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
     value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
 Proof.
-  intros env f s s' v Hcheck Hinitial Hin Hstore Hready Heval.
+  intros env f s s' v Hcheck Hinitial Hin Hstore Heval.
   eapply check_program_env_alpha_validated_big_step_safe_with_root_shadow_provenance_validator_ready_checked_initial_ready.
   - unfold check_program_env_alpha_validated_root_shadow_provenance_summary
       in Hcheck.
@@ -1787,7 +1783,6 @@ Proof.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.
-  - exact Hready.
   - exact Heval.
 Qed.
 

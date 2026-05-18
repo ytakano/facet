@@ -305,9 +305,8 @@ Current status:
   that fail executable preservation readiness.
 - `check_program_env_alpha_validated_root_shadow_provenance_summary_big_step_safe_checked_initial_ready`
   is the strongest provenance-summary theorem. It no longer needs executable
-  preservation readiness for callee bodies, but it still requires explicit
-  `preservation_direct_call_ready_expr (fn_body f)` for the caller expression
-  and checked initial runtime readiness.
+  preservation readiness for callee bodies or the caller expression, but it
+  still requires checked initial runtime readiness.
 - Initial runtime readiness remains a separate premise, now in executable form.
    - It cannot be derived from `initial_store_for_fn` alone.
    - Reason: `initial_root_env_for_fn` stores parameter origins as `RParam`,
@@ -320,8 +319,6 @@ inputs are:
   which is stricter than `check_program_env_alpha env = true` because
   root-shadow provenance summary evidence is still a separate executable
   validator.
-- `preservation_direct_call_ready_expr (fn_body f)`, which remains an explicit
-  proof/runtime-safety premise for the caller expression.
 - `check_initial_root_runtime_ready f s = true`, which checks the initial
   execution state rather than the program.
 
@@ -403,8 +400,8 @@ for these gates before treating a newly accepted syntax class as ordinary-safe.
   The provenance-summary route no longer needs this for callee bodies, but the
   older split-validator route still uses it.
 - The provenance-only direct-call bridge and final checked-initial wrapper now
-  exist through `eval_preserves_typing_roots_ready_prefix_mutual`. The remaining
-  direct-call readiness gap is the explicit caller
+  exist through `eval_preserves_typing_roots_ready_prefix_mutual`. The
+  provenance-summary route no longer needs the caller
   `preservation_direct_call_ready_expr (fn_body f)` premise.
 - The current executable safety validator is stricter than the ordinary checker.
   In particular, `preservation_ready_expr_b` currently rejects `ELet`,

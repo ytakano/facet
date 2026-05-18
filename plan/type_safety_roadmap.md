@@ -349,9 +349,13 @@ Follow this order before inventing new theorem shapes:
    instantiation `eval_captured_call_body_cleanup_preserves_value_and_refs`:
    after evaluating the body over `captured ++ s_args`, parameter cleanup
    preserves value/ref/root facts and proves the final store is exactly
-   `captured ++ s_args`. The next blocker is integrating these captured-frame
-   and cleanup lemmas into an `ECallExpr` preservation theorem without widening
-   executable validators.
+   `captured ++ s_args`. The frame-extended captured call-expression
+   integration is now represented by
+   `eval_captured_call_expr_cleanup_preserves_value_and_refs`. The remaining
+   blocker is still ordinary operational type safety/final output-context
+   mismatch for non-empty captures, because the final runtime store is
+   `captured ++ s_args` while ordinary checker routes expect the ordinary
+   output context.
 8. **Handle the `if` root-environment gap last.**
    The known blocker is that ordinary `TES_If` does not expose
    `root_env_equiv R2 R3`, while root/shadow routes require it. Do not

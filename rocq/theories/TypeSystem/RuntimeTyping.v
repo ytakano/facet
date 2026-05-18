@@ -1142,6 +1142,62 @@ Definition store_typed_prefix (env : global_env) (s : store) (Σ : sctx) : Prop 
     s = entries ++ frame /\
     Forall2 (store_entry_typed env s) entries Σ.
 
+Fixpoint store_tys (s : store) : list Ty :=
+  match s with
+  | [] => []
+  | se :: rest => se_ty se :: store_tys rest
+  end.
+
+Fixpoint sctx_of_store (s : store) : sctx :=
+  match s with
+  | [] => []
+  | se :: rest =>
+      (se_name se, se_ty se, se_state se, MImmutable) :: sctx_of_store rest
+  end.
+
+Definition captured_store_typed (env : global_env) (captured : store) : Prop :=
+  store_typed env captured (sctx_of_store captured).
+
+Definition captured_closure_has_type
+    (env : global_env) (fname : ident) (captured : store) (T : Ty) : Prop :=
+  exists fdef,
+    lookup_fn fname (env_fns env) = Some fdef /\
+    captured_store_typed env captured /\
+    T = closure_value_ty fdef (store_tys captured).
+
+Lemma captured_closure_empty_has_type :
+  forall env fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    captured_closure_has_type env fname [] (fn_value_ty fdef).
+Proof.
+  intros env fname fdef Hlookup.
+  unfold captured_closure_has_type, captured_store_typed.
+  exists fdef.
+  simpl.
+  split; [exact Hlookup |].
+  split; [constructor |].
+  unfold fn_value_ty, closure_value_ty. reflexivity.
+Qed.
+
+Lemma captured_closure_has_type_outer_usage :
+  forall env fname captured T fdef,
+    captured_closure_has_type env fname captured T ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    ty_usage T = closure_capture_usage (store_tys captured).
+Proof.
+  intros env fname captured T fdef Hclosure Hlookup.
+  unfold captured_closure_has_type in Hclosure.
+  destruct Hclosure as [fdef' [Hlookup' [_ HT]]].
+  rewrite Hlookup in Hlookup'. inversion Hlookup'. subst fdef'.
+  subst T.
+  unfold closure_value_ty, fn_signature_ty_with_usage.
+  destruct (fn_lifetimes fdef); simpl.
+  - destruct (close_fn_ty 0
+      (MkTy UUnrestricted (TFn (map param_ty (fn_params fdef)) (fn_ret fdef)))).
+    reflexivity.
+  - reflexivity.
+Qed.
+
 Lemma store_entry_typed_store_preserved :
   forall env s se ce,
     store_entry_typed env s se ce ->

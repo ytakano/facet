@@ -326,6 +326,15 @@ Follow this order before inventing new theorem shapes:
    item wrapper. For polymorphic closure values, put the captured-usage result
    on the outer `TForall` wrapper while keeping the inner `TFn` body shape
    unchanged.
+   Current implementation progress: `RuntimeTyping.v` now has the Prop-level
+   captured-store specification helpers `store_tys`, `sctx_of_store`,
+   `captured_store_typed`, and `captured_closure_has_type`. These fix the
+   intended captured-closure value type as
+   `closure_value_ty fdef (store_tys captured)` without changing the existing
+   executable checker or the existing empty-capture `value_has_type`
+   constructors. The next implementation step is to connect these helpers to
+   `Eval_CallExpr` preservation through a proof-only captured-store invariant
+   covering roots/no-shadow/naming before widening any executable validator.
 8. **Handle the `if` root-environment gap last.**
    The known blocker is that ordinary `TES_If` does not expose
    `root_env_equiv R2 R3`, while root/shadow routes require it. Do not

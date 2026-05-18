@@ -1,0 +1,8 @@
+struct Slot {
+  mut x: affine isize
+}
+
+fn main() -> affine isize {
+  let mut s: affine Slot = Slot { x = 1 };
+  (replace s.x s.x)
+}

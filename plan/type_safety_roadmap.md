@@ -25,6 +25,33 @@ proofs. If a future design promotes the root checker to the canonical route,
 that decision must be made explicitly and this file must be rewritten around
 that theorem.
 
+## Codex Digest
+
+Quick interpretation for implementation work:
+
+- **Canonical goal (Ordinary checker target):**
+
+  ```coq
+  infer_full_env env f = infer_ok (T, Γ')
+    -> initial_store_for_fn f s
+    -> eval env s (fn_body f) s' v
+    -> value_has_type env s' v (fn_ret f).
+  ```
+
+- **Current strongest executable theorem:**
+  `check_program_env_alpha_validated_root_shadow_provenance_summary_big_step_safe_checked_initial_ready`
+- **Current strongest direct-call-local executable theorem:**
+  `check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary_big_step_safe_checked_initial_ready`
+- **Current sidecar shape to preserve:** validate runtime-only obligations, keep
+  root provenance as proof evidence, not as language acceptance.
+- **Current known gaps (do not close by acceptance widening):**
+  - Ordinary checker acceptance still exceeds validator acceptance.
+  - Initial-runtime readiness remains a separate checked-state premise.
+  - `ECallExpr` remains a design gap.
+
+For Codex decisions: when a theorem name changes, update both the
+`Current Endpoint` and this digest block together.
+
 ## Canonical Route
 
 1. Prove preservation and runtime safety from the Prop-level ordinary typing
@@ -99,6 +126,8 @@ Near-term working goal:
 Do not claim ordinary-checker-only safety until the final theorem no longer
 needs root-shadow summary evidence, preservation readiness sidecar evidence, or
 initial runtime readiness beyond the agreed initial-store contract.
+For Codex updates, treat this as: reduce explicit validator false negatives first,
+then decide whether each remaining gap is intrinsic to the checker contract.
 
 ### Current Route
 
@@ -404,6 +433,9 @@ Outstanding review-linked gates for the ordinary safety work:
   overwrite, or borrow-conflict with `p` or a prefix/descendant of `p`. Add
   alias/borrow variants to the gap matrix if the current ordinary checker does
   not already reject them.
+  Current implementation note: invalid fixtures now cover direct field
+  self-use plus shared-borrow conflicts for replacing a root and a descendant
+  field.
 
 When reducing validator false negatives, rerun the relevant invalid fixtures
 for these gates before treating a newly accepted syntax class as ordinary-safe.

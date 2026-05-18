@@ -1,0 +1,4 @@
+fn f(mut x: unrestricted isize) -> unrestricted isize {
+    let r = (&x) in
+    (replace x 2)
+}

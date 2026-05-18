@@ -200,6 +200,8 @@ Use these wrappers before adding new theorem shapes:
 - Executable provenance-only root-shadow summary entrypoints:
   `check_fn_root_shadow_provenance_summary` and
   `check_env_root_shadow_provenance_summary`.
+- Executable provenance-summary route with checked initial runtime state:
+  `check_program_env_alpha_validated_root_shadow_provenance_summary_big_step_safe_checked_initial_ready`.
 - Executable preservation readiness entrypoint:
   `check_env_preservation_ready`.
 - Executable initial runtime readiness entrypoint:
@@ -228,8 +230,9 @@ Use these wrappers before adding new theorem shapes:
   `env_fns_root_provenance_summary_evidence`,
   `env_fns_root_shadow_provenance_summary_evidence`, and
   `env_fns_root_shadow_provenance_summary_check_ready`.
-- Direct-call bridge from uniqueness:
-  `direct_call_callee_body_root_shadow_summary_bridge_of_unique`.
+- Direct-call bridges from uniqueness:
+  `direct_call_callee_body_root_shadow_summary_bridge_of_unique` and
+  `direct_call_callee_body_root_shadow_provenance_summary_bridge_of_unique`.
 
 ### Current Endpoint
 
@@ -242,7 +245,7 @@ alpha-normalized environment.
 The current strongest executable route is:
 
 ```coq
-check_program_env_alpha_validated_root_shadow_provenance_big_step_safe_checked_initial
+check_program_env_alpha_validated_root_shadow_provenance_summary_big_step_safe_checked_initial_ready
 ```
 
 Current status:
@@ -287,12 +290,12 @@ Current status:
   `check_program_env_alpha_validated_root_shadow_provenance_ready` recombines
   them into the existing validator-ready package for the current runtime safety
   theorem.
-- The prefix-store cleanup prerequisites for a provenance-only direct-call
-  route have started. `RuntimeTyping.v` now has
-  `store_typed_prefix_remove_excluding_root`, and `TypeSafety.v` has
-  `eval_let_roots_preserves_typing_prefix`. These preserve let-local cleanup
-  typing with root/provenance evidence but do not yet remove the callee-body
-  preservation-readiness dependency from the public runtime theorem.
+- The prefix-store provenance-only direct-call route is now implemented.
+  `TypeSafety.v` has `eval_preserves_typing_roots_ready_prefix_mutual`,
+  and direct-call cleanup uses it to avoid requiring
+  `preservation_ready_expr` for callee bodies. The public runtime theorem
+  `eval_preserves_typing_direct_call_roots_provenance_ready` consumes
+  root-shadow provenance summary evidence without `env_fns_preservation_ready`.
 - `check_program_env_alpha_validated_root_shadow_big_step_safe_checked_initial`
   discharges `initial_root_runtime_ready_for_fn` from the executable
   `check_initial_root_runtime_ready f s`.
@@ -300,6 +303,11 @@ Current status:
   is the strongest split-validator theorem. It is less coupled internally than
   `check_program_env_alpha_validated_root_shadow`, but still rejects programs
   that fail executable preservation readiness.
+- `check_program_env_alpha_validated_root_shadow_provenance_summary_big_step_safe_checked_initial_ready`
+  is the strongest provenance-summary theorem. It no longer needs executable
+  preservation readiness for callee bodies, but it still requires explicit
+  `preservation_direct_call_ready_expr (fn_body f)` for the caller expression
+  and checked initial runtime readiness.
 - Initial runtime readiness remains a separate premise, now in executable form.
    - It cannot be derived from `initial_store_for_fn` alone.
    - Reason: `initial_root_env_for_fn` stores parameter origins as `RParam`,
@@ -308,9 +316,12 @@ Current status:
 The current sidecar contract is fixed. The remaining non-ordinary acceptance
 inputs are:
 
-- `check_program_env_alpha_validated_root_shadow_provenance env = true`, which
-  is stricter than `check_program_env_alpha env = true` because preservation
-  readiness is still a separate executable validator.
+- `check_program_env_alpha_validated_root_shadow_provenance_summary env = true`,
+  which is stricter than `check_program_env_alpha env = true` because
+  root-shadow provenance summary evidence is still a separate executable
+  validator.
+- `preservation_direct_call_ready_expr (fn_body f)`, which remains an explicit
+  proof/runtime-safety premise for the caller expression.
 - `check_initial_root_runtime_ready f s = true`, which checks the initial
   execution state rather than the program.
 
@@ -327,15 +338,12 @@ Future work:
   `initial_root_runtime_ready_for_fn`.
 - Bring the safety-validator route closer to the ordinary checker accepted
   range by following the Next Implementation Order above.
-- Localize or eliminate the remaining `env_fns_preservation_ready` dependency.
-  The split validator proves that root/shadow provenance evidence can be
-  checked independently, but the current direct-call cleanup proof still calls
-  preservation-ready typing preservation for callee bodies. The next fixed
-  implementation unit is a full
-  `eval_preserves_typing_roots_ready_prefix_mutual` theorem: a prefix-store
-  analogue of `eval_preserves_typing_roots_ready_mutual` that uses
-  `provenance_ready_*` only and calls `eval_let_roots_preserves_typing_prefix`
-  in the `ELet` case.
+- Localize or eliminate the remaining caller
+  `preservation_direct_call_ready_expr` dependency. The callee-body
+  `env_fns_preservation_ready` dependency has been removed from the
+  provenance-summary route; the remaining gap is deriving direct-call
+  preservation readiness for the executed top-level body from ordinary checker
+  success or replacing it with narrower proof facts.
 
 ### Ordinary Checker Review Gates
 
@@ -392,17 +400,19 @@ for these gates before treating a newly accepted syntax class as ordinary-safe.
 - `check_program_env_alpha_validated` now implies `fn_env_unique_by_name` for
   the alpha-normalized environment.
 - Ordinary checker success still does not imply `env_fns_preservation_ready`.
-- The provenance-only direct-call bridge exists, but the final wrapper is still
-  blocked on `eval_preserves_typing_roots_ready_prefix_mutual`; direct-call
-  cleanup starts from `store_typed_prefix` for the callee parameter frame, not a
-  full exact `store_typed`.
+  The provenance-summary route no longer needs this for callee bodies, but the
+  older split-validator route still uses it.
+- The provenance-only direct-call bridge and final checked-initial wrapper now
+  exist through `eval_preserves_typing_roots_ready_prefix_mutual`. The remaining
+  direct-call readiness gap is the explicit caller
+  `preservation_direct_call_ready_expr (fn_body f)` premise.
 - The current executable safety validator is stricter than the ordinary checker.
   In particular, `preservation_ready_expr_b` currently rejects `ELet`,
   `ELetInfer`, `ECall`, `ECallExpr`, and `EDeref`.
 - The provenance-only root-shadow summary validator accepts the annotated and
   inferred ready-gap let examples that the preservation-ready root-shadow
-  validator rejects, but it is not yet wired into a final operational safety
-  theorem.
+  validator rejects, and it is now wired into the checked-initial operational
+  safety theorem named in Current Endpoint.
 - The abandoned synthesis route stops at `If`: `TES_If` lacks the
   `root_env_equiv R2 R3` evidence required by `TERS_If`.
 - General root-checker-to-shadow-safe soundness is false for arbitrary core

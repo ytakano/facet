@@ -1349,6 +1349,26 @@ Proof.
   exact Hvalidator.
 Qed.
 
+Lemma env_fns_root_shadow_provenance_summary_evidence_of_check_ready :
+  forall env,
+    env_fns_root_shadow_provenance_summary_check_ready env ->
+    env_fns_root_shadow_provenance_summary_evidence env.
+Proof.
+  intros env Hcheck fname fdef Hlookup.
+  exact (Hcheck fname fdef Hlookup).
+Qed.
+
+Lemma ordinary_alpha_root_shadow_provenance_evidence_of_validator_ready :
+  forall env,
+    ordinary_alpha_root_shadow_provenance_validator_ready env ->
+    env_fns_root_shadow_provenance_summary_evidence
+      (alpha_normalize_global_env env).
+Proof.
+  intros env Hvalidator.
+  apply env_fns_root_shadow_provenance_summary_evidence_of_check_ready.
+  exact Hvalidator.
+Qed.
+
 Lemma ordinary_alpha_root_shadow_sidecar_ready_evidence :
   forall env,
     ordinary_alpha_root_shadow_sidecar_ready env ->
@@ -1694,6 +1714,80 @@ Proof.
   - exact Hin.
   - exact Hstore.
   - apply check_initial_root_runtime_ready_sound. exact Hinitial.
+  - exact Heval.
+Qed.
+
+Theorem check_program_env_alpha_validated_big_step_safe_with_root_shadow_provenance_validator_ready_checked_initial_ready :
+  forall env f s s' v,
+    check_program_env_alpha_validated env = true ->
+    ordinary_alpha_root_shadow_provenance_validator_ready env ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns (alpha_normalize_global_env env)) ->
+    initial_store_for_fn (alpha_normalize_global_env env) f s ->
+    preservation_direct_call_ready_expr (fn_body f) ->
+    eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
+    value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hvalidated Hvalidator Hinitial Hin Hstore Hready
+    Heval.
+  pose proof (check_program_env_alpha_validated_unique env Hvalidated)
+    as Hunique.
+  pose proof
+    (ordinary_alpha_root_shadow_provenance_evidence_of_validator_ready
+      env Hvalidator) as Hsummary.
+  pose proof
+    (lookup_fn_in_unique_by_name (alpha_normalize_global_env env)
+      (fn_name f) f Hin eq_refl Hunique) as Hlookup.
+  pose proof (Hsummary (fn_name f) f Hlookup) as Hfn_summary.
+  destruct Hfn_summary as [Hnodup Hbody_summary].
+  unfold callee_body_root_shadow_provenance_ready_at in Hbody_summary.
+  destruct Hbody_summary as
+    (T_body & Γ_out & R_body & roots_body &
+      _ & Htyped_shadow & Hcompat & _ & _).
+  pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
+  destruct (check_initial_root_runtime_ready_sound f s Hinitial) as
+    [Hroots [Hstore_shadow [Hnamed Hkeys]]].
+  destruct (eval_preserves_typing_direct_call_roots_provenance_ready
+      (alpha_normalize_global_env env) s (fn_body f) s' v Heval
+      (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+      (sctx_of_ctx (params_ctx (fn_params f)))
+      T_body (sctx_of_ctx Γ_out) R_body roots_body
+      Hready Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
+      (typed_env_roots_shadow_safe_roots
+        (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
+        (initial_root_env_for_fn f)
+        (sctx_of_ctx (params_ctx (fn_params f)))
+        (fn_body f) T_body (sctx_of_ctx Γ_out) R_body roots_body
+        Htyped_shadow)
+      Hunique Hsummary)
+    as [_ [Hv _]].
+  eapply VHT_Compatible.
+  - exact Hv.
+  - apply ty_compatible_b_sound. exact Hcompat.
+Qed.
+
+Theorem check_program_env_alpha_validated_root_shadow_provenance_summary_big_step_safe_checked_initial_ready :
+  forall env f s s' v,
+    check_program_env_alpha_validated_root_shadow_provenance_summary env = true ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns (alpha_normalize_global_env env)) ->
+    initial_store_for_fn (alpha_normalize_global_env env) f s ->
+    preservation_direct_call_ready_expr (fn_body f) ->
+    eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
+    value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hcheck Hinitial Hin Hstore Hready Heval.
+  eapply check_program_env_alpha_validated_big_step_safe_with_root_shadow_provenance_validator_ready_checked_initial_ready.
+  - unfold check_program_env_alpha_validated_root_shadow_provenance_summary
+      in Hcheck.
+    apply andb_true_iff in Hcheck as [Hvalidated _].
+    exact Hvalidated.
+  - apply check_program_env_alpha_validated_root_shadow_provenance_summary_ready.
+    exact Hcheck.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Hready.
   - exact Heval.
 Qed.
 

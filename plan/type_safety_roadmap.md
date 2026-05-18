@@ -80,6 +80,26 @@ shadow/root sidecar evidence.
 Start here. The detailed inventory below is history/reference, not the
 implementation order.
 
+### Current Goal
+
+Make the ordinary-checker safety route understandable and implementable without
+turning the root checker into the language definition.
+
+Near-term working goal:
+
+1. Keep `check_program_env_alpha` as the ordinary accepted-program checker.
+2. Use executable safety validators only to discharge proof evidence that the
+   current operational proof still needs.
+3. Reduce the validator's false negatives until the safety-validator route has
+   the same accepted program range as the ordinary checker, or until a specific
+   gap is proven to require a checker contract decision.
+4. Keep initial runtime readiness as a separate execution-state obligation; it
+   is not part of program acceptance.
+
+Do not claim ordinary-checker-only safety until the final theorem no longer
+needs root-shadow summary evidence, preservation readiness sidecar evidence, or
+initial runtime readiness beyond the agreed initial-store contract.
+
 ### Current Route
 
 The active route is ordinary checker safety over alpha-normalized core:
@@ -92,6 +112,47 @@ The active route is ordinary checker safety over alpha-normalized core:
 
 Do not try to prove `typed_env_structural -> typed_env_roots_shadow_safe` as the
 canonical route.
+
+### Next Implementation Order
+
+Follow this order before inventing new theorem shapes:
+
+1. **List acceptance gaps with fixtures and Rocq examples.**
+   Add small examples that pass the ordinary checker but fail the current
+   safety-validator route. Include both `.facet` fixtures and small core-AST
+   examples when parser/desugarer behavior would obscure the proof issue.
+   Include the still-relevant `plan/review.md` safety cases in this matrix so
+   validator widening does not re-open old ordinary-checker bugs.
+2. **Reduce `preservation_ready_expr_b` false negatives.**
+   The current executable validator rejects broad syntax classes such as
+   `ELet`, `ELetInfer`, direct `ECall`, `ECallExpr`, and `EDeref`. First make
+   the structural preservation route cover ordinary accepted `let` and direct
+   call cases where the proof already has the required facts. For `ELet` and
+   `ELetInfer`, do not merely remove the validator rejection: first make the
+   ordinary route account for let-local reference escape, either by proving the
+   current checker already rejects it or by adding an executable ordinary
+   checker-side escape check.
+3. **Move the non-direct-call structural route toward no validator.**
+   Prefer deriving or eliminating `preservation_ready_expr` obligations from
+   ordinary typing/checker success over adding more executable checks.
+4. **Localize direct-call cleanup and root evidence.**
+   Root/shadow evidence should be required only for the direct-call cleanup and
+   reference-provenance subproofs that actually need it. Avoid whole-program
+   root-shadow validation when a narrower direct-call evidence package is
+   enough.
+   While doing this, keep `replace p e_new` target-conflict discipline visible:
+   the ordinary checker must not allow `e_new` to consume or invalidate the
+   place being replaced, and any proof route should use that fact directly
+   rather than relying on a broad sidecar rejection.
+5. **Handle the `if` root-environment gap last.**
+   The known blocker is that ordinary `TES_If` does not expose
+   `root_env_equiv R2 R3`, while root/shadow routes require it. Do not
+   strengthen `TES_If` or ordinary checker acceptance just to manufacture this
+   evidence.
+6. **Treat initial readiness as a separate axis.**
+   `initial_root_runtime_ready_for_fn` is about the starting store, not the
+   accepted program. Reduce it only through an initial-store contract change or
+   an executable initial-state validator such as `check_initial_root_runtime_ready`.
 
 ### Current Public Proof Wrappers
 
@@ -112,8 +173,12 @@ Use these wrappers before adding new theorem shapes:
   `check_program_env_alpha_validated_big_step_safe_with_root_shadow_validator_ready`.
 - Executable root-shadow validator route:
   `check_program_env_alpha_validated_root_shadow_big_step_safe`.
+- Executable root-shadow validator route with checked initial runtime state:
+  `check_program_env_alpha_validated_root_shadow_big_step_safe_checked_initial`.
 - Executable root-shadow validator entrypoint:
   `check_program_env_alpha_validated_root_shadow`.
+- Executable initial runtime readiness entrypoint:
+  `check_initial_root_runtime_ready`.
 - Sidecar package predicates:
   `ordinary_alpha_root_shadow_sidecar_ready`,
   `ordinary_alpha_direct_call_meta_ready`,
@@ -135,10 +200,10 @@ top-level-name uniqueness check over the alpha-normalized environment. The
 sidecar root-shadow validator route is now executable and also runs on the
 alpha-normalized environment.
 
-The final/current theorem is:
+The current strongest executable route is:
 
 ```coq
-check_program_env_alpha_validated_root_shadow_big_step_safe
+check_program_env_alpha_validated_root_shadow_big_step_safe_checked_initial
 ```
 
 Current status:
@@ -164,19 +229,25 @@ Current status:
 - The executable validator route absorbs root-shadow summary evidence and
   environment-level preservation readiness. It still keeps
   `initial_root_runtime_ready_for_fn` explicit.
-- `initial_root_runtime_ready_for_fn` remains explicit.
+- `check_program_env_alpha_validated_root_shadow_big_step_safe_checked_initial`
+  discharges `initial_root_runtime_ready_for_fn` from the executable
+  `check_initial_root_runtime_ready f s`.
+- Initial runtime readiness remains a separate premise, now in executable form.
    - It cannot be derived from `initial_store_for_fn` alone.
    - Reason: `initial_root_env_for_fn` stores parameter origins as `RParam`,
      while runtime references require concrete `RStore` reachability.
 
-The current sidecar contract is fixed. The remaining explicit premises are:
+The current sidecar contract is fixed. The remaining non-ordinary acceptance
+inputs are:
 
-- `initial_root_runtime_ready_for_fn`.
+- `check_program_env_alpha_validated_root_shadow env = true`, which is stricter
+  than `check_program_env_alpha env = true`.
+- `check_initial_root_runtime_ready f s = true`, which checks the initial
+  execution state rather than the program.
 
-Future reductions require an initial-runtime-root readiness validator or a
-stronger initial-store contract. Do not claim that
-`initial_root_runtime_ready_for_fn` is eliminated without that new design and
-proof route.
+Further reductions of the initial-state premise require a stronger
+initial-store contract. Do not claim that initial runtime readiness is
+eliminated merely because it has an executable validator.
 
 Future work:
 
@@ -185,6 +256,46 @@ Future work:
   unchanged unless that is explicitly redesigned.
 - Design an executable validator or strengthened setup invariant for
   `initial_root_runtime_ready_for_fn`.
+- Bring the safety-validator route closer to the ordinary checker accepted
+  range by following the Next Implementation Order above.
+
+### Ordinary Checker Review Gates
+
+`plan/review.md` is old, but its examples should stay as regression and proof
+gates while the safety-validator route is widened to match the ordinary checker.
+
+Already-fixed ordinary checker issues to preserve:
+
+- Active-borrow access must be checked for ordinary reads/moves through `EVar`
+  and `EPlace`, not only for `replace`, assignment, borrow, or dereference.
+- Linear aggregate obligations must require every linear component path to be
+  consumed; a single partial field move must not discharge the parent value.
+- `&mut T` must be invariant in its referent type. Shared references may keep
+  the intended compatible/covariant behavior, but unique references must not
+  accept compatible-but-different inner types.
+- Struct field mutability must be enforced for assignment and `replace`, not
+  inferred only from the root binding mutability.
+- Local type annotation lifetime elision must stay rejected until fresh local
+  lifetime regions are designed.
+- Generic trait syntax and validation must keep checking trait argument arity
+  and bounds consistently.
+
+Outstanding review-linked gates for the ordinary safety work:
+
+- **Let-local reference escape.** The ordinary route must reject or prove safe
+  examples shaped like `let r = let x = 1 in (&x); ...`. The current root-shadow
+  safety route has initializer/body root exclusions, but that is sidecar
+  evidence; the final ordinary checker theorem needs this handled by ordinary
+  typing/checker facts or by an ordinary executable escape check.
+- **Replace target self-use.** Existing path-state checks cover the direct
+  self-move regression, but the final proof should make the intended rule
+  explicit: while checking `replace p e_new`, `e_new` may not consume,
+  overwrite, or borrow-conflict with `p` or a prefix/descendant of `p`. Add
+  alias/borrow variants to the gap matrix if the current ordinary checker does
+  not already reject them.
+
+When reducing validator false negatives, rerun the relevant invalid fixtures
+for these gates before treating a newly accepted syntax class as ordinary-safe.
 
 ### Do Not Do
 
@@ -203,6 +314,9 @@ Future work:
 - `check_program_env_alpha_validated` now implies `fn_env_unique_by_name` for
   the alpha-normalized environment.
 - Ordinary checker success still does not imply `env_fns_preservation_ready`.
+- The current executable safety validator is stricter than the ordinary checker.
+  In particular, `preservation_ready_expr_b` currently rejects `ELet`,
+  `ELetInfer`, `ECall`, `ECallExpr`, and `EDeref`.
 - The abandoned synthesis route stops at `If`: `TES_If` lacks the
   `root_env_equiv R2 R3` evidence required by `TERS_If`.
 - General root-checker-to-shadow-safe soundness is false for arbitrary core

@@ -117,11 +117,17 @@ Use these wrappers before adding new theorem shapes:
 - Direct-call bridge from uniqueness:
   `direct_call_callee_body_root_shadow_summary_bridge_of_unique`.
 
-### Next Implementation Task
+### Current Endpoint
 
 The top-level name validator route is implemented. `check_program_env_alpha`
 remains unchanged, and `check_program_env_alpha_validated` adds a Rocq-side
 top-level-name uniqueness check over the alpha-normalized environment.
+
+The final/current theorem is:
+
+```coq
+check_program_env_alpha_validated_big_step_safe_with_direct_call_sidecar_env_ready
+```
 
 Current status:
 
@@ -141,16 +147,16 @@ Current status:
    - Reason: `initial_root_env_for_fn` stores parameter origins as `RParam`,
      while runtime references require concrete `RStore` reachability.
 
-Remaining implementation choices require a new design decision:
+The current sidecar contract is fixed. The remaining explicit premises are:
 
-1. Add a separate validator/theorem for preservation readiness.
-2. Add a checker/root-summary validator route for
-   `env_fns_root_shadow_summary_evidence`.
-3. Expand structural preservation coverage so `preservation_ready_expr` can be
-   removed from ordinary-facing wrappers.
-4. Keep the current validated proof wrappers as the explicit sidecar contract.
+- `ordinary_alpha_root_shadow_sidecar_ready`.
+- `env_fns_preservation_ready`, supplied through
+  `ordinary_alpha_direct_call_validated_sidecar_ready`.
+- `initial_root_runtime_ready_for_fn`.
 
-Do not pick one of these in implementation mode without user confirmation.
+Future reductions require a separate root-summary validator or readiness
+validator design. Do not claim that any remaining premise is eliminated without
+that new design and proof route.
 
 ### Do Not Do
 

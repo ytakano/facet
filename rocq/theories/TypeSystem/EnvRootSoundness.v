@@ -667,6 +667,27 @@ Proof.
         -- eapply infer_place_sctx_structural_sound. exact Hplace.
         -- exact Hpath.
         -- exact Hmut.
+    + destruct e; try discriminate.
+      destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
+      destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
+      destruct (usage_eqb (ty_usage Tp) UUnrestricted) eqn:Husage; try discriminate.
+      destruct (root_env_lookup x R) as [roots0 |] eqn:Hlookup; try discriminate.
+      destruct r.
+      * inversion Hinfer; subst.
+        eapply TER_DerefBorrowShared.
+        -- eapply infer_place_sctx_structural_sound. exact Hplace.
+        -- apply usage_eqb_true. exact Husage.
+        -- exact Hpath.
+        -- exact Hlookup.
+      * destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
+        destruct mut; try discriminate.
+        inversion Hinfer; subst.
+        eapply TER_DerefBorrowUnique.
+        -- eapply infer_place_sctx_structural_sound. exact Hplace.
+        -- apply usage_eqb_true. exact Husage.
+        -- exact Hpath.
+        -- exact Hmut.
+        -- exact Hlookup.
     + destruct (infer_core_env_state_fuel_roots fuel' env Ω n R Σ e)
         as [[[[Te Σe] Re] roots_e] | err] eqn:He; try discriminate.
       inversion Hinfer; subst.
@@ -907,6 +928,27 @@ Proof.
         -- eapply infer_place_sctx_structural_sound. exact Hplace.
         -- exact Hpath.
         -- exact Hmut.
+    + destruct e; try discriminate.
+      destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
+      destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
+      destruct (usage_eqb (ty_usage Tp) UUnrestricted) eqn:Husage; try discriminate.
+      destruct (root_env_lookup x R) as [roots0 |] eqn:Hlookup; try discriminate.
+      destruct r.
+      * inversion Hinfer; subst.
+        eapply TERS_DerefBorrowShared.
+        -- eapply infer_place_sctx_structural_sound. exact Hplace.
+        -- apply usage_eqb_true. exact Husage.
+        -- exact Hpath.
+        -- exact Hlookup.
+      * destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
+        destruct mut; try discriminate.
+        inversion Hinfer; subst.
+        eapply TERS_DerefBorrowUnique.
+        -- eapply infer_place_sctx_structural_sound. exact Hplace.
+        -- apply usage_eqb_true. exact Husage.
+        -- exact Hpath.
+        -- exact Hmut.
+        -- exact Hlookup.
     + destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ e)
         as [[[[Te Σe] Re] roots_e] | err] eqn:He; try discriminate.
       inversion Hinfer; subst.

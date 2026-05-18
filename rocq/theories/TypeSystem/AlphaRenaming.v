@@ -5181,6 +5181,21 @@ Inductive typed_env_roots_shadow_safe
       sctx_lookup_mut x Σ = Some MMutable ->
       typed_env_roots_shadow_safe env Ω n R Σ (EBorrow RUnique p)
         (MkTy UAffine (TRef (Lifetime.LVar n) RUnique T)) Σ R [RStore x]
+  | TERS_DerefBorrowShared : forall R Σ p T x path roots,
+      typed_place_env_structural env Σ p T ->
+      ty_usage T = UUnrestricted ->
+      place_path p = Some (x, path) ->
+      root_env_lookup x R = Some roots ->
+      typed_env_roots_shadow_safe env Ω n R Σ
+        (EDeref (EBorrow RShared p)) T Σ R roots
+  | TERS_DerefBorrowUnique : forall R Σ p T x path roots,
+      typed_place_env_structural env Σ p T ->
+      ty_usage T = UUnrestricted ->
+      place_path p = Some (x, path) ->
+      sctx_lookup_mut x Σ = Some MMutable ->
+      root_env_lookup x R = Some roots ->
+      typed_env_roots_shadow_safe env Ω n R Σ
+        (EDeref (EBorrow RUnique p)) T Σ R roots
   | TERS_If : forall R R1 R2 R3 Σ Σ1 Σ2 Σ3 Σ4 e1 e2 e3
       T_cond T2 T3 roots_cond roots2 roots3,
       typed_env_roots_shadow_safe env Ω n R Σ e1 T_cond Σ1 R1 roots_cond ->
@@ -5683,6 +5698,34 @@ Proof.
     + exact HnsR0.
     + exact HR0.
     + apply root_set_equiv_sym. apply root_set_instantiate_store_singleton_equiv.
+  - intros R Σ p T x path roots Hplace Husage Hpath Hlookup
+      Hfresh R0 HnsR HnsR0 HR0.
+    assert (Hlookup_inst :
+      root_env_lookup x (root_env_instantiate rho R) =
+      Some (root_set_instantiate rho roots)).
+    { apply root_env_lookup_instantiate. exact Hlookup. }
+    destruct (root_env_equiv_lookup_r R0 (root_env_instantiate rho R)
+      x (root_set_instantiate rho roots) HR0 Hlookup_inst)
+      as [roots0 [Hlookup0 Hroots0]].
+    exists R0, roots0. split; [| split; [| split]].
+    + eapply TERS_DerefBorrowShared; eauto.
+    + exact HnsR0.
+    + exact HR0.
+    + exact Hroots0.
+  - intros R Σ p T x path roots Hplace Husage Hpath Hmut Hlookup
+      Hfresh R0 HnsR HnsR0 HR0.
+    assert (Hlookup_inst :
+      root_env_lookup x (root_env_instantiate rho R) =
+      Some (root_set_instantiate rho roots)).
+    { apply root_env_lookup_instantiate. exact Hlookup. }
+    destruct (root_env_equiv_lookup_r R0 (root_env_instantiate rho R)
+      x (root_set_instantiate rho roots) HR0 Hlookup_inst)
+      as [roots0 [Hlookup0 Hroots0]].
+    exists R0, roots0. split; [| split; [| split]].
+    + eapply TERS_DerefBorrowUnique; eauto.
+    + exact HnsR0.
+    + exact HR0.
+    + exact Hroots0.
   - intros R R1 R2 R3 Σ Σ1 Σ2 Σ3 Σ4 e1 e2 e3 T_cond T2 T3
       roots_cond roots2 roots3 He1 IHe1 Hcond He2 IHe2 He3 IHe3 Hcore
       Hmerge HR23 Hfresh R0 HnsR HnsR0 HR0.
@@ -7537,6 +7580,10 @@ Proof.
     eapply root_of_place_sctx_roots_named. eassumption.
   - split; try assumption.
     eapply root_store_single_sctx_roots_named_of_place_path; eassumption.
+  - split; try assumption.
+    eapply root_env_lookup_sctx_roots_named; eassumption.
+  - split; try assumption.
+    eapply root_env_lookup_sctx_roots_named; eassumption.
   - match goal with
     | IHcond : root_env_no_shadow ?R ->
         root_env_sctx_roots_named ?R ?Σ ->
@@ -13478,7 +13525,62 @@ Proof.
         * exact Hrename.
       + eapply alpha_rename_typed_env_roots_borrow_shadow_safe_support_forward;
           eauto.
-      + inversion Htyped.
+      + inversion Htyped; subst; simpl in Hrename; injection Hrename as <- <-.
+        * match goal with
+          | Hlookup : root_env_lookup x ?R0 = Some roots,
+            HR : root_env_equiv Rr (root_env_rename rho ?R0) |- _ =>
+              assert (Hlookup_ren :
+                root_env_lookup (lookup_rename x rho)
+                  (root_env_rename rho R0) =
+                Some (root_set_rename rho roots));
+              [ apply root_env_lookup_rename;
+                [ apply HnocollR;
+                  eapply root_env_lookup_some_in_names; exact Hlookup
+                | exact Hlookup ]
+              | destruct (root_env_equiv_lookup_r Rr (root_env_rename rho R0)
+                  (lookup_rename x rho) (root_set_rename rho roots)
+                  HR Hlookup_ren) as [rootsr [Hlookup_r Hroots_r]] ]
+          end.
+          assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+          { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+          exists Σr, Rr, rootsr.
+          split.
+          -- eapply TERS_DerefBorrowShared.
+             ++ eapply alpha_rename_typed_place_env_structural_forward; eauto.
+             ++ assumption.
+             ++ eapply place_path_rename_place_some. eassumption.
+             ++ exact Hlookup_r.
+          -- split; [exact Hctx | split; [exact HnsRr | split; [exact HRr | exact Hroots_r]]].
+        * match goal with
+          | Hlookup : root_env_lookup x ?R0 = Some roots,
+            HR : root_env_equiv Rr (root_env_rename rho ?R0) |- _ =>
+              assert (Hlookup_ren :
+                root_env_lookup (lookup_rename x rho)
+                  (root_env_rename rho R0) =
+                Some (root_set_rename rho roots));
+              [ apply root_env_lookup_rename;
+                [ apply HnocollR;
+                  eapply root_env_lookup_some_in_names; exact Hlookup
+                | exact Hlookup ]
+              | destruct (root_env_equiv_lookup_r Rr (root_env_rename rho R0)
+                  (lookup_rename x rho) (root_set_rename rho roots)
+                  HR Hlookup_ren) as [rootsr [Hlookup_r Hroots_r]] ]
+          end.
+          assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+          { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+          exists Σr, Rr, rootsr.
+          split.
+          -- eapply TERS_DerefBorrowUnique.
+             ++ eapply alpha_rename_typed_place_env_structural_forward; eauto.
+             ++ assumption.
+             ++ eapply place_path_rename_place_some. eassumption.
+             ++ eapply ctx_alpha_lookup_mut_forward.
+                ** exact Hctx.
+                ** rewrite <- (place_path_root p x path ltac:(eassumption)).
+                   exact Hsafe_root.
+                ** eassumption.
+             ++ exact Hlookup_r.
+          -- split; [exact Hctx | split; [exact HnsRr | split; [exact HRr | exact Hroots_r]]].
       + eapply (alpha_rename_typed_env_roots_drop_shadow_safe_support_forward
           env Ω n rho R Rr Σ Σr e er used used' T Σ' R' roots).
         * intros R0 R0r Σa Σb used0 er0 used1 T0 Σa' R0' roots0

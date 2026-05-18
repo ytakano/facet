@@ -2614,6 +2614,10 @@ Proof.
       reflexivity.
   - eapply TERS_BorrowShared; eauto.
   - eapply TERS_BorrowUnique; eauto.
+  - eapply TERS_DerefBorrowShared; eauto.
+    eapply root_env_lookup_app_left; eassumption.
+  - eapply TERS_DerefBorrowUnique; eauto.
+    eapply root_env_lookup_app_left; eassumption.
   - pose proof (root_env_tail_fresh_names_app_l _ _ _ H2) as Hfresh1.
     pose proof (root_env_tail_fresh_names_app_r _ _ _ H2) as Hfresh_tail.
     pose proof (root_env_tail_fresh_names_app_l _ _ _ Hfresh_tail) as Hfresh2.
@@ -4267,6 +4271,9 @@ Inductive provenance_ready_expr : expr -> Prop :=
       provenance_ready_expr e2 ->
       provenance_ready_expr e3 ->
       provenance_ready_expr (EIf e1 e2 e3)
+  | ProvReady_DerefBorrow : forall rk p x path,
+      place_path p = Some (x, path) ->
+      provenance_ready_expr (EDeref (EBorrow rk p))
 with provenance_ready_args : list expr -> Prop :=
   | ProvReadyArgs_Nil :
       provenance_ready_args []
@@ -4390,6 +4397,11 @@ Proof.
       * eapply alpha_rename_provenance_ready_expr; eauto.
       * eapply alpha_rename_provenance_ready_expr; eauto.
       * eapply alpha_rename_provenance_ready_expr; eauto.
+    + simpl in Hrename.
+      inversion Hrename; subst.
+      destruct (place_path_rename_place_some ρ p x path H)
+        as [xr Hpath].
+      eapply ProvReady_DerefBorrow. exact Hpath.
   - intros ρ used args argsr used' Hrename Hready.
     destruct Hready as [| arg rest Harg Hrest]; simpl in Hrename.
     + inversion Hrename; subst. constructor.
@@ -5114,6 +5126,10 @@ Proof.
     eapply root_of_place_ctx_roots_named. eassumption.
   - split; try assumption.
     eapply root_store_single_ctx_roots_named_of_place_path; eassumption.
+  - split; try assumption.
+    eapply root_env_lookup_ctx_roots_named; eassumption.
+  - split; try assumption.
+    eapply root_env_lookup_ctx_roots_named; eassumption.
   - match goal with
     | IHcond : root_env_no_shadow ?R ->
         root_env_ctx_roots_named ?R ?Σ ->
@@ -5408,7 +5424,7 @@ Proof.
     inversion Htyped; subst. repeat split; try assumption; constructor.
   - intros s x se Hlookup Hconsume Ω n R Σ T Σ' R' roots
       _ Hroots Hnodup Hrn Htyped.
-    inversion Htyped; subst.
+    dependent destruction Htyped.
     all: repeat split; try assumption;
       eapply store_roots_within_lookup_value; eassumption.
   - intros s x se Hlookup Hconsume Hused Ω n R Σ T Σ' R' roots
@@ -5704,10 +5720,31 @@ Proof.
       end.
   - intros s r p x path se v T_eval Hplace Heval_place Hlookup Hvalue
       Htype_eval Husage Ω n R Σ T Σ' R' roots Hready _ _ _ _.
-    inversion Hready.
+    dependent destruction Hready.
   - intros s s_r r x path se v T_eval Hnot_place Heval_r IHr Hlookup
-      Hvalue Htype_eval Husage Ω n R Σ T Σ' R' roots Hready _ _ _ _.
-    inversion Hready.
+      Hvalue Htype_eval Husage Ω n R Σ T Σ' R' roots Hready Hroots Hnodup Hrn
+      Htyped.
+    dependent destruction Hready.
+    inversion Heval_r; subst.
+    dependent destruction Htyped.
+    + repeat split; try assumption.
+      match goal with
+      | Hevalp : eval_place ?s0 ?p0 ?x0 ?path0,
+        Hlookup0 : store_lookup ?x0 ?s0 = Some ?se0,
+        Hvalue0 : value_lookup_path (se_val ?se0) ?path0 = Some ?v0 |- _ =>
+          assert (Hlookup_path : store_lookup_path x0 path0 s0 = Some v0)
+            by (unfold store_lookup_path; rewrite Hlookup0; exact Hvalue0);
+          eapply eval_place_lookup_path_roots_within; eassumption
+      end.
+    + repeat split; try assumption.
+      match goal with
+      | Hevalp : eval_place ?s0 ?p0 ?x0 ?path0,
+        Hlookup0 : store_lookup ?x0 ?s0 = Some ?se0,
+        Hvalue0 : value_lookup_path (se_val ?se0) ?path0 = Some ?v0 |- _ =>
+          assert (Hlookup_path : store_lookup_path x0 path0 s0 = Some v0)
+            by (unfold store_lookup_path; rewrite Hlookup0; exact Hvalue0);
+          eapply eval_place_lookup_path_roots_within; eassumption
+      end.
   - intros s fname Ω n R Σ T Σ' R' roots _ Hroots Hnodup Hrn Htyped.
     inversion Htyped; subst. repeat split; try assumption; constructor.
   - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_then IHthen
@@ -8295,11 +8332,14 @@ Proof.
     all: split; [exact Hcover | exists frame; exact Hscope].
   - intros s r p x path se v T_eval Hplace Heval_place Hlookup Hvalue
       Htype_eval Husage Ω n R Σ T Σ' R' roots ps frame Hready _ _ _.
-    inversion Hready.
+    dependent destruction Hready.
   - intros s s_r r x path se v T_eval Hnot_place Heval_r IHr Hlookup
       Hvalue Htype_eval Husage Ω n R Σ T Σ' R' roots ps frame
-      Hready _ _ _.
-    inversion Hready.
+      Hready Htyped Hcover Hscope.
+    dependent destruction Hready.
+    inversion Heval_r; subst.
+    inversion Htyped; subst;
+      try solve [split; [exact Hcover | exists frame; exact Hscope]].
   - intros s fname Ω n R Σ T Σ' R' roots ps frame _ Htyped Hcover Hscope.
     inversion Htyped; subst. split; [exact Hcover | exists frame; exact Hscope].
   - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_then IHthen
@@ -8946,11 +8986,13 @@ Proof.
     inversion Htyped; subst; repeat split; assumption.
   - intros s r p x path se v T_eval Hplace Heval_place Hlookup Hvalue
       Htype_eval Husage Ω n R Σ T Σ' R' roots ps frame Hready _ _ _ _ _ _ _.
-    inversion Hready.
+    dependent destruction Hready.
   - intros s s_r r x path se v T_eval Hnot_place Heval_r IHr Hlookup
       Hvalue Htype_eval Husage Ω n R Σ T Σ' R' roots ps frame
-      Hready _ _ _ _ _ _ _.
-    inversion Hready.
+      Hready Htyped Hcover Hroots Hshadow Hrn Hscope Hfresh.
+    dependent destruction Hready.
+    inversion Heval_r; subst.
+    inversion Htyped; subst; try solve [repeat split; assumption].
   - intros s fname Ω n R Σ T Σ' R' roots ps frame _ Htyped Hcover
       _ _ _ Hscope Hfresh.
     inversion Htyped; subst. repeat split; assumption.
@@ -12658,10 +12700,47 @@ Proof.
       end.
   - intros s r p x path se v T_eval Hplace Heval_place Hlookup Hvalue
       Htype_eval Husage Ω n R Σ T Σ' R' roots Hready _ _ _ _ _.
-    inversion Hready.
+    dependent destruction Hready.
   - intros s s_r r x path se v T_eval Hnot_place Heval_r IHr Hlookup
-      Hvalue Htype_eval Husage Ω n R Σ T Σ' R' roots Hready _ _ _ _ _.
-    inversion Hready.
+      Hvalue Htype_eval Husage Ω n R Σ T Σ' R' roots Hready Hstore Hroots
+      Hnodup Hrn Htyped.
+    dependent destruction Hready.
+    inversion Heval_r; subst.
+    dependent destruction Htyped.
+    + destruct (eval_place_matches_place_path s_r p x path x1 path1 H4 H2)
+        as [Hx Hpath].
+      subst x path.
+      destruct (typed_place_direct_lookup env Σ p T x1 path1 H0 H2)
+        as [T_root [st [HΣ [_ Htype_path]]]].
+      destruct (store_typed_prefix_lookup_sctx
+                  env s_r Σ x1 T_root st Hstore HΣ)
+        as [se' [Hlookup' [_ [HT [_ Hvroot]]]]].
+      rewrite Hlookup in Hlookup'.
+      inversion Hlookup'; subst se'.
+      rewrite HT in Htype_eval.
+      rewrite Htype_path in Htype_eval.
+      inversion Htype_eval; subst T_eval.
+      repeat split; try assumption;
+        try apply store_ref_targets_preserved_refl;
+        try (eapply value_lookup_path_has_type; eassumption);
+        try (eapply eval_place_lookup_path_roots_within; eassumption).
+    + destruct (eval_place_matches_place_path s_r p x path x1 path1 H5 H2)
+        as [Hx Hpath].
+      subst x path.
+      destruct (typed_place_direct_lookup env Σ p T x1 path1 H0 H2)
+        as [T_root [st [HΣ [_ Htype_path]]]].
+      destruct (store_typed_prefix_lookup_sctx
+                  env s_r Σ x1 T_root st Hstore HΣ)
+        as [se' [Hlookup' [_ [HT [_ Hvroot]]]]].
+      rewrite Hlookup in Hlookup'.
+      inversion Hlookup'; subst se'.
+      rewrite HT in Htype_eval.
+      rewrite Htype_path in Htype_eval.
+      inversion Htype_eval; subst T_eval.
+      repeat split; try assumption;
+        try apply store_ref_targets_preserved_refl;
+        try (eapply value_lookup_path_has_type; eassumption);
+        try (eapply eval_place_lookup_path_roots_within; eassumption).
   - intros s fname Ω n R Σ T Σ' R' roots _ Hstore _ _ _ Htyped.
     inversion Htyped; subst.
     split.
@@ -13977,10 +14056,45 @@ Proof.
       end.
   - intros s r p x path se v T_eval Hplace Heval_place Hlookup Hvalue
       Htype_eval Husage Ω n R Σ T Σ' R' roots Hready _ _ _ _ _.
-    inversion Hready.
+    dependent destruction Hready.
   - intros s s_r r x path se v T_eval Hnot_place Heval_r IHr Hlookup
-      Hvalue Htype_eval Husage Ω n R Σ T Σ' R' roots Hready _ _ _ _ _.
-    inversion Hready.
+      Hvalue Htype_eval Husage Ω n R Σ T Σ' R' roots Hready Hstore Hroots
+      Hnodup Hrn Htyped.
+    dependent destruction Hready.
+    inversion Heval_r; subst.
+    dependent destruction Htyped.
+    + destruct (eval_place_matches_place_path s_r p x path x1 path1 H4 H2)
+        as [Hx Hpath].
+      subst x path.
+      destruct (store_typed_lookup env s_r Σ x1 se Hstore Hlookup)
+        as [T_root [st [m [HΣ [Hname [HTy [Hst Hvroot]]]]]]].
+      destruct (typed_place_direct_lookup env Σ p T x1 path1 H0 H2)
+        as [T_static [st_static [HΣstatic [_ Htype_path]]]].
+      rewrite HΣstatic in HΣ.
+      inversion HΣ; subst T_static st_static.
+      rewrite HTy in Htype_eval.
+      rewrite Htype_path in Htype_eval.
+      inversion Htype_eval; subst T_eval.
+      repeat split; try assumption;
+        try apply store_ref_targets_preserved_refl;
+        try (eapply value_lookup_path_has_type; eassumption);
+        try (eapply eval_place_lookup_path_roots_within; eassumption).
+    + destruct (eval_place_matches_place_path s_r p x path x1 path1 H5 H2)
+        as [Hx Hpath].
+      subst x path.
+      destruct (store_typed_lookup env s_r Σ x1 se Hstore Hlookup)
+        as [T_root [st [m [HΣ [Hname [HTy [Hst Hvroot]]]]]]].
+      destruct (typed_place_direct_lookup env Σ p T x1 path1 H0 H2)
+        as [T_static [st_static [HΣstatic [_ Htype_path]]]].
+      rewrite HΣstatic in HΣ.
+      inversion HΣ; subst T_static st_static.
+      rewrite HTy in Htype_eval.
+      rewrite Htype_path in Htype_eval.
+      inversion Htype_eval; subst T_eval.
+      repeat split; try assumption;
+        try apply store_ref_targets_preserved_refl;
+        try (eapply value_lookup_path_has_type; eassumption);
+        try (eapply eval_place_lookup_path_roots_within; eassumption).
   - intros s fname Ω n R Σ T Σ' R' roots _ Hstore _ _ _ Htyped.
     inversion Htyped; subst.
     split.

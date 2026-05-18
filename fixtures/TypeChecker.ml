@@ -3939,7 +3939,13 @@ let rec provenance_ready_expr_b = function
 | EBorrow (_, p) -> (match place_path p with
                      | Some _ -> true
                      | None -> false)
-| EDeref _ -> false
+| EDeref e0 ->
+  (match e0 with
+   | EBorrow (_, p) ->
+     (match place_path p with
+      | Some _ -> true
+      | None -> false)
+   | _ -> false)
 | EDrop e1 -> provenance_ready_expr_b e1
 | EIf (e1, e2, e3) ->
   (&&) ((&&) (provenance_ready_expr_b e1) (provenance_ready_expr_b e2))
@@ -4126,6 +4132,7 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
              | None -> Infer_err ErrLifetimeConflict)
           | Infer_err err -> Infer_err err)
        | None -> Infer_err (ErrFunctionNotFound fname))
+    | ECallExpr (_, _) -> Infer_err ErrNotImplemented
     | EStruct (sname, lts, args, fields) ->
       (match lookup_struct sname env with
        | Some s ->
@@ -4298,6 +4305,33 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                 | None -> Infer_err (ErrUnknownVar x)))
           | Infer_err err -> Infer_err err)
        | None -> Infer_err ErrNotImplemented)
+    | EDeref e0 ->
+      (match e0 with
+       | EBorrow (rk, p) ->
+         (match place_path p with
+          | Some p0 ->
+            let (x, _) = p0 in
+            (match infer_place_sctx env _UU03a3_ p with
+             | Infer_ok t_p ->
+               if usage_eqb (ty_usage t_p) UUnrestricted
+               then (match root_env_lookup x r with
+                     | Some roots ->
+                       (match rk with
+                        | RShared -> Infer_ok (((t_p, _UU03a3_), r), roots)
+                        | RUnique ->
+                          (match sctx_lookup_mut x _UU03a3_ with
+                           | Some m ->
+                             (match m with
+                              | MImmutable -> Infer_err (ErrImmutableBorrow x)
+                              | MMutable ->
+                                Infer_ok (((t_p, _UU03a3_), r), roots))
+                           | None -> Infer_err (ErrUnknownVar x)))
+                     | None -> Infer_err ErrContextCheckFailed)
+               else Infer_err (ErrUsageMismatch ((ty_usage t_p),
+                      UUnrestricted))
+             | Infer_err err -> Infer_err err)
+          | None -> Infer_err ErrNotImplemented)
+       | _ -> Infer_err ErrNotImplemented)
     | EDrop e1 ->
       (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r _UU03a3_
                e1 with
@@ -4343,8 +4377,7 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                   | Infer_err err -> Infer_err err)
                | Infer_err err -> Infer_err err)
          else Infer_err (ErrTypeMismatch ((ty_core t_cond), TBooleans))
-       | Infer_err err -> Infer_err err)
-    | _ -> Infer_err ErrNotImplemented)
+       | Infer_err err -> Infer_err err))
     fuel
 
 (** val infer_core_env_roots :
@@ -4502,6 +4535,7 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
              | None -> Infer_err ErrLifetimeConflict)
           | Infer_err err -> Infer_err err)
        | None -> Infer_err (ErrFunctionNotFound fname))
+    | ECallExpr (_, _) -> Infer_err ErrNotImplemented
     | EStruct (sname, lts, args, fields) ->
       (match lookup_struct sname env with
        | Some s ->
@@ -4674,6 +4708,33 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                 | None -> Infer_err (ErrUnknownVar x)))
           | Infer_err err -> Infer_err err)
        | None -> Infer_err ErrNotImplemented)
+    | EDeref e0 ->
+      (match e0 with
+       | EBorrow (rk, p) ->
+         (match place_path p with
+          | Some p0 ->
+            let (x, _) = p0 in
+            (match infer_place_sctx env _UU03a3_ p with
+             | Infer_ok t_p ->
+               if usage_eqb (ty_usage t_p) UUnrestricted
+               then (match root_env_lookup x r with
+                     | Some roots ->
+                       (match rk with
+                        | RShared -> Infer_ok (((t_p, _UU03a3_), r), roots)
+                        | RUnique ->
+                          (match sctx_lookup_mut x _UU03a3_ with
+                           | Some m ->
+                             (match m with
+                              | MImmutable -> Infer_err (ErrImmutableBorrow x)
+                              | MMutable ->
+                                Infer_ok (((t_p, _UU03a3_), r), roots))
+                           | None -> Infer_err (ErrUnknownVar x)))
+                     | None -> Infer_err ErrContextCheckFailed)
+               else Infer_err (ErrUsageMismatch ((ty_usage t_p),
+                      UUnrestricted))
+             | Infer_err err -> Infer_err err)
+          | None -> Infer_err ErrNotImplemented)
+       | _ -> Infer_err ErrNotImplemented)
     | EDrop e1 ->
       (match infer_core_env_state_fuel_roots_shadow_safe fuel' env _UU03a9_ n
                r _UU03a3_ e1 with
@@ -4719,8 +4780,7 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                   | Infer_err err -> Infer_err err)
                | Infer_err err -> Infer_err err)
          else Infer_err (ErrTypeMismatch ((ty_core t_cond), TBooleans))
-       | Infer_err err -> Infer_err err)
-    | _ -> Infer_err ErrNotImplemented)
+       | Infer_err err -> Infer_err err))
     fuel
 
 (** val infer_core_env_roots_shadow_safe :

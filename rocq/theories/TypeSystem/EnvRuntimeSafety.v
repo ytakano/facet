@@ -1031,6 +1031,9 @@ Proof.
         * apply IH with (e := e); [simpl in Hlt; lia | exact Hready].
       + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
         eapply ProvReady_Borrow. exact Hpath.
+      + destruct e; simpl in Hready; try discriminate.
+        destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
+        eapply ProvReady_DerefBorrow. exact Hpath.
       + apply ProvReady_Drop.
         apply IH with (e := e); [simpl in Hlt; lia | exact Hready].
       + apply andb_true_iff in Hready as [H12 H3].

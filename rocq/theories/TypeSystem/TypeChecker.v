@@ -2597,6 +2597,11 @@ Fixpoint provenance_ready_expr_b (e : expr) : bool :=
       provenance_ready_expr_b e3
   | ECall _ _ => false
   | ECallExpr _ _ => false
+  | EDeref (EBorrow _ p) =>
+      match place_path p with
+      | Some _ => true
+      | None => false
+      end
   | EDeref _ => false
   end
 .
@@ -2926,6 +2931,31 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
                   | None => infer_err (ErrUnknownVar x)
                   end
               end
+          end
+      end
+  | EDeref (EBorrow rk p) =>
+      match place_path p with
+      | None => infer_err ErrNotImplemented
+      | Some (x, _) =>
+          match infer_place_sctx env Σ p with
+          | infer_err err => infer_err err
+          | infer_ok T_p =>
+              if usage_eqb (ty_usage T_p) UUnrestricted
+              then
+                match root_env_lookup x R with
+                | None => infer_err ErrContextCheckFailed
+                | Some roots =>
+                    match rk with
+                    | RShared => infer_ok (T_p, Σ, R, roots)
+                    | RUnique =>
+                        match sctx_lookup_mut x Σ with
+                        | Some MMutable => infer_ok (T_p, Σ, R, roots)
+                        | Some MImmutable => infer_err (ErrImmutableBorrow x)
+                        | None => infer_err (ErrUnknownVar x)
+                        end
+                    end
+                end
+              else infer_err (ErrUsageMismatch (ty_usage T_p) UUnrestricted)
           end
       end
   | EDeref _ => infer_err ErrNotImplemented
@@ -3261,6 +3291,31 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
                   | None => infer_err (ErrUnknownVar x)
                   end
               end
+          end
+      end
+  | EDeref (EBorrow rk p) =>
+      match place_path p with
+      | None => infer_err ErrNotImplemented
+      | Some (x, _) =>
+          match infer_place_sctx env Σ p with
+          | infer_err err => infer_err err
+          | infer_ok T_p =>
+              if usage_eqb (ty_usage T_p) UUnrestricted
+              then
+                match root_env_lookup x R with
+                | None => infer_err ErrContextCheckFailed
+                | Some roots =>
+                    match rk with
+                    | RShared => infer_ok (T_p, Σ, R, roots)
+                    | RUnique =>
+                        match sctx_lookup_mut x Σ with
+                        | Some MMutable => infer_ok (T_p, Σ, R, roots)
+                        | Some MImmutable => infer_err (ErrImmutableBorrow x)
+                        | None => infer_err (ErrUnknownVar x)
+                        end
+                    end
+                end
+              else infer_err (ErrUsageMismatch (ty_usage T_p) UUnrestricted)
           end
       end
   | EDeref _ => infer_err ErrNotImplemented
@@ -4431,6 +4486,11 @@ Proof. vm_compute. reflexivity. Qed.
 Example ready_gap_matrix_deref_borrow_validator_rejects :
   check_program_env_alpha_validated_root_shadow_provenance
     ex_ready_gap_deref_borrow_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_deref_borrow_provenance_summary_accepts :
+  check_program_env_alpha_validated_root_shadow_provenance_summary
+    ex_ready_gap_deref_borrow_env = true.
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_ready_gap_call_callee_fn : fn_def :=

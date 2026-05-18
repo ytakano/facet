@@ -748,6 +748,19 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       sctx_lookup_mut x Σ = Some MMutable ->
       typed_env_roots env Ω n R Σ (EBorrow RUnique p)
         (MkTy UAffine (TRef (LVar n) RUnique T)) Σ R [RStore x]
+  | TER_DerefBorrowShared : forall R Σ p T x path roots,
+      typed_place_env_structural env Σ p T ->
+      ty_usage T = UUnrestricted ->
+      place_path p = Some (x, path) ->
+      root_env_lookup x R = Some roots ->
+      typed_env_roots env Ω n R Σ (EDeref (EBorrow RShared p)) T Σ R roots
+  | TER_DerefBorrowUnique : forall R Σ p T x path roots,
+      typed_place_env_structural env Σ p T ->
+      ty_usage T = UUnrestricted ->
+      place_path p = Some (x, path) ->
+      sctx_lookup_mut x Σ = Some MMutable ->
+      root_env_lookup x R = Some roots ->
+      typed_env_roots env Ω n R Σ (EDeref (EBorrow RUnique p)) T Σ R roots
   | TER_If : forall R R1 R2 R3 Σ Σ1 Σ2 Σ3 Σ4 e1 e2 e3
       T_cond T2 T3 roots_cond roots2 roots3,
       typed_env_roots env Ω n R Σ e1 T_cond Σ1 R1 roots_cond ->
@@ -804,7 +817,15 @@ Lemma typed_roots_structural :
 Proof.
   intros env Ω n.
   apply typed_roots_ind;
-    intros; econstructor; eauto.
+    intros; try solve [econstructor; eauto].
+  - eapply TES_Deref_Expr.
+    + reflexivity.
+    + eapply TES_BorrowShared. eassumption.
+    + assumption.
+  - eapply TES_Deref_Expr.
+    + reflexivity.
+    + eapply TES_BorrowUnique; eauto.
+    + assumption.
 Qed.
 
 Lemma typed_env_roots_structural :
@@ -1262,6 +1283,34 @@ Proof.
     + exact HnsR0.
     + exact HR0.
     + apply root_set_equiv_sym. apply root_set_instantiate_store_singleton_equiv.
+  - intros R Σ p T x path roots Hplace Husage Hpath Hlookup
+      Hfresh R0 HnsR HnsR0 HR0.
+    assert (Hlookup_inst :
+      root_env_lookup x (root_env_instantiate rho R) =
+      Some (root_set_instantiate rho roots)).
+    { apply root_env_lookup_instantiate. exact Hlookup. }
+    destruct (root_env_equiv_lookup_r R0 (root_env_instantiate rho R)
+      x (root_set_instantiate rho roots) HR0 Hlookup_inst)
+      as [roots0 [Hlookup0 Hroots0]].
+    exists R0, roots0. split; [| split; [| split]].
+    + eapply TER_DerefBorrowShared; eauto.
+    + exact HnsR0.
+    + exact HR0.
+    + exact Hroots0.
+  - intros R Σ p T x path roots Hplace Husage Hpath Hmut Hlookup
+      Hfresh R0 HnsR HnsR0 HR0.
+    assert (Hlookup_inst :
+      root_env_lookup x (root_env_instantiate rho R) =
+      Some (root_set_instantiate rho roots)).
+    { apply root_env_lookup_instantiate. exact Hlookup. }
+    destruct (root_env_equiv_lookup_r R0 (root_env_instantiate rho R)
+      x (root_set_instantiate rho roots) HR0 Hlookup_inst)
+      as [roots0 [Hlookup0 Hroots0]].
+    exists R0, roots0. split; [| split; [| split]].
+    + eapply TER_DerefBorrowUnique; eauto.
+    + exact HnsR0.
+    + exact HR0.
+    + exact Hroots0.
   - intros R R1 R2 R3 Σ Σ1 Σ2 Σ3 Σ4 e1 e2 e3 T_cond T2 T3
       roots_cond roots2 roots3 He1 IHe1 Hcond He2 IHe2 He3 IHe3 Hcore
       Hmerge HR23 Hfresh R0 HnsR HnsR0 HR0.

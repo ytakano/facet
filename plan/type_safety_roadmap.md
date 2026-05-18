@@ -4,6 +4,23 @@ This file is the active Codex-facing implementation guide. Historical notes,
 completed proof inventory, and older milestone logs live in
 `plan/type_safety_roadmap_history.md`.
 
+## How Codex Should Read This File
+
+Use the first half of this file as the active work guide:
+
+1. Read `Purpose` and `Codex Digest` to identify the target theorem and the
+   current executable endpoints.
+2. Use `Next Implementation Order` to choose the next task. Do not mine
+   `Detailed Status Inventory` for new work unless the quick path points there.
+3. Treat `Current Public Proof Wrappers` as the allowed theorem/API surface
+   before inventing new theorem names.
+4. Treat `Detailed Status Inventory` as history and proof context, not as the
+   implementation queue.
+
+When updating this file, keep the digest, current endpoint, and known gaps in
+sync. Stale theorem names in the digest cause future agents to take the wrong
+route.
+
 ## Purpose
 
 The primary goal is to prove operational type safety for the user-facing,
@@ -38,19 +55,37 @@ Quick interpretation for implementation work:
     -> value_has_type env s' v (fn_ret f).
   ```
 
-- **Current strongest executable theorem:**
+- **User-facing accepted-program checker:**
+  `check_program_env_alpha`
+- **Validated sidecar checker, general provenance route:**
+  `check_program_env_alpha_validated_root_shadow_provenance_summary`
+- **Validated sidecar checker, direct-call-local route:**
+  `check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary`
+- **Strongest executable theorem, general provenance route:**
   `check_program_env_alpha_validated_root_shadow_provenance_summary_big_step_safe_checked_initial_ready`
-- **Current strongest direct-call-local executable theorem:**
+- **Strongest executable theorem, direct-call-local route:**
   `check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary_big_step_safe_checked_initial_ready`
-- **Current sidecar shape to preserve:** validate runtime-only obligations, keep
-  root provenance as proof evidence, not as language acceptance.
-- **Current known gaps (do not close by acceptance widening):**
-  - Ordinary checker acceptance still exceeds validator acceptance.
-  - Initial-runtime readiness remains a separate checked-state premise.
-  - `ECallExpr` remains a design gap.
+- **Current sidecar rule:** executable validators discharge proof evidence;
+  they do not redefine the language accepted by the ordinary checker.
 
-For Codex decisions: when a theorem name changes, update both the
-`Current Endpoint` and this digest block together.
+Current gap summary:
+
+- Ordinary checker acceptance still exceeds validator acceptance.
+- Initial-runtime readiness is a checked execution-state premise, not a program
+  acceptance condition.
+- Direct `ECall` has a localized sidecar route. Do not add it to ordinary
+  expression readiness.
+- `ECallExpr` remains a design gap because root-provenance typing/checking for
+  call expressions is not implemented.
+
+Next-task rule:
+
+1. Prefer reducing concrete validator false negatives already listed in the
+   ready-gap matrix.
+2. Before widening any validator, check the ordinary checker review gates.
+3. If the next step requires a new invariant, checker contract change, or
+   theorem shape decision, stop and document the design choice instead of
+   implementing.
 
 ## Canonical Route
 
@@ -284,7 +319,7 @@ Use these wrappers before adding new theorem shapes:
   `direct_call_callee_body_root_shadow_summary_bridge_of_unique` and
   `direct_call_callee_body_root_shadow_provenance_summary_bridge_of_unique`.
 
-### Current Endpoint
+### Current Endpoints
 
 The top-level name validator route is implemented. `check_program_env_alpha`
 remains unchanged, and `check_program_env_alpha_validated` adds a Rocq-side
@@ -292,11 +327,19 @@ top-level-name uniqueness check over the alpha-normalized environment. The
 sidecar root-shadow validator route is now executable and also runs on the
 alpha-normalized environment.
 
-The current strongest executable route is:
+There are two current executable runtime-safety endpoints:
 
 ```coq
+(* General provenance-summary sidecar route. *)
 check_program_env_alpha_validated_root_shadow_provenance_summary_big_step_safe_checked_initial_ready
+
+(* Direct-call-local provenance-summary sidecar route. *)
+check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary_big_step_safe_checked_initial_ready
 ```
+
+Use the general route for ordinary non-direct-call validator work. Use the
+direct-call-local route only when the caller body is handled by the localized
+direct-call sidecar package.
 
 Current status:
 

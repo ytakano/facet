@@ -108,12 +108,18 @@ Use these wrappers before adding new theorem shapes:
 - Validated program-level direct-call sidecar route with environment-level
   preservation readiness:
   `check_program_env_alpha_validated_big_step_safe_with_direct_call_sidecar_env_ready`.
+- Proof-only root-shadow validator-ready route:
+  `check_program_env_alpha_validated_big_step_safe_with_root_shadow_validator_ready`.
 - Sidecar package predicates:
   `ordinary_alpha_root_shadow_sidecar_ready`,
   `ordinary_alpha_direct_call_meta_ready`,
   `ordinary_alpha_direct_call_sidecar_ready`,
   `ordinary_alpha_direct_call_validated_sidecar_ready`, and
   `initial_root_runtime_ready_for_fn`.
+- Proof-only validator-ready package predicates:
+  `env_fns_root_shadow_summary_check_ready`,
+  `ordinary_alpha_root_shadow_validator_ready`, and
+  `ordinary_alpha_direct_call_validated_root_shadow_validator_ready`.
 - Direct-call bridge from uniqueness:
   `direct_call_callee_body_root_shadow_summary_bridge_of_unique`.
 
@@ -142,6 +148,10 @@ Current status:
   `check_program_env_alpha_validated`. The `_env_ready` validated wrapper also
   absorbs per-function direct-call readiness from the package's
   environment-level preservation readiness.
+- The root-shadow validator-ready contract is proof-only. It repackages
+  `env_fns_root_shadow_summary_evidence` behind check-ready names so public
+  wrappers can state where a future validator soundness theorem should plug in;
+  it does not assert that an executable root-shadow validator exists.
 - `initial_root_runtime_ready_for_fn` remains explicit.
    - It cannot be derived from `initial_store_for_fn` alone.
    - Reason: `initial_root_env_for_fn` stores parameter origins as `RParam`,
@@ -157,6 +167,15 @@ The current sidecar contract is fixed. The remaining explicit premises are:
 Future reductions require a separate root-summary validator or readiness
 validator design. Do not claim that any remaining premise is eliminated without
 that new design and proof route.
+
+Future work:
+
+- Design an executable root-shadow summary validator.
+- Prove that validator soundness implies
+  `env_fns_root_shadow_summary_check_ready`.
+- Connect the executable validator to the proof-only
+  `ordinary_alpha_root_shadow_validator_ready` route without changing the
+  ordinary checker contract.
 
 ### Do Not Do
 

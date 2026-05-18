@@ -597,6 +597,20 @@ Definition initial_root_runtime_ready_for_fn (f : fn_def) (s : store) : Prop :=
   root_env_store_roots_named (initial_root_env_for_fn f) s /\
   root_env_store_keys_named (initial_root_env_for_fn f) s.
 
+Definition env_fns_root_shadow_summary_check_ready (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_summary env fdef.
+
+Definition ordinary_alpha_root_shadow_validator_ready
+    (env : global_env) : Prop :=
+  env_fns_root_shadow_summary_check_ready (alpha_normalize_global_env env).
+
+Definition ordinary_alpha_direct_call_validated_root_shadow_validator_ready
+    (env : global_env) : Prop :=
+  ordinary_alpha_root_shadow_validator_ready env /\
+  env_fns_preservation_ready (alpha_normalize_global_env env).
+
 Definition ordinary_alpha_root_shadow_sidecar_ready (env : global_env) : Prop :=
   env_fns_root_shadow_summary_evidence (alpha_normalize_global_env env).
 
@@ -620,6 +634,26 @@ Lemma ordinary_alpha_root_shadow_sidecar_ready_intro :
 Proof.
   intros env Hroot_shadow.
   exact Hroot_shadow.
+Qed.
+
+Lemma env_fns_root_shadow_summary_evidence_of_check_ready :
+  forall env,
+    env_fns_root_shadow_summary_check_ready env ->
+    env_fns_root_shadow_summary_evidence env.
+Proof.
+  intros env Hcheck fname fdef Hlookup.
+  exact (Hcheck fname fdef Hlookup).
+Qed.
+
+Lemma ordinary_alpha_root_shadow_sidecar_ready_of_validator_ready :
+  forall env,
+    ordinary_alpha_root_shadow_validator_ready env ->
+    ordinary_alpha_root_shadow_sidecar_ready env.
+Proof.
+  intros env Hvalidator.
+  apply ordinary_alpha_root_shadow_sidecar_ready_intro.
+  apply env_fns_root_shadow_summary_evidence_of_check_ready.
+  exact Hvalidator.
 Qed.
 
 Lemma ordinary_alpha_root_shadow_sidecar_ready_evidence :
@@ -683,6 +717,19 @@ Proof.
   - apply ordinary_alpha_root_shadow_sidecar_ready_intro.
     exact Hroot_shadow.
   - apply ordinary_alpha_direct_call_meta_ready_intro; assumption.
+Qed.
+
+Lemma ordinary_alpha_direct_call_validated_sidecar_ready_of_root_shadow_validator_ready :
+  forall env,
+    ordinary_alpha_direct_call_validated_root_shadow_validator_ready env ->
+    ordinary_alpha_direct_call_validated_sidecar_ready env.
+Proof.
+  intros env Hvalidator.
+  destruct Hvalidator as [Hroot_shadow Hfns_ready].
+  split.
+  - apply ordinary_alpha_root_shadow_sidecar_ready_of_validator_ready.
+    exact Hroot_shadow.
+  - exact Hfns_ready.
 Qed.
 
 Lemma check_program_env_alpha_validated_unique :
@@ -869,6 +916,27 @@ Proof.
   - apply preservation_ready_direct_call_ready.
     apply Hfns_ready.
     exact Hin.
+  - exact Hroot_runtime.
+  - exact Heval.
+Qed.
+
+Theorem check_program_env_alpha_validated_big_step_safe_with_root_shadow_validator_ready :
+  forall env f s s' v,
+    check_program_env_alpha_validated env = true ->
+    ordinary_alpha_direct_call_validated_root_shadow_validator_ready env ->
+    In f (env_fns (alpha_normalize_global_env env)) ->
+    initial_store_for_fn (alpha_normalize_global_env env) f s ->
+    initial_root_runtime_ready_for_fn f s ->
+    eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
+    value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hcheck Hvalidator Hin Hstore Hroot_runtime Heval.
+  eapply check_program_env_alpha_validated_big_step_safe_with_direct_call_sidecar_env_ready.
+  - exact Hcheck.
+  - apply ordinary_alpha_direct_call_validated_sidecar_ready_of_root_shadow_validator_ready.
+    exact Hvalidator.
+  - exact Hin.
+  - exact Hstore.
   - exact Hroot_runtime.
   - exact Heval.
 Qed.

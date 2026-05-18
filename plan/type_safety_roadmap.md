@@ -123,6 +123,11 @@ Follow this order before inventing new theorem shapes:
    examples when parser/desugarer behavior would obscure the proof issue.
    Include the still-relevant `plan/review.md` safety cases in this matrix so
    validator widening does not re-open old ordinary-checker bugs.
+   Current implementation note: `TypeChecker.v` now contains a core-AST gap
+   matrix for ordinary-checker accepted shapes rejected by the current
+   preservation-ready validator: annotated `ELet`, existing `ELetInfer`,
+   `EDeref (EBorrow RShared ...)`, direct `ECall`, and
+   `ECallExpr (EFn ...)`.
 2. **Reduce `preservation_ready_expr_b` false negatives.**
    The current executable validator rejects broad syntax classes such as
    `ELet`, `ELetInfer`, direct `ECall`, `ECallExpr`, and `EDeref`. First make
@@ -140,8 +145,11 @@ Follow this order before inventing new theorem shapes:
    provenance-only route is now represented by
    `callee_body_root_shadow_provenance_ready_at`,
    `callee_body_root_shadow_provenance_summary`, and
-   `check_env_root_shadow_provenance_summary`; use these names for future
-   narrowing of direct-call/root evidence.
+   `check_env_root_shadow_provenance_summary`; the program-level entrypoint
+   is `check_program_env_alpha_validated_root_shadow_provenance_summary`.
+   The Rocq examples currently show this provenance-only entrypoint accepts
+   the annotated and inferred ready-gap `let` cases that the split
+   preservation-ready validator rejects.
 3. **Move the non-direct-call structural route toward no validator.**
    Prefer deriving or eliminating `preservation_ready_expr` obligations from
    ordinary typing/checker success over adding more executable checks.
@@ -268,8 +276,10 @@ Current status:
 - The additive provenance-only validator route is implemented for the
   root-shadow summary evidence that does not require `preservation_ready_expr`.
   Its checker soundness theorem is
-  `check_env_root_shadow_provenance_summary_ready`, and the original
-  preservation-ready root-shadow validator route is unchanged.
+  `check_env_root_shadow_provenance_summary_ready`, its program-level
+  entrypoint is
+  `check_program_env_alpha_validated_root_shadow_provenance_summary`, and the
+  original preservation-ready root-shadow validator route is unchanged.
 - The split validator route keeps provenance and preservation readiness as
   separate executable checks. `check_env_root_shadow_provenance_summary`
   supplies root/shadow provenance evidence, `check_env_preservation_ready`
@@ -374,9 +384,10 @@ for these gates before treating a newly accepted syntax class as ordinary-safe.
 - The current executable safety validator is stricter than the ordinary checker.
   In particular, `preservation_ready_expr_b` currently rejects `ELet`,
   `ELetInfer`, `ECall`, `ECallExpr`, and `EDeref`.
-- The provenance-only root-shadow summary validator accepts the elaborated
-  ready-gap let example that the preservation-ready root-shadow validator
-  rejects, but it is not yet wired into a final operational safety theorem.
+- The provenance-only root-shadow summary validator accepts the annotated and
+  inferred ready-gap let examples that the preservation-ready root-shadow
+  validator rejects, but it is not yet wired into a final operational safety
+  theorem.
 - The abandoned synthesis route stops at `If`: `TES_If` lacks the
   `root_env_equiv R2 R3` evidence required by `TERS_If`.
 - General root-checker-to-shadow-safe soundness is false for arbitrary core

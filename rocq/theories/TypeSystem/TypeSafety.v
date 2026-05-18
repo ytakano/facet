@@ -4282,6 +4282,171 @@ with provenance_ready_fields : list (string * expr) -> Prop :=
       provenance_ready_fields rest ->
       provenance_ready_fields ((name, e) :: rest).
 
+Lemma alpha_rename_provenance_ready_expr :
+  forall ρ used e er used',
+    alpha_rename_expr ρ used e = (er, used') ->
+    provenance_ready_expr e ->
+    provenance_ready_expr er
+with alpha_rename_provenance_ready_args :
+  forall ρ used args argsr used',
+    (fix go (used0 : list ident) (args0 : list expr)
+        {struct args0} : list expr * list ident :=
+       match args0 with
+       | [] => ([], used0)
+       | arg :: rest =>
+           let (arg', used1) := alpha_rename_expr ρ used0 arg in
+           let (rest', used2) := go used1 rest in
+           (arg' :: rest', used2)
+       end) used args = (argsr, used') ->
+    provenance_ready_args args ->
+    provenance_ready_args argsr
+with alpha_rename_provenance_ready_fields :
+  forall ρ used fields fieldsr used',
+    (fix go (used0 : list ident) (fields0 : list (string * expr))
+        {struct fields0} : list (string * expr) * list ident :=
+       match fields0 with
+       | [] => ([], used0)
+       | (fname, e) :: rest =>
+           let (e', used1) := alpha_rename_expr ρ used0 e in
+           let (rest', used2) := go used1 rest in
+           ((fname, e') :: rest', used2)
+       end) used fields = (fieldsr, used') ->
+    provenance_ready_fields fields ->
+    provenance_ready_fields fieldsr.
+Proof.
+  - intros ρ used e er used' Hrename Hready.
+    destruct Hready; simpl in Hrename.
+    + inversion Hrename; subst. constructor.
+    + inversion Hrename; subst. constructor.
+    + inversion Hrename; subst. constructor.
+    + inversion Hrename; subst. constructor.
+    + inversion Hrename; subst.
+      destruct (place_path_rename_place_some ρ p x path H)
+        as [xr Hpath].
+      eapply ProvReady_Place_Direct. exact Hpath.
+    + inversion Hrename; subst.
+      destruct (place_path_rename_place_some ρ p x path H)
+        as [xr Hpath].
+      eapply ProvReady_Borrow. exact Hpath.
+    + destruct
+        ((fix go (used0 : list ident) (fields0 : list (string * expr))
+             {struct fields0} : list (string * expr) * list ident :=
+            match fields0 with
+            | [] => ([], used0)
+            | (fname, e) :: rest =>
+                let (e', used1) := alpha_rename_expr ρ used0 e in
+                let (rest', used2) := go used1 rest in
+                ((fname, e') :: rest', used2)
+            end) used fields)
+        as [fieldsr used_fields] eqn:Hfields.
+      inversion Hrename; subst.
+      apply ProvReady_Struct.
+      eapply alpha_rename_provenance_ready_fields; eauto.
+    + destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
+      destruct (alpha_rename_expr
+        ((x, fresh_ident x (x :: free_vars_expr e2 ++ used1)) :: ρ)
+        (fresh_ident x (x :: free_vars_expr e2 ++ used1) ::
+          x :: free_vars_expr e2 ++ used1) e2)
+        as [e2r used2] eqn:He2.
+      inversion Hrename; subst.
+      apply ProvReady_Let.
+      * eapply alpha_rename_provenance_ready_expr; eauto.
+      * eapply alpha_rename_provenance_ready_expr; eauto.
+    + destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
+      destruct (alpha_rename_expr
+        ((x, fresh_ident x (x :: free_vars_expr e2 ++ used1)) :: ρ)
+        (fresh_ident x (x :: free_vars_expr e2 ++ used1) ::
+          x :: free_vars_expr e2 ++ used1) e2)
+        as [e2r used2] eqn:He2.
+      inversion Hrename; subst.
+      apply ProvReady_LetInfer.
+      * eapply alpha_rename_provenance_ready_expr; eauto.
+      * eapply alpha_rename_provenance_ready_expr; eauto.
+    + destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
+      inversion Hrename; subst.
+      apply ProvReady_Drop.
+      eapply alpha_rename_provenance_ready_expr; eauto.
+    + destruct (alpha_rename_expr ρ used e_new) as [er_new used_new]
+        eqn:Hnew.
+      inversion Hrename; subst.
+      destruct (place_path_rename_place_some ρ p x path H)
+        as [xr Hpath].
+      eapply ProvReady_Assign.
+      * exact Hpath.
+      * eapply alpha_rename_provenance_ready_expr; eauto.
+    + destruct (alpha_rename_expr ρ used e_new) as [er_new used_new]
+        eqn:Hnew.
+      inversion Hrename; subst.
+      destruct (place_path_rename_place_some ρ p x path H)
+        as [xr Hpath].
+      eapply ProvReady_Replace.
+      * exact Hpath.
+      * eapply alpha_rename_provenance_ready_expr; eauto.
+    + destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
+      destruct (alpha_rename_expr ρ used1 e2) as [e2r used2] eqn:He2.
+      destruct (alpha_rename_expr ρ used2 e3) as [e3r used3] eqn:He3.
+      inversion Hrename; subst.
+      apply ProvReady_If.
+      * eapply alpha_rename_provenance_ready_expr; eauto.
+      * eapply alpha_rename_provenance_ready_expr; eauto.
+      * eapply alpha_rename_provenance_ready_expr; eauto.
+  - intros ρ used args argsr used' Hrename Hready.
+    destruct Hready as [| arg rest Harg Hrest]; simpl in Hrename.
+    + inversion Hrename; subst. constructor.
+    + destruct (alpha_rename_expr ρ used arg) as [ar used1] eqn:Harg_ren.
+      destruct
+        ((fix go (used0 : list ident) (args0 : list expr)
+             {struct args0} : list expr * list ident :=
+            match args0 with
+            | [] => ([], used0)
+            | arg0 :: rest0 =>
+                let (arg', used2) := alpha_rename_expr ρ used0 arg0 in
+                let (rest', used3) := go used2 rest0 in
+                (arg' :: rest', used3)
+            end) used1 rest)
+        as [restr used2] eqn:Hrest_ren.
+      inversion Hrename; subst.
+      constructor.
+      * eapply alpha_rename_provenance_ready_expr; eauto.
+      * eapply alpha_rename_provenance_ready_args; eauto.
+  - intros ρ used fields fieldsr used' Hrename Hready.
+    destruct Hready as [| name e rest He Hrest]; simpl in Hrename.
+    + inversion Hrename; subst. constructor.
+    + destruct (alpha_rename_expr ρ used e) as [er used1] eqn:He_ren.
+      destruct
+        ((fix go (used0 : list ident) (fields0 : list (string * expr))
+             {struct fields0} : list (string * expr) * list ident :=
+            match fields0 with
+            | [] => ([], used0)
+            | (fname, e0) :: rest0 =>
+                let (e', used2) := alpha_rename_expr ρ used0 e0 in
+                let (rest', used3) := go used2 rest0 in
+                ((fname, e') :: rest', used3)
+            end) used1 rest)
+        as [restr used2] eqn:Hrest_ren.
+      inversion Hrename; subst.
+      constructor.
+      * eapply alpha_rename_provenance_ready_expr; eauto.
+      * eapply alpha_rename_provenance_ready_fields; eauto.
+Qed.
+
+Lemma alpha_rename_fn_def_provenance_ready_body :
+  forall used f fr used',
+    alpha_rename_fn_def used f = (fr, used') ->
+    provenance_ready_expr (fn_body f) ->
+    provenance_ready_expr (fn_body fr).
+Proof.
+  intros used f fr used' Hrename Hready.
+  unfold alpha_rename_fn_def in Hrename.
+  destruct (alpha_rename_params [] (param_names (fn_params f) ++
+             free_vars_expr (fn_body f) ++ used) (fn_params f))
+    as [[paramsr ρ] used1] eqn:Hparams.
+  destruct (alpha_rename_expr ρ used1 (fn_body f)) as [bodyr used2]
+    eqn:Hbody.
+  inversion Hrename; subst. simpl.
+  eapply alpha_rename_provenance_ready_expr; eauto.
+Qed.
+
 Lemma preservation_ready_fields_lookup :
   forall fields name e,
     preservation_ready_fields fields ->
@@ -13776,6 +13941,227 @@ Proof.
   { eapply preservation_ready_implies_provenance_ready.
     exact Hready_fcall. }
   unfold callee_body_root_shadow_ready_at.
+  exists T_body, Γ_out_r,
+    (R_body_inst ++ root_env_remove_params (fn_params fcall) R_args),
+    roots_body_inst.
+  repeat split; try assumption;
+    try (rewrite call_param_root_env_app_tail; unfold sctx_of_ctx;
+         rewrite Houts; rewrite Hlts; exact Htyped_tail);
+    try (rewrite Houts; rewrite Hret; exact Hcompat_body).
+Qed.
+
+Lemma direct_call_callee_body_root_shadow_provenance_summary_bridge_of_unique :
+  forall env,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+        (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs
+        used',
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      typed_args_roots env Ω n R Σ args
+        (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+      eval_args env s args s_args vs ->
+      provenance_ready_args args ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+      callee_body_root_shadow_provenance_ready_at env fcall
+        (call_param_root_env (fn_params fcall) arg_roots R_args).
+Proof.
+  intros env Hunique Hsummary Ω n R Σ Σ_args R_args arg_roots fname args
+    fdef fcall σ s s_args vs used' Hin Hfname Htyped_args Heval_args
+    Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
+  unfold env_fns_root_shadow_provenance_summary_evidence in Hsummary.
+  unfold callee_body_root_shadow_provenance_summary in Hsummary.
+  destruct (Hsummary fname fdef
+              (lookup_fn_in_unique_by_name env fname fdef Hin Hfname Hunique))
+    as [Hnodup_fdef Hready].
+  unfold callee_body_root_shadow_provenance_ready_at in Hready.
+  destruct Hready as
+    (T_body & Γ_out & R_body & roots_body &
+      Hprov_body & Htyped_body & Hcompat_body &
+      Hexclude_roots & Hexclude_env).
+  destruct (alpha_rename_fn_def_initial_support_facts
+              (store_names s_args) fdef fcall used' Hrename Hnodup_fdef)
+    as (rho & used_params & Hparams_rename & Hbody_rename &
+        Halpha_params & Hrn_initial & Hrn_initial_r & Hinitial_equiv &
+        Hkeys_initial & Hroots_initial & Hnocoll_initial & Hctx_used &
+        Hrange_used & Hdisj).
+  destruct (alpha_rename_fn_def_static_fields
+              (store_names s_args) fdef fcall used' Hrename)
+    as [_ [Hlts [Houts Hret]]].
+  assert (Hsame_body :
+    sctx_same_bindings
+      (sctx_of_ctx (params_ctx (fn_params fdef)))
+      (sctx_of_ctx Γ_out)).
+  { eapply typed_env_structural_same_bindings.
+    eapply typed_env_roots_structural.
+    eapply typed_env_roots_shadow_safe_roots. exact Htyped_body. }
+  assert (Hkeys_body : root_env_sctx_keys_named R_body (sctx_of_ctx Γ_out)).
+  { destruct (typed_roots_shadow_safe_sctx_keys_named_mutual env
+                (fn_outlives fdef) (fn_lifetimes fdef)) as [Hkeys_expr _].
+    eapply Hkeys_expr; eassumption. }
+  assert (Hroots_body_named :
+    root_env_sctx_roots_named R_body (sctx_of_ctx Γ_out) /\
+    root_set_sctx_roots_named roots_body (sctx_of_ctx Γ_out)).
+  { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env
+                (fn_outlives fdef) (fn_lifetimes fdef)) as [Hroots_expr _].
+    eapply Hroots_expr; eassumption. }
+  destruct Hroots_body_named as [Hroots_env_body Hroots_set_body].
+  assert (Hrn_body : root_env_no_shadow R_body).
+  { eapply typed_env_roots_no_shadow.
+    - eapply typed_env_roots_shadow_safe_roots. exact Htyped_body.
+    - exact Hrn_initial. }
+  assert (Hnocoll_body :
+    rename_no_collision_on rho (root_env_names R_body)).
+  { eapply rename_no_collision_on_root_env_names_from_typed_support;
+      eassumption. }
+  destruct (alpha_rename_typed_env_roots_shadow_safe_full_support_forward
+              env (fn_outlives fdef) (fn_lifetimes fdef) rho
+              (initial_root_env_for_fn fdef)
+              (initial_root_env_for_params_origin
+                (fn_params fdef) (fn_params fcall))
+              (sctx_of_ctx (params_ctx (fn_params fdef)))
+              (sctx_of_ctx (params_ctx (fn_params fcall)))
+              (fn_body fdef) (fn_body fcall) used_params used'
+              T_body (sctx_of_ctx Γ_out) R_body roots_body
+              Htyped_body Halpha_params Hrn_initial Hrn_initial_r
+              Hinitial_equiv Hkeys_initial Hroots_initial
+              Hnocoll_initial Hnocoll_body Hctx_used Hrange_used Hdisj
+              Hbody_rename)
+    as (Γ_out_r & R_body_r & roots_body_r &
+        Htyped_renamed & Halpha_out & Hrn_body_r & Hbody_equiv &
+        Hroots_equiv).
+  assert (Hexclude_roots_renamed :
+    roots_exclude_params (fn_params fcall) roots_body_r).
+  { eapply roots_exclude_params_rename_from_typed_support; eassumption. }
+  assert (Hexclude_env_renamed :
+    root_env_excludes_params (fn_params fcall) R_body_r).
+  { eapply root_env_excludes_params_rename_from_typed_support.
+    - exact Halpha_params.
+    - exact Halpha_out.
+    - exact Hsame_body.
+    - exact Hnodup_fdef.
+    - exact Hrn_body.
+    - exact Hbody_equiv.
+    - exact Hkeys_body.
+    - exact Hroots_env_body.
+    - exact Hexclude_env. }
+  pose proof (alpha_rename_fn_def_shape (store_names s_args)
+                fdef fcall used' Hrename) as Hshape.
+  destruct Hshape as [_ [_ Hparams_alpha]].
+  assert (Hlen_arg_roots_fdef :
+    List.length arg_roots = List.length (fn_params fdef)).
+  { rewrite <- (apply_lt_params_length σ (fn_params fdef)).
+    eapply typed_args_roots_arg_roots_length. exact Htyped_args. }
+  assert (Hlen_arg_roots_fcall :
+    List.length arg_roots = List.length (fn_params fcall)).
+  { rewrite <- (params_alpha_length _ _ Hparams_alpha).
+    exact Hlen_arg_roots_fdef. }
+  assert (Hrn_call_empty :
+    root_env_no_shadow (call_param_root_env (fn_params fcall) arg_roots [])).
+  { apply call_param_root_env_no_shadow.
+    - eapply alpha_rename_fn_def_params_nodup_ctx_names. exact Hrename.
+    - simpl. constructor. }
+  assert (Hinitial_inst_equiv :
+    root_env_equiv
+      (root_env_instantiate
+        (root_subst_of_params (fn_params fdef) arg_roots)
+        (initial_root_env_for_params_origin
+          (fn_params fdef) (fn_params fcall)))
+      (call_param_root_env (fn_params fcall) arg_roots [])).
+  { eapply root_env_instantiate_initial_origin_equiv_call_param_root_env_empty;
+      eassumption. }
+  assert (Harg_roots_named :
+    Forall (fun roots => root_set_store_roots_named roots s_args) arg_roots).
+  { destruct (proj1 (proj2 eval_preserves_root_names_ready_mutual)
+              env s args s_args vs Heval_args Ω n R Σ
+              (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots
+              Hprov_args Hstore Hroots Hshadow Hrn Hnamed Htyped_args)
+      as [_ Harg_roots_named].
+    exact Harg_roots_named. }
+  assert (Hsubst_fresh :
+    root_subst_images_exclude_names (expr_local_store_names (fn_body fcall))
+      (root_subst_of_params (fn_params fdef) arg_roots)).
+  { eapply root_subst_of_params_images_exclude_names_from_store_roots.
+    - exact Harg_roots_named.
+    - eapply alpha_rename_fn_def_body_local_store_names_fresh_used.
+      exact Hrename. }
+  destruct (typed_env_roots_shadow_safe_instantiate_fresh
+              env (fn_outlives fdef) (fn_lifetimes fdef)
+              (root_subst_of_params (fn_params fdef) arg_roots)
+              (initial_root_env_for_params_origin
+                (fn_params fdef) (fn_params fcall))
+              (sctx_of_ctx (params_ctx (fn_params fcall)))
+              (fn_body fcall) T_body Γ_out_r R_body_r roots_body_r
+              (call_param_root_env (fn_params fcall) arg_roots [])
+              Htyped_renamed Hsubst_fresh Hrn_initial_r Hrn_call_empty)
+    as (R_body_inst & roots_body_inst &
+        Htyped_inst & Hrn_body_inst & Hbody_inst_equiv &
+        Hroots_inst_equiv).
+  { apply root_env_equiv_sym. exact Hinitial_inst_equiv. }
+  assert (Hfresh_params :
+    params_fresh_in_store (fn_params fcall) s_args).
+  { eapply alpha_rename_fn_def_params_fresh_in_store. exact Hrename. }
+  assert (Harg_roots_exclude :
+    Forall (roots_exclude_params (fn_params fcall)) arg_roots).
+  { eapply root_sets_store_roots_named_excludes_params; eassumption. }
+  assert (Himages_exclude :
+    forall x,
+      In x (ctx_names (params_ctx (fn_params fcall))) ->
+      root_subst_images_exclude x
+        (root_subst_of_params (fn_params fdef) arg_roots)).
+  { intros x Hin_x.
+    apply root_subst_of_params_images_exclude.
+    eapply Forall_impl; [| exact Harg_roots_exclude].
+    intros roots_i Hroots_i.
+    apply Hroots_i. exact Hin_x. }
+  assert (Hexclude_roots_inst :
+    roots_exclude_params (fn_params fcall) roots_body_inst).
+  { eapply roots_exclude_params_equiv.
+    - apply root_set_equiv_sym. exact Hroots_inst_equiv.
+    - eapply roots_exclude_params_instantiate.
+      + exact Hexclude_roots_renamed.
+      + exact Himages_exclude. }
+  assert (Hexclude_env_inst :
+    root_env_excludes_params (fn_params fcall) R_body_inst).
+  { eapply root_env_excludes_params_equiv.
+    - apply root_env_equiv_sym. exact Hbody_inst_equiv.
+    - eapply root_env_excludes_params_instantiate.
+      + exact Hexclude_env_renamed.
+      + exact Himages_exclude. }
+  assert (Htail_fresh :
+    root_env_tail_fresh_names
+      (root_env_remove_params (fn_params fcall) R_args)
+      (expr_local_store_names (fn_body fcall))).
+  { eapply eval_args_root_tail_fresh_names_for_fresh_call; eassumption. }
+  assert (Htyped_tail :
+    typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
+      (call_param_root_env (fn_params fcall) arg_roots [] ++
+        root_env_remove_params (fn_params fcall) R_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (fn_body fcall) T_body Γ_out_r
+      (R_body_inst ++ root_env_remove_params (fn_params fcall) R_args)
+      roots_body_inst).
+  { eapply typed_env_roots_shadow_safe_tail_frame; eassumption. }
+  assert (Htail_exclude :
+    root_env_excludes_params (fn_params fcall)
+      (root_env_remove_params (fn_params fcall) R_args)).
+  { apply root_env_remove_params_excludes_params.
+    - eapply typed_args_roots_no_shadow; eassumption.
+    - eapply eval_args_root_names_excludes_params_ready; eassumption. }
+  assert (Hexclude_env_tail :
+    root_env_excludes_params (fn_params fcall)
+      (R_body_inst ++ root_env_remove_params (fn_params fcall) R_args)).
+  { apply root_env_excludes_params_app; assumption. }
+  assert (Hprov_fcall : provenance_ready_expr (fn_body fcall)).
+  { eapply alpha_rename_fn_def_provenance_ready_body; eassumption. }
+  unfold callee_body_root_shadow_provenance_ready_at.
   exists T_body, Γ_out_r,
     (R_body_inst ++ root_env_remove_params (fn_params fcall) R_args),
     roots_body_inst.

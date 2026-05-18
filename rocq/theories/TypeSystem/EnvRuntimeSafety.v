@@ -2,7 +2,7 @@ From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules RootProvenance TypeChecker RuntimeTyping
   EnvStructuralRules CheckerSoundness AlphaRenaming EnvTypingSoundness TypeSafety
   EnvRootSoundness.
-From Stdlib Require Import List.
+From Stdlib Require Import List Bool.
 Import ListNotations.
 
 Definition initial_store_for_fn (env : global_env) (f : fn_def) (s : store) : Prop :=
@@ -608,6 +608,11 @@ Definition ordinary_alpha_direct_call_sidecar_ready (env : global_env) : Prop :=
   ordinary_alpha_root_shadow_sidecar_ready env /\
   ordinary_alpha_direct_call_meta_ready env.
 
+Definition ordinary_alpha_direct_call_validated_sidecar_ready
+    (env : global_env) : Prop :=
+  ordinary_alpha_root_shadow_sidecar_ready env /\
+  env_fns_preservation_ready (alpha_normalize_global_env env).
+
 Lemma ordinary_alpha_root_shadow_sidecar_ready_intro :
   forall env,
     env_fns_root_shadow_summary_evidence (alpha_normalize_global_env env) ->
@@ -678,6 +683,46 @@ Proof.
   - apply ordinary_alpha_root_shadow_sidecar_ready_intro.
     exact Hroot_shadow.
   - apply ordinary_alpha_direct_call_meta_ready_intro; assumption.
+Qed.
+
+Lemma check_program_env_alpha_validated_unique :
+  forall env,
+    check_program_env_alpha_validated env = true ->
+    fn_env_unique_by_name (alpha_normalize_global_env env).
+Proof.
+  intros env Hcheck.
+  unfold check_program_env_alpha_validated in Hcheck.
+  apply andb_true_iff in Hcheck.
+  destruct Hcheck as [Hunique _].
+  apply top_level_names_unique_b_fn_env_unique_by_name.
+  exact Hunique.
+Qed.
+
+Lemma check_program_env_alpha_validated_checked :
+  forall env,
+    check_program_env_alpha_validated env = true ->
+    check_program_env_alpha env = true.
+Proof.
+  intros env Hcheck.
+  unfold check_program_env_alpha_validated in Hcheck.
+  apply andb_true_iff in Hcheck.
+  exact (proj2 Hcheck).
+Qed.
+
+Lemma ordinary_alpha_direct_call_validated_sidecar_ready_package :
+  forall env,
+    check_program_env_alpha_validated env = true ->
+    ordinary_alpha_direct_call_validated_sidecar_ready env ->
+    ordinary_alpha_direct_call_sidecar_ready env.
+Proof.
+  intros env Hcheck Hsidecar.
+  destruct Hsidecar as [Hroot_shadow Hfns_ready].
+  apply ordinary_alpha_direct_call_sidecar_ready_intro.
+  - exact Hroot_shadow.
+  - apply ordinary_alpha_direct_call_meta_ready_intro.
+    + apply check_program_env_alpha_validated_unique.
+      exact Hcheck.
+    + exact Hfns_ready.
 Qed.
 
 Lemma ordinary_alpha_direct_call_sidecar_ready_root_shadow :
@@ -777,6 +822,31 @@ Proof.
   - eapply infer_full_env_alpha_big_step_safe_with_direct_call_sidecar_ready;
       eassumption.
   - simpl in Hcheck. discriminate.
+Qed.
+
+Theorem check_program_env_alpha_validated_big_step_safe_with_direct_call_sidecar_ready :
+  forall env f s s' v,
+    check_program_env_alpha_validated env = true ->
+    ordinary_alpha_direct_call_validated_sidecar_ready env ->
+    In f (env_fns (alpha_normalize_global_env env)) ->
+    initial_store_for_fn (alpha_normalize_global_env env) f s ->
+    preservation_direct_call_ready_expr (fn_body f) ->
+    initial_root_runtime_ready_for_fn f s ->
+    eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
+    value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hcheck Hsidecar Hin Hstore Hready
+    Hroot_runtime Heval.
+  eapply check_program_env_alpha_big_step_safe_with_direct_call_sidecar_ready.
+  - apply check_program_env_alpha_validated_checked.
+    exact Hcheck.
+  - eapply ordinary_alpha_direct_call_validated_sidecar_ready_package;
+      eassumption.
+  - exact Hin.
+  - exact Hstore.
+  - exact Hready.
+  - exact Hroot_runtime.
+  - exact Heval.
 Qed.
 
 Theorem infer_full_env_alpha_big_step_safe_with_root_sidecar :

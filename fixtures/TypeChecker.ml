@@ -3829,6 +3829,29 @@ let rec duplicate_param_name_aux seen = function
 let duplicate_param_name ps =
   duplicate_param_name_aux [] ps
 
+(** val string_names_unique_b : string list -> bool **)
+
+let rec string_names_unique_b = function
+| [] -> true
+| x :: xs' -> (&&) (negb (string_in x xs')) (string_names_unique_b xs')
+
+(** val fn_name_strings : fn_def list -> string list **)
+
+let fn_name_strings fns =
+  map (fun f -> fst f.fn_name) fns
+
+(** val top_level_names : global_env -> string list **)
+
+let top_level_names env =
+  app (map (fun s -> s.struct_name) env.env_structs)
+    (app (map (fun t -> t.trait_name) env.env_traits)
+      (fn_name_strings env.env_fns))
+
+(** val top_level_names_unique_b : global_env -> bool **)
+
+let top_level_names_unique_b env =
+  string_names_unique_b (top_level_names env)
+
 (** val infer_env : global_env -> fn_def -> (ty * ctx) infer_result **)
 
 let infer_env env f =
@@ -4132,3 +4155,9 @@ let check_program_env env =
 
 let check_program_env_alpha env =
   check_program_env (alpha_normalize_global_env env)
+
+(** val check_program_env_alpha_validated : global_env -> bool **)
+
+let check_program_env_alpha_validated env =
+  (&&) (top_level_names_unique_b (alpha_normalize_global_env env))
+    (check_program_env_alpha env)

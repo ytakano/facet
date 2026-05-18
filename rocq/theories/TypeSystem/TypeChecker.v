@@ -2562,6 +2562,69 @@ Proof.
       * apply (IH H). exact Hin.
 Qed.
 
+Fixpoint string_names_unique_b (xs : list string) : bool :=
+  match xs with
+  | [] => true
+  | x :: xs' => negb (string_in x xs') && string_names_unique_b xs'
+  end.
+
+Definition fn_name_strings (fns : list fn_def) : list string :=
+  map (fun f => fst (fn_name f)) fns.
+
+Definition top_level_names (env : global_env) : list string :=
+  map struct_name (env_structs env) ++
+  map trait_name (env_traits env) ++
+  fn_name_strings (env_fns env).
+
+Definition top_level_names_unique_b (env : global_env) : bool :=
+  string_names_unique_b (top_level_names env).
+
+Lemma string_names_unique_b_nodup : forall xs,
+  string_names_unique_b xs = true ->
+  NoDup xs.
+Proof.
+  induction xs as [| x xs IH]; simpl; intros Hunique.
+  - constructor.
+  - apply andb_true_iff in Hunique.
+    destruct Hunique as [Hfresh Hrest].
+    apply negb_true_iff in Hfresh.
+    constructor.
+    + apply string_in_false_not_in. exact Hfresh.
+    + apply IH. exact Hrest.
+Qed.
+
+Lemma NoDup_app_right : forall (A : Type) (xs ys : list A),
+  NoDup (xs ++ ys) ->
+  NoDup ys.
+Proof.
+  intros A xs.
+  induction xs as [| x xs IH]; intros ys Hnodup.
+  - simpl in Hnodup. exact Hnodup.
+  - simpl in Hnodup. inversion Hnodup as [| ? ? _ Hnodup_tail]; subst.
+    apply IH. exact Hnodup_tail.
+Qed.
+
+Lemma top_level_names_unique_b_nodup : forall env,
+  top_level_names_unique_b env = true ->
+  NoDup (top_level_names env).
+Proof.
+  intros env Hunique.
+  unfold top_level_names_unique_b in Hunique.
+  apply string_names_unique_b_nodup. exact Hunique.
+Qed.
+
+Lemma top_level_names_unique_b_fn_names_nodup : forall env,
+  top_level_names_unique_b env = true ->
+  NoDup (fn_name_strings (env_fns env)).
+Proof.
+  intros env Hunique.
+  pose proof (top_level_names_unique_b_nodup env Hunique) as Hnodup.
+  unfold top_level_names in Hnodup.
+  apply (NoDup_app_right string
+    (map struct_name (env_structs env) ++ map trait_name (env_traits env))).
+  rewrite <- app_assoc. exact Hnodup.
+Qed.
+
 Lemma ctx_names_params_ctx_param_names : forall ps,
   ctx_names (params_ctx ps) = param_names ps.
 Proof.
@@ -3219,6 +3282,10 @@ Definition check_program_env (env : global_env) : bool :=
 Definition check_program_env_alpha (env : global_env) : bool :=
   check_program_env (alpha_normalize_global_env env).
 
+Definition check_program_env_alpha_validated (env : global_env) : bool :=
+  top_level_names_unique_b (alpha_normalize_global_env env) &&
+  check_program_env_alpha env.
+
 Definition ex_struct_split : struct_def :=
   MkStructDef ("Split"%string) 0 0 []
     [ MkFieldDef ("x"%string) MImmutable (MkTy UAffine TIntegers)
@@ -3354,4 +3421,5 @@ From Stdlib Require Import ExtrOcamlZBigInt.
 Extraction "../fixtures/TypeChecker.ml"
   infer_core_env_roots infer_env_roots infer_full_env_roots
   infer_env infer_full_env check_program_env
-  alpha_normalize_global_env check_program_env_alpha.
+  alpha_normalize_global_env check_program_env_alpha
+  check_program_env_alpha_validated.

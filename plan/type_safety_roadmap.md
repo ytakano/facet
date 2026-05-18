@@ -103,18 +103,22 @@ Use these wrappers before adding new theorem shapes:
   `infer_full_env_alpha_big_step_safe_with_direct_call_sidecar_ready`.
 - Program-level direct-call sidecar route:
   `check_program_env_alpha_big_step_safe_with_direct_call_sidecar_ready`.
+- Validated program-level direct-call sidecar route:
+  `check_program_env_alpha_validated_big_step_safe_with_direct_call_sidecar_ready`.
 - Sidecar package predicates:
   `ordinary_alpha_root_shadow_sidecar_ready`,
   `ordinary_alpha_direct_call_meta_ready`,
-  `ordinary_alpha_direct_call_sidecar_ready`, and
+  `ordinary_alpha_direct_call_sidecar_ready`,
+  `ordinary_alpha_direct_call_validated_sidecar_ready`, and
   `initial_root_runtime_ready_for_fn`.
 - Direct-call bridge from uniqueness:
   `direct_call_callee_body_root_shadow_summary_bridge_of_unique`.
 
 ### Next Implementation Task
 
-The sidecar package has been decomposed. Under the current policy, do not
-reduce these premises by changing ordinary checker acceptance.
+The top-level name validator route is implemented. `check_program_env_alpha`
+remains unchanged, and `check_program_env_alpha_validated` adds a Rocq-side
+top-level-name uniqueness check over the alpha-normalized environment.
 
 Current status:
 
@@ -124,18 +128,22 @@ Current status:
   preservation readiness.
 - `ordinary_alpha_direct_call_sidecar_ready` remains as the compatibility
   package used by existing public wrappers.
+- `ordinary_alpha_direct_call_validated_sidecar_ready` removes function-name
+  uniqueness from the explicit sidecar package; uniqueness is derived from
+  `check_program_env_alpha_validated`.
 - `initial_root_runtime_ready_for_fn` remains explicit.
    - It cannot be derived from `initial_store_for_fn` alone.
    - Reason: `initial_root_env_for_fn` stores parameter origins as `RParam`,
      while runtime references require concrete `RStore` reachability.
 
-Next implementation choices require a new design decision:
+Remaining implementation choices require a new design decision:
 
-1. Add a separate validator/theorem for function-name uniqueness and
-   preservation readiness.
-2. Expand structural preservation coverage so `preservation_ready_expr` can be
+1. Add a separate validator/theorem for preservation readiness.
+2. Add a checker/root-summary validator route for
+   `env_fns_root_shadow_summary_evidence`.
+3. Expand structural preservation coverage so `preservation_ready_expr` can be
    removed from ordinary-facing wrappers.
-3. Keep the current proof wrappers as the explicit sidecar contract.
+4. Keep the current validated proof wrappers as the explicit sidecar contract.
 
 Do not pick one of these in implementation mode without user confirmation.
 
@@ -153,8 +161,9 @@ Do not pick one of these in implementation mode without user confirmation.
 
 - Ordinary checker success does not imply
   `env_fns_root_shadow_summary_evidence`.
-- Ordinary checker success does not imply `fn_env_unique_by_name` or
-  `env_fns_preservation_ready`.
+- `check_program_env_alpha_validated` now implies `fn_env_unique_by_name` for
+  the alpha-normalized environment.
+- Ordinary checker success still does not imply `env_fns_preservation_ready`.
 - The abandoned synthesis route stops at `If`: `TES_If` lacks the
   `root_env_equiv R2 R3` evidence required by `TERS_If`.
 - General root-checker-to-shadow-safe soundness is false for arbitrary core
@@ -286,10 +295,17 @@ verbose than the quick path. Do not use it as the primary implementation order.
      and preservation readiness. The compatibility predicate
      `ordinary_alpha_direct_call_sidecar_ready` remains for existing public
      wrappers.
+   - Done: added the Rocq-side top-level name validator route:
+     `top_level_names_unique_b`, `check_program_env_alpha_validated`, and
+     `check_program_env_alpha_validated_big_step_safe_with_direct_call_sidecar_ready`.
+     This keeps `check_program_env_alpha` unchanged while letting the
+     validated wrapper derive `fn_env_unique_by_name` for the
+     alpha-normalized environment.
    - Remaining ordinary-safety blocker: under the current ordinary-checker
-     contract, the decomposed sidecar premises stay explicit. Reducing them
-     further requires a separate validator/theorem or broader preservation
-     coverage, not a proof-only wrapper change.
+     contract, root/shadow summary evidence, preservation readiness, and
+     initial root/runtime readiness stay explicit. Reducing them further
+     requires a separate validator/theorem or broader preservation coverage,
+     not a proof-only wrapper change.
    - Sidecar limitation: ordinary checker success still does not by itself
      produce `env_fns_root_shadow_summary_evidence` for the alpha-normalized
      function environment. Existing facts only project root/shadow-root typing

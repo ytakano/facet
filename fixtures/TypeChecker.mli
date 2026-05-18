@@ -664,6 +664,14 @@ val duplicate_param_name_aux : string list -> param list -> ident option
 
 val duplicate_param_name : param list -> ident option
 
+val string_names_unique_b : string list -> bool
+
+val fn_name_strings : fn_def list -> string list
+
+val top_level_names : global_env -> string list
+
+val top_level_names_unique_b : global_env -> bool
+
 val infer_env : global_env -> fn_def -> (ty * ctx) infer_result
 
 val infer_env_roots :
@@ -718,3 +726,5 @@ val alpha_normalize_global_env : global_env -> global_env
 val check_program_env : global_env -> bool
 
 val check_program_env_alpha : global_env -> bool
+
+val check_program_env_alpha_validated : global_env -> bool

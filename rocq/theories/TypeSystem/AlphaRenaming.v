@@ -1677,6 +1677,337 @@ Proof.
     + exact IH.
 Qed.
 
+Lemma NoDup_app_from_Forall : forall (xs ys : list ident),
+  NoDup xs ->
+  NoDup ys ->
+  Forall (fun x => ~ In x ys) xs ->
+  NoDup (xs ++ ys).
+Proof.
+  intros xs ys Hxs Hys Hfresh.
+  induction Hxs as [| x xs Hnotin Hnodup IH]; simpl.
+  - exact Hys.
+  - inversion Hfresh as [| ? ? Hnotin_ys Hfresh_tail]; subst.
+    constructor.
+    + intro Hin.
+      apply in_app_or in Hin. destruct Hin as [Hin | Hin].
+      * apply Hnotin. exact Hin.
+      * apply Hnotin_ys. exact Hin.
+    + apply IH. exact Hfresh_tail.
+Qed.
+
+Lemma Forall_not_in_app_of_used :
+  forall (xs ys used : list ident),
+    (forall x, In x xs -> In x used) ->
+    Forall (fun y => ~ In y used) ys ->
+    Forall (fun x => ~ In x ys) xs.
+Proof.
+  intros xs ys used Hxs Hys.
+  induction xs as [| x xs IH].
+  - constructor.
+  - constructor.
+    + intro Hin_ys.
+      rewrite Forall_forall in Hys.
+      specialize (Hys x Hin_ys).
+      apply Hys. apply Hxs. simpl. left. reflexivity.
+    + apply IH. intros y Hy. apply Hxs. simpl. right. exact Hy.
+Qed.
+
+Lemma alpha_rename_call_args_local_store_names_in_used :
+  forall ρ used args argsr used',
+    (forall used0 e er used1,
+        In e args ->
+        alpha_rename_expr ρ used0 e = (er, used1) ->
+        forall x, In x (expr_local_store_names er) -> In x used1) ->
+    ((fix go (used0 : list ident) (args0 : list expr)
+        : list expr * list ident :=
+        match args0 with
+        | [] => ([], used0)
+        | arg :: rest =>
+            let (arg', used1) := alpha_rename_expr ρ used0 arg in
+            let (rest', used2) := go used1 rest in
+            (arg' :: rest', used2)
+        end) used args) = (argsr, used') ->
+    forall x, In x (args_local_store_names argsr) -> In x used'.
+Proof.
+  intros ρ used args.
+  revert used.
+  induction args as [| arg rest IH]; intros used argsr used' Hexpr Hrename x Hin;
+    simpl in Hrename.
+  - injection Hrename as <- <-. simpl in Hin. contradiction.
+  - destruct (alpha_rename_expr ρ used arg) as [ar used1] eqn:Harg.
+    destruct ((fix go (used0 : list ident) (args0 : list expr)
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used0)
+          | arg0 :: rest0 =>
+              let (arg', used2) := alpha_rename_expr ρ used0 arg0 in
+              let (rest', used3) := go used2 rest0 in
+              (arg' :: rest', used3)
+          end) used1 rest) as [restr used2] eqn:Hrest.
+    injection Hrename as <- <-.
+    simpl in Hin. apply in_app_or in Hin. destruct Hin as [Hin | Hin].
+    + eapply alpha_rename_call_args_used_extends.
+      * intros used0 e er0 used_tail Hin_rest Hrename0.
+        eapply alpha_rename_expr_used_extends. exact Hrename0.
+      * exact Hrest.
+      * eapply Hexpr.
+        -- left. reflexivity.
+        -- exact Harg.
+        -- exact Hin.
+    + eapply IH.
+      * intros used0 e er0 used_tail Hin_rest Hrename0.
+        eapply Hexpr.
+        -- right. exact Hin_rest.
+        -- exact Hrename0.
+      * exact Hrest.
+      * exact Hin.
+Qed.
+
+Lemma alpha_rename_struct_fields_local_store_names_in_used :
+  forall ρ used fields fieldsr used',
+    (forall used0 fname e er used1,
+        In (fname, e) fields ->
+        alpha_rename_expr ρ used0 e = (er, used1) ->
+        forall x, In x (expr_local_store_names er) -> In x used1) ->
+    ((fix go (used0 : list ident) (fields0 : list (string * expr))
+        : list (string * expr) * list ident :=
+        match fields0 with
+        | [] => ([], used0)
+        | (fname, e) :: rest =>
+            let (e', used1) := alpha_rename_expr ρ used0 e in
+            let (rest', used2) := go used1 rest in
+            ((fname, e') :: rest', used2)
+        end) used fields) = (fieldsr, used') ->
+    forall x, In x (fields_local_store_names fieldsr) -> In x used'.
+Proof.
+  intros ρ used fields.
+  revert used.
+  induction fields as [| [fname e] rest IH]; intros used fieldsr used' Hexpr Hrename x Hin;
+    simpl in Hrename.
+  - injection Hrename as <- <-. simpl in Hin. contradiction.
+  - destruct (alpha_rename_expr ρ used e) as [er used1] eqn:He.
+    destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+          : list (string * expr) * list ident :=
+          match fields0 with
+          | [] => ([], used0)
+          | (fname0, e0) :: rest0 =>
+              let (e0', used2) := alpha_rename_expr ρ used0 e0 in
+              let (rest', used3) := go used2 rest0 in
+              ((fname0, e0') :: rest', used3)
+          end) used1 rest) as [restr used2] eqn:Hrest.
+    injection Hrename as <- <-.
+    simpl in Hin. apply in_app_or in Hin. destruct Hin as [Hin | Hin].
+    + eapply alpha_rename_struct_fields_used_extends.
+      * intros used0 fname0 e0 er0 used_tail Hin_rest Hrename0.
+        eapply alpha_rename_expr_used_extends. exact Hrename0.
+      * exact Hrest.
+      * eapply Hexpr.
+        -- left. reflexivity.
+        -- exact He.
+        -- exact Hin.
+    + eapply IH.
+      * intros used0 fname0 e0 er0 used_tail Hin_rest Hrename0.
+        eapply Hexpr.
+        -- right. exact Hin_rest.
+        -- exact Hrename0.
+      * exact Hrest.
+      * exact Hin.
+Qed.
+
+Lemma alpha_rename_expr_local_store_names_in_used :
+  forall rho used e er used',
+    alpha_rename_expr rho used e = (er, used') ->
+    forall x, In x (expr_local_store_names er) -> In x used'.
+Proof.
+  assert (Hsize : forall n rho used e er used',
+    expr_size e < n ->
+    alpha_rename_expr rho used e = (er, used') ->
+    forall x, In x (expr_local_store_names er) -> In x used').
+  {
+  induction n as [| n IH]; intros rho used e er used' Hlt Hrename x Hin.
+  - lia.
+  - destruct e; simpl in Hrename.
+    + injection Hrename as <- <-. simpl in Hin. contradiction.
+    + injection Hrename as <- <-. simpl in Hin. contradiction.
+    + injection Hrename as <- <-. simpl in Hin. contradiction.
+    + destruct (alpha_rename_expr rho used e1) as [e1r used1] eqn:He1.
+      destruct (alpha_rename_expr
+        ((i, fresh_ident i (i :: free_vars_expr e2 ++ used1)) :: rho)
+        (fresh_ident i (i :: free_vars_expr e2 ++ used1) ::
+         i :: free_vars_expr e2 ++ used1) e2)
+        as [e2r used2] eqn:He2.
+      injection Hrename as <- <-.
+      simpl in Hin. apply in_app_or in Hin. destruct Hin as [Hin | Hin].
+      * eapply alpha_rename_expr_used_extends.
+        -- exact He2.
+        -- right. right. apply in_or_app. right.
+           eapply IH.
+           ++ simpl in Hlt. assert (expr_size e1 < n) as Hlt_e1 by lia. exact Hlt_e1.
+           ++ exact He1.
+           ++ exact Hin.
+      * destruct Hin as [Heq | Hin].
+        -- subst. eapply alpha_rename_expr_used_extends.
+           ++ exact He2.
+           ++ simpl. left. reflexivity.
+        -- eapply IH.
+           ++ simpl in Hlt. assert (expr_size e2 < n) as Hlt_e2 by lia. exact Hlt_e2.
+           ++ exact He2.
+           ++ exact Hin.
+    + destruct (alpha_rename_expr rho used e1) as [e1r used1] eqn:He1.
+      destruct (alpha_rename_expr
+        ((i, fresh_ident i (i :: free_vars_expr e2 ++ used1)) :: rho)
+        (fresh_ident i (i :: free_vars_expr e2 ++ used1) ::
+         i :: free_vars_expr e2 ++ used1) e2)
+        as [e2r used2] eqn:He2.
+      injection Hrename as <- <-.
+      simpl in Hin. apply in_app_or in Hin. destruct Hin as [Hin | Hin].
+      * eapply alpha_rename_expr_used_extends.
+        -- exact He2.
+        -- right. right. apply in_or_app. right.
+           eapply IH.
+           ++ simpl in Hlt. assert (expr_size e1 < n) as Hlt_e1 by lia. exact Hlt_e1.
+           ++ exact He1.
+           ++ exact Hin.
+      * destruct Hin as [Heq | Hin].
+        -- subst. eapply alpha_rename_expr_used_extends.
+           ++ exact He2.
+           ++ simpl. left. reflexivity.
+        -- eapply IH.
+           ++ simpl in Hlt. assert (expr_size e2 < n) as Hlt_e2 by lia. exact Hlt_e2.
+           ++ exact He2.
+           ++ exact Hin.
+    + injection Hrename as <- <-. simpl in Hin. contradiction.
+    + injection Hrename as <- <-. simpl in Hin. contradiction.
+    + remember
+        ((fix go (used0 : list ident) (args0 : list expr)
+            : list expr * list ident :=
+            match args0 with
+            | [] => ([], used0)
+            | arg :: rest =>
+                let (arg', used1) := alpha_rename_expr rho used0 arg in
+                let (rest', used2) := go used1 rest in
+                (arg' :: rest', used2)
+            end) used l) as r eqn:Hargs.
+      destruct r as [argsr used_args].
+      injection Hrename as <- <-.
+      rewrite expr_local_store_names_call in Hin.
+      eapply alpha_rename_call_args_local_store_names_in_used.
+      * intros used0 e er0 used1 Hin_arg Hrename0.
+        eapply IH.
+        -- pose proof (expr_size_call_arg_lt i l e Hin_arg) as Harg_lt.
+           assert (expr_size e < n) as Hlt_arg by lia. exact Hlt_arg.
+        -- exact Hrename0.
+      * symmetry. exact Hargs.
+      * exact Hin.
+    + destruct (alpha_rename_expr rho used e) as [callee_r used0] eqn:Hcallee.
+      remember
+        ((fix go (used0 : list ident) (args0 : list expr)
+            : list expr * list ident :=
+            match args0 with
+            | [] => ([], used0)
+            | arg :: rest =>
+                let (arg', used1') := alpha_rename_expr rho used0 arg in
+                let (rest', used2) := go used1' rest in
+                (arg' :: rest', used2)
+            end) used0 l) as r eqn:Hargs.
+      destruct r as [argsr used_args].
+      injection Hrename as <- <-.
+      rewrite expr_local_store_names_call_expr in Hin.
+      apply in_app_or in Hin. destruct Hin as [Hin | Hin].
+      * eapply alpha_rename_call_args_used_extends.
+        -- intros used_arg earg er0 used_tail Hin_arg Hrename0.
+           eapply alpha_rename_expr_used_extends. exact Hrename0.
+        -- symmetry. exact Hargs.
+        -- eapply IH.
+           ++ pose proof (expr_size_callexpr_callee_lt e l) as Hcallee_lt.
+              assert (expr_size e < n) as Hlt_callee by lia. exact Hlt_callee.
+           ++ exact Hcallee.
+           ++ exact Hin.
+      * eapply alpha_rename_call_args_local_store_names_in_used.
+        -- intros used_arg earg er0 used_tail Hin_arg Hrename0.
+           eapply IH.
+           ++ pose proof (expr_size_callexpr_arg_lt e l earg Hin_arg) as Harg_lt.
+              assert (expr_size earg < n) as Hlt_arg by lia. exact Hlt_arg.
+           ++ exact Hrename0.
+        -- symmetry. exact Hargs.
+        -- exact Hin.
+    + remember
+        ((fix go (used0 : list ident) (fields0 : list (string * expr))
+            : list (string * expr) * list ident :=
+            match fields0 with
+            | [] => ([], used0)
+            | (fname, e0) :: rest =>
+                let (e0', used1) := alpha_rename_expr rho used0 e0 in
+                let (rest', used2) := go used1 rest in
+                ((fname, e0') :: rest', used2)
+            end) used l1) as r eqn:Hfields.
+      destruct r as [fieldsr used_fields].
+      injection Hrename as <- <-.
+      rewrite expr_local_store_names_struct in Hin.
+      eapply alpha_rename_struct_fields_local_store_names_in_used.
+      * intros used0 fname efield er0 used1 Hin_field Hrename0.
+        eapply IH.
+        -- pose proof (expr_size_struct_field_lt s l l0 l1 fname efield Hin_field) as Hfield_lt.
+           assert (expr_size efield < n) as Hlt_field by lia. exact Hlt_field.
+        -- exact Hrename0.
+      * symmetry. exact Hfields.
+      * exact Hin.
+    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
+      injection Hrename as <- <-.
+      eapply IH.
+      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
+      * exact He.
+      * exact Hin.
+    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
+      injection Hrename as <- <-.
+      eapply IH.
+      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
+      * exact He.
+      * exact Hin.
+    + injection Hrename as <- <-. simpl in Hin. contradiction.
+    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
+      injection Hrename as <- <-.
+      eapply IH.
+      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
+      * exact He.
+      * exact Hin.
+    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
+      injection Hrename as <- <-.
+      eapply IH.
+      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
+      * exact He.
+      * exact Hin.
+    + destruct (alpha_rename_expr rho used e1) as [e1r used1] eqn:He1.
+      destruct (alpha_rename_expr rho used1 e2) as [e2r used2] eqn:He2.
+      destruct (alpha_rename_expr rho used2 e3) as [e3r used3] eqn:He3.
+      injection Hrename as <- <-.
+      simpl in Hin. repeat rewrite in_app_iff in Hin.
+      destruct Hin as [Hin | [Hin | Hin]].
+      * eapply alpha_rename_expr_used_extends.
+        -- exact He3.
+        -- eapply alpha_rename_expr_used_extends.
+           ++ exact He2.
+           ++ eapply IH.
+              ** simpl in Hlt. assert (expr_size e1 < n) as Hlt_e1 by lia. exact Hlt_e1.
+              ** exact He1.
+              ** exact Hin.
+      * eapply alpha_rename_expr_used_extends.
+        -- exact He3.
+        -- eapply IH.
+           ++ simpl in Hlt. assert (expr_size e2 < n) as Hlt_e2 by lia. exact Hlt_e2.
+           ++ exact He2.
+           ++ exact Hin.
+      * eapply IH.
+        -- simpl in Hlt. assert (expr_size e3 < n) as Hlt_e3 by lia. exact Hlt_e3.
+        -- exact He3.
+        -- exact Hin.
+  }
+  intros rho used e er used' Hrename.
+  eapply (Hsize (S (expr_size e))).
+  - apply Nat.lt_succ_diag_r.
+  - exact Hrename.
+Qed.
+
 Lemma alpha_rename_call_args_local_store_names_fresh_used :
   forall ρ used args argsr used',
     (forall used0 e er used1,
@@ -1962,6 +2293,360 @@ Proof.
            ++ eapply IH.
               ** simpl in Hlt. assert (expr_size e3 < n) as Hlt_e3 by lia. exact Hlt_e3.
               ** exact He3.
+  }
+  intros rho used e er used' Hrename.
+  eapply (Hsize (S (expr_size e))).
+  - apply Nat.lt_succ_diag_r.
+  - exact Hrename.
+Qed.
+
+Lemma alpha_rename_call_args_local_store_names_nodup :
+  forall ρ used args argsr used',
+    (forall used0 e er used1,
+        In e args ->
+        alpha_rename_expr ρ used0 e = (er, used1) ->
+        NoDup (expr_local_store_names er)) ->
+    ((fix go (used0 : list ident) (args0 : list expr)
+        : list expr * list ident :=
+        match args0 with
+        | [] => ([], used0)
+        | arg :: rest =>
+            let (arg', used1) := alpha_rename_expr ρ used0 arg in
+            let (rest', used2) := go used1 rest in
+            (arg' :: rest', used2)
+        end) used args) = (argsr, used') ->
+    NoDup (args_local_store_names argsr).
+Proof.
+  intros ρ used args.
+  revert used.
+  induction args as [| arg rest IH]; intros used argsr used' Hexpr Hrename;
+    simpl in Hrename.
+  - injection Hrename as <- _. simpl. constructor.
+  - destruct (alpha_rename_expr ρ used arg) as [ar used1] eqn:Harg.
+    destruct ((fix go (used0 : list ident) (args0 : list expr)
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used0)
+          | arg0 :: rest0 =>
+              let (arg', used2) := alpha_rename_expr ρ used0 arg0 in
+              let (rest', used3) := go used2 rest0 in
+              (arg' :: rest', used3)
+          end) used1 rest) as [restr used2] eqn:Hrest.
+    injection Hrename as <- _.
+    simpl.
+    eapply NoDup_app_from_Forall.
+    + eapply Hexpr.
+      * left. reflexivity.
+      * exact Harg.
+    + eapply IH.
+      * intros used0 e er0 used_tail Hin_rest Hrename0.
+        eapply Hexpr.
+        -- right. exact Hin_rest.
+        -- exact Hrename0.
+      * exact Hrest.
+    + eapply Forall_not_in_app_of_used with (used := used1).
+      * intros x Hin.
+        eapply alpha_rename_expr_local_store_names_in_used.
+        -- exact Harg.
+        -- exact Hin.
+      * eapply alpha_rename_call_args_local_store_names_fresh_used.
+        -- intros used0 e er0 used_tail Hin_rest Hrename0.
+           eapply alpha_rename_expr_local_store_names_fresh_used.
+           exact Hrename0.
+        -- exact Hrest.
+Qed.
+
+Lemma alpha_rename_struct_fields_local_store_names_nodup :
+  forall ρ used fields fieldsr used',
+    (forall used0 fname e er used1,
+        In (fname, e) fields ->
+        alpha_rename_expr ρ used0 e = (er, used1) ->
+        NoDup (expr_local_store_names er)) ->
+    ((fix go (used0 : list ident) (fields0 : list (string * expr))
+        : list (string * expr) * list ident :=
+        match fields0 with
+        | [] => ([], used0)
+        | (fname, e) :: rest =>
+            let (e', used1) := alpha_rename_expr ρ used0 e in
+            let (rest', used2) := go used1 rest in
+            ((fname, e') :: rest', used2)
+        end) used fields) = (fieldsr, used') ->
+    NoDup (fields_local_store_names fieldsr).
+Proof.
+  intros ρ used fields.
+  revert used.
+  induction fields as [| [fname e] rest IH]; intros used fieldsr used' Hexpr Hrename;
+    simpl in Hrename.
+  - injection Hrename as <- _. simpl. constructor.
+  - destruct (alpha_rename_expr ρ used e) as [er used1] eqn:He.
+    destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+          : list (string * expr) * list ident :=
+          match fields0 with
+          | [] => ([], used0)
+          | (fname0, e0) :: rest0 =>
+              let (e0', used2) := alpha_rename_expr ρ used0 e0 in
+              let (rest', used3) := go used2 rest0 in
+              ((fname0, e0') :: rest', used3)
+          end) used1 rest) as [restr used2] eqn:Hrest.
+    injection Hrename as <- _.
+    simpl.
+    eapply NoDup_app_from_Forall.
+    + eapply Hexpr.
+      * left. reflexivity.
+      * exact He.
+    + eapply IH.
+      * intros used0 fname0 e0 er0 used_tail Hin_rest Hrename0.
+        eapply Hexpr.
+        -- right. exact Hin_rest.
+        -- exact Hrename0.
+      * exact Hrest.
+    + eapply Forall_not_in_app_of_used with (used := used1).
+      * intros x Hin.
+        eapply alpha_rename_expr_local_store_names_in_used.
+        -- exact He.
+        -- exact Hin.
+      * eapply alpha_rename_struct_fields_local_store_names_fresh_used.
+        -- intros used0 fname0 e0 er0 used_tail Hin_rest Hrename0.
+           eapply alpha_rename_expr_local_store_names_fresh_used.
+           exact Hrename0.
+        -- exact Hrest.
+Qed.
+
+Lemma alpha_rename_expr_local_store_names_nodup :
+  forall rho used e er used',
+    alpha_rename_expr rho used e = (er, used') ->
+    NoDup (expr_local_store_names er).
+Proof.
+  assert (Hsize : forall n rho used e er used',
+    expr_size e < n ->
+    alpha_rename_expr rho used e = (er, used') ->
+    NoDup (expr_local_store_names er)).
+  {
+  induction n as [| n IH]; intros rho used e er used' Hlt Hrename.
+  - lia.
+  - destruct e; simpl in Hrename.
+    + injection Hrename as <- _. simpl. constructor.
+    + injection Hrename as <- _. simpl. constructor.
+    + injection Hrename as <- _. simpl. constructor.
+    + destruct (alpha_rename_expr rho used e1) as [e1r used1] eqn:He1.
+      destruct (alpha_rename_expr
+        ((i, fresh_ident i (i :: free_vars_expr e2 ++ used1)) :: rho)
+        (fresh_ident i (i :: free_vars_expr e2 ++ used1) ::
+         i :: free_vars_expr e2 ++ used1) e2)
+        as [e2r used2] eqn:He2.
+      injection Hrename as <- _.
+      simpl.
+      eapply NoDup_app_from_Forall.
+      * eapply IH.
+        -- simpl in Hlt. assert (expr_size e1 < n) as Hlt_e1 by lia. exact Hlt_e1.
+        -- exact He1.
+      * constructor.
+        -- intro Hin.
+           pose proof (alpha_rename_expr_local_store_names_fresh_used
+             _ _ _ _ _ He2) as Hfresh_e2.
+           rewrite Forall_forall in Hfresh_e2.
+           specialize (Hfresh_e2 _ Hin).
+           apply Hfresh_e2. simpl. left. reflexivity.
+        -- eapply IH.
+           ++ simpl in Hlt. assert (expr_size e2 < n) as Hlt_e2 by lia. exact Hlt_e2.
+           ++ exact He2.
+      * apply Forall_forall. intros x Hx Hin.
+        destruct Hin as [Heq | Hin].
+        -- subst.
+           apply (fresh_ident_not_in i (i :: free_vars_expr e2 ++ used1)).
+           right. apply in_or_app. right.
+           eapply alpha_rename_expr_local_store_names_in_used.
+           ++ exact He1.
+           ++ exact Hx.
+        -- pose proof (alpha_rename_expr_local_store_names_fresh_used
+             _ _ _ _ _ He2) as Hfresh_e2.
+           rewrite Forall_forall in Hfresh_e2.
+           specialize (Hfresh_e2 _ Hin).
+           apply Hfresh_e2. simpl. right. right.
+           apply in_or_app. right.
+           eapply alpha_rename_expr_local_store_names_in_used.
+           ++ exact He1.
+           ++ exact Hx.
+    + destruct (alpha_rename_expr rho used e1) as [e1r used1] eqn:He1.
+      destruct (alpha_rename_expr
+        ((i, fresh_ident i (i :: free_vars_expr e2 ++ used1)) :: rho)
+        (fresh_ident i (i :: free_vars_expr e2 ++ used1) ::
+         i :: free_vars_expr e2 ++ used1) e2)
+        as [e2r used2] eqn:He2.
+      injection Hrename as <- _.
+      simpl.
+      eapply NoDup_app_from_Forall.
+      * eapply IH.
+        -- simpl in Hlt. assert (expr_size e1 < n) as Hlt_e1 by lia. exact Hlt_e1.
+        -- exact He1.
+      * constructor.
+        -- intro Hin.
+           pose proof (alpha_rename_expr_local_store_names_fresh_used
+             _ _ _ _ _ He2) as Hfresh_e2.
+           rewrite Forall_forall in Hfresh_e2.
+           specialize (Hfresh_e2 _ Hin).
+           apply Hfresh_e2. simpl. left. reflexivity.
+        -- eapply IH.
+           ++ simpl in Hlt. assert (expr_size e2 < n) as Hlt_e2 by lia. exact Hlt_e2.
+           ++ exact He2.
+      * apply Forall_forall. intros x Hx Hin.
+        destruct Hin as [Heq | Hin].
+        -- subst.
+           apply (fresh_ident_not_in i (i :: free_vars_expr e2 ++ used1)).
+           right. apply in_or_app. right.
+           eapply alpha_rename_expr_local_store_names_in_used.
+           ++ exact He1.
+           ++ exact Hx.
+        -- pose proof (alpha_rename_expr_local_store_names_fresh_used
+             _ _ _ _ _ He2) as Hfresh_e2.
+           rewrite Forall_forall in Hfresh_e2.
+           specialize (Hfresh_e2 _ Hin).
+           apply Hfresh_e2. simpl. right. right.
+           apply in_or_app. right.
+           eapply alpha_rename_expr_local_store_names_in_used.
+           ++ exact He1.
+           ++ exact Hx.
+    + injection Hrename as <- _. simpl. constructor.
+    + injection Hrename as <- _. simpl. constructor.
+    + remember
+        ((fix go (used0 : list ident) (args0 : list expr)
+            : list expr * list ident :=
+            match args0 with
+            | [] => ([], used0)
+            | arg :: rest =>
+                let (arg', used1) := alpha_rename_expr rho used0 arg in
+                let (rest', used2) := go used1 rest in
+                (arg' :: rest', used2)
+            end) used l) as r eqn:Hargs.
+      destruct r as [argsr used_args].
+      injection Hrename as <- _.
+      rewrite expr_local_store_names_call.
+      eapply alpha_rename_call_args_local_store_names_nodup.
+      * intros used0 e er0 used1 Hin_arg Hrename0.
+        eapply IH.
+        -- pose proof (expr_size_call_arg_lt i l e Hin_arg) as Harg_lt.
+           assert (expr_size e < n) as Hlt_arg by lia. exact Hlt_arg.
+        -- exact Hrename0.
+      * symmetry. exact Hargs.
+    + destruct (alpha_rename_expr rho used e) as [callee_r used0] eqn:Hcallee.
+      remember
+        ((fix go (used0 : list ident) (args0 : list expr)
+            : list expr * list ident :=
+            match args0 with
+            | [] => ([], used0)
+            | arg :: rest =>
+                let (arg', used1') := alpha_rename_expr rho used0 arg in
+                let (rest', used2) := go used1' rest in
+                (arg' :: rest', used2)
+            end) used0 l) as r eqn:Hargs.
+      destruct r as [argsr used_args].
+      injection Hrename as <- _.
+      rewrite expr_local_store_names_call_expr.
+      eapply NoDup_app_from_Forall.
+      * eapply IH.
+        -- pose proof (expr_size_callexpr_callee_lt e l) as Hcallee_lt.
+           assert (expr_size e < n) as Hlt_callee by lia. exact Hlt_callee.
+        -- exact Hcallee.
+      * eapply alpha_rename_call_args_local_store_names_nodup.
+        -- intros used_arg earg er0 used_tail Hin_arg Hrename0.
+           eapply IH.
+           ++ pose proof (expr_size_callexpr_arg_lt e l earg Hin_arg) as Harg_lt.
+              assert (expr_size earg < n) as Hlt_arg by lia. exact Hlt_arg.
+           ++ exact Hrename0.
+        -- symmetry. exact Hargs.
+      * eapply Forall_not_in_app_of_used with (used := used0).
+        -- intros x Hin.
+           eapply alpha_rename_expr_local_store_names_in_used.
+           ++ exact Hcallee.
+           ++ exact Hin.
+        -- eapply alpha_rename_call_args_local_store_names_fresh_used.
+           ++ intros used_arg earg er0 used_tail Hin_arg Hrename0.
+              eapply alpha_rename_expr_local_store_names_fresh_used.
+              exact Hrename0.
+           ++ symmetry. exact Hargs.
+    + remember
+        ((fix go (used0 : list ident) (fields0 : list (string * expr))
+            : list (string * expr) * list ident :=
+            match fields0 with
+            | [] => ([], used0)
+            | (fname, e0) :: rest =>
+                let (e0', used1) := alpha_rename_expr rho used0 e0 in
+                let (rest', used2) := go used1 rest in
+                ((fname, e0') :: rest', used2)
+            end) used l1) as r eqn:Hfields.
+      destruct r as [fieldsr used_fields].
+      injection Hrename as <- _.
+      rewrite expr_local_store_names_struct.
+      eapply alpha_rename_struct_fields_local_store_names_nodup.
+      * intros used0 fname efield er0 used1 Hin_field Hrename0.
+        eapply IH.
+        -- pose proof (expr_size_struct_field_lt s l l0 l1 fname efield Hin_field) as Hfield_lt.
+           assert (expr_size efield < n) as Hlt_field by lia. exact Hlt_field.
+        -- exact Hrename0.
+      * symmetry. exact Hfields.
+    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
+      injection Hrename as <- _.
+      simpl.
+      eapply IH.
+      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
+      * exact He.
+    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
+      injection Hrename as <- _.
+      simpl.
+      eapply IH.
+      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
+      * exact He.
+    + injection Hrename as <- _. simpl. constructor.
+    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
+      injection Hrename as <- _.
+      simpl.
+      eapply IH.
+      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
+      * exact He.
+    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
+      injection Hrename as <- _.
+      simpl.
+      eapply IH.
+      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
+      * exact He.
+    + destruct (alpha_rename_expr rho used e1) as [e1r used1] eqn:He1.
+      destruct (alpha_rename_expr rho used1 e2) as [e2r used2] eqn:He2.
+      destruct (alpha_rename_expr rho used2 e3) as [e3r used3] eqn:He3.
+      injection Hrename as <- _.
+      simpl.
+      eapply NoDup_app_from_Forall.
+      * eapply IH.
+        -- simpl in Hlt. assert (expr_size e1 < n) as Hlt_e1 by lia. exact Hlt_e1.
+        -- exact He1.
+      * eapply NoDup_app_from_Forall.
+        -- eapply IH.
+           ++ simpl in Hlt. assert (expr_size e2 < n) as Hlt_e2 by lia. exact Hlt_e2.
+           ++ exact He2.
+        -- eapply IH.
+           ++ simpl in Hlt. assert (expr_size e3 < n) as Hlt_e3 by lia. exact Hlt_e3.
+           ++ exact He3.
+        -- eapply Forall_not_in_app_of_used with (used := used2).
+           ++ intros x Hin.
+              eapply alpha_rename_expr_local_store_names_in_used.
+              ** exact He2.
+              ** exact Hin.
+           ++ eapply alpha_rename_expr_local_store_names_fresh_used.
+              exact He3.
+      * eapply Forall_not_in_app_of_used with (used := used1).
+        -- intros x Hin.
+           eapply alpha_rename_expr_local_store_names_in_used.
+           ++ exact He1.
+           ++ exact Hin.
+        -- apply Forall_app. split.
+           ++ eapply alpha_rename_expr_local_store_names_fresh_used.
+              exact He2.
+           ++ eapply Forall_fresh_weaken.
+              ** intros x Hin.
+                 eapply alpha_rename_expr_used_extends.
+                 --- exact He2.
+                 --- exact Hin.
+              ** eapply alpha_rename_expr_local_store_names_fresh_used.
+                 exact He3.
   }
   intros rho used e er used' Hrename.
   eapply (Hsize (S (expr_size e))).
@@ -2371,6 +3056,42 @@ Proof.
   destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
   inversion Hrename; subst. simpl.
   eapply alpha_rename_params_names_nodup. exact Hps.
+Qed.
+
+Lemma alpha_rename_fn_def_body_local_store_names_nodup :
+  forall used f fr used',
+    alpha_rename_fn_def used f = (fr, used') ->
+    NoDup (expr_local_store_names (fn_body fr)).
+Proof.
+  intros used f fr used' Hrename.
+  destruct f as [fname lifetimes outs ps ret body].
+  unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
+  destruct (alpha_rename_params []
+    (param_names ps ++ free_vars_expr body ++ used) ps)
+    as [[psr ρ] used1] eqn:Hps.
+  destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
+  inversion Hrename; subst. simpl.
+  eapply alpha_rename_expr_local_store_names_nodup. exact Hbody.
+Qed.
+
+Lemma alpha_rename_fn_def_params_body_local_store_names_nodup :
+  forall used f fr used',
+    alpha_rename_fn_def used f = (fr, used') ->
+    NoDup
+      (ctx_names (params_ctx (fn_params fr)) ++
+       expr_local_store_names (fn_body fr)).
+Proof.
+  intros used f fr used' Hrename.
+  eapply NoDup_app_from_Forall.
+  - eapply alpha_rename_fn_def_params_nodup. exact Hrename.
+  - eapply alpha_rename_fn_def_body_local_store_names_nodup. exact Hrename.
+  - pose proof (alpha_rename_fn_def_body_local_store_names_fresh_params
+      used f fr used' Hrename) as Hfresh.
+    rewrite Forall_forall in Hfresh.
+    apply Forall_forall. intros x Hin_params Hin_body.
+    eapply Hfresh.
+    + exact Hin_body.
+    + exact Hin_params.
 Qed.
 
 Lemma alpha_rename_fn_def_params_ctx_alpha : forall used f fr used',

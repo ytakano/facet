@@ -801,6 +801,16 @@ Definition root_env_ctx_keys_named (R : root_env) (Σ : sctx) : Prop :=
 Definition root_env_store_keys_named (R : root_env) (s : store) : Prop :=
   root_env_keys_named R (store_names s).
 
+Definition expr_local_no_shadow_from (Γ : sctx) (e : expr) : Prop :=
+  NoDup (ctx_names Γ ++ expr_local_store_names e).
+
+Definition args_local_no_shadow_from (Γ : sctx) (args : list expr) : Prop :=
+  NoDup (ctx_names Γ ++ args_local_store_names args).
+
+Definition fields_local_no_shadow_from
+    (Γ : sctx) (fields : list (string * expr)) : Prop :=
+  NoDup (ctx_names Γ ++ fields_local_store_names fields).
+
 Lemma value_roots_within_excludes :
   (forall roots v,
     value_roots_within roots v ->

@@ -112,8 +112,10 @@ shows they are unusable.
   `alpha_rename_fn_def_params_body_facts`,
   `ctx_alpha_no_collision_on`,
   `ctx_alpha_renamed_name_preimage`,
-  `alpha_rename_fn_def_initial_support_facts`, and
-  `alpha_rename_fn_def_static_fields`.
+  `alpha_rename_fn_def_initial_support_facts`,
+  `alpha_rename_fn_def_static_fields`,
+  `alpha_rename_fn_def_body_local_store_names_nodup`, and
+  `alpha_rename_fn_def_params_body_local_store_names_nodup`.
 - Params-level exclusion transport helpers now exist in `TypeSafety.v`:
   `roots_exclude_params_rename`,
   `root_env_excludes_params_rename`,
@@ -241,11 +243,12 @@ Next implementable target:
    must carry the freshness invariant needed to discharge the extra
    `TERS_Let` / `TERS_LetInfer` initializer obligations:
    `roots_exclude x roots1` and `root_env_excludes x R1`.
-3. First prove the alpha-local freshness support needed by that theorem:
-   alpha-renamed function bodies must expose local binder freshness against
-   both the alpha-renamed params and previously introduced local binders.
-   The params-only helper exists; the local-local uniqueness/no-shadow helper
-   is the next proof-only prerequisite.
+3. Done: the alpha-local freshness support needed by that theorem now exposes
+   both params/body no-shadow and local-local uniqueness for alpha-renamed
+   function bodies. Use
+   `alpha_rename_fn_def_params_body_local_store_names_nodup` as the function
+   wrapper when proving each `ELet` / `ELetInfer` binder is fresh for the
+   current synthesized root environment.
 4. If the alpha-normalized theorem family is not tractable, add an executable
    alpha root-summary checker plus soundness, and use it as the explicit
    sidecar evidence source.
@@ -381,11 +384,17 @@ verbose than the quick path. Do not use it as the primary implementation order.
      lemmas in `TypeSafety.v`, plus
      `alpha_rename_fn_def_body_local_store_names_fresh_params` in
      `AlphaRenaming.v`.
-   - Next proof-only prerequisite: add an alpha-renamed local-local freshness
-     or `NoDup (expr_local_store_names (fn_body fr))` theorem strong enough
-     to show each `ELet` / `ELetInfer` binder is fresh for the current
-     synthesized root environment, not only fresh relative to the function
-     parameters.
+   - Done: added the alpha-renamed local-local freshness prerequisite in
+     `AlphaRenaming.v`. The key wrappers are
+     `alpha_rename_expr_local_store_names_in_used`,
+     `alpha_rename_expr_local_store_names_nodup`,
+     `alpha_rename_fn_def_body_local_store_names_nodup`, and
+     `alpha_rename_fn_def_params_body_local_store_names_nodup`. These facts
+     are proof-only and do not change checker behavior.
+   - Next proof-only prerequisite: use the new alpha no-shadow facts to state
+     and prove the first structural-to-shadow-root synthesis theorem over
+     alpha-normalized expressions. Start with the expression theorem and only
+     add args/fields variants when the call/struct cases require them.
    - Done: proved and focused-compiled
      `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`, closing
      the old blockers around assembling the full shadow-safe

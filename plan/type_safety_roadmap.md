@@ -288,6 +288,26 @@ Follow this order before inventing new theorem shapes:
    task is to add a structure-aware direct-call preservation route for the
    synthetic `let` body, or an equivalent dedicated `ECallExpr` theorem, without
    adding general `ECallExpr` to ordinary readiness.
+   Current proof progress: the Prop mirror and boolean soundness bridge now
+   exist as
+   `callee_body_root_shadow_non_capturing_call_provenance_summary`,
+   `env_fns_root_shadow_non_capturing_call_provenance_summary_check_ready`,
+   `check_fn_root_shadow_non_capturing_call_provenance_summary_sound`, and
+   `check_env_root_shadow_non_capturing_call_provenance_summary_ready`.
+   There is also a local operational bridge
+   `eval_local_unrestricted_fn_value_call_as_synthetic_call` showing that the
+   unrestricted alias form evaluates like the structure-preserving synthetic
+   `let` with an inner `ECall`.
+   The final checked-initial theorem is still blocked because the existing
+   direct-call preservation theorem exposes only `store_typed`,
+   `value_has_type`, and `store_ref_targets_preserved`. The enclosing `let`
+   cleanup proof also needs root/no-shadow/exclusion results for the synthetic
+   inner call so it can justify `store_remove g`. Next implement a stronger
+   direct-call helper that exposes the cleanup data already produced by
+   `eval_direct_call_body_cleanup_preserves_value_and_refs`, or a local
+   non-capturing-let theorem that derives `value_refs_exclude_root g` and
+   `store_refs_exclude_root g (store_remove g s_body)` from the synthetic
+   root-shadow typing evidence.
 7. **Prove closures with captures.**
    Only after non-capturing function values are stable, add captured-closure
    calls. This requires a captured-store invariant covering typing, root

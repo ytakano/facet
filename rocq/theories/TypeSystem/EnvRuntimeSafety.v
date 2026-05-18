@@ -2,7 +2,7 @@ From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules RootProvenance TypeChecker RuntimeTyping
   EnvStructuralRules CheckerSoundness AlphaRenaming EnvTypingSoundness TypeSafety
   EnvRootSoundness.
-From Stdlib Require Import List Bool Lia String.
+From Stdlib Require Import List Bool Lia String Program.Equality.
 Import ListNotations.
 
 Definition initial_store_for_fn (env : global_env) (f : fn_def) (s : store) : Prop :=
@@ -1133,6 +1133,31 @@ Definition env_fns_root_shadow_direct_call_provenance_summary_check_ready
     lookup_fn fname (env_fns env) = Some fdef ->
     callee_body_root_shadow_direct_call_provenance_summary env fdef.
 
+Definition callee_body_root_shadow_non_capturing_call_provenance_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  callee_body_root_shadow_direct_call_provenance_summary env fdef \/
+  exists fname args raw_body synthetic_body fcallee T_body Γ_out R_body roots_body,
+    fn_body fdef = raw_body /\
+    local_fn_value_call_target_expr raw_body = Some (fname, args, synthetic_body) /\
+    preservation_ready_args args /\
+    In fcallee (env_fns env) /\
+    fn_name fcallee = fname /\
+    callee_body_root_shadow_provenance_summary env fcallee /\
+    NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+    typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (params_ctx (fn_params fdef)))
+      synthetic_body T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
+    roots_exclude_params (fn_params fdef) roots_body /\
+    root_env_excludes_params (fn_params fdef) R_body.
+
+Definition env_fns_root_shadow_non_capturing_call_provenance_summary_check_ready
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_non_capturing_call_provenance_summary env fdef.
+
 Lemma fn_params_roots_exclude_b_sound :
   forall ps roots,
     fn_params_roots_exclude_b ps roots = true ->
@@ -1275,6 +1300,58 @@ Proof.
     apply fn_params_root_env_excludes_b_sound. exact Henv.
 Qed.
 
+Lemma check_fn_root_shadow_non_capturing_call_provenance_summary_sound :
+  forall env fdef,
+    check_fn_root_shadow_non_capturing_call_provenance_summary env fdef = true ->
+    callee_body_root_shadow_non_capturing_call_provenance_summary env fdef.
+Proof.
+  intros env fdef Hcheck.
+  unfold check_fn_root_shadow_non_capturing_call_provenance_summary in Hcheck.
+  destruct (check_fn_root_shadow_direct_call_provenance_summary env fdef)
+    eqn:Hold.
+  - left. apply check_fn_root_shadow_direct_call_provenance_summary_sound.
+    exact Hold.
+  - right.
+    destruct (local_fn_value_call_target_expr (fn_body fdef))
+      as [[[fname args] synthetic_body] |] eqn:Htarget; try discriminate.
+    apply andb_true_iff in Hcheck as [Hready_args Hrest].
+    destruct (lookup_fn_b fname (env_fns env)) as [fcallee |] eqn:Hlookup_b;
+      try discriminate.
+    apply andb_true_iff in Hrest as [Hcallee Hsummary].
+    destruct (infer_env_roots_shadow_safe env
+      (fn_with_body fdef synthetic_body)
+      (initial_root_env_for_fn fdef))
+      as [[[[T_check Γ_check] R_out] roots] | err] eqn:Hinfer;
+      try discriminate.
+    apply andb_true_iff in Hsummary as [Hroots Henv].
+    destruct (lookup_fn_b_sound fname (env_fns env) fcallee Hlookup_b)
+      as [Hin_callee Hname_callee].
+    pose proof (infer_env_roots_shadow_safe_sound
+                  env (fn_with_body fdef synthetic_body)
+                  (initial_root_env_for_fn fdef)
+                  T_check Γ_check R_out roots Hinfer) as Htyped_fn.
+    unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
+    destruct Htyped_fn as
+      (T_body & Γ_out & Htyped & Hcompat & _).
+    exists fname, args, (fn_body fdef), synthetic_body, fcallee,
+      T_body, Γ_out, R_out, roots.
+    split; [reflexivity|].
+    split; [exact Htarget|].
+    split; [apply preservation_ready_args_b_sound; exact Hready_args|].
+    split; [exact Hin_callee|].
+    split; [exact Hname_callee|].
+    split; [apply check_fn_root_shadow_provenance_summary_sound; exact Hcallee|].
+    split.
+    { change (NoDup
+        (ctx_names
+          (params_ctx (fn_params (fn_with_body fdef synthetic_body))))).
+      eapply infer_env_roots_shadow_safe_params_nodup. exact Hinfer. }
+    split; [exact Htyped|].
+    split; [exact Hcompat|].
+    split; [apply fn_params_roots_exclude_b_sound; exact Hroots|].
+    apply fn_params_root_env_excludes_b_sound. exact Henv.
+Qed.
+
 Lemma check_env_root_shadow_summary_ready :
   forall env,
     check_env_root_shadow_summary env = true ->
@@ -1314,6 +1391,20 @@ Proof.
     as [Hin _].
   apply forallb_forall with (x := fdef) in Hcheck; [| exact Hin].
   apply check_fn_root_shadow_direct_call_provenance_summary_sound.
+  exact Hcheck.
+Qed.
+
+Lemma check_env_root_shadow_non_capturing_call_provenance_summary_ready :
+  forall env,
+    check_env_root_shadow_non_capturing_call_provenance_summary env = true ->
+    env_fns_root_shadow_non_capturing_call_provenance_summary_check_ready env.
+Proof.
+  intros env Hcheck fname fdef Hlookup.
+  unfold check_env_root_shadow_non_capturing_call_provenance_summary in Hcheck.
+  destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+    as [Hin _].
+  apply forallb_forall with (x := fdef) in Hcheck; [| exact Hin].
+  apply check_fn_root_shadow_non_capturing_call_provenance_summary_sound.
   exact Hcheck.
 Qed.
 
@@ -2010,6 +2101,62 @@ Proof.
     eapply VHT_Compatible.
     + exact Hv.
     + apply ty_compatible_b_sound. exact Hcompat.
+Qed.
+
+Lemma eval_local_unrestricted_fn_value_call_as_synthetic_call :
+  forall env s s' v m x T fname args,
+    ty_usage T = UUnrestricted ->
+    eval env s
+      (ELet m x T (EFn fname) (ECallExpr (EVar x) args)) s' v ->
+    eval env s
+      (ELet m x T (EFn fname) (ECall fname args)) s' v.
+Proof.
+  intros env s s' v m x T fname args Husage Heval.
+  inversion Heval; subst; clear Heval.
+  match goal with
+  | Hfn : eval _ _ (EFn _) _ _ |- _ =>
+      inversion Hfn; subst; clear Hfn
+  end.
+  match goal with
+  | Hcall : eval _ _ (ECallExpr (EVar _) _) _ _ |- _ =>
+      inversion Hcall; subst; clear Hcall
+  end.
+  match goal with
+  | Hcallee : eval _ _ (EVar _) _ _ |- _ =>
+      inversion Hcallee; subst; clear Hcallee
+  end.
+  - match goal with
+    | Hlookup : store_lookup _ (store_add _ _ _ _) = Some _ |- _ =>
+        simpl in Hlookup; rewrite ident_eqb_refl in Hlookup;
+        inversion Hlookup; subst; clear Hlookup
+    end.
+    repeat match goal with
+    | Hclosure : VClosure _ _ = VClosure _ _ |- _ =>
+        inversion Hclosure; subst; clear Hclosure
+    | Hclosure : VClosure _ _ = _ |- _ =>
+        inversion Hclosure; subst; clear Hclosure
+    | Hclosure : _ = VClosure _ _ |- _ =>
+        inversion Hclosure; subst; clear Hclosure
+    end.
+    simpl in *.
+    eapply Eval_Let.
+    + apply Eval_Fn.
+    + eapply Eval_Call.
+      * eassumption.
+      * eassumption.
+      * eassumption.
+      * eassumption.
+  - match goal with
+    | Hlookup : store_lookup _ (store_add _ _ _ _) = Some _ |- _ =>
+        simpl in Hlookup; rewrite ident_eqb_refl in Hlookup;
+        inversion Hlookup; subst; clear Hlookup
+    end.
+    match goal with
+    | Hconsume : needs_consume _ = true |- _ =>
+        simpl in Hconsume; unfold needs_consume in Hconsume;
+        simpl in Hconsume; rewrite Husage in Hconsume;
+        discriminate
+    end.
 Qed.
 
 Theorem infer_full_env_alpha_big_step_safe_with_root_sidecar :

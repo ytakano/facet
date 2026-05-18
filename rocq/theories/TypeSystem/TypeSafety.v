@@ -6231,10 +6231,29 @@ Proof.
   exact HinΣ.
 Qed.
 
+Definition root_env_covers_sctx (Σ : sctx) (R : root_env) : Prop :=
+  forall x,
+    In x (ctx_names Σ) ->
+    exists roots, root_env_lookup x R = Some roots.
+
 Definition root_env_covers_params (ps : list param) (R : root_env) : Prop :=
   forall x,
     In x (ctx_names (params_ctx ps)) ->
     exists roots, root_env_lookup x R = Some roots.
+
+Lemma root_env_covers_sctx_equiv :
+  forall Σ R R',
+    root_env_equiv R R' ->
+    root_env_covers_sctx Σ R ->
+    root_env_covers_sctx Σ R'.
+Proof.
+  unfold root_env_covers_sctx.
+  intros Σ R R' Heq Hcovers x Hin.
+  destruct (Hcovers x Hin) as [roots Hlookup].
+  destruct (root_env_equiv_lookup_l R R' x roots Heq Hlookup)
+    as [roots' [Hlookup' _]].
+  exists roots'. exact Hlookup'.
+Qed.
 
 Lemma root_env_covers_params_equiv :
   forall ps R R',
@@ -6688,6 +6707,74 @@ Proof.
   unfold root_env_excludes_params_b, root_env_excludes_params.
   intros ps R Hparams x Hin.
   eapply Hnames; eassumption.
+Qed.
+
+Lemma root_env_covers_sctx_update :
+  forall Σ R x roots,
+    root_env_covers_sctx Σ R ->
+    root_env_covers_sctx Σ (root_env_update x roots R).
+Proof.
+  intros Σ R x roots Hcovers y Hy.
+  destruct (Hcovers y Hy) as [roots_old Hlookup].
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst y.
+    exists roots.
+    eapply root_env_lookup_update_eq. exact Hlookup.
+  - exists roots_old.
+    rewrite root_env_lookup_update_neq.
+    + exact Hlookup.
+    + apply ident_eqb_neq. exact Heq.
+Qed.
+
+Lemma root_env_covers_sctx_add :
+  forall Σ R x roots,
+    root_env_covers_sctx Σ R ->
+    root_env_covers_sctx Σ (root_env_add x roots R).
+Proof.
+  intros Σ R x roots Hcovers y Hy.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst y.
+    exists roots. apply root_env_lookup_add_eq.
+  - destruct (Hcovers y Hy) as [roots_old Hlookup].
+    exists roots_old.
+    rewrite root_env_lookup_add_neq.
+    + exact Hlookup.
+    + apply ident_eqb_neq. exact Heq.
+Qed.
+
+Lemma root_env_covers_sctx_remove_non_name :
+  forall Σ R x,
+    root_env_covers_sctx Σ R ->
+    ~ In x (ctx_names Σ) ->
+    root_env_covers_sctx Σ (root_env_remove x R).
+Proof.
+  intros Σ R x Hcovers Hnotin y Hy.
+  destruct (Hcovers y Hy) as [roots_old Hlookup].
+  exists roots_old.
+  rewrite root_env_lookup_remove_neq.
+  - exact Hlookup.
+  - intros Heq. subst y. contradiction.
+Qed.
+
+Lemma root_env_covers_sctx_lookup_none_not_in :
+  forall Σ R x,
+    root_env_covers_sctx Σ R ->
+    root_env_lookup x R = None ->
+    ~ In x (ctx_names Σ).
+Proof.
+  intros Σ R x Hcovers Hlookup_none Hin.
+  destruct (Hcovers x Hin) as [roots Hlookup].
+  rewrite Hlookup_none in Hlookup. discriminate.
+Qed.
+
+Lemma root_env_covers_params_sctx_of_params :
+  forall ps R,
+    root_env_covers_params ps R ->
+    root_env_covers_sctx (sctx_of_ctx (params_ctx ps)) R.
+Proof.
+  unfold root_env_covers_params, root_env_covers_sctx, sctx_of_ctx.
+  intros ps R Hcovers x Hin.
+  apply Hcovers. exact Hin.
 Qed.
 
 Lemma root_env_covers_params_update :

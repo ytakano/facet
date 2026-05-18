@@ -241,7 +241,12 @@ Next implementable target:
    must carry the freshness invariant needed to discharge the extra
    `TERS_Let` / `TERS_LetInfer` initializer obligations:
    `roots_exclude x roots1` and `root_env_excludes x R1`.
-3. If the alpha-normalized theorem family is not tractable, add an executable
+3. First prove the alpha-local freshness support needed by that theorem:
+   alpha-renamed function bodies must expose local binder freshness against
+   both the alpha-renamed params and previously introduced local binders.
+   The params-only helper exists; the local-local uniqueness/no-shadow helper
+   is the next proof-only prerequisite.
+4. If the alpha-normalized theorem family is not tractable, add an executable
    alpha root-summary checker plus soundness, and use it as the explicit
    sidecar evidence source.
 
@@ -371,6 +376,16 @@ verbose than the quick path. Do not use it as the primary implementation order.
      alpha-normalization because source-level `let x = &x` initializer
      shadowing is valid. The next theorem must therefore be restricted to
      alpha-normalized core or must use a new alpha root-summary checker.
+   - Done: added proof-only coverage/freshness prerequisites for the
+     structural-to-shadow route: `root_env_covers_sctx` and basic coverage
+     lemmas in `TypeSafety.v`, plus
+     `alpha_rename_fn_def_body_local_store_names_fresh_params` in
+     `AlphaRenaming.v`.
+   - Next proof-only prerequisite: add an alpha-renamed local-local freshness
+     or `NoDup (expr_local_store_names (fn_body fr))` theorem strong enough
+     to show each `ELet` / `ELetInfer` binder is fresh for the current
+     synthesized root environment, not only fresh relative to the function
+     parameters.
    - Done: proved and focused-compiled
      `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`, closing
      the old blockers around assembling the full shadow-safe

@@ -2329,6 +2329,35 @@ Proof.
     exact Hbody.
 Qed.
 
+Lemma alpha_rename_fn_def_body_local_store_names_fresh_params :
+  forall used f fr used',
+    alpha_rename_fn_def used f = (fr, used') ->
+    Forall
+      (fun x => ~ In x (ctx_names (params_ctx (fn_params fr))))
+      (expr_local_store_names (fn_body fr)).
+Proof.
+  intros used f fr used' Hrename.
+  destruct f as [fname lifetimes outs ps ret body].
+  unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
+  destruct (alpha_rename_params []
+    (param_names ps ++ free_vars_expr body ++ used) ps)
+    as [[psr ρ] used1] eqn:Hps.
+  destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
+  pose proof (alpha_rename_expr_local_store_names_fresh_used
+    ρ used1 body bodyr used2 Hbody) as Hfresh.
+  inversion Hrename; subst. simpl.
+  simpl in Hfresh.
+  induction Hfresh as [| x xs Hnotin Hfresh IH].
+  - constructor.
+  - constructor.
+    + intro Hin.
+      apply Hnotin.
+      eapply alpha_rename_params_names_in_used.
+      * exact Hps.
+      * exact Hin.
+    + exact IH.
+Qed.
+
 Lemma alpha_rename_fn_def_params_nodup : forall used f fr used',
   alpha_rename_fn_def used f = (fr, used') ->
   NoDup (ctx_names (params_ctx (fn_params fr))).

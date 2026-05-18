@@ -4367,6 +4367,96 @@ Example check_program_env_alpha_validated_root_shadow_provenance_rejects_ready_g
   check_program_env_alpha_validated_root_shadow_provenance ex_ready_gap_let_env = false.
 Proof. vm_compute. reflexivity. Qed.
 
+(* Ordinary-checker accepted core shapes that the safety validator rejects. *)
+
+Definition ex_ready_gap_let_annotated_fn : fn_def :=
+  MkFnDef (("ready_gap_let_annotated"%string), 0) 0 [] []
+    (MkTy UUnrestricted TUnits)
+    (ELet MImmutable (("x"%string), 0)
+      (MkTy UUnrestricted TIntegers)
+      (ELit (LInt 1))
+      EUnit).
+
+Definition ex_ready_gap_let_annotated_env : global_env :=
+  MkGlobalEnv [] [] [] [ex_ready_gap_let_annotated_fn].
+
+Example ready_gap_matrix_annotated_let_checker_accepts :
+  check_program_env_alpha ex_ready_gap_let_annotated_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_annotated_let_validator_rejects :
+  check_program_env_alpha_validated_root_shadow_provenance
+    ex_ready_gap_let_annotated_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_infer_let_checker_accepts :
+  check_program_env_alpha ex_ready_gap_let_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_infer_let_validator_rejects :
+  check_program_env_alpha_validated_root_shadow_provenance
+    ex_ready_gap_let_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Definition ex_ready_gap_deref_borrow_fn : fn_def :=
+  MkFnDef (("ready_gap_deref_borrow"%string), 0) 0 [] []
+    (MkTy UUnrestricted TIntegers)
+    (ELet MImmutable (("x"%string), 0)
+      (MkTy UUnrestricted TIntegers)
+      (ELit (LInt 1))
+      (EDeref (EBorrow RShared (PVar (("x"%string), 0))))).
+
+Definition ex_ready_gap_deref_borrow_env : global_env :=
+  MkGlobalEnv [] [] [] [ex_ready_gap_deref_borrow_fn].
+
+Example ready_gap_matrix_deref_borrow_checker_accepts :
+  check_program_env_alpha ex_ready_gap_deref_borrow_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_deref_borrow_validator_rejects :
+  check_program_env_alpha_validated_root_shadow_provenance
+    ex_ready_gap_deref_borrow_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Definition ex_ready_gap_call_callee_fn : fn_def :=
+  MkFnDef (("ready_gap_call_callee"%string), 0) 0 [] []
+    (MkTy UUnrestricted TUnits)
+    EUnit.
+
+Definition ex_ready_gap_direct_call_fn : fn_def :=
+  MkFnDef (("ready_gap_direct_call"%string), 0) 0 [] []
+    (MkTy UUnrestricted TUnits)
+    (ECall (("ready_gap_call_callee"%string), 0) []).
+
+Definition ex_ready_gap_direct_call_env : global_env :=
+  MkGlobalEnv [] [] [] [ex_ready_gap_call_callee_fn; ex_ready_gap_direct_call_fn].
+
+Example ready_gap_matrix_direct_call_checker_accepts :
+  check_program_env_alpha ex_ready_gap_direct_call_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_direct_call_validator_rejects :
+  check_program_env_alpha_validated_root_shadow_provenance
+    ex_ready_gap_direct_call_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Definition ex_ready_gap_call_expr_fn : fn_def :=
+  MkFnDef (("ready_gap_call_expr"%string), 0) 0 [] []
+    (MkTy UUnrestricted TUnits)
+    (ECallExpr (EFn (("ready_gap_call_callee"%string), 0)) []).
+
+Definition ex_ready_gap_call_expr_env : global_env :=
+  MkGlobalEnv [] [] [] [ex_ready_gap_call_callee_fn; ex_ready_gap_call_expr_fn].
+
+Example ready_gap_matrix_call_expr_checker_accepts :
+  check_program_env_alpha ex_ready_gap_call_expr_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_call_expr_validator_rejects :
+  check_program_env_alpha_validated_root_shadow_provenance
+    ex_ready_gap_call_expr_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
 Definition ex_struct_split : struct_def :=
   MkStructDef ("Split"%string) 0 0 []
     [ MkFieldDef ("x"%string) MImmutable (MkTy UAffine TIntegers)

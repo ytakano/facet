@@ -591,6 +591,36 @@ Proof.
   - apply ty_compatible_b_sound. exact Hcompat.
 Qed.
 
+Definition initial_root_runtime_ready_for_fn (f : fn_def) (s : store) : Prop :=
+  store_roots_within (initial_root_env_for_fn f) s /\
+  store_no_shadow s /\
+  root_env_store_roots_named (initial_root_env_for_fn f) s /\
+  root_env_store_keys_named (initial_root_env_for_fn f) s.
+
+Definition ordinary_alpha_direct_call_sidecar_ready (env : global_env) : Prop :=
+  env_fns_root_shadow_summary_evidence (alpha_normalize_global_env env) /\
+  fn_env_unique_by_name (alpha_normalize_global_env env) /\
+  env_fns_preservation_ready (alpha_normalize_global_env env).
+
+Theorem infer_full_env_alpha_big_step_safe_with_direct_call_sidecar_ready :
+  forall env f T Γ' s s' v,
+    infer_full_env (alpha_normalize_global_env env) f = infer_ok (T, Γ') ->
+    ordinary_alpha_direct_call_sidecar_ready env ->
+    In f (env_fns (alpha_normalize_global_env env)) ->
+    initial_store_for_fn (alpha_normalize_global_env env) f s ->
+    preservation_direct_call_ready_expr (fn_body f) ->
+    initial_root_runtime_ready_for_fn f s ->
+    eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
+    value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
+Proof.
+  intros env f T Γ' s s' v Hinfer Hsidecar Hin Hstore Hready
+    Hroot_runtime Heval.
+  destruct Hsidecar as [Hsummary [Hunique Hfns_ready]].
+  destruct Hroot_runtime as [Hroots [Hstore_shadow [Hnamed Hkeys]]].
+  eapply infer_full_env_alpha_big_step_safe_with_shadow_summary_evidence;
+    eassumption.
+Qed.
+
 Theorem infer_full_env_alpha_big_step_safe_with_root_sidecar :
   forall env f R0 T Γ' R' roots s s' v,
     infer_full_env (alpha_normalize_global_env env) f = infer_ok (T, Γ') ->

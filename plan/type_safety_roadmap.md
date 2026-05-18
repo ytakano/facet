@@ -232,16 +232,19 @@ The current implemented target is the non-direct-call alpha route:
 `infer_full_env_alpha_big_step_safe_structural_ready` connects ordinary
 checker success on alpha-normalized core to structural preservation and
 `value_has_type` under `preservation_ready_expr`.
+The direct-call route now has a packaged sidecar wrapper:
+`infer_full_env_alpha_big_step_safe_with_direct_call_sidecar_ready`.
 
 Current ordinary-safety blockers:
 
-- Extend the ordinary-alpha theorem through direct calls without making full
-  structural-to-shadow-root synthesis the canonical route.
-- Runtime reference safety and direct-call cleanup may use local root/shadow
-  sidecar evidence, but that evidence is not the ordinary accepted-program
-  route.
-- Reduce or package the direct-call sidecar premises only where operational
-  cleanup genuinely needs them.
+- Reduce or discharge the packaged sidecar premises where possible.
+- `ordinary_alpha_direct_call_sidecar_ready` still explicitly requires
+  `env_fns_root_shadow_summary_evidence`, function-name uniqueness, and
+  preservation readiness for the alpha-normalized environment.
+- `initial_root_runtime_ready_for_fn` remains an explicit runtime precondition.
+  It cannot be derived from `initial_store_for_fn` alone because the initial
+  root environment stores `RParam` roots while runtime references require
+  concrete `RStore` reachability.
 
 Do not make full structural-to-shadow-root synthesis the next task. Existing
 root/shadow facts are useful sidecar facts for direct-call cleanup and
@@ -369,9 +372,14 @@ verbose than the quick path. Do not use it as the primary implementation order.
      ordinary checker success on alpha-normalized core to structural
      preservation and `value_has_type` for `preservation_ready_expr`, without
      routing through `env_fns_root_shadow_summary_evidence`.
-   - Remaining ordinary-safety blocker: extend the theorem shape through
-     direct calls while keeping root/shadow evidence local to direct-call
-     cleanup and provenance.
+   - Done: added the direct-call sidecar packaging theorem
+     `infer_full_env_alpha_big_step_safe_with_direct_call_sidecar_ready`, plus
+     `ordinary_alpha_direct_call_sidecar_ready` and
+     `initial_root_runtime_ready_for_fn`. This keeps root/shadow evidence
+     local to direct-call cleanup and provenance while avoiding full
+     structural-to-shadow-root synthesis as the ordinary route.
+   - Remaining ordinary-safety blocker: reduce or discharge the packaged
+     direct-call sidecar premises where possible.
    - Sidecar limitation: ordinary checker success still does not by itself
      produce `env_fns_root_shadow_summary_evidence` for the alpha-normalized
      function environment. Existing facts only project root/shadow-root typing

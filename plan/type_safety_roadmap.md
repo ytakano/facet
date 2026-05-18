@@ -408,6 +408,12 @@ for these gates before treating a newly accepted syntax class as ordinary-safe.
 - The current executable safety validator is stricter than the ordinary checker.
   In particular, `preservation_ready_expr_b` currently rejects `ELet`,
   `ELetInfer`, `ECall`, `ECallExpr`, and `EDeref`.
+- Do not widen `provenance_ready_expr_b` to accept `EDeref` by only adding a
+  boolean case and Prop constructor. `typed_env_roots` and
+  `typed_env_roots_shadow_safe` currently have no `EDeref` constructors, and
+  the runtime preservation/root/frame proofs close dereference evaluation cases
+  by inverting the ready predicate. A sound `EDeref` widening needs root
+  provenance typing rules plus matching preservation cases.
 - The provenance-only root-shadow summary validator accepts the annotated and
   inferred ready-gap let examples that the preservation-ready root-shadow
   validator rejects, and it is now wired into the checked-initial operational

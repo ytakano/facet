@@ -107,6 +107,14 @@ shows they are unusable.
   `root_env_tail_fresh_names`,
   `typed_roots_shadow_safe_tail_frame_mutual`, and
   `typed_env_roots_shadow_safe_tail_frame`.
+- Alpha-local no-shadow predicates and `ELet` / `ELetInfer` decomposition
+  helpers exist in `TypeSafety.v`:
+  `expr_local_no_shadow_from`, `args_local_no_shadow_from`,
+  `fields_local_no_shadow_from`,
+  `expr_local_no_shadow_from_let_init`,
+  `expr_local_no_shadow_from_let_binder_fresh_prefix`,
+  `expr_local_no_shadow_from_letinfer_init`, and
+  `expr_local_no_shadow_from_letinfer_binder_fresh_prefix`.
 - Function-level alpha-renaming packaging now exists in `AlphaRenaming.v`:
   `alpha_rename_fn_def_params_body`,
   `alpha_rename_fn_def_params_body_facts`,
@@ -393,8 +401,10 @@ verbose than the quick path. Do not use it as the primary implementation order.
      are proof-only and do not change checker behavior.
    - Next proof-only prerequisite: use the new alpha no-shadow facts to state
      and prove the first structural-to-shadow-root synthesis theorem over
-     alpha-normalized expressions. Start with the expression theorem and only
-     add args/fields variants when the call/struct cases require them.
+     alpha-normalized expressions. Start with the expression theorem and use
+     the `expr_local_no_shadow_from_*` decomposition helpers in the
+     `ELet` / `ELetInfer` cases; only add args/fields variants when the
+     call/struct cases require them.
    - Done: proved and focused-compiled
      `alpha_rename_typed_env_roots_shadow_safe_full_support_forward`, closing
      the old blockers around assembling the full shadow-safe

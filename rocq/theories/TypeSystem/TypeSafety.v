@@ -811,6 +811,82 @@ Definition fields_local_no_shadow_from
     (Γ : sctx) (fields : list (string * expr)) : Prop :=
   NoDup (ctx_names Γ ++ fields_local_store_names fields).
 
+Lemma NoDup_app_left_ts : forall (xs ys : list ident),
+  NoDup (xs ++ ys) ->
+  NoDup xs.
+Proof.
+  intros xs ys Hnodup.
+  induction xs as [| x xs IH]; simpl in *.
+  - constructor.
+  - inversion Hnodup; subst.
+    constructor.
+    + intro Hin. apply H1. apply in_or_app. left. exact Hin.
+    + apply IH. exact H2.
+Qed.
+
+Lemma NoDup_app_middle_fresh_ts : forall (xs ys : list ident) x,
+  NoDup (xs ++ x :: ys) ->
+  ~ In x xs.
+Proof.
+  intros xs ys x Hnodup Hin.
+  induction xs as [| y xs IH]; simpl in *.
+  - contradiction.
+  - inversion Hnodup; subst.
+    destruct Hin as [Heq | Hin].
+    + subst y. apply H1. apply in_or_app. right. simpl. left. reflexivity.
+    + apply IH.
+      * exact H2.
+      * exact Hin.
+Qed.
+
+Lemma expr_local_no_shadow_from_let_init :
+  forall Γ m x T e1 e2,
+    expr_local_no_shadow_from Γ (ELet m x T e1 e2) ->
+    expr_local_no_shadow_from Γ e1.
+Proof.
+  unfold expr_local_no_shadow_from.
+  intros Γ m x T e1 e2 Hnodup.
+  simpl in Hnodup.
+  rewrite app_assoc in Hnodup.
+  eapply NoDup_app_left_ts. exact Hnodup.
+Qed.
+
+Lemma expr_local_no_shadow_from_let_binder_fresh_prefix :
+  forall Γ m x T e1 e2,
+    expr_local_no_shadow_from Γ (ELet m x T e1 e2) ->
+    ~ In x (ctx_names Γ ++ expr_local_store_names e1).
+Proof.
+  unfold expr_local_no_shadow_from.
+  intros Γ m x T e1 e2 Hnodup.
+  simpl in Hnodup.
+  rewrite app_assoc in Hnodup.
+  eapply NoDup_app_middle_fresh_ts. exact Hnodup.
+Qed.
+
+Lemma expr_local_no_shadow_from_letinfer_init :
+  forall Γ m x e1 e2,
+    expr_local_no_shadow_from Γ (ELetInfer m x e1 e2) ->
+    expr_local_no_shadow_from Γ e1.
+Proof.
+  unfold expr_local_no_shadow_from.
+  intros Γ m x e1 e2 Hnodup.
+  simpl in Hnodup.
+  rewrite app_assoc in Hnodup.
+  eapply NoDup_app_left_ts. exact Hnodup.
+Qed.
+
+Lemma expr_local_no_shadow_from_letinfer_binder_fresh_prefix :
+  forall Γ m x e1 e2,
+    expr_local_no_shadow_from Γ (ELetInfer m x e1 e2) ->
+    ~ In x (ctx_names Γ ++ expr_local_store_names e1).
+Proof.
+  unfold expr_local_no_shadow_from.
+  intros Γ m x e1 e2 Hnodup.
+  simpl in Hnodup.
+  rewrite app_assoc in Hnodup.
+  eapply NoDup_app_middle_fresh_ts. exact Hnodup.
+Qed.
+
 Lemma value_roots_within_excludes :
   (forall roots v,
     value_roots_within roots v ->

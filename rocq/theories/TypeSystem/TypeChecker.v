@@ -3735,6 +3735,28 @@ Definition check_program_env_alpha_validated_root_shadow (env : global_env) : bo
   check_program_env_alpha_validated env &&
   check_env_root_shadow_summary (alpha_normalize_global_env env).
 
+Definition ex_ready_gap_let_fn : fn_def :=
+  MkFnDef (("ready_gap_let"%string), 0) 0 [] []
+    (MkTy UUnrestricted TUnits)
+    (ELetInfer MImmutable (("x"%string), 0)
+      (ELit (LInt 1))
+      EUnit).
+
+Definition ex_ready_gap_let_env : global_env :=
+  MkGlobalEnv [] [] [] [ex_ready_gap_let_fn].
+
+Example check_program_env_alpha_accepts_ready_gap_let :
+  check_program_env_alpha ex_ready_gap_let_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example check_program_env_alpha_validated_root_shadow_rejects_ready_gap_let :
+  check_program_env_alpha_validated_root_shadow ex_ready_gap_let_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Example preservation_ready_expr_b_rejects_ready_gap_let :
+  preservation_ready_expr_b (fn_body ex_ready_gap_let_fn) = false.
+Proof. vm_compute. reflexivity. Qed.
+
 Definition ex_struct_split : struct_def :=
   MkStructDef ("Split"%string) 0 0 []
     [ MkFieldDef ("x"%string) MImmutable (MkTy UAffine TIntegers)

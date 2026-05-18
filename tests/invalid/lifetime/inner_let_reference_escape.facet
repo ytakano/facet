@@ -1,0 +1,5 @@
+fn bad<'a>() -> unrestricted isize {
+    let r: unrestricted &'a unrestricted isize =
+        let x: unrestricted isize = 1 in (&x) in
+    (*r)
+}

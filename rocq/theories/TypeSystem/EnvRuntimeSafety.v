@@ -980,6 +980,18 @@ Proof.
     + apply IH. exact Hrest.
 Qed.
 
+Lemma direct_call_ready_expr_b_sound :
+  forall e,
+    direct_call_ready_expr_b e = true ->
+    preservation_direct_call_ready_expr e.
+Proof.
+  intros e Hready.
+  unfold direct_call_ready_expr_b in Hready.
+  destruct e; try discriminate.
+  apply PDCR_Call.
+  apply preservation_ready_args_b_sound. exact Hready.
+Qed.
+
 Lemma provenance_ready_expr_b_sound :
   forall e,
     provenance_ready_expr_b e = true ->
@@ -1085,6 +1097,30 @@ Definition env_fns_root_shadow_provenance_summary_check_ready
     lookup_fn fname (env_fns env) = Some fdef ->
     callee_body_root_shadow_provenance_summary env fdef.
 
+Definition callee_body_root_shadow_direct_call_provenance_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  callee_body_root_shadow_provenance_summary env fdef \/
+  exists fname args fcallee T_body Γ_out R_body roots_body,
+    fn_body fdef = ECall fname args /\
+    preservation_ready_args args /\
+    In fcallee (env_fns env) /\
+    fn_name fcallee = fname /\
+    callee_body_root_shadow_provenance_summary env fcallee /\
+    NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+    typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (params_ctx (fn_params fdef)))
+      (fn_body fdef) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
+    roots_exclude_params (fn_params fdef) roots_body /\
+    root_env_excludes_params (fn_params fdef) R_body.
+
+Definition env_fns_root_shadow_direct_call_provenance_summary_check_ready
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_direct_call_provenance_summary env fdef.
+
 Lemma fn_params_roots_exclude_b_sound :
   forall ps roots,
     fn_params_roots_exclude_b ps roots = true ->
@@ -1171,6 +1207,47 @@ Proof.
     + apply fn_params_root_env_excludes_b_sound. exact Henv.
 Qed.
 
+Lemma check_fn_root_shadow_direct_call_provenance_summary_sound :
+  forall env fdef,
+    check_fn_root_shadow_direct_call_provenance_summary env fdef = true ->
+    callee_body_root_shadow_direct_call_provenance_summary env fdef.
+Proof.
+  intros env fdef Hcheck.
+  unfold check_fn_root_shadow_direct_call_provenance_summary in Hcheck.
+  destruct (check_fn_root_shadow_provenance_summary env fdef) eqn:Hold.
+  - left. apply check_fn_root_shadow_provenance_summary_sound. exact Hold.
+  - right.
+    destruct (fn_body fdef) eqn:Hbody; try discriminate.
+    apply andb_true_iff in Hcheck as [Hready_args Hrest].
+    destruct (lookup_fn_b i (env_fns env)) as [fcallee |] eqn:Hlookup_b;
+      try discriminate.
+    apply andb_true_iff in Hrest as [Hcallee Hsummary].
+    destruct (infer_env_roots_shadow_safe env fdef
+      (initial_root_env_for_fn fdef))
+      as [[[[T_check Γ_check] R_out] roots] | err] eqn:Hinfer;
+      try discriminate.
+    apply andb_true_iff in Hsummary as [Hroots Henv].
+    destruct (lookup_fn_b_sound i (env_fns env) fcallee Hlookup_b)
+      as [Hin_callee Hname_callee].
+    pose proof (infer_env_roots_shadow_safe_sound
+                  env fdef (initial_root_env_for_fn fdef)
+                  T_check Γ_check R_out roots Hinfer) as Htyped_fn.
+    unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
+    destruct Htyped_fn as
+      (T_body & Γ_out & Htyped & Hcompat & _).
+    exists i, l, fcallee, T_body, Γ_out, R_out, roots.
+    split; [reflexivity|].
+    split; [apply preservation_ready_args_b_sound; exact Hready_args|].
+    split; [exact Hin_callee|].
+    split; [exact Hname_callee|].
+    split; [apply check_fn_root_shadow_provenance_summary_sound; exact Hcallee|].
+    split; [eapply infer_env_roots_shadow_safe_params_nodup; exact Hinfer|].
+    split; [rewrite <- Hbody; exact Htyped|].
+    split; [exact Hcompat|].
+    split; [apply fn_params_roots_exclude_b_sound; exact Hroots|].
+    apply fn_params_root_env_excludes_b_sound. exact Henv.
+Qed.
+
 Lemma check_env_root_shadow_summary_ready :
   forall env,
     check_env_root_shadow_summary env = true ->
@@ -1196,6 +1273,20 @@ Proof.
     as [Hin _].
   apply forallb_forall with (x := fdef) in Hcheck; [| exact Hin].
   apply check_fn_root_shadow_provenance_summary_sound.
+  exact Hcheck.
+Qed.
+
+Lemma check_env_root_shadow_direct_call_provenance_summary_ready :
+  forall env,
+    check_env_root_shadow_direct_call_provenance_summary env = true ->
+    env_fns_root_shadow_direct_call_provenance_summary_check_ready env.
+Proof.
+  intros env Hcheck fname fdef Hlookup.
+  unfold check_env_root_shadow_direct_call_provenance_summary in Hcheck.
+  destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+    as [Hin _].
+  apply forallb_forall with (x := fdef) in Hcheck; [| exact Hin].
+  apply check_fn_root_shadow_direct_call_provenance_summary_sound.
   exact Hcheck.
 Qed.
 
@@ -1260,6 +1351,11 @@ Definition ordinary_alpha_root_shadow_provenance_validator_ready
   env_fns_root_shadow_provenance_summary_check_ready
     (alpha_normalize_global_env env).
 
+Definition ordinary_alpha_root_shadow_direct_call_provenance_validator_ready
+    (env : global_env) : Prop :=
+  env_fns_root_shadow_direct_call_provenance_summary_check_ready
+    (alpha_normalize_global_env env).
+
 Lemma check_program_env_alpha_validated_root_shadow_ready :
   forall env,
     check_program_env_alpha_validated_root_shadow env = true ->
@@ -1286,6 +1382,19 @@ Proof.
   apply andb_true_iff in Hcheck as [_ Hprov].
   apply check_env_root_shadow_provenance_summary_ready.
   exact Hprov.
+Qed.
+
+Lemma check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary_ready :
+  forall env,
+    check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary env = true ->
+    ordinary_alpha_root_shadow_direct_call_provenance_validator_ready env.
+Proof.
+  intros env Hcheck.
+  unfold check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary
+    in Hcheck.
+  apply andb_true_iff in Hcheck as [_ Hsummary].
+  apply check_env_root_shadow_direct_call_provenance_summary_ready.
+  exact Hsummary.
 Qed.
 
 Lemma check_program_env_alpha_validated_root_shadow_provenance_ready :
@@ -1787,6 +1896,84 @@ Proof.
   - exact Hin.
   - exact Hstore.
   - exact Heval.
+Qed.
+
+Theorem check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary_big_step_safe_checked_initial_ready :
+  forall env f s s' v,
+    check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary env = true ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns (alpha_normalize_global_env env)) ->
+    initial_store_for_fn (alpha_normalize_global_env env) f s ->
+    eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
+    value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hcheck Hinitial Hin Hstore Heval.
+  unfold check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary
+    in Hcheck.
+  apply andb_true_iff in Hcheck as [Hvalidated Hsummary_check].
+  pose proof (check_program_env_alpha_validated_unique env Hvalidated)
+    as Hunique.
+  pose proof
+    (check_env_root_shadow_direct_call_provenance_summary_ready
+      (alpha_normalize_global_env env) Hsummary_check)
+    as Hsummary.
+  pose proof (lookup_fn_in_unique_by_name (alpha_normalize_global_env env)
+    (fn_name f) f Hin eq_refl Hunique) as Hlookup.
+  pose proof (Hsummary (fn_name f) f Hlookup) as Hfn_summary.
+  destruct (check_initial_root_runtime_ready_sound f s Hinitial) as
+    [Hroots [Hstore_shadow [Hnamed Hkeys]]].
+  destruct Hfn_summary as [Hprov_summary | Hdirect_summary].
+  - destruct Hprov_summary as [Hnodup Hbody_summary].
+    unfold callee_body_root_shadow_provenance_ready_at in Hbody_summary.
+    destruct Hbody_summary as
+      (T_body & Γ_out & R_body & roots_body &
+        Hprov_body & Htyped_shadow & Hcompat & _ & _).
+    pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
+    destruct (proj1 eval_preserves_typing_roots_ready_mutual
+        (alpha_normalize_global_env env) s (fn_body f) s' v Heval
+        (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+        (sctx_of_ctx (params_ctx (fn_params f)))
+        T_body (sctx_of_ctx Γ_out) R_body roots_body
+        Hprov_body Hstore Hroots Hstore_shadow Hroot_shadow
+        (typed_env_roots_shadow_safe_roots
+          (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
+          (initial_root_env_for_fn f)
+          (sctx_of_ctx (params_ctx (fn_params f)))
+          (fn_body f) T_body (sctx_of_ctx Γ_out) R_body roots_body
+          Htyped_shadow))
+      as [_ [Hv _]].
+    eapply VHT_Compatible.
+    + exact Hv.
+    + apply ty_compatible_b_sound. exact Hcompat.
+  - destruct Hdirect_summary as
+      (fname & args & fcallee & T_body & Γ_out & R_body & roots_body &
+        Hbody & Hready_args & Hin_callee & Hname_callee & Hcallee_summary &
+        Hnodup & Htyped_shadow & Hcompat & _ & _).
+    pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
+    rewrite Hbody in Heval.
+    assert (Htyped_call :
+      typed_env_roots_shadow_safe (alpha_normalize_global_env env)
+        (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+        (sctx_of_ctx (params_ctx (fn_params f))) (ECall fname args)
+        T_body (sctx_of_ctx Γ_out) R_body roots_body).
+    { rewrite <- Hbody. exact Htyped_shadow. }
+    destruct (eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary
+        (alpha_normalize_global_env env) s s' v fname args Heval
+        (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+        (sctx_of_ctx (params_ctx (fn_params f)))
+        T_body (sctx_of_ctx Γ_out) R_body roots_body fcallee
+        Hready_args Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
+        (typed_env_roots_shadow_safe_roots
+          (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
+          (initial_root_env_for_fn f)
+          (sctx_of_ctx (params_ctx (fn_params f)))
+          (ECall fname args) T_body (sctx_of_ctx Γ_out) R_body roots_body
+          Htyped_call)
+        Hunique Hin_callee Hname_callee Hcallee_summary)
+      as [_ [Hv _]].
+    eapply VHT_Compatible.
+    + exact Hv.
+    + apply ty_compatible_b_sound. exact Hcompat.
 Qed.
 
 Theorem infer_full_env_alpha_big_step_safe_with_root_sidecar :

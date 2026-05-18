@@ -161,6 +161,14 @@ Follow this order before inventing new theorem shapes:
    reference-provenance subproofs that actually need it. Avoid whole-program
    root-shadow validation when a narrower direct-call evidence package is
    enough.
+   For direct `ECall`, do not widen ordinary or provenance expression
+   readiness by simply adding an `ECall` constructor. Direct calls need
+   callee-body root-shadow/provenance evidence, so the route must stay local:
+   the caller body should use `preservation_direct_call_ready_expr`, while only
+   the called callee body is required to have the existing root-shadow
+   provenance summary evidence. Avoid a whole-environment validator shape that
+   makes the direct-call caller depend on the same old summary predicate it is
+   trying to relax.
    While doing this, keep `replace p e_new` target-conflict discipline visible:
    the ordinary checker must not allow `e_new` to consume or invalidate the
    place being replaced, and any proof route should use that fact directly
@@ -203,8 +211,15 @@ Use these wrappers before adding new theorem shapes:
 - Executable provenance-only root-shadow summary entrypoints:
   `check_fn_root_shadow_provenance_summary` and
   `check_env_root_shadow_provenance_summary`.
+- Executable direct-call-local provenance summary entrypoints:
+  `check_fn_root_shadow_direct_call_provenance_summary`,
+  `check_env_root_shadow_direct_call_provenance_summary`, and
+  `check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary`.
 - Executable provenance-summary route with checked initial runtime state:
   `check_program_env_alpha_validated_root_shadow_provenance_summary_big_step_safe_checked_initial_ready`.
+- Executable direct-call-local provenance-summary route with checked initial
+  runtime state:
+  `check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary_big_step_safe_checked_initial_ready`.
 - Executable preservation readiness entrypoint:
   `check_env_preservation_ready`.
 - Executable initial runtime readiness entrypoint:
@@ -230,9 +245,12 @@ Use these wrappers before adding new theorem shapes:
   `callee_body_root_shadow_provenance_ready_at`,
   `callee_body_root_provenance_summary`,
   `callee_body_root_shadow_provenance_summary`,
+  `callee_body_root_shadow_direct_call_provenance_summary`,
   `env_fns_root_provenance_summary_evidence`,
   `env_fns_root_shadow_provenance_summary_evidence`, and
   `env_fns_root_shadow_provenance_summary_check_ready`.
+- Proof-only direct-call-local provenance-summary package predicate:
+  `env_fns_root_shadow_direct_call_provenance_summary_check_ready`.
 - Direct-call bridges from uniqueness:
   `direct_call_callee_body_root_shadow_summary_bridge_of_unique` and
   `direct_call_callee_body_root_shadow_provenance_summary_bridge_of_unique`.
@@ -299,6 +317,14 @@ Current status:
   `preservation_ready_expr` for callee bodies. The public runtime theorem
   `eval_preserves_typing_direct_call_roots_provenance_ready` consumes
   root-shadow provenance summary evidence without `env_fns_preservation_ready`.
+- The executable direct-call-local provenance route is implemented. A caller
+  body that is exactly direct `ECall fname args` can be accepted by
+  `check_fn_root_shadow_direct_call_provenance_summary` when the arguments are
+  `preservation_ready_args`, the callee has the existing provenance summary,
+  and the caller has its local root-shadow exclusions. This deliberately does
+  not make general `ECall` or `ECallExpr` part of ordinary/provenance readiness.
+  The checked-initial theorem is
+  `check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary_big_step_safe_checked_initial_ready`.
 - `check_program_env_alpha_validated_root_shadow_big_step_safe_checked_initial`
   discharges `initial_root_runtime_ready_for_fn` from the executable
   `check_initial_root_runtime_ready f s`.
@@ -408,12 +434,15 @@ for these gates before treating a newly accepted syntax class as ordinary-safe.
 - The current executable safety validator is stricter than the ordinary checker.
   In particular, `preservation_ready_expr_b` currently rejects `ELet`,
   `ELetInfer`, `ECall`, `ECallExpr`, and `EDeref`.
-- Do not widen `provenance_ready_expr_b` to accept `EDeref` by only adding a
-  boolean case and Prop constructor. `typed_env_roots` and
-  `typed_env_roots_shadow_safe` currently have no `EDeref` constructors, and
-  the runtime preservation/root/frame proofs close dereference evaluation cases
-  by inverting the ready predicate. A sound `EDeref` widening needs root
-  provenance typing rules plus matching preservation cases.
+- Direct `ECall` should be handled by a localized direct-call sidecar package,
+  not by mixing it into ordinary expression readiness. The next theorem shape
+  should let the caller use `preservation_direct_call_ready_expr` and require
+  root-shadow provenance summary evidence only for the callee body reached by
+  the call. `ECallExpr` remains a separate design gap because root provenance
+  typing/checking for call expressions is not implemented.
+- `provenance_ready_expr_b` now accepts the narrow `EDeref (EBorrow rk p)`
+  pattern with matching root provenance typing rules and runtime preservation
+  cases. General `EDeref` remains outside the current validator route.
 - The provenance-only root-shadow summary validator accepts the annotated and
   inferred ready-gap let examples that the preservation-ready root-shadow
   validator rejects, and it is now wired into the checked-initial operational

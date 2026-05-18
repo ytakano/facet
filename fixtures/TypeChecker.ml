@@ -5320,6 +5320,42 @@ let check_fn_root_shadow_provenance_summary env fdef =
 let check_env_root_shadow_provenance_summary env =
   forallb (check_fn_root_shadow_provenance_summary env) env.env_fns
 
+(** val direct_call_ready_expr_b : expr -> bool **)
+
+let direct_call_ready_expr_b = function
+| ECall (_, args) -> preservation_ready_args_b args
+| _ -> false
+
+(** val check_fn_root_shadow_direct_call_provenance_summary :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_direct_call_provenance_summary env fdef =
+  if check_fn_root_shadow_provenance_summary env fdef
+  then true
+  else (match fdef.fn_body with
+        | ECall (fname, args) ->
+          (&&) (preservation_ready_args_b args)
+            (match lookup_fn_b fname env.env_fns with
+             | Some callee ->
+               (&&) (check_fn_root_shadow_provenance_summary env callee)
+                 (match infer_env_roots_shadow_safe env fdef
+                          (initial_root_env_for_fn fdef) with
+                  | Infer_ok p ->
+                    let (p0, roots) = p in
+                    let (_, r_out) = p0 in
+                    (&&) (fn_params_roots_exclude_b fdef.fn_params roots)
+                      (fn_params_root_env_excludes_b fdef.fn_params r_out)
+                  | Infer_err _ -> false)
+             | None -> false)
+        | _ -> false)
+
+(** val check_env_root_shadow_direct_call_provenance_summary :
+    global_env -> bool **)
+
+let check_env_root_shadow_direct_call_provenance_summary env =
+  forallb (check_fn_root_shadow_direct_call_provenance_summary env)
+    env.env_fns
+
 (** val check_env_preservation_ready : global_env -> bool **)
 
 let check_env_preservation_ready env =
@@ -5337,6 +5373,14 @@ let check_program_env_alpha_validated_root_shadow env =
 let check_program_env_alpha_validated_root_shadow_provenance_summary env =
   (&&) (check_program_env_alpha_validated env)
     (check_env_root_shadow_provenance_summary
+      (alpha_normalize_global_env env))
+
+(** val check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary :
+    global_env -> bool **)
+
+let check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary env =
+  (&&) (check_program_env_alpha_validated env)
+    (check_env_root_shadow_direct_call_provenance_summary
       (alpha_normalize_global_env env))
 
 (** val check_program_env_alpha_validated_root_shadow_provenance :

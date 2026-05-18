@@ -4346,6 +4346,41 @@ Definition check_env_root_shadow_provenance_summary
     (env : global_env) : bool :=
   forallb (check_fn_root_shadow_provenance_summary env) (env_fns env).
 
+Definition direct_call_ready_expr_b (e : expr) : bool :=
+  match e with
+  | ECall _ args => preservation_ready_args_b args
+  | _ => false
+  end.
+
+Definition check_fn_root_shadow_direct_call_provenance_summary
+    (env : global_env) (fdef : fn_def) : bool :=
+  match check_fn_root_shadow_provenance_summary env fdef with
+  | true => true
+  | false =>
+      match fn_body fdef with
+      | ECall fname args =>
+          preservation_ready_args_b args &&
+          match lookup_fn_b fname (env_fns env) with
+          | None => false
+          | Some callee =>
+              check_fn_root_shadow_provenance_summary env callee &&
+              match infer_env_roots_shadow_safe env fdef
+                      (initial_root_env_for_fn fdef) with
+              | infer_ok (_, _, R_out, roots) =>
+                  fn_params_roots_exclude_b (fn_params fdef) roots &&
+                  fn_params_root_env_excludes_b (fn_params fdef) R_out
+              | infer_err _ => false
+              end
+          end
+      | _ => false
+      end
+  end.
+
+Definition check_env_root_shadow_direct_call_provenance_summary
+    (env : global_env) : bool :=
+  forallb (check_fn_root_shadow_direct_call_provenance_summary env)
+    (env_fns env).
+
 Definition check_env_preservation_ready (env : global_env) : bool :=
   forallb (fun fdef => preservation_ready_expr_b (fn_body fdef))
     (env_fns env).
@@ -4358,6 +4393,12 @@ Definition check_program_env_alpha_validated_root_shadow_provenance_summary
     (env : global_env) : bool :=
   check_program_env_alpha_validated env &&
   check_env_root_shadow_provenance_summary (alpha_normalize_global_env env).
+
+Definition check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary
+    (env : global_env) : bool :=
+  check_program_env_alpha_validated env &&
+  check_env_root_shadow_direct_call_provenance_summary
+    (alpha_normalize_global_env env).
 
 Definition check_program_env_alpha_validated_root_shadow_provenance
     (env : global_env) : bool :=
@@ -4515,6 +4556,11 @@ Example ready_gap_matrix_direct_call_validator_rejects :
     ex_ready_gap_direct_call_env = false.
 Proof. vm_compute. reflexivity. Qed.
 
+Example ready_gap_matrix_direct_call_direct_call_summary_accepts :
+  check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary
+    ex_ready_gap_direct_call_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
 Definition ex_ready_gap_call_expr_fn : fn_def :=
   MkFnDef (("ready_gap_call_expr"%string), 0) 0 [] []
     (MkTy UUnrestricted TUnits)
@@ -4529,6 +4575,11 @@ Proof. vm_compute. reflexivity. Qed.
 
 Example ready_gap_matrix_call_expr_validator_rejects :
   check_program_env_alpha_validated_root_shadow_provenance
+    ex_ready_gap_call_expr_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_call_expr_direct_call_summary_rejects :
+  check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary
     ex_ready_gap_call_expr_env = false.
 Proof. vm_compute. reflexivity. Qed.
 
@@ -4680,7 +4731,11 @@ Extraction "../fixtures/TypeChecker.ml"
   check_fn_root_shadow_summary check_env_root_shadow_summary
   check_fn_root_shadow_provenance_summary
   check_env_root_shadow_provenance_summary
+  direct_call_ready_expr_b
+  check_fn_root_shadow_direct_call_provenance_summary
+  check_env_root_shadow_direct_call_provenance_summary
   check_env_preservation_ready
   check_program_env_alpha_validated_root_shadow
   check_program_env_alpha_validated_root_shadow_provenance_summary
+  check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary
   check_program_env_alpha_validated_root_shadow_provenance.

@@ -4291,9 +4291,20 @@ Definition check_env_root_shadow_provenance_summary
     (env : global_env) : bool :=
   forallb (check_fn_root_shadow_provenance_summary env) (env_fns env).
 
+Definition check_env_preservation_ready (env : global_env) : bool :=
+  forallb (fun fdef => preservation_ready_expr_b (fn_body fdef))
+    (env_fns env).
+
 Definition check_program_env_alpha_validated_root_shadow (env : global_env) : bool :=
   check_program_env_alpha_validated env &&
   check_env_root_shadow_summary (alpha_normalize_global_env env).
+
+Definition check_program_env_alpha_validated_root_shadow_provenance
+    (env : global_env) : bool :=
+  check_program_env_alpha_validated env &&
+  (check_env_root_shadow_provenance_summary
+     (alpha_normalize_global_env env) &&
+   check_env_preservation_ready (alpha_normalize_global_env env)).
 
 Definition ex_ready_gap_let_fn : fn_def :=
   MkFnDef (("ready_gap_let"%string), 0) 0 [] []
@@ -4341,8 +4352,19 @@ Example infer_env_elab_ready_gap_let_annotates_body :
          EUnit)).
 Proof. vm_compute. reflexivity. Qed.
 
+Example check_env_preservation_ready_rejects_alpha_elab_ready_gap_let :
+  match infer_program_env_alpha_elab ex_ready_gap_let_env with
+  | infer_ok env => check_env_preservation_ready env
+  | infer_err _ => false
+  end = false.
+Proof. vm_compute. reflexivity. Qed.
+
 Example check_program_env_alpha_elab_accepts_ready_gap_let :
   check_program_env_alpha_elab ex_ready_gap_let_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example check_program_env_alpha_validated_root_shadow_provenance_rejects_ready_gap_let :
+  check_program_env_alpha_validated_root_shadow_provenance ex_ready_gap_let_env = false.
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_struct_split : struct_def :=
@@ -4493,4 +4515,6 @@ Extraction "../fixtures/TypeChecker.ml"
   check_fn_root_shadow_summary check_env_root_shadow_summary
   check_fn_root_shadow_provenance_summary
   check_env_root_shadow_provenance_summary
-  check_program_env_alpha_validated_root_shadow.
+  check_env_preservation_ready
+  check_program_env_alpha_validated_root_shadow
+  check_program_env_alpha_validated_root_shadow_provenance.

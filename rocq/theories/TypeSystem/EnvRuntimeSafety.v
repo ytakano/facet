@@ -1219,6 +1219,30 @@ Proof.
   exact Hcheck.
 Qed.
 
+Lemma check_env_preservation_ready_sound :
+  forall env,
+    check_env_preservation_ready env = true ->
+    env_fns_preservation_ready env.
+Proof.
+  intros env Hcheck fdef Hin.
+  unfold check_env_preservation_ready in Hcheck.
+  apply forallb_forall with (x := fdef) in Hcheck; [| exact Hin].
+  apply preservation_ready_expr_b_sound. exact Hcheck.
+Qed.
+
+Lemma env_fns_root_shadow_summary_check_ready_of_provenance_and_preservation :
+  forall env,
+    env_fns_root_shadow_provenance_summary_check_ready env ->
+    env_fns_preservation_ready env ->
+    env_fns_root_shadow_summary_check_ready env.
+Proof.
+  intros env Hprov Hpres fname fdef Hlookup.
+  pose proof
+    (env_fns_root_shadow_summary_evidence_of_provenance_and_preservation
+      env Hprov Hpres) as Hsummary.
+  exact (Hsummary fname fdef Hlookup).
+Qed.
+
 Definition ordinary_alpha_root_shadow_validator_ready
     (env : global_env) : Prop :=
   env_fns_root_shadow_summary_check_ready (alpha_normalize_global_env env).
@@ -1241,6 +1265,25 @@ Proof.
     exact Hshadow.
   - apply check_env_root_shadow_summary_preservation_ready.
     exact Hshadow.
+Qed.
+
+Lemma check_program_env_alpha_validated_root_shadow_provenance_ready :
+  forall env,
+    check_program_env_alpha_validated_root_shadow_provenance env = true ->
+    ordinary_alpha_direct_call_validated_root_shadow_validator_ready env.
+Proof.
+  intros env Hcheck.
+  unfold check_program_env_alpha_validated_root_shadow_provenance in Hcheck.
+  apply andb_true_iff in Hcheck as [_ Hvalidators].
+  apply andb_true_iff in Hvalidators as [Hprov Hpres].
+  split.
+  - eapply env_fns_root_shadow_summary_check_ready_of_provenance_and_preservation.
+    + apply check_env_root_shadow_provenance_summary_ready.
+      exact Hprov.
+    + apply check_env_preservation_ready_sound.
+      exact Hpres.
+  - apply check_env_preservation_ready_sound.
+    exact Hpres.
 Qed.
 
 Definition ordinary_alpha_root_shadow_sidecar_ready (env : global_env) : Prop :=
@@ -1608,6 +1651,28 @@ Proof.
   intros env f s s' v Hcheck Hinitial Hin Hstore Heval.
   eapply check_program_env_alpha_validated_root_shadow_big_step_safe.
   - exact Hcheck.
+  - exact Hin.
+  - exact Hstore.
+  - apply check_initial_root_runtime_ready_sound. exact Hinitial.
+  - exact Heval.
+Qed.
+
+Theorem check_program_env_alpha_validated_root_shadow_provenance_big_step_safe_checked_initial :
+  forall env f s s' v,
+    check_program_env_alpha_validated_root_shadow_provenance env = true ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns (alpha_normalize_global_env env)) ->
+    initial_store_for_fn (alpha_normalize_global_env env) f s ->
+    eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
+    value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hcheck Hinitial Hin Hstore Heval.
+  eapply check_program_env_alpha_validated_big_step_safe_with_root_shadow_validator_ready.
+  - unfold check_program_env_alpha_validated_root_shadow_provenance in Hcheck.
+    apply andb_true_iff in Hcheck as [Hvalidated _].
+    exact Hvalidated.
+  - apply check_program_env_alpha_validated_root_shadow_provenance_ready.
+    exact Hcheck.
   - exact Hin.
   - exact Hstore.
   - apply check_initial_root_runtime_ready_sound. exact Hinitial.

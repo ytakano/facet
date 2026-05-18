@@ -796,4 +796,9 @@ val check_fn_root_shadow_provenance_summary : global_env -> fn_def -> bool
 
 val check_env_root_shadow_provenance_summary : global_env -> bool
 
+val check_env_preservation_ready : global_env -> bool
+
 val check_program_env_alpha_validated_root_shadow : global_env -> bool
+
+val check_program_env_alpha_validated_root_shadow_provenance :
+  global_env -> bool

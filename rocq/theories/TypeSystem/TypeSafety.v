@@ -12244,6 +12244,22 @@ Proof.
   repeat split; assumption.
 Qed.
 
+Lemma callee_body_root_shadow_ready_at_of_provenance_and_preservation :
+  forall env fcall R_params,
+    callee_body_root_shadow_provenance_ready_at env fcall R_params ->
+    preservation_ready_expr (fn_body fcall) ->
+    callee_body_root_shadow_ready_at env fcall R_params.
+Proof.
+  intros env fcall R_params Hprov_ready Hpres_ready.
+  unfold callee_body_root_shadow_provenance_ready_at in Hprov_ready.
+  destruct Hprov_ready as
+    (T_body & Γ_out & R_body & roots_body &
+      Hprov & Htyped & Hcompat & Hexclude_roots & Hexclude_env).
+  unfold callee_body_root_shadow_ready_at.
+  exists T_body, Γ_out, R_body, roots_body.
+  repeat split; assumption.
+Qed.
+
 Definition callee_body_root_summary (env : global_env) (fdef : fn_def)
     : Prop :=
   callee_body_root_ready_at env fdef (initial_root_env_for_fn fdef).
@@ -12341,6 +12357,27 @@ Proof.
   destruct (Hshadow fname fdef Hlookup) as [_ Hready].
   eapply callee_body_root_provenance_ready_at_of_shadow_provenance_ready_at.
   exact Hready.
+Qed.
+
+Lemma env_fns_root_shadow_summary_evidence_of_provenance_and_preservation :
+  forall env,
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    env_fns_preservation_ready env ->
+    env_fns_root_shadow_summary_evidence env.
+Proof.
+  intros env Hprov Hpres fname fdef Hlookup.
+  unfold env_fns_root_shadow_provenance_summary_evidence in Hprov.
+  unfold callee_body_root_shadow_provenance_summary,
+    callee_body_root_shadow_summary in *.
+  destruct (Hprov fname fdef Hlookup) as [Hnodup Hready].
+  split.
+  - exact Hnodup.
+  - eapply callee_body_root_shadow_ready_at_of_provenance_and_preservation.
+    + exact Hready.
+    + apply Hpres.
+      destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+        as [Hin _].
+      exact Hin.
 Qed.
 
 Definition direct_call_callee_body_root_summary_bridge

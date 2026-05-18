@@ -5260,8 +5260,23 @@ let check_fn_root_shadow_provenance_summary env fdef =
 let check_env_root_shadow_provenance_summary env =
   forallb (check_fn_root_shadow_provenance_summary env) env.env_fns
 
+(** val check_env_preservation_ready : global_env -> bool **)
+
+let check_env_preservation_ready env =
+  forallb (fun fdef -> preservation_ready_expr_b fdef.fn_body) env.env_fns
+
 (** val check_program_env_alpha_validated_root_shadow : global_env -> bool **)
 
 let check_program_env_alpha_validated_root_shadow env =
   (&&) (check_program_env_alpha_validated env)
     (check_env_root_shadow_summary (alpha_normalize_global_env env))
+
+(** val check_program_env_alpha_validated_root_shadow_provenance :
+    global_env -> bool **)
+
+let check_program_env_alpha_validated_root_shadow_provenance env =
+  (&&) (check_program_env_alpha_validated env)
+    ((&&)
+      (check_env_root_shadow_provenance_summary
+        (alpha_normalize_global_env env))
+      (check_env_preservation_ready (alpha_normalize_global_env env)))

@@ -187,9 +187,13 @@ Use these wrappers before adding new theorem shapes:
   `check_program_env_alpha_validated_root_shadow_big_step_safe_checked_initial`.
 - Executable root-shadow validator entrypoint:
   `check_program_env_alpha_validated_root_shadow`.
+- Executable split provenance/preservation root-shadow validator entrypoint:
+  `check_program_env_alpha_validated_root_shadow_provenance`.
 - Executable provenance-only root-shadow summary entrypoints:
   `check_fn_root_shadow_provenance_summary` and
   `check_env_root_shadow_provenance_summary`.
+- Executable preservation readiness entrypoint:
+  `check_env_preservation_ready`.
 - Executable initial runtime readiness entrypoint:
   `check_initial_root_runtime_ready`.
 - Executable provenance readiness entrypoints:
@@ -230,7 +234,7 @@ alpha-normalized environment.
 The current strongest executable route is:
 
 ```coq
-check_program_env_alpha_validated_root_shadow_big_step_safe_checked_initial
+check_program_env_alpha_validated_root_shadow_provenance_big_step_safe_checked_initial
 ```
 
 Current status:
@@ -266,9 +270,20 @@ Current status:
   Its checker soundness theorem is
   `check_env_root_shadow_provenance_summary_ready`, and the original
   preservation-ready root-shadow validator route is unchanged.
+- The split validator route keeps provenance and preservation readiness as
+  separate executable checks. `check_env_root_shadow_provenance_summary`
+  supplies root/shadow provenance evidence, `check_env_preservation_ready`
+  supplies `env_fns_preservation_ready`, and
+  `check_program_env_alpha_validated_root_shadow_provenance_ready` recombines
+  them into the existing validator-ready package for the current runtime safety
+  theorem.
 - `check_program_env_alpha_validated_root_shadow_big_step_safe_checked_initial`
   discharges `initial_root_runtime_ready_for_fn` from the executable
   `check_initial_root_runtime_ready f s`.
+- `check_program_env_alpha_validated_root_shadow_provenance_big_step_safe_checked_initial`
+  is the strongest split-validator theorem. It is less coupled internally than
+  `check_program_env_alpha_validated_root_shadow`, but still rejects programs
+  that fail executable preservation readiness.
 - Initial runtime readiness remains a separate premise, now in executable form.
    - It cannot be derived from `initial_store_for_fn` alone.
    - Reason: `initial_root_env_for_fn` stores parameter origins as `RParam`,
@@ -277,8 +292,9 @@ Current status:
 The current sidecar contract is fixed. The remaining non-ordinary acceptance
 inputs are:
 
-- `check_program_env_alpha_validated_root_shadow env = true`, which is stricter
-  than `check_program_env_alpha env = true`.
+- `check_program_env_alpha_validated_root_shadow_provenance env = true`, which
+  is stricter than `check_program_env_alpha env = true` because preservation
+  readiness is still a separate executable validator.
 - `check_initial_root_runtime_ready f s = true`, which checks the initial
   execution state rather than the program.
 
@@ -295,11 +311,10 @@ Future work:
   `initial_root_runtime_ready_for_fn`.
 - Bring the safety-validator route closer to the ordinary checker accepted
   range by following the Next Implementation Order above.
-- Connect the provenance-only root-shadow summary route to a future
-  direct-call evidence theorem if direct-call cleanup only needs provenance
-  and shadow-safe root facts. Do not replace the existing preservation-ready
-  public wrappers until the required preservation obligations are either
-  derived from ordinary typing or localized to the subproofs that need them.
+- Localize or eliminate the remaining `env_fns_preservation_ready` dependency.
+  The split validator proves that root/shadow provenance evidence can be
+  checked independently, but the current direct-call cleanup proof still calls
+  preservation-ready typing preservation for callee bodies.
 
 ### Ordinary Checker Review Gates
 

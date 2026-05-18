@@ -234,6 +234,8 @@ checker success on alpha-normalized core to structural preservation and
 `value_has_type` under `preservation_ready_expr`.
 The direct-call route now has a packaged sidecar wrapper:
 `infer_full_env_alpha_big_step_safe_with_direct_call_sidecar_ready`.
+The program-level checker route now has the matching wrapper:
+`check_program_env_alpha_big_step_safe_with_direct_call_sidecar_ready`.
 
 Current ordinary-safety blockers:
 
@@ -378,6 +380,11 @@ verbose than the quick path. Do not use it as the primary implementation order.
      `initial_root_runtime_ready_for_fn`. This keeps root/shadow evidence
      local to direct-call cleanup and provenance while avoiding full
      structural-to-shadow-root synthesis as the ordinary route.
+   - Done: added the program-level wrapper
+     `check_program_env_alpha_big_step_safe_with_direct_call_sidecar_ready`,
+     which derives per-function `infer_full_env` success from
+     `check_program_env_alpha env = true` and then uses the packaged
+     direct-call sidecar theorem.
    - Remaining ordinary-safety blocker: reduce or discharge the packaged
      direct-call sidecar premises where possible.
    - Sidecar limitation: ordinary checker success still does not by itself

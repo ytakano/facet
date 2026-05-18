@@ -621,6 +621,28 @@ Proof.
     eassumption.
 Qed.
 
+Theorem check_program_env_alpha_big_step_safe_with_direct_call_sidecar_ready :
+  forall env f s s' v,
+    check_program_env_alpha env = true ->
+    ordinary_alpha_direct_call_sidecar_ready env ->
+    In f (env_fns (alpha_normalize_global_env env)) ->
+    initial_store_for_fn (alpha_normalize_global_env env) f s ->
+    preservation_direct_call_ready_expr (fn_body f) ->
+    initial_root_runtime_ready_for_fn f s ->
+    eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
+    value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hcheck Hsidecar Hin Hstore Hready
+    Hroot_runtime Heval.
+  unfold check_program_env_alpha, check_program_env in Hcheck.
+  apply forallb_forall with (x := f) in Hcheck; [| exact Hin].
+  destruct (infer_full_env (alpha_normalize_global_env env) f) as
+    [[T Γ'] | err] eqn:Hinfer.
+  - eapply infer_full_env_alpha_big_step_safe_with_direct_call_sidecar_ready;
+      eassumption.
+  - simpl in Hcheck. discriminate.
+Qed.
+
 Theorem infer_full_env_alpha_big_step_safe_with_root_sidecar :
   forall env f R0 T Γ' R' roots s s' v,
     infer_full_env (alpha_normalize_global_env env) f = infer_ok (T, Γ') ->

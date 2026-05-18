@@ -344,10 +344,14 @@ Follow this order before inventing new theorem shapes:
    already proved non-capturing route. The non-empty frame-composition step is
    now represented by `captured_call_frame_ready_compose`, supported by
    append/weakening helpers for store names, no-shadow, store roots, and
-   root-env naming. The remaining blocker is callee-body cleanup/final-store
-   shape: after evaluating the body over `captured ++ s_args`, prove the exact
-   cleanup theorem needed to remove parameter bindings while preserving or
-   accounting for captured entries in the final store.
+   root-env naming. Callee-body cleanup/final-store shape is now represented
+   by `eval_call_body_cleanup_preserves_value_and_refs_frame` and the captured
+   instantiation `eval_captured_call_body_cleanup_preserves_value_and_refs`:
+   after evaluating the body over `captured ++ s_args`, parameter cleanup
+   preserves value/ref/root facts and proves the final store is exactly
+   `captured ++ s_args`. The next blocker is integrating these captured-frame
+   and cleanup lemmas into an `ECallExpr` preservation theorem without widening
+   executable validators.
 8. **Handle the `if` root-environment gap last.**
    The known blocker is that ordinary `TES_If` does not expose
    `root_env_equiv R2 R3`, while root/shadow routes require it. Do not

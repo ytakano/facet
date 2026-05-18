@@ -308,6 +308,16 @@ Follow this order before inventing new theorem shapes:
    non-capturing-let theorem that derives `value_refs_exclude_root g` and
    `store_refs_exclude_root g (store_remove g s_body)` from the synthetic
    root-shadow typing evidence.
+   Attempted next step: simply strengthening
+   `eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary`
+   to return `store_roots_within R' s'`, `value_roots_within roots v`,
+   `store_no_shadow s'`, and `root_env_no_shadow R'` is not a mechanical
+   extension. The final-store root/no-shadow facts are reachable because the
+   direct-call cleanup can show `store_remove_params ... s_body = s_args`, but
+   the returned-value root fact needs an additional bridge from callee-body
+   `roots_body` under `call_param_root_env params arg_roots R'` to caller-side
+   `root_sets_union arg_roots`. Do not retry the helper until that
+   root-substitution/result-roots bridge is stated.
 7. **Prove closures with captures.**
    Only after non-capturing function values are stable, add captured-closure
    calls. This requires a captured-store invariant covering typing, root

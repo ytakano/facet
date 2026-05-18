@@ -15366,6 +15366,7 @@ Proof.
   | Hcallee : eval _ _ (EFn _) _ (VClosure _ _) |- _ =>
       dependent destruction Hcallee
   end.
+  simpl in *.
   match goal with
   | Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?fdef,
     Hargs : eval_args env s args ?s_args ?vs,
@@ -15405,6 +15406,7 @@ Proof.
                 args Hready_args) as Hprov_args.
   dependent destruction Heval.
   dependent destruction Htyped.
+  simpl in *.
   repeat match goal with
   | Hlookup : lookup_fn (fn_name ?f_typed) (env_fns env) =
       Some ?f_runtime,

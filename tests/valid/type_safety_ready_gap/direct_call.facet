@@ -1,0 +1,7 @@
+fn callee() -> unrestricted () {
+    ()
+}
+
+fn main() -> unrestricted () {
+    (callee)
+}

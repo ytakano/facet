@@ -127,7 +127,10 @@ Follow this order before inventing new theorem shapes:
    matrix for ordinary-checker accepted shapes rejected by the current
    preservation-ready validator: annotated `ELet`, existing `ELetInfer`,
    `EDeref (EBorrow RShared ...)`, direct `ECall`, and
-   `ECallExpr (EFn ...)`.
+   `ECallExpr (EFn ...)`. Matching ordinary-checker accepted source fixtures
+   live under `tests/valid/type_safety_ready_gap/`; source-level function-value
+   calls use a local function-typed binding because the frontend lowers an
+   unbound call name to direct `ECall`.
 2. **Reduce `preservation_ready_expr_b` false negatives.**
    The current executable validator rejects broad syntax classes such as
    `ELet`, `ELetInfer`, direct `ECall`, `ECallExpr`, and `EDeref`. First make
@@ -335,12 +338,11 @@ Future work:
   `initial_root_runtime_ready_for_fn`.
 - Bring the safety-validator route closer to the ordinary checker accepted
   range by following the Next Implementation Order above.
-- Localize or eliminate the remaining caller
-  `preservation_direct_call_ready_expr` dependency. The callee-body
-  `env_fns_preservation_ready` dependency has been removed from the
-  provenance-summary route; the remaining gap is deriving direct-call
-  preservation readiness for the executed top-level body from ordinary checker
-  success or replacing it with narrower proof facts.
+- Continue narrowing the executable safety validator's false negatives against
+  the ordinary-checker accepted fixtures in `tests/valid/type_safety_ready_gap/`.
+  The provenance-summary route no longer needs the callee-body
+  `env_fns_preservation_ready` dependency or the caller
+  `preservation_direct_call_ready_expr` premise.
 
 ### Ordinary Checker Review Gates
 

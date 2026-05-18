@@ -1,0 +1,4 @@
+fn main() -> unrestricted () {
+    let x = 1 in
+    ()
+}

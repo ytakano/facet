@@ -2452,6 +2452,66 @@ Proof.
     eapply Hexcl2; eassumption.
 Qed.
 
+Definition store_no_shadow (s : store) : Prop :=
+  NoDup (store_names s).
+
+Definition captured_store_runtime_ready
+    (env : global_env) (captured : store) (Rcap : root_env) : Prop :=
+  captured_store_typed env captured /\
+  store_roots_within Rcap captured /\
+  store_no_shadow captured /\
+  root_env_no_shadow Rcap /\
+  root_env_store_roots_named Rcap captured /\
+  root_env_store_keys_named Rcap captured.
+
+Definition captured_call_frame_ready
+    (env : global_env) (captured : store) (Rcap : root_env)
+    (s_args : store) (R_args : root_env) : Prop :=
+  captured_store_runtime_ready env captured Rcap /\
+  store_roots_within R_args s_args /\
+  store_no_shadow (captured ++ s_args) /\
+  root_env_no_shadow (Rcap ++ R_args) /\
+  root_env_store_roots_named (Rcap ++ R_args) (captured ++ s_args) /\
+  root_env_store_keys_named (Rcap ++ R_args) (captured ++ s_args).
+
+Lemma captured_store_runtime_ready_empty :
+  forall env,
+    captured_store_runtime_ready env [] [].
+Proof.
+  intros env.
+  unfold captured_store_runtime_ready.
+  repeat split.
+  - unfold captured_store_typed, store_typed. constructor.
+  - constructor.
+  - unfold store_no_shadow. constructor.
+  - unfold root_env_no_shadow. constructor.
+  - unfold root_env_store_roots_named.
+    intros x roots z Hlookup _. simpl in Hlookup. discriminate.
+  - unfold root_env_store_keys_named, root_env_keys_named.
+    intros x Hin. simpl in Hin. contradiction.
+Qed.
+
+Lemma captured_call_frame_ready_empty :
+  forall env s_args R_args,
+    store_roots_within R_args s_args ->
+    store_no_shadow s_args ->
+    root_env_no_shadow R_args ->
+    root_env_store_roots_named R_args s_args ->
+    root_env_store_keys_named R_args s_args ->
+    captured_call_frame_ready env [] [] s_args R_args.
+Proof.
+  intros env s_args R_args Hroots Hshadow Hrn Hnamed Hkeys.
+  unfold captured_call_frame_ready.
+  split.
+  - apply captured_store_runtime_ready_empty.
+  - repeat split.
+    + exact Hroots.
+    + simpl. exact Hshadow.
+    + simpl. exact Hrn.
+    + simpl. exact Hnamed.
+    + simpl. exact Hkeys.
+Qed.
+
 Lemma root_env_equiv_app :
   forall R1 R1' R2 R2',
     root_env_equiv R1 R1' ->
@@ -3286,9 +3346,6 @@ Proof.
       * econstructor; eassumption.
       * exact IH.
 Qed.
-
-Definition store_no_shadow (s : store) : Prop :=
-  NoDup (store_names s).
 
 Definition params_fresh_in_store (ps : list param) (s : store) : Prop :=
   forall x,

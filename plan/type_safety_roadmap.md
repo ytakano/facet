@@ -335,6 +335,16 @@ Follow this order before inventing new theorem shapes:
    constructors. The next implementation step is to connect these helpers to
    `Eval_CallExpr` preservation through a proof-only captured-store invariant
    covering roots/no-shadow/naming before widening any executable validator.
+   Current implementation progress: `TypeSafety.v` now has proof-only
+   invariant shells `captured_store_runtime_ready` and
+   `captured_call_frame_ready`. These specify the runtime obligations needed
+   for composing `captured ++ s_args` in `Eval_CallExpr`: captured-store
+   typing, root reachability, no-shadow, root-env no-shadow, and root/key
+   naming. Empty-capture bridge lemmas are the compatibility baseline with the
+   already proved non-capturing route. The remaining blocker is the non-empty
+   composition theorem: prove that a captured frame satisfying this invariant
+   can be safely composed with evaluated arguments and then cleaned up after
+   callee execution.
 8. **Handle the `if` root-environment gap last.**
    The known blocker is that ordinary `TES_If` does not expose
    `root_env_equiv R2 R3`, while root/shadow routes require it. Do not

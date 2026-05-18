@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 
 root_dir=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$root_dir"
@@ -7,9 +7,8 @@ cd "$root_dir"
 status=0
 
 run_case() {
-  local file=$1
-  local expected=$2
-  local tmp
+  file=$1
+  expected=$2
   tmp=$(mktemp)
 
   if dune exec ocaml/main.exe -- --emit-fir "$tmp" "$file" >/dev/null 2>&1; then

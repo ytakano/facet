@@ -287,6 +287,12 @@ Current status:
   `check_program_env_alpha_validated_root_shadow_provenance_ready` recombines
   them into the existing validator-ready package for the current runtime safety
   theorem.
+- The prefix-store cleanup prerequisites for a provenance-only direct-call
+  route have started. `RuntimeTyping.v` now has
+  `store_typed_prefix_remove_excluding_root`, and `TypeSafety.v` has
+  `eval_let_roots_preserves_typing_prefix`. These preserve let-local cleanup
+  typing with root/provenance evidence but do not yet remove the callee-body
+  preservation-readiness dependency from the public runtime theorem.
 - `check_program_env_alpha_validated_root_shadow_big_step_safe_checked_initial`
   discharges `initial_root_runtime_ready_for_fn` from the executable
   `check_initial_root_runtime_ready f s`.
@@ -324,7 +330,12 @@ Future work:
 - Localize or eliminate the remaining `env_fns_preservation_ready` dependency.
   The split validator proves that root/shadow provenance evidence can be
   checked independently, but the current direct-call cleanup proof still calls
-  preservation-ready typing preservation for callee bodies.
+  preservation-ready typing preservation for callee bodies. The next fixed
+  implementation unit is a full
+  `eval_preserves_typing_roots_ready_prefix_mutual` theorem: a prefix-store
+  analogue of `eval_preserves_typing_roots_ready_mutual` that uses
+  `provenance_ready_*` only and calls `eval_let_roots_preserves_typing_prefix`
+  in the `ELet` case.
 
 ### Ordinary Checker Review Gates
 
@@ -381,6 +392,10 @@ for these gates before treating a newly accepted syntax class as ordinary-safe.
 - `check_program_env_alpha_validated` now implies `fn_env_unique_by_name` for
   the alpha-normalized environment.
 - Ordinary checker success still does not imply `env_fns_preservation_ready`.
+- The provenance-only direct-call bridge exists, but the final wrapper is still
+  blocked on `eval_preserves_typing_roots_ready_prefix_mutual`; direct-call
+  cleanup starts from `store_typed_prefix` for the callee parameter frame, not a
+  full exact `store_typed`.
 - The current executable safety validator is stricter than the ordinary checker.
   In particular, `preservation_ready_expr_b` currently rejects `ELet`,
   `ELetInfer`, `ECall`, `ECallExpr`, and `EDeref`.

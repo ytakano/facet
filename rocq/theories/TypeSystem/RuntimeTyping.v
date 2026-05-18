@@ -1535,6 +1535,70 @@ Proof.
   eapply store_typed_remove_entries_excluding_root; eassumption.
 Qed.
 
+Lemma store_remove_app_prefix :
+  forall root entries frame,
+    exists frame',
+      store_remove root (entries ++ frame) =
+        store_remove root entries ++ frame'.
+Proof.
+  intros root entries.
+  induction entries as [|se rest IH]; intros frame.
+  - exists (store_remove root frame). reflexivity.
+  - simpl.
+    destruct (ident_eqb root (se_name se)) eqn:Hroot.
+    + exists frame. reflexivity.
+    + destruct (IH frame) as [frame' Hremove].
+      exists frame'. simpl. rewrite Hremove. reflexivity.
+Qed.
+
+Lemma store_refs_exclude_root_app_left :
+  forall root entries frame,
+    store_refs_exclude_root root (entries ++ frame) ->
+    store_refs_exclude_root root entries.
+Proof.
+  intros root entries.
+  induction entries as [|se rest IH]; intros frame Hexclude.
+  - constructor.
+  - simpl in Hexclude.
+    inversion Hexclude; subst.
+    constructor; eauto.
+Qed.
+
+Lemma store_refs_exclude_root_remove_app_left :
+  forall root entries frame,
+    store_refs_exclude_root root (store_remove root (entries ++ frame)) ->
+    store_refs_exclude_root root (store_remove root entries).
+Proof.
+  intros root entries.
+  induction entries as [|se rest IH]; intros frame Hexclude.
+  - constructor.
+  - simpl in Hexclude |- *.
+    destruct (ident_eqb root (se_name se)) eqn:Hroot.
+    + eapply store_refs_exclude_root_app_left. exact Hexclude.
+    + inversion Hexclude; subst.
+      constructor; eauto.
+Qed.
+
+Lemma store_typed_prefix_remove_excluding_root :
+  forall env s Σ root,
+    store_typed_prefix env s Σ ->
+    store_refs_exclude_root root (store_remove root s) ->
+    store_typed_prefix env (store_remove root s) (sctx_remove root Σ).
+Proof.
+  intros env s Σ root Htyped Hexclude.
+  unfold store_typed_prefix in Htyped.
+  destruct Htyped as [entries [frame [Hs Htyped]]].
+  subst s.
+  destruct (store_remove_app_prefix root entries frame) as [frame' Hremove].
+  unfold store_typed_prefix.
+  exists (store_remove root entries), frame'.
+  split.
+  - exact Hremove.
+  - eapply store_typed_remove_entries_excluding_root.
+    + exact Htyped.
+    + eapply store_refs_exclude_root_remove_app_left. exact Hexclude.
+Qed.
+
 Lemma store_ref_targets_preserved_remove_after_absent_root :
   forall env s s' root,
     store_ref_targets_preserved env s s' ->

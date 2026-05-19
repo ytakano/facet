@@ -537,6 +537,52 @@ Proof.
         -- apply outlives_b_sound. exact Hl.
 Qed.
 
+Fixpoint ty_compatible_refl (Ω : outlives_ctx) (T : Ty)
+    {struct T} : ty_compatible Ω T T :=
+  match T with
+  | MkTy u (TRef l RShared Tinner) =>
+      TC_Ref_Shared Ω u u l l Tinner Tinner
+        (US_refl u) (Outlives_refl Ω l) (ty_compatible_refl Ω Tinner)
+  | MkTy u (TRef l RUnique Tinner) =>
+      TC_Ref_Unique Ω u u l l Tinner
+        (US_refl u) (Outlives_refl Ω l)
+  | MkTy u (TFn params ret) =>
+      let fix go (xs : list Ty)
+          : Forall2 (fun expected actual => ty_compatible Ω expected actual)
+              xs xs :=
+        match xs with
+        | [] =>
+            @Forall2_nil Ty Ty
+              (fun expected actual => ty_compatible Ω expected actual)
+        | x :: xs' =>
+            @Forall2_cons Ty Ty
+              (fun expected actual => ty_compatible Ω expected actual)
+              x x xs' xs' (ty_compatible_refl Ω x) (go xs')
+        end in
+      TC_Fn Ω u u params params ret ret
+        (US_refl u) (go params) (ty_compatible_refl Ω ret)
+  | MkTy u (TClosure l params ret) =>
+      let fix go (xs : list Ty)
+          : Forall2 (fun expected actual => ty_compatible Ω expected actual)
+              xs xs :=
+        match xs with
+        | [] =>
+            @Forall2_nil Ty Ty
+              (fun expected actual => ty_compatible Ω expected actual)
+        | x :: xs' =>
+            @Forall2_cons Ty Ty
+              (fun expected actual => ty_compatible Ω expected actual)
+              x x xs' xs' (ty_compatible_refl Ω x) (go xs')
+        end in
+      TC_Closure Ω u u l l params params ret ret
+        (US_refl u) (Outlives_refl Ω l) (go params) (ty_compatible_refl Ω ret)
+  | MkTy u (TForall n Ω_forall body) =>
+      TC_Forall Ω u u n Ω_forall body body
+        (US_refl u) (ty_compatible_refl Ω body)
+  | MkTy u core =>
+      TC_Core Ω u u core core (US_refl u) eq_refl
+  end.
+
 (* ------------------------------------------------------------------ *)
 (* Auxiliary: ctx_check_ok implies ctx_is_ok                             *)
 (* ------------------------------------------------------------------ *)
@@ -655,6 +701,57 @@ Proof.
     + exact Href_free.
     + apply ty_compatible_b_sound. exact Hcompat.
     + eapply IH. exact Hrest.
+Qed.
+
+Lemma check_make_closure_captures_exact_ctx_sound :
+  forall Ω Γ captures caps captured_tys,
+    check_make_closure_captures_exact_ctx Ω Γ captures caps =
+      infer_ok captured_tys ->
+    typed_captures Ω Γ captures caps captured_tys /\
+    captured_tys = map param_ty caps /\
+    captures = map param_name caps.
+Proof.
+  intros Ω Γ captures.
+  induction captures as [| x captures IH]; intros caps captured_tys Hcheck;
+    destruct caps as [| cap caps]; simpl in Hcheck; try discriminate.
+  - injection Hcheck as <-.
+    repeat split; constructor.
+  - destruct (ident_eqb x (param_name cap)) eqn:Hname; simpl in Hcheck;
+      try discriminate.
+    destruct (param_mutability cap) eqn:Hcap_mut; simpl in Hcheck;
+      try discriminate.
+    destruct (ctx_lookup_state x Γ) as [[T st] |] eqn:Hlookup; try discriminate.
+    destruct (st_consumed st) eqn:Hconsumed; try discriminate.
+    destruct (st_moved_paths st) as [| moved moved_rest] eqn:Hmoved;
+      try discriminate.
+    destruct (ctx_lookup_mut_b x Γ) as [m |] eqn:Hmut; try discriminate.
+    destruct m; try discriminate.
+    destruct (usage_eqb (ty_usage T) UUnrestricted) eqn:Husage;
+      try discriminate.
+    destruct (ty_ref_free_b T) eqn:Href_free; try discriminate.
+    destruct (ty_eqb T (param_ty cap)) eqn:Hty; try discriminate.
+    destruct (check_make_closure_captures_exact_ctx Ω Γ captures caps)
+      as [captured_rest | err] eqn:Hrest; try discriminate.
+    injection Hcheck as <-.
+    destruct (IH caps captured_rest Hrest)
+      as [Htyped_tail [Htys_tail Hnames_tail]].
+    apply ident_eqb_eq in Hname.
+    assert (Havailable : binding_available_b st [] = true).
+    { unfold binding_available_b.
+      rewrite Hconsumed, Hmoved. reflexivity. }
+    assert (HTeq : T = param_ty cap).
+    { apply ty_eqb_true. exact Hty. }
+    subst T x.
+    repeat split.
+    + eapply TCap_Cons.
+      * eapply ctx_lookup_state_available_nil_lookup; eassumption.
+      * exact Hmut.
+      * apply usage_eqb_true. exact Husage.
+      * exact Href_free.
+      * apply ty_compatible_refl.
+      * exact Htyped_tail.
+    + simpl. rewrite Htys_tail. reflexivity.
+    + simpl. rewrite Hnames_tail. reflexivity.
 Qed.
 
 Lemma check_arg_tys_params_of_tys : forall Ω arg_tys param_tys,

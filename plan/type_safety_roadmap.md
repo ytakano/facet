@@ -535,16 +535,19 @@ Follow this order before inventing new theorem shapes:
      `params_ctx (fn_params f ++ fn_captures f)` is available at the
      alpha-renaming layer.
    - Current `fn_body_ctx := fn_params ++ fn_captures` blocker: after the
-     alpha-renaming contract was fixed, the next migration attempt reached
-     `EnvRuntimeSafety.v` and exposed a direct-call/root-shadow summary gap.
-     Existing callee-body readiness summaries are still params-only: they prove
-     readiness for `params_ctx (fn_params fcall)` and do not carry the captured
-     root environment needed for
-     `params_ctx (fn_params fcall ++ fn_captures fcall)`. Do not retry the
-     global body-context migration until the direct-call route stays explicitly
-     captureless and a separate captured-call route threads
-     `captured_call_frame_params_ready` or equivalent captured-root evidence
-     into the callee-body readiness/root-shadow summary predicates.
+     alpha-renaming contract was fixed, the direct-call route was isolated as
+     captureless evidence: direct-call root summary/evidence bridges now carry
+     `fn_captures fdef = []`. The next migration attempt got through
+     `AlphaRenaming.v` and the simple body-safety lemmas, but then hit brittle
+     direct-call preservation proof scripts in `TypeSafety.v` after changing
+     `callee_body_root_*_ready_at` to use `fn_body_ctx`. Before retrying the
+     global body-context migration, factor the direct-call bridge proofs into
+     explicit helper lemmas that take a captureless callee summary over
+     `fn_body_ctx fdef`, rewrite it to the params-only context, and return the
+     existing instantiated params-only body evidence. After that helper exists,
+     retry the global migration and only then add the separate captured-call
+     route that threads `captured_call_frame_params_ready` or equivalent
+     captured-root evidence into captured callee-body readiness predicates.
    - Preservation/provenance readiness validators still reject
      `EMakeClosure`. Do not flip those booleans until captured `ECallExpr`
      preservation is proved. The next closure task is either parser/lambda

@@ -563,6 +563,11 @@ Follow this order before inventing new theorem shapes:
      store-subset, and weakening lemmas preserve this case. This is only a
      reference/root safety bridge; it does not yet prove that arbitrary
      captured closure values satisfy `value_has_type`.
+   - Exact immutable-copy capture no longer treats `TClosure` as ref-free.
+     `ty_ref_free_b (TClosure ...) = false`, so Stage 7a exact capture cannot
+     silently copy a closure value whose runtime captured store may hide
+     references or unproved root obligations. Captureless `TFn` values can
+     still be copied through the existing function-value route.
    - Next closure proof task: supply the remaining captured-call premises
      without changing validator acceptance yet. In particular, derive or package
      captured frame readiness, combined `fn_params ++ fn_captures` root

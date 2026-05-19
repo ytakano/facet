@@ -220,7 +220,7 @@ Fixpoint ty_ref_free_b (T : Ty) : bool :=
   | MkTy _ (TFn ts r) =>
       forallb ty_ref_free_b ts && ty_ref_free_b r
   | MkTy _ (TClosure _ ts r) =>
-      forallb ty_ref_free_b ts && ty_ref_free_b r
+      false
   | MkTy _ (TForall _ _ body) =>
       ty_ref_free_b body
   | MkTy _ (TRef _ _ _) =>

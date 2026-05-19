@@ -4285,6 +4285,12 @@ Example ty_compatible_b_closure_not_expected_fn :
       (TFn [] (MkTy UUnrestricted TBooleans))) = false.
 Proof. vm_compute. reflexivity. Qed.
 
+Example ty_ref_free_b_rejects_closure_value :
+  ty_ref_free_b
+    (MkTy UUnrestricted
+      (TClosure LStatic [] (MkTy UUnrestricted TBooleans))) = false.
+Proof. vm_compute. reflexivity. Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Borrow conflict checker                                               *)
 (*                                                                      *)

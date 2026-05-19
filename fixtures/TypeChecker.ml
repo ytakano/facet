@@ -832,7 +832,7 @@ let rec ty_ref_free_b = function
   (match t0 with
    | TStruct (_, _, args) -> forallb ty_ref_free_b args
    | TFn (ts, r) -> (&&) (forallb ty_ref_free_b ts) (ty_ref_free_b r)
-   | TClosure (_, ts, r) -> (&&) (forallb ty_ref_free_b ts) (ty_ref_free_b r)
+   | TClosure (_, _, _) -> false
    | TForall (_, _, body) -> ty_ref_free_b body
    | TRef (_, _, _) -> false
    | _ -> true)

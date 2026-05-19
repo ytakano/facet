@@ -362,6 +362,12 @@ Definition compatible_error (T_actual T_expected : Ty) : infer_error :=
       else ErrTypeMismatch (ty_core T_actual) (ty_core T_expected)
   end.
 
+Definition no_captures_b (f : fn_def) : bool :=
+  match fn_captures f with
+  | [] => true
+  | _ :: _ => false
+  end.
+
 Definition trait_impl_error_with_args
     (env : global_env) (trait_name : string) (trait_args : list Ty)
     (for_ty : Ty) : option infer_error :=
@@ -753,7 +759,10 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
   | EFn fname =>
       match lookup_fn_b fname fenv with
       | None => infer_err (ErrFunctionNotFound fname)
-      | Some fdef => infer_ok (fn_value_ty fdef, Γ)
+      | Some fdef =>
+          if no_captures_b fdef
+          then infer_ok (fn_value_ty fdef, Γ)
+          else infer_err ErrNotImplemented
       end
 
   | EPlace _ => infer_err ErrNotImplemented
@@ -869,6 +878,8 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
       match lookup_fn_b fname fenv with
       | None      => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
+          if no_captures_b fdef
+          then
           let m := fn_lifetimes fdef in
           let fix collect (Γ0 : ctx) (as_ : list expr)
               : infer_result (list Ty * ctx) :=
@@ -906,6 +917,7 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
                   end
               end
           end
+          else infer_err ErrNotImplemented
       end
 
   | ECallExpr callee args =>
@@ -1131,7 +1143,10 @@ Fixpoint infer_core_env_fuel (fuel : nat)
   | EFn fname =>
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
-      | Some fdef => infer_ok (fn_value_ty fdef, Γ)
+      | Some fdef =>
+          if no_captures_b fdef
+          then infer_ok (fn_value_ty fdef, Γ)
+          else infer_err ErrNotImplemented
       end
   | EStruct sname lts args fields =>
       match lookup_struct sname env with
@@ -1389,6 +1404,8 @@ Fixpoint infer_core_env_fuel (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
+          if no_captures_b fdef
+          then
           let m := fn_lifetimes fdef in
           let fix collect (Γ0 : ctx) (as_ : list expr)
               : infer_result (list Ty * ctx) :=
@@ -1426,6 +1443,7 @@ Fixpoint infer_core_env_fuel (fuel : nat)
                   end
               end
           end
+          else infer_err ErrNotImplemented
       end
   | ECallExpr callee args =>
       match infer_core_env_fuel fuel' env Ω n Γ callee with
@@ -1789,7 +1807,10 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
   | EFn fname =>
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
-      | Some fdef => infer_ok (fn_value_ty fdef, Σ)
+      | Some fdef =>
+          if no_captures_b fdef
+          then infer_ok (fn_value_ty fdef, Σ)
+          else infer_err ErrNotImplemented
       end
   | EStruct sname lts args fields =>
       match lookup_struct sname env with
@@ -2025,6 +2046,8 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
+          if no_captures_b fdef
+          then
           let m := fn_lifetimes fdef in
           let fix collect (Σ0 : sctx) (as_ : list expr)
               : infer_result (list Ty * sctx) :=
@@ -2062,6 +2085,7 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
                   end
               end
           end
+          else infer_err ErrNotImplemented
       end
   | ECallExpr callee args =>
       match infer_core_env_state_fuel fuel' env Ω n Σ callee with
@@ -2164,7 +2188,10 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
   | EFn fname =>
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
-      | Some fdef => infer_ok (fn_value_ty fdef, Σ, e)
+      | Some fdef =>
+          if no_captures_b fdef
+          then infer_ok (fn_value_ty fdef, Σ, e)
+          else infer_err ErrNotImplemented
       end
   | EStruct sname lts args fields =>
       match lookup_struct sname env with
@@ -2410,6 +2437,8 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
+          if no_captures_b fdef
+          then
           let m := fn_lifetimes fdef in
           let fix collect (Σ0 : sctx) (as_ : list expr)
               : infer_result (list Ty * sctx * list expr) :=
@@ -2448,6 +2477,7 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
                   end
               end
           end
+          else infer_err ErrNotImplemented
       end
   | ECallExpr callee args =>
       match infer_core_env_state_fuel_elab fuel' env Ω n Σ callee with
@@ -2726,6 +2756,8 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
+          if no_captures_b fdef
+          then
           let m := fn_lifetimes fdef in
           let fix collect (Σ0 : sctx) (R0 : root_env) (as_ : list expr)
               : infer_result (list Ty * sctx * root_env * list root_set) :=
@@ -2767,11 +2799,15 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
                   end
               end
           end
+          else infer_err ErrNotImplemented
       end
   | EFn fname =>
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
-      | Some fdef => infer_ok (fn_value_ty fdef, Σ, R, [])
+      | Some fdef =>
+          if no_captures_b fdef
+          then infer_ok (fn_value_ty fdef, Σ, R, [])
+          else infer_err ErrNotImplemented
       end
   | EStruct sname lts args fields =>
       match lookup_struct sname env with
@@ -3079,6 +3115,8 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
+          if no_captures_b fdef
+          then
           let m := fn_lifetimes fdef in
           let fix collect (Σ0 : sctx) (R0 : root_env) (as_ : list expr)
               : infer_result (list Ty * sctx * root_env * list root_set) :=
@@ -3121,11 +3159,15 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
                   end
               end
           end
+          else infer_err ErrNotImplemented
       end
   | EFn fname =>
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
-      | Some fdef => infer_ok (fn_value_ty fdef, Σ, R, [])
+      | Some fdef =>
+          if no_captures_b fdef
+          then infer_ok (fn_value_ty fdef, Σ, R, [])
+          else infer_err ErrNotImplemented
       end
   | EStruct sname lts args fields =>
       match lookup_struct sname env with
@@ -4701,6 +4743,42 @@ Proof. vm_compute. reflexivity. Qed.
 Example ready_gap_matrix_direct_call_direct_call_summary_accepts :
   check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary
     ex_ready_gap_direct_call_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example infer_core_env_empty_capture_fn_value_accepts :
+  infer_core_env ex_ready_gap_direct_call_env [] 0 []
+    (EFn (("ready_gap_call_callee"%string), 0)) =
+  infer_ok (fn_value_ty ex_ready_gap_call_callee_fn, []).
+Proof. vm_compute. reflexivity. Qed.
+
+Example infer_core_env_empty_capture_direct_call_accepts :
+  infer_core_env ex_ready_gap_direct_call_env [] 0 []
+    (ECall (("ready_gap_call_callee"%string), 0) []) =
+  infer_ok (MkTy UUnrestricted TUnits, []).
+Proof. vm_compute. reflexivity. Qed.
+
+Definition ex_nonempty_capture_param : param :=
+  MkParam MImmutable (("captured"%string), 0) (MkTy UUnrestricted TIntegers).
+
+Definition ex_nonempty_capture_callee_fn : fn_def :=
+  MkFnDef (("nonempty_capture_callee"%string), 0) 0 []
+    [ex_nonempty_capture_param] []
+    (MkTy UUnrestricted TUnits)
+    EUnit.
+
+Definition ex_nonempty_capture_env : global_env :=
+  MkGlobalEnv [] [] [] [ex_nonempty_capture_callee_fn].
+
+Example infer_core_env_nonempty_capture_fn_value_rejects :
+  infer_core_env ex_nonempty_capture_env [] 0 []
+    (EFn (("nonempty_capture_callee"%string), 0)) =
+  infer_err ErrNotImplemented.
+Proof. vm_compute. reflexivity. Qed.
+
+Example infer_core_env_nonempty_capture_direct_call_rejects :
+  infer_core_env ex_nonempty_capture_env [] 0 []
+    (ECall (("nonempty_capture_callee"%string), 0) []) =
+  infer_err ErrNotImplemented.
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_ready_gap_call_expr_fn : fn_def :=

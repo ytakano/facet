@@ -239,6 +239,20 @@ Fixpoint lookup_fn (name : ident) (fenv : list fn_def) : option fn_def :=
               else lookup_fn name t
   end.
 
+Lemma lookup_fn_deterministic :
+  forall name fenv f1 f2,
+    lookup_fn name fenv = Some f1 ->
+    lookup_fn name fenv = Some f2 ->
+    f1 = f2.
+Proof.
+  intros name fenv.
+  induction fenv as [| f rest IH]; intros f1 f2 H1 H2; simpl in *.
+  - discriminate.
+  - destruct (ident_eqb name (fn_name f)).
+    + inversion H1; subst. inversion H2; subst. reflexivity.
+    + eapply IH; eassumption.
+Qed.
+
 Fixpoint lookup_expr_field (name : string) (fields : list (string * expr)) : option expr :=
   match fields with
   | [] => None
@@ -406,7 +420,9 @@ Inductive eval (env : global_env) : store -> expr -> store -> value -> Prop :=
       ty_usage T = UUnrestricted ->
       eval env s (EDeref r) s_r v
 
-  | Eval_Fn : forall s fname,
+  | Eval_Fn : forall s fname fdef,
+      lookup_fn fname (env_fns env) = Some fdef ->
+      fn_captures fdef = [] ->
       eval env s (EFn fname) s (VClosure fname [])
 
   | Eval_If_True : forall s s1 s2 e1 e2 e3 v,
@@ -422,6 +438,7 @@ Inductive eval (env : global_env) : store -> expr -> store -> value -> Prop :=
   (* f(args): look up function, evaluate arguments, evaluate body. *)
   | Eval_Call : forall s s_args s_body fname fdef fcall args vs ret used',
       lookup_fn fname (env_fns env) = Some fdef ->
+      fn_captures fdef = [] ->
       eval_args env s args s_args vs ->
       alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
       eval env (bind_params (fn_params fcall) vs s_args)

@@ -330,6 +330,7 @@ Inductive typed (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) : ctx -> expr
   | T_FnValue : forall Γ fname fdef,
       In fdef fenv ->
       fn_name fdef = fname ->
+      fn_captures fdef = [] ->
       typed fenv Ω n Γ (EFn fname) (fn_value_ty fdef) Γ
 
   (* let x: T = e1 in e2
@@ -464,6 +465,7 @@ Inductive typed (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) : ctx -> expr
   | T_Call_Lt : forall Γ Γ' fname fdef args (σ : list lifetime),
       In fdef fenv ->
       fn_name fdef = fname ->
+      fn_captures fdef = [] ->
       typed_args fenv Ω n Γ args (apply_lt_params σ (fn_params fdef)) Γ' ->
       Forall (fun '(a, b) => outlives Ω a b) (apply_lt_outlives σ (fn_outlives fdef)) ->
       typed fenv Ω n Γ (ECall fname args) (apply_lt_ty σ (fn_ret fdef)) Γ'

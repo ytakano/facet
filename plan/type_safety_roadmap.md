@@ -456,9 +456,11 @@ Follow this order before inventing new theorem shapes:
      alpha-renaming branches. This is only a callable-type bridge; it does not
      add closure literals, captured runtime environments, parser syntax, or
      validator/runtime theorem widening.
-   - The hidden-capture design is now fixed: add `fn_captures` separately from
-     ordinary `fn_params`. The next implementation task is mechanical plumbing
-     for empty-capture existing functions, followed by core-only `EMakeClosure`
+   - The hidden-capture design is now fixed and partially implemented:
+     `fn_def` has `fn_captures` separately from ordinary `fn_params`, existing
+     frontend functions elaborate with empty captures, and direct `EFn` /
+     `ECall` typing, checking, and evaluation are guarded to empty-capture
+     functions only. The next implementation task is core-only `EMakeClosure`
      for immutable unrestricted reference-free captures. Parser syntax and
      frontend lambda lifting come after the Rocq core route is stable.
 8. **Handle the `if` root-environment gap last.**

@@ -2461,6 +2461,13 @@ let compatible_error t_actual t_expected =
     then ErrUsageMismatch ((ty_usage t_actual), (ty_usage t_expected))
     else ErrTypeMismatch ((ty_core t_actual), (ty_core t_expected))
 
+(** val no_captures_b : fn_def -> bool **)
+
+let no_captures_b f =
+  match f.fn_captures with
+  | [] -> true
+  | _ :: _ -> false
+
 (** val trait_impl_error_with_args :
     global_env -> string -> ty list -> ty -> infer_error option **)
 
@@ -3167,7 +3174,10 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
        | Infer_err err -> Infer_err err)
     | EFn fname ->
       (match lookup_fn_b fname env.env_fns with
-       | Some fdef -> Infer_ok ((fn_value_ty fdef), _UU03a3_)
+       | Some fdef ->
+         if no_captures_b fdef
+         then Infer_ok ((fn_value_ty fdef), _UU03a3_)
+         else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
     | EPlace p ->
       (match infer_place_sctx env _UU03a3_ p with
@@ -3179,44 +3189,48 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
     | ECall (fname, args) ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         let m = fdef.fn_lifetimes in
-         let collect =
-           let rec collect _UU03a3_0 = function
-           | [] -> Infer_ok ([], _UU03a3_0)
-           | e' :: es ->
-             (match infer_core_env_state_fuel fuel' env _UU03a9_ n _UU03a3_0
-                      e' with
-              | Infer_ok p ->
-                let (t_e, _UU03a3_1) = p in
-                (match collect _UU03a3_1 es with
-                 | Infer_ok p0 ->
-                   let (tys, _UU03a3_2) = p0 in
-                   Infer_ok ((t_e :: tys), _UU03a3_2)
-                 | Infer_err err -> Infer_err err)
-              | Infer_err err -> Infer_err err)
-           in collect
-         in
-         (match collect _UU03a3_ args with
-          | Infer_ok p ->
-            let (arg_tys, _UU03a3_') = p in
-            (match build_sigma m (repeat None m) arg_tys fdef.fn_params with
-             | Some _UU03c3__acc ->
-               let _UU03c3_ = finalize_subst _UU03c3__acc in
-               let ps_subst = apply_lt_params _UU03c3_ fdef.fn_params in
-               (match check_args _UU03a9_ arg_tys ps_subst with
-                | Some err -> Infer_err err
-                | None ->
-                  if forallb (wf_lifetime_b (mk_region_ctx n)) _UU03c3_
-                  then let _UU03a9__subst =
-                         apply_lt_outlives _UU03c3_ fdef.fn_outlives
-                       in
-                       if outlives_constraints_hold_b _UU03a9_ _UU03a9__subst
-                       then Infer_ok ((apply_lt_ty _UU03c3_ fdef.fn_ret),
-                              _UU03a3_')
-                       else Infer_err ErrHrtBoundUnsatisfied
-                  else Infer_err ErrLifetimeLeak)
-             | None -> Infer_err ErrLifetimeConflict)
-          | Infer_err err -> Infer_err err)
+         if no_captures_b fdef
+         then let m = fdef.fn_lifetimes in
+              let collect =
+                let rec collect _UU03a3_0 = function
+                | [] -> Infer_ok ([], _UU03a3_0)
+                | e' :: es ->
+                  (match infer_core_env_state_fuel fuel' env _UU03a9_ n
+                           _UU03a3_0 e' with
+                   | Infer_ok p ->
+                     let (t_e, _UU03a3_1) = p in
+                     (match collect _UU03a3_1 es with
+                      | Infer_ok p0 ->
+                        let (tys, _UU03a3_2) = p0 in
+                        Infer_ok ((t_e :: tys), _UU03a3_2)
+                      | Infer_err err -> Infer_err err)
+                   | Infer_err err -> Infer_err err)
+                in collect
+              in
+              (match collect _UU03a3_ args with
+               | Infer_ok p ->
+                 let (arg_tys, _UU03a3_') = p in
+                 (match build_sigma m (repeat None m) arg_tys fdef.fn_params with
+                  | Some _UU03c3__acc ->
+                    let _UU03c3_ = finalize_subst _UU03c3__acc in
+                    let ps_subst = apply_lt_params _UU03c3_ fdef.fn_params in
+                    (match check_args _UU03a9_ arg_tys ps_subst with
+                     | Some err -> Infer_err err
+                     | None ->
+                       if forallb (wf_lifetime_b (mk_region_ctx n)) _UU03c3_
+                       then let _UU03a9__subst =
+                              apply_lt_outlives _UU03c3_ fdef.fn_outlives
+                            in
+                            if outlives_constraints_hold_b _UU03a9_
+                                 _UU03a9__subst
+                            then Infer_ok
+                                   ((apply_lt_ty _UU03c3_ fdef.fn_ret),
+                                   _UU03a3_')
+                            else Infer_err ErrHrtBoundUnsatisfied
+                       else Infer_err ErrLifetimeLeak)
+                  | None -> Infer_err ErrLifetimeConflict)
+               | Infer_err err -> Infer_err err)
+         else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
     | ECallExpr (callee, args) ->
       (match infer_core_env_state_fuel fuel' env _UU03a9_ n _UU03a3_ callee with
@@ -3570,7 +3584,10 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
        | Infer_err err -> Infer_err err)
     | EFn fname ->
       (match lookup_fn_b fname env.env_fns with
-       | Some fdef -> Infer_ok (((fn_value_ty fdef), _UU03a3_), e)
+       | Some fdef ->
+         if no_captures_b fdef
+         then Infer_ok (((fn_value_ty fdef), _UU03a3_), e)
+         else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
     | EPlace p ->
       (match infer_place_sctx env _UU03a3_ p with
@@ -3582,47 +3599,52 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
     | ECall (fname, args) ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         let m = fdef.fn_lifetimes in
-         let collect =
-           let rec collect _UU03a3_0 = function
-           | [] -> Infer_ok (([], _UU03a3_0), [])
-           | e' :: es ->
-             (match infer_core_env_state_fuel_elab fuel' env _UU03a9_ n
-                      _UU03a3_0 e' with
-              | Infer_ok p ->
-                let (p0, e_elab) = p in
-                let (t_e, _UU03a3_1) = p0 in
-                (match collect _UU03a3_1 es with
-                 | Infer_ok p1 ->
-                   let (p2, es_elab) = p1 in
-                   let (tys, _UU03a3_2) = p2 in
-                   Infer_ok (((t_e :: tys), _UU03a3_2), (e_elab :: es_elab))
-                 | Infer_err err -> Infer_err err)
-              | Infer_err err -> Infer_err err)
-           in collect
-         in
-         (match collect _UU03a3_ args with
-          | Infer_ok p ->
-            let (p0, args') = p in
-            let (arg_tys, _UU03a3_') = p0 in
-            (match build_sigma m (repeat None m) arg_tys fdef.fn_params with
-             | Some _UU03c3__acc ->
-               let _UU03c3_ = finalize_subst _UU03c3__acc in
-               let ps_subst = apply_lt_params _UU03c3_ fdef.fn_params in
-               (match check_args _UU03a9_ arg_tys ps_subst with
-                | Some err -> Infer_err err
-                | None ->
-                  if forallb (wf_lifetime_b (mk_region_ctx n)) _UU03c3_
-                  then let _UU03a9__subst =
-                         apply_lt_outlives _UU03c3_ fdef.fn_outlives
-                       in
-                       if outlives_constraints_hold_b _UU03a9_ _UU03a9__subst
-                       then Infer_ok (((apply_lt_ty _UU03c3_ fdef.fn_ret),
-                              _UU03a3_'), (ECall (fname, args')))
-                       else Infer_err ErrHrtBoundUnsatisfied
-                  else Infer_err ErrLifetimeLeak)
-             | None -> Infer_err ErrLifetimeConflict)
-          | Infer_err err -> Infer_err err)
+         if no_captures_b fdef
+         then let m = fdef.fn_lifetimes in
+              let collect =
+                let rec collect _UU03a3_0 = function
+                | [] -> Infer_ok (([], _UU03a3_0), [])
+                | e' :: es ->
+                  (match infer_core_env_state_fuel_elab fuel' env _UU03a9_ n
+                           _UU03a3_0 e' with
+                   | Infer_ok p ->
+                     let (p0, e_elab) = p in
+                     let (t_e, _UU03a3_1) = p0 in
+                     (match collect _UU03a3_1 es with
+                      | Infer_ok p1 ->
+                        let (p2, es_elab) = p1 in
+                        let (tys, _UU03a3_2) = p2 in
+                        Infer_ok (((t_e :: tys), _UU03a3_2),
+                        (e_elab :: es_elab))
+                      | Infer_err err -> Infer_err err)
+                   | Infer_err err -> Infer_err err)
+                in collect
+              in
+              (match collect _UU03a3_ args with
+               | Infer_ok p ->
+                 let (p0, args') = p in
+                 let (arg_tys, _UU03a3_') = p0 in
+                 (match build_sigma m (repeat None m) arg_tys fdef.fn_params with
+                  | Some _UU03c3__acc ->
+                    let _UU03c3_ = finalize_subst _UU03c3__acc in
+                    let ps_subst = apply_lt_params _UU03c3_ fdef.fn_params in
+                    (match check_args _UU03a9_ arg_tys ps_subst with
+                     | Some err -> Infer_err err
+                     | None ->
+                       if forallb (wf_lifetime_b (mk_region_ctx n)) _UU03c3_
+                       then let _UU03a9__subst =
+                              apply_lt_outlives _UU03c3_ fdef.fn_outlives
+                            in
+                            if outlives_constraints_hold_b _UU03a9_
+                                 _UU03a9__subst
+                            then Infer_ok
+                                   (((apply_lt_ty _UU03c3_ fdef.fn_ret),
+                                   _UU03a3_'), (ECall (fname, args')))
+                            else Infer_err ErrHrtBoundUnsatisfied
+                       else Infer_err ErrLifetimeLeak)
+                  | None -> Infer_err ErrLifetimeConflict)
+               | Infer_err err -> Infer_err err)
+         else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
     | ECallExpr (callee, args) ->
       (match infer_core_env_state_fuel_elab fuel' env _UU03a9_ n _UU03a3_
@@ -4203,7 +4225,10 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
        | Infer_err err -> Infer_err err)
     | EFn fname ->
       (match lookup_fn_b fname env.env_fns with
-       | Some fdef -> Infer_ok ((((fn_value_ty fdef), _UU03a3_), r), [])
+       | Some fdef ->
+         if no_captures_b fdef
+         then Infer_ok ((((fn_value_ty fdef), _UU03a3_), r), [])
+         else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
     | EPlace p ->
       (match consume_direct_place_value_roots env _UU03a3_ r p with
@@ -4212,51 +4237,56 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
     | ECall (fname, args) ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         let m = fdef.fn_lifetimes in
-         let collect =
-           let rec collect _UU03a3_0 r0 = function
-           | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
-           | e' :: es ->
-             (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r0
-                      _UU03a3_0 e' with
-              | Infer_ok p ->
-                let (p0, roots_e) = p in
-                let (p1, r1) = p0 in
-                let (t_e, _UU03a3_1) = p1 in
-                (match collect _UU03a3_1 r1 es with
-                 | Infer_ok p2 ->
-                   let (p3, roots_es) = p2 in
-                   let (p4, r2) = p3 in
-                   let (tys, _UU03a3_2) = p4 in
-                   Infer_ok ((((t_e :: tys), _UU03a3_2), r2),
-                   (roots_e :: roots_es))
-                 | Infer_err err -> Infer_err err)
-              | Infer_err err -> Infer_err err)
-           in collect
-         in
-         (match collect _UU03a3_ r args with
-          | Infer_ok p ->
-            let (p0, arg_roots) = p in
-            let (p1, r') = p0 in
-            let (arg_tys, _UU03a3_') = p1 in
-            (match build_sigma m (repeat None m) arg_tys fdef.fn_params with
-             | Some _UU03c3__acc ->
-               let _UU03c3_ = finalize_subst _UU03c3__acc in
-               let ps_subst = apply_lt_params _UU03c3_ fdef.fn_params in
-               (match check_args _UU03a9_ arg_tys ps_subst with
-                | Some err -> Infer_err err
-                | None ->
-                  if forallb (wf_lifetime_b (mk_region_ctx n)) _UU03c3_
-                  then let _UU03a9__subst =
-                         apply_lt_outlives _UU03c3_ fdef.fn_outlives
-                       in
-                       if outlives_constraints_hold_b _UU03a9_ _UU03a9__subst
-                       then Infer_ok ((((apply_lt_ty _UU03c3_ fdef.fn_ret),
-                              _UU03a3_'), r'), (root_sets_union arg_roots))
-                       else Infer_err ErrHrtBoundUnsatisfied
-                  else Infer_err ErrLifetimeLeak)
-             | None -> Infer_err ErrLifetimeConflict)
-          | Infer_err err -> Infer_err err)
+         if no_captures_b fdef
+         then let m = fdef.fn_lifetimes in
+              let collect =
+                let rec collect _UU03a3_0 r0 = function
+                | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+                | e' :: es ->
+                  (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                           r0 _UU03a3_0 e' with
+                   | Infer_ok p ->
+                     let (p0, roots_e) = p in
+                     let (p1, r1) = p0 in
+                     let (t_e, _UU03a3_1) = p1 in
+                     (match collect _UU03a3_1 r1 es with
+                      | Infer_ok p2 ->
+                        let (p3, roots_es) = p2 in
+                        let (p4, r2) = p3 in
+                        let (tys, _UU03a3_2) = p4 in
+                        Infer_ok ((((t_e :: tys), _UU03a3_2), r2),
+                        (roots_e :: roots_es))
+                      | Infer_err err -> Infer_err err)
+                   | Infer_err err -> Infer_err err)
+                in collect
+              in
+              (match collect _UU03a3_ r args with
+               | Infer_ok p ->
+                 let (p0, arg_roots) = p in
+                 let (p1, r') = p0 in
+                 let (arg_tys, _UU03a3_') = p1 in
+                 (match build_sigma m (repeat None m) arg_tys fdef.fn_params with
+                  | Some _UU03c3__acc ->
+                    let _UU03c3_ = finalize_subst _UU03c3__acc in
+                    let ps_subst = apply_lt_params _UU03c3_ fdef.fn_params in
+                    (match check_args _UU03a9_ arg_tys ps_subst with
+                     | Some err -> Infer_err err
+                     | None ->
+                       if forallb (wf_lifetime_b (mk_region_ctx n)) _UU03c3_
+                       then let _UU03a9__subst =
+                              apply_lt_outlives _UU03c3_ fdef.fn_outlives
+                            in
+                            if outlives_constraints_hold_b _UU03a9_
+                                 _UU03a9__subst
+                            then Infer_ok
+                                   ((((apply_lt_ty _UU03c3_ fdef.fn_ret),
+                                   _UU03a3_'), r'),
+                                   (root_sets_union arg_roots))
+                            else Infer_err ErrHrtBoundUnsatisfied
+                       else Infer_err ErrLifetimeLeak)
+                  | None -> Infer_err ErrLifetimeConflict)
+               | Infer_err err -> Infer_err err)
+         else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
     | ECallExpr (_, _) -> Infer_err ErrNotImplemented
     | EStruct (sname, lts, args, fields) ->
@@ -4606,7 +4636,10 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
        | Infer_err err -> Infer_err err)
     | EFn fname ->
       (match lookup_fn_b fname env.env_fns with
-       | Some fdef -> Infer_ok ((((fn_value_ty fdef), _UU03a3_), r), [])
+       | Some fdef ->
+         if no_captures_b fdef
+         then Infer_ok ((((fn_value_ty fdef), _UU03a3_), r), [])
+         else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
     | EPlace p ->
       (match consume_direct_place_value_roots env _UU03a3_ r p with
@@ -4615,51 +4648,56 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
     | ECall (fname, args) ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         let m = fdef.fn_lifetimes in
-         let collect =
-           let rec collect _UU03a3_0 r0 = function
-           | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
-           | e' :: es ->
-             (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
-                      _UU03a9_ n r0 _UU03a3_0 e' with
-              | Infer_ok p ->
-                let (p0, roots_e) = p in
-                let (p1, r1) = p0 in
-                let (t_e, _UU03a3_1) = p1 in
-                (match collect _UU03a3_1 r1 es with
-                 | Infer_ok p2 ->
-                   let (p3, roots_es) = p2 in
-                   let (p4, r2) = p3 in
-                   let (tys, _UU03a3_2) = p4 in
-                   Infer_ok ((((t_e :: tys), _UU03a3_2), r2),
-                   (roots_e :: roots_es))
-                 | Infer_err err -> Infer_err err)
-              | Infer_err err -> Infer_err err)
-           in collect
-         in
-         (match collect _UU03a3_ r args with
-          | Infer_ok p ->
-            let (p0, arg_roots) = p in
-            let (p1, r') = p0 in
-            let (arg_tys, _UU03a3_') = p1 in
-            (match build_sigma m (repeat None m) arg_tys fdef.fn_params with
-             | Some _UU03c3__acc ->
-               let _UU03c3_ = finalize_subst _UU03c3__acc in
-               let ps_subst = apply_lt_params _UU03c3_ fdef.fn_params in
-               (match check_args _UU03a9_ arg_tys ps_subst with
-                | Some err -> Infer_err err
-                | None ->
-                  if forallb (wf_lifetime_b (mk_region_ctx n)) _UU03c3_
-                  then let _UU03a9__subst =
-                         apply_lt_outlives _UU03c3_ fdef.fn_outlives
-                       in
-                       if outlives_constraints_hold_b _UU03a9_ _UU03a9__subst
-                       then Infer_ok ((((apply_lt_ty _UU03c3_ fdef.fn_ret),
-                              _UU03a3_'), r'), (root_sets_union arg_roots))
-                       else Infer_err ErrHrtBoundUnsatisfied
-                  else Infer_err ErrLifetimeLeak)
-             | None -> Infer_err ErrLifetimeConflict)
-          | Infer_err err -> Infer_err err)
+         if no_captures_b fdef
+         then let m = fdef.fn_lifetimes in
+              let collect =
+                let rec collect _UU03a3_0 r0 = function
+                | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+                | e' :: es ->
+                  (match infer_core_env_state_fuel_roots_shadow_safe fuel'
+                           env _UU03a9_ n r0 _UU03a3_0 e' with
+                   | Infer_ok p ->
+                     let (p0, roots_e) = p in
+                     let (p1, r1) = p0 in
+                     let (t_e, _UU03a3_1) = p1 in
+                     (match collect _UU03a3_1 r1 es with
+                      | Infer_ok p2 ->
+                        let (p3, roots_es) = p2 in
+                        let (p4, r2) = p3 in
+                        let (tys, _UU03a3_2) = p4 in
+                        Infer_ok ((((t_e :: tys), _UU03a3_2), r2),
+                        (roots_e :: roots_es))
+                      | Infer_err err -> Infer_err err)
+                   | Infer_err err -> Infer_err err)
+                in collect
+              in
+              (match collect _UU03a3_ r args with
+               | Infer_ok p ->
+                 let (p0, arg_roots) = p in
+                 let (p1, r') = p0 in
+                 let (arg_tys, _UU03a3_') = p1 in
+                 (match build_sigma m (repeat None m) arg_tys fdef.fn_params with
+                  | Some _UU03c3__acc ->
+                    let _UU03c3_ = finalize_subst _UU03c3__acc in
+                    let ps_subst = apply_lt_params _UU03c3_ fdef.fn_params in
+                    (match check_args _UU03a9_ arg_tys ps_subst with
+                     | Some err -> Infer_err err
+                     | None ->
+                       if forallb (wf_lifetime_b (mk_region_ctx n)) _UU03c3_
+                       then let _UU03a9__subst =
+                              apply_lt_outlives _UU03c3_ fdef.fn_outlives
+                            in
+                            if outlives_constraints_hold_b _UU03a9_
+                                 _UU03a9__subst
+                            then Infer_ok
+                                   ((((apply_lt_ty _UU03c3_ fdef.fn_ret),
+                                   _UU03a3_'), r'),
+                                   (root_sets_union arg_roots))
+                            else Infer_err ErrHrtBoundUnsatisfied
+                       else Infer_err ErrLifetimeLeak)
+                  | None -> Infer_err ErrLifetimeConflict)
+               | Infer_err err -> Infer_err err)
+         else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
     | ECallExpr (_, _) -> Infer_err ErrNotImplemented
     | EStruct (sname, lts, args, fields) ->

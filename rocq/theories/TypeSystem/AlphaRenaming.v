@@ -4821,7 +4821,7 @@ Proof.
         * exact Hdisj.
         * apply params_alpha_refl.
         * exact Hargs.
-        * exact H1.
+        * exact H2.
         * exists Σr'. split; [econstructor; eauto | exact Hctx_r].
       + destruct (disjoint_names_app_l (free_vars_expr callee)
           ((fix go (args0 : list expr) : list ident :=
@@ -5145,6 +5145,7 @@ Inductive typed_env_roots_shadow_safe
   | TERS_Call : forall R R' Σ Σ' fname fdef args σ arg_roots,
       In fdef (Program.env_fns env) ->
       fn_name fdef = fname ->
+      fn_captures fdef = [] ->
       typed_args_roots_shadow_safe env Ω n R Σ args
         (apply_lt_params σ (fn_params fdef)) Σ' R' arg_roots ->
       Forall (fun '(a, b) => Lifetime.outlives Ω a b)
@@ -5154,6 +5155,7 @@ Inductive typed_env_roots_shadow_safe
   | TERS_Fn : forall R Σ fname fdef,
       In fdef (Program.env_fns env) ->
       fn_name fdef = fname ->
+      fn_captures fdef = [] ->
       typed_env_roots_shadow_safe env Ω n R Σ (EFn fname)
         (fn_value_ty fdef) Σ R []
   | TERS_Struct : forall R R' Σ Σ' sname lts args fields sdef roots,
@@ -5476,8 +5478,8 @@ Proof.
     + exact HnsR0.
     + exact HR0.
     + exact Hroots0.
-  - intros R R' Σ Σ' fname fdef args σ arg_roots Hin Hfname Hargs IHargs
-      Houtlives Hfresh R0 HnsR HnsR0 HR0.
+  - intros R R' Σ Σ' fname fdef args σ arg_roots Hin Hfname Hcaps
+      Hargs IHargs Houtlives Hfresh R0 HnsR HnsR0 HR0.
     rewrite expr_local_store_names_call in Hfresh.
     destruct (IHargs Hfresh R0 HnsR HnsR0 HR0)
       as [R0' [arg_roots0 [Hargs0 [HnsR0' [HR0' Harg_roots0]]]]].
@@ -5488,7 +5490,7 @@ Proof.
     + eapply root_set_equiv_trans.
       * apply root_sets_union_equiv. exact Harg_roots0.
       * apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
-  - intros R Σ fname fdef Hin Hfname Hfresh R0 HnsR HnsR0 HR0.
+  - intros R Σ fname fdef Hin Hfname Hcaps Hfresh R0 HnsR HnsR0 HR0.
     exists R0, []. split; [| split; [| split]].
     + eapply TERS_Fn; eauto.
     + exact HnsR0.
@@ -7769,7 +7771,7 @@ Proof.
   inversion Htyped; subst.
   exists Σr, Rr, [].
   split; [| split; [| split; [| split]]].
-  - eapply TER_Fn; [eassumption | reflexivity].
+  - eapply TER_Fn; eauto.
   - exact Hctx.
   - exact HnsRr.
   - exact HRr.
@@ -7838,7 +7840,7 @@ Proof.
   inversion Htyped; subst.
   exists Σr, Rr, [].
   split; [| split; [| split; [| split]]].
-  - eapply TERS_Fn; [eassumption | reflexivity].
+  - eapply TERS_Fn; eauto.
   - exact Hctx.
   - exact HnsRr.
   - exact HRr.

@@ -509,6 +509,8 @@ type infer_error =
 
 val compatible_error : ty -> ty -> infer_error
 
+val no_captures_b : fn_def -> bool
+
 val trait_impl_error_with_args :
   global_env -> string -> ty list -> ty -> infer_error option
 

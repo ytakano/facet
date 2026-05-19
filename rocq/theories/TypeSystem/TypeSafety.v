@@ -6257,8 +6257,14 @@ Proof.
             by (unfold store_lookup_path; rewrite Hlookup0; exact Hvalue0);
           eapply eval_place_lookup_path_roots_within; eassumption
       end.
-  - intros s fname Ω n R Σ T Σ' R' roots _ Hroots Hnodup Hrn Htyped.
-    inversion Htyped; subst. repeat split; try assumption; constructor.
+  - intros s fname fdef Hlookup Hcaps Ω n R Σ T Σ' R' roots
+      _ Hroots Hnodup Hrn Htyped.
+    inversion Htyped; subst.
+    repeat split.
+    + exact Hroots.
+    + constructor.
+    + exact Hnodup.
+    + exact Hrn.
   - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_then IHthen
       Ω n R Σ T Σ' R' roots Hready Hroots Hnodup Hrn Htyped.
     dependent destruction Hready.
@@ -6313,8 +6319,8 @@ Proof.
 	    + exact Hnodup3.
 	    + exact Hrn2.
   - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
-      Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R' roots
-      Hready _ _ _ _.
+      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
+      roots Hready _ _ _ _.
     inversion Hready.
   - intros s s_fn s_args s_body callee args0 fname captured fdef fcall vs ret
       used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
@@ -8886,7 +8892,8 @@ Proof.
     inversion Heval_r; subst.
     inversion Htyped; subst;
       try solve [split; [exact Hcover | exists frame; exact Hscope]].
-  - intros s fname Ω n R Σ T Σ' R' roots ps frame _ Htyped Hcover Hscope.
+  - intros s fname fdef Hlookup Hcaps Ω n R Σ T Σ' R' roots ps frame
+      _ Htyped Hcover Hscope.
     inversion Htyped; subst. split; [exact Hcover | exists frame; exact Hscope].
   - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_then IHthen
       Ω n R Σ T Σ' R' roots ps frame Hready Htyped Hcover Hscope.
@@ -8913,8 +8920,8 @@ Proof.
       * exact Hcover3.
     + exists frame3. exact Hscope3.
   - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
-      Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R' roots
-      ps frame Hready _ _ _.
+      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
+      roots ps frame Hready _ _ _.
     inversion Hready.
   - intros s s_fn s_args s_body callee args0 fname captured fdef fcall vs ret
       used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
@@ -9539,9 +9546,9 @@ Proof.
     dependent destruction Hready.
     inversion Heval_r; subst.
     inversion Htyped; subst; try solve [repeat split; assumption].
-  - intros s fname Ω n R Σ T Σ' R' roots ps frame _ Htyped Hcover
-      _ _ _ Hscope Hfresh.
-    inversion Htyped; subst. repeat split; assumption.
+  - intros s fname fdef Hlookup Hcaps Ω n R Σ T Σ' R' roots ps frame
+      _ Htyped Hcover _ _ _ Hscope Hfresh.
+    inversion Htyped; subst. repeat split; try assumption; constructor.
   - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_then IHthen
       Ω n R Σ T Σ' R' roots ps frame Hready Htyped Hcover Hroots
       Hshadow Hrn Hscope Hfresh.
@@ -9614,8 +9621,8 @@ Proof.
         -- exact H13.
       * exact Hfresh3.
   - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
-      Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R' roots
-      ps frame Hready _ _ _ _ _ _ _.
+      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
+      roots ps frame Hready _ _ _ _ _ _ _.
     inversion Hready.
   - intros s s_fn s_args s_body callee args0 fname captured fdef fcall vs ret
       used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
@@ -11826,7 +11833,7 @@ Proof.
   - intros s s_r r x path se v T_eval Hnot_place Heval_r IHr Hlookup
       Hvalue Htype_eval Husage Ω n Σ T Σ' Hready _ _.
     inversion Hready.
-  - intros s fname Ω n Σ T Σ' _ Hstore Htyped.
+  - intros s fname fdef Hlookup Hcaps Ω n Σ T Σ' _ Hstore Htyped.
     inversion Htyped; subst.
     split.
     + exact Hstore.
@@ -11882,7 +11889,8 @@ Proof.
           | eapply store_ref_targets_preserved_trans; eassumption ] ]
     end.
   - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
-      Heval_args IHargs Hrename Heval_body IHbody Ω n Σ T Σ' Hready _ _.
+      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n Σ T Σ'
+      Hready _ _.
     inversion Hready.
   - intros s s_fn s_args s_body callee args fname captured fdef fcall vs ret
       used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
@@ -12384,7 +12392,7 @@ Proof.
   - intros s s_r r x path se v T_eval Hnot_place Heval_r IHr Hlookup
       Hvalue Htype_eval Husage Ω n Σ T Σ' Hready _ _.
     inversion Hready.
-  - intros s fname Ω n Σ T Σ' _ Hstore Htyped.
+  - intros s fname fdef Hlookup Hcaps Ω n Σ T Σ' _ Hstore Htyped.
     inversion Htyped; subst.
     split.
     + exact Hstore.
@@ -12440,7 +12448,8 @@ Proof.
           | eapply store_ref_targets_preserved_trans; eassumption ] ]
     end.
   - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
-      Heval_args IHargs Hrename Heval_body IHbody Ω n Σ T Σ' Hready _ _.
+      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n Σ T Σ'
+      Hready _ _.
     inversion Hready.
   - intros s s_fn s_args s_body callee args fname captured fdef fcall vs ret
       used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
@@ -13287,7 +13296,8 @@ Proof.
         try apply store_ref_targets_preserved_refl;
         try (eapply value_lookup_path_has_type; eassumption);
         try (eapply eval_place_lookup_path_roots_within; eassumption).
-  - intros s fname Ω n R Σ T Σ' R' roots _ Hstore _ _ _ Htyped.
+  - intros s fname fdef Hlookup Hcaps Ω n R Σ T Σ' R' roots
+      _ Hstore _ _ _ Htyped.
     inversion Htyped; subst.
     split.
     + exact Hstore.
@@ -13352,8 +13362,8 @@ Proof.
           | eapply store_ref_targets_preserved_trans; eassumption ] ]
     end.
   - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
-      Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R' roots
-      Hready _ _ _ _ _.
+      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
+      roots Hready _ _ _ _ _.
     inversion Hready.
   - intros s s_fn s_args s_body callee args0 fname captured fdef fcall vs ret
       used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
@@ -14918,7 +14928,8 @@ Proof.
         try apply store_ref_targets_preserved_refl;
         try (eapply value_lookup_path_has_type; eassumption);
         try (eapply eval_place_lookup_path_roots_within; eassumption).
-  - intros s fname Ω n R Σ T Σ' R' roots _ Hstore _ _ _ Htyped.
+  - intros s fname fdef Hlookup Hcaps Ω n R Σ T Σ' R' roots
+      _ Hstore _ _ _ Htyped.
     inversion Htyped; subst.
     split.
     + exact Hstore.
@@ -14983,8 +14994,8 @@ Proof.
           | eapply store_ref_targets_preserved_trans; eassumption ] ]
     end.
   - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
-      Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R' roots
-      Hready _ _ _ _ _.
+      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
+      roots Hready _ _ _ _ _.
     inversion Hready.
   - intros s s_fn s_args s_body callee args0 fname captured fdef fcall vs ret
       used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
@@ -16254,14 +16265,19 @@ Proof.
   end.
   simpl in *.
   match goal with
-  | Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?fdef,
+  | Hlookup_fn : lookup_fn ?fname_call (env_fns env) = Some ?fdef_fn,
+    Hcaps_fn : fn_captures ?fdef_fn = [],
+    Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?fdef,
     Hargs : eval_args env s args ?s_args ?vs,
     Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
       (?fcall, ?used'),
     Hbody : eval env (bind_params (fn_params ?fcall) ?vs ?s_args)
       (fn_body ?fcall) ?s_body ?ret |- _ =>
+      assert (Hsame : fdef_fn = fdef)
+        by (eapply lookup_fn_deterministic; eassumption);
+      subst fdef;
       eapply Eval_Call;
-      [ exact Hlookup | exact Hargs | exact Hrename | exact Hbody ]
+      [ exact Hlookup | exact Hcaps_fn | exact Hargs | exact Hrename | exact Hbody ]
   end.
 Qed.
 
@@ -16350,20 +16366,20 @@ Proof.
 	          Htyped_shadow_body) as Htyped_body
 	  end.
   destruct (proj1 (proj2 eval_preserves_typing_ready_mutual)
-              env s args s_args vs H0 Ω n Σ
+              env s args s_args vs H1 Ω n Σ
               (apply_lt_params σ (fn_params fdef1)) Σ'
               Hready_args Hstore
               (typed_args_roots_structural env Ω n R Σ args
                 (apply_lt_params σ (fn_params fdef1)) Σ' R'
-                arg_roots H4))
+                arg_roots H6))
     as [_ [Hargs_subst _]].
   destruct (proj1 (proj2 eval_preserves_roots_ready_mutual)
-              env s args s_args vs H0 Ω n R Σ
+              env s args s_args vs H1 Ω n R Σ
               (apply_lt_params σ (fn_params fdef1)) Σ' R'
-              arg_roots Hprov_args Hroots Hshadow Hrn H4)
+              arg_roots Hprov_args Hroots Hshadow Hrn H6)
     as [Hroots_args [_ [Hshadow_args Hrn_args]]].
   pose proof (alpha_rename_fn_def_shape (store_names s_args)
-                fdef1 fcall used' H1) as Hshape.
+                fdef1 fcall used' H2) as Hshape.
   destruct Hshape as [_ [_ Hparams_alpha]].
   assert (Hargs_unsubst_fdef :
     eval_args_values_have_types env Ω s_args vs (fn_params fdef1))
@@ -16376,14 +16392,14 @@ Proof.
   assert (Hnodup :
     NoDup (ctx_names (params_ctx (fn_params fcall))))
   by (eapply alpha_rename_fn_def_params_nodup_ctx_names;
-      exact H1).
+      exact H2).
   assert (Hfresh : params_fresh_in_store (fn_params fcall) s_args)
   by (eapply alpha_rename_fn_def_params_fresh_in_store;
-      exact H1).
+      exact H2).
   destruct (eval_args_bind_params_call_param_root_env_ready
               env s args s_args vs Ω n R Σ
               (apply_lt_params σ (fn_params fdef1)) Σ' R' arg_roots
-              (fn_params fcall) H0 Hprov_args H4
+              (fn_params fcall) H1 Hprov_args H6
               Hroots Hshadow Hrn Hnodup Hfresh Hargs_fcall)
     as [Hroots_bind [Hshadow_bind [Hrn_params Hcover_params]]].
   destruct (eval_direct_call_body_cleanup_preserves_value_and_refs
@@ -16391,7 +16407,7 @@ Proof.
               fdef1 fcall σ s s_args s_body vs ret used' T_body
               Γ_out (call_param_root_env (fn_params fcall) arg_roots R')
               R_body roots_body Hstore Hroots Hshadow Hrn Hprov_args
-              Hready_args H4 H0 H1 Hroots_bind
+              Hready_args H6 H1 H2 Hroots_bind
               Hshadow_bind Hrn_params Hcover_params Hprov_body
               Htyped_body Hcompat_body Hexclude_ret Hexclude_env
               Heval)

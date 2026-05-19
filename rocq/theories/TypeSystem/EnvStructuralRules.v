@@ -497,6 +497,7 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
   | TES_Fn : forall Σ fname fdef,
       In fdef (env_fns env) ->
       fn_name fdef = fname ->
+      fn_captures fdef = [] ->
       typed_env_structural env Ω n Σ (EFn fname) (fn_value_ty fdef) Σ
   | TES_Struct : forall Σ Σ' sname lts args fields sdef,
       lookup_struct sname env = Some sdef ->
@@ -591,6 +592,7 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
   | TES_Call : forall Σ Σ' fname fdef args σ,
       In fdef (env_fns env) ->
       fn_name fdef = fname ->
+      fn_captures fdef = [] ->
       typed_args_env_structural env Ω n Σ args (apply_lt_params σ (fn_params fdef)) Σ' ->
       Forall (fun '(a, b) => outlives Ω a b) (apply_lt_outlives σ (fn_outlives fdef)) ->
       typed_env_structural env Ω n Σ (ECall fname args) (apply_lt_ty σ (fn_ret fdef)) Σ'
@@ -673,6 +675,7 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
   | TER_Call : forall R R' Σ Σ' fname fdef args σ arg_roots,
       In fdef (env_fns env) ->
       fn_name fdef = fname ->
+      fn_captures fdef = [] ->
       typed_args_roots env Ω n R Σ args
         (apply_lt_params σ (fn_params fdef)) Σ' R' arg_roots ->
       Forall (fun '(a, b) => outlives Ω a b) (apply_lt_outlives σ (fn_outlives fdef)) ->
@@ -681,6 +684,7 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
   | TER_Fn : forall R Σ fname fdef,
       In fdef (env_fns env) ->
       fn_name fdef = fname ->
+      fn_captures fdef = [] ->
       typed_env_roots env Ω n R Σ (EFn fname) (fn_value_ty fdef) Σ R []
   | TER_Struct : forall R R' Σ Σ' sname lts args fields sdef roots,
       lookup_struct sname env = Some sdef ->
@@ -1035,8 +1039,8 @@ Proof.
     + exact HnsR0.
     + exact HR0.
     + exact Hroots0.
-  - intros R R' Σ Σ' fname fdef args σ arg_roots Hin Hfname Hargs IHargs
-      Houtlives Hfresh R0 HnsR HnsR0 HR0.
+  - intros R R' Σ Σ' fname fdef args σ arg_roots Hin Hfname Hcaps
+      Hargs IHargs Houtlives Hfresh R0 HnsR HnsR0 HR0.
     rewrite expr_local_store_names_call in Hfresh.
     destruct (IHargs Hfresh R0 HnsR HnsR0 HR0)
       as [R0' [arg_roots0 [Hargs0 [HnsR0' [HR0' Harg_roots0]]]]].
@@ -1047,7 +1051,7 @@ Proof.
     + eapply root_set_equiv_trans.
       * apply root_sets_union_equiv. exact Harg_roots0.
       * apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
-  - intros R Σ fname fdef Hin Hfname Hfresh R0 HnsR HnsR0 HR0.
+  - intros R Σ fname fdef Hin Hfname Hcaps Hfresh R0 HnsR HnsR0 HR0.
     exists R0, []. split; [| split; [| split]].
     + eapply TER_Fn; eauto.
     + exact HnsR0.

@@ -2115,7 +2115,7 @@ Proof.
   inversion Heval; subst; clear Heval.
   match goal with
   | Hfn : eval _ _ (EFn _) _ _ |- _ =>
-      inversion Hfn; subst; clear Hfn
+      inversion Hfn; subst
   end.
   match goal with
   | Hcall : eval _ _ (ECallExpr (EVar _) _) _ _ |- _ =>
@@ -2140,12 +2140,22 @@ Proof.
     end.
     simpl in *.
     eapply Eval_Let.
-    + apply Eval_Fn.
-    + eapply Eval_Call.
-      * eassumption.
-      * eassumption.
-      * eassumption.
-      * eassumption.
+    + match goal with
+      | Hfn : eval _ _ (EFn _) _ _ |- _ => exact Hfn
+      end.
+    + match goal with
+      | Hlookup_fn : lookup_fn ?fname_call (env_fns env) = Some ?fdef_fn,
+        Hcaps_fn : fn_captures ?fdef_fn = [],
+        Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?fdef,
+        Hargs : eval_args env _ args _ _,
+        Hrename : alpha_rename_fn_def _ ?fdef = (_, _),
+        Hbody : eval env (bind_params _ _ _) _ _ _ |- _ =>
+          assert (Hsame : fdef_fn = fdef)
+            by (eapply lookup_fn_deterministic; eassumption);
+          subst fdef;
+          eapply Eval_Call;
+          [ exact Hlookup | exact Hcaps_fn | exact Hargs | exact Hrename | exact Hbody ]
+      end.
   - match goal with
     | Hlookup : store_lookup _ (store_add _ _ _ _) = Some _ |- _ =>
         simpl in Hlookup; rewrite ident_eqb_refl in Hlookup;

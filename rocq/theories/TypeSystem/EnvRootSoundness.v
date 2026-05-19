@@ -533,6 +533,8 @@ Proof.
       * apply roots_exclude_b_sound. exact Hroots.
       * apply root_env_excludes_b_sound. exact Henv.
     + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+      unfold no_captures_b in Hinfer.
+      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
       inversion Hinfer; subst.
       destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
       eapply TER_Fn; eassumption.
@@ -557,6 +559,8 @@ Proof.
         -- exact Hconsume.
         -- exact Hlookup.
     + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+      unfold no_captures_b in Hinfer.
+      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
       rewrite infer_env_args_collect_roots_eq in Hinfer.
       destruct (infer_env_args_collect_roots fuel' env Ω n R Σ l)
         as [[[[arg_tys Σargs] Rargs] arg_roots] | err] eqn:Hcollect;
@@ -575,6 +579,7 @@ Proof.
       eapply TER_Call with (fdef := fdef) (σ := finalize_subst σ_acc).
       * exact Hin.
       * exact Hname.
+      * exact Hcaps.
       * eapply infer_env_args_collect_roots_sound.
         -- exact Hcollect.
         -- intros R0 Σ0 e0 T0 Σ1 R1 roots1 Hinfer0.
@@ -794,6 +799,8 @@ Proof.
       * apply roots_exclude_b_sound. exact Hroots2.
       * apply root_env_excludes_b_sound. exact Henv2.
     + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+      unfold no_captures_b in Hinfer.
+      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
       inversion Hinfer; subst.
       destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
       eapply TERS_Fn; eassumption.
@@ -818,6 +825,8 @@ Proof.
         -- exact Hconsume.
         -- exact Hlookup.
     + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+      unfold no_captures_b in Hinfer.
+      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
       rewrite infer_env_args_collect_roots_shadow_safe_eq in Hinfer.
       destruct (infer_env_args_collect_roots_shadow_safe fuel' env Ω n R Σ l)
         as [[[[arg_tys Σargs] Rargs] arg_roots] | err] eqn:Hcollect;
@@ -836,6 +845,7 @@ Proof.
       eapply TERS_Call with (fdef := fdef) (σ := finalize_subst σ_acc).
       * exact Hin.
       * exact Hname.
+      * exact Hcaps.
       * eapply infer_env_args_collect_roots_shadow_safe_sound.
         -- exact Hcollect.
         -- intros R0 Σ0 e0 T0 Σ1 R1 roots1 Hinfer0.

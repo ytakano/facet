@@ -681,14 +681,19 @@ Proof.
         * eapply IH; [simpl in Hlt; lia | exact He1].
         * eapply IH; [simpl in Hlt; lia | exact He2].
         * apply ctx_check_ok_sound. exact Hok.
-      + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
-        injection Hinfer as <- <-.
-        destruct (lookup_fn_b_sound i fenv fdef Hlookup) as [Hin Hname].
-	        eapply T_FnValue.
-	        * exact Hin.
-	        * exact Hname.
-	      + discriminate.
 	      + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
+        unfold no_captures_b in Hinfer.
+        destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; [|discriminate].
+	        injection Hinfer as <- <-.
+	        destruct (lookup_fn_b_sound i fenv fdef Hlookup) as [Hin Hname].
+		        eapply T_FnValue.
+		        * exact Hin.
+		        * exact Hname.
+            * exact Hcaps.
+		      + discriminate.
+		      + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
+        unfold no_captures_b in Hinfer.
+        destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; [|discriminate].
         destruct (infer_args_collect fenv Ω n Γ l) as [[arg_tys Γcall] | err] eqn:Hcollect.
         2:{
           rewrite (ecall_collect_eq fenv Ω n l Γ) in Hinfer.
@@ -709,6 +714,7 @@ Proof.
         eapply T_Call_Lt with (fdef := fdef) (σ := σ).
         * exact Hin.
         * exact Hname.
+        * exact Hcaps.
         * subst ps_subst. eapply infer_call_args_sound_v2.
           -- exact Hcollect.
           -- intros Γ0 e0 T0 Γ1 Hin_arg Hinfer_arg.

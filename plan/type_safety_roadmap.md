@@ -77,8 +77,10 @@ Current gap summary:
   expression readiness.
 - `ECallExpr (EFn fname) args` is closed as syntactic direct-call sugar in the
   direct-call-local sidecar route.
-- General `ECallExpr callee args` remains a staged design gap: first prove
-  first-class functions without captures, then captured closures.
+- General `ECallExpr callee args` remains a staged design gap. The staged
+  order is: first-class functions without captures, then MVP closures with
+  immutable unrestricted captures, then captured references/lifetimes, then
+  mutable and affine/linear captures.
 
 Next-task rule:
 
@@ -138,6 +140,18 @@ shadow/root sidecar evidence.
   regions are designed.
 - Same-argument-name parameters in one function are rejected.
 - Duplicate-parameter and shadowing errors should stay distinguishable.
+- Captureless `fn(...) -> ...` and captured `closure<'env>(...) -> ...` are
+  separate callable value types. `fn_value_ty` remains the empty-capture
+  function item wrapper; captured closures use `closure_value_ty`.
+- Closure literals use explicit capture lists. The parser records capture
+  syntax; elaboration/checking performs copy/move/borrow decisions.
+- Closure literals are lowered by lambda lifting. The generated synthetic
+  function takes hidden capture parameters first, followed by ordinary call
+  parameters, and runtime values reuse the existing `VClosure fname captured`
+  representation.
+- Rust-style `Fn` / `FnMut` / `FnOnce` are not new Facet kinds. Their behavior
+  is represented by receiver mutability, closure value usage, and whether the
+  captured environment is read, updated, or consumed.
 
 ## Codex Quick Path
 
@@ -314,48 +328,129 @@ Follow this order before inventing new theorem shapes:
    `eval_local_unrestricted_fn_value_call_as_synthetic_call`, applies the
    strengthened direct-call theorem to the inner `ECall`, and uses the returned
    result roots plus `TERS_Let` exclusions to type the final `store_remove g`.
-7. **Prove closures with captures.**
-   Only after non-capturing function values are stable, add captured-closure
-   calls. This requires a captured-store invariant covering typing, root
-   reachability, no-shadow, lifetime validity, and the way captured store is
-   composed with parameters and caller tail during callee execution.
-   Captured closure values must be usage-polymorphic like structs: compute the
-   closure value's outer usage as the maximum usage of captured values.
-   `closure_capture_usage` and `closure_value_ty` are the specification helpers
-   for this shape; `fn_value_ty` remains the empty-capture unrestricted function
-   item wrapper. For polymorphic closure values, put the captured-usage result
-   on the outer `TForall` wrapper while keeping the inner `TFn` body shape
-   unchanged.
-   Current implementation progress: `RuntimeTyping.v` now has the Prop-level
-   captured-store specification helpers `store_tys`, `sctx_of_store`,
-   `captured_store_typed`, and `captured_closure_has_type`. These fix the
-   intended captured-closure value type as
-   `closure_value_ty fdef (store_tys captured)` without changing the existing
-   executable checker or the existing empty-capture `value_has_type`
-   constructors. The next implementation step is to connect these helpers to
-   `Eval_CallExpr` preservation through a proof-only captured-store invariant
-   covering roots/no-shadow/naming before widening any executable validator.
-   Current implementation progress: `TypeSafety.v` now has proof-only
-   invariant shells `captured_store_runtime_ready` and
-   `captured_call_frame_ready`. These specify the runtime obligations needed
-   for composing `captured ++ s_args` in `Eval_CallExpr`: captured-store
-   typing, root reachability, no-shadow, root-env no-shadow, and root/key
-   naming. Empty-capture bridge lemmas are the compatibility baseline with the
-   already proved non-capturing route. The non-empty frame-composition step is
-   now represented by `captured_call_frame_ready_compose`, supported by
-   append/weakening helpers for store names, no-shadow, store roots, and
-   root-env naming. Callee-body cleanup/final-store shape is now represented
-   by `eval_call_body_cleanup_preserves_value_and_refs_frame` and the captured
-   instantiation `eval_captured_call_body_cleanup_preserves_value_and_refs`:
-   after evaluating the body over `captured ++ s_args`, parameter cleanup
-   preserves value/ref/root facts and proves the final store is exactly
-   `captured ++ s_args`. The frame-extended captured call-expression
-   integration is now represented by
-   `eval_captured_call_expr_cleanup_preserves_value_and_refs`. The remaining
-   blocker is still ordinary operational type safety/final output-context
-   mismatch for non-empty captures, because the final runtime store is
-   `captured ++ s_args` while ordinary checker routes expect the ordinary
-   output context.
+7. **Introduce and prove closures in proof-friendly phases.**
+   Do not implement every closure feature from `plan/closure.md` at once. Each
+   phase must add a narrow language surface, the corresponding core
+   elaboration, executable checks, Prop rules, and a preservation bridge before
+   moving to the next phase.
+
+   **Stage 7a: MVP immutable unrestricted captures.**
+   - Surface syntax:
+     `closure [x, y](args) -> ret { body }`.
+   - Capture list contains variable names only. No `&x` / `&mut x` capture
+     syntax in this stage.
+   - Accepted captures are immutable unrestricted non-reference values only.
+     Capturing copies the value into the closure environment. Mutating or
+     consuming captured slots is rejected.
+   - Lower closure literals by lambda lifting:
+
+     ```text
+     surface:
+       closure [x, y](a: A) -> R { body }
+
+     synthetic function:
+       fn __closure_N(x: X, y: Y, a: A) -> R { body }
+
+     core expression:
+       EMakeClosure __closure_N [x, y]
+     ```
+
+     Hidden capture parameters come before ordinary call parameters. The
+     runtime value is `VClosure __closure_N captured`, so the existing
+     `Eval_CallExpr` shape is reused.
+   - Type the value as `unrestricted closure<'env>(Args) -> Ret` with an
+     internally generated trivial `'env`. Reference-valued captures are
+     deliberately deferred to Stage 7b.
+   - Proof target: show that evaluating the closure literal produces a
+     captured store satisfying `captured_store_typed` and
+     `captured_call_frame_ready`, then prove `ECallExpr` preservation for this
+     immutable-copy case.
+   - The final-store mismatch must be handled by theorem shape, not by
+     rewriting closure calls to direct calls. Treat the final `captured ++
+     s_args` frame as internal to the closure call and expose only the caller
+     output context/value promised by the ordinary typing rule.
+
+   **Stage 7b: Captured reference values and closure lifetimes.**
+   - Still no `closure [&x]` or `closure [&mut x]` syntax. This stage supports
+     capturing variables whose values are already references.
+   - Add the real `closure<'env>(Args) -> Ret` lifetime discipline:
+     every captured `&'a T` requires `'a : 'env`, and the closure value may not
+     escape `'env`.
+   - Extend checker/elaboration evidence so lifetime inference introduces the
+     internal closure environment lifetime outside the parser.
+   - Extend captured-store readiness with lifetime validity/root reachability
+     for captured references. Reuse root provenance only as sidecar evidence
+     where reference safety needs it.
+
+   **Stage 7c: Borrow-capture syntax.**
+   - Add surface capture forms `closure [&x]` and `closure [&mut x]`.
+   - The parser must only record the capture syntax. The elaborator/checker
+     converts borrow captures into reference-valued captures and performs the
+     borrow/lifetime checks.
+   - Do not let parser desugaring insert ownership-sensitive operations. Any
+     borrow creation, drop behavior, or root evidence belongs to the named
+     elaboration/checker phase.
+
+   **Stage 7d: Mutable unrestricted closure environments.**
+   - Allow mutable unrestricted captured slots to be assigned/replaced inside
+     the closure body.
+   - A call that may update the captured environment requires a mutable
+     closure place as receiver. The updated captured store is written back to
+     the closure value after the call.
+   - Copy-captured unrestricted variables remain independent from the outer
+     variables. Updating the captured slot does not update the source variable;
+     updating the outer variable requires a captured mutable reference.
+   - Proof target: split immutable call preservation from mutable receiver call
+     preservation. The mutable route must account for env writeback and prove
+     that writeback preserves store typing, roots, no-shadow, and lifetime
+     obligations.
+
+   **Stage 7e: Affine and linear captures.**
+   - Add move capture for affine/linear values only after immutable and mutable
+     unrestricted closures are proved.
+   - Captured closure values are usage-polymorphic like structs: compute the
+     closure value's outer usage as the maximum usage of captured values.
+     `closure_capture_usage` and `closure_value_ty` are the specification
+     helpers for this shape. For polymorphic closure values, put the captured
+     usage result on the outer `TForall` wrapper while keeping the inner `TFn`
+     body shape unchanged.
+   - Moving an affine/linear value into a closure is rejected when live
+     references make the move invalid.
+   - Consuming calls move the closure value and may consume captured affine or
+     linear slots. The closure cannot be used after the call.
+   - Proof target: add a consuming-call preservation theorem that accounts for
+     callee evaluation effects instead of relying on the Stage 6a
+     unrestricted-copy alias theorem.
+
+   Existing proof assets to reuse:
+   - `RuntimeTyping.v` already has `store_tys`, `sctx_of_store`,
+     `captured_store_typed`, and `captured_closure_has_type`.
+   - `TypeSafety.v` already has `captured_store_runtime_ready`,
+     `captured_call_frame_ready`, `captured_call_frame_ready_compose`,
+     `eval_call_body_cleanup_preserves_value_and_refs_frame`,
+     `eval_captured_call_body_cleanup_preserves_value_and_refs`, and
+     `eval_captured_call_expr_cleanup_preserves_value_and_refs`.
+   - These helpers are proof infrastructure, not permission to widen the
+     executable validators. Widen validators only after the matching Prop
+     preservation theorem exists.
+
+   Current implementation progress:
+   - `Types.v` now has `TClosure env_lt params ret` as a separate type core
+     from `TFn`. Lifetime substitution, lifetime mapping, bound-lifetime
+     detection, type-parameter substitution, well-formedness, declaration
+     equality, executable type equality, checker type depth, validation
+     traversals, runtime lifetime-equivalence helpers, and extracted OCaml
+     printers all handle `TClosure`.
+   - Prop-level `ty_compatible` has the intended asymmetric callable relation:
+     `TClosure` is compatible with `TClosure`, and captureless `TFn` is
+     compatible where `TClosure` is expected. The executable
+     `ty_compatible_b` has not yet been widened for this asymmetric relation;
+     it currently remains conservative to keep checker soundness stable.
+   - `ECallExpr` typing/checking has not yet been widened to accept
+     `TClosure` directly. The next implementation task is to add the
+     executable `TFn <: TClosure` bridge and the `TClosure` call-expression
+     rules together with their checker-soundness, env-structural, alpha, and
+     runtime preservation obligations.
 8. **Handle the `if` root-environment gap last.**
    The known blocker is that ordinary `TES_If` does not expose
    `root_env_equiv R2 R3`, while root/shadow routes require it. Do not
@@ -398,6 +493,11 @@ Use these wrappers before adding new theorem shapes:
   `check_fn_root_shadow_direct_call_provenance_summary`,
   `check_env_root_shadow_direct_call_provenance_summary`, and
   `check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary`.
+- Executable non-capturing function-value provenance summary entrypoint:
+  `check_program_env_alpha_validated_root_shadow_non_capturing_call_provenance_summary`.
+- Executable non-capturing function-value route with checked initial runtime
+  state:
+  `check_program_env_alpha_validated_root_shadow_non_capturing_call_provenance_summary_big_step_safe_checked_initial_ready`.
 - Executable provenance-summary route with checked initial runtime state:
   `check_program_env_alpha_validated_root_shadow_provenance_summary_big_step_safe_checked_initial_ready`.
 - Executable direct-call-local provenance-summary route with checked initial
@@ -560,8 +660,10 @@ Future work:
   The provenance-summary route no longer needs the callee-body
   `env_fns_preservation_ready` dependency or the caller
   `preservation_direct_call_ready_expr` premise.
-- General `ECallExpr` work must proceed in two later stages: first-class
-  functions without captures, then closures with captured stores.
+- General `ECallExpr` work must proceed through the staged order in
+  `Next Implementation Order`: first-class functions without captures, MVP
+  immutable unrestricted closures, captured references/lifetimes, borrow
+  capture syntax, mutable environments, then affine/linear captures.
 
 ### Ordinary Checker Review Gates
 
@@ -635,13 +737,13 @@ for these gates before treating a newly accepted syntax class as ordinary-safe.
   expression readiness. The caller should use the direct-call-local readiness
   package, while only the reached callee body requires root-shadow provenance
   summary evidence.
-- General `ECallExpr callee args` is staged future work. The first stage is
-  non-capturing first-class function values: evaluating `callee` must produce a
-  function value carrying the concrete `fname` used to select the callee
-  summary. The second stage is captured closures: the runtime value must carry
-  a captured-store invariant strong enough for typing, root reachability,
-  no-shadow, lifetime validity, and callee execution over parameters plus
-  captured store.
+- General `ECallExpr callee args` is staged future work. The first-class
+  function-value stage proves that evaluating `callee` produces a function
+  value carrying the concrete `fname` used to select the callee summary. The
+  closure stages then add explicit capture-list syntax, lambda-lifted
+  `EMakeClosure` core, immutable unrestricted captures, captured reference
+  lifetimes, borrow-capture syntax, mutable environment writeback, and finally
+  affine/linear move captures.
 - `provenance_ready_expr_b` now accepts the narrow `EDeref (EBorrow rk p)`
   pattern with matching root provenance typing rules and runtime preservation
   cases. General `EDeref` remains outside the current validator route.
@@ -1105,10 +1207,10 @@ verbose than the quick path. Do not use it as the primary implementation order.
 5. Defer unrelated expansion.
    - The syntactic `ECallExpr (EFn fname) args` direct-call-sugar case is now
      implemented by the direct-call-local route.
-   - Do not start general `ECallExpr callee args` until the non-capturing
-     function-value provenance route is designed.
-   - Do not handle captured closure stores until a captured-store invariant is
-     designed.
+   - Do not start captured closures until the non-capturing function-value
+     provenance route is stable.
+   - Do not widen closure validators until the matching Prop preservation
+     theorem exists for that closure phase.
    - Do not attempt small-step progress before preservation is stable.
 
 ## Main Target Theorems

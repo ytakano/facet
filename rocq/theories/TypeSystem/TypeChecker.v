@@ -75,6 +75,14 @@ Fixpoint ty_eqb (T1 T2 : Ty) {struct T1} : bool :=
              | t1 :: l1', t2 :: l2' => ty_eqb t1 t2 && go l1' l2'
              | _, _ => false
              end) ts1 ts2 && ty_eqb r1 r2
+      | TClosure env1 ts1 r1, TClosure env2 ts2 r2 =>
+          lifetime_eqb env1 env2 &&
+          (fix go (l1 l2 : list Ty) : bool :=
+             match l1, l2 with
+             | [], [] => true
+             | t1 :: l1', t2 :: l2' => ty_eqb t1 t2 && go l1' l2'
+             | _, _ => false
+             end) ts1 ts2 && ty_eqb r1 r2
       | TForall n1 Ω1 b1, TForall n2 Ω2 b2 =>
           Nat.eqb n1 n2 && outlives_ctx_eqb Ω1 Ω2 && ty_eqb b1 b2
       | TRef l1 k1 t1, TRef l2 k2 t2 =>
@@ -107,6 +115,14 @@ Definition ty_core_eqb (c1 c2 : TypeCore Ty) : bool :=
          | t1 :: l1', t2 :: l2' => ty_eqb t1 t2 && go l1' l2'
          | _, _ => false
          end) ts1 ts2 && ty_eqb r1 r2
+  | TClosure env1 ts1 r1, TClosure env2 ts2 r2 =>
+      lifetime_eqb env1 env2 &&
+      (fix go (l1 l2 : list Ty) : bool :=
+         match l1, l2 with
+         | [], [] => true
+         | t1 :: l1', t2 :: l2' => ty_eqb t1 t2 && go l1' l2'
+         | _, _ => false
+         end) ts1 ts2 && ty_eqb r1 r2
   | TForall n1 Ω1 b1, TForall n2 Ω2 b2 =>
       Nat.eqb n1 n2 && outlives_ctx_eqb Ω1 Ω2 && ty_eqb b1 b2
   | TRef l1 k1 t1, TRef l2 k2 t2 =>
@@ -119,6 +135,12 @@ Fixpoint ty_depth (T : Ty) : nat :=
   | MkTy _ c =>
       match c with
       | TFn ts r =>
+          S ((fix go (l : list Ty) : nat :=
+               match l with
+               | [] => ty_depth r
+               | t :: l' => S (ty_depth t) + go l'
+               end) ts)
+      | TClosure _ ts r =>
           S ((fix go (l : list Ty) : nat :=
                match l with
                | [] => ty_depth r
@@ -274,6 +296,9 @@ Fixpoint wf_type_at_b (bound_depth : nat) (Δ : region_ctx) (T : Ty) : bool :=
   | MkTy u (TRef l rk T_inner) =>
       ref_usage_ok_b u rk && wf_lifetime_at_b bound_depth Δ l && wf_type_at_b bound_depth Δ T_inner
   | MkTy _ (TFn ts r) =>
+      forallb (wf_type_at_b bound_depth Δ) ts && wf_type_at_b bound_depth Δ r
+  | MkTy _ (TClosure l ts r) =>
+      wf_lifetime_at_b bound_depth Δ l &&
       forallb (wf_type_at_b bound_depth Δ) ts && wf_type_at_b bound_depth Δ r
   | MkTy _ (TForall n Ω body) =>
       wf_outlives_at_b (n + bound_depth) Δ Ω && wf_type_at_b (n + bound_depth) Δ body

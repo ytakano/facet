@@ -24,6 +24,10 @@ let rec string_of_ty_core : ty typeCore -> string = function
     Printf.sprintf "fn(%s) -> %s"
       (String.concat ", " (List.map string_of_ty ts))
       (string_of_ty r)
+  | TClosure (_, ts, r) ->
+    Printf.sprintf "closure(%s) -> %s"
+      (String.concat ", " (List.map string_of_ty ts))
+      (string_of_ty r)
   | TForall (n, _, body) ->
     Printf.sprintf "for<%s> %s"
       (String.concat ", "

@@ -412,6 +412,8 @@ and pp_ty_core = function
     if all = [] then name else Printf.sprintf "%s<%s>" name (String.concat ", " all)
   | TFn (ts, r) ->
     "fn(" ^ String.concat ", " (List.map pp_ty ts) ^ ") -> " ^ pp_ty r
+  | TClosure (_, ts, r) ->
+    "closure(" ^ String.concat ", " (List.map pp_ty ts) ^ ") -> " ^ pp_ty r
   | TForall (n, _, body) ->
     "for<" ^
     String.concat ", "

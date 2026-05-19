@@ -61,6 +61,8 @@ Fixpoint type_struct_refs (T : Ty) : list string :=
       fold_right (fun T acc => type_struct_refs T ++ acc) [] args
   | MkTy _ (TFn args ret) =>
       fold_right (fun T acc => type_struct_refs T ++ acc) (type_struct_refs ret) args
+  | MkTy _ (TClosure _ args ret) =>
+      fold_right (fun T acc => type_struct_refs T ++ acc) (type_struct_refs ret) args
   | MkTy _ (TForall _ _ body) => type_struct_refs body
   | MkTy _ (TRef _ _ inner) => type_struct_refs inner
   | _ => []
@@ -143,6 +145,10 @@ Fixpoint type_env_wf_b
   | MkTy _ (TFn args ret) =>
       forallb (type_env_wf_b structs ty_params lt_params bound_depth) args &&
       type_env_wf_b structs ty_params lt_params bound_depth ret
+  | MkTy _ (TClosure env_lt args ret) =>
+      lifetime_wf_b lt_params bound_depth env_lt &&
+      forallb (type_env_wf_b structs ty_params lt_params bound_depth) args &&
+      type_env_wf_b structs ty_params lt_params bound_depth ret
   | MkTy _ (TForall n Ω body) =>
       outlives_wf_b lt_params (n + bound_depth) Ω &&
       type_env_wf_b structs ty_params lt_params (n + bound_depth) body
@@ -186,6 +192,13 @@ Fixpoint used_type_params_ty (T : Ty) : list nat :=
         | x :: rest => used_type_params_ty x ++ go rest
         end
       in go args
+  | MkTy _ (TClosure _ args ret) =>
+      let fix go (xs : list Ty) : list nat :=
+        match xs with
+        | [] => used_type_params_ty ret
+        | x :: rest => used_type_params_ty x ++ go rest
+        end
+      in go args
   | MkTy _ (TForall _ _ body) => used_type_params_ty body
   | MkTy _ (TRef _ _ inner) => used_type_params_ty inner
   | _ => []
@@ -210,6 +223,18 @@ Fixpoint used_lifetime_vars_ty (T : Ty) : list nat :=
       let fix go (xs : list Ty) : list nat :=
         match xs with
         | [] => used_lifetime_vars_ty ret
+        | x :: rest => used_lifetime_vars_ty x ++ go rest
+        end
+      in go args
+  | MkTy _ (TClosure env_lt args ret) =>
+      let env_indices :=
+        match env_lt with
+        | LVar i => [i]
+        | _ => []
+        end in
+      let fix go (xs : list Ty) : list nat :=
+        match xs with
+        | [] => env_indices ++ used_lifetime_vars_ty ret
         | x :: rest => used_lifetime_vars_ty x ++ go rest
         end
       in go args

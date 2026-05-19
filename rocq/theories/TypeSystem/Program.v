@@ -136,6 +136,14 @@ Fixpoint subst_type_params_ty (σ : list Ty) (T : Ty) {struct T} : Ty :=
         end
       in
       MkTy u (TFn (go ps) (subst_type_params_ty σ r))
+  | MkTy u (TClosure env ps r) =>
+      let fix go (xs : list Ty) : list Ty :=
+        match xs with
+        | [] => []
+        | x :: xs' => subst_type_params_ty σ x :: go xs'
+        end
+      in
+      MkTy u (TClosure env (go ps) (subst_type_params_ty σ r))
   | MkTy u (TForall n Ω body) =>
       MkTy u (TForall n Ω (subst_type_params_ty σ body))
   | MkTy u (TRef l rk inner) =>
@@ -205,6 +213,14 @@ Fixpoint ty_eqb_decl (T1 T2 : Ty) {struct T1} : bool :=
              | _, _ => false
              end) args1 args2
       | TFn ps1 r1, TFn ps2 r2 =>
+          (fix go (xs ys : list Ty) : bool :=
+             match xs, ys with
+             | [], [] => true
+             | x :: xs', y :: ys' => ty_eqb_decl x y && go xs' ys'
+             | _, _ => false
+             end) ps1 ps2 && ty_eqb_decl r1 r2
+      | TClosure env1 ps1 r1, TClosure env2 ps2 r2 =>
+          lifetime_eqb env1 env2 &&
           (fix go (xs ys : list Ty) : bool :=
              match xs, ys with
              | [], [] => true

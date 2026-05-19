@@ -31,6 +31,12 @@ Inductive ty_lifetime_equiv : Ty -> Ty -> Prop :=
       ty_lifetime_equiv
         (MkTy u (TFn params_actual ret_actual))
         (MkTy u (TFn params_expected ret_expected))
+  | TLE_Closure : forall u env_actual env_expected params_actual params_expected ret_actual ret_expected,
+      Forall2 ty_lifetime_equiv params_actual params_expected ->
+      ty_lifetime_equiv ret_actual ret_expected ->
+      ty_lifetime_equiv
+        (MkTy u (TClosure env_actual params_actual ret_actual))
+        (MkTy u (TClosure env_expected params_expected ret_expected))
   | TLE_Forall : forall u n Ω_actual Ω_expected body_actual body_expected,
       ty_lifetime_equiv body_actual body_expected ->
       ty_lifetime_equiv
@@ -68,6 +74,16 @@ Fixpoint ty_lifetime_equiv_refl (T : Ty) : ty_lifetime_equiv T T :=
         end
       in
       TLE_Fn u params params ret ret (go params) (ty_lifetime_equiv_refl ret)
+  | MkTy u (TClosure env params ret) =>
+      let fix go (xs : list Ty) : Forall2 ty_lifetime_equiv xs xs :=
+        match xs with
+        | [] => @Forall2_nil Ty Ty ty_lifetime_equiv
+        | x :: xs' => @Forall2_cons Ty Ty ty_lifetime_equiv x x xs' xs'
+            (ty_lifetime_equiv_refl x) (go xs')
+        end
+      in
+      TLE_Closure u env env params params ret ret
+        (go params) (ty_lifetime_equiv_refl ret)
   | MkTy u (TForall n Ω body) =>
       TLE_Forall u n Ω Ω body body (ty_lifetime_equiv_refl body)
   | MkTy u (TRef l rk Tinner) =>
@@ -142,6 +158,36 @@ Fixpoint ty_lifetime_equiv_apply_lt_ty
             end) params)
         ret (apply_lt_ty σ ret)
         (go params) (ty_lifetime_equiv_apply_lt_ty σ ret)
+  | MkTy u (TClosure env params ret) =>
+      let fix go (xs : list Ty)
+          : Forall2 ty_lifetime_equiv
+              xs
+              ((fix map_lt (ys : list Ty) : list Ty :=
+                  match ys with
+                  | [] => []
+                  | y :: ys' => apply_lt_ty σ y :: map_lt ys'
+                  end) xs) :=
+        match xs with
+        | [] => @Forall2_nil Ty Ty ty_lifetime_equiv
+        | x :: xs' => @Forall2_cons Ty Ty ty_lifetime_equiv
+            x (apply_lt_ty σ x) xs'
+            ((fix map_lt (ys : list Ty) : list Ty :=
+                match ys with
+                | [] => []
+                | y :: ys' => apply_lt_ty σ y :: map_lt ys'
+                end) xs')
+            (ty_lifetime_equiv_apply_lt_ty σ x) (go xs')
+        end
+      in
+      TLE_Closure u env (apply_lt_lifetime σ env)
+        params
+        ((fix map_lt (xs : list Ty) : list Ty :=
+            match xs with
+            | [] => []
+            | x :: xs' => apply_lt_ty σ x :: map_lt xs'
+            end) params)
+        ret (apply_lt_ty σ ret)
+        (go params) (ty_lifetime_equiv_apply_lt_ty σ ret)
   | MkTy u (TForall n Ω body) =>
       TLE_Forall u n Ω (apply_lt_outlives σ Ω)
         body (apply_lt_ty σ body)
@@ -178,6 +224,9 @@ Proof.
   - constructor.
   - constructor.
   - constructor. induction H; constructor; eauto.
+  - constructor.
+    + induction H; constructor; eauto.
+    + apply IH. exact Heq.
   - constructor.
     + induction H; constructor; eauto.
     + apply IH. exact Heq.
@@ -285,6 +334,53 @@ Fixpoint ty_lifetime_equiv_apply_lt_ty_two
         (apply_lt_ty σ_actual ret) (apply_lt_ty σ_expected ret)
         (go params)
         (ty_lifetime_equiv_apply_lt_ty_two σ_actual σ_expected ret)
+  | MkTy u (TClosure env params ret) =>
+      let fix go (xs : list Ty)
+          : Forall2 ty_lifetime_equiv
+              ((fix map_lt (ys : list Ty) : list Ty :=
+                  match ys with
+                  | [] => []
+                  | y :: ys' => apply_lt_ty σ_actual y :: map_lt ys'
+                  end) xs)
+              ((fix map_lt (ys : list Ty) : list Ty :=
+                  match ys with
+                  | [] => []
+                  | y :: ys' => apply_lt_ty σ_expected y :: map_lt ys'
+                  end) xs) :=
+        match xs with
+        | [] => @Forall2_nil Ty Ty ty_lifetime_equiv
+        | x :: xs' => @Forall2_cons Ty Ty ty_lifetime_equiv
+            (apply_lt_ty σ_actual x) (apply_lt_ty σ_expected x)
+            ((fix map_lt (ys : list Ty) : list Ty :=
+                match ys with
+                | [] => []
+                | y :: ys' => apply_lt_ty σ_actual y :: map_lt ys'
+                end) xs')
+            ((fix map_lt (ys : list Ty) : list Ty :=
+                match ys with
+                | [] => []
+                | y :: ys' => apply_lt_ty σ_expected y :: map_lt ys'
+                end) xs')
+            (ty_lifetime_equiv_apply_lt_ty_two σ_actual σ_expected x)
+            (go xs')
+        end
+      in
+      TLE_Closure u
+        (apply_lt_lifetime σ_actual env)
+        (apply_lt_lifetime σ_expected env)
+        ((fix map_lt (xs : list Ty) : list Ty :=
+            match xs with
+            | [] => []
+            | x :: xs' => apply_lt_ty σ_actual x :: map_lt xs'
+            end) params)
+        ((fix map_lt (xs : list Ty) : list Ty :=
+            match xs with
+            | [] => []
+            | x :: xs' => apply_lt_ty σ_expected x :: map_lt xs'
+            end) params)
+        (apply_lt_ty σ_actual ret) (apply_lt_ty σ_expected ret)
+        (go params)
+        (ty_lifetime_equiv_apply_lt_ty_two σ_actual σ_expected ret)
   | MkTy u (TForall n Ω body) =>
       TLE_Forall u n
         (apply_lt_outlives σ_actual Ω)
@@ -361,6 +457,9 @@ Proof.
   - apply TLE_Struct.
     induction H; simpl; constructor; eauto.
   - apply TLE_Fn.
+    + induction H; simpl; constructor; eauto.
+    + eapply IH; eassumption.
+  - apply TLE_Closure.
     + induction H; simpl; constructor; eauto.
     + eapply IH; eassumption.
 Qed.
@@ -2869,6 +2968,18 @@ Proof.
       exists (MkTy ua (TFn params_a ret_a)). split.
       * reflexivity.
       * eapply TC_Fn; eassumption.
+    + simpl in Hlookup. discriminate.
+  - destruct path as [|seg rest].
+    + simpl in Hlookup. inversion Hlookup; subst T_path.
+      exists (MkTy ua (TClosure la params_a ret_a)). split.
+      * reflexivity.
+      * eapply TC_Closure; eassumption.
+    + simpl in Hlookup. discriminate.
+  - destruct path as [|seg rest].
+    + simpl in Hlookup. inversion Hlookup; subst T_path.
+      exists (MkTy ua (TFn params_a ret_a)). split.
+      * reflexivity.
+      * eapply TC_Fn_Closure; eassumption.
     + simpl in Hlookup. discriminate.
   - destruct path as [|seg rest].
     + simpl in Hlookup. inversion Hlookup; subst T_path.

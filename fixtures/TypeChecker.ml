@@ -634,6 +634,7 @@ type 'a typeCore =
 | TParam of Big_int_Z.big_int
 | TStruct of string * lifetime list * 'a list
 | TFn of 'a list * 'a
+| TClosure of lifetime * 'a list * 'a
 | TForall of Big_int_Z.big_int * outlives_ctx * 'a
 | TRef of lifetime * ref_kind * 'a
 
@@ -701,6 +702,15 @@ let rec apply_lt_ty _UU03c3_ = function
        in map_lt
      in
      MkTy (u, (TFn ((map_lt ts), (apply_lt_ty _UU03c3_ r))))
+   | TClosure (l, ts, r) ->
+     let map_lt =
+       let rec map_lt = function
+       | [] -> []
+       | x :: xs' -> (apply_lt_ty _UU03c3_ x) :: (map_lt xs')
+       in map_lt
+     in
+     MkTy (u, (TClosure ((apply_lt_lifetime _UU03c3_ l), (map_lt ts),
+     (apply_lt_ty _UU03c3_ r))))
    | TForall (n, _UU03a9_, body) ->
      MkTy (u, (TForall (n, (apply_lt_outlives _UU03c3_ _UU03a9_),
        (apply_lt_ty _UU03c3_ body))))
@@ -730,6 +740,14 @@ let rec map_lifetimes_ty f = function
        in go
      in
      MkTy (u, (TFn ((go ts), (map_lifetimes_ty f r))))
+   | TClosure (l, ts, r) ->
+     let go =
+       let rec go = function
+       | [] -> []
+       | x :: xs' -> (map_lifetimes_ty f x) :: (go xs')
+       in go
+     in
+     MkTy (u, (TClosure ((f l), (go ts), (map_lifetimes_ty f r))))
    | TForall (n, _UU03a9_, body) ->
      MkTy (u, (TForall (n,
        (map (fun pat -> let (a, b) = pat in ((f a), (f b))) _UU03a9_),
@@ -798,6 +816,9 @@ let rec contains_lbound_ty = function
        (existsb contains_lbound_ty args)
    | TFn (ts, r) ->
      (||) (existsb contains_lbound_ty ts) (contains_lbound_ty r)
+   | TClosure (l, ts, r) ->
+     (||) ((||) (contains_lbound_lifetime l) (existsb contains_lbound_ty ts))
+       (contains_lbound_ty r)
    | TForall (_, _UU03a9_, body) ->
      (||) (contains_lbound_outlives _UU03a9_) (contains_lbound_ty body)
    | TRef (l, _, t1) ->
@@ -1035,6 +1056,14 @@ let rec subst_type_params_ty _UU03c3_ = function
        in go
      in
      MkTy (u, (TFn ((go ps), (subst_type_params_ty _UU03c3_ r))))
+   | TClosure (env, ps, r) ->
+     let go =
+       let rec go = function
+       | [] -> []
+       | x :: xs' -> (subst_type_params_ty _UU03c3_ x) :: (go xs')
+       in go
+     in
+     MkTy (u, (TClosure (env, (go ps), (subst_type_params_ty _UU03c3_ r))))
    | TForall (n, _UU03a9_, body) ->
      MkTy (u, (TForall (n, _UU03a9_, (subst_type_params_ty _UU03c3_ body))))
    | TRef (l, rk, inner) ->
@@ -1154,6 +1183,23 @@ let rec ty_eqb_decl t1 t2 =
                   | [] -> false
                   | y :: ys' -> (&&) (ty_eqb_decl x y) (go xs' ys'))
              in go ps1 ps2)
+            (ty_eqb_decl r1 r2)
+        | _ -> false)
+     | TClosure (env1, ps1, r1) ->
+       (match c2 with
+        | TClosure (env2, ps2, r2) ->
+          (&&)
+            ((&&) (lifetime_eqb env1 env2)
+              (let rec go xs ys =
+                 match xs with
+                 | [] -> (match ys with
+                          | [] -> true
+                          | _ :: _ -> false)
+                 | x :: xs' ->
+                   (match ys with
+                    | [] -> false
+                    | y :: ys' -> (&&) (ty_eqb_decl x y) (go xs' ys'))
+               in go ps1 ps2))
             (ty_eqb_decl r1 r2)
         | _ -> false)
      | TForall (n1, _UU03a9_1, b1) ->
@@ -1293,7 +1339,6 @@ let rec match_ty ty_params lt_params fuel pattern actual st =
                (match c_a with
                 | TNamed s2 -> if (=) s1 s2 then Some st else None
                 | _ -> None)
-             | TParam _ -> None
              | TStruct (n1, lts1, args1) ->
                (match c_a with
                 | TStruct (n2, lts2, args2) ->
@@ -1328,7 +1373,8 @@ let rec match_ty ty_params lt_params fuel pattern actual st =
                           match_ty ty_params lt_params fuel' t1 t2 st'
                         | None -> None)
                   else None
-                | _ -> None))))
+                | _ -> None)
+             | _ -> None)))
     fuel
 
 (** val match_tys :
@@ -1982,6 +2028,23 @@ let rec ty_eqb t1 t2 =
              in go ts1 ts2)
             (ty_eqb r1 r2)
         | _ -> false)
+     | TClosure (env1, ts1, r1) ->
+       (match c2 with
+        | TClosure (env2, ts2, r2) ->
+          (&&)
+            ((&&) (lifetime_eqb env1 env2)
+              (let rec go l1 l2 =
+                 match l1 with
+                 | [] -> (match l2 with
+                          | [] -> true
+                          | _ :: _ -> false)
+                 | t3 :: l1' ->
+                   (match l2 with
+                    | [] -> false
+                    | t4 :: l2' -> (&&) (ty_eqb t3 t4) (go l1' l2'))
+               in go ts1 ts2))
+            (ty_eqb r1 r2)
+        | _ -> false)
      | TForall (n1, _UU03a9_1, b1) ->
        (match c2 with
         | TForall (n2, _UU03a9_2, b2) ->
@@ -2047,6 +2110,23 @@ let ty_core_eqb c1 c2 =
           in go ts1 ts2)
          (ty_eqb r1 r2)
      | _ -> false)
+  | TClosure (env1, ts1, r1) ->
+    (match c2 with
+     | TClosure (env2, ts2, r2) ->
+       (&&)
+         ((&&) (lifetime_eqb env1 env2)
+           (let rec go l1 l2 =
+              match l1 with
+              | [] -> (match l2 with
+                       | [] -> true
+                       | _ :: _ -> false)
+              | t1 :: l1' ->
+                (match l2 with
+                 | [] -> false
+                 | t2 :: l2' -> (&&) (ty_eqb t1 t2) (go l1' l2'))
+            in go ts1 ts2))
+         (ty_eqb r1 r2)
+     | _ -> false)
   | TForall (n1, _UU03a9_1, b1) ->
     (match c2 with
      | TForall (n2, _UU03a9_2, b2) ->
@@ -2072,6 +2152,12 @@ let rec ty_depth = function
           | t0 :: l' -> add (Big_int_Z.succ_big_int (ty_depth t0)) (go l')
           in go args))
    | TFn (ts, r) ->
+     Big_int_Z.succ_big_int
+       (let rec go = function
+        | [] -> ty_depth r
+        | t0 :: l' -> add (Big_int_Z.succ_big_int (ty_depth t0)) (go l')
+        in go ts)
+   | TClosure (_, ts, r) ->
      Big_int_Z.succ_big_int
        (let rec go = function
         | [] -> ty_depth r
@@ -2168,16 +2254,6 @@ let rec ty_compatible_b_fuel fuel _UU03a9_ t_actual t_expected =
                  (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
              | p :: l -> ty_core_eqb ca (TForall (n0, (p :: l), tb)))
           | x -> ty_core_eqb ca x)
-       | TStruct (s, l, l0) ->
-         let ca = TStruct (s, l, l0) in
-         (match ty_core t_expected with
-          | TForall (n, o, tb) ->
-            (match o with
-             | [] ->
-               (&&) (negb (contains_lbound_ty tb))
-                 (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
-             | p :: l1 -> ty_core_eqb ca (TForall (n, (p :: l1), tb)))
-          | x -> ty_core_eqb ca x)
        | TFn (params_a, ret_a) ->
          let ca = TFn (params_a, ret_a) in
          (match ty_core t_expected with
@@ -2215,7 +2291,16 @@ let rec ty_compatible_b_fuel fuel _UU03a9_ t_actual t_expected =
               (match rka with
                | RShared -> ty_compatible_b_fuel fuel' _UU03a9_ ta tb
                | RUnique -> ty_eqb ta tb)
-          | x -> ty_core_eqb ca x)))
+          | x -> ty_core_eqb ca x)
+       | x ->
+         (match ty_core t_expected with
+          | TForall (n, o, tb) ->
+            (match o with
+             | [] ->
+               (&&) (negb (contains_lbound_ty tb))
+                 (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
+             | p :: l1 -> ty_core_eqb x (TForall (n, (p :: l1), tb)))
+          | x0 -> ty_core_eqb x x0)))
     fuel
 
 (** val ty_compatible_b : outlives_ctx -> ty -> ty -> bool **)
@@ -2282,6 +2367,11 @@ let rec wf_type_at_b bound_depth _UU0394_ = function
        (forallb (wf_type_at_b bound_depth _UU0394_) args)
    | TFn (ts, r) ->
      (&&) (forallb (wf_type_at_b bound_depth _UU0394_) ts)
+       (wf_type_at_b bound_depth _UU0394_ r)
+   | TClosure (l, ts, r) ->
+     (&&)
+       ((&&) (wf_lifetime_at_b bound_depth _UU0394_ l)
+         (forallb (wf_type_at_b bound_depth _UU0394_) ts))
        (wf_type_at_b bound_depth _UU0394_ r)
    | TForall (n, _UU03a9_, body) ->
      (&&) (wf_outlives_at_b (add n bound_depth) _UU0394_ _UU03a9_)

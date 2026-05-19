@@ -142,6 +142,7 @@ type 'a typeCore =
 | TParam of Big_int_Z.big_int
 | TStruct of string * lifetime list * 'a list
 | TFn of 'a list * 'a
+| TClosure of lifetime * 'a list * 'a
 | TForall of Big_int_Z.big_int * outlives_ctx * 'a
 | TRef of lifetime * ref_kind * 'a
 

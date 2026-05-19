@@ -174,6 +174,31 @@ Proof.
   intros u t ts. induction ts as [| t1 ts' IH]; intros r; simpl; lia.
 Qed.
 
+Lemma ty_depth_closure_arg_lt : forall u l ts r t,
+  In t ts -> ty_depth t < ty_depth (MkTy u (TClosure l ts r)).
+Proof.
+  intros u l ts. induction ts as [| t1 ts' IH]; intros r t Hin.
+  - contradiction.
+  - simpl. destruct Hin as [<- | Hin].
+    + lia.
+    + specialize (IH r t Hin). simpl in IH. lia.
+Qed.
+
+Lemma ty_depth_closure_ret_lt : forall u l ts r,
+  ty_depth r < ty_depth (MkTy u (TClosure l ts r)).
+Proof.
+  intros u l ts. induction ts as [| t1 ts' IH]; intros r.
+  - simpl. lia.
+  - simpl. specialize (IH r). simpl in IH. lia.
+Qed.
+
+Lemma ty_depth_closure_cons_lt : forall u l t ts r,
+  ty_depth (MkTy u (TClosure l ts r)) <
+  ty_depth (MkTy u (TClosure l (t :: ts) r)).
+Proof.
+  intros u l t ts. induction ts as [| t1 ts' IH]; intros r; simpl; lia.
+Qed.
+
 Lemma ty_depth_forall_body_lt : forall u n Ω body,
   ty_depth body < ty_depth (MkTy u (TForall n Ω body)).
 Proof.
@@ -195,8 +220,8 @@ Proof.
         (destruct u1, u2; simpl in Hu; try discriminate; reflexivity).
       subst u2.
       f_equal.
-      destruct c1 as [| | | | s1 | i1 | name1 lts1 args1 | ts1 r1 | n1 Ω1 b1 | l1 k1 t1],
-               c2 as [| | | | s2 | i2 | name2 lts2 args2 | ts2 r2 | n2 Ω2 b2 | l2 k2 t2];
+      destruct c1 as [| | | | s1 | i1 | name1 lts1 args1 | ts1 r1 | lc1 cts1 cr1 | n1 Ω1 b1 | l1 k1 t1],
+               c2 as [| | | | s2 | i2 | name2 lts2 args2 | ts2 r2 | lc2 cts2 cr2 | n2 Ω2 b2 | l2 k2 t2];
         simpl in Hc; try discriminate.
       + reflexivity.
       + reflexivity.
@@ -233,6 +258,24 @@ Proof.
           { apply IHts;
             [ exact (Nat.lt_trans _ _ _ (ty_depth_fn_cons_lt u1 t1 ts1' r1) Hlt)
             | exact Hts]. }
+      + apply andb_true_iff in Hc as [Henv_list Hr].
+        apply andb_true_iff in Henv_list as [Henv Hlist].
+        apply lifetime_eqb_eq in Henv. subst lc2.
+        assert (Heqr : cr1 = cr2) by
+          (apply IH; [pose proof (ty_depth_closure_ret_lt u1 lc1 cts1 cr1); lia | exact Hr]).
+        subst cr2. f_equal.
+        revert cts2 Hlt Hlist.
+        induction cts1 as [| t1 cts1' IHts]; intros cts2 Hlt Hlist.
+        * destruct cts2; [reflexivity | discriminate].
+        * destruct cts2 as [| t2 cts2']; [discriminate |].
+          simpl in Hlist. apply andb_true_iff in Hlist as [Ht Hts].
+          f_equal.
+          { apply IH;
+            [pose proof (ty_depth_closure_arg_lt u1 lc1 (t1::cts1') cr1 t1 (or_introl eq_refl)); lia
+            | exact Ht]. }
+          { apply IHts;
+            [ exact (Nat.lt_trans _ _ _ (ty_depth_closure_cons_lt u1 lc1 t1 cts1' cr1) Hlt)
+            | exact Hts]. }
       + apply andb_true_iff in Hc as [Hlk Ht].
         apply andb_true_iff in Hlk as [Hn HΩ].
         apply Nat.eqb_eq in Hn. subst n2.
@@ -253,8 +296,8 @@ Lemma ty_core_eqb_true : forall c1 c2,
   ty_core_eqb c1 c2 = true -> c1 = c2.
 Proof.
   intros c1 c2 H.
-  destruct c1 as [| | | | s1 | i1 | name1 lts1 args1 | ts1 r1 | n1 Ω1 b1 | l1 k1 t1],
-           c2 as [| | | | s2 | i2 | name2 lts2 args2 | ts2 r2 | n2 Ω2 b2 | l2 k2 t2];
+  destruct c1 as [| | | | s1 | i1 | name1 lts1 args1 | ts1 r1 | lc1 cts1 cr1 | n1 Ω1 b1 | l1 k1 t1],
+           c2 as [| | | | s2 | i2 | name2 lts2 args2 | ts2 r2 | lc2 cts2 cr2 | n2 Ω2 b2 | l2 k2 t2];
     simpl in H; try discriminate.
   - reflexivity.
   - reflexivity.
@@ -282,6 +325,19 @@ Proof.
     induction ts1 as [| t1 ts1' IHts]; intros ts2 Hlist.
     + destruct ts2; [reflexivity | discriminate].
     + destruct ts2 as [| t2 ts2']; [discriminate |].
+      simpl in Hlist. apply andb_true_iff in Hlist as [Ht Hts].
+      f_equal.
+      * apply ty_eqb_true. exact Ht.
+      * apply IHts. exact Hts.
+  - apply andb_true_iff in H as [Henv_list Hr].
+    apply andb_true_iff in Henv_list as [Henv Hlist].
+    apply lifetime_eqb_eq in Henv. subst lc2.
+    assert (Heqr : cr1 = cr2) by (apply ty_eqb_true; exact Hr). subst cr2.
+    f_equal.
+    revert cts2 Hlist.
+    induction cts1 as [| t1 cts1' IHts]; intros cts2 Hlist.
+    + destruct cts2; [reflexivity | discriminate].
+    + destruct cts2 as [| t2 cts2']; [discriminate |].
       simpl in Hlist. apply andb_true_iff in Hlist as [Ht Hts].
       f_equal.
       * apply ty_eqb_true. exact Ht.
@@ -358,8 +414,8 @@ Proof.
   - simpl in H. discriminate.
   - destruct T_actual as [ua ca], T_expected as [ue ce].
     simpl in H. apply andb_true_iff in H as [Hu Hc].
-    destruct ca as [| | | | sa | ia | struct_a ltsa argsa | tsa ra | na Ωa body_a | la rka Ta],
-             ce as [| | | | se | ie | struct_e ltse argse | tse re | nb Ωb body_b | lb rkb Tb];
+    destruct ca as [| | | | sa | ia | struct_a ltsa argsa | tsa ra | lca ctsa cra | na Ωa body_a | la rka Ta],
+             ce as [| | | | se | ie | struct_e ltse argse | tse re | lce ctse cre | nb Ωb body_b | lb rkb Tb];
       simpl in Hc; try discriminate;
       try (apply TC_Core;
            [apply usage_sub_bool_sound; exact Hu
@@ -421,6 +477,13 @@ Proof.
            eapply IH. exact Hcompat.
         -- exact Hargs.
       * eapply IH. exact Hret.
+    + destruct Ωb as [|p Ωb]; [|discriminate].
+      apply andb_true_iff in Hc as [Hnob Hrec].
+      apply negb_true_iff in Hnob.
+      eapply ty_compatible_forall_generalize_unused_sound.
+      * exact Hu.
+      * exact Hnob.
+      * eapply IH. exact Hrec.
     + destruct Ωb as [|p Ωb]; [|discriminate].
       apply andb_true_iff in Hc as [Hnob Hrec].
       apply negb_true_iff in Hnob.
@@ -652,7 +715,7 @@ Proof.
 	        * discriminate.
 	        * discriminate.
 	        * discriminate.
-	        * destruct (check_arg_tys Ω arg_tys l0) as [err |] eqn:Hcheck; [discriminate |].
+        * destruct (check_arg_tys Ω arg_tys l0) as [err |] eqn:Hcheck; [discriminate |].
           injection Hinfer as <- <-.
           eapply T_CallExpr_Fn.
           -- replace (MkTy (ty_usage Tcallee) (TFn l0 t)) with Tcallee.
@@ -666,7 +729,8 @@ Proof.
                 eapply IH.
                 ** pose proof (expr_size_callexpr_arg_lt e l e0 Hin_arg). lia.
                 ** exact Hinfer_arg.
-             ++ rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
+	             ++ rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
+        * discriminate.
         * destruct (ty_core t) eqn:Hbody; try discriminate.
           destruct (build_bound_sigma (repeat None n0) arg_tys l0) as [σ |] eqn:Hbuild; [|discriminate].
           remember (map (open_bound_ty σ) l0) as params_open.

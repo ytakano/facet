@@ -1522,15 +1522,15 @@ Proof.
       match goal with
       | H : typed_args_env_structural _ _ _ _ _ _ _ |- _ => exact H
       end.
-    + eapply sctx_same_bindings_trans.
-      * exact IHHtyped.
-      * eapply typed_args_env_structural_same_bindings.
-        match goal with
-        | H : typed_args_env_structural _ _ _ _ _ _ _ |- _ => exact H
-        end.
-    + eapply sctx_same_bindings_trans.
-      * exact IHHtyped.
-      * eapply typed_args_env_structural_same_bindings.
+	    + eapply sctx_same_bindings_trans.
+	      * exact IHHtyped.
+	      * eapply typed_args_env_structural_same_bindings.
+	        match goal with
+	        | H : typed_args_env_structural _ _ _ _ _ _ _ |- _ => exact H
+	        end.
+	    + eapply sctx_same_bindings_trans.
+	      * exact IHHtyped.
+	      * eapply typed_args_env_structural_same_bindings.
         match goal with
         | H : typed_args_env_structural _ _ _ _ _ _ _ |- _ => exact H
         end.

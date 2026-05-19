@@ -25,6 +25,7 @@ Inductive TypeCore (A : Type) : Type :=
 | TParam    : nat -> TypeCore A
 | TStruct   : string -> list lifetime -> list A -> TypeCore A
 | TFn       : list A -> A -> TypeCore A
+| TClosure  : lifetime -> list A -> A -> TypeCore A
 | TForall   : nat -> outlives_ctx -> A -> TypeCore A
 | TRef      : lifetime -> ref_kind -> A -> TypeCore A.
 
@@ -36,6 +37,7 @@ Arguments TNamed {A} _.
 Arguments TParam {A} _.
 Arguments TStruct {A} _ _ _.
 Arguments TFn {A} _ _.
+Arguments TClosure {A} _ _ _.
 Arguments TForall {A} _ _ _.
 Arguments TRef {A} _ _ _.
 
@@ -111,6 +113,14 @@ Fixpoint apply_lt_ty (σ : list lifetime) (T : Ty) {struct T} : Ty :=
         end
       in
       MkTy u (TFn (map_lt ts) (apply_lt_ty σ r))
+  | MkTy u (TClosure l ts r) =>
+      let fix map_lt (xs : list Ty) : list Ty :=
+        match xs with
+        | [] => []
+        | x :: xs' => apply_lt_ty σ x :: map_lt xs'
+        end
+      in
+      MkTy u (TClosure (apply_lt_lifetime σ l) (map_lt ts) (apply_lt_ty σ r))
   | MkTy u (TForall n Ω body) =>
       MkTy u (TForall n (apply_lt_outlives σ Ω) (apply_lt_ty σ body))
   | MkTy u (TRef l rk t) =>
@@ -142,6 +152,14 @@ Fixpoint map_lifetimes_ty
         end
       in
       MkTy u (TFn (go ts) (map_lifetimes_ty f r))
+  | MkTy u (TClosure l ts r) =>
+      let fix go (xs : list Ty) : list Ty :=
+        match xs with
+        | [] => []
+        | x :: xs' => map_lifetimes_ty f x :: go xs'
+        end
+      in
+      MkTy u (TClosure (f l) (go ts) (map_lifetimes_ty f r))
   | MkTy u (TForall n Ω body) =>
       MkTy u (TForall n (map (fun '(a, b) => (f a, f b)) Ω)
         (map_lifetimes_ty f body))
@@ -186,6 +204,8 @@ Fixpoint contains_lbound_ty (T : Ty) : bool :=
       existsb contains_lbound_lifetime lts || existsb contains_lbound_ty args
   | MkTy _ (TFn ts r) =>
       existsb contains_lbound_ty ts || contains_lbound_ty r
+  | MkTy _ (TClosure l ts r) =>
+      contains_lbound_lifetime l || existsb contains_lbound_ty ts || contains_lbound_ty r
   | MkTy _ (TForall _ Ω body) =>
       contains_lbound_outlives Ω || contains_lbound_ty body
   | MkTy _ (TRef l _ t) =>

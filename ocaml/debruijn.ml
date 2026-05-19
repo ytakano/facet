@@ -338,6 +338,14 @@ let validate_env env =
         first_some
           (List.map (type_error ty_params lt_params bound_depth) args @
            [type_error ty_params lt_params bound_depth ret])
+      | TClosure (env_lt, args, ret) ->
+        begin match lifetime_error lt_params bound_depth env_lt with
+        | Some _ as err -> err
+        | None ->
+          first_some
+            (List.map (type_error ty_params lt_params bound_depth) args @
+             [type_error ty_params lt_params bound_depth ret])
+        end
       | TForall (n, outs, body) ->
         let bound_depth' = Big_int_Z.add_big_int n bound_depth in
         begin match outlives_error lt_params bound_depth' outs with
@@ -371,6 +379,8 @@ let validate_env env =
       | TStruct (name, _, args) ->
         name :: List.concat_map type_struct_refs args
       | TFn (args, ret) ->
+        List.concat_map type_struct_refs args @ type_struct_refs ret
+      | TClosure (_, args, ret) ->
         List.concat_map type_struct_refs args @ type_struct_refs ret
       | TForall (_, _, body) -> type_struct_refs body
       | TRef (_, _, inner) -> type_struct_refs inner

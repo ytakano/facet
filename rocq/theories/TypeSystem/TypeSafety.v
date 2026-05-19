@@ -402,6 +402,21 @@ Fixpoint ty_compatible_refl (Ω : outlives_ctx) (T : Ty)
         end in
       TC_Fn Ω u u params params ret ret
         (US_refl u) (go params) (ty_compatible_refl Ω ret)
+  | MkTy u (TClosure l params ret) =>
+      let fix go (xs : list Ty)
+          : Forall2 (fun expected actual => ty_compatible Ω expected actual)
+              xs xs :=
+        match xs with
+        | [] =>
+            @Forall2_nil Ty Ty
+              (fun expected actual => ty_compatible Ω expected actual)
+        | x :: xs' =>
+            @Forall2_cons Ty Ty
+              (fun expected actual => ty_compatible Ω expected actual)
+              x x xs' xs' (ty_compatible_refl Ω x) (go xs')
+        end in
+      TC_Closure Ω u u l l params params ret ret
+        (US_refl u) (Outlives_refl Ω l) (go params) (ty_compatible_refl Ω ret)
   | MkTy u (TForall n Ω_forall body) =>
       TC_Forall Ω u u n Ω_forall body body
         (US_refl u) (ty_compatible_refl Ω body)

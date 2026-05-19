@@ -539,7 +539,7 @@ Proof.
 	      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
 	      eapply TER_Fn; eassumption.
 	    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
-	      destruct (check_make_closure_captures_sctx Ω Σ l (fn_captures fdef))
+	      destruct (check_make_closure_captures_sctx env Ω Σ l (fn_captures fdef))
 	        as [captured_tys | err] eqn:Hcheck; try discriminate.
 	      inversion Hinfer; subst.
 	      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
@@ -811,7 +811,7 @@ Proof.
 	      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
 	      eapply TERS_Fn; eassumption.
 	    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
-	      destruct (check_make_closure_captures_sctx Ω Σ l (fn_captures fdef))
+	      destruct (check_make_closure_captures_sctx env Ω Σ l (fn_captures fdef))
 	        as [captured_tys | err] eqn:Hcheck; try discriminate.
 	      inversion Hinfer; subst.
 	      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].

@@ -502,7 +502,7 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
   | TES_MakeClosure : forall Σ fname fdef captures captured_tys,
       In fdef (env_fns env) ->
       fn_name fdef = fname ->
-      check_make_closure_captures_sctx Ω Σ captures (fn_captures fdef) =
+      check_make_closure_captures_sctx env Ω Σ captures (fn_captures fdef) =
         infer_ok captured_tys ->
       typed_env_structural env Ω n Σ (EMakeClosure fname captures)
         (closure_value_ty fdef captured_tys) Σ
@@ -696,7 +696,7 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
   | TER_MakeClosure : forall R Σ fname fdef captures captured_tys,
       In fdef (env_fns env) ->
       fn_name fdef = fname ->
-      check_make_closure_captures_sctx Ω Σ captures (fn_captures fdef) =
+      check_make_closure_captures_sctx env Ω Σ captures (fn_captures fdef) =
         infer_ok captured_tys ->
       typed_env_roots env Ω n R Σ (EMakeClosure fname captures)
         (closure_value_ty fdef captured_tys) Σ R []

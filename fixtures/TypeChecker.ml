@@ -825,18 +825,6 @@ let rec contains_lbound_ty = function
      (||) (contains_lbound_lifetime l) (contains_lbound_ty t1)
    | _ -> false)
 
-(** val ty_ref_free_b : ty -> bool **)
-
-let rec ty_ref_free_b = function
-| MkTy (_, t0) ->
-  (match t0 with
-   | TStruct (_, _, args) -> forallb ty_ref_free_b args
-   | TFn (ts, r) -> (&&) (forallb ty_ref_free_b ts) (ty_ref_free_b r)
-   | TClosure (_, _, _) -> false
-   | TForall (_, _, body) -> ty_ref_free_b body
-   | TRef (_, _, _) -> false
-   | _ -> true)
-
 type ident = string * Big_int_Z.big_int
 
 (** val ident_eqb : ident -> ident -> bool **)
@@ -2375,6 +2363,42 @@ let ty_compatible_b _UU03a9_ t_actual t_expected =
   ty_compatible_b_fuel (add (ty_depth t_actual) (ty_depth t_expected))
     _UU03a9_ t_actual t_expected
 
+(** val capture_ref_free_ty_b_fuel :
+    Big_int_Z.big_int -> global_env -> ty -> bool **)
+
+let rec capture_ref_free_ty_b_fuel fuel env t =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> false)
+    (fun fuel' ->
+    let MkTy (_, t0) = t in
+    (match t0 with
+     | TUnits -> true
+     | TIntegers -> true
+     | TFloats -> true
+     | TBooleans -> true
+     | TStruct (name, lts, args) ->
+       (&&) (forallb (capture_ref_free_ty_b_fuel fuel' env) args)
+         (match lookup_struct name env with
+          | Some sdef ->
+            forallb (fun f ->
+              capture_ref_free_ty_b_fuel fuel' env
+                (instantiate_struct_field_ty lts args f))
+              sdef.struct_fields
+          | None -> false)
+     | TFn (ts, r) ->
+       (&&) (forallb (capture_ref_free_ty_b_fuel fuel' env) ts)
+         (capture_ref_free_ty_b_fuel fuel' env r)
+     | TForall (_, _, body) -> capture_ref_free_ty_b_fuel fuel' env body
+     | _ -> false))
+    fuel
+
+(** val capture_ref_free_ty_b : global_env -> ty -> bool **)
+
+let capture_ref_free_ty_b env t =
+  capture_ref_free_ty_b_fuel (Big_int_Z.succ_big_int
+    (add (length env.env_structs) (ty_depth t))) env t
+
 (** val ctx_lookup_b : ident -> ctx -> (ty * bool) option **)
 
 let rec ctx_lookup_b x = function
@@ -2877,9 +2901,10 @@ let sctx_lookup_mut =
   ctx_lookup_mut
 
 (** val check_make_closure_captures_sctx :
-    outlives_ctx -> sctx -> ident list -> param list -> ty list infer_result **)
+    global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list
+    infer_result **)
 
-let rec check_make_closure_captures_sctx _UU03a9_ _UU03a3_ captures params =
+let rec check_make_closure_captures_sctx env _UU03a9_ _UU03a3_ captures params =
   match captures with
   | [] ->
     (match params with
@@ -2899,10 +2924,10 @@ let rec check_make_closure_captures_sctx _UU03a9_ _UU03a3_ captures params =
                   (match m with
                    | MImmutable ->
                      if usage_eqb (ty_usage t) UUnrestricted
-                     then if ty_ref_free_b t
+                     then if capture_ref_free_ty_b env t
                           then if ty_compatible_b _UU03a9_ t cap.param_ty
                                then (match check_make_closure_captures_sctx
-                                             _UU03a9_ _UU03a3_ captures'
+                                             env _UU03a9_ _UU03a3_ captures'
                                              params' with
                                      | Infer_ok captured_tys ->
                                        Infer_ok (t :: captured_tys)
@@ -3266,8 +3291,8 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
     | EMakeClosure (fname, captures) ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         (match check_make_closure_captures_sctx _UU03a9_ _UU03a3_ captures
-                  fdef.fn_captures with
+         (match check_make_closure_captures_sctx env _UU03a9_ _UU03a3_
+                  captures fdef.fn_captures with
           | Infer_ok captured_tys ->
             Infer_ok ((closure_value_ty fdef captured_tys), _UU03a3_)
           | Infer_err err -> Infer_err err)
@@ -3685,8 +3710,8 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
     | EMakeClosure (fname, captures) ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         (match check_make_closure_captures_sctx _UU03a9_ _UU03a3_ captures
-                  fdef.fn_captures with
+         (match check_make_closure_captures_sctx env _UU03a9_ _UU03a3_
+                  captures fdef.fn_captures with
           | Infer_ok captured_tys ->
             Infer_ok (((closure_value_ty fdef captured_tys), _UU03a3_),
               (EMakeClosure (fname, captures)))
@@ -4337,8 +4362,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
     | EMakeClosure (fname, captures) ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         (match check_make_closure_captures_sctx _UU03a9_ _UU03a3_ captures
-                  fdef.fn_captures with
+         (match check_make_closure_captures_sctx env _UU03a9_ _UU03a3_
+                  captures fdef.fn_captures with
           | Infer_ok captured_tys ->
             Infer_ok ((((closure_value_ty fdef captured_tys), _UU03a3_), r),
               [])
@@ -4758,8 +4783,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
     | EMakeClosure (fname, captures) ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         (match check_make_closure_captures_sctx _UU03a9_ _UU03a3_ captures
-                  fdef.fn_captures with
+         (match check_make_closure_captures_sctx env _UU03a9_ _UU03a3_
+                  captures fdef.fn_captures with
           | Infer_ok captured_tys ->
             Infer_ok ((((closure_value_ty fdef captured_tys), _UU03a3_), r),
               [])

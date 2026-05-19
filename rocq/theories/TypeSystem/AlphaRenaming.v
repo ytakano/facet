@@ -769,16 +769,16 @@ Proof.
 Qed.
 
 Lemma check_make_closure_captures_sctx_alpha_forward :
-  forall ρ Σ Σr Ω captures params captured_tys,
+  forall env ρ Σ Σr Ω captures params captured_tys,
     ctx_alpha ρ Σ Σr ->
     disjoint_names captures (rename_range ρ) ->
-    check_make_closure_captures_sctx Ω Σ captures params =
+    check_make_closure_captures_sctx env Ω Σ captures params =
       infer_ok captured_tys ->
-    check_make_closure_captures_sctx Ω Σr
+    check_make_closure_captures_sctx env Ω Σr
       (map (fun x => lookup_rename x ρ) captures) params =
       infer_ok captured_tys.
 Proof.
-  intros ρ Σ Σr Ω captures.
+  intros env ρ Σ Σr Ω captures.
   induction captures as [| x captures IH]; intros params captured_tys Halpha Hdisj Hcheck;
     destruct params as [| cap params]; simpl in *; try discriminate.
   - exact Hcheck.
@@ -795,9 +795,9 @@ Proof.
       ltac:(apply Hdisj; simpl; left; reflexivity) Hmut).
     destruct m; try discriminate.
     destruct (usage_eqb (ty_usage T) UUnrestricted); try discriminate.
-    destruct (ty_ref_free_b T); try discriminate.
+    destruct (capture_ref_free_ty_b env T); try discriminate.
     destruct (ty_compatible_b Ω T (param_ty cap)); try discriminate.
-    destruct (check_make_closure_captures_sctx Ω Σ captures params)
+    destruct (check_make_closure_captures_sctx env Ω Σ captures params)
       as [captured_rest | err] eqn:Hrest; try discriminate.
     injection Hcheck as <-.
     rewrite (IH params captured_rest Halpha
@@ -5330,7 +5330,7 @@ Inductive typed_env_roots_shadow_safe
   | TERS_MakeClosure : forall R Σ fname fdef captures captured_tys,
       In fdef (Program.env_fns env) ->
       fn_name fdef = fname ->
-      check_make_closure_captures_sctx Ω Σ captures (fn_captures fdef) =
+      check_make_closure_captures_sctx env Ω Σ captures (fn_captures fdef) =
         infer_ok captured_tys ->
       typed_env_roots_shadow_safe env Ω n R Σ (EMakeClosure fname captures)
         (closure_value_ty fdef captured_tys) Σ R []

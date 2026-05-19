@@ -2557,13 +2557,13 @@ Definition captured_call_frame_params_ready
   captured_params_store_typed env captured caps.
 
 Lemma check_make_closure_captures_exact_sctx_sound :
-  forall Ω Σ captures caps captured_tys,
-    check_make_closure_captures_exact_sctx Ω Σ captures caps =
+  forall env Ω Σ captures caps captured_tys,
+    check_make_closure_captures_exact_sctx env Ω Σ captures caps =
       infer_ok captured_tys ->
     typed_captures Ω Σ captures caps captured_tys /\
     captured_tys = map param_ty caps.
 Proof.
-  intros Ω Σ captures.
+  intros env Ω Σ captures.
   induction captures as [| x captures IH]; intros caps captured_tys Hcheck;
     destruct caps as [| cap caps]; simpl in Hcheck; try discriminate.
   - injection Hcheck as <-.
@@ -2580,9 +2580,9 @@ Proof.
     destruct m; try discriminate.
     destruct (usage_eqb (ty_usage T) UUnrestricted) eqn:Husage;
       try discriminate.
-    destruct (ty_ref_free_b T) eqn:Href_free; try discriminate.
+    destruct (capture_ref_free_ty_b env T) eqn:Href_free; try discriminate.
     destruct (ty_eqb T (param_ty cap)) eqn:Hty; try discriminate.
-    destruct (check_make_closure_captures_exact_sctx Ω Σ captures caps)
+    destruct (check_make_closure_captures_exact_sctx env Ω Σ captures caps)
       as [captured_rest | err] eqn:Hrest; try discriminate.
     injection Hcheck as <-.
     destruct (IH caps captured_rest Hrest) as [Htyped_tail Htys_tail].
@@ -2598,7 +2598,8 @@ Proof.
         eapply ctx_lookup_state_available_nil_lookup; eassumption.
       * exact Hmut.
       * apply usage_eqb_true. exact Husage.
-      * exact Href_free.
+      * apply (capture_ref_free_ty_b_ty_ref_free env (param_ty cap)).
+        exact Href_free.
       * apply ty_compatible_refl.
       * exact Htyped_tail.
     + simpl. rewrite Htys_tail. reflexivity.
@@ -2620,7 +2621,7 @@ Lemma copy_capture_store_exact_sctx_of_store :
   forall Ω env s Σ captures caps captured captured_tys,
     store_typed env s Σ ->
     copy_capture_store_as captures caps s = Some captured ->
-    check_make_closure_captures_exact_sctx Ω Σ captures caps =
+    check_make_closure_captures_exact_sctx env Ω Σ captures caps =
       infer_ok captured_tys ->
     sctx_of_store captured = sctx_of_ctx (params_ctx caps).
 Proof.
@@ -2641,9 +2642,9 @@ Proof.
     destruct m; try discriminate.
     destruct (usage_eqb (ty_usage T) UUnrestricted) eqn:Husage;
       try discriminate.
-    destruct (ty_ref_free_b T) eqn:Href_free; try discriminate.
+    destruct (capture_ref_free_ty_b env T) eqn:Href_free; try discriminate.
     destruct (ty_eqb T (param_ty cap)) eqn:Hty; try discriminate.
-    destruct (check_make_closure_captures_exact_sctx Ω Σ captures caps)
+    destruct (check_make_closure_captures_exact_sctx env Ω Σ captures caps)
       as [captured_rest_tys | err] eqn:Hrest_check; try discriminate.
     destruct (store_lookup x s) as [se |] eqn:Hlookup_store; try discriminate.
     destruct (binding_available_b (se_state se) [] &&
@@ -2694,7 +2695,7 @@ Lemma copy_capture_store_exact_params_store_typed :
     store_typed env s Σ ->
     captured_store_typed env captured ->
     copy_capture_store_as captures caps s = Some captured ->
-    check_make_closure_captures_exact_sctx Ω Σ captures caps =
+    check_make_closure_captures_exact_sctx env Ω Σ captures caps =
       infer_ok captured_tys ->
     captured_params_store_typed env captured caps.
 Proof.
@@ -14682,7 +14683,7 @@ Lemma eval_make_closure_exact_captured_call_frame_params_ready :
     lookup_fn fname (env_fns env) = Some fdef ->
     alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
       (fcall, used') ->
-    check_make_closure_captures_exact_sctx Ω Σ captures (fn_captures fdef) =
+    check_make_closure_captures_exact_sctx env Ω Σ captures (fn_captures fdef) =
       infer_ok captured_tys ->
     captured_call_frame_ready env captured Rcap s_args R_args ->
     captured_call_frame_params_ready env captured Rcap s_args R_args
@@ -14721,7 +14722,7 @@ Lemma eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_
       (fcall, used') ->
     eval env (bind_params (fn_params fcall) vs (captured ++ s_args))
       (fn_body fcall) s_body ret ->
-    check_make_closure_captures_exact_sctx Ω Σ captures (fn_captures fdef) =
+    check_make_closure_captures_exact_sctx env Ω Σ captures (fn_captures fdef) =
       infer_ok captured_tys ->
     captured_call_frame_ready env captured Rcap s_args R_args ->
     store_typed env s_args Σ_args ->

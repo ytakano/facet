@@ -568,6 +568,12 @@ Follow this order before inventing new theorem shapes:
      silently copy a closure value whose runtime captured store may hide
      references or unproved root obligations. Captureless `TFn` values can
      still be copied through the existing function-value route.
+   - Capture checking now has an env-aware executable predicate
+     `capture_ref_free_ty_b`. Exact capture uses this predicate instead of raw
+     `ty_ref_free_b`, so struct captures are accepted only when their
+     instantiated field types are also capture-reference-free. The boolean
+     predicate still implies the existing `ty_ref_free_b` contract used by
+     `typed_captures`, keeping ordinary checker soundness shape unchanged.
    - Next closure proof task: supply the remaining captured-call premises
      without changing validator acceptance yet. In particular, derive or package
      captured frame readiness, combined `fn_params ++ fn_captures` root

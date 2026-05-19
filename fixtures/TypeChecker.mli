@@ -181,8 +181,6 @@ val contains_lbound_outlives : outlives_ctx -> bool
 
 val contains_lbound_ty : ty -> bool
 
-val ty_ref_free_b : ty -> bool
-
 type ident = string * Big_int_Z.big_int
 
 val ident_eqb : ident -> ident -> bool
@@ -474,6 +472,10 @@ val ty_compatible_b_fuel :
 
 val ty_compatible_b : outlives_ctx -> ty -> ty -> bool
 
+val capture_ref_free_ty_b_fuel : Big_int_Z.big_int -> global_env -> ty -> bool
+
+val capture_ref_free_ty_b : global_env -> ty -> bool
+
 val ctx_lookup_b : ident -> ctx -> (ty * bool) option
 
 val ctx_add_b : ident -> ty -> mutability -> ctx -> ctx
@@ -601,7 +603,8 @@ val sctx_lookup : ident -> sctx -> (ty * binding_state) option
 val sctx_lookup_mut : ident -> sctx -> mutability option
 
 val check_make_closure_captures_sctx :
-  outlives_ctx -> sctx -> ident list -> param list -> ty list infer_result
+  global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list
+  infer_result
 
 val sctx_add : ident -> ty -> mutability -> sctx -> sctx
 

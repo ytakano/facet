@@ -363,6 +363,12 @@ val param_ctx_entry : param -> ctx_entry
 
 val params_ctx : param list -> ctx
 
+val fn_body_params : fn_def -> param list
+
+val fn_binding_params : fn_def -> param list
+
+val fn_body_ctx : fn_def -> ctx
+
 val usage_max : usage -> usage -> usage
 
 val closure_capture_usage : ty list -> usage
@@ -715,8 +721,6 @@ val string_in : string -> string list -> bool
 val duplicate_param_name_aux : string list -> param list -> ident option
 
 val duplicate_param_name : param list -> ident option
-
-val fn_binding_params : fn_def -> param list
 
 val check_fn_binding_params : region_ctx -> fn_def -> infer_error option
 

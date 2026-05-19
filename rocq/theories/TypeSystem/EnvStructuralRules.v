@@ -1687,7 +1687,7 @@ with borrow_ok_fields_env_structural (env : global_env)
 Definition typed_fn_env_structural (env : global_env) (f : fn_def) : Prop :=
   exists T_body Γ_out,
     typed_env_structural env (fn_outlives f) (fn_lifetimes f)
-      (sctx_of_ctx (params_ctx (fn_params f)))
+      (sctx_of_ctx (fn_body_ctx f))
       (fn_body f) T_body (sctx_of_ctx Γ_out) /\
     ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
     params_ok_env_b env (fn_params f) Γ_out = true.
@@ -1698,7 +1698,7 @@ Definition env_fns_typed_structural (env : global_env) : Prop :=
 Definition checked_fn_env_structural (env : global_env) (f : fn_def) : Prop :=
   typed_fn_env_structural env f /\
   (exists PBS',
-    borrow_ok_env_structural env [] (params_ctx (fn_params f)) (fn_body f) PBS') /\
+    borrow_ok_env_structural env [] (fn_body_ctx f) (fn_body f) PBS') /\
   NoDup (ctx_names (params_ctx (fn_params f))).
 
 Definition env_fns_checked_structural (env : global_env) : Prop :=

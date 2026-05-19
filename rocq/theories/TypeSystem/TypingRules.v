@@ -118,6 +118,15 @@ Fixpoint params_ctx (ps : list param) : ctx :=
   | p :: ps' => param_ctx_entry p :: params_ctx ps'
   end.
 
+Definition fn_body_params (f : fn_def) : list param :=
+  fn_params f.
+
+Definition fn_binding_params (f : fn_def) : list param :=
+  fn_params f ++ fn_captures f.
+
+Definition fn_body_ctx (f : fn_def) : ctx :=
+  params_ctx (fn_body_params f).
+
 Fixpoint params_ok (ps : list param) (Γ : ctx) : Prop :=
   match ps with
   | [] => True
@@ -552,7 +561,7 @@ Inductive typed_struct_literal (fenv : list fn_def) (Ω : outlives_ctx) (n : nat
 
 Definition typed_fn_def (fenv : list fn_def) (f : fn_def) : Prop :=
   exists T_body Γ',
-    typed fenv (fn_outlives f) (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
+    typed fenv (fn_outlives f) (fn_lifetimes f) (fn_body_ctx f) (fn_body f) T_body Γ' /\
     ty_compatible (fn_outlives f) T_body (fn_ret f) /\
     params_ok (fn_params f) Γ'.
 
@@ -760,4 +769,4 @@ with borrow_ok_args (fenv : list fn_def)
 
 Definition borrow_ok_fn_def (fenv : list fn_def) (f : fn_def) : Prop :=
   exists BS',
-    borrow_ok fenv [] (params_ctx (fn_params f)) (fn_body f) BS'.
+    borrow_ok fenv [] (fn_body_ctx f) (fn_body f) BS'.

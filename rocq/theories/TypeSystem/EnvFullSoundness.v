@@ -69,7 +69,7 @@ Proof.
   destruct (check_fn_binding_params (mk_region_ctx (fn_lifetimes f)) f);
     try discriminate.
   destruct (infer_core_env env (fn_outlives f) (fn_lifetimes f)
-              (params_ctx (fn_params f)) (fn_body f))
+              (fn_body_ctx f) (fn_body f))
     as [[T_body Γ_out] | err] eqn:Hcore; try discriminate.
   destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) T_body));
     try discriminate.
@@ -91,7 +91,7 @@ Proof.
   unfold infer_full_env, checked_fn_env_structural.
   intros env f T Γ' Hfull.
   destruct (infer_env env f) as [[T0 Γ0] | err] eqn:Hinfer; try discriminate.
-  destruct (borrow_check_env env [] (params_ctx (fn_params f)) (fn_body f))
+  destruct (borrow_check_env env [] (fn_body_ctx f) (fn_body f))
     as [PBS' | err] eqn:Hborrow; try discriminate.
   split.
   - eapply infer_env_structural_sound. exact Hinfer.

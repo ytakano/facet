@@ -1030,7 +1030,7 @@ Proof.
   destruct (negb (wf_type_b Δ (fn_ret f))) eqn:Hwf_ret; [discriminate |].
   destruct (check_fn_binding_params Δ f) as [err_params |] eqn:Hparams_check;
     [discriminate |].
-  destruct (infer_body fenv Ω (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f))
+  destruct (infer_body fenv Ω (fn_lifetimes f) (fn_body_ctx f) (fn_body f))
     as [[T_body Γ_out] | err] eqn:Hinfer; [|discriminate].
   destruct (negb (wf_type_b Δ T_body)) eqn:Hwf_body; [discriminate |].
   destruct (ty_compatible_b Ω T_body (fn_ret f)) eqn:Hcompat; [|discriminate].
@@ -1068,7 +1068,7 @@ Proof.
   destruct (negb (wf_type_b Δ (fn_ret f))) eqn:Hwf_ret; [discriminate |].
   destruct (check_fn_binding_params Δ f) as [err_params |] eqn:Hparams_check;
     [discriminate |].
-  destruct (infer_core fenv Ω (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f))
+  destruct (infer_core fenv Ω (fn_lifetimes f) (fn_body_ctx f) (fn_body f))
     as [[T_body Γ_out] | err] eqn:Hinfer; [|discriminate].
   destruct (negb (wf_type_b Δ T_body)) eqn:Hwf_body; [discriminate |].
   destruct (ty_compatible_b Ω T_body (fn_ret f)) eqn:Hcompat; [|discriminate].

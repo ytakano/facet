@@ -1531,6 +1531,21 @@ let rec params_ctx = function
 | [] -> []
 | p :: ps' -> (param_ctx_entry p) :: (params_ctx ps')
 
+(** val fn_body_params : fn_def -> param list **)
+
+let fn_body_params f =
+  f.fn_params
+
+(** val fn_binding_params : fn_def -> param list **)
+
+let fn_binding_params f =
+  app f.fn_params f.fn_captures
+
+(** val fn_body_ctx : fn_def -> ctx **)
+
+let fn_body_ctx f =
+  params_ctx (fn_body_params f)
+
 (** val usage_max : usage -> usage -> usage **)
 
 let usage_max u1 u2 =
@@ -5097,11 +5112,6 @@ let rec duplicate_param_name_aux seen = function
 let duplicate_param_name ps =
   duplicate_param_name_aux [] ps
 
-(** val fn_binding_params : fn_def -> param list **)
-
-let fn_binding_params f =
-  app f.fn_captures f.fn_params
-
 (** val check_fn_binding_params :
     region_ctx -> fn_def -> infer_error option **)
 
@@ -5150,8 +5160,7 @@ let infer_env env f =
        else (match check_fn_binding_params _UU0394_ f with
              | Some err -> Infer_err err
              | None ->
-               (match infer_core_env env _UU03a9_ n (params_ctx f.fn_params)
-                        f.fn_body with
+               (match infer_core_env env _UU03a9_ n (fn_body_ctx f) f.fn_body with
                 | Infer_ok p ->
                   let (t_body, _UU0393__out) = p in
                   if negb (wf_type_b _UU0394_ t_body)
@@ -5184,8 +5193,8 @@ let infer_env_elab env f =
        else (match check_fn_binding_params _UU0394_ f with
              | Some err -> Infer_err err
              | None ->
-               (match infer_core_env_elab env _UU03a9_ n
-                        (params_ctx f.fn_params) f.fn_body with
+               (match infer_core_env_elab env _UU03a9_ n (fn_body_ctx f)
+                        f.fn_body with
                 | Infer_ok p ->
                   let (p0, body') = p in
                   let (t_body, _UU0393__out) = p0 in
@@ -5214,8 +5223,8 @@ let infer_env_roots env f r0 =
        else (match check_fn_binding_params _UU0394_ f with
              | Some err -> Infer_err err
              | None ->
-               (match infer_core_env_roots env _UU03a9_ n r0
-                        (params_ctx f.fn_params) f.fn_body with
+               (match infer_core_env_roots env _UU03a9_ n r0 (fn_body_ctx f)
+                        f.fn_body with
                 | Infer_ok p ->
                   let (p0, roots) = p in
                   let (p1, r_out) = p0 in
@@ -5246,7 +5255,7 @@ let infer_env_roots_shadow_safe env f r0 =
              | Some err -> Infer_err err
              | None ->
                (match infer_core_env_roots_shadow_safe env _UU03a9_ n r0
-                        (params_ctx f.fn_params) f.fn_body with
+                        (fn_body_ctx f) f.fn_body with
                 | Infer_ok p ->
                   let (p0, roots) = p in
                   let (p1, r_out) = p0 in
@@ -5472,7 +5481,7 @@ let rec borrow_check_env env pBS _UU0393_ = function
 let infer_full_env env f =
   match infer_env env f with
   | Infer_ok res ->
-    (match borrow_check_env env [] (params_ctx f.fn_params) f.fn_body with
+    (match borrow_check_env env [] (fn_body_ctx f) f.fn_body with
      | Infer_ok _ -> Infer_ok res
      | Infer_err err -> Infer_err err)
   | Infer_err err -> Infer_err err
@@ -5484,7 +5493,7 @@ let infer_full_env_elab env f =
   match infer_env_elab env f with
   | Infer_ok p ->
     let (p0, f') = p in
-    (match borrow_check_env env [] (params_ctx f'.fn_params) f'.fn_body with
+    (match borrow_check_env env [] (fn_body_ctx f') f'.fn_body with
      | Infer_ok _ -> Infer_ok (p0, f')
      | Infer_err err -> Infer_err err)
   | Infer_err err -> Infer_err err
@@ -5496,7 +5505,7 @@ let infer_full_env_elab env f =
 let infer_full_env_roots env f r0 =
   match infer_env_roots env f r0 with
   | Infer_ok res ->
-    (match borrow_check_env env [] (params_ctx f.fn_params) f.fn_body with
+    (match borrow_check_env env [] (fn_body_ctx f) f.fn_body with
      | Infer_ok _ -> Infer_ok res
      | Infer_err err -> Infer_err err)
   | Infer_err err -> Infer_err err

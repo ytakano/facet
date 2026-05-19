@@ -3662,9 +3662,6 @@ Fixpoint duplicate_param_name_aux (seen : list string) (ps : list param) : optio
 Definition duplicate_param_name (ps : list param) : option ident :=
   duplicate_param_name_aux [] ps.
 
-Definition fn_binding_params (f : fn_def) : list param :=
-  fn_captures f ++ fn_params f.
-
 Definition check_fn_binding_params (Δ : region_ctx) (f : fn_def)
     : option infer_error :=
   if negb (wf_params_b Δ (fn_captures f))
@@ -3732,6 +3729,19 @@ Proof.
   - simpl in Hnodup. exact Hnodup.
   - simpl in Hnodup. inversion Hnodup as [| ? ? _ Hnodup_tail]; subst.
     apply IH. exact Hnodup_tail.
+Qed.
+
+Lemma NoDup_app_left : forall (A : Type) (xs ys : list A),
+  NoDup (xs ++ ys) ->
+  NoDup xs.
+Proof.
+  intros A xs.
+  induction xs as [| x xs IH]; intros ys Hnodup.
+  - constructor.
+  - simpl in Hnodup. inversion Hnodup as [| ? ? Hfresh Hnodup_tail]; subst.
+    constructor.
+    + intros Hin. apply Hfresh. apply in_or_app. left. exact Hin.
+    + apply IH with (ys := ys). exact Hnodup_tail.
 Qed.
 
 Lemma top_level_names_unique_b_nodup : forall env,
@@ -3830,6 +3840,19 @@ Proof.
   eapply NoDup_app_right. exact Hnodup_all.
 Qed.
 
+Lemma duplicate_param_name_none_nodup_params_ctx_prefix : forall ps caps,
+  duplicate_param_name (ps ++ caps) = None ->
+  NoDup (ctx_names (params_ctx ps)).
+Proof.
+  intros ps caps Hnone.
+  rewrite ctx_names_params_ctx_param_names.
+  pose proof (duplicate_param_name_none_nodup_params_ctx (ps ++ caps) Hnone)
+    as Hnodup_all.
+  rewrite ctx_names_params_ctx_param_names in Hnodup_all.
+  rewrite param_names_app in Hnodup_all.
+  eapply NoDup_app_left. exact Hnodup_all.
+Qed.
+
 
 (* Check a single function definition:
    - infer the body type
@@ -3852,7 +3875,7 @@ Definition infer (fenv : list fn_def) (f : fn_def)
   match check_fn_binding_params Δ f with
   | Some err => infer_err err
   | None =>
-  match infer_body fenv Ω n (params_ctx (fn_params f)) (fn_body f) with
+  match infer_body fenv Ω n (fn_body_ctx f) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out) =>
       if negb (wf_type_b Δ T_body)
@@ -3888,7 +3911,7 @@ Definition infer_env (env : global_env) (f : fn_def)
   match check_fn_binding_params Δ f with
   | Some err => infer_err err
   | None =>
-  match infer_core_env env Ω n (params_ctx (fn_params f)) (fn_body f) with
+  match infer_core_env env Ω n (fn_body_ctx f) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out) =>
       if negb (wf_type_b Δ T_body)
@@ -3920,7 +3943,7 @@ Definition infer_env_elab (env : global_env) (f : fn_def)
   match check_fn_binding_params Δ f with
   | Some err => infer_err err
   | None =>
-  match infer_core_env_elab env Ω n (params_ctx (fn_params f)) (fn_body f) with
+  match infer_core_env_elab env Ω n (fn_body_ctx f) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out, body') =>
       if negb (wf_type_b Δ T_body)
@@ -3948,7 +3971,7 @@ Definition infer_env_roots (env : global_env) (f : fn_def) (R0 : root_env)
   match check_fn_binding_params Δ f with
   | Some err => infer_err err
   | None =>
-  match infer_core_env_roots env Ω n R0 (params_ctx (fn_params f)) (fn_body f) with
+  match infer_core_env_roots env Ω n R0 (fn_body_ctx f) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out, R_out, roots) =>
       if negb (wf_type_b Δ T_body)
@@ -3978,7 +4001,7 @@ Definition infer_env_roots_shadow_safe
   | Some err => infer_err err
   | None =>
   match infer_core_env_roots_shadow_safe
-          env Ω n R0 (params_ctx (fn_params f)) (fn_body f) with
+          env Ω n R0 (fn_body_ctx f) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out, R_out, roots) =>
       if negb (wf_type_b Δ T_body)
@@ -4010,7 +4033,7 @@ Proof.
   destruct (duplicate_param_name (fn_binding_params f)) as [dup |] eqn:Hdup;
     try discriminate.
   unfold fn_binding_params in Hdup.
-  eapply duplicate_param_name_none_nodup_params_ctx_suffix. exact Hdup.
+  eapply duplicate_param_name_none_nodup_params_ctx_prefix. exact Hdup.
 Qed.
 
 Lemma infer_env_roots_params_nodup : forall env f R0 T Γ' R' roots,
@@ -4031,7 +4054,7 @@ Proof.
   destruct (duplicate_param_name (fn_binding_params f)) as [dup |] eqn:Hdup;
     try discriminate.
   unfold fn_binding_params in Hdup.
-  eapply duplicate_param_name_none_nodup_params_ctx_suffix. exact Hdup.
+  eapply duplicate_param_name_none_nodup_params_ctx_prefix. exact Hdup.
 Qed.
 
 Definition ex_struct_pair : struct_def :=
@@ -4529,7 +4552,7 @@ Definition infer_full (fenv : list fn_def) (f : fn_def)
   match infer fenv f with
   | infer_err err => infer_err err
   | infer_ok res  =>
-      let Γ := params_ctx (fn_params f) in
+      let Γ := fn_body_ctx f in
       match borrow_check fenv [] Γ (fn_body f) with
       | infer_err err => infer_err err
       | infer_ok _    => infer_ok res
@@ -4541,7 +4564,7 @@ Definition infer_full_env (env : global_env) (f : fn_def)
   match infer_env env f with
   | infer_err err => infer_err err
   | infer_ok res =>
-      match borrow_check_env env [] (params_ctx (fn_params f)) (fn_body f) with
+      match borrow_check_env env [] (fn_body_ctx f) (fn_body f) with
       | infer_err err => infer_err err
       | infer_ok _ => infer_ok res
       end
@@ -4552,7 +4575,7 @@ Definition infer_full_env_elab (env : global_env) (f : fn_def)
   match infer_env_elab env f with
   | infer_err err => infer_err err
   | infer_ok (T, Γ, f') =>
-      match borrow_check_env env [] (params_ctx (fn_params f')) (fn_body f') with
+      match borrow_check_env env [] (fn_body_ctx f') (fn_body f') with
       | infer_err err => infer_err err
       | infer_ok _ => infer_ok (T, Γ, f')
       end
@@ -4563,7 +4586,7 @@ Definition infer_full_env_roots (env : global_env) (f : fn_def) (R0 : root_env)
   match infer_env_roots env f R0 with
   | infer_err err => infer_err err
   | infer_ok res =>
-      match borrow_check_env env [] (params_ctx (fn_params f)) (fn_body f) with
+      match borrow_check_env env [] (fn_body_ctx f) (fn_body f) with
       | infer_err err => infer_err err
       | infer_ok _ => infer_ok res
       end
@@ -5137,7 +5160,7 @@ Definition infer_direct (fenv : list fn_def) (f : fn_def)
   match check_fn_binding_params Δ f with
   | Some err => infer_err err
   | None =>
-  match infer_core fenv Ω n (params_ctx (fn_params f)) (fn_body f) with
+  match infer_core fenv Ω n (fn_body_ctx f) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out) =>
       if negb (wf_type_b Δ T_body)

@@ -1029,7 +1029,7 @@ Definition typed_fn_env_roots (env : global_env) (f : fn_def)
     (R0 R_out : root_env) (roots : root_set) : Prop :=
   exists T_body Γ_out,
     typed_env_roots env (fn_outlives f) (fn_lifetimes f)
-      R0 (sctx_of_ctx (params_ctx (fn_params f)))
+      R0 (sctx_of_ctx (fn_body_ctx f))
       (fn_body f) T_body (sctx_of_ctx Γ_out) R_out roots /\
     ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
     params_ok_env_b env (fn_params f) Γ_out = true.
@@ -1038,14 +1038,14 @@ Definition checked_fn_env_roots (env : global_env) (f : fn_def)
     (R0 R_out : root_env) (roots : root_set) : Prop :=
   typed_fn_env_roots env f R0 R_out roots /\
   (exists PBS',
-    borrow_ok_env_structural env [] (params_ctx (fn_params f)) (fn_body f) PBS') /\
+    borrow_ok_env_structural env [] (fn_body_ctx f) (fn_body f) PBS') /\
   NoDup (ctx_names (params_ctx (fn_params f))).
 
 Definition typed_fn_env_roots_shadow_safe (env : global_env) (f : fn_def)
     (R0 R_out : root_env) (roots : root_set) : Prop :=
   exists T_body Γ_out,
     typed_env_roots_shadow_safe env (fn_outlives f) (fn_lifetimes f)
-      R0 (sctx_of_ctx (params_ctx (fn_params f)))
+      R0 (sctx_of_ctx (fn_body_ctx f))
       (fn_body f) T_body (sctx_of_ctx Γ_out) R_out roots /\
     ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
     params_ok_env_b env (fn_params f) Γ_out = true.
@@ -1054,7 +1054,7 @@ Definition checked_fn_env_roots_shadow_safe (env : global_env) (f : fn_def)
     (R0 R_out : root_env) (roots : root_set) : Prop :=
   typed_fn_env_roots_shadow_safe env f R0 R_out roots /\
   (exists PBS',
-    borrow_ok_env_structural env [] (params_ctx (fn_params f)) (fn_body f) PBS') /\
+    borrow_ok_env_structural env [] (fn_body_ctx f) (fn_body f) PBS') /\
   NoDup (ctx_names (params_ctx (fn_params f))).
 
 Lemma typed_fn_env_roots_structural :
@@ -1134,7 +1134,7 @@ Proof.
   destruct (check_fn_binding_params (mk_region_ctx (fn_lifetimes f)) f);
     try discriminate.
   destruct (infer_core_env_roots env (fn_outlives f) (fn_lifetimes f)
-      R0 (params_ctx (fn_params f)) (fn_body f))
+      R0 (fn_body_ctx f) (fn_body f))
     as [[[[T_body Γ_body] R_body] roots_body] | err] eqn:Hcore; try discriminate.
   destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) T_body));
     try discriminate.
@@ -1144,7 +1144,8 @@ Proof.
   inversion Hinfer; subst.
   exists T_body, Γ_out.
   repeat split.
-  - eapply infer_core_env_roots_sound. exact Hcore.
+  - exact (infer_core_env_roots_sound env (fn_outlives f) (fn_lifetimes f)
+      R0 (fn_body_ctx f) (fn_body f) T_body Γ_out R_out roots Hcore).
   - exact Hcompat.
   - exact Hparams.
 Qed.
@@ -1164,7 +1165,7 @@ Proof.
   destruct (check_fn_binding_params (mk_region_ctx (fn_lifetimes f)) f);
     try discriminate.
   destruct (infer_core_env_roots_shadow_safe env (fn_outlives f)
-      (fn_lifetimes f) R0 (params_ctx (fn_params f)) (fn_body f))
+      (fn_lifetimes f) R0 (fn_body_ctx f) (fn_body f))
     as [[[[T_body Γ_body] R_body] roots_body] | err] eqn:Hcore;
     try discriminate.
   destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) T_body));
@@ -1176,7 +1177,9 @@ Proof.
   inversion Hinfer; subst.
   exists T_body, Γ_out.
   repeat split.
-  - eapply infer_core_env_roots_shadow_safe_sound. exact Hcore.
+  - exact (infer_core_env_roots_shadow_safe_sound env (fn_outlives f)
+      (fn_lifetimes f) R0 (fn_body_ctx f) (fn_body f) T_body Γ_out
+      R_out roots Hcore).
   - exact Hcompat.
   - exact Hparams.
 Qed.
@@ -1200,7 +1203,7 @@ Proof.
   destruct (duplicate_param_name (fn_binding_params f)) as [dup |] eqn:Hdup;
     try discriminate.
   unfold fn_binding_params in Hdup.
-  eapply duplicate_param_name_none_nodup_params_ctx_suffix. exact Hdup.
+  eapply duplicate_param_name_none_nodup_params_ctx_prefix. exact Hdup.
 Qed.
 
 Theorem infer_full_env_roots_sound :
@@ -1212,7 +1215,7 @@ Proof.
   intros env f R0 T Γ_out R_out roots Hfull.
   destruct (infer_env_roots env f R0)
     as [[[[T0 Γ0] R1] roots1] | err] eqn:Hinfer; try discriminate.
-  destruct (borrow_check_env env [] (params_ctx (fn_params f)) (fn_body f))
+  destruct (borrow_check_env env [] (fn_body_ctx f) (fn_body f))
     as [PBS' | err] eqn:Hborrow; try discriminate.
   inversion Hfull; subst.
   split.

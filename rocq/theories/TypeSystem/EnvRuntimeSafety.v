@@ -88,7 +88,7 @@ Proof.
   destruct (check_fn_binding_params (mk_region_ctx (fn_lifetimes f)) f);
     try discriminate.
   destruct (infer_core_env env (fn_outlives f) (fn_lifetimes f)
-              (params_ctx (fn_params f)) (fn_body f))
+              (fn_body_ctx f) (fn_body f))
     as [[T_body Γ_out] | err] eqn:Hcore; try discriminate.
   destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) T_body));
     try discriminate.
@@ -299,7 +299,7 @@ Proof.
   destruct (infer_env (alpha_normalize_global_env env) f)
     as [[T0 Γ0] | err] eqn:Hinfer_env; try discriminate.
   destruct (borrow_check_env (alpha_normalize_global_env env) []
-              (params_ctx (fn_params f)) (fn_body f))
+              (fn_body_ctx f) (fn_body f))
     as [PBS' | err] eqn:Hborrow; try discriminate.
   eapply typed_fn_env_structural_big_step_safe_ready.
   - eapply infer_env_runtime_structural_sound. exact Hinfer_env.

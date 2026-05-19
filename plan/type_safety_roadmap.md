@@ -473,19 +473,21 @@ Follow this order before inventing new theorem shapes:
      the listed captures. The executable capture checks require matching
      `fn_captures`, immutable bindings, unrestricted usage, no active mutable
      borrow of the captured root, and `ty_ref_free_b = true`.
-   - Function-level validation now checks `fn_captures ++ fn_params` as one
+   - Function-level validation now checks `fn_params ++ fn_captures` as one
      binding namespace: capture names and ordinary parameter names must be
      well-formed and duplicate-free. This prevents hidden captured frames from
      shadowing ordinary call frames.
-   - Current blocker for captured-call preservation: function bodies are still
-     typed and checked under `params_ctx (fn_params f)`, not under a
-     capture-aware body context. Before proving calls to captured closures,
-     introduce a single helper such as `fn_body_ctx f :=
-     params_ctx (fn_captures f ++ fn_params f)` and migrate ordinary typing,
-     env typing, root typing, borrow checking, and runtime safety summaries to
-     use it for function bodies. Direct `EFn` and direct `ECall` remain
-     captureless, so existing source functions with `fn_captures = []` should
-     be behavior-preserving.
+   - Current blocker for captured-call preservation: function bodies still use
+     `fn_body_ctx f := params_ctx (fn_params f)`. The checker has a separate
+     `fn_binding_params f := fn_params f ++ fn_captures f` for validation, but
+     typing/proof contexts are not capture-aware yet. Before captured
+     `ECallExpr` preservation can be enabled, introduce a capture-aware body
+     context in a separate proof step. Prefer ordinary params first, captures
+     second, matching the existing runtime/proof frame shape for
+     `bind_params (fn_params f) args (captured ++ caller_store)`. Because
+     validation rejects duplicate names across both lists, this internal order
+     should not be source-observable. Direct `EFn` and direct `ECall` remain
+     captureless.
    - Preservation/provenance readiness validators still reject
      `EMakeClosure`. Do not flip those booleans until captured `ECallExpr`
      preservation is proved. The next closure task is either parser/lambda

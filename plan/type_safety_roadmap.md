@@ -556,6 +556,13 @@ Follow this order before inventing new theorem shapes:
      `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased`
      wraps the body-context cleanup theorem for the direct core shape
      `ECallExpr (EMakeClosure fname captures) args`.
+   - Runtime root-readiness now treats captured closure values as first-class
+     root-containing values. `value_roots_within` has a captured-closure case
+     requiring that any store root outside the closure value's root set is
+     absent from the captured runtime store, and the existing exclusion,
+     store-subset, and weakening lemmas preserve this case. This is only a
+     reference/root safety bridge; it does not yet prove that arbitrary
+     captured closure values satisfy `value_has_type`.
    - Next closure proof task: supply the remaining captured-call premises
      without changing validator acceptance yet. In particular, derive or package
      captured frame readiness, combined `fn_params ++ fn_captures` root

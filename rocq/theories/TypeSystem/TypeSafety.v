@@ -843,6 +843,11 @@ Inductive value_roots_within : root_set -> value -> Prop :=
       value_roots_within roots (VRef x path)
   | VRW_ClosureEmpty : forall roots fname,
       value_roots_within roots (VClosure fname [])
+  | VRW_ClosureCaptured : forall roots fname captured,
+      (forall root,
+        roots_exclude root roots ->
+        store_refs_exclude_root root captured) ->
+      value_roots_within roots (VClosure fname captured)
 with store_entry_roots_within : root_env -> store_entry -> Prop :=
   | SERW_Entry : forall R sx sT sv sst roots,
       root_env_lookup sx R = Some roots ->
@@ -1322,7 +1327,14 @@ Lemma value_roots_within_stores_subset :
       root_set_stores_subset roots roots' ->
       value_fields_roots_within roots' fields).
 Proof.
-  apply value_roots_within_mutind; intros; try constructor; eauto.
+  apply value_roots_within_mutind; intros; try solve [constructor; eauto].
+  - constructor.
+    intros root Hexclude.
+    apply s.
+    unfold roots_exclude in *.
+    intros Hin.
+    apply Hexclude.
+    apply H. exact Hin.
 Qed.
 
 Lemma value_roots_within_store_subset :
@@ -1417,6 +1429,13 @@ Lemma value_roots_within_weaken :
       value_fields_roots_within roots' fields).
 Proof.
   apply value_roots_within_mutind; intros; try solve [constructor; eauto].
+  - constructor.
+    intros root Hexclude.
+    apply s.
+    unfold roots_exclude in *.
+    intros Hin.
+    apply Hexclude.
+    apply H. exact Hin.
   - destruct (H0 sx roots e) as [roots' [Hlookup Hincl]].
     eapply SERW_Entry.
     + exact Hlookup.

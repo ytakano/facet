@@ -198,7 +198,10 @@ Fixpoint alpha_rename_params (ρ : rename_env) (used : list ident)
 
 Definition alpha_rename_fn_def (used : list ident)
     (f : fn_def) : fn_def * list ident :=
-  let used0 := param_names (fn_params f) ++ free_vars_expr (fn_body f) ++ used in
+  let used0 :=
+    param_names (fn_params f) ++
+    param_names (fn_captures f) ++
+    free_vars_expr (fn_body f) ++ used in
   let '(params', ρ, used1) := alpha_rename_params [] used0 (fn_params f) in
   let (body', used2) := alpha_rename_expr ρ used1 (fn_body f) in
   (MkFnDef (fn_name f) (fn_lifetimes f) (fn_outlives f)

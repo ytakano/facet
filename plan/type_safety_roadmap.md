@@ -527,18 +527,24 @@ Follow this order before inventing new theorem shapes:
      `captured_call_frame_params_ready` is available. This is still a
      proof-only wrapper over the existing body context; it does not yet migrate
      `fn_body_ctx` to include `fn_captures`.
-   - Current `fn_body_ctx := fn_params ++ fn_captures` blocker: the first
-     attempted minimal migration failed in `AlphaRenaming.v` because
-     `alpha_rename_fn_def` renames only `fn_params`, leaves `fn_captures`
-     unchanged, and proves body structural typing from
-     `params_ctx (fn_params f)` to `params_ctx (fn_params fr)`. A
-     capture-aware body context requires a specification decision and proof
-     update for function alpha-renaming: either rename hidden capture params
-     together with ordinary params and update `EMakeClosure` capture-name
-     evidence accordingly, or keep hidden capture params stable and prove a
-     mixed context-alpha relation for `params_ctx (fn_params f ++ fn_captures f)`.
-     Do not retry the global body-context migration until this alpha-renaming
-     contract is fixed.
+   - Function alpha-renaming now uses the stable-hidden-capture contract:
+     `alpha_rename_fn_def` freshens only ordinary `fn_params`, keeps
+     `fn_captures` unchanged, and includes capture names in the initial used set
+     so ordinary renamed parameters cannot collide with hidden captures. The
+     mixed context-alpha bridge for
+     `params_ctx (fn_params f ++ fn_captures f)` is available at the
+     alpha-renaming layer.
+   - Current `fn_body_ctx := fn_params ++ fn_captures` blocker: after the
+     alpha-renaming contract was fixed, the next migration attempt reached
+     `EnvRuntimeSafety.v` and exposed a direct-call/root-shadow summary gap.
+     Existing callee-body readiness summaries are still params-only: they prove
+     readiness for `params_ctx (fn_params fcall)` and do not carry the captured
+     root environment needed for
+     `params_ctx (fn_params fcall ++ fn_captures fcall)`. Do not retry the
+     global body-context migration until the direct-call route stays explicitly
+     captureless and a separate captured-call route threads
+     `captured_call_frame_params_ready` or equivalent captured-root evidence
+     into the callee-body readiness/root-shadow summary predicates.
    - Preservation/provenance readiness validators still reject
      `EMakeClosure`. Do not flip those booleans until captured `ECallExpr`
      preservation is proved. The next closure task is either parser/lambda

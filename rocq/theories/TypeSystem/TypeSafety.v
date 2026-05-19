@@ -4844,6 +4844,7 @@ Proof.
   intros used f fr used' Hrename Hready.
   unfold alpha_rename_fn_def in Hrename.
   destruct (alpha_rename_params [] (param_names (fn_params f) ++
+             param_names (fn_captures f) ++
              free_vars_expr (fn_body f) ++ used) (fn_params f))
     as [[paramsr ρ] used1] eqn:Hparams.
   destruct (alpha_rename_expr ρ used1 (fn_body f)) as [bodyr used2]
@@ -5152,6 +5153,7 @@ Proof.
   intros used f fr used' Hrename Hready.
   unfold alpha_rename_fn_def in Hrename.
   destruct (alpha_rename_params [] (param_names (fn_params f) ++
+             param_names (fn_captures f) ++
              free_vars_expr (fn_body f) ++ used) (fn_params f))
     as [[paramsr ρ] used1] eqn:Hparams.
   destruct (alpha_rename_expr ρ used1 (fn_body f)) as [bodyr used2]
@@ -15806,7 +15808,7 @@ Proof.
         Hrange_used & Hdisj).
   destruct (alpha_rename_fn_def_static_fields
               (store_names s_args) fdef fcall used' Hrename)
-    as [_ [Hlts [Houts Hret]]].
+    as [_ [Hlts [Houts [_ Hret]]]].
   assert (Hsame_body :
     sctx_same_bindings
       (sctx_of_ctx (params_ctx (fn_params fdef)))
@@ -16023,7 +16025,7 @@ Proof.
         Hrange_used & Hdisj).
   destruct (alpha_rename_fn_def_static_fields
               (store_names s_args) fdef fcall used' Hrename)
-    as [_ [Hlts [Houts Hret]]].
+    as [_ [Hlts [Houts [_ Hret]]]].
   assert (Hsame_body :
     sctx_same_bindings
       (sctx_of_ctx (params_ctx (fn_params fdef)))

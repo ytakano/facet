@@ -1834,7 +1834,8 @@ let rec alpha_rename_params _UU03c1_ used = function
 
 let alpha_rename_fn_def used f =
   let used0 =
-    app (param_names f.fn_params) (app (free_vars_expr f.fn_body) used)
+    app (param_names f.fn_params)
+      (app (param_names f.fn_captures) (app (free_vars_expr f.fn_body) used))
   in
   let (p, used1) = alpha_rename_params [] used0 f.fn_params in
   let (params', _UU03c1_) = p in

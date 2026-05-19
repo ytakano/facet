@@ -2881,6 +2881,79 @@ Proof.
   - simpl. rewrite IH. reflexivity.
 Qed.
 
+Lemma ctx_names_app : forall Γ Δ,
+  ctx_names (Γ ++ Δ) = ctx_names Γ ++ ctx_names Δ.
+Proof.
+  induction Γ as [| [[[x T] st] m] Γ IH]; intros Δ.
+  - reflexivity.
+  - simpl. rewrite IH. reflexivity.
+Qed.
+
+Lemma params_ctx_app : forall ps qs,
+  params_ctx (ps ++ qs) = params_ctx ps ++ params_ctx qs.
+Proof.
+  induction ps as [| p ps IH]; intros qs.
+  - reflexivity.
+  - simpl. rewrite IH. reflexivity.
+Qed.
+
+Lemma alpha_rename_params_ctx_alpha_tail :
+  forall used ps psr ρ used' Γ,
+    alpha_rename_params [] used ps = (psr, ρ, used') ->
+    (forall x, In x (ctx_names Γ) -> In x used) ->
+    ctx_alpha ρ (params_ctx ps ++ Γ) (params_ctx psr ++ Γ).
+Proof.
+  intros used ps.
+  revert used.
+  induction ps as [| p ps IH]; intros used psr ρ used' Γ Hrename HΓ_used.
+  - simpl in Hrename. inversion Hrename; subst.
+    constructor.
+  - destruct p as [m xp T].
+    simpl in Hrename.
+    destruct (alpha_rename_params
+      [] (fresh_ident xp used :: used) ps)
+      as [[ps0 ρ0] used0] eqn:Hps.
+    inversion Hrename; subst.
+    simpl.
+    constructor.
+    + eapply IH.
+      * exact Hps.
+      * intros x Hin. right. apply HΓ_used. exact Hin.
+    + rewrite ctx_names_app. intro Hin.
+      apply in_app_or in Hin as [Hin_ps | Hin_Γ].
+      * eapply alpha_rename_params_names_fresh_used.
+        -- exact Hps.
+        -- exact Hin_ps.
+        -- left. reflexivity.
+      * apply (fresh_ident_not_in xp used).
+        apply HΓ_used. exact Hin_Γ.
+    + intro Hin.
+      destruct (alpha_rename_params_range_ctx_or_tail
+        _ _ _ _ _ _ Hps _ Hin) as [Hctx | Htail].
+      * eapply alpha_rename_params_names_fresh_used.
+        -- exact Hps.
+        -- exact Hctx.
+        -- left. reflexivity.
+      * simpl in Htail. contradiction.
+Qed.
+
+Lemma alpha_rename_params_ctx_alpha_stable_tail :
+  forall used ps caps psr ρ used',
+    alpha_rename_params []
+      (param_names ps ++ param_names caps ++ used) ps =
+      (psr, ρ, used') ->
+    ctx_alpha ρ
+      (params_ctx (ps ++ caps)) (params_ctx (psr ++ caps)).
+Proof.
+  intros used ps caps psr ρ used' Hrename.
+  repeat rewrite params_ctx_app.
+  eapply alpha_rename_params_ctx_alpha_tail.
+  - exact Hrename.
+  - intros x Hin.
+    rewrite params_ctx_names_param_names in Hin.
+    apply in_or_app. right. apply in_or_app. left. exact Hin.
+Qed.
+
 Lemma sctx_check_ok_cons_ne : forall env x y T Ty st m Σ,
   x <> y ->
   sctx_check_ok env x T ((y, Ty, st, m) :: Σ) =
@@ -3009,7 +3082,7 @@ Proof.
   destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
   destruct (alpha_rename_params []
-    (param_names ps ++ free_vars_expr body ++ used) ps)
+    (param_names ps ++ param_names captures ++ free_vars_expr body ++ used) ps)
     as [[psr ρ] used1] eqn:Hps.
   destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
   injection Hrename as _ <-.
@@ -3017,7 +3090,9 @@ Proof.
   - exact Hbody.
   - eapply alpha_rename_params_used_extends.
     + exact Hps.
-    + apply in_or_app. right. apply in_or_app. right. exact Hin.
+    + apply in_or_app. right.
+      apply in_or_app. right.
+      apply in_or_app. right. exact Hin.
 Qed.
 
 Lemma alpha_rename_fn_def_params_fresh_used : forall used f fr used',
@@ -3028,14 +3103,16 @@ Proof.
   destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
   destruct (alpha_rename_params []
-    (param_names ps ++ free_vars_expr body ++ used) ps)
+    (param_names ps ++ param_names captures ++ free_vars_expr body ++ used) ps)
     as [[psr ρ] used1] eqn:Hps.
   destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
   inversion Hrename; subst. simpl in Hin.
   eapply alpha_rename_params_names_fresh_used.
   - exact Hps.
   - exact Hin.
-  - apply in_or_app. right. apply in_or_app. right. exact Hused.
+  - apply in_or_app. right.
+    apply in_or_app. right.
+    apply in_or_app. right. exact Hused.
 Qed.
 
 Lemma alpha_rename_fn_def_body_local_store_names_fresh_used :
@@ -3047,7 +3124,7 @@ Proof.
   destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
   destruct (alpha_rename_params []
-    (param_names ps ++ free_vars_expr body ++ used) ps)
+    (param_names ps ++ param_names captures ++ free_vars_expr body ++ used) ps)
     as [[psr ρ] used1] eqn:Hps.
   destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
   inversion Hrename; subst. simpl.
@@ -3055,7 +3132,9 @@ Proof.
   - intros x Hin.
     eapply alpha_rename_params_used_extends.
     + exact Hps.
-    + apply in_or_app. right. apply in_or_app. right. exact Hin.
+    + apply in_or_app. right.
+      apply in_or_app. right.
+      apply in_or_app. right. exact Hin.
   - eapply alpha_rename_expr_local_store_names_fresh_used.
     exact Hbody.
 Qed.
@@ -3071,7 +3150,7 @@ Proof.
   destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
   destruct (alpha_rename_params []
-    (param_names ps ++ free_vars_expr body ++ used) ps)
+    (param_names ps ++ param_names captures ++ free_vars_expr body ++ used) ps)
     as [[psr ρ] used1] eqn:Hps.
   destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
   pose proof (alpha_rename_expr_local_store_names_fresh_used
@@ -3097,7 +3176,7 @@ Proof.
   destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
   destruct (alpha_rename_params []
-    (param_names ps ++ free_vars_expr body ++ used) ps)
+    (param_names ps ++ param_names captures ++ free_vars_expr body ++ used) ps)
     as [[psr ρ] used1] eqn:Hps.
   destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
   inversion Hrename; subst. simpl.
@@ -3113,7 +3192,7 @@ Proof.
   destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
   destruct (alpha_rename_params []
-    (param_names ps ++ free_vars_expr body ++ used) ps)
+    (param_names ps ++ param_names captures ++ free_vars_expr body ++ used) ps)
     as [[psr ρ] used1] eqn:Hps.
   destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
   inversion Hrename; subst. simpl.
@@ -3149,12 +3228,44 @@ Proof.
   destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
   destruct (alpha_rename_params []
-    (param_names ps ++ free_vars_expr body ++ used) ps)
+    (param_names ps ++ param_names captures ++ free_vars_expr body ++ used) ps)
     as [[psr ρ] used1] eqn:Hps.
   destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
   inversion Hrename; subst. simpl.
   exists ρ.
   eapply alpha_rename_params_ctx_alpha_nil. exact Hps.
+Qed.
+
+Lemma alpha_rename_fn_def_captures : forall used f fr used',
+  alpha_rename_fn_def used f = (fr, used') ->
+  fn_captures fr = fn_captures f.
+Proof.
+  intros used f fr used' Hrename.
+  destruct f as [fname lifetimes outs captures ps ret body].
+  unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
+  destruct (alpha_rename_params []
+    (param_names ps ++ param_names captures ++ free_vars_expr body ++ used) ps)
+    as [[psr ρ] used1] eqn:Hps.
+  destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
+  inversion Hrename; subst. reflexivity.
+Qed.
+
+Lemma alpha_rename_fn_def_binding_params_ctx_alpha : forall used f fr used',
+  alpha_rename_fn_def used f = (fr, used') ->
+  exists ρ, ctx_alpha ρ
+    (params_ctx (fn_params f ++ fn_captures f))
+    (params_ctx (fn_params fr ++ fn_captures fr)).
+Proof.
+  intros used f fr used' Hrename.
+  destruct f as [fname lifetimes outs captures ps ret body].
+  unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
+  destruct (alpha_rename_params []
+    (param_names ps ++ param_names captures ++ free_vars_expr body ++ used) ps)
+    as [[psr ρ] used1] eqn:Hps.
+  destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
+  inversion Hrename; subst. simpl.
+  exists ρ.
+  eapply alpha_rename_params_ctx_alpha_stable_tail. exact Hps.
 Qed.
 
 Lemma alpha_rename_syntax_go_used_extends : forall used fenv fenvr used',
@@ -3472,7 +3583,7 @@ Proof.
   unfold alpha_rename_fn_def in H.
   simpl in H.
   destruct (alpha_rename_params []
-    (param_names ps ++ free_vars_expr body ++ used) ps)
+    (param_names ps ++ param_names captures ++ free_vars_expr body ++ used) ps)
     as [[ps' ρ] used1] eqn:Hps.
   destruct (alpha_rename_expr ρ used1 body) as [body' used2] eqn:Hbody.
   inversion H; subst.
@@ -3488,13 +3599,14 @@ Lemma alpha_rename_fn_def_static_fields :
     fn_name fr = fn_name f /\
     fn_lifetimes fr = fn_lifetimes f /\
     fn_outlives fr = fn_outlives f /\
+    fn_captures fr = fn_captures f /\
     fn_ret fr = fn_ret f.
 Proof.
   intros used f fr used' H.
   destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in H. simpl in H.
   destruct (alpha_rename_params []
-    (param_names ps ++ free_vars_expr body ++ used) ps)
+    (param_names ps ++ param_names captures ++ free_vars_expr body ++ used) ps)
     as [[ps' rho] used1] eqn:Hps.
   destruct (alpha_rename_expr rho used1 body) as [body' used2] eqn:Hbody.
   inversion H; subst. simpl.
@@ -3507,7 +3619,8 @@ Lemma alpha_rename_fn_def_initial_root_env_rename :
     NoDup (ctx_names (params_ctx (fn_params f))) ->
     exists rho used_params,
       alpha_rename_params []
-        (param_names (fn_params f) ++ free_vars_expr (fn_body f) ++ used)
+        (param_names (fn_params f) ++
+         param_names (fn_captures f) ++ free_vars_expr (fn_body f) ++ used)
         (fn_params f) = (fn_params fr, rho, used_params) /\
       root_env_rename rho (initial_root_env_for_fn f) =
         initial_root_env_for_params_origin (fn_params f) (fn_params fr).
@@ -3517,7 +3630,7 @@ Proof.
   unfold alpha_rename_fn_def in Hrename.
   simpl in Hrename.
   destruct (alpha_rename_params []
-    (param_names ps ++ free_vars_expr body ++ used) ps)
+    (param_names ps ++ param_names captures ++ free_vars_expr body ++ used) ps)
     as [[ps' rho] used_params] eqn:Hps.
   destruct (alpha_rename_expr rho used_params body)
     as [body' used_body] eqn:Hbody.
@@ -3533,7 +3646,8 @@ Lemma alpha_rename_fn_def_params_body :
     alpha_rename_fn_def used f = (fr, used') ->
     exists rho used_params,
       alpha_rename_params []
-        (param_names (fn_params f) ++ free_vars_expr (fn_body f) ++ used)
+        (param_names (fn_params f) ++
+         param_names (fn_captures f) ++ free_vars_expr (fn_body f) ++ used)
         (fn_params f) = (fn_params fr, rho, used_params) /\
       alpha_rename_expr rho used_params (fn_body f) =
         (fn_body fr, used').
@@ -3543,13 +3657,13 @@ Proof.
   unfold alpha_rename_fn_def in Hrename.
   simpl in Hrename.
   destruct (alpha_rename_params []
-    (param_names ps ++ free_vars_expr body ++ used) ps)
+    (param_names ps ++ param_names captures ++ free_vars_expr body ++ used) ps)
     as [[ps' rho] used_params] eqn:Hps.
   destruct (alpha_rename_expr rho used_params body)
     as [body' used_body] eqn:Hbody.
   inversion Hrename; subst. simpl.
   exists rho, used_params.
-  split; assumption.
+  split; [exact Hps | exact Hbody].
 Qed.
 
 Lemma alpha_rename_fn_def_params_body_facts :
@@ -3557,7 +3671,8 @@ Lemma alpha_rename_fn_def_params_body_facts :
     alpha_rename_fn_def used f = (fr, used') ->
     exists rho used_params,
       alpha_rename_params []
-        (param_names (fn_params f) ++ free_vars_expr (fn_body f) ++ used)
+        (param_names (fn_params f) ++
+         param_names (fn_captures f) ++ free_vars_expr (fn_body f) ++ used)
         (fn_params f) = (fn_params fr, rho, used_params) /\
       alpha_rename_expr rho used_params (fn_body f) =
         (fn_body fr, used') /\
@@ -3576,7 +3691,7 @@ Proof.
   unfold alpha_rename_fn_def in Hrename.
   simpl in Hrename.
   destruct (alpha_rename_params []
-    (param_names ps ++ free_vars_expr body ++ used) ps)
+    (param_names ps ++ param_names captures ++ free_vars_expr body ++ used) ps)
     as [[psr rho] used_params] eqn:Hps.
   destruct (alpha_rename_expr rho used_params body)
     as [bodyr used_body] eqn:Hbody.
@@ -3598,7 +3713,9 @@ Proof.
     eapply alpha_rename_params_range_fresh_used_nil.
     + exact Hps.
     + exact Hrange.
-    + apply in_or_app. right. apply in_or_app. left. exact Hfree.
+    + apply in_or_app. right.
+      apply in_or_app. right.
+      apply in_or_app. left. exact Hfree.
 Qed.
 
 Lemma alpha_rename_syntax_go_shape : forall used fenv fenvr used',
@@ -6389,7 +6506,8 @@ Lemma alpha_rename_fn_def_initial_support_facts :
     NoDup (ctx_names (params_ctx (fn_params f))) ->
     exists rho used_params,
       alpha_rename_params []
-        (param_names (fn_params f) ++ free_vars_expr (fn_body f) ++ used)
+        (param_names (fn_params f) ++
+         param_names (fn_captures f) ++ free_vars_expr (fn_body f) ++ used)
         (fn_params f) = (fn_params fr, rho, used_params) /\
       alpha_rename_expr rho used_params (fn_body f) =
         (fn_body fr, used') /\
@@ -13776,7 +13894,7 @@ Proof.
   destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
   destruct (alpha_rename_params []
-    (param_names ps ++ free_vars_expr body ++ used) ps)
+    (param_names ps ++ param_names captures ++ free_vars_expr body ++ used) ps)
     as [[psr ρ] used1] eqn:Hps.
   destruct (alpha_rename_expr ρ used1 body) as [bodyr used2] eqn:Hbody.
   injection Hrename as <- <-.
@@ -13784,11 +13902,14 @@ Proof.
   destruct Htyped as [T_body [Γ_out [Htyped_body [Hcompat Hparams]]]].
   destruct (alpha_rename_typed_env_structural_forward
     env outs lifetimes ρ
-    (sctx_of_ctx (params_ctx ps)) (sctx_of_ctx (params_ctx psr))
+    (sctx_of_ctx (params_ctx ps))
+    (sctx_of_ctx (params_ctx psr))
     body bodyr used1 used2 T_body (sctx_of_ctx Γ_out))
     as [Σr_out [Htyped_body_r Hctx_out_r]].
   - eapply alpha_rename_params_ctx_alpha_nil. exact Hps.
   - intros x Hin.
+    change (ctx_names (sctx_of_ctx (params_ctx psr)))
+      with (ctx_names (params_ctx psr)) in Hin.
     eapply alpha_rename_params_names_in_used.
     + exact Hps.
     + exact Hin.
@@ -13800,7 +13921,9 @@ Proof.
     eapply alpha_rename_params_range_fresh_used_nil.
     + exact Hps.
     + exact Hrange.
-    + apply in_or_app. right. apply in_or_app. left. exact Hfree.
+    + apply in_or_app. right.
+      apply in_or_app. right.
+      apply in_or_app. left. exact Hfree.
   - exact Hbody.
   - exact Htyped_body.
   - exists T_body, Σr_out. repeat split.

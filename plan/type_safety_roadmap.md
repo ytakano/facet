@@ -537,17 +537,23 @@ Follow this order before inventing new theorem shapes:
    - Current `fn_body_ctx := fn_params ++ fn_captures` blocker: after the
      alpha-renaming contract was fixed, the direct-call route was isolated as
      captureless evidence: direct-call root summary/evidence bridges now carry
-     `fn_captures fdef = []`. The next migration attempt got through
-     `AlphaRenaming.v` and the simple body-safety lemmas, but then hit brittle
-     direct-call preservation proof scripts in `TypeSafety.v` after changing
-     `callee_body_root_*_ready_at` to use `fn_body_ctx`. Before retrying the
-     global body-context migration, factor the direct-call bridge proofs into
-     explicit helper lemmas that take a captureless callee summary over
-     `fn_body_ctx fdef`, rewrite it to the params-only context, and return the
-     existing instantiated params-only body evidence. After that helper exists,
-     retry the global migration and only then add the separate captured-call
-     route that threads `captured_call_frame_params_ready` or equivalent
-     captured-root evidence into captured callee-body readiness predicates.
+     `fn_captures fdef = []`. Captureless body-context conversion helpers now
+     exist:
+     `fn_body_ctx_eq_params_ctx_when_no_captures`,
+     `typed_env_roots_fn_body_ctx_to_params_ctx_when_no_captures`, and
+     `typed_env_roots_shadow_safe_fn_body_ctx_to_params_ctx_when_no_captures`.
+     The next migration attempt still hit brittle direct-call preservation
+     proof scripts in `TypeSafety.v` after changing
+     `callee_body_root_*_ready_at` to use `fn_body_ctx`: the large
+     `dependent destruction` / `match goal` blocks do not expose uniform
+     `eval_args` hypotheses across all generated subgoals. Before retrying the
+     global body-context migration, factor those direct-call preservation
+     theorem branches into explicit helper lemmas that take the already
+     destructed runtime/typing call facts as ordinary named premises. After
+     that refactor, retry the global migration and only then add the separate
+     captured-call route that threads `captured_call_frame_params_ready` or
+     equivalent captured-root evidence into captured callee-body readiness
+     predicates.
    - Preservation/provenance readiness validators still reject
      `EMakeClosure`. Do not flip those booleans until captured `ECallExpr`
      preservation is proved. The next closure task is either parser/lambda

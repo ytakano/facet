@@ -2489,6 +2489,174 @@ Definition captured_call_frame_ready
   root_env_store_roots_named (Rcap ++ R_args) (captured ++ s_args) /\
   root_env_store_keys_named (Rcap ++ R_args) (captured ++ s_args).
 
+Definition captured_params_store_typed
+    (env : global_env) (captured : store) (caps : list param) : Prop :=
+  store_typed env captured (sctx_of_ctx (params_ctx caps)).
+
+Definition captured_call_frame_params_ready
+    (env : global_env) (captured : store) (Rcap : root_env)
+    (s_args : store) (R_args : root_env) (caps : list param) : Prop :=
+  captured_call_frame_ready env captured Rcap s_args R_args /\
+  captured_params_store_typed env captured caps.
+
+Lemma check_make_closure_captures_exact_sctx_sound :
+  forall Ω Σ captures caps captured_tys,
+    check_make_closure_captures_exact_sctx Ω Σ captures caps =
+      infer_ok captured_tys ->
+    typed_captures Ω Σ captures caps captured_tys /\
+    captured_tys = map param_ty caps /\
+    captures = map param_name caps.
+Proof.
+  intros Ω Σ captures.
+  induction captures as [| x captures IH]; intros caps captured_tys Hcheck;
+    destruct caps as [| cap caps]; simpl in Hcheck; try discriminate.
+  - injection Hcheck as <-.
+    repeat split; constructor.
+  - destruct (ident_eqb x (param_name cap)) eqn:Hname; simpl in Hcheck;
+      try discriminate.
+    destruct (param_mutability cap) eqn:Hcap_mut; simpl in Hcheck;
+      try discriminate.
+    destruct (sctx_lookup x Σ) as [[T st] |] eqn:Hlookup; try discriminate.
+    destruct (st_consumed st) eqn:Hconsumed; try discriminate.
+    destruct (st_moved_paths st) as [| moved moved_rest] eqn:Hmoved;
+      try discriminate.
+    destruct (sctx_lookup_mut x Σ) as [m |] eqn:Hmut; try discriminate.
+    destruct m; try discriminate.
+    destruct (usage_eqb (ty_usage T) UUnrestricted) eqn:Husage;
+      try discriminate.
+    destruct (ty_ref_free_b T) eqn:Href_free; try discriminate.
+    destruct (ty_eqb T (param_ty cap)) eqn:Hty; try discriminate.
+    destruct (check_make_closure_captures_exact_sctx Ω Σ captures caps)
+      as [captured_rest | err] eqn:Hrest; try discriminate.
+    injection Hcheck as <-.
+    destruct (IH caps captured_rest Hrest)
+      as [Htyped_tail [Htys_tail Hnames_tail]].
+    apply ident_eqb_eq in Hname.
+    assert (Havailable : binding_available_b st [] = true).
+    { unfold binding_available_b.
+      rewrite Hconsumed, Hmoved. reflexivity. }
+    assert (HTeq : T = param_ty cap).
+    { apply ty_eqb_true. exact Hty. }
+    subst T x.
+    repeat split.
+    + eapply TCap_Cons.
+      * unfold sctx_lookup in Hlookup.
+        eapply ctx_lookup_state_available_nil_lookup; eassumption.
+      * exact Hmut.
+      * apply usage_eqb_true. exact Husage.
+      * exact Href_free.
+      * apply ty_compatible_refl.
+      * exact Htyped_tail.
+    + simpl. rewrite Htys_tail. reflexivity.
+    + simpl. rewrite Hnames_tail. reflexivity.
+Qed.
+
+Lemma binding_available_nil_fresh :
+  forall st,
+    binding_available_b st [] = true ->
+    st = binding_state_of_bool false.
+Proof.
+  intros [consumed moved] Havailable.
+  unfold binding_available_b in Havailable.
+  destruct consumed; simpl in Havailable; try discriminate.
+  destruct moved as [| p moved']; simpl in Havailable; try discriminate.
+  reflexivity.
+Qed.
+
+Lemma copy_capture_store_exact_sctx_of_store :
+  forall Ω env s Σ captures caps captured captured_tys,
+    store_typed env s Σ ->
+    copy_capture_store captures s = Some captured ->
+    check_make_closure_captures_exact_sctx Ω Σ captures caps =
+      infer_ok captured_tys ->
+    sctx_of_store captured = sctx_of_ctx (params_ctx caps).
+Proof.
+  intros Ω env s Σ captures.
+  induction captures as [| x captures IH]; intros caps captured captured_tys
+    Hstore Hcopy Hcheck;
+    destruct caps as [| cap caps]; simpl in Hcopy, Hcheck; try discriminate.
+  - injection Hcopy as <-. reflexivity.
+  - destruct (ident_eqb x (param_name cap)) eqn:Hname; simpl in Hcheck;
+      try discriminate.
+    destruct (param_mutability cap) eqn:Hcap_mut; simpl in Hcheck;
+      try discriminate.
+    destruct (sctx_lookup x Σ) as [[T st] |] eqn:Hlookup; try discriminate.
+    destruct (st_consumed st) eqn:Hconsumed; try discriminate.
+    destruct (st_moved_paths st) as [| moved moved_rest] eqn:Hmoved;
+      try discriminate.
+    destruct (sctx_lookup_mut x Σ) as [m |] eqn:Hmut; try discriminate.
+    destruct m; try discriminate.
+    destruct (usage_eqb (ty_usage T) UUnrestricted) eqn:Husage;
+      try discriminate.
+    destruct (ty_ref_free_b T) eqn:Href_free; try discriminate.
+    destruct (ty_eqb T (param_ty cap)) eqn:Hty; try discriminate.
+    destruct (check_make_closure_captures_exact_sctx Ω Σ captures caps)
+      as [captured_rest_tys | err] eqn:Hrest_check; try discriminate.
+    destruct (store_lookup x s) as [se |] eqn:Hlookup_store; try discriminate.
+    destruct (binding_available_b (se_state se) [] &&
+      match ty_usage (se_ty se) with
+      | UUnrestricted => true
+      | _ => false
+      end) eqn:Hcopy_ok; try discriminate.
+    destruct (copy_capture_store captures s) as [captured_rest |] eqn:Hcopy_rest;
+      try discriminate.
+    injection Hcopy as <-.
+    apply andb_true_iff in Hcopy_ok.
+    destruct Hcopy_ok as [Hruntime_available _].
+    destruct (store_typed_lookup env s Σ x se Hstore Hlookup_store)
+      as [T_lookup [st_lookup [m_lookup
+        [Hlookup_static [Hse_name [Hse_ty [_ _]]]]]]].
+    rewrite Hlookup in Hlookup_static.
+    inversion Hlookup_static; subst T_lookup st_lookup.
+    apply ident_eqb_eq in Hname.
+    apply ty_eqb_true in Hty.
+    subst x.
+    apply binding_available_nil_fresh in Hruntime_available.
+    destruct se as [se_x se_T se_v se_st].
+    simpl in Hse_name, Hruntime_available |- *.
+    subst se_x se_st.
+    simpl in H0.
+    change (sctx_of_ctx (param_ctx_entry cap :: params_ctx caps)) with
+      ((param_name cap, param_ty cap, binding_state_of_bool false,
+        param_mutability cap) :: sctx_of_ctx (params_ctx caps)).
+    rewrite Hcap_mut.
+    f_equal.
+    + rewrite <- H0, Hty. reflexivity.
+    + eapply IH.
+      * exact Hstore.
+      * reflexivity.
+      * exact Hrest_check.
+Qed.
+
+Lemma captured_store_typed_as_params :
+  forall env captured caps,
+    captured_store_typed env captured ->
+    sctx_of_store captured = sctx_of_ctx (params_ctx caps) ->
+    captured_params_store_typed env captured caps.
+Proof.
+  intros env captured caps Htyped Heq.
+  unfold captured_store_typed, captured_params_store_typed in *.
+  rewrite <- Heq.
+  exact Htyped.
+Qed.
+
+Lemma copy_capture_store_exact_params_store_typed :
+  forall Ω env s Σ captures caps captured captured_tys,
+    store_typed env s Σ ->
+    captured_store_typed env captured ->
+    copy_capture_store captures s = Some captured ->
+    check_make_closure_captures_exact_sctx Ω Σ captures caps =
+      infer_ok captured_tys ->
+    captured_params_store_typed env captured caps.
+Proof.
+  intros Ω env s Σ captures caps captured captured_tys
+    Hstore Hcaptured Hcopy Hcheck.
+  eapply captured_store_typed_as_params.
+  - exact Hcaptured.
+  - eapply (copy_capture_store_exact_sctx_of_store
+      Ω env s Σ captures caps captured captured_tys); eassumption.
+Qed.
+
 Lemma captured_store_runtime_ready_empty :
   forall env,
     captured_store_runtime_ready env [] [].
@@ -2828,6 +2996,26 @@ Proof.
   unfold captured_call_frame_ready, captured_store_runtime_ready in Hready.
   destruct Hready as
     [[Htyped_cap _] [_ [Hshadow_frame _]]].
+  eapply store_typed_app.
+  - exact Htyped_cap.
+  - exact Htyped_args.
+  - apply store_ref_targets_preserved_app_left.
+  - apply store_ref_targets_preserved_app_right.
+    intros x Hin.
+    eapply store_no_shadow_app_lookup_right_none; eassumption.
+Qed.
+
+Lemma captured_call_frame_params_store_typed :
+  forall env captured Rcap s_args R_args caps Σ_args,
+    captured_call_frame_params_ready env captured Rcap s_args R_args caps ->
+    store_typed env s_args Σ_args ->
+    store_typed env (captured ++ s_args)
+      (sctx_of_ctx (params_ctx caps) ++ Σ_args).
+Proof.
+  intros env captured Rcap s_args R_args caps Σ_args Hready Htyped_args.
+  destruct Hready as [Hframe_ready Htyped_cap].
+  unfold captured_call_frame_ready in Hframe_ready.
+  destruct Hframe_ready as [_ [_ [Hshadow_frame _]]].
   eapply store_typed_app.
   - exact Htyped_cap.
   - exact Htyped_args.

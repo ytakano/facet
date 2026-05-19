@@ -500,6 +500,26 @@ Follow this order before inventing new theorem shapes:
      `EMakeClosure` capture checks to `fn_captures`-shaped captured-frame
      typing. Do not retry the global `fn_body_ctx := params ++ captures`
      migration before this bridge exists.
+   - Current bridge progress: `check_make_closure_captures_exact_ctx` and
+     `check_make_closure_captures_exact_sctx` now exist as sidecar validators.
+     They require each capture name to equal the corresponding hidden capture
+     parameter name, each hidden capture parameter to be immutable, the captured
+     binding state to be fresh, the binding to be
+     immutable/unrestricted/reference-free, and the captured type to equal the
+     hidden parameter type. Prop-level
+     `captured_params_store_typed` and
+     `captured_call_frame_params_ready` also exist, together with the basic
+     lemma that types `captured ++ s_args` against
+     `params_ctx fn_captures ++ Σ_args`.
+   - The executable exact checker/copy-store bridge now exists at the sctx
+     shape level: `check_make_closure_captures_exact_sctx_sound`,
+     `copy_capture_store_exact_sctx_of_store`, and
+     `copy_capture_store_exact_params_store_typed` prove that a successful exact
+     sidecar check plus `copy_capture_store` turns the copied captured store
+     into `captured_params_store_typed` for the hidden capture params. The next
+     task is to thread this evidence into the captured-call cleanup theorem and
+     only then retry the local captured-call theorem against
+     `params_ctx (fn_captures fcall) ++ Σ_args`.
    - Preservation/provenance readiness validators still reject
      `EMakeClosure`. Do not flip those booleans until captured `ECallExpr`
      preservation is proved. The next closure task is either parser/lambda

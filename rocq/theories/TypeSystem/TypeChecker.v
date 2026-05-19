@@ -634,6 +634,50 @@ Fixpoint check_make_closure_captures_ctx
   | _, _ => infer_err ErrArityMismatch
   end.
 
+Fixpoint check_make_closure_captures_exact_ctx
+    (Ω : outlives_ctx) (Γ : ctx) (captures : list ident) (params : list param)
+    : infer_result (list Ty) :=
+  match captures, params with
+  | [], [] => infer_ok []
+  | x :: captures', cap :: params' =>
+      if negb (ident_eqb x (param_name cap))
+      then infer_err ErrContextCheckFailed
+      else
+      if match param_mutability cap with MImmutable => false | MMutable => true end
+      then infer_err ErrContextCheckFailed
+      else
+      match ctx_lookup_state x Γ with
+      | None => infer_err (ErrUnknownVar x)
+      | Some (T, st) =>
+          if st_consumed st
+          then infer_err ErrContextCheckFailed
+          else
+          match st_moved_paths st with
+          | _ :: _ => infer_err ErrContextCheckFailed
+          | [] =>
+          match ctx_lookup_mut_b x Γ with
+          | Some MImmutable =>
+              if usage_eqb (ty_usage T) UUnrestricted
+              then
+                if ty_ref_free_b T
+                then
+                  if ty_eqb T (param_ty cap)
+                  then
+                    match check_make_closure_captures_exact_ctx Ω Γ captures' params' with
+                    | infer_ok rest_tys => infer_ok (T :: rest_tys)
+                    | infer_err err => infer_err err
+                    end
+                  else infer_err (compatible_error T (param_ty cap))
+                else infer_err (ErrNotAReference (ty_core T))
+              else infer_err (ErrUsageMismatch (ty_usage T) UUnrestricted)
+          | Some MMutable => infer_err (ErrNotMutable x)
+          | None => infer_err (ErrUnknownVar x)
+          end
+          end
+        end
+  | _, _ => infer_err ErrArityMismatch
+  end.
+
 Fixpoint infer_place (Γ : ctx) (p : place) : infer_result Ty :=
   match p with
   | PVar x =>
@@ -1581,6 +1625,50 @@ Fixpoint check_make_closure_captures_sctx
           | None => infer_err (ErrUnknownVar x)
           end
       end
+  | _, _ => infer_err ErrArityMismatch
+  end.
+
+Fixpoint check_make_closure_captures_exact_sctx
+    (Ω : outlives_ctx) (Σ : sctx) (captures : list ident) (params : list param)
+    : infer_result (list Ty) :=
+  match captures, params with
+  | [], [] => infer_ok []
+  | x :: captures', cap :: params' =>
+      if negb (ident_eqb x (param_name cap))
+      then infer_err ErrContextCheckFailed
+      else
+      if match param_mutability cap with MImmutable => false | MMutable => true end
+      then infer_err ErrContextCheckFailed
+      else
+      match sctx_lookup x Σ with
+      | None => infer_err (ErrUnknownVar x)
+      | Some (T, st) =>
+          if st_consumed st
+          then infer_err ErrContextCheckFailed
+          else
+          match st_moved_paths st with
+          | _ :: _ => infer_err ErrContextCheckFailed
+          | [] =>
+          match sctx_lookup_mut x Σ with
+          | Some MImmutable =>
+              if usage_eqb (ty_usage T) UUnrestricted
+              then
+                if ty_ref_free_b T
+                then
+                  if ty_eqb T (param_ty cap)
+                  then
+                    match check_make_closure_captures_exact_sctx Ω Σ captures' params' with
+                    | infer_ok rest_tys => infer_ok (T :: rest_tys)
+                    | infer_err err => infer_err err
+                    end
+                  else infer_err (compatible_error T (param_ty cap))
+                else infer_err (ErrNotAReference (ty_core T))
+              else infer_err (ErrUsageMismatch (ty_usage T) UUnrestricted)
+          | Some MMutable => infer_err (ErrNotMutable x)
+          | None => infer_err (ErrUnknownVar x)
+          end
+          end
+        end
   | _, _ => infer_err ErrArityMismatch
   end.
 

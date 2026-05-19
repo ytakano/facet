@@ -2542,18 +2542,17 @@ Lemma check_make_closure_captures_exact_sctx_sound :
     check_make_closure_captures_exact_sctx Ω Σ captures caps =
       infer_ok captured_tys ->
     typed_captures Ω Σ captures caps captured_tys /\
-    captured_tys = map param_ty caps /\
-    captures = map param_name caps.
+    captured_tys = map param_ty caps.
 Proof.
   intros Ω Σ captures.
   induction captures as [| x captures IH]; intros caps captured_tys Hcheck;
     destruct caps as [| cap caps]; simpl in Hcheck; try discriminate.
   - injection Hcheck as <-.
-    repeat split; constructor.
-  - destruct (ident_eqb x (param_name cap)) eqn:Hname; simpl in Hcheck;
+    split; constructor.
+  - destruct (param_mutability cap) eqn:Hcap_mut; simpl in Hcheck;
       try discriminate.
-    destruct (param_mutability cap) eqn:Hcap_mut; simpl in Hcheck;
-      try discriminate.
+    destruct (sctx_lookup (param_name cap) Σ) as [[Tcap stcap] |]
+      eqn:Hcap_lookup; try discriminate.
     destruct (sctx_lookup x Σ) as [[T st] |] eqn:Hlookup; try discriminate.
     destruct (st_consumed st) eqn:Hconsumed; try discriminate.
     destruct (st_moved_paths st) as [| moved moved_rest] eqn:Hmoved;
@@ -2567,16 +2566,14 @@ Proof.
     destruct (check_make_closure_captures_exact_sctx Ω Σ captures caps)
       as [captured_rest | err] eqn:Hrest; try discriminate.
     injection Hcheck as <-.
-    destruct (IH caps captured_rest Hrest)
-      as [Htyped_tail [Htys_tail Hnames_tail]].
-    apply ident_eqb_eq in Hname.
+    destruct (IH caps captured_rest Hrest) as [Htyped_tail Htys_tail].
     assert (Havailable : binding_available_b st [] = true).
     { unfold binding_available_b.
       rewrite Hconsumed, Hmoved. reflexivity. }
     assert (HTeq : T = param_ty cap).
     { apply ty_eqb_true. exact Hty. }
-    subst T x.
-    repeat split.
+    subst T.
+    split.
     + eapply TCap_Cons.
       * unfold sctx_lookup in Hlookup.
         eapply ctx_lookup_state_available_nil_lookup; eassumption.
@@ -2586,7 +2583,6 @@ Proof.
       * apply ty_compatible_refl.
       * exact Htyped_tail.
     + simpl. rewrite Htys_tail. reflexivity.
-    + simpl. rewrite Hnames_tail. reflexivity.
 Qed.
 
 Lemma binding_available_nil_fresh :
@@ -2604,7 +2600,7 @@ Qed.
 Lemma copy_capture_store_exact_sctx_of_store :
   forall Ω env s Σ captures caps captured captured_tys,
     store_typed env s Σ ->
-    copy_capture_store captures s = Some captured ->
+    copy_capture_store_as captures caps s = Some captured ->
     check_make_closure_captures_exact_sctx Ω Σ captures caps =
       infer_ok captured_tys ->
     sctx_of_store captured = sctx_of_ctx (params_ctx caps).
@@ -2614,10 +2610,10 @@ Proof.
     Hstore Hcopy Hcheck;
     destruct caps as [| cap caps]; simpl in Hcopy, Hcheck; try discriminate.
   - injection Hcopy as <-. reflexivity.
-  - destruct (ident_eqb x (param_name cap)) eqn:Hname; simpl in Hcheck;
+  - destruct (param_mutability cap) eqn:Hcap_mut; simpl in Hcheck;
       try discriminate.
-    destruct (param_mutability cap) eqn:Hcap_mut; simpl in Hcheck;
-      try discriminate.
+    destruct (sctx_lookup (param_name cap) Σ) as [[Tcap stcap] |]
+      eqn:Hcap_lookup; try discriminate.
     destruct (sctx_lookup x Σ) as [[T st] |] eqn:Hlookup; try discriminate.
     destruct (st_consumed st) eqn:Hconsumed; try discriminate.
     destruct (st_moved_paths st) as [| moved moved_rest] eqn:Hmoved;
@@ -2636,8 +2632,8 @@ Proof.
       | UUnrestricted => true
       | _ => false
       end) eqn:Hcopy_ok; try discriminate.
-    destruct (copy_capture_store captures s) as [captured_rest |] eqn:Hcopy_rest;
-      try discriminate.
+    destruct (copy_capture_store_as captures caps s) as [captured_rest |]
+      eqn:Hcopy_rest; try discriminate.
     injection Hcopy as <-.
     apply andb_true_iff in Hcopy_ok.
     destruct Hcopy_ok as [Hruntime_available _].
@@ -2646,14 +2642,10 @@ Proof.
         [Hlookup_static [Hse_name [Hse_ty [_ _]]]]]]].
     rewrite Hlookup in Hlookup_static.
     inversion Hlookup_static; subst T_lookup st_lookup.
-    apply ident_eqb_eq in Hname.
     apply ty_eqb_true in Hty.
-    subst x.
     apply binding_available_nil_fresh in Hruntime_available.
-    destruct se as [se_x se_T se_v se_st].
-    simpl in Hse_name, Hruntime_available |- *.
-    subst se_x se_st.
-    simpl in H0.
+    simpl.
+    rewrite Hruntime_available.
     change (sctx_of_ctx (param_ctx_entry cap :: params_ctx caps)) with
       ((param_name cap, param_ty cap, binding_state_of_bool false,
         param_mutability cap) :: sctx_of_ctx (params_ctx caps)).
@@ -2662,7 +2654,7 @@ Proof.
     + rewrite <- H0, Hty. reflexivity.
     + eapply IH.
       * exact Hstore.
-      * reflexivity.
+      * exact Hcopy_rest.
       * exact Hrest_check.
 Qed.
 
@@ -2682,7 +2674,7 @@ Lemma copy_capture_store_exact_params_store_typed :
   forall Ω env s Σ captures caps captured captured_tys,
     store_typed env s Σ ->
     captured_store_typed env captured ->
-    copy_capture_store captures s = Some captured ->
+    copy_capture_store_as captures caps s = Some captured ->
     check_make_closure_captures_exact_sctx Ω Σ captures caps =
       infer_ok captured_tys ->
     captured_params_store_typed env captured caps.

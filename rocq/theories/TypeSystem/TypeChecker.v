@@ -640,12 +640,12 @@ Fixpoint check_make_closure_captures_exact_ctx
   match captures, params with
   | [], [] => infer_ok []
   | x :: captures', cap :: params' =>
-      if negb (ident_eqb x (param_name cap))
-      then infer_err ErrContextCheckFailed
-      else
       if match param_mutability cap with MImmutable => false | MMutable => true end
       then infer_err ErrContextCheckFailed
       else
+      match ctx_lookup_state (param_name cap) Γ with
+      | Some _ => infer_err ErrContextCheckFailed
+      | None =>
       match ctx_lookup_state x Γ with
       | None => infer_err (ErrUnknownVar x)
       | Some (T, st) =>
@@ -674,7 +674,8 @@ Fixpoint check_make_closure_captures_exact_ctx
           | None => infer_err (ErrUnknownVar x)
           end
           end
-        end
+      end
+      end
   | _, _ => infer_err ErrArityMismatch
   end.
 
@@ -1634,12 +1635,12 @@ Fixpoint check_make_closure_captures_exact_sctx
   match captures, params with
   | [], [] => infer_ok []
   | x :: captures', cap :: params' =>
-      if negb (ident_eqb x (param_name cap))
-      then infer_err ErrContextCheckFailed
-      else
       if match param_mutability cap with MImmutable => false | MMutable => true end
       then infer_err ErrContextCheckFailed
       else
+      match sctx_lookup (param_name cap) Σ with
+      | Some _ => infer_err ErrContextCheckFailed
+      | None =>
       match sctx_lookup x Σ with
       | None => infer_err (ErrUnknownVar x)
       | Some (T, st) =>
@@ -1668,7 +1669,8 @@ Fixpoint check_make_closure_captures_exact_sctx
           | None => infer_err (ErrUnknownVar x)
           end
           end
-        end
+      end
+      end
   | _, _ => infer_err ErrArityMismatch
   end.
 

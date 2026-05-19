@@ -708,18 +708,17 @@ Lemma check_make_closure_captures_exact_ctx_sound :
     check_make_closure_captures_exact_ctx Ω Γ captures caps =
       infer_ok captured_tys ->
     typed_captures Ω Γ captures caps captured_tys /\
-    captured_tys = map param_ty caps /\
-    captures = map param_name caps.
+    captured_tys = map param_ty caps.
 Proof.
   intros Ω Γ captures.
   induction captures as [| x captures IH]; intros caps captured_tys Hcheck;
     destruct caps as [| cap caps]; simpl in Hcheck; try discriminate.
   - injection Hcheck as <-.
-    repeat split; constructor.
-  - destruct (ident_eqb x (param_name cap)) eqn:Hname; simpl in Hcheck;
+    split; constructor.
+  - destruct (param_mutability cap) eqn:Hcap_mut; simpl in Hcheck;
       try discriminate.
-    destruct (param_mutability cap) eqn:Hcap_mut; simpl in Hcheck;
-      try discriminate.
+    destruct (ctx_lookup_state (param_name cap) Γ) as [[Tcap stcap] |]
+      eqn:Hcap_lookup; try discriminate.
     destruct (ctx_lookup_state x Γ) as [[T st] |] eqn:Hlookup; try discriminate.
     destruct (st_consumed st) eqn:Hconsumed; try discriminate.
     destruct (st_moved_paths st) as [| moved moved_rest] eqn:Hmoved;
@@ -733,16 +732,14 @@ Proof.
     destruct (check_make_closure_captures_exact_ctx Ω Γ captures caps)
       as [captured_rest | err] eqn:Hrest; try discriminate.
     injection Hcheck as <-.
-    destruct (IH caps captured_rest Hrest)
-      as [Htyped_tail [Htys_tail Hnames_tail]].
-    apply ident_eqb_eq in Hname.
+    destruct (IH caps captured_rest Hrest) as [Htyped_tail Htys_tail].
     assert (Havailable : binding_available_b st [] = true).
     { unfold binding_available_b.
       rewrite Hconsumed, Hmoved. reflexivity. }
     assert (HTeq : T = param_ty cap).
     { apply ty_eqb_true. exact Hty. }
-    subst T x.
-    repeat split.
+    subst T.
+    split.
     + eapply TCap_Cons.
       * eapply ctx_lookup_state_available_nil_lookup; eassumption.
       * exact Hmut.
@@ -751,7 +748,6 @@ Proof.
       * apply ty_compatible_refl.
       * exact Htyped_tail.
     + simpl. rewrite Htys_tail. reflexivity.
-    + simpl. rewrite Hnames_tail. reflexivity.
 Qed.
 
 Lemma check_arg_tys_params_of_tys : forall Ω arg_tys param_tys,

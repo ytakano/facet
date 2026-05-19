@@ -476,10 +476,16 @@ Follow this order before inventing new theorem shapes:
      root/shadow typing, ordinary checker soundness, env checker soundness,
      borrow checker soundness, alpha-renaming, runtime evaluation, extraction,
      and FIR lowering all have coverage for this constructor.
-   - `EMakeClosure` currently constructs `VClosure fname captured` by copying
-     the listed captures. The executable capture checks require matching
-     `fn_captures`, immutable bindings, unrestricted usage, no active mutable
-     borrow of the captured root, and `ty_ref_free_b = true`.
+   - `EMakeClosure` constructs `VClosure fname captured` by copying source
+     capture variables into the hidden capture parameter names from
+     `fn_captures fdef` using `copy_capture_store_as`. This is the implemented
+     Rename Slots shape: source capture names and hidden capture parameter names
+     may differ, and the closure store uses the hidden names.
+   - The executable exact capture sidecars no longer require source name =
+     hidden capture name. They require matching `fn_captures`, immutable
+     bindings, unrestricted usage, no active mutable borrow of the captured
+     root, `ty_ref_free_b = true`, and absence of each hidden capture name from
+     the current `ctx`/`sctx`.
    - Function-level validation now checks `fn_params ++ fn_captures` as one
      binding namespace: capture names and ordinary parameter names must be
      well-formed and duplicate-free. This prevents hidden captured frames from
@@ -498,11 +504,8 @@ Follow this order before inventing new theorem shapes:
      with the existing no-captures context conversion helpers.
    - Current bridge progress: `check_make_closure_captures_exact_ctx` and
      `check_make_closure_captures_exact_sctx` now exist as sidecar validators.
-     They require each capture name to equal the corresponding hidden capture
-     parameter name, each hidden capture parameter to be immutable, the captured
-     binding state to be fresh, the binding to be
-     immutable/unrestricted/reference-free, and the captured type to equal the
-     hidden parameter type. Prop-level
+     They implement the Rename Slots policy above and check that copied source
+     values match the hidden capture parameter types. Prop-level
      `captured_params_store_typed` and
      `captured_call_frame_params_ready` also exist, together with the basic
      lemma that types `captured ++ s_args` against
@@ -511,7 +514,7 @@ Follow this order before inventing new theorem shapes:
      shape level: `check_make_closure_captures_exact_sctx_sound`,
      `copy_capture_store_exact_sctx_of_store`, and
      `copy_capture_store_exact_params_store_typed` prove that a successful exact
-     sidecar check plus `copy_capture_store` turns the copied captured store
+     sidecar check plus `copy_capture_store_as` turns the copied captured store
      into `captured_params_store_typed` for the hidden capture params.
    - Current cleanup progress: `eval_captured_call_body_cleanup_preserves_value_and_refs_params`
      and `eval_captured_call_expr_cleanup_preserves_value_and_refs_params`

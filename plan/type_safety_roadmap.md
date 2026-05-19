@@ -367,8 +367,9 @@ Follow this order before inventing new theorem shapes:
      Captures are not stored in ordinary `fn_params`. Synthetic functions use
      a separate `fn_captures : list param`; ordinary `fn_params` remains the
      public call-argument list. `Eval_CallExpr` composes captured slots with
-     ordinary arguments internally and removes both internal frames before
-     exposing the caller result store.
+     ordinary arguments internally and now removes both internal frames before
+     exposing the caller result store:
+     first ordinary parameters, then hidden captures.
    - Direct `ECall` and `EFn` remain empty-capture only. Captured synthetic
      functions are constructed by `EMakeClosure` and called through
      `ECallExpr`.
@@ -511,15 +512,20 @@ Follow this order before inventing new theorem shapes:
      `copy_capture_store_exact_sctx_of_store`, and
      `copy_capture_store_exact_params_store_typed` prove that a successful exact
      sidecar check plus `copy_capture_store` turns the copied captured store
-     into `captured_params_store_typed` for the hidden capture params. The next
-     task is to thread this evidence into the captured-call cleanup theorem and
-     only then retry the local captured-call theorem against
-     `params_ctx (fn_captures fcall) ++ Σ_args`.
+     into `captured_params_store_typed` for the hidden capture params.
    - Current cleanup progress: `eval_captured_call_body_cleanup_preserves_value_and_refs_params`
      and `eval_captured_call_expr_cleanup_preserves_value_and_refs_params`
      now expose the captured-call cleanup result against
      `sctx_of_ctx (params_ctx caps) ++ Σ_args` whenever
      `captured_call_frame_params_ready` is available.
+   - Hidden-capture erasure is now reflected in both semantics and proof
+     helpers. `Eval_CallExpr` returns
+     `store_remove_params fn_captures (store_remove_params fn_params s_body)`,
+     and `eval_captured_call_body_cleanup_preserves_value_and_refs_params_erased`
+     shows that, for the exact immutable-copy capture frame, erasing hidden
+     captures exposes the original caller argument store `Σ_args`. Direct
+     `ECall` and syntactic `ECallExpr (EFn fname) args` proofs use the
+     captureless alpha-renaming fact to simplify this new capture-removal step.
    - Function alpha-renaming now uses the stable-hidden-capture contract:
      `alpha_rename_fn_def` freshens only ordinary `fn_params`, keeps
      `fn_captures` unchanged, and includes capture names in the initial used set
@@ -532,8 +538,11 @@ Follow this order before inventing new theorem shapes:
      `typed_env_roots_fn_body_ctx_to_params_ctx_when_no_captures`, and
      `typed_env_roots_shadow_safe_fn_body_ctx_to_params_ctx_when_no_captures`.
    - Next closure proof task: add the separate captured-call preservation route
-     that threads `captured_call_frame_params_ready` or equivalent captured-root
-     evidence into captured callee-body readiness predicates.
+     over `fn_body_ctx fcall`, not the older params-only body context. This route
+     should thread exact-capture evidence into captured callee-body readiness,
+     prove the body under `params_ctx (fn_params fcall ++ fn_captures fcall)`,
+     and then use the hidden-capture erasure helper to expose only the caller
+     store/result promised by the ordinary `ECallExpr` typing rule.
    - Preservation/provenance readiness validators still reject
      `EMakeClosure`. Do not flip those booleans until captured `ECallExpr`
      preservation is proved. The next closure task is either parser/lambda

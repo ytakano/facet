@@ -6794,6 +6794,46 @@ Proof.
   - simpl. constructor. exact IH.
 Qed.
 
+Lemma store_param_prefix_append_frame :
+  forall ps s_param frame frame_tail,
+    store_param_prefix ps s_param frame_tail ->
+    store_param_prefix ps (s_param ++ frame) (frame_tail ++ frame).
+Proof.
+  intros ps s_param frame frame_tail Hprefix.
+  induction Hprefix as [s | p ps v st s_param s _ IH].
+  - constructor.
+  - simpl. constructor. exact IH.
+Qed.
+
+Lemma store_typed_entries_params_store_param_prefix :
+  forall env full captured caps,
+    Forall2 (store_entry_typed env full) captured (params_ctx caps) ->
+    store_param_prefix caps captured [].
+Proof.
+  intros env full captured.
+  induction captured as [| se captured IH]; intros caps Htyped;
+    destruct caps as [| cap caps]; simpl in Htyped; inversion Htyped; subst.
+  - constructor.
+  - destruct se as [sx sT sv sst].
+    destruct cap as [pname pty pmut].
+    simpl in H2.
+    destruct H2 as [Hname [Hty [_ _]]].
+    simpl in *. subst sx sT.
+    constructor.
+    eapply IH. exact H4.
+Qed.
+
+Lemma captured_params_store_typed_store_param_prefix :
+  forall env captured caps,
+    captured_params_store_typed env captured caps ->
+    store_param_prefix caps captured [].
+Proof.
+  intros env captured caps Htyped.
+  unfold captured_params_store_typed, store_typed in Htyped.
+  eapply store_typed_entries_params_store_param_prefix.
+  exact Htyped.
+Qed.
+
 Lemma store_names_store_param_prefix :
   forall ps s_param s,
     store_param_prefix ps s_param s ->
@@ -8596,6 +8636,21 @@ Proof.
   induction Hprefix as [s | p ps v st s_param s _ IH].
   - reflexivity.
   - simpl. rewrite ident_eqb_refl. exact IH.
+Qed.
+
+Lemma captured_params_store_typed_remove_app :
+  forall env captured caps frame,
+    captured_params_store_typed env captured caps ->
+    store_remove_params caps (captured ++ frame) = frame.
+Proof.
+  intros env captured caps frame Htyped.
+  pose proof (captured_params_store_typed_store_param_prefix
+                env captured caps Htyped) as Hprefix.
+  pose proof (store_param_prefix_append_frame
+                caps captured frame [] Hprefix) as Hprefix_frame.
+  simpl in Hprefix_frame.
+  eapply store_remove_params_store_param_prefix.
+  exact Hprefix_frame.
 Qed.
 
 Lemma store_remove_params_store_frame_scope_exact :
@@ -13971,7 +14026,8 @@ Lemma eval_captured_call_expr_cleanup_preserves_value_and_refs :
     roots_exclude_params (fn_params fcall) roots_body ->
     root_env_excludes_params (fn_params fcall) R_body ->
     eval env s (ECallExpr callee args)
-      (store_remove_params (fn_params fcall) s_body) ret /\
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body)) ret /\
     store_typed env (store_remove_params (fn_params fcall) s_body)
       (sctx_of_store captured ++ Σ_args) /\
     store_typed_prefix env s_body (sctx_of_ctx Γ_out) /\
@@ -14106,7 +14162,8 @@ Lemma eval_captured_call_expr_cleanup_preserves_value_and_refs_params :
     roots_exclude_params (fn_params fcall) roots_body ->
     root_env_excludes_params (fn_params fcall) R_body ->
     eval env s (ECallExpr callee args)
-      (store_remove_params (fn_params fcall) s_body) ret /\
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body)) ret /\
     store_typed env (store_remove_params (fn_params fcall) s_body)
       (sctx_of_ctx (params_ctx caps) ++ Σ_args) /\
     store_typed_prefix env s_body (sctx_of_ctx Γ_out) /\
@@ -14136,6 +14193,78 @@ Proof.
   - eapply Eval_CallExpr; eassumption.
   - eapply eval_captured_call_body_cleanup_preserves_value_and_refs_params;
       eassumption.
+Qed.
+
+Lemma eval_captured_call_body_cleanup_preserves_value_and_refs_params_erased :
+  forall env (Ω : outlives_ctx) captured Rcap s_args R_args Σ_args caps
+      fdef fcall σ s_body vs ret used' T_body Γ_out R_params R_body
+      roots_body,
+    captured_call_frame_params_ready env captured Rcap s_args R_args caps ->
+    store_typed env s_args Σ_args ->
+    alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
+      (fcall, used') ->
+    eval_args_values_have_types env Ω (captured ++ s_args) vs
+      (fn_params fcall) ->
+    store_roots_within R_params
+      (bind_params (fn_params fcall) vs (captured ++ s_args)) ->
+    store_no_shadow (bind_params (fn_params fcall) vs (captured ++ s_args)) ->
+    root_env_no_shadow R_params ->
+    root_env_covers_params (fn_params fcall) R_params ->
+    provenance_ready_expr (fn_body fcall) ->
+    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+      R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
+    roots_exclude_params (fn_params fcall) roots_body ->
+    root_env_excludes_params (fn_params fcall) R_body ->
+    roots_exclude_params caps roots_body ->
+    eval env (bind_params (fn_params fcall) vs (captured ++ s_args))
+      (fn_body fcall) s_body ret ->
+    store_typed env
+      (store_remove_params caps
+        (store_remove_params (fn_params fcall) s_body)) Σ_args /\
+    value_has_type env
+      (store_remove_params caps
+        (store_remove_params (fn_params fcall) s_body))
+      ret (apply_lt_ty σ (fn_ret fdef)) /\
+    store_remove_params caps
+      (store_remove_params (fn_params fcall) s_body) = s_args.
+Proof.
+  intros env Ω captured Rcap s_args R_args Σ_args caps fdef fcall σ
+    s_body vs ret used' T_body Γ_out R_params R_body roots_body
+    Hframe_params_ready Htyped_args Hrename Hargs_fcall Hroots_bind
+    Hshadow_bind Hrn_params Hcover_params Hprov_body Htyped_body
+    Hcompat_body Hexclude_ret Hexclude_env Hexclude_caps Heval_body.
+  destruct Hframe_params_ready as [Hframe_ready Hcaptured_params_typed].
+  destruct (eval_captured_call_body_cleanup_preserves_value_and_refs_params
+              env Ω captured Rcap s_args R_args Σ_args caps fdef fcall σ
+              s_body vs ret used' T_body Γ_out R_params R_body roots_body
+              (conj Hframe_ready Hcaptured_params_typed) Htyped_args
+              Hrename Hargs_fcall Hroots_bind Hshadow_bind Hrn_params
+              Hcover_params Hprov_body Htyped_body Hcompat_body
+              Hexclude_ret Hexclude_env Heval_body)
+    as [Hstore_frame Hcleanup].
+  destruct Hcleanup as [_ Hcleanup].
+  destruct Hcleanup as [_ Hcleanup].
+  destruct Hcleanup as [_ Hcleanup].
+  destruct Hcleanup as [_ Hcleanup].
+  destruct Hcleanup as [Hv_ret Hcleanup].
+  destruct Hcleanup as [_ Hcleanup].
+  destruct Hcleanup as [frame_final [locals [_ [_ [_ [_
+    [Hremoved_exact Hroots_ret]]]]]]].
+  assert (Hfinal_exact :
+    store_remove_params caps
+      (store_remove_params (fn_params fcall) s_body) = s_args).
+  { rewrite Hremoved_exact.
+    eapply captured_params_store_typed_remove_app.
+    exact Hcaptured_params_typed. }
+  repeat split.
+  - rewrite Hfinal_exact. exact Htyped_args.
+  - rewrite Hremoved_exact.
+    eapply value_has_type_store_remove_params_excluding.
+    + rewrite <- Hremoved_exact. exact Hv_ret.
+    + eapply value_roots_exclude_params; eassumption.
+  - exact Hfinal_exact.
 Qed.
 
 Lemma eval_direct_call_body_cleanup_preserves_value_and_refs :
@@ -16691,6 +16820,12 @@ Proof.
       assert (Hsame : fdef_fn = fdef)
         by (eapply lookup_fn_deterministic; eassumption);
       subst fdef;
+      assert (Hcaps_call : fn_captures fcall = [])
+        by (rewrite (alpha_rename_fn_def_captures
+              (store_names s_args) fdef_fn fcall used' Hrename);
+            exact Hcaps_fn);
+      rewrite Hcaps_call;
+      simpl;
       eapply Eval_Call;
       [ exact Hlookup | exact Hcaps_fn | exact Hargs | exact Hrename | exact Hbody ]
   end.

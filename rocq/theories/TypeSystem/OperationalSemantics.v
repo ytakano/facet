@@ -479,7 +479,8 @@ Inductive eval (env : global_env) : store -> expr -> store -> value -> Prop :=
       eval env (bind_params (fn_params fcall) vs (captured ++ s_args))
                 (fn_body fcall) s_body ret ->
       eval env s (ECallExpr callee args)
-               (store_remove_params (fn_params fcall) s_body) ret
+               (store_remove_params (fn_captures fcall)
+                  (store_remove_params (fn_params fcall) s_body)) ret
 
 (* Evaluate argument list left-to-right, threading the store. *)
 with eval_args (env : global_env)

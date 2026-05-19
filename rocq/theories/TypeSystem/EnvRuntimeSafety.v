@@ -2147,11 +2147,17 @@ Proof.
         Hcaps_fn : fn_captures ?fdef_fn = [],
         Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?fdef,
         Hargs : eval_args env _ args _ _,
-        Hrename : alpha_rename_fn_def _ ?fdef = (_, _),
+        Hrename : alpha_rename_fn_def ?used_names ?fdef = (?fcall, ?used'),
         Hbody : eval env (bind_params _ _ _) _ _ _ |- _ =>
           assert (Hsame : fdef_fn = fdef)
             by (eapply lookup_fn_deterministic; eassumption);
           subst fdef;
+          assert (Hcaps_call : fn_captures fcall = [])
+            by (rewrite (alpha_rename_fn_def_captures
+                  used_names fdef_fn fcall used' Hrename);
+                exact Hcaps_fn);
+          rewrite Hcaps_call;
+          simpl;
           eapply Eval_Call;
           [ exact Hlookup | exact Hcaps_fn | exact Hargs | exact Hrename | exact Hbody ]
       end.

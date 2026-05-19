@@ -520,6 +520,13 @@ Follow this order before inventing new theorem shapes:
      task is to thread this evidence into the captured-call cleanup theorem and
      only then retry the local captured-call theorem against
      `params_ctx (fn_captures fcall) ++ Σ_args`.
+   - Current cleanup progress: `eval_captured_call_body_cleanup_preserves_value_and_refs_params`
+     and `eval_captured_call_expr_cleanup_preserves_value_and_refs_params`
+     now expose the captured-call cleanup result against
+     `sctx_of_ctx (params_ctx caps) ++ Σ_args` whenever
+     `captured_call_frame_params_ready` is available. This is still a
+     proof-only wrapper over the existing body context; it does not yet migrate
+     `fn_body_ctx` to include `fn_captures`.
    - Preservation/provenance readiness validators still reject
      `EMakeClosure`. Do not flip those booleans until captured `ECallExpr`
      preservation is proved. The next closure task is either parser/lambda

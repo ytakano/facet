@@ -13960,6 +13960,141 @@ Proof.
       eassumption.
 Qed.
 
+Lemma eval_captured_call_body_cleanup_preserves_value_and_refs_params :
+  forall env (Ω : outlives_ctx) captured Rcap s_args R_args Σ_args caps
+      fdef fcall σ s_body vs ret used' T_body Γ_out R_params R_body
+      roots_body,
+    captured_call_frame_params_ready env captured Rcap s_args R_args caps ->
+    store_typed env s_args Σ_args ->
+    alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
+      (fcall, used') ->
+    eval_args_values_have_types env Ω (captured ++ s_args) vs
+      (fn_params fcall) ->
+    store_roots_within R_params
+      (bind_params (fn_params fcall) vs (captured ++ s_args)) ->
+    store_no_shadow (bind_params (fn_params fcall) vs (captured ++ s_args)) ->
+    root_env_no_shadow R_params ->
+    root_env_covers_params (fn_params fcall) R_params ->
+    provenance_ready_expr (fn_body fcall) ->
+    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+      R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
+    roots_exclude_params (fn_params fcall) roots_body ->
+    root_env_excludes_params (fn_params fcall) R_body ->
+    eval env (bind_params (fn_params fcall) vs (captured ++ s_args))
+      (fn_body fcall) s_body ret ->
+    store_typed env (store_remove_params (fn_params fcall) s_body)
+      (sctx_of_ctx (params_ctx caps) ++ Σ_args) /\
+    store_typed_prefix env s_body (sctx_of_ctx Γ_out) /\
+    store_roots_within R_body s_body /\
+    store_no_shadow s_body /\
+    root_env_no_shadow R_body /\
+    value_has_type env (store_remove_params (fn_params fcall) s_body)
+      ret (apply_lt_ty σ (fn_ret fdef)) /\
+    store_ref_targets_preserved env (captured ++ s_args)
+      (store_remove_params (fn_params fcall) s_body) /\
+    exists frame_final locals,
+      store_param_scope (fn_params fcall) s_body frame_final /\
+      store_remove_params (fn_params fcall) s_body = locals ++ frame_final /\
+      value_refs_exclude_params (fn_params fcall) ret /\
+      store_refs_exclude_params (fn_params fcall)
+        (store_remove_params (fn_params fcall) s_body) /\
+    store_remove_params (fn_params fcall) s_body = captured ++ s_args /\
+    value_roots_within roots_body ret.
+Proof.
+  intros env Ω captured Rcap s_args R_args Σ_args caps fdef fcall σ
+    s_body vs ret used' T_body Γ_out R_params R_body roots_body
+    Hframe_params_ready Htyped_args Hrename Hargs_fcall Hroots_bind
+    Hshadow_bind Hrn_params Hcover_params Hprov_body Htyped_body
+    Hcompat_body Hexclude_ret Hexclude_env Heval_body.
+  destruct Hframe_params_ready as [Hframe_ready Hcaptured_params_typed].
+  destruct (eval_captured_call_body_cleanup_preserves_value_and_refs
+              env Ω captured Rcap s_args R_args Σ_args fdef fcall σ
+              s_body vs ret used' T_body Γ_out R_params R_body roots_body
+              Hframe_ready Htyped_args Hrename Hargs_fcall Hroots_bind
+              Hshadow_bind Hrn_params Hcover_params Hprov_body Htyped_body
+              Hcompat_body Hexclude_ret Hexclude_env Heval_body)
+    as [_ Hcleanup].
+  destruct Hcleanup as [Hprefix Hcleanup].
+  destruct Hcleanup as [Hroots_body Hcleanup].
+  destruct Hcleanup as [Hshadow_body Hcleanup].
+  destruct Hcleanup as [Hrn_body Hcleanup].
+  destruct Hcleanup as [Hv_ret Hcleanup].
+  destruct Hcleanup as [Hpres Hcleanup].
+  destruct Hcleanup as [frame_final [locals [Hscope [Hremoved
+    [Hret_exclude [Hstore_exclude [Hremoved_exact Hroots_ret]]]]]]].
+  assert (Htyped_frame :
+    store_typed env (captured ++ s_args)
+      (sctx_of_ctx (params_ctx caps) ++ Σ_args)).
+  { eapply captured_call_frame_params_store_typed.
+    - split; eassumption.
+    - exact Htyped_args. }
+  repeat split; try assumption.
+  - rewrite Hremoved_exact. exact Htyped_frame.
+  - exists frame_final, locals. repeat split; assumption.
+Qed.
+
+Lemma eval_captured_call_expr_cleanup_preserves_value_and_refs_params :
+  forall env (Ω : outlives_ctx) s s_fn s_args s_body callee args fname
+      captured fdef fcall vs ret used' Rcap R_args Σ_args caps σ T_body
+      Γ_out R_params R_body roots_body,
+    eval env s callee s_fn (VClosure fname captured) ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    eval_args env s_fn args s_args vs ->
+    alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
+      (fcall, used') ->
+    eval env (bind_params (fn_params fcall) vs (captured ++ s_args))
+      (fn_body fcall) s_body ret ->
+    captured_call_frame_params_ready env captured Rcap s_args R_args caps ->
+    store_typed env s_args Σ_args ->
+    eval_args_values_have_types env Ω (captured ++ s_args) vs
+      (fn_params fcall) ->
+    store_roots_within R_params
+      (bind_params (fn_params fcall) vs (captured ++ s_args)) ->
+    store_no_shadow (bind_params (fn_params fcall) vs (captured ++ s_args)) ->
+    root_env_no_shadow R_params ->
+    root_env_covers_params (fn_params fcall) R_params ->
+    provenance_ready_expr (fn_body fcall) ->
+    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+      R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
+    roots_exclude_params (fn_params fcall) roots_body ->
+    root_env_excludes_params (fn_params fcall) R_body ->
+    eval env s (ECallExpr callee args)
+      (store_remove_params (fn_params fcall) s_body) ret /\
+    store_typed env (store_remove_params (fn_params fcall) s_body)
+      (sctx_of_ctx (params_ctx caps) ++ Σ_args) /\
+    store_typed_prefix env s_body (sctx_of_ctx Γ_out) /\
+    store_roots_within R_body s_body /\
+    store_no_shadow s_body /\
+    root_env_no_shadow R_body /\
+    value_has_type env (store_remove_params (fn_params fcall) s_body)
+      ret (apply_lt_ty σ (fn_ret fdef)) /\
+    store_ref_targets_preserved env (captured ++ s_args)
+      (store_remove_params (fn_params fcall) s_body) /\
+    exists frame_final locals,
+      store_param_scope (fn_params fcall) s_body frame_final /\
+      store_remove_params (fn_params fcall) s_body = locals ++ frame_final /\
+      value_refs_exclude_params (fn_params fcall) ret /\
+      store_refs_exclude_params (fn_params fcall)
+        (store_remove_params (fn_params fcall) s_body) /\
+    store_remove_params (fn_params fcall) s_body = captured ++ s_args /\
+    value_roots_within roots_body ret.
+Proof.
+  intros env Ω s s_fn s_args s_body callee args fname captured fdef fcall
+    vs ret used' Rcap R_args Σ_args caps σ T_body Γ_out R_params R_body
+    roots_body Heval_callee Hlookup Heval_args Hrename Heval_body
+    Hframe_params_ready Htyped_args Hargs_fcall Hroots_bind Hshadow_bind
+    Hrn_params Hcover_params Hprov_body Htyped_body Hcompat_body
+    Hexclude_ret Hexclude_env.
+  split.
+  - eapply Eval_CallExpr; eassumption.
+  - eapply eval_captured_call_body_cleanup_preserves_value_and_refs_params;
+      eassumption.
+Qed.
+
 Lemma eval_direct_call_body_cleanup_preserves_value_and_refs :
   forall env (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
       (fname : ident) args fdef fcall σ s s_args s_body vs ret used'

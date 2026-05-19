@@ -606,6 +606,10 @@ val check_make_closure_captures_sctx :
   global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list
   infer_result
 
+val check_make_closure_captures_exact_sctx :
+  global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list
+  infer_result
+
 val sctx_add : ident -> ty -> mutability -> sctx -> sctx
 
 val sctx_remove : ident -> sctx -> sctx

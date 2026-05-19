@@ -596,7 +596,7 @@ Proof.
       destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup;
         try discriminate.
       destruct (Nat.eqb (fn_lifetimes fdef) 0) eqn:Hlt; try discriminate.
-      destruct (check_make_closure_captures_sctx env Ω Σ l0 (fn_captures fdef))
+      destruct (check_make_closure_captures_exact_sctx env Ω Σ l0 (fn_captures fdef))
         as [captured_tys | err] eqn:Hcaptures; try discriminate.
       rewrite infer_env_args_collect_roots_eq in Hinfer.
       destruct (infer_env_args_collect_roots fuel' env Ω n R Σ l)
@@ -611,7 +611,8 @@ Proof.
       * exact Hin.
       * exact Hname.
       * exact Hlt.
-      * exact Hcaptures.
+      * eapply check_make_closure_captures_exact_sctx_implies_sctx.
+        exact Hcaptures.
       * eapply infer_env_args_collect_roots_sound.
         -- exact Hcollect.
         -- intros R0 Σ0 e0 T0 Σ1 R1 roots1 Hinfer0.
@@ -893,7 +894,7 @@ Proof.
       destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup;
         try discriminate.
       destruct (Nat.eqb (fn_lifetimes fdef) 0) eqn:Hlt; try discriminate.
-      destruct (check_make_closure_captures_sctx env Ω Σ l0 (fn_captures fdef))
+      destruct (check_make_closure_captures_exact_sctx env Ω Σ l0 (fn_captures fdef))
         as [captured_tys | err] eqn:Hcaptures; try discriminate.
       rewrite infer_env_args_collect_roots_shadow_safe_eq in Hinfer.
       destruct (infer_env_args_collect_roots_shadow_safe fuel' env Ω n R Σ l)
@@ -908,7 +909,8 @@ Proof.
       * exact Hin.
       * exact Hname.
       * exact Hlt.
-      * exact Hcaptures.
+      * eapply check_make_closure_captures_exact_sctx_implies_sctx.
+        exact Hcaptures.
       * eapply infer_env_args_collect_roots_shadow_safe_sound.
         -- exact Hcollect.
         -- intros R0 Σ0 e0 T0 Σ1 R1 roots1 Hinfer0.

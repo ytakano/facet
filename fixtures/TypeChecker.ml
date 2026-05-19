@@ -2941,6 +2941,60 @@ let rec check_make_closure_captures_sctx env _UU03a9_ _UU03a3_ captures params =
                 | None -> Infer_err (ErrUnknownVar x))
         | None -> Infer_err (ErrUnknownVar x)))
 
+(** val check_make_closure_captures_exact_sctx :
+    global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list
+    infer_result **)
+
+let rec check_make_closure_captures_exact_sctx env _UU03a9_ _UU03a3_ captures params =
+  match captures with
+  | [] ->
+    (match params with
+     | [] -> Infer_ok []
+     | _ :: _ -> Infer_err ErrArityMismatch)
+  | x :: captures' ->
+    (match params with
+     | [] -> Infer_err ErrArityMismatch
+     | cap :: params' ->
+       (match cap.param_mutability with
+        | MImmutable ->
+          (match sctx_lookup cap.param_name _UU03a3_ with
+           | Some _ -> Infer_err ErrContextCheckFailed
+           | None ->
+             (match sctx_lookup x _UU03a3_ with
+              | Some p ->
+                let (t, st) = p in
+                if st.st_consumed
+                then Infer_err ErrContextCheckFailed
+                else (match st.st_moved_paths with
+                      | [] ->
+                        (match sctx_lookup_mut x _UU03a3_ with
+                         | Some m ->
+                           (match m with
+                            | MImmutable ->
+                              if usage_eqb (ty_usage t) UUnrestricted
+                              then if capture_ref_free_ty_b env t
+                                   then if (&&) (ty_eqb t cap.param_ty)
+                                             (ty_compatible_b _UU03a9_ t
+                                               cap.param_ty)
+                                        then (match check_make_closure_captures_exact_sctx
+                                                      env _UU03a9_ _UU03a3_
+                                                      captures' params' with
+                                              | Infer_ok rest_tys ->
+                                                Infer_ok (t :: rest_tys)
+                                              | Infer_err err -> Infer_err err)
+                                        else Infer_err
+                                               (compatible_error t
+                                                 cap.param_ty)
+                                   else Infer_err (ErrNotAReference
+                                          (ty_core t))
+                              else Infer_err (ErrUsageMismatch ((ty_usage t),
+                                     UUnrestricted))
+                            | MMutable -> Infer_err (ErrNotMutable x))
+                         | None -> Infer_err (ErrUnknownVar x))
+                      | _ :: _ -> Infer_err ErrContextCheckFailed)
+              | None -> Infer_err (ErrUnknownVar x)))
+        | MMutable -> Infer_err ErrContextCheckFailed))
+
 (** val sctx_add : ident -> ty -> mutability -> sctx -> sctx **)
 
 let sctx_add =
@@ -4433,7 +4487,7 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
          (match lookup_fn_b fname env.env_fns with
           | Some fdef ->
             if Nat.eqb fdef.fn_lifetimes Big_int_Z.zero_big_int
-            then (match check_make_closure_captures_sctx env _UU03a9_
+            then (match check_make_closure_captures_exact_sctx env _UU03a9_
                           _UU03a3_ captures fdef.fn_captures with
                   | Infer_ok _ ->
                     let collect =
@@ -4898,7 +4952,7 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
          (match lookup_fn_b fname env.env_fns with
           | Some fdef ->
             if Nat.eqb fdef.fn_lifetimes Big_int_Z.zero_big_int
-            then (match check_make_closure_captures_sctx env _UU03a9_
+            then (match check_make_closure_captures_exact_sctx env _UU03a9_
                           _UU03a3_ captures fdef.fn_captures with
                   | Infer_ok _ ->
                     let collect =

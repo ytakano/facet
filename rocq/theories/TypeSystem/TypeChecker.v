@@ -729,7 +729,8 @@ Fixpoint check_make_closure_captures_exact_ctx
               then
                 if capture_ref_free_ty_b env T
                 then
-                  if ty_eqb T (param_ty cap)
+                  if ty_eqb T (param_ty cap) &&
+                     ty_compatible_b Ω T (param_ty cap)
                   then
                     match check_make_closure_captures_exact_ctx env Ω Γ captures' params' with
                     | infer_ok rest_tys => infer_ok (T :: rest_tys)
@@ -1727,7 +1728,8 @@ Fixpoint check_make_closure_captures_exact_sctx
               then
                 if capture_ref_free_ty_b env T
                 then
-                  if ty_eqb T (param_ty cap)
+                  if ty_eqb T (param_ty cap) &&
+                     ty_compatible_b Ω T (param_ty cap)
                   then
                     match check_make_closure_captures_exact_sctx env Ω Σ captures' params' with
                     | infer_ok rest_tys => infer_ok (T :: rest_tys)
@@ -3361,7 +3363,7 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
       | Some fdef =>
           if Nat.eqb (fn_lifetimes fdef) 0
           then
-            match check_make_closure_captures_sctx env Ω Σ captures (fn_captures fdef) with
+            match check_make_closure_captures_exact_sctx env Ω Σ captures (fn_captures fdef) with
             | infer_err err => infer_err err
             | infer_ok _ =>
                 let fix collect (Σ0 : sctx) (R0 : root_env) (as_ : list expr)
@@ -3776,7 +3778,7 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
       | Some fdef =>
           if Nat.eqb (fn_lifetimes fdef) 0
           then
-            match check_make_closure_captures_sctx env Ω Σ captures (fn_captures fdef) with
+            match check_make_closure_captures_exact_sctx env Ω Σ captures (fn_captures fdef) with
             | infer_err err => infer_err err
             | infer_ok _ =>
                 let fix collect (Σ0 : sctx) (R0 : root_env) (as_ : list expr)
@@ -5257,6 +5259,55 @@ Example infer_core_env_nonempty_capture_direct_call_rejects :
   infer_core_env ex_nonempty_capture_env [] 0 []
     (ECall (("nonempty_capture_callee"%string), 0) []) =
   infer_err ErrNotImplemented.
+Proof. vm_compute. reflexivity. Qed.
+
+Definition ex_ready_gap_captured_closure_call_expr : expr :=
+  ELet MImmutable (("cap"%string), 0)
+    (MkTy UUnrestricted TIntegers)
+    (ELit (LInt 1))
+    (ECallExpr
+      (EMakeClosure (("nonempty_capture_callee"%string), 0)
+        [(("cap"%string), 0)])
+      []).
+
+Definition ex_ready_gap_captured_closure_call_fn : fn_def :=
+  MkFnDef (("ready_gap_captured_closure_call"%string), 0) 0 [] [] []
+    (MkTy UUnrestricted TUnits)
+    ex_ready_gap_captured_closure_call_expr.
+
+Definition ex_ready_gap_captured_closure_call_env : global_env :=
+  MkGlobalEnv [] [] []
+    [ex_nonempty_capture_callee_fn; ex_ready_gap_captured_closure_call_fn].
+
+Example ready_gap_matrix_captured_closure_call_checker_accepts :
+  check_program_env_alpha ex_ready_gap_captured_closure_call_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_captured_closure_call_validator_rejects :
+  check_program_env_alpha_validated_root_shadow_provenance
+    ex_ready_gap_captured_closure_call_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_captured_closure_call_direct_call_summary_rejects :
+  check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary
+    ex_ready_gap_captured_closure_call_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_captured_closure_call_non_capturing_summary_rejects :
+  check_program_env_alpha_validated_root_shadow_non_capturing_call_provenance_summary
+    ex_ready_gap_captured_closure_call_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_make_closure_preservation_ready_rejects :
+  preservation_ready_expr_b
+    (EMakeClosure (("nonempty_capture_callee"%string), 0)
+      [(("cap"%string), 0)]) = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_make_closure_provenance_ready_rejects :
+  provenance_ready_expr_b
+    (EMakeClosure (("nonempty_capture_callee"%string), 0)
+      [(("cap"%string), 0)]) = false.
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_ready_gap_call_expr_fn : fn_def :=

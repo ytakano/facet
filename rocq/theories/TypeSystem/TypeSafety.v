@@ -2581,7 +2581,9 @@ Proof.
     destruct (usage_eqb (ty_usage T) UUnrestricted) eqn:Husage;
       try discriminate.
     destruct (capture_ref_free_ty_b env T) eqn:Href_free; try discriminate.
-    destruct (ty_eqb T (param_ty cap)) eqn:Hty; try discriminate.
+    destruct (ty_eqb T (param_ty cap) &&
+      ty_compatible_b Ω T (param_ty cap)) eqn:Hty; try discriminate.
+    apply andb_true_iff in Hty as [Hty_eq _].
     destruct (check_make_closure_captures_exact_sctx env Ω Σ captures caps)
       as [captured_rest | err] eqn:Hrest; try discriminate.
     injection Hcheck as <-.
@@ -2590,7 +2592,7 @@ Proof.
     { unfold binding_available_b.
       rewrite Hconsumed, Hmoved. reflexivity. }
     assert (HTeq : T = param_ty cap).
-    { apply ty_eqb_true. exact Hty. }
+    { apply ty_eqb_true. exact Hty_eq. }
     subst T.
     split.
     + eapply TCap_Cons.
@@ -2643,7 +2645,9 @@ Proof.
     destruct (usage_eqb (ty_usage T) UUnrestricted) eqn:Husage;
       try discriminate.
     destruct (capture_ref_free_ty_b env T) eqn:Href_free; try discriminate.
-    destruct (ty_eqb T (param_ty cap)) eqn:Hty; try discriminate.
+    destruct (ty_eqb T (param_ty cap) &&
+      ty_compatible_b Ω T (param_ty cap)) eqn:Hty; try discriminate.
+    apply andb_true_iff in Hty as [Hty_eq _].
     destruct (check_make_closure_captures_exact_sctx env Ω Σ captures caps)
       as [captured_rest_tys | err] eqn:Hrest_check; try discriminate.
     destruct (store_lookup x s) as [se |] eqn:Hlookup_store; try discriminate.
@@ -2662,7 +2666,7 @@ Proof.
         [Hlookup_static [Hse_name [Hse_ty [_ _]]]]]]].
     rewrite Hlookup in Hlookup_static.
     inversion Hlookup_static; subst T_lookup st_lookup.
-    apply ty_eqb_true in Hty.
+    apply ty_eqb_true in Hty_eq.
     apply binding_available_nil_fresh in Hruntime_available.
     simpl.
     rewrite Hruntime_available.
@@ -2671,7 +2675,7 @@ Proof.
         param_mutability cap) :: sctx_of_ctx (params_ctx caps)).
     rewrite Hcap_mut.
     f_equal.
-    + rewrite <- H0, Hty. reflexivity.
+    + rewrite <- H0, Hty_eq. reflexivity.
     + eapply IH.
       * exact Hstore.
       * exact Hcopy_rest.

@@ -1,6 +1,6 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming TypingRules RootProvenance TypeChecker.
-From Stdlib Require Import List String.
+From Stdlib Require Import Bool List String.
 Import ListNotations.
 
 (* ------------------------------------------------------------------ *)
@@ -848,6 +848,41 @@ Proof.
   - simpl. econstructor; eauto.
 Qed.
 
+Lemma check_make_closure_captures_exact_sctx_implies_sctx :
+  forall env Ω Σ captures params captured_tys,
+    check_make_closure_captures_exact_sctx env Ω Σ captures params =
+      infer_ok captured_tys ->
+    check_make_closure_captures_sctx env Ω Σ captures params =
+      infer_ok captured_tys.
+Proof.
+  intros env Ω Σ captures.
+  induction captures as [| x captures IH]; intros params captured_tys Hcheck;
+    destruct params as [| cap params]; simpl in *; try discriminate.
+  - exact Hcheck.
+  - destruct (param_mutability cap) eqn:Hcap_mut; try discriminate.
+    destruct (sctx_lookup (param_name cap) Σ) as [[Tcap stcap] |]
+      eqn:Hcap_lookup; try discriminate.
+    destruct (sctx_lookup x Σ) as [[T st] |] eqn:Hlookup; try discriminate.
+    destruct (st_consumed st) eqn:Hconsumed; try discriminate.
+    destruct (st_moved_paths st) as [| moved moved_rest] eqn:Hmoved;
+      try discriminate.
+    destruct (sctx_lookup_mut x Σ) as [m |] eqn:Hmut; try discriminate.
+    destruct m; try discriminate.
+    destruct (usage_eqb (ty_usage T) UUnrestricted) eqn:Husage;
+      try discriminate.
+    destruct (capture_ref_free_ty_b env T) eqn:Href_free; try discriminate.
+    destruct (ty_eqb T (param_ty cap) &&
+      ty_compatible_b Ω T (param_ty cap)) eqn:Hty; try discriminate.
+    apply andb_true_iff in Hty as [_ Hcompat].
+    destruct (check_make_closure_captures_exact_sctx env Ω Σ captures params)
+      as [captured_rest | err] eqn:Hrest; try discriminate.
+    injection Hcheck as <-.
+    simpl. unfold binding_available_b.
+    rewrite (IH params captured_rest Hrest).
+    rewrite Hconsumed, Hmoved, Hcompat.
+    reflexivity.
+Qed.
+
 Lemma typed_roots_structural :
   forall env Ω n,
   (forall R Σ e T Σ' R' roots,
@@ -1598,28 +1633,14 @@ Proof.
         match goal with
         | H : ctx_merge _ _ = Some _ |- _ => exact H
         end.
-    + eapply typed_args_env_structural_same_bindings.
-      match goal with
-      | H : typed_args_env_structural _ _ _ _ _ _ _ |- _ => exact H
-      end.
-    + eapply sctx_same_bindings_trans.
-      * exact IHHtyped.
-      * eapply typed_args_env_structural_same_bindings.
-        match goal with
-        | H : typed_args_env_structural _ _ _ _ _ _ _ |- _ => exact H
-        end.
-    + eapply sctx_same_bindings_trans.
-      * exact IHHtyped.
-      * eapply typed_args_env_structural_same_bindings.
-        match goal with
-        | H : typed_args_env_structural _ _ _ _ _ _ _ |- _ => exact H
-        end.
-	    + eapply sctx_same_bindings_trans.
-	      * exact IHHtyped.
-	      * eapply typed_args_env_structural_same_bindings.
-        match goal with
-        | H : typed_args_env_structural _ _ _ _ _ _ _ |- _ => exact H
-        end.
+    + eauto using typed_args_env_structural_same_bindings,
+        sctx_same_bindings_trans.
+    + eauto using typed_args_env_structural_same_bindings,
+        sctx_same_bindings_trans.
+    + eauto using typed_args_env_structural_same_bindings,
+        sctx_same_bindings_trans.
+    + eauto using typed_args_env_structural_same_bindings,
+        sctx_same_bindings_trans.
   - intros env Ω n Σ args ps Σ' Htyped.
     induction Htyped.
     + apply sctx_same_bindings_refl.

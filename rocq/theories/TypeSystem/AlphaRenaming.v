@@ -805,6 +805,22 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma check_make_closure_captures_exact_sctx_alpha_forward :
+  forall env ρ Σ Σr Ω captures params captured_tys,
+    ctx_alpha ρ Σ Σr ->
+    disjoint_names captures (rename_range ρ) ->
+    check_make_closure_captures_exact_sctx env Ω Σ captures params =
+      infer_ok captured_tys ->
+    check_make_closure_captures_sctx env Ω Σr
+      (map (fun x => lookup_rename x ρ) captures) params =
+      infer_ok captured_tys.
+Proof.
+  intros env ρ Σ Σr Ω captures params captured_tys Halpha Hdisj Hcheck.
+  eapply check_make_closure_captures_sctx_alpha_forward; eauto.
+  eapply check_make_closure_captures_exact_sctx_implies_sctx.
+  exact Hcheck.
+Qed.
+
 Lemma alpha_rename_typed_place_backward : forall fenv0 fenvr n ρ Γ0 Γr p T,
   ctx_alpha ρ Γ0 Γr ->
   ~ In (place_root p) (rename_range ρ) ->

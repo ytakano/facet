@@ -729,7 +729,9 @@ Proof.
     destruct (usage_eqb (ty_usage T) UUnrestricted) eqn:Husage;
       try discriminate.
     destruct (capture_ref_free_ty_b env T) eqn:Href_free; try discriminate.
-    destruct (ty_eqb T (param_ty cap)) eqn:Hty; try discriminate.
+    destruct (ty_eqb T (param_ty cap) &&
+      ty_compatible_b Ω T (param_ty cap)) eqn:Hty; try discriminate.
+    apply andb_true_iff in Hty as [Hty_eq _].
     destruct (check_make_closure_captures_exact_ctx env Ω Γ captures caps)
       as [captured_rest | err] eqn:Hrest; try discriminate.
     injection Hcheck as <-.
@@ -738,7 +740,7 @@ Proof.
     { unfold binding_available_b.
       rewrite Hconsumed, Hmoved. reflexivity. }
     assert (HTeq : T = param_ty cap).
-    { apply ty_eqb_true. exact Hty. }
+    { apply ty_eqb_true. exact Hty_eq. }
     subst T.
     split.
     + eapply TCap_Cons.

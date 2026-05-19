@@ -527,6 +527,18 @@ Follow this order before inventing new theorem shapes:
      `captured_call_frame_params_ready` is available. This is still a
      proof-only wrapper over the existing body context; it does not yet migrate
      `fn_body_ctx` to include `fn_captures`.
+   - Current `fn_body_ctx := fn_params ++ fn_captures` blocker: the first
+     attempted minimal migration failed in `AlphaRenaming.v` because
+     `alpha_rename_fn_def` renames only `fn_params`, leaves `fn_captures`
+     unchanged, and proves body structural typing from
+     `params_ctx (fn_params f)` to `params_ctx (fn_params fr)`. A
+     capture-aware body context requires a specification decision and proof
+     update for function alpha-renaming: either rename hidden capture params
+     together with ordinary params and update `EMakeClosure` capture-name
+     evidence accordingly, or keep hidden capture params stable and prove a
+     mixed context-alpha relation for `params_ctx (fn_params f ++ fn_captures f)`.
+     Do not retry the global body-context migration until this alpha-renaming
+     contract is fixed.
    - Preservation/provenance readiness validators still reject
      `EMakeClosure`. Do not flip those booleans until captured `ECallExpr`
      preservation is proved. The next closure task is either parser/lambda

@@ -483,29 +483,18 @@ Follow this order before inventing new theorem shapes:
      binding namespace: capture names and ordinary parameter names must be
      well-formed and duplicate-free. This prevents hidden captured frames from
      shadowing ordinary call frames.
-   - Current blocker for captured-call preservation: function bodies still use
-     `fn_body_ctx f := params_ctx (fn_params f)`. The checker has a separate
-     `fn_binding_params f := fn_params f ++ fn_captures f` for validation, but
-     typing/proof contexts are not capture-aware yet. Before captured
-     `ECallExpr` preservation can be enabled, introduce a capture-aware body
-     context in a separate proof step. Prefer ordinary params first, captures
+   - Function bodies now use the capture-aware context
+     `fn_body_ctx f := params_ctx (fn_params f ++ fn_captures f)`. The checker
+     still keeps `fn_binding_params f := fn_params f ++ fn_captures f` for
+     validation. The internal order is ordinary params first, hidden captures
      second, matching the existing runtime/proof frame shape for
-     `bind_params (fn_params f) args (captured ++ caller_store)`. Because
-     validation rejects duplicate names across both lists, this internal order
-     should not be source-observable. Direct `EFn` and direct `ECall` remain
-     captureless.
-   - Concrete proof blocker found during the attempted capture-aware
-     `fn_body_ctx` migration: existing call-body cleanup lemmas type
-     `bind_params (fn_params fcall) args frame` against
-     `params_ctx (fn_params fcall)`. A body context of
-     `params_ctx (fn_params fcall ++ fn_captures fcall)` also needs evidence
-     that the `captured` prefix of `frame` is typed as
-     `params_ctx (fn_captures fcall)`. Current `captured_call_frame_ready`
-     only exposes `captured_store_typed` / `sctx_of_store captured`, so the
-     next implementation must first add a Prop/executable bridge connecting
-     `EMakeClosure` capture checks to `fn_captures`-shaped captured-frame
-     typing. Do not retry the global `fn_body_ctx := params ++ captures`
-     migration before this bridge exists.
+     `bind_params (fn_params f) args (captured ++ caller_store)`. Direct `EFn`
+     and direct `ECall` remain captureless.
+   - The previous global `fn_body_ctx := params ++ captures` blocker is closed:
+     direct-call preservation branches were factored into explicit helper
+     lemmas, `callee_body_root_*_ready_at` now use `fn_body_ctx`, and
+     captureless direct-call proofs convert back to params-only cleanup lemmas
+     with the existing no-captures context conversion helpers.
    - Current bridge progress: `check_make_closure_captures_exact_ctx` and
      `check_make_closure_captures_exact_sctx` now exist as sidecar validators.
      They require each capture name to equal the corresponding hidden capture
@@ -530,9 +519,7 @@ Follow this order before inventing new theorem shapes:
      and `eval_captured_call_expr_cleanup_preserves_value_and_refs_params`
      now expose the captured-call cleanup result against
      `sctx_of_ctx (params_ctx caps) ++ Σ_args` whenever
-     `captured_call_frame_params_ready` is available. This is still a
-     proof-only wrapper over the existing body context; it does not yet migrate
-     `fn_body_ctx` to include `fn_captures`.
+     `captured_call_frame_params_ready` is available.
    - Function alpha-renaming now uses the stable-hidden-capture contract:
      `alpha_rename_fn_def` freshens only ordinary `fn_params`, keeps
      `fn_captures` unchanged, and includes capture names in the initial used set
@@ -540,26 +527,13 @@ Follow this order before inventing new theorem shapes:
      mixed context-alpha bridge for
      `params_ctx (fn_params f ++ fn_captures f)` is available at the
      alpha-renaming layer.
-   - Current `fn_body_ctx := fn_params ++ fn_captures` blocker: after the
-     alpha-renaming contract was fixed, the direct-call route was isolated as
-     captureless evidence: direct-call root summary/evidence bridges now carry
-     `fn_captures fdef = []`. Captureless body-context conversion helpers now
-     exist:
+   - Captureless body-context conversion helpers now exist:
      `fn_body_ctx_eq_params_ctx_when_no_captures`,
      `typed_env_roots_fn_body_ctx_to_params_ctx_when_no_captures`, and
      `typed_env_roots_shadow_safe_fn_body_ctx_to_params_ctx_when_no_captures`.
-     The next migration attempt still hit brittle direct-call preservation
-     proof scripts in `TypeSafety.v` after changing
-     `callee_body_root_*_ready_at` to use `fn_body_ctx`: the large
-     `dependent destruction` / `match goal` blocks do not expose uniform
-     `eval_args` hypotheses across all generated subgoals. Before retrying the
-     global body-context migration, factor those direct-call preservation
-     theorem branches into explicit helper lemmas that take the already
-     destructed runtime/typing call facts as ordinary named premises. After
-     that refactor, retry the global migration and only then add the separate
-     captured-call route that threads `captured_call_frame_params_ready` or
-     equivalent captured-root evidence into captured callee-body readiness
-     predicates.
+   - Next closure proof task: add the separate captured-call preservation route
+     that threads `captured_call_frame_params_ready` or equivalent captured-root
+     evidence into captured callee-body readiness predicates.
    - Preservation/provenance readiness validators still reject
      `EMakeClosure`. Do not flip those booleans until captured `ECallExpr`
      preservation is proved. The next closure task is either parser/lambda

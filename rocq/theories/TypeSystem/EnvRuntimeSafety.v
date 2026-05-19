@@ -132,6 +132,7 @@ Definition direct_call_callee_body_root_check_evidence
       used',
     In fdef (env_fns env) ->
     fn_name fdef = fname ->
+    fn_captures fdef = [] ->
     typed_args_roots env Ω n R Σ args
       (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
     eval_args env s args s_args vs ->
@@ -234,7 +235,7 @@ Lemma direct_call_callee_body_root_evidence_of_check :
     direct_call_callee_body_root_evidence env.
 Proof.
   intros env Hcheck Ω n R Σ Σ_args R_args arg_roots fname args fdef fcall
-    σ s s_args vs used' Hin Hfname Htyped_args Heval_args Hprov_args
+    σ s s_args vs used' Hin Hfname Hcaps Htyped_args Heval_args Hprov_args
     Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
   apply callee_body_root_ready_at_of_check_ready_at.
   eapply Hcheck; eassumption.

@@ -14552,6 +14552,7 @@ Definition direct_call_callee_body_root_summary_bridge
       used',
     In fdef (env_fns env) ->
     fn_name fdef = fname ->
+    fn_captures fdef = [] ->
     typed_args_roots env Ω n R Σ args
       (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
     eval_args env s args s_args vs ->
@@ -14574,6 +14575,7 @@ Definition direct_call_callee_body_root_shadow_summary_bridge
       used',
     In fdef (env_fns env) ->
     fn_name fdef = fname ->
+    fn_captures fdef = [] ->
     typed_args_roots env Ω n R Σ args
       (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
     eval_args env s args s_args vs ->
@@ -14594,6 +14596,7 @@ Definition direct_call_callee_body_root_evidence (env : global_env) : Prop :=
       used',
     In fdef (env_fns env) ->
     fn_name fdef = fname ->
+    fn_captures fdef = [] ->
     typed_args_roots env Ω n R Σ args
       (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
     eval_args env s args s_args vs ->
@@ -14615,7 +14618,7 @@ Lemma direct_call_callee_body_root_evidence_of_summary_bridge :
     direct_call_callee_body_root_evidence env.
 Proof.
   intros env Hsummary Hbridge Ω n R Σ Σ_args R_args arg_roots fname args
-    fdef fcall σ s s_args vs used' Hin Hfname Htyped_args Heval_args
+    fdef fcall σ s s_args vs used' Hin Hfname Hcaps Htyped_args Heval_args
     Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
   eapply Hbridge; eassumption.
 Qed.
@@ -14627,7 +14630,7 @@ Lemma direct_call_callee_body_root_evidence_of_shadow_summary_bridge :
     direct_call_callee_body_root_evidence env.
 Proof.
   intros env Hsummary Hbridge Ω n R Σ Σ_args R_args arg_roots fname args
-    fdef fcall σ s s_args vs used' Hin Hfname Htyped_args Heval_args
+    fdef fcall σ s s_args vs used' Hin Hfname Hcaps Htyped_args Heval_args
     Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
   eapply callee_body_root_ready_at_of_shadow_ready_at.
   eapply Hbridge; eassumption.
@@ -15790,7 +15793,7 @@ Lemma direct_call_callee_body_root_shadow_summary_bridge_of_unique :
     direct_call_callee_body_root_shadow_summary_bridge env.
 Proof.
   intros env Hunique Hsummary Ω n R Σ Σ_args R_args arg_roots fname args
-    fdef fcall σ s s_args vs used' Hin Hfname Htyped_args Heval_args
+    fdef fcall σ s s_args vs used' Hin Hfname Hcaps Htyped_args Heval_args
     Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
   destruct (env_fns_root_shadow_summary_evidence_in_unique
               env Hsummary Hunique fname fdef Hin Hfname)
@@ -15992,6 +15995,7 @@ Lemma direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_w
   forall env (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
       args fdef fcall (σ : list lifetime) s s_args vs used',
       callee_body_root_shadow_provenance_summary env fdef ->
+      fn_captures fdef = [] ->
       typed_args_roots env Ω n R Σ args
         (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
       eval_args env s args s_args vs ->
@@ -16008,7 +16012,7 @@ Lemma direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_w
         (root_sets_union arg_roots).
 Proof.
   intros env Ω n R Σ Σ_args R_args arg_roots args fdef fcall σ s s_args
-    vs used' Hsummary Htyped_args Heval_args
+    vs used' Hsummary Hcaps Htyped_args Heval_args
     Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
   unfold callee_body_root_shadow_provenance_summary in Hsummary.
   destruct Hsummary as [Hnodup_fdef Hready].
@@ -16234,6 +16238,7 @@ Lemma direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary :
   forall env (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
       args fdef fcall (σ : list lifetime) s s_args vs used',
       callee_body_root_shadow_provenance_summary env fdef ->
+      fn_captures fdef = [] ->
       typed_args_roots env Ω n R Σ args
         (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
       eval_args env s args s_args vs ->
@@ -16249,12 +16254,12 @@ Lemma direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary :
         (call_param_root_env (fn_params fcall) arg_roots R_args).
 Proof.
   intros env Ω n R Σ Σ_args R_args arg_roots args fdef fcall σ s s_args
-    vs used' Hsummary Htyped_args Heval_args Hprov_args Hstore Hroots
+    vs used' Hsummary Hcaps Htyped_args Heval_args Hprov_args Hstore Hroots
     Hshadow Hrn Hnamed Hkeys Hrename.
   destruct
     (direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_with_result_subset
       env Ω n R Σ Σ_args R_args arg_roots args fdef fcall σ s s_args vs
-      used' Hsummary Htyped_args Heval_args Hprov_args Hstore Hroots
+      used' Hsummary Hcaps Htyped_args Heval_args Hprov_args Hstore Hroots
       Hshadow Hrn Hnamed Hkeys Hrename)
     as (T_body & Γ_out & R_body & roots_body &
         Hprov_body & Htyped_body & Hcompat_body &
@@ -16273,6 +16278,7 @@ Lemma direct_call_callee_body_root_shadow_provenance_summary_bridge_of_unique :
         used',
       In fdef (env_fns env) ->
       fn_name fdef = fname ->
+      fn_captures fdef = [] ->
       typed_args_roots env Ω n R Σ args
         (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
       eval_args env s args s_args vs ->
@@ -16288,7 +16294,7 @@ Lemma direct_call_callee_body_root_shadow_provenance_summary_bridge_of_unique :
         (call_param_root_env (fn_params fcall) arg_roots R_args).
 Proof.
   intros env Hunique Hsummary Ω n R Σ Σ_args R_args arg_roots fname args
-    fdef fcall σ s s_args vs used' Hin Hfname Htyped_args Heval_args
+    fdef fcall σ s s_args vs used' Hin Hfname Hcaps Htyped_args Heval_args
     Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
   eapply direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary;
     try eassumption.
@@ -16359,10 +16365,11 @@ Proof.
       Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
         (?fcall, ?used'),
       Hin : In ?fdef (env_fns env),
-      Hfname : fn_name ?fdef = ?fname_call |- _ =>
+      Hfname : fn_name ?fdef = ?fname_call,
+      Hcaps : fn_captures ?fdef = [] |- _ =>
         pose proof (Hcallee_roots Ω n R Σ Σ' R' arg_roots
                       fname_call args_call fdef fcall σ s s_args vs
-                      used' Hin Hfname Htyped_args Heval_args Hprov_args
+                      used' Hin Hfname Hcaps Htyped_args Heval_args Hprov_args
                       Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename)
           as Hbody_ready;
         unfold callee_body_root_ready_at in Hbody_ready;
@@ -16375,10 +16382,11 @@ Proof.
       Heval_args : eval_args env s ?args_call ?s_args ?vs,
       Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
         (?fcall, ?used'),
-      Hin : In ?fdef (env_fns env) |- _ =>
+      Hin : In ?fdef (env_fns env),
+      Hcaps : fn_captures ?fdef = [] |- _ =>
         pose proof (Hcallee_roots Ω n R Σ Σ' R' arg_roots
                       (fn_name fdef) args_call fdef fcall σ s s_args vs
-                      used' Hin eq_refl Htyped_args Heval_args Hprov_args
+                      used' Hin eq_refl Hcaps Htyped_args Heval_args Hprov_args
                       Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename)
           as Hbody_ready;
         unfold callee_body_root_ready_at in Hbody_ready;
@@ -16504,11 +16512,12 @@ Proof.
       Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
         (?fcall, ?used'),
       Hin : In ?fdef (env_fns env),
-      Hfname : fn_name ?fdef = ?fname_call |- _ =>
+      Hfname : fn_name ?fdef = ?fname_call,
+      Hcaps : fn_captures ?fdef = [] |- _ =>
         pose proof (direct_call_callee_body_root_shadow_provenance_summary_bridge_of_unique
                       env Hunique Hsummary Ω n R Σ Σ' R' arg_roots
                       fname_call args_call fdef fcall σ s s_args vs
-                      used' Hin Hfname Htyped_args Heval_args Hprov_args
+                      used' Hin Hfname Hcaps Htyped_args Heval_args Hprov_args
                       Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename)
           as Hbody_shadow_ready;
         pose proof
@@ -16526,11 +16535,12 @@ Proof.
       Heval_args : eval_args env s ?args_call ?s_args ?vs,
       Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
         (?fcall, ?used'),
-      Hin : In ?fdef (env_fns env) |- _ =>
+      Hin : In ?fdef (env_fns env),
+      Hcaps : fn_captures ?fdef = [] |- _ =>
         pose proof (direct_call_callee_body_root_shadow_provenance_summary_bridge_of_unique
                       env Hunique Hsummary Ω n R Σ Σ' R' arg_roots
                       (fn_name fdef) args_call fdef fcall σ s s_args vs
-                      used' Hin eq_refl Htyped_args Heval_args Hprov_args
+                      used' Hin eq_refl Hcaps Htyped_args Heval_args Hprov_args
                       Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename)
           as Hbody_shadow_ready;
         pose proof
@@ -16692,11 +16702,12 @@ Proof.
       (apply_lt_params ?σ (fn_params ?fdef_call)) Σ' R' ?arg_roots,
     Heval_args : eval_args env s ?args_call ?s_args ?vs,
     Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef_call =
-      (?fcall, ?used') |- _ =>
+      (?fcall, ?used'),
+    Hcaps : fn_captures ?fdef_call = [] |- _ =>
       pose proof
         (direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_with_result_subset
           env Ω n R Σ Σ' R' arg_roots args_call fdef_call fcall σ
-          s s_args vs used' Hcallee_summary Htyped_args Heval_args
+          s s_args vs used' Hcallee_summary Hcaps Htyped_args Heval_args
           Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename)
         as Hbody_shadow_ready;
       unfold callee_body_root_shadow_provenance_ready_at_result_subset

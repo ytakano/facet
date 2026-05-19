@@ -13900,19 +13900,29 @@ Proof.
   injection Hrename as <- <-.
   unfold typed_fn_env_structural in *. simpl in *.
   destruct Htyped as [T_body [Γ_out [Htyped_body [Hcompat Hparams]]]].
+  unfold fn_body_ctx, fn_body_params in Htyped_body.
+  simpl in Htyped_body.
   destruct (alpha_rename_typed_env_structural_forward
     env outs lifetimes ρ
-    (sctx_of_ctx (params_ctx ps))
-    (sctx_of_ctx (params_ctx psr))
+    (sctx_of_ctx (params_ctx (ps ++ captures)))
+    (sctx_of_ctx (params_ctx (psr ++ captures)))
     body bodyr used1 used2 T_body (sctx_of_ctx Γ_out))
     as [Σr_out [Htyped_body_r Hctx_out_r]].
-  - eapply alpha_rename_params_ctx_alpha_nil. exact Hps.
+  - eapply alpha_rename_params_ctx_alpha_stable_tail. exact Hps.
   - intros x Hin.
-    change (ctx_names (sctx_of_ctx (params_ctx psr)))
-      with (ctx_names (params_ctx psr)) in Hin.
-    eapply alpha_rename_params_names_in_used.
-    + exact Hps.
-    + exact Hin.
+    change (ctx_names (sctx_of_ctx (params_ctx (psr ++ captures))))
+      with (ctx_names (params_ctx (psr ++ captures))) in Hin.
+    rewrite params_ctx_app in Hin.
+    rewrite ctx_names_app in Hin.
+    rewrite !params_ctx_names_param_names in Hin.
+    apply in_app_or in Hin as [Hin_params | Hin_captures].
+    + eapply alpha_rename_params_names_in_used.
+      * exact Hps.
+      * rewrite params_ctx_names_param_names. exact Hin_params.
+    + eapply alpha_rename_params_used_extends.
+      * exact Hps.
+      * apply in_or_app. right.
+        apply in_or_app. left. exact Hin_captures.
   - intros x Hin.
     eapply alpha_rename_params_range_in_used_nil.
     + exact Hps.

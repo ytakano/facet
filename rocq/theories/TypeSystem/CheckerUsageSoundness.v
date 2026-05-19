@@ -64,7 +64,7 @@ Lemma typed_linear_param_used : forall fenv f p,
   In p (fn_params f) ->
   ty_usage (param_ty p) = ULinear ->
   exists T_body Γ' Tx st,
-    typed fenv (fn_outlives f) (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
+    typed fenv (fn_outlives f) (fn_lifetimes f) (fn_body_ctx f) (fn_body f) T_body Γ' /\
     ctx_lookup_state (param_name p) Γ' = Some (Tx, st) /\
     st_consumed st = true.
 Proof.
@@ -82,7 +82,7 @@ Qed.
 
 Definition infer_fn_def_ok (fenv : list fn_def) (f : fn_def) : Prop :=
   exists Γ',
-    infer_body fenv (fn_outlives f) (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) =
+    infer_body fenv (fn_outlives f) (fn_lifetimes f) (fn_body_ctx f) (fn_body f) =
       infer_ok (fn_ret f, Γ') /\
     params_ok (fn_params f) Γ'.
 
@@ -168,7 +168,7 @@ Theorem infer_checked_fn_linear_params_used : forall fenv f p,
   In p (fn_params f) ->
   ty_usage (param_ty p) = ULinear ->
   exists T_body Γ' Tx st,
-    typed fenv (fn_outlives f) (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
+    typed fenv (fn_outlives f) (fn_lifetimes f) (fn_body_ctx f) (fn_body f) T_body Γ' /\
     ctx_lookup_state (param_name p) Γ' = Some (Tx, st) /\
     st_consumed st = true.
 Proof.
@@ -186,7 +186,7 @@ Theorem infer_checked_fn_linear_usage : forall fenv f,
       In p (fn_params f) ->
       ty_usage (param_ty p) = ULinear ->
       exists T_body Γ' Tx st,
-        typed fenv (fn_outlives f) (fn_lifetimes f) (params_ctx (fn_params f)) (fn_body f) T_body Γ' /\
+        typed fenv (fn_outlives f) (fn_lifetimes f) (fn_body_ctx f) (fn_body f) T_body Γ' /\
         ctx_lookup_state (param_name p) Γ' = Some (Tx, st) /\
         st_consumed st = true).
 Proof.

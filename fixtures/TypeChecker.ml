@@ -1534,7 +1534,7 @@ let rec params_ctx = function
 (** val fn_body_params : fn_def -> param list **)
 
 let fn_body_params f =
-  f.fn_params
+  app f.fn_params f.fn_captures
 
 (** val fn_binding_params : fn_def -> param list **)
 

@@ -342,7 +342,7 @@ Corollary checked_fn_env_roots_borrow_state_no_conflicts :
   forall env f R0 R_out roots,
     checked_fn_env_roots env f R0 R_out roots ->
     exists PBS',
-      borrow_ok_env_structural env [] (params_ctx (fn_params f)) (fn_body f) PBS' /\
+      borrow_ok_env_structural env [] (fn_body_ctx f) (fn_body f) PBS' /\
       pbs_no_conflicts PBS'.
 Proof.
   intros env f R0 R_out roots Hchecked.

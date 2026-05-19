@@ -6,7 +6,7 @@ From Stdlib Require Import List Bool Lia String Program.Equality.
 Import ListNotations.
 
 Definition initial_store_for_fn (env : global_env) (f : fn_def) (s : store) : Prop :=
-  store_typed env s (sctx_of_ctx (params_ctx (fn_params f))).
+  store_typed env s (sctx_of_ctx (fn_body_ctx f)).
 
 Lemma initial_root_env_for_params_covers :
   forall ps,
@@ -261,7 +261,7 @@ Proof.
   destruct (proj1 eval_preserves_typing_roots_ready_mutual
       env s (fn_body f) s' v Heval
       (fn_outlives f) (fn_lifetimes f) R0
-      (sctx_of_ctx (params_ctx (fn_params f)))
+      (sctx_of_ctx (fn_body_ctx f))
       T_body (sctx_of_ctx Γ_out) R' roots
       Hready Hstore Hroots Hstore_shadow Hroot_shadow Htyped)
     as [_ [Hv _]].
@@ -335,7 +335,7 @@ Proof.
   destruct (eval_preserves_typing_direct_call_roots_ready
       env s (fn_body f) s' v Heval
       (fn_outlives f) (fn_lifetimes f) R0
-      (sctx_of_ctx (params_ctx (fn_params f)))
+      (sctx_of_ctx (fn_body_ctx f))
       T_body (sctx_of_ctx Γ_out) R' roots
       Hready Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys Htyped
       Hunique Hfns_ready
@@ -373,7 +373,7 @@ Proof.
   destruct (eval_preserves_typing_direct_call_roots_ready
       env s (fn_body f) s' v Heval
       (fn_outlives f) (fn_lifetimes f) R0
-      (sctx_of_ctx (params_ctx (fn_params f)))
+      (sctx_of_ctx (fn_body_ctx f))
       T_body (sctx_of_ctx Γ_out) R' roots
       Hready Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys Htyped
       Hunique Hfns_ready Hcallee_body_roots)
@@ -569,13 +569,13 @@ Proof.
   destruct (eval_preserves_typing_direct_call_roots_ready
       (alpha_normalize_global_env env) s (fn_body f) s' v Heval
       (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-      (sctx_of_ctx (params_ctx (fn_params f)))
+      (sctx_of_ctx (fn_body_ctx f))
       T_body (sctx_of_ctx Γ_out) R_body roots_body
       Hready Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
       (typed_env_roots_shadow_safe_roots
         (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
         (initial_root_env_for_fn f)
-        (sctx_of_ctx (params_ctx (fn_params f)))
+        (sctx_of_ctx (fn_body_ctx f))
         (fn_body f) T_body (sctx_of_ctx Γ_out) R_body roots_body
         Htyped_shadow)
       Hunique Hfns_ready
@@ -1120,7 +1120,7 @@ Definition callee_body_root_shadow_direct_call_provenance_summary
     NoDup (ctx_names (params_ctx (fn_params fdef))) /\
     typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
       (initial_root_env_for_fn fdef)
-      (sctx_of_ctx (params_ctx (fn_params fdef)))
+      (sctx_of_ctx (fn_body_ctx fdef))
       synthetic_body T_body (sctx_of_ctx Γ_out) R_body roots_body /\
     ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
     roots_exclude_params (fn_params fdef) roots_body /\
@@ -1145,7 +1145,7 @@ Definition callee_body_root_shadow_non_capturing_call_provenance_summary
     NoDup (ctx_names (params_ctx (fn_params fdef))) /\
     typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
       (initial_root_env_for_fn fdef)
-      (sctx_of_ctx (params_ctx (fn_params fdef)))
+      (sctx_of_ctx (fn_body_ctx fdef))
       synthetic_body T_body (sctx_of_ctx Γ_out) R_body roots_body /\
     ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
     roots_exclude_params (fn_params fdef) roots_body /\
@@ -1977,13 +1977,13 @@ Proof.
   destruct (proj1 eval_preserves_typing_roots_ready_mutual
       (alpha_normalize_global_env env) s (fn_body f) s' v Heval
       (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-      (sctx_of_ctx (params_ctx (fn_params f)))
+      (sctx_of_ctx (fn_body_ctx f))
       T_body (sctx_of_ctx Γ_out) R_body roots_body
       Hprov_body Hstore Hroots Hstore_shadow Hroot_shadow
       (typed_env_roots_shadow_safe_roots
         (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
         (initial_root_env_for_fn f)
-        (sctx_of_ctx (params_ctx (fn_params f)))
+        (sctx_of_ctx (fn_body_ctx f))
         (fn_body f) T_body (sctx_of_ctx Γ_out) R_body roots_body
         Htyped_shadow))
     as [_ [Hv _]].
@@ -2049,13 +2049,13 @@ Proof.
     destruct (proj1 eval_preserves_typing_roots_ready_mutual
         (alpha_normalize_global_env env) s (fn_body f) s' v Heval
         (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-        (sctx_of_ctx (params_ctx (fn_params f)))
+        (sctx_of_ctx (fn_body_ctx f))
         T_body (sctx_of_ctx Γ_out) R_body roots_body
         Hprov_body Hstore Hroots Hstore_shadow Hroot_shadow
         (typed_env_roots_shadow_safe_roots
           (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
           (initial_root_env_for_fn f)
-          (sctx_of_ctx (params_ctx (fn_params f)))
+          (sctx_of_ctx (fn_body_ctx f))
           (fn_body f) T_body (sctx_of_ctx Γ_out) R_body roots_body
           Htyped_shadow))
       as [_ [Hv _]].
@@ -2072,7 +2072,7 @@ Proof.
     assert (Htyped_call :
       typed_env_roots_shadow_safe (alpha_normalize_global_env env)
         (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-        (sctx_of_ctx (params_ctx (fn_params f))) (ECall fname args)
+        (sctx_of_ctx (fn_body_ctx f)) (ECall fname args)
         T_body (sctx_of_ctx Γ_out) R_body roots_body).
     { rewrite <- Hsynthetic. exact Htyped_shadow. }
     assert (Heval_call :
@@ -2086,13 +2086,13 @@ Proof.
     destruct (eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary
         (alpha_normalize_global_env env) s s' v fname args Heval_call
         (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-        (sctx_of_ctx (params_ctx (fn_params f)))
+        (sctx_of_ctx (fn_body_ctx f))
         T_body (sctx_of_ctx Γ_out) R_body roots_body fcallee
         Hready_args Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
         (typed_env_roots_shadow_safe_roots
           (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
           (initial_root_env_for_fn f)
-          (sctx_of_ctx (params_ctx (fn_params f)))
+          (sctx_of_ctx (fn_body_ctx f))
           (ECall fname args) T_body (sctx_of_ctx Γ_out) R_body roots_body
           Htyped_call)
         Hunique Hin_callee Hname_callee Hcallee_summary)
@@ -2203,13 +2203,13 @@ Proof.
       destruct (proj1 eval_preserves_typing_roots_ready_mutual
           (alpha_normalize_global_env env) s (fn_body f) s' v Heval
           (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-          (sctx_of_ctx (params_ctx (fn_params f)))
+          (sctx_of_ctx (fn_body_ctx f))
           T_body (sctx_of_ctx Γ_out) R_body roots_body
           Hprov_body Hstore Hroots Hstore_shadow Hroot_shadow
           (typed_env_roots_shadow_safe_roots
             (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
             (initial_root_env_for_fn f)
-            (sctx_of_ctx (params_ctx (fn_params f)))
+            (sctx_of_ctx (fn_body_ctx f))
             (fn_body f) T_body (sctx_of_ctx Γ_out) R_body roots_body
             Htyped_shadow))
         as [_ [Hv _]].
@@ -2226,7 +2226,7 @@ Proof.
       assert (Htyped_call :
         typed_env_roots_shadow_safe (alpha_normalize_global_env env)
           (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-          (sctx_of_ctx (params_ctx (fn_params f))) (ECall fname args)
+          (sctx_of_ctx (fn_body_ctx f)) (ECall fname args)
           T_body (sctx_of_ctx Γ_out) R_body roots_body).
       { rewrite <- Hsynthetic. exact Htyped_shadow. }
       assert (Heval_call :
@@ -2240,13 +2240,13 @@ Proof.
       destruct (eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary
           (alpha_normalize_global_env env) s s' v fname args Heval_call
           (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-          (sctx_of_ctx (params_ctx (fn_params f)))
+          (sctx_of_ctx (fn_body_ctx f))
           T_body (sctx_of_ctx Γ_out) R_body roots_body fcallee
           Hready_args Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
           (typed_env_roots_shadow_safe_roots
             (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
             (initial_root_env_for_fn f)
-            (sctx_of_ctx (params_ctx (fn_params f)))
+            (sctx_of_ctx (fn_body_ctx f))
             (ECall fname args) T_body (sctx_of_ctx Γ_out) R_body roots_body
             Htyped_call)
           Hunique Hin_callee Hname_callee Hcallee_summary)
@@ -2342,7 +2342,7 @@ Proof.
       assert (Hstore_add :
         store_typed (alpha_normalize_global_env env)
           (store_add x0 T (VClosure (fn_name fcallee) []) s1)
-          (sctx_add x0 T m (sctx_of_ctx (params_ctx (fn_params f)))))
+          (sctx_add x0 T m (sctx_of_ctx (fn_body_ctx f))))
       by (eapply store_typed_add;
           [ exact Hstore | exact Hv_closure | exact Hadd_pres ]).
       assert (Hroots_add :
@@ -2379,7 +2379,7 @@ Proof.
               (fn_name fcallee) args Heval_call
               (fn_outlives f) (fn_lifetimes f)
               (root_env_add x0 [] (initial_root_env_for_fn f))
-              (sctx_add x0 T m (sctx_of_ctx (params_ctx (fn_params f))))
+              (sctx_add x0 T m (sctx_of_ctx (fn_body_ctx f)))
               T2 Σ2 R2 roots2 fcallee
               Hready_args Hstore_add Hroots_add Hshadow_add Hrn_add
               Hnamed_add Hkeys_add Htyped_call Hunique Hin_callee

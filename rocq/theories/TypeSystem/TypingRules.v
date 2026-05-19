@@ -108,7 +108,8 @@ Definition ctx_is_ok (x : ident) (T : Ty) (Γ : ctx) : Prop :=
   end.
 
 (* Build the initial context for checking a function body from its
-   parameters. Scope-exit checks reuse ctx_is_ok for each parameter. *)
+   ordinary parameters followed by hidden captures. Scope-exit checks
+   reuse ctx_is_ok for each ordinary parameter. *)
 Definition param_ctx_entry (p : param) : ctx_entry :=
   (param_name p, param_ty p, binding_state_of_bool false, param_mutability p).
 
@@ -119,7 +120,7 @@ Fixpoint params_ctx (ps : list param) : ctx :=
   end.
 
 Definition fn_body_params (f : fn_def) : list param :=
-  fn_params f.
+  fn_params f ++ fn_captures f.
 
 Definition fn_binding_params (f : fn_def) : list param :=
   fn_params f ++ fn_captures f.

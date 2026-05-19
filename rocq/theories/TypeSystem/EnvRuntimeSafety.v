@@ -85,9 +85,7 @@ Proof.
     try discriminate.
   destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f)));
     try discriminate.
-  destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_params f)));
-    try discriminate.
-  destruct (duplicate_param_name (fn_params f));
+  destruct (check_fn_binding_params (mk_region_ctx (fn_lifetimes f)) f);
     try discriminate.
   destruct (infer_core_env env (fn_outlives f) (fn_lifetimes f)
               (params_ctx (fn_params f)) (fn_body f))

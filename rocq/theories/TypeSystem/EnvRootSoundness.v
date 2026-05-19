@@ -1131,9 +1131,7 @@ Proof.
     try discriminate.
   destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f)));
     try discriminate.
-  destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_params f)));
-    try discriminate.
-  destruct (duplicate_param_name (fn_params f));
+  destruct (check_fn_binding_params (mk_region_ctx (fn_lifetimes f)) f);
     try discriminate.
   destruct (infer_core_env_roots env (fn_outlives f) (fn_lifetimes f)
       R0 (params_ctx (fn_params f)) (fn_body f))
@@ -1163,9 +1161,7 @@ Proof.
     try discriminate.
   destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f)));
     try discriminate.
-  destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_params f)));
-    try discriminate.
-  destruct (duplicate_param_name (fn_params f));
+  destruct (check_fn_binding_params (mk_region_ctx (fn_lifetimes f)) f);
     try discriminate.
   destruct (infer_core_env_roots_shadow_safe env (fn_outlives f)
       (fn_lifetimes f) R0 (params_ctx (fn_params f)) (fn_body f))
@@ -1196,11 +1192,15 @@ Proof.
     try discriminate.
   destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f)));
     try discriminate.
+  unfold check_fn_binding_params in Hinfer.
+  destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_captures f)));
+    try discriminate.
   destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_params f)));
     try discriminate.
-  destruct (duplicate_param_name (fn_params f)) as [dup |] eqn:Hdup;
+  destruct (duplicate_param_name (fn_binding_params f)) as [dup |] eqn:Hdup;
     try discriminate.
-  apply duplicate_param_name_none_nodup_params_ctx. exact Hdup.
+  unfold fn_binding_params in Hdup.
+  eapply duplicate_param_name_none_nodup_params_ctx_suffix. exact Hdup.
 Qed.
 
 Theorem infer_full_env_roots_sound :

@@ -716,6 +716,10 @@ val duplicate_param_name_aux : string list -> param list -> ident option
 
 val duplicate_param_name : param list -> ident option
 
+val fn_binding_params : fn_def -> param list
+
+val check_fn_binding_params : region_ctx -> fn_def -> infer_error option
+
 val string_names_unique_b : string list -> bool
 
 val fn_name_strings : fn_def list -> string list

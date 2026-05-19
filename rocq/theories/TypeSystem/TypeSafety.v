@@ -14663,6 +14663,97 @@ Proof.
     split; assumption.
 Qed.
 
+Lemma eval_make_closure_exact_captured_call_frame_params_ready :
+  forall env (Ω : outlives_ctx) s Σ fname captures captured fdef fcall
+      used' Rcap s_args R_args captured_tys,
+    store_typed env s Σ ->
+    eval env s (EMakeClosure fname captures) s (VClosure fname captured) ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
+      (fcall, used') ->
+    check_make_closure_captures_exact_sctx Ω Σ captures (fn_captures fdef) =
+      infer_ok captured_tys ->
+    captured_call_frame_ready env captured Rcap s_args R_args ->
+    captured_call_frame_params_ready env captured Rcap s_args R_args
+      (fn_captures fcall).
+Proof.
+  intros env Ω s Σ fname captures captured fdef fcall used' Rcap s_args
+    R_args captured_tys Hstore Heval_make Hlookup Hrename Hcheck
+    Hframe_ready.
+  dependent destruction Heval_make.
+  assert (Hsame : fdef0 = fdef).
+  { eapply lookup_fn_deterministic; eassumption. }
+  subst fdef0.
+  split.
+  - exact Hframe_ready.
+  - rewrite (alpha_rename_fn_def_captures
+                (store_names (captured ++ s_args)) fdef fcall used'
+                Hrename).
+    eapply copy_capture_store_exact_params_store_typed.
+    + exact Hstore.
+    + unfold captured_call_frame_ready, captured_store_runtime_ready
+        in Hframe_ready.
+      exact (proj1 (proj1 Hframe_ready)).
+    + exact H0.
+    + exact Hcheck.
+Qed.
+
+Lemma eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased :
+  forall env (Ω : outlives_ctx) s s_args s_body args fname captures
+      captured fdef fcall vs ret used' Rcap R_args Σ Σ_args captured_tys
+      σ T_body Γ_out R_params R_body roots_body,
+    store_typed env s Σ ->
+    eval env s (EMakeClosure fname captures) s (VClosure fname captured) ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    eval_args env s args s_args vs ->
+    alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
+      (fcall, used') ->
+    eval env (bind_params (fn_params fcall) vs (captured ++ s_args))
+      (fn_body fcall) s_body ret ->
+    check_make_closure_captures_exact_sctx Ω Σ captures (fn_captures fdef) =
+      infer_ok captured_tys ->
+    captured_call_frame_ready env captured Rcap s_args R_args ->
+    store_typed env s_args Σ_args ->
+    eval_args_values_have_types env Ω (captured ++ s_args) vs
+      (fn_params fcall) ->
+    store_roots_within R_params
+      (bind_params (fn_params fcall) vs (captured ++ s_args)) ->
+    store_no_shadow (bind_params (fn_params fcall) vs (captured ++ s_args)) ->
+    root_env_no_shadow R_params ->
+    root_env_covers_params (fn_params fcall ++ fn_captures fcall) R_params ->
+    provenance_ready_expr (fn_body fcall) ->
+    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+      R_params (sctx_of_ctx (fn_body_ctx fcall))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
+    roots_exclude_params (fn_params fcall ++ fn_captures fcall) roots_body ->
+    root_env_excludes_params (fn_params fcall ++ fn_captures fcall) R_body ->
+    eval env s (ECallExpr (EMakeClosure fname captures) args)
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body)) ret /\
+    store_typed env
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body)) Σ_args /\
+    value_has_type env
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body))
+      ret (apply_lt_ty σ (fn_ret fdef)).
+Proof.
+  intros env Ω s s_args s_body args fname captures captured fdef fcall vs
+    ret used' Rcap R_args Σ Σ_args captured_tys σ T_body Γ_out R_params
+    R_body roots_body Hstore Heval_make Hlookup Heval_args Hrename
+    Heval_body Hcheck Hframe_ready Htyped_args Hargs_fcall Hroots_bind
+    Hshadow_bind Hrn_params Hcover_all Hprov_body Htyped_body Hcompat_body
+    Hexclude_all Hexclude_env_all.
+  pose proof
+    (eval_make_closure_exact_captured_call_frame_params_ready
+      env Ω s Σ fname captures captured fdef fcall used' Rcap s_args
+      R_args captured_tys Hstore Heval_make Hlookup Hrename Hcheck
+      Hframe_ready) as Hframe_params_ready.
+  eapply eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased;
+    eassumption.
+Qed.
+
 Lemma eval_direct_call_body_cleanup_preserves_value_and_refs :
   forall env (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
       (fname : ident) args fdef fcall σ s s_args s_body vs ret used'

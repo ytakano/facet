@@ -544,12 +544,21 @@ Follow this order before inventing new theorem shapes:
      These lemmas prove the callee body under
      `params_ctx (fn_params fcall ++ fn_captures fcall)` and erase both ordinary
      params and hidden captures to expose the caller-visible `Σ_args` store.
-   - Next closure proof task: build the preservation route that supplies the
-     new body-context cleanup premises from an evaluated `EMakeClosure` callee:
-     exact capture evidence, captured frame readiness, combined
-     `fn_params ++ fn_captures` root coverage/exclusion, and callee-body
-     root/shadow provenance summary. Only after that theorem compiles should
-     the executable validators accept captured `ECallExpr`.
+   - Evaluated `EMakeClosure` now has the first local bridge into the captured
+     call cleanup route:
+     `eval_make_closure_exact_captured_call_frame_params_ready` turns the
+     runtime copied closure plus the exact capture sidecar check into
+     `captured_call_frame_params_ready` for the alpha-renamed callee captures,
+     and
+     `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased`
+     wraps the body-context cleanup theorem for the direct core shape
+     `ECallExpr (EMakeClosure fname captures) args`.
+   - Next closure proof task: supply the remaining captured-call premises
+     without changing validator acceptance yet. In particular, derive or package
+     captured frame readiness, combined `fn_params ++ fn_captures` root
+     coverage/exclusion, and callee-body root/shadow provenance summary for the
+     alpha-renamed body context. Only after that theorem compiles should the
+     executable validators accept captured `ECallExpr`.
    - Preservation/provenance readiness validators still reject
      `EMakeClosure`. Do not flip those booleans until captured `ECallExpr`
      preservation is proved. The next closure task is either parser/lambda

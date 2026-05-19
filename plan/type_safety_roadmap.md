@@ -598,24 +598,35 @@ Follow this order before inventing new theorem shapes:
      `typed_captures`, keeping ordinary checker soundness shape unchanged.
    - Caller-side root/shadow typing now has the first narrow captured-call
      expression route for only
-     `ECallExpr (EMakeClosure fname captures) args`. The Prop-level
-     constructors and executable root/shadow checkers use the existing exact
-     capture check, require `fn_lifetimes fdef = 0`, type/check the ordinary
-     arguments against `fn_params fdef`, return `root_sets_union arg_roots`,
-     and still reject every other general `ECallExpr` shape. Soundness and
-     alpha-renaming preservation compile for this narrow route.
+     `ECallExpr (EMakeClosure fname captures) args`. The executable
+     root/shadow checkers use `check_make_closure_captures_exact_sctx` for the
+     callee construction. The Prop-level constructors intentionally remain
+     non-exact through `check_make_closure_captures_sctx`, because exact Prop
+     evidence is not stable under the current generic alpha-renaming theorem.
+     Soundness bridges executable exact success back to normal Prop evidence
+     with `check_make_closure_captures_exact_sctx_implies_sctx`. The route also
+     requires `fn_lifetimes fdef = 0`, type/checks the ordinary arguments
+     against `fn_params fdef`, returns `root_sets_union arg_roots`, and still
+     rejects every other general `ECallExpr` shape. Soundness and alpha-renaming
+     preservation compile for this narrow route.
    - Next closure proof task: connect the new caller-side
      `ECallExpr (EMakeClosure ...)` root/shadow evidence to
      `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased`.
-     In particular, derive or package captured frame readiness, combined
-     `fn_params ++ fn_captures` root coverage/exclusion, and callee-body
-     root/shadow provenance summary for the alpha-renamed body context. Only
-     after that theorem compiles should the executable validators accept
-     captured `ECallExpr`.
-   - Preservation/provenance readiness validators still reject
-     `EMakeClosure`. Do not flip those booleans until captured `ECallExpr`
-     preservation is proved. The next closure task is the captured-call
-     preservation bridge, not more parser work.
+     Current blocker: root/shadow soundness erases the executable exact capture
+     success into non-exact Prop evidence, but the cleanup bridge still needs
+     the exact sidecar check to type the copied hidden capture store. Do not
+     make the existing Prop constructors exact; that reopens the alpha-renaming
+     hidden-name freshness problem. The next implementation must add a narrow
+     captured-call sidecar package that retains exact capture success together
+     with captured frame readiness, combined `fn_params ++ fn_captures` root
+     coverage/exclusion, and callee-body root/shadow provenance summary for the
+     alpha-renamed body context. Only after that package and theorem compile
+     should the executable validators accept captured `ECallExpr`.
+   - Preservation/provenance readiness validators still reject `EMakeClosure`
+     and captured `ECallExpr`, including
+     `ECallExpr (EMakeClosure fname captures) args`. Do not flip those
+     booleans until the captured-call preservation bridge is proved. The next
+     closure task is that bridge, not more parser work.
 8. **Handle the `if` root-environment gap last.**
    The known blocker is that ordinary `TES_If` does not expose
    `root_env_equiv R2 R3`, while root/shadow routes require it. Do not

@@ -20,6 +20,12 @@ and named_type_arg =
   | NTArgLifetime of TypeChecker.lifetime
   | NTArgTy of named_ty
 
+type named_param = {
+  np_mutability : TypeChecker.mutability;
+  np_name       : name;
+  np_ty         : named_ty;
+}
+
 type named_expr =
   | NUnit
   | NLit    of TypeChecker.literal
@@ -34,12 +40,7 @@ type named_expr =
   | NDeref  of named_expr
   | NDrop   of named_expr
   | NIf     of named_expr * named_expr * named_expr
-
-type named_param = {
-  np_mutability : TypeChecker.mutability;
-  np_name       : name;
-  np_ty         : named_ty;
-}
+  | NClosure of name list * named_param list * named_ty * named_expr
 
 type named_fn_def = {
   nf_name           : name;

@@ -97,6 +97,7 @@ atom_expr ::= "()"
             | "(" ID atom_expr* ")"
             | "if" atom_expr "{" block "}" "else" "{" block "}"
             | "if" atom_expr "{" block "}"
+            | "closure" "[" capture_list "]" "(" params ")" "->" ty "{" block "}"
 ```
 
 ## place
@@ -105,6 +106,8 @@ place ::= place_base ("." ID)*
 place_base ::= ID
              | "*" place
 struct_literal_field ::= ID "=" expr
+capture_list ::= ""
+               | ID ("," ID)*
 ```
 
 ## ty
@@ -149,7 +152,7 @@ LIFETIME  ::= "'" alpha (alpha | digit | "_")*
 ## Reserved words
 `fn`, `let`, `in`, `mut`, `drop`, `replace`, `affine`, `linear`,
 `unrestricted`, `isize`, `f64`, `bool`, `true`, `false`, `if`, `else`,
-`struct`, `trait`, `impl`, `for`, `where`
+`struct`, `trait`, `impl`, `for`, `where`, `closure`
 |}
 
 let print_grammar () = print_string grammar

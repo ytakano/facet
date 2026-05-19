@@ -87,9 +87,10 @@ Current gap summary:
   order is: first-class functions without captures, then MVP closures with
   immutable unrestricted captures, then captured references/lifetimes, then
   mutable and affine/linear captures.
-- Core-only closure construction for immutable unrestricted reference-free
-  captures is implemented as `EMakeClosure`; parser syntax, frontend lambda
-  lifting, and captured `ECallExpr` preservation are still future work.
+- Surface closure literals for immutable unrestricted reference-free captures
+  now lower through Rocq-side raw elaboration to `EMakeClosure` plus synthetic
+  hidden-capture functions. Captured `ECallExpr` preservation is still future
+  proof work before the safety validators may accept captured closure calls.
 
 Next-task rule:
 
@@ -476,6 +477,27 @@ Follow this order before inventing new theorem shapes:
      root/shadow typing, ordinary checker soundness, env checker soundness,
      borrow checker soundness, alpha-renaming, runtime evaluation, extraction,
      and FIR lowering all have coverage for this constructor.
+   - Stage 7a surface syntax is implemented:
+     `closure [x, y](args) -> ret { body }` is parsed by the OCaml frontend,
+     converted to extracted Rocq `raw_expr`, and elaborated by
+     `elaborate_raw_global_env` inside the extracted checker boundary. The
+     parser records only syntax; capture validation, type-directed lambda
+     lifting, synthetic hidden-capture function generation, and inferred-let
+     annotation happen in Rocq-extracted code. The accepted Stage 7a capture
+     class is still immutable unrestricted reference-free values.
+   - The OCaml frontend now routes program conversion through
+     `raw_fn_def`/`elaborate_raw_global_env`, so user-facing functions can
+     contain closure literals without duplicating type-checking logic in OCaml.
+     Unannotated raw lets are elaborated to annotated core `ELet` after Rocq
+     infers the initializer type; this avoids leaving `ELetInfer` for later
+     passes that need the binding type.
+   - FIR emission handles Stage 7a closures: closure values show the copied
+     captured values, and synthetic closure functions lower with
+     `fn_captures ++ fn_params` in the function-body context.
+   - Regression coverage exists under `tests/valid/closure/`,
+     `tests/invalid/closure/`, and `tests/fir/closure_capture_value.facet`.
+     The invalid cases cover borrow-capture syntax, duplicate capture names,
+     unknown captures, and mutable captures.
    - `EMakeClosure` constructs `VClosure fname captured` by copying source
      capture variables into the hidden capture parameter names from
      `fn_captures fdef` using `copy_capture_store_as`. This is the implemented
@@ -592,10 +614,8 @@ Follow this order before inventing new theorem shapes:
      captured `ECallExpr`.
    - Preservation/provenance readiness validators still reject
      `EMakeClosure`. Do not flip those booleans until captured `ECallExpr`
-     preservation is proved. The next closure task is either parser/lambda
-     lifting for Stage 7a surface syntax or the captured-call preservation
-     bridge, depending on whether the project wants syntax first or theorem
-     widening first.
+     preservation is proved. The next closure task is the captured-call
+     preservation bridge, not more parser work.
 8. **Handle the `if` root-environment gap last.**
    The known blocker is that ordinary `TES_If` does not expose
    `root_env_equiv R2 R3`, while root/shadow routes require it. Do not

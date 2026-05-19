@@ -70,10 +70,10 @@ let install_generics params =
 
 %}
 
-%token KW_FN KW_FOR KW_STRUCT KW_TRAIT KW_IMPL KW_LET KW_IN KW_MUT KW_DROP KW_REPLACE
+%token KW_FN KW_FOR KW_STRUCT KW_TRAIT KW_IMPL KW_LET KW_IN KW_MUT KW_DROP KW_REPLACE KW_CLOSURE
 %token KW_AFFINE KW_LINEAR KW_UNRESTRICTED KW_ISIZE KW_F64
 %token KW_IF KW_ELSE KW_TRUE KW_FALSE KW_BOOL KW_WHERE
-%token LPAREN RPAREN LBRACE RBRACE LANGLE RANGLE
+%token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET LANGLE RANGLE
 %token ARROW AMP STAR
 %token COMMA COLON EQUAL SEMI UNDERSCORE DOT PLUS
 %token <string> ID
@@ -258,6 +258,10 @@ atom_expr:
     { NIf (cond, then_e, else_e) }
   | KW_IF; cond = atom_expr; LBRACE; then_e = block; RBRACE
     { NIf (cond, then_e, NUnit) }
+  | KW_CLOSURE; LBRACKET; captures = separated_list(COMMA, ID); RBRACKET;
+    LPAREN; ps = params; RPAREN; ARROW; ret = signature_ty;
+    LBRACE; body = block; RBRACE
+    { NClosure (captures, ps, ret, body) }
 
 place:
   | p = place_base; fields = list(field_suffix)

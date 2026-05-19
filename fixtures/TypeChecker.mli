@@ -843,3 +843,65 @@ val check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary
 
 val check_program_env_alpha_validated_root_shadow_provenance :
   global_env -> bool
+
+type raw_expr =
+| RawUnit
+| RawLit of literal
+| RawVar of ident
+| RawFn of ident
+| RawPlace of place
+| RawLet of mutability * ident * ty * raw_expr * raw_expr
+| RawLetInfer of mutability * ident * raw_expr * raw_expr
+| RawCall of ident * raw_expr list
+| RawCallExpr of raw_expr * raw_expr list
+| RawStruct of string * lifetime list * ty list * (string * raw_expr) list
+| RawReplace of place * raw_expr
+| RawAssign of place * raw_expr
+| RawBorrow of ref_kind * place
+| RawDeref of raw_expr
+| RawDrop of raw_expr
+| RawIf of raw_expr * raw_expr * raw_expr
+| RawClosure of ident list * param list * ty * raw_expr
+| RawCore of expr
+
+type raw_fn_def = { raw_fn_name : ident;
+                    raw_fn_lifetimes : Big_int_Z.big_int;
+                    raw_fn_outlives : outlives_ctx;
+                    raw_fn_params : param list; raw_fn_ret : ty;
+                    raw_fn_body : raw_expr }
+
+val fn_stub_of_raw : raw_fn_def -> fn_def
+
+val append_env_fns : global_env -> fn_def list -> global_env
+
+val closure_elab_suffix : Big_int_Z.big_int -> string
+
+val closure_elab_name : Big_int_Z.big_int -> ident
+
+val closure_elab_capture_param :
+  global_env -> outlives_ctx -> sctx -> ident -> param infer_result
+
+val closure_elab_capture_params :
+  global_env -> outlives_ctx -> sctx -> ident list -> param list infer_result
+
+val infer_elaborated_expr_state :
+  Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+  sctx -> expr -> sctx infer_result
+
+val elaborate_raw_expr_fuel :
+  Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+  sctx -> Big_int_Z.big_int -> raw_expr -> (((expr * sctx) * fn_def
+  list) * Big_int_Z.big_int) infer_result
+
+val elaborate_raw_expr :
+  global_env -> outlives_ctx -> Big_int_Z.big_int -> sctx -> raw_expr ->
+  (expr * fn_def list) infer_result
+
+val raw_fn_body_ctx : raw_fn_def -> ctx
+
+val elaborate_raw_fns_fuel :
+  Big_int_Z.big_int -> global_env -> fn_def list -> Big_int_Z.big_int ->
+  raw_fn_def list -> (fn_def list * Big_int_Z.big_int) infer_result
+
+val elaborate_raw_global_env :
+  global_env -> raw_fn_def list -> global_env infer_result

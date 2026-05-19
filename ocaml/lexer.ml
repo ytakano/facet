@@ -33,6 +33,7 @@ let keywords = [
   "mut",          Parser.KW_MUT;
   "drop",         Parser.KW_DROP;
   "replace",      Parser.KW_REPLACE;
+  "closure",      Parser.KW_CLOSURE;
   "affine",       Parser.KW_AFFINE;
   "linear",       Parser.KW_LINEAR;
   "unrestricted", Parser.KW_UNRESTRICTED;
@@ -83,6 +84,8 @@ let rec tokenize st =
   | ')' -> Parser.RPAREN
   | '{' -> Parser.LBRACE
   | '}' -> Parser.RBRACE
+  | '[' -> Parser.LBRACKET
+  | ']' -> Parser.RBRACKET
   | '&' -> Parser.AMP
   | '<' -> Parser.LANGLE
   | '>' -> Parser.RANGLE

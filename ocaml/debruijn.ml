@@ -24,8 +24,11 @@ let lookup scope name =
 let make_ident name d : ident =
   (name, Big_int_Z.big_int_of_int d)
 
+let ident_of_name scope name =
+  make_ident name (lookup scope name)
+
 let rec convert_place scope = function
-  | NPVar name -> PVar (make_ident name (lookup scope name))
+  | NPVar name -> PVar (ident_of_name scope name)
   | NPDeref p -> PDeref (convert_place scope p)
   | NPField (p, field) -> PField (convert_place scope p, field)
 
@@ -208,6 +211,73 @@ let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (
     EIf (convert fn_names ty_scope scope cond,
          convert fn_names ty_scope scope then_e,
          convert fn_names ty_scope scope else_e)
+  | NClosure _ ->
+    failwith "closure literals must be lowered through raw elaboration"
+
+let add_capture_binding outer_scope closure_scope name =
+  (name, lookup outer_scope name) :: closure_scope
+
+let lower_param ty_scope scope np =
+  let (scope', d) = add_binding scope np.np_name in
+  let p = { param_mutability = np.np_mutability;
+            param_name       = make_ident np.np_name d;
+            param_ty         = lower_named_ty ty_scope np.np_ty } in
+  (scope', p)
+
+let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (e : named_expr) : raw_expr =
+  match e with
+  | NUnit           -> RawUnit
+  | NLit l          -> RawLit l
+  | NVar name       ->
+    if in_scope scope name then RawVar (ident_of_name scope name)
+    else if List.mem name fn_names then RawFn (make_ident name 0)
+    else RawVar (ident_of_name scope name)
+  | NPlace p        -> RawPlace (convert_place scope p)
+  | NDrop e1        -> RawDrop (convert_raw fn_names ty_scope scope e1)
+  | NReplace (p, e1) ->
+    RawReplace (convert_place scope p, convert_raw fn_names ty_scope scope e1)
+  | NAssign (p, e1) ->
+    RawAssign (convert_place scope p, convert_raw fn_names ty_scope scope e1)
+  | NBorrow (rk, p) ->
+    RawBorrow (rk, convert_place scope p)
+  | NDeref e1 ->
+    RawDeref (convert_raw fn_names ty_scope scope e1)
+  | NCall (f, args) ->
+    let args' = List.map (convert_raw fn_names ty_scope scope) args in
+    if in_scope scope f then RawCallExpr (RawVar (ident_of_name scope f), args')
+    else RawCall (make_ident f 0, args')
+  | NStruct (name, args, fields) ->
+    let (lts, tys) = split_expr_type_args ty_scope args in
+    RawStruct (name, lts, tys,
+      List.map (fun (field, e1) -> (field, convert_raw fn_names ty_scope scope e1)) fields)
+  | NLet (m, name, Some ty, e1, e2) ->
+    if named_ty_has_elided_ref_lifetime ty
+    then failwith "cannot elide lifetime in local type annotation";
+    let e1' = convert_raw fn_names ty_scope scope e1 in
+    let (scope', d) = add_binding scope name in
+    let e2' = convert_raw fn_names ty_scope scope' e2 in
+    RawLet (m, make_ident name d, lower_named_ty ty_scope ty, e1', e2')
+  | NLet (m, name, None, e1, e2) ->
+    let e1' = convert_raw fn_names ty_scope scope e1 in
+    let (scope', d) = add_binding scope name in
+    let e2' = convert_raw fn_names ty_scope scope' e2 in
+    RawLetInfer (m, make_ident name d, e1', e2')
+  | NIf (cond, then_e, else_e) ->
+    RawIf (convert_raw fn_names ty_scope scope cond,
+           convert_raw fn_names ty_scope scope then_e,
+           convert_raw fn_names ty_scope scope else_e)
+  | NClosure (captures, params, ret, body) ->
+    let capture_ids = List.map (ident_of_name scope) captures in
+    let closure_scope = List.fold_left (add_capture_binding scope) [] captures in
+    let (body_scope, raw_params) =
+      List.fold_left
+        (fun (sc, acc) np ->
+          let (sc', p) = lower_param ty_scope sc np in
+          (sc', acc @ [p]))
+        (closure_scope, []) params
+    in
+    RawClosure (capture_ids, raw_params, lower_named_ty ty_scope ret,
+      convert_raw fn_names ty_scope body_scope body)
 
 let convert_fn_def_with_names struct_names fn_names (f : named_fn_def) : fn_def =
   let ty_scope = {
@@ -234,6 +304,31 @@ let convert_fn_def_with_names struct_names fn_names (f : named_fn_def) : fn_def 
     fn_params    = params;
     fn_ret       = ret_ty;
     fn_body      = convert fn_names ty_scope scope f.nf_body }
+
+let convert_raw_fn_def_with_names struct_names fn_names (f : named_fn_def) : raw_fn_def =
+  let ty_scope = {
+    type_params = [];
+    struct_names;
+  } in
+  let (scope, params, next_lifetime, input_lts) = List.fold_left
+    (fun (sc, acc, next_lt, input_lts) np ->
+      let (sc', d) = add_binding sc np.np_name in
+      let (param_ty, next_lt', input_lts') =
+        lower_input_ty ty_scope next_lt input_lts np.np_ty
+      in
+      let p = { param_mutability = np.np_mutability;
+                param_name       = make_ident np.np_name d;
+                param_ty         = param_ty } in
+      (sc', acc @ [p], next_lt', input_lts'))
+    ([], [], List.length f.nf_lifetime_names, []) f.nf_params
+  in
+  let ret_ty = lower_output_ty ty_scope input_lts f.nf_ret in
+  { raw_fn_name      = make_ident f.nf_name 0;
+    raw_fn_lifetimes = Big_int_Z.big_int_of_int next_lifetime;
+    raw_fn_outlives = f.nf_outlives;
+    raw_fn_params    = params;
+    raw_fn_ret       = ret_ty;
+    raw_fn_body      = convert_raw fn_names ty_scope scope f.nf_body }
 
 let convert_struct struct_names s =
   let (lts, tys) = split_generics s.ns_generics in
@@ -471,12 +566,31 @@ let convert_program_items (items : named_item list) : global_env =
   let fns = List.filter_map (function NIFn f -> Some f | _ -> None) items in
   let struct_names = List.map (fun s -> s.ns_name) structs in
   let fn_names = List.map (fun f -> f.nf_name) fns in
-  let env = {
+  let top_names =
+    List.map (fun s -> s.ns_name) structs @
+    List.map (fun t -> t.nt_name) traits @
+    fn_names
+  in
+  begin match duplicate_name top_names with
+  | Some name -> failwith ("duplicate top-level name: " ^ name)
+  | None -> ()
+  end;
+  let base_env = {
     env_structs = List.map (convert_struct struct_names) structs;
     env_traits = List.map (convert_trait struct_names) traits;
     env_impls = List.map (convert_impl struct_names) impls;
-    env_fns = List.map (convert_fn_def_with_names struct_names fn_names) fns;
+    env_fns = [];
   } in
+  begin match validate_env base_env with
+  | None -> ()
+  | Some msg -> failwith msg
+  end;
+  let raw_fns = List.map (convert_raw_fn_def_with_names struct_names fn_names) fns in
+  let env =
+    match elaborate_raw_global_env base_env raw_fns with
+    | Infer_ok env -> env
+    | Infer_err _ -> failwith "raw elaboration failed"
+  in
   match validate_env env with
   | None -> env
   | Some msg -> failwith msg

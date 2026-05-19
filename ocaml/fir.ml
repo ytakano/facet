@@ -385,13 +385,14 @@ let params_to_ctx params =
     params
 
 let convert_fn global_env fn_def =
+  let body_params = fn_def.fn_captures @ fn_def.fn_params in
   let env = { env = global_env; fenv = global_env.env_fns; lifetimes = fn_def.fn_lifetimes;
-              ctx = params_to_ctx fn_def.fn_params;
+              ctx = params_to_ctx body_params;
               counter = 0; instrs = []; moved = [] } in
   let final_val = to_value env fn_def.fn_body in
   emit env (FIReturn final_val);
   { ff_name   = fn_def.fn_name;
-    ff_params = fn_def.fn_params;
+    ff_params = body_params;
     ff_ret    = fn_def.fn_ret;
     ff_body   = List.rev env.instrs }
 

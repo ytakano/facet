@@ -5814,3 +5814,393 @@ let check_program_env_alpha_validated_root_shadow_provenance env =
       (check_env_root_shadow_provenance_summary
         (alpha_normalize_global_env env))
       (check_env_preservation_ready (alpha_normalize_global_env env)))
+
+type raw_expr =
+| RawUnit
+| RawLit of literal
+| RawVar of ident
+| RawFn of ident
+| RawPlace of place
+| RawLet of mutability * ident * ty * raw_expr * raw_expr
+| RawLetInfer of mutability * ident * raw_expr * raw_expr
+| RawCall of ident * raw_expr list
+| RawCallExpr of raw_expr * raw_expr list
+| RawStruct of string * lifetime list * ty list * (string * raw_expr) list
+| RawReplace of place * raw_expr
+| RawAssign of place * raw_expr
+| RawBorrow of ref_kind * place
+| RawDeref of raw_expr
+| RawDrop of raw_expr
+| RawIf of raw_expr * raw_expr * raw_expr
+| RawClosure of ident list * param list * ty * raw_expr
+| RawCore of expr
+
+type raw_fn_def = { raw_fn_name : ident;
+                    raw_fn_lifetimes : Big_int_Z.big_int;
+                    raw_fn_outlives : outlives_ctx;
+                    raw_fn_params : param list; raw_fn_ret : ty;
+                    raw_fn_body : raw_expr }
+
+(** val fn_stub_of_raw : raw_fn_def -> fn_def **)
+
+let fn_stub_of_raw f =
+  { fn_name = f.raw_fn_name; fn_lifetimes = f.raw_fn_lifetimes; fn_outlives =
+    f.raw_fn_outlives; fn_captures = []; fn_params = f.raw_fn_params;
+    fn_ret = f.raw_fn_ret; fn_body = EUnit }
+
+(** val append_env_fns : global_env -> fn_def list -> global_env **)
+
+let append_env_fns env fns =
+  { env_structs = env.env_structs; env_traits = env.env_traits; env_impls =
+    env.env_impls; env_fns = (app env.env_fns fns) }
+
+(** val closure_elab_suffix : Big_int_Z.big_int -> string **)
+
+let rec closure_elab_suffix idx =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> "")
+    (fun idx' -> (^) "_" (closure_elab_suffix idx'))
+    idx
+
+(** val closure_elab_name : Big_int_Z.big_int -> ident **)
+
+let closure_elab_name idx =
+  (((^) "__facet_closure" (closure_elab_suffix idx)), Big_int_Z.zero_big_int)
+
+(** val closure_elab_capture_param :
+    global_env -> outlives_ctx -> sctx -> ident -> param infer_result **)
+
+let closure_elab_capture_param env _ _UU03a3_ x =
+  match sctx_lookup x _UU03a3_ with
+  | Some p ->
+    let (t, st) = p in
+    if negb (binding_available_b st [])
+    then Infer_err (ErrAlreadyConsumed x)
+    else (match sctx_lookup_mut x _UU03a3_ with
+          | Some m ->
+            (match m with
+             | MImmutable ->
+               if usage_eqb (ty_usage t) UUnrestricted
+               then if capture_ref_free_ty_b env t
+                    then Infer_ok { param_mutability = MImmutable;
+                           param_name = x; param_ty = t }
+                    else Infer_err (ErrNotAReference (ty_core t))
+               else Infer_err (ErrUsageMismatch ((ty_usage t), UUnrestricted))
+             | MMutable -> Infer_err (ErrNotMutable x))
+          | None -> Infer_err (ErrUnknownVar x))
+  | None -> Infer_err (ErrUnknownVar x)
+
+(** val closure_elab_capture_params :
+    global_env -> outlives_ctx -> sctx -> ident list -> param list
+    infer_result **)
+
+let rec closure_elab_capture_params env _UU03a9_ _UU03a3_ = function
+| [] -> Infer_ok []
+| x :: xs ->
+  (match closure_elab_capture_param env _UU03a9_ _UU03a3_ x with
+   | Infer_ok p ->
+     (match closure_elab_capture_params env _UU03a9_ _UU03a3_ xs with
+      | Infer_ok ps -> Infer_ok (p :: ps)
+      | Infer_err err -> Infer_err err)
+   | Infer_err err -> Infer_err err)
+
+(** val infer_elaborated_expr_state :
+    Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+    sctx -> expr -> sctx infer_result **)
+
+let infer_elaborated_expr_state fuel env _UU03a9_ n _UU03a3_ e =
+  match infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e with
+  | Infer_ok p -> let (_, _UU03a3_') = p in Infer_ok _UU03a3_'
+  | Infer_err err -> Infer_err err
+
+(** val elaborate_raw_expr_fuel :
+    Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+    sctx -> Big_int_Z.big_int -> raw_expr -> (((expr * sctx) * fn_def
+    list) * Big_int_Z.big_int) infer_result **)
+
+let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
+  let finish = fun env' e' extras next' ->
+    match infer_elaborated_expr_state fuel env' _UU03a9_ n _UU03a3_ e' with
+    | Infer_ok _UU03a3_' -> Infer_ok (((e', _UU03a3_'), extras), next')
+    | Infer_err err -> Infer_err err
+  in
+  let go_args =
+    let rec go_args fuel0 env0 _UU03a3_0 next0 = function
+    | [] -> Infer_ok ((([], _UU03a3_0), []), next0)
+    | a :: rest ->
+      (match elaborate_raw_expr_fuel fuel0 env0 _UU03a9_ n _UU03a3_0 next0 a with
+       | Infer_ok p ->
+         let (p0, next1) = p in
+         let (p1, extras1) = p0 in
+         let (a', _UU03a3_1) = p1 in
+         let env1 = append_env_fns env0 extras1 in
+         (match go_args fuel0 env1 _UU03a3_1 next1 rest with
+          | Infer_ok p2 ->
+            let (p3, next2) = p2 in
+            let (p4, extras2) = p3 in
+            let (rest', _UU03a3_2) = p4 in
+            Infer_ok ((((a' :: rest'), _UU03a3_2), (app extras1 extras2)),
+            next2)
+          | Infer_err err -> Infer_err err)
+       | Infer_err err -> Infer_err err)
+    in go_args
+  in
+  let go_fields =
+    let rec go_fields fuel0 env0 _UU03a3_0 next0 = function
+    | [] -> Infer_ok ((([], _UU03a3_0), []), next0)
+    | y :: rest ->
+      let (fname, fe) = y in
+      (match elaborate_raw_expr_fuel fuel0 env0 _UU03a9_ n _UU03a3_0 next0 fe with
+       | Infer_ok p ->
+         let (p0, next1) = p in
+         let (p1, extras1) = p0 in
+         let (fe', _UU03a3_1) = p1 in
+         let env1 = append_env_fns env0 extras1 in
+         (match go_fields fuel0 env1 _UU03a3_1 next1 rest with
+          | Infer_ok p2 ->
+            let (p3, next2) = p2 in
+            let (p4, extras2) = p3 in
+            let (rest', _UU03a3_2) = p4 in
+            Infer_ok (((((fname, fe') :: rest'), _UU03a3_2),
+            (app extras1 extras2)), next2)
+          | Infer_err err -> Infer_err err)
+       | Infer_err err -> Infer_err err)
+    in go_fields
+  in
+  ((fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+     (fun _ -> Infer_err ErrNotImplemented)
+     (fun fuel' ->
+     match e with
+     | RawUnit -> finish env EUnit [] next
+     | RawLit lit -> finish env (ELit lit) [] next
+     | RawVar x -> finish env (EVar x) [] next
+     | RawFn fname -> finish env (EFn fname) [] next
+     | RawPlace p -> finish env (EPlace p) [] next
+     | RawLet (m, x, t, e1, e2) ->
+       (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n _UU03a3_ next e1 with
+        | Infer_ok p ->
+          let (p0, next1) = p in
+          let (p1, extras1) = p0 in
+          let (e1', _UU03a3_1) = p1 in
+          let env1 = append_env_fns env extras1 in
+          (match elaborate_raw_expr_fuel fuel' env1 _UU03a9_ n
+                   (sctx_add x t m _UU03a3_1) next1 e2 with
+           | Infer_ok p2 ->
+             let (p3, next2) = p2 in
+             let (p4, extras2) = p3 in
+             let (e2', _) = p4 in
+             let e' = ELet (m, x, t, e1', e2') in
+             let extras = app extras1 extras2 in
+             finish (append_env_fns env extras) e' extras next2
+           | Infer_err err -> Infer_err err)
+        | Infer_err err -> Infer_err err)
+     | RawLetInfer (m, x, e1, e2) ->
+       (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n _UU03a3_ next e1 with
+        | Infer_ok p ->
+          let (p0, next1) = p in
+          let (p1, extras1) = p0 in
+          let (e1', _UU03a3_1) = p1 in
+          (match infer_core_env_state_fuel fuel' (append_env_fns env extras1)
+                   _UU03a9_ n _UU03a3_ e1' with
+           | Infer_ok p2 ->
+             let (t1, _) = p2 in
+             let env1 = append_env_fns env extras1 in
+             (match elaborate_raw_expr_fuel fuel' env1 _UU03a9_ n
+                      (sctx_add x t1 m _UU03a3_1) next1 e2 with
+              | Infer_ok p3 ->
+                let (p4, next2) = p3 in
+                let (p5, extras2) = p4 in
+                let (e2', _) = p5 in
+                let e' = ELet (m, x, t1, e1', e2') in
+                let extras = app extras1 extras2 in
+                finish (append_env_fns env extras) e' extras next2
+              | Infer_err err -> Infer_err err)
+           | Infer_err err -> Infer_err err)
+        | Infer_err err -> Infer_err err)
+     | RawCall (fname, args) ->
+       (match go_args fuel' env _UU03a3_ next args with
+        | Infer_ok p ->
+          let (p0, next') = p in
+          let (p1, extras) = p0 in
+          let (args', _) = p1 in
+          finish (append_env_fns env extras) (ECall (fname, args')) extras
+            next'
+        | Infer_err err -> Infer_err err)
+     | RawCallExpr (callee, args) ->
+       (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n _UU03a3_ next
+                callee with
+        | Infer_ok p ->
+          let (p0, next1) = p in
+          let (p1, extras1) = p0 in
+          let (callee', _UU03a3_1) = p1 in
+          let env1 = append_env_fns env extras1 in
+          (match go_args fuel' env1 _UU03a3_1 next1 args with
+           | Infer_ok p2 ->
+             let (p3, next2) = p2 in
+             let (p4, extras2) = p3 in
+             let (args', _) = p4 in
+             let extras = app extras1 extras2 in
+             finish (append_env_fns env extras) (ECallExpr (callee', args'))
+               extras next2
+           | Infer_err err -> Infer_err err)
+        | Infer_err err -> Infer_err err)
+     | RawStruct (sname, lts, tys, fields) ->
+       (match go_fields fuel' env _UU03a3_ next fields with
+        | Infer_ok p ->
+          let (p0, next') = p in
+          let (p1, extras) = p0 in
+          let (fields', _) = p1 in
+          finish (append_env_fns env extras) (EStruct (sname, lts, tys,
+            fields')) extras next'
+        | Infer_err err -> Infer_err err)
+     | RawReplace (p, e1) ->
+       (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n _UU03a3_ next e1 with
+        | Infer_ok p0 ->
+          let (p1, next') = p0 in
+          let (p2, extras) = p1 in
+          let (e1', _) = p2 in
+          finish (append_env_fns env extras) (EReplace (p, e1')) extras next'
+        | Infer_err err -> Infer_err err)
+     | RawAssign (p, e1) ->
+       (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n _UU03a3_ next e1 with
+        | Infer_ok p0 ->
+          let (p1, next') = p0 in
+          let (p2, extras) = p1 in
+          let (e1', _) = p2 in
+          finish (append_env_fns env extras) (EAssign (p, e1')) extras next'
+        | Infer_err err -> Infer_err err)
+     | RawBorrow (rk, p) -> finish env (EBorrow (rk, p)) [] next
+     | RawDeref e1 ->
+       (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n _UU03a3_ next e1 with
+        | Infer_ok p ->
+          let (p0, next') = p in
+          let (p1, extras) = p0 in
+          let (e1', _) = p1 in
+          finish (append_env_fns env extras) (EDeref e1') extras next'
+        | Infer_err err -> Infer_err err)
+     | RawDrop e1 ->
+       (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n _UU03a3_ next e1 with
+        | Infer_ok p ->
+          let (p0, next') = p in
+          let (p1, extras) = p0 in
+          let (e1', _) = p1 in
+          finish (append_env_fns env extras) (EDrop e1') extras next'
+        | Infer_err err -> Infer_err err)
+     | RawIf (e1, e2, e3) ->
+       (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n _UU03a3_ next e1 with
+        | Infer_ok p ->
+          let (p0, next1) = p in
+          let (p1, extras1) = p0 in
+          let (e1', _UU03a3_1) = p1 in
+          let env1 = append_env_fns env extras1 in
+          (match elaborate_raw_expr_fuel fuel' env1 _UU03a9_ n _UU03a3_1
+                   next1 e2 with
+           | Infer_ok p2 ->
+             let (p3, next2) = p2 in
+             let (p4, extras2) = p3 in
+             let (e2', _) = p4 in
+             let env2 = append_env_fns env1 extras2 in
+             (match elaborate_raw_expr_fuel fuel' env2 _UU03a9_ n _UU03a3_1
+                      next2 e3 with
+              | Infer_ok p5 ->
+                let (p6, next3) = p5 in
+                let (p7, extras3) = p6 in
+                let (e3', _) = p7 in
+                let extras = app extras1 (app extras2 extras3) in
+                finish (append_env_fns env extras) (EIf (e1', e2', e3'))
+                  extras next3
+              | Infer_err err -> Infer_err err)
+           | Infer_err err -> Infer_err err)
+        | Infer_err err -> Infer_err err)
+     | RawClosure (captures, params, ret, body) ->
+       (match closure_elab_capture_params env _UU03a9_ _UU03a3_ captures with
+        | Infer_ok cap_params ->
+          let fname = closure_elab_name next in
+          let body_ctx = sctx_of_ctx (params_ctx (app cap_params params)) in
+          (match elaborate_raw_expr_fuel fuel' env _UU03a9_
+                   Big_int_Z.zero_big_int body_ctx (Big_int_Z.succ_big_int
+                   next) body with
+           | Infer_ok p ->
+             let (p0, next') = p in
+             let (p1, body_extras) = p0 in
+             let (body', _) = p1 in
+             let fdef = { fn_name = fname; fn_lifetimes =
+               Big_int_Z.zero_big_int; fn_outlives = []; fn_captures =
+               cap_params; fn_params = params; fn_ret = ret; fn_body = body' }
+             in
+             let env_with_closure =
+               append_env_fns env (app body_extras (fdef :: []))
+             in
+             (match infer_full_env env_with_closure fdef with
+              | Infer_ok _ ->
+                finish env_with_closure (EMakeClosure (fname, captures))
+                  (app body_extras (fdef :: [])) next'
+              | Infer_err err -> Infer_err err)
+           | Infer_err err -> Infer_err err)
+        | Infer_err err -> Infer_err err)
+     | RawCore ecore -> finish env ecore [] next)
+     fuel)
+
+(** val elaborate_raw_expr :
+    global_env -> outlives_ctx -> Big_int_Z.big_int -> sctx -> raw_expr ->
+    (expr * fn_def list) infer_result **)
+
+let elaborate_raw_expr env _UU03a9_ n _UU03a3_ e =
+  match elaborate_raw_expr_fuel
+          (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) env
+          _UU03a9_ n _UU03a3_ Big_int_Z.zero_big_int e with
+  | Infer_ok p ->
+    let (p0, _) = p in
+    let (p1, extras) = p0 in let (e', _) = p1 in Infer_ok (e', extras)
+  | Infer_err err -> Infer_err err
+
+(** val raw_fn_body_ctx : raw_fn_def -> ctx **)
+
+let raw_fn_body_ctx f =
+  params_ctx f.raw_fn_params
+
+(** val elaborate_raw_fns_fuel :
+    Big_int_Z.big_int -> global_env -> fn_def list -> Big_int_Z.big_int ->
+    raw_fn_def list -> (fn_def list * Big_int_Z.big_int) infer_result **)
+
+let rec elaborate_raw_fns_fuel fuel base_env done0 next = function
+| [] -> Infer_ok ([], next)
+| f :: rest ->
+  let env0 = append_env_fns base_env done0 in
+  (match elaborate_raw_expr_fuel fuel env0 f.raw_fn_outlives
+           f.raw_fn_lifetimes (sctx_of_ctx (raw_fn_body_ctx f)) next
+           f.raw_fn_body with
+   | Infer_ok p ->
+     let (p0, next1) = p in
+     let (p1, extras) = p0 in
+     let (body', _) = p1 in
+     let f' = { fn_name = f.raw_fn_name; fn_lifetimes = f.raw_fn_lifetimes;
+       fn_outlives = f.raw_fn_outlives; fn_captures = []; fn_params =
+       f.raw_fn_params; fn_ret = f.raw_fn_ret; fn_body = body' }
+     in
+     (match elaborate_raw_fns_fuel fuel base_env
+              (app done0 (app extras (f' :: []))) next1 rest with
+      | Infer_ok p2 ->
+        let (rest', next2) = p2 in
+        Infer_ok ((app extras (f' :: rest')), next2)
+      | Infer_err err -> Infer_err err)
+   | Infer_err err -> Infer_err err)
+
+(** val elaborate_raw_global_env :
+    global_env -> raw_fn_def list -> global_env infer_result **)
+
+let elaborate_raw_global_env env fs =
+  let stubs = map fn_stub_of_raw fs in
+  let base = { env_structs = env.env_structs; env_traits = env.env_traits;
+    env_impls = env.env_impls; env_fns = stubs }
+  in
+  (match elaborate_raw_fns_fuel
+           (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) base []
+           Big_int_Z.zero_big_int fs with
+   | Infer_ok p ->
+     let (fns, _) = p in
+     Infer_ok { env_structs = env.env_structs; env_traits = env.env_traits;
+     env_impls = env.env_impls; env_fns = fns }
+   | Infer_err err -> Infer_err err)

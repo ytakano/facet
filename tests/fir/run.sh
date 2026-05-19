@@ -40,5 +40,8 @@ run_case tests/fir/struct_field_borrow.facet "borrow %t0#0 = &p#1.y as unrestric
 run_case tests/fir/nested_field_access.facet "project %t0#0 as unrestricted isize = o#1.inner.value as unrestricted isize"
 run_case tests/fir/structural_drop.facet "drop %t1#0 as unrestricted unit = p#1.x as affine isize"
 run_case tests/fir/structural_drop.facet "drop %t0#0 as unrestricted unit = p#1.y as affine bool"
+run_case tests/fir/closure_capture_value.facet "closure __facet_closure"
+run_case tests/fir/closure_capture_value.facet "[y#"
+run_case tests/fir/closure_capture_value.facet "fn __facet_closure"
 
 exit "$status"

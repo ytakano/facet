@@ -1,0 +1,5 @@
+fn main() -> unrestricted isize {
+    let y: unrestricted isize = 7 in
+    let f = closure [z](x: unrestricted isize) -> unrestricted isize { y } in
+    (f 1)
+}

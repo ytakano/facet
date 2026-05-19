@@ -5452,6 +5452,320 @@ Definition infer_direct (fenv : list fn_def) (f : fn_def)
   end.
 
 (* ------------------------------------------------------------------ *)
+(* Surface closure elaboration                                          *)
+(* ------------------------------------------------------------------ *)
+
+Inductive raw_expr : Type :=
+| RawUnit : raw_expr
+| RawLit : literal -> raw_expr
+| RawVar : ident -> raw_expr
+| RawFn : ident -> raw_expr
+| RawPlace : place -> raw_expr
+| RawLet : mutability -> ident -> Ty -> raw_expr -> raw_expr -> raw_expr
+| RawLetInfer : mutability -> ident -> raw_expr -> raw_expr -> raw_expr
+| RawCall : ident -> list raw_expr -> raw_expr
+| RawCallExpr : raw_expr -> list raw_expr -> raw_expr
+| RawStruct : string -> list lifetime -> list Ty -> list (string * raw_expr) -> raw_expr
+| RawReplace : place -> raw_expr -> raw_expr
+| RawAssign : place -> raw_expr -> raw_expr
+| RawBorrow : ref_kind -> place -> raw_expr
+| RawDeref : raw_expr -> raw_expr
+| RawDrop : raw_expr -> raw_expr
+| RawIf : raw_expr -> raw_expr -> raw_expr -> raw_expr
+| RawClosure : list ident -> list param -> Ty -> raw_expr -> raw_expr
+| RawCore : expr -> raw_expr.
+
+Record raw_fn_def : Type := MkRawFnDef {
+  raw_fn_name      : ident;
+  raw_fn_lifetimes : nat;
+  raw_fn_outlives  : outlives_ctx;
+  raw_fn_params    : list param;
+  raw_fn_ret       : Ty;
+  raw_fn_body      : raw_expr
+}.
+
+Definition fn_stub_of_raw (f : raw_fn_def) : fn_def :=
+  MkFnDef (raw_fn_name f) (raw_fn_lifetimes f) (raw_fn_outlives f)
+    [] (raw_fn_params f) (raw_fn_ret f) EUnit.
+
+Definition append_env_fns (env : global_env) (fns : list fn_def) : global_env :=
+  MkGlobalEnv (env_structs env) (env_traits env) (env_impls env)
+    (env_fns env ++ fns).
+
+Fixpoint closure_elab_suffix (idx : nat) : string :=
+  match idx with
+  | O => EmptyString
+  | S idx' => String.append "_"%string (closure_elab_suffix idx')
+  end.
+
+Definition closure_elab_name (idx : nat) : ident :=
+  (String.append "__facet_closure"%string (closure_elab_suffix idx), 0).
+
+Definition closure_elab_capture_param
+    (env : global_env) (Ω : outlives_ctx) (Σ : sctx) (x : ident)
+    : infer_result param :=
+  match sctx_lookup x Σ with
+  | None => infer_err (ErrUnknownVar x)
+  | Some (T, st) =>
+      if negb (binding_available_b st [])
+      then infer_err (ErrAlreadyConsumed x)
+      else
+      match sctx_lookup_mut x Σ with
+      | Some MImmutable =>
+          if usage_eqb (ty_usage T) UUnrestricted
+          then
+            if capture_ref_free_ty_b env T
+            then infer_ok (MkParam MImmutable x T)
+            else infer_err (ErrNotAReference (ty_core T))
+          else infer_err (ErrUsageMismatch (ty_usage T) UUnrestricted)
+      | Some MMutable => infer_err (ErrNotMutable x)
+      | None => infer_err (ErrUnknownVar x)
+      end
+  end.
+
+Fixpoint closure_elab_capture_params
+    (env : global_env) (Ω : outlives_ctx) (Σ : sctx) (captures : list ident)
+    : infer_result (list param) :=
+  match captures with
+  | [] => infer_ok []
+  | x :: xs =>
+      match closure_elab_capture_param env Ω Σ x with
+      | infer_err err => infer_err err
+      | infer_ok p =>
+          match closure_elab_capture_params env Ω Σ xs with
+          | infer_err err => infer_err err
+          | infer_ok ps => infer_ok (p :: ps)
+          end
+      end
+  end.
+
+Definition infer_elaborated_expr_state
+    (fuel : nat) (env : global_env) (Ω : outlives_ctx) (n : nat)
+    (Σ : sctx) (e : expr) : infer_result sctx :=
+  match infer_core_env_state_fuel fuel env Ω n Σ e with
+  | infer_err err => infer_err err
+  | infer_ok (_, Σ') => infer_ok Σ'
+  end.
+
+Fixpoint elaborate_raw_expr_fuel
+    (fuel : nat) (env : global_env) (Ω : outlives_ctx) (n : nat)
+    (Σ : sctx) (next : nat) (e : raw_expr)
+    : infer_result (expr * sctx * list fn_def * nat) :=
+  let finish env' e' extras next' :=
+    match infer_elaborated_expr_state fuel env' Ω n Σ e' with
+    | infer_err err => infer_err err
+    | infer_ok Σ' => infer_ok (e', Σ', extras, next')
+    end in
+  let fix go_args fuel0 env0 Σ0 next0 args :=
+    match args with
+    | [] => infer_ok ([], Σ0, [], next0)
+    | a :: rest =>
+        match elaborate_raw_expr_fuel fuel0 env0 Ω n Σ0 next0 a with
+        | infer_err err => infer_err err
+        | infer_ok (a', Σ1, extras1, next1) =>
+            let env1 := append_env_fns env0 extras1 in
+            match go_args fuel0 env1 Σ1 next1 rest with
+            | infer_err err => infer_err err
+            | infer_ok (rest', Σ2, extras2, next2) =>
+                infer_ok (a' :: rest', Σ2, extras1 ++ extras2, next2)
+            end
+        end
+    end in
+  let fix go_fields fuel0 env0 Σ0 next0 fields :=
+    match fields with
+    | [] => infer_ok ([], Σ0, [], next0)
+    | (fname, fe) :: rest =>
+        match elaborate_raw_expr_fuel fuel0 env0 Ω n Σ0 next0 fe with
+        | infer_err err => infer_err err
+        | infer_ok (fe', Σ1, extras1, next1) =>
+            let env1 := append_env_fns env0 extras1 in
+            match go_fields fuel0 env1 Σ1 next1 rest with
+            | infer_err err => infer_err err
+            | infer_ok (rest', Σ2, extras2, next2) =>
+                infer_ok ((fname, fe') :: rest', Σ2, extras1 ++ extras2, next2)
+            end
+        end
+    end in
+  match fuel with
+  | O => infer_err ErrNotImplemented
+  | S fuel' =>
+      match e with
+      | RawUnit => finish env EUnit [] next
+      | RawLit lit => finish env (ELit lit) [] next
+      | RawVar x => finish env (EVar x) [] next
+      | RawFn fname => finish env (EFn fname) [] next
+      | RawPlace p => finish env (EPlace p) [] next
+      | RawCore ecore => finish env ecore [] next
+      | RawBorrow rk p => finish env (EBorrow rk p) [] next
+      | RawLet m x T e1 e2 =>
+          match elaborate_raw_expr_fuel fuel' env Ω n Σ next e1 with
+          | infer_err err => infer_err err
+          | infer_ok (e1', Σ1, extras1, next1) =>
+              let env1 := append_env_fns env extras1 in
+              match elaborate_raw_expr_fuel fuel' env1 Ω n
+                      (sctx_add x T m Σ1) next1 e2 with
+              | infer_err err => infer_err err
+              | infer_ok (e2', _, extras2, next2) =>
+                  let e' := ELet m x T e1' e2' in
+                  let extras := extras1 ++ extras2 in
+                  finish (append_env_fns env extras) e' extras next2
+              end
+          end
+      | RawLetInfer m x e1 e2 =>
+          match elaborate_raw_expr_fuel fuel' env Ω n Σ next e1 with
+          | infer_err err => infer_err err
+          | infer_ok (e1', Σ1, extras1, next1) =>
+              match infer_core_env_state_fuel fuel' (append_env_fns env extras1)
+                      Ω n Σ e1' with
+              | infer_err err => infer_err err
+              | infer_ok (T1, _) =>
+                  let env1 := append_env_fns env extras1 in
+                  match elaborate_raw_expr_fuel fuel' env1 Ω n
+                          (sctx_add x T1 m Σ1) next1 e2 with
+                  | infer_err err => infer_err err
+                  | infer_ok (e2', _, extras2, next2) =>
+                      let e' := ELet m x T1 e1' e2' in
+                      let extras := extras1 ++ extras2 in
+                      finish (append_env_fns env extras) e' extras next2
+                  end
+              end
+          end
+      | RawCall fname args =>
+          match go_args fuel' env Σ next args with
+          | infer_err err => infer_err err
+          | infer_ok (args', _, extras, next') =>
+              finish (append_env_fns env extras) (ECall fname args') extras next'
+          end
+      | RawCallExpr callee args =>
+          match elaborate_raw_expr_fuel fuel' env Ω n Σ next callee with
+          | infer_err err => infer_err err
+          | infer_ok (callee', Σ1, extras1, next1) =>
+              let env1 := append_env_fns env extras1 in
+              match go_args fuel' env1 Σ1 next1 args with
+              | infer_err err => infer_err err
+              | infer_ok (args', _, extras2, next2) =>
+                  let extras := extras1 ++ extras2 in
+                  finish (append_env_fns env extras)
+                    (ECallExpr callee' args') extras next2
+              end
+          end
+      | RawStruct sname lts tys fields =>
+          match go_fields fuel' env Σ next fields with
+          | infer_err err => infer_err err
+          | infer_ok (fields', _, extras, next') =>
+              finish (append_env_fns env extras)
+                (EStruct sname lts tys fields') extras next'
+          end
+      | RawReplace p e1 =>
+          match elaborate_raw_expr_fuel fuel' env Ω n Σ next e1 with
+          | infer_err err => infer_err err
+          | infer_ok (e1', _, extras, next') =>
+              finish (append_env_fns env extras) (EReplace p e1') extras next'
+          end
+      | RawAssign p e1 =>
+          match elaborate_raw_expr_fuel fuel' env Ω n Σ next e1 with
+          | infer_err err => infer_err err
+          | infer_ok (e1', _, extras, next') =>
+              finish (append_env_fns env extras) (EAssign p e1') extras next'
+          end
+      | RawDeref e1 =>
+          match elaborate_raw_expr_fuel fuel' env Ω n Σ next e1 with
+          | infer_err err => infer_err err
+          | infer_ok (e1', _, extras, next') =>
+              finish (append_env_fns env extras) (EDeref e1') extras next'
+          end
+      | RawDrop e1 =>
+          match elaborate_raw_expr_fuel fuel' env Ω n Σ next e1 with
+          | infer_err err => infer_err err
+          | infer_ok (e1', _, extras, next') =>
+              finish (append_env_fns env extras) (EDrop e1') extras next'
+          end
+      | RawIf e1 e2 e3 =>
+          match elaborate_raw_expr_fuel fuel' env Ω n Σ next e1 with
+          | infer_err err => infer_err err
+          | infer_ok (e1', Σ1, extras1, next1) =>
+              let env1 := append_env_fns env extras1 in
+              match elaborate_raw_expr_fuel fuel' env1 Ω n Σ1 next1 e2 with
+              | infer_err err => infer_err err
+              | infer_ok (e2', _, extras2, next2) =>
+                  let env2 := append_env_fns env1 extras2 in
+                  match elaborate_raw_expr_fuel fuel' env2 Ω n Σ1 next2 e3 with
+                  | infer_err err => infer_err err
+                  | infer_ok (e3', _, extras3, next3) =>
+                      let extras := extras1 ++ extras2 ++ extras3 in
+                      finish (append_env_fns env extras)
+                        (EIf e1' e2' e3') extras next3
+                  end
+              end
+          end
+      | RawClosure captures params ret body =>
+          match closure_elab_capture_params env Ω Σ captures with
+          | infer_err err => infer_err err
+          | infer_ok cap_params =>
+              let fname := closure_elab_name next in
+              let body_ctx := sctx_of_ctx (params_ctx (cap_params ++ params)) in
+              match elaborate_raw_expr_fuel fuel' env Ω 0 body_ctx (S next) body with
+              | infer_err err => infer_err err
+              | infer_ok (body', _, body_extras, next') =>
+                  let fdef := MkFnDef fname 0 [] cap_params params ret body' in
+                  let env_with_closure := append_env_fns env (body_extras ++ [fdef]) in
+                  match infer_full_env env_with_closure fdef with
+                  | infer_err err => infer_err err
+                  | infer_ok _ =>
+                      finish env_with_closure (EMakeClosure fname captures)
+                        (body_extras ++ [fdef]) next'
+                  end
+              end
+          end
+      end
+  end.
+
+Definition elaborate_raw_expr
+    (env : global_env) (Ω : outlives_ctx) (n : nat) (Σ : sctx)
+    (e : raw_expr) : infer_result (expr * list fn_def) :=
+  match elaborate_raw_expr_fuel 10000 env Ω n Σ 0 e with
+  | infer_err err => infer_err err
+  | infer_ok (e', _, extras, _) => infer_ok (e', extras)
+  end.
+
+Definition raw_fn_body_ctx (f : raw_fn_def) : ctx :=
+  params_ctx (raw_fn_params f).
+
+Fixpoint elaborate_raw_fns_fuel
+    (fuel : nat) (base_env : global_env) (done : list fn_def)
+    (next : nat) (fs : list raw_fn_def)
+    : infer_result (list fn_def * nat) :=
+  match fs with
+  | [] => infer_ok ([], next)
+  | f :: rest =>
+      let env0 := append_env_fns base_env done in
+      match elaborate_raw_expr_fuel fuel env0 (raw_fn_outlives f)
+              (raw_fn_lifetimes f) (sctx_of_ctx (raw_fn_body_ctx f))
+              next (raw_fn_body f) with
+      | infer_err err => infer_err err
+      | infer_ok (body', _, extras, next1) =>
+          let f' := MkFnDef (raw_fn_name f) (raw_fn_lifetimes f)
+                      (raw_fn_outlives f) [] (raw_fn_params f)
+                      (raw_fn_ret f) body' in
+          match elaborate_raw_fns_fuel fuel base_env (done ++ extras ++ [f'])
+                  next1 rest with
+          | infer_err err => infer_err err
+          | infer_ok (rest', next2) => infer_ok (extras ++ f' :: rest', next2)
+          end
+      end
+  end.
+
+Definition elaborate_raw_global_env (env : global_env) (fs : list raw_fn_def)
+    : infer_result global_env :=
+  let stubs := map fn_stub_of_raw fs in
+  let base := MkGlobalEnv (env_structs env) (env_traits env) (env_impls env) stubs in
+  match elaborate_raw_fns_fuel 10000 base [] 0 fs with
+  | infer_err err => infer_err err
+  | infer_ok (fns, _) =>
+      infer_ok (MkGlobalEnv (env_structs env) (env_traits env) (env_impls env) fns)
+  end.
+
+(* ------------------------------------------------------------------ *)
 (* OCaml extraction                                                      *)
 (* ------------------------------------------------------------------ *)
 
@@ -5465,6 +5779,7 @@ Extraction "../fixtures/TypeChecker.ml"
   infer_env infer_full_env check_program_env
   infer_core_env_elab infer_env_elab infer_full_env_elab
   infer_program_env_alpha_elab check_program_env_alpha_elab
+  elaborate_raw_expr elaborate_raw_global_env
   alpha_normalize_global_env check_program_env_alpha
   check_program_env_alpha_validated
   preservation_ready_expr_b preservation_ready_args_b

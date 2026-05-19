@@ -488,6 +488,18 @@ Follow this order before inventing new theorem shapes:
      validation rejects duplicate names across both lists, this internal order
      should not be source-observable. Direct `EFn` and direct `ECall` remain
      captureless.
+   - Concrete proof blocker found during the attempted capture-aware
+     `fn_body_ctx` migration: existing call-body cleanup lemmas type
+     `bind_params (fn_params fcall) args frame` against
+     `params_ctx (fn_params fcall)`. A body context of
+     `params_ctx (fn_params fcall ++ fn_captures fcall)` also needs evidence
+     that the `captured` prefix of `frame` is typed as
+     `params_ctx (fn_captures fcall)`. Current `captured_call_frame_ready`
+     only exposes `captured_store_typed` / `sctx_of_store captured`, so the
+     next implementation must first add a Prop/executable bridge connecting
+     `EMakeClosure` capture checks to `fn_captures`-shaped captured-frame
+     typing. Do not retry the global `fn_body_ctx := params ++ captures`
+     migration before this bridge exists.
    - Preservation/provenance readiness validators still reject
      `EMakeClosure`. Do not flip those booleans until captured `ECallExpr`
      preservation is proved. The next closure task is either parser/lambda

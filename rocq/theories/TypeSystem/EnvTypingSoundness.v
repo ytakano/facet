@@ -719,6 +719,21 @@ Proof.
         -- eapply IH; [exact Hcallee | exact Hcallee_infer].
         -- eapply infer_env_args_collect_sound.
            ++ exact Hcollect.
+	           ++ intros Σ0 e0 T0 Σ1 Hin_arg Hinfer_arg.
+	              eapply IH.
+	              ** eapply call_exprs_in_true; eassumption.
+	              ** exact Hinfer_arg.
+	           ++ rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
+      * match goal with
+        | H : context[check_arg_tys Ω arg_tys ?param_tys] |- _ =>
+            destruct (check_arg_tys Ω arg_tys param_tys) as [err |] eqn:Hcheck;
+              try discriminate
+        end.
+        inversion Hinfer; subst.
+        eapply TES_CallExpr_Closure.
+        -- eapply IH; [exact Hcallee | exact Hcallee_infer].
+        -- eapply infer_env_args_collect_sound.
+           ++ exact Hcollect.
            ++ intros Σ0 e0 T0 Σ1 Hin_arg Hinfer_arg.
               eapply IH.
               ** eapply call_exprs_in_true; eassumption.
@@ -906,6 +921,21 @@ Proof.
       * destruct (check_arg_tys Ω arg_tys l0) as [err |] eqn:Hcheck; try discriminate.
         inversion Hinfer; subst.
         eapply TES_CallExpr_Fn.
+        -- eapply IH; [exact Hcallee | exact Hcallee_infer].
+        -- eapply infer_env_args_collect_sound.
+           ++ exact Hcollect.
+	           ++ intros Σ0 e0 T0 Σ1 Hin_arg Hinfer_arg.
+	              eapply IH.
+	              ** eapply struct_exprs_in_true; eassumption.
+	              ** exact Hinfer_arg.
+	           ++ rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
+      * match goal with
+        | H : context[check_arg_tys Ω arg_tys ?param_tys] |- _ =>
+            destruct (check_arg_tys Ω arg_tys param_tys) as [err |] eqn:Hcheck;
+              try discriminate
+        end.
+        inversion Hinfer; subst.
+        eapply TES_CallExpr_Closure.
         -- eapply IH; [exact Hcallee | exact Hcallee_infer].
         -- eapply infer_env_args_collect_sound.
            ++ exact Hcollect.

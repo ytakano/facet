@@ -187,6 +187,13 @@ Fixpoint ty_compatible_b_fuel (fuel : nat) (Ω : outlives_ctx)
       | TFn params_a ret_a, TFn params_e ret_e =>
           ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel') Ω params_a params_e &&
           ty_compatible_b_fuel fuel' Ω ret_a ret_e
+      | TClosure env_a params_a ret_a, TClosure env_e params_e ret_e =>
+          outlives_b Ω env_a env_e &&
+          ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel') Ω params_a params_e &&
+          ty_compatible_b_fuel fuel' Ω ret_a ret_e
+      | TFn params_a ret_a, TClosure _ params_e ret_e =>
+          ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel') Ω params_a params_e &&
+          ty_compatible_b_fuel fuel' Ω ret_a ret_e
       | TForall na Ωa Ta, TForall nb Ωb Tb =>
           Nat.eqb na nb && outlives_ctx_eqb Ωa Ωb &&
           ty_compatible_b_fuel fuel' Ω Ta Tb
@@ -929,6 +936,11 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
                   | Some err => infer_err err
                   | None => infer_ok (ret, Γ')
                   end
+              | TClosure _ param_tys ret =>
+                  match check_arg_tys Ω arg_tys param_tys with
+                  | Some err => infer_err err
+                  | None => infer_ok (ret, Γ')
+                  end
               | TForall m bounds body =>
                   match ty_core body with
                   | TFn param_tys ret =>
@@ -1439,6 +1451,11 @@ Fixpoint infer_core_env_fuel (fuel : nat)
           | infer_ok (arg_tys, Γ') =>
               match ty_core T_callee with
               | TFn param_tys ret =>
+                  match check_arg_tys Ω arg_tys param_tys with
+                  | Some err => infer_err err
+                  | None => infer_ok (ret, Γ')
+                  end
+              | TClosure _ param_tys ret =>
                   match check_arg_tys Ω arg_tys param_tys with
                   | Some err => infer_err err
                   | None => infer_ok (ret, Γ')
@@ -2074,6 +2091,11 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
                   | Some err => infer_err err
                   | None => infer_ok (ret, Σ')
                   end
+              | TClosure _ param_tys ret =>
+                  match check_arg_tys Ω arg_tys param_tys with
+                  | Some err => infer_err err
+                  | None => infer_ok (ret, Σ')
+                  end
               | TForall m bounds body =>
                   match ty_core body with
                   | TFn param_tys ret =>
@@ -2452,6 +2474,11 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
           | infer_ok (arg_tys, Σ', args') =>
               match ty_core T_callee with
               | TFn param_tys ret =>
+                  match check_arg_tys Ω arg_tys param_tys with
+                  | Some err => infer_err err
+                  | None => infer_ok (ret, Σ', ECallExpr callee' args')
+                  end
+              | TClosure _ param_tys ret =>
                   match check_arg_tys Ω arg_tys param_tys with
                   | Some err => infer_err err
                   | None => infer_ok (ret, Σ', ECallExpr callee' args')
@@ -3911,6 +3938,38 @@ Example ty_compatible_b_unique_ref_invariant_inner :
       (TRef LStatic RUnique (MkTy UUnrestricted TIntegers)))
     (MkTy UUnrestricted
       (TRef LStatic RUnique (MkTy UAffine TIntegers))) = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ty_compatible_b_closure_env_contra_params_covariant_ret :
+  ty_compatible_b []
+    (MkTy UUnrestricted
+      (TClosure LStatic
+        [MkTy UAffine TIntegers]
+        (MkTy UUnrestricted TBooleans)))
+    (MkTy UAffine
+      (TClosure (LVar 0)
+        [MkTy UUnrestricted TIntegers]
+        (MkTy UAffine TBooleans))) = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ty_compatible_b_fn_expected_closure_bridge :
+  ty_compatible_b []
+    (MkTy UUnrestricted
+      (TFn
+        [MkTy UAffine TIntegers]
+        (MkTy UUnrestricted TBooleans)))
+    (MkTy UAffine
+      (TClosure (LVar 0)
+        [MkTy UUnrestricted TIntegers]
+        (MkTy UAffine TBooleans))) = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ty_compatible_b_closure_not_expected_fn :
+  ty_compatible_b []
+    (MkTy UUnrestricted
+      (TClosure LStatic [] (MkTy UUnrestricted TBooleans)))
+    (MkTy UUnrestricted
+      (TFn [] (MkTy UUnrestricted TBooleans))) = false.
 Proof. vm_compute. reflexivity. Qed.
 
 (* ------------------------------------------------------------------ *)

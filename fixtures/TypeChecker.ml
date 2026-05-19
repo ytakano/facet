@@ -2254,6 +2254,16 @@ let rec ty_compatible_b_fuel fuel _UU03a9_ t_actual t_expected =
                  (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
              | p :: l -> ty_core_eqb ca (TForall (n0, (p :: l), tb)))
           | x -> ty_core_eqb ca x)
+       | TStruct (s, l, l0) ->
+         let ca = TStruct (s, l, l0) in
+         (match ty_core t_expected with
+          | TForall (n, o, tb) ->
+            (match o with
+             | [] ->
+               (&&) (negb (contains_lbound_ty tb))
+                 (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
+             | p :: l1 -> ty_core_eqb ca (TForall (n, (p :: l1), tb)))
+          | x -> ty_core_eqb ca x)
        | TFn (params_a, ret_a) ->
          let ca = TFn (params_a, ret_a) in
          (match ty_core t_expected with
@@ -2261,6 +2271,27 @@ let rec ty_compatible_b_fuel fuel _UU03a9_ t_actual t_expected =
             (&&)
               (ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel')
                 _UU03a9_ params_a params_e)
+              (ty_compatible_b_fuel fuel' _UU03a9_ ret_a ret_e)
+          | TClosure (_, params_e, ret_e) ->
+            (&&)
+              (ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel')
+                _UU03a9_ params_a params_e)
+              (ty_compatible_b_fuel fuel' _UU03a9_ ret_a ret_e)
+          | TForall (n, o, tb) ->
+            (match o with
+             | [] ->
+               (&&) (negb (contains_lbound_ty tb))
+                 (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
+             | p :: l -> ty_core_eqb ca (TForall (n, (p :: l), tb)))
+          | x -> ty_core_eqb ca x)
+       | TClosure (env_a, params_a, ret_a) ->
+         let ca = TClosure (env_a, params_a, ret_a) in
+         (match ty_core t_expected with
+          | TClosure (env_e, params_e, ret_e) ->
+            (&&)
+              ((&&) (outlives_b _UU03a9_ env_a env_e)
+                (ty_compatible_args_contra_b_fuel
+                  (ty_compatible_b_fuel fuel') _UU03a9_ params_a params_e))
               (ty_compatible_b_fuel fuel' _UU03a9_ ret_a ret_e)
           | TForall (n, o, tb) ->
             (match o with
@@ -2291,16 +2322,7 @@ let rec ty_compatible_b_fuel fuel _UU03a9_ t_actual t_expected =
               (match rka with
                | RShared -> ty_compatible_b_fuel fuel' _UU03a9_ ta tb
                | RUnique -> ty_eqb ta tb)
-          | x -> ty_core_eqb ca x)
-       | x ->
-         (match ty_core t_expected with
-          | TForall (n, o, tb) ->
-            (match o with
-             | [] ->
-               (&&) (negb (contains_lbound_ty tb))
-                 (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
-             | p :: l1 -> ty_core_eqb x (TForall (n, (p :: l1), tb)))
-          | x0 -> ty_core_eqb x x0)))
+          | x -> ty_core_eqb ca x)))
     fuel
 
 (** val ty_compatible_b : outlives_ctx -> ty -> ty -> bool **)
@@ -3224,6 +3246,10 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
                (match check_arg_tys _UU03a9_ arg_tys param_tys with
                 | Some err -> Infer_err err
                 | None -> Infer_ok (ret, _UU03a3_'))
+             | TClosure (_, param_tys, ret) ->
+               (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                | Some err -> Infer_err err
+                | None -> Infer_ok (ret, _UU03a3_'))
              | TForall (m, bounds, body) ->
                (match ty_core body with
                 | TFn (param_tys, ret) ->
@@ -3628,6 +3654,11 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
             let (arg_tys, _UU03a3_') = p2 in
             (match ty_core t_callee with
              | TFn (param_tys, ret) ->
+               (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                | Some err -> Infer_err err
+                | None ->
+                  Infer_ok ((ret, _UU03a3_'), (ECallExpr (callee', args'))))
+             | TClosure (_, param_tys, ret) ->
                (match check_arg_tys _UU03a9_ arg_tys param_tys with
                 | Some err -> Infer_err err
                 | None ->

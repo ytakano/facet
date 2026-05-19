@@ -441,16 +441,21 @@ Follow this order before inventing new theorem shapes:
      equality, executable type equality, checker type depth, validation
      traversals, runtime lifetime-equivalence helpers, and extracted OCaml
      printers all handle `TClosure`.
-   - Prop-level `ty_compatible` has the intended asymmetric callable relation:
-     `TClosure` is compatible with `TClosure`, and captureless `TFn` is
-     compatible where `TClosure` is expected. The executable
-     `ty_compatible_b` has not yet been widened for this asymmetric relation;
-     it currently remains conservative to keep checker soundness stable.
-   - `ECallExpr` typing/checking has not yet been widened to accept
-     `TClosure` directly. The next implementation task is to add the
-     executable `TFn <: TClosure` bridge and the `TClosure` call-expression
-     rules together with their checker-soundness, env-structural, alpha, and
-     runtime preservation obligations.
+   - Prop-level and executable `ty_compatible` now have the intended
+     asymmetric callable relation: `TClosure` is compatible with `TClosure`,
+     and captureless `TFn` is compatible where `TClosure` is expected. The
+     reverse `TClosure`-as-`TFn` direction remains rejected.
+   - `ECallExpr` typing/checking now accepts callees whose inferred type is
+     `TClosure env_lt params ret`, with matching ordinary typing,
+     env-structural typing, checker soundness, env-typing soundness, and
+     alpha-renaming branches. This is only a callable-type bridge; it does not
+     add closure literals, captured runtime environments, parser syntax, or
+     validator/runtime theorem widening.
+   - The next closure implementation task is Stage 7a syntax/elaboration for
+     immutable unrestricted captures. Before implementation, resolve the
+     lambda-lifting detail around hidden capture parameters versus ordinary
+     `fn_params`, so `Eval_CallExpr` binds ordinary arguments and captured
+     slots in the intended order.
 8. **Handle the `if` root-environment gap last.**
    The known blocker is that ordinary `TES_If` does not expose
    `root_env_equiv R2 R3`, while root/shadow routes require it. Do not

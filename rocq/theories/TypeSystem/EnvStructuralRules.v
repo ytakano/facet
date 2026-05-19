@@ -598,6 +598,10 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_env_structural env Ω n Σ callee (MkTy u (TFn param_tys ret)) Σ1 ->
       typed_args_env_structural env Ω n Σ1 args (params_of_tys param_tys) Σ' ->
       typed_env_structural env Ω n Σ (ECallExpr callee args) ret Σ'
+  | TES_CallExpr_Closure : forall Σ Σ1 Σ' callee args u env_lt param_tys ret,
+      typed_env_structural env Ω n Σ callee (MkTy u (TClosure env_lt param_tys ret)) Σ1 ->
+      typed_args_env_structural env Ω n Σ1 args (params_of_tys param_tys) Σ' ->
+      typed_env_structural env Ω n Σ (ECallExpr callee args) ret Σ'
   | TES_CallExpr_Forall : forall Σ Σ1 Σ' callee args u m bounds body param_tys ret σ,
       typed_env_structural env Ω n Σ callee (MkTy u (TForall m bounds body)) Σ1 ->
       ty_core body = TFn param_tys ret ->
@@ -1522,12 +1526,18 @@ Proof.
       match goal with
       | H : typed_args_env_structural _ _ _ _ _ _ _ |- _ => exact H
       end.
-	    + eapply sctx_same_bindings_trans.
-	      * exact IHHtyped.
-	      * eapply typed_args_env_structural_same_bindings.
-	        match goal with
-	        | H : typed_args_env_structural _ _ _ _ _ _ _ |- _ => exact H
-	        end.
+    + eapply sctx_same_bindings_trans.
+      * exact IHHtyped.
+      * eapply typed_args_env_structural_same_bindings.
+        match goal with
+        | H : typed_args_env_structural _ _ _ _ _ _ _ |- _ => exact H
+        end.
+    + eapply sctx_same_bindings_trans.
+      * exact IHHtyped.
+      * eapply typed_args_env_structural_same_bindings.
+        match goal with
+        | H : typed_args_env_structural _ _ _ _ _ _ _ |- _ => exact H
+        end.
 	    + eapply sctx_same_bindings_trans.
 	      * exact IHHtyped.
 	      * eapply typed_args_env_structural_same_bindings.

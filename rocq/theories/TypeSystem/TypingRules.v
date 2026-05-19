@@ -473,6 +473,11 @@ Inductive typed (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) : ctx -> expr
       typed_args fenv Ω n Γ1 args (params_of_tys param_tys) Γ' ->
       typed fenv Ω n Γ (ECallExpr callee args) ret Γ'
 
+  | T_CallExpr_Closure : forall Γ Γ1 Γ' callee args u env_lt param_tys ret,
+      typed fenv Ω n Γ callee (MkTy u (TClosure env_lt param_tys ret)) Γ1 ->
+      typed_args fenv Ω n Γ1 args (params_of_tys param_tys) Γ' ->
+      typed fenv Ω n Γ (ECallExpr callee args) ret Γ'
+
   | T_CallExpr_Forall : forall Γ Γ1 Γ' callee args u m bounds body param_tys ret σ,
       typed fenv Ω n Γ callee (MkTy u (TForall m bounds body)) Γ1 ->
       ty_core body = TFn param_tys ret ->

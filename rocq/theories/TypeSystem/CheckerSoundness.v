@@ -477,6 +477,14 @@ Proof.
            eapply IH. exact Hcompat.
         -- exact Hargs.
       * eapply IH. exact Hret.
+    + apply andb_true_iff in Hc as [Hargs Hret].
+      apply TC_Fn_Closure.
+      * apply usage_sub_bool_sound. exact Hu.
+      * eapply ty_compatible_args_contra_b_sound.
+        -- intros Ω0 T_actual0 T_expected0 Hcompat.
+           eapply IH. exact Hcompat.
+        -- exact Hargs.
+      * eapply IH. exact Hret.
     + destruct Ωb as [|p Ωb]; [|discriminate].
       apply andb_true_iff in Hc as [Hnob Hrec].
       apply negb_true_iff in Hnob.
@@ -484,6 +492,16 @@ Proof.
       * exact Hu.
       * exact Hnob.
       * eapply IH. exact Hrec.
+    + apply andb_true_iff in Hc as [Henv_args Hret].
+      apply andb_true_iff in Henv_args as [Henv Hargs].
+      apply TC_Closure.
+      * apply usage_sub_bool_sound. exact Hu.
+      * apply outlives_b_sound. exact Henv.
+      * eapply ty_compatible_args_contra_b_sound.
+        -- intros Ω0 T_actual0 T_expected0 Hcompat.
+           eapply IH. exact Hcompat.
+        -- exact Hargs.
+      * eapply IH. exact Hret.
     + destruct Ωb as [|p Ωb]; [|discriminate].
       apply andb_true_iff in Hc as [Hnob Hrec].
       apply negb_true_iff in Hnob.
@@ -726,11 +744,31 @@ Proof.
           -- eapply infer_call_args_sound_v2.
              ++ exact Hcollect.
              ++ intros Γ0 e0 T0 Γ1 Hin_arg Hinfer_arg.
+	                eapply IH.
+	                ** pose proof (expr_size_callexpr_arg_lt e l e0 Hin_arg). lia.
+	                ** exact Hinfer_arg.
+		             ++ rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
+        * match goal with
+          | H : context[check_arg_tys Ω arg_tys ?param_tys] |- _ =>
+              destruct (check_arg_tys Ω arg_tys param_tys) as [err |] eqn:Hcheck;
+                [discriminate |]
+          end.
+          injection Hinfer as <- <-.
+          assert (Hcallee_typed : typed fenv Ω n Γ e Tcallee Γcallee).
+          { eapply IH.
+            - pose proof (expr_size_callexpr_callee_lt e l). lia.
+            - exact Hcallee. }
+          destruct Tcallee as [u0 c0]. simpl in Hcore.
+          rewrite Hcore in Hcallee_typed.
+          eapply T_CallExpr_Closure.
+          -- exact Hcallee_typed.
+          -- eapply infer_call_args_sound_v2.
+             ++ exact Hcollect.
+             ++ intros Γ0 e0 T0 Γ1 Hin_arg Hinfer_arg.
                 eapply IH.
                 ** pose proof (expr_size_callexpr_arg_lt e l e0 Hin_arg). lia.
                 ** exact Hinfer_arg.
-	             ++ rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
-        * discriminate.
+             ++ rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
         * destruct (ty_core t) eqn:Hbody; try discriminate.
           destruct (build_bound_sigma (repeat None n0) arg_tys l0) as [σ |] eqn:Hbuild; [|discriminate].
           remember (map (open_bound_ty σ) l0) as params_open.
@@ -744,13 +782,13 @@ Proof.
           subst params_open ret_open bounds_open.
           eapply T_CallExpr_Forall with (σ := σ) (param_tys := l0).
           -- replace (MkTy (ty_usage Tcallee) (TForall n0 o t)) with Tcallee.
-             2:{ destruct Tcallee as [u c]. simpl in Hcore. rewrite Hcore. reflexivity. }
-             eapply IH.
-             ++ pose proof (expr_size_callexpr_callee_lt e l). lia.
-             ++ exact Hcallee.
-          -- exact Hbody.
-          -- eapply infer_call_args_sound_v2.
-             ++ exact Hcollect.
+	             2:{ destruct Tcallee as [u c]. simpl in Hcore. rewrite Hcore. reflexivity. }
+	             eapply IH.
+	             ++ pose proof (expr_size_callexpr_callee_lt e l). lia.
+	             ++ exact Hcallee.
+	          -- exact Hbody.
+	          -- eapply infer_call_args_sound_v2.
+	             ++ exact Hcollect.
              ++ intros Γ0 e0 T0 Γ1 Hin_arg Hinfer_arg.
                 eapply IH.
                 ** pose proof (expr_size_callexpr_arg_lt e l e0 Hin_arg). lia.

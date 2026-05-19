@@ -176,6 +176,42 @@ Proof.
   eapply lookup_fn_checked_structural; eassumption.
 Qed.
 
+Lemma fn_body_ctx_eq_params_ctx_when_no_captures :
+  forall f,
+    fn_captures f = [] ->
+    fn_body_ctx f = params_ctx (fn_params f).
+Proof.
+  intros f _.
+  unfold fn_body_ctx, fn_body_params.
+  reflexivity.
+Qed.
+
+Lemma typed_env_roots_fn_body_ctx_to_params_ctx_when_no_captures :
+  forall env Ω n R f e T Σ' R' roots,
+    fn_captures f = [] ->
+    typed_env_roots env Ω n R (sctx_of_ctx (fn_body_ctx f))
+      e T Σ' R' roots ->
+    typed_env_roots env Ω n R (sctx_of_ctx (params_ctx (fn_params f)))
+      e T Σ' R' roots.
+Proof.
+  intros env Ω n R f e T Σ' R' roots Hcaps Htyped.
+  rewrite <- (fn_body_ctx_eq_params_ctx_when_no_captures f Hcaps).
+  exact Htyped.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_fn_body_ctx_to_params_ctx_when_no_captures :
+  forall env Ω n R f e T Σ' R' roots,
+    fn_captures f = [] ->
+    typed_env_roots_shadow_safe env Ω n R (sctx_of_ctx (fn_body_ctx f))
+      e T Σ' R' roots ->
+    typed_env_roots_shadow_safe env Ω n R
+      (sctx_of_ctx (params_ctx (fn_params f))) e T Σ' R' roots.
+Proof.
+  intros env Ω n R f e T Σ' R' roots Hcaps Htyped.
+  rewrite <- (fn_body_ctx_eq_params_ctx_when_no_captures f Hcaps).
+  exact Htyped.
+Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Direct place helper facts                                            *)
 (* ------------------------------------------------------------------ *)

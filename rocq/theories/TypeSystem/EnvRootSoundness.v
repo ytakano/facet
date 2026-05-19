@@ -469,7 +469,7 @@ Theorem infer_core_env_state_fuel_roots_sound :
 Proof.
   induction fuel as [|fuel' IH]; intros env Ω n R Σ e T Σ' R' roots Hinfer.
   - simpl in Hinfer. discriminate.
-  - destruct e as [|l|i|m i t e1 e2|m i e1 e2|i|p|i l|e l|
+  - destruct e as [|l|i|m i t e1 e2|m i e1 e2|i|i l|p|i l|e l|
         s l l0 l1|p e|p e|r p|e|e|e1 e2 e3];
       simpl in Hinfer; try discriminate.
     + inversion Hinfer; subst. constructor.
@@ -532,13 +532,19 @@ Proof.
       * exact Hcheck.
       * apply roots_exclude_b_sound. exact Hroots.
       * apply root_env_excludes_b_sound. exact Henv.
-    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
-      unfold no_captures_b in Hinfer.
-      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
-      inversion Hinfer; subst.
-      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
-      eapply TER_Fn; eassumption.
-    + unfold consume_direct_place_value_roots, infer_place_roots in Hinfer.
+	    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+	      unfold no_captures_b in Hinfer.
+	      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
+	      inversion Hinfer; subst.
+	      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
+	      eapply TER_Fn; eassumption.
+	    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+	      destruct (check_make_closure_captures_sctx Ω Σ l (fn_captures fdef))
+	        as [captured_tys | err] eqn:Hcheck; try discriminate.
+	      inversion Hinfer; subst.
+	      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
+	      eapply TER_MakeClosure; eassumption.
+	    + unfold consume_direct_place_value_roots, infer_place_roots in Hinfer.
       destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
       destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
       destruct (root_env_lookup x R) as [roots0 |] eqn:Hlookup; try discriminate.
@@ -727,7 +733,7 @@ Theorem infer_core_env_state_fuel_roots_shadow_safe_sound :
 Proof.
   induction fuel as [|fuel' IH]; intros env Ω n R Σ e T Σ' R' roots Hinfer.
   - simpl in Hinfer. discriminate.
-  - destruct e as [|l|i|m i t e1 e2|m i e1 e2|i|p|i l|e l|
+  - destruct e as [|l|i|m i t e1 e2|m i e1 e2|i|i l|p|i l|e l|
         s l l0 l1|p e|p e|r p|e|e|e1 e2 e3];
       simpl in Hinfer; try discriminate.
     + inversion Hinfer; subst. constructor.
@@ -798,13 +804,19 @@ Proof.
       * exact Hcheck.
       * apply roots_exclude_b_sound. exact Hroots2.
       * apply root_env_excludes_b_sound. exact Henv2.
-    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
-      unfold no_captures_b in Hinfer.
-      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
-      inversion Hinfer; subst.
-      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
-      eapply TERS_Fn; eassumption.
-    + unfold consume_direct_place_value_roots, infer_place_roots in Hinfer.
+	    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+	      unfold no_captures_b in Hinfer.
+	      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
+	      inversion Hinfer; subst.
+	      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
+	      eapply TERS_Fn; eassumption.
+	    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+	      destruct (check_make_closure_captures_sctx Ω Σ l (fn_captures fdef))
+	        as [captured_tys | err] eqn:Hcheck; try discriminate.
+	      inversion Hinfer; subst.
+	      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
+	      eapply TERS_MakeClosure; eassumption.
+	    + unfold consume_direct_place_value_roots, infer_place_roots in Hinfer.
       destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
       destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
       destruct (root_env_lookup x R) as [roots0 |] eqn:Hlookup; try discriminate.

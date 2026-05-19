@@ -499,6 +499,13 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       fn_name fdef = fname ->
       fn_captures fdef = [] ->
       typed_env_structural env Ω n Σ (EFn fname) (fn_value_ty fdef) Σ
+  | TES_MakeClosure : forall Σ fname fdef captures captured_tys,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      check_make_closure_captures_sctx Ω Σ captures (fn_captures fdef) =
+        infer_ok captured_tys ->
+      typed_env_structural env Ω n Σ (EMakeClosure fname captures)
+        (closure_value_ty fdef captured_tys) Σ
   | TES_Struct : forall Σ Σ' sname lts args fields sdef,
       lookup_struct sname env = Some sdef ->
       Datatypes.length lts = struct_lifetimes sdef ->
@@ -686,6 +693,13 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       fn_name fdef = fname ->
       fn_captures fdef = [] ->
       typed_env_roots env Ω n R Σ (EFn fname) (fn_value_ty fdef) Σ R []
+  | TER_MakeClosure : forall R Σ fname fdef captures captured_tys,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      check_make_closure_captures_sctx Ω Σ captures (fn_captures fdef) =
+        infer_ok captured_tys ->
+      typed_env_roots env Ω n R Σ (EMakeClosure fname captures)
+        (closure_value_ty fdef captured_tys) Σ R []
   | TER_Struct : forall R R' Σ Σ' sname lts args fields sdef roots,
       lookup_struct sname env = Some sdef ->
       Datatypes.length lts = struct_lifetimes sdef ->
@@ -1054,6 +1068,13 @@ Proof.
   - intros R Σ fname fdef Hin Hfname Hcaps Hfresh R0 HnsR HnsR0 HR0.
     exists R0, []. split; [| split; [| split]].
     + eapply TER_Fn; eauto.
+    + exact HnsR0.
+    + exact HR0.
+    + apply root_set_equiv_refl.
+  - intros R Σ fname fdef captures captured_tys Hin Hfname Hcaptures
+      Hfresh R0 HnsR HnsR0 HR0.
+    exists R0, []. split; [| split; [| split]].
+    + eapply TER_MakeClosure; eauto.
     + exact HnsR0.
     + exact HR0.
     + apply root_set_equiv_refl.
@@ -1493,6 +1514,7 @@ Proof.
       | H : sctx_consume_path _ _ _ = infer_ok _ |- _ => exact H
       end.
     + apply sctx_same_bindings_refl.
+    + apply sctx_same_bindings_refl.
     + eapply typed_fields_env_structural_same_bindings.
       match goal with
       | H : typed_fields_env_structural _ _ _ _ _ _ _ _ _ |- _ => exact H
@@ -1585,6 +1607,9 @@ Inductive borrow_ok_env_structural (env : global_env)
       borrow_ok_env_structural env PBS Γ (EVar x) PBS
   | BOES_Fn : forall PBS Γ fname,
       borrow_ok_env_structural env PBS Γ (EFn fname) PBS
+  | BOES_MakeClosure : forall PBS Γ fname captures,
+      Forall (fun x => pbs_has_mut x [] PBS = false) captures ->
+      borrow_ok_env_structural env PBS Γ (EMakeClosure fname captures) PBS
   | BOES_Place : forall PBS Γ p,
       borrow_check_place_access env PBS Γ p = infer_ok tt ->
       borrow_ok_env_structural env PBS Γ (EPlace p) PBS

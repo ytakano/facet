@@ -13,6 +13,7 @@ Fixpoint basic_expr (e : expr) : bool :=
   | ELit _ => true
   | EVar _ => true
   | EFn _ => true
+  | EMakeClosure _ _ => true
   | EPlace _ => true
   | ELet _ _ _ e1 e2 => basic_expr e1 && basic_expr e2
   | ELetInfer _ _ e1 e2 => basic_expr e1 && basic_expr e2
@@ -47,6 +48,7 @@ Fixpoint call_expr (e : expr) : bool :=
   | ELit _ => true
   | EVar _ => true
   | EFn _ => true
+  | EMakeClosure _ _ => true
   | EPlace _ => true
   | ELet _ _ _ e1 e2 => call_expr e1 && call_expr e2
   | ELetInfer _ _ e1 e2 => call_expr e1 && call_expr e2
@@ -157,6 +159,7 @@ Fixpoint struct_expr (e : expr) : bool :=
   | ELit _ => true
   | EVar _ => true
   | EFn _ => true
+  | EMakeClosure _ _ => true
   | EPlace _ => true
   | ELet _ _ _ e1 e2 => struct_expr e1 && struct_expr e2
   | ELetInfer _ _ e1 e2 => struct_expr e1 && struct_expr e2
@@ -531,13 +534,19 @@ Proof.
       * eapply IH; [exact Hbasic1 | exact He1].
       * eapply IH; [exact Hbasic2 | exact He2].
       * exact Hcheck.
+		    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+		      unfold no_captures_b in Hinfer.
+		      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
+		      inversion Hinfer; subst.
+		      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
+		      eapply TES_Fn; eassumption.
 	    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
-	      unfold no_captures_b in Hinfer.
-	      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
+	      destruct (check_make_closure_captures_sctx Ω Σ l (fn_captures fdef))
+	        as [captured_tys | err] eqn:Hcheck; try discriminate.
 	      inversion Hinfer; subst.
 	      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
-	      eapply TES_Fn; eassumption.
-    + destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
+	      eapply TES_MakeClosure; eassumption.
+	    + destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
       destruct (consume_place_value env Σ p Tp) as [Σ0 | err] eqn:Hconsume;
         try discriminate.
       unfold consume_place_value in Hconsume.
@@ -658,13 +667,19 @@ Proof.
       * eapply IH; [exact Hcall1 | exact He1].
       * eapply IH; [exact Hcall2 | exact He2].
       * exact Hcheck.
+		    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+		      unfold no_captures_b in Hinfer.
+		      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
+		      inversion Hinfer; subst.
+		      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
+		      eapply TES_Fn; eassumption.
 	    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
-	      unfold no_captures_b in Hinfer.
-	      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
+	      destruct (check_make_closure_captures_sctx Ω Σ l (fn_captures fdef))
+	        as [captured_tys | err] eqn:Hcheck; try discriminate.
 	      inversion Hinfer; subst.
 	      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
-	      eapply TES_Fn; eassumption.
-    + destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
+	      eapply TES_MakeClosure; eassumption.
+	    + destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
       destruct (consume_place_value env Σ p Tp) as [Σ0 | err] eqn:Hconsume;
         try discriminate.
       unfold consume_place_value in Hconsume.
@@ -870,13 +885,19 @@ Proof.
       * eapply IH; [exact Hstruct1 | exact He1].
       * eapply IH; [exact Hstruct2 | exact He2].
       * exact Hcheck.
+		    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+		      unfold no_captures_b in Hinfer.
+		      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
+		      inversion Hinfer; subst.
+		      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
+		      eapply TES_Fn; eassumption.
 	    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
-	      unfold no_captures_b in Hinfer.
-	      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
+	      destruct (check_make_closure_captures_sctx Ω Σ l (fn_captures fdef))
+	        as [captured_tys | err] eqn:Hcheck; try discriminate.
 	      inversion Hinfer; subst.
 	      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
-	      eapply TES_Fn; eassumption.
-    + destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
+	      eapply TES_MakeClosure; eassumption.
+	    + destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
       destruct (consume_place_value env Σ p Tp) as [Σ0 | err] eqn:Hconsume;
         try discriminate.
       unfold consume_place_value in Hconsume.

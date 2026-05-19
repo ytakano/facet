@@ -212,3 +212,18 @@ Fixpoint contains_lbound_ty (T : Ty) : bool :=
       contains_lbound_lifetime l || contains_lbound_ty t
   | _ => false
   end.
+
+Fixpoint ty_ref_free_b (T : Ty) : bool :=
+  match T with
+  | MkTy _ (TStruct _ _ args) =>
+      forallb ty_ref_free_b args
+  | MkTy _ (TFn ts r) =>
+      forallb ty_ref_free_b ts && ty_ref_free_b r
+  | MkTy _ (TClosure _ ts r) =>
+      forallb ty_ref_free_b ts && ty_ref_free_b r
+  | MkTy _ (TForall _ _ body) =>
+      ty_ref_free_b body
+  | MkTy _ (TRef _ _ _) =>
+      false
+  | _ => true
+  end.

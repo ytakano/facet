@@ -3059,6 +3059,7 @@ Proof.
     eapply root_env_lookup_app_left; eassumption.
   - eapply TERS_Call; eauto.
   - eapply TERS_Fn; eauto.
+  - eapply TERS_MakeClosure; eauto.
   - eapply TERS_Struct; eauto.
   - pose proof (root_env_tail_fresh_names_app_l _ _ _ H1) as Hfresh1.
     pose proof (root_env_tail_fresh_names_app_r _ _ _ H1) as Hfresh_tail.
@@ -6265,6 +6266,9 @@ Proof.
     + constructor.
     + exact Hnodup.
     + exact Hrn.
+  - intros s fname captures captured fdef Hlookup Hcheck Ω n R Σ T Σ' R' roots
+      Hready _ _ _ _.
+    inversion Hready.
   - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_then IHthen
       Ω n R Σ T Σ' R' roots Hready Hroots Hnodup Hrn Htyped.
     dependent destruction Hready.
@@ -8895,6 +8899,9 @@ Proof.
   - intros s fname fdef Hlookup Hcaps Ω n R Σ T Σ' R' roots ps frame
       _ Htyped Hcover Hscope.
     inversion Htyped; subst. split; [exact Hcover | exists frame; exact Hscope].
+  - intros s fname captures captured fdef Hlookup Hcheck Ω n R Σ T Σ' R'
+      roots ps frame Hready _ _ _.
+    inversion Hready.
   - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_then IHthen
       Ω n R Σ T Σ' R' roots ps frame Hready Htyped Hcover Hscope.
     dependent destruction Hready.
@@ -9549,6 +9556,9 @@ Proof.
   - intros s fname fdef Hlookup Hcaps Ω n R Σ T Σ' R' roots ps frame
       _ Htyped Hcover _ _ _ Hscope Hfresh.
     inversion Htyped; subst. repeat split; try assumption; constructor.
+  - intros s fname captures captured fdef Hlookup Hcheck Ω n R Σ T Σ' R'
+      roots ps frame Hready _ _ _ _ _ _ _.
+    inversion Hready.
   - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_then IHthen
       Ω n R Σ T Σ' R' roots ps frame Hready Htyped Hcover Hroots
       Hshadow Hrn Hscope Hfresh.
@@ -11840,6 +11850,9 @@ Proof.
     + split.
       * eapply VHT_ClosureIn; [eassumption | reflexivity].
       * apply store_ref_targets_preserved_refl.
+  - intros s fname captures captured fdef Hlookup Hcheck Ω n Σ T Σ'
+      Hready _ _.
+    inversion Hready.
   - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_then IHthen
       Ω n Σ T Σ' Hready Hstore Htyped.
     inversion Hready; subst.
@@ -12399,6 +12412,9 @@ Proof.
     + split.
       * eapply VHT_ClosureIn; [eassumption | reflexivity].
       * apply store_ref_targets_preserved_refl.
+  - intros s fname captures captured fdef Hlookup Hcheck Ω n Σ T Σ'
+      Hready _ _.
+    inversion Hready.
   - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_then IHthen
       Ω n Σ T Σ' Hready Hstore Htyped.
     inversion Hready; subst.
@@ -13304,6 +13320,9 @@ Proof.
     + split.
       * eapply VHT_ClosureIn; [eassumption | reflexivity].
       * apply store_ref_targets_preserved_refl.
+  - intros s fname captures captured fdef Hlookup Hcheck Ω n R Σ T Σ' R'
+      roots Hready _ _ _ _ _.
+    inversion Hready.
   - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_then IHthen
       Ω n R Σ T Σ' R' roots Hready Hstore Hroots Hnodup Hrn Htyped.
     dependent destruction Hready.
@@ -14936,6 +14955,9 @@ Proof.
     + split.
       * eapply VHT_ClosureIn; [eassumption | reflexivity].
       * apply store_ref_targets_preserved_refl.
+  - intros s fname captures captured fdef Hlookup Hcheck Ω n R Σ T Σ' R'
+      roots Hready _ _ _ _ _.
+    inversion Hready.
   - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_then IHthen
       Ω n R Σ T Σ' R' roots Hready Hstore Hroots Hnodup Hrn Htyped.
     dependent destruction Hready.

@@ -163,6 +163,23 @@ Proof.
   (* EFn *)
   + injection Hcheck as <-. constructor.
 
+  (* EMakeClosure *)
+  + assert (Hcaptures : Forall (fun x => pbs_has_mut x [] PBS = false) l /\
+                         PBS' = PBS).
+    {
+      clear Hlt IH.
+      revert PBS' Hcheck.
+      induction l as [| x captures IHcaptures]; intros PBS' Hcheck.
+      - simpl in Hcheck. injection Hcheck as <-.
+        split; [constructor | reflexivity].
+      - simpl in Hcheck.
+        destruct (pbs_has_mut x [] PBS) eqn:Hmut; [discriminate|].
+        destruct (IHcaptures PBS' Hcheck) as [Hfor Hall_eq].
+        split; [constructor; assumption | exact Hall_eq].
+    }
+    destruct Hcaptures as [Hfor <-].
+    apply BOES_MakeClosure. exact Hfor.
+
   (* EPlace *)
   + destruct (borrow_check_place_access env PBS Γ p) as [[] | err] eqn:Haccess;
       try discriminate.

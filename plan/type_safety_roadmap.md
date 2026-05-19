@@ -81,6 +81,9 @@ Current gap summary:
   order is: first-class functions without captures, then MVP closures with
   immutable unrestricted captures, then captured references/lifetimes, then
   mutable and affine/linear captures.
+- Core-only closure construction for immutable unrestricted reference-free
+  captures is implemented as `EMakeClosure`; parser syntax, frontend lambda
+  lifting, and captured `ECallExpr` preservation are still future work.
 
 Next-task rule:
 
@@ -460,9 +463,22 @@ Follow this order before inventing new theorem shapes:
      `fn_def` has `fn_captures` separately from ordinary `fn_params`, existing
      frontend functions elaborate with empty captures, and direct `EFn` /
      `ECall` typing, checking, and evaluation are guarded to empty-capture
-     functions only. The next implementation task is core-only `EMakeClosure`
-     for immutable unrestricted reference-free captures. Parser syntax and
-     frontend lambda lifting come after the Rocq core route is stable.
+     functions only.
+   - Core-only `EMakeClosure fname captures` is implemented for immutable
+     unrestricted reference-free captures. Rocq typing, env-structural typing,
+     root/shadow typing, ordinary checker soundness, env checker soundness,
+     borrow checker soundness, alpha-renaming, runtime evaluation, extraction,
+     and FIR lowering all have coverage for this constructor.
+   - `EMakeClosure` currently constructs `VClosure fname captured` by copying
+     the listed captures. The executable capture checks require matching
+     `fn_captures`, immutable bindings, unrestricted usage, no active mutable
+     borrow of the captured root, and `ty_ref_free_b = true`.
+   - Preservation/provenance readiness validators still reject
+     `EMakeClosure`. Do not flip those booleans until captured `ECallExpr`
+     preservation is proved. The next closure task is either parser/lambda
+     lifting for Stage 7a surface syntax or the captured-call preservation
+     bridge, depending on whether the project wants syntax first or theorem
+     widening first.
 8. **Handle the `if` root-environment gap last.**
    The known blocker is that ordinary `TES_If` does not expose
    `root_env_equiv R2 R3`, while root/shadow routes require it. Do not

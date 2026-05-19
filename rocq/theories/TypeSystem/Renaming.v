@@ -52,6 +52,7 @@ Fixpoint free_vars_expr (e : expr) : list ident :=
   | ELit _ => []
   | EVar x => [x]
   | EFn _ => []
+  | EMakeClosure _ captures => captures
   | EPlace p => [place_name p]
   | ELet _ x _ e1 e2 => x :: free_vars_expr e1 ++ free_vars_expr e2
   | ELetInfer _ x e1 e2 => x :: free_vars_expr e1 ++ free_vars_expr e2
@@ -104,6 +105,8 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
   | ELit l => (ELit l, used)
   | EVar x => (EVar (lookup_rename x ρ), used)
   | EFn fname => (EFn fname, used)
+  | EMakeClosure fname captures =>
+      (EMakeClosure fname (map (fun x => lookup_rename x ρ) captures), used)
   | EPlace p => (EPlace (rename_place ρ p), used)
   | ECall fname args =>
       let fix go (used0 : list ident) (args0 : list expr)

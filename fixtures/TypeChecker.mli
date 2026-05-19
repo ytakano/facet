@@ -181,6 +181,8 @@ val contains_lbound_outlives : outlives_ctx -> bool
 
 val contains_lbound_ty : ty -> bool
 
+val ty_ref_free_b : ty -> bool
+
 type ident = string * Big_int_Z.big_int
 
 val ident_eqb : ident -> ident -> bool
@@ -202,6 +204,7 @@ type expr =
 | ELet of mutability * ident * ty * expr * expr
 | ELetInfer of mutability * ident * expr * expr
 | EFn of ident
+| EMakeClosure of ident * ident list
 | EPlace of place
 | ECall of ident * expr list
 | ECallExpr of expr * expr list
@@ -362,9 +365,13 @@ val params_ctx : param list -> ctx
 
 val usage_max : usage -> usage -> usage
 
+val closure_capture_usage : ty list -> usage
+
 val ctx_merge : ctx -> ctx -> ctx option
 
 val fn_signature_ty_with_usage : usage -> fn_def -> ty
+
+val closure_value_ty : fn_def -> ty list -> ty
 
 val fn_value_ty : fn_def -> ty
 
@@ -586,6 +593,9 @@ val ctx_of_sctx : sctx -> ctx
 val sctx_lookup : ident -> sctx -> (ty * binding_state) option
 
 val sctx_lookup_mut : ident -> sctx -> mutability option
+
+val check_make_closure_captures_sctx :
+  outlives_ctx -> sctx -> ident list -> param list -> ty list infer_result
 
 val sctx_add : ident -> ty -> mutability -> sctx -> sctx
 

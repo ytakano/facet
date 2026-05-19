@@ -646,6 +646,7 @@ Fixpoint expr_local_store_names (e : expr) : list ident :=
   | ELetInfer _ x e1 e2 =>
       expr_local_store_names e1 ++ x :: expr_local_store_names e2
   | EFn _ => []
+  | EMakeClosure _ _ => []
   | EPlace _ => []
   | ECall _ args =>
       args_local_store_names_with expr_local_store_names args

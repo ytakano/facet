@@ -175,6 +175,10 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
       expr_alpha ρ (EVar x) (EVar (lookup_rename x ρ))
   | EA_Fn : forall ρ fname,
       expr_alpha ρ (EFn fname) (EFn fname)
+  | EA_MakeClosure : forall ρ fname captures,
+      expr_alpha ρ
+        (EMakeClosure fname captures)
+        (EMakeClosure fname (map (fun x => lookup_rename x ρ) captures))
   | EA_Place : forall ρ p pr,
       place_alpha ρ p pr ->
       expr_alpha ρ (EPlace p) (EPlace pr)
@@ -764,6 +768,43 @@ Proof.
       * exact Hlookup.
 Qed.
 
+Lemma check_make_closure_captures_sctx_alpha_forward :
+  forall ρ Σ Σr Ω captures params captured_tys,
+    ctx_alpha ρ Σ Σr ->
+    disjoint_names captures (rename_range ρ) ->
+    check_make_closure_captures_sctx Ω Σ captures params =
+      infer_ok captured_tys ->
+    check_make_closure_captures_sctx Ω Σr
+      (map (fun x => lookup_rename x ρ) captures) params =
+      infer_ok captured_tys.
+Proof.
+  intros ρ Σ Σr Ω captures.
+  induction captures as [| x captures IH]; intros params captured_tys Halpha Hdisj Hcheck;
+    destruct params as [| cap params]; simpl in *; try discriminate.
+  - exact Hcheck.
+  - destruct (sctx_lookup x Σ) as [[T st] |] eqn:Hlookup; try discriminate.
+    change (sctx_lookup (lookup_rename x ρ) Σr) with
+      (ctx_lookup_state (lookup_rename x ρ) Σr).
+    rewrite (ctx_alpha_lookup_state_forward ρ Σ Σr x T st Halpha
+      ltac:(apply Hdisj; simpl; left; reflexivity) Hlookup).
+    destruct (negb (binding_available_b st [])); try discriminate.
+    destruct (sctx_lookup_mut x Σ) as [m |] eqn:Hmut; try discriminate.
+    change (sctx_lookup_mut (lookup_rename x ρ) Σr) with
+      (ctx_lookup_mut (lookup_rename x ρ) Σr).
+    rewrite (ctx_alpha_lookup_mut_forward ρ Σ Σr x m Halpha
+      ltac:(apply Hdisj; simpl; left; reflexivity) Hmut).
+    destruct m; try discriminate.
+    destruct (usage_eqb (ty_usage T) UUnrestricted); try discriminate.
+    destruct (ty_ref_free_b T); try discriminate.
+    destruct (ty_compatible_b Ω T (param_ty cap)); try discriminate.
+    destruct (check_make_closure_captures_sctx Ω Σ captures params)
+      as [captured_rest | err] eqn:Hrest; try discriminate.
+    injection Hcheck as <-.
+    rewrite (IH params captured_rest Halpha
+      ltac:(intros y Hy; apply Hdisj; simpl; right; exact Hy) Hrest).
+    reflexivity.
+Qed.
+
 Lemma alpha_rename_typed_place_backward : forall fenv0 fenvr n ρ Γ0 Γr p T,
   ctx_alpha ρ Γ0 Γr ->
   ~ In (place_root p) (rename_range ρ) ->
@@ -1270,6 +1311,7 @@ Fixpoint expr_size (e : expr) : nat :=
   | ELit _ => 1
   | EVar _ => 1
   | EFn _ => 1
+  | EMakeClosure _ _ => 1
   | EPlace _ => 1
   | ELet _ _ _ e1 e2 => S (expr_size e1 + expr_size e2)
   | ELetInfer _ _ e1 e2 => S (expr_size e1 + expr_size e2)
@@ -1544,9 +1586,10 @@ Proof.
       -- simpl in Hlt. assert (expr_size e1 < n) as Hlt_e1 by lia. exact Hlt_e1.
       -- exact He1.
       -- exact Hin.
-	  + injection Hrename as _ <-. exact Hin.
-	  + injection Hrename as _ <-. exact Hin.
-	  + remember
+		  + injection Hrename as _ <-. exact Hin.
+		  + injection Hrename as _ <-. exact Hin.
+		  + injection Hrename as _ <-. exact Hin.
+		  + remember
       ((fix go (used0 : list ident) (args0 : list expr)
           : list expr * list ident :=
           match args0 with
@@ -1876,9 +1919,10 @@ Proof.
            ++ simpl in Hlt. assert (expr_size e2 < n) as Hlt_e2 by lia. exact Hlt_e2.
            ++ exact He2.
            ++ exact Hin.
-    + injection Hrename as <- <-. simpl in Hin. contradiction.
-    + injection Hrename as <- <-. simpl in Hin. contradiction.
-    + remember
+	    + injection Hrename as <- <-. simpl in Hin. contradiction.
+	    + injection Hrename as <- <-. simpl in Hin. contradiction.
+	    + injection Hrename as <- <-. simpl in Hin. contradiction.
+	    + remember
         ((fix go (used0 : list ident) (args0 : list expr)
             : list expr * list ident :=
             match args0 with
@@ -2174,9 +2218,10 @@ Proof.
            ++ eapply IH.
               ** simpl in Hlt. assert (expr_size e2 < n) as Hlt_e2 by lia. exact Hlt_e2.
               ** exact He2.
-    + injection Hrename as <- _. simpl. constructor.
-    + injection Hrename as <- _. simpl. constructor.
-    + remember
+	    + injection Hrename as <- _. simpl. constructor.
+	    + injection Hrename as <- _. simpl. constructor.
+	    + injection Hrename as <- _. simpl. constructor.
+	    + remember
         ((fix go (used0 : list ident) (args0 : list expr)
             : list expr * list ident :=
             match args0 with
@@ -2503,12 +2548,13 @@ Proof.
            specialize (Hfresh_e2 _ Hin).
            apply Hfresh_e2. simpl. right. right.
            apply in_or_app. right.
-           eapply alpha_rename_expr_local_store_names_in_used.
-           ++ exact He1.
-           ++ exact Hx.
-    + injection Hrename as <- _. simpl. constructor.
-    + injection Hrename as <- _. simpl. constructor.
-    + remember
+	           eapply alpha_rename_expr_local_store_names_in_used.
+	           ++ exact He1.
+	           ++ exact Hx.
+	    + injection Hrename as <- _. simpl. constructor.
+	    + injection Hrename as <- _. simpl. constructor.
+	    + injection Hrename as <- _. simpl. constructor.
+	    + remember
         ((fix go (used0 : list ident) (args0 : list expr)
             : list expr * list ident :=
             match args0 with
@@ -3255,9 +3301,10 @@ Proof.
            right. apply in_or_app. left. exact Hin.
         ++ exact (Hdisj2 x Hin Hin_range).
       -- exact He2.
-	  + injection Hrename as <- _. constructor.
-	  + injection Hrename as <- _.
-	    apply EA_Place.
+		  + injection Hrename as <- _. constructor.
+		  + injection Hrename as <- _. constructor.
+		  + injection Hrename as <- _.
+		    apply EA_Place.
 	    apply rename_place_alpha_sound.
 	    intros Hin_range. apply (Hdisj (place_name p)).
 	    * simpl. left. reflexivity.
@@ -4434,10 +4481,15 @@ Proof.
           -- eapply place_path_rename_place_some. exact H1.
           -- exact Hconsume_r.
         * exact Hctx_r.
-      + injection Hrename as <- <-.
-        exists Σr. split; [econstructor; eauto | exact Hctx].
-      + destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
-                    : list (string * expr) * list ident :=
+	      + injection Hrename as <- <-.
+	        exists Σr. split; [econstructor; eauto | exact Hctx].
+	      + injection Hrename as <- <-.
+	        exists Σr. split.
+	        * eapply TES_MakeClosure; eauto.
+	          eapply check_make_closure_captures_sctx_alpha_forward; eauto.
+	        * exact Hctx.
+	      + destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+	                    : list (string * expr) * list ident :=
                     match fields0 with
                     | [] => ([], used0)
                     | (fname, e) :: rest =>
@@ -5158,6 +5210,13 @@ Inductive typed_env_roots_shadow_safe
       fn_captures fdef = [] ->
       typed_env_roots_shadow_safe env Ω n R Σ (EFn fname)
         (fn_value_ty fdef) Σ R []
+  | TERS_MakeClosure : forall R Σ fname fdef captures captured_tys,
+      In fdef (Program.env_fns env) ->
+      fn_name fdef = fname ->
+      check_make_closure_captures_sctx Ω Σ captures (fn_captures fdef) =
+        infer_ok captured_tys ->
+      typed_env_roots_shadow_safe env Ω n R Σ (EMakeClosure fname captures)
+        (closure_value_ty fdef captured_tys) Σ R []
   | TERS_Struct : forall R R' Σ Σ' sname lts args fields sdef roots,
       Program.lookup_struct sname env = Some sdef ->
       Datatypes.length lts = Program.struct_lifetimes sdef ->
@@ -5493,6 +5552,13 @@ Proof.
   - intros R Σ fname fdef Hin Hfname Hcaps Hfresh R0 HnsR HnsR0 HR0.
     exists R0, []. split; [| split; [| split]].
     + eapply TERS_Fn; eauto.
+    + exact HnsR0.
+    + exact HR0.
+    + apply root_set_equiv_refl.
+  - intros R Σ fname fdef captures captured_tys Hin Hfname Hcheck Hfresh
+      R0 HnsR HnsR0 HR0.
+    exists R0, []. split; [| split; [| split]].
+    + eapply TERS_MakeClosure; eauto.
     + exact HnsR0.
     + exact HR0.
     + apply root_set_equiv_refl.
@@ -13484,6 +13550,16 @@ Proof.
         * exact Hrename.
       + eapply alpha_rename_typed_env_roots_fn_shadow_safe_support_forward;
           eauto.
+      + injection Hrename as <- <-.
+        inversion Htyped; subst.
+        exists Σr, Rr, [].
+        split; [| split; [| split; [| split]]].
+        * eapply TERS_MakeClosure; eauto.
+          eapply check_make_closure_captures_sctx_alpha_forward; eauto.
+        * exact Hctx.
+        * exact HnsRr.
+        * exact HRr.
+        * apply root_set_equiv_refl.
       + eapply alpha_rename_typed_env_roots_place_shadow_safe_support_forward;
           eauto.
       + eapply (alpha_rename_typed_env_roots_call_shadow_safe_support_forward

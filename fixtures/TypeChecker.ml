@@ -825,6 +825,18 @@ let rec contains_lbound_ty = function
      (||) (contains_lbound_lifetime l) (contains_lbound_ty t1)
    | _ -> false)
 
+(** val ty_ref_free_b : ty -> bool **)
+
+let rec ty_ref_free_b = function
+| MkTy (_, t0) ->
+  (match t0 with
+   | TStruct (_, _, args) -> forallb ty_ref_free_b args
+   | TFn (ts, r) -> (&&) (forallb ty_ref_free_b ts) (ty_ref_free_b r)
+   | TClosure (_, ts, r) -> (&&) (forallb ty_ref_free_b ts) (ty_ref_free_b r)
+   | TForall (_, _, body) -> ty_ref_free_b body
+   | TRef (_, _, _) -> false
+   | _ -> true)
+
 type ident = string * Big_int_Z.big_int
 
 (** val ident_eqb : ident -> ident -> bool **)
@@ -849,6 +861,7 @@ type expr =
 | ELet of mutability * ident * ty * expr * expr
 | ELetInfer of mutability * ident * expr * expr
 | EFn of ident
+| EMakeClosure of ident * ident list
 | EPlace of place
 | ECall of ident * expr list
 | ECallExpr of expr * expr list
@@ -1528,6 +1541,12 @@ let usage_max u1 u2 =
                 | _ -> UAffine)
   | UUnrestricted -> u2
 
+(** val closure_capture_usage : ty list -> usage **)
+
+let rec closure_capture_usage = function
+| [] -> UUnrestricted
+| t :: rest -> usage_max (ty_usage t) (closure_capture_usage rest)
+
 (** val ctx_merge : ctx -> ctx -> ctx option **)
 
 let rec ctx_merge _UU0393_2 _UU0393_3 =
@@ -1578,6 +1597,11 @@ let fn_signature_ty_with_usage u f =
      (fun _ -> MkTy (u, (TForall (m, (close_fn_outlives m f.fn_outlives),
      body))))
      m)
+
+(** val closure_value_ty : fn_def -> ty list -> ty **)
+
+let closure_value_ty f captured_tys =
+  fn_signature_ty_with_usage (closure_capture_usage captured_tys) f
 
 (** val fn_value_ty : fn_def -> ty **)
 
@@ -1657,6 +1681,7 @@ let rec free_vars_expr = function
 | ELet (_, x, _, e1, e2) -> x :: (app (free_vars_expr e1) (free_vars_expr e2))
 | ELetInfer (_, x, e1, e2) ->
   x :: (app (free_vars_expr e1) (free_vars_expr e2))
+| EMakeClosure (_, captures) -> captures
 | EPlace p -> (place_name p) :: []
 | ECall (_, args) ->
   let rec go = function
@@ -1717,6 +1742,9 @@ let rec alpha_rename_expr _UU03c1_ used = function
   let used2 = x' :: used1' in
   let (e2', used3) = alpha_rename_expr ((x, x') :: _UU03c1_) used2 e2 in
   ((ELetInfer (m, x', e1', e2')), used3)
+| EMakeClosure (fname, captures) ->
+  ((EMakeClosure (fname,
+    (map (fun x -> lookup_rename x _UU03c1_) captures))), used)
 | EPlace p -> ((EPlace (rename_place _UU03c1_ p)), used)
 | ECall (fname, args) ->
   let go =
@@ -2832,6 +2860,46 @@ let sctx_lookup =
 let sctx_lookup_mut =
   ctx_lookup_mut
 
+(** val check_make_closure_captures_sctx :
+    outlives_ctx -> sctx -> ident list -> param list -> ty list infer_result **)
+
+let rec check_make_closure_captures_sctx _UU03a9_ _UU03a3_ captures params =
+  match captures with
+  | [] ->
+    (match params with
+     | [] -> Infer_ok []
+     | _ :: _ -> Infer_err ErrArityMismatch)
+  | x :: captures' ->
+    (match params with
+     | [] -> Infer_err ErrArityMismatch
+     | cap :: params' ->
+       (match sctx_lookup x _UU03a3_ with
+        | Some p ->
+          let (t, st) = p in
+          if negb (binding_available_b st [])
+          then Infer_err (ErrAlreadyConsumed x)
+          else (match sctx_lookup_mut x _UU03a3_ with
+                | Some m ->
+                  (match m with
+                   | MImmutable ->
+                     if usage_eqb (ty_usage t) UUnrestricted
+                     then if ty_ref_free_b t
+                          then if ty_compatible_b _UU03a9_ t cap.param_ty
+                               then (match check_make_closure_captures_sctx
+                                             _UU03a9_ _UU03a3_ captures'
+                                             params' with
+                                     | Infer_ok captured_tys ->
+                                       Infer_ok (t :: captured_tys)
+                                     | Infer_err err -> Infer_err err)
+                               else Infer_err
+                                      (compatible_error t cap.param_ty)
+                          else Infer_err (ErrNotAReference (ty_core t))
+                     else Infer_err (ErrUsageMismatch ((ty_usage t),
+                            UUnrestricted))
+                   | MMutable -> Infer_err (ErrNotMutable x))
+                | None -> Infer_err (ErrUnknownVar x))
+        | None -> Infer_err (ErrUnknownVar x)))
+
 (** val sctx_add : ident -> ty -> mutability -> sctx -> sctx **)
 
 let sctx_add =
@@ -3178,6 +3246,15 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
          if no_captures_b fdef
          then Infer_ok ((fn_value_ty fdef), _UU03a3_)
          else Infer_err ErrNotImplemented
+       | None -> Infer_err (ErrFunctionNotFound fname))
+    | EMakeClosure (fname, captures) ->
+      (match lookup_fn_b fname env.env_fns with
+       | Some fdef ->
+         (match check_make_closure_captures_sctx _UU03a9_ _UU03a3_ captures
+                  fdef.fn_captures with
+          | Infer_ok captured_tys ->
+            Infer_ok ((closure_value_ty fdef captured_tys), _UU03a3_)
+          | Infer_err err -> Infer_err err)
        | None -> Infer_err (ErrFunctionNotFound fname))
     | EPlace p ->
       (match infer_place_sctx env _UU03a3_ p with
@@ -3588,6 +3665,16 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
          if no_captures_b fdef
          then Infer_ok (((fn_value_ty fdef), _UU03a3_), e)
          else Infer_err ErrNotImplemented
+       | None -> Infer_err (ErrFunctionNotFound fname))
+    | EMakeClosure (fname, captures) ->
+      (match lookup_fn_b fname env.env_fns with
+       | Some fdef ->
+         (match check_make_closure_captures_sctx _UU03a9_ _UU03a3_ captures
+                  fdef.fn_captures with
+          | Infer_ok captured_tys ->
+            Infer_ok (((closure_value_ty fdef captured_tys), _UU03a3_),
+              (EMakeClosure (fname, captures)))
+          | Infer_err err -> Infer_err err)
        | None -> Infer_err (ErrFunctionNotFound fname))
     | EPlace p ->
       (match infer_place_sctx env _UU03a3_ p with
@@ -4065,6 +4152,7 @@ let rec provenance_ready_expr_b = function
   (&&) (provenance_ready_expr_b e1) (provenance_ready_expr_b e2)
 | ELetInfer (_, _, e1, e2) ->
   (&&) (provenance_ready_expr_b e1) (provenance_ready_expr_b e2)
+| EMakeClosure (_, _) -> false
 | EPlace p -> (match place_path p with
                | Some _ -> true
                | None -> false)
@@ -4229,6 +4317,16 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
          if no_captures_b fdef
          then Infer_ok ((((fn_value_ty fdef), _UU03a3_), r), [])
          else Infer_err ErrNotImplemented
+       | None -> Infer_err (ErrFunctionNotFound fname))
+    | EMakeClosure (fname, captures) ->
+      (match lookup_fn_b fname env.env_fns with
+       | Some fdef ->
+         (match check_make_closure_captures_sctx _UU03a9_ _UU03a3_ captures
+                  fdef.fn_captures with
+          | Infer_ok captured_tys ->
+            Infer_ok ((((closure_value_ty fdef captured_tys), _UU03a3_), r),
+              [])
+          | Infer_err err -> Infer_err err)
        | None -> Infer_err (ErrFunctionNotFound fname))
     | EPlace p ->
       (match consume_direct_place_value_roots env _UU03a3_ r p with
@@ -4640,6 +4738,16 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
          if no_captures_b fdef
          then Infer_ok ((((fn_value_ty fdef), _UU03a3_), r), [])
          else Infer_err ErrNotImplemented
+       | None -> Infer_err (ErrFunctionNotFound fname))
+    | EMakeClosure (fname, captures) ->
+      (match lookup_fn_b fname env.env_fns with
+       | Some fdef ->
+         (match check_make_closure_captures_sctx _UU03a9_ _UU03a3_ captures
+                  fdef.fn_captures with
+          | Infer_ok captured_tys ->
+            Infer_ok ((((closure_value_ty fdef captured_tys), _UU03a3_), r),
+              [])
+          | Infer_err err -> Infer_err err)
        | None -> Infer_err (ErrFunctionNotFound fname))
     | EPlace p ->
       (match consume_direct_place_value_roots env _UU03a3_ r p with
@@ -5271,6 +5379,12 @@ let rec borrow_check_env env pBS _UU0393_ = function
       | Infer_ok pBS2 -> Infer_ok (pbs_remove_all new_from_e1 pBS2)
       | Infer_err err -> Infer_err err)
    | Infer_err err -> Infer_err err)
+| EMakeClosure (_, captures) ->
+  let rec go = function
+  | [] -> Infer_ok pBS
+  | x :: rest ->
+    if pbs_has_mut x [] pBS then Infer_err (ErrBorrowConflict x) else go rest
+  in go captures
 | EPlace p ->
   (match borrow_check_place_access env pBS _UU0393_ p with
    | Infer_ok _ -> Infer_ok pBS

@@ -264,6 +264,19 @@ Fixpoint place_root (p : place) : ident :=
   | PField q _ => place_root q
   end.
 
+Inductive typed_captures (Ω : outlives_ctx) (Γ : ctx)
+    : list ident -> list param -> list Ty -> Prop :=
+  | TCap_Nil :
+      typed_captures Ω Γ [] [] []
+  | TCap_Cons : forall x captures cap caps T captured_tys,
+      ctx_lookup x Γ = Some (T, false) ->
+      ctx_lookup_mut x Γ = Some MImmutable ->
+      ty_usage T = UUnrestricted ->
+      ty_ref_free_b T = true ->
+      ty_compatible Ω T (param_ty cap) ->
+      typed_captures Ω Γ captures caps captured_tys ->
+      typed_captures Ω Γ (x :: captures) (cap :: caps) (T :: captured_tys).
+
 Inductive typed_place (fenv : list fn_def) (n : nat) (Γ : ctx)
     : place -> Ty -> Prop :=
   | TP_Var : forall x T,
@@ -332,6 +345,13 @@ Inductive typed (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) : ctx -> expr
       fn_name fdef = fname ->
       fn_captures fdef = [] ->
       typed fenv Ω n Γ (EFn fname) (fn_value_ty fdef) Γ
+
+  | T_MakeClosure : forall Γ fname fdef captures captured_tys,
+      In fdef fenv ->
+      fn_name fdef = fname ->
+      typed_captures Ω Γ captures (fn_captures fdef) captured_tys ->
+      typed fenv Ω n Γ (EMakeClosure fname captures)
+        (closure_value_ty fdef captured_tys) Γ
 
   (* let x: T = e1 in e2
      1. Type e1; the result type T1 must have the same core type as T
@@ -639,6 +659,10 @@ Inductive borrow_ok (fenv : list fn_def)
 
   | BO_Fn : forall BS Γ fname,
       borrow_ok fenv BS Γ (EFn fname) BS
+
+  | BO_MakeClosure : forall BS Γ fname captures,
+      Forall (fun x => bs_can_shared x BS) captures ->
+      borrow_ok fenv BS Γ (EMakeClosure fname captures) BS
 
   (* shared borrow: OK if no active mut borrow on x *)
   | BO_BorrowShared : forall BS Γ x,

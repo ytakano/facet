@@ -53,6 +53,7 @@ Inductive expr : Type :=
 | ELet      : mutability -> ident -> Ty -> expr -> expr -> expr
 | ELetInfer : mutability -> ident -> expr -> expr -> expr
 | EFn       : ident -> expr
+| EMakeClosure : ident -> list ident -> expr
 | EPlace    : place -> expr
 | ECall     : ident -> list expr -> expr
 | ECallExpr : expr -> list expr -> expr

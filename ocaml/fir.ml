@@ -187,6 +187,13 @@ let rec to_value env = function
     end
   | EFn f ->
     { fv = FVClosure (f, []); ft = get_fn_value_ty env f }
+  | EMakeClosure (f, captures) ->
+    let captured =
+      List.map
+        (fun x -> { fv = FVVar x; ft = get_var_ty env x })
+        captures
+    in
+    { fv = FVClosure (f, captured); ft = infer_expr_ty env (EMakeClosure (f, captures)) }
   | ELet (m, x, t, e1, e2) ->
     emit_into env x t e1;
     env.ctx <- ctx_add_b x t m env.ctx;

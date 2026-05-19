@@ -97,6 +97,27 @@ Proof.
   (* EFn *)
   + injection Hcheck as <-. constructor.
 
+  (* EMakeClosure *)
+  + assert (Hcaptures : Forall (fun x => bs_can_shared x BS) l /\
+                         BS' = BS).
+    {
+      clear Hlt IH.
+      revert BS' Hcheck.
+      induction l as [| x captures IHcaptures]; intros BS' Hcheck.
+      - simpl in Hcheck. injection Hcheck as <-.
+        split; [constructor | reflexivity].
+      - simpl in Hcheck.
+        destruct (bs_has_mut x BS) eqn:Hmut; [discriminate|].
+        destruct (IHcaptures BS' Hcheck) as [Hfor Hall_eq].
+        split.
+        + constructor.
+          * unfold bs_can_shared. exact Hmut.
+          * exact Hfor.
+        + exact Hall_eq.
+    }
+    destruct Hcaptures as [Hfor <-].
+    apply BO_MakeClosure. exact Hfor.
+
   (* EPlace *)
   + injection Hcheck as <-. constructor.
 
@@ -244,6 +265,13 @@ Proof.
 
   (* BO_Fn *)
   - intros. reflexivity.
+
+  (* BO_MakeClosure *)
+  - intros BS Γ fname captures Hall.
+    simpl.
+    induction Hall as [| x captures Hcan _ IH].
+    + reflexivity.
+    + unfold bs_can_shared in Hcan. rewrite Hcan. exact IH.
 
   (* BO_BorrowShared *)
   - intros BS Γ x Hcan.

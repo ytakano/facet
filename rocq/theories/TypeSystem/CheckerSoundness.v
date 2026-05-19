@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Lifetime Types Syntax TypingRules TypeChecker AlphaRenaming.
+From Facet.TypeSystem Require Import Lifetime Types Syntax PathState TypingRules TypeChecker AlphaRenaming.
 From Stdlib Require Import List String Bool Lia PeanoNat Program.Equality.
 Import ListNotations.
 
@@ -610,6 +610,53 @@ Proof.
       * exact Hcheck.
 Qed.
 
+Lemma ctx_lookup_state_available_nil_lookup :
+  forall Γ x T st,
+    ctx_lookup_state x Γ = Some (T, st) ->
+    binding_available_b st [] = true ->
+    ctx_lookup x Γ = Some (T, false).
+Proof.
+  induction Γ as [| [[[y Ty] sty] m] Γ IH]; intros x T st Hlookup Havailable;
+    simpl in *; try discriminate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - inversion Hlookup; subst.
+    unfold binding_available_b in Havailable. simpl in Havailable.
+    destruct st as [consumed moved]. simpl in *.
+    destruct consumed; simpl in Havailable; try discriminate.
+    reflexivity.
+  - eapply IH; eassumption.
+Qed.
+
+Lemma check_make_closure_captures_ctx_sound :
+  forall Ω Γ captures params captured_tys,
+    check_make_closure_captures_ctx Ω Γ captures params =
+      infer_ok captured_tys ->
+    typed_captures Ω Γ captures params captured_tys.
+Proof.
+  intros Ω Γ captures.
+  induction captures as [| x captures IH]; intros params captured_tys Hcheck;
+    destruct params as [| cap params]; simpl in Hcheck; try discriminate.
+  - injection Hcheck as <-. constructor.
+  - destruct (ctx_lookup_state x Γ) as [[T st] |] eqn:Hlookup; try discriminate.
+    destruct (negb (binding_available_b st [])) eqn:Havailable_neg; try discriminate.
+    apply negb_false_iff in Havailable_neg.
+    destruct (ctx_lookup_mut_b x Γ) as [m |] eqn:Hmut; try discriminate.
+    destruct m; try discriminate.
+    destruct (usage_eqb (ty_usage T) UUnrestricted) eqn:Husage; try discriminate.
+    destruct (ty_ref_free_b T) eqn:Href_free; try discriminate.
+    destruct (ty_compatible_b Ω T (param_ty cap)) eqn:Hcompat; try discriminate.
+    destruct (check_make_closure_captures_ctx Ω Γ captures params)
+      as [captured_rest | err] eqn:Hrest; try discriminate.
+    injection Hcheck as <-.
+    eapply TCap_Cons.
+    + eapply ctx_lookup_state_available_nil_lookup; eassumption.
+    + exact Hmut.
+    + apply usage_eqb_true. exact Husage.
+    + exact Href_free.
+    + apply ty_compatible_b_sound. exact Hcompat.
+    + eapply IH. exact Hrest.
+Qed.
+
 Lemma check_arg_tys_params_of_tys : forall Ω arg_tys param_tys,
   check_arg_tys Ω arg_tys param_tys =
   check_args Ω arg_tys (params_of_tys param_tys).
@@ -690,8 +737,17 @@ Proof.
 		        * exact Hin.
 		        * exact Hname.
             * exact Hcaps.
-		      + discriminate.
-		      + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
+      + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
+        destruct (check_make_closure_captures_ctx Ω Γ l (fn_captures fdef))
+          as [captured_tys | err] eqn:Hcheck; [|discriminate].
+        injection Hinfer as <- <-.
+        destruct (lookup_fn_b_sound i fenv fdef Hlookup) as [Hin Hname].
+        eapply T_MakeClosure.
+        * exact Hin.
+        * exact Hname.
+        * eapply check_make_closure_captures_ctx_sound. exact Hcheck.
+      + discriminate.
+      + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
         unfold no_captures_b in Hinfer.
         destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; [|discriminate].
         destruct (infer_args_collect fenv Ω n Γ l) as [[arg_tys Γcall] | err] eqn:Hcollect.

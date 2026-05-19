@@ -206,6 +206,26 @@ Fixpoint bind_params (params : list param) (vs : list value) (s : store) : store
       store_add (param_name p) (param_ty p) v (bind_params ps vs' s)
   end.
 
+Fixpoint copy_capture_store (captures : list ident) (s : store) : option store :=
+  match captures with
+  | [] => Some []
+  | x :: rest =>
+      match store_lookup x s with
+      | None => None
+      | Some se =>
+          if binding_available_b (se_state se) [] &&
+             match ty_usage (se_ty se) with
+             | UUnrestricted => true
+             | _ => false
+             end
+          then match copy_capture_store rest s with
+               | Some captured => Some (se :: captured)
+               | None => None
+               end
+          else None
+      end
+  end.
+
 Definition ex_param_x : param :=
   MkParam MImmutable (("x"%string), 0) (MkTy UUnrestricted TIntegers).
 
@@ -424,6 +444,11 @@ Inductive eval (env : global_env) : store -> expr -> store -> value -> Prop :=
       lookup_fn fname (env_fns env) = Some fdef ->
       fn_captures fdef = [] ->
       eval env s (EFn fname) s (VClosure fname [])
+
+  | Eval_MakeClosure : forall s fname captures captured fdef,
+      lookup_fn fname (env_fns env) = Some fdef ->
+      copy_capture_store captures s = Some captured ->
+      eval env s (EMakeClosure fname captures) s (VClosure fname captured)
 
   | Eval_If_True : forall s s1 s2 e1 e2 e3 v,
       eval env s e1 s1 (VBool true) ->

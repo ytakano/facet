@@ -600,6 +600,40 @@ Inductive infer_result (A : Type) : Type :=
 Arguments infer_ok {_} _.
 Arguments infer_err {_} _.
 
+Fixpoint check_make_closure_captures_ctx
+    (Ω : outlives_ctx) (Γ : ctx) (captures : list ident) (params : list param)
+    : infer_result (list Ty) :=
+  match captures, params with
+  | [], [] => infer_ok []
+  | x :: captures', cap :: params' =>
+      match ctx_lookup_state x Γ with
+      | None => infer_err (ErrUnknownVar x)
+      | Some (T, st) =>
+          if negb (binding_available_b st [])
+          then infer_err (ErrAlreadyConsumed x)
+          else
+          match ctx_lookup_mut_b x Γ with
+          | Some MImmutable =>
+              if usage_eqb (ty_usage T) UUnrestricted
+              then
+                if ty_ref_free_b T
+                then
+                  if ty_compatible_b Ω T (param_ty cap)
+                  then
+                    match check_make_closure_captures_ctx Ω Γ captures' params' with
+                    | infer_ok captured_tys => infer_ok (T :: captured_tys)
+                    | infer_err err => infer_err err
+                    end
+                  else infer_err (compatible_error T (param_ty cap))
+                else infer_err (ErrNotAReference (ty_core T))
+              else infer_err (ErrUsageMismatch (ty_usage T) UUnrestricted)
+          | Some MMutable => infer_err (ErrNotMutable x)
+          | None => infer_err (ErrUnknownVar x)
+          end
+      end
+  | _, _ => infer_err ErrArityMismatch
+  end.
+
 Fixpoint infer_place (Γ : ctx) (p : place) : infer_result Ty :=
   match p with
   | PVar x =>
@@ -763,6 +797,16 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
           if no_captures_b fdef
           then infer_ok (fn_value_ty fdef, Γ)
           else infer_err ErrNotImplemented
+      end
+
+  | EMakeClosure fname captures =>
+      match lookup_fn_b fname fenv with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef =>
+          match check_make_closure_captures_ctx Ω Γ captures (fn_captures fdef) with
+          | infer_ok captured_tys => infer_ok (closure_value_ty fdef captured_tys, Γ)
+          | infer_err err => infer_err err
+          end
       end
 
   | EPlace _ => infer_err ErrNotImplemented
@@ -1148,6 +1192,15 @@ Fixpoint infer_core_env_fuel (fuel : nat)
           then infer_ok (fn_value_ty fdef, Γ)
           else infer_err ErrNotImplemented
       end
+  | EMakeClosure fname captures =>
+      match lookup_fn_b fname (env_fns env) with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef =>
+          match check_make_closure_captures_ctx Ω Γ captures (fn_captures fdef) with
+          | infer_ok captured_tys => infer_ok (closure_value_ty fdef captured_tys, Γ)
+          | infer_err err => infer_err err
+          end
+      end
   | EStruct sname lts args fields =>
       match lookup_struct sname env with
       | None => infer_err (ErrStructNotFound sname)
@@ -1497,6 +1550,40 @@ Definition sctx_lookup (x : ident) (Σ : sctx) : option (Ty * binding_state) :=
 Definition sctx_lookup_mut (x : ident) (Σ : sctx) : option mutability :=
   ctx_lookup_mut x Σ.
 
+Fixpoint check_make_closure_captures_sctx
+    (Ω : outlives_ctx) (Σ : sctx) (captures : list ident) (params : list param)
+    : infer_result (list Ty) :=
+  match captures, params with
+  | [], [] => infer_ok []
+  | x :: captures', cap :: params' =>
+      match sctx_lookup x Σ with
+      | None => infer_err (ErrUnknownVar x)
+      | Some (T, st) =>
+          if negb (binding_available_b st [])
+          then infer_err (ErrAlreadyConsumed x)
+          else
+          match sctx_lookup_mut x Σ with
+          | Some MImmutable =>
+              if usage_eqb (ty_usage T) UUnrestricted
+              then
+                if ty_ref_free_b T
+                then
+                  if ty_compatible_b Ω T (param_ty cap)
+                  then
+                    match check_make_closure_captures_sctx Ω Σ captures' params' with
+                    | infer_ok captured_tys => infer_ok (T :: captured_tys)
+                    | infer_err err => infer_err err
+                    end
+                  else infer_err (compatible_error T (param_ty cap))
+                else infer_err (ErrNotAReference (ty_core T))
+              else infer_err (ErrUsageMismatch (ty_usage T) UUnrestricted)
+          | Some MMutable => infer_err (ErrNotMutable x)
+          | None => infer_err (ErrUnknownVar x)
+          end
+      end
+  | _, _ => infer_err ErrArityMismatch
+  end.
+
 Definition sctx_add (x : ident) (T : Ty) (m : mutability) (Σ : sctx) : sctx :=
   ctx_add x T m Σ.
 
@@ -1811,6 +1898,15 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
           if no_captures_b fdef
           then infer_ok (fn_value_ty fdef, Σ)
           else infer_err ErrNotImplemented
+      end
+  | EMakeClosure fname captures =>
+      match lookup_fn_b fname (env_fns env) with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef =>
+          match check_make_closure_captures_sctx Ω Σ captures (fn_captures fdef) with
+          | infer_ok captured_tys => infer_ok (closure_value_ty fdef captured_tys, Σ)
+          | infer_err err => infer_err err
+          end
       end
   | EStruct sname lts args fields =>
       match lookup_struct sname env with
@@ -2192,6 +2288,16 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
           if no_captures_b fdef
           then infer_ok (fn_value_ty fdef, Σ, e)
           else infer_err ErrNotImplemented
+      end
+  | EMakeClosure fname captures =>
+      match lookup_fn_b fname (env_fns env) with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef =>
+          match check_make_closure_captures_sctx Ω Σ captures (fn_captures fdef) with
+          | infer_ok captured_tys =>
+              infer_ok (closure_value_ty fdef captured_tys, Σ, EMakeClosure fname captures)
+          | infer_err err => infer_err err
+          end
       end
   | EStruct sname lts args fields =>
       match lookup_struct sname env with
@@ -2581,6 +2687,7 @@ Fixpoint preservation_ready_expr_b (e : expr) : bool :=
   | ELit _ => true
   | EVar _ => true
   | EFn _ => true
+  | EMakeClosure _ _ => false
   | EPlace p =>
       match place_path p with
       | Some _ => true
@@ -2640,6 +2747,7 @@ Fixpoint provenance_ready_expr_b (e : expr) : bool :=
   | ELit _ => true
   | EVar _ => true
   | EFn _ => true
+  | EMakeClosure _ _ => false
   | EPlace p =>
       match place_path p with
       | Some _ => true
@@ -2808,6 +2916,16 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
           if no_captures_b fdef
           then infer_ok (fn_value_ty fdef, Σ, R, [])
           else infer_err ErrNotImplemented
+      end
+  | EMakeClosure fname captures =>
+      match lookup_fn_b fname (env_fns env) with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef =>
+          match check_make_closure_captures_sctx Ω Σ captures (fn_captures fdef) with
+          | infer_ok captured_tys =>
+              infer_ok (closure_value_ty fdef captured_tys, Σ, R, [])
+          | infer_err err => infer_err err
+          end
       end
   | EStruct sname lts args fields =>
       match lookup_struct sname env with
@@ -3168,6 +3286,16 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
           if no_captures_b fdef
           then infer_ok (fn_value_ty fdef, Σ, R, [])
           else infer_err ErrNotImplemented
+      end
+  | EMakeClosure fname captures =>
+      match lookup_fn_b fname (env_fns env) with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef =>
+          match check_make_closure_captures_sctx Ω Σ captures (fn_captures fdef) with
+          | infer_ok captured_tys =>
+              infer_ok (closure_value_ty fdef captured_tys, Σ, R, [])
+          | infer_err err => infer_err err
+          end
       end
   | EStruct sname lts args fields =>
       match lookup_struct sname env with
@@ -4027,6 +4155,16 @@ Fixpoint borrow_check (fenv : list fn_def) (BS : borrow_state) (Γ : ctx)
   match e with
   | EUnit | ELit _ | EVar _ | EPlace _ => infer_ok BS
   | EFn _ => infer_ok BS
+  | EMakeClosure _ captures =>
+      let fix go (captures0 : list ident) : infer_result borrow_state :=
+        match captures0 with
+        | [] => infer_ok BS
+        | x :: rest =>
+            if bs_has_mut x BS
+            then infer_err (ErrBorrowConflict x)
+            else go rest
+        end
+      in go captures
   | EStruct _ _ _ _ => infer_err ErrNotImplemented
 
   | EBorrow RShared (PVar x) =>
@@ -4231,6 +4369,16 @@ Fixpoint borrow_check_env (env : global_env) (PBS : path_borrow_state) (Γ : ctx
     (e : expr) : infer_result path_borrow_state :=
   match e with
   | EUnit | ELit _ | EFn _ => infer_ok PBS
+  | EMakeClosure _ captures =>
+      let fix go (captures0 : list ident) : infer_result path_borrow_state :=
+        match captures0 with
+        | [] => infer_ok PBS
+        | x :: rest =>
+            if pbs_has_mut x [] PBS
+            then infer_err (ErrBorrowConflict x)
+            else go rest
+        end
+      in go captures
   | EVar x =>
       match borrow_check_place_access env PBS Γ (PVar x) with
       | infer_ok _ => infer_ok PBS

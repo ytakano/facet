@@ -86,6 +86,7 @@ Record fn_def : Type := MkFnDef {
   fn_name      : ident;
   fn_lifetimes : nat;
   fn_outlives  : outlives_ctx;
+  fn_captures  : list param;
   fn_params    : list param;
   fn_ret       : Ty;
   fn_body      : expr

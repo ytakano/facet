@@ -219,8 +219,8 @@ type param = { param_mutability : mutability; param_name : ident;
                param_ty : ty }
 
 type fn_def = { fn_name : ident; fn_lifetimes : Big_int_Z.big_int;
-                fn_outlives : outlives_ctx; fn_params : param list;
-                fn_ret : ty; fn_body : expr }
+                fn_outlives : outlives_ctx; fn_captures : param list;
+                fn_params : param list; fn_ret : ty; fn_body : expr }
 
 type syntax = fn_def list
 

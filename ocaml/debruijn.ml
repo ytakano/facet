@@ -230,6 +230,7 @@ let convert_fn_def_with_names struct_names fn_names (f : named_fn_def) : fn_def 
   { fn_name      = make_ident f.nf_name 0;
     fn_lifetimes = Big_int_Z.big_int_of_int next_lifetime;
     fn_outlives = f.nf_outlives;
+    fn_captures  = [];
     fn_params    = params;
     fn_ret       = ret_ty;
     fn_body      = convert fn_names ty_scope scope f.nf_body }

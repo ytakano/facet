@@ -139,8 +139,22 @@ surface:
   closure [x, y](a: A) -> R { body }
 
 elaborated synthetic fn:
-  fn __closure_N(x: X, y: Y, a: A) -> R { body }
+  fn __closure_N captures (x: X, y: Y) params (a: A) -> R { body }
 ```
+
+Capture parameters are represented separately from ordinary function
+parameters:
+
+```
+fn_captures __closure_N = [x: X, y: Y]
+fn_params   __closure_N = [a: A]
+```
+
+`fn_params` remains the public call interface. Direct `ECall` and `EFn` are
+empty-capture only; captured functions are materialized by `EMakeClosure`.
+`Eval_CallExpr` combines the captured frame and ordinary argument frame
+internally, then hides/removes both internal frames from the caller-visible
+result store for immutable Stage 7a calls.
 
 ## Closure Types
 

@@ -3703,7 +3703,7 @@ Definition infer_env (env : global_env) (f : fn_def)
 
 Definition fn_with_body (f : fn_def) (body : expr) : fn_def :=
   MkFnDef (fn_name f) (fn_lifetimes f) (fn_outlives f)
-    (fn_params f) (fn_ret f) body.
+    (fn_captures f) (fn_params f) (fn_ret f) body.
 
 Definition infer_env_elab (env : global_env) (f : fn_def)
     : infer_result (Ty * ctx * fn_def) :=
@@ -4550,7 +4550,7 @@ Definition check_program_env_alpha_validated_root_shadow_provenance
    check_env_preservation_ready (alpha_normalize_global_env env)).
 
 Definition ex_ready_gap_let_fn : fn_def :=
-  MkFnDef (("ready_gap_let"%string), 0) 0 [] []
+  MkFnDef (("ready_gap_let"%string), 0) 0 [] [] []
     (MkTy UUnrestricted TUnits)
     (ELetInfer MImmutable (("x"%string), 0)
       (ELit (LInt 1))
@@ -4613,7 +4613,7 @@ Proof. vm_compute. reflexivity. Qed.
 (* Ordinary-checker accepted core shapes that the safety validator rejects. *)
 
 Definition ex_ready_gap_let_annotated_fn : fn_def :=
-  MkFnDef (("ready_gap_let_annotated"%string), 0) 0 [] []
+  MkFnDef (("ready_gap_let_annotated"%string), 0) 0 [] [] []
     (MkTy UUnrestricted TUnits)
     (ELet MImmutable (("x"%string), 0)
       (MkTy UUnrestricted TIntegers)
@@ -4652,7 +4652,7 @@ Example ready_gap_matrix_infer_let_provenance_summary_accepts :
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_ready_gap_deref_borrow_fn : fn_def :=
-  MkFnDef (("ready_gap_deref_borrow"%string), 0) 0 [] []
+  MkFnDef (("ready_gap_deref_borrow"%string), 0) 0 [] [] []
     (MkTy UUnrestricted TIntegers)
     (ELet MImmutable (("x"%string), 0)
       (MkTy UUnrestricted TIntegers)
@@ -4677,12 +4677,12 @@ Example ready_gap_matrix_deref_borrow_provenance_summary_accepts :
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_ready_gap_call_callee_fn : fn_def :=
-  MkFnDef (("ready_gap_call_callee"%string), 0) 0 [] []
+  MkFnDef (("ready_gap_call_callee"%string), 0) 0 [] [] []
     (MkTy UUnrestricted TUnits)
     EUnit.
 
 Definition ex_ready_gap_direct_call_fn : fn_def :=
-  MkFnDef (("ready_gap_direct_call"%string), 0) 0 [] []
+  MkFnDef (("ready_gap_direct_call"%string), 0) 0 [] [] []
     (MkTy UUnrestricted TUnits)
     (ECall (("ready_gap_call_callee"%string), 0) []).
 
@@ -4704,7 +4704,7 @@ Example ready_gap_matrix_direct_call_direct_call_summary_accepts :
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_ready_gap_call_expr_fn : fn_def :=
-  MkFnDef (("ready_gap_call_expr"%string), 0) 0 [] []
+  MkFnDef (("ready_gap_call_expr"%string), 0) 0 [] [] []
     (MkTy UUnrestricted TUnits)
     (ECallExpr (EFn (("ready_gap_call_callee"%string), 0)) []).
 
@@ -4726,7 +4726,7 @@ Example ready_gap_matrix_call_expr_direct_call_summary_accepts :
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_ready_gap_function_value_call_fn : fn_def :=
-  MkFnDef (("ready_gap_function_value_call"%string), 0) 0 [] []
+  MkFnDef (("ready_gap_function_value_call"%string), 0) 0 [] [] []
     (MkTy UUnrestricted TUnits)
     (ELet MImmutable (("g"%string), 0)
       (fn_value_ty ex_ready_gap_call_callee_fn)
@@ -4752,7 +4752,7 @@ Example ready_gap_matrix_function_value_call_non_capturing_summary_accepts :
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_ready_gap_function_value_call_affine_annotated_fn : fn_def :=
-  MkFnDef (("ready_gap_function_value_call_affine_annotated"%string), 0) 0 [] []
+  MkFnDef (("ready_gap_function_value_call_affine_annotated"%string), 0) 0 [] [] []
     (MkTy UUnrestricted TUnits)
     (ELet MImmutable (("g"%string), 0)
       (MkTy UAffine (ty_core (fn_value_ty ex_ready_gap_call_callee_fn)))

@@ -349,15 +349,20 @@ Follow this order before inventing new theorem shapes:
        closure [x, y](a: A) -> R { body }
 
      synthetic function:
-       fn __closure_N(x: X, y: Y, a: A) -> R { body }
+       fn __closure_N captures (x: X, y: Y) params (a: A) -> R { body }
 
      core expression:
        EMakeClosure __closure_N [x, y]
      ```
 
-     Hidden capture parameters come before ordinary call parameters. The
-     runtime value is `VClosure __closure_N captured`, so the existing
-     `Eval_CallExpr` shape is reused.
+     Captures are not stored in ordinary `fn_params`. Synthetic functions use
+     a separate `fn_captures : list param`; ordinary `fn_params` remains the
+     public call-argument list. `Eval_CallExpr` composes captured slots with
+     ordinary arguments internally and removes both internal frames before
+     exposing the caller result store.
+   - Direct `ECall` and `EFn` remain empty-capture only. Captured synthetic
+     functions are constructed by `EMakeClosure` and called through
+     `ECallExpr`.
    - Type the value as `unrestricted closure<'env>(Args) -> Ret` with an
      internally generated trivial `'env`. Reference-valued captures are
      deliberately deferred to Stage 7b.
@@ -451,11 +456,11 @@ Follow this order before inventing new theorem shapes:
      alpha-renaming branches. This is only a callable-type bridge; it does not
      add closure literals, captured runtime environments, parser syntax, or
      validator/runtime theorem widening.
-   - The next closure implementation task is Stage 7a syntax/elaboration for
-     immutable unrestricted captures. Before implementation, resolve the
-     lambda-lifting detail around hidden capture parameters versus ordinary
-     `fn_params`, so `Eval_CallExpr` binds ordinary arguments and captured
-     slots in the intended order.
+   - The hidden-capture design is now fixed: add `fn_captures` separately from
+     ordinary `fn_params`. The next implementation task is mechanical plumbing
+     for empty-capture existing functions, followed by core-only `EMakeClosure`
+     for immutable unrestricted reference-free captures. Parser syntax and
+     frontend lambda lifting come after the Rocq core route is stable.
 8. **Handle the `if` root-environment gap last.**
    The known blocker is that ordinary `TES_If` does not expose
    `root_env_equiv R2 R3`, while root/shadow routes require it. Do not

@@ -875,8 +875,8 @@ type param = { param_mutability : mutability; param_name : ident;
                param_ty : ty }
 
 type fn_def = { fn_name : ident; fn_lifetimes : Big_int_Z.big_int;
-                fn_outlives : outlives_ctx; fn_params : param list;
-                fn_ret : ty; fn_body : expr }
+                fn_outlives : outlives_ctx; fn_captures : param list;
+                fn_params : param list; fn_ret : ty; fn_body : expr }
 
 type syntax = fn_def list
 
@@ -1797,8 +1797,8 @@ let alpha_rename_fn_def used f =
   let (params', _UU03c1_) = p in
   let (body', used2) = alpha_rename_expr _UU03c1_ used1 f.fn_body in
   ({ fn_name = f.fn_name; fn_lifetimes = f.fn_lifetimes; fn_outlives =
-  f.fn_outlives; fn_params = params'; fn_ret = f.fn_ret; fn_body = body' },
-  used2)
+  f.fn_outlives; fn_captures = f.fn_captures; fn_params = params'; fn_ret =
+  f.fn_ret; fn_body = body' }, used2)
 
 (** val alpha_rename_syntax_go :
     ident list -> syntax -> syntax * ident list **)
@@ -5007,8 +5007,8 @@ let infer_env env f =
 
 let fn_with_body f body =
   { fn_name = f.fn_name; fn_lifetimes = f.fn_lifetimes; fn_outlives =
-    f.fn_outlives; fn_params = f.fn_params; fn_ret = f.fn_ret; fn_body =
-    body }
+    f.fn_outlives; fn_captures = f.fn_captures; fn_params = f.fn_params;
+    fn_ret = f.fn_ret; fn_body = body }
 
 (** val infer_env_elab :
     global_env -> fn_def -> ((ty * ctx) * fn_def) infer_result **)

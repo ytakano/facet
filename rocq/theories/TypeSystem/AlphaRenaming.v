@@ -2960,7 +2960,7 @@ Lemma alpha_rename_fn_def_used_extends : forall used f fr used',
   forall x, In x used -> In x used'.
 Proof.
   intros used f fr used' Hrename x Hin.
-  destruct f as [fname lifetimes outs ps ret body].
+  destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
   destruct (alpha_rename_params []
     (param_names ps ++ free_vars_expr body ++ used) ps)
@@ -2979,7 +2979,7 @@ Lemma alpha_rename_fn_def_params_fresh_used : forall used f fr used',
   forall x, In x (ctx_names (params_ctx (fn_params fr))) -> ~ In x used.
 Proof.
   intros used f fr used' Hrename x Hin Hused.
-  destruct f as [fname lifetimes outs ps ret body].
+  destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
   destruct (alpha_rename_params []
     (param_names ps ++ free_vars_expr body ++ used) ps)
@@ -2998,7 +2998,7 @@ Lemma alpha_rename_fn_def_body_local_store_names_fresh_used :
     Forall (fun x => ~ In x used) (expr_local_store_names (fn_body fr)).
 Proof.
   intros used f fr used' Hrename.
-  destruct f as [fname lifetimes outs ps ret body].
+  destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
   destruct (alpha_rename_params []
     (param_names ps ++ free_vars_expr body ++ used) ps)
@@ -3022,7 +3022,7 @@ Lemma alpha_rename_fn_def_body_local_store_names_fresh_params :
       (expr_local_store_names (fn_body fr)).
 Proof.
   intros used f fr used' Hrename.
-  destruct f as [fname lifetimes outs ps ret body].
+  destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
   destruct (alpha_rename_params []
     (param_names ps ++ free_vars_expr body ++ used) ps)
@@ -3048,7 +3048,7 @@ Lemma alpha_rename_fn_def_params_nodup : forall used f fr used',
   NoDup (ctx_names (params_ctx (fn_params fr))).
 Proof.
   intros used f fr used' Hrename.
-  destruct f as [fname lifetimes outs ps ret body].
+  destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
   destruct (alpha_rename_params []
     (param_names ps ++ free_vars_expr body ++ used) ps)
@@ -3064,7 +3064,7 @@ Lemma alpha_rename_fn_def_body_local_store_names_nodup :
     NoDup (expr_local_store_names (fn_body fr)).
 Proof.
   intros used f fr used' Hrename.
-  destruct f as [fname lifetimes outs ps ret body].
+  destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
   destruct (alpha_rename_params []
     (param_names ps ++ free_vars_expr body ++ used) ps)
@@ -3100,7 +3100,7 @@ Lemma alpha_rename_fn_def_params_ctx_alpha : forall used f fr used',
     (params_ctx (fn_params f)) (params_ctx (fn_params fr)).
 Proof.
   intros used f fr used' Hrename.
-  destruct f as [fname lifetimes outs ps ret body].
+  destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
   destruct (alpha_rename_params []
     (param_names ps ++ free_vars_expr body ++ used) ps)
@@ -3421,7 +3421,7 @@ Lemma alpha_rename_fn_def_shape : forall used f fr used',
   same_fn_shape f fr.
 Proof.
   intros used f fr used' H.
-  destruct f as [fname lifetimes outs ps ret body].
+  destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in H.
   simpl in H.
   destruct (alpha_rename_params []
@@ -3444,7 +3444,7 @@ Lemma alpha_rename_fn_def_static_fields :
     fn_ret fr = fn_ret f.
 Proof.
   intros used f fr used' H.
-  destruct f as [fname lifetimes outs ps ret body].
+  destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in H. simpl in H.
   destruct (alpha_rename_params []
     (param_names ps ++ free_vars_expr body ++ used) ps)
@@ -3466,7 +3466,7 @@ Lemma alpha_rename_fn_def_initial_root_env_rename :
         initial_root_env_for_params_origin (fn_params f) (fn_params fr).
 Proof.
   intros used f fr used' Hrename Hnodup.
-  destruct f as [fname lifetimes outs ps ret body].
+  destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename.
   simpl in Hrename.
   destruct (alpha_rename_params []
@@ -3492,7 +3492,7 @@ Lemma alpha_rename_fn_def_params_body :
         (fn_body fr, used').
 Proof.
   intros used f fr used' Hrename.
-  destruct f as [fname lifetimes outs ps ret body].
+  destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename.
   simpl in Hrename.
   destruct (alpha_rename_params []
@@ -3525,7 +3525,7 @@ Lemma alpha_rename_fn_def_params_body_facts :
       disjoint_names (free_vars_expr (fn_body f)) (rename_range rho).
 Proof.
   intros used f fr used' Hrename.
-  destruct f as [fname lifetimes outs ps ret body].
+  destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename.
   simpl in Hrename.
   destruct (alpha_rename_params []
@@ -13695,7 +13695,7 @@ Lemma alpha_rename_fn_def_typed_structural_forward :
     typed_fn_env_structural env fr.
 Proof.
   intros env used f fr used' Hrename Hnodup Htyped.
-  destruct f as [fname lifetimes outs ps ret body].
+  destruct f as [fname lifetimes outs captures ps ret body].
   unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
   destruct (alpha_rename_params []
     (param_names ps ++ free_vars_expr body ++ used) ps)

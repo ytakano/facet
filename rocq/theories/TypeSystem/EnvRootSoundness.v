@@ -592,6 +592,31 @@ Proof.
            eapply IH. exact Hinfer0.
         -- exact Hcheck.
       * apply outlives_constraints_hold_b_sound. exact Hout.
+    + destruct e; try discriminate.
+      destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup;
+        try discriminate.
+      destruct (Nat.eqb (fn_lifetimes fdef) 0) eqn:Hlt; try discriminate.
+      destruct (check_make_closure_captures_sctx env Ω Σ l0 (fn_captures fdef))
+        as [captured_tys | err] eqn:Hcaptures; try discriminate.
+      rewrite infer_env_args_collect_roots_eq in Hinfer.
+      destruct (infer_env_args_collect_roots fuel' env Ω n R Σ l)
+        as [[[[arg_tys Σargs] Rargs] arg_roots] | err] eqn:Hcollect;
+        try discriminate.
+      destruct (check_args Ω arg_tys (fn_params fdef)) as [err |] eqn:Hcheck;
+        try discriminate.
+      inversion Hinfer; subst.
+      apply Nat.eqb_eq in Hlt.
+      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
+      eapply TER_CallExpr_MakeClosure.
+      * exact Hin.
+      * exact Hname.
+      * exact Hlt.
+      * exact Hcaptures.
+      * eapply infer_env_args_collect_roots_sound.
+        -- exact Hcollect.
+        -- intros R0 Σ0 e0 T0 Σ1 R1 roots1 Hinfer0.
+           eapply IH. exact Hinfer0.
+        -- exact Hcheck.
     + destruct (lookup_struct s env) as [sdef |] eqn:Hlookup; try discriminate.
       destruct (negb (Nat.eqb (Datatypes.length l) (struct_lifetimes sdef))) eqn:Hlts;
         try discriminate.
@@ -864,6 +889,31 @@ Proof.
            eapply IH. exact Hinfer0.
         -- exact Hcheck.
       * apply outlives_constraints_hold_b_sound. exact Hout.
+    + destruct e; try discriminate.
+      destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup;
+        try discriminate.
+      destruct (Nat.eqb (fn_lifetimes fdef) 0) eqn:Hlt; try discriminate.
+      destruct (check_make_closure_captures_sctx env Ω Σ l0 (fn_captures fdef))
+        as [captured_tys | err] eqn:Hcaptures; try discriminate.
+      rewrite infer_env_args_collect_roots_shadow_safe_eq in Hinfer.
+      destruct (infer_env_args_collect_roots_shadow_safe fuel' env Ω n R Σ l)
+        as [[[[arg_tys Σargs] Rargs] arg_roots] | err] eqn:Hcollect;
+        try discriminate.
+      destruct (check_args Ω arg_tys (fn_params fdef)) as [err |] eqn:Hcheck;
+        try discriminate.
+      inversion Hinfer; subst.
+      apply Nat.eqb_eq in Hlt.
+      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
+      eapply TERS_CallExpr_MakeClosure.
+      * exact Hin.
+      * exact Hname.
+      * exact Hlt.
+      * exact Hcaptures.
+      * eapply infer_env_args_collect_roots_shadow_safe_sound.
+        -- exact Hcollect.
+        -- intros R0 Σ0 e0 T0 Σ1 R1 roots1 Hinfer0.
+           eapply IH. exact Hinfer0.
+        -- exact Hcheck.
     + destruct (lookup_struct s env) as [sdef |] eqn:Hlookup; try discriminate.
       destruct (negb (Nat.eqb (Datatypes.length l) (struct_lifetimes sdef))) eqn:Hlts;
         try discriminate.

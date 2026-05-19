@@ -574,12 +574,22 @@ Follow this order before inventing new theorem shapes:
      instantiated field types are also capture-reference-free. The boolean
      predicate still implies the existing `ty_ref_free_b` contract used by
      `typed_captures`, keeping ordinary checker soundness shape unchanged.
-   - Next closure proof task: supply the remaining captured-call premises
-     without changing validator acceptance yet. In particular, derive or package
-     captured frame readiness, combined `fn_params ++ fn_captures` root
-     coverage/exclusion, and callee-body root/shadow provenance summary for the
-     alpha-renamed body context. Only after that theorem compiles should the
-     executable validators accept captured `ECallExpr`.
+   - Caller-side root/shadow typing now has the first narrow captured-call
+     expression route for only
+     `ECallExpr (EMakeClosure fname captures) args`. The Prop-level
+     constructors and executable root/shadow checkers use the existing exact
+     capture check, require `fn_lifetimes fdef = 0`, type/check the ordinary
+     arguments against `fn_params fdef`, return `root_sets_union arg_roots`,
+     and still reject every other general `ECallExpr` shape. Soundness and
+     alpha-renaming preservation compile for this narrow route.
+   - Next closure proof task: connect the new caller-side
+     `ECallExpr (EMakeClosure ...)` root/shadow evidence to
+     `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased`.
+     In particular, derive or package captured frame readiness, combined
+     `fn_params ++ fn_captures` root coverage/exclusion, and callee-body
+     root/shadow provenance summary for the alpha-renamed body context. Only
+     after that theorem compiles should the executable validators accept
+     captured `ECallExpr`.
    - Preservation/provenance readiness validators still reject
      `EMakeClosure`. Do not flip those booleans until captured `ECallExpr`
      preservation is proved. The next closure task is either parser/lambda

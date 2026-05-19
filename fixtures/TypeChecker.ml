@@ -4427,7 +4427,51 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                | Infer_err err -> Infer_err err)
          else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
-    | ECallExpr (_, _) -> Infer_err ErrNotImplemented
+    | ECallExpr (e0, args) ->
+      (match e0 with
+       | EMakeClosure (fname, captures) ->
+         (match lookup_fn_b fname env.env_fns with
+          | Some fdef ->
+            if Nat.eqb fdef.fn_lifetimes Big_int_Z.zero_big_int
+            then (match check_make_closure_captures_sctx env _UU03a9_
+                          _UU03a3_ captures fdef.fn_captures with
+                  | Infer_ok _ ->
+                    let collect =
+                      let rec collect _UU03a3_0 r0 = function
+                      | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+                      | e' :: es ->
+                        (match infer_core_env_state_fuel_roots fuel' env
+                                 _UU03a9_ n r0 _UU03a3_0 e' with
+                         | Infer_ok p ->
+                           let (p0, roots_e) = p in
+                           let (p1, r1) = p0 in
+                           let (t_e, _UU03a3_1) = p1 in
+                           (match collect _UU03a3_1 r1 es with
+                            | Infer_ok p2 ->
+                              let (p3, roots_es) = p2 in
+                              let (p4, r2) = p3 in
+                              let (tys, _UU03a3_2) = p4 in
+                              Infer_ok ((((t_e :: tys), _UU03a3_2), r2),
+                              (roots_e :: roots_es))
+                            | Infer_err err -> Infer_err err)
+                         | Infer_err err -> Infer_err err)
+                      in collect
+                    in
+                    (match collect _UU03a3_ r args with
+                     | Infer_ok p ->
+                       let (p0, arg_roots) = p in
+                       let (p1, r') = p0 in
+                       let (arg_tys, _UU03a3_') = p1 in
+                       (match check_args _UU03a9_ arg_tys fdef.fn_params with
+                        | Some err -> Infer_err err
+                        | None ->
+                          Infer_ok (((fdef.fn_ret, _UU03a3_'), r'),
+                            (root_sets_union arg_roots)))
+                     | Infer_err err -> Infer_err err)
+                  | Infer_err err -> Infer_err err)
+            else Infer_err ErrNotImplemented
+          | None -> Infer_err (ErrFunctionNotFound fname))
+       | _ -> Infer_err ErrNotImplemented)
     | EStruct (sname, lts, args, fields) ->
       (match lookup_struct sname env with
        | Some s ->
@@ -4848,7 +4892,51 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                | Infer_err err -> Infer_err err)
          else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
-    | ECallExpr (_, _) -> Infer_err ErrNotImplemented
+    | ECallExpr (e0, args) ->
+      (match e0 with
+       | EMakeClosure (fname, captures) ->
+         (match lookup_fn_b fname env.env_fns with
+          | Some fdef ->
+            if Nat.eqb fdef.fn_lifetimes Big_int_Z.zero_big_int
+            then (match check_make_closure_captures_sctx env _UU03a9_
+                          _UU03a3_ captures fdef.fn_captures with
+                  | Infer_ok _ ->
+                    let collect =
+                      let rec collect _UU03a3_0 r0 = function
+                      | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+                      | e' :: es ->
+                        (match infer_core_env_state_fuel_roots_shadow_safe
+                                 fuel' env _UU03a9_ n r0 _UU03a3_0 e' with
+                         | Infer_ok p ->
+                           let (p0, roots_e) = p in
+                           let (p1, r1) = p0 in
+                           let (t_e, _UU03a3_1) = p1 in
+                           (match collect _UU03a3_1 r1 es with
+                            | Infer_ok p2 ->
+                              let (p3, roots_es) = p2 in
+                              let (p4, r2) = p3 in
+                              let (tys, _UU03a3_2) = p4 in
+                              Infer_ok ((((t_e :: tys), _UU03a3_2), r2),
+                              (roots_e :: roots_es))
+                            | Infer_err err -> Infer_err err)
+                         | Infer_err err -> Infer_err err)
+                      in collect
+                    in
+                    (match collect _UU03a3_ r args with
+                     | Infer_ok p ->
+                       let (p0, arg_roots) = p in
+                       let (p1, r') = p0 in
+                       let (arg_tys, _UU03a3_') = p1 in
+                       (match check_args _UU03a9_ arg_tys fdef.fn_params with
+                        | Some err -> Infer_err err
+                        | None ->
+                          Infer_ok (((fdef.fn_ret, _UU03a3_'), r'),
+                            (root_sets_union arg_roots)))
+                     | Infer_err err -> Infer_err err)
+                  | Infer_err err -> Infer_err err)
+            else Infer_err ErrNotImplemented
+          | None -> Infer_err (ErrFunctionNotFound fname))
+       | _ -> Infer_err ErrNotImplemented)
     | EStruct (sname, lts, args, fields) ->
       (match lookup_struct sname env with
        | Some s ->

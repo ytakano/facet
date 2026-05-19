@@ -3355,6 +3355,45 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
             end
           else infer_err (ErrTypeMismatch (ty_core T_cond) TBooleans)
       end
+  | ECallExpr (EMakeClosure fname captures) args =>
+      match lookup_fn_b fname (env_fns env) with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef =>
+          if Nat.eqb (fn_lifetimes fdef) 0
+          then
+            match check_make_closure_captures_sctx env Ω Σ captures (fn_captures fdef) with
+            | infer_err err => infer_err err
+            | infer_ok _ =>
+                let fix collect (Σ0 : sctx) (R0 : root_env) (as_ : list expr)
+                    : infer_result (list Ty * sctx * root_env * list root_set) :=
+                  match as_ with
+                  | [] => infer_ok ([], Σ0, R0, [])
+                  | e' :: es =>
+                      match infer_core_env_state_fuel_roots fuel' env Ω n R0 Σ0 e' with
+                      | infer_err err => infer_err err
+                      | infer_ok (T_e, Σ1, R1, roots_e) =>
+                          match collect Σ1 R1 es with
+                          | infer_err err => infer_err err
+                          | infer_ok (tys, Σ2, R2, roots_es) =>
+                              infer_ok
+                                (T_e :: tys, Σ2, R2, roots_e :: roots_es)
+                          end
+                      end
+                  end
+                in
+                match collect Σ R args with
+                | infer_err err => infer_err err
+                | infer_ok (arg_tys, Σ', R', arg_roots) =>
+                    match check_args Ω arg_tys (fn_params fdef) with
+                    | Some err => infer_err err
+                    | None =>
+                        infer_ok
+                          (fn_ret fdef, Σ', R', root_sets_union arg_roots)
+                    end
+                end
+            end
+          else infer_err ErrNotImplemented
+      end
   | ECallExpr _ _ => infer_err ErrNotImplemented
   end
   end.
@@ -3730,6 +3769,46 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
                 end
             end
           else infer_err (ErrTypeMismatch (ty_core T_cond) TBooleans)
+      end
+  | ECallExpr (EMakeClosure fname captures) args =>
+      match lookup_fn_b fname (env_fns env) with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef =>
+          if Nat.eqb (fn_lifetimes fdef) 0
+          then
+            match check_make_closure_captures_sctx env Ω Σ captures (fn_captures fdef) with
+            | infer_err err => infer_err err
+            | infer_ok _ =>
+                let fix collect (Σ0 : sctx) (R0 : root_env) (as_ : list expr)
+                    : infer_result (list Ty * sctx * root_env * list root_set) :=
+                  match as_ with
+                  | [] => infer_ok ([], Σ0, R0, [])
+                  | e' :: es =>
+                      match infer_core_env_state_fuel_roots_shadow_safe
+                              fuel' env Ω n R0 Σ0 e' with
+                      | infer_err err => infer_err err
+                      | infer_ok (T_e, Σ1, R1, roots_e) =>
+                          match collect Σ1 R1 es with
+                          | infer_err err => infer_err err
+                          | infer_ok (tys, Σ2, R2, roots_es) =>
+                              infer_ok
+                                (T_e :: tys, Σ2, R2, roots_e :: roots_es)
+                          end
+                      end
+                  end
+                in
+                match collect Σ R args with
+                | infer_err err => infer_err err
+                | infer_ok (arg_tys, Σ', R', arg_roots) =>
+                    match check_args Ω arg_tys (fn_params fdef) with
+                    | Some err => infer_err err
+                    | None =>
+                        infer_ok
+                          (fn_ret fdef, Σ', R', root_sets_union arg_roots)
+                    end
+                end
+            end
+          else infer_err ErrNotImplemented
       end
   | ECallExpr _ _ => infer_err ErrNotImplemented
   end

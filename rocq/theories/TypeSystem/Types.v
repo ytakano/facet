@@ -170,6 +170,73 @@ Fixpoint map_lifetimes_ty
 Definition close_fn_ty (m : nat) (T : Ty) : Ty :=
   map_lifetimes_ty (close_fn_lifetime m) T.
 
+Lemma close_fn_lifetime_0 :
+  forall l,
+    close_fn_lifetime 0 l = l.
+Proof.
+  intros [| i | i]; simpl; reflexivity.
+Qed.
+
+Lemma map_lifetimes_ty_close_fn_lifetime_0 :
+  forall T,
+    map_lifetimes_ty (close_fn_lifetime 0) T = T.
+Proof.
+  fix IH 1.
+  intros [u core]; destruct core; simpl; try reflexivity.
+  - assert (Hlts : map (close_fn_lifetime 0) l = l).
+    { induction l as [| lt lts IHlts]; simpl.
+      - reflexivity.
+      - rewrite close_fn_lifetime_0, IHlts. reflexivity. }
+    assert (Hargs :
+      (fix go (xs : list Ty) : list Ty :=
+         match xs with
+         | [] => []
+         | x :: xs' => map_lifetimes_ty (close_fn_lifetime 0) x :: go xs'
+         end) l0 = l0).
+    { induction l0 as [| T Ts IHTs]; simpl; try reflexivity.
+      rewrite IH, IHTs. reflexivity. }
+    rewrite Hlts, Hargs. reflexivity.
+  - assert (Hargs :
+      (fix go (xs : list Ty) : list Ty :=
+         match xs with
+         | [] => []
+         | x :: xs' => map_lifetimes_ty (close_fn_lifetime 0) x :: go xs'
+         end) l = l).
+    { induction l as [| T Ts IHTs]; simpl; try reflexivity.
+      rewrite IH, IHTs. reflexivity. }
+    rewrite Hargs, IH. reflexivity.
+  - assert (Hargs :
+      (fix go (xs : list Ty) : list Ty :=
+         match xs with
+         | [] => []
+         | x :: xs' => map_lifetimes_ty (close_fn_lifetime 0) x :: go xs'
+         end) l0 = l0).
+    { induction l0 as [| T Ts IHTs]; simpl; try reflexivity.
+      rewrite IH, IHTs. reflexivity. }
+    rewrite close_fn_lifetime_0, Hargs, IH. reflexivity.
+  - assert (Hbounds :
+      map
+        (fun '(a, b) =>
+          (close_fn_lifetime 0 a, close_fn_lifetime 0 b)) o = o).
+    { induction o as [| [a b] rest IHrest]; simpl.
+      - reflexivity.
+      - rewrite !close_fn_lifetime_0, IHrest. reflexivity. }
+    rewrite Hbounds, IH. reflexivity.
+  - rewrite close_fn_lifetime_0, IH. reflexivity.
+Qed.
+
+Lemma map_lifetimes_tys_close_fn_lifetime_0 :
+  forall Ts,
+    (fix go (xs : list Ty) : list Ty :=
+       match xs with
+       | [] => []
+       | x :: xs' => map_lifetimes_ty (close_fn_lifetime 0) x :: go xs'
+       end) Ts = Ts.
+Proof.
+  induction Ts as [| T Ts IH]; simpl; try reflexivity.
+  rewrite map_lifetimes_ty_close_fn_lifetime_0, IH. reflexivity.
+Qed.
+
 Definition close_fn_outlives (m : nat) (Ω : outlives_ctx) : outlives_ctx :=
   map (fun '(a, b) => (close_fn_lifetime m a, close_fn_lifetime m b)) Ω.
 

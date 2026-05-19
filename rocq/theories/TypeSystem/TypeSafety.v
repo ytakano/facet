@@ -3298,6 +3298,7 @@ Proof.
   - eapply TERS_Call; eauto.
   - eapply TERS_Fn; eauto.
   - eapply TERS_MakeClosure; eauto.
+  - eapply TERS_CallExpr_MakeClosure; eauto.
   - eapply TERS_Struct; eauto.
   - pose proof (root_env_tail_fresh_names_app_l _ _ _ H1) as Hfresh1.
     pose proof (root_env_tail_fresh_names_app_r _ _ _ H1) as Hfresh_tail.
@@ -5820,6 +5821,16 @@ Proof.
     | IH : root_env_no_shadow ?R ->
         root_env_ctx_roots_named ?R ?Σ ->
         root_env_ctx_roots_named ?R' ?Σ' /\
+        Forall (fun roots => root_set_ctx_roots_named roots ?Σ') ?arg_roots,
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_ctx_roots_named ?R ?Σ |- _ =>
+        destruct (IH Hrn Henv) as [Henv_args Hroots_args];
+        split; [exact Henv_args | apply root_sets_ctx_roots_named_union; exact Hroots_args]
+    end.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_ctx_roots_named ?R ?Σ ->
+        root_env_ctx_roots_named ?R' ?Σ' /\
         root_set_ctx_roots_named ?roots ?Σ',
       Hrn : root_env_no_shadow ?R,
       Henv : root_env_ctx_roots_named ?R ?Σ |- _ =>
@@ -5972,6 +5983,14 @@ Proof.
   - eapply root_env_ctx_keys_named_same_bindings.
     + eapply sctx_consume_path_same_bindings. eassumption.
     + assumption.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_ctx_keys_named ?R ?Σ ->
+        root_env_ctx_keys_named ?R' ?Σ',
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_ctx_keys_named ?R ?Σ |- _ =>
+        exact (IH Hrn Henv)
+    end.
   - match goal with
     | IH : root_env_no_shadow ?R ->
         root_env_ctx_keys_named ?R ?Σ ->

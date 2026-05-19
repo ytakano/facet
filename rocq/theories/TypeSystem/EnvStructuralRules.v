@@ -700,6 +700,17 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
         infer_ok captured_tys ->
       typed_env_roots env Ω n R Σ (EMakeClosure fname captures)
         (closure_value_ty fdef captured_tys) Σ R []
+  | TER_CallExpr_MakeClosure : forall R R' Σ Σ' fname fdef captures
+      captured_tys args arg_roots,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      fn_lifetimes fdef = 0 ->
+      check_make_closure_captures_sctx env Ω Σ captures (fn_captures fdef) =
+        infer_ok captured_tys ->
+      typed_args_roots env Ω n R Σ args (fn_params fdef) Σ' R' arg_roots ->
+      typed_env_roots env Ω n R Σ
+        (ECallExpr (EMakeClosure fname captures) args)
+        (fn_ret fdef) Σ' R' (root_sets_union arg_roots)
   | TER_Struct : forall R R' Σ Σ' sname lts args fields sdef roots,
       lookup_struct sname env = Some sdef ->
       Datatypes.length lts = struct_lifetimes sdef ->
@@ -825,6 +836,18 @@ with typed_fields_roots_ind' := Induction for typed_fields_roots Sort Prop.
 Combined Scheme typed_roots_ind
   from typed_env_roots_ind', typed_args_roots_ind', typed_fields_roots_ind'.
 
+Lemma typed_args_env_structural_params_of_tys_map_param_ty :
+  forall env Ω n Σ args ps Σ',
+    typed_args_env_structural env Ω n Σ args ps Σ' ->
+    typed_args_env_structural env Ω n Σ args
+      (params_of_tys (map param_ty ps)) Σ'.
+Proof.
+  intros env Ω n Σ args ps Σ' Hargs.
+  induction Hargs.
+  - constructor.
+  - simpl. econstructor; eauto.
+Qed.
+
 Lemma typed_roots_structural :
   forall env Ω n,
   (forall R Σ e T Σ' R' roots,
@@ -840,6 +863,19 @@ Proof.
   intros env Ω n.
   apply typed_roots_ind;
     intros; try solve [econstructor; eauto].
+  - eapply TES_CallExpr_Fn
+      with (u := closure_capture_usage captured_tys)
+           (param_tys := map param_ty (fn_params fdef)).
+    + replace (MkTy (closure_capture_usage captured_tys)
+          (TFn (map param_ty (fn_params fdef)) (fn_ret fdef)))
+        with (closure_value_ty fdef captured_tys).
+      * eapply TES_MakeClosure; eauto.
+      * unfold closure_value_ty, fn_signature_ty_with_usage.
+        rewrite e0. simpl.
+        rewrite map_lifetimes_tys_close_fn_lifetime_0.
+        rewrite map_lifetimes_ty_close_fn_lifetime_0.
+        reflexivity.
+    + apply typed_args_env_structural_params_of_tys_map_param_ty. exact H.
   - eapply TES_Deref_Expr.
     + reflexivity.
     + eapply TES_BorrowShared. eassumption.
@@ -1078,6 +1114,20 @@ Proof.
     + exact HnsR0.
     + exact HR0.
     + apply root_set_equiv_refl.
+  - intros R R' Σ Σ' fname fdef captures captured_tys args arg_roots
+      Hin Hfname Hlt Hcaptures Hargs IHargs Hfresh R0 HnsR HnsR0 HR0.
+    rewrite expr_local_store_names_call_expr in Hfresh.
+    apply root_subst_images_exclude_names_app_inv in Hfresh.
+    destruct Hfresh as [_ Hfresh_args].
+    destruct (IHargs Hfresh_args R0 HnsR HnsR0 HR0)
+      as [R0' [arg_roots0 [Hargs0 [HnsR0' [HR0' Harg_roots0]]]]].
+    exists R0', (root_sets_union arg_roots0). split; [| split; [| split]].
+    + eapply TER_CallExpr_MakeClosure; eauto.
+    + exact HnsR0'.
+    + exact HR0'.
+    + eapply root_set_equiv_trans.
+      * apply root_sets_union_equiv. exact Harg_roots0.
+      * apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
   - intros R R' Σ Σ' sname lts args fields sdef roots Hlookup Hlen_lts
       Hlen_args Hbounds Hfields IHfields Hfresh R0 HnsR HnsR0 HR0.
     rewrite expr_local_store_names_struct in Hfresh.

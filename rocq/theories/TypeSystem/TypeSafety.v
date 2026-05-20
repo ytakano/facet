@@ -3192,6 +3192,19 @@ Proof.
       * apply IH. exact Hin.
 Qed.
 
+Lemma root_env_lookup_empty_root_env_for_store_none :
+  forall s x,
+    ~ In x (store_names s) ->
+    root_env_lookup x (empty_root_env_for_store s) = None.
+Proof.
+  induction s as [| se rest IH]; intros x Hfresh; simpl; try reflexivity.
+  destruct (ident_eqb x (se_name se)) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst x.
+    exfalso. apply Hfresh. left. reflexivity.
+  - apply IH.
+    intros Hin. apply Hfresh. right. exact Hin.
+Qed.
+
 Lemma root_env_names_empty_root_env_for_store :
   forall s,
     root_env_names (empty_root_env_for_store s) = store_names s.
@@ -4582,6 +4595,50 @@ Proof.
     simpl. rewrite Hname, IH. reflexivity.
 Qed.
 
+Lemma check_make_closure_captures_exact_sctx_params_fresh_in_store :
+  forall env Ω s Σ captures caps captured_tys,
+    store_typed env s Σ ->
+    check_make_closure_captures_exact_sctx env Ω Σ captures caps =
+      infer_ok captured_tys ->
+    params_fresh_in_store caps s.
+Proof.
+  intros env Ω s Σ captures.
+  induction captures as [| x captures IH]; intros caps captured_tys
+    Hstore Hcheck;
+    destruct caps as [| cap caps]; simpl in Hcheck; try discriminate.
+  - unfold params_fresh_in_store. intros y Hin. contradiction.
+  - destruct (param_mutability cap) eqn:Hcap_mut; simpl in Hcheck;
+      try discriminate.
+    destruct (sctx_lookup (param_name cap) Σ) as [[Tcap stcap] |]
+      eqn:Hcap_lookup; try discriminate.
+    destruct (sctx_lookup x Σ) as [[T st] |] eqn:Hlookup; try discriminate.
+    destruct (st_consumed st) eqn:Hconsumed; try discriminate.
+    destruct (st_moved_paths st) as [| moved moved_rest] eqn:Hmoved;
+      try discriminate.
+    destruct (sctx_lookup_mut x Σ) as [m |] eqn:Hmut; try discriminate.
+    destruct m; try discriminate.
+    destruct (usage_eqb (ty_usage T) UUnrestricted) eqn:Husage;
+      try discriminate.
+    destruct (capture_ref_free_ty_b env T) eqn:Href_free; try discriminate.
+    destruct (ty_eqb T (param_ty cap) &&
+      ty_compatible_b Ω T (param_ty cap)) eqn:Hty; try discriminate.
+    destruct (check_make_closure_captures_exact_sctx env Ω Σ captures caps)
+      as [captured_rest | err] eqn:Hrest; try discriminate.
+    injection Hcheck as <-.
+    unfold params_fresh_in_store.
+    intros y Hin.
+    simpl in Hin. destruct Hin as [Hin | Hin].
+    + subst y.
+      intros Hin_store.
+      apply (sctx_lookup_none_not_in_names (param_name cap) Σ Hcap_lookup).
+      rewrite (store_typed_names env s Σ Hstore) in Hin_store.
+      exact Hin_store.
+    + eapply IH.
+      * exact Hstore.
+      * exact Hrest.
+      * exact Hin.
+Qed.
+
 Lemma root_env_ctx_roots_named_store_typed :
   forall env s Σ R,
     store_typed env s Σ ->
@@ -5775,6 +5832,157 @@ Proof.
   - destruct (String.eqb name fname) eqn:Hname.
     + inversion Hlookup; subst. exact Hexpr.
     + apply IH. exact Hlookup.
+Qed.
+
+Theorem preservation_ready_eval_store_names_mutual :
+  (forall env s e s' v,
+    eval env s e s' v ->
+    preservation_ready_expr e ->
+    store_names s' = store_names s) /\
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    preservation_ready_args args ->
+    store_names s' = store_names s) /\
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    preservation_ready_fields fields ->
+    store_names s' = store_names s).
+Proof.
+  assert (Hmut : forall env,
+    (forall s e s' v,
+      eval env s e s' v ->
+      preservation_ready_expr e ->
+      store_names s' = store_names s) /\
+    (forall s args s' vs,
+      eval_args env s args s' vs ->
+      preservation_ready_args args ->
+      store_names s' = store_names s) /\
+    (forall s fields defs s' values,
+      eval_struct_fields env s fields defs s' values ->
+      preservation_ready_fields fields ->
+      store_names s' = store_names s)).
+  { intro env.
+  apply (eval_eval_args_eval_struct_fields_ind env
+    (fun s e s' v _ =>
+      preservation_ready_expr e -> store_names s' = store_names s)
+    (fun s args s' vs _ =>
+      preservation_ready_args args -> store_names s' = store_names s)
+    (fun s fields defs s' values _ =>
+      preservation_ready_fields fields -> store_names s' = store_names s)).
+  - intros s Hready. reflexivity.
+  - intros s lit Hready. reflexivity.
+  - intros s lit Hready. reflexivity.
+  - intros s lit Hready. reflexivity.
+  - intros s x e Hlookup Hconsume Hready. reflexivity.
+  - intros s x e Hlookup Hconsume Hused Hready.
+    apply store_names_mark_used.
+  - intros s p x path e T v Hplace Hlookup Havailable Hty Hconsume
+      Hvalue Hready. reflexivity.
+  - intros s s' p x path e T v Hplace Hlookup Havailable Hty Hconsume
+      Hvalue Hupdate Hready.
+    eapply store_consume_path_names. exact Hupdate.
+  - intros s s' name lts args fields values sdef Hlookup Heval_fields
+      IH Hready.
+    inversion Hready; subst. apply IH.
+    match goal with
+    | H : preservation_ready_fields fields |- _ => exact H
+    end.
+  - intros s s1 s2 m x T e1 e2 v1 v2 Heval1 IH1 Heval2 IH2
+      Hready.
+    inversion Hready.
+  - intros s s' e v Heval IH Hready.
+    inversion Hready; subst. apply IH.
+    match goal with
+    | H : preservation_ready_expr e |- _ => exact H
+    end.
+  - intros s s1 s2 s3 x old_e e_new v_new Hlookup Heval_new IH
+      Hupdate Hrestore Hready.
+    inversion Hready; subst.
+    rewrite (store_restore_path_names s2 x [] s3 Hrestore).
+    rewrite (store_update_val_names s1 x v_new s2 Hupdate).
+    apply IH.
+    match goal with
+    | H : preservation_ready_expr e_new |- _ => exact H
+    end.
+  - intros s s1 s2 x old_e e_new v_new Hlookup Heval_new IH
+      Hupdate Hready.
+    inversion Hready; subst.
+    rewrite (store_update_val_names s1 x v_new s2 Hupdate).
+    apply IH.
+    match goal with
+    | H : preservation_ready_expr e_new |- _ => exact H
+    end.
+  - intros s s1 s2 s3 p x path old_v e_new v_new Hplace Hlookup
+      Heval_new IH Hupdate Hrestore Hready.
+    inversion Hready; subst.
+    rewrite (store_restore_path_names s2 x path s3 Hrestore).
+    rewrite (store_update_path_names s1 x path v_new s2 Hupdate).
+    apply IH.
+    match goal with
+    | H : preservation_ready_expr e_new |- _ => exact H
+    end.
+  - intros s s1 s2 p x path e_new v_new Hplace Heval_new IH Hupdate
+      Hready.
+    inversion Hready; subst.
+    rewrite (store_update_path_names s1 x path v_new s2 Hupdate).
+    apply IH.
+    match goal with
+    | H : preservation_ready_expr e_new |- _ => exact H
+    end.
+  - intros s p x path rk Hplace Hready. reflexivity.
+  - intros s r p x path e v T Has_place Hplace Hlookup Hvalue Hty
+      Husage Hready. reflexivity.
+  - intros s s_r r x path e v T Hnot_place Heval_r IH Hlookup Hvalue
+      Hty Husage Hready.
+    inversion Hready.
+  - intros s fname fdef Hlookup Hcaps Hready. reflexivity.
+  - intros s fname captures captured fdef Hlookup Hcopy Hready.
+    inversion Hready.
+  - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_then IHthen
+      Hready.
+    inversion Hready; subst.
+    rewrite (IHthen ltac:(match goal with
+      | H : preservation_ready_expr e2 |- _ => exact H
+      end)).
+    apply IHcond.
+    match goal with
+    | H : preservation_ready_expr e1 |- _ => exact H
+    end.
+  - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_else IHelse
+      Hready.
+    inversion Hready; subst.
+    rewrite (IHelse ltac:(match goal with
+      | H : preservation_ready_expr e3 |- _ => exact H
+      end)).
+    apply IHcond.
+    match goal with
+    | H : preservation_ready_expr e1 |- _ => exact H
+    end.
+  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
+      Hcaps Heval_args IHargs Hrename Heval_body IHbody Hready.
+    inversion Hready.
+  - intros s s_fn s_args s_body callee args fname captured fdef fcall
+      vs ret used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
+      Heval_body IHbody Hready.
+    inversion Hready.
+  - intros s Hready. reflexivity.
+  - intros s s1 s2 e es v vs Heval_e IHe Heval_args IHargs Hready.
+    inversion Hready; subst.
+    rewrite (IHargs ltac:(match goal with
+      | H : preservation_ready_args es |- _ => exact H
+      end)).
+    apply IHe.
+    match goal with
+    | H : preservation_ready_expr e |- _ => exact H
+    end.
+  - intros s Hready. reflexivity.
+  - intros s s1 s2 fields f rest e v values Hlookup Heval_e IHe
+      Heval_fields IHfields Hready.
+    rewrite (IHfields Hready).
+    apply IHe.
+    eapply preservation_ready_fields_lookup; eassumption. }
+  repeat split; intros env; destruct (Hmut env) as [He [Hargs Hfields]];
+    eauto.
 Qed.
 
 Lemma provenance_ready_fields_lookup :
@@ -8282,6 +8490,50 @@ Proof.
   apply Hcovers.
   rewrite params_ctx_app, ctx_names_app.
   apply in_or_app. right. exact Hin.
+Qed.
+
+Lemma root_env_covers_params_app :
+  forall ps caps R,
+    root_env_covers_params ps R ->
+    root_env_covers_params caps R ->
+    root_env_covers_params (ps ++ caps) R.
+Proof.
+  unfold root_env_covers_params.
+  intros ps caps R Hcovers_ps Hcovers_caps x Hin.
+  rewrite params_ctx_app, ctx_names_app in Hin.
+  apply in_app_or in Hin as [Hin | Hin].
+  - apply Hcovers_ps. exact Hin.
+  - apply Hcovers_caps. exact Hin.
+Qed.
+
+Lemma captured_params_store_typed_empty_root_env_covers :
+  forall env captured caps,
+    captured_params_store_typed env captured caps ->
+    root_env_covers_params caps (empty_root_env_for_store captured).
+Proof.
+  intros env captured caps Htyped.
+  pose proof (captured_params_store_typed_store_param_prefix
+                env captured caps Htyped) as Hprefix.
+  unfold root_env_covers_params.
+  intros x Hin.
+  exists [].
+  apply root_env_lookup_empty_root_env_for_store.
+  rewrite (store_names_store_param_prefix caps captured [] Hprefix).
+  rewrite app_nil_r. exact Hin.
+Qed.
+
+Lemma captured_params_store_typed_empty_root_env_app_covers :
+  forall env captured caps R_tail,
+    captured_params_store_typed env captured caps ->
+    root_env_covers_params caps
+      (empty_root_env_for_store captured ++ R_tail).
+Proof.
+  intros env captured caps R_tail Htyped.
+  unfold root_env_covers_params.
+  intros x Hin.
+  destruct (captured_params_store_typed_empty_root_env_covers
+              env captured caps Htyped x Hin) as [roots Hlookup].
+  exists roots. eapply root_env_lookup_app_left. exact Hlookup.
 Qed.
 
 Definition roots_exclude_params (ps : list param) (roots : root_set) : Prop :=
@@ -15243,6 +15495,59 @@ Proof.
     split; assumption.
 Qed.
 
+Lemma copy_capture_store_as_captured_call_frame_ready :
+  forall Ω env s Σ captures caps captured captured_tys args s_args vs R_args,
+    store_typed env s Σ ->
+    NoDup (ctx_names (params_ctx caps)) ->
+    check_make_closure_captures_exact_sctx env Ω Σ captures caps =
+      infer_ok captured_tys ->
+    copy_capture_store_as captures caps s = Some captured ->
+    preservation_ready_args args ->
+    eval_args env s args s_args vs ->
+    store_roots_within R_args s_args ->
+    store_no_shadow s_args ->
+    root_env_no_shadow R_args ->
+    root_env_store_roots_named R_args s_args ->
+    root_env_store_keys_named R_args s_args ->
+    captured_call_frame_ready env captured
+      (empty_root_env_for_store captured) s_args R_args.
+Proof.
+  intros Ω env s Σ captures caps captured captured_tys args s_args vs R_args
+    Hstore Hnodup Hcheck Hcopy Hready_args Heval_args Hroots_args
+    Hshadow_args Hrn_args Hnamed_args Hkeys_args.
+  pose proof
+    (copy_capture_store_as_captured_store_runtime_ready
+      Ω env s Σ captures caps captured captured_tys
+      Hstore Hnodup Hcopy Hcheck) as Hcap_ready.
+  pose proof
+    (check_make_closure_captures_exact_sctx_params_fresh_in_store
+      env Ω s Σ captures caps captured_tys Hstore Hcheck) as Hfresh_caps.
+  pose proof (proj1 (proj2 preservation_ready_eval_store_names_mutual)
+                env s args s_args vs Heval_args Hready_args)
+    as Hargs_names.
+  assert (Hstore_disj :
+    forall x, In x (store_names captured) -> ~ In x (store_names s_args)).
+  { intros x Hin_captured Hin_args.
+    rewrite (copy_capture_store_as_store_names captures caps s captured Hcopy)
+      in Hin_captured.
+    rewrite Hargs_names in Hin_args.
+    exact (Hfresh_caps x Hin_captured Hin_args). }
+  eapply captured_call_frame_ready_compose; try eassumption.
+  intros x.
+  destruct (root_env_lookup x (empty_root_env_for_store captured))
+    as [roots |] eqn:Hlookup_cap.
+  - right.
+    destruct (root_env_lookup x R_args) as [roots_args |] eqn:Hlookup_args;
+      try reflexivity.
+    exfalso.
+    eapply Hstore_disj.
+    + rewrite <- root_env_names_empty_root_env_for_store.
+      eapply root_env_lookup_some_in_names. exact Hlookup_cap.
+    + apply Hkeys_args.
+      eapply root_env_lookup_some_in_names. exact Hlookup_args.
+  - left. reflexivity.
+Qed.
+
 Lemma eval_make_closure_exact_captured_call_frame_params_ready :
   forall env (Ω : outlives_ctx) s Σ fname captures captured fdef fcall
       used' Rcap s_args R_args captured_tys,
@@ -15264,6 +15569,56 @@ Proof.
   assert (Hsame : fdef0 = fdef).
   { eapply lookup_fn_deterministic; eassumption. }
   subst fdef0.
+  split.
+  - exact Hframe_ready.
+  - rewrite (alpha_rename_fn_def_captures
+                (store_names (captured ++ s_args)) fdef fcall used'
+                Hrename).
+    eapply copy_capture_store_exact_params_store_typed.
+    + exact Hstore.
+    + unfold captured_call_frame_ready, captured_store_runtime_ready
+        in Hframe_ready.
+      exact (proj1 (proj1 Hframe_ready)).
+    + exact H0.
+    + exact Hcheck.
+Qed.
+
+Lemma eval_make_closure_exact_captured_call_frame_params_ready_auto :
+  forall env (Ω : outlives_ctx) s Σ fname captures captured fdef fcall
+      used' args s_args vs R_args captured_tys,
+    store_typed env s Σ ->
+    eval env s (EMakeClosure fname captures) s (VClosure fname captured) ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
+      (fcall, used') ->
+    check_make_closure_captures_exact_sctx env Ω Σ captures (fn_captures fdef) =
+      infer_ok captured_tys ->
+    NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
+    preservation_ready_args args ->
+    eval_args env s args s_args vs ->
+    store_roots_within R_args s_args ->
+    store_no_shadow s_args ->
+    root_env_no_shadow R_args ->
+    root_env_store_roots_named R_args s_args ->
+    root_env_store_keys_named R_args s_args ->
+    captured_call_frame_params_ready env captured
+      (empty_root_env_for_store captured) s_args R_args
+      (fn_captures fcall).
+Proof.
+  intros env Ω s Σ fname captures captured fdef fcall used' args s_args vs
+    R_args captured_tys Hstore Heval_make Hlookup Hrename Hcheck Hnodup
+    Hready_args Heval_args Hroots_args Hshadow_args Hrn_args Hnamed_args
+    Hkeys_args.
+  dependent destruction Heval_make.
+  assert (Hsame : fdef0 = fdef).
+  { eapply lookup_fn_deterministic; eassumption. }
+  subst fdef0.
+  pose proof
+    (copy_capture_store_as_captured_call_frame_ready
+      Ω env s Σ captures (fn_captures fdef) captured captured_tys args
+      s_args vs R_args Hstore Hnodup Hcheck H0 Hready_args Heval_args
+      Hroots_args Hshadow_args Hrn_args Hnamed_args Hkeys_args)
+    as Hframe_ready.
   split.
   - exact Hframe_ready.
   - rewrite (alpha_rename_fn_def_captures
@@ -15330,6 +15685,70 @@ Proof.
       env Ω s Σ fname captures captured fdef fcall used' Rcap s_args
       R_args captured_tys Hstore Heval_make Hlookup Hrename Hcheck
       Hframe_ready) as Hframe_params_ready.
+  eapply eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased;
+    eassumption.
+Qed.
+
+Lemma eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_auto :
+  forall env (Ω : outlives_ctx) s s_args s_body args fname captures
+      captured fdef fcall vs ret used' R_args Σ Σ_args captured_tys
+      σ T_body Γ_out R_params R_body roots_body,
+    store_typed env s Σ ->
+    eval env s (EMakeClosure fname captures) s (VClosure fname captured) ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    eval_args env s args s_args vs ->
+    alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
+      (fcall, used') ->
+    eval env (bind_params (fn_params fcall) vs (captured ++ s_args))
+      (fn_body fcall) s_body ret ->
+    check_make_closure_captures_exact_sctx env Ω Σ captures (fn_captures fdef) =
+      infer_ok captured_tys ->
+    NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
+    preservation_ready_args args ->
+    store_roots_within R_args s_args ->
+    store_no_shadow s_args ->
+    root_env_no_shadow R_args ->
+    root_env_store_roots_named R_args s_args ->
+    root_env_store_keys_named R_args s_args ->
+    store_typed env s_args Σ_args ->
+    eval_args_values_have_types env Ω (captured ++ s_args) vs
+      (fn_params fcall) ->
+    store_roots_within R_params
+      (bind_params (fn_params fcall) vs (captured ++ s_args)) ->
+    store_no_shadow (bind_params (fn_params fcall) vs (captured ++ s_args)) ->
+    root_env_no_shadow R_params ->
+    root_env_covers_params (fn_params fcall ++ fn_captures fcall) R_params ->
+    provenance_ready_expr (fn_body fcall) ->
+    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+      R_params (sctx_of_ctx (fn_body_ctx fcall))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
+    roots_exclude_params (fn_params fcall ++ fn_captures fcall) roots_body ->
+    root_env_excludes_params (fn_params fcall ++ fn_captures fcall) R_body ->
+    eval env s (ECallExpr (EMakeClosure fname captures) args)
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body)) ret /\
+    store_typed env
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body)) Σ_args /\
+    value_has_type env
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body))
+      ret (apply_lt_ty σ (fn_ret fdef)).
+Proof.
+  intros env Ω s s_args s_body args fname captures captured fdef fcall vs
+    ret used' R_args Σ Σ_args captured_tys σ T_body Γ_out R_params R_body
+    roots_body Hstore Heval_make Hlookup Heval_args Hrename Heval_body
+    Hcheck Hnodup Hready_args Hroots_args Hshadow_args Hrn_args Hnamed_args
+    Hkeys_args Htyped_args Hargs_fcall Hroots_bind Hshadow_bind Hrn_params
+    Hcover_all Hprov_body Htyped_body Hcompat_body Hexclude_all
+    Hexclude_env_all.
+  pose proof
+    (eval_make_closure_exact_captured_call_frame_params_ready_auto
+      env Ω s Σ fname captures captured fdef fcall used' args s_args vs
+      R_args captured_tys Hstore Heval_make Hlookup Hrename Hcheck Hnodup
+      Hready_args Heval_args Hroots_args Hshadow_args Hrn_args Hnamed_args
+      Hkeys_args) as Hframe_params_ready.
   eapply eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased;
     eassumption.
 Qed.
@@ -17545,6 +17964,131 @@ Proof.
   unfold callee_body_root_shadow_provenance_ready_at.
   exists T_body, Γ_out, R_body, roots_body.
   repeat split; assumption.
+Qed.
+
+Lemma captured_call_callee_body_root_shadow_provenance_instantiated_bridge :
+  forall env R_origin R_params
+      fcall rho T_body Γ_out R_body roots_body,
+    provenance_ready_expr (fn_body fcall) ->
+    typed_env_roots_shadow_safe env (fn_outlives fcall) (fn_lifetimes fcall)
+      R_origin
+      (sctx_of_ctx (fn_body_ctx fcall))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
+    roots_exclude_params (fn_params fcall ++ fn_captures fcall)
+      roots_body ->
+    root_env_excludes_params (fn_params fcall ++ fn_captures fcall)
+      R_body ->
+    root_subst_images_exclude_names (expr_local_store_names (fn_body fcall))
+      rho ->
+    root_env_no_shadow R_origin ->
+    root_env_no_shadow R_params ->
+    root_env_equiv R_params (root_env_instantiate rho R_origin) ->
+    (forall x,
+      In x (ctx_names (params_ctx (fn_params fcall ++ fn_captures fcall))) ->
+      root_subst_images_exclude x rho) ->
+    callee_body_root_shadow_provenance_ready_at env fcall R_params.
+Proof.
+  intros env R_origin R_params fcall rho T_body Γ_out R_body
+    roots_body Hprov Htyped Hcompat Hexclude_roots Hexclude_env
+    Hsubst_fresh Hrn_origin Hrn_params Hparams_equiv Himages_exclude.
+  destruct (typed_env_roots_shadow_safe_instantiate_fresh
+              env (fn_outlives fcall) (fn_lifetimes fcall) rho R_origin
+              (sctx_of_ctx (fn_body_ctx fcall))
+              (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body
+              roots_body R_params Htyped Hsubst_fresh Hrn_origin
+              Hrn_params Hparams_equiv)
+    as (R_body_inst & roots_body_inst &
+        Htyped_inst & Hrn_body_inst & Hbody_inst_equiv &
+        Hroots_inst_equiv).
+  assert (Hexclude_roots_inst :
+    roots_exclude_params (fn_params fcall ++ fn_captures fcall)
+      roots_body_inst).
+  { eapply roots_exclude_params_equiv.
+    - apply root_set_equiv_sym. exact Hroots_inst_equiv.
+    - eapply roots_exclude_params_instantiate.
+      + exact Hexclude_roots.
+      + exact Himages_exclude. }
+  assert (Hexclude_env_inst :
+    root_env_excludes_params (fn_params fcall ++ fn_captures fcall)
+      R_body_inst).
+  { eapply root_env_excludes_params_equiv.
+    - apply root_env_equiv_sym. exact Hbody_inst_equiv.
+    - eapply root_env_excludes_params_instantiate.
+      + exact Hexclude_env.
+      + exact Himages_exclude. }
+  unfold callee_body_root_shadow_provenance_ready_at.
+  exists T_body, Γ_out, R_body_inst, roots_body_inst.
+  repeat split; try assumption.
+  - eapply roots_exclude_params_app_inv_l. exact Hexclude_roots_inst.
+  - eapply root_env_excludes_params_app_inv_l. exact Hexclude_env_inst.
+Qed.
+
+Lemma captured_call_callee_body_root_shadow_provenance_instantiated_bridge_with_result_subset :
+  forall env R_origin R_params
+      fcall rho T_body Γ_out R_body roots_body result_roots,
+    provenance_ready_expr (fn_body fcall) ->
+    typed_env_roots_shadow_safe env (fn_outlives fcall) (fn_lifetimes fcall)
+      R_origin
+      (sctx_of_ctx (fn_body_ctx fcall))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
+    roots_exclude_params (fn_params fcall ++ fn_captures fcall)
+      roots_body ->
+    root_env_excludes_params (fn_params fcall ++ fn_captures fcall)
+      R_body ->
+    root_subst_images_exclude_names (expr_local_store_names (fn_body fcall))
+      rho ->
+    root_env_no_shadow R_origin ->
+    root_env_no_shadow R_params ->
+    root_env_equiv R_params (root_env_instantiate rho R_origin) ->
+    (forall x,
+      In x (ctx_names (params_ctx (fn_params fcall ++ fn_captures fcall))) ->
+      root_subst_images_exclude x rho) ->
+    root_set_stores_subset (root_set_instantiate rho roots_body)
+      result_roots ->
+    callee_body_root_shadow_provenance_ready_at_result_subset
+      env fcall R_params result_roots.
+Proof.
+  intros env R_origin R_params fcall rho T_body Γ_out R_body
+    roots_body result_roots Hprov Htyped Hcompat Hexclude_roots
+    Hexclude_env Hsubst_fresh Hrn_origin Hrn_params Hparams_equiv
+    Himages_exclude Hsubset.
+  destruct (typed_env_roots_shadow_safe_instantiate_fresh
+              env (fn_outlives fcall) (fn_lifetimes fcall) rho R_origin
+              (sctx_of_ctx (fn_body_ctx fcall))
+              (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body
+              roots_body R_params Htyped Hsubst_fresh Hrn_origin
+              Hrn_params Hparams_equiv)
+    as (R_body_inst & roots_body_inst &
+        Htyped_inst & Hrn_body_inst & Hbody_inst_equiv &
+        Hroots_inst_equiv).
+  assert (Hexclude_roots_inst :
+    roots_exclude_params (fn_params fcall ++ fn_captures fcall)
+      roots_body_inst).
+  { eapply roots_exclude_params_equiv.
+    - apply root_set_equiv_sym. exact Hroots_inst_equiv.
+    - eapply roots_exclude_params_instantiate.
+      + exact Hexclude_roots.
+      + exact Himages_exclude. }
+  assert (Hexclude_env_inst :
+    root_env_excludes_params (fn_params fcall ++ fn_captures fcall)
+      R_body_inst).
+  { eapply root_env_excludes_params_equiv.
+    - apply root_env_equiv_sym. exact Hbody_inst_equiv.
+    - eapply root_env_excludes_params_instantiate.
+      + exact Hexclude_env.
+      + exact Himages_exclude. }
+  assert (Hsubset_inst :
+    root_set_stores_subset roots_body_inst result_roots).
+  { eapply root_set_stores_subset_equiv.
+    - exact Hroots_inst_equiv.
+    - exact Hsubset. }
+  unfold callee_body_root_shadow_provenance_ready_at_result_subset.
+  exists T_body, Γ_out, R_body_inst, roots_body_inst.
+  repeat split; try assumption.
+  - eapply roots_exclude_params_app_inv_l. exact Hexclude_roots_inst.
+  - eapply root_env_excludes_params_app_inv_l. exact Hexclude_env_inst.
 Qed.
 
 Lemma direct_call_callee_body_root_shadow_provenance_summary_bridge_of_unique :

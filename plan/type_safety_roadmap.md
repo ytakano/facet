@@ -125,29 +125,50 @@ Work in this order unless a proof exposes a soundness gap:
    `empty_root_env_for_store captured` as `Rcap` and proves exact capture copy
    yields `captured_store_runtime_ready`.
 
-   Next implementation task: prove the hidden capture names remain absent from
-   the evaluated argument store/root environment, then use
-   `captured_call_frame_ready_compose`.
+   Current captured-frame endpoint:
+   `copy_capture_store_as_captured_call_frame_ready` proves exact capture copy
+   can be composed with evaluated preservation-ready arguments using
+   `captured_call_frame_ready_compose`, with `Rcap` fixed to
+   `empty_root_env_for_store captured`.
 
 3. **Argument/capture frame composition.**
-   After captured-store readiness is proved:
+   The local composition bridge is now in place:
 
-   - prove hidden capture parameter names remain absent from the evaluated
-     argument store/root environment;
-   - use `callee_hidden_capture_args_disjoint` and exact capture freshness;
-   - compose captured and argument frames with
-     `captured_call_frame_ready_compose`.
+   - `preservation_ready_eval_store_names_mutual` proves preservation-ready
+     argument evaluation does not add store names;
+   - `check_make_closure_captures_exact_sctx_params_fresh_in_store` proves
+     exact hidden capture parameter names are absent from the caller store;
+   - `eval_make_closure_exact_captured_call_frame_params_ready_auto` and
+     `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_auto`
+     expose the bridge without an external `captured_call_frame_ready` premise.
+   - `captured_call_callee_body_root_shadow_provenance_instantiated_bridge`
+     and its `_with_result_subset` variant instantiate captured callee body
+     summaries once the target runtime root environment is supplied.
+
+   Next implementation task: prove the runtime root-environment equivalence for
+   captured calls:
+
+   ```coq
+   call_param_root_env (fn_params fcall) arg_roots
+     (empty_root_env_for_store captured ++ R_args)
+   ```
+
+   must correspond to instantiating
+   `initial_root_env_for_params (fn_params fdef ++ fn_captures fdef)` with
+   normal argument roots for params and empty roots for captures, after
+   alpha-renaming params. Then call the instantiated bridge and the automatic
+   cleanup wrapper from the captured-call sidecar summary.
 
 4. **Final captured-call executable endpoint.**
-   Only after the preservation bridge compiles, add the checked-initial wrapper
-   for:
+   Add the checked-initial wrapper for:
 
    ```coq
    check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
    ```
 
-   Do not widen validators to accept captured `ECallExpr` before this theorem
-   exists.
+   Do not widen validators beyond the existing
+   `ECallExpr (EMakeClosure fname captures) args` sidecar shape before this
+   theorem exists.
 
 5. **Handle `if` last.**
    The known `if` blocker is that ordinary `TES_If` does not expose

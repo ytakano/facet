@@ -60,6 +60,13 @@ do not redefine the language accepted by the ordinary checker.
   check_program_env_alpha_validated_root_shadow_non_capturing_call_provenance_summary_big_step_safe_checked_initial_ready
   ```
 
+- The strongest checked-initial safety endpoint for local captured closure
+  calls is:
+
+  ```coq
+  check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready
+  ```
+
 - Initial runtime readiness is still an execution-state premise, currently via
   `check_initial_root_runtime_ready`. It is not a program acceptance condition.
 - Ordinary checker acceptance still exceeds validator acceptance.
@@ -74,7 +81,7 @@ do not redefine the language accepted by the ordinary checker.
 
 Work in this order unless a proof exposes a soundness gap:
 
-1. **Captured closure call bridge.**
+1. **Captured closure call bridge.** Done.
    Implement the Stage 7a bridge for only:
 
    ```coq
@@ -215,18 +222,27 @@ Work in this order unless a proof exposes a soundness gap:
    callee using `fn_env_unique_by_name`, then call
    `eval_make_closure_captured_call_expr_preserves_typing_with_callee_components`.
 
-4. **Final captured-call executable endpoint.**
-   Add the checked-initial wrapper for:
+4. **Final captured-call executable endpoint.** Done.
+   The checked-initial wrapper exists:
 
    ```coq
    check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
    ```
 
-   Do not widen validators beyond the existing
-   `ECallExpr (EMakeClosure fname captures) args` sidecar shape before this
-   theorem exists.
+   It proves safety for the localized
+   `ECallExpr (EMakeClosure fname captures) args` sidecar shape by destructing
+   the captured summary in `EnvRuntimeSafety.v`, aligning the runtime/typed
+   callee via `fn_env_unique_by_name`, and calling
+   `eval_make_closure_captured_call_expr_preserves_typing_with_callee_components`.
 
-5. **Handle `if` last.**
+5. **Next: reduce captured-call validator false negatives.**
+   Keep the proof endpoint above stable. Only widen the executable sidecar when
+   the new shape has a matching Prop summary and a local proof path to the same
+   endpoint. Good next candidates are small structural variants of
+   `ECallExpr (EMakeClosure fname captures) args`; do not mix this into
+   ordinary expression readiness.
+
+6. **Handle `if` last.**
    The known `if` blocker is that ordinary `TES_If` does not expose
    `root_env_equiv R2 R3`, while root/shadow routes require it. Do not
    strengthen `TES_If` or ordinary checker acceptance just to manufacture

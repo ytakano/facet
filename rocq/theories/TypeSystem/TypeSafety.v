@@ -9507,6 +9507,164 @@ Proof.
             x T hidden s eq_refl); eassumption.
 Qed.
 
+Lemma store_refs_exclude_root_app :
+  forall root s1 s2,
+    store_refs_exclude_root root s1 ->
+    store_refs_exclude_root root s2 ->
+    store_refs_exclude_root root (s1 ++ s2).
+Proof.
+  intros root s1.
+  induction s1 as [| se rest IH]; intros s2 H1 H2; simpl.
+  - exact H2.
+  - inversion H1; subst. constructor; eauto.
+Qed.
+
+Lemma store_add_refs_exclude_root :
+  forall root x T v s,
+    value_refs_exclude_root root v ->
+    store_refs_exclude_root root s ->
+    store_refs_exclude_root root (store_add x T v s).
+Proof.
+  intros root x T v s Hv Hs.
+  unfold store_add. constructor.
+  - constructor. exact Hv.
+  - exact Hs.
+Qed.
+
+Lemma bind_params_refs_exclude_root :
+  forall root ps vs s,
+    Forall (value_refs_exclude_root root) vs ->
+    store_refs_exclude_root root s ->
+    store_refs_exclude_root root (bind_params ps vs s).
+Proof.
+  intros root ps.
+  induction ps as [| p ps IH]; intros vs s Hvs Hs;
+    destruct vs as [| v vs']; simpl; try exact Hs.
+  inversion Hvs; subst.
+  apply store_add_refs_exclude_root; eauto.
+Qed.
+
+Lemma store_remove_store_add_same :
+  forall x T v s,
+    store_remove x (store_add x T v s) = s.
+Proof.
+  intros x T v s.
+  unfold store_add. simpl. rewrite ident_eqb_refl. reflexivity.
+Qed.
+
+Lemma alpha_rename_fn_def_params_not_in_used :
+  forall used f fr used' x,
+    alpha_rename_fn_def used f = (fr, used') ->
+    In x used ->
+    ~ In x (ctx_names (params_ctx (fn_params fr))).
+Proof.
+  intros used f fr used' x Hrename Hused Hin.
+  pose proof (alpha_rename_fn_def_params_fresh_used
+                used f fr used' Hrename x Hin) as Hfresh.
+  exact (Hfresh Hused).
+Qed.
+
+Lemma alpha_rename_fn_def_body_local_store_names_not_in_used :
+  forall used f fr used' x,
+    alpha_rename_fn_def used f = (fr, used') ->
+    In x used ->
+    ~ In x (expr_local_store_names (fn_body fr)).
+Proof.
+  intros used f fr used' x Hrename Hused Hin.
+  pose proof (alpha_rename_fn_def_body_local_store_names_fresh_used
+                used f fr used' Hrename) as Hfresh.
+  pose proof (proj1 (Forall_forall _ _) Hfresh x Hin) as Hnotin.
+  exact (Hnotin Hused).
+Qed.
+
+Lemma eval_let_make_closure_captured_call_args_strip :
+  forall env s s_final m x T fname captures args ret,
+    ty_usage T = UUnrestricted ->
+    eval env s
+      (ELet m x T (EMakeClosure fname captures)
+        (ECallExpr (EVar x) args)) s_final ret ->
+    preservation_ready_args args ->
+    ~ In x (args_free_vars_ts args) ->
+    ~ In x (args_local_store_names args) ->
+    store_refs_exclude_root x s ->
+    exists captured fdef s_args_hidden s_args vs fcall used' s_body,
+      lookup_fn fname (env_fns env) = Some fdef /\
+      copy_capture_store_as captures (fn_captures fdef) s = Some captured /\
+      s_args_hidden = store_add x T (VClosure fname captured) s_args /\
+      eval_args env s args s_args vs /\
+      store_refs_exclude_root x s_args /\
+      Forall (value_refs_exclude_root x) vs /\
+      alpha_rename_fn_def (store_names (captured ++ s_args_hidden)) fdef =
+        (fcall, used') /\
+      eval env (bind_params (fn_params fcall) vs (captured ++ s_args_hidden))
+        (fn_body fcall) s_body ret /\
+      s_final =
+        store_remove x
+          (store_remove_params (fn_captures fcall)
+            (store_remove_params (fn_params fcall) s_body)).
+Proof.
+  intros env s s_final m x T fname captures args ret Husage Heval Hready
+    Hfree Hlocal Hrefs.
+  inversion Heval; subst; clear Heval.
+  match goal with
+  | Hmake : eval _ _ (EMakeClosure _ _) _ _ |- _ =>
+      inversion Hmake; subst; clear Hmake
+  end.
+  match goal with
+  | Hcall : eval _ _ (ECallExpr (EVar x) args) _ _ |- _ =>
+      inversion Hcall; subst; clear Hcall
+  end.
+  match goal with
+  | Hcallee : eval _ _ (EVar x) _ _ |- _ =>
+      inversion Hcallee; subst; clear Hcallee
+  end.
+  - match goal with
+    | Hlookup_var : store_lookup x
+        (store_add x T (VClosure fname ?captured) ?s_base) =
+        Some ?se |- _ =>
+        rewrite store_lookup_store_add_same in Hlookup_var;
+        inversion Hlookup_var; subst se; clear Hlookup_var
+    end.
+    repeat match goal with
+    | Hvalue : se_val _ = VClosure _ _ |- _ =>
+        simpl in Hvalue; inversion Hvalue; subst; clear Hvalue
+    end.
+    match goal with
+    | Hlookup_make : lookup_fn ?fname_call (env_fns env) = Some ?fdef_make,
+      Hlookup_call : lookup_fn ?fname_call (env_fns env) = Some ?fdef_call |- _ =>
+        assert (Hfdef_same : fdef_call = fdef_make)
+        by (eapply lookup_fn_deterministic; eassumption);
+        subst fdef_call
+    end.
+    match goal with
+    | Heval_args : eval_args _ _ _ _ _ |- _ =>
+        destruct (preservation_ready_eval_args_hidden_frame_strip
+                    env s1 args s_args vs x T (VClosure fname0 captured0)
+                    Heval_args Hready Hfree Hlocal Hrefs)
+          as [s_args_base [Hs_args_hidden
+            [Heval_args_base [Hrefs_args Hvs_refs]]]]
+    end.
+    subst s_args.
+    exists captured0, fdef,
+      (store_add x T (VClosure fname0 captured0) s_args_base),
+      s_args_base, vs, fcall, used', s_body.
+    repeat split; try eassumption.
+  - match goal with
+    | Hlookup_var : store_lookup x
+        (store_add x T (VClosure fname ?captured) ?s_base) =
+        Some ?se |- _ =>
+        rewrite store_lookup_store_add_same in Hlookup_var;
+        inversion Hlookup_var; subst se; clear Hlookup_var
+    end.
+    match goal with
+    | Hconsume : needs_consume _ = true |- _ =>
+        simpl in Hconsume;
+        unfold needs_consume in Hconsume;
+        rewrite Husage in Hconsume;
+        discriminate
+    end.
+Qed.
+
 Lemma store_param_prefix_update_state_same_frame :
   forall ps s_param frame x f s',
     store_param_prefix ps s_param frame ->

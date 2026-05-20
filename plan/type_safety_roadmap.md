@@ -391,11 +391,27 @@ Work in this order unless a proof exposes a soundness gap:
    irrelevant hidden binding, with the required runtime evidence
    `store_refs_exclude_root x s`.
 
-   Next hidden-frame proof subtask: add the TypeSafety-side proof-local helper
-   for the whole let-bound captured-closure call shape. It should use
-   `preservation_ready_eval_args_hidden_frame_strip` to strip the temporary
-   closure binding from argument evaluation, then call the existing captured
-   call cleanup/preservation endpoint. Do this before adding any checker branch.
+   Current let-bound captured-call progress:
+
+   ```coq
+   eval_let_make_closure_captured_call_args_strip
+   ```
+
+   This destructs the exact local-let captured-call evaluation shape, treats
+   `Eval_MakeClosure` as exact capture-copy evidence, rejects the consuming
+   callee-variable path via unrestricted usage, and strips argument evaluation
+   from `store_add x T (VClosure fname captured) s` back to `s`. Supporting
+   helpers now include `store_refs_exclude_root_app`,
+   `store_add_refs_exclude_root`, `bind_params_refs_exclude_root`,
+   `store_remove_store_add_same`, and alpha-renaming not-in-used wrappers for
+   renamed params/body locals.
+
+   Next hidden-frame proof subtask: connect the stripped evaluation package to
+   the existing captured-call preservation endpoint. The remaining bridge must
+   handle the callee-body evaluation under
+   `captured ++ store_add x T (VClosure fname captured) s_args`, then erase
+   `x` without requiring `store_typed` for the temporary closure binding. Do
+   this before adding any checker branch.
 
 6. **Handle `if` last.**
    The known `if` blocker is that ordinary `TES_If` does not expose

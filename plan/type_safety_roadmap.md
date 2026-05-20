@@ -275,17 +275,21 @@ Work in this order unless a proof exposes a soundness gap:
    - `args_free_vars_ts_cons_notin`;
    - `fields_free_vars_ts_cons_notin`;
    - `args_local_store_names_cons_notin`;
-   - `fields_local_store_names_cons_notin`.
+   - `fields_local_store_names_cons_notin`;
+   - `lookup_expr_field_in`;
+   - `fields_free_vars_ts_lookup_notin`;
+   - `fields_local_store_names_lookup_notin`;
+   - `store_refs_exclude_lookup_value`;
+   - `hidden_frame_eval_strip_mutual`;
+   - `preservation_ready_eval_args_hidden_frame_strip`.
 
-   `eval_place_store_add_strip` is the current stable proof endpoint for
-   hidden-frame stripping. It shows that evaluating a place under
-   `store_add x T hidden s` strips back to evaluation over `s` when the place's
-   root name is not `x` and the base store's references exclude `x`. Use this
-   as the base case for the next `eval`/`eval_args` stripping lemma. The
-   inverse store-operation lemmas and refs-exclusion preservation lemmas above
-   are the stable low-level support for the `EVar`, `EPlace`, `EAssign`, and
-   `EReplace` cases. The free-variable/local-name list helpers are the stable
-   support for the `eval_args` and `eval_struct_fields` cons cases.
+   `preservation_ready_eval_args_hidden_frame_strip` is the current stable
+   proof endpoint for hidden-frame argument stripping. It relates evaluation
+   of preservation-ready args under `store_add x T hidden s` to evaluation over
+   `s`, assuming syntactic absence of `x` from free variables/local store names
+   and the runtime invariant `store_refs_exclude_root x s`. This runtime
+   invariant is the necessary evidence that evaluated args cannot indirectly
+   reach the hidden binding through existing references.
 
 4. **Final captured-call executable endpoint.** Done.
    The checked-initial wrapper exists:
@@ -377,13 +381,21 @@ Work in this order unless a proof exposes a soundness gap:
    evidence and `captured_store_runtime_ready`, without adding a global
    captured-closure `value_has_type` constructor.
 
-   Next hidden-frame proof subtask: prove an args-evaluation invariance lemma
-   for preservation-ready args under an irrelevant hidden binding. The lemma
-   should relate `eval_args env (store_add x T hidden s) args ...` to evaluation
-   over `s`, but only with enough runtime evidence to rule out indirect
-   reference access to `x`. Syntactic absence from `args_local_store_names args`
-   and the free variables of `args` is not sufficient by itself. This should be
-   proved before adding any checker branch.
+   Current hidden-frame stripping endpoint:
+
+   ```coq
+   preservation_ready_eval_args_hidden_frame_strip
+   ```
+
+   It proves args-evaluation invariance for preservation-ready args under an
+   irrelevant hidden binding, with the required runtime evidence
+   `store_refs_exclude_root x s`.
+
+   Next hidden-frame proof subtask: add the TypeSafety-side proof-local helper
+   for the whole let-bound captured-closure call shape. It should use
+   `preservation_ready_eval_args_hidden_frame_strip` to strip the temporary
+   closure binding from argument evaluation, then call the existing captured
+   call cleanup/preservation endpoint. Do this before adding any checker branch.
 
 6. **Handle `if` last.**
    The known `if` blocker is that ordinary `TES_If` does not expose

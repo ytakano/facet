@@ -419,9 +419,11 @@ Work in this order unless a proof exposes a soundness gap:
    This is the proof-local body cleanup variant for
    `captured ++ store_add x T hidden s_args`. It avoids requiring
    `store_typed` for the temporary closure binding and erases `x` from the
-   final store. It currently takes `value_refs_exclude_root x ret` explicitly;
-   the next bridge must derive that fact from root/provenance evidence for the
-   callee body result.
+   final store. It now derives return-value reference exclusion from
+   `roots_exclude x roots_body`. The `_subset` wrapper additionally accepts
+   `root_set_stores_subset roots_body roots_bound` plus
+   `roots_exclude x roots_bound`, matching the existing captured-call
+   result-subset bridge style.
 
    Next hidden-frame proof subtask: connect the stripped evaluation package to
    the existing captured-call preservation endpoint. The remaining bridge must
@@ -429,9 +431,9 @@ Work in this order unless a proof exposes a soundness gap:
    `captured ++ store_add x T (VClosure fname captured) s_args`, then erase
    `x` without requiring `store_typed` for the temporary closure binding.
    The cleanup arithmetic and hidden-frame body cleanup are now available; the
-   remaining proof work is deriving `value_refs_exclude_root x ret`, then
-   wiring the stripped evaluation package to the hidden cleanup helper. Do this
-   before adding any checker branch.
+   remaining proof work is wiring the stripped evaluation package to the hidden
+   cleanup helper and supplying a bound that excludes the hidden name `x`. Do
+   this before adding any checker branch.
 
 6. **Handle `if` last.**
    The known `if` blocker is that ordinary `TES_If` does not expose

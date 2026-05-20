@@ -104,8 +104,12 @@ Work in this order unless a proof exposes a soundness gap:
    - exact capture copy yields `captured_store_runtime_ready` for the copied
      hidden capture store.
 
-   This is proof design work. Do not delegate it to a sub-agent until the
-   statements are fixed.
+   Current progress: `capture_ref_free_ty` and
+   `capture_ref_free_ty_b_sound` exist. The remaining proof-design blocker is
+   connecting this Prop to `value_has_type` roots: `VHT_Compatible` and
+   `VHT_LifetimeEquiv` require a stable closure principle for compatibility
+   and lifetime equivalence before the empty-root theorem can be stated safely.
+   Do not delegate this to a sub-agent until those lemma statements are fixed.
 
 3. **Argument/capture frame composition.**
    After captured-store readiness is proved:

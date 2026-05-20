@@ -170,15 +170,25 @@ copy_capture_store_as
 The next proof route should not make Prop root/shadow constructors exact. That
 reopens the alpha-renaming hidden-name freshness problem.
 
+Current progress:
+
+- `capture_ref_free_ty` is available as the Prop mirror for
+  `capture_ref_free_ty_b`.
+- `capture_ref_free_ty_b_sound` proves successful executable checks produce
+  that Prop evidence.
+- The remaining blocker is the runtime-root theorem for values typed at
+  `capture_ref_free_ty`. The theorem must handle both `VHT_Compatible` and
+  `VHT_LifetimeEquiv` without making the Prop mirror unsoundly broad.
+
 ## Next Closure Lemmas
 
-1. Introduce a proof-friendly Prop mirror for capture-reference-free types.
-2. Prove `capture_ref_free_ty_b` sound into that Prop.
-3. Prove values typed at that Prop have empty runtime roots.
-4. Prove exact capture copy yields `captured_store_runtime_ready`.
-5. Prove hidden capture names remain absent from evaluated argument store/root
+1. Prove stable compatibility/lifetime-equivalence closure lemmas for
+   `capture_ref_free_ty`.
+2. Prove values typed at `capture_ref_free_ty` have empty runtime roots.
+3. Prove exact capture copy yields `captured_store_runtime_ready`.
+4. Prove hidden capture names remain absent from evaluated argument store/root
    environment.
-6. Compose captured and argument frames with `captured_call_frame_ready_compose`.
-7. Instantiate the callee-body summary under `fn_body_ctx fcall`.
-8. Connect to
+5. Compose captured and argument frames with `captured_call_frame_ready_compose`.
+6. Instantiate the callee-body summary under `fn_body_ctx fcall`.
+7. Connect to
    `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased`.

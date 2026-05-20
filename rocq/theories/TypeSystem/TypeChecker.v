@@ -207,6 +207,39 @@ Fixpoint ty_compatible_b_fuel (fuel : nat) (Ω : outlives_ctx)
 Definition ty_compatible_b (Ω : outlives_ctx) (T_actual T_expected : Ty) : bool :=
   ty_compatible_b_fuel (ty_depth T_actual + ty_depth T_expected) Ω T_actual T_expected.
 
+Inductive capture_ref_free_ty (env : global_env) : Ty -> Prop :=
+  | CRFT_Unit : forall u,
+      capture_ref_free_ty env (MkTy u TUnits)
+  | CRFT_Int : forall u,
+      capture_ref_free_ty env (MkTy u TIntegers)
+  | CRFT_Float : forall u,
+      capture_ref_free_ty env (MkTy u TFloats)
+  | CRFT_Bool : forall u,
+      capture_ref_free_ty env (MkTy u TBooleans)
+  | CRFT_Struct : forall u name lts args sdef,
+      lookup_struct name env = Some sdef ->
+      Forall (capture_ref_free_ty env) args ->
+      Forall
+        (fun f =>
+           capture_ref_free_ty env
+             (instantiate_struct_field_ty lts args f))
+        (struct_fields sdef) ->
+      capture_ref_free_ty env (MkTy u (TStruct name lts args))
+  | CRFT_Fn : forall u params ret,
+      Forall (capture_ref_free_ty env) params ->
+      capture_ref_free_ty env ret ->
+      capture_ref_free_ty env (MkTy u (TFn params ret))
+  | CRFT_Forall : forall u n Ω body,
+      capture_ref_free_ty env body ->
+      capture_ref_free_ty env (MkTy u (TForall n Ω body))
+  | CRFT_CompatibleActual : forall Ω T_actual T_expected,
+      ty_compatible Ω T_actual T_expected ->
+      capture_ref_free_ty env T_expected ->
+      capture_ref_free_ty env T_actual
+  | CRFT_ChangeUsage : forall u T,
+      capture_ref_free_ty env T ->
+      capture_ref_free_ty env (MkTy u (ty_core T)).
+
 Fixpoint capture_ref_free_ty_b_fuel
     (fuel : nat) (env : global_env) (T : Ty) : bool :=
   match fuel with
@@ -240,6 +273,58 @@ Fixpoint capture_ref_free_ty_b_fuel
 Definition capture_ref_free_ty_b (env : global_env) (T : Ty) : bool :=
   capture_ref_free_ty_b_fuel
     (S (List.length (env_structs env) + ty_depth T)) env T.
+
+Lemma capture_ref_free_ty_b_fuel_sound :
+  forall fuel env T,
+    capture_ref_free_ty_b_fuel fuel env T = true ->
+    capture_ref_free_ty env T.
+Proof.
+  induction fuel as [| fuel IH]; intros env T Hfree; simpl in Hfree;
+    try discriminate.
+  assert (Hlist : forall ts,
+    forallb (capture_ref_free_ty_b_fuel fuel env) ts = true ->
+    Forall (capture_ref_free_ty env) ts).
+  { induction ts as [| T0 Ts IHTs]; simpl; intros Hts.
+    - constructor.
+    - apply andb_true_iff in Hts as [HT HTs].
+      constructor.
+      + apply IH. exact HT.
+      + apply IHTs. exact HTs. }
+  destruct T as [u core].
+  destruct core as
+    [| | | | named | tparam | name lts args | params ret
+     | env_lt params ret | n Ω body | la rk inner];
+    simpl in *; try discriminate.
+  - constructor.
+  - constructor.
+  - constructor.
+  - constructor.
+  - apply andb_true_iff in Hfree as [Hargs Hfields_lookup].
+    destruct (lookup_struct name env) as [sdef |] eqn:Hlookup;
+      try discriminate.
+    eapply CRFT_Struct.
+    + exact Hlookup.
+    + apply Hlist. exact Hargs.
+    + apply Forall_forall.
+      intros f Hin.
+      apply forallb_forall with (x := f) in Hfields_lookup; [| exact Hin].
+      apply IH. exact Hfields_lookup.
+  - apply andb_true_iff in Hfree as [Hparams Hret].
+    eapply CRFT_Fn.
+    + apply Hlist. exact Hparams.
+    + apply IH. exact Hret.
+  - apply CRFT_Forall. apply IH. exact Hfree.
+Qed.
+
+Lemma capture_ref_free_ty_b_sound :
+  forall env T,
+    capture_ref_free_ty_b env T = true ->
+    capture_ref_free_ty env T.
+Proof.
+  intros env T Hfree.
+  unfold capture_ref_free_ty_b in Hfree.
+  eapply capture_ref_free_ty_b_fuel_sound. exact Hfree.
+Qed.
 
 Lemma capture_ref_free_ty_b_fuel_ty_ref_free :
   forall fuel env T,

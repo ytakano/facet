@@ -8456,6 +8456,90 @@ Proof.
   eapply store_update_state_store_add_diff; eassumption.
 Qed.
 
+Lemma store_update_state_store_add_inv :
+  forall x y f T v s s_hidden',
+    x <> y ->
+    store_update_state x f (store_add y T v s) = Some s_hidden' ->
+    exists s',
+      s_hidden' = store_add y T v s' /\
+      store_update_state x f s = Some s'.
+Proof.
+  intros x y f T v s s_hidden' Hneq Hupdate.
+  unfold store_add in Hupdate. simpl in Hupdate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. contradiction.
+  - destruct (store_update_state x f s) as [s' |] eqn:Hbase;
+      try discriminate.
+    inversion Hupdate; subst.
+    exists s'. split; reflexivity.
+Qed.
+
+Lemma store_update_val_store_add_inv :
+  forall x y T v v_new s s_hidden',
+    x <> y ->
+    store_update_val x v_new (store_add y T v s) = Some s_hidden' ->
+    exists s',
+      s_hidden' = store_add y T v s' /\
+      store_update_val x v_new s = Some s'.
+Proof.
+  intros x y T v v_new s s_hidden' Hneq Hupdate.
+  unfold store_add in Hupdate. simpl in Hupdate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. contradiction.
+  - destruct (store_update_val x v_new s) as [s' |] eqn:Hbase;
+      try discriminate.
+    inversion Hupdate; subst.
+    exists s'. split; reflexivity.
+Qed.
+
+Lemma store_update_path_store_add_inv :
+  forall x y path T v v_new s s_hidden',
+    x <> y ->
+    store_update_path x path v_new (store_add y T v s) = Some s_hidden' ->
+    exists s',
+      s_hidden' = store_add y T v s' /\
+      store_update_path x path v_new s = Some s'.
+Proof.
+  intros x y path T v v_new s s_hidden' Hneq Hupdate.
+  unfold store_add in Hupdate. simpl in Hupdate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. contradiction.
+  - destruct (store_update_path x path v_new s) as [s' |] eqn:Hbase;
+      try discriminate.
+    inversion Hupdate; subst.
+    exists s'. split; reflexivity.
+Qed.
+
+Lemma store_restore_path_store_add_inv :
+  forall x y path T v s s_hidden',
+    x <> y ->
+    store_restore_path x path (store_add y T v s) = Some s_hidden' ->
+    exists s',
+      s_hidden' = store_add y T v s' /\
+      store_restore_path x path s = Some s'.
+Proof.
+  intros x y path T v s s_hidden' Hneq Hrestore.
+  unfold store_restore_path in *.
+  eapply store_update_state_store_add_inv; eassumption.
+Qed.
+
+Lemma store_consume_path_store_add_inv :
+  forall x y path T v s s_hidden',
+    x <> y ->
+    store_consume_path x path (store_add y T v s) = Some s_hidden' ->
+    exists s',
+      s_hidden' = store_add y T v s' /\
+      store_consume_path x path s = Some s'.
+Proof.
+  intros x y path T v s s_hidden' Hneq Hconsume.
+  unfold store_consume_path in *.
+  rewrite store_lookup_store_add_diff in Hconsume by exact Hneq.
+  destruct (store_lookup x s) as [se |] eqn:Hlookup; try discriminate.
+  destruct (binding_available_b (se_state se) path) eqn:Havailable;
+    try discriminate.
+  eapply store_update_state_store_add_inv; eassumption.
+Qed.
+
 Lemma value_fields_refs_exclude_lookup :
   forall root fields fname v,
     value_fields_refs_exclude_root root fields ->
@@ -8507,6 +8591,46 @@ Proof.
     + exact Hlookup.
 Qed.
 
+Lemma value_refs_exclude_lookup_path :
+  forall root v path v_path,
+    value_refs_exclude_root root v ->
+    value_lookup_path v path = Some v_path ->
+    value_refs_exclude_root root v_path.
+Proof.
+  intros root v path.
+  revert v.
+  induction path as [| fname rest IH]; intros v v_path Hexcl Hlookup.
+  - simpl in Hlookup. inversion Hlookup; subst. exact Hexcl.
+  - simpl in Hlookup.
+    destruct v; try discriminate.
+    inversion Hexcl; subst.
+    destruct
+      ((fix lookup (fields0 : list (string * value)) : option value :=
+          match fields0 with
+          | [] => None
+          | (name, fv) :: tail =>
+              if String.eqb fname name then Some fv else lookup tail
+          end) l) as [fv |] eqn:Hfield; try discriminate.
+    eapply IH.
+    + eapply value_fields_refs_exclude_lookup; eassumption.
+    + exact Hlookup.
+Qed.
+
+Lemma store_refs_exclude_lookup :
+  forall root s y se,
+    store_refs_exclude_root root s ->
+    store_lookup y s = Some se ->
+    store_entry_refs_exclude_root root se.
+Proof.
+  intros root s.
+  induction s as [| se_head rest IH]; intros y se Hexcl Hlookup;
+    simpl in Hlookup; try discriminate.
+  inversion Hexcl; subst.
+  destruct (ident_eqb y (se_name se_head)) eqn:Hy.
+  - inversion Hlookup; subst. assumption.
+  - eapply IH; eassumption.
+Qed.
+
 Lemma store_refs_exclude_lookup_ref_neq :
   forall root s y se path x rpath,
     store_refs_exclude_root root s ->
@@ -8529,6 +8653,219 @@ Proof.
         eapply value_refs_exclude_lookup_ref_neq; eassumption
     end.
   - eapply IH; eassumption.
+Qed.
+
+Lemma store_mark_used_refs_exclude_root :
+  forall root x s,
+    store_refs_exclude_root root s ->
+    store_refs_exclude_root root (store_mark_used x s).
+Proof.
+  intros root x s Hexcl.
+  induction Hexcl as [| [sx sT sv sst] rest Hentry Hrest IH];
+    simpl; try constructor.
+  inversion Hentry; subst.
+  destruct (ident_eqb x sx).
+  - constructor.
+    + constructor. assumption.
+    + exact Hrest.
+  - constructor.
+    + constructor. assumption.
+    + exact IH.
+Qed.
+
+Lemma store_update_state_refs_exclude_root :
+  forall root x f s s',
+    store_refs_exclude_root root s ->
+    store_update_state x f s = Some s' ->
+    store_refs_exclude_root root s'.
+Proof.
+  intros root x f s.
+  induction s as [| [sx sT sv sst] rest IH]; intros s' Hexcl Hupdate;
+    simpl in Hupdate; try discriminate.
+  inversion Hexcl; subst.
+  destruct (ident_eqb x sx) eqn:Hx.
+  - inversion Hupdate; subst.
+    match goal with
+    | Hentry : store_entry_refs_exclude_root root
+        (MkStoreEntry sx sT sv sst) |- _ =>
+        inversion Hentry; subst
+    end.
+    constructor.
+    + constructor. assumption.
+    + assumption.
+  - destruct (store_update_state x f rest) as [rest' |] eqn:Htail;
+      try discriminate.
+    inversion Hupdate; subst.
+    constructor; eauto.
+Qed.
+
+Lemma store_restore_path_refs_exclude_root :
+  forall root x path s s',
+    store_refs_exclude_root root s ->
+    store_restore_path x path s = Some s' ->
+    store_refs_exclude_root root s'.
+Proof.
+  intros root x path s s' Hexcl Hrestore.
+  unfold store_restore_path in Hrestore.
+  eapply store_update_state_refs_exclude_root; eassumption.
+Qed.
+
+Lemma store_consume_path_refs_exclude_root :
+  forall root x path s s',
+    store_refs_exclude_root root s ->
+    store_consume_path x path s = Some s' ->
+    store_refs_exclude_root root s'.
+Proof.
+  intros root x path s s' Hexcl Hconsume.
+  unfold store_consume_path in Hconsume.
+  destruct (store_lookup x s) as [se |] eqn:Hlookup; try discriminate.
+  destruct (binding_available_b (se_state se) path) eqn:Havailable;
+    try discriminate.
+  eapply store_update_state_refs_exclude_root; eassumption.
+Qed.
+
+Lemma store_update_val_refs_exclude_root :
+  forall root x v_new s s',
+    value_refs_exclude_root root v_new ->
+    store_refs_exclude_root root s ->
+    store_update_val x v_new s = Some s' ->
+    store_refs_exclude_root root s'.
+Proof.
+  intros root x v_new s.
+  induction s as [| [sx sT sv sst] rest IH]; intros s' Hv Hexcl Hupdate;
+    simpl in Hupdate; try discriminate.
+  inversion Hexcl; subst.
+  destruct (ident_eqb x sx) eqn:Hx.
+  - inversion Hupdate; subst.
+    constructor.
+    + constructor. exact Hv.
+    + assumption.
+  - destruct (store_update_val x v_new rest) as [rest' |] eqn:Htail;
+      try discriminate.
+    inversion Hupdate; subst.
+    constructor; eauto.
+Qed.
+
+Lemma value_update_path_refs_exclude_root :
+  forall root v path v_new v',
+    value_refs_exclude_root root v ->
+    value_refs_exclude_root root v_new ->
+    value_update_path v path v_new = Some v' ->
+    value_refs_exclude_root root v'.
+Proof.
+  intros root v path.
+  revert v.
+  induction path as [| fname rest IH]; intros v v_new v' Hv Hvnew Hupdate.
+  - destruct v; simpl in Hupdate; inversion Hupdate; subst; exact Hvnew.
+  - destruct v; simpl in Hupdate; try discriminate.
+    inversion Hv; subst.
+    destruct
+      ((fix update (fields : list (string * value)) :
+          option (list (string * value)) :=
+          match fields with
+          | [] => None
+          | (name, fv) :: tail =>
+              if String.eqb fname name
+              then match value_update_path fv rest v_new with
+                   | Some fv' => Some ((name, fv') :: tail)
+                   | None => None
+                   end
+              else match update tail with
+                   | Some tail' => Some ((name, fv) :: tail')
+                   | None => None
+                   end
+          end) l) as [fields' |] eqn:Hfields; try discriminate.
+    assert (Hfields_excl :
+      forall fields fields',
+        value_fields_refs_exclude_root root fields ->
+        (fix update (fields0 : list (string * value)) :
+            option (list (string * value)) :=
+            match fields0 with
+            | [] => None
+            | (name, fv) :: tail =>
+                if String.eqb fname name
+                then match value_update_path fv rest v_new with
+                     | Some fv' => Some ((name, fv') :: tail)
+                     | None => None
+                     end
+                else match update tail with
+                     | Some tail' => Some ((name, fv) :: tail')
+                     | None => None
+                     end
+            end) fields = Some fields' ->
+        value_fields_refs_exclude_root root fields').
+    { clear Hfields.
+      induction fields as [| [name fv] tail IHfields];
+        intros fields_out Hfields_excl Hupd; simpl in Hupd; try discriminate.
+      inversion Hfields_excl; subst.
+      destruct (String.eqb fname name) eqn:Hname.
+      - destruct (value_update_path fv rest v_new) as [fv' |] eqn:Hfv;
+          try discriminate.
+        inversion Hupd; subst.
+        constructor.
+        + eapply IH.
+          * eassumption.
+          * exact Hvnew.
+          * exact Hfv.
+        + assumption.
+      - destruct
+          ((fix update (fields0 : list (string * value)) :
+              option (list (string * value)) :=
+              match fields0 with
+              | [] => None
+              | (name0, fv0) :: tail0 =>
+                  if String.eqb fname name0
+                  then match value_update_path fv0 rest v_new with
+                       | Some fv' => Some ((name0, fv') :: tail0)
+                       | None => None
+                       end
+                  else match update tail0 with
+                       | Some tail' => Some ((name0, fv0) :: tail')
+                       | None => None
+                       end
+              end) tail) as [tail' |] eqn:Htail; try discriminate.
+        inversion Hupd; subst.
+        constructor.
+        + assumption.
+        + eapply IHfields.
+          * eassumption.
+          * reflexivity. }
+    inversion Hupdate; subst.
+    constructor.
+    eapply Hfields_excl; eassumption.
+Qed.
+
+Lemma store_update_path_refs_exclude_root :
+  forall root x path v_new s s',
+    value_refs_exclude_root root v_new ->
+    store_refs_exclude_root root s ->
+    store_update_path x path v_new s = Some s' ->
+    store_refs_exclude_root root s'.
+Proof.
+  intros root x path v_new s.
+  induction s as [| [sx sT sv sst] rest IH]; intros s' Hv Hexcl Hupdate;
+    simpl in Hupdate; try discriminate.
+  inversion Hexcl; subst.
+  destruct (ident_eqb x sx) eqn:Hx.
+  - destruct (value_update_path sv path v_new) as [sv' |] eqn:Hvalue;
+      try discriminate.
+    inversion Hupdate; subst.
+    match goal with
+    | Hentry : store_entry_refs_exclude_root root
+        (MkStoreEntry sx sT sv sst) |- _ =>
+        inversion Hentry; subst
+    end.
+    constructor.
+    + constructor.
+      eapply value_update_path_refs_exclude_root.
+      * eassumption.
+      * exact Hv.
+      * exact Hvalue.
+    + assumption.
+  - destruct (store_update_path x path v_new rest) as [rest' |] eqn:Htail;
+      try discriminate.
+    inversion Hupdate; subst.
+    constructor; eauto.
 Qed.
 
 Lemma eval_place_store_add_strip :

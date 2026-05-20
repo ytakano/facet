@@ -256,12 +256,29 @@ Work in this order unless a proof exposes a soundness gap:
    - `value_refs_exclude_lookup_ref_neq`;
    - `store_refs_exclude_lookup_ref_neq`;
    - `eval_place_store_add_strip`.
+   - `store_update_state_store_add_inv`;
+   - `store_update_val_store_add_inv`;
+   - `store_update_path_store_add_inv`;
+   - `store_restore_path_store_add_inv`;
+   - `store_consume_path_store_add_inv`;
+   - `value_refs_exclude_lookup_path`;
+   - `store_refs_exclude_lookup`;
+   - `store_mark_used_refs_exclude_root`;
+   - `store_update_state_refs_exclude_root`;
+   - `store_restore_path_refs_exclude_root`;
+   - `store_consume_path_refs_exclude_root`;
+   - `store_update_val_refs_exclude_root`;
+   - `value_update_path_refs_exclude_root`;
+   - `store_update_path_refs_exclude_root`.
 
    `eval_place_store_add_strip` is the current stable proof endpoint for
    hidden-frame stripping. It shows that evaluating a place under
    `store_add x T hidden s` strips back to evaluation over `s` when the place's
    root name is not `x` and the base store's references exclude `x`. Use this
-   as the base case for the next `eval`/`eval_args` stripping lemma.
+   as the base case for the next `eval`/`eval_args` stripping lemma. The
+   inverse store-operation lemmas and refs-exclusion preservation lemmas above
+   are the stable low-level support for the `EVar`, `EPlace`, `EAssign`, and
+   `EReplace` cases.
 
 4. **Final captured-call executable endpoint.** Done.
    The checked-initial wrapper exists:

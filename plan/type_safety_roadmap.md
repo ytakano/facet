@@ -410,14 +410,28 @@ Work in this order unless a proof exposes a soundness gap:
    `captured_params_store_typed_remove_hidden_app`, and alpha-renaming
    not-in-used wrappers for renamed params/body locals.
 
+   Current hidden-frame cleanup endpoint:
+
+   ```coq
+   eval_captured_call_body_ctx_cleanup_hidden_frame_erased
+   ```
+
+   This is the proof-local body cleanup variant for
+   `captured ++ store_add x T hidden s_args`. It avoids requiring
+   `store_typed` for the temporary closure binding and erases `x` from the
+   final store. It currently takes `value_refs_exclude_root x ret` explicitly;
+   the next bridge must derive that fact from root/provenance evidence for the
+   callee body result.
+
    Next hidden-frame proof subtask: connect the stripped evaluation package to
    the existing captured-call preservation endpoint. The remaining bridge must
    handle the callee-body evaluation under
    `captured ++ store_add x T (VClosure fname captured) s_args`, then erase
    `x` without requiring `store_typed` for the temporary closure binding.
-   The cleanup arithmetic for erasing `x` after parameter/capture removal is
-   now available; the remaining proof work is the body cleanup/alpha-renaming
-   bridge for the hidden frame. Do this before adding any checker branch.
+   The cleanup arithmetic and hidden-frame body cleanup are now available; the
+   remaining proof work is deriving `value_refs_exclude_root x ret`, then
+   wiring the stripped evaluation package to the hidden cleanup helper. Do this
+   before adding any checker branch.
 
 6. **Handle `if` last.**
    The known `if` blocker is that ordinary `TES_If` does not expose

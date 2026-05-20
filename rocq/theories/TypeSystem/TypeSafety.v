@@ -8912,6 +8912,64 @@ Proof.
     apply EvalPlace_Field. exact Heval_base.
 Qed.
 
+Fixpoint args_free_vars_ts (args : list expr) : list ident :=
+  match args with
+  | [] => []
+  | e :: rest => free_vars_expr e ++ args_free_vars_ts rest
+  end.
+
+Fixpoint fields_free_vars_ts (fields : list (string * expr)) : list ident :=
+  match fields with
+  | [] => []
+  | (_, e) :: rest => free_vars_expr e ++ fields_free_vars_ts rest
+  end.
+
+Lemma args_free_vars_ts_cons_notin :
+  forall x e rest,
+    ~ In x (args_free_vars_ts (e :: rest)) ->
+    ~ In x (free_vars_expr e) /\ ~ In x (args_free_vars_ts rest).
+Proof.
+  intros x e rest Hnotin. simpl in Hnotin.
+  split; intros Hin; apply Hnotin; apply in_or_app;
+    [left | right]; exact Hin.
+Qed.
+
+Lemma fields_free_vars_ts_cons_notin :
+  forall x name e rest,
+    ~ In x (fields_free_vars_ts ((name, e) :: rest)) ->
+    ~ In x (free_vars_expr e) /\ ~ In x (fields_free_vars_ts rest).
+Proof.
+  intros x name e rest Hnotin. simpl in Hnotin.
+  split; intros Hin; apply Hnotin; apply in_or_app;
+    [left | right]; exact Hin.
+Qed.
+
+Lemma args_local_store_names_cons_notin :
+  forall x e rest,
+    ~ In x (args_local_store_names (e :: rest)) ->
+    ~ In x (expr_local_store_names e) /\
+    ~ In x (args_local_store_names rest).
+Proof.
+  intros x e rest Hnotin.
+  unfold args_local_store_names in *.
+  simpl in Hnotin.
+  split; intros Hin; apply Hnotin; apply in_or_app;
+    [left | right]; exact Hin.
+Qed.
+
+Lemma fields_local_store_names_cons_notin :
+  forall x name e rest,
+    ~ In x (fields_local_store_names ((name, e) :: rest)) ->
+    ~ In x (expr_local_store_names e) /\
+    ~ In x (fields_local_store_names rest).
+Proof.
+  intros x name e rest Hnotin.
+  unfold fields_local_store_names in *.
+  simpl in Hnotin.
+  split; intros Hin; apply Hnotin; apply in_or_app;
+    [left | right]; exact Hin.
+Qed.
+
 Lemma store_param_prefix_update_state_same_frame :
   forall ps s_param frame x f s',
     store_param_prefix ps s_param frame ->

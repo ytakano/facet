@@ -270,6 +270,12 @@ Work in this order unless a proof exposes a soundness gap:
    - `store_update_val_refs_exclude_root`;
    - `value_update_path_refs_exclude_root`;
    - `store_update_path_refs_exclude_root`.
+   - `args_free_vars_ts`;
+   - `fields_free_vars_ts`;
+   - `args_free_vars_ts_cons_notin`;
+   - `fields_free_vars_ts_cons_notin`;
+   - `args_local_store_names_cons_notin`;
+   - `fields_local_store_names_cons_notin`.
 
    `eval_place_store_add_strip` is the current stable proof endpoint for
    hidden-frame stripping. It shows that evaluating a place under
@@ -278,7 +284,8 @@ Work in this order unless a proof exposes a soundness gap:
    as the base case for the next `eval`/`eval_args` stripping lemma. The
    inverse store-operation lemmas and refs-exclusion preservation lemmas above
    are the stable low-level support for the `EVar`, `EPlace`, `EAssign`, and
-   `EReplace` cases.
+   `EReplace` cases. The free-variable/local-name list helpers are the stable
+   support for the `eval_args` and `eval_struct_fields` cons cases.
 
 4. **Final captured-call executable endpoint.** Done.
    The checked-initial wrapper exists:

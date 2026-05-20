@@ -8456,6 +8456,125 @@ Proof.
   eapply store_update_state_store_add_diff; eassumption.
 Qed.
 
+Lemma value_fields_refs_exclude_lookup :
+  forall root fields fname v,
+    value_fields_refs_exclude_root root fields ->
+    (let fix lookup (fields0 : list (string * value)) : option value :=
+       match fields0 with
+       | [] => None
+       | (name, fv) :: tail =>
+           if String.eqb fname name then Some fv else lookup tail
+       end in lookup fields) = Some v ->
+    value_refs_exclude_root root v.
+Proof.
+  intros root fields.
+  induction fields as [| [name fv] tail IH]; intros fname v Hfields Hlookup;
+    simpl in Hlookup; try discriminate.
+  inversion Hfields; subst.
+  destruct (String.eqb fname name) eqn:Hname.
+  - inversion Hlookup; subst. assumption.
+  - eapply IH; eassumption.
+Qed.
+
+Lemma value_refs_exclude_lookup_ref_neq :
+  forall root v path x rpath,
+    value_refs_exclude_root root v ->
+    value_lookup_path v path = Some (VRef x rpath) ->
+    x <> root.
+Proof.
+  intros root v path.
+  revert v.
+  induction path as [| fname rest IH]; intros v x rpath Hexcl Hlookup.
+  - simpl in Hlookup. inversion Hlookup; subst v.
+    inversion Hexcl; subst.
+    match goal with
+    | Hneqb : ident_eqb root x = false |- _ =>
+        apply ident_eqb_neq in Hneqb;
+        intros Heq; apply Hneqb; symmetry; exact Heq
+    end.
+  - simpl in Hlookup.
+    destruct v; try discriminate.
+    inversion Hexcl; subst.
+    destruct
+      ((fix lookup (fields0 : list (string * value)) : option value :=
+          match fields0 with
+          | [] => None
+          | (name, fv) :: tail =>
+              if String.eqb fname name then Some fv else lookup tail
+          end) l) as [fv |] eqn:Hfield; try discriminate.
+    eapply IH.
+    + eapply value_fields_refs_exclude_lookup; eassumption.
+    + exact Hlookup.
+Qed.
+
+Lemma store_refs_exclude_lookup_ref_neq :
+  forall root s y se path x rpath,
+    store_refs_exclude_root root s ->
+    store_lookup y s = Some se ->
+    value_lookup_path (se_val se) path = Some (VRef x rpath) ->
+    x <> root.
+Proof.
+  intros root s.
+  induction s as [| [sx sT sv sst] rest IH]; intros y se path x rpath Hexcl
+    Hlookup Hvalue; simpl in Hlookup; try discriminate.
+  inversion Hexcl; subst.
+  destruct (ident_eqb y sx) eqn:Hy.
+  - inversion Hlookup; subst se.
+    match goal with
+    | Hentry : store_entry_refs_exclude_root root (MkStoreEntry sx sT sv sst) |- _ =>
+        inversion Hentry; subst
+    end.
+    match goal with
+    | Hvalue_excl : value_refs_exclude_root root sv |- _ =>
+        eapply value_refs_exclude_lookup_ref_neq; eassumption
+    end.
+  - eapply IH; eassumption.
+Qed.
+
+Lemma eval_place_store_add_strip :
+  forall s p y path x T hidden,
+    place_name p <> x ->
+    store_refs_exclude_root x s ->
+    eval_place (store_add x T hidden s) p y path ->
+    y <> x /\ eval_place s p y path.
+Proof.
+  intros s p.
+  induction p as [z | p IH | p IH]; intros y path x T hidden
+    Hplace_fresh Hrefs Heval.
+  - inversion Heval; subst.
+    simpl in Hplace_fresh.
+    split; try assumption.
+    eapply EvalPlace_Var.
+    match goal with
+    | Hlookup : store_lookup _ (store_add x T hidden s) = Some _ |- _ =>
+        rewrite store_lookup_store_add_diff in Hlookup by exact Hplace_fresh;
+        exact Hlookup
+    end.
+  - inversion Heval; subst.
+    simpl in Hplace_fresh.
+    match goal with
+    | Hplace : eval_place (store_add x T hidden s) p ?r ?rpath |- _ =>
+        destruct (IH r rpath x T hidden Hplace_fresh Hrefs Hplace)
+          as [Hrneq Heval_base]
+    end.
+    match goal with
+    | Hlookup : store_lookup ?r (store_add x T hidden s) = Some _ |- _ =>
+        rewrite store_lookup_store_add_diff in Hlookup by exact Hrneq
+    end.
+    split.
+    + eapply store_refs_exclude_lookup_ref_neq; eassumption.
+    + eapply EvalPlace_Deref; eassumption.
+  - inversion Heval; subst.
+    simpl in Hplace_fresh.
+    match goal with
+    | Hplace : eval_place (store_add x T hidden s) p ?x0 ?path0 |- _ =>
+        destruct (IH x0 path0 x T hidden Hplace_fresh Hrefs Hplace)
+          as [Hneq Heval_base]
+    end.
+    split; try assumption.
+    apply EvalPlace_Field. exact Heval_base.
+Qed.
+
 Lemma store_param_prefix_update_state_same_frame :
   forall ps s_param frame x f s',
     store_param_prefix ps s_param frame ->

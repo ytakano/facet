@@ -252,6 +252,16 @@ Work in this order unless a proof exposes a soundness gap:
    - `store_update_val_store_add_diff`;
    - `store_update_path_store_add_diff`;
    - `store_restore_path_store_add_diff`.
+   - `value_fields_refs_exclude_lookup`;
+   - `value_refs_exclude_lookup_ref_neq`;
+   - `store_refs_exclude_lookup_ref_neq`;
+   - `eval_place_store_add_strip`.
+
+   `eval_place_store_add_strip` is the current stable proof endpoint for
+   hidden-frame stripping. It shows that evaluating a place under
+   `store_add x T hidden s` strips back to evaluation over `s` when the place's
+   root name is not `x` and the base store's references exclude `x`. Use this
+   as the base case for the next `eval`/`eval_args` stripping lemma.
 
 4. **Final captured-call executable endpoint.** Done.
    The checked-initial wrapper exists:

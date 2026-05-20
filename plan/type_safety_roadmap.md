@@ -108,20 +108,20 @@ Work in this order unless a proof exposes a soundness gap:
    Current progress: `capture_ref_free_ty` and
    `capture_ref_free_ty_b_sound` exist, and the Prop no longer has broad
    compatibility/usage constructors. `runtime_rootless_ty` exists in
-   `TypeSafety.v`, its struct case now requires rootlessness only for
-   instantiated fields, executable `capture_ref_free_ty_b` checks imply it, and
+   `TypeSafety.v`, its struct case factors instantiated fields through
+   `runtime_rootless_fields`, executable `capture_ref_free_ty_b` checks imply it,
+   lifetime-equivalence preserves it, and
    `ty_compatible_runtime_rootless_actual` handles compatibility without
    broadening `capture_ref_free_ty`. Do not reintroduce a constructor like
    `CRFT_CompatibleActual`: it is too strong for function argument
    contravariance and `TC_Fn_Closure`.
 
-   Remaining proof-design task: prove lifetime-equivalence preservation for
-   `runtime_rootless_ty`, including instantiated struct field types. A direct
-   recursive proof through `instantiate_struct_field_ty_lifetime_equiv` is
-   rejected by Rocq's guard checker, so the next route should use an explicit
-   size/fuel measure or a normalized field-instantiation lemma. Then state the
-   empty-root theorem directly over `value_has_type`. Do not delegate this to a
-   sub-agent until those lemma statements are fixed.
+   Current proof endpoint: `value_has_type_runtime_rootless_empty_roots` proves
+   runtime-rootless typed values fit in the empty root set, including
+   `VHT_Compatible` and `VHT_LifetimeEquiv`.
+
+   Next implementation task: construct an empty-root `Rcap` for copied captures
+   and prove exact capture copy yields `captured_store_runtime_ready`.
 
 3. **Argument/capture frame composition.**
    After captured-store readiness is proved:

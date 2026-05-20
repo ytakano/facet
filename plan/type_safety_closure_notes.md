@@ -179,36 +179,29 @@ Current progress:
 - `capture_ref_free_ty` remains structural. Do not add compatibility or
   lifetime-equivalence closure constructors to it.
 - `runtime_rootless_ty` is available in `TypeSafety.v` as a structural
-  proof-only predicate. Its struct case requires rootlessness for instantiated
-  fields, not for type arguments themselves.
+  proof-only predicate. Its struct case factors instantiated fields through
+  `runtime_rootless_fields`, not through type arguments themselves.
 - `capture_ref_free_ty_b_fuel_runtime_rootless` and
   `capture_ref_free_ty_b_runtime_rootless` prove executable
   capture-ref-free checks imply that predicate.
 - `ty_compatible_runtime_rootless_actual` handles the `VHT_Compatible` route
   without broadening `capture_ref_free_ty`.
-- The remaining blocker is the `VHT_LifetimeEquiv` route. It needs a
-  structural lemma showing lifetime equivalence preserves
-  `runtime_rootless_ty`, including instantiated struct field types.
-- A direct recursive proof of that lemma through
-  `instantiate_struct_field_ty_lifetime_equiv` is not accepted by Rocq's guard
-  checker. Use an explicit type-size/fuel induction or split out a normalized
-  field-instantiation preservation lemma before trying the `VHT_LifetimeEquiv`
-  case again.
-- In the `VHT_Compatible` and `VHT_LifetimeEquiv` cases, reason from the
-  compatibility/lifetime-equivalence proof and runtime value shape. Do not
-  first try to convert the actual type back into `capture_ref_free_ty`.
+- `ty_lifetime_equiv_runtime_rootless_actual` and
+  `ty_lifetime_equiv_runtime_rootless_fields_actual` handle the
+  `VHT_LifetimeEquiv` route.
+- `value_has_type_runtime_rootless_empty_roots` and
+  `struct_fields_have_type_runtime_rootless_empty_roots` prove runtime-rootless
+  typed values fit in the empty root set.
+- The remaining blocker is constructing an empty-root `Rcap` for the copied
+  hidden capture store and proving it satisfies `captured_store_runtime_ready`.
 
 ## Next Closure Lemmas
 
-1. Prove lifetime-equivalence preservation for `runtime_rootless_ty` using an
-   explicit measure or normalized field-instantiation lemma.
-2. Prove direct root-empty lemmas from `value_has_type` for
-   `capture_ref_free_ty` values, using `runtime_rootless_ty` for the
-   compatibility and lifetime-equivalence cases.
-3. Prove exact capture copy yields `captured_store_runtime_ready`.
-4. Prove hidden capture names remain absent from evaluated argument store/root
+1. Define/prove an empty-root environment helper for copied capture stores.
+2. Prove exact capture copy yields `captured_store_runtime_ready`.
+3. Prove hidden capture names remain absent from evaluated argument store/root
    environment.
-5. Compose captured and argument frames with `captured_call_frame_ready_compose`.
-6. Instantiate the callee-body summary under `fn_body_ctx fcall`.
-7. Connect to
+4. Compose captured and argument frames with `captured_call_frame_ready_compose`.
+5. Instantiate the callee-body summary under `fn_body_ctx fcall`.
+6. Connect to
    `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased`.

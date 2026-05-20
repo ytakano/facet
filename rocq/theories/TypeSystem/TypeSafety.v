@@ -927,17 +927,26 @@ Inductive runtime_rootless_ty (env : global_env) : Ty -> Prop :=
       runtime_rootless_ty env (MkTy u TBooleans)
   | RRT_Struct : forall u name lts args sdef,
       lookup_struct name env = Some sdef ->
-      Forall
-        (fun f =>
-           runtime_rootless_ty env
-             (instantiate_struct_field_ty lts args f))
-        (struct_fields sdef) ->
+      runtime_rootless_fields env lts args (struct_fields sdef) ->
       runtime_rootless_ty env (MkTy u (TStruct name lts args))
   | RRT_Fn : forall u params ret,
       runtime_rootless_ty env (MkTy u (TFn params ret))
   | RRT_Forall : forall u n Ω body,
       runtime_rootless_ty env body ->
-      runtime_rootless_ty env (MkTy u (TForall n Ω body)).
+      runtime_rootless_ty env (MkTy u (TForall n Ω body))
+with runtime_rootless_fields
+    (env : global_env) : list lifetime -> list Ty -> list field_def -> Prop :=
+  | RRF_Nil : forall lts args,
+      runtime_rootless_fields env lts args []
+  | RRF_Cons : forall lts args f fs,
+      runtime_rootless_ty env (instantiate_struct_field_ty lts args f) ->
+      runtime_rootless_fields env lts args fs ->
+      runtime_rootless_fields env lts args (f :: fs).
+
+Scheme runtime_rootless_ty_ind' := Induction for runtime_rootless_ty Sort Prop
+with runtime_rootless_fields_ind' := Induction for runtime_rootless_fields Sort Prop.
+Combined Scheme runtime_rootless_ind
+  from runtime_rootless_ty_ind', runtime_rootless_fields_ind'.
 
 Lemma runtime_rootless_ty_change_usage :
   forall env T u,
@@ -971,6 +980,35 @@ Proof.
     apply IHHcompat. assumption.
 Qed.
 
+Lemma ty_lifetime_equiv_runtime_rootless_actual :
+  forall env T_actual T_expected,
+    ty_lifetime_equiv T_actual T_expected ->
+    runtime_rootless_ty env T_expected ->
+    runtime_rootless_ty env T_actual
+with ty_lifetime_equiv_runtime_rootless_fields_actual :
+  forall env lts_actual lts_expected args_actual args_expected fdefs,
+    Forall2 ty_lifetime_equiv args_actual args_expected ->
+    runtime_rootless_fields env lts_expected args_expected fdefs ->
+    runtime_rootless_fields env lts_actual args_actual fdefs.
+Proof.
+  - intros env T_actual T_expected Heq Hrootless.
+    destruct Heq; inversion Hrootless; subst; try solve [constructor].
+    + eapply RRT_Struct.
+      * exact H2.
+      * eapply ty_lifetime_equiv_runtime_rootless_fields_actual; eassumption.
+    + apply RRT_Forall.
+      eapply ty_lifetime_equiv_runtime_rootless_actual; eassumption.
+  - intros env lts_actual lts_expected args_actual args_expected fdefs
+      Hargs Hfields.
+    induction Hfields.
+    + constructor.
+    + constructor.
+      * eapply ty_lifetime_equiv_runtime_rootless_actual.
+        -- eapply instantiate_struct_field_ty_lifetime_equiv. exact Hargs.
+        -- exact H.
+      * apply IHHfields. exact Hargs.
+Qed.
+
 Lemma capture_ref_free_ty_b_fuel_runtime_rootless :
   forall fuel env T,
     capture_ref_free_ty_b_fuel fuel env T = true ->
@@ -992,10 +1030,13 @@ Proof.
       try discriminate.
     eapply RRT_Struct.
     + exact Hlookup.
-    + apply Forall_forall.
-      intros f Hin.
-      apply forallb_forall with (x := f) in Hfields_lookup; [| exact Hin].
-      apply IH. exact Hfields_lookup.
+    + clear Hargs.
+      induction (struct_fields sdef) as [| f fs IHfs]; simpl in *.
+      * constructor.
+      * apply andb_true_iff in Hfields_lookup as [Hfield Hfields].
+        constructor.
+        -- apply IH. exact Hfield.
+        -- apply IHfs. exact Hfields.
   - constructor.
   - apply RRT_Forall. apply IH. exact Hfree.
 Qed.
@@ -1008,6 +1049,93 @@ Proof.
   intros env T Hfree.
   unfold capture_ref_free_ty_b in Hfree.
   eapply capture_ref_free_ty_b_fuel_runtime_rootless. exact Hfree.
+Qed.
+
+Lemma lookup_struct_deterministic :
+  forall env name sdef1 sdef2,
+    lookup_struct name env = Some sdef1 ->
+    lookup_struct name env = Some sdef2 ->
+    sdef1 = sdef2.
+Proof.
+  intros env name sdef1 sdef2 Hlookup1 Hlookup2.
+  rewrite Hlookup1 in Hlookup2.
+  inversion Hlookup2. reflexivity.
+Qed.
+
+Lemma value_has_type_runtime_rootless_empty_roots_mut :
+  forall env s,
+  (forall v T,
+    value_has_type env s v T ->
+    runtime_rootless_ty env T ->
+    value_roots_within [] v) /\
+  (forall lts args fields defs,
+    struct_fields_have_type env s lts args fields defs ->
+    runtime_rootless_fields env lts args defs ->
+    value_fields_roots_within [] fields).
+Proof.
+  intros env s.
+  apply (runtime_typing_ind env s
+    (fun v T _ =>
+      runtime_rootless_ty env T -> value_roots_within [] v)
+    (fun lts args fields defs _ =>
+      runtime_rootless_fields env lts args defs ->
+      value_fields_roots_within [] fields));
+    try solve [intros; constructor].
+  - intros name lts args fields sdef Hlookup Hfields IHfields Hrootless.
+    unfold instantiate_struct_instance_ty in Hrootless.
+    inversion Hrootless; subst.
+    destruct (lookup_struct_success env name sdef Hlookup) as [_ Hstruct_name].
+    subst name.
+    assert (sdef0 = sdef) as ->.
+    { eapply lookup_struct_deterministic; eassumption. }
+    constructor.
+    match goal with
+    | Hroot_fields : runtime_rootless_fields env lts args (struct_fields sdef) |- _ =>
+        eapply IHfields; exact Hroot_fields
+    end.
+  - intros u la rk x path se v T Hstore Hvalue Htype Hrootless.
+    inversion Hrootless.
+  - intros Ω v T_actual T_expected Htyped IHtyped Hcompat Hrootless.
+    eapply IHtyped.
+    eapply ty_compatible_runtime_rootless_actual; eassumption.
+  - intros v T_actual T_expected Htyped IHtyped Heq Hrootless.
+    eapply IHtyped.
+    eapply ty_lifetime_equiv_runtime_rootless_actual; eassumption.
+  - intros lts args name v fields f defs Hname Htyped IHtyped
+      Hfields IHfields Hrootless.
+    inversion Hrootless; subst.
+    constructor.
+    + match goal with
+      | Hroot_field : runtime_rootless_ty env
+          (instantiate_struct_field_ty lts args f) |- _ =>
+          apply IHtyped; exact Hroot_field
+      end.
+    + match goal with
+      | Hroot_fields : runtime_rootless_fields env lts args defs |- _ =>
+          apply IHfields; exact Hroot_fields
+      end.
+Qed.
+
+Lemma value_has_type_runtime_rootless_empty_roots :
+  forall env s v T,
+    value_has_type env s v T ->
+    runtime_rootless_ty env T ->
+    value_roots_within [] v.
+Proof.
+  intros env s v T Htyped Hrootless.
+  exact (proj1 (value_has_type_runtime_rootless_empty_roots_mut env s)
+    v T Htyped Hrootless).
+Qed.
+
+Lemma struct_fields_have_type_runtime_rootless_empty_roots :
+  forall env s lts args fields defs,
+    struct_fields_have_type env s lts args fields defs ->
+    runtime_rootless_fields env lts args defs ->
+    value_fields_roots_within [] fields.
+Proof.
+  intros env s lts args fields defs Htyped Hrootless.
+  exact (proj2 (value_has_type_runtime_rootless_empty_roots_mut env s)
+    lts args fields defs Htyped Hrootless).
 Qed.
 
 Lemma root_set_stores_subset_equiv :

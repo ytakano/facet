@@ -192,16 +192,18 @@ Current progress:
 - `value_has_type_runtime_rootless_empty_roots` and
   `struct_fields_have_type_runtime_rootless_empty_roots` prove runtime-rootless
   typed values fit in the empty root set.
-- The remaining blocker is constructing an empty-root `Rcap` for the copied
-  hidden capture store and proving it satisfies `captured_store_runtime_ready`.
+- `empty_root_env_for_store` constructs the copied-capture `Rcap`.
+- `copy_capture_store_as_captured_store_runtime_ready` proves exact capture
+  copy satisfies `captured_store_runtime_ready`.
+- The remaining blocker is showing hidden capture names are absent from the
+  evaluated argument store/root environment so `captured_call_frame_ready_compose`
+  can be applied.
 
 ## Next Closure Lemmas
 
-1. Define/prove an empty-root environment helper for copied capture stores.
-2. Prove exact capture copy yields `captured_store_runtime_ready`.
-3. Prove hidden capture names remain absent from evaluated argument store/root
+1. Prove hidden capture names remain absent from evaluated argument store/root
    environment.
-4. Compose captured and argument frames with `captured_call_frame_ready_compose`.
-5. Instantiate the callee-body summary under `fn_body_ctx fcall`.
-6. Connect to
+2. Compose captured and argument frames with `captured_call_frame_ready_compose`.
+3. Instantiate the callee-body summary under `fn_body_ctx fcall`.
+4. Connect to
    `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased`.

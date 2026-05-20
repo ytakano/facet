@@ -120,8 +120,14 @@ Work in this order unless a proof exposes a soundness gap:
    runtime-rootless typed values fit in the empty root set, including
    `VHT_Compatible` and `VHT_LifetimeEquiv`.
 
-   Next implementation task: construct an empty-root `Rcap` for copied captures
-   and prove exact capture copy yields `captured_store_runtime_ready`.
+   Current captured-store endpoint:
+   `copy_capture_store_as_captured_store_runtime_ready` constructs
+   `empty_root_env_for_store captured` as `Rcap` and proves exact capture copy
+   yields `captured_store_runtime_ready`.
+
+   Next implementation task: prove the hidden capture names remain absent from
+   the evaluated argument store/root environment, then use
+   `captured_call_frame_ready_compose`.
 
 3. **Argument/capture frame composition.**
    After captured-store readiness is proved:

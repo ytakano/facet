@@ -1138,6 +1138,99 @@ Proof.
     lts args fields defs Htyped Hrootless).
 Qed.
 
+Lemma value_has_type_runtime_rootless_store_any_mut :
+  forall env s,
+  (forall v T,
+    value_has_type env s v T ->
+    runtime_rootless_ty env T ->
+    forall s', value_has_type env s' v T) /\
+  (forall lts args fields defs,
+    struct_fields_have_type env s lts args fields defs ->
+    runtime_rootless_fields env lts args defs ->
+    forall s', struct_fields_have_type env s' lts args fields defs).
+Proof.
+  intros env s.
+  apply (runtime_typing_ind env s
+    (fun v T _ =>
+      runtime_rootless_ty env T -> forall s', value_has_type env s' v T)
+    (fun lts args fields defs _ =>
+      runtime_rootless_fields env lts args defs ->
+      forall s', struct_fields_have_type env s' lts args fields defs)).
+  - intros u Hrootless s'. constructor.
+  - intros u i Hrootless s'. constructor.
+  - intros u f Hrootless s'. constructor.
+  - intros u b Hrootless s'. constructor.
+  - intros name lts args fields sdef Hlookup Hfields IHfields Hrootless s'.
+    unfold instantiate_struct_instance_ty in Hrootless.
+    inversion Hrootless; subst.
+    destruct (lookup_struct_success env name sdef Hlookup) as [_ Hstruct_name].
+    subst name.
+    assert (sdef0 = sdef) as ->.
+    { eapply lookup_struct_deterministic; eassumption. }
+    eapply VHT_Struct.
+    + exact Hlookup.
+    + match goal with
+      | Hroot_fields : runtime_rootless_fields env lts args
+          (struct_fields sdef) |- _ =>
+          exact (IHfields Hroot_fields s')
+      end.
+  - intros u la rk x path se v T Hstore Hvalue Htype Hrootless s'.
+    inversion Hrootless.
+  - intros fname fdef Hlookup Hrootless s'. constructor. exact Hlookup.
+  - intros fname fdef Hin Hname Hrootless s'.
+    econstructor; eassumption.
+  - intros Ω v T_actual T_expected Htyped IHtyped Hcompat Hrootless s'.
+    eapply VHT_Compatible.
+    + eapply IHtyped.
+      eapply ty_compatible_runtime_rootless_actual; eassumption.
+    + exact Hcompat.
+  - intros v T_actual T_expected Htyped IHtyped Heq Hrootless s'.
+    eapply VHT_LifetimeEquiv.
+    + eapply IHtyped.
+      eapply ty_lifetime_equiv_runtime_rootless_actual; eassumption.
+    + exact Heq.
+  - intros lts args Hrootless s'. constructor.
+  - intros lts args name v fields f defs Hname Htyped IHtyped
+      Hfields IHfields Hrootless s'.
+    inversion Hrootless; subst.
+    econstructor.
+    + match goal with
+      | H : _ = _ |- _ => exact H
+      | |- _ = _ => reflexivity
+      end.
+    + match goal with
+      | Hroot_field : runtime_rootless_ty env
+          (instantiate_struct_field_ty lts args f) |- _ =>
+          exact (IHtyped Hroot_field s')
+      end.
+    + match goal with
+      | Hroot_fields : runtime_rootless_fields env lts args defs |- _ =>
+          exact (IHfields Hroot_fields s')
+      end.
+Qed.
+
+Lemma value_has_type_runtime_rootless_store_any :
+  forall env s s' v T,
+    value_has_type env s v T ->
+    runtime_rootless_ty env T ->
+    value_has_type env s' v T.
+Proof.
+  intros env s s' v T Htyped Hrootless.
+  exact (proj1 (value_has_type_runtime_rootless_store_any_mut env s)
+    v T Htyped Hrootless s').
+Qed.
+
+Lemma struct_fields_have_type_runtime_rootless_store_any :
+  forall env s s' lts args fields defs,
+    struct_fields_have_type env s lts args fields defs ->
+    runtime_rootless_fields env lts args defs ->
+    struct_fields_have_type env s' lts args fields defs.
+Proof.
+  intros env s s' lts args fields defs Htyped Hrootless.
+  exact (proj2 (value_has_type_runtime_rootless_store_any_mut env s)
+    lts args fields defs Htyped Hrootless s').
+Qed.
+
 Lemma root_set_stores_subset_equiv :
   forall roots roots' roots_bound,
     root_set_equiv roots roots' ->
@@ -2933,6 +3026,114 @@ Proof.
       Ω env s Σ captures caps captured captured_tys); eassumption.
 Qed.
 
+Lemma copy_capture_store_as_store_names :
+  forall captures caps s captured,
+    copy_capture_store_as captures caps s = Some captured ->
+    store_names captured = ctx_names (params_ctx caps).
+Proof.
+  induction captures as [| x captures IH]; intros caps s captured Hcopy;
+    destruct caps as [| cap caps]; simpl in Hcopy; try discriminate.
+  - injection Hcopy as <-. reflexivity.
+  - destruct (store_lookup x s) as [se |] eqn:Hlookup; try discriminate.
+    destruct (binding_available_b (se_state se) [] &&
+      match ty_usage (se_ty se) with
+      | UUnrestricted => true
+      | _ => false
+      end) eqn:Hcopy_ok; try discriminate.
+    destruct (copy_capture_store_as captures caps s) as [captured_rest |]
+      eqn:Hcopy_rest; try discriminate.
+    injection Hcopy as <-.
+    simpl. rewrite (IH caps s captured_rest Hcopy_rest). reflexivity.
+Qed.
+
+Lemma copy_capture_store_as_captured_entries_typed_rootless :
+  forall Ω env s_target s Σ captures caps captured captured_tys,
+    store_typed env s Σ ->
+    copy_capture_store_as captures caps s = Some captured ->
+    check_make_closure_captures_exact_sctx env Ω Σ captures caps =
+      infer_ok captured_tys ->
+    Forall2 (store_entry_typed env s_target) captured (sctx_of_store captured) /\
+    Forall (fun se => value_roots_within [] (se_val se)) captured.
+Proof.
+  intros Ω env s_target s Σ captures.
+  revert s_target.
+  induction captures as [| x captures IH]; intros s_target caps captured captured_tys
+    Hstore Hcopy Hcheck;
+    destruct caps as [| cap caps]; simpl in Hcopy, Hcheck; try discriminate.
+  - injection Hcopy as <-.
+    split; constructor.
+  - destruct (param_mutability cap) eqn:Hcap_mut; simpl in Hcheck;
+      try discriminate.
+    destruct (sctx_lookup (param_name cap) Σ) as [[Tcap stcap] |]
+      eqn:Hcap_lookup; try discriminate.
+    destruct (sctx_lookup x Σ) as [[T st] |] eqn:Hlookup; try discriminate.
+    destruct (st_consumed st) eqn:Hconsumed; try discriminate.
+    destruct (st_moved_paths st) as [| moved moved_rest] eqn:Hmoved;
+      try discriminate.
+    destruct (sctx_lookup_mut x Σ) as [m |] eqn:Hmut; try discriminate.
+    destruct m; try discriminate.
+    destruct (usage_eqb (ty_usage T) UUnrestricted) eqn:Husage;
+      try discriminate.
+    destruct (capture_ref_free_ty_b env T) eqn:Href_free; try discriminate.
+    destruct (ty_eqb T (param_ty cap) &&
+      ty_compatible_b Ω T (param_ty cap)) eqn:Hty; try discriminate.
+    apply andb_true_iff in Hty as [Hty_eq _].
+    destruct (check_make_closure_captures_exact_sctx env Ω Σ captures caps)
+      as [captured_rest_tys | err] eqn:Hrest_check; try discriminate.
+    destruct (store_lookup x s) as [se |] eqn:Hlookup_store; try discriminate.
+    destruct (binding_available_b (se_state se) [] &&
+      match ty_usage (se_ty se) with
+      | UUnrestricted => true
+      | _ => false
+      end) eqn:Hcopy_ok; try discriminate.
+    destruct (copy_capture_store_as captures caps s) as [captured_rest |]
+      eqn:Hcopy_rest; try discriminate.
+    injection Hcopy as <-.
+    destruct (store_typed_lookup env s Σ x se Hstore Hlookup_store)
+      as [T_lookup [st_lookup [m_lookup
+        [Hlookup_static [Hse_name [Hse_ty [Hrefines Hvalue]]]]]]].
+    rewrite Hlookup in Hlookup_static.
+    inversion Hlookup_static; subst T_lookup st_lookup.
+    apply ty_eqb_true in Hty_eq.
+    assert (Hrootless_T : runtime_rootless_ty env T).
+    { apply capture_ref_free_ty_b_runtime_rootless. exact Href_free. }
+    assert (Hrootless : runtime_rootless_ty env (se_ty se)).
+    { rewrite <- H0. exact Hrootless_T. }
+    assert (Hvalue_target : value_has_type env s_target (se_val se) (se_ty se)).
+    { eapply value_has_type_runtime_rootless_store_any.
+      - exact Hvalue.
+      - exact Hrootless. }
+    destruct (IH s_target caps captured_rest captured_rest_tys
+                Hstore Hcopy_rest Hrest_check)
+      as [Htyped_tail Hroots_tail].
+    split.
+    + simpl. constructor.
+      * exact (conj eq_refl
+          (conj eq_refl
+            (conj (binding_state_refines_refl (se_state se))
+              Hvalue_target))).
+      * exact Htyped_tail.
+    + simpl. constructor.
+      * eapply value_has_type_runtime_rootless_empty_roots.
+        -- exact Hvalue_target.
+        -- exact Hrootless.
+      * exact Hroots_tail.
+Qed.
+
+Lemma copy_capture_store_as_captured_store_typed_rootless :
+  forall Ω env s Σ captures caps captured captured_tys,
+    store_typed env s Σ ->
+    copy_capture_store_as captures caps s = Some captured ->
+    check_make_closure_captures_exact_sctx env Ω Σ captures caps =
+      infer_ok captured_tys ->
+    captured_store_typed env captured /\
+    Forall (fun se => value_roots_within [] (se_val se)) captured.
+Proof.
+  intros Ω env s Σ captures caps captured captured_tys Hstore Hcopy Hcheck.
+  unfold captured_store_typed.
+  eapply copy_capture_store_as_captured_entries_typed_rootless; eassumption.
+Qed.
+
 Lemma captured_store_runtime_ready_empty :
   forall env,
     captured_store_runtime_ready env [] [].
@@ -2969,6 +3170,73 @@ Proof.
     + simpl. exact Hrn.
     + simpl. exact Hnamed.
     + simpl. exact Hkeys.
+Qed.
+
+Fixpoint empty_root_env_for_store (s : store) : root_env :=
+  match s with
+  | [] => []
+  | se :: rest => (se_name se, []) :: empty_root_env_for_store rest
+  end.
+
+Lemma root_env_lookup_empty_root_env_for_store :
+  forall s x,
+    In x (store_names s) ->
+    root_env_lookup x (empty_root_env_for_store s) = Some [].
+Proof.
+  induction s as [| se rest IH]; intros x Hin; simpl in *.
+  - contradiction.
+  - destruct Hin as [Hin | Hin].
+    + subst x. rewrite ident_eqb_refl. reflexivity.
+    + destruct (ident_eqb x (se_name se)) eqn:Heq.
+      * reflexivity.
+      * apply IH. exact Hin.
+Qed.
+
+Lemma root_env_names_empty_root_env_for_store :
+  forall s,
+    root_env_names (empty_root_env_for_store s) = store_names s.
+Proof.
+  induction s as [| se rest IH]; simpl; try reflexivity.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma root_env_no_shadow_empty_root_env_for_store :
+  forall s,
+    store_no_shadow s ->
+    root_env_no_shadow (empty_root_env_for_store s).
+Proof.
+  unfold store_no_shadow, root_env_no_shadow.
+  intros s Hshadow.
+  rewrite root_env_names_empty_root_env_for_store.
+  exact Hshadow.
+Qed.
+
+Lemma root_env_store_roots_named_empty_root_env_for_store :
+  forall s,
+    root_env_store_roots_named (empty_root_env_for_store s) s.
+Proof.
+  unfold root_env_store_roots_named.
+  intros s x roots z Hlookup Hin.
+  destruct s as [| se rest].
+  - simpl in Hlookup. discriminate.
+  - destruct roots as [| r roots].
+    + contradiction.
+    + assert (Hin_names : In x (store_names (se :: rest))).
+      { rewrite <- root_env_names_empty_root_env_for_store.
+        eapply root_env_lookup_some_in_names. exact Hlookup. }
+      rewrite root_env_lookup_empty_root_env_for_store in Hlookup
+        by exact Hin_names.
+      inversion Hlookup.
+Qed.
+
+Lemma root_env_store_keys_named_empty_root_env_for_store :
+  forall s,
+    root_env_store_keys_named (empty_root_env_for_store s) s.
+Proof.
+  unfold root_env_store_keys_named, root_env_keys_named.
+  intros s x Hin.
+  rewrite root_env_names_empty_root_env_for_store in Hin.
+  exact Hin.
 Qed.
 
 Lemma store_names_app :
@@ -3034,6 +3302,61 @@ Proof.
       apply Hpreserve.
       * simpl. right. exact Hname.
       * exact Hlookup_x.
+Qed.
+
+Lemma store_roots_within_empty_root_env_for_store :
+  forall s,
+    store_no_shadow s ->
+    Forall (fun se => value_roots_within [] (se_val se)) s ->
+    store_roots_within (empty_root_env_for_store s) s.
+Proof.
+  induction s as [| se rest IH]; intros Hshadow Hvalues; simpl in *.
+  - constructor.
+  - inversion Hvalues as [| se0 rest0 Hvalue Htail]; subst.
+    inversion Hshadow as [| x xs Hnotin Hshadow_tail]; subst.
+    destruct se as [sx sT sv sst].
+    constructor.
+    + econstructor.
+      * simpl. rewrite ident_eqb_refl. reflexivity.
+      * exact Hvalue.
+    + eapply store_roots_within_weaken_lookup.
+      * apply IH; assumption.
+      * intros x roots Hin Hlookup.
+        simpl.
+        destruct (ident_eqb x sx) eqn:Heq.
+        -- apply ident_eqb_eq in Heq. subst x.
+           exfalso. apply Hnotin. exact Hin.
+        -- exact Hlookup.
+Qed.
+
+Lemma copy_capture_store_as_captured_store_runtime_ready :
+  forall Ω env s Σ captures caps captured captured_tys,
+    store_typed env s Σ ->
+    NoDup (ctx_names (params_ctx caps)) ->
+    copy_capture_store_as captures caps s = Some captured ->
+    check_make_closure_captures_exact_sctx env Ω Σ captures caps =
+      infer_ok captured_tys ->
+    captured_store_runtime_ready env captured
+      (empty_root_env_for_store captured).
+Proof.
+  intros Ω env s Σ captures caps captured captured_tys
+    Hstore Hnodup Hcopy Hcheck.
+  destruct (copy_capture_store_as_captured_store_typed_rootless
+              Ω env s Σ captures caps captured captured_tys
+              Hstore Hcopy Hcheck)
+    as [Htyped Hroots_values].
+  assert (Hshadow : store_no_shadow captured).
+  { unfold store_no_shadow.
+    rewrite (copy_capture_store_as_store_names captures caps s captured Hcopy).
+    exact Hnodup. }
+  unfold captured_store_runtime_ready.
+  repeat split.
+  - exact Htyped.
+  - apply store_roots_within_empty_root_env_for_store; assumption.
+  - exact Hshadow.
+  - apply root_env_no_shadow_empty_root_env_for_store. exact Hshadow.
+  - apply root_env_store_roots_named_empty_root_env_for_store.
+  - apply root_env_store_keys_named_empty_root_env_for_store.
 Qed.
 
 Lemma root_env_store_roots_named_app :

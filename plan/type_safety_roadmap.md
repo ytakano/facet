@@ -164,6 +164,57 @@ Work in this order unless a proof exposes a soundness gap:
    Treat this as instantiating params with `arg_roots`, captures with empty
    roots, then tail-framing over the copied-capture/argument root environment.
 
+   Current progress: the runtime argument/captured-frame package now has
+   TypeSafety-side helpers:
+
+   - `captured_call_bind_params_call_param_root_env_ready`;
+   - `captured_call_frame_args_values_have_types`;
+   - `captured_call_runtime_root_env_covers_params_captures`;
+   - `eval_make_closure_captured_call_runtime_args_ready_auto`;
+   - `eval_make_closure_captured_call_expr_preserves_typing_with_instantiated_body`;
+   - `alpha_rename_params_initial_root_env_rename_stable_tail_ts`;
+   - `alpha_rename_fn_def_binding_initial_support_facts`;
+   - `alpha_rename_fn_def_binding_params_alpha_ts`;
+   - `empty_root_env_for_store_params_fresh_lookup_none`;
+   - `captured_call_runtime_args_tail_excludes_binding_params`;
+   - `captured_call_runtime_args_tail_fresh_names_for_fresh_call`;
+   - `empty_root_env_for_captured_params_equiv`;
+   - `captured_call_runtime_root_env_binding_split_equiv`;
+   - `captured_call_binding_runtime_root_env_equiv`;
+   - `apply_lt_ty_nil_ts`;
+   - `eval_make_closure_captured_call_expr_preserves_typing_with_callee_components`.
+
+   The last helper is the current stable connection point. It consumes the raw
+   callee components stored in
+   `callee_body_root_shadow_captured_callee_provenance_summary`, alpha-renames
+   and instantiates the callee body at
+   `call_param_root_env (fn_params fcall) arg_roots
+   (empty_root_env_for_store captured ++ R_args)`, packages runtime args,
+   copied captures, frame coverage, cleanup, and final value typing.
+
+   Completed proof subtask: the root-env equivalence between binding
+   instantiation and the copied-capture base frame is now available as
+   `captured_call_binding_runtime_root_env_equiv`:
+
+   ```coq
+   root_env_equiv
+     (call_param_root_env (fn_params fcall) arg_roots
+       (empty_root_env_for_store captured))
+     (root_env_instantiate
+       (root_subst_of_params
+         (fn_params fdef ++ fn_captures fdef)
+         (arg_roots ++ repeat [] (List.length (fn_captures fdef))))
+       (initial_root_env_for_params_origin
+         (fn_params fdef ++ fn_captures fdef)
+         (fn_params fcall ++ fn_captures fcall)))
+   ```
+
+   Next proof subtask: connect `EnvRuntimeSafety.v` to this helper. In the
+   captured-call branch, destruct `Eval_CallExpr` and the outer
+   `TERS_CallExpr_MakeClosure`, align the runtime/typed callee with the summary
+   callee using `fn_env_unique_by_name`, then call
+   `eval_make_closure_captured_call_expr_preserves_typing_with_callee_components`.
+
 4. **Final captured-call executable endpoint.**
    Add the checked-initial wrapper for:
 

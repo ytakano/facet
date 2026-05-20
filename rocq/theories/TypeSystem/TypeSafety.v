@@ -1323,6 +1323,86 @@ Proof.
   - inversion Hnodup; subst. apply IH. exact H2.
 Qed.
 
+Lemma NoDup_app_not_in_right_ts : forall (xs ys : list ident) x,
+  NoDup (xs ++ ys) ->
+  In x xs ->
+  ~ In x ys.
+Proof.
+  intros xs ys x Hnodup Hin Hiny.
+  induction xs as [| y xs IH]; simpl in *.
+  - contradiction.
+  - inversion Hnodup; subst.
+    destruct Hin as [Heq | Hin].
+    + subst y. apply H1. apply in_or_app. right. exact Hiny.
+    + apply IH.
+      * exact H2.
+      * exact Hin.
+Qed.
+
+Lemma apply_lt_lifetime_nil_ts :
+  forall l,
+    apply_lt_lifetime [] l = l.
+Proof.
+  intros l. destruct l as [| i | i]; simpl; try reflexivity.
+  induction i as [| i IH]; simpl; try reflexivity.
+Qed.
+
+Lemma apply_lt_outlives_nil_ts :
+  forall Ω,
+    apply_lt_outlives [] Ω = Ω.
+Proof.
+  unfold apply_lt_outlives.
+  induction Ω as [| [a b] Ω IH]; cbn [map].
+  - reflexivity.
+  - rewrite !apply_lt_lifetime_nil_ts. rewrite IH. reflexivity.
+Qed.
+
+Lemma apply_lt_ty_nil_ts :
+  forall T,
+    apply_lt_ty [] T = T.
+Proof.
+  fix IH 1.
+  intros [u core].
+  destruct core; cbn [apply_lt_ty]; try reflexivity.
+  - assert (Hlts : map (apply_lt_lifetime []) l = l).
+    { induction l as [| lt l IHl]; cbn [map].
+      - reflexivity.
+      - rewrite apply_lt_lifetime_nil_ts. rewrite IHl. reflexivity. }
+    assert (Hargs :
+      (fix map_lt (xs : list Ty) : list Ty :=
+        match xs with
+        | [] => []
+        | x :: xs' => apply_lt_ty [] x :: map_lt xs'
+        end) l0 = l0).
+    { induction l0 as [| T l0 IHl]; simpl.
+      - reflexivity.
+      - rewrite IH. rewrite IHl. reflexivity. }
+    rewrite Hlts. rewrite Hargs. reflexivity.
+  - assert (Hargs :
+      (fix map_lt (xs : list Ty) : list Ty :=
+        match xs with
+        | [] => []
+        | x :: xs' => apply_lt_ty [] x :: map_lt xs'
+        end) l = l).
+    { induction l as [| T l IHl]; simpl.
+      - reflexivity.
+      - rewrite IH. rewrite IHl. reflexivity. }
+    rewrite Hargs. rewrite IH. reflexivity.
+  - assert (Hargs :
+      (fix map_lt (xs : list Ty) : list Ty :=
+        match xs with
+        | [] => []
+        | x :: xs' => apply_lt_ty [] x :: map_lt xs'
+        end) l0 = l0).
+    { induction l0 as [| T l0 IHl]; simpl.
+      - reflexivity.
+      - rewrite IH. rewrite IHl. reflexivity. }
+    rewrite apply_lt_lifetime_nil_ts. rewrite Hargs. rewrite IH.
+    reflexivity.
+  - rewrite apply_lt_outlives_nil_ts. rewrite IH. reflexivity.
+  - rewrite apply_lt_lifetime_nil_ts. rewrite IH. reflexivity.
+Qed.
+
 Lemma NoDup_app_remove_middle_ts : forall (xs ys zs : list ident),
   NoDup (xs ++ ys ++ zs) ->
   NoDup (xs ++ zs).
@@ -2759,9 +2839,10 @@ Lemma root_env_lookup_app_left :
 Proof.
   intros x R1.
   induction R1 as [| [y roots_y] rest IH]; intros R2 roots Hlookup;
-    simpl in *; try discriminate.
-  destruct (ident_eqb x y); try assumption.
-  apply IH. exact Hlookup.
+    simpl; simpl in Hlookup; try discriminate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - exact Hlookup.
+  - apply IH. exact Hlookup.
 Qed.
 
 Lemma root_env_lookup_app_right :
@@ -2771,9 +2852,10 @@ Lemma root_env_lookup_app_right :
 Proof.
   intros x R1.
   induction R1 as [| [y roots_y] rest IH]; intros R2 Hlookup;
-    simpl in *; try reflexivity.
-  destruct (ident_eqb x y); try discriminate.
-  apply IH. exact Hlookup.
+    simpl; simpl in Hlookup; try reflexivity.
+  destruct (ident_eqb x y) eqn:Heq.
+  - discriminate.
+  - apply IH. exact Hlookup.
 Qed.
 
 Lemma root_env_names_app :
@@ -2821,6 +2903,24 @@ Proof.
         destruct (ident_eqb y x); try exact Hdisj.
         right. destruct Hdisj as [Hbad | Hnone]; try discriminate.
         exact Hnone.
+Qed.
+
+Lemma root_env_no_shadow_app_lookup_right_none :
+  forall R1 R2 x roots,
+    root_env_no_shadow (R1 ++ R2) ->
+    root_env_lookup x R2 = Some roots ->
+    root_env_lookup x R1 = None.
+Proof.
+  intros R1 R2 x roots Hrn Hlookup_right.
+  destruct (root_env_lookup x R1) as [roots_left |] eqn:Hlookup_left;
+    try reflexivity.
+  exfalso.
+  unfold root_env_no_shadow in Hrn.
+  rewrite root_env_names_app in Hrn.
+  eapply (NoDup_app_not_in_right_ts (root_env_names R1)
+            (root_env_names R2) x Hrn).
+  - eapply root_env_lookup_some_in_names. exact Hlookup_left.
+  - eapply root_env_lookup_some_in_names. exact Hlookup_right.
 Qed.
 
 Lemma root_env_excludes_app :
@@ -3738,6 +3838,22 @@ Proof.
   exact IH.
 Qed.
 
+Lemma root_env_remove_params_app_left :
+  forall ps R1 R2,
+    (forall x,
+      In x (ctx_names (params_ctx ps)) ->
+      root_env_lookup x R2 = None) ->
+    root_env_remove_params ps (R1 ++ R2) =
+      root_env_remove_params ps R1 ++ R2.
+Proof.
+  induction ps as [| p ps IH]; intros R1 R2 Hlookup_tail; simpl.
+  - reflexivity.
+  - rewrite root_env_remove_app_left.
+    + apply IH. intros x Hin.
+      apply Hlookup_tail. right. exact Hin.
+    + apply Hlookup_tail. left. reflexivity.
+Qed.
+
 Lemma call_param_root_env_app_tail :
   forall ps roots_list R_tail,
     call_param_root_env ps roots_list R_tail =
@@ -3748,6 +3864,153 @@ Proof.
   unfold call_param_root_env at 1 2.
   rewrite root_env_remove_params_empty.
   apply root_env_add_params_roots_app_tail.
+Qed.
+
+Lemma root_env_add_params_roots_app_roots :
+  forall ps qs roots_ps roots_qs R,
+    List.length roots_ps = List.length ps ->
+    root_env_add_params_roots (ps ++ qs) (roots_ps ++ roots_qs) R =
+      root_env_add_params_roots ps roots_ps
+        (root_env_add_params_roots qs roots_qs R).
+Proof.
+  induction ps as [| p ps IH]; intros qs roots_ps roots_qs R Hlen;
+    destruct roots_ps as [| roots roots_ps]; simpl in *; try discriminate.
+  - reflexivity.
+  - inversion Hlen as [Hlen_tail].
+    rewrite IH by exact Hlen_tail.
+    reflexivity.
+Qed.
+
+Lemma root_env_add_params_roots_preserves_equiv :
+  forall ps roots_list R R',
+    root_env_equiv R R' ->
+    root_env_equiv
+      (root_env_add_params_roots ps roots_list R)
+      (root_env_add_params_roots ps roots_list R').
+Proof.
+  induction ps as [| p ps IH]; intros roots_list R R' Heq;
+    destruct roots_list as [| roots roots_list]; simpl.
+  - exact Heq.
+  - exact Heq.
+  - exact Heq.
+  - apply root_env_equiv_add.
+    + apply root_set_equiv_refl.
+    + apply IH. exact Heq.
+Qed.
+
+Lemma call_param_root_env_app_roots :
+  forall ps qs roots_ps roots_qs R,
+    List.length roots_ps = List.length ps ->
+    call_param_root_env (ps ++ qs) (roots_ps ++ roots_qs) R =
+      root_env_add_params_roots ps roots_ps
+        (root_env_add_params_roots qs roots_qs
+          (root_env_remove_params (ps ++ qs) R)).
+Proof.
+  intros ps qs roots_ps roots_qs R Hlen.
+  unfold call_param_root_env.
+  apply root_env_add_params_roots_app_roots. exact Hlen.
+Qed.
+
+Lemma params_alpha_refl_ts :
+  forall ps,
+    params_alpha ps ps.
+Proof.
+  apply params_alpha_refl.
+Qed.
+
+Lemma params_alpha_app_ts :
+  forall ps psr qs qsr,
+    params_alpha ps psr ->
+    params_alpha qs qsr ->
+    params_alpha (ps ++ qs) (psr ++ qsr).
+Proof.
+  intros ps psr qs qsr Halpha_ps Halpha_qs.
+  induction Halpha_ps as [| p pr ps psr Hshape Halpha_tail IH];
+    simpl.
+  - exact Halpha_qs.
+  - constructor; assumption.
+Qed.
+
+Lemma alpha_rename_fn_def_binding_params_alpha_ts :
+  forall used f fr used',
+    alpha_rename_fn_def used f = (fr, used') ->
+    params_alpha (fn_params f ++ fn_captures f)
+      (fn_params fr ++ fn_captures fr).
+Proof.
+  intros used f fr used' Hrename.
+  apply params_alpha_app_ts.
+  - pose proof (alpha_rename_fn_def_shape used f fr used' Hrename)
+      as [_ [_ Hparams_alpha]].
+    exact Hparams_alpha.
+  - rewrite <- (alpha_rename_fn_def_captures used f fr used' Hrename).
+    apply params_alpha_refl_ts.
+Qed.
+
+Lemma root_env_remove_app_right_lookup_none :
+  forall x R1 R2,
+    root_env_lookup x R1 = None ->
+    root_env_remove x (R1 ++ R2) = R1 ++ root_env_remove x R2.
+Proof.
+  intros x R1.
+  induction R1 as [| [y roots_y] R1 IH]; intros R2 Hlookup; simpl in *.
+  - reflexivity.
+  - destruct (ident_eqb x y) eqn:Heq; try discriminate.
+    rewrite IH by exact Hlookup.
+    reflexivity.
+Qed.
+
+Lemma root_env_remove_params_lookup_none_self :
+  forall ps R,
+    (forall x,
+      In x (ctx_names (params_ctx ps)) ->
+      root_env_lookup x R = None) ->
+    root_env_remove_params ps R = R.
+Proof.
+  induction ps as [| p ps IH]; intros R Hfresh; simpl.
+  - reflexivity.
+  - rewrite root_env_remove_lookup_none.
+    + apply IH. intros x Hin.
+      apply Hfresh. right. exact Hin.
+    + apply Hfresh. left. reflexivity.
+Qed.
+
+Lemma root_env_remove_params_app_right_lookup_none :
+  forall ps R1 R2,
+    (forall x,
+      In x (ctx_names (params_ctx ps)) ->
+      root_env_lookup x R1 = None) ->
+    root_env_remove_params ps (R1 ++ R2) =
+      R1 ++ root_env_remove_params ps R2.
+Proof.
+  induction ps as [| p ps IH]; intros R1 R2 Hfresh; simpl.
+  - reflexivity.
+  - rewrite root_env_remove_app_right_lookup_none.
+    + rewrite IH.
+      * reflexivity.
+      * intros x Hin. apply Hfresh. right. exact Hin.
+    + apply Hfresh. left. reflexivity.
+Qed.
+
+Lemma captured_call_runtime_root_env_tail_decompose :
+  forall ps arg_roots Rcap R_args,
+    (forall x,
+      In x (ctx_names (params_ctx ps)) ->
+      root_env_lookup x Rcap = None) ->
+    call_param_root_env ps arg_roots (Rcap ++ R_args) =
+      call_param_root_env ps arg_roots Rcap ++
+        root_env_remove_params ps R_args.
+Proof.
+  intros ps arg_roots Rcap R_args Hfresh_cap.
+  unfold call_param_root_env.
+  rewrite (root_env_remove_params_app_right_lookup_none
+             ps Rcap R_args Hfresh_cap).
+  rewrite (root_env_remove_params_lookup_none_self
+             ps Rcap Hfresh_cap).
+  rewrite (root_env_add_params_roots_app_tail
+             ps arg_roots (Rcap ++ root_env_remove_params ps R_args)).
+  rewrite (root_env_add_params_roots_app_tail ps arg_roots Rcap).
+  rewrite app_assoc.
+  reflexivity.
 Qed.
 
 Definition root_env_tail_fresh_names (R_tail : root_env)
@@ -7670,6 +7933,19 @@ Proof.
   - simpl. rewrite IH. reflexivity.
 Qed.
 
+Lemma empty_root_env_for_store_param_prefix :
+  forall ps s_param s,
+    store_param_prefix ps s_param s ->
+    empty_root_env_for_store s_param =
+      root_env_add_params_roots ps (repeat [] (List.length ps))
+        (empty_root_env_for_store s).
+Proof.
+  intros ps s_param s Hprefix.
+  induction Hprefix as [s | p ps v st s_param s _ IH].
+  - reflexivity.
+  - simpl. rewrite IH. reflexivity.
+Qed.
+
 Inductive store_param_scope : list param -> store -> store -> Prop :=
   | SPS_Prefix : forall ps s_param s,
       store_param_prefix ps s_param s ->
@@ -8522,6 +8798,19 @@ Proof.
   rewrite app_nil_r. exact Hin.
 Qed.
 
+Lemma empty_root_env_for_captured_params_equiv :
+  forall env captured caps,
+    captured_params_store_typed env captured caps ->
+    root_env_equiv (empty_root_env_for_store captured)
+      (root_env_add_params_roots caps (repeat [] (List.length caps)) []).
+Proof.
+  intros env captured caps Htyped.
+  pose proof (captured_params_store_typed_store_param_prefix
+                env captured caps Htyped) as Hprefix.
+  rewrite (empty_root_env_for_store_param_prefix caps captured [] Hprefix).
+  simpl. apply root_env_equiv_refl.
+Qed.
+
 Lemma captured_params_store_typed_empty_root_env_app_covers :
   forall env captured caps R_tail,
     captured_params_store_typed env captured caps ->
@@ -8592,6 +8881,32 @@ Proof.
   apply Hexcl.
   rewrite params_ctx_app, ctx_names_app.
   apply in_or_app. right. exact Hin.
+Qed.
+
+Lemma empty_root_env_for_store_params_fresh_lookup_none :
+  forall ps s x,
+    params_fresh_in_store ps s ->
+    In x (ctx_names (params_ctx ps)) ->
+    root_env_lookup x (empty_root_env_for_store s) = None.
+Proof.
+  intros ps s x Hfresh Hin.
+  apply root_env_lookup_empty_root_env_for_store_none.
+  exact (Hfresh x Hin).
+Qed.
+
+Lemma root_env_excludes_params_empty_root_env_for_store :
+  forall ps s,
+    root_env_excludes_params ps (empty_root_env_for_store s).
+Proof.
+  unfold root_env_excludes_params, root_env_excludes, roots_exclude.
+  intros ps s x _ y roots Hlookup _ Hin.
+  assert (Hy_names : In y (store_names s)).
+  { rewrite <- root_env_names_empty_root_env_for_store.
+    eapply root_env_lookup_some_in_names. exact Hlookup. }
+  rewrite root_env_lookup_empty_root_env_for_store in Hlookup
+    by exact Hy_names.
+  inversion Hlookup; subst roots.
+  contradiction.
 Qed.
 
 Lemma root_set_no_store_of_sctx_named_excludes_params :
@@ -8875,6 +9190,19 @@ Proof.
   intros R s x Hnamed Hfresh y roots Hlookup Hyx Hin.
   apply Hfresh.
   eapply Hnamed; eassumption.
+Qed.
+
+Lemma root_env_store_keys_named_lookup_excludes_name :
+  forall R s x,
+    root_env_store_keys_named R s ->
+    ~ In x (store_names s) ->
+    root_env_lookup x R = None.
+Proof.
+  intros R s x Hnamed Hfresh.
+  destruct (root_env_lookup x R) as [roots |] eqn:Hlookup;
+    try reflexivity.
+  exfalso. apply Hfresh.
+  eapply root_env_keys_named_lookup; eassumption.
 Qed.
 
 Lemma root_set_store_roots_named_excludes_params :
@@ -9192,6 +9520,35 @@ Proof.
   - exact Hlen.
 Qed.
 
+Lemma captured_call_runtime_root_env_covers_params_captures :
+  forall env captured caps ps arg_roots R_tail,
+    NoDup (ctx_names (params_ctx ps)) ->
+    List.length arg_roots = List.length ps ->
+    captured_params_store_typed env captured caps ->
+    root_env_covers_params (ps ++ caps)
+      (call_param_root_env ps arg_roots
+        (empty_root_env_for_store captured ++ R_tail)).
+Proof.
+  intros env captured caps ps arg_roots R_tail Hnodup Hlen Hcaptured.
+  apply root_env_covers_params_app.
+  - apply call_param_root_env_covers_params; assumption.
+  - unfold root_env_covers_params.
+    intros x Hin_caps.
+    assert (Hident_dec : forall a b : ident, {a = b} + {a <> b}).
+    { decide equality; [apply Nat.eq_dec | apply string_dec]. }
+    destruct (in_dec Hident_dec x (ctx_names (params_ctx ps)))
+      as [Hin_ps | Hnotin_ps].
+    + apply call_param_root_env_covers_params; assumption.
+    + destruct (captured_params_store_typed_empty_root_env_app_covers
+                  env captured caps R_tail Hcaptured x Hin_caps)
+        as [roots Hlookup_tail].
+      exists roots.
+      unfold call_param_root_env.
+      rewrite root_env_add_params_roots_lookup_not_in by exact Hnotin_ps.
+      rewrite root_env_lookup_remove_params_not_in by exact Hnotin_ps.
+      exact Hlookup_tail.
+Qed.
+
 Lemma root_env_excludes_remove_no_shadow :
   forall x y R,
     root_env_no_shadow R ->
@@ -9253,6 +9610,168 @@ Lemma root_env_remove_params_excludes_params :
 Proof.
   intros ps R_tail Hrn Hexcl.
   eapply root_env_remove_params_preserves_excludes_params; eassumption.
+Qed.
+
+Lemma captured_call_runtime_args_tail_excludes_binding_params :
+  forall ps caps R_args s_args,
+    root_env_no_shadow R_args ->
+    root_env_store_roots_named R_args s_args ->
+    params_fresh_in_store (ps ++ caps) s_args ->
+    root_env_excludes_params (ps ++ caps)
+      (root_env_remove_params ps R_args).
+Proof.
+  intros ps caps R_args s_args Hrn Hnamed Hfresh.
+  eapply root_env_remove_params_preserves_excludes_params.
+  - exact Hrn.
+  - eapply root_env_store_roots_named_excludes_params; eassumption.
+Qed.
+
+Lemma captured_call_runtime_args_tail_fresh_names_for_fresh_call :
+  forall env captured s_args R_args fdef fcall used',
+    captured_call_frame_ready env captured
+      (empty_root_env_for_store captured) s_args R_args ->
+    alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
+      (fcall, used') ->
+    root_env_tail_fresh_names
+      (root_env_remove_params (fn_params fcall) R_args)
+      (expr_local_store_names (fn_body fcall)).
+Proof.
+  unfold root_env_tail_fresh_names.
+  intros env captured s_args R_args fdef fcall used'
+    Hframe Hrename x Hin.
+  unfold captured_call_frame_ready in Hframe.
+  destruct Hframe as [_ [_ [_ [Hrn_tail [Hnamed_tail Hkeys_tail]]]]].
+  assert (Hrn_args : root_env_no_shadow R_args).
+  { unfold root_env_no_shadow in *.
+    rewrite root_env_names_app in Hrn_tail.
+    eapply NoDup_app_right_ts. exact Hrn_tail. }
+  assert (Hnamed_args :
+    root_env_store_roots_named R_args (captured ++ s_args)).
+  { unfold root_env_store_roots_named in *.
+    intros y roots z Hlookup_args Hin_root.
+    eapply Hnamed_tail.
+    - assert (Hlookup_cap :
+        root_env_lookup y (empty_root_env_for_store captured) = None).
+      { eapply root_env_no_shadow_app_lookup_right_none; eassumption. }
+      rewrite (root_env_lookup_app_right y
+        (empty_root_env_for_store captured) R_args Hlookup_cap).
+      exact Hlookup_args.
+    - exact Hin_root. }
+  assert (Hkeys_args :
+    root_env_store_keys_named R_args (captured ++ s_args)).
+  { unfold root_env_store_keys_named, root_env_keys_named in *.
+    intros y Hin_names.
+    apply Hkeys_tail.
+    rewrite root_env_names_app.
+    apply in_or_app. right. exact Hin_names. }
+  pose proof (alpha_rename_fn_def_body_local_store_names_fresh_used
+                (store_names (captured ++ s_args)) fdef fcall used'
+                Hrename)
+    as Hfresh_names.
+  assert (Hfresh_x : ~ In x (store_names (captured ++ s_args))).
+  { apply (proj1 (Forall_forall _ _) Hfresh_names). exact Hin. }
+  assert (Hlookup : root_env_lookup x R_args = None).
+  { eapply root_env_store_keys_named_lookup_excludes_name; eassumption. }
+  assert (Hexcl : root_env_excludes x R_args).
+  { eapply root_env_store_roots_named_excludes_name; eassumption. }
+  split.
+  - apply root_env_lookup_remove_params_none_preserved. exact Hlookup.
+  - apply root_env_remove_params_preserves_excludes; assumption.
+Qed.
+
+Lemma captured_call_runtime_root_env_binding_split_equiv :
+  forall env captured ps caps arg_roots,
+    captured_params_store_typed env captured caps ->
+    params_fresh_in_store ps captured ->
+    List.length arg_roots = List.length ps ->
+    root_env_equiv
+      (call_param_root_env ps arg_roots
+        (empty_root_env_for_store captured))
+      (call_param_root_env (ps ++ caps)
+        (arg_roots ++ repeat [] (List.length caps)) []).
+Proof.
+  intros env captured ps caps arg_roots Hcaptured Hfresh Hlen.
+  rewrite (call_param_root_env_app_roots ps caps arg_roots
+             (repeat [] (List.length caps)) [] Hlen).
+  unfold call_param_root_env at 1.
+  rewrite (root_env_remove_params_lookup_none_self
+             ps (empty_root_env_for_store captured)).
+  - eapply root_env_add_params_roots_preserves_equiv.
+    rewrite root_env_remove_params_empty.
+    eapply empty_root_env_for_captured_params_equiv. exact Hcaptured.
+  - intros x Hin.
+    eapply empty_root_env_for_store_params_fresh_lookup_none; eassumption.
+Qed.
+
+Lemma captured_call_binding_runtime_root_env_equiv :
+  forall env captured fdef fcall used used' arg_roots,
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    NoDup (ctx_names (params_ctx
+      (fn_params fdef ++ fn_captures fdef))) ->
+    List.length arg_roots = List.length (fn_params fdef) ->
+    captured_params_store_typed env captured (fn_captures fcall) ->
+    params_fresh_in_store (fn_params fcall) captured ->
+    root_env_equiv
+      (call_param_root_env (fn_params fcall) arg_roots
+        (empty_root_env_for_store captured))
+      (root_env_instantiate
+        (root_subst_of_params
+          (fn_params fdef ++ fn_captures fdef)
+          (arg_roots ++ repeat [] (List.length (fn_captures fdef))))
+        (initial_root_env_for_params_origin
+          (fn_params fdef ++ fn_captures fdef)
+          (fn_params fcall ++ fn_captures fcall))).
+Proof.
+  intros env captured fdef fcall used used' arg_roots Hrename Hnodup
+    Hlen_args Hcaptured Hfresh.
+  pose proof (alpha_rename_fn_def_binding_params_alpha_ts
+                used fdef fcall used' Hrename) as Halpha_binding.
+  pose proof (alpha_rename_fn_def_shape used fdef fcall used' Hrename)
+    as [_ [_ Halpha_params]].
+  assert (Hlen_args_fcall :
+    List.length arg_roots = List.length (fn_params fcall)).
+  { rewrite <- (params_alpha_length _ _ Halpha_params).
+    exact Hlen_args. }
+  assert (Hcaps_eq :
+    fn_captures fcall = fn_captures fdef).
+  { rewrite <- (alpha_rename_fn_def_captures
+                  used fdef fcall used' Hrename).
+    reflexivity. }
+  assert (Hlen_binding :
+    List.length
+      (arg_roots ++ repeat [] (List.length (fn_captures fdef))) =
+    List.length (fn_params fdef ++ fn_captures fdef)).
+  { rewrite length_app, repeat_length, length_app.
+    rewrite Hlen_args. reflexivity. }
+  assert (Hinitial_inst_equiv :
+    root_env_equiv
+      (root_env_instantiate
+        (root_subst_of_params
+          (fn_params fdef ++ fn_captures fdef)
+          (arg_roots ++ repeat [] (List.length (fn_captures fdef))))
+        (initial_root_env_for_params_origin
+          (fn_params fdef ++ fn_captures fdef)
+          (fn_params fcall ++ fn_captures fcall)))
+      (call_param_root_env (fn_params fcall ++ fn_captures fcall)
+        (arg_roots ++ repeat [] (List.length (fn_captures fdef))) [])).
+  { eapply root_env_instantiate_initial_origin_equiv_call_param_root_env_empty;
+      eassumption. }
+  eapply (root_env_equiv_trans
+    (call_param_root_env (fn_params fcall) arg_roots
+      (empty_root_env_for_store captured))
+    (call_param_root_env (fn_params fcall ++ fn_captures fcall)
+      (arg_roots ++ repeat [] (List.length (fn_captures fdef))) [])
+    (root_env_instantiate
+      (root_subst_of_params
+        (fn_params fdef ++ fn_captures fdef)
+        (arg_roots ++ repeat [] (List.length (fn_captures fdef))))
+      (initial_root_env_for_params_origin
+        (fn_params fdef ++ fn_captures fdef)
+        (fn_params fcall ++ fn_captures fcall)))).
+  - rewrite <- Hcaps_eq.
+    eapply captured_call_runtime_root_env_binding_split_equiv;
+      eassumption.
+  - apply root_env_equiv_sym. exact Hinitial_inst_equiv.
 Qed.
 
 Lemma root_env_excludes_add :
@@ -11082,6 +11601,63 @@ Proof.
     + exact Hnodup.
     + rewrite (Forall2_length Hvalues).
       eapply eval_args_values_have_types_length. exact Hargs_values.
+Qed.
+
+Lemma captured_call_bind_params_call_param_root_env_ready :
+  forall env captured Rcap s_args R_args ps_bind vs Ω arg_roots,
+    captured_call_frame_ready env captured Rcap s_args R_args ->
+    NoDup (ctx_names (params_ctx ps_bind)) ->
+    params_fresh_in_store ps_bind (captured ++ s_args) ->
+    eval_args_values_have_types env Ω (captured ++ s_args) vs ps_bind ->
+    Forall2 value_roots_within arg_roots vs ->
+    store_roots_within (call_param_root_env ps_bind arg_roots
+      (Rcap ++ R_args)) (bind_params ps_bind vs (captured ++ s_args)) /\
+    store_no_shadow (bind_params ps_bind vs (captured ++ s_args)) /\
+    root_env_no_shadow (call_param_root_env ps_bind arg_roots
+      (Rcap ++ R_args)) /\
+    root_env_covers_params ps_bind
+      (call_param_root_env ps_bind arg_roots (Rcap ++ R_args)).
+Proof.
+  intros env captured Rcap s_args R_args ps_bind vs Ω arg_roots
+    Hframe Hnodup Hfresh Hargs_values Hvalue_roots.
+  unfold captured_call_frame_ready in Hframe.
+  destruct Hframe as [Hcap_ready [Hroots_args [Hshadow_frame
+    [Hrn_frame _]]]].
+  unfold captured_store_runtime_ready in Hcap_ready.
+  destruct Hcap_ready as [_ [Hroots_cap _]].
+  assert (Hroots_frame :
+    store_roots_within (Rcap ++ R_args) (captured ++ s_args)).
+  { eapply store_roots_within_app.
+    - exact Hroots_cap.
+    - exact Hroots_args.
+    - intros x roots Hlookup_args.
+      eapply root_env_no_shadow_app_lookup_right_none; eassumption. }
+  repeat split.
+  - eapply (bind_params_store_roots_within_call_param_root_env
+      env Ω (captured ++ s_args) vs ps_bind (Rcap ++ R_args)
+      arg_roots); eassumption.
+  - eapply bind_params_store_no_shadow; eassumption.
+  - apply call_param_root_env_no_shadow; assumption.
+  - apply call_param_root_env_covers_params.
+    + exact Hnodup.
+    + rewrite (Forall2_length Hvalue_roots).
+      eapply eval_args_values_have_types_length. exact Hargs_values.
+Qed.
+
+Lemma captured_call_frame_args_values_have_types :
+  forall env captured Rcap s_args R_args Ω vs ps,
+    captured_call_frame_ready env captured Rcap s_args R_args ->
+    eval_args_values_have_types env Ω s_args vs ps ->
+    eval_args_values_have_types env Ω (captured ++ s_args) vs ps.
+Proof.
+  intros env captured Rcap s_args R_args Ω vs ps Hframe Hargs.
+  unfold captured_call_frame_ready in Hframe.
+  destruct Hframe as [_ [_ [Hshadow_frame _]]].
+  eapply eval_args_values_have_types_store_preserved.
+  - exact Hargs.
+  - apply store_ref_targets_preserved_app_right.
+    intros x Hin.
+    eapply store_no_shadow_app_lookup_right_none; eassumption.
 Qed.
 
 Lemma bind_params_ref_targets_preserved :
@@ -17333,17 +17909,202 @@ Proof.
       eapply root_env_ctx_keys_named_store_typed; eassumption.
 Qed.
 
-Lemma root_env_store_keys_named_lookup_excludes_name :
-  forall R s x,
+Lemma eval_make_closure_captured_call_runtime_args_ready_auto :
+  forall env Ω n R Σ args fname captures captured fdef fcall used'
+      s s_args vs R_args Σ_args arg_roots captured_tys,
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
     root_env_store_keys_named R s ->
-    ~ In x (store_names s) ->
-    root_env_lookup x R = None.
+    eval env s (EMakeClosure fname captures) s (VClosure fname captured) ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    eval_args env s args s_args vs ->
+    alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
+      (fcall, used') ->
+    check_make_closure_captures_exact_sctx env Ω Σ captures
+      (fn_captures fdef) = infer_ok captured_tys ->
+    NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
+    preservation_ready_args args ->
+    typed_args_roots env Ω n R Σ args (fn_params fdef)
+      Σ_args R_args arg_roots ->
+    captured_call_frame_params_ready env captured
+      (empty_root_env_for_store captured) s_args R_args
+      (fn_captures fcall) /\
+    store_typed env s_args Σ_args /\
+    eval_args_values_have_types env Ω (captured ++ s_args) vs
+      (fn_params fcall) /\
+    Forall2 value_roots_within arg_roots vs /\
+    store_roots_within
+      (call_param_root_env (fn_params fcall) arg_roots
+        (empty_root_env_for_store captured ++ R_args))
+      (bind_params (fn_params fcall) vs (captured ++ s_args)) /\
+    store_no_shadow (bind_params (fn_params fcall) vs
+      (captured ++ s_args)) /\
+    root_env_no_shadow
+      (call_param_root_env (fn_params fcall) arg_roots
+        (empty_root_env_for_store captured ++ R_args)) /\
+    root_env_covers_params (fn_params fcall)
+      (call_param_root_env (fn_params fcall) arg_roots
+        (empty_root_env_for_store captured ++ R_args)).
 Proof.
-  intros R s x Hnamed Hfresh.
-  destruct (root_env_lookup x R) as [roots |] eqn:Hlookup;
-    try reflexivity.
-  exfalso. apply Hfresh.
-  eapply root_env_keys_named_lookup; eassumption.
+  intros env Ω n R Σ args fname captures captured fdef fcall used'
+    s s_args vs R_args Σ_args arg_roots captured_tys Hstore Hroots
+    Hshadow Hrn Hnamed Hkeys Heval_make Hlookup Heval_args Hrename
+    Hcheck Hnodup_caps Hready_args Htyped_args.
+  pose proof (preservation_ready_args_implies_provenance_ready
+                args Hready_args) as Hprov_args.
+  destruct (proj1 (proj2 eval_preserves_typing_ready_mutual)
+              env s args s_args vs Heval_args Ω n Σ (fn_params fdef)
+              Σ_args Hready_args Hstore
+              (typed_args_roots_structural env Ω n R Σ args
+                (fn_params fdef) Σ_args R_args arg_roots Htyped_args))
+    as [Hstore_args [Hargs_fdef_sargs _]].
+  destruct (proj1 (proj2 eval_preserves_roots_ready_mutual)
+              env s args s_args vs Heval_args Ω n R Σ (fn_params fdef)
+              Σ_args R_args arg_roots Hprov_args Hroots Hshadow Hrn
+              Htyped_args)
+    as [Hroots_args [Hvalue_roots [Hshadow_args Hrn_args]]].
+  pose proof (proj1 (proj2 eval_preserves_root_names_ready_mutual)
+              env s args s_args vs Heval_args Ω n R Σ (fn_params fdef)
+              Σ_args R_args arg_roots Hprov_args Hstore Hroots Hshadow
+              Hrn Hnamed Htyped_args) as Hnames_args.
+  pose proof (proj1 (proj2 eval_preserves_root_keys_named_ready_mutual)
+              env s args s_args vs Heval_args Ω n R Σ (fn_params fdef)
+              Σ_args R_args arg_roots Hprov_args Hstore Hroots Hshadow
+              Hrn Hkeys Htyped_args) as Hkeys_args.
+  pose proof
+    (eval_make_closure_exact_captured_call_frame_params_ready_auto
+      env Ω s Σ fname captures captured fdef fcall used' args s_args vs
+      R_args captured_tys Hstore Heval_make Hlookup Hrename Hcheck
+      Hnodup_caps Hready_args Heval_args Hroots_args Hshadow_args Hrn_args
+      (proj1 Hnames_args) Hkeys_args) as Hframe_params_ready.
+  destruct Hframe_params_ready as [Hframe_ready Hcaptured_params_typed].
+  pose proof
+    (captured_call_frame_args_values_have_types
+      env captured (empty_root_env_for_store captured) s_args R_args Ω vs
+      (fn_params fdef) Hframe_ready Hargs_fdef_sargs)
+    as Hargs_fdef_frame.
+  pose proof (alpha_rename_fn_def_shape (store_names (captured ++ s_args))
+                fdef fcall used' Hrename) as Hshape.
+  destruct Hshape as [_ [_ Hparams_alpha]].
+  assert (Hargs_fcall :
+    eval_args_values_have_types env Ω (captured ++ s_args) vs
+      (fn_params fcall)).
+  { eapply eval_args_values_have_types_params_alpha; eassumption. }
+  assert (Hnodup_fcall :
+    NoDup (ctx_names (params_ctx (fn_params fcall)))).
+  { eapply alpha_rename_fn_def_params_nodup_ctx_names. exact Hrename. }
+  assert (Hfresh_fcall :
+    params_fresh_in_store (fn_params fcall) (captured ++ s_args)).
+  { eapply alpha_rename_fn_def_params_fresh_in_store. exact Hrename. }
+  destruct
+    (captured_call_bind_params_call_param_root_env_ready
+      env captured (empty_root_env_for_store captured) s_args R_args
+      (fn_params fcall) vs Ω arg_roots Hframe_ready Hnodup_fcall
+      Hfresh_fcall Hargs_fcall Hvalue_roots)
+    as [Hroots_bind [Hshadow_bind [Hrn_bind Hcover_bind]]].
+  split.
+  - split; assumption.
+  - split; [exact Hstore_args |].
+    split; [exact Hargs_fcall |].
+    split; [exact Hvalue_roots |].
+    split; [exact Hroots_bind |].
+    split; [exact Hshadow_bind |].
+    split; [exact Hrn_bind | exact Hcover_bind].
+Qed.
+
+Lemma eval_make_closure_captured_call_expr_preserves_typing_with_instantiated_body :
+  forall env Ω n R Σ args fname captures captured fdef fcall used'
+      s s_args s_body vs ret R_args Σ_args arg_roots captured_tys
+      T_body Γ_out R_body roots_body,
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    eval env s (EMakeClosure fname captures) s (VClosure fname captured) ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    eval_args env s args s_args vs ->
+    alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
+      (fcall, used') ->
+    eval env (bind_params (fn_params fcall) vs (captured ++ s_args))
+      (fn_body fcall) s_body ret ->
+    check_make_closure_captures_exact_sctx env Ω Σ captures
+      (fn_captures fdef) = infer_ok captured_tys ->
+    NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
+    preservation_ready_args args ->
+    typed_args_roots env Ω n R Σ args (fn_params fdef)
+      Σ_args R_args arg_roots ->
+    provenance_ready_expr (fn_body fcall) ->
+    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+      (call_param_root_env (fn_params fcall) arg_roots
+        (empty_root_env_for_store captured ++ R_args))
+      (sctx_of_ctx (fn_body_ctx fcall))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
+    roots_exclude_params (fn_params fcall ++ fn_captures fcall)
+      roots_body ->
+    root_env_excludes_params (fn_params fcall ++ fn_captures fcall)
+      R_body ->
+    eval env s (ECallExpr (EMakeClosure fname captures) args)
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body)) ret /\
+    store_typed env
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body)) Σ_args /\
+    value_has_type env
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body))
+      ret (apply_lt_ty [] (fn_ret fdef)).
+Proof.
+  intros env Ω n R Σ args fname captures captured fdef fcall used'
+    s s_args s_body vs ret R_args Σ_args arg_roots captured_tys
+    T_body Γ_out R_body roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys
+    Heval_make Hlookup Heval_args Hrename Heval_body Hcheck Hnodup_caps
+    Hready_args Htyped_args Hprov_body Htyped_body Hcompat_body
+    Hexclude_roots Hexclude_env.
+  destruct (eval_make_closure_captured_call_runtime_args_ready_auto
+              env Ω n R Σ args fname captures captured fdef fcall used'
+              s s_args vs R_args Σ_args arg_roots captured_tys
+              Hstore Hroots Hshadow Hrn Hnamed Hkeys Heval_make Hlookup
+              Heval_args Hrename Hcheck Hnodup_caps Hready_args
+              Htyped_args)
+    as [[Hframe_ready Hcaptured_params_typed]
+        [Hstore_args [Hargs_fcall [_ [Hroots_bind [Hshadow_bind
+          [Hrn_bind Hcover_params]]]]]]].
+  pose proof (alpha_rename_fn_def_shape (store_names (captured ++ s_args))
+                fdef fcall used' Hrename) as Hshape.
+  destruct Hshape as [_ [_ Hparams_alpha]].
+  assert (Hlen_arg_roots :
+    List.length arg_roots = List.length (fn_params fcall)).
+  { rewrite <- (params_alpha_length _ _ Hparams_alpha).
+    eapply typed_args_roots_arg_roots_length. exact Htyped_args. }
+  assert (Hnodup_fcall :
+    NoDup (ctx_names (params_ctx (fn_params fcall)))).
+  { eapply alpha_rename_fn_def_params_nodup_ctx_names. exact Hrename. }
+  assert (Hcover_all :
+    root_env_covers_params (fn_params fcall ++ fn_captures fcall)
+      (call_param_root_env (fn_params fcall) arg_roots
+        (empty_root_env_for_store captured ++ R_args))).
+  { eapply captured_call_runtime_root_env_covers_params_captures;
+      eassumption. }
+  destruct (eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased
+              env Ω s s_args s_body args fname captures captured fdef
+              fcall vs ret used'
+              (empty_root_env_for_store captured) R_args Σ Σ_args
+              captured_tys [] T_body Γ_out
+              (call_param_root_env (fn_params fcall) arg_roots
+                (empty_root_env_for_store captured ++ R_args))
+              R_body roots_body Hstore Heval_make Hlookup Heval_args
+              Hrename Heval_body Hcheck Hframe_ready Hstore_args
+              Hargs_fcall Hroots_bind Hshadow_bind Hrn_bind Hcover_all
+              Hprov_body Htyped_body Hcompat_body Hexclude_roots
+              Hexclude_env)
+    as [Heval_final [Hstore_final Hv_final]].
+  repeat split; assumption.
 Qed.
 
 Lemma root_env_store_keys_named_excludes_names :
@@ -17485,6 +18246,168 @@ Proof.
               arg_roots Hready Hstore Hroots Hnodup Hrn Hnamed Htyped)
     as [Hnamed_args _].
   eapply root_env_store_roots_named_excludes_params; eassumption.
+Qed.
+
+Lemma alpha_rename_params_initial_root_env_rename_stable_tail_ts :
+  forall used ps psr tail rho used',
+    NoDup (ctx_names (params_ctx (ps ++ tail))) ->
+    alpha_rename_params [] used ps = (psr, rho, used') ->
+    root_env_rename rho (initial_root_env_for_params (ps ++ tail)) =
+      initial_root_env_for_params_origin (ps ++ tail) (psr ++ tail).
+Proof.
+  intros used ps.
+  revert used.
+  induction ps as [| p ps IH]; intros used psr tail rho used' Hnodup Hrename.
+  - simpl in Hrename. inversion Hrename; subst.
+    induction tail as [| p tail IHtail]; simpl; try reflexivity.
+    destruct p as [m x T]. simpl.
+    inversion Hnodup; subst.
+    change (root_env_rename [] (initial_root_env_for_params_origin tail tail))
+      with (root_env_rename [] (initial_root_env_for_params ([] ++ tail))).
+    change (initial_root_env_for_params_origin tail tail)
+      with (initial_root_env_for_params_origin ([] ++ tail) ([] ++ tail)).
+    rewrite (IHtail H2). reflexivity.
+  - destruct p as [m x T]. simpl in Hrename.
+    destruct (alpha_rename_params [] (fresh_ident x used :: used) ps)
+      as [[ps'' rho''] used''] eqn:Hps.
+    inversion Hrename; subst psr rho used'. simpl.
+    inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
+    rewrite ident_eqb_refl.
+    rewrite root_env_rename_cons_initial_root_env_for_params_origin_notin.
+    + change (root_env_rename rho''
+          (initial_root_env_for_params_origin (ps ++ tail) (ps ++ tail)))
+        with (root_env_rename rho'' (initial_root_env_for_params (ps ++ tail))).
+      rewrite (IH (fresh_ident x used :: used) ps'' tail rho'' used''
+        Hnodup_tail Hps).
+      reflexivity.
+    + exact Hnotin.
+Qed.
+
+Lemma alpha_rename_fn_def_binding_initial_support_facts :
+  forall used f fr used',
+    alpha_rename_fn_def used f = (fr, used') ->
+    NoDup (ctx_names (params_ctx (fn_params f ++ fn_captures f))) ->
+    exists rho used_params,
+      alpha_rename_params []
+        (param_names (fn_params f) ++
+         param_names (fn_captures f) ++ free_vars_expr (fn_body f) ++ used)
+        (fn_params f) = (fn_params fr, rho, used_params) /\
+      alpha_rename_expr rho used_params (fn_body f) =
+        (fn_body fr, used') /\
+      ctx_alpha rho
+        (sctx_of_ctx (params_ctx (fn_params f ++ fn_captures f)))
+        (sctx_of_ctx (params_ctx (fn_params fr ++ fn_captures fr))) /\
+      root_env_no_shadow
+        (initial_root_env_for_params (fn_params f ++ fn_captures f)) /\
+      root_env_no_shadow
+        (initial_root_env_for_params_origin
+          (fn_params f ++ fn_captures f)
+          (fn_params fr ++ fn_captures fr)) /\
+      root_env_equiv
+        (initial_root_env_for_params_origin
+          (fn_params f ++ fn_captures f)
+          (fn_params fr ++ fn_captures fr))
+        (root_env_rename rho
+          (initial_root_env_for_params (fn_params f ++ fn_captures f))) /\
+      root_env_sctx_keys_named
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        (sctx_of_ctx (params_ctx (fn_params f ++ fn_captures f))) /\
+      root_env_sctx_roots_named
+        (initial_root_env_for_params (fn_params f ++ fn_captures f))
+        (sctx_of_ctx (params_ctx (fn_params f ++ fn_captures f))) /\
+      rename_no_collision_on rho
+        (root_env_names
+          (initial_root_env_for_params (fn_params f ++ fn_captures f))) /\
+      (forall x,
+        In x (ctx_names
+          (sctx_of_ctx
+            (params_ctx (fn_params fr ++ fn_captures fr)))) ->
+        In x used_params) /\
+      (forall x, In x (rename_range rho) -> In x used_params) /\
+      disjoint_names (free_vars_expr (fn_body f)) (rename_range rho).
+Proof.
+  intros used f fr used' Hrename Hnodup_binding.
+  assert (Hnodup_params : NoDup (ctx_names (params_ctx (fn_params f)))).
+  { rewrite params_ctx_app, ctx_names_app in Hnodup_binding.
+    eapply NoDup_app_left_ts. exact Hnodup_binding. }
+  destruct (alpha_rename_fn_def_initial_support_facts
+              used f fr used' Hrename Hnodup_params)
+    as (rho & used_params & Hparams_rename & Hbody_rename &
+        _ & _ & _ & _ & _ & _ & _ & _ & Hrange_used & Hdisj).
+  assert (Halpha_binding :
+    ctx_alpha rho
+      (sctx_of_ctx (params_ctx (fn_params f ++ fn_captures f)))
+      (sctx_of_ctx (params_ctx (fn_params fr ++ fn_captures fr)))).
+  { destruct f as [fname lifetimes outs captures ps ret body].
+    unfold alpha_rename_fn_def in Hrename. simpl in *.
+    destruct (alpha_rename_params []
+      (param_names ps ++ param_names captures ++ free_vars_expr body ++ used)
+      ps) as [[psr rho1] used1] eqn:Hps.
+    destruct (alpha_rename_expr rho1 used1 body) as [bodyr used2] eqn:Hbody.
+    inversion Hrename; subst. simpl in *.
+    inversion Hparams_rename; subst.
+    eapply alpha_rename_params_ctx_alpha_stable_tail. exact Hps. }
+  assert (Hnodup_binding_r :
+    NoDup (ctx_names
+      (sctx_of_ctx (params_ctx (fn_params fr ++ fn_captures fr))))).
+  { eapply ctx_alpha_nodup_names; eassumption. }
+  assert (Hlen_binding :
+    List.length (fn_params f ++ fn_captures f) =
+    List.length (fn_params fr ++ fn_captures fr)).
+  { pose proof (alpha_rename_fn_def_shape used f fr used' Hrename)
+      as [_ [_ Hparams_alpha]].
+    rewrite !length_app.
+    rewrite <- (params_alpha_length _ _ Hparams_alpha).
+    rewrite (alpha_rename_fn_def_captures used f fr used' Hrename).
+    reflexivity. }
+  destruct (alpha_rename_fn_def_params_body_facts
+              used f fr used' Hrename)
+    as (rho0 & used_params0 & Hparams_rename0 & _ & _ &
+        Hctx_used_params & _ & _).
+  rewrite Hparams_rename in Hparams_rename0.
+  inversion Hparams_rename0; subst rho0 used_params0.
+  exists rho, used_params.
+  repeat split.
+  - exact Hparams_rename.
+  - exact Hbody_rename.
+  - exact Halpha_binding.
+  - apply initial_root_env_for_params_no_shadow. exact Hnodup_binding.
+  - apply initial_root_env_for_params_origin_no_shadow.
+    + exact Hlen_binding.
+    + exact Hnodup_binding_r.
+  - destruct f as [fname lifetimes outs captures ps ret body].
+    unfold alpha_rename_fn_def in Hrename. simpl in *.
+    destruct (alpha_rename_params []
+      (param_names ps ++ param_names captures ++ free_vars_expr body ++ used)
+      ps) as [[psr rho1] used1] eqn:Hps.
+    destruct (alpha_rename_expr rho1 used1 body) as [bodyr used2] eqn:Hbody.
+    inversion Hrename; subst. simpl in *.
+	    inversion Hparams_rename; subst.
+	    rewrite (alpha_rename_params_initial_root_env_rename_stable_tail_ts
+	      (param_names ps ++ param_names captures ++ free_vars_expr body ++ used)
+	      ps psr captures rho used_params Hnodup_binding Hps).
+    apply root_env_equiv_refl.
+  - unfold initial_root_env_for_params.
+    apply initial_root_env_for_params_origin_sctx_keys_named. reflexivity.
+  - unfold initial_root_env_for_params.
+    apply initial_root_env_for_params_origin_sctx_roots_named.
+  - rewrite initial_root_env_for_params_names.
+    eapply ctx_alpha_no_collision_on; eassumption.
+  - intros x Hin.
+	    change (ctx_names
+	      (sctx_of_ctx (params_ctx (fn_params fr ++ fn_captures fr))))
+	      with (ctx_names (params_ctx (fn_params fr ++ fn_captures fr))) in Hin.
+	    rewrite params_ctx_app, ctx_names_app in Hin.
+	    apply in_app_or in Hin as [Hin | Hin].
+    + apply Hctx_used_params. exact Hin.
+    + eapply alpha_rename_params_used_extends.
+	      * exact Hparams_rename.
+	      * apply in_or_app. right. apply in_or_app. left.
+	        rewrite <- (alpha_rename_fn_def_captures used f fr used' Hrename).
+	        rewrite params_ctx_names_param_names in Hin.
+	        exact Hin.
+  - exact Hrange_used.
+  - exact Hdisj.
 Qed.
 
 Lemma direct_call_callee_body_root_shadow_summary_bridge_of_unique :
@@ -18201,6 +19124,389 @@ Proof.
   repeat split; try assumption.
   - eapply typed_env_roots_shadow_safe_roots. exact Htyped_tail.
   - apply root_env_excludes_params_app; assumption.
+Qed.
+
+Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_components :
+  forall env Ω n R Σ args fname captures captured fdef fcall used'
+      s s_args s_body vs ret R_args Σ_args arg_roots captured_tys
+      T_body Γ_out R_body roots_body,
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    eval env s (EMakeClosure fname captures) s (VClosure fname captured) ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    eval_args env s args s_args vs ->
+    alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
+      (fcall, used') ->
+    eval env (bind_params (fn_params fcall) vs (captured ++ s_args))
+      (fn_body fcall) s_body ret ->
+    check_make_closure_captures_exact_sctx env Ω Σ captures
+      (fn_captures fdef) = infer_ok captured_tys ->
+    NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
+    preservation_ready_args args ->
+    typed_args_roots env Ω n R Σ args (fn_params fdef)
+      Σ_args R_args arg_roots ->
+    NoDup (ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))) ->
+    provenance_ready_expr (fn_body fdef) ->
+    typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_params (fn_params fdef ++ fn_captures fdef))
+      (sctx_of_ctx (fn_body_ctx fdef))
+      (fn_body fdef) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
+    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true ->
+    roots_exclude_params (fn_params fdef ++ fn_captures fdef)
+      roots_body ->
+    root_env_excludes_params (fn_params fdef ++ fn_captures fdef)
+      R_body ->
+    eval env s (ECallExpr (EMakeClosure fname captures) args)
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body)) ret /\
+    store_typed env
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body)) Σ_args /\
+    value_has_type env
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body))
+      ret (apply_lt_ty [] (fn_ret fdef)).
+Proof.
+  intros env Ω n R Σ args fname captures captured fdef fcall used'
+    s s_args s_body vs ret R_args Σ_args arg_roots captured_tys
+    T_body Γ_out R_body roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys
+    Heval_make Hlookup Heval_args Hrename Heval_body Hcheck Hnodup_caps
+    Hready_args Htyped_args Hnodup_binding Hprov_body Htyped_body
+    Hcompat_body Hexclude_roots Hexclude_env.
+  destruct (eval_make_closure_captured_call_runtime_args_ready_auto
+              env Ω n R Σ args fname captures captured fdef fcall used'
+              s s_args vs R_args Σ_args arg_roots captured_tys
+              Hstore Hroots Hshadow Hrn Hnamed Hkeys Heval_make Hlookup
+              Heval_args Hrename Hcheck Hnodup_caps Hready_args
+              Htyped_args)
+    as [[Hframe_ready Hcaptured_params_typed]
+        [Hstore_args [Hargs_fcall [Hvalue_roots [Hroots_bind
+          [Hshadow_bind [Hrn_bind Hcover_params]]]]]]].
+  destruct (alpha_rename_fn_def_binding_initial_support_facts
+              (store_names (captured ++ s_args)) fdef fcall used'
+              Hrename Hnodup_binding)
+    as (rho & used_params & Hparams_rename & Hbody_rename &
+        Halpha_binding & Hrn_initial & Hrn_initial_r & Hinitial_equiv &
+        Hkeys_initial & Hroots_initial & Hnocoll_initial & Hctx_used &
+        Hrange_used & Hdisj).
+  destruct (alpha_rename_fn_def_static_fields
+              (store_names (captured ++ s_args)) fdef fcall used'
+              Hrename)
+    as [_ [Hlts [Houts [Hcaps_eq Hret]]]].
+  assert (Hsame_body :
+    sctx_same_bindings
+      (sctx_of_ctx (fn_body_ctx fdef))
+      (sctx_of_ctx Γ_out)).
+  { eapply typed_env_structural_same_bindings.
+    eapply typed_env_roots_structural.
+    eapply typed_env_roots_shadow_safe_roots. exact Htyped_body. }
+  assert (Hkeys_body : root_env_sctx_keys_named R_body (sctx_of_ctx Γ_out)).
+  { destruct (typed_roots_shadow_safe_sctx_keys_named_mutual env
+                (fn_outlives fdef) (fn_lifetimes fdef)) as [Hkeys_expr _].
+    eapply Hkeys_expr; eassumption. }
+  assert (Hroots_body_named :
+    root_env_sctx_roots_named R_body (sctx_of_ctx Γ_out) /\
+    root_set_sctx_roots_named roots_body (sctx_of_ctx Γ_out)).
+  { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env
+                (fn_outlives fdef) (fn_lifetimes fdef)) as [Hroots_expr _].
+    eapply Hroots_expr; eassumption. }
+  destruct Hroots_body_named as [Hroots_env_body Hroots_set_body].
+  assert (Hrn_body : root_env_no_shadow R_body).
+  { eapply typed_env_roots_no_shadow.
+    - eapply typed_env_roots_shadow_safe_roots. exact Htyped_body.
+    - exact Hrn_initial. }
+  assert (Hnocoll_body :
+    rename_no_collision_on rho (root_env_names R_body)).
+  { eapply rename_no_collision_on_root_env_names_from_typed_support;
+      eassumption. }
+  destruct (alpha_rename_typed_env_roots_shadow_safe_full_support_forward
+              env (fn_outlives fdef) (fn_lifetimes fdef) rho
+              (initial_root_env_for_params
+                (fn_params fdef ++ fn_captures fdef))
+              (initial_root_env_for_params_origin
+                (fn_params fdef ++ fn_captures fdef)
+                (fn_params fcall ++ fn_captures fcall))
+              (sctx_of_ctx (fn_body_ctx fdef))
+              (sctx_of_ctx (fn_body_ctx fcall))
+              (fn_body fdef) (fn_body fcall) used_params used'
+              T_body (sctx_of_ctx Γ_out) R_body roots_body
+              Htyped_body Halpha_binding Hrn_initial Hrn_initial_r
+              Hinitial_equiv Hkeys_initial Hroots_initial
+              Hnocoll_initial Hnocoll_body Hctx_used Hrange_used Hdisj
+              Hbody_rename)
+    as (Γ_out_r & R_body_r & roots_body_r &
+        Htyped_renamed & Halpha_out & Hrn_body_r & Hbody_equiv &
+        Hroots_equiv).
+  assert (Hexclude_roots_renamed :
+    roots_exclude_params (fn_params fcall ++ fn_captures fcall)
+      roots_body_r).
+  { eapply roots_exclude_params_rename_from_typed_support; eassumption. }
+  assert (Hexclude_env_renamed :
+    root_env_excludes_params (fn_params fcall ++ fn_captures fcall)
+      R_body_r).
+  { eapply root_env_excludes_params_rename_from_typed_support.
+    - exact Halpha_binding.
+    - exact Halpha_out.
+    - exact Hsame_body.
+    - exact Hnodup_binding.
+    - exact Hrn_body.
+    - exact Hbody_equiv.
+    - exact Hkeys_body.
+    - exact Hroots_env_body.
+    - exact Hexclude_env. }
+  pose proof (alpha_rename_fn_def_shape (store_names (captured ++ s_args))
+                fdef fcall used' Hrename) as Hshape.
+  destruct Hshape as [_ [_ Hparams_alpha]].
+  assert (Hlen_arg_roots_fdef :
+    List.length arg_roots = List.length (fn_params fdef)).
+  { eapply typed_args_roots_arg_roots_length. exact Htyped_args. }
+  assert (Hlen_binding_roots :
+    List.length
+      (arg_roots ++ repeat [] (List.length (fn_captures fdef))) =
+    List.length (fn_params fdef ++ fn_captures fdef)).
+  { rewrite length_app, repeat_length, length_app.
+    rewrite Hlen_arg_roots_fdef. reflexivity. }
+  assert (Harg_roots_named_sargs :
+    Forall (fun roots => root_set_store_roots_named roots s_args)
+      arg_roots).
+  { pose proof (preservation_ready_args_implies_provenance_ready
+                  args Hready_args) as Hprov_args.
+    destruct (proj1 (proj2 eval_preserves_root_names_ready_mutual)
+              env s args s_args vs Heval_args Ω n R Σ (fn_params fdef)
+              Σ_args R_args arg_roots Hprov_args Hstore Hroots Hshadow
+              Hrn Hnamed Htyped_args)
+      as [_ Harg_roots_named].
+    exact Harg_roots_named. }
+  assert (Hbinding_roots_named :
+    Forall
+      (fun roots => root_set_store_roots_named roots (captured ++ s_args))
+      (arg_roots ++ repeat [] (List.length (fn_captures fdef)))).
+  { apply Forall_app. split.
+    - eapply root_sets_store_roots_named_weaken_store.
+      + exact Harg_roots_named_sargs.
+      + intros z Hin. rewrite store_names_app.
+        apply in_or_app. right. exact Hin.
+    - assert (Hrepeat_named :
+        Forall
+          (fun roots => root_set_store_roots_named roots (captured ++ s_args))
+          (repeat [] (List.length (fn_captures fdef)))).
+      { assert (Hrepeat_named_all :
+          forall k,
+            Forall
+              (fun roots =>
+                root_set_store_roots_named roots (captured ++ s_args))
+              (repeat [] k)).
+        { induction k; simpl.
+          - constructor.
+          - constructor; [apply root_set_store_roots_named_nil | assumption]. }
+        apply Hrepeat_named_all. }
+      exact Hrepeat_named. }
+  assert (Hsubst_fresh :
+    root_subst_images_exclude_names (expr_local_store_names (fn_body fcall))
+      (root_subst_of_params (fn_params fdef ++ fn_captures fdef)
+        (arg_roots ++ repeat [] (List.length (fn_captures fdef))))).
+  { eapply root_subst_of_params_images_exclude_names_from_store_roots.
+    - exact Hbinding_roots_named.
+    - eapply alpha_rename_fn_def_body_local_store_names_fresh_used.
+      exact Hrename. }
+  assert (Hparams_fresh_captured :
+    params_fresh_in_store (fn_params fcall) captured).
+  { assert (Hfresh :
+      params_fresh_in_store (fn_params fcall) (captured ++ s_args)).
+    { eapply alpha_rename_fn_def_params_fresh_in_store. exact Hrename. }
+    unfold params_fresh_in_store in *.
+    intros x Hin Hstore_x. apply (Hfresh x Hin).
+    rewrite store_names_app. apply in_or_app. left. exact Hstore_x. }
+  assert (Hbase_equiv :
+    root_env_equiv
+      (call_param_root_env (fn_params fcall) arg_roots
+        (empty_root_env_for_store captured))
+      (root_env_instantiate
+        (root_subst_of_params
+          (fn_params fdef ++ fn_captures fdef)
+          (arg_roots ++ repeat [] (List.length (fn_captures fdef))))
+        (initial_root_env_for_params_origin
+          (fn_params fdef ++ fn_captures fdef)
+          (fn_params fcall ++ fn_captures fcall)))).
+  { eapply captured_call_binding_runtime_root_env_equiv; eassumption. }
+  assert (Hnodup_fcall :
+    NoDup (ctx_names (params_ctx (fn_params fcall)))).
+  { eapply alpha_rename_fn_def_params_nodup_ctx_names. exact Hrename. }
+  assert (Hrn_base :
+    root_env_no_shadow
+      (call_param_root_env (fn_params fcall) arg_roots
+        (empty_root_env_for_store captured))).
+  { apply call_param_root_env_no_shadow.
+    - exact Hnodup_fcall.
+    - apply root_env_no_shadow_empty_root_env_for_store.
+      unfold captured_call_frame_ready in Hframe_ready.
+      destruct Hframe_ready as [[_ [_ [Hshadow_captured _]]] _].
+      exact Hshadow_captured. }
+  destruct (typed_env_roots_shadow_safe_instantiate_fresh
+              env (fn_outlives fdef) (fn_lifetimes fdef)
+              (root_subst_of_params
+                (fn_params fdef ++ fn_captures fdef)
+                (arg_roots ++ repeat [] (List.length (fn_captures fdef))))
+              (initial_root_env_for_params_origin
+                (fn_params fdef ++ fn_captures fdef)
+                (fn_params fcall ++ fn_captures fcall))
+              (sctx_of_ctx (fn_body_ctx fcall))
+              (fn_body fcall) T_body Γ_out_r R_body_r roots_body_r
+              (call_param_root_env (fn_params fcall) arg_roots
+                (empty_root_env_for_store captured))
+              Htyped_renamed Hsubst_fresh Hrn_initial_r Hrn_base)
+    as (R_body_inst & roots_body_inst &
+        Htyped_inst & _ & Hbody_inst_equiv & Hroots_inst_equiv).
+  { exact Hbase_equiv. }
+  assert (Hfresh_binding_sargs :
+    params_fresh_in_store (fn_params fcall ++ fn_captures fcall) s_args).
+  { unfold params_fresh_in_store.
+    intros x Hin Hstore_x.
+    rewrite params_ctx_app, ctx_names_app in Hin.
+    apply in_app_or in Hin as [Hin_params | Hin_caps].
+    - assert (Hfresh :
+        params_fresh_in_store (fn_params fcall) (captured ++ s_args)).
+      { eapply alpha_rename_fn_def_params_fresh_in_store. exact Hrename. }
+      apply (Hfresh x Hin_params).
+      rewrite store_names_app. apply in_or_app. right. exact Hstore_x.
+    - pose proof (captured_params_store_typed_store_param_prefix
+                    env captured (fn_captures fcall)
+                    Hcaptured_params_typed) as Hprefix_caps0.
+      pose proof (store_param_prefix_append_frame
+                    (fn_captures fcall) captured s_args []
+                    Hprefix_caps0) as Hprefix_caps.
+      simpl in Hprefix_caps.
+      assert (Hshadow_frame : store_no_shadow (captured ++ s_args)).
+      { unfold captured_call_frame_ready in Hframe_ready.
+        destruct Hframe_ready as [_ [_ [Hshadow_frame _]]].
+        exact Hshadow_frame. }
+      pose proof (store_param_prefix_frame_static_fresh
+                    (fn_captures fcall) (captured ++ s_args) s_args
+                    Hprefix_caps Hshadow_frame) as Hfresh_caps.
+      apply (Hfresh_caps x).
+      + unfold sctx_of_ctx. exact Hin_caps.
+      + exact Hstore_x. }
+  assert (Hbinding_roots_exclude :
+    Forall (roots_exclude_params (fn_params fcall ++ fn_captures fcall))
+      (arg_roots ++ repeat [] (List.length (fn_captures fdef)))).
+  { apply Forall_app. split.
+    - eapply root_sets_store_roots_named_excludes_params; eassumption.
+    - assert (Hrepeat_exclude :
+        Forall (roots_exclude_params
+          (fn_params fcall ++ fn_captures fcall))
+          (repeat [] (List.length (fn_captures fdef)))).
+      { assert (Hrepeat_exclude_all :
+          forall k,
+            Forall (roots_exclude_params
+              (fn_params fcall ++ fn_captures fcall))
+              (repeat [] k)).
+        { intros k. apply Forall_forall. intros roots Hin_repeat.
+          apply repeat_spec in Hin_repeat. subst roots.
+          unfold roots_exclude_params, roots_exclude.
+          intros x Hin Hroot. contradiction. }
+        apply Hrepeat_exclude_all. }
+      exact Hrepeat_exclude. }
+  assert (Himages_exclude :
+    forall x,
+      In x
+        (ctx_names
+          (params_ctx (fn_params fcall ++ fn_captures fcall))) ->
+      root_subst_images_exclude x
+        (root_subst_of_params
+          (fn_params fdef ++ fn_captures fdef)
+          (arg_roots ++ repeat [] (List.length (fn_captures fdef))))).
+  { intros x Hin_x.
+    apply root_subst_of_params_images_exclude.
+    eapply Forall_impl; [| exact Hbinding_roots_exclude].
+    intros roots_i Hroots_i.
+    apply Hroots_i. exact Hin_x. }
+  assert (Hexclude_roots_inst :
+    roots_exclude_params (fn_params fcall ++ fn_captures fcall)
+      roots_body_inst).
+  { eapply roots_exclude_params_equiv.
+    - apply root_set_equiv_sym. exact Hroots_inst_equiv.
+    - eapply roots_exclude_params_instantiate.
+      + exact Hexclude_roots_renamed.
+      + exact Himages_exclude. }
+  assert (Hexclude_env_inst :
+    root_env_excludes_params (fn_params fcall ++ fn_captures fcall)
+      R_body_inst).
+  { eapply root_env_excludes_params_equiv.
+    - apply root_env_equiv_sym. exact Hbody_inst_equiv.
+    - eapply root_env_excludes_params_instantiate.
+      + exact Hexclude_env_renamed.
+      + exact Himages_exclude. }
+  assert (Htail_fresh :
+    root_env_tail_fresh_names
+      (root_env_remove_params (fn_params fcall) R_args)
+      (expr_local_store_names (fn_body fcall))).
+  { eapply captured_call_runtime_args_tail_fresh_names_for_fresh_call;
+      eassumption. }
+  assert (Hrn_args : root_env_no_shadow R_args).
+  { unfold captured_call_frame_ready in Hframe_ready.
+    destruct Hframe_ready as [_ [_ [_ [Hrn_tail _]]]].
+    unfold root_env_no_shadow in *.
+    rewrite root_env_names_app in Hrn_tail.
+    eapply NoDup_app_right_ts. exact Hrn_tail. }
+  assert (Hnamed_args : root_env_store_roots_named R_args s_args).
+  { pose proof (preservation_ready_args_implies_provenance_ready
+                  args Hready_args) as Hprov_args.
+    destruct (proj1 (proj2 eval_preserves_root_names_ready_mutual)
+              env s args s_args vs Heval_args Ω n R Σ (fn_params fdef)
+              Σ_args R_args arg_roots Hprov_args Hstore Hroots Hshadow
+              Hrn Hnamed Htyped_args)
+      as [Henv_named _].
+    exact Henv_named. }
+  assert (Htail_exclude :
+    root_env_excludes_params (fn_params fcall ++ fn_captures fcall)
+      (root_env_remove_params (fn_params fcall) R_args)).
+  { eapply captured_call_runtime_args_tail_excludes_binding_params;
+      eassumption. }
+  assert (Htyped_tail :
+    typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
+      (call_param_root_env (fn_params fcall) arg_roots
+        (empty_root_env_for_store captured) ++
+        root_env_remove_params (fn_params fcall) R_args)
+      (sctx_of_ctx (fn_body_ctx fcall))
+      (fn_body fcall) T_body Γ_out_r
+      (R_body_inst ++ root_env_remove_params (fn_params fcall) R_args)
+      roots_body_inst).
+  { eapply typed_env_roots_shadow_safe_tail_frame; eassumption. }
+  assert (Htail_decompose :
+    call_param_root_env (fn_params fcall) arg_roots
+      (empty_root_env_for_store captured ++ R_args) =
+    call_param_root_env (fn_params fcall) arg_roots
+      (empty_root_env_for_store captured) ++
+      root_env_remove_params (fn_params fcall) R_args).
+  { apply captured_call_runtime_root_env_tail_decompose.
+    intros x Hin.
+    eapply empty_root_env_for_store_params_fresh_lookup_none; eassumption. }
+  assert (Htyped_tail_roots :
+    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+      (call_param_root_env (fn_params fcall) arg_roots
+        (empty_root_env_for_store captured ++ R_args))
+      (sctx_of_ctx (fn_body_ctx fcall))
+      (fn_body fcall) T_body Γ_out_r
+      (R_body_inst ++ root_env_remove_params (fn_params fcall) R_args)
+      roots_body_inst).
+  { rewrite Houts. rewrite Hlts.
+    rewrite Htail_decompose.
+    eapply typed_env_roots_shadow_safe_roots. exact Htyped_tail. }
+  assert (Hcompat_fcall :
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true).
+  { rewrite Houts. rewrite Hret. exact Hcompat_body. }
+  assert (Hprov_fcall : provenance_ready_expr (fn_body fcall)).
+  { eapply alpha_rename_fn_def_provenance_ready_body; eassumption. }
+  assert (Hexclude_env_tail :
+    root_env_excludes_params (fn_params fcall ++ fn_captures fcall)
+      (R_body_inst ++ root_env_remove_params (fn_params fcall) R_args)).
+  { apply root_env_excludes_params_app; assumption. }
+  eapply eval_make_closure_captured_call_expr_preserves_typing_with_instantiated_body;
+    eassumption.
 Qed.
 
 Lemma direct_call_callee_body_root_shadow_provenance_summary_bridge_of_unique :

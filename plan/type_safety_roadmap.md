@@ -144,20 +144,25 @@ Work in this order unless a proof exposes a soundness gap:
    - `captured_call_callee_body_root_shadow_provenance_instantiated_bridge`
      and its `_with_result_subset` variant instantiate captured callee body
      summaries once the target runtime root environment is supplied.
+   - `captured_call_frame_root_tail_fresh_names_for_fresh_call` proves the
+     copied-capture/runtime-argument frame can be used as a tail frame for the
+     alpha-renamed callee body.
+   - `captured_call_callee_body_root_shadow_provenance_instantiated_tail_frame`
+     exposes the TypeSafety-side bridge without depending on
+     `EnvRuntimeSafety.v` summary predicates.
 
-   Next implementation task: prove the runtime root-environment equivalence for
-   captured calls:
+   Next implementation task: in `EnvRuntimeSafety.v`, destruct the captured
+   sidecar summary, pass the callee-body components to the TypeSafety-side
+   tail-frame bridge, then call the automatic cleanup wrapper. The runtime root
+   environment is:
 
    ```coq
    call_param_root_env (fn_params fcall) arg_roots
      (empty_root_env_for_store captured ++ R_args)
    ```
 
-   must correspond to instantiating
-   `initial_root_env_for_params (fn_params fdef ++ fn_captures fdef)` with
-   normal argument roots for params and empty roots for captures, after
-   alpha-renaming params. Then call the instantiated bridge and the automatic
-   cleanup wrapper from the captured-call sidecar summary.
+   Treat this as instantiating params with `arg_roots`, captures with empty
+   roots, then tail-framing over the copied-capture/argument root environment.
 
 4. **Final captured-call executable endpoint.**
    Add the checked-initial wrapper for:

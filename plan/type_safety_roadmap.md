@@ -107,17 +107,17 @@ Work in this order unless a proof exposes a soundness gap:
 
    Current progress: `capture_ref_free_ty` and
    `capture_ref_free_ty_b_sound` exist, and the Prop no longer has broad
-   compatibility/usage constructors. Do not reintroduce a constructor like
+   compatibility/usage constructors. `runtime_rootless_ty` exists in
+   `TypeSafety.v`, executable `capture_ref_free_ty_b` checks imply it, and
+   `ty_compatible_runtime_rootless_actual` handles compatibility without
+   broadening `capture_ref_free_ty`. Do not reintroduce a constructor like
    `CRFT_CompatibleActual`: it is too strong for function argument
    contravariance and `TC_Fn_Closure`.
 
-   Remaining proof-design task: state the empty-root theorem directly over
-   `value_has_type`. In the `VHT_Compatible` case, analyze the compatibility
-   proof and the runtime value shape instead of converting the actual type back
-   into `capture_ref_free_ty`. In particular, function-typed values can have
-   non-reference-free parameter annotations while still being root-empty as
-   runtime closures. Do not delegate this to a sub-agent until those lemma
-   statements are fixed.
+   Remaining proof-design task: prove lifetime-equivalence preservation for
+   `runtime_rootless_ty`, including instantiated struct field types, then state
+   the empty-root theorem directly over `value_has_type`. Do not delegate this
+   to a sub-agent until those lemma statements are fixed.
 
 3. **Argument/capture frame composition.**
    After captured-store readiness is proved:

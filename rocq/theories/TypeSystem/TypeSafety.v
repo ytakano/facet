@@ -938,30 +938,7 @@ Inductive runtime_rootless_ty (env : global_env) : Ty -> Prop :=
       runtime_rootless_ty env (MkTy u (TFn params ret))
   | RRT_Forall : forall u n Ω body,
       runtime_rootless_ty env body ->
-      runtime_rootless_ty env (MkTy u (TForall n Ω body))
-  | RRT_CaptureRefFree : forall T,
-      capture_ref_free_ty env T ->
-      runtime_rootless_ty env T
-  | RRT_CompatibleActual : forall Ω T_actual T_expected,
-      ty_compatible Ω T_actual T_expected ->
-      runtime_rootless_ty env T_expected ->
-      runtime_rootless_ty env T_actual
-  | RRT_LifetimeEquivActual : forall T_actual T_expected,
-      ty_lifetime_equiv T_actual T_expected ->
-      runtime_rootless_ty env T_expected ->
-      runtime_rootless_ty env T_actual
-  | RRT_ChangeUsage : forall u T,
-      runtime_rootless_ty env T ->
-      runtime_rootless_ty env (MkTy u (ty_core T)).
-
-Lemma capture_ref_free_ty_runtime_rootless :
-  forall env T,
-    capture_ref_free_ty env T ->
-    runtime_rootless_ty env T.
-Proof.
-  intros env T Hfree.
-  apply RRT_CaptureRefFree. exact Hfree.
-Qed.
+      runtime_rootless_ty env (MkTy u (TForall n Ω body)).
 
 Lemma runtime_rootless_ty_change_usage :
   forall env T u,
@@ -969,7 +946,8 @@ Lemma runtime_rootless_ty_change_usage :
     runtime_rootless_ty env (MkTy u (ty_core T)).
 Proof.
   intros env T u Hrootless.
-  apply RRT_ChangeUsage. exact Hrootless.
+  destruct T as [u0 core].
+  induction Hrootless; simpl; eauto using runtime_rootless_ty.
 Qed.
 
 Lemma ty_compatible_runtime_rootless_actual :
@@ -979,18 +957,68 @@ Lemma ty_compatible_runtime_rootless_actual :
     runtime_rootless_ty env T_actual.
 Proof.
   intros env Ω T_actual T_expected Hcompat.
-  intros Hrootless.
-  eapply RRT_CompatibleActual; eassumption.
+  induction Hcompat; intros Hrootless.
+  - subst ce.
+    change (runtime_rootless_ty env (MkTy ua (ty_core (MkTy ue ca)))).
+    apply runtime_rootless_ty_change_usage. exact Hrootless.
+  - inversion Hrootless.
+  - inversion Hrootless.
+  - constructor.
+  - inversion Hrootless.
+  - inversion Hrootless.
+  - inversion Hrootless; subst.
+    constructor. apply IHHcompat. assumption.
+  - inversion Hrootless; subst.
+    apply IHHcompat. assumption.
 Qed.
 
-Lemma ty_lifetime_equiv_runtime_rootless_actual :
-  forall env T_actual T_expected,
-    ty_lifetime_equiv T_actual T_expected ->
-    runtime_rootless_ty env T_expected ->
-    runtime_rootless_ty env T_actual.
+Lemma capture_ref_free_ty_b_fuel_runtime_rootless :
+  forall fuel env T,
+    capture_ref_free_ty_b_fuel fuel env T = true ->
+    runtime_rootless_ty env T.
 Proof.
-  intros env T_actual T_expected Heq Hrootless.
-  eapply RRT_LifetimeEquivActual; eassumption.
+  induction fuel as [| fuel IH]; intros env T Hfree; simpl in Hfree;
+    try discriminate.
+  assert (Hlist : forall ts,
+    forallb (capture_ref_free_ty_b_fuel fuel env) ts = true ->
+    Forall (runtime_rootless_ty env) ts).
+  { induction ts as [| T0 Ts IHTs]; simpl; intros Hts.
+    - constructor.
+    - apply andb_true_iff in Hts as [HT HTs].
+      constructor.
+      + apply IH. exact HT.
+      + apply IHTs. exact HTs. }
+  destruct T as [u core].
+  destruct core as
+    [| | | | named | tparam | name lts args | params ret
+     | env_lt params ret | n Ω body | la rk inner];
+    simpl in *; try discriminate.
+  - constructor.
+  - constructor.
+  - constructor.
+  - constructor.
+  - apply andb_true_iff in Hfree as [Hargs Hfields_lookup].
+    destruct (lookup_struct name env) as [sdef |] eqn:Hlookup;
+      try discriminate.
+    eapply RRT_Struct.
+    + exact Hlookup.
+    + apply Hlist. exact Hargs.
+    + apply Forall_forall.
+      intros f Hin.
+      apply forallb_forall with (x := f) in Hfields_lookup; [| exact Hin].
+      apply IH. exact Hfields_lookup.
+  - constructor.
+  - apply RRT_Forall. apply IH. exact Hfree.
+Qed.
+
+Lemma capture_ref_free_ty_b_runtime_rootless :
+  forall env T,
+    capture_ref_free_ty_b env T = true ->
+    runtime_rootless_ty env T.
+Proof.
+  intros env T Hfree.
+  unfold capture_ref_free_ty_b in Hfree.
+  eapply capture_ref_free_ty_b_fuel_runtime_rootless. exact Hfree.
 Qed.
 
 Lemma root_set_stores_subset_equiv :

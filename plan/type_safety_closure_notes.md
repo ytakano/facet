@@ -179,7 +179,8 @@ Current progress:
 - `capture_ref_free_ty` remains structural. Do not add compatibility or
   lifetime-equivalence closure constructors to it.
 - `runtime_rootless_ty` is available in `TypeSafety.v` as a structural
-  proof-only predicate.
+  proof-only predicate. Its struct case requires rootlessness for instantiated
+  fields, not for type arguments themselves.
 - `capture_ref_free_ty_b_fuel_runtime_rootless` and
   `capture_ref_free_ty_b_runtime_rootless` prove executable
   capture-ref-free checks imply that predicate.
@@ -188,13 +189,19 @@ Current progress:
 - The remaining blocker is the `VHT_LifetimeEquiv` route. It needs a
   structural lemma showing lifetime equivalence preserves
   `runtime_rootless_ty`, including instantiated struct field types.
+- A direct recursive proof of that lemma through
+  `instantiate_struct_field_ty_lifetime_equiv` is not accepted by Rocq's guard
+  checker. Use an explicit type-size/fuel induction or split out a normalized
+  field-instantiation preservation lemma before trying the `VHT_LifetimeEquiv`
+  case again.
 - In the `VHT_Compatible` and `VHT_LifetimeEquiv` cases, reason from the
   compatibility/lifetime-equivalence proof and runtime value shape. Do not
   first try to convert the actual type back into `capture_ref_free_ty`.
 
 ## Next Closure Lemmas
 
-1. Prove lifetime-equivalence preservation for `runtime_rootless_ty`.
+1. Prove lifetime-equivalence preservation for `runtime_rootless_ty` using an
+   explicit measure or normalized field-instantiation lemma.
 2. Prove direct root-empty lemmas from `value_has_type` for
    `capture_ref_free_ty` values, using `runtime_rootless_ty` for the
    compatibility and lifetime-equivalence cases.

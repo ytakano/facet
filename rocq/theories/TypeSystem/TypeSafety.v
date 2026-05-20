@@ -927,7 +927,6 @@ Inductive runtime_rootless_ty (env : global_env) : Ty -> Prop :=
       runtime_rootless_ty env (MkTy u TBooleans)
   | RRT_Struct : forall u name lts args sdef,
       lookup_struct name env = Some sdef ->
-      Forall (runtime_rootless_ty env) args ->
       Forall
         (fun f =>
            runtime_rootless_ty env
@@ -979,15 +978,6 @@ Lemma capture_ref_free_ty_b_fuel_runtime_rootless :
 Proof.
   induction fuel as [| fuel IH]; intros env T Hfree; simpl in Hfree;
     try discriminate.
-  assert (Hlist : forall ts,
-    forallb (capture_ref_free_ty_b_fuel fuel env) ts = true ->
-    Forall (runtime_rootless_ty env) ts).
-  { induction ts as [| T0 Ts IHTs]; simpl; intros Hts.
-    - constructor.
-    - apply andb_true_iff in Hts as [HT HTs].
-      constructor.
-      + apply IH. exact HT.
-      + apply IHTs. exact HTs. }
   destruct T as [u core].
   destruct core as
     [| | | | named | tparam | name lts args | params ret
@@ -1002,7 +992,6 @@ Proof.
       try discriminate.
     eapply RRT_Struct.
     + exact Hlookup.
-    + apply Hlist. exact Hargs.
     + apply Forall_forall.
       intros f Hin.
       apply forallb_forall with (x := f) in Hfields_lookup; [| exact Hin].

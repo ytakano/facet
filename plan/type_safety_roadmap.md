@@ -609,19 +609,34 @@ Follow this order before inventing new theorem shapes:
      against `fn_params fdef`, returns `root_sets_union arg_roots`, and still
      rejects every other general `ECallExpr` shape. Soundness and alpha-renaming
      preservation compile for this narrow route.
-   - Next closure proof task: connect the new caller-side
-     `ECallExpr (EMakeClosure ...)` root/shadow evidence to
+   - Current sidecar progress: a narrow captured-call sidecar package now
+     exists for exactly `ECallExpr (EMakeClosure fname captures) args`. It
+     retains executable exact capture success, requires the callee lifetime
+     count to be zero, requires hidden capture names to be disjoint from
+     `args_local_store_names args`, and records callee-body root/shadow
+     provenance under `initial_root_env_for_params (fn_params ++ fn_captures)`.
+     The boolean-to-Prop soundness bridge compiles in `EnvRuntimeSafety.v`.
+   - Next closure proof task: connect this sidecar evidence to
      `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased`.
-     Current blocker: root/shadow soundness erases the executable exact capture
-     success into non-exact Prop evidence, but the cleanup bridge still needs
-     the exact sidecar check to type the copied hidden capture store. Do not
-     make the existing Prop constructors exact; that reopens the alpha-renaming
-     hidden-name freshness problem. The next implementation must add a narrow
-     captured-call sidecar package that retains exact capture success together
-     with captured frame readiness, combined `fn_params ++ fn_captures` root
-     coverage/exclusion, and callee-body root/shadow provenance summary for the
-     alpha-renamed body context. Only after that package and theorem compile
-     should the executable validators accept captured `ECallExpr`.
+     Current blocker: the cleanup bridge requires
+     `captured_call_frame_ready env captured Rcap s_args R_args`, but no lemma
+     yet constructs `Rcap` for the copied hidden capture store from
+     `copy_capture_store_as`.
+   - Required next lemmas before the final captured-call theorem:
+     1. prove that exact `copy_capture_store_as` plus caller
+        `store_roots_within R s`, `store_no_shadow s`, root-env no-shadow, and
+        root-env naming yields some `Rcap` satisfying
+        `captured_store_runtime_ready env captured Rcap`;
+     2. prove hidden capture parameter names remain absent from the evaluated
+        argument store/root environment, using exact capture freshness plus the
+        sidecar `callee_hidden_capture_args_disjoint`;
+     3. compose `Rcap` and the evaluated argument frame with
+        `captured_call_frame_ready_compose`;
+     4. instantiate the callee-body summary for the alpha-renamed body context
+        and pass the combined root env into the existing captured cleanup
+        theorem.
+     Do not make the existing Prop root/shadow constructors exact; that reopens
+     the alpha-renaming hidden-name freshness problem.
    - Preservation/provenance readiness validators still reject `EMakeClosure`
      and captured `ECallExpr`, including
      `ECallExpr (EMakeClosure fname captures) args`. Do not flip those

@@ -1157,6 +1157,79 @@ Definition env_fns_root_shadow_non_capturing_call_provenance_summary_check_ready
     lookup_fn fname (env_fns env) = Some fdef ->
     callee_body_root_shadow_non_capturing_call_provenance_summary env fdef.
 
+Definition callee_body_root_shadow_captured_callee_provenance_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+  exists T_body Γ_out R_body roots_body,
+    provenance_ready_expr (fn_body fdef) /\
+    typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_params (fn_params fdef ++ fn_captures fdef))
+      (sctx_of_ctx (fn_body_ctx fdef))
+      (fn_body fdef) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
+    roots_exclude_params (fn_params fdef ++ fn_captures fdef) roots_body /\
+    root_env_excludes_params (fn_params fdef ++ fn_captures fdef) R_body.
+
+Definition callee_hidden_capture_args_disjoint
+    (callee : fn_def) (args : list expr) : Prop :=
+  Forall
+    (fun x => ~ In x (args_local_store_names args))
+    (ctx_names (params_ctx (fn_captures callee))).
+
+Definition callee_body_root_shadow_captured_call_provenance_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  callee_body_root_shadow_non_capturing_call_provenance_summary env fdef \/
+  exists fname captures args fcallee captured_tys
+      T_body Γ_out R_body roots_body,
+    fn_body fdef = ECallExpr (EMakeClosure fname captures) args /\
+    captured_call_target_expr (fn_body fdef) = Some (fname, captures, args) /\
+    preservation_ready_args args /\
+    In fcallee (env_fns env) /\
+    fn_name fcallee = fname /\
+    fn_lifetimes fcallee = 0 /\
+    callee_hidden_capture_args_disjoint fcallee args /\
+    check_make_closure_captures_exact_sctx env
+      (fn_outlives fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      captures
+      (fn_captures fcallee) = infer_ok captured_tys /\
+    callee_body_root_shadow_captured_callee_provenance_summary
+      env fcallee /\
+    NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+    typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      (fn_body fdef) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
+    roots_exclude_params (fn_params fdef) roots_body /\
+    root_env_excludes_params (fn_params fdef) R_body.
+
+Definition env_fns_root_shadow_captured_call_provenance_summary_check_ready
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_captured_call_provenance_summary env fdef.
+
+Lemma callee_hidden_capture_args_disjoint_b_sound :
+  forall callee args,
+    callee_hidden_capture_args_disjoint_b callee args = true ->
+    callee_hidden_capture_args_disjoint callee args.
+Proof.
+  intros callee args Hcheck.
+  unfold callee_hidden_capture_args_disjoint_b in Hcheck.
+  unfold callee_hidden_capture_args_disjoint.
+  apply Forall_forall.
+  intros x Hin Harg.
+  apply forallb_forall with (x := x) in Hcheck; [| exact Hin].
+  apply negb_true_iff in Hcheck.
+  assert (Hexists :
+    existsb (ident_eqb x) (args_local_store_names args) = true).
+  { apply existsb_exists.
+    exists x. split; [exact Harg|].
+    apply ident_eqb_refl. }
+  rewrite Hexists in Hcheck. discriminate.
+Qed.
+
 Lemma fn_params_roots_exclude_b_sound :
   forall ps roots,
     fn_params_roots_exclude_b ps roots = true ->
@@ -1351,6 +1424,108 @@ Proof.
     apply fn_params_root_env_excludes_b_sound. exact Henv.
 Qed.
 
+Lemma check_fn_root_shadow_captured_callee_provenance_summary_sound :
+  forall env fdef,
+    check_fn_root_shadow_captured_callee_provenance_summary env fdef = true ->
+    callee_body_root_shadow_captured_callee_provenance_summary env fdef.
+Proof.
+  intros env fdef Hcheck.
+  unfold check_fn_root_shadow_captured_callee_provenance_summary in Hcheck.
+  apply andb_true_iff in Hcheck as [Hready Hsummary].
+  destruct (infer_env_roots_shadow_safe env fdef
+    (initial_root_env_for_params (fn_params fdef ++ fn_captures fdef)))
+    as [[[[T_check Γ_check] R_out] roots] | err] eqn:Hinfer;
+    try discriminate.
+  apply andb_true_iff in Hsummary as [Hroots Henv].
+  split.
+  - eapply infer_env_roots_shadow_safe_params_nodup. exact Hinfer.
+  - pose proof (infer_env_roots_shadow_safe_sound
+                  env fdef
+                  (initial_root_env_for_params
+                    (fn_params fdef ++ fn_captures fdef))
+                  T_check Γ_check R_out roots Hinfer) as Htyped_fn.
+    unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
+    destruct Htyped_fn as
+      (T_body & Γ_out & Htyped & Hcompat & _).
+    exists T_body, Γ_out, R_out, roots.
+    repeat split.
+    + apply provenance_ready_expr_b_sound. exact Hready.
+    + exact Htyped.
+    + exact Hcompat.
+    + apply fn_params_roots_exclude_b_sound. exact Hroots.
+    + apply fn_params_root_env_excludes_b_sound. exact Henv.
+Qed.
+
+Lemma check_fn_root_shadow_captured_call_provenance_summary_sound :
+  forall env fdef,
+    check_fn_root_shadow_captured_call_provenance_summary env fdef = true ->
+    callee_body_root_shadow_captured_call_provenance_summary env fdef.
+Proof.
+  intros env fdef Hcheck.
+  unfold check_fn_root_shadow_captured_call_provenance_summary in Hcheck.
+  destruct (check_fn_root_shadow_non_capturing_call_provenance_summary env fdef)
+    eqn:Hold.
+  - left. apply check_fn_root_shadow_non_capturing_call_provenance_summary_sound.
+    exact Hold.
+  - right.
+    destruct (captured_call_target_expr (fn_body fdef))
+      as [[[fname captures] args] |] eqn:Htarget; try discriminate.
+    apply andb_true_iff in Hcheck as [Hready_args Hrest].
+    destruct (lookup_fn_b fname (env_fns env)) as [fcallee |] eqn:Hlookup_b;
+      try discriminate.
+    apply andb_true_iff in Hrest as [Hcallee_head Hrest].
+    apply andb_true_iff in Hcallee_head as [Hlt Hdisjoint].
+    apply PeanoNat.Nat.eqb_eq in Hlt.
+    destruct (check_make_closure_captures_exact_sctx env
+      (fn_outlives fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      captures
+      (fn_captures fcallee)) as [captured_tys | err] eqn:Hcaptures;
+      try discriminate.
+    apply andb_true_iff in Hrest as [Hcallee Hsummary].
+    destruct (infer_env_roots_shadow_safe env fdef
+      (initial_root_env_for_fn fdef))
+      as [[[[T_check Γ_check] R_out] roots] | err] eqn:Hinfer;
+      try discriminate.
+    apply andb_true_iff in Hsummary as [Hroots Henv].
+    destruct (lookup_fn_b_sound fname (env_fns env) fcallee Hlookup_b)
+      as [Hin_callee Hname_callee].
+    pose proof (infer_env_roots_shadow_safe_sound
+                  env fdef
+                  (initial_root_env_for_fn fdef)
+                  T_check Γ_check R_out roots Hinfer) as Htyped_fn.
+    unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
+    destruct Htyped_fn as
+      (T_body & Γ_out & Htyped & Hcompat & _).
+    assert (Hbody :
+      fn_body fdef = ECallExpr (EMakeClosure fname captures) args).
+    { unfold captured_call_target_expr in Htarget.
+      destruct (fn_body fdef); try discriminate.
+      destruct e; try discriminate.
+      inversion Htarget. reflexivity. }
+    exists fname, captures, args, fcallee, captured_tys,
+      T_body, Γ_out, R_out, roots.
+    split; [exact Hbody|].
+    split; [reflexivity|].
+    split; [apply preservation_ready_args_b_sound; exact Hready_args|].
+    split; [exact Hin_callee|].
+    split; [exact Hname_callee|].
+    split; [exact Hlt|].
+    split.
+    { apply callee_hidden_capture_args_disjoint_b_sound.
+      exact Hdisjoint. }
+    split; [exact Hcaptures|].
+    split.
+    { apply check_fn_root_shadow_captured_callee_provenance_summary_sound.
+      exact Hcallee. }
+    split.
+    { eapply infer_env_roots_shadow_safe_params_nodup. exact Hinfer. }
+    split; [exact Htyped|].
+    split; [exact Hcompat|].
+    split; [apply fn_params_roots_exclude_b_sound; exact Hroots|].
+    apply fn_params_root_env_excludes_b_sound. exact Henv.
+Qed.
+
 Lemma check_env_root_shadow_summary_ready :
   forall env,
     check_env_root_shadow_summary env = true ->
@@ -1404,6 +1579,20 @@ Proof.
     as [Hin _].
   apply forallb_forall with (x := fdef) in Hcheck; [| exact Hin].
   apply check_fn_root_shadow_non_capturing_call_provenance_summary_sound.
+  exact Hcheck.
+Qed.
+
+Lemma check_env_root_shadow_captured_call_provenance_summary_ready :
+  forall env,
+    check_env_root_shadow_captured_call_provenance_summary env = true ->
+    env_fns_root_shadow_captured_call_provenance_summary_check_ready env.
+Proof.
+  intros env Hcheck fname fdef Hlookup.
+  unfold check_env_root_shadow_captured_call_provenance_summary in Hcheck.
+  destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+    as [Hin _].
+  apply forallb_forall with (x := fdef) in Hcheck; [| exact Hin].
+  apply check_fn_root_shadow_captured_call_provenance_summary_sound.
   exact Hcheck.
 Qed.
 
@@ -1473,6 +1662,11 @@ Definition ordinary_alpha_root_shadow_direct_call_provenance_validator_ready
   env_fns_root_shadow_direct_call_provenance_summary_check_ready
     (alpha_normalize_global_env env).
 
+Definition ordinary_alpha_root_shadow_captured_call_provenance_validator_ready
+    (env : global_env) : Prop :=
+  env_fns_root_shadow_captured_call_provenance_summary_check_ready
+    (alpha_normalize_global_env env).
+
 Lemma check_program_env_alpha_validated_root_shadow_ready :
   forall env,
     check_program_env_alpha_validated_root_shadow env = true ->
@@ -1511,6 +1705,19 @@ Proof.
     in Hcheck.
   apply andb_true_iff in Hcheck as [_ Hsummary].
   apply check_env_root_shadow_direct_call_provenance_summary_ready.
+  exact Hsummary.
+Qed.
+
+Lemma check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary_ready :
+  forall env,
+    check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary env = true ->
+    ordinary_alpha_root_shadow_captured_call_provenance_validator_ready env.
+Proof.
+  intros env Hcheck.
+  unfold check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
+    in Hcheck.
+  apply andb_true_iff in Hcheck as [_ Hsummary].
+  apply check_env_root_shadow_captured_call_provenance_summary_ready.
   exact Hsummary.
 Qed.
 

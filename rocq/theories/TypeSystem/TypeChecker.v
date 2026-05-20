@@ -5029,6 +5029,67 @@ Definition check_fn_root_shadow_non_capturing_call_provenance_summary
       end
   end.
 
+Definition captured_call_target_expr
+    (e : expr) : option (ident * list ident * list expr) :=
+  match e with
+  | ECallExpr (EMakeClosure fname captures) args =>
+      Some (fname, captures, args)
+  | _ => None
+  end.
+
+Definition check_fn_root_shadow_captured_callee_provenance_summary
+    (env : global_env) (fdef : fn_def) : bool :=
+  provenance_ready_expr_b (fn_body fdef) &&
+  match infer_env_roots_shadow_safe env fdef
+          (initial_root_env_for_params (fn_params fdef ++ fn_captures fdef)) with
+  | infer_ok (_, _, R_out, roots) =>
+      fn_params_roots_exclude_b (fn_params fdef ++ fn_captures fdef) roots &&
+      fn_params_root_env_excludes_b (fn_params fdef ++ fn_captures fdef) R_out
+  | infer_err _ => false
+  end.
+
+Definition callee_hidden_capture_args_disjoint_b
+    (callee : fn_def) (args : list expr) : bool :=
+  forallb
+    (fun x =>
+       negb (existsb (ident_eqb x) (args_local_store_names args)))
+    (ctx_names (params_ctx (fn_captures callee))).
+
+Definition check_fn_root_shadow_captured_call_provenance_summary
+    (env : global_env) (fdef : fn_def) : bool :=
+  match check_fn_root_shadow_non_capturing_call_provenance_summary env fdef with
+  | true => true
+  | false =>
+      match captured_call_target_expr (fn_body fdef) with
+      | Some (fname, captures, args) =>
+          preservation_ready_args_b args &&
+          match lookup_fn_b fname (env_fns env) with
+          | None => false
+          | Some callee =>
+              (Nat.eqb (fn_lifetimes callee) 0) &&
+              callee_hidden_capture_args_disjoint_b callee args &&
+              match check_make_closure_captures_exact_sctx env
+                      (fn_outlives fdef)
+                      (sctx_of_ctx (fn_body_ctx fdef))
+                      captures
+                      (fn_captures callee) with
+              | infer_err _ => false
+              | infer_ok _ =>
+                  check_fn_root_shadow_captured_callee_provenance_summary
+                    env callee &&
+                  match infer_env_roots_shadow_safe env fdef
+                          (initial_root_env_for_fn fdef) with
+                  | infer_ok (_, _, R_out, roots) =>
+                      fn_params_roots_exclude_b (fn_params fdef) roots &&
+                      fn_params_root_env_excludes_b (fn_params fdef) R_out
+                  | infer_err _ => false
+                  end
+              end
+          end
+      | None => false
+      end
+  end.
+
 Definition check_env_root_shadow_direct_call_provenance_summary
     (env : global_env) : bool :=
   forallb (check_fn_root_shadow_direct_call_provenance_summary env)
@@ -5037,6 +5098,11 @@ Definition check_env_root_shadow_direct_call_provenance_summary
 Definition check_env_root_shadow_non_capturing_call_provenance_summary
     (env : global_env) : bool :=
   forallb (check_fn_root_shadow_non_capturing_call_provenance_summary env)
+    (env_fns env).
+
+Definition check_env_root_shadow_captured_call_provenance_summary
+    (env : global_env) : bool :=
+  forallb (check_fn_root_shadow_captured_call_provenance_summary env)
     (env_fns env).
 
 Definition check_env_preservation_ready (env : global_env) : bool :=
@@ -5062,6 +5128,12 @@ Definition check_program_env_alpha_validated_root_shadow_non_capturing_call_prov
     (env : global_env) : bool :=
   check_program_env_alpha_validated env &&
   check_env_root_shadow_non_capturing_call_provenance_summary
+    (alpha_normalize_global_env env).
+
+Definition check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
+    (env : global_env) : bool :=
+  check_program_env_alpha_validated env &&
+  check_env_root_shadow_captured_call_provenance_summary
     (alpha_normalize_global_env env).
 
 Definition check_program_env_alpha_validated_root_shadow_provenance
@@ -5296,6 +5368,37 @@ Proof. vm_compute. reflexivity. Qed.
 Example ready_gap_matrix_captured_closure_call_non_capturing_summary_rejects :
   check_program_env_alpha_validated_root_shadow_non_capturing_call_provenance_summary
     ex_ready_gap_captured_closure_call_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Definition ex_ready_gap_captured_closure_direct_param_call_fn : fn_def :=
+  MkFnDef (("ready_gap_captured_closure_direct_param_call"%string), 0)
+    0 [] [] [MkParam MImmutable (("cap"%string), 0)
+      (MkTy UUnrestricted TIntegers)]
+    (MkTy UUnrestricted TUnits)
+    (ECallExpr
+      (EMakeClosure (("nonempty_capture_callee"%string), 0)
+        [(("cap"%string), 0)])
+      []).
+
+Definition ex_ready_gap_captured_closure_direct_param_call_env
+    : global_env :=
+  MkGlobalEnv [] [] []
+    [ex_nonempty_capture_callee_fn;
+     ex_ready_gap_captured_closure_direct_param_call_fn].
+
+Example ready_gap_matrix_captured_closure_direct_param_call_checker_accepts :
+  check_program_env_alpha
+    ex_ready_gap_captured_closure_direct_param_call_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_captured_closure_direct_param_call_non_capturing_summary_rejects :
+  check_program_env_alpha_validated_root_shadow_non_capturing_call_provenance_summary
+    ex_ready_gap_captured_closure_direct_param_call_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_captured_closure_direct_param_call_captured_summary_accepts :
+  check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
+    ex_ready_gap_captured_closure_direct_param_call_env = true.
 Proof. vm_compute. reflexivity. Qed.
 
 Example ready_gap_matrix_make_closure_preservation_ready_rejects :

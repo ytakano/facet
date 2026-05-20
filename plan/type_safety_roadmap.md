@@ -216,11 +216,42 @@ Work in this order unless a proof exposes a soundness gap:
          (fn_params fcall ++ fn_captures fcall)))
    ```
 
-   Next proof subtask: connect `EnvRuntimeSafety.v` to this helper. In the
-   captured-call branch, destruct `Eval_CallExpr` and the outer
-   `TERS_CallExpr_MakeClosure`, align the runtime/typed callee with the summary
-   callee using `fn_env_unique_by_name`, then call
-   `eval_make_closure_captured_call_expr_preserves_typing_with_callee_components`.
+   This `EnvRuntimeSafety.v` connection is now complete for the direct
+   `ECallExpr (EMakeClosure fname captures) args` shape. Do not add more
+   captured-call checker branches until a matching TypeSafety-side helper
+   exists.
+
+   Important hidden-frame note: the local let form
+
+   ```coq
+   ELet m x T (EMakeClosure fname captures)
+     (ECallExpr (EVar x) args)
+   ```
+
+   cannot be justified from only:
+
+   - `x` not in `captures`;
+   - `x` not in `args_local_store_names args`;
+   - `x` not in the syntactic free variables of `args`.
+
+   Those conditions rule out direct syntactic access to `x`, but they do not
+   rule out an argument dereferencing an existing reference value that points
+   to the future hidden binding name `x`. The argument-stripping proof must
+   also consume runtime root/alias evidence excluding `x` from the reachable
+   argument roots, or otherwise prove from the initial root environment that
+   no evaluated argument can reach the hidden binding.
+
+   Current low-level progress for that route: `TypeSafety.v` now has the
+   store operation commute/lookup facts needed to factor a fresh hidden
+   `store_add` through argument evaluation:
+
+   - `store_lookup_store_add_same`;
+   - `store_lookup_store_add_diff`;
+   - `store_mark_used_store_add_diff`;
+   - `store_update_state_store_add_diff`;
+   - `store_update_val_store_add_diff`;
+   - `store_update_path_store_add_diff`;
+   - `store_restore_path_store_add_diff`.
 
 4. **Final captured-call executable endpoint.** Done.
    The checked-initial wrapper exists:
@@ -241,6 +272,84 @@ Work in this order unless a proof exposes a soundness gap:
    endpoint. Good next candidates are small structural variants of
    `ECallExpr (EMakeClosure fname captures) args`; do not mix this into
    ordinary expression readiness.
+
+   Do not implement let-bound captured closure values by merely adding a broad
+   `value_has_type` constructor for `VClosure fname captured`. Even a mutual
+   constructor carrying only "captured entries have their stored types" is not
+   enough: it makes existing root facts false. In particular,
+   `closure_value_ty fdef captured_tys` currently erases `captured_tys` from the
+   type core and only keeps their aggregate usage. Since
+   `runtime_rootless_ty` accepts `TFn` without inspecting captured values, a
+   captured closure containing references could be typed as a rootless function
+   value, contradicting `value_has_type_runtime_rootless_empty_roots_mut`.
+
+   Any future general `VClosure fname captured` route must therefore carry root
+   evidence as well as type evidence, or avoid installing it as a global
+   `value_has_type` constructor. Acceptable next designs are:
+
+   - proof-local bridge from `Eval_MakeClosure` plus exact copy evidence to the
+     captured-call preservation endpoint, without widening global runtime
+     typing;
+   - a frame/projection theorem for closure results that keeps captured roots in
+     the frame instead of requiring `value_roots_within []`;
+   - a stronger closure runtime typing predicate whose statement includes both
+     captured entry types and captured root bounds, with all rootless lemmas
+     updated deliberately.
+
+   The attempted checker shape:
+
+   ```coq
+   ELet m x T (EMakeClosure fname captures)
+     (ECallExpr (EVar x) args)
+   ```
+
+   also needs extra evidence before it can be accepted by the sidecar:
+
+   - `x` is not in `captures`;
+   - `x` is not in `args_local_store_names args`;
+   - `x` is not in the free variables of `args`;
+   - evaluating preservation-ready `args` under `store_add x ... s` is
+     equivalent to evaluating them under `s`, up to the final removal of `x`;
+   - the call-body proof must not require `store_typed` for
+     `store_add x T (VClosure fname captured) s`, because that would require a
+     global captured-closure `value_has_type` constructor;
+   - alpha-renaming must be shown stable, or frame-insensitive, when the hidden
+     let binding `x` appears in the runtime `store_names` used for
+     `alpha_rename_fn_def`;
+   - the final value excludes `x`, so `store_remove x` preserves its type.
+
+   Until those facts exist, keep the executable captured-call validator limited
+   to direct `ECallExpr (EMakeClosure fname captures) args`.
+
+   The safe next proof task is not checker plumbing. First add a TypeSafety-side
+   lemma for a proof-local hidden binding frame:
+
+   ```coq
+   eval env s
+     (ELet m x T (EMakeClosure fname captures)
+       (ECallExpr (EVar x) args)) s' v
+   ```
+
+   The lemma should destruct the evaluation, use `Eval_MakeClosure` only as
+   exact capture-copy evidence, avoid typing the temporary closure binding as a
+   normal store entry, and prove the captured-call body cleanup with `x` treated
+   as an erased frame name. Only after that helper compiles should
+   `check_fn_root_shadow_captured_call_provenance_summary` grow a local-let
+   branch.
+
+   Current hidden-frame progress: `TypeSafety.v` has
+   `copied_captured_closure_roots_empty`, which derives
+   `value_roots_within [] (VClosure fname captured)` from exact capture-copy
+   evidence and `captured_store_runtime_ready`, without adding a global
+   captured-closure `value_has_type` constructor.
+
+   Next hidden-frame proof subtask: prove an args-evaluation invariance lemma
+   for preservation-ready args under an irrelevant hidden binding. The lemma
+   should relate `eval_args env (store_add x T hidden s) args ...` to evaluation
+   over `s`, but only with enough runtime evidence to rule out indirect
+   reference access to `x`. Syntactic absence from `args_local_store_names args`
+   and the free variables of `args` is not sufficient by itself. This should be
+   proved before adding any checker branch.
 
 6. **Handle `if` last.**
    The known `if` blocker is that ordinary `TES_If` does not expose

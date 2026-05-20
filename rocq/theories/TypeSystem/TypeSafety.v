@@ -3472,6 +3472,84 @@ Proof.
   - apply root_env_store_keys_named_empty_root_env_for_store.
 Qed.
 
+Lemma store_roots_with_empty_roots_exclude_root :
+  forall R s root,
+    store_roots_within R s ->
+    (forall x roots,
+      In x (store_names s) ->
+      root_env_lookup x R = Some roots ->
+      roots = []) ->
+    store_refs_exclude_root root s.
+Proof.
+  intros R s root Hwithin Hempty.
+  induction Hwithin as [R|R se rest Hentry Hrest IH].
+  - constructor.
+  - constructor.
+    + inversion Hentry; subst.
+      assert (Hroots_empty : roots = []).
+      { eapply Hempty.
+        - simpl. left. reflexivity.
+        - exact H. }
+      subst roots.
+      constructor.
+      eapply value_roots_exclude_root.
+      * exact H0.
+      * unfold roots_exclude. intros Hin. contradiction.
+    + apply IH.
+      intros x roots Hin Hlookup.
+      eapply Hempty.
+      * simpl. right. exact Hin.
+      * exact Hlookup.
+Qed.
+
+Lemma store_roots_within_empty_root_env_refs_exclude_root :
+  forall s root,
+    store_roots_within (empty_root_env_for_store s) s ->
+    store_refs_exclude_root root s.
+Proof.
+  intros s root Hwithin.
+  eapply store_roots_with_empty_roots_exclude_root.
+  - exact Hwithin.
+  - intros x roots Hin Hlookup.
+    rewrite (root_env_lookup_empty_root_env_for_store s x Hin) in Hlookup.
+    inversion Hlookup. reflexivity.
+Qed.
+
+Lemma captured_store_runtime_ready_empty_refs_exclude_root :
+  forall env captured root,
+    captured_store_runtime_ready env captured
+      (empty_root_env_for_store captured) ->
+    store_refs_exclude_root root captured.
+Proof.
+  intros env captured root Hready.
+  unfold captured_store_runtime_ready in Hready.
+  destruct Hready as [_ [Hroots _]].
+  eapply store_roots_within_empty_root_env_refs_exclude_root.
+  exact Hroots.
+Qed.
+
+Lemma copied_captured_closure_roots_empty :
+  forall Ω env s Σ fname captures fdef captured captured_tys,
+    store_typed env s Σ ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
+    copy_capture_store_as captures (fn_captures fdef) s = Some captured ->
+    check_make_closure_captures_exact_sctx env Ω Σ captures
+      (fn_captures fdef) = infer_ok captured_tys ->
+    value_roots_within [] (VClosure fname captured).
+Proof.
+  intros Ω env s Σ fname captures fdef captured captured_tys Hstore
+    Hlookup Hnodup Hcopy Hcheck.
+  constructor.
+  intros root _.
+  pose proof
+    (copy_capture_store_as_captured_store_runtime_ready
+      Ω env s Σ captures (fn_captures fdef) captured captured_tys
+      Hstore Hnodup Hcopy Hcheck) as Hready.
+  eapply captured_store_runtime_ready_empty_refs_exclude_root.
+  exact Hready.
+Qed.
+
 Lemma root_env_store_roots_named_app :
   forall R1 R2 s1 s2,
     root_env_store_roots_named R1 s1 ->
@@ -8288,6 +8366,94 @@ Proof.
     contradiction Hnotin. left. reflexivity.
   - rewrite IH; try reflexivity.
     intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma store_lookup_store_add_same :
+  forall x T v s,
+    store_lookup x (store_add x T v s) =
+    Some (MkStoreEntry x T v (binding_state_of_bool false)).
+Proof.
+  intros x T v s.
+  unfold store_add. simpl. rewrite ident_eqb_refl. reflexivity.
+Qed.
+
+Lemma store_lookup_store_add_diff :
+  forall x y T v s,
+    x <> y ->
+    store_lookup x (store_add y T v s) = store_lookup x s.
+Proof.
+  intros x y T v s Hneq.
+  unfold store_add. simpl.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. contradiction.
+  - reflexivity.
+Qed.
+
+Lemma store_mark_used_store_add_diff :
+  forall x y T v s,
+    x <> y ->
+    store_mark_used x (store_add y T v s) =
+    store_add y T v (store_mark_used x s).
+Proof.
+  intros x y T v s Hneq.
+  unfold store_add. simpl.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. contradiction.
+  - reflexivity.
+Qed.
+
+Lemma store_update_state_store_add_diff :
+  forall x y f T v s s',
+    x <> y ->
+    store_update_state x f s = Some s' ->
+    store_update_state x f (store_add y T v s) =
+    Some (store_add y T v s').
+Proof.
+  intros x y f T v s s' Hneq Hupdate.
+  unfold store_add. simpl.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. contradiction.
+  - rewrite Hupdate. reflexivity.
+Qed.
+
+Lemma store_update_val_store_add_diff :
+  forall x y T v v_new s s',
+    x <> y ->
+    store_update_val x v_new s = Some s' ->
+    store_update_val x v_new (store_add y T v s) =
+    Some (store_add y T v s').
+Proof.
+  intros x y T v v_new s s' Hneq Hupdate.
+  unfold store_add. simpl.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. contradiction.
+  - rewrite Hupdate. reflexivity.
+Qed.
+
+Lemma store_update_path_store_add_diff :
+  forall x y path T v v_new s s',
+    x <> y ->
+    store_update_path x path v_new s = Some s' ->
+    store_update_path x path v_new (store_add y T v s) =
+    Some (store_add y T v s').
+Proof.
+  intros x y path T v v_new s s' Hneq Hupdate.
+  unfold store_add. simpl.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. contradiction.
+  - rewrite Hupdate. reflexivity.
+Qed.
+
+Lemma store_restore_path_store_add_diff :
+  forall x y path T v s s',
+    x <> y ->
+    store_restore_path x path s = Some s' ->
+    store_restore_path x path (store_add y T v s) =
+    Some (store_add y T v s').
+Proof.
+  intros x y path T v s s' Hneq Hrestore.
+  unfold store_restore_path in *.
+  eapply store_update_state_store_add_diff; eassumption.
 Qed.
 
 Lemma store_param_prefix_update_state_same_frame :

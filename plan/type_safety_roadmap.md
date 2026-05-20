@@ -414,6 +414,7 @@ Work in this order unless a proof exposes a soundness gap:
 
    ```coq
    eval_captured_call_body_ctx_cleanup_hidden_frame_erased
+   eval_let_make_closure_captured_call_hidden_cleanup_package
    ```
 
    This is the proof-local body cleanup variant for
@@ -425,15 +426,19 @@ Work in this order unless a proof exposes a soundness gap:
    `roots_exclude x roots_bound`, matching the existing captured-call
    result-subset bridge style.
 
-   Next hidden-frame proof subtask: connect the stripped evaluation package to
-   the existing captured-call preservation endpoint. The remaining bridge must
-   handle the callee-body evaluation under
-   `captured ++ store_add x T (VClosure fname captured) s_args`, then erase
-   `x` without requiring `store_typed` for the temporary closure binding.
-   The cleanup arithmetic and hidden-frame body cleanup are now available; the
-   remaining proof work is wiring the stripped evaluation package to the hidden
-   cleanup helper and supplying a bound that excludes the hidden name `x`. Do
-   this before adding any checker branch.
+   `eval_let_make_closure_captured_call_hidden_cleanup_package` is the current
+   local-let bridge endpoint. It destructs the stripped local-let evaluation,
+   exposes copied captures, evaluated args, alpha-renamed callee components,
+   and body evaluation, then provides a continuation that runs the hidden-frame
+   cleanup once the caller supplies the callee body typing/root package and a
+   root bound excluding `x`.
+
+   Next hidden-frame proof subtask: construct that caller-side package
+   automatically for the local-let shape. Reuse the existing captured-call
+   instantiated-body helpers, but target
+   `captured ++ store_add x T (VClosure fname captured) s_args` and supply a
+   `roots_bound` that excludes the hidden name `x`. Do this before adding any
+   checker branch.
 
 6. **Handle `if` last.**
    The known `if` blocker is that ordinary `TES_If` does not expose

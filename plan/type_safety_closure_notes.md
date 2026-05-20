@@ -176,15 +176,22 @@ Current progress:
   `capture_ref_free_ty_b`.
 - `capture_ref_free_ty_b_sound` proves successful executable checks produce
   that Prop evidence.
+- `capture_ref_free_ty` remains structural. Do not add compatibility or
+  lifetime-equivalence closure constructors to it.
 - The remaining blocker is the runtime-root theorem for values typed at
-  `capture_ref_free_ty`. The theorem must handle both `VHT_Compatible` and
-  `VHT_LifetimeEquiv` without making the Prop mirror unsoundly broad.
+  `capture_ref_free_ty`. The next route is to introduce a proof-only
+  `runtime_rootless_ty` predicate in `TypeSafety.v`, then prove root-empty
+  facts directly from `value_has_type`.
+- In the `VHT_Compatible` and `VHT_LifetimeEquiv` cases, reason from the
+  compatibility/lifetime-equivalence proof and runtime value shape. Do not
+  first try to convert the actual type back into `capture_ref_free_ty`.
 
 ## Next Closure Lemmas
 
-1. Prove stable compatibility/lifetime-equivalence closure lemmas for
-   `capture_ref_free_ty`.
-2. Prove values typed at `capture_ref_free_ty` have empty runtime roots.
+1. Add a proof-only `runtime_rootless_ty` predicate in `TypeSafety.v`.
+2. Prove direct root-empty lemmas from `value_has_type` for
+   `capture_ref_free_ty` values, using `runtime_rootless_ty` for the
+   compatibility and lifetime-equivalence cases.
 3. Prove exact capture copy yields `captured_store_runtime_ready`.
 4. Prove hidden capture names remain absent from evaluated argument store/root
    environment.

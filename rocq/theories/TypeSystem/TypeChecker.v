@@ -232,13 +232,7 @@ Inductive capture_ref_free_ty (env : global_env) : Ty -> Prop :=
   | CRFT_Forall : forall u n Ω body,
       capture_ref_free_ty env body ->
       capture_ref_free_ty env (MkTy u (TForall n Ω body))
-  | CRFT_CompatibleActual : forall Ω T_actual T_expected,
-      ty_compatible Ω T_actual T_expected ->
-      capture_ref_free_ty env T_expected ->
-      capture_ref_free_ty env T_actual
-  | CRFT_ChangeUsage : forall u T,
-      capture_ref_free_ty env T ->
-      capture_ref_free_ty env (MkTy u (ty_core T)).
+  .
 
 Fixpoint capture_ref_free_ty_b_fuel
     (fuel : nat) (env : global_env) (T : Ty) : bool :=

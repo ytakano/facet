@@ -916,6 +916,83 @@ Definition root_env_ctx_keys_named (R : root_env) (Σ : sctx) : Prop :=
 Definition root_env_store_keys_named (R : root_env) (s : store) : Prop :=
   root_env_keys_named R (store_names s).
 
+Inductive runtime_rootless_ty (env : global_env) : Ty -> Prop :=
+  | RRT_Unit : forall u,
+      runtime_rootless_ty env (MkTy u TUnits)
+  | RRT_Int : forall u,
+      runtime_rootless_ty env (MkTy u TIntegers)
+  | RRT_Float : forall u,
+      runtime_rootless_ty env (MkTy u TFloats)
+  | RRT_Bool : forall u,
+      runtime_rootless_ty env (MkTy u TBooleans)
+  | RRT_Struct : forall u name lts args sdef,
+      lookup_struct name env = Some sdef ->
+      Forall (runtime_rootless_ty env) args ->
+      Forall
+        (fun f =>
+           runtime_rootless_ty env
+             (instantiate_struct_field_ty lts args f))
+        (struct_fields sdef) ->
+      runtime_rootless_ty env (MkTy u (TStruct name lts args))
+  | RRT_Fn : forall u params ret,
+      runtime_rootless_ty env (MkTy u (TFn params ret))
+  | RRT_Forall : forall u n Ω body,
+      runtime_rootless_ty env body ->
+      runtime_rootless_ty env (MkTy u (TForall n Ω body))
+  | RRT_CaptureRefFree : forall T,
+      capture_ref_free_ty env T ->
+      runtime_rootless_ty env T
+  | RRT_CompatibleActual : forall Ω T_actual T_expected,
+      ty_compatible Ω T_actual T_expected ->
+      runtime_rootless_ty env T_expected ->
+      runtime_rootless_ty env T_actual
+  | RRT_LifetimeEquivActual : forall T_actual T_expected,
+      ty_lifetime_equiv T_actual T_expected ->
+      runtime_rootless_ty env T_expected ->
+      runtime_rootless_ty env T_actual
+  | RRT_ChangeUsage : forall u T,
+      runtime_rootless_ty env T ->
+      runtime_rootless_ty env (MkTy u (ty_core T)).
+
+Lemma capture_ref_free_ty_runtime_rootless :
+  forall env T,
+    capture_ref_free_ty env T ->
+    runtime_rootless_ty env T.
+Proof.
+  intros env T Hfree.
+  apply RRT_CaptureRefFree. exact Hfree.
+Qed.
+
+Lemma runtime_rootless_ty_change_usage :
+  forall env T u,
+    runtime_rootless_ty env T ->
+    runtime_rootless_ty env (MkTy u (ty_core T)).
+Proof.
+  intros env T u Hrootless.
+  apply RRT_ChangeUsage. exact Hrootless.
+Qed.
+
+Lemma ty_compatible_runtime_rootless_actual :
+  forall env Ω T_actual T_expected,
+    ty_compatible Ω T_actual T_expected ->
+    runtime_rootless_ty env T_expected ->
+    runtime_rootless_ty env T_actual.
+Proof.
+  intros env Ω T_actual T_expected Hcompat.
+  intros Hrootless.
+  eapply RRT_CompatibleActual; eassumption.
+Qed.
+
+Lemma ty_lifetime_equiv_runtime_rootless_actual :
+  forall env T_actual T_expected,
+    ty_lifetime_equiv T_actual T_expected ->
+    runtime_rootless_ty env T_expected ->
+    runtime_rootless_ty env T_actual.
+Proof.
+  intros env T_actual T_expected Heq Hrootless.
+  eapply RRT_LifetimeEquivActual; eassumption.
+Qed.
+
 Lemma root_set_stores_subset_equiv :
   forall roots roots' roots_bound,
     root_set_equiv roots roots' ->

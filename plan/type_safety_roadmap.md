@@ -96,20 +96,28 @@ Work in this order unless a proof exposes a soundness gap:
    for the store copied by `copy_capture_store_as`.
 
 2. **Capture-reference-free Prop mirror.**
-   Introduce a proof-friendly Prop mirror for capture-reference-free types.
+   Keep the Prop mirror structural, matching `capture_ref_free_ty_b`.
    Then prove:
 
    - `capture_ref_free_ty_b` sound into the Prop mirror;
-   - values typed at that Prop have empty runtime roots;
+   - values typed at that Prop have empty runtime roots, without first trying
+     to prove that `ty_compatible` preserves the Prop on the actual type;
    - exact capture copy yields `captured_store_runtime_ready` for the copied
      hidden capture store.
 
    Current progress: `capture_ref_free_ty` and
-   `capture_ref_free_ty_b_sound` exist. The remaining proof-design blocker is
-   connecting this Prop to `value_has_type` roots: `VHT_Compatible` and
-   `VHT_LifetimeEquiv` require a stable closure principle for compatibility
-   and lifetime equivalence before the empty-root theorem can be stated safely.
-   Do not delegate this to a sub-agent until those lemma statements are fixed.
+   `capture_ref_free_ty_b_sound` exist, and the Prop no longer has broad
+   compatibility/usage constructors. Do not reintroduce a constructor like
+   `CRFT_CompatibleActual`: it is too strong for function argument
+   contravariance and `TC_Fn_Closure`.
+
+   Remaining proof-design task: state the empty-root theorem directly over
+   `value_has_type`. In the `VHT_Compatible` case, analyze the compatibility
+   proof and the runtime value shape instead of converting the actual type back
+   into `capture_ref_free_ty`. In particular, function-typed values can have
+   non-reference-free parameter annotations while still being root-empty as
+   runtime closures. Do not delegate this to a sub-agent until those lemma
+   statements are fixed.
 
 3. **Argument/capture frame composition.**
    After captured-store readiness is proved:
@@ -161,10 +169,10 @@ for the next task:
   ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))
   ```
 
-- The first attempted route, "capture-ref-free type implies empty runtime
-  roots", was blocked because `capture_ref_free_ty_b` is fuel-based and does
-  not currently expose compositional proof facts for struct/function
-  subcomponents.
+- The rejected route, "`ty_compatible Ω T_actual T_expected` plus
+  `capture_ref_free_ty T_expected` implies `capture_ref_free_ty T_actual`",
+  fails for function argument contravariance and `TC_Fn_Closure`. The next
+  route must prove root emptiness from `value_has_type` directly.
 
 ## Fixed Boundaries
 

@@ -616,23 +616,33 @@ Follow this order before inventing new theorem shapes:
      `args_local_store_names args`, and records callee-body root/shadow
      provenance under `initial_root_env_for_params (fn_params ++ fn_captures)`.
      The boolean-to-Prop soundness bridge compiles in `EnvRuntimeSafety.v`.
+     Captured callee summaries now expose `NoDup` for the whole binding
+     parameter list `fn_params ++ fn_captures`, matching the root env used to
+     type the callee body.
    - Next closure proof task: connect this sidecar evidence to
      `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased`.
      Current blocker: the cleanup bridge requires
      `captured_call_frame_ready env captured Rcap s_args R_args`, but no lemma
      yet constructs `Rcap` for the copied hidden capture store from
      `copy_capture_store_as`.
+     The first attempted route, "capture-ref-free type implies empty runtime
+     roots", is blocked by `capture_ref_free_ty_b` being a fuel-based
+     executable predicate: the needed compositional facts for function/struct
+     subcomponents are not currently exposed in a proof-friendly Prop form.
    - Required next lemmas before the final captured-call theorem:
-     1. prove that exact `copy_capture_store_as` plus caller
+     1. introduce a proof-friendly Prop mirror for capture-reference-free
+        types, prove `capture_ref_free_ty_b` sound into that Prop, and prove
+        values typed at that Prop have empty runtime roots;
+     2. prove that exact `copy_capture_store_as` plus caller
         `store_roots_within R s`, `store_no_shadow s`, root-env no-shadow, and
         root-env naming yields some `Rcap` satisfying
         `captured_store_runtime_ready env captured Rcap`;
-     2. prove hidden capture parameter names remain absent from the evaluated
+     3. prove hidden capture parameter names remain absent from the evaluated
         argument store/root environment, using exact capture freshness plus the
         sidecar `callee_hidden_capture_args_disjoint`;
-     3. compose `Rcap` and the evaluated argument frame with
+     4. compose `Rcap` and the evaluated argument frame with
         `captured_call_frame_ready_compose`;
-     4. instantiate the callee-body summary for the alpha-renamed body context
+     5. instantiate the callee-body summary for the alpha-renamed body context
         and pass the combined root env into the existing captured cleanup
         theorem.
      Do not make the existing Prop root/shadow constructors exact; that reopens

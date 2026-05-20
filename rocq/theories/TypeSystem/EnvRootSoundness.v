@@ -1258,6 +1258,28 @@ Proof.
   eapply duplicate_param_name_none_nodup_params_ctx_prefix. exact Hdup.
 Qed.
 
+Lemma infer_env_roots_shadow_safe_binding_params_nodup :
+  forall env f R0 T Γ' R' roots,
+    infer_env_roots_shadow_safe env f R0 = infer_ok (T, Γ', R', roots) ->
+    NoDup (ctx_names (params_ctx (fn_params f ++ fn_captures f))).
+Proof.
+  intros env f R0 T Γ' R' roots Hinfer.
+  unfold infer_env_roots_shadow_safe in Hinfer.
+  destruct (negb (wf_outlives_b (mk_region_ctx (fn_lifetimes f)) (fn_outlives f)));
+    try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f)));
+    try discriminate.
+  unfold check_fn_binding_params in Hinfer.
+  destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_captures f)));
+    try discriminate.
+  destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_params f)));
+    try discriminate.
+  destruct (duplicate_param_name (fn_binding_params f)) as [dup |] eqn:Hdup;
+    try discriminate.
+  unfold fn_binding_params in Hdup.
+  eapply duplicate_param_name_none_nodup_params_ctx. exact Hdup.
+Qed.
+
 Theorem infer_full_env_roots_sound :
   forall env f R0 T Γ_out R_out roots,
     infer_full_env_roots env f R0 = infer_ok (T, Γ_out, R_out, roots) ->

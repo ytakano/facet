@@ -1159,7 +1159,7 @@ Definition env_fns_root_shadow_non_capturing_call_provenance_summary_check_ready
 
 Definition callee_body_root_shadow_captured_callee_provenance_summary
     (env : global_env) (fdef : fn_def) : Prop :=
-  NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+  NoDup (ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))) /\
   exists T_body Γ_out R_body roots_body,
     provenance_ready_expr (fn_body fdef) /\
     typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
@@ -1438,7 +1438,7 @@ Proof.
     try discriminate.
   apply andb_true_iff in Hsummary as [Hroots Henv].
   split.
-  - eapply infer_env_roots_shadow_safe_params_nodup. exact Hinfer.
+  - eapply infer_env_roots_shadow_safe_binding_params_nodup. exact Hinfer.
   - pose proof (infer_env_roots_shadow_safe_sound
                   env fdef
                   (initial_root_env_for_params

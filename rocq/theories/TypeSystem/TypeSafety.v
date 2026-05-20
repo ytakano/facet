@@ -9552,6 +9552,84 @@ Proof.
   unfold store_add. simpl. rewrite ident_eqb_refl. reflexivity.
 Qed.
 
+Lemma store_remove_commute_neq :
+  forall x y s,
+    x <> y ->
+    store_remove x (store_remove y s) =
+      store_remove y (store_remove x s).
+Proof.
+  intros x y s Hneq.
+  induction s as [| se rest IH]; simpl; try reflexivity.
+  destruct (ident_eqb y (se_name se)) eqn:Hy;
+    destruct (ident_eqb x (se_name se)) eqn:Hx; simpl.
+  - apply ident_eqb_eq in Hy. apply ident_eqb_eq in Hx.
+    subst. contradiction.
+  - rewrite Hy. reflexivity.
+  - rewrite Hx. reflexivity.
+  - rewrite Hy, Hx. rewrite IH. reflexivity.
+Qed.
+
+Lemma store_remove_params_store_remove_commute :
+  forall ps x s,
+    ~ In x (ctx_names (params_ctx ps)) ->
+    store_remove x (store_remove_params ps s) =
+      store_remove_params ps (store_remove x s).
+Proof.
+  induction ps as [| p ps IH]; intros x s Hnotin; simpl.
+  - reflexivity.
+  - rewrite store_remove_commute_neq.
+    + rewrite IH.
+      * reflexivity.
+      * intros Hin. apply Hnotin. right. exact Hin.
+    + intros Heq. apply Hnotin. left. exact Heq.
+Qed.
+
+Lemma store_remove_params_store_add_non_param :
+  forall ps x T v s,
+    ~ In x (ctx_names (params_ctx ps)) ->
+    store_remove_params ps (store_add x T v s) =
+      store_add x T v (store_remove_params ps s).
+Proof.
+  induction ps as [| p ps IH]; intros x T v s Hnotin; simpl.
+  - reflexivity.
+  - unfold store_add. simpl.
+    destruct (ident_eqb (param_name p) x) eqn:Hpx.
+    + apply ident_eqb_eq in Hpx. subst x.
+      contradiction Hnotin. left. reflexivity.
+    + change (MkStoreEntry x T v (binding_state_of_bool false) ::
+        store_remove (param_name p) s)
+        with (store_add x T v (store_remove (param_name p) s)).
+      rewrite IH.
+      * reflexivity.
+      * intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma store_remove_hidden_after_params :
+  forall ps x T v s,
+    ~ In x (ctx_names (params_ctx ps)) ->
+    store_remove x (store_remove_params ps (store_add x T v s)) =
+      store_remove_params ps s.
+Proof.
+  intros ps x T v s Hnotin.
+  rewrite store_remove_params_store_add_non_param by exact Hnotin.
+  rewrite store_remove_store_add_same. reflexivity.
+Qed.
+
+Lemma store_remove_hidden_after_param_groups :
+  forall ps caps x T v s,
+    ~ In x (ctx_names (params_ctx ps)) ->
+    ~ In x (ctx_names (params_ctx caps)) ->
+    store_remove x
+      (store_remove_params caps
+        (store_remove_params ps (store_add x T v s))) =
+      store_remove_params caps (store_remove_params ps s).
+Proof.
+  intros ps caps x T v s Hnotin_ps Hnotin_caps.
+  rewrite store_remove_params_store_add_non_param by exact Hnotin_ps.
+  rewrite store_remove_params_store_add_non_param by exact Hnotin_caps.
+  rewrite store_remove_store_add_same. reflexivity.
+Qed.
+
 Lemma alpha_rename_fn_def_params_not_in_used :
   forall used f fr used' x,
     alpha_rename_fn_def used f = (fr, used') ->
@@ -11506,6 +11584,19 @@ Proof.
   simpl in Hprefix_frame.
   eapply store_remove_params_store_param_prefix.
   exact Hprefix_frame.
+Qed.
+
+Lemma captured_params_store_typed_remove_hidden_app :
+  forall env captured caps x T v frame,
+    captured_params_store_typed env captured caps ->
+    store_remove x
+      (store_remove_params caps (captured ++ store_add x T v frame)) =
+      frame.
+Proof.
+  intros env captured caps x T v frame Htyped.
+  rewrite captured_params_store_typed_remove_app with (env := env)
+    by exact Htyped.
+  apply store_remove_store_add_same.
 Qed.
 
 Lemma store_remove_params_store_frame_scope_exact :

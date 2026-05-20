@@ -403,15 +403,21 @@ Work in this order unless a proof exposes a soundness gap:
    from `store_add x T (VClosure fname captured) s` back to `s`. Supporting
    helpers now include `store_refs_exclude_root_app`,
    `store_add_refs_exclude_root`, `bind_params_refs_exclude_root`,
-   `store_remove_store_add_same`, and alpha-renaming not-in-used wrappers for
-   renamed params/body locals.
+   `store_remove_store_add_same`,
+   `store_remove_params_store_add_non_param`,
+   `store_remove_hidden_after_params`,
+   `store_remove_hidden_after_param_groups`,
+   `captured_params_store_typed_remove_hidden_app`, and alpha-renaming
+   not-in-used wrappers for renamed params/body locals.
 
    Next hidden-frame proof subtask: connect the stripped evaluation package to
    the existing captured-call preservation endpoint. The remaining bridge must
    handle the callee-body evaluation under
    `captured ++ store_add x T (VClosure fname captured) s_args`, then erase
-   `x` without requiring `store_typed` for the temporary closure binding. Do
-   this before adding any checker branch.
+   `x` without requiring `store_typed` for the temporary closure binding.
+   The cleanup arithmetic for erasing `x` after parameter/capture removal is
+   now available; the remaining proof work is the body cleanup/alpha-renaming
+   bridge for the hidden frame. Do this before adding any checker branch.
 
 6. **Handle `if` last.**
    The known `if` blocker is that ordinary `TES_If` does not expose

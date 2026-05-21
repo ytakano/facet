@@ -25,6 +25,7 @@ theories/TypeSystem/TypeSafetyProvenanceReady.v
 theories/TypeSystem/TypeSafetyRootEnvParams.v
 theories/TypeSystem/TypeSafetyRootsReady.v
 theories/TypeSystem/TypeSafetyParamScopeReady.v
+theories/TypeSystem/TypeSafetyFrameScopeReady.v
 theories/TypeSystem/TypeSafetyHiddenFrame.v
 theories/TypeSystem/TypeSafetyClosureRuntimeArgs.v
 theories/TypeSystem/TypeSafetyClosureCleanup.v

@@ -269,8 +269,7 @@ The second split batch is done:
   `bind_params_ref_targets_preserved`, `bind_params_store_typed_prefix`, and
   `bind_params_store_typed_prefix_extend`.
 - `TypeSafetyRootNamed.v` owns the parameterized root-name/key preservation
-  cores and the standalone `root_env_store_keys_named_excludes_names` helper;
-  `TypeSafety.v` keeps the public wrappers.
+  cores and the standalone `root_env_store_keys_named_excludes_names` helper.
 - `TypeSafetyBasePreservation.v` owns the basic big-step preservation cases
   from `eval_args_preserves_typing` through `eval_letinfer_preserves_typing`.
   It also owns the main preservation core
@@ -278,26 +277,28 @@ The second split batch is done:
   endpoint cores
   `typed_fn_env_structural_big_step_safe_ready_with_preservation_core` and
   `checked_fn_env_structural_big_step_safe_ready_with_preservation_core`.
-  `TypeSafety.v` exports it and keeps the public structural endpoint theorem
-  names and public `eval_preserves_typing_ready_mutual` theorem as wrappers.
+  `TypeSafety.v` exports it through the wrapper modules.
 - `TypeSafetyPrefixPreservation.v` owns prefix-preservation cores:
   `eval_preserves_typing_ready_prefix_mutual_core`,
   `eval_preserves_typing_roots_ready_prefix_mutual_core`,
   `eval_preserves_typing_ready_with_call_invariants_mutual_with_preservation_core`,
   and `eval_let_roots_ready_preserves_typing_with_preservation_core`.
-  `TypeSafety.v` keeps the public theorem names as wrappers.
+  `TypeSafetyPreservationWrappers.v` keeps the public theorem names as wrappers.
 - `TypeSafetyRootPreservation.v` owns
   `eval_preserves_typing_roots_ready_mutual_core`.
-  `TypeSafety.v` keeps the public `eval_preserves_typing_roots_ready_mutual`
-  theorem as a wrapper.
+  `TypeSafetyPreservationWrappers.v` keeps the public
+  `eval_preserves_typing_roots_ready_mutual` theorem as a wrapper.
+- `TypeSafetyPreservationWrappers.v` owns the public preservation wrappers:
+  main ready preservation, structural endpoint safety, prefix preservation,
+  roots-ready preservation, root-name preservation, and root-key preservation.
 - `TypeSafetyClosure.v` now holds the parameterized cleanup core:
   `eval_call_body_cleanup_preserves_value_and_refs_frame_core`. It takes the
   body preservation, roots, frame-scope, and param-scope facts as premises, so
   it does not depend on the main preservation mutual theorem in `TypeSafety.v`.
 - `TypeSafetyClosure.v` now also holds the parameterized cleanup wrapper core:
   `eval_call_body_cleanup_preserves_value_and_refs_frame_with_preservation_core`.
-  `TypeSafety.v` keeps the public wrapper and passes the main preservation
-  mutual theorems into the core.
+  `TypeSafetyClosureWrappers.v` keeps the public wrapper and passes the main
+  preservation mutual theorems into the core.
 - `TypeSafetyClosure.v` now holds the captured cleanup wrapper cores:
   `eval_captured_call_body_cleanup_preserves_value_and_refs_with_preservation_core`,
   `eval_captured_call_expr_cleanup_preserves_value_and_refs_with_preservation_core`,
@@ -305,8 +306,9 @@ The second split batch is done:
   `eval_captured_call_expr_cleanup_preserves_value_and_refs_params_with_preservation_core`,
   and
   `eval_captured_call_body_cleanup_preserves_value_and_refs_params_erased_with_preservation_core`.
-  `TypeSafety.v` keeps the public wrappers and passes the frame-scope,
-  prefix-typing, and param-scope preservation mutual theorems into the cores.
+  `TypeSafetyClosureWrappers.v` keeps the public wrappers and passes the
+  frame-scope, prefix-typing, and param-scope preservation mutual theorems into
+  the cores.
 - `TypeSafetyClosure.v` also holds the body-context erased cleanup core:
   `eval_call_body_ctx_cleanup_erased_core`. It is used by
   `eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core`
@@ -322,23 +324,25 @@ The second split batch is done:
   `eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core`
   and
   `eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_core`.
-  `TypeSafety.v` keeps the public wrappers and passes the main preservation
-  mutual theorems into the cores.
+  `TypeSafetyClosureWrappers.v` keeps the public wrappers and passes the main
+  preservation mutual theorems into the cores.
 - `TypeSafetyClosure.v` now also holds the hidden captured cleanup package
   cores:
   `eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset_with_preservation_core`
   and
   `eval_let_make_closure_captured_call_hidden_cleanup_package_with_preservation_core`.
-  `TypeSafety.v` keeps the public wrappers and passes the frame-scope,
-  prefix-typing, and param-scope preservation mutual theorems into the cores.
+  `TypeSafetyClosureWrappers.v` keeps the public wrappers and passes the
+  frame-scope, prefix-typing, and param-scope preservation mutual theorems into
+  the cores.
 - `TypeSafetyClosure.v` also holds the make-closure captured body-context
   cleanup wrapper cores:
   `eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core`,
   `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core`,
   and
   `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_auto_with_preservation_core`.
-  `TypeSafety.v` keeps the public wrappers and passes the frame-scope,
-  prefix-typing, and param-scope preservation mutual theorems into the cores.
+  `TypeSafetyClosureWrappers.v` keeps the public wrappers and passes the
+  frame-scope, prefix-typing, and param-scope preservation mutual theorems into
+  the cores.
 - `TypeSafetyClosure.v` now holds the captured runtime-readiness helper batch:
   copied-capture frame readiness, exact captured frame params readiness, and
   the non-hidden/hidden runtime-args readiness cores used by
@@ -349,16 +353,17 @@ The second split batch is done:
   `eval_make_closure_captured_call_runtime_args_ready_auto_with_preservation_core`
   and
   `eval_let_make_closure_captured_call_runtime_args_ready_auto_with_preservation_core`.
-  `TypeSafety.v` keeps the public wrappers and passes the main preservation,
-  root-name, and root-key mutual theorems into the cores.
+  `TypeSafetyClosureWrappers.v` keeps the public wrappers and passes the main
+  preservation, root-name, and root-key mutual theorems into the cores.
 - `TypeSafetyDirectCall.v` now holds the direct-call support batch:
   function-env uniqueness and lookup helpers needed outside `TypeSafety.v`,
   direct-call callee evidence definitions/conversions, and
   `eval_direct_call_body_cleanup_preserves_value_and_refs_core`.
   It also owns the parameterized direct-call helper, summary bridge, body
-  preservation, and route cores. `TypeSafety.v` keeps the direct-call public
-  wrappers and passes the main preservation, root-name, root-key, frame-scope,
-  prefix-typing, and param-scope preservation mutual theorems into the cores.
+  preservation, and route cores. `TypeSafetyDirectCallWrappers.v` keeps the
+  direct-call public wrappers and passes the main preservation, root-name,
+  root-key, frame-scope, prefix-typing, and param-scope preservation mutual
+  theorems into the cores.
   It also owns the parameterized direct-call prefix preservation cores
   `eval_direct_call_body_preserves_typing_prefix_with_preservation_core` and
   `eval_direct_call_body_preserves_typing_prefix_from_lookup_with_preservation_core`.
@@ -377,42 +382,34 @@ The second split batch is done:
   `eval_make_closure_captured_call_expr_preserves_typing_with_callee_components_with_preservation_core`,
   and
   `eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components_with_preservation_core`.
-  `TypeSafety.v` keeps the public wrappers and passes the main preservation,
-  root-name, root-key, frame-scope, prefix-typing, and param-scope preservation
-  mutual theorems into the cores.
-- `TypeSafety.v` still owns the public cleanup theorem names as thin wrappers.
-  Their proof bodies should keep moving to parameterized cores in
-  `TypeSafetyClosure.v` when the dependency set is fixed.
+  `TypeSafetyClosureWrappers.v` keeps the public captured-call preservation
+  bridge wrappers and passes the main preservation, root-name, root-key,
+  frame-scope, prefix-typing, and param-scope preservation mutual theorems into
+  the cores.
 - `TypeSafetyDirectPlace.v` now owns direct-place runtime target, runtime path
   lookup, and copy/move contradiction helpers.
 - `TypeSafetyLocalFacts.v` now owns the early local-shadow, nil-lifetime, and
   root subset helper facts through `value_roots_exclude_root_stores_subset`.
-- `TypeSafety.v` exports `TypeSafetyHiddenFrame`, `TypeSafetyClosure`,
-  `TypeSafetyDirectCall`, `TypeSafetyCapturedCall`, and
-  `TypeSafetyDirectPlace` plus `TypeSafetyLocalFacts`,
-  `TypeSafetyRootNamed`, `TypeSafetyBasePreservation`, and
-  `TypeSafetyPrefixPreservation`, and `TypeSafetyRootPreservation`, so
-  downstream modules that import `TypeSafety` still see the moved names.
+- `TypeSafety.v` is now an export aggregator. It exports the focused proof
+  modules plus `TypeSafetyPreservationWrappers.v`,
+  `TypeSafetyClosureWrappers.v`, and `TypeSafetyDirectCallWrappers.v`, so
+  downstream modules that import `TypeSafety` still see the public theorem
+  names.
 
 Continue splitting in small batches:
 
 1. Create focused files and update `rocq/_CoqProject` in the same commit.
 2. Preferred targets:
-   - Keep public runtime-readiness and captured-call preservation bridge names
-     in `TypeSafety.v`, but put proof bodies in parameterized wrapper cores in
-     focused files whenever the dependency set is fixed.
-   - Keep public cleanup theorem names in `TypeSafety.v`, but keep moving proof
-     bodies into parameterized wrapper cores in `TypeSafetyClosure.v` once the
-     needed preservation premises are explicit.
+   - Keep public theorem names visible through `TypeSafety.v`, but add new
+     wrappers to focused `*Wrappers.v` files instead of growing `TypeSafety.v`.
+   - Keep moving proof bodies into parameterized cores in focused proof files
+     once the needed preservation premises are explicit.
    - For direct-call work, add new helper facts and parameterized route cores
-     to `TypeSafetyDirectCall.v`; public theorem wrappers should remain stable
-     in `TypeSafety.v`.
+     to `TypeSafetyDirectCall.v`; public wrappers should go in
+     `TypeSafetyDirectCallWrappers.v`.
    - For captured-call work, prefer adding new private helper facts to
-     `TypeSafetyCapturedCall.v`; public theorem wrappers should remain stable
-     in `TypeSafety.v`.
-   - Do not move the public wrapper
-     `eval_call_body_cleanup_preserves_value_and_refs_frame` unless all callers
-     are updated and no dependency cycle is reintroduced.
+     `TypeSafetyCapturedCall.v`; public wrappers should go in
+     `TypeSafetyClosureWrappers.v` or a new focused wrapper file if needed.
 3. Move lemmas only when dependencies are clear. After each batch run:
 
    ```sh

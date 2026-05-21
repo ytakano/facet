@@ -234,23 +234,18 @@ The second split batch is done:
   `store_param_prefix`, `root_env_add_params_roots`, `root_env_remove_params`,
   `call_param_root_env`, tail-frame freshness, and shadow-safe tail-frame
   helpers.
-- `TypeSafetyHiddenFrame.v` owns the readiness-to-provenance bridge
-  `preservation_ready_implies_provenance_ready*`. Do not move these helpers
-  into `TypeSafetyReadiness.v`: `provenance_ready_expr` is defined later in
-  `TypeSafetyHiddenFrame.v`, which already imports `TypeSafetyReadiness.v`, so
-  that move would create a dependency cycle.
-- `TypeSafetyHiddenFrame.v` now holds the frame-scope foundation batch:
+- `TypeSafetyFrameScope.v` now holds the frame-scope foundation batch:
   `store_param_scope`, hidden frame scope, frame static freshness, and
   update/remove preservation facts through
   `store_frame_scope_no_local_under_params`.
-- `TypeSafetyHiddenFrame.v` now holds the root-env frame helper batch:
-  local root-env covers/excludes helpers and captured-call runtime root-env
-  composition facts.
-- `TypeSafetyHiddenFrame.v` now holds the hidden-frame cleanup foundation
-  batch: root-env covers/excludes params, store-remove cleanup/excluding facts,
-  `store_no_shadow`/store-name support needed by cleanup, and
-  `store_typed_remove_params_store_param_prefix`.
-- `TypeSafetyHiddenFrame.v` now holds the roots-ready support batch:
+- `TypeSafetyProvenanceReady.v` now holds the readiness-to-provenance bridge
+  `preservation_ready_implies_provenance_ready*`, the local eval induction
+  scheme, runtime provenance-readiness preservation, and root-exclusion facts
+  through `store_roots_exclude_root`.
+- `TypeSafetyRootEnvParams.v` now holds root-env covers/excludes helpers,
+  captured-call runtime root-env composition facts, and params exclusion facts
+  through `call_param_root_env_excludes_params`.
+- `TypeSafetyRootsReady.v` now holds the roots-ready support batch:
   direct-place lookup helpers, root/store/ctx named facts, provenance
   readiness, `typed_fields_roots_cons_inv_ts`, typed roots named/key named
   mutual facts, `eval_preserves_roots_ready_mutual`, and the parameterized
@@ -258,10 +253,10 @@ The second split batch is done:
   `eval_preserves_roots_ready_prefix_mutual_with_preservation_core`.
   `TypeSafety.v` keeps the public `eval_preserves_roots_ready_prefix_mutual`
   theorem and passes `eval_preserves_typing_ready_prefix_mutual` into the core.
-- `TypeSafetyHiddenFrame.v` now holds the frame-scope roots-ready preservation
-  batch: `sctx_path_available_success`, param-scope update/preservation
-  helpers, frame-scope result definitions, the args/fields bridge, and
-  `eval_preserves_frame_scope_roots_ready_mutual`.
+- `TypeSafetyHiddenFrame.v` now holds the remaining hidden-frame batch:
+  param-scope and frame-scope roots-ready preservation, store-remove cleanup
+  and excluding facts, store-name support, and
+  `store_typed_remove_params_store_param_prefix`.
 - `TypeSafetyClosureRuntimeArgs.v` now holds the first captured-call readiness helper
   batch: bind-params call-root readiness, captured argument value typing, hidden
   closure-frame argument typing, evaluated-argument store-name freshness, and

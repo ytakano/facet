@@ -4227,23 +4227,11 @@ Lemma eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased :
         (store_remove_params (fn_params fcall) s_body))
       ret (apply_lt_ty σ (fn_ret fdef)).
 Proof.
-  intros env Ω s s_fn s_args s_body callee args fname captured fdef fcall
-    vs ret used' Rcap R_args Σ_args σ T_body Γ_out R_params R_body
-    roots_body Heval_callee Hlookup Heval_args Hrename Heval_body
-    Hframe_params_ready Htyped_args Hargs_fcall Hroots_bind Hshadow_bind
-    Hrn_params Hcover_all Hprov_body Htyped_body Hcompat_body
-    Hexclude_all Hexclude_env_all.
-  split.
-  - eapply Eval_CallExpr; eassumption.
-  - destruct (eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased
-                env Ω captured Rcap s_args R_args Σ_args fdef fcall σ
-                s_body vs ret used' T_body Γ_out R_params R_body roots_body
-                Hframe_params_ready Htyped_args Hrename Hargs_fcall
-                Hroots_bind Hshadow_bind Hrn_params Hcover_all Hprov_body
-                Htyped_body Hcompat_body Hexclude_all Hexclude_env_all
-                Heval_body)
-      as [Hstore [Hv _]].
-    split; assumption.
+  eapply (eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
+            eval_preserves_frame_scope_roots_ready_mutual
+            eval_preserves_typing_roots_ready_prefix_mutual
+            eval_preserves_param_scope_roots_ready_mutual);
+    eassumption.
 Qed.
 
 Lemma eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased :
@@ -4287,18 +4275,10 @@ Lemma eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_
         (store_remove_params (fn_params fcall) s_body))
       ret (apply_lt_ty σ (fn_ret fdef)).
 Proof.
-  intros env Ω s s_args s_body args fname captures captured fdef fcall vs
-    ret used' Rcap R_args Σ Σ_args captured_tys σ T_body Γ_out R_params
-    R_body roots_body Hstore Heval_make Hlookup Heval_args Hrename
-    Heval_body Hcheck Hframe_ready Htyped_args Hargs_fcall Hroots_bind
-    Hshadow_bind Hrn_params Hcover_all Hprov_body Htyped_body Hcompat_body
-    Hexclude_all Hexclude_env_all.
-  pose proof
-    (eval_make_closure_exact_captured_call_frame_params_ready
-      env Ω s Σ fname captures captured fdef fcall used' Rcap s_args
-      R_args captured_tys Hstore Heval_make Hlookup Hrename Hcheck
-      Hframe_ready) as Hframe_params_ready.
-  eapply eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased;
+  eapply (eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
+            eval_preserves_frame_scope_roots_ready_mutual
+            eval_preserves_typing_roots_ready_prefix_mutual
+            eval_preserves_param_scope_roots_ready_mutual);
     eassumption.
 Qed.
 
@@ -4349,20 +4329,10 @@ Lemma eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_
         (store_remove_params (fn_params fcall) s_body))
       ret (apply_lt_ty σ (fn_ret fdef)).
 Proof.
-  intros env Ω s s_args s_body args fname captures captured fdef fcall vs
-    ret used' R_args Σ Σ_args captured_tys σ T_body Γ_out R_params R_body
-    roots_body Hstore Heval_make Hlookup Heval_args Hrename Heval_body
-    Hcheck Hnodup Hready_args Hroots_args Hshadow_args Hrn_args Hnamed_args
-    Hkeys_args Htyped_args Hargs_fcall Hroots_bind Hshadow_bind Hrn_params
-    Hcover_all Hprov_body Htyped_body Hcompat_body Hexclude_all
-    Hexclude_env_all.
-  pose proof
-    (eval_make_closure_exact_captured_call_frame_params_ready_auto
-      env Ω s Σ fname captures captured fdef fcall used' args s_args vs
-      R_args captured_tys Hstore Heval_make Hlookup Hrename Hcheck Hnodup
-      Hready_args Heval_args Hroots_args Hshadow_args Hrn_args Hnamed_args
-      Hkeys_args) as Hframe_params_ready.
-  eapply eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased;
+  eapply (eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_auto_with_preservation_core
+            eval_preserves_frame_scope_roots_ready_mutual
+            eval_preserves_typing_roots_ready_prefix_mutual
+            eval_preserves_param_scope_roots_ready_mutual);
     eassumption.
 Qed.
 

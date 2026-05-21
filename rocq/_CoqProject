@@ -25,6 +25,7 @@ theories/TypeSystem/TypeSafetyDirectPlace.v
 theories/TypeSystem/TypeSafetyLocalFacts.v
 theories/TypeSystem/TypeSafetyRootNamed.v
 theories/TypeSystem/TypeSafetyBasePreservation.v
+theories/TypeSystem/TypeSafetyPrefixPreservation.v
 theories/TypeSystem/TypeSafety.v
 theories/TypeSystem/EnvTypingSoundness.v
 theories/TypeSystem/EnvBorrowSoundness.v

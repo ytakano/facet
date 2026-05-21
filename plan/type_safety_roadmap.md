@@ -213,6 +213,9 @@ The second split batch is done:
   root/store append facts, captured frame readiness, empty capture root
   environments, copied-capture rootless/runtime-ready facts, and captured
   frame store typing facts.
+- It also holds the primitive hidden `store_add` stripping support batch:
+  store-add lookup/update inversion facts, root-reference exclusion
+  preservation for store operations, and `eval_place_store_add_strip`.
 - `TypeSafety.v` exports `TypeSafetyHiddenFrame`, so downstream modules that
   import `TypeSafety` still see the moved names.
 
@@ -220,8 +223,12 @@ Continue splitting in small batches:
 
 1. Create focused files and update `rocq/_CoqProject` in the same commit.
 2. Preferred targets:
-   - `TypeSafetyHiddenFrame.v`: continue with actual hidden `store_add`
-     stripping, cleanup, and hidden-frame erasure facts.
+   - `TypeSafetyHiddenFrame.v`: next move the readiness-dependent hidden-frame
+     mutual strip facts, starting at `args_free_vars_ts` and ending before the
+     frame-scope update facts. This batch depends on `preservation_ready_*`
+     helpers, so move only after the exact dependency boundary is clear.
+   - `TypeSafetyHiddenFrame.v`: after the mutual strip batch, move hidden-frame
+     cleanup and hidden-frame erasure facts in separate small batches.
    - `TypeSafetyClosure.v`: captured store/frame readiness and captured closure
      call preservation bridges.
 3. Move lemmas only when dependencies are clear. After each batch run:

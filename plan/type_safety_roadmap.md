@@ -200,12 +200,17 @@ Short-term rule:
 - If adding clearly independent root facts, prefer statements that can later
   move as a batch.
 
-After the local-let bridge compiles, split in small batches:
+The first split batch is done:
+
+- `TypeSafetyRootFacts.v` now holds root/value rootless facts that are
+  frame-independent and broadly reused.
+- `TypeSafety.v` exports `TypeSafetyRootFacts`, so downstream modules that
+  import `TypeSafety` still see the moved names.
+
+Continue splitting in small batches:
 
 1. Create focused files and update `rocq/_CoqProject` in the same commit.
 2. Preferred targets:
-   - `TypeSafetyRootFacts.v`: root-set/root-env exclusion, store-name, and
-     frame-independent root facts.
    - `TypeSafetyHiddenFrame.v`: hidden `store_add` stripping, cleanup, and
      hidden-frame erasure facts.
    - `TypeSafetyClosure.v`: captured store/frame readiness and captured closure

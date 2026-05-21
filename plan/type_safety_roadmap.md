@@ -309,10 +309,10 @@ The second split batch is done:
   function-env uniqueness and lookup helpers needed outside `TypeSafety.v`,
   direct-call callee evidence definitions/conversions, and
   `eval_direct_call_body_cleanup_preserves_value_and_refs_core`.
-  It also owns the parameterized direct-call cleanup wrapper core
-  `eval_direct_call_body_cleanup_preserves_value_and_refs_with_preservation_core`.
-  `TypeSafety.v` keeps the direct-call public wrapper and passes the main
-  preservation mutual theorems into the core.
+  It also owns the parameterized direct-call helper, summary bridge, body
+  preservation, and route cores. `TypeSafety.v` keeps the direct-call public
+  wrappers and passes the main preservation, root-name, root-key, frame-scope,
+  prefix-typing, and param-scope preservation mutual theorems into the cores.
 - `TypeSafetyCapturedCall.v` now holds the captured callee evidence
   instantiation batch:
   `captured_call_callee_body_root_shadow_provenance_instantiated_bridge`,
@@ -352,10 +352,9 @@ Continue splitting in small batches:
    - Keep public cleanup wrappers in `TypeSafety.v` while they still call main
      preservation mutual theorems. Prefer adding parameterized wrapper cores to
      `TypeSafetyClosure.v` and keeping stable public wrappers in `TypeSafety.v`.
-   - Keep direct-call public wrappers in `TypeSafety.v` while they still call
-     main preservation mutual theorems. Prefer parameterized wrapper cores in
-     `TypeSafetyDirectCall.v`; move only direct-call helper evidence and
-     private proof tails.
+   - For direct-call work, add new helper facts and parameterized route cores
+     to `TypeSafetyDirectCall.v`; public theorem wrappers should remain stable
+     in `TypeSafety.v`.
    - For captured-call work, prefer adding new private helper facts to
      `TypeSafetyCapturedCall.v`; public theorem wrappers should remain stable
      in `TypeSafety.v`.

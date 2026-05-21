@@ -31,6 +31,7 @@ theories/TypeSystem/TypeSafetyHiddenFrame.v
 theories/TypeSystem/TypeSafetyClosureRuntimeArgs.v
 theories/TypeSystem/TypeSafetyClosureCleanupFrame.v
 theories/TypeSystem/TypeSafetyClosureCleanupCtxErased.v
+theories/TypeSystem/TypeSafetyClosureCleanupCaptured.v
 theories/TypeSystem/TypeSafetyClosureCleanup.v
 theories/TypeSystem/TypeSafetyClosure.v
 theories/TypeSystem/TypeSafetyDirectCallSetup.v

@@ -264,14 +264,27 @@ The second split batch is done:
   `eval_call_body_cleanup_preserves_value_and_refs_frame_core`. It takes the
   body preservation, roots, frame-scope, and param-scope facts as premises, so
   it does not depend on the main preservation mutual theorem in `TypeSafety.v`.
+- `TypeSafetyClosure.v` now also holds the parameterized cleanup wrapper core:
+  `eval_call_body_cleanup_preserves_value_and_refs_frame_with_preservation_core`.
+  `TypeSafety.v` keeps the public wrapper and passes the main preservation
+  mutual theorems into the core.
 - `TypeSafetyClosure.v` also holds the body-context erased cleanup core:
   `eval_call_body_ctx_cleanup_erased_core`. It is used by
-  `eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased` after
-  `TypeSafety.v` obtains the main preservation facts.
+  `eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core`
+  after that parameterized core obtains the main preservation facts from
+  premises supplied by `TypeSafety.v`.
 - `TypeSafetyClosure.v` also holds the hidden-frame erased cleanup core:
   `eval_call_body_ctx_cleanup_hidden_frame_erased_core`. It is used by
-  `eval_captured_call_body_ctx_cleanup_hidden_frame_erased` after `TypeSafety.v`
-  obtains the main preservation facts.
+  `eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_core`
+  after that parameterized core obtains the main preservation facts from
+  premises supplied by `TypeSafety.v`.
+- `TypeSafetyClosure.v` now holds the captured body-context cleanup wrapper
+  cores:
+  `eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core`
+  and
+  `eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_core`.
+  `TypeSafety.v` keeps the public wrappers and passes the main preservation
+  mutual theorems into the cores.
 - `TypeSafetyClosure.v` now holds the captured runtime-readiness helper batch:
   copied-capture frame readiness, exact captured frame params readiness, and
   the non-hidden/hidden runtime-args readiness cores used by
@@ -291,10 +304,9 @@ The second split batch is done:
   `captured_call_callee_body_root_shadow_provenance_instantiated_tail_frame`.
   It also owns the captured-call alpha-renaming binding initial support facts.
   Public captured-call preservation bridges remain in `TypeSafety.v`.
-- `TypeSafety.v` still owns the public wrapper
-  `eval_call_body_cleanup_preserves_value_and_refs_frame`. The wrapper calls
-  the main preservation mutual theorem and then delegates the cleanup endpoint
-  to the core lemma in `TypeSafetyClosure.v`.
+- `TypeSafety.v` still owns the public cleanup wrappers. These wrappers should
+  stay there while they pass main preservation mutual theorems into
+  parameterized cores in `TypeSafetyClosure.v`.
 - `TypeSafetyDirectPlace.v` now owns direct-place runtime target, runtime path
   lookup, and copy/move contradiction helpers.
 - `TypeSafetyLocalFacts.v` now owns the early local-shadow, nil-lifetime, and
@@ -309,12 +321,12 @@ Continue splitting in small batches:
 1. Create focused files and update `rocq/_CoqProject` in the same commit.
 2. Preferred targets:
    - Move or parameterize the next cleanup wrappers only after their dependency
-     on `eval_preserves_typing_roots_ready_prefix_mutual` is explicit.
+     on the main preservation mutual theorems is explicit.
    - Keep public runtime-readiness wrappers and later preservation bridges in
      `TypeSafety.v` while they still call main preservation mutual theorems.
    - Keep public cleanup wrappers in `TypeSafety.v` while they still call main
-     preservation mutual theorems. Move only private core cleanup tails to
-     `TypeSafetyClosure.v`.
+     preservation mutual theorems. Prefer adding parameterized wrapper cores to
+     `TypeSafetyClosure.v` and keeping stable public wrappers in `TypeSafety.v`.
    - Keep direct-call public wrappers in `TypeSafety.v` while they still call
      main preservation mutual theorems. Move only direct-call helper evidence
      and private proof tails to `TypeSafetyDirectCall.v`.

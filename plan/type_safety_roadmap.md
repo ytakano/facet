@@ -227,6 +227,14 @@ The second split batch is done:
   argument value typing, parameter prefix/scope, hidden frame scope, frame
   static freshness, and update/remove preservation facts through
   `store_frame_scope_no_local_under_params`.
+- `TypeSafetyHiddenFrame.v` now holds the root-env frame helper batch:
+  local root-env lookup add/update/remove helpers, `root_env_remove_params`,
+  `call_param_root_env`, tail-frame freshness, shadow-safe tail-frame, and
+  call-param root-env no-shadow support.
+- `TypeSafetyHiddenFrame.v` now holds the hidden-frame cleanup foundation
+  batch: root-env covers/excludes params, store-remove cleanup/excluding facts,
+  `store_no_shadow`/store-name support needed by cleanup, and
+  `store_typed_remove_params_store_param_prefix`.
 - `TypeSafety.v` exports `TypeSafetyHiddenFrame`, so downstream modules that
   import `TypeSafety` still see the moved names.
 
@@ -234,8 +242,9 @@ Continue splitting in small batches:
 
 1. Create focused files and update `rocq/_CoqProject` in the same commit.
 2. Preferred targets:
-   - `TypeSafetyHiddenFrame.v`: move the remaining hidden-frame cleanup and
-     erasure facts in separate small batches.
+   - `TypeSafetyHiddenFrame.v`: move frame-scope roots-ready preservation next.
+     This is not a pure mechanical move until the field-branch proof scripts
+     are made robust against constructor/inversion hypothesis shapes.
    - `TypeSafetyClosure.v`: captured store/frame readiness and captured closure
      call preservation bridges.
 3. Move lemmas only when dependencies are clear. After each batch run:

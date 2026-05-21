@@ -259,6 +259,10 @@ The second split batch is done:
   `eval_call_body_ctx_cleanup_erased_core`. It is used by
   `eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased` after
   `TypeSafety.v` obtains the main preservation facts.
+- `TypeSafetyClosure.v` also holds the hidden-frame erased cleanup core:
+  `eval_call_body_ctx_cleanup_hidden_frame_erased_core`. It is used by
+  `eval_captured_call_body_ctx_cleanup_hidden_frame_erased` after `TypeSafety.v`
+  obtains the main preservation facts.
 - `TypeSafety.v` still owns the public wrapper
   `eval_call_body_cleanup_preserves_value_and_refs_frame`. The wrapper calls
   the main preservation mutual theorem and then delegates the cleanup endpoint
@@ -275,11 +279,9 @@ Continue splitting in small batches:
    - Keep `eval_make_closure_captured_call_runtime_args_ready_auto` and later
      preservation bridges in `TypeSafety.v` until those dependencies no longer
      point back to the main preservation mutual theorems.
-   - Keep `eval_captured_call_body_ctx_cleanup_hidden_frame_erased` in
-     `TypeSafety.v` until a hidden-frame-specific erased cleanup core is added;
-     the current body-context core expects the final frame itself to be typed,
-     while the hidden variant types the store only after removing the synthetic
-     local binding.
+   - Keep public cleanup wrappers in `TypeSafety.v` while they still call main
+     preservation mutual theorems. Move only private core cleanup tails to
+     `TypeSafetyClosure.v`.
    - Do not move the public wrapper
      `eval_call_body_cleanup_preserves_value_and_refs_frame` unless all callers
      are updated and no dependency cycle is reintroduced.

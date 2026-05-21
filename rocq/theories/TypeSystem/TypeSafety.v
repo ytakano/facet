@@ -5405,13 +5405,6 @@ Proof.
                 (store_names (captured ++ s_args_hidden))
                 fdef fcall used' Hrename) as Hshape.
   destruct Hshape as [_ [Hret _]].
-  assert (Hv_ret_fcall : value_has_type env s_body ret (fn_ret fcall)).
-  { eapply value_has_type_compatible.
-    - exact Hv_body.
-    - apply ty_compatible_b_sound with (Ω := fn_outlives fcall).
-      exact Hcompat_body. }
-  assert (Hv_ret_fdef : value_has_type env s_body ret (fn_ret fdef)).
-  { rewrite Hret. exact Hv_ret_fcall. }
   destruct (eval_preserves_param_scope_roots_ready_mutual)
     as [Hscope_expr _].
   assert (Hscope_start :
@@ -5431,43 +5424,13 @@ Proof.
               as [frame_final Hscope_body].
   { exact Hcover_all. }
   { exact Hscope_start. }
-  destruct (store_remove_params_cleanup_excludes
-              (fn_params fcall ++ fn_captures fcall) s_body frame_final
-              R_body roots_body ret Hscope_body Hroots_body Hret_roots
-              Hshadow_body Hnodup_all Hexclude_all Hexclude_env_all)
-    as [locals [Hremoved [Hret_exclude _]]].
-  assert (Hret_exclude_x : value_refs_exclude_root x ret).
-  { eapply value_roots_exclude_root; eassumption. }
   assert (Hsame_body :
     sctx_same_bindings (sctx_of_ctx (fn_body_ctx fcall))
       (sctx_of_ctx Γ_out)).
   { eapply typed_env_structural_same_bindings.
     eapply typed_env_roots_structural. exact Htyped_body. }
-  assert (Hremoved_exact_all :
-    store_remove_params (fn_params fcall ++ fn_captures fcall) s_body =
-      s_args_hidden).
-  { eapply store_remove_params_store_frame_scope_exact.
-    - exact Hsame_body.
-    - eapply store_frame_scope_param_scope. exact Hframe_scope.
-    - exact Hframe_scope. }
-  assert (Hfinal_exact :
-    store_remove x
-      (store_remove_params (fn_captures fcall)
-        (store_remove_params (fn_params fcall) s_body)) = s_args).
-  { rewrite <- store_remove_params_app.
-    rewrite Hremoved_exact_all.
-    subst s_args_hidden.
-    apply store_remove_store_add_same. }
-  repeat split.
-  - rewrite Hfinal_exact. exact Htyped_args.
-  - rewrite <- store_remove_params_app.
-    apply value_has_type_store_remove_excluding_root.
-    + apply value_has_type_apply_lt_ty.
-      eapply value_has_type_store_remove_params_excluding.
-      * exact Hv_ret_fdef.
-      * exact Hret_exclude.
-    + exact Hret_exclude_x.
-  - exact Hfinal_exact.
+  eapply eval_call_body_ctx_cleanup_hidden_frame_erased_core;
+    eassumption.
 Qed.
 
 Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset :

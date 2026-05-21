@@ -3687,14 +3687,11 @@ Lemma eval_captured_call_body_cleanup_preserves_value_and_refs :
     store_remove_params (fn_params fcall) s_body = captured ++ s_args /\
     value_roots_within roots_body ret.
 Proof.
-  intros env Ω captured Rcap s_args R_args Σ_args fdef fcall σ s_body
-    vs ret used' T_body Γ_out R_params R_body roots_body Hframe_ready
-    Htyped_args Hrename Hargs_fcall Hroots_bind Hshadow_bind Hrn_params
-    Hcover_params Hprov_body Htyped_body Hcompat_body Hexclude_ret
-    Hexclude_env Heval_body.
-  eapply eval_call_body_cleanup_preserves_value_and_refs_frame;
-    try eassumption.
-  eapply captured_call_frame_store_typed; eassumption.
+  eapply (eval_captured_call_body_cleanup_preserves_value_and_refs_with_preservation_core
+            eval_preserves_frame_scope_roots_ready_mutual
+            eval_preserves_typing_roots_ready_prefix_mutual
+            eval_preserves_param_scope_roots_ready_mutual);
+    eassumption.
 Qed.
 
 Lemma eval_captured_call_expr_cleanup_preserves_value_and_refs :
@@ -3746,16 +3743,11 @@ Lemma eval_captured_call_expr_cleanup_preserves_value_and_refs :
     store_remove_params (fn_params fcall) s_body = captured ++ s_args /\
     value_roots_within roots_body ret.
 Proof.
-  intros env Ω s s_fn s_args s_body callee args fname captured fdef fcall
-    vs ret used' Rcap R_args Σ_args σ T_body Γ_out R_params R_body
-    roots_body Heval_callee Hlookup Heval_args Hrename Heval_body
-    Hframe_ready Htyped_args Hargs_fcall Hroots_bind Hshadow_bind Hrn_params
-    Hcover_params Hprov_body Htyped_body Hcompat_body Hexclude_ret
-    Hexclude_env.
-  split.
-  - eapply Eval_CallExpr; eassumption.
-  - eapply eval_captured_call_body_cleanup_preserves_value_and_refs;
-      eassumption.
+  eapply (eval_captured_call_expr_cleanup_preserves_value_and_refs_with_preservation_core
+            eval_preserves_frame_scope_roots_ready_mutual
+            eval_preserves_typing_roots_ready_prefix_mutual
+            eval_preserves_param_scope_roots_ready_mutual);
+    eassumption.
 Qed.
 
 Lemma eval_captured_call_body_cleanup_preserves_value_and_refs_params :
@@ -3801,36 +3793,11 @@ Lemma eval_captured_call_body_cleanup_preserves_value_and_refs_params :
     store_remove_params (fn_params fcall) s_body = captured ++ s_args /\
     value_roots_within roots_body ret.
 Proof.
-  intros env Ω captured Rcap s_args R_args Σ_args caps fdef fcall σ
-    s_body vs ret used' T_body Γ_out R_params R_body roots_body
-    Hframe_params_ready Htyped_args Hrename Hargs_fcall Hroots_bind
-    Hshadow_bind Hrn_params Hcover_params Hprov_body Htyped_body
-    Hcompat_body Hexclude_ret Hexclude_env Heval_body.
-  destruct Hframe_params_ready as [Hframe_ready Hcaptured_params_typed].
-  destruct (eval_captured_call_body_cleanup_preserves_value_and_refs
-              env Ω captured Rcap s_args R_args Σ_args fdef fcall σ
-              s_body vs ret used' T_body Γ_out R_params R_body roots_body
-              Hframe_ready Htyped_args Hrename Hargs_fcall Hroots_bind
-              Hshadow_bind Hrn_params Hcover_params Hprov_body Htyped_body
-              Hcompat_body Hexclude_ret Hexclude_env Heval_body)
-    as [_ Hcleanup].
-  destruct Hcleanup as [Hprefix Hcleanup].
-  destruct Hcleanup as [Hroots_body Hcleanup].
-  destruct Hcleanup as [Hshadow_body Hcleanup].
-  destruct Hcleanup as [Hrn_body Hcleanup].
-  destruct Hcleanup as [Hv_ret Hcleanup].
-  destruct Hcleanup as [Hpres Hcleanup].
-  destruct Hcleanup as [frame_final [locals [Hscope [Hremoved
-    [Hret_exclude [Hstore_exclude [Hremoved_exact Hroots_ret]]]]]]].
-  assert (Htyped_frame :
-    store_typed env (captured ++ s_args)
-      (sctx_of_ctx (params_ctx caps) ++ Σ_args)).
-  { eapply captured_call_frame_params_store_typed.
-    - split; eassumption.
-    - exact Htyped_args. }
-  repeat split; try assumption.
-  - rewrite Hremoved_exact. exact Htyped_frame.
-  - exists frame_final, locals. repeat split; assumption.
+  eapply (eval_captured_call_body_cleanup_preserves_value_and_refs_params_with_preservation_core
+            eval_preserves_frame_scope_roots_ready_mutual
+            eval_preserves_typing_roots_ready_prefix_mutual
+            eval_preserves_param_scope_roots_ready_mutual);
+    eassumption.
 Qed.
 
 Lemma eval_captured_call_expr_cleanup_preserves_value_and_refs_params :
@@ -3882,16 +3849,11 @@ Lemma eval_captured_call_expr_cleanup_preserves_value_and_refs_params :
     store_remove_params (fn_params fcall) s_body = captured ++ s_args /\
     value_roots_within roots_body ret.
 Proof.
-  intros env Ω s s_fn s_args s_body callee args fname captured fdef fcall
-    vs ret used' Rcap R_args Σ_args caps σ T_body Γ_out R_params R_body
-    roots_body Heval_callee Hlookup Heval_args Hrename Heval_body
-    Hframe_params_ready Htyped_args Hargs_fcall Hroots_bind Hshadow_bind
-    Hrn_params Hcover_params Hprov_body Htyped_body Hcompat_body
-    Hexclude_ret Hexclude_env.
-  split.
-  - eapply Eval_CallExpr; eassumption.
-  - eapply eval_captured_call_body_cleanup_preserves_value_and_refs_params;
-      eassumption.
+  eapply (eval_captured_call_expr_cleanup_preserves_value_and_refs_params_with_preservation_core
+            eval_preserves_frame_scope_roots_ready_mutual
+            eval_preserves_typing_roots_ready_prefix_mutual
+            eval_preserves_param_scope_roots_ready_mutual);
+    eassumption.
 Qed.
 
 Lemma eval_captured_call_body_cleanup_preserves_value_and_refs_params_erased :
@@ -3929,41 +3891,11 @@ Lemma eval_captured_call_body_cleanup_preserves_value_and_refs_params_erased :
     store_remove_params caps
       (store_remove_params (fn_params fcall) s_body) = s_args.
 Proof.
-  intros env Ω captured Rcap s_args R_args Σ_args caps fdef fcall σ
-    s_body vs ret used' T_body Γ_out R_params R_body roots_body
-    Hframe_params_ready Htyped_args Hrename Hargs_fcall Hroots_bind
-    Hshadow_bind Hrn_params Hcover_params Hprov_body Htyped_body
-    Hcompat_body Hexclude_ret Hexclude_env Hexclude_caps Heval_body.
-  destruct Hframe_params_ready as [Hframe_ready Hcaptured_params_typed].
-  destruct (eval_captured_call_body_cleanup_preserves_value_and_refs_params
-              env Ω captured Rcap s_args R_args Σ_args caps fdef fcall σ
-              s_body vs ret used' T_body Γ_out R_params R_body roots_body
-              (conj Hframe_ready Hcaptured_params_typed) Htyped_args
-              Hrename Hargs_fcall Hroots_bind Hshadow_bind Hrn_params
-              Hcover_params Hprov_body Htyped_body Hcompat_body
-              Hexclude_ret Hexclude_env Heval_body)
-    as [Hstore_frame Hcleanup].
-  destruct Hcleanup as [_ Hcleanup].
-  destruct Hcleanup as [_ Hcleanup].
-  destruct Hcleanup as [_ Hcleanup].
-  destruct Hcleanup as [_ Hcleanup].
-  destruct Hcleanup as [Hv_ret Hcleanup].
-  destruct Hcleanup as [_ Hcleanup].
-  destruct Hcleanup as [frame_final [locals [_ [_ [_ [_
-    [Hremoved_exact Hroots_ret]]]]]]].
-  assert (Hfinal_exact :
-    store_remove_params caps
-      (store_remove_params (fn_params fcall) s_body) = s_args).
-  { rewrite Hremoved_exact.
-    eapply captured_params_store_typed_remove_app.
-    exact Hcaptured_params_typed. }
-  repeat split.
-  - rewrite Hfinal_exact. exact Htyped_args.
-  - rewrite Hremoved_exact.
-    eapply value_has_type_store_remove_params_excluding.
-    + rewrite <- Hremoved_exact. exact Hv_ret.
-    + eapply value_roots_exclude_params; eassumption.
-  - exact Hfinal_exact.
+  eapply (eval_captured_call_body_cleanup_preserves_value_and_refs_params_erased_with_preservation_core
+            eval_preserves_frame_scope_roots_ready_mutual
+            eval_preserves_typing_roots_ready_prefix_mutual
+            eval_preserves_param_scope_roots_ready_mutual);
+    eassumption.
 Qed.
 
 Lemma eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased :

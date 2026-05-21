@@ -287,6 +287,7 @@ The second split batch is done:
   `captured_call_callee_body_root_shadow_provenance_instantiated_bridge_with_result_subset`,
   and
   `captured_call_callee_body_root_shadow_provenance_instantiated_tail_frame`.
+  It also owns the captured-call alpha-renaming binding initial support facts.
   Public captured-call preservation bridges remain in `TypeSafety.v`.
 - `TypeSafety.v` still owns the public wrapper
   `eval_call_body_cleanup_preserves_value_and_refs_frame`. The wrapper calls

@@ -81,7 +81,7 @@ do not redefine the language accepted by the ordinary checker.
 
 Work in this order unless a proof exposes a soundness gap.
 
-1. **Finish local-let captured closure bridge.**
+1. **Add the annotated local-let captured-call sidecar branch.**
 
    Target shape:
 
@@ -90,47 +90,23 @@ Work in this order unless a proof exposes a soundness gap.
      (ECallExpr (EVar x) args)
    ```
 
-   Current stable endpoint:
+   TypeSafety bridge status: done.
+
+   Checked-in preservation bridge:
+
+   ```coq
+   eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components
+   ```
+
+   The bridge packages the hidden closure binding, evaluated arguments,
+   copied captures, alpha-renamed callee body evidence, and hidden-frame
+   cleanup. It proves final store typing and return value typing for the
+   annotated local-let shape above.
+
+   Supporting cleanup endpoint:
 
    ```coq
    eval_let_make_closure_captured_call_hidden_cleanup_package
-   ```
-
-   This endpoint already destructs local-let evaluation, strips argument
-   evaluation back to `s`, exposes copied captures / evaluated args /
-   alpha-renamed callee components / body evaluation, and provides a
-   continuation that performs hidden-frame cleanup once the caller supplies the
-   callee body typing/root package and a root bound excluding `x`.
-
-   Next proof task:
-
-   - use the checked-in hidden-frame runtime-args package for
-     `captured ++ store_add x T hidden s_args`;
-   - construct the caller-side callee body typing/root package automatically;
-   - supply a `roots_bound` excluding hidden name `x`;
-   - do not add any checker branch before this TypeSafety helper compiles.
-
-   Current reusable root-bound helpers:
-
-   - `captured_hidden_frame_args_values_have_types`
-   - `captured_call_frame_ready_store_add_right`
-   - `eval_let_make_closure_captured_call_runtime_args_ready_auto`
-   - `eval_args_store_names_fresh`
-   - `store_no_shadow_app_store_add_right`
-   - `roots_exclude_root_sets_union`
-   - `value_roots_exclude_root_forall2`
-   - `root_sets_union_store_roots_named_excludes_name`
-   - `store_roots_within_named_fresh_refs_exclude_root`
-   - `eval_args_root_sets_union_excludes_fresh_name`
-
-2. **Then widen the captured-call sidecar for annotated local-let only.**
-
-   Add the checker branch only after the TypeSafety bridge above compiles.
-   The only new accepted sidecar shape is:
-
-   ```coq
-   ELet m x T (EMakeClosure fname captures)
-     (ECallExpr (EVar x) args)
    ```
 
    Required executable guards:
@@ -144,9 +120,36 @@ Work in this order unless a proof exposes a soundness gap.
    - exact capture check with `check_make_closure_captures_exact_sctx`;
    - existing captured callee summary.
 
+   Current implementation status:
+
+   - `local_captured_call_target_expr` recognizes the annotated local-let
+     shape and checks the syntactic freshness guards. Its soundness helper is
+     in `EnvRuntimeSafety.v`.
+   - `check_fn_root_shadow_captured_call_provenance_summary` now has the
+     annotated local-let captured-call branch.
+   - The branch uses two synthetic checks:
+     - direct synthetic body:
+       `ECallExpr (EMakeClosure fname captures) args`, used to extract
+       `typed_args_roots ... args (fn_params fcallee) ...` in the original
+       caller context;
+     - let synthetic body:
+       `ELet m x T (EMakeClosure fname captures)
+          (ECallExpr (EMakeClosure fname captures) args)`, used to prove the
+       local binding `x` is fresh for the initial root/store frame.
+   - The final captured-call checked-initial safety theorem has the local-let
+     branch wired through
+     `eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components`.
+
+   Next proof task:
+
+   - Add focused regression examples for the local-let captured-call sidecar if
+     future changes touch this checker branch.
+   - Then move to the next staged closure shape, or start the TypeSafety file
+     split below.
+
    Do not add `ELetInfer` support in the same step.
 
-3. **Handle `if` last.**
+2. **Handle `if` last.**
 
    The known `if` blocker is that ordinary `TES_If` does not expose
    `root_env_equiv R2 R3`, while root/shadow routes require it. Do not
@@ -190,8 +193,9 @@ local-let captured closure bridge is unstable.
 
 Short-term rule:
 
-- Keep active bridge-debugging lemmas in `TypeSafety.v` until the local-let
-  bridge compiles.
+- Keep the local-let captured closure bridge in `TypeSafety.v` while the
+  checker sidecar is being wired, so theorem references stay local and easy to
+  inspect.
 - Avoid moving existing lemmas while changing proof statements.
 - If adding clearly independent root facts, prefer statements that can later
   move as a batch.

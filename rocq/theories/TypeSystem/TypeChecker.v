@@ -5116,6 +5116,28 @@ Definition captured_call_target_expr
   | _ => None
   end.
 
+Definition args_free_vars_checker (args : list expr) : list ident :=
+  args_local_store_names_with free_vars_expr args.
+
+Definition local_captured_call_target_expr
+    (e : expr)
+    : option (ident * list ident * list expr * mutability * ident * Ty *
+        expr * expr) :=
+  match e with
+  | ELet m x T (EMakeClosure fname captures) (ECallExpr (EVar y) args) =>
+      if ident_eqb x y &&
+         usage_eqb (ty_usage T) UUnrestricted &&
+         negb (existsb (ident_eqb x) captures) &&
+         negb (existsb (ident_eqb x) (args_free_vars_checker args)) &&
+         negb (existsb (ident_eqb x) (args_local_store_names args))
+      then
+        let direct_body := ECallExpr (EMakeClosure fname captures) args in
+        Some (fname, captures, args, m, x, T, direct_body,
+          ELet m x T (EMakeClosure fname captures) direct_body)
+      else None
+  | _ => None
+  end.
+
 Definition check_fn_root_shadow_captured_callee_provenance_summary
     (env : global_env) (fdef : fn_def) : bool :=
   provenance_ready_expr_b (fn_body fdef) &&
@@ -5162,6 +5184,43 @@ Definition check_fn_root_shadow_captured_call_provenance_summary
                       fn_params_roots_exclude_b (fn_params fdef) roots &&
                       fn_params_root_env_excludes_b (fn_params fdef) R_out
                   | infer_err _ => false
+                  end
+              end
+          end
+      | None => false
+      end ||
+      match local_captured_call_target_expr (fn_body fdef) with
+      | Some (fname, captures, args, m, x, T, direct_body, let_body) =>
+          preservation_ready_args_b args &&
+          match lookup_fn_b fname (env_fns env) with
+          | None => false
+          | Some callee =>
+              (Nat.eqb (fn_lifetimes callee) 0) &&
+              callee_hidden_capture_args_disjoint_b callee args &&
+              negb (existsb (ident_eqb x)
+                (ctx_names (params_ctx (fn_captures callee)))) &&
+              match check_make_closure_captures_exact_sctx env
+                      (fn_outlives fdef)
+                      (sctx_of_ctx (fn_body_ctx fdef))
+                      captures
+                      (fn_captures callee) with
+              | infer_err _ => false
+              | infer_ok _ =>
+                  check_fn_root_shadow_captured_callee_provenance_summary
+                    env callee &&
+                  match infer_env_roots_shadow_safe env
+                          (fn_with_body fdef direct_body)
+                          (initial_root_env_for_fn fdef),
+                        infer_env_roots_shadow_safe env
+                          (fn_with_body fdef let_body)
+                          (initial_root_env_for_fn fdef) with
+                  | infer_ok (_, _, R_direct, roots_direct),
+                    infer_ok (_, _, _, _) =>
+                      fn_params_roots_exclude_b (fn_params fdef)
+                        roots_direct &&
+                      fn_params_root_env_excludes_b (fn_params fdef)
+                        R_direct
+                  | _, _ => false
                   end
               end
           end
@@ -5478,6 +5537,29 @@ Proof. vm_compute. reflexivity. Qed.
 Example ready_gap_matrix_captured_closure_direct_param_call_captured_summary_accepts :
   check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
     ex_ready_gap_captured_closure_direct_param_call_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Definition ex_ready_gap_captured_closure_local_let_call_fn : fn_def :=
+  MkFnDef (("ready_gap_captured_closure_local_let_call"%string), 0)
+    0 [] [] [MkParam MImmutable (("cap"%string), 0)
+      (MkTy UUnrestricted TIntegers)]
+    (MkTy UUnrestricted TUnits)
+    (ELet MImmutable (("g"%string), 0)
+      (closure_value_ty ex_nonempty_capture_callee_fn
+        [MkTy UUnrestricted TIntegers])
+      (EMakeClosure (("nonempty_capture_callee"%string), 0)
+        [(("cap"%string), 0)])
+      (ECallExpr (EVar (("g"%string), 0)) [])).
+
+Definition ex_ready_gap_captured_closure_local_let_call_env
+    : global_env :=
+  MkGlobalEnv [] [] []
+    [ex_nonempty_capture_callee_fn;
+     ex_ready_gap_captured_closure_local_let_call_fn].
+
+Example ready_gap_matrix_captured_closure_local_let_call_captured_summary_accepts :
+  check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
+    ex_ready_gap_captured_closure_local_let_call_env = true.
 Proof. vm_compute. reflexivity. Qed.
 
 Example ready_gap_matrix_make_closure_preservation_ready_rejects :

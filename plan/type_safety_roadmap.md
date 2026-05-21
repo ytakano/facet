@@ -216,7 +216,7 @@ The first split batch is done:
 
 The second split batch is done:
 
-- `TypeSafetyHiddenFrame.v` now holds the first hidden-frame support batch:
+- `TypeSafetyHiddenFrameBase.v` now holds the first hidden-frame support batch:
   root/store append facts, captured frame readiness, empty capture root
   environments, copied-capture rootless/runtime-ready facts, and captured
   frame store typing facts.
@@ -225,24 +225,27 @@ The second split batch is done:
   preservation for store operations, and `eval_place_store_add_strip`.
 - `TypeSafetyReadiness.v` holds preservation-readiness predicates and the
   store-name preservation facts used by hidden-frame stripping.
+- `TypeSafetyHiddenFrameStrip.v` now holds the readiness-dependent hidden-frame
+  mutual strip batch, from `args_free_vars_ts` through
+  `eval_let_make_closure_captured_call_args_strip`.
+- `TypeSafetyCallFrame.v` now holds call-frame/root-env foundations from
+  `params_fresh_in_store` through `call_param_root_env_no_shadow`, including
+  parameter freshness, argument value typing, bind-params facts,
+  `store_param_prefix`, `root_env_add_params_roots`, `root_env_remove_params`,
+  `call_param_root_env`, tail-frame freshness, and shadow-safe tail-frame
+  helpers.
 - `TypeSafetyHiddenFrame.v` owns the readiness-to-provenance bridge
   `preservation_ready_implies_provenance_ready*`. Do not move these helpers
   into `TypeSafetyReadiness.v`: `provenance_ready_expr` is defined later in
   `TypeSafetyHiddenFrame.v`, which already imports `TypeSafetyReadiness.v`, so
   that move would create a dependency cycle.
-- `TypeSafetyHiddenFrame.v` now holds the readiness-dependent hidden-frame
-  mutual strip batch, from `args_free_vars_ts` through
-  `eval_let_make_closure_captured_call_args_strip`.
-- `TypeSafetyHiddenFrame.v` now also holds the parameter freshness facts used
-  by captured-call alpha-renaming and exact capture checking.
 - `TypeSafetyHiddenFrame.v` now holds the frame-scope foundation batch:
-  argument value typing, parameter prefix/scope, hidden frame scope, frame
-  static freshness, and update/remove preservation facts through
+  `store_param_scope`, hidden frame scope, frame static freshness, and
+  update/remove preservation facts through
   `store_frame_scope_no_local_under_params`.
 - `TypeSafetyHiddenFrame.v` now holds the root-env frame helper batch:
-  local root-env lookup add/update/remove helpers, `root_env_remove_params`,
-  `call_param_root_env`, tail-frame freshness, shadow-safe tail-frame, and
-  call-param root-env no-shadow support.
+  local root-env covers/excludes helpers and captured-call runtime root-env
+  composition facts.
 - `TypeSafetyHiddenFrame.v` now holds the hidden-frame cleanup foundation
   batch: root-env covers/excludes params, store-remove cleanup/excluding facts,
   `store_no_shadow`/store-name support needed by cleanup, and

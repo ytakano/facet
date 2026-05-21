@@ -294,10 +294,12 @@ The second split batch is done:
   to the core lemma in `TypeSafetyClosure.v`.
 - `TypeSafetyDirectPlace.v` now owns direct-place runtime target, runtime path
   lookup, and copy/move contradiction helpers.
+- `TypeSafetyLocalFacts.v` now owns the early local-shadow, nil-lifetime, and
+  root subset helper facts through `value_roots_exclude_root_stores_subset`.
 - `TypeSafety.v` exports `TypeSafetyHiddenFrame`, `TypeSafetyClosure`,
   `TypeSafetyDirectCall`, `TypeSafetyCapturedCall`, and
-  `TypeSafetyDirectPlace`, so downstream modules that import `TypeSafety`
-  still see the moved names.
+  `TypeSafetyDirectPlace` plus `TypeSafetyLocalFacts`, so downstream modules
+  that import `TypeSafety` still see the moved names.
 
 Continue splitting in small batches:
 

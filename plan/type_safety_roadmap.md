@@ -227,12 +227,11 @@ The second split batch is done:
   preservation for store operations, and `eval_place_store_add_strip`.
 - `TypeSafetyReadiness.v` holds preservation-readiness predicates and the
   store-name preservation facts used by hidden-frame stripping.
-- Do not move `preservation_ready_implies_provenance_ready*` into
-  `TypeSafetyReadiness.v`: `provenance_ready_expr` is defined later in
+- `TypeSafetyHiddenFrame.v` owns the readiness-to-provenance bridge
+  `preservation_ready_implies_provenance_ready*`. Do not move these helpers
+  into `TypeSafetyReadiness.v`: `provenance_ready_expr` is defined later in
   `TypeSafetyHiddenFrame.v`, which already imports `TypeSafetyReadiness.v`, so
-  that move would create a dependency cycle. Keep those wrappers in
-  `TypeSafety.v` unless provenance readiness is split earlier in the project
-  order.
+  that move would create a dependency cycle.
 - `TypeSafetyHiddenFrame.v` now holds the readiness-dependent hidden-frame
   mutual strip batch, from `args_free_vars_ts` through
   `eval_let_make_closure_captured_call_args_strip`.
@@ -253,7 +252,11 @@ The second split batch is done:
 - `TypeSafetyHiddenFrame.v` now holds the roots-ready support batch:
   direct-place lookup helpers, root/store/ctx named facts, provenance
   readiness, `typed_fields_roots_cons_inv_ts`, typed roots named/key named
-  mutual facts, and `eval_preserves_roots_ready_mutual`.
+  mutual facts, `eval_preserves_roots_ready_mutual`, and the parameterized
+  prefix wrapper core
+  `eval_preserves_roots_ready_prefix_mutual_with_preservation_core`.
+  `TypeSafety.v` keeps the public `eval_preserves_roots_ready_prefix_mutual`
+  theorem and passes `eval_preserves_typing_ready_prefix_mutual` into the core.
 - `TypeSafetyHiddenFrame.v` now holds the frame-scope roots-ready preservation
   batch: `sctx_path_available_success`, param-scope update/preservation
   helpers, frame-scope result definitions, the args/fields bridge, and
@@ -270,8 +273,12 @@ The second split batch is done:
   `TypeSafety.v` keeps the public wrappers.
 - `TypeSafetyBasePreservation.v` owns the basic big-step preservation cases
   from `eval_args_preserves_typing` through `eval_letinfer_preserves_typing`.
-  `TypeSafety.v` exports it and now starts with the main
-  `eval_preserves_typing_ready_mutual` theorem.
+  It also owns the parameterized structural endpoint cores
+  `typed_fn_env_structural_big_step_safe_ready_with_preservation_core` and
+  `checked_fn_env_structural_big_step_safe_ready_with_preservation_core`.
+  `TypeSafety.v` exports it and keeps the public structural endpoint theorem
+  names as wrappers around the main `eval_preserves_typing_ready_mutual`
+  theorem.
 - `TypeSafetyClosure.v` now holds the parameterized cleanup core:
   `eval_call_body_cleanup_preserves_value_and_refs_frame_core`. It takes the
   body preservation, roots, frame-scope, and param-scope facts as premises, so

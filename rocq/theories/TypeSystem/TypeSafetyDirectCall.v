@@ -134,6 +134,35 @@ Definition eval_preserves_typing_roots_ready_prefix_mutual_statement : Prop :=
       store_no_shadow s' /\
       root_env_no_shadow R').
 
+Definition eval_preserves_typing_ready_prefix_mutual_statement : Prop :=
+  (forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) Σ T Σ',
+      preservation_ready_expr e ->
+      store_typed_prefix env s Σ ->
+      typed_env_structural env Ω n Σ e T Σ' ->
+      store_typed_prefix env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s') /\
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    forall (Ω : outlives_ctx) (n : nat) Σ ps Σ',
+      preservation_ready_args args ->
+      store_typed_prefix env s Σ ->
+      typed_args_env_structural env Ω n Σ args ps Σ' ->
+      store_typed_prefix env s' Σ' /\
+      eval_args_values_have_types env Ω s' vs ps /\
+      store_ref_targets_preserved env s s') /\
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    forall (Ω : outlives_ctx) (n : nat) lts args Σ Σ',
+      preservation_ready_fields fields ->
+      store_typed_prefix env s Σ ->
+      typed_fields_env_structural env Ω n lts args Σ fields defs Σ' ->
+      store_typed_prefix env s' Σ' /\
+      struct_fields_have_type env s' lts args values defs /\
+      store_ref_targets_preserved env s s').
+
 Definition eval_preserves_param_scope_roots_ready_mutual_statement : Prop :=
   (forall env s e s' v,
     eval env s e s' v ->
@@ -399,6 +428,123 @@ Proof.
     pose proof (lookup_fn_none_not_in_name fname (env_fns env) fdef
                   Hlookup Hin) as Hneq.
     apply Hneq. exact Hname.
+Qed.
+
+Lemma eval_direct_call_body_preserves_typing_prefix_with_preservation_core :
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  forall env (Ω : outlives_ctx) (n : nat) Σ Σ_args fname args
+      fdef fcall σ s s_args s_body vs ret used' T_body Γ_out,
+    store_typed env s Σ ->
+    preservation_ready_args args ->
+    typed_args_env_structural env Ω n Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args ->
+    eval_args env s args s_args vs ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    env_fns_checked_structural env ->
+    env_fns_preservation_ready env ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    typed_env_structural env (fn_outlives fcall) (fn_lifetimes fcall)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) ->
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
+    eval env (bind_params (fn_params fcall) vs s_args)
+      (fn_body fcall) s_body ret ->
+    store_typed env s_args Σ_args /\
+    store_typed_prefix env s_body (sctx_of_ctx Γ_out) /\
+    value_has_type env s_body ret (apply_lt_ty σ (fn_ret fdef)) /\
+    store_ref_targets_preserved env
+      (bind_params (fn_params fcall) vs s_args) s_body.
+Proof.
+  intros Htyping_ready Htyping_prefix_ready env Ω n Σ Σ_args fname args
+    fdef fcall σ s s_args s_body vs ret used' T_body Γ_out Hstore
+    Hready_args Htyped_args Heval_args Hlookup Henv_checked Henv_ready
+    Hrename Htyped_body Hcompat_body Heval_body.
+  destruct (proj1 (proj2 Htyping_ready)
+              env s args s_args vs Heval_args Ω n Σ
+              (apply_lt_params σ (fn_params fdef)) Σ_args
+              Hready_args Hstore Htyped_args)
+    as [Hstore_args [Hargs_subst _]].
+  pose proof (alpha_rename_fn_def_shape (store_names s_args)
+                fdef fcall used' Hrename) as Hshape.
+  destruct Hshape as [_ [Hret Hparams_alpha]].
+  assert (Hargs_unsubst_fdef :
+    eval_args_values_have_types env Ω s_args vs (fn_params fdef)).
+  { eapply eval_args_values_have_types_apply_lt_params_inv.
+    exact Hargs_subst. }
+  assert (Hargs_fcall :
+    eval_args_values_have_types env Ω s_args vs (fn_params fcall)).
+  { eapply eval_args_values_have_types_params_alpha.
+    - exact Hparams_alpha.
+    - exact Hargs_unsubst_fdef. }
+  assert (Hnodup :
+    NoDup (ctx_names (params_ctx (fn_params fcall)))).
+  { eapply alpha_rename_fn_def_params_nodup_ctx_names. exact Hrename. }
+  assert (Hfresh : params_fresh_in_store (fn_params fcall) s_args).
+  { eapply alpha_rename_fn_def_params_fresh_in_store. exact Hrename. }
+  assert (Hstore_bind :
+    store_typed_prefix env (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))).
+  { eapply bind_params_store_typed_prefix; eassumption. }
+  assert (Hready_body : preservation_ready_expr (fn_body fcall)).
+  { eapply lookup_alpha_rename_fn_def_preservation_ready_body; eassumption. }
+  destruct (proj1 Htyping_prefix_ready
+              env (bind_params (fn_params fcall) vs s_args)
+              (fn_body fcall) s_body ret Heval_body
+              (fn_outlives fcall) (fn_lifetimes fcall)
+              (sctx_of_ctx (params_ctx (fn_params fcall)))
+              T_body (sctx_of_ctx Γ_out)
+              Hready_body Hstore_bind Htyped_body)
+    as [Hstore_body [Hv_body Hpres_body]].
+  assert (Hv_ret_fcall : value_has_type env s_body ret (fn_ret fcall)).
+  { eapply value_has_type_compatible.
+    - exact Hv_body.
+    - apply ty_compatible_b_sound with (Ω := fn_outlives fcall).
+      exact Hcompat_body. }
+  assert (Hv_ret_fdef : value_has_type env s_body ret (fn_ret fdef)).
+  { rewrite Hret. exact Hv_ret_fcall. }
+  repeat split; try assumption.
+  eapply value_has_type_apply_lt_ty. exact Hv_ret_fdef.
+Qed.
+
+Lemma eval_direct_call_body_preserves_typing_prefix_from_lookup_with_preservation_core :
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  forall env (Ω : outlives_ctx) (n : nat) Σ Σ_args fname args
+      fdef fcall σ s s_args s_body vs ret used',
+    store_typed env s Σ ->
+    preservation_ready_args args ->
+    typed_args_env_structural env Ω n Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args ->
+    eval_args env s args s_args vs ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    env_fns_checked_structural env ->
+    env_fns_preservation_ready env ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    fn_captures fcall = [] ->
+    eval env (bind_params (fn_params fcall) vs s_args)
+      (fn_body fcall) s_body ret ->
+    exists Γ_out,
+      store_typed env s_args Σ_args /\
+      store_typed_prefix env s_body (sctx_of_ctx Γ_out) /\
+      value_has_type env s_body ret (apply_lt_ty σ (fn_ret fdef)) /\
+      store_ref_targets_preserved env
+        (bind_params (fn_params fcall) vs s_args) s_body.
+Proof.
+  intros Htyping_ready Htyping_prefix_ready env Ω n Σ Σ_args fname args
+    fdef fcall σ s s_args s_body vs ret used' Hstore Hready_args
+    Htyped_args Heval_args Hlookup Henv_checked Henv_ready Hrename
+    Hcaps_call Heval_body.
+  pose proof (lookup_alpha_rename_fn_def_typed_structural
+                env fname fdef fcall (store_names s_args) used'
+                Hlookup Henv_checked Hrename) as Htyped_fn.
+  destruct (typed_fn_env_structural_body env fcall Htyped_fn)
+    as [T_body [Γ_out [Htyped_body [Hcompat_body _]]]].
+  rewrite (fn_body_ctx_eq_params_ctx_when_no_captures
+             fcall Hcaps_call) in Htyped_body.
+  exists Γ_out.
+  eapply eval_direct_call_body_preserves_typing_prefix_with_preservation_core;
+    eassumption.
 Qed.
 
 Lemma eval_direct_call_body_cleanup_preserves_value_and_refs_core :

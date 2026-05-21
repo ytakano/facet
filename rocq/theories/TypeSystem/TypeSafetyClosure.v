@@ -509,3 +509,68 @@ Proof.
   repeat split; try assumption.
   exists locals. repeat split; assumption.
 Qed.
+
+Lemma eval_call_body_ctx_cleanup_erased_core :
+  forall env (Ω : outlives_ctx) frame Σ_frame fdef fcall σ s_body ret
+      T_body Γ_out R_body roots_body frame_final,
+    store_typed env frame Σ_frame ->
+    fn_ret fdef = fn_ret fcall ->
+    NoDup (ctx_names
+      (params_ctx (fn_params fcall ++ fn_captures fcall))) ->
+    store_frame_scope (fn_params fcall ++ fn_captures fcall)
+      (sctx_of_ctx Γ_out) s_body frame ->
+    store_param_scope (fn_params fcall ++ fn_captures fcall)
+      s_body frame_final ->
+    value_has_type env s_body ret T_body ->
+    store_roots_within R_body s_body ->
+    value_roots_within roots_body ret ->
+    store_no_shadow s_body ->
+    sctx_same_bindings (sctx_of_ctx (fn_body_ctx fcall))
+      (sctx_of_ctx Γ_out) ->
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
+    roots_exclude_params (fn_params fcall ++ fn_captures fcall)
+      roots_body ->
+    root_env_excludes_params (fn_params fcall ++ fn_captures fcall)
+      R_body ->
+    store_typed env
+      (store_remove_params (fn_params fcall ++ fn_captures fcall) s_body)
+      Σ_frame /\
+    value_has_type env
+      (store_remove_params (fn_params fcall ++ fn_captures fcall) s_body)
+      ret (apply_lt_ty σ (fn_ret fdef)) /\
+    store_remove_params (fn_params fcall ++ fn_captures fcall) s_body =
+      frame /\
+    value_refs_exclude_params (fn_params fcall ++ fn_captures fcall) ret.
+Proof.
+  intros env Ω frame Σ_frame fdef fcall σ s_body ret T_body
+    Γ_out R_body roots_body frame_final Hstore_frame Hret Hnodup_all
+    Hframe_scope Hscope_body Hv_body Hroots_body Hret_roots Hshadow_body
+    Hsame_body Hcompat_body Hexclude_all Hexclude_env_all.
+  assert (Hv_ret_fcall : value_has_type env s_body ret (fn_ret fcall)).
+  { eapply value_has_type_compatible.
+    - exact Hv_body.
+    - apply ty_compatible_b_sound with (Ω := fn_outlives fcall).
+      exact Hcompat_body. }
+  assert (Hv_ret_fdef : value_has_type env s_body ret (fn_ret fdef)).
+  { rewrite Hret. exact Hv_ret_fcall. }
+  destruct (store_remove_params_cleanup_excludes
+              (fn_params fcall ++ fn_captures fcall) s_body frame_final
+              R_body roots_body ret Hscope_body Hroots_body Hret_roots
+              Hshadow_body Hnodup_all Hexclude_all Hexclude_env_all)
+    as [locals [Hremoved [Hret_exclude _]]].
+  assert (Hremoved_exact_all :
+    store_remove_params (fn_params fcall ++ fn_captures fcall) s_body =
+      frame).
+  { eapply store_remove_params_store_frame_scope_exact.
+    - exact Hsame_body.
+    - eapply store_frame_scope_param_scope. exact Hframe_scope.
+    - exact Hframe_scope. }
+  repeat split.
+  - rewrite Hremoved_exact_all. exact Hstore_frame.
+  - apply value_has_type_apply_lt_ty.
+    eapply value_has_type_store_remove_params_excluding.
+    + exact Hv_ret_fdef.
+    + exact Hret_exclude.
+  - exact Hremoved_exact_all.
+  - exact Hret_exclude.
+Qed.

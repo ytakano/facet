@@ -5248,34 +5248,25 @@ Proof.
               as [frame_final Hscope_body].
   { exact Hcover_all. }
   { exact Hscope_start. }
-  destruct (store_remove_params_cleanup_excludes
-              (fn_params fcall ++ fn_captures fcall) s_body frame_final
-              R_body roots_body ret Hscope_body Hroots_body Hret_roots
-              Hshadow_body Hnodup_all Hexclude_all Hexclude_env_all)
-    as [locals [Hremoved [Hret_exclude _]]].
   assert (Hsame_body :
     sctx_same_bindings (sctx_of_ctx (fn_body_ctx fcall))
       (sctx_of_ctx Γ_out)).
   { eapply typed_env_structural_same_bindings.
     eapply typed_env_roots_structural. exact Htyped_body. }
-  assert (Hremoved_exact_all :
-    store_remove_params (fn_params fcall ++ fn_captures fcall) s_body =
-      s_args).
-  { eapply store_remove_params_store_frame_scope_exact.
-    - exact Hsame_body.
-    - eapply store_frame_scope_param_scope. exact Hframe_scope.
-    - exact Hframe_scope. }
+  destruct (eval_call_body_ctx_cleanup_erased_core
+              env Ω s_args Σ_args fdef fcall σ s_body ret T_body Γ_out
+              R_body roots_body frame_final Htyped_args Hret Hnodup_all
+              Hframe_scope Hscope_body Hv_body Hroots_body Hret_roots
+              Hshadow_body Hsame_body Hcompat_body Hexclude_all
+              Hexclude_env_all)
+    as [Hstore_erased [Hv_erased [Hremoved_exact_all _]]].
   assert (Hfinal_exact :
     store_remove_params (fn_captures fcall)
       (store_remove_params (fn_params fcall) s_body) = s_args).
   { rewrite <- store_remove_params_app. exact Hremoved_exact_all. }
   repeat split.
-  - rewrite Hfinal_exact. exact Htyped_args.
-  - rewrite <- store_remove_params_app.
-    apply value_has_type_apply_lt_ty.
-    eapply value_has_type_store_remove_params_excluding.
-    + exact Hv_ret_fdef.
-    + exact Hret_exclude.
+  - rewrite <- store_remove_params_app. exact Hstore_erased.
+  - rewrite <- store_remove_params_app. exact Hv_erased.
   - exact Hfinal_exact.
 Qed.
 

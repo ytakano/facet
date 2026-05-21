@@ -290,12 +290,21 @@ The second split batch is done:
   the non-hidden/hidden runtime-args readiness cores used by
   `eval_make_closure_captured_call_runtime_args_ready_auto` and
   `eval_let_make_closure_captured_call_runtime_args_ready_auto`.
+- `TypeSafetyClosure.v` now also holds the parameterized captured
+  runtime-args wrapper cores:
+  `eval_make_closure_captured_call_runtime_args_ready_auto_with_preservation_core`
+  and
+  `eval_let_make_closure_captured_call_runtime_args_ready_auto_with_preservation_core`.
+  `TypeSafety.v` keeps the public wrappers and passes the main preservation,
+  root-name, and root-key mutual theorems into the cores.
 - `TypeSafetyDirectCall.v` now holds the direct-call support batch:
   function-env uniqueness and lookup helpers needed outside `TypeSafety.v`,
   direct-call callee evidence definitions/conversions, and
   `eval_direct_call_body_cleanup_preserves_value_and_refs_core`.
-  `TypeSafety.v` still owns direct-call public wrappers that call main
-  preservation mutual theorems.
+  It also owns the parameterized direct-call cleanup wrapper core
+  `eval_direct_call_body_cleanup_preserves_value_and_refs_with_preservation_core`.
+  `TypeSafety.v` keeps the direct-call public wrapper and passes the main
+  preservation mutual theorems into the core.
 - `TypeSafetyCapturedCall.v` now holds the captured callee evidence
   instantiation batch:
   `captured_call_callee_body_root_shadow_provenance_instantiated_bridge`,
@@ -324,12 +333,15 @@ Continue splitting in small batches:
      on the main preservation mutual theorems is explicit.
    - Keep public runtime-readiness wrappers and later preservation bridges in
      `TypeSafety.v` while they still call main preservation mutual theorems.
+     Prefer parameterized wrapper cores in focused files when the dependency
+     set is fixed.
    - Keep public cleanup wrappers in `TypeSafety.v` while they still call main
      preservation mutual theorems. Prefer adding parameterized wrapper cores to
      `TypeSafetyClosure.v` and keeping stable public wrappers in `TypeSafety.v`.
    - Keep direct-call public wrappers in `TypeSafety.v` while they still call
-     main preservation mutual theorems. Move only direct-call helper evidence
-     and private proof tails to `TypeSafetyDirectCall.v`.
+     main preservation mutual theorems. Prefer parameterized wrapper cores in
+     `TypeSafetyDirectCall.v`; move only direct-call helper evidence and
+     private proof tails.
    - Keep public captured-call preservation bridges in `TypeSafety.v`; the
      captured callee evidence instantiation split is complete.
    - Do not move the public wrapper

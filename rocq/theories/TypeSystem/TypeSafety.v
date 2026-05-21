@@ -13221,6 +13221,66 @@ Proof.
     eapply store_no_shadow_app_lookup_right_none; eassumption.
 Qed.
 
+Lemma captured_hidden_frame_args_values_have_types :
+  forall env captured s_args_hidden s_args Ω vs ps x T hidden,
+    s_args_hidden = store_add x T hidden s_args ->
+    store_no_shadow (captured ++ s_args_hidden) ->
+    ~ In x (store_names s_args) ->
+    eval_args_values_have_types env Ω s_args vs ps ->
+    eval_args_values_have_types env Ω (captured ++ s_args_hidden) vs ps.
+Proof.
+  intros env captured s_args_hidden s_args Ω vs ps x T hidden Hhidden
+    Hshadow Hfresh Hargs.
+  subst s_args_hidden.
+  eapply eval_args_values_have_types_store_preserved.
+  - eapply eval_args_values_have_types_store_preserved.
+    + exact Hargs.
+    + apply store_add_fresh_ref_targets_preserved.
+      apply store_lookup_not_in_names. exact Hfresh.
+  - apply store_ref_targets_preserved_app_right.
+    intros y Hin.
+    eapply store_no_shadow_app_lookup_right_none.
+    + exact Hshadow.
+    + exact Hin.
+Qed.
+
+Lemma eval_args_store_names_fresh :
+  forall env s args s_args vs x,
+    eval_args env s args s_args vs ->
+    preservation_ready_args args ->
+    ~ In x (store_names s) ->
+    ~ In x (store_names s_args).
+Proof.
+  intros env s args s_args vs x Heval Hready Hfresh.
+  rewrite (proj1 (proj2 preservation_ready_eval_store_names_mutual)
+             env s args s_args vs Heval Hready).
+  exact Hfresh.
+Qed.
+
+Lemma store_no_shadow_app_store_add_right :
+  forall captured s_args x T hidden,
+    store_no_shadow (captured ++ s_args) ->
+    ~ In x (store_names captured) ->
+    ~ In x (store_names s_args) ->
+    store_no_shadow (captured ++ store_add x T hidden s_args).
+Proof.
+  intros captured s_args x T hidden Hshadow Hfresh_captured Hfresh_args.
+  unfold store_no_shadow in *.
+  rewrite store_names_app in *.
+  rewrite store_names_add.
+  apply NoDup_app_from_Forall.
+  - eapply NoDup_app_left_ts. exact Hshadow.
+  - constructor.
+    + exact Hfresh_args.
+    + eapply NoDup_app_right_ts. exact Hshadow.
+  - apply Forall_forall. intros y Hy Hin.
+    simpl in Hin. destruct Hin as [Hyx | Hy_args].
+    + subst y. contradiction.
+    + eapply (NoDup_app_not_in_right_ts
+                (store_names captured) (store_names s_args) y Hshadow);
+        eassumption.
+Qed.
+
 Lemma bind_params_ref_targets_preserved :
   forall env Ω s vs ps,
     NoDup (ctx_names (params_ctx ps)) ->

@@ -4360,6 +4360,55 @@ with provenance_ready_fields : list (string * expr) -> Prop :=
       provenance_ready_fields rest ->
       provenance_ready_fields ((name, e) :: rest).
 
+Scheme preservation_ready_expr_ind' :=
+  Induction for preservation_ready_expr Sort Prop
+with preservation_ready_args_ind' :=
+  Induction for preservation_ready_args Sort Prop
+with preservation_ready_fields_ind' :=
+  Induction for preservation_ready_fields Sort Prop.
+Combined Scheme preservation_ready_mutind
+  from preservation_ready_expr_ind', preservation_ready_args_ind',
+       preservation_ready_fields_ind'.
+
+Lemma preservation_ready_implies_provenance_ready_mutual :
+  (forall e,
+    preservation_ready_expr e ->
+    provenance_ready_expr e) /\
+  (forall args,
+    preservation_ready_args args ->
+    provenance_ready_args args) /\
+  (forall fields,
+    preservation_ready_fields fields ->
+    provenance_ready_fields fields).
+Proof.
+  apply preservation_ready_mutind;
+    try solve [econstructor; eauto].
+Qed.
+
+Lemma preservation_ready_implies_provenance_ready :
+  forall e,
+    preservation_ready_expr e ->
+    provenance_ready_expr e.
+Proof.
+  exact (proj1 preservation_ready_implies_provenance_ready_mutual).
+Qed.
+
+Lemma preservation_ready_args_implies_provenance_ready :
+  forall args,
+    preservation_ready_args args ->
+    provenance_ready_args args.
+Proof.
+  exact (proj1 (proj2 preservation_ready_implies_provenance_ready_mutual)).
+Qed.
+
+Lemma preservation_ready_fields_implies_provenance_ready :
+  forall fields,
+    preservation_ready_fields fields ->
+    provenance_ready_fields fields.
+Proof.
+  exact (proj2 (proj2 preservation_ready_implies_provenance_ready_mutual)).
+Qed.
+
 Lemma alpha_rename_provenance_ready_expr :
   forall ρ used e er used',
     alpha_rename_expr ρ used e = (er, used') ->

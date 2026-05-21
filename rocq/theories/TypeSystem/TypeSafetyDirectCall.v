@@ -557,6 +557,185 @@ Proof.
   exists frame_final, locals. repeat split; assumption.
 Qed.
 
+Lemma eval_args_root_subst_images_exclude_names_for_fresh_call_with_preservation_core :
+  eval_preserves_root_names_ready_mutual_statement ->
+  forall env Ω n R Σ ps_typed Σ_args R_args arg_roots args s s_args vs
+      fdef fcall used',
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    typed_args_roots env Ω n R Σ args ps_typed Σ_args R_args arg_roots ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    root_subst_images_exclude_names
+      (expr_local_store_names (fn_body fcall))
+      (root_subst_of_params (fn_params fcall) arg_roots).
+Proof.
+  intros Hroot_names env Ω n R Σ ps_typed Σ_args R_args arg_roots
+    args s s_args vs fdef fcall used' Heval_args Hprov_args Hstore
+    Hroots Hshadow Hrn Hnamed Htyped_args Hrename.
+  destruct (proj1 (proj2 Hroot_names)
+              env s args s_args vs Heval_args Ω n R Σ ps_typed Σ_args
+              R_args arg_roots Hprov_args Hstore Hroots Hshadow Hrn
+              Hnamed Htyped_args)
+    as [_ Harg_roots_named].
+  eapply alpha_rename_fn_def_body_root_subst_images_exclude_names_from_store_roots;
+    eassumption.
+Qed.
+
+Lemma eval_args_root_keys_exclude_names_for_fresh_call_with_preservation_core :
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env Ω n R Σ ps_typed Σ_args R_args arg_roots args s s_args vs
+      fdef fcall used',
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_keys_named R s ->
+    typed_args_roots env Ω n R Σ args ps_typed Σ_args R_args arg_roots ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    forall x,
+      In x (expr_local_store_names (fn_body fcall)) ->
+      root_env_lookup x R_args = None.
+Proof.
+  intros Hroot_keys env Ω n R Σ ps_typed Σ_args R_args arg_roots
+    args s s_args vs fdef fcall used' Heval_args Hprov_args Hstore
+    Hroots Hshadow Hrn Hnamed Htyped_args Hrename x Hin.
+  pose proof (proj1 (proj2 Hroot_keys)
+                env s args s_args vs Heval_args Ω n R Σ ps_typed Σ_args
+                R_args arg_roots Hprov_args Hstore Hroots Hshadow Hrn
+                Hnamed Htyped_args)
+    as Harg_keys_named.
+  assert (Hfresh_x : ~ In x (store_names s_args)).
+  { pose proof (alpha_rename_fn_def_body_local_store_names_fresh_used
+                  (store_names s_args) fdef fcall used' Hrename)
+      as Hfresh_names.
+    apply (proj1 (Forall_forall _ _) Hfresh_names). exact Hin. }
+  eapply root_env_store_keys_named_lookup_excludes_name.
+  - exact Harg_keys_named.
+  - exact Hfresh_x.
+Qed.
+
+Lemma eval_args_root_tail_fresh_names_for_fresh_call_with_preservation_core :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env Ω n R Σ ps_typed Σ_args R_args arg_roots args s s_args vs
+      fdef fcall used',
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    typed_args_roots env Ω n R Σ args ps_typed Σ_args R_args arg_roots ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    root_env_tail_fresh_names (root_env_remove_params (fn_params fcall) R_args)
+      (expr_local_store_names (fn_body fcall)).
+Proof.
+  unfold root_env_tail_fresh_names.
+  intros Hroot_names Hroot_keys env Ω n R Σ ps_typed Σ_args R_args
+    arg_roots args s s_args vs fdef fcall used' Heval_args Hprov_args
+    Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped_args Hrename x Hin.
+  destruct (proj1 (proj2 Hroot_names)
+              env s args s_args vs Heval_args Ω n R Σ ps_typed Σ_args
+              R_args arg_roots Hprov_args Hstore Hroots Hshadow Hrn
+              Hnamed Htyped_args)
+    as [Harg_roots_named _].
+  pose proof (proj1 (proj2 Hroot_keys)
+                env s args s_args vs Heval_args Ω n R Σ ps_typed Σ_args
+                R_args arg_roots Hprov_args Hstore Hroots Hshadow Hrn
+                Hkeys Htyped_args)
+    as Harg_keys_named.
+  pose proof (alpha_rename_fn_def_body_local_store_names_fresh_used
+                (store_names s_args) fdef fcall used' Hrename)
+    as Hfresh_names.
+  assert (Hfresh_x : ~ In x (store_names s_args)).
+  { apply (proj1 (Forall_forall _ _) Hfresh_names). exact Hin. }
+  assert (Hlookup : root_env_lookup x R_args = None).
+  { eapply root_env_store_keys_named_lookup_excludes_name; eassumption. }
+  assert (Hexcl : root_env_excludes x R_args).
+  { eapply root_env_store_roots_named_excludes_name; eassumption. }
+  split.
+  - apply root_env_lookup_remove_params_none_preserved. exact Hlookup.
+  - apply root_env_remove_params_preserves_excludes.
+    + eapply typed_args_roots_no_shadow; eassumption.
+    + exact Hexcl.
+Qed.
+
+Lemma eval_args_root_names_excludes_params_ready_with_preservation_core :
+  eval_preserves_root_names_ready_mutual_statement ->
+  forall env s args s_args vs Ω n R Σ ps Σ_args R_args arg_roots
+      ps_bind,
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    typed_args_roots env Ω n R Σ args ps Σ_args R_args arg_roots ->
+    params_fresh_in_store ps_bind s_args ->
+    root_env_excludes_params ps_bind R_args.
+Proof.
+  intros Hroot_names env s args s_args vs Ω n R Σ ps Σ_args R_args
+    arg_roots ps_bind Heval Hready Hstore Hroots Hnodup Hrn Hnamed
+    Htyped Hfresh.
+  destruct (proj1 (proj2 Hroot_names)
+              env s args s_args vs Heval Ω n R Σ ps Σ_args R_args
+              arg_roots Hready Hstore Hroots Hnodup Hrn Hnamed Htyped)
+    as [Hnamed_args _].
+  eapply root_env_store_roots_named_excludes_params; eassumption.
+Qed.
+
+Lemma eval_args_root_sets_union_excludes_fresh_name_with_preservation_core :
+  eval_preserves_root_names_ready_mutual_statement ->
+  ((forall env s e s' v,
+    eval env s e s' v ->
+    preservation_ready_expr e ->
+    store_names s' = store_names s) /\
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    preservation_ready_args args ->
+    store_names s' = store_names s) /\
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    preservation_ready_fields fields ->
+    store_names s' = store_names s)) ->
+  forall env s args s_args vs Ω n R Σ ps Σ_args R_args arg_roots x,
+    eval_args env s args s_args vs ->
+    preservation_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    typed_args_roots env Ω n R Σ args ps Σ_args R_args arg_roots ->
+    ~ In x (store_names s) ->
+    roots_exclude x (root_sets_union arg_roots).
+Proof.
+  intros Hroot_names Hstore_names env s args s_args vs Ω n R Σ ps Σ_args
+    R_args arg_roots x Heval Hready Hstore Hroots Hnodup Hrn Hnamed
+    Htyped Hfresh.
+  pose proof (preservation_ready_args_implies_provenance_ready_closure
+                args Hready) as Hprov.
+  pose proof (proj1 (proj2 Hstore_names)
+              env s args s_args vs Heval Hready) as Hnames.
+  destruct (proj1 (proj2 Hroot_names)
+              env s args s_args vs Heval Ω n R Σ ps Σ_args R_args
+              arg_roots Hprov Hstore Hroots Hnodup Hrn Hnamed Htyped)
+    as [_ Harg_roots_named].
+  eapply root_sets_union_store_roots_named_excludes_name.
+  - exact Harg_roots_named.
+  - rewrite Hnames. exact Hfresh.
+Qed.
+
 Definition direct_call_callee_root_evidence (env : global_env) : Prop :=
   forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
       (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs

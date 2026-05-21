@@ -9,6 +9,56 @@ Import ListNotations.
 (* Function environment lookup facts                                   *)
 (* ------------------------------------------------------------------ *)
 
+Lemma lookup_fn_typed_structural :
+  forall env fname f_lookup,
+    lookup_fn fname (env_fns env) = Some f_lookup ->
+    env_fns_typed_structural env ->
+    typed_fn_env_structural env f_lookup.
+Proof.
+  intros env fname f_lookup Hlookup Henv_typed.
+  destruct (lookup_fn_in_name fname (env_fns env) f_lookup Hlookup)
+    as [Hin_lookup _].
+  apply Henv_typed. exact Hin_lookup.
+Qed.
+
+Lemma fn_body_ctx_eq_params_ctx_when_no_captures :
+  forall f,
+    fn_captures f = [] ->
+    fn_body_ctx f = params_ctx (fn_params f).
+Proof.
+  intros f Hcaps.
+  unfold fn_body_ctx, fn_body_params.
+  rewrite Hcaps.
+  rewrite app_nil_r.
+  reflexivity.
+Qed.
+
+Lemma typed_env_roots_fn_body_ctx_to_params_ctx_when_no_captures :
+  forall env Ω n R f e T Σ' R' roots,
+    fn_captures f = [] ->
+    typed_env_roots env Ω n R (sctx_of_ctx (fn_body_ctx f))
+      e T Σ' R' roots ->
+    typed_env_roots env Ω n R (sctx_of_ctx (params_ctx (fn_params f)))
+      e T Σ' R' roots.
+Proof.
+  intros env Ω n R f e T Σ' R' roots Hcaps Htyped.
+  rewrite <- (fn_body_ctx_eq_params_ctx_when_no_captures f Hcaps).
+  exact Htyped.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_fn_body_ctx_to_params_ctx_when_no_captures :
+  forall env Ω n R f e T Σ' R' roots,
+    fn_captures f = [] ->
+    typed_env_roots_shadow_safe env Ω n R (sctx_of_ctx (fn_body_ctx f))
+      e T Σ' R' roots ->
+    typed_env_roots_shadow_safe env Ω n R
+      (sctx_of_ctx (params_ctx (fn_params f))) e T Σ' R' roots.
+Proof.
+  intros env Ω n R f e T Σ' R' roots Hcaps Htyped.
+  rewrite <- (fn_body_ctx_eq_params_ctx_when_no_captures f Hcaps).
+  exact Htyped.
+Qed.
+
 Lemma NoDup_map_eq :
   forall (A B : Type) (f : A -> B) (xs : list A) x y,
     NoDup (map f xs) ->

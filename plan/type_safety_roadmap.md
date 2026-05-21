@@ -152,6 +152,8 @@ Work in this order unless a proof exposes a soundness gap.
 
    - Continue the TypeSafety file split below, with `TypeSafetyClosure.v`
      captured closure bridges as the next preferred target.
+   - `TypeSafetyDirectCall.v` owns direct-call function lookup facts and
+     no-capture function-body context conversion helpers.
 
    Do not add `ELetInfer` support in the same step.
 

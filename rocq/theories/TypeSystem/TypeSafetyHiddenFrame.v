@@ -9259,6 +9259,128 @@ Proof.
       eapply Hfields; eassumption.
 Qed.
 
+Definition eval_preserves_typing_ready_prefix_for_roots_ready_statement : Prop :=
+  (forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) Σ T Σ',
+      preservation_ready_expr e ->
+      store_typed_prefix env s Σ ->
+      typed_env_structural env Ω n Σ e T Σ' ->
+      store_typed_prefix env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s') /\
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    forall (Ω : outlives_ctx) (n : nat) Σ ps Σ',
+      preservation_ready_args args ->
+      store_typed_prefix env s Σ ->
+      typed_args_env_structural env Ω n Σ args ps Σ' ->
+      store_typed_prefix env s' Σ' /\
+      eval_args_values_have_types env Ω s' vs ps /\
+      store_ref_targets_preserved env s s') /\
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    forall (Ω : outlives_ctx) (n : nat) lts args Σ Σ',
+      preservation_ready_fields fields ->
+      store_typed_prefix env s Σ ->
+      typed_fields_env_structural env Ω n lts args Σ fields defs Σ' ->
+      store_typed_prefix env s' Σ' /\
+      struct_fields_have_type env s' lts args values defs /\
+      store_ref_targets_preserved env s s').
+
+Theorem eval_preserves_roots_ready_prefix_mutual_with_preservation_core :
+  eval_preserves_typing_ready_prefix_for_roots_ready_statement ->
+  (forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      provenance_ready_expr e ->
+      preservation_ready_expr e ->
+      store_typed_prefix env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      store_typed_prefix env s' Σ' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R' /\
+      store_ref_targets_preserved env s s') /\
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ ps Σ' R' roots,
+      provenance_ready_args args ->
+      preservation_ready_args args ->
+      store_typed_prefix env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+      store_typed_prefix env s' Σ' /\
+      store_roots_within R' s' /\
+      Forall2 value_roots_within roots vs /\
+      store_no_shadow s' /\
+      root_env_no_shadow R' /\
+      store_ref_targets_preserved env s s') /\
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots,
+      provenance_ready_fields fields ->
+      preservation_ready_fields fields ->
+      store_typed_prefix env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+      store_typed_prefix env s' Σ' /\
+      store_roots_within R' s' /\
+      value_fields_roots_within roots values /\
+      store_no_shadow s' /\
+      root_env_no_shadow R' /\
+      store_ref_targets_preserved env s s').
+Proof.
+  intros Hpreservation_prefix.
+  split.
+  - intros env s e s' v Heval Ω n R Σ T Σ' R' roots
+      Hprov Hpres_ready Hstore Hroots Hnodup Hrn Htyped.
+    destruct (proj1 Hpreservation_prefix
+                env s e s' v Heval Ω n Σ T Σ' Hpres_ready Hstore
+                (typed_env_roots_structural env Ω n R Σ e T Σ' R' roots
+                  Htyped))
+      as [Hstore' [_ Hpres]].
+    destruct (proj1 eval_preserves_roots_ready_mutual
+                env s e s' v Heval Ω n R Σ T Σ' R' roots
+                Hprov Hroots Hnodup Hrn Htyped)
+      as [Hroots' [Hv_roots [Hnodup' Hrn']]].
+    repeat split; assumption.
+  - split.
+    + intros env s args s' vs Heval Ω n R Σ ps Σ' R' roots
+        Hprov Hpres_ready Hstore Hroots Hnodup Hrn Htyped.
+      destruct (proj1 (proj2 Hpreservation_prefix)
+                  env s args s' vs Heval Ω n Σ ps Σ' Hpres_ready Hstore
+                  (typed_args_roots_structural env Ω n R Σ args ps Σ' R'
+                    roots Htyped))
+        as [Hstore' [_ Hpres]].
+      destruct (proj1 (proj2 eval_preserves_roots_ready_mutual)
+                  env s args s' vs Heval Ω n R Σ ps Σ' R' roots
+                  Hprov Hroots Hnodup Hrn Htyped)
+        as [Hroots' [Hvals_roots [Hnodup' Hrn']]].
+      repeat split; assumption.
+    + intros env s fields defs s' values Heval Ω n lts args R Σ Σ' R'
+        roots Hprov Hpres_ready Hstore Hroots Hnodup Hrn Htyped.
+      destruct (proj2 (proj2 Hpreservation_prefix)
+                  env s fields defs s' values Heval Ω n lts args Σ Σ'
+                  Hpres_ready Hstore
+                  (typed_fields_roots_structural env Ω n lts args R Σ
+                    fields defs Σ' R' roots Htyped))
+        as [Hstore' [_ Hpres]].
+      destruct (proj2 (proj2 eval_preserves_roots_ready_mutual)
+                  env s fields defs s' values Heval Ω n lts args R Σ Σ' R'
+                  roots Hprov Hroots Hnodup Hrn Htyped)
+        as [Hroots' [Hvals_roots [Hnodup' Hrn']]].
+      repeat split; assumption.
+Qed.
+
 Lemma store_param_prefix_remove_non_param :
   forall ps s_param s x,
     store_param_prefix ps s_param s ->

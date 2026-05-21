@@ -1142,45 +1142,8 @@ Theorem eval_preserves_roots_ready_prefix_mutual :
       root_env_no_shadow R' /\
       store_ref_targets_preserved env s s').
 Proof.
-  split.
-  - intros env s e s' v Heval Ω n R Σ T Σ' R' roots
-      Hprov Hpres_ready Hstore Hroots Hnodup Hrn Htyped.
-    destruct (proj1 eval_preserves_typing_ready_prefix_mutual
-                env s e s' v Heval Ω n Σ T Σ' Hpres_ready Hstore
-                (typed_env_roots_structural env Ω n R Σ e T Σ' R' roots
-                  Htyped))
-      as [Hstore' [_ Hpres]].
-    destruct (proj1 eval_preserves_roots_ready_mutual
-                env s e s' v Heval Ω n R Σ T Σ' R' roots
-                Hprov Hroots Hnodup Hrn Htyped)
-      as [Hroots' [Hv_roots [Hnodup' Hrn']]].
-    repeat split; assumption.
-  - split.
-    + intros env s args s' vs Heval Ω n R Σ ps Σ' R' roots
-        Hprov Hpres_ready Hstore Hroots Hnodup Hrn Htyped.
-      destruct (proj1 (proj2 eval_preserves_typing_ready_prefix_mutual)
-                  env s args s' vs Heval Ω n Σ ps Σ' Hpres_ready Hstore
-                  (typed_args_roots_structural env Ω n R Σ args ps Σ' R'
-                    roots Htyped))
-        as [Hstore' [_ Hpres]].
-      destruct (proj1 (proj2 eval_preserves_roots_ready_mutual)
-                  env s args s' vs Heval Ω n R Σ ps Σ' R' roots
-                  Hprov Hroots Hnodup Hrn Htyped)
-        as [Hroots' [Hvals_roots [Hnodup' Hrn']]].
-      repeat split; assumption.
-    + intros env s fields defs s' values Heval Ω n lts args R Σ Σ' R'
-        roots Hprov Hpres_ready Hstore Hroots Hnodup Hrn Htyped.
-      destruct (proj2 (proj2 eval_preserves_typing_ready_prefix_mutual)
-                  env s fields defs s' values Heval Ω n lts args Σ Σ'
-                  Hpres_ready Hstore
-                  (typed_fields_roots_structural env Ω n lts args R Σ
-                    fields defs Σ' R' roots Htyped))
-        as [Hstore' [_ Hpres]].
-      destruct (proj2 (proj2 eval_preserves_roots_ready_mutual)
-                  env s fields defs s' values Heval Ω n lts args R Σ Σ' R'
-                  roots Hprov Hroots Hnodup Hrn Htyped)
-        as [Hroots' [Hvals_roots [Hnodup' Hrn']]].
-      repeat split; assumption.
+  exact (eval_preserves_roots_ready_prefix_mutual_with_preservation_core
+    eval_preserves_typing_ready_prefix_mutual).
 Qed.
 
 Lemma eval_direct_call_body_preserves_typing_prefix :

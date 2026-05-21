@@ -5484,51 +5484,16 @@ Lemma eval_make_closure_captured_call_expr_preserves_typing_with_instantiated_bo
         (store_remove_params (fn_params fcall) s_body))
       ret (apply_lt_ty [] (fn_ret fdef)).
 Proof.
-  intros env Ω n R Σ args fname captures captured fdef fcall used'
-    s s_args s_body vs ret R_args Σ_args arg_roots captured_tys
-    T_body Γ_out R_body roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys
-    Heval_make Hlookup Heval_args Hrename Heval_body Hcheck Hnodup_caps
-    Hready_args Htyped_args Hprov_body Htyped_body Hcompat_body
-    Hexclude_roots Hexclude_env.
-  destruct (eval_make_closure_captured_call_runtime_args_ready_auto
-              env Ω n R Σ args fname captures captured fdef fcall used'
-              s s_args vs R_args Σ_args arg_roots captured_tys
-              Hstore Hroots Hshadow Hrn Hnamed Hkeys Heval_make Hlookup
-              Heval_args Hrename Hcheck Hnodup_caps Hready_args
-              Htyped_args)
-    as [[Hframe_ready Hcaptured_params_typed]
-        [Hstore_args [Hargs_fcall [_ [Hroots_bind [Hshadow_bind
-          [Hrn_bind Hcover_params]]]]]]].
-  pose proof (alpha_rename_fn_def_shape (store_names (captured ++ s_args))
-                fdef fcall used' Hrename) as Hshape.
-  destruct Hshape as [_ [_ Hparams_alpha]].
-  assert (Hlen_arg_roots :
-    List.length arg_roots = List.length (fn_params fcall)).
-  { rewrite <- (params_alpha_length _ _ Hparams_alpha).
-    eapply typed_args_roots_arg_roots_length. exact Htyped_args. }
-  assert (Hnodup_fcall :
-    NoDup (ctx_names (params_ctx (fn_params fcall)))).
-  { eapply alpha_rename_fn_def_params_nodup_ctx_names. exact Hrename. }
-  assert (Hcover_all :
-    root_env_covers_params (fn_params fcall ++ fn_captures fcall)
-      (call_param_root_env (fn_params fcall) arg_roots
-        (empty_root_env_for_store captured ++ R_args))).
-  { eapply captured_call_runtime_root_env_covers_params_captures;
-      eassumption. }
-  destruct (eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased
-              env Ω s s_args s_body args fname captures captured fdef
-              fcall vs ret used'
-              (empty_root_env_for_store captured) R_args Σ Σ_args
-              captured_tys [] T_body Γ_out
-              (call_param_root_env (fn_params fcall) arg_roots
-                (empty_root_env_for_store captured ++ R_args))
-              R_body roots_body Hstore Heval_make Hlookup Heval_args
-              Hrename Heval_body Hcheck Hframe_ready Hstore_args
-              Hargs_fcall Hroots_bind Hshadow_bind Hrn_bind Hcover_all
-              Hprov_body Htyped_body Hcompat_body Hexclude_roots
-              Hexclude_env)
-    as [Heval_final [Hstore_final Hv_final]].
-  repeat split; assumption.
+  eapply
+    (eval_make_closure_captured_call_expr_preserves_typing_with_instantiated_body_with_preservation_core
+      eval_preserves_typing_ready_mutual
+      eval_preserves_roots_ready_mutual
+      eval_preserves_root_names_ready_mutual
+      eval_preserves_root_keys_named_ready_mutual
+      eval_preserves_frame_scope_roots_ready_mutual
+      eval_preserves_typing_roots_ready_prefix_mutual
+      eval_preserves_param_scope_roots_ready_mutual);
+    eassumption.
 Qed.
 
 Lemma root_env_store_keys_named_excludes_names :

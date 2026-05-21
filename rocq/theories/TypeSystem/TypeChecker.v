@@ -5557,6 +5557,21 @@ Definition ex_ready_gap_captured_closure_local_let_call_env
     [ex_nonempty_capture_callee_fn;
      ex_ready_gap_captured_closure_local_let_call_fn].
 
+Example ready_gap_matrix_captured_closure_local_let_call_checker_accepts :
+  check_program_env_alpha
+    ex_ready_gap_captured_closure_local_let_call_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_captured_closure_local_let_call_direct_summary_rejects :
+  check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary
+    ex_ready_gap_captured_closure_local_let_call_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_captured_closure_local_let_call_non_capturing_summary_rejects :
+  check_program_env_alpha_validated_root_shadow_non_capturing_call_provenance_summary
+    ex_ready_gap_captured_closure_local_let_call_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
 Example ready_gap_matrix_captured_closure_local_let_call_captured_summary_accepts :
   check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
     ex_ready_gap_captured_closure_local_let_call_env = true.

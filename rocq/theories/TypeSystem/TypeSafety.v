@@ -538,20 +538,8 @@ Theorem typed_fn_env_structural_big_step_safe_ready :
     eval env s (fn_body f) s' v ->
     value_has_type env s' v (fn_ret f).
 Proof.
-  intros env f s s' v Htyped_fn Hready Hstore Heval.
-  unfold typed_fn_env_structural in Htyped_fn.
-  destruct Htyped_fn as
-    (T_body & Γ_out & Htyped & Hcompat & _).
-  destruct (proj1 eval_preserves_typing_ready_mutual
-      env s (fn_body f) s' v Heval
-      (fn_outlives f) (fn_lifetimes f)
-      (sctx_of_ctx (fn_body_ctx f))
-      T_body (sctx_of_ctx Γ_out)
-      Hready Hstore Htyped)
-    as [_ [Hv _]].
-  eapply VHT_Compatible.
-  - exact Hv.
-  - apply ty_compatible_b_sound. exact Hcompat.
+  eapply typed_fn_env_structural_big_step_safe_ready_with_preservation_core.
+  exact eval_preserves_typing_ready_mutual.
 Qed.
 
 Theorem checked_fn_env_structural_big_step_safe_ready :
@@ -562,12 +550,8 @@ Theorem checked_fn_env_structural_big_step_safe_ready :
     eval env s (fn_body f) s' v ->
     value_has_type env s' v (fn_ret f).
 Proof.
-  intros env f s s' v Hchecked Hready Hstore Heval.
-  eapply typed_fn_env_structural_big_step_safe_ready.
-  - exact (proj1 Hchecked).
-  - exact Hready.
-  - exact Hstore.
-  - exact Heval.
+  eapply checked_fn_env_structural_big_step_safe_ready_with_preservation_core.
+  exact eval_preserves_typing_ready_mutual.
 Qed.
 
 Theorem eval_preserves_typing_ready_prefix_mutual :

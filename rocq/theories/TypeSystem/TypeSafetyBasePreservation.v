@@ -1559,3 +1559,46 @@ Proof.
   intros env Ω n Σ Σ' s s' m x e1 e2 T v _ _ Heval.
   inversion Heval.
 Qed.
+
+Theorem typed_fn_env_structural_big_step_safe_ready_with_preservation_core :
+  eval_preserves_typing_ready_mutual_statement ->
+  forall env f s s' v,
+    typed_fn_env_structural env f ->
+    preservation_ready_expr (fn_body f) ->
+    store_typed env s (sctx_of_ctx (fn_body_ctx f)) ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hpres env f s s' v Htyped_fn Hready Hstore Heval.
+  unfold typed_fn_env_structural in Htyped_fn.
+  destruct Htyped_fn as
+    (T_body & Γ_out & Htyped & Hcompat & _).
+  destruct (proj1 Hpres
+      env s (fn_body f) s' v Heval
+      (fn_outlives f) (fn_lifetimes f)
+      (sctx_of_ctx (fn_body_ctx f))
+      T_body (sctx_of_ctx Γ_out)
+      Hready Hstore Htyped)
+    as [_ [Hv _]].
+  eapply VHT_Compatible.
+  - exact Hv.
+  - apply ty_compatible_b_sound. exact Hcompat.
+Qed.
+
+Theorem checked_fn_env_structural_big_step_safe_ready_with_preservation_core :
+  eval_preserves_typing_ready_mutual_statement ->
+  forall env f s s' v,
+    checked_fn_env_structural env f ->
+    preservation_ready_expr (fn_body f) ->
+    store_typed env s (sctx_of_ctx (fn_body_ctx f)) ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hpres env f s s' v Hchecked Hready Hstore Heval.
+  eapply typed_fn_env_structural_big_step_safe_ready_with_preservation_core.
+  - exact Hpres.
+  - exact (proj1 Hchecked).
+  - exact Hready.
+  - exact Hstore.
+  - exact Heval.
+Qed.

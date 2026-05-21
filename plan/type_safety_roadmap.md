@@ -268,12 +268,19 @@ The second split batch is done:
   the non-hidden/hidden runtime-args readiness cores used by
   `eval_make_closure_captured_call_runtime_args_ready_auto` and
   `eval_let_make_closure_captured_call_runtime_args_ready_auto`.
+- `TypeSafetyDirectCall.v` now holds the direct-call support batch:
+  function-lookup uniqueness helpers needed outside `TypeSafety.v`,
+  direct-call callee evidence definitions/conversions, and
+  `eval_direct_call_body_cleanup_preserves_value_and_refs_core`.
+  `TypeSafety.v` still owns direct-call public wrappers that call main
+  preservation mutual theorems.
 - `TypeSafety.v` still owns the public wrapper
   `eval_call_body_cleanup_preserves_value_and_refs_frame`. The wrapper calls
   the main preservation mutual theorem and then delegates the cleanup endpoint
   to the core lemma in `TypeSafetyClosure.v`.
-- `TypeSafety.v` exports `TypeSafetyHiddenFrame` and `TypeSafetyClosure`, so
-  downstream modules that import `TypeSafety` still see the moved names.
+- `TypeSafety.v` exports `TypeSafetyHiddenFrame`, `TypeSafetyClosure`, and
+  `TypeSafetyDirectCall`, so downstream modules that import `TypeSafety` still
+  see the moved names.
 
 Continue splitting in small batches:
 
@@ -286,6 +293,9 @@ Continue splitting in small batches:
    - Keep public cleanup wrappers in `TypeSafety.v` while they still call main
      preservation mutual theorems. Move only private core cleanup tails to
      `TypeSafetyClosure.v`.
+   - Keep direct-call public wrappers in `TypeSafety.v` while they still call
+     main preservation mutual theorems. Move only direct-call helper evidence
+     and private proof tails to `TypeSafetyDirectCall.v`.
    - Do not move the public wrapper
      `eval_call_body_cleanup_preserves_value_and_refs_frame` unless all callers
      are updated and no dependency cycle is reintroduced.

@@ -221,6 +221,12 @@ The second split batch is done:
 - `TypeSafetyHiddenFrame.v` now holds the readiness-dependent hidden-frame
   mutual strip batch, from `args_free_vars_ts` through
   `eval_let_make_closure_captured_call_args_strip`.
+- `TypeSafetyHiddenFrame.v` now also holds the parameter freshness facts used
+  by captured-call alpha-renaming and exact capture checking.
+- `TypeSafetyHiddenFrame.v` now holds the frame-scope foundation batch:
+  argument value typing, parameter prefix/scope, hidden frame scope, frame
+  static freshness, and update/remove preservation facts through
+  `store_frame_scope_no_local_under_params`.
 - `TypeSafety.v` exports `TypeSafetyHiddenFrame`, so downstream modules that
   import `TypeSafety` still see the moved names.
 
@@ -228,7 +234,7 @@ Continue splitting in small batches:
 
 1. Create focused files and update `rocq/_CoqProject` in the same commit.
 2. Preferred targets:
-   - `TypeSafetyHiddenFrame.v`: move hidden-frame cleanup and hidden-frame
+   - `TypeSafetyHiddenFrame.v`: move the remaining hidden-frame cleanup and
      erasure facts in separate small batches.
    - `TypeSafetyClosure.v`: captured store/frame readiness and captured closure
      call preservation bridges.

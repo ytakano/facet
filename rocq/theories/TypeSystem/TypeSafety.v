@@ -4028,15 +4028,11 @@ Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset :
       (store_remove_params (fn_captures fcall)
         (store_remove_params (fn_params fcall) s_body)) = s_args.
 Proof.
-  intros env Ω captured s_args_hidden s_args Σ_args x T_hidden hidden
-    fdef fcall σ s_body vs ret used' T_body Γ_out R_params R_body
-    roots_body roots_bound Hhidden Hcaptured_params_typed Htyped_args
-    Hrename Hargs_fcall Hroots_bind Hshadow_bind Hrn_params Hcover_all
-    Hprov_body Htyped_body Hcompat_body Hexclude_all Hexclude_env_all
-    Hsubset Hroot_exclude_bound Heval_body.
-  eapply eval_captured_call_body_ctx_cleanup_hidden_frame_erased;
-    try eassumption.
-  eapply roots_exclude_stores_subset; eassumption.
+  eapply (eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset_with_preservation_core
+            eval_preserves_frame_scope_roots_ready_mutual
+            eval_preserves_typing_roots_ready_prefix_mutual
+            eval_preserves_param_scope_roots_ready_mutual);
+    eassumption.
 Qed.
 
 Lemma eval_let_make_closure_captured_call_hidden_cleanup_package :
@@ -4093,30 +4089,10 @@ Lemma eval_let_make_closure_captured_call_hidden_cleanup_package :
         value_has_type env s_final ret (apply_lt_ty sigma_result (fn_ret fdef)) /\
         s_final = s_args.
 Proof.
-  intros env Ω s s_final m x T fname captures args ret Husage Heval Hready
-    Hfree Hlocal Hrefs.
-  destruct (eval_let_make_closure_captured_call_args_strip
-              env s s_final m x T fname captures args ret Husage Heval
-              Hready Hfree Hlocal Hrefs)
-    as (captured & fdef & s_args_hidden & s_args & vs & fcall & used' &
-        s_body & Hlookup & Hcopy & Hhidden & Heval_args & Hrefs_args &
-        Hvs_refs & Hrename & Heval_body & Hfinal).
-  exists captured, fdef, s_args_hidden, s_args, vs, fcall, used', s_body.
-  split; [exact Hlookup|].
-  split; [exact Hcopy|].
-  split; [exact Hhidden|].
-  split; [exact Heval_args|].
-  split; [exact Hrefs_args|].
-  split; [exact Hvs_refs|].
-  split; [exact Hrename|].
-  split; [exact Heval_body|].
-  split; [exact Hfinal|].
-  intros ? ? ? ? ? ? ? ?
-    Hcaptured_params Htyped_args Hargs_fcall Hroots_bind Hshadow_bind
-    Hrn_params Hcover_all Hprov_body Htyped_body Hcompat_body Hexclude_all
-    Hexclude_env_all Hsubset Hroot_exclude_bound.
-  subst s_final.
-  eapply eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset;
+  eapply (eval_let_make_closure_captured_call_hidden_cleanup_package_with_preservation_core
+            eval_preserves_frame_scope_roots_ready_mutual
+            eval_preserves_typing_roots_ready_prefix_mutual
+            eval_preserves_param_scope_roots_ready_mutual);
     eassumption.
 Qed.
 

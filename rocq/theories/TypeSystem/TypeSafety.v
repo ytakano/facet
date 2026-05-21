@@ -3699,6 +3699,24 @@ Proof.
   induction Htyped_args; simpl; auto.
 Qed.
 
+Lemma typed_fields_roots_cons_inv_ts :
+  forall env Ω n lts args R Σ fields f rest Σ' R' roots,
+    typed_fields_roots env Ω n lts args R Σ fields (f :: rest) Σ' R' roots ->
+    exists e_field T_field Σ1 R1 roots_field roots_rest,
+      lookup_field_b (field_name f) fields = Some e_field /\
+      typed_env_roots env Ω n R Σ e_field T_field Σ1 R1 roots_field /\
+      ty_compatible_b Ω T_field (instantiate_struct_field_ty lts args f) =
+        true /\
+      typed_fields_roots env Ω n lts args R1 Σ1 fields rest
+        Σ' R' roots_rest /\
+      roots = root_set_union roots_field roots_rest.
+Proof.
+  intros env Ω n lts args R Σ fields f rest Σ' R' roots Htyped.
+  inversion Htyped; subst.
+  exists e_field, T_field, Σ1, R1, roots_field, roots_rest.
+  repeat split; assumption.
+Qed.
+
 Theorem typed_roots_ctx_roots_named_mutual :
   forall env Ω n,
   (forall R Σ e T Σ' R' roots,
@@ -5145,22 +5163,18 @@ Proof.
       Hready Htyped Hcover Hscope.
     pose proof (provenance_ready_fields_lookup fields (field_name f) e
                   Hready Hlookup_expr) as Hready_field.
-    inversion Htyped; subst.
-    match goal with
-    | Hlookup_typed : lookup_field_b (field_name f) ?fields0 = Some ?e_field,
-      Htyped_field : typed_env_roots env Ω n R Σ ?e_field ?T_field ?Σ1
-        ?R1 ?roots_field,
-      Htyped_rest : typed_fields_roots env Ω n lts ?args_inst ?R1 ?Σ1
-        ?fields0 rest ?Σ2 ?R2 ?roots_rest |- _ =>
-        rewrite lookup_field_b_lookup_expr_field in Hlookup_typed;
-        rewrite Hlookup_typed in Hlookup_expr;
-        inversion Hlookup_expr; subst e_field;
-        destruct (IHfield Ω n R Σ T_field Σ1 R1 roots_field ps frame
-                    Hready_field Htyped_field Hcover Hscope)
-          as [Hcover1 [frame1 Hscope1]];
-        exact (IHrest Ω n lts args0 R1 Σ1 Σ' R' roots_rest ps frame1
-                 Hready Htyped_rest Hcover1 Hscope1)
-    end.
+    destruct (typed_fields_roots_cons_inv_ts env Ω n lts args0 R Σ
+                fields f rest Σ' R' roots Htyped)
+      as (e_field & T_field & Σ1 & R1 & roots_field & roots_rest &
+        Hlookup_typed & Htyped_field & _ & Htyped_rest & _).
+    rewrite lookup_field_b_lookup_expr_field in Hlookup_typed.
+    rewrite Hlookup_typed in Hlookup_expr.
+    inversion Hlookup_expr; subst e_field.
+    destruct (IHfield Ω n R Σ T_field Σ1 R1 roots_field ps frame
+                Hready_field Htyped_field Hcover Hscope)
+      as [Hcover1 [frame1 Hscope1]].
+    exact (IHrest Ω n lts args0 R1 Σ1 Σ' R' roots_rest ps frame1
+             Hready Htyped_rest Hcover1 Hscope1).
   }
   split.
   - intros env0 s0 e0 s0' v0 Heval Ω0 n0 R0 Σ0 T0 Σ0' R0'
@@ -5277,24 +5291,20 @@ Proof.
       repeat split; assumption.
     + pose proof (provenance_ready_fields_lookup fields (field_name f) e
                     Hready Hlookup_expr) as Hready_field.
-      dependent destruction Htyped.
-      match goal with
-      | Hlookup_typed : lookup_field_b (field_name f) ?fields0 = Some ?e_field,
-        Htyped_field : typed_env_roots env Ω n R Σ _ ?T_field ?Σ1
-          ?R1 ?roots_field,
-        Htyped_rest : typed_fields_roots env Ω n lts args ?R1 ?Σ1
-          ?fields0 rest ?Σ2 ?R2 ?roots_rest |- _ =>
-          rewrite lookup_field_b_lookup_expr_field in Hlookup_typed;
-          rewrite Hlookup_typed in Hlookup_expr;
-          inversion Hlookup_expr; subst e_field;
-          destruct (Hexpr env s e s1 v Heval_field Ω n R Σ T_field Σ1
-                      R1 roots_field ps frame Hready_field Htyped_field
-                      Hcover Hroots Hshadow Hrn Hscope Hfresh)
-            as [Hcover1 [Hroots1 [Hshadow1 [Hrn1 [Hscope1 Hfresh1]]]]];
-          exact (IHrest Ω n lts args R1 Σ1 Σ2 R2 roots_rest ps frame
-                   Hready Htyped_rest Hcover1 Hroots1 Hshadow1 Hrn1
-                   Hscope1 Hfresh1)
-      end.
+      destruct (typed_fields_roots_cons_inv_ts env Ω n lts args R Σ
+                  fields f rest Σ' R' roots Htyped)
+        as (e_field & T_field & Σ1 & R1 & roots_field & roots_rest &
+        Hlookup_typed & Htyped_field & _ & Htyped_rest & _).
+      rewrite lookup_field_b_lookup_expr_field in Hlookup_typed.
+      rewrite Hlookup_typed in Hlookup_expr.
+      inversion Hlookup_expr; subst e_field.
+      destruct (Hexpr env s e s1 v Heval_field Ω n R Σ T_field Σ1
+                  R1 roots_field ps frame Hready_field Htyped_field
+                  Hcover Hroots Hshadow Hrn Hscope Hfresh)
+        as [Hcover1 [Hroots1 [Hshadow1 [Hrn1 [Hscope1 Hfresh1]]]]].
+      exact (IHrest Ω n lts args R1 Σ1 Σ' R' roots_rest ps frame
+               Hready Htyped_rest Hcover1 Hroots1 Hshadow1 Hrn1
+               Hscope1 Hfresh1).
 Qed.
 
 Theorem eval_preserves_frame_scope_roots_ready_mutual :
@@ -5857,28 +5867,24 @@ Proof.
       Hready Htyped Hcover Hroots Hshadow Hrn Hscope Hfresh.
     pose proof (provenance_ready_fields_lookup fields (field_name f) e
                   Hready Hlookup_expr) as Hready_field.
-    dependent destruction Htyped.
-    match goal with
-    | Hlookup_typed : lookup_field_b (field_name f) ?fields0 = Some ?e_field,
-      Htyped_field : typed_env_roots env Ω n R Σ ?e_field ?T_field ?Σ1
-        ?R1 ?roots_field,
-      Htyped_rest : typed_fields_roots env Ω n lts ?args_inst ?R1 ?Σ1
-        ?fields0 rest ?Σ2 ?R2 ?roots_rest |- _ =>
-        rewrite lookup_field_b_lookup_expr_field in Hlookup_typed;
-        rewrite Hlookup_typed in Hlookup_expr;
-        inversion Hlookup_expr; subst e_field;
-        destruct (proj1 eval_preserves_roots_ready_mutual env s e s1 v
-                    Heval_field Ω n R Σ T_field Σ1 R1 roots_field
-                    Hready_field Hroots Hshadow Hrn Htyped_field)
-          as [Hroots1 [_ [Hshadow1 Hrn1]]];
-        destruct (IHfield Ω n R Σ T_field Σ1 R1 roots_field ps frame
-                    Hready_field Htyped_field Hcover Hroots Hshadow Hrn
-                    Hscope Hfresh)
-          as [Hcover1 [Hscope1 Hfresh1]];
-        exact (IHrest Ω n lts args_inst R1 Σ1 Σ2 R2 roots_rest ps frame
-                 Hready Htyped_rest Hcover1 Hroots1 Hshadow1 Hrn1
-                 Hscope1 Hfresh1)
-    end.
+    destruct (typed_fields_roots_cons_inv_ts env Ω n lts args0 R Σ
+                fields f rest Σ' R' roots Htyped)
+      as (e_field & T_field & Σ1 & R1 & roots_field & roots_rest &
+        Hlookup_typed & Htyped_field & _ & Htyped_rest & _).
+    rewrite lookup_field_b_lookup_expr_field in Hlookup_typed.
+    rewrite Hlookup_typed in Hlookup_expr.
+    inversion Hlookup_expr; subst e_field.
+    destruct (proj1 eval_preserves_roots_ready_mutual env s e s1 v
+                Heval_field Ω n R Σ T_field Σ1 R1 roots_field
+                Hready_field Hroots Hshadow Hrn Htyped_field)
+      as [Hroots1 [_ [Hshadow1 Hrn1]]].
+    destruct (IHfield Ω n R Σ T_field Σ1 R1 roots_field ps frame
+                Hready_field Htyped_field Hcover Hroots Hshadow Hrn
+                Hscope Hfresh)
+      as [Hcover1 [Hscope1 Hfresh1]].
+    exact (IHrest Ω n lts args0 R1 Σ1 Σ' R' roots_rest ps frame
+             Hready Htyped_rest Hcover1 Hroots1 Hshadow1 Hrn1
+             Hscope1 Hfresh1).
   }
   assert (Hexpr : frame_scope_roots_ready_expr_preservation).
   { intros env s e s' v Heval Ω n R Σ T Σ' R' roots ps frame

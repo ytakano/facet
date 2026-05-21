@@ -334,3 +334,81 @@ Proof.
           Rcap R_args y roots_args Hrn_frame Hlookup_args).
     + apply root_env_store_keys_named_app; assumption.
 Qed.
+
+Lemma bind_params_ref_targets_preserved :
+  forall env Ω s vs ps,
+    NoDup (ctx_names (params_ctx ps)) ->
+    params_fresh_in_store ps s ->
+    eval_args_values_have_types env Ω s vs ps ->
+    store_ref_targets_preserved env s (bind_params ps vs s).
+Proof.
+  intros env Ω s vs ps Hnodup Hfresh Hargs.
+  induction Hargs as [| v vs p ps T_actual Hv Hcompat Hargs IH].
+  - apply store_ref_targets_preserved_refl.
+  - simpl.
+    eapply store_ref_targets_preserved_trans.
+    + apply IH.
+      * eapply params_ctx_names_nodup_tail. exact Hnodup.
+      * eapply params_fresh_in_store_tail. exact Hfresh.
+    + apply store_add_fresh_ref_targets_preserved.
+      apply store_lookup_not_in_names.
+      eapply bind_params_head_fresh_in_tail; eassumption.
+Qed.
+
+Lemma bind_params_store_typed_prefix :
+  forall env Ω s vs ps,
+    NoDup (ctx_names (params_ctx ps)) ->
+    params_fresh_in_store ps s ->
+    eval_args_values_have_types env Ω s vs ps ->
+    store_typed_prefix env (bind_params ps vs s) (sctx_of_ctx (params_ctx ps)).
+Proof.
+  intros env Ω s vs ps Hnodup Hfresh Hargs.
+  induction Hargs as [| v vs p ps T_actual Hv Hcompat Hargs IH].
+  - simpl. unfold store_typed_prefix. exists [], s. split.
+    + reflexivity.
+    + constructor.
+  - simpl.
+    eapply store_typed_prefix_add_compatible.
+    + apply IH.
+      * eapply params_ctx_names_nodup_tail. exact Hnodup.
+      * eapply params_fresh_in_store_tail. exact Hfresh.
+    + eapply value_has_type_store_preserved.
+      * exact Hv.
+      * eapply bind_params_ref_targets_preserved.
+        -- eapply params_ctx_names_nodup_tail. exact Hnodup.
+        -- eapply params_fresh_in_store_tail. exact Hfresh.
+        -- exact Hargs.
+    + exact Hcompat.
+    + apply store_add_fresh_ref_targets_preserved.
+      apply store_lookup_not_in_names.
+      eapply bind_params_head_fresh_in_tail; eassumption.
+Qed.
+
+Lemma bind_params_store_typed_prefix_extend :
+  forall env Ω s Σ_frame vs ps,
+    store_typed_prefix env s Σ_frame ->
+    NoDup (ctx_names (params_ctx ps)) ->
+    params_fresh_in_store ps s ->
+    eval_args_values_have_types env Ω s vs ps ->
+    store_typed_prefix env (bind_params ps vs s)
+      (sctx_of_ctx (params_ctx ps) ++ Σ_frame).
+Proof.
+  intros env Ω s Σ_frame vs ps Hprefix Hnodup Hfresh Hargs.
+  induction Hargs as [| v vs p ps T_actual Hv Hcompat Hargs IH].
+  - simpl. exact Hprefix.
+  - simpl.
+    eapply store_typed_prefix_add_compatible.
+    + apply IH.
+      * eapply params_ctx_names_nodup_tail. exact Hnodup.
+      * eapply params_fresh_in_store_tail. exact Hfresh.
+    + eapply value_has_type_store_preserved.
+      * exact Hv.
+      * eapply bind_params_ref_targets_preserved.
+        -- eapply params_ctx_names_nodup_tail. exact Hnodup.
+        -- eapply params_fresh_in_store_tail. exact Hfresh.
+        -- exact Hargs.
+    + exact Hcompat.
+    + apply store_add_fresh_ref_targets_preserved.
+      apply store_lookup_not_in_names.
+      eapply bind_params_head_fresh_in_tail; eassumption.
+Qed.

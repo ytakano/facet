@@ -248,6 +248,9 @@ The second split batch is done:
   batch: bind-params call-root readiness, captured argument value typing, hidden
   closure-frame argument typing, evaluated-argument store-name freshness, and
   `captured_call_frame_ready_store_add_right`.
+- `TypeSafetyClosure.v` now also holds the bind-params cleanup support batch:
+  `bind_params_ref_targets_preserved`, `bind_params_store_typed_prefix`, and
+  `bind_params_store_typed_prefix_extend`.
 - `TypeSafety.v` exports `TypeSafetyHiddenFrame` and `TypeSafetyClosure`, so
   downstream modules that import `TypeSafety` still see the moved names.
 
@@ -255,10 +258,11 @@ Continue splitting in small batches:
 
 1. Create focused files and update `rocq/_CoqProject` in the same commit.
 2. Preferred targets:
-   - `TypeSafetyClosure.v`: continue with captured-call cleanup bridges that do
-     not require moving the main preservation mutual theorems.
-   - Keep `eval_make_closure_captured_call_runtime_args_ready_auto` and later
-     preservation bridges in `TypeSafety.v` until their dependencies no longer
+   - First inspect how to break or parameterize dependencies from cleanup
+     bridges to the main preservation mutual theorems.
+   - Keep `eval_call_body_cleanup_preserves_value_and_refs_frame`,
+     `eval_make_closure_captured_call_runtime_args_ready_auto`, and later
+     preservation bridges in `TypeSafety.v` until those dependencies no longer
      point back to the main preservation mutual theorems.
 3. Move lemmas only when dependencies are clear. After each batch run:
 

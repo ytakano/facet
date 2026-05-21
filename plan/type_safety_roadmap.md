@@ -292,9 +292,12 @@ The second split batch is done:
   `eval_call_body_cleanup_preserves_value_and_refs_frame`. The wrapper calls
   the main preservation mutual theorem and then delegates the cleanup endpoint
   to the core lemma in `TypeSafetyClosure.v`.
-- `TypeSafety.v` exports `TypeSafetyHiddenFrame`, `TypeSafetyClosure`, and
-  `TypeSafetyDirectCall`, and `TypeSafetyCapturedCall`, so downstream modules
-  that import `TypeSafety` still see the moved names.
+- `TypeSafetyDirectPlace.v` now owns direct-place runtime target, runtime path
+  lookup, and copy/move contradiction helpers.
+- `TypeSafety.v` exports `TypeSafetyHiddenFrame`, `TypeSafetyClosure`,
+  `TypeSafetyDirectCall`, `TypeSafetyCapturedCall`, and
+  `TypeSafetyDirectPlace`, so downstream modules that import `TypeSafety`
+  still see the moved names.
 
 Continue splitting in small batches:
 

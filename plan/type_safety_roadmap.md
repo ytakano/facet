@@ -251,6 +251,14 @@ The second split batch is done:
 - `TypeSafetyClosure.v` now also holds the bind-params cleanup support batch:
   `bind_params_ref_targets_preserved`, `bind_params_store_typed_prefix`, and
   `bind_params_store_typed_prefix_extend`.
+- `TypeSafetyClosure.v` now holds the parameterized cleanup core:
+  `eval_call_body_cleanup_preserves_value_and_refs_frame_core`. It takes the
+  body preservation, roots, frame-scope, and param-scope facts as premises, so
+  it does not depend on the main preservation mutual theorem in `TypeSafety.v`.
+- `TypeSafety.v` still owns the public wrapper
+  `eval_call_body_cleanup_preserves_value_and_refs_frame`. The wrapper calls
+  the main preservation mutual theorem and then delegates the cleanup endpoint
+  to the core lemma in `TypeSafetyClosure.v`.
 - `TypeSafety.v` exports `TypeSafetyHiddenFrame` and `TypeSafetyClosure`, so
   downstream modules that import `TypeSafety` still see the moved names.
 
@@ -258,12 +266,14 @@ Continue splitting in small batches:
 
 1. Create focused files and update `rocq/_CoqProject` in the same commit.
 2. Preferred targets:
-   - First inspect how to break or parameterize dependencies from cleanup
-     bridges to the main preservation mutual theorems.
-   - Keep `eval_call_body_cleanup_preserves_value_and_refs_frame`,
-     `eval_make_closure_captured_call_runtime_args_ready_auto`, and later
+   - Move or parameterize the next cleanup wrappers only after their dependency
+     on `eval_preserves_typing_roots_ready_prefix_mutual` is explicit.
+   - Keep `eval_make_closure_captured_call_runtime_args_ready_auto` and later
      preservation bridges in `TypeSafety.v` until those dependencies no longer
      point back to the main preservation mutual theorems.
+   - Do not move the public wrapper
+     `eval_call_body_cleanup_preserves_value_and_refs_frame` unless all callers
+     are updated and no dependency cycle is reintroduced.
 3. Move lemmas only when dependencies are clear. After each batch run:
 
    ```sh

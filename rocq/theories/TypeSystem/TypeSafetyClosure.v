@@ -412,3 +412,100 @@ Proof.
       apply store_lookup_not_in_names.
       eapply bind_params_head_fresh_in_tail; eassumption.
 Qed.
+
+Lemma eval_call_body_cleanup_preserves_value_and_refs_frame_core :
+  forall env (Ω : outlives_ctx) frame Σ_frame fdef fcall σ s_body vs ret
+      used' T_body Γ_out R_body roots_body frame_final,
+    store_typed env frame Σ_frame ->
+    alpha_rename_fn_def (store_names frame) fdef = (fcall, used') ->
+    eval_args_values_have_types env Ω frame vs (fn_params fcall) ->
+    store_frame_scope (fn_params fcall)
+      (sctx_of_ctx Γ_out) s_body frame ->
+    store_param_scope (fn_params fcall) s_body frame_final ->
+    store_typed_prefix env s_body (sctx_of_ctx Γ_out) ->
+    value_has_type env s_body ret T_body ->
+    store_ref_targets_preserved env
+      (bind_params (fn_params fcall) vs frame) s_body ->
+    store_roots_within R_body s_body ->
+    value_roots_within roots_body ret ->
+    store_no_shadow s_body ->
+    root_env_no_shadow R_body ->
+    sctx_same_bindings
+      (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (sctx_of_ctx Γ_out) ->
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
+    roots_exclude_params (fn_params fcall) roots_body ->
+    root_env_excludes_params (fn_params fcall) R_body ->
+    store_typed env (store_remove_params (fn_params fcall) s_body) Σ_frame /\
+    store_typed_prefix env s_body (sctx_of_ctx Γ_out) /\
+    store_roots_within R_body s_body /\
+    store_no_shadow s_body /\
+    root_env_no_shadow R_body /\
+    value_has_type env (store_remove_params (fn_params fcall) s_body)
+      ret (apply_lt_ty σ (fn_ret fdef)) /\
+    store_ref_targets_preserved env frame
+      (store_remove_params (fn_params fcall) s_body) /\
+    exists locals,
+      store_remove_params (fn_params fcall) s_body = locals ++ frame_final /\
+      value_refs_exclude_params (fn_params fcall) ret /\
+      store_refs_exclude_params (fn_params fcall)
+        (store_remove_params (fn_params fcall) s_body) /\
+    store_remove_params (fn_params fcall) s_body = frame /\
+    value_roots_within roots_body ret.
+Proof.
+  intros env Ω frame Σ_frame fdef fcall σ s_body vs ret used' T_body
+    Γ_out R_body roots_body frame_final Hstore_frame Hrename Hargs_fcall
+    Hframe_scope Hscope_body Hstore_body Hv_body Hpres_body Hroots_body
+    Hret_roots Hshadow_body Hrn_body Hsame_body Hcompat_body Hexclude_ret
+    Hexclude_env.
+  pose proof (alpha_rename_fn_def_shape (store_names frame)
+                fdef fcall used' Hrename) as Hshape.
+  destruct Hshape as [_ [Hret _]].
+  assert (Hnodup :
+    NoDup (ctx_names (params_ctx (fn_params fcall)))).
+  { eapply alpha_rename_fn_def_params_nodup_ctx_names. exact Hrename. }
+  assert (Hfresh : params_fresh_in_store (fn_params fcall) frame).
+  { eapply alpha_rename_fn_def_params_fresh_in_store. exact Hrename. }
+  assert (Hv_ret_fcall : value_has_type env s_body ret (fn_ret fcall)).
+  { eapply value_has_type_compatible.
+    - exact Hv_body.
+    - apply ty_compatible_b_sound with (Ω := fn_outlives fcall).
+      exact Hcompat_body. }
+  assert (Hv_ret_fdef : value_has_type env s_body ret (fn_ret fdef)).
+  { rewrite Hret. exact Hv_ret_fcall. }
+  destruct (store_remove_params_cleanup_excludes
+              (fn_params fcall) s_body frame_final R_body roots_body ret
+              Hscope_body Hroots_body Hret_roots Hshadow_body Hnodup
+              Hexclude_ret Hexclude_env)
+    as [locals [Hremoved [Hret_exclude Hstore_exclude]]].
+  assert (Hv_final :
+    value_has_type env (store_remove_params (fn_params fcall) s_body)
+      ret (apply_lt_ty σ (fn_ret fdef))).
+  { apply value_has_type_apply_lt_ty.
+    eapply value_has_type_store_remove_params_excluding.
+    - exact Hv_ret_fdef.
+    - exact Hret_exclude. }
+  assert (Hpres_bind :
+    store_ref_targets_preserved env frame
+      (bind_params (fn_params fcall) vs frame)).
+  { eapply bind_params_ref_targets_preserved; eassumption. }
+  assert (Hpres_frame_body :
+    store_ref_targets_preserved env frame s_body).
+  { eapply store_ref_targets_preserved_trans; eassumption. }
+  assert (Hpres_frame_final :
+    store_ref_targets_preserved env frame
+      (store_remove_params (fn_params fcall) s_body)).
+  { eapply store_ref_targets_preserved_remove_params_after_absent;
+      eassumption. }
+  assert (Hremoved_exact :
+    store_remove_params (fn_params fcall) s_body = frame).
+  { eapply store_remove_params_store_frame_scope_exact.
+    - exact Hsame_body.
+    - eapply store_frame_scope_param_scope. exact Hframe_scope.
+    - exact Hframe_scope. }
+  assert (Hstore_final :
+    store_typed env (store_remove_params (fn_params fcall) s_body) Σ_frame).
+  { rewrite Hremoved_exact. exact Hstore_frame. }
+  repeat split; try assumption.
+  exists locals. repeat split; assumption.
+Qed.

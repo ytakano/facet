@@ -4752,45 +4752,27 @@ Proof.
               as [frame_final Hscope_body].
   { exact Hcover_params. }
   { exact Hscope_start. }
-  destruct (store_remove_params_cleanup_excludes
-              (fn_params fcall) s_body frame_final R_body roots_body ret
-              Hscope_body Hroots_body Hret_roots Hshadow_body Hnodup
-              Hexclude_ret Hexclude_env)
-    as [locals [Hremoved [Hret_exclude Hstore_exclude]]].
-  assert (Hv_final :
-    value_has_type env (store_remove_params (fn_params fcall) s_body)
-      ret (apply_lt_ty σ (fn_ret fdef))).
-  { apply value_has_type_apply_lt_ty.
-    eapply value_has_type_store_remove_params_excluding.
-    - exact Hv_ret_fdef.
-    - exact Hret_exclude. }
-  assert (Hpres_bind :
-    store_ref_targets_preserved env frame
-      (bind_params (fn_params fcall) vs frame)).
-  { eapply bind_params_ref_targets_preserved; eassumption. }
-  assert (Hpres_frame_body :
-    store_ref_targets_preserved env frame s_body).
-  { eapply store_ref_targets_preserved_trans; eassumption. }
-  assert (Hpres_frame_final :
-    store_ref_targets_preserved env frame
-      (store_remove_params (fn_params fcall) s_body)).
-  { eapply store_ref_targets_preserved_remove_params_after_absent;
-      eassumption. }
   assert (Hsame_body :
     sctx_same_bindings
       (sctx_of_ctx (params_ctx (fn_params fcall)))
       (sctx_of_ctx Γ_out)).
   { eapply typed_env_structural_same_bindings.
     eapply typed_env_roots_structural. exact Htyped_body. }
-  assert (Hremoved_exact :
-    store_remove_params (fn_params fcall) s_body = frame).
-  { eapply store_remove_params_store_frame_scope_exact.
-    - exact Hsame_body.
-    - eapply store_frame_scope_param_scope. exact Hframe_scope.
-    - exact Hframe_scope. }
-  assert (Hstore_final :
-    store_typed env (store_remove_params (fn_params fcall) s_body) Σ_frame).
-  { rewrite Hremoved_exact. exact Hstore_frame. }
+  destruct (eval_call_body_cleanup_preserves_value_and_refs_frame_core
+              env Ω frame Σ_frame fdef fcall σ s_body vs ret used' T_body
+              Γ_out R_body roots_body frame_final Hstore_frame Hrename
+              Hargs_fcall Hframe_scope Hscope_body Hstore_body Hv_body
+              Hpres_body Hroots_body Hret_roots Hshadow_body Hrn_body
+              Hsame_body Hcompat_body Hexclude_ret Hexclude_env)
+    as [Hstore_final Hcleanup].
+  destruct Hcleanup as [Hstore_prefix Hcleanup].
+  destruct Hcleanup as [Hroots_final Hcleanup].
+  destruct Hcleanup as [Hshadow_final Hcleanup].
+  destruct Hcleanup as [Hrn_final Hcleanup].
+  destruct Hcleanup as [Hv_final Hcleanup].
+  destruct Hcleanup as [Hpres_final [locals Hcleanup]].
+  destruct Hcleanup as [Hremoved [Hret_exclude
+    [Hstore_exclude [Hremoved_exact Hret_roots_final]]]].
   repeat split; try assumption.
   exists frame_final, locals. repeat split; assumption.
 Qed.

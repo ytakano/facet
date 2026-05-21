@@ -1,5 +1,5 @@
 fn main() -> unrestricted isize {
     let y: unrestricted isize = 7 in
-    let f: unrestricted fn(unrestricted isize) -> unrestricted isize = closure [y](x: unrestricted isize) -> unrestricted isize { y } in
+    let f: unrestricted closure<'static>(unrestricted isize) -> unrestricted isize = closure [y](x: unrestricted isize) -> unrestricted isize { y } in
     (f 1)
 }

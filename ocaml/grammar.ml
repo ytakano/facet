@@ -129,6 +129,7 @@ ty_core ::= "isize"
            | "&" LIFETIME ty
            | "&" LIFETIME "mut" ty
            | "fn" "(" ty_list ")" "->" ty
+           | "closure" "<" LIFETIME ">" "(" ty_list ")" "->" ty
            | "for" "<" LIFETIME ("," LIFETIME)* ">" "fn" "(" ty_list ")" "->" ty opt_where_outlives
 ```
 

@@ -14,6 +14,7 @@ and named_ty_core =
   | NTBooleans
   | NTNamed of string * named_type_arg list
   | NTFn of named_ty list * named_ty
+  | NTClosure of TypeChecker.lifetime * named_ty list * named_ty
   | NTForall of Big_int_Z.big_int * (TypeChecker.lifetime * TypeChecker.lifetime) list * named_ty
   | NTRef of TypeChecker.lifetime option * TypeChecker.ref_kind * named_ty
 and named_type_arg =

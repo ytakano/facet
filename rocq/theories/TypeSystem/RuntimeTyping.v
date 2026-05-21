@@ -1267,15 +1267,14 @@ Definition captured_closure_has_type
 Lemma captured_closure_empty_has_type :
   forall env fname fdef,
     lookup_fn fname (env_fns env) = Some fdef ->
-    captured_closure_has_type env fname [] (fn_value_ty fdef).
+    captured_closure_has_type env fname [] (closure_value_ty fdef []).
 Proof.
   intros env fname fdef Hlookup.
   unfold captured_closure_has_type, captured_store_typed.
   exists fdef.
   simpl.
   split; [exact Hlookup |].
-  split; [constructor |].
-  unfold fn_value_ty, closure_value_ty. reflexivity.
+  split; [constructor | reflexivity].
 Qed.
 
 Lemma captured_closure_has_type_outer_usage :
@@ -1292,7 +1291,8 @@ Proof.
   unfold closure_value_ty, fn_signature_ty_with_usage.
   destruct (fn_lifetimes fdef); simpl.
   - destruct (close_fn_ty 0
-      (MkTy UUnrestricted (TFn (map param_ty (fn_params fdef)) (fn_ret fdef)))).
+      (MkTy UUnrestricted
+        (TClosure LStatic (map param_ty (fn_params fdef)) (fn_ret fdef)))).
     reflexivity.
   - reflexivity.
 Qed.

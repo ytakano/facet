@@ -256,7 +256,19 @@ Definition fn_signature_ty_with_usage (u : usage) (f : fn_def) : Ty :=
   end.
 
 Definition closure_value_ty (f : fn_def) (captured_tys : list Ty) : Ty :=
-  fn_signature_ty_with_usage (closure_capture_usage captured_tys) f.
+  let u := closure_capture_usage captured_tys in
+  let m := fn_lifetimes f in
+  let body :=
+    close_fn_ty m
+      (MkTy UUnrestricted
+        (TClosure LStatic (map param_ty (fn_params f)) (fn_ret f))) in
+  match m with
+  | O =>
+      match body with
+      | MkTy _ core => MkTy u core
+      end
+  | S _ => MkTy u (TForall m (close_fn_outlives m (fn_outlives f)) body)
+  end.
 
 Definition fn_value_ty (f : fn_def) : Ty :=
   fn_signature_ty_with_usage UUnrestricted f.

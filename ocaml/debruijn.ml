@@ -70,6 +70,8 @@ and lower_named_ty_core ty_scope c =
     end
   | NTFn (ts, ret) ->
     TFn (List.map (lower_named_ty ty_scope) ts, lower_named_ty ty_scope ret)
+  | NTClosure (env_lt, ts, ret) ->
+    TClosure (env_lt, List.map (lower_named_ty ty_scope) ts, lower_named_ty ty_scope ret)
   | NTForall (n, outs, body) ->
     TForall (n, outs, lower_named_ty ty_scope body)
   | NTRef (lt_opt, rk, inner) ->
@@ -104,6 +106,9 @@ and named_ty_core_has_elided_ref_lifetime c =
   | NTNamed (_, args) ->
     List.exists named_type_arg_has_elided_ref_lifetime args
   | NTFn (ts, ret) ->
+    List.exists named_ty_has_elided_ref_lifetime ts ||
+    named_ty_has_elided_ref_lifetime ret
+  | NTClosure (_, ts, ret) ->
     List.exists named_ty_has_elided_ref_lifetime ts ||
     named_ty_has_elided_ref_lifetime ret
   | NTForall (_, _, body) ->

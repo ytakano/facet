@@ -1604,7 +1604,18 @@ let fn_signature_ty_with_usage u f =
 (** val closure_value_ty : fn_def -> ty list -> ty **)
 
 let closure_value_ty f captured_tys =
-  fn_signature_ty_with_usage (closure_capture_usage captured_tys) f
+  let u = closure_capture_usage captured_tys in
+  let m = f.fn_lifetimes in
+  let body =
+    close_fn_ty m (MkTy (UUnrestricted, (TClosure (LStatic,
+      (map (fun p -> p.param_ty) f.fn_params), f.fn_ret))))
+  in
+  ((fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+     (fun _ -> let MkTy (_, core) = body in MkTy (u, core))
+     (fun _ -> MkTy (u, (TForall (m, (close_fn_outlives m f.fn_outlives),
+     body))))
+     m)
 
 (** val fn_value_ty : fn_def -> ty **)
 

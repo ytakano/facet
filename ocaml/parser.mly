@@ -34,6 +34,7 @@ let resolve_fn_lt_name (name : string) : Big_int_Z.big_int =
   aux 0 !current_lifetimes
 
 let resolve_lifetime (name : string) : lifetime =
+  if name = "static" then LStatic else
   let rec aux_bound i = function
     | [] -> None
     | h :: _ when h = name -> Some (LBound (Big_int_Z.big_int_of_int i))
@@ -296,6 +297,8 @@ ty_core:
   | AMP; lt = LIFETIME; KW_MUT; t = ty { NTRef (Some (resolve_lifetime lt), RUnique, t) }
   | KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty
     { NTFn (ts, ret) }
+  | KW_CLOSURE; LANGLE; env_lt = LIFETIME; RANGLE; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty
+    { NTClosure (resolve_lifetime env_lt, ts, ret) }
   | h = hrt_lifetime_params; KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty; outs = opt_hrt_where_outlives
     { let (names, prev) = h in
       current_hrt_lifetimes := prev;
@@ -318,6 +321,8 @@ signature_ty_core:
   | AMP; lt = LIFETIME; KW_MUT; t = signature_ty { NTRef (Some (resolve_lifetime lt), RUnique, t) }
   | KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty
     { NTFn (ts, ret) }
+  | KW_CLOSURE; LANGLE; env_lt = LIFETIME; RANGLE; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty
+    { NTClosure (resolve_lifetime env_lt, ts, ret) }
   | h = hrt_lifetime_params; KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty; outs = opt_hrt_where_outlives
     { let (names, prev) = h in
       current_hrt_lifetimes := prev;

@@ -898,11 +898,12 @@ Proof.
   intros env Ω n.
   apply typed_roots_ind;
     intros; try solve [econstructor; eauto].
-  - eapply TES_CallExpr_Fn
+  - eapply TES_CallExpr_Closure
       with (u := closure_capture_usage captured_tys)
+           (env_lt := LStatic)
            (param_tys := map param_ty (fn_params fdef)).
     + replace (MkTy (closure_capture_usage captured_tys)
-          (TFn (map param_ty (fn_params fdef)) (fn_ret fdef)))
+          (TClosure LStatic (map param_ty (fn_params fdef)) (fn_ret fdef)))
         with (closure_value_ty fdef captured_tys).
       * eapply TES_MakeClosure; eauto.
       * unfold closure_value_ty, fn_signature_ty_with_usage.

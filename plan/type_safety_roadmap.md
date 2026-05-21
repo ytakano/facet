@@ -260,7 +260,12 @@ The second split batch is done:
   `bind_params_ref_targets_preserved`, `bind_params_store_typed_prefix`, and
   `bind_params_store_typed_prefix_extend`.
 - `TypeSafetyRootNamed.v` owns the parameterized root-name/key preservation
-  cores; `TypeSafety.v` keeps the public wrappers.
+  cores and the standalone `root_env_store_keys_named_excludes_names` helper;
+  `TypeSafety.v` keeps the public wrappers.
+- `TypeSafetyBasePreservation.v` owns the basic big-step preservation cases
+  from `eval_args_preserves_typing` through `eval_letinfer_preserves_typing`.
+  `TypeSafety.v` exports it and now starts with the main
+  `eval_preserves_typing_ready_mutual` theorem.
 - `TypeSafetyClosure.v` now holds the parameterized cleanup core:
   `eval_call_body_cleanup_preserves_value_and_refs_frame_core`. It takes the
   body preservation, roots, frame-scope, and param-scope facts as premises, so
@@ -330,6 +335,9 @@ The second split batch is done:
   preservation, and route cores. `TypeSafety.v` keeps the direct-call public
   wrappers and passes the main preservation, root-name, root-key, frame-scope,
   prefix-typing, and param-scope preservation mutual theorems into the cores.
+  It also owns the standalone direct-call conversion
+  `eval_call_expr_fn_as_call` and the captured-frame fresh-tail helper
+  `captured_call_frame_root_tail_fresh_names_for_fresh_call`.
 - `TypeSafetyCapturedCall.v` now holds the captured callee evidence
   instantiation batch:
   `captured_call_callee_body_root_shadow_provenance_instantiated_bridge`,
@@ -354,8 +362,9 @@ The second split batch is done:
   root subset helper facts through `value_roots_exclude_root_stores_subset`.
 - `TypeSafety.v` exports `TypeSafetyHiddenFrame`, `TypeSafetyClosure`,
   `TypeSafetyDirectCall`, `TypeSafetyCapturedCall`, and
-  `TypeSafetyDirectPlace` plus `TypeSafetyLocalFacts`, so downstream modules
-  that import `TypeSafety` still see the moved names.
+  `TypeSafetyDirectPlace` plus `TypeSafetyLocalFacts`,
+  `TypeSafetyRootNamed`, and `TypeSafetyBasePreservation`, so downstream
+  modules that import `TypeSafety` still see the moved names.
 
 Continue splitting in small batches:
 

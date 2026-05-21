@@ -5,6 +5,217 @@ From Facet.TypeSystem Require Export TypeSafetyClosure.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
+Definition eval_preserves_typing_roots_ready_mutual_statement : Prop :=
+  (forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      provenance_ready_expr e ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      store_typed env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R') /\
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ ps Σ' R' roots,
+      provenance_ready_args args ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+      store_typed env s' Σ' /\
+      eval_args_values_have_types env Ω s' vs ps /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      Forall2 value_roots_within roots vs /\
+      store_no_shadow s' /\
+      root_env_no_shadow R') /\
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots,
+      provenance_ready_fields fields ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+      store_typed env s' Σ' /\
+      struct_fields_have_type env s' lts args values defs /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_fields_roots_within roots values /\
+      store_no_shadow s' /\
+      root_env_no_shadow R').
+
+Definition eval_preserves_frame_scope_roots_ready_mutual_statement : Prop :=
+  frame_scope_roots_ready_expr_preservation /\
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ params Σ' R' roots
+        ps frame,
+      provenance_ready_args args ->
+      typed_args_roots env Ω n R Σ args params Σ' R' roots ->
+      root_env_covers_params ps R ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      store_frame_scope ps Σ s frame ->
+      store_frame_static_fresh Σ frame ->
+      frame_scope_roots_ready_result ps R' Σ' s' frame) /\
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots
+        ps frame,
+      provenance_ready_fields fields ->
+      typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+      root_env_covers_params ps R ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      store_frame_scope ps Σ s frame ->
+      store_frame_static_fresh Σ frame ->
+      frame_scope_roots_ready_result ps R' Σ' s' frame).
+
+Definition eval_preserves_typing_roots_ready_prefix_mutual_statement : Prop :=
+  (forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      provenance_ready_expr e ->
+      store_typed_prefix env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      store_typed_prefix env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R') /\
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ ps Σ' R' roots,
+      provenance_ready_args args ->
+      store_typed_prefix env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+      store_typed_prefix env s' Σ' /\
+      eval_args_values_have_types env Ω s' vs ps /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      Forall2 value_roots_within roots vs /\
+      store_no_shadow s' /\
+      root_env_no_shadow R') /\
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots,
+      provenance_ready_fields fields ->
+      store_typed_prefix env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+      store_typed_prefix env s' Σ' /\
+      struct_fields_have_type env s' lts args values defs /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_fields_roots_within roots values /\
+      store_no_shadow s' /\
+      root_env_no_shadow R').
+
+Definition eval_preserves_param_scope_roots_ready_mutual_statement : Prop :=
+  (forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots
+        ps frame,
+      provenance_ready_expr e ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      root_env_covers_params ps R ->
+      store_param_scope ps s frame ->
+      exists frame', store_param_scope ps s' frame') /\
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ params Σ' R' roots
+        ps frame,
+      provenance_ready_args args ->
+      typed_args_roots env Ω n R Σ args params Σ' R' roots ->
+      root_env_covers_params ps R ->
+      store_param_scope ps s frame ->
+      exists frame', store_param_scope ps s' frame') /\
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots
+        ps frame,
+      provenance_ready_fields fields ->
+      typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+      root_env_covers_params ps R ->
+      store_param_scope ps s frame ->
+      exists frame', store_param_scope ps s' frame').
+
+Lemma preservation_ready_expr_implies_provenance_ready_direct_call :
+  forall e,
+    preservation_ready_expr e ->
+    provenance_ready_expr e.
+Proof.
+  assert (Hmut :
+    (forall e,
+      preservation_ready_expr e ->
+      provenance_ready_expr e) /\
+    (forall args,
+      preservation_ready_args args ->
+      provenance_ready_args args) /\
+    (forall fields,
+      preservation_ready_fields fields ->
+      provenance_ready_fields fields)).
+  { apply preservation_ready_mutind_closure;
+      try solve [econstructor; eauto]. }
+  exact (proj1 Hmut).
+Qed.
+
+Lemma direct_call_value_roots_within_store_subset :
+  forall roots v roots',
+    value_roots_within roots v ->
+    root_set_stores_subset roots roots' ->
+    value_roots_within roots' v.
+Proof.
+  assert (Hmut :
+    (forall roots v,
+      value_roots_within roots v ->
+      forall roots',
+        root_set_stores_subset roots roots' ->
+        value_roots_within roots' v) /\
+    (forall R se,
+      store_entry_roots_within R se -> True) /\
+    (forall R s,
+      store_roots_within R s -> True) /\
+    (forall roots fields,
+      value_fields_roots_within roots fields ->
+      forall roots',
+        root_set_stores_subset roots roots' ->
+        value_fields_roots_within roots' fields)).
+  { apply value_roots_within_mutind; intros; try solve [constructor; eauto].
+    - constructor.
+      intros root Hexclude.
+      apply s.
+      unfold roots_exclude in *.
+      intros Hin.
+      apply Hexclude.
+      apply H. exact Hin. }
+  intros roots v roots' Hwithin Hsubset.
+  exact (proj1 Hmut roots v Hwithin roots' Hsubset).
+Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Function environment lookup facts                                   *)
 (* ------------------------------------------------------------------ *)
@@ -1870,4 +2081,400 @@ Proof.
     try eassumption.
   eapply Hsummary.
   eapply lookup_fn_in_unique_by_name; eassumption.
+Qed.
+
+Theorem eval_preserves_typing_direct_call_roots_ready_with_preservation_core :
+  eval_preserves_typing_roots_ready_mutual_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      preservation_direct_call_ready_expr e ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      env_fns_preservation_ready env ->
+      direct_call_callee_body_root_evidence env ->
+      store_typed env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s'.
+Proof.
+  intros Htyping_roots Htyping_ready Hroots_ready Hframe_scope_ready
+    Htyping_roots_prefix_ready Hparam_scope_ready env s e s' v Heval Ω n R
+    Σ T Σ' R' roots Hready Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped
+    Hunique _ Hcallee_roots.
+  inversion Hready as [e_ready Hpres_ready | fname args Hready_args]; subst.
+  - pose proof
+      (preservation_ready_expr_implies_provenance_ready_direct_call
+        e Hpres_ready) as Hprov.
+    destruct (proj1 Htyping_roots
+                env s e s' v Heval Ω n R Σ T Σ' R' roots
+                Hprov Hstore Hroots Hshadow Hrn Htyped)
+      as [Hstore' [Hv [Hpres _]]].
+    repeat split; assumption.
+  - dependent destruction Heval.
+    dependent destruction Htyped.
+    match goal with
+    | Hready_args0 : preservation_ready_args ?args_call |- _ =>
+        pose proof (preservation_ready_args_implies_provenance_ready_closure
+                      args_call Hready_args0) as Hprov_args
+    end.
+    repeat match goal with
+    | Hlookup : lookup_fn (fn_name ?f_typed) (env_fns env) =
+        Some ?f_runtime,
+      Hin : In ?f_typed (env_fns env) |- _ =>
+        pose proof (lookup_fn_unique_by_name env (fn_name f_typed)
+          f_runtime f_typed Hlookup Hin eq_refl Hunique) as Hsame;
+        subst f_runtime
+    | Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?f_runtime,
+      Hin : In ?f_typed (env_fns env),
+      Hname : fn_name ?f_typed = ?fname_call |- _ =>
+        pose proof (lookup_fn_unique_by_name env fname_call f_runtime f_typed
+          Hlookup Hin Hname Hunique) as Hsame;
+        subst f_typed
+    | Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?f_runtime,
+      Hin : In ?f_typed (env_fns env),
+      Hname : ?fname_call = fn_name ?f_typed |- _ =>
+        pose proof (lookup_fn_unique_by_name env fname_call f_runtime f_typed
+          Hlookup Hin (eq_sym Hname) Hunique) as Hsame;
+        subst f_typed
+    end.
+    match goal with
+    | Htyped_args : typed_args_roots env Ω n R Σ ?args_call
+        (apply_lt_params ?σ (fn_params ?fdef)) Σ' R' ?arg_roots,
+      Heval_args : eval_args env s ?args_call ?s_args ?vs,
+      Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
+        (?fcall, ?used'),
+      Hin : In ?fdef (env_fns env),
+      Hfname : fn_name ?fdef = ?fname_call,
+      Hcaps : fn_captures ?fdef = [] |- _ =>
+        pose proof (Hcallee_roots Ω n R Σ Σ' R' arg_roots
+                      fname_call args_call fdef fcall σ s s_args vs
+                      used' Hin Hfname Hcaps Htyped_args Heval_args Hprov_args
+                      Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename)
+          as Hbody_ready;
+        pose proof
+          (callee_body_root_provenance_ready_at_of_ready_at env fcall
+            (call_param_root_env (fn_params fcall) arg_roots R')
+            Hbody_ready) as Hbody_prov_ready;
+        eapply
+          (eval_direct_call_body_provenance_ready_preserves_typing_with_preservation_core
+            Htyping_ready Hroots_ready Hframe_scope_ready
+            Htyping_roots_prefix_ready Hparam_scope_ready);
+          eassumption
+    | Htyped_args : typed_args_roots env Ω n R Σ ?args_call
+        (apply_lt_params ?σ (fn_params ?fdef)) Σ' R' ?arg_roots,
+      Heval_args : eval_args env s ?args_call ?s_args ?vs,
+      Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
+        (?fcall, ?used'),
+      Hin : In ?fdef (env_fns env),
+      Hcaps : fn_captures ?fdef = [] |- _ =>
+        pose proof (Hcallee_roots Ω n R Σ Σ' R' arg_roots
+                      (fn_name fdef) args_call fdef fcall σ s s_args vs
+                      used' Hin eq_refl Hcaps Htyped_args Heval_args Hprov_args
+                      Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename)
+          as Hbody_ready;
+        pose proof
+          (callee_body_root_provenance_ready_at_of_ready_at env fcall
+            (call_param_root_env (fn_params fcall) arg_roots R')
+            Hbody_ready) as Hbody_prov_ready;
+        eapply
+          (eval_direct_call_body_provenance_ready_preserves_typing_with_preservation_core
+            Htyping_ready Hroots_ready Hframe_scope_ready
+            Htyping_roots_prefix_ready Hparam_scope_ready);
+          eassumption
+    end.
+Qed.
+
+Theorem eval_preserves_typing_direct_call_roots_provenance_ready_with_preservation_core :
+  eval_preserves_typing_roots_ready_mutual_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      preservation_direct_call_ready_expr e ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      env_fns_root_shadow_provenance_summary_evidence env ->
+      store_typed env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s'.
+Proof.
+  intros Htyping_roots Htyping_ready Hroots_ready Hroot_names Hroot_keys
+    Hframe_scope_ready Htyping_roots_prefix_ready Hparam_scope_ready env s e
+    s' v Heval Ω n R Σ T Σ' R' roots Hready Hstore Hroots Hshadow Hrn
+    Hnamed Hkeys Htyped Hunique Hsummary.
+  inversion Hready as [e_ready Hpres_ready | fname args Hready_args]; subst.
+  - pose proof
+      (preservation_ready_expr_implies_provenance_ready_direct_call
+        e Hpres_ready) as Hprov.
+    destruct (proj1 Htyping_roots
+                env s e s' v Heval Ω n R Σ T Σ' R' roots
+                Hprov Hstore Hroots Hshadow Hrn Htyped)
+      as [Hstore' [Hv [Hpres _]]].
+    repeat split; assumption.
+  - dependent destruction Heval.
+    dependent destruction Htyped.
+    match goal with
+    | Hready_args0 : preservation_ready_args ?args_call |- _ =>
+        pose proof (preservation_ready_args_implies_provenance_ready_closure
+                      args_call Hready_args0) as Hprov_args
+    end.
+    repeat match goal with
+    | Hlookup : lookup_fn (fn_name ?f_typed) (env_fns env) =
+        Some ?f_runtime,
+      Hin : In ?f_typed (env_fns env) |- _ =>
+        pose proof (lookup_fn_unique_by_name env (fn_name f_typed)
+          f_runtime f_typed Hlookup Hin eq_refl Hunique) as Hsame;
+        subst f_runtime
+    | Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?f_runtime,
+      Hin : In ?f_typed (env_fns env),
+      Hname : fn_name ?f_typed = ?fname_call |- _ =>
+        pose proof (lookup_fn_unique_by_name env fname_call f_runtime f_typed
+          Hlookup Hin Hname Hunique) as Hsame;
+        subst f_typed
+    | Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?f_runtime,
+      Hin : In ?f_typed (env_fns env),
+      Hname : ?fname_call = fn_name ?f_typed |- _ =>
+        pose proof (lookup_fn_unique_by_name env fname_call f_runtime f_typed
+          Hlookup Hin (eq_sym Hname) Hunique) as Hsame;
+        subst f_typed
+    end.
+    match goal with
+    | Htyped_args : typed_args_roots env Ω n R Σ ?args_call
+        (apply_lt_params ?σ (fn_params ?fdef)) Σ' R' ?arg_roots,
+      Heval_args : eval_args env s ?args_call ?s_args ?vs,
+      Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
+        (?fcall, ?used'),
+      Hin : In ?fdef (env_fns env),
+      Hfname : fn_name ?fdef = ?fname_call,
+      Hcaps : fn_captures ?fdef = [] |- _ =>
+        pose proof
+          (direct_call_callee_body_root_shadow_provenance_summary_bridge_of_unique_with_preservation_core
+            Hroot_names Hroot_keys env Hunique Hsummary Ω n R Σ Σ' R'
+            arg_roots fname_call args_call fdef fcall σ s s_args vs
+            used' Hin Hfname Hcaps Htyped_args Heval_args Hprov_args
+            Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename)
+          as Hbody_shadow_ready;
+        pose proof
+          (callee_body_root_provenance_ready_at_of_shadow_provenance_ready_at
+            env fcall
+            (call_param_root_env (fn_params fcall) arg_roots R')
+            Hbody_shadow_ready) as Hbody_ready;
+        eapply
+          (eval_direct_call_body_provenance_ready_preserves_typing_with_preservation_core
+            Htyping_ready Hroots_ready Hframe_scope_ready
+            Htyping_roots_prefix_ready Hparam_scope_ready);
+          eassumption
+    | Htyped_args : typed_args_roots env Ω n R Σ ?args_call
+        (apply_lt_params ?σ (fn_params ?fdef)) Σ' R' ?arg_roots,
+      Heval_args : eval_args env s ?args_call ?s_args ?vs,
+      Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
+        (?fcall, ?used'),
+      Hin : In ?fdef (env_fns env),
+      Hcaps : fn_captures ?fdef = [] |- _ =>
+        pose proof
+          (direct_call_callee_body_root_shadow_provenance_summary_bridge_of_unique_with_preservation_core
+            Hroot_names Hroot_keys env Hunique Hsummary Ω n R Σ Σ' R'
+            arg_roots (fn_name fdef) args_call fdef fcall σ s s_args vs
+            used' Hin eq_refl Hcaps Htyped_args Heval_args Hprov_args
+            Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename)
+          as Hbody_shadow_ready;
+        pose proof
+          (callee_body_root_provenance_ready_at_of_shadow_provenance_ready_at
+            env fcall
+            (call_param_root_env (fn_params fcall) arg_roots R')
+            Hbody_shadow_ready) as Hbody_ready;
+        eapply
+          (eval_direct_call_body_provenance_ready_preserves_typing_with_preservation_core
+            Htyping_ready Hroots_ready Hframe_scope_ready
+            Htyping_roots_prefix_ready Hparam_scope_ready);
+          eassumption
+    end.
+Qed.
+
+Theorem eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary_with_preservation_core :
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env s s' v fname args,
+    eval env s (ECall fname args) s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots fdef,
+      preservation_ready_args args ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ (ECall fname args) T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      callee_body_root_shadow_provenance_summary env fdef ->
+      store_typed env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R'.
+Proof.
+  intros Htyping_ready Hroots_ready Hroot_names Hroot_keys
+    Hframe_scope_ready Htyping_roots_prefix_ready Hparam_scope_ready env s s'
+    v fname args Heval Ω n R Σ T Σ' R' roots fdef Hready_args Hstore
+    Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique Hin_summary
+    Hfname_summary Hcallee_summary.
+  pose proof (preservation_ready_args_implies_provenance_ready_closure
+                args Hready_args) as Hprov_args.
+  dependent destruction Heval.
+  dependent destruction Htyped.
+  simpl in *.
+  repeat match goal with
+  | Hlookup : lookup_fn (fn_name ?f_typed) (env_fns env) =
+      Some ?f_runtime,
+    Hin : In ?f_typed (env_fns env) |- _ =>
+      pose proof (lookup_fn_unique_by_name env (fn_name f_typed)
+        f_runtime f_typed Hlookup Hin eq_refl Hunique) as Hsame;
+      subst f_runtime
+  | Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?f_runtime,
+    Hin : In ?f_typed (env_fns env),
+    Hname : fn_name ?f_typed = ?fname_call |- _ =>
+      pose proof (lookup_fn_unique_by_name env fname_call f_runtime f_typed
+        Hlookup Hin Hname Hunique) as Hsame;
+      subst f_typed
+  | Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?f_runtime,
+    Hin : In ?f_typed (env_fns env),
+    Hname : ?fname_call = fn_name ?f_typed |- _ =>
+      pose proof (lookup_fn_unique_by_name env fname_call f_runtime f_typed
+        Hlookup Hin (eq_sym Hname) Hunique) as Hsame;
+      subst f_typed
+  | Hin : In ?f_typed (env_fns env),
+    Hname : fn_name ?f_typed = ?fname_call,
+    Hin0 : In ?f_summary (env_fns env),
+    Hname0 : fn_name ?f_summary = ?fname_call |- _ =>
+      pose proof (Hunique f_typed f_summary Hin Hin0
+        (eq_trans Hname (eq_sym Hname0))) as Hsame;
+      subst f_typed
+  end.
+  assert (Hcaps_fdef1 : fn_captures fdef1 = []) by assumption.
+  match goal with
+  | Htyped_args : typed_args_roots env Ω n R Σ ?args_call
+      (apply_lt_params ?σ (fn_params ?fdef_call)) Σ' R' ?arg_roots,
+    Heval_args : eval_args env s ?args_call ?s_args ?vs,
+    Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef_call =
+      (?fcall, ?used') |- _ =>
+      pose proof
+        (direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_with_result_subset_with_preservation_core
+          Hroot_names Hroot_keys env Ω n R Σ Σ' R' arg_roots args_call
+          fdef_call fcall σ s s_args vs used' Hcallee_summary Hcaps_fdef1
+          Htyped_args Heval_args Hprov_args Hstore Hroots Hshadow Hrn Hnamed
+          Hkeys Hrename)
+        as Hbody_shadow_ready;
+      unfold callee_body_root_shadow_provenance_ready_at_result_subset
+        in Hbody_shadow_ready;
+      destruct Hbody_shadow_ready
+        as (T_body & Γ_out & R_body & roots_body &
+            Hprov_body & Htyped_shadow_body & Hcompat_body &
+            Hexclude_ret & Hexclude_env & Hresult_subset);
+      assert (Hcaps_call : fn_captures fcall = [])
+        by (rewrite (alpha_rename_fn_def_captures
+              (store_names s_args) fdef_call fcall used' Hrename);
+            exact Hcaps_fdef1);
+      pose proof (typed_env_roots_shadow_safe_roots
+          env (fn_outlives fcall) (fn_lifetimes fcall)
+          (call_param_root_env (fn_params fcall) arg_roots R')
+          (sctx_of_ctx (fn_body_ctx fcall))
+          (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body
+          Htyped_shadow_body) as Htyped_body_ctx;
+      pose proof
+        (typed_env_roots_fn_body_ctx_to_params_ctx_when_no_captures
+          env (fn_outlives fcall) (fn_lifetimes fcall)
+          (call_param_root_env (fn_params fcall) arg_roots R')
+          fcall (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body
+          roots_body Hcaps_call Htyped_body_ctx) as Htyped_body
+  end.
+  destruct (proj1 (proj2 Htyping_ready)
+              env s args s_args vs H1 Ω n Σ
+              (apply_lt_params σ (fn_params fdef1)) Σ'
+              Hready_args Hstore
+              (typed_args_roots_structural env Ω n R Σ args
+                (apply_lt_params σ (fn_params fdef1)) Σ' R'
+                arg_roots H6))
+    as [_ [Hargs_subst _]].
+  destruct (proj1 (proj2 Hroots_ready)
+              env s args s_args vs H1 Ω n R Σ
+              (apply_lt_params σ (fn_params fdef1)) Σ' R'
+              arg_roots Hprov_args Hroots Hshadow Hrn H6)
+    as [Hroots_args [_ [Hshadow_args Hrn_args]]].
+  pose proof (alpha_rename_fn_def_shape (store_names s_args)
+                fdef1 fcall used' H2) as Hshape.
+  destruct Hshape as [_ [_ Hparams_alpha]].
+  assert (Hargs_unsubst_fdef :
+    eval_args_values_have_types env Ω s_args vs (fn_params fdef1))
+  by (eapply eval_args_values_have_types_apply_lt_params_inv;
+      exact Hargs_subst).
+  assert (Hargs_fcall :
+    eval_args_values_have_types env Ω s_args vs (fn_params fcall))
+  by (eapply eval_args_values_have_types_params_alpha;
+      [ exact Hparams_alpha | exact Hargs_unsubst_fdef ]).
+  assert (Hnodup :
+    NoDup (ctx_names (params_ctx (fn_params fcall))))
+  by (eapply alpha_rename_fn_def_params_nodup_ctx_names;
+      exact H2).
+  assert (Hfresh : params_fresh_in_store (fn_params fcall) s_args)
+  by (eapply alpha_rename_fn_def_params_fresh_in_store;
+      exact H2).
+  destruct (eval_args_bind_params_call_param_root_env_ready
+              env s args s_args vs Ω n R Σ
+              (apply_lt_params σ (fn_params fdef1)) Σ' R' arg_roots
+              (fn_params fcall) H1 Hprov_args H6
+              Hroots Hshadow Hrn Hnodup Hfresh Hargs_fcall)
+    as [Hroots_bind [Hshadow_bind [Hrn_params Hcover_params]]].
+  destruct
+    (eval_direct_call_body_cleanup_preserves_value_and_refs_with_preservation_core
+      Htyping_ready Hroots_ready Hframe_scope_ready
+      Htyping_roots_prefix_ready Hparam_scope_ready
+      env Ω n R Σ Σ' R' arg_roots (fn_name fdef1) args
+      fdef1 fcall σ s s_args s_body vs ret used' T_body
+      Γ_out (call_param_root_env (fn_params fcall) arg_roots R')
+      R_body roots_body Hstore Hroots Hshadow Hrn Hprov_args
+      Hready_args H6 H1 H2 Hroots_bind
+      Hshadow_bind Hrn_params Hcover_params Hprov_body
+      Htyped_body Hcompat_body Hexclude_ret Hexclude_env
+      Heval)
+    as [_ [Hstore_final [_ [_ [_ [_ [Hv_final
+          [Hpres_final Hcleanup_tail]]]]]]]].
+  destruct Hcleanup_tail
+    as [frame_final [locals_final
+        [_ [_ [_ [_ [Hremoved_exact Hret_roots_body]]]]]]].
+  repeat split; try assumption.
+  - rewrite Hremoved_exact. exact Hroots_args.
+  - eapply direct_call_value_roots_within_store_subset; eassumption.
+  - rewrite Hremoved_exact. exact Hshadow_args.
 Qed.

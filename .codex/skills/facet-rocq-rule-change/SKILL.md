@@ -16,6 +16,7 @@ description: Use when changing Facet typing rules, ownership rules, effects, bor
 5. Record proof gaps explicitly.
 6. Add valid and invalid examples in tests/.
 7. Run Rocq build.
+   - When Rocq compile times are high, profile and optimize the bottlenecks before committing changes.
 8. If extraction is affected, run extraction and OCaml tests.
 
 ## Hard constraints

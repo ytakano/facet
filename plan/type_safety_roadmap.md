@@ -207,12 +207,21 @@ The first split batch is done:
 - `TypeSafety.v` exports `TypeSafetyRootFacts`, so downstream modules that
   import `TypeSafety` still see the moved names.
 
+The second split batch is done:
+
+- `TypeSafetyHiddenFrame.v` now holds the first hidden-frame support batch:
+  root/store append facts, captured frame readiness, empty capture root
+  environments, copied-capture rootless/runtime-ready facts, and captured
+  frame store typing facts.
+- `TypeSafety.v` exports `TypeSafetyHiddenFrame`, so downstream modules that
+  import `TypeSafety` still see the moved names.
+
 Continue splitting in small batches:
 
 1. Create focused files and update `rocq/_CoqProject` in the same commit.
 2. Preferred targets:
-   - `TypeSafetyHiddenFrame.v`: hidden `store_add` stripping, cleanup, and
-     hidden-frame erasure facts.
+   - `TypeSafetyHiddenFrame.v`: continue with actual hidden `store_add`
+     stripping, cleanup, and hidden-frame erasure facts.
    - `TypeSafetyClosure.v`: captured store/frame readiness and captured closure
      call preservation bridges.
 3. Move lemmas only when dependencies are clear. After each batch run:

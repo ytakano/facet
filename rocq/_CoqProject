@@ -16,6 +16,7 @@ theories/TypeSystem/AlphaRenaming.v
 theories/TypeSystem/CheckerSoundness.v
 theories/TypeSystem/EnvSoundnessFacts.v
 theories/TypeSystem/TypeSafetyRootFacts.v
+theories/TypeSystem/TypeSafetyHiddenFrame.v
 theories/TypeSystem/TypeSafety.v
 theories/TypeSystem/EnvTypingSoundness.v
 theories/TypeSystem/EnvBorrowSoundness.v

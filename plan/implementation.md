@@ -7,3 +7,5 @@
 5. レビューで問題が見つからなかった場合、GPG署名無しでgit commit
 6. 2に戻り、次のタスクを実装する
 7. after finishing the tasks, update plan/type_safety_roadmap.md
+  - plan/type_safety_roadmap.mdが長くなってきた場合は、今後のタスクに不要な情報を削除するか、他のドキュメントに移し、整理すること
+  - 整理する際は、codexが理解しやすいように修正すること

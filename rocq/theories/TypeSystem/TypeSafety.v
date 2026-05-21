@@ -1777,6 +1777,32 @@ Proof.
   - eapply roots_exclude_stores_subset; eassumption.
 Qed.
 
+Lemma roots_exclude_root_sets_union :
+  forall x roots_list,
+    Forall (roots_exclude x) roots_list ->
+    roots_exclude x (root_sets_union roots_list).
+Proof.
+  intros x roots_list Hexclude.
+  induction Hexclude as [| roots roots_list Hroot Hrest IH]; simpl.
+  - unfold roots_exclude. intros Hin. contradiction.
+  - apply roots_exclude_union; assumption.
+Qed.
+
+Lemma value_roots_exclude_root_forall2 :
+  forall roots_list values x,
+    Forall2 value_roots_within roots_list values ->
+    Forall (roots_exclude x) roots_list ->
+    Forall (value_refs_exclude_root x) values.
+Proof.
+  intros roots_list values x Hroots Hexclude.
+  induction Hroots as [| roots v roots_list values Hroot Hroots IH];
+    inversion Hexclude; subst.
+  - constructor.
+  - constructor.
+    + eapply value_roots_exclude_root; eassumption.
+    + apply IH. assumption.
+Qed.
+
 Lemma store_roots_exclude_root :
   forall R s root,
     store_roots_within R s ->
@@ -1787,6 +1813,35 @@ Proof.
   intros R s root Hwithin Hexclude Hnames.
   exact (proj1 (proj2 (proj2 value_roots_within_excludes))
     R s Hwithin root Hexclude Hnames).
+Qed.
+
+Lemma store_names_in_store_entry :
+  forall s se,
+    In se s ->
+    In (se_name se) (store_names s).
+Proof.
+  induction s as [| se_head rest IH]; intros se Hin; simpl in *.
+  - contradiction.
+  - destruct Hin as [Hin | Hin].
+    + subst se_head. left. reflexivity.
+    + right. apply IH. exact Hin.
+Qed.
+
+Lemma store_roots_within_named_fresh_refs_exclude_root :
+  forall R s root,
+    store_roots_within R s ->
+    root_env_store_roots_named R s ->
+    ~ In root (store_names s) ->
+    store_refs_exclude_root root s.
+Proof.
+  intros R s root Hroots Hnamed Hfresh.
+  eapply store_roots_exclude_root.
+  - exact Hroots.
+  - unfold root_env_store_roots_named, root_env_excludes, roots_exclude in *.
+    intros y roots Hlookup _ Hin.
+    apply Hfresh. eapply Hnamed; eassumption.
+  - intros se Hin Heq. apply Hfresh.
+    rewrite <- Heq. apply store_names_in_store_entry. exact Hin.
 Qed.
 
 Lemma root_set_union_in_right :
@@ -2096,6 +2151,22 @@ Proof.
   induction Hsets as [| roots rest Hroot Hrest IH]; simpl.
   - apply root_set_store_roots_named_nil.
   - apply root_set_store_roots_named_union; assumption.
+Qed.
+
+Lemma root_sets_union_store_roots_named_excludes_name :
+  forall roots_list s x,
+    Forall (fun roots => root_set_store_roots_named roots s) roots_list ->
+    ~ In x (store_names s) ->
+    roots_exclude x (root_sets_union roots_list).
+Proof.
+  intros roots_list s x Hnamed Hfresh.
+  apply roots_exclude_root_sets_union.
+  induction Hnamed as [| roots roots_list Hroot Hrest IH].
+  - constructor.
+  - constructor.
+    + unfold root_set_store_roots_named, roots_exclude in *.
+      intros Hin. apply Hfresh. apply Hroot. exact Hin.
+    + exact IH.
 Qed.
 
 Lemma root_sets_ctx_roots_named_union :
@@ -20069,6 +20140,34 @@ Proof.
               arg_roots Hready Hstore Hroots Hnodup Hrn Hnamed Htyped)
     as [Hnamed_args _].
   eapply root_env_store_roots_named_excludes_params; eassumption.
+Qed.
+
+Lemma eval_args_root_sets_union_excludes_fresh_name :
+  forall env s args s_args vs Ω n R Σ ps Σ_args R_args arg_roots x,
+    eval_args env s args s_args vs ->
+    preservation_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    typed_args_roots env Ω n R Σ args ps Σ_args R_args arg_roots ->
+    ~ In x (store_names s) ->
+    roots_exclude x (root_sets_union arg_roots).
+Proof.
+  intros env s args s_args vs Ω n R Σ ps Σ_args R_args arg_roots x
+    Heval Hready Hstore Hroots Hnodup Hrn Hnamed Htyped Hfresh.
+  pose proof (preservation_ready_args_implies_provenance_ready args Hready)
+    as Hprov.
+  pose proof (proj1 (proj2 preservation_ready_eval_store_names_mutual)
+              env s args s_args vs Heval Hready) as Hnames.
+  destruct (proj1 (proj2 eval_preserves_root_names_ready_mutual)
+              env s args s_args vs Heval Ω n R Σ ps Σ_args R_args
+              arg_roots Hprov Hstore Hroots Hnodup Hrn Hnamed Htyped)
+    as [_ Harg_roots_named].
+  eapply root_sets_union_store_roots_named_excludes_name.
+  - exact Harg_roots_named.
+  - rewrite Hnames. exact Hfresh.
 Qed.
 
 Lemma alpha_rename_params_initial_root_env_rename_stable_tail_ts :

@@ -433,9 +433,22 @@ Work in this order unless a proof exposes a soundness gap:
    cleanup once the caller supplies the callee body typing/root package and a
    root bound excluding `x`.
 
+   Current root-bound progress: `TypeSafety.v` now has
+   `roots_exclude_root_sets_union`,
+   `value_roots_exclude_root_forall2`,
+   `root_sets_union_store_roots_named_excludes_name`,
+   `store_roots_within_named_fresh_refs_exclude_root`, and
+   `eval_args_root_sets_union_excludes_fresh_name`. These package the
+   reusable facts needed to show the evaluated argument root bound excludes
+   the hidden let name when the initial store is fresh for that name.
+
    Next hidden-frame proof subtask: construct that caller-side package
-   automatically for the local-let shape. Reuse the existing captured-call
-   instantiated-body helpers, but target
+   automatically for the local-let shape. First add a value-typing preservation
+   helper from `s_args` to
+   `captured ++ store_add x T (VClosure fname captured) s_args`, using
+   freshness of `x` in both the copied capture store and evaluated argument
+   store plus `Forall (value_refs_exclude_root x) vs`. Then reuse the existing
+   captured-call instantiated-body helpers, but target
    `captured ++ store_add x T (VClosure fname captured) s_args` and supply a
    `roots_bound` that excludes the hidden name `x`. Do this before adding any
    checker branch.

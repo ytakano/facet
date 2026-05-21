@@ -144,8 +144,9 @@ Work in this order unless a proof exposes a soundness gap.
 
    - Add focused regression examples for the local-let captured-call sidecar if
      future changes touch this checker branch.
-   - Then move to the next staged closure shape, or start the TypeSafety file
-     split below.
+   - Then continue the TypeSafety file split below, with
+     `TypeSafetyClosure.v` captured closure bridges as the next preferred
+     target.
 
    Do not add `ELetInfer` support in the same step.
 
@@ -239,6 +240,10 @@ The second split batch is done:
   direct-place lookup helpers, root/store/ctx named facts, provenance
   readiness, `typed_fields_roots_cons_inv_ts`, typed roots named/key named
   mutual facts, and `eval_preserves_roots_ready_mutual`.
+- `TypeSafetyHiddenFrame.v` now holds the frame-scope roots-ready preservation
+  batch: `sctx_path_available_success`, param-scope update/preservation
+  helpers, frame-scope result definitions, the args/fields bridge, and
+  `eval_preserves_frame_scope_roots_ready_mutual`.
 - `TypeSafety.v` exports `TypeSafetyHiddenFrame`, so downstream modules that
   import `TypeSafety` still see the moved names.
 
@@ -246,11 +251,6 @@ Continue splitting in small batches:
 
 1. Create focused files and update `rocq/_CoqProject` in the same commit.
 2. Preferred targets:
-   - `TypeSafetyHiddenFrame.v`: move frame-scope roots-ready preservation next.
-     The first field-branch proof scripts are robust via
-     `typed_fields_roots_cons_inv_ts`, but the moved
-     `eval_preserves_frame_scope_roots_ready_mutual` still has a brittle
-     replace/path-var branch around `typed_env_roots` hypothesis matching.
    - `TypeSafetyClosure.v`: captured store/frame readiness and captured closure
      call preservation bridges.
 3. Move lemmas only when dependencies are clear. After each batch run:

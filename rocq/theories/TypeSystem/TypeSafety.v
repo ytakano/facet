@@ -5844,66 +5844,14 @@ Lemma eval_direct_call_body_provenance_ready_preserves_typing :
     store_ref_targets_preserved env s
       (store_remove_params (fn_params fcall) s_body).
 Proof.
-  intros env Ω n R Σ Σ_args R_args arg_roots args fdef fcall σ
-    s s_args s_body vs ret used' Hstore Hroots Hshadow Hrn Hprov_args
-    Hready_args Htyped_args Heval_args Hrename Hcaps Hbody_ready Heval_body.
-  unfold callee_body_root_provenance_ready_at in Hbody_ready.
-  destruct Hbody_ready
-    as (T_body & Γ_out & R_body & roots_body &
-        Hprov_body & Htyped_body & Hcompat_body &
-        Hexclude_ret & Hexclude_env).
-  destruct (proj1 (proj2 eval_preserves_typing_ready_mutual)
-              env s args s_args vs Heval_args Ω n Σ
-              (apply_lt_params σ (fn_params fdef)) Σ_args
-              Hready_args Hstore
-              (typed_args_roots_structural env Ω n R Σ args
-                (apply_lt_params σ (fn_params fdef)) Σ_args R_args
-                arg_roots Htyped_args))
-    as [_ [Hargs_subst _]].
-  pose proof (alpha_rename_fn_def_shape (store_names s_args)
-                fdef fcall used' Hrename) as Hshape.
-  destruct Hshape as [_ [_ Hparams_alpha]].
-  assert (Hargs_unsubst_fdef :
-    eval_args_values_have_types env Ω s_args vs (fn_params fdef)).
-  { eapply eval_args_values_have_types_apply_lt_params_inv.
-    exact Hargs_subst. }
-  assert (Hargs_fcall :
-    eval_args_values_have_types env Ω s_args vs (fn_params fcall)).
-  { eapply eval_args_values_have_types_params_alpha.
-    - exact Hparams_alpha.
-    - exact Hargs_unsubst_fdef. }
-  assert (Hnodup :
-    NoDup (ctx_names (params_ctx (fn_params fcall)))).
-  { eapply alpha_rename_fn_def_params_nodup_ctx_names. exact Hrename. }
-  assert (Hfresh : params_fresh_in_store (fn_params fcall) s_args).
-  { eapply alpha_rename_fn_def_params_fresh_in_store. exact Hrename. }
-  destruct (eval_args_bind_params_call_param_root_env_ready
-              env s args s_args vs Ω n R Σ
-              (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots
-              (fn_params fcall) Heval_args Hprov_args Htyped_args
-              Hroots Hshadow Hrn Hnodup Hfresh Hargs_fcall)
-    as [Hroots_bind [Hshadow_bind [Hrn_params Hcover_params]]].
-  assert (Hcaps_call : fn_captures fcall = []).
-  { rewrite (alpha_rename_fn_def_captures
-               (store_names s_args) fdef fcall used' Hrename).
-    exact Hcaps. }
-  pose proof
-    (typed_env_roots_fn_body_ctx_to_params_ctx_when_no_captures
-      env (fn_outlives fcall) (fn_lifetimes fcall)
-      (call_param_root_env (fn_params fcall) arg_roots R_args)
-      fcall (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body
-      roots_body Hcaps_call Htyped_body) as Htyped_body_params.
-  destruct (eval_direct_call_body_cleanup_preserves_value_and_refs
-              env Ω n R Σ Σ_args R_args arg_roots (fn_name fdef) args fdef
-              fcall σ s s_args s_body vs ret used' T_body Γ_out
-              (call_param_root_env (fn_params fcall) arg_roots R_args)
-              R_body roots_body Hstore Hroots Hshadow Hrn Hprov_args
-              Hready_args Htyped_args Heval_args Hrename Hroots_bind
-              Hshadow_bind Hrn_params Hcover_params Hprov_body
-              Htyped_body_params Hcompat_body Hexclude_ret Hexclude_env
-              Heval_body)
-    as [_ [Hstore_final [_ [_ [_ [_ [Hv_final [Hpres_final _]]]]]]]].
-  repeat split; assumption.
+  eapply
+    (eval_direct_call_body_provenance_ready_preserves_typing_with_preservation_core
+      eval_preserves_typing_ready_mutual
+      eval_preserves_roots_ready_mutual
+      eval_preserves_frame_scope_roots_ready_mutual
+      eval_preserves_typing_roots_ready_prefix_mutual
+      eval_preserves_param_scope_roots_ready_mutual);
+    eassumption.
 Qed.
 
 Theorem eval_preserves_typing_direct_call_roots_ready :

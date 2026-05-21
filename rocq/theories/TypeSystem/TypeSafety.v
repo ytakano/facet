@@ -4,7 +4,7 @@ From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
 From Facet.TypeSystem Require Export TypeSafetyRootFacts TypeSafetyReadiness
   TypeSafetyHiddenFrame TypeSafetyClosure TypeSafetyDirectCall
   TypeSafetyCapturedCall TypeSafetyDirectPlace
-  TypeSafetyLocalFacts.
+  TypeSafetyLocalFacts TypeSafetyRootNamed.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
@@ -5736,51 +5736,8 @@ Theorem eval_preserves_root_names_ready_mutual :
       root_env_store_roots_named R' s' /\
       root_set_store_roots_named roots s').
 Proof.
-  split.
-  - intros env s e s' v Heval Ω n R Σ T Σ' R' roots Hready Hstore
-      Hroots Hnodup Hrn Hnamed Htyped.
-    destruct (proj1 eval_preserves_typing_roots_ready_mutual
-                env s e s' v Heval Ω n R Σ T Σ' R' roots
-                Hready Hstore Hroots Hnodup Hrn Htyped)
-      as [Hstore' _].
-    assert (Hctx_named : root_env_ctx_roots_named R Σ)
-      by (eapply root_env_store_roots_named_to_ctx; eassumption).
-    destruct (proj1 (typed_roots_ctx_roots_named_mutual env Ω n)
-                R Σ e T Σ' R' roots Htyped Hrn Hctx_named)
-      as [Henv_named Hroot_named].
-    split.
-    + eapply root_env_ctx_roots_named_store_typed; eassumption.
-    + eapply root_set_ctx_roots_named_store_typed; eassumption.
-  - split.
-    + intros env s args s' vs Heval Ω n R Σ ps Σ' R' roots Hready
-        Hstore Hroots Hnodup Hrn Hnamed Htyped.
-      destruct (proj1 (proj2 eval_preserves_typing_roots_ready_mutual)
-                  env s args s' vs Heval Ω n R Σ ps Σ' R' roots
-                  Hready Hstore Hroots Hnodup Hrn Htyped)
-        as [Hstore' _].
-      assert (Hctx_named : root_env_ctx_roots_named R Σ)
-        by (eapply root_env_store_roots_named_to_ctx; eassumption).
-      destruct (proj1 (proj2 (typed_roots_ctx_roots_named_mutual env Ω n))
-                  R Σ args ps Σ' R' roots Htyped Hrn Hctx_named)
-        as [Henv_named Hroots_named].
-      split.
-      * eapply root_env_ctx_roots_named_store_typed; eassumption.
-      * eapply root_sets_ctx_roots_named_store_typed; eassumption.
-    + intros env s fields defs s' values Heval Ω n lts args R Σ Σ' R'
-        roots Hready Hstore Hroots Hnodup Hrn Hnamed Htyped.
-      destruct (proj2 (proj2 eval_preserves_typing_roots_ready_mutual)
-                  env s fields defs s' values Heval Ω n lts args R Σ Σ'
-                  R' roots Hready Hstore Hroots Hnodup Hrn Htyped)
-        as [Hstore' _].
-      assert (Hctx_named : root_env_ctx_roots_named R Σ)
-        by (eapply root_env_store_roots_named_to_ctx; eassumption).
-      destruct (proj2 (proj2 (typed_roots_ctx_roots_named_mutual env Ω n))
-                  lts args R Σ fields defs Σ' R' roots Htyped Hrn
-                  Hctx_named)
-        as [Henv_named Hroot_named].
-      split.
-      * eapply root_env_ctx_roots_named_store_typed; eassumption.
-      * eapply root_set_ctx_roots_named_store_typed; eassumption.
+  apply eval_preserves_root_names_ready_mutual_core.
+  exact eval_preserves_typing_roots_ready_mutual.
 Qed.
 
 Lemma eval_args_root_subst_images_exclude_names_for_fresh_call :
@@ -5846,45 +5803,8 @@ Theorem eval_preserves_root_keys_named_ready_mutual :
       typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
       root_env_store_keys_named R' s').
 Proof.
-  split.
-  - intros env s e s' v Heval Ω n R Σ T Σ' R' roots Hready Hstore
-      Hroots Hnodup Hrn Hnamed Htyped.
-    destruct (proj1 eval_preserves_typing_roots_ready_mutual
-                env s e s' v Heval Ω n R Σ T Σ' R' roots
-                Hready Hstore Hroots Hnodup Hrn Htyped)
-      as [Hstore' _].
-    assert (Hctx_named : root_env_ctx_keys_named R Σ)
-      by (eapply root_env_store_keys_named_to_ctx; eassumption).
-    pose proof (proj1 (typed_roots_ctx_keys_named_mutual env Ω n)
-                  R Σ e T Σ' R' roots Htyped Hrn Hctx_named)
-      as Henv_named.
-    eapply root_env_ctx_keys_named_store_typed; eassumption.
-  - split.
-    + intros env s args s' vs Heval Ω n R Σ ps Σ' R' roots Hready
-        Hstore Hroots Hnodup Hrn Hnamed Htyped.
-      destruct (proj1 (proj2 eval_preserves_typing_roots_ready_mutual)
-                  env s args s' vs Heval Ω n R Σ ps Σ' R' roots
-                  Hready Hstore Hroots Hnodup Hrn Htyped)
-        as [Hstore' _].
-      assert (Hctx_named : root_env_ctx_keys_named R Σ)
-        by (eapply root_env_store_keys_named_to_ctx; eassumption).
-      pose proof (proj1 (proj2 (typed_roots_ctx_keys_named_mutual env Ω n))
-                    R Σ args ps Σ' R' roots Htyped Hrn Hctx_named)
-        as Henv_named.
-      eapply root_env_ctx_keys_named_store_typed; eassumption.
-    + intros env s fields defs s' values Heval Ω n lts args R Σ Σ' R'
-        roots Hready Hstore Hroots Hnodup Hrn Hnamed Htyped.
-      destruct (proj2 (proj2 eval_preserves_typing_roots_ready_mutual)
-                  env s fields defs s' values Heval Ω n lts args R Σ Σ'
-                  R' roots Hready Hstore Hroots Hnodup Hrn Htyped)
-        as [Hstore' _].
-      assert (Hctx_named : root_env_ctx_keys_named R Σ)
-        by (eapply root_env_store_keys_named_to_ctx; eassumption).
-      pose proof (proj2 (proj2 (typed_roots_ctx_keys_named_mutual env Ω n))
-                    lts args R Σ fields defs Σ' R' roots Htyped Hrn
-                    Hctx_named)
-        as Henv_named.
-      eapply root_env_ctx_keys_named_store_typed; eassumption.
+  apply eval_preserves_root_keys_named_ready_mutual_core.
+  exact eval_preserves_typing_roots_ready_mutual.
 Qed.
 
 Lemma eval_make_closure_captured_call_runtime_args_ready_auto :

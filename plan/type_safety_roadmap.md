@@ -258,6 +258,8 @@ The second split batch is done:
 - `TypeSafetyClosure.v` now also holds the bind-params cleanup support batch:
   `bind_params_ref_targets_preserved`, `bind_params_store_typed_prefix`, and
   `bind_params_store_typed_prefix_extend`.
+- `TypeSafetyRootNamed.v` owns the parameterized root-name/key preservation
+  cores; `TypeSafety.v` keeps the public wrappers.
 - `TypeSafetyClosure.v` now holds the parameterized cleanup core:
   `eval_call_body_cleanup_preserves_value_and_refs_frame_core`. It takes the
   body preservation, roots, frame-scope, and param-scope facts as premises, so

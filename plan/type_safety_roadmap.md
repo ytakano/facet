@@ -288,61 +288,23 @@ The second split batch is done:
 - `TypeSafetyPreservationWrappers.v` owns the public preservation wrappers:
   main ready preservation, structural endpoint safety, prefix preservation,
   roots-ready preservation, root-name preservation, and root-key preservation.
-- `TypeSafetyClosureCleanup.v` now holds the bind-params cleanup support batch:
-  `bind_params_ref_targets_preserved`, `bind_params_store_typed_prefix`, and
-  `bind_params_store_typed_prefix_extend`.
-- `TypeSafetyClosureCleanup.v` now holds the parameterized cleanup core:
-  `eval_call_body_cleanup_preserves_value_and_refs_frame_core`. It takes the
-  body preservation, roots, frame-scope, and param-scope facts as premises, so
-  it does not depend on the main preservation mutual theorem in `TypeSafety.v`.
-- `TypeSafetyClosureCleanup.v` now also holds the parameterized cleanup wrapper core:
-  `eval_call_body_cleanup_preserves_value_and_refs_frame_with_preservation_core`.
-  `TypeSafetyClosureWrappers.v` keeps the public wrapper and passes the main
-  preservation mutual theorems into the core.
-- `TypeSafetyClosureCleanup.v` now holds the captured cleanup wrapper cores:
-  `eval_captured_call_body_cleanup_preserves_value_and_refs_with_preservation_core`,
-  `eval_captured_call_expr_cleanup_preserves_value_and_refs_with_preservation_core`,
-  `eval_captured_call_body_cleanup_preserves_value_and_refs_params_with_preservation_core`,
-  `eval_captured_call_expr_cleanup_preserves_value_and_refs_params_with_preservation_core`,
-  and
-  `eval_captured_call_body_cleanup_preserves_value_and_refs_params_erased_with_preservation_core`.
-  `TypeSafetyClosureWrappers.v` keeps the public wrappers and passes the
-  frame-scope, prefix-typing, and param-scope preservation mutual theorems into
-  the cores.
-- `TypeSafetyClosureCleanup.v` also holds the body-context erased cleanup core:
-  `eval_call_body_ctx_cleanup_erased_core`. It is used by
-  `eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core`
-  after that parameterized core obtains the main preservation facts from
-  premises supplied by `TypeSafety.v`.
-- `TypeSafetyClosureCleanup.v` also holds the hidden-frame erased cleanup core:
-  `eval_call_body_ctx_cleanup_hidden_frame_erased_core`. It is used by
-  `eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_core`
-  after that parameterized core obtains the main preservation facts from
-  premises supplied by `TypeSafety.v`.
-- `TypeSafetyClosureCleanup.v` now holds the captured body-context cleanup wrapper
-  cores:
-  `eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core`
-  and
-  `eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_core`.
-  `TypeSafetyClosureWrappers.v` keeps the public wrappers and passes the main
-  preservation mutual theorems into the cores.
-- `TypeSafetyClosureCleanup.v` now also holds the hidden captured cleanup package
-  cores:
-  `eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset_with_preservation_core`
-  and
-  `eval_let_make_closure_captured_call_hidden_cleanup_package_with_preservation_core`.
-  `TypeSafetyClosureWrappers.v` keeps the public wrappers and passes the
-  frame-scope, prefix-typing, and param-scope preservation mutual theorems into
-  the cores.
-- `TypeSafetyClosureCleanup.v` also holds the make-closure captured body-context
-  cleanup wrapper cores:
-  `eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core`,
-  `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core`,
-  and
+- Closure cleanup is split by proof layer:
+  `TypeSafetyClosureCleanupFrame.v` owns bind-params cleanup support and the
+  frame cleanup cores through
+  `eval_call_body_cleanup_preserves_value_and_refs_frame_with_preservation_core`;
+  `TypeSafetyClosureCleanupCtxErased.v` owns body-context and hidden-frame
+  erased cleanup cores through
+  `eval_let_make_closure_captured_call_hidden_cleanup_package_with_preservation_core`;
+  `TypeSafetyClosureCleanupCaptured.v` owns captured-call cleanup variants
+  through
+  `eval_captured_call_body_cleanup_preserves_value_and_refs_params_erased_with_preservation_core`;
+  `TypeSafetyClosureCleanupMakeClosure.v` owns make-closure captured cleanup
+  cores through
   `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_auto_with_preservation_core`.
-  `TypeSafetyClosureWrappers.v` keeps the public wrappers and passes the
-  frame-scope, prefix-typing, and param-scope preservation mutual theorems into
-  the cores.
+  `TypeSafetyClosureCleanup.v` is now only an export aggregator, and
+  `TypeSafetyClosureWrappers.v` keeps the public wrappers that pass the main
+  preservation, frame-scope, prefix-typing, and param-scope facts into these
+  cores.
 - `TypeSafetyClosureRuntimeArgs.v` now holds the captured runtime-readiness helper batch:
   copied-capture frame readiness, exact captured frame params readiness, and
   the non-hidden/hidden runtime-args readiness cores used by

@@ -34,6 +34,7 @@ theories/TypeSystem/TypeSafetyClosure.v
 theories/TypeSystem/TypeSafetyDirectCallSetup.v
 theories/TypeSystem/TypeSafetyDirectCallBody.v
 theories/TypeSystem/TypeSafetyDirectCallEvidence.v
+theories/TypeSystem/TypeSafetyDirectCallRoute.v
 theories/TypeSystem/TypeSafetyDirectCall.v
 theories/TypeSystem/TypeSafetyCapturedCall.v
 theories/TypeSystem/TypeSafetyDirectPlace.v

@@ -357,21 +357,22 @@ The second split batch is done:
   preservation, root-name, and root-key mutual theorems into the cores.
 - `TypeSafetyClosure.v` is now only an export aggregator for
   `TypeSafetyClosureRuntimeArgs.v` and `TypeSafetyClosureCleanup.v`.
-- `TypeSafetyDirectCall.v` now holds the direct-call support batch:
-  function-env uniqueness and lookup helpers needed outside `TypeSafety.v`,
-  direct-call callee evidence definitions/conversions, and
-  `eval_direct_call_body_cleanup_preserves_value_and_refs_core`.
-  It also owns the parameterized direct-call helper, summary bridge, body
-  preservation, and route cores. `TypeSafetyDirectCallWrappers.v` keeps the
-  direct-call public wrappers and passes the main preservation, root-name,
-  root-key, frame-scope, prefix-typing, and param-scope preservation mutual
-  theorems into the cores.
-  It also owns the parameterized direct-call prefix preservation cores
-  `eval_direct_call_body_preserves_typing_prefix_with_preservation_core` and
-  `eval_direct_call_body_preserves_typing_prefix_from_lookup_with_preservation_core`.
-  It also owns the standalone direct-call conversion
-  `eval_call_expr_fn_as_call` and the captured-frame fresh-tail helper
-  `captured_call_frame_root_tail_fresh_names_for_fresh_call`.
+- `TypeSafetyDirectCallSetup.v` now holds direct-call statement definitions,
+  function-env uniqueness and lookup helpers, and setup facts through
+  `lookup_fn_in_unique_by_name`.
+- `TypeSafetyDirectCallBody.v` now holds direct-call body/prefix/cleanup and
+  fresh-args helper cores through
+  `eval_args_root_sets_union_excludes_fresh_name_with_preservation_core`.
+- `TypeSafetyDirectCallEvidence.v` now holds direct-call callee evidence
+  definitions and summary bridge cores through
+  `direct_call_callee_body_root_shadow_provenance_summary_bridge_of_unique_with_preservation_core`.
+- `TypeSafetyDirectCallRoute.v` now holds direct-call route cores,
+  `eval_call_expr_fn_as_call`, and the callee-summary route core.
+- `TypeSafetyDirectCall.v` is now only an export aggregator for the split
+  direct-call modules. `TypeSafetyDirectCallWrappers.v` keeps the public
+  direct-call wrappers and passes the main preservation, root-name, root-key,
+  frame-scope, prefix-typing, and param-scope preservation mutual theorems into
+  the cores.
 - `TypeSafetyCapturedCall.v` now holds the captured callee evidence
   instantiation batch:
   `captured_call_callee_body_root_shadow_provenance_instantiated_bridge`,

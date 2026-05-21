@@ -253,10 +253,14 @@ The second split batch is done:
   `eval_preserves_roots_ready_prefix_mutual_with_preservation_core`.
   `TypeSafety.v` keeps the public `eval_preserves_roots_ready_prefix_mutual`
   theorem and passes `eval_preserves_typing_ready_prefix_mutual` into the core.
-- `TypeSafetyHiddenFrame.v` now holds the remaining hidden-frame batch:
-  param-scope and frame-scope roots-ready preservation, store-remove cleanup
-  and excluding facts, store-name support, and
-  `store_typed_remove_params_store_param_prefix`.
+- `TypeSafetyParamScopeReady.v` now holds param-scope roots-ready
+  preservation through `eval_preserves_param_scope_roots_ready_mutual`.
+- `TypeSafetyFrameScopeReady.v` now holds frame-scope roots-ready
+  preservation through `eval_preserves_frame_scope_roots_ready_mutual`.
+- `TypeSafetyHiddenFrameCleanupFacts.v` now holds the hidden-frame cleanup
+  foundation facts through `store_typed_remove_params_store_param_prefix`.
+- `TypeSafetyHiddenFrame.v` is now only an export aggregator for the split
+  hidden-frame modules.
 - `TypeSafetyClosureRuntimeArgs.v` now holds the first captured-call readiness helper
   batch: bind-params call-root readiness, captured argument value typing, hidden
   closure-frame argument typing, evaluated-argument store-name freshness, and

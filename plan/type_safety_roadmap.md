@@ -140,13 +140,18 @@ Work in this order unless a proof exposes a soundness gap.
      branch wired through
      `eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components`.
 
+   Focused regressions are done:
+
+   - `TypeChecker.v` checks that the ordinary checker accepts the local-let
+     captured-call shape, direct/non-capturing sidecars reject it, and the
+     captured-call sidecar accepts it.
+   - `tests/valid/closure/capture_unrestricted_annotated_let_call.facet`
+     covers the annotated surface local-let shape.
+
    Next proof task:
 
-   - Add focused regression examples for the local-let captured-call sidecar if
-     future changes touch this checker branch.
-   - Then continue the TypeSafety file split below, with
-     `TypeSafetyClosure.v` captured closure bridges as the next preferred
-     target.
+   - Continue the TypeSafety file split below, with `TypeSafetyClosure.v`
+     captured closure bridges as the next preferred target.
 
    Do not add `ELetInfer` support in the same step.
 
@@ -269,7 +274,7 @@ The second split batch is done:
   `eval_make_closure_captured_call_runtime_args_ready_auto` and
   `eval_let_make_closure_captured_call_runtime_args_ready_auto`.
 - `TypeSafetyDirectCall.v` now holds the direct-call support batch:
-  function-lookup uniqueness helpers needed outside `TypeSafety.v`,
+  function-env uniqueness and lookup helpers needed outside `TypeSafety.v`,
   direct-call callee evidence definitions/conversions, and
   `eval_direct_call_body_cleanup_preserves_value_and_refs_core`.
   `TypeSafety.v` still owns direct-call public wrappers that call main

@@ -6,58 +6,6 @@ From Facet.TypeSystem Require Export TypeSafetyRootFacts TypeSafetyReadiness
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
-(* ------------------------------------------------------------------ *)
-(* Function environment lookup facts                                   *)
-(* ------------------------------------------------------------------ *)
-
-Lemma NoDup_map_eq :
-  forall (A B : Type) (f : A -> B) (xs : list A) x y,
-    NoDup (map f xs) ->
-    In x xs ->
-    In y xs ->
-    f x = f y ->
-    x = y.
-Proof.
-  intros A B f xs.
-  induction xs as [| z zs IH]; intros x y Hnodup Hinx Hiny Heq.
-  - contradiction.
-  - simpl in Hnodup. inversion Hnodup; subst.
-    simpl in Hinx, Hiny.
-    destruct Hinx as [Hx | Hinx]; destruct Hiny as [Hy | Hiny].
-    + subst. reflexivity.
-    + subst x.
-      exfalso. apply H1.
-      rewrite Heq. apply in_map. exact Hiny.
-    + subst y.
-      exfalso. apply H1.
-      rewrite <- Heq. apply in_map. exact Hinx.
-    + eapply IH; eassumption.
-Qed.
-
-Lemma fn_name_strings_nodup_unique_by_name :
-  forall env,
-    NoDup (fn_name_strings (env_fns env)) ->
-    fn_env_unique_by_name env.
-Proof.
-  unfold fn_env_unique_by_name, fn_name_strings.
-  intros env Hnodup f1 f2 Hin1 Hin2 Hname.
-  eapply (NoDup_map_eq fn_def string
-    (fun f => fst (fn_name f)) (env_fns env) f1 f2);
-    try eassumption.
-  simpl. rewrite Hname. reflexivity.
-Qed.
-
-Lemma top_level_names_unique_b_fn_env_unique_by_name :
-  forall env,
-    top_level_names_unique_b env = true ->
-    fn_env_unique_by_name env.
-Proof.
-  intros env Hunique.
-  apply fn_name_strings_nodup_unique_by_name.
-  apply top_level_names_unique_b_fn_names_nodup.
-  exact Hunique.
-Qed.
-
 Lemma lookup_fn_typed_structural :
   forall env fname f_lookup,
     lookup_fn fname (env_fns env) = Some f_lookup ->

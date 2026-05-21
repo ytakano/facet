@@ -104,10 +104,8 @@ Work in this order unless a proof exposes a soundness gap.
 
    Next proof task:
 
-   - use the checked-in value-typing preservation helper from `s_args` to
+   - use the checked-in hidden-frame runtime-args package for
      `captured ++ store_add x T hidden s_args`;
-   - use freshness of `x` in copied captures and evaluated argument store, plus
-     `Forall (value_refs_exclude_root x) vs`;
    - construct the caller-side callee body typing/root package automatically;
    - supply a `roots_bound` excluding hidden name `x`;
    - do not add any checker branch before this TypeSafety helper compiles.
@@ -115,6 +113,8 @@ Work in this order unless a proof exposes a soundness gap.
    Current reusable root-bound helpers:
 
    - `captured_hidden_frame_args_values_have_types`
+   - `captured_call_frame_ready_store_add_right`
+   - `eval_let_make_closure_captured_call_runtime_args_ready_auto`
    - `eval_args_store_names_fresh`
    - `store_no_shadow_app_store_add_right`
    - `roots_exclude_root_sets_union`

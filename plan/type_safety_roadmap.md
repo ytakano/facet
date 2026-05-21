@@ -244,15 +244,22 @@ The second split batch is done:
   batch: `sctx_path_available_success`, param-scope update/preservation
   helpers, frame-scope result definitions, the args/fields bridge, and
   `eval_preserves_frame_scope_roots_ready_mutual`.
-- `TypeSafety.v` exports `TypeSafetyHiddenFrame`, so downstream modules that
-  import `TypeSafety` still see the moved names.
+- `TypeSafetyClosure.v` now holds the first captured-call readiness helper
+  batch: bind-params call-root readiness, captured argument value typing, hidden
+  closure-frame argument typing, evaluated-argument store-name freshness, and
+  `captured_call_frame_ready_store_add_right`.
+- `TypeSafety.v` exports `TypeSafetyHiddenFrame` and `TypeSafetyClosure`, so
+  downstream modules that import `TypeSafety` still see the moved names.
 
 Continue splitting in small batches:
 
 1. Create focused files and update `rocq/_CoqProject` in the same commit.
 2. Preferred targets:
-   - `TypeSafetyClosure.v`: captured store/frame readiness and captured closure
-     call preservation bridges.
+   - `TypeSafetyClosure.v`: continue with captured-call cleanup bridges that do
+     not require moving the main preservation mutual theorems.
+   - Keep `eval_make_closure_captured_call_runtime_args_ready_auto` and later
+     preservation bridges in `TypeSafety.v` until their dependencies no longer
+     point back to the main preservation mutual theorems.
 3. Move lemmas only when dependencies are clear. After each batch run:
 
    ```sh

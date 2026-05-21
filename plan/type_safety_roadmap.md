@@ -263,6 +263,11 @@ The second split batch is done:
   `eval_call_body_ctx_cleanup_hidden_frame_erased_core`. It is used by
   `eval_captured_call_body_ctx_cleanup_hidden_frame_erased` after `TypeSafety.v`
   obtains the main preservation facts.
+- `TypeSafetyClosure.v` now holds the captured runtime-readiness helper batch:
+  copied-capture frame readiness, exact captured frame params readiness, and
+  the non-hidden/hidden runtime-args readiness cores used by
+  `eval_make_closure_captured_call_runtime_args_ready_auto` and
+  `eval_let_make_closure_captured_call_runtime_args_ready_auto`.
 - `TypeSafety.v` still owns the public wrapper
   `eval_call_body_cleanup_preserves_value_and_refs_frame`. The wrapper calls
   the main preservation mutual theorem and then delegates the cleanup endpoint
@@ -276,9 +281,8 @@ Continue splitting in small batches:
 2. Preferred targets:
    - Move or parameterize the next cleanup wrappers only after their dependency
      on `eval_preserves_typing_roots_ready_prefix_mutual` is explicit.
-   - Keep `eval_make_closure_captured_call_runtime_args_ready_auto` and later
-     preservation bridges in `TypeSafety.v` until those dependencies no longer
-     point back to the main preservation mutual theorems.
+   - Keep public runtime-readiness wrappers and later preservation bridges in
+     `TypeSafety.v` while they still call main preservation mutual theorems.
    - Keep public cleanup wrappers in `TypeSafety.v` while they still call main
      preservation mutual theorems. Move only private core cleanup tails to
      `TypeSafetyClosure.v`.

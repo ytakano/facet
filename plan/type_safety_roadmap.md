@@ -192,30 +192,31 @@ for the next task:
   fails for function argument contravariance and `TC_Fn_Closure`. The next
   route must prove root emptiness from `value_has_type` directly.
 
-## TypeSafety.v Split Plan
+## TypeSafety Module Ownership
 
-`rocq/theories/TypeSystem/TypeSafety.v` is large enough that new closure work
-should stop growing it indefinitely. Do not do a broad file split while the
-local-let captured closure bridge is unstable.
+The TypeSafety split is complete enough for the current roadmap. Do not start
+another file-splitting batch just because a file is large. Move existing lemmas
+only when a new proof requires a clear dependency boundary, or when compile-time
+measurement identifies a concrete bottleneck.
 
-Short-term rule:
+Going forward:
 
-- Keep the local-let captured closure bridge in `TypeSafety.v` while the
-  checker sidecar is being wired, so theorem references stay local and easy to
-  inspect.
-- Avoid moving existing lemmas while changing proof statements.
-- If adding clearly independent root facts, prefer statements that can later
-  move as a batch.
+- Add new direct-call helper facts and route cores to the focused direct-call
+  modules, with public wrappers in `TypeSafetyDirectCallWrappers.v`.
+- Add new captured-call helper facts and route cores to
+  `TypeSafetyCapturedCall.v`, `TypeSafetyClosureRuntimeArgs.v`, or the closure
+  cleanup modules according to the ownership list below.
+- Keep public theorem names visible through `TypeSafety.v`, but add wrappers to
+  focused `*Wrappers.v` files instead of growing `TypeSafety.v`.
+- Keep proof statements stable unless the active implementation task requires a
+  theorem-strengthening step.
 
-The first split batch is done:
+Completed ownership:
 
 - `TypeSafetyRootFacts.v` now holds root/value rootless facts that are
   frame-independent and broadly reused.
 - `TypeSafety.v` exports `TypeSafetyRootFacts`, so downstream modules that
   import `TypeSafety` still see the moved names.
-
-The second split batch is done:
-
 - `TypeSafetyHiddenFrameBase.v` now holds the first hidden-frame support batch:
   root/store append facts, captured frame readiness, empty capture root
   environments, copied-capture rootless/runtime-ready facts, and captured
@@ -361,28 +362,14 @@ The second split batch is done:
   downstream modules that import `TypeSafety` still see the public theorem
   names.
 
-Continue splitting in small batches:
+When adding a new proof or wrapper, run at least:
 
-1. Create focused files and update `rocq/_CoqProject` in the same commit.
-2. Preferred targets:
-   - Keep public theorem names visible through `TypeSafety.v`, but add new
-     wrappers to focused `*Wrappers.v` files instead of growing `TypeSafety.v`.
-   - Keep moving proof bodies into parameterized cores in focused proof files
-     once the needed preservation premises are explicit.
-   - For direct-call work, add new helper facts and parameterized route cores
-     to `TypeSafetyDirectCall.v`; public wrappers should go in
-     `TypeSafetyDirectCallWrappers.v`.
-   - For captured-call work, prefer adding new private helper facts to
-     `TypeSafetyCapturedCall.v`; public wrappers should go in
-     `TypeSafetyClosureWrappers.v` or a new focused wrapper file if needed.
-3. Move lemmas only when dependencies are clear. After each batch run:
+```sh
+cd rocq && rocq compile -R theories Facet theories/TypeSystem/TypeSafety.v
+```
 
-   ```sh
-   cd rocq && rocq compile -R theories Facet theories/TypeSystem/TypeSafety.v
-   ```
-
-4. Keep public theorem names stable unless every caller is updated in the same
-   commit.
+If a future task really needs another split, first record the measured reason
+in this file and keep the split separate from theorem-strengthening work.
 
 ## Fixed Boundaries
 

@@ -123,7 +123,10 @@ is still defined by `plan/type_safety_roadmap.md`.
 - `eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased`
 - `eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased`
 - `eval_make_closure_exact_captured_call_frame_params_ready`
+- `eval_make_closure_exact_captured_call_frame_params_ready_auto`
 - `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased`
+- `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_auto`
+- `eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components`
 
 These helpers do not permit validator widening by themselves. Widen validators
 only after the matching preservation theorem compiles.
@@ -153,24 +156,20 @@ It records:
   ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))
   ```
 
-## Current Blocker
+## Current Status
 
-The cleanup bridge requires:
+Stage 7a direct and annotated local-let captured-call sidecar routes are
+implemented for immutable unrestricted reference-free captures.
 
-```coq
-captured_call_frame_ready env captured Rcap s_args R_args
-```
-
-No lemma currently constructs `Rcap` for the copied hidden capture store from:
+Implemented proof route:
 
 ```coq
 copy_capture_store_as
+  -> captured_store_runtime_ready
+  -> captured_call_frame_ready
+  -> captured_call_frame_ready_compose
+  -> eval_make_closure_captured_call_expr_* cleanup/preservation
 ```
-
-The next proof route should not make Prop root/shadow constructors exact. That
-reopens the alpha-renaming hidden-name freshness problem.
-
-Current progress:
 
 - `capture_ref_free_ty` is available as the Prop mirror for
   `capture_ref_free_ty_b`.
@@ -195,15 +194,35 @@ Current progress:
 - `empty_root_env_for_store` constructs the copied-capture `Rcap`.
 - `copy_capture_store_as_captured_store_runtime_ready` proves exact capture
   copy satisfies `captured_store_runtime_ready`.
-- The remaining blocker is showing hidden capture names are absent from the
-  evaluated argument store/root environment so `captured_call_frame_ready_compose`
-  can be applied.
+- `copy_capture_store_as_captured_call_frame_ready` constructs the copied
+  hidden capture frame readiness package.
+- Hidden capture names are proved absent from evaluated argument stores/root
+  environments, allowing `captured_call_frame_ready_compose`.
+- `eval_make_closure_captured_call_runtime_args_ready_auto_with_preservation_core`
+  and
+  `eval_let_make_closure_captured_call_runtime_args_ready_auto_with_preservation_core`
+  build the runtime-argument readiness needed by the checked sidecar routes.
+- `eval_make_closure_captured_call_expr_preserves_typing_with_callee_components`
+  and
+  `eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components`
+  are the checked preservation bridge endpoints for direct and annotated
+  local-let captured calls.
+
+The proof bodies are split across:
+
+- `TypeSafetyClosureRuntimeArgs.v`: copied-capture/runtime-argument readiness.
+- `TypeSafetyClosureCleanup.v`: parameterized cleanup cores and captured-call
+  cleanup wrappers.
+- `TypeSafetyClosure.v`: export aggregator.
 
 ## Next Closure Lemmas
 
-1. Prove hidden capture names remain absent from evaluated argument store/root
-   environment.
-2. Compose captured and argument frames with `captured_call_frame_ready_compose`.
-3. Instantiate the callee-body summary under `fn_body_ctx fcall`.
-4. Connect to
-   `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased`.
+1. Do not add `ELetInfer` captured-call support until the semantics has an
+   evaluable `ELetInfer` case or the route is expressed through an existing
+   evaluable core shape. Current `ELetInfer` preservation is vacuous by
+   inversion on evaluation.
+2. For broader captured closures, move to Stage 7b: captured references plus
+   closure lifetime evidence. Extend captured-store readiness with lifetime
+   validity and root reachability before widening validators.
+3. Keep direct `EFn`/`ECall` empty-capture only. Captured closure calls should
+   stay on explicit captured-call sidecar routes.

@@ -235,6 +235,10 @@ The second split batch is done:
   batch: root-env covers/excludes params, store-remove cleanup/excluding facts,
   `store_no_shadow`/store-name support needed by cleanup, and
   `store_typed_remove_params_store_param_prefix`.
+- `TypeSafetyHiddenFrame.v` now holds the roots-ready support batch:
+  direct-place lookup helpers, root/store/ctx named facts, provenance
+  readiness, `typed_fields_roots_cons_inv_ts`, typed roots named/key named
+  mutual facts, and `eval_preserves_roots_ready_mutual`.
 - `TypeSafety.v` exports `TypeSafetyHiddenFrame`, so downstream modules that
   import `TypeSafety` still see the moved names.
 
@@ -243,8 +247,10 @@ Continue splitting in small batches:
 1. Create focused files and update `rocq/_CoqProject` in the same commit.
 2. Preferred targets:
    - `TypeSafetyHiddenFrame.v`: move frame-scope roots-ready preservation next.
-     This is not a pure mechanical move until the field-branch proof scripts
-     are made robust against constructor/inversion hypothesis shapes.
+     The first field-branch proof scripts are robust via
+     `typed_fields_roots_cons_inv_ts`, but the moved
+     `eval_preserves_frame_scope_roots_ready_mutual` still has a brittle
+     replace/path-var branch around `typed_env_roots` hypothesis matching.
    - `TypeSafetyClosure.v`: captured store/frame readiness and captured closure
      call preservation bridges.
 3. Move lemmas only when dependencies are clear. After each batch run:

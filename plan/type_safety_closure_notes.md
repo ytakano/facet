@@ -89,6 +89,10 @@ is still defined by `plan/type_safety_roadmap.md`.
 - The reverse `TClosure`-as-`TFn` direction remains rejected.
 - `ECallExpr` typing/checking accepts callees whose inferred type is
   `TClosure env_lt params ret`.
+- `EMakeClosure fname captures` now produces `TClosure LStatic ...` for the
+  implemented reference-free capture fragment.
+- Surface type annotations support `closure<'env>(Args...) -> Ret`; existing
+  Stage 7a annotations use `closure<'static>(...) -> ...`.
 - `fn_def` separates `fn_captures` from `fn_params`.
 - Frontend-created functions elaborate with empty captures.
 - Direct `EFn` / `ECall` typing, checking, and evaluation require empty
@@ -159,7 +163,9 @@ It records:
 ## Current Status
 
 Stage 7a direct and annotated local-let captured-call sidecar routes are
-implemented for immutable unrestricted reference-free captures.
+implemented for immutable unrestricted reference-free captures. The Stage 7b
+TClosure-first foundation is also implemented: closure literals are no longer
+typed as `TFn`, and the reverse `TClosure`-as-`TFn` annotation route is rejected.
 
 Implemented proof route:
 
@@ -221,8 +227,8 @@ The proof bodies are split across:
    evaluable `ELetInfer` case or the route is expressed through an existing
    evaluable core shape. Current `ELetInfer` preservation is vacuous by
    inversion on evaluation.
-2. For broader captured closures, move to Stage 7b: captured references plus
-   closure lifetime evidence. Extend captured-store readiness with lifetime
-   validity and root reachability before widening validators.
+2. For broader captured closures, continue Stage 7b by accepting immutable
+   unrestricted shared-reference captures. Add closure env-lifetime inference,
+   lifetime validity, and root reachability before widening validators.
 3. Keep direct `EFn`/`ECall` empty-capture only. Captured closure calls should
    stay on explicit captured-call sidecar routes.

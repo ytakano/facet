@@ -81,7 +81,29 @@ do not redefine the language accepted by the ordinary checker.
 
 Work in this order unless a proof exposes a soundness gap.
 
-1. **Add the annotated local-let captured-call sidecar branch.**
+1. **Implement Stage 7b captured-reference closures.**
+
+   Foundation status: TClosure-first is done. `EMakeClosure` now produces
+   `TClosure LStatic ...` for the current reference-free closure literals, and
+   surface local annotations can write
+   `closure<'static>(Args...) -> Ret`. A closure literal is no longer accepted
+   by an ordinary `fn(Args...) -> Ret` annotation; the one-way compatibility
+   remains only `TFn` where `TClosure` is expected.
+
+   Next implementation task:
+
+   - Extend capture checking to accept immutable unrestricted shared-reference
+     values, not unique references or mutable bindings.
+   - Infer the closure env lifetime by full outlives search over captured
+     shared-reference lifetimes. If no captured references exist, keep
+     `LStatic`.
+   - Strengthen the Prop typing/soundness side before widening executable
+     validators or sidecar routes.
+   - Add valid and invalid surface fixtures for shared-reference capture,
+     missing outlives support, mutable binding capture, and `&mut` capture
+     rejection.
+
+2. **Keep the annotated local-let captured-call sidecar branch stable.**
 
    Target shape:
 
@@ -156,7 +178,7 @@ Work in this order unless a proof exposes a soundness gap.
    - If widening captured-call sidecar coverage, first add an operational
      semantics case or choose an already-evaluable surface shape.
 
-2. **Handle `if` last.**
+3. **Handle `if` last.**
 
    The known `if` blocker is that ordinary `TES_If` does not expose
    `root_env_equiv R2 R3`, while root/shadow routes require it. Do not
@@ -170,7 +192,7 @@ for the next task:
 
 - `TClosure` is distinct from `TFn`.
 - `EMakeClosure fname captures` exists for immutable unrestricted
-  reference-free captures.
+  reference-free captures and currently types as a `TClosure`.
 - `fn_def` has separate `fn_params` and `fn_captures`.
 - Function bodies use:
 

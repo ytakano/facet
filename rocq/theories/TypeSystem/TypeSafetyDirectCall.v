@@ -216,6 +216,35 @@ Proof.
   exact (proj1 Hmut roots v Hwithin roots' Hsubset).
 Qed.
 
+Lemma captured_call_frame_root_tail_fresh_names_for_fresh_call :
+  forall env captured Rcap s_args R_args fdef fcall used',
+    captured_call_frame_ready env captured Rcap s_args R_args ->
+    alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
+      (fcall, used') ->
+    root_env_tail_fresh_names
+      (root_env_remove_params (fn_params fcall) (Rcap ++ R_args))
+      (expr_local_store_names (fn_body fcall)).
+Proof.
+  unfold root_env_tail_fresh_names.
+  intros env captured Rcap s_args R_args fdef fcall used'
+    Hframe Hrename x Hin.
+  unfold captured_call_frame_ready in Hframe.
+  destruct Hframe as [_ [_ [_ [Hrn_tail [Hnamed_tail Hkeys_tail]]]]].
+  pose proof (alpha_rename_fn_def_body_local_store_names_fresh_used
+                (store_names (captured ++ s_args)) fdef fcall used'
+                Hrename)
+    as Hfresh_names.
+  assert (Hfresh_x : ~ In x (store_names (captured ++ s_args))).
+  { apply (proj1 (Forall_forall _ _) Hfresh_names). exact Hin. }
+  assert (Hlookup : root_env_lookup x (Rcap ++ R_args) = None).
+  { eapply root_env_store_keys_named_lookup_excludes_name; eassumption. }
+  assert (Hexcl : root_env_excludes x (Rcap ++ R_args)).
+  { eapply root_env_store_roots_named_excludes_name; eassumption. }
+  split.
+  - apply root_env_lookup_remove_params_none_preserved. exact Hlookup.
+  - apply root_env_remove_params_preserves_excludes; assumption.
+Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Function environment lookup facts                                   *)
 (* ------------------------------------------------------------------ *)
@@ -2312,6 +2341,41 @@ Proof.
             Htyping_roots_prefix_ready Hparam_scope_ready);
           eassumption
     end.
+Qed.
+
+Lemma eval_call_expr_fn_as_call :
+  forall env s s' v fname args,
+    eval env s (ECallExpr (EFn fname) args) s' v ->
+    eval env s (ECall fname args) s' v.
+Proof.
+  intros env s s' v fname args Heval.
+  dependent destruction Heval.
+  match goal with
+  | Hcallee : eval _ _ (EFn _) _ (VClosure _ _) |- _ =>
+      dependent destruction Hcallee
+  end.
+  simpl in *.
+  match goal with
+  | Hlookup_fn : lookup_fn ?fname_call (env_fns env) = Some ?fdef_fn,
+    Hcaps_fn : fn_captures ?fdef_fn = [],
+    Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?fdef,
+    Hargs : eval_args env s args ?s_args ?vs,
+    Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
+      (?fcall, ?used'),
+    Hbody : eval env (bind_params (fn_params ?fcall) ?vs ?s_args)
+      (fn_body ?fcall) ?s_body ?ret |- _ =>
+      assert (Hsame : fdef_fn = fdef)
+        by (eapply lookup_fn_deterministic; eassumption);
+      subst fdef;
+      assert (Hcaps_call : fn_captures fcall = [])
+        by (rewrite (alpha_rename_fn_def_captures
+              (store_names s_args) fdef_fn fcall used' Hrename);
+            exact Hcaps_fn);
+      rewrite Hcaps_call;
+      simpl;
+      eapply Eval_Call;
+      [ exact Hlookup | exact Hcaps_fn | exact Hargs | exact Hrename | exact Hbody ]
+  end.
 Qed.
 
 Theorem eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary_with_preservation_core :

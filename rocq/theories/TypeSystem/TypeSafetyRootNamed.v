@@ -265,3 +265,15 @@ Proof.
         as Henv_named.
       eapply root_env_ctx_keys_named_store_typed; eassumption.
 Qed.
+
+Lemma root_env_store_keys_named_excludes_names :
+  forall R s names,
+    root_env_store_keys_named R s ->
+    Forall (fun x => ~ In x (store_names s)) names ->
+    forall x, In x names -> root_env_lookup x R = None.
+Proof.
+  intros R s names Hnamed Hfresh x Hin.
+  eapply root_env_store_keys_named_lookup_excludes_name.
+  - exact Hnamed.
+  - apply (proj1 (Forall_forall _ _) Hfresh). exact Hin.
+Qed.

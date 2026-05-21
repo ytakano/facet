@@ -279,6 +279,12 @@ The second split batch is done:
   `TypeSafety.v` exports it and keeps the public structural endpoint theorem
   names as wrappers around the main `eval_preserves_typing_ready_mutual`
   theorem.
+- `TypeSafetyPrefixPreservation.v` owns prefix-preservation cores:
+  `eval_preserves_typing_ready_prefix_mutual_core`,
+  `eval_preserves_typing_roots_ready_prefix_mutual_core`,
+  `eval_preserves_typing_ready_with_call_invariants_mutual_with_preservation_core`,
+  and `eval_let_roots_ready_preserves_typing_with_preservation_core`.
+  `TypeSafety.v` keeps the public theorem names as wrappers.
 - `TypeSafetyClosure.v` now holds the parameterized cleanup core:
   `eval_call_body_cleanup_preserves_value_and_refs_frame_core`. It takes the
   body preservation, roots, frame-scope, and param-scope facts as premises, so
@@ -379,15 +385,14 @@ The second split batch is done:
 - `TypeSafety.v` exports `TypeSafetyHiddenFrame`, `TypeSafetyClosure`,
   `TypeSafetyDirectCall`, `TypeSafetyCapturedCall`, and
   `TypeSafetyDirectPlace` plus `TypeSafetyLocalFacts`,
-  `TypeSafetyRootNamed`, and `TypeSafetyBasePreservation`, so downstream
-  modules that import `TypeSafety` still see the moved names.
+  `TypeSafetyRootNamed`, `TypeSafetyBasePreservation`, and
+  `TypeSafetyPrefixPreservation`, so downstream modules that import
+  `TypeSafety` still see the moved names.
 
 Continue splitting in small batches:
 
 1. Create focused files and update `rocq/_CoqProject` in the same commit.
 2. Preferred targets:
-   - Move or parameterize the next cleanup wrappers only after their dependency
-     on the main preservation mutual theorems is explicit.
    - Keep public runtime-readiness and captured-call preservation bridge names
      in `TypeSafety.v`, but put proof bodies in parameterized wrapper cores in
      focused files whenever the dependency set is fixed.

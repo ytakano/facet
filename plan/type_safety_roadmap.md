@@ -227,6 +227,12 @@ The second split batch is done:
   preservation for store operations, and `eval_place_store_add_strip`.
 - `TypeSafetyReadiness.v` holds preservation-readiness predicates and the
   store-name preservation facts used by hidden-frame stripping.
+- Do not move `preservation_ready_implies_provenance_ready*` into
+  `TypeSafetyReadiness.v`: `provenance_ready_expr` is defined later in
+  `TypeSafetyHiddenFrame.v`, which already imports `TypeSafetyReadiness.v`, so
+  that move would create a dependency cycle. Keep those wrappers in
+  `TypeSafety.v` unless provenance readiness is split earlier in the project
+  order.
 - `TypeSafetyHiddenFrame.v` now holds the readiness-dependent hidden-frame
   mutual strip batch, from `args_free_vars_ts` through
   `eval_let_make_closure_captured_call_args_strip`.
@@ -335,6 +341,9 @@ The second split batch is done:
   preservation, and route cores. `TypeSafety.v` keeps the direct-call public
   wrappers and passes the main preservation, root-name, root-key, frame-scope,
   prefix-typing, and param-scope preservation mutual theorems into the cores.
+  It also owns the parameterized direct-call prefix preservation cores
+  `eval_direct_call_body_preserves_typing_prefix_with_preservation_core` and
+  `eval_direct_call_body_preserves_typing_prefix_from_lookup_with_preservation_core`.
   It also owns the standalone direct-call conversion
   `eval_call_expr_fn_as_call` and the captured-frame fresh-tail helper
   `captured_call_frame_root_tail_fresh_names_for_fresh_call`.

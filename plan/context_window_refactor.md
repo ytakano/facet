@@ -143,8 +143,11 @@ runtime safety currently cross theorem boundaries.
 - Extracted the roots-ready package interface:
   `TypeSafetyRootedPackages.v` now owns the rooted result records, package
   statements, conversion lemmas, and readiness bridge used by runtime args.
+- Extracted the direct-call evidence facts prefix:
+  `TypeSafetyDirectCallEvidenceFacts.v` now owns the reusable direct-call
+  callee evidence and summary bridge definitions.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/TypeSafetyClosureCleanupPackages.vo theories/TypeSystem/TypeSafetyClosureCleanupFrame.vo theories/TypeSystem/TypeSafetyClosureCleanup.v theories/TypeSystem/TypeSafety.v`.
+  `cd rocq && make theories/TypeSystem/TypeSafetyDirectCallEvidenceFacts.vo theories/TypeSystem/TypeSafetyDirectCallEvidence.vo theories/TypeSystem/TypeSafetyDirectCall.v theories/TypeSystem/TypeSafety.v`.
 - Next task: continue Phase 3 by looking for the next stable helper cluster
   that can move out of a large preservation file without changing theorem
   statements.

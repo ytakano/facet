@@ -105,7 +105,8 @@ Proof.
     Hexclude_env Heval_body.
   eapply (eval_captured_call_body_cleanup_preserves_value_and_refs_with_preservation_core
             eval_preserves_frame_scope_roots_ready_mutual
-            eval_preserves_typing_roots_ready_prefix_mutual
+            (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+               eval_preserves_typing_roots_ready_prefix_mutual)
             eval_preserves_param_scope_roots_ready_mutual);
     try eassumption.
   eapply captured_call_frame_ready_in_frame_from_self.

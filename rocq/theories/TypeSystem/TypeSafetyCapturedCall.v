@@ -1459,7 +1459,10 @@ Proof.
       exact (Hparams_fresh_captured x Hin). }
   destruct
     (eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
-      Hframe Hprefix Hparam env Ω s s s_args s_body
+      Hframe
+      (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+        Hprefix)
+      Hparam env Ω s s s_args s_body
       (EMakeClosure fname captures) args fname captured fdef fcall vs ret
       used' (capture_store_root_env captured) R_args Σ_args [] T_body
       Γ_out_r

@@ -1004,6 +1004,32 @@ Proof.
     apply Hfresh_cap. exact Hin.
 Qed.
 
+Lemma copy_capture_roots_as_equiv_root_env_add_params_roots :
+  forall captures caps R Rcap,
+    copy_capture_roots_as captures caps R = Some Rcap ->
+    root_env_equiv Rcap
+      (root_env_add_params_roots caps
+        (map (fun x =>
+          match root_env_lookup x R with
+          | Some roots => roots
+          | None => []
+          end) captures) []).
+Proof.
+  intros captures.
+  induction captures as [| x captures IH]; intros caps R Rcap Hcopy;
+    destruct caps as [| cap caps]; simpl in Hcopy; try discriminate.
+  - injection Hcopy as <-. apply root_env_equiv_refl.
+  - destruct (root_env_lookup x R) as [roots |] eqn:Hlookup;
+      try discriminate.
+    destruct (copy_capture_roots_as captures caps R) as [Rtail |]
+      eqn:Htail; try discriminate.
+    injection Hcopy as <-.
+    simpl. rewrite Hlookup.
+    apply root_env_equiv_add.
+    + apply root_set_equiv_refl.
+    + apply IH. exact Htail.
+Qed.
+
 Lemma captured_call_runtime_root_env_binding_split_equiv :
   forall env captured ps caps arg_roots,
     captured_params_store_typed env captured caps ->

@@ -94,11 +94,16 @@ runtime safety currently cross theorem boundaries.
   `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core`
   now consumes the typed-prefix package statement directly, with plain callers
   converting at the boundary.
+- Rewired the make-closure auto cleanup core:
+  `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_auto_with_preservation_core`
+  now consumes the typed-prefix package statement directly, with its plain
+  wrapper converting at the boundary.
 - Last focused check:
   `cd rocq && make theories/TypeSystem/TypeSafetyClosureCleanupMakeClosure.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo theories/TypeSystem/TypeSafetyCapturedCall.vo theories/TypeSystem/TypeSafety.vo`.
-- Next task: identify the next remaining plain typed-prefix preservation core
-  with `rg` before changing signatures. Do not combine package rewiring with
-  new captured-call invariants.
+- Next task: rewire
+  `eval_make_closure_captured_call_expr_preserves_typing_with_instantiated_body_with_preservation_core`
+  in `TypeSafetyCapturedCall.v`. Do not combine package rewiring with new
+  captured-call invariants.
 
 ### Phase 1: Compact Continuation Notes
 

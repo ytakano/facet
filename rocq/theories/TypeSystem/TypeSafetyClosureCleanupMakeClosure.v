@@ -87,7 +87,7 @@ Qed.
 
 Lemma eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_auto_with_preservation_core :
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_package_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   forall env (Ω : outlives_ctx) s s_args s_body args fname captures
       captured fdef fcall vs ret used' R_args Σ Σ_args captured_tys
@@ -151,8 +151,7 @@ Proof.
   destruct
     (eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
       Hframe_mutual
-      (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
-        Htyping_mutual)
+      Htyping_mutual
       Hparam_mutual env Ω s s s_args s_body
       (EMakeClosure fname captures) args fname captured fdef fcall vs ret
       used' (empty_root_env_for_store captured) R_args Σ_args σ T_body

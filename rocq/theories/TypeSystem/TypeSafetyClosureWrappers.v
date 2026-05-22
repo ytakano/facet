@@ -723,7 +723,8 @@ Lemma eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_
 Proof.
   eapply (eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_auto_with_preservation_core
             eval_preserves_frame_scope_roots_ready_mutual
-            eval_preserves_typing_roots_ready_prefix_mutual
+            (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+               eval_preserves_typing_roots_ready_prefix_mutual)
             eval_preserves_param_scope_roots_ready_mutual);
     eassumption.
 Qed.

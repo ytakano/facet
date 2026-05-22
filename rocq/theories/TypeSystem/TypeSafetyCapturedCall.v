@@ -1485,7 +1485,7 @@ Lemma eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_comp
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_package_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   forall env Ω n R Σ m x T args fname captures fdef
       s s_final ret R_args Σ_args arg_roots env_lt captured_tys
@@ -1582,8 +1582,7 @@ Proof.
     subst s_final.
     eapply (eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_core
               Hframe
-              (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
-                Hprefix)
+              Hprefix
               Hparam); try eassumption.
     eapply roots_exclude_stores_subset; eassumption. }
   assert (Hfresh_captured : ~ In x (store_names captured)).

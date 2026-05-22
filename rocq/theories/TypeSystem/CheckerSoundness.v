@@ -674,14 +674,33 @@ Proof.
   - eapply IH; eassumption.
 Qed.
 
-Lemma check_make_closure_captures_ctx_sound :
-  forall env Ω Γ captures params captured_tys,
-    check_make_closure_captures_ctx env Ω Γ captures params =
+Lemma closure_capture_allowed_b_sound :
+  forall env Ω env_lt T,
+    closure_capture_allowed_b env Ω env_lt T = true ->
+    closure_capture_allowed Ω env_lt T.
+Proof.
+  intros env Ω env_lt T Hallowed.
+  unfold closure_capture_allowed_b in Hallowed.
+  apply orb_true_iff in Hallowed as [Hfree | Href].
+  - apply CCap_RefFree.
+    apply (capture_ref_free_ty_b_ty_ref_free env T). exact Hfree.
+  - destruct T as [u core]; simpl in Href.
+    destruct core; try discriminate.
+    destruct r; try discriminate.
+    eapply CCap_SharedRef.
+    apply outlives_b_sound. exact Href.
+Qed.
+
+Lemma check_make_closure_captures_ctx_base_sound :
+  forall env Ω Γ captures params captured_tys env_lt,
+    check_make_closure_captures_ctx_base env Ω Γ captures params =
       infer_ok captured_tys ->
-    typed_captures Ω Γ captures params captured_tys.
+    closure_captures_allowed_b env Ω env_lt captured_tys = true ->
+    typed_captures Ω Γ env_lt captures params captured_tys.
 Proof.
   intros env Ω Γ captures.
-  induction captures as [| x captures IH]; intros params captured_tys Hcheck;
+  induction captures as [| x captures IH]; intros params captured_tys env_lt
+    Hcheck Hallowed;
     destruct params as [| cap params]; simpl in Hcheck; try discriminate.
   - injection Hcheck as <-. constructor.
   - destruct (ctx_lookup_state x Γ) as [[T st] |] eqn:Hlookup; try discriminate.
@@ -690,25 +709,44 @@ Proof.
     destruct (ctx_lookup_mut_b x Γ) as [m |] eqn:Hmut; try discriminate.
     destruct m; try discriminate.
     destruct (usage_eqb (ty_usage T) UUnrestricted) eqn:Husage; try discriminate.
-    destruct (capture_ref_free_ty_b env T) eqn:Href_free; try discriminate.
     destruct (ty_compatible_b Ω T (param_ty cap)) eqn:Hcompat; try discriminate.
-    destruct (check_make_closure_captures_ctx env Ω Γ captures params)
+    destruct (check_make_closure_captures_ctx_base env Ω Γ captures params)
       as [captured_rest | err] eqn:Hrest; try discriminate.
     injection Hcheck as <-.
+    simpl in Hallowed.
+    apply andb_true_iff in Hallowed as [Hhead Htail].
     eapply TCap_Cons.
     + eapply ctx_lookup_state_available_nil_lookup; eassumption.
     + exact Hmut.
     + apply usage_eqb_true. exact Husage.
-    + apply (capture_ref_free_ty_b_ty_ref_free env T). exact Href_free.
+    + eapply closure_capture_allowed_b_sound. exact Hhead.
     + apply ty_compatible_b_sound. exact Hcompat.
-    + eapply IH. exact Hrest.
+    + eapply IH; eassumption.
+Qed.
+
+Lemma check_make_closure_captures_ctx_sound :
+  forall env Ω Γ captures params env_lt captured_tys,
+    check_make_closure_captures_ctx env Ω Γ captures params =
+      infer_ok (env_lt, captured_tys) ->
+    typed_captures Ω Γ env_lt captures params captured_tys.
+Proof.
+  intros env Ω Γ captures params env_lt captured_tys Hcheck.
+  unfold check_make_closure_captures_ctx in Hcheck.
+  destruct (check_make_closure_captures_ctx_base env Ω Γ captures params)
+    as [captured_tys0 | err] eqn:Hbase; try discriminate.
+  destruct (infer_closure_env_lifetime Ω captured_tys0) as [env_lt0 | err]
+    eqn:Henv; try discriminate.
+  destruct (closure_captures_allowed_b env Ω env_lt0 captured_tys0)
+    eqn:Hallowed; try discriminate.
+  injection Hcheck as <- <-.
+  eapply check_make_closure_captures_ctx_base_sound; eassumption.
 Qed.
 
 Lemma check_make_closure_captures_exact_ctx_sound :
   forall env Ω Γ captures caps captured_tys,
     check_make_closure_captures_exact_ctx env Ω Γ captures caps =
       infer_ok captured_tys ->
-    typed_captures Ω Γ captures caps captured_tys /\
+    typed_captures Ω Γ LStatic captures caps captured_tys /\
     captured_tys = map param_ty caps.
 Proof.
   intros env Ω Γ captures.
@@ -747,7 +785,8 @@ Proof.
       * eapply ctx_lookup_state_available_nil_lookup; eassumption.
       * exact Hmut.
       * apply usage_eqb_true. exact Husage.
-      * apply (capture_ref_free_ty_b_ty_ref_free env (param_ty cap)).
+      * apply CCap_RefFree.
+        apply (capture_ref_free_ty_b_ty_ref_free env (param_ty cap)).
         exact Href_free.
       * apply ty_compatible_refl.
       * exact Htyped_tail.
@@ -837,7 +876,7 @@ Proof.
       + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
         destruct (check_make_closure_captures_ctx
                     (empty_global_env fenv) Ω Γ l (fn_captures fdef))
-          as [captured_tys | err] eqn:Hcheck; [|discriminate].
+          as [[env_lt captured_tys] | err] eqn:Hcheck; [|discriminate].
         injection Hinfer as <- <-.
         destruct (lookup_fn_b_sound i fenv fdef Hlookup) as [Hin Hname].
         eapply T_MakeClosure.

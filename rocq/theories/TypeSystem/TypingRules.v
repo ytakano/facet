@@ -255,13 +255,14 @@ Definition fn_signature_ty_with_usage (u : usage) (f : fn_def) : Ty :=
   | S _ => MkTy u (TForall m (close_fn_outlives m (fn_outlives f)) body)
   end.
 
-Definition closure_value_ty (f : fn_def) (captured_tys : list Ty) : Ty :=
+Definition closure_value_ty_at
+    (env_lt : lifetime) (f : fn_def) (captured_tys : list Ty) : Ty :=
   let u := closure_capture_usage captured_tys in
   let m := fn_lifetimes f in
   let body :=
     close_fn_ty m
       (MkTy UUnrestricted
-        (TClosure LStatic (map param_ty (fn_params f)) (fn_ret f))) in
+        (TClosure env_lt (map param_ty (fn_params f)) (fn_ret f))) in
   match m with
   | O =>
       match body with
@@ -269,6 +270,9 @@ Definition closure_value_ty (f : fn_def) (captured_tys : list Ty) : Ty :=
       end
   | S _ => MkTy u (TForall m (close_fn_outlives m (fn_outlives f)) body)
   end.
+
+Definition closure_value_ty (f : fn_def) (captured_tys : list Ty) : Ty :=
+  closure_value_ty_at LStatic f captured_tys.
 
 Definition fn_value_ty (f : fn_def) : Ty :=
   fn_signature_ty_with_usage UUnrestricted f.
@@ -286,18 +290,27 @@ Fixpoint place_root (p : place) : ident :=
   | PField q _ => place_root q
   end.
 
-Inductive typed_captures (Ω : outlives_ctx) (Γ : ctx)
+Inductive closure_capture_allowed
+    (Ω : outlives_ctx) (env_lt : lifetime) : Ty -> Prop :=
+  | CCap_RefFree : forall T,
+      ty_ref_free_b T = true ->
+      closure_capture_allowed Ω env_lt T
+  | CCap_SharedRef : forall u l T,
+      outlives Ω l env_lt ->
+      closure_capture_allowed Ω env_lt (MkTy u (TRef l RShared T)).
+
+Inductive typed_captures (Ω : outlives_ctx) (Γ : ctx) (env_lt : lifetime)
     : list ident -> list param -> list Ty -> Prop :=
   | TCap_Nil :
-      typed_captures Ω Γ [] [] []
+      typed_captures Ω Γ env_lt [] [] []
   | TCap_Cons : forall x captures cap caps T captured_tys,
       ctx_lookup x Γ = Some (T, false) ->
       ctx_lookup_mut x Γ = Some MImmutable ->
       ty_usage T = UUnrestricted ->
-      ty_ref_free_b T = true ->
+      closure_capture_allowed Ω env_lt T ->
       ty_compatible Ω T (param_ty cap) ->
-      typed_captures Ω Γ captures caps captured_tys ->
-      typed_captures Ω Γ (x :: captures) (cap :: caps) (T :: captured_tys).
+      typed_captures Ω Γ env_lt captures caps captured_tys ->
+      typed_captures Ω Γ env_lt (x :: captures) (cap :: caps) (T :: captured_tys).
 
 Inductive typed_place (fenv : list fn_def) (n : nat) (Γ : ctx)
     : place -> Ty -> Prop :=
@@ -368,12 +381,12 @@ Inductive typed (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) : ctx -> expr
       fn_captures fdef = [] ->
       typed fenv Ω n Γ (EFn fname) (fn_value_ty fdef) Γ
 
-  | T_MakeClosure : forall Γ fname fdef captures captured_tys,
+  | T_MakeClosure : forall Γ fname fdef captures env_lt captured_tys,
       In fdef fenv ->
       fn_name fdef = fname ->
-      typed_captures Ω Γ captures (fn_captures fdef) captured_tys ->
+      typed_captures Ω Γ env_lt captures (fn_captures fdef) captured_tys ->
       typed fenv Ω n Γ (EMakeClosure fname captures)
-        (closure_value_ty fdef captured_tys) Γ
+        (closure_value_ty_at env_lt fdef captured_tys) Γ
 
   (* let x: T = e1 in e2
      1. Type e1; the result type T1 must have the same core type as T

@@ -81,27 +81,34 @@ do not redefine the language accepted by the ordinary checker.
 
 Work in this order unless a proof exposes a soundness gap.
 
-1. **Implement Stage 7b captured-reference closures.**
+1. **Finish Stage 7b captured-reference closure calls.**
 
-   Foundation status: TClosure-first is done. `EMakeClosure` now produces
-   `TClosure LStatic ...` for the current reference-free closure literals, and
-   surface local annotations can write
-   `closure<'static>(Args...) -> Ret`. A closure literal is no longer accepted
-   by an ordinary `fn(Args...) -> Ret` annotation; the one-way compatibility
-   remains only `TFn` where `TClosure` is expected.
+   Core status: ordinary `EMakeClosure` capture checking now accepts
+   immutable unrestricted shared-reference values, rejects mutable bindings
+   and non-unrestricted captures, infers the closure env lifetime by searching
+   captured shared-reference lifetimes, and still keeps exact sidecar capture
+   validators reference-free. The Prop typing and checker soundness path are
+   updated for `closure_value_ty_at env_lt`.
+
+   Surface status: raw closure elaboration now inherits the enclosing lifetime
+   context for synthetic closure helper functions, and surface shared-reference
+   closure literals can be constructed.
 
    Next implementation task:
 
-   - Extend capture checking to accept immutable unrestricted shared-reference
-     values, not unique references or mutable bindings.
-   - Infer the closure env lifetime by full outlives search over captured
-     shared-reference lifetimes. If no captured references exist, keep
-     `LStatic`.
-   - Strengthen the Prop typing/soundness side before widening executable
-     validators or sidecar routes.
-   - Add valid and invalid surface fixtures for shared-reference capture,
-     missing outlives support, mutable binding capture, and `&mut` capture
-     rejection.
+   - Decide how callable captured-reference closures should expose enclosing
+     lifetimes. The current generated closure value is a
+     `TForall ... (TClosure ...)`, and the existing closure call path rejects
+     that with `ErrMalformedHrtBody`.
+   - Prefer a local, explicit route for closure-call lifetime instantiation.
+     Do not silently erase the helper function lifetime or make closure calls
+     ordinary direct-call evidence.
+   - Add a valid surface fixture that constructs and calls a captured-reference
+     closure only after the callable-lifetime route is implemented.
+   - Keep the invalid fixtures for missing outlives support, mutable binding
+     capture, and `&mut` capture rejection.
+   - Do not widen executable sidecar validators or captured-call routes until
+     runtime root evidence for captured references is designed and proved.
 
 2. **Keep the annotated local-let captured-call sidecar branch stable.**
 

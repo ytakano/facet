@@ -1601,13 +1601,13 @@ let fn_signature_ty_with_usage u f =
      body))))
      m)
 
-(** val closure_value_ty : fn_def -> ty list -> ty **)
+(** val closure_value_ty_at : lifetime -> fn_def -> ty list -> ty **)
 
-let closure_value_ty f captured_tys =
+let closure_value_ty_at env_lt f captured_tys =
   let u = closure_capture_usage captured_tys in
   let m = f.fn_lifetimes in
   let body =
-    close_fn_ty m (MkTy (UUnrestricted, (TClosure (LStatic,
+    close_fn_ty m (MkTy (UUnrestricted, (TClosure (env_lt,
       (map (fun p -> p.param_ty) f.fn_params), f.fn_ret))))
   in
   ((fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
@@ -2803,6 +2803,77 @@ type 'a infer_result =
 | Infer_ok of 'a
 | Infer_err of infer_error
 
+(** val shared_ref_lifetime_of_ty : ty -> lifetime option **)
+
+let shared_ref_lifetime_of_ty = function
+| MkTy (_, t0) ->
+  (match t0 with
+   | TRef (l, r, _) -> (match r with
+                        | RShared -> Some l
+                        | RUnique -> None)
+   | _ -> None)
+
+(** val collect_shared_ref_lifetimes : ty list -> lifetime list **)
+
+let rec collect_shared_ref_lifetimes = function
+| [] -> []
+| t :: rest ->
+  (match shared_ref_lifetime_of_ty t with
+   | Some l -> l :: (collect_shared_ref_lifetimes rest)
+   | None -> collect_shared_ref_lifetimes rest)
+
+(** val all_outlive_b : outlives_ctx -> lifetime list -> lifetime -> bool **)
+
+let rec all_outlive_b _UU03a9_ lts env_lt =
+  match lts with
+  | [] -> true
+  | l :: rest ->
+    (&&) (outlives_b _UU03a9_ l env_lt) (all_outlive_b _UU03a9_ rest env_lt)
+
+(** val find_closure_env_lifetime :
+    outlives_ctx -> lifetime list -> lifetime list -> lifetime option **)
+
+let rec find_closure_env_lifetime _UU03a9_ lts = function
+| [] -> None
+| l :: rest ->
+  if all_outlive_b _UU03a9_ lts l
+  then Some l
+  else find_closure_env_lifetime _UU03a9_ lts rest
+
+(** val infer_closure_env_lifetime :
+    outlives_ctx -> ty list -> lifetime infer_result **)
+
+let infer_closure_env_lifetime _UU03a9_ captured_tys =
+  let lts = collect_shared_ref_lifetimes captured_tys in
+  (match lts with
+   | [] -> Infer_ok LStatic
+   | _ :: _ ->
+     (match find_closure_env_lifetime _UU03a9_ lts lts with
+      | Some env_lt -> Infer_ok env_lt
+      | None -> Infer_err ErrLifetimeConflict))
+
+(** val closure_capture_allowed_b :
+    global_env -> outlives_ctx -> lifetime -> ty -> bool **)
+
+let closure_capture_allowed_b env _UU03a9_ env_lt t =
+  (||) (capture_ref_free_ty_b env t)
+    (let MkTy (_, t0) = t in
+     (match t0 with
+      | TRef (l, r, _) ->
+        (match r with
+         | RShared -> outlives_b _UU03a9_ l env_lt
+         | RUnique -> false)
+      | _ -> false))
+
+(** val closure_captures_allowed_b :
+    global_env -> outlives_ctx -> lifetime -> ty list -> bool **)
+
+let rec closure_captures_allowed_b env _UU03a9_ env_lt = function
+| [] -> true
+| t :: rest ->
+  (&&) (closure_capture_allowed_b env _UU03a9_ env_lt t)
+    (closure_captures_allowed_b env _UU03a9_ env_lt rest)
+
 (** val lookup_field_b : string -> (string * expr) list -> expr option **)
 
 let rec lookup_field_b name = function
@@ -2911,11 +2982,11 @@ let sctx_lookup =
 let sctx_lookup_mut =
   ctx_lookup_mut
 
-(** val check_make_closure_captures_sctx :
+(** val check_make_closure_captures_sctx_base :
     global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list
     infer_result **)
 
-let rec check_make_closure_captures_sctx env _UU03a9_ _UU03a3_ captures params =
+let rec check_make_closure_captures_sctx_base env _UU03a9_ _UU03a3_ captures params =
   match captures with
   | [] ->
     (match params with
@@ -2935,22 +3006,35 @@ let rec check_make_closure_captures_sctx env _UU03a9_ _UU03a3_ captures params =
                   (match m with
                    | MImmutable ->
                      if usage_eqb (ty_usage t) UUnrestricted
-                     then if capture_ref_free_ty_b env t
-                          then if ty_compatible_b _UU03a9_ t cap.param_ty
-                               then (match check_make_closure_captures_sctx
-                                             env _UU03a9_ _UU03a3_ captures'
-                                             params' with
-                                     | Infer_ok captured_tys ->
-                                       Infer_ok (t :: captured_tys)
-                                     | Infer_err err -> Infer_err err)
-                               else Infer_err
-                                      (compatible_error t cap.param_ty)
-                          else Infer_err (ErrNotAReference (ty_core t))
+                     then if ty_compatible_b _UU03a9_ t cap.param_ty
+                          then (match check_make_closure_captures_sctx_base
+                                        env _UU03a9_ _UU03a3_ captures'
+                                        params' with
+                                | Infer_ok captured_tys ->
+                                  Infer_ok (t :: captured_tys)
+                                | Infer_err err -> Infer_err err)
+                          else Infer_err (compatible_error t cap.param_ty)
                      else Infer_err (ErrUsageMismatch ((ty_usage t),
                             UUnrestricted))
                    | MMutable -> Infer_err (ErrNotMutable x))
                 | None -> Infer_err (ErrUnknownVar x))
         | None -> Infer_err (ErrUnknownVar x)))
+
+(** val check_make_closure_captures_sctx_with_env :
+    global_env -> outlives_ctx -> sctx -> ident list -> param list ->
+    (lifetime * ty list) infer_result **)
+
+let check_make_closure_captures_sctx_with_env env _UU03a9_ _UU03a3_ captures params =
+  match check_make_closure_captures_sctx_base env _UU03a9_ _UU03a3_ captures
+          params with
+  | Infer_ok captured_tys ->
+    (match infer_closure_env_lifetime _UU03a9_ captured_tys with
+     | Infer_ok env_lt ->
+       if closure_captures_allowed_b env _UU03a9_ env_lt captured_tys
+       then Infer_ok (env_lt, captured_tys)
+       else Infer_err (ErrNotAReference TUnits)
+     | Infer_err err -> Infer_err err)
+  | Infer_err err -> Infer_err err
 
 (** val check_make_closure_captures_exact_sctx :
     global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list
@@ -3356,10 +3440,12 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
     | EMakeClosure (fname, captures) ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         (match check_make_closure_captures_sctx env _UU03a9_ _UU03a3_
-                  captures fdef.fn_captures with
-          | Infer_ok captured_tys ->
-            Infer_ok ((closure_value_ty fdef captured_tys), _UU03a3_)
+         (match check_make_closure_captures_sctx_with_env env _UU03a9_
+                  _UU03a3_ captures fdef.fn_captures with
+          | Infer_ok p ->
+            let (env_lt, captured_tys) = p in
+            Infer_ok ((closure_value_ty_at env_lt fdef captured_tys),
+            _UU03a3_)
           | Infer_err err -> Infer_err err)
        | None -> Infer_err (ErrFunctionNotFound fname))
     | EPlace p ->
@@ -3775,11 +3861,12 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
     | EMakeClosure (fname, captures) ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         (match check_make_closure_captures_sctx env _UU03a9_ _UU03a3_
-                  captures fdef.fn_captures with
-          | Infer_ok captured_tys ->
-            Infer_ok (((closure_value_ty fdef captured_tys), _UU03a3_),
-              (EMakeClosure (fname, captures)))
+         (match check_make_closure_captures_sctx_with_env env _UU03a9_
+                  _UU03a3_ captures fdef.fn_captures with
+          | Infer_ok p ->
+            let (env_lt, captured_tys) = p in
+            Infer_ok (((closure_value_ty_at env_lt fdef captured_tys),
+            _UU03a3_), (EMakeClosure (fname, captures)))
           | Infer_err err -> Infer_err err)
        | None -> Infer_err (ErrFunctionNotFound fname))
     | EPlace p ->
@@ -4427,11 +4514,12 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
     | EMakeClosure (fname, captures) ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         (match check_make_closure_captures_sctx env _UU03a9_ _UU03a3_
-                  captures fdef.fn_captures with
-          | Infer_ok captured_tys ->
-            Infer_ok ((((closure_value_ty fdef captured_tys), _UU03a3_), r),
-              [])
+         (match check_make_closure_captures_sctx_with_env env _UU03a9_
+                  _UU03a3_ captures fdef.fn_captures with
+          | Infer_ok p ->
+            let (env_lt, captured_tys) = p in
+            Infer_ok ((((closure_value_ty_at env_lt fdef captured_tys),
+            _UU03a3_), r), [])
           | Infer_err err -> Infer_err err)
        | None -> Infer_err (ErrFunctionNotFound fname))
     | EPlace p ->
@@ -4892,11 +4980,12 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
     | EMakeClosure (fname, captures) ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         (match check_make_closure_captures_sctx env _UU03a9_ _UU03a3_
-                  captures fdef.fn_captures with
-          | Infer_ok captured_tys ->
-            Infer_ok ((((closure_value_ty fdef captured_tys), _UU03a3_), r),
-              [])
+         (match check_make_closure_captures_sctx_with_env env _UU03a9_
+                  _UU03a3_ captures fdef.fn_captures with
+          | Infer_ok p ->
+            let (env_lt, captured_tys) = p in
+            Infer_ok ((((closure_value_ty_at env_lt fdef captured_tys),
+            _UU03a3_), r), [])
           | Infer_err err -> Infer_err err)
        | None -> Infer_err (ErrFunctionNotFound fname))
     | EPlace p ->
@@ -5950,7 +6039,16 @@ let closure_elab_capture_param env _ _UU03a3_ x =
                then if capture_ref_free_ty_b env t
                     then Infer_ok { param_mutability = MImmutable;
                            param_name = x; param_ty = t }
-                    else Infer_err (ErrNotAReference (ty_core t))
+                    else let MkTy (_, t0) = t in
+                         (match t0 with
+                          | TRef (_, r, _) ->
+                            (match r with
+                             | RShared ->
+                               Infer_ok { param_mutability = MImmutable;
+                                 param_name = x; param_ty = t }
+                             | RUnique ->
+                               Infer_err (ErrNotAReference (ty_core t)))
+                          | _ -> Infer_err (ErrNotAReference (ty_core t)))
                else Infer_err (ErrUsageMismatch ((ty_usage t), UUnrestricted))
              | MMutable -> Infer_err (ErrNotMutable x))
           | None -> Infer_err (ErrUnknownVar x))
@@ -6184,16 +6282,15 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
         | Infer_ok cap_params ->
           let fname = closure_elab_name next in
           let body_ctx = sctx_of_ctx (params_ctx (app cap_params params)) in
-          (match elaborate_raw_expr_fuel fuel' env _UU03a9_
-                   Big_int_Z.zero_big_int body_ctx (Big_int_Z.succ_big_int
-                   next) body with
+          (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n body_ctx
+                   (Big_int_Z.succ_big_int next) body with
            | Infer_ok p ->
              let (p0, next') = p in
              let (p1, body_extras) = p0 in
              let (body', _) = p1 in
-             let fdef = { fn_name = fname; fn_lifetimes =
-               Big_int_Z.zero_big_int; fn_outlives = []; fn_captures =
-               cap_params; fn_params = params; fn_ret = ret; fn_body = body' }
+             let fdef = { fn_name = fname; fn_lifetimes = n; fn_outlives =
+               _UU03a9_; fn_captures = cap_params; fn_params = params;
+               fn_ret = ret; fn_body = body' }
              in
              let env_with_closure =
                append_env_fns env (app body_extras (fdef :: []))

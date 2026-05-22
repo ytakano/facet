@@ -1288,7 +1288,7 @@ Proof.
   destruct Hclosure as [fdef' [Hlookup' [_ HT]]].
   rewrite Hlookup in Hlookup'. inversion Hlookup'. subst fdef'.
   subst T.
-  unfold closure_value_ty, fn_signature_ty_with_usage.
+  unfold closure_value_ty, closure_value_ty_at.
   destruct (fn_lifetimes fdef); simpl.
   - destruct (close_fn_ty 0
       (MkTy UUnrestricted

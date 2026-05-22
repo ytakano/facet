@@ -805,6 +805,61 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma check_make_closure_captures_sctx_base_alpha_forward :
+  forall env ρ Σ Σr Ω captures params captured_tys,
+    ctx_alpha ρ Σ Σr ->
+    disjoint_names captures (rename_range ρ) ->
+    check_make_closure_captures_sctx_base env Ω Σ captures params =
+      infer_ok captured_tys ->
+    check_make_closure_captures_sctx_base env Ω Σr
+      (map (fun x => lookup_rename x ρ) captures) params =
+      infer_ok captured_tys.
+Proof.
+  intros env ρ Σ Σr Ω captures.
+  induction captures as [| x captures IH]; intros params captured_tys Halpha Hdisj Hcheck;
+    destruct params as [| cap params]; simpl in *; try discriminate.
+  - exact Hcheck.
+  - destruct (sctx_lookup x Σ) as [[T st] |] eqn:Hlookup; try discriminate.
+    change (sctx_lookup (lookup_rename x ρ) Σr) with
+      (ctx_lookup_state (lookup_rename x ρ) Σr).
+    rewrite (ctx_alpha_lookup_state_forward ρ Σ Σr x T st Halpha
+      ltac:(apply Hdisj; simpl; left; reflexivity) Hlookup).
+    destruct (negb (binding_available_b st [])); try discriminate.
+    destruct (sctx_lookup_mut x Σ) as [m |] eqn:Hmut; try discriminate.
+    change (sctx_lookup_mut (lookup_rename x ρ) Σr) with
+      (ctx_lookup_mut (lookup_rename x ρ) Σr).
+    rewrite (ctx_alpha_lookup_mut_forward ρ Σ Σr x m Halpha
+      ltac:(apply Hdisj; simpl; left; reflexivity) Hmut).
+    destruct m; try discriminate.
+    destruct (usage_eqb (ty_usage T) UUnrestricted); try discriminate.
+    destruct (ty_compatible_b Ω T (param_ty cap)); try discriminate.
+    destruct (check_make_closure_captures_sctx_base env Ω Σ captures params)
+      as [captured_rest | err] eqn:Hrest; try discriminate.
+    injection Hcheck as <-.
+    rewrite (IH params captured_rest Halpha
+      ltac:(intros y Hy; apply Hdisj; simpl; right; exact Hy) Hrest).
+    reflexivity.
+Qed.
+
+Lemma check_make_closure_captures_sctx_with_env_alpha_forward :
+  forall env ρ Σ Σr Ω captures params env_lt captured_tys,
+    ctx_alpha ρ Σ Σr ->
+    disjoint_names captures (rename_range ρ) ->
+    check_make_closure_captures_sctx_with_env env Ω Σ captures params =
+      infer_ok (env_lt, captured_tys) ->
+    check_make_closure_captures_sctx_with_env env Ω Σr
+      (map (fun x => lookup_rename x ρ) captures) params =
+      infer_ok (env_lt, captured_tys).
+Proof.
+  intros env ρ Σ Σr Ω captures params env_lt captured_tys Halpha Hdisj Hcheck.
+  unfold check_make_closure_captures_sctx_with_env in *.
+  destruct (check_make_closure_captures_sctx_base env Ω Σ captures params)
+    as [captured_tys0 | err] eqn:Hbase; try discriminate.
+  rewrite (check_make_closure_captures_sctx_base_alpha_forward
+    env ρ Σ Σr Ω captures params captured_tys0 Halpha Hdisj Hbase).
+  exact Hcheck.
+Qed.
+
 Lemma check_make_closure_captures_exact_sctx_alpha_forward :
   forall env ρ Σ Σr Ω captures params captured_tys,
     ctx_alpha ρ Σ Σr ->
@@ -4616,12 +4671,17 @@ Proof.
         * exact Hctx_r.
 	      + injection Hrename as <- <-.
 	        exists Σr. split; [econstructor; eauto | exact Hctx].
-	      + injection Hrename as <- <-.
-	        exists Σr. split.
-	        * eapply TES_MakeClosure; eauto.
-	          eapply check_make_closure_captures_sctx_alpha_forward; eauto.
-	        * exact Hctx.
-	      + destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+		      + injection Hrename as <- <-.
+		        exists Σr. split.
+		        * eapply TES_MakeClosure; eauto.
+		          eapply check_make_closure_captures_sctx_with_env_alpha_forward; eauto.
+		        * exact Hctx.
+		      + injection Hrename as <- <-.
+		        exists Σr. split.
+		        * eapply TES_MakeClosure_Static; eauto.
+		          eapply check_make_closure_captures_sctx_alpha_forward; eauto.
+		        * exact Hctx.
+		      + destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
 	                    : list (string * expr) * list ident :=
                     match fields0 with
                     | [] => ([], used0)
@@ -5343,7 +5403,14 @@ Inductive typed_env_roots_shadow_safe
       fn_captures fdef = [] ->
       typed_env_roots_shadow_safe env Ω n R Σ (EFn fname)
         (fn_value_ty fdef) Σ R []
-  | TERS_MakeClosure : forall R Σ fname fdef captures captured_tys,
+  | TERS_MakeClosure : forall R Σ fname fdef captures env_lt captured_tys,
+      In fdef (Program.env_fns env) ->
+      fn_name fdef = fname ->
+      check_make_closure_captures_sctx_with_env env Ω Σ captures (fn_captures fdef) =
+        infer_ok (env_lt, captured_tys) ->
+      typed_env_roots_shadow_safe env Ω n R Σ (EMakeClosure fname captures)
+        (closure_value_ty_at env_lt fdef captured_tys) Σ R []
+  | TERS_MakeClosure_Static : forall R Σ fname fdef captures captured_tys,
       In fdef (Program.env_fns env) ->
       fn_name fdef = fname ->
       check_make_closure_captures_sctx env Ω Σ captures (fn_captures fdef) =
@@ -5526,7 +5593,7 @@ Lemma typed_roots_shadow_safe_roots :
     typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots).
 Proof.
   intros env Ω n.
-  apply typed_roots_shadow_safe_ind; intros; subst; econstructor; eauto.
+  apply typed_roots_shadow_safe_ind; intros; subst; try solve [econstructor; eauto].
 Qed.
 
 Lemma typed_env_roots_shadow_safe_roots :
@@ -5700,10 +5767,17 @@ Proof.
     + exact HnsR0.
     + exact HR0.
     + apply root_set_equiv_refl.
-  - intros R Σ fname fdef captures captured_tys Hin Hfname Hcheck Hfresh
+  - intros R Σ fname fdef captures env_lt captured_tys Hin Hfname Hcheck Hfresh
       R0 HnsR HnsR0 HR0.
     exists R0, []. split; [| split; [| split]].
     + eapply TERS_MakeClosure; eauto.
+    + exact HnsR0.
+    + exact HR0.
+    + apply root_set_equiv_refl.
+  - intros R Σ fname fdef captures captured_tys Hin Hfname Hcheck Hfresh
+      R0 HnsR HnsR0 HR0.
+    exists R0, []. split; [| split; [| split]].
+    + eapply TERS_MakeClosure_Static; eauto.
     + exact HnsR0.
     + exact HR0.
     + apply root_set_equiv_refl.
@@ -13834,16 +13908,18 @@ Proof.
         * exact Hrename.
       + eapply alpha_rename_typed_env_roots_fn_shadow_safe_support_forward;
           eauto.
-      + injection Hrename as <- <-.
-        inversion Htyped; subst.
-        exists Σr, Rr, [].
-        split; [| split; [| split; [| split]]].
-        * eapply TERS_MakeClosure; eauto.
-          eapply check_make_closure_captures_sctx_alpha_forward; eauto.
-        * exact Hctx.
-        * exact HnsRr.
-        * exact HRr.
-        * apply root_set_equiv_refl.
+	      + injection Hrename as <- <-.
+	        inversion Htyped; subst.
+	        * do 3 eexists.
+	          repeat split; try exact Hctx; try exact HnsRr; try exact HRr;
+	            try apply root_set_equiv_refl.
+	          eapply TERS_MakeClosure; eauto.
+	          eapply check_make_closure_captures_sctx_with_env_alpha_forward; eauto.
+	        * do 3 eexists.
+	          repeat split; try exact Hctx; try exact HnsRr; try exact HRr;
+	            try apply root_set_equiv_refl.
+	          eapply TERS_MakeClosure_Static; eauto.
+	          eapply check_make_closure_captures_sctx_alpha_forward; eauto.
       + eapply alpha_rename_typed_env_roots_place_shadow_safe_support_forward;
           eauto.
       + eapply (alpha_rename_typed_env_roots_call_shadow_safe_support_forward

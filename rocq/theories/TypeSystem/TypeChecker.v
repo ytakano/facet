@@ -745,7 +745,72 @@ Inductive infer_result (A : Type) : Type :=
 Arguments infer_ok {_} _.
 Arguments infer_err {_} _.
 
-Fixpoint check_make_closure_captures_ctx
+Definition shared_ref_lifetime_of_ty (T : Ty) : option lifetime :=
+  match T with
+  | MkTy _ (TRef l RShared _) => Some l
+  | _ => None
+  end.
+
+Fixpoint collect_shared_ref_lifetimes (captured_tys : list Ty) : list lifetime :=
+  match captured_tys with
+  | [] => []
+  | T :: rest =>
+      match shared_ref_lifetime_of_ty T with
+      | Some l => l :: collect_shared_ref_lifetimes rest
+      | None => collect_shared_ref_lifetimes rest
+      end
+  end.
+
+Fixpoint all_outlive_b (Ω : outlives_ctx) (lts : list lifetime)
+    (env_lt : lifetime) : bool :=
+  match lts with
+  | [] => true
+  | l :: rest => outlives_b Ω l env_lt && all_outlive_b Ω rest env_lt
+  end.
+
+Fixpoint find_closure_env_lifetime
+    (Ω : outlives_ctx) (lts candidates : list lifetime)
+    : option lifetime :=
+  match candidates with
+  | [] => None
+  | l :: rest =>
+      if all_outlive_b Ω lts l
+      then Some l
+      else find_closure_env_lifetime Ω lts rest
+  end.
+
+Definition infer_closure_env_lifetime
+    (Ω : outlives_ctx) (captured_tys : list Ty) : infer_result lifetime :=
+  let lts := collect_shared_ref_lifetimes captured_tys in
+  match lts with
+  | [] => infer_ok LStatic
+  | _ =>
+      match find_closure_env_lifetime Ω lts lts with
+      | Some env_lt => infer_ok env_lt
+      | None => infer_err ErrLifetimeConflict
+      end
+  end.
+
+Definition closure_capture_allowed_b
+    (env : global_env) (Ω : outlives_ctx) (env_lt : lifetime) (T : Ty)
+    : bool :=
+  capture_ref_free_ty_b env T ||
+  match T with
+  | MkTy _ (TRef l RShared _) => outlives_b Ω l env_lt
+  | _ => false
+  end.
+
+Fixpoint closure_captures_allowed_b
+    (env : global_env) (Ω : outlives_ctx) (env_lt : lifetime)
+    (captured_tys : list Ty) : bool :=
+  match captured_tys with
+  | [] => true
+  | T :: rest =>
+      closure_capture_allowed_b env Ω env_lt T &&
+      closure_captures_allowed_b env Ω env_lt rest
+  end.
+
+Fixpoint check_make_closure_captures_ctx_base
     (env : global_env) (Ω : outlives_ctx) (Γ : ctx)
     (captures : list ident) (params : list param)
     : infer_result (list Ty) :=
@@ -762,22 +827,35 @@ Fixpoint check_make_closure_captures_ctx
           | Some MImmutable =>
               if usage_eqb (ty_usage T) UUnrestricted
               then
-                if capture_ref_free_ty_b env T
+                if ty_compatible_b Ω T (param_ty cap)
                 then
-                  if ty_compatible_b Ω T (param_ty cap)
-                  then
-                    match check_make_closure_captures_ctx env Ω Γ captures' params' with
-                    | infer_ok captured_tys => infer_ok (T :: captured_tys)
-                    | infer_err err => infer_err err
-                    end
-                  else infer_err (compatible_error T (param_ty cap))
-                else infer_err (ErrNotAReference (ty_core T))
+                  match check_make_closure_captures_ctx_base env Ω Γ captures' params' with
+                  | infer_ok captured_tys => infer_ok (T :: captured_tys)
+                  | infer_err err => infer_err err
+                  end
+                else infer_err (compatible_error T (param_ty cap))
               else infer_err (ErrUsageMismatch (ty_usage T) UUnrestricted)
           | Some MMutable => infer_err (ErrNotMutable x)
           | None => infer_err (ErrUnknownVar x)
           end
       end
   | _, _ => infer_err ErrArityMismatch
+  end.
+
+Definition check_make_closure_captures_ctx
+    (env : global_env) (Ω : outlives_ctx) (Γ : ctx)
+    (captures : list ident) (params : list param)
+    : infer_result (lifetime * list Ty) :=
+  match check_make_closure_captures_ctx_base env Ω Γ captures params with
+  | infer_ok captured_tys =>
+      match infer_closure_env_lifetime Ω captured_tys with
+      | infer_ok env_lt =>
+          if closure_captures_allowed_b env Ω env_lt captured_tys
+          then infer_ok (env_lt, captured_tys)
+          else infer_err (ErrNotAReference TUnits)
+      | infer_err err => infer_err err
+      end
+  | infer_err err => infer_err err
   end.
 
 Fixpoint check_make_closure_captures_exact_ctx
@@ -998,7 +1076,8 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
       | Some fdef =>
           match check_make_closure_captures_ctx
                   (empty_global_env fenv) Ω Γ captures (fn_captures fdef) with
-          | infer_ok captured_tys => infer_ok (closure_value_ty fdef captured_tys, Γ)
+          | infer_ok (env_lt, captured_tys) =>
+              infer_ok (closure_value_ty_at env_lt fdef captured_tys, Γ)
           | infer_err err => infer_err err
           end
       end
@@ -1391,7 +1470,8 @@ Fixpoint infer_core_env_fuel (fuel : nat)
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
           match check_make_closure_captures_ctx env Ω Γ captures (fn_captures fdef) with
-          | infer_ok captured_tys => infer_ok (closure_value_ty fdef captured_tys, Γ)
+          | infer_ok (env_lt, captured_tys) =>
+              infer_ok (closure_value_ty_at env_lt fdef captured_tys, Γ)
           | infer_err err => infer_err err
           end
       end
@@ -1744,6 +1824,38 @@ Definition sctx_lookup (x : ident) (Σ : sctx) : option (Ty * binding_state) :=
 Definition sctx_lookup_mut (x : ident) (Σ : sctx) : option mutability :=
   ctx_lookup_mut x Σ.
 
+Fixpoint check_make_closure_captures_sctx_base
+    (env : global_env) (Ω : outlives_ctx) (Σ : sctx)
+    (captures : list ident) (params : list param)
+    : infer_result (list Ty) :=
+  match captures, params with
+  | [], [] => infer_ok []
+  | x :: captures', cap :: params' =>
+      match sctx_lookup x Σ with
+      | None => infer_err (ErrUnknownVar x)
+      | Some (T, st) =>
+          if negb (binding_available_b st [])
+          then infer_err (ErrAlreadyConsumed x)
+          else
+          match sctx_lookup_mut x Σ with
+          | Some MImmutable =>
+              if usage_eqb (ty_usage T) UUnrestricted
+              then
+                if ty_compatible_b Ω T (param_ty cap)
+                then
+                  match check_make_closure_captures_sctx_base env Ω Σ captures' params' with
+                  | infer_ok captured_tys => infer_ok (T :: captured_tys)
+                  | infer_err err => infer_err err
+                  end
+                else infer_err (compatible_error T (param_ty cap))
+              else infer_err (ErrUsageMismatch (ty_usage T) UUnrestricted)
+          | Some MMutable => infer_err (ErrNotMutable x)
+          | None => infer_err (ErrUnknownVar x)
+          end
+      end
+  | _, _ => infer_err ErrArityMismatch
+  end.
+
 Fixpoint check_make_closure_captures_sctx
     (env : global_env) (Ω : outlives_ctx) (Σ : sctx)
     (captures : list ident) (params : list param)
@@ -1777,6 +1889,22 @@ Fixpoint check_make_closure_captures_sctx
           end
       end
   | _, _ => infer_err ErrArityMismatch
+  end.
+
+Definition check_make_closure_captures_sctx_with_env
+    (env : global_env) (Ω : outlives_ctx) (Σ : sctx)
+    (captures : list ident) (params : list param)
+    : infer_result (lifetime * list Ty) :=
+  match check_make_closure_captures_sctx_base env Ω Σ captures params with
+  | infer_ok captured_tys =>
+      match infer_closure_env_lifetime Ω captured_tys with
+      | infer_ok env_lt =>
+          if closure_captures_allowed_b env Ω env_lt captured_tys
+          then infer_ok (env_lt, captured_tys)
+          else infer_err (ErrNotAReference TUnits)
+      | infer_err err => infer_err err
+      end
+  | infer_err err => infer_err err
   end.
 
 Fixpoint check_make_closure_captures_exact_sctx
@@ -2145,8 +2273,9 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          match check_make_closure_captures_sctx env Ω Σ captures (fn_captures fdef) with
-          | infer_ok captured_tys => infer_ok (closure_value_ty fdef captured_tys, Σ)
+          match check_make_closure_captures_sctx_with_env env Ω Σ captures (fn_captures fdef) with
+          | infer_ok (env_lt, captured_tys) =>
+              infer_ok (closure_value_ty_at env_lt fdef captured_tys, Σ)
           | infer_err err => infer_err err
           end
       end
@@ -2535,9 +2664,10 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          match check_make_closure_captures_sctx env Ω Σ captures (fn_captures fdef) with
-          | infer_ok captured_tys =>
-              infer_ok (closure_value_ty fdef captured_tys, Σ, EMakeClosure fname captures)
+          match check_make_closure_captures_sctx_with_env env Ω Σ captures (fn_captures fdef) with
+          | infer_ok (env_lt, captured_tys) =>
+              infer_ok (closure_value_ty_at env_lt fdef captured_tys, Σ,
+                EMakeClosure fname captures)
           | infer_err err => infer_err err
           end
       end
@@ -3163,9 +3293,9 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          match check_make_closure_captures_sctx env Ω Σ captures (fn_captures fdef) with
-          | infer_ok captured_tys =>
-              infer_ok (closure_value_ty fdef captured_tys, Σ, R, [])
+          match check_make_closure_captures_sctx_with_env env Ω Σ captures (fn_captures fdef) with
+          | infer_ok (env_lt, captured_tys) =>
+              infer_ok (closure_value_ty_at env_lt fdef captured_tys, Σ, R, [])
           | infer_err err => infer_err err
           end
       end
@@ -3572,9 +3702,9 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          match check_make_closure_captures_sctx env Ω Σ captures (fn_captures fdef) with
-          | infer_ok captured_tys =>
-              infer_ok (closure_value_ty fdef captured_tys, Σ, R, [])
+          match check_make_closure_captures_sctx_with_env env Ω Σ captures (fn_captures fdef) with
+          | infer_ok (env_lt, captured_tys) =>
+              infer_ok (closure_value_ty_at env_lt fdef captured_tys, Σ, R, [])
           | infer_err err => infer_err err
           end
       end
@@ -5471,6 +5601,35 @@ Example infer_core_env_nonempty_capture_direct_call_rejects :
   infer_err ErrNotImplemented.
 Proof. vm_compute. reflexivity. Qed.
 
+Definition ex_shared_ref_capture_ty : Ty :=
+  MkTy UUnrestricted (TRef (LVar 0) RShared (MkTy UUnrestricted TIntegers)).
+
+Definition ex_shared_ref_capture_param : param :=
+  MkParam MImmutable (("captured_ref"%string), 0) ex_shared_ref_capture_ty.
+
+Definition ex_shared_ref_capture_callee_fn : fn_def :=
+  MkFnDef (("shared_ref_capture_callee"%string), 0) 1 []
+    [ex_shared_ref_capture_param] []
+    (MkTy UUnrestricted TIntegers)
+    (EDeref (EVar (("captured_ref"%string), 0))).
+
+Definition ex_shared_ref_capture_ctx : ctx :=
+  [((("r"%string), 0), ex_shared_ref_capture_ty,
+    MkBindingState false [], MImmutable)].
+
+Definition ex_shared_ref_capture_env : global_env :=
+  MkGlobalEnv [] [] [] [ex_shared_ref_capture_callee_fn].
+
+Example infer_core_env_shared_ref_capture_accepts :
+  infer_core_env ex_shared_ref_capture_env [] 1 ex_shared_ref_capture_ctx
+    (EMakeClosure (("shared_ref_capture_callee"%string), 0)
+      [(("r"%string), 0)]) =
+  infer_ok
+    (closure_value_ty_at (LVar 0) ex_shared_ref_capture_callee_fn
+      [ex_shared_ref_capture_ty],
+     ex_shared_ref_capture_ctx).
+Proof. vm_compute. reflexivity. Qed.
+
 Definition ex_ready_gap_captured_closure_call_expr : expr :=
   ELet MImmutable (("cap"%string), 0)
     (MkTy UUnrestricted TIntegers)
@@ -5846,7 +6005,11 @@ Definition closure_elab_capture_param
           then
             if capture_ref_free_ty_b env T
             then infer_ok (MkParam MImmutable x T)
-            else infer_err (ErrNotAReference (ty_core T))
+            else
+              match T with
+              | MkTy _ (TRef _ RShared _) => infer_ok (MkParam MImmutable x T)
+              | _ => infer_err (ErrNotAReference (ty_core T))
+              end
           else infer_err (ErrUsageMismatch (ty_usage T) UUnrestricted)
       | Some MMutable => infer_err (ErrNotMutable x)
       | None => infer_err (ErrUnknownVar x)
@@ -6034,10 +6197,10 @@ Fixpoint elaborate_raw_expr_fuel
           | infer_ok cap_params =>
               let fname := closure_elab_name next in
               let body_ctx := sctx_of_ctx (params_ctx (cap_params ++ params)) in
-              match elaborate_raw_expr_fuel fuel' env Ω 0 body_ctx (S next) body with
+              match elaborate_raw_expr_fuel fuel' env Ω n body_ctx (S next) body with
               | infer_err err => infer_err err
               | infer_ok (body', _, body_extras, next') =>
-                  let fdef := MkFnDef fname 0 [] cap_params params ret body' in
+                  let fdef := MkFnDef fname n Ω cap_params params ret body' in
                   let env_with_closure := append_env_fns env (body_extras ++ [fdef]) in
                   match infer_full_env env_with_closure fdef with
                   | infer_err err => infer_err err

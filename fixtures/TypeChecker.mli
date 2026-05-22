@@ -375,7 +375,7 @@ val ctx_merge : ctx -> ctx -> ctx option
 
 val fn_signature_ty_with_usage : usage -> fn_def -> ty
 
-val closure_value_ty : fn_def -> ty list -> ty
+val closure_value_ty_at : lifetime -> fn_def -> ty list -> ty
 
 val fn_value_ty : fn_def -> ty
 
@@ -574,6 +574,24 @@ type 'a infer_result =
 | Infer_ok of 'a
 | Infer_err of infer_error
 
+val shared_ref_lifetime_of_ty : ty -> lifetime option
+
+val collect_shared_ref_lifetimes : ty list -> lifetime list
+
+val all_outlive_b : outlives_ctx -> lifetime list -> lifetime -> bool
+
+val find_closure_env_lifetime :
+  outlives_ctx -> lifetime list -> lifetime list -> lifetime option
+
+val infer_closure_env_lifetime :
+  outlives_ctx -> ty list -> lifetime infer_result
+
+val closure_capture_allowed_b :
+  global_env -> outlives_ctx -> lifetime -> ty -> bool
+
+val closure_captures_allowed_b :
+  global_env -> outlives_ctx -> lifetime -> ty list -> bool
+
 val lookup_field_b : string -> (string * expr) list -> expr option
 
 val has_field_b : string -> (string * expr) list -> bool
@@ -602,9 +620,13 @@ val sctx_lookup : ident -> sctx -> (ty * binding_state) option
 
 val sctx_lookup_mut : ident -> sctx -> mutability option
 
-val check_make_closure_captures_sctx :
+val check_make_closure_captures_sctx_base :
   global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list
   infer_result
+
+val check_make_closure_captures_sctx_with_env :
+  global_env -> outlives_ctx -> sctx -> ident list -> param list ->
+  (lifetime * ty list) infer_result
 
 val check_make_closure_captures_exact_sctx :
   global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list

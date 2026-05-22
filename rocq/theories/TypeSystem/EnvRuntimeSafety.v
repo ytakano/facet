@@ -3252,17 +3252,24 @@ Proof.
             Sigma_args R_args arg_roots Htyped_args_shadow)
             as Htyped_args_roots
       end.
-	      dependent destruction Htyped_let.
+		      dependent destruction Htyped_let.
       match goal with
-      | Hmake : typed_env_roots_shadow_safe _ _ _ _ _
-          (EMakeClosure _ _) _ _ _ _ |- _ =>
-          dependent destruction Hmake
+      | Hmake : typed_env_roots_shadow_safe _ _ _ ?R0 ?Σ0
+          (EMakeClosure _ _) _ ?Σ1 ?R1 ?roots1 |- _ =>
+          assert (Σ1 = Σ0 /\ R1 = R0 /\ roots1 = []) as Hmake_frame
       end.
-	      assert (Hfresh_store_lookup : store_lookup x0 s = None).
-	      { match goal with
-	        | Hlookup_x : root_env_lookup x0 (initial_root_env_for_fn f) = None |- _ =>
-	            eapply store_roots_within_lookup_none; eassumption
-	        end. }
+      { match goal with
+        | Hmake : typed_env_roots_shadow_safe _ _ _ _ _
+            (EMakeClosure _ _) _ _ _ _ |- _ =>
+            inversion Hmake; subst; repeat split
+        end. }
+      destruct Hmake_frame as [-> [-> ->]].
+			      assert (Hfresh_store_lookup : store_lookup x0 s = None).
+		      { match goal with
+		        | Hlookup_x : root_env_lookup ?x (initial_root_env_for_fn f) = None
+		            |- store_lookup ?x s = None =>
+		            eapply store_roots_within_lookup_none; eassumption
+		        end. }
 	      assert (Hfresh_s : ~ In x0 (store_names s)).
 	      { apply store_lookup_none_not_in_store_names.
 	        exact Hfresh_store_lookup. }

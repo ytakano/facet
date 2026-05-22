@@ -499,7 +499,14 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       fn_name fdef = fname ->
       fn_captures fdef = [] ->
       typed_env_structural env Ω n Σ (EFn fname) (fn_value_ty fdef) Σ
-  | TES_MakeClosure : forall Σ fname fdef captures captured_tys,
+  | TES_MakeClosure : forall Σ fname fdef captures env_lt captured_tys,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      check_make_closure_captures_sctx_with_env env Ω Σ captures (fn_captures fdef) =
+        infer_ok (env_lt, captured_tys) ->
+      typed_env_structural env Ω n Σ (EMakeClosure fname captures)
+        (closure_value_ty_at env_lt fdef captured_tys) Σ
+  | TES_MakeClosure_Static : forall Σ fname fdef captures captured_tys,
       In fdef (env_fns env) ->
       fn_name fdef = fname ->
       check_make_closure_captures_sctx env Ω Σ captures (fn_captures fdef) =
@@ -693,7 +700,14 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       fn_name fdef = fname ->
       fn_captures fdef = [] ->
       typed_env_roots env Ω n R Σ (EFn fname) (fn_value_ty fdef) Σ R []
-  | TER_MakeClosure : forall R Σ fname fdef captures captured_tys,
+  | TER_MakeClosure : forall R Σ fname fdef captures env_lt captured_tys,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      check_make_closure_captures_sctx_with_env env Ω Σ captures (fn_captures fdef) =
+        infer_ok (env_lt, captured_tys) ->
+      typed_env_roots env Ω n R Σ (EMakeClosure fname captures)
+        (closure_value_ty_at env_lt fdef captured_tys) Σ R []
+  | TER_MakeClosure_Static : forall R Σ fname fdef captures captured_tys,
       In fdef (env_fns env) ->
       fn_name fdef = fname ->
       check_make_closure_captures_sctx env Ω Σ captures (fn_captures fdef) =
@@ -905,8 +919,8 @@ Proof.
     + replace (MkTy (closure_capture_usage captured_tys)
           (TClosure LStatic (map param_ty (fn_params fdef)) (fn_ret fdef)))
         with (closure_value_ty fdef captured_tys).
-      * eapply TES_MakeClosure; eauto.
-      * unfold closure_value_ty, fn_signature_ty_with_usage.
+      * eapply TES_MakeClosure_Static; eauto.
+      * unfold closure_value_ty, closure_value_ty_at.
         rewrite e0. simpl.
         rewrite map_lifetimes_tys_close_fn_lifetime_0.
         rewrite map_lifetimes_ty_close_fn_lifetime_0.
@@ -1143,10 +1157,17 @@ Proof.
     + exact HnsR0.
     + exact HR0.
     + apply root_set_equiv_refl.
-  - intros R Σ fname fdef captures captured_tys Hin Hfname Hcaptures
+  - intros R Σ fname fdef captures env_lt captured_tys Hin Hfname Hcaptures
       Hfresh R0 HnsR HnsR0 HR0.
     exists R0, []. split; [| split; [| split]].
     + eapply TER_MakeClosure; eauto.
+    + exact HnsR0.
+    + exact HR0.
+    + apply root_set_equiv_refl.
+  - intros R Σ fname fdef captures captured_tys Hin Hfname Hcaptures
+      Hfresh R0 HnsR HnsR0 HR0.
+    exists R0, []. split; [| split; [| split]].
+    + eapply TER_MakeClosure_Static; eauto.
     + exact HnsR0.
     + exact HR0.
     + apply root_set_equiv_refl.
@@ -1599,6 +1620,7 @@ Proof.
       match goal with
       | H : sctx_consume_path _ _ _ = infer_ok _ |- _ => exact H
       end.
+    + apply sctx_same_bindings_refl.
     + apply sctx_same_bindings_refl.
     + apply sctx_same_bindings_refl.
     + eapply typed_fields_env_structural_same_bindings.

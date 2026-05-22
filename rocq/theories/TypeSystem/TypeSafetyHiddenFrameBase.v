@@ -280,7 +280,7 @@ Lemma check_make_closure_captures_exact_sctx_sound :
   forall env Ω Σ captures caps captured_tys,
     check_make_closure_captures_exact_sctx env Ω Σ captures caps =
       infer_ok captured_tys ->
-    typed_captures Ω Σ captures caps captured_tys /\
+    typed_captures Ω Σ LStatic captures caps captured_tys /\
     captured_tys = map param_ty caps.
 Proof.
   intros env Ω Σ captures.
@@ -320,7 +320,8 @@ Proof.
         eapply ctx_lookup_state_available_nil_lookup; eassumption.
       * exact Hmut.
       * apply usage_eqb_true. exact Husage.
-      * apply (capture_ref_free_ty_b_ty_ref_free env (param_ty cap)).
+      * apply CCap_RefFree.
+        apply (capture_ref_free_ty_b_ty_ref_free env (param_ty cap)).
         exact Href_free.
       * apply ty_compatible_refl.
       * exact Htyped_tail.

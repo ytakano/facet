@@ -892,6 +892,7 @@ Proof.
   - eapply TERS_Call; eauto.
   - eapply TERS_Fn; eauto.
   - eapply TERS_MakeClosure; eauto.
+  - eapply TERS_MakeClosure_Static; eauto.
   - eapply TERS_CallExpr_MakeClosure; eauto.
   - eapply TERS_Struct; eauto.
   - pose proof (root_env_tail_fresh_names_app_l _ _ _ H1) as Hfresh1.
@@ -1286,4 +1287,3 @@ Proof.
   - intros x Hin.
     eapply root_env_remove_params_lookup_none; eassumption.
 Qed.
-

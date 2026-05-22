@@ -1,0 +1,4 @@
+fn bad<'a>(r: affine &'a mut unrestricted isize) -> unrestricted isize {
+    let f = closure [r](x: unrestricted isize) -> unrestricted isize { (*r) } in
+    (f 0)
+}

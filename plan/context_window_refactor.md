@@ -137,8 +137,11 @@ runtime safety currently cross theorem boundaries.
   `TypeSafetyClosureRuntimeArgsFacts.v` now owns the helper lemma cluster from
   `bind_params_head_fresh_in_tail` through the make-closure captured-call
   frame params readiness bridge.
+- Extracted the roots-ready package interface:
+  `TypeSafetyRootedPackages.v` now owns the rooted result records, package
+  statements, conversion lemmas, and readiness bridge used by runtime args.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/TypeSafetyClosureRuntimeArgsFacts.vo theories/TypeSystem/TypeSafetyClosureRuntimeArgs.vo theories/TypeSystem/TypeSafetyClosure.v`.
+  `cd rocq && make theories/TypeSystem/TypeSafetyRootedPackages.vo theories/TypeSystem/TypeSafetyClosureRuntimeArgs.vo theories/TypeSystem/TypeSafetyClosure.v`.
 - Next task: continue Phase 3 by looking for the next stable helper cluster
   that can move out of a large preservation file without changing theorem
   statements.

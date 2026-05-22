@@ -28,6 +28,7 @@ theories/TypeSystem/TypeSafetyParamScopeReady.v
 theories/TypeSystem/TypeSafetyFrameScopeReady.v
 theories/TypeSystem/TypeSafetyHiddenFrameCleanupFacts.v
 theories/TypeSystem/TypeSafetyHiddenFrame.v
+theories/TypeSystem/TypeSafetyRootedPackages.v
 theories/TypeSystem/TypeSafetyClosureRuntimeArgsFacts.v
 theories/TypeSystem/TypeSafetyClosureRuntimeArgs.v
 theories/TypeSystem/TypeSafetyClosureCleanupFrame.v

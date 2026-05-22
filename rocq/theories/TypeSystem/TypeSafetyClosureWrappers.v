@@ -759,7 +759,8 @@ Proof.
   eapply
     (eval_make_closure_captured_call_runtime_args_ready_auto_with_preservation_core
       eval_preserves_typing_ready_mutual
-      eval_preserves_roots_ready_mutual
+      (eval_preserves_roots_ready_mutual_statement_to_package
+        eval_preserves_roots_ready_mutual)
       eval_preserves_root_names_ready_mutual
       eval_preserves_root_keys_named_ready_mutual);
     eassumption.
@@ -811,7 +812,8 @@ Proof.
   eapply
     (eval_let_make_closure_captured_call_runtime_args_ready_auto_with_preservation_core
       eval_preserves_typing_ready_mutual
-      eval_preserves_roots_ready_mutual
+      (eval_preserves_roots_ready_mutual_statement_to_package
+        eval_preserves_roots_ready_mutual)
       eval_preserves_root_names_ready_mutual
       eval_preserves_root_keys_named_ready_mutual);
     eassumption.

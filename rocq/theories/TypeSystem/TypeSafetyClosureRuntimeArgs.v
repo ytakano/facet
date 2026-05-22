@@ -1428,7 +1428,7 @@ Qed.
 
 Lemma eval_make_closure_captured_call_runtime_args_ready_auto_with_env_with_preservation_core :
   eval_preserves_typing_ready_mutual_statement ->
-  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_package_statement ->
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
   forall env Ω n R Σ args fname captures captured fdef fcall used'
@@ -1483,11 +1483,18 @@ Proof.
               (typed_args_roots_structural env Ω n R Σ args
                 (fn_params fdef) Σ_args R_args arg_roots Htyped_args))
     as [Hstore_args [Hargs_fdef_sargs Hpres_args]].
-  destruct (proj1 (proj2 Hroots_mutual)
+  pose proof (proj1 (proj2 Hroots_mutual)
               env s args s_args vs Heval_args Ω n R Σ
               (fn_params fdef) Σ_args R_args arg_roots Hprov_args Hroots
-              Hshadow Hrn Htyped_args)
-    as [Hroots_args' [Hvalue_roots [Hshadow_args Hrn_args]]].
+              Hshadow Hrn Htyped_args) as Hrooted_args.
+  pose proof (rooted_args_store_roots _ _ _ _ Hrooted_args)
+    as Hroots_args'.
+  pose proof (rooted_args_value_roots _ _ _ _ Hrooted_args)
+    as Hvalue_roots.
+  pose proof (rooted_args_store_no_shadow _ _ _ _ Hrooted_args)
+    as Hshadow_args.
+  pose proof (rooted_args_root_env_no_shadow _ _ _ _ Hrooted_args)
+    as Hrn_args.
   pose proof (proj1 (proj2 Hnames)
               env s args s_args vs Heval_args Ω n R Σ
               (fn_params fdef) Σ_args R_args arg_roots Hprov_args Hstore
@@ -2336,7 +2343,7 @@ Qed.
 
 Lemma eval_make_closure_captured_call_runtime_args_ready_auto_with_preservation_core :
   eval_preserves_typing_ready_mutual_statement ->
-  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_package_statement ->
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
   forall env Ω n R Σ args fname captures captured fdef fcall used'
@@ -2378,15 +2385,73 @@ Lemma eval_make_closure_captured_call_runtime_args_ready_auto_with_preservation_
       (call_param_root_env (fn_params fcall) arg_roots
         (empty_root_env_for_store captured ++ R_args)).
 Proof.
-  intros Htyping Hroots Hnames Hkeys.
+  intros Htyping Hroots_pkg Hnames Hkeys.
+  destruct Hroots_pkg as [Hroot_expr [Hroot_args Hroot_fields]].
+  assert (Hroot_expr_plain :
+    forall env s e s' v,
+      eval env s e s' v ->
+      forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+        provenance_ready_expr e ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+        store_roots_within R' s' /\
+        value_roots_within roots v /\
+        store_no_shadow s' /\
+        root_env_no_shadow R').
+  { intros env_a s_a e_a s_b v_a Heval Ω_a n_a R_a Σ_a T_a Σ_b
+      R_b roots_a Hready Hroots Hshadow Hrn Htyped.
+    destruct (Hroot_expr env_a s_a e_a s_b v_a Heval Ω_a n_a R_a
+      Σ_a T_a Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped)
+      as [Hroots' Hvalue Hshadow' Hrn'].
+    repeat split; assumption. }
+  assert (Hroot_args_plain :
+    forall env s args s' vs,
+      eval_args env s args s' vs ->
+      forall (Ω : outlives_ctx) (n : nat) R Σ ps Σ' R' roots,
+        provenance_ready_args args ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+        store_roots_within R' s' /\
+        Forall2 value_roots_within roots vs /\
+        store_no_shadow s' /\
+        root_env_no_shadow R').
+  { intros env_a s_a args_a s_b vs_a Heval Ω_a n_a R_a Σ_a ps_a
+      Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped.
+    destruct (Hroot_args env_a s_a args_a s_b vs_a Heval Ω_a n_a R_a
+      Σ_a ps_a Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped)
+      as [Hroots' Hvalues Hshadow' Hrn'].
+    repeat split; assumption. }
+  assert (Hroot_fields_plain :
+    forall env s fields defs s' values,
+      eval_struct_fields env s fields defs s' values ->
+      forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots,
+        provenance_ready_fields fields ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+        store_roots_within R' s' /\
+        value_fields_roots_within roots values /\
+        store_no_shadow s' /\
+        root_env_no_shadow R').
+  { intros env_a s_a fields_a defs_a s_b values_a Heval Ω_a n_a lts_a
+      args_a R_a Σ_a Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped.
+    destruct (Hroot_fields env_a s_a fields_a defs_a s_b values_a Heval
+      Ω_a n_a lts_a args_a R_a Σ_a Σ_b R_b roots_a Hready Hroots
+      Hshadow Hrn Htyped) as [Hroots' Hvalues Hshadow' Hrn'].
+    repeat split; assumption. }
   eapply
     (eval_make_closure_captured_call_runtime_args_ready_auto_with_preservation_parts_core
       (proj1 Htyping)
       (proj1 (proj2 Htyping))
       (proj2 (proj2 Htyping))
-      (proj1 Hroots)
-      (proj1 (proj2 Hroots))
-      (proj2 (proj2 Hroots))
+      Hroot_expr_plain
+      Hroot_args_plain
+      Hroot_fields_plain
       (proj1 Hnames)
       (proj1 (proj2 Hnames))
       (proj2 (proj2 Hnames))
@@ -2398,7 +2463,7 @@ Qed.
 
 Lemma eval_let_make_closure_captured_call_runtime_args_ready_auto_with_preservation_core :
   eval_preserves_typing_ready_mutual_statement ->
-  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_package_statement ->
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
   forall env Ω n R Σ args fname captures captured fdef fcall used'
@@ -2443,15 +2508,73 @@ Lemma eval_let_make_closure_captured_call_runtime_args_ready_auto_with_preservat
       (call_param_root_env (fn_params fcall) arg_roots
         (empty_root_env_for_store captured ++ root_env_add x [] R_args)).
 Proof.
-  intros Htyping Hroots Hnames Hkeys.
+  intros Htyping Hroots_pkg Hnames Hkeys.
+  destruct Hroots_pkg as [Hroot_expr [Hroot_args Hroot_fields]].
+  assert (Hroot_expr_plain :
+    forall env s e s' v,
+      eval env s e s' v ->
+      forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+        provenance_ready_expr e ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+        store_roots_within R' s' /\
+        value_roots_within roots v /\
+        store_no_shadow s' /\
+        root_env_no_shadow R').
+  { intros env_a s_a e_a s_b v_a Heval Ω_a n_a R_a Σ_a T_a Σ_b
+      R_b roots_a Hready Hroots Hshadow Hrn Htyped.
+    destruct (Hroot_expr env_a s_a e_a s_b v_a Heval Ω_a n_a R_a
+      Σ_a T_a Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped)
+      as [Hroots' Hvalue Hshadow' Hrn'].
+    repeat split; assumption. }
+  assert (Hroot_args_plain :
+    forall env s args s' vs,
+      eval_args env s args s' vs ->
+      forall (Ω : outlives_ctx) (n : nat) R Σ ps Σ' R' roots,
+        provenance_ready_args args ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+        store_roots_within R' s' /\
+        Forall2 value_roots_within roots vs /\
+        store_no_shadow s' /\
+        root_env_no_shadow R').
+  { intros env_a s_a args_a s_b vs_a Heval Ω_a n_a R_a Σ_a ps_a
+      Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped.
+    destruct (Hroot_args env_a s_a args_a s_b vs_a Heval Ω_a n_a R_a
+      Σ_a ps_a Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped)
+      as [Hroots' Hvalues Hshadow' Hrn'].
+    repeat split; assumption. }
+  assert (Hroot_fields_plain :
+    forall env s fields defs s' values,
+      eval_struct_fields env s fields defs s' values ->
+      forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots,
+        provenance_ready_fields fields ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+        store_roots_within R' s' /\
+        value_fields_roots_within roots values /\
+        store_no_shadow s' /\
+        root_env_no_shadow R').
+  { intros env_a s_a fields_a defs_a s_b values_a Heval Ω_a n_a lts_a
+      args_a R_a Σ_a Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped.
+    destruct (Hroot_fields env_a s_a fields_a defs_a s_b values_a Heval
+      Ω_a n_a lts_a args_a R_a Σ_a Σ_b R_b roots_a Hready Hroots
+      Hshadow Hrn Htyped) as [Hroots' Hvalues Hshadow' Hrn'].
+    repeat split; assumption. }
   eapply
     (eval_let_make_closure_captured_call_runtime_args_ready_auto_with_preservation_parts_core
       (proj1 Htyping)
       (proj1 (proj2 Htyping))
       (proj2 (proj2 Htyping))
-      (proj1 Hroots)
-      (proj1 (proj2 Hroots))
-      (proj2 (proj2 Hroots))
+      Hroot_expr_plain
+      Hroot_args_plain
+      Hroot_fields_plain
       (proj1 Hnames)
       (proj1 (proj2 Hnames))
       (proj2 (proj2 Hnames))
@@ -2463,7 +2586,7 @@ Qed.
 
 Lemma eval_let_make_closure_captured_call_runtime_args_ready_auto_with_env_with_preservation_core :
   eval_preserves_typing_ready_mutual_statement ->
-  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_package_statement ->
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
   forall env Ω n R Σ args fname captures captured fdef fcall used'
@@ -2513,15 +2636,73 @@ Lemma eval_let_make_closure_captured_call_runtime_args_ready_auto_with_env_with_
         (capture_store_root_env captured ++
           root_env_add x hidden_roots R_args)).
 Proof.
-  intros Htyping Hroots Hnames Hkeys.
+  intros Htyping Hroots_pkg Hnames Hkeys.
+  destruct Hroots_pkg as [Hroot_expr [Hroot_args Hroot_fields]].
+  assert (Hroot_expr_plain :
+    forall env s e s' v,
+      eval env s e s' v ->
+      forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+        provenance_ready_expr e ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+        store_roots_within R' s' /\
+        value_roots_within roots v /\
+        store_no_shadow s' /\
+        root_env_no_shadow R').
+  { intros env_a s_a e_a s_b v_a Heval Ω_a n_a R_a Σ_a T_a Σ_b
+      R_b roots_a Hready Hroots Hshadow Hrn Htyped.
+    destruct (Hroot_expr env_a s_a e_a s_b v_a Heval Ω_a n_a R_a
+      Σ_a T_a Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped)
+      as [Hroots' Hvalue Hshadow' Hrn'].
+    repeat split; assumption. }
+  assert (Hroot_args_plain :
+    forall env s args s' vs,
+      eval_args env s args s' vs ->
+      forall (Ω : outlives_ctx) (n : nat) R Σ ps Σ' R' roots,
+        provenance_ready_args args ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+        store_roots_within R' s' /\
+        Forall2 value_roots_within roots vs /\
+        store_no_shadow s' /\
+        root_env_no_shadow R').
+  { intros env_a s_a args_a s_b vs_a Heval Ω_a n_a R_a Σ_a ps_a
+      Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped.
+    destruct (Hroot_args env_a s_a args_a s_b vs_a Heval Ω_a n_a R_a
+      Σ_a ps_a Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped)
+      as [Hroots' Hvalues Hshadow' Hrn'].
+    repeat split; assumption. }
+  assert (Hroot_fields_plain :
+    forall env s fields defs s' values,
+      eval_struct_fields env s fields defs s' values ->
+      forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots,
+        provenance_ready_fields fields ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+        store_roots_within R' s' /\
+        value_fields_roots_within roots values /\
+        store_no_shadow s' /\
+        root_env_no_shadow R').
+  { intros env_a s_a fields_a defs_a s_b values_a Heval Ω_a n_a lts_a
+      args_a R_a Σ_a Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped.
+    destruct (Hroot_fields env_a s_a fields_a defs_a s_b values_a Heval
+      Ω_a n_a lts_a args_a R_a Σ_a Σ_b R_b roots_a Hready Hroots
+      Hshadow Hrn Htyped) as [Hroots' Hvalues Hshadow' Hrn'].
+    repeat split; assumption. }
   eapply
     (eval_let_make_closure_captured_call_runtime_args_ready_auto_with_env_with_preservation_parts_core
       (proj1 Htyping)
       (proj1 (proj2 Htyping))
       (proj2 (proj2 Htyping))
-      (proj1 Hroots)
-      (proj1 (proj2 Hroots))
-      (proj2 (proj2 Hroots))
+      Hroot_expr_plain
+      Hroot_args_plain
+      Hroot_fields_plain
       (proj1 Hnames)
       (proj1 (proj2 Hnames))
       (proj2 (proj2 Hnames))

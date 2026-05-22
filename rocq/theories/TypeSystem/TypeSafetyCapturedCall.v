@@ -893,7 +893,8 @@ Proof.
     Hexclude_env.
   destruct
     (eval_make_closure_captured_call_runtime_args_ready_auto_with_preservation_core
-      Htyping Hroots Hnames Hkeys env Ω n R Σ args fname captures
+      Htyping (eval_preserves_roots_ready_mutual_statement_to_package Hroots)
+      Hnames Hkeys env Ω n R Σ args fname captures
       captured fdef fcall used' s s_args vs R_args Σ_args arg_roots
       captured_tys Hstore Hroots_store Hshadow Hrn Hnamed Hkeys_named
       Heval_make Hlookup Heval_args Hrename Hcheck Hnodup_caps
@@ -992,7 +993,8 @@ Proof.
     Hready_args Htyped_args Hnodup_binding Hprov_body Htyped_body
     Hcompat_body Hexclude_roots Hexclude_env.
   destruct (eval_make_closure_captured_call_runtime_args_ready_auto_with_env_with_preservation_core
-              Htyping Hroots_mutual Hnames Hkeys_mutual env Ω n R Σ args fname captures captured fdef fcall used'
+              Htyping (eval_preserves_roots_ready_mutual_statement_to_package Hroots_mutual)
+              Hnames Hkeys_mutual env Ω n R Σ args fname captures captured fdef fcall used'
               s s_args vs R_args Σ_args arg_roots env_lt captured_tys
               Hstore Hroots Hshadow Hrn Hnamed Hkeys Heval_make Hlookup
               Heval_args Hrename Hcheck Hnodup_caps Hready_args
@@ -1582,7 +1584,8 @@ Proof.
                captures (fn_captures fdef) s captured Hcopy).
     exact Hfresh_cap_names. }
   destruct (eval_let_make_closure_captured_call_runtime_args_ready_auto_with_env_with_preservation_core
-              Htyping Hroots_mutual Hnames Hkeys_mutual env Ω n R Σ args fname captures captured fdef fcall used'
+              Htyping (eval_preserves_roots_ready_mutual_statement_to_package Hroots_mutual)
+              Hnames Hkeys_mutual env Ω n R Σ args fname captures captured fdef fcall used'
               s s_args_hidden s_args vs R_args Σ_args arg_roots
               env_lt captured_tys x T Hstore Hroots Hshadow Hrn Hnamed Hkeys
               Hlookup Hcopy Hhidden Heval_args Hrename Hcheck Hnodup_caps

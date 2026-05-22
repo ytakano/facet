@@ -43,11 +43,14 @@ runtime safety currently cross theorem boundaries.
   roots-ready and typed-prefix roots-ready statements now have package forms and
   conversion lemmas, while the existing public statement aliases remain
   unchanged.
+- Rewired runtime-args captured-call cores to consume the roots-ready package
+  statement; public wrappers and captured-call bridge callers convert existing
+  plain statements at the boundary.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/TypeSafetyClosureRuntimeArgs.vo theories/TypeSystem/TypeSafetyClosureCleanupFrame.vo theories/TypeSystem/TypeSafetyCapturedCall.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo theories/TypeSystem/TypeSafety.vo`.
-- Next task: rewire one target theorem at a time to the package statement, then
-  project back through compatibility wrappers. Do not combine package rewiring
-  with new captured-call invariants.
+  `cd rocq && make theories/TypeSystem/TypeSafetyClosureRuntimeArgs.vo theories/TypeSystem/TypeSafetyCapturedCall.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo theories/TypeSystem/TypeSafety.vo`.
+- Next task: rewire one typed-prefix cleanup theorem at a time to the package
+  statement, then project back through compatibility wrappers. Do not combine
+  package rewiring with new captured-call invariants.
 
 ### Phase 1: Compact Continuation Notes
 

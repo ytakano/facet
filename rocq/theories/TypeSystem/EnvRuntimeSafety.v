@@ -1180,7 +1180,7 @@ Definition callee_body_root_shadow_captured_call_provenance_summary
     (env : global_env) (fdef : fn_def) : Prop :=
   callee_body_root_shadow_non_capturing_call_provenance_summary env fdef \/
   (
-  exists fname captures args fcallee captured_tys
+  exists fname captures args fcallee env_lt captured_tys
       T_body Γ_out R_body roots_body,
     fn_body fdef = ECallExpr (EMakeClosure fname captures) args /\
     captured_call_target_expr (fn_body fdef) = Some (fname, captures, args) /\
@@ -1189,11 +1189,11 @@ Definition callee_body_root_shadow_captured_call_provenance_summary
     fn_name fcallee = fname /\
     fn_lifetimes fcallee = 0 /\
     callee_hidden_capture_args_disjoint fcallee args /\
-    check_make_closure_captures_exact_sctx env
+    check_make_closure_captures_exact_sctx_with_env env
       (fn_outlives fdef)
       (sctx_of_ctx (fn_body_ctx fdef))
       captures
-      (fn_captures fcallee) = infer_ok captured_tys /\
+      (fn_captures fcallee) = infer_ok (env_lt, captured_tys) /\
     callee_body_root_shadow_captured_callee_provenance_summary
       env fcallee /\
     NoDup (ctx_names (params_ctx (fn_params fdef))) /\
@@ -1622,11 +1622,12 @@ Proof.
     apply andb_true_iff in Hrest as [Hcallee_head Hrest].
     apply andb_true_iff in Hcallee_head as [Hlt Hdisjoint].
     apply PeanoNat.Nat.eqb_eq in Hlt.
-    destruct (check_make_closure_captures_exact_sctx env
+    destruct (check_make_closure_captures_exact_sctx_with_env env
       (fn_outlives fdef)
       (sctx_of_ctx (fn_body_ctx fdef))
       captures
-      (fn_captures fcallee)) as [captured_tys | err] eqn:Hcaptures;
+      (fn_captures fcallee)) as [[env_lt captured_tys] | err]
+      eqn:Hcaptures;
       try discriminate.
     apply andb_true_iff in Hrest as [Hcallee Hsummary].
     destruct (infer_env_roots_shadow_safe env fdef
@@ -1649,7 +1650,7 @@ Proof.
       destruct (fn_body fdef); try discriminate.
       destruct e; try discriminate.
       inversion Htarget. reflexivity. }
-    exists fname, captures, args, fcallee, captured_tys,
+    exists fname, captures, args, fcallee, env_lt, captured_tys,
       T_body, Γ_out, R_out, roots.
     split; [exact Hbody|].
     split; [reflexivity|].
@@ -3081,7 +3082,7 @@ Proof.
       * inversion Heval.
   - destruct Hcaptured_summary as [Hcaptured_summary | Hlocal_captured_summary].
     + destruct Hcaptured_summary as
-      (fname & captures & args & fcallee & captured_tys &
+      (fname & captures & args & fcallee & env_lt & captured_tys &
         T_body & Γ_out & R_body & roots_body &
         Hbody & Htarget & Hready_args & Hin_callee & Hname_callee &
         Hcallee_lts & Hdisjoint & Hcaptures & Hcallee_summary &
@@ -3169,7 +3170,7 @@ Proof.
         (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
         (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
         args fname_call captures captured fcallee fcall used' s s_args s_body vs ret
-        R_args Sigma_args arg_roots captured_tys T_callee Γ_callee
+        R_args Sigma_args arg_roots env_lt captured_tys T_callee Γ_callee
         R_callee roots_callee
         Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
         (Eval_MakeClosure (alpha_normalize_global_env env) s fname_call captures

@@ -188,6 +188,26 @@ Proof.
   eapply Hentries. exact Htyped.
 Qed.
 
+Lemma capture_store_root_sets_store_roots_named_in_store :
+  forall env target captured,
+    Forall2 (store_entry_typed env target)
+      captured (sctx_of_store captured) ->
+    Forall
+      (fun roots => root_set_store_roots_named roots target)
+      (capture_store_root_sets captured).
+Proof.
+  intros env target captured Htyped.
+  induction Htyped as [| se ce captured_tail Σ_tail Hentry _ IH].
+  - constructor.
+  - destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [_ Hvalue]]].
+    simpl. constructor.
+    + eapply capture_value_roots_store_roots_named. exact Hvalue.
+    + exact IH.
+Qed.
+
 Lemma value_roots_within_nil_capture_value_roots :
   forall v,
     value_roots_within [] v ->
@@ -994,7 +1014,7 @@ Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_componen
       store_param_scope ps s frame ->
       exists frame', store_param_scope ps s' frame')) ->
   forall env Ω n R Σ args fname captures captured fdef fcall used'
-      s s_args s_body vs ret R_args Σ_args arg_roots captured_tys
+      s s_args s_body vs ret R_args Σ_args arg_roots env_lt captured_tys
       T_body Γ_out R_body roots_body,
     store_typed env s Σ ->
     store_roots_within R s ->
@@ -1009,8 +1029,8 @@ Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_componen
       (fcall, used') ->
     eval env (bind_params (fn_params fcall) vs (captured ++ s_args))
       (fn_body fcall) s_body ret ->
-    check_make_closure_captures_exact_sctx env Ω Σ captures
-      (fn_captures fdef) = infer_ok captured_tys ->
+    check_make_closure_captures_exact_sctx_with_env env Ω Σ captures
+      (fn_captures fdef) = infer_ok (env_lt, captured_tys) ->
     NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
     preservation_ready_args args ->
     typed_args_roots env Ω n R Σ args (fn_params fdef)
@@ -1039,20 +1059,16 @@ Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_componen
 Proof.
   intros Htyping Hroots_mutual Hnames Hkeys_mutual Hframe Hprefix Hparam
     env Ω n R Σ args fname captures captured fdef fcall used'
-    s s_args s_body vs ret R_args Σ_args arg_roots captured_tys
+    s s_args s_body vs ret R_args Σ_args arg_roots env_lt captured_tys
     T_body Γ_out R_body roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys
     Heval_make Hlookup Heval_args Hrename Heval_body Hcheck Hnodup_caps
     Hready_args Htyped_args Hnodup_binding Hprov_body Htyped_body
     Hcompat_body Hexclude_roots Hexclude_env.
-  pose proof
-    (check_make_closure_captures_exact_sctx_with_env_of_exact_sctx
-      env Ω Σ captures (fn_captures fdef) captured_tys Hcheck)
-    as Hcheck_env.
   destruct (eval_make_closure_captured_call_runtime_args_ready_auto_with_env_with_preservation_core
               Htyping Hroots_mutual Hnames Hkeys_mutual env Ω n R Σ args fname captures captured fdef fcall used'
-              s s_args vs R_args Σ_args arg_roots LStatic captured_tys
+              s s_args vs R_args Σ_args arg_roots env_lt captured_tys
               Hstore Hroots Hshadow Hrn Hnamed Hkeys Heval_make Hlookup
-              Heval_args Hrename Hcheck_env Hnodup_caps Hready_args
+              Heval_args Hrename Hcheck Hnodup_caps Hready_args
               Htyped_args)
     as [[Hframe_ready Hcaptured_params_typed]
         [Hstore_args [Hargs_fcall [Hvalue_roots [Hroots_bind
@@ -1060,9 +1076,6 @@ Proof.
   pose proof
     (eval_make_closure_copy_capture_store_as_ts
       env s fname captures captured fdef Heval_make Hlookup) as Hcopy.
-  destruct (copy_capture_store_as_captured_store_typed_rootless
-              Ω env s Σ captures (fn_captures fdef) captured captured_tys
-              Hstore Hcopy Hcheck) as [_ Hcaptured_rootless].
   destruct (alpha_rename_fn_def_binding_initial_support_facts
               (store_names (captured ++ s_args)) fdef fcall used'
               Hrename Hnodup_binding)
@@ -1081,12 +1094,6 @@ Proof.
     pose proof (Forall2_length Hcaptured_params_len) as Hlen_captured.
     rewrite params_ctx_length_ts in Hlen_captured.
     rewrite Hcaps_eq in Hlen_captured. exact Hlen_captured. }
-  assert (Hcap_roots_empty :
-    capture_store_root_sets captured =
-      repeat [] (List.length (fn_captures fdef))).
-  { rewrite (capture_store_root_sets_empty_from_rootless
-              captured Hcaptured_rootless).
-    rewrite Hlen_captured_fdef. reflexivity. }
   assert (Hsame_body :
     sctx_same_bindings
       (sctx_of_ctx (fn_body_ctx fdef))
@@ -1286,27 +1293,60 @@ Proof.
       apply (Hfresh_caps x).
       + unfold sctx_of_ctx. exact Hin_caps.
       + exact Hstore_x. }
+  assert (Hcap_roots_named_frame :
+    Forall
+      (fun roots => root_set_store_roots_named roots (captured ++ s_args))
+      (capture_store_root_sets captured)).
+  { eapply capture_store_root_sets_store_roots_named_in_frame.
+    exact Hcaptured_params_typed. }
+  assert (Hcap_roots_named_s :
+    Forall (fun roots => root_set_store_roots_named roots s)
+      (capture_store_root_sets captured)).
+  { eapply capture_store_root_sets_store_roots_named_in_store.
+    eapply copy_capture_store_as_captured_entries_typed_with_env_preserved.
+    - exact Hstore.
+    - apply store_ref_targets_preserved_refl.
+    - exact Hcopy.
+    - exact Hcheck. }
+  assert (Hfresh_caps_s :
+    params_fresh_in_store (fn_captures fcall) s).
+  { rewrite Hcaps_eq.
+    eapply check_make_closure_captures_exact_sctx_with_env_params_fresh_in_store;
+      eassumption. }
   assert (Hbinding_roots_exclude :
     Forall (roots_exclude_params (fn_params fcall ++ fn_captures fcall))
       (arg_roots ++ capture_store_root_sets captured)).
   { apply Forall_app. split.
     - eapply root_sets_store_roots_named_excludes_params; eassumption.
-    - rewrite Hcap_roots_empty.
-      assert (Hrepeat_exclude :
-        Forall (roots_exclude_params
-          (fn_params fcall ++ fn_captures fcall))
-          (repeat [] (List.length (fn_captures fdef)))).
-      { assert (Hrepeat_exclude_all :
-          forall k,
-            Forall (roots_exclude_params
-              (fn_params fcall ++ fn_captures fcall))
-              (repeat [] k)).
-        { intros k. apply Forall_forall. intros roots Hin_repeat.
-          apply repeat_spec in Hin_repeat. subst roots.
-          unfold roots_exclude_params, roots_exclude.
-          intros x Hin Hroot. contradiction. }
-        apply Hrepeat_exclude_all. }
-      exact Hrepeat_exclude. }
+    - apply Forall_forall. intros roots Hin_roots.
+      unfold roots_exclude_params.
+      intros x Hin_x.
+      rewrite params_ctx_app, ctx_names_app in Hin_x.
+      apply in_app_or in Hin_x as [Hin_params | Hin_caps].
+      + assert (Hroot_named :
+          root_set_store_roots_named roots (captured ++ s_args)).
+        { apply (proj1 (Forall_forall _ _) Hcap_roots_named_frame).
+          exact Hin_roots. }
+        assert (Hfresh_params_frame :
+          params_fresh_in_store (fn_params fcall) (captured ++ s_args)).
+        { eapply alpha_rename_fn_def_params_fresh_in_store.
+          exact Hrename. }
+        pose proof
+          (root_set_store_roots_named_excludes_params
+            (fn_params fcall) roots (captured ++ s_args)
+            Hroot_named Hfresh_params_frame)
+          as Hexcl_params.
+        apply Hexcl_params. exact Hin_params.
+      + assert (Hroot_named :
+          root_set_store_roots_named roots s).
+        { apply (proj1 (Forall_forall _ _) Hcap_roots_named_s).
+          exact Hin_roots. }
+        pose proof
+          (root_set_store_roots_named_excludes_params
+            (fn_captures fcall) roots s
+            Hroot_named Hfresh_caps_s)
+          as Hexcl_caps.
+        apply Hexcl_caps. exact Hin_caps. }
   assert (Himages_exclude :
     forall x,
       In x

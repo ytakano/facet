@@ -145,25 +145,22 @@ Work in this order unless a proof exposes a soundness gap.
      `captured_call_frame_ready_in_frame` through in-frame parameter readiness.
      Existing reference-free wrappers still accept `captured_call_frame_ready`
      via the existing self-to-in-frame coercions.
-   - The direct captured-call proof now routes through the in-frame cleanup
-     path and uses canonical-root helper plumbing internally. However, the
-     public direct theorem still consumes
-     `check_make_closure_captures_exact_sctx` and derives the with-env helper
-     only for the reference-free `LStatic` case.
+   - The direct captured-call proof now consumes
+     `check_make_closure_captures_exact_sctx_with_env env Ω Σ captures
+     (fn_captures fdef) = infer_ok (env_lt, captured_tys)`.
+   - The direct proof carries `capture_store_root_env captured` and
+     `capture_store_root_sets captured` through body instantiation,
+     root-exclusion, and cleanup without collapsing copied capture roots to
+     `repeat []`.
+   - The direct captured-call sidecar checker branch now uses
+     `check_make_closure_captures_exact_sctx_with_env`.
 
    Next implementation task:
 
-   - Strengthen the direct captured-call theorem so its public premise is
-     `check_make_closure_captures_exact_sctx_with_env env Ω Σ captures
-     (fn_captures fdef) = infer_ok (env_lt, captured_tys)`.
-   - Remove the remaining reference-free fallback facts from the direct proof,
-     especially the path that proves copied capture root sets collapse to
-     `repeat []`.
-   - Carry `capture_store_root_env captured` and `capture_store_root_sets
-     captured` through body instantiation, root-exclusion, and cleanup without
-     requiring rootless captured values.
-   - Only after that strengthened direct theorem compiles, replace the direct
-     captured-call sidecar checker branch with
+   - Design and prove the annotated local-let hidden-closure root invariant
+     needed for shared-reference captures. Its current hidden closure binding
+     is rooted as `root_env_add x [] R_args`, which is still reference-free.
+   - After that invariant exists, widen only the annotated local-let branch to
      `check_make_closure_captures_exact_sctx_with_env`.
 
    Blocker found:
@@ -171,9 +168,6 @@ Work in this order unless a proof exposes a soundness gap.
    - Do not try to coerce canonical shared-reference captures back into
      `captured_call_frame_ready`. The canonical root env is intentionally
      frame-relative.
-   - Do not widen the direct checker sidecar while the public direct theorem
-     still exposes `check_make_closure_captures_exact_sctx`; that path remains
-     reference-free even though it uses the in-frame cleanup bridge internally.
    - Do not widen the annotated local-let branch to with-env captures yet. Its
      hidden closure binding is currently rooted as `root_env_add x [] R_args`;
      shared-reference captures require either a new hidden-closure root
@@ -188,9 +182,8 @@ Work in this order unless a proof exposes a soundness gap.
      regression that constructs and calls a shared-reference closure.
    - Keep the invalid fixtures for missing outlives support, mutable binding
      capture, and `&mut` capture rejection.
-   - Do not widen executable sidecar validators or captured-call routes until
-     the captured-call preservation theorem is rewired to canonical capture
-     roots and compiles.
+   - Keep closure-call validator expansion staged by proof coverage. The direct
+     captured-call route is now with-env; the annotated local-let route is not.
 
 2. **Keep the annotated local-let captured-call sidecar branch stable.**
 

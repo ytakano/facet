@@ -843,7 +843,7 @@ Proof.
 Qed.
 Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_components :
   forall env Ω n R Σ args fname captures captured fdef fcall used'
-      s s_args s_body vs ret R_args Σ_args arg_roots captured_tys
+      s s_args s_body vs ret R_args Σ_args arg_roots env_lt captured_tys
       T_body Γ_out R_body roots_body,
     store_typed env s Σ ->
     store_roots_within R s ->
@@ -858,8 +858,8 @@ Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_componen
       (fcall, used') ->
     eval env (bind_params (fn_params fcall) vs (captured ++ s_args))
       (fn_body fcall) s_body ret ->
-    check_make_closure_captures_exact_sctx env Ω Σ captures
-      (fn_captures fdef) = infer_ok captured_tys ->
+    check_make_closure_captures_exact_sctx_with_env env Ω Σ captures
+      (fn_captures fdef) = infer_ok (env_lt, captured_tys) ->
     NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
     preservation_ready_args args ->
     typed_args_roots env Ω n R Σ args (fn_params fdef)

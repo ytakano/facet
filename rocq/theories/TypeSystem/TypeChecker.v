@@ -5439,7 +5439,7 @@ Definition check_fn_root_shadow_captured_call_provenance_summary
           | Some callee =>
               (Nat.eqb (fn_lifetimes callee) 0) &&
               callee_hidden_capture_args_disjoint_b callee args &&
-              match check_make_closure_captures_exact_sctx env
+              match check_make_closure_captures_exact_sctx_with_env env
                       (fn_outlives fdef)
                       (sctx_of_ctx (fn_body_ctx fdef))
                       captures

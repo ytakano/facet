@@ -111,7 +111,7 @@ Lemma eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased_with_p
   forall env (Ω : outlives_ctx) captured Rcap s_args R_args Σ_args
       fdef fcall σ s_body vs ret used' T_body Γ_out R_params R_body
       roots_body,
-    captured_call_frame_params_ready env captured Rcap s_args R_args
+    captured_call_frame_params_ready_in_frame env captured Rcap s_args R_args
       (fn_captures fcall) ->
     store_typed env s_args Σ_args ->
     alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
@@ -148,8 +148,9 @@ Proof.
     Hargs_fcall Hroots_bind Hshadow_bind Hrn_params Hcover_all Hprov_body
     Htyped_body Hcompat_body Hexclude_all Hexclude_env_all Heval_body.
   destruct Hframe_params_ready as [Hframe_ready Hcaptured_params_typed].
-  pose proof (captured_params_store_typed_store_param_prefix
-                env captured (fn_captures fcall) Hcaptured_params_typed)
+  pose proof (captured_params_store_typed_in_frame_store_param_prefix
+                env captured s_args (fn_captures fcall)
+                Hcaptured_params_typed)
     as Hprefix_caps0.
   pose proof (store_param_prefix_append_frame
                 (fn_captures fcall) captured s_args []
@@ -176,7 +177,7 @@ Proof.
   assert (Hstore_captured_prefix :
     store_typed_prefix env (captured ++ s_args)
       (sctx_of_ctx (params_ctx (fn_captures fcall)))).
-  { eapply captured_params_store_typed_prefix_frame.
+  { eapply captured_params_store_typed_in_frame_prefix_frame.
     exact Hcaptured_params_typed. }
   assert (Hnodup_params :
     NoDup (ctx_names (params_ctx (fn_params fcall)))).
@@ -390,7 +391,7 @@ Lemma eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_w
       (fcall, used') ->
     eval env (bind_params (fn_params fcall) vs (captured ++ s_args))
       (fn_body fcall) s_body ret ->
-    captured_call_frame_params_ready env captured Rcap s_args R_args
+    captured_call_frame_params_ready_in_frame env captured Rcap s_args R_args
       (fn_captures fcall) ->
     store_typed env s_args Σ_args ->
     eval_args_values_have_types env Ω (captured ++ s_args) vs
@@ -446,7 +447,7 @@ Lemma eval_captured_call_body_cleanup_preserves_value_and_refs_with_preservation
   forall env (Ω : outlives_ctx) captured Rcap s_args R_args Σ_args
       fdef fcall σ s_body vs ret used' T_body Γ_out R_params R_body
       roots_body,
-    captured_call_frame_ready env captured Rcap s_args R_args ->
+    captured_call_frame_ready_in_frame env captured Rcap s_args R_args ->
     store_typed env s_args Σ_args ->
     alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
       (fcall, used') ->
@@ -494,7 +495,7 @@ Proof.
   eapply (eval_call_body_cleanup_preserves_value_and_refs_frame_with_preservation_core
             Hframe_mutual Htyping_mutual Hparam_mutual);
     try eassumption.
-  eapply captured_call_frame_store_typed; eassumption.
+  eapply captured_call_frame_store_typed_in_frame; eassumption.
 Qed.
 
 Lemma eval_captured_call_expr_cleanup_preserves_value_and_refs_with_preservation_core :
@@ -511,7 +512,7 @@ Lemma eval_captured_call_expr_cleanup_preserves_value_and_refs_with_preservation
       (fcall, used') ->
     eval env (bind_params (fn_params fcall) vs (captured ++ s_args))
       (fn_body fcall) s_body ret ->
-    captured_call_frame_ready env captured Rcap s_args R_args ->
+    captured_call_frame_ready_in_frame env captured Rcap s_args R_args ->
     store_typed env s_args Σ_args ->
     eval_args_values_have_types env Ω (captured ++ s_args) vs
       (fn_params fcall) ->
@@ -619,7 +620,9 @@ Proof.
     (eval_captured_call_body_cleanup_preserves_value_and_refs_with_preservation_core
       Hframe_mutual Htyping_mutual Hparam_mutual
       env Ω captured Rcap s_args R_args Σ_args fdef fcall σ s_body vs
-      ret used' T_body Γ_out R_params R_body roots_body Hframe_ready
+      ret used' T_body Γ_out R_params R_body roots_body
+      (captured_call_frame_ready_in_frame_from_self
+        env captured Rcap s_args R_args Hframe_ready)
       Htyped_args Hrename Hargs_fcall Hroots_bind Hshadow_bind
       Hrn_params Hcover_params Hprov_body Htyped_body Hcompat_body
       Hexclude_ret Hexclude_env Heval_body)

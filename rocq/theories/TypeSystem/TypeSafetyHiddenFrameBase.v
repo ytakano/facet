@@ -2092,6 +2092,28 @@ Proof.
     eapply store_no_shadow_app_lookup_right_none; eassumption.
 Qed.
 
+Lemma captured_call_frame_store_typed_in_frame :
+  forall env captured Rcap s_args R_args Σ_args,
+    captured_call_frame_ready_in_frame env captured Rcap s_args R_args ->
+    store_typed env s_args Σ_args ->
+    store_typed env (captured ++ s_args)
+      (sctx_of_store captured ++ Σ_args).
+Proof.
+  intros env captured Rcap s_args R_args Σ_args Hready Htyped_args.
+  unfold captured_call_frame_ready_in_frame,
+    captured_store_runtime_ready_in_frame in Hready.
+  destruct Hready as
+    [[Htyped_cap _] [_ [Hshadow_frame _]]].
+  unfold store_typed in *.
+  apply store_typed_entries_app.
+  - exact Htyped_cap.
+  - eapply store_typed_entries_store_preserved.
+    + exact Htyped_args.
+    + apply store_ref_targets_preserved_app_right.
+      intros x Hin.
+      eapply store_no_shadow_app_lookup_right_none; eassumption.
+Qed.
+
 Lemma captured_call_frame_params_store_typed :
   forall env captured Rcap s_args R_args caps Σ_args,
     captured_call_frame_params_ready env captured Rcap s_args R_args caps ->

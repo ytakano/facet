@@ -97,11 +97,18 @@ Lemma eval_captured_call_body_cleanup_preserves_value_and_refs :
     store_remove_params (fn_params fcall) s_body = captured ++ s_args /\
     value_roots_within roots_body ret.
 Proof.
+  intros env Ω captured Rcap s_args R_args Σ_args fdef fcall σ s_body
+    vs ret used' T_body Γ_out R_params R_body roots_body Hframe_ready
+    Htyped_args Hrename Hargs_fcall Hroots_bind Hshadow_bind Hrn_params
+    Hcover_params Hprov_body Htyped_body Hcompat_body Hexclude_ret
+    Hexclude_env Heval_body.
   eapply (eval_captured_call_body_cleanup_preserves_value_and_refs_with_preservation_core
             eval_preserves_frame_scope_roots_ready_mutual
             eval_preserves_typing_roots_ready_prefix_mutual
             eval_preserves_param_scope_roots_ready_mutual);
-    eassumption.
+    try eassumption.
+  eapply captured_call_frame_ready_in_frame_from_self.
+  exact Hframe_ready.
 Qed.
 
 Lemma eval_captured_call_expr_cleanup_preserves_value_and_refs :
@@ -153,11 +160,19 @@ Lemma eval_captured_call_expr_cleanup_preserves_value_and_refs :
     store_remove_params (fn_params fcall) s_body = captured ++ s_args /\
     value_roots_within roots_body ret.
 Proof.
+  intros env Ω s s_fn s_args s_body callee args fname captured fdef fcall
+    vs ret used' Rcap R_args Σ_args σ T_body Γ_out R_params R_body
+    roots_body Heval_callee Hlookup Heval_args Hrename Heval_body
+    Hframe_ready Htyped_args Hargs_fcall Hroots_bind Hshadow_bind
+    Hrn_params Hcover_params Hprov_body Htyped_body Hcompat_body
+    Hexclude_ret Hexclude_env.
   eapply (eval_captured_call_expr_cleanup_preserves_value_and_refs_with_preservation_core
             eval_preserves_frame_scope_roots_ready_mutual
             eval_preserves_typing_roots_ready_prefix_mutual
             eval_preserves_param_scope_roots_ready_mutual);
-    eassumption.
+    try eassumption.
+  eapply captured_call_frame_ready_in_frame_from_self.
+  exact Hframe_ready.
 Qed.
 
 Lemma eval_captured_call_body_cleanup_preserves_value_and_refs_params :
@@ -343,11 +358,18 @@ Lemma eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased :
     store_remove_params (fn_captures fcall)
       (store_remove_params (fn_params fcall) s_body) = s_args.
 Proof.
+  intros env Ω captured Rcap s_args R_args Σ_args fdef fcall σ s_body
+    vs ret used' T_body Γ_out R_params R_body roots_body Hframe_ready
+    Htyped_args Hrename Hargs_fcall Hroots_bind Hshadow_bind Hrn_params
+    Hcover_all Hprov_body Htyped_body Hcompat_body Hexclude_all
+    Hexclude_env_all Heval_body.
   eapply (eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
             eval_preserves_frame_scope_roots_ready_mutual
             eval_preserves_typing_roots_ready_prefix_mutual
             eval_preserves_param_scope_roots_ready_mutual);
-    eassumption.
+    try eassumption.
+  eapply captured_call_frame_params_ready_in_frame_from_self.
+  exact Hframe_ready.
 Qed.
 
 Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased :
@@ -545,11 +567,19 @@ Lemma eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased :
         (store_remove_params (fn_params fcall) s_body))
       ret (apply_lt_ty σ (fn_ret fdef)).
 Proof.
+  intros env Ω s s_fn s_args s_body callee args fname captured fdef fcall
+    vs ret used' Rcap R_args Σ_args σ T_body Γ_out R_params R_body
+    roots_body Heval_callee Hlookup Heval_args Hrename Heval_body
+    Hframe_params_ready Htyped_args Hargs_fcall Hroots_bind Hshadow_bind
+    Hrn_params Hcover_all Hprov_body Htyped_body Hcompat_body Hexclude_all
+    Hexclude_env_all.
   eapply (eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
             eval_preserves_frame_scope_roots_ready_mutual
             eval_preserves_typing_roots_ready_prefix_mutual
             eval_preserves_param_scope_roots_ready_mutual);
-    eassumption.
+    try eassumption.
+  eapply captured_call_frame_params_ready_in_frame_from_self.
+  exact Hframe_params_ready.
 Qed.
 
 Lemma eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased :

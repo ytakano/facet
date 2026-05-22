@@ -162,7 +162,9 @@ Proof.
   eapply
     (eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
       Hframe_mutual Htyping_mutual Hparam_mutual);
-    eassumption.
+    try eassumption.
+  eapply captured_call_frame_params_ready_in_frame_from_self.
+  exact Hframe_params_ready.
 Qed.
 
 Lemma eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_auto_with_preservation_core :
@@ -330,5 +332,7 @@ Proof.
   eapply
     (eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
       Hframe_mutual Htyping_mutual Hparam_mutual);
-    eassumption.
+    try eassumption.
+  eapply captured_call_frame_params_ready_in_frame_from_self.
+  exact Hframe_params_ready.
 Qed.

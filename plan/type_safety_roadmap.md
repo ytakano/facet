@@ -139,31 +139,41 @@ Work in this order unless a proof exposes a soundness gap.
    - This avoids the prior over-approximation gap where source root-env entries
      could mention roots no longer named after argument evaluation.
 
+   Progress in current slice:
+
+   - The captured-call body cleanup bridge now accepts
+     `captured_call_frame_ready_in_frame` through in-frame parameter readiness.
+     Existing reference-free wrappers still accept `captured_call_frame_ready`
+     via the existing self-to-in-frame coercions.
+   - The direct captured-call proof now routes through the in-frame cleanup
+     path and uses canonical-root helper plumbing internally. However, the
+     public direct theorem still consumes
+     `check_make_closure_captures_exact_sctx` and derives the with-env helper
+     only for the reference-free `LStatic` case.
+
    Next implementation task:
 
-   - First generalize the captured-call body cleanup bridge to accept
-     `captured_call_frame_ready_in_frame`, not only
-     `captured_call_frame_ready`. This is required because shared-reference
-     copied captures may point into the evaluated-argument frame; the older
-     self-contained frame predicate is only valid for reference-free captures.
-   - After cleanup accepts in-frame readiness, rewire
-     `TypeSafetyCapturedCall.v` from `empty_root_env_for_store captured` and
-     `repeat []` to:
-     - `capture_store_root_env captured`
-     - `capture_store_root_sets captured`
-   - Use `captured_call_binding_runtime_root_env_equiv_with_roots` plus
-     `capture_store_root_env_equiv_root_env_add_params_roots` for body
-     substitution, and use the with-env runtime-argument helper above for the
-     direct captured-call branch.
-   - Only after that proof compiles, replace the captured-call sidecar checker
-     branches with `check_make_closure_captures_exact_sctx_with_env`.
+   - Strengthen the direct captured-call theorem so its public premise is
+     `check_make_closure_captures_exact_sctx_with_env env Ω Σ captures
+     (fn_captures fdef) = infer_ok (env_lt, captured_tys)`.
+   - Remove the remaining reference-free fallback facts from the direct proof,
+     especially the path that proves copied capture root sets collapse to
+     `repeat []`.
+   - Carry `capture_store_root_env captured` and `capture_store_root_sets
+     captured` through body instantiation, root-exclusion, and cleanup without
+     requiring rootless captured values.
+   - Only after that strengthened direct theorem compiles, replace the direct
+     captured-call sidecar checker branch with
+     `check_make_closure_captures_exact_sctx_with_env`.
 
    Blocker found:
 
    - Do not try to coerce canonical shared-reference captures back into
      `captured_call_frame_ready`. The canonical root env is intentionally
-     frame-relative. A proof attempt fails at cleanup because the cleanup bridge
-     still asks for the old self-contained captured-frame predicate.
+     frame-relative.
+   - Do not widen the direct checker sidecar while the public direct theorem
+     still exposes `check_make_closure_captures_exact_sctx`; that path remains
+     reference-free even though it uses the in-frame cleanup bridge internally.
    - Do not widen the annotated local-let branch to with-env captures yet. Its
      hidden closure binding is currently rooted as `root_env_add x [] R_args`;
      shared-reference captures require either a new hidden-closure root

@@ -83,7 +83,7 @@ do not redefine the language accepted by the ordinary checker.
 
 Work in this order unless a proof exposes a soundness gap.
 
-1. **Finish Stage 7b captured-reference closure runtime evidence.**
+1. **Resolve the Stage 7b captured-reference runtime-root invariant.**
 
    Core status: ordinary `EMakeClosure` capture checking now accepts
    immutable unrestricted shared-reference values, rejects mutable bindings
@@ -98,11 +98,58 @@ Work in this order unless a proof exposes a soundness gap.
    context for synthetic closure helper functions. Surface shared-reference
    closure literals can be constructed and called by the ordinary checker.
 
-   Next implementation task:
+   Implemented proof support:
 
-   - Design and prove runtime root/provenance evidence for captured-reference
-     closure calls. The ordinary checker now accepts them, but captured-call
-     sidecar routes still intentionally do not.
+   - Sidecar-only exact capture checking with closure-env lifetime evidence is
+     in place:
+
+     ```coq
+     check_make_closure_captures_exact_sctx_with_env
+     ```
+
+   - Copied capture root construction and frame-relative captured-frame
+     readiness helpers are in place, including:
+
+     ```coq
+     copy_capture_roots_as
+     captured_call_frame_ready_in_frame
+     captured_call_frame_params_ready_in_frame
+     copy_capture_store_exact_with_env_params_store_typed_in_frame
+     captured_call_binding_runtime_root_env_equiv_with_roots
+     copy_capture_roots_as_equiv_root_env_add_params_roots
+     ```
+
+   Blocker found while wiring executable sidecar acceptance:
+
+   - The captured-call body substitution bridge can now use arbitrary capture
+     root sets instead of hardcoded `repeat []`.
+   - The remaining missing fact is stronger: copied capture root sets are
+     taken from the caller root environment, and those root sets may
+     over-approximate the actual reference roots in the copied value.
+   - Existing preservation evidence proves actual reference targets survive
+     into the argument/result frame via `store_ref_targets_preserved`; it does
+     not prove every store root listed in an arbitrary source root set remains
+     named in the post-argument store.
+   - Therefore the captured-call sidecar must not be widened yet for shared
+     reference captures. Doing so would manufacture `root_env_store_roots_named`
+     evidence for roots that may no longer be present in the runtime frame.
+
+   Next design task:
+
+   - Choose and prove one runtime-root invariant before changing executable
+     validator acceptance:
+     - canonical/minimal copied roots for captures, derived from captured
+       values rather than arbitrary source root-env entries; or
+     - a strengthened preservation invariant proving copied source root sets
+       stay named through argument evaluation; or
+     - a checker-side restriction requiring captured root entries to contain
+       only roots guaranteed by the copied values.
+   - After the invariant is fixed, wire
+     `check_make_closure_captures_exact_sctx_with_env` only through captured-call
+     sidecar routes and keep ordinary checker/direct-call behavior unchanged.
+
+   Still required after the invariant is fixed:
+
    - Keep closure-call lifetime instantiation local to the
      `TForall ... TClosure` call path. Do not silently erase helper function
      lifetimes or make closure calls ordinary direct-call evidence.
@@ -111,7 +158,7 @@ Work in this order unless a proof exposes a soundness gap.
    - Keep the invalid fixtures for missing outlives support, mutable binding
      capture, and `&mut` capture rejection.
    - Do not widen executable sidecar validators or captured-call routes until
-     runtime root evidence for captured references is designed and proved.
+     the copied-root naming invariant above is designed and proved.
 
 2. **Keep the annotated local-let captured-call sidecar branch stable.**
 

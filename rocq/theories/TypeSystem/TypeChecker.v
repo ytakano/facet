@@ -1990,6 +1990,68 @@ Fixpoint check_make_closure_captures_exact_sctx
   | _, _ => infer_err ErrArityMismatch
   end.
 
+Fixpoint check_make_closure_captures_exact_sctx_with_env_base
+    (env : global_env) (Ω : outlives_ctx) (Σ : sctx)
+    (captures : list ident) (params : list param)
+    : infer_result (list Ty) :=
+  match captures, params with
+  | [], [] => infer_ok []
+  | x :: captures', cap :: params' =>
+      if match param_mutability cap with MImmutable => false | MMutable => true end
+      then infer_err ErrContextCheckFailed
+      else
+      match sctx_lookup (param_name cap) Σ with
+      | Some _ => infer_err ErrContextCheckFailed
+      | None =>
+      match sctx_lookup x Σ with
+      | None => infer_err (ErrUnknownVar x)
+      | Some (T, st) =>
+          if st_consumed st
+          then infer_err ErrContextCheckFailed
+          else
+          match st_moved_paths st with
+          | _ :: _ => infer_err ErrContextCheckFailed
+          | [] =>
+          match sctx_lookup_mut x Σ with
+          | Some MImmutable =>
+              if usage_eqb (ty_usage T) UUnrestricted
+              then
+                if ty_eqb T (param_ty cap) &&
+                   ty_compatible_b Ω T (param_ty cap)
+                then
+                  match check_make_closure_captures_exact_sctx_with_env_base
+                          env Ω Σ captures' params' with
+                  | infer_ok rest_tys => infer_ok (T :: rest_tys)
+                  | infer_err err => infer_err err
+                  end
+                else infer_err (compatible_error T (param_ty cap))
+              else infer_err (ErrUsageMismatch (ty_usage T) UUnrestricted)
+          | Some MMutable => infer_err (ErrNotMutable x)
+          | None => infer_err (ErrUnknownVar x)
+          end
+          end
+      end
+      end
+  | _, _ => infer_err ErrArityMismatch
+  end.
+
+Definition check_make_closure_captures_exact_sctx_with_env
+    (env : global_env) (Ω : outlives_ctx) (Σ : sctx)
+    (captures : list ident) (params : list param)
+    : infer_result (lifetime * list Ty) :=
+  match check_make_closure_captures_exact_sctx_with_env_base
+          env Ω Σ captures params with
+  | infer_ok captured_tys =>
+      match infer_closure_env_lifetime Ω captured_tys with
+      | infer_ok env_lt =>
+          if closure_captures_allowed_b env Ω env_lt captured_tys
+          then infer_ok (env_lt, captured_tys)
+          else infer_err (ErrNotAReference TUnits)
+      | infer_err err => infer_err err
+      end
+  | infer_err err => infer_err err
+  end.
+
 Definition sctx_add (x : ident) (T : Ty) (m : mutability) (Σ : sctx) : sctx :=
   ctx_add x T m Σ.
 
@@ -5706,6 +5768,23 @@ Example infer_core_env_shared_ref_capture_accepts :
     (closure_value_ty_at (LVar 0) ex_shared_ref_capture_callee_fn
       [ex_shared_ref_capture_ty],
      ex_shared_ref_capture_ctx).
+Proof. vm_compute. reflexivity. Qed.
+
+Example exact_sctx_shared_ref_capture_still_rejects :
+  check_make_closure_captures_exact_sctx ex_shared_ref_capture_env []
+    (sctx_of_ctx ex_shared_ref_capture_ctx)
+    [(("r"%string), 0)]
+    [ex_shared_ref_capture_param] =
+  infer_err (ErrNotAReference (TRef (LVar 0) RShared
+    (MkTy UUnrestricted TIntegers))).
+Proof. vm_compute. reflexivity. Qed.
+
+Example exact_sctx_with_env_shared_ref_capture_accepts :
+  check_make_closure_captures_exact_sctx_with_env ex_shared_ref_capture_env []
+    (sctx_of_ctx ex_shared_ref_capture_ctx)
+    [(("r"%string), 0)]
+    [ex_shared_ref_capture_param] =
+  infer_ok (LVar 0, [ex_shared_ref_capture_ty]).
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_ready_gap_captured_closure_call_expr : expr :=

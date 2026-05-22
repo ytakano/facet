@@ -281,7 +281,7 @@ Theorem eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_sum
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_package_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   forall env s s' v fname args,
     eval env s (ECall fname args) s' v ->
@@ -420,8 +420,7 @@ Proof.
   destruct
     (eval_direct_call_body_cleanup_preserves_value_and_refs_with_preservation_core
       Htyping_ready Hroots_ready Hframe_scope_ready
-      (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
-        Htyping_roots_prefix_ready)
+      Htyping_roots_prefix_ready
       Hparam_scope_ready
       env Ω n R Σ Σ' R' arg_roots (fn_name fdef1) args
       fdef1 fcall σ s s_args s_body vs ret used' T_body

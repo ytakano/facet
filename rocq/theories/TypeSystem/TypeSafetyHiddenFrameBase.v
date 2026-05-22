@@ -744,6 +744,175 @@ Proof.
     simpl. rewrite (IH caps s captured_rest Hcopy_rest). reflexivity.
 Qed.
 
+Lemma store_names_app_hfb :
+  forall s1 s2,
+    store_names (s1 ++ s2) = store_names s1 ++ store_names s2.
+Proof.
+  intros s1.
+  induction s1 as [| se rest IH]; intros s2; simpl.
+  - reflexivity.
+  - rewrite IH. reflexivity.
+Qed.
+
+Lemma store_roots_within_lookup_value_hfb :
+  forall R s x se roots,
+    store_roots_within R s ->
+    store_lookup x s = Some se ->
+    root_env_lookup x R = Some roots ->
+    value_roots_within roots (se_val se).
+Proof.
+  intros R s x se roots Hwithin.
+  revert x se roots.
+  induction Hwithin as [R | R se_head rest Hentry Hrest IH];
+    intros x se roots Hlookup_store Hlookup_roots;
+    simpl in Hlookup_store; try discriminate.
+  destruct se_head as [sx sT sv sst].
+  inversion Hentry as [R0 sx0 sT0 sv0 sst0 roots0 Hlookup_head Hvalue];
+    subst.
+  simpl in Hlookup_store.
+  destruct (ident_eqb x sx) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst x.
+    inversion Hlookup_store; subst se.
+    rewrite Hlookup_roots in Hlookup_head.
+    inversion Hlookup_head; subst roots0.
+    exact Hvalue.
+  - eapply IH; eassumption.
+Qed.
+
+Lemma store_roots_within_weaken_lookup_hfb :
+  forall R R' s,
+    store_roots_within R s ->
+    (forall x roots,
+      In x (store_names s) ->
+      root_env_lookup x R = Some roots ->
+      root_env_lookup x R' = Some roots) ->
+    store_roots_within R' s.
+Proof.
+  intros R R' s Hroots.
+  induction Hroots as [R | R se rest Hentry Hrest IH]; intros Hpreserve.
+  - constructor.
+  - inversion Hentry as [R0 sx sT sv sst roots Hlookup Hvalue]; subst.
+    constructor.
+    + econstructor.
+      * apply Hpreserve.
+        -- simpl. left. reflexivity.
+        -- exact Hlookup.
+      * exact Hvalue.
+    + apply IH.
+      intros x roots_x Hname Hlookup_x.
+      apply Hpreserve.
+      * simpl. right. exact Hname.
+      * exact Hlookup_x.
+Qed.
+
+Lemma copy_capture_store_as_roots_within_copied_roots :
+  forall captures caps s captured R Rcap,
+    copy_capture_store_as captures caps s = Some captured ->
+    copy_capture_roots_as captures caps R = Some Rcap ->
+    NoDup (ctx_names (params_ctx caps)) ->
+    store_roots_within R s ->
+    store_roots_within Rcap captured.
+Proof.
+  induction captures as [| x captures IH]; intros caps s captured R Rcap
+    Hcopy_store Hcopy_roots Hnodup Hwithin;
+    destruct caps as [| cap caps]; simpl in Hcopy_store, Hcopy_roots;
+    try discriminate.
+  - injection Hcopy_store as <-. constructor.
+  - destruct (store_lookup x s) as [se |] eqn:Hlookup_store;
+      try discriminate.
+    destruct (binding_available_b (se_state se) [] &&
+      match ty_usage (se_ty se) with
+      | UUnrestricted => true
+      | _ => false
+      end) eqn:Hcopy_ok; try discriminate.
+    destruct (copy_capture_store_as captures caps s) as [captured_rest |]
+      eqn:Hcopy_store_tail; try discriminate.
+    destruct (root_env_lookup x R) as [roots |] eqn:Hlookup_roots;
+      try discriminate.
+    destruct (copy_capture_roots_as captures caps R) as [Rtail |]
+      eqn:Hcopy_roots_tail; try discriminate.
+    injection Hcopy_store as <-.
+    injection Hcopy_roots as <-.
+    inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
+    constructor.
+    + econstructor.
+      * simpl. rewrite ident_eqb_refl. reflexivity.
+      * eapply store_roots_within_lookup_value_hfb; eassumption.
+    + eapply store_roots_within_weaken_lookup_hfb.
+      * eapply IH; eassumption.
+      * intros y roots_y Hin Hlookup_y.
+        simpl.
+        destruct (ident_eqb y (param_name cap)) eqn:Heq.
+        -- apply ident_eqb_eq in Heq. subst y.
+           exfalso. apply Hnotin.
+           rewrite <- (copy_capture_store_as_store_names
+             captures caps s captured_rest Hcopy_store_tail).
+           exact Hin.
+        -- exact Hlookup_y.
+Qed.
+
+Lemma copy_capture_roots_store_as_keys_named :
+  forall captures caps R Rcap s captured,
+    copy_capture_roots_as captures caps R = Some Rcap ->
+    copy_capture_store_as captures caps s = Some captured ->
+    root_env_store_keys_named Rcap captured.
+Proof.
+  intros captures caps R Rcap s captured Hcopy_roots Hcopy_store.
+  unfold root_env_store_keys_named, root_env_keys_named.
+  rewrite (copy_capture_roots_as_names captures caps R Rcap Hcopy_roots).
+  rewrite (copy_capture_store_as_store_names captures caps s captured
+    Hcopy_store).
+  intros x Hin. exact Hin.
+Qed.
+
+Lemma copy_capture_roots_as_store_roots_named_in_frame :
+  forall captures caps R Rcap s captured frame,
+    copy_capture_store_as captures caps s = Some captured ->
+    copy_capture_roots_as captures caps R = Some Rcap ->
+    NoDup (ctx_names (params_ctx caps)) ->
+    root_env_store_roots_named R frame ->
+    root_env_store_roots_named Rcap (captured ++ frame).
+Proof.
+  induction captures as [| x captures IH]; intros caps R Rcap s captured
+    frame Hcopy_store Hcopy_roots Hnodup Hnamed;
+    destruct caps as [| cap caps]; simpl in Hcopy_store, Hcopy_roots;
+    try discriminate.
+  - injection Hcopy_store as <-. injection Hcopy_roots as <-.
+    unfold root_env_store_roots_named.
+    intros y roots z Hlookup _. simpl in Hlookup. discriminate.
+  - destruct (store_lookup x s) as [se |] eqn:Hlookup_store;
+      try discriminate.
+    destruct (binding_available_b (se_state se) [] &&
+      match ty_usage (se_ty se) with
+      | UUnrestricted => true
+      | _ => false
+      end) eqn:Hcopy_ok; try discriminate.
+    destruct (copy_capture_store_as captures caps s) as [captured_rest |]
+      eqn:Hcopy_store_tail; try discriminate.
+    destruct (root_env_lookup x R) as [roots_x |] eqn:Hlookup_roots;
+      try discriminate.
+    destruct (copy_capture_roots_as captures caps R) as [Rtail |]
+      eqn:Hcopy_roots_tail; try discriminate.
+    injection Hcopy_store as <-.
+    injection Hcopy_roots as <-.
+    inversion Hnodup as [| ? ? Hnotin Hnodup_tail]; subst.
+    unfold root_env_store_roots_named in *.
+    intros y roots z Hlookup Hin.
+    simpl in Hlookup.
+    destruct (ident_eqb y (param_name cap)) eqn:Heq.
+    + injection Hlookup as <-.
+      simpl. right. rewrite store_names_app_hfb. apply in_or_app. right.
+      eapply Hnamed; eassumption.
+    + simpl. right.
+      eapply IH.
+      * exact Hcopy_store_tail.
+      * exact Hcopy_roots_tail.
+      * exact Hnodup_tail.
+      * exact Hnamed.
+      * exact Hlookup.
+      * exact Hin.
+Qed.
+
 Lemma copy_capture_store_as_captured_entries_typed_rootless :
   forall Ω env s_target s Σ captures caps captured captured_tys,
     store_typed env s Σ ->

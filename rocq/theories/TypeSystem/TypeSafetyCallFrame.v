@@ -198,6 +198,70 @@ Proof.
       * exact Hin.
 Qed.
 
+Lemma check_make_closure_captures_exact_sctx_with_env_base_params_fresh_in_store :
+  forall env Ω s Σ captures caps captured_tys,
+    store_typed env s Σ ->
+    check_make_closure_captures_exact_sctx_with_env_base
+      env Ω Σ captures caps = infer_ok captured_tys ->
+    params_fresh_in_store caps s.
+Proof.
+  intros env Ω s Σ captures.
+  induction captures as [| x captures IH]; intros caps captured_tys
+    Hstore Hcheck;
+    destruct caps as [| cap caps]; simpl in Hcheck; try discriminate.
+  - unfold params_fresh_in_store. intros y Hin. contradiction.
+  - destruct (param_mutability cap) eqn:Hcap_mut; simpl in Hcheck;
+      try discriminate.
+    destruct (sctx_lookup (param_name cap) Σ) as [[Tcap stcap] |]
+      eqn:Hcap_lookup; try discriminate.
+    destruct (sctx_lookup x Σ) as [[T st] |] eqn:Hlookup; try discriminate.
+    destruct (st_consumed st) eqn:Hconsumed; try discriminate.
+    destruct (st_moved_paths st) as [| moved moved_rest] eqn:Hmoved;
+      try discriminate.
+    destruct (sctx_lookup_mut x Σ) as [m |] eqn:Hmut; try discriminate.
+    destruct m; try discriminate.
+    destruct (usage_eqb (ty_usage T) UUnrestricted) eqn:Husage;
+      try discriminate.
+    destruct (ty_eqb T (param_ty cap) &&
+      ty_compatible_b Ω T (param_ty cap)) eqn:Hty; try discriminate.
+    destruct (check_make_closure_captures_exact_sctx_with_env_base
+      env Ω Σ captures caps) as [captured_rest | err] eqn:Hrest;
+      try discriminate.
+    injection Hcheck as <-.
+    unfold params_fresh_in_store.
+    intros y Hin.
+    simpl in Hin. destruct Hin as [Hin | Hin].
+    + subst y.
+      intros Hin_store.
+      apply (sctx_lookup_none_not_in_names (param_name cap) Σ Hcap_lookup).
+      rewrite (store_typed_names env s Σ Hstore) in Hin_store.
+      exact Hin_store.
+    + eapply IH.
+      * exact Hstore.
+      * exact Hrest.
+      * exact Hin.
+Qed.
+
+Lemma check_make_closure_captures_exact_sctx_with_env_params_fresh_in_store :
+  forall env Ω s Σ captures caps env_lt captured_tys,
+    store_typed env s Σ ->
+    check_make_closure_captures_exact_sctx_with_env env Ω Σ captures caps =
+      infer_ok (env_lt, captured_tys) ->
+    params_fresh_in_store caps s.
+Proof.
+  intros env Ω s Σ captures caps env_lt captured_tys Hstore Hcheck.
+  unfold check_make_closure_captures_exact_sctx_with_env in Hcheck.
+  destruct (check_make_closure_captures_exact_sctx_with_env_base
+    env Ω Σ captures caps) as [captured_tys0 | err] eqn:Hbase;
+    try discriminate.
+  destruct (infer_closure_env_lifetime Ω captured_tys0) as [env_lt0 | err]
+    eqn:Henv; try discriminate.
+  destruct (closure_captures_allowed_b env Ω env_lt0 captured_tys0)
+    eqn:Hallowed; try discriminate.
+  eapply check_make_closure_captures_exact_sctx_with_env_base_params_fresh_in_store;
+    eassumption.
+Qed.
+
 Inductive eval_args_values_have_types
     (env : global_env) (Ω : outlives_ctx) (s : store)
     : list value -> list param -> Prop :=

@@ -149,8 +149,10 @@ runtime safety currently cross theorem boundaries.
 - Extracted the EnvRuntimeSafety root-check bridge block:
   `EnvRuntimeRootCheckFacts.v` now owns the root-check readiness and evidence
   conversion definitions.
+- Extracted the EnvRuntimeSafety initial-root runtime readiness block into
+  `EnvRuntimeInitialRootFacts.v`.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/EnvRuntimeRootCheckFacts.vo theories/TypeSystem/EnvRuntimeSafety.vo theories/TypeSystem/EnvFullSoundness.vo theories/TypeSystem/CheckerUsageSoundness.vo`.
+  `cd rocq && make theories/TypeSystem/EnvRuntimeInitialRootFacts.vo theories/TypeSystem/EnvRuntimeSafety.vo theories/TypeSystem/RuntimeRefSafety.vo theories/TypeSystem/EnvFullSoundness.vo theories/TypeSystem/CheckerUsageSoundness.vo`.
 - Next task: continue Phase 3 by looking for the next stable helper cluster
   that can move out of a large preservation file without changing theorem
   statements.

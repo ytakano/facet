@@ -62,6 +62,7 @@ theories/TypeSystem/EnvBorrowSoundness.v
 theories/TypeSystem/EnvRootSoundness.v
 theories/TypeSystem/BorrowStateSafety.v
 theories/TypeSystem/EnvRuntimeRootCheckFacts.v
+theories/TypeSystem/EnvRuntimeInitialRootFacts.v
 theories/TypeSystem/EnvRuntimeSafety.v
 theories/TypeSystem/RuntimeRefSafety.v
 theories/TypeSystem/EnvFullSoundness.v

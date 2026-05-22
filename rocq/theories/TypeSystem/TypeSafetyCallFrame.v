@@ -429,6 +429,65 @@ Proof.
   exact Htyped.
 Qed.
 
+Definition captured_params_store_typed_in_frame
+    (env : global_env) (captured frame : store) (caps : list param) : Prop :=
+  Forall2 (store_entry_typed env (captured ++ frame))
+    captured (params_ctx caps).
+
+Definition captured_call_frame_params_ready_in_frame
+    (env : global_env) (captured : store) (Rcap : root_env)
+    (s_args : store) (R_args : root_env) (caps : list param) : Prop :=
+  captured_call_frame_ready env captured Rcap s_args R_args /\
+  captured_params_store_typed_in_frame env captured s_args caps.
+
+Lemma captured_params_store_typed_in_frame_store_param_prefix :
+  forall env captured frame caps,
+    captured_params_store_typed_in_frame env captured frame caps ->
+    store_param_prefix caps captured [].
+Proof.
+  intros env captured frame caps Htyped.
+  unfold captured_params_store_typed_in_frame in Htyped.
+  eapply store_typed_entries_params_store_param_prefix.
+  exact Htyped.
+Qed.
+
+Lemma captured_params_store_typed_in_frame_prefix_frame :
+  forall env captured caps frame,
+    captured_params_store_typed_in_frame env captured frame caps ->
+    store_typed_prefix env (captured ++ frame)
+      (sctx_of_ctx (params_ctx caps)).
+Proof.
+  intros env captured caps frame Htyped.
+  unfold captured_params_store_typed_in_frame, store_typed_prefix in *.
+  exists captured, frame.
+  split; [reflexivity | exact Htyped].
+Qed.
+
+Lemma captured_params_store_typed_in_frame_from_self :
+  forall env captured caps frame,
+    captured_params_store_typed env captured caps ->
+    captured_params_store_typed_in_frame env captured frame caps.
+Proof.
+  intros env captured caps frame Htyped.
+  unfold captured_params_store_typed, captured_params_store_typed_in_frame,
+    store_typed in *.
+  eapply store_typed_entries_store_preserved.
+  - exact Htyped.
+  - apply store_ref_targets_preserved_app_left.
+Qed.
+
+Lemma captured_call_frame_params_ready_in_frame_from_self :
+  forall env captured Rcap s_args R_args caps,
+    captured_call_frame_params_ready env captured Rcap s_args R_args caps ->
+    captured_call_frame_params_ready_in_frame
+      env captured Rcap s_args R_args caps.
+Proof.
+  intros env captured Rcap s_args R_args caps [Hframe Htyped].
+  split.
+  - exact Hframe.
+  - eapply captured_params_store_typed_in_frame_from_self. exact Htyped.
+Qed.
+
 Lemma captured_params_store_typed_prefix_frame :
   forall env captured caps frame,
     captured_params_store_typed env captured caps ->

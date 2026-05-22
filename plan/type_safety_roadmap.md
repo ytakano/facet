@@ -326,6 +326,16 @@ Work in this order unless a proof exposes a soundness gap.
    - The final captured-call checked-initial safety theorem now has an `if`
      summary case that delegates to
      `eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_typing`.
+   - Newly discovered blocker for the remaining captured-call `ELet` gap:
+     a naive `ERSCE_Let`/expression-sidecar widening was considered, but the
+     exact helper currently returns only `store_typed` and `value_has_type`.
+     `ELet` cleanup needs body `store_roots_within`, `value_roots_within`,
+     `store_no_shadow`, and `root_env_no_shadow` evidence, and likely root
+     name/key facts, to erase the bound root safely. The captured-call
+     preservation wrappers also expose only store/value facts at the expression
+     helper boundary, so the next implementation must first strengthen the
+     captured-call preservation/runtime facts before adding an `ELet` sidecar
+     branch.
 
    Next proof task:
 

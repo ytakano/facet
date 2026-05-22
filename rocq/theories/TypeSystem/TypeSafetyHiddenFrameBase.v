@@ -1730,12 +1730,20 @@ Proof.
   - exact Hroots_args.
   - apply store_no_shadow_app; assumption.
   - apply root_env_no_shadow_app; assumption.
-  - apply root_env_store_roots_named_app; try assumption.
-    intros x roots Hlookup_args.
-    specialize (Hroot_disj x).
-    destruct Hroot_disj as [Hnone_cap | Hnone_args].
-    + exact Hnone_cap.
-    + rewrite Hlookup_args in Hnone_args. discriminate.
+  - unfold root_env_store_roots_named in *.
+    intros x roots z Hlookup Hin.
+    destruct (root_env_lookup x Rcap) as [roots_cap |] eqn:Hlookup_cap.
+    + rewrite (root_env_lookup_app_left x Rcap R_args roots_cap
+        Hlookup_cap) in Hlookup.
+      inversion Hlookup; subst roots_cap.
+      rewrite store_names_app.
+      apply in_or_app. left.
+      eapply Hnamed_cap; eassumption.
+    + rewrite (root_env_lookup_app_right x Rcap R_args Hlookup_cap)
+        in Hlookup.
+      rewrite store_names_app.
+      apply in_or_app. right.
+      eapply Hnamed_args; eassumption.
   - apply root_env_store_keys_named_app; assumption.
 Qed.
 
@@ -1841,6 +1849,89 @@ Proof.
   intros env captured frame Htyped.
   eapply capture_store_root_env_store_roots_named_in_store.
   exact Htyped.
+Qed.
+
+Lemma copy_capture_store_as_captured_store_runtime_ready_in_frame_with_env :
+  forall Ω env s Σ captures caps captured env_lt captured_tys frame,
+    store_typed env s Σ ->
+    store_ref_targets_preserved env s (captured ++ frame) ->
+    NoDup (ctx_names (params_ctx caps)) ->
+    copy_capture_store_as captures caps s = Some captured ->
+    check_make_closure_captures_exact_sctx_with_env env Ω Σ captures caps =
+      infer_ok (env_lt, captured_tys) ->
+    captured_store_runtime_ready_in_frame env captured
+      (capture_store_root_env captured) frame.
+Proof.
+  intros Ω env s Σ captures caps captured env_lt captured_tys frame
+    Hstore Hpres Hnodup Hcopy Hcheck.
+  pose proof
+    (copy_capture_store_as_captured_entries_typed_with_env_preserved
+      Ω env (captured ++ frame) s Σ captures caps captured env_lt
+      captured_tys Hstore Hpres Hcopy Hcheck) as Htyped.
+  pose proof
+    (copy_capture_store_as_captured_values_canonical_roots_with_env
+      Ω env s Σ captures caps captured env_lt captured_tys
+      Hstore Hcopy Hcheck) as Hvalues.
+  assert (Hshadow : store_no_shadow captured).
+  { unfold store_no_shadow.
+    rewrite (copy_capture_store_as_store_names captures caps s captured Hcopy).
+    exact Hnodup. }
+  unfold captured_store_runtime_ready_in_frame.
+  repeat split.
+  - exact Htyped.
+  - eapply capture_store_root_env_roots_within; eassumption.
+  - exact Hshadow.
+  - apply capture_store_root_env_no_shadow. exact Hshadow.
+  - eapply capture_store_root_env_store_roots_named. exact Htyped.
+  - apply capture_store_root_env_store_keys_named.
+Qed.
+
+Lemma captured_call_frame_ready_in_frame_compose :
+  forall env captured Rcap s_args R_args,
+    captured_store_runtime_ready_in_frame env captured Rcap s_args ->
+    store_roots_within R_args s_args ->
+    store_no_shadow s_args ->
+    root_env_no_shadow R_args ->
+    root_env_store_roots_named R_args s_args ->
+    root_env_store_keys_named R_args s_args ->
+    (forall x, In x (store_names captured) -> ~ In x (store_names s_args)) ->
+    (forall x, root_env_lookup x Rcap = None \/
+      root_env_lookup x R_args = None) ->
+    captured_call_frame_ready_in_frame env captured Rcap s_args R_args.
+Proof.
+  intros env captured Rcap s_args R_args Hcap_ready Hroots_args
+    Hshadow_args Hrn_args Hnamed_args Hkeys_args Hstore_disj Hroot_disj.
+  unfold captured_store_runtime_ready_in_frame in Hcap_ready.
+  destruct Hcap_ready as
+    [Hcap_typed
+      [Hroots_cap
+        [Hshadow_cap
+          [Hrn_cap [Hnamed_cap Hkeys_cap]]]]].
+  unfold captured_call_frame_ready_in_frame,
+    captured_store_runtime_ready_in_frame.
+  repeat split.
+  - exact Hcap_typed.
+  - exact Hroots_cap.
+  - exact Hshadow_cap.
+  - exact Hrn_cap.
+  - exact Hnamed_cap.
+  - exact Hkeys_cap.
+  - exact Hroots_args.
+  - apply store_no_shadow_app; assumption.
+  - apply root_env_no_shadow_app; assumption.
+  - unfold root_env_store_roots_named in *.
+    intros x roots z Hlookup Hin.
+    destruct (root_env_lookup x Rcap) as [roots_cap |] eqn:Hlookup_cap.
+    + rewrite (root_env_lookup_app_left x Rcap R_args roots_cap
+        Hlookup_cap) in Hlookup.
+      inversion Hlookup; subst roots_cap.
+      eapply Hnamed_cap; eassumption.
+    + rewrite (root_env_lookup_app_right x Rcap R_args Hlookup_cap)
+        in Hlookup.
+      rewrite store_names_app.
+      apply in_or_app. right.
+      eapply Hnamed_args; eassumption.
+  - apply root_env_store_keys_named_app; assumption.
 Qed.
 
 Lemma store_ref_targets_preserved_app_left :

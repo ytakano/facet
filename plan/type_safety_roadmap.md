@@ -296,9 +296,10 @@ Work in this order unless a proof exposes a soundness gap.
 
      The exact `if` constructor carries the same branch typings, merge, and
      root equivalence as `TERS_If`.
-   - This helper is intentionally not wired into
-     `check_fn_root_shadow_captured_call_provenance_summary` or any validated
-     program wrapper yet.
+   - Checker soundness from the fuel-aligned helper to the exact evidence is
+     in place. The function-level captured-call summary checker now has an
+     `EIf` branch guarded by the exact expression helper, return
+     compatibility, and parameter root-exclusion checks.
 
    Remaining proof task:
 
@@ -322,14 +323,16 @@ Work in this order unless a proof exposes a soundness gap.
      It evaluates the condition with ordinary provenance readiness, carries
      store/root/name/key invariants into the selected branch, and reuses the
      direct/captured-call wrappers under branch `R1`/`Σ1`.
-   - Next: prove checker soundness from the fuel-aligned helper to the exact
-     evidence. Keep the proof tied to the same state-fuel equations used by
-     `infer_core_env_state_fuel_roots_shadow_safe`; do not use typing
-     determinism to relate fresh checker runs.
-   - Only after that checker-soundness lemma compiles should the
-     function-level captured-call summary checker gain an `EIf` branch. If the
-     proof requires weakening returned-value safety or changing ordinary
-     `T_If`/`TES_If`, stop and report the soundness gap.
+   - The final captured-call checked-initial safety theorem now has an `if`
+     summary case that delegates to
+     `eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_typing`.
+
+   Next proof task:
+
+   - Reassess the remaining gap between ordinary checker acceptance and the
+     validated captured-call sidecar after the `if` branch. Do not add new
+     expression forms to the sidecar unless their preservation route is
+     already covered by exact evidence and checked-initial runtime premises.
 
 ## Current Captured Closure Facts
 

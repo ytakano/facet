@@ -900,6 +900,14 @@ val check_fn_root_shadow_captured_callee_provenance_summary :
 
 val callee_hidden_capture_args_disjoint_b : fn_def -> expr list -> bool
 
+val check_expr_root_shadow_captured_call_provenance_summary_fuel :
+  Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+  root_env -> sctx -> expr -> bool
+
+val check_expr_root_shadow_captured_call_provenance_summary :
+  global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
+  -> bool
+
 val check_fn_root_shadow_captured_call_provenance_summary :
   global_env -> fn_def -> bool
 

@@ -5526,6 +5526,28 @@ Definition check_fn_root_shadow_captured_call_provenance_summary
           end
       | None => false
       end ||
+      match fn_body fdef with
+      | EIf _ _ _ =>
+          match infer_core_env_roots_shadow_safe env
+                  (fn_outlives fdef)
+                  (fn_lifetimes fdef)
+                  (initial_root_env_for_fn fdef)
+                  (fn_body_ctx fdef)
+                  (fn_body fdef),
+                infer_env_roots_shadow_safe env fdef
+                  (initial_root_env_for_fn fdef) with
+          | infer_ok (T_body, _, R_out, roots), infer_ok _ =>
+              check_expr_root_shadow_captured_call_provenance_summary
+                env (fn_outlives fdef) (fn_lifetimes fdef)
+                (initial_root_env_for_fn fdef)
+                (fn_body_ctx fdef) (fn_body fdef) &&
+              ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) &&
+              fn_params_roots_exclude_b (fn_params fdef) roots &&
+              fn_params_root_env_excludes_b (fn_params fdef) R_out
+          | _, _ => false
+          end
+      | _ => false
+      end ||
       match local_captured_call_target_expr (fn_body fdef) with
       | Some (fname, captures, args, m, x, T, direct_body, let_body) =>
           preservation_ready_args_b args &&
@@ -5968,9 +5990,9 @@ Example ready_gap_matrix_captured_closure_direct_param_if_call_helper_accepts :
     (fn_body ex_ready_gap_captured_closure_direct_param_if_call_fn) = true.
 Proof. vm_compute. reflexivity. Qed.
 
-Example ready_gap_matrix_captured_closure_direct_param_if_call_summary_rejects :
+Example ready_gap_matrix_captured_closure_direct_param_if_call_summary_accepts :
   check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
-    ex_ready_gap_captured_closure_direct_param_if_call_env = false.
+    ex_ready_gap_captured_closure_direct_param_if_call_env = true.
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_ready_gap_captured_closure_local_let_call_fn : fn_def :=

@@ -920,7 +920,10 @@ Proof.
       eassumption. }
   destruct
     (eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
-      Hframe Hprefix Hparam env Ω s s_args s_body args fname captures
+      Hframe
+      (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+        Hprefix)
+      Hparam env Ω s s_args s_body args fname captures
       captured fdef fcall vs ret used' (empty_root_env_for_store captured)
       R_args Σ Σ_args captured_tys [] T_body Γ_out
       (call_param_root_env (fn_params fcall) arg_roots

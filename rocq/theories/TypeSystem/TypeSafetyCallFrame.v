@@ -437,7 +437,7 @@ Definition captured_params_store_typed_in_frame
 Definition captured_call_frame_params_ready_in_frame
     (env : global_env) (captured : store) (Rcap : root_env)
     (s_args : store) (R_args : root_env) (caps : list param) : Prop :=
-  captured_call_frame_ready env captured Rcap s_args R_args /\
+  captured_call_frame_ready_in_frame env captured Rcap s_args R_args /\
   captured_params_store_typed_in_frame env captured s_args caps.
 
 Lemma captured_params_store_typed_in_frame_store_param_prefix :
@@ -484,7 +484,7 @@ Lemma captured_call_frame_params_ready_in_frame_from_self :
 Proof.
   intros env captured Rcap s_args R_args caps [Hframe Htyped].
   split.
-  - exact Hframe.
+  - eapply captured_call_frame_ready_in_frame_from_self. exact Hframe.
   - eapply captured_params_store_typed_in_frame_from_self. exact Htyped.
 Qed.
 

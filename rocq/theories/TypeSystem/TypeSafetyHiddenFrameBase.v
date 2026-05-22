@@ -266,6 +266,27 @@ Definition captured_call_frame_ready
   root_env_store_roots_named (Rcap ++ R_args) (captured ++ s_args) /\
   root_env_store_keys_named (Rcap ++ R_args) (captured ++ s_args).
 
+Definition captured_store_runtime_ready_in_frame
+    (env : global_env) (captured : store) (Rcap : root_env)
+    (frame : store) : Prop :=
+  Forall2 (store_entry_typed env (captured ++ frame))
+    captured (sctx_of_store captured) /\
+  store_roots_within Rcap captured /\
+  store_no_shadow captured /\
+  root_env_no_shadow Rcap /\
+  root_env_store_roots_named Rcap (captured ++ frame) /\
+  root_env_store_keys_named Rcap captured.
+
+Definition captured_call_frame_ready_in_frame
+    (env : global_env) (captured : store) (Rcap : root_env)
+    (s_args : store) (R_args : root_env) : Prop :=
+  captured_store_runtime_ready_in_frame env captured Rcap s_args /\
+  store_roots_within R_args s_args /\
+  store_no_shadow (captured ++ s_args) /\
+  root_env_no_shadow (Rcap ++ R_args) /\
+  root_env_store_roots_named (Rcap ++ R_args) (captured ++ s_args) /\
+  root_env_store_keys_named (Rcap ++ R_args) (captured ++ s_args).
+
 Definition captured_params_store_typed
     (env : global_env) (captured : store) (caps : list param) : Prop :=
   store_typed env captured (sctx_of_ctx (params_ctx caps)).
@@ -1374,6 +1395,46 @@ Proof.
     + simpl. repeat split; try assumption.
       eapply value_has_type_store_preserved; eassumption.
     + exact IH.
+Qed.
+
+Lemma captured_store_runtime_ready_in_frame_from_self :
+  forall env captured Rcap frame,
+    captured_store_runtime_ready env captured Rcap ->
+    captured_store_runtime_ready_in_frame env captured Rcap frame.
+Proof.
+  intros env captured Rcap frame Hready.
+  unfold captured_store_runtime_ready, captured_store_runtime_ready_in_frame
+    in *.
+  destruct Hready as
+    [Htyped [Hroots [Hshadow [Hrn [Hnamed Hkeys]]]]].
+  repeat split.
+  - unfold captured_store_typed, store_typed in Htyped.
+    eapply store_typed_entries_store_preserved.
+    + exact Htyped.
+    + apply store_ref_targets_preserved_app_left.
+  - exact Hroots.
+  - exact Hshadow.
+  - exact Hrn.
+  - unfold root_env_store_roots_named in *.
+    intros x roots z Hlookup Hin.
+    rewrite store_names_app.
+    apply in_or_app. left.
+    eapply Hnamed; eassumption.
+  - exact Hkeys.
+Qed.
+
+Lemma captured_call_frame_ready_in_frame_from_self :
+  forall env captured Rcap s_args R_args,
+    captured_call_frame_ready env captured Rcap s_args R_args ->
+    captured_call_frame_ready_in_frame env captured Rcap s_args R_args.
+Proof.
+  intros env captured Rcap s_args R_args Hready.
+  unfold captured_call_frame_ready, captured_call_frame_ready_in_frame in *.
+  destruct Hready as [Hcap_ready Hrest].
+  split.
+  - eapply captured_store_runtime_ready_in_frame_from_self.
+    exact Hcap_ready.
+  - exact Hrest.
 Qed.
 
 Lemma store_typed_entries_app :

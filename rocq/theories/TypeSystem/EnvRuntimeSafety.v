@@ -1959,6 +1959,22 @@ Proof.
   exact Hsummary.
 Qed.
 
+Lemma check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary_ready :
+  forall env env',
+    check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary env = true ->
+    infer_program_env_alpha_elab env = infer_ok env' ->
+    env_fns_root_shadow_captured_call_provenance_summary_check_ready env'.
+Proof.
+  intros env env' Hcheck Helab.
+  unfold
+    check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary
+    in Hcheck.
+  apply andb_true_iff in Hcheck as [_ Hsummary].
+  rewrite Helab in Hsummary.
+  apply check_env_root_shadow_captured_call_provenance_summary_ready.
+  exact Hsummary.
+Qed.
+
 Lemma check_program_env_alpha_validated_root_shadow_provenance_ready :
   forall env,
     check_program_env_alpha_validated_root_shadow_provenance env = true ->

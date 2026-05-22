@@ -445,6 +445,16 @@ val root_env_update : ident -> root_set -> root_env -> root_env
 
 val root_env_remove : ident -> root_env -> root_env
 
+val args_local_store_names_with :
+  (expr -> ident list) -> expr list -> ident list
+
+val fields_local_store_names_with :
+  (expr -> ident list) -> (string * expr) list -> ident list
+
+val expr_local_store_names : expr -> ident list
+
+val args_local_store_names : expr list -> ident list
+
 val usage_eqb : usage -> usage -> bool
 
 val usage_sub_bool : usage -> usage -> bool
@@ -638,6 +648,14 @@ val check_make_closure_captures_sctx_with_env :
 val check_make_closure_captures_exact_sctx :
   global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list
   infer_result
+
+val check_make_closure_captures_exact_sctx_with_env_base :
+  global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list
+  infer_result
+
+val check_make_closure_captures_exact_sctx_with_env :
+  global_env -> outlives_ctx -> sctx -> ident list -> param list ->
+  (lifetime * ty list) infer_result
 
 val sctx_add : ident -> ty -> mutability -> sctx -> sctx
 
@@ -862,7 +880,33 @@ val direct_call_ready_expr_b : expr -> bool
 val check_fn_root_shadow_direct_call_provenance_summary :
   global_env -> fn_def -> bool
 
+val local_fn_value_call_target_expr :
+  expr -> ((ident * expr list) * expr) option
+
+val check_fn_root_shadow_non_capturing_call_provenance_summary :
+  global_env -> fn_def -> bool
+
+val captured_call_target_expr :
+  expr -> ((ident * ident list) * expr list) option
+
+val args_free_vars_checker : expr list -> ident list
+
+val local_captured_call_target_expr :
+  expr -> (((((((ident * ident list) * expr
+  list) * mutability) * ident) * ty) * expr) * expr) option
+
+val check_fn_root_shadow_captured_callee_provenance_summary :
+  global_env -> fn_def -> bool
+
+val callee_hidden_capture_args_disjoint_b : fn_def -> expr list -> bool
+
+val check_fn_root_shadow_captured_call_provenance_summary :
+  global_env -> fn_def -> bool
+
 val check_env_root_shadow_direct_call_provenance_summary : global_env -> bool
+
+val check_env_root_shadow_captured_call_provenance_summary :
+  global_env -> bool
 
 val check_env_preservation_ready : global_env -> bool
 
@@ -872,6 +916,9 @@ val check_program_env_alpha_validated_root_shadow_provenance_summary :
   global_env -> bool
 
 val check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary :
+  global_env -> bool
+
+val check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary :
   global_env -> bool
 
 val check_program_env_alpha_validated_root_shadow_provenance :

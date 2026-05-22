@@ -5544,6 +5544,15 @@ Definition check_program_env_alpha_validated_root_shadow_captured_call_provenanc
   check_env_root_shadow_captured_call_provenance_summary
     (alpha_normalize_global_env env).
 
+Definition check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary
+    (env : global_env) : bool :=
+  top_level_names_unique_b (alpha_normalize_global_env env) &&
+  match infer_program_env_alpha_elab env with
+  | infer_ok env' =>
+      check_env_root_shadow_captured_call_provenance_summary env'
+  | infer_err _ => false
+  end.
+
 Definition check_program_env_alpha_validated_root_shadow_provenance
     (env : global_env) : bool :=
   check_program_env_alpha_validated env &&
@@ -5891,6 +5900,37 @@ Proof. vm_compute. reflexivity. Qed.
 Example ready_gap_matrix_captured_closure_local_let_call_captured_summary_accepts :
   check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
     ex_ready_gap_captured_closure_local_let_call_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Definition ex_ready_gap_captured_closure_infer_local_let_call_fn : fn_def :=
+  MkFnDef (("ready_gap_captured_closure_infer_local_let_call"%string), 0)
+    0 [] [] [MkParam MImmutable (("cap"%string), 0)
+      (MkTy UUnrestricted TIntegers)]
+    (MkTy UUnrestricted TUnits)
+    (ELetInfer MImmutable (("g"%string), 0)
+      (EMakeClosure (("nonempty_capture_callee"%string), 0)
+        [(("cap"%string), 0)])
+      (ECallExpr (EVar (("g"%string), 0)) [])).
+
+Definition ex_ready_gap_captured_closure_infer_local_let_call_env
+    : global_env :=
+  MkGlobalEnv [] [] []
+    [ex_nonempty_capture_callee_fn;
+     ex_ready_gap_captured_closure_infer_local_let_call_fn].
+
+Example ready_gap_matrix_captured_closure_infer_local_let_call_elab_checker_accepts :
+  check_program_env_alpha_elab
+    ex_ready_gap_captured_closure_infer_local_let_call_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_captured_closure_infer_local_let_call_original_summary_rejects :
+  check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
+    ex_ready_gap_captured_closure_infer_local_let_call_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_captured_closure_infer_local_let_call_elab_summary_accepts :
+  check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary
+    ex_ready_gap_captured_closure_infer_local_let_call_env = true.
 Proof. vm_compute. reflexivity. Qed.
 
 Example ready_gap_matrix_make_closure_preservation_ready_rejects :
@@ -6448,4 +6488,5 @@ Extraction "../fixtures/TypeChecker.ml"
   check_program_env_alpha_validated_root_shadow
   check_program_env_alpha_validated_root_shadow_provenance_summary
   check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary
+  check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary
   check_program_env_alpha_validated_root_shadow_provenance.

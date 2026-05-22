@@ -1947,6 +1947,50 @@ let rec root_env_remove x = function
   let (y, roots) = p in
   if ident_eqb x y then rest else (y, roots) :: (root_env_remove x rest)
 
+(** val args_local_store_names_with :
+    (expr -> ident list) -> expr list -> ident list **)
+
+let rec args_local_store_names_with expr_names = function
+| [] -> []
+| e :: rest ->
+  app (expr_names e) (args_local_store_names_with expr_names rest)
+
+(** val fields_local_store_names_with :
+    (expr -> ident list) -> (string * expr) list -> ident list **)
+
+let rec fields_local_store_names_with expr_names = function
+| [] -> []
+| p :: rest ->
+  let (_, e) = p in
+  app (expr_names e) (fields_local_store_names_with expr_names rest)
+
+(** val expr_local_store_names : expr -> ident list **)
+
+let rec expr_local_store_names = function
+| ELet (_, x, _, e1, e2) ->
+  app (expr_local_store_names e1) (x :: (expr_local_store_names e2))
+| ELetInfer (_, x, e1, e2) ->
+  app (expr_local_store_names e1) (x :: (expr_local_store_names e2))
+| ECall (_, args) -> args_local_store_names_with expr_local_store_names args
+| ECallExpr (callee, args) ->
+  app (expr_local_store_names callee)
+    (args_local_store_names_with expr_local_store_names args)
+| EStruct (_, _, _, fields) ->
+  fields_local_store_names_with expr_local_store_names fields
+| EReplace (_, e_new) -> expr_local_store_names e_new
+| EAssign (_, e_new) -> expr_local_store_names e_new
+| EDeref e' -> expr_local_store_names e'
+| EDrop e' -> expr_local_store_names e'
+| EIf (e1, e2, e3) ->
+  app (expr_local_store_names e1)
+    (app (expr_local_store_names e2) (expr_local_store_names e3))
+| _ -> []
+
+(** val args_local_store_names : expr list -> ident list **)
+
+let args_local_store_names args =
+  args_local_store_names_with expr_local_store_names args
+
 (** val usage_eqb : usage -> usage -> bool **)
 
 let usage_eqb u1 u2 =
@@ -3113,6 +3157,72 @@ let rec check_make_closure_captures_exact_sctx env _UU03a9_ _UU03a3_ captures pa
                       | _ :: _ -> Infer_err ErrContextCheckFailed)
               | None -> Infer_err (ErrUnknownVar x)))
         | MMutable -> Infer_err ErrContextCheckFailed))
+
+(** val check_make_closure_captures_exact_sctx_with_env_base :
+    global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list
+    infer_result **)
+
+let rec check_make_closure_captures_exact_sctx_with_env_base env _UU03a9_ _UU03a3_ captures params =
+  match captures with
+  | [] ->
+    (match params with
+     | [] -> Infer_ok []
+     | _ :: _ -> Infer_err ErrArityMismatch)
+  | x :: captures' ->
+    (match params with
+     | [] -> Infer_err ErrArityMismatch
+     | cap :: params' ->
+       (match cap.param_mutability with
+        | MImmutable ->
+          (match sctx_lookup cap.param_name _UU03a3_ with
+           | Some _ -> Infer_err ErrContextCheckFailed
+           | None ->
+             (match sctx_lookup x _UU03a3_ with
+              | Some p ->
+                let (t, st) = p in
+                if st.st_consumed
+                then Infer_err ErrContextCheckFailed
+                else (match st.st_moved_paths with
+                      | [] ->
+                        (match sctx_lookup_mut x _UU03a3_ with
+                         | Some m ->
+                           (match m with
+                            | MImmutable ->
+                              if usage_eqb (ty_usage t) UUnrestricted
+                              then if (&&) (ty_eqb t cap.param_ty)
+                                        (ty_compatible_b _UU03a9_ t
+                                          cap.param_ty)
+                                   then (match check_make_closure_captures_exact_sctx_with_env_base
+                                                 env _UU03a9_ _UU03a3_
+                                                 captures' params' with
+                                         | Infer_ok rest_tys ->
+                                           Infer_ok (t :: rest_tys)
+                                         | Infer_err err -> Infer_err err)
+                                   else Infer_err
+                                          (compatible_error t cap.param_ty)
+                              else Infer_err (ErrUsageMismatch ((ty_usage t),
+                                     UUnrestricted))
+                            | MMutable -> Infer_err (ErrNotMutable x))
+                         | None -> Infer_err (ErrUnknownVar x))
+                      | _ :: _ -> Infer_err ErrContextCheckFailed)
+              | None -> Infer_err (ErrUnknownVar x)))
+        | MMutable -> Infer_err ErrContextCheckFailed))
+
+(** val check_make_closure_captures_exact_sctx_with_env :
+    global_env -> outlives_ctx -> sctx -> ident list -> param list ->
+    (lifetime * ty list) infer_result **)
+
+let check_make_closure_captures_exact_sctx_with_env env _UU03a9_ _UU03a3_ captures params =
+  match check_make_closure_captures_exact_sctx_with_env_base env _UU03a9_
+          _UU03a3_ captures params with
+  | Infer_ok captured_tys ->
+    (match infer_closure_env_lifetime _UU03a9_ captured_tys with
+     | Infer_ok env_lt ->
+       if closure_captures_allowed_b env _UU03a9_ env_lt captured_tys
+       then Infer_ok (env_lt, captured_tys)
+       else Infer_err (ErrNotAReference TUnits)
+     | Infer_err err -> Infer_err err)
+  | Infer_err err -> Infer_err err
 
 (** val sctx_add : ident -> ty -> mutability -> sctx -> sctx **)
 
@@ -6000,11 +6110,236 @@ let check_fn_root_shadow_direct_call_provenance_summary env fdef =
              | None -> false)
         | None -> false)
 
+(** val local_fn_value_call_target_expr :
+    expr -> ((ident * expr list) * expr) option **)
+
+let local_fn_value_call_target_expr = function
+| ELet (m, x, t, e0, e1) ->
+  (match e0 with
+   | EFn fname ->
+     (match e1 with
+      | ECallExpr (e2, args) ->
+        (match e2 with
+         | EVar y ->
+           if (&&) (ident_eqb x y) (usage_eqb (ty_usage t) UUnrestricted)
+           then Some ((fname, args), (ELet (m, x, t, (EFn fname), (ECall
+                  (fname, args)))))
+           else None
+         | _ -> None)
+      | _ -> None)
+   | _ -> None)
+| ELetInfer (m, x, e0, e1) ->
+  (match e0 with
+   | EFn fname ->
+     (match e1 with
+      | ECallExpr (e2, args) ->
+        (match e2 with
+         | EVar y ->
+           if ident_eqb x y
+           then Some ((fname, args), (ELetInfer (m, x, (EFn fname), (ECall
+                  (fname, args)))))
+           else None
+         | _ -> None)
+      | _ -> None)
+   | _ -> None)
+| _ -> None
+
+(** val check_fn_root_shadow_non_capturing_call_provenance_summary :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_non_capturing_call_provenance_summary env fdef =
+  if check_fn_root_shadow_direct_call_provenance_summary env fdef
+  then true
+  else (match local_fn_value_call_target_expr fdef.fn_body with
+        | Some p ->
+          let (p0, synthetic_body) = p in
+          let (fname, args) = p0 in
+          (&&) (preservation_ready_args_b args)
+            (match lookup_fn_b fname env.env_fns with
+             | Some callee ->
+               (&&) (check_fn_root_shadow_provenance_summary env callee)
+                 (match infer_env_roots_shadow_safe env
+                          (fn_with_body fdef synthetic_body)
+                          (initial_root_env_for_fn fdef) with
+                  | Infer_ok p1 ->
+                    let (p2, roots) = p1 in
+                    let (_, r_out) = p2 in
+                    (&&) (fn_params_roots_exclude_b fdef.fn_params roots)
+                      (fn_params_root_env_excludes_b fdef.fn_params r_out)
+                  | Infer_err _ -> false)
+             | None -> false)
+        | None -> false)
+
+(** val captured_call_target_expr :
+    expr -> ((ident * ident list) * expr list) option **)
+
+let captured_call_target_expr = function
+| ECallExpr (e0, args) ->
+  (match e0 with
+   | EMakeClosure (fname, captures) -> Some ((fname, captures), args)
+   | _ -> None)
+| _ -> None
+
+(** val args_free_vars_checker : expr list -> ident list **)
+
+let args_free_vars_checker args =
+  args_local_store_names_with free_vars_expr args
+
+(** val local_captured_call_target_expr :
+    expr -> (((((((ident * ident list) * expr
+    list) * mutability) * ident) * ty) * expr) * expr) option **)
+
+let local_captured_call_target_expr = function
+| ELet (m, x, t, e0, e1) ->
+  (match e0 with
+   | EMakeClosure (fname, captures) ->
+     (match e1 with
+      | ECallExpr (e2, args) ->
+        (match e2 with
+         | EVar y ->
+           if (&&)
+                ((&&)
+                  ((&&)
+                    ((&&) (ident_eqb x y)
+                      (usage_eqb (ty_usage t) UUnrestricted))
+                    (negb (existsb (ident_eqb x) captures)))
+                  (negb (existsb (ident_eqb x) (args_free_vars_checker args))))
+                (negb (existsb (ident_eqb x) (args_local_store_names args)))
+           then let direct_body = ECallExpr ((EMakeClosure (fname,
+                  captures)), args)
+                in
+                Some (((((((fname, captures), args), m), x), t),
+                direct_body), (ELet (m, x, t, (EMakeClosure (fname,
+                captures)), direct_body)))
+           else None
+         | _ -> None)
+      | _ -> None)
+   | _ -> None)
+| _ -> None
+
+(** val check_fn_root_shadow_captured_callee_provenance_summary :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_captured_callee_provenance_summary env fdef =
+  (&&) (provenance_ready_expr_b fdef.fn_body)
+    (match infer_env_roots_shadow_safe env fdef
+             (initial_root_env_for_params
+               (app fdef.fn_params fdef.fn_captures)) with
+     | Infer_ok p ->
+       let (p0, roots) = p in
+       let (_, r_out) = p0 in
+       (&&)
+         (fn_params_roots_exclude_b (app fdef.fn_params fdef.fn_captures)
+           roots)
+         (fn_params_root_env_excludes_b (app fdef.fn_params fdef.fn_captures)
+           r_out)
+     | Infer_err _ -> false)
+
+(** val callee_hidden_capture_args_disjoint_b :
+    fn_def -> expr list -> bool **)
+
+let callee_hidden_capture_args_disjoint_b callee args =
+  forallb (fun x ->
+    negb (existsb (ident_eqb x) (args_local_store_names args)))
+    (ctx_names (params_ctx callee.fn_captures))
+
+(** val check_fn_root_shadow_captured_call_provenance_summary :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_captured_call_provenance_summary env fdef =
+  if check_fn_root_shadow_non_capturing_call_provenance_summary env fdef
+  then true
+  else (||)
+         (match captured_call_target_expr fdef.fn_body with
+          | Some p ->
+            let (p0, args) = p in
+            let (fname, captures) = p0 in
+            (&&) (preservation_ready_args_b args)
+              (match lookup_fn_b fname env.env_fns with
+               | Some callee ->
+                 (&&)
+                   ((&&) (Nat.eqb callee.fn_lifetimes Big_int_Z.zero_big_int)
+                     (callee_hidden_capture_args_disjoint_b callee args))
+                   (match check_make_closure_captures_exact_sctx_with_env env
+                            fdef.fn_outlives (sctx_of_ctx (fn_body_ctx fdef))
+                            captures callee.fn_captures with
+                    | Infer_ok _ ->
+                      (&&)
+                        (check_fn_root_shadow_captured_callee_provenance_summary
+                          env callee)
+                        (match infer_env_roots_shadow_safe env fdef
+                                 (initial_root_env_for_fn fdef) with
+                         | Infer_ok p1 ->
+                           let (p2, roots) = p1 in
+                           let (_, r_out) = p2 in
+                           (&&)
+                             (fn_params_roots_exclude_b fdef.fn_params roots)
+                             (fn_params_root_env_excludes_b fdef.fn_params
+                               r_out)
+                         | Infer_err _ -> false)
+                    | Infer_err _ -> false)
+               | None -> false)
+          | None -> false)
+         (match local_captured_call_target_expr fdef.fn_body with
+          | Some p ->
+            let (p0, let_body) = p in
+            let (p1, direct_body) = p0 in
+            let (p2, _) = p1 in
+            let (p3, x) = p2 in
+            let (p4, _) = p3 in
+            let (p5, args) = p4 in
+            let (fname, captures) = p5 in
+            (&&) (preservation_ready_args_b args)
+              (match lookup_fn_b fname env.env_fns with
+               | Some callee ->
+                 (&&)
+                   ((&&)
+                     ((&&)
+                       (Nat.eqb callee.fn_lifetimes Big_int_Z.zero_big_int)
+                       (callee_hidden_capture_args_disjoint_b callee args))
+                     (negb
+                       (existsb (ident_eqb x)
+                         (ctx_names (params_ctx callee.fn_captures)))))
+                   (match check_make_closure_captures_exact_sctx_with_env env
+                            fdef.fn_outlives (sctx_of_ctx (fn_body_ctx fdef))
+                            captures callee.fn_captures with
+                    | Infer_ok _ ->
+                      (&&)
+                        (check_fn_root_shadow_captured_callee_provenance_summary
+                          env callee)
+                        (match infer_env_roots_shadow_safe env
+                                 (fn_with_body fdef direct_body)
+                                 (initial_root_env_for_fn fdef) with
+                         | Infer_ok p6 ->
+                           let (p7, roots_direct) = p6 in
+                           let (_, r_direct) = p7 in
+                           (match infer_env_roots_shadow_safe env
+                                    (fn_with_body fdef let_body)
+                                    (initial_root_env_for_fn fdef) with
+                            | Infer_ok _ ->
+                              (&&)
+                                (fn_params_roots_exclude_b fdef.fn_params
+                                  roots_direct)
+                                (fn_params_root_env_excludes_b fdef.fn_params
+                                  r_direct)
+                            | Infer_err _ -> false)
+                         | Infer_err _ -> false)
+                    | Infer_err _ -> false)
+               | None -> false)
+          | None -> false)
+
 (** val check_env_root_shadow_direct_call_provenance_summary :
     global_env -> bool **)
 
 let check_env_root_shadow_direct_call_provenance_summary env =
   forallb (check_fn_root_shadow_direct_call_provenance_summary env)
+    env.env_fns
+
+(** val check_env_root_shadow_captured_call_provenance_summary :
+    global_env -> bool **)
+
+let check_env_root_shadow_captured_call_provenance_summary env =
+  forallb (check_fn_root_shadow_captured_call_provenance_summary env)
     env.env_fns
 
 (** val check_env_preservation_ready : global_env -> bool **)
@@ -6033,6 +6368,16 @@ let check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary
   (&&) (check_program_env_alpha_validated env)
     (check_env_root_shadow_direct_call_provenance_summary
       (alpha_normalize_global_env env))
+
+(** val check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary :
+    global_env -> bool **)
+
+let check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary env =
+  (&&) (top_level_names_unique_b (alpha_normalize_global_env env))
+    (match infer_program_env_alpha_elab env with
+     | Infer_ok env' ->
+       check_env_root_shadow_captured_call_provenance_summary env'
+     | Infer_err _ -> false)
 
 (** val check_program_env_alpha_validated_root_shadow_provenance :
     global_env -> bool **)

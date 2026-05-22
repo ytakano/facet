@@ -220,7 +220,7 @@ Work in this order unless a proof exposes a soundness gap.
    - `x` not in `args_free_vars_ts args`;
    - `x` not in `args_local_store_names args`;
    - `preservation_ready_args_b args`;
-   - exact capture check with `check_make_closure_captures_exact_sctx`;
+   - exact capture check with `check_make_closure_captures_exact_sctx_with_env`;
    - existing captured callee summary.
 
    Current implementation status:
@@ -251,13 +251,26 @@ Work in this order unless a proof exposes a soundness gap.
    - `tests/valid/closure/capture_unrestricted_annotated_let_call.facet`
      covers the annotated surface local-let shape.
 
+   Inferred local-let status:
+
+   - Core `ELetInfer` still has no `Eval_LetInfer`, and
+     `preservation_ready_expr_b` continues to reject it.
+   - Inferred local-let coverage is routed through elaboration instead:
+     `infer_program_env_alpha_elab` rewrites successful `ELetInfer` bodies
+     into annotated `ELet` bodies before the captured-call sidecar runs.
+   - `check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary`
+     is the executable wrapper for that route. Its readiness bridge in
+     `EnvRuntimeSafety.v` exposes the captured-call summary evidence for the
+     elaborated environment returned by `infer_program_env_alpha_elab`.
+   - `TypeChecker.v` has a focused example for the inferred local-let captured
+     closure call: the original core shape is not accepted by the direct
+     captured-call summary, while the elaborated route is accepted.
+
    Next proof task:
 
-   - Do not add `ELetInfer` captured-call support in the same step. The current
-     operational semantics has no `Eval_LetInfer`, so existing `ELetInfer`
-     preservation is vacuous by inversion on evaluation.
-   - If widening captured-call sidecar coverage, first add an operational
-     semantics case or choose an already-evaluable surface shape.
+   - Do not add a direct `Eval_LetInfer` rule unless the runtime binding type
+     is carried by a typed/evidence-bearing semantics. The current supported
+     route for inferred lets is elaboration to annotated `ELet`.
 
 3. **Handle `if` last.**
 

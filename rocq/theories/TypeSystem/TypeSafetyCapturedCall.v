@@ -230,6 +230,63 @@ Proof.
     rewrite IH. reflexivity.
 Qed.
 
+Lemma capture_value_roots_stores_subset :
+  forall roots v,
+    value_roots_within roots v ->
+    root_set_stores_subset (capture_value_roots v) roots.
+Proof.
+  intros roots v Hwithin.
+  unfold root_set_stores_subset.
+  destruct v; simpl; intros z0 Hin; try contradiction.
+  destruct Hin as [Hin | Hin]; try contradiction.
+  inversion Hin; subst.
+  inversion Hwithin; subst.
+  assumption.
+Qed.
+
+Lemma capture_store_root_sets_bound_from_capture_root_bound :
+  forall R s captures caps captured capture_roots,
+    copy_capture_store_as captures caps s = Some captured ->
+    store_roots_within R s ->
+    capture_root_bound R captures caps = Some capture_roots ->
+    root_set_stores_subset
+      (root_sets_union (capture_store_root_sets captured))
+      capture_roots.
+Proof.
+  intros R s captures.
+  induction captures as [| x captures IH];
+    intros caps captured capture_roots Hcopy Hroots Hbound;
+    destruct caps as [| cap caps]; simpl in *; try discriminate.
+  - inversion Hcopy; subst captured.
+    inversion Hbound; subst capture_roots.
+    unfold root_set_stores_subset.
+    intros z Hin. contradiction.
+  - destruct (store_lookup x s) as [se |] eqn:Hlookup; try discriminate.
+    destruct (binding_available_b (se_state se) [] &&
+      match ty_usage (se_ty se) with
+      | UUnrestricted => true
+      | _ => false
+      end) eqn:Havailable; try discriminate.
+    destruct (copy_capture_store_as captures caps s) as [captured_tail |]
+      eqn:Hcopy_tail; try discriminate.
+    destruct (root_env_lookup x R) as [roots_x |] eqn:Hroot_lookup;
+      try discriminate.
+    destruct (capture_root_bound R captures caps) as [capture_roots_tail |]
+      eqn:Hbound_tail; try discriminate.
+    inversion Hcopy; subst captured.
+    inversion Hbound; subst capture_roots.
+    unfold root_set_stores_subset.
+    intros z Hin.
+    apply root_set_union_in_inv in Hin.
+    destruct Hin as [Hin_head | Hin_tail].
+    + apply root_set_union_in_l.
+      pose proof (store_roots_within_lookup_value
+        R s x se roots_x Hroots Hlookup Hroot_lookup) as Hvalue_roots.
+      eapply capture_value_roots_stores_subset; eassumption.
+    + apply root_set_union_in_r.
+      eapply IH; eassumption.
+Qed.
+
 Lemma captured_call_runtime_root_env_covers_params_captures_with_roots :
   forall ps caps arg_roots cap_roots Rcap R_tail,
     NoDup (ctx_names (params_ctx (ps ++ caps))) ->

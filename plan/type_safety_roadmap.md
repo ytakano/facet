@@ -163,24 +163,25 @@ Work in this order unless a proof exposes a soundness gap.
      accepts captured-call evidence. This keeps the static sidecar evidence
      from accepting copied-reference captures whose source roots are absent
      from the caller root environment.
+   - The static/runtime capture-root bound is now proved:
+
+     ```coq
+     capture_store_root_sets_bound_from_capture_root_bound
+     ```
+
+     It relates `copy_capture_store_as`, `store_roots_within R s`, and
+     `capture_root_bound R captures caps = Some capture_roots` to
+     `root_set_stores_subset (root_sets_union
+     (capture_store_root_sets captured)) capture_roots`.
 
    Next proof task:
 
-   - Relate the static `capture_root_bound` result to the runtime copied
-     capture roots:
-
-     ```coq
-     root_set_stores_subset
-       (root_sets_union (capture_store_root_sets captured))
-       capture_roots
-     ```
-
-     from `copy_capture_store_as`, `store_roots_within R s`, and
-     `capture_root_bound R captures (fn_captures fdef) = Some capture_roots`.
-     After that lemma is available, strengthen the captured-call preservation
-     package to expose final `store_roots_within`, returned
-     `value_roots_within`, `store_no_shadow`, and `root_env_no_shadow`, then
-     add the `ELet` exact-evidence constructor.
+   - Strengthen the captured-call preservation package to expose final
+     `store_roots_within`, returned `value_roots_within`, `store_no_shadow`,
+     and `root_env_no_shadow`. Then use
+     `capture_store_root_sets_bound_from_capture_root_bound` to weaken copied
+     capture roots into the exact sidecar returned-root bound and add the
+     `ELet` exact-evidence constructor.
 
    Annotated local-let captured-call route:
 

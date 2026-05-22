@@ -279,6 +279,29 @@ Work in this order unless a proof exposes a soundness gap.
    strengthen `TES_If` or ordinary checker acceptance just to manufacture
    root/shadow sidecar evidence.
 
+   Current staged implementation:
+
+   - `TypeChecker.v` has an executable expression-level helper,
+     `check_expr_root_shadow_captured_call_provenance_summary`, for `if`
+     expressions whose condition is ordinary provenance-ready and whose
+     branches are ordinary provenance-ready, direct calls, direct captured
+     closure calls, or nested `if` expressions with the same shape.
+   - This helper is intentionally not wired into
+     `check_fn_root_shadow_captured_call_provenance_summary` or any validated
+     program wrapper yet.
+
+   Remaining proof task:
+
+   - Add a Prop-level expression sidecar evidence relation and preservation
+     lemma for arbitrary branch frames. The lemma must evaluate the condition
+     with ordinary provenance readiness, carry the resulting store/root/name/key
+     invariants into the selected branch, and reuse the direct/captured-call
+     preservation wrappers under the branch `R1`/`Σ1`.
+   - Only after that lemma compiles should the function-level captured-call
+     summary checker gain an `EIf` branch. If the proof requires weakening
+     returned-value safety or changing ordinary `T_If`/`TES_If`, stop and
+     report the soundness gap.
+
 ## Current Captured Closure Facts
 
 Detailed notes are in `plan/type_safety_closure_notes.md`. Active facts needed

@@ -5426,6 +5426,61 @@ Definition callee_hidden_capture_args_disjoint_b
        negb (existsb (ident_eqb x) (args_local_store_names args)))
     (ctx_names (params_ctx (fn_captures callee))).
 
+Fixpoint check_expr_root_shadow_captured_call_provenance_summary
+    (env : global_env) (Ω : outlives_ctx) (n : nat)
+    (R : root_env) (Γ : ctx) (e : expr) : bool :=
+  match infer_core_env_roots_shadow_safe env Ω n R Γ e with
+  | infer_err _ => false
+  | infer_ok _ =>
+      provenance_ready_expr_b e ||
+      match direct_call_target_expr e with
+      | Some (fname, args, synthetic_body) =>
+          preservation_ready_args_b args &&
+          match lookup_fn_b fname (env_fns env) with
+          | None => false
+          | Some callee =>
+              check_fn_root_shadow_provenance_summary env callee &&
+              match infer_core_env_roots_shadow_safe env Ω n R Γ synthetic_body with
+              | infer_ok _ => true
+              | infer_err _ => false
+              end
+          end
+      | None => false
+      end ||
+      match captured_call_target_expr e with
+      | Some (fname, captures, args) =>
+          preservation_ready_args_b args &&
+          match lookup_fn_b fname (env_fns env) with
+          | None => false
+          | Some callee =>
+              (Nat.eqb (fn_lifetimes callee) 0) &&
+              callee_hidden_capture_args_disjoint_b callee args &&
+              match check_make_closure_captures_exact_sctx_with_env env
+                      Ω (sctx_of_ctx Γ) captures (fn_captures callee) with
+              | infer_err _ => false
+              | infer_ok _ =>
+                  check_fn_root_shadow_captured_callee_provenance_summary
+                    env callee
+              end
+          end
+      | None => false
+      end ||
+      match e with
+      | EIf e1 e2 e3 =>
+          match infer_core_env_roots_shadow_safe env Ω n R Γ e1 with
+          | infer_err _ => false
+          | infer_ok (T_cond, Γ1, R1, _) =>
+              ty_core_eqb (ty_core T_cond) TBooleans &&
+              provenance_ready_expr_b e1 &&
+              check_expr_root_shadow_captured_call_provenance_summary
+                env Ω n R1 Γ1 e2 &&
+              check_expr_root_shadow_captured_call_provenance_summary
+                env Ω n R1 Γ1 e3
+          end
+      | _ => false
+      end
+  end.
+
 Definition check_fn_root_shadow_captured_call_provenance_summary
     (env : global_env) (fdef : fn_def) : bool :=
   match check_fn_root_shadow_non_capturing_call_provenance_summary env fdef with
@@ -5862,6 +5917,48 @@ Proof. vm_compute. reflexivity. Qed.
 Example ready_gap_matrix_captured_closure_direct_param_call_captured_summary_accepts :
   check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
     ex_ready_gap_captured_closure_direct_param_call_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Definition ex_ready_gap_captured_closure_direct_param_if_call_expr : expr :=
+  EIf (ELit (LBool true))
+    (ECallExpr
+      (EMakeClosure (("nonempty_capture_callee"%string), 0)
+        [(("cap"%string), 0)])
+      [])
+    EUnit.
+
+Definition ex_ready_gap_captured_closure_direct_param_if_call_fn : fn_def :=
+  MkFnDef (("ready_gap_captured_closure_direct_param_if_call"%string), 0)
+    0 [] [] [MkParam MImmutable (("cap"%string), 0)
+      (MkTy UUnrestricted TIntegers)]
+    (MkTy UUnrestricted TUnits)
+    ex_ready_gap_captured_closure_direct_param_if_call_expr.
+
+Definition ex_ready_gap_captured_closure_direct_param_if_call_env
+    : global_env :=
+  MkGlobalEnv [] [] []
+    [ex_nonempty_capture_callee_fn;
+     ex_ready_gap_captured_closure_direct_param_if_call_fn].
+
+Example ready_gap_matrix_captured_closure_direct_param_if_call_checker_accepts :
+  check_program_env_alpha
+    ex_ready_gap_captured_closure_direct_param_if_call_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_captured_closure_direct_param_if_call_helper_accepts :
+  check_expr_root_shadow_captured_call_provenance_summary
+    ex_ready_gap_captured_closure_direct_param_if_call_env
+    (fn_outlives ex_ready_gap_captured_closure_direct_param_if_call_fn)
+    (fn_lifetimes ex_ready_gap_captured_closure_direct_param_if_call_fn)
+    (initial_root_env_for_fn
+      ex_ready_gap_captured_closure_direct_param_if_call_fn)
+    (fn_body_ctx ex_ready_gap_captured_closure_direct_param_if_call_fn)
+    (fn_body ex_ready_gap_captured_closure_direct_param_if_call_fn) = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example ready_gap_matrix_captured_closure_direct_param_if_call_summary_rejects :
+  check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
+    ex_ready_gap_captured_closure_direct_param_if_call_env = false.
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_ready_gap_captured_closure_local_let_call_fn : fn_def :=

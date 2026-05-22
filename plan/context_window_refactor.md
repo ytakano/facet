@@ -46,11 +46,15 @@ runtime safety currently cross theorem boundaries.
 - Rewired runtime-args captured-call cores to consume the roots-ready package
   statement; public wrappers and captured-call bridge callers convert existing
   plain statements at the boundary.
+- Rewired the first typed-prefix cleanup core:
+  `eval_call_body_cleanup_preserves_value_and_refs_frame_with_preservation_core`
+  now consumes the typed-prefix package statement directly, and its two callers
+  convert plain statements at the boundary.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/TypeSafetyClosureRuntimeArgs.vo theories/TypeSystem/TypeSafetyCapturedCall.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo theories/TypeSystem/TypeSafety.vo`.
-- Next task: rewire one typed-prefix cleanup theorem at a time to the package
-  statement, then project back through compatibility wrappers. Do not combine
-  package rewiring with new captured-call invariants.
+  `cd rocq && make theories/TypeSystem/TypeSafetyClosureCleanupCaptured.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo theories/TypeSystem/TypeSafety.vo`.
+- Next task: rewire captured cleanup cores to consume the typed-prefix package
+  statement one theorem at a time. Do not combine package rewiring with new
+  captured-call invariants.
 
 ### Phase 1: Compact Continuation Notes
 

@@ -304,7 +304,10 @@ Proof.
     Hprov_body Htyped_body Hcompat_body Hexclude_ret Hexclude_env
     Heval_body.
   eapply (eval_call_body_cleanup_preserves_value_and_refs_frame_with_preservation_core
-            Hframe_mutual Htyping_mutual Hparam_mutual);
+            Hframe_mutual
+            (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+               Htyping_mutual)
+            Hparam_mutual);
     try eassumption.
   eapply captured_call_frame_store_typed_in_frame; eassumption.
 Qed.

@@ -49,7 +49,8 @@ Lemma eval_call_body_cleanup_preserves_value_and_refs_frame :
 Proof.
   eapply (eval_call_body_cleanup_preserves_value_and_refs_frame_with_preservation_core
             eval_preserves_frame_scope_roots_ready_mutual
-            eval_preserves_typing_roots_ready_prefix_mutual
+            (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+               eval_preserves_typing_roots_ready_prefix_mutual)
             eval_preserves_param_scope_roots_ready_mutual);
     eassumption.
 Qed.

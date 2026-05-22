@@ -424,7 +424,7 @@ Definition eval_preserves_param_scope_roots_ready_mutual_statement : Prop :=
 
 Lemma eval_call_body_cleanup_preserves_value_and_refs_frame_with_preservation_core :
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_package_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   forall env (Ω : outlives_ctx) frame Σ_frame fdef fcall σ s_body vs ret
       used' T_body Γ_out R_params R_body roots_body,
@@ -499,16 +499,17 @@ Proof.
               Hcover_params Hroots_bind Hshadow_bind Hrn_params
               Hframe_start Hframe_fresh_start)
     as [_ [_ [_ [_ [Hframe_scope _]]]]].
-  destruct (proj1 Htyping_mutual
-              env (bind_params (fn_params fcall) vs frame)
-              (fn_body fcall) s_body ret Heval_body
-              (fn_outlives fcall) (fn_lifetimes fcall)
-              R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
-              T_body (sctx_of_ctx Γ_out) R_body roots_body
-              Hprov_body Hstore_bind Hroots_bind Hshadow_bind Hrn_params
-              Htyped_body)
-    as [Hstore_body [Hv_body [Hpres_body [Hroots_body
-        [Hret_roots [Hshadow_body Hrn_body]]]]]].
+  pose proof (proj1 Htyping_mutual
+                env (bind_params (fn_params fcall) vs frame)
+                (fn_body fcall) s_body ret Heval_body
+                (fn_outlives fcall) (fn_lifetimes fcall)
+                R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
+                T_body (sctx_of_ctx Γ_out) R_body roots_body
+                Hprov_body Hstore_bind Hroots_bind Hshadow_bind Hrn_params
+                Htyped_body) as Hbody_package.
+  destruct (typed_rooted_eval_roots _ _ _ _ _ _ _ _ Hbody_package)
+    as [Hroots_body Hret_roots Hshadow_body Hrn_body].
+  destruct Hbody_package as [Hstore_body Hv_body Hpres_body _].
   assert (Hv_ret_fcall : value_has_type env s_body ret (fn_ret fcall)).
   { eapply value_has_type_compatible.
     - exact Hv_body.

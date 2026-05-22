@@ -119,10 +119,14 @@ runtime safety currently cross theorem boundaries.
   `eval_preserves_typing_direct_call_roots_ready_with_preservation_core`
   now consumes the typed-prefix package statement directly, with its plain
   wrapper converting at the boundary.
+- Rewired the direct-call roots-provenance route core:
+  `eval_preserves_typing_direct_call_roots_provenance_ready_with_preservation_core`
+  now consumes the typed-prefix package statement directly, with its plain
+  wrapper converting at the boundary.
 - Last focused check:
   `cd rocq && make theories/TypeSystem/TypeSafetyDirectCallRoute.vo theories/TypeSystem/TypeSafetyDirectCallWrappers.vo theories/TypeSystem/TypeSafety.vo`.
 - Next task: rewire
-  `eval_preserves_typing_direct_call_roots_provenance_ready_with_preservation_core`
+  `eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary_with_preservation_core`
   in `TypeSafetyDirectCallRoute.v`. Do not combine direct-call route rewiring
   with new captured-call invariants.
 

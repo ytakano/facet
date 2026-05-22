@@ -39,11 +39,15 @@ runtime safety currently cross theorem boundaries.
 - Completed second proof-interface deduplication slice:
   closure cleanup cores now use the shared mutual statement aliases, and
   `TypeSafetyDirectCallSetup.v` no longer duplicates those alias definitions.
+- Added preservation package bridge definitions:
+  roots-ready and typed-prefix roots-ready statements now have package forms and
+  conversion lemmas, while the existing public statement aliases remain
+  unchanged.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/TypeSafetyClosureCleanupCtxErased.vo theories/TypeSystem/TypeSafetyClosureCleanupCaptured.vo theories/TypeSystem/TypeSafetyClosureCleanupMakeClosure.vo theories/TypeSystem/TypeSafetyDirectCallSetup.vo theories/TypeSystem/TypeSafetyDirectCallRoute.vo theories/TypeSystem/TypeSafetyCapturedCall.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo theories/TypeSystem/TypeSafety.vo`.
-- Next task: use the new packages only after a target theorem and wrapper
-  projection are fixed; do not rewire broad result shapes and prove new
-  captured-call invariants in the same commit.
+  `cd rocq && make theories/TypeSystem/TypeSafetyClosureRuntimeArgs.vo theories/TypeSystem/TypeSafetyClosureCleanupFrame.vo theories/TypeSystem/TypeSafetyCapturedCall.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo theories/TypeSystem/TypeSafety.vo`.
+- Next task: rewire one target theorem at a time to the package statement, then
+  project back through compatibility wrappers. Do not combine package rewiring
+  with new captured-call invariants.
 
 ### Phase 1: Compact Continuation Notes
 

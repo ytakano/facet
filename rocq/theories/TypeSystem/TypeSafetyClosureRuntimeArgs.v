@@ -1140,6 +1140,24 @@ Record rooted_eval_result
   rooted_eval_root_env_no_shadow : root_env_no_shadow R'
 }.
 
+Record rooted_args_result
+    (R' : root_env) (s' : store) (roots : list root_set)
+    (vs : list value) : Prop := {
+  rooted_args_store_roots : store_roots_within R' s';
+  rooted_args_value_roots : Forall2 value_roots_within roots vs;
+  rooted_args_store_no_shadow : store_no_shadow s';
+  rooted_args_root_env_no_shadow : root_env_no_shadow R'
+}.
+
+Record rooted_fields_result
+    (R' : root_env) (s' : store) (roots : root_set)
+    (values : list (string * value)) : Prop := {
+  rooted_fields_store_roots : store_roots_within R' s';
+  rooted_fields_value_roots : value_fields_roots_within roots values;
+  rooted_fields_store_no_shadow : store_no_shadow s';
+  rooted_fields_root_env_no_shadow : root_env_no_shadow R'
+}.
+
 Record typed_rooted_eval_result
     (env : global_env) (s s' : store) (v : value) (T : Ty)
     (Σ' : sctx) (R' : root_env) (roots : root_set) : Prop := {
@@ -1215,6 +1233,95 @@ Definition eval_preserves_roots_ready_mutual_statement : Prop :=
       value_fields_roots_within roots values /\
       store_no_shadow s' /\
       root_env_no_shadow R').
+
+Definition eval_preserves_roots_ready_mutual_package_statement : Prop :=
+  (forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      provenance_ready_expr e ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      rooted_eval_result R' s' roots v) /\
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ ps Σ' R' roots,
+      provenance_ready_args args ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+      rooted_args_result R' s' roots vs) /\
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots,
+      provenance_ready_fields fields ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+      rooted_fields_result R' s' roots values).
+
+Lemma eval_preserves_roots_ready_mutual_statement_to_package :
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_package_statement.
+Proof.
+  intros Hplain.
+  destruct Hplain as [Hex [Hargs Hfields]].
+  split.
+  - intros env_a st_a expr_a st_b val_a Heval Ω_a n_a R_a Σ_a T_a
+      Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped.
+    destruct (Hex env_a st_a expr_a st_b val_a Heval Ω_a n_a R_a Σ_a
+      T_a Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped)
+      as [Hroots' [Hvalue [Hshadow' Hrn']]].
+    constructor; assumption.
+  - split.
+    + intros env_a st_a args_a st_b vs_a Heval Ω_a n_a R_a Σ_a ps_a
+      Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped.
+      destruct (Hargs env_a st_a args_a st_b vs_a Heval Ω_a n_a R_a Σ_a
+        ps_a Σ_b R_b roots_a
+        Hready Hroots Hshadow Hrn Htyped)
+        as [Hroots' [Hvalues [Hshadow' Hrn']]].
+      constructor; assumption.
+    + intros env_a st_a fields_a defs_a st_b values_a Heval Ω_a n_a lts_a
+      ty_args_a R_a Σ_a Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped.
+      destruct (Hfields env_a st_a fields_a defs_a st_b values_a Heval Ω_a
+        n_a lts_a ty_args_a R_a Σ_a Σ_b R_b roots_a Hready Hroots
+        Hshadow Hrn Htyped)
+        as [Hroots' [Hvalues [Hshadow' Hrn']]].
+      constructor; assumption.
+Qed.
+
+Lemma eval_preserves_roots_ready_mutual_package_statement_to_plain :
+  eval_preserves_roots_ready_mutual_package_statement ->
+  eval_preserves_roots_ready_mutual_statement.
+Proof.
+  intros Hpackage.
+  destruct Hpackage as [Hex [Hargs Hfields]].
+  split.
+  - intros env_a st_a expr_a st_b val_a Heval Ω_a n_a R_a Σ_a T_a
+      Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped.
+    destruct (Hex env_a st_a expr_a st_b val_a Heval Ω_a n_a R_a Σ_a
+      T_a Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped) as
+      [Hroots' Hvalue Hshadow' Hrn'].
+    repeat split; assumption.
+  - split.
+    + intros env_a st_a args_a st_b vs_a Heval Ω_a n_a R_a Σ_a ps_a
+      Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped.
+      destruct (Hargs env_a st_a args_a st_b vs_a Heval Ω_a n_a R_a Σ_a
+        ps_a Σ_b R_b roots_a Hready
+        Hroots Hshadow Hrn Htyped) as
+        [Hroots' Hvalues Hshadow' Hrn'].
+      repeat split; assumption.
+    + intros env_a st_a fields_a defs_a st_b values_a Heval Ω_a n_a lts_a
+      ty_args_a R_a Σ_a Σ_b R_b roots_a Hready Hroots Hshadow Hrn Htyped.
+      destruct (Hfields env_a st_a fields_a defs_a st_b values_a Heval Ω_a
+        n_a lts_a ty_args_a R_a Σ_a Σ_b R_b roots_a Hready Hroots Hshadow
+        Hrn Htyped) as
+        [Hroots' Hvalues Hshadow' Hrn'].
+      repeat split; assumption.
+Qed.
 
 Definition eval_preserves_root_names_ready_mutual_statement : Prop :=
   (forall env s e s' v,

@@ -383,7 +383,7 @@ Qed.
 
 Lemma eval_captured_call_body_cleanup_preserves_value_and_refs_params_with_preservation_core :
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_package_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   forall env (Ω : outlives_ctx) captured Rcap s_args R_args Σ_args caps
       fdef fcall σ s_body vs ret used' T_body Γ_out R_params R_body
@@ -437,8 +437,7 @@ Proof.
   destruct
     (eval_captured_call_body_cleanup_preserves_value_and_refs_with_preservation_core
       Hframe_mutual
-      (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
-        Htyping_mutual)
+      Htyping_mutual
       Hparam_mutual
       env Ω captured Rcap s_args R_args Σ_args fdef fcall σ s_body vs
       ret used' T_body Γ_out R_params R_body roots_body
@@ -528,7 +527,10 @@ Proof.
   split.
   - eapply Eval_CallExpr; eassumption.
   - eapply (eval_captured_call_body_cleanup_preserves_value_and_refs_params_with_preservation_core
-              Hframe_mutual Htyping_mutual Hparam_mutual);
+              Hframe_mutual
+              (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+                Htyping_mutual)
+              Hparam_mutual);
       eassumption.
 Qed.
 
@@ -579,7 +581,10 @@ Proof.
   destruct Hframe_params_ready as [Hframe_ready Hcaptured_params_typed].
   destruct
     (eval_captured_call_body_cleanup_preserves_value_and_refs_params_with_preservation_core
-      Hframe_mutual Htyping_mutual Hparam_mutual
+      Hframe_mutual
+      (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+        Htyping_mutual)
+      Hparam_mutual
       env Ω captured Rcap s_args R_args Σ_args caps fdef fcall σ
       s_body vs ret used' T_body Γ_out R_params R_body roots_body
       (conj Hframe_ready Hcaptured_params_typed) Htyped_args Hrename

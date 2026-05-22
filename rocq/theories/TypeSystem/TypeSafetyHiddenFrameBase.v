@@ -311,6 +311,79 @@ Fixpoint copy_capture_roots_as
   | _, _ => None
   end.
 
+Definition capture_value_roots (v : value) : root_set :=
+  match v with
+  | VRef x _ => [RStore x]
+  | _ => []
+  end.
+
+Fixpoint capture_store_root_sets (captured : store) : list root_set :=
+  match captured with
+  | [] => []
+  | se :: rest =>
+      capture_value_roots (se_val se) :: capture_store_root_sets rest
+  end.
+
+Fixpoint capture_store_root_env (captured : store) : root_env :=
+  match captured with
+  | [] => []
+  | se :: rest =>
+      (se_name se, capture_value_roots (se_val se)) ::
+      capture_store_root_env rest
+  end.
+
+Lemma capture_store_root_sets_length :
+  forall captured,
+    List.length (capture_store_root_sets captured) = List.length captured.
+Proof.
+  induction captured as [| se rest IH]; simpl; auto.
+Qed.
+
+Lemma capture_store_root_env_names :
+  forall captured,
+    root_env_names (capture_store_root_env captured) = store_names captured.
+Proof.
+  induction captured as [| se rest IH]; simpl.
+  - reflexivity.
+  - rewrite IH. reflexivity.
+Qed.
+
+Lemma capture_store_root_env_no_shadow :
+  forall captured,
+    store_no_shadow captured ->
+    root_env_no_shadow (capture_store_root_env captured).
+Proof.
+  intros captured Hshadow.
+  unfold root_env_no_shadow.
+  rewrite capture_store_root_env_names.
+  exact Hshadow.
+Qed.
+
+Lemma capture_value_roots_sound :
+  forall v,
+    value_roots_within [] v \/
+    (exists x path, v = VRef x path) ->
+    value_roots_within (capture_value_roots v) v.
+Proof.
+  intros v Hcase.
+  destruct Hcase as [Hrootless | [x [path Href]]].
+  - destruct v; simpl in *; try exact Hrootless.
+    inversion Hrootless; subst.
+    contradiction.
+  - subst v. simpl. constructor. simpl. left. reflexivity.
+Qed.
+
+Lemma capture_store_root_env_store_keys_named :
+  forall captured,
+    root_env_store_keys_named
+      (capture_store_root_env captured) captured.
+Proof.
+  intros captured.
+  unfold root_env_store_keys_named, root_env_keys_named.
+  rewrite capture_store_root_env_names.
+  intros x Hin. exact Hin.
+Qed.
+
 Lemma copy_capture_roots_as_length :
   forall captures caps R Rcap,
     copy_capture_roots_as captures caps R = Some Rcap ->
@@ -1522,6 +1595,97 @@ Proof.
   destruct (ident_eqb x (se_name se_head)) eqn:Heq.
   - apply ident_eqb_eq in Heq. subst x. simpl. left. reflexivity.
   - simpl. right. eapply IH. exact Hlookup.
+Qed.
+
+Lemma capture_store_root_env_roots_within :
+  forall captured,
+    Forall
+      (fun se =>
+        value_roots_within (capture_value_roots (se_val se)) (se_val se))
+      captured ->
+    store_no_shadow captured ->
+    store_roots_within (capture_store_root_env captured) captured.
+Proof.
+  intros captured Hvalues Hshadow.
+  induction Hvalues as [| se rest Hvalue _ IH]; simpl in *.
+  - constructor.
+  - inversion Hshadow as [| ? ? Hnotin Hnodup_tail]; subst.
+    constructor.
+    + destruct se as [sx sT sv sst]. simpl in *.
+      econstructor.
+      * simpl. rewrite ident_eqb_refl. reflexivity.
+      * exact Hvalue.
+    + eapply store_roots_within_weaken_lookup_hfb.
+      * apply IH. exact Hnodup_tail.
+      * intros x roots Hin Hlookup. simpl.
+        destruct (ident_eqb x (se_name se)) eqn:Heq.
+        -- apply ident_eqb_eq in Heq. subst x.
+           exfalso. apply Hnotin. exact Hin.
+        -- exact Hlookup.
+Qed.
+
+Lemma value_has_type_ref_root_named :
+  forall env s x path T,
+    value_has_type env s (VRef x path) T ->
+    In x (store_names s).
+Proof.
+  intros env s x path T Htype.
+  remember (VRef x path) as v eqn:Hv.
+  induction Htype; inversion Hv; subst; eauto.
+  eapply store_lookup_some_in_store_names. exact H.
+Qed.
+
+Lemma capture_value_roots_store_roots_named :
+  forall env s v T,
+    value_has_type env s v T ->
+    root_set_store_roots_named (capture_value_roots v) s.
+Proof.
+  intros env s v T Htype.
+  destruct v; simpl; unfold root_set_store_roots_named;
+    intros root_name Hin; simpl in Hin; try contradiction.
+  destruct Hin as [Hin | Hin]; try contradiction.
+  inversion Hin; subst.
+  eapply value_has_type_ref_root_named. exact Htype.
+Qed.
+
+Lemma capture_store_root_env_store_roots_named_in_store :
+  forall env target captured,
+    Forall2 (store_entry_typed env target)
+      captured (sctx_of_store captured) ->
+    root_env_store_roots_named
+      (capture_store_root_env captured) target.
+Proof.
+  intros env target captured Htyped.
+  induction Htyped as [| se ce captured_tail Σ_tail Hentry _ IH].
+  - unfold root_env_store_roots_named.
+    intros x roots z Hlookup _. simpl in Hlookup. discriminate.
+  - simpl in *.
+    destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [_ Hvalue]]].
+    subst cx cT.
+    unfold root_env_store_roots_named in *.
+    intros x roots z Hlookup Hin.
+    simpl in Hlookup.
+    destruct (ident_eqb x sx) eqn:Heq.
+    + inversion Hlookup; subst roots.
+      eapply capture_value_roots_store_roots_named in Hvalue.
+      unfold root_set_store_roots_named in Hvalue.
+      exact (Hvalue z Hin).
+    + eapply IH; eassumption.
+Qed.
+
+Lemma capture_store_root_env_store_roots_named :
+  forall env captured frame,
+    Forall2 (store_entry_typed env (captured ++ frame))
+      captured (sctx_of_store captured) ->
+    root_env_store_roots_named
+      (capture_store_root_env captured) (captured ++ frame).
+Proof.
+  intros env captured frame Htyped.
+  eapply capture_store_root_env_store_roots_named_in_store.
+  exact Htyped.
 Qed.
 
 Lemma store_ref_targets_preserved_app_left :

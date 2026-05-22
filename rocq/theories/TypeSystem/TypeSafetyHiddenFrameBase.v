@@ -373,6 +373,76 @@ Proof.
   - subst v. simpl. constructor. simpl. left. reflexivity.
 Qed.
 
+Lemma ty_compatible_expected_ref_actual_ref :
+  forall Ω T_actual u l rk T,
+    ty_compatible Ω T_actual (MkTy u (TRef l rk T)) ->
+    exists u_actual l_actual T_actual_inner,
+      T_actual = MkTy u_actual (TRef l_actual rk T_actual_inner).
+Proof.
+  intros Ω T_actual u l rk T Hcompat.
+  remember (MkTy u (TRef l rk T)) as T_expected eqn:Hexpected.
+  induction Hcompat; inversion Hexpected; subst; try discriminate.
+  - subst. eauto.
+  - eauto.
+  - eauto.
+Qed.
+
+Lemma ty_lifetime_equiv_expected_ref_actual_ref :
+  forall T_actual u l rk T,
+    ty_lifetime_equiv T_actual (MkTy u (TRef l rk T)) ->
+    exists l_actual T_actual_inner,
+      T_actual = MkTy u (TRef l_actual rk T_actual_inner).
+Proof.
+  intros T_actual u l rk T Hequiv.
+  remember (MkTy u (TRef l rk T)) as T_expected eqn:Hexpected.
+  induction Hequiv; inversion Hexpected; subst; try discriminate.
+  eauto.
+Qed.
+
+Lemma value_has_type_ref_ty_value_aux :
+  forall env s v T_final,
+    value_has_type env s v T_final ->
+    forall u l rk T,
+      T_final = MkTy u (TRef l rk T) ->
+      exists x path, v = VRef x path.
+Proof.
+  intros env s v T_final Htype.
+  induction Htype; intros u_ref l_ref rk_ref T_ref Href;
+    inversion Href; subst; try discriminate.
+  - eauto.
+  - unfold fn_value_ty, fn_signature_ty_with_usage in Href.
+    destruct (fn_lifetimes fdef) eqn:Hlifetimes.
+    + unfold close_fn_ty in Href.
+      rewrite map_lifetimes_ty_close_fn_lifetime_0 in Href.
+      discriminate.
+    + discriminate.
+  - unfold fn_value_ty, fn_signature_ty_with_usage in Href.
+    destruct (fn_lifetimes fdef) eqn:Hlifetimes.
+    + unfold close_fn_ty in Href.
+      rewrite map_lifetimes_ty_close_fn_lifetime_0 in Href.
+      discriminate.
+    + discriminate.
+  - destruct (ty_compatible_expected_ref_actual_ref
+      Ω T_actual u_ref l_ref rk_ref T_ref H)
+      as [u_actual [l_actual [T_inner Hactual]]].
+    eapply IHHtype. exact Hactual.
+  - destruct (ty_lifetime_equiv_expected_ref_actual_ref
+      T_actual u_ref l_ref rk_ref T_ref H)
+      as [l_actual [T_inner Hactual]].
+    eapply IHHtype. exact Hactual.
+Qed.
+
+Lemma value_has_type_ref_ty_value :
+  forall env s v u l rk T,
+    value_has_type env s v (MkTy u (TRef l rk T)) ->
+    exists x path, v = VRef x path.
+Proof.
+  intros env s v u l rk T Htype.
+  eapply value_has_type_ref_ty_value_aux.
+  - exact Htype.
+  - reflexivity.
+Qed.
+
 Lemma capture_store_root_env_store_keys_named :
   forall captured,
     root_env_store_keys_named
@@ -1140,6 +1210,91 @@ Proof.
   eapply copy_capture_store_as_captured_entries_typed_with_env_base_preserved;
     eassumption.
 Qed.
+
+Lemma copy_capture_store_as_captured_values_canonical_roots_with_env :
+  forall Ω env s Σ captures caps captured env_lt captured_tys,
+    store_typed env s Σ ->
+    copy_capture_store_as captures caps s = Some captured ->
+    check_make_closure_captures_exact_sctx_with_env env Ω Σ captures caps =
+      infer_ok (env_lt, captured_tys) ->
+    Forall (fun se =>
+      value_roots_within (capture_value_roots (se_val se)) (se_val se))
+      captured.
+Proof.
+  intros Ω env s Σ captures caps captured env_lt captured_tys
+    Hstore Hcopy Hcheck.
+  unfold check_make_closure_captures_exact_sctx_with_env in Hcheck.
+  destruct (check_make_closure_captures_exact_sctx_with_env_base
+    env Ω Σ captures caps) as [captured_tys0 | err] eqn:Hbase;
+    try discriminate.
+  destruct (infer_closure_env_lifetime Ω captured_tys0) as [env_lt0 | err]
+    eqn:Henv; try discriminate.
+  destruct (closure_captures_allowed_b env Ω env_lt0 captured_tys0)
+    eqn:Hallowed; try discriminate.
+  injection Hcheck as <- <-.
+  clear Henv.
+  revert caps captured captured_tys0 Hcopy Hbase Hallowed.
+  induction captures as [| x captures IH]; intros caps captured captured_tys0
+    Hcopy Hbase Hallowed;
+    destruct caps as [| cap caps]; simpl in Hcopy, Hbase; try discriminate.
+  - injection Hcopy as <-. constructor.
+  - destruct (param_mutability cap) eqn:Hcap_mut; simpl in Hbase;
+      try discriminate.
+    destruct (sctx_lookup (param_name cap) Σ) as [[Tcap stcap] |]
+      eqn:Hcap_lookup; try discriminate.
+    destruct (sctx_lookup x Σ) as [[T st] |] eqn:Hlookup; try discriminate.
+    destruct (st_consumed st) eqn:Hconsumed; try discriminate.
+    destruct (st_moved_paths st) as [| moved moved_rest] eqn:Hmoved;
+      try discriminate.
+    destruct (sctx_lookup_mut x Σ) as [m |] eqn:Hmut; try discriminate.
+    destruct m; try discriminate.
+    destruct (usage_eqb (ty_usage T) UUnrestricted) eqn:Husage;
+      try discriminate.
+    destruct (ty_eqb T (param_ty cap) &&
+      ty_compatible_b Ω T (param_ty cap)) eqn:Hty; try discriminate.
+    apply andb_true_iff in Hty as [Hty_eq _].
+    destruct (check_make_closure_captures_exact_sctx_with_env_base
+      env Ω Σ captures caps) as [captured_rest_tys | err]
+      eqn:Hrest_check; try discriminate.
+    destruct (store_lookup x s) as [se |] eqn:Hlookup_store; try discriminate.
+    destruct (binding_available_b (se_state se) [] &&
+      match ty_usage (se_ty se) with
+      | UUnrestricted => true
+      | _ => false
+      end) eqn:Hcopy_ok; try discriminate.
+    destruct (copy_capture_store_as captures caps s) as [captured_rest |]
+      eqn:Hcopy_rest; try discriminate.
+    injection Hcopy as <-.
+    injection Hbase as <-.
+    simpl in Hallowed.
+    apply andb_true_iff in Hallowed as [Hallowed_head Hallowed_tail].
+    destruct (store_typed_lookup env s Σ x se Hstore Hlookup_store)
+      as [T_lookup [st_lookup [m_lookup
+        [Hlookup_static [Hse_name [Hse_ty [Hrefines Hvalue]]]]]]].
+    rewrite Hlookup in Hlookup_static.
+    inversion Hlookup_static; subst T_lookup st_lookup.
+    apply ty_eqb_true in Hty_eq.
+    simpl. constructor.
+    + apply capture_value_roots_sound.
+      unfold closure_capture_allowed_b in Hallowed_head.
+      apply orb_true_iff in Hallowed_head as [Hfree | Href].
+      * left.
+        assert (Hrootless_T : runtime_rootless_ty env T).
+        { apply capture_ref_free_ty_b_runtime_rootless. exact Hfree. }
+        assert (Hrootless : runtime_rootless_ty env (se_ty se)).
+        { rewrite <- H0. exact Hrootless_T. }
+        eapply value_has_type_runtime_rootless_empty_roots.
+        -- exact Hvalue.
+        -- exact Hrootless.
+      * right.
+        destruct T as [u core]. simpl in Href.
+        destruct core; try discriminate.
+        destruct r; try discriminate.
+        eapply value_has_type_ref_ty_value.
+        rewrite H0. exact Hvalue.
+    + eapply IH; eassumption.
+Qed.
+
 Lemma copy_capture_store_as_captured_store_typed_rootless :
   forall Ω env s Σ captures caps captured captured_tys,
     store_typed env s Σ ->

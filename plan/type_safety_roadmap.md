@@ -176,12 +176,27 @@ Work in this order unless a proof exposes a soundness gap.
 
    Next proof task:
 
-   - Strengthen the captured-call preservation package to expose final
-     `store_roots_within`, returned `value_roots_within`, `store_no_shadow`,
-     and `root_env_no_shadow`. Then use
-     `capture_store_root_sets_bound_from_capture_root_bound` to weaken copied
-     capture roots into the exact sidecar returned-root bound and add the
-     `ELet` exact-evidence constructor.
+   - The captured-call body cleanup core now exposes the body returned-root
+     fact:
+
+     ```coq
+     value_roots_within roots_body ret
+     ```
+
+     The expression cleanup wrapper also carries that fact through its
+     package. Compatibility wrappers still project the older store/value
+     surface.
+   - Remaining blocker: the outer direct captured-call preservation package
+     still needs a proved subset bridge from the instantiated body return
+     roots to `root_sets_union (arg_roots ++ capture_store_root_sets captured)`
+     in the direct with-env route. Do not widen exact `ELet` evidence until
+     this bridge is available and can then be combined with
+     `capture_store_root_sets_bound_from_capture_root_bound`.
+   - After that bridge exists, expose final `store_roots_within`, returned
+     `value_roots_within`, `store_no_shadow`, and `root_env_no_shadow` from
+     the captured-call preservation package, weaken copied capture roots into
+     the exact sidecar returned-root bound, and add the `ELet` exact-evidence
+     constructor.
 
    Annotated local-let captured-call route:
 

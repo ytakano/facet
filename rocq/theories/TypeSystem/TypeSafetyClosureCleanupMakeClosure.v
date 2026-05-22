@@ -159,12 +159,27 @@ Proof.
       env Ω s Σ fname captures captured fdef fcall used' Rcap s_args
       R_args captured_tys Hstore Heval_make Hlookup Hrename Hcheck
       Hframe_ready) as Hframe_params_ready.
-  eapply
+  destruct
     (eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
-      Hframe_mutual Htyping_mutual Hparam_mutual);
-    try eassumption.
-  eapply captured_call_frame_params_ready_in_frame_from_self.
-  exact Hframe_params_ready.
+      Hframe_mutual Htyping_mutual Hparam_mutual env Ω s s s_args s_body
+      (EMakeClosure fname captures) args fname captured fdef fcall vs ret
+      used' Rcap R_args Σ_args σ T_body Γ_out R_params R_body roots_body
+      Heval_make Hlookup Heval_args Hrename Heval_body)
+    as [Heval_final [Hstore_final [Hv_final _]]].
+  - eapply captured_call_frame_params_ready_in_frame_from_self.
+    exact Hframe_params_ready.
+  - exact Htyped_args.
+  - exact Hargs_fcall.
+  - exact Hroots_bind.
+  - exact Hshadow_bind.
+  - exact Hrn_params.
+  - exact Hcover_all.
+  - exact Hprov_body.
+  - exact Htyped_body.
+  - exact Hcompat_body.
+  - exact Hexclude_all.
+  - exact Hexclude_env_all.
+  - repeat split; assumption.
 Qed.
 
 Lemma eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_auto_with_preservation_core :
@@ -329,10 +344,26 @@ Proof.
       R_args captured_tys Hstore Heval_make Hlookup Hrename Hcheck Hnodup
       Hready_args Heval_args Hroots_args Hshadow_args Hrn_args Hnamed_args
       Hkeys_args) as Hframe_params_ready.
-  eapply
+  destruct
     (eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
-      Hframe_mutual Htyping_mutual Hparam_mutual);
-    try eassumption.
-  eapply captured_call_frame_params_ready_in_frame_from_self.
-  exact Hframe_params_ready.
+      Hframe_mutual Htyping_mutual Hparam_mutual env Ω s s s_args s_body
+      (EMakeClosure fname captures) args fname captured fdef fcall vs ret
+      used' (empty_root_env_for_store captured) R_args Σ_args σ T_body
+      Γ_out R_params R_body roots_body Heval_make Hlookup Heval_args
+      Hrename Heval_body)
+    as [Heval_final [Hstore_final [Hv_final _]]].
+  - eapply captured_call_frame_params_ready_in_frame_from_self.
+    exact Hframe_params_ready.
+  - exact Htyped_args.
+  - exact Hargs_fcall.
+  - exact Hroots_bind.
+  - exact Hshadow_bind.
+  - exact Hrn_params.
+  - exact Hcover_all.
+  - exact Hprov_body.
+  - exact Htyped_body.
+  - exact Hcompat_body.
+  - exact Hexclude_all.
+  - exact Hexclude_env_all.
+  - repeat split; assumption.
 Qed.

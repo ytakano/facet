@@ -363,13 +363,30 @@ Proof.
     Htyped_args Hrename Hargs_fcall Hroots_bind Hshadow_bind Hrn_params
     Hcover_all Hprov_body Htyped_body Hcompat_body Hexclude_all
     Hexclude_env_all Heval_body.
-  eapply (eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
-            eval_preserves_frame_scope_roots_ready_mutual
-            eval_preserves_typing_roots_ready_prefix_mutual
-            eval_preserves_param_scope_roots_ready_mutual);
-    try eassumption.
-  eapply captured_call_frame_params_ready_in_frame_from_self.
-  exact Hframe_ready.
+  destruct
+    (eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
+      eval_preserves_frame_scope_roots_ready_mutual
+      eval_preserves_typing_roots_ready_prefix_mutual
+      eval_preserves_param_scope_roots_ready_mutual
+      env Ω captured Rcap s_args R_args Σ_args fdef fcall σ s_body vs ret
+      used' T_body Γ_out R_params R_body roots_body)
+    as [Hstore_final [Hv_final [_ Hfinal]]].
+  - eapply captured_call_frame_params_ready_in_frame_from_self.
+    exact Hframe_ready.
+  - exact Htyped_args.
+  - exact Hrename.
+  - exact Hargs_fcall.
+  - exact Hroots_bind.
+  - exact Hshadow_bind.
+  - exact Hrn_params.
+  - exact Hcover_all.
+  - exact Hprov_body.
+  - exact Htyped_body.
+  - exact Hcompat_body.
+  - exact Hexclude_all.
+  - exact Hexclude_env_all.
+  - exact Heval_body.
+  - repeat split; assumption.
 Qed.
 
 Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased :
@@ -572,13 +589,29 @@ Proof.
     Hframe_params_ready Htyped_args Hargs_fcall Hroots_bind Hshadow_bind
     Hrn_params Hcover_all Hprov_body Htyped_body Hcompat_body Hexclude_all
     Hexclude_env_all.
-  eapply (eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
-            eval_preserves_frame_scope_roots_ready_mutual
-            eval_preserves_typing_roots_ready_prefix_mutual
-            eval_preserves_param_scope_roots_ready_mutual);
-    try eassumption.
-  eapply captured_call_frame_params_ready_in_frame_from_self.
-  exact Hframe_params_ready.
+  destruct
+    (eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
+      eval_preserves_frame_scope_roots_ready_mutual
+      eval_preserves_typing_roots_ready_prefix_mutual
+      eval_preserves_param_scope_roots_ready_mutual
+      env Ω s s_fn s_args s_body callee args fname captured fdef fcall vs
+      ret used' Rcap R_args Σ_args σ T_body Γ_out R_params R_body
+      roots_body Heval_callee Hlookup Heval_args Hrename Heval_body)
+    as [Heval_final [Hstore_final [Hv_final _]]].
+  - eapply captured_call_frame_params_ready_in_frame_from_self.
+    exact Hframe_params_ready.
+  - exact Htyped_args.
+  - exact Hargs_fcall.
+  - exact Hroots_bind.
+  - exact Hshadow_bind.
+  - exact Hrn_params.
+  - exact Hcover_all.
+  - exact Hprov_body.
+  - exact Htyped_body.
+  - exact Hcompat_body.
+  - exact Hexclude_all.
+  - exact Hexclude_env_all.
+  - repeat split; assumption.
 Qed.
 
 Lemma eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased :

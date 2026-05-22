@@ -1666,7 +1666,7 @@ Proof.
       (conj Hframe_ready Hcaptured_params_typed) Hstore_args Hargs_fcall
       Hroots_bind Hshadow_bind Hrn_bind Hcover_all Hprov_fcall
       Htyped_tail_roots Hcompat_fcall Hexclude_roots_inst Hexclude_env_tail)
-    as [Heval_final [Hstore_final Hv_final]].
+    as [Heval_final [Hstore_final [Hv_final _]]].
   repeat split; assumption.
 Qed.
 

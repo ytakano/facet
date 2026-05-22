@@ -378,7 +378,7 @@ Qed.
 
 Lemma eval_let_make_closure_captured_call_hidden_cleanup_package_with_preservation_core :
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_package_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   forall env (Ω : outlives_ctx) s s_final m x T fname captures args ret,
     ty_usage T = UUnrestricted ->
@@ -457,8 +457,7 @@ Proof.
   subst s_final.
   eapply (eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset_with_preservation_core
             Hframe_mutual
-            (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
-              Htyping_mutual)
+            Htyping_mutual
             Hparam_mutual);
     eassumption.
 Qed.

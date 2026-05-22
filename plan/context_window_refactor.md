@@ -146,8 +146,11 @@ runtime safety currently cross theorem boundaries.
 - Extracted the direct-call evidence facts prefix:
   `TypeSafetyDirectCallEvidenceFacts.v` now owns the reusable direct-call
   callee evidence and summary bridge definitions.
+- Extracted the EnvRuntimeSafety root-check bridge block:
+  `EnvRuntimeRootCheckFacts.v` now owns the root-check readiness and evidence
+  conversion definitions.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/TypeSafetyDirectCallEvidenceFacts.vo theories/TypeSystem/TypeSafetyDirectCallEvidence.vo theories/TypeSystem/TypeSafetyDirectCall.v theories/TypeSystem/TypeSafety.v`.
+  `cd rocq && make theories/TypeSystem/EnvRuntimeRootCheckFacts.vo theories/TypeSystem/EnvRuntimeSafety.vo theories/TypeSystem/EnvFullSoundness.vo theories/TypeSystem/CheckerUsageSoundness.vo`.
 - Next task: continue Phase 3 by looking for the next stable helper cluster
   that can move out of a large preservation file without changing theorem
   statements.

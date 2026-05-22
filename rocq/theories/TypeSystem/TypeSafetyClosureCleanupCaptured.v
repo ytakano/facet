@@ -468,7 +468,7 @@ Qed.
 
 Lemma eval_captured_call_expr_cleanup_preserves_value_and_refs_params_with_preservation_core :
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_package_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   forall env (Ω : outlives_ctx) s s_fn s_args s_body callee args fname
       captured fdef fcall vs ret used' Rcap R_args Σ_args caps σ T_body
@@ -528,8 +528,7 @@ Proof.
   - eapply Eval_CallExpr; eassumption.
   - eapply (eval_captured_call_body_cleanup_preserves_value_and_refs_params_with_preservation_core
               Hframe_mutual
-              (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
-                Htyping_mutual)
+              Htyping_mutual
               Hparam_mutual);
       eassumption.
 Qed.

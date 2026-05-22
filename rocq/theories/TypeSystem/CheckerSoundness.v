@@ -402,6 +402,21 @@ Proof.
   apply orb_false_iff in H. exact H.
 Qed.
 
+Lemma opened_closure_call_no_lbound_sound :
+  forall env_open ret_open bounds_open,
+    contains_lbound_lifetime env_open ||
+    contains_lbound_ty ret_open ||
+    contains_lbound_outlives bounds_open = false ->
+    contains_lbound_lifetime env_open = false /\
+    contains_lbound_ty ret_open = false /\
+    contains_lbound_outlives bounds_open = false.
+Proof.
+  intros env_open ret_open bounds_open H.
+  apply orb_false_iff in H as [Henv_ret Hbounds].
+  apply orb_false_iff in Henv_ret as [Henv Hret].
+  repeat split; assumption.
+Qed.
+
 Lemma ty_compatible_b_sound : forall Ω T_actual T_expected,
   ty_compatible_b Ω T_actual T_expected = true ->
   ty_compatible Ω T_actual T_expected.
@@ -993,10 +1008,38 @@ Proof.
                 ** pose proof (expr_size_callexpr_arg_lt e l e0 Hin_arg). lia.
                 ** exact Hinfer_arg.
              ++ rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
-          -- exact Hret.
-          -- exact Hbounds.
-          -- apply outlives_constraints_hold_b_sound. exact Hout.
-        * discriminate.
+	          -- exact Hret.
+	          -- exact Hbounds.
+	          -- apply outlives_constraints_hold_b_sound. exact Hout.
+	          -- destruct (build_bound_sigma (repeat None n0) arg_tys l1) as [σ0 |] eqn:Hbuild; [|discriminate].
+	          remember (complete_bound_sigma_with_vars n σ0) as σ.
+	          remember (map (open_bound_ty σ) l1) as params_open.
+	          destruct (check_arg_tys Ω arg_tys params_open) as [err |] eqn:Hcheck; [discriminate |].
+	          remember (open_bound_lifetime σ l0) as env_open.
+	          remember (open_bound_ty σ t0) as ret_open.
+	          remember (open_bound_outlives σ o) as bounds_open.
+	          destruct (contains_lbound_lifetime env_open ||
+	                    contains_lbound_ty ret_open ||
+	                    contains_lbound_outlives bounds_open) eqn:Hleak; [discriminate |].
+	          destruct (outlives_constraints_hold_b Ω bounds_open) eqn:Hout; [|discriminate].
+	          injection Hinfer as <- <-.
+	          apply opened_closure_call_no_lbound_sound in Hleak as [Henv [Hret Hbounds]].
+	          subst params_open env_open ret_open bounds_open.
+	          eapply T_CallExpr_Forall_Closure with (σ := σ) (param_tys := l1) (env_lt := l0).
+	          ++ replace (MkTy (ty_usage Tcallee) (TForall n0 o t)) with Tcallee.
+			             2:{ destruct Tcallee as [u c]. simpl in Hcore. rewrite Hcore. reflexivity. }
+			             eapply IH; [pose proof (expr_size_callexpr_callee_lt e l); lia | exact Hcallee].
+	          ++ exact Hbody.
+	          ++ eapply infer_call_args_sound_v2.
+	             ** exact Hcollect.
+	             ** intros Γ0 e0 T0 Γ1 Hin_arg Hinfer_arg.
+	                eapply IH; [pose proof (expr_size_callexpr_arg_lt e l e0 Hin_arg); lia | exact Hinfer_arg].
+	             ** rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
+	          ++ exact Henv.
+	          ++ exact Hret.
+	          ++ exact Hbounds.
+	          ++ apply outlives_constraints_hold_b_sound. exact Hout.
+	        * discriminate.
 	      + discriminate.
 	      + destruct p as [x | p | p f].
         * destruct (ctx_lookup_b x Γ) as [[Tx bx] |] eqn:Hlookup; [|discriminate].

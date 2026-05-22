@@ -716,6 +716,21 @@ Fixpoint build_bound_sigma (σ_acc : list (option lifetime))
   | _, _ => None
   end.
 
+Fixpoint complete_bound_sigma_with_vars_from
+    (n i : nat) (σ : list (option lifetime)) : list (option lifetime) :=
+  match σ with
+  | [] => []
+  | Some l :: rest =>
+      Some l :: complete_bound_sigma_with_vars_from n (S i) rest
+  | None :: rest =>
+      (if Nat.ltb i n then Some (LVar i) else None) ::
+      complete_bound_sigma_with_vars_from n (S i) rest
+  end.
+
+Definition complete_bound_sigma_with_vars
+    (n : nat) (σ : list (option lifetime)) : list (option lifetime) :=
+  complete_bound_sigma_with_vars_from n 0 σ.
+
 Fixpoint check_args (Ω : outlives_ctx) (arg_tys : list Ty) (params : list param)
     : option infer_error :=
   match arg_tys, params with
@@ -1283,6 +1298,27 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
                               let ret_open := open_bound_ty σ ret in
                               let bounds_open := open_bound_outlives σ bounds in
                               if contains_lbound_ty ret_open || contains_lbound_outlives bounds_open
+                              then infer_err ErrHrtUnresolvedBound
+                              else if outlives_constraints_hold_b Ω bounds_open
+                                   then infer_ok (ret_open, Γ')
+                                   else infer_err ErrHrtBoundUnsatisfied
+                          end
+                      end
+                  | TClosure env_lt param_tys ret =>
+                      match build_bound_sigma (repeat None m) arg_tys param_tys with
+                      | None => infer_err ErrLifetimeConflict
+                      | Some σ0 =>
+                          let σ := complete_bound_sigma_with_vars n σ0 in
+                          let param_tys_open := map (open_bound_ty σ) param_tys in
+                          match check_arg_tys Ω arg_tys param_tys_open with
+                          | Some err => infer_err err
+                          | None =>
+                              let env_open := open_bound_lifetime σ env_lt in
+                              let ret_open := open_bound_ty σ ret in
+                              let bounds_open := open_bound_outlives σ bounds in
+                              if contains_lbound_lifetime env_open ||
+                                 contains_lbound_ty ret_open ||
+                                 contains_lbound_outlives bounds_open
                               then infer_err ErrHrtUnresolvedBound
                               else if outlives_constraints_hold_b Ω bounds_open
                                    then infer_ok (ret_open, Γ')
@@ -2606,6 +2642,27 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
                                    else infer_err ErrHrtBoundUnsatisfied
                           end
                       end
+                  | TClosure env_lt param_tys ret =>
+                      match build_bound_sigma (repeat None m) arg_tys param_tys with
+                      | None => infer_err ErrLifetimeConflict
+                      | Some σ0 =>
+                          let σ := complete_bound_sigma_with_vars n σ0 in
+                          let param_tys_open := map (open_bound_ty σ) param_tys in
+                          match check_arg_tys Ω arg_tys param_tys_open with
+                          | Some err => infer_err err
+                          | None =>
+                              let env_open := open_bound_lifetime σ env_lt in
+                              let ret_open := open_bound_ty σ ret in
+                              let bounds_open := open_bound_outlives σ bounds in
+                              if contains_lbound_lifetime env_open ||
+                                 contains_lbound_ty ret_open ||
+                                 contains_lbound_outlives bounds_open
+                              then infer_err ErrHrtUnresolvedBound
+                              else if outlives_constraints_hold_b Ω bounds_open
+                                   then infer_ok (ret_open, Σ')
+                                   else infer_err ErrHrtBoundUnsatisfied
+                          end
+                      end
                   | c => infer_err (ErrMalformedHrtBody c)
                   end
               | c => infer_err (ErrNotAFunction c)
@@ -3004,6 +3061,27 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
                               let ret_open := open_bound_ty σ ret in
                               let bounds_open := open_bound_outlives σ bounds in
                               if contains_lbound_ty ret_open || contains_lbound_outlives bounds_open
+                              then infer_err ErrHrtUnresolvedBound
+                              else if outlives_constraints_hold_b Ω bounds_open
+                                   then infer_ok (ret_open, Σ', ECallExpr callee' args')
+                                   else infer_err ErrHrtBoundUnsatisfied
+                          end
+                      end
+                  | TClosure env_lt param_tys ret =>
+                      match build_bound_sigma (repeat None m) arg_tys param_tys with
+                      | None => infer_err ErrLifetimeConflict
+                      | Some σ0 =>
+                          let σ := complete_bound_sigma_with_vars n σ0 in
+                          let param_tys_open := map (open_bound_ty σ) param_tys in
+                          match check_arg_tys Ω arg_tys param_tys_open with
+                          | Some err => infer_err err
+                          | None =>
+                              let env_open := open_bound_lifetime σ env_lt in
+                              let ret_open := open_bound_ty σ ret in
+                              let bounds_open := open_bound_outlives σ bounds in
+                              if contains_lbound_lifetime env_open ||
+                                 contains_lbound_ty ret_open ||
+                                 contains_lbound_outlives bounds_open
                               then infer_err ErrHrtUnresolvedBound
                               else if outlives_constraints_hold_b Ω bounds_open
                                    then infer_ok (ret_open, Σ', ECallExpr callee' args')

@@ -73,38 +73,41 @@ do not redefine the language accepted by the ordinary checker.
 - Direct `ECall` and syntactic `ECallExpr (EFn fname) args` are handled by
   localized sidecar routes. Do not add direct calls to ordinary expression
   readiness.
-- General `ECallExpr callee args` remains staged: first non-capturing function
-  values, then immutable-copy captured closures, then captured references and
-  lifetimes, then mutable and affine/linear captures.
+- General `ECallExpr callee args` remains staged. Non-capturing function
+  values, immutable-copy captured closures, and ordinary checker support for
+  callable shared-reference captured closures are in place. Runtime sidecar
+  evidence for captured references still comes next; mutable and affine/linear
+  captures remain later work.
 
 ## Next Implementation Order
 
 Work in this order unless a proof exposes a soundness gap.
 
-1. **Finish Stage 7b captured-reference closure calls.**
+1. **Finish Stage 7b captured-reference closure runtime evidence.**
 
    Core status: ordinary `EMakeClosure` capture checking now accepts
    immutable unrestricted shared-reference values, rejects mutable bindings
    and non-unrestricted captures, infers the closure env lifetime by searching
    captured shared-reference lifetimes, and still keeps exact sidecar capture
-   validators reference-free. The Prop typing and checker soundness path are
-   updated for `closure_value_ty_at env_lt`.
+   validators reference-free. The Prop typing, executable checker, checker
+   soundness, structural typing, alpha-renaming, and env typing soundness paths
+   support calling `TForall ... (TClosure env_lt params ret)` by instantiating
+   unresolved closure lifetimes from the enclosing lexical lifetime context.
 
    Surface status: raw closure elaboration now inherits the enclosing lifetime
-   context for synthetic closure helper functions, and surface shared-reference
-   closure literals can be constructed.
+   context for synthetic closure helper functions. Surface shared-reference
+   closure literals can be constructed and called by the ordinary checker.
 
    Next implementation task:
 
-   - Decide how callable captured-reference closures should expose enclosing
-     lifetimes. The current generated closure value is a
-     `TForall ... (TClosure ...)`, and the existing closure call path rejects
-     that with `ErrMalformedHrtBody`.
-   - Prefer a local, explicit route for closure-call lifetime instantiation.
-     Do not silently erase the helper function lifetime or make closure calls
-     ordinary direct-call evidence.
-   - Add a valid surface fixture that constructs and calls a captured-reference
-     closure only after the callable-lifetime route is implemented.
+   - Design and prove runtime root/provenance evidence for captured-reference
+     closure calls. The ordinary checker now accepts them, but captured-call
+     sidecar routes still intentionally do not.
+   - Keep closure-call lifetime instantiation local to the
+     `TForall ... TClosure` call path. Do not silently erase helper function
+     lifetimes or make closure calls ordinary direct-call evidence.
+   - Keep `tests/valid/closure/capture_shared_ref.facet` as the surface
+     regression that constructs and calls a shared-reference closure.
    - Keep the invalid fixtures for missing outlives support, mutable binding
      capture, and `&mut` capture rejection.
    - Do not widen executable sidecar validators or captured-call routes until

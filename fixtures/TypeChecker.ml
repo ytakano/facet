@@ -2767,6 +2767,30 @@ let rec build_bound_sigma _UU03c3__acc arg_tys params =
         | Some _UU03c3_' -> build_bound_sigma _UU03c3_' ts ps
         | None -> None))
 
+(** val complete_bound_sigma_with_vars_from :
+    Big_int_Z.big_int -> Big_int_Z.big_int -> lifetime option list ->
+    lifetime option list **)
+
+let rec complete_bound_sigma_with_vars_from n i = function
+| [] -> []
+| o :: rest ->
+  (match o with
+   | Some l ->
+     (Some
+       l) :: (complete_bound_sigma_with_vars_from n (Big_int_Z.succ_big_int
+               i) rest)
+   | None ->
+     (if Nat.ltb i n then Some (LVar i) else None) :: (complete_bound_sigma_with_vars_from
+                                                        n
+                                                        (Big_int_Z.succ_big_int
+                                                        i) rest))
+
+(** val complete_bound_sigma_with_vars :
+    Big_int_Z.big_int -> lifetime option list -> lifetime option list **)
+
+let complete_bound_sigma_with_vars n _UU03c3_ =
+  complete_bound_sigma_with_vars_from n Big_int_Z.zero_big_int _UU03c3_
+
 (** val check_args :
     outlives_ctx -> ty list -> param list -> infer_error option **)
 
@@ -3555,6 +3579,31 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
                              then Infer_ok (ret_open, _UU03a3_')
                              else Infer_err ErrHrtBoundUnsatisfied)
                    | None -> Infer_err ErrLifetimeConflict)
+                | TClosure (env_lt, param_tys, ret) ->
+                  (match build_bound_sigma (repeat None m) arg_tys param_tys with
+                   | Some _UU03c3_0 ->
+                     let _UU03c3_ = complete_bound_sigma_with_vars n _UU03c3_0
+                     in
+                     let param_tys_open =
+                       map (open_bound_ty _UU03c3_) param_tys
+                     in
+                     (match check_arg_tys _UU03a9_ arg_tys param_tys_open with
+                      | Some err -> Infer_err err
+                      | None ->
+                        let env_open = open_bound_lifetime _UU03c3_ env_lt in
+                        let ret_open = open_bound_ty _UU03c3_ ret in
+                        let bounds_open = open_bound_outlives _UU03c3_ bounds
+                        in
+                        if (||)
+                             ((||) (contains_lbound_lifetime env_open)
+                               (contains_lbound_ty ret_open))
+                             (contains_lbound_outlives bounds_open)
+                        then Infer_err ErrHrtUnresolvedBound
+                        else if outlives_constraints_hold_b _UU03a9_
+                                  bounds_open
+                             then Infer_ok (ret_open, _UU03a3_')
+                             else Infer_err ErrHrtBoundUnsatisfied)
+                   | None -> Infer_err ErrLifetimeConflict)
                 | x -> Infer_err (ErrMalformedHrtBody x))
              | x -> Infer_err (ErrNotAFunction x))
           | Infer_err err -> Infer_err err)
@@ -3980,6 +4029,32 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
                         let bounds_open = open_bound_outlives _UU03c3_ bounds
                         in
                         if (||) (contains_lbound_ty ret_open)
+                             (contains_lbound_outlives bounds_open)
+                        then Infer_err ErrHrtUnresolvedBound
+                        else if outlives_constraints_hold_b _UU03a9_
+                                  bounds_open
+                             then Infer_ok ((ret_open, _UU03a3_'), (ECallExpr
+                                    (callee', args')))
+                             else Infer_err ErrHrtBoundUnsatisfied)
+                   | None -> Infer_err ErrLifetimeConflict)
+                | TClosure (env_lt, param_tys, ret) ->
+                  (match build_bound_sigma (repeat None m) arg_tys param_tys with
+                   | Some _UU03c3_0 ->
+                     let _UU03c3_ = complete_bound_sigma_with_vars n _UU03c3_0
+                     in
+                     let param_tys_open =
+                       map (open_bound_ty _UU03c3_) param_tys
+                     in
+                     (match check_arg_tys _UU03a9_ arg_tys param_tys_open with
+                      | Some err -> Infer_err err
+                      | None ->
+                        let env_open = open_bound_lifetime _UU03c3_ env_lt in
+                        let ret_open = open_bound_ty _UU03c3_ ret in
+                        let bounds_open = open_bound_outlives _UU03c3_ bounds
+                        in
+                        if (||)
+                             ((||) (contains_lbound_lifetime env_open)
+                               (contains_lbound_ty ret_open))
                              (contains_lbound_outlives bounds_open)
                         then Infer_err ErrHrtUnresolvedBound
                         else if outlives_constraints_hold_b _UU03a9_

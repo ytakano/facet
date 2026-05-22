@@ -783,10 +783,36 @@ Proof.
               ** eapply call_exprs_in_true; eassumption.
               ** exact Hinfer_arg.
            ++ rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
-        -- exact Hret.
-        -- exact Hbounds.
-        -- apply env_outlives_constraints_hold_b_sound. exact Hout.
-    + destruct (expr_as_place e) as [p |] eqn:Hplace_expr.
+	        -- exact Hret.
+	        -- exact Hbounds.
+	        -- apply env_outlives_constraints_hold_b_sound. exact Hout.
+	        -- destruct (build_bound_sigma (repeat None n0) arg_tys l1) as [σ0 |] eqn:Hbuild;
+	             try discriminate.
+	           set (σ := complete_bound_sigma_with_vars n σ0).
+	           change (complete_bound_sigma_with_vars n σ0) with σ in Hinfer.
+	           destruct (check_arg_tys Ω arg_tys (map (open_bound_ty σ) l1)) as [err |] eqn:Hcheck;
+	             try discriminate.
+	           destruct (contains_lbound_lifetime (open_bound_lifetime σ l0) ||
+	               contains_lbound_ty (open_bound_ty σ t0) ||
+	               contains_lbound_outlives (open_bound_outlives σ o)) eqn:Hleak;
+	             [discriminate |].
+	           destruct (outlives_constraints_hold_b Ω (open_bound_outlives σ o)) eqn:Hout;
+	             [|discriminate].
+	           inversion Hinfer; subst.
+	           apply opened_closure_call_no_lbound_sound in Hleak as [Henv [Hret Hbounds]].
+	           eapply TES_CallExpr_Forall_Closure with (σ := σ) (param_tys := l1) (env_lt := l0).
+	           ++ eapply IH; [exact Hcallee | exact Hcallee_infer].
+	           ++ exact Hbody.
+	           ++ eapply infer_env_args_collect_sound.
+	              ** exact Hcollect.
+	              ** intros Σ0 e0 T0 Σ1 Hin_arg Hinfer_arg.
+	                 eapply IH; [eapply call_exprs_in_true; eassumption | exact Hinfer_arg].
+	              ** rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
+	           ++ exact Henv.
+	           ++ exact Hret.
+	           ++ exact Hbounds.
+	           ++ apply env_outlives_constraints_hold_b_sound. exact Hout.
+	    + destruct (expr_as_place e) as [p |] eqn:Hplace_expr.
       * destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
         destruct Tp as [u c]; simpl in *.
         destruct c; try discriminate.
@@ -999,10 +1025,36 @@ Proof.
               ** eapply struct_exprs_in_true; eassumption.
               ** exact Hinfer_arg.
            ++ rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
-        -- exact Hret.
-        -- exact Hbounds.
-        -- apply env_outlives_constraints_hold_b_sound. exact Hout.
-    + destruct (lookup_struct s env) as [sdef |] eqn:Hlookup; try discriminate.
+	        -- exact Hret.
+	        -- exact Hbounds.
+	        -- apply env_outlives_constraints_hold_b_sound. exact Hout.
+	        -- destruct (build_bound_sigma (repeat None n0) arg_tys l1) as [σ0 |] eqn:Hbuild;
+	             try discriminate.
+	           set (σ := complete_bound_sigma_with_vars n σ0).
+	           change (complete_bound_sigma_with_vars n σ0) with σ in Hinfer.
+	           destruct (check_arg_tys Ω arg_tys (map (open_bound_ty σ) l1)) as [err |] eqn:Hcheck;
+	             try discriminate.
+	           destruct (contains_lbound_lifetime (open_bound_lifetime σ l0) ||
+	               contains_lbound_ty (open_bound_ty σ t0) ||
+	               contains_lbound_outlives (open_bound_outlives σ o)) eqn:Hleak;
+	             [discriminate |].
+	           destruct (outlives_constraints_hold_b Ω (open_bound_outlives σ o)) eqn:Hout;
+	             [|discriminate].
+	           inversion Hinfer; subst.
+	           apply opened_closure_call_no_lbound_sound in Hleak as [Henv [Hret Hbounds]].
+	           eapply TES_CallExpr_Forall_Closure with (σ := σ) (param_tys := l1) (env_lt := l0).
+	           ++ eapply IH; [exact Hcallee | exact Hcallee_infer].
+	           ++ exact Hbody.
+	           ++ eapply infer_env_args_collect_sound.
+	              ** exact Hcollect.
+	              ** intros Σ0 e0 T0 Σ1 Hin_arg Hinfer_arg.
+	                 eapply IH; [eapply struct_exprs_in_true; eassumption | exact Hinfer_arg].
+	              ** rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
+	           ++ exact Henv.
+	           ++ exact Hret.
+	           ++ exact Hbounds.
+	           ++ apply env_outlives_constraints_hold_b_sound. exact Hout.
+	    + destruct (lookup_struct s env) as [sdef |] eqn:Hlookup; try discriminate.
       destruct (negb (Nat.eqb (Datatypes.length l) (struct_lifetimes sdef))) eqn:Hlts;
         try discriminate.
       destruct (negb (Nat.eqb (Datatypes.length l0) (struct_type_params sdef))) eqn:Hargslen;

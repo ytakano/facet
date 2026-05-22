@@ -1,4 +1,4 @@
-fn main<'a>(r: unrestricted &'a unrestricted isize) -> unrestricted () {
+fn main<'a>(r: unrestricted &'a unrestricted isize) -> unrestricted &'a unrestricted isize {
     let f = closure [r](x: unrestricted isize) -> unrestricted &'a unrestricted isize { r } in
-    ()
+    (f 0)
 }

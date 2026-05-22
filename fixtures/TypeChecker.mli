@@ -566,6 +566,13 @@ val unify_bound_lt :
 val build_bound_sigma :
   lifetime option list -> ty list -> ty list -> lifetime option list option
 
+val complete_bound_sigma_with_vars_from :
+  Big_int_Z.big_int -> Big_int_Z.big_int -> lifetime option list -> lifetime
+  option list
+
+val complete_bound_sigma_with_vars :
+  Big_int_Z.big_int -> lifetime option list -> lifetime option list
+
 val check_args : outlives_ctx -> ty list -> param list -> infer_error option
 
 val check_arg_tys : outlives_ctx -> ty list -> ty list -> infer_error option

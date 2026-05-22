@@ -30,6 +30,9 @@ runtime safety currently cross theorem boundaries.
 
 ### Current Status
 
+- Extracted closure cleanup preservation package interfaces into
+  `TypeSafetyClosureCleanupPackages.v`; focused check: rebuild the new package
+  and downstream closure cleanup/type-safety modules.
 - Completed first proof-interface compression slice:
   `TypeSafetyCapturedCall.v` now uses existing mutual statement aliases for the
   repeated frame-scope, prefix-root, and param-scope preservation hypotheses in
@@ -141,7 +144,7 @@ runtime safety currently cross theorem boundaries.
   `TypeSafetyRootedPackages.v` now owns the rooted result records, package
   statements, conversion lemmas, and readiness bridge used by runtime args.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/TypeSafetyRootedPackages.vo theories/TypeSystem/TypeSafetyClosureRuntimeArgs.vo theories/TypeSystem/TypeSafetyClosure.v`.
+  `cd rocq && make theories/TypeSystem/TypeSafetyClosureCleanupPackages.vo theories/TypeSystem/TypeSafetyClosureCleanupFrame.vo theories/TypeSystem/TypeSafetyClosureCleanup.v theories/TypeSystem/TypeSafety.v`.
 - Next task: continue Phase 3 by looking for the next stable helper cluster
   that can move out of a large preservation file without changing theorem
   statements.

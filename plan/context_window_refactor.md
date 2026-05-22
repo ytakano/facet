@@ -98,10 +98,14 @@ runtime safety currently cross theorem boundaries.
   `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_auto_with_preservation_core`
   now consumes the typed-prefix package statement directly, with its plain
   wrapper converting at the boundary.
-- Last focused check:
-  `cd rocq && make theories/TypeSystem/TypeSafetyClosureCleanupMakeClosure.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo theories/TypeSystem/TypeSafetyCapturedCall.vo theories/TypeSystem/TypeSafety.vo`.
-- Next task: rewire
+- Rewired the instantiated captured-call bridge core:
   `eval_make_closure_captured_call_expr_preserves_typing_with_instantiated_body_with_preservation_core`
+  now consumes the typed-prefix package statement directly, with its plain
+  wrapper converting at the boundary.
+- Last focused check:
+  `cd rocq && make theories/TypeSystem/TypeSafetyCapturedCall.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo theories/TypeSystem/TypeSafety.vo`.
+- Next task: rewire
+  `eval_make_closure_captured_call_expr_preserves_typing_with_callee_components_with_preservation_core`
   in `TypeSafetyCapturedCall.v`. Do not combine package rewiring with new
   captured-call invariants.
 

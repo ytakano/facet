@@ -10,7 +10,7 @@ Theorem eval_preserves_typing_direct_call_roots_ready_with_preservation_core :
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_package_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   forall env s e s' v,
     eval env s e s' v ->
@@ -91,8 +91,7 @@ Proof.
         eapply
           (eval_direct_call_body_provenance_ready_preserves_typing_with_preservation_core
             Htyping_ready Hroots_ready Hframe_scope_ready
-            (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
-              Htyping_roots_prefix_ready)
+            Htyping_roots_prefix_ready
             Hparam_scope_ready);
           eassumption
     | Htyped_args : typed_args_roots env Ω n R Σ ?args_call
@@ -114,8 +113,7 @@ Proof.
         eapply
           (eval_direct_call_body_provenance_ready_preserves_typing_with_preservation_core
             Htyping_ready Hroots_ready Hframe_scope_ready
-            (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
-              Htyping_roots_prefix_ready)
+            Htyping_roots_prefix_ready
             Hparam_scope_ready);
           eassumption
     end.

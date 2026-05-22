@@ -333,9 +333,16 @@ Work in this order unless a proof exposes a soundness gap.
      `store_no_shadow`, and `root_env_no_shadow` evidence, and likely root
      name/key facts, to erase the bound root safely. The captured-call
      preservation wrappers also expose only store/value facts at the expression
-     helper boundary, so the next implementation must first strengthen the
-     captured-call preservation/runtime facts before adding an `ELet` sidecar
-     branch.
+     helper boundary. More specifically,
+     `expr_root_shadow_captured_call_provenance_summary_exact` indexes captured
+     calls with the typed expression roots (`root_sets_union arg_roots`), but a
+     captured callee return can depend on copied capture roots. A strengthened
+     exact preservation package therefore cannot safely claim
+     `value_roots_within roots ret` for captured-call branches until its
+     evidence has an explicit returned-root bound/subset invariant, or another
+     proven invariant that accounts for capture roots. Keep checker widening
+     for `ELet` blocked until that returned-root invariant is designed and
+     proven.
 
    Next proof task:
 

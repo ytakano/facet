@@ -120,6 +120,11 @@ Work in this order unless a proof exposes a soundness gap.
      copy_capture_store_exact_with_env_params_store_typed_in_frame
      copy_capture_store_as_captured_values_canonical_roots_with_env
      copy_capture_store_as_captured_store_runtime_ready_in_frame_with_env
+     captured_call_bind_params_call_param_root_env_ready_in_frame
+     captured_call_frame_args_values_have_types_in_frame
+     eval_make_closure_exact_captured_call_frame_params_ready_auto_with_env
+     eval_make_closure_captured_call_runtime_args_ready_in_frame_core
+     eval_make_closure_captured_call_runtime_args_ready_auto_with_env_with_preservation_core
      captured_call_binding_runtime_root_env_equiv_with_roots
      copy_capture_roots_as_equiv_root_env_add_params_roots
      capture_store_root_env_equiv_root_env_add_params_roots
@@ -136,17 +141,33 @@ Work in this order unless a proof exposes a soundness gap.
 
    Next implementation task:
 
-   - Rewire `TypeSafetyCapturedCall.v` from
-     `empty_root_env_for_store captured` and `repeat []` to:
+   - First generalize the captured-call body cleanup bridge to accept
+     `captured_call_frame_ready_in_frame`, not only
+     `captured_call_frame_ready`. This is required because shared-reference
+     copied captures may point into the evaluated-argument frame; the older
+     self-contained frame predicate is only valid for reference-free captures.
+   - After cleanup accepts in-frame readiness, rewire
+     `TypeSafetyCapturedCall.v` from `empty_root_env_for_store captured` and
+     `repeat []` to:
      - `capture_store_root_env captured`
      - `capture_store_root_sets captured`
    - Use `captured_call_binding_runtime_root_env_equiv_with_roots` plus
      `capture_store_root_env_equiv_root_env_add_params_roots` for body
-     substitution.
-   - Use the canonical in-frame readiness helpers when packaging captured-call
-     runtime arguments.
+     substitution, and use the with-env runtime-argument helper above for the
+     direct captured-call branch.
    - Only after that proof compiles, replace the captured-call sidecar checker
      branches with `check_make_closure_captures_exact_sctx_with_env`.
+
+   Blocker found:
+
+   - Do not try to coerce canonical shared-reference captures back into
+     `captured_call_frame_ready`. The canonical root env is intentionally
+     frame-relative. A proof attempt fails at cleanup because the cleanup bridge
+     still asks for the old self-contained captured-frame predicate.
+   - Do not widen the annotated local-let branch to with-env captures yet. Its
+     hidden closure binding is currently rooted as `root_env_add x [] R_args`;
+     shared-reference captures require either a new hidden-closure root
+     invariant or a different root assignment for `x`.
 
    Still required after the invariant is fixed:
 

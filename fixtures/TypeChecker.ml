@@ -6235,6 +6235,25 @@ let check_fn_root_shadow_captured_callee_provenance_summary env fdef =
            r_out)
      | Infer_err _ -> false)
 
+(** val capture_root_bound :
+    root_env -> ident list -> param list -> root_set option **)
+
+let rec capture_root_bound r captures caps =
+  match captures with
+  | [] -> (match caps with
+           | [] -> Some []
+           | _ :: _ -> None)
+  | x :: captures' ->
+    (match caps with
+     | [] -> None
+     | _ :: caps' ->
+       (match root_env_lookup x r with
+        | Some roots ->
+          (match capture_root_bound r captures' caps' with
+           | Some rest -> Some (root_set_union roots rest)
+           | None -> None)
+        | None -> None))
+
 (** val callee_hidden_capture_args_disjoint_b :
     fn_def -> expr list -> bool **)
 
@@ -6286,8 +6305,11 @@ let rec check_expr_root_shadow_captured_call_provenance_summary_fuel fuel env _U
                     (match check_make_closure_captures_exact_sctx_with_env
                              env _UU03a9_ _UU03a3_ captures callee.fn_captures with
                      | Infer_ok _ ->
-                       check_fn_root_shadow_captured_callee_provenance_summary
-                         env callee
+                       (match capture_root_bound r captures callee.fn_captures with
+                        | Some _ ->
+                          check_fn_root_shadow_captured_callee_provenance_summary
+                            env callee
+                        | None -> false)
                      | Infer_err _ -> false)
                 | None -> false)
            | None -> false))

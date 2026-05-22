@@ -898,6 +898,9 @@ val local_captured_call_target_expr :
 val check_fn_root_shadow_captured_callee_provenance_summary :
   global_env -> fn_def -> bool
 
+val capture_root_bound :
+  root_env -> ident list -> param list -> root_set option
+
 val callee_hidden_capture_args_disjoint_b : fn_def -> expr list -> bool
 
 val check_expr_root_shadow_captured_call_provenance_summary_fuel :

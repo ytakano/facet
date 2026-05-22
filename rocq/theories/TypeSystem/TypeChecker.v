@@ -5419,6 +5419,19 @@ Definition check_fn_root_shadow_captured_callee_provenance_summary
   | infer_err _ => false
   end.
 
+Fixpoint capture_root_bound
+    (R : root_env) (captures : list ident) (caps : list param)
+    : option root_set :=
+  match captures, caps with
+  | [], [] => Some []
+  | x :: captures', _ :: caps' =>
+      match root_env_lookup x R, capture_root_bound R captures' caps' with
+      | Some roots, Some rest => Some (root_set_union roots rest)
+      | _, _ => None
+      end
+  | _, _ => None
+  end.
+
 Definition callee_hidden_capture_args_disjoint_b
     (callee : fn_def) (args : list expr) : bool :=
   forallb
@@ -5463,8 +5476,12 @@ Fixpoint check_expr_root_shadow_captured_call_provenance_summary_fuel
                       Ω Σ captures (fn_captures callee) with
               | infer_err _ => false
               | infer_ok _ =>
-                  check_fn_root_shadow_captured_callee_provenance_summary
-                    env callee
+                  match capture_root_bound R captures (fn_captures callee) with
+                  | Some _ =>
+                      check_fn_root_shadow_captured_callee_provenance_summary
+                        env callee
+                  | None => false
+                  end
               end
           end
       | None => false

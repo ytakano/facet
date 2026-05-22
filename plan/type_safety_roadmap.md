@@ -154,6 +154,33 @@ Work in this order unless a proof exposes a soundness gap.
      `repeat []`.
    - The direct captured-call sidecar checker branch now uses
      `check_make_closure_captures_exact_sctx_with_env`.
+   - The captured-call exact sidecar evidence now carries a separate returned
+     root bound. Direct/provenance evidence returns its typed roots, `if`
+     evidence unions branch returned roots, and captured-call evidence returns
+     the typed call roots unioned with a static capture bound.
+   - The direct captured-call sidecar checker branch now requires
+     `capture_root_bound R captures (fn_captures fcallee) = Some _` before it
+     accepts captured-call evidence. This keeps the static sidecar evidence
+     from accepting copied-reference captures whose source roots are absent
+     from the caller root environment.
+
+   Next proof task:
+
+   - Relate the static `capture_root_bound` result to the runtime copied
+     capture roots:
+
+     ```coq
+     root_set_stores_subset
+       (root_sets_union (capture_store_root_sets captured))
+       capture_roots
+     ```
+
+     from `copy_capture_store_as`, `store_roots_within R s`, and
+     `capture_root_bound R captures (fn_captures fdef) = Some capture_roots`.
+     After that lemma is available, strengthen the captured-call preservation
+     package to expose final `store_roots_within`, returned
+     `value_roots_within`, `store_no_shadow`, and `root_env_no_shadow`, then
+     add the `ELet` exact-evidence constructor.
 
    Annotated local-let captured-call route:
 

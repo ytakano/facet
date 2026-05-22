@@ -1232,12 +1232,13 @@ Inductive expr_root_shadow_captured_call_provenance_summary
 Inductive expr_root_shadow_captured_call_provenance_summary_exact
     (env : global_env) (Ω : outlives_ctx) (n : nat)
     : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set ->
+      root_set ->
       Prop :=
   | ERSCE_Provenance : forall R Σ e T Σ' R' roots,
       provenance_ready_expr e ->
       typed_env_roots_shadow_safe env Ω n R Σ e T Σ' R' roots ->
       expr_root_shadow_captured_call_provenance_summary_exact
-        env Ω n R Σ e T Σ' R' roots
+        env Ω n R Σ e T Σ' R' roots roots
   | ERSCE_DirectCall : forall R Σ e fname args synthetic_body fcallee
       T Σ' R' roots,
       direct_call_target_expr e = Some (fname, args, synthetic_body) ->
@@ -1250,9 +1251,10 @@ Inductive expr_root_shadow_captured_call_provenance_summary_exact
       typed_env_roots_shadow_safe env Ω n R Σ
         synthetic_body T Σ' R' roots ->
       expr_root_shadow_captured_call_provenance_summary_exact
-        env Ω n R Σ e T Σ' R' roots
+        env Ω n R Σ e T Σ' R' roots roots
   | ERSCE_CapturedCall : forall R Σ fname captures args fcallee
-      env_lt captured_tys T Σ' R' roots T_body Γ_out R_body roots_body,
+      env_lt captured_tys T Σ' R' roots capture_roots
+      T_body Γ_out R_body roots_body,
       preservation_ready_args args ->
       In fcallee (env_fns env) ->
       fn_name fcallee = fname ->
@@ -1274,40 +1276,43 @@ Inductive expr_root_shadow_captured_call_provenance_summary_exact
         roots_body ->
       root_env_excludes_params (fn_params fcallee ++ fn_captures fcallee)
         R_body ->
+      capture_root_bound R captures (fn_captures fcallee) =
+        Some capture_roots ->
       typed_env_roots_shadow_safe env Ω n R Σ
         (ECallExpr (EMakeClosure fname captures) args) T Σ' R' roots ->
       expr_root_shadow_captured_call_provenance_summary_exact
         env Ω n R Σ (ECallExpr (EMakeClosure fname captures) args)
-        T Σ' R' roots
+        T Σ' R' roots (root_set_union roots capture_roots)
   | ERSCE_If : forall R R1 R2 R3 Σ Σ1 Σ2 Σ3 Σ4 e1 e2 e3
-      T_cond T2 T3 roots_cond roots2 roots3,
+      T_cond T2 T3 roots_cond roots2 roots3 ret_roots2 ret_roots3,
       provenance_ready_expr e1 ->
       typed_env_roots_shadow_safe env Ω n R Σ e1 T_cond Σ1 R1
         roots_cond ->
       ty_core T_cond = TBooleans ->
       expr_root_shadow_captured_call_provenance_summary_exact
-        env Ω n R1 Σ1 e2 T2 Σ2 R2 roots2 ->
+        env Ω n R1 Σ1 e2 T2 Σ2 R2 roots2 ret_roots2 ->
       expr_root_shadow_captured_call_provenance_summary_exact
-        env Ω n R1 Σ1 e3 T3 Σ3 R3 roots3 ->
+        env Ω n R1 Σ1 e3 T3 Σ3 R3 roots3 ret_roots3 ->
       ty_core T2 = ty_core T3 ->
       ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
       root_env_equiv R2 R3 ->
       expr_root_shadow_captured_call_provenance_summary_exact
         env Ω n R Σ (EIf e1 e2 e3)
         (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2))
-        (sctx_of_ctx Σ4) R2 (root_set_union roots2 roots3).
+        (sctx_of_ctx Σ4) R2 (root_set_union roots2 roots3)
+        (root_set_union ret_roots2 ret_roots3).
 
 Lemma expr_root_shadow_captured_call_provenance_summary_exact_typed :
-  forall env Ω n R Σ e T Σ' R' roots,
+  forall env Ω n R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_captured_call_provenance_summary_exact
-      env Ω n R Σ e T Σ' R' roots ->
+      env Ω n R Σ e T Σ' R' roots ret_roots ->
     typed_env_roots_shadow_safe env Ω n R Σ e T Σ' R' roots.
 Proof.
-  intros env Ω n R Σ e T Σ' R' roots Hsummary.
+  intros env Ω n R Σ e T Σ' R' roots ret_roots Hsummary.
   induction Hsummary.
   - exact H0.
   - exact H5.
-  - exact H11.
+  - exact H12.
   - eapply TERS_If; eauto.
 Qed.
 
@@ -1340,13 +1345,14 @@ Definition callee_body_root_shadow_captured_call_provenance_summary
     roots_exclude_params (fn_params fdef) roots_body /\
     root_env_excludes_params (fn_params fdef) R_body) \/
   (
-  exists T_body Γ_out R_body roots_body,
+  exists T_body Γ_out R_body roots_body ret_roots,
     NoDup (ctx_names (params_ctx (fn_params fdef))) /\
     expr_root_shadow_captured_call_provenance_summary_exact env
       (fn_outlives fdef) (fn_lifetimes fdef)
       (initial_root_env_for_fn fdef)
       (sctx_of_ctx (fn_body_ctx fdef))
-      (fn_body fdef) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+      (fn_body fdef) T_body (sctx_of_ctx Γ_out) R_body roots_body
+      ret_roots /\
     ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
     roots_exclude_params (fn_params fdef) roots_body /\
     root_env_excludes_params (fn_params fdef) R_body) \/
@@ -1784,8 +1790,9 @@ Lemma check_expr_root_shadow_captured_call_provenance_summary_fuel_sound_early :
       infer_ok (T, Σ', R', roots) ->
     check_expr_root_shadow_captured_call_provenance_summary_fuel
       fuel env Ω n R Σ e = true ->
-    expr_root_shadow_captured_call_provenance_summary_exact
-      env Ω n R Σ e T Σ' R' roots.
+    exists ret_roots,
+      expr_root_shadow_captured_call_provenance_summary_exact
+        env Ω n R Σ e T Σ' R' roots ret_roots.
 Proof.
   induction fuel as [| fuel' IH]; intros env Ω n R Σ e T Σ' R' roots
     Hinfer Hcheck.
@@ -1796,7 +1803,7 @@ Proof.
     apply orb_true_iff in Hcheck as [Hnon_if | Hif].
     + apply orb_true_iff in Hnon_if as [Hprov_or_direct | Hcaptured].
       * apply orb_true_iff in Hprov_or_direct as [Hprov | Hdirect].
-        -- eapply ERSCE_Provenance.
+        -- eexists. eapply ERSCE_Provenance.
            ++ apply provenance_ready_expr_b_sound. exact Hprov.
            ++ eapply infer_core_env_state_fuel_roots_shadow_safe_sound.
               exact Hinfer.
@@ -1819,7 +1826,7 @@ Proof.
            rewrite Hinfer in Hsynthetic. inversion Hsynthetic; subst.
            destruct (lookup_fn_b_sound fname (env_fns env) fcallee
              Hlookup_b) as [Hin_callee Hname_callee].
-           eapply ERSCE_DirectCall.
+           eexists. eapply ERSCE_DirectCall.
            ++ reflexivity.
            ++ reflexivity.
            ++ apply preservation_ready_args_b_sound. exact Hready_args.
@@ -1842,6 +1849,8 @@ Proof.
         destruct (check_make_closure_captures_exact_sctx_with_env env Ω Σ
           captures (fn_captures fcallee)) as [[env_lt captured_tys] | err]
           eqn:Hcaptures; try discriminate.
+        destruct (capture_root_bound R captures (fn_captures fcallee))
+          as [capture_roots |] eqn:Hcapture_bound; try discriminate.
         pose proof (captured_call_target_expr_ok_is_make_closure_call_early
           (S fuel') env Ω n R Σ e T Σ' R' roots fname captures args
           Hinfer Htarget) as He.
@@ -1855,7 +1864,7 @@ Proof.
           [Hnodup_binding
            (T_body & Γ_out & R_body & roots_body & Hprov_body &
             Htyped_body & Hcompat_body & Hexclude_roots & Hexclude_env)].
-        eapply ERSCE_CapturedCall.
+        eexists. eapply ERSCE_CapturedCall.
         -- apply preservation_ready_args_b_sound. exact Hready_args.
         -- exact Hin_callee.
         -- exact Hname_callee.
@@ -1869,6 +1878,7 @@ Proof.
         -- exact Hcompat_body.
         -- exact Hexclude_roots.
         -- exact Hexclude_env.
+        -- exact Hcapture_bound.
         -- eapply infer_core_env_state_fuel_roots_shadow_safe_sound.
            exact Hinfer.
     + destruct e; try discriminate.
@@ -1889,17 +1899,21 @@ Proof.
       destruct (root_env_eqb R2 R3) eqn:Hroot_eq; try discriminate.
       destruct (ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3)) as [Γ4 |]
         eqn:Hmerge; try discriminate.
-      inversion Hinfer; subst; clear Hinfer.
       apply andb_true_iff in Hif as [Hif_head Helse_check].
       apply andb_true_iff in Hif_head as [Hif_head Hthen_check].
       apply andb_true_iff in Hif_head as [Hcond_bool Hprov_cond].
-      eapply ERSCE_If.
+      destruct (IH env Ω n R1 Σ1 e2 T2 Σ2 R2 roots2 Hthen
+        Hthen_check) as [ret_roots2 Hthen_summary].
+      destruct (IH env Ω n R1 Σ1 e3 T3 Σ3 R3 roots3 Helse
+        Helse_check) as [ret_roots3 Helse_summary].
+      inversion Hinfer; subst; clear Hinfer.
+      eexists. eapply ERSCE_If.
       * apply provenance_ready_expr_b_sound. exact Hprov_cond.
       * eapply infer_core_env_state_fuel_roots_shadow_safe_sound.
         exact Hcond.
       * apply ty_core_eqb_true. exact Hcond_core.
-      * eapply IH; eassumption.
-      * eapply IH; eassumption.
+      * exact Hthen_summary.
+      * exact Helse_summary.
       * apply ty_core_eqb_true. exact Hbranch_core.
       * exact Hmerge.
       * apply root_env_eqb_true_equiv. exact Hroot_eq.
@@ -1911,8 +1925,9 @@ Lemma check_expr_root_shadow_captured_call_provenance_summary_sound_early :
       infer_ok (T, Γ', R', roots) ->
     check_expr_root_shadow_captured_call_provenance_summary
       env Ω n R Γ e = true ->
-    expr_root_shadow_captured_call_provenance_summary_exact
-      env Ω n R (sctx_of_ctx Γ) e T (sctx_of_ctx Γ') R' roots.
+    exists ret_roots,
+      expr_root_shadow_captured_call_provenance_summary_exact
+        env Ω n R (sctx_of_ctx Γ) e T (sctx_of_ctx Γ') R' roots ret_roots.
 Proof.
   unfold check_expr_root_shadow_captured_call_provenance_summary,
     infer_core_env_roots_shadow_safe.
@@ -2013,12 +2028,17 @@ Proof.
       apply andb_true_iff in Hif_check as [Hif_head Henv].
       apply andb_true_iff in Hif_head as [Hif_head Hroots].
       apply andb_true_iff in Hif_head as [Hexpr Hcompat].
-      exists T_body, Γ_out, R_body, roots_body.
+      destruct
+        (check_expr_root_shadow_captured_call_provenance_summary_sound_early
+          env (fn_outlives fdef) (fn_lifetimes fdef)
+          (initial_root_env_for_fn fdef) (fn_body_ctx fdef)
+          (EIf e1 e2 e3) T_body Γ_out R_body roots_body Hcore Hexpr)
+        as [ret_roots Hexpr_summary].
+      exists T_body, Γ_out, R_body, roots_body, ret_roots.
       repeat split.
       * eapply infer_env_roots_shadow_safe_params_nodup.
         exact Hinfer_env.
-      * eapply check_expr_root_shadow_captured_call_provenance_summary_sound_early;
-          eassumption.
+      * exact Hexpr_summary.
       * exact Hcompat.
       * apply fn_params_roots_exclude_b_sound. exact Hroots.
       * apply fn_params_root_env_excludes_b_sound. exact Henv.
@@ -2319,9 +2339,9 @@ Proof.
 Qed.
 
 Lemma eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_typing :
-  forall env Ω n R Σ e T Σ' R' roots,
+  forall env Ω n R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_captured_call_provenance_summary_exact
-      env Ω n R Σ e T Σ' R' roots ->
+      env Ω n R Σ e T Σ' R' roots ret_roots ->
     forall s s' ret,
       store_typed env s Σ ->
       store_roots_within R s ->
@@ -2333,7 +2353,7 @@ Lemma eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_typ
       fn_env_unique_by_name env ->
       store_typed env s' Σ' /\ value_has_type env s' ret T.
 Proof.
-  intros env Ω n R Σ e T Σ' R' roots Hsummary.
+  intros env Ω n R Σ e T Σ' R' roots ret_roots Hsummary.
   induction Hsummary; intros s s' ret Hstore Hroots Hshadow Hrn Hnamed
     Hkeys Heval Hunique.
   - destruct (proj1 eval_preserves_typing_roots_ready_mutual
@@ -2488,8 +2508,9 @@ Lemma check_expr_root_shadow_captured_call_provenance_summary_fuel_sound :
       infer_ok (T, Σ', R', roots) ->
     check_expr_root_shadow_captured_call_provenance_summary_fuel
       fuel env Ω n R Σ e = true ->
-    expr_root_shadow_captured_call_provenance_summary_exact
-      env Ω n R Σ e T Σ' R' roots.
+    exists ret_roots,
+      expr_root_shadow_captured_call_provenance_summary_exact
+        env Ω n R Σ e T Σ' R' roots ret_roots.
 Proof.
   induction fuel as [| fuel' IH]; intros env Ω n R Σ e T Σ' R' roots
     Hinfer Hcheck.
@@ -2500,7 +2521,7 @@ Proof.
     apply orb_true_iff in Hcheck as [Hnon_if | Hif].
     + apply orb_true_iff in Hnon_if as [Hprov_or_direct | Hcaptured].
       * apply orb_true_iff in Hprov_or_direct as [Hprov | Hdirect].
-        -- eapply ERSCE_Provenance.
+        -- eexists. eapply ERSCE_Provenance.
            ++ apply provenance_ready_expr_b_sound. exact Hprov.
            ++ eapply infer_core_env_state_fuel_roots_shadow_safe_sound.
               exact Hinfer.
@@ -2523,7 +2544,7 @@ Proof.
            rewrite Hinfer in Hsynthetic. inversion Hsynthetic; subst.
            destruct (lookup_fn_b_sound fname (env_fns env) fcallee
              Hlookup_b) as [Hin_callee Hname_callee].
-           eapply ERSCE_DirectCall.
+           eexists. eapply ERSCE_DirectCall.
            ++ reflexivity.
            ++ reflexivity.
            ++ apply preservation_ready_args_b_sound. exact Hready_args.
@@ -2546,6 +2567,8 @@ Proof.
         destruct (check_make_closure_captures_exact_sctx_with_env env Ω Σ
           captures (fn_captures fcallee)) as [[env_lt captured_tys] | err]
           eqn:Hcaptures; try discriminate.
+        destruct (capture_root_bound R captures (fn_captures fcallee))
+          as [capture_roots |] eqn:Hcapture_bound; try discriminate.
         pose proof (captured_call_target_expr_ok_is_make_closure_call
           (S fuel') env Ω n R Σ e T Σ' R' roots fname captures args
           Hinfer Htarget) as He.
@@ -2559,7 +2582,7 @@ Proof.
           [Hnodup_binding
            (T_body & Γ_out & R_body & roots_body & Hprov_body &
             Htyped_body & Hcompat_body & Hexclude_roots & Hexclude_env)].
-        eapply ERSCE_CapturedCall.
+        eexists. eapply ERSCE_CapturedCall.
         -- apply preservation_ready_args_b_sound. exact Hready_args.
         -- exact Hin_callee.
         -- exact Hname_callee.
@@ -2573,6 +2596,7 @@ Proof.
         -- exact Hcompat_body.
         -- exact Hexclude_roots.
         -- exact Hexclude_env.
+        -- exact Hcapture_bound.
         -- eapply infer_core_env_state_fuel_roots_shadow_safe_sound.
            exact Hinfer.
     + destruct e; try discriminate.
@@ -2593,17 +2617,21 @@ Proof.
       destruct (root_env_eqb R2 R3) eqn:Hroot_eq; try discriminate.
       destruct (ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3)) as [Γ4 |]
         eqn:Hmerge; try discriminate.
-      inversion Hinfer; subst; clear Hinfer.
       apply andb_true_iff in Hif as [Hif_head Helse_check].
       apply andb_true_iff in Hif_head as [Hif_head Hthen_check].
       apply andb_true_iff in Hif_head as [Hcond_bool Hprov_cond].
-      eapply ERSCE_If.
+      destruct (IH env Ω n R1 Σ1 e2 T2 Σ2 R2 roots2 Hthen
+        Hthen_check) as [ret_roots2 Hthen_summary].
+      destruct (IH env Ω n R1 Σ1 e3 T3 Σ3 R3 roots3 Helse
+        Helse_check) as [ret_roots3 Helse_summary].
+      inversion Hinfer; subst; clear Hinfer.
+      eexists. eapply ERSCE_If.
       * apply provenance_ready_expr_b_sound. exact Hprov_cond.
       * eapply infer_core_env_state_fuel_roots_shadow_safe_sound.
         exact Hcond.
       * apply ty_core_eqb_true. exact Hcond_core.
-      * eapply IH; eassumption.
-      * eapply IH; eassumption.
+      * exact Hthen_summary.
+      * exact Helse_summary.
       * apply ty_core_eqb_true. exact Hbranch_core.
       * exact Hmerge.
       * apply root_env_eqb_true_equiv. exact Hroot_eq.
@@ -2615,8 +2643,9 @@ Lemma check_expr_root_shadow_captured_call_provenance_summary_sound :
       infer_ok (T, Γ', R', roots) ->
     check_expr_root_shadow_captured_call_provenance_summary
       env Ω n R Γ e = true ->
-    expr_root_shadow_captured_call_provenance_summary_exact
-      env Ω n R (sctx_of_ctx Γ) e T (sctx_of_ctx Γ') R' roots.
+    exists ret_roots,
+      expr_root_shadow_captured_call_provenance_summary_exact
+        env Ω n R (sctx_of_ctx Γ) e T (sctx_of_ctx Γ') R' roots ret_roots.
 Proof.
   unfold check_expr_root_shadow_captured_call_provenance_summary,
     infer_core_env_roots_shadow_safe.
@@ -3997,16 +4026,16 @@ Proof.
 	    * rewrite apply_lt_ty_nil_ts in Hv. exact Hv.
 	    * apply ty_compatible_b_sound. exact Hcompat.
     + destruct Hif_summary as
-        (T_body & Γ_out & R_body & roots_body & Hnodup & Hexpr_summary &
-          Hcompat & _ & _).
+        (T_body & Γ_out & R_body & roots_body & ret_roots & Hnodup &
+          Hexpr_summary & Hcompat & _ & _).
       pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
       destruct
         (eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_typing
           (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
           (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
           (fn_body f) T_body (sctx_of_ctx Γ_out) R_body roots_body
-          Hexpr_summary s s' v Hstore Hroots Hstore_shadow Hroot_shadow
-          Hnamed Hkeys Heval Hunique) as [_ Hv].
+          ret_roots Hexpr_summary s s' v Hstore Hroots Hstore_shadow
+          Hroot_shadow Hnamed Hkeys Heval Hunique) as [_ Hv].
       eapply VHT_Compatible.
       * exact Hv.
       * apply ty_compatible_b_sound. exact Hcompat.

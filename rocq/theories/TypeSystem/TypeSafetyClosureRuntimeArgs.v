@@ -1132,6 +1132,23 @@ Proof.
     split; [exact Hrn_bind | exact Hcover_bind].
 Qed.
 
+Record rooted_eval_result
+    (R' : root_env) (s' : store) (roots : root_set) (v : value) : Prop := {
+  rooted_eval_store_roots : store_roots_within R' s';
+  rooted_eval_value_roots : value_roots_within roots v;
+  rooted_eval_store_no_shadow : store_no_shadow s';
+  rooted_eval_root_env_no_shadow : root_env_no_shadow R'
+}.
+
+Record typed_rooted_eval_result
+    (env : global_env) (s s' : store) (v : value) (T : Ty)
+    (Σ' : sctx) (R' : root_env) (roots : root_set) : Prop := {
+  typed_rooted_eval_store_prefix : store_typed_prefix env s' Σ';
+  typed_rooted_eval_value_type : value_has_type env s' v T;
+  typed_rooted_eval_refs_preserved : store_ref_targets_preserved env s s';
+  typed_rooted_eval_roots : rooted_eval_result R' s' roots v
+}.
+
 Definition eval_preserves_typing_ready_mutual_statement : Prop :=
   (forall env s e s' v,
     eval env s e s' v ->

@@ -1,0 +1,136 @@
+# Context Window Refactor Roadmap
+
+## Summary
+
+Current Rocq proof work is becoming infeasible because each continuation often
+requires reloading large proof files, long theorem statements, and historical
+roadmap context. The immediate goal is to make closure and captured-call proof
+work continue within the context window by reducing the amount of code and proof
+state an agent must read for each step.
+
+Do not start with a broad checker split into Hindley-Milner, usage, and
+reference checkers. That split may be useful later, but it is too coarse as an
+immediate fix because usage, borrowing, root provenance, closure capture, and
+runtime safety currently cross theorem boundaries.
+
+## Current Bottlenecks
+
+- Large files repeatedly enter context: `TypeChecker.v`,
+  `TypeSafetyCapturedCall.v`, `TypeSafetyClosureRuntimeArgs.v`, and
+  `EnvRuntimeSafety.v`.
+- Large theorem statements return deeply nested conjunctions, forcing agents to
+  reread destruct shapes and proof obligations.
+- Root, capture, store, and shadow facts are spread across proof modules, so
+  finding one bridge often requires opening unrelated preservation files.
+- Roadmap files contain useful history, but active tasks need a smaller
+  continuation surface: current target, known blocker, next lemma, and last
+  passing checks.
+
+## Roadmap
+
+### Current Status
+
+- Completed first proof-interface compression slice:
+  `TypeSafetyCapturedCall.v` now uses existing mutual statement aliases for the
+  repeated frame-scope, prefix-root, and param-scope preservation hypotheses in
+  the captured-call bridge cores.
+- Added compact rooted eval result package definitions in
+  `TypeSafetyClosureRuntimeArgs.v` for future theorem-result rewiring.
+- Last focused check:
+  `cd rocq && make theories/TypeSystem/TypeSafetyClosureRuntimeArgs.vo theories/TypeSystem/TypeSafetyCapturedCall.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo`.
+- Next task: use the new packages only after a target theorem and wrapper
+  projection are fixed; do not rewire broad result shapes and prove new
+  captured-call invariants in the same commit.
+
+### Phase 1: Compact Continuation Notes
+
+- Keep `plan/type_safety_roadmap.md` focused on the active proof path.
+- Move historical or completed detail into `plan/type_safety_roadmap_history.md`
+  or another archive note when it is no longer needed for the next task.
+- For each active proof task, record only:
+  - target theorem or lemma;
+  - exact blocker;
+  - relevant helper lemmas;
+  - last passing focused commands;
+  - files that should not be edited.
+- Avoid long proof transcripts, full error logs, and repeated explanations in
+  planning files.
+
+### Phase 2: Small Preservation Packages
+
+- Replace recurring long nested conjunction results with small record/package
+  types where the same evidence is passed repeatedly.
+- Prioritize packages for closure and captured-call preservation evidence:
+  final store typing, returned value typing, returned root bound, store root
+  bound, store no-shadow, root-env no-shadow, and cleanup store equality.
+- Keep compatibility wrappers for existing public theorem names while internal
+  cores return the compact package.
+- Do not weaken any safety property to make a package smaller; the package must
+  expose the same facts or stronger facts.
+
+### Phase 3: Narrow Root/Capture Fact Modules
+
+- Move reusable root, capture, store-subset, and no-store bridge facts into
+  narrow fact modules that can be imported without loading large preservation
+  proofs.
+- Prefer modules with stable ownership such as root-set facts, capture-store
+  facts, and closure-cleanup facts.
+- The next high-value bridge is the direct with-env captured-call subset fact:
+  instantiated body return roots must be shown within
+  `root_sets_union (arg_roots ++ capture_store_root_sets captured)`.
+- Keep checker contracts unchanged until the supporting proof bridge compiles.
+
+### Phase 4: Measured Proof File Splits
+
+- Split a proof file only when a stable ownership boundary is already clear.
+- Keep aggregators and wrapper modules so downstream imports continue to work.
+- Do not combine theorem strengthening with file movement in the same commit.
+- Before splitting, record the measured reason: file size, repeated import
+  pressure, or a specific recurring context bottleneck.
+
+### Phase 5: Checker Modularization Later
+
+- Reconsider checker-level modularization only after proof APIs and fact modules
+  are smaller.
+- Base any checker split on the actual `_CoqProject` dependency graph and
+  theorem dependencies, not only conceptual categories.
+- If checker modularization proceeds, preserve Rocq as the source of truth and
+  regenerate extracted OCaml through `cd rocq && make`.
+- Do not duplicate type-checking logic in OCaml.
+
+## Operating Rules
+
+- Follow `plan/implementation.md` for context-efficient work.
+- Search with `rg` before reading whole files.
+- Read only the relevant symbol range first; keep `sed` ranges around 80 lines
+  unless a larger range has a stated purpose.
+- Summarize long build logs and proof errors instead of pasting them into the
+  conversation or roadmap.
+- Reuse previously established facts rather than rediscovering them.
+- Use sub-agents only for implementation-only tasks with fixed statements,
+  target files, constraints, and tests.
+- Do not delegate invariant design, uncertainty reduction, checker contract
+  changes, or repository-wide investigation.
+
+## Checks
+
+For roadmap-only edits:
+
+```sh
+git diff --check
+```
+
+For later Rocq refactors, start with focused checks near the touched modules,
+then run the full type-system pipeline when behavior or checker extraction is
+affected:
+
+```sh
+cd rocq && make
+dune build
+sh tests/run.sh
+sh tests/fir/run.sh
+rg -n "\bAxiom\b|Admitted\.|Abort\.|DEBUG|idtac" rocq/theories
+```
+
+The final `rg` command exits with status 1 when there are no matches; that is a
+successful result.

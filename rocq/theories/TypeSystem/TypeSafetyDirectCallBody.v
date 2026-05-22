@@ -279,54 +279,7 @@ Lemma eval_direct_call_body_cleanup_preserves_value_and_refs_with_preservation_c
       store_frame_scope ps Σ s frame ->
       store_frame_static_fresh Σ frame ->
       frame_scope_roots_ready_result ps R' Σ' s' frame) ->
-  (forall env s e s' v,
-    eval env s e s' v ->
-    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
-      provenance_ready_expr e ->
-      store_typed_prefix env s Σ ->
-      store_roots_within R s ->
-      store_no_shadow s ->
-      root_env_no_shadow R ->
-      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
-      store_typed_prefix env s' Σ' /\
-      value_has_type env s' v T /\
-      store_ref_targets_preserved env s s' /\
-      store_roots_within R' s' /\
-      value_roots_within roots v /\
-      store_no_shadow s' /\
-      root_env_no_shadow R') /\
-  (forall env s args s' vs,
-    eval_args env s args s' vs ->
-    forall (Ω : outlives_ctx) (n : nat) R Σ ps Σ' R' roots,
-      provenance_ready_args args ->
-      store_typed_prefix env s Σ ->
-      store_roots_within R s ->
-      store_no_shadow s ->
-      root_env_no_shadow R ->
-      typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
-      store_typed_prefix env s' Σ' /\
-      eval_args_values_have_types env Ω s' vs ps /\
-      store_ref_targets_preserved env s s' /\
-      store_roots_within R' s' /\
-      Forall2 value_roots_within roots vs /\
-      store_no_shadow s' /\
-      root_env_no_shadow R') /\
-  (forall env s fields defs s' values,
-    eval_struct_fields env s fields defs s' values ->
-    forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots,
-      provenance_ready_fields fields ->
-      store_typed_prefix env s Σ ->
-      store_roots_within R s ->
-      store_no_shadow s ->
-      root_env_no_shadow R ->
-      typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
-      store_typed_prefix env s' Σ' /\
-      struct_fields_have_type env s' lts args values defs /\
-      store_ref_targets_preserved env s s' /\
-      store_roots_within R' s' /\
-      value_fields_roots_within roots values /\
-      store_no_shadow s' /\
-      root_env_no_shadow R') ->
+  eval_preserves_typing_roots_ready_prefix_mutual_package_statement ->
   (forall env s e s' v,
     eval env s e s' v ->
     forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots
@@ -460,16 +413,17 @@ Proof.
               Hcover_params Hroots_bind Hshadow_bind Hrn_params
               Hframe_start Hframe_fresh_start)
     as [_ [_ [_ [_ [Hframe_scope _]]]]].
-  destruct (proj1 Htyping_roots_prefix_ready
-              env (bind_params (fn_params fcall) vs s_args)
-              (fn_body fcall) s_body ret Heval_body
-              (fn_outlives fcall) (fn_lifetimes fcall)
-              R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
-              T_body (sctx_of_ctx Γ_out) R_body roots_body
-              Hprov_body Hstore_bind Hroots_bind Hshadow_bind Hrn_params
-              Htyped_body)
-    as [Hstore_body [Hv_body [Hpres_body [Hroots_body
-        [Hret_roots [Hshadow_body Hrn_body]]]]]].
+  pose proof (proj1 Htyping_roots_prefix_ready
+                env (bind_params (fn_params fcall) vs s_args)
+                (fn_body fcall) s_body ret Heval_body
+                (fn_outlives fcall) (fn_lifetimes fcall)
+                R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
+                T_body (sctx_of_ctx Γ_out) R_body roots_body
+                Hprov_body Hstore_bind Hroots_bind Hshadow_bind Hrn_params
+                Htyped_body) as Hbody_package.
+  destruct (typed_rooted_eval_roots _ _ _ _ _ _ _ _ Hbody_package)
+    as [Hroots_body Hret_roots Hshadow_body Hrn_body].
+  destruct Hbody_package as [Hstore_body Hv_body Hpres_body _].
   assert (Hv_ret_fcall : value_has_type env s_body ret (fn_ret fcall)).
   { eapply value_has_type_compatible.
     - exact Hv_body.
@@ -548,54 +502,7 @@ Lemma eval_direct_call_body_provenance_ready_preserves_typing_with_preservation_
       store_frame_scope ps Σ s frame ->
       store_frame_static_fresh Σ frame ->
       frame_scope_roots_ready_result ps R' Σ' s' frame) ->
-  (forall env s e s' v,
-    eval env s e s' v ->
-    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
-      provenance_ready_expr e ->
-      store_typed_prefix env s Σ ->
-      store_roots_within R s ->
-      store_no_shadow s ->
-      root_env_no_shadow R ->
-      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
-      store_typed_prefix env s' Σ' /\
-      value_has_type env s' v T /\
-      store_ref_targets_preserved env s s' /\
-      store_roots_within R' s' /\
-      value_roots_within roots v /\
-      store_no_shadow s' /\
-      root_env_no_shadow R') /\
-  (forall env s args s' vs,
-    eval_args env s args s' vs ->
-    forall (Ω : outlives_ctx) (n : nat) R Σ ps Σ' R' roots,
-      provenance_ready_args args ->
-      store_typed_prefix env s Σ ->
-      store_roots_within R s ->
-      store_no_shadow s ->
-      root_env_no_shadow R ->
-      typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
-      store_typed_prefix env s' Σ' /\
-      eval_args_values_have_types env Ω s' vs ps /\
-      store_ref_targets_preserved env s s' /\
-      store_roots_within R' s' /\
-      Forall2 value_roots_within roots vs /\
-      store_no_shadow s' /\
-      root_env_no_shadow R') /\
-  (forall env s fields defs s' values,
-    eval_struct_fields env s fields defs s' values ->
-    forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots,
-      provenance_ready_fields fields ->
-      store_typed_prefix env s Σ ->
-      store_roots_within R s ->
-      store_no_shadow s ->
-      root_env_no_shadow R ->
-      typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
-      store_typed_prefix env s' Σ' /\
-      struct_fields_have_type env s' lts args values defs /\
-      store_ref_targets_preserved env s s' /\
-      store_roots_within R' s' /\
-      value_fields_roots_within roots values /\
-      store_no_shadow s' /\
-      root_env_no_shadow R') ->
+  eval_preserves_typing_roots_ready_prefix_mutual_package_statement ->
   (forall env s e s' v,
     eval env s e s' v ->
     forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots
@@ -896,4 +803,3 @@ Proof.
   - exact Harg_roots_named.
   - rewrite Hnames. exact Hfresh.
 Qed.
-

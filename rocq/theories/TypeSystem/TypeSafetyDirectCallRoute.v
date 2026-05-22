@@ -91,7 +91,9 @@ Proof.
         eapply
           (eval_direct_call_body_provenance_ready_preserves_typing_with_preservation_core
             Htyping_ready Hroots_ready Hframe_scope_ready
-            Htyping_roots_prefix_ready Hparam_scope_ready);
+            (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+              Htyping_roots_prefix_ready)
+            Hparam_scope_ready);
           eassumption
     | Htyped_args : typed_args_roots env Ω n R Σ ?args_call
         (apply_lt_params ?σ (fn_params ?fdef)) Σ' R' ?arg_roots,
@@ -112,7 +114,9 @@ Proof.
         eapply
           (eval_direct_call_body_provenance_ready_preserves_typing_with_preservation_core
             Htyping_ready Hroots_ready Hframe_scope_ready
-            Htyping_roots_prefix_ready Hparam_scope_ready);
+            (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+              Htyping_roots_prefix_ready)
+            Hparam_scope_ready);
           eassumption
     end.
 Qed.
@@ -207,7 +211,9 @@ Proof.
         eapply
           (eval_direct_call_body_provenance_ready_preserves_typing_with_preservation_core
             Htyping_ready Hroots_ready Hframe_scope_ready
-            Htyping_roots_prefix_ready Hparam_scope_ready);
+            (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+              Htyping_roots_prefix_ready)
+            Hparam_scope_ready);
           eassumption
     | Htyped_args : typed_args_roots env Ω n R Σ ?args_call
         (apply_lt_params ?σ (fn_params ?fdef)) Σ' R' ?arg_roots,
@@ -231,7 +237,9 @@ Proof.
         eapply
           (eval_direct_call_body_provenance_ready_preserves_typing_with_preservation_core
             Htyping_ready Hroots_ready Hframe_scope_ready
-            Htyping_roots_prefix_ready Hparam_scope_ready);
+            (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+              Htyping_roots_prefix_ready)
+            Hparam_scope_ready);
           eassumption
     end.
 Qed.
@@ -416,7 +424,9 @@ Proof.
   destruct
     (eval_direct_call_body_cleanup_preserves_value_and_refs_with_preservation_core
       Htyping_ready Hroots_ready Hframe_scope_ready
-      Htyping_roots_prefix_ready Hparam_scope_ready
+      (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+        Htyping_roots_prefix_ready)
+      Hparam_scope_ready
       env Ω n R Σ Σ' R' arg_roots (fn_name fdef1) args
       fdef1 fcall σ s s_args s_body vs ret used' T_body
       Γ_out (call_param_root_env (fn_params fcall) arg_roots R')

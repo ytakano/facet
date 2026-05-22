@@ -600,6 +600,80 @@ Proof.
       * exact Hrest_check.
 Qed.
 
+Lemma copy_capture_store_exact_with_env_sctx_of_store :
+  forall Ω env s Σ captures caps captured env_lt captured_tys,
+    store_typed env s Σ ->
+    copy_capture_store_as captures caps s = Some captured ->
+    check_make_closure_captures_exact_sctx_with_env env Ω Σ captures caps =
+      infer_ok (env_lt, captured_tys) ->
+    sctx_of_store captured = sctx_of_ctx (params_ctx caps).
+Proof.
+  intros Ω env s Σ captures caps captured env_lt captured_tys
+    Hstore Hcopy Hcheck.
+  unfold check_make_closure_captures_exact_sctx_with_env in Hcheck.
+  destruct (check_make_closure_captures_exact_sctx_with_env_base
+    env Ω Σ captures caps) as [captured_tys0 | err] eqn:Hbase;
+    try discriminate.
+  destruct (infer_closure_env_lifetime Ω captured_tys0) as [env_lt0 | err]
+    eqn:Henv; try discriminate.
+  destruct (closure_captures_allowed_b env Ω env_lt0 captured_tys0)
+    eqn:Hallowed; try discriminate.
+  injection Hcheck as <- <-.
+  clear Henv Hallowed.
+  revert caps captured captured_tys0 Hcopy Hbase.
+  induction captures as [| x captures IH]; intros caps captured captured_tys0
+    Hcopy Hbase;
+    destruct caps as [| cap caps]; simpl in Hcopy, Hbase; try discriminate.
+  - injection Hcopy as <-. reflexivity.
+  - destruct (param_mutability cap) eqn:Hcap_mut; simpl in Hbase;
+      try discriminate.
+    destruct (sctx_lookup (param_name cap) Σ) as [[Tcap stcap] |]
+      eqn:Hcap_lookup; try discriminate.
+    destruct (sctx_lookup x Σ) as [[T st] |] eqn:Hlookup; try discriminate.
+    destruct (st_consumed st) eqn:Hconsumed; try discriminate.
+    destruct (st_moved_paths st) as [| moved moved_rest] eqn:Hmoved;
+      try discriminate.
+    destruct (sctx_lookup_mut x Σ) as [m |] eqn:Hmut; try discriminate.
+    destruct m; try discriminate.
+    destruct (usage_eqb (ty_usage T) UUnrestricted) eqn:Husage;
+      try discriminate.
+    destruct (ty_eqb T (param_ty cap) &&
+      ty_compatible_b Ω T (param_ty cap)) eqn:Hty; try discriminate.
+    apply andb_true_iff in Hty as [Hty_eq _].
+    destruct (check_make_closure_captures_exact_sctx_with_env_base
+      env Ω Σ captures caps) as [captured_rest_tys | err]
+      eqn:Hrest_check; try discriminate.
+    destruct (store_lookup x s) as [se |] eqn:Hlookup_store; try discriminate.
+    destruct (binding_available_b (se_state se) [] &&
+      match ty_usage (se_ty se) with
+      | UUnrestricted => true
+      | _ => false
+      end) eqn:Hcopy_ok; try discriminate.
+    destruct (copy_capture_store_as captures caps s) as [captured_rest |]
+      eqn:Hcopy_rest; try discriminate.
+    injection Hcopy as <-.
+    apply andb_true_iff in Hcopy_ok.
+    destruct Hcopy_ok as [Hruntime_available _].
+    destruct (store_typed_lookup env s Σ x se Hstore Hlookup_store)
+      as [T_lookup [st_lookup [m_lookup
+        [Hlookup_static [Hse_name [Hse_ty [_ _]]]]]]].
+    rewrite Hlookup in Hlookup_static.
+    inversion Hlookup_static; subst T_lookup st_lookup.
+    apply ty_eqb_true in Hty_eq.
+    apply binding_available_nil_fresh in Hruntime_available.
+    simpl.
+    rewrite Hruntime_available.
+    change (sctx_of_ctx (param_ctx_entry cap :: params_ctx caps)) with
+      ((param_name cap, param_ty cap, binding_state_of_bool false,
+        param_mutability cap) :: sctx_of_ctx (params_ctx caps)).
+    rewrite Hcap_mut.
+    f_equal.
+    + rewrite <- H0, Hty_eq. reflexivity.
+    + eapply IH.
+      * exact Hcopy_rest.
+      * exact Hrest_check.
+Qed.
+
 Lemma captured_store_typed_as_params :
   forall env captured caps,
     captured_store_typed env captured ->
@@ -723,6 +797,86 @@ Proof.
       * exact Hroots_tail.
 Qed.
 
+Lemma copy_capture_store_as_captured_entries_typed_with_env_base_preserved :
+  forall Ω env s_target s Σ captures caps captured captured_tys,
+    store_typed env s Σ ->
+    store_ref_targets_preserved env s s_target ->
+    copy_capture_store_as captures caps s = Some captured ->
+    check_make_closure_captures_exact_sctx_with_env_base env Ω Σ captures caps =
+      infer_ok captured_tys ->
+    Forall2 (store_entry_typed env s_target) captured (sctx_of_store captured).
+Proof.
+  intros Ω env s_target s Σ captures.
+  induction captures as [| x captures IH]; intros caps captured captured_tys
+    Hstore Hpres Hcopy Hcheck;
+    destruct caps as [| cap caps]; simpl in Hcopy, Hcheck; try discriminate.
+  - injection Hcopy as <-. constructor.
+  - destruct (param_mutability cap) eqn:Hcap_mut; simpl in Hcheck;
+      try discriminate.
+    destruct (sctx_lookup (param_name cap) Σ) as [[Tcap stcap] |]
+      eqn:Hcap_lookup; try discriminate.
+    destruct (sctx_lookup x Σ) as [[T st] |] eqn:Hlookup; try discriminate.
+    destruct (st_consumed st) eqn:Hconsumed; try discriminate.
+    destruct (st_moved_paths st) as [| moved moved_rest] eqn:Hmoved;
+      try discriminate.
+    destruct (sctx_lookup_mut x Σ) as [m |] eqn:Hmut; try discriminate.
+    destruct m; try discriminate.
+    destruct (usage_eqb (ty_usage T) UUnrestricted) eqn:Husage;
+      try discriminate.
+    destruct (ty_eqb T (param_ty cap) &&
+      ty_compatible_b Ω T (param_ty cap)) eqn:Hty; try discriminate.
+    apply andb_true_iff in Hty as [Hty_eq _].
+    destruct (check_make_closure_captures_exact_sctx_with_env_base
+      env Ω Σ captures caps) as [captured_rest_tys | err]
+      eqn:Hrest_check; try discriminate.
+    destruct (store_lookup x s) as [se |] eqn:Hlookup_store; try discriminate.
+    destruct (binding_available_b (se_state se) [] &&
+      match ty_usage (se_ty se) with
+      | UUnrestricted => true
+      | _ => false
+      end) eqn:Hcopy_ok; try discriminate.
+    destruct (copy_capture_store_as captures caps s) as [captured_rest |]
+      eqn:Hcopy_rest; try discriminate.
+    injection Hcopy as <-.
+    injection Hcheck as <-.
+    destruct (store_typed_lookup env s Σ x se Hstore Hlookup_store)
+      as [T_lookup [st_lookup [m_lookup
+        [Hlookup_static [Hse_name [Hse_ty [Hrefines Hvalue]]]]]]].
+    rewrite Hlookup in Hlookup_static.
+    inversion Hlookup_static; subst T_lookup st_lookup.
+    apply ty_eqb_true in Hty_eq.
+    simpl. constructor.
+    + exact (conj eq_refl
+        (conj eq_refl
+          (conj (binding_state_refines_refl (se_state se))
+            (value_has_type_store_preserved env s (se_val se) (se_ty se)
+              Hvalue s_target Hpres)))).
+    + eapply IH; eassumption.
+Qed.
+
+Lemma copy_capture_store_as_captured_entries_typed_with_env_preserved :
+  forall Ω env s_target s Σ captures caps captured env_lt captured_tys,
+    store_typed env s Σ ->
+    store_ref_targets_preserved env s s_target ->
+    copy_capture_store_as captures caps s = Some captured ->
+    check_make_closure_captures_exact_sctx_with_env env Ω Σ captures caps =
+      infer_ok (env_lt, captured_tys) ->
+    Forall2 (store_entry_typed env s_target) captured (sctx_of_store captured).
+Proof.
+  intros Ω env s_target s Σ captures caps captured env_lt captured_tys
+    Hstore Hpres Hcopy Hcheck.
+  unfold check_make_closure_captures_exact_sctx_with_env in Hcheck.
+  destruct (check_make_closure_captures_exact_sctx_with_env_base
+    env Ω Σ captures caps) as [captured_tys0 | err] eqn:Hbase;
+    try discriminate.
+  destruct (infer_closure_env_lifetime Ω captured_tys0) as [env_lt0 | err]
+    eqn:Henv; try discriminate.
+  destruct (closure_captures_allowed_b env Ω env_lt0 captured_tys0)
+    eqn:Hallowed; try discriminate.
+  injection Hcheck as <- <-.
+  eapply copy_capture_store_as_captured_entries_typed_with_env_base_preserved;
+    eassumption.
+Qed.
 Lemma copy_capture_store_as_captured_store_typed_rootless :
   forall Ω env s Σ captures caps captured captured_tys,
     store_typed env s Σ ->

@@ -488,6 +488,30 @@ Proof.
   - eapply captured_params_store_typed_in_frame_from_self. exact Htyped.
 Qed.
 
+Lemma copy_capture_store_exact_with_env_params_store_typed_in_frame :
+  forall Ω env s Σ captures caps captured env_lt captured_tys frame,
+    store_typed env s Σ ->
+    store_ref_targets_preserved env s (captured ++ frame) ->
+    copy_capture_store_as captures caps s = Some captured ->
+    check_make_closure_captures_exact_sctx_with_env env Ω Σ captures caps =
+      infer_ok (env_lt, captured_tys) ->
+    captured_params_store_typed_in_frame env captured frame caps.
+Proof.
+  intros Ω env s Σ captures caps captured env_lt captured_tys frame
+    Hstore Hpres Hcopy Hcheck.
+  unfold captured_params_store_typed_in_frame.
+  pose proof
+    (copy_capture_store_as_captured_entries_typed_with_env_preserved
+      Ω env (captured ++ frame) s Σ captures caps captured env_lt
+      captured_tys Hstore Hpres Hcopy Hcheck) as Htyped.
+  pose proof
+    (copy_capture_store_exact_with_env_sctx_of_store
+      Ω env s Σ captures caps captured env_lt captured_tys
+      Hstore Hcopy Hcheck) as Heq.
+  rewrite Heq in Htyped.
+  exact Htyped.
+Qed.
+
 Lemma captured_params_store_typed_prefix_frame :
   forall env captured caps frame,
     captured_params_store_typed env captured caps ->

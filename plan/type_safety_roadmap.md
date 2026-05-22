@@ -286,17 +286,24 @@ Work in this order unless a proof exposes a soundness gap.
      expressions whose condition is ordinary provenance-ready and whose
      branches are ordinary provenance-ready, direct calls, direct captured
      closure calls, or nested `if` expressions with the same shape.
+   - `EnvRuntimeSafety.v` now has the Prop-level evidence shape
+     `expr_root_shadow_captured_call_provenance_summary`, covering ordinary
+     provenance-ready expressions, direct calls, direct captured closure calls,
+     and nested `if` expressions under the condition output frame.
    - This helper is intentionally not wired into
      `check_fn_root_shadow_captured_call_provenance_summary` or any validated
      program wrapper yet.
 
    Remaining proof task:
 
-   - Add a Prop-level expression sidecar evidence relation and preservation
-     lemma for arbitrary branch frames. The lemma must evaluate the condition
-     with ordinary provenance readiness, carry the resulting store/root/name/key
-     invariants into the selected branch, and reuse the direct/captured-call
-     preservation wrappers under the branch `R1`/`Σ1`.
+   - Add the preservation lemma for arbitrary branch frames. The attempted
+     generic lemma exposed the next proof-interface requirement: the captured
+     branch must expose typed argument roots from the branch typing before the
+     captured-call wrapper can be reused under `R1`/`Σ1`.
+   - The lemma must evaluate the condition with ordinary provenance readiness,
+     carry the resulting store/root/name/key invariants into the selected
+     branch, and reuse the direct/captured-call preservation wrappers under the
+     branch `R1`/`Σ1`.
    - Only after that lemma compiles should the function-level captured-call
      summary checker gain an `EIf` branch. If the proof requires weakening
      returned-value safety or changing ordinary `T_If`/`TES_If`, stop and

@@ -1176,6 +1176,59 @@ Definition callee_hidden_capture_args_disjoint
     (fun x => ~ In x (args_local_store_names args))
     (ctx_names (params_ctx (fn_captures callee))).
 
+Inductive expr_root_shadow_captured_call_provenance_summary
+    (env : global_env) (Ω : outlives_ctx) (n : nat)
+    : root_env -> ctx -> expr -> Prop :=
+  | ERSC_Provenance : forall R Γ e,
+      provenance_ready_expr e ->
+      expr_root_shadow_captured_call_provenance_summary env Ω n R Γ e
+  | ERSC_DirectCall : forall R Γ e fname args synthetic_body fcallee
+      T_body Γ_out R_body roots_body,
+      direct_call_target_expr e = Some (fname, args, synthetic_body) ->
+      synthetic_body = ECall fname args ->
+      preservation_ready_args args ->
+      In fcallee (env_fns env) ->
+      fn_name fcallee = fname ->
+      callee_body_root_shadow_provenance_summary env fcallee ->
+      typed_env_roots_shadow_safe env Ω n R (sctx_of_ctx Γ)
+        synthetic_body T_body (sctx_of_ctx Γ_out) R_body roots_body ->
+      expr_root_shadow_captured_call_provenance_summary env Ω n R Γ e
+  | ERSC_CapturedCall : forall R Γ e fname captures args fcallee
+      env_lt captured_tys T_body Γ_out R_body roots_body,
+      captured_call_target_expr e = Some (fname, captures, args) ->
+      preservation_ready_args args ->
+      In fcallee (env_fns env) ->
+      fn_name fcallee = fname ->
+      fn_lifetimes fcallee = 0 ->
+      callee_hidden_capture_args_disjoint fcallee args ->
+      check_make_closure_captures_exact_sctx_with_env env Ω
+        (sctx_of_ctx Γ) captures (fn_captures fcallee) =
+        infer_ok (env_lt, captured_tys) ->
+      NoDup (ctx_names (params_ctx (fn_params fcallee ++ fn_captures fcallee))) ->
+      provenance_ready_expr (fn_body fcallee) ->
+      typed_env_roots_shadow_safe env (fn_outlives fcallee)
+        (fn_lifetimes fcallee)
+        (initial_root_env_for_params
+          (fn_params fcallee ++ fn_captures fcallee))
+        (sctx_of_ctx (fn_body_ctx fcallee))
+        (fn_body fcallee) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
+      ty_compatible_b (fn_outlives fcallee) T_body
+        (fn_ret fcallee) = true ->
+      roots_exclude_params (fn_params fcallee ++ fn_captures fcallee)
+        roots_body ->
+      root_env_excludes_params (fn_params fcallee ++ fn_captures fcallee)
+        R_body ->
+      expr_root_shadow_captured_call_provenance_summary env Ω n R Γ e
+  | ERSC_If : forall R Γ e1 e2 e3 T_cond Γ1 R1 roots_cond,
+      typed_env_roots_shadow_safe env Ω n R (sctx_of_ctx Γ)
+        e1 T_cond (sctx_of_ctx Γ1) R1 roots_cond ->
+      ty_core T_cond = TBooleans ->
+      provenance_ready_expr e1 ->
+      expr_root_shadow_captured_call_provenance_summary env Ω n R1 Γ1 e2 ->
+      expr_root_shadow_captured_call_provenance_summary env Ω n R1 Γ1 e3 ->
+      expr_root_shadow_captured_call_provenance_summary env Ω n R Γ
+        (EIf e1 e2 e3).
+
 Definition callee_body_root_shadow_captured_call_provenance_summary
     (env : global_env) (fdef : fn_def) : Prop :=
   callee_body_root_shadow_non_capturing_call_provenance_summary env fdef \/

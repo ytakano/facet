@@ -320,7 +320,7 @@ Qed.
 
 Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset_with_preservation_core :
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_package_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   forall env (Ω : outlives_ctx) captured s_args_hidden s_args
       Σ_args x T_hidden hidden fdef fcall σ s_body vs ret used'
@@ -370,8 +370,7 @@ Proof.
     Hcompat_body Hexclude_all Hsubset Hroot_exclude_bound Heval_body.
   eapply (eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_core
             Hframe_mutual
-            (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
-              Htyping_mutual)
+            Htyping_mutual
             Hparam_mutual);
     try eassumption.
   eapply roots_exclude_stores_subset; eassumption.
@@ -457,6 +456,9 @@ Proof.
     Hsubset Hroot_exclude_bound.
   subst s_final.
   eapply (eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset_with_preservation_core
-            Hframe_mutual Htyping_mutual Hparam_mutual);
+            Hframe_mutual
+            (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+              Htyping_mutual)
+            Hparam_mutual);
     eassumption.
 Qed.

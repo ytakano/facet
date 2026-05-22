@@ -367,7 +367,8 @@ Proof.
   destruct
     (eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
       eval_preserves_frame_scope_roots_ready_mutual
-      eval_preserves_typing_roots_ready_prefix_mutual
+      (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+        eval_preserves_typing_roots_ready_prefix_mutual)
       eval_preserves_param_scope_roots_ready_mutual
       env Ω captured Rcap s_args R_args Σ_args fdef fcall σ s_body vs ret
       used' T_body Γ_out R_params R_body roots_body)

@@ -40,6 +40,7 @@ theories/TypeSystem/TypeSafetyDirectCallBody.v
 theories/TypeSystem/TypeSafetyDirectCallEvidence.v
 theories/TypeSystem/TypeSafetyDirectCallRoute.v
 theories/TypeSystem/TypeSafetyDirectCall.v
+theories/TypeSystem/TypeSafetyCaptureFacts.v
 theories/TypeSystem/TypeSafetyCapturedCall.v
 theories/TypeSystem/TypeSafetyDirectPlace.v
 theories/TypeSystem/TypeSafetyLocalFacts.v

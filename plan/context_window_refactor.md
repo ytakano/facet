@@ -127,12 +127,15 @@ runtime safety currently cross theorem boundaries.
   `eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary_with_preservation_core`
   now consumes the typed-prefix package statement directly, with its plain
   wrapper converting at the boundary.
+- Extracted the first capture fact module:
+  `TypeSafetyCaptureFacts.v` now owns the reusable capture/root helper lemmas
+  that were previously at the top of `TypeSafetyCapturedCall.v`.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/TypeSafetyDirectCallRoute.vo theories/TypeSystem/TypeSafetyDirectCallWrappers.vo theories/TypeSystem/TypeSafety.vo`.
-- Next task: no remaining plain typed-prefix preservation core was found by
-  `rg -n "eval_preserves_typing_roots_ready_prefix_mutual_statement ->" rocq/theories/TypeSystem`
-  except the package conversion lemma in `TypeSafetyClosureCleanupFrame.v`.
-  Start the next roadmap phase with a fresh `rg` before changing signatures.
+  `cd rocq && make theories/TypeSystem/TypeSafetyCaptureFacts.vo theories/TypeSystem/TypeSafetyCapturedCall.vo theories/TypeSystem/TypeSafety.v`.
+- Next task: extract `TypeSafetyCapturedCallEvidence.v` for
+  `alpha_rename_params_initial_root_env_rename_stable_tail_ts`,
+  `alpha_rename_fn_def_binding_initial_support_facts`, and the four captured
+  callee-body root-shadow provenance bridge lemmas.
 
 ### Phase 1: Compact Continuation Notes
 

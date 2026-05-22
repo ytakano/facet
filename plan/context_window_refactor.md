@@ -36,8 +36,11 @@ runtime safety currently cross theorem boundaries.
   the captured-call bridge cores.
 - Added compact rooted eval result package definitions in
   `TypeSafetyClosureRuntimeArgs.v` for future theorem-result rewiring.
+- Completed second proof-interface deduplication slice:
+  closure cleanup cores now use the shared mutual statement aliases, and
+  `TypeSafetyDirectCallSetup.v` no longer duplicates those alias definitions.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/TypeSafetyClosureRuntimeArgs.vo theories/TypeSystem/TypeSafetyCapturedCall.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo`.
+  `cd rocq && make theories/TypeSystem/TypeSafetyClosureCleanupCtxErased.vo theories/TypeSystem/TypeSafetyClosureCleanupCaptured.vo theories/TypeSystem/TypeSafetyClosureCleanupMakeClosure.vo theories/TypeSystem/TypeSafetyDirectCallSetup.vo theories/TypeSystem/TypeSafetyDirectCallRoute.vo theories/TypeSystem/TypeSafetyCapturedCall.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo theories/TypeSystem/TypeSafety.vo`.
 - Next task: use the new packages only after a target theorem and wrapper
   projection are fixed; do not rewire broad result shapes and prove new
   captured-call invariants in the same commit.

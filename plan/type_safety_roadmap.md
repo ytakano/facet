@@ -296,10 +296,23 @@ Work in this order unless a proof exposes a soundness gap.
 
    Remaining proof task:
 
+   - A focused captured-call preservation helper now exists:
+
+     ```coq
+     eval_make_closure_captured_call_expr_shadow_preserves_typing_with_callee_components
+     ```
+
+     It consumes the full shadow-safe typing judgment for
+     `ECallExpr (EMakeClosure fname captures) args`, extracts typed argument
+     roots internally, and reuses the with-env captured-call wrapper. This
+     removes the captured-branch argument-root extraction from the eventual
+     `if` proof body.
    - Add the preservation lemma for arbitrary branch frames. The attempted
-     generic lemma exposed the next proof-interface requirement: the captured
-     branch must expose typed argument roots from the branch typing before the
-     captured-call wrapper can be reused under `R1`/`Σ1`.
+     generic lemma exposed the next proof-interface requirement: the `if`
+     evidence must line up recursive branch evidence with the exact branch
+     typings produced by the enclosing `TERS_If`. Do not rely on an
+     unproved typing determinism lemma to equate separately stored condition
+     output frames.
    - The lemma must evaluate the condition with ordinary provenance readiness,
      carry the resulting store/root/name/key invariants into the selected
      branch, and reuse the direct/captured-call preservation wrappers under the

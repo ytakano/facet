@@ -388,6 +388,36 @@ Proof.
   - left. reflexivity.
 Qed.
 
+Lemma copy_capture_store_as_captured_call_frame_ready_with_env :
+  forall Ω env s Σ captures caps captured env_lt captured_tys
+      s_args R_args,
+    store_typed env s Σ ->
+    store_ref_targets_preserved env s (captured ++ s_args) ->
+    NoDup (ctx_names (params_ctx caps)) ->
+    check_make_closure_captures_exact_sctx_with_env env Ω Σ captures caps =
+      infer_ok (env_lt, captured_tys) ->
+    copy_capture_store_as captures caps s = Some captured ->
+    store_roots_within R_args s_args ->
+    store_no_shadow s_args ->
+    root_env_no_shadow R_args ->
+    root_env_store_roots_named R_args s_args ->
+    root_env_store_keys_named R_args s_args ->
+    (forall x, In x (store_names captured) -> ~ In x (store_names s_args)) ->
+    (forall x, root_env_lookup x (capture_store_root_env captured) = None \/
+      root_env_lookup x R_args = None) ->
+    captured_call_frame_ready_in_frame env captured
+      (capture_store_root_env captured) s_args R_args.
+Proof.
+  intros Ω env s Σ captures caps captured env_lt captured_tys s_args R_args
+    Hstore Hpres Hnodup Hcheck Hcopy Hroots_args Hshadow_args Hrn_args
+    Hnamed_args Hkeys_args Hstore_disj Hroot_disj.
+  pose proof
+    (copy_capture_store_as_captured_store_runtime_ready_in_frame_with_env
+      Ω env s Σ captures caps captured env_lt captured_tys s_args
+      Hstore Hpres Hnodup Hcopy Hcheck) as Hcap_ready.
+  eapply captured_call_frame_ready_in_frame_compose; eassumption.
+Qed.
+
 Lemma eval_make_closure_exact_captured_call_frame_params_ready :
   forall env (Ω : outlives_ctx) s Σ fname captures captured fdef fcall
       used' Rcap s_args R_args captured_tys,
@@ -1361,4 +1391,3 @@ Proof.
       (proj2 (proj2 Hkeys)));
     eassumption.
 Qed.
-

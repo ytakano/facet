@@ -153,8 +153,10 @@ runtime safety currently cross theorem boundaries.
   `EnvRuntimeInitialRootFacts.v`.
 - Extracted the EnvRuntimeSafety readiness boolean soundness block into
   `EnvRuntimeReadinessFacts.v`.
+- Extracted the EnvRuntimeSafety root-shadow/provenance summary block into
+  `EnvRuntimeShadowSummaryFacts.v`.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/EnvRuntimeReadinessFacts.vo theories/TypeSystem/EnvRuntimeSafety.vo theories/TypeSystem/RuntimeRefSafety.vo theories/TypeSystem/EnvFullSoundness.vo theories/TypeSystem/CheckerUsageSoundness.vo`.
+  `cd rocq && make theories/TypeSystem/EnvRuntimeShadowSummaryFacts.vo theories/TypeSystem/EnvRuntimeSafety.vo theories/TypeSystem/RuntimeRefSafety.vo theories/TypeSystem/EnvFullSoundness.vo theories/TypeSystem/CheckerUsageSoundness.vo`.
 - Next task: continue Phase 3 by looking for the next stable helper cluster
   that can move out of a large preservation file without changing theorem
   statements.

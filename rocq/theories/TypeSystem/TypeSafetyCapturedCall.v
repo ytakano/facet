@@ -1580,7 +1580,10 @@ Proof.
       Hroot_exclude_bound0.
     subst s_final.
     eapply (eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_core
-              Hframe Hprefix Hparam); try eassumption.
+              Hframe
+              (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+                Hprefix)
+              Hparam); try eassumption.
     eapply roots_exclude_stores_subset; eassumption. }
   assert (Hfresh_captured : ~ In x (store_names captured)).
   { rewrite (copy_capture_store_as_store_names

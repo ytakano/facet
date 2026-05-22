@@ -152,7 +152,7 @@ Qed.
 
 Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_core :
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_package_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   forall env (Ω : outlives_ctx) captured s_args_hidden s_args
       Σ_args x T_hidden hidden fdef fcall σ s_body vs ret used'
@@ -274,17 +274,19 @@ Proof.
               Hprov_body Htyped_body Hcover_all Hroots_bind Hshadow_bind
               Hrn_params Hframe_start Hframe_fresh_start)
     as [_ [_ [_ [_ [Hframe_scope _]]]]].
-  destruct (proj1 Htyping_mutual
-              env
-              (bind_params (fn_params fcall) vs
-                (captured ++ s_args_hidden))
-              (fn_body fcall) s_body ret Heval_body
-              (fn_outlives fcall) (fn_lifetimes fcall)
-              R_params (sctx_of_ctx (fn_body_ctx fcall))
-              T_body (sctx_of_ctx Γ_out) R_body roots_body
-              Hprov_body Hstore_bind_prefix Hroots_bind Hshadow_bind
-              Hrn_params Htyped_body)
-    as [_ [Hv_body [_ [Hroots_body [Hret_roots [Hshadow_body _]]]]]].
+  pose proof (proj1 Htyping_mutual
+                env
+                (bind_params (fn_params fcall) vs
+                  (captured ++ s_args_hidden))
+                (fn_body fcall) s_body ret Heval_body
+                (fn_outlives fcall) (fn_lifetimes fcall)
+                R_params (sctx_of_ctx (fn_body_ctx fcall))
+                T_body (sctx_of_ctx Γ_out) R_body roots_body
+                Hprov_body Hstore_bind_prefix Hroots_bind Hshadow_bind
+                Hrn_params Htyped_body) as Hbody_package.
+  destruct (typed_rooted_eval_roots _ _ _ _ _ _ _ _ Hbody_package)
+    as [Hroots_body Hret_roots Hshadow_body _].
+  destruct Hbody_package as [_ Hv_body _ _].
   pose proof (alpha_rename_fn_def_shape
                 (store_names (captured ++ s_args_hidden))
                 fdef fcall used' Hrename) as Hshape.
@@ -367,7 +369,10 @@ Proof.
     Hroots_bind Hshadow_bind Hrn_params Hcover_all Hprov_body Htyped_body
     Hcompat_body Hexclude_all Hsubset Hroot_exclude_bound Heval_body.
   eapply (eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_core
-            Hframe_mutual Htyping_mutual Hparam_mutual);
+            Hframe_mutual
+            (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+              Htyping_mutual)
+            Hparam_mutual);
     try eassumption.
   eapply roots_exclude_stores_subset; eassumption.
 Qed.

@@ -941,7 +941,7 @@ Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_componen
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
-  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_package_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
   forall env Ω n R Σ args fname captures captured fdef fcall used'
       s s_args s_body vs ret R_args Σ_args arg_roots env_lt captured_tys
@@ -1462,8 +1462,7 @@ Proof.
   destruct
     (eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
       Hframe
-      (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
-        Hprefix)
+      Hprefix
       Hparam env Ω s s s_args s_body
       (EMakeClosure fname captures) args fname captured fdef fcall vs ret
       used' (capture_store_root_env captured) R_args Σ_args [] T_body

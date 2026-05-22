@@ -1229,6 +1229,88 @@ Inductive expr_root_shadow_captured_call_provenance_summary
       expr_root_shadow_captured_call_provenance_summary env Ω n R Γ
         (EIf e1 e2 e3).
 
+Inductive expr_root_shadow_captured_call_provenance_summary_exact
+    (env : global_env) (Ω : outlives_ctx) (n : nat)
+    : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set ->
+      Prop :=
+  | ERSCE_Provenance : forall R Σ e T Σ' R' roots,
+      provenance_ready_expr e ->
+      typed_env_roots_shadow_safe env Ω n R Σ e T Σ' R' roots ->
+      expr_root_shadow_captured_call_provenance_summary_exact
+        env Ω n R Σ e T Σ' R' roots
+  | ERSCE_DirectCall : forall R Σ e fname args synthetic_body fcallee
+      T Σ' R' roots,
+      direct_call_target_expr e = Some (fname, args, synthetic_body) ->
+      synthetic_body = ECall fname args ->
+      preservation_ready_args args ->
+      In fcallee (env_fns env) ->
+      fn_name fcallee = fname ->
+      callee_body_root_shadow_provenance_summary env fcallee ->
+      typed_env_roots_shadow_safe env Ω n R Σ e T Σ' R' roots ->
+      typed_env_roots_shadow_safe env Ω n R Σ
+        synthetic_body T Σ' R' roots ->
+      expr_root_shadow_captured_call_provenance_summary_exact
+        env Ω n R Σ e T Σ' R' roots
+  | ERSCE_CapturedCall : forall R Σ fname captures args fcallee
+      env_lt captured_tys T Σ' R' roots T_body Γ_out R_body roots_body,
+      preservation_ready_args args ->
+      In fcallee (env_fns env) ->
+      fn_name fcallee = fname ->
+      fn_lifetimes fcallee = 0 ->
+      callee_hidden_capture_args_disjoint fcallee args ->
+      check_make_closure_captures_exact_sctx_with_env env Ω Σ
+        captures (fn_captures fcallee) = infer_ok (env_lt, captured_tys) ->
+      NoDup (ctx_names (params_ctx (fn_params fcallee ++ fn_captures fcallee))) ->
+      provenance_ready_expr (fn_body fcallee) ->
+      typed_env_roots_shadow_safe env (fn_outlives fcallee)
+        (fn_lifetimes fcallee)
+        (initial_root_env_for_params
+          (fn_params fcallee ++ fn_captures fcallee))
+        (sctx_of_ctx (fn_body_ctx fcallee))
+        (fn_body fcallee) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
+      ty_compatible_b (fn_outlives fcallee) T_body
+        (fn_ret fcallee) = true ->
+      roots_exclude_params (fn_params fcallee ++ fn_captures fcallee)
+        roots_body ->
+      root_env_excludes_params (fn_params fcallee ++ fn_captures fcallee)
+        R_body ->
+      typed_env_roots_shadow_safe env Ω n R Σ
+        (ECallExpr (EMakeClosure fname captures) args) T Σ' R' roots ->
+      expr_root_shadow_captured_call_provenance_summary_exact
+        env Ω n R Σ (ECallExpr (EMakeClosure fname captures) args)
+        T Σ' R' roots
+  | ERSCE_If : forall R R1 R2 R3 Σ Σ1 Σ2 Σ3 Σ4 e1 e2 e3
+      T_cond T2 T3 roots_cond roots2 roots3,
+      provenance_ready_expr e1 ->
+      typed_env_roots_shadow_safe env Ω n R Σ e1 T_cond Σ1 R1
+        roots_cond ->
+      ty_core T_cond = TBooleans ->
+      expr_root_shadow_captured_call_provenance_summary_exact
+        env Ω n R1 Σ1 e2 T2 Σ2 R2 roots2 ->
+      expr_root_shadow_captured_call_provenance_summary_exact
+        env Ω n R1 Σ1 e3 T3 Σ3 R3 roots3 ->
+      ty_core T2 = ty_core T3 ->
+      ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
+      root_env_equiv R2 R3 ->
+      expr_root_shadow_captured_call_provenance_summary_exact
+        env Ω n R Σ (EIf e1 e2 e3)
+        (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2))
+        (sctx_of_ctx Σ4) R2 (root_set_union roots2 roots3).
+
+Lemma expr_root_shadow_captured_call_provenance_summary_exact_typed :
+  forall env Ω n R Σ e T Σ' R' roots,
+    expr_root_shadow_captured_call_provenance_summary_exact
+      env Ω n R Σ e T Σ' R' roots ->
+    typed_env_roots_shadow_safe env Ω n R Σ e T Σ' R' roots.
+Proof.
+  intros env Ω n R Σ e T Σ' R' roots Hsummary.
+  induction Hsummary.
+  - exact H0.
+  - exact H5.
+  - exact H11.
+  - eapply TERS_If; eauto.
+Qed.
+
 Definition callee_body_root_shadow_captured_call_provenance_summary
     (env : global_env) (fdef : fn_def) : Prop :=
   callee_body_root_shadow_non_capturing_call_provenance_summary env fdef \/
@@ -2018,6 +2100,139 @@ Proof.
   split.
   - exact Hstore_final.
   - rewrite apply_lt_ty_nil_ts in Hv. exact Hv.
+Qed.
+
+Lemma eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_typing :
+  forall env Ω n R Σ e T Σ' R' roots,
+    expr_root_shadow_captured_call_provenance_summary_exact
+      env Ω n R Σ e T Σ' R' roots ->
+    forall s s' ret,
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      eval env s e s' ret ->
+      fn_env_unique_by_name env ->
+      store_typed env s' Σ' /\ value_has_type env s' ret T.
+Proof.
+  intros env Ω n R Σ e T Σ' R' roots Hsummary.
+  induction Hsummary; intros s s' ret Hstore Hroots Hshadow Hrn Hnamed
+    Hkeys Heval Hunique.
+  - destruct (proj1 eval_preserves_typing_roots_ready_mutual
+        env s e s' ret Heval Ω n R Σ T Σ' R' roots
+        H Hstore Hroots Hshadow Hrn
+        (typed_env_roots_shadow_safe_roots
+          env Ω n R Σ e T Σ' R' roots H0))
+      as [Hstore' [Hv _]].
+    split; assumption.
+  - subst synthetic_body.
+    assert (Heval_call : eval env s (ECall fname args) s' ret).
+    { unfold direct_call_target_expr in H.
+      destruct e; try discriminate.
+      - inversion H; subst. exact Heval.
+      - destruct e; try discriminate.
+        inversion H; subst.
+        apply eval_call_expr_fn_as_call. exact Heval. }
+    destruct (eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary
+        env s s' ret fname args Heval_call Ω n R Σ T Σ' R' roots
+        fcallee H1 Hstore Hroots Hshadow Hrn Hnamed Hkeys
+        (typed_env_roots_shadow_safe_roots
+          env Ω n R Σ (ECall fname args) T Σ' R' roots H6)
+        Hunique H2 H3 H4)
+      as [Hstore' [Hv _]].
+    split; assumption.
+  - assert (Hnodup_caps :
+        NoDup (ctx_names (params_ctx (fn_captures fcallee)))).
+    { rewrite params_ctx_app, ctx_names_app in H5.
+      eapply NoDup_app_right_ts. exact H5. }
+    eapply eval_make_closure_captured_call_expr_shadow_preserves_typing_with_callee_components;
+      eauto.
+  - dependent destruction Heval.
+    + destruct (proj1 eval_preserves_typing_roots_ready_mutual
+          env s e1 s1 (VBool true) Heval1 Ω n R Σ T_cond Σ1 R1
+          roots_cond H Hstore Hroots Hshadow Hrn
+          (typed_env_roots_shadow_safe_roots
+            env Ω n R Σ e1 T_cond Σ1 R1 roots_cond H0))
+        as [Hstore1 [_ _]].
+      destruct (proj1 eval_preserves_roots_ready_mutual
+          env s e1 s1 (VBool true) Heval1 Ω n R Σ T_cond Σ1 R1
+          roots_cond H Hroots Hshadow Hrn
+          (typed_env_roots_shadow_safe_roots
+            env Ω n R Σ e1 T_cond Σ1 R1 roots_cond H0))
+        as [Hroots1 [_ [Hshadow1 Hrn1]]].
+      destruct (proj1 eval_preserves_root_names_ready_mutual
+          env s e1 s1 (VBool true) Heval1 Ω n R Σ T_cond Σ1 R1
+          roots_cond H Hstore Hroots Hshadow Hrn Hnamed
+          (typed_env_roots_shadow_safe_roots
+            env Ω n R Σ e1 T_cond Σ1 R1 roots_cond H0))
+        as [Hnamed1 _].
+      pose proof (proj1 eval_preserves_root_keys_named_ready_mutual
+          env s e1 s1 (VBool true) Heval1 Ω n R Σ T_cond Σ1 R1
+          roots_cond H Hstore Hroots Hshadow Hrn Hkeys
+          (typed_env_roots_shadow_safe_roots
+            env Ω n R Σ e1 T_cond Σ1 R1 roots_cond H0))
+        as Hkeys1.
+      destruct (IHHsummary1 s1 s2 v Hstore1 Hroots1 Hshadow1 Hrn1
+          Hnamed1 Hkeys1 Heval2 Hunique) as [Hstore2 Hv].
+      split.
+      * eapply store_typed_ctx_merge_left; eassumption.
+      * eapply value_has_type_if_left_result. exact Hv.
+    + destruct (proj1 eval_preserves_typing_roots_ready_mutual
+          env s e1 s1 (VBool false) Heval1 Ω n R Σ T_cond Σ1 R1
+          roots_cond H Hstore Hroots Hshadow Hrn
+          (typed_env_roots_shadow_safe_roots
+            env Ω n R Σ e1 T_cond Σ1 R1 roots_cond H0))
+        as [Hstore1 [_ _]].
+      destruct (proj1 eval_preserves_roots_ready_mutual
+          env s e1 s1 (VBool false) Heval1 Ω n R Σ T_cond Σ1 R1
+          roots_cond H Hroots Hshadow Hrn
+          (typed_env_roots_shadow_safe_roots
+            env Ω n R Σ e1 T_cond Σ1 R1 roots_cond H0))
+        as [Hroots1 [_ [Hshadow1 Hrn1]]].
+      destruct (proj1 eval_preserves_root_names_ready_mutual
+          env s e1 s1 (VBool false) Heval1 Ω n R Σ T_cond Σ1 R1
+          roots_cond H Hstore Hroots Hshadow Hrn Hnamed
+          (typed_env_roots_shadow_safe_roots
+            env Ω n R Σ e1 T_cond Σ1 R1 roots_cond H0))
+        as [Hnamed1 _].
+      pose proof (proj1 eval_preserves_root_keys_named_ready_mutual
+          env s e1 s1 (VBool false) Heval1 Ω n R Σ T_cond Σ1 R1
+          roots_cond H Hstore Hroots Hshadow Hrn Hkeys
+          (typed_env_roots_shadow_safe_roots
+            env Ω n R Σ e1 T_cond Σ1 R1 roots_cond H0))
+        as Hkeys1.
+      destruct (IHHsummary2 s1 s2 v Hstore1 Hroots1 Hshadow1 Hrn1
+          Hnamed1 Hkeys1 Heval2 Hunique) as [Hstore3 Hv].
+      assert (Htypes : Forall2 sctx_entry_type_eq Σ2 Σ3).
+      { eapply typed_env_structural_branch_type_eq.
+        - eapply typed_env_roots_structural.
+          eapply typed_env_roots_shadow_safe_roots.
+          eapply expr_root_shadow_captured_call_provenance_summary_exact_typed.
+          exact Hsummary1.
+        - eapply typed_env_roots_structural.
+          eapply typed_env_roots_shadow_safe_roots.
+          eapply expr_root_shadow_captured_call_provenance_summary_exact_typed.
+          exact Hsummary2. }
+      split.
+      * eapply store_typed_ctx_merge_right; eassumption.
+      * eapply value_has_type_if_right_result. exact Hv.
+Unshelve.
+  all: eauto.
+Qed.
+
+Lemma direct_call_target_expr_synthetic_call :
+  forall e fname args synthetic_body,
+    direct_call_target_expr e = Some (fname, args, synthetic_body) ->
+    synthetic_body = ECall fname args.
+Proof.
+  intros e fname args synthetic_body Htarget.
+  unfold direct_call_target_expr in Htarget.
+  destruct e; try discriminate.
+  - inversion Htarget. reflexivity.
+  - destruct e; try discriminate.
+    inversion Htarget. reflexivity.
 Qed.
 
 Lemma check_fn_root_shadow_summary_preservation_ready :

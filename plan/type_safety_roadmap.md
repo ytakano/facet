@@ -281,15 +281,21 @@ Work in this order unless a proof exposes a soundness gap.
 
    Current staged implementation:
 
-   - `TypeChecker.v` has an executable expression-level helper,
-     `check_expr_root_shadow_captured_call_provenance_summary`, for `if`
-     expressions whose condition is ordinary provenance-ready and whose
-     branches are ordinary provenance-ready, direct calls, direct captured
-     closure calls, or nested `if` expressions with the same shape.
-   - `EnvRuntimeSafety.v` now has the Prop-level evidence shape
-     `expr_root_shadow_captured_call_provenance_summary`, covering ordinary
-     provenance-ready expressions, direct calls, direct captured closure calls,
-     and nested `if` expressions under the condition output frame.
+   - `TypeChecker.v` has a fuel-aligned internal expression helper,
+     `check_expr_root_shadow_captured_call_provenance_summary_fuel`, plus the
+     existing 10000-fuel public wrapper
+     `check_expr_root_shadow_captured_call_provenance_summary`. This avoids
+     manufacturing branch evidence from fresh top-level fuel when proving an
+     enclosing `if`.
+   - `EnvRuntimeSafety.v` keeps the older unindexed Prop evidence shape and
+     now also has exact, output-indexed evidence:
+
+     ```coq
+     expr_root_shadow_captured_call_provenance_summary_exact
+     ```
+
+     The exact `if` constructor carries the same branch typings, merge, and
+     root equivalence as `TERS_If`.
    - This helper is intentionally not wired into
      `check_fn_root_shadow_captured_call_provenance_summary` or any validated
      program wrapper yet.
@@ -307,20 +313,23 @@ Work in this order unless a proof exposes a soundness gap.
      roots internally, and reuses the with-env captured-call wrapper. This
      removes the captured-branch argument-root extraction from the eventual
      `if` proof body.
-   - Add the preservation lemma for arbitrary branch frames. The attempted
-     generic lemma exposed the next proof-interface requirement: the `if`
-     evidence must line up recursive branch evidence with the exact branch
-     typings produced by the enclosing `TERS_If`. Do not rely on an
-     unproved typing determinism lemma to equate separately stored condition
-     output frames.
-   - The lemma must evaluate the condition with ordinary provenance readiness,
-     carry the resulting store/root/name/key invariants into the selected
-     branch, and reuse the direct/captured-call preservation wrappers under the
-     branch `R1`/`Σ1`.
-   - Only after that lemma compiles should the function-level captured-call
-     summary checker gain an `EIf` branch. If the proof requires weakening
-     returned-value safety or changing ordinary `T_If`/`TES_If`, stop and
-     report the soundness gap.
+   - The exact arbitrary-branch preservation bridge now exists:
+
+     ```coq
+     eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_typing
+     ```
+
+     It evaluates the condition with ordinary provenance readiness, carries
+     store/root/name/key invariants into the selected branch, and reuses the
+     direct/captured-call wrappers under branch `R1`/`Σ1`.
+   - Next: prove checker soundness from the fuel-aligned helper to the exact
+     evidence. Keep the proof tied to the same state-fuel equations used by
+     `infer_core_env_state_fuel_roots_shadow_safe`; do not use typing
+     determinism to relate fresh checker runs.
+   - Only after that checker-soundness lemma compiles should the
+     function-level captured-call summary checker gain an `EIf` branch. If the
+     proof requires weakening returned-value safety or changing ordinary
+     `T_If`/`TES_If`, stop and report the soundness gap.
 
 ## Current Captured Closure Facts
 

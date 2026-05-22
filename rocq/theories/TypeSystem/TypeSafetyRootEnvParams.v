@@ -1030,6 +1030,37 @@ Proof.
     + apply IH. exact Htail.
 Qed.
 
+Lemma capture_store_root_env_store_param_prefix_equiv :
+  forall caps captured,
+    store_param_prefix caps captured [] ->
+    root_env_equiv (capture_store_root_env captured)
+      (root_env_add_params_roots caps
+        (capture_store_root_sets captured) []).
+Proof.
+  intros caps.
+  induction caps as [| cap caps IH]; intros captured Hprefix.
+  - inversion Hprefix; subst. simpl. apply root_env_equiv_refl.
+  - inversion Hprefix as [| ? ? v ? s_param_tail s_tail Htail]; subst.
+    simpl.
+    apply root_env_equiv_add.
+    + apply root_set_equiv_refl.
+    + eapply IH. exact Htail.
+Qed.
+
+Lemma capture_store_root_env_equiv_root_env_add_params_roots :
+  forall env captured caps,
+    captured_params_store_typed env captured caps ->
+    root_env_equiv (capture_store_root_env captured)
+      (root_env_add_params_roots caps
+        (capture_store_root_sets captured) []).
+Proof.
+  intros env captured caps Htyped.
+  pose proof (captured_params_store_typed_store_param_prefix
+                env captured caps Htyped) as Hprefix.
+  eapply capture_store_root_env_store_param_prefix_equiv.
+  exact Hprefix.
+Qed.
+
 Lemma captured_call_runtime_root_env_binding_split_equiv :
   forall env captured ps caps arg_roots,
     captured_params_store_typed env captured caps ->

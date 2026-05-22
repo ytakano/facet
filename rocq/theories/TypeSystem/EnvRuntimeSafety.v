@@ -1206,7 +1206,7 @@ Definition callee_body_root_shadow_captured_call_provenance_summary
     root_env_excludes_params (fn_params fdef) R_body) \/
   (
   exists fname captures args m x T direct_body let_body fcallee
-      captured_tys T_direct Γ_direct R_direct roots_direct
+      env_lt captured_tys T_direct Γ_direct R_direct roots_direct
       T_let Γ_let R_let roots_let,
     fn_body fdef =
       ELet m x T (EMakeClosure fname captures)
@@ -1226,11 +1226,11 @@ Definition callee_body_root_shadow_captured_call_provenance_summary
     fn_name fcallee = fname /\
     fn_lifetimes fcallee = 0 /\
     callee_hidden_capture_args_disjoint fcallee args /\
-    check_make_closure_captures_exact_sctx env
+    check_make_closure_captures_exact_sctx_with_env env
       (fn_outlives fdef)
       (sctx_of_ctx (fn_body_ctx fdef))
       captures
-      (fn_captures fcallee) = infer_ok captured_tys /\
+      (fn_captures fcallee) = infer_ok (env_lt, captured_tys) /\
     callee_body_root_shadow_captured_callee_provenance_summary
       env fcallee /\
     NoDup (ctx_names (params_ctx (fn_params fdef))) /\
@@ -1683,11 +1683,12 @@ Proof.
       apply andb_true_iff in Hcallee_head as [Hlt Hdisjoint].
       apply PeanoNat.Nat.eqb_eq in Hlt.
       apply negb_true_iff in Hnot_cap_name.
-      destruct (check_make_closure_captures_exact_sctx env
+      destruct (check_make_closure_captures_exact_sctx_with_env env
         (fn_outlives fdef)
         (sctx_of_ctx (fn_body_ctx fdef))
         captures
-        (fn_captures fcallee)) as [captured_tys | err] eqn:Hcaptures;
+        (fn_captures fcallee)) as [[env_lt captured_tys] | err]
+        eqn:Hcaptures;
         try discriminate.
       apply andb_true_iff in Hrest as [Hcallee Hsummary].
       destruct (infer_env_roots_shadow_safe env
@@ -1727,7 +1728,7 @@ Proof.
         (T_let_body & Γ_let_out & Htyped_let & _).
       cbn in Htyped_let.
       exists fname, captures, args, m, x, T, direct_body, let_body,
-        fcallee, captured_tys, T_direct_body, Γ_direct_out, R_direct,
+        fcallee, env_lt, captured_tys, T_direct_body, Γ_direct_out, R_direct,
         roots_direct, T_let_body, Γ_let_out, R_let, roots_let.
       split; [exact Hbody|].
       split; [reflexivity|].
@@ -3185,7 +3186,7 @@ Proof.
 	    * apply ty_compatible_b_sound. exact Hcompat.
     + destruct Hlocal_captured_summary as
         (fname & captures & args & m & x & T & direct_body & let_body &
-          fcallee & captured_tys & T_direct & Γ_direct & R_direct &
+          fcallee & env_lt & captured_tys & T_direct & Γ_direct & R_direct &
           roots_direct & T_let & Γ_let & R_let & roots_let &
           Hbody & Htarget & Hdirect & Hlet & Husage & Hnot_caps &
           Hfresh_cap_names & Hfree_args & Hlocal_args & Hready_args &
@@ -3294,7 +3295,7 @@ Proof.
 	              (alpha_normalize_global_env env) (fn_outlives f)
 	              (fn_lifetimes f) (initial_root_env_for_fn f)
 	              (sctx_of_ctx (fn_body_ctx f)) m x0 T args (fn_name fcallee) captures
-	              fcallee s s' v R_args Sigma_args arg_roots captured_tys
+	              fcallee s s' v R_args Sigma_args arg_roots env_lt captured_tys
               T_callee Γ_callee R_callee roots_callee
               Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
               Husage Heval Hcaptures Hnodup_caps Hready_args

@@ -91,8 +91,6 @@ Lemma eval_call_body_ctx_cleanup_hidden_frame_erased_core :
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
     roots_exclude_params (fn_params fcall ++ fn_captures fcall)
       roots_body ->
-    root_env_excludes_params (fn_params fcall ++ fn_captures fcall)
-      R_body ->
     roots_exclude x roots_body ->
     store_typed env
       (store_remove x
@@ -111,7 +109,7 @@ Proof.
     s_body ret T_body Γ_out R_body roots_body frame_final Hhidden
     Htyped_args Hret Hnodup_all Hframe_scope Hscope_body Hv_body
     Hroots_body Hret_roots Hshadow_body Hsame_body Hcompat_body
-    Hexclude_all Hexclude_env_all Hroot_exclude_x.
+    Hexclude_all Hroot_exclude_x.
   assert (Hv_ret_fcall : value_has_type env s_body ret (fn_ret fcall)).
   { eapply value_has_type_compatible.
     - exact Hv_body.
@@ -119,11 +117,10 @@ Proof.
       exact Hcompat_body. }
   assert (Hv_ret_fdef : value_has_type env s_body ret (fn_ret fdef)).
   { rewrite Hret. exact Hv_ret_fcall. }
-  destruct (store_remove_params_cleanup_excludes
-              (fn_params fcall ++ fn_captures fcall) s_body frame_final
-              R_body roots_body ret Hscope_body Hroots_body Hret_roots
-              Hshadow_body Hnodup_all Hexclude_all Hexclude_env_all)
-    as [locals [Hremoved [Hret_exclude _]]].
+  assert (Hret_exclude :
+    value_refs_exclude_params
+      (fn_params fcall ++ fn_captures fcall) ret).
+  { eapply value_roots_exclude_params; eassumption. }
   assert (Hret_exclude_x : value_refs_exclude_root x ret).
   { eapply value_roots_exclude_root; eassumption. }
   assert (Hremoved_exact_all :
@@ -260,7 +257,8 @@ Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_
       Σ_args x T_hidden hidden fdef fcall σ s_body vs ret used'
       T_body Γ_out R_params R_body roots_body,
     s_args_hidden = store_add x T_hidden hidden s_args ->
-    captured_params_store_typed env captured (fn_captures fcall) ->
+    captured_params_store_typed_in_frame env captured s_args_hidden
+      (fn_captures fcall) ->
     store_typed env s_args Σ_args ->
     alpha_rename_fn_def (store_names (captured ++ s_args_hidden)) fdef =
       (fcall, used') ->
@@ -278,7 +276,6 @@ Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
     roots_exclude_params (fn_params fcall ++ fn_captures fcall) roots_body ->
-    root_env_excludes_params (fn_params fcall ++ fn_captures fcall) R_body ->
     roots_exclude x roots_body ->
     eval env (bind_params (fn_params fcall) vs (captured ++ s_args_hidden))
       (fn_body fcall) s_body ret ->
@@ -300,9 +297,10 @@ Proof.
     vs ret used' T_body Γ_out R_params R_body roots_body Hhidden
     Hcaptured_params_typed Htyped_args Hrename Hargs_fcall Hroots_bind
     Hshadow_bind Hrn_params Hcover_all Hprov_body Htyped_body Hcompat_body
-    Hexclude_all Hexclude_env_all Hroot_exclude_x Heval_body.
-  pose proof (captured_params_store_typed_store_param_prefix
-                env captured (fn_captures fcall) Hcaptured_params_typed)
+    Hexclude_all Hroot_exclude_x Heval_body.
+  pose proof (captured_params_store_typed_in_frame_store_param_prefix
+                env captured s_args_hidden (fn_captures fcall)
+                Hcaptured_params_typed)
     as Hprefix_caps0.
   pose proof (store_param_prefix_append_frame
                 (fn_captures fcall) captured s_args_hidden []
@@ -331,7 +329,7 @@ Proof.
   assert (Hstore_captured_prefix :
     store_typed_prefix env (captured ++ s_args_hidden)
       (sctx_of_ctx (params_ctx (fn_captures fcall)))).
-  { eapply captured_params_store_typed_prefix_frame.
+  { eapply captured_params_store_typed_in_frame_prefix_frame.
     exact Hcaptured_params_typed. }
   assert (Hnodup_params :
     NoDup (ctx_names (params_ctx (fn_params fcall)))).
@@ -425,7 +423,8 @@ Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset_with_preser
       Σ_args x T_hidden hidden fdef fcall σ s_body vs ret used'
       T_body Γ_out R_params R_body roots_body roots_bound,
     s_args_hidden = store_add x T_hidden hidden s_args ->
-    captured_params_store_typed env captured (fn_captures fcall) ->
+    captured_params_store_typed_in_frame env captured s_args_hidden
+      (fn_captures fcall) ->
     store_typed env s_args Σ_args ->
     alpha_rename_fn_def (store_names (captured ++ s_args_hidden)) fdef =
       (fcall, used') ->
@@ -443,7 +442,6 @@ Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset_with_preser
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
     roots_exclude_params (fn_params fcall ++ fn_captures fcall) roots_body ->
-    root_env_excludes_params (fn_params fcall ++ fn_captures fcall) R_body ->
     root_set_stores_subset roots_body roots_bound ->
     roots_exclude x roots_bound ->
     eval env (bind_params (fn_params fcall) vs (captured ++ s_args_hidden))
@@ -466,8 +464,7 @@ Proof.
     vs ret used' T_body Γ_out R_params R_body roots_body roots_bound
     Hhidden Hcaptured_params_typed Htyped_args Hrename Hargs_fcall
     Hroots_bind Hshadow_bind Hrn_params Hcover_all Hprov_body Htyped_body
-    Hcompat_body Hexclude_all Hexclude_env_all Hsubset Hroot_exclude_bound
-    Heval_body.
+    Hcompat_body Hexclude_all Hsubset Hroot_exclude_bound Heval_body.
   eapply (eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_core
             Hframe_mutual Htyping_mutual Hparam_mutual);
     try eassumption.
@@ -503,7 +500,8 @@ Lemma eval_let_make_closure_captured_call_hidden_cleanup_package_with_preservati
           (store_remove_params (fn_captures fcall)
             (store_remove_params (fn_params fcall) s_body)) /\
       forall sigma_result Σ_args T_body Γ_out R_params R_body roots_body roots_bound,
-        captured_params_store_typed env captured (fn_captures fcall) ->
+        captured_params_store_typed_in_frame env captured s_args_hidden
+          (fn_captures fcall) ->
         store_typed env s_args Σ_args ->
         eval_args_values_have_types env Ω (captured ++ s_args_hidden) vs
           (fn_params fcall) ->
@@ -523,8 +521,6 @@ Lemma eval_let_make_closure_captured_call_hidden_cleanup_package_with_preservati
         ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
         roots_exclude_params (fn_params fcall ++ fn_captures fcall)
           roots_body ->
-        root_env_excludes_params (fn_params fcall ++ fn_captures fcall)
-          R_body ->
         root_set_stores_subset roots_body roots_bound ->
         roots_exclude x roots_bound ->
         store_typed env s_final Σ_args /\
@@ -552,10 +548,9 @@ Proof.
   intros ? ? ? ? ? ? ? ?
     Hcaptured_params Htyped_args Hargs_fcall Hroots_bind Hshadow_bind
     Hrn_params Hcover_all Hprov_body Htyped_body Hcompat_body Hexclude_all
-    Hexclude_env_all Hsubset Hroot_exclude_bound.
+    Hsubset Hroot_exclude_bound.
   subst s_final.
   eapply (eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset_with_preservation_core
             Hframe_mutual Htyping_mutual Hparam_mutual);
     eassumption.
 Qed.
-

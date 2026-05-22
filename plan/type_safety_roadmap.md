@@ -155,23 +155,22 @@ Work in this order unless a proof exposes a soundness gap.
    - The direct captured-call sidecar checker branch now uses
      `check_make_closure_captures_exact_sctx_with_env`.
 
-   Next implementation task:
-
-   - Design and prove the annotated local-let hidden-closure root invariant
-     needed for shared-reference captures. Its current hidden closure binding
-     is rooted as `root_env_add x [] R_args`, which is still reference-free.
-   - After that invariant exists, widen only the annotated local-let branch to
-     `check_make_closure_captures_exact_sctx_with_env`.
-
-   Blocker found:
+   Annotated local-let captured-call route:
 
    - Do not try to coerce canonical shared-reference captures back into
      `captured_call_frame_ready`. The canonical root env is intentionally
      frame-relative.
-   - Do not widen the annotated local-let branch to with-env captures yet. Its
-     hidden closure binding is currently rooted as `root_env_add x [] R_args`;
-     shared-reference captures require either a new hidden-closure root
-     invariant or a different root assignment for `x`.
+   - The annotated-local-let runtime helper now roots the hidden closure
+     binding as
+     `root_env_add x (root_sets_union (capture_store_root_sets captured))
+     R_args`.
+   - The hidden-frame cleanup path proves returned-value safety directly from
+     `roots_body`, `roots_exclude_params`, and `roots_exclude x roots_body`
+     instead of requiring the whole body root env to exclude callee
+     params/captures. This keeps the inaccessible hidden `x` binding rooted
+     without making it an ordinary tail entry.
+   - The annotated local-let sidecar checker branch now uses
+     `check_make_closure_captures_exact_sctx_with_env`.
 
    Still required after the invariant is fixed:
 
@@ -183,7 +182,7 @@ Work in this order unless a proof exposes a soundness gap.
    - Keep the invalid fixtures for missing outlives support, mutable binding
      capture, and `&mut` capture rejection.
    - Keep closure-call validator expansion staged by proof coverage. The direct
-     captured-call route is now with-env; the annotated local-let route is not.
+     captured-call and annotated local-let routes are now with-env.
 
 2. **Keep the annotated local-let captured-call sidecar branch stable.**
 

@@ -392,6 +392,215 @@ Proof.
     + apply root_env_store_keys_named_app; assumption.
 Qed.
 
+Lemma captured_closure_roots_within_capture_store_root_sets :
+  forall fname captured,
+    Forall
+      (fun se =>
+        value_roots_within (capture_value_roots (se_val se)) (se_val se))
+      captured ->
+    value_roots_within (root_sets_union (capture_store_root_sets captured))
+      (VClosure fname captured).
+Proof.
+  intros fname captured Hvalues.
+  constructor.
+  intros root Hexclude.
+  induction Hvalues as [| se rest Hvalue _ IH]; simpl in *.
+  - constructor.
+  - constructor.
+    + destruct se as [sx sT sv sst]. simpl in *.
+      constructor.
+      eapply value_roots_exclude_root.
+      * exact Hvalue.
+      * unfold roots_exclude in *.
+        intros Hin. apply Hexclude. apply root_set_union_in_l. exact Hin.
+    + apply IH.
+      unfold roots_exclude in *.
+      intros Hin. apply Hexclude. apply root_set_union_in_r. exact Hin.
+Qed.
+
+Lemma capture_store_root_sets_union_store_roots_named_in_store_runtime :
+  forall env target captured,
+    Forall2 (store_entry_typed env target)
+      captured (sctx_of_store captured) ->
+    root_set_store_roots_named (root_sets_union (capture_store_root_sets captured))
+      target.
+Proof.
+  intros env target captured Htyped.
+  apply root_sets_store_roots_named_union.
+  induction Htyped as [| se ce captured_tail Σ_tail Hentry _ IH].
+  - constructor.
+  - destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [_ Hvalue]]].
+    simpl. constructor.
+    + eapply capture_value_roots_store_roots_named. exact Hvalue.
+    + exact IH.
+Qed.
+
+Lemma captured_call_frame_ready_in_frame_store_add_right_roots :
+  forall env captured Rcap s_args R_args x T hidden roots,
+    captured_call_frame_ready_in_frame env captured Rcap s_args R_args ->
+    root_set_store_roots_named roots
+      (captured ++ store_add x T hidden s_args) ->
+    root_env_store_keys_named R_args s_args ->
+    value_roots_within roots hidden ->
+    ~ In x (store_names captured) ->
+    ~ In x (store_names s_args) ->
+    root_env_lookup x R_args = None ->
+    captured_call_frame_ready_in_frame env captured Rcap
+      (store_add x T hidden s_args) (root_env_add x roots R_args).
+Proof.
+  intros env captured Rcap s_args R_args x T hidden roots Hframe
+    Hhidden_named Hkeys_args Hhidden_roots Hfresh_cap Hfresh_args
+    Hlookup_args_x.
+  unfold captured_call_frame_ready_in_frame in *.
+  destruct Hframe as [Hcap_ready [Hroots_args [Hshadow_frame
+    [Hrn_frame [Hnamed_frame Hkeys_frame]]]]].
+  unfold captured_store_runtime_ready_in_frame in Hcap_ready.
+  destruct Hcap_ready as [Htyped_cap [Hroots_cap [Hshadow_cap
+    [Hrn_cap [Hnamed_cap Hkeys_cap]]]]].
+  assert (Hin_hidden :
+    forall z,
+      In z (store_names (captured ++ s_args)) ->
+      In z (store_names (captured ++ store_add x T hidden s_args))).
+  { intros z Hin.
+    rewrite store_names_app in *.
+    apply in_app_or in Hin.
+    apply in_or_app.
+    destruct Hin as [Hin | Hin].
+    - left. exact Hin.
+    - right. simpl. right. exact Hin. }
+  assert (Hlookup_cap_x : root_env_lookup x Rcap = None).
+  { eapply root_env_store_keys_named_lookup_excludes_name; eassumption. }
+  assert (Hrn_args : root_env_no_shadow R_args).
+  { unfold root_env_no_shadow in *.
+    rewrite root_env_names_app in Hrn_frame.
+    eapply NoDup_app_right_ts. exact Hrn_frame. }
+  assert (Hroots_hidden_args :
+    store_roots_within (root_env_add x roots R_args)
+      (store_add x T hidden s_args)).
+  { eapply store_add_roots_within; eassumption. }
+  assert (Hshadow_hidden :
+    store_no_shadow (captured ++ store_add x T hidden s_args)).
+  { eapply store_no_shadow_app_store_add_right; eassumption. }
+  assert (Hrn_hidden_args :
+    root_env_no_shadow (root_env_add x roots R_args)).
+  { apply root_env_no_shadow_add; assumption. }
+  assert (Hrn_hidden_frame :
+    root_env_no_shadow (Rcap ++ root_env_add x roots R_args)).
+  { apply root_env_no_shadow_app; try assumption.
+    intros y.
+    destruct (root_env_lookup y Rcap) as [roots_cap |] eqn:Hlookup_cap.
+    - right.
+      unfold root_env_add. simpl.
+      destruct (ident_eqb y x) eqn:Hyx.
+      + apply ident_eqb_eq in Hyx. subst y.
+        rewrite Hlookup_cap_x in Hlookup_cap. discriminate.
+      + destruct (root_env_lookup y R_args) as [roots_args |]
+          eqn:Hlookup_args; try reflexivity.
+        pose proof (root_env_no_shadow_app_lookup_right_none
+                      Rcap R_args y roots_args Hrn_frame Hlookup_args)
+          as Hnone_cap.
+        rewrite Hlookup_cap in Hnone_cap. discriminate.
+    - left. reflexivity. }
+  assert (Hnamed_hidden_frame :
+    root_env_store_roots_named (Rcap ++ root_env_add x roots R_args)
+      (captured ++ store_add x T hidden s_args)).
+  { unfold root_env_store_roots_named in *.
+    intros y roots_y z Hlookup Hin.
+    destruct (root_env_lookup y Rcap) as [roots_cap |] eqn:Hlookup_cap.
+    - rewrite (root_env_lookup_app_left y Rcap (root_env_add x roots R_args)
+        roots_cap Hlookup_cap) in Hlookup.
+      inversion Hlookup; subst roots_cap.
+      apply Hin_hidden.
+      eapply Hnamed_frame.
+      * apply root_env_lookup_app_left. exact Hlookup_cap.
+      * exact Hin.
+    - rewrite (root_env_lookup_app_right y Rcap
+        (root_env_add x roots R_args) Hlookup_cap) in Hlookup.
+      unfold root_env_add in Hlookup. simpl in Hlookup.
+      destruct (ident_eqb y x) eqn:Hyx.
+      + inversion Hlookup; subst roots_y.
+        eapply Hhidden_named. exact Hin.
+      + destruct (root_env_lookup y R_args) as [roots_args |]
+          eqn:Hlookup_args; try discriminate.
+        inversion Hlookup; subst roots_args.
+        apply Hin_hidden.
+        eapply Hnamed_frame.
+        * rewrite (root_env_lookup_app_right y Rcap R_args Hlookup_cap).
+          exact Hlookup_args.
+        * exact Hin. }
+  assert (Hkeys_hidden_args :
+    root_env_store_keys_named (root_env_add x roots R_args)
+      (store_add x T hidden s_args)).
+  { eapply root_env_store_keys_named_add_env_store_add.
+    exact Hkeys_args. }
+  assert (Hpres_frame_hidden :
+    store_ref_targets_preserved env (captured ++ s_args)
+      (captured ++ store_add x T hidden s_args)).
+  { unfold store_ref_targets_preserved.
+    intros y path se v Ty Hlookup Hvalue Htype.
+    exists se, v. repeat split; try assumption.
+    destruct (store_lookup y captured) as [se_cap |] eqn:Hlookup_cap.
+    - rewrite (store_lookup_app_some y captured s_args se_cap Hlookup_cap)
+        in Hlookup.
+      inversion Hlookup; subst se_cap.
+      apply store_lookup_app_some. exact Hlookup_cap.
+    - rewrite (store_lookup_app_none y captured s_args Hlookup_cap)
+        in Hlookup.
+      rewrite (store_lookup_app_none y captured
+        (store_add x T hidden s_args) Hlookup_cap).
+      simpl.
+      destruct (ident_eqb y x) eqn:Hyx.
+      + apply ident_eqb_eq in Hyx. subst y.
+        rewrite (store_lookup_not_in_names x s_args Hfresh_args) in Hlookup.
+        discriminate.
+      + exact Hlookup. }
+  assert (Htyped_cap_hidden :
+    Forall2 (store_entry_typed env
+      (captured ++ store_add x T hidden s_args))
+      captured (sctx_of_store captured)).
+  { eapply store_typed_entries_store_preserved; eassumption. }
+  split.
+  - unfold captured_store_runtime_ready_in_frame.
+    split; [exact Htyped_cap_hidden|].
+    split; [exact Hroots_cap|].
+    split; [exact Hshadow_cap|].
+    split; [exact Hrn_cap|].
+    split.
+    + eapply root_env_store_roots_named_weaken_store; eassumption.
+    + exact Hkeys_cap.
+  - split; [exact Hroots_hidden_args|].
+    split; [exact Hshadow_hidden|].
+    split; [exact Hrn_hidden_frame|].
+    split.
+    + exact Hnamed_hidden_frame.
+    + apply root_env_store_keys_named_app; assumption.
+Qed.
+
+Lemma captured_call_frame_ready_in_frame_store_add_right :
+  forall env captured Rcap s_args R_args x T hidden hidden_roots,
+    captured_call_frame_ready_in_frame env captured Rcap s_args R_args ->
+    root_env_store_roots_named R_args s_args ->
+    root_env_store_keys_named R_args s_args ->
+    value_roots_within hidden_roots hidden ->
+    root_set_store_roots_named hidden_roots
+      (captured ++ store_add x T hidden s_args) ->
+    ~ In x (store_names captured) ->
+    ~ In x (store_names s_args) ->
+    root_env_lookup x R_args = None ->
+    captured_call_frame_ready_in_frame env captured Rcap
+      (store_add x T hidden s_args)
+      (root_env_add x hidden_roots R_args).
+Proof.
+  intros env captured Rcap s_args R_args x T hidden hidden_roots Hframe
+    Hnamed_args Hkeys_args Hhidden_roots Hhidden_named Hfresh_cap
+    Hfresh_args Hlookup_args_x.
+  eapply captured_call_frame_ready_in_frame_store_add_right_roots;
+    eassumption.
+Qed.
+
 Lemma copy_capture_store_as_captured_call_frame_ready :
   forall Ω env s Σ captures caps captured captured_tys args s_args vs R_args,
     store_typed env s Σ ->
@@ -845,39 +1054,41 @@ Qed.
 
 Lemma eval_let_make_closure_captured_call_runtime_args_ready_in_frame_core :
   forall env Ω fname captured Rcap fdef fcall used' s_args_hidden s_args vs
-      R_args Σ_args arg_roots x T,
+      R_args Σ_args arg_roots x T hidden_roots,
     s_args_hidden = store_add x T (VClosure fname captured) s_args ->
     alpha_rename_fn_def (store_names (captured ++ s_args_hidden)) fdef =
       (fcall, used') ->
     captured_call_frame_ready_in_frame env captured Rcap s_args_hidden
-      (root_env_add x [] R_args) ->
+      (root_env_add x hidden_roots R_args) ->
     captured_call_frame_params_ready_in_frame env captured Rcap
-      s_args_hidden (root_env_add x [] R_args) (fn_captures fcall) ->
+      s_args_hidden (root_env_add x hidden_roots R_args)
+      (fn_captures fcall) ->
     store_typed env s_args Σ_args ->
     eval_args_values_have_types env Ω s_args vs (fn_params fdef) ->
     Forall2 value_roots_within arg_roots vs ->
     ~ In x (store_names s_args) ->
     captured_call_frame_params_ready_in_frame env captured Rcap
-      s_args_hidden (root_env_add x [] R_args) (fn_captures fcall) /\
+      s_args_hidden (root_env_add x hidden_roots R_args)
+      (fn_captures fcall) /\
     store_typed env s_args Σ_args /\
     eval_args_values_have_types env Ω (captured ++ s_args_hidden) vs
       (fn_params fcall) /\
     Forall2 value_roots_within arg_roots vs /\
     store_roots_within
       (call_param_root_env (fn_params fcall) arg_roots
-        (Rcap ++ root_env_add x [] R_args))
+        (Rcap ++ root_env_add x hidden_roots R_args))
       (bind_params (fn_params fcall) vs (captured ++ s_args_hidden)) /\
     store_no_shadow (bind_params (fn_params fcall) vs
       (captured ++ s_args_hidden)) /\
     root_env_no_shadow
       (call_param_root_env (fn_params fcall) arg_roots
-        (Rcap ++ root_env_add x [] R_args)) /\
+        (Rcap ++ root_env_add x hidden_roots R_args)) /\
     root_env_covers_params (fn_params fcall)
       (call_param_root_env (fn_params fcall) arg_roots
-        (Rcap ++ root_env_add x [] R_args)).
+        (Rcap ++ root_env_add x hidden_roots R_args)).
 Proof.
   intros env Ω fname captured Rcap fdef fcall used' s_args_hidden s_args vs
-    R_args Σ_args arg_roots x T Hhidden Hrename Hframe_hidden
+    R_args Σ_args arg_roots x T hidden_roots Hhidden Hrename Hframe_hidden
     Hframe_params_ready Hstore_args Hargs_fdef_sargs Hvalue_roots
     Hfresh_s_args.
   assert (Hshadow_hidden_frame :
@@ -906,7 +1117,8 @@ Proof.
   { eapply alpha_rename_fn_def_params_fresh_in_store. exact Hrename. }
   destruct
     (captured_call_bind_params_call_param_root_env_ready_in_frame
-      env captured Rcap s_args_hidden (root_env_add x [] R_args)
+      env captured Rcap s_args_hidden
+      (root_env_add x hidden_roots R_args)
       (fn_params fcall) vs Ω arg_roots Hframe_hidden Hnodup_fcall
       Hfresh_fcall Hargs_fcall Hvalue_roots)
     as [Hroots_bind [Hshadow_bind [Hrn_bind Hcover_bind]]].
@@ -1655,6 +1867,349 @@ Proof.
     Hfresh_s_args).
 Qed.
 
+Lemma eval_let_make_closure_captured_call_runtime_args_ready_auto_with_env_with_preservation_parts_core :
+  (forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) Σ T Σ',
+      preservation_ready_expr e ->
+      store_typed env s Σ ->
+      typed_env_structural env Ω n Σ e T Σ' ->
+      store_typed env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s') ->
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    forall (Ω : outlives_ctx) (n : nat) Σ ps Σ',
+      preservation_ready_args args ->
+      store_typed env s Σ ->
+      typed_args_env_structural env Ω n Σ args ps Σ' ->
+      store_typed env s' Σ' /\
+      eval_args_values_have_types env Ω s' vs ps /\
+      store_ref_targets_preserved env s s') ->
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    forall (Ω : outlives_ctx) (n : nat) lts args Σ Σ',
+      preservation_ready_fields fields ->
+      store_typed env s Σ ->
+      typed_fields_env_structural env Ω n lts args Σ fields defs Σ' ->
+      store_typed env s' Σ' /\
+      struct_fields_have_type env s' lts args values defs /\
+      store_ref_targets_preserved env s s') ->
+  (forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      provenance_ready_expr e ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R') ->
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ ps Σ' R' roots,
+      provenance_ready_args args ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+      store_roots_within R' s' /\
+      Forall2 value_roots_within roots vs /\
+      store_no_shadow s' /\
+      root_env_no_shadow R') ->
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots,
+      provenance_ready_fields fields ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+      store_roots_within R' s' /\
+      value_fields_roots_within roots values /\
+      store_no_shadow s' /\
+      root_env_no_shadow R') ->
+  (forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      provenance_ready_expr e ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      root_env_store_roots_named R' s' /\
+      root_set_store_roots_named roots s') ->
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ ps Σ' R' roots,
+      provenance_ready_args args ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+      root_env_store_roots_named R' s' /\
+      Forall (fun roots => root_set_store_roots_named roots s') roots) ->
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots,
+      provenance_ready_fields fields ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+      root_env_store_roots_named R' s' /\
+      root_set_store_roots_named roots s') ->
+  (forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      provenance_ready_expr e ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      root_env_store_keys_named R' s') ->
+  (forall env s args s' vs,
+    eval_args env s args s' vs ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ ps Σ' R' roots,
+      provenance_ready_args args ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_keys_named R s ->
+      typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+      root_env_store_keys_named R' s') ->
+  (forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    forall (Ω : outlives_ctx) (n : nat) lts args R Σ Σ' R' roots,
+      provenance_ready_fields fields ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_keys_named R s ->
+      typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
+      root_env_store_keys_named R' s') ->
+  forall env Ω n R Σ args fname captures captured fdef fcall used'
+      s s_args_hidden s_args vs R_args Σ_args arg_roots env_lt
+      captured_tys x T,
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    copy_capture_store_as captures (fn_captures fdef) s = Some captured ->
+    s_args_hidden = store_add x T (VClosure fname captured) s_args ->
+    eval_args env s args s_args vs ->
+    alpha_rename_fn_def (store_names (captured ++ s_args_hidden)) fdef =
+      (fcall, used') ->
+    check_make_closure_captures_exact_sctx_with_env env Ω Σ captures
+      (fn_captures fdef) = infer_ok (env_lt, captured_tys) ->
+    NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
+    preservation_ready_args args ->
+    typed_args_roots env Ω n R Σ args (fn_params fdef)
+      Σ_args R_args arg_roots ->
+    ~ In x (store_names s) ->
+    ~ In x (store_names captured) ->
+    captured_call_frame_params_ready_in_frame env captured
+      (capture_store_root_env captured) s_args_hidden
+      (root_env_add x (root_sets_union (capture_store_root_sets captured))
+        R_args) (fn_captures fcall) /\
+    store_typed env s_args Σ_args /\
+    eval_args_values_have_types env Ω (captured ++ s_args_hidden) vs
+      (fn_params fcall) /\
+    Forall2 value_roots_within arg_roots vs /\
+    store_roots_within
+      (call_param_root_env (fn_params fcall) arg_roots
+        (capture_store_root_env captured ++
+          root_env_add x
+            (root_sets_union (capture_store_root_sets captured)) R_args))
+      (bind_params (fn_params fcall) vs (captured ++ s_args_hidden)) /\
+    store_no_shadow (bind_params (fn_params fcall) vs
+      (captured ++ s_args_hidden)) /\
+    root_env_no_shadow
+      (call_param_root_env (fn_params fcall) arg_roots
+        (capture_store_root_env captured ++
+          root_env_add x
+            (root_sets_union (capture_store_root_sets captured)) R_args)) /\
+    root_env_covers_params (fn_params fcall)
+      (call_param_root_env (fn_params fcall) arg_roots
+        (capture_store_root_env captured ++
+          root_env_add x
+            (root_sets_union (capture_store_root_sets captured)) R_args)).
+Proof.
+  intros Htyping_expr Htyping_args Htyping_fields Hroots_expr Hroots_args
+    Hroots_fields Hnames_expr Hnames_args Hnames_fields Hkeys_expr
+    Hkeys_args Hkeys_fields env Ω n R Σ args fname captures captured fdef
+    fcall used' s s_args_hidden s_args vs R_args Σ_args arg_roots env_lt
+    captured_tys x T Hstore Hroots Hshadow Hrn Hnamed Hkeys Hlookup Hcopy
+    Hhidden Heval_args Hrename Hcheck Hnodup_caps Hready_args Htyped_args
+    Hfresh_s Hfresh_captured.
+  pose proof (preservation_ready_args_implies_provenance_ready_closure
+                args Hready_args) as Hprov_args.
+  destruct (Htyping_args env s args s_args vs Heval_args Ω n Σ
+              (fn_params fdef) Σ_args Hready_args Hstore
+              (typed_args_roots_structural env Ω n R Σ args
+                (fn_params fdef) Σ_args R_args arg_roots Htyped_args))
+    as [Hstore_args [Hargs_fdef_sargs Hpres_args]].
+  destruct (Hroots_args env s args s_args vs Heval_args Ω n R Σ
+              (fn_params fdef) Σ_args R_args arg_roots Hprov_args Hroots
+              Hshadow Hrn Htyped_args)
+    as [Hroots_args' [Hvalue_roots [Hshadow_args Hrn_args]]].
+  pose proof (Hnames_args env s args s_args vs Heval_args Ω n R Σ
+              (fn_params fdef) Σ_args R_args arg_roots Hprov_args Hstore
+              Hroots Hshadow Hrn Hnamed Htyped_args) as Hnames_args'.
+  pose proof (Hkeys_args env s args s_args vs Heval_args Ω n R Σ
+              (fn_params fdef) Σ_args R_args arg_roots Hprov_args Hstore
+              Hroots Hshadow Hrn Hkeys Htyped_args) as Hkeys_args'.
+  destruct Hnames_args' as [Hnamed_args Harg_roots_named].
+  assert (Hfresh_s_args : ~ In x (store_names s_args)).
+  { eapply eval_args_store_names_fresh; eassumption. }
+  assert (Hlookup_args_x : root_env_lookup x R_args = None).
+  { eapply root_env_store_keys_named_lookup_excludes_name; eassumption. }
+  pose proof
+    (check_make_closure_captures_exact_sctx_with_env_params_fresh_in_store
+      env Ω s Σ captures (fn_captures fdef) env_lt captured_tys
+      Hstore Hcheck) as Hfresh_caps.
+  pose proof (proj1 (proj2 preservation_ready_eval_store_names_mutual)
+                env s args s_args vs Heval_args Hready_args)
+    as Hargs_names.
+  assert (Hstore_disj :
+    forall y, In y (store_names captured) -> ~ In y (store_names s_args)).
+  { intros y Hin_captured Hin_args.
+    rewrite (copy_capture_store_as_store_names captures (fn_captures fdef)
+               s captured Hcopy) in Hin_captured.
+    rewrite Hargs_names in Hin_args.
+    exact (Hfresh_caps y Hin_captured Hin_args). }
+  assert (Hroot_disj :
+    forall y,
+      root_env_lookup y (capture_store_root_env captured) = None \/
+      root_env_lookup y R_args = None).
+  { intros y.
+    destruct (root_env_lookup y (capture_store_root_env captured))
+      as [roots_cap |] eqn:Hlookup_cap.
+    - right.
+      eapply root_env_store_keys_named_lookup_excludes_name.
+      + exact Hkeys_args'.
+      + intros Hin_args.
+        eapply Hstore_disj.
+        * rewrite <- capture_store_root_env_names.
+          eapply root_env_lookup_some_in_names. exact Hlookup_cap.
+        * exact Hin_args.
+    - left. reflexivity. }
+  assert (Hpres_tail :
+    store_ref_targets_preserved env s_args (captured ++ s_args)).
+  { apply store_ref_targets_preserved_app_right.
+    intros y Hin.
+    apply store_lookup_not_in_names.
+    intros Hin_captured.
+    eapply Hstore_disj; eassumption. }
+  assert (Hpres_frame : store_ref_targets_preserved env s (captured ++ s_args)).
+  { eapply store_ref_targets_preserved_trans; eassumption. }
+  pose proof
+    (copy_capture_store_as_captured_call_frame_ready_with_env
+      Ω env s Σ captures (fn_captures fdef) captured env_lt captured_tys
+      s_args R_args Hstore Hpres_frame Hnodup_caps Hcheck Hcopy
+      Hroots_args' Hshadow_args Hrn_args Hnamed_args Hkeys_args'
+      Hstore_disj Hroot_disj) as Hframe_ready.
+  pose proof
+    (copy_capture_store_as_captured_values_canonical_roots_with_env
+      Ω env s Σ captures (fn_captures fdef) captured env_lt captured_tys
+      Hstore Hcopy Hcheck) as Hcaptured_values.
+  assert (Hclosure_roots :
+    value_roots_within
+      (root_sets_union (capture_store_root_sets captured))
+      (VClosure fname captured)).
+  { eapply captured_closure_roots_within_capture_store_root_sets.
+    exact Hcaptured_values. }
+  assert (Htyped_cap_frame :
+    Forall2 (store_entry_typed env (captured ++ s_args))
+      captured (sctx_of_store captured)).
+  { unfold captured_call_frame_ready_in_frame,
+      captured_store_runtime_ready_in_frame in Hframe_ready.
+    exact (proj1 (proj1 Hframe_ready)). }
+  assert (Hcapture_roots_named_frame :
+    root_set_store_roots_named
+      (root_sets_union (capture_store_root_sets captured))
+      (captured ++ s_args)).
+  { eapply capture_store_root_sets_union_store_roots_named_in_store_runtime.
+    exact Htyped_cap_frame. }
+  assert (Hcapture_roots_named_hidden :
+    root_set_store_roots_named
+      (root_sets_union (capture_store_root_sets captured))
+      (captured ++ s_args_hidden)).
+  { eapply root_set_store_roots_named_weaken_store.
+    - exact Hcapture_roots_named_frame.
+    - intros y Hin.
+      subst s_args_hidden.
+      rewrite store_names_app in *.
+      apply in_app_or in Hin as [Hin | Hin].
+      + apply in_or_app. left. exact Hin.
+      + apply in_or_app. right. simpl. right. exact Hin. }
+  assert (Hframe_hidden :
+    captured_call_frame_ready_in_frame env captured
+      (capture_store_root_env captured) s_args_hidden
+      (root_env_add x (root_sets_union (capture_store_root_sets captured))
+        R_args)).
+  { subst s_args_hidden.
+    eapply captured_call_frame_ready_in_frame_store_add_right_roots;
+      eassumption. }
+  assert (Hpres_args_hidden :
+    store_ref_targets_preserved env s_args s_args_hidden).
+  { subst s_args_hidden.
+    apply store_add_fresh_ref_targets_preserved.
+    apply store_lookup_not_in_names. exact Hfresh_s_args. }
+  assert (Hpres_hidden_tail :
+    store_ref_targets_preserved env s_args_hidden
+      (captured ++ s_args_hidden)).
+  { apply store_ref_targets_preserved_app_right.
+    intros y Hin_hidden.
+    apply store_lookup_not_in_names.
+    intros Hin_captured.
+    subst s_args_hidden.
+    rewrite store_names_add in Hin_hidden.
+    simpl in Hin_hidden.
+    destruct Hin_hidden as [Hyx | Hin_args].
+    - subst y. contradiction.
+    - eapply Hstore_disj; eassumption. }
+  assert (Hpres_hidden :
+    store_ref_targets_preserved env s (captured ++ s_args_hidden)).
+  { eapply store_ref_targets_preserved_trans.
+    - exact Hpres_args.
+    - eapply store_ref_targets_preserved_trans; eassumption. }
+  assert (Hcaptured_params_typed :
+    captured_params_store_typed_in_frame env captured s_args_hidden
+      (fn_captures fcall)).
+  { rewrite (alpha_rename_fn_def_captures
+                (store_names (captured ++ s_args_hidden)) fdef fcall used'
+                Hrename).
+    eapply copy_capture_store_exact_with_env_params_store_typed_in_frame.
+    - exact Hstore.
+    - exact Hpres_hidden.
+    - exact Hcopy.
+    - exact Hcheck. }
+  pose proof (conj Hframe_hidden Hcaptured_params_typed)
+    as Hframe_params_ready.
+  exact (eval_let_make_closure_captured_call_runtime_args_ready_in_frame_core
+    env Ω fname captured (capture_store_root_env captured) fdef fcall used'
+    s_args_hidden s_args vs R_args Σ_args arg_roots x T
+    (root_sets_union (capture_store_root_sets captured))
+    Hhidden Hrename Hframe_hidden Hframe_params_ready Hstore_args
+    Hargs_fdef_sargs Hvalue_roots Hfresh_s_args).
+Qed.
+
 Lemma eval_make_closure_captured_call_runtime_args_ready_auto_with_preservation_core :
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->
@@ -1767,6 +2322,76 @@ Proof.
   intros Htyping Hroots Hnames Hkeys.
   eapply
     (eval_let_make_closure_captured_call_runtime_args_ready_auto_with_preservation_parts_core
+      (proj1 Htyping)
+      (proj1 (proj2 Htyping))
+      (proj2 (proj2 Htyping))
+      (proj1 Hroots)
+      (proj1 (proj2 Hroots))
+      (proj2 (proj2 Hroots))
+      (proj1 Hnames)
+      (proj1 (proj2 Hnames))
+      (proj2 (proj2 Hnames))
+      (proj1 Hkeys)
+      (proj1 (proj2 Hkeys))
+      (proj2 (proj2 Hkeys)));
+    eassumption.
+Qed.
+
+Lemma eval_let_make_closure_captured_call_runtime_args_ready_auto_with_env_with_preservation_core :
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env Ω n R Σ args fname captures captured fdef fcall used'
+      s s_args_hidden s_args vs R_args Σ_args arg_roots env_lt captured_tys
+      x T,
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    copy_capture_store_as captures (fn_captures fdef) s = Some captured ->
+    s_args_hidden = store_add x T (VClosure fname captured) s_args ->
+    eval_args env s args s_args vs ->
+    alpha_rename_fn_def (store_names (captured ++ s_args_hidden)) fdef =
+      (fcall, used') ->
+    check_make_closure_captures_exact_sctx_with_env env Ω Σ captures
+      (fn_captures fdef) = infer_ok (env_lt, captured_tys) ->
+    NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
+    preservation_ready_args args ->
+    typed_args_roots env Ω n R Σ args (fn_params fdef)
+      Σ_args R_args arg_roots ->
+    ~ In x (store_names s) ->
+    ~ In x (store_names captured) ->
+    let hidden_roots := root_sets_union (capture_store_root_sets captured) in
+    captured_call_frame_params_ready_in_frame env captured
+      (capture_store_root_env captured) s_args_hidden
+      (root_env_add x hidden_roots R_args) (fn_captures fcall) /\
+    store_typed env s_args Σ_args /\
+    eval_args_values_have_types env Ω (captured ++ s_args_hidden) vs
+      (fn_params fcall) /\
+    Forall2 value_roots_within arg_roots vs /\
+    store_roots_within
+      (call_param_root_env (fn_params fcall) arg_roots
+        (capture_store_root_env captured ++
+          root_env_add x hidden_roots R_args))
+      (bind_params (fn_params fcall) vs (captured ++ s_args_hidden)) /\
+    store_no_shadow (bind_params (fn_params fcall) vs
+      (captured ++ s_args_hidden)) /\
+    root_env_no_shadow
+      (call_param_root_env (fn_params fcall) arg_roots
+        (capture_store_root_env captured ++
+          root_env_add x hidden_roots R_args)) /\
+    root_env_covers_params (fn_params fcall)
+      (call_param_root_env (fn_params fcall) arg_roots
+        (capture_store_root_env captured ++
+          root_env_add x hidden_roots R_args)).
+Proof.
+  intros Htyping Hroots Hnames Hkeys.
+  eapply
+    (eval_let_make_closure_captured_call_runtime_args_ready_auto_with_env_with_preservation_parts_core
       (proj1 Htyping)
       (proj1 (proj2 Htyping))
       (proj2 (proj2 Htyping))

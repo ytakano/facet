@@ -5469,7 +5469,7 @@ Definition check_fn_root_shadow_captured_call_provenance_summary
               callee_hidden_capture_args_disjoint_b callee args &&
               negb (existsb (ident_eqb x)
                 (ctx_names (params_ctx (fn_captures callee)))) &&
-              match check_make_closure_captures_exact_sctx env
+              match check_make_closure_captures_exact_sctx_with_env env
                       (fn_outlives fdef)
                       (sctx_of_ctx (fn_body_ctx fdef))
                       captures

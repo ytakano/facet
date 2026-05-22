@@ -377,7 +377,8 @@ Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased :
       Σ_args x T_hidden hidden fdef fcall σ s_body vs ret used'
       T_body Γ_out R_params R_body roots_body,
     s_args_hidden = store_add x T_hidden hidden s_args ->
-    captured_params_store_typed env captured (fn_captures fcall) ->
+    captured_params_store_typed_in_frame env captured s_args_hidden
+      (fn_captures fcall) ->
     store_typed env s_args Σ_args ->
     alpha_rename_fn_def (store_names (captured ++ s_args_hidden)) fdef =
       (fcall, used') ->
@@ -395,7 +396,6 @@ Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased :
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
     roots_exclude_params (fn_params fcall ++ fn_captures fcall) roots_body ->
-    root_env_excludes_params (fn_params fcall ++ fn_captures fcall) R_body ->
     roots_exclude x roots_body ->
     eval env (bind_params (fn_params fcall) vs (captured ++ s_args_hidden))
       (fn_body fcall) s_body ret ->
@@ -424,7 +424,8 @@ Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset :
       Σ_args x T_hidden hidden fdef fcall σ s_body vs ret used'
       T_body Γ_out R_params R_body roots_body roots_bound,
     s_args_hidden = store_add x T_hidden hidden s_args ->
-    captured_params_store_typed env captured (fn_captures fcall) ->
+    captured_params_store_typed_in_frame env captured s_args_hidden
+      (fn_captures fcall) ->
     store_typed env s_args Σ_args ->
     alpha_rename_fn_def (store_names (captured ++ s_args_hidden)) fdef =
       (fcall, used') ->
@@ -442,7 +443,6 @@ Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset :
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
     roots_exclude_params (fn_params fcall ++ fn_captures fcall) roots_body ->
-    root_env_excludes_params (fn_params fcall ++ fn_captures fcall) R_body ->
     root_set_stores_subset roots_body roots_bound ->
     roots_exclude x roots_bound ->
     eval env (bind_params (fn_params fcall) vs (captured ++ s_args_hidden))
@@ -493,7 +493,8 @@ Lemma eval_let_make_closure_captured_call_hidden_cleanup_package :
           (store_remove_params (fn_captures fcall)
             (store_remove_params (fn_params fcall) s_body)) /\
       forall sigma_result Σ_args T_body Γ_out R_params R_body roots_body roots_bound,
-        captured_params_store_typed env captured (fn_captures fcall) ->
+        captured_params_store_typed_in_frame env captured s_args_hidden
+          (fn_captures fcall) ->
         store_typed env s_args Σ_args ->
         eval_args_values_have_types env Ω (captured ++ s_args_hidden) vs
           (fn_params fcall) ->
@@ -513,8 +514,6 @@ Lemma eval_let_make_closure_captured_call_hidden_cleanup_package :
         ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
         roots_exclude_params (fn_params fcall ++ fn_captures fcall)
           roots_body ->
-        root_env_excludes_params (fn_params fcall ++ fn_captures fcall)
-          R_body ->
         root_set_stores_subset roots_body roots_bound ->
         roots_exclude x roots_bound ->
         store_typed env s_final Σ_args /\
@@ -900,7 +899,7 @@ Qed.
 
 Lemma eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components :
   forall env Ω n R Σ m x T args fname captures fdef
-      s s_final ret R_args Σ_args arg_roots captured_tys
+      s s_final ret R_args Σ_args arg_roots env_lt captured_tys
       T_body Γ_out R_body roots_body,
     store_typed env s Σ ->
     store_roots_within R s ->
@@ -912,8 +911,8 @@ Lemma eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_comp
     eval env s
       (ELet m x T (EMakeClosure fname captures)
         (ECallExpr (EVar x) args)) s_final ret ->
-    check_make_closure_captures_exact_sctx env Ω Σ captures
-      (fn_captures fdef) = infer_ok captured_tys ->
+    check_make_closure_captures_exact_sctx_with_env env Ω Σ captures
+      (fn_captures fdef) = infer_ok (env_lt, captured_tys) ->
     NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
     preservation_ready_args args ->
     typed_args_roots env Ω n R Σ args (fn_params fdef)

@@ -978,6 +978,32 @@ Proof.
   - apply root_env_remove_params_preserves_excludes; assumption.
 Qed.
 
+Lemma captured_call_runtime_root_env_binding_split_equiv_with_roots :
+  forall ps caps arg_roots cap_roots Rcap,
+    List.length arg_roots = List.length ps ->
+    List.length cap_roots = List.length caps ->
+    root_env_equiv Rcap
+      (root_env_add_params_roots caps cap_roots []) ->
+    (forall x, In x (ctx_names (params_ctx ps)) ->
+      root_env_lookup x Rcap = None) ->
+    root_env_equiv
+      (call_param_root_env ps arg_roots Rcap)
+      (call_param_root_env (ps ++ caps)
+        (arg_roots ++ cap_roots) []).
+Proof.
+  intros ps caps arg_roots cap_roots Rcap Hlen_args Hlen_caps
+    Hequiv_cap Hfresh_cap.
+  rewrite (call_param_root_env_app_roots ps caps arg_roots
+             cap_roots [] Hlen_args).
+  unfold call_param_root_env at 1.
+  rewrite (root_env_remove_params_lookup_none_self ps Rcap).
+  - eapply root_env_add_params_roots_preserves_equiv.
+    rewrite root_env_remove_params_empty.
+    exact Hequiv_cap.
+  - intros x Hin.
+    apply Hfresh_cap. exact Hin.
+Qed.
+
 Lemma captured_call_runtime_root_env_binding_split_equiv :
   forall env captured ps caps arg_roots,
     captured_params_store_typed env captured caps ->
@@ -990,16 +1016,87 @@ Lemma captured_call_runtime_root_env_binding_split_equiv :
         (arg_roots ++ repeat [] (List.length caps)) []).
 Proof.
   intros env captured ps caps arg_roots Hcaptured Hfresh Hlen.
-  rewrite (call_param_root_env_app_roots ps caps arg_roots
-             (repeat [] (List.length caps)) [] Hlen).
-  unfold call_param_root_env at 1.
-  rewrite (root_env_remove_params_lookup_none_self
-             ps (empty_root_env_for_store captured)).
-  - eapply root_env_add_params_roots_preserves_equiv.
-    rewrite root_env_remove_params_empty.
-    eapply empty_root_env_for_captured_params_equiv. exact Hcaptured.
+  eapply captured_call_runtime_root_env_binding_split_equiv_with_roots.
+  - exact Hlen.
+  - rewrite repeat_length. reflexivity.
+  - eapply empty_root_env_for_captured_params_equiv. exact Hcaptured.
   - intros x Hin.
     eapply empty_root_env_for_store_params_fresh_lookup_none; eassumption.
+Qed.
+
+Lemma captured_call_binding_runtime_root_env_equiv_with_roots :
+  forall fdef fcall used used' arg_roots cap_roots Rcap,
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    NoDup (ctx_names (params_ctx
+      (fn_params fdef ++ fn_captures fdef))) ->
+    List.length arg_roots = List.length (fn_params fdef) ->
+    List.length cap_roots = List.length (fn_captures fdef) ->
+    root_env_equiv Rcap
+      (root_env_add_params_roots (fn_captures fcall) cap_roots []) ->
+    (forall x, In x (ctx_names (params_ctx (fn_params fcall))) ->
+      root_env_lookup x Rcap = None) ->
+    root_env_equiv
+      (call_param_root_env (fn_params fcall) arg_roots Rcap)
+      (root_env_instantiate
+        (root_subst_of_params
+          (fn_params fdef ++ fn_captures fdef)
+          (arg_roots ++ cap_roots))
+        (initial_root_env_for_params_origin
+          (fn_params fdef ++ fn_captures fdef)
+          (fn_params fcall ++ fn_captures fcall))).
+Proof.
+  intros fdef fcall used used' arg_roots cap_roots Rcap Hrename Hnodup
+    Hlen_args Hlen_caps Hequiv_cap Hfresh_cap.
+  pose proof (alpha_rename_fn_def_binding_params_alpha_ts
+                used fdef fcall used' Hrename) as Halpha_binding.
+  pose proof (alpha_rename_fn_def_shape used fdef fcall used' Hrename)
+    as [_ [_ Halpha_params]].
+  assert (Hlen_args_fcall :
+    List.length arg_roots = List.length (fn_params fcall)).
+  { rewrite <- (params_alpha_length _ _ Halpha_params).
+    exact Hlen_args. }
+  assert (Hcaps_eq :
+    fn_captures fcall = fn_captures fdef).
+  { rewrite <- (alpha_rename_fn_def_captures
+                  used fdef fcall used' Hrename).
+    reflexivity. }
+  assert (Hlen_binding :
+    List.length
+      (arg_roots ++ cap_roots) =
+    List.length (fn_params fdef ++ fn_captures fdef)).
+  { rewrite length_app, Hlen_caps, length_app.
+    rewrite Hlen_args. reflexivity. }
+  assert (Hlen_caps_fcall :
+    List.length cap_roots = List.length (fn_captures fcall)).
+  { rewrite Hcaps_eq. exact Hlen_caps. }
+  assert (Hinitial_inst_equiv :
+    root_env_equiv
+      (root_env_instantiate
+        (root_subst_of_params
+          (fn_params fdef ++ fn_captures fdef)
+          (arg_roots ++ cap_roots))
+        (initial_root_env_for_params_origin
+          (fn_params fdef ++ fn_captures fdef)
+          (fn_params fcall ++ fn_captures fcall)))
+      (call_param_root_env (fn_params fcall ++ fn_captures fcall)
+        (arg_roots ++ cap_roots) [])).
+  { eapply root_env_instantiate_initial_origin_equiv_call_param_root_env_empty;
+      eassumption. }
+  eapply (root_env_equiv_trans
+    (call_param_root_env (fn_params fcall) arg_roots
+      Rcap)
+    (call_param_root_env (fn_params fcall ++ fn_captures fcall)
+      (arg_roots ++ cap_roots) [])
+    (root_env_instantiate
+      (root_subst_of_params
+        (fn_params fdef ++ fn_captures fdef)
+        (arg_roots ++ cap_roots))
+      (initial_root_env_for_params_origin
+        (fn_params fdef ++ fn_captures fdef)
+        (fn_params fcall ++ fn_captures fcall)))).
+  - eapply captured_call_runtime_root_env_binding_split_equiv_with_roots;
+      eassumption.
+  - apply root_env_equiv_sym. exact Hinitial_inst_equiv.
 Qed.
 
 Lemma captured_call_binding_runtime_root_env_equiv :
@@ -1023,54 +1120,22 @@ Lemma captured_call_binding_runtime_root_env_equiv :
 Proof.
   intros env captured fdef fcall used used' arg_roots Hrename Hnodup
     Hlen_args Hcaptured Hfresh.
-  pose proof (alpha_rename_fn_def_binding_params_alpha_ts
-                used fdef fcall used' Hrename) as Halpha_binding.
-  pose proof (alpha_rename_fn_def_shape used fdef fcall used' Hrename)
-    as [_ [_ Halpha_params]].
-  assert (Hlen_args_fcall :
-    List.length arg_roots = List.length (fn_params fcall)).
-  { rewrite <- (params_alpha_length _ _ Halpha_params).
-    exact Hlen_args. }
-  assert (Hcaps_eq :
-    fn_captures fcall = fn_captures fdef).
-  { rewrite <- (alpha_rename_fn_def_captures
-                  used fdef fcall used' Hrename).
-    reflexivity. }
-  assert (Hlen_binding :
-    List.length
-      (arg_roots ++ repeat [] (List.length (fn_captures fdef))) =
-    List.length (fn_params fdef ++ fn_captures fdef)).
-  { rewrite length_app, repeat_length, length_app.
-    rewrite Hlen_args. reflexivity. }
-  assert (Hinitial_inst_equiv :
-    root_env_equiv
-      (root_env_instantiate
-        (root_subst_of_params
-          (fn_params fdef ++ fn_captures fdef)
-          (arg_roots ++ repeat [] (List.length (fn_captures fdef))))
-        (initial_root_env_for_params_origin
-          (fn_params fdef ++ fn_captures fdef)
-          (fn_params fcall ++ fn_captures fcall)))
-      (call_param_root_env (fn_params fcall ++ fn_captures fcall)
-        (arg_roots ++ repeat [] (List.length (fn_captures fdef))) [])).
-  { eapply root_env_instantiate_initial_origin_equiv_call_param_root_env_empty;
-      eassumption. }
-  eapply (root_env_equiv_trans
-    (call_param_root_env (fn_params fcall) arg_roots
-      (empty_root_env_for_store captured))
-    (call_param_root_env (fn_params fcall ++ fn_captures fcall)
-      (arg_roots ++ repeat [] (List.length (fn_captures fdef))) [])
-    (root_env_instantiate
-      (root_subst_of_params
-        (fn_params fdef ++ fn_captures fdef)
-        (arg_roots ++ repeat [] (List.length (fn_captures fdef))))
-      (initial_root_env_for_params_origin
-        (fn_params fdef ++ fn_captures fdef)
-        (fn_params fcall ++ fn_captures fcall)))).
-  - rewrite <- Hcaps_eq.
-    eapply captured_call_runtime_root_env_binding_split_equiv;
-      eassumption.
-  - apply root_env_equiv_sym. exact Hinitial_inst_equiv.
+  pose proof (alpha_rename_fn_def_captures
+                used fdef fcall used' Hrename) as Hcaps_eq.
+  eapply (captured_call_binding_runtime_root_env_equiv_with_roots
+    fdef fcall used used' arg_roots
+    (repeat ([] : root_set) (List.length (fn_captures fdef)))
+    (empty_root_env_for_store captured)).
+  - exact Hrename.
+  - exact Hnodup.
+  - exact Hlen_args.
+  - rewrite repeat_length. reflexivity.
+  - replace (repeat ([] : root_set) (List.length (fn_captures fdef))) with
+      (repeat ([] : root_set) (List.length (fn_captures fcall))).
+    + eapply empty_root_env_for_captured_params_equiv. exact Hcaptured.
+    + rewrite <- Hcaps_eq. reflexivity.
+  - intros x Hin.
+    eapply empty_root_env_for_store_params_fresh_lookup_none; eassumption.
 Qed.
 
 Lemma root_env_excludes_add :
@@ -1136,4 +1201,3 @@ Proof.
   - exact Hroots.
   - apply root_env_remove_params_excludes_params; assumption.
 Qed.
-

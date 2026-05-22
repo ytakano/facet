@@ -133,11 +133,15 @@ runtime safety currently cross theorem boundaries.
 - Extracted the captured-call evidence module:
   `TypeSafetyCapturedCallEvidence.v` now owns the reusable alpha-renaming and
   captured callee-body root-shadow provenance bridge lemmas.
+- Extracted the closure runtime-args facts module:
+  `TypeSafetyClosureRuntimeArgsFacts.v` now owns the helper lemma cluster from
+  `bind_params_head_fresh_in_tail` through the make-closure captured-call
+  frame params readiness bridge.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/TypeSafetyCapturedCallEvidence.vo theories/TypeSystem/TypeSafetyCapturedCall.vo theories/TypeSystem/TypeSafety.v`.
-- Next task: start the next Phase 3 slice with `rg` to identify remaining
-  root/capture/store-subset helper clusters that can move out of large
-  preservation files without changing theorem statements.
+  `cd rocq && make theories/TypeSystem/TypeSafetyClosureRuntimeArgsFacts.vo theories/TypeSystem/TypeSafetyClosureRuntimeArgs.vo theories/TypeSystem/TypeSafetyClosure.v`.
+- Next task: continue Phase 3 by looking for the next stable helper cluster
+  that can move out of a large preservation file without changing theorem
+  statements.
 
 ### Phase 1: Compact Continuation Notes
 

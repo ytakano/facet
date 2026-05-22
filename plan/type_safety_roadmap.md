@@ -112,41 +112,41 @@ Work in this order unless a proof exposes a soundness gap.
 
      ```coq
      copy_capture_roots_as
+     capture_value_roots
+     capture_store_root_sets
+     capture_store_root_env
      captured_call_frame_ready_in_frame
      captured_call_frame_params_ready_in_frame
      copy_capture_store_exact_with_env_params_store_typed_in_frame
+     copy_capture_store_as_captured_values_canonical_roots_with_env
+     copy_capture_store_as_captured_store_runtime_ready_in_frame_with_env
      captured_call_binding_runtime_root_env_equiv_with_roots
      copy_capture_roots_as_equiv_root_env_add_params_roots
+     capture_store_root_env_equiv_root_env_add_params_roots
      ```
 
-   Blocker found while wiring executable sidecar acceptance:
+   Resolved runtime-root invariant:
 
-   - The captured-call body substitution bridge can now use arbitrary capture
-     root sets instead of hardcoded `repeat []`.
-   - The remaining missing fact is stronger: copied capture root sets are
-     taken from the caller root environment, and those root sets may
-     over-approximate the actual reference roots in the copied value.
-   - Existing preservation evidence proves actual reference targets survive
-     into the argument/result frame via `store_ref_targets_preserved`; it does
-     not prove every store root listed in an arbitrary source root set remains
-     named in the post-argument store.
-   - Therefore the captured-call sidecar must not be widened yet for shared
-     reference captures. Doing so would manufacture `root_env_store_roots_named`
-     evidence for roots that may no longer be present in the runtime frame.
+   - Stage 7b now uses canonical copied capture roots derived from copied
+     runtime values, not arbitrary caller root-env entries.
+   - Ref-free captured values use `[]`; shared-reference captured values use the
+     singleton store root from the copied `VRef`.
+   - This avoids the prior over-approximation gap where source root-env entries
+     could mention roots no longer named after argument evaluation.
 
-   Next design task:
+   Next implementation task:
 
-   - Choose and prove one runtime-root invariant before changing executable
-     validator acceptance:
-     - canonical/minimal copied roots for captures, derived from captured
-       values rather than arbitrary source root-env entries; or
-     - a strengthened preservation invariant proving copied source root sets
-       stay named through argument evaluation; or
-     - a checker-side restriction requiring captured root entries to contain
-       only roots guaranteed by the copied values.
-   - After the invariant is fixed, wire
-     `check_make_closure_captures_exact_sctx_with_env` only through captured-call
-     sidecar routes and keep ordinary checker/direct-call behavior unchanged.
+   - Rewire `TypeSafetyCapturedCall.v` from
+     `empty_root_env_for_store captured` and `repeat []` to:
+     - `capture_store_root_env captured`
+     - `capture_store_root_sets captured`
+   - Use `captured_call_binding_runtime_root_env_equiv_with_roots` plus
+     `capture_store_root_env_equiv_root_env_add_params_roots` for body
+     substitution.
+   - Use the canonical in-frame readiness helpers when packaging captured-call
+     runtime arguments.
+   - Only after that proof compiles, replace the captured-call sidecar checker
+     branches with `check_make_closure_captures_exact_sctx_with_env`.
 
    Still required after the invariant is fixed:
 
@@ -158,7 +158,8 @@ Work in this order unless a proof exposes a soundness gap.
    - Keep the invalid fixtures for missing outlives support, mutable binding
      capture, and `&mut` capture rejection.
    - Do not widen executable sidecar validators or captured-call routes until
-     the copied-root naming invariant above is designed and proved.
+     the captured-call preservation theorem is rewired to canonical capture
+     roots and compiles.
 
 2. **Keep the annotated local-let captured-call sidecar branch stable.**
 

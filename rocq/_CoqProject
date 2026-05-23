@@ -60,6 +60,7 @@ theories/TypeSystem/TypeSafetyPrefixPreservation.v
 theories/TypeSystem/TypeSafetyRootPreservation.v
 theories/TypeSystem/TypeSafetyPreservationWrappers.v
 theories/TypeSystem/TypeSafetyClosureWrappersCleanup.v
+theories/TypeSystem/TypeSafetyClosureWrappersRuntimeArgs.v
 theories/TypeSystem/TypeSafetyClosureWrappers.v
 theories/TypeSystem/TypeSafetyDirectCallWrappers.v
 theories/TypeSystem/TypeSafety.v

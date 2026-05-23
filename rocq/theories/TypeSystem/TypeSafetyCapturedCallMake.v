@@ -117,7 +117,7 @@ Lemma eval_make_closure_captured_call_expr_package_with_callee_components_with_p
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
   eval_preserves_typing_roots_ready_prefix_mutual_package_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
-  forall env Ω n R Σ args fname captures captured fdef fcall used'
+  forall env Ω n R Σ args fname captures captured fdef fcall used' σ
       s s_args s_body vs ret R_args Σ_args arg_roots env_lt captured_tys
       T_body Γ_out R_body roots_body,
     store_typed env s Σ ->
@@ -137,7 +137,7 @@ Lemma eval_make_closure_captured_call_expr_package_with_callee_components_with_p
       (fn_captures fdef) = infer_ok (env_lt, captured_tys) ->
     NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
     preservation_ready_args args ->
-    typed_args_roots env Ω n R Σ args (fn_params fdef)
+    typed_args_roots env Ω n R Σ args (apply_lt_params σ (fn_params fdef))
       Σ_args R_args arg_roots ->
     NoDup (ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))) ->
     provenance_ready_expr (fn_body fdef) ->
@@ -159,7 +159,7 @@ Lemma eval_make_closure_captured_call_expr_package_with_callee_components_with_p
     value_has_type env
       (store_remove_params (fn_captures fcall)
         (store_remove_params (fn_params fcall) s_body))
-      ret (apply_lt_ty [] (fn_ret fdef)) /\
+      ret (apply_lt_ty σ (fn_ret fdef)) /\
     store_ref_targets_preserved env s
       (store_remove_params (fn_captures fcall)
         (store_remove_params (fn_params fcall) s_body)) /\
@@ -170,7 +170,7 @@ Lemma eval_make_closure_captured_call_expr_package_with_callee_components_with_p
       ret.
 Proof.
   intros Htyping Hroots_mutual Hnames Hkeys_mutual Hframe Hprefix Hparam
-    env Ω n R Σ args fname captures captured fdef fcall used'
+    env Ω n R Σ args fname captures captured fdef fcall used' σ
     s s_args s_body vs ret R_args Σ_args arg_roots env_lt captured_tys
     T_body Γ_out R_body roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys
     Heval_make Hlookup Heval_args Hrename Heval_body Hcheck Hnodup_caps
@@ -178,7 +178,7 @@ Proof.
     Hcompat_body Hexclude_roots Hexclude_env.
   destruct (eval_make_closure_captured_call_runtime_args_ready_auto_with_env_with_preservation_core
               Htyping (eval_preserves_roots_ready_mutual_statement_to_package Hroots_mutual)
-              Hnames Hkeys_mutual env Ω n R Σ args fname captures captured fdef fcall used'
+              Hnames Hkeys_mutual env Ω n R Σ args fname captures captured fdef fcall used' σ
               s s_args vs R_args Σ_args arg_roots env_lt captured_tys
               Hstore Hroots Hshadow Hrn Hnamed Hkeys Heval_make Hlookup
               Heval_args Hrename Hcheck Hnodup_caps Hready_args
@@ -273,7 +273,8 @@ Proof.
   destruct Hshape as [_ [_ Hparams_alpha]].
   assert (Hlen_arg_roots_fdef :
     List.length arg_roots = List.length (fn_params fdef)).
-  { eapply typed_args_roots_arg_roots_length. exact Htyped_args. }
+  { rewrite <- (apply_lt_params_length σ (fn_params fdef)).
+    eapply typed_args_roots_arg_roots_length. exact Htyped_args. }
   assert (Hlen_binding_roots :
     List.length
       (arg_roots ++ capture_store_root_sets captured) =
@@ -291,7 +292,8 @@ Proof.
   { pose proof (preservation_ready_args_implies_provenance_ready_closure
                   args Hready_args) as Hprov_args.
     destruct (proj1 (proj2 Hnames)
-              env s args s_args vs Heval_args Ω n R Σ (fn_params fdef)
+              env s args s_args vs Heval_args Ω n R Σ
+              (apply_lt_params σ (fn_params fdef))
               Σ_args R_args arg_roots Hprov_args Hstore Hroots Hshadow
               Hrn Hnamed Htyped_args)
       as [_ Harg_roots_named].
@@ -555,7 +557,8 @@ Proof.
   { pose proof (preservation_ready_args_implies_provenance_ready_closure
                   args Hready_args) as Hprov_args.
     destruct (proj1 (proj2 Hnames)
-              env s args s_args vs Heval_args Ω n R Σ (fn_params fdef)
+              env s args s_args vs Heval_args Ω n R Σ
+              (apply_lt_params σ (fn_params fdef))
               Σ_args R_args arg_roots Hprov_args Hstore Hroots Hshadow
               Hrn Hnamed Htyped_args)
       as [Henv_named _].
@@ -651,12 +654,12 @@ Proof.
       rewrite capture_store_root_env_names.
       exact (Hparams_fresh_captured x Hin). }
   destruct
-    (eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
+      (eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_with_preservation_core
       Hframe
       Hprefix
       Hparam env Ω s s s_args s_body
       (EMakeClosure fname captures) args fname captured fdef fcall vs ret
-      used' (capture_store_root_env captured) R_args Σ_args [] T_body
+      used' (capture_store_root_env captured) R_args Σ_args σ T_body
       Γ_out_r
       (call_param_root_env (fn_params fcall) arg_roots
         (capture_store_root_env captured ++ R_args))
@@ -670,7 +673,8 @@ Proof.
   pose proof (preservation_ready_args_implies_provenance_ready_closure
                 args Hready_args) as Hprov_args.
   destruct (proj1 (proj2 Hprefix)
-              env s args s_args vs Heval_args Ω n R Σ (fn_params fdef)
+              env s args s_args vs Heval_args Ω n R Σ
+              (apply_lt_params σ (fn_params fdef))
               Σ_args R_args arg_roots Hprov_args)
     as [Hprefix_args _ Hrefs_args Hrooted_args].
   { eapply store_typed_prefix_exact. exact Hstore. }
@@ -705,7 +709,7 @@ Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_componen
   eval_preserves_frame_scope_roots_ready_mutual_statement ->
   eval_preserves_typing_roots_ready_prefix_mutual_package_statement ->
   eval_preserves_param_scope_roots_ready_mutual_statement ->
-  forall env Ω n R Σ args fname captures captured fdef fcall used'
+  forall env Ω n R Σ args fname captures captured fdef fcall used' σ
       s s_args s_body vs ret R_args Σ_args arg_roots env_lt captured_tys
       T_body Γ_out R_body roots_body,
     store_typed env s Σ ->
@@ -725,7 +729,7 @@ Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_componen
       (fn_captures fdef) = infer_ok (env_lt, captured_tys) ->
     NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
     preservation_ready_args args ->
-    typed_args_roots env Ω n R Σ args (fn_params fdef)
+    typed_args_roots env Ω n R Σ args (apply_lt_params σ (fn_params fdef))
       Σ_args R_args arg_roots ->
     NoDup (ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))) ->
     provenance_ready_expr (fn_body fdef) ->
@@ -747,10 +751,10 @@ Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_componen
     value_has_type env
       (store_remove_params (fn_captures fcall)
         (store_remove_params (fn_params fcall) s_body))
-      ret (apply_lt_ty [] (fn_ret fdef)).
+      ret (apply_lt_ty σ (fn_ret fdef)).
 Proof.
   intros Htyping Hroots_mutual Hnames Hkeys_mutual Hframe Hprefix Hparam
-    env Ω n R Σ args fname captures captured fdef fcall used'
+    env Ω n R Σ args fname captures captured fdef fcall used' σ
     s s_args s_body vs ret R_args Σ_args arg_roots env_lt captured_tys
     T_body Γ_out R_body roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys
     Heval_make Hlookup Heval_args Hrename Heval_body Hcheck Hnodup_caps
@@ -759,7 +763,7 @@ Proof.
   destruct
     (eval_make_closure_captured_call_expr_package_with_callee_components_with_preservation_core
       Htyping Hroots_mutual Hnames Hkeys_mutual Hframe Hprefix Hparam
-      env Ω n R Σ args fname captures captured fdef fcall used'
+      env Ω n R Σ args fname captures captured fdef fcall used' σ
       s s_args s_body vs ret R_args Σ_args arg_roots env_lt captured_tys
       T_body Γ_out R_body roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys
       Heval_make Hlookup Heval_args Hrename Heval_body Hcheck Hnodup_caps

@@ -82,15 +82,16 @@ do not redefine the language accepted by the ordinary checker.
   readiness.
 - General `ECallExpr callee args` remains staged. Non-capturing function
   values, immutable-copy captured closures, and ordinary checker support for
-  callable shared-reference captured closures are in place. Runtime sidecar
-  evidence for captured references still comes next; mutable and affine/linear
-  captures remain later work.
+  callable shared-reference captured closures are in place. The remaining
+  captured-reference sidecar blocker is the nonzero-lifetime captured-call
+  proof bridge described below; mutable and affine/linear captures remain later
+  work.
 
 ## Next Implementation Order
 
 Work in this order unless a proof exposes a soundness gap.
 
-1. **Resolve the Stage 7b captured-reference runtime-root invariant.**
+1. **Resolve the nonzero-lifetime captured-call sidecar type bridge.**
 
    Core status: ordinary `EMakeClosure` capture checking now accepts
    immutable unrestricted shared-reference values, rejects mutable bindings
@@ -234,9 +235,21 @@ Work in this order unless a proof exposes a soundness gap.
      without making it an ordinary tail entry.
    - The annotated local-let sidecar checker branch now uses
      `check_make_closure_captures_exact_sctx_with_env`.
+   - The captured-call runtime helper API now carries the call-site lifetime
+     substitution `σ`, accepts arguments typed against
+     `apply_lt_params σ (fn_params fdef)`, and returns
+     `value_has_type ... (apply_lt_ty σ (fn_ret fdef))`. Existing zero-lifetime
+     wrapper routes instantiate this with `[]`.
 
-   Still required after the invariant is fixed:
+   Still required:
 
+   - Do not remove `fn_lifetimes = 0` from the sidecar checker branch until the
+     exact sidecar evidence can carry the same instantiated closure-call return
+     type that ordinary `TForall ... TClosure` call typing computes.
+   - Add a proof bridge between the closure-call instantiated type
+     (`open_bound_ty` over the closed closure body) and the cleanup helper result
+     (`apply_lt_ty σ (fn_ret fdef)`), or refactor the helper to return the
+     call-site instantiated type directly.
    - Keep closure-call lifetime instantiation local to the
      `TForall ... TClosure` call path. Do not silently erase helper function
      lifetimes or make closure calls ordinary direct-call evidence.

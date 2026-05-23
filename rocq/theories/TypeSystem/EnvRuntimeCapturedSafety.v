@@ -316,10 +316,12 @@ Proof.
         args (fn_params fcallee) Sigma_args R_args arg_roots
         Htyped_args_shadow)
         as Htyped_args_roots;
+      rewrite <- (apply_lt_params_nil_ts (fn_params fcallee)) in
+        Htyped_args_roots;
       destruct (eval_make_closure_captured_call_expr_preserves_typing_with_callee_components
         env (fn_outlives f) (fn_lifetimes f)
         (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
-        args fname_call captures captured fcallee fcall used' s s_args s_body vs ret
+        args fname_call captures captured fcallee fcall used' [] s s_args s_body vs ret
         R_args Sigma_args arg_roots env_lt captured_tys T_callee Γ_callee
         R_callee roots_callee
         Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys

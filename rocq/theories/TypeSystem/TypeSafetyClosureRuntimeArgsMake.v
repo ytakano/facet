@@ -10,7 +10,7 @@ Lemma eval_make_closure_captured_call_runtime_args_ready_auto_with_env_with_pres
   eval_preserves_roots_ready_mutual_package_statement ->
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
-  forall env Ω n R Σ args fname captures captured fdef fcall used'
+  forall env Ω n R Σ args fname captures captured fdef fcall used' σ
       s s_args vs R_args Σ_args arg_roots env_lt captured_tys,
     store_typed env s Σ ->
     store_roots_within R s ->
@@ -27,7 +27,7 @@ Lemma eval_make_closure_captured_call_runtime_args_ready_auto_with_env_with_pres
       (fn_captures fdef) = infer_ok (env_lt, captured_tys) ->
     NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
     preservation_ready_args args ->
-    typed_args_roots env Ω n R Σ args (fn_params fdef)
+    typed_args_roots env Ω n R Σ args (apply_lt_params σ (fn_params fdef))
       Σ_args R_args arg_roots ->
     captured_call_frame_params_ready_in_frame env captured
       (capture_store_root_env captured) s_args R_args
@@ -50,7 +50,7 @@ Lemma eval_make_closure_captured_call_runtime_args_ready_auto_with_env_with_pres
         (capture_store_root_env captured ++ R_args)).
 Proof.
   intros Htyping Hroots_mutual Hnames Hkeys env Ω n R Σ args fname
-    captures captured fdef fcall used' s s_args vs R_args Σ_args
+    captures captured fdef fcall used' σ s s_args vs R_args Σ_args
     arg_roots env_lt captured_tys Hstore Hroots Hshadow Hrn Hnamed Hkeys0
     Heval_make Hlookup Heval_args Hrename Hcheck Hnodup_caps Hready_args
     Htyped_args.
@@ -58,13 +58,18 @@ Proof.
                 args Hready_args) as Hprov_args.
   destruct (proj1 (proj2 Htyping)
               env s args s_args vs Heval_args Ω n Σ
-              (fn_params fdef) Σ_args Hready_args Hstore
+              (apply_lt_params σ (fn_params fdef)) Σ_args Hready_args Hstore
               (typed_args_roots_structural env Ω n R Σ args
-                (fn_params fdef) Σ_args R_args arg_roots Htyped_args))
-    as [Hstore_args [Hargs_fdef_sargs Hpres_args]].
+                (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots
+                Htyped_args))
+    as [Hstore_args [Hargs_sigma_sargs Hpres_args]].
+  assert (Hargs_fdef_sargs :
+    eval_args_values_have_types env Ω s_args vs (fn_params fdef)).
+  { eapply eval_args_values_have_types_apply_lt_params_inv.
+    exact Hargs_sigma_sargs. }
   pose proof (proj1 (proj2 Hroots_mutual)
               env s args s_args vs Heval_args Ω n R Σ
-              (fn_params fdef) Σ_args R_args arg_roots Hprov_args Hroots
+              (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots Hprov_args Hroots
               Hshadow Hrn Htyped_args) as Hrooted_args.
   pose proof (rooted_args_store_roots _ _ _ _ Hrooted_args)
     as Hroots_args'.
@@ -76,11 +81,11 @@ Proof.
     as Hrn_args.
   pose proof (proj1 (proj2 Hnames)
               env s args s_args vs Heval_args Ω n R Σ
-              (fn_params fdef) Σ_args R_args arg_roots Hprov_args Hstore
+              (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots Hprov_args Hstore
               Hroots Hshadow Hrn Hnamed Htyped_args) as Hnames_args'.
   pose proof (proj1 (proj2 Hkeys)
               env s args s_args vs Heval_args Ω n R Σ
-              (fn_params fdef) Σ_args R_args arg_roots Hprov_args Hstore
+              (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots Hprov_args Hstore
               Hroots Hshadow Hrn Hkeys0 Htyped_args) as Hkeys_args'.
   destruct Hnames_args' as [Hnamed_args _].
   dependent destruction Heval_make.
@@ -461,4 +466,3 @@ Proof.
       (proj2 (proj2 Hkeys)));
     eassumption.
 Qed.
-

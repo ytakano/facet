@@ -5,6 +5,31 @@ From Facet.TypeSystem Require Export TypeSafetyClosureWrappersRuntimeArgs.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
+Lemma apply_lt_params_nil_ts :
+  forall ps,
+    apply_lt_params [] ps = ps.
+Proof.
+  intros ps.
+  induction ps as [| p ps IH].
+  - reflexivity.
+  - destruct p as [m x T].
+    unfold apply_lt_params in *.
+    simpl in *.
+    unfold apply_lt_param in *.
+    simpl in *.
+    change
+      ({| param_mutability := m; param_name := x;
+           param_ty := apply_lt_ty [] T |}
+        :: map
+             (fun p : param =>
+                {| param_mutability := param_mutability p;
+                   param_name := param_name p;
+                   param_ty := apply_lt_ty [] (param_ty p) |}) ps =
+       {| param_mutability := m; param_name := x; param_ty := T |} :: ps).
+    rewrite apply_lt_ty_nil_ts.
+    rewrite IH. reflexivity.
+Qed.
+
 Lemma eval_make_closure_captured_call_expr_preserves_typing_with_instantiated_body :
   forall env Ω n R Σ args fname captures captured fdef fcall used'
       s s_args s_body vs ret R_args Σ_args arg_roots captured_tys
@@ -60,10 +85,11 @@ Proof.
       (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
         eval_preserves_typing_roots_ready_prefix_mutual)
       eval_preserves_param_scope_roots_ready_mutual);
+    try (rewrite apply_lt_params_nil_ts; eassumption);
     eassumption.
 Qed.
 Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_components :
-  forall env Ω n R Σ args fname captures captured fdef fcall used'
+  forall env Ω n R Σ args fname captures captured fdef fcall used' σ
       s s_args s_body vs ret R_args Σ_args arg_roots env_lt captured_tys
       T_body Γ_out R_body roots_body,
     store_typed env s Σ ->
@@ -83,7 +109,7 @@ Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_componen
       (fn_captures fdef) = infer_ok (env_lt, captured_tys) ->
     NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
     preservation_ready_args args ->
-    typed_args_roots env Ω n R Σ args (fn_params fdef)
+    typed_args_roots env Ω n R Σ args (apply_lt_params σ (fn_params fdef))
       Σ_args R_args arg_roots ->
     NoDup (ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))) ->
     provenance_ready_expr (fn_body fdef) ->
@@ -105,7 +131,7 @@ Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_componen
     value_has_type env
       (store_remove_params (fn_captures fcall)
         (store_remove_params (fn_params fcall) s_body))
-      ret (apply_lt_ty [] (fn_ret fdef)).
+      ret (apply_lt_ty σ (fn_ret fdef)).
 Proof.
   eapply
     (eval_make_closure_captured_call_expr_preserves_typing_with_callee_components_with_preservation_core
@@ -121,7 +147,7 @@ Proof.
 Qed.
 
 Lemma eval_make_closure_captured_call_expr_package_with_callee_components :
-  forall env Ω n R Σ args fname captures captured fdef fcall used'
+  forall env Ω n R Σ args fname captures captured fdef fcall used' σ
       s s_args s_body vs ret R_args Σ_args arg_roots env_lt captured_tys
       T_body Γ_out R_body roots_body,
     store_typed env s Σ ->
@@ -141,7 +167,7 @@ Lemma eval_make_closure_captured_call_expr_package_with_callee_components :
       (fn_captures fdef) = infer_ok (env_lt, captured_tys) ->
     NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
     preservation_ready_args args ->
-    typed_args_roots env Ω n R Σ args (fn_params fdef)
+    typed_args_roots env Ω n R Σ args (apply_lt_params σ (fn_params fdef))
       Σ_args R_args arg_roots ->
     NoDup (ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))) ->
     provenance_ready_expr (fn_body fdef) ->
@@ -163,7 +189,7 @@ Lemma eval_make_closure_captured_call_expr_package_with_callee_components :
     value_has_type env
       (store_remove_params (fn_captures fcall)
         (store_remove_params (fn_params fcall) s_body))
-      ret (apply_lt_ty [] (fn_ret fdef)) /\
+      ret (apply_lt_ty σ (fn_ret fdef)) /\
     store_ref_targets_preserved env s
       (store_remove_params (fn_captures fcall)
         (store_remove_params (fn_params fcall) s_body)) /\

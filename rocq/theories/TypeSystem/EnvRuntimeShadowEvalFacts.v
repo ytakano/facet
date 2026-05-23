@@ -151,9 +151,11 @@ Proof.
       pose proof (typed_args_roots_shadow_safe_roots
         env Ω n R Σ args (fn_params fdef) Sigma_args R_args arg_roots
         Htyped_args_shadow) as Htyped_args_roots;
+      rewrite <- (apply_lt_params_nil_ts (fn_params fdef)) in
+        Htyped_args_roots;
       destruct
         (eval_make_closure_captured_call_expr_package_with_callee_components
-          env Ω n R Σ args fname_call captures captured fdef fcall used'
+          env Ω n R Σ args fname_call captures captured fdef fcall used' []
           s s_args s_body vs ret R_args Sigma_args arg_roots env_lt
           captured_tys T_body Γ_out R_body roots_body Hstore Hroots
           Hshadow Hrn Hnamed Hkeys
@@ -297,9 +299,11 @@ Proof.
       pose proof (typed_args_roots_shadow_safe_roots
         env Ω n R Σ args (fn_params fdef) Sigma_args R_args arg_roots
         Htyped_args_shadow) as Htyped_args_roots;
+      rewrite <- (apply_lt_params_nil_ts (fn_params fdef)) in
+        Htyped_args_roots;
       destruct
         (eval_make_closure_captured_call_expr_preserves_typing_with_callee_components
-          env Ω n R Σ args fname_call captures captured fdef fcall used'
+          env Ω n R Σ args fname_call captures captured fdef fcall used' []
           s s_args s_body vs ret R_args Sigma_args arg_roots env_lt
           captured_tys T_body Γ_out R_body roots_body Hstore Hroots
           Hshadow Hrn Hnamed Hkeys

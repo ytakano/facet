@@ -1,7 +1,7 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules TypeChecker RuntimeTyping RootProvenance
   EnvStructuralRules AlphaRenaming EnvSoundnessFacts CheckerSoundness
-  TypeSafetyRootEnvParams.
+  TypeSafetyRootEnvParams TypeSafetyDirectCallSetup.
 From Facet.TypeSystem Require Export TypeSafetyCapturedCallEvidence.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
@@ -109,7 +109,7 @@ Proof.
   repeat split; assumption.
 Qed.
 
-Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_components_with_preservation_core :
+Lemma eval_make_closure_captured_call_expr_package_with_callee_components_with_preservation_core :
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->
   eval_preserves_root_names_ready_mutual_statement ->
@@ -159,7 +159,15 @@ Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_componen
     value_has_type env
       (store_remove_params (fn_captures fcall)
         (store_remove_params (fn_params fcall) s_body))
-      ret (apply_lt_ty [] (fn_ret fdef)).
+      ret (apply_lt_ty [] (fn_ret fdef)) /\
+    store_ref_targets_preserved env s
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body)) /\
+    rooted_eval_result R_args
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body))
+      (root_sets_union (arg_roots ++ capture_store_root_sets captured))
+      ret.
 Proof.
   intros Htyping Hroots_mutual Hnames Hkeys_mutual Hframe Hprefix Hparam
     env Ω n R Σ args fname captures captured fdef fcall used'
@@ -370,6 +378,15 @@ Proof.
     as (R_body_inst & roots_body_inst &
         Htyped_inst & _ & Hbody_inst_equiv & Hroots_inst_equiv).
   { exact Hbase_equiv. }
+  assert (Hsubset_inst :
+    root_set_stores_subset roots_body_inst
+      (root_sets_union (arg_roots ++ capture_store_root_sets captured))).
+  { eapply typed_env_roots_shadow_safe_instantiated_roots_subset_union.
+    - unfold fn_body_ctx, fn_body_params in Htyped_renamed.
+      exact Htyped_renamed.
+    - exact Hrn_initial_r.
+    - exact Hexclude_roots_renamed.
+    - exact Hroots_inst_equiv. }
   assert (Hfresh_binding_sargs :
     params_fresh_in_store (fn_params fcall ++ fn_captures fcall) s_args).
   { unfold params_fresh_in_store.
@@ -648,6 +665,106 @@ Proof.
       (conj Hframe_ready Hcaptured_params_typed) Hstore_args Hargs_fcall
       Hroots_bind Hshadow_bind Hrn_bind Hcover_all Hprov_fcall
       Htyped_tail_roots Hcompat_fcall Hexclude_roots_inst Hexclude_env_tail)
+    as [Heval_final [Hstore_final [Hv_final
+      [Hvalue_roots_body Hfinal_exact]]]].
+  pose proof (preservation_ready_args_implies_provenance_ready_closure
+                args Hready_args) as Hprov_args.
+  destruct (proj1 (proj2 Hprefix)
+              env s args s_args vs Heval_args Ω n R Σ (fn_params fdef)
+              Σ_args R_args arg_roots Hprov_args)
+    as [Hprefix_args _ Hrefs_args Hrooted_args].
+  { eapply store_typed_prefix_exact. exact Hstore. }
+  { exact Hroots. }
+  { exact Hshadow. }
+  { exact Hrn. }
+  { exact Htyped_args. }
+  split.
+  - exact Heval_final.
+  - split.
+    + exact Hstore_final.
+    + split.
+      * exact Hv_final.
+      * split.
+        -- rewrite Hfinal_exact. exact Hrefs_args.
+        -- constructor.
+           ++ rewrite Hfinal_exact.
+              exact (rooted_args_store_roots _ _ _ _ Hrooted_args).
+           ++ eapply direct_call_value_roots_within_store_subset.
+              ** exact Hvalue_roots_body.
+              ** exact Hsubset_inst.
+           ++ rewrite Hfinal_exact.
+              exact (rooted_args_store_no_shadow _ _ _ _ Hrooted_args).
+           ++ exact (rooted_args_root_env_no_shadow _ _ _ _ Hrooted_args).
+Qed.
+
+Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_components_with_preservation_core :
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_package_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env Ω n R Σ args fname captures captured fdef fcall used'
+      s s_args s_body vs ret R_args Σ_args arg_roots env_lt captured_tys
+      T_body Γ_out R_body roots_body,
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    eval env s (EMakeClosure fname captures) s (VClosure fname captured) ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    eval_args env s args s_args vs ->
+    alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
+      (fcall, used') ->
+    eval env (bind_params (fn_params fcall) vs (captured ++ s_args))
+      (fn_body fcall) s_body ret ->
+    check_make_closure_captures_exact_sctx_with_env env Ω Σ captures
+      (fn_captures fdef) = infer_ok (env_lt, captured_tys) ->
+    NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
+    preservation_ready_args args ->
+    typed_args_roots env Ω n R Σ args (fn_params fdef)
+      Σ_args R_args arg_roots ->
+    NoDup (ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))) ->
+    provenance_ready_expr (fn_body fdef) ->
+    typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_params (fn_params fdef ++ fn_captures fdef))
+      (sctx_of_ctx (fn_body_ctx fdef))
+      (fn_body fdef) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
+    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true ->
+    roots_exclude_params (fn_params fdef ++ fn_captures fdef)
+      roots_body ->
+    root_env_excludes_params (fn_params fdef ++ fn_captures fdef)
+      R_body ->
+    eval env s (ECallExpr (EMakeClosure fname captures) args)
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body)) ret /\
+    store_typed env
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body)) Σ_args /\
+    value_has_type env
+      (store_remove_params (fn_captures fcall)
+        (store_remove_params (fn_params fcall) s_body))
+      ret (apply_lt_ty [] (fn_ret fdef)).
+Proof.
+  intros Htyping Hroots_mutual Hnames Hkeys_mutual Hframe Hprefix Hparam
+    env Ω n R Σ args fname captures captured fdef fcall used'
+    s s_args s_body vs ret R_args Σ_args arg_roots env_lt captured_tys
+    T_body Γ_out R_body roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys
+    Heval_make Hlookup Heval_args Hrename Heval_body Hcheck Hnodup_caps
+    Hready_args Htyped_args Hnodup_binding Hprov_body Htyped_body
+    Hcompat_body Hexclude_roots Hexclude_env.
+  destruct
+    (eval_make_closure_captured_call_expr_package_with_callee_components_with_preservation_core
+      Htyping Hroots_mutual Hnames Hkeys_mutual Hframe Hprefix Hparam
+      env Ω n R Σ args fname captures captured fdef fcall used'
+      s s_args s_body vs ret R_args Σ_args arg_roots env_lt captured_tys
+      T_body Γ_out R_body roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys
+      Heval_make Hlookup Heval_args Hrename Heval_body Hcheck Hnodup_caps
+      Hready_args Htyped_args Hnodup_binding Hprov_body Htyped_body
+      Hcompat_body Hexclude_roots Hexclude_env)
     as [Heval_final [Hstore_final [Hv_final _]]].
   repeat split; assumption.
 Qed.

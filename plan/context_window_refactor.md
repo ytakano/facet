@@ -49,9 +49,13 @@ outside the reconciled roadmap.
 - The direct with-env captured-call subset bridge is no longer a roadmap/status
   discrepancy. It exists as
   `captured_call_callee_body_root_shadow_provenance_instantiated_bridge_with_result_subset`
-  and is used by captured-call make/let routes. Exact `ELet` evidence should
-  still wait for explicit returned-root, store-root, and no-shadow package
-  coverage.
+  and is used by captured-call make/let routes.
+- Exact captured-call evidence now has package coverage in
+  `EnvRuntimeShadowEvalFacts.v` for store typing, value typing, final store
+  roots, returned value roots, and final `store_no_shadow`.
+- The remaining exact `if false` proof-interface gap is root-env no-shadow:
+  the constructor exposes only `root_env_equiv R2 R3`, which does not imply
+  syntactic `root_env_no_shadow R2`.
 
 ## Operating Rules
 

@@ -193,6 +193,50 @@ Inductive expr_root_shadow_captured_call_provenance_summary_exact
       expr_root_shadow_captured_call_provenance_summary_exact
         env Ω n R Σ (ECallExpr (EMakeClosure fname captures) args)
         T Σ' R' roots (root_set_union roots capture_roots)
+  | ERSCE_LocalCapturedLet : forall R Σ fname captures args m x T_hidden
+      fcallee env_lt captured_tys T Σ' R' roots roots_direct
+      capture_roots T_body Γ_out R_body roots_body,
+      ty_usage T_hidden = UUnrestricted ->
+      ~ In x captures ->
+      ~ In x (ctx_names (params_ctx (fn_captures fcallee))) ->
+      ~ In x (args_free_vars_ts args) ->
+      ~ In x (args_local_store_names args) ->
+      preservation_ready_args args ->
+      In fcallee (env_fns env) ->
+      fn_name fcallee = fname ->
+      fn_lifetimes fcallee = 0 ->
+      callee_hidden_capture_args_disjoint fcallee args ->
+      check_make_closure_captures_exact_sctx_with_env env Ω Σ
+        captures (fn_captures fcallee) = infer_ok (env_lt, captured_tys) ->
+      NoDup (ctx_names (params_ctx (fn_params fcallee ++ fn_captures fcallee))) ->
+      provenance_ready_expr (fn_body fcallee) ->
+      typed_env_roots_shadow_safe env (fn_outlives fcallee)
+        (fn_lifetimes fcallee)
+        (initial_root_env_for_params
+          (fn_params fcallee ++ fn_captures fcallee))
+        (sctx_of_ctx (fn_body_ctx fcallee))
+        (fn_body fcallee) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
+      ty_compatible_b (fn_outlives fcallee) T_body
+        (fn_ret fcallee) = true ->
+      roots_exclude_params (fn_params fcallee ++ fn_captures fcallee)
+        roots_body ->
+      root_env_excludes_params (fn_params fcallee ++ fn_captures fcallee)
+        R_body ->
+      capture_root_bound R captures (fn_captures fcallee) =
+        Some capture_roots ->
+      root_env_lookup x R = None ->
+      typed_env_roots_shadow_safe env Ω n R Σ
+        (ECallExpr (EMakeClosure fname captures) args) (fn_ret fcallee)
+        Σ' R' roots_direct ->
+      typed_env_roots_shadow_safe env Ω n R Σ
+        (ELet m x T_hidden (EMakeClosure fname captures)
+          (ECallExpr (EVar x) args)) T Σ' R' roots ->
+      ty_compatible_b Ω (fn_ret fcallee) T = true ->
+      expr_root_shadow_captured_call_provenance_summary_exact
+        env Ω n R Σ
+        (ELet m x T_hidden (EMakeClosure fname captures)
+          (ECallExpr (EVar x) args))
+        T Σ' R' roots (root_set_union roots_direct capture_roots)
   | ERSCE_If : forall R R1 R2 R3 Σ Σ1 Σ2 Σ3 Σ4 e1 e2 e3
       T_cond T2 T3 roots_cond roots2 roots3 ret_roots2 ret_roots3,
       provenance_ready_expr e1 ->
@@ -223,6 +267,7 @@ Proof.
   - exact H0.
   - exact H5.
   - exact H12.
+  - exact H19.
   - subst R3. eapply TERS_If; eauto. apply root_env_equiv_refl.
 Qed.
 

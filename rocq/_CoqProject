@@ -68,6 +68,7 @@ theories/TypeSystem/EnvRuntimeShadowSummaryFacts.v
 theories/TypeSystem/EnvRuntimeShadowCheckerFacts.v
 theories/TypeSystem/EnvRuntimeShadowEvalFacts.v
 theories/TypeSystem/EnvRuntimeShadowExprCheckerFacts.v
+theories/TypeSystem/EnvRuntimeValidatorFacts.v
 theories/TypeSystem/EnvRuntimeSafety.v
 theories/TypeSystem/RuntimeRefSafety.v
 theories/TypeSystem/EnvFullSoundness.v

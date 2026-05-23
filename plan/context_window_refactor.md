@@ -161,8 +161,10 @@ runtime safety currently cross theorem boundaries.
   `EnvRuntimeShadowEvalFacts.v`.
 - Extracted the EnvRuntimeSafety root-shadow expression checker block into
   `EnvRuntimeShadowExprCheckerFacts.v`.
+- Extracted the EnvRuntimeSafety validator/sidecar readiness fact block into
+  `EnvRuntimeValidatorFacts.v`.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/EnvRuntimeShadowExprCheckerFacts.vo theories/TypeSystem/EnvRuntimeSafety.vo theories/TypeSystem/RuntimeRefSafety.vo theories/TypeSystem/EnvFullSoundness.vo theories/TypeSystem/CheckerUsageSoundness.vo`.
+  `cd rocq && make theories/TypeSystem/EnvRuntimeValidatorFacts.vo theories/TypeSystem/EnvRuntimeSafety.vo theories/TypeSystem/RuntimeRefSafety.vo theories/TypeSystem/EnvFullSoundness.vo theories/TypeSystem/CheckerUsageSoundness.vo`.
 - Next task: continue Phase 3 by looking for the next stable helper cluster
   that can move out of a large preservation file without changing theorem
   statements.

@@ -3172,60 +3172,6 @@ let check_make_closure_captures_sctx_with_env env _UU03a9_ _UU03a3_ captures par
      | Infer_err err -> Infer_err err)
   | Infer_err err -> Infer_err err
 
-(** val check_make_closure_captures_exact_sctx :
-    global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list
-    infer_result **)
-
-let rec check_make_closure_captures_exact_sctx env _UU03a9_ _UU03a3_ captures params =
-  match captures with
-  | [] ->
-    (match params with
-     | [] -> Infer_ok []
-     | _ :: _ -> Infer_err ErrArityMismatch)
-  | x :: captures' ->
-    (match params with
-     | [] -> Infer_err ErrArityMismatch
-     | cap :: params' ->
-       (match cap.param_mutability with
-        | MImmutable ->
-          (match sctx_lookup cap.param_name _UU03a3_ with
-           | Some _ -> Infer_err ErrContextCheckFailed
-           | None ->
-             (match sctx_lookup x _UU03a3_ with
-              | Some p ->
-                let (t, st) = p in
-                if st.st_consumed
-                then Infer_err ErrContextCheckFailed
-                else (match st.st_moved_paths with
-                      | [] ->
-                        (match sctx_lookup_mut x _UU03a3_ with
-                         | Some m ->
-                           (match m with
-                            | MImmutable ->
-                              if usage_eqb (ty_usage t) UUnrestricted
-                              then if capture_ref_free_ty_b env t
-                                   then if (&&) (ty_eqb t cap.param_ty)
-                                             (ty_compatible_b _UU03a9_ t
-                                               cap.param_ty)
-                                        then (match check_make_closure_captures_exact_sctx
-                                                      env _UU03a9_ _UU03a3_
-                                                      captures' params' with
-                                              | Infer_ok rest_tys ->
-                                                Infer_ok (t :: rest_tys)
-                                              | Infer_err err -> Infer_err err)
-                                        else Infer_err
-                                               (compatible_error t
-                                                 cap.param_ty)
-                                   else Infer_err (ErrNotAReference
-                                          (ty_core t))
-                              else Infer_err (ErrUsageMismatch ((ty_usage t),
-                                     UUnrestricted))
-                            | MMutable -> Infer_err (ErrNotMutable x))
-                         | None -> Infer_err (ErrUnknownVar x))
-                      | _ :: _ -> Infer_err ErrContextCheckFailed)
-              | None -> Infer_err (ErrUnknownVar x)))
-        | MMutable -> Infer_err ErrContextCheckFailed))
-
 (** val check_make_closure_captures_exact_sctx_with_env_base :
     global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list
     infer_result **)
@@ -4838,44 +4784,59 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
        | EMakeClosure (fname, captures) ->
          (match lookup_fn_b fname env.env_fns with
           | Some fdef ->
-            if Nat.eqb fdef.fn_lifetimes Big_int_Z.zero_big_int
-            then (match check_make_closure_captures_exact_sctx env _UU03a9_
-                          _UU03a3_ captures fdef.fn_captures with
-                  | Infer_ok _ ->
-                    let collect =
-                      let rec collect _UU03a3_0 r0 = function
-                      | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
-                      | e' :: es ->
-                        (match infer_core_env_state_fuel_roots fuel' env
-                                 _UU03a9_ n r0 _UU03a3_0 e' with
-                         | Infer_ok p ->
-                           let (p0, roots_e) = p in
-                           let (p1, r1) = p0 in
-                           let (t_e, _UU03a3_1) = p1 in
-                           (match collect _UU03a3_1 r1 es with
-                            | Infer_ok p2 ->
-                              let (p3, roots_es) = p2 in
-                              let (p4, r2) = p3 in
-                              let (tys, _UU03a3_2) = p4 in
-                              Infer_ok ((((t_e :: tys), _UU03a3_2), r2),
-                              (roots_e :: roots_es))
-                            | Infer_err err -> Infer_err err)
-                         | Infer_err err -> Infer_err err)
-                      in collect
-                    in
-                    (match collect _UU03a3_ r args with
-                     | Infer_ok p ->
-                       let (p0, arg_roots) = p in
-                       let (p1, r') = p0 in
-                       let (arg_tys, _UU03a3_') = p1 in
-                       (match check_args _UU03a9_ arg_tys fdef.fn_params with
-                        | Some err -> Infer_err err
-                        | None ->
-                          Infer_ok (((fdef.fn_ret, _UU03a3_'), r'),
-                            (root_sets_union arg_roots)))
-                     | Infer_err err -> Infer_err err)
-                  | Infer_err err -> Infer_err err)
-            else Infer_err ErrNotImplemented
+            (match check_make_closure_captures_sctx_with_env env _UU03a9_
+                     _UU03a3_ captures fdef.fn_captures with
+             | Infer_ok _ ->
+               let collect =
+                 let rec collect _UU03a3_0 r0 = function
+                 | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+                 | e' :: es ->
+                   (match infer_core_env_state_fuel_roots fuel' env _UU03a9_
+                            n r0 _UU03a3_0 e' with
+                    | Infer_ok p ->
+                      let (p0, roots_e) = p in
+                      let (p1, r1) = p0 in
+                      let (t_e, _UU03a3_1) = p1 in
+                      (match collect _UU03a3_1 r1 es with
+                       | Infer_ok p2 ->
+                         let (p3, roots_es) = p2 in
+                         let (p4, r2) = p3 in
+                         let (tys, _UU03a3_2) = p4 in
+                         Infer_ok ((((t_e :: tys), _UU03a3_2), r2),
+                         (roots_e :: roots_es))
+                       | Infer_err err -> Infer_err err)
+                    | Infer_err err -> Infer_err err)
+                 in collect
+               in
+               (match collect _UU03a3_ r args with
+                | Infer_ok p ->
+                  let (p0, arg_roots) = p in
+                  let (p1, r') = p0 in
+                  let (arg_tys, _UU03a3_') = p1 in
+                  (match build_sigma fdef.fn_lifetimes
+                           (repeat None fdef.fn_lifetimes) arg_tys
+                           fdef.fn_params with
+                   | Some _UU03c3__acc ->
+                     let _UU03c3_ = finalize_subst _UU03c3__acc in
+                     let ps_subst = apply_lt_params _UU03c3_ fdef.fn_params in
+                     (match check_args _UU03a9_ arg_tys ps_subst with
+                      | Some err -> Infer_err err
+                      | None ->
+                        if forallb (wf_lifetime_b (mk_region_ctx n)) _UU03c3_
+                        then let _UU03a9__subst =
+                               apply_lt_outlives _UU03c3_ fdef.fn_outlives
+                             in
+                             if outlives_constraints_hold_b _UU03a9_
+                                  _UU03a9__subst
+                             then Infer_ok
+                                    ((((apply_lt_ty _UU03c3_ fdef.fn_ret),
+                                    _UU03a3_'), r'),
+                                    (root_sets_union arg_roots))
+                             else Infer_err ErrHrtBoundUnsatisfied
+                        else Infer_err ErrLifetimeLeak)
+                   | None -> Infer_err ErrLifetimeConflict)
+                | Infer_err err -> Infer_err err)
+             | Infer_err err -> Infer_err err)
           | None -> Infer_err (ErrFunctionNotFound fname))
        | _ -> Infer_err ErrNotImplemented)
     | EStruct (sname, lts, args, fields) ->
@@ -5304,44 +5265,59 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
        | EMakeClosure (fname, captures) ->
          (match lookup_fn_b fname env.env_fns with
           | Some fdef ->
-            if Nat.eqb fdef.fn_lifetimes Big_int_Z.zero_big_int
-            then (match check_make_closure_captures_exact_sctx env _UU03a9_
-                          _UU03a3_ captures fdef.fn_captures with
-                  | Infer_ok _ ->
-                    let collect =
-                      let rec collect _UU03a3_0 r0 = function
-                      | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
-                      | e' :: es ->
-                        (match infer_core_env_state_fuel_roots_shadow_safe
-                                 fuel' env _UU03a9_ n r0 _UU03a3_0 e' with
-                         | Infer_ok p ->
-                           let (p0, roots_e) = p in
-                           let (p1, r1) = p0 in
-                           let (t_e, _UU03a3_1) = p1 in
-                           (match collect _UU03a3_1 r1 es with
-                            | Infer_ok p2 ->
-                              let (p3, roots_es) = p2 in
-                              let (p4, r2) = p3 in
-                              let (tys, _UU03a3_2) = p4 in
-                              Infer_ok ((((t_e :: tys), _UU03a3_2), r2),
-                              (roots_e :: roots_es))
-                            | Infer_err err -> Infer_err err)
-                         | Infer_err err -> Infer_err err)
-                      in collect
-                    in
-                    (match collect _UU03a3_ r args with
-                     | Infer_ok p ->
-                       let (p0, arg_roots) = p in
-                       let (p1, r') = p0 in
-                       let (arg_tys, _UU03a3_') = p1 in
-                       (match check_args _UU03a9_ arg_tys fdef.fn_params with
-                        | Some err -> Infer_err err
-                        | None ->
-                          Infer_ok (((fdef.fn_ret, _UU03a3_'), r'),
-                            (root_sets_union arg_roots)))
-                     | Infer_err err -> Infer_err err)
-                  | Infer_err err -> Infer_err err)
-            else Infer_err ErrNotImplemented
+            (match check_make_closure_captures_sctx_with_env env _UU03a9_
+                     _UU03a3_ captures fdef.fn_captures with
+             | Infer_ok _ ->
+               let collect =
+                 let rec collect _UU03a3_0 r0 = function
+                 | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+                 | e' :: es ->
+                   (match infer_core_env_state_fuel_roots_shadow_safe fuel'
+                            env _UU03a9_ n r0 _UU03a3_0 e' with
+                    | Infer_ok p ->
+                      let (p0, roots_e) = p in
+                      let (p1, r1) = p0 in
+                      let (t_e, _UU03a3_1) = p1 in
+                      (match collect _UU03a3_1 r1 es with
+                       | Infer_ok p2 ->
+                         let (p3, roots_es) = p2 in
+                         let (p4, r2) = p3 in
+                         let (tys, _UU03a3_2) = p4 in
+                         Infer_ok ((((t_e :: tys), _UU03a3_2), r2),
+                         (roots_e :: roots_es))
+                       | Infer_err err -> Infer_err err)
+                    | Infer_err err -> Infer_err err)
+                 in collect
+               in
+               (match collect _UU03a3_ r args with
+                | Infer_ok p ->
+                  let (p0, arg_roots) = p in
+                  let (p1, r') = p0 in
+                  let (arg_tys, _UU03a3_') = p1 in
+                  (match build_sigma fdef.fn_lifetimes
+                           (repeat None fdef.fn_lifetimes) arg_tys
+                           fdef.fn_params with
+                   | Some _UU03c3__acc ->
+                     let _UU03c3_ = finalize_subst _UU03c3__acc in
+                     let ps_subst = apply_lt_params _UU03c3_ fdef.fn_params in
+                     (match check_args _UU03a9_ arg_tys ps_subst with
+                      | Some err -> Infer_err err
+                      | None ->
+                        if forallb (wf_lifetime_b (mk_region_ctx n)) _UU03c3_
+                        then let _UU03a9__subst =
+                               apply_lt_outlives _UU03c3_ fdef.fn_outlives
+                             in
+                             if outlives_constraints_hold_b _UU03a9_
+                                  _UU03a9__subst
+                             then Infer_ok
+                                    ((((apply_lt_ty _UU03c3_ fdef.fn_ret),
+                                    _UU03a3_'), r'),
+                                    (root_sets_union arg_roots))
+                             else Infer_err ErrHrtBoundUnsatisfied
+                        else Infer_err ErrLifetimeLeak)
+                   | None -> Infer_err ErrLifetimeConflict)
+                | Infer_err err -> Infer_err err)
+             | Infer_err err -> Infer_err err)
           | None -> Infer_err (ErrFunctionNotFound fname))
        | _ -> Infer_err ErrNotImplemented)
     | EStruct (sname, lts, args, fields) ->
@@ -6368,10 +6344,7 @@ let rec check_expr_root_shadow_captured_call_provenance_summary_fuel fuel env _U
                (&&) (preservation_ready_args_b args)
                  (match lookup_fn_b fname env.env_fns with
                   | Some callee ->
-                    (&&)
-                      ((&&)
-                        (Nat.eqb callee.fn_lifetimes Big_int_Z.zero_big_int)
-                        (callee_hidden_capture_args_disjoint_b callee args))
+                    (&&) (callee_hidden_capture_args_disjoint_b callee args)
                       (match check_make_closure_captures_exact_sctx_with_env
                                env _UU03a9_ _UU03a3_ captures
                                callee.fn_captures with
@@ -6491,10 +6464,7 @@ let check_fn_root_shadow_captured_call_provenance_summary env fdef =
               (&&) (preservation_ready_args_b args)
                 (match lookup_fn_b fname env.env_fns with
                  | Some callee ->
-                   (&&)
-                     ((&&)
-                       (Nat.eqb callee.fn_lifetimes Big_int_Z.zero_big_int)
-                       (callee_hidden_capture_args_disjoint_b callee args))
+                   (&&) (callee_hidden_capture_args_disjoint_b callee args)
                      (match check_make_closure_captures_exact_sctx_with_env
                               env fdef.fn_outlives
                               (sctx_of_ctx (fn_body_ctx fdef)) captures

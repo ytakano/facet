@@ -138,7 +138,8 @@ Proof.
   end.
   match goal with
   | Htyped_args_shadow : typed_args_roots_shadow_safe env Ω n R Σ args
-      (fn_params fdef) ?Sigma_args ?R_args ?arg_roots,
+      (apply_lt_params ?sigma (fn_params fdef)) ?Sigma_args ?R_args
+      ?arg_roots,
     Hlookup : lookup_fn ?fname_call (env_fns env) = Some fdef,
     Hcopy : copy_capture_store_as captures (fn_captures fdef) s =
       Some ?captured,
@@ -149,13 +150,12 @@ Proof.
       (bind_params (fn_params ?fcall) ?vs (?captured ++ ?s_args))
       (fn_body ?fcall) ?s_body ret |- _ =>
       pose proof (typed_args_roots_shadow_safe_roots
-        env Ω n R Σ args (fn_params fdef) Sigma_args R_args arg_roots
+        env Ω n R Σ args (apply_lt_params sigma (fn_params fdef))
+        Sigma_args R_args arg_roots
         Htyped_args_shadow) as Htyped_args_roots;
-      rewrite <- (apply_lt_params_nil_ts (fn_params fdef)) in
-        Htyped_args_roots;
       destruct
         (eval_make_closure_captured_call_expr_package_with_callee_components
-          env Ω n R Σ args fname_call captures captured fdef fcall used' []
+          env Ω n R Σ args fname_call captures captured fdef fcall used' sigma
           s s_args s_body vs ret R_args Sigma_args arg_roots env_lt
           captured_tys T_body Γ_out R_body roots_body Hstore Hroots
           Hshadow Hrn Hnamed Hkeys
@@ -175,7 +175,7 @@ Proof.
       destruct Hrooted as [Hroots_final Hvalue_roots Hshadow_final Hrn_final];
       repeat split;
         try exact Hstore_final;
-        try (rewrite apply_lt_ty_nil_ts in Hv; exact Hv);
+        try exact Hv;
         try exact Hroots_final;
         try exact Hshadow_final;
         try exact Hrn_final;
@@ -286,7 +286,8 @@ Proof.
   end.
   match goal with
   | Htyped_args_shadow : typed_args_roots_shadow_safe env Ω n R Σ args
-      (fn_params fdef) ?Sigma_args ?R_args ?arg_roots,
+      (apply_lt_params ?sigma (fn_params fdef)) ?Sigma_args ?R_args
+      ?arg_roots,
     Hlookup : lookup_fn ?fname_call (env_fns env) = Some fdef,
     Hcopy : copy_capture_store_as captures (fn_captures fdef) s =
       Some ?captured,
@@ -297,13 +298,12 @@ Proof.
       (bind_params (fn_params ?fcall) ?vs (?captured ++ ?s_args))
       (fn_body ?fcall) ?s_body ret |- _ =>
       pose proof (typed_args_roots_shadow_safe_roots
-        env Ω n R Σ args (fn_params fdef) Sigma_args R_args arg_roots
+        env Ω n R Σ args (apply_lt_params sigma (fn_params fdef))
+        Sigma_args R_args arg_roots
         Htyped_args_shadow) as Htyped_args_roots;
-      rewrite <- (apply_lt_params_nil_ts (fn_params fdef)) in
-        Htyped_args_roots;
       destruct
         (eval_make_closure_captured_call_expr_preserves_typing_with_callee_components
-          env Ω n R Σ args fname_call captures captured fdef fcall used' []
+          env Ω n R Σ args fname_call captures captured fdef fcall used' sigma
           s s_args s_body vs ret R_args Sigma_args arg_roots env_lt
           captured_tys T_body Γ_out R_body roots_body Hstore Hroots
           Hshadow Hrn Hnamed Hkeys
@@ -316,7 +316,7 @@ Proof.
   end.
   split.
   - exact Hstore_final.
-  - rewrite apply_lt_ty_nil_ts in Hv. exact Hv.
+  - exact Hv.
 Qed.
 
 Lemma eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_typing :
@@ -362,14 +362,22 @@ Proof.
     split; assumption.
   - assert (Hnodup_caps :
         NoDup (ctx_names (params_ctx (fn_captures fcallee)))).
-    { rewrite params_ctx_app, ctx_names_app in H5.
-      eapply NoDup_app_right_ts. exact H5. }
+    { match goal with
+      | Hnodup : NoDup (ctx_names
+          (params_ctx (fn_params fcallee ++ fn_captures fcallee))) |- _ =>
+          rewrite params_ctx_app, ctx_names_app in Hnodup;
+          eapply NoDup_app_right_ts; exact Hnodup
+      end. }
     eapply eval_make_closure_captured_call_expr_shadow_preserves_typing_with_callee_components;
       eauto.
   - assert (Hnodup_caps :
         NoDup (ctx_names (params_ctx (fn_captures fcallee)))).
-    { rewrite params_ctx_app, ctx_names_app in H10.
-      eapply NoDup_app_right_ts. exact H10. }
+    { match goal with
+      | Hnodup : NoDup (ctx_names
+          (params_ctx (fn_params fcallee ++ fn_captures fcallee))) |- _ =>
+          rewrite params_ctx_app, ctx_names_app in Hnodup;
+          eapply NoDup_app_right_ts; exact Hnodup
+      end. }
     rename x into x_hidden.
     assert (Hfresh_s : ~ In x_hidden (store_names s)).
     { apply store_lookup_none_not_in_store_names.
@@ -381,9 +389,10 @@ Proof.
                   H5 H6 Hunique) as Hlookup_callee.
     rewrite Hlookup_direct in Hlookup_callee.
     inversion Hlookup_callee; subst fdef.
-    pose proof (typed_args_roots_shadow_safe_roots env Ω n R Σ args
-                  (fn_params fcallee) Σ' R' arg_roots H22)
-      as Htyped_args_roots.
+	pose proof (typed_args_roots_shadow_safe_roots env Ω n R Σ args
+	                  (apply_lt_params σ (fn_params fcallee))
+	                  Σ' R' arg_roots H21)
+	    as Htyped_args_roots.
     destruct
       (eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components_with_preservation_core
         eval_preserves_typing_ready_mutual
@@ -394,15 +403,15 @@ Proof.
         (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
           eval_preserves_typing_roots_ready_prefix_mutual)
         eval_preserves_param_scope_roots_ready_mutual
-        env Ω n R Σ m x_hidden T_hidden args (fn_name fcallee) captures fcallee s s' ret
-        R' Σ' arg_roots env_lt captured_tys T_body Γ_out R_body
+	        env Ω n R Σ m x_hidden T_hidden args (fn_name fcallee) captures fcallee σ s s' ret
+	        R' Σ' arg_roots env_lt captured_tys T_body Γ_out R_body
         roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys H Heval H9
         Hnodup_caps H4 Htyped_args_roots H10 H11 H12 H13 H14 H15)
       as [Hstore' [Hv _]]; eauto.
     split.
     + exact Hstore'.
-    + rewrite apply_lt_ty_nil_ts in Hv.
-      eapply VHT_Compatible.
+	    + rewrite x in Hv.
+	      eapply VHT_Compatible.
       * exact Hv.
       * apply ty_compatible_b_sound. exact H23.
   - dependent destruction Heval.
@@ -532,19 +541,27 @@ Proof.
         Hunique H2 H3 H4)
       as [Hstore' [Hv [_ [Hroots' [Hvalue_roots [Hshadow' Hrn']]]]]].
     repeat split; assumption.
-  - assert (Hnodup_caps :
-        NoDup (ctx_names (params_ctx (fn_captures fcallee)))).
-    { rewrite params_ctx_app, ctx_names_app in H5.
-      eapply NoDup_app_right_ts. exact H5. }
+	  - assert (Hnodup_caps :
+	        NoDup (ctx_names (params_ctx (fn_captures fcallee)))).
+	    { match goal with
+	      | Hnodup : NoDup (ctx_names
+	          (params_ctx (fn_params fcallee ++ fn_captures fcallee))) |- _ =>
+	          rewrite params_ctx_app, ctx_names_app in Hnodup;
+	          eapply NoDup_app_right_ts; exact Hnodup
+	      end. }
     destruct (eval_make_closure_captured_call_expr_shadow_package_with_callee_components
         env Ω n R Σ args fname captures fcallee s s' ret T Σ' R' roots
         env_lt captured_tys T_body Γ_out R_body roots_body capture_roots)
       as [Hstore' [Hv [Hroots' [Hvalue_roots [Hshadow' Hrn']]]]]; eauto.
     repeat split; assumption.
-  - assert (Hnodup_caps :
-        NoDup (ctx_names (params_ctx (fn_captures fcallee)))).
-    { rewrite params_ctx_app, ctx_names_app in H10.
-      eapply NoDup_app_right_ts. exact H10. }
+	  - assert (Hnodup_caps :
+	        NoDup (ctx_names (params_ctx (fn_captures fcallee)))).
+	    { match goal with
+	      | Hnodup : NoDup (ctx_names
+	          (params_ctx (fn_params fcallee ++ fn_captures fcallee))) |- _ =>
+	          rewrite params_ctx_app, ctx_names_app in Hnodup;
+	          eapply NoDup_app_right_ts; exact Hnodup
+	      end. }
     rename x into x_hidden.
     assert (Hfresh_s : ~ In x_hidden (store_names s)).
     { apply store_lookup_none_not_in_store_names.
@@ -556,9 +573,10 @@ Proof.
                   H5 H6 Hunique) as Hlookup_callee.
     rewrite Hlookup_direct in Hlookup_callee.
     inversion Hlookup_callee; subst fdef.
-    pose proof (typed_args_roots_shadow_safe_roots env Ω n R Σ args
-                  (fn_params fcallee) Σ' R' arg_roots H22)
-      as Htyped_args_roots.
+	pose proof (typed_args_roots_shadow_safe_roots env Ω n R Σ args
+	                  (apply_lt_params σ (fn_params fcallee))
+	                  Σ' R' arg_roots H21)
+	    as Htyped_args_roots.
     destruct
       (eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components_with_preservation_core
         eval_preserves_typing_ready_mutual
@@ -569,7 +587,7 @@ Proof.
         (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
           eval_preserves_typing_roots_ready_prefix_mutual)
         eval_preserves_param_scope_roots_ready_mutual
-        env Ω n R Σ m x_hidden T_hidden args (fn_name fcallee) captures fcallee s s' ret
+	        env Ω n R Σ m x_hidden T_hidden args (fn_name fcallee) captures fcallee σ s s' ret
         R' Σ' arg_roots env_lt captured_tys T_body Γ_out R_body
         roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys H Heval H9
         Hnodup_caps H4 Htyped_args_roots H10 H11 H12 H13 H14 H15)
@@ -580,8 +598,8 @@ Proof.
     destruct Hrooted as [Hroots' Hvalue_roots Hshadow' Hrn'].
     repeat split.
     + exact Hstore'.
-    + rewrite apply_lt_ty_nil_ts in Hv.
-      eapply VHT_Compatible.
+	    + rewrite x in Hv.
+	      eapply VHT_Compatible.
       * exact Hv.
       * apply ty_compatible_b_sound. exact H23.
     + exact Hroots'.

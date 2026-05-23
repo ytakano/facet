@@ -235,7 +235,7 @@ Proof.
       (fname & captures & args & fcallee & env_lt & captured_tys &
         T_body & Γ_out & R_body & roots_body &
         Hbody & Htarget & Hready_args & Hin_callee & Hname_callee &
-        Hcallee_lts & Hdisjoint & Hcaptures & Hcallee_summary &
+        Hdisjoint & Hcaptures & Hcallee_summary &
         Hnodup & Htyped_shadow & Hcompat & _ & _).
     pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
     rewrite Hbody in Heval.
@@ -303,7 +303,8 @@ Proof.
       Htyped_args_shadow : typed_args_roots_shadow_safe
         env (fn_outlives f) (fn_lifetimes f)
         (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
-        args (fn_params fcallee) ?Sigma_args ?R_args ?arg_roots,
+        args (apply_lt_params ?sigma (fn_params fcallee))
+        ?Sigma_args ?R_args ?arg_roots,
       Heval_args : eval_args env s args s_args vs,
       Hrename : alpha_rename_fn_def (store_names (captured ++ s_args))
         fcallee = (fcall, used'),
@@ -313,15 +314,14 @@ Proof.
       pose proof (typed_args_roots_shadow_safe_roots
         env (fn_outlives f) (fn_lifetimes f)
         (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
-        args (fn_params fcallee) Sigma_args R_args arg_roots
+        args (apply_lt_params sigma (fn_params fcallee))
+        Sigma_args R_args arg_roots
         Htyped_args_shadow)
         as Htyped_args_roots;
-      rewrite <- (apply_lt_params_nil_ts (fn_params fcallee)) in
-        Htyped_args_roots;
       destruct (eval_make_closure_captured_call_expr_preserves_typing_with_callee_components
         env (fn_outlives f) (fn_lifetimes f)
         (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
-        args fname_call captures captured fcallee fcall used' [] s s_args s_body vs ret
+        args fname_call captures captured fcallee fcall used' sigma s s_args s_body vs ret
         R_args Sigma_args arg_roots env_lt captured_tys T_callee Γ_callee
         R_callee roots_callee
         Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
@@ -333,7 +333,7 @@ Proof.
       as [_ [_ Hv]]
 	    end.
 	    eapply VHT_Compatible.
-	    * rewrite apply_lt_ty_nil_ts in Hv. exact Hv.
+	    * exact Hv.
 	    * apply ty_compatible_b_sound. exact Hcompat.
     + destruct Hif_summary as
         (T_body & Γ_out & R_body & roots_body & ret_roots & Hnodup &
@@ -407,17 +407,19 @@ Proof.
 	          end
 	      end.
       match goal with
-      | Htyped_args_shadow : typed_args_roots_shadow_safe
-          env (fn_outlives f)
-          (fn_lifetimes f) (initial_root_env_for_fn f)
-          (sctx_of_ctx (fn_body_ctx f)) args (fn_params fcallee)
-          ?Sigma_args ?R_args ?arg_roots |- _ =>
-          pose proof (typed_args_roots_shadow_safe_roots
-            env (fn_outlives f)
-            (fn_lifetimes f) (initial_root_env_for_fn f)
-            (sctx_of_ctx (fn_body_ctx f)) args (fn_params fcallee)
-            Sigma_args R_args arg_roots Htyped_args_shadow)
-            as Htyped_args_roots
+	      | Htyped_args_shadow : typed_args_roots_shadow_safe
+	          env (fn_outlives f)
+	          (fn_lifetimes f) (initial_root_env_for_fn f)
+	          (sctx_of_ctx (fn_body_ctx f)) args
+	          (apply_lt_params ?sigma (fn_params fcallee))
+	          ?Sigma_args ?R_args ?arg_roots |- _ =>
+	          pose proof (typed_args_roots_shadow_safe_roots
+	            env (fn_outlives f)
+	            (fn_lifetimes f) (initial_root_env_for_fn f)
+	            (sctx_of_ctx (fn_body_ctx f)) args
+	            (apply_lt_params sigma (fn_params fcallee))
+	            Sigma_args R_args arg_roots Htyped_args_shadow)
+	            as Htyped_args_roots
       end.
 		      dependent destruction Htyped_let.
       match goal with
@@ -449,29 +451,26 @@ Proof.
         NoDup (ctx_names (params_ctx (fn_captures fcallee)))).
       { rewrite params_ctx_app, ctx_names_app in Hnodup_binding.
         eapply NoDup_app_right_ts. exact Hnodup_binding. }
-      match goal with
-      | Htyped_args_roots : typed_args_roots
-          env (fn_outlives f)
-          (fn_lifetimes f) (initial_root_env_for_fn f)
-          (sctx_of_ctx (fn_body_ctx f)) args (fn_params fcallee)
-          ?Sigma_args ?R_args ?arg_roots |- _ =>
-          destruct
-	            (eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components
-	              env (fn_outlives f)
-	              (fn_lifetimes f) (initial_root_env_for_fn f)
-	              (sctx_of_ctx (fn_body_ctx f)) m x0 T args (fn_name fcallee) captures
-	              fcallee s s' v R_args Sigma_args arg_roots env_lt captured_tys
-              T_callee Γ_callee R_callee roots_callee
-              Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
-              Husage Heval Hcaptures Hnodup_caps Hready_args
-              Htyped_args_roots Hnodup_binding Hprov_callee Htyped_callee
-              Hcompat_callee Hexclude_roots_callee Hexclude_env_callee
-              Hlookup_callee Hfresh_s Hfresh_cap_names Hfree_args
-              Hlocal_args)
-            as [_ Hv]
-      end.
-      eapply VHT_Compatible.
-      * rewrite apply_lt_ty_nil_ts in Hv. exact Hv.
+	      destruct
+	        (eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components
+	          env (fn_outlives f)
+	          (fn_lifetimes f) (initial_root_env_for_fn f)
+	          (sctx_of_ctx (fn_body_ctx f)) m x0 T args (fn_name fcallee) captures
+	          fcallee _ s s' v _ _ _ env_lt captured_tys
+	              T_callee Γ_callee R_callee roots_callee
+	              Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
+	              Husage Heval Hcaptures Hnodup_caps Hready_args
+	              Htyped_args_roots Hnodup_binding Hprov_callee Htyped_callee
+	              Hcompat_callee Hexclude_roots_callee Hexclude_env_callee
+	              Hlookup_callee Hfresh_s Hfresh_cap_names Hfree_args
+	              Hlocal_args)
+	        as [_ Hv].
+	      eapply VHT_Compatible.
+	      * match goal with
+	        | Hret : apply_lt_ty _ (fn_ret fcallee) = fn_ret fcallee |- _ =>
+	            rewrite Hret in Hv; exact Hv
+	        | _ => exact Hv
+	        end.
       * apply ty_compatible_b_sound. exact Hcompat_direct.
 Qed.
 

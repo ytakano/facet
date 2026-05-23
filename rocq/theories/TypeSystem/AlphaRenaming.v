@@ -5286,6 +5286,53 @@ Proof.
 	        * exact Hargs.
 	        * assumption.
 	        * exists Σr'. split; [eapply TES_CallExpr_Forall_Closure; eauto | exact Hctx_r].
+      + destruct (disjoint_names_app_l (free_vars_expr (EMakeClosure fname captures))
+          ((fix go (args0 : list expr) : list ident :=
+              match args0 with
+              | [] => []
+              | arg :: rest => free_vars_expr arg ++ go rest
+              end) args) (rename_range ρ) Hdisj) as [Hdisj_callee Hdisj_args].
+        simpl in Hdisj_callee.
+        destruct ((fix go (used0 : list ident) (args0 : list expr)
+                    : list expr * list ident :=
+                    match args0 with
+                    | [] => ([], used0)
+                    | arg :: rest =>
+                        let (arg', used1') := alpha_rename_expr ρ used0 arg in
+                        let (rest', used2) := go used1' rest in
+                        (arg' :: rest', used2)
+                    end) used args) as [argsr used_args] eqn:Hargs.
+        injection Hrename as <- <-.
+        destruct (alpha_rename_typed_args_env_structural_forward
+          env Ω n ρ Σ Σr args argsr used used_args
+          (apply_lt_params σ (fn_params fdef))
+          (apply_lt_params σ (fn_params fdef)) Σ')
+          as [Σr' [Hargs_r Hctx_r]].
+        * intros Σa Σb used0 e0 er0 used_tail T0 Σa' Hin Halpha Hcu Hru Hd Hr Ht.
+          eapply IH.
+          -- pose proof (expr_size_callexpr_arg_lt
+               (EMakeClosure fname captures) args e0 Hin) as Harg_lt.
+             eapply Nat.lt_le_trans.
+             ++ exact Harg_lt.
+             ++ apply Nat.lt_succ_r. exact Hlt.
+          -- exact Halpha.
+          -- exact Hcu.
+          -- exact Hru.
+          -- exact Hd.
+          -- exact Hr.
+          -- exact Ht.
+        * exact Hctx.
+        * exact Hctx_used.
+        * exact Hrange_used.
+        * exact Hdisj_args.
+        * apply params_alpha_refl.
+        * exact Hargs.
+        * assumption.
+        * exists Σr'. split.
+          -- eapply TES_CallExpr_MakeClosure with (σ := σ); eauto.
+             eapply check_make_closure_captures_sctx_with_env_alpha_forward;
+               eauto.
+          -- exact Hctx_r.
 	  }
   intros env Ω n ρ Σ Σr e er used used' T Σ'
     Hctx Hctx_used Hrange_used Hdisj Hrename Htyped.
@@ -5473,17 +5520,18 @@ Inductive typed_env_roots_shadow_safe
       typed_env_roots_shadow_safe env Ω n R Σ (EMakeClosure fname captures)
         (closure_value_ty fdef captured_tys) Σ R []
   | TERS_CallExpr_MakeClosure : forall R R' Σ Σ' fname fdef captures
-      captured_tys args arg_roots,
+      env_lt captured_tys args σ arg_roots,
       In fdef (Program.env_fns env) ->
       fn_name fdef = fname ->
-      fn_lifetimes fdef = 0 ->
-      check_make_closure_captures_sctx env Ω Σ captures (fn_captures fdef) =
-        infer_ok captured_tys ->
-      typed_args_roots_shadow_safe env Ω n R Σ args (fn_params fdef)
-        Σ' R' arg_roots ->
+      check_make_closure_captures_sctx_with_env env Ω Σ captures
+        (fn_captures fdef) = infer_ok (env_lt, captured_tys) ->
+      typed_args_roots_shadow_safe env Ω n R Σ args
+        (apply_lt_params σ (fn_params fdef)) Σ' R' arg_roots ->
+      Forall (fun '(a, b) => Lifetime.outlives Ω a b)
+        (apply_lt_outlives σ (fn_outlives fdef)) ->
       typed_env_roots_shadow_safe env Ω n R Σ
         (ECallExpr (EMakeClosure fname captures) args)
-        (fn_ret fdef) Σ' R' (root_sets_union arg_roots)
+        (apply_lt_ty σ (fn_ret fdef)) Σ' R' (root_sets_union arg_roots)
   | TERS_Struct : forall R R' Σ Σ' sname lts args fields sdef roots,
       Program.lookup_struct sname env = Some sdef ->
       Datatypes.length lts = Program.struct_lifetimes sdef ->
@@ -5836,8 +5884,9 @@ Proof.
     + exact HnsR0.
     + exact HR0.
     + apply root_set_equiv_refl.
-  - intros R R' Σ Σ' fname fdef captures captured_tys args arg_roots
-      Hin Hfname Hlt Hcheck Hargs IHargs Hfresh R0 HnsR HnsR0 HR0.
+  - intros R R' Σ Σ' fname fdef captures env_lt captured_tys args σ
+      arg_roots Hin Hfname Hcheck Hargs IHargs Hout Hfresh R0 HnsR HnsR0
+      HR0.
     rewrite expr_local_store_names_call_expr in Hfresh.
     apply root_subst_images_exclude_names_app_inv in Hfresh.
     destruct Hfresh as [_ Hfresh_args].
@@ -13427,13 +13476,14 @@ Proof.
   inversion Htyped; subst.
   destruct (alpha_rename_typed_args_roots_shadow_safe_support_forward
     env Ω n rho R Rr Σ Σr args argsr used used_args
-    (fn_params fdef) (fn_params fdef) Σ' R' arg_roots)
+    (apply_lt_params σ (fn_params fdef))
+    (apply_lt_params σ (fn_params fdef)) Σ' R' arg_roots)
     as [Σr' [Rr' [arg_rootsr
       [Hargs_r [Hctx_r [HnsRr' [HRr' Harg_roots]]]]]]].
   - exact Hexpr.
   - match goal with
     | H : typed_args_roots_shadow_safe _ _ _ _ _ args
-          (fn_params fdef) _ _ arg_roots |- _ =>
+          (apply_lt_params σ (fn_params fdef)) _ _ arg_roots |- _ =>
         exact H
     end.
   - exact Hctx.
@@ -13452,7 +13502,7 @@ Proof.
   - exists Σr', Rr', (root_sets_union arg_rootsr).
     split; [| split; [| split; [| split]]].
     + eapply TERS_CallExpr_MakeClosure; eauto.
-      eapply check_make_closure_captures_sctx_alpha_forward; eauto.
+      eapply check_make_closure_captures_sctx_with_env_alpha_forward; eauto.
     + exact Hctx_r.
     + exact HnsRr'.
     + exact HRr'.

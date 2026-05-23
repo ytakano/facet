@@ -109,7 +109,6 @@ Inductive expr_root_shadow_captured_call_provenance_summary
       preservation_ready_args args ->
       In fcallee (env_fns env) ->
       fn_name fcallee = fname ->
-      fn_lifetimes fcallee = 0 ->
       callee_hidden_capture_args_disjoint fcallee args ->
       check_make_closure_captures_exact_sctx_with_env env Ω
         (sctx_of_ctx Γ) captures (fn_captures fcallee) =
@@ -168,7 +167,6 @@ Inductive expr_root_shadow_captured_call_provenance_summary_exact
       preservation_ready_args args ->
       In fcallee (env_fns env) ->
       fn_name fcallee = fname ->
-      fn_lifetimes fcallee = 0 ->
       callee_hidden_capture_args_disjoint fcallee args ->
       check_make_closure_captures_exact_sctx_with_env env Ω Σ
         captures (fn_captures fcallee) = infer_ok (env_lt, captured_tys) ->
@@ -266,7 +264,7 @@ Proof.
   induction Hsummary.
   - exact H0.
   - exact H5.
-  - exact H12.
+  - exact H11.
   - exact H19.
   - subst R3. eapply TERS_If; eauto. apply root_env_equiv_refl.
 Qed.
@@ -282,7 +280,6 @@ Definition callee_body_root_shadow_captured_call_provenance_summary
     preservation_ready_args args /\
     In fcallee (env_fns env) /\
     fn_name fcallee = fname /\
-    fn_lifetimes fcallee = 0 /\
     callee_hidden_capture_args_disjoint fcallee args /\
     check_make_closure_captures_exact_sctx_with_env env
       (fn_outlives fdef)

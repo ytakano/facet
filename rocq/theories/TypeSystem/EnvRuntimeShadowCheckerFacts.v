@@ -521,8 +521,6 @@ Proof.
         destruct (lookup_fn_b fname (env_fns env)) as [fcallee |]
           eqn:Hlookup_b; try discriminate.
         apply andb_true_iff in Hcaptured as [Hcaptured_head Hcallee].
-        apply andb_true_iff in Hcaptured_head as [Hlt Hdisjoint].
-        apply PeanoNat.Nat.eqb_eq in Hlt.
         destruct (check_make_closure_captures_exact_sctx_with_env env Ω Σ
           captures (fn_captures fcallee)) as [[env_lt captured_tys] | err]
           eqn:Hcaptures; try discriminate.
@@ -545,9 +543,8 @@ Proof.
         -- apply preservation_ready_args_b_sound. exact Hready_args.
         -- exact Hin_callee.
         -- exact Hname_callee.
-        -- exact Hlt.
         -- apply callee_hidden_capture_args_disjoint_b_sound.
-           exact Hdisjoint.
+           exact Hcaptured_head.
         -- exact Hcaptures.
         -- exact Hnodup_binding.
         -- exact Hprov_body.
@@ -712,8 +709,6 @@ Proof.
     destruct (lookup_fn_b fname (env_fns env)) as [fcallee |] eqn:Hlookup_b;
       try discriminate.
     apply andb_true_iff in Hrest as [Hcallee_head Hrest].
-    apply andb_true_iff in Hcallee_head as [Hlt Hdisjoint].
-    apply PeanoNat.Nat.eqb_eq in Hlt.
     destruct (check_make_closure_captures_exact_sctx_with_env env
       (fn_outlives fdef)
       (sctx_of_ctx (fn_body_ctx fdef))
@@ -749,10 +744,9 @@ Proof.
     split; [apply preservation_ready_args_b_sound; exact Hready_args|].
     split; [exact Hin_callee|].
     split; [exact Hname_callee|].
-    split; [exact Hlt|].
     split.
     { apply callee_hidden_capture_args_disjoint_b_sound.
-      exact Hdisjoint. }
+      exact Hcallee_head. }
     split; [exact Hcaptures|].
     split.
     { apply check_fn_root_shadow_captured_callee_provenance_summary_sound.

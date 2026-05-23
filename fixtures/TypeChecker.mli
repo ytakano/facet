@@ -659,10 +659,6 @@ val check_make_closure_captures_sctx_with_env :
   global_env -> outlives_ctx -> sctx -> ident list -> param list ->
   (lifetime * ty list) infer_result
 
-val check_make_closure_captures_exact_sctx :
-  global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list
-  infer_result
-
 val check_make_closure_captures_exact_sctx_with_env_base :
   global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list
   infer_result

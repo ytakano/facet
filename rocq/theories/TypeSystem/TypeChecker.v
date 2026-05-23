@@ -3750,9 +3750,8 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if Nat.eqb (fn_lifetimes fdef) 0
-          then
-            match check_make_closure_captures_exact_sctx env Ω Σ captures (fn_captures fdef) with
+            match check_make_closure_captures_sctx_with_env env Ω Σ captures
+                    (fn_captures fdef) with
             | infer_err err => infer_err err
             | infer_ok _ =>
                 let fix collect (Σ0 : sctx) (R0 : root_env) (as_ : list expr)
@@ -3775,15 +3774,30 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
                 match collect Σ R args with
                 | infer_err err => infer_err err
                 | infer_ok (arg_tys, Σ', R', arg_roots) =>
-                    match check_args Ω arg_tys (fn_params fdef) with
-                    | Some err => infer_err err
-                    | None =>
-                        infer_ok
-                          (fn_ret fdef, Σ', R', root_sets_union arg_roots)
+                    match build_sigma (fn_lifetimes fdef)
+                            (repeat None (fn_lifetimes fdef))
+                            arg_tys (fn_params fdef) with
+                    | None => infer_err ErrLifetimeConflict
+                    | Some σ_acc =>
+                        let σ := finalize_subst σ_acc in
+                        let ps_subst := apply_lt_params σ (fn_params fdef) in
+                        match check_args Ω arg_tys ps_subst with
+                        | Some err => infer_err err
+                        | None =>
+                            if forallb (wf_lifetime_b (mk_region_ctx n)) σ
+                            then
+                              let Ω_subst :=
+                                apply_lt_outlives σ (fn_outlives fdef) in
+                              if outlives_constraints_hold_b Ω Ω_subst
+                              then infer_ok
+                                (apply_lt_ty σ (fn_ret fdef), Σ', R',
+                                  root_sets_union arg_roots)
+                              else infer_err ErrHrtBoundUnsatisfied
+                            else infer_err ErrLifetimeLeak
+                        end
                     end
                 end
             end
-          else infer_err ErrNotImplemented
       end
   | ECallExpr _ _ => infer_err ErrNotImplemented
   end
@@ -4165,9 +4179,8 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if Nat.eqb (fn_lifetimes fdef) 0
-          then
-            match check_make_closure_captures_exact_sctx env Ω Σ captures (fn_captures fdef) with
+            match check_make_closure_captures_sctx_with_env env Ω Σ captures
+                    (fn_captures fdef) with
             | infer_err err => infer_err err
             | infer_ok _ =>
                 let fix collect (Σ0 : sctx) (R0 : root_env) (as_ : list expr)
@@ -4191,15 +4204,30 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
                 match collect Σ R args with
                 | infer_err err => infer_err err
                 | infer_ok (arg_tys, Σ', R', arg_roots) =>
-                    match check_args Ω arg_tys (fn_params fdef) with
-                    | Some err => infer_err err
-                    | None =>
-                        infer_ok
-                          (fn_ret fdef, Σ', R', root_sets_union arg_roots)
+                    match build_sigma (fn_lifetimes fdef)
+                            (repeat None (fn_lifetimes fdef))
+                            arg_tys (fn_params fdef) with
+                    | None => infer_err ErrLifetimeConflict
+                    | Some σ_acc =>
+                        let σ := finalize_subst σ_acc in
+                        let ps_subst := apply_lt_params σ (fn_params fdef) in
+                        match check_args Ω arg_tys ps_subst with
+                        | Some err => infer_err err
+                        | None =>
+                            if forallb (wf_lifetime_b (mk_region_ctx n)) σ
+                            then
+                              let Ω_subst :=
+                                apply_lt_outlives σ (fn_outlives fdef) in
+                              if outlives_constraints_hold_b Ω Ω_subst
+                              then infer_ok
+                                (apply_lt_ty σ (fn_ret fdef), Σ', R',
+                                  root_sets_union arg_roots)
+                              else infer_err ErrHrtBoundUnsatisfied
+                            else infer_err ErrLifetimeLeak
+                        end
                     end
                 end
             end
-          else infer_err ErrNotImplemented
       end
   | ECallExpr _ _ => infer_err ErrNotImplemented
   end
@@ -5510,7 +5538,6 @@ Fixpoint check_expr_root_shadow_captured_call_provenance_summary_fuel
           match lookup_fn_b fname (env_fns env) with
           | None => false
           | Some callee =>
-              (Nat.eqb (fn_lifetimes callee) 0) &&
               callee_hidden_capture_args_disjoint_b callee args &&
               match check_make_closure_captures_exact_sctx_with_env env
                       Ω Σ captures (fn_captures callee) with
@@ -5604,7 +5631,6 @@ Definition check_fn_root_shadow_captured_call_provenance_summary
           match lookup_fn_b fname (env_fns env) with
           | None => false
           | Some callee =>
-              (Nat.eqb (fn_lifetimes callee) 0) &&
               callee_hidden_capture_args_disjoint_b callee args &&
               match check_make_closure_captures_exact_sctx_with_env env
                       (fn_outlives fdef)
@@ -5983,6 +6009,35 @@ Example exact_sctx_with_env_shared_ref_capture_accepts :
     [(("r"%string), 0)]
     [ex_shared_ref_capture_param] =
   infer_ok (LVar 0, [ex_shared_ref_capture_ty]).
+Proof. vm_compute. reflexivity. Qed.
+
+Definition ex_shared_ref_capture_ignore_callee_fn : fn_def :=
+  MkFnDef (("shared_ref_capture_ignore_callee"%string), 0) 1 []
+    [ex_shared_ref_capture_param] []
+    (MkTy UUnrestricted TUnits)
+    EUnit.
+
+Definition ex_shared_ref_capture_direct_call_fn : fn_def :=
+  MkFnDef (("shared_ref_capture_direct_call"%string), 0) 1 []
+    [] [MkParam MImmutable (("r"%string), 0) ex_shared_ref_capture_ty]
+    (MkTy UUnrestricted TUnits)
+    (ECallExpr
+      (EMakeClosure (("shared_ref_capture_ignore_callee"%string), 0)
+        [(("r"%string), 0)])
+      []).
+
+Definition ex_shared_ref_capture_direct_call_env : global_env :=
+  MkGlobalEnv [] [] []
+    [ex_shared_ref_capture_ignore_callee_fn;
+     ex_shared_ref_capture_direct_call_fn].
+
+Example shared_ref_capture_direct_call_checker_accepts :
+  check_program_env_alpha ex_shared_ref_capture_direct_call_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example shared_ref_capture_direct_call_sidecar_accepts :
+  check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
+    ex_shared_ref_capture_direct_call_env = true.
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_ready_gap_captured_closure_call_expr : expr :=

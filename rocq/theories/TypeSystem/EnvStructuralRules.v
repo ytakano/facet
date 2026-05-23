@@ -638,6 +638,18 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       contains_lbound_outlives (open_bound_outlives σ bounds) = false ->
       Forall (fun '(a, b) => outlives Ω a b) (open_bound_outlives σ bounds) ->
       typed_env_structural env Ω n Σ (ECallExpr callee args) (open_bound_ty σ ret) Σ'
+  | TES_CallExpr_MakeClosure : forall Σ Σ' fname fdef captures env_lt
+      captured_tys args σ,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      check_make_closure_captures_sctx_with_env env Ω Σ captures
+        (fn_captures fdef) = infer_ok (env_lt, captured_tys) ->
+      typed_args_env_structural env Ω n Σ args
+        (apply_lt_params σ (fn_params fdef)) Σ' ->
+      Forall (fun '(a, b) => outlives Ω a b)
+        (apply_lt_outlives σ (fn_outlives fdef)) ->
+      typed_env_structural env Ω n Σ (ECallExpr (EMakeClosure fname captures) args)
+        (apply_lt_ty σ (fn_ret fdef)) Σ'
 with typed_args_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
     : sctx -> list expr -> list param -> sctx -> Prop :=
   | TESArgs_Nil : forall Σ,
@@ -726,16 +738,18 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_env_roots env Ω n R Σ (EMakeClosure fname captures)
         (closure_value_ty fdef captured_tys) Σ R []
   | TER_CallExpr_MakeClosure : forall R R' Σ Σ' fname fdef captures
-      captured_tys args arg_roots,
+      env_lt captured_tys args σ arg_roots,
       In fdef (env_fns env) ->
       fn_name fdef = fname ->
-      fn_lifetimes fdef = 0 ->
-      check_make_closure_captures_sctx env Ω Σ captures (fn_captures fdef) =
-        infer_ok captured_tys ->
-      typed_args_roots env Ω n R Σ args (fn_params fdef) Σ' R' arg_roots ->
+      check_make_closure_captures_sctx_with_env env Ω Σ captures
+        (fn_captures fdef) = infer_ok (env_lt, captured_tys) ->
+      typed_args_roots env Ω n R Σ args
+        (apply_lt_params σ (fn_params fdef)) Σ' R' arg_roots ->
+      Forall (fun '(a, b) => outlives Ω a b)
+        (apply_lt_outlives σ (fn_outlives fdef)) ->
       typed_env_roots env Ω n R Σ
         (ECallExpr (EMakeClosure fname captures) args)
-        (fn_ret fdef) Σ' R' (root_sets_union arg_roots)
+        (apply_lt_ty σ (fn_ret fdef)) Σ' R' (root_sets_union arg_roots)
   | TER_Struct : forall R R' Σ Σ' sname lts args fields sdef roots,
       lookup_struct sname env = Some sdef ->
       Datatypes.length lts = struct_lifetimes sdef ->
@@ -923,20 +937,6 @@ Proof.
   intros env Ω n.
   apply typed_roots_ind;
     intros; try solve [econstructor; eauto].
-  - eapply TES_CallExpr_Closure
-      with (u := closure_capture_usage captured_tys)
-           (env_lt := LStatic)
-           (param_tys := map param_ty (fn_params fdef)).
-    + replace (MkTy (closure_capture_usage captured_tys)
-          (TClosure LStatic (map param_ty (fn_params fdef)) (fn_ret fdef)))
-        with (closure_value_ty fdef captured_tys).
-      * eapply TES_MakeClosure_Static; eauto.
-      * unfold closure_value_ty, closure_value_ty_at.
-        rewrite e0. simpl.
-        rewrite map_lifetimes_tys_close_fn_lifetime_0.
-        rewrite map_lifetimes_ty_close_fn_lifetime_0.
-        reflexivity.
-    + apply typed_args_env_structural_params_of_tys_map_param_ty. exact H.
   - eapply TES_Deref_Expr.
     + reflexivity.
     + eapply TES_BorrowShared. eassumption.
@@ -1182,8 +1182,9 @@ Proof.
     + exact HnsR0.
     + exact HR0.
     + apply root_set_equiv_refl.
-  - intros R R' Σ Σ' fname fdef captures captured_tys args arg_roots
-      Hin Hfname Hlt Hcaptures Hargs IHargs Hfresh R0 HnsR HnsR0 HR0.
+  - intros R R' Σ Σ' fname fdef captures env_lt captured_tys args σ
+      arg_roots Hin Hfname Hcaptures Hargs IHargs Hout Hfresh R0 HnsR HnsR0
+      HR0.
     rewrite expr_local_store_names_call_expr in Hfresh.
     apply root_subst_images_exclude_names_app_inv in Hfresh.
     destruct Hfresh as [_ Hfresh_args].
@@ -1671,13 +1672,15 @@ Proof.
         sctx_same_bindings_trans.
     + eauto using typed_args_env_structural_same_bindings,
         sctx_same_bindings_trans.
-	    + eauto using typed_args_env_structural_same_bindings,
-	        sctx_same_bindings_trans.
-	    + eauto using typed_args_env_structural_same_bindings,
-	        sctx_same_bindings_trans.
-	    + eauto using typed_args_env_structural_same_bindings,
-	        sctx_same_bindings_trans.
-	  - intros env Ω n Σ args ps Σ' Htyped.
+    + eauto using typed_args_env_structural_same_bindings,
+        sctx_same_bindings_trans.
+    + eauto using typed_args_env_structural_same_bindings,
+        sctx_same_bindings_trans.
+    + eauto using typed_args_env_structural_same_bindings,
+        sctx_same_bindings_trans.
+    + eauto using typed_args_env_structural_same_bindings,
+        sctx_same_bindings_trans.
+  - intros env Ω n Σ args ps Σ' Htyped.
     induction Htyped.
     + apply sctx_same_bindings_refl.
     + eapply sctx_same_bindings_trans.

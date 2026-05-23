@@ -213,7 +213,7 @@ Proof.
 Qed.
 
 Lemma eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components :
-  forall env Ω n R Σ m x T args fname captures fdef
+  forall env Ω n R Σ m x T args fname captures fdef σ
       s s_final ret R_args Σ_args arg_roots env_lt captured_tys
       T_body Γ_out R_body roots_body,
     store_typed env s Σ ->
@@ -230,7 +230,7 @@ Lemma eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_comp
       (fn_captures fdef) = infer_ok (env_lt, captured_tys) ->
     NoDup (ctx_names (params_ctx (fn_captures fdef))) ->
     preservation_ready_args args ->
-    typed_args_roots env Ω n R Σ args (fn_params fdef)
+    typed_args_roots env Ω n R Σ args (apply_lt_params σ (fn_params fdef))
       Σ_args R_args arg_roots ->
     NoDup (ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))) ->
     provenance_ready_expr (fn_body fdef) ->
@@ -249,9 +249,9 @@ Lemma eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_comp
     ~ In x (args_free_vars_ts args) ->
     ~ In x (args_local_store_names args) ->
     store_typed env s_final Σ_args /\
-    value_has_type env s_final ret (apply_lt_ty [] (fn_ret fdef)).
+    value_has_type env s_final ret (apply_lt_ty σ (fn_ret fdef)).
 Proof.
-  intros env Ω n R Σ m x T args fname captures fdef s s_final ret
+  intros env Ω n R Σ m x T args fname captures fdef σ s s_final ret
     R_args Σ_args arg_roots env_lt captured_tys T_body Γ_out R_body
     roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys Husage Heval
     Hcheck Hnodup_caps Hready_args Htyped_args Hnodup_binding Hprov_body
@@ -266,13 +266,14 @@ Proof.
       eval_preserves_frame_scope_roots_ready_mutual
       (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
         eval_preserves_typing_roots_ready_prefix_mutual)
-      eval_preserves_param_scope_roots_ready_mutual
-      env Ω n R Σ m x T args fname captures fdef s s_final ret
-      R_args Σ_args arg_roots env_lt captured_tys T_body Γ_out R_body
-      roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys Husage Heval
-      Hcheck Hnodup_caps Hready_args Htyped_args Hnodup_binding Hprov_body
-      Htyped_body Hcompat_body Hexclude_roots Hexclude_env Hlookup Hfresh_s
-      Hfresh_cap_names Hfree_args Hlocal_args)
+	      eval_preserves_param_scope_roots_ready_mutual
+	      env Ω n R Σ m x T args fname captures fdef σ s s_final ret
+	      R_args Σ_args arg_roots env_lt captured_tys T_body Γ_out R_body
+	      roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys Husage Heval
+	      Hcheck Hnodup_caps Hready_args Htyped_args
+	      Hnodup_binding Hprov_body
+	      Htyped_body Hcompat_body Hexclude_roots Hexclude_env Hlookup Hfresh_s
+	      Hfresh_cap_names Hfree_args Hlocal_args)
     as [Hstore_final [Hv_final _]].
   split; assumption.
 Qed.

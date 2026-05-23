@@ -24,14 +24,18 @@ outside the reconciled roadmap.
   closure-related slices around `TypeSafetyClosureRuntimeArgsFacts.v`,
   `TypeSafetyClosureRuntimeArgsLet.v`, `TypeSafetyClosureWrappersCleanup.v`,
   `TypeSafetyCapturedCallMake.v`, and `TypeSafetyCapturedCallLet.v`.
-- Not fully optimized for repository-wide proof work: large shared foundations
-  remain, especially `TypeChecker.v` and `TypeSafetyHiddenFrameBase.v`.
+- Not fully optimized for repository-wide proof work: `TypeChecker.v` remains
+  large and should be treated as a separate checker-modularization effort.
 - Root-env parameter helpers have also been split behind
   `TypeSafetyRootEnvParams.v`, with focused slices for base facts, rename/store
   naming facts, boolean mirrors, coverage facts, and runtime binding facts.
 - Roots-ready helpers have been split behind `TypeSafetyRootsReady.v`, with
   focused slices for store basics, root-set naming, store operations,
   context-root facts, and mutual readiness theorems.
+- Hidden-frame base helpers have been split behind
+  `TypeSafetyHiddenFrameBase.v`, with focused slices for core root/frame
+  definitions, capture typing, copied capture stores, empty-frame composition,
+  and store-reference stripping support.
 - `plan/type_safety_roadmap.md` is still the active proof-intent document. Its
   captured-call subset-bridge status and module-ownership guidance have been
   reconciled with the current split; when future text conflicts with code,
@@ -42,9 +46,6 @@ outside the reconciled roadmap.
 - `TypeChecker.v` is still large and should not be split casually. Any checker
   modularization must preserve Rocq as the source of truth and regenerate
   extracted OCaml through `cd rocq && make`.
-- `TypeSafetyHiddenFrameBase.v` is still large, but it needs careful ownership
-  design before another split. Do not delegate its boundary selection to
-  sub-agents.
 - The direct with-env captured-call subset bridge is no longer a roadmap/status
   discrepancy. It exists as
   `captured_call_callee_body_root_shadow_provenance_instantiated_bridge_with_result_subset`
@@ -71,9 +72,10 @@ outside the reconciled roadmap.
 
 ## Next Refactor Candidates
 
-1. If the next proof repeatedly opens `TypeSafetyHiddenFrameBase.v`, first map
-   dependencies around capture roots, copied capture stores, empty root envs,
-   frame readiness, and hidden-store stripping support.
+There is no immediate proof-organization split left in this roadmap. Continue
+the active proof work in `plan/type_safety_roadmap.md`; only add a new refactor
+candidate when an active proof repeatedly opens a large file and exposes a
+stable ownership boundary.
 
 ## Checks
 

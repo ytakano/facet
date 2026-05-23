@@ -62,6 +62,7 @@ theories/TypeSystem/TypeSafetyBasePreservationMutual.v
 theories/TypeSystem/TypeSafetyBasePreservation.v
 theories/TypeSystem/TypeSafetyPrefixPreservationPrefix.v
 theories/TypeSystem/TypeSafetyPrefixPreservationCallInvariants.v
+theories/TypeSystem/TypeSafetyPrefixPreservationLetRoots.v
 theories/TypeSystem/TypeSafetyPrefixPreservation.v
 theories/TypeSystem/TypeSafetyRootPreservation.v
 theories/TypeSystem/TypeSafetyPreservationWrappers.v

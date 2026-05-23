@@ -193,11 +193,17 @@ runtime safety currently cross theorem boundaries.
   proof slices are Prefix (~535 old theorem lines), CallInvariants (~52),
   LetRoots (~86), and Roots (~1280); `TypeSafetyPrefixPreservation.v`
   is now the compatibility export surface.
+- Completed Phase 4 TypeSafetyCallFrame split:
+  `TypeSafetyCallFrameParamRootEnv.v` now owns the remaining param-root-env
+  block from `root_env_remove_params_no_shadow` through
+  `call_param_root_env_no_shadow`; `TypeSafetyCallFrame.v` is now a 1-line
+  compatibility export surface. Final line counts: ParamRootEnv 286,
+  compatibility export 1.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/TypeSafetyPrefixPreservationRoots.vo theories/TypeSystem/TypeSafetyPrefixPreservation.vo theories/TypeSystem/TypeSafetyRootPreservation.vo theories/TypeSystem/TypeSafetyPreservationWrappers.vo theories/TypeSystem/TypeSafety.vo`.
+  `cd rocq && make theories/TypeSystem/TypeSafetyCallFrameParamRootEnv.vo theories/TypeSystem/TypeSafetyCallFrame.vo theories/TypeSystem/TypeSafetyFrameScope.vo theories/TypeSystem/TypeSafety.v`.
 - Next task: pick the next measured Phase 4 bottleneck after the
-  TypeSafetyPrefixPreservation split; keep compatibility export surfaces and
-  theorem names stable.
+  TypeSafetyCallFrame split; keep compatibility export surfaces and theorem
+  names stable.
 
 ### Phase 1: Compact Continuation Notes
 

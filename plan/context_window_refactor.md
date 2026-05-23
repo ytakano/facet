@@ -9,8 +9,8 @@ to reload the original large captured-call, runtime-args, closure-wrapper, or
 call-frame files wholesale.
 
 The remaining problem is no longer the already-completed split history. The
-current risks are large foundational files and stale or overly detailed roadmap
-text that can send agents back through old proof paths.
+current risks are large foundational files and stale or overly detailed notes
+outside the reconciled roadmap.
 
 ## Current Evaluation
 
@@ -27,9 +27,10 @@ text that can send agents back through old proof paths.
 - Not fully optimized for repository-wide proof work: large shared foundations
   remain, especially `TypeChecker.v`, `TypeSafetyRootsReady.v`,
   `TypeSafetyHiddenFrameBase.v`, and `TypeSafetyRootEnvParams.v`.
-- `plan/type_safety_roadmap.md` is still the active proof-intent document, but
-  it contains some stale ownership/status wording. When it conflicts with code,
-  inspect the code and update that roadmap separately.
+- `plan/type_safety_roadmap.md` is still the active proof-intent document. Its
+  captured-call subset-bridge status and module-ownership guidance have been
+  reconciled with the current split; when future text conflicts with code,
+  inspect the code and update the roadmap separately.
 
 ## Remaining Bottlenecks
 
@@ -41,9 +42,12 @@ text that can send agents back through old proof paths.
   their boundary selection to sub-agents.
 - `TypeSafetyRootEnvParams.v` is a likely future target only when an active
   proof needs a narrower root-env helper boundary.
-- The closure roadmap should be reconciled before widening checker evidence:
-  the status of the direct with-env captured-call subset bridge differs between
-  older roadmap text and the current refactor notes.
+- The direct with-env captured-call subset bridge is no longer a roadmap/status
+  discrepancy. It exists as
+  `captured_call_callee_body_root_shadow_provenance_instantiated_bridge_with_result_subset`
+  and is used by captured-call make/let routes. Exact `ELet` evidence should
+  still wait for explicit returned-root, store-root, and no-shadow package
+  coverage.
 
 ## Operating Rules
 
@@ -64,16 +68,14 @@ text that can send agents back through old proof paths.
 
 ## Next Refactor Candidates
 
-1. Reconcile `plan/type_safety_roadmap.md` with the current closure code and
-   split ownership before doing more closure proof work.
-2. If the next proof repeatedly opens `TypeSafetyRootsReady.v`, design a split
+1. If the next proof repeatedly opens `TypeSafetyRootsReady.v`, design a split
    around a stable fact cluster first, then implement it as a separate
    proof-organization refactor.
-3. If the next proof repeatedly opens `TypeSafetyHiddenFrameBase.v`, first map
+2. If the next proof repeatedly opens `TypeSafetyHiddenFrameBase.v`, first map
    dependencies around capture roots, copied capture stores, empty root envs,
    frame readiness, and hidden-store stripping support.
-4. Defer checker modularization until proof APIs and active sidecar evidence
-   requirements are settled.
+3. Split `TypeSafetyRootEnvParams.v` only when an active proof needs a narrower
+   root-env helper boundary.
 
 ## Checks
 

@@ -186,17 +186,20 @@ Work in this order unless a proof exposes a soundness gap.
      The expression cleanup wrapper also carries that fact through its
      package. Compatibility wrappers still project the older store/value
      surface.
-   - Remaining blocker: the outer direct captured-call preservation package
-     still needs a proved subset bridge from the instantiated body return
-     roots to `root_sets_union (arg_roots ++ capture_store_root_sets captured)`
-     in the direct with-env route. Do not widen exact `ELet` evidence until
-     this bridge is available and can then be combined with
-     `capture_store_root_sets_bound_from_capture_root_bound`.
-   - After that bridge exists, expose final `store_roots_within`, returned
-     `value_roots_within`, `store_no_shadow`, and `root_env_no_shadow` from
-     the captured-call preservation package, weaken copied capture roots into
-     the exact sidecar returned-root bound, and add the `ELet` exact-evidence
-     constructor.
+   - The subset bridge exists as
+     `captured_call_callee_body_root_shadow_provenance_instantiated_bridge_with_result_subset`
+     and is used by the captured-call make/let routes. It relates the
+     instantiated body returned roots to the argument/captured-store root
+     union needed by the direct with-env captured-call path.
+   - Remaining warning: do not widen exact `ELet` evidence unless the
+     returned-root, store-root, and no-shadow package obligations are
+     explicitly covered, including the returned-root subset bridge together
+     with `capture_store_root_sets_bound_from_capture_root_bound`.
+   - After those package obligations are covered, expose final
+     `store_roots_within`, returned `value_roots_within`, `store_no_shadow`,
+     and `root_env_no_shadow` from the captured-call preservation package,
+     weaken copied capture roots into the exact sidecar returned-root bound,
+     and add the `ELet` exact-evidence constructor.
 
    Annotated local-let captured-call route:
 
@@ -434,164 +437,30 @@ Going forward:
 
 - Add new direct-call helper facts and route cores to the focused direct-call
   modules, with public wrappers in `TypeSafetyDirectCallWrappers.v`.
-- Add new captured-call helper facts and route cores to
-  `TypeSafetyCapturedCall.v`, `TypeSafetyClosureRuntimeArgs.v`, or the closure
-  cleanup modules according to the ownership list below.
+- Add new captured-call helper facts and route cores to the focused
+  captured-call, runtime-args, or closure cleanup split modules according to
+  their current dependencies.
 - Keep public theorem names visible through `TypeSafety.v`, but add wrappers to
   focused `*Wrappers.v` files instead of growing `TypeSafety.v`.
 - Keep proof statements stable unless the active implementation task requires a
   theorem-strengthening step.
 
-Completed ownership:
+Current ownership pattern:
 
-- `TypeSafetyRootFacts.v` now holds root/value rootless facts that are
-  frame-independent and broadly reused.
-- `TypeSafety.v` exports `TypeSafetyRootFacts`, so downstream modules that
-  import `TypeSafety` still see the moved names.
-- `TypeSafetyHiddenFrameBase.v` now holds the first hidden-frame support batch:
-  root/store append facts, captured frame readiness, empty capture root
-  environments, copied-capture rootless/runtime-ready facts, and captured
-  frame store typing facts.
-- It also holds the primitive hidden `store_add` stripping support batch:
-  store-add lookup/update inversion facts, root-reference exclusion
-  preservation for store operations, and `eval_place_store_add_strip`.
-- `TypeSafetyReadiness.v` holds preservation-readiness predicates and the
-  store-name preservation facts used by hidden-frame stripping.
-- `TypeSafetyHiddenFrameStrip.v` now holds the readiness-dependent hidden-frame
-  mutual strip batch, from `args_free_vars_ts` through
-  `eval_let_make_closure_captured_call_args_strip`.
-- `TypeSafetyCallFrame.v` now holds call-frame/root-env foundations from
-  `params_fresh_in_store` through `call_param_root_env_no_shadow`, including
-  parameter freshness, argument value typing, bind-params facts,
-  `store_param_prefix`, `root_env_add_params_roots`, `root_env_remove_params`,
-  `call_param_root_env`, tail-frame freshness, and shadow-safe tail-frame
-  helpers.
-- `TypeSafetyFrameScope.v` now holds the frame-scope foundation batch:
-  `store_param_scope`, hidden frame scope, frame static freshness, and
-  update/remove preservation facts through
-  `store_frame_scope_no_local_under_params`.
-- `TypeSafetyProvenanceReady.v` now holds the readiness-to-provenance bridge
-  `preservation_ready_implies_provenance_ready*`, the local eval induction
-  scheme, runtime provenance-readiness preservation, and root-exclusion facts
-  through `store_roots_exclude_root`.
-- `TypeSafetyRootEnvParams.v` now holds root-env covers/excludes helpers,
-  captured-call runtime root-env composition facts, and params exclusion facts
-  through `call_param_root_env_excludes_params`.
-- `TypeSafetyRootsReady.v` now holds the roots-ready support batch:
-  direct-place lookup helpers, root/store/ctx named facts, provenance
-  readiness, `typed_fields_roots_cons_inv_ts`, typed roots named/key named
-  mutual facts, `eval_preserves_roots_ready_mutual`, and the parameterized
-  prefix wrapper core
-  `eval_preserves_roots_ready_prefix_mutual_with_preservation_core`.
-  `TypeSafety.v` keeps the public `eval_preserves_roots_ready_prefix_mutual`
-  theorem and passes `eval_preserves_typing_ready_prefix_mutual` into the core.
-- `TypeSafetyParamScopeReady.v` now holds param-scope roots-ready
-  preservation through `eval_preserves_param_scope_roots_ready_mutual`.
-- `TypeSafetyFrameScopeReady.v` now holds frame-scope roots-ready
-  preservation through `eval_preserves_frame_scope_roots_ready_mutual`.
-- `TypeSafetyHiddenFrameCleanupFacts.v` now holds the hidden-frame cleanup
-  foundation facts through `store_typed_remove_params_store_param_prefix`.
-- `TypeSafetyHiddenFrame.v` is now only an export aggregator for the split
-  hidden-frame modules.
-- `TypeSafetyClosureRuntimeArgs.v` now holds the first captured-call readiness helper
-  batch: bind-params call-root readiness, captured argument value typing, hidden
-  closure-frame argument typing, evaluated-argument store-name freshness, and
-  `captured_call_frame_ready_store_add_right`.
-- `TypeSafetyRootNamed.v` owns the parameterized root-name/key preservation
-  cores and the standalone `root_env_store_keys_named_excludes_names` helper.
-- `TypeSafetyBasePreservation.v` owns the basic big-step preservation cases
-  from `eval_args_preserves_typing` through `eval_letinfer_preserves_typing`.
-  It also owns the main preservation core
-  `eval_preserves_typing_ready_mutual_core` and the parameterized structural
-  endpoint cores
-  `typed_fn_env_structural_big_step_safe_ready_with_preservation_core` and
-  `checked_fn_env_structural_big_step_safe_ready_with_preservation_core`.
-  `TypeSafety.v` exports it through the wrapper modules.
-- `TypeSafetyPrefixPreservation.v` owns prefix-preservation cores:
-  `eval_preserves_typing_ready_prefix_mutual_core`,
-  `eval_preserves_typing_roots_ready_prefix_mutual_core`,
-  `eval_preserves_typing_ready_with_call_invariants_mutual_with_preservation_core`,
-  and `eval_let_roots_ready_preserves_typing_with_preservation_core`.
-  `TypeSafetyPreservationWrappers.v` keeps the public theorem names as wrappers.
-- `TypeSafetyRootPreservation.v` owns
-  `eval_preserves_typing_roots_ready_mutual_core`.
-  `TypeSafetyPreservationWrappers.v` keeps the public
-  `eval_preserves_typing_roots_ready_mutual` theorem as a wrapper.
-- `TypeSafetyPreservationWrappers.v` owns the public preservation wrappers:
-  main ready preservation, structural endpoint safety, prefix preservation,
-  roots-ready preservation, root-name preservation, and root-key preservation.
-- Closure cleanup is split by proof layer:
-  `TypeSafetyClosureCleanupFrame.v` owns bind-params cleanup support and the
-  frame cleanup cores through
-  `eval_call_body_cleanup_preserves_value_and_refs_frame_with_preservation_core`;
-  `TypeSafetyClosureCleanupCtxErased.v` owns body-context and hidden-frame
-  erased cleanup cores through
-  `eval_let_make_closure_captured_call_hidden_cleanup_package_with_preservation_core`;
-  `TypeSafetyClosureCleanupCaptured.v` owns captured-call cleanup variants
-  through
-  `eval_captured_call_body_cleanup_preserves_value_and_refs_params_erased_with_preservation_core`;
-  `TypeSafetyClosureCleanupMakeClosure.v` owns make-closure captured cleanup
-  cores through
-  `eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_auto_with_preservation_core`.
-  `TypeSafetyClosureCleanup.v` is now only an export aggregator, and
-  `TypeSafetyClosureWrappers.v` keeps the public wrappers that pass the main
-  preservation, frame-scope, prefix-typing, and param-scope facts into these
-  cores.
-- `TypeSafetyClosureRuntimeArgs.v` now holds the captured runtime-readiness helper batch:
-  copied-capture frame readiness, exact captured frame params readiness, and
-  the non-hidden/hidden runtime-args readiness cores used by
-  `eval_make_closure_captured_call_runtime_args_ready_auto` and
-  `eval_let_make_closure_captured_call_runtime_args_ready_auto`.
-- `TypeSafetyClosureRuntimeArgs.v` now also holds the parameterized captured
-  runtime-args wrapper cores:
-  `eval_make_closure_captured_call_runtime_args_ready_auto_with_preservation_core`
-  and
-  `eval_let_make_closure_captured_call_runtime_args_ready_auto_with_preservation_core`.
-  `TypeSafetyClosureWrappers.v` keeps the public wrappers and passes the main
-  preservation, root-name, and root-key mutual theorems into the cores.
-- `TypeSafetyClosure.v` is now only an export aggregator for
-  `TypeSafetyClosureRuntimeArgs.v` and `TypeSafetyClosureCleanup.v`.
-- `TypeSafetyDirectCallSetup.v` now holds direct-call statement definitions,
-  function-env uniqueness and lookup helpers, and setup facts through
-  `lookup_fn_in_unique_by_name`.
-- `TypeSafetyDirectCallBody.v` now holds direct-call body/prefix/cleanup and
-  fresh-args helper cores through
-  `eval_args_root_sets_union_excludes_fresh_name_with_preservation_core`.
-- `TypeSafetyDirectCallEvidence.v` now holds direct-call callee evidence
-  definitions and summary bridge cores through
-  `direct_call_callee_body_root_shadow_provenance_summary_bridge_of_unique_with_preservation_core`.
-- `TypeSafetyDirectCallRoute.v` now holds direct-call route cores,
-  `eval_call_expr_fn_as_call`, and the callee-summary route core.
-- `TypeSafetyDirectCall.v` is now only an export aggregator for the split
-  direct-call modules. `TypeSafetyDirectCallWrappers.v` keeps the public
-  direct-call wrappers and passes the main preservation, root-name, root-key,
-  frame-scope, prefix-typing, and param-scope preservation mutual theorems into
-  the cores.
-- `TypeSafetyCapturedCall.v` now holds the captured callee evidence
-  instantiation batch:
-  `captured_call_callee_body_root_shadow_provenance_instantiated_bridge`,
-  `captured_call_callee_body_root_shadow_provenance_instantiated_bridge_with_result_subset`,
-  and
-  `captured_call_callee_body_root_shadow_provenance_instantiated_tail_frame`.
-  It also owns the captured-call alpha-renaming binding initial support facts.
-  It also owns parameterized captured-call preservation bridge cores:
-  `eval_make_closure_captured_call_expr_preserves_typing_with_instantiated_body_with_preservation_core`,
-  `eval_make_closure_captured_call_expr_preserves_typing_with_callee_components_with_preservation_core`,
-  and
-  `eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components_with_preservation_core`.
-  `TypeSafetyClosureWrappers.v` keeps the public captured-call preservation
-  bridge wrappers and passes the main preservation, root-name, root-key,
-  frame-scope, prefix-typing, and param-scope preservation mutual theorems into
-  the cores.
-- `TypeSafetyDirectPlace.v` now owns direct-place runtime target, runtime path
-  lookup, and copy/move contradiction helpers.
-- `TypeSafetyLocalFacts.v` now owns the early local-shadow, nil-lifetime, and
-  root subset helper facts through `value_roots_exclude_root_stores_subset`.
-- `TypeSafety.v` is now an export aggregator. It exports the focused proof
-  modules plus `TypeSafetyPreservationWrappers.v`,
-  `TypeSafetyClosureWrappers.v`, and `TypeSafetyDirectCallWrappers.v`, so
-  downstream modules that import `TypeSafety` still see the public theorem
-  names.
+- `TypeSafety.v`, `TypeSafetyCallFrame.v`, `TypeSafetyCapturedCall.v`,
+  `TypeSafetyClosureRuntimeArgs.v`, `TypeSafetyClosureWrappers.v`,
+  `TypeSafetyBasePreservation.v`, and `TypeSafetyPrefixPreservation.v` are
+  compatibility/export surfaces for the current split. Do not assume they own
+  old moved proof bodies just because older notes said so.
+- Focused split modules own proof bodies. For example, direct-call setup,
+  body, evidence, and route facts live in the direct-call split modules;
+  captured-call make/let/evidence facts live in the captured-call split
+  modules; closure cleanup facts live in the cleanup split modules; and public
+  theorem names are kept stable through wrapper/export modules.
+- Treat detailed completed ownership lists as inventory/history notes, not as
+  active routing instructions. Before adding or moving a proof, inspect the
+  current imports and nearest focused module instead of following stale
+  roadmap inventory.
 
 When adding a new proof or wrapper, run at least:
 

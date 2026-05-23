@@ -183,10 +183,17 @@ runtime safety currently cross theorem boundaries.
   are `TypeSafetyClosureWrappersCleanup.v` 731 lines,
   `TypeSafetyClosureWrappersRuntimeArgs.v` 109 lines, and
   `TypeSafetyClosureWrappersCapturedCall.v` 173 lines.
+- Completed Phase 4 Task D measured base-preservation split:
+  `TypeSafetyBasePreservation.v` is now a 1-line compatibility export surface;
+  proof slices are `TypeSafetyBasePreservationBasic.v` 482 lines,
+  `TypeSafetyBasePreservationControl.v` 466 lines,
+  `TypeSafetyBasePreservationAssign.v` 626 lines, and
+  `TypeSafetyBasePreservationMutual.v` 572 lines.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/TypeSafetyClosureWrappersCapturedCall.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo theories/TypeSystem/TypeSafetyDirectCallWrappers.vo theories/TypeSystem/TypeSafety.vo`.
-- Next task: pick the next measured Phase 4 bottleneck after current checks;
-  keep compatibility export surfaces and theorem names stable.
+  `cd rocq && make theories/TypeSystem/TypeSafetyBasePreservationMutual.vo theories/TypeSystem/TypeSafetyBasePreservation.vo theories/TypeSystem/TypeSafetyPrefixPreservation.vo theories/TypeSystem/TypeSafetyPreservationWrappers.vo theories/TypeSystem/TypeSafety.vo`.
+- Next task: pick the next measured Phase 4 bottleneck after the
+  base-preservation split; keep compatibility export surfaces and theorem names
+  stable.
 
 ### Phase 1: Compact Continuation Notes
 

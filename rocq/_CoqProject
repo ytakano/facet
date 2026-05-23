@@ -58,6 +58,7 @@ theories/TypeSystem/TypeSafetyRootNamed.v
 theories/TypeSystem/TypeSafetyBasePreservationBasic.v
 theories/TypeSystem/TypeSafetyBasePreservationControl.v
 theories/TypeSystem/TypeSafetyBasePreservationAssign.v
+theories/TypeSystem/TypeSafetyBasePreservationMutual.v
 theories/TypeSystem/TypeSafetyBasePreservation.v
 theories/TypeSystem/TypeSafetyPrefixPreservation.v
 theories/TypeSystem/TypeSafetyRootPreservation.v

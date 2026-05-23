@@ -517,7 +517,7 @@ Proof.
       * exact Helse_summary.
       * apply ty_core_eqb_true. exact Hbranch_core.
       * exact Hmerge.
-      * apply root_env_eqb_true_equiv. exact Hroot_eq.
+      * apply root_env_eqb_true. exact Hroot_eq.
 Qed.
 
 Lemma check_expr_root_shadow_captured_call_provenance_summary_sound_early :
@@ -805,4 +805,3 @@ Proof.
   apply check_fn_root_shadow_captured_call_provenance_summary_sound.
   exact Hcheck.
 Qed.
-

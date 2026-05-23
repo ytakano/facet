@@ -454,7 +454,8 @@ Lemma eval_expr_root_shadow_captured_call_provenance_summary_exact_package :
       value_has_type env s' ret T /\
       store_roots_within R' s' /\
       value_roots_within ret_roots ret /\
-      store_no_shadow s'.
+      store_no_shadow s' /\
+      root_env_no_shadow R'.
 Proof.
   intros env Ω n R Σ e T Σ' R' roots ret_roots Hsummary.
   induction Hsummary; intros s s' ret Hstore Hroots Hshadow Hrn Hnamed
@@ -495,7 +496,8 @@ Proof.
     destruct (eval_make_closure_captured_call_expr_shadow_package_with_callee_components
         env Ω n R Σ args fname captures fcallee s s' ret T Σ' R' roots
         env_lt captured_tys T_body Γ_out R_body roots_body capture_roots)
-      as [Hstore' [Hv [Hroots' [Hvalue_roots [Hshadow' _]]]]]; eauto.
+      as [Hstore' [Hv [Hroots' [Hvalue_roots [Hshadow' Hrn']]]]]; eauto.
+    repeat split; assumption.
   - dependent destruction Heval.
     + destruct (proj1 eval_preserves_typing_roots_ready_mutual
           env s e1 s1 (VBool true) Heval1 Ω n R Σ T_cond Σ1 R1
@@ -523,7 +525,7 @@ Proof.
         as Hkeys1.
       destruct (IHHsummary1 s1 s2 v Hstore1 Hroots1 Hshadow1 Hrn1
           Hnamed1 Hkeys1 Heval2 Hunique)
-        as [Hstore2 [Hv [Hroots2 [Hvalue_roots Hshadow2]]]].
+        as [Hstore2 [Hv [Hroots2 [Hvalue_roots [Hshadow2 Hrn2]]]]].
       repeat split.
       * eapply store_typed_ctx_merge_left; eassumption.
       * eapply value_has_type_if_left_result. exact Hv.
@@ -532,6 +534,7 @@ Proof.
         -- exact Hvalue_roots.
         -- intros x Hin. apply root_set_union_in_l. exact Hin.
       * exact Hshadow2.
+      * exact Hrn2.
     + destruct (proj1 eval_preserves_typing_roots_ready_mutual
           env s e1 s1 (VBool false) Heval1 Ω n R Σ T_cond Σ1 R1
           roots_cond H Hstore Hroots Hshadow Hrn
@@ -558,7 +561,7 @@ Proof.
         as Hkeys1.
       destruct (IHHsummary2 s1 s2 v Hstore1 Hroots1 Hshadow1 Hrn1
           Hnamed1 Hkeys1 Heval2 Hunique)
-        as [Hstore3 [Hv [Hroots3 [Hvalue_roots Hshadow3]]]].
+        as [Hstore3 [Hv [Hroots3 [Hvalue_roots [Hshadow3 Hrn3]]]]].
       assert (Htypes : Forall2 sctx_entry_type_eq Σ2 Σ3).
       { eapply typed_env_structural_branch_type_eq.
         - eapply typed_env_roots_structural.
@@ -574,13 +577,12 @@ Proof.
       * eapply value_has_type_if_right_result.
         -- exact Hv.
         -- exact H2.
-      * eapply store_roots_within_equiv.
-        -- apply root_env_equiv_sym. exact H4.
-        -- exact Hroots3.
+      * rewrite H4. exact Hroots3.
       * eapply (proj1 value_roots_within_weaken).
         -- exact Hvalue_roots.
         -- intros x Hin. apply root_set_union_in_r. exact Hin.
       * exact Hshadow3.
+      * rewrite H4. exact Hrn3.
 Unshelve.
   all: eauto.
 Qed.

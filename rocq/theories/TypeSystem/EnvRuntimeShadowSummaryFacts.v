@@ -205,7 +205,7 @@ Inductive expr_root_shadow_captured_call_provenance_summary_exact
         env Ω n R1 Σ1 e3 T3 Σ3 R3 roots3 ret_roots3 ->
       ty_core T2 = ty_core T3 ->
       ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
-      root_env_equiv R2 R3 ->
+      R2 = R3 ->
       expr_root_shadow_captured_call_provenance_summary_exact
         env Ω n R Σ (EIf e1 e2 e3)
         (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2))
@@ -223,7 +223,7 @@ Proof.
   - exact H0.
   - exact H5.
   - exact H12.
-  - eapply TERS_If; eauto.
+  - subst R3. eapply TERS_If; eauto. apply root_env_equiv_refl.
 Qed.
 
 Definition callee_body_root_shadow_captured_call_provenance_summary

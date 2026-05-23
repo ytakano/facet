@@ -27,6 +27,11 @@ theories/TypeSystem/TypeSafetyCallFrameParamRootEnv.v
 theories/TypeSystem/TypeSafetyCallFrame.v
 theories/TypeSystem/TypeSafetyFrameScope.v
 theories/TypeSystem/TypeSafetyProvenanceReady.v
+theories/TypeSystem/TypeSafetyRootEnvParamsBase.v
+theories/TypeSystem/TypeSafetyRootEnvParamsRename.v
+theories/TypeSystem/TypeSafetyRootEnvParamsBool.v
+theories/TypeSystem/TypeSafetyRootEnvParamsCovers.v
+theories/TypeSystem/TypeSafetyRootEnvParamsRuntime.v
 theories/TypeSystem/TypeSafetyRootEnvParams.v
 theories/TypeSystem/TypeSafetyRootsReady.v
 theories/TypeSystem/TypeSafetyParamScopeReady.v

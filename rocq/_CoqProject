@@ -33,6 +33,11 @@ theories/TypeSystem/TypeSafetyRootEnvParamsBool.v
 theories/TypeSystem/TypeSafetyRootEnvParamsCovers.v
 theories/TypeSystem/TypeSafetyRootEnvParamsRuntime.v
 theories/TypeSystem/TypeSafetyRootEnvParams.v
+theories/TypeSystem/TypeSafetyRootsReadyStore.v
+theories/TypeSystem/TypeSafetyRootsReadyRootSets.v
+theories/TypeSystem/TypeSafetyRootsReadyStoreOps.v
+theories/TypeSystem/TypeSafetyRootsReadyCtx.v
+theories/TypeSystem/TypeSafetyRootsReadyMutual.v
 theories/TypeSystem/TypeSafetyRootsReady.v
 theories/TypeSystem/TypeSafetyParamScopeReady.v
 theories/TypeSystem/TypeSafetyFrameScopeReady.v

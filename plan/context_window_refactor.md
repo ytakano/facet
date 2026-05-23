@@ -167,8 +167,14 @@ runtime safety currently cross theorem boundaries.
   use the `TypeSafetyRootEnvParams.v` helper API for instantiated body return
   roots within `root_sets_union (arg_roots ++ capture_store_root_sets
   captured)`, without changing checker contracts or theorem statements.
+- Completed Phase 4 Task C measured runtime-args split:
+  `TypeSafetyClosureRuntimeArgs.v` was 1579 lines before the Phase 4 split;
+  `TypeSafetyClosureRuntimeArgsBase.v`, `TypeSafetyClosureRuntimeArgsMake.v`,
+  and `TypeSafetyClosureRuntimeArgsLet.v` now own the extracted Base/Make/Let
+  proof slices, while `TypeSafetyClosureRuntimeArgs.v` remains the public
+  compatibility export surface.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/TypeSafetyCapturedCall.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo theories/TypeSystem/TypeSafety.v`.
+  `cd rocq && make theories/TypeSystem/TypeSafetyClosureRuntimeArgsLet.vo theories/TypeSystem/TypeSafetyClosureRuntimeArgs.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo theories/TypeSystem/TypeSafety.v`.
 - Next task: Phase 4 measured proof-file splits. Before splitting, record the
   concrete bottleneck measurement and keep wrapper/aggregator theorem names
   stable.

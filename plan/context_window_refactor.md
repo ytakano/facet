@@ -189,11 +189,15 @@ runtime safety currently cross theorem boundaries.
   `TypeSafetyBasePreservationControl.v` 466 lines,
   `TypeSafetyBasePreservationAssign.v` 626 lines, and
   `TypeSafetyBasePreservationMutual.v` 572 lines.
+- Completed Phase 4 TypeSafetyPrefixPreservation split:
+  proof slices are Prefix (~535 old theorem lines), CallInvariants (~52),
+  LetRoots (~86), and Roots (~1280); `TypeSafetyPrefixPreservation.v`
+  is now the compatibility export surface.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/TypeSafetyBasePreservationMutual.vo theories/TypeSystem/TypeSafetyBasePreservation.vo theories/TypeSystem/TypeSafetyPrefixPreservation.vo theories/TypeSystem/TypeSafetyPreservationWrappers.vo theories/TypeSystem/TypeSafety.vo`.
+  `cd rocq && make theories/TypeSystem/TypeSafetyPrefixPreservationRoots.vo theories/TypeSystem/TypeSafetyPrefixPreservation.vo theories/TypeSystem/TypeSafetyRootPreservation.vo theories/TypeSystem/TypeSafetyPreservationWrappers.vo theories/TypeSystem/TypeSafety.vo`.
 - Next task: pick the next measured Phase 4 bottleneck after the
-  base-preservation split; keep compatibility export surfaces and theorem names
-  stable.
+  TypeSafetyPrefixPreservation split; keep compatibility export surfaces and
+  theorem names stable.
 
 ### Phase 1: Compact Continuation Notes
 

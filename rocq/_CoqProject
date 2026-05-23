@@ -17,6 +17,11 @@ theories/TypeSystem/CheckerSoundness.v
 theories/TypeSystem/EnvSoundnessFacts.v
 theories/TypeSystem/TypeSafetyRootFacts.v
 theories/TypeSystem/TypeSafetyReadiness.v
+theories/TypeSystem/TypeSafetyHiddenFrameBaseCore.v
+theories/TypeSystem/TypeSafetyHiddenFrameBaseCapture.v
+theories/TypeSystem/TypeSafetyHiddenFrameBaseCopyStore.v
+theories/TypeSystem/TypeSafetyHiddenFrameBaseEmpty.v
+theories/TypeSystem/TypeSafetyHiddenFrameBaseStoreRefs.v
 theories/TypeSystem/TypeSafetyHiddenFrameBase.v
 theories/TypeSystem/TypeSafetyHiddenFrameStrip.v
 theories/TypeSystem/TypeSafetyCallFrameParams.v

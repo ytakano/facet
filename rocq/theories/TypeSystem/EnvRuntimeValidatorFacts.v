@@ -99,6 +99,106 @@ Proof.
   exact Hsummary.
 Qed.
 
+Lemma infer_env_elab_fn_name :
+  forall env f T Γ f',
+    infer_env_elab env f = infer_ok (T, Γ, f') ->
+    fn_name f' = fn_name f.
+Proof.
+  intros env f T Γ f' Helab.
+  unfold infer_env_elab in Helab.
+  destruct (negb (wf_outlives_b (mk_region_ctx (fn_lifetimes f))
+             (fn_outlives f))) eqn:?; try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f))
+             (fn_ret f))) eqn:?; try discriminate.
+  destruct (check_fn_binding_params (mk_region_ctx (fn_lifetimes f)) f)
+    eqn:?; try discriminate.
+  destruct (infer_core_env_elab env (fn_outlives f) (fn_lifetimes f)
+             (fn_body_ctx f) (fn_body f))
+    as [[[T_body Γ_out] body'] | err] eqn:?; try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) T_body))
+    eqn:?; try discriminate.
+  destruct (ty_compatible_b (fn_outlives f) T_body (fn_ret f))
+    eqn:?; try discriminate.
+  destruct (params_ok_env_b env (fn_params f) Γ_out)
+    eqn:?; try discriminate.
+  inversion Helab; subst.
+  unfold fn_with_body. reflexivity.
+Qed.
+
+Lemma infer_full_env_elab_fn_name :
+  forall env f T Γ f',
+    infer_full_env_elab env f = infer_ok (T, Γ, f') ->
+    fn_name f' = fn_name f.
+Proof.
+  intros env f T Γ f' Hfull.
+  unfold infer_full_env_elab in Hfull.
+  destruct (infer_env_elab env f) as [[[T0 Γ0] f0] | err] eqn:Helab;
+    try discriminate.
+  destruct (borrow_check_env env [] (fn_body_ctx f0) (fn_body f0))
+    as [pbs | err] eqn:?; try discriminate.
+  inversion Hfull; subst.
+  eapply infer_env_elab_fn_name. exact Helab.
+Qed.
+
+Lemma infer_fns_env_elab_fn_names :
+  forall env fns fns',
+    infer_fns_env_elab env fns = infer_ok fns' ->
+    map fn_name fns' = map fn_name fns.
+Proof.
+  intros env fns.
+  induction fns as [| f rest IH]; intros fns' Helab.
+  - simpl in Helab. inversion Helab. reflexivity.
+  - simpl in Helab.
+    destruct (infer_full_env_elab env f) as [[[T Γ] f'] | err] eqn:Hfull;
+      try discriminate.
+    destruct (infer_fns_env_elab env rest) as [rest' | err] eqn:Hrest;
+      try discriminate.
+    inversion Helab; subst.
+    simpl. f_equal.
+    + eapply infer_full_env_elab_fn_name. exact Hfull.
+    + apply IH. reflexivity.
+Qed.
+
+Lemma fn_name_strings_of_fn_names :
+  forall fns1 fns2,
+    map fn_name fns1 = map fn_name fns2 ->
+    fn_name_strings fns1 = fn_name_strings fns2.
+Proof.
+  unfold fn_name_strings.
+  induction fns1 as [| f1 rest1 IH]; destruct fns2 as [| f2 rest2];
+    simpl; intros Hnames; try discriminate.
+  - reflexivity.
+  - injection Hnames as Hnames_tail Hnames_head.
+    f_equal.
+    + rewrite Hnames_tail. reflexivity.
+    + apply IH. exact Hnames_head.
+Qed.
+
+Lemma infer_program_env_alpha_elab_unique_by_name :
+  forall env env',
+    top_level_names_unique_b (alpha_normalize_global_env env) = true ->
+    infer_program_env_alpha_elab env = infer_ok env' ->
+    fn_env_unique_by_name env'.
+Proof.
+  intros env env' Hunique Helab.
+  unfold infer_program_env_alpha_elab in Helab.
+  destruct (infer_fns_env_elab (alpha_normalize_global_env env)
+              (env_fns (alpha_normalize_global_env env)))
+    as [fns' | err] eqn:Hfns; try discriminate.
+  inversion Helab; subst.
+  apply fn_name_strings_nodup_unique_by_name.
+  simpl.
+  pose proof (top_level_names_unique_b_fn_names_nodup
+    (alpha_normalize_global_env env) Hunique) as Hnodup.
+  pose proof (infer_fns_env_elab_fn_names
+    (alpha_normalize_global_env env)
+    (env_fns (alpha_normalize_global_env env)) fns' Hfns) as Hnames.
+  pose proof (fn_name_strings_of_fn_names fns'
+    (env_fns (alpha_normalize_global_env env)) Hnames) as Hstrings.
+  rewrite Hstrings.
+  exact Hnodup.
+Qed.
+
 Lemma check_program_env_alpha_validated_root_shadow_provenance_ready :
   forall env,
     check_program_env_alpha_validated_root_shadow_provenance env = true ->

@@ -67,6 +67,13 @@ do not redefine the language accepted by the ordinary checker.
   check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready
   ```
 
+- The elaborated checked-initial endpoint for inferred local-let captured
+  closure calls is:
+
+  ```coq
+  check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready
+  ```
+
 - Initial runtime readiness is still an execution-state premise, currently via
   `check_initial_root_runtime_ready`. It is not a program acceptance condition.
 - Ordinary checker acceptance still exceeds validator acceptance.
@@ -323,15 +330,13 @@ Work in this order unless a proof exposes a soundness gap.
      is the executable wrapper for that route. Its readiness bridge in
      `EnvRuntimeSafety.v` exposes the captured-call summary evidence for the
      elaborated environment returned by `infer_program_env_alpha_elab`.
+   - The checked-initial safety theorem for this route evaluates functions in
+     the elaborated environment returned by `infer_program_env_alpha_elab`;
+     it does not claim semantics preservation for the original `ELetInfer`
+     source body.
    - `TypeChecker.v` has a focused example for the inferred local-let captured
      closure call: the original core shape is not accepted by the direct
      captured-call summary, while the elaborated route is accepted.
-
-   Next proof task:
-
-   - Do not add a direct `Eval_LetInfer` rule unless the runtime binding type
-     is carried by a typed/evidence-bearing semantics. The current supported
-     route for inferred lets is elaboration to annotated `ELet`.
 
 3. **Handle `if` last.**
 

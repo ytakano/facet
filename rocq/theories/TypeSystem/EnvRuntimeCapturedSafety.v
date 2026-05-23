@@ -5,26 +5,18 @@ From Facet.TypeSystem Require Export EnvRuntimeNonCapturingSafety.
 From Stdlib Require Import List Bool Lia String Program.Equality.
 Import ListNotations.
 
-Theorem check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready :
+Theorem env_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready :
   forall env f s s' v,
-    check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary env = true ->
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_captured_call_provenance_summary_check_ready env ->
     check_initial_root_runtime_ready f s = true ->
-    In f (env_fns (alpha_normalize_global_env env)) ->
-    initial_store_for_fn (alpha_normalize_global_env env) f s ->
-    eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
-    value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
 Proof.
-  intros env f s s' v Hcheck Hinitial Hin Hstore Heval.
-  unfold check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
-    in Hcheck.
-  apply andb_true_iff in Hcheck as [Hvalidated Hsummary_check].
-  pose proof (check_program_env_alpha_validated_unique env Hvalidated)
-    as Hunique.
-  pose proof
-    (check_env_root_shadow_captured_call_provenance_summary_ready
-      (alpha_normalize_global_env env) Hsummary_check)
-    as Hsummary.
-  pose proof (lookup_fn_in_unique_by_name (alpha_normalize_global_env env)
+  intros env f s s' v Hunique Hsummary Hinitial Hin Hstore Heval.
+  pose proof (lookup_fn_in_unique_by_name env
     (fn_name f) f Hin eq_refl Hunique) as Hlookup.
   pose proof (Hsummary (fn_name f) f Hlookup) as Hfn_summary.
   destruct (check_initial_root_runtime_ready_sound f s Hinitial) as
@@ -40,13 +32,13 @@ Proof.
         pose proof (initial_root_env_for_fn_no_shadow f Hnodup)
           as Hroot_shadow.
         destruct (proj1 eval_preserves_typing_roots_ready_mutual
-            (alpha_normalize_global_env env) s (fn_body f) s' v Heval
+            env s (fn_body f) s' v Heval
             (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
             (sctx_of_ctx (fn_body_ctx f))
             T_body (sctx_of_ctx Γ_out) R_body roots_body
             Hprov_body Hstore Hroots Hstore_shadow Hroot_shadow
             (typed_env_roots_shadow_safe_roots
-              (alpha_normalize_global_env env) (fn_outlives f)
+              env (fn_outlives f)
               (fn_lifetimes f) (initial_root_env_for_fn f)
               (sctx_of_ctx (fn_body_ctx f))
               (fn_body f) T_body (sctx_of_ctx Γ_out) R_body roots_body
@@ -64,13 +56,13 @@ Proof.
           as Hroot_shadow.
         rewrite Hbody in Heval.
         assert (Htyped_call :
-          typed_env_roots_shadow_safe (alpha_normalize_global_env env)
+          typed_env_roots_shadow_safe env
             (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
             (sctx_of_ctx (fn_body_ctx f)) (ECall fname args)
             T_body (sctx_of_ctx Γ_out) R_body roots_body).
         { rewrite <- Hsynthetic. exact Htyped_shadow. }
         assert (Heval_call :
-          eval (alpha_normalize_global_env env) s (ECall fname args) s' v).
+          eval env s (ECall fname args) s' v).
         { unfold direct_call_target_expr in Htarget.
           destruct raw_body; try discriminate.
           - inversion Htarget; subst. exact Heval.
@@ -78,13 +70,13 @@ Proof.
             inversion Htarget; subst.
             apply eval_call_expr_fn_as_call. exact Heval. }
         destruct (eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary
-            (alpha_normalize_global_env env) s s' v fname args Heval_call
+            env s s' v fname args Heval_call
             (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
             (sctx_of_ctx (fn_body_ctx f))
             T_body (sctx_of_ctx Γ_out) R_body roots_body fcallee
             Hready_args Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
             (typed_env_roots_shadow_safe_roots
-              (alpha_normalize_global_env env) (fn_outlives f)
+              env (fn_outlives f)
               (fn_lifetimes f) (initial_root_env_for_fn f)
               (sctx_of_ctx (fn_body_ctx f))
               (ECall fname args) T_body (sctx_of_ctx Γ_out) R_body
@@ -159,29 +151,29 @@ Proof.
             typed_env_roots_shadow_safe _ _ _ (root_env_add _ _ _)
               (sctx_add _ _ _ _) (ECall _ _) _ _ _ _ |- _ =>
             pose proof (typed_env_roots_shadow_safe_roots
-              (alpha_normalize_global_env env) (fn_outlives f)
+              env (fn_outlives f)
               (fn_lifetimes f) _ _ _ _ _ _ _ Htyped_call_shadow)
               as Htyped_call
         end.
         assert (Hfresh_store : store_lookup x0 s1 = None)
           by (eapply store_roots_within_lookup_none; eassumption).
         assert (Hadd_pres :
-          store_ref_targets_preserved (alpha_normalize_global_env env) s1
+          store_ref_targets_preserved env s1
             (store_add x0 T (VClosure (fn_name fcallee) []) s1))
           by (apply store_add_fresh_ref_targets_preserved;
               exact Hfresh_store).
         assert (Hv_closure_actual :
-          value_has_type (alpha_normalize_global_env env) s1
+          value_has_type env s1
             (VClosure (fn_name fcallee) []) (fn_value_ty fdef))
           by (eapply VHT_ClosureIn; [exact H | exact x]).
         assert (Hv_closure :
-          value_has_type (alpha_normalize_global_env env) s1
+          value_has_type env s1
             (VClosure (fn_name fcallee) []) T)
         by (eapply VHT_Compatible;
             [ exact Hv_closure_actual
             | apply ty_compatible_b_sound; exact H0 ]).
         assert (Hstore_add :
-          store_typed (alpha_normalize_global_env env)
+          store_typed env
             (store_add x0 T (VClosure (fn_name fcallee) []) s1)
             (sctx_add x0 T m (sctx_of_ctx (fn_body_ctx f))))
         by (eapply store_typed_add;
@@ -215,7 +207,7 @@ Proof.
         match goal with
         | Heval_call : eval _ _ (ECall (fn_name fcallee) args) s2 v |- _ =>
             destruct (eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary
-                (alpha_normalize_global_env env)
+                env
                 (store_add x0 T (VClosure (fn_name fcallee) []) s1) s2 v
                 (fn_name fcallee) args Heval_call
                 (fn_outlives f) (fn_lifetimes f)
@@ -230,7 +222,7 @@ Proof.
         assert (Hexclude_v : value_refs_exclude_root x0 v)
           by (eapply value_roots_exclude_root; eassumption).
         assert (Hv_removed :
-          value_has_type (alpha_normalize_global_env env) (store_remove x0 s2)
+          value_has_type env (store_remove x0 s2)
             v T2)
           by (eapply value_has_type_store_remove_excluding_root; eassumption).
         eapply VHT_Compatible.
@@ -254,7 +246,7 @@ Proof.
     dependent destruction Htyped_shadow.
     repeat match goal with
     | Hlookup : lookup_fn ?fname_call
-        (env_fns (alpha_normalize_global_env env)) =
+        (env_fns env) =
         Some ?f_runtime |- _ =>
         lazymatch f_runtime with
         | fcallee => fail
@@ -266,7 +258,7 @@ Proof.
                   | exact Hunique ]);
             subst f_runtime
         end
-    | Hin_typed : In ?f_typed (env_fns (alpha_normalize_global_env env)),
+    | Hin_typed : In ?f_typed (env_fns env),
       Hname_typed : fn_name ?f_typed = ?fname_call |- _ =>
         lazymatch f_typed with
         | fcallee => fail
@@ -280,7 +272,7 @@ Proof.
         end
     end.
     match goal with
-    | Hin_typed : In ?f_typed (env_fns (alpha_normalize_global_env env)),
+    | Hin_typed : In ?f_typed (env_fns env),
       Hname_eq : fn_name fcallee = fn_name ?f_typed |- _ =>
         lazymatch f_typed with
         | fcallee => fail
@@ -304,34 +296,34 @@ Proof.
       eapply NoDup_app_right_ts. exact Hnodup_binding. }
     match goal with
     | Hlookup : lookup_fn ?fname_call
-        (env_fns (alpha_normalize_global_env env)) =
+        (env_fns env) =
         Some fcallee,
       Hcopy : copy_capture_store_as captures (fn_captures fcallee) s =
         Some captured,
       Htyped_args_shadow : typed_args_roots_shadow_safe
-        (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
+        env (fn_outlives f) (fn_lifetimes f)
         (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
         args (fn_params fcallee) ?Sigma_args ?R_args ?arg_roots,
-      Heval_args : eval_args (alpha_normalize_global_env env) s args s_args vs,
+      Heval_args : eval_args env s args s_args vs,
       Hrename : alpha_rename_fn_def (store_names (captured ++ s_args))
         fcallee = (fcall, used'),
-      Heval_body : eval (alpha_normalize_global_env env)
+      Heval_body : eval env
         (bind_params (fn_params fcall) vs (captured ++ s_args))
         (fn_body fcall) s_body ?ret |- _ =>
       pose proof (typed_args_roots_shadow_safe_roots
-        (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
+        env (fn_outlives f) (fn_lifetimes f)
         (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
         args (fn_params fcallee) Sigma_args R_args arg_roots
         Htyped_args_shadow)
         as Htyped_args_roots;
       destruct (eval_make_closure_captured_call_expr_preserves_typing_with_callee_components
-        (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
+        env (fn_outlives f) (fn_lifetimes f)
         (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
         args fname_call captures captured fcallee fcall used' s s_args s_body vs ret
         R_args Sigma_args arg_roots env_lt captured_tys T_callee Γ_callee
         R_callee roots_callee
         Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
-        (Eval_MakeClosure (alpha_normalize_global_env env) s fname_call captures
+        (Eval_MakeClosure env s fname_call captures
           captured fcallee Hlookup Hcopy)
         Hlookup Heval_args Hrename Heval_body Hcaptures Hnodup_caps Hready_args
         Htyped_args_roots Hnodup_binding Hprov_callee Htyped_callee Hcompat_callee
@@ -347,7 +339,7 @@ Proof.
       pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
       destruct
         (eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_typing
-          (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
+          env (fn_outlives f) (fn_lifetimes f)
           (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
           (fn_body f) T_body (sctx_of_ctx Γ_out) R_body roots_body
           ret_roots Hexpr_summary s s' v Hstore Hroots Hstore_shadow
@@ -366,7 +358,7 @@ Proof.
           Hcompat_direct & _ & _ & Htyped_let).
       pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
 	      pose proof (lookup_fn_in_unique_by_name
-	                    (alpha_normalize_global_env env) fname fcallee
+	                    env fname fcallee
 	                    Hin_callee Hname_callee Hunique) as Hlookup_callee.
 	      rewrite Hbody in Heval.
 	      rewrite Hlet in Htyped_let.
@@ -374,7 +366,7 @@ Proof.
 	      rewrite Hdirect in Htyped_direct.
 	      dependent destruction Htyped_direct.
 	      repeat match goal with
-	      | Hin_typed : In ?f_typed (env_fns (alpha_normalize_global_env env)),
+	      | Hin_typed : In ?f_typed (env_fns env),
 	        Hname_typed : fn_name ?f_typed = ?fname0,
 	        Hname_callee0 : fn_name fcallee = ?fname0 |- _ =>
 	          lazymatch f_typed with
@@ -387,7 +379,7 @@ Proof.
 	                    | rewrite Hname_typed; symmetry; exact Hname_callee0 ]);
 	              subst f_typed
 	          end
-	      | Hin_typed : In ?f_typed (env_fns (alpha_normalize_global_env env)),
+	      | Hin_typed : In ?f_typed (env_fns env),
 	        Hname_eq : fn_name fcallee = fn_name ?f_typed |- _ =>
 	          lazymatch f_typed with
 	          | fcallee => fail
@@ -399,7 +391,7 @@ Proof.
 	                    | symmetry; exact Hname_eq ]);
 	              subst f_typed
 	          end
-	      | Hin_typed : In ?f_typed (env_fns (alpha_normalize_global_env env)),
+	      | Hin_typed : In ?f_typed (env_fns env),
 	        Hname_eq : fn_name ?f_typed = fn_name fcallee |- _ =>
 	          lazymatch f_typed with
 	          | fcallee => fail
@@ -414,12 +406,12 @@ Proof.
 	      end.
       match goal with
       | Htyped_args_shadow : typed_args_roots_shadow_safe
-          (alpha_normalize_global_env env) (fn_outlives f)
+          env (fn_outlives f)
           (fn_lifetimes f) (initial_root_env_for_fn f)
           (sctx_of_ctx (fn_body_ctx f)) args (fn_params fcallee)
           ?Sigma_args ?R_args ?arg_roots |- _ =>
           pose proof (typed_args_roots_shadow_safe_roots
-            (alpha_normalize_global_env env) (fn_outlives f)
+            env (fn_outlives f)
             (fn_lifetimes f) (initial_root_env_for_fn f)
             (sctx_of_ctx (fn_body_ctx f)) args (fn_params fcallee)
             Sigma_args R_args arg_roots Htyped_args_shadow)
@@ -457,13 +449,13 @@ Proof.
         eapply NoDup_app_right_ts. exact Hnodup_binding. }
       match goal with
       | Htyped_args_roots : typed_args_roots
-          (alpha_normalize_global_env env) (fn_outlives f)
+          env (fn_outlives f)
           (fn_lifetimes f) (initial_root_env_for_fn f)
           (sctx_of_ctx (fn_body_ctx f)) args (fn_params fcallee)
           ?Sigma_args ?R_args ?arg_roots |- _ =>
           destruct
 	            (eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components
-	              (alpha_normalize_global_env env) (fn_outlives f)
+	              env (fn_outlives f)
 	              (fn_lifetimes f) (initial_root_env_for_fn f)
 	              (sctx_of_ctx (fn_body_ctx f)) m x0 T args (fn_name fcallee) captures
 	              fcallee s s' v R_args Sigma_args arg_roots env_lt captured_tys
@@ -479,6 +471,49 @@ Proof.
       eapply VHT_Compatible.
       * rewrite apply_lt_ty_nil_ts in Hv. exact Hv.
       * apply ty_compatible_b_sound. exact Hcompat_direct.
+Qed.
+
+Theorem check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready :
+  forall env f s s' v,
+    check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary env = true ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns (alpha_normalize_global_env env)) ->
+    initial_store_for_fn (alpha_normalize_global_env env) f s ->
+    eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
+    value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hcheck Hinitial Hin Hstore Heval.
+  unfold check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
+    in Hcheck.
+  apply andb_true_iff in Hcheck as [Hvalidated Hsummary_check].
+  eapply env_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready;
+    eauto.
+  - apply check_program_env_alpha_validated_unique. exact Hvalidated.
+  - apply check_env_root_shadow_captured_call_provenance_summary_ready.
+    exact Hsummary_check.
+Qed.
+
+Theorem check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready :
+  forall env env' f s s' v,
+    check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary env = true ->
+    infer_program_env_alpha_elab env = infer_ok env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros env env' f s s' v Hcheck Helab Hinitial Hin Hstore Heval.
+  unfold
+    check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary
+    in Hcheck.
+  apply andb_true_iff in Hcheck as [Hunique_b Hsummary_check].
+  eapply env_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready;
+    eauto.
+  - eapply infer_program_env_alpha_elab_unique_by_name; eassumption.
+  - rewrite Helab in Hsummary_check.
+    apply check_env_root_shadow_captured_call_provenance_summary_ready.
+    exact Hsummary_check.
 Qed.
 
 Theorem infer_full_env_alpha_big_step_safe_with_root_sidecar :

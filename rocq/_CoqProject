@@ -30,6 +30,7 @@ theories/TypeSystem/TypeSafetyHiddenFrameCleanupFacts.v
 theories/TypeSystem/TypeSafetyHiddenFrame.v
 theories/TypeSystem/TypeSafetyRootedPackages.v
 theories/TypeSystem/TypeSafetyClosureRuntimeArgsFacts.v
+theories/TypeSystem/TypeSafetyClosureRuntimeArgsBase.v
 theories/TypeSystem/TypeSafetyClosureRuntimeArgs.v
 theories/TypeSystem/TypeSafetyClosureCleanupPackages.v
 theories/TypeSystem/TypeSafetyClosureCleanupFrame.v

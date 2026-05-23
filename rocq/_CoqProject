@@ -21,6 +21,7 @@ theories/TypeSystem/TypeSafetyHiddenFrameBase.v
 theories/TypeSystem/TypeSafetyHiddenFrameStrip.v
 theories/TypeSystem/TypeSafetyCallFrameParams.v
 theories/TypeSystem/TypeSafetyCallFrameBindParams.v
+theories/TypeSystem/TypeSafetyCallFrameRootEnv.v
 theories/TypeSystem/TypeSafetyCallFrame.v
 theories/TypeSystem/TypeSafetyFrameScope.v
 theories/TypeSystem/TypeSafetyProvenanceReady.v

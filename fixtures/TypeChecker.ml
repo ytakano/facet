@@ -3028,6 +3028,8 @@ let wf_outlives_b _UU0394_ _UU03a9_ =
 let outlives_constraints_hold_b _UU03a9_ constraints =
   forallb (fun pat -> let (a, b) = pat in outlives_b _UU03a9_ a b) constraints
 
+type sctx_entry = ctx_entry
+
 type sctx = ctx
 
 (** val sctx_of_ctx : ctx -> sctx **)
@@ -3039,6 +3041,72 @@ let sctx_of_ctx _UU0393_ =
 
 let ctx_of_sctx _UU03a3_ =
   _UU03a3_
+
+(** val mutability_eqb : mutability -> mutability -> bool **)
+
+let mutability_eqb m1 m2 =
+  match m1 with
+  | MImmutable -> (match m2 with
+                   | MImmutable -> true
+                   | MMutable -> false)
+  | MMutable -> (match m2 with
+                 | MImmutable -> false
+                 | MMutable -> true)
+
+(** val field_path_eqb : field_path -> field_path -> bool **)
+
+let rec field_path_eqb p q =
+  match p with
+  | [] -> (match q with
+           | [] -> true
+           | _ :: _ -> false)
+  | x :: xs ->
+    (match q with
+     | [] -> false
+     | y :: ys -> (&&) ((=) x y) (field_path_eqb xs ys))
+
+(** val field_paths_eqb : field_path list -> field_path list -> bool **)
+
+let rec field_paths_eqb ps qs =
+  match ps with
+  | [] -> (match qs with
+           | [] -> true
+           | _ :: _ -> false)
+  | p :: ps' ->
+    (match qs with
+     | [] -> false
+     | q :: qs' -> (&&) (field_path_eqb p q) (field_paths_eqb ps' qs'))
+
+(** val binding_state_eqb : binding_state -> binding_state -> bool **)
+
+let binding_state_eqb st1 st2 =
+  (&&) (eqb0 st1.st_consumed st2.st_consumed)
+    (field_paths_eqb st1.st_moved_paths st2.st_moved_paths)
+
+(** val sctx_entry_eqb : sctx_entry -> sctx_entry -> bool **)
+
+let sctx_entry_eqb ce1 ce2 =
+  let (p, m1) = ce1 in
+  let (p0, st1) = p in
+  let (x1, t1) = p0 in
+  let (p1, m2) = ce2 in
+  let (p2, st2) = p1 in
+  let (x2, t2) = p2 in
+  (&&)
+    ((&&) ((&&) (ident_eqb x1 x2) (ty_eqb t1 t2)) (binding_state_eqb st1 st2))
+    (mutability_eqb m1 m2)
+
+(** val sctx_eqb : sctx -> sctx -> bool **)
+
+let rec sctx_eqb _UU03a3_1 _UU03a3_2 =
+  match _UU03a3_1 with
+  | [] -> (match _UU03a3_2 with
+           | [] -> true
+           | _ :: _ -> false)
+  | ce1 :: rest1 ->
+    (match _UU03a3_2 with
+     | [] -> false
+     | ce2 :: rest2 -> (&&) (sctx_entry_eqb ce1 ce2) (sctx_eqb rest1 rest2))
 
 (** val sctx_lookup : ident -> sctx -> (ty * binding_state) option **)
 
@@ -6276,41 +6344,106 @@ let rec check_expr_root_shadow_captured_call_provenance_summary_fuel fuel env _U
     | Infer_ok _ ->
       (||)
         ((||)
-          ((||) (provenance_ready_expr_b e)
-            (match direct_call_target_expr e with
+          ((||)
+            ((||) (provenance_ready_expr_b e)
+              (match direct_call_target_expr e with
+               | Some p ->
+                 let (p0, synthetic_body) = p in
+                 let (fname, args) = p0 in
+                 (&&) (preservation_ready_args_b args)
+                   (match lookup_fn_b fname env.env_fns with
+                    | Some callee ->
+                      (&&)
+                        (check_fn_root_shadow_provenance_summary env callee)
+                        (match infer_core_env_state_fuel_roots_shadow_safe
+                                 fuel env _UU03a9_ n r _UU03a3_ synthetic_body with
+                         | Infer_ok _ -> true
+                         | Infer_err _ -> false)
+                    | None -> false)
+               | None -> false))
+            (match captured_call_target_expr e with
              | Some p ->
-               let (p0, synthetic_body) = p in
-               let (fname, args) = p0 in
+               let (p0, args) = p in
+               let (fname, captures) = p0 in
                (&&) (preservation_ready_args_b args)
                  (match lookup_fn_b fname env.env_fns with
                   | Some callee ->
-                    (&&) (check_fn_root_shadow_provenance_summary env callee)
-                      (match infer_core_env_state_fuel_roots_shadow_safe fuel
-                               env _UU03a9_ n r _UU03a3_ synthetic_body with
-                       | Infer_ok _ -> true
+                    (&&)
+                      ((&&)
+                        (Nat.eqb callee.fn_lifetimes Big_int_Z.zero_big_int)
+                        (callee_hidden_capture_args_disjoint_b callee args))
+                      (match check_make_closure_captures_exact_sctx_with_env
+                               env _UU03a9_ _UU03a3_ captures
+                               callee.fn_captures with
+                       | Infer_ok _ ->
+                         (match capture_root_bound r captures
+                                  callee.fn_captures with
+                          | Some _ ->
+                            check_fn_root_shadow_captured_callee_provenance_summary
+                              env callee
+                          | None -> false)
                        | Infer_err _ -> false)
                   | None -> false)
              | None -> false))
-          (match captured_call_target_expr e with
+          (match local_captured_call_target_expr e with
            | Some p ->
-             let (p0, args) = p in
-             let (fname, captures) = p0 in
+             let (p0, _) = p in
+             let (p1, direct_body) = p0 in
+             let (p2, _) = p1 in
+             let (p3, x) = p2 in
+             let (p4, _) = p3 in
+             let (p5, args) = p4 in
+             let (fname, captures) = p5 in
              (&&) (preservation_ready_args_b args)
                (match lookup_fn_b fname env.env_fns with
                 | Some callee ->
                   (&&)
                     ((&&)
-                      (Nat.eqb callee.fn_lifetimes Big_int_Z.zero_big_int)
-                      (callee_hidden_capture_args_disjoint_b callee args))
-                    (match check_make_closure_captures_exact_sctx_with_env
-                             env _UU03a9_ _UU03a3_ captures callee.fn_captures with
-                     | Infer_ok _ ->
-                       (match capture_root_bound r captures callee.fn_captures with
-                        | Some _ ->
-                          check_fn_root_shadow_captured_callee_provenance_summary
-                            env callee
-                        | None -> false)
-                     | Infer_err _ -> false)
+                      ((&&)
+                        (Nat.eqb callee.fn_lifetimes Big_int_Z.zero_big_int)
+                        (callee_hidden_capture_args_disjoint_b callee args))
+                      (negb
+                        (existsb (ident_eqb x)
+                          (ctx_names (params_ctx callee.fn_captures)))))
+                    (match root_env_lookup x r with
+                     | Some _ -> false
+                     | None ->
+                       (match check_make_closure_captures_exact_sctx_with_env
+                                env _UU03a9_ _UU03a3_ captures
+                                callee.fn_captures with
+                        | Infer_ok _ ->
+                          (match capture_root_bound r captures
+                                   callee.fn_captures with
+                           | Some _ ->
+                             (&&)
+                               (check_fn_root_shadow_captured_callee_provenance_summary
+                                 env callee)
+                               (match infer_core_env_state_fuel_roots_shadow_safe
+                                        fuel env _UU03a9_ n r _UU03a3_
+                                        direct_body with
+                                | Infer_ok p6 ->
+                                  let (p7, _) = p6 in
+                                  let (p8, r_direct) = p7 in
+                                  let (t_direct, _UU03a3__direct) = p8 in
+                                  (match infer_core_env_state_fuel_roots_shadow_safe
+                                           fuel env _UU03a9_ n r _UU03a3_ e with
+                                   | Infer_ok p9 ->
+                                     let (p10, _) = p9 in
+                                     let (p11, r_let) = p10 in
+                                     let (t_let, _UU03a3__let) = p11 in
+                                     (&&)
+                                       ((&&)
+                                         ((&&)
+                                           (ty_eqb t_direct callee.fn_ret)
+                                           (sctx_eqb _UU03a3__direct
+                                             _UU03a3__let))
+                                         (root_env_eqb r_direct r_let))
+                                       (ty_compatible_b _UU03a9_
+                                         callee.fn_ret t_let)
+                                   | Infer_err _ -> false)
+                                | Infer_err _ -> false)
+                           | None -> false)
+                        | Infer_err _ -> false))
                 | None -> false)
            | None -> false))
         (match e with

@@ -1854,6 +1854,46 @@ Definition sctx : Type := ctx.
 Definition sctx_of_ctx (Γ : ctx) : sctx := Γ.
 Definition ctx_of_sctx (Σ : sctx) : ctx := Σ.
 
+Definition mutability_eqb (m1 m2 : mutability) : bool :=
+  match m1, m2 with
+  | MImmutable, MImmutable => true
+  | MMutable, MMutable => true
+  | _, _ => false
+  end.
+
+Fixpoint field_path_eqb (p q : field_path) : bool :=
+  match p, q with
+  | [], [] => true
+  | x :: xs, y :: ys => String.eqb x y && field_path_eqb xs ys
+  | _, _ => false
+  end.
+
+Fixpoint field_paths_eqb (ps qs : list field_path) : bool :=
+  match ps, qs with
+  | [], [] => true
+  | p :: ps', q :: qs' => field_path_eqb p q && field_paths_eqb ps' qs'
+  | _, _ => false
+  end.
+
+Definition binding_state_eqb (st1 st2 : binding_state) : bool :=
+  Bool.eqb (st_consumed st1) (st_consumed st2) &&
+  field_paths_eqb (st_moved_paths st1) (st_moved_paths st2).
+
+Definition sctx_entry_eqb (ce1 ce2 : sctx_entry) : bool :=
+  match ce1, ce2 with
+  | (x1, T1, st1, m1), (x2, T2, st2, m2) =>
+      ident_eqb x1 x2 && ty_eqb T1 T2 &&
+      binding_state_eqb st1 st2 && mutability_eqb m1 m2
+  end.
+
+Fixpoint sctx_eqb (Σ1 Σ2 : sctx) : bool :=
+  match Σ1, Σ2 with
+  | [], [] => true
+  | ce1 :: rest1, ce2 :: rest2 =>
+      sctx_entry_eqb ce1 ce2 && sctx_eqb rest1 rest2
+  | _, _ => false
+  end.
+
 Definition sctx_lookup (x : ident) (Σ : sctx) : option (Ty * binding_state) :=
   ctx_lookup_state x Σ.
 
@@ -5486,7 +5526,50 @@ Fixpoint check_expr_root_shadow_captured_call_provenance_summary_fuel
           end
       | None => false
       end ||
-      match e with
+      match local_captured_call_target_expr e with
+      | Some (fname, captures, args, m, x, T_hidden, direct_body, let_body) =>
+          preservation_ready_args_b args &&
+          match lookup_fn_b fname (env_fns env) with
+          | None => false
+          | Some callee =>
+              (Nat.eqb (fn_lifetimes callee) 0) &&
+              callee_hidden_capture_args_disjoint_b callee args &&
+              negb (existsb (ident_eqb x)
+                (ctx_names (params_ctx (fn_captures callee)))) &&
+              match root_env_lookup x R with
+              | Some _ => false
+              | None =>
+                  match check_make_closure_captures_exact_sctx_with_env env
+                          Ω Σ captures (fn_captures callee) with
+                  | infer_err _ => false
+                  | infer_ok _ =>
+                      match capture_root_bound R captures
+                              (fn_captures callee) with
+                      | None => false
+                      | Some _ =>
+                          check_fn_root_shadow_captured_callee_provenance_summary
+                            env callee &&
+                          match
+                            infer_core_env_state_fuel_roots_shadow_safe
+                              fuel env Ω n R Σ direct_body,
+                            infer_core_env_state_fuel_roots_shadow_safe
+                              fuel env Ω n R Σ e
+                          with
+	                          | infer_ok (T_direct, Σ_direct, R_direct, _),
+	                            infer_ok (T_let, Σ_let, R_let, _) =>
+	                              ty_eqb T_direct (fn_ret callee) &&
+	                              sctx_eqb Σ_direct Σ_let &&
+	                              root_env_eqb R_direct R_let &&
+	                              ty_compatible_b Ω (fn_ret callee) T_let
+                          | _, _ => false
+                          end
+                      end
+                  end
+              end
+          end
+      | None => false
+      end ||
+	      match e with
       | EIf e1 e2 e3 =>
           match infer_core_env_state_fuel_roots_shadow_safe
                   fuel' env Ω n R Σ e1 with

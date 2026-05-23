@@ -20,6 +20,81 @@ Proof.
     + eapply IH; eassumption.
 Qed.
 
+Lemma mutability_eqb_true :
+  forall m1 m2,
+    mutability_eqb m1 m2 = true ->
+    m1 = m2.
+Proof.
+  destruct m1, m2; simpl; intros H; try discriminate; reflexivity.
+Qed.
+
+Lemma field_path_eqb_true :
+  forall p q,
+    field_path_eqb p q = true ->
+    p = q.
+Proof.
+  induction p as [| x xs IH]; destruct q as [| y ys]; simpl;
+    intros H; try discriminate.
+  - reflexivity.
+  - apply andb_true_iff in H as [Hxy Hrest].
+    apply String.eqb_eq in Hxy. subst y.
+    apply IH in Hrest. subst ys. reflexivity.
+Qed.
+
+Lemma field_paths_eqb_true :
+  forall ps qs,
+    field_paths_eqb ps qs = true ->
+    ps = qs.
+Proof.
+  induction ps as [| p ps IH]; destruct qs as [| q qs]; simpl;
+    intros H; try discriminate.
+  - reflexivity.
+  - apply andb_true_iff in H as [Hp Hrest].
+    apply field_path_eqb_true in Hp.
+    apply IH in Hrest. subst q qs. reflexivity.
+Qed.
+
+Lemma binding_state_eqb_true :
+  forall st1 st2,
+    binding_state_eqb st1 st2 = true ->
+    st1 = st2.
+Proof.
+  intros [c1 paths1] [c2 paths2] H.
+  unfold binding_state_eqb in H. simpl in H.
+  apply andb_true_iff in H as [Hc Hpaths].
+  destruct c1, c2; simpl in Hc; try discriminate;
+    apply field_paths_eqb_true in Hpaths; subst paths2; reflexivity.
+Qed.
+
+Lemma sctx_entry_eqb_true :
+  forall ce1 ce2,
+    sctx_entry_eqb ce1 ce2 = true ->
+    ce1 = ce2.
+Proof.
+  intros [[[x1 T1] st1] m1] [[[x2 T2] st2] m2] H.
+  unfold sctx_entry_eqb in H.
+  repeat rewrite andb_true_iff in H.
+  destruct H as [[[Hx HT] Hst] Hm].
+  apply ident_eqb_eq in Hx. subst x2.
+  apply ty_eqb_true in HT. subst T2.
+  apply binding_state_eqb_true in Hst. subst st2.
+  apply mutability_eqb_true in Hm. subst m2.
+  reflexivity.
+Qed.
+
+Lemma sctx_eqb_true :
+  forall Σ1 Σ2,
+    sctx_eqb Σ1 Σ2 = true ->
+    Σ1 = Σ2.
+Proof.
+  induction Σ1 as [| ce1 rest1 IH]; destruct Σ2 as [| ce2 rest2];
+    simpl; intros H; try discriminate.
+  - reflexivity.
+  - apply andb_true_iff in H as [Hce Hrest].
+    apply sctx_entry_eqb_true in Hce.
+    apply IH in Hrest. subst ce2 rest2. reflexivity.
+Qed.
+
 Lemma store_lookup_none_not_in_store_names :
   forall x s,
     store_lookup x s = None ->
@@ -402,7 +477,8 @@ Proof.
       in Hcheck.
     rewrite Hinfer in Hcheck.
     apply orb_true_iff in Hcheck as [Hnon_if | Hif].
-    + apply orb_true_iff in Hnon_if as [Hprov_or_direct | Hcaptured].
+    + apply orb_true_iff in Hnon_if as [Hnon_local | Hlocal].
+      apply orb_true_iff in Hnon_local as [Hprov_or_direct | Hcaptured].
       * apply orb_true_iff in Hprov_or_direct as [Hprov | Hdirect].
         -- eexists. eapply ERSCE_Provenance.
            ++ apply provenance_ready_expr_b_sound. exact Hprov.
@@ -482,6 +558,81 @@ Proof.
         -- exact Hcapture_bound.
         -- eapply infer_core_env_state_fuel_roots_shadow_safe_sound.
            exact Hinfer.
+      * destruct (local_captured_call_target_expr e)
+          as [[[[[[[[fname captures] args] m] x] T_hidden] direct_body]
+                let_body] |] eqn:Htarget; try discriminate.
+        apply andb_true_iff in Hlocal as [Hready_args Hlocal].
+        destruct (lookup_fn_b fname (env_fns env)) as [fcallee |]
+          eqn:Hlookup_b; try discriminate.
+        apply andb_true_iff in Hlocal as [Hlocal_head Hlocal].
+        apply andb_true_iff in Hlocal_head as [Hlocal_head Hnot_cap_name].
+        apply andb_true_iff in Hlocal_head as [Hlt Hdisjoint].
+        apply PeanoNat.Nat.eqb_eq in Hlt.
+        apply negb_true_iff in Hnot_cap_name.
+        destruct (root_env_lookup x R) as [roots_x |] eqn:Hlookup_x;
+          try discriminate.
+        destruct (check_make_closure_captures_exact_sctx_with_env env Ω Σ
+          captures (fn_captures fcallee)) as [[env_lt captured_tys] | err]
+          eqn:Hcaptures; try discriminate.
+        destruct (capture_root_bound R captures (fn_captures fcallee))
+          as [capture_roots |] eqn:Hcapture_bound; try discriminate.
+        apply andb_true_iff in Hlocal as [Hcallee Hlocal_infer].
+        destruct (infer_core_env_state_fuel_roots_shadow_safe
+          (S fuel') env Ω n R Σ direct_body)
+          as [[[[T_direct Σ_direct] R_direct] roots_direct] | err]
+          eqn:Hdirect; try discriminate.
+        destruct (infer_core_env_state_fuel_roots_shadow_safe
+          (S fuel') env Ω n R Σ e)
+          as [[[[T_let Σ_let] R_let] roots_let] | err]
+          eqn:Hlet; try discriminate.
+        destruct (local_captured_call_target_expr_sound
+                    e fname captures args m x T_hidden direct_body
+                    let_body Htarget)
+          as (He & Hdirect_body & Hlet_body & Husage & Hnot_caps &
+              Hnot_free & Hnot_local).
+        rewrite Hdirect_body in Hdirect.
+        rewrite Hinfer in Hlet. inversion Hlet; subst.
+        repeat rewrite andb_true_iff in Hlocal_infer.
+        destruct Hlocal_infer as
+          [[[Hdirect_ty Hdirect_sctx] Hdirect_root] Hlocal_infer].
+        apply ty_eqb_true in Hdirect_ty. subst T_direct.
+        apply sctx_eqb_true in Hdirect_sctx. subst Σ_direct.
+        apply root_env_eqb_true in Hdirect_root. subst R_direct.
+        destruct (lookup_fn_b_sound fname (env_fns env) fcallee Hlookup_b)
+          as [Hin_callee Hname_callee].
+        pose proof
+          (check_fn_root_shadow_captured_callee_provenance_summary_sound
+            env fcallee Hcallee) as Hcallee_summary.
+        destruct Hcallee_summary as
+          [Hnodup_binding
+           (T_body & Γ_out & R_body & roots_body & Hprov_body &
+            Htyped_body & Hcompat_body & Hexclude_roots & Hexclude_env)].
+        eexists. eapply ERSCE_LocalCapturedLet.
+        -- exact Husage.
+        -- exact Hnot_caps.
+        -- eapply existsb_ident_eqb_false_notin. exact Hnot_cap_name.
+        -- exact Hnot_free.
+        -- exact Hnot_local.
+        -- apply preservation_ready_args_b_sound. exact Hready_args.
+        -- exact Hin_callee.
+        -- exact Hname_callee.
+        -- exact Hlt.
+        -- apply callee_hidden_capture_args_disjoint_b_sound.
+           exact Hdisjoint.
+        -- exact Hcaptures.
+        -- exact Hnodup_binding.
+        -- exact Hprov_body.
+        -- exact Htyped_body.
+        -- exact Hcompat_body.
+        -- exact Hexclude_roots.
+        -- exact Hexclude_env.
+        -- exact Hcapture_bound.
+        -- exact Hlookup_x.
+        -- eapply infer_core_env_state_fuel_roots_shadow_safe_sound.
+           exact Hdirect.
+        -- eapply infer_core_env_state_fuel_roots_shadow_safe_sound.
+           exact Hlet.
+        -- exact Hlocal_infer.
     + destruct e; try discriminate.
       simpl in Hinfer, Hif.
       destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R

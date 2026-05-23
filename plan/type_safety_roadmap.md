@@ -174,7 +174,7 @@ Work in this order unless a proof exposes a soundness gap.
      `root_set_stores_subset (root_sets_union
      (capture_store_root_sets captured)) capture_roots`.
 
-   Next proof task:
+   Completed package support:
 
    - The captured-call body cleanup core now exposes the body returned-root
      fact:
@@ -186,20 +186,30 @@ Work in this order unless a proof exposes a soundness gap.
      The expression cleanup wrapper also carries that fact through its
      package. Compatibility wrappers still project the older store/value
      surface.
+   - Hidden-frame cleanup now propagates returned-root evidence through the
+     subset bound used by local-let captured calls.
+   - The annotated local-let captured-call preservation core now exposes an
+     existential copied-capture package with final `store_roots_within`,
+     returned `value_roots_within`, `store_no_shadow`, and
+     `root_env_no_shadow`. The public compatibility wrapper still projects the
+     older store/value surface.
    - The subset bridge exists as
      `captured_call_callee_body_root_shadow_provenance_instantiated_bridge_with_result_subset`
      and is used by the captured-call make/let routes. It relates the
      instantiated body returned roots to the argument/captured-store root
      union needed by the direct with-env captured-call path.
-   - Remaining warning: do not widen exact `ELet` evidence unless the
-     returned-root, store-root, and no-shadow package obligations are
-     explicitly covered, including the returned-root subset bridge together
-     with `capture_store_root_sets_bound_from_capture_root_bound`.
-   - After those package obligations are covered, expose final
-     `store_roots_within`, returned `value_roots_within`, `store_no_shadow`,
-     and `root_env_no_shadow` from the captured-call preservation package,
-     weaken copied capture roots into the exact sidecar returned-root bound,
-     and add the `ELet` exact-evidence constructor.
+
+  Exact local-let evidence status:
+
+   - The exact `ELet` sidecar constructor is in place for the annotated
+     local-let captured-call shape.
+   - Its eval package uses the local-let copied-capture package plus
+     `capture_store_root_sets_bound_from_capture_root_bound` to weaken returned
+     roots from copied capture roots to the static `capture_root_bound`.
+   - The executable expression checker has the matching exact local-let branch,
+     guarded by exact capture checking, static capture-root bounds, hidden
+     binding freshness, direct synthetic-call typing equality, and returned
+     type compatibility.
 
    Annotated local-let captured-call route:
 
@@ -269,13 +279,18 @@ Work in this order unless a proof exposes a soundness gap.
    - exact capture check with `check_make_closure_captures_exact_sctx_with_env`;
    - existing captured callee summary.
 
-   Current implementation status:
+  Current implementation status:
 
-   - `local_captured_call_target_expr` recognizes the annotated local-let
+  - `local_captured_call_target_expr` recognizes the annotated local-let
      shape and checks the syntactic freshness guards. Its soundness helper is
      in `EnvRuntimeSafety.v`.
-   - `check_fn_root_shadow_captured_call_provenance_summary` now has the
+  - `expr_root_shadow_captured_call_provenance_summary_exact` has an
+     `ERSCE_LocalCapturedLet` constructor for the exact annotated shape.
+  - `check_fn_root_shadow_captured_call_provenance_summary` now has the
      annotated local-let captured-call branch.
+  - `check_expr_root_shadow_captured_call_provenance_summary_fuel` now has the
+     corresponding exact expression branch used by `if` and expression-level
+     sidecar evidence.
    - The branch uses two synthetic checks:
      - direct synthetic body:
        `ECallExpr (EMakeClosure fname captures) args`, used to extract
@@ -369,33 +384,26 @@ Work in this order unless a proof exposes a soundness gap.
      It evaluates the condition with ordinary provenance readiness, carries
      store/root/name/key invariants into the selected branch, and reuses the
      direct/captured-call wrappers under branch `R1`/`Σ1`.
+   - The exact package bridge now exists:
+
+     ```coq
+     eval_expr_root_shadow_captured_call_provenance_summary_exact_package
+     ```
+
+     It exposes final store typing, return typing, final store roots, returned
+     roots, final store no-shadow, and final root-env no-shadow. The exact
+     `if` evidence carries syntactic branch root-env equality from
+     `root_env_eqb`, which is stronger than the semantic equivalence needed by
+     `TERS_If`.
    - The final captured-call checked-initial safety theorem now has an `if`
      summary case that delegates to
      `eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_typing`.
-   - Newly discovered blocker for the remaining captured-call `ELet` gap:
-     a naive `ERSCE_Let`/expression-sidecar widening was considered, but the
-     exact helper currently returns only `store_typed` and `value_has_type`.
-     `ELet` cleanup needs body `store_roots_within`, `value_roots_within`,
-     `store_no_shadow`, and `root_env_no_shadow` evidence, and likely root
-     name/key facts, to erase the bound root safely. The captured-call
-     preservation wrappers also expose only store/value facts at the expression
-     helper boundary. More specifically,
-     `expr_root_shadow_captured_call_provenance_summary_exact` indexes captured
-     calls with the typed expression roots (`root_sets_union arg_roots`), but a
-     captured callee return can depend on copied capture roots. A strengthened
-     exact preservation package therefore cannot safely claim
-     `value_roots_within roots ret` for captured-call branches until its
-     evidence has an explicit returned-root bound/subset invariant, or another
-     proven invariant that accounts for capture roots. Keep checker widening
-     for `ELet` blocked until that returned-root invariant is designed and
-     proven.
 
-   Next proof task:
+  Next proof task:
 
-   - Reassess the remaining gap between ordinary checker acceptance and the
-     validated captured-call sidecar after the `if` branch. Do not add new
-     expression forms to the sidecar unless their preservation route is
-     already covered by exact evidence and checked-initial runtime premises.
+   - Do not add broader expression forms unless their package preservation
+     route is already covered. The exact annotated local-let captured-call
+     route is now wired through expression-level and checked-initial safety.
 
 ## Current Captured Closure Facts
 
@@ -502,8 +510,8 @@ reducing validator false negatives:
 
 Follow `plan/implementation.md`.
 
-Use sub-agents only for implementation-only work. Before spawning a sub-agent,
-state why the task is implementation-only.
+Use sub-agents only for design or implementation-only work. Before spawning a
+sub-agent, state why the task is design or implementation-only.
 
 Do not delegate:
 

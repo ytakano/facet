@@ -627,11 +627,25 @@ val wf_outlives_b : region_ctx -> outlives_ctx -> bool
 
 val outlives_constraints_hold_b : outlives_ctx -> outlives_ctx -> bool
 
+type sctx_entry = ctx_entry
+
 type sctx = ctx
 
 val sctx_of_ctx : ctx -> sctx
 
 val ctx_of_sctx : sctx -> ctx
+
+val mutability_eqb : mutability -> mutability -> bool
+
+val field_path_eqb : field_path -> field_path -> bool
+
+val field_paths_eqb : field_path list -> field_path list -> bool
+
+val binding_state_eqb : binding_state -> binding_state -> bool
+
+val sctx_entry_eqb : sctx_entry -> sctx_entry -> bool
+
+val sctx_eqb : sctx -> sctx -> bool
 
 val sctx_lookup : ident -> sctx -> (ty * binding_state) option
 

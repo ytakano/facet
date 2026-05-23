@@ -451,34 +451,13 @@ Proof.
   { apply root_env_excludes_params_app; assumption. }
   assert (Hprov_fcall : provenance_ready_expr (fn_body fcall)).
   { eapply alpha_rename_fn_def_provenance_ready_body; eassumption. }
-  assert (Hsame_body_r :
-    sctx_same_bindings
-      (sctx_of_ctx (params_ctx (fn_params fcall))) Γ_out_r).
-  { eapply typed_env_structural_same_bindings.
-    eapply typed_env_roots_structural.
-    eapply typed_env_roots_shadow_safe_roots. exact Htyped_renamed. }
-  assert (Hroots_set_body_r :
-    root_set_sctx_roots_named roots_body_r Γ_out_r).
-  { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env
-                (fn_outlives fdef) (fn_lifetimes fdef)) as [Hroots_expr _].
-    destruct (Hroots_expr
-                (initial_root_env_for_params_origin
-                  (fn_params fdef) (fn_params fcall))
-                (sctx_of_ctx (params_ctx (fn_params fcall)))
-                (fn_body fcall) T_body Γ_out_r R_body_r roots_body_r
-                Htyped_renamed Hrn_initial_r
-                (initial_root_env_for_params_origin_sctx_roots_named
-                  (fn_params fdef) (fn_params fcall)))
-      as [_ Hroots_set].
-    exact Hroots_set. }
   assert (Hroots_body_r_no_store : root_set_no_store roots_body_r).
-  { eapply root_set_no_store_of_sctx_named_excludes_params; eassumption. }
+  { eapply typed_env_roots_shadow_safe_root_set_no_store_of_excludes_params;
+      eassumption. }
   assert (Hsubset_inst :
     root_set_stores_subset roots_body_inst (root_sets_union arg_roots)).
-  { eapply root_set_stores_subset_equiv.
-    - exact Hroots_inst_equiv.
-    - eapply root_set_instantiate_no_store_stores_subset_root_sets_union.
-      exact Hroots_body_r_no_store. }
+  { eapply typed_env_roots_shadow_safe_instantiated_roots_subset_union;
+      eassumption. }
   assert (Hcaps_call : fn_captures fcall = []).
   { rewrite Hcaps_eq. exact Hcaps. }
   unfold callee_body_root_shadow_provenance_ready_at_result_subset.
@@ -568,4 +547,3 @@ Proof.
   eapply Hsummary.
   eapply lookup_fn_in_unique_by_name; eassumption.
 Qed.
-

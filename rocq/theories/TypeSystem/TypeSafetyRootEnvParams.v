@@ -227,6 +227,58 @@ Proof.
   eapply Hexclude; eassumption.
 Qed.
 
+Lemma typed_env_roots_shadow_safe_root_set_no_store_of_excludes_params :
+  forall env Ω n ps_orig ps_current e T Σ' R' roots,
+    typed_env_roots_shadow_safe env Ω n
+      (initial_root_env_for_params_origin ps_orig ps_current)
+      (sctx_of_ctx (params_ctx ps_current)) e T Σ' R' roots ->
+    root_env_no_shadow
+      (initial_root_env_for_params_origin ps_orig ps_current) ->
+    roots_exclude_params ps_current roots ->
+    root_set_no_store roots.
+Proof.
+  intros env Ω n ps_orig ps_current e T Σ' R' roots Htyped Hrn Hexclude.
+  assert (Hsame :
+    sctx_same_bindings (sctx_of_ctx (params_ctx ps_current)) Σ').
+  { eapply typed_env_structural_same_bindings.
+    eapply typed_env_roots_structural.
+    eapply typed_env_roots_shadow_safe_roots. exact Htyped. }
+  assert (Hroots_named : root_set_sctx_roots_named roots Σ').
+  { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env Ω n)
+      as [Hroots_expr _].
+    destruct (Hroots_expr
+                (initial_root_env_for_params_origin ps_orig ps_current)
+                (sctx_of_ctx (params_ctx ps_current))
+                e T Σ' R' roots
+                Htyped Hrn
+                (initial_root_env_for_params_origin_sctx_roots_named
+                  ps_orig ps_current))
+      as [_ Hroots_set].
+    exact Hroots_set. }
+  eapply root_set_no_store_of_sctx_named_excludes_params; eassumption.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_instantiated_roots_subset_union :
+  forall env Ω n ps_orig ps_current e T Σ' R' roots roots_inst arg_roots,
+    typed_env_roots_shadow_safe env Ω n
+      (initial_root_env_for_params_origin ps_orig ps_current)
+      (sctx_of_ctx (params_ctx ps_current)) e T Σ' R' roots ->
+    root_env_no_shadow
+      (initial_root_env_for_params_origin ps_orig ps_current) ->
+    roots_exclude_params ps_current roots ->
+    root_set_equiv roots_inst
+      (root_set_instantiate (root_subst_of_params ps_orig arg_roots) roots) ->
+    root_set_stores_subset roots_inst (root_sets_union arg_roots).
+Proof.
+  intros env Ω n ps_orig ps_current e T Σ' R' roots roots_inst arg_roots
+    Htyped Hrn Hexclude Hequiv.
+  eapply root_set_stores_subset_equiv.
+  - exact Hequiv.
+  - eapply root_set_instantiate_no_store_stores_subset_root_sets_union.
+    eapply typed_env_roots_shadow_safe_root_set_no_store_of_excludes_params;
+      eassumption.
+Qed.
+
 Lemma roots_exclude_params_rename :
   forall rho ps psr roots rootsr,
     ctx_alpha rho

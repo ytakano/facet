@@ -173,11 +173,20 @@ runtime safety currently cross theorem boundaries.
   and `TypeSafetyClosureRuntimeArgsLet.v` now own the extracted Base/Make/Let
   proof slices, while `TypeSafetyClosureRuntimeArgs.v` remains the public
   compatibility export surface.
+- Completed Phase 4 measured captured-call split:
+  `TypeSafetyCapturedCall.v` is now a 1-line export surface; proof slices are
+  `TypeSafetyCapturedCallEvidence.v` 444 lines,
+  `TypeSafetyCapturedCallMake.v` 653 lines, and
+  `TypeSafetyCapturedCallLet.v` 588 lines.
+- Completed Phase 4 Task E measured closure-wrapper split:
+  `TypeSafetyClosureWrappers.v` is now a 1-line export surface; proof slices
+  are `TypeSafetyClosureWrappersCleanup.v` 731 lines,
+  `TypeSafetyClosureWrappersRuntimeArgs.v` 109 lines, and
+  `TypeSafetyClosureWrappersCapturedCall.v` 173 lines.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/TypeSafetyClosureRuntimeArgsLet.vo theories/TypeSystem/TypeSafetyClosureRuntimeArgs.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo theories/TypeSystem/TypeSafety.v`.
-- Next task: Phase 4 measured proof-file splits. Before splitting, record the
-  concrete bottleneck measurement and keep wrapper/aggregator theorem names
-  stable.
+  `cd rocq && make theories/TypeSystem/TypeSafetyClosureWrappersCapturedCall.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo theories/TypeSystem/TypeSafetyDirectCallWrappers.vo theories/TypeSystem/TypeSafety.vo`.
+- Next task: pick the next measured Phase 4 bottleneck after current checks;
+  keep compatibility export surfaces and theorem names stable.
 
 ### Phase 1: Compact Continuation Notes
 

@@ -1,6 +1,7 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules TypeChecker RuntimeTyping RootProvenance
-  EnvStructuralRules AlphaRenaming EnvSoundnessFacts CheckerSoundness.
+  EnvStructuralRules AlphaRenaming EnvSoundnessFacts CheckerSoundness
+  TypeSafetyRootEnvParams.
 From Facet.TypeSystem Require Export TypeSafetyCapturedCallEvidence.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
@@ -1040,33 +1041,12 @@ Proof.
     eapply Forall_impl; [| exact Hbinding_roots_exclude].
     intros roots_i Hroots_i.
     apply Hroots_i. exact Hin_y. }
-  assert (Hsame_body_r :
-    sctx_same_bindings
-      (sctx_of_ctx (fn_body_ctx fcall)) Γ_out_r).
-  { eapply typed_env_structural_same_bindings.
-    eapply typed_env_roots_structural.
-    eapply typed_env_roots_shadow_safe_roots. exact Htyped_renamed. }
-  assert (Hroots_set_body_r :
-    root_set_sctx_roots_named roots_body_r Γ_out_r).
-  { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env
-                (fn_outlives fdef) (fn_lifetimes fdef)) as [Hroots_expr _].
-    destruct (Hroots_expr
-                (initial_root_env_for_params_origin
-                  (fn_params fdef ++ fn_captures fdef)
-                  (fn_params fcall ++ fn_captures fcall))
-                (sctx_of_ctx (fn_body_ctx fcall))
-                (fn_body fcall) T_body Γ_out_r R_body_r roots_body_r
-                Htyped_renamed Hrn_initial_r
-                (initial_root_env_for_params_origin_sctx_roots_named
-                  (fn_params fdef ++ fn_captures fdef)
-                  (fn_params fcall ++ fn_captures fcall)))
-      as [_ Hroots_set].
-    exact Hroots_set. }
-    assert (Hroots_body_r_no_store : root_set_no_store roots_body_r).
-    { eapply root_set_no_store_of_sctx_named_excludes_params.
-      - exact Hsame_body_r.
-      - exact Hroots_set_body_r.
-      - exact Hexclude_roots_renamed. }
+  assert (Hroots_body_r_no_store : root_set_no_store roots_body_r).
+  { eapply typed_env_roots_shadow_safe_root_set_no_store_of_excludes_params.
+    - unfold fn_body_ctx, fn_body_params in Htyped_renamed.
+      exact Htyped_renamed.
+    - exact Hrn_initial_r.
+    - exact Hexclude_roots_renamed. }
   assert (Hsubset_inst_input :
     root_set_stores_subset (root_set_instantiate
       (root_subst_of_params
@@ -1075,8 +1055,12 @@ Proof.
       roots_body_r)
       (root_sets_union
         (arg_roots ++ capture_store_root_sets captured))).
-  { eapply root_set_instantiate_no_store_stores_subset_root_sets_union.
-    exact Hroots_body_r_no_store. }
+  { eapply typed_env_roots_shadow_safe_instantiated_roots_subset_union.
+    - unfold fn_body_ctx, fn_body_params in Htyped_renamed.
+      exact Htyped_renamed.
+    - exact Hrn_initial_r.
+    - exact Hexclude_roots_renamed.
+    - apply root_set_equiv_refl. }
   assert (Htail_fresh :
     root_env_tail_fresh_names
       (root_env_remove_params (fn_params fcall)

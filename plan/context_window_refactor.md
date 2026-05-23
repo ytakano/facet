@@ -163,11 +163,15 @@ runtime safety currently cross theorem boundaries.
   `EnvRuntimeShadowExprCheckerFacts.v`.
 - Extracted the EnvRuntimeSafety validator/sidecar readiness fact block into
   `EnvRuntimeValidatorFacts.v`.
+- Completed Phase 3: rewired the direct with-env captured-call subset bridge to
+  use the `TypeSafetyRootEnvParams.v` helper API for instantiated body return
+  roots within `root_sets_union (arg_roots ++ capture_store_root_sets
+  captured)`, without changing checker contracts or theorem statements.
 - Last focused check:
-  `cd rocq && make theories/TypeSystem/EnvRuntimeValidatorFacts.vo theories/TypeSystem/EnvRuntimeSafety.vo theories/TypeSystem/RuntimeRefSafety.vo theories/TypeSystem/EnvFullSoundness.vo theories/TypeSystem/CheckerUsageSoundness.vo`.
-- Next task: continue Phase 3 by looking for the next stable helper cluster
-  that can move out of a large preservation file without changing theorem
-  statements.
+  `cd rocq && make theories/TypeSystem/TypeSafetyCapturedCall.vo theories/TypeSystem/TypeSafetyClosureWrappers.vo theories/TypeSystem/TypeSafety.v`.
+- Next task: Phase 4 measured proof-file splits. Before splitting, record the
+  concrete bottleneck measurement and keep wrapper/aggregator theorem names
+  stable.
 
 ### Phase 1: Compact Continuation Notes
 
@@ -197,15 +201,17 @@ runtime safety currently cross theorem boundaries.
 
 ### Phase 3: Narrow Root/Capture Fact Modules
 
+- Status: complete.
 - Move reusable root, capture, store-subset, and no-store bridge facts into
   narrow fact modules that can be imported without loading large preservation
   proofs.
 - Prefer modules with stable ownership such as root-set facts, capture-store
   facts, and closure-cleanup facts.
-- The next high-value bridge is the direct with-env captured-call subset fact:
+- The completed high-value bridge is the direct with-env captured-call subset fact:
   instantiated body return roots must be shown within
   `root_sets_union (arg_roots ++ capture_store_root_sets captured)`.
-- Keep checker contracts unchanged until the supporting proof bridge compiles.
+- Checker contracts remained unchanged while the supporting proof bridge was
+  rewired.
 
 ### Phase 4: Measured Proof File Splits
 

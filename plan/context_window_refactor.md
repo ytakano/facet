@@ -25,8 +25,11 @@ outside the reconciled roadmap.
   `TypeSafetyClosureRuntimeArgsLet.v`, `TypeSafetyClosureWrappersCleanup.v`,
   `TypeSafetyCapturedCallMake.v`, and `TypeSafetyCapturedCallLet.v`.
 - Not fully optimized for repository-wide proof work: large shared foundations
-  remain, especially `TypeChecker.v`, `TypeSafetyRootsReady.v`,
-  `TypeSafetyHiddenFrameBase.v`, and `TypeSafetyRootEnvParams.v`.
+  remain, especially `TypeChecker.v`, `TypeSafetyRootsReady.v`, and
+  `TypeSafetyHiddenFrameBase.v`.
+- Root-env parameter helpers have also been split behind
+  `TypeSafetyRootEnvParams.v`, with focused slices for base facts, rename/store
+  naming facts, boolean mirrors, coverage facts, and runtime binding facts.
 - `plan/type_safety_roadmap.md` is still the active proof-intent document. Its
   captured-call subset-bridge status and module-ownership guidance have been
   reconciled with the current split; when future text conflicts with code,
@@ -40,8 +43,6 @@ outside the reconciled roadmap.
 - `TypeSafetyRootsReady.v` and `TypeSafetyHiddenFrameBase.v` are still large,
   but both need careful ownership design before another split. Do not delegate
   their boundary selection to sub-agents.
-- `TypeSafetyRootEnvParams.v` is a likely future target only when an active
-  proof needs a narrower root-env helper boundary.
 - The direct with-env captured-call subset bridge is no longer a roadmap/status
   discrepancy. It exists as
   `captured_call_callee_body_root_shadow_provenance_instantiated_bridge_with_result_subset`
@@ -74,8 +75,6 @@ outside the reconciled roadmap.
 2. If the next proof repeatedly opens `TypeSafetyHiddenFrameBase.v`, first map
    dependencies around capture roots, copied capture stores, empty root envs,
    frame readiness, and hidden-store stripping support.
-3. Split `TypeSafetyRootEnvParams.v` only when an active proof needs a narrower
-   root-env helper boundary.
 
 ## Checks
 

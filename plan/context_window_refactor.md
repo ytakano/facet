@@ -226,6 +226,9 @@ runtime safety currently cross theorem boundaries.
 - Do not combine theorem strengthening with file movement in the same commit.
 - Before splitting, record the measured reason: file size, repeated import
   pressure, or a specific recurring context bottleneck.
+- Measured result: `EnvRuntimeSafety.v` is split into Base (467 lines),
+  Direct (342), NonCapturing (309), and Captured (507) modules; the old
+  `EnvRuntimeSafety.v` is now the 1-line compatibility export surface.
 
 ### Phase 5: Checker Modularization Later
 

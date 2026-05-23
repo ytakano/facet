@@ -75,6 +75,7 @@ theories/TypeSystem/EnvRuntimeValidatorFacts.v
 theories/TypeSystem/EnvRuntimeBaseSafety.v
 theories/TypeSystem/EnvRuntimeDirectSafety.v
 theories/TypeSystem/EnvRuntimeNonCapturingSafety.v
+theories/TypeSystem/EnvRuntimeCapturedSafety.v
 theories/TypeSystem/EnvRuntimeSafety.v
 theories/TypeSystem/RuntimeRefSafety.v
 theories/TypeSystem/EnvFullSoundness.v

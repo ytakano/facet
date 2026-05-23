@@ -50,6 +50,7 @@ theories/TypeSystem/TypeSafetyDirectCall.v
 theories/TypeSystem/TypeSafetyCaptureFacts.v
 theories/TypeSystem/TypeSafetyCapturedCallEvidence.v
 theories/TypeSystem/TypeSafetyCapturedCallMake.v
+theories/TypeSystem/TypeSafetyCapturedCallLet.v
 theories/TypeSystem/TypeSafetyCapturedCall.v
 theories/TypeSystem/TypeSafetyDirectPlace.v
 theories/TypeSystem/TypeSafetyLocalFacts.v

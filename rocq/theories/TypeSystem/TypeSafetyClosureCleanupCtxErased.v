@@ -5,6 +5,43 @@ From Facet.TypeSystem Require Export TypeSafetyClosureCleanupFrame.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
+Lemma value_roots_within_stores_subset_cleanup :
+  (forall roots v,
+    value_roots_within roots v ->
+    forall roots',
+      root_set_stores_subset roots roots' ->
+      value_roots_within roots' v) /\
+  (forall R se,
+    store_entry_roots_within R se -> True) /\
+  (forall R s,
+    store_roots_within R s -> True) /\
+  (forall roots fields,
+    value_fields_roots_within roots fields ->
+    forall roots',
+      root_set_stores_subset roots roots' ->
+      value_fields_roots_within roots' fields).
+Proof.
+  apply value_roots_within_mutind; intros; try solve [constructor; eauto].
+  constructor.
+  intros root Hexclude.
+  apply s.
+  unfold roots_exclude in *.
+  intros Hin.
+  apply Hexclude.
+  apply H. exact Hin.
+Qed.
+
+Lemma value_roots_within_store_subset_cleanup :
+  forall roots v roots',
+    value_roots_within roots v ->
+    root_set_stores_subset roots roots' ->
+    value_roots_within roots' v.
+Proof.
+  intros roots v roots' Hwithin Hsubset.
+  exact (proj1 value_roots_within_stores_subset_cleanup
+    roots v Hwithin roots' Hsubset).
+Qed.
+
 Lemma eval_call_body_ctx_cleanup_erased_core :
   forall env (Ω : outlives_ctx) frame Σ_frame fdef fcall σ s_body ret
       T_body Γ_out R_body roots_body frame_final,
@@ -101,6 +138,7 @@ Lemma eval_call_body_ctx_cleanup_hidden_frame_erased_core :
         (store_remove_params (fn_captures fcall)
           (store_remove_params (fn_params fcall) s_body)))
       ret (apply_lt_ty σ (fn_ret fdef)) /\
+    value_roots_within roots_body ret /\
     store_remove x
       (store_remove_params (fn_captures fcall)
         (store_remove_params (fn_params fcall) s_body)) = s_args.
@@ -147,6 +185,7 @@ Proof.
       * exact Hv_ret_fdef.
       * exact Hret_exclude.
     + exact Hret_exclude_x.
+  - exact Hret_roots.
   - exact Hfinal_exact.
 Qed.
 
@@ -189,6 +228,7 @@ Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_
         (store_remove_params (fn_captures fcall)
           (store_remove_params (fn_params fcall) s_body)))
       ret (apply_lt_ty σ (fn_ret fdef)) /\
+    value_roots_within roots_body ret /\
     store_remove x
       (store_remove_params (fn_captures fcall)
         (store_remove_params (fn_params fcall) s_body)) = s_args.
@@ -314,8 +354,15 @@ Proof.
       (sctx_of_ctx Γ_out)).
   { eapply typed_env_structural_same_bindings.
     eapply typed_env_roots_structural. exact Htyped_body. }
-  eapply eval_call_body_ctx_cleanup_hidden_frame_erased_core;
-    eassumption.
+  destruct (eval_call_body_ctx_cleanup_hidden_frame_erased_core
+              env Ω s_args_hidden s_args Σ_args x T_hidden hidden fdef
+              fcall σ s_body ret T_body Γ_out R_body roots_body
+              frame_final Hhidden Htyped_args Hret Hnodup_all
+              Hframe_scope Hscope_body Hv_body Hroots_body Hret_roots
+              Hshadow_body Hsame_body Hcompat_body Hexclude_all
+              Hroot_exclude_x)
+    as [Hstore_final [Hv_final [Hret_roots_final Hfinal]]].
+  repeat split; assumption.
 Qed.
 
 Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset_with_preservation_core :
@@ -358,6 +405,7 @@ Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset_with_preser
         (store_remove_params (fn_captures fcall)
           (store_remove_params (fn_params fcall) s_body)))
       ret (apply_lt_ty σ (fn_ret fdef)) /\
+    value_roots_within roots_bound ret /\
     store_remove x
       (store_remove_params (fn_captures fcall)
         (store_remove_params (fn_params fcall) s_body)) = s_args.
@@ -368,12 +416,24 @@ Proof.
     Hhidden Hcaptured_params_typed Htyped_args Hrename Hargs_fcall
     Hroots_bind Hshadow_bind Hrn_params Hcover_all Hprov_body Htyped_body
     Hcompat_body Hexclude_all Hsubset Hroot_exclude_bound Heval_body.
-  eapply (eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_core
-            Hframe_mutual
-            Htyping_mutual
-            Hparam_mutual);
-    try eassumption.
-  eapply roots_exclude_stores_subset; eassumption.
+  assert (Hroot_exclude_body : roots_exclude x roots_body).
+  { eapply roots_exclude_stores_subset; eassumption. }
+  destruct (eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_core
+              Hframe_mutual
+              Htyping_mutual
+              Hparam_mutual
+              env Ω captured s_args_hidden s_args Σ_args x T_hidden hidden
+              fdef fcall σ s_body vs ret used' T_body Γ_out R_params
+              R_body roots_body Hhidden Hcaptured_params_typed Htyped_args
+              Hrename Hargs_fcall Hroots_bind Hshadow_bind Hrn_params
+              Hcover_all Hprov_body Htyped_body Hcompat_body Hexclude_all
+              Hroot_exclude_body Heval_body)
+    as [Hstore_final [Hv_final [Hret_roots Hfinal]]].
+  repeat split.
+  - exact Hstore_final.
+  - exact Hv_final.
+  - eapply value_roots_within_store_subset_cleanup; eassumption.
+  - exact Hfinal.
 Qed.
 
 Lemma eval_let_make_closure_captured_call_hidden_cleanup_package_with_preservation_core :
@@ -430,6 +490,7 @@ Lemma eval_let_make_closure_captured_call_hidden_cleanup_package_with_preservati
         roots_exclude x roots_bound ->
         store_typed env s_final Σ_args /\
         value_has_type env s_final ret (apply_lt_ty sigma_result (fn_ret fdef)) /\
+        value_roots_within roots_bound ret /\
         s_final = s_args.
 Proof.
   intros Hframe_mutual Htyping_mutual Hparam_mutual env Ω s s_final m x T

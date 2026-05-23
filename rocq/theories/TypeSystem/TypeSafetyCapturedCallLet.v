@@ -50,7 +50,13 @@ Lemma eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_comp
     ~ In x (args_free_vars_ts args) ->
     ~ In x (args_local_store_names args) ->
     store_typed env s_final Σ_args /\
-    value_has_type env s_final ret (apply_lt_ty [] (fn_ret fdef)).
+    value_has_type env s_final ret (apply_lt_ty [] (fn_ret fdef)) /\
+    exists captured_final,
+      copy_capture_store_as captures (fn_captures fdef) s =
+        Some captured_final /\
+      rooted_eval_result R_args s_final
+        (root_sets_union (arg_roots ++ capture_store_root_sets captured_final))
+        ret.
 Proof.
   intros Htyping Hroots_mutual Hnames Hkeys_mutual Hframe Hprefix Hparam
     env Ω n R Σ m x T args fname captures fdef s s_final ret
@@ -100,6 +106,7 @@ Proof.
       store_typed env s_final Σ_args0 /\
       value_has_type env s_final ret
         (apply_lt_ty sigma_result (fn_ret fdef)) /\
+      value_roots_within roots_bound ret /\
       s_final = s_args).
   { intros sigma_result Σ_args0 T_body0 Γ_out0 R_params R_body0
       roots_body0 roots_bound Hcaptured_params0 Htyped_args0 Hargs_fcall0
@@ -107,11 +114,11 @@ Proof.
       Htyped_body0 Hcompat_body0 Hexclude_all0 Hsubset0
       Hroot_exclude_bound0.
     subst s_final.
-    eapply (eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_core
+    eapply (eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset_with_preservation_core
               Hframe
               Hprefix
               Hparam); try eassumption.
-    eapply roots_exclude_stores_subset; eassumption. }
+  }
   assert (Hfresh_captured : ~ In x (store_names captured)).
   { rewrite (copy_capture_store_as_store_names
                captures (fn_captures fdef) s captured Hcopy).
@@ -583,6 +590,19 @@ Proof.
               Hshadow_bind Hrn_bind Hcover_all Hprov_fcall Htyped_tail_roots
               Hcompat_fcall Hexclude_roots_i Hsubset_i
               Hroot_exclude_bound)
-    as [Hstore_final [Hv_final _]].
-  split; assumption.
+    as [Hstore_final [Hv_final [Hret_roots_final Hfinal_eq]]].
+  destruct (proj1 (proj2 Hroots_mutual)
+              env s args s_args vs Heval_args Ω n R Σ (fn_params fdef)
+              Σ_args R_args arg_roots Hprov_args Hroots Hshadow Hrn
+              Htyped_args)
+    as [Hroots_args_final [_ [Hshadow_args_final Hrn_args_final]]].
+  repeat split.
+  - exact Hstore_final.
+  - exact Hv_final.
+  - exists captured. split; [exact Hcopy|].
+    repeat split.
+    + rewrite Hfinal_eq. exact Hroots_args_final.
+    + exact Hret_roots_final.
+    + rewrite Hfinal_eq. exact Hshadow_args_final.
+    + exact Hrn_args_final.
 Qed.

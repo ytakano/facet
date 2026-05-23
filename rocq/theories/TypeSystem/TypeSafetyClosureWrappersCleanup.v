@@ -432,6 +432,7 @@ Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased :
         (store_remove_params (fn_captures fcall)
           (store_remove_params (fn_params fcall) s_body)))
       ret (apply_lt_ty σ (fn_ret fdef)) /\
+    value_roots_within roots_body ret /\
     store_remove x
       (store_remove_params (fn_captures fcall)
         (store_remove_params (fn_params fcall) s_body)) = s_args.
@@ -481,6 +482,7 @@ Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset :
         (store_remove_params (fn_captures fcall)
           (store_remove_params (fn_params fcall) s_body)))
       ret (apply_lt_ty σ (fn_ret fdef)) /\
+    value_roots_within roots_bound ret /\
     store_remove x
       (store_remove_params (fn_captures fcall)
         (store_remove_params (fn_params fcall) s_body)) = s_args.
@@ -544,6 +546,7 @@ Lemma eval_let_make_closure_captured_call_hidden_cleanup_package :
         roots_exclude x roots_bound ->
         store_typed env s_final Σ_args /\
         value_has_type env s_final ret (apply_lt_ty sigma_result (fn_ret fdef)) /\
+        value_roots_within roots_bound ret /\
         s_final = s_args.
 Proof.
   eapply (eval_let_make_closure_captured_call_hidden_cleanup_package_with_preservation_core
@@ -728,4 +731,3 @@ Proof.
             eval_preserves_param_scope_roots_ready_mutual);
     eassumption.
 Qed.
-

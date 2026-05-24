@@ -205,6 +205,7 @@ type expr =
 | EMakeClosure of ident * ident list
 | EPlace of place
 | ECall of ident * expr list
+| ECallGeneric of ident * ty list * expr list
 | ECallExpr of expr * expr list
 | EStruct of string * lifetime list * ty list * (string * expr) list
 | EReplace of place * expr
@@ -386,6 +387,10 @@ val place_root : place -> ident
 val apply_lt_param : lifetime list -> param -> param
 
 val apply_lt_params : lifetime list -> param list -> param list
+
+val apply_type_param : ty list -> param -> param
+
+val apply_type_params : ty list -> param list -> param list
 
 val expr_ref_root : expr -> ident option
 
@@ -969,6 +974,7 @@ type raw_expr =
 | RawLet of mutability * ident * ty * raw_expr * raw_expr
 | RawLetInfer of mutability * ident * raw_expr * raw_expr
 | RawCall of ident * raw_expr list
+| RawCallGeneric of ident * ty list * raw_expr list
 | RawCallExpr of raw_expr * raw_expr list
 | RawStruct of string * lifetime list * ty list * (string * raw_expr) list
 | RawReplace of place * raw_expr

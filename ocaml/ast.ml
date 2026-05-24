@@ -47,7 +47,7 @@ type named_expr =
   | NVar    of name
   | NPlace  of named_place
   | NLet    of TypeChecker.mutability * name * named_ty option * named_expr * named_expr
-  | NCall   of name * named_expr list
+  | NCall   of name * named_type_arg list * named_expr list
   | NStruct of name * named_type_arg list * (name * named_expr) list
   | NReplace of named_place * named_expr
   | NAssign of named_place * named_expr

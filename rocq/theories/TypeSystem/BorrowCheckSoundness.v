@@ -121,9 +121,9 @@ Proof.
   (* EPlace *)
   + injection Hcheck as <-. constructor.
 
-  (* ECall *)
-  + apply BO_Call.
-    apply borrow_check_call_go in Hcheck.
+	  (* ECall *)
+	  + apply BO_Call.
+	    apply borrow_check_call_go in Hcheck.
     revert BS BS' Hcheck.
     induction l as [| a rest IHargs]; intros BS BS' Hcheck.
     * simpl in Hcheck. injection Hcheck as <-. constructor.
@@ -134,10 +134,26 @@ Proof.
          pose proof (expr_size_call_arg_lt i (a :: rest) a (or_introl eq_refl)) as Harg_lt.
          simpl in Hlt. lia.
          exact Ha.
-      -- apply IHargs; [simpl; simpl in Hlt; lia | exact Hcheck].
+	      -- apply IHargs; [simpl; simpl in Hlt; lia | exact Hcheck].
 
-  (* ECallExpr *)
-  + destruct (borrow_check fenv BS Γ e) as [BScallee|] eqn:Hcallee; [|discriminate].
+	  (* ECallGeneric *)
+	  + apply BO_CallGeneric.
+	    apply borrow_check_call_go in Hcheck.
+	    revert BS BS' Hcheck.
+	    induction l0 as [| a rest IHargs]; intros BS BS' Hcheck.
+	    * simpl in Hcheck. injection Hcheck as <-. constructor.
+	    * simpl in Hcheck.
+	      destruct (borrow_check fenv BS Γ a) as [BS1|] eqn:Ha; [|discriminate].
+	      apply BO_Args_Cons with (BS1 := BS1).
+	      -- apply IH with (e := a).
+	         pose proof (expr_size_call_generic_arg_lt i l (a :: rest) a
+	           (or_introl eq_refl)) as Harg_lt.
+	         simpl in Hlt. lia.
+	         exact Ha.
+	      -- apply IHargs; [simpl; simpl in Hlt; lia | exact Hcheck].
+
+	  (* ECallExpr *)
+	  + destruct (borrow_check fenv BS Γ e) as [BScallee|] eqn:Hcallee; [|discriminate].
     apply BO_CallExpr with (BS1 := BScallee).
     * apply IH with (e := e).
       -- pose proof (expr_size_callexpr_callee_lt e l). lia.
@@ -333,13 +349,19 @@ Proof.
     simpl. rewrite IH1. rewrite IH2. rewrite IH3.
     rewrite (proj2 (bs_eqb_eq BS2 BS2) eq_refl). reflexivity.
 
-  (* BO_Call *)
-  - intros BS BS' Γ fname args _ IHargs.
-    simpl.
-    apply borrow_check_call_go.
-    exact IHargs.
+	  (* BO_Call *)
+	  - intros BS BS' Γ fname args _ IHargs.
+	    simpl.
+	    apply borrow_check_call_go.
+	    exact IHargs.
 
-  (* BO_CallExpr *)
+	  (* BO_CallGeneric *)
+	  - intros BS BS' Γ fname type_args args _ IHargs.
+	    simpl.
+	    apply borrow_check_call_go.
+	    exact IHargs.
+
+	  (* BO_CallExpr *)
   - intros BS BS1 BS2 Γ callee args _ IHcallee _ IHargs.
     simpl. rewrite IHcallee.
     apply borrow_check_call_go.

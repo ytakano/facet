@@ -1008,13 +1008,17 @@ Proof.
         -- exact Hsame_then_else.
         -- exact H13.
       * exact Hfresh3.
-  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
-      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
-      roots ps frame Hready _ _ _ _ _ _ _.
-    inversion Hready.
-  - intros s s_fn s_args s_body callee args0 fname captured fdef fcall vs ret
-      used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
-      Heval_body IHbody Ω n R Σ T Σ' R' roots ps frame Hready _ _ _ _ _ _ _.
+	  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
+	      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
+	      roots ps frame Hready _ _ _ _ _ _ _.
+	    inversion Hready.
+	  - intros s s_args s_body fname type_args fdef fcall args0 vs ret used'
+	      Hlookup Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ
+	      T Σ' R' roots ps frame Hready _ _ _ _ _ _ _.
+	    inversion Hready.
+	  - intros s s_fn s_args s_body callee args0 fname captured fdef fcall vs ret
+	      used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
+	      Heval_body IHbody Ω n R Σ T Σ' R' roots ps frame Hready _ _ _ _ _ _ _.
     inversion Hready.
   - intros s Ω n R Σ params Σ' R' roots ps frame _ Htyped Hcover
       _ _ _ Hscope Hfresh.
@@ -1085,5 +1089,4 @@ Proof.
   - exact Hexpr.
   - exact (eval_preserves_frame_scope_roots_ready_args_fields_from_expr Hexpr).
 Qed.
-
 

@@ -1,0 +1,9 @@
+trait Show;
+
+fn keep<T>(x: affine T) -> affine T where T: Show {
+  x
+}
+
+fn main() -> affine isize {
+  (keep<affine isize> 1)
+}

@@ -650,6 +650,8 @@ Fixpoint expr_local_store_names (e : expr) : list ident :=
   | EPlace _ => []
   | ECall _ args =>
       args_local_store_names_with expr_local_store_names args
+  | ECallGeneric _ _ args =>
+      args_local_store_names_with expr_local_store_names args
   | ECallExpr callee args =>
       expr_local_store_names callee ++
       args_local_store_names_with expr_local_store_names args
@@ -679,6 +681,14 @@ Lemma expr_local_store_names_call :
     args_local_store_names args.
 Proof.
   intros fname args. reflexivity.
+Qed.
+
+Lemma expr_local_store_names_call_generic :
+  forall fname type_args args,
+    expr_local_store_names (ECallGeneric fname type_args args) =
+    args_local_store_names args.
+Proof.
+  intros fname type_args args. reflexivity.
 Qed.
 
 Lemma expr_local_store_names_call_expr :

@@ -495,6 +495,16 @@ Inductive eval (env : global_env) : store -> expr -> store -> value -> Prop :=
       eval env s (ECall fname args)
                (store_remove_params (fn_params fcall) s_body) ret
 
+  | Eval_CallGeneric : forall s s_args s_body fname type_args fdef fcall args vs ret used',
+      lookup_fn fname (env_fns env) = Some fdef ->
+      fn_captures fdef = [] ->
+      eval_args env s args s_args vs ->
+      alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+      eval env (bind_params (fn_params fcall) vs s_args)
+                (fn_body fcall) s_body ret ->
+      eval env s (ECallGeneric fname type_args args)
+               (store_remove_params (fn_params fcall) s_body) ret
+
   | Eval_CallExpr : forall s s_fn s_args s_body callee args fname captured fdef fcall vs ret used',
       eval env s callee s_fn (VClosure fname captured) ->
       lookup_fn fname (env_fns env) = Some fdef ->

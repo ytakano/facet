@@ -42,11 +42,14 @@ Proof.
   destruct e; simpl; try reflexivity.
   - rewrite IH, IH. reflexivity.
   - rewrite IH, IH. reflexivity.
-  - induction l as [| a rest IHargs]; simpl.
-    + reflexivity.
-    + rewrite IH, IHargs. reflexivity.
-  - rewrite IH.
-    induction l as [| a rest IHargs]; simpl.
+	  - induction l as [| a rest IHargs]; simpl.
+	    + reflexivity.
+	    + rewrite IH, IHargs. reflexivity.
+	  - induction l0 as [| a rest IHargs]; simpl.
+	    + reflexivity.
+	    + rewrite IH, IHargs. reflexivity.
+	  - rewrite IH.
+	    induction l as [| a rest IHargs]; simpl.
     + reflexivity.
     + rewrite IH, IHargs. reflexivity.
   - induction l1 as [| [fname field] rest IHfields]; simpl.
@@ -464,4 +467,3 @@ Proof.
   - exact Hv.
   - apply ty_compatible_b_sound. exact Hcompat.
 Qed.
-

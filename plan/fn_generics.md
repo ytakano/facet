@@ -13,11 +13,13 @@ Implemented:
 - De Bruijn conversion lowers function type params to existing `TParam nat`.
 - Function type/bound validation rejects out-of-range type params and unknown
   trait bounds.
+- Explicit generic direct calls are supported:
+  `(f<affine isize> x)` lowers through `RawCallGeneric`/`ECallGeneric`,
+  checks type-arg arity and instantiated function bounds, instantiates
+  parameters and return types, and erases type args at runtime/FIR.
 
 Not implemented yet:
 
-- Generic call syntax and core call forms.
-- Explicit type-argument calls.
 - Local trait-bound assumptions inside generic function bodies.
 - Implicit type-argument inference.
 - Expected-return inference for zero-argument generic calls.
@@ -25,34 +27,26 @@ Not implemented yet:
 
 ## Next Implementation Steps
 
-1. Add explicit generic direct calls.
-   - Add `ECallGeneric fname type_args args` and
-     `RawCallGeneric fname type_args args`.
-   - Parse `(f<affine isize> x)` and reject wrong type-arg arity.
-   - Instantiate `fn_params`, `fn_ret`, and `fn_bounds` with
-     `subst_type_params_ty`.
-   - Erase type args in operational semantics and FIR lowering.
-
-2. Check instantiated function bounds.
-   - Validate explicit type args against `fn_bounds`.
-   - For concrete instantiated args, use existing global impl resolution.
-
-3. Add local generic bound assumptions.
+1. Add local generic bound assumptions.
    - Extend trait checks so `TParam i` can satisfy required traits from
      `fn_bounds`.
    - Use this for generic function bodies that construct bounded structs or call
      bounded functions.
 
-4. Add implicit inference.
+2. Add implicit inference.
    - Solve type args from formal parameter types versus actual argument types.
    - Report unresolved and conflicting type params as errors.
    - Do not infer a type solely from trait impl search.
 
-5. Add expected-return inference.
+3. Add expected-return inference.
    - Use annotated `let`, assignment, and return contexts to solve remaining
      type args.
    - Allow zero-argument generic calls only when the expected type uniquely
      solves all params.
+
+4. Add generic function values.
+   - Decide representation for generic function values and closure values before
+     exposing them through ordinary value calls.
 
 Required checks:
 

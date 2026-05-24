@@ -21,6 +21,7 @@ Fixpoint basic_expr (e : expr) : bool :=
   | EDrop e1 => basic_expr e1
   | EIf e1 e2 e3 => basic_expr e1 && basic_expr e2 && basic_expr e3
   | ECall _ _ => false
+  | ECallGeneric _ _ _ => false
   | ECallExpr _ _ => false
   | EStruct _ _ _ _ => false
   | EReplace _ _ => false
@@ -53,6 +54,7 @@ Fixpoint call_expr (e : expr) : bool :=
   | ELet _ _ _ e1 e2 => call_expr e1 && call_expr e2
   | ELetInfer _ _ e1 e2 => call_expr e1 && call_expr e2
   | ECall _ args => forallb call_expr args
+  | ECallGeneric _ _ args => forallb call_expr args
   | ECallExpr callee args => call_expr callee && forallb call_expr args
   | EDeref e1 => call_expr e1
   | EDrop e1 => call_expr e1
@@ -164,6 +166,7 @@ Fixpoint struct_expr (e : expr) : bool :=
   | ELet _ _ _ e1 e2 => struct_expr e1 && struct_expr e2
   | ELetInfer _ _ e1 e2 => struct_expr e1 && struct_expr e2
   | ECall _ args => forallb struct_expr args
+  | ECallGeneric _ _ args => forallb struct_expr args
   | ECallExpr callee args => struct_expr callee && forallb struct_expr args
   | EStruct _ _ _ fields => forallb (fun '(_, e_field) => struct_expr e_field) fields
   | EReplace _ e_new => struct_expr e_new
@@ -534,12 +537,13 @@ Proof.
       * eapply IH; [exact Hbasic1 | exact He1].
       * eapply IH; [exact Hbasic2 | exact He2].
       * exact Hcheck.
-		    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
-		      unfold no_captures_b in Hinfer.
-		      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
-		      inversion Hinfer; subst.
-		      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
-		      eapply TES_Fn; eassumption.
+			    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+			      unfold no_captures_b in Hinfer.
+			      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
+			      destruct (Nat.eqb (fn_type_params fdef) 0) eqn:Htypeparams; try discriminate.
+			      inversion Hinfer; subst.
+			      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
+			      eapply TES_Fn; eassumption.
 		    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
 		      destruct (check_make_closure_captures_sctx_with_env env Ω Σ l (fn_captures fdef))
 		        as [[env_lt captured_tys] | err] eqn:Hcheck; try discriminate.
@@ -667,12 +671,13 @@ Proof.
       * eapply IH; [exact Hcall1 | exact He1].
       * eapply IH; [exact Hcall2 | exact He2].
       * exact Hcheck.
-		    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
-		      unfold no_captures_b in Hinfer.
-		      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
-		      inversion Hinfer; subst.
-		      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
-		      eapply TES_Fn; eassumption.
+			    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+			      unfold no_captures_b in Hinfer.
+			      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
+			      destruct (Nat.eqb (fn_type_params fdef) 0) eqn:Htypeparams; try discriminate.
+			      inversion Hinfer; subst.
+			      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
+			      eapply TES_Fn; eassumption.
 		    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
 		      destruct (check_make_closure_captures_sctx_with_env env Ω Σ l (fn_captures fdef))
 		        as [[env_lt captured_tys] | err] eqn:Hcheck; try discriminate.
@@ -699,10 +704,11 @@ Proof.
         -- intro Hu. rewrite Hu in Husage. simpl in Husage. discriminate.
         -- exact Hpath.
         -- exact Hconsume_path.
-	    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
-	      unfold no_captures_b in Hinfer.
-	      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
-	      rewrite infer_env_args_collect_eq in Hinfer.
+		    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+		      unfold no_captures_b in Hinfer.
+		      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
+		      destruct (Nat.eqb (fn_type_params fdef) 0) eqn:Htypeparams; try discriminate.
+		      rewrite infer_env_args_collect_eq in Hinfer.
       destruct (infer_env_args_collect fuel' env Ω n Σ l) as [[arg_tys Σargs] | err]
         eqn:Hcollect; try discriminate.
       destruct (build_sigma (fn_lifetimes fdef) (repeat None (fn_lifetimes fdef))
@@ -716,18 +722,53 @@ Proof.
       inversion Hinfer; subst.
       destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
 	      eapply TES_Call with (fdef := fdef) (σ := finalize_subst σ_acc).
+		      * exact Hin.
+		      * exact Hname.
+		      * exact Hcaps.
+		      * apply Nat.eqb_eq. exact Htypeparams.
+		      * eapply infer_env_args_collect_sound.
+	        -- exact Hcollect.
+	        -- intros Σ0 e0 T0 Σ1 Hin_arg Hinfer_arg.
+	           eapply IH.
+	           ++ eapply call_exprs_in_true; eassumption.
+	           ++ exact Hinfer_arg.
+	        -- exact Hcheck.
+	      * apply env_outlives_constraints_hold_b_sound. exact Hout.
+	    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+	      unfold no_captures_b in Hinfer.
+	      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
+	      destruct (Nat.eqb (Datatypes.length l) (fn_type_params fdef)) eqn:Htypeparams;
+	        try discriminate.
+	      destruct (check_struct_bounds env (fn_bounds fdef) l) eqn:Hbounds; try discriminate.
+	      rewrite infer_env_args_collect_eq in Hinfer.
+	      destruct (infer_env_args_collect fuel' env Ω n Σ l0) as [[arg_tys Σargs] | err]
+	        eqn:Hcollect; try discriminate.
+	      remember (apply_type_params l (fn_params fdef)) as ps_typed.
+	      destruct (build_sigma (fn_lifetimes fdef) (repeat None (fn_lifetimes fdef))
+	          arg_tys ps_typed) as [σ_acc |] eqn:Hbuild; try discriminate.
+	      remember (apply_lt_params (finalize_subst σ_acc) ps_typed) as ps_subst.
+	      destruct (check_args Ω arg_tys ps_subst) as [err |] eqn:Hcheck; try discriminate.
+	      destruct (forallb (wf_lifetime_b (mk_region_ctx n)) (finalize_subst σ_acc)) eqn:Hwf;
+	        try discriminate.
+	      remember (apply_lt_outlives (finalize_subst σ_acc) (fn_outlives fdef)) as Ω_subst.
+	      destruct (outlives_constraints_hold_b Ω Ω_subst) eqn:Hout; try discriminate.
+	      inversion Hinfer; subst.
+	      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
+	      eapply TES_CallGeneric with (fdef := fdef) (σ := finalize_subst σ_acc).
 	      * exact Hin.
 	      * exact Hname.
 	      * exact Hcaps.
+	      * apply Nat.eqb_eq. exact Htypeparams.
+	      * exact Hbounds.
 	      * eapply infer_env_args_collect_sound.
-        -- exact Hcollect.
-        -- intros Σ0 e0 T0 Σ1 Hin_arg Hinfer_arg.
-           eapply IH.
-           ++ eapply call_exprs_in_true; eassumption.
-           ++ exact Hinfer_arg.
-        -- exact Hcheck.
-      * apply env_outlives_constraints_hold_b_sound. exact Hout.
-    + apply andb_true_iff in Hcall as [Hcallee Hargs].
+	        -- exact Hcollect.
+	        -- intros Σ0 e0 T0 Σ1 Hin_arg Hinfer_arg.
+	           eapply IH.
+	           ++ eapply call_exprs_in_true; eassumption.
+	           ++ exact Hinfer_arg.
+	        -- exact Hcheck.
+	      * apply env_outlives_constraints_hold_b_sound. exact Hout.
+	    + apply andb_true_iff in Hcall as [Hcallee Hargs].
       destruct (infer_core_env_state_fuel fuel' env Ω n Σ e) as [[Tcallee Σc] | err]
         eqn:Hcallee_infer; try discriminate.
       rewrite infer_env_args_collect_eq in Hinfer.
@@ -911,10 +952,11 @@ Proof.
       * eapply IH; [exact Hstruct1 | exact He1].
       * eapply IH; [exact Hstruct2 | exact He2].
       * exact Hcheck.
-		    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
-		      unfold no_captures_b in Hinfer.
-		      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
-		      inversion Hinfer; subst.
+			    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+			      unfold no_captures_b in Hinfer.
+			      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
+			      destruct (Nat.eqb (fn_type_params fdef) 0) eqn:Htypeparams; try discriminate.
+			      inversion Hinfer; subst.
 		      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
 		      eapply TES_Fn; eassumption.
 		    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
@@ -941,10 +983,11 @@ Proof.
         -- intro Hu. rewrite Hu in Husage. simpl in Husage. discriminate.
         -- exact Hpath.
         -- exact Hconsume_path.
-	    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
-	      unfold no_captures_b in Hinfer.
-	      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
-	      rewrite infer_env_args_collect_eq in Hinfer.
+		    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+		      unfold no_captures_b in Hinfer.
+		      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
+		      destruct (Nat.eqb (fn_type_params fdef) 0) eqn:Htypeparams; try discriminate.
+		      rewrite infer_env_args_collect_eq in Hinfer.
       destruct (infer_env_args_collect fuel' env Ω n Σ l) as [[arg_tys Σargs] | err]
         eqn:Hcollect; try discriminate.
       destruct (build_sigma (fn_lifetimes fdef) (repeat None (fn_lifetimes fdef))
@@ -958,18 +1001,53 @@ Proof.
       inversion Hinfer; subst.
       destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
 	      eapply TES_Call with (fdef := fdef) (σ := finalize_subst σ_acc).
+		      * exact Hin.
+		      * exact Hname.
+		      * exact Hcaps.
+		      * apply Nat.eqb_eq. exact Htypeparams.
+		      * eapply infer_env_args_collect_sound.
+	        -- exact Hcollect.
+	        -- intros Σ0 e0 T0 Σ1 Hin_arg Hinfer_arg.
+	           eapply IH.
+	           ++ eapply struct_exprs_in_true; eassumption.
+	           ++ exact Hinfer_arg.
+	        -- exact Hcheck.
+	      * apply env_outlives_constraints_hold_b_sound. exact Hout.
+	    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
+	      unfold no_captures_b in Hinfer.
+	      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
+	      destruct (Nat.eqb (Datatypes.length l) (fn_type_params fdef)) eqn:Htypeparams;
+	        try discriminate.
+	      destruct (check_struct_bounds env (fn_bounds fdef) l) eqn:Hbounds; try discriminate.
+	      rewrite infer_env_args_collect_eq in Hinfer.
+	      destruct (infer_env_args_collect fuel' env Ω n Σ l0) as [[arg_tys Σargs] | err]
+	        eqn:Hcollect; try discriminate.
+	      remember (apply_type_params l (fn_params fdef)) as ps_typed.
+	      destruct (build_sigma (fn_lifetimes fdef) (repeat None (fn_lifetimes fdef))
+	          arg_tys ps_typed) as [σ_acc |] eqn:Hbuild; try discriminate.
+	      remember (apply_lt_params (finalize_subst σ_acc) ps_typed) as ps_subst.
+	      destruct (check_args Ω arg_tys ps_subst) as [err |] eqn:Hcheck; try discriminate.
+	      destruct (forallb (wf_lifetime_b (mk_region_ctx n)) (finalize_subst σ_acc)) eqn:Hwf;
+	        try discriminate.
+	      remember (apply_lt_outlives (finalize_subst σ_acc) (fn_outlives fdef)) as Ω_subst.
+	      destruct (outlives_constraints_hold_b Ω Ω_subst) eqn:Hout; try discriminate.
+	      inversion Hinfer; subst.
+	      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
+	      eapply TES_CallGeneric with (fdef := fdef) (σ := finalize_subst σ_acc).
 	      * exact Hin.
 	      * exact Hname.
 	      * exact Hcaps.
+	      * apply Nat.eqb_eq. exact Htypeparams.
+	      * exact Hbounds.
 	      * eapply infer_env_args_collect_sound.
-        -- exact Hcollect.
-        -- intros Σ0 e0 T0 Σ1 Hin_arg Hinfer_arg.
-           eapply IH.
-           ++ eapply struct_exprs_in_true; eassumption.
-           ++ exact Hinfer_arg.
-        -- exact Hcheck.
-      * apply env_outlives_constraints_hold_b_sound. exact Hout.
-    + apply andb_true_iff in Hstruct as [Hcallee Hargs].
+	        -- exact Hcollect.
+	        -- intros Σ0 e0 T0 Σ1 Hin_arg Hinfer_arg.
+	           eapply IH.
+	           ++ eapply struct_exprs_in_true; eassumption.
+	           ++ exact Hinfer_arg.
+	        -- exact Hcheck.
+	      * apply env_outlives_constraints_hold_b_sound. exact Hout.
+	    + apply andb_true_iff in Hstruct as [Hcallee Hargs].
       destruct (infer_core_env_state_fuel fuel' env Ω n Σ e) as [[Tcallee Σc] | err]
         eqn:Hcallee_infer; try discriminate.
       rewrite infer_env_args_collect_eq in Hinfer.

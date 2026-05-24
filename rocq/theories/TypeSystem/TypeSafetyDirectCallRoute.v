@@ -384,14 +384,14 @@ Proof.
               env s args s_args vs H1 Ω n Σ
               (apply_lt_params σ (fn_params fdef1)) Σ'
               Hready_args Hstore
-              (typed_args_roots_structural env Ω n R Σ args
-                (apply_lt_params σ (fn_params fdef1)) Σ' R'
-                arg_roots H6))
+	              (typed_args_roots_structural env Ω n R Σ args
+	                (apply_lt_params σ (fn_params fdef1)) Σ' R'
+	                arg_roots H7))
     as [_ [Hargs_subst _]].
   destruct (proj1 (proj2 Hroots_ready)
               env s args s_args vs H1 Ω n R Σ
-              (apply_lt_params σ (fn_params fdef1)) Σ' R'
-              arg_roots Hprov_args Hroots Hshadow Hrn H6)
+	              (apply_lt_params σ (fn_params fdef1)) Σ' R'
+	              arg_roots Hprov_args Hroots Hshadow Hrn H7)
     as [Hroots_args [_ [Hshadow_args Hrn_args]]].
   pose proof (alpha_rename_fn_def_shape (store_names s_args)
                 fdef1 fcall used' H2) as Hshape.
@@ -412,10 +412,10 @@ Proof.
   by (eapply alpha_rename_fn_def_params_fresh_in_store;
       exact H2).
   destruct (eval_args_bind_params_call_param_root_env_ready
-              env s args s_args vs Ω n R Σ
-              (apply_lt_params σ (fn_params fdef1)) Σ' R' arg_roots
-              (fn_params fcall) H1 Hprov_args H6
-              Hroots Hshadow Hrn Hnodup Hfresh Hargs_fcall)
+	              env s args s_args vs Ω n R Σ
+	              (apply_lt_params σ (fn_params fdef1)) Σ' R' arg_roots
+	              (fn_params fcall) H1 Hprov_args H7
+	              Hroots Hshadow Hrn Hnodup Hfresh Hargs_fcall)
     as [Hroots_bind [Hshadow_bind [Hrn_params Hcover_params]]].
   destruct
     (eval_direct_call_body_cleanup_preserves_value_and_refs_with_preservation_core
@@ -423,10 +423,10 @@ Proof.
       Htyping_roots_prefix_ready
       Hparam_scope_ready
       env Ω n R Σ Σ' R' arg_roots (fn_name fdef1) args
-      fdef1 fcall σ s s_args s_body vs ret used' T_body
-      Γ_out (call_param_root_env (fn_params fcall) arg_roots R')
-      R_body roots_body Hstore Hroots Hshadow Hrn Hprov_args
-      Hready_args H6 H1 H2 Hroots_bind
+	      fdef1 fcall σ s s_args s_body vs ret used' T_body
+	      Γ_out (call_param_root_env (fn_params fcall) arg_roots R')
+	      R_body roots_body Hstore Hroots Hshadow Hrn Hprov_args
+	      Hready_args H7 H1 H2 Hroots_bind
       Hshadow_bind Hrn_params Hcover_params Hprov_body
       Htyped_body Hcompat_body Hexclude_ret Hexclude_env
       Heval)

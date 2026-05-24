@@ -433,13 +433,17 @@ Proof.
           [ eapply value_has_type_if_right_result; eassumption
           | eapply store_ref_targets_preserved_trans; eassumption ] ]
     end.
-  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
-      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n Σ T Σ'
-      Hready _ _.
-    inversion Hready.
-  - intros s s_fn s_args s_body callee args fname captured fdef fcall vs ret
-      used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
-      Heval_body IHbody Ω n Σ T Σ' Hready _ _.
+	  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
+	      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n Σ T Σ'
+	      Hready _ _.
+	    inversion Hready.
+	  - intros s s_args s_body fname type_args fdef fcall args vs ret used'
+	      Hlookup Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n Σ
+	      T Σ' Hready _ _.
+	    inversion Hready.
+	  - intros s s_fn s_args s_body callee args fname captured fdef fcall vs ret
+	      used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
+	      Heval_body IHbody Ω n Σ T Σ' Hready _ _.
     inversion Hready.
   - intros s Ω n Σ ps Σ' _ Hstore Htyped.
     inversion Htyped; subst.

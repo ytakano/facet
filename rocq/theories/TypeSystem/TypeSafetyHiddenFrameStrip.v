@@ -539,13 +539,17 @@ Proof.
       as [s2_base [Hs2 [Heval_else_base [Hrefs2 Hv]]]].
     exists s2_base. repeat split; try assumption.
     subst s2. eapply Eval_If_False; eassumption.
-  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
-      Hcaps Heval_args IHargs Hrename Heval_body IHbody x T hidden s_base Hs
-      Hready Hfree Hlocal Hrefs.
-    inversion Hready.
-  - intros s s_fn s_args s_body callee args fname captured fdef fcall
-      vs ret used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
-      Heval_body IHbody x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
+	  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
+	      Hcaps Heval_args IHargs Hrename Heval_body IHbody x T hidden s_base Hs
+	      Hready Hfree Hlocal Hrefs.
+	    inversion Hready.
+	  - intros s s_args s_body fname type_args fdef fcall args vs ret used'
+	      Hlookup Hcaps Heval_args IHargs Hrename Heval_body IHbody x T hidden
+	      s_base Hs Hready Hfree Hlocal Hrefs.
+	    inversion Hready.
+	  - intros s s_fn s_args s_body callee args fname captured fdef fcall
+	      vs ret used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
+	      Heval_body IHbody x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
     inversion Hready.
   - intros s x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
     subst s. exists s_base. repeat split; try constructor; assumption.
@@ -847,4 +851,3 @@ Proof.
         discriminate
     end.
 Qed.
-

@@ -63,6 +63,13 @@ Fixpoint free_vars_expr (e : expr) : list ident :=
         | arg :: rest => free_vars_expr arg ++ go rest
         end
       in go args
+  | ECallGeneric _ _ args =>
+      let fix go (args0 : list expr) : list ident :=
+        match args0 with
+        | [] => []
+        | arg :: rest => free_vars_expr arg ++ go rest
+        end
+      in go args
   | ECallExpr callee args =>
       let fix go (args0 : list expr) : list ident :=
         match args0 with
@@ -121,6 +128,19 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
       in
       let (args', used') := go used args in
       (ECall fname args', used')
+  | ECallGeneric fname type_args args =>
+      let fix go (used0 : list ident) (args0 : list expr)
+          : list expr * list ident :=
+        match args0 with
+        | [] => ([], used0)
+        | arg :: rest =>
+            let (arg', used1) := alpha_rename_expr ρ used0 arg in
+            let (rest', used2) := go used1 rest in
+            (arg' :: rest', used2)
+        end
+      in
+      let (args', used') := go used args in
+      (ECallGeneric fname type_args args', used')
   | ECallExpr callee args =>
       let (callee', used1) := alpha_rename_expr ρ used callee in
       let fix go (used0 : list ident) (args0 : list expr)

@@ -339,6 +339,14 @@ Definition apply_lt_param (σ : list lifetime) (p : param) : param :=
 Definition apply_lt_params (σ : list lifetime) (ps : list param) : list param :=
   map (apply_lt_param σ) ps.
 
+Definition apply_type_param (type_args : list Ty) (p : param) : param :=
+  {| param_mutability := param_mutability p;
+     param_name := param_name p;
+     param_ty := subst_type_params_ty type_args (param_ty p) |}.
+
+Definition apply_type_params (type_args : list Ty) (ps : list param) : list param :=
+  map (apply_type_param type_args) ps.
+
 (* ------------------------------------------------------------------ *)
 (* Typing judgement                                                      *)
 (*                                                                      *)
@@ -521,9 +529,24 @@ Inductive typed (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) : ctx -> expr
       In fdef fenv ->
       fn_name fdef = fname ->
       fn_captures fdef = [] ->
+      fn_type_params fdef = 0 ->
       typed_args fenv Ω n Γ args (apply_lt_params σ (fn_params fdef)) Γ' ->
       Forall (fun '(a, b) => outlives Ω a b) (apply_lt_outlives σ (fn_outlives fdef)) ->
       typed fenv Ω n Γ (ECall fname args) (apply_lt_ty σ (fn_ret fdef)) Γ'
+
+  | T_Call_Generic : forall Γ Γ' fname fdef (type_args : list Ty) args
+        (σ : list lifetime),
+      In fdef fenv ->
+      fn_name fdef = fname ->
+      fn_captures fdef = [] ->
+      Datatypes.length type_args = fn_type_params fdef ->
+      typed_args fenv Ω n Γ args
+        (apply_lt_params σ
+          (apply_type_params type_args (fn_params fdef))) Γ' ->
+      Forall (fun '(a, b) => outlives Ω a b)
+        (apply_lt_outlives σ (fn_outlives fdef)) ->
+      typed fenv Ω n Γ (ECallGeneric fname type_args args)
+        (apply_lt_ty σ (subst_type_params_ty type_args (fn_ret fdef))) Γ'
 
   | T_CallExpr_Fn : forall Γ Γ1 Γ' callee args u param_tys ret,
       typed fenv Ω n Γ callee (MkTy u (TFn param_tys ret)) Γ1 ->
@@ -787,6 +810,10 @@ Inductive borrow_ok (fenv : list fn_def)
   | BO_Call : forall BS BS' Γ fname args,
       borrow_ok_args fenv BS Γ args BS' ->
       borrow_ok fenv BS Γ (ECall fname args) BS'
+
+  | BO_CallGeneric : forall BS BS' Γ fname type_args args,
+      borrow_ok_args fenv BS Γ args BS' ->
+      borrow_ok fenv BS Γ (ECallGeneric fname type_args args) BS'
 
   | BO_CallExpr : forall BS BS1 BS2 Γ callee args,
       borrow_ok fenv BS Γ callee BS1 ->

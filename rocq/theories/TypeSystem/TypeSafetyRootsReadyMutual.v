@@ -43,19 +43,29 @@ Proof.
       * eapply sctx_consume_path_same_bindings. eassumption.
       * assumption.
     + eapply root_env_lookup_ctx_roots_named_consume_path; eassumption.
-  - match goal with
-    | IH : root_env_no_shadow ?R ->
-        root_env_ctx_roots_named ?R ?Σ ->
-        root_env_ctx_roots_named ?R' ?Σ' /\
-        Forall (fun roots => root_set_ctx_roots_named roots ?Σ') ?arg_roots,
+	  - match goal with
+	    | IH : root_env_no_shadow ?R ->
+	        root_env_ctx_roots_named ?R ?Σ ->
+	        root_env_ctx_roots_named ?R' ?Σ' /\
+	        Forall (fun roots => root_set_ctx_roots_named roots ?Σ') ?arg_roots,
       Hrn : root_env_no_shadow ?R,
       Henv : root_env_ctx_roots_named ?R ?Σ |- _ =>
-        destruct (IH Hrn Henv) as [Henv_args Hroots_args];
-        split; [exact Henv_args | apply root_sets_ctx_roots_named_union; exact Hroots_args]
-    end.
-  - match goal with
-    | IH : root_env_no_shadow ?R ->
-        root_env_ctx_roots_named ?R ?Σ ->
+	        destruct (IH Hrn Henv) as [Henv_args Hroots_args];
+	        split; [exact Henv_args | apply root_sets_ctx_roots_named_union; exact Hroots_args]
+	    end.
+	  - match goal with
+	    | IH : root_env_no_shadow ?R ->
+	        root_env_ctx_roots_named ?R ?Σ ->
+	        root_env_ctx_roots_named ?R' ?Σ' /\
+	        Forall (fun roots => root_set_ctx_roots_named roots ?Σ') ?arg_roots,
+	      Hrn : root_env_no_shadow ?R,
+	      Henv : root_env_ctx_roots_named ?R ?Σ |- _ =>
+	        destruct (IH Hrn Henv) as [Henv_args Hroots_args];
+	        split; [exact Henv_args | apply root_sets_ctx_roots_named_union; exact Hroots_args]
+	    end.
+	  - match goal with
+	    | IH : root_env_no_shadow ?R ->
+	        root_env_ctx_roots_named ?R ?Σ ->
         root_env_ctx_roots_named ?R' ?Σ' /\
         Forall (fun roots => root_set_ctx_roots_named roots ?Σ') ?arg_roots,
       Hrn : root_env_no_shadow ?R,
@@ -235,15 +245,23 @@ Proof.
       Henv : root_env_ctx_keys_named ?R ?Σ |- _ =>
         exact (IH Hrn Henv)
     end.
-  - match goal with
-    | IH : root_env_no_shadow ?R ->
-        root_env_ctx_keys_named ?R ?Σ ->
-        root_env_ctx_keys_named ?R' ?Σ',
-      Hrn : root_env_no_shadow ?R,
-      Henv : root_env_ctx_keys_named ?R ?Σ |- _ =>
-        exact (IH Hrn Henv)
-    end.
-  - pose proof (H H1 H2) as Hkeys1.
+	  - match goal with
+	    | IH : root_env_no_shadow ?R ->
+	        root_env_ctx_keys_named ?R ?Σ ->
+	        root_env_ctx_keys_named ?R' ?Σ',
+	      Hrn : root_env_no_shadow ?R,
+	      Henv : root_env_ctx_keys_named ?R ?Σ |- _ =>
+	        exact (IH Hrn Henv)
+	    end.
+	  - match goal with
+	    | IH : root_env_no_shadow ?R ->
+	        root_env_ctx_keys_named ?R ?Σ ->
+	        root_env_ctx_keys_named ?R' ?Σ',
+	      Hrn : root_env_no_shadow ?R,
+	      Henv : root_env_ctx_keys_named ?R ?Σ |- _ =>
+	        exact (IH Hrn Henv)
+	    end.
+	  - pose proof (H H1 H2) as Hkeys1.
     assert (Hrn1 : root_env_no_shadow R1)
       by (eapply typed_env_roots_no_shadow; eassumption).
     assert (Hkeys_add :
@@ -817,13 +835,17 @@ Proof.
 	    + apply value_roots_within_union_r. exact Hv3.
 	    + exact Hnodup3.
 	    + exact Hrn2.
-  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
-      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
-      roots Hready _ _ _ _.
-    inversion Hready.
-  - intros s s_fn s_args s_body callee args0 fname captured fdef fcall vs ret
-      used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
-      Heval_body IHbody Ω n R Σ T Σ' R' roots Hready _ _ _ _.
+	  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
+	      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
+	      roots Hready _ _ _ _.
+	    inversion Hready.
+	  - intros s s_args s_body fname type_args fdef fcall args0 vs ret used'
+	      Hlookup Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ
+	      T Σ' R' roots Hready _ _ _ _.
+	    inversion Hready.
+	  - intros s s_fn s_args s_body callee args0 fname captured fdef fcall vs ret
+	      used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
+	      Heval_body IHbody Ω n R Σ T Σ' R' roots Hready _ _ _ _.
     inversion Hready.
   - intros s Ω n R Σ ps Σ' R' roots _ Hroots Hnodup Hrn Htyped.
     inversion Htyped; subst. repeat split; try assumption; constructor.

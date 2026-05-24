@@ -607,9 +607,23 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       In fdef (env_fns env) ->
       fn_name fdef = fname ->
       fn_captures fdef = [] ->
+      fn_type_params fdef = 0 ->
       typed_args_env_structural env Ω n Σ args (apply_lt_params σ (fn_params fdef)) Σ' ->
       Forall (fun '(a, b) => outlives Ω a b) (apply_lt_outlives σ (fn_outlives fdef)) ->
       typed_env_structural env Ω n Σ (ECall fname args) (apply_lt_ty σ (fn_ret fdef)) Σ'
+  | TES_CallGeneric : forall Σ Σ' fname fdef (type_args : list Ty) args σ,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      fn_captures fdef = [] ->
+      Datatypes.length type_args = fn_type_params fdef ->
+      check_struct_bounds env (fn_bounds fdef) type_args = None ->
+      typed_args_env_structural env Ω n Σ args
+        (apply_lt_params σ
+          (apply_type_params type_args (fn_params fdef))) Σ' ->
+      Forall (fun '(a, b) => outlives Ω a b)
+        (apply_lt_outlives σ (fn_outlives fdef)) ->
+      typed_env_structural env Ω n Σ (ECallGeneric fname type_args args)
+        (apply_lt_ty σ (subst_type_params_ty type_args (fn_ret fdef))) Σ'
   | TES_CallExpr_Fn : forall Σ Σ1 Σ' callee args u param_tys ret,
       typed_env_structural env Ω n Σ callee (MkTy u (TFn param_tys ret)) Σ1 ->
       typed_args_env_structural env Ω n Σ1 args (params_of_tys param_tys) Σ' ->
@@ -713,11 +727,26 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       In fdef (env_fns env) ->
       fn_name fdef = fname ->
       fn_captures fdef = [] ->
+      fn_type_params fdef = 0 ->
       typed_args_roots env Ω n R Σ args
         (apply_lt_params σ (fn_params fdef)) Σ' R' arg_roots ->
       Forall (fun '(a, b) => outlives Ω a b) (apply_lt_outlives σ (fn_outlives fdef)) ->
       typed_env_roots env Ω n R Σ (ECall fname args)
         (apply_lt_ty σ (fn_ret fdef)) Σ' R' (root_sets_union arg_roots)
+  | TER_CallGeneric : forall R R' Σ Σ' fname fdef (type_args : list Ty) args σ arg_roots,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      fn_captures fdef = [] ->
+      Datatypes.length type_args = fn_type_params fdef ->
+      check_struct_bounds env (fn_bounds fdef) type_args = None ->
+      typed_args_roots env Ω n R Σ args
+        (apply_lt_params σ
+          (apply_type_params type_args (fn_params fdef))) Σ' R' arg_roots ->
+      Forall (fun '(a, b) => outlives Ω a b)
+        (apply_lt_outlives σ (fn_outlives fdef)) ->
+      typed_env_roots env Ω n R Σ (ECallGeneric fname type_args args)
+        (apply_lt_ty σ (subst_type_params_ty type_args (fn_ret fdef)))
+        Σ' R' (root_sets_union arg_roots)
   | TER_Fn : forall R Σ fname fdef,
       In fdef (env_fns env) ->
       fn_name fdef = fname ->
@@ -1151,12 +1180,24 @@ Proof.
     + exact HR0.
     + exact Hroots0.
   - intros R R' Σ Σ' fname fdef args σ arg_roots Hin Hfname Hcaps
-      Hargs IHargs Houtlives Hfresh R0 HnsR HnsR0 HR0.
+      Htypeparams Hargs IHargs Houtlives Hfresh R0 HnsR HnsR0 HR0.
     rewrite expr_local_store_names_call in Hfresh.
     destruct (IHargs Hfresh R0 HnsR HnsR0 HR0)
       as [R0' [arg_roots0 [Hargs0 [HnsR0' [HR0' Harg_roots0]]]]].
     exists R0', (root_sets_union arg_roots0). split; [| split; [| split]].
     + eapply TER_Call; eauto.
+    + exact HnsR0'.
+    + exact HR0'.
+    + eapply root_set_equiv_trans.
+      * apply root_sets_union_equiv. exact Harg_roots0.
+      * apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
+  - intros R R' Σ Σ' fname fdef type_args args σ arg_roots Hin Hfname
+      Hcaps Hlen Hbounds Hargs IHargs Houtlives Hfresh R0 HnsR HnsR0 HR0.
+    rewrite expr_local_store_names_call_generic in Hfresh.
+    destruct (IHargs Hfresh R0 HnsR HnsR0 HR0)
+      as [R0' [arg_roots0 [Hargs0 [HnsR0' [HR0' Harg_roots0]]]]].
+    exists R0', (root_sets_union arg_roots0). split; [| split; [| split]].
+    + eapply TER_CallGeneric; eauto.
     + exact HnsR0'.
     + exact HR0'.
     + eapply root_set_equiv_trans.
@@ -1680,6 +1721,8 @@ Proof.
         sctx_same_bindings_trans.
     + eauto using typed_args_env_structural_same_bindings,
         sctx_same_bindings_trans.
+    + eauto using typed_args_env_structural_same_bindings,
+        sctx_same_bindings_trans.
   - intros env Ω n Σ args ps Σ' Htyped.
     induction Htyped.
     + apply sctx_same_bindings_refl.
@@ -1773,6 +1816,9 @@ Inductive borrow_ok_env_structural (env : global_env)
   | BOES_Call : forall PBS PBS' Γ fname args,
       borrow_ok_args_env_structural env PBS Γ args PBS' ->
       borrow_ok_env_structural env PBS Γ (ECall fname args) PBS'
+  | BOES_CallGeneric : forall PBS PBS' Γ fname type_args args,
+      borrow_ok_args_env_structural env PBS Γ args PBS' ->
+      borrow_ok_env_structural env PBS Γ (ECallGeneric fname type_args args) PBS'
   | BOES_CallExpr : forall PBS PBS1 PBS2 Γ callee args,
       borrow_ok_env_structural env PBS Γ callee PBS1 ->
       borrow_ok_args_env_structural env PBS1 Γ args PBS2 ->

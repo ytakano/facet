@@ -880,12 +880,13 @@ Proof.
         * eapply IH; [simpl in Hlt; lia | exact He2].
         * apply ctx_check_ok_sound. exact Hok.
 	      + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
-        unfold no_captures_b in Hinfer.
-        destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; [|discriminate].
-	        injection Hinfer as <- <-.
-	        destruct (lookup_fn_b_sound i fenv fdef Hlookup) as [Hin Hname].
-		        eapply T_FnValue.
-		        * exact Hin.
+	        unfold no_captures_b in Hinfer.
+	        destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; [|discriminate].
+	        destruct (Nat.eqb (fn_type_params fdef) 0) eqn:Htypeparams; [|discriminate].
+		        injection Hinfer as <- <-.
+		        destruct (lookup_fn_b_sound i fenv fdef Hlookup) as [Hin Hname].
+			        eapply T_FnValue.
+			        * exact Hin.
 		        * exact Hname.
             * exact Hcaps.
       + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
@@ -900,11 +901,12 @@ Proof.
         * eapply check_make_closure_captures_ctx_sound. exact Hcheck.
       + discriminate.
       + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
-        unfold no_captures_b in Hinfer.
-        destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; [|discriminate].
-        destruct (infer_args_collect fenv Ω n Γ l) as [[arg_tys Γcall] | err] eqn:Hcollect.
-        2:{
-          rewrite (ecall_collect_eq fenv Ω n l Γ) in Hinfer.
+	        unfold no_captures_b in Hinfer.
+	        destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; [|discriminate].
+	        destruct (Nat.eqb (fn_type_params fdef) 0) eqn:Htypeparams; [|discriminate].
+	        destruct (infer_args_collect fenv Ω n Γ l) as [[arg_tys Γcall] | err] eqn:Hcollect.
+	        2:{
+	          rewrite (ecall_collect_eq fenv Ω n l Γ) in Hinfer.
           rewrite Hcollect in Hinfer. discriminate.
         }
         rewrite (ecall_collect_eq fenv Ω n l Γ) in Hinfer.
@@ -920,18 +922,55 @@ Proof.
         injection Hinfer as <- <-.
         destruct (lookup_fn_b_sound i fenv fdef Hlookup) as [Hin Hname].
         eapply T_Call_Lt with (fdef := fdef) (σ := σ).
-        * exact Hin.
-        * exact Hname.
-        * exact Hcaps.
-        * subst ps_subst. eapply infer_call_args_sound_v2.
-          -- exact Hcollect.
-          -- intros Γ0 e0 T0 Γ1 Hin_arg Hinfer_arg.
-             eapply IH.
-             ++ pose proof (expr_size_call_arg_lt i l e0 Hin_arg). lia.
-             ++ exact Hinfer_arg.
-          -- exact Hcheck.
-        * subst Ω_subst. apply outlives_constraints_hold_b_sound. exact Hout.
-      + destruct (infer_core fenv Ω n Γ e) as [[Tcallee Γcallee] | err] eqn:Hcallee; [|discriminate].
+	        * exact Hin.
+	        * exact Hname.
+	        * exact Hcaps.
+	        * apply Nat.eqb_eq. exact Htypeparams.
+	        * subst ps_subst. eapply infer_call_args_sound_v2.
+	          -- exact Hcollect.
+	          -- intros Γ0 e0 T0 Γ1 Hin_arg Hinfer_arg.
+	             eapply IH.
+	             ++ pose proof (expr_size_call_arg_lt i l e0 Hin_arg). lia.
+	             ++ exact Hinfer_arg.
+	          -- exact Hcheck.
+	        * subst Ω_subst. apply outlives_constraints_hold_b_sound. exact Hout.
+	      + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
+	        unfold no_captures_b in Hinfer.
+	        destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; [|discriminate].
+	        destruct (Nat.eqb (Datatypes.length l) (fn_type_params fdef)) eqn:Htypeparams;
+	          [|discriminate].
+	        destruct (infer_args_collect fenv Ω n Γ l0) as [[arg_tys Γcall] | err] eqn:Hcollect.
+	        2:{
+	          rewrite (ecall_collect_eq fenv Ω n l0 Γ) in Hinfer.
+	          rewrite Hcollect in Hinfer. discriminate.
+	        }
+	        rewrite (ecall_collect_eq fenv Ω n l0 Γ) in Hinfer.
+	        rewrite Hcollect in Hinfer.
+	        remember (apply_type_params l (fn_params fdef)) as ps_typed.
+	        destruct (build_sigma (fn_lifetimes fdef) (repeat None (fn_lifetimes fdef)) arg_tys ps_typed)
+	          as [σ_acc |] eqn:Hbuild; [|discriminate].
+	        remember (finalize_subst σ_acc) as σ.
+	        remember (apply_lt_params σ ps_typed) as ps_subst.
+	        destruct (check_args Ω arg_tys ps_subst) as [err |] eqn:Hcheck; [discriminate |].
+	        destruct (forallb (wf_lifetime_b (mk_region_ctx n)) σ) eqn:Hwf; [|discriminate].
+	        remember (apply_lt_outlives σ (fn_outlives fdef)) as Ω_subst.
+	        destruct (outlives_constraints_hold_b Ω Ω_subst) eqn:Hout; [|discriminate].
+	        injection Hinfer as <- <-.
+	        destruct (lookup_fn_b_sound i fenv fdef Hlookup) as [Hin Hname].
+	        eapply T_Call_Generic with (fdef := fdef) (σ := σ).
+	        * exact Hin.
+	        * exact Hname.
+	        * exact Hcaps.
+	        * apply Nat.eqb_eq. exact Htypeparams.
+	        * subst ps_subst ps_typed. eapply infer_call_args_sound_v2.
+	          -- exact Hcollect.
+	          -- intros Γ0 e0 T0 Γ1 Hin_arg Hinfer_arg.
+	             eapply IH.
+	             ++ pose proof (expr_size_call_generic_arg_lt i l l0 e0 Hin_arg). lia.
+	             ++ exact Hinfer_arg.
+	          -- exact Hcheck.
+	        * subst Ω_subst. apply outlives_constraints_hold_b_sound. exact Hout.
+	      + destruct (infer_core fenv Ω n Γ e) as [[Tcallee Γcallee] | err] eqn:Hcallee; [|discriminate].
         destruct (infer_args_collect fenv Ω n Γcallee l) as [[arg_tys Γcall] | err] eqn:Hcollect.
         2:{
           rewrite (ecall_collect_eq fenv Ω n l Γcallee) in Hinfer.

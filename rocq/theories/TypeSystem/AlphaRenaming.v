@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Types Syntax PathState Renaming TypingRules RootProvenance TypeChecker EnvStructuralRules.
+From Facet.TypeSystem Require Import Types Syntax PathState Program Renaming TypingRules RootProvenance TypeChecker EnvStructuralRules.
 From Stdlib Require Import List String Bool Lia PeanoNat Program.Equality.
 Import ListNotations.
 
@@ -193,6 +193,11 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
   | EA_Call : forall ρ fname args argsr,
       exprs_alpha ρ args argsr ->
       expr_alpha ρ (ECall fname args) (ECall fname argsr)
+  | EA_CallGeneric : forall ρ fname type_args args argsr,
+      exprs_alpha ρ args argsr ->
+      expr_alpha ρ
+        (ECallGeneric fname type_args args)
+        (ECallGeneric fname type_args argsr)
   | EA_CallExpr : forall ρ callee calleer args argsr,
       expr_alpha ρ callee calleer ->
       exprs_alpha ρ args argsr ->
@@ -1098,6 +1103,16 @@ Proof.
                      (arg' :: rest', used2)
                  end) used l).
     injection Hrename as <- _. simpl in Hplace. discriminate.
+  - destruct ((fix go (used0 : list ident) (args0 : list expr)
+                : list expr * list ident :=
+                 match args0 with
+                 | [] => ([], used0)
+                 | arg :: rest =>
+                     let (arg', used1) := alpha_rename_expr ρ used0 arg in
+                     let (rest', used2) := go used1 rest in
+                     (arg' :: rest', used2)
+                 end) used l0).
+    injection Hrename as <- _. simpl in Hplace. discriminate.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
     destruct ((fix go (used0 : list ident) (args0 : list expr)
                 : list expr * list ident :=
@@ -1170,6 +1185,16 @@ Proof.
                      let (rest', used2) := go used1 rest in
                      (arg' :: rest', used2)
                  end) used l).
+    injection Hrename as <- _. reflexivity.
+  - destruct ((fix go (used0 : list ident) (args0 : list expr)
+                : list expr * list ident :=
+                 match args0 with
+                 | [] => ([], used0)
+                 | arg :: rest =>
+                     let (arg', used1) := alpha_rename_expr ρ used0 arg in
+                     let (rest', used2) := go used1 rest in
+                     (arg' :: rest', used2)
+                 end) used l0).
     injection Hrename as <- _. reflexivity.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
     destruct ((fix go (used0 : list ident) (args0 : list expr)
@@ -1392,6 +1417,12 @@ Fixpoint expr_size (e : expr) : nat :=
             | [] => 0
             | arg :: rest => expr_size arg + go rest
             end) args)
+  | ECallGeneric _ _ args =>
+      S ((fix go (args0 : list expr) : nat :=
+            match args0 with
+            | [] => 0
+            | arg :: rest => expr_size arg + go rest
+            end) args)
   | ECallExpr callee args =>
       S (expr_size callee +
          (fix go (args0 : list expr) : nat :=
@@ -1418,6 +1449,18 @@ Lemma expr_size_call_arg_lt : forall fname args arg,
   expr_size arg < expr_size (ECall fname args).
 Proof.
   intros fname args.
+  induction args as [| a rest IH]; intros arg Hin.
+  - contradiction.
+  - simpl in *. destruct Hin as [<- | Hin].
+    + lia.
+    + specialize (IH arg Hin). simpl in IH. lia.
+Qed.
+
+Lemma expr_size_call_generic_arg_lt : forall fname type_args args arg,
+  In arg args ->
+  expr_size arg < expr_size (ECallGeneric fname type_args args).
+Proof.
+  intros fname type_args args.
   induction args as [| a rest IH]; intros arg Hin.
   - contradiction.
   - simpl in *. destruct Hin as [<- | Hin].
@@ -1676,6 +1719,28 @@ Proof.
     * intros used0 e er0 used1 Hin_arg Hrename0.
       eapply IH.
       -- pose proof (expr_size_call_arg_lt i l e Hin_arg) as Harg_lt.
+        assert (expr_size e < n) as Hlt_arg by lia.
+        exact Hlt_arg.
+      -- exact Hrename0.
+    * symmetry. exact Hargs.
+    * exact Hin.
+  + remember
+      ((fix go (used0 : list ident) (args0 : list expr)
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used0)
+          | arg :: rest =>
+              let (arg', used1) := alpha_rename_expr ρ used0 arg in
+              let (rest', used2) := go used1 rest in
+              (arg' :: rest', used2)
+          end) used l0) as r eqn:Hargs.
+    destruct r as [argsr used_args].
+    injection Hrename as _ <-.
+    eapply alpha_rename_call_args_used_extends.
+    * intros used0 e er0 used1 Hin_arg Hrename0.
+      eapply IH.
+      -- pose proof (expr_size_call_generic_arg_lt i l l0 e Hin_arg)
+          as Harg_lt.
         assert (expr_size e < n) as Hlt_arg by lia.
         exact Hlt_arg.
       -- exact Hrename0.
@@ -2014,6 +2079,28 @@ Proof.
         -- exact Hrename0.
       * symmetry. exact Hargs.
       * exact Hin.
+    + remember
+        ((fix go (used0 : list ident) (args0 : list expr)
+            : list expr * list ident :=
+            match args0 with
+            | [] => ([], used0)
+            | arg :: rest =>
+                let (arg', used1) := alpha_rename_expr rho used0 arg in
+                let (rest', used2) := go used1 rest in
+                (arg' :: rest', used2)
+            end) used l0) as r eqn:Hargs.
+      destruct r as [argsr used_args].
+      injection Hrename as <- <-.
+      rewrite expr_local_store_names_call_generic in Hin.
+      eapply alpha_rename_call_args_local_store_names_in_used.
+      * intros used0 e er0 used1 Hin_arg Hrename0.
+        eapply IH.
+        -- pose proof (expr_size_call_generic_arg_lt i l l0 e Hin_arg)
+             as Harg_lt.
+           assert (expr_size e < n) as Hlt_arg by lia. exact Hlt_arg.
+        -- exact Hrename0.
+      * symmetry. exact Hargs.
+      * exact Hin.
     + destruct (alpha_rename_expr rho used e) as [callee_r used0] eqn:Hcallee.
       remember
         ((fix go (used0 : list ident) (args0 : list expr)
@@ -2309,6 +2396,28 @@ Proof.
       * intros used0 e er0 used1 Hin_arg Hrename0.
         eapply IH.
         -- pose proof (expr_size_call_arg_lt i l e Hin_arg) as Harg_lt.
+           assert (expr_size e < n) as Hlt_arg by lia.
+           exact Hlt_arg.
+        -- exact Hrename0.
+      * symmetry. exact Hargs.
+    + remember
+        ((fix go (used0 : list ident) (args0 : list expr)
+            : list expr * list ident :=
+            match args0 with
+            | [] => ([], used0)
+            | arg :: rest =>
+                let (arg', used1) := alpha_rename_expr rho used0 arg in
+                let (rest', used2) := go used1 rest in
+                (arg' :: rest', used2)
+            end) used l0) as r eqn:Hargs.
+      destruct r as [argsr used_args].
+      injection Hrename as <- _.
+      rewrite expr_local_store_names_call_generic.
+      eapply alpha_rename_call_args_local_store_names_fresh_used.
+      * intros used0 e er0 used1 Hin_arg Hrename0.
+        eapply IH.
+        -- pose proof (expr_size_call_generic_arg_lt i l l0 e Hin_arg)
+             as Harg_lt.
            assert (expr_size e < n) as Hlt_arg by lia.
            exact Hlt_arg.
         -- exact Hrename0.
@@ -2642,6 +2751,27 @@ Proof.
       * intros used0 e er0 used1 Hin_arg Hrename0.
         eapply IH.
         -- pose proof (expr_size_call_arg_lt i l e Hin_arg) as Harg_lt.
+           assert (expr_size e < n) as Hlt_arg by lia. exact Hlt_arg.
+        -- exact Hrename0.
+      * symmetry. exact Hargs.
+    + remember
+        ((fix go (used0 : list ident) (args0 : list expr)
+            : list expr * list ident :=
+            match args0 with
+            | [] => ([], used0)
+            | arg :: rest =>
+                let (arg', used1) := alpha_rename_expr rho used0 arg in
+                let (rest', used2) := go used1 rest in
+                (arg' :: rest', used2)
+            end) used l0) as r eqn:Hargs.
+      destruct r as [argsr used_args].
+      injection Hrename as <- _.
+      rewrite expr_local_store_names_call_generic.
+      eapply alpha_rename_call_args_local_store_names_nodup.
+      * intros used0 e er0 used1 Hin_arg Hrename0.
+        eapply IH.
+        -- pose proof (expr_size_call_generic_arg_lt i l l0 e Hin_arg)
+             as Harg_lt.
            assert (expr_size e < n) as Hlt_arg by lia. exact Hlt_arg.
         -- exact Hrename0.
       * symmetry. exact Hargs.
@@ -3508,6 +3638,30 @@ Proof.
     * intros used0 e er0 used1 Hin Hdisj0 Hrename0.
       eapply IH.
       -- pose proof (expr_size_call_arg_lt i l e Hin) as Harg_lt.
+         assert (expr_size e < n) as Hlt_arg by lia.
+         exact Hlt_arg.
+      -- exact Hdisj0.
+      -- exact Hrename0.
+    * exact Hdisj.
+    * symmetry. exact Hargs.
+  + remember
+      ((fix go (used0 : list ident) (args0 : list expr)
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used0)
+          | arg :: rest =>
+              let (arg', used1) := alpha_rename_expr ρ used0 arg in
+              let (rest', used2) := go used1 rest in
+              (arg' :: rest', used2)
+          end) used l0) as r eqn:Hargs.
+    destruct r as [argsr used_args].
+    injection Hrename as <- _.
+    constructor.
+    eapply alpha_rename_call_args_sound.
+    * intros used0 e er0 used1 Hin Hdisj0 Hrename0.
+      eapply IH.
+      -- pose proof (expr_size_call_generic_arg_lt i l l0 e Hin)
+           as Harg_lt.
          assert (expr_size e < n) as Hlt_arg by lia.
          exact Hlt_arg.
       -- exact Hdisj0.
@@ -4440,6 +4594,16 @@ Proof.
                      (arg' :: rest', used2)
                  end) used l).
     injection Hrename as <- _. discriminate.
+  - destruct ((fix go (used0 : list ident) (args0 : list expr)
+                : list expr * list ident :=
+                 match args0 with
+                 | [] => ([], used0)
+                 | arg :: rest =>
+                     let (arg', used1) := alpha_rename_expr ρ used0 arg in
+                     let (rest', used2) := go used1 rest in
+                     (arg' :: rest', used2)
+                 end) used l0).
+    injection Hrename as <- _. discriminate.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
     destruct ((fix go (used0 : list ident) (args0 : list expr)
                 : list expr * list ident :=
@@ -4510,6 +4674,16 @@ Proof.
                      let (rest', used2) := go used1 rest in
                      (arg' :: rest', used2)
                  end) used l).
+    injection Hrename as <- _. reflexivity.
+  - destruct ((fix go (used0 : list ident) (args0 : list expr)
+                : list expr * list ident :=
+                 match args0 with
+                 | [] => ([], used0)
+                 | arg :: rest =>
+                     let (arg', used1) := alpha_rename_expr ρ used0 arg in
+                     let (rest', used2) := go used1 rest in
+                     (arg' :: rest', used2)
+                 end) used l0).
     injection Hrename as <- _. reflexivity.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
     destruct ((fix go (used0 : list ident) (args0 : list expr)
@@ -5066,7 +5240,43 @@ Proof.
         * exact Hdisj.
         * apply params_alpha_refl.
         * exact Hargs.
-        * exact H2.
+        * exact H3.
+        * exists Σr'. split; [econstructor; eauto | exact Hctx_r].
+      + destruct ((fix go (used0 : list ident) (args0 : list expr)
+                    : list expr * list ident :=
+                    match args0 with
+                    | [] => ([], used0)
+                    | arg :: rest =>
+                        let (arg', used1) := alpha_rename_expr ρ used0 arg in
+                        let (rest', used2) := go used1 rest in
+                        (arg' :: rest', used2)
+                    end) used args) as [argsr used_args] eqn:Hargs.
+        injection Hrename as <- <-.
+        destruct (alpha_rename_typed_args_env_structural_forward
+          env Ω n ρ Σ Σr args argsr used used_args
+          (apply_lt_params σ (apply_type_params type_args (fn_params fdef)))
+          (apply_lt_params σ (apply_type_params type_args (fn_params fdef)))
+          Σ') as [Σr' [Hargs_r Hctx_r]].
+        * intros Σa Σb used0 e0 er0 used1 T0 Σa' Hin Halpha Hcu Hru Hd Hr Ht.
+          eapply IH.
+          -- pose proof (expr_size_call_generic_arg_lt fname type_args args e0 Hin)
+               as Harg_lt.
+             eapply Nat.lt_le_trans.
+             ++ exact Harg_lt.
+             ++ apply Nat.lt_succ_r. exact Hlt.
+          -- exact Halpha.
+          -- exact Hcu.
+          -- exact Hru.
+          -- exact Hd.
+          -- exact Hr.
+          -- exact Ht.
+        * exact Hctx.
+        * exact Hctx_used.
+        * exact Hrange_used.
+        * exact Hdisj.
+        * apply params_alpha_refl.
+        * exact Hargs.
+        * exact H4.
         * exists Σr'. split; [econstructor; eauto | exact Hctx_r].
       + destruct (disjoint_names_app_l (free_vars_expr callee)
           ((fix go (args0 : list expr) : list ident :=
@@ -5493,12 +5703,29 @@ Inductive typed_env_roots_shadow_safe
       In fdef (Program.env_fns env) ->
       fn_name fdef = fname ->
       fn_captures fdef = [] ->
+      fn_type_params fdef = 0 ->
       typed_args_roots_shadow_safe env Ω n R Σ args
         (apply_lt_params σ (fn_params fdef)) Σ' R' arg_roots ->
       Forall (fun '(a, b) => Lifetime.outlives Ω a b)
         (apply_lt_outlives σ (fn_outlives fdef)) ->
       typed_env_roots_shadow_safe env Ω n R Σ (ECall fname args)
         (apply_lt_ty σ (fn_ret fdef)) Σ' R' (root_sets_union arg_roots)
+  | TERS_CallGeneric :
+      forall R R' Σ Σ' fname fdef (type_args : list Ty) args σ arg_roots,
+      In fdef (Program.env_fns env) ->
+      fn_name fdef = fname ->
+      fn_captures fdef = [] ->
+      Datatypes.length type_args = fn_type_params fdef ->
+      check_struct_bounds env (fn_bounds fdef) type_args = None ->
+      typed_args_roots_shadow_safe env Ω n R Σ args
+        (apply_lt_params σ
+          (apply_type_params type_args (fn_params fdef))) Σ' R' arg_roots ->
+      Forall (fun '(a, b) => Lifetime.outlives Ω a b)
+        (apply_lt_outlives σ (fn_outlives fdef)) ->
+      typed_env_roots_shadow_safe env Ω n R Σ
+        (ECallGeneric fname type_args args)
+        (apply_lt_ty σ (subst_type_params_ty type_args (fn_ret fdef)))
+        Σ' R' (root_sets_union arg_roots)
   | TERS_Fn : forall R Σ fname fdef,
       In fdef (Program.env_fns env) ->
       fn_name fdef = fname ->
@@ -5853,12 +6080,24 @@ Proof.
     + exact HR0.
     + exact Hroots0.
   - intros R R' Σ Σ' fname fdef args σ arg_roots Hin Hfname Hcaps
-      Hargs IHargs Houtlives Hfresh R0 HnsR HnsR0 HR0.
+      Htypeparams Hargs IHargs Houtlives Hfresh R0 HnsR HnsR0 HR0.
     rewrite expr_local_store_names_call in Hfresh.
     destruct (IHargs Hfresh R0 HnsR HnsR0 HR0)
       as [R0' [arg_roots0 [Hargs0 [HnsR0' [HR0' Harg_roots0]]]]].
     exists R0', (root_sets_union arg_roots0). split; [| split; [| split]].
     + eapply TERS_Call; eauto.
+    + exact HnsR0'.
+    + exact HR0'.
+    + eapply root_set_equiv_trans.
+      * apply root_sets_union_equiv. exact Harg_roots0.
+      * apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
+  - intros R R' Σ Σ' fname fdef type_args args σ arg_roots Hin Hfname
+      Hcaps Hlen Hbounds Hargs IHargs Houtlives Hfresh R0 HnsR HnsR0 HR0.
+    rewrite expr_local_store_names_call_generic in Hfresh.
+    destruct (IHargs Hfresh R0 HnsR HnsR0 HR0)
+      as [R0' [arg_roots0 [Hargs0 [HnsR0' [HR0' Harg_roots0]]]]].
+    exists R0', (root_sets_union arg_roots0). split; [| split; [| split]].
+    + eapply TERS_CallGeneric; eauto.
     + exact HnsR0'.
     + exact HR0'.
     + eapply root_set_equiv_trans.
@@ -7808,6 +8047,14 @@ Proof.
       Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
         exact (IH Hrn Henv)
     end.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_sctx_keys_named ?R ?Σ ->
+        root_env_sctx_keys_named ?R' ?Σ',
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
+        exact (IH Hrn Henv)
+    end.
   - pose proof (H H1 H2) as Hkeys1.
     assert (Hrn1 : root_env_no_shadow R1)
       by (eapply typed_env_roots_no_shadow;
@@ -7965,6 +8212,18 @@ Proof.
     + eapply root_set_sctx_roots_named_same_bindings.
       * eapply sctx_consume_path_same_bindings. eassumption.
       * eapply root_env_lookup_sctx_roots_named; eassumption.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_sctx_roots_named ?R ?Σ ->
+        root_env_sctx_roots_named ?R' ?Σ' /\
+        Forall (fun roots => root_set_sctx_roots_named roots ?Σ') ?arg_roots,
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_sctx_roots_named ?R ?Σ |- _ =>
+        destruct (IH Hrn Henv) as [Henv_args Hroots_args];
+        split;
+        [ exact Henv_args
+        | apply root_sets_sctx_roots_named_union; exact Hroots_args ]
+    end.
   - match goal with
     | IH : root_env_no_shadow ?R ->
         root_env_sctx_roots_named ?R ?Σ ->
@@ -9138,6 +9397,7 @@ Lemma typed_roots_root_env_names_subset_mutual :
 Proof.
   intros env Ω n.
   apply typed_roots_ind; intros; subst; try assumption.
+  - eapply H. exact H0.
   - eapply H. exact H0.
   - eapply H. exact H0.
   - eapply H. exact H0.
@@ -13405,6 +13665,102 @@ Proof.
     + eapply root_sets_union_rename_equiv. exact Harg_roots.
 Qed.
 
+Lemma alpha_rename_typed_env_roots_call_generic_shadow_safe_support_forward :
+  forall env Ω n rho R Rr Σ Σr fname type_args args er used used' T Σ' R' roots,
+  (forall R0 R0r Σa Σb used0 e er0 used1 T0 Σa' R0' roots0,
+      In e args ->
+      typed_env_roots_shadow_safe env Ω n R0 Σa e T0 Σa' R0' roots0 ->
+      ctx_alpha rho Σa Σb ->
+      root_env_no_shadow R0 ->
+      root_env_no_shadow R0r ->
+      root_env_equiv R0r (root_env_rename rho R0) ->
+      root_env_sctx_keys_named R0 Σa ->
+      root_env_sctx_roots_named R0 Σa ->
+      rename_no_collision_on rho (root_env_names R0) ->
+      rename_no_collision_on rho (root_env_names R0') ->
+      (forall x, In x (ctx_names Σb) -> In x used0) ->
+      (forall x, In x (rename_range rho) -> In x used0) ->
+      disjoint_names (free_vars_expr e) (rename_range rho) ->
+      alpha_rename_expr rho used0 e = (er0, used1) ->
+      exists Σb' R0r' roots0r,
+        typed_env_roots_shadow_safe env Ω n R0r Σb er0 T0
+          Σb' R0r' roots0r /\
+        ctx_alpha rho Σa' Σb' /\
+        root_env_no_shadow R0r' /\
+        root_env_equiv R0r' (root_env_rename rho R0') /\
+        root_set_equiv roots0r (root_set_rename rho roots0)) ->
+  typed_env_roots_shadow_safe env Ω n R Σ (ECallGeneric fname type_args args)
+    T Σ' R' roots ->
+  ctx_alpha rho Σ Σr ->
+  root_env_no_shadow R ->
+  root_env_no_shadow Rr ->
+  root_env_equiv Rr (root_env_rename rho R) ->
+  root_env_sctx_keys_named R Σ ->
+  root_env_sctx_roots_named R Σ ->
+  rename_no_collision_on rho (root_env_names R) ->
+  rename_no_collision_on rho (root_env_names R') ->
+  (forall x, In x (ctx_names Σr) -> In x used) ->
+  (forall x, In x (rename_range rho) -> In x used) ->
+  disjoint_names (free_vars_expr (ECallGeneric fname type_args args))
+    (rename_range rho) ->
+  alpha_rename_expr rho used (ECallGeneric fname type_args args) = (er, used') ->
+  exists Σr' Rr' rootsr,
+    typed_env_roots_shadow_safe env Ω n Rr Σr er T Σr' Rr' rootsr /\
+    ctx_alpha rho Σ' Σr' /\
+    root_env_no_shadow Rr' /\
+    root_env_equiv Rr' (root_env_rename rho R') /\
+    root_set_equiv rootsr (root_set_rename rho roots).
+Proof.
+  intros env Ω n rho R Rr Σ Σr fname type_args args er used used' T Σ' R' roots
+    Hexpr Htyped Hctx HnsR HnsRr HRr Hkeys Hroots HnocollR
+    HnocollR' Hctx_used Hrange_used Hdisj Hrename.
+  simpl in Hrename.
+  destruct ((fix go (used0 : list ident) (args0 : list expr) {struct args0}
+              : list expr * list ident :=
+              match args0 with
+              | [] => ([], used0)
+              | arg :: rest =>
+                  let (arg', used1) := alpha_rename_expr rho used0 arg in
+                  let (rest', used2) := go used1 rest in
+                  (arg' :: rest', used2)
+              end) used args) as [argsr used_args] eqn:Hargs.
+  injection Hrename as <- <-.
+  inversion Htyped; subst.
+  destruct (alpha_rename_typed_args_roots_shadow_safe_support_forward
+    env Ω n rho R Rr Σ Σr args argsr used used_args
+    (apply_lt_params σ (apply_type_params type_args (fn_params fdef)))
+    (apply_lt_params σ (apply_type_params type_args (fn_params fdef))) Σ' R' arg_roots)
+    as [Σr' [Rr' [arg_rootsr
+      [Hargs_r [Hctx_r [HnsRr' [HRr' Harg_roots]]]]]]].
+  - exact Hexpr.
+  - match goal with
+    | H : typed_args_roots_shadow_safe _ _ _ _ _ args
+          (apply_lt_params σ (apply_type_params type_args (fn_params fdef)))
+          _ _ arg_roots |- _ =>
+        exact H
+    end.
+  - exact Hctx.
+  - exact HnsR.
+  - exact HnsRr.
+  - exact HRr.
+  - exact Hkeys.
+  - exact Hroots.
+  - exact HnocollR.
+  - exact HnocollR'.
+  - exact Hctx_used.
+  - exact Hrange_used.
+  - exact Hdisj.
+  - apply params_alpha_refl.
+  - exact Hargs.
+  - exists Σr', Rr', (root_sets_union arg_rootsr).
+    split; [| split; [| split; [| split]]].
+    + eapply TERS_CallGeneric; eauto.
+    + exact Hctx_r.
+    + exact HnsRr'.
+    + exact HRr'.
+    + eapply root_sets_union_rename_equiv. exact Harg_roots.
+Qed.
+
 Lemma alpha_rename_typed_env_roots_call_expr_make_closure_shadow_safe_support_forward :
   forall env Ω n rho R Rr Σ Σr fname captures args er used used'
     T Σ' R' roots,
@@ -14027,10 +14383,10 @@ Proof.
 	          eapply check_make_closure_captures_sctx_alpha_forward; eauto.
       + eapply alpha_rename_typed_env_roots_place_shadow_safe_support_forward;
           eauto.
-      + eapply (alpha_rename_typed_env_roots_call_shadow_safe_support_forward
-          env Ω n rho R Rr Σ Σr i l er used used' T Σ' R' roots).
-        * intros R0 R0r Σa Σb used0 e0 er0 used1 T0 Σa' R0' roots0
-            Hin Htyped0 Halpha HnsR0 HnsR0r HR0r Hkeys0 Hroots0
+	      + eapply (alpha_rename_typed_env_roots_call_shadow_safe_support_forward
+	          env Ω n rho R Rr Σ Σr i l er used used' T Σ' R' roots).
+	        * intros R0 R0r Σa Σb used0 e0 er0 used1 T0 Σa' R0' roots0
+	            Hin Htyped0 Halpha HnsR0 HnsR0r HR0r Hkeys0 Hroots0
             Hnocoll0 Hnocoll0' Hcu Hru Hd Hr.
           eapply (IH env Ω n rho R0 R0r Σa Σb e0 er0 used0 used1
             T0 Σa' R0' roots0).
@@ -14046,12 +14402,36 @@ Proof.
         * exact Hroots.
         * exact HnocollR.
         * exact HnocollR'.
-        * exact Hctx_used.
-        * exact Hrange_used.
-        * exact Hdisj.
-        * exact Hrename.
-      + destruct e; try solve [inversion Htyped].
-        eapply alpha_rename_typed_env_roots_call_expr_make_closure_shadow_safe_support_forward.
+	        * exact Hctx_used.
+	        * exact Hrange_used.
+	        * exact Hdisj.
+	        * exact Hrename.
+	      + eapply (alpha_rename_typed_env_roots_call_generic_shadow_safe_support_forward
+	          env Ω n rho R Rr Σ Σr i l l0 er used used' T Σ' R' roots).
+	        * intros R0 R0r Σa Σb used0 e0 er0 used1 T0 Σa' R0' roots0
+	            Hin Htyped0 Halpha HnsR0 HnsR0r HR0r Hkeys0 Hroots0
+	            Hnocoll0 Hnocoll0' Hcu Hru Hd Hr.
+	          eapply (IH env Ω n rho R0 R0r Σa Σb e0 er0 used0 used1
+	            T0 Σa' R0' roots0).
+	          { pose proof (expr_size_call_generic_arg_lt i l l0 e0 Hin)
+	              as Harg_lt.
+	            simpl in *. lia. }
+	          all: eassumption.
+	        * exact Htyped.
+	        * exact Hctx.
+	        * exact HnsR.
+	        * exact HnsRr.
+	        * exact HRr.
+	        * exact Hkeys.
+	        * exact Hroots.
+	        * exact HnocollR.
+	        * exact HnocollR'.
+	        * exact Hctx_used.
+	        * exact Hrange_used.
+	        * exact Hdisj.
+	        * exact Hrename.
+	      + destruct e; try solve [inversion Htyped].
+	        eapply alpha_rename_typed_env_roots_call_expr_make_closure_shadow_safe_support_forward.
         * intros R0 R0r Σa Σb used0 e0 er0 used1 T0 Σa' R0' roots0
             Hin Htyped0 Halpha HnsR0 HnsR0r HR0r Hkeys0 Hroots0
             Hnocoll0 Hnocoll0' Hcu Hru Hd Hr.

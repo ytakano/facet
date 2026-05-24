@@ -213,6 +213,12 @@ let rec to_value env = function
     let tmp = fresh_id env in
     emit env (FICall (tmp, ret, f, flat));
     { fv = FVVar tmp; ft = ret }
+  | ECallGeneric (f, type_args, args) ->
+    let result_ty = infer_expr_ty env (ECallGeneric (f, type_args, args)) in
+    let flat = List.map (to_value env) args in
+    let tmp = fresh_id env in
+    emit env (FICall (tmp, result_ty, f, flat));
+    { fv = FVVar tmp; ft = result_ty }
   | ECallExpr (callee, args) ->
     let callee_val = to_value env callee in
     let result_ty = infer_expr_ty env (ECallExpr (callee, args)) in
@@ -399,6 +405,9 @@ and emit_into env x t = function
   | EPlace place ->
     emit env (FILet (x, t, to_value env (EPlace place)))
   | ECall (f, args) ->
+    let flat = List.map (to_value env) args in
+    emit env (FICall (x, t, f, flat))
+  | ECallGeneric (f, _, args) ->
     let flat = List.map (to_value env) args in
     emit env (FICall (x, t, f, flat))
   | EStruct _ as e ->

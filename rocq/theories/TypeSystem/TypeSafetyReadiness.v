@@ -534,12 +534,15 @@ Proof.
     match goal with
     | H : preservation_ready_expr e1 |- _ => exact H
     end.
-  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
-      Hcaps Heval_args IHargs Hrename Heval_body IHbody Hready.
-    inversion Hready.
-  - intros s s_fn s_args s_body callee args fname captured fdef fcall
-      vs ret used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
-      Heval_body IHbody Hready.
+	  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
+	      Hcaps Heval_args IHargs Hrename Heval_body IHbody Hready.
+	    inversion Hready.
+	  - intros s s_args s_body fname type_args fdef fcall args vs ret used'
+	      Hlookup Hcaps Heval_args IHargs Hrename Heval_body IHbody Hready.
+	    inversion Hready.
+	  - intros s s_fn s_args s_body callee args fname captured fdef fcall
+	      vs ret used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
+	      Heval_body IHbody Hready.
     inversion Hready.
   - intros s Hready. reflexivity.
   - intros s s1 s2 e es v vs Heval_e IHe Heval_args IHargs Hready.

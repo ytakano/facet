@@ -1080,7 +1080,7 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
       match lookup_fn_b fname fenv with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef
+          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
           then infer_ok (fn_value_ty fdef, Γ)
           else infer_err ErrNotImplemented
       end
@@ -1210,7 +1210,7 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
       match lookup_fn_b fname fenv with
       | None      => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef
+          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
           then
           let m := fn_lifetimes fdef in
           let fix collect (Γ0 : ctx) (as_ : list expr)
@@ -1250,6 +1250,56 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
               end
           end
           else infer_err ErrNotImplemented
+      end
+
+  | ECallGeneric fname type_args args =>
+      match lookup_fn_b fname fenv with
+      | None      => infer_err (ErrFunctionNotFound fname)
+      | Some fdef =>
+          if no_captures_b fdef &&
+             Nat.eqb (Datatypes.length type_args) (fn_type_params fdef)
+          then
+          let m := fn_lifetimes fdef in
+          let params_typed := apply_type_params type_args (fn_params fdef) in
+          let fix collect (Γ0 : ctx) (as_ : list expr)
+              : infer_result (list Ty * ctx) :=
+            match as_ with
+            | []      => infer_ok ([], Γ0)
+            | e' :: es =>
+                match infer_core fenv Ω n Γ0 e' with
+                | infer_err err => infer_err err
+                | infer_ok (T_e, Γ1) =>
+                    match collect Γ1 es with
+                    | infer_err err => infer_err err
+                    | infer_ok (tys, Γ2) => infer_ok (T_e :: tys, Γ2)
+                    end
+                end
+            end
+          in
+          match collect Γ args with
+          | infer_err err => infer_err err
+          | infer_ok (arg_tys, Γ') =>
+              match build_sigma m (repeat None m) arg_tys params_typed with
+              | None => infer_err ErrLifetimeConflict
+              | Some σ_acc =>
+                  let σ := finalize_subst σ_acc in
+                  let ps_subst := apply_lt_params σ params_typed in
+                  match check_args Ω arg_tys ps_subst with
+                  | Some err => infer_err err
+                  | None =>
+                      if forallb (wf_lifetime_b (mk_region_ctx n)) σ
+                      then
+                        let Ω_subst := apply_lt_outlives σ (fn_outlives fdef) in
+                        if outlives_constraints_hold_b Ω Ω_subst
+                        then infer_ok
+                          (apply_lt_ty σ
+                            (subst_type_params_ty type_args (fn_ret fdef)), Γ')
+                        else infer_err ErrHrtBoundUnsatisfied
+                      else infer_err ErrLifetimeLeak
+                  end
+              end
+          end
+          else infer_err ErrArityMismatch
       end
 
   | ECallExpr callee args =>
@@ -1497,7 +1547,7 @@ Fixpoint infer_core_env_fuel (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef
+          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
           then infer_ok (fn_value_ty fdef, Γ)
           else infer_err ErrNotImplemented
       end
@@ -1767,7 +1817,7 @@ Fixpoint infer_core_env_fuel (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef
+          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
           then
           let m := fn_lifetimes fdef in
           let fix collect (Γ0 : ctx) (as_ : list expr)
@@ -1807,6 +1857,59 @@ Fixpoint infer_core_env_fuel (fuel : nat)
               end
           end
           else infer_err ErrNotImplemented
+      end
+  | ECallGeneric fname type_args args =>
+      match lookup_fn_b fname (env_fns env) with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef =>
+          if no_captures_b fdef &&
+             Nat.eqb (Datatypes.length type_args) (fn_type_params fdef)
+          then
+          match check_struct_bounds env (fn_bounds fdef) type_args with
+          | Some err => infer_err err
+          | None =>
+          let m := fn_lifetimes fdef in
+          let params_typed := apply_type_params type_args (fn_params fdef) in
+          let fix collect (Γ0 : ctx) (as_ : list expr)
+              : infer_result (list Ty * ctx) :=
+            match as_ with
+            | [] => infer_ok ([], Γ0)
+            | e' :: es =>
+                match infer_core_env_fuel fuel' env Ω n Γ0 e' with
+                | infer_err err => infer_err err
+                | infer_ok (T_e, Γ1) =>
+                    match collect Γ1 es with
+                    | infer_err err => infer_err err
+                    | infer_ok (tys, Γ2) => infer_ok (T_e :: tys, Γ2)
+                    end
+                end
+            end
+          in
+          match collect Γ args with
+          | infer_err err => infer_err err
+          | infer_ok (arg_tys, Γ') =>
+              match build_sigma m (repeat None m) arg_tys params_typed with
+              | None => infer_err ErrLifetimeConflict
+              | Some σ_acc =>
+                  let σ := finalize_subst σ_acc in
+                  let ps_subst := apply_lt_params σ params_typed in
+                  match check_args Ω arg_tys ps_subst with
+                  | Some err => infer_err err
+                  | None =>
+                      if forallb (wf_lifetime_b (mk_region_ctx n)) σ
+                      then
+                        let Ω_subst := apply_lt_outlives σ (fn_outlives fdef) in
+                        if outlives_constraints_hold_b Ω Ω_subst
+                        then infer_ok
+                          (apply_lt_ty σ
+                            (subst_type_params_ty type_args (fn_ret fdef)), Γ')
+                        else infer_err ErrHrtBoundUnsatisfied
+                      else infer_err ErrLifetimeLeak
+                  end
+              end
+          end
+          end
+          else infer_err ErrArityMismatch
       end
   | ECallExpr callee args =>
       match infer_core_env_fuel fuel' env Ω n Γ callee with
@@ -2455,7 +2558,7 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef
+          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
           then infer_ok (fn_value_ty fdef, Σ)
           else infer_err ErrNotImplemented
       end
@@ -2703,7 +2806,7 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef
+          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
           then
           let m := fn_lifetimes fdef in
           let fix collect (Σ0 : sctx) (as_ : list expr)
@@ -2743,6 +2846,59 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
               end
           end
           else infer_err ErrNotImplemented
+      end
+  | ECallGeneric fname type_args args =>
+      match lookup_fn_b fname (env_fns env) with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef =>
+          if no_captures_b fdef &&
+             Nat.eqb (Datatypes.length type_args) (fn_type_params fdef)
+          then
+          match check_struct_bounds env (fn_bounds fdef) type_args with
+          | Some err => infer_err err
+          | None =>
+          let m := fn_lifetimes fdef in
+          let params_typed := apply_type_params type_args (fn_params fdef) in
+          let fix collect (Σ0 : sctx) (as_ : list expr)
+              : infer_result (list Ty * sctx) :=
+            match as_ with
+            | [] => infer_ok ([], Σ0)
+            | e' :: es =>
+                match infer_core_env_state_fuel fuel' env Ω n Σ0 e' with
+                | infer_err err => infer_err err
+                | infer_ok (T_e, Σ1) =>
+                    match collect Σ1 es with
+                    | infer_err err => infer_err err
+                    | infer_ok (tys, Σ2) => infer_ok (T_e :: tys, Σ2)
+                    end
+                end
+            end
+          in
+          match collect Σ args with
+          | infer_err err => infer_err err
+          | infer_ok (arg_tys, Σ') =>
+              match build_sigma m (repeat None m) arg_tys params_typed with
+              | None => infer_err ErrLifetimeConflict
+              | Some σ_acc =>
+                  let σ := finalize_subst σ_acc in
+                  let ps_subst := apply_lt_params σ params_typed in
+                  match check_args Ω arg_tys ps_subst with
+                  | Some err => infer_err err
+                  | None =>
+                      if forallb (wf_lifetime_b (mk_region_ctx n)) σ
+                      then
+                        let Ω_subst := apply_lt_outlives σ (fn_outlives fdef) in
+                        if outlives_constraints_hold_b Ω Ω_subst
+                        then infer_ok
+                          (apply_lt_ty σ
+                            (subst_type_params_ty type_args (fn_ret fdef)), Σ')
+                        else infer_err ErrHrtBoundUnsatisfied
+                      else infer_err ErrLifetimeLeak
+                  end
+              end
+          end
+          end
+          else infer_err ErrArityMismatch
       end
   | ECallExpr callee args =>
       match infer_core_env_state_fuel fuel' env Ω n Σ callee with
@@ -2867,7 +3023,7 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef
+          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
           then infer_ok (fn_value_ty fdef, Σ, e)
           else infer_err ErrNotImplemented
       end
@@ -3126,7 +3282,7 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef
+          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
           then
           let m := fn_lifetimes fdef in
           let fix collect (Σ0 : sctx) (as_ : list expr)
@@ -3167,6 +3323,62 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
               end
           end
           else infer_err ErrNotImplemented
+      end
+  | ECallGeneric fname type_args args =>
+      match lookup_fn_b fname (env_fns env) with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef =>
+          if no_captures_b fdef &&
+             Nat.eqb (Datatypes.length type_args) (fn_type_params fdef)
+          then
+          match check_struct_bounds env (fn_bounds fdef) type_args with
+          | Some err => infer_err err
+          | None =>
+          let m := fn_lifetimes fdef in
+          let params_typed := apply_type_params type_args (fn_params fdef) in
+          let fix collect (Σ0 : sctx) (as_ : list expr)
+              : infer_result (list Ty * sctx * list expr) :=
+            match as_ with
+            | [] => infer_ok ([], Σ0, [])
+            | e' :: es =>
+                match infer_core_env_state_fuel_elab fuel' env Ω n Σ0 e' with
+                | infer_err err => infer_err err
+                | infer_ok (T_e, Σ1, e_elab) =>
+                    match collect Σ1 es with
+                    | infer_err err => infer_err err
+                    | infer_ok (tys, Σ2, es_elab) =>
+                        infer_ok (T_e :: tys, Σ2, e_elab :: es_elab)
+                    end
+                end
+            end
+          in
+          match collect Σ args with
+          | infer_err err => infer_err err
+          | infer_ok (arg_tys, Σ', args') =>
+              match build_sigma m (repeat None m) arg_tys params_typed with
+              | None => infer_err ErrLifetimeConflict
+              | Some σ_acc =>
+                  let σ := finalize_subst σ_acc in
+                  let ps_subst := apply_lt_params σ params_typed in
+                  match check_args Ω arg_tys ps_subst with
+                  | Some err => infer_err err
+                  | None =>
+                      if forallb (wf_lifetime_b (mk_region_ctx n)) σ
+                      then
+                        let Ω_subst := apply_lt_outlives σ (fn_outlives fdef) in
+                        if outlives_constraints_hold_b Ω Ω_subst
+                        then infer_ok
+                          (apply_lt_ty σ
+                            (subst_type_params_ty type_args (fn_ret fdef)),
+                           Σ',
+                           ECallGeneric fname type_args args')
+                        else infer_err ErrHrtBoundUnsatisfied
+                      else infer_err ErrLifetimeLeak
+                  end
+              end
+          end
+          end
+          else infer_err ErrArityMismatch
       end
   | ECallExpr callee args =>
       match infer_core_env_state_fuel_elab fuel' env Ω n Σ callee with
@@ -3326,6 +3538,7 @@ Fixpoint preservation_ready_expr_b (e : expr) : bool :=
       preservation_ready_expr_b e2 &&
       preservation_ready_expr_b e3
   | ECall _ _ => false
+  | ECallGeneric _ _ _ => false
   | ECallExpr _ _ => false
   | ELet _ _ _ _ _ => false
   | ELetInfer _ _ _ _ => false
@@ -3390,6 +3603,7 @@ Fixpoint provenance_ready_expr_b (e : expr) : bool :=
       provenance_ready_expr_b e2 &&
       provenance_ready_expr_b e3
   | ECall _ _ => false
+  | ECallGeneric _ _ _ => false
   | ECallExpr _ _ => false
   | EDeref (EBorrow _ p) =>
       match place_path p with
@@ -3468,7 +3682,7 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef
+          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
           then
           let m := fn_lifetimes fdef in
           let fix collect (Σ0 : sctx) (R0 : root_env) (as_ : list expr)
@@ -3513,11 +3727,66 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
           end
           else infer_err ErrNotImplemented
       end
+  | ECallGeneric fname type_args args =>
+      match lookup_fn_b fname (env_fns env) with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef =>
+          if no_captures_b fdef &&
+             Nat.eqb (Datatypes.length type_args) (fn_type_params fdef)
+          then
+          match check_struct_bounds env (fn_bounds fdef) type_args with
+          | Some err => infer_err err
+          | None =>
+          let m := fn_lifetimes fdef in
+          let params_typed := apply_type_params type_args (fn_params fdef) in
+          let fix collect (Σ0 : sctx) (R0 : root_env) (as_ : list expr)
+              : infer_result (list Ty * sctx * root_env * list root_set) :=
+            match as_ with
+            | [] => infer_ok ([], Σ0, R0, [])
+            | e' :: es =>
+                match infer_core_env_state_fuel_roots fuel' env Ω n R0 Σ0 e' with
+                | infer_err err => infer_err err
+                | infer_ok (T_e, Σ1, R1, roots_e) =>
+                    match collect Σ1 R1 es with
+                    | infer_err err => infer_err err
+                    | infer_ok (tys, Σ2, R2, roots_es) =>
+                        infer_ok (T_e :: tys, Σ2, R2, roots_e :: roots_es)
+                    end
+                end
+            end
+          in
+          match collect Σ R args with
+          | infer_err err => infer_err err
+          | infer_ok (arg_tys, Σ', R', arg_roots) =>
+              match build_sigma m (repeat None m) arg_tys params_typed with
+              | None => infer_err ErrLifetimeConflict
+              | Some σ_acc =>
+                  let σ := finalize_subst σ_acc in
+                  let ps_subst := apply_lt_params σ params_typed in
+                  match check_args Ω arg_tys ps_subst with
+                  | Some err => infer_err err
+                  | None =>
+                      if forallb (wf_lifetime_b (mk_region_ctx n)) σ
+                      then
+                        let Ω_subst := apply_lt_outlives σ (fn_outlives fdef) in
+                        if outlives_constraints_hold_b Ω Ω_subst
+                        then infer_ok
+                          (apply_lt_ty σ
+                            (subst_type_params_ty type_args (fn_ret fdef)),
+                           Σ', R', root_sets_union arg_roots)
+                        else infer_err ErrHrtBoundUnsatisfied
+                      else infer_err ErrLifetimeLeak
+                  end
+              end
+          end
+          end
+          else infer_err ErrArityMismatch
+      end
   | EFn fname =>
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef
+          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
           then infer_ok (fn_value_ty fdef, Σ, R, [])
           else infer_err ErrNotImplemented
       end
@@ -3890,7 +4159,7 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef
+          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
           then
           let m := fn_lifetimes fdef in
           let fix collect (Σ0 : sctx) (R0 : root_env) (as_ : list expr)
@@ -3936,11 +4205,67 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
           end
           else infer_err ErrNotImplemented
       end
+  | ECallGeneric fname type_args args =>
+      match lookup_fn_b fname (env_fns env) with
+      | None => infer_err (ErrFunctionNotFound fname)
+      | Some fdef =>
+          if no_captures_b fdef &&
+             Nat.eqb (Datatypes.length type_args) (fn_type_params fdef)
+          then
+          match check_struct_bounds env (fn_bounds fdef) type_args with
+          | Some err => infer_err err
+          | None =>
+          let m := fn_lifetimes fdef in
+          let params_typed := apply_type_params type_args (fn_params fdef) in
+          let fix collect (Σ0 : sctx) (R0 : root_env) (as_ : list expr)
+              : infer_result (list Ty * sctx * root_env * list root_set) :=
+            match as_ with
+            | [] => infer_ok ([], Σ0, R0, [])
+            | e' :: es =>
+                match infer_core_env_state_fuel_roots_shadow_safe
+                        fuel' env Ω n R0 Σ0 e' with
+                | infer_err err => infer_err err
+                | infer_ok (T_e, Σ1, R1, roots_e) =>
+                    match collect Σ1 R1 es with
+                    | infer_err err => infer_err err
+                    | infer_ok (tys, Σ2, R2, roots_es) =>
+                        infer_ok (T_e :: tys, Σ2, R2, roots_e :: roots_es)
+                    end
+                end
+            end
+          in
+          match collect Σ R args with
+          | infer_err err => infer_err err
+          | infer_ok (arg_tys, Σ', R', arg_roots) =>
+              match build_sigma m (repeat None m) arg_tys params_typed with
+              | None => infer_err ErrLifetimeConflict
+              | Some σ_acc =>
+                  let σ := finalize_subst σ_acc in
+                  let ps_subst := apply_lt_params σ params_typed in
+                  match check_args Ω arg_tys ps_subst with
+                  | Some err => infer_err err
+                  | None =>
+                      if forallb (wf_lifetime_b (mk_region_ctx n)) σ
+                      then
+                        let Ω_subst := apply_lt_outlives σ (fn_outlives fdef) in
+                        if outlives_constraints_hold_b Ω Ω_subst
+                        then infer_ok
+                          (apply_lt_ty σ
+                            (subst_type_params_ty type_args (fn_ret fdef)),
+                           Σ', R', root_sets_union arg_roots)
+                        else infer_err ErrHrtBoundUnsatisfied
+                      else infer_err ErrLifetimeLeak
+                  end
+              end
+          end
+          end
+          else infer_err ErrArityMismatch
+      end
   | EFn fname =>
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef
+          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
           then infer_ok (fn_value_ty fdef, Σ, R, [])
           else infer_err ErrNotImplemented
       end
@@ -5066,6 +5391,17 @@ Fixpoint borrow_check (fenv : list fn_def) (BS : borrow_state) (Γ : ctx)
             end
         end
       in go BS args
+  | ECallGeneric _ _ args =>
+      let fix go (BS0 : borrow_state) (as_ : list expr) : infer_result borrow_state :=
+        match as_ with
+        | []      => infer_ok BS0
+        | a :: rest =>
+            match borrow_check fenv BS0 Γ a with
+            | infer_err err => infer_err err
+            | infer_ok BS1  => go BS1 rest
+            end
+        end
+      in go BS args
   | ECallExpr callee args =>
       match borrow_check fenv BS Γ callee with
       | infer_err err => infer_err err
@@ -5261,6 +5597,18 @@ Fixpoint borrow_check_env (env : global_env) (PBS : path_borrow_state) (Γ : ctx
           end
       end
   | ECall _ args =>
+      let fix go (PBS0 : path_borrow_state) (args0 : list expr)
+          : infer_result path_borrow_state :=
+        match args0 with
+        | [] => infer_ok PBS0
+        | a :: rest =>
+            match borrow_check_env env PBS0 Γ a with
+            | infer_err err => infer_err err
+            | infer_ok PBS1 => go PBS1 rest
+            end
+        end
+      in go PBS args
+  | ECallGeneric _ _ args =>
       let fix go (PBS0 : path_borrow_state) (args0 : list expr)
           : infer_result path_borrow_state :=
         match args0 with
@@ -6537,6 +6885,7 @@ Inductive raw_expr : Type :=
 | RawLet : mutability -> ident -> Ty -> raw_expr -> raw_expr -> raw_expr
 | RawLetInfer : mutability -> ident -> raw_expr -> raw_expr -> raw_expr
 | RawCall : ident -> list raw_expr -> raw_expr
+| RawCallGeneric : ident -> list Ty -> list raw_expr -> raw_expr
 | RawCallExpr : raw_expr -> list raw_expr -> raw_expr
 | RawStruct : string -> list lifetime -> list Ty -> list (string * raw_expr) -> raw_expr
 | RawReplace : place -> raw_expr -> raw_expr
@@ -6769,6 +7118,13 @@ Fixpoint elaborate_raw_expr_fuel
           | infer_err err => infer_err err
           | infer_ok (args', _, extras, next') =>
               finish (append_env_fns env extras) (ECall fname args') extras next'
+          end
+      | RawCallGeneric fname type_args args =>
+          match go_args fuel' env Σ next args with
+          | infer_err err => infer_err err
+          | infer_ok (args', _, extras, next') =>
+              finish (append_env_fns env extras)
+                (ECallGeneric fname type_args args') extras next'
           end
       | RawCallExpr callee args =>
           match elaborate_raw_expr_fuel fuel' env Ω n Σ next callee with

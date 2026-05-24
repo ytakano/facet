@@ -80,12 +80,16 @@ let rec diagnostic_add_expr map original alpha =
   | ELit _, ELit _ ->
     map
   | EVar original_id, EVar alpha_id
-  | EFn original_id, EFn alpha_id
-  | ECall (original_id, _), ECall (alpha_id, _) ->
+  | EFn original_id, EFn alpha_id ->
     let map = diagnostic_add alpha_id original_id map in
-    diagnostic_add_exprs map
-      (match original with ECall (_, args) -> args | _ -> [])
-      (match alpha with ECall (_, args) -> args | _ -> [])
+    map
+  | ECall (original_id, original_args), ECall (alpha_id, alpha_args) ->
+    let map = diagnostic_add alpha_id original_id map in
+    diagnostic_add_exprs map original_args alpha_args
+  | ECallGeneric (original_id, _, original_args),
+    ECallGeneric (alpha_id, _, alpha_args) ->
+    let map = diagnostic_add alpha_id original_id map in
+    diagnostic_add_exprs map original_args alpha_args
   | EPlace original_p, EPlace alpha_p ->
     diagnostic_add_place map original_p alpha_p
   | ELet (_, original_id, _, original_e1, original_e2),

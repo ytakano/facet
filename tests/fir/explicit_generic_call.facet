@@ -1,0 +1,7 @@
+fn id<T>(x: affine T) -> affine T {
+  x
+}
+
+fn main() -> affine isize {
+  (id<affine isize> 1)
+}

@@ -174,6 +174,12 @@ let split_expr_type_args ty_scope args =
   in
   go [] [] args
 
+let lower_call_type_args ty_scope args =
+  let (lts, tys) = split_expr_type_args ty_scope args in
+  if lts <> []
+  then failwith "explicit generic direct calls do not accept lifetime arguments"
+  else tys
+
 let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (e : named_expr) : expr =
   match e with
   | NUnit           -> EUnit
@@ -192,10 +198,15 @@ let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (
     EBorrow (rk, convert_place scope p)
   | NDeref e1 ->
     EDeref (convert fn_names ty_scope scope e1)
-  | NCall (f, args) ->
+  | NCall (f, type_args, args) ->
     let args' = List.map (convert fn_names ty_scope scope) args in
-    if in_scope scope f then ECallExpr (EVar (make_ident f (lookup scope f)), args')
-    else ECall (make_ident f 0, args')
+    if type_args = [] then
+      if in_scope scope f then ECallExpr (EVar (make_ident f (lookup scope f)), args')
+      else ECall (make_ident f 0, args')
+    else if in_scope scope f then
+      failwith "explicit type arguments are only supported for direct function calls"
+    else
+      ECallGeneric (make_ident f 0, lower_call_type_args ty_scope type_args, args')
   | NStruct (name, args, fields) ->
     let (lts, tys) = split_expr_type_args ty_scope args in
     EStruct (name, lts, tys,
@@ -247,10 +258,15 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
     RawBorrow (rk, convert_place scope p)
   | NDeref e1 ->
     RawDeref (convert_raw fn_names ty_scope scope e1)
-  | NCall (f, args) ->
+  | NCall (f, type_args, args) ->
     let args' = List.map (convert_raw fn_names ty_scope scope) args in
-    if in_scope scope f then RawCallExpr (RawVar (ident_of_name scope f), args')
-    else RawCall (make_ident f 0, args')
+    if type_args = [] then
+      if in_scope scope f then RawCallExpr (RawVar (ident_of_name scope f), args')
+      else RawCall (make_ident f 0, args')
+    else if in_scope scope f then
+      failwith "explicit type arguments are only supported for direct function calls"
+    else
+      RawCallGeneric (make_ident f 0, lower_call_type_args ty_scope type_args, args')
   | NStruct (name, args, fields) ->
     let (lts, tys) = split_expr_type_args ty_scope args in
     RawStruct (name, lts, tys,

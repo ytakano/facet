@@ -264,8 +264,8 @@ atom_expr:
     { NBorrow (RUnique, p) }
   | LPAREN; STAR; e = expr; RPAREN
     { NDeref e }
-  | LPAREN; f = ID; args = list(atom_expr); RPAREN
-    { NCall (f, args) }
+  | LPAREN; f = ID; type_args = opt_type_args; args = list(atom_expr); RPAREN
+    { NCall (f, type_args, args) }
   | KW_IF; cond = atom_expr; LBRACE; then_e = block; RBRACE;
     KW_ELSE; LBRACE; else_e = block; RBRACE
     { NIf (cond, then_e, else_e) }

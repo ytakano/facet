@@ -96,10 +96,11 @@ Proof.
     eapply root_env_lookup_app_left; eassumption.
   - eapply TERS_Place_Copy; eauto.
     eapply root_env_lookup_app_left; eassumption.
-  - eapply TERS_Place_Move; eauto.
-    eapply root_env_lookup_app_left; eassumption.
-  - eapply TERS_Call; eauto.
-  - eapply TERS_Fn; eauto.
+	  - eapply TERS_Place_Move; eauto.
+	    eapply root_env_lookup_app_left; eassumption.
+	  - eapply TERS_Call; eauto.
+	  - eapply TERS_CallGeneric; eauto.
+	  - eapply TERS_Fn; eauto.
   - eapply TERS_MakeClosure; eauto.
   - eapply TERS_MakeClosure_Static; eauto.
   - eapply TERS_CallExpr_MakeClosure; eauto.

@@ -97,26 +97,30 @@ Proof.
       unfold local_fn_value_call_target_expr in Htarget.
       destruct raw_body as
         [| lit | z | m x T e1 e2 | m x e1 e2 | fname_alias
-         | fname_make captures_make | p | fname_direct args_direct
-         | callee args_call | sname lts tys fields
+	         | fname_make captures_make | p | fname_direct args_direct
+	         | fname_generic tys_generic args_generic | callee args_call
+	         | sname lts tys fields
          | p e_new | p e_new | rk p | e | e | e1 e2 e3];
         try discriminate.
       * destruct e1 as
           [| lit1 | z1 | m1 x1 T1 e11 e12 | m1 x1 e11 e12
-           | fname_value | fname_make1 captures_make1 | p1
-           | fname1 args1 | callee1 args1 | sname1 lts1 tys1 fields1
+	           | fname_value | fname_make1 captures_make1 | p1
+	           | fname1 args1 | fname_generic1 tys_generic1 args_generic1
+	           | callee1 args1 | sname1 lts1 tys1 fields1
            | p1 e_new1 | p1 e_new1 | rkc1 p1 | e1 | e1 | e11 e12 e13];
           try discriminate.
         destruct e2 as
           [| lit2 | z2 | m2 x2 T2 e21 e22 | m2 x2 e21 e22
-           | fname2 | fname_make2 captures_make2 | p2
-           | fname2 args2 | callee2 args2 | sname2 lts2 tys2 fields2
+	           | fname2 | fname_make2 captures_make2 | p2
+	           | fname2 args2 | fname_generic2 tys_generic2 args_generic2
+	           | callee2 args2 | sname2 lts2 tys2 fields2
            | p2 e_new2 | p2 e_new2 | rkc2 p2 | e2 | e2 | e21 e22 e23];
           try discriminate.
         destruct callee2 as
           [| litc | y | mc xc Tc ec1 ec2 | mc xc ec1 ec2
-           | fnamec | fname_makec captures_makec | pc
-           | fnamec argsc | calleec argsc | snamec ltsc tysc fieldsc
+	           | fnamec | fname_makec captures_makec | pc
+	           | fnamec argsc | fname_genericc tys_genericc args_genericc
+	           | calleec argsc | snamec ltsc tysc fieldsc
            | pc e_newc | pc e_newc | rkc pc | ec | ec | ec1 ec2 ec3];
           try discriminate.
         destruct (ident_eqb x y && usage_eqb (ty_usage T) UUnrestricted)

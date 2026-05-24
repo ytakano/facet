@@ -185,10 +185,10 @@ Proof.
       try discriminate.
     injection Hcheck as <-. constructor. exact Haccess.
 
-  (* ECall *)
-  + apply BOES_Call.
-    revert PBS PBS' Hcheck.
-    induction l as [| a rest IHargs]; intros PBS PBS' Hcheck.
+	  (* ECall *)
+	  + apply BOES_Call.
+	    revert PBS PBS' Hcheck.
+	    induction l as [| a rest IHargs]; intros PBS PBS' Hcheck.
     * simpl in Hcheck. injection Hcheck as <-. constructor.
     * simpl in Hcheck.
       destruct (borrow_check_env env PBS Γ a) as [PBS1|] eqn:Ha; [|discriminate].
@@ -197,10 +197,25 @@ Proof.
          pose proof (expr_size_call_arg_lt i (a :: rest) a (or_introl eq_refl)).
          simpl in Hlt. lia.
          exact Ha.
-      -- apply IHargs; [simpl in *; lia | exact Hcheck].
+	      -- apply IHargs; [simpl in *; lia | exact Hcheck].
 
-  (* ECallExpr *)
-  + destruct (borrow_check_env env PBS Γ e) as [PBScallee|] eqn:Hcallee; [|discriminate].
+	  (* ECallGeneric *)
+	  + apply BOES_CallGeneric.
+	    revert PBS PBS' Hcheck.
+	    induction l0 as [| a rest IHargs]; intros PBS PBS' Hcheck.
+	    * simpl in Hcheck. injection Hcheck as <-. constructor.
+	    * simpl in Hcheck.
+	      destruct (borrow_check_env env PBS Γ a) as [PBS1|] eqn:Ha; [|discriminate].
+	      apply BOESArgs_Cons with (PBS1 := PBS1).
+	      -- apply IH with (e := a).
+	         pose proof (expr_size_call_generic_arg_lt i l (a :: rest) a
+	           (or_introl eq_refl)).
+	         simpl in Hlt. lia.
+	         exact Ha.
+	      -- apply IHargs; [simpl in *; lia | exact Hcheck].
+
+	  (* ECallExpr *)
+	  + destruct (borrow_check_env env PBS Γ e) as [PBScallee|] eqn:Hcallee; [|discriminate].
     apply BOES_CallExpr with (PBS1 := PBScallee).
     * apply IH with (e := e).
       -- pose proof (expr_size_callexpr_callee_lt e l). lia.

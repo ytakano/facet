@@ -56,6 +56,7 @@ Inductive expr : Type :=
 | EMakeClosure : ident -> list ident -> expr
 | EPlace    : place -> expr
 | ECall     : ident -> list expr -> expr
+| ECallGeneric : ident -> list Ty -> list expr -> expr
 | ECallExpr : expr -> list expr -> expr
 | EStruct   : string -> list lifetime -> list Ty -> list (string * expr) -> expr
 | EReplace  : place -> expr -> expr

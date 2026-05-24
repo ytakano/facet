@@ -581,13 +581,17 @@ Proof.
           [ eapply value_has_type_if_right_result; eassumption
           | eapply store_ref_targets_preserved_trans; eassumption ] ]
     end.
-  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
-      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
-      roots Hready _ _ _ _ _.
-    inversion Hready.
-  - intros s s_fn s_args s_body callee args0 fname captured fdef fcall vs ret
-      used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
-      Heval_body IHbody Ω n R Σ T Σ' R' roots Hready _ _ _ _ _.
+	  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
+	      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
+	      roots Hready _ _ _ _ _.
+	    inversion Hready.
+	  - intros s s_args s_body fname type_args fdef fcall args0 vs ret used'
+	      Hlookup Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ
+	      T Σ' R' roots Hready _ _ _ _ _.
+	    inversion Hready.
+	  - intros s s_fn s_args s_body callee args0 fname captured fdef fcall vs ret
+	      used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
+	      Heval_body IHbody Ω n R Σ T Σ' R' roots Hready _ _ _ _ _.
     inversion Hready.
   - intros s Ω n R Σ ps Σ' R' roots _ Hstore _ _ _ Htyped.
     inversion Htyped; subst.

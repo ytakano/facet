@@ -852,6 +852,7 @@ type expr =
 | EMakeClosure of ident * ident list
 | EPlace of place
 | ECall of ident * expr list
+| ECallGeneric of ident * ty list * expr list
 | ECallExpr of expr * expr list
 | EStruct of string * lifetime list * ty list * (string * expr) list
 | EReplace of place * expr
@@ -1642,6 +1643,17 @@ let apply_lt_param _UU03c3_ p =
 let apply_lt_params _UU03c3_ ps =
   map (apply_lt_param _UU03c3_) ps
 
+(** val apply_type_param : ty list -> param -> param **)
+
+let apply_type_param type_args p =
+  { param_mutability = p.param_mutability; param_name = p.param_name;
+    param_ty = (subst_type_params_ty type_args p.param_ty) }
+
+(** val apply_type_params : ty list -> param list -> param list **)
+
+let apply_type_params type_args ps =
+  map (apply_type_param type_args) ps
+
 (** val expr_ref_root : expr -> ident option **)
 
 let rec expr_ref_root = function
@@ -1700,6 +1712,11 @@ let rec free_vars_expr = function
 | EMakeClosure (_, captures) -> captures
 | EPlace p -> (place_name p) :: []
 | ECall (_, args) ->
+  let rec go = function
+  | [] -> []
+  | arg :: rest -> app (free_vars_expr arg) (go rest)
+  in go args
+| ECallGeneric (_, _, args) ->
   let rec go = function
   | [] -> []
   | arg :: rest -> app (free_vars_expr arg) (go rest)
@@ -1772,6 +1789,17 @@ let rec alpha_rename_expr _UU03c1_ used = function
     in go
   in
   let (args', used') = go used args in ((ECall (fname, args')), used')
+| ECallGeneric (fname, type_args, args) ->
+  let go =
+    let rec go used0 = function
+    | [] -> ([], used0)
+    | arg :: rest ->
+      let (arg', used1) = alpha_rename_expr _UU03c1_ used0 arg in
+      let (rest', used2) = go used1 rest in ((arg' :: rest'), used2)
+    in go
+  in
+  let (args', used') = go used args in
+  ((ECallGeneric (fname, type_args, args')), used')
 | ECallExpr (callee, args) ->
   let (callee', used1) = alpha_rename_expr _UU03c1_ used callee in
   let go =
@@ -1975,6 +2003,8 @@ let rec expr_local_store_names = function
 | ELetInfer (_, x, e1, e2) ->
   app (expr_local_store_names e1) (x :: (expr_local_store_names e2))
 | ECall (_, args) -> args_local_store_names_with expr_local_store_names args
+| ECallGeneric (_, _, args) ->
+  args_local_store_names_with expr_local_store_names args
 | ECallExpr (callee, args) ->
   app (expr_local_store_names callee)
     (args_local_store_names_with expr_local_store_names args)
@@ -3638,7 +3668,8 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
     | EFn fname ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         if no_captures_b fdef
+         if (&&) (no_captures_b fdef)
+              (Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int)
          then Infer_ok ((fn_value_ty fdef), _UU03a3_)
          else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
@@ -3663,7 +3694,8 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
     | ECall (fname, args) ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         if no_captures_b fdef
+         if (&&) (no_captures_b fdef)
+              (Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int)
          then let m = fdef.fn_lifetimes in
               let collect =
                 let rec collect _UU03a3_0 = function
@@ -3705,6 +3737,61 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
                   | None -> Infer_err ErrLifetimeConflict)
                | Infer_err err -> Infer_err err)
          else Infer_err ErrNotImplemented
+       | None -> Infer_err (ErrFunctionNotFound fname))
+    | ECallGeneric (fname, type_args, args) ->
+      (match lookup_fn_b fname env.env_fns with
+       | Some fdef ->
+         if (&&) (no_captures_b fdef)
+              (Nat.eqb (length type_args) fdef.fn_type_params)
+         then (match check_struct_bounds env fdef.fn_bounds type_args with
+               | Some err -> Infer_err err
+               | None ->
+                 let m = fdef.fn_lifetimes in
+                 let params_typed = apply_type_params type_args fdef.fn_params
+                 in
+                 let collect =
+                   let rec collect _UU03a3_0 = function
+                   | [] -> Infer_ok ([], _UU03a3_0)
+                   | e' :: es ->
+                     (match infer_core_env_state_fuel fuel' env _UU03a9_ n
+                              _UU03a3_0 e' with
+                      | Infer_ok p ->
+                        let (t_e, _UU03a3_1) = p in
+                        (match collect _UU03a3_1 es with
+                         | Infer_ok p0 ->
+                           let (tys, _UU03a3_2) = p0 in
+                           Infer_ok ((t_e :: tys), _UU03a3_2)
+                         | Infer_err err -> Infer_err err)
+                      | Infer_err err -> Infer_err err)
+                   in collect
+                 in
+                 (match collect _UU03a3_ args with
+                  | Infer_ok p ->
+                    let (arg_tys, _UU03a3_') = p in
+                    (match build_sigma m (repeat None m) arg_tys params_typed with
+                     | Some _UU03c3__acc ->
+                       let _UU03c3_ = finalize_subst _UU03c3__acc in
+                       let ps_subst = apply_lt_params _UU03c3_ params_typed in
+                       (match check_args _UU03a9_ arg_tys ps_subst with
+                        | Some err -> Infer_err err
+                        | None ->
+                          if forallb (wf_lifetime_b (mk_region_ctx n))
+                               _UU03c3_
+                          then let _UU03a9__subst =
+                                 apply_lt_outlives _UU03c3_ fdef.fn_outlives
+                               in
+                               if outlives_constraints_hold_b _UU03a9_
+                                    _UU03a9__subst
+                               then Infer_ok
+                                      ((apply_lt_ty _UU03c3_
+                                         (subst_type_params_ty type_args
+                                           fdef.fn_ret)),
+                                      _UU03a3_')
+                               else Infer_err ErrHrtBoundUnsatisfied
+                          else Infer_err ErrLifetimeLeak)
+                     | None -> Infer_err ErrLifetimeConflict)
+                  | Infer_err err -> Infer_err err))
+         else Infer_err ErrArityMismatch
        | None -> Infer_err (ErrFunctionNotFound fname))
     | ECallExpr (callee, args) ->
       (match infer_core_env_state_fuel fuel' env _UU03a9_ n _UU03a3_ callee with
@@ -4084,7 +4171,8 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
     | EFn fname ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         if no_captures_b fdef
+         if (&&) (no_captures_b fdef)
+              (Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int)
          then Infer_ok (((fn_value_ty fdef), _UU03a3_), e)
          else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
@@ -4109,7 +4197,8 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
     | ECall (fname, args) ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         if no_captures_b fdef
+         if (&&) (no_captures_b fdef)
+              (Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int)
          then let m = fdef.fn_lifetimes in
               let collect =
                 let rec collect _UU03a3_0 = function
@@ -4155,6 +4244,66 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
                   | None -> Infer_err ErrLifetimeConflict)
                | Infer_err err -> Infer_err err)
          else Infer_err ErrNotImplemented
+       | None -> Infer_err (ErrFunctionNotFound fname))
+    | ECallGeneric (fname, type_args, args) ->
+      (match lookup_fn_b fname env.env_fns with
+       | Some fdef ->
+         if (&&) (no_captures_b fdef)
+              (Nat.eqb (length type_args) fdef.fn_type_params)
+         then (match check_struct_bounds env fdef.fn_bounds type_args with
+               | Some err -> Infer_err err
+               | None ->
+                 let m = fdef.fn_lifetimes in
+                 let params_typed = apply_type_params type_args fdef.fn_params
+                 in
+                 let collect =
+                   let rec collect _UU03a3_0 = function
+                   | [] -> Infer_ok (([], _UU03a3_0), [])
+                   | e' :: es ->
+                     (match infer_core_env_state_fuel_elab fuel' env _UU03a9_
+                              n _UU03a3_0 e' with
+                      | Infer_ok p ->
+                        let (p0, e_elab) = p in
+                        let (t_e, _UU03a3_1) = p0 in
+                        (match collect _UU03a3_1 es with
+                         | Infer_ok p1 ->
+                           let (p2, es_elab) = p1 in
+                           let (tys, _UU03a3_2) = p2 in
+                           Infer_ok (((t_e :: tys), _UU03a3_2),
+                           (e_elab :: es_elab))
+                         | Infer_err err -> Infer_err err)
+                      | Infer_err err -> Infer_err err)
+                   in collect
+                 in
+                 (match collect _UU03a3_ args with
+                  | Infer_ok p ->
+                    let (p0, args') = p in
+                    let (arg_tys, _UU03a3_') = p0 in
+                    (match build_sigma m (repeat None m) arg_tys params_typed with
+                     | Some _UU03c3__acc ->
+                       let _UU03c3_ = finalize_subst _UU03c3__acc in
+                       let ps_subst = apply_lt_params _UU03c3_ params_typed in
+                       (match check_args _UU03a9_ arg_tys ps_subst with
+                        | Some err -> Infer_err err
+                        | None ->
+                          if forallb (wf_lifetime_b (mk_region_ctx n))
+                               _UU03c3_
+                          then let _UU03a9__subst =
+                                 apply_lt_outlives _UU03c3_ fdef.fn_outlives
+                               in
+                               if outlives_constraints_hold_b _UU03a9_
+                                    _UU03a9__subst
+                               then Infer_ok
+                                      (((apply_lt_ty _UU03c3_
+                                          (subst_type_params_ty type_args
+                                            fdef.fn_ret)),
+                                      _UU03a3_'), (ECallGeneric (fname,
+                                      type_args, args')))
+                               else Infer_err ErrHrtBoundUnsatisfied
+                          else Infer_err ErrLifetimeLeak)
+                     | None -> Infer_err ErrLifetimeConflict)
+                  | Infer_err err -> Infer_err err))
+         else Infer_err ErrArityMismatch
        | None -> Infer_err (ErrFunctionNotFound fname))
     | ECallExpr (callee, args) ->
       (match infer_core_env_state_fuel_elab fuel' env _UU03a9_ n _UU03a3_
@@ -4597,16 +4746,17 @@ let rec preservation_ready_fields_b = function
 (** val provenance_ready_expr_b : expr -> bool **)
 
 let rec provenance_ready_expr_b = function
+| EUnit -> true
+| ELit _ -> true
+| EVar _ -> true
 | ELet (_, _, _, e1, e2) ->
   (&&) (provenance_ready_expr_b e1) (provenance_ready_expr_b e2)
 | ELetInfer (_, _, e1, e2) ->
   (&&) (provenance_ready_expr_b e1) (provenance_ready_expr_b e2)
-| EMakeClosure (_, _) -> false
+| EFn _ -> true
 | EPlace p -> (match place_path p with
                | Some _ -> true
                | None -> false)
-| ECall (_, _) -> false
-| ECallExpr (_, _) -> false
 | EStruct (_, _, _, fields) ->
   let rec go = function
   | [] -> true
@@ -4635,7 +4785,7 @@ let rec provenance_ready_expr_b = function
 | EIf (e1, e2, e3) ->
   (&&) ((&&) (provenance_ready_expr_b e1) (provenance_ready_expr_b e2))
     (provenance_ready_expr_b e3)
-| _ -> true
+| _ -> false
 
 (** val provenance_ready_args_b : expr list -> bool **)
 
@@ -4763,7 +4913,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
     | EFn fname ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         if no_captures_b fdef
+         if (&&) (no_captures_b fdef)
+              (Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int)
          then Infer_ok ((((fn_value_ty fdef), _UU03a3_), r), [])
          else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
@@ -4785,7 +4936,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
     | ECall (fname, args) ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         if no_captures_b fdef
+         if (&&) (no_captures_b fdef)
+              (Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int)
          then let m = fdef.fn_lifetimes in
               let collect =
                 let rec collect _UU03a3_0 r0 = function
@@ -4835,6 +4987,69 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                   | None -> Infer_err ErrLifetimeConflict)
                | Infer_err err -> Infer_err err)
          else Infer_err ErrNotImplemented
+       | None -> Infer_err (ErrFunctionNotFound fname))
+    | ECallGeneric (fname, type_args, args) ->
+      (match lookup_fn_b fname env.env_fns with
+       | Some fdef ->
+         if (&&) (no_captures_b fdef)
+              (Nat.eqb (length type_args) fdef.fn_type_params)
+         then (match check_struct_bounds env fdef.fn_bounds type_args with
+               | Some err -> Infer_err err
+               | None ->
+                 let m = fdef.fn_lifetimes in
+                 let params_typed = apply_type_params type_args fdef.fn_params
+                 in
+                 let collect =
+                   let rec collect _UU03a3_0 r0 = function
+                   | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+                   | e' :: es ->
+                     (match infer_core_env_state_fuel_roots fuel' env
+                              _UU03a9_ n r0 _UU03a3_0 e' with
+                      | Infer_ok p ->
+                        let (p0, roots_e) = p in
+                        let (p1, r1) = p0 in
+                        let (t_e, _UU03a3_1) = p1 in
+                        (match collect _UU03a3_1 r1 es with
+                         | Infer_ok p2 ->
+                           let (p3, roots_es) = p2 in
+                           let (p4, r2) = p3 in
+                           let (tys, _UU03a3_2) = p4 in
+                           Infer_ok ((((t_e :: tys), _UU03a3_2), r2),
+                           (roots_e :: roots_es))
+                         | Infer_err err -> Infer_err err)
+                      | Infer_err err -> Infer_err err)
+                   in collect
+                 in
+                 (match collect _UU03a3_ r args with
+                  | Infer_ok p ->
+                    let (p0, arg_roots) = p in
+                    let (p1, r') = p0 in
+                    let (arg_tys, _UU03a3_') = p1 in
+                    (match build_sigma m (repeat None m) arg_tys params_typed with
+                     | Some _UU03c3__acc ->
+                       let _UU03c3_ = finalize_subst _UU03c3__acc in
+                       let ps_subst = apply_lt_params _UU03c3_ params_typed in
+                       (match check_args _UU03a9_ arg_tys ps_subst with
+                        | Some err -> Infer_err err
+                        | None ->
+                          if forallb (wf_lifetime_b (mk_region_ctx n))
+                               _UU03c3_
+                          then let _UU03a9__subst =
+                                 apply_lt_outlives _UU03c3_ fdef.fn_outlives
+                               in
+                               if outlives_constraints_hold_b _UU03a9_
+                                    _UU03a9__subst
+                               then Infer_ok
+                                      ((((apply_lt_ty _UU03c3_
+                                           (subst_type_params_ty type_args
+                                             fdef.fn_ret)),
+                                      _UU03a3_'), r'),
+                                      (root_sets_union arg_roots))
+                               else Infer_err ErrHrtBoundUnsatisfied
+                          else Infer_err ErrLifetimeLeak)
+                     | None -> Infer_err ErrLifetimeConflict)
+                  | Infer_err err -> Infer_err err))
+         else Infer_err ErrArityMismatch
        | None -> Infer_err (ErrFunctionNotFound fname))
     | ECallExpr (e0, args) ->
       (match e0 with
@@ -5244,7 +5459,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
     | EFn fname ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         if no_captures_b fdef
+         if (&&) (no_captures_b fdef)
+              (Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int)
          then Infer_ok ((((fn_value_ty fdef), _UU03a3_), r), [])
          else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
@@ -5266,7 +5482,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
     | ECall (fname, args) ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         if no_captures_b fdef
+         if (&&) (no_captures_b fdef)
+              (Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int)
          then let m = fdef.fn_lifetimes in
               let collect =
                 let rec collect _UU03a3_0 r0 = function
@@ -5316,6 +5533,69 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                   | None -> Infer_err ErrLifetimeConflict)
                | Infer_err err -> Infer_err err)
          else Infer_err ErrNotImplemented
+       | None -> Infer_err (ErrFunctionNotFound fname))
+    | ECallGeneric (fname, type_args, args) ->
+      (match lookup_fn_b fname env.env_fns with
+       | Some fdef ->
+         if (&&) (no_captures_b fdef)
+              (Nat.eqb (length type_args) fdef.fn_type_params)
+         then (match check_struct_bounds env fdef.fn_bounds type_args with
+               | Some err -> Infer_err err
+               | None ->
+                 let m = fdef.fn_lifetimes in
+                 let params_typed = apply_type_params type_args fdef.fn_params
+                 in
+                 let collect =
+                   let rec collect _UU03a3_0 r0 = function
+                   | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+                   | e' :: es ->
+                     (match infer_core_env_state_fuel_roots_shadow_safe fuel'
+                              env _UU03a9_ n r0 _UU03a3_0 e' with
+                      | Infer_ok p ->
+                        let (p0, roots_e) = p in
+                        let (p1, r1) = p0 in
+                        let (t_e, _UU03a3_1) = p1 in
+                        (match collect _UU03a3_1 r1 es with
+                         | Infer_ok p2 ->
+                           let (p3, roots_es) = p2 in
+                           let (p4, r2) = p3 in
+                           let (tys, _UU03a3_2) = p4 in
+                           Infer_ok ((((t_e :: tys), _UU03a3_2), r2),
+                           (roots_e :: roots_es))
+                         | Infer_err err -> Infer_err err)
+                      | Infer_err err -> Infer_err err)
+                   in collect
+                 in
+                 (match collect _UU03a3_ r args with
+                  | Infer_ok p ->
+                    let (p0, arg_roots) = p in
+                    let (p1, r') = p0 in
+                    let (arg_tys, _UU03a3_') = p1 in
+                    (match build_sigma m (repeat None m) arg_tys params_typed with
+                     | Some _UU03c3__acc ->
+                       let _UU03c3_ = finalize_subst _UU03c3__acc in
+                       let ps_subst = apply_lt_params _UU03c3_ params_typed in
+                       (match check_args _UU03a9_ arg_tys ps_subst with
+                        | Some err -> Infer_err err
+                        | None ->
+                          if forallb (wf_lifetime_b (mk_region_ctx n))
+                               _UU03c3_
+                          then let _UU03a9__subst =
+                                 apply_lt_outlives _UU03c3_ fdef.fn_outlives
+                               in
+                               if outlives_constraints_hold_b _UU03a9_
+                                    _UU03a9__subst
+                               then Infer_ok
+                                      ((((apply_lt_ty _UU03c3_
+                                           (subst_type_params_ty type_args
+                                             fdef.fn_ret)),
+                                      _UU03a3_'), r'),
+                                      (root_sets_union arg_roots))
+                               else Infer_err ErrHrtBoundUnsatisfied
+                          else Infer_err ErrLifetimeLeak)
+                     | None -> Infer_err ErrLifetimeConflict)
+                  | Infer_err err -> Infer_err err))
+         else Infer_err ErrArityMismatch
        | None -> Infer_err (ErrFunctionNotFound fname))
     | ECallExpr (e0, args) ->
       (match e0 with
@@ -5959,6 +6239,14 @@ let rec borrow_check_env env pBS _UU0393_ = function
    | Infer_ok _ -> Infer_ok pBS
    | Infer_err err -> Infer_err err)
 | ECall (_, args) ->
+  let rec go pBS0 = function
+  | [] -> Infer_ok pBS0
+  | a :: rest ->
+    (match borrow_check_env env pBS0 _UU0393_ a with
+     | Infer_ok pBS1 -> go pBS1 rest
+     | Infer_err err -> Infer_err err)
+  in go pBS args
+| ECallGeneric (_, _, args) ->
   let rec go pBS0 = function
   | [] -> Infer_ok pBS0
   | a :: rest ->
@@ -6687,6 +6975,7 @@ type raw_expr =
 | RawLet of mutability * ident * ty * raw_expr * raw_expr
 | RawLetInfer of mutability * ident * raw_expr * raw_expr
 | RawCall of ident * raw_expr list
+| RawCallGeneric of ident * ty list * raw_expr list
 | RawCallExpr of raw_expr * raw_expr list
 | RawStruct of string * lifetime list * ty list * (string * raw_expr) list
 | RawReplace of place * raw_expr
@@ -6970,6 +7259,15 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
           let (args', _) = p1 in
           finish (append_env_fns env extras) (ECall (fname, args')) extras
             next'
+        | Infer_err err -> Infer_err err)
+     | RawCallGeneric (fname, type_args, args) ->
+       (match go_args fuel' env _UU03a3_ next args with
+        | Infer_ok p ->
+          let (p0, next') = p in
+          let (p1, extras) = p0 in
+          let (args', _) = p1 in
+          finish (append_env_fns env extras) (ECallGeneric (fname, type_args,
+            args')) extras next'
         | Infer_err err -> Infer_err err)
      | RawCallExpr (callee, args) ->
        (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n _UU03a3_ next

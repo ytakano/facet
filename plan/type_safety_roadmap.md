@@ -87,359 +87,54 @@ do not redefine the language accepted by the ordinary checker.
   for both direct make-closure calls and annotated local-let calls. Mutable and
   affine/linear captures remain later work.
 
-## Next Implementation Order
+## Current Safety Routes
 
-Work in this order unless a proof exposes a soundness gap.
+No new proof target is selected here. Treat the current endpoints as completed
+safe entry points and preserve their contracts unless a later task explicitly
+chooses a target and justifies the contract change.
 
-1. **Keep captured-reference sidecar widening stable.**
+Current captured-call sidecar coverage includes:
 
-   Core status: ordinary `EMakeClosure` capture checking now accepts
-   immutable unrestricted shared-reference values, rejects mutable bindings
-   and non-unrestricted captures, infers the closure env lifetime by searching
-   captured shared-reference lifetimes, and still keeps exact sidecar capture
-   validators reference-free. The Prop typing, executable checker, checker
-   soundness, structural typing, alpha-renaming, and env typing soundness paths
-   support calling `TForall ... (TClosure env_lt params ret)` by instantiating
-   unresolved closure lifetimes from the enclosing lexical lifetime context.
+- direct `ECallExpr (EMakeClosure fname captures) args`;
+- annotated local-let captured calls:
 
-   Surface status: raw closure elaboration now inherits the enclosing lifetime
-   context for synthetic closure helper functions. Surface shared-reference
-   closure literals can be constructed and called by the ordinary checker.
+  ```coq
+  ELet m x T (EMakeClosure fname captures)
+    (ECallExpr (EVar x) args)
+  ```
 
-   Implemented proof support:
+- inferred local-let captured calls through elaboration by
+  `infer_program_env_alpha_elab`;
+- expression-level exact sidecar evidence used by the checked-initial
+  captured-call route, including `if` evidence where the exact sidecar carries
+  the branch root-env equality required by the root/shadow proof path.
 
-   - Sidecar-only exact capture checking with closure-env lifetime evidence is
-     in place:
+Shared-reference captured-call support is with-env for the direct and
+annotated local-let routes. It handles nonzero-lifetime copied
+shared-reference captures without making closure calls ordinary direct-call
+evidence.
 
-     ```coq
-     check_make_closure_captures_exact_sctx_with_env
-     ```
+Keep these invariants stable:
 
-   - Copied capture root construction and frame-relative captured-frame
-     readiness helpers are in place, including:
-
-     ```coq
-     copy_capture_roots_as
-     capture_value_roots
-     capture_store_root_sets
-     capture_store_root_env
-     captured_call_frame_ready_in_frame
-     captured_call_frame_params_ready_in_frame
-     copy_capture_store_exact_with_env_params_store_typed_in_frame
-     copy_capture_store_as_captured_values_canonical_roots_with_env
-     copy_capture_store_as_captured_store_runtime_ready_in_frame_with_env
-     captured_call_bind_params_call_param_root_env_ready_in_frame
-     captured_call_frame_args_values_have_types_in_frame
-     eval_make_closure_exact_captured_call_frame_params_ready_auto_with_env
-     eval_make_closure_captured_call_runtime_args_ready_in_frame_core
-     eval_make_closure_captured_call_runtime_args_ready_auto_with_env_with_preservation_core
-     captured_call_binding_runtime_root_env_equiv_with_roots
-     copy_capture_roots_as_equiv_root_env_add_params_roots
-     capture_store_root_env_equiv_root_env_add_params_roots
-     ```
-
-   Resolved runtime-root invariant:
-
-   - Stage 7b now uses canonical copied capture roots derived from copied
-     runtime values, not arbitrary caller root-env entries.
-   - Ref-free captured values use `[]`; shared-reference captured values use the
-     singleton store root from the copied `VRef`.
-   - This avoids the prior over-approximation gap where source root-env entries
-     could mention roots no longer named after argument evaluation.
-
-   Progress in current slice:
-
-   - The captured-call body cleanup bridge now accepts
-     `captured_call_frame_ready_in_frame` through in-frame parameter readiness.
-     Existing reference-free wrappers still accept `captured_call_frame_ready`
-     via the existing self-to-in-frame coercions.
-   - The direct captured-call proof now consumes
-     `check_make_closure_captures_exact_sctx_with_env env Ω Σ captures
-     (fn_captures fdef) = infer_ok (env_lt, captured_tys)`.
-   - The direct proof carries `capture_store_root_env captured` and
-     `capture_store_root_sets captured` through body instantiation,
-     root-exclusion, and cleanup without collapsing copied capture roots to
-     `repeat []`.
-   - The direct captured-call sidecar checker branch now uses
-     `check_make_closure_captures_exact_sctx_with_env`.
-   - The captured-call exact sidecar evidence now carries a separate returned
-     root bound. Direct/provenance evidence returns its typed roots, `if`
-     evidence unions branch returned roots, and captured-call evidence returns
-     the typed call roots unioned with a static capture bound.
-   - The direct captured-call sidecar checker branch now requires
-     `capture_root_bound R captures (fn_captures fcallee) = Some _` before it
-     accepts captured-call evidence. This keeps the static sidecar evidence
-     from accepting copied-reference captures whose source roots are absent
-     from the caller root environment.
-   - The static/runtime capture-root bound is now proved:
-
-     ```coq
-     capture_store_root_sets_bound_from_capture_root_bound
-     ```
-
-     It relates `copy_capture_store_as`, `store_roots_within R s`, and
-     `capture_root_bound R captures caps = Some capture_roots` to
-     `root_set_stores_subset (root_sets_union
-     (capture_store_root_sets captured)) capture_roots`.
-
-   Completed package support:
-
-   - The captured-call body cleanup core now exposes the body returned-root
-     fact:
-
-     ```coq
-     value_roots_within roots_body ret
-     ```
-
-     The expression cleanup wrapper also carries that fact through its
-     package. Compatibility wrappers still project the older store/value
-     surface.
-   - Hidden-frame cleanup now propagates returned-root evidence through the
-     subset bound used by local-let captured calls.
-   - The annotated local-let captured-call preservation core now exposes an
-     existential copied-capture package with final `store_roots_within`,
-     returned `value_roots_within`, `store_no_shadow`, and
-     `root_env_no_shadow`. The public compatibility wrapper still projects the
-     older store/value surface.
-   - The subset bridge exists as
-     `captured_call_callee_body_root_shadow_provenance_instantiated_bridge_with_result_subset`
-     and is used by the captured-call make/let routes. It relates the
-     instantiated body returned roots to the argument/captured-store root
-     union needed by the direct with-env captured-call path.
-
-  Exact local-let evidence status:
-
-   - The exact `ELet` sidecar constructor is in place for the annotated
-     local-let captured-call shape.
-   - Its eval package uses the local-let copied-capture package plus
-     `capture_store_root_sets_bound_from_capture_root_bound` to weaken returned
-     roots from copied capture roots to the static `capture_root_bound`.
-   - The executable expression checker has the matching exact local-let branch,
-     guarded by exact capture checking, static capture-root bounds, hidden
-     binding freshness, direct synthetic-call compatibility, and returned type
-     compatibility.
-
-   Annotated local-let captured-call route:
-
-   - Do not try to coerce canonical shared-reference captures back into
-     `captured_call_frame_ready`. The canonical root env is intentionally
-     frame-relative.
-   - The annotated-local-let runtime helper now roots the hidden closure
-     binding as
-     `root_env_add x (root_sets_union (capture_store_root_sets captured))
-     R_args`.
-   - The hidden-frame cleanup path proves returned-value safety directly from
-     `roots_body`, `roots_exclude_params`, and `roots_exclude x roots_body`
-     instead of requiring the whole body root env to exclude callee
-     params/captures. This keeps the inaccessible hidden `x` binding rooted
-     without making it an ordinary tail entry.
-   - The annotated local-let sidecar checker branch now uses
-     `check_make_closure_captures_exact_sctx_with_env`.
-   - The captured-call runtime helper API now carries the call-site lifetime
-     substitution `σ`, accepts arguments typed against
-     `apply_lt_params σ (fn_params fdef)`, and returns
-     `value_has_type ... (apply_lt_ty σ (fn_ret fdef))`. Existing zero-lifetime
-     wrapper routes instantiate this with `[]`.
-   - The root/shadow structural rules, alpha-renaming support, executable root
-     checkers, root soundness proofs, direct exact sidecar evidence, eval
-     packages, checked-initial captured safety theorem, and function-level
-     sidecar checker now carry the same `σ` for direct
-     `ECallExpr (EMakeClosure fname captures) args`.
-   - The annotated local-let exact sidecar evidence no longer requires
-     `fn_lifetimes fcallee = 0`. It carries the direct synthetic call return
-     type and proves compatibility from that instantiated type to the final
-     local-let type.
-   - `TypeChecker.v` has a direct sidecar regression for a nonzero-lifetime
-     copied shared-reference capture:
-
-     ```coq
-     shared_ref_capture_direct_call_sidecar_accepts
-     shared_ref_capture_local_let_call_sidecar_accepts
-     ```
-
-   Still required:
-
-   - Keep closure-call lifetime instantiation local to the
-     `TForall ... TClosure` call path. Do not silently erase helper function
-     lifetimes or make closure calls ordinary direct-call evidence.
-   - Keep `tests/valid/closure/capture_shared_ref.facet` as the surface
-     regression that constructs and calls a shared-reference closure.
-   - Keep the invalid fixtures for missing outlives support, mutable binding
-     capture, and `&mut` capture rejection.
-   - Keep closure-call validator expansion staged by proof coverage. The direct
-     captured-call and annotated local-let routes are now with-env.
-
-2. **Keep the annotated local-let captured-call sidecar branch stable.**
-
-   Target shape:
-
-   ```coq
-   ELet m x T (EMakeClosure fname captures)
-     (ECallExpr (EVar x) args)
-   ```
-
-   TypeSafety bridge status: done.
-
-   Checked-in preservation bridge:
-
-   ```coq
-   eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components
-   ```
-
-   The bridge packages the hidden closure binding, evaluated arguments,
-   copied captures, alpha-renamed callee body evidence, and hidden-frame
-   cleanup. It proves final store typing and return value typing for the
-   annotated local-let shape above.
-
-   Supporting cleanup endpoint:
-
-   ```coq
-   eval_let_make_closure_captured_call_hidden_cleanup_package
-   ```
-
-   Required executable guards:
-
-   - `ident_eqb x y` for the callee variable;
-   - `usage_eqb (ty_usage T) UUnrestricted`;
-   - `x` not in `captures`;
-   - `x` not in `args_free_vars_ts args`;
-   - `x` not in `args_local_store_names args`;
-   - `preservation_ready_args_b args`;
-   - exact capture check with `check_make_closure_captures_exact_sctx_with_env`;
-   - existing captured callee summary.
-
-  Current implementation status:
-
-  - `local_captured_call_target_expr` recognizes the annotated local-let
-     shape and checks the syntactic freshness guards. Its soundness helper is
-     in `EnvRuntimeSafety.v`.
-  - `expr_root_shadow_captured_call_provenance_summary_exact` has an
-     `ERSCE_LocalCapturedLet` constructor for the exact annotated shape.
-  - `check_fn_root_shadow_captured_call_provenance_summary` now has the
-     annotated local-let captured-call branch.
-  - `check_expr_root_shadow_captured_call_provenance_summary_fuel` now has the
-     corresponding exact expression branch used by `if` and expression-level
-     sidecar evidence.
-   - The branch uses two synthetic checks:
-     - direct synthetic body:
-       `ECallExpr (EMakeClosure fname captures) args`, used to extract
-       `typed_args_roots ... args (fn_params fcallee) ...` in the original
-       caller context;
-     - let synthetic body:
-       `ELet m x T (EMakeClosure fname captures)
-          (ECallExpr (EMakeClosure fname captures) args)`, used to prove the
-       local binding `x` is fresh for the initial root/store frame.
-   - The final captured-call checked-initial safety theorem has the local-let
-     branch wired through
-     `eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components`.
-
-   Focused regressions are done:
-
-   - `TypeChecker.v` checks that the ordinary checker accepts the local-let
-     captured-call shape, direct/non-capturing sidecars reject it, and the
-     captured-call sidecar accepts it.
-   - `tests/valid/closure/capture_unrestricted_annotated_let_call.facet`
-     covers the annotated surface local-let shape.
-
-   Inferred local-let status:
-
-   - Core `ELetInfer` still has no `Eval_LetInfer`, and
-     `preservation_ready_expr_b` continues to reject it.
-   - Inferred local-let coverage is routed through elaboration instead:
-     `infer_program_env_alpha_elab` rewrites successful `ELetInfer` bodies
-     into annotated `ELet` bodies before the captured-call sidecar runs.
-   - `check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary`
-     is the executable wrapper for that route. Its readiness bridge in
-     `EnvRuntimeSafety.v` exposes the captured-call summary evidence for the
-     elaborated environment returned by `infer_program_env_alpha_elab`.
-   - The checked-initial safety theorem for this route evaluates functions in
-     the elaborated environment returned by `infer_program_env_alpha_elab`;
-     it does not claim semantics preservation for the original `ELetInfer`
-     source body.
-   - `TypeChecker.v` has a focused example for the inferred local-let captured
-     closure call: the original core shape is not accepted by the direct
-     captured-call summary, while the elaborated route is accepted.
-
-3. **Handle `if` last.**
-
-   The known `if` blocker is that ordinary `TES_If` does not expose
-   `root_env_equiv R2 R3`, while root/shadow routes require it. Do not
-   strengthen `TES_If` or ordinary checker acceptance just to manufacture
-   root/shadow sidecar evidence.
-
-   Current staged implementation:
-
-   - `TypeChecker.v` has a fuel-aligned internal expression helper,
-     `check_expr_root_shadow_captured_call_provenance_summary_fuel`, plus the
-     existing 10000-fuel public wrapper
-     `check_expr_root_shadow_captured_call_provenance_summary`. This avoids
-     manufacturing branch evidence from fresh top-level fuel when proving an
-     enclosing `if`.
-   - `EnvRuntimeSafety.v` keeps the older unindexed Prop evidence shape and
-     now also has exact, output-indexed evidence:
-
-     ```coq
-     expr_root_shadow_captured_call_provenance_summary_exact
-     ```
-
-     The exact `if` constructor carries the same branch typings, merge, and
-     root equivalence as `TERS_If`.
-   - Checker soundness from the fuel-aligned helper to the exact evidence is
-     in place. The function-level captured-call summary checker now has an
-     `EIf` branch guarded by the exact expression helper, return
-     compatibility, and parameter root-exclusion checks.
-
-   Remaining proof task:
-
-   - A focused captured-call preservation helper now exists:
-
-     ```coq
-     eval_make_closure_captured_call_expr_shadow_preserves_typing_with_callee_components
-     ```
-
-     It consumes the full shadow-safe typing judgment for
-     `ECallExpr (EMakeClosure fname captures) args`, extracts typed argument
-     roots internally, and reuses the with-env captured-call wrapper. This
-     removes the captured-branch argument-root extraction from the eventual
-     `if` proof body.
-   - The exact arbitrary-branch preservation bridge now exists:
-
-     ```coq
-     eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_typing
-     ```
-
-     It evaluates the condition with ordinary provenance readiness, carries
-     store/root/name/key invariants into the selected branch, and reuses the
-     direct/captured-call wrappers under branch `R1`/`Σ1`.
-   - The exact package bridge now exists:
-
-     ```coq
-     eval_expr_root_shadow_captured_call_provenance_summary_exact_package
-     ```
-
-     It exposes final store typing, return typing, final store roots, returned
-     roots, final store no-shadow, and final root-env no-shadow. The exact
-     `if` evidence carries syntactic branch root-env equality from
-     `root_env_eqb`, which is stronger than the semantic equivalence needed by
-     `TERS_If`.
-   - The final captured-call checked-initial safety theorem now has an `if`
-     summary case that delegates to
-     `eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_typing`.
-
-  Next proof task:
-
-   - Do not add broader expression forms unless their package preservation
-     route is already covered. The exact annotated local-let captured-call
-     route is now wired through expression-level and checked-initial safety.
+- Closure-call lifetime instantiation stays local to the
+  `TForall ... TClosure` call path.
+- Exact sidecar capture checking uses
+  `check_make_closure_captures_exact_sctx_with_env`.
+- Captured-call root evidence uses copied runtime capture roots, not arbitrary
+  caller root-env entries.
+- Canonical shared-reference captures are frame-relative; do not coerce them
+  back into the older `captured_call_frame_ready` shape.
+- `ELetInfer` still has no core `Eval_LetInfer`; inferred local-let coverage is
+  via elaborated annotated bodies, and safety is claimed for the elaborated
+  environment.
 
 ## Current Captured Closure Facts
 
-Detailed notes are in `plan/type_safety_closure_notes.md`. Active facts needed
-for the next task:
+Detailed notes are in `plan/type_safety_closure_notes.md`. Stable facts:
 
 - `TClosure` is distinct from `TFn`.
-- `EMakeClosure fname captures` exists for immutable unrestricted
-  reference-free captures and currently types as a `TClosure`.
+- `EMakeClosure fname captures` exists for immutable unrestricted captures and
+  currently types as a `TClosure`.
 - `fn_def` has separate `fn_params` and `fn_captures`.
 - Function bodies use:
 
@@ -448,18 +143,28 @@ for the next task:
   ```
 
 - Direct `EFn` and direct `ECall` remain empty-capture only.
-- Captured-call sidecar evidence exists for exactly
-  `ECallExpr (EMakeClosure fname captures) args`.
+- Captured-call sidecar evidence exists for direct make-closure calls and the
+  local-let/elaborated routes listed above.
 - Captured callee summaries expose `NoDup` for:
 
   ```coq
   ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))
   ```
 
-- The rejected route, "`ty_compatible Ω T_actual T_expected` plus
-  `capture_ref_free_ty T_expected` implies `capture_ref_free_ty T_actual`",
-  fails for function argument contravariance and `TC_Fn_Closure`. The next
-  route must prove root emptiness from `value_has_type` directly.
+## Future Candidate Areas
+
+These are candidate areas only; do not treat this list as a selected next
+proof target.
+
+- Mutable and affine/linear captures.
+- Broader general-callee `ECallExpr callee args` coverage beyond the current
+  direct, non-capturing function-value, and captured-call routes.
+- Semantics-level support for `ELetInfer`, if the language design later needs
+  safety for the original inferred-let core form rather than the elaborated
+  environment.
+- Progress, after a future small-step semantics exists.
+- Remaining false negatives from `plan/review.md` that can be reduced without
+  making sidecar validators define ordinary checker acceptance.
 
 ## TypeSafety Module Ownership
 
@@ -535,10 +240,8 @@ reducing validator false negatives:
 
 ## Sub-Agent Policy
 
-Follow `plan/implementation.md`.
-
-Use sub-agents only for design or implementation-only work. Before spawning a
-sub-agent, state why the task is design or implementation-only.
+Use sub-agents only for implementation tasks. Before spawning a sub-agent,
+state why the task is implementation-only.
 
 Do not delegate:
 

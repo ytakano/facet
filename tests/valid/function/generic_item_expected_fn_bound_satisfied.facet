@@ -1,0 +1,12 @@
+trait Show;
+
+impl Show for affine isize;
+
+fn keep<T>(x: affine T) -> affine T where T: Show {
+  x
+}
+
+fn main() -> affine isize {
+  let f: unrestricted fn(affine isize) -> affine isize = keep in
+  (f 1)
+}

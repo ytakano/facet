@@ -1,0 +1,8 @@
+fn id<T>(x: affine T) -> affine T {
+  x
+}
+
+fn main() -> affine isize {
+  let f: unrestricted fn(affine isize) -> affine isize = id in
+  (f 1)
+}

@@ -7251,6 +7251,47 @@ let rec closure_elab_suffix idx =
 let closure_elab_name idx =
   (((^) "__facet_closure" (closure_elab_suffix idx)), Big_int_Z.zero_big_int)
 
+(** val generic_fn_value_wrapper_name : Big_int_Z.big_int -> ident **)
+
+let generic_fn_value_wrapper_name idx =
+  (((^) "__facet_generic_fn_value" (closure_elab_suffix idx)),
+    Big_int_Z.zero_big_int)
+
+(** val wrapper_params_from_tys_from :
+    Big_int_Z.big_int -> ty list -> param list **)
+
+let rec wrapper_params_from_tys_from idx = function
+| [] -> []
+| t :: rest ->
+  { param_mutability = MImmutable; param_name = ("__facet_generic_arg", idx);
+    param_ty =
+    t } :: (wrapper_params_from_tys_from (Big_int_Z.succ_big_int idx) rest)
+
+(** val wrapper_params_from_tys : ty list -> param list **)
+
+let wrapper_params_from_tys tys =
+  wrapper_params_from_tys_from Big_int_Z.zero_big_int tys
+
+(** val expr_vars_of_params : param list -> expr list **)
+
+let rec expr_vars_of_params = function
+| [] -> []
+| p :: rest -> (EVar p.param_name) :: (expr_vars_of_params rest)
+
+(** val infer_fn_value_type_args_expected :
+    fn_def -> ty option -> ((ty list * ty list) * ty) option **)
+
+let infer_fn_value_type_args_expected fdef = function
+| Some t ->
+  let MkTy (_, t0) = t in
+  (match t0 with
+   | TFn (param_tys, ret) ->
+     (match infer_call_type_args_expected fdef param_tys (Some ret) with
+      | Some type_args -> Some ((type_args, param_tys), ret)
+      | None -> None)
+   | _ -> None)
+| None -> None
+
 (** val auto_drop_ret_name : Big_int_Z.big_int -> ident **)
 
 let auto_drop_ret_name idx =
@@ -7434,7 +7475,42 @@ let rec elaborate_raw_expr_fuel fuel expected env _UU03a9_ n _UU03a3_ next e =
      | RawUnit -> finish env EUnit [] next
      | RawLit lit -> finish env (ELit lit) [] next
      | RawVar x -> finish env (EVar x) [] next
-     | RawFn fname -> finish env (EFn fname) [] next
+     | RawFn fname ->
+       (match lookup_fn_b fname env.env_fns with
+        | Some fdef ->
+          if Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int
+          then finish env (EFn fname) [] next
+          else if (||) (negb (no_captures_b fdef))
+                    (negb (Nat.eqb fdef.fn_lifetimes Big_int_Z.zero_big_int))
+               then Infer_err ErrNotImplemented
+               else (match infer_fn_value_type_args_expected fdef expected with
+                     | Some p ->
+                       let (p0, ret) = p in
+                       let (type_args, param_tys) = p0 in
+                       (match check_struct_bounds env fdef.fn_bounds type_args with
+                        | Some err -> Infer_err err
+                        | None ->
+                          let wrapper_name =
+                            generic_fn_value_wrapper_name next
+                          in
+                          let wrapper_params =
+                            wrapper_params_from_tys param_tys
+                          in
+                          let wrapper_body = ECallGeneric (fname, type_args,
+                            (expr_vars_of_params wrapper_params))
+                          in
+                          let wrapper = { fn_name = wrapper_name;
+                            fn_lifetimes = Big_int_Z.zero_big_int;
+                            fn_outlives = []; fn_captures = []; fn_params =
+                            wrapper_params; fn_ret = ret; fn_body =
+                            wrapper_body; fn_type_params =
+                            Big_int_Z.zero_big_int; fn_bounds = [] }
+                          in
+                          let env' = append_env_fns env (wrapper :: []) in
+                          finish env' (EFn wrapper_name) (wrapper :: [])
+                            (Big_int_Z.succ_big_int next))
+                     | None -> Infer_err ErrTypeArgInferenceFailed)
+        | None -> finish env (EFn fname) [] next)
      | RawPlace p -> finish env (EPlace p) [] next
      | RawLet (m, x, t, e1, e2) ->
        (match elaborate_raw_expr_fuel fuel' (Some t) env _UU03a9_ n _UU03a3_

@@ -7089,6 +7089,38 @@ Fixpoint closure_elab_suffix (idx : nat) : string :=
 Definition closure_elab_name (idx : nat) : ident :=
   (String.append "__facet_closure"%string (closure_elab_suffix idx), 0).
 
+Definition generic_fn_value_wrapper_name (idx : nat) : ident :=
+  (String.append "__facet_generic_fn_value"%string (closure_elab_suffix idx), 0).
+
+Fixpoint wrapper_params_from_tys_from
+    (idx : nat) (tys : list Ty) : list param :=
+  match tys with
+  | [] => []
+  | T :: rest =>
+      MkParam MImmutable ("__facet_generic_arg"%string, idx) T ::
+      wrapper_params_from_tys_from (S idx) rest
+  end.
+
+Definition wrapper_params_from_tys (tys : list Ty) : list param :=
+  wrapper_params_from_tys_from 0 tys.
+
+Fixpoint expr_vars_of_params (ps : list param) : list expr :=
+  match ps with
+  | [] => []
+  | p :: rest => EVar (param_name p) :: expr_vars_of_params rest
+  end.
+
+Definition infer_fn_value_type_args_expected
+    (fdef : fn_def) (expected : option Ty) : option (list Ty * list Ty * Ty) :=
+  match expected with
+  | Some (MkTy _ (TFn param_tys ret)) =>
+      match infer_call_type_args_expected fdef param_tys (Some ret) with
+      | Some type_args => Some (type_args, param_tys, ret)
+      | None => None
+      end
+  | _ => None
+  end.
+
 Definition auto_drop_ret_name (idx : nat) : ident :=
   ("__facet_auto_drop_ret"%string, idx).
 
@@ -7237,7 +7269,35 @@ Fixpoint elaborate_raw_expr_fuel
       | RawUnit => finish env EUnit [] next
       | RawLit lit => finish env (ELit lit) [] next
       | RawVar x => finish env (EVar x) [] next
-      | RawFn fname => finish env (EFn fname) [] next
+      | RawFn fname =>
+          match lookup_fn_b fname (env_fns env) with
+          | None => finish env (EFn fname) [] next
+          | Some fdef =>
+              if Nat.eqb (fn_type_params fdef) 0
+              then finish env (EFn fname) [] next
+              else
+                if negb (no_captures_b fdef) || negb (Nat.eqb (fn_lifetimes fdef) 0)
+                then infer_err ErrNotImplemented
+                else
+                  match infer_fn_value_type_args_expected fdef expected with
+                  | None => infer_err ErrTypeArgInferenceFailed
+                  | Some (type_args, param_tys, ret) =>
+                      match check_struct_bounds env (fn_bounds fdef) type_args with
+                      | Some err => infer_err err
+                      | None =>
+                          let wrapper_name := generic_fn_value_wrapper_name next in
+                          let wrapper_params := wrapper_params_from_tys param_tys in
+                          let wrapper_body :=
+                            ECallGeneric fname type_args
+                              (expr_vars_of_params wrapper_params) in
+                          let wrapper :=
+                            MkFnDef wrapper_name 0 [] [] wrapper_params ret
+                              wrapper_body 0 [] in
+                          let env' := append_env_fns env [wrapper] in
+                          finish env' (EFn wrapper_name) [wrapper] (S next)
+                      end
+                  end
+          end
       | RawPlace p => finish env (EPlace p) [] next
       | RawCore ecore => finish env ecore [] next
       | RawBorrow rk p => finish env (EBorrow rk p) [] next

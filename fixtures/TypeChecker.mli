@@ -1037,6 +1037,17 @@ val closure_elab_suffix : Big_int_Z.big_int -> string
 
 val closure_elab_name : Big_int_Z.big_int -> ident
 
+val generic_fn_value_wrapper_name : Big_int_Z.big_int -> ident
+
+val wrapper_params_from_tys_from : Big_int_Z.big_int -> ty list -> param list
+
+val wrapper_params_from_tys : ty list -> param list
+
+val expr_vars_of_params : param list -> expr list
+
+val infer_fn_value_type_args_expected :
+  fn_def -> ty option -> ((ty list * ty list) * ty) option
+
 val auto_drop_ret_name : Big_int_Z.big_int -> ident
 
 val auto_drop_tmp_name : Big_int_Z.big_int -> ident

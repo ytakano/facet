@@ -29,10 +29,15 @@ Implemented:
   elaboration uses annotated `let`, function return type, assignment/replace
   RHS type, and `if` branch expected type to solve remaining type args before
   emitting `ECallGeneric`.
+- Expected-monomorphic generic item values are supported. When a generic
+  function item is used at an expected concrete `fn(...) -> ...` type, raw
+  elaboration infers type args, validates `fn_bounds`, generates a monomorphic
+  wrapper, and exposes the wrapper through ordinary `EFn`/`TFn` function-value
+  paths.
 
 Not implemented yet:
 
-- Generic function values.
+- Full type-polymorphic function values.
 
 ## Next Implementation Steps
 
@@ -47,13 +52,7 @@ Current facts:
 - Generic direct calls are already handled by raw elaboration to `ECallGeneric`;
   this should remain separate from first-class generic values.
 
-1. Add expected-monomorphic generic item values.
-   - Allow a generic function item to be used where an expected concrete
-     `fn(...) -> ...` type determines all type args.
-   - Elaborate/check the item as the instantiated monomorphic function value.
-   - Do not infer type args from trait impl search.
-
-2. Add full type-polymorphic function values later.
+1. Add full type-polymorphic function values.
    - Add surface/core type syntax for type-generic function values, including
      trait bounds.
    - Extend `EFn`, `ECallExpr`, checker soundness, FIR printing, and regression

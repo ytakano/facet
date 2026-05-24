@@ -1,0 +1,5 @@
+fn main() -> affine isize {
+  let mut x: affine isize = 1;
+  let old: affine isize = (replace x 2);
+  old
+}

@@ -3527,6 +3527,60 @@ let instantiate_struct_instance_ty s lifetime_args type_args =
          s.struct_fields)),
     (TStruct (s.struct_name, lifetime_args, type_args)))
 
+(** val auto_drop_paths_for_ty_fuel :
+    Big_int_Z.big_int -> global_env -> ty -> field_path -> field_path list **)
+
+let rec auto_drop_paths_for_ty_fuel fuel env t prefix =
+  match ty_usage t with
+  | UAffine ->
+    (match ty_core t with
+     | TStruct (sname, lts, args) ->
+       ((fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+          (fun _ -> prefix :: [])
+          (fun fuel' ->
+          match lookup_struct sname env with
+          | Some s ->
+            let rec go = function
+            | [] -> []
+            | f :: rest ->
+              app
+                (auto_drop_paths_for_ty_fuel fuel' env
+                  (instantiate_struct_field_ty lts args f)
+                  (app prefix (f.field_name :: [])))
+                (go rest)
+            in go s.struct_fields
+          | None -> prefix :: [])
+          fuel)
+     | _ -> prefix :: [])
+  | _ -> []
+
+(** val auto_drop_paths_for_ty : global_env -> ty -> field_path list **)
+
+let auto_drop_paths_for_ty env t =
+  auto_drop_paths_for_ty_fuel (Big_int_Z.succ_big_int
+    (add (length env.env_structs) (ty_depth t))) env t []
+
+(** val filter_live_drop_paths :
+    binding_state -> field_path list -> field_path list **)
+
+let rec filter_live_drop_paths st = function
+| [] -> []
+| p :: rest ->
+  if binding_available_b st p
+  then p :: (filter_live_drop_paths st rest)
+  else filter_live_drop_paths st rest
+
+(** val auto_drop_live_paths :
+    global_env -> ident -> ty -> sctx -> field_path list **)
+
+let auto_drop_live_paths env x t _UU03a3_ =
+  match sctx_lookup x _UU03a3_ with
+  | Some p ->
+    let (_, st) = p in
+    filter_live_drop_paths st (auto_drop_paths_for_ty env t)
+  | None -> []
+
 (** val infer_core_env_state_fuel :
     Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
     sctx -> expr -> (ty * sctx) infer_result **)
@@ -6673,6 +6727,56 @@ let rec closure_elab_suffix idx =
 let closure_elab_name idx =
   (((^) "__facet_closure" (closure_elab_suffix idx)), Big_int_Z.zero_big_int)
 
+(** val auto_drop_ret_name : Big_int_Z.big_int -> ident **)
+
+let auto_drop_ret_name idx =
+  ("__facet_auto_drop_ret", idx)
+
+(** val auto_drop_tmp_name : Big_int_Z.big_int -> ident **)
+
+let auto_drop_tmp_name idx =
+  ("__facet_auto_drop", idx)
+
+(** val place_of_path_from : place -> field_path -> place **)
+
+let rec place_of_path_from base = function
+| [] -> base
+| field :: rest -> place_of_path_from (PField (base, field)) rest
+
+(** val place_of_field_path : ident -> field_path -> place **)
+
+let place_of_field_path x p =
+  place_of_path_from (PVar x) p
+
+(** val wrap_auto_drop_expr :
+    ident -> field_path list -> expr -> Big_int_Z.big_int ->
+    expr * Big_int_Z.big_int **)
+
+let rec wrap_auto_drop_expr x paths ret next =
+  match paths with
+  | [] -> (ret, next)
+  | path :: rest ->
+    let tmp = auto_drop_tmp_name next in
+    let (tail, next') =
+      wrap_auto_drop_expr x rest ret (Big_int_Z.succ_big_int next)
+    in
+    ((ELet (MImmutable, tmp, (MkTy (UUnrestricted, TUnits)), (EDrop (EPlace
+    (place_of_field_path x path))), tail)), next')
+
+(** val wrap_let_body_auto_drops :
+    global_env -> ident -> ty -> sctx -> ty -> expr -> Big_int_Z.big_int ->
+    expr * Big_int_Z.big_int **)
+
+let wrap_let_body_auto_drops env x t _UU03a3__body body_ty body next =
+  match auto_drop_live_paths env x t _UU03a3__body with
+  | [] -> (body, next)
+  | f :: l ->
+    let ret = auto_drop_ret_name next in
+    let (tail, next') =
+      wrap_auto_drop_expr x (f :: l) (EVar ret) (Big_int_Z.succ_big_int next)
+    in
+    ((ELet (MImmutable, ret, body_ty, body, tail)), next')
+
 (** val closure_elab_capture_param :
     global_env -> outlives_ctx -> sctx -> ident -> param infer_result **)
 
@@ -6804,10 +6908,19 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
            | Infer_ok p2 ->
              let (p3, next2) = p2 in
              let (p4, extras2) = p3 in
-             let (e2', _) = p4 in
-             let e' = ELet (m, x, t, e1', e2') in
+             let (e2', _UU03a3_2) = p4 in
              let extras = app extras1 extras2 in
-             finish (append_env_fns env extras) e' extras next2
+             let env2 = append_env_fns env extras in
+             (match infer_core_env_state_fuel fuel' env2 _UU03a9_ n
+                      (sctx_add x t m _UU03a3_1) e2' with
+              | Infer_ok p5 ->
+                let (t2, _) = p5 in
+                let (e2'', next3) =
+                  wrap_let_body_auto_drops env2 x t _UU03a3_2 t2 e2' next2
+                in
+                let e' = ELet (m, x, t, e1', e2'') in
+                finish env2 e' extras next3
+              | Infer_err err -> Infer_err err)
            | Infer_err err -> Infer_err err)
         | Infer_err err -> Infer_err err)
      | RawLetInfer (m, x, e1, e2) ->
@@ -6826,10 +6939,19 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
               | Infer_ok p3 ->
                 let (p4, next2) = p3 in
                 let (p5, extras2) = p4 in
-                let (e2', _) = p5 in
-                let e' = ELet (m, x, t1, e1', e2') in
+                let (e2', _UU03a3_2) = p5 in
                 let extras = app extras1 extras2 in
-                finish (append_env_fns env extras) e' extras next2
+                let env2 = append_env_fns env extras in
+                (match infer_core_env_state_fuel fuel' env2 _UU03a9_ n
+                         (sctx_add x t1 m _UU03a3_1) e2' with
+                 | Infer_ok p6 ->
+                   let (t2, _) = p6 in
+                   let (e2'', next3) =
+                     wrap_let_body_auto_drops env2 x t1 _UU03a3_2 t2 e2' next2
+                   in
+                   let e' = ELet (m, x, t1, e1', e2'') in
+                   finish env2 e' extras next3
+                 | Infer_err err -> Infer_err err)
               | Infer_err err -> Infer_err err)
            | Infer_err err -> Infer_err err)
         | Infer_err err -> Infer_err err)

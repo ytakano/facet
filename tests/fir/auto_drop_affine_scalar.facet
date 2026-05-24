@@ -1,0 +1,4 @@
+fn main() -> unrestricted () {
+  let x: affine isize = 1;
+  ()
+}

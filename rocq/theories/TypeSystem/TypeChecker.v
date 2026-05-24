@@ -2370,6 +2370,58 @@ Definition instantiate_struct_instance_ty
   MkTy (usage_max_tys (map (instantiate_struct_field_ty lifetime_args type_args) (struct_fields s)))
        (TStruct (struct_name s) lifetime_args type_args).
 
+Fixpoint auto_drop_paths_for_ty_fuel
+    (fuel : nat) (env : global_env) (T : Ty) (prefix : field_path)
+    {struct fuel} : list field_path :=
+  match ty_usage T with
+  | UAffine =>
+      match ty_core T with
+      | TStruct sname lts args =>
+          match fuel with
+          | O => [prefix]
+          | S fuel' =>
+              match lookup_struct sname env with
+              | Some s =>
+                  let fix go (fields : list field_def) : list field_path :=
+                    match fields with
+                    | [] => []
+                    | f :: rest =>
+                        auto_drop_paths_for_ty_fuel fuel' env
+                          (instantiate_struct_field_ty lts args f)
+                          (prefix ++ [field_name f]) ++ go rest
+                    end
+                  in go (struct_fields s)
+              | None => [prefix]
+              end
+          end
+      | _ => [prefix]
+      end
+  | _ => []
+  end.
+
+Definition auto_drop_paths_for_ty
+    (env : global_env) (T : Ty) : list field_path :=
+  auto_drop_paths_for_ty_fuel
+    (S (List.length (env_structs env) + ty_depth T)) env T [].
+
+Fixpoint filter_live_drop_paths
+    (st : binding_state) (paths : list field_path) : list field_path :=
+  match paths with
+  | [] => []
+  | p :: rest =>
+      if binding_available_b st p
+      then p :: filter_live_drop_paths st rest
+      else filter_live_drop_paths st rest
+  end.
+
+Definition auto_drop_live_paths
+    (env : global_env) (x : ident) (T : Ty) (Σ : sctx)
+    : list field_path :=
+  match sctx_lookup x Σ with
+  | Some (_, st) => filter_live_drop_paths st (auto_drop_paths_for_ty env T)
+  | None => []
+  end.
+
 Fixpoint infer_core_env_state_fuel (fuel : nat)
     (env : global_env) (Ω : outlives_ctx) (n : nat) (Σ : sctx) (e : expr)
     : infer_result (Ty * sctx) :=
@@ -6355,6 +6407,20 @@ Definition ex_split_ctx : ctx :=
 Definition ex_split_ctx_x_moved : ctx :=
   [((("p"%string), 0), ex_split_ty, MkBindingState false [["x"%string]], MMutable)].
 
+Example auto_drop_live_paths_affine_struct_field :
+  auto_drop_live_paths ex_env_split (("p"%string), 0) ex_split_ty ex_split_ctx =
+  [["x"%string]].
+Proof. vm_compute. reflexivity. Qed.
+
+Example auto_drop_live_paths_affine_struct_moved_field_skipped :
+  auto_drop_live_paths ex_env_split (("p"%string), 0) ex_split_ty ex_split_ctx_x_moved =
+  [].
+Proof. vm_compute. reflexivity. Qed.
+
+Example auto_drop_paths_linear_not_generated :
+  auto_drop_paths_for_ty ex_env_split (MkTy ULinear TIntegers) = [].
+Proof. vm_compute. reflexivity. Qed.
+
 Example infer_core_env_struct_instance_usage_after_args :
   infer_core_env
     (MkGlobalEnv
@@ -6507,6 +6573,44 @@ Fixpoint closure_elab_suffix (idx : nat) : string :=
 Definition closure_elab_name (idx : nat) : ident :=
   (String.append "__facet_closure"%string (closure_elab_suffix idx), 0).
 
+Definition auto_drop_ret_name (idx : nat) : ident :=
+  ("__facet_auto_drop_ret"%string, idx).
+
+Definition auto_drop_tmp_name (idx : nat) : ident :=
+  ("__facet_auto_drop"%string, idx).
+
+Fixpoint place_of_path_from (base : place) (p : field_path) : place :=
+  match p with
+  | [] => base
+  | field :: rest => place_of_path_from (PField base field) rest
+  end.
+
+Definition place_of_field_path (x : ident) (p : field_path) : place :=
+  place_of_path_from (PVar x) p.
+
+Fixpoint wrap_auto_drop_expr
+    (x : ident) (paths : list field_path) (ret : expr) (next : nat)
+    : expr * nat :=
+  match paths with
+  | [] => (ret, next)
+  | path :: rest =>
+      let tmp := auto_drop_tmp_name next in
+      let '(tail, next') := wrap_auto_drop_expr x rest ret (S next) in
+      (ELet MImmutable tmp (MkTy UUnrestricted TUnits)
+        (EDrop (EPlace (place_of_field_path x path))) tail, next')
+  end.
+
+Definition wrap_let_body_auto_drops
+    (env : global_env) (x : ident) (T : Ty) (Σ_body : sctx)
+    (body_ty : Ty) (body : expr) (next : nat) : expr * nat :=
+  match auto_drop_live_paths env x T Σ_body with
+  | [] => (body, next)
+  | paths =>
+      let ret := auto_drop_ret_name next in
+      let '(tail, next') := wrap_auto_drop_expr x paths (EVar ret) (S next) in
+      (ELet MImmutable ret body_ty body tail, next')
+  end.
+
 Definition closure_elab_capture_param
     (env : global_env) (Ω : outlives_ctx) (Σ : sctx) (x : ident)
     : infer_result param :=
@@ -6615,10 +6719,18 @@ Fixpoint elaborate_raw_expr_fuel
               match elaborate_raw_expr_fuel fuel' env1 Ω n
                       (sctx_add x T m Σ1) next1 e2 with
               | infer_err err => infer_err err
-              | infer_ok (e2', _, extras2, next2) =>
-                  let e' := ELet m x T e1' e2' in
+              | infer_ok (e2', Σ2, extras2, next2) =>
                   let extras := extras1 ++ extras2 in
-                  finish (append_env_fns env extras) e' extras next2
+                  let env2 := append_env_fns env extras in
+                  match infer_core_env_state_fuel fuel' env2 Ω n
+                          (sctx_add x T m Σ1) e2' with
+                  | infer_err err => infer_err err
+                  | infer_ok (T2, _) =>
+                      let '(e2'', next3) :=
+                        wrap_let_body_auto_drops env2 x T Σ2 T2 e2' next2 in
+                      let e' := ELet m x T e1' e2'' in
+                      finish env2 e' extras next3
+                  end
               end
           end
       | RawLetInfer m x e1 e2 =>
@@ -6633,10 +6745,18 @@ Fixpoint elaborate_raw_expr_fuel
                   match elaborate_raw_expr_fuel fuel' env1 Ω n
                           (sctx_add x T1 m Σ1) next1 e2 with
                   | infer_err err => infer_err err
-                  | infer_ok (e2', _, extras2, next2) =>
-                      let e' := ELet m x T1 e1' e2' in
+                  | infer_ok (e2', Σ2, extras2, next2) =>
                       let extras := extras1 ++ extras2 in
-                      finish (append_env_fns env extras) e' extras next2
+                      let env2 := append_env_fns env extras in
+                      match infer_core_env_state_fuel fuel' env2 Ω n
+                              (sctx_add x T1 m Σ1) e2' with
+                      | infer_err err => infer_err err
+                      | infer_ok (T2, _) =>
+                          let '(e2'', next3) :=
+                            wrap_let_body_auto_drops env2 x T1 Σ2 T2 e2' next2 in
+                          let e' := ELet m x T1 e1' e2'' in
+                          finish env2 e' extras next3
+                      end
                   end
               end
           end

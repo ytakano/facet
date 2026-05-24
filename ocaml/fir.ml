@@ -31,6 +31,10 @@ type fir_instr =
   | FIGoto    of string
   | FIIf      of fir_tval * string * string
 
+type drop_filter =
+  | DropMaterialized
+  | DropSourcePlace of place
+
 type fir_fn = {
   ff_name   : ident;
   ff_params : param list;
@@ -246,7 +250,7 @@ let rec to_value env = function
   | EDrop inner ->
     let v = to_value env inner in
     let tmp = fresh_id env in
-    emit env (FIDrop (tmp, FIPVar (ident_of_tval env v), v.ft));
+    drop_materialized_tval env tmp v;
     { fv = FVVar tmp; ft = unit_ty }
   | EReplace (place, e_new) ->
     let fir_place = lower_place place in
@@ -263,7 +267,7 @@ let rec to_value env = function
     let old_tmp = fresh_id env in
     emit env (FIReplace (old_tmp, p_ty, fir_place, p_ty, v_new));
     let drop_tmp = fresh_id env in
-    emit env (FIDrop (drop_tmp, FIPVar old_tmp, p_ty));
+    drop_materialized_place env drop_tmp (FIPVar old_tmp) p_ty;
     restore_path env place;
     { fv = FVVar drop_tmp; ft = unit_ty }
   | EBorrow (rk, place) ->
@@ -305,43 +309,89 @@ let rec to_value env = function
 and drop_place env result_id place =
   let place_ty = infer_place_ty env place in
   let fir_place = lower_place place in
-  let emitted = structural_drop env result_id place fir_place place_ty in
-  if not emitted then
+  drop_structural env result_id (DropSourcePlace place) fir_place place_ty
+
+and drop_materialized_tval env result_id v =
+  drop_materialized_place env result_id (FIPVar (ident_of_tval env v)) v.ft
+
+and drop_materialized_place env result_id fir_place place_ty =
+  drop_structural env result_id DropMaterialized fir_place place_ty
+
+and drop_structural env result_id filter fir_place place_ty =
+  if not (structural_drop env result_id filter fir_place place_ty) then
     emit env (FILet (result_id, unit_ty, { fv = FVUnit; ft = unit_ty }))
 
-and structural_drop env result_id place fir_place place_ty =
-  match place_root_path place with
-  | Some (root, path) when path <> [] && path_moved env root path ->
+and source_place_moved env = function
+  | DropSourcePlace place ->
+    begin match place_root_path place with
+    | Some (root, path) when path <> [] && path_moved env root path -> true
+    | _ -> false
+    end
+  | DropMaterialized -> false
+
+and field_drop_filter filter field =
+  match filter with
+  | DropSourcePlace place -> DropSourcePlace (PField (place, field))
+  | DropMaterialized -> DropMaterialized
+
+and drop_needed env filter place_ty =
+  if source_place_moved env filter || ty_usage place_ty = UUnrestricted then
     false
-  | _ ->
-    begin match ty_core place_ty with
+  else
+    match ty_core place_ty with
+    | TStruct (sname, lts, args) ->
+      begin match lookup_struct sname env.env with
+      | None -> true
+      | Some struct_def ->
+        List.exists
+          (fun field_def ->
+            let field_ty = instantiate_struct_field_ty lts args field_def in
+            drop_needed env (field_drop_filter filter field_def.field_name) field_ty)
+          struct_def.struct_fields
+      end
+    | _ -> true
+
+and structural_drop env result_id filter fir_place place_ty =
+  if not (drop_needed env filter place_ty) then
+    false
+  else
+    match ty_core place_ty with
     | TStruct (sname, lts, args) ->
       begin match lookup_struct sname env.env with
       | None ->
         emit env (FIDrop (result_id, fir_place, place_ty));
-        add_moved_path env place place_ty;
+        begin match filter with
+        | DropSourcePlace place -> add_moved_path env place place_ty
+        | DropMaterialized -> ()
+        end;
         true
       | Some struct_def ->
-        let emitted_any = ref false in
-        let fields = struct_def.struct_fields in
+        let droppable_fields =
+          List.filter
+            (fun field_def ->
+              let field_ty = instantiate_struct_field_ty lts args field_def in
+              drop_needed env (field_drop_filter filter field_def.field_name) field_ty)
+            struct_def.struct_fields
+        in
         List.iteri
           (fun idx field_def ->
-            let field_place = PField (place, field_def.field_name) in
             let field_fir_place = FIPField (fir_place, field_def.field_name) in
+            let field_filter = field_drop_filter filter field_def.field_name in
             let field_ty = instantiate_struct_field_ty lts args field_def in
             let drop_id =
-              if idx = List.length fields - 1 then result_id else fresh_id env
+              if idx = List.length droppable_fields - 1 then result_id else fresh_id env
             in
-            if structural_drop env drop_id field_place field_fir_place field_ty then
-              emitted_any := true)
-          fields;
-        !emitted_any
+            ignore (structural_drop env drop_id field_filter field_fir_place field_ty))
+          droppable_fields;
+        true
       end
     | _ ->
       emit env (FIDrop (result_id, fir_place, place_ty));
-      add_moved_path env place place_ty;
+      begin match filter with
+      | DropSourcePlace place -> add_moved_path env place place_ty
+      | DropMaterialized -> ()
+      end;
       true
-    end
 
 and emit_into env x t = function
   | EUnit | ELit _ | EVar _ as e ->
@@ -359,7 +409,7 @@ and emit_into env x t = function
     | EPlace place -> drop_place env x place
     | _ ->
       let v = to_value env inner in
-      emit env (FIDrop (x, FIPVar (ident_of_tval env v), v.ft))
+      drop_materialized_tval env x v
     end
   | EReplace (place, e_new) ->
     let fir_place = lower_place place in
@@ -373,7 +423,7 @@ and emit_into env x t = function
     let v_new = to_value env e_new in
     let old_tmp = fresh_id env in
     emit env (FIReplace (old_tmp, p_ty, fir_place, p_ty, v_new));
-    emit env (FIDrop (x, FIPVar old_tmp, p_ty));
+    drop_materialized_place env x (FIPVar old_tmp) p_ty;
     restore_path env place
   | e ->
     let v = to_value env e in

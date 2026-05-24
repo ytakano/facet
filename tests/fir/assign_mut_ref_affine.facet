@@ -1,0 +1,14 @@
+struct Pair {
+  x: affine isize,
+  y: affine bool
+}
+
+fn scalar(mut x: affine isize) -> unrestricted () {
+  let r = (&mut x) in
+  (*r = 2)
+}
+
+fn strukt(mut p: affine Pair) -> unrestricted () {
+  let r = (&mut p) in
+  (*r = Pair { x = 2, y = false })
+}

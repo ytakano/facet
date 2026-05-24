@@ -716,6 +716,17 @@ val usage_max_tys : ty list -> usage
 val instantiate_struct_instance_ty :
   struct_def -> lifetime list -> ty list -> ty
 
+val auto_drop_paths_for_ty_fuel :
+  Big_int_Z.big_int -> global_env -> ty -> field_path -> field_path list
+
+val auto_drop_paths_for_ty : global_env -> ty -> field_path list
+
+val filter_live_drop_paths :
+  binding_state -> field_path list -> field_path list
+
+val auto_drop_live_paths :
+  global_env -> ident -> ty -> sctx -> field_path list
+
 val infer_core_env_state_fuel :
   Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
   sctx -> expr -> (ty * sctx) infer_result
@@ -980,6 +991,22 @@ val append_env_fns : global_env -> fn_def list -> global_env
 val closure_elab_suffix : Big_int_Z.big_int -> string
 
 val closure_elab_name : Big_int_Z.big_int -> ident
+
+val auto_drop_ret_name : Big_int_Z.big_int -> ident
+
+val auto_drop_tmp_name : Big_int_Z.big_int -> ident
+
+val place_of_path_from : place -> field_path -> place
+
+val place_of_field_path : ident -> field_path -> place
+
+val wrap_auto_drop_expr :
+  ident -> field_path list -> expr -> Big_int_Z.big_int ->
+  expr * Big_int_Z.big_int
+
+val wrap_let_body_auto_drops :
+  global_env -> ident -> ty -> sctx -> ty -> expr -> Big_int_Z.big_int ->
+  expr * Big_int_Z.big_int
 
 val closure_elab_capture_param :
   global_env -> outlives_ctx -> sctx -> ident -> param infer_result

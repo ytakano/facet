@@ -27,6 +27,48 @@ run_case() {
   rm -f "$tmp"
 }
 
+run_drop_case() {
+  file=$1
+  place=$2
+  tmp=$(mktemp)
+
+  if dune exec ocaml/main.exe -- --emit-fir "$tmp" "$file" >/dev/null 2>&1; then
+    if grep -F "drop " "$tmp" | grep -Fq "$place"; then
+      printf 'ok   %s\n' "$file"
+    else
+      printf 'FAIL %s: expected FIR drop line to contain %s\n' "$file" "$place"
+      cat "$tmp"
+      status=1
+    fi
+  else
+    printf 'FAIL %s: --emit-fir failed\n' "$file"
+    status=1
+  fi
+
+  rm -f "$tmp"
+}
+
+run_drop_absent() {
+  file=$1
+  place=$2
+  tmp=$(mktemp)
+
+  if dune exec ocaml/main.exe -- --emit-fir "$tmp" "$file" >/dev/null 2>&1; then
+    if grep -F "drop " "$tmp" | grep -Fq "$place"; then
+      printf 'FAIL %s: FIR unexpectedly contained drop of %s\n' "$file" "$place"
+      cat "$tmp"
+      status=1
+    else
+      printf 'ok   %s\n' "$file"
+    fi
+  else
+    printf 'FAIL %s: --emit-fir failed\n' "$file"
+    status=1
+  fi
+
+  rm -f "$tmp"
+}
+
 run_case tests/valid/replace/replace_through_nested_ref.facet "replace old#1 as unrestricted isize = **rr#1 as unrestricted isize"
 run_case tests/valid/replace/replace_through_immut_bound_nested_mut_ref.facet "replace old#1 as unrestricted isize = **rr#1 as unrestricted isize"
 run_case tests/valid/assign/assign_through_nested_ref.facet "= **rr#1 as unrestricted isize with 42"
@@ -43,5 +85,20 @@ run_case tests/fir/structural_drop.facet "drop %t0#0 as unrestricted unit = p#1.
 run_case tests/fir/closure_capture_value.facet "closure __facet_closure"
 run_case tests/fir/closure_capture_value.facet "[y#"
 run_case tests/fir/closure_capture_value.facet "fn __facet_closure"
+run_drop_case tests/fir/auto_drop_affine_scalar.facet "x#1 as affine isize"
+run_drop_case tests/fir/auto_drop_affine_struct.facet "p#1.x as affine isize"
+run_drop_case tests/fir/auto_drop_affine_struct.facet "p#1.y as affine bool"
+run_drop_case tests/fir/auto_drop_partial_struct.facet "p#1.y as affine bool"
+run_drop_absent tests/fir/auto_drop_partial_struct.facet "p#1.x as affine isize"
+run_case tests/fir/assign_affine_struct_drop_old.facet "replace %t0#0 as affine Pair = p#1 as affine Pair"
+run_drop_case tests/fir/assign_affine_struct_drop_old.facet "%t0#0.x as affine isize"
+run_drop_case tests/fir/assign_affine_struct_drop_old.facet "%t0#0.y as affine bool"
+run_case tests/fir/assign_mut_ref_affine.facet "replace %t1#0 as affine isize = *r#1 as affine isize"
+run_drop_case tests/fir/assign_mut_ref_affine.facet "%t1#0 as affine isize"
+run_case tests/fir/assign_mut_ref_affine.facet "replace %t1#0 as affine Pair = *r#2 as affine Pair"
+run_drop_case tests/fir/assign_mut_ref_affine.facet "%t1#0.x as affine isize"
+run_drop_case tests/fir/assign_mut_ref_affine.facet "%t1#0.y as affine bool"
+run_case tests/fir/replace_affine_no_immediate_drop.facet " = x#1 as affine isize with 2"
+run_drop_absent tests/fir/replace_affine_no_immediate_drop.facet "old#1 as affine isize"
 
 exit "$status"

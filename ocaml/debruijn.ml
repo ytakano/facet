@@ -607,6 +607,7 @@ let convert_program_items (items : named_item list) : global_env =
     env_structs = List.map (convert_struct struct_names) structs;
     env_traits = List.map (convert_trait struct_names) traits;
     env_impls = List.map (convert_impl struct_names) impls;
+    env_local_bounds = [];
     env_fns = [];
   } in
   begin match validate_env base_env with

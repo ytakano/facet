@@ -233,6 +233,31 @@ Proof.
   eapply store_typed_entries_refs_wf. exact Htyped.
 Qed.
 
+Lemma store_entry_typed_clear_global_env_local_bounds :
+  forall env bounds s entry ce,
+    store_entry_typed (global_env_with_local_bounds env bounds) s entry ce ->
+    store_entry_typed env s entry ce.
+Proof.
+  unfold store_entry_typed.
+  intros env bounds s entry ce Hentry.
+  destruct entry as [sx sT sv sst], ce as [[[cx cT] cst] cm]; simpl in *.
+  destruct Hentry as (Hx & HT & Hst & Hv).
+  repeat split; auto.
+  eapply value_has_type_clear_global_env_local_bounds. exact Hv.
+Qed.
+
+Lemma store_typed_clear_global_env_local_bounds :
+  forall env bounds s Σ,
+    store_typed (global_env_with_local_bounds env bounds) s Σ ->
+    store_typed env s Σ.
+Proof.
+  unfold store_typed.
+  intros env bounds s Σ Htyped.
+  eapply Forall2_impl; [| exact Htyped].
+  intros entry ce Hentry.
+  eapply store_entry_typed_clear_global_env_local_bounds. exact Hentry.
+Qed.
+
 Theorem eval_no_dangling_refs_roots_ready :
   forall env s e s' v Ω n R Σ T Σ' R' roots,
     eval env s e s' v ->
@@ -274,12 +299,27 @@ Proof.
   unfold typed_fn_env_roots in Htyped_fn.
   destruct Htyped_fn as [T_body [Γ_out [Htyped _]]].
   unfold initial_store_for_fn in Hstore.
-  eapply eval_no_dangling_refs_roots_ready.
-  - exact Heval.
-  - exact Hready.
-  - exact Hstore.
-  - exact Hroots.
-  - exact Hstore_shadow.
-  - exact Hroot_shadow.
-  - exact Htyped.
+  pose (body_env := global_env_with_local_bounds env (fn_bounds f)).
+  assert (Hstore_body_env :
+      store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
+  { subst body_env.
+    eapply store_typed_global_env_with_local_bounds. exact Hstore. }
+  assert (Heval_body_env : eval body_env s (fn_body f) s' v).
+  { subst body_env.
+    eapply eval_global_env_with_local_bounds. exact Heval. }
+  destruct (proj1 eval_preserves_typing_roots_ready_mutual
+      body_env s (fn_body f) s' v Heval_body_env
+      (fn_outlives f) (fn_lifetimes f) R0
+      (sctx_of_ctx (fn_body_ctx f)) T_body
+      (sctx_of_ctx Γ_out) R' roots Hready Hstore_body_env Hroots
+      Hstore_shadow Hroot_shadow Htyped) as [Hstore_final [Hv _]].
+  assert (Hv_env : value_has_type env s' v T_body).
+  { subst body_env.
+    eapply value_has_type_clear_global_env_local_bounds. exact Hv. }
+  assert (Hstore_env : store_typed env s' (sctx_of_ctx Γ_out)).
+  { subst body_env.
+    eapply store_typed_clear_global_env_local_bounds. exact Hstore_final. }
+  split.
+  - eapply value_has_type_runtime_refs_wf. exact Hv_env.
+  - eapply store_typed_refs_wf. exact Hstore_env.
 Qed.

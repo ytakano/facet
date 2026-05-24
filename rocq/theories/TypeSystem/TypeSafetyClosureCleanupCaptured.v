@@ -25,7 +25,8 @@ Lemma eval_captured_call_body_ctx_cleanup_preserves_value_and_refs_erased_with_p
     root_env_no_shadow R_params ->
     root_env_covers_params (fn_params fcall ++ fn_captures fcall) R_params ->
     provenance_ready_expr (fn_body fcall) ->
-    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       R_params (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
@@ -99,6 +100,20 @@ Proof.
       as Hprefix.
     unfold fn_body_ctx, fn_body_params, sctx_of_ctx in *.
     rewrite params_ctx_app. exact Hprefix. }
+  pose (body_env := global_env_with_local_bounds env (fn_bounds fcall)).
+  assert (Hstore_bind_prefix_body_env :
+    store_typed_prefix body_env
+      (bind_params (fn_params fcall) vs (captured ++ s_args))
+      (sctx_of_ctx (fn_body_ctx fcall))).
+  { subst body_env.
+    eapply cleanup_store_typed_prefix_global_env_with_local_bounds.
+    exact Hstore_bind_prefix. }
+  assert (Heval_body_body_env :
+    eval body_env (bind_params (fn_params fcall) vs (captured ++ s_args))
+      (fn_body fcall) s_body ret).
+  { subst body_env.
+    eapply cleanup_eval_global_env_with_local_bounds.
+    exact Heval_body. }
   assert (Hframe_start :
     store_frame_scope (fn_params fcall ++ fn_captures fcall)
       (sctx_of_ctx (fn_body_ctx fcall))
@@ -111,9 +126,9 @@ Proof.
   { unfold fn_body_ctx, fn_body_params, sctx_of_ctx.
     eapply store_param_prefix_frame_static_fresh; eassumption. }
   destruct (proj1 Hframe_mutual
-              env
+              body_env
               (bind_params (fn_params fcall) vs (captured ++ s_args))
-              (fn_body fcall) s_body ret Heval_body
+              (fn_body fcall) s_body ret Heval_body_body_env
               (fn_outlives fcall) (fn_lifetimes fcall)
               R_params (sctx_of_ctx (fn_body_ctx fcall))
               T_body (sctx_of_ctx Γ_out) R_body roots_body
@@ -122,13 +137,13 @@ Proof.
               Hrn_params Hframe_start Hframe_fresh_start)
     as [_ [_ [_ [_ [Hframe_scope _]]]]].
   pose proof (proj1 Htyping_mutual
-                env
+                body_env
                 (bind_params (fn_params fcall) vs (captured ++ s_args))
-                (fn_body fcall) s_body ret Heval_body
+                (fn_body fcall) s_body ret Heval_body_body_env
                 (fn_outlives fcall) (fn_lifetimes fcall)
                 R_params (sctx_of_ctx (fn_body_ctx fcall))
                 T_body (sctx_of_ctx Γ_out) R_body roots_body
-                Hprov_body Hstore_bind_prefix Hroots_bind Hshadow_bind
+                Hprov_body Hstore_bind_prefix_body_env Hroots_bind Hshadow_bind
                 Hrn_params Htyped_body) as Hbody_package.
   destruct (typed_rooted_eval_roots _ _ _ _ _ _ _ _ Hbody_package)
     as [Hroots_body Hret_roots Hshadow_body _].
@@ -136,9 +151,13 @@ Proof.
   pose proof (alpha_rename_fn_def_shape (store_names (captured ++ s_args))
                 fdef fcall used' Hrename) as Hshape.
   destruct Hshape as [_ [Hret _]].
+  assert (Hv_body_env : value_has_type env s_body ret T_body).
+  { subst body_env.
+    eapply cleanup_value_has_type_clear_global_env_local_bounds.
+    exact Hv_body. }
   assert (Hv_ret_fcall : value_has_type env s_body ret (fn_ret fcall)).
   { eapply value_has_type_compatible.
-    - exact Hv_body.
+    - exact Hv_body_env.
     - apply ty_compatible_b_sound with (Ω := fn_outlives fcall).
       exact Hcompat_body. }
   assert (Hv_ret_fdef : value_has_type env s_body ret (fn_ret fdef)).
@@ -148,9 +167,9 @@ Proof.
     store_param_scope (fn_params fcall ++ fn_captures fcall)
       (bind_params (fn_params fcall) vs (captured ++ s_args)) s_args).
   { constructor. exact Hprefix_all. }
-  destruct (Hscope_expr env
+  destruct (Hscope_expr body_env
               (bind_params (fn_params fcall) vs (captured ++ s_args))
-              (fn_body fcall) s_body ret Heval_body
+              (fn_body fcall) s_body ret Heval_body_body_env
               (fn_outlives fcall) (fn_lifetimes fcall)
               R_params (sctx_of_ctx (fn_body_ctx fcall))
               T_body (sctx_of_ctx Γ_out) R_body roots_body
@@ -167,7 +186,7 @@ Proof.
   destruct (eval_call_body_ctx_cleanup_erased_core
               env Ω s_args Σ_args fdef fcall σ s_body ret T_body Γ_out
               R_body roots_body frame_final Htyped_args Hret Hnodup_all
-              Hframe_scope Hscope_body Hv_body Hroots_body Hret_roots
+              Hframe_scope Hscope_body Hv_body_env Hroots_body Hret_roots
               Hshadow_body Hsame_body Hcompat_body Hexclude_all
               Hexclude_env_all)
     as [Hstore_erased [Hv_erased [Hremoved_exact_all _]]].
@@ -205,7 +224,8 @@ Lemma eval_captured_call_expr_body_ctx_cleanup_preserves_value_and_refs_erased_w
     root_env_no_shadow R_params ->
     root_env_covers_params (fn_params fcall ++ fn_captures fcall) R_params ->
     provenance_ready_expr (fn_body fcall) ->
-    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       R_params (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->

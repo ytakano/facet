@@ -5,6 +5,125 @@ From Facet.TypeSystem Require Export TypeSafetyClosureCleanupFrame.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
+Lemma cleanup_type_lookup_path_global_env_with_local_bounds :
+  forall env bounds T path,
+    type_lookup_path (global_env_with_local_bounds env bounds) T path =
+    type_lookup_path env T path.
+Proof.
+  intros env bounds T path.
+  revert env bounds T.
+  induction path as [| field rest IH]; intros env bounds T; simpl; auto.
+  destruct T as [u core]; simpl.
+  destruct core; try reflexivity.
+  change (lookup_struct s (global_env_with_local_bounds env bounds))
+    with (lookup_struct s env).
+  destruct (lookup_struct s env) as [sdef |]; [| reflexivity].
+  destruct (lookup_field field (struct_fields sdef)); [apply IH | reflexivity].
+Qed.
+
+Lemma cleanup_value_has_type_global_env_with_local_bounds :
+  forall env bounds s v T,
+    value_has_type env s v T ->
+    value_has_type (global_env_with_local_bounds env bounds) s v T
+with cleanup_struct_fields_have_type_global_env_with_local_bounds :
+  forall env bounds s lts args fields defs,
+    struct_fields_have_type env s lts args fields defs ->
+    struct_fields_have_type (global_env_with_local_bounds env bounds)
+      s lts args fields defs.
+Proof.
+  - intros env bounds s v T H.
+    induction H;
+      try solve
+        [ econstructor; simpl in *; eauto;
+          rewrite ?cleanup_type_lookup_path_global_env_with_local_bounds;
+          eauto ].
+  - intros env bounds s lts args fields defs H.
+    induction H; try solve [econstructor; eauto].
+Qed.
+
+Lemma cleanup_value_has_type_clear_global_env_local_bounds :
+  forall env bounds s v T,
+    value_has_type (global_env_with_local_bounds env bounds) s v T ->
+    value_has_type env s v T
+with cleanup_struct_fields_have_type_clear_global_env_local_bounds :
+  forall env bounds s lts args fields defs,
+    struct_fields_have_type (global_env_with_local_bounds env bounds)
+      s lts args fields defs ->
+    struct_fields_have_type env s lts args fields defs.
+Proof.
+  - intros env bounds s v T H.
+    remember (global_env_with_local_bounds env bounds) as env' eqn:Heq.
+    revert env bounds Heq.
+    induction H; intros env0 bounds Heq;
+      try solve
+        [ subst; econstructor; simpl in *; eauto;
+          rewrite ?cleanup_type_lookup_path_global_env_with_local_bounds in *;
+          eauto ].
+    all: try
+      (subst; econstructor; simpl in *; eauto;
+       rewrite ?cleanup_type_lookup_path_global_env_with_local_bounds in *;
+       eauto).
+  - intros env bounds s lts args fields defs H.
+    remember (global_env_with_local_bounds env bounds) as env' eqn:Heq.
+    revert env bounds Heq.
+    induction H; intros env0 bounds Heq; try solve [econstructor; eauto].
+    all: try (subst; eapply SFHT_Cons; eauto;
+      eapply cleanup_value_has_type_clear_global_env_local_bounds; eauto).
+Qed.
+
+Lemma cleanup_store_entry_typed_global_env_with_local_bounds :
+  forall env bounds s entry ce,
+    store_entry_typed env s entry ce ->
+    store_entry_typed (global_env_with_local_bounds env bounds) s entry ce.
+Proof.
+  unfold store_entry_typed.
+  intros env bounds s entry ce H.
+  destruct entry as [sx sT sv sst], ce as [[[cx cT] cst] cm]; simpl in *.
+  destruct H as (Hx & HT & Hst & Hv).
+  repeat split; auto.
+  eapply cleanup_value_has_type_global_env_with_local_bounds. exact Hv.
+Qed.
+
+Lemma cleanup_store_typed_prefix_global_env_with_local_bounds :
+  forall env bounds s Σ,
+    store_typed_prefix env s Σ ->
+    store_typed_prefix (global_env_with_local_bounds env bounds) s Σ.
+Proof.
+  unfold store_typed_prefix.
+  intros env bounds s Σ (entries & frame & Hs & Htyped).
+  exists entries, frame. repeat split; auto.
+  eapply Forall2_impl; [| exact Htyped].
+  intros entry ce Hentry.
+  eapply cleanup_store_entry_typed_global_env_with_local_bounds.
+  exact Hentry.
+Qed.
+
+Lemma cleanup_eval_global_env_with_local_bounds :
+  forall env bounds s e s' v,
+    eval env s e s' v ->
+    eval (global_env_with_local_bounds env bounds) s e s' v
+with cleanup_eval_args_global_env_with_local_bounds :
+  forall env bounds s args s' vs,
+    eval_args env s args s' vs ->
+    eval_args (global_env_with_local_bounds env bounds) s args s' vs
+with cleanup_eval_struct_fields_global_env_with_local_bounds :
+  forall env bounds s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    eval_struct_fields (global_env_with_local_bounds env bounds)
+      s fields defs s' values.
+Proof.
+  - intros env bounds s e s' v Heval.
+    induction Heval;
+      try solve
+        [ econstructor; simpl in *; eauto;
+          rewrite ?cleanup_type_lookup_path_global_env_with_local_bounds;
+          eauto ].
+  - intros env bounds s args s' vs Hargs.
+    induction Hargs; try solve [econstructor; eauto].
+  - intros env bounds s fields defs s' values Hfields.
+    induction Hfields; try solve [econstructor; eauto].
+Qed.
+
 Lemma value_roots_within_stores_subset_cleanup :
   (forall roots v,
     value_roots_within roots v ->
@@ -211,7 +330,8 @@ Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased_with_preservation_
     root_env_no_shadow R_params ->
     root_env_covers_params (fn_params fcall ++ fn_captures fcall) R_params ->
     provenance_ready_expr (fn_body fcall) ->
-    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       R_params (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
@@ -290,6 +410,20 @@ Proof.
       as Hprefix.
     unfold fn_body_ctx, fn_body_params, sctx_of_ctx in *.
     rewrite params_ctx_app. exact Hprefix. }
+  pose (body_env := global_env_with_local_bounds env (fn_bounds fcall)).
+  assert (Hstore_bind_prefix_body_env :
+    store_typed_prefix body_env
+      (bind_params (fn_params fcall) vs (captured ++ s_args_hidden))
+      (sctx_of_ctx (fn_body_ctx fcall))).
+  { subst body_env.
+    eapply cleanup_store_typed_prefix_global_env_with_local_bounds.
+    exact Hstore_bind_prefix. }
+  assert (Heval_body_body_env :
+    eval body_env (bind_params (fn_params fcall) vs
+      (captured ++ s_args_hidden)) (fn_body fcall) s_body ret).
+  { subst body_env.
+    eapply cleanup_eval_global_env_with_local_bounds.
+    exact Heval_body. }
   assert (Hframe_start :
     store_frame_scope (fn_params fcall ++ fn_captures fcall)
       (sctx_of_ctx (fn_body_ctx fcall))
@@ -303,10 +437,10 @@ Proof.
   { unfold fn_body_ctx, fn_body_params, sctx_of_ctx.
     eapply store_param_prefix_frame_static_fresh; eassumption. }
   destruct (proj1 Hframe_mutual
-              env
+              body_env
               (bind_params (fn_params fcall) vs
                 (captured ++ s_args_hidden))
-              (fn_body fcall) s_body ret Heval_body
+              (fn_body fcall) s_body ret Heval_body_body_env
               (fn_outlives fcall) (fn_lifetimes fcall)
               R_params (sctx_of_ctx (fn_body_ctx fcall))
               T_body (sctx_of_ctx Γ_out) R_body roots_body
@@ -315,14 +449,14 @@ Proof.
               Hrn_params Hframe_start Hframe_fresh_start)
     as [_ [_ [_ [_ [Hframe_scope _]]]]].
   pose proof (proj1 Htyping_mutual
-                env
+                body_env
                 (bind_params (fn_params fcall) vs
                   (captured ++ s_args_hidden))
-                (fn_body fcall) s_body ret Heval_body
+                (fn_body fcall) s_body ret Heval_body_body_env
                 (fn_outlives fcall) (fn_lifetimes fcall)
                 R_params (sctx_of_ctx (fn_body_ctx fcall))
                 T_body (sctx_of_ctx Γ_out) R_body roots_body
-                Hprov_body Hstore_bind_prefix Hroots_bind Hshadow_bind
+                Hprov_body Hstore_bind_prefix_body_env Hroots_bind Hshadow_bind
                 Hrn_params Htyped_body) as Hbody_package.
   destruct (typed_rooted_eval_roots _ _ _ _ _ _ _ _ Hbody_package)
     as [Hroots_body Hret_roots Hshadow_body _].
@@ -337,10 +471,10 @@ Proof.
       (bind_params (fn_params fcall) vs (captured ++ s_args_hidden))
       s_args_hidden).
   { constructor. exact Hprefix_all. }
-  destruct (Hscope_expr env
+  destruct (Hscope_expr body_env
               (bind_params (fn_params fcall) vs
                 (captured ++ s_args_hidden))
-              (fn_body fcall) s_body ret Heval_body
+              (fn_body fcall) s_body ret Heval_body_body_env
               (fn_outlives fcall) (fn_lifetimes fcall)
               R_params (sctx_of_ctx (fn_body_ctx fcall))
               T_body (sctx_of_ctx Γ_out) R_body roots_body
@@ -354,11 +488,15 @@ Proof.
       (sctx_of_ctx Γ_out)).
   { eapply typed_env_structural_same_bindings.
     eapply typed_env_roots_structural. exact Htyped_body. }
+  assert (Hv_body_env : value_has_type env s_body ret T_body).
+  { subst body_env.
+    eapply cleanup_value_has_type_clear_global_env_local_bounds.
+    exact Hv_body. }
   destruct (eval_call_body_ctx_cleanup_hidden_frame_erased_core
               env Ω s_args_hidden s_args Σ_args x T_hidden hidden fdef
               fcall σ s_body ret T_body Γ_out R_body roots_body
               frame_final Hhidden Htyped_args Hret Hnodup_all
-              Hframe_scope Hscope_body Hv_body Hroots_body Hret_roots
+              Hframe_scope Hscope_body Hv_body_env Hroots_body Hret_roots
               Hshadow_body Hsame_body Hcompat_body Hexclude_all
               Hroot_exclude_x)
     as [Hstore_final [Hv_final [Hret_roots_final Hfinal]]].
@@ -387,7 +525,8 @@ Lemma eval_captured_call_body_ctx_cleanup_hidden_frame_erased_subset_with_preser
     root_env_no_shadow R_params ->
     root_env_covers_params (fn_params fcall ++ fn_captures fcall) R_params ->
     provenance_ready_expr (fn_body fcall) ->
-    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       R_params (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
@@ -480,7 +619,8 @@ Lemma eval_let_make_closure_captured_call_hidden_cleanup_package_with_preservati
         root_env_covers_params (fn_params fcall ++ fn_captures fcall)
           R_params ->
         provenance_ready_expr (fn_body fcall) ->
-        typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+        typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+          (fn_outlives fcall) (fn_lifetimes fcall)
           R_params (sctx_of_ctx (fn_body_ctx fcall))
           (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
         ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->

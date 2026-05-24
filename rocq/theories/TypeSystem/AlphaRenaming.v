@@ -3825,7 +3825,9 @@ Lemma alpha_rename_fn_def_static_fields :
     fn_lifetimes fr = fn_lifetimes f /\
     fn_outlives fr = fn_outlives f /\
     fn_captures fr = fn_captures f /\
-    fn_ret fr = fn_ret f.
+    fn_ret fr = fn_ret f /\
+    fn_type_params fr = fn_type_params f /\
+    fn_bounds fr = fn_bounds f.
 Proof.
   intros used f fr used' H.
   destruct f as [fname lifetimes outs captures ps ret body].
@@ -14653,7 +14655,7 @@ Proof.
   unfold fn_body_ctx, fn_body_params in Htyped_body.
   simpl in Htyped_body.
   destruct (alpha_rename_typed_env_structural_forward
-    env outs lifetimes ρ
+    (global_env_with_local_bounds env fn_bounds) outs lifetimes ρ
     (sctx_of_ctx (params_ctx (ps ++ captures)))
     (sctx_of_ctx (params_ctx (psr ++ captures)))
     body bodyr used1 used2 T_body (sctx_of_ctx Γ_out))

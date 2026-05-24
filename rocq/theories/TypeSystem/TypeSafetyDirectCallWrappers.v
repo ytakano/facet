@@ -41,7 +41,7 @@ Qed.
 
 Lemma eval_direct_call_body_preserves_typing_prefix_from_lookup :
   forall env (Ω : outlives_ctx) (n : nat) Σ Σ_args fname args
-      fdef fcall σ s s_args s_body vs ret used',
+      fdef fcall σ s s_args s_body vs ret used' T_body Γ_out,
     store_typed env s Σ ->
     preservation_ready_args args ->
     typed_args_env_structural env Ω n Σ args
@@ -51,6 +51,10 @@ Lemma eval_direct_call_body_preserves_typing_prefix_from_lookup :
     env_fns_checked_structural env ->
     env_fns_preservation_ready env ->
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    typed_env_structural env (fn_outlives fcall) (fn_lifetimes fcall)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) ->
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
     fn_captures fcall = [] ->
     eval env (bind_params (fn_params fcall) vs s_args)
       (fn_body fcall) s_body ret ->
@@ -86,7 +90,8 @@ Lemma eval_direct_call_body_cleanup_preserves_value_and_refs :
     root_env_no_shadow R_params ->
     root_env_covers_params (fn_params fcall) R_params ->
     provenance_ready_expr (fn_body fcall) ->
-    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->

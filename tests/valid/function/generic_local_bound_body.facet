@@ -1,0 +1,15 @@
+trait Show;
+
+impl Show for affine isize;
+
+fn require_show<T>(x: affine T) -> affine T where T: Show {
+  x
+}
+
+fn wrap<T>(x: affine T) -> affine T where T: Show {
+  (require_show<affine T> x)
+}
+
+fn main() -> affine isize {
+  (wrap<affine isize> 1)
+}

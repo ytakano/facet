@@ -5,6 +5,157 @@ From Facet.TypeSystem Require Export TypeSafetyDirectCallSetup.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
+Lemma direct_call_type_lookup_path_global_env_with_local_bounds :
+  forall env bounds T path,
+    type_lookup_path (global_env_with_local_bounds env bounds) T path =
+    type_lookup_path env T path.
+Proof.
+  intros env bounds T path.
+  revert env bounds T.
+  induction path as [| field rest IH]; intros env bounds T; simpl; auto.
+  destruct T as [u core]; simpl.
+  destruct core; try reflexivity.
+  change (lookup_struct s (global_env_with_local_bounds env bounds))
+    with (lookup_struct s env).
+  destruct (lookup_struct s env) as [sdef |]; [| reflexivity].
+  destruct (lookup_field field (struct_fields sdef)); [apply IH | reflexivity].
+Qed.
+
+Lemma direct_call_value_has_type_global_env_with_local_bounds :
+  forall env bounds s v T,
+    value_has_type env s v T ->
+    value_has_type (global_env_with_local_bounds env bounds) s v T
+with direct_call_struct_fields_have_type_global_env_with_local_bounds :
+  forall env bounds s lts args fields defs,
+    struct_fields_have_type env s lts args fields defs ->
+    struct_fields_have_type (global_env_with_local_bounds env bounds)
+      s lts args fields defs.
+Proof.
+  - intros env bounds s v T H.
+    induction H;
+      try solve
+        [ econstructor; simpl in *; eauto;
+          rewrite ?direct_call_type_lookup_path_global_env_with_local_bounds;
+          eauto ].
+  - intros env bounds s lts args fields defs H.
+    induction H; try solve [econstructor; eauto].
+Qed.
+
+Lemma direct_call_value_has_type_clear_global_env_local_bounds :
+  forall env bounds s v T,
+    value_has_type (global_env_with_local_bounds env bounds) s v T ->
+    value_has_type env s v T
+with direct_call_struct_fields_have_type_clear_global_env_local_bounds :
+  forall env bounds s lts args fields defs,
+    struct_fields_have_type (global_env_with_local_bounds env bounds)
+      s lts args fields defs ->
+    struct_fields_have_type env s lts args fields defs.
+Proof.
+  - intros env bounds s v T H.
+    remember (global_env_with_local_bounds env bounds) as env' eqn:Heq.
+    revert env bounds Heq.
+    induction H; intros env0 bounds Heq;
+      try solve
+        [ subst; econstructor; simpl in *; eauto;
+          rewrite ?direct_call_type_lookup_path_global_env_with_local_bounds in *;
+          eauto ].
+    all: try
+      (subst; econstructor; simpl in *; eauto;
+       rewrite ?direct_call_type_lookup_path_global_env_with_local_bounds in *;
+       eauto).
+  - intros env bounds s lts args fields defs H.
+    remember (global_env_with_local_bounds env bounds) as env' eqn:Heq.
+    revert env bounds Heq.
+    induction H; intros env0 bounds Heq; try solve [econstructor; eauto].
+    all: try (subst; eapply SFHT_Cons; eauto;
+      eapply direct_call_value_has_type_clear_global_env_local_bounds; eauto).
+Qed.
+
+Lemma direct_call_store_entry_typed_global_env_with_local_bounds :
+  forall env bounds s entry ce,
+    store_entry_typed env s entry ce ->
+    store_entry_typed (global_env_with_local_bounds env bounds) s entry ce.
+Proof.
+  unfold store_entry_typed.
+  intros env bounds s entry ce H.
+  destruct entry as [sx sT sv sst], ce as [[[cx cT] cst] cm]; simpl in *.
+  destruct H as (Hx & HT & Hst & Hv).
+  repeat split; auto.
+  eapply direct_call_value_has_type_global_env_with_local_bounds. exact Hv.
+Qed.
+
+Lemma direct_call_store_typed_prefix_global_env_with_local_bounds :
+  forall env bounds s Σ,
+    store_typed_prefix env s Σ ->
+    store_typed_prefix (global_env_with_local_bounds env bounds) s Σ.
+Proof.
+  unfold store_typed_prefix.
+  intros env bounds s Σ (entries & frame & Hs & Htyped).
+  exists entries, frame. repeat split; auto.
+  eapply Forall2_impl; [| exact Htyped].
+  intros entry ce Hentry.
+  eapply direct_call_store_entry_typed_global_env_with_local_bounds.
+  exact Hentry.
+Qed.
+
+Lemma direct_call_store_typed_prefix_clear_global_env_local_bounds :
+  forall env bounds s Σ,
+    store_typed_prefix (global_env_with_local_bounds env bounds) s Σ ->
+    store_typed_prefix env s Σ.
+Proof.
+  unfold store_typed_prefix, store_entry_typed.
+  intros env bounds s Σ (entries & frame & Hs & Htyped).
+  exists entries, frame. repeat split; auto.
+  eapply Forall2_impl; [| exact Htyped].
+  intros entry ce Hentry.
+  destruct entry as [sx sT sv sst], ce as [[[cx cT] cst] cm]; simpl in *.
+  destruct Hentry as (Hx & HT & Hst & Hv).
+  repeat split; auto.
+  eapply direct_call_value_has_type_clear_global_env_local_bounds. exact Hv.
+Qed.
+
+Lemma direct_call_store_ref_targets_preserved_clear_global_env_local_bounds :
+  forall env bounds s s',
+    store_ref_targets_preserved (global_env_with_local_bounds env bounds) s s' ->
+    store_ref_targets_preserved env s s'.
+Proof.
+  unfold store_ref_targets_preserved.
+  intros env bounds s s' Hpres x path se v T Hlookup Hval Hpath.
+  destruct (Hpres x path se v T Hlookup Hval) as (se' & v' & Hlookup' & Hval' & Hpath').
+  { rewrite direct_call_type_lookup_path_global_env_with_local_bounds.
+    exact Hpath. }
+  exists se', v'. repeat split; auto.
+  rewrite <- (direct_call_type_lookup_path_global_env_with_local_bounds
+    env bounds (se_ty se') path).
+  exact Hpath'.
+Qed.
+
+Lemma direct_call_eval_global_env_with_local_bounds :
+  forall env bounds s e s' v,
+    eval env s e s' v ->
+    eval (global_env_with_local_bounds env bounds) s e s' v
+with direct_call_eval_args_global_env_with_local_bounds :
+  forall env bounds s args s' vs,
+    eval_args env s args s' vs ->
+    eval_args (global_env_with_local_bounds env bounds) s args s' vs
+with direct_call_eval_struct_fields_global_env_with_local_bounds :
+  forall env bounds s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    eval_struct_fields (global_env_with_local_bounds env bounds)
+      s fields defs s' values.
+Proof.
+  - intros env bounds s e s' v Heval.
+    induction Heval;
+      try solve
+        [ econstructor; simpl in *; eauto;
+          rewrite ?direct_call_type_lookup_path_global_env_with_local_bounds;
+          eauto ].
+  - intros env bounds s args s' vs Hargs.
+    induction Hargs; try solve [econstructor; eauto].
+  - intros env bounds s fields defs s' values Hfields.
+    induction Hfields; try solve [econstructor; eauto].
+Qed.
+
 Lemma eval_direct_call_body_preserves_typing_prefix_with_preservation_core :
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->
@@ -61,6 +212,19 @@ Proof.
     store_typed_prefix env (bind_params (fn_params fcall) vs s_args)
       (sctx_of_ctx (params_ctx (fn_params fcall)))).
   { eapply bind_params_store_typed_prefix; eassumption. }
+  pose (body_env := global_env_with_local_bounds env (fn_bounds fcall)).
+  assert (Hstore_bind_body_env :
+    store_typed_prefix body_env (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))).
+  { subst body_env.
+    eapply direct_call_store_typed_prefix_global_env_with_local_bounds.
+    exact Hstore_bind. }
+  assert (Heval_body_body_env :
+    eval body_env (bind_params (fn_params fcall) vs s_args)
+      (fn_body fcall) s_body ret).
+  { subst body_env.
+    eapply direct_call_eval_global_env_with_local_bounds.
+    exact Heval_body. }
   assert (Hready_body : preservation_ready_expr (fn_body fcall)).
   { eapply lookup_alpha_rename_fn_def_preservation_ready_body; eassumption. }
   destruct (proj1 Htyping_prefix_ready
@@ -86,7 +250,7 @@ Lemma eval_direct_call_body_preserves_typing_prefix_from_lookup_with_preservatio
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->
   forall env (Ω : outlives_ctx) (n : nat) Σ Σ_args fname args
-      fdef fcall σ s s_args s_body vs ret used',
+      fdef fcall σ s s_args s_body vs ret used' T_body Γ_out,
     store_typed env s Σ ->
     preservation_ready_args args ->
     typed_args_env_structural env Ω n Σ args
@@ -96,6 +260,10 @@ Lemma eval_direct_call_body_preserves_typing_prefix_from_lookup_with_preservatio
     env_fns_checked_structural env ->
     env_fns_preservation_ready env ->
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    typed_env_structural env (fn_outlives fcall) (fn_lifetimes fcall)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) ->
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
     fn_captures fcall = [] ->
     eval env (bind_params (fn_params fcall) vs s_args)
       (fn_body fcall) s_body ret ->
@@ -107,16 +275,9 @@ Lemma eval_direct_call_body_preserves_typing_prefix_from_lookup_with_preservatio
         (bind_params (fn_params fcall) vs s_args) s_body.
 Proof.
   intros Htyping_ready Htyping_prefix_ready env Ω n Σ Σ_args fname args
-    fdef fcall σ s s_args s_body vs ret used' Hstore Hready_args
+    fdef fcall σ s s_args s_body vs ret used' T_body Γ_out Hstore Hready_args
     Htyped_args Heval_args Hlookup Henv_checked Henv_ready Hrename
-    Hcaps_call Heval_body.
-  pose proof (lookup_alpha_rename_fn_def_typed_structural
-                env fname fdef fcall (store_names s_args) used'
-                Hlookup Henv_checked Hrename) as Htyped_fn.
-  destruct (typed_fn_env_structural_body env fcall Htyped_fn)
-    as [T_body [Γ_out [Htyped_body [Hcompat_body _]]]].
-  rewrite (fn_body_ctx_eq_params_ctx_when_no_captures
-             fcall Hcaps_call) in Htyped_body.
+    Htyped_body Hcompat_body Hcaps_call Heval_body.
   exists Γ_out.
   eapply eval_direct_call_body_preserves_typing_prefix_with_preservation_core;
     eassumption.
@@ -326,7 +487,8 @@ Lemma eval_direct_call_body_cleanup_preserves_value_and_refs_with_preservation_c
     root_env_no_shadow R_params ->
     root_env_covers_params (fn_params fcall) R_params ->
     provenance_ready_expr (fn_body fcall) ->
-    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
@@ -394,6 +556,19 @@ Proof.
     store_typed_prefix env (bind_params (fn_params fcall) vs s_args)
       (sctx_of_ctx (params_ctx (fn_params fcall)))).
   { eapply bind_params_store_typed_prefix; eassumption. }
+  pose (body_env := global_env_with_local_bounds env (fn_bounds fcall)).
+  assert (Hstore_bind_body_env :
+    store_typed_prefix body_env (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))).
+  { subst body_env.
+    eapply direct_call_store_typed_prefix_global_env_with_local_bounds.
+    exact Hstore_bind. }
+  assert (Heval_body_body_env :
+    eval body_env (bind_params (fn_params fcall) vs s_args)
+      (fn_body fcall) s_body ret).
+  { subst body_env.
+    eapply direct_call_eval_global_env_with_local_bounds.
+    exact Heval_body. }
   assert (Hframe_start :
     store_frame_scope (fn_params fcall)
       (sctx_of_ctx (params_ctx (fn_params fcall)))
@@ -404,8 +579,8 @@ Proof.
       (sctx_of_ctx (params_ctx (fn_params fcall))) s_args).
   { eapply params_fresh_in_store_frame_static_fresh. exact Hfresh. }
   destruct (proj1 Hframe_scope_ready
-              env (bind_params (fn_params fcall) vs s_args)
-              (fn_body fcall) s_body ret Heval_body
+              body_env (bind_params (fn_params fcall) vs s_args)
+              (fn_body fcall) s_body ret Heval_body_body_env
               (fn_outlives fcall) (fn_lifetimes fcall)
               R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
               T_body (sctx_of_ctx Γ_out) R_body roots_body
@@ -414,19 +589,33 @@ Proof.
               Hframe_start Hframe_fresh_start)
     as [_ [_ [_ [_ [Hframe_scope _]]]]].
   pose proof (proj1 Htyping_roots_prefix_ready
-                env (bind_params (fn_params fcall) vs s_args)
-                (fn_body fcall) s_body ret Heval_body
+                body_env (bind_params (fn_params fcall) vs s_args)
+                (fn_body fcall) s_body ret Heval_body_body_env
                 (fn_outlives fcall) (fn_lifetimes fcall)
                 R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
                 T_body (sctx_of_ctx Γ_out) R_body roots_body
-                Hprov_body Hstore_bind Hroots_bind Hshadow_bind Hrn_params
+                Hprov_body Hstore_bind_body_env Hroots_bind Hshadow_bind Hrn_params
                 Htyped_body) as Hbody_package.
   destruct (typed_rooted_eval_roots _ _ _ _ _ _ _ _ Hbody_package)
     as [Hroots_body Hret_roots Hshadow_body Hrn_body].
   destruct Hbody_package as [Hstore_body Hv_body Hpres_body _].
+  assert (Hstore_body_env : store_typed_prefix env s_body (sctx_of_ctx Γ_out)).
+  { subst body_env.
+    eapply direct_call_store_typed_prefix_clear_global_env_local_bounds.
+    exact Hstore_body. }
+  assert (Hv_body_env : value_has_type env s_body ret T_body).
+  { subst body_env.
+    eapply direct_call_value_has_type_clear_global_env_local_bounds.
+    exact Hv_body. }
+  assert (Hpres_body_env :
+    store_ref_targets_preserved env
+      (bind_params (fn_params fcall) vs s_args) s_body).
+  { subst body_env.
+    eapply direct_call_store_ref_targets_preserved_clear_global_env_local_bounds.
+    exact Hpres_body. }
   assert (Hv_ret_fcall : value_has_type env s_body ret (fn_ret fcall)).
   { eapply value_has_type_compatible.
-    - exact Hv_body.
+    - exact Hv_body_env.
     - apply ty_compatible_b_sound with (Ω := fn_outlives fcall).
       exact Hcompat_body. }
   assert (Hv_ret_fdef : value_has_type env s_body ret (fn_ret fdef)).
@@ -436,9 +625,9 @@ Proof.
     store_param_scope (fn_params fcall)
       (bind_params (fn_params fcall) vs s_args) s_args).
   { eapply store_param_scope_bind_params. exact Hargs_fcall. }
-  destruct (Hscope_expr env
+  destruct (Hscope_expr body_env
               (bind_params (fn_params fcall) vs s_args)
-              (fn_body fcall) s_body ret Heval_body
+              (fn_body fcall) s_body ret Heval_body_body_env
               (fn_outlives fcall) (fn_lifetimes fcall)
               R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
               T_body (sctx_of_ctx Γ_out) R_body roots_body
@@ -456,7 +645,7 @@ Proof.
               env Ω s s_args Σ_args fdef fcall σ s_body vs ret used'
               T_body Γ_out R_body roots_body frame_final Hstore_args
               Hpres_args Hrename Hargs_fcall Hframe_scope Hscope_body
-              Hstore_body Hv_body Hpres_body Hroots_body Hret_roots
+              Hstore_body_env Hv_body_env Hpres_body_env Hroots_body Hret_roots
               Hshadow_body Hrn_body Hsame_body Hcompat_body Hexclude_ret
               Hexclude_env)
     as [Hstore_final Hcleanup].
@@ -545,7 +734,8 @@ Lemma eval_direct_call_body_provenance_ready_preserves_typing_with_preservation_
     fn_captures fdef = [] ->
     (exists T_body Γ_out R_body roots_body,
       provenance_ready_expr (fn_body fcall) /\
-      typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+      typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+        (fn_outlives fcall) (fn_lifetimes fcall)
         (call_param_root_env (fn_params fcall) arg_roots R_args)
         (sctx_of_ctx (fn_body_ctx fcall))
         (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
@@ -606,7 +796,8 @@ Proof.
     exact Hcaps. }
   pose proof
     (typed_env_roots_fn_body_ctx_to_params_ctx_when_no_captures
-      env (fn_outlives fcall) (fn_lifetimes fcall)
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       (call_param_root_env (fn_params fcall) arg_roots R_args)
       fcall (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body
       roots_body Hcaps_call Htyped_body) as Htyped_body_params.

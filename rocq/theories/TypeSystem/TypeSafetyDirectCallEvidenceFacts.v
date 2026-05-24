@@ -33,7 +33,8 @@ Definition callee_body_root_ready_at
   exists T_body Γ_out R_body roots_body,
     provenance_ready_expr (fn_body fcall) /\
     preservation_ready_expr (fn_body fcall) /\
-    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       R_params (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
@@ -45,7 +46,9 @@ Definition callee_body_root_shadow_ready_at
   exists T_body Γ_out R_body roots_body,
     provenance_ready_expr (fn_body fcall) /\
     preservation_ready_expr (fn_body fcall) /\
-    typed_env_roots_shadow_safe env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       R_params (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
@@ -56,7 +59,8 @@ Definition callee_body_root_provenance_ready_at
     (env : global_env) (fcall : fn_def) (R_params : root_env) : Prop :=
   exists T_body Γ_out R_body roots_body,
     provenance_ready_expr (fn_body fcall) /\
-    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       R_params (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
@@ -67,7 +71,9 @@ Definition callee_body_root_shadow_provenance_ready_at
     (env : global_env) (fcall : fn_def) (R_params : root_env) : Prop :=
   exists T_body Γ_out R_body roots_body,
     provenance_ready_expr (fn_body fcall) /\
-    typed_env_roots_shadow_safe env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       R_params (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
@@ -79,7 +85,9 @@ Definition callee_body_root_shadow_provenance_ready_at_result_subset
     (roots_bound : root_set) : Prop :=
   exists T_body Γ_out R_body roots_body,
     provenance_ready_expr (fn_body fcall) /\
-    typed_env_roots_shadow_safe env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       R_params (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\

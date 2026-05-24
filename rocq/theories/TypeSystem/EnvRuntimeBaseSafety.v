@@ -1,6 +1,7 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules RootProvenance TypeChecker RuntimeTyping
-  EnvStructuralRules CheckerSoundness AlphaRenaming EnvTypingSoundness.
+  EnvStructuralRules CheckerSoundness AlphaRenaming EnvTypingSoundness
+  TypeSafetyBasePreservationMutual.
 From Facet.TypeSystem Require Export EnvRuntimeValidatorFacts.
 From Stdlib Require Import List Bool Lia String Program.Equality.
 Import ListNotations.
@@ -90,8 +91,9 @@ Proof.
     try discriminate.
   destruct (check_fn_binding_params (mk_region_ctx (fn_lifetimes f)) f);
     try discriminate.
-  destruct (infer_core_env env (fn_outlives f) (fn_lifetimes f)
-              (fn_body_ctx f) (fn_body f))
+  destruct (infer_core_env (global_env_with_local_bounds env (fn_bounds f))
+              (fn_outlives f) (fn_lifetimes f) (fn_body_ctx f)
+              (fn_body f))
     as [[T_body Γ_out] | err] eqn:Hcore; try discriminate.
   destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) T_body));
     try discriminate.
@@ -136,15 +138,25 @@ Proof.
     as [Htyped_fn _].
   unfold typed_fn_env_roots in Htyped_fn.
   destruct Htyped_fn as [T_body [Γ_out [Htyped [Hcompat _]]]].
+  pose (body_env := global_env_with_local_bounds env (fn_bounds f)).
+  assert (Hstore_body_env : store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
+  { subst body_env.
+    eapply store_typed_global_env_with_local_bounds. exact Hstore. }
+  assert (Heval_body_env : eval body_env s (fn_body f) s' v).
+  { subst body_env.
+    eapply eval_global_env_with_local_bounds. exact Heval. }
   destruct (proj1 eval_preserves_typing_roots_ready_mutual
-      env s (fn_body f) s' v Heval
+      body_env s (fn_body f) s' v Heval_body_env
       (fn_outlives f) (fn_lifetimes f) R0
       (sctx_of_ctx (fn_body_ctx f))
       T_body (sctx_of_ctx Γ_out) R' roots
-      Hready Hstore Hroots Hstore_shadow Hroot_shadow Htyped)
+      Hready Hstore_body_env Hroots Hstore_shadow Hroot_shadow Htyped)
     as [_ [Hv _]].
+  assert (Hv_env : value_has_type env s' v T_body).
+  { subst body_env.
+    eapply value_has_type_clear_global_env_local_bounds. exact Hv. }
   eapply VHT_Compatible.
-  - exact Hv.
+  - exact Hv_env.
   - apply ty_compatible_b_sound. exact Hcompat.
 Qed.
 
@@ -199,7 +211,8 @@ Theorem infer_full_env_roots_big_step_safe_direct_call_ready :
     root_env_store_keys_named R0 s ->
     fn_env_unique_by_name env ->
     env_fns_preservation_ready env ->
-    direct_call_callee_body_root_check_evidence env ->
+    direct_call_callee_body_root_check_evidence
+      (global_env_with_local_bounds env (fn_bounds f)) ->
     eval env s (fn_body f) s' v ->
     value_has_type env s' v (fn_ret f).
 Proof.
@@ -210,18 +223,32 @@ Proof.
     as [Htyped_fn _].
   unfold typed_fn_env_roots in Htyped_fn.
   destruct Htyped_fn as [T_body [Γ_out [Htyped [Hcompat _]]]].
+  pose (body_env := global_env_with_local_bounds env (fn_bounds f)).
+  assert (Hstore_body_env : store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
+  { subst body_env.
+    eapply store_typed_global_env_with_local_bounds. exact Hstore. }
+  assert (Heval_body_env : eval body_env s (fn_body f) s' v).
+  { subst body_env.
+    eapply eval_global_env_with_local_bounds. exact Heval. }
+  assert (Hunique_body_env : fn_env_unique_by_name body_env).
+  { subst body_env. exact Hunique. }
+  assert (Hfns_ready_body_env : env_fns_preservation_ready body_env).
+  { subst body_env. exact Hfns_ready. }
   destruct (eval_preserves_typing_direct_call_roots_ready
-      env s (fn_body f) s' v Heval
+      body_env s (fn_body f) s' v Heval_body_env
       (fn_outlives f) (fn_lifetimes f) R0
       (sctx_of_ctx (fn_body_ctx f))
       T_body (sctx_of_ctx Γ_out) R' roots
-      Hready Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys Htyped
-      Hunique Hfns_ready
-      (direct_call_callee_body_root_evidence_of_check env
+      Hready Hstore_body_env Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys Htyped
+      Hunique_body_env Hfns_ready_body_env
+      (direct_call_callee_body_root_evidence_of_check body_env
         Hcallee_body_roots))
     as [_ [Hv _]].
+  assert (Hv_env : value_has_type env s' v T_body).
+  { subst body_env.
+    eapply value_has_type_clear_global_env_local_bounds. exact Hv. }
   eapply VHT_Compatible.
-  - exact Hv.
+  - exact Hv_env.
   - apply ty_compatible_b_sound. exact Hcompat.
 Qed.
 
@@ -237,7 +264,8 @@ Theorem infer_full_env_roots_big_step_safe_direct_call_evidence :
     root_env_store_keys_named R0 s ->
     fn_env_unique_by_name env ->
     env_fns_preservation_ready env ->
-    direct_call_callee_body_root_evidence env ->
+    direct_call_callee_body_root_evidence
+      (global_env_with_local_bounds env (fn_bounds f)) ->
     eval env s (fn_body f) s' v ->
     value_has_type env s' v (fn_ret f).
 Proof.
@@ -248,16 +276,30 @@ Proof.
     as [Htyped_fn _].
   unfold typed_fn_env_roots in Htyped_fn.
   destruct Htyped_fn as [T_body [Γ_out [Htyped [Hcompat _]]]].
+  pose (body_env := global_env_with_local_bounds env (fn_bounds f)).
+  assert (Hstore_body_env : store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
+  { subst body_env.
+    eapply store_typed_global_env_with_local_bounds. exact Hstore. }
+  assert (Heval_body_env : eval body_env s (fn_body f) s' v).
+  { subst body_env.
+    eapply eval_global_env_with_local_bounds. exact Heval. }
+  assert (Hunique_body_env : fn_env_unique_by_name body_env).
+  { subst body_env. exact Hunique. }
+  assert (Hfns_ready_body_env : env_fns_preservation_ready body_env).
+  { subst body_env. exact Hfns_ready. }
   destruct (eval_preserves_typing_direct_call_roots_ready
-      env s (fn_body f) s' v Heval
+      body_env s (fn_body f) s' v Heval_body_env
       (fn_outlives f) (fn_lifetimes f) R0
       (sctx_of_ctx (fn_body_ctx f))
       T_body (sctx_of_ctx Γ_out) R' roots
-      Hready Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys Htyped
-      Hunique Hfns_ready Hcallee_body_roots)
+      Hready Hstore_body_env Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys Htyped
+      Hunique_body_env Hfns_ready_body_env Hcallee_body_roots)
     as [_ [Hv _]].
+  assert (Hv_env : value_has_type env s' v T_body).
+  { subst body_env.
+    eapply value_has_type_clear_global_env_local_bounds. exact Hv. }
   eapply VHT_Compatible.
-  - exact Hv.
+  - exact Hv_env.
   - apply ty_compatible_b_sound. exact Hcompat.
 Qed.
 
@@ -274,7 +316,9 @@ Theorem infer_full_env_roots_alpha_big_step_safe_direct_call_ready :
     root_env_store_keys_named R0 s ->
     fn_env_unique_by_name (alpha_normalize_global_env env) ->
     env_fns_preservation_ready (alpha_normalize_global_env env) ->
-    direct_call_callee_body_root_check_evidence (alpha_normalize_global_env env) ->
+    direct_call_callee_body_root_check_evidence
+      (global_env_with_local_bounds (alpha_normalize_global_env env)
+        (fn_bounds f)) ->
     eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
     value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
 Proof.
@@ -296,7 +340,9 @@ Theorem infer_full_env_roots_alpha_big_step_safe_direct_call_evidence :
     root_env_store_keys_named R0 s ->
     fn_env_unique_by_name (alpha_normalize_global_env env) ->
     env_fns_preservation_ready (alpha_normalize_global_env env) ->
-    direct_call_callee_body_root_evidence (alpha_normalize_global_env env) ->
+    direct_call_callee_body_root_evidence
+      (global_env_with_local_bounds (alpha_normalize_global_env env)
+        (fn_bounds f)) ->
     eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
     value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
 Proof.
@@ -312,7 +358,9 @@ Theorem infer_full_env_alpha_big_step_safe_with_root_summary_bridge :
     infer_full_env_roots (alpha_normalize_global_env env) f R0 =
       infer_ok (T, Γ', R', roots) ->
     env_fns_root_summary_check_ready (alpha_normalize_global_env env) ->
-    direct_call_callee_body_root_summary_bridge (alpha_normalize_global_env env) ->
+    direct_call_callee_body_root_summary_bridge
+      (global_env_with_local_bounds (alpha_normalize_global_env env)
+        (fn_bounds f)) ->
     initial_store_for_fn (alpha_normalize_global_env env) f s ->
     preservation_direct_call_ready_expr (fn_body f) ->
     store_roots_within R0 s ->
@@ -331,7 +379,9 @@ Proof.
   eapply infer_full_env_roots_alpha_big_step_safe_direct_call_evidence;
     try eassumption.
   eapply direct_call_callee_body_root_evidence_of_summary_bridge.
-  - apply env_fns_root_summary_evidence_of_check. exact Hsummary.
+  - apply env_fns_root_summary_evidence_of_check.
+    apply env_fns_root_summary_check_ready_global_env_with_local_bounds.
+    exact Hsummary.
   - exact Hbridge.
 Qed.
 
@@ -340,9 +390,12 @@ Theorem infer_full_env_alpha_big_step_safe_with_root_shadow_summary_bridge :
     infer_full_env (alpha_normalize_global_env env) f = infer_ok (T, Γ') ->
     infer_full_env_roots (alpha_normalize_global_env env) f R0 =
       infer_ok (T, Γ', R', roots) ->
-    env_fns_root_shadow_summary_evidence (alpha_normalize_global_env env) ->
+    env_fns_root_shadow_summary_evidence
+      (global_env_with_local_bounds (alpha_normalize_global_env env)
+        (fn_bounds f)) ->
     direct_call_callee_body_root_shadow_summary_bridge
-      (alpha_normalize_global_env env) ->
+      (global_env_with_local_bounds (alpha_normalize_global_env env)
+        (fn_bounds f)) ->
     initial_store_for_fn (alpha_normalize_global_env env) f s ->
     preservation_direct_call_ready_expr (fn_body f) ->
     store_roots_within R0 s ->
@@ -370,7 +423,9 @@ Theorem infer_full_env_alpha_big_step_safe_with_root_shadow_summary_bridge_of_un
     infer_full_env (alpha_normalize_global_env env) f = infer_ok (T, Γ') ->
     infer_full_env_roots (alpha_normalize_global_env env) f R0 =
       infer_ok (T, Γ', R', roots) ->
-    env_fns_root_shadow_summary_evidence (alpha_normalize_global_env env) ->
+    env_fns_root_shadow_summary_evidence
+      (global_env_with_local_bounds (alpha_normalize_global_env env)
+        (fn_bounds f)) ->
     initial_store_for_fn (alpha_normalize_global_env env) f s ->
     preservation_direct_call_ready_expr (fn_body f) ->
     store_roots_within R0 s ->
@@ -444,26 +499,49 @@ Proof.
     (T_body & Γ_out & R_body & roots_body &
       _ & _ & Htyped_shadow & Hcompat & _ & _).
   pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
+  pose (body_env :=
+    global_env_with_local_bounds (alpha_normalize_global_env env)
+      (fn_bounds f)).
+  assert (Hstore_body_env :
+      store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
+  { subst body_env.
+    eapply store_typed_global_env_with_local_bounds. exact Hstore. }
+  assert (Heval_body_env : eval body_env s (fn_body f) s' v).
+  { subst body_env.
+    eapply eval_global_env_with_local_bounds. exact Heval. }
+  assert (Hunique_body_env : fn_env_unique_by_name body_env).
+  { subst body_env. exact Hunique. }
+  assert (Hfns_ready_body_env : env_fns_preservation_ready body_env).
+  { subst body_env. exact Hfns_ready. }
+  assert (Hsummary_body :
+      env_fns_root_shadow_summary_evidence body_env).
+  { subst body_env.
+    apply env_fns_root_shadow_summary_evidence_global_env_with_local_bounds.
+    exact Hsummary. }
   destruct (eval_preserves_typing_direct_call_roots_ready
-      (alpha_normalize_global_env env) s (fn_body f) s' v Heval
+      body_env s (fn_body f) s' v Heval_body_env
       (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
       (sctx_of_ctx (fn_body_ctx f))
       T_body (sctx_of_ctx Γ_out) R_body roots_body
-      Hready Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
+      Hready Hstore_body_env Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
       (typed_env_roots_shadow_safe_roots
-        (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
+        body_env (fn_outlives f) (fn_lifetimes f)
         (initial_root_env_for_fn f)
         (sctx_of_ctx (fn_body_ctx f))
         (fn_body f) T_body (sctx_of_ctx Γ_out) R_body roots_body
         Htyped_shadow)
-      Hunique Hfns_ready
+      Hunique_body_env Hfns_ready_body_env
       (direct_call_callee_body_root_evidence_of_shadow_summary_bridge
-        (alpha_normalize_global_env env)
-        Hsummary
+        body_env
+        Hsummary_body
         (direct_call_callee_body_root_shadow_summary_bridge_of_unique
-          (alpha_normalize_global_env env) Hunique)))
+          body_env Hunique_body_env)))
     as [_ [Hv _]].
+  assert (Hv_env :
+      value_has_type (alpha_normalize_global_env env) s' v T_body).
+  { subst body_env.
+    eapply value_has_type_clear_global_env_local_bounds. exact Hv. }
   eapply VHT_Compatible.
-  - exact Hv.
+  - exact Hv_env.
   - apply ty_compatible_b_sound. exact Hcompat.
 Qed.

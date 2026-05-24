@@ -424,7 +424,8 @@ Lemma typed_fn_env_structural_body :
   forall env f,
     typed_fn_env_structural env f ->
     exists T_body Γ_out,
-      typed_env_structural env (fn_outlives f) (fn_lifetimes f)
+      typed_env_structural (global_env_with_local_bounds env (fn_bounds f))
+        (fn_outlives f) (fn_lifetimes f)
         (sctx_of_ctx (fn_body_ctx f))
         (fn_body f) T_body (sctx_of_ctx Γ_out) /\
       ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\

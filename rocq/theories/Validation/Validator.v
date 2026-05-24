@@ -384,7 +384,7 @@ Definition ex_impl_show_box : impl_def :=
     (MkTy UUnrestricted (TStruct "Box" [] [MkTy UUnrestricted (TParam 0)])).
 
 Definition ex_env_show_box : global_env :=
-  MkGlobalEnv [ex_struct_box] [ex_trait_show] [ex_impl_show_box] [].
+  MkGlobalEnv [ex_struct_box] [ex_trait_show] [ex_impl_show_box] [] [].
 
 Example validate_env_show_box :
   validate_env ex_env_show_box = Some ex_env_show_box.
@@ -403,7 +403,7 @@ Definition ex_struct_b : struct_def :=
   MkStructDef "B" 0 0 [] [MkFieldDef "a" MImmutable (MkTy UUnrestricted (TStruct "A" [] []))].
 
 Definition ex_env_recursive : global_env :=
-  MkGlobalEnv [ex_struct_a; ex_struct_b] [] [] [].
+  MkGlobalEnv [ex_struct_a; ex_struct_b] [] [] [] [].
 
 Example validate_env_rejects_recursive_structs :
   validate_env ex_env_recursive = None.

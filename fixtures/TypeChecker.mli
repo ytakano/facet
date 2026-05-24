@@ -281,7 +281,10 @@ type impl_def = { impl_lifetimes : Big_int_Z.big_int;
 
 type global_env = { env_structs : struct_def list;
                     env_traits : trait_def list; env_impls : impl_def list;
-                    env_fns : fn_def list }
+                    env_local_bounds : trait_bound list; env_fns : fn_def list }
+
+val global_env_with_local_bounds :
+  global_env -> trait_bound list -> global_env
 
 val lookup_struct_in : string -> struct_def list -> struct_def option
 
@@ -547,6 +550,16 @@ val trait_impl_error_with_args :
   global_env -> string -> ty list -> ty -> infer_error option
 
 val instantiate_trait_ref : ty list -> trait_ref -> trait_ref
+
+val ty_list_eqb : ty list -> ty list -> bool
+
+val trait_ref_eqb : trait_ref -> trait_ref -> bool
+
+val local_bound_satisfies_trait :
+  trait_bound list -> Big_int_Z.big_int -> trait_ref -> bool
+
+val local_bounds_satisfy_trait_ref_for_ty :
+  trait_bound list -> trait_ref -> ty -> bool
 
 val check_trait_ref_for_ty :
   global_env -> trait_ref -> ty -> infer_error option

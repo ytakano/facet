@@ -45,6 +45,13 @@ Proof.
     repeat split; assumption.
   - dependent destruction Heval.
     dependent destruction Htyped.
+    try solve
+      [ eapply
+          (eval_direct_call_body_provenance_ready_preserves_typing_with_preservation_core
+            Htyping_ready Hroots_ready Hframe_scope_ready
+            Htyping_roots_prefix_ready
+            Hparam_scope_ready);
+        eauto ].
     match goal with
     | Hready_args0 : preservation_ready_args ?args_call |- _ =>
         pose proof (preservation_ready_args_implies_provenance_ready_closure
@@ -71,6 +78,29 @@ Proof.
         subst f_typed
     end.
     match goal with
+    | Htyped_args : typed_args_roots ?env_call ?Ω_call ?n_call ?R_call ?Σ_call ?args_call
+        ?params_inst ?Σ_args_call ?R_args_call ?arg_roots,
+      Heval_args : eval_args ?env_call ?s_call ?args_call ?s_args ?vs,
+      Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef =
+        (?fcall, ?used'),
+      Hin : In ?fdef (env_fns ?env_call),
+      Hcaps : fn_captures ?fdef = [] |- _ =>
+        pose proof (Hcallee_roots Ω_call n_call R_call Σ_call
+                      Σ_args_call R_args_call arg_roots
+                      (fn_name fdef) args_call fdef fcall σ s s_args vs
+                      used' Hin eq_refl Hcaps Htyped_args Heval_args Hprov_args
+                      Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename)
+          as Hbody_ready;
+        pose proof
+          (callee_body_root_provenance_ready_at_of_ready_at env fcall
+            (call_param_root_env (fn_params fcall) arg_roots R_args_call)
+            Hbody_ready) as Hbody_prov_ready;
+        eapply
+          (eval_direct_call_body_provenance_ready_preserves_typing_with_preservation_core
+            Htyping_ready Hroots_ready Hframe_scope_ready
+            Htyping_roots_prefix_ready
+            Hparam_scope_ready);
+          eassumption
     | Htyped_args : typed_args_roots env Ω n R Σ ?args_call
         (apply_lt_params ?σ (fn_params ?fdef)) Σ' R' ?arg_roots,
       Heval_args : eval_args env s ?args_call ?s_args ?vs,
@@ -116,7 +146,14 @@ Proof.
             Htyping_roots_prefix_ready
             Hparam_scope_ready);
           eassumption
-    end.
+    | _ =>
+        eapply
+          (eval_direct_call_body_provenance_ready_preserves_typing_with_preservation_core
+            Htyping_ready Hroots_ready Hframe_scope_ready
+            Htyping_roots_prefix_ready
+            Hparam_scope_ready);
+          eauto
+    end; eauto.
 Qed.
 
 Theorem eval_preserves_typing_direct_call_roots_provenance_ready_with_preservation_core :
@@ -345,16 +382,17 @@ Proof.
   end.
   assert (Hcaps_fdef1 : fn_captures fdef1 = []) by assumption.
   match goal with
-  | Htyped_args : typed_args_roots env Ω n R Σ ?args_call
-      (apply_lt_params ?σ (fn_params ?fdef_call)) Σ' R' ?arg_roots,
-    Heval_args : eval_args env s ?args_call ?s_args ?vs,
+  | Htyped_args : typed_args_roots ?env_call ?Ω_call ?n_call ?R_call
+      ?Σ_call ?args_call ?params_inst ?Σ_args_call ?R_args_call ?arg_roots,
+    Heval_args : eval_args ?env_call ?s_call ?args_call ?s_args ?vs,
     Hrename : alpha_rename_fn_def (store_names ?s_args) ?fdef_call =
       (?fcall, ?used') |- _ =>
-      pose proof
-        (direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_with_result_subset_with_preservation_core
-          Hroot_names Hroot_keys env Ω n R Σ Σ' R' arg_roots args_call
-          fdef_call fcall σ s s_args vs used' Hcallee_summary Hcaps_fdef1
-          Htyped_args Heval_args Hprov_args Hstore Hroots Hshadow Hrn Hnamed
+    pose proof
+      (direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_with_result_subset_with_preservation_core
+        Hroot_names Hroot_keys env_call Ω_call n_call R_call Σ_call
+        Σ_args_call R_args_call arg_roots args_call
+        fdef_call fcall σ s s_args vs used' Hcallee_summary Hcaps_fdef1
+        Htyped_args Heval_args Hprov_args Hstore Hroots Hshadow Hrn Hnamed
           Hkeys Hrename)
         as Hbody_shadow_ready;
       unfold callee_body_root_shadow_provenance_ready_at_result_subset
@@ -368,14 +406,16 @@ Proof.
               (store_names s_args) fdef_call fcall used' Hrename);
             exact Hcaps_fdef1);
       pose proof (typed_env_roots_shadow_safe_roots
-          env (fn_outlives fcall) (fn_lifetimes fcall)
+          (global_env_with_local_bounds env (fn_bounds fcall))
+          (fn_outlives fcall) (fn_lifetimes fcall)
           (call_param_root_env (fn_params fcall) arg_roots R')
           (sctx_of_ctx (fn_body_ctx fcall))
           (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body
           Htyped_shadow_body) as Htyped_body_ctx;
       pose proof
         (typed_env_roots_fn_body_ctx_to_params_ctx_when_no_captures
-          env (fn_outlives fcall) (fn_lifetimes fcall)
+          (global_env_with_local_bounds env (fn_bounds fcall))
+          (fn_outlives fcall) (fn_lifetimes fcall)
           (call_param_root_env (fn_params fcall) arg_roots R')
           fcall (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body
           roots_body Hcaps_call Htyped_body_ctx) as Htyped_body

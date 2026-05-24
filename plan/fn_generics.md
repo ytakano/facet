@@ -17,34 +17,31 @@ Implemented:
   `(f<affine isize> x)` lowers through `RawCallGeneric`/`ECallGeneric`,
   checks type-arg arity and instantiated function bounds, instantiates
   parameters and return types, and erases type args at runtime/FIR.
+- Local trait-bound assumptions inside generic function bodies are supported.
+  Function body checking/elaboration runs with `fn_bounds` installed as local
+  trait assumptions, so `TParam i` can satisfy required traits without a
+  concrete impl at definition time.
 
 Not implemented yet:
 
-- Local trait-bound assumptions inside generic function bodies.
 - Implicit type-argument inference.
 - Expected-return inference for zero-argument generic calls.
 - Generic function values.
 
 ## Next Implementation Steps
 
-1. Add local generic bound assumptions.
-   - Extend trait checks so `TParam i` can satisfy required traits from
-     `fn_bounds`.
-   - Use this for generic function bodies that construct bounded structs or call
-     bounded functions.
-
-2. Add implicit inference.
+1. Add implicit inference.
    - Solve type args from formal parameter types versus actual argument types.
    - Report unresolved and conflicting type params as errors.
    - Do not infer a type solely from trait impl search.
 
-3. Add expected-return inference.
+2. Add expected-return inference.
    - Use annotated `let`, assignment, and return contexts to solve remaining
      type args.
    - Allow zero-argument generic calls only when the expected type uniquely
      solves all params.
 
-4. Add generic function values.
+3. Add generic function values.
    - Decide representation for generic function values and closure values before
      exposing them through ordinary value calls.
 

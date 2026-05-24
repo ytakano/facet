@@ -5,6 +5,119 @@ From Facet.TypeSystem Require Export TypeSafetyBasePreservationAssign.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
+Lemma type_lookup_path_global_env_with_local_bounds :
+  forall env bounds T path,
+    type_lookup_path (global_env_with_local_bounds env bounds) T path =
+    type_lookup_path env T path.
+Proof.
+  intros env bounds T path.
+  revert env bounds T.
+  induction path as [| field rest IH]; intros env bounds T; simpl; auto.
+  destruct T as [u core]; simpl.
+  destruct core; try reflexivity.
+  change (lookup_struct s (global_env_with_local_bounds env bounds))
+    with (lookup_struct s env).
+  destruct (lookup_struct s env) as [sdef |] eqn:Hlookup; [| reflexivity].
+  destruct (lookup_field field (struct_fields sdef)); [apply IH | reflexivity].
+Qed.
+
+Lemma value_has_type_global_env_with_local_bounds :
+  forall env bounds s v T,
+    value_has_type env s v T ->
+    value_has_type (global_env_with_local_bounds env bounds) s v T
+with struct_fields_have_type_global_env_with_local_bounds :
+  forall env bounds s lts args fields defs,
+    struct_fields_have_type env s lts args fields defs ->
+    struct_fields_have_type (global_env_with_local_bounds env bounds)
+      s lts args fields defs.
+Proof.
+  - intros env bounds s v T H.
+    induction H;
+      try solve
+        [ econstructor; simpl in *; eauto;
+          rewrite ?type_lookup_path_global_env_with_local_bounds; eauto ].
+  - intros env bounds s lts args fields defs H.
+    induction H; try solve [econstructor; eauto].
+Qed.
+
+Lemma value_has_type_clear_global_env_local_bounds :
+  forall env bounds s v T,
+    value_has_type (global_env_with_local_bounds env bounds) s v T ->
+    value_has_type env s v T
+with struct_fields_have_type_clear_global_env_local_bounds :
+  forall env bounds s lts args fields defs,
+    struct_fields_have_type (global_env_with_local_bounds env bounds)
+      s lts args fields defs ->
+    struct_fields_have_type env s lts args fields defs.
+Proof.
+  - intros env bounds s v T H.
+    remember (global_env_with_local_bounds env bounds) as env' eqn:Heq.
+    revert env bounds Heq.
+    induction H; intros env0 bounds Heq;
+      try solve
+        [ subst; econstructor; simpl in *; eauto;
+          rewrite ?type_lookup_path_global_env_with_local_bounds in *; eauto ].
+    all: try
+      (subst; econstructor; simpl in *; eauto;
+       rewrite ?type_lookup_path_global_env_with_local_bounds in *; eauto).
+  - intros env bounds s lts args fields defs H.
+    remember (global_env_with_local_bounds env bounds) as env' eqn:Heq.
+    revert env bounds Heq.
+    induction H; intros env0 bounds Heq; try solve [econstructor; eauto].
+    all: try (subst; eapply SFHT_Cons; eauto;
+      eapply value_has_type_clear_global_env_local_bounds; eauto).
+Qed.
+
+Lemma store_entry_typed_global_env_with_local_bounds :
+  forall env bounds s entry ce,
+    store_entry_typed env s entry ce ->
+    store_entry_typed (global_env_with_local_bounds env bounds) s entry ce.
+Proof.
+  unfold store_entry_typed.
+  intros env bounds s entry ce H.
+  destruct entry as [sx sT sv sst], ce as [[[cx cT] cst] cm]; simpl in *.
+  destruct H as (Hx & HT & Hst & Hv).
+  repeat split; auto.
+  eapply value_has_type_global_env_with_local_bounds. exact Hv.
+Qed.
+
+Lemma store_typed_global_env_with_local_bounds :
+  forall env bounds s Σ,
+    store_typed env s Σ ->
+    store_typed (global_env_with_local_bounds env bounds) s Σ.
+Proof.
+  unfold store_typed.
+  intros env bounds s Σ H.
+  eapply Forall2_impl; [| exact H].
+  intros entry ce Hentry.
+  eapply store_entry_typed_global_env_with_local_bounds. exact Hentry.
+Qed.
+
+Lemma eval_global_env_with_local_bounds :
+  forall env bounds s e s' v,
+    eval env s e s' v ->
+    eval (global_env_with_local_bounds env bounds) s e s' v
+with eval_args_global_env_with_local_bounds :
+  forall env bounds s args s' vs,
+    eval_args env s args s' vs ->
+    eval_args (global_env_with_local_bounds env bounds) s args s' vs
+with eval_struct_fields_global_env_with_local_bounds :
+  forall env bounds s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    eval_struct_fields (global_env_with_local_bounds env bounds)
+      s fields defs s' values.
+Proof.
+  - intros env bounds s e s' v Heval.
+    induction Heval;
+      try solve
+        [ econstructor; simpl in *; eauto;
+          rewrite ?type_lookup_path_global_env_with_local_bounds; eauto ].
+  - intros env bounds s args s' vs Hargs.
+    induction Hargs; try solve [econstructor; eauto].
+  - intros env bounds s fields defs s' values Hfields.
+    induction Hfields; try solve [econstructor; eauto].
+Qed.
+
 
 Theorem eval_preserves_typing_ready_mutual_core :
   (forall env s e s' v,
@@ -545,15 +658,21 @@ Proof.
   unfold typed_fn_env_structural in Htyped_fn.
   destruct Htyped_fn as
     (T_body & Γ_out & Htyped & Hcompat & _).
+  pose (body_env := global_env_with_local_bounds env (fn_bounds f)).
+  assert (Hstore_body_env : store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
+  { subst body_env. eapply store_typed_global_env_with_local_bounds. exact Hstore. }
+  assert (Heval_body_env : eval body_env s (fn_body f) s' v).
+  { subst body_env. eapply eval_global_env_with_local_bounds. exact Heval. }
   destruct (proj1 Hpres
-      env s (fn_body f) s' v Heval
+      body_env s (fn_body f) s' v Heval_body_env
       (fn_outlives f) (fn_lifetimes f)
       (sctx_of_ctx (fn_body_ctx f))
       T_body (sctx_of_ctx Γ_out)
-      Hready Hstore Htyped)
+      Hready Hstore_body_env Htyped)
     as [_ [Hv _]].
   eapply VHT_Compatible.
-  - exact Hv.
+  - subst body_env.
+    eapply value_has_type_clear_global_env_local_bounds. exact Hv.
   - apply ty_compatible_b_sound. exact Hcompat.
 Qed.
 

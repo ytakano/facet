@@ -71,8 +71,9 @@ Proof.
     try discriminate.
   destruct (check_fn_binding_params (mk_region_ctx (fn_lifetimes f)) f);
     try discriminate.
-  destruct (infer_core_env env (fn_outlives f) (fn_lifetimes f)
-              (fn_body_ctx f) (fn_body f))
+  destruct (infer_core_env (global_env_with_local_bounds env (fn_bounds f))
+              (fn_outlives f) (fn_lifetimes f) (fn_body_ctx f)
+              (fn_body f))
     as [[T_body Γ_out] | err] eqn:Hcore; try discriminate.
   destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) T_body));
     try discriminate.

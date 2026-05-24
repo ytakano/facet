@@ -32,7 +32,8 @@ Lemma eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_
     root_env_no_shadow R_params ->
     root_env_covers_params (fn_params fcall ++ fn_captures fcall) R_params ->
     provenance_ready_expr (fn_body fcall) ->
-    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       R_params (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
@@ -118,7 +119,8 @@ Lemma eval_make_closure_captured_call_expr_body_ctx_cleanup_preserves_value_and_
     root_env_no_shadow R_params ->
     root_env_covers_params (fn_params fcall ++ fn_captures fcall) R_params ->
     provenance_ready_expr (fn_body fcall) ->
-    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       R_params (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->

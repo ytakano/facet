@@ -1002,7 +1002,14 @@ type impl_def = { impl_lifetimes : Big_int_Z.big_int;
 
 type global_env = { env_structs : struct_def list;
                     env_traits : trait_def list; env_impls : impl_def list;
-                    env_fns : fn_def list }
+                    env_local_bounds : trait_bound list; env_fns : fn_def list }
+
+(** val global_env_with_local_bounds :
+    global_env -> trait_bound list -> global_env **)
+
+let global_env_with_local_bounds env bounds =
+  { env_structs = env.env_structs; env_traits = env.env_traits; env_impls =
+    env.env_impls; env_local_bounds = bounds; env_fns = env.env_fns }
 
 (** val lookup_struct_in : string -> struct_def list -> struct_def option **)
 
@@ -2646,11 +2653,49 @@ let instantiate_trait_ref args tr =
   { trait_ref_name = tr.trait_ref_name; trait_ref_args =
     (map (subst_type_params_ty args) tr.trait_ref_args) }
 
+(** val ty_list_eqb : ty list -> ty list -> bool **)
+
+let rec ty_list_eqb xs ys =
+  match xs with
+  | [] -> (match ys with
+           | [] -> true
+           | _ :: _ -> false)
+  | x :: xs' ->
+    (match ys with
+     | [] -> false
+     | y :: ys' -> (&&) (ty_eqb x y) (ty_list_eqb xs' ys'))
+
+(** val trait_ref_eqb : trait_ref -> trait_ref -> bool **)
+
+let trait_ref_eqb a b =
+  (&&) ((=) a.trait_ref_name b.trait_ref_name)
+    (ty_list_eqb a.trait_ref_args b.trait_ref_args)
+
+(** val local_bound_satisfies_trait :
+    trait_bound list -> Big_int_Z.big_int -> trait_ref -> bool **)
+
+let local_bound_satisfies_trait bounds type_index tr =
+  existsb (fun b ->
+    (&&) (Nat.eqb b.bound_type_index type_index)
+      (existsb (trait_ref_eqb tr) b.bound_traits))
+    bounds
+
+(** val local_bounds_satisfy_trait_ref_for_ty :
+    trait_bound list -> trait_ref -> ty -> bool **)
+
+let local_bounds_satisfy_trait_ref_for_ty bounds tr for_ty =
+  match ty_core for_ty with
+  | TParam i -> local_bound_satisfies_trait bounds i tr
+  | _ -> false
+
 (** val check_trait_ref_for_ty :
     global_env -> trait_ref -> ty -> infer_error option **)
 
 let check_trait_ref_for_ty env tr for_ty =
-  trait_impl_error_with_args env tr.trait_ref_name tr.trait_ref_args for_ty
+  if local_bounds_satisfy_trait_ref_for_ty env.env_local_bounds tr for_ty
+  then None
+  else trait_impl_error_with_args env tr.trait_ref_name tr.trait_ref_args
+         for_ty
 
 (** val check_trait_refs_for_ty :
     global_env -> trait_ref list -> ty -> infer_error option **)
@@ -5987,6 +6032,7 @@ let infer_env env f =
   let n = f.fn_lifetimes in
   let _UU03a9_ = f.fn_outlives in
   let _UU0394_ = mk_region_ctx n in
+  let body_env = global_env_with_local_bounds env f.fn_bounds in
   if negb (wf_outlives_b _UU0394_ _UU03a9_)
   then Infer_err ErrLifetimeLeak
   else if negb (wf_type_b _UU0394_ f.fn_ret)
@@ -5994,7 +6040,8 @@ let infer_env env f =
        else (match check_fn_binding_params _UU0394_ f with
              | Some err -> Infer_err err
              | None ->
-               (match infer_core_env env _UU03a9_ n (fn_body_ctx f) f.fn_body with
+               (match infer_core_env body_env _UU03a9_ n (fn_body_ctx f)
+                        f.fn_body with
                 | Infer_ok p ->
                   let (t_body, _UU0393__out) = p in
                   if negb (wf_type_b _UU0394_ t_body)
@@ -6021,6 +6068,7 @@ let infer_env_elab env f =
   let n = f.fn_lifetimes in
   let _UU03a9_ = f.fn_outlives in
   let _UU0394_ = mk_region_ctx n in
+  let body_env = global_env_with_local_bounds env f.fn_bounds in
   if negb (wf_outlives_b _UU0394_ _UU03a9_)
   then Infer_err ErrLifetimeLeak
   else if negb (wf_type_b _UU0394_ f.fn_ret)
@@ -6028,7 +6076,7 @@ let infer_env_elab env f =
        else (match check_fn_binding_params _UU0394_ f with
              | Some err -> Infer_err err
              | None ->
-               (match infer_core_env_elab env _UU03a9_ n (fn_body_ctx f)
+               (match infer_core_env_elab body_env _UU03a9_ n (fn_body_ctx f)
                         f.fn_body with
                 | Infer_ok p ->
                   let (p0, body') = p in
@@ -6051,6 +6099,7 @@ let infer_env_roots env f r0 =
   let n = f.fn_lifetimes in
   let _UU03a9_ = f.fn_outlives in
   let _UU0394_ = mk_region_ctx n in
+  let body_env = global_env_with_local_bounds env f.fn_bounds in
   if negb (wf_outlives_b _UU0394_ _UU03a9_)
   then Infer_err ErrLifetimeLeak
   else if negb (wf_type_b _UU0394_ f.fn_ret)
@@ -6058,8 +6107,8 @@ let infer_env_roots env f r0 =
        else (match check_fn_binding_params _UU0394_ f with
              | Some err -> Infer_err err
              | None ->
-               (match infer_core_env_roots env _UU03a9_ n r0 (fn_body_ctx f)
-                        f.fn_body with
+               (match infer_core_env_roots body_env _UU03a9_ n r0
+                        (fn_body_ctx f) f.fn_body with
                 | Infer_ok p ->
                   let (p0, roots) = p in
                   let (p1, r_out) = p0 in
@@ -6082,6 +6131,7 @@ let infer_env_roots_shadow_safe env f r0 =
   let n = f.fn_lifetimes in
   let _UU03a9_ = f.fn_outlives in
   let _UU0394_ = mk_region_ctx n in
+  let body_env = global_env_with_local_bounds env f.fn_bounds in
   if negb (wf_outlives_b _UU0394_ _UU03a9_)
   then Infer_err ErrLifetimeLeak
   else if negb (wf_type_b _UU0394_ f.fn_ret)
@@ -6089,7 +6139,7 @@ let infer_env_roots_shadow_safe env f r0 =
        else (match check_fn_binding_params _UU0394_ f with
              | Some err -> Infer_err err
              | None ->
-               (match infer_core_env_roots_shadow_safe env _UU03a9_ n r0
+               (match infer_core_env_roots_shadow_safe body_env _UU03a9_ n r0
                         (fn_body_ctx f) f.fn_body with
                 | Infer_ok p ->
                   let (p0, roots) = p in
@@ -6357,7 +6407,8 @@ let infer_full_env_roots env f r0 =
 
 let alpha_normalize_global_env env =
   { env_structs = env.env_structs; env_traits = env.env_traits; env_impls =
-    env.env_impls; env_fns = (alpha_rename_syntax env.env_fns) }
+    env.env_impls; env_local_bounds = env.env_local_bounds; env_fns =
+    (alpha_rename_syntax env.env_fns) }
 
 (** val infer_fns_env_elab :
     global_env -> fn_def list -> fn_def list infer_result **)
@@ -6381,7 +6432,8 @@ let infer_program_env_alpha_elab env =
   (match infer_fns_env_elab env_alpha env_alpha.env_fns with
    | Infer_ok fns' ->
      Infer_ok { env_structs = env_alpha.env_structs; env_traits =
-       env_alpha.env_traits; env_impls = env_alpha.env_impls; env_fns = fns' }
+       env_alpha.env_traits; env_impls = env_alpha.env_impls;
+       env_local_bounds = env_alpha.env_local_bounds; env_fns = fns' }
    | Infer_err err -> Infer_err err)
 
 (** val fn_params_roots_exclude_b : param list -> root_set -> bool **)
@@ -7007,7 +7059,8 @@ let fn_stub_of_raw f =
 
 let append_env_fns env fns =
   { env_structs = env.env_structs; env_traits = env.env_traits; env_impls =
-    env.env_impls; env_fns = (app env.env_fns fns) }
+    env.env_impls; env_local_bounds = env.env_local_bounds; env_fns =
+    (app env.env_fns fns) }
 
 (** val closure_elab_suffix : Big_int_Z.big_int -> string **)
 
@@ -7410,7 +7463,8 @@ let rec elaborate_raw_fns_fuel fuel base_env done0 next = function
 | [] -> Infer_ok ([], next)
 | f :: rest ->
   let env0 = append_env_fns base_env done0 in
-  (match elaborate_raw_expr_fuel fuel env0 f.raw_fn_outlives
+  let body_env = global_env_with_local_bounds env0 f.raw_fn_bounds in
+  (match elaborate_raw_expr_fuel fuel body_env f.raw_fn_outlives
            f.raw_fn_lifetimes (sctx_of_ctx (raw_fn_body_ctx f)) next
            f.raw_fn_body with
    | Infer_ok p ->
@@ -7436,7 +7490,7 @@ let rec elaborate_raw_fns_fuel fuel base_env done0 next = function
 let elaborate_raw_global_env env fs =
   let stubs = map fn_stub_of_raw fs in
   let base = { env_structs = env.env_structs; env_traits = env.env_traits;
-    env_impls = env.env_impls; env_fns = stubs }
+    env_impls = env.env_impls; env_local_bounds = []; env_fns = stubs }
   in
   (match elaborate_raw_fns_fuel
            (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) base []
@@ -7444,5 +7498,5 @@ let elaborate_raw_global_env env fs =
    | Infer_ok p ->
      let (fns, _) = p in
      Infer_ok { env_structs = env.env_structs; env_traits = env.env_traits;
-     env_impls = env.env_impls; env_fns = fns }
+     env_impls = env.env_impls; env_local_bounds = []; env_fns = fns }
    | Infer_err err -> Infer_err err)

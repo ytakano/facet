@@ -112,8 +112,9 @@ Proof.
              (fn_ret f))) eqn:?; try discriminate.
   destruct (check_fn_binding_params (mk_region_ctx (fn_lifetimes f)) f)
     eqn:?; try discriminate.
-  destruct (infer_core_env_elab env (fn_outlives f) (fn_lifetimes f)
-             (fn_body_ctx f) (fn_body f))
+  destruct (infer_core_env_elab
+             (global_env_with_local_bounds env (fn_bounds f))
+             (fn_outlives f) (fn_lifetimes f) (fn_body_ctx f) (fn_body f))
     as [[[T_body Γ_out] body'] | err] eqn:?; try discriminate.
   destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) T_body))
     eqn:?; try discriminate.

@@ -38,11 +38,17 @@ Record global_env : Type := MkGlobalEnv {
   env_structs : list struct_def;
   env_traits  : list trait_def;
   env_impls   : list impl_def;
+  env_local_bounds : list trait_bound;
   env_fns     : list fn_def
 }.
 
 Definition empty_global_env (fenv : list fn_def) : global_env :=
-  MkGlobalEnv [] [] [] fenv.
+  MkGlobalEnv [] [] [] [] fenv.
+
+Definition global_env_with_local_bounds
+    (env : global_env) (bounds : list trait_bound) : global_env :=
+  MkGlobalEnv (env_structs env) (env_traits env) (env_impls env)
+    bounds (env_fns env).
 
 Fixpoint lookup_struct_in (name : string) (structs : list struct_def) : option struct_def :=
   match structs with

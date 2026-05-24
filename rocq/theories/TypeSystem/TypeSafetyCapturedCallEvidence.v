@@ -171,7 +171,9 @@ Lemma captured_call_callee_body_root_shadow_provenance_instantiated_bridge :
   forall env R_origin R_params
       fcall rho T_body Γ_out R_body roots_body,
     provenance_ready_expr (fn_body fcall) ->
-    typed_env_roots_shadow_safe env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       R_origin
       (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
@@ -194,7 +196,8 @@ Proof.
     roots_body Hprov Htyped Hcompat Hexclude_roots Hexclude_env
     Hsubst_fresh Hrn_origin Hrn_params Hparams_equiv Himages_exclude.
   destruct (typed_env_roots_shadow_safe_instantiate_fresh
-              env (fn_outlives fcall) (fn_lifetimes fcall) rho R_origin
+              (global_env_with_local_bounds env (fn_bounds fcall))
+              (fn_outlives fcall) (fn_lifetimes fcall) rho R_origin
               (sctx_of_ctx (fn_body_ctx fcall))
               (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body
               roots_body R_params Htyped Hsubst_fresh Hrn_origin
@@ -229,7 +232,9 @@ Lemma captured_call_callee_body_root_shadow_provenance_instantiated_bridge_with_
   forall env R_origin R_params
       fcall rho T_body Γ_out R_body roots_body result_roots,
     provenance_ready_expr (fn_body fcall) ->
-    typed_env_roots_shadow_safe env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       R_origin
       (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
@@ -256,7 +261,8 @@ Proof.
     Hexclude_env Hsubst_fresh Hrn_origin Hrn_params Hparams_equiv
     Himages_exclude Hsubset.
   destruct (typed_env_roots_shadow_safe_instantiate_fresh
-              env (fn_outlives fcall) (fn_lifetimes fcall) rho R_origin
+              (global_env_with_local_bounds env (fn_bounds fcall))
+              (fn_outlives fcall) (fn_lifetimes fcall) rho R_origin
               (sctx_of_ctx (fn_body_ctx fcall))
               (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body
               roots_body R_params Htyped Hsubst_fresh Hrn_origin
@@ -296,7 +302,9 @@ Lemma captured_call_callee_body_root_shadow_provenance_instantiated_tail_frame :
   forall env R_origin R_params_base R_tail fcall rho T_body Γ_out
       R_body roots_body roots_bound,
     provenance_ready_expr (fn_body fcall) ->
-    typed_env_roots_shadow_safe env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       R_origin (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
@@ -319,7 +327,8 @@ Lemma captured_call_callee_body_root_shadow_provenance_instantiated_tail_frame :
       R_tail ->
     exists T_body_i Γ_out_i R_body_i roots_body_i,
       provenance_ready_expr (fn_body fcall) /\
-      typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+      typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+        (fn_outlives fcall) (fn_lifetimes fcall)
         (R_params_base ++ R_tail) (sctx_of_ctx (fn_body_ctx fcall))
         (fn_body fcall) T_body_i (sctx_of_ctx Γ_out_i)
         (R_body_i ++ R_tail) roots_body_i /\
@@ -335,7 +344,8 @@ Proof.
     Hexclude_env Hsubst_fresh Hrn_origin Hrn_params_base Hparams_equiv
     Himages_exclude Hsubset Htail_fresh Htail_exclude.
   destruct (typed_env_roots_shadow_safe_instantiate_fresh
-              env (fn_outlives fcall) (fn_lifetimes fcall) rho R_origin
+              (global_env_with_local_bounds env (fn_bounds fcall))
+              (fn_outlives fcall) (fn_lifetimes fcall) rho R_origin
               (sctx_of_ctx (fn_body_ctx fcall))
               (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body
               roots_body R_params_base Htyped Hsubst_fresh Hrn_origin
@@ -364,7 +374,9 @@ Proof.
     - exact Hroots_inst_equiv.
     - exact Hsubset. }
   assert (Htyped_tail :
-    typed_env_roots_shadow_safe env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       (R_params_base ++ R_tail) (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out)
       (R_body_inst ++ R_tail) roots_body_inst).
@@ -379,7 +391,9 @@ Lemma captured_call_callee_body_root_shadow_provenance_instantiated_tail_frame_n
   forall env R_origin R_params_base R_tail fcall rho T_body Γ_out
       R_body roots_body roots_bound,
     provenance_ready_expr (fn_body fcall) ->
-    typed_env_roots_shadow_safe env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       R_origin (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
@@ -398,7 +412,8 @@ Lemma captured_call_callee_body_root_shadow_provenance_instantiated_tail_frame_n
     root_env_tail_fresh_names R_tail (expr_local_store_names (fn_body fcall)) ->
     exists T_body_i Γ_out_i R_body_i roots_body_i,
       provenance_ready_expr (fn_body fcall) /\
-      typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+      typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+        (fn_outlives fcall) (fn_lifetimes fcall)
         (R_params_base ++ R_tail) (sctx_of_ctx (fn_body_ctx fcall))
         (fn_body fcall) T_body_i (sctx_of_ctx Γ_out_i)
         (R_body_i ++ R_tail) roots_body_i /\
@@ -412,7 +427,8 @@ Proof.
     Hsubst_fresh Hrn_origin Hrn_params_base Hparams_equiv Himages_exclude
     Hsubset Htail_fresh.
   destruct (typed_env_roots_shadow_safe_instantiate_fresh
-              env (fn_outlives fcall) (fn_lifetimes fcall) rho R_origin
+              (global_env_with_local_bounds env (fn_bounds fcall))
+              (fn_outlives fcall) (fn_lifetimes fcall) rho R_origin
               (sctx_of_ctx (fn_body_ctx fcall))
               (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body
               roots_body R_params_base Htyped Hsubst_fresh Hrn_origin
@@ -433,7 +449,9 @@ Proof.
     - exact Hroots_inst_equiv.
     - exact Hsubset. }
   assert (Htyped_tail :
-    typed_env_roots_shadow_safe env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       (R_params_base ++ R_tail) (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out)
       (R_body_inst ++ R_tail) roots_body_inst).

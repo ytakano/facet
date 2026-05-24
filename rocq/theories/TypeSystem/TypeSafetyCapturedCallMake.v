@@ -37,7 +37,8 @@ Lemma eval_make_closure_captured_call_expr_preserves_typing_with_instantiated_bo
     typed_args_roots env Ω n R Σ args (fn_params fdef)
       Σ_args R_args arg_roots ->
     provenance_ready_expr (fn_body fcall) ->
-    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       (call_param_root_env (fn_params fcall) arg_roots
         (empty_root_env_for_store captured ++ R_args))
       (sctx_of_ctx (fn_body_ctx fcall))
@@ -141,7 +142,9 @@ Lemma eval_make_closure_captured_call_expr_package_with_callee_components_with_p
       Σ_args R_args arg_roots ->
     NoDup (ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))) ->
     provenance_ready_expr (fn_body fdef) ->
-    typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef) (fn_lifetimes fdef)
       (initial_root_env_for_params (fn_params fdef ++ fn_captures fdef))
       (sctx_of_ctx (fn_body_ctx fdef))
       (fn_body fdef) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
@@ -199,7 +202,7 @@ Proof.
   destruct (alpha_rename_fn_def_static_fields
               (store_names (captured ++ s_args)) fdef fcall used'
               Hrename)
-    as [_ [Hlts [Houts [Hcaps_eq Hret]]]].
+    as [_ [Hlts [Houts [Hcaps_eq [Hret [_ Hbounds]]]]]].
   assert (Hlen_captured_fdef :
     List.length captured = List.length (fn_captures fdef)).
   { pose proof Hcaptured_params_typed as Hcaptured_params_len.
@@ -215,13 +218,15 @@ Proof.
     eapply typed_env_roots_structural.
     eapply typed_env_roots_shadow_safe_roots. exact Htyped_body. }
   assert (Hkeys_body : root_env_sctx_keys_named R_body (sctx_of_ctx Γ_out)).
-  { destruct (typed_roots_shadow_safe_sctx_keys_named_mutual env
+  { destruct (typed_roots_shadow_safe_sctx_keys_named_mutual
+                (global_env_with_local_bounds env (fn_bounds fdef))
                 (fn_outlives fdef) (fn_lifetimes fdef)) as [Hkeys_expr _].
     eapply Hkeys_expr; eassumption. }
   assert (Hroots_body_named :
     root_env_sctx_roots_named R_body (sctx_of_ctx Γ_out) /\
     root_set_sctx_roots_named roots_body (sctx_of_ctx Γ_out)).
-  { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env
+  { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual
+                (global_env_with_local_bounds env (fn_bounds fdef))
                 (fn_outlives fdef) (fn_lifetimes fdef)) as [Hroots_expr _].
     eapply Hroots_expr; eassumption. }
   destruct Hroots_body_named as [Hroots_env_body Hroots_set_body].
@@ -234,7 +239,8 @@ Proof.
   { eapply rename_no_collision_on_root_env_names_from_typed_support;
       eassumption. }
   destruct (alpha_rename_typed_env_roots_shadow_safe_full_support_forward
-              env (fn_outlives fdef) (fn_lifetimes fdef) rho
+              (global_env_with_local_bounds env (fn_bounds fdef))
+              (fn_outlives fdef) (fn_lifetimes fdef) rho
               (initial_root_env_for_params
                 (fn_params fdef ++ fn_captures fdef))
               (initial_root_env_for_params_origin
@@ -365,7 +371,8 @@ Proof.
       destruct Hframe_ready as [[_ [_ [_ [Hrn_cap _]]]] _].
       exact Hrn_cap. }
   destruct (typed_env_roots_shadow_safe_instantiate_fresh
-              env (fn_outlives fdef) (fn_lifetimes fdef)
+              (global_env_with_local_bounds env (fn_bounds fdef))
+              (fn_outlives fdef) (fn_lifetimes fdef)
               (root_subst_of_params
                 (fn_params fdef ++ fn_captures fdef)
                 (arg_roots ++ capture_store_root_sets captured))
@@ -569,7 +576,9 @@ Proof.
   { eapply captured_call_runtime_args_tail_excludes_binding_params;
       eassumption. }
   assert (Htyped_tail :
-    typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef) (fn_lifetimes fdef)
       (call_param_root_env (fn_params fcall) arg_roots
         (capture_store_root_env captured) ++
         root_env_remove_params (fn_params fcall) R_args)
@@ -590,14 +599,15 @@ Proof.
     rewrite capture_store_root_env_names.
     exact (Hparams_fresh_captured x Hin). }
   assert (Htyped_tail_roots :
-    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       (call_param_root_env (fn_params fcall) arg_roots
         (capture_store_root_env captured ++ R_args))
       (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body Γ_out_r
       (R_body_inst ++ root_env_remove_params (fn_params fcall) R_args)
       roots_body_inst).
-  { rewrite Houts. rewrite Hlts.
+  { rewrite Houts. rewrite Hlts. rewrite Hbounds.
     rewrite Htail_decompose.
     eapply typed_env_roots_shadow_safe_roots. exact Htyped_tail. }
   assert (Hcompat_fcall :
@@ -733,7 +743,9 @@ Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_componen
       Σ_args R_args arg_roots ->
     NoDup (ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))) ->
     provenance_ready_expr (fn_body fdef) ->
-    typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef) (fn_lifetimes fdef)
       (initial_root_env_for_params (fn_params fdef ++ fn_captures fdef))
       (sctx_of_ctx (fn_body_ctx fdef))
       (fn_body fdef) T_body (sctx_of_ctx Γ_out) R_body roots_body ->

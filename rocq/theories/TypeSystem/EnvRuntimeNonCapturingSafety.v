@@ -105,72 +105,116 @@ Proof.
   - destruct Hdirect_or_prov as [Hprov_summary | Hdirect_summary].
     + destruct Hprov_summary as [Hnodup Hbody_summary].
       unfold callee_body_root_shadow_provenance_ready_at in Hbody_summary.
-      destruct Hbody_summary as
-        (T_body & Γ_out & R_body & roots_body &
-          Hprov_body & Htyped_shadow & Hcompat & _ & _).
-      pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
-      destruct (proj1 eval_preserves_typing_roots_ready_mutual
-          (alpha_normalize_global_env env) s (fn_body f) s' v Heval
-          (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-          (sctx_of_ctx (fn_body_ctx f))
-          T_body (sctx_of_ctx Γ_out) R_body roots_body
-          Hprov_body Hstore Hroots Hstore_shadow Hroot_shadow
-          (typed_env_roots_shadow_safe_roots
-            (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
-            (initial_root_env_for_fn f)
-            (sctx_of_ctx (fn_body_ctx f))
-            (fn_body f) T_body (sctx_of_ctx Γ_out) R_body roots_body
-            Htyped_shadow))
-        as [_ [Hv _]].
-      eapply VHT_Compatible.
-      * exact Hv.
-      * apply ty_compatible_b_sound. exact Hcompat.
+	      destruct Hbody_summary as
+	        (T_body & Γ_out & R_body & roots_body &
+	          Hprov_body & Htyped_shadow & Hcompat & _ & _).
+	      pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
+	      pose (body_env :=
+	        global_env_with_local_bounds (alpha_normalize_global_env env)
+	          (fn_bounds f)).
+	      assert (Hstore_body_env :
+	          store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
+	      { subst body_env.
+	        eapply store_typed_global_env_with_local_bounds. exact Hstore. }
+	      assert (Heval_body_env : eval body_env s (fn_body f) s' v).
+	      { subst body_env.
+	        eapply eval_global_env_with_local_bounds. exact Heval. }
+	      destruct (proj1 eval_preserves_typing_roots_ready_mutual
+	          body_env s (fn_body f) s' v Heval_body_env
+	          (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+	          (sctx_of_ctx (fn_body_ctx f))
+	          T_body (sctx_of_ctx Γ_out) R_body roots_body
+	          Hprov_body Hstore_body_env Hroots Hstore_shadow Hroot_shadow
+	          (typed_env_roots_shadow_safe_roots
+	            body_env (fn_outlives f) (fn_lifetimes f)
+	            (initial_root_env_for_fn f)
+	            (sctx_of_ctx (fn_body_ctx f))
+	            (fn_body f) T_body (sctx_of_ctx Γ_out) R_body roots_body
+	            Htyped_shadow))
+	        as [_ [Hv _]].
+	      assert (Hv_env :
+	          value_has_type (alpha_normalize_global_env env) s' v T_body).
+	      { subst body_env.
+	        eapply value_has_type_clear_global_env_local_bounds. exact Hv. }
+	      eapply VHT_Compatible.
+	      * exact Hv_env.
+	      * apply ty_compatible_b_sound. exact Hcompat.
     + destruct Hdirect_summary as
         (fname & args & raw_body & synthetic_body & fcallee & T_body &
           Γ_out & R_body & roots_body & Hbody & Htarget & Hsynthetic &
-          Hready_args & Hin_callee & Hname_callee & Hcallee_summary &
-          Hnodup & Htyped_shadow & Hcompat & _ & _).
-      pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
-      rewrite Hbody in Heval.
-      assert (Htyped_call :
-        typed_env_roots_shadow_safe (alpha_normalize_global_env env)
-          (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-          (sctx_of_ctx (fn_body_ctx f)) (ECall fname args)
-          T_body (sctx_of_ctx Γ_out) R_body roots_body).
-      { rewrite <- Hsynthetic. exact Htyped_shadow. }
-      assert (Heval_call :
-        eval (alpha_normalize_global_env env) s (ECall fname args) s' v).
-      { unfold direct_call_target_expr in Htarget.
-        destruct raw_body; try discriminate.
-        - inversion Htarget; subst. exact Heval.
-        - destruct raw_body; try discriminate.
-          inversion Htarget; subst.
-          apply eval_call_expr_fn_as_call. exact Heval. }
-      destruct (eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary
-          (alpha_normalize_global_env env) s s' v fname args Heval_call
-          (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
-          (sctx_of_ctx (fn_body_ctx f))
-          T_body (sctx_of_ctx Γ_out) R_body roots_body fcallee
-          Hready_args Hstore Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
-          (typed_env_roots_shadow_safe_roots
-            (alpha_normalize_global_env env) (fn_outlives f) (fn_lifetimes f)
-            (initial_root_env_for_fn f)
-            (sctx_of_ctx (fn_body_ctx f))
-            (ECall fname args) T_body (sctx_of_ctx Γ_out) R_body roots_body
-            Htyped_call)
-          Hunique Hin_callee Hname_callee Hcallee_summary)
-        as [_ [Hv _]].
-      eapply VHT_Compatible.
-      * exact Hv.
-      * apply ty_compatible_b_sound. exact Hcompat.
+	          Hready_args & Hin_callee & Hname_callee & Hcallee_summary &
+	          Hnodup & Htyped_shadow & Hcompat & _ & _).
+	      pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
+	      rewrite Hbody in Heval.
+	      pose (body_env :=
+	        global_env_with_local_bounds (alpha_normalize_global_env env)
+	          (fn_bounds f)).
+	      assert (Hstore_body_env :
+	          store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
+	      { subst body_env.
+	        eapply store_typed_global_env_with_local_bounds. exact Hstore. }
+	      assert (Heval_body_env : eval body_env s raw_body s' v).
+	      { subst body_env.
+	        eapply eval_global_env_with_local_bounds. exact Heval. }
+	      assert (Htyped_call :
+	        typed_env_roots_shadow_safe body_env
+	          (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+	          (sctx_of_ctx (fn_body_ctx f)) (ECall fname args)
+	          T_body (sctx_of_ctx Γ_out) R_body roots_body).
+	      { rewrite <- Hsynthetic. exact Htyped_shadow. }
+	      assert (Heval_call :
+	        eval body_env s (ECall fname args) s' v).
+	      { unfold direct_call_target_expr in Htarget.
+	        destruct raw_body; try discriminate.
+	        - inversion Htarget; subst. exact Heval_body_env.
+	        - destruct raw_body; try discriminate.
+	          inversion Htarget; subst.
+	          apply eval_call_expr_fn_as_call. exact Heval_body_env. }
+	      assert (Hcallee_summary_body :
+	          callee_body_root_shadow_provenance_summary body_env fcallee).
+	      { subst body_env.
+	        apply
+	          callee_body_root_shadow_provenance_summary_global_env_with_local_bounds.
+	        exact Hcallee_summary. }
+	      destruct (eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary
+	          body_env s s' v fname args Heval_call
+	          (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+	          (sctx_of_ctx (fn_body_ctx f))
+	          T_body (sctx_of_ctx Γ_out) R_body roots_body fcallee
+	          Hready_args Hstore_body_env Hroots Hstore_shadow Hroot_shadow Hnamed Hkeys
+	          (typed_env_roots_shadow_safe_roots
+	            body_env (fn_outlives f) (fn_lifetimes f)
+	            (initial_root_env_for_fn f)
+	            (sctx_of_ctx (fn_body_ctx f))
+	            (ECall fname args) T_body (sctx_of_ctx Γ_out) R_body roots_body
+	            Htyped_call)
+	          Hunique Hin_callee Hname_callee Hcallee_summary_body)
+	        as [_ [Hv _]].
+	      assert (Hv_env :
+	          value_has_type (alpha_normalize_global_env env) s' v T_body).
+	      { subst body_env.
+	        eapply value_has_type_clear_global_env_local_bounds. exact Hv. }
+	      eapply VHT_Compatible.
+	      * exact Hv_env.
+	      * apply ty_compatible_b_sound. exact Hcompat.
   - destruct Hlocal_summary as
       (fname & args & raw_body & synthetic_body & fcallee & T_body &
         Γ_out & R_body & roots_body & Hbody & Htarget & Hready_args &
         Hin_callee & Hname_callee & Hcallee_summary & Hnodup &
         Htyped_shadow & Hcompat & Hexclude_roots & Hexclude_env).
-    pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
-    rewrite Hbody in Heval.
-    unfold local_fn_value_call_target_expr in Htarget.
+	    pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
+	    rewrite Hbody in Heval.
+	    pose (body_env :=
+	      global_env_with_local_bounds (alpha_normalize_global_env env)
+	        (fn_bounds (fn_with_body f synthetic_body))).
+	    assert (Hstore_body_env :
+	        store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
+	    { subst body_env.
+	      eapply store_typed_global_env_with_local_bounds. exact Hstore. }
+	    assert (Heval_body_env : eval body_env s raw_body s' v).
+	    { subst body_env.
+	      eapply eval_global_env_with_local_bounds. exact Heval. }
+	    unfold local_fn_value_call_target_expr in Htarget.
 	    destruct raw_body as
 	      [| lit | z | m x T e1 e2 | m x e1 e2 | fname_alias
 		       | fname_make captures_make | p | fname_direct args_direct
@@ -205,14 +249,14 @@ Proof.
       apply andb_true_iff in Halias as [Hname_eq Husage_eq].
       apply ident_eqb_eq in Hname_eq. subst y.
       apply usage_eqb_true in Husage_eq.
-      match goal with
-      | He : eval ?env0 ?s0
-          (ELet ?m0 ?x0 ?T0 (EFn ?fname0)
-            (ECallExpr (EVar ?x0) ?args0)) ?sfinal ?vfinal |- _ =>
-          assert (Heval_synthetic :
-            eval env0 s0
-              (ELet m0 x0 T0 (EFn fname0) (ECall fname0 args0))
-              sfinal vfinal)
+	      match goal with
+	      | He : eval body_env ?s0
+	          (ELet ?m0 ?x0 ?T0 (EFn ?fname0)
+	            (ECallExpr (EVar ?x0) ?args0)) ?sfinal ?vfinal |- _ =>
+	          assert (Heval_synthetic :
+	            eval body_env s0
+	              (ELet m0 x0 T0 (EFn fname0) (ECall fname0 args0))
+	              sfinal vfinal)
           by (eapply eval_local_unrestricted_fn_value_call_as_synthetic_call;
               [ exact Husage_eq | exact He ])
       end.
@@ -226,38 +270,38 @@ Proof.
       | Hfn_typed : typed_env_roots_shadow_safe _ _ _ _ _ (EFn _) _ _ _ _ |- _ =>
           dependent destruction Hfn_typed
       end.
-      match goal with
-      | Htyped_call_shadow :
-          typed_env_roots_shadow_safe _ _ _ (root_env_add _ _ _)
-            (sctx_add _ _ _ _) (ECall _ _) _ _ _ _ |- _ =>
-          pose proof (typed_env_roots_shadow_safe_roots
-            (alpha_normalize_global_env env) (fn_outlives f)
-            (fn_lifetimes f) _ _ _ _ _ _ _ Htyped_call_shadow)
-            as Htyped_call
-      end.
+	      match goal with
+	      | Htyped_call_shadow :
+	          typed_env_roots_shadow_safe ?env0 ?Ω0 ?n0 ?R0 ?Σ0
+	            (ECall ?fname0 ?args0) ?T0 ?Σ' ?R' ?roots |- _ =>
+	          pose proof (typed_env_roots_shadow_safe_roots
+	            env0 Ω0 n0 R0 Σ0 (ECall fname0 args0) T0 Σ' R' roots
+	            Htyped_call_shadow)
+	            as Htyped_call
+	      end.
       assert (Hfresh_store : store_lookup x0 s1 = None)
         by (eapply store_roots_within_lookup_none; eassumption).
-      assert (Hadd_pres :
-        store_ref_targets_preserved (alpha_normalize_global_env env) s1
-          (store_add x0 T (VClosure (fn_name fcallee) []) s1))
-        by (apply store_add_fresh_ref_targets_preserved;
-            exact Hfresh_store).
-      assert (Hv_closure_actual :
-        value_has_type (alpha_normalize_global_env env) s1
-          (VClosure (fn_name fcallee) []) (fn_value_ty fdef))
-        by (eapply VHT_ClosureIn; [exact H | exact x]).
-      assert (Hv_closure :
-        value_has_type (alpha_normalize_global_env env) s1
-          (VClosure (fn_name fcallee) []) T)
-      by (eapply VHT_Compatible;
-          [ exact Hv_closure_actual
-          | apply ty_compatible_b_sound; exact H0 ]).
-      assert (Hstore_add :
-        store_typed (alpha_normalize_global_env env)
-          (store_add x0 T (VClosure (fn_name fcallee) []) s1)
-          (sctx_add x0 T m (sctx_of_ctx (fn_body_ctx f))))
-      by (eapply store_typed_add;
-          [ exact Hstore | exact Hv_closure | exact Hadd_pres ]).
+	      assert (Hadd_pres :
+	        store_ref_targets_preserved body_env s1
+	          (store_add x0 T (VClosure (fn_name fcallee) []) s1))
+	        by (apply store_add_fresh_ref_targets_preserved;
+	            exact Hfresh_store).
+	      assert (Hv_closure_actual :
+	        value_has_type body_env s1
+	          (VClosure (fn_name fcallee) []) (fn_value_ty fdef))
+	        by (eapply VHT_ClosureIn; [exact H | exact x]).
+	      assert (Hv_closure :
+	        value_has_type body_env s1
+	          (VClosure (fn_name fcallee) []) T)
+	      by (eapply VHT_Compatible;
+	          [ exact Hv_closure_actual
+	          | apply ty_compatible_b_sound; exact H0 ]).
+	      assert (Hstore_add :
+	        store_typed body_env
+	          (store_add x0 T (VClosure (fn_name fcallee) []) s1)
+	          (sctx_add x0 T m (sctx_of_ctx (fn_body_ctx f))))
+	      by (eapply store_typed_add;
+	          [ exact Hstore_body_env | exact Hv_closure | exact Hadd_pres ]).
       assert (Hroots_add :
         store_roots_within (root_env_add x0 [] (initial_root_env_for_fn f))
           (store_add x0 T (VClosure (fn_name fcallee) []) s1))
@@ -278,35 +322,44 @@ Proof.
           (store_add x0 T (VClosure (fn_name fcallee) []) s1))
       by (eapply root_env_store_roots_named_add_env_store_add;
           eassumption).
-      assert (Hkeys_add :
-        root_env_store_keys_named
-          (root_env_add x0 [] (initial_root_env_for_fn f))
-          (store_add x0 T (VClosure (fn_name fcallee) []) s1))
-      by (eapply root_env_store_keys_named_add_env_store_add;
-          exact Hkeys).
-      match goal with
-      | Heval_call : eval _ _ (ECall (fn_name fcallee) args) s2 v |- _ =>
-          destruct (eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary
-              (alpha_normalize_global_env env)
-              (store_add x0 T (VClosure (fn_name fcallee) []) s1) s2 v
-              (fn_name fcallee) args Heval_call
-              (fn_outlives f) (fn_lifetimes f)
-              (root_env_add x0 [] (initial_root_env_for_fn f))
-              (sctx_add x0 T m (sctx_of_ctx (fn_body_ctx f)))
-              T2 Σ2 R2 roots2 fcallee
-              Hready_args Hstore_add Hroots_add Hshadow_add Hrn_add
-              Hnamed_add Hkeys_add Htyped_call Hunique Hin_callee
-              eq_refl Hcallee_summary)
-            as [_ [Hv_inner [_ [_ [Hv_roots _]]]]]
-      end.
+	      assert (Hkeys_add :
+	        root_env_store_keys_named
+	          (root_env_add x0 [] (initial_root_env_for_fn f))
+	          (store_add x0 T (VClosure (fn_name fcallee) []) s1))
+	      by (eapply root_env_store_keys_named_add_env_store_add;
+	          exact Hkeys).
+	      assert (Hcallee_summary_body :
+	        callee_body_root_shadow_provenance_summary body_env fcallee).
+	      { subst body_env.
+	        apply
+	          callee_body_root_shadow_provenance_summary_global_env_with_local_bounds.
+	        exact Hcallee_summary. }
+	      destruct (eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary
+	          body_env
+	          (store_add x0 T (VClosure (fn_name fcallee) []) s1) s2 v
+	          (fn_name fcallee) args H8
+	          (fn_outlives f) (fn_lifetimes f)
+	          (root_env_add x0 [] (initial_root_env_for_fn f))
+	          (sctx_add x0 T m (sctx_of_ctx (fn_body_ctx f)))
+	          T2 Σ2 R2 roots2 fcallee
+	          Hready_args Hstore_add Hroots_add Hshadow_add Hrn_add
+	          Hnamed_add Hkeys_add Htyped_call Hunique Hin_callee
+	          eq_refl Hcallee_summary_body)
+	        as [_ [Hv_inner [_ [_ [Hv_roots _]]]]].
       assert (Hexclude_v : value_refs_exclude_root x0 v)
         by (eapply value_roots_exclude_root; eassumption).
-      assert (Hv_removed :
-        value_has_type (alpha_normalize_global_env env) (store_remove x0 s2)
-          v T2)
-        by (eapply value_has_type_store_remove_excluding_root; eassumption).
-      eapply VHT_Compatible.
-      * exact Hv_removed.
+	      assert (Hv_removed :
+	        value_has_type body_env (store_remove x0 s2)
+	          v T2)
+	        by (eapply value_has_type_store_remove_excluding_root; eassumption).
+	      assert (Hv_removed_env :
+	          value_has_type (alpha_normalize_global_env env)
+	            (store_remove x0 s2) v T2).
+	      { subst body_env.
+	        eapply value_has_type_clear_global_env_local_bounds.
+	        exact Hv_removed. }
+	      eapply VHT_Compatible.
+	      * exact Hv_removed_env.
       * apply ty_compatible_b_sound. exact Hcompat.
     + inversion Heval.
 Qed.

@@ -54,7 +54,8 @@ Lemma eval_make_closure_captured_call_expr_preserves_typing_with_instantiated_bo
     typed_args_roots env Ω n R Σ args (fn_params fdef)
       Σ_args R_args arg_roots ->
     provenance_ready_expr (fn_body fcall) ->
-    typed_env_roots env (fn_outlives fcall) (fn_lifetimes fcall)
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
       (call_param_root_env (fn_params fcall) arg_roots
         (empty_root_env_for_store captured ++ R_args))
       (sctx_of_ctx (fn_body_ctx fcall))
@@ -113,7 +114,9 @@ Lemma eval_make_closure_captured_call_expr_preserves_typing_with_callee_componen
       Σ_args R_args arg_roots ->
     NoDup (ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))) ->
     provenance_ready_expr (fn_body fdef) ->
-    typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef) (fn_lifetimes fdef)
       (initial_root_env_for_params (fn_params fdef ++ fn_captures fdef))
       (sctx_of_ctx (fn_body_ctx fdef))
       (fn_body fdef) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
@@ -171,7 +174,9 @@ Lemma eval_make_closure_captured_call_expr_package_with_callee_components :
       Σ_args R_args arg_roots ->
     NoDup (ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))) ->
     provenance_ready_expr (fn_body fdef) ->
-    typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef) (fn_lifetimes fdef)
       (initial_root_env_for_params (fn_params fdef ++ fn_captures fdef))
       (sctx_of_ctx (fn_body_ctx fdef))
       (fn_body fdef) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
@@ -234,7 +239,9 @@ Lemma eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_comp
       Σ_args R_args arg_roots ->
     NoDup (ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))) ->
     provenance_ready_expr (fn_body fdef) ->
-    typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef) (fn_lifetimes fdef)
       (initial_root_env_for_params (fn_params fdef ++ fn_captures fdef))
       (sctx_of_ctx (fn_body_ctx fdef))
       (fn_body fdef) T_body (sctx_of_ctx Γ_out) R_body roots_body ->

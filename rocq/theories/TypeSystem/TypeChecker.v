@@ -537,9 +537,37 @@ Definition instantiate_trait_ref (args : list Ty) (tr : trait_ref) : trait_ref :
   MkTraitRef (trait_ref_name tr)
     (map (subst_type_params_ty args) (trait_ref_args tr)).
 
+Fixpoint ty_list_eqb (xs ys : list Ty) : bool :=
+  match xs, ys with
+  | [], [] => true
+  | x :: xs', y :: ys' => ty_eqb x y && ty_list_eqb xs' ys'
+  | _, _ => false
+  end.
+
+Definition trait_ref_eqb (a b : trait_ref) : bool :=
+  String.eqb (trait_ref_name a) (trait_ref_name b) &&
+  ty_list_eqb (trait_ref_args a) (trait_ref_args b).
+
+Definition local_bound_satisfies_trait
+    (bounds : list trait_bound) (type_index : nat) (tr : trait_ref) : bool :=
+  existsb
+    (fun b =>
+      Nat.eqb (bound_type_index b) type_index &&
+      existsb (trait_ref_eqb tr) (bound_traits b))
+    bounds.
+
+Definition local_bounds_satisfy_trait_ref_for_ty
+    (bounds : list trait_bound) (tr : trait_ref) (for_ty : Ty) : bool :=
+  match ty_core for_ty with
+  | TParam i => local_bound_satisfies_trait bounds i tr
+  | _ => false
+  end.
+
 Definition check_trait_ref_for_ty
     (env : global_env) (tr : trait_ref) (for_ty : Ty) : option infer_error :=
-  trait_impl_error_with_args env (trait_ref_name tr) (trait_ref_args tr) for_ty.
+  if local_bounds_satisfy_trait_ref_for_ty (env_local_bounds env) tr for_ty
+  then None
+  else trait_impl_error_with_args env (trait_ref_name tr) (trait_ref_args tr) for_ty.
 
 Fixpoint check_trait_refs_for_ty
     (env : global_env) (traits : list trait_ref) (for_ty : Ty)
@@ -4938,6 +4966,7 @@ Definition infer_env (env : global_env) (f : fn_def)
   let n := fn_lifetimes f in
   let Ω := fn_outlives f in
   let Δ := mk_region_ctx n in
+  let body_env := global_env_with_local_bounds env (fn_bounds f) in
   if negb (wf_outlives_b Δ Ω)
   then infer_err ErrLifetimeLeak
   else
@@ -4947,7 +4976,7 @@ Definition infer_env (env : global_env) (f : fn_def)
   match check_fn_binding_params Δ f with
   | Some err => infer_err err
   | None =>
-  match infer_core_env env Ω n (fn_body_ctx f) (fn_body f) with
+  match infer_core_env body_env Ω n (fn_body_ctx f) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out) =>
       if negb (wf_type_b Δ T_body)
@@ -4971,6 +5000,7 @@ Definition infer_env_elab (env : global_env) (f : fn_def)
   let n := fn_lifetimes f in
   let Ω := fn_outlives f in
   let Δ := mk_region_ctx n in
+  let body_env := global_env_with_local_bounds env (fn_bounds f) in
   if negb (wf_outlives_b Δ Ω)
   then infer_err ErrLifetimeLeak
   else
@@ -4980,7 +5010,7 @@ Definition infer_env_elab (env : global_env) (f : fn_def)
   match check_fn_binding_params Δ f with
   | Some err => infer_err err
   | None =>
-  match infer_core_env_elab env Ω n (fn_body_ctx f) (fn_body f) with
+  match infer_core_env_elab body_env Ω n (fn_body_ctx f) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out, body') =>
       if negb (wf_type_b Δ T_body)
@@ -4999,6 +5029,7 @@ Definition infer_env_roots (env : global_env) (f : fn_def) (R0 : root_env)
   let n := fn_lifetimes f in
   let Ω := fn_outlives f in
   let Δ := mk_region_ctx n in
+  let body_env := global_env_with_local_bounds env (fn_bounds f) in
   if negb (wf_outlives_b Δ Ω)
   then infer_err ErrLifetimeLeak
   else
@@ -5008,7 +5039,7 @@ Definition infer_env_roots (env : global_env) (f : fn_def) (R0 : root_env)
   match check_fn_binding_params Δ f with
   | Some err => infer_err err
   | None =>
-  match infer_core_env_roots env Ω n R0 (fn_body_ctx f) (fn_body f) with
+  match infer_core_env_roots body_env Ω n R0 (fn_body_ctx f) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out, R_out, roots) =>
       if negb (wf_type_b Δ T_body)
@@ -5028,6 +5059,7 @@ Definition infer_env_roots_shadow_safe
   let n := fn_lifetimes f in
   let Ω := fn_outlives f in
   let Δ := mk_region_ctx n in
+  let body_env := global_env_with_local_bounds env (fn_bounds f) in
   if negb (wf_outlives_b Δ Ω)
   then infer_err ErrLifetimeLeak
   else
@@ -5038,7 +5070,7 @@ Definition infer_env_roots_shadow_safe
   | Some err => infer_err err
   | None =>
   match infer_core_env_roots_shadow_safe
-          env Ω n R0 (fn_body_ctx f) (fn_body f) with
+          body_env Ω n R0 (fn_body_ctx f) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out, R_out, roots) =>
       if negb (wf_type_b Δ T_body)
@@ -5101,7 +5133,7 @@ Definition ex_struct_pair : struct_def :=
     ].
 
 Definition ex_env_struct_pair : global_env :=
-  MkGlobalEnv [ex_struct_pair] [] [] [].
+  MkGlobalEnv [ex_struct_pair] [] [] [] [].
 
 Example infer_core_env_roots_var_summary_ok :
   infer_core_env_roots ex_env_struct_pair [] 0
@@ -5252,19 +5284,19 @@ Definition ex_capture_ref_free_ref_struct : struct_def :=
 
 Example capture_ref_free_ty_b_accepts_plain_struct :
   capture_ref_free_ty_b
-    (MkGlobalEnv [ex_capture_ref_free_plain_struct] [] [] [])
+    (MkGlobalEnv [ex_capture_ref_free_plain_struct] [] [] [] [])
     (MkTy UUnrestricted (TStruct "PlainCapture"%string [] [])) = true.
 Proof. vm_compute. reflexivity. Qed.
 
 Example capture_ref_free_ty_b_rejects_ref_struct :
   capture_ref_free_ty_b
-    (MkGlobalEnv [ex_capture_ref_free_ref_struct] [] [] [])
+    (MkGlobalEnv [ex_capture_ref_free_ref_struct] [] [] [] [])
     (MkTy UUnrestricted (TStruct "RefCapture"%string [] [])) = false.
 Proof. vm_compute. reflexivity. Qed.
 
 Example capture_ref_free_ty_b_rejects_closure_value :
   capture_ref_free_ty_b
-    (MkGlobalEnv [] [] [] [])
+    (MkGlobalEnv [] [] [] [] [])
     (MkTy UUnrestricted
       (TClosure LStatic [] (MkTy UUnrestricted TBooleans))) = false.
 Proof. vm_compute. reflexivity. Qed.
@@ -5691,7 +5723,7 @@ Definition infer_full_env_roots (env : global_env) (f : fn_def) (R0 : root_env)
 
 Definition alpha_normalize_global_env (env : global_env) : global_env :=
   MkGlobalEnv (env_structs env) (env_traits env) (env_impls env)
-    (alpha_rename_syntax (env_fns env)).
+    (env_local_bounds env) (alpha_rename_syntax (env_fns env)).
 
 Fixpoint infer_fns_env_elab (env : global_env) (fns : list fn_def)
     : infer_result (list fn_def) :=
@@ -5715,7 +5747,7 @@ Definition infer_program_env_alpha_elab (env : global_env)
   | infer_err err => infer_err err
   | infer_ok fns' =>
       infer_ok (MkGlobalEnv (env_structs env_alpha) (env_traits env_alpha)
-        (env_impls env_alpha) fns')
+        (env_impls env_alpha) (env_local_bounds env_alpha) fns')
   end.
 
 Definition fn_params_roots_exclude_b (ps : list param) (roots : root_set) : bool :=
@@ -6186,14 +6218,14 @@ Definition ex_ready_gap_let_fn : fn_def :=
       EUnit) 0 [].
 
 Definition ex_ready_gap_let_env : global_env :=
-  MkGlobalEnv [] [] [] [ex_ready_gap_let_fn].
+  MkGlobalEnv [] [] [] [] [ex_ready_gap_let_fn].
 
 Example check_program_env_alpha_accepts_ready_gap_let :
   check_program_env_alpha ex_ready_gap_let_env = true.
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_duplicate_fn_name_env : global_env :=
-  MkGlobalEnv [] [] [] [ex_ready_gap_let_fn; ex_ready_gap_let_fn].
+  MkGlobalEnv [] [] [] [] [ex_ready_gap_let_fn; ex_ready_gap_let_fn].
 
 Example check_program_env_alpha_rejects_duplicate_fn_name :
   check_program_env_alpha ex_duplicate_fn_name_env = false.
@@ -6257,7 +6289,7 @@ Definition ex_ready_gap_let_annotated_fn : fn_def :=
       EUnit) 0 [].
 
 Definition ex_ready_gap_let_annotated_env : global_env :=
-  MkGlobalEnv [] [] [] [ex_ready_gap_let_annotated_fn].
+  MkGlobalEnv [] [] [] [] [ex_ready_gap_let_annotated_fn].
 
 Example ready_gap_matrix_annotated_let_checker_accepts :
   check_program_env_alpha ex_ready_gap_let_annotated_env = true.
@@ -6296,7 +6328,7 @@ Definition ex_ready_gap_deref_borrow_fn : fn_def :=
       (EDeref (EBorrow RShared (PVar (("x"%string), 0))))) 0 [].
 
 Definition ex_ready_gap_deref_borrow_env : global_env :=
-  MkGlobalEnv [] [] [] [ex_ready_gap_deref_borrow_fn].
+  MkGlobalEnv [] [] [] [] [ex_ready_gap_deref_borrow_fn].
 
 Example ready_gap_matrix_deref_borrow_checker_accepts :
   check_program_env_alpha ex_ready_gap_deref_borrow_env = true.
@@ -6323,7 +6355,7 @@ Definition ex_ready_gap_direct_call_fn : fn_def :=
     (ECall (("ready_gap_call_callee"%string), 0) []) 0 [].
 
 Definition ex_ready_gap_direct_call_env : global_env :=
-  MkGlobalEnv [] [] [] [ex_ready_gap_call_callee_fn; ex_ready_gap_direct_call_fn].
+  MkGlobalEnv [] [] [] [] [ex_ready_gap_call_callee_fn; ex_ready_gap_direct_call_fn].
 
 Example ready_gap_matrix_direct_call_checker_accepts :
   check_program_env_alpha ex_ready_gap_direct_call_env = true.
@@ -6361,7 +6393,7 @@ Definition ex_nonempty_capture_callee_fn : fn_def :=
     EUnit 0 [].
 
 Definition ex_nonempty_capture_env : global_env :=
-  MkGlobalEnv [] [] [] [ex_nonempty_capture_callee_fn].
+  MkGlobalEnv [] [] [] [] [ex_nonempty_capture_callee_fn].
 
 Example infer_core_env_nonempty_capture_fn_value_rejects :
   infer_core_env ex_nonempty_capture_env [] 0 []
@@ -6392,7 +6424,7 @@ Definition ex_shared_ref_capture_ctx : ctx :=
     MkBindingState false [], MImmutable)].
 
 Definition ex_shared_ref_capture_env : global_env :=
-  MkGlobalEnv [] [] [] [ex_shared_ref_capture_callee_fn].
+  MkGlobalEnv [] [] [] [] [ex_shared_ref_capture_callee_fn].
 
 Example infer_core_env_shared_ref_capture_accepts :
   infer_core_env ex_shared_ref_capture_env [] 1 ex_shared_ref_capture_ctx
@@ -6437,7 +6469,7 @@ Definition ex_shared_ref_capture_direct_call_fn : fn_def :=
       []) 0 [].
 
 Definition ex_shared_ref_capture_direct_call_env : global_env :=
-  MkGlobalEnv [] [] []
+  MkGlobalEnv [] [] [] []
     [ex_shared_ref_capture_ignore_callee_fn;
      ex_shared_ref_capture_direct_call_fn].
 
@@ -6462,7 +6494,7 @@ Definition ex_shared_ref_capture_local_let_call_fn : fn_def :=
       (ECallExpr (EVar (("g"%string), 0)) [])) 0 [].
 
 Definition ex_shared_ref_capture_local_let_call_env : global_env :=
-  MkGlobalEnv [] [] []
+  MkGlobalEnv [] [] [] []
     [ex_shared_ref_capture_ignore_callee_fn;
      ex_shared_ref_capture_local_let_call_fn].
 
@@ -6490,7 +6522,7 @@ Definition ex_ready_gap_captured_closure_call_fn : fn_def :=
     ex_ready_gap_captured_closure_call_expr 0 [].
 
 Definition ex_ready_gap_captured_closure_call_env : global_env :=
-  MkGlobalEnv [] [] []
+  MkGlobalEnv [] [] [] []
     [ex_nonempty_capture_callee_fn; ex_ready_gap_captured_closure_call_fn].
 
 Example ready_gap_matrix_captured_closure_call_checker_rejects :
@@ -6525,6 +6557,7 @@ Definition ex_ready_gap_captured_closure_direct_param_call_fn : fn_def :=
 Definition ex_ready_gap_captured_closure_direct_param_call_env
     : global_env :=
   MkGlobalEnv [] [] []
+    []
     [ex_nonempty_capture_callee_fn;
      ex_ready_gap_captured_closure_direct_param_call_fn].
 
@@ -6561,6 +6594,7 @@ Definition ex_ready_gap_captured_closure_direct_param_if_call_fn : fn_def :=
 Definition ex_ready_gap_captured_closure_direct_param_if_call_env
     : global_env :=
   MkGlobalEnv [] [] []
+    []
     [ex_nonempty_capture_callee_fn;
      ex_ready_gap_captured_closure_direct_param_if_call_fn].
 
@@ -6600,6 +6634,7 @@ Definition ex_ready_gap_captured_closure_local_let_call_fn : fn_def :=
 Definition ex_ready_gap_captured_closure_local_let_call_env
     : global_env :=
   MkGlobalEnv [] [] []
+    []
     [ex_nonempty_capture_callee_fn;
      ex_ready_gap_captured_closure_local_let_call_fn].
 
@@ -6636,6 +6671,7 @@ Definition ex_ready_gap_captured_closure_infer_local_let_call_fn : fn_def :=
 Definition ex_ready_gap_captured_closure_infer_local_let_call_env
     : global_env :=
   MkGlobalEnv [] [] []
+    []
     [ex_nonempty_capture_callee_fn;
      ex_ready_gap_captured_closure_infer_local_let_call_fn].
 
@@ -6672,7 +6708,7 @@ Definition ex_ready_gap_call_expr_fn : fn_def :=
     (ECallExpr (EFn (("ready_gap_call_callee"%string), 0)) []) 0 [].
 
 Definition ex_ready_gap_call_expr_env : global_env :=
-  MkGlobalEnv [] [] [] [ex_ready_gap_call_callee_fn; ex_ready_gap_call_expr_fn].
+  MkGlobalEnv [] [] [] [] [ex_ready_gap_call_callee_fn; ex_ready_gap_call_expr_fn].
 
 Example ready_gap_matrix_call_expr_checker_accepts :
   check_program_env_alpha ex_ready_gap_call_expr_env = true.
@@ -6697,7 +6733,7 @@ Definition ex_ready_gap_function_value_call_fn : fn_def :=
       (ECallExpr (EVar (("g"%string), 0)) [])) 0 [].
 
 Definition ex_ready_gap_function_value_call_env : global_env :=
-  MkGlobalEnv [] [] []
+  MkGlobalEnv [] [] [] []
     [ex_ready_gap_call_callee_fn; ex_ready_gap_function_value_call_fn].
 
 Example ready_gap_matrix_function_value_call_checker_accepts :
@@ -6723,7 +6759,7 @@ Definition ex_ready_gap_function_value_call_affine_annotated_fn : fn_def :=
       (ECallExpr (EVar (("g"%string), 0)) [])) 0 [].
 
 Definition ex_ready_gap_function_value_call_affine_annotated_env : global_env :=
-  MkGlobalEnv [] [] []
+  MkGlobalEnv [] [] [] []
     [ ex_ready_gap_call_callee_fn
     ; ex_ready_gap_function_value_call_affine_annotated_fn
     ].
@@ -6745,7 +6781,7 @@ Definition ex_struct_split : struct_def :=
     ].
 
 Definition ex_env_split : global_env :=
-  MkGlobalEnv [ex_struct_split] [] [] [].
+  MkGlobalEnv [ex_struct_split] [] [] [] [].
 
 Definition ex_split_ty : Ty :=
   MkTy UAffine (TStruct ("Split"%string) [] []).
@@ -6775,7 +6811,7 @@ Example infer_core_env_struct_instance_usage_after_args :
     (MkGlobalEnv
       [MkStructDef ("Box"%string) 0 1 []
         [MkFieldDef ("value"%string) MImmutable (MkTy UAffine (TParam 0))]]
-      [] [] [])
+      [] [] [] [])
     [] 0 []
     (EStruct ("Box"%string) [] [MkTy UAffine TIntegers]
       [(("value"%string), ELit (LInt 1))]) =
@@ -6915,7 +6951,7 @@ Definition fn_stub_of_raw (f : raw_fn_def) : fn_def :=
 
 Definition append_env_fns (env : global_env) (fns : list fn_def) : global_env :=
   MkGlobalEnv (env_structs env) (env_traits env) (env_impls env)
-    (env_fns env ++ fns).
+    (env_local_bounds env) (env_fns env ++ fns).
 
 Fixpoint closure_elab_suffix (idx : nat) : string :=
   match idx with
@@ -7229,7 +7265,8 @@ Fixpoint elaborate_raw_fns_fuel
   | [] => infer_ok ([], next)
   | f :: rest =>
       let env0 := append_env_fns base_env done in
-      match elaborate_raw_expr_fuel fuel env0 (raw_fn_outlives f)
+      let body_env := global_env_with_local_bounds env0 (raw_fn_bounds f) in
+      match elaborate_raw_expr_fuel fuel body_env (raw_fn_outlives f)
               (raw_fn_lifetimes f) (sctx_of_ctx (raw_fn_body_ctx f))
               next (raw_fn_body f) with
       | infer_err err => infer_err err
@@ -7249,11 +7286,13 @@ Fixpoint elaborate_raw_fns_fuel
 Definition elaborate_raw_global_env (env : global_env) (fs : list raw_fn_def)
     : infer_result global_env :=
   let stubs := map fn_stub_of_raw fs in
-  let base := MkGlobalEnv (env_structs env) (env_traits env) (env_impls env) stubs in
+  let base := MkGlobalEnv (env_structs env) (env_traits env) (env_impls env)
+    [] stubs in
   match elaborate_raw_fns_fuel 10000 base [] 0 fs with
   | infer_err err => infer_err err
   | infer_ok (fns, _) =>
-      infer_ok (MkGlobalEnv (env_structs env) (env_traits env) (env_impls env) fns)
+      infer_ok (MkGlobalEnv (env_structs env) (env_traits env) (env_impls env)
+        [] fns)
   end.
 
 (* ------------------------------------------------------------------ *)

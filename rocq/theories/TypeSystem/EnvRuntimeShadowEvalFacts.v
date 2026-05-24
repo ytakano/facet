@@ -51,7 +51,9 @@ Lemma eval_make_closure_captured_call_expr_shadow_package_with_callee_components
     preservation_ready_args args ->
     NoDup (ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))) ->
     provenance_ready_expr (fn_body fdef) ->
-    typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef) (fn_lifetimes fdef)
       (initial_root_env_for_params (fn_params fdef ++ fn_captures fdef))
       (sctx_of_ctx (fn_body_ctx fdef))
       (fn_body fdef) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
@@ -81,7 +83,7 @@ Proof.
   repeat match goal with
   | Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?f_runtime |- _ =>
       lazymatch f_runtime with
-      | fdef => fail
+      | fdef => fail 1
       | _ =>
           let Hsame := fresh "Hsame_callee" in
           assert (Hsame : f_runtime = fdef)
@@ -92,7 +94,7 @@ Proof.
   | Hin_typed : In ?f_typed (env_fns env),
     Hname_typed : fn_name ?f_typed = ?fname_call |- _ =>
       lazymatch f_typed with
-      | fdef => fail
+      | fdef => fail 1
       | _ =>
           let Hsame := fresh "Hsame_typed_callee" in
           assert (Hsame : f_typed = fdef)
@@ -104,7 +106,7 @@ Proof.
   | Hin_typed : In ?f_typed (env_fns env),
     Hname_eq : fn_name fdef = fn_name ?f_typed |- _ =>
       lazymatch f_typed with
-      | fdef => fail
+      | fdef => fail 1
       | _ =>
           let Hsame := fresh "Hsame_typed_callee" in
           assert (Hsame : f_typed = fdef)
@@ -115,7 +117,7 @@ Proof.
   | Hin_typed : In ?f_typed (env_fns env),
     Hname_eq : ?fname_call = fn_name ?f_typed |- _ =>
       lazymatch f_typed with
-      | fdef => fail
+      | fdef => fail 1
       | _ =>
           let Hsame := fresh "Hsame_typed_callee" in
           assert (Hsame : f_typed = fdef)
@@ -127,7 +129,7 @@ Proof.
   | Hin_typed : In ?f_typed (env_fns env),
     Hname_eq : fn_name ?f_typed = fn_name fdef |- _ =>
       lazymatch f_typed with
-      | fdef => fail
+      | fdef => fail 1
       | _ =>
           let Hsame := fresh "Hsame_typed_callee" in
           assert (Hsame : f_typed = fdef)
@@ -135,6 +137,68 @@ Proof.
                 [ exact Hin_typed | exact Hin | exact Hname_eq ]);
           subst f_typed
       end
+  end.
+  match goal with
+  | Hin_typed : In ?f_typed (env_fns env),
+    Hname_eq : fn_name fdef = fn_name ?f_typed |- _ =>
+      let Hsame := fresh "Hsame_typed_callee" in
+      assert (Hsame : f_typed = fdef)
+        by (eapply Hunique;
+            [ exact Hin_typed | exact Hin | symmetry; exact Hname_eq ]);
+      subst f_typed
+  | _ => idtac
+  end.
+  repeat match goal with
+  | Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?f_runtime |- _ =>
+      lazymatch f_runtime with
+      | fdef => fail 1
+      | _ =>
+          let Hsame := fresh "Hsame_callee" in
+          assert (Hsame : f_runtime = fdef)
+            by (eapply lookup_fn_unique_by_name;
+                [ exact Hlookup | exact Hin | exact Hfname | exact Hunique ]);
+          subst f_runtime
+      end
+  end.
+  match goal with
+  | Hlookup : lookup_fn (fn_name fdef) (env_fns env) = Some ?f_runtime |- _ =>
+      let Hsame := fresh "Hsame_callee" in
+      assert (Hsame : f_runtime = fdef)
+        by (eapply lookup_fn_unique_by_name;
+            [ exact Hlookup | exact Hin | reflexivity | exact Hunique ]);
+      subst f_runtime
+  | _ => idtac
+  end.
+  match goal with
+  | Hin_typed : In ?f_typed (env_fns env),
+    Hname_eq : fn_name fdef = fn_name ?f_typed |- _ =>
+      let Hsame := fresh "Hsame_typed_callee" in
+      assert (Hsame : f_typed = fdef)
+        by (eapply Hunique;
+            [ exact Hin_typed | exact Hin | symmetry; exact Hname_eq ]);
+      subst f_typed
+  | _ => idtac
+  end.
+  repeat match goal with
+  | Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?f_runtime |- _ =>
+      lazymatch f_runtime with
+      | fdef => fail 1
+      | _ =>
+          let Hsame := fresh "Hsame_callee" in
+          assert (Hsame : f_runtime = fdef)
+            by (eapply lookup_fn_unique_by_name;
+                [ exact Hlookup | exact Hin | exact Hfname | exact Hunique ]);
+          subst f_runtime
+      end
+  end.
+  match goal with
+  | Hlookup : lookup_fn (fn_name fdef) (env_fns env) = Some ?f_runtime |- _ =>
+      let Hsame := fresh "Hsame_callee" in
+      assert (Hsame : f_runtime = fdef)
+        by (eapply lookup_fn_unique_by_name;
+            [ exact Hlookup | exact Hin | reflexivity | exact Hunique ]);
+      subst f_runtime
+  | _ => idtac
   end.
   match goal with
   | Htyped_args_shadow : typed_args_roots_shadow_safe env Ω n R Σ args
@@ -205,7 +269,9 @@ Lemma eval_make_closure_captured_call_expr_shadow_preserves_typing_with_callee_c
     preservation_ready_args args ->
     NoDup (ctx_names (params_ctx (fn_params fdef ++ fn_captures fdef))) ->
     provenance_ready_expr (fn_body fdef) ->
-    typed_env_roots_shadow_safe env (fn_outlives fdef) (fn_lifetimes fdef)
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef) (fn_lifetimes fdef)
       (initial_root_env_for_params (fn_params fdef ++ fn_captures fdef))
       (sctx_of_ctx (fn_body_ctx fdef))
       (fn_body fdef) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
@@ -229,7 +295,7 @@ Proof.
   repeat match goal with
   | Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?f_runtime |- _ =>
       lazymatch f_runtime with
-      | fdef => fail
+      | fdef => fail 1
       | _ =>
           let Hsame := fresh "Hsame_callee" in
           assert (Hsame : f_runtime = fdef)
@@ -240,7 +306,7 @@ Proof.
   | Hin_typed : In ?f_typed (env_fns env),
     Hname_typed : fn_name ?f_typed = ?fname_call |- _ =>
       lazymatch f_typed with
-      | fdef => fail
+      | fdef => fail 1
       | _ =>
           let Hsame := fresh "Hsame_typed_callee" in
           assert (Hsame : f_typed = fdef)
@@ -252,7 +318,7 @@ Proof.
   | Hin_typed : In ?f_typed (env_fns env),
     Hname_eq : fn_name fdef = fn_name ?f_typed |- _ =>
       lazymatch f_typed with
-      | fdef => fail
+      | fdef => fail 1
       | _ =>
           let Hsame := fresh "Hsame_typed_callee" in
           assert (Hsame : f_typed = fdef)
@@ -263,7 +329,7 @@ Proof.
   | Hin_typed : In ?f_typed (env_fns env),
     Hname_eq : ?fname_call = fn_name ?f_typed |- _ =>
       lazymatch f_typed with
-      | fdef => fail
+      | fdef => fail 1
       | _ =>
           let Hsame := fresh "Hsame_typed_callee" in
           assert (Hsame : f_typed = fdef)
@@ -275,7 +341,7 @@ Proof.
   | Hin_typed : In ?f_typed (env_fns env),
     Hname_eq : fn_name ?f_typed = fn_name fdef |- _ =>
       lazymatch f_typed with
-      | fdef => fail
+      | fdef => fail 1
       | _ =>
           let Hsame := fresh "Hsame_typed_callee" in
           assert (Hsame : f_typed = fdef)
@@ -285,38 +351,20 @@ Proof.
       end
   end.
   match goal with
-  | Htyped_args_shadow : typed_args_roots_shadow_safe env Ω n R Σ args
-      (apply_lt_params ?sigma (fn_params fdef)) ?Sigma_args ?R_args
-      ?arg_roots,
-    Hlookup : lookup_fn ?fname_call (env_fns env) = Some fdef,
-    Hcopy : copy_capture_store_as captures (fn_captures fdef) s =
-      Some ?captured,
-    Heval_args : eval_args env s args ?s_args ?vs,
-    Hrename : alpha_rename_fn_def (store_names (?captured ++ ?s_args))
-      fdef = (?fcall, ?used'),
-    Heval_body : eval env
-      (bind_params (fn_params ?fcall) ?vs (?captured ++ ?s_args))
-      (fn_body ?fcall) ?s_body ret |- _ =>
-      pose proof (typed_args_roots_shadow_safe_roots
-        env Ω n R Σ args (apply_lt_params sigma (fn_params fdef))
-        Sigma_args R_args arg_roots
-        Htyped_args_shadow) as Htyped_args_roots;
-      destruct
-        (eval_make_closure_captured_call_expr_preserves_typing_with_callee_components
-          env Ω n R Σ args fname_call captures captured fdef fcall used' sigma
-          s s_args s_body vs ret R_args Sigma_args arg_roots env_lt
-          captured_tys T_body Γ_out R_body roots_body Hstore Hroots
-          Hshadow Hrn Hnamed Hkeys
-          (Eval_MakeClosure env s fname_call captures captured fdef
-            Hlookup Hcopy)
-          Hlookup Heval_args Hrename Heval_body Hcaptures Hnodup_caps
-          Hready_args Htyped_args_roots Hnodup_binding Hprov_callee
-          Htyped_callee Hcompat_callee Hexclude_roots_callee
-          Hexclude_env_callee) as [_ [Hstore_final Hv]]
+  | Hin_typed : In ?f_typed (env_fns env),
+    Hname_eq : fn_name fdef = fn_name ?f_typed |- _ =>
+      let Hsame := fresh "Hsame_typed_callee" in
+      assert (Hsame : f_typed = fdef)
+        by (eapply Hunique;
+            [ exact Hin_typed | exact Hin | symmetry; exact Hname_eq ]);
+      subst f_typed
+  | _ => idtac
   end.
-  split.
-  - exact Hstore_final.
-  - exact Hv.
+  eapply
+    TypeSafetyClosureWrappersCapturedCall
+      .eval_make_closure_captured_call_expr_preserves_typing_with_callee_components;
+    try eassumption.
+  - eapply typed_args_roots_shadow_safe_roots; eassumption.
 Qed.
 
 Lemma eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_typing :

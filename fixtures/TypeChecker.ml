@@ -6371,10 +6371,7 @@ let rec check_expr_root_shadow_captured_call_provenance_summary_fuel fuel env _U
                (match lookup_fn_b fname env.env_fns with
                 | Some callee ->
                   (&&)
-                    ((&&)
-                      ((&&)
-                        (Nat.eqb callee.fn_lifetimes Big_int_Z.zero_big_int)
-                        (callee_hidden_capture_args_disjoint_b callee args))
+                    ((&&) (callee_hidden_capture_args_disjoint_b callee args)
                       (negb
                         (existsb (ident_eqb x)
                           (ctx_names (params_ctx callee.fn_captures)))))
@@ -6406,13 +6403,11 @@ let rec check_expr_root_shadow_captured_call_provenance_summary_fuel fuel env _U
                                      let (t_let, _UU03a3__let) = p11 in
                                      (&&)
                                        ((&&)
-                                         ((&&)
-                                           (ty_eqb t_direct callee.fn_ret)
-                                           (sctx_eqb _UU03a3__direct
-                                             _UU03a3__let))
+                                         (sctx_eqb _UU03a3__direct
+                                           _UU03a3__let)
                                          (root_env_eqb r_direct r_let))
-                                       (ty_compatible_b _UU03a9_
-                                         callee.fn_ret t_let)
+                                       (ty_compatible_b _UU03a9_ t_direct
+                                         t_let)
                                    | Infer_err _ -> false)
                                 | Infer_err _ -> false)
                            | None -> false)
@@ -6526,10 +6521,7 @@ let check_fn_root_shadow_captured_call_provenance_summary env fdef =
               (match lookup_fn_b fname env.env_fns with
                | Some callee ->
                  (&&)
-                   ((&&)
-                     ((&&)
-                       (Nat.eqb callee.fn_lifetimes Big_int_Z.zero_big_int)
-                       (callee_hidden_capture_args_disjoint_b callee args))
+                   ((&&) (callee_hidden_capture_args_disjoint_b callee args)
                      (negb
                        (existsb (ident_eqb x)
                          (ctx_names (params_ctx callee.fn_captures)))))

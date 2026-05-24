@@ -562,9 +562,7 @@ Proof.
         destruct (lookup_fn_b fname (env_fns env)) as [fcallee |]
           eqn:Hlookup_b; try discriminate.
         apply andb_true_iff in Hlocal as [Hlocal_head Hlocal].
-        apply andb_true_iff in Hlocal_head as [Hlocal_head Hnot_cap_name].
-        apply andb_true_iff in Hlocal_head as [Hlt Hdisjoint].
-        apply PeanoNat.Nat.eqb_eq in Hlt.
+        apply andb_true_iff in Hlocal_head as [Hdisjoint Hnot_cap_name].
         apply negb_true_iff in Hnot_cap_name.
         destruct (root_env_lookup x R) as [roots_x |] eqn:Hlookup_x;
           try discriminate.
@@ -591,8 +589,7 @@ Proof.
         rewrite Hinfer in Hlet. inversion Hlet; subst.
         repeat rewrite andb_true_iff in Hlocal_infer.
         destruct Hlocal_infer as
-          [[[Hdirect_ty Hdirect_sctx] Hdirect_root] Hlocal_infer].
-        apply ty_eqb_true in Hdirect_ty. subst T_direct.
+          [[Hdirect_sctx Hdirect_root] Hlocal_infer].
         apply sctx_eqb_true in Hdirect_sctx. subst Σ_direct.
         apply root_env_eqb_true in Hdirect_root. subst R_direct.
         destruct (lookup_fn_b_sound fname (env_fns env) fcallee Hlookup_b)
@@ -613,7 +610,6 @@ Proof.
         -- apply preservation_ready_args_b_sound. exact Hready_args.
         -- exact Hin_callee.
         -- exact Hname_callee.
-        -- exact Hlt.
         -- apply callee_hidden_capture_args_disjoint_b_sound.
            exact Hdisjoint.
         -- exact Hcaptures.
@@ -796,9 +792,7 @@ Proof.
       destruct (lookup_fn_b fname (env_fns env)) as [fcallee |]
         eqn:Hlookup_b; try discriminate.
       apply andb_true_iff in Hrest as [Hcallee_head Hrest].
-      apply andb_true_iff in Hcallee_head as [Hcallee_head Hnot_cap_name].
-      apply andb_true_iff in Hcallee_head as [Hlt Hdisjoint].
-      apply PeanoNat.Nat.eqb_eq in Hlt.
+      apply andb_true_iff in Hcallee_head as [Hdisjoint Hnot_cap_name].
       apply negb_true_iff in Hnot_cap_name.
       destruct (check_make_closure_captures_exact_sctx_with_env env
         (fn_outlives fdef)
@@ -860,7 +854,6 @@ Proof.
       split; [apply preservation_ready_args_b_sound; exact Hready_args|].
       split; [exact Hin_callee|].
       split; [exact Hname_callee|].
-      split; [exact Hlt|].
       split.
       { apply callee_hidden_capture_args_disjoint_b_sound.
         exact Hdisjoint. }

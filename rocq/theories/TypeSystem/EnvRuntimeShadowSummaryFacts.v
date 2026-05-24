@@ -192,7 +192,7 @@ Inductive expr_root_shadow_captured_call_provenance_summary_exact
         env Ω n R Σ (ECallExpr (EMakeClosure fname captures) args)
         T Σ' R' roots (root_set_union roots capture_roots)
   | ERSCE_LocalCapturedLet : forall R Σ fname captures args m x T_hidden
-      fcallee env_lt captured_tys T Σ' R' roots roots_direct
+      fcallee env_lt captured_tys T_direct T Σ' R' roots roots_direct
       capture_roots T_body Γ_out R_body roots_body,
       ty_usage T_hidden = UUnrestricted ->
       ~ In x captures ->
@@ -202,7 +202,6 @@ Inductive expr_root_shadow_captured_call_provenance_summary_exact
       preservation_ready_args args ->
       In fcallee (env_fns env) ->
       fn_name fcallee = fname ->
-      fn_lifetimes fcallee = 0 ->
       callee_hidden_capture_args_disjoint fcallee args ->
       check_make_closure_captures_exact_sctx_with_env env Ω Σ
         captures (fn_captures fcallee) = infer_ok (env_lt, captured_tys) ->
@@ -224,12 +223,12 @@ Inductive expr_root_shadow_captured_call_provenance_summary_exact
         Some capture_roots ->
       root_env_lookup x R = None ->
       typed_env_roots_shadow_safe env Ω n R Σ
-        (ECallExpr (EMakeClosure fname captures) args) (fn_ret fcallee)
+        (ECallExpr (EMakeClosure fname captures) args) T_direct
         Σ' R' roots_direct ->
       typed_env_roots_shadow_safe env Ω n R Σ
         (ELet m x T_hidden (EMakeClosure fname captures)
           (ECallExpr (EVar x) args)) T Σ' R' roots ->
-      ty_compatible_b Ω (fn_ret fcallee) T = true ->
+      ty_compatible_b Ω T_direct T = true ->
       expr_root_shadow_captured_call_provenance_summary_exact
         env Ω n R Σ
         (ELet m x T_hidden (EMakeClosure fname captures)
@@ -265,7 +264,7 @@ Proof.
   - exact H0.
   - exact H5.
   - exact H11.
-  - exact H19.
+  - exact H18.
   - subst R3. eapply TERS_If; eauto. apply root_env_equiv_refl.
 Qed.
 
@@ -328,7 +327,6 @@ Definition callee_body_root_shadow_captured_call_provenance_summary
     preservation_ready_args args /\
     In fcallee (env_fns env) /\
     fn_name fcallee = fname /\
-    fn_lifetimes fcallee = 0 /\
     callee_hidden_capture_args_disjoint fcallee args /\
     check_make_closure_captures_exact_sctx_with_env env
       (fn_outlives fdef)

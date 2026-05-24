@@ -5559,7 +5559,6 @@ Fixpoint check_expr_root_shadow_captured_call_provenance_summary_fuel
           match lookup_fn_b fname (env_fns env) with
           | None => false
           | Some callee =>
-              (Nat.eqb (fn_lifetimes callee) 0) &&
               callee_hidden_capture_args_disjoint_b callee args &&
               negb (existsb (ident_eqb x)
                 (ctx_names (params_ctx (fn_captures callee)))) &&
@@ -5584,10 +5583,9 @@ Fixpoint check_expr_root_shadow_captured_call_provenance_summary_fuel
                           with
 	                          | infer_ok (T_direct, Σ_direct, R_direct, _),
 	                            infer_ok (T_let, Σ_let, R_let, _) =>
-	                              ty_eqb T_direct (fn_ret callee) &&
 	                              sctx_eqb Σ_direct Σ_let &&
 	                              root_env_eqb R_direct R_let &&
-	                              ty_compatible_b Ω (fn_ret callee) T_let
+	                              ty_compatible_b Ω T_direct T_let
                           | _, _ => false
                           end
                       end
@@ -5680,7 +5678,6 @@ Definition check_fn_root_shadow_captured_call_provenance_summary
           match lookup_fn_b fname (env_fns env) with
           | None => false
           | Some callee =>
-              (Nat.eqb (fn_lifetimes callee) 0) &&
               callee_hidden_capture_args_disjoint_b callee args &&
               negb (existsb (ident_eqb x)
                 (ctx_names (params_ctx (fn_captures callee)))) &&
@@ -6038,6 +6035,31 @@ Proof. vm_compute. reflexivity. Qed.
 Example shared_ref_capture_direct_call_sidecar_accepts :
   check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
     ex_shared_ref_capture_direct_call_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Definition ex_shared_ref_capture_local_let_call_fn : fn_def :=
+  MkFnDef (("shared_ref_capture_local_let_call"%string), 0) 1 []
+    [] [MkParam MImmutable (("r"%string), 0) ex_shared_ref_capture_ty]
+    (MkTy UUnrestricted TUnits)
+    (ELet MImmutable (("g"%string), 0)
+      (closure_value_ty_at (LVar 0) ex_shared_ref_capture_ignore_callee_fn
+        [ex_shared_ref_capture_ty])
+      (EMakeClosure (("shared_ref_capture_ignore_callee"%string), 0)
+        [(("r"%string), 0)])
+      (ECallExpr (EVar (("g"%string), 0)) [])).
+
+Definition ex_shared_ref_capture_local_let_call_env : global_env :=
+  MkGlobalEnv [] [] []
+    [ex_shared_ref_capture_ignore_callee_fn;
+     ex_shared_ref_capture_local_let_call_fn].
+
+Example shared_ref_capture_local_let_call_checker_accepts :
+  check_program_env_alpha ex_shared_ref_capture_local_let_call_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Example shared_ref_capture_local_let_call_sidecar_accepts :
+  check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary
+    ex_shared_ref_capture_local_let_call_env = true.
 Proof. vm_compute. reflexivity. Qed.
 
 Definition ex_ready_gap_captured_closure_call_expr : expr :=

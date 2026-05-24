@@ -82,17 +82,16 @@ do not redefine the language accepted by the ordinary checker.
   readiness.
 - General `ECallExpr callee args` remains staged. Non-capturing function
   values, immutable-copy captured closures, ordinary checker support for
-  callable shared-reference captured closures, and direct captured-call sidecar
-  support for nonzero-lifetime copied shared-reference captures are in place.
-  The annotated local-let sidecar still keeps its zero-lifetime executable
-  guard until that route is intentionally widened. Mutable and affine/linear
-  captures remain later work.
+  callable shared-reference captured closures, and captured-call sidecar
+  support for nonzero-lifetime copied shared-reference captures are in place
+  for both direct make-closure calls and annotated local-let calls. Mutable and
+  affine/linear captures remain later work.
 
 ## Next Implementation Order
 
 Work in this order unless a proof exposes a soundness gap.
 
-1. **Finish the remaining captured-reference sidecar widening.**
+1. **Keep captured-reference sidecar widening stable.**
 
    Core status: ordinary `EMakeClosure` capture checking now accepts
    immutable unrestricted shared-reference values, rejects mutable bindings
@@ -217,8 +216,8 @@ Work in this order unless a proof exposes a soundness gap.
      roots from copied capture roots to the static `capture_root_bound`.
    - The executable expression checker has the matching exact local-let branch,
      guarded by exact capture checking, static capture-root bounds, hidden
-     binding freshness, direct synthetic-call typing equality, and returned
-     type compatibility.
+     binding freshness, direct synthetic-call compatibility, and returned type
+     compatibility.
 
    Annotated local-let captured-call route:
 
@@ -246,11 +245,16 @@ Work in this order unless a proof exposes a soundness gap.
      packages, checked-initial captured safety theorem, and function-level
      sidecar checker now carry the same `σ` for direct
      `ECallExpr (EMakeClosure fname captures) args`.
+   - The annotated local-let exact sidecar evidence no longer requires
+     `fn_lifetimes fcallee = 0`. It carries the direct synthetic call return
+     type and proves compatibility from that instantiated type to the final
+     local-let type.
    - `TypeChecker.v` has a direct sidecar regression for a nonzero-lifetime
      copied shared-reference capture:
 
      ```coq
      shared_ref_capture_direct_call_sidecar_accepts
+     shared_ref_capture_local_let_call_sidecar_accepts
      ```
 
    Still required:
@@ -258,10 +262,6 @@ Work in this order unless a proof exposes a soundness gap.
    - Keep closure-call lifetime instantiation local to the
      `TForall ... TClosure` call path. Do not silently erase helper function
      lifetimes or make closure calls ordinary direct-call evidence.
-   - The annotated local-let sidecar checker branch still intentionally keeps
-     `fn_lifetimes callee = 0`; remove it only in a focused slice that proves
-     the exact local-let evidence and checker soundness continue to carry the
-     instantiated call return type end to end.
    - Keep `tests/valid/closure/capture_shared_ref.facet` as the surface
      regression that constructs and calls a shared-reference closure.
    - Keep the invalid fixtures for missing outlives support, mutable binding

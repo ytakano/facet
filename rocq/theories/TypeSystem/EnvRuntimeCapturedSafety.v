@@ -355,7 +355,7 @@ Proof.
           roots_direct & T_let & Γ_let & R_let & roots_let &
           Hbody & Htarget & Hdirect & Hlet & Husage & Hnot_caps &
           Hfresh_cap_names & Hfree_args & Hlocal_args & Hready_args &
-          Hin_callee & Hname_callee & Hcallee_lts & Hdisjoint &
+          Hin_callee & Hname_callee & Hdisjoint &
           Hcaptures & Hcallee_summary & Hnodup & Htyped_direct &
           Hcompat_direct & _ & _ & Htyped_let).
       pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.

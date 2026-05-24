@@ -2,13 +2,15 @@
 2. sub-agentsに小タスクを一つ割り当て、実装させる
   - sub-agentsが上限に達している場合、再利用するか、古いsub-agentsを閉じる
   - 実装中に、soundness holeや、仕様の不備を見つけた場合は、そこで終了
+. - 将来の設計・実装をする際にCodexのcontext windowが少なくなるように、設計・実装をすること
 3. sub-agentsが実装完了後レビューを行う
 4. レビュー時に、soundness holeや、仕様の不備を見つけた場合は、そこで終了
 5. レビューで問題が見つからなかった場合、GPG署名無しでgit commit
 6. 2に戻り、次のタスクを実装する
-7. after finishing the tasks, update plan/type_safety_roadmap.md
-  - plan/type_safety_roadmap.mdが長くなってきた場合は、今後のタスクに不要な情報を削除するか、他のドキュメントに移し、整理すること
-  - 整理する際は、codexが理解しやすいように修正すること
+7. after finishing the tasks, update plan/fn_generics.md
+  - must remove unnecessary information for future tasks
+  - must update this document for Codex
+  - must keep plan/fn_generics.md clear, consice and compact
 
 ## Context消費を抑えるための指示
 
@@ -20,3 +22,8 @@
 - テストは最初から全体を回さず、変更箇所に近い対象theory、対象ファイル、対象fixtureから始めること。最後に必要な全体チェックを回すこと。
 - 中間報告は短くすること。変更点、失敗箇所、次の一手だけを書くこと。
 - 最終報告は、変更点と実行した検証を中心に短くまとめること。
+
+## Sub-agents Rule
+
+- must not use sub-agents for exploring
+- must not use sub-agents when planning

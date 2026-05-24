@@ -14,6 +14,8 @@ Use these wrappers before adding new theorem shapes:
   `infer_full_env_alpha_big_step_safe_with_direct_call_sidecar_ready`.
 - Program-level direct-call sidecar route:
   `check_program_env_alpha_big_step_safe_with_direct_call_sidecar_ready`.
+- Ordinary accepted-program checked-initial endpoint:
+  `check_program_env_alpha_big_step_safe_checked_initial_ready`.
 - Validated program-level direct-call sidecar route:
   `check_program_env_alpha_validated_big_step_safe_with_direct_call_sidecar_ready`.
 - Validated program-level direct-call sidecar route with environment-level
@@ -56,6 +58,10 @@ Use these wrappers before adding new theorem shapes:
 - Executable inferred-let elaboration entrypoints:
   `infer_core_env_elab`, `infer_env_elab`, `infer_full_env_elab`,
   `infer_program_env_alpha_elab`, and `check_program_env_alpha_elab`.
+- Ordinary checker compatibility alias:
+  `check_program_env_alpha_validated`.
+- Ordinary per-function safety gate:
+  `check_fn_ordinary_safety_gate`.
 - Sidecar package predicates:
   `ordinary_alpha_root_shadow_sidecar_ready`,
   `ordinary_alpha_direct_call_meta_ready`,
@@ -83,28 +89,29 @@ Use these wrappers before adding new theorem shapes:
 
 ### Current Endpoints
 
-The top-level name validator route is implemented. `check_program_env_alpha`
-remains unchanged, and `check_program_env_alpha_validated` adds a Rocq-side
-top-level-name uniqueness check over the alpha-normalized environment. The
-sidecar root-shadow validator route is now executable and also runs on the
-alpha-normalized environment.
+`check_program_env_alpha` is the ordinary accepted-program checker. It now
+includes top-level name uniqueness over the alpha-normalized environment and
+applies `check_fn_ordinary_safety_gate` to every accepted function.
+`check_program_env_alpha_validated` is a compatibility alias for the same
+ordinary checker.
 
-There are two current executable runtime-safety endpoints:
+The ordinary checked-initial runtime-safety endpoint is:
 
 ```coq
-(* General provenance-summary sidecar route. *)
-check_program_env_alpha_validated_root_shadow_provenance_summary_big_step_safe_checked_initial_ready
-
-(* Direct-call-local provenance-summary sidecar route. *)
-check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary_big_step_safe_checked_initial_ready
+check_program_env_alpha_big_step_safe_checked_initial_ready
 ```
 
-Use the general route for ordinary non-direct-call validator work. Use the
-direct-call-local route only when the caller body is handled by the localized
-direct-call sidecar package.
+The ordinary per-function gate is implemented through the captured-call summary
+checker. That summary checker subsumes the older root-shadow, direct-call-local,
+non-capturing function-value, and captured-call sidecar routes.
 
 Current status:
 
+- `check_fn_ordinary_safety_gate` is the per-function safety gate used by
+  `check_program_env_alpha`.
+- `check_program_env_alpha_validated` is retained only as a compatibility name.
+- `check_program_env_alpha_big_step_safe_checked_initial_ready` is the ordinary
+  endpoint to cite for accepted-program checked-initial safety.
 - `ordinary_alpha_root_shadow_sidecar_ready` isolates
   `env_fns_root_shadow_summary_evidence`.
 - `ordinary_alpha_direct_call_meta_ready` isolates function-name uniqueness and
@@ -112,10 +119,10 @@ Current status:
 - `ordinary_alpha_direct_call_sidecar_ready` remains as the compatibility
   package used by existing public wrappers.
 - `ordinary_alpha_direct_call_validated_sidecar_ready` removes function-name
-  uniqueness from the explicit sidecar package; uniqueness is derived from
-  `check_program_env_alpha_validated`. The `_env_ready` validated wrapper also
-  absorbs per-function direct-call readiness from the package's
-  environment-level preservation readiness.
+  uniqueness from the explicit sidecar package; uniqueness is derived from the
+  ordinary checker. The `_env_ready` validated wrapper also absorbs
+  per-function direct-call readiness from the package's environment-level
+  preservation readiness.
 - `check_program_env_alpha_validated_root_shadow` is the executable sidecar
   validator route. Its soundness derives
   `ordinary_alpha_direct_call_validated_root_shadow_validator_ready` through
@@ -136,8 +143,9 @@ Current status:
   Its checker soundness theorem is
   `check_env_root_shadow_provenance_summary_ready`, its program-level
   entrypoint is
-  `check_program_env_alpha_validated_root_shadow_provenance_summary`, and the
-  original preservation-ready root-shadow validator route is unchanged.
+  `check_program_env_alpha_validated_root_shadow_provenance_summary`, and it is
+  now covered by the ordinary safety gate through the captured-call summary
+  checker.
 - The split validator route keeps provenance and preservation readiness as
   separate executable checks. `check_env_root_shadow_provenance_summary`
   supplies root/shadow provenance evidence, `check_env_preservation_ready`
@@ -166,22 +174,16 @@ Current status:
   is the strongest split-validator theorem. It is less coupled internally than
   `check_program_env_alpha_validated_root_shadow`, but still rejects programs
   that fail executable preservation readiness.
-- `check_program_env_alpha_validated_root_shadow_provenance_summary_big_step_safe_checked_initial_ready`
-  is the strongest provenance-summary theorem. It no longer needs executable
-  preservation readiness for callee bodies or the caller expression, but it
-  still requires checked initial runtime readiness.
+- `check_program_env_alpha_big_step_safe_checked_initial_ready` is the ordinary
+  accepted-program theorem. It still requires checked initial runtime
+  readiness.
 - Initial runtime readiness remains a separate premise, now in executable form.
    - It cannot be derived from `initial_store_for_fn` alone.
    - Reason: `initial_root_env_for_fn` stores parameter origins as `RParam`,
      while runtime references require concrete `RStore` reachability.
 
-The current sidecar contract is fixed. The remaining non-ordinary acceptance
-inputs are:
+The remaining non-program input is:
 
-- `check_program_env_alpha_validated_root_shadow_provenance_summary env = true`,
-  which is stricter than `check_program_env_alpha env = true` because
-  root-shadow provenance summary evidence is still a separate executable
-  validator.
 - `check_initial_root_runtime_ready f s = true`, which checks the initial
   execution state rather than the program.
 
@@ -192,12 +194,9 @@ eliminated merely because it has an executable validator.
 Future work:
 
 - Decide whether the OCaml CLI should expose the root-shadow sidecar validator
-  as an optional diagnostic/check mode. The ordinary checker contract remains
-  unchanged unless that is explicitly redesigned.
+  as an optional diagnostic/check mode.
 - Design an executable validator or strengthened setup invariant for
   `initial_root_runtime_ready_for_fn`.
-- Bring the safety-validator route closer to the ordinary checker accepted
-  range by following the Next Implementation Order above.
 - Continue narrowing the executable safety validator's false negatives against
   the ordinary-checker accepted fixtures in `tests/valid/type_safety_ready_gap/`.
   The provenance-summary route no longer needs the callee-body

@@ -34,37 +34,16 @@ Current accepted-program checker:
 check_program_env_alpha
 ```
 
-Executable safety validators discharge proof evidence. The ordinary checker now
-uses the ordinary safety gate below before accepting a function.
+It includes top-level name uniqueness and applies the ordinary per-function
+safety gate before accepting a function. `check_program_env_alpha_validated` is
+a compatibility alias, not the primary ordinary route.
 
 ## Current State
 
-- The strongest checked-initial safety endpoint for the general provenance
-  route is:
+- The ordinary checked-initial safety endpoint is:
 
   ```coq
-  check_program_env_alpha_validated_root_shadow_provenance_summary_big_step_safe_checked_initial_ready
-  ```
-
-- The strongest checked-initial safety endpoint for direct-call-local evidence
-  is:
-
-  ```coq
-  check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary_big_step_safe_checked_initial_ready
-  ```
-
-- The strongest checked-initial safety endpoint for local non-capturing
-  function-value calls is:
-
-  ```coq
-  check_program_env_alpha_validated_root_shadow_non_capturing_call_provenance_summary_big_step_safe_checked_initial_ready
-  ```
-
-- The strongest checked-initial safety endpoint for local captured closure
-  calls is:
-
-  ```coq
-  check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready
+  check_program_env_alpha_big_step_safe_checked_initial_ready
   ```
 
 - The elaborated checked-initial endpoint for inferred local-let captured
@@ -77,8 +56,9 @@ uses the ordinary safety gate below before accepting a function.
 - Initial runtime readiness is still an execution-state premise, currently via
   `check_initial_root_runtime_ready`. It is not a program acceptance condition.
 - Ordinary checker acceptance is gated by `check_fn_ordinary_safety_gate`.
-  A function must pass the legacy full checker and one of the root-shadow,
-  direct-call, non-capturing function-value, or captured-call sidecar routes.
+  A function must pass the legacy full checker and the captured-call summary
+  checker, which subsumes the root-shadow, direct-call, non-capturing
+  function-value, and captured-call routes.
 - Direct `ECall` and syntactic `ECallExpr (EFn fname) args` are handled by
   localized sidecar routes. Do not add direct calls to ordinary expression
   readiness.

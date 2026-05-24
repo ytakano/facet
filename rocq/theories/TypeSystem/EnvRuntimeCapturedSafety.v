@@ -494,6 +494,23 @@ Proof.
     exact Hsummary_check.
 Qed.
 
+Theorem check_program_env_alpha_big_step_safe_checked_initial_ready :
+  forall env f s s' v,
+    check_program_env_alpha env = true ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns (alpha_normalize_global_env env)) ->
+    initial_store_for_fn (alpha_normalize_global_env env) f s ->
+    eval (alpha_normalize_global_env env) s (fn_body f) s' v ->
+    value_has_type (alpha_normalize_global_env env) s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hcheck Hinitial Hin Hstore Heval.
+  eapply env_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready;
+    eauto.
+  - apply check_program_env_alpha_unique. exact Hcheck.
+  - apply check_env_root_shadow_captured_call_provenance_summary_ready.
+    apply check_program_env_alpha_captured_summary. exact Hcheck.
+Qed.
+
 Theorem check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready :
   forall env env' f s s' v,
     check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary env = true ->

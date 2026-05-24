@@ -365,9 +365,21 @@ Lemma check_program_env_alpha_validated_unique :
     fn_env_unique_by_name (alpha_normalize_global_env env).
 Proof.
   intros env Hcheck.
-  unfold check_program_env_alpha_validated in Hcheck.
+  unfold check_program_env_alpha_validated, check_program_env_alpha in Hcheck.
   apply andb_true_iff in Hcheck.
   destruct Hcheck as [Hunique _].
+  apply top_level_names_unique_b_fn_env_unique_by_name.
+  exact Hunique.
+Qed.
+
+Lemma check_program_env_alpha_unique :
+  forall env,
+    check_program_env_alpha env = true ->
+    fn_env_unique_by_name (alpha_normalize_global_env env).
+Proof.
+  intros env Hcheck.
+  unfold check_program_env_alpha in Hcheck.
+  apply andb_true_iff in Hcheck as [Hunique _].
   apply top_level_names_unique_b_fn_env_unique_by_name.
   exact Hunique.
 Qed.
@@ -377,10 +389,36 @@ Lemma check_program_env_alpha_validated_checked :
     check_program_env_alpha_validated env = true ->
     check_program_env_alpha env = true.
 Proof.
+  intros env Hcheck. exact Hcheck.
+Qed.
+
+Lemma check_program_env_alpha_checked :
+  forall env,
+    check_program_env_alpha env = true ->
+    check_program_env (alpha_normalize_global_env env) = true.
+Proof.
   intros env Hcheck.
-  unfold check_program_env_alpha_validated in Hcheck.
-  apply andb_true_iff in Hcheck.
-  exact (proj2 Hcheck).
+  unfold check_program_env_alpha in Hcheck.
+  apply andb_true_iff in Hcheck as [_ Hchecked].
+  exact Hchecked.
+Qed.
+
+Lemma check_program_env_alpha_captured_summary :
+  forall env,
+    check_program_env_alpha env = true ->
+    check_env_root_shadow_captured_call_provenance_summary
+      (alpha_normalize_global_env env) = true.
+Proof.
+  intros env Hcheck.
+  pose proof (check_program_env_alpha_checked env Hcheck) as Hchecked.
+  unfold check_program_env in Hchecked.
+  unfold check_env_root_shadow_captured_call_provenance_summary.
+  apply forallb_forall.
+  intros f Hin.
+  apply forallb_forall with (x := f) in Hchecked; [| exact Hin].
+  destruct (infer_full_env (alpha_normalize_global_env env) f)
+    as [[T Γ'] | err] eqn:Hinfer; try discriminate.
+  exact Hchecked.
 Qed.
 
 Lemma ordinary_alpha_direct_call_validated_sidecar_ready_package :

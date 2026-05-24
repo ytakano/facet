@@ -42,13 +42,14 @@ Theorem check_program_env_alpha_big_step_safe_with_direct_call_sidecar_ready :
 Proof.
   intros env f s s' v Hcheck Hsidecar Hin Hstore Hready
     Hroot_runtime Heval.
-  unfold check_program_env_alpha, check_program_env in Hcheck.
-  apply forallb_forall with (x := f) in Hcheck; [| exact Hin].
+  pose proof (check_program_env_alpha_checked env Hcheck) as Hchecked.
+  unfold check_program_env in Hchecked.
+  apply forallb_forall with (x := f) in Hchecked; [| exact Hin].
   destruct (infer_full_env (alpha_normalize_global_env env) f) as
     [[T Γ'] | err] eqn:Hinfer.
   - eapply infer_full_env_alpha_big_step_safe_with_direct_call_sidecar_ready;
       eassumption.
-  - simpl in Hcheck. discriminate.
+  - simpl in Hchecked. discriminate.
 Qed.
 
 Theorem check_program_env_alpha_validated_big_step_safe_with_direct_call_sidecar_ready :
@@ -339,4 +340,3 @@ Proof.
     + exact Hv.
     + apply ty_compatible_b_sound. exact Hcompat.
 Qed.
-

@@ -5707,9 +5707,6 @@ Definition check_env_root_shadow_captured_call_provenance_summary
 
 Definition check_fn_ordinary_safety_gate
     (env : global_env) (fdef : fn_def) : bool :=
-  check_fn_root_shadow_summary env fdef ||
-  check_fn_root_shadow_direct_call_provenance_summary env fdef ||
-  check_fn_root_shadow_non_capturing_call_provenance_summary env fdef ||
   check_fn_root_shadow_captured_call_provenance_summary env fdef.
 
 Definition check_program_env (env : global_env) : bool :=
@@ -5720,13 +5717,14 @@ Definition check_program_env (env : global_env) : bool :=
     end) (env_fns env).
 
 Definition check_program_env_alpha (env : global_env) : bool :=
+  top_level_names_unique_b (alpha_normalize_global_env env) &&
   check_program_env (alpha_normalize_global_env env).
 
 Definition check_program_env_alpha_validated (env : global_env) : bool :=
-  top_level_names_unique_b (alpha_normalize_global_env env) &&
   check_program_env_alpha env.
 
 Definition check_program_env_alpha_elab (env : global_env) : bool :=
+  top_level_names_unique_b (alpha_normalize_global_env env) &&
   match infer_program_env_alpha_elab env with
   | infer_ok env' => check_program_env env'
   | infer_err _ => false
@@ -5791,6 +5789,13 @@ Definition ex_ready_gap_let_env : global_env :=
 
 Example check_program_env_alpha_accepts_ready_gap_let :
   check_program_env_alpha ex_ready_gap_let_env = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Definition ex_duplicate_fn_name_env : global_env :=
+  MkGlobalEnv [] [] [] [ex_ready_gap_let_fn; ex_ready_gap_let_fn].
+
+Example check_program_env_alpha_rejects_duplicate_fn_name :
+  check_program_env_alpha ex_duplicate_fn_name_env = false.
 Proof. vm_compute. reflexivity. Qed.
 
 Example check_program_env_alpha_validated_root_shadow_rejects_ready_gap_let :

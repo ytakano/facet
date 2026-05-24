@@ -6543,13 +6543,8 @@ let check_env_root_shadow_captured_call_provenance_summary env =
 
 (** val check_fn_ordinary_safety_gate : global_env -> fn_def -> bool **)
 
-let check_fn_ordinary_safety_gate env fdef =
-  (||)
-    ((||)
-      ((||) (check_fn_root_shadow_summary env fdef)
-        (check_fn_root_shadow_direct_call_provenance_summary env fdef))
-      (check_fn_root_shadow_non_capturing_call_provenance_summary env fdef))
-    (check_fn_root_shadow_captured_call_provenance_summary env fdef)
+let check_fn_ordinary_safety_gate =
+  check_fn_root_shadow_captured_call_provenance_summary
 
 (** val check_program_env : global_env -> bool **)
 
@@ -6562,20 +6557,21 @@ let check_program_env env =
 (** val check_program_env_alpha : global_env -> bool **)
 
 let check_program_env_alpha env =
-  check_program_env (alpha_normalize_global_env env)
+  (&&) (top_level_names_unique_b (alpha_normalize_global_env env))
+    (check_program_env (alpha_normalize_global_env env))
 
 (** val check_program_env_alpha_validated : global_env -> bool **)
 
-let check_program_env_alpha_validated env =
-  (&&) (top_level_names_unique_b (alpha_normalize_global_env env))
-    (check_program_env_alpha env)
+let check_program_env_alpha_validated =
+  check_program_env_alpha
 
 (** val check_program_env_alpha_elab : global_env -> bool **)
 
 let check_program_env_alpha_elab env =
-  match infer_program_env_alpha_elab env with
-  | Infer_ok env' -> check_program_env env'
-  | Infer_err _ -> false
+  (&&) (top_level_names_unique_b (alpha_normalize_global_env env))
+    (match infer_program_env_alpha_elab env with
+     | Infer_ok env' -> check_program_env env'
+     | Infer_err _ -> false)
 
 (** val check_env_preservation_ready : global_env -> bool **)
 

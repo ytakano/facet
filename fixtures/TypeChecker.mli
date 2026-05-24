@@ -863,14 +863,6 @@ val infer_fns_env_elab : global_env -> fn_def list -> fn_def list infer_result
 
 val infer_program_env_alpha_elab : global_env -> global_env infer_result
 
-val check_program_env : global_env -> bool
-
-val check_program_env_alpha : global_env -> bool
-
-val check_program_env_alpha_validated : global_env -> bool
-
-val check_program_env_alpha_elab : global_env -> bool
-
 val fn_params_roots_exclude_b : param list -> root_set -> bool
 
 val fn_params_root_env_excludes_b : param list -> root_env -> bool
@@ -928,6 +920,16 @@ val check_env_root_shadow_direct_call_provenance_summary : global_env -> bool
 
 val check_env_root_shadow_captured_call_provenance_summary :
   global_env -> bool
+
+val check_fn_ordinary_safety_gate : global_env -> fn_def -> bool
+
+val check_program_env : global_env -> bool
+
+val check_program_env_alpha : global_env -> bool
+
+val check_program_env_alpha_validated : global_env -> bool
+
+val check_program_env_alpha_elab : global_env -> bool
 
 val check_env_preservation_ready : global_env -> bool
 

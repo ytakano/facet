@@ -34,8 +34,8 @@ Current accepted-program checker:
 check_program_env_alpha
 ```
 
-Executable safety validators are sidecars. They discharge proof evidence; they
-do not redefine the language accepted by the ordinary checker.
+Executable safety validators discharge proof evidence. The ordinary checker now
+uses the ordinary safety gate below before accepting a function.
 
 ## Current State
 
@@ -76,7 +76,9 @@ do not redefine the language accepted by the ordinary checker.
 
 - Initial runtime readiness is still an execution-state premise, currently via
   `check_initial_root_runtime_ready`. It is not a program acceptance condition.
-- Ordinary checker acceptance still exceeds validator acceptance.
+- Ordinary checker acceptance is gated by `check_fn_ordinary_safety_gate`.
+  A function must pass the legacy full checker and one of the root-shadow,
+  direct-call, non-capturing function-value, or captured-call sidecar routes.
 - Direct `ECall` and syntactic `ECallExpr (EFn fname) args` are handled by
   localized sidecar routes. Do not add direct calls to ordinary expression
   readiness.
@@ -164,7 +166,7 @@ proof target.
   environment.
 - Progress, after a future small-step semantics exists.
 - Remaining false negatives from `plan/review.md` that can be reduced without
-  making sidecar validators define ordinary checker acceptance.
+  weakening the ordinary safety gate.
 
 ## TypeSafety Module Ownership
 
@@ -216,9 +218,9 @@ in this file and keep the split separate from theorem-strengthening work.
 - Big-step preservation comes before progress.
 - Progress is deferred until a future small-step semantics exists.
 - The ordinary checker remains the primary accepted-program interface.
-- Root provenance is a sidecar API, not the language definition.
-- Do not prove ordinary safety by making the root checker stricter than the
-  ordinary checker.
+- Root provenance remains proof evidence, but the ordinary accepted-program
+  checker is intentionally filtered by `check_fn_ordinary_safety_gate`.
+- Do not bypass the ordinary safety gate to recover old ready-gap acceptance.
 - Do not add `Axiom`, `Admitted`, or `Abort`.
 - Do not silently weaken linearity, borrowing, reference-target safety, or drop
   behavior.
@@ -235,7 +237,7 @@ reducing validator false negatives:
 - struct field mutability for assignment and `replace`;
 - local type annotation lifetime elision rejection;
 - generic trait arity and bound validation;
-- let-local reference escape;
+- let-local reference escape is rejected by the ordinary safety gate;
 - `replace p e_new` target self-use and alias/borrow variants.
 
 ## Sub-Agent Policy

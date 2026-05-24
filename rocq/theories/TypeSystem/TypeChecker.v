@@ -5317,26 +5317,6 @@ Definition infer_program_env_alpha_elab (env : global_env)
         (env_impls env_alpha) fns')
   end.
 
-Definition check_program_env (env : global_env) : bool :=
-  forallb (fun f =>
-    match infer_full_env env f with
-    | infer_ok _ => true
-    | infer_err _ => false
-    end) (env_fns env).
-
-Definition check_program_env_alpha (env : global_env) : bool :=
-  check_program_env (alpha_normalize_global_env env).
-
-Definition check_program_env_alpha_validated (env : global_env) : bool :=
-  top_level_names_unique_b (alpha_normalize_global_env env) &&
-  check_program_env_alpha env.
-
-Definition check_program_env_alpha_elab (env : global_env) : bool :=
-  match infer_program_env_alpha_elab env with
-  | infer_ok _ => true
-  | infer_err _ => false
-  end.
-
 Definition fn_params_roots_exclude_b (ps : list param) (roots : root_set) : bool :=
   forallb (fun x => roots_exclude_b x roots) (ctx_names (params_ctx ps)).
 
@@ -5725,6 +5705,33 @@ Definition check_env_root_shadow_captured_call_provenance_summary
   forallb (check_fn_root_shadow_captured_call_provenance_summary env)
     (env_fns env).
 
+Definition check_fn_ordinary_safety_gate
+    (env : global_env) (fdef : fn_def) : bool :=
+  check_fn_root_shadow_summary env fdef ||
+  check_fn_root_shadow_direct_call_provenance_summary env fdef ||
+  check_fn_root_shadow_non_capturing_call_provenance_summary env fdef ||
+  check_fn_root_shadow_captured_call_provenance_summary env fdef.
+
+Definition check_program_env (env : global_env) : bool :=
+  forallb (fun f =>
+    match infer_full_env env f with
+    | infer_ok _ => check_fn_ordinary_safety_gate env f
+    | infer_err _ => false
+    end) (env_fns env).
+
+Definition check_program_env_alpha (env : global_env) : bool :=
+  check_program_env (alpha_normalize_global_env env).
+
+Definition check_program_env_alpha_validated (env : global_env) : bool :=
+  top_level_names_unique_b (alpha_normalize_global_env env) &&
+  check_program_env_alpha env.
+
+Definition check_program_env_alpha_elab (env : global_env) : bool :=
+  match infer_program_env_alpha_elab env with
+  | infer_ok env' => check_program_env env'
+  | infer_err _ => false
+  end.
+
 Definition check_env_preservation_ready (env : global_env) : bool :=
   forallb (fun fdef => preservation_ready_expr_b (fn_body fdef))
     (env_fns env).
@@ -6080,8 +6087,8 @@ Definition ex_ready_gap_captured_closure_call_env : global_env :=
   MkGlobalEnv [] [] []
     [ex_nonempty_capture_callee_fn; ex_ready_gap_captured_closure_call_fn].
 
-Example ready_gap_matrix_captured_closure_call_checker_accepts :
-  check_program_env_alpha ex_ready_gap_captured_closure_call_env = true.
+Example ready_gap_matrix_captured_closure_call_checker_rejects :
+  check_program_env_alpha ex_ready_gap_captured_closure_call_env = false.
 Proof. vm_compute. reflexivity. Qed.
 
 Example ready_gap_matrix_captured_closure_call_validator_rejects :
@@ -6315,9 +6322,9 @@ Definition ex_ready_gap_function_value_call_affine_annotated_env : global_env :=
     ; ex_ready_gap_function_value_call_affine_annotated_fn
     ].
 
-Example ready_gap_matrix_function_value_call_affine_annotation_checker_accepts :
+Example ready_gap_matrix_function_value_call_affine_annotation_checker_rejects :
   check_program_env_alpha
-    ex_ready_gap_function_value_call_affine_annotated_env = true.
+    ex_ready_gap_function_value_call_affine_annotated_env = false.
 Proof. vm_compute. reflexivity. Qed.
 
 Example ready_gap_matrix_function_value_call_affine_annotation_non_capturing_summary_rejects :

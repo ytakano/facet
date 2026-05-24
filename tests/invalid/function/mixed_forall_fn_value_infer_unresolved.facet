@@ -1,0 +1,8 @@
+fn keep<'a, T>(x: unrestricted &'a affine isize) -> unrestricted &'a affine isize {
+  x
+}
+
+fn main<'x>(r: unrestricted &'x affine isize) -> unrestricted &'x affine isize {
+  let f: unrestricted for<'a, T> fn(unrestricted &'a affine isize) -> unrestricted &'a affine isize = keep in
+  (f r)
+}

@@ -681,6 +681,20 @@ let apply_lt_outlives _UU03c3_ _UU03a9_ =
     let (a, b) = pat in
     ((apply_lt_lifetime _UU03c3_ a), (apply_lt_lifetime _UU03c3_ b))) _UU03a9_
 
+(** val map_core_trait_ref :
+    ('a1 -> 'a2) -> 'a1 core_trait_ref -> 'a2 core_trait_ref **)
+
+let map_core_trait_ref f tr =
+  { core_trait_ref_name = tr.core_trait_ref_name; core_trait_ref_args =
+    (map f tr.core_trait_ref_args) }
+
+(** val map_core_trait_bound :
+    ('a1 -> 'a2) -> 'a1 core_trait_bound -> 'a2 core_trait_bound **)
+
+let map_core_trait_bound f b =
+  { core_bound_type_index = b.core_bound_type_index; core_bound_traits =
+    (map (map_core_trait_ref f) b.core_bound_traits) }
+
 (** val close_fn_lifetime : Big_int_Z.big_int -> lifetime -> lifetime **)
 
 let close_fn_lifetime m l = match l with
@@ -722,7 +736,9 @@ let rec apply_lt_ty _UU03c3_ = function
      MkTy (u, (TForall (n, (apply_lt_outlives _UU03c3_ _UU03a9_),
        (apply_lt_ty _UU03c3_ body))))
    | TTypeForall (n, bounds, body) ->
-     MkTy (u, (TTypeForall (n, bounds, (apply_lt_ty _UU03c3_ body))))
+     MkTy (u, (TTypeForall (n,
+       (map (map_core_trait_bound (apply_lt_ty _UU03c3_)) bounds),
+       (apply_lt_ty _UU03c3_ body))))
    | TRef (l, rk, t1) ->
      MkTy (u, (TRef ((apply_lt_lifetime _UU03c3_ l), rk,
        (apply_lt_ty _UU03c3_ t1))))
@@ -832,7 +848,14 @@ let rec contains_lbound_ty = function
        (contains_lbound_ty r)
    | TForall (_, _UU03a9_, body) ->
      (||) (contains_lbound_outlives _UU03a9_) (contains_lbound_ty body)
-   | TTypeForall (_, _, body) -> contains_lbound_ty body
+   | TTypeForall (_, bounds, body) ->
+     (||)
+       (existsb (fun b ->
+         existsb (fun tr ->
+           existsb contains_lbound_ty tr.core_trait_ref_args)
+           b.core_bound_traits)
+         bounds)
+       (contains_lbound_ty body)
    | TRef (l, _, t1) ->
      (||) (contains_lbound_lifetime l) (contains_lbound_ty t1)
    | _ -> false)
@@ -1719,10 +1742,20 @@ let fn_signature_ty_with_usage u f =
           (fun _ -> MkTy (u, (TForall (m,
           (close_fn_outlives m f.fn_outlives), body))))
           m)
-  else if eqb m Big_int_Z.zero_big_int
-       then MkTy (u, (TTypeForall (f.fn_type_params,
-              (map core_trait_bound_of_trait_bound f.fn_bounds), body)))
-       else let MkTy (_, core) = body in MkTy (u, core)
+  else let type_bounds =
+         map (map_core_trait_bound (close_fn_ty m))
+           (map core_trait_bound_of_trait_bound f.fn_bounds)
+       in
+       let type_body = MkTy (UUnrestricted, (TTypeForall (f.fn_type_params,
+         type_bounds, body)))
+       in
+       ((fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+          (fun _ -> MkTy (u, (TTypeForall (f.fn_type_params, type_bounds,
+          body))))
+          (fun _ -> MkTy (u, (TForall (m,
+          (close_fn_outlives m f.fn_outlives), type_body))))
+          m)
 
 (** val closure_value_ty_at : lifetime -> fn_def -> ty list -> ty **)
 
@@ -3641,6 +3674,57 @@ let wf_outlives_b _UU0394_ _UU03a9_ =
 let outlives_constraints_hold_b _UU03a9_ constraints =
   forallb (fun pat -> let (a, b) = pat in outlives_b _UU03a9_ a b) constraints
 
+(** val open_core_trait_bounds :
+    lifetime option list -> ty core_trait_bound list -> ty core_trait_bound
+    list **)
+
+let open_core_trait_bounds _UU03c3_ bounds =
+  map (map_core_trait_bound (open_bound_ty _UU03c3_)) bounds
+
+(** val infer_mixed_forall_call_env :
+    global_env -> outlives_ctx -> Big_int_Z.big_int -> Big_int_Z.big_int ->
+    outlives_ctx -> Big_int_Z.big_int -> ty core_trait_bound list -> ty -> ty
+    list -> ty infer_result **)
+
+let infer_mixed_forall_call_env env _UU03a9_ n m lt_bounds type_params type_bounds body arg_tys =
+  match ty_core body with
+  | TFn (param_tys, ret) ->
+    (match infer_type_forall_args type_params param_tys arg_tys with
+     | Some type_args ->
+       let param_tys_t = map (subst_type_params_ty type_args) param_tys in
+       (match build_bound_sigma (repeat None m) arg_tys param_tys_t with
+        | Some _UU03c3_0 ->
+          let _UU03c3_ = complete_bound_sigma_with_vars n _UU03c3_0 in
+          let param_tys_open = map (open_bound_ty _UU03c3_) param_tys_t in
+          (match check_arg_tys _UU03a9_ arg_tys param_tys_open with
+           | Some err -> Infer_err err
+           | None ->
+             let ret_open =
+               open_bound_ty _UU03c3_ (subst_type_params_ty type_args ret)
+             in
+             let lt_bounds_open = open_bound_outlives _UU03c3_ lt_bounds in
+             let type_bounds_open =
+               open_core_trait_bounds _UU03c3_ type_bounds
+             in
+             if (||)
+                  ((||) (contains_lbound_ty ret_open)
+                    (contains_lbound_outlives lt_bounds_open))
+                  (existsb (fun b ->
+                    existsb (fun tr ->
+                      existsb contains_lbound_ty tr.core_trait_ref_args)
+                      b.core_bound_traits)
+                    type_bounds_open)
+             then Infer_err ErrHrtUnresolvedBound
+             else if outlives_constraints_hold_b _UU03a9_ lt_bounds_open
+                  then (match check_type_forall_bounds env type_bounds_open
+                                type_args with
+                        | Some err -> Infer_err err
+                        | None -> Infer_ok ret_open)
+                  else Infer_err ErrHrtBoundUnsatisfied)
+        | None -> Infer_err ErrLifetimeConflict)
+     | None -> Infer_err ErrTypeArgInferenceFailed)
+  | x -> Infer_err (ErrMalformedHrtBody x)
+
 type sctx_entry = ctx_entry
 
 type sctx = ctx
@@ -4248,9 +4332,7 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
     | EFn fname ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         if (&&) (no_captures_b fdef)
-              ((||) (Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int)
-                (Nat.eqb fdef.fn_lifetimes Big_int_Z.zero_big_int))
+         if no_captures_b fdef
          then Infer_ok ((fn_value_ty fdef), _UU03a3_)
          else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
@@ -4453,6 +4535,11 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
                              then Infer_ok (ret_open, _UU03a3_')
                              else Infer_err ErrHrtBoundUnsatisfied)
                    | None -> Infer_err ErrLifetimeConflict)
+                | TTypeForall (type_params, type_bounds, type_body) ->
+                  (match infer_mixed_forall_call_env env _UU03a9_ n m bounds
+                           type_params type_bounds type_body arg_tys with
+                   | Infer_ok ret -> Infer_ok (ret, _UU03a3_')
+                   | Infer_err err -> Infer_err err)
                 | x -> Infer_err (ErrMalformedHrtBody x))
              | TTypeForall (type_params, bounds, body) ->
                (match infer_type_forall_call_env env _UU03a9_ type_params
@@ -4757,9 +4844,7 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
     | EFn fname ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         if (&&) (no_captures_b fdef)
-              ((||) (Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int)
-                (Nat.eqb fdef.fn_lifetimes Big_int_Z.zero_big_int))
+         if no_captures_b fdef
          then Infer_ok (((fn_value_ty fdef), _UU03a3_), e)
          else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
@@ -5506,9 +5591,7 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
     | EFn fname ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         if (&&) (no_captures_b fdef)
-              ((||) (Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int)
-                (Nat.eqb fdef.fn_lifetimes Big_int_Z.zero_big_int))
+         if no_captures_b fdef
          then Infer_ok ((((fn_value_ty fdef), _UU03a3_), r), [])
          else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
@@ -6053,9 +6136,7 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
     | EFn fname ->
       (match lookup_fn_b fname env.env_fns with
        | Some fdef ->
-         if (&&) (no_captures_b fdef)
-              ((||) (Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int)
-                (Nat.eqb fdef.fn_lifetimes Big_int_Z.zero_big_int))
+         if no_captures_b fdef
          then Infer_ok ((((fn_value_ty fdef), _UU03a3_), r), [])
          else Infer_err ErrNotImplemented
        | None -> Infer_err (ErrFunctionNotFound fname))
@@ -7884,47 +7965,54 @@ let rec elaborate_raw_expr_fuel fuel expected env _UU03a9_ n _UU03a3_ next e =
         | Some fdef ->
           if Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int
           then finish env (EFn fname) [] next
-          else if (||) (negb (no_captures_b fdef))
-                    (negb (Nat.eqb fdef.fn_lifetimes Big_int_Z.zero_big_int))
+          else if negb (no_captures_b fdef)
                then Infer_err ErrNotImplemented
                else (match expected with
                      | Some t_expected ->
                        if ty_compatible_b _UU03a9_ (fn_value_ty fdef)
                             t_expected
                        then finish env (EFn fname) [] next
-                       else (match infer_fn_value_type_args_expected fdef
-                                     expected with
-                             | Some p ->
-                               let (p0, ret) = p in
-                               let (type_args, param_tys) = p0 in
-                               (match check_struct_bounds env fdef.fn_bounds
-                                        type_args with
-                                | Some err -> Infer_err err
-                                | None ->
-                                  let wrapper_name =
-                                    generic_fn_value_wrapper_name next
-                                  in
-                                  let wrapper_params =
-                                    wrapper_params_from_tys param_tys
-                                  in
-                                  let wrapper_body = ECallGeneric (fname,
-                                    type_args,
-                                    (expr_vars_of_params wrapper_params))
-                                  in
-                                  let wrapper = { fn_name = wrapper_name;
-                                    fn_lifetimes = Big_int_Z.zero_big_int;
-                                    fn_outlives = []; fn_captures = [];
-                                    fn_params = wrapper_params; fn_ret = ret;
-                                    fn_body = wrapper_body; fn_type_params =
-                                    Big_int_Z.zero_big_int; fn_bounds = [] }
-                                  in
-                                  let env' =
-                                    append_env_fns env (wrapper :: [])
-                                  in
-                                  finish env' (EFn wrapper_name)
-                                    (wrapper :: []) (Big_int_Z.succ_big_int
-                                    next))
-                             | None -> Infer_err ErrTypeArgInferenceFailed)
+                       else if negb
+                                 (Nat.eqb fdef.fn_lifetimes
+                                   Big_int_Z.zero_big_int)
+                            then Infer_err ErrTypeArgInferenceFailed
+                            else (match infer_fn_value_type_args_expected
+                                          fdef expected with
+                                  | Some p ->
+                                    let (p0, ret) = p in
+                                    let (type_args, param_tys) = p0 in
+                                    (match check_struct_bounds env
+                                             fdef.fn_bounds type_args with
+                                     | Some err -> Infer_err err
+                                     | None ->
+                                       let wrapper_name =
+                                         generic_fn_value_wrapper_name next
+                                       in
+                                       let wrapper_params =
+                                         wrapper_params_from_tys param_tys
+                                       in
+                                       let wrapper_body = ECallGeneric
+                                         (fname, type_args,
+                                         (expr_vars_of_params wrapper_params))
+                                       in
+                                       let wrapper = { fn_name =
+                                         wrapper_name; fn_lifetimes =
+                                         Big_int_Z.zero_big_int;
+                                         fn_outlives = []; fn_captures = [];
+                                         fn_params = wrapper_params; fn_ret =
+                                         ret; fn_body = wrapper_body;
+                                         fn_type_params =
+                                         Big_int_Z.zero_big_int; fn_bounds =
+                                         [] }
+                                       in
+                                       let env' =
+                                         append_env_fns env (wrapper :: [])
+                                       in
+                                       finish env' (EFn wrapper_name)
+                                         (wrapper :: [])
+                                         (Big_int_Z.succ_big_int next))
+                                  | None ->
+                                    Infer_err ErrTypeArgInferenceFailed)
                      | None -> Infer_err ErrTypeArgInferenceFailed)
         | None -> finish env (EFn fname) [] next)
      | RawPlace p -> finish env (EPlace p) [] next
@@ -8020,8 +8108,7 @@ let rec elaborate_raw_expr_fuel fuel expected env _UU03a9_ n _UU03a3_ next e =
        in
        (match lookup_fn_b fname env.env_fns with
         | Some fdef ->
-          if (&&) (Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int)
-               (Nat.eqb fdef.fn_lifetimes Big_int_Z.zero_big_int)
+          if Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int
           then (match go_args_expected fuel' env _UU03a3_ next args
                         fdef.fn_params with
                 | Infer_ok p ->

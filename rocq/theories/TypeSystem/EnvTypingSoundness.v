@@ -539,10 +539,7 @@ Proof.
       * exact Hcheck.
 			    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
 			      unfold no_captures_b in Hinfer.
-			      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
-				      destruct (Nat.eqb (fn_type_params fdef) 0 ||
-				                Nat.eqb (fn_lifetimes fdef) 0) eqn:Hgeneric;
-				        try discriminate.
+				      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
 			      inversion Hinfer; subst.
 			      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
 			      eapply TES_Fn; eassumption.
@@ -675,10 +672,7 @@ Proof.
       * exact Hcheck.
 			    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
 			      unfold no_captures_b in Hinfer.
-			      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
-				      destruct (Nat.eqb (fn_type_params fdef) 0 ||
-				                Nat.eqb (fn_lifetimes fdef) 0) eqn:Hgeneric;
-				        try discriminate.
+				      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
 			      inversion Hinfer; subst.
 			      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
 			      eapply TES_Fn; eassumption.
@@ -806,31 +800,29 @@ Proof.
               ** eapply call_exprs_in_true; eassumption.
               ** exact Hinfer_arg.
            ++ rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
-      * destruct (ty_core t) eqn:Hbody; try discriminate.
-        destruct (build_bound_sigma (repeat None n0) arg_tys l0) as [σ |] eqn:Hbuild;
-          try discriminate.
-        destruct (check_arg_tys Ω arg_tys (map (open_bound_ty σ) l0)) as [err |] eqn:Hcheck;
-          try discriminate.
-        destruct (contains_lbound_ty (open_bound_ty σ t0) ||
-            contains_lbound_outlives (open_bound_outlives σ o)) eqn:Hleak;
-          try discriminate.
-        destruct (outlives_constraints_hold_b Ω (open_bound_outlives σ o)) eqn:Hout;
-          try discriminate.
-        inversion Hinfer; subst.
-        apply opened_call_no_lbound_sound in Hleak as [Hret Hbounds].
-        eapply TES_CallExpr_Forall with (σ := σ) (param_tys := l0).
-        -- eapply IH; [exact Hcallee | exact Hcallee_infer].
-        -- exact Hbody.
-        -- eapply infer_env_args_collect_sound.
-           ++ exact Hcollect.
-           ++ intros Σ0 e0 T0 Σ1 Hin_arg Hinfer_arg.
-              eapply IH.
-              ** eapply call_exprs_in_true; eassumption.
-              ** exact Hinfer_arg.
-           ++ rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
-	        -- exact Hret.
-	        -- exact Hbounds.
-	        -- apply env_outlives_constraints_hold_b_sound. exact Hout.
+	      * destruct (ty_core t) eqn:Hbody; try discriminate.
+	        -- destruct (build_bound_sigma (repeat None n0) arg_tys l0) as [σ |] eqn:Hbuild;
+	             try discriminate.
+	           destruct (check_arg_tys Ω arg_tys (map (open_bound_ty σ) l0)) as [err |] eqn:Hcheck;
+	             try discriminate.
+	           destruct (contains_lbound_ty (open_bound_ty σ t0) ||
+	               contains_lbound_outlives (open_bound_outlives σ o)) eqn:Hleak;
+	             try discriminate.
+	           destruct (outlives_constraints_hold_b Ω (open_bound_outlives σ o)) eqn:Hout;
+	             try discriminate.
+	           inversion Hinfer; subst.
+	           apply opened_call_no_lbound_sound in Hleak as [Hret Hbounds].
+	           eapply TES_CallExpr_Forall with (σ := σ) (param_tys := l0).
+	           ++ eapply IH; [exact Hcallee | exact Hcallee_infer].
+	           ++ exact Hbody.
+	           ++ eapply infer_env_args_collect_sound.
+	              ** exact Hcollect.
+	              ** intros Σ0 e0 T0 Σ1 Hin_arg Hinfer_arg.
+	                 eapply IH; [eapply call_exprs_in_true; eassumption | exact Hinfer_arg].
+	              ** rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
+	           ++ exact Hret.
+	           ++ exact Hbounds.
+	           ++ apply env_outlives_constraints_hold_b_sound. exact Hout.
 	        -- destruct (build_bound_sigma (repeat None n0) arg_tys l1) as [σ0 |] eqn:Hbuild;
 	             try discriminate.
 	           set (σ := complete_bound_sigma_with_vars n σ0).
@@ -854,9 +846,58 @@ Proof.
 	                 eapply IH; [eapply call_exprs_in_true; eassumption | exact Hinfer_arg].
 	              ** rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
 	           ++ exact Henv.
-		           ++ exact Hret.
-		           ++ exact Hbounds.
-		           ++ apply env_outlives_constraints_hold_b_sound. exact Hout.
+	           ++ exact Hret.
+	           ++ exact Hbounds.
+	           ++ apply env_outlives_constraints_hold_b_sound. exact Hout.
+	        -- unfold infer_mixed_forall_call_env in Hinfer.
+	           destruct (ty_core t0) eqn:Htypebody; try discriminate.
+	           destruct (infer_type_forall_args n1 l1 arg_tys) as [type_args |] eqn:Htypeargs;
+	             try discriminate.
+	           destruct (build_bound_sigma (repeat None n0) arg_tys
+	               (map (subst_type_params_ty type_args) l1)) as [σ0 |] eqn:Hbuild;
+	             try discriminate.
+	           set (σ := complete_bound_sigma_with_vars n σ0).
+	           change (complete_bound_sigma_with_vars n σ0) with σ in Hinfer.
+	           destruct (check_arg_tys Ω arg_tys
+	               (map (open_bound_ty σ)
+	                 (map (subst_type_params_ty type_args) l1))) as [err |] eqn:Hcheck;
+	             try discriminate.
+	           destruct (contains_lbound_ty
+	               (open_bound_ty σ (subst_type_params_ty type_args t1)) ||
+	               contains_lbound_outlives (open_bound_outlives σ o) ||
+	               existsb
+	                 (fun b =>
+	                   existsb
+	                     (fun tr =>
+	                       existsb contains_lbound_ty (core_trait_ref_args Ty tr))
+	                     (core_bound_traits Ty b))
+	                 (open_core_trait_bounds σ l0)) eqn:Hleak; try discriminate.
+	           destruct (outlives_constraints_hold_b Ω (open_bound_outlives σ o)) eqn:Hout;
+	             try discriminate.
+	           destruct (check_type_forall_bounds env (open_core_trait_bounds σ l0)
+	               type_args) as [err |] eqn:Hbounds; try discriminate.
+	           inversion Hinfer; subst.
+	           repeat rewrite orb_false_iff in Hleak.
+	           destruct Hleak as [[Hret Hltbounds] _].
+	           eapply TES_CallExpr_MixedForall with
+	             (σ := σ) (type_args := type_args) (param_tys := l1) (ret := t1).
+	           ++ replace (MkTy u
+	                (TForall n0 o
+	                  (MkTy (ty_usage t) (TTypeForall n1 l0 t0))))
+	                with (MkTy u (TForall n0 o t)).
+	              ** eapply IH; [exact Hcallee | exact Hcallee_infer].
+	              ** destruct t as [ut ct]; simpl in Hbody.
+	                 inversion Hbody; reflexivity.
+	           ++ exact Htypebody.
+	           ++ exact Hbounds.
+	           ++ eapply infer_env_args_collect_sound.
+	              ** exact Hcollect.
+	              ** intros Σ0 e0 T0 Σ1 Hin_arg Hinfer_arg.
+	                 eapply IH; [eapply call_exprs_in_true; eassumption | exact Hinfer_arg].
+	              ** rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
+	           ++ exact Hret.
+	           ++ exact Hltbounds.
+	           ++ apply env_outlives_constraints_hold_b_sound. exact Hout.
 	      * destruct (ty_core t) eqn:Hbody;
 	          unfold infer_type_forall_call_env in Hinfer;
 	          rewrite Hbody in Hinfer; try discriminate.
@@ -977,10 +1018,7 @@ Proof.
       * exact Hcheck.
 			    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
 			      unfold no_captures_b in Hinfer.
-				      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
-				      destruct (Nat.eqb (fn_type_params fdef) 0 ||
-				                Nat.eqb (fn_lifetimes fdef) 0) eqn:Hgeneric;
-				        try discriminate.
+					      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
 				      inversion Hinfer; subst.
 		      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
 		      eapply TES_Fn; eassumption.
@@ -1106,31 +1144,29 @@ Proof.
               ** eapply struct_exprs_in_true; eassumption.
               ** exact Hinfer_arg.
            ++ rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
-      * destruct (ty_core t) eqn:Hbody; try discriminate.
-        destruct (build_bound_sigma (repeat None n0) arg_tys l0) as [σ |] eqn:Hbuild;
-          try discriminate.
-        destruct (check_arg_tys Ω arg_tys (map (open_bound_ty σ) l0)) as [err |] eqn:Hcheck;
-          try discriminate.
-        destruct (contains_lbound_ty (open_bound_ty σ t0) ||
-            contains_lbound_outlives (open_bound_outlives σ o)) eqn:Hleak;
-          try discriminate.
-        destruct (outlives_constraints_hold_b Ω (open_bound_outlives σ o)) eqn:Hout;
-          try discriminate.
-        inversion Hinfer; subst.
-        apply opened_call_no_lbound_sound in Hleak as [Hret Hbounds].
-        eapply TES_CallExpr_Forall with (σ := σ) (param_tys := l0).
-        -- eapply IH; [exact Hcallee | exact Hcallee_infer].
-        -- exact Hbody.
-        -- eapply infer_env_args_collect_sound.
-           ++ exact Hcollect.
-           ++ intros Σ0 e0 T0 Σ1 Hin_arg Hinfer_arg.
-              eapply IH.
-              ** eapply struct_exprs_in_true; eassumption.
-              ** exact Hinfer_arg.
-           ++ rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
-	        -- exact Hret.
-	        -- exact Hbounds.
-	        -- apply env_outlives_constraints_hold_b_sound. exact Hout.
+	      * destruct (ty_core t) eqn:Hbody; try discriminate.
+	        -- destruct (build_bound_sigma (repeat None n0) arg_tys l0) as [σ |] eqn:Hbuild;
+	             try discriminate.
+	           destruct (check_arg_tys Ω arg_tys (map (open_bound_ty σ) l0)) as [err |] eqn:Hcheck;
+	             try discriminate.
+	           destruct (contains_lbound_ty (open_bound_ty σ t0) ||
+	               contains_lbound_outlives (open_bound_outlives σ o)) eqn:Hleak;
+	             try discriminate.
+	           destruct (outlives_constraints_hold_b Ω (open_bound_outlives σ o)) eqn:Hout;
+	             try discriminate.
+	           inversion Hinfer; subst.
+	           apply opened_call_no_lbound_sound in Hleak as [Hret Hbounds].
+	           eapply TES_CallExpr_Forall with (σ := σ) (param_tys := l0).
+	           ++ eapply IH; [exact Hcallee | exact Hcallee_infer].
+	           ++ exact Hbody.
+	           ++ eapply infer_env_args_collect_sound.
+	              ** exact Hcollect.
+	              ** intros Σ0 e0 T0 Σ1 Hin_arg Hinfer_arg.
+	                 eapply IH; [eapply struct_exprs_in_true; eassumption | exact Hinfer_arg].
+	              ** rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
+	           ++ exact Hret.
+	           ++ exact Hbounds.
+	           ++ apply env_outlives_constraints_hold_b_sound. exact Hout.
 	        -- destruct (build_bound_sigma (repeat None n0) arg_tys l1) as [σ0 |] eqn:Hbuild;
 	             try discriminate.
 	           set (σ := complete_bound_sigma_with_vars n σ0).
@@ -1154,9 +1190,58 @@ Proof.
 	                 eapply IH; [eapply struct_exprs_in_true; eassumption | exact Hinfer_arg].
 	              ** rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
 	           ++ exact Henv.
-		           ++ exact Hret.
-		           ++ exact Hbounds.
-		           ++ apply env_outlives_constraints_hold_b_sound. exact Hout.
+	           ++ exact Hret.
+	           ++ exact Hbounds.
+	           ++ apply env_outlives_constraints_hold_b_sound. exact Hout.
+	        -- unfold infer_mixed_forall_call_env in Hinfer.
+	           destruct (ty_core t0) eqn:Htypebody; try discriminate.
+	           destruct (infer_type_forall_args n1 l1 arg_tys) as [type_args |] eqn:Htypeargs;
+	             try discriminate.
+	           destruct (build_bound_sigma (repeat None n0) arg_tys
+	               (map (subst_type_params_ty type_args) l1)) as [σ0 |] eqn:Hbuild;
+	             try discriminate.
+	           set (σ := complete_bound_sigma_with_vars n σ0).
+	           change (complete_bound_sigma_with_vars n σ0) with σ in Hinfer.
+	           destruct (check_arg_tys Ω arg_tys
+	               (map (open_bound_ty σ)
+	                 (map (subst_type_params_ty type_args) l1))) as [err |] eqn:Hcheck;
+	             try discriminate.
+	           destruct (contains_lbound_ty
+	               (open_bound_ty σ (subst_type_params_ty type_args t1)) ||
+	               contains_lbound_outlives (open_bound_outlives σ o) ||
+	               existsb
+	                 (fun b =>
+	                   existsb
+	                     (fun tr =>
+	                       existsb contains_lbound_ty (core_trait_ref_args Ty tr))
+	                     (core_bound_traits Ty b))
+	                 (open_core_trait_bounds σ l0)) eqn:Hleak; try discriminate.
+	           destruct (outlives_constraints_hold_b Ω (open_bound_outlives σ o)) eqn:Hout;
+	             try discriminate.
+	           destruct (check_type_forall_bounds env (open_core_trait_bounds σ l0)
+	               type_args) as [err |] eqn:Hbounds; try discriminate.
+	           inversion Hinfer; subst.
+	           repeat rewrite orb_false_iff in Hleak.
+	           destruct Hleak as [[Hret Hltbounds] _].
+	           eapply TES_CallExpr_MixedForall with
+	             (σ := σ) (type_args := type_args) (param_tys := l1) (ret := t1).
+	           ++ replace (MkTy u
+	                (TForall n0 o
+	                  (MkTy (ty_usage t) (TTypeForall n1 l0 t0))))
+	                with (MkTy u (TForall n0 o t)).
+	              ** eapply IH; [exact Hcallee | exact Hcallee_infer].
+	              ** destruct t as [ut ct]; simpl in Hbody.
+	                 inversion Hbody; reflexivity.
+	           ++ exact Htypebody.
+	           ++ exact Hbounds.
+	           ++ eapply infer_env_args_collect_sound.
+	              ** exact Hcollect.
+	              ** intros Σ0 e0 T0 Σ1 Hin_arg Hinfer_arg.
+	                 eapply IH; [eapply struct_exprs_in_true; eassumption | exact Hinfer_arg].
+	              ** rewrite <- check_arg_tys_params_of_tys. exact Hcheck.
+	           ++ exact Hret.
+	           ++ exact Hltbounds.
+	           ++ apply env_outlives_constraints_hold_b_sound. exact Hout.
 	      * destruct (ty_core t) eqn:Hbody;
 	          unfold infer_type_forall_call_env in Hinfer;
 	          rewrite Hbody in Hinfer; try discriminate.

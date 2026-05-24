@@ -978,10 +978,7 @@ Proof.
 	      + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
 	        unfold no_captures_b in Hinfer.
 	        destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; [|discriminate].
-		        destruct (Nat.eqb (fn_type_params fdef) 0 ||
-		                  Nat.eqb (fn_lifetimes fdef) 0) eqn:Hgeneric;
-		          [|discriminate].
-		        injection Hinfer as <- <-.
+			        injection Hinfer as <- <-.
 			        destruct (lookup_fn_b_sound i fenv fdef Hlookup) as [Hin Hname].
 			        eapply T_FnValue; [exact Hin | exact Hname | exact Hcaps].
       + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].

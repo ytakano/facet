@@ -73,9 +73,13 @@ let check_unique_type_params names =
   in
   go [] names
 
-let with_type_forall_params names f =
-  check_unique_type_params names;
-  f names
+let with_mixed_forall_params params f =
+  let (lts, tys) = split_generics params in
+  check_unique_lifetimes lts;
+  check_unique_type_params tys;
+  let prev = !current_hrt_lifetimes in
+  current_hrt_lifetimes := lts;
+  f lts tys prev
 
 let install_generics params =
   let (lts, tys) = split_generics params in
@@ -168,20 +172,9 @@ struct_field:
   | m = opt_mut; name = ID; COLON; t = ty
     { { nfield_mutability = m; nfield_name = name; nfield_ty = t } }
 
-lifetime_name:
-  | lt = LIFETIME { lt }
-
 outlives_constraint:
   | a = LIFETIME; COLON; b = LIFETIME
-    { (LVar (resolve_fn_lt_name a), LVar (resolve_fn_lt_name b)) }
-
-hrt_outlives_constraint:
-  | a = LIFETIME; COLON; b = LIFETIME
     { (resolve_lifetime a, resolve_lifetime b) }
-
-opt_hrt_where_outlives:
-  | { [] }
-  | KW_WHERE; cs = separated_nonempty_list(COMMA, hrt_outlives_constraint) { cs }
 
 params:
   | { [] }
@@ -315,13 +308,19 @@ ty_core:
     { NTFn (ts, ret) }
   | KW_CLOSURE; LANGLE; env_lt = LIFETIME; RANGLE; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty
     { NTClosure (resolve_lifetime env_lt, ts, ret) }
-  | h = hrt_lifetime_params; KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty; outs = opt_hrt_where_outlives
-    { let (names, prev) = h in
+  | h = mixed_forall_params; KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty; where_clause = opt_fn_where_clause
+    { let (params, prev) = h in
+      let (bounds, outs) = where_clause in
+      let (lts, tys) = split_generics params in
       current_hrt_lifetimes := prev;
-      NTForall (Big_int_Z.big_int_of_int (List.length names), outs, NTy (UUnrestricted, NTFn (ts, ret))) }
-  | names = type_forall_params; KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty; bounds = opt_trait_bounds
-    { with_type_forall_params names
-        (fun names -> NTTypeForall (names, bounds, NTy (UUnrestricted, NTFn (ts, ret)))) }
+      let body = NTy (UUnrestricted, NTFn (ts, ret)) in
+      match lts, tys with
+      | [], _ -> NTTypeForall (tys, bounds, body)
+      | _, [] -> NTForall (Big_int_Z.big_int_of_int (List.length lts), outs, body)
+      | _, _ ->
+          NTForall
+            (Big_int_Z.big_int_of_int (List.length lts), outs,
+             NTy (UUnrestricted, NTTypeForall (tys, bounds, body))) }
 
 signature_ty:
   | KW_AFFINE;       c = signature_ty_core { NTy (UAffine,       c) }
@@ -342,13 +341,19 @@ signature_ty_core:
     { NTFn (ts, ret) }
   | KW_CLOSURE; LANGLE; env_lt = LIFETIME; RANGLE; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty
     { NTClosure (resolve_lifetime env_lt, ts, ret) }
-  | h = hrt_lifetime_params; KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty; outs = opt_hrt_where_outlives
-    { let (names, prev) = h in
+  | h = mixed_forall_params; KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty; where_clause = opt_fn_where_clause
+    { let (params, prev) = h in
+      let (bounds, outs) = where_clause in
+      let (lts, tys) = split_generics params in
       current_hrt_lifetimes := prev;
-      NTForall (Big_int_Z.big_int_of_int (List.length names), outs, NTy (UUnrestricted, NTFn (ts, ret))) }
-  | names = type_forall_params; KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty; bounds = opt_trait_bounds
-    { with_type_forall_params names
-        (fun names -> NTTypeForall (names, bounds, NTy (UUnrestricted, NTFn (ts, ret)))) }
+      let body = NTy (UUnrestricted, NTFn (ts, ret)) in
+      match lts, tys with
+      | [], _ -> NTTypeForall (tys, bounds, body)
+      | _, [] -> NTForall (Big_int_Z.big_int_of_int (List.length lts), outs, body)
+      | _, _ ->
+          NTForall
+            (Big_int_Z.big_int_of_int (List.length lts), outs,
+             NTy (UUnrestricted, NTTypeForall (tys, bounds, body))) }
 
 opt_type_args:
   | { [] }
@@ -358,16 +363,9 @@ type_arg:
   | lt = LIFETIME { NTArgLifetime (resolve_lifetime lt) }
   | t = ty { NTArgTy t }
 
-hrt_lifetime_params:
-  | KW_FOR; LANGLE; names = separated_nonempty_list(COMMA, lifetime_name); RANGLE
-    { check_unique_lifetimes names;
-      let prev = !current_hrt_lifetimes in
-      current_hrt_lifetimes := names;
-      (names, prev) }
-
-type_forall_params:
-  | KW_FOR; LANGLE; names = separated_nonempty_list(COMMA, ID); RANGLE
-    { names }
+mixed_forall_params:
+  | KW_FOR; LANGLE; params = separated_nonempty_list(COMMA, generic_param); RANGLE
+    { with_mixed_forall_params params (fun _ _ prev -> (params, prev)) }
 
 ty_list:
   | { [] }

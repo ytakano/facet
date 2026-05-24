@@ -166,6 +166,12 @@ val apply_lt_lifetime : lifetime list -> lifetime -> lifetime
 
 val apply_lt_outlives : lifetime list -> outlives_ctx -> outlives_ctx
 
+val map_core_trait_ref :
+  ('a1 -> 'a2) -> 'a1 core_trait_ref -> 'a2 core_trait_ref
+
+val map_core_trait_bound :
+  ('a1 -> 'a2) -> 'a1 core_trait_bound -> 'a2 core_trait_bound
+
 val close_fn_lifetime : Big_int_Z.big_int -> lifetime -> lifetime
 
 val apply_lt_ty : lifetime list -> ty -> ty
@@ -698,6 +704,14 @@ val infer_place_env : global_env -> ctx -> place -> ty infer_result
 val wf_outlives_b : region_ctx -> outlives_ctx -> bool
 
 val outlives_constraints_hold_b : outlives_ctx -> outlives_ctx -> bool
+
+val open_core_trait_bounds :
+  lifetime option list -> ty core_trait_bound list -> ty core_trait_bound list
+
+val infer_mixed_forall_call_env :
+  global_env -> outlives_ctx -> Big_int_Z.big_int -> Big_int_Z.big_int ->
+  outlives_ctx -> Big_int_Z.big_int -> ty core_trait_bound list -> ty -> ty
+  list -> ty infer_result
 
 type sctx_entry = ctx_entry
 

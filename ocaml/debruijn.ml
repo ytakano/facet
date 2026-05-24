@@ -513,7 +513,7 @@ let validate_env env =
                 then Some ("type-forall trait bound arity mismatch: " ^ tr.core_trait_ref_name)
                 else
                   first_some
-                    (List.map (type_error ty_params' lt_params zero) tr.core_trait_ref_args)
+                    (List.map (type_error ty_params' lt_params bound_depth) tr.core_trait_ref_args)
             in
             first_some (List.map validate_trait_ref b.core_bound_traits)
         in

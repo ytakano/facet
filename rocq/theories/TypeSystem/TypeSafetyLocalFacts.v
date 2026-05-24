@@ -78,7 +78,28 @@ Proof.
     rewrite apply_lt_lifetime_nil_ts. rewrite Hargs. rewrite IH.
     reflexivity.
 	  - rewrite apply_lt_outlives_nil_ts. rewrite IH. reflexivity.
-	  - rewrite IH. reflexivity.
+		  - assert (Hbounds :
+		      map (map_core_trait_bound (apply_lt_ty [])) l = l).
+		    { induction l as [| b bs IHbs]; simpl; try reflexivity.
+		      destruct b as [idx refs]; simpl.
+		      assert (Hrefs :
+		        map (map_core_trait_ref (apply_lt_ty [])) refs = refs).
+			      { induction refs as [| tr refs IHrefs]; cbn [map]; try reflexivity.
+			        destruct tr as [name args].
+			        cbn [map_core_trait_ref core_trait_ref_name core_trait_ref_args].
+			        assert (Hargs : map (apply_lt_ty []) args = args).
+			        { induction args as [| T Ts IHTs]; cbn [map]; try reflexivity.
+			          rewrite IH, IHTs. reflexivity. }
+			        change (MkCoreTraitRef Ty name (map (apply_lt_ty []) args)
+			                  :: map (map_core_trait_ref (apply_lt_ty [])) refs =
+			                MkCoreTraitRef Ty name args :: refs).
+			        rewrite Hargs. f_equal. exact IHrefs. }
+			      change (MkCoreTraitBound Ty idx
+			                (map (map_core_trait_ref (apply_lt_ty [])) refs)
+			              :: map (map_core_trait_bound (apply_lt_ty [])) bs =
+			              MkCoreTraitBound Ty idx refs :: bs).
+			      rewrite Hrefs. f_equal. exact IHbs. }
+		    rewrite Hbounds. rewrite IH. reflexivity.
 	  - rewrite apply_lt_lifetime_nil_ts. rewrite IH. reflexivity.
 Qed.
 

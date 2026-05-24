@@ -534,10 +534,7 @@ Proof.
       * apply root_env_excludes_b_sound. exact Henv.
 		    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
 			      unfold no_captures_b in Hinfer.
-			      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
-			      destruct (Nat.eqb (fn_type_params fdef) 0 ||
-			                Nat.eqb (fn_lifetimes fdef) 0) eqn:Hgeneric;
-			        try discriminate.
+				      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
 			      inversion Hinfer; subst.
 	      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
 	      eapply TER_Fn; eassumption.
@@ -881,10 +878,7 @@ Proof.
       * apply root_env_excludes_b_sound. exact Henv2.
 		    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup; try discriminate.
 			      unfold no_captures_b in Hinfer.
-			      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
-			      destruct (Nat.eqb (fn_type_params fdef) 0 ||
-			                Nat.eqb (fn_lifetimes fdef) 0) eqn:Hgeneric;
-			        try discriminate.
+				      destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; try discriminate.
 			      inversion Hinfer; subst.
 	      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
 	      eapply TERS_Fn; eassumption.

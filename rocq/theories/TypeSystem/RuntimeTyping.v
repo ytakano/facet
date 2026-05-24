@@ -42,11 +42,12 @@ Inductive ty_lifetime_equiv : Ty -> Ty -> Prop :=
       ty_lifetime_equiv
         (MkTy u (TForall n Ω_actual body_actual))
         (MkTy u (TForall n Ω_expected body_expected))
-  | TLE_TypeForall : forall u n bounds body_actual body_expected,
+  | TLE_TypeForall : forall u n bounds_actual bounds_expected
+      body_actual body_expected,
       ty_lifetime_equiv body_actual body_expected ->
       ty_lifetime_equiv
-        (MkTy u (TTypeForall n bounds body_actual))
-        (MkTy u (TTypeForall n bounds body_expected))
+        (MkTy u (TTypeForall n bounds_actual body_actual))
+        (MkTy u (TTypeForall n bounds_expected body_expected))
   | TLE_Ref : forall u l_actual l_expected rk T_actual T_expected,
       ty_lifetime_equiv T_actual T_expected ->
       ty_lifetime_equiv
@@ -92,7 +93,7 @@ Fixpoint ty_lifetime_equiv_refl (T : Ty) : ty_lifetime_equiv T T :=
   | MkTy u (TForall n Ω body) =>
       TLE_Forall u n Ω Ω body body (ty_lifetime_equiv_refl body)
   | MkTy u (TTypeForall n bounds body) =>
-      TLE_TypeForall u n bounds body body (ty_lifetime_equiv_refl body)
+      TLE_TypeForall u n bounds bounds body body (ty_lifetime_equiv_refl body)
   | MkTy u (TRef l rk Tinner) =>
       TLE_Ref u l l rk Tinner Tinner (ty_lifetime_equiv_refl Tinner)
   end.
@@ -200,7 +201,9 @@ Fixpoint ty_lifetime_equiv_apply_lt_ty
         body (apply_lt_ty σ body)
         (ty_lifetime_equiv_apply_lt_ty σ body)
   | MkTy u (TTypeForall n bounds body) =>
-      TLE_TypeForall u n bounds body (apply_lt_ty σ body)
+      TLE_TypeForall u n bounds
+        (map (map_core_trait_bound (apply_lt_ty σ)) bounds)
+        body (apply_lt_ty σ body)
         (ty_lifetime_equiv_apply_lt_ty σ body)
   | MkTy u (TRef l rk Tinner) =>
       TLE_Ref u l (apply_lt_lifetime σ l) rk
@@ -400,7 +403,9 @@ Fixpoint ty_lifetime_equiv_apply_lt_ty_two
         (apply_lt_ty σ_expected body)
         (ty_lifetime_equiv_apply_lt_ty_two σ_actual σ_expected body)
   | MkTy u (TTypeForall n bounds body) =>
-      TLE_TypeForall u n bounds
+      TLE_TypeForall u n
+        (map (map_core_trait_bound (apply_lt_ty σ_actual)) bounds)
+        (map (map_core_trait_bound (apply_lt_ty σ_expected)) bounds)
         (apply_lt_ty σ_actual body)
         (apply_lt_ty σ_expected body)
         (ty_lifetime_equiv_apply_lt_ty_two σ_actual σ_expected body)

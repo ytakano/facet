@@ -261,12 +261,16 @@ Definition fn_signature_ty_with_usage (u : usage) (f : fn_def) : Ty :=
         end
     | S _ => MkTy u (TForall m (close_fn_outlives m (fn_outlives f)) body)
     end
-  else if Nat.eqb m 0 then
-    MkTy u (TTypeForall (fn_type_params f)
-      (map core_trait_bound_of_trait_bound (fn_bounds f)) body)
   else
-    match body with
-    | MkTy _ core => MkTy u core
+    let type_bounds :=
+      map (map_core_trait_bound (close_fn_ty m))
+        (map core_trait_bound_of_trait_bound (fn_bounds f)) in
+    let type_body :=
+      MkTy UUnrestricted (TTypeForall (fn_type_params f)
+        type_bounds body) in
+    match m with
+    | O => MkTy u (TTypeForall (fn_type_params f) type_bounds body)
+    | S _ => MkTy u (TForall m (close_fn_outlives m (fn_outlives f)) type_body)
     end.
 
 Definition closure_value_ty_at

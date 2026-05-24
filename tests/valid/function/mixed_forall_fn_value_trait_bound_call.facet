@@ -1,0 +1,18 @@
+trait Show;
+
+impl Show for affine isize;
+
+fn choose_second<'a, 'b, T>(
+  r: unrestricted &'a affine T,
+  s: unrestricted &'b affine T
+) -> unrestricted &'b affine T where 'a: 'b, T: Show {
+  s
+}
+
+fn main<'x, 'y>(
+  r: unrestricted &'x affine isize,
+  s: unrestricted &'y affine isize
+) -> unrestricted &'y affine isize where 'x: 'y {
+  let f: unrestricted for<'a, 'b, T> fn(unrestricted &'a affine T, unrestricted &'b affine T) -> unrestricted &'b affine T where 'a: 'b, T: Show = choose_second in
+  (f r s)
+}

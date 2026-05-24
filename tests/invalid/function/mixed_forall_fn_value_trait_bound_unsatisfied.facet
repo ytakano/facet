@@ -1,0 +1,12 @@
+trait Show;
+
+impl Show for affine bool;
+
+fn keep<'a, T>(x: unrestricted &'a affine T) -> unrestricted &'a affine T where T: Show {
+  x
+}
+
+fn main<'x>(r: unrestricted &'x affine isize) -> unrestricted &'x affine isize {
+  let f: unrestricted for<'a, T> fn(unrestricted &'a affine T) -> unrestricted &'a affine T where T: Show = keep in
+  (f r)
+}

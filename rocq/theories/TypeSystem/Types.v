@@ -145,7 +145,9 @@ Fixpoint apply_lt_ty (σ : list lifetime) (T : Ty) {struct T} : Ty :=
   | MkTy u (TForall n Ω body) =>
       MkTy u (TForall n (apply_lt_outlives σ Ω) (apply_lt_ty σ body))
   | MkTy u (TTypeForall n bounds body) =>
-      MkTy u (TTypeForall n bounds (apply_lt_ty σ body))
+      MkTy u (TTypeForall n
+        (map (map_core_trait_bound (apply_lt_ty σ)) bounds)
+        (apply_lt_ty σ body))
   | MkTy u (TRef l rk t) =>
       MkTy u (TRef (apply_lt_lifetime σ l) rk (apply_lt_ty σ t))
   end.
@@ -302,7 +304,12 @@ Fixpoint contains_lbound_ty (T : Ty) : bool :=
   | MkTy _ (TForall _ Ω body) =>
       contains_lbound_outlives Ω || contains_lbound_ty body
   | MkTy _ (TTypeForall _ bounds body) =>
-      contains_lbound_ty body
+      existsb
+        (fun b =>
+           existsb
+             (fun tr => existsb contains_lbound_ty (core_trait_ref_args Ty tr))
+             (core_bound_traits Ty b))
+        bounds || contains_lbound_ty body
   | MkTy _ (TRef l _ t) =>
       contains_lbound_lifetime l || contains_lbound_ty t
   | _ => false

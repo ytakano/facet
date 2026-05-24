@@ -652,6 +652,24 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       contains_lbound_outlives (open_bound_outlives σ bounds) = false ->
       Forall (fun '(a, b) => outlives Ω a b) (open_bound_outlives σ bounds) ->
       typed_env_structural env Ω n Σ (ECallExpr callee args) (open_bound_ty σ ret) Σ'
+  | TES_CallExpr_MixedForall :
+      forall Σ Σ1 Σ' callee args u u_body m bounds type_params type_bounds body
+        param_tys ret σ type_args,
+      typed_env_structural env Ω n Σ callee
+        (MkTy u (TForall m bounds
+          (MkTy u_body (TTypeForall type_params type_bounds body)))) Σ1 ->
+      ty_core body = TFn param_tys ret ->
+      check_type_forall_bounds env (open_core_trait_bounds σ type_bounds) type_args = None ->
+      typed_args_env_structural env Ω n Σ1 args
+        (params_of_tys
+          (map (open_bound_ty σ)
+            (map (subst_type_params_ty type_args) param_tys))) Σ' ->
+      contains_lbound_ty
+        (open_bound_ty σ (subst_type_params_ty type_args ret)) = false ->
+      contains_lbound_outlives (open_bound_outlives σ bounds) = false ->
+      Forall (fun '(a, b) => outlives Ω a b) (open_bound_outlives σ bounds) ->
+      typed_env_structural env Ω n Σ (ECallExpr callee args)
+        (open_bound_ty σ (subst_type_params_ty type_args ret)) Σ'
   | TES_CallExpr_TypeForall :
       forall Σ Σ1 Σ' callee args u m bounds body param_tys ret type_args,
       typed_env_structural env Ω n Σ callee (MkTy u (TTypeForall m bounds body)) Σ1 ->
@@ -1728,6 +1746,8 @@ Proof.
         sctx_same_bindings_trans.
     + eauto using typed_args_env_structural_same_bindings,
         sctx_same_bindings_trans.
+	    + eauto using typed_args_env_structural_same_bindings,
+	      sctx_same_bindings_trans.
 	    + eauto using typed_args_env_structural_same_bindings,
 	      sctx_same_bindings_trans.
 	    + eauto using typed_args_env_structural_same_bindings,

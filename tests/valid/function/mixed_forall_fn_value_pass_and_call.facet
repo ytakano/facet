@@ -1,0 +1,14 @@
+fn id<'a, T>(x: unrestricted &'a affine T) -> unrestricted &'a affine T {
+  x
+}
+
+fn apply<'x>(
+  f: unrestricted for<'a, T> fn(unrestricted &'a affine T) -> unrestricted &'a affine T,
+  r: unrestricted &'x affine isize
+) -> unrestricted &'x affine isize {
+  (f r)
+}
+
+fn main<'x>(r: unrestricted &'x affine isize) -> unrestricted &'x affine isize {
+  (apply id r)
+}

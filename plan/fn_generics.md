@@ -48,17 +48,36 @@ Implemented:
     so higher-order calls such as passing `id<T>` to a parameter of type
     `for<T> fn(...) -> ...` are supported.
   - Type args remain erased in FIR/runtime output.
-
-Not implemented yet:
-
-- Mixed lifetime/type function-value polymorphism.
+- Mixed lifetime/type function-value polymorphism is supported.
+  - Surface value types accept `for<'a, T> fn(...) -> ...` with mixed
+    outlives constraints and trait bounds.
+  - Core value types represent mixed polymorphism as
+    `TForall ... (TTypeForall ... body)`, so lifetime opening and type
+    substitution stay separated.
+  - No-capture generic function items with both lifetime and type params can be
+    used as first-class function values when an expected mixed forall type is
+    available.
+  - `ECallExpr` on mixed forall values infers type args from actual arguments,
+    then infers HRT lifetime witnesses from the substituted parameter types,
+    validates outlives constraints and trait bounds, and returns the opened,
+    substituted result type.
+  - Raw elaboration propagates expected argument types for lifetime-polymorphic
+    monomorphic callees, so higher-order calls can pass mixed forall function
+    items directly.
 
 ## Next Implementation Steps
 
-1. Later: mixed lifetime/type function-value polymorphism.
-   - Add `for<'a, T>` only after v1 compiles and tests pass.
-   - Revisit the interaction between lifetime HRT opening and type-arg
-     inference before changing the existing `TForall` proof path.
+1. Trait solver and inference improvements.
+   - Keep direct-call and function-value type argument inference syntactic for
+     now; do not search impls or infer from trait bounds until there is a
+     dedicated constraint solver.
+   - Add ambiguity diagnostics before widening inference beyond parameter and
+     expected-return matching.
+
+2. Closure and richer callable integration.
+   - Reuse the mixed forall call path only for erased no-capture function items.
+   - Add closure-specific polymorphism later, after mutable/affine/linear
+     closure representation is settled.
 
 Required checks:
 
@@ -68,7 +87,9 @@ dune build
 sh tests/run.sh
 sh tests/fir/run.sh
 git diff --check
-rg -n "\bAxiom\b|Admitted\.|Abort\.|DEBUG|idtac" rocq/theories
+rg -n "\bAxiom\b|Admitted\.|admit\b|Abort\.|TODO|DEBUG|idtac" rocq/theories
 ```
 
-The final `rg` exits with status 1 when there are no matches; that is success.
+The final `rg` should not report new proof holes or debug leftovers. Existing
+`idtac` matches in `EnvRuntimeShadowEvalFacts.v` are legacy proof-script
+selectors, not holes.

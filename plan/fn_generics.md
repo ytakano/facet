@@ -37,7 +37,7 @@ Implemented:
 
 Not implemented yet:
 
-- Full type-polymorphic function values.
+- Type-polymorphic function values v1.
 
 ## Next Implementation Steps
 
@@ -52,12 +52,34 @@ Current facts:
 - Generic direct calls are already handled by raw elaboration to `ECallGeneric`;
   this should remain separate from first-class generic values.
 
-1. Add full type-polymorphic function values.
-   - Add surface/core type syntax for type-generic function values, including
-     trait bounds.
-   - Extend `EFn`, `ECallExpr`, checker soundness, FIR printing, and regression
-     tests for first-class `for<T>` values.
-   - Stop if this requires weakening typing, ownership, or trait-bound checks.
+1. Add type-polymorphic function values v1.
+   - Support surface value types of the form
+     `for<T, U> fn(...) -> ...` and
+     `for<T, U> fn(...) -> ... where T: Trait`.
+   - Do not support mixed `for<'a, T>` function-value types in v1. Existing
+     lifetime-only `for<'a> fn(...) -> ...` remains unchanged.
+   - Keep the current lifetime-only `TForall`; add a separate type-param
+     forall representation instead of widening `TForall`.
+   - Do not make `Types.v` depend on `Syntax.v`. Type-level trait bounds need
+     a core-level structural representation, with conversion to existing
+     `trait_bound` only in checker/program layers that already import
+     `Syntax.v`.
+   - Expose no-capture, type-generic function items as type-polymorphic values
+     through `EFn` when they have type params and no lifetime params. Keep the
+     existing expected-monomorphic wrapper path unchanged.
+   - Extend value calls through `ECallExpr` so a `for<T>` function value infers
+     type args from actual arguments, validates stored trait bounds, checks
+     substituted parameters, and returns the substituted result type.
+   - Type-arg inference for `for<T>` function values does not search trait
+     impls and may fail when args do not determine all type params.
+   - Update FIR/type pretty-printing; type args remain erased at runtime.
+   - Stop if this requires weakening typing, ownership, trait-bound checks, or
+     existing lifetime HRT soundness.
+
+2. Later: mixed lifetime/type function-value polymorphism.
+   - Add `for<'a, T>` only after v1 compiles and tests pass.
+   - Revisit the interaction between lifetime HRT opening and type-arg
+     inference before changing the existing `TForall` proof path.
 
 Required checks:
 

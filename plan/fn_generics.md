@@ -36,9 +36,29 @@ Not implemented yet:
 
 ## Next Implementation Steps
 
-1. Add generic function values.
-   - Decide representation for generic function values and closure values before
-     exposing them through ordinary value calls.
+Current facts:
+
+- Monomorphic function values are already represented by `EFn` and `TFn`.
+- Lifetime-polymorphic function values are represented by `TForall`, but only
+  for lifetimes: surface syntax supports `for<'a> fn(...) -> ...`.
+- There is no surface or core type syntax for type-polymorphic function values
+  such as `for<T> fn(T) -> T`, and no type-level trait-bound representation for
+  such values.
+- Generic direct calls are already handled by raw elaboration to `ECallGeneric`;
+  this should remain separate from first-class generic values.
+
+1. Add expected-monomorphic generic item values.
+   - Allow a generic function item to be used where an expected concrete
+     `fn(...) -> ...` type determines all type args.
+   - Elaborate/check the item as the instantiated monomorphic function value.
+   - Do not infer type args from trait impl search.
+
+2. Add full type-polymorphic function values later.
+   - Add surface/core type syntax for type-generic function values, including
+     trait bounds.
+   - Extend `EFn`, `ECallExpr`, checker soundness, FIR printing, and regression
+     tests for first-class `for<T>` values.
+   - Stop if this requires weakening typing, ownership, or trait-bound checks.
 
 Required checks:
 

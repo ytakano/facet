@@ -34,49 +34,28 @@ Implemented:
   elaboration infers type args, validates `fn_bounds`, generates a monomorphic
   wrapper, and exposes the wrapper through ordinary `EFn`/`TFn` function-value
   paths.
+- Type-polymorphic function values v1 are supported.
+  - Surface value types accept `for<T, U> fn(...) -> ...` and
+    `for<T, U> fn(...) -> ... where T: Trait`.
+  - Core types use a separate `TTypeForall` with core-level trait-bound refs,
+    keeping lifetime-only `TForall` unchanged.
+  - No-capture, type-generic function items with no lifetime params are exposed
+    as first-class type-polymorphic values through `EFn`.
+  - `ECallExpr` on `for<T>` values infers type args from actual arguments,
+    validates stored trait bounds, checks substituted parameters, and returns
+    the substituted result type.
+  - Raw elaboration propagates expected argument types for monomorphic calls,
+    so higher-order calls such as passing `id<T>` to a parameter of type
+    `for<T> fn(...) -> ...` are supported.
+  - Type args remain erased in FIR/runtime output.
 
 Not implemented yet:
 
-- Type-polymorphic function values v1.
+- Mixed lifetime/type function-value polymorphism.
 
 ## Next Implementation Steps
 
-Current facts:
-
-- Monomorphic function values are already represented by `EFn` and `TFn`.
-- Lifetime-polymorphic function values are represented by `TForall`, but only
-  for lifetimes: surface syntax supports `for<'a> fn(...) -> ...`.
-- There is no surface or core type syntax for type-polymorphic function values
-  such as `for<T> fn(T) -> T`, and no type-level trait-bound representation for
-  such values.
-- Generic direct calls are already handled by raw elaboration to `ECallGeneric`;
-  this should remain separate from first-class generic values.
-
-1. Add type-polymorphic function values v1.
-   - Support surface value types of the form
-     `for<T, U> fn(...) -> ...` and
-     `for<T, U> fn(...) -> ... where T: Trait`.
-   - Do not support mixed `for<'a, T>` function-value types in v1. Existing
-     lifetime-only `for<'a> fn(...) -> ...` remains unchanged.
-   - Keep the current lifetime-only `TForall`; add a separate type-param
-     forall representation instead of widening `TForall`.
-   - Do not make `Types.v` depend on `Syntax.v`. Type-level trait bounds need
-     a core-level structural representation, with conversion to existing
-     `trait_bound` only in checker/program layers that already import
-     `Syntax.v`.
-   - Expose no-capture, type-generic function items as type-polymorphic values
-     through `EFn` when they have type params and no lifetime params. Keep the
-     existing expected-monomorphic wrapper path unchanged.
-   - Extend value calls through `ECallExpr` so a `for<T>` function value infers
-     type args from actual arguments, validates stored trait bounds, checks
-     substituted parameters, and returns the substituted result type.
-   - Type-arg inference for `for<T>` function values does not search trait
-     impls and may fail when args do not determine all type params.
-   - Update FIR/type pretty-printing; type args remain erased at runtime.
-   - Stop if this requires weakening typing, ownership, trait-bound checks, or
-     existing lifetime HRT soundness.
-
-2. Later: mixed lifetime/type function-value polymorphism.
+1. Later: mixed lifetime/type function-value polymorphism.
    - Add `for<'a, T>` only after v1 compiles and tests pass.
    - Revisit the interaction between lifetime HRT opening and type-arg
      inference before changing the existing `TForall` proof path.

@@ -77,8 +77,9 @@ Proof.
       - rewrite IH. rewrite IHl. reflexivity. }
     rewrite apply_lt_lifetime_nil_ts. rewrite Hargs. rewrite IH.
     reflexivity.
-  - rewrite apply_lt_outlives_nil_ts. rewrite IH. reflexivity.
-  - rewrite apply_lt_lifetime_nil_ts. rewrite IH. reflexivity.
+	  - rewrite apply_lt_outlives_nil_ts. rewrite IH. reflexivity.
+	  - rewrite IH. reflexivity.
+	  - rewrite apply_lt_lifetime_nil_ts. rewrite IH. reflexivity.
 Qed.
 
 Lemma NoDup_app_remove_middle_ts : forall (xs ys zs : list ident),
@@ -398,4 +399,3 @@ Proof.
   - exact Hwithin.
   - eapply roots_exclude_stores_subset; eassumption.
 Qed.
-

@@ -42,6 +42,11 @@ Inductive ty_lifetime_equiv : Ty -> Ty -> Prop :=
       ty_lifetime_equiv
         (MkTy u (TForall n Ω_actual body_actual))
         (MkTy u (TForall n Ω_expected body_expected))
+  | TLE_TypeForall : forall u n bounds body_actual body_expected,
+      ty_lifetime_equiv body_actual body_expected ->
+      ty_lifetime_equiv
+        (MkTy u (TTypeForall n bounds body_actual))
+        (MkTy u (TTypeForall n bounds body_expected))
   | TLE_Ref : forall u l_actual l_expected rk T_actual T_expected,
       ty_lifetime_equiv T_actual T_expected ->
       ty_lifetime_equiv
@@ -86,6 +91,8 @@ Fixpoint ty_lifetime_equiv_refl (T : Ty) : ty_lifetime_equiv T T :=
         (go params) (ty_lifetime_equiv_refl ret)
   | MkTy u (TForall n Ω body) =>
       TLE_Forall u n Ω Ω body body (ty_lifetime_equiv_refl body)
+  | MkTy u (TTypeForall n bounds body) =>
+      TLE_TypeForall u n bounds body body (ty_lifetime_equiv_refl body)
   | MkTy u (TRef l rk Tinner) =>
       TLE_Ref u l l rk Tinner Tinner (ty_lifetime_equiv_refl Tinner)
   end.
@@ -192,6 +199,9 @@ Fixpoint ty_lifetime_equiv_apply_lt_ty
       TLE_Forall u n Ω (apply_lt_outlives σ Ω)
         body (apply_lt_ty σ body)
         (ty_lifetime_equiv_apply_lt_ty σ body)
+  | MkTy u (TTypeForall n bounds body) =>
+      TLE_TypeForall u n bounds body (apply_lt_ty σ body)
+        (ty_lifetime_equiv_apply_lt_ty σ body)
   | MkTy u (TRef l rk Tinner) =>
       TLE_Ref u l (apply_lt_lifetime σ l) rk
         Tinner (apply_lt_ty σ Tinner)
@@ -230,6 +240,7 @@ Proof.
   - constructor.
     + induction H; constructor; eauto.
     + apply IH. exact Heq.
+  - constructor. apply IH. exact Heq.
   - constructor. apply IH. exact Heq.
   - constructor. apply IH. exact Heq.
 Qed.
@@ -385,6 +396,11 @@ Fixpoint ty_lifetime_equiv_apply_lt_ty_two
       TLE_Forall u n
         (apply_lt_outlives σ_actual Ω)
         (apply_lt_outlives σ_expected Ω)
+        (apply_lt_ty σ_actual body)
+        (apply_lt_ty σ_expected body)
+        (ty_lifetime_equiv_apply_lt_ty_two σ_actual σ_expected body)
+  | MkTy u (TTypeForall n bounds body) =>
+      TLE_TypeForall u n bounds
         (apply_lt_ty σ_actual body)
         (apply_lt_ty σ_expected body)
         (ty_lifetime_equiv_apply_lt_ty_two σ_actual σ_expected body)
@@ -2981,17 +2997,23 @@ Proof.
       * reflexivity.
       * eapply TC_Fn_Closure; eassumption.
     + simpl in Hlookup. discriminate.
-  - destruct path as [|seg rest].
-    + simpl in Hlookup. inversion Hlookup; subst T_path.
-      exists (MkTy ua (TForall n Ω_forall body_a)). split.
-      * reflexivity.
-      * eapply TC_Forall; eassumption.
-    + simpl in Hlookup. discriminate.
-  - destruct path as [|seg rest].
-    + simpl in Hlookup. inversion Hlookup; subst T_path.
-      exists (MkTy ua ca). split.
-      * reflexivity.
-      * eapply TC_Forall_GeneralizeUnused; eassumption.
+	  - destruct path as [|seg rest].
+	    + simpl in Hlookup. inversion Hlookup; subst T_path.
+	      exists (MkTy ua (TForall n Ω_forall body_a)). split.
+	      * reflexivity.
+	      * eapply TC_Forall; eassumption.
+	    + simpl in Hlookup. discriminate.
+	  - destruct path as [|seg rest].
+	    + simpl in Hlookup. inversion Hlookup; subst T_path.
+	      exists (MkTy ua (TTypeForall n bounds body_a)). split.
+	      * reflexivity.
+	      * eapply TC_TypeForall; eassumption.
+	    + simpl in Hlookup. discriminate.
+	  - destruct path as [|seg rest].
+	    + simpl in Hlookup. inversion Hlookup; subst T_path.
+	      exists (MkTy ua ca). split.
+	      * reflexivity.
+	      * eapply TC_Forall_GeneralizeUnused; eassumption.
     + simpl in Hlookup. discriminate.
 Qed.
 
@@ -3109,8 +3131,9 @@ Proof.
       | Hsome : Some _ = Some _ |- _ => inversion Hsome; clear Hsome; subst
       end.
       split; [reflexivity | eapply VHT_ClosureEmpty; eassumption].
-    + unfold fn_value_ty, fn_signature_ty_with_usage in *.
-      destruct (fn_lifetimes fdef); simpl in *; discriminate.
+	    + unfold fn_value_ty, fn_signature_ty_with_usage in *.
+	      destruct (fn_type_params fdef); destruct (fn_lifetimes fdef);
+	        simpl in *; discriminate.
   - destruct lookup_path as [|seg rest].
     + simpl in *.
       match goal with
@@ -3121,8 +3144,9 @@ Proof.
       | Hsome : Some _ = Some _ |- _ => inversion Hsome; clear Hsome; subst
       end.
       split; [reflexivity | eapply VHT_ClosureIn; [eassumption | reflexivity]].
-    + unfold fn_value_ty, fn_signature_ty_with_usage in *.
-      destruct (fn_lifetimes fdef); simpl in *; discriminate.
+	    + unfold fn_value_ty, fn_signature_ty_with_usage in *.
+	      destruct (fn_type_params fdef); destruct (fn_lifetimes fdef);
+	        simpl in *; discriminate.
   - match goal with
     | Hcompat : ty_compatible Ω T_actual T_expected,
       Htype : type_lookup_path env T_expected lookup_path = Some T_path |- _ =>

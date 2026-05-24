@@ -487,6 +487,12 @@ and pp_ty_core = function
       (List.init (Big_int_Z.int_of_big_int n)
          (fun i -> "'_" ^ string_of_int i)) ^
     "> " ^ pp_ty body
+  | TTypeForall (n, _, body) ->
+    "for<" ^
+    String.concat ", "
+      (List.init (Big_int_Z.int_of_big_int n)
+         (fun i -> "T" ^ string_of_int i)) ^
+    "> " ^ pp_ty body
   | TRef (_, RShared, t) -> "& " ^ pp_ty t
   | TRef (_, RUnique, t) -> "&mut " ^ pp_ty t
 

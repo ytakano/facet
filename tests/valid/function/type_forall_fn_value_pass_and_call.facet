@@ -1,0 +1,11 @@
+fn id<T>(x: affine T) -> affine T {
+  x
+}
+
+fn apply(f: unrestricted for<T> fn(affine T) -> affine T) -> affine isize {
+  (f 1)
+}
+
+fn main() -> affine isize {
+  (apply id)
+}

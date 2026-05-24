@@ -192,6 +192,12 @@ Inductive ty_compatible (Ω : outlives_ctx) : Ty -> Ty -> Prop :=
       ty_compatible Ω
         (MkTy ua (TForall n Ω_forall body_a))
         (MkTy ue (TForall n Ω_forall body_e))
+  | TC_TypeForall : forall ua ue n bounds body_a body_e,
+      usage_sub ua ue ->
+      ty_compatible Ω body_a body_e ->
+      ty_compatible Ω
+        (MkTy ua (TTypeForall n bounds body_a))
+        (MkTy ue (TTypeForall n bounds body_e))
   | TC_Forall_GeneralizeUnused : forall ua ue n ca body,
       usage_sub ua ue ->
       contains_lbound_ty body = false ->
@@ -247,13 +253,21 @@ Definition fn_signature_ty_with_usage (u : usage) (f : fn_def) : Ty :=
   let body :=
     close_fn_ty m
       (MkTy UUnrestricted (TFn (map param_ty (fn_params f)) (fn_ret f))) in
-  match m with
-  | O =>
-      match body with
-      | MkTy _ core => MkTy u core
-      end
-  | S _ => MkTy u (TForall m (close_fn_outlives m (fn_outlives f)) body)
-  end.
+  if Nat.eqb (fn_type_params f) 0 then
+    match m with
+    | O =>
+        match body with
+        | MkTy _ core => MkTy u core
+        end
+    | S _ => MkTy u (TForall m (close_fn_outlives m (fn_outlives f)) body)
+    end
+  else if Nat.eqb m 0 then
+    MkTy u (TTypeForall (fn_type_params f)
+      (map core_trait_bound_of_trait_bound (fn_bounds f)) body)
+  else
+    match body with
+    | MkTy _ core => MkTy u core
+    end.
 
 Definition closure_value_ty_at
     (env_lt : lifetime) (f : fn_def) (captured_tys : list Ty) : Ty :=

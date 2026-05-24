@@ -73,6 +73,10 @@ let check_unique_type_params names =
   in
   go [] names
 
+let with_type_forall_params names f =
+  check_unique_type_params names;
+  f names
+
 let install_generics params =
   let (lts, tys) = split_generics params in
   check_unique_lifetimes lts;
@@ -315,6 +319,9 @@ ty_core:
     { let (names, prev) = h in
       current_hrt_lifetimes := prev;
       NTForall (Big_int_Z.big_int_of_int (List.length names), outs, NTy (UUnrestricted, NTFn (ts, ret))) }
+  | names = type_forall_params; KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty; bounds = opt_trait_bounds
+    { with_type_forall_params names
+        (fun names -> NTTypeForall (names, bounds, NTy (UUnrestricted, NTFn (ts, ret)))) }
 
 signature_ty:
   | KW_AFFINE;       c = signature_ty_core { NTy (UAffine,       c) }
@@ -339,6 +346,9 @@ signature_ty_core:
     { let (names, prev) = h in
       current_hrt_lifetimes := prev;
       NTForall (Big_int_Z.big_int_of_int (List.length names), outs, NTy (UUnrestricted, NTFn (ts, ret))) }
+  | names = type_forall_params; KW_FN; LPAREN; ts = ty_list; RPAREN; ARROW; ret = ty; bounds = opt_trait_bounds
+    { with_type_forall_params names
+        (fun names -> NTTypeForall (names, bounds, NTy (UUnrestricted, NTFn (ts, ret)))) }
 
 opt_type_args:
   | { [] }
@@ -354,6 +364,10 @@ hrt_lifetime_params:
       let prev = !current_hrt_lifetimes in
       current_hrt_lifetimes := names;
       (names, prev) }
+
+type_forall_params:
+  | KW_FOR; LANGLE; names = separated_nonempty_list(COMMA, ID); RANGLE
+    { names }
 
 ty_list:
   | { [] }

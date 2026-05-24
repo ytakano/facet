@@ -50,6 +50,26 @@ Definition global_env_with_local_bounds
   MkGlobalEnv (env_structs env) (env_traits env) (env_impls env)
     bounds (env_fns env).
 
+Definition core_trait_ref_of_trait_ref (tr : trait_ref) : core_trait_ref Ty :=
+  MkCoreTraitRef Ty (trait_ref_name tr) (trait_ref_args tr).
+
+Definition core_trait_bound_of_trait_bound
+    (b : trait_bound) : core_trait_bound Ty :=
+  MkCoreTraitBound Ty (bound_type_index b)
+    (map core_trait_ref_of_trait_ref (bound_traits b)).
+
+Definition trait_ref_of_core_trait_ref (tr : core_trait_ref Ty) : trait_ref :=
+  MkTraitRef (core_trait_ref_name Ty tr) (core_trait_ref_args Ty tr).
+
+Definition trait_bound_of_core_trait_bound
+    (b : core_trait_bound Ty) : trait_bound :=
+  MkTraitBound (core_bound_type_index Ty b)
+    (map trait_ref_of_core_trait_ref (core_bound_traits Ty b)).
+
+Definition trait_bounds_of_core_trait_bounds
+    (bounds : list (core_trait_bound Ty)) : list trait_bound :=
+  map trait_bound_of_core_trait_bound bounds.
+
 Fixpoint lookup_struct_in (name : string) (structs : list struct_def) : option struct_def :=
   match structs with
   | [] => None
@@ -142,6 +162,8 @@ Fixpoint subst_type_params_ty (σ : list Ty) (T : Ty) {struct T} : Ty :=
       MkTy u (TClosure env (go ps) (subst_type_params_ty σ r))
   | MkTy u (TForall n Ω body) =>
       MkTy u (TForall n Ω (subst_type_params_ty σ body))
+  | MkTy u (TTypeForall n bounds body) =>
+      MkTy u (TTypeForall n bounds body)
   | MkTy u (TRef l rk inner) =>
       MkTy u (TRef l rk (subst_type_params_ty σ inner))
   end.
@@ -225,6 +247,31 @@ Fixpoint ty_eqb_decl (T1 T2 : Ty) {struct T1} : bool :=
              end) ps1 ps2 && ty_eqb_decl r1 r2
       | TForall n1 Ω1 b1, TForall n2 Ω2 b2 =>
           Nat.eqb n1 n2 && outlives_ctx_eqb_decl Ω1 Ω2 && ty_eqb_decl b1 b2
+      | TTypeForall n1 bs1 b1, TTypeForall n2 bs2 b2 =>
+          Nat.eqb n1 n2 &&
+          (fix go_bounds (xs ys : list (core_trait_bound Ty)) : bool :=
+             match xs, ys with
+             | [], [] => true
+             | x :: xs', y :: ys' =>
+                 Nat.eqb (core_bound_type_index Ty x) (core_bound_type_index Ty y) &&
+                 (fix go_refs (rs ss : list (core_trait_ref Ty)) : bool :=
+                    match rs, ss with
+                    | [], [] => true
+                    | r :: rs', s :: ss' =>
+                        String.eqb (core_trait_ref_name Ty r) (core_trait_ref_name Ty s) &&
+                        (fix go_args (as_ bs : list Ty) : bool :=
+                           match as_, bs with
+                           | [], [] => true
+                           | a :: as', b :: bs' => ty_eqb_decl a b && go_args as' bs'
+                           | _, _ => false
+                           end) (core_trait_ref_args Ty r) (core_trait_ref_args Ty s) &&
+                        go_refs rs' ss'
+                    | _, _ => false
+                    end) (core_bound_traits Ty x) (core_bound_traits Ty y) &&
+                 go_bounds xs' ys'
+             | _, _ => false
+             end) bs1 bs2 &&
+          ty_eqb_decl b1 b2
       | TRef l1 rk1 t1, TRef l2 rk2 t2 =>
           lifetime_eqb l1 l2 && ref_kind_eqb_decl rk1 rk2 && ty_eqb_decl t1 t2
       | _, _ => false
@@ -334,6 +381,12 @@ Fixpoint match_ty
               if Nat.eqb n1 n2 && outlives_ctx_eqb_decl Ω1 Ω2
               then match_ty ty_params lt_params fuel' b1 b2 st
               else None
+          | TTypeForall n1 bs1 b1, TTypeForall n2 bs2 b2 =>
+              if Nat.eqb n1 n2 && ty_eqb_decl
+                   (MkTy UUnrestricted (TTypeForall n1 bs1 b1))
+                   (MkTy UUnrestricted (TTypeForall n2 bs2 b2))
+              then Some st
+              else None
           | TRef l1 rk1 t1, TRef l2 rk2 t2 =>
               if ref_kind_eqb_decl rk1 rk2
               then match match_lifetime lt_params l1 l2 st with
@@ -370,6 +423,8 @@ Fixpoint ty_match_fuel (T : Ty) : nat :=
   | MkTy _ (TFn ps r) =>
       S (ty_match_fuel r + fold_right (fun T acc => ty_match_fuel T + acc) 0 ps)
   | MkTy _ (TForall _ Ω body) => S (List.length Ω + ty_match_fuel body)
+  | MkTy _ (TTypeForall _ bounds body) =>
+      S (List.length bounds + ty_match_fuel body)
   | MkTy _ (TRef _ _ inner) => S (ty_match_fuel inner)
   | _ => 1
   end.

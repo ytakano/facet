@@ -1,0 +1,8 @@
+fn id<T>(x: affine T) -> affine T {
+  x
+}
+
+fn main() -> affine isize {
+  let f: unrestricted for<T> fn(affine T) -> affine T where T: Missing = id in
+  (f 1)
+}

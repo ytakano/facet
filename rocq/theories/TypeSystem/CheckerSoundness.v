@@ -206,6 +206,12 @@ Proof.
   intros. simpl. lia.
 Qed.
 
+Lemma ty_depth_type_forall_body_lt : forall u n bounds body,
+  ty_depth body < ty_depth (MkTy u (TTypeForall n bounds body)).
+Proof.
+  intros. simpl. lia.
+Qed.
+
 Lemma ty_eqb_true : forall T1 T2,
   ty_eqb T1 T2 = true -> T1 = T2.
 Proof.
@@ -221,8 +227,8 @@ Proof.
         (destruct u1, u2; simpl in Hu; try discriminate; reflexivity).
       subst u2.
       f_equal.
-      destruct c1 as [| | | | s1 | i1 | name1 lts1 args1 | ts1 r1 | lc1 cts1 cr1 | n1 Ω1 b1 | l1 k1 t1],
-               c2 as [| | | | s2 | i2 | name2 lts2 args2 | ts2 r2 | lc2 cts2 cr2 | n2 Ω2 b2 | l2 k2 t2];
+      destruct c1 as [| | | | s1 | i1 | name1 lts1 args1 | ts1 r1 | lc1 cts1 cr1 | n1 Ω1 b1 | tn1 bs1 tb1 | l1 k1 t1],
+               c2 as [| | | | s2 | i2 | name2 lts2 args2 | ts2 r2 | lc2 cts2 cr2 | n2 Ω2 b2 | tn2 bs2 tb2 | l2 k2 t2];
         simpl in Hc; try discriminate.
       + reflexivity.
       + reflexivity.
@@ -284,6 +290,47 @@ Proof.
         f_equal. apply IH;
           [pose proof (ty_depth_forall_body_lt u1 n1 Ω1 b1); lia | exact Ht].
       + apply andb_true_iff in Hc as [Hlk Ht].
+        apply andb_true_iff in Hlk as [Hn _Hbounds].
+        apply Nat.eqb_eq in Hn. subst tn2.
+        assert (Hbs : bs1 = bs2).
+        { revert bs2 _Hbounds Hlt.
+          induction bs1 as [| [idx1 refs1] bs1' IHbs];
+            intros bs2 Hbounds Hdepth;
+            destruct bs2 as [| [idx2 refs2] bs2']; simpl in Hbounds;
+            try discriminate; try reflexivity.
+          apply andb_true_iff in Hbounds as [Hhead Htail].
+          apply andb_true_iff in Hhead as [Hidx Hrefs].
+          apply Nat.eqb_eq in Hidx. subst idx2.
+          assert (Hrefs_eq : refs1 = refs2).
+          { revert refs2 Hrefs Hdepth.
+            induction refs1 as [| [name1 args1] refs1' IHrefs];
+              intros refs2 Hrefs Hdepth;
+              destruct refs2 as [| [name2 args2] refs2']; simpl in Hrefs;
+              try discriminate; try reflexivity.
+            apply andb_true_iff in Hrefs as [Hhead Htail_refs].
+            apply andb_true_iff in Hhead as [Hname Hargs].
+            apply String.eqb_eq in Hname. subst name2.
+            assert (Hargs_eq : args1 = args2).
+            { revert args2 Hargs Hdepth.
+              induction args1 as [| a1 args1' IHargs];
+                intros args2 Hargs Hdepth.
+              * destruct args2; simpl in Hargs; [reflexivity | discriminate].
+              * destruct args2 as [| a2 args2']; simpl in Hargs; [discriminate |].
+                apply andb_true_iff in Hargs as [Ha Htail_args].
+                f_equal.
+                -- apply IH; [simpl in Hdepth; lia | exact Ha].
+                -- apply IHargs; [exact Htail_args | simpl in Hdepth; simpl; lia]. }
+            assert (Hrefs_tail : refs1' = refs2').
+            { apply IHrefs; [exact Htail_refs | simpl in Hdepth; simpl; lia]. }
+            subst. reflexivity. }
+          assert (Hbs_tail : bs1' = bs2').
+          { apply IHbs; [exact Htail | simpl in Hdepth; simpl; lia]. }
+          subst. reflexivity. }
+        subst bs2.
+        f_equal.
+        apply IH;
+          [pose proof (ty_depth_type_forall_body_lt u1 tn1 bs1 tb1); lia | exact Ht].
+      + apply andb_true_iff in Hc as [Hlk Ht].
         apply andb_true_iff in Hlk as [Hl Hk].
         apply lifetime_eqb_eq in Hl. subst l2.
         apply ref_kind_eqb_true in Hk. subst k2.
@@ -297,8 +344,8 @@ Lemma ty_core_eqb_true : forall c1 c2,
   ty_core_eqb c1 c2 = true -> c1 = c2.
 Proof.
   intros c1 c2 H.
-  destruct c1 as [| | | | s1 | i1 | name1 lts1 args1 | ts1 r1 | lc1 cts1 cr1 | n1 Ω1 b1 | l1 k1 t1],
-           c2 as [| | | | s2 | i2 | name2 lts2 args2 | ts2 r2 | lc2 cts2 cr2 | n2 Ω2 b2 | l2 k2 t2];
+  destruct c1 as [| | | | s1 | i1 | name1 lts1 args1 | ts1 r1 | lc1 cts1 cr1 | n1 Ω1 b1 | tn1 bs1 tb1 | l1 k1 t1],
+           c2 as [| | | | s2 | i2 | name2 lts2 args2 | ts2 r2 | lc2 cts2 cr2 | n2 Ω2 b2 | tn2 bs2 tb2 | l2 k2 t2];
     simpl in H; try discriminate.
   - reflexivity.
   - reflexivity.
@@ -348,6 +395,12 @@ Proof.
     apply Nat.eqb_eq in Hn. subst n2.
     apply outlives_ctx_eqb_true in HΩ. subst Ω2.
     f_equal. apply ty_eqb_true. exact Ht.
+  - assert (Hty :
+      ty_eqb
+        (MkTy UUnrestricted (TTypeForall tn1 bs1 tb1))
+        (MkTy UUnrestricted (TTypeForall tn2 bs2 tb2)) = true).
+    { simpl. exact H. }
+    apply ty_eqb_true in Hty. inversion Hty. reflexivity.
   - apply andb_true_iff in H as [Hlk Ht].
     apply andb_true_iff in Hlk as [Hl Hk].
     apply lifetime_eqb_eq in Hl. subst l2.
@@ -430,13 +483,13 @@ Proof.
   - simpl in H. discriminate.
   - destruct T_actual as [ua ca], T_expected as [ue ce].
     simpl in H. apply andb_true_iff in H as [Hu Hc].
-    destruct ca as [| | | | sa | ia | struct_a ltsa argsa | tsa ra | lca ctsa cra | na Ωa body_a | la rka Ta],
-             ce as [| | | | se | ie | struct_e ltse argse | tse re | lce ctse cre | nb Ωb body_b | lb rkb Tb];
+    destruct ca as [| | | | sa | ia | struct_a ltsa argsa | tsa ra | lca ctsa cra | na Ωa body_a | tna boundsa tbody_a | la rka Ta],
+             ce as [| | | | se | ie | struct_e ltse argse | tse re | lce ctse cre | nb Ωb body_b | tnb boundsb tbody_b | lb rkb Tb];
       simpl in Hc; try discriminate;
-      try (apply TC_Core;
-           [apply usage_sub_bool_sound; exact Hu
-           | apply ty_core_eqb_true; exact Hc]).
-    + destruct Ωb as [|p Ωb]; [|discriminate].
+	      try (apply TC_Core;
+	           [apply usage_sub_bool_sound; exact Hu
+	           | apply ty_core_eqb_true; exact Hc]).
+	    + destruct Ωb as [|p Ωb]; [|discriminate].
       apply andb_true_iff in Hc as [Hnob Hrec].
       apply negb_true_iff in Hnob.
       eapply ty_compatible_forall_generalize_unused_sound.
@@ -532,14 +585,57 @@ Proof.
       apply TC_Forall.
       * apply usage_sub_bool_sound. exact Hu.
       * eapply IH. exact HT.
-    + destruct Ωb as [|p Ωb]; [|discriminate].
-      apply andb_true_iff in Hc as [Hnob Hrec].
-      apply negb_true_iff in Hnob.
-      eapply ty_compatible_forall_generalize_unused_sound.
-      * exact Hu.
-      * exact Hnob.
-      * eapply IH. exact Hrec.
-    + apply andb_true_iff in Hc as [Hlr HT].
+	    + destruct Ωb as [|p Ωb]; [|discriminate].
+	      apply andb_true_iff in Hc as [Hnob Hrec].
+	      apply negb_true_iff in Hnob.
+	      eapply ty_compatible_forall_generalize_unused_sound.
+	      * exact Hu.
+	      * exact Hnob.
+	      * eapply IH. exact Hrec.
+	    + apply andb_true_iff in Hc as [Hnb Hrec].
+	      apply andb_true_iff in Hnb as [Hn Hbounds].
+	      apply Nat.eqb_eq in Hn. subst tnb.
+	      assert (Hbounds_eq : boundsa = boundsb).
+	      { revert boundsb Hbounds.
+	        induction boundsa as [| [idx1 refs1] bs1 IHbs];
+	          intros boundsb Hbounds;
+	          destruct boundsb as [| [idx2 refs2] bs2]; simpl in Hbounds;
+	          try discriminate; try reflexivity.
+	        apply andb_true_iff in Hbounds as [Hhead Htail].
+	        apply andb_true_iff in Hhead as [Hidx Hrefs].
+	        apply Nat.eqb_eq in Hidx. subst idx2.
+	        assert (Hrefs_eq : refs1 = refs2).
+	        { revert refs2 Hrefs.
+	          induction refs1 as [| [name1 args1] refs1' IHrefs];
+	            intros refs2 Hrefs;
+	            destruct refs2 as [| [name2 args2] refs2']; simpl in Hrefs;
+	            try discriminate; try reflexivity.
+	          apply andb_true_iff in Hrefs as [Hhead Htail_refs].
+	          apply andb_true_iff in Hhead as [Hname Hargs].
+	          apply String.eqb_eq in Hname. subst name2.
+	          assert (Hargs_eq : args1 = args2).
+	          { revert args2 Hargs.
+	            induction args1 as [| a1 args1' IHargs]; intros args2 Hargs;
+	              destruct args2 as [| a2 args2']; simpl in Hargs;
+	              try discriminate; try reflexivity.
+	            apply andb_true_iff in Hargs as [Ha Htail_args].
+	            f_equal; [apply ty_eqb_true; exact Ha | apply IHargs; exact Htail_args]. }
+	          assert (Hrefs_tail : refs1' = refs2') by (apply IHrefs; exact Htail_refs).
+	          subst. reflexivity. }
+	        assert (Hbounds_tail : bs1 = bs2) by (apply IHbs; exact Htail).
+	        subst. reflexivity. }
+	      subst boundsb.
+	      eapply TC_TypeForall.
+	      * apply usage_sub_bool_sound. exact Hu.
+	      * eapply IH. exact Hrec.
+	    + destruct Ωb as [|p Ωb]; [|discriminate].
+	      apply andb_true_iff in Hc as [Hnob Hrec].
+	      apply negb_true_iff in Hnob.
+	      eapply ty_compatible_forall_generalize_unused_sound.
+	      * exact Hu.
+	      * exact Hnob.
+	      * eapply IH. exact Hrec.
+	    + apply andb_true_iff in Hc as [Hlr HT].
       apply andb_true_iff in Hlr as [Hl Hr].
       apply ref_kind_eqb_true in Hr. subst rkb.
       destruct rka.
@@ -882,13 +978,12 @@ Proof.
 	      + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
 	        unfold no_captures_b in Hinfer.
 	        destruct (fn_captures fdef) as [| cap caps] eqn:Hcaps; [|discriminate].
-	        destruct (Nat.eqb (fn_type_params fdef) 0) eqn:Htypeparams; [|discriminate].
+		        destruct (Nat.eqb (fn_type_params fdef) 0 ||
+		                  Nat.eqb (fn_lifetimes fdef) 0) eqn:Hgeneric;
+		          [|discriminate].
 		        injection Hinfer as <- <-.
-		        destruct (lookup_fn_b_sound i fenv fdef Hlookup) as [Hin Hname].
-			        eapply T_FnValue.
-			        * exact Hin.
-		        * exact Hname.
-            * exact Hcaps.
+			        destruct (lookup_fn_b_sound i fenv fdef Hlookup) as [Hin Hname].
+			        eapply T_FnValue; [exact Hin | exact Hname | exact Hcaps].
       + destruct (lookup_fn_b i fenv) as [fdef |] eqn:Hlookup; [|discriminate].
         destruct (check_make_closure_captures_ctx
                     (empty_global_env fenv) Ω Γ l (fn_captures fdef))
@@ -1078,9 +1173,10 @@ Proof.
 	          ++ exact Hret.
 	          ++ exact Hbounds.
 	          ++ apply outlives_constraints_hold_b_sound. exact Hout.
-	        * discriminate.
-	      + discriminate.
-	      + destruct p as [x | p | p f].
+		        * discriminate.
+			        * discriminate.
+		      + discriminate.
+			      + destruct p as [x | p | p f].
         * destruct (ctx_lookup_b x Γ) as [[Tx bx] |] eqn:Hlookup; [|discriminate].
           destruct bx; [discriminate |].
           destruct (ctx_lookup_mut_b x Γ) as [mx |] eqn:Hmut; [|discriminate].

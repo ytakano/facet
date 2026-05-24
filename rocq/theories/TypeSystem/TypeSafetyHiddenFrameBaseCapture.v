@@ -54,17 +54,13 @@ Proof.
     inversion Href; subst; try discriminate.
   - eauto.
   - unfold fn_value_ty, fn_signature_ty_with_usage in Href.
-    destruct (fn_lifetimes fdef) eqn:Hlifetimes.
-    + unfold close_fn_ty in Href.
-      rewrite map_lifetimes_ty_close_fn_lifetime_0 in Href.
-      discriminate.
-    + discriminate.
+    destruct (fn_type_params fdef) eqn:Htypeparams;
+      destruct (fn_lifetimes fdef) eqn:Hlifetimes;
+      try discriminate.
   - unfold fn_value_ty, fn_signature_ty_with_usage in Href.
-    destruct (fn_lifetimes fdef) eqn:Hlifetimes.
-    + unfold close_fn_ty in Href.
-      rewrite map_lifetimes_ty_close_fn_lifetime_0 in Href.
-      discriminate.
-    + discriminate.
+    destruct (fn_type_params fdef) eqn:Htypeparams;
+      destruct (fn_lifetimes fdef) eqn:Hlifetimes;
+      try discriminate.
   - destruct (ty_compatible_expected_ref_actual_ref
       Ω T_actual u_ref l_ref rk_ref T_ref H)
       as [u_actual [l_actual [T_inner Hactual]]].

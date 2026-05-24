@@ -1,0 +1,12 @@
+trait Convert<T>;
+
+impl Convert<affine bool> for affine isize;
+
+fn id<T>(x: affine T) -> affine T {
+  x
+}
+
+fn main() -> affine isize {
+  let f: unrestricted for<T> fn(affine T) -> affine T where T: Convert = id in
+  (f 1)
+}

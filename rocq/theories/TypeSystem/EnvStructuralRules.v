@@ -652,6 +652,15 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       contains_lbound_outlives (open_bound_outlives σ bounds) = false ->
       Forall (fun '(a, b) => outlives Ω a b) (open_bound_outlives σ bounds) ->
       typed_env_structural env Ω n Σ (ECallExpr callee args) (open_bound_ty σ ret) Σ'
+  | TES_CallExpr_TypeForall :
+      forall Σ Σ1 Σ' callee args u m bounds body param_tys ret type_args,
+      typed_env_structural env Ω n Σ callee (MkTy u (TTypeForall m bounds body)) Σ1 ->
+      ty_core body = TFn param_tys ret ->
+      check_type_forall_bounds env bounds type_args = None ->
+      typed_args_env_structural env Ω n Σ1 args
+        (params_of_tys (map (subst_type_params_ty type_args) param_tys)) Σ' ->
+      typed_env_structural env Ω n Σ (ECallExpr callee args)
+        (subst_type_params_ty type_args ret) Σ'
   | TES_CallExpr_MakeClosure : forall Σ Σ' fname fdef captures env_lt
       captured_tys args σ,
       In fdef (env_fns env) ->
@@ -1719,11 +1728,13 @@ Proof.
         sctx_same_bindings_trans.
     + eauto using typed_args_env_structural_same_bindings,
         sctx_same_bindings_trans.
-    + eauto using typed_args_env_structural_same_bindings,
-        sctx_same_bindings_trans.
-    + eauto using typed_args_env_structural_same_bindings,
-        sctx_same_bindings_trans.
-  - intros env Ω n Σ args ps Σ' Htyped.
+	    + eauto using typed_args_env_structural_same_bindings,
+	      sctx_same_bindings_trans.
+	    + eauto using typed_args_env_structural_same_bindings,
+	      sctx_same_bindings_trans.
+	    + eauto using typed_args_env_structural_same_bindings,
+	      sctx_same_bindings_trans.
+	  - intros env Ω n Σ args ps Σ' Htyped.
     induction Htyped.
     + apply sctx_same_bindings_refl.
     + eapply sctx_same_bindings_trans.

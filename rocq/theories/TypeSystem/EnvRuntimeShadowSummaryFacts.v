@@ -388,7 +388,8 @@ Proof.
   - reflexivity.
   - destruct T as [u core].
     destruct core as [| | | | name | idx | name lts args | ts ret
-      | env_lt args ret | n Ω body | l rk inner]; simpl; try reflexivity.
+      | env_lt args ret | n Ω body | n type_bounds body | l rk inner];
+      simpl; try reflexivity.
     + assert (Hargs :
         forallb
           (capture_ref_free_ty_b_fuel fuel
@@ -431,7 +432,8 @@ Proof.
       { induction ts as [| T Ts IHTs]; simpl; [reflexivity |].
         rewrite (IH env bounds T), IHTs. reflexivity. }
       rewrite Hts, (IH env bounds ret). reflexivity.
-    + apply IH.
+	    + apply IH.
+	    + apply IH.
 Qed.
 
 Lemma capture_ref_free_ty_b_global_env_with_local_bounds :

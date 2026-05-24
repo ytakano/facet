@@ -16,10 +16,19 @@ and named_ty_core =
   | NTFn of named_ty list * named_ty
   | NTClosure of TypeChecker.lifetime * named_ty list * named_ty
   | NTForall of Big_int_Z.big_int * (TypeChecker.lifetime * TypeChecker.lifetime) list * named_ty
+  | NTTypeForall of string list * named_trait_bound list * named_ty
   | NTRef of TypeChecker.lifetime option * TypeChecker.ref_kind * named_ty
 and named_type_arg =
   | NTArgLifetime of TypeChecker.lifetime
   | NTArgTy of named_ty
+and named_trait_bound = {
+  ntb_type_name : string;
+  ntb_traits    : named_trait_ref list;
+}
+and named_trait_ref = {
+  ntr_name : string;
+  ntr_args : named_type_arg list;
+}
 
 type named_param = {
   np_mutability : TypeChecker.mutability;
@@ -30,16 +39,6 @@ type named_param = {
 type named_generic_param =
   | NGLifetime of string
   | NGType of string
-
-type named_trait_bound = {
-  ntb_type_name : string;
-  ntb_traits    : named_trait_ref list;
-}
-
-and named_trait_ref = {
-  ntr_name : string;
-  ntr_args : named_type_arg list;
-}
 
 type named_expr =
   | NUnit

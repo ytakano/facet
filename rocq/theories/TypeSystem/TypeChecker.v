@@ -85,6 +85,31 @@ Fixpoint ty_eqb (T1 T2 : Ty) {struct T1} : bool :=
              end) ts1 ts2 && ty_eqb r1 r2
       | TForall n1 Ω1 b1, TForall n2 Ω2 b2 =>
           Nat.eqb n1 n2 && outlives_ctx_eqb Ω1 Ω2 && ty_eqb b1 b2
+      | TTypeForall n1 bs1 b1, TTypeForall n2 bs2 b2 =>
+          Nat.eqb n1 n2 &&
+          (fix go_bounds (xs ys : list (core_trait_bound Ty)) : bool :=
+             match xs, ys with
+             | [], [] => true
+             | x :: xs', y :: ys' =>
+                 Nat.eqb (core_bound_type_index Ty x) (core_bound_type_index Ty y) &&
+                 (fix go_refs (rs ss : list (core_trait_ref Ty)) : bool :=
+                    match rs, ss with
+                    | [], [] => true
+                    | r :: rs', s :: ss' =>
+                        String.eqb (core_trait_ref_name Ty r) (core_trait_ref_name Ty s) &&
+                        (fix go_args (as_ bs : list Ty) : bool :=
+                           match as_, bs with
+                           | [], [] => true
+                           | a :: as', b :: bs' => ty_eqb a b && go_args as' bs'
+                           | _, _ => false
+                           end) (core_trait_ref_args Ty r) (core_trait_ref_args Ty s) &&
+                        go_refs rs' ss'
+                    | _, _ => false
+                    end) (core_bound_traits Ty x) (core_bound_traits Ty y) &&
+                 go_bounds xs' ys'
+             | _, _ => false
+             end) bs1 bs2 &&
+          ty_eqb b1 b2
       | TRef l1 k1 t1, TRef l2 k2 t2 =>
           lifetime_eqb l1 l2 && ref_kind_eqb k1 k2 && ty_eqb t1 t2
       | _, _ => false
@@ -125,6 +150,31 @@ Definition ty_core_eqb (c1 c2 : TypeCore Ty) : bool :=
          end) ts1 ts2 && ty_eqb r1 r2
   | TForall n1 Ω1 b1, TForall n2 Ω2 b2 =>
       Nat.eqb n1 n2 && outlives_ctx_eqb Ω1 Ω2 && ty_eqb b1 b2
+  | TTypeForall n1 bs1 b1, TTypeForall n2 bs2 b2 =>
+      Nat.eqb n1 n2 &&
+      (fix go_bounds (xs ys : list (core_trait_bound Ty)) : bool :=
+         match xs, ys with
+         | [], [] => true
+         | x :: xs', y :: ys' =>
+             Nat.eqb (core_bound_type_index Ty x) (core_bound_type_index Ty y) &&
+             (fix go_refs (rs ss : list (core_trait_ref Ty)) : bool :=
+                match rs, ss with
+                | [], [] => true
+                | r :: rs', s :: ss' =>
+                    String.eqb (core_trait_ref_name Ty r) (core_trait_ref_name Ty s) &&
+                    (fix go_args (as_ bs : list Ty) : bool :=
+                       match as_, bs with
+                       | [], [] => true
+                       | a :: as', b :: bs' => ty_eqb a b && go_args as' bs'
+                       | _, _ => false
+                       end) (core_trait_ref_args Ty r) (core_trait_ref_args Ty s) &&
+                    go_refs rs' ss'
+                | _, _ => false
+                end) (core_bound_traits Ty x) (core_bound_traits Ty y) &&
+             go_bounds xs' ys'
+         | _, _ => false
+         end) bs1 bs2 &&
+      ty_eqb b1 b2
   | TRef l1 k1 t1, TRef l2 k2 t2 =>
       lifetime_eqb l1 l2 && ref_kind_eqb k1 k2 && ty_eqb t1 t2
   | _, _ => false
@@ -155,6 +205,25 @@ Fixpoint ty_depth (T : Ty) : nat :=
                 end) args)
       | TRef _ _ t => S (ty_depth t)
       | TForall _ Ω body => S (List.length Ω + ty_depth body)
+      | TTypeForall _ bounds body =>
+          S (ty_depth body +
+             (fix go_bounds (bs : list (core_trait_bound Ty)) : nat :=
+                match bs with
+                | [] => 0
+                | b :: bs' =>
+                    (fix go_refs (rs : list (core_trait_ref Ty)) : nat :=
+                       match rs with
+                       | [] => 0
+                       | tr :: rs' =>
+                           (fix go_args (args : list Ty) : nat :=
+                              match args with
+                              | [] => 0
+                              | arg :: args' => S (ty_depth arg) + go_args args'
+                              end) (core_trait_ref_args Ty tr) +
+                           go_refs rs'
+                       end) (core_bound_traits Ty b) +
+                    go_bounds bs'
+                end) bounds)
       | _ => 1
       end
   end.
@@ -197,6 +266,31 @@ Fixpoint ty_compatible_b_fuel (fuel : nat) (Ω : outlives_ctx)
       | TForall na Ωa Ta, TForall nb Ωb Tb =>
           Nat.eqb na nb && outlives_ctx_eqb Ωa Ωb &&
           ty_compatible_b_fuel fuel' Ω Ta Tb
+      | TTypeForall na ba Ta, TTypeForall nb bb Tb =>
+          Nat.eqb na nb &&
+          (fix go_bounds (xs ys : list (core_trait_bound Ty)) : bool :=
+             match xs, ys with
+             | [], [] => true
+             | x :: xs', y :: ys' =>
+                 Nat.eqb (core_bound_type_index Ty x) (core_bound_type_index Ty y) &&
+                 (fix go_refs (rs ss : list (core_trait_ref Ty)) : bool :=
+                    match rs, ss with
+                    | [], [] => true
+                    | r :: rs', s :: ss' =>
+                        String.eqb (core_trait_ref_name Ty r) (core_trait_ref_name Ty s) &&
+                        (fix go_args (as_ bs : list Ty) : bool :=
+                           match as_, bs with
+                           | [], [] => true
+                           | a :: as', b :: bs' => ty_eqb a b && go_args as' bs'
+                           | _, _ => false
+                           end) (core_trait_ref_args Ty r) (core_trait_ref_args Ty s) &&
+                        go_refs rs' ss'
+                    | _, _ => false
+                    end) (core_bound_traits Ty x) (core_bound_traits Ty y) &&
+                 go_bounds xs' ys'
+             | _, _ => false
+             end) ba bb &&
+          ty_compatible_b_fuel fuel' Ω Ta Tb
       | _, TForall _ [] Tb =>
           negb (contains_lbound_ty Tb) &&
           ty_compatible_b_fuel fuel' Ω T_actual Tb
@@ -232,6 +326,9 @@ Inductive capture_ref_free_ty (env : global_env) : Ty -> Prop :=
   | CRFT_Forall : forall u n Ω body,
       capture_ref_free_ty env body ->
       capture_ref_free_ty env (MkTy u (TForall n Ω body))
+  | CRFT_TypeForall : forall u n bounds body,
+      capture_ref_free_ty env body ->
+      capture_ref_free_ty env (MkTy u (TTypeForall n bounds body))
   .
 
 Fixpoint capture_ref_free_ty_b_fuel
@@ -256,6 +353,8 @@ Fixpoint capture_ref_free_ty_b_fuel
           capture_ref_free_ty_b_fuel fuel' env r
       | MkTy _ (TClosure _ _ _) => false
       | MkTy _ (TForall _ _ body) =>
+          capture_ref_free_ty_b_fuel fuel' env body
+      | MkTy _ (TTypeForall _ bounds body) =>
           capture_ref_free_ty_b_fuel fuel' env body
       | MkTy _ (TRef _ _ _) => false
       | MkTy _ (TNamed _) => false
@@ -287,7 +386,7 @@ Proof.
   destruct T as [u core].
   destruct core as
     [| | | | named | tparam | name lts args | params ret
-     | env_lt params ret | n Ω body | la rk inner];
+     | env_lt params ret | n Ω body | tn tbounds tbody | la rk inner];
     simpl in *; try discriminate.
   - constructor.
   - constructor.
@@ -308,6 +407,7 @@ Proof.
     + apply Hlist. exact Hparams.
     + apply IH. exact Hret.
   - apply CRFT_Forall. apply IH. exact Hfree.
+  - apply CRFT_TypeForall. apply IH. exact Hfree.
 Qed.
 
 Lemma capture_ref_free_ty_b_sound :
@@ -339,6 +439,7 @@ Proof.
     apply Hlist. exact Hargs.
   - apply andb_true_iff in Hfree as [Hargs Hret].
     rewrite (Hlist _ Hargs), (IH env t Hret). reflexivity.
+  - apply (IH env t). exact Hfree.
   - apply (IH env t). exact Hfree.
 Qed.
 
@@ -454,6 +555,15 @@ Fixpoint wf_type_at_b (bound_depth : nat) (Δ : region_ctx) (T : Ty) : bool :=
       forallb (wf_type_at_b bound_depth Δ) ts && wf_type_at_b bound_depth Δ r
   | MkTy _ (TForall n Ω body) =>
       wf_outlives_at_b (n + bound_depth) Δ Ω && wf_type_at_b (n + bound_depth) Δ body
+  | MkTy _ (TTypeForall _ bounds body) =>
+      forallb
+        (fun b =>
+           forallb
+             (fun tr => forallb (wf_type_at_b bound_depth Δ)
+                (core_trait_ref_args Ty tr))
+             (core_bound_traits Ty b))
+        bounds &&
+      wf_type_at_b bound_depth Δ body
   | _ => true
   end.
 
@@ -631,6 +741,13 @@ Fixpoint infer_type_args_from_ty
   | MkTy _ (TForall n_f Ω_f body_f), MkTy _ (TForall n_a Ω_a body_a) =>
       if Nat.eqb n_f n_a && outlives_ctx_eqb Ω_f Ω_a
       then infer_type_args_from_ty fuel' body_f body_a σ
+      else None
+  | MkTy _ (TTypeForall n_f bounds_f body_f),
+    MkTy _ (TTypeForall n_a bounds_a body_a) =>
+      if Nat.eqb n_f n_a &&
+         ty_eqb (MkTy UUnrestricted (TTypeForall n_f bounds_f body_f))
+                (MkTy UUnrestricted (TTypeForall n_a bounds_a body_a))
+      then Some σ
       else None
   | _, _ =>
       if ty_core_eqb (ty_core formal) (ty_core actual) then Some σ else None
@@ -914,6 +1031,70 @@ Inductive infer_result (A : Type) : Type :=
 
 Arguments infer_ok {_} _.
 Arguments infer_err {_} _.
+
+Fixpoint tys_depth (ts : list Ty) : nat :=
+  match ts with
+  | [] => 0
+  | t :: ts' => ty_depth t + tys_depth ts'
+  end.
+
+Definition infer_type_forall_args
+    (type_params : nat) (param_tys arg_tys : list Ty) : option (list Ty) :=
+  match infer_type_args_from_tys
+          (S (tys_depth param_tys + tys_depth arg_tys))
+          param_tys arg_tys (repeat None type_params) with
+  | Some σ => finalize_type_args σ
+  | None => None
+  end.
+
+Definition check_type_forall_bounds
+    (env : global_env) (bounds : list (core_trait_bound Ty)) (type_args : list Ty)
+    : option infer_error :=
+  check_struct_bounds env (trait_bounds_of_core_trait_bounds bounds) type_args.
+
+Definition infer_type_forall_call_no_env
+    (Ω : outlives_ctx) (type_params : nat)
+    (bounds : list (core_trait_bound Ty)) (body : Ty) (arg_tys : list Ty)
+    : infer_result Ty :=
+  match bounds with
+  | [] =>
+      match ty_core body with
+      | TFn param_tys ret =>
+          match infer_type_forall_args type_params param_tys arg_tys with
+          | None => infer_err ErrTypeArgInferenceFailed
+          | Some type_args =>
+              let param_tys' := map (subst_type_params_ty type_args) param_tys in
+              match check_arg_tys Ω arg_tys param_tys' with
+              | Some err => infer_err err
+              | None => infer_ok (subst_type_params_ty type_args ret)
+              end
+          end
+      | c => infer_err (ErrMalformedHrtBody c)
+      end
+  | _ => infer_err ErrNotImplemented
+  end.
+
+Definition infer_type_forall_call_env
+    (env : global_env) (Ω : outlives_ctx) (type_params : nat)
+    (bounds : list (core_trait_bound Ty)) (body : Ty) (arg_tys : list Ty)
+    : infer_result Ty :=
+  match ty_core body with
+  | TFn param_tys ret =>
+      match infer_type_forall_args type_params param_tys arg_tys with
+      | None => infer_err ErrTypeArgInferenceFailed
+      | Some type_args =>
+          match check_type_forall_bounds env bounds type_args with
+          | Some err => infer_err err
+          | None =>
+              let param_tys' := map (subst_type_params_ty type_args) param_tys in
+              match check_arg_tys Ω arg_tys param_tys' with
+              | Some err => infer_err err
+              | None => infer_ok (subst_type_params_ty type_args ret)
+              end
+          end
+      end
+  | c => infer_err (ErrMalformedHrtBody c)
+  end.
 
 Definition shared_ref_lifetime_of_ty (T : Ty) : option lifetime :=
   match T with
@@ -1235,7 +1416,8 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
       match lookup_fn_b fname fenv with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
+          if no_captures_b fdef &&
+             (Nat.eqb (fn_type_params fdef) 0 || Nat.eqb (fn_lifetimes fdef) 0)
           then infer_ok (fn_value_ty fdef, Γ)
           else infer_err ErrNotImplemented
       end
@@ -1702,7 +1884,8 @@ Fixpoint infer_core_env_fuel (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
+          if no_captures_b fdef &&
+             (Nat.eqb (fn_type_params fdef) 0 || Nat.eqb (fn_lifetimes fdef) 0)
           then infer_ok (fn_value_ty fdef, Γ)
           else infer_err ErrNotImplemented
       end
@@ -2098,6 +2281,11 @@ Fixpoint infer_core_env_fuel (fuel : nat)
                   match check_arg_tys Ω arg_tys param_tys with
                   | Some err => infer_err err
                   | None => infer_ok (ret, Γ')
+                  end
+              | TTypeForall type_params bounds body =>
+                  match infer_type_forall_call_env env Ω type_params bounds body arg_tys with
+                  | infer_err err => infer_err err
+                  | infer_ok ret => infer_ok (ret, Γ')
                   end
               | c => infer_err (ErrNotAFunction c)
               end
@@ -2713,7 +2901,8 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
+          if no_captures_b fdef &&
+             (Nat.eqb (fn_type_params fdef) 0 || Nat.eqb (fn_lifetimes fdef) 0)
           then infer_ok (fn_value_ty fdef, Σ)
           else infer_err ErrNotImplemented
       end
@@ -3088,6 +3277,11 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
                   | Some err => infer_err err
                   | None => infer_ok (ret, Σ')
                   end
+              | TTypeForall type_params bounds body =>
+                  match infer_type_forall_call_env env Ω type_params bounds body arg_tys with
+                  | infer_err err => infer_err err
+                  | infer_ok ret => infer_ok (ret, Σ')
+                  end
               | TForall m bounds body =>
                   match ty_core body with
                   | TFn param_tys ret =>
@@ -3178,7 +3372,8 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
+          if no_captures_b fdef &&
+             (Nat.eqb (fn_type_params fdef) 0 || Nat.eqb (fn_lifetimes fdef) 0)
           then infer_ok (fn_value_ty fdef, Σ, e)
           else infer_err ErrNotImplemented
       end
@@ -3569,6 +3764,11 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
                   | Some err => infer_err err
                   | None => infer_ok (ret, Σ', ECallExpr callee' args')
                   end
+              | TTypeForall type_params bounds body =>
+                  match infer_type_forall_call_env env Ω type_params bounds body arg_tys with
+                  | infer_err err => infer_err err
+                  | infer_ok ret => infer_ok (ret, Σ', ECallExpr callee' args')
+                  end
               | TForall m bounds body =>
                   match ty_core body with
                   | TFn param_tys ret =>
@@ -3941,7 +4141,8 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
+          if no_captures_b fdef &&
+             (Nat.eqb (fn_type_params fdef) 0 || Nat.eqb (fn_lifetimes fdef) 0)
           then infer_ok (fn_value_ty fdef, Σ, R, [])
           else infer_err ErrNotImplemented
       end
@@ -4420,7 +4621,8 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
       match lookup_fn_b fname (env_fns env) with
       | None => infer_err (ErrFunctionNotFound fname)
       | Some fdef =>
-          if no_captures_b fdef && Nat.eqb (fn_type_params fdef) 0
+          if no_captures_b fdef &&
+             (Nat.eqb (fn_type_params fdef) 0 || Nat.eqb (fn_lifetimes fdef) 0)
           then infer_ok (fn_value_ty fdef, Σ, R, [])
           else infer_err ErrNotImplemented
       end
@@ -7234,6 +7436,22 @@ Fixpoint elaborate_raw_expr_fuel
             end
         end
     end in
+  let fix go_args_expected fuel0 env0 Σ0 next0 args params :=
+    match args, params with
+    | [], [] => infer_ok ([], Σ0, [], next0)
+    | a :: rest, p :: ps =>
+        match elaborate_raw_expr_fuel fuel0 (Some (param_ty p)) env0 Ω n Σ0 next0 a with
+        | infer_err err => infer_err err
+        | infer_ok (a', Σ1, extras1, next1) =>
+            let env1 := append_env_fns env0 extras1 in
+            match go_args_expected fuel0 env1 Σ1 next1 rest ps with
+            | infer_err err => infer_err err
+            | infer_ok (rest', Σ2, extras2, next2) =>
+                infer_ok (a' :: rest', Σ2, extras1 ++ extras2, next2)
+            end
+        end
+    | _, _ => infer_err ErrArityMismatch
+    end in
   let fix infer_arg_tys_state fuel0 env0 Σ0 args :=
     match args with
     | [] => infer_ok ([], Σ0)
@@ -7279,23 +7497,30 @@ Fixpoint elaborate_raw_expr_fuel
                 if negb (no_captures_b fdef) || negb (Nat.eqb (fn_lifetimes fdef) 0)
                 then infer_err ErrNotImplemented
                 else
-                  match infer_fn_value_type_args_expected fdef expected with
+                  match expected with
+                  | Some T_expected =>
+                      if ty_compatible_b Ω (fn_value_ty fdef) T_expected
+                      then finish env (EFn fname) [] next
+                      else
+                        match infer_fn_value_type_args_expected fdef expected with
+                        | None => infer_err ErrTypeArgInferenceFailed
+                        | Some (type_args, param_tys, ret) =>
+                            match check_struct_bounds env (fn_bounds fdef) type_args with
+                            | Some err => infer_err err
+                            | None =>
+                                let wrapper_name := generic_fn_value_wrapper_name next in
+                                let wrapper_params := wrapper_params_from_tys param_tys in
+                                let wrapper_body :=
+                                  ECallGeneric fname type_args
+                                    (expr_vars_of_params wrapper_params) in
+                                let wrapper :=
+                                  MkFnDef wrapper_name 0 [] [] wrapper_params ret
+                                    wrapper_body 0 [] in
+                                let env' := append_env_fns env [wrapper] in
+                                finish env' (EFn wrapper_name) [wrapper] (S next)
+                            end
+                        end
                   | None => infer_err ErrTypeArgInferenceFailed
-                  | Some (type_args, param_tys, ret) =>
-                      match check_struct_bounds env (fn_bounds fdef) type_args with
-                      | Some err => infer_err err
-                      | None =>
-                          let wrapper_name := generic_fn_value_wrapper_name next in
-                          let wrapper_params := wrapper_params_from_tys param_tys in
-                          let wrapper_body :=
-                            ECallGeneric fname type_args
-                              (expr_vars_of_params wrapper_params) in
-                          let wrapper :=
-                            MkFnDef wrapper_name 0 [] [] wrapper_params ret
-                              wrapper_body 0 [] in
-                          let env' := append_env_fns env [wrapper] in
-                          finish env' (EFn wrapper_name) [wrapper] (S next)
-                      end
                   end
           end
       | RawPlace p => finish env (EPlace p) [] next
@@ -7351,31 +7576,46 @@ Fixpoint elaborate_raw_expr_fuel
               end
           end
       | RawCall fname args =>
-          match go_args fuel' env Σ next args with
-          | infer_err err => infer_err err
-          | infer_ok (args', _, extras, next') =>
-              let env' := append_env_fns env extras in
-              match lookup_fn_b fname (env_fns env') with
-              | None => finish env' (ECall fname args') extras next'
-              | Some fdef =>
-                  if Nat.eqb (fn_type_params fdef) 0
-                  then finish env' (ECall fname args') extras next'
-                  else
-                    match infer_arg_tys_state fuel' env' Σ args' with
-                    | infer_err err => infer_err err
-                    | infer_ok (arg_tys, _) =>
-                        match infer_call_type_args_expected fdef arg_tys expected with
-                        | None => infer_err ErrTypeArgInferenceFailed
-                        | Some type_args =>
-                            match check_struct_bounds env' (fn_bounds fdef) type_args with
-                            | Some err => infer_err err
-                            | None =>
-                                finish env' (ECallGeneric fname type_args args')
-                                  extras next'
-                            end
-                        end
-                    end
-              end
+          let infer_plain :=
+            match go_args fuel' env Σ next args with
+            | infer_err err => infer_err err
+            | infer_ok (args', _, extras, next') =>
+                let env' := append_env_fns env extras in
+                match lookup_fn_b fname (env_fns env') with
+                | None => finish env' (ECall fname args') extras next'
+                | Some fdef =>
+                    if Nat.eqb (fn_type_params fdef) 0
+                    then finish env' (ECall fname args') extras next'
+                    else
+                      match infer_arg_tys_state fuel' env' Σ args' with
+                      | infer_err err => infer_err err
+                      | infer_ok (arg_tys, _) =>
+                          match infer_call_type_args_expected fdef arg_tys expected with
+                          | None => infer_err ErrTypeArgInferenceFailed
+                          | Some type_args =>
+                              match check_struct_bounds env' (fn_bounds fdef) type_args with
+                              | Some err => infer_err err
+                              | None =>
+                                  finish env' (ECallGeneric fname type_args args')
+                                    extras next'
+                              end
+                          end
+                      end
+                end
+            end in
+          match lookup_fn_b fname (env_fns env) with
+          | Some fdef =>
+              if Nat.eqb (fn_type_params fdef) 0 &&
+                 Nat.eqb (fn_lifetimes fdef) 0
+              then
+                match go_args_expected fuel' env Σ next args (fn_params fdef) with
+                | infer_err _ => infer_plain
+                | infer_ok (args', _, extras, next') =>
+                    finish (append_env_fns env extras)
+                      (ECall fname args') extras next'
+                end
+              else infer_plain
+          | None => infer_plain
           end
       | RawCallGeneric fname type_args args =>
           match go_args fuel' env Σ next args with

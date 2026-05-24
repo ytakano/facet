@@ -113,6 +113,9 @@ Inductive runtime_rootless_ty (env : global_env) : Ty -> Prop :=
   | RRT_Forall : forall u n Ω body,
       runtime_rootless_ty env body ->
       runtime_rootless_ty env (MkTy u (TForall n Ω body))
+  | RRT_TypeForall : forall u n bounds body,
+      runtime_rootless_ty env body ->
+      runtime_rootless_ty env (MkTy u (TTypeForall n bounds body))
 with runtime_rootless_fields
     (env : global_env) : list lifetime -> list Ty -> list field_def -> Prop :=
   | RRF_Nil : forall lts args,
@@ -156,6 +159,8 @@ Proof.
   - inversion Hrootless; subst.
     constructor. apply IHHcompat. assumption.
   - inversion Hrootless; subst.
+    constructor. apply IHHcompat. assumption.
+  - inversion Hrootless; subst.
     apply IHHcompat. assumption.
 Qed.
 
@@ -175,9 +180,11 @@ Proof.
     + eapply RRT_Struct.
       * exact H2.
       * eapply ty_lifetime_equiv_runtime_rootless_fields_actual; eassumption.
-    + apply RRT_Forall.
-      eapply ty_lifetime_equiv_runtime_rootless_actual; eassumption.
-  - intros env lts_actual lts_expected args_actual args_expected fdefs
+	    + apply RRT_Forall.
+	      eapply ty_lifetime_equiv_runtime_rootless_actual; eassumption.
+	    + apply RRT_TypeForall.
+	      eapply ty_lifetime_equiv_runtime_rootless_actual; eassumption.
+	  - intros env lts_actual lts_expected args_actual args_expected fdefs
       Hargs Hfields.
     induction Hfields.
     + constructor.
@@ -198,7 +205,7 @@ Proof.
   destruct T as [u core].
   destruct core as
     [| | | | named | tparam | name lts args | params ret
-     | env_lt params ret | n Ω body | la rk inner];
+     | env_lt params ret | n Ω body | tn tbounds tbody | la rk inner];
     simpl in *; try discriminate.
   - constructor.
   - constructor.
@@ -218,6 +225,7 @@ Proof.
         -- apply IHfs. exact Hfields.
   - constructor.
   - apply RRT_Forall. apply IH. exact Hfree.
+  - apply RRT_TypeForall. apply IH. exact Hfree.
 Qed.
 
 Lemma capture_ref_free_ty_b_runtime_rootless :
@@ -478,4 +486,3 @@ Proof.
     + reflexivity.
     + exact Hinst.
 Qed.
-

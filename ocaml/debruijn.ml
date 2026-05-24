@@ -74,6 +74,14 @@ and lower_named_ty_core ty_scope c =
     TClosure (env_lt, List.map (lower_named_ty ty_scope) ts, lower_named_ty ty_scope ret)
   | NTForall (n, outs, body) ->
     TForall (n, outs, lower_named_ty ty_scope body)
+  | NTTypeForall (type_params, bounds, body) ->
+    let ty_scope' =
+      { ty_scope with type_params = type_params @ ty_scope.type_params }
+    in
+    TTypeForall
+      (Big_int_Z.big_int_of_int (List.length type_params),
+       List.map (core_trait_bound_of_named ty_scope' type_params) bounds,
+       lower_named_ty ty_scope' body)
   | NTRef (lt_opt, rk, inner) ->
     let lt =
       match lt_opt with
@@ -89,6 +97,20 @@ and split_type_args ty_scope args =
     | NTArgTy ty :: rest -> go lts (lower_named_ty ty_scope ty :: tys) rest
   in
   go [] [] args
+
+and core_trait_bound_of_named ty_scope type_params b =
+  match index_of b.ntb_type_name type_params with
+  | None -> failwith ("unknown type parameter in type-forall trait bound: " ^ b.ntb_type_name)
+  | Some i ->
+    { core_bound_type_index = Big_int_Z.big_int_of_int i;
+      core_bound_traits = List.map (core_trait_ref_of_named ty_scope) b.ntb_traits }
+
+and core_trait_ref_of_named ty_scope r =
+  let (lts, args) = split_type_args ty_scope r.ntr_args in
+  if lts <> []
+  then failwith ("trait bound cannot take lifetime arguments: " ^ r.ntr_name);
+  { core_trait_ref_name = r.ntr_name;
+    core_trait_ref_args = args }
 
 let trait_ref_of_named ty_scope r =
   let (lts, args) = split_type_args ty_scope r.ntr_args in
@@ -112,6 +134,8 @@ and named_ty_core_has_elided_ref_lifetime c =
     List.exists named_ty_has_elided_ref_lifetime ts ||
     named_ty_has_elided_ref_lifetime ret
   | NTForall (_, _, body) ->
+    named_ty_has_elided_ref_lifetime body
+  | NTTypeForall (_, _, body) ->
     named_ty_has_elided_ref_lifetime body
   | NTRef (None, _, _) -> true
   | NTRef (Some _, _, inner) ->
@@ -475,6 +499,27 @@ let validate_env env =
         | Some _ as err -> err
         | None -> type_error ty_params lt_params bound_depth' body
         end
+      | TTypeForall (n, bounds, body) ->
+        let ty_params' = Big_int_Z.add_big_int n ty_params in
+        let validate_core_bound b =
+          if Big_int_Z.ge_big_int b.core_bound_type_index n
+          then Some "type-forall trait bound refers to an out-of-range bound type parameter"
+          else
+            let validate_trait_ref tr =
+              match find_trait tr.core_trait_ref_name with
+              | None -> Some ("unknown trait in type-forall bound: " ^ tr.core_trait_ref_name)
+              | Some trait_def ->
+                if not (Big_int_Z.eq_big_int (big_len tr.core_trait_ref_args) trait_def.trait_type_params)
+                then Some ("type-forall trait bound arity mismatch: " ^ tr.core_trait_ref_name)
+                else
+                  first_some
+                    (List.map (type_error ty_params' lt_params zero) tr.core_trait_ref_args)
+            in
+            first_some (List.map validate_trait_ref b.core_bound_traits)
+        in
+        first_some
+          (List.map validate_core_bound bounds @
+           [type_error ty_params' lt_params bound_depth body])
       | TRef (lt, _, inner) ->
         begin match lifetime_error lt_params bound_depth lt with
         | Some _ as err -> err
@@ -506,6 +551,14 @@ let validate_env env =
       | TClosure (_, args, ret) ->
         List.concat_map type_struct_refs args @ type_struct_refs ret
       | TForall (_, _, body) -> type_struct_refs body
+      | TTypeForall (_, bounds, body) ->
+        List.concat_map
+          (fun b ->
+            List.concat_map
+              (fun tr -> List.concat_map type_struct_refs tr.core_trait_ref_args)
+              b.core_bound_traits)
+          bounds @
+        type_struct_refs body
       | TRef (_, _, inner) -> type_struct_refs inner
       | TUnits | TIntegers | TFloats | TBooleans | TNamed _ | TParam _ -> []
     in

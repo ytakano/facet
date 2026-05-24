@@ -133,6 +133,12 @@ type ref_kind =
 | RShared
 | RUnique
 
+type 'a core_trait_ref = { core_trait_ref_name : string;
+                           core_trait_ref_args : 'a list }
+
+type 'a core_trait_bound = { core_bound_type_index : Big_int_Z.big_int;
+                             core_bound_traits : 'a core_trait_ref list }
+
 type 'a typeCore =
 | TUnits
 | TIntegers
@@ -144,6 +150,7 @@ type 'a typeCore =
 | TFn of 'a list * 'a
 | TClosure of lifetime * 'a list * 'a
 | TForall of Big_int_Z.big_int * outlives_ctx * 'a
+| TTypeForall of Big_int_Z.big_int * 'a core_trait_bound list * 'a
 | TRef of lifetime * ref_kind * 'a
 
 type ty =
@@ -285,6 +292,17 @@ type global_env = { env_structs : struct_def list;
 
 val global_env_with_local_bounds :
   global_env -> trait_bound list -> global_env
+
+val core_trait_ref_of_trait_ref : trait_ref -> ty core_trait_ref
+
+val core_trait_bound_of_trait_bound : trait_bound -> ty core_trait_bound
+
+val trait_ref_of_core_trait_ref : ty core_trait_ref -> trait_ref
+
+val trait_bound_of_core_trait_bound : ty core_trait_bound -> trait_bound
+
+val trait_bounds_of_core_trait_bounds :
+  ty core_trait_bound list -> trait_bound list
 
 val lookup_struct_in : string -> struct_def list -> struct_def option
 
@@ -632,6 +650,18 @@ val check_arg_tys : outlives_ctx -> ty list -> ty list -> infer_error option
 type 'a infer_result =
 | Infer_ok of 'a
 | Infer_err of infer_error
+
+val tys_depth : ty list -> Big_int_Z.big_int
+
+val infer_type_forall_args :
+  Big_int_Z.big_int -> ty list -> ty list -> ty list option
+
+val check_type_forall_bounds :
+  global_env -> ty core_trait_bound list -> ty list -> infer_error option
+
+val infer_type_forall_call_env :
+  global_env -> outlives_ctx -> Big_int_Z.big_int -> ty core_trait_bound list
+  -> ty -> ty list -> ty infer_result
 
 val shared_ref_lifetime_of_ty : ty -> lifetime option
 

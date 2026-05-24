@@ -132,6 +132,7 @@ ty_core ::= "isize"
            | "fn" "(" ty_list ")" "->" ty
            | "closure" "<" LIFETIME ">" "(" ty_list ")" "->" ty
            | "for" "<" LIFETIME ("," LIFETIME)* ">" "fn" "(" ty_list ")" "->" ty opt_where_outlives
+           | "for" "<" ID ("," ID)* ">" "fn" "(" ty_list ")" "->" ty opt_trait_bounds
 ```
 
 ## ty_list

@@ -493,7 +493,8 @@ Inductive infer_error : Type :=
   | ErrDuplicateField : string -> infer_error
   | ErrMissingField : string -> infer_error
   | ErrTraitImplNotFound : string -> Ty -> infer_error
-  | ErrTraitImplAmbiguous : string -> Ty -> infer_error.
+  | ErrTraitImplAmbiguous : string -> Ty -> infer_error
+  | ErrTypeArgInferenceFailed : infer_error.
 
 Definition compatible_error (T_actual T_expected : Ty) : infer_error :=
   match ty_core T_actual, ty_core T_expected with
@@ -579,6 +580,111 @@ Fixpoint check_trait_refs_for_ty
       | Some err => Some err
       | None => check_trait_refs_for_ty env rest for_ty
       end
+  end.
+
+Fixpoint type_arg_list_set_nth
+    (i : nat) (v : option Ty) (σ : list (option Ty)) : list (option Ty) :=
+  match i, σ with
+  | O, _ :: rest => v :: rest
+  | O, [] => []
+  | S i', h :: rest => h :: type_arg_list_set_nth i' v rest
+  | S _, [] => []
+  end.
+
+Definition type_arg_subst_vec_add
+    (σ : list (option Ty)) (i : nat) (T : Ty)
+    : option (list (option Ty)) :=
+  match nth_error σ i with
+  | None => None
+  | Some None => Some (type_arg_list_set_nth i (Some T) σ)
+  | Some (Some T_old) =>
+      if ty_eqb T_old T then Some σ else None
+  end.
+
+Fixpoint infer_type_args_from_ty
+    (fuel : nat) (formal actual : Ty) (σ : list (option Ty))
+    : option (list (option Ty)) :=
+  match fuel with
+  | O => None
+  | S fuel' =>
+  match formal, actual with
+  | MkTy u_f (TParam i), MkTy _ c_a =>
+      type_arg_subst_vec_add σ i (MkTy u_f c_a)
+  | MkTy _ (TStruct name_f lts_f args_f), MkTy _ (TStruct name_a lts_a args_a) =>
+      if String.eqb name_f name_a && lifetime_list_eqb lts_f lts_a
+      then infer_type_args_from_tys fuel' args_f args_a σ
+      else None
+  | MkTy _ (TRef _ rk_f inner_f), MkTy _ (TRef _ rk_a inner_a) =>
+      if ref_kind_eqb rk_f rk_a
+      then infer_type_args_from_ty fuel' inner_f inner_a σ
+      else None
+  | MkTy _ (TFn ps_f ret_f), MkTy _ (TFn ps_a ret_a) =>
+      match infer_type_args_from_tys fuel' ps_f ps_a σ with
+      | Some σ' => infer_type_args_from_ty fuel' ret_f ret_a σ'
+      | None => None
+      end
+  | MkTy _ (TClosure _ ps_f ret_f), MkTy _ (TClosure _ ps_a ret_a) =>
+      match infer_type_args_from_tys fuel' ps_f ps_a σ with
+      | Some σ' => infer_type_args_from_ty fuel' ret_f ret_a σ'
+      | None => None
+      end
+  | MkTy _ (TForall n_f Ω_f body_f), MkTy _ (TForall n_a Ω_a body_a) =>
+      if Nat.eqb n_f n_a && outlives_ctx_eqb Ω_f Ω_a
+      then infer_type_args_from_ty fuel' body_f body_a σ
+      else None
+  | _, _ =>
+      if ty_core_eqb (ty_core formal) (ty_core actual) then Some σ else None
+  end
+  end
+
+with infer_type_args_from_tys
+    (fuel : nat) (formals actuals : list Ty) (σ : list (option Ty))
+    : option (list (option Ty)) :=
+  match fuel with
+  | O => None
+  | S fuel' =>
+  match formals, actuals with
+  | [], [] => Some σ
+  | f :: fs, a :: as_ =>
+      match infer_type_args_from_ty fuel' f a σ with
+      | Some σ' => infer_type_args_from_tys fuel' fs as_ σ'
+      | None => None
+      end
+  | _, _ => None
+  end
+  end.
+
+Fixpoint infer_type_args_from_params
+    (params : list param) (arg_tys : list Ty) (σ : list (option Ty))
+    : option (list (option Ty)) :=
+  match params, arg_tys with
+  | [], [] => Some σ
+  | p :: ps, a :: as_ =>
+      match infer_type_args_from_ty (ty_depth (param_ty p) + ty_depth a)
+              (param_ty p) a σ with
+      | Some σ' => infer_type_args_from_params ps as_ σ'
+      | None => None
+      end
+  | _, _ => None
+  end.
+
+Fixpoint finalize_type_args (σ : list (option Ty)) : option (list Ty) :=
+  match σ with
+  | [] => Some []
+  | Some T :: rest =>
+      match finalize_type_args rest with
+      | Some Ts => Some (T :: Ts)
+      | None => None
+      end
+  | None :: _ => None
+  end.
+
+Definition infer_call_type_args
+    (fdef : fn_def) (arg_tys : list Ty) : option (list Ty) :=
+  match infer_type_args_from_params
+          (fn_params fdef) arg_tys (repeat None (fn_type_params fdef)) with
+  | Some σ => finalize_type_args σ
+  | None => None
   end.
 
 Fixpoint check_struct_bounds
@@ -7074,6 +7180,19 @@ Fixpoint elaborate_raw_expr_fuel
             end
         end
     end in
+  let fix infer_arg_tys_state fuel0 env0 Σ0 args :=
+    match args with
+    | [] => infer_ok ([], Σ0)
+    | a :: rest =>
+        match infer_core_env_state_fuel fuel0 env0 Ω n Σ0 a with
+        | infer_err err => infer_err err
+        | infer_ok (T, Σ1) =>
+            match infer_arg_tys_state fuel0 env0 Σ1 rest with
+            | infer_err err => infer_err err
+            | infer_ok (Ts, Σ2) => infer_ok (T :: Ts, Σ2)
+            end
+        end
+    end in
   let fix go_fields fuel0 env0 Σ0 next0 fields :=
     match fields with
     | [] => infer_ok ([], Σ0, [], next0)
@@ -7153,7 +7272,28 @@ Fixpoint elaborate_raw_expr_fuel
           match go_args fuel' env Σ next args with
           | infer_err err => infer_err err
           | infer_ok (args', _, extras, next') =>
-              finish (append_env_fns env extras) (ECall fname args') extras next'
+              let env' := append_env_fns env extras in
+              match lookup_fn_b fname (env_fns env') with
+              | None => finish env' (ECall fname args') extras next'
+              | Some fdef =>
+                  if Nat.eqb (fn_type_params fdef) 0
+                  then finish env' (ECall fname args') extras next'
+                  else
+                    match infer_arg_tys_state fuel' env' Σ args' with
+                    | infer_err err => infer_err err
+                    | infer_ok (arg_tys, _) =>
+                        match infer_call_type_args fdef arg_tys with
+                        | None => infer_err ErrTypeArgInferenceFailed
+                        | Some type_args =>
+                            match check_struct_bounds env' (fn_bounds fdef) type_args with
+                            | Some err => infer_err err
+                            | None =>
+                                finish env' (ECallGeneric fname type_args args')
+                                  extras next'
+                            end
+                        end
+                    end
+              end
           end
       | RawCallGeneric fname type_args args =>
           match go_args fuel' env Σ next args with

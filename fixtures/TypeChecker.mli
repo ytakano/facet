@@ -541,6 +541,7 @@ type infer_error =
 | ErrMissingField of string
 | ErrTraitImplNotFound of string * ty
 | ErrTraitImplAmbiguous of string * ty
+| ErrTypeArgInferenceFailed
 
 val compatible_error : ty -> ty -> infer_error
 
@@ -566,6 +567,26 @@ val check_trait_ref_for_ty :
 
 val check_trait_refs_for_ty :
   global_env -> trait_ref list -> ty -> infer_error option
+
+val type_arg_list_set_nth :
+  Big_int_Z.big_int -> ty option -> ty option list -> ty option list
+
+val type_arg_subst_vec_add :
+  ty option list -> Big_int_Z.big_int -> ty -> ty option list option
+
+val infer_type_args_from_ty :
+  Big_int_Z.big_int -> ty -> ty -> ty option list -> ty option list option
+
+val infer_type_args_from_tys :
+  Big_int_Z.big_int -> ty list -> ty list -> ty option list -> ty option list
+  option
+
+val infer_type_args_from_params :
+  param list -> ty list -> ty option list -> ty option list option
+
+val finalize_type_args : ty option list -> ty list option
+
+val infer_call_type_args : fn_def -> ty list -> ty list option
 
 val check_struct_bounds :
   global_env -> trait_bound list -> ty list -> infer_error option

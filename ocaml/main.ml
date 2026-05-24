@@ -224,6 +224,8 @@ let string_of_infer_error ?(diagnostics = []) = function
     Printf.sprintf "trait impl not found: %s for %s" name (string_of_ty ty)
   | ErrTraitImplAmbiguous (name, ty) ->
     Printf.sprintf "trait impl is ambiguous: %s for %s" name (string_of_ty ty)
+  | ErrTypeArgInferenceFailed ->
+    "could not infer generic type arguments"
 
 let () =
   let args = Sys.argv in

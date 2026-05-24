@@ -2604,6 +2604,7 @@ type infer_error =
 | ErrMissingField of string
 | ErrTraitImplNotFound of string * ty
 | ErrTraitImplAmbiguous of string * ty
+| ErrTypeArgInferenceFailed
 
 (** val compatible_error : ty -> ty -> infer_error **)
 
@@ -2707,6 +2708,168 @@ let rec check_trait_refs_for_ty env traits for_ty =
     (match check_trait_ref_for_ty env tr for_ty with
      | Some err -> Some err
      | None -> check_trait_refs_for_ty env rest for_ty)
+
+(** val type_arg_list_set_nth :
+    Big_int_Z.big_int -> ty option -> ty option list -> ty option list **)
+
+let rec type_arg_list_set_nth i v _UU03c3_ =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ ->
+    match _UU03c3_ with
+    | [] -> []
+    | _ :: rest -> v :: rest)
+    (fun i' ->
+    match _UU03c3_ with
+    | [] -> []
+    | h :: rest -> h :: (type_arg_list_set_nth i' v rest))
+    i
+
+(** val type_arg_subst_vec_add :
+    ty option list -> Big_int_Z.big_int -> ty -> ty option list option **)
+
+let type_arg_subst_vec_add _UU03c3_ i t =
+  match nth_error _UU03c3_ i with
+  | Some o ->
+    (match o with
+     | Some t_old -> if ty_eqb t_old t then Some _UU03c3_ else None
+     | None -> Some (type_arg_list_set_nth i (Some t) _UU03c3_))
+  | None -> None
+
+(** val infer_type_args_from_ty :
+    Big_int_Z.big_int -> ty -> ty -> ty option list -> ty option list option **)
+
+let rec infer_type_args_from_ty fuel formal actual _UU03c3_ =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> None)
+    (fun fuel' ->
+    let MkTy (u_f, t) = formal in
+    (match t with
+     | TParam i ->
+       let MkTy (_, c_a) = actual in
+       type_arg_subst_vec_add _UU03c3_ i (MkTy (u_f, c_a))
+     | TStruct (name_f, lts_f, args_f) ->
+       let MkTy (_, t0) = actual in
+       (match t0 with
+        | TStruct (name_a, lts_a, args_a) ->
+          if (&&) ((=) name_f name_a) (lifetime_list_eqb lts_f lts_a)
+          then infer_type_args_from_tys fuel' args_f args_a _UU03c3_
+          else None
+        | _ ->
+          if ty_core_eqb (ty_core formal) (ty_core actual)
+          then Some _UU03c3_
+          else None)
+     | TFn (ps_f, ret_f) ->
+       let MkTy (_, t0) = actual in
+       (match t0 with
+        | TFn (ps_a, ret_a) ->
+          (match infer_type_args_from_tys fuel' ps_f ps_a _UU03c3_ with
+           | Some _UU03c3_' ->
+             infer_type_args_from_ty fuel' ret_f ret_a _UU03c3_'
+           | None -> None)
+        | _ ->
+          if ty_core_eqb (ty_core formal) (ty_core actual)
+          then Some _UU03c3_
+          else None)
+     | TClosure (_, ps_f, ret_f) ->
+       let MkTy (_, t0) = actual in
+       (match t0 with
+        | TClosure (_, ps_a, ret_a) ->
+          (match infer_type_args_from_tys fuel' ps_f ps_a _UU03c3_ with
+           | Some _UU03c3_' ->
+             infer_type_args_from_ty fuel' ret_f ret_a _UU03c3_'
+           | None -> None)
+        | _ ->
+          if ty_core_eqb (ty_core formal) (ty_core actual)
+          then Some _UU03c3_
+          else None)
+     | TForall (n_f, _UU03a9__f, body_f) ->
+       let MkTy (_, t0) = actual in
+       (match t0 with
+        | TForall (n_a, _UU03a9__a, body_a) ->
+          if (&&) (Nat.eqb n_f n_a) (outlives_ctx_eqb _UU03a9__f _UU03a9__a)
+          then infer_type_args_from_ty fuel' body_f body_a _UU03c3_
+          else None
+        | _ ->
+          if ty_core_eqb (ty_core formal) (ty_core actual)
+          then Some _UU03c3_
+          else None)
+     | TRef (_, rk_f, inner_f) ->
+       let MkTy (_, t0) = actual in
+       (match t0 with
+        | TRef (_, rk_a, inner_a) ->
+          if ref_kind_eqb rk_f rk_a
+          then infer_type_args_from_ty fuel' inner_f inner_a _UU03c3_
+          else None
+        | _ ->
+          if ty_core_eqb (ty_core formal) (ty_core actual)
+          then Some _UU03c3_
+          else None)
+     | _ ->
+       if ty_core_eqb (ty_core formal) (ty_core actual)
+       then Some _UU03c3_
+       else None))
+    fuel
+
+(** val infer_type_args_from_tys :
+    Big_int_Z.big_int -> ty list -> ty list -> ty option list -> ty option
+    list option **)
+
+and infer_type_args_from_tys fuel formals actuals _UU03c3_ =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> None)
+    (fun fuel' ->
+    match formals with
+    | [] -> (match actuals with
+             | [] -> Some _UU03c3_
+             | _ :: _ -> None)
+    | f :: fs ->
+      (match actuals with
+       | [] -> None
+       | a :: as_ ->
+         (match infer_type_args_from_ty fuel' f a _UU03c3_ with
+          | Some _UU03c3_' -> infer_type_args_from_tys fuel' fs as_ _UU03c3_'
+          | None -> None)))
+    fuel
+
+(** val infer_type_args_from_params :
+    param list -> ty list -> ty option list -> ty option list option **)
+
+let rec infer_type_args_from_params params arg_tys _UU03c3_ =
+  match params with
+  | [] -> (match arg_tys with
+           | [] -> Some _UU03c3_
+           | _ :: _ -> None)
+  | p :: ps ->
+    (match arg_tys with
+     | [] -> None
+     | a :: as_ ->
+       (match infer_type_args_from_ty
+                (add (ty_depth p.param_ty) (ty_depth a)) p.param_ty a _UU03c3_ with
+        | Some _UU03c3_' -> infer_type_args_from_params ps as_ _UU03c3_'
+        | None -> None))
+
+(** val finalize_type_args : ty option list -> ty list option **)
+
+let rec finalize_type_args = function
+| [] -> Some []
+| o :: rest ->
+  (match o with
+   | Some t ->
+     (match finalize_type_args rest with
+      | Some ts -> Some (t :: ts)
+      | None -> None)
+   | None -> None)
+
+(** val infer_call_type_args : fn_def -> ty list -> ty list option **)
+
+let infer_call_type_args fdef arg_tys =
+  match infer_type_args_from_params fdef.fn_params arg_tys
+          (repeat None fdef.fn_type_params) with
+  | Some _UU03c3_ -> finalize_type_args _UU03c3_
+  | None -> None
 
 (** val check_struct_bounds :
     global_env -> trait_bound list -> ty list -> infer_error option **)
@@ -7213,6 +7376,20 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
        | Infer_err err -> Infer_err err)
     in go_args
   in
+  let infer_arg_tys_state =
+    let rec infer_arg_tys_state fuel0 env0 _UU03a3_0 = function
+    | [] -> Infer_ok ([], _UU03a3_0)
+    | a :: rest ->
+      (match infer_core_env_state_fuel fuel0 env0 _UU03a9_ n _UU03a3_0 a with
+       | Infer_ok p ->
+         let (t, _UU03a3_1) = p in
+         (match infer_arg_tys_state fuel0 env0 _UU03a3_1 rest with
+          | Infer_ok p0 ->
+            let (ts, _UU03a3_2) = p0 in Infer_ok ((t :: ts), _UU03a3_2)
+          | Infer_err err -> Infer_err err)
+       | Infer_err err -> Infer_err err)
+    in infer_arg_tys_state
+  in
   let go_fields =
     let rec go_fields fuel0 env0 _UU03a3_0 next0 = function
     | [] -> Infer_ok ((([], _UU03a3_0), []), next0)
@@ -7310,8 +7487,25 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
           let (p0, next') = p in
           let (p1, extras) = p0 in
           let (args', _) = p1 in
-          finish (append_env_fns env extras) (ECall (fname, args')) extras
-            next'
+          let env' = append_env_fns env extras in
+          (match lookup_fn_b fname env'.env_fns with
+           | Some fdef ->
+             if Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int
+             then finish env' (ECall (fname, args')) extras next'
+             else (match infer_arg_tys_state fuel' env' _UU03a3_ args' with
+                   | Infer_ok p2 ->
+                     let (arg_tys, _) = p2 in
+                     (match infer_call_type_args fdef arg_tys with
+                      | Some type_args ->
+                        (match check_struct_bounds env' fdef.fn_bounds
+                                 type_args with
+                         | Some err -> Infer_err err
+                         | None ->
+                           finish env' (ECallGeneric (fname, type_args,
+                             args')) extras next')
+                      | None -> Infer_err ErrTypeArgInferenceFailed)
+                   | Infer_err err -> Infer_err err)
+           | None -> finish env' (ECall (fname, args')) extras next')
         | Infer_err err -> Infer_err err)
      | RawCallGeneric (fname, type_args, args) ->
        (match go_args fuel' env _UU03a3_ next args with

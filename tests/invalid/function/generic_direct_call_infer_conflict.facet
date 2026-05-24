@@ -1,0 +1,8 @@
+fn same<T>(x: affine T, y: affine T) -> affine T {
+  let _ = y;
+  x
+}
+
+fn main() -> affine isize {
+  (same 1 true)
+}

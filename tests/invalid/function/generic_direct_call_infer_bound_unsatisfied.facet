@@ -1,0 +1,11 @@
+trait Show;
+
+impl Show for affine bool;
+
+fn keep<T>(x: affine T) -> affine T where T: Show {
+  x
+}
+
+fn main() -> affine isize {
+  (keep 1)
+}

@@ -21,27 +21,25 @@ Implemented:
   Function body checking/elaboration runs with `fn_bounds` installed as local
   trait assumptions, so `TParam i` can satisfy required traits without a
   concrete impl at definition time.
+- Implicit type-argument inference from direct-call arguments is supported.
+  Raw direct calls to generic functions infer type args from formal parameter
+  types versus actual argument types, validate `fn_bounds`, and elaborate to
+  `ECallGeneric`. Inference does not search trait impls.
 
 Not implemented yet:
 
-- Implicit type-argument inference.
 - Expected-return inference for zero-argument generic calls.
 - Generic function values.
 
 ## Next Implementation Steps
 
-1. Add implicit inference.
-   - Solve type args from formal parameter types versus actual argument types.
-   - Report unresolved and conflicting type params as errors.
-   - Do not infer a type solely from trait impl search.
-
-2. Add expected-return inference.
+1. Add expected-return inference.
    - Use annotated `let`, assignment, and return contexts to solve remaining
      type args.
    - Allow zero-argument generic calls only when the expected type uniquely
      solves all params.
 
-3. Add generic function values.
+2. Add generic function values.
    - Decide representation for generic function values and closure values before
      exposing them through ordinary value calls.
 

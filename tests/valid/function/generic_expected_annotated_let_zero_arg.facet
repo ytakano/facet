@@ -1,0 +1,11 @@
+struct Token<T> {
+}
+
+fn make<T>() -> affine Token<affine T> {
+  Token<affine T> { }
+}
+
+fn main() -> affine Token<affine isize> {
+  let x: affine Token<affine isize> = (make) in
+  x
+}

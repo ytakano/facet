@@ -586,7 +586,8 @@ val infer_type_args_from_params :
 
 val finalize_type_args : ty option list -> ty list option
 
-val infer_call_type_args : fn_def -> ty list -> ty list option
+val infer_call_type_args_expected :
+  fn_def -> ty list -> ty option -> ty list option
 
 val check_struct_bounds :
   global_env -> trait_bound list -> ty list -> infer_error option
@@ -1063,9 +1064,9 @@ val infer_elaborated_expr_state :
   sctx -> expr -> sctx infer_result
 
 val elaborate_raw_expr_fuel :
-  Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
-  sctx -> Big_int_Z.big_int -> raw_expr -> (((expr * sctx) * fn_def
-  list) * Big_int_Z.big_int) infer_result
+  Big_int_Z.big_int -> ty option -> global_env -> outlives_ctx ->
+  Big_int_Z.big_int -> sctx -> Big_int_Z.big_int -> raw_expr ->
+  (((expr * sctx) * fn_def list) * Big_int_Z.big_int) infer_result
 
 val elaborate_raw_expr :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> sctx -> raw_expr ->

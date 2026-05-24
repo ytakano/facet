@@ -25,21 +25,18 @@ Implemented:
   Raw direct calls to generic functions infer type args from formal parameter
   types versus actual argument types, validate `fn_bounds`, and elaborate to
   `ECallGeneric`. Inference does not search trait impls.
+- Expected-type inference for generic direct calls is supported. Raw
+  elaboration uses annotated `let`, function return type, assignment/replace
+  RHS type, and `if` branch expected type to solve remaining type args before
+  emitting `ECallGeneric`.
 
 Not implemented yet:
 
-- Expected-return inference for zero-argument generic calls.
 - Generic function values.
 
 ## Next Implementation Steps
 
-1. Add expected-return inference.
-   - Use annotated `let`, assignment, and return contexts to solve remaining
-     type args.
-   - Allow zero-argument generic calls only when the expected type uniquely
-     solves all params.
-
-2. Add generic function values.
+1. Add generic function values.
    - Decide representation for generic function values and closure values before
      exposing them through ordinary value calls.
 

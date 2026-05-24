@@ -687,6 +687,27 @@ Definition infer_call_type_args
   | None => None
   end.
 
+Definition infer_call_type_args_expected
+    (fdef : fn_def) (arg_tys : list Ty) (expected : option Ty)
+    : option (list Ty) :=
+  match infer_type_args_from_params
+          (fn_params fdef) arg_tys (repeat None (fn_type_params fdef)) with
+  | None => None
+  | Some σ_args =>
+      let σ_expected :=
+        match expected with
+        | None => Some σ_args
+        | Some T_expected =>
+            infer_type_args_from_ty
+              (ty_depth (fn_ret fdef) + ty_depth T_expected)
+              (fn_ret fdef) T_expected σ_args
+        end in
+      match σ_expected with
+      | Some σ => finalize_type_args σ
+      | None => None
+      end
+  end.
+
 Fixpoint check_struct_bounds
     (env : global_env) (bounds : list trait_bound) (args : list Ty)
     : option infer_error :=
@@ -7157,7 +7178,8 @@ Definition infer_elaborated_expr_state
   end.
 
 Fixpoint elaborate_raw_expr_fuel
-    (fuel : nat) (env : global_env) (Ω : outlives_ctx) (n : nat)
+    (fuel : nat) (expected : option Ty)
+    (env : global_env) (Ω : outlives_ctx) (n : nat)
     (Σ : sctx) (next : nat) (e : raw_expr)
     : infer_result (expr * sctx * list fn_def * nat) :=
   let finish env' e' extras next' :=
@@ -7169,7 +7191,7 @@ Fixpoint elaborate_raw_expr_fuel
     match args with
     | [] => infer_ok ([], Σ0, [], next0)
     | a :: rest =>
-        match elaborate_raw_expr_fuel fuel0 env0 Ω n Σ0 next0 a with
+        match elaborate_raw_expr_fuel fuel0 None env0 Ω n Σ0 next0 a with
         | infer_err err => infer_err err
         | infer_ok (a', Σ1, extras1, next1) =>
             let env1 := append_env_fns env0 extras1 in
@@ -7197,7 +7219,7 @@ Fixpoint elaborate_raw_expr_fuel
     match fields with
     | [] => infer_ok ([], Σ0, [], next0)
     | (fname, fe) :: rest =>
-        match elaborate_raw_expr_fuel fuel0 env0 Ω n Σ0 next0 fe with
+        match elaborate_raw_expr_fuel fuel0 None env0 Ω n Σ0 next0 fe with
         | infer_err err => infer_err err
         | infer_ok (fe', Σ1, extras1, next1) =>
             let env1 := append_env_fns env0 extras1 in
@@ -7220,11 +7242,11 @@ Fixpoint elaborate_raw_expr_fuel
       | RawCore ecore => finish env ecore [] next
       | RawBorrow rk p => finish env (EBorrow rk p) [] next
       | RawLet m x T e1 e2 =>
-          match elaborate_raw_expr_fuel fuel' env Ω n Σ next e1 with
+          match elaborate_raw_expr_fuel fuel' (Some T) env Ω n Σ next e1 with
           | infer_err err => infer_err err
           | infer_ok (e1', Σ1, extras1, next1) =>
               let env1 := append_env_fns env extras1 in
-              match elaborate_raw_expr_fuel fuel' env1 Ω n
+              match elaborate_raw_expr_fuel fuel' expected env1 Ω n
                       (sctx_add x T m Σ1) next1 e2 with
               | infer_err err => infer_err err
               | infer_ok (e2', Σ2, extras2, next2) =>
@@ -7242,7 +7264,7 @@ Fixpoint elaborate_raw_expr_fuel
               end
           end
       | RawLetInfer m x e1 e2 =>
-          match elaborate_raw_expr_fuel fuel' env Ω n Σ next e1 with
+          match elaborate_raw_expr_fuel fuel' None env Ω n Σ next e1 with
           | infer_err err => infer_err err
           | infer_ok (e1', Σ1, extras1, next1) =>
               match infer_core_env_state_fuel fuel' (append_env_fns env extras1)
@@ -7250,7 +7272,7 @@ Fixpoint elaborate_raw_expr_fuel
               | infer_err err => infer_err err
               | infer_ok (T1, _) =>
                   let env1 := append_env_fns env extras1 in
-                  match elaborate_raw_expr_fuel fuel' env1 Ω n
+                  match elaborate_raw_expr_fuel fuel' expected env1 Ω n
                           (sctx_add x T1 m Σ1) next1 e2 with
                   | infer_err err => infer_err err
                   | infer_ok (e2', Σ2, extras2, next2) =>
@@ -7282,7 +7304,7 @@ Fixpoint elaborate_raw_expr_fuel
                     match infer_arg_tys_state fuel' env' Σ args' with
                     | infer_err err => infer_err err
                     | infer_ok (arg_tys, _) =>
-                        match infer_call_type_args fdef arg_tys with
+                        match infer_call_type_args_expected fdef arg_tys expected with
                         | None => infer_err ErrTypeArgInferenceFailed
                         | Some type_args =>
                             match check_struct_bounds env' (fn_bounds fdef) type_args with
@@ -7303,7 +7325,7 @@ Fixpoint elaborate_raw_expr_fuel
                 (ECallGeneric fname type_args args') extras next'
           end
       | RawCallExpr callee args =>
-          match elaborate_raw_expr_fuel fuel' env Ω n Σ next callee with
+          match elaborate_raw_expr_fuel fuel' None env Ω n Σ next callee with
           | infer_err err => infer_err err
           | infer_ok (callee', Σ1, extras1, next1) =>
               let env1 := append_env_fns env extras1 in
@@ -7323,39 +7345,49 @@ Fixpoint elaborate_raw_expr_fuel
                 (EStruct sname lts tys fields') extras next'
           end
       | RawReplace p e1 =>
-          match elaborate_raw_expr_fuel fuel' env Ω n Σ next e1 with
+          let expected_rhs :=
+            match infer_place_sctx env Σ p with
+            | infer_ok T => Some T
+            | infer_err _ => None
+            end in
+          match elaborate_raw_expr_fuel fuel' expected_rhs env Ω n Σ next e1 with
           | infer_err err => infer_err err
           | infer_ok (e1', _, extras, next') =>
               finish (append_env_fns env extras) (EReplace p e1') extras next'
           end
       | RawAssign p e1 =>
-          match elaborate_raw_expr_fuel fuel' env Ω n Σ next e1 with
+          let expected_rhs :=
+            match infer_place_sctx env Σ p with
+            | infer_ok T => Some T
+            | infer_err _ => None
+            end in
+          match elaborate_raw_expr_fuel fuel' expected_rhs env Ω n Σ next e1 with
           | infer_err err => infer_err err
           | infer_ok (e1', _, extras, next') =>
               finish (append_env_fns env extras) (EAssign p e1') extras next'
           end
       | RawDeref e1 =>
-          match elaborate_raw_expr_fuel fuel' env Ω n Σ next e1 with
+          match elaborate_raw_expr_fuel fuel' None env Ω n Σ next e1 with
           | infer_err err => infer_err err
           | infer_ok (e1', _, extras, next') =>
               finish (append_env_fns env extras) (EDeref e1') extras next'
           end
       | RawDrop e1 =>
-          match elaborate_raw_expr_fuel fuel' env Ω n Σ next e1 with
+          match elaborate_raw_expr_fuel fuel' None env Ω n Σ next e1 with
           | infer_err err => infer_err err
           | infer_ok (e1', _, extras, next') =>
               finish (append_env_fns env extras) (EDrop e1') extras next'
           end
       | RawIf e1 e2 e3 =>
-          match elaborate_raw_expr_fuel fuel' env Ω n Σ next e1 with
+          match elaborate_raw_expr_fuel fuel' None env Ω n Σ next e1 with
           | infer_err err => infer_err err
           | infer_ok (e1', Σ1, extras1, next1) =>
               let env1 := append_env_fns env extras1 in
-              match elaborate_raw_expr_fuel fuel' env1 Ω n Σ1 next1 e2 with
+              match elaborate_raw_expr_fuel fuel' expected env1 Ω n Σ1 next1 e2 with
               | infer_err err => infer_err err
               | infer_ok (e2', _, extras2, next2) =>
                   let env2 := append_env_fns env1 extras2 in
-                  match elaborate_raw_expr_fuel fuel' env2 Ω n Σ1 next2 e3 with
+                  match elaborate_raw_expr_fuel fuel' expected env2 Ω n Σ1 next2 e3 with
                   | infer_err err => infer_err err
                   | infer_ok (e3', _, extras3, next3) =>
                       let extras := extras1 ++ extras2 ++ extras3 in
@@ -7370,7 +7402,7 @@ Fixpoint elaborate_raw_expr_fuel
           | infer_ok cap_params =>
               let fname := closure_elab_name next in
               let body_ctx := sctx_of_ctx (params_ctx (cap_params ++ params)) in
-              match elaborate_raw_expr_fuel fuel' env Ω n body_ctx (S next) body with
+              match elaborate_raw_expr_fuel fuel' (Some ret) env Ω n body_ctx (S next) body with
               | infer_err err => infer_err err
               | infer_ok (body', _, body_extras, next') =>
                   let fdef := MkFnDef fname n Ω cap_params params ret body' 0 [] in
@@ -7389,7 +7421,7 @@ Fixpoint elaborate_raw_expr_fuel
 Definition elaborate_raw_expr
     (env : global_env) (Ω : outlives_ctx) (n : nat) (Σ : sctx)
     (e : raw_expr) : infer_result (expr * list fn_def) :=
-  match elaborate_raw_expr_fuel 10000 env Ω n Σ 0 e with
+  match elaborate_raw_expr_fuel 10000 None env Ω n Σ 0 e with
   | infer_err err => infer_err err
   | infer_ok (e', _, extras, _) => infer_ok (e', extras)
   end.
@@ -7406,7 +7438,8 @@ Fixpoint elaborate_raw_fns_fuel
   | f :: rest =>
       let env0 := append_env_fns base_env done in
       let body_env := global_env_with_local_bounds env0 (raw_fn_bounds f) in
-      match elaborate_raw_expr_fuel fuel body_env (raw_fn_outlives f)
+      match elaborate_raw_expr_fuel fuel (Some (raw_fn_ret f))
+              body_env (raw_fn_outlives f)
               (raw_fn_lifetimes f) (sctx_of_ctx (raw_fn_body_ctx f))
               next (raw_fn_body f) with
       | infer_err err => infer_err err

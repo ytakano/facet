@@ -1,0 +1,7 @@
+fn keep<T, U>(x: affine T) -> affine T {
+  x
+}
+
+fn main() -> affine isize {
+  (keep 1)
+}

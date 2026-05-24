@@ -2863,12 +2863,24 @@ let rec finalize_type_args = function
       | None -> None)
    | None -> None)
 
-(** val infer_call_type_args : fn_def -> ty list -> ty list option **)
+(** val infer_call_type_args_expected :
+    fn_def -> ty list -> ty option -> ty list option **)
 
-let infer_call_type_args fdef arg_tys =
+let infer_call_type_args_expected fdef arg_tys expected =
   match infer_type_args_from_params fdef.fn_params arg_tys
           (repeat None fdef.fn_type_params) with
-  | Some _UU03c3_ -> finalize_type_args _UU03c3_
+  | Some _UU03c3__args ->
+    let _UU03c3__expected =
+      match expected with
+      | Some t_expected ->
+        infer_type_args_from_ty
+          (add (ty_depth fdef.fn_ret) (ty_depth t_expected)) fdef.fn_ret
+          t_expected _UU03c3__args
+      | None -> Some _UU03c3__args
+    in
+    (match _UU03c3__expected with
+     | Some _UU03c3_ -> finalize_type_args _UU03c3_
+     | None -> None)
   | None -> None
 
 (** val check_struct_bounds :
@@ -7345,11 +7357,11 @@ let infer_elaborated_expr_state fuel env _UU03a9_ n _UU03a3_ e =
   | Infer_err err -> Infer_err err
 
 (** val elaborate_raw_expr_fuel :
-    Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
-    sctx -> Big_int_Z.big_int -> raw_expr -> (((expr * sctx) * fn_def
-    list) * Big_int_Z.big_int) infer_result **)
+    Big_int_Z.big_int -> ty option -> global_env -> outlives_ctx ->
+    Big_int_Z.big_int -> sctx -> Big_int_Z.big_int -> raw_expr ->
+    (((expr * sctx) * fn_def list) * Big_int_Z.big_int) infer_result **)
 
-let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
+let rec elaborate_raw_expr_fuel fuel expected env _UU03a9_ n _UU03a3_ next e =
   let finish = fun env' e' extras next' ->
     match infer_elaborated_expr_state fuel env' _UU03a9_ n _UU03a3_ e' with
     | Infer_ok _UU03a3_' -> Infer_ok (((e', _UU03a3_'), extras), next')
@@ -7359,7 +7371,8 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
     let rec go_args fuel0 env0 _UU03a3_0 next0 = function
     | [] -> Infer_ok ((([], _UU03a3_0), []), next0)
     | a :: rest ->
-      (match elaborate_raw_expr_fuel fuel0 env0 _UU03a9_ n _UU03a3_0 next0 a with
+      (match elaborate_raw_expr_fuel fuel0 None env0 _UU03a9_ n _UU03a3_0
+               next0 a with
        | Infer_ok p ->
          let (p0, next1) = p in
          let (p1, extras1) = p0 in
@@ -7395,7 +7408,8 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
     | [] -> Infer_ok ((([], _UU03a3_0), []), next0)
     | y :: rest ->
       let (fname, fe) = y in
-      (match elaborate_raw_expr_fuel fuel0 env0 _UU03a9_ n _UU03a3_0 next0 fe with
+      (match elaborate_raw_expr_fuel fuel0 None env0 _UU03a9_ n _UU03a3_0
+               next0 fe with
        | Infer_ok p ->
          let (p0, next1) = p in
          let (p1, extras1) = p0 in
@@ -7423,13 +7437,14 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
      | RawFn fname -> finish env (EFn fname) [] next
      | RawPlace p -> finish env (EPlace p) [] next
      | RawLet (m, x, t, e1, e2) ->
-       (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n _UU03a3_ next e1 with
+       (match elaborate_raw_expr_fuel fuel' (Some t) env _UU03a9_ n _UU03a3_
+                next e1 with
         | Infer_ok p ->
           let (p0, next1) = p in
           let (p1, extras1) = p0 in
           let (e1', _UU03a3_1) = p1 in
           let env1 = append_env_fns env extras1 in
-          (match elaborate_raw_expr_fuel fuel' env1 _UU03a9_ n
+          (match elaborate_raw_expr_fuel fuel' expected env1 _UU03a9_ n
                    (sctx_add x t m _UU03a3_1) next1 e2 with
            | Infer_ok p2 ->
              let (p3, next2) = p2 in
@@ -7450,7 +7465,8 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
            | Infer_err err -> Infer_err err)
         | Infer_err err -> Infer_err err)
      | RawLetInfer (m, x, e1, e2) ->
-       (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n _UU03a3_ next e1 with
+       (match elaborate_raw_expr_fuel fuel' None env _UU03a9_ n _UU03a3_ next
+                e1 with
         | Infer_ok p ->
           let (p0, next1) = p in
           let (p1, extras1) = p0 in
@@ -7460,7 +7476,7 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
            | Infer_ok p2 ->
              let (t1, _) = p2 in
              let env1 = append_env_fns env extras1 in
-             (match elaborate_raw_expr_fuel fuel' env1 _UU03a9_ n
+             (match elaborate_raw_expr_fuel fuel' expected env1 _UU03a9_ n
                       (sctx_add x t1 m _UU03a3_1) next1 e2 with
               | Infer_ok p3 ->
                 let (p4, next2) = p3 in
@@ -7495,7 +7511,8 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
              else (match infer_arg_tys_state fuel' env' _UU03a3_ args' with
                    | Infer_ok p2 ->
                      let (arg_tys, _) = p2 in
-                     (match infer_call_type_args fdef arg_tys with
+                     (match infer_call_type_args_expected fdef arg_tys
+                              expected with
                       | Some type_args ->
                         (match check_struct_bounds env' fdef.fn_bounds
                                  type_args with
@@ -7517,7 +7534,7 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
             args')) extras next'
         | Infer_err err -> Infer_err err)
      | RawCallExpr (callee, args) ->
-       (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n _UU03a3_ next
+       (match elaborate_raw_expr_fuel fuel' None env _UU03a9_ n _UU03a3_ next
                 callee with
         | Infer_ok p ->
           let (p0, next1) = p in
@@ -7544,7 +7561,13 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
             fields')) extras next'
         | Infer_err err -> Infer_err err)
      | RawReplace (p, e1) ->
-       (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n _UU03a3_ next e1 with
+       let expected_rhs =
+         match infer_place_sctx env _UU03a3_ p with
+         | Infer_ok t -> Some t
+         | Infer_err _ -> None
+       in
+       (match elaborate_raw_expr_fuel fuel' expected_rhs env _UU03a9_ n
+                _UU03a3_ next e1 with
         | Infer_ok p0 ->
           let (p1, next') = p0 in
           let (p2, extras) = p1 in
@@ -7552,7 +7575,13 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
           finish (append_env_fns env extras) (EReplace (p, e1')) extras next'
         | Infer_err err -> Infer_err err)
      | RawAssign (p, e1) ->
-       (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n _UU03a3_ next e1 with
+       let expected_rhs =
+         match infer_place_sctx env _UU03a3_ p with
+         | Infer_ok t -> Some t
+         | Infer_err _ -> None
+       in
+       (match elaborate_raw_expr_fuel fuel' expected_rhs env _UU03a9_ n
+                _UU03a3_ next e1 with
         | Infer_ok p0 ->
           let (p1, next') = p0 in
           let (p2, extras) = p1 in
@@ -7561,7 +7590,8 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
         | Infer_err err -> Infer_err err)
      | RawBorrow (rk, p) -> finish env (EBorrow (rk, p)) [] next
      | RawDeref e1 ->
-       (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n _UU03a3_ next e1 with
+       (match elaborate_raw_expr_fuel fuel' None env _UU03a9_ n _UU03a3_ next
+                e1 with
         | Infer_ok p ->
           let (p0, next') = p in
           let (p1, extras) = p0 in
@@ -7569,7 +7599,8 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
           finish (append_env_fns env extras) (EDeref e1') extras next'
         | Infer_err err -> Infer_err err)
      | RawDrop e1 ->
-       (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n _UU03a3_ next e1 with
+       (match elaborate_raw_expr_fuel fuel' None env _UU03a9_ n _UU03a3_ next
+                e1 with
         | Infer_ok p ->
           let (p0, next') = p in
           let (p1, extras) = p0 in
@@ -7577,21 +7608,22 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
           finish (append_env_fns env extras) (EDrop e1') extras next'
         | Infer_err err -> Infer_err err)
      | RawIf (e1, e2, e3) ->
-       (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n _UU03a3_ next e1 with
+       (match elaborate_raw_expr_fuel fuel' None env _UU03a9_ n _UU03a3_ next
+                e1 with
         | Infer_ok p ->
           let (p0, next1) = p in
           let (p1, extras1) = p0 in
           let (e1', _UU03a3_1) = p1 in
           let env1 = append_env_fns env extras1 in
-          (match elaborate_raw_expr_fuel fuel' env1 _UU03a9_ n _UU03a3_1
-                   next1 e2 with
+          (match elaborate_raw_expr_fuel fuel' expected env1 _UU03a9_ n
+                   _UU03a3_1 next1 e2 with
            | Infer_ok p2 ->
              let (p3, next2) = p2 in
              let (p4, extras2) = p3 in
              let (e2', _) = p4 in
              let env2 = append_env_fns env1 extras2 in
-             (match elaborate_raw_expr_fuel fuel' env2 _UU03a9_ n _UU03a3_1
-                      next2 e3 with
+             (match elaborate_raw_expr_fuel fuel' expected env2 _UU03a9_ n
+                      _UU03a3_1 next2 e3 with
               | Infer_ok p5 ->
                 let (p6, next3) = p5 in
                 let (p7, extras3) = p6 in
@@ -7607,8 +7639,8 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
         | Infer_ok cap_params ->
           let fname = closure_elab_name next in
           let body_ctx = sctx_of_ctx (params_ctx (app cap_params params)) in
-          (match elaborate_raw_expr_fuel fuel' env _UU03a9_ n body_ctx
-                   (Big_int_Z.succ_big_int next) body with
+          (match elaborate_raw_expr_fuel fuel' (Some ret) env _UU03a9_ n
+                   body_ctx (Big_int_Z.succ_big_int next) body with
            | Infer_ok p ->
              let (p0, next') = p in
              let (p1, body_extras) = p0 in
@@ -7637,7 +7669,7 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
 
 let elaborate_raw_expr env _UU03a9_ n _UU03a3_ e =
   match elaborate_raw_expr_fuel
-          (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) env
+          (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) None env
           _UU03a9_ n _UU03a3_ Big_int_Z.zero_big_int e with
   | Infer_ok p ->
     let (p0, _) = p in
@@ -7658,9 +7690,9 @@ let rec elaborate_raw_fns_fuel fuel base_env done0 next = function
 | f :: rest ->
   let env0 = append_env_fns base_env done0 in
   let body_env = global_env_with_local_bounds env0 f.raw_fn_bounds in
-  (match elaborate_raw_expr_fuel fuel body_env f.raw_fn_outlives
-           f.raw_fn_lifetimes (sctx_of_ctx (raw_fn_body_ctx f)) next
-           f.raw_fn_body with
+  (match elaborate_raw_expr_fuel fuel (Some f.raw_fn_ret) body_env
+           f.raw_fn_outlives f.raw_fn_lifetimes
+           (sctx_of_ctx (raw_fn_body_ctx f)) next f.raw_fn_body with
    | Infer_ok p ->
      let (p0, next1) = p in
      let (p1, extras) = p0 in

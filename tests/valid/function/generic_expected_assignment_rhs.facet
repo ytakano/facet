@@ -1,0 +1,12 @@
+struct Token<T> {
+}
+
+fn make<T>() -> unrestricted Token<affine T> {
+  Token<affine T> { }
+}
+
+fn main() -> unrestricted Token<affine isize> {
+  let mut x: unrestricted Token<affine isize> = Token<affine isize> { };
+  (x = (make));
+  x
+}

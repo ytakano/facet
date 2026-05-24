@@ -1,0 +1,14 @@
+trait Show;
+
+impl Show for affine bool;
+
+struct Token<T> {
+}
+
+fn make<T>() -> affine Token<affine T> where T: Show {
+  Token<affine T> { }
+}
+
+fn main() -> affine Token<affine isize> {
+  (make)
+}

@@ -875,9 +875,16 @@ let rec expr_as_place = function
 type param = { param_mutability : mutability; param_name : ident;
                param_ty : ty }
 
+type trait_ref = { trait_ref_name : string; trait_ref_args : ty list }
+
+type trait_bound = { bound_type_index : Big_int_Z.big_int;
+                     bound_traits : trait_ref list }
+
 type fn_def = { fn_name : ident; fn_lifetimes : Big_int_Z.big_int;
                 fn_outlives : outlives_ctx; fn_captures : param list;
-                fn_params : param list; fn_ret : ty; fn_body : expr }
+                fn_params : param list; fn_ret : ty; fn_body : expr;
+                fn_type_params : Big_int_Z.big_int;
+                fn_bounds : trait_bound list }
 
 type syntax = fn_def list
 
@@ -976,11 +983,6 @@ let rec place_suffix_path = function
 
 type field_def = { field_name : string; field_mutability : mutability;
                    field_ty : ty }
-
-type trait_ref = { trait_ref_name : string; trait_ref_args : ty list }
-
-type trait_bound = { bound_type_index : Big_int_Z.big_int;
-                     bound_traits : trait_ref list }
 
 type struct_def = { struct_name : string;
                     struct_lifetimes : Big_int_Z.big_int;
@@ -1841,7 +1843,8 @@ let alpha_rename_fn_def used f =
   let (body', used2) = alpha_rename_expr _UU03c1_ used1 f.fn_body in
   ({ fn_name = f.fn_name; fn_lifetimes = f.fn_lifetimes; fn_outlives =
   f.fn_outlives; fn_captures = f.fn_captures; fn_params = params'; fn_ret =
-  f.fn_ret; fn_body = body' }, used2)
+  f.fn_ret; fn_body = body'; fn_type_params = f.fn_type_params; fn_bounds =
+  f.fn_bounds }, used2)
 
 (** val alpha_rename_syntax_go :
     ident list -> syntax -> syntax * ident list **)
@@ -5728,7 +5731,8 @@ let infer_env env f =
 let fn_with_body f body =
   { fn_name = f.fn_name; fn_lifetimes = f.fn_lifetimes; fn_outlives =
     f.fn_outlives; fn_captures = f.fn_captures; fn_params = f.fn_params;
-    fn_ret = f.fn_ret; fn_body = body }
+    fn_ret = f.fn_ret; fn_body = body; fn_type_params = f.fn_type_params;
+    fn_bounds = f.fn_bounds }
 
 (** val infer_env_elab :
     global_env -> fn_def -> ((ty * ctx) * fn_def) infer_result **)
@@ -6698,14 +6702,17 @@ type raw_fn_def = { raw_fn_name : ident;
                     raw_fn_lifetimes : Big_int_Z.big_int;
                     raw_fn_outlives : outlives_ctx;
                     raw_fn_params : param list; raw_fn_ret : ty;
-                    raw_fn_body : raw_expr }
+                    raw_fn_body : raw_expr;
+                    raw_fn_type_params : Big_int_Z.big_int;
+                    raw_fn_bounds : trait_bound list }
 
 (** val fn_stub_of_raw : raw_fn_def -> fn_def **)
 
 let fn_stub_of_raw f =
   { fn_name = f.raw_fn_name; fn_lifetimes = f.raw_fn_lifetimes; fn_outlives =
     f.raw_fn_outlives; fn_captures = []; fn_params = f.raw_fn_params;
-    fn_ret = f.raw_fn_ret; fn_body = EUnit }
+    fn_ret = f.raw_fn_ret; fn_body = EUnit; fn_type_params =
+    f.raw_fn_type_params; fn_bounds = f.raw_fn_bounds }
 
 (** val append_env_fns : global_env -> fn_def list -> global_env **)
 
@@ -7063,7 +7070,8 @@ let rec elaborate_raw_expr_fuel fuel env _UU03a9_ n _UU03a3_ next e =
              let (body', _) = p1 in
              let fdef = { fn_name = fname; fn_lifetimes = n; fn_outlives =
                _UU03a9_; fn_captures = cap_params; fn_params = params;
-               fn_ret = ret; fn_body = body' }
+               fn_ret = ret; fn_body = body'; fn_type_params =
+               Big_int_Z.zero_big_int; fn_bounds = [] }
              in
              let env_with_closure =
                append_env_fns env (app body_extras (fdef :: []))
@@ -7113,7 +7121,8 @@ let rec elaborate_raw_fns_fuel fuel base_env done0 next = function
      let (body', _) = p1 in
      let f' = { fn_name = f.raw_fn_name; fn_lifetimes = f.raw_fn_lifetimes;
        fn_outlives = f.raw_fn_outlives; fn_captures = []; fn_params =
-       f.raw_fn_params; fn_ret = f.raw_fn_ret; fn_body = body' }
+       f.raw_fn_params; fn_ret = f.raw_fn_ret; fn_body = body';
+       fn_type_params = f.raw_fn_type_params; fn_bounds = f.raw_fn_bounds }
      in
      (match elaborate_raw_fns_fuel fuel base_env
               (app done0 (app extras (f' :: []))) next1 rest with

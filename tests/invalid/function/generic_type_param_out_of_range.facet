@@ -1,0 +1,4 @@
+fn bad(x: affine T) -> affine T {
+  x
+}
+

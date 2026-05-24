@@ -285,8 +285,9 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
       convert_raw fn_names ty_scope body_scope body)
 
 let convert_fn_def_with_names struct_names fn_names (f : named_fn_def) : fn_def =
+  let (lts, tys) = split_generics f.nf_generics in
   let ty_scope = {
-    type_params = [];
+    type_params = tys;
     struct_names;
   } in
   let (scope, params, next_lifetime, input_lts) = List.fold_left
@@ -299,7 +300,7 @@ let convert_fn_def_with_names struct_names fn_names (f : named_fn_def) : fn_def 
                 param_name       = make_ident np.np_name d;
                 param_ty         = param_ty } in
       (sc', acc @ [p], next_lt', input_lts'))
-    ([], [], List.length f.nf_lifetime_names, []) f.nf_params
+    ([], [], List.length lts, []) f.nf_params
   in
   let ret_ty = lower_output_ty ty_scope input_lts f.nf_ret in
   { fn_name      = make_ident f.nf_name 0;
@@ -308,11 +309,14 @@ let convert_fn_def_with_names struct_names fn_names (f : named_fn_def) : fn_def 
     fn_captures  = [];
     fn_params    = params;
     fn_ret       = ret_ty;
-    fn_body      = convert fn_names ty_scope scope f.nf_body }
+    fn_body      = convert fn_names ty_scope scope f.nf_body;
+    fn_type_params = Big_int_Z.big_int_of_int (List.length tys);
+    fn_bounds = List.map (trait_bound_of_named ty_scope tys) f.nf_bounds }
 
 let convert_raw_fn_def_with_names struct_names fn_names (f : named_fn_def) : raw_fn_def =
+  let (lts, tys) = split_generics f.nf_generics in
   let ty_scope = {
-    type_params = [];
+    type_params = tys;
     struct_names;
   } in
   let (scope, params, next_lifetime, input_lts) = List.fold_left
@@ -325,7 +329,7 @@ let convert_raw_fn_def_with_names struct_names fn_names (f : named_fn_def) : raw
                 param_name       = make_ident np.np_name d;
                 param_ty         = param_ty } in
       (sc', acc @ [p], next_lt', input_lts'))
-    ([], [], List.length f.nf_lifetime_names, []) f.nf_params
+    ([], [], List.length lts, []) f.nf_params
   in
   let ret_ty = lower_output_ty ty_scope input_lts f.nf_ret in
   { raw_fn_name      = make_ident f.nf_name 0;
@@ -333,7 +337,9 @@ let convert_raw_fn_def_with_names struct_names fn_names (f : named_fn_def) : raw
     raw_fn_outlives = f.nf_outlives;
     raw_fn_params    = params;
     raw_fn_ret       = ret_ty;
-    raw_fn_body      = convert_raw fn_names ty_scope scope f.nf_body }
+    raw_fn_body      = convert_raw fn_names ty_scope scope f.nf_body;
+    raw_fn_type_params = Big_int_Z.big_int_of_int (List.length tys);
+    raw_fn_bounds = List.map (trait_bound_of_named ty_scope tys) f.nf_bounds }
 
 let convert_struct struct_names s =
   let (lts, tys) = split_generics s.ns_generics in
@@ -540,10 +546,11 @@ let validate_env env =
     let validate_fn f =
       first_some
         (List.map
-           (fun p -> type_error zero f.fn_lifetimes zero p.param_ty)
+           (fun p -> type_error f.fn_type_params f.fn_lifetimes zero p.param_ty)
            f.fn_params @
-         [type_error zero f.fn_lifetimes zero f.fn_ret;
-          outlives_error f.fn_lifetimes zero f.fn_outlives])
+         [type_error f.fn_type_params f.fn_lifetimes zero f.fn_ret;
+          outlives_error f.fn_lifetimes zero f.fn_outlives] @
+         List.map (validate_bound f.fn_type_params f.fn_lifetimes) f.fn_bounds)
     in
     match first_some (List.map validate_acyclic_struct env.env_structs @
                       List.map validate_struct env.env_structs @

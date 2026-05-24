@@ -27,6 +27,20 @@ type named_param = {
   np_ty         : named_ty;
 }
 
+type named_generic_param =
+  | NGLifetime of string
+  | NGType of string
+
+type named_trait_bound = {
+  ntb_type_name : string;
+  ntb_traits    : named_trait_ref list;
+}
+
+and named_trait_ref = {
+  ntr_name : string;
+  ntr_args : named_type_arg list;
+}
+
 type named_expr =
   | NUnit
   | NLit    of TypeChecker.literal
@@ -45,25 +59,12 @@ type named_expr =
 
 type named_fn_def = {
   nf_name           : name;
-  nf_lifetime_names : string list;
+  nf_generics       : named_generic_param list;
+  nf_bounds         : named_trait_bound list;
   nf_outlives       : (TypeChecker.lifetime * TypeChecker.lifetime) list;
   nf_params         : named_param list;
   nf_ret            : named_ty;
   nf_body           : named_expr;
-}
-
-type named_generic_param =
-  | NGLifetime of string
-  | NGType of string
-
-type named_trait_bound = {
-  ntb_type_name : string;
-  ntb_traits    : named_trait_ref list;
-}
-
-and named_trait_ref = {
-  ntr_name : string;
-  ntr_args : named_type_arg list;
 }
 
 type named_field_def = {

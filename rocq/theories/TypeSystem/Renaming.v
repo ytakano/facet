@@ -205,7 +205,8 @@ Definition alpha_rename_fn_def (used : list ident)
   let '(params', ρ, used1) := alpha_rename_params [] used0 (fn_params f) in
   let (body', used2) := alpha_rename_expr ρ used1 (fn_body f) in
   (MkFnDef (fn_name f) (fn_lifetimes f) (fn_outlives f)
-    (fn_captures f) params' (fn_ret f) body', used2).
+    (fn_captures f) params' (fn_ret f) body'
+    (fn_type_params f) (fn_bounds f), used2).
 
 Fixpoint alpha_rename_syntax_go (used : list ident) (s : Syntax)
     : Syntax * list ident :=

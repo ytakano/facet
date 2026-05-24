@@ -219,9 +219,16 @@ val expr_as_place : expr -> place option
 type param = { param_mutability : mutability; param_name : ident;
                param_ty : ty }
 
+type trait_ref = { trait_ref_name : string; trait_ref_args : ty list }
+
+type trait_bound = { bound_type_index : Big_int_Z.big_int;
+                     bound_traits : trait_ref list }
+
 type fn_def = { fn_name : ident; fn_lifetimes : Big_int_Z.big_int;
                 fn_outlives : outlives_ctx; fn_captures : param list;
-                fn_params : param list; fn_ret : ty; fn_body : expr }
+                fn_params : param list; fn_ret : ty; fn_body : expr;
+                fn_type_params : Big_int_Z.big_int;
+                fn_bounds : trait_bound list }
 
 type syntax = fn_def list
 
@@ -255,11 +262,6 @@ val place_suffix_path : place -> field_path
 
 type field_def = { field_name : string; field_mutability : mutability;
                    field_ty : ty }
-
-type trait_ref = { trait_ref_name : string; trait_ref_args : ty list }
-
-type trait_bound = { bound_type_index : Big_int_Z.big_int;
-                     bound_traits : trait_ref list }
 
 type struct_def = { struct_name : string;
                     struct_lifetimes : Big_int_Z.big_int;
@@ -982,7 +984,9 @@ type raw_fn_def = { raw_fn_name : ident;
                     raw_fn_lifetimes : Big_int_Z.big_int;
                     raw_fn_outlives : outlives_ctx;
                     raw_fn_params : param list; raw_fn_ret : ty;
-                    raw_fn_body : raw_expr }
+                    raw_fn_body : raw_expr;
+                    raw_fn_type_params : Big_int_Z.big_int;
+                    raw_fn_bounds : trait_bound list }
 
 val fn_stub_of_raw : raw_fn_def -> fn_def
 

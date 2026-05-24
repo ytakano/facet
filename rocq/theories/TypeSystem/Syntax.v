@@ -83,6 +83,16 @@ Record param : Type := MkParam {
   param_ty         : Ty
 }.
 
+Record trait_ref : Type := MkTraitRef {
+  trait_ref_name : string;
+  trait_ref_args : list Ty
+}.
+
+Record trait_bound : Type := MkTraitBound {
+  bound_type_index : nat;
+  bound_traits     : list trait_ref
+}.
+
 Record fn_def : Type := MkFnDef {
   fn_name      : ident;
   fn_lifetimes : nat;
@@ -90,7 +100,9 @@ Record fn_def : Type := MkFnDef {
   fn_captures  : list param;
   fn_params    : list param;
   fn_ret       : Ty;
-  fn_body      : expr
+  fn_body      : expr;
+  fn_type_params : nat;
+  fn_bounds    : list trait_bound
 }.
 
 Definition Syntax := list fn_def.

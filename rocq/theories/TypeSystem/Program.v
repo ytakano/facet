@@ -12,16 +12,6 @@ Record field_def : Type := MkFieldDef {
   field_ty         : Ty
 }.
 
-Record trait_ref : Type := MkTraitRef {
-  trait_ref_name : string;
-  trait_ref_args : list Ty
-}.
-
-Record trait_bound : Type := MkTraitBound {
-  bound_type_index : nat;
-  bound_traits     : list trait_ref
-}.
-
 Record struct_def : Type := MkStructDef {
   struct_name      : string;
   struct_lifetimes : nat;

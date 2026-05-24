@@ -6,10 +6,21 @@ type stmt_item =
   | LetStmt of mutability * name * named_ty option * named_expr
   | ExprStmt of named_expr
 
+type fn_where_item =
+  | FnWhereTrait of named_trait_bound
+  | FnWhereOutlives of (TypeChecker.lifetime * TypeChecker.lifetime)
+
 let desugar_stmt item cont =
   match item with
   | LetStmt (m, x, ty_opt, e) -> NLet (m, x, ty_opt, e, cont)
   | ExprStmt e                -> NLet (MImmutable, "_", None, e, cont)
+
+let split_fn_where_items items =
+  let add (bounds, outs) = function
+    | FnWhereTrait b -> (bounds @ [b], outs)
+    | FnWhereOutlives c -> (bounds, outs @ [c])
+  in
+  List.fold_left add ([], []) items
 
 (* Mutable state for lifetime name resolution within the current fn_def *)
 let current_lifetimes : string list ref = ref []
@@ -97,11 +108,12 @@ top_item:
   | i = impl_def { NIImpl i }
 
 fn_def:
-  | KW_FN; name = ID; lt_names = opt_lifetime_params;
+  | KW_FN; name = ID; generics = opt_generic_params;
     LPAREN; ps = params; RPAREN;
-    ARROW; ret = signature_ty; outs = opt_where_outlives; LBRACE; body = block; RBRACE
-    { { nf_name = name; nf_lifetime_names = lt_names; nf_outlives = outs;
-        nf_params = ps; nf_ret = ret; nf_body = body } }
+    ARROW; ret = signature_ty; where_clause = opt_fn_where_clause; LBRACE; body = block; RBRACE
+    { let (bounds, outs) = where_clause in
+      { nf_name = name; nf_generics = generics; nf_bounds = bounds;
+        nf_outlives = outs; nf_params = ps; nf_ret = ret; nf_body = body } }
 
 struct_def:
   | KW_STRUCT; name = ID; generics = opt_generic_params;
@@ -131,6 +143,15 @@ opt_trait_bounds:
   | { [] }
   | KW_WHERE; bounds = separated_nonempty_list(COMMA, trait_bound) { bounds }
 
+opt_fn_where_clause:
+  | { ([], []) }
+  | KW_WHERE; items = separated_nonempty_list(COMMA, fn_where_item)
+    { split_fn_where_items items }
+
+fn_where_item:
+  | b = trait_bound { FnWhereTrait b }
+  | c = outlives_constraint { FnWhereOutlives c }
+
 trait_bound:
   | type_name = ID; COLON; traits = separated_nonempty_list(PLUS, trait_ref)
     { { ntb_type_name = type_name; ntb_traits = traits } }
@@ -143,17 +164,8 @@ struct_field:
   | m = opt_mut; name = ID; COLON; t = ty
     { { nfield_mutability = m; nfield_name = name; nfield_ty = t } }
 
-opt_lifetime_params:
-  | { current_lifetimes := []; [] }
-  | LANGLE; names = separated_nonempty_list(COMMA, lifetime_name); RANGLE
-    { check_unique_lifetimes names; current_lifetimes := names; names }
-
 lifetime_name:
   | lt = LIFETIME { lt }
-
-opt_where_outlives:
-  | { [] }
-  | KW_WHERE; cs = separated_nonempty_list(COMMA, outlives_constraint) { cs }
 
 outlives_constraint:
   | a = LIFETIME; COLON; b = LIFETIME

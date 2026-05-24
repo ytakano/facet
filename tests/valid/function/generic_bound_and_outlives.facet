@@ -1,0 +1,9 @@
+trait Show;
+
+fn keep_ref<'a, 'b, T>(
+  r: unrestricted &'a unrestricted isize,
+  x: affine T
+) -> unrestricted &'b unrestricted isize where 'a: 'b, T: Show {
+  r
+}
+

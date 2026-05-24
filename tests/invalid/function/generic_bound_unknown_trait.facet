@@ -1,0 +1,4 @@
+fn bad<T>(x: affine T) -> affine T where T: Missing {
+  x
+}
+

@@ -1,0 +1,4 @@
+fn id<T>(x: affine T) -> affine T {
+  x
+}
+

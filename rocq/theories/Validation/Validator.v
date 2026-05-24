@@ -164,12 +164,9 @@ Definition field_type_wf_b (structs : list struct_def) (s : struct_def)
 Definition struct_field_types_wf_b (structs : list struct_def) (s : struct_def) : bool :=
   forallb (field_type_wf_b structs s) (struct_fields s).
 
-Definition param_type_wf_b (structs : list struct_def) (n : nat) (p : param) : bool :=
-  type_env_wf_b structs 0 n 0 (param_ty p).
-
-Definition fn_types_wf_b (structs : list struct_def) (f : fn_def) : bool :=
-  forallb (param_type_wf_b structs (fn_lifetimes f)) (fn_params f) &&
-  type_env_wf_b structs 0 (fn_lifetimes f) 0 (fn_ret f).
+Definition param_type_wf_b
+    (structs : list struct_def) (ty_params n : nat) (p : param) : bool :=
+  type_env_wf_b structs ty_params n 0 (param_ty p).
 
 (* ------------------------------------------------------------------ *)
 (* Type parameter and lifetime reference collection                      *)
@@ -292,6 +289,14 @@ Definition trait_bounds_wf_b
          (bound_traits b))
     bounds.
 
+Definition fn_types_wf_b
+    (structs : list struct_def) (traits : list trait_def) (f : fn_def) : bool :=
+  forallb (param_type_wf_b structs (fn_type_params f) (fn_lifetimes f))
+    (fn_params f) &&
+  type_env_wf_b structs (fn_type_params f) (fn_lifetimes f) 0 (fn_ret f) &&
+  trait_bounds_wf_b structs traits (fn_type_params f) (fn_lifetimes f)
+    (fn_bounds f).
+
 Definition struct_wf_b (structs : list struct_def) (traits : list trait_def) (s : struct_def) : bool :=
   string_no_dup_b (field_names (struct_fields s)) &&
   struct_field_types_wf_b structs s &&
@@ -353,7 +358,7 @@ Definition valid_global_env_b (env : global_env) : bool :=
   forallb (trait_wf_b (env_structs env) (env_traits env)) (env_traits env) &&
   impl_no_dup_b (env_impls env) &&
   forallb (impl_wf_b env) (env_impls env) &&
-  forallb (fn_types_wf_b (env_structs env)) (env_fns env).
+  forallb (fn_types_wf_b (env_structs env) (env_traits env)) (env_fns env).
 
 Definition validate_env (env : global_env) : option global_env :=
   if valid_global_env_b env then Some env else None.

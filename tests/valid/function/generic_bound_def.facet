@@ -1,0 +1,6 @@
+trait Show;
+
+fn keep<T>(x: affine T) -> affine T where T: Show {
+  x
+}
+

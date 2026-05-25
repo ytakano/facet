@@ -7,10 +7,10 @@
 4. レビュー時に、soundness holeや、仕様の不備を見つけた場合は、そこで終了
 5. レビューで問題が見つからなかった場合、GPG署名無しでgit commit
 6. 2に戻り、次のタスクを実装する
-7. after finishing the tasks, update plan/fn_generics.md
+7. after finishing the tasks, update plan/enum.md
   - must remove unnecessary information for future tasks
   - must update this document for Codex
-  - must keep plan/fn_generics.md clear, consice and compact
+  - must keep plan/enum.md clear, consice and compact
 
 ## Context消費を抑えるための指示
 

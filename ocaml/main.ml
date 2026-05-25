@@ -232,6 +232,14 @@ let string_of_infer_error ?(diagnostics = []) = function
     Printf.sprintf "enum not found: %s" name
   | ErrVariantNotFound name ->
     Printf.sprintf "enum variant not found: %s" name
+  | ErrNotAnEnum c ->
+    Printf.sprintf "type is not an enum: %s" (string_of_ty_core c)
+  | ErrDuplicateVariant name ->
+    Printf.sprintf "duplicate match branch: %s" name
+  | ErrMissingVariant name ->
+    Printf.sprintf "missing match branch: %s" name
+  | ErrMatchPayloadUnsupported name ->
+    Printf.sprintf "match branch payloads are not supported for variant: %s" name
   | ErrFieldNotFound name ->
     Printf.sprintf "field not found: %s" name
   | ErrDuplicateField name ->

@@ -56,10 +56,14 @@ Proof.
   - induction l1 as [| [fname field] rest IHfields]; simpl.
     + reflexivity.
     + rewrite IH, IHfields. reflexivity.
-  - induction l1 as [| payload rest IHargs]; simpl.
+	  - induction l1 as [| payload rest IHargs]; simpl.
+	    + reflexivity.
+	    + rewrite IH, IHargs. reflexivity.
+  - rewrite IH.
+    induction l as [| [name branch] rest IHbranches]; simpl.
     + reflexivity.
-    + rewrite IH, IHargs. reflexivity.
-  - rewrite IH. reflexivity.
+    + rewrite IH, IHbranches. reflexivity.
+	  - rewrite IH. reflexivity.
   - rewrite IH. reflexivity.
   - rewrite IH. reflexivity.
   - rewrite IH. reflexivity.

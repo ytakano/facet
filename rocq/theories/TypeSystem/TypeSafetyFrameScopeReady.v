@@ -1024,14 +1024,18 @@ Proof.
         -- exact Hsame_then_else.
         -- exact H13.
       * exact Hscope3.
-    + eapply store_frame_static_fresh_same_bindings.
-      * eapply ctx_merge_same_bindings_right.
-        -- exact Hsame_then_else.
-        -- exact H13.
-      * exact Hfresh3.
-	  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
-	      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
-	      roots ps frame Hready _ _ _ _ _ _ _.
+	    + eapply store_frame_static_fresh_same_bindings.
+	      * eapply ctx_merge_same_bindings_right.
+	        -- exact Hsame_then_else.
+	        -- exact H13.
+	      * exact Hfresh3.
+  - intros s s_scrut s' scrut branches enum_name variant_name e_branch v
+      Heval_scrut IHscrut Hlookup Heval_branch IHbranch
+      Ω n R Σ T Σ' R' roots ps frame Hready Htyped _ _ _ _ _ _.
+    inversion Hready; subst. inversion Htyped.
+		  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
+		      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
+		      roots ps frame Hready _ _ _ _ _ _ _.
 	    inversion Hready.
 	  - intros s s_args s_body fname type_args fdef fcall args0 vs ret used'
 	      Hlookup Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ

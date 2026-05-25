@@ -91,6 +91,13 @@ Fixpoint free_vars_expr (e : expr) : list ident :=
         | e :: rest => free_vars_expr e ++ go rest
         end
       in go payloads
+  | EMatch scrut branches =>
+      let fix go (branches0 : list (string * expr)) : list ident :=
+        match branches0 with
+        | [] => []
+        | (_, e) :: rest => free_vars_expr e ++ go rest
+        end
+      in free_vars_expr scrut ++ go branches
   | EReplace p e_new => place_name p :: free_vars_expr e_new
   | EAssign p e_new => place_name p :: free_vars_expr e_new
   | EBorrow _ p => [place_name p]
@@ -188,6 +195,20 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
       in
       let (payloads', used') := go used payloads in
       (EEnum enum_name variant_name lts args payloads', used')
+  | EMatch scrut branches =>
+      let (scrut', used1) := alpha_rename_expr ρ used scrut in
+      let fix go (used0 : list ident) (branches0 : list (string * expr))
+          : list (string * expr) * list ident :=
+        match branches0 with
+        | [] => ([], used0)
+        | (variant_name, e) :: rest =>
+            let (e', used1') := alpha_rename_expr ρ used0 e in
+            let (rest', used2) := go used1' rest in
+            ((variant_name, e') :: rest', used2)
+        end
+      in
+      let (branches', used') := go used1 branches in
+      (EMatch scrut' branches', used')
   | EReplace p e_new =>
       let (e_new', used') := alpha_rename_expr ρ used e_new in
       (EReplace (rename_place ρ p) e_new', used')

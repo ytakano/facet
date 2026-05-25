@@ -241,6 +241,12 @@ let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (
     let (lts, tys) = split_expr_type_args ty_scope args in
     EEnum (enum_name, variant_name, lts, tys,
       List.map (convert fn_names ty_scope scope) payloads)
+  | NMatch (scrut, branches) ->
+    EMatch
+      (convert fn_names ty_scope scope scrut,
+       List.map
+         (fun (variant, body) -> (variant, convert fn_names ty_scope scope body))
+         branches)
   | NLet (m, name, Some ty, e1, e2) ->
     if named_ty_has_elided_ref_lifetime ty
     then failwith "cannot elide lifetime in local type annotation";
@@ -305,6 +311,12 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
     let (lts, tys) = split_expr_type_args ty_scope args in
     RawEnum (enum_name, variant_name, lts, tys,
       List.map (convert_raw fn_names ty_scope scope) payloads)
+  | NMatch (scrut, branches) ->
+    RawMatch
+      (convert_raw fn_names ty_scope scope scrut,
+       List.map
+         (fun (variant, body) -> (variant, convert_raw fn_names ty_scope scope body))
+         branches)
   | NLet (m, name, Some ty, e1, e2) ->
     if named_ty_has_elided_ref_lifetime ty
     then failwith "cannot elide lifetime in local type annotation";

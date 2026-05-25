@@ -223,6 +223,7 @@ type expr =
 | ECallExpr of expr * expr list
 | EStruct of string * lifetime list * ty list * (string * expr) list
 | EEnum of string * string * lifetime list * ty list * expr list
+| EMatch of expr * (string * expr) list
 | EReplace of place * expr
 | EAssign of place * expr
 | EBorrow of ref_kind * place
@@ -589,6 +590,10 @@ type infer_error =
 | ErrStructNotFound of string
 | ErrEnumNotFound of string
 | ErrVariantNotFound of string
+| ErrNotAnEnum of ty typeCore
+| ErrDuplicateVariant of string
+| ErrMissingVariant of string
+| ErrMatchPayloadUnsupported of string
 | ErrFieldNotFound of string
 | ErrDuplicateField of string
 | ErrMissingField of string
@@ -727,6 +732,24 @@ val first_unknown_field :
 
 val first_missing_field :
   field_def list -> (string * expr) list -> string option
+
+val lookup_branch_b : string -> (string * expr) list -> expr option
+
+val has_branch_b : string -> (string * expr) list -> bool
+
+val first_duplicate_branch : (string * expr) list -> string option
+
+val first_unknown_variant_branch :
+  (string * expr) list -> enum_variant_def list -> string option
+
+val first_missing_variant_branch :
+  enum_variant_def list -> (string * expr) list -> string option
+
+val first_payload_variant : enum_variant_def list -> string option
+
+val usage_max_tys_nonempty : ty -> ty list -> usage
+
+val ctx_merge_many : ctx -> ctx list -> ctx option
 
 val infer_place_env : global_env -> ctx -> place -> ty infer_result
 
@@ -1094,6 +1117,7 @@ type raw_expr =
 | RawCallExpr of raw_expr * raw_expr list
 | RawStruct of string * lifetime list * ty list * (string * raw_expr) list
 | RawEnum of string * string * lifetime list * ty list * raw_expr list
+| RawMatch of raw_expr * (string * raw_expr) list
 | RawReplace of place * raw_expr
 | RawAssign of place * raw_expr
 | RawBorrow of ref_kind * place

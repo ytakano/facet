@@ -48,12 +48,31 @@ Proof.
              ++ pose proof (expr_size_enum_payload_lt s s0 l l0
                   (payload :: rest) payload (or_introl eq_refl)).
                 lia.
-             ++ exact Hpayload.
-          -- apply IHpayloads.
-             ++ simpl. simpl in Hlt. lia.
-             ++ exact Hrest.
-      + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
-        eapply PRE_Replace.
+	             ++ exact Hpayload.
+	          -- apply IHpayloads.
+	             ++ simpl. simpl in Hlt. lia.
+	             ++ exact Hrest.
+      + apply andb_true_iff in Hready as [Hscrut Hbranches].
+        apply PRE_Match.
+        * apply IH with (e := e).
+          -- pose proof (expr_size_match_scrutinee_lt e l).
+             lia.
+          -- exact Hscrut.
+        * induction l as [| [name branch] rest IHbranches].
+          -- constructor.
+          -- simpl in Hbranches.
+             apply andb_true_iff in Hbranches as [Hbranch Hrest].
+             constructor.
+             ++ apply IH with (e := branch).
+                ** pose proof (expr_size_match_branch_lt e
+                     ((name, branch) :: rest) name branch (or_introl eq_refl)).
+                   lia.
+                ** exact Hbranch.
+             ++ apply IHbranches.
+                ** simpl. simpl in Hlt. lia.
+                ** exact Hrest.
+	      + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
+	        eapply PRE_Replace.
         * exact Hpath.
         * apply IH with (e := e); [simpl in Hlt; lia | exact Hready].
       + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
@@ -175,12 +194,31 @@ Proof.
              ++ pose proof (expr_size_enum_payload_lt s s0 l l0
                   (payload :: rest) payload (or_introl eq_refl)).
                 lia.
-             ++ exact Hpayload.
-          -- apply IHpayloads.
-             ++ simpl. simpl in Hlt. lia.
-             ++ exact Hrest.
-      + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
-        eapply ProvReady_Replace.
+	             ++ exact Hpayload.
+	          -- apply IHpayloads.
+	             ++ simpl. simpl in Hlt. lia.
+	             ++ exact Hrest.
+      + apply andb_true_iff in Hready as [Hscrut Hbranches].
+        apply ProvReady_Match.
+        * apply IH with (e := e).
+          -- pose proof (expr_size_match_scrutinee_lt e l).
+             lia.
+          -- exact Hscrut.
+        * induction l as [| [name branch] rest IHbranches].
+          -- constructor.
+          -- simpl in Hbranches.
+             apply andb_true_iff in Hbranches as [Hbranch Hrest].
+             constructor.
+             ++ apply IH with (e := branch).
+                ** pose proof (expr_size_match_branch_lt e
+                     ((name, branch) :: rest) name branch (or_introl eq_refl)).
+                   lia.
+                ** exact Hbranch.
+             ++ apply IHbranches.
+                ** simpl. simpl in Hlt. lia.
+                ** exact Hrest.
+	      + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
+	        eapply ProvReady_Replace.
         * exact Hpath.
         * apply IH with (e := e); [simpl in Hlt; lia | exact Hready].
       + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.

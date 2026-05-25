@@ -8,6 +8,71 @@ From Facet.TypeSystem Require Export TypeSafetyRootFacts TypeSafetyReadiness
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
+Lemma store_typed_prefix_ctx_merge_many_left :
+  forall env s Σ tail Γ,
+    store_typed_prefix env s Σ ->
+    ctx_merge_many (ctx_of_sctx Σ) (map ctx_of_sctx tail) = Some Γ ->
+    store_typed_prefix env s (sctx_of_ctx Γ).
+Proof.
+  intros env s Σ tail.
+  revert Σ.
+  induction tail as [|Σh rest IH]; intros Σ Γ Hstore Hmerge.
+  - simpl in Hmerge. inversion Hmerge; subst. exact Hstore.
+  - simpl in Hmerge.
+    destruct (ctx_merge (ctx_of_sctx Σ) (ctx_of_sctx Σh)) as [Σm |] eqn:Hhead;
+      try discriminate.
+    eapply IH.
+    + eapply store_typed_prefix_ctx_merge_left. exact Hstore. exact Hhead.
+    + exact Hmerge.
+Qed.
+
+Lemma store_typed_prefix_ctx_merge_many_selected :
+  forall env s Σ0 tail Γ Σsel,
+    store_typed_prefix env s Σsel ->
+    sctx_same_bindings Σ0 Σsel ->
+    Forall (sctx_same_bindings Σ0) tail ->
+    In Σsel (Σ0 :: tail) ->
+    ctx_merge_many (ctx_of_sctx Σ0) (map ctx_of_sctx tail) = Some Γ ->
+    store_typed_prefix env s (sctx_of_ctx Γ).
+Proof.
+  intros env s Σ0 tail.
+  revert Σ0.
+  induction tail as [|Σh rest IH]; intros Σ0 Γ Σsel Hstore Hsame Hforall Hin Hmerge.
+  - simpl in Hmerge. inversion Hmerge; subst.
+    simpl in Hin. destruct Hin as [Heq | []]. subst. exact Hstore.
+  - simpl in Hmerge.
+    destruct (ctx_merge (ctx_of_sctx Σ0) (ctx_of_sctx Σh)) as [Σm |] eqn:Hhead;
+      try discriminate.
+    inversion Hforall as [|? ? Hsame_h Hforall_rest]; subst.
+    simpl in Hin. destruct Hin as [Heq | [Heq | Hin_rest]].
+    + subst. eapply store_typed_prefix_ctx_merge_many_left.
+      * eapply store_typed_prefix_ctx_merge_left.
+        -- exact Hstore.
+        -- exact Hhead.
+      * exact Hmerge.
+    + subst. eapply store_typed_prefix_ctx_merge_many_left.
+      * eapply store_typed_prefix_ctx_merge_right.
+        -- exact Hstore.
+        -- apply sctx_same_bindings_type_eq. exact Hsame_h.
+        -- exact Hhead.
+      * exact Hmerge.
+    + eapply IH.
+      * exact Hstore.
+      * eapply sctx_same_bindings_trans.
+        -- apply sctx_same_bindings_sym.
+           eapply ctx_merge_same_bindings_left. exact Hhead.
+        -- exact Hsame.
+      * eapply Forall_impl.
+        -- intros Σr Hsame_r.
+           eapply sctx_same_bindings_trans.
+           ++ apply sctx_same_bindings_sym.
+              eapply ctx_merge_same_bindings_left. exact Hhead.
+           ++ exact Hsame_r.
+        -- exact Hforall_rest.
+      * simpl. right. exact Hin_rest.
+      * exact Hmerge.
+Qed.
+
 Theorem eval_preserves_typing_ready_prefix_mutual_core :
   (forall env s e s' v,
     eval env s e s' v ->
@@ -470,9 +535,100 @@ Proof.
           [ eapply value_has_type_if_right_result; eassumption
           | eapply store_ref_targets_preserved_trans; eassumption ] ]
     end.
-	  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
-	      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n Σ T Σ'
-	      Hready _ _.
+  - intros s s_scrut s' scrut branches enum_name variant_name e_branch v
+      Heval_scrut IHscrut Hlookup_branch_eval Heval_branch IHbranch
+      Ω n Σ T Σ' Hready Hstore Htyped.
+    dependent destruction Hready.
+    dependent destruction Htyped.
+    destruct (IHscrut Ω n Σ _ _ ltac:(eassumption) Hstore ltac:(eassumption))
+      as [Hstore_scrut [Hv_scrut Hpres_scrut]].
+    assert (Hready_branch : preservation_ready_expr e_branch)
+      by (eapply lookup_match_branch_preservation_ready; eassumption).
+    unfold lookup_match_branch in Hlookup_branch_eval.
+    match goal with
+    | Hscrut_core : ty_core ?T_scrut = TEnum ?enum_typed ?lts ?args,
+      Hlookup_typed : lookup_enum ?enum_typed env = Some ?edef_typed,
+      Hvariants : enum_variants ?edef_typed = ?v_head :: ?v_tail0,
+      Hhead_branch : lookup_expr_branch (enum_variant_name ?v_head) branches = Some ?e_head0 |- _ =>
+        destruct (value_has_type_enum_variant_lookup env s_scrut enum_name variant_name []
+          T_scrut enum_typed lts args edef_typed Hv_scrut Hscrut_core Hlookup_typed)
+          as [vdef_runtime [Henum_name Hvariant_runtime]];
+        subst enum_name;
+        rewrite Hvariants in Hvariant_runtime;
+        simpl in Hvariant_runtime;
+        destruct (String.eqb variant_name (enum_variant_name v_head)) eqn:Hvariant_head
+    end.
+    + apply String.eqb_eq in Hvariant_head. subst variant_name.
+      assert (Hbranch_eq : e_branch = e_head).
+      {
+        match goal with
+        | Hhead_lookup : lookup_expr_branch (enum_variant_name v_head) branches = Some e_head |- _ =>
+            eapply lookup_expr_branch_deterministic;
+            [ exact Hlookup_branch_eval | exact Hhead_lookup ]
+        end.
+      }
+      subst e_branch.
+      match goal with
+      | Htyped_head : typed_env_structural env Ω n Σ1 e_head T_head Σ_head |- _ =>
+          destruct (IHbranch Ω n Σ1 T_head Σ_head
+                    Hready_branch Hstore_scrut Htyped_head)
+            as [Hstore_branch [Hv_branch Hpres_branch]]
+      end.
+      split.
+      * eapply store_typed_prefix_ctx_merge_many_left; eassumption.
+      * split.
+        -- eapply value_has_type_match_head_result. exact Hv_branch.
+        -- eapply store_ref_targets_preserved_trans; eassumption.
+    + match goal with
+      | Htail_typed : typed_match_tail_env_structural env Ω n Σ1 branches v_tail
+          (ty_core T_head) Σ_tail Ts_tail |- _ =>
+          destruct (typed_match_tail_lookup env Ω n Σ1 branches v_tail
+            (ty_core T_head) Σ_tail Ts_tail variant_name vdef_runtime e_branch
+            Htail_typed Hvariant_runtime Hlookup_branch_eval)
+          as [T_branch [Σ_branch [Htyped_branch [Hcore_branch [HinΣ HinT]]]]]
+      end.
+      destruct (IHbranch Ω n Σ1 T_branch Σ_branch
+                  Hready_branch Hstore_scrut Htyped_branch)
+        as [Hstore_branch [Hv_branch Hpres_branch]].
+      assert (Hsame_head_tail : Forall (sctx_same_bindings Σ_head) Σ_tail).
+      {
+        assert (Hsame_head : sctx_same_bindings Σ1 Σ_head)
+          by (eapply typed_env_structural_same_bindings; eassumption).
+        assert (Hsame_tail : Forall (sctx_same_bindings Σ1) Σ_tail)
+          by (eapply typed_match_tail_env_structural_same_bindings; eassumption).
+        eapply Forall_impl.
+        - intros Σt Hsame_t.
+          eapply sctx_same_bindings_trans.
+          + apply sctx_same_bindings_sym. exact Hsame_head.
+          + exact Hsame_t.
+        - exact Hsame_tail.
+      }
+      assert (Hsame_head_branch : sctx_same_bindings Σ_head Σ_branch).
+      {
+        assert (Hsame_head : sctx_same_bindings Σ1 Σ_head)
+          by (eapply typed_env_structural_same_bindings; eassumption).
+        assert (Hsame_branch : sctx_same_bindings Σ1 Σ_branch)
+          by (eapply typed_env_structural_same_bindings; eassumption).
+        eapply sctx_same_bindings_trans.
+        - apply sctx_same_bindings_sym. exact Hsame_head.
+        - exact Hsame_branch.
+      }
+      split.
+      * eapply store_typed_prefix_ctx_merge_many_selected.
+        -- exact Hstore_branch.
+        -- exact Hsame_head_branch.
+        -- exact Hsame_head_tail.
+        -- simpl. right. exact HinΣ.
+        -- match goal with
+           | Hmerge : ctx_merge_many (ctx_of_sctx Σ_head) (map ctx_of_sctx Σ_tail) = Some Γ_out |- _ =>
+               exact Hmerge
+           end.
+      * split.
+        -- eapply value_has_type_match_tail_result; eassumption.
+        -- eapply store_ref_targets_preserved_trans; eassumption.
+		  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
+		      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n Σ T Σ'
+		      Hready _ _.
 	    inversion Hready.
 	  - intros s s_args s_body fname type_args fdef fcall args vs ret used'
 	      Hlookup Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n Σ

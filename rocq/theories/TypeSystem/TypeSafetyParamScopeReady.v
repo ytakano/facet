@@ -577,13 +577,17 @@ Proof.
                 Hready3 Htyped3 Hcover1 Hscope1)
       as [Hcover3 [frame3 Hscope3]].
     split.
-    + eapply root_env_covers_params_equiv.
-      * apply root_env_equiv_sym. exact H2.
-      * exact Hcover3.
-    + exists frame3. exact Hscope3.
-	  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
-	      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
-	      roots ps frame Hready _ _ _.
+	    + eapply root_env_covers_params_equiv.
+	      * apply root_env_equiv_sym. exact H2.
+	      * exact Hcover3.
+	    + exists frame3. exact Hscope3.
+  - intros s s_scrut s' scrut branches enum_name variant_name e_branch v
+      Heval_scrut IHscrut Hlookup Heval_branch IHbranch
+      Ω n R Σ T Σ' R' roots ps frame Hready Htyped _ _.
+    inversion Hready; subst. inversion Htyped.
+		  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
+		      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
+		      roots ps frame Hready _ _ _.
 	    inversion Hready.
 	  - intros s s_args s_body fname type_args fdef fcall args0 vs ret used'
 	      Hlookup Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ

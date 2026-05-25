@@ -670,8 +670,8 @@ Theorem infer_core_env_state_fuel_roots_sound :
 Proof.
   induction fuel as [|fuel' IH]; intros env Ω n R Σ e T Σ' R' roots Hinfer.
   - simpl in Hinfer. discriminate.
-	  - destruct e as [|l|i|m i t e1 e2|m i e1 e2|i|i l|p|i l|i l l0|e l|
-	        s l l0 l1|s s0 l l0 l1|p e|p e|r p|e|e|e1 e2 e3];
+		  - destruct e as [|l|i|m i t e1 e2|m i e1 e2|i|i l|p|i l|i l l0|e l|
+		        s l l0 l1|s s0 l l0 l1|e l|p e|p e|r p|e|e|e1 e2 e3];
       simpl in Hinfer; try discriminate.
     + inversion Hinfer; subst. constructor.
     + destruct l; inversion Hinfer; subst; constructor.
@@ -914,15 +914,15 @@ Proof.
       { intros R0 Σ0 e0 T0 Σ1 R1 roots1 Hinfer0.
         eapply IH. exact Hinfer0. }
       subst roots.
-      eapply TER_Enum.
-      * exact Hlookup.
-      * exact Hvariant.
-      * exact Hlts.
-      * exact Hargslen.
-      * exact Hbounds.
-      * exact Hpayload_roots.
-    + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
-      destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
+	      eapply TER_Enum.
+	      * exact Hlookup.
+	      * exact Hvariant.
+	      * exact Hlts.
+	      * exact Hargslen.
+	      * exact Hbounds.
+	      * exact Hpayload_roots.
+	    + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
+	      destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
       destruct (root_env_lookup x R) as [roots_result |] eqn:Hroot_result; try discriminate.
       destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
       destruct mut; try discriminate.
@@ -1035,8 +1035,8 @@ Theorem infer_core_env_state_fuel_roots_shadow_safe_sound :
 Proof.
   induction fuel as [|fuel' IH]; intros env Ω n R Σ e T Σ' R' roots Hinfer.
   - simpl in Hinfer. discriminate.
-  - destruct e as [|l|i|m i t e1 e2|m i e1 e2|i|i l|p|i l|i l l0|e l|
-      s l l0 l1|s s0 l l0 l1|p e|p e|r p|e|e|e1 e2 e3];
+	  - destruct e as [|l|i|m i t e1 e2|m i e1 e2|i|i l|p|i l|i l l0|e l|
+	      s l l0 l1|s s0 l l0 l1|e l|p e|p e|r p|e|e|e1 e2 e3];
       simpl in Hinfer; try discriminate.
     + inversion Hinfer; subst. constructor.
     + destruct l; inversion Hinfer; subst; constructor.

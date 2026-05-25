@@ -465,6 +465,23 @@ Proof.
   - eapply ctx_merge_same_bindings_left. exact Hmerge.
 Qed.
 
+Lemma ctx_merge_many_same_bindings_left :
+  forall Σ tail Γ,
+    ctx_merge_many (ctx_of_sctx Σ) (map ctx_of_sctx tail) = Some Γ ->
+    sctx_same_bindings Σ (sctx_of_ctx Γ).
+Proof.
+  intros Σ tail.
+  revert Σ.
+  induction tail as [|Σh rest IH]; intros Σ Γ Hmerge.
+  - simpl in Hmerge. inversion Hmerge; subst. apply sctx_same_bindings_refl.
+  - simpl in Hmerge.
+    destruct (ctx_merge (ctx_of_sctx Σ) (ctx_of_sctx Σh)) as [Σm |] eqn:Hhead;
+      try discriminate.
+    eapply sctx_same_bindings_trans.
+    + eapply ctx_merge_same_bindings_left. exact Hhead.
+    + eapply IH. exact Hmerge.
+Qed.
+
 Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
     : sctx -> expr -> Ty -> sctx -> Prop :=
   | TES_Unit : forall Σ,
@@ -616,6 +633,25 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
       typed_env_structural env Ω n Σ (EIf e1 e2 e3)
         (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2)) Σ4
+  | TES_Match : forall Σ Σ1 Σ_head Σ_tail Γ_out scrut branches
+        enum_name lts args edef v_head v_tail e_head T_scrut T_head Ts_tail,
+      typed_env_structural env Ω n Σ scrut T_scrut Σ1 ->
+      ty_core T_scrut = TEnum enum_name lts args ->
+      lookup_enum enum_name env = Some edef ->
+      Datatypes.length lts = enum_lifetimes edef ->
+      Datatypes.length args = enum_type_params edef ->
+      check_struct_bounds env (enum_bounds edef) args = None ->
+      enum_variants edef = v_head :: v_tail ->
+      enum_variant_fields v_head = [] ->
+      lookup_expr_branch (enum_variant_name v_head) branches = Some e_head ->
+      typed_env_structural env Ω n Σ1 e_head T_head Σ_head ->
+      typed_match_tail_env_structural env Ω n Σ1 branches v_tail
+        (ty_core T_head) Σ_tail Ts_tail ->
+      ctx_merge_many (ctx_of_sctx Σ_head) (map ctx_of_sctx Σ_tail) =
+        Some Γ_out ->
+      typed_env_structural env Ω n Σ (EMatch scrut branches)
+        (MkTy (usage_max_tys_nonempty T_head Ts_tail) (ty_core T_head))
+        (sctx_of_ctx Γ_out)
   | TES_Call : forall Σ Σ' fname fdef args σ,
       In fdef (env_fns env) ->
       fn_name fdef = fname ->
@@ -723,7 +759,23 @@ with typed_fields_env_structural
       typed_env_structural env Ω n Σ e_field T_field Σ1 ->
       ty_compatible_b Ω T_field (instantiate_struct_field_ty lts args f) = true ->
       typed_fields_env_structural env Ω n lts args Σ1 fields rest Σ2 ->
-      typed_fields_env_structural env Ω n lts args Σ fields (f :: rest) Σ2.
+      typed_fields_env_structural env Ω n lts args Σ fields (f :: rest) Σ2
+with typed_match_tail_env_structural
+    (env : global_env) (Ω : outlives_ctx) (n : nat)
+    : sctx -> list (string * expr) -> list enum_variant_def ->
+      TypeCore Ty -> list sctx -> list Ty -> Prop :=
+  | TESMatchTail_Nil : forall Σ branches expected_core,
+      typed_match_tail_env_structural env Ω n Σ branches []
+        expected_core [] []
+  | TESMatchTail_Cons : forall Σ branches v rest e T Σv Σs Ts expected_core,
+      enum_variant_fields v = [] ->
+      lookup_expr_branch (enum_variant_name v) branches = Some e ->
+      typed_env_structural env Ω n Σ e T Σv ->
+      ty_core T = expected_core ->
+      typed_match_tail_env_structural env Ω n Σ branches rest
+        expected_core Σs Ts ->
+      typed_match_tail_env_structural env Ω n Σ branches (v :: rest)
+        expected_core (Σv :: Σs) (T :: Ts).
 
 Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
     : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set -> Prop :=
@@ -1723,7 +1775,12 @@ with typed_args_env_structural_same_bindings :
 with typed_fields_env_structural_same_bindings :
   forall env Ω n lts args Σ fields defs Σ',
     typed_fields_env_structural env Ω n lts args Σ fields defs Σ' ->
-    sctx_same_bindings Σ Σ'.
+    sctx_same_bindings Σ Σ'
+with typed_match_tail_env_structural_same_bindings :
+  forall env Ω n Σ branches variants expected_core Σs Ts,
+    typed_match_tail_env_structural env Ω n Σ branches variants
+      expected_core Σs Ts ->
+    Forall (sctx_same_bindings Σ) Σs.
 Proof.
   - intros env Ω n Σ e T Σ' Htyped.
     induction Htyped.
@@ -1758,8 +1815,8 @@ Proof.
     + eapply sctx_same_bindings_remove_added.
       * exact IHHtyped1.
       * exact IHHtyped2.
-    + exact IHHtyped.
-    + eapply sctx_same_bindings_trans.
+	    + exact IHHtyped.
+	    + eapply sctx_same_bindings_trans.
       * exact IHHtyped.
       * eapply sctx_restore_path_same_bindings.
         match goal with
@@ -1777,12 +1834,23 @@ Proof.
       * eapply sctx_same_bindings_trans.
         -- exact IHHtyped1.
         -- exact IHHtyped2.
-      * eapply ctx_merge_same_bindings_left.
-        match goal with
-        | H : ctx_merge _ _ = Some _ |- _ => exact H
-        end.
-    + eauto using typed_args_env_structural_same_bindings,
-        sctx_same_bindings_trans.
+	      * eapply ctx_merge_same_bindings_left.
+	        match goal with
+	        | H : ctx_merge _ _ = Some _ |- _ => exact H
+	        end.
+	    + eapply sctx_same_bindings_trans.
+	      * exact IHHtyped1.
+	      * eapply sctx_same_bindings_trans.
+	        -- eapply typed_env_structural_same_bindings.
+	           match goal with
+	           | H : typed_env_structural _ _ _ _ _ _ _ |- _ => exact H
+	           end.
+	        -- eapply ctx_merge_many_same_bindings_left.
+	           match goal with
+	           | H : ctx_merge_many _ _ = Some _ |- _ => exact H
+	           end.
+	    + eauto using typed_args_env_structural_same_bindings,
+	        sctx_same_bindings_trans.
     + eauto using typed_args_env_structural_same_bindings,
         sctx_same_bindings_trans.
     + eauto using typed_args_env_structural_same_bindings,
@@ -1805,12 +1873,18 @@ Proof.
     + eapply sctx_same_bindings_trans.
       * eapply typed_env_structural_same_bindings. exact H.
       * exact IHHtyped.
-  - intros env Ω n lts args Σ fields defs Σ' Htyped.
-    induction Htyped.
-    + apply sctx_same_bindings_refl.
-    + eapply sctx_same_bindings_trans.
-      * eapply typed_env_structural_same_bindings. exact H0.
-      * exact IHHtyped.
+	  - intros env Ω n lts args Σ fields defs Σ' Htyped.
+	    induction Htyped.
+	    + apply sctx_same_bindings_refl.
+	    + eapply sctx_same_bindings_trans.
+	      * eapply typed_env_structural_same_bindings. exact H0.
+	      * exact IHHtyped.
+	  - intros env Ω n Σ branches variants expected_core Σs Ts Htyped.
+	    induction Htyped.
+	    + constructor.
+	    + constructor.
+	      * eapply typed_env_structural_same_bindings. exact H1.
+	      * exact IHHtyped.
 Qed.
 
 Lemma typed_env_structural_branch_type_eq :
@@ -1849,6 +1923,14 @@ Inductive borrow_ok_env_structural (env : global_env)
       borrow_ok_args_env_structural env PBS Γ payloads PBS' ->
       borrow_ok_env_structural env PBS Γ
         (EEnum enum_name variant_name lts args payloads) PBS'
+  | BOES_Match : forall PBS PBS1 PBS2 Γ scrut name branch rest,
+      borrow_ok_env_structural env PBS Γ scrut PBS1 ->
+      borrow_ok_env_structural env PBS1 Γ branch PBS2 ->
+      Forall
+        (fun branch0 =>
+          borrow_ok_env_structural env PBS1 Γ (snd branch0) PBS2)
+        rest ->
+      borrow_ok_env_structural env PBS Γ (EMatch scrut ((name, branch) :: rest)) PBS2
   | BOES_BorrowShared : forall PBS Γ p x path,
       borrow_target_of_place p = (x, path) ->
       pbs_has_mut x path PBS = false ->

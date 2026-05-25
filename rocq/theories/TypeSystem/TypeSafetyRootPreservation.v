@@ -614,12 +614,16 @@ Proof.
         split;
         [ eapply store_typed_ctx_merge_right; eassumption
         | split;
-          [ eapply value_has_type_if_right_result; eassumption
-          | eapply store_ref_targets_preserved_trans; eassumption ] ]
-    end.
-	  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
-	      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
-	      roots Hready _ _ _ _ _.
+	          [ eapply value_has_type_if_right_result; eassumption
+	          | eapply store_ref_targets_preserved_trans; eassumption ] ]
+	    end.
+  - intros s s_scrut s' scrut branches enum_name variant_name e_branch v
+      Heval_scrut IHscrut Hlookup_branch_eval Heval_branch IHbranch
+      Ω n R Σ T Σ' R' roots Hready _ _ _ _ Htyped.
+    inversion Htyped.
+		  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
+		      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
+		      roots Hready _ _ _ _ _.
 	    inversion Hready.
 	  - intros s s_args s_body fname type_args fdef fcall args0 vs ret used'
 	      Hlookup Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ

@@ -248,6 +248,30 @@ Fixpoint ctx_merge (Γ2 Γ3 : ctx) : option ctx :=
   | _, _ => None
   end.
 
+Fixpoint ctx_merge_many (head : ctx) (tail : list ctx) : option ctx :=
+  match tail with
+  | [] => Some head
+  | Γ :: rest =>
+      match ctx_merge head Γ with
+      | Some merged => ctx_merge_many merged rest
+      | None => None
+      end
+  end.
+
+Fixpoint usage_max_tys_nonempty (head : Ty) (tail : list Ty) : usage :=
+  match tail with
+  | [] => ty_usage head
+  | T :: rest => usage_max (ty_usage head) (usage_max_tys_nonempty T rest)
+  end.
+
+Fixpoint lookup_expr_branch (name : string) (branches : list (string * expr))
+    : option expr :=
+  match branches with
+  | [] => None
+  | (name', e) :: rest =>
+      if String.eqb name name' then Some e else lookup_expr_branch name rest
+  end.
+
 Definition fn_signature_ty_with_usage (u : usage) (f : fn_def) : Ty :=
   let m := fn_lifetimes f in
   let body :=

@@ -88,13 +88,17 @@ let install_generics params =
   current_lifetimes := lts;
   params
 
+let expr_of_place = function
+  | NPVar x -> NVar x
+  | p -> NPlace p
+
 %}
 
-%token KW_FN KW_FOR KW_STRUCT KW_ENUM KW_TRAIT KW_IMPL KW_LET KW_IN KW_MUT KW_DROP KW_REPLACE KW_CLOSURE
+%token KW_FN KW_FOR KW_STRUCT KW_ENUM KW_TRAIT KW_IMPL KW_MATCH KW_LET KW_IN KW_MUT KW_DROP KW_REPLACE KW_CLOSURE
 %token KW_AFFINE KW_LINEAR KW_UNRESTRICTED KW_ISIZE KW_F64
 %token KW_IF KW_ELSE KW_TRUE KW_FALSE KW_BOOL KW_WHERE
 %token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET LANGLE RANGLE
-%token ARROW AMP STAR
+%token ARROW FATARROW AMP STAR
 %token COMMA COLON DCOLON EQUAL SEMI UNDERSCORE DOT PLUS
 %token <string> ID
 %token <string> LIFETIME
@@ -263,10 +267,10 @@ atom_expr:
   | enum_name = ID; LANGLE; args = separated_nonempty_list(COMMA, type_arg); RANGLE;
     DCOLON; variant_name = ID; LPAREN; payloads = separated_list(COMMA, atom_expr); RPAREN
     { NEnum (enum_name, args, variant_name, payloads) }
+  | KW_MATCH; scrut = match_scrut; LBRACE; branches = match_branches; RBRACE
+    { NMatch (scrut, branches) }
   | p = place
-    { match p with
-      | NPVar x -> NVar x
-      | _ -> NPlace p }
+    { expr_of_place p }
   | LPAREN; KW_DROP; e = expr; RPAREN
     { NDrop e }
   | LPAREN; KW_REPLACE; p = place; e = atom_expr; RPAREN
@@ -306,6 +310,22 @@ field_suffix:
 
 struct_literal_field:
   | name = ID; EQUAL; e = expr { (name, e) }
+
+match_branches:
+  | { [] }
+  | first = match_branch; rest = match_branch_tail { first :: rest }
+
+match_branch_tail:
+  | { [] }
+  | COMMA { [] }
+  | COMMA; branch = match_branch; rest = match_branch_tail { branch :: rest }
+
+match_branch:
+  | variant = ID; FATARROW; e = expr { (variant, e) }
+
+match_scrut:
+  | p = place { expr_of_place p }
+  | LPAREN; e = expr; RPAREN { e }
 
 ty:
   | KW_AFFINE;       c = ty_core { NTy (UAffine,       c) }

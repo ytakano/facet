@@ -122,6 +122,10 @@ Inductive preservation_ready_expr : expr -> Prop :=
   | PRE_Enum : forall enum_name variant_name lts args payloads,
       preservation_ready_args payloads ->
       preservation_ready_expr (EEnum enum_name variant_name lts args payloads)
+  | PRE_Match : forall scrut branches,
+      preservation_ready_expr scrut ->
+      preservation_ready_fields branches ->
+      preservation_ready_expr (EMatch scrut branches)
   | PRE_Drop : forall e,
       preservation_ready_expr e ->
       preservation_ready_expr (EDrop e)
@@ -152,6 +156,20 @@ with preservation_ready_fields : list (string * expr) -> Prop :=
       preservation_ready_expr e ->
       preservation_ready_fields rest ->
       preservation_ready_fields ((name, e) :: rest).
+
+Lemma lookup_match_branch_preservation_ready :
+  forall variant branches e,
+    preservation_ready_fields branches ->
+    lookup_match_branch variant branches = Some e ->
+    preservation_ready_expr e.
+Proof.
+  intros variant branches e Hready Hlookup.
+  induction Hready as [| name e0 rest He0 Hrest IH]; simpl in Hlookup.
+  - discriminate.
+  - destruct (String.eqb variant name) eqn:Heq.
+    + inversion Hlookup; subst. exact He0.
+    + apply IH. exact Hlookup.
+Qed.
 
 Definition env_fns_preservation_ready (env : global_env) : Prop :=
   forall f, In f (env_fns env) -> preservation_ready_expr (fn_body f).
@@ -274,6 +292,23 @@ Proof.
       inversion Hrename; subst.
       apply PRE_Enum.
       eapply alpha_rename_preservation_ready_args; eauto.
+    + destruct (alpha_rename_expr ρ used scrut) as [scrutr used_scrut]
+        eqn:Hscrut.
+      destruct
+        ((fix go (used0 : list ident) (fields0 : list (string * expr))
+             {struct fields0} : list (string * expr) * list ident :=
+            match fields0 with
+            | [] => ([], used0)
+            | (fname, e) :: rest =>
+                let (e', used1) := alpha_rename_expr ρ used0 e in
+                let (rest', used2) := go used1 rest in
+                ((fname, e') :: rest', used2)
+            end) used_scrut branches)
+        as [branchesr used_branches] eqn:Hbranches.
+      inversion Hrename; subst.
+      apply PRE_Match.
+      * eapply alpha_rename_preservation_ready_expr; eauto.
+      * eapply alpha_rename_preservation_ready_fields; eauto.
     + destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
       inversion Hrename; subst.
       apply PRE_Drop.
@@ -547,17 +582,29 @@ Proof.
     match goal with
     | H : preservation_ready_expr e1 |- _ => exact H
     end.
-  - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_else IHelse
-      Hready.
-    inversion Hready; subst.
-    rewrite (IHelse ltac:(match goal with
-      | H : preservation_ready_expr e3 |- _ => exact H
-      end)).
-    apply IHcond.
-    match goal with
-    | H : preservation_ready_expr e1 |- _ => exact H
-    end.
-	  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
+	  - intros s s1 s2 e1 e2 e3 v Heval_cond IHcond Heval_else IHelse
+	      Hready.
+	    inversion Hready; subst.
+	    rewrite (IHelse ltac:(match goal with
+	      | H : preservation_ready_expr e3 |- _ => exact H
+	      end)).
+	    apply IHcond.
+	    match goal with
+	    | H : preservation_ready_expr e1 |- _ => exact H
+	    end.
+	  - intros s s_scrut s' scrut branches enum_name variant_name e_branch v
+	      Heval_scrut IHscrut Hlookup Heval_branch IHbranch Hready.
+	    inversion Hready; subst.
+	    rewrite (IHbranch ltac:(match goal with
+	      | H : preservation_ready_fields branches |- _ =>
+	          eapply lookup_match_branch_preservation_ready; eauto
+	      | H : preservation_ready_expr e_branch |- _ => exact H
+	      end)).
+	    apply IHscrut.
+	    match goal with
+	    | H : preservation_ready_expr scrut |- _ => exact H
+	    end.
+		  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
 	      Hcaps Heval_args IHargs Hrename Heval_body IHbody Hready.
 	    inversion Hready.
 	  - intros s s_args s_body fname type_args fdef fcall args vs ret used'

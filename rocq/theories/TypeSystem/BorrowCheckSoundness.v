@@ -184,11 +184,13 @@ Proof.
       -- apply IH with (e := a).
          pose proof (expr_size_enum_payload_lt s s0 l l0 (a :: rest) a
            (or_introl eq_refl)) as Harg_lt.
-         simpl in Hlt. lia.
-         exact Ha.
-      -- apply IHargs; [simpl; simpl in Hlt; lia | exact Hcheck].
-  (* EReplace *)
-  + destruct p as [x | q | q f].
+	         simpl in Hlt. lia.
+	         exact Ha.
+	      -- apply IHargs; [simpl; simpl in Hlt; lia | exact Hcheck].
+  (* EMatch *)
+  + discriminate.
+	  (* EReplace *)
+	  + destruct p as [x | q | q f].
     * apply BO_Replace.
       apply IH with (e := e). simpl in Hlt; lia. exact Hcheck.
     * simpl in Hcheck.

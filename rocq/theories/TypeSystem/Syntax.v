@@ -60,6 +60,7 @@ Inductive expr : Type :=
 | ECallExpr : expr -> list expr -> expr
 | EStruct   : string -> list lifetime -> list Ty -> list (string * expr) -> expr
 | EEnum     : string -> string -> list lifetime -> list Ty -> list expr -> expr
+| EMatch    : expr -> list (string * expr) -> expr
 | EReplace  : place -> expr -> expr
 | EAssign   : place -> expr -> expr
 | EBorrow   : ref_kind -> place -> expr

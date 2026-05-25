@@ -305,6 +305,8 @@ Fixpoint lookup_expr_field (name : string) (fields : list (string * expr)) : opt
       if String.eqb name field_name then Some e else lookup_expr_field name rest
   end.
 
+Definition lookup_match_branch := lookup_expr_field.
+
 Fixpoint type_lookup_path (env : global_env) (T : Ty) (p : field_path) : option Ty :=
   match p with
   | [] => Some T
@@ -491,6 +493,12 @@ Inductive eval (env : global_env) : store -> expr -> store -> value -> Prop :=
       eval env s e1 s1 (VBool false) ->
       eval env s1 e3 s2 v ->
       eval env s (EIf e1 e2 e3) s2 v
+
+  | Eval_MatchEnum : forall s s_scrut s' scrut branches enum_name variant_name e_branch v,
+      eval env s scrut s_scrut (VEnum enum_name variant_name []) ->
+      lookup_match_branch variant_name branches = Some e_branch ->
+      eval env s_scrut e_branch s' v ->
+      eval env s (EMatch scrut branches) s' v
 
   (* f(args): look up function, evaluate arguments, evaluate body. *)
   | Eval_Call : forall s s_args s_body fname fdef fcall args vs ret used',

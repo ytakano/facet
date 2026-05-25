@@ -33,6 +33,10 @@ Inductive provenance_ready_expr : expr -> Prop :=
   | ProvReady_Enum : forall enum_name variant_name lts args payloads,
       provenance_ready_args payloads ->
       provenance_ready_expr (EEnum enum_name variant_name lts args payloads)
+  | ProvReady_Match : forall scrut branches,
+      provenance_ready_expr scrut ->
+      provenance_ready_fields branches ->
+      provenance_ready_expr (EMatch scrut branches)
   | ProvReady_Let : forall m x T e1 e2,
       provenance_ready_expr e1 ->
       provenance_ready_expr e2 ->
@@ -184,9 +188,9 @@ Proof.
       inversion Hrename; subst.
       apply ProvReady_Struct.
       eapply alpha_rename_provenance_ready_fields; eauto.
-    + destruct
-        ((fix go (used0 : list ident) (args0 : list expr)
-             {struct args0} : list expr * list ident :=
+	    + destruct
+	        ((fix go (used0 : list ident) (args0 : list expr)
+	             {struct args0} : list expr * list ident :=
             match args0 with
             | [] => ([], used0)
             | arg :: rest =>
@@ -195,10 +199,26 @@ Proof.
                 (arg' :: rest', used2)
             end) used payloads)
         as [payloadsr used_payloads] eqn:Hpayloads.
+	      inversion Hrename; subst.
+	      apply ProvReady_Enum.
+	      eapply alpha_rename_provenance_ready_args; eauto.
+    + destruct (alpha_rename_expr ρ used scrut) as [scrutr used_scrut] eqn:Hscrut.
+      destruct
+        ((fix go (used0 : list ident) (branches0 : list (string * expr))
+             {struct branches0} : list (string * expr) * list ident :=
+            match branches0 with
+            | [] => ([], used0)
+            | (variant_name, e) :: rest =>
+                let (e', used1') := alpha_rename_expr ρ used0 e in
+                let (rest', used2) := go used1' rest in
+                ((variant_name, e') :: rest', used2)
+            end) used_scrut branches)
+        as [branchesr used_branches] eqn:Hbranches.
       inversion Hrename; subst.
-      apply ProvReady_Enum.
-      eapply alpha_rename_provenance_ready_args; eauto.
-    + destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
+      apply ProvReady_Match.
+      * eapply alpha_rename_provenance_ready_expr; eauto.
+      * eapply alpha_rename_provenance_ready_fields; eauto.
+	    + destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
       destruct (alpha_rename_expr
         ((x, fresh_ident x (x :: free_vars_expr e2 ++ used1)) :: ρ)
         (fresh_ident x (x :: free_vars_expr e2 ++ used1) ::

@@ -659,6 +659,9 @@ Fixpoint expr_local_store_names (e : expr) : list ident :=
       fields_local_store_names_with expr_local_store_names fields
   | EEnum _ _ _ _ payloads =>
       args_local_store_names_with expr_local_store_names payloads
+  | EMatch scrut branches =>
+      expr_local_store_names scrut ++
+      fields_local_store_names_with expr_local_store_names branches
   | EReplace _ e_new => expr_local_store_names e_new
   | EAssign _ e_new => expr_local_store_names e_new
   | EBorrow _ _ => []

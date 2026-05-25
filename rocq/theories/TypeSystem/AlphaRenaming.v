@@ -209,6 +209,10 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
       expr_alpha ρ
         (EEnum enum_name variant_name lts args payloads)
         (EEnum enum_name variant_name lts args payloadsr)
+  | EA_Match : forall ρ scrut scrutr branches branchesr,
+      expr_alpha ρ
+        (EMatch scrut branches)
+        (EMatch scrutr branchesr)
   | EA_Replace : forall ρ p pr e er,
       place_alpha ρ p pr ->
       expr_alpha ρ e er ->
@@ -1083,11 +1087,11 @@ Proof.
   - injection Hrename as <- _. simpl in Hplace.
     injection Hplace as <-.
     exists (PVar i). split; reflexivity.
-  - destruct (alpha_rename_expr ρ used e1) as [e1r used1].
+  - destruct (alpha_rename_expr ρ used e1) as [er0 used0].
     destruct (alpha_rename_expr
-      ((i, fresh_ident i (i :: free_vars_expr e2 ++ used1)) :: ρ)
-      (fresh_ident i (i :: free_vars_expr e2 ++ used1) ::
-       i :: free_vars_expr e2 ++ used1) e2).
+      ((i, fresh_ident i (i :: free_vars_expr e2 ++ used0)) :: ρ)
+      (fresh_ident i (i :: free_vars_expr e2 ++ used0) ::
+       i :: free_vars_expr e2 ++ used0) e2).
     injection Hrename as <- _. simpl in Hplace. discriminate.
   - destruct (alpha_rename_expr ρ used e1) as [e1r used1].
     destruct (alpha_rename_expr
@@ -1118,7 +1122,7 @@ Proof.
                      (arg' :: rest', used2)
                  end) used l0).
     injection Hrename as <- _. simpl in Hplace. discriminate.
-  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+  - destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     destruct ((fix go (used0 : list ident) (args0 : list expr)
                 : list expr * list ident :=
                  match args0 with
@@ -1149,14 +1153,29 @@ Proof.
                      (e0' :: rest', used2)
                  end) used l1).
     injection Hrename as <- _. simpl in Hplace. discriminate.
-  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
-    injection Hrename as <- _. simpl in Hplace. discriminate.
-  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
-    injection Hrename as <- _. simpl in Hplace. discriminate.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
-    injection Hrename as <- <-. simpl in Hplace.
+    destruct ((fix go (used0 : list ident) (branches0 : list (string * expr))
+                : list (string * expr) * list ident :=
+                 match branches0 with
+                 | [] => ([], used0)
+                 | (variant_name, e0) :: rest =>
+                     let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+                     let (rest', used2) := go used1 rest in
+                     ((variant_name, e0') :: rest', used2)
+                 end) used0 l).
+    injection Hrename as <- _. simpl in Hplace. discriminate.
+  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+    inversion Hrename; subst; clear Hrename. simpl in Hplace.
+    try discriminate; contradiction.
+  - simpl in Hrename.
+    destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
+    inversion Hrename; subst; clear Hrename.
+    simpl in Hplace. discriminate.
+  - destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
+    injection Hrename as <- _.
+    simpl in Hplace.
     destruct (expr_as_place er0) as [pr0 |] eqn:Hpr0; [|discriminate].
-    injection Hplace as <-.
+    inversion Hplace; subst; clear Hplace.
     destruct (IHe used er0 used0 pr0 He Hpr0) as [p [Hp Hrename_p]].
     exists (PDeref p). split.
     + simpl. rewrite Hp. reflexivity.
@@ -1243,13 +1262,25 @@ Proof.
                  end) used l1).
     injection Hrename as <- _. reflexivity.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+    destruct ((fix go (used0 : list ident) (branches0 : list (string * expr))
+                : list (string * expr) * list ident :=
+                 match branches0 with
+                 | [] => ([], used0)
+                 | (variant_name, e0) :: rest =>
+                     let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+                     let (rest', used2) := go used1 rest in
+                     ((variant_name, e0') :: rest', used2)
+                 end) used0 l).
+    injection Hrename as <- _. reflexivity.
+  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
     injection Hrename as <- _. reflexivity.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
     injection Hrename as <- _. reflexivity.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
-    injection Hrename as <- <-. simpl in Hnone.
-    destruct (expr_as_place er0) as [pr |] eqn:Hpr; [discriminate |].
-    simpl. rewrite (IHe used er0 used0 He Hpr). reflexivity.
+    inversion Hrename; subst; clear Hrename.
+    simpl in Hnone.
+    destruct (expr_as_place er0) as [pr |] eqn:Hpr; [inversion Hnone |].
+    simpl. rewrite (IHe used er0 _ He Hpr). reflexivity.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
     injection Hrename as <- _. reflexivity.
   - destruct (alpha_rename_expr ρ used e1) as [e1r used1].
@@ -1467,6 +1498,13 @@ Fixpoint expr_size (e : expr) : nat :=
             | [] => 0
             | e :: rest => expr_size e + go rest
             end) payloads)
+  | EMatch scrut branches =>
+      S (expr_size scrut +
+         (fix go (branches0 : list (string * expr)) : nat :=
+            match branches0 with
+            | [] => 0
+            | (_, e) :: rest => expr_size e + go rest
+            end) branches)
   | EReplace _ e => S (expr_size e)
   | EAssign _ e => S (expr_size e)
   | EBorrow _ _ => 1
@@ -1555,6 +1593,26 @@ Proof.
   - simpl in *. destruct Hin as [<- | Hin].
     + lia.
     + specialize (IH payload Hin). simpl in IH. lia.
+Qed.
+
+Lemma expr_size_match_scrutinee_lt :
+  forall scrut branches,
+    expr_size scrut < expr_size (EMatch scrut branches).
+Proof.
+  intros. simpl. lia.
+Qed.
+
+Lemma expr_size_match_branch_lt :
+  forall scrut branches variant branch,
+    In (variant, branch) branches ->
+    expr_size branch < expr_size (EMatch scrut branches).
+Proof.
+  intros scrut branches.
+  induction branches as [| [name e] rest IH]; intros variant branch Hin.
+  - contradiction.
+  - simpl in *. destruct Hin as [Heq | Hin].
+    + inversion Heq; subst. lia.
+    + specialize (IH variant branch Hin). simpl in IH. lia.
 Qed.
 
 Lemma alpha_rename_call_args_used_extends : forall ρ used args argsr used',
@@ -1860,6 +1918,34 @@ Proof.
       -- exact Hrename0.
     * symmetry. exact Hpayloads.
     * exact Hin.
+  + destruct (alpha_rename_expr ρ used e) as [scrutr used0] eqn:Hscrut.
+    remember
+      ((fix go (used0 : list ident) (branches0 : list (string * expr))
+          : list (string * expr) * list ident :=
+          match branches0 with
+          | [] => ([], used0)
+          | (variant_name, e0) :: rest =>
+              let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+              let (rest', used2) := go used1 rest in
+              ((variant_name, e0') :: rest', used2)
+          end) used0 l) as r eqn:Hbranches.
+    destruct r as [branchesr used_branches].
+    injection Hrename as _ <-.
+    eapply alpha_rename_struct_fields_used_extends.
+    * intros used_branch variant_name ebranch er0 used_tail Hin_branch Hrename0.
+      eapply IH.
+      -- pose proof (expr_size_match_branch_lt e l variant_name ebranch Hin_branch)
+           as Hbranch_lt.
+         assert (expr_size ebranch < n) as Hlt_branch by lia.
+         exact Hlt_branch.
+      -- exact Hrename0.
+    * symmetry. exact Hbranches.
+    * eapply IH.
+      -- pose proof (expr_size_match_scrutinee_lt e l) as Hscrut_lt.
+         assert (expr_size e < n) as Hlt_scrut by lia.
+         exact Hlt_scrut.
+      -- exact Hscrut.
+      -- exact Hin.
   + destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as _ <-.
     eapply IH.
@@ -1872,8 +1958,8 @@ Proof.
     * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
     * exact He.
     * exact Hin.
-  + (* EBorrow: returns used unchanged *)
-    injection Hrename as _ <-. exact Hin.
+	  + (* EBorrow: returns used unchanged *)
+	    inversion Hrename; subst; exact Hin.
   + (* EDeref: like EDrop *)
     destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as _ <-.
@@ -2242,18 +2328,50 @@ Proof.
         -- exact Hrename0.
       * symmetry. exact Hpayloads.
       * exact Hin.
-    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
-      injection Hrename as <- <-.
-      eapply IH.
-      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
-      * exact He.
-      * exact Hin.
-    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
-      injection Hrename as <- <-.
-      eapply IH.
-      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
-      * exact He.
-      * exact Hin.
+	    + destruct (alpha_rename_expr rho used e) as [scrutr used0] eqn:Hscrut.
+	      remember
+	        ((fix go (used0 : list ident) (branches0 : list (string * expr))
+	            : list (string * expr) * list ident :=
+	            match branches0 with
+	            | [] => ([], used0)
+	            | (variant_name, e0) :: rest =>
+	                let (e0', used1) := alpha_rename_expr rho used0 e0 in
+	                let (rest', used2) := go used1 rest in
+	                ((variant_name, e0') :: rest', used2)
+	            end) used0 l) as r eqn:Hbranches.
+	      destruct r as [branchesr used_branches].
+	      inversion Hrename; subst; clear Hrename.
+	      simpl in Hin. apply in_app_or in Hin. destruct Hin as [Hin | Hin].
+	      * eapply alpha_rename_struct_fields_used_extends.
+	        -- intros used_branch variant_name ebranch er0 used_tail Hin_branch Hrename0.
+	           eapply alpha_rename_expr_used_extends. exact Hrename0.
+	        -- symmetry. exact Hbranches.
+	        -- eapply IH.
+	           ++ pose proof (expr_size_match_scrutinee_lt e l) as Hscrut_lt.
+	              assert (expr_size e < n) as Hlt_scrut by lia. exact Hlt_scrut.
+	           ++ exact Hscrut.
+	           ++ exact Hin.
+	      * eapply alpha_rename_struct_fields_local_store_names_in_used.
+	        -- intros used_branch variant_name ebranch er0 used_tail Hin_branch Hrename0.
+	           eapply IH.
+	           ++ pose proof (expr_size_match_branch_lt e l variant_name ebranch Hin_branch)
+	                as Hbranch_lt.
+	              assert (expr_size ebranch < n) as Hlt_branch by lia. exact Hlt_branch.
+	           ++ exact Hrename0.
+	        -- symmetry. exact Hbranches.
+	        -- exact Hin.
+	    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
+	      injection Hrename as <- <-.
+	      eapply IH.
+	      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
+	      * exact He.
+	      * exact Hin.
+	    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
+	      injection Hrename as <- <-.
+	      eapply IH.
+	      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
+	      * exact He.
+	      * exact Hin.
     + injection Hrename as <- <-. simpl in Hin. contradiction.
     + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
       injection Hrename as <- <-.
@@ -2584,16 +2702,44 @@ Proof.
            exact Hlt_payload.
         -- exact Hrename0.
       * symmetry. exact Hpayloads.
-    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
-      inversion Hrename; subst. simpl.
-      eapply IH.
-      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
-      * exact He.
-    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
-      inversion Hrename; subst. simpl.
-      eapply IH.
-      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
-      * exact He.
+	    + destruct (alpha_rename_expr rho used e) as [scrutr used0] eqn:Hscrut.
+	      remember
+	        ((fix go (used0 : list ident) (branches0 : list (string * expr))
+	            : list (string * expr) * list ident :=
+	            match branches0 with
+	            | [] => ([], used0)
+	            | (variant_name, e0) :: rest =>
+	                let (e0', used1) := alpha_rename_expr rho used0 e0 in
+	                let (rest', used2) := go used1 rest in
+	                ((variant_name, e0') :: rest', used2)
+	            end) used0 l) as r eqn:Hbranches.
+	      destruct r as [branchesr used_branches].
+	      injection Hrename as <- _. simpl. apply Forall_app. split.
+	      * eapply IH.
+	        -- pose proof (expr_size_match_scrutinee_lt e l) as Hscrut_lt.
+	           assert (expr_size e < n) as Hlt_scrut by lia. exact Hlt_scrut.
+	        -- exact Hscrut.
+	      * apply (Forall_fresh_weaken used used0).
+	        -- intros x Hin.
+	           eapply alpha_rename_expr_used_extends; eauto.
+	        -- eapply alpha_rename_struct_fields_local_store_names_fresh_used.
+	           ++ intros used_branch variant_name ebranch er0 used_tail Hin_branch Hrename0.
+	              eapply IH.
+	              ** pose proof (expr_size_match_branch_lt e l variant_name ebranch Hin_branch)
+	                   as Hbranch_lt.
+	                 assert (expr_size ebranch < n) as Hlt_branch by lia. exact Hlt_branch.
+	              ** exact Hrename0.
+	           ++ symmetry. exact Hbranches.
+	    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
+	      inversion Hrename; subst. simpl.
+	      eapply IH.
+	      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
+	      * exact He.
+	    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
+	      inversion Hrename; subst. simpl.
+	      eapply IH.
+	      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
+	      * exact He.
     + injection Hrename as <- _. simpl. constructor.
     + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
       inversion Hrename; subst. simpl.
@@ -2962,18 +3108,54 @@ Proof.
            assert (expr_size epayload < n) as Hlt_payload by lia. exact Hlt_payload.
         -- exact Hrename0.
       * symmetry. exact Hpayloads.
-    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
-      injection Hrename as <- _.
-      simpl.
-      eapply IH.
-      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
-      * exact He.
-    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
-      injection Hrename as <- _.
-      simpl.
-      eapply IH.
-      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
-      * exact He.
+	    + destruct (alpha_rename_expr rho used e) as [scrutr used0] eqn:Hscrut.
+	      remember
+	        ((fix go (used0 : list ident) (branches0 : list (string * expr))
+	            : list (string * expr) * list ident :=
+	            match branches0 with
+	            | [] => ([], used0)
+	            | (variant_name, e0) :: rest =>
+	                let (e0', used1) := alpha_rename_expr rho used0 e0 in
+	                let (rest', used2) := go used1 rest in
+	                ((variant_name, e0') :: rest', used2)
+	            end) used0 l) as r eqn:Hbranches.
+	      destruct r as [branchesr used_branches].
+	      inversion Hrename; subst; clear Hrename. simpl.
+	      eapply NoDup_app_from_Forall.
+	      * eapply IH.
+	        -- pose proof (expr_size_match_scrutinee_lt e l) as Hscrut_lt.
+	           assert (expr_size e < n) as Hlt_scrut by lia. exact Hlt_scrut.
+	        -- exact Hscrut.
+	      * eapply alpha_rename_struct_fields_local_store_names_nodup.
+	        -- intros used_branch variant_name ebranch er0 used_tail Hin_branch Hrename0.
+	           eapply IH.
+	           ++ pose proof (expr_size_match_branch_lt e l variant_name ebranch Hin_branch)
+	                as Hbranch_lt.
+	              assert (expr_size ebranch < n) as Hlt_branch by lia. exact Hlt_branch.
+	           ++ exact Hrename0.
+	        -- symmetry. exact Hbranches.
+	      * eapply Forall_not_in_app_of_used with (used := used0).
+	        -- intros x Hin.
+	           eapply alpha_rename_expr_local_store_names_in_used.
+	           ++ exact Hscrut.
+	           ++ exact Hin.
+	        -- eapply alpha_rename_struct_fields_local_store_names_fresh_used.
+	           ++ intros used_branch variant_name ebranch er0 used_tail Hin_branch Hrename0.
+	              eapply alpha_rename_expr_local_store_names_fresh_used.
+	              exact Hrename0.
+	           ++ symmetry. exact Hbranches.
+	    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
+	      injection Hrename as <- _.
+	      simpl.
+	      eapply IH.
+	      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
+	      * exact He.
+	    + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
+	      injection Hrename as <- _.
+	      simpl.
+	      eapply IH.
+	      * simpl in Hlt. assert (expr_size e < n) as Hlt_e by lia. exact Hlt_e.
+	      * exact He.
     + injection Hrename as <- _. simpl. constructor.
     + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
       injection Hrename as <- _.
@@ -3870,11 +4052,25 @@ Proof.
 		         exact Hlt_payload.
 		      -- exact Hdisj0.
 		      -- exact Hrename0.
-		    * exact Hdisj.
-		    * symmetry. exact Hpayloads.
-		  + (* EReplace p e *)
-	    destruct (disjoint_names_cons_l (place_name p) (free_vars_expr e)
-      (rename_range ρ) Hdisj) as [Hpx Hdisj_e].
+			    * exact Hdisj.
+			    * symmetry. exact Hpayloads.
+			  + destruct (alpha_rename_expr ρ used e) as [scrutr used0] eqn:Hscrut.
+			    remember
+			      ((fix go (used0 : list ident) (branches0 : list (string * expr))
+			          : list (string * expr) * list ident :=
+			          match branches0 with
+			          | [] => ([], used0)
+			          | (variant_name, e0) :: rest =>
+			              let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+			              let (rest', used2) := go used1 rest in
+			              ((variant_name, e0') :: rest', used2)
+			          end) used0 l) as r eqn:Hbranches.
+			    destruct r as [branchesr used_branches].
+			    injection Hrename as <- _.
+			    apply EA_Match.
+			  + (* EReplace p e *)
+		    destruct (disjoint_names_cons_l (place_name p) (free_vars_expr e)
+	      (rename_range ρ) Hdisj) as [Hpx Hdisj_e].
     destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as <- _.
     constructor.
@@ -4402,6 +4598,31 @@ Proof.
       constructor; [exact Hctx4r | exact Hrest_names | exact Hxr_range].
 Qed.
 
+Lemma ctx_alpha_merge_many_forward :
+  forall ρ Γ Γr tail tailr Γout,
+    ctx_alpha ρ Γ Γr ->
+    Forall2 (ctx_alpha ρ) tail tailr ->
+    ctx_merge_many (ctx_of_sctx Γ) (map ctx_of_sctx tail) = Some Γout ->
+    exists Γoutr,
+      ctx_merge_many (ctx_of_sctx Γr) (map ctx_of_sctx tailr) = Some Γoutr /\
+      ctx_alpha ρ Γout Γoutr.
+Proof.
+  intros ρ Γ Γr tail tailr Γout Hctx Htails Hmerge.
+  revert Γ Γr Γout Hctx Hmerge.
+  induction Htails as [|Σ Σr rest restr HΣ Hrest IH];
+    intros Γ Γr Γout Hctx Hmerge.
+  - simpl in Hmerge. inversion Hmerge; subst.
+    exists Γr. split; [reflexivity | exact Hctx].
+  - simpl in Hmerge.
+    destruct (ctx_merge (ctx_of_sctx Γ) (ctx_of_sctx Σ)) as [Γm |] eqn:Hhead;
+      try discriminate.
+    destruct (ctx_alpha_merge_forward ρ Γ Γr Σ Σr Γm Hctx HΣ Hhead)
+      as [Γmr [Hhead_r Hctx_m]].
+    destruct (IH Γm Γmr Γout Hctx_m Hmerge)
+      as [Γoutr [Htail_r Hctx_out]].
+    exists Γoutr. simpl. unfold ctx_of_sctx in *. rewrite Hhead_r. split; assumption.
+Qed.
+
 Lemma sctx_same_bindings_names_alpha : forall Σ Σ',
   sctx_same_bindings Σ Σ' ->
   ctx_names Σ' = ctx_names Σ.
@@ -4424,6 +4645,74 @@ Proof.
   - destruct (String.eqb fname fname0) eqn:Hname.
     + injection Hlookup as <-. simpl. left. reflexivity.
     + simpl. right. eapply IH. exact Hlookup.
+Qed.
+
+Lemma lookup_expr_branch_free_vars_in :
+  forall x name branches e,
+    lookup_expr_branch name branches = Some e ->
+    In x (free_vars_expr e) ->
+    In x ((fix go (branches0 : list (string * expr)) : list ident :=
+      match branches0 with
+      | [] => []
+      | (_, e0) :: rest => free_vars_expr e0 ++ go rest
+      end) branches).
+Proof.
+  intros x name branches.
+  induction branches as [|[name0 e0] rest IH]; intros e Hlookup Hin;
+    simpl in Hlookup.
+  - discriminate.
+  - simpl. destruct (String.eqb name name0) eqn:Hname.
+    + inversion Hlookup; subst. apply in_or_app. left. exact Hin.
+    + apply in_or_app. right. eapply IH; eauto.
+Qed.
+
+Lemma alpha_rename_expr_branches_lookup_exists_forward :
+  forall ρ used branches branchesr used' name e,
+  ((fix go (used0 : list ident) (branches0 : list (string * expr))
+      : list (string * expr) * list ident :=
+      match branches0 with
+      | [] => ([], used0)
+      | (name0, e0) :: rest =>
+          let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+          let (rest', used2) := go used1 rest in
+          ((name0, e0') :: rest', used2)
+      end) used branches) = (branchesr, used') ->
+  lookup_expr_branch name branches = Some e ->
+  exists er used0 used1,
+    lookup_expr_branch name branchesr = Some er /\
+    alpha_rename_expr ρ used0 e = (er, used1) /\
+    (forall x, In x used -> In x used0).
+Proof.
+  intros ρ used branches.
+  revert used.
+  induction branches as [| [name0 e0] rest IH];
+    intros used branchesr used' name e Hrename Hlookup;
+    simpl in Hrename, Hlookup.
+  - discriminate.
+  - destruct (alpha_rename_expr ρ used e0) as [e0r used1] eqn:He0.
+    destruct ((fix go (used0 : list ident) (branches0 : list (string * expr))
+          : list (string * expr) * list ident :=
+          match branches0 with
+          | [] => ([], used0)
+          | (name1, e1) :: rest1 =>
+              let (e1', used2) := alpha_rename_expr ρ used0 e1 in
+              let (rest', used3) := go used2 rest1 in
+              ((name1, e1') :: rest', used3)
+          end) used1 rest) as [restr used2] eqn:Hrest.
+    injection Hrename as <- <-.
+    destruct (String.eqb name name0) eqn:Hname.
+    + injection Hlookup as <-.
+      exists e0r, used, used1. repeat split.
+      * simpl. rewrite Hname. reflexivity.
+      * exact He0.
+      * intros x Hin. exact Hin.
+    + destruct (IH used1 restr used2 name e Hrest Hlookup)
+        as [er [used0 [used_tail [Hlookup_r [Hren Hused]]]]].
+      exists er, used0, used_tail. repeat split.
+      * simpl. rewrite Hname. exact Hlookup_r.
+      * exact Hren.
+      * intros x Hin. apply Hused.
+        eapply alpha_rename_expr_used_extends; eauto.
 Qed.
 
 Lemma alpha_rename_struct_fields_lookup_exists_forward :
@@ -4708,6 +4997,181 @@ Proof.
       * exact Hctx_rest.
 Qed.
 
+Lemma lookup_expr_branch_in_alpha :
+  forall name branches e,
+    lookup_expr_branch name branches = Some e ->
+    In (name, e) branches.
+Proof.
+  intros name branches.
+  induction branches as [| [name0 e0] rest IH]; intros e Hlookup;
+    simpl in Hlookup.
+  - discriminate.
+  - destruct (String.eqb name name0) eqn:Hname.
+    + apply String.eqb_eq in Hname. subst name0.
+      injection Hlookup as <-. left. reflexivity.
+    + right. eapply IH. exact Hlookup.
+Qed.
+
+Lemma lookup_expr_branch_snd_in_alpha :
+  forall name branches e,
+    lookup_expr_branch name branches = Some e ->
+    In e (map snd branches).
+Proof.
+  intros name branches e Hlookup.
+  pose proof (lookup_expr_branch_in_alpha name branches e Hlookup) as Hin.
+  apply in_map with (f := snd) in Hin.
+  simpl in Hin. exact Hin.
+Qed.
+
+Lemma alpha_rename_match_branches_lookup_exists_forward :
+  forall ρ used branches branchesr used' name e,
+  ((fix go (used0 : list ident) (branches0 : list (string * expr))
+      : list (string * expr) * list ident :=
+      match branches0 with
+      | [] => ([], used0)
+      | (name0, e0) :: rest =>
+          let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+          let (rest', used2) := go used1 rest in
+          ((name0, e0') :: rest', used2)
+      end) used branches) = (branchesr, used') ->
+  lookup_expr_branch name branches = Some e ->
+  exists er used0 used1,
+    lookup_expr_branch name branchesr = Some er /\
+    alpha_rename_expr ρ used0 e = (er, used1) /\
+    (forall x, In x used -> In x used0).
+Proof.
+  intros ρ used branches.
+  revert used.
+  induction branches as [| [name0 e0] rest IH]; intros used branchesr used' name e
+    Hrename Hlookup; simpl in Hrename, Hlookup.
+  - discriminate.
+  - destruct (alpha_rename_expr ρ used e0) as [e0r used1] eqn:He0.
+    destruct ((fix go (used0 : list ident) (branches0 : list (string * expr))
+          : list (string * expr) * list ident :=
+          match branches0 with
+          | [] => ([], used0)
+          | (name1, e1) :: rest1 =>
+              let (e1', used2) := alpha_rename_expr ρ used0 e1 in
+              let (rest', used3) := go used2 rest1 in
+              ((name1, e1') :: rest', used3)
+          end) used1 rest) as [restr used2] eqn:Hrest.
+    injection Hrename as <- <-.
+    destruct (String.eqb name name0) eqn:Hname.
+    + injection Hlookup as <-.
+      exists e0r, used, used1. repeat split.
+      * simpl. rewrite Hname. reflexivity.
+      * exact He0.
+      * intros x Hin. exact Hin.
+    + destruct (IH used1 restr used2 name e Hrest Hlookup)
+        as [er [used0 [used_tail [Hlookup_r [Hren Hused]]]]].
+      exists er, used0, used_tail. repeat split.
+      * simpl. rewrite Hname. exact Hlookup_r.
+      * exact Hren.
+      * intros x Hin. apply Hused.
+        eapply alpha_rename_expr_used_extends.
+        -- exact He0.
+        -- exact Hin.
+Qed.
+
+Lemma lookup_expr_branch_disjoint_alpha :
+  forall name branches e ρ,
+    lookup_expr_branch name branches = Some e ->
+    disjoint_names
+      ((fix go (branches0 : list (string * expr)) : list ident :=
+          match branches0 with
+          | [] => []
+          | (_, e0) :: rest => free_vars_expr e0 ++ go rest
+          end) branches)
+      (rename_range ρ) ->
+    disjoint_names (free_vars_expr e) (rename_range ρ).
+Proof.
+  intros name branches.
+  induction branches as [| [name0 e0] rest IH]; intros e ρ Hlookup Hdisj;
+    simpl in Hlookup, Hdisj.
+  - discriminate.
+  - destruct (disjoint_names_app_l (free_vars_expr e0)
+      ((fix go (branches0 : list (string * expr)) : list ident :=
+          match branches0 with
+          | [] => []
+          | (_, e1) :: rest0 => free_vars_expr e1 ++ go rest0
+          end) rest) (rename_range ρ) Hdisj) as [Hdisj_head Hdisj_rest].
+    destruct (String.eqb name name0) eqn:Hname.
+    + injection Hlookup as <-. exact Hdisj_head.
+    + eapply IH; eauto.
+Qed.
+
+Lemma alpha_rename_typed_match_tail_env_structural_forward :
+  forall env Ω n ρ Σ Σr branches branchesr used used' variants expected_core
+      Σs Ts,
+  (forall Σa Σb used0 variant e er used1 T Σa',
+      In (variant, e) branches ->
+      ctx_alpha ρ Σa Σb ->
+      (forall x, In x (ctx_names Σb) -> In x used0) ->
+      (forall x, In x (rename_range ρ) -> In x used0) ->
+      disjoint_names (free_vars_expr e) (rename_range ρ) ->
+      alpha_rename_expr ρ used0 e = (er, used1) ->
+      typed_env_structural env Ω n Σa e T Σa' ->
+      exists Σb',
+        typed_env_structural env Ω n Σb er T Σb' /\
+        ctx_alpha ρ Σa' Σb') ->
+  ctx_alpha ρ Σ Σr ->
+  (forall x, In x (ctx_names Σr) -> In x used) ->
+  (forall x, In x (rename_range ρ) -> In x used) ->
+  disjoint_names
+    ((fix go (branches0 : list (string * expr)) : list ident :=
+        match branches0 with
+        | [] => []
+        | (_, e) :: rest => free_vars_expr e ++ go rest
+        end) branches)
+    (rename_range ρ) ->
+  ((fix go (used0 : list ident) (branches0 : list (string * expr))
+      : list (string * expr) * list ident :=
+      match branches0 with
+      | [] => ([], used0)
+      | (name, e) :: rest =>
+          let (e', used1) := alpha_rename_expr ρ used0 e in
+          let (rest', used2) := go used1 rest in
+          ((name, e') :: rest', used2)
+      end) used branches) = (branchesr, used') ->
+  typed_match_tail_env_structural env Ω n Σ branches variants
+    expected_core Σs Ts ->
+  exists Σrs,
+    typed_match_tail_env_structural env Ω n Σr branchesr variants
+      expected_core Σrs Ts /\
+    Forall2 (ctx_alpha ρ) Σs Σrs.
+Proof.
+  intros env Ω n ρ Σ Σr branches branchesr used used' variants expected_core
+    Σs Ts Hexpr Hctx Hctx_used Hrange_used Hdisj Hrename Htyped_tail.
+  induction Htyped_tail.
+  - exists []. split; [constructor | constructor].
+  - destruct (alpha_rename_match_branches_lookup_exists_forward
+      ρ used branches branchesr used' (enum_variant_name v) e Hrename H0)
+      as [er [used_branch [used_branch_out
+        [Hlookup_r [Hrename_branch Hused_prefix]]]]].
+    assert (Hbranch_in : In (enum_variant_name v, e) branches).
+    { eapply lookup_expr_branch_in_alpha. exact H0. }
+    destruct (Hexpr Σ Σr used_branch (enum_variant_name v) e er
+      used_branch_out T Σv)
+      as [Σvr [Htyped_branch_r Hctx_branch]].
+    + exact Hbranch_in.
+    + exact Hctx.
+    + intros x Hin. apply Hused_prefix. apply Hctx_used. exact Hin.
+    + intros x Hin. apply Hused_prefix. apply Hrange_used. exact Hin.
+    + eapply lookup_expr_branch_disjoint_alpha; eauto.
+    + exact Hrename_branch.
+    + exact H1.
+    + specialize (IHHtyped_tail Hexpr Hctx Hdisj Hrename).
+      destruct IHHtyped_tail as [Σrs [Htail_r Hctxs_tail]].
+      exists (Σvr :: Σrs). split.
+      * eapply TESMatchTail_Cons.
+        -- exact H.
+        -- exact Hlookup_r.
+        -- exact Htyped_branch_r.
+        -- exact H2.
+        -- exact Htail_r.
+      * constructor; assumption.
+Qed.
+
 Lemma params_alpha_refl : forall ps,
   params_alpha ps ps.
 Proof.
@@ -4782,18 +5246,29 @@ Proof.
 	                     ((fname, e0') :: rest', used2)
 	                 end) used l1).
 	    injection Hrename as <- _. discriminate.
-	  - destruct ((fix go (used0 : list ident) (payloads0 : list expr)
-	                : list expr * list ident :=
-	                 match payloads0 with
-	                 | [] => ([], used0)
-	                 | e0 :: rest =>
-	                     let (e0', used1) := alpha_rename_expr ρ used0 e0 in
-	                     let (rest', used2) := go used1 rest in
-	                     (e0' :: rest', used2)
-	                 end) used l1).
-	    injection Hrename as <- _. discriminate.
-	  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
-	    injection Hrename as <- _. discriminate.
+		  - destruct ((fix go (used0 : list ident) (payloads0 : list expr)
+		                : list expr * list ident :=
+		                 match payloads0 with
+		                 | [] => ([], used0)
+		                 | e0 :: rest =>
+		                     let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+		                     let (rest', used2) := go used1 rest in
+		                     (e0' :: rest', used2)
+		                 end) used l1).
+		    injection Hrename as <- _. discriminate.
+		  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+		    destruct ((fix go (used0 : list ident) (branches0 : list (string * expr))
+		                : list (string * expr) * list ident :=
+		                 match branches0 with
+		                 | [] => ([], used0)
+		                 | (variant_name, e0) :: rest =>
+		                     let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+		                     let (rest', used2) := go used1 rest in
+		                     ((variant_name, e0') :: rest', used2)
+		                 end) used0 l).
+		    injection Hrename as <- _. discriminate.
+		  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+		    injection Hrename as <- _. discriminate.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
     injection Hrename as <- _. discriminate.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
@@ -4873,18 +5348,29 @@ Proof.
 	                     ((fname, e0') :: rest', used2)
 	                 end) used l1).
 	    injection Hrename as <- _. reflexivity.
-	  - destruct ((fix go (used0 : list ident) (payloads0 : list expr)
-	                : list expr * list ident :=
-	                 match payloads0 with
-	                 | [] => ([], used0)
-	                 | e0 :: rest =>
-	                     let (e0', used1) := alpha_rename_expr ρ used0 e0 in
-	                     let (rest', used2) := go used1 rest in
-	                     (e0' :: rest', used2)
-	                 end) used l1).
-	    injection Hrename as <- _. reflexivity.
-	  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
-	    injection Hrename as <- _. reflexivity.
+		  - destruct ((fix go (used0 : list ident) (payloads0 : list expr)
+		                : list expr * list ident :=
+		                 match payloads0 with
+		                 | [] => ([], used0)
+		                 | e0 :: rest =>
+		                     let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+		                     let (rest', used2) := go used1 rest in
+		                     (e0' :: rest', used2)
+		                 end) used l1).
+		    injection Hrename as <- _. reflexivity.
+		  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+		    destruct ((fix go (used0 : list ident) (branches0 : list (string * expr))
+		                : list (string * expr) * list ident :=
+		                 match branches0 with
+		                 | [] => ([], used0)
+		                 | (variant_name, e0) :: rest =>
+		                     let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+		                     let (rest', used2) := go used1 rest in
+		                     ((variant_name, e0') :: rest', used2)
+		                 end) used0 l).
+		    injection Hrename as <- _. reflexivity.
+		  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+		    injection Hrename as <- _. reflexivity.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
     injection Hrename as <- _. reflexivity.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
@@ -5426,6 +5912,93 @@ Proof.
         exists Σr4. split.
         * eapply TES_If; eauto.
         * exact Hctx_merge.
+      + destruct (disjoint_names_app_l (free_vars_expr scrut)
+          ((fix go (branches0 : list (string * expr)) : list ident :=
+              match branches0 with
+              | [] => []
+              | (_, e) :: rest => free_vars_expr e ++ go rest
+              end) branches) (rename_range ρ) Hdisj)
+          as [Hdisj_scrut Hdisj_branches].
+        destruct (alpha_rename_expr ρ used scrut) as [scrutr used_scrut]
+          eqn:Hscrut.
+        destruct ((fix go (used0 : list ident)
+                    (branches0 : list (string * expr))
+                    : list (string * expr) * list ident :=
+                    match branches0 with
+                    | [] => ([], used0)
+                    | (variant_name, e) :: rest =>
+                        let (e', used1) := alpha_rename_expr ρ used0 e in
+                        let (rest', used2) := go used1 rest in
+                        ((variant_name, e') :: rest', used2)
+                    end) used_scrut branches) as [branchesr used_branches]
+          eqn:Hbranches.
+        injection Hrename as <- <-.
+        destruct (IH env Ω n ρ Σ Σr scrut scrutr used used_scrut
+          T_scrut Σ1) as [Σr1 [Hscrut_r Hctx1_r]];
+          try solve [simpl in Hlt; lia | eauto].
+        assert (Hctx_used1 : forall y, In y (ctx_names Σr1) -> In y used_scrut).
+        { intros y Hy.
+          eapply alpha_rename_expr_used_extends.
+          - exact Hscrut.
+          - apply Hctx_used.
+            rewrite <- (sctx_same_bindings_names_alpha Σr Σr1).
+            + exact Hy.
+            + eapply typed_env_structural_same_bindings. exact Hscrut_r. }
+        assert (Hrange_used1 : forall y, In y (rename_range ρ) -> In y used_scrut).
+        { intros y Hy. eapply alpha_rename_expr_used_extends; eauto. }
+        destruct (alpha_rename_match_branches_lookup_exists_forward
+          ρ used_scrut branches branchesr used_branches
+          (enum_variant_name v_head) e_head Hbranches H6)
+          as [e_headr [used_head [used_head_out
+            [Hlookup_head_r [Hrename_head Hused_head]]]]].
+        assert (Hhead_in : In (enum_variant_name v_head, e_head) branches).
+        { eapply lookup_expr_branch_in_alpha. exact H6. }
+        destruct (IH env Ω n ρ Σ1 Σr1 e_head e_headr used_head
+          used_head_out T_head Σ_head) as [Σ_headr [Hhead_r Hctx_head_r]].
+        * pose proof (expr_size_match_branch_lt scrut branches
+            (enum_variant_name v_head) e_head Hhead_in) as Hbranch_lt.
+          eapply Nat.lt_le_trans.
+          -- exact Hbranch_lt.
+          -- apply Nat.lt_succ_r. exact Hlt.
+        * exact Hctx1_r.
+        * intros y Hy. apply Hused_head. apply Hctx_used1. exact Hy.
+        * intros y Hy. apply Hused_head. apply Hrange_used1. exact Hy.
+        * eapply lookup_expr_branch_disjoint_alpha; eauto.
+        * exact Hrename_head.
+        * exact Htyped2.
+        * destruct (alpha_rename_typed_match_tail_env_structural_forward
+            env Ω n ρ Σ1 Σr1 branches branchesr used_scrut used_branches
+            v_tail (ty_core T_head) Σ_tail Ts_tail)
+            as [Σ_tailr [Htail_r Hctx_tail_r]].
+          -- intros Σa Σb used0 variant e0 er0 used1 T0 Σa'
+               Hin Halpha Hcu Hru Hd Hr Ht.
+             eapply IH.
+             ++ pose proof (expr_size_match_branch_lt scrut branches
+                  variant e0 Hin) as Hbranch_lt.
+                eapply Nat.lt_le_trans.
+                ** exact Hbranch_lt.
+                ** apply Nat.lt_succ_r. exact Hlt.
+             ++ exact Halpha.
+             ++ exact Hcu.
+             ++ exact Hru.
+             ++ exact Hd.
+             ++ exact Hr.
+             ++ exact Ht.
+          -- exact Hctx1_r.
+          -- exact Hctx_used1.
+          -- exact Hrange_used1.
+          -- exact Hdisj_branches.
+          -- exact Hbranches.
+          -- exact H7.
+          -- destruct (ctx_alpha_merge_many_forward ρ
+               Σ_head Σ_headr Σ_tail Σ_tailr Γ_out)
+               as [Γ_outr [Hmerge_r Hctx_merge_r]].
+             ++ exact Hctx_head_r.
+             ++ exact Hctx_tail_r.
+             ++ exact H8.
+             ++ exists (sctx_of_ctx Γ_outr). split.
+                ** eapply TES_Match; eauto.
+                ** unfold sctx_of_ctx. exact Hctx_merge_r.
       + destruct ((fix go (used0 : list ident) (args0 : list expr)
                     : list expr * list ident :=
                     match args0 with
@@ -14914,16 +15487,31 @@ Proof.
 	        * exact Hrange_used.
 	        * exact Hdisj.
 	        * apply params_alpha_refl.
-	        * exact Hpayloads.
-	        * exists Σr', Rr', (root_sets_union payload_rootsr).
-	          split; [| split; [| split; [| split]]].
-	          -- eapply TERS_Enum; eauto.
-	          -- exact Hctx_r.
-	          -- exact HnsRr'.
-	          -- exact HRr'.
-	          -- eapply root_sets_union_rename_equiv. exact Hpayload_roots.
-	      + eapply (alpha_rename_typed_env_roots_replace_shadow_safe_support_forward
-	          env Ω n rho R Rr Σ Σr p e er used used' T Σ' R' roots).
+		        * exact Hpayloads.
+		        * exists Σr', Rr', (root_sets_union payload_rootsr).
+		          split; [| split; [| split; [| split]]].
+		          -- eapply TERS_Enum; eauto.
+		          -- exact Hctx_r.
+		          -- exact HnsRr'.
+		          -- exact HRr'.
+		          -- eapply root_sets_union_rename_equiv. exact Hpayload_roots.
+		      + simpl in Hrename.
+		        destruct (alpha_rename_expr rho used e) as [scrutr used_scrut] eqn:Hscrut.
+		        destruct ((fix go
+		                    (used0 : list ident)
+		                    (branches0 : list (string * expr)) {struct branches0}
+		                    : list (string * expr) * list ident :=
+		                    match branches0 with
+		                    | [] => ([], used0)
+		                    | (variant_name, e0) :: rest =>
+		                        let (e0', used1) := alpha_rename_expr rho used0 e0 in
+		                        let (rest', used2) := go used1 rest in
+		                        ((variant_name, e0') :: rest', used2)
+		                    end) used_scrut l) as [branchesr used_branches] eqn:Hbranches.
+		        injection Hrename as <- <-.
+			        exfalso. inversion Htyped.
+		      + eapply (alpha_rename_typed_env_roots_replace_shadow_safe_support_forward
+		          env Ω n rho R Rr Σ Σr p e er used used' T Σ' R' roots).
 	        * intros R0 R0r Σa Σb used0 er0 used1 T0 Σa' R0' roots0
             Htyped0 Halpha HnsR0 HnsR0r HR0r Hkeys0 Hroots0 Hnocoll0
             Hnocoll0' Hcu Hru Hd Hr.

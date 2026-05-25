@@ -247,20 +247,65 @@ Proof.
          exact Hfield.
       -- apply IHfields; [simpl in *; lia | exact Hcheck].
 
-  (* EEnum *)
-  + apply BOES_Enum.
-    revert PBS PBS' Hcheck.
-    induction l1 as [| a rest IHargs]; intros PBS PBS' Hcheck.
+	  (* EEnum *)
+	  + apply BOES_Enum.
+	    revert PBS PBS' Hcheck.
+	    induction l1 as [| a rest IHargs]; intros PBS PBS' Hcheck.
     * simpl in Hcheck. injection Hcheck as <-. constructor.
     * simpl in Hcheck.
       destruct (borrow_check_env env PBS Γ a) as [PBS1|] eqn:Ha; [|discriminate].
       apply BOESArgs_Cons with (PBS1 := PBS1).
       -- apply IH with (e := a).
-         pose proof (expr_size_enum_payload_lt s s0 l l0 (a :: rest) a
-           (or_introl eq_refl)).
+	         pose proof (expr_size_enum_payload_lt s s0 l l0 (a :: rest) a
+	           (or_introl eq_refl)).
+	         simpl in Hlt. lia.
+	         exact Ha.
+	      -- apply IHargs; [simpl in *; lia | exact Hcheck].
+
+  (* EMatch *)
+  + destruct (borrow_check_env env PBS Γ e) as [PBS1|] eqn:Hscrut; [|discriminate].
+    destruct l as [| [name branch] rest]; [discriminate|].
+    simpl in Hcheck.
+    destruct (borrow_check_env env PBS1 Γ branch) as [PBS_branch|] eqn:Hbranch;
+      [|discriminate].
+    assert (Hrest : PBS' = PBS_branch /\
+        Forall
+          (fun br => borrow_ok_env_structural env PBS1 Γ (snd br) PBS_branch)
+          rest).
+    {
+      revert PBS' Hcheck.
+      induction rest as [| [name0 branch0] rest IHrest]; intros PBS' Hcheck.
+      - simpl in Hcheck. injection Hcheck as <-.
+        split; [reflexivity | constructor].
+      - simpl in Hcheck.
+        destruct (borrow_check_env env PBS1 Γ branch0) as [PBS0|] eqn:Hbranch0;
+          [|discriminate].
+        destruct (pbs_eqb PBS0 PBS_branch) eqn:Heq; [|discriminate].
+        apply pbs_eqb_eq in Heq. subst PBS0.
+        destruct (IHrest ltac:(simpl in Hlt; simpl; lia) PBS' Hcheck)
+          as [Heq_out Hfor].
+        split; [exact Heq_out |].
+        constructor.
+        + apply IH with (e := branch0).
+          * pose proof (expr_size_match_branch_lt e
+              ((name, branch) :: (name0, branch0) :: rest)
+              name0 branch0 (or_intror (or_introl eq_refl))).
+            simpl in Hlt. lia.
+          * exact Hbranch0.
+        + exact Hfor.
+    }
+    destruct Hrest as [-> Hfor_rest].
+    apply BOES_Match with (PBS1 := PBS1).
+    * apply IH with (e := e).
+      -- pose proof (expr_size_match_scrutinee_lt e ((name, branch) :: rest)).
+         lia.
+      -- exact Hscrut.
+    * apply IH with (e := branch).
+      -- pose proof (expr_size_match_branch_lt e ((name, branch) :: rest)
+           name branch (or_introl eq_refl)).
          simpl in Hlt. lia.
-         exact Ha.
-      -- apply IHargs; [simpl in *; lia | exact Hcheck].
+      -- exact Hbranch.
+    * exact Hfor_rest.
 
   (* EReplace *)
   + destruct (pbs_has_any (place_root p) (place_suffix_path p) PBS) eqn:Hany.

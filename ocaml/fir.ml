@@ -31,6 +31,7 @@ type fir_instr =
   | FILabel   of string
   | FIGoto    of string
   | FIIf      of fir_tval * string * string
+  | FIMatch   of fir_tval * (string * string) list
 
 type drop_filter =
   | DropMaterialized
@@ -321,6 +322,33 @@ let rec to_value env = function
     emit env (FILet (result_tmp, result_ty, else_val));
     emit env (FILabel end_lbl);
     { fv = FVVar result_tmp; ft = result_ty }
+  | EMatch (scrut, branches) ->
+    let result_ty = infer_expr_ty env (EMatch (scrut, branches)) in
+    let scrut_val = to_value env scrut in
+    let end_lbl = fresh_label env "match_end_" in
+    let result_tmp = fresh_id env in
+    let branch_labels =
+      List.map
+        (fun (variant, _) -> (variant, fresh_label env ("match_" ^ variant ^ "_")))
+        branches
+    in
+    let saved_ctx = env.ctx in
+    emit env (FIMatch (scrut_val, branch_labels));
+    List.iter
+      (fun (variant, body) ->
+        let lbl =
+          match List.assoc_opt variant branch_labels with
+          | Some lbl -> lbl
+          | None -> failwith ("FIR: missing match label: " ^ variant)
+        in
+        env.ctx <- saved_ctx;
+        emit env (FILabel lbl);
+        let branch_val = to_value env body in
+        emit env (FILet (result_tmp, result_ty, branch_val));
+        emit env (FIGoto end_lbl))
+      branches;
+    emit env (FILabel end_lbl);
+    { fv = FVVar result_tmp; ft = result_ty }
 
 and drop_place env result_id place =
   let place_ty = infer_place_ty env place in
@@ -585,6 +613,13 @@ let pp_instr = function
   | FIGoto  lbl -> Printf.sprintf "  goto %s" lbl
   | FIIf (cond, then_lbl, else_lbl) ->
     Printf.sprintf "  if %s goto %s else %s" (pp_tval cond) then_lbl else_lbl
+  | FIMatch (scrut, branches) ->
+    let branch_s =
+      branches
+      |> List.map (fun (variant, lbl) -> variant ^ " => " ^ lbl)
+      |> String.concat ", "
+    in
+    Printf.sprintf "  match %s { %s }" (pp_tval scrut) branch_s
 
 let pp_param p =
   let mut = if p.param_mutability = MMutable then "mut " else "" in

@@ -29,6 +29,7 @@ let keywords = [
   "enum",         Parser.KW_ENUM;
   "trait",        Parser.KW_TRAIT;
   "impl",         Parser.KW_IMPL;
+  "match",        Parser.KW_MATCH;
   "let",          Parser.KW_LET;
   "in",           Parser.KW_IN;
   "mut",          Parser.KW_MUT;
@@ -69,6 +70,7 @@ let rec tokenize st =
     st.bol  <- Sedlexing.lexeme_end buf;
     tokenize st
   | Plus (Chars " \t\r") -> tokenize st
+  | '=', '>' -> Parser.FATARROW
   | '-', '>' -> Parser.ARROW
   | '-', Plus digit, '.', Plus digit ->
     Parser.FLOAT_LIT (Sedlexing.Utf8.lexeme buf)

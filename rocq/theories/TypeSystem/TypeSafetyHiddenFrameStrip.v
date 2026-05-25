@@ -546,16 +546,45 @@ Proof.
     assert (Hlocal_else : ~ In x (expr_local_store_names e3)).
     { simpl in Hlocal. intros Hin. apply Hlocal. apply in_or_app. right.
       apply in_or_app. right. exact Hin. }
-    destruct (IHelse x T hidden s1_base eq_refl
+	    destruct (IHelse x T hidden s1_base eq_refl
+	                ltac:(match goal with
+	                | H : preservation_ready_expr e3 |- _ => exact H
+	                end) Hfree_else Hlocal_else Hrefs1)
+	      as [s2_base [Hs2 [Heval_else_base [Hrefs2 Hv]]]].
+	    exists s2_base. repeat split; try assumption.
+	    subst s2. eapply Eval_If_False; eassumption.
+  - intros s s_scrut s' scrut branches enum_name variant_name e_branch v
+      Heval_scrut IHscrut Hlookup Heval_branch IHbranch
+      x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
+    subst s. inversion Hready; subst.
+    assert (Hfree_scrut : ~ In x (free_vars_expr scrut)).
+    { simpl in Hfree. intros Hin. apply Hfree. apply in_or_app. left. exact Hin. }
+    assert (Hlocal_scrut : ~ In x (expr_local_store_names scrut)).
+    { simpl in Hlocal. intros Hin. apply Hlocal. apply in_or_app. left. exact Hin. }
+    destruct (IHscrut x T hidden s_base eq_refl
                 ltac:(match goal with
-                | H : preservation_ready_expr e3 |- _ => exact H
-                end) Hfree_else Hlocal_else Hrefs1)
-      as [s2_base [Hs2 [Heval_else_base [Hrefs2 Hv]]]].
-    exists s2_base. repeat split; try assumption.
-    subst s2. eapply Eval_If_False; eassumption.
-	  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
-	      Hcaps Heval_args IHargs Hrename Heval_body IHbody x T hidden s_base Hs
-	      Hready Hfree Hlocal Hrefs.
+                | H : preservation_ready_expr scrut |- _ => exact H
+                end) Hfree_scrut Hlocal_scrut Hrefs)
+      as [s_scrut_base [Hs_scrut [Heval_scrut_base [Hrefs_scrut _]]]].
+    subst s_scrut.
+    assert (Hready_branch : preservation_ready_expr e_branch).
+    { eapply lookup_match_branch_preservation_ready; eassumption. }
+    assert (Hfree_branches : ~ In x (fields_free_vars_ts branches)).
+    { simpl in Hfree. intros Hin. apply Hfree. apply in_or_app. right. exact Hin. }
+    assert (Hfree_branch : ~ In x (free_vars_expr e_branch)).
+    { eapply fields_free_vars_ts_lookup_notin; eassumption. }
+    assert (Hlocal_branches : ~ In x (fields_local_store_names branches)).
+    { simpl in Hlocal. intros Hin. apply Hlocal. apply in_or_app. right. exact Hin. }
+    assert (Hlocal_branch : ~ In x (expr_local_store_names e_branch)).
+    { eapply fields_local_store_names_lookup_notin; eassumption. }
+    destruct (IHbranch x T hidden s_scrut_base eq_refl Hready_branch
+                Hfree_branch Hlocal_branch Hrefs_scrut)
+      as [s'_base [Hs' [Heval_branch_base [Hrefs' Hv]]]].
+    exists s'_base. repeat split; try assumption.
+    subst s'. eapply Eval_MatchEnum; eassumption.
+		  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
+		      Hcaps Heval_args IHargs Hrename Heval_body IHbody x T hidden s_base Hs
+		      Hready Hfree Hlocal Hrefs.
 	    inversion Hready.
 	  - intros s s_args s_body fname type_args fdef fcall args vs ret used'
 	      Hlookup Hcaps Heval_args IHargs Hrename Heval_body IHbody x T hidden

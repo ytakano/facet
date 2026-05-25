@@ -890,14 +890,18 @@ Proof.
 	    { eapply store_roots_within_equiv.
 	      - apply root_env_equiv_sym. eassumption.
 	      - exact Hroots3. }
-	    repeat split.
-	    + exact Hroots3_out.
-	    + apply value_roots_within_union_r. exact Hv3.
-	    + exact Hnodup3.
-	    + exact Hrn2.
-	  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
-	      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
-	      roots Hready _ _ _ _.
+		    repeat split.
+		    + exact Hroots3_out.
+		    + apply value_roots_within_union_r. exact Hv3.
+		    + exact Hnodup3.
+		    + exact Hrn2.
+  - intros s s_scrut s' scrut branches enum_name variant_name e_branch v
+      Heval_scrut IHscrut Hlookup Heval_branch IHbranch
+      Ω n R Σ T Σ' R' roots Hready _ _ _ Htyped.
+    inversion Hready; subst. inversion Htyped.
+		  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
+		      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
+		      roots Hready _ _ _ _.
 	    inversion Hready.
 	  - intros s s_args s_body fname type_args fdef fcall args0 vs ret used'
 	      Hlookup Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ

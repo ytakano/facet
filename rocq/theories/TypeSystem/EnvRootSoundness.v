@@ -937,8 +937,10 @@ Proof.
         eqn:Hunknown; try discriminate.
       destruct (first_missing_variant_branch (enum_variants edef) l) as [missing |]
         eqn:Hmissing; try discriminate.
-      destruct (first_payload_variant (enum_variants edef)) as [payload |]
-        eqn:Hpayload; try discriminate.
+      destruct (first_unsupported_match_payload l (enum_variants edef)) as [payload |]
+        eqn:Hunsupported; try discriminate.
+      destruct (first_unsupported_match_payload_none _ _ Hunsupported)
+        as [Hbinders Hpayload].
       destruct (enum_variants edef) as [|v_head v_tail] eqn:Hvariants;
         try discriminate.
       simpl in Hinfer.
@@ -986,7 +988,7 @@ Proof.
         typed_match_tail_roots env Ω n R1 Σ1 l v_tail
           (ty_core T_head) R_out Σ_tail Ts_tail roots_tail).
       {
-        clear Hinfer Hvariants Hunknown Hmissing Hdup Hpayload.
+        clear Hinfer Hvariants Hunknown Hmissing Hdup Hunsupported Hpayload.
         revert Σ_tail Ts_tail roots_tail Htail Hpayload_tail.
         induction v_tail as [|v rest IHtail];
           intros Σ_tail Ts_tail roots_tail Htail0 Hpayload0; simpl in Htail0.
@@ -1033,6 +1035,7 @@ Proof.
           rewrite lookup_branch_b_lookup_expr_branch in Hlookup0.
           eapply TERMatchTail_Cons.
           + exact Hfields.
+          + eapply first_payload_binder_branch_lookup_none; eassumption.
           + exact Hlookup0.
           + eapply IH. exact Hinfer0.
           + apply ty_core_eqb_true. exact Hcore0.
@@ -1060,6 +1063,7 @@ Proof.
       * exact Hvariants.
       * destruct (enum_variant_fields v_head) eqn:Hfields; [reflexivity |].
         simpl in Hpayload. rewrite Hfields in Hpayload. discriminate.
+      * eapply first_payload_binder_branch_lookup_none; eassumption.
       * exact Hlookup_branch.
       * eapply IH. exact Hhead.
       * exact Htail_typed.
@@ -1454,8 +1458,10 @@ Proof.
         eqn:Hunknown; try discriminate.
       destruct (first_missing_variant_branch (enum_variants edef) l) as [missing |]
         eqn:Hmissing; try discriminate.
-      destruct (first_payload_variant (enum_variants edef)) as [payload |]
-        eqn:Hpayload; try discriminate.
+      destruct (first_unsupported_match_payload l (enum_variants edef)) as [payload |]
+        eqn:Hunsupported; try discriminate.
+      destruct (first_unsupported_match_payload_none _ _ Hunsupported)
+        as [Hbinders Hpayload].
       destruct (enum_variants edef) as [|v_head v_tail] eqn:Hvariants;
         try discriminate.
       simpl in Hinfer.
@@ -1503,7 +1509,7 @@ Proof.
         typed_match_tail_roots_shadow_safe env Ω n R1 Σ1 l v_tail
           (ty_core T_head) R_out Σ_tail Ts_tail roots_tail).
       {
-        clear Hinfer Hvariants Hunknown Hmissing Hdup Hpayload.
+        clear Hinfer Hvariants Hunknown Hmissing Hdup Hunsupported Hpayload.
         revert Σ_tail Ts_tail roots_tail Htail Hpayload_tail.
         induction v_tail as [|v rest IHtail];
           intros Σ_tail Ts_tail roots_tail Htail0 Hpayload0; simpl in Htail0.
@@ -1550,6 +1556,7 @@ Proof.
           rewrite lookup_branch_b_lookup_expr_branch in Hlookup0.
           eapply TERSMatchTail_Cons.
           + exact Hfields.
+          + eapply first_payload_binder_branch_lookup_none; eassumption.
           + exact Hlookup0.
           + eapply IH. exact Hinfer0.
           + apply ty_core_eqb_true. exact Hcore0.
@@ -1577,6 +1584,7 @@ Proof.
       * exact Hvariants.
       * destruct (enum_variant_fields v_head) eqn:Hfields; [reflexivity |].
         simpl in Hpayload. rewrite Hfields in Hpayload. discriminate.
+      * eapply first_payload_binder_branch_lookup_none; eassumption.
       * exact Hlookup_branch.
       * eapply IH. exact Hhead.
       * exact Htail_typed.

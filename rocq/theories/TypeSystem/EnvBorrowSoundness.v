@@ -264,20 +264,23 @@ Proof.
 
   (* EMatch *)
   + destruct (borrow_check_env env PBS Γ e) as [PBS1|] eqn:Hscrut; [|discriminate].
-    destruct l as [| [name branch] rest]; [discriminate|].
+    destruct l as [| [[name binders] branch] rest]; [discriminate|].
     simpl in Hcheck.
+    destruct binders as [| binder binders']; [|discriminate].
     destruct (borrow_check_env env PBS1 Γ branch) as [PBS_branch|] eqn:Hbranch;
       [|discriminate].
     assert (Hrest : PBS' = PBS_branch /\
         Forall
-          (fun br => borrow_ok_env_structural env PBS1 Γ (snd br) PBS_branch)
+          (fun br =>
+            borrow_ok_env_structural env PBS1 Γ (match_branch_expr br) PBS_branch)
           rest).
     {
       revert PBS' Hcheck.
-      induction rest as [| [name0 branch0] rest IHrest]; intros PBS' Hcheck.
+      induction rest as [| [[name0 binders0] branch0] rest IHrest]; intros PBS' Hcheck.
       - simpl in Hcheck. injection Hcheck as <-.
         split; [reflexivity | constructor].
       - simpl in Hcheck.
+        destruct binders0 as [| binder0 binders0']; [|discriminate].
         destruct (borrow_check_env env PBS1 Γ branch0) as [PBS0|] eqn:Hbranch0;
           [|discriminate].
         destruct (pbs_eqb PBS0 PBS_branch) eqn:Heq; [|discriminate].
@@ -288,8 +291,8 @@ Proof.
         constructor.
         + apply IH with (e := branch0).
           * pose proof (expr_size_match_branch_lt e
-              ((name, branch) :: (name0, branch0) :: rest)
-              name0 branch0 (or_intror (or_introl eq_refl))).
+              ((name, [], branch) :: (name0, [], branch0) :: rest)
+              name0 [] branch0 (or_intror (or_introl eq_refl))).
             simpl in Hlt. lia.
           * exact Hbranch0.
         + exact Hfor.
@@ -297,12 +300,12 @@ Proof.
     destruct Hrest as [-> Hfor_rest].
     apply BOES_Match with (PBS1 := PBS1).
     * apply IH with (e := e).
-      -- pose proof (expr_size_match_scrutinee_lt e ((name, branch) :: rest)).
+      -- pose proof (expr_size_match_scrutinee_lt e ((name, [], branch) :: rest)).
          lia.
       -- exact Hscrut.
     * apply IH with (e := branch).
-      -- pose proof (expr_size_match_branch_lt e ((name, branch) :: rest)
-           name branch (or_introl eq_refl)).
+      -- pose proof (expr_size_match_branch_lt e ((name, [], branch) :: rest)
+           name [] branch (or_introl eq_refl)).
          simpl in Hlt. lia.
       -- exact Hbranch.
     * exact Hfor_rest.

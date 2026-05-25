@@ -35,7 +35,7 @@ Inductive provenance_ready_expr : expr -> Prop :=
       provenance_ready_expr (EEnum enum_name variant_name lts args payloads)
   | ProvReady_Match : forall scrut branches,
       provenance_ready_expr scrut ->
-      provenance_ready_fields branches ->
+      provenance_ready_match_branches branches ->
       provenance_ready_expr (EMatch scrut branches)
   | ProvReady_Let : forall m x T e1 e2,
       provenance_ready_expr e1 ->
@@ -77,17 +77,26 @@ with provenance_ready_fields : list (string * expr) -> Prop :=
   | ProvReadyFields_Cons : forall name e rest,
       provenance_ready_expr e ->
       provenance_ready_fields rest ->
-      provenance_ready_fields ((name, e) :: rest).
+      provenance_ready_fields ((name, e) :: rest)
+with provenance_ready_match_branches : list (string * list ident * expr) -> Prop :=
+  | ProvReadyMatchBranches_Nil :
+      provenance_ready_match_branches []
+  | ProvReadyMatchBranches_Cons : forall name binders e rest,
+      provenance_ready_expr e ->
+      provenance_ready_match_branches rest ->
+      provenance_ready_match_branches ((name, binders, e) :: rest).
 
 Scheme preservation_ready_expr_ind' :=
   Induction for preservation_ready_expr Sort Prop
 with preservation_ready_args_ind' :=
   Induction for preservation_ready_args Sort Prop
 with preservation_ready_fields_ind' :=
-  Induction for preservation_ready_fields Sort Prop.
+  Induction for preservation_ready_fields Sort Prop
+with preservation_ready_match_branches_ind' :=
+  Induction for preservation_ready_match_branches Sort Prop.
 Combined Scheme preservation_ready_mutind
   from preservation_ready_expr_ind', preservation_ready_args_ind',
-       preservation_ready_fields_ind'.
+       preservation_ready_fields_ind', preservation_ready_match_branches_ind'.
 
 Lemma preservation_ready_implies_provenance_ready_mutual :
   (forall e,
@@ -98,7 +107,10 @@ Lemma preservation_ready_implies_provenance_ready_mutual :
     provenance_ready_args args) /\
   (forall fields,
     preservation_ready_fields fields ->
-    provenance_ready_fields fields).
+    provenance_ready_fields fields) /\
+  (forall branches,
+    preservation_ready_match_branches branches ->
+    provenance_ready_match_branches branches).
 Proof.
   apply preservation_ready_mutind;
     try solve [econstructor; eauto].
@@ -125,7 +137,7 @@ Lemma preservation_ready_fields_implies_provenance_ready :
     preservation_ready_fields fields ->
     provenance_ready_fields fields.
 Proof.
-  exact (proj2 (proj2 preservation_ready_implies_provenance_ready_mutual)).
+  exact (proj1 (proj2 (proj2 preservation_ready_implies_provenance_ready_mutual))).
 Qed.
 
 Lemma alpha_rename_provenance_ready_expr :
@@ -158,7 +170,21 @@ with alpha_rename_provenance_ready_fields :
            ((fname, e') :: rest', used2)
        end) used fields = (fieldsr, used') ->
     provenance_ready_fields fields ->
-    provenance_ready_fields fieldsr.
+    provenance_ready_fields fieldsr
+with alpha_rename_provenance_ready_match_branches :
+  forall ρ used branches branchesr used',
+    (fix go (used0 : list ident)
+        (branches0 : list (string * list ident * expr))
+        {struct branches0} : list (string * list ident * expr) * list ident :=
+       match branches0 with
+       | [] => ([], used0)
+       | (name, binders, e) :: rest =>
+           let (e', used1) := alpha_rename_expr ρ used0 e in
+           let (rest', used2) := go used1 rest in
+           ((name, binders, e') :: rest', used2)
+       end) used branches = (branchesr, used') ->
+    provenance_ready_match_branches branches ->
+    provenance_ready_match_branches branchesr.
 Proof.
   - intros ρ used e er used' Hrename Hready.
     destruct Hready; simpl in Hrename.
@@ -204,20 +230,21 @@ Proof.
 	      eapply alpha_rename_provenance_ready_args; eauto.
     + destruct (alpha_rename_expr ρ used scrut) as [scrutr used_scrut] eqn:Hscrut.
       destruct
-        ((fix go (used0 : list ident) (branches0 : list (string * expr))
-             {struct branches0} : list (string * expr) * list ident :=
+        ((fix go (used0 : list ident)
+             (branches0 : list (string * list ident * expr))
+             {struct branches0} : list (string * list ident * expr) * list ident :=
             match branches0 with
             | [] => ([], used0)
-            | (variant_name, e) :: rest =>
+            | (variant_name, binders, e) :: rest =>
                 let (e', used1') := alpha_rename_expr ρ used0 e in
                 let (rest', used2) := go used1' rest in
-                ((variant_name, e') :: rest', used2)
+                ((variant_name, binders, e') :: rest', used2)
             end) used_scrut branches)
         as [branchesr used_branches] eqn:Hbranches.
       inversion Hrename; subst.
       apply ProvReady_Match.
       * eapply alpha_rename_provenance_ready_expr; eauto.
-      * eapply alpha_rename_provenance_ready_fields; eauto.
+      * eapply alpha_rename_provenance_ready_match_branches; eauto.
 	    + destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
       destruct (alpha_rename_expr
         ((x, fresh_ident x (x :: free_vars_expr e2 ++ used1)) :: ρ)
@@ -309,6 +336,26 @@ Proof.
       constructor.
       * eapply alpha_rename_provenance_ready_expr; eauto.
       * eapply alpha_rename_provenance_ready_fields; eauto.
+  - intros ρ used branches branchesr used' Hrename Hready.
+    destruct Hready as [| name binders e rest He Hrest]; simpl in Hrename.
+    + inversion Hrename; subst. constructor.
+    + destruct (alpha_rename_expr ρ used e) as [er used1] eqn:He_ren.
+      destruct
+        ((fix go (used0 : list ident)
+             (branches0 : list (string * list ident * expr))
+             {struct branches0} : list (string * list ident * expr) * list ident :=
+            match branches0 with
+            | [] => ([], used0)
+            | (name0, binders0, e0) :: rest0 =>
+                let (e', used2) := alpha_rename_expr ρ used0 e0 in
+                let (rest', used3) := go used2 rest0 in
+                ((name0, binders0, e') :: rest', used3)
+            end) used1 rest)
+        as [restr used2] eqn:Hrest_ren.
+      inversion Hrename; subst.
+      constructor.
+      * eapply alpha_rename_provenance_ready_expr; eauto.
+      * eapply alpha_rename_provenance_ready_match_branches; eauto.
 Qed.
 
 Lemma alpha_rename_fn_def_provenance_ready_body :
@@ -340,6 +387,21 @@ Proof.
     simpl; intros Hlookup.
   - discriminate.
   - destruct (String.eqb name fname) eqn:Hname.
+    + inversion Hlookup; subst. exact Hexpr.
+    + apply IH. exact Hlookup.
+Qed.
+
+Lemma provenance_ready_match_branches_lookup :
+  forall branches name e,
+    provenance_ready_match_branches branches ->
+    lookup_expr_branch name branches = Some e ->
+    provenance_ready_expr e.
+Proof.
+  intros branches name e Hready.
+  induction Hready as [| bname binders branch rest Hexpr _ IH];
+    simpl; intros Hlookup.
+  - discriminate.
+  - destruct (String.eqb name bname) eqn:Hname.
     + inversion Hlookup; subst. exact Hexpr.
     + apply IH. exact Hlookup.
 Qed.

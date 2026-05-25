@@ -49,7 +49,7 @@ type named_expr =
   | NCall   of name * named_type_arg list * named_expr list
   | NStruct of name * named_type_arg list * (name * named_expr) list
   | NEnum   of name * named_type_arg list * name * named_expr list
-  | NMatch  of named_expr * (name * named_expr) list
+  | NMatch  of named_expr * (name * name list * named_expr) list
   | NReplace of named_place * named_expr
   | NAssign of named_place * named_expr
   | NBorrow of TypeChecker.ref_kind * named_place

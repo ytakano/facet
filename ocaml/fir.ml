@@ -323,19 +323,24 @@ let rec to_value env = function
     emit env (FILabel end_lbl);
     { fv = FVVar result_tmp; ft = result_ty }
   | EMatch (scrut, branches) ->
+    List.iter
+      (fun ((variant, binders), _) ->
+        if binders <> [] then
+          failwith ("FIR: match branch payload binders are not supported yet: " ^ variant))
+      branches;
     let result_ty = infer_expr_ty env (EMatch (scrut, branches)) in
     let scrut_val = to_value env scrut in
     let end_lbl = fresh_label env "match_end_" in
     let result_tmp = fresh_id env in
     let branch_labels =
       List.map
-        (fun (variant, _) -> (variant, fresh_label env ("match_" ^ variant ^ "_")))
+        (fun ((variant, _), _) -> (variant, fresh_label env ("match_" ^ variant ^ "_")))
         branches
     in
     let saved_ctx = env.ctx in
     emit env (FIMatch (scrut_val, branch_labels));
     List.iter
-      (fun (variant, body) ->
+      (fun ((variant, _), body) ->
         let lbl =
           match List.assoc_opt variant branch_labels with
           | Some lbl -> lbl

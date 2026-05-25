@@ -58,14 +58,15 @@ Proof.
           -- pose proof (expr_size_match_scrutinee_lt e l).
              lia.
           -- exact Hscrut.
-        * induction l as [| [name branch] rest IHbranches].
+        * induction l as [| [[name binders] branch] rest IHbranches].
           -- constructor.
           -- simpl in Hbranches.
              apply andb_true_iff in Hbranches as [Hbranch Hrest].
              constructor.
              ++ apply IH with (e := branch).
                 ** pose proof (expr_size_match_branch_lt e
-                     ((name, branch) :: rest) name branch (or_introl eq_refl)).
+                     ((name, binders, branch) :: rest) name binders branch
+                     (or_introl eq_refl)).
                    lia.
                 ** exact Hbranch.
              ++ apply IHbranches.
@@ -204,14 +205,15 @@ Proof.
           -- pose proof (expr_size_match_scrutinee_lt e l).
              lia.
           -- exact Hscrut.
-        * induction l as [| [name branch] rest IHbranches].
+        * induction l as [| [[name binders] branch] rest IHbranches].
           -- constructor.
           -- simpl in Hbranches.
              apply andb_true_iff in Hbranches as [Hbranch Hrest].
              constructor.
              ++ apply IH with (e := branch).
                 ** pose proof (expr_size_match_branch_lt e
-                     ((name, branch) :: rest) name branch (or_introl eq_refl)).
+                     ((name, binders, branch) :: rest) name binders branch
+                     (or_introl eq_refl)).
                    lia.
                 ** exact Hbranch.
              ++ apply IHbranches.

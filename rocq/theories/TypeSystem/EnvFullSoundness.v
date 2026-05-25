@@ -32,7 +32,7 @@ Proof.
 	    + reflexivity.
 	    + rewrite IH, IHargs. reflexivity.
   - rewrite IH.
-    induction l as [| [name branch] rest IHbranches]; simpl.
+    induction l as [| [[name binders] branch] rest IHbranches]; simpl.
     + reflexivity.
     + rewrite IH, IHbranches. reflexivity.
 	  - rewrite IH. reflexivity.

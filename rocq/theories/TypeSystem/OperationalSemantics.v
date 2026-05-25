@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Types Syntax PathState Program Renaming.
+From Facet.TypeSystem Require Import Types Syntax PathState Program TypingRules Renaming.
 From Stdlib Require Import List String ZArith Bool.
 Import ListNotations.
 
@@ -305,7 +305,7 @@ Fixpoint lookup_expr_field (name : string) (fields : list (string * expr)) : opt
       if String.eqb name field_name then Some e else lookup_expr_field name rest
   end.
 
-Definition lookup_match_branch := lookup_expr_field.
+Definition lookup_match_branch := lookup_expr_branch.
 
 Fixpoint type_lookup_path (env : global_env) (T : Ty) (p : field_path) : option Ty :=
   match p with

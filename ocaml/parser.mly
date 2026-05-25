@@ -321,7 +321,10 @@ match_branch_tail:
   | COMMA; branch = match_branch; rest = match_branch_tail { branch :: rest }
 
 match_branch:
-  | variant = ID; FATARROW; e = expr { (variant, e) }
+  | variant = ID; FATARROW; e = expr { (variant, [], e) }
+  | variant = ID; LPAREN; binders = separated_list(COMMA, ID); RPAREN;
+    FATARROW; e = expr
+    { (variant, binders, e) }
 
 match_scrut:
   | p = place { expr_of_place p }

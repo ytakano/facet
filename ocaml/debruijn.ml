@@ -19,11 +19,25 @@ let add_binding scope name =
   let d = current_depth scope name + 1 in
   ((name, d) :: scope, d)
 
+let add_bindings scope names =
+  List.fold_left (fun scope name -> fst (add_binding scope name)) scope names
+
 let lookup scope name =
   Stdlib.max 0 (current_depth scope name)
 
 let make_ident name d : ident =
   (name, Big_int_Z.big_int_of_int d)
+
+let add_bindings_with_idents scope names =
+  let scope', rev_idents =
+    List.fold_left
+      (fun (scope_acc, idents_acc) name ->
+         let (scope_next, d) = add_binding scope_acc name in
+         (scope_next, make_ident name d :: idents_acc))
+      (scope, [])
+      names
+  in
+  (scope', List.rev rev_idents)
 
 let ident_of_name scope name =
   make_ident name (lookup scope name)
@@ -245,7 +259,9 @@ let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (
     EMatch
       (convert fn_names ty_scope scope scrut,
        List.map
-         (fun (variant, body) -> (variant, convert fn_names ty_scope scope body))
+         (fun (variant, binders, body) ->
+            let (branch_scope, binder_ids) = add_bindings_with_idents scope binders in
+            ((variant, binder_ids), convert fn_names ty_scope branch_scope body))
          branches)
   | NLet (m, name, Some ty, e1, e2) ->
     if named_ty_has_elided_ref_lifetime ty
@@ -315,7 +331,9 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
     RawMatch
       (convert_raw fn_names ty_scope scope scrut,
        List.map
-         (fun (variant, body) -> (variant, convert_raw fn_names ty_scope scope body))
+         (fun (variant, binders, body) ->
+            let (branch_scope, binder_ids) = add_bindings_with_idents scope binders in
+            ((variant, binder_ids), convert_raw fn_names ty_scope branch_scope body))
          branches)
   | NLet (m, name, Some ty, e1, e2) ->
     if named_ty_has_elided_ref_lifetime ty

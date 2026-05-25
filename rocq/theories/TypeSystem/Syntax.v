@@ -60,7 +60,7 @@ Inductive expr : Type :=
 | ECallExpr : expr -> list expr -> expr
 | EStruct   : string -> list lifetime -> list Ty -> list (string * expr) -> expr
 | EEnum     : string -> string -> list lifetime -> list Ty -> list expr -> expr
-| EMatch    : expr -> list (string * expr) -> expr
+| EMatch    : expr -> list (string * list ident * expr) -> expr
 | EReplace  : place -> expr -> expr
 | EAssign   : place -> expr -> expr
 | EBorrow   : ref_kind -> place -> expr
@@ -79,6 +79,15 @@ Fixpoint expr_as_place (e : expr) : option place :=
   | EPlace p => Some p
   | _ => None
   end.
+
+Definition match_branch_name (b : string * list ident * expr) : string :=
+  let '(name, _, _) := b in name.
+
+Definition match_branch_binders (b : string * list ident * expr) : list ident :=
+  let '(_, binders, _) := b in binders.
+
+Definition match_branch_expr (b : string * list ident * expr) : expr :=
+  let '(_, _, e) := b in e.
 
 Record param : Type := MkParam {
   param_mutability : mutability;

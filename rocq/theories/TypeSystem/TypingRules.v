@@ -264,12 +264,23 @@ Fixpoint usage_max_tys_nonempty (head : Ty) (tail : list Ty) : usage :=
   | T :: rest => usage_max (ty_usage head) (usage_max_tys_nonempty T rest)
   end.
 
-Fixpoint lookup_expr_branch (name : string) (branches : list (string * expr))
+Fixpoint lookup_expr_branch (name : string)
+    (branches : list (string * list ident * expr))
     : option expr :=
   match branches with
   | [] => None
-  | (name', e) :: rest =>
+  | (name', _, e) :: rest =>
       if String.eqb name name' then Some e else lookup_expr_branch name rest
+  end.
+
+Fixpoint lookup_expr_branch_binders (name : string)
+    (branches : list (string * list ident * expr))
+    : option (list ident) :=
+  match branches with
+  | [] => None
+  | (name', binders, _) :: rest =>
+      if String.eqb name name' then Some binders
+      else lookup_expr_branch_binders name rest
   end.
 
 Definition fn_signature_ty_with_usage (u : usage) (f : fn_def) : Ty :=

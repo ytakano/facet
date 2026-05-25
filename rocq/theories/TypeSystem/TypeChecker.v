@@ -1411,22 +1411,35 @@ Fixpoint first_missing_field
       else Some (field_name f)
   end.
 
-Definition lookup_branch_b (name : string) (branches : list (string * expr))
+Definition lookup_branch_b (name : string)
+    (branches : list (string * list ident * expr))
     : option expr :=
-  lookup_field_b name branches.
+  lookup_expr_branch name branches.
 
-Definition has_branch_b (name : string) (branches : list (string * expr)) : bool :=
-  has_field_b name branches.
+Fixpoint has_branch_b (name : string)
+    (branches : list (string * list ident * expr)) : bool :=
+  match branches with
+  | [] => false
+  | (name', _, _) :: rest =>
+      if String.eqb name name' then true else has_branch_b name rest
+  end.
 
-Definition first_duplicate_branch (branches : list (string * expr)) : option string :=
-  first_duplicate_field branches.
+Fixpoint first_duplicate_branch
+    (branches : list (string * list ident * expr)) : option string :=
+  match branches with
+  | [] => None
+  | b :: rest =>
+      let name := match_branch_name b in
+      if has_branch_b name rest then Some name else first_duplicate_branch rest
+  end.
 
 Fixpoint first_unknown_variant_branch
-    (branches : list (string * expr)) (defs : list enum_variant_def)
+    (branches : list (string * list ident * expr))
+    (defs : list enum_variant_def)
     : option string :=
   match branches with
   | [] => None
-  | (name, _) :: rest =>
+  | (name, _, _) :: rest =>
       match lookup_enum_variant name defs with
       | Some _ => first_unknown_variant_branch rest defs
       | None => Some name
@@ -1434,7 +1447,8 @@ Fixpoint first_unknown_variant_branch
   end.
 
 Fixpoint first_missing_variant_branch
-    (defs : list enum_variant_def) (branches : list (string * expr))
+    (defs : list enum_variant_def)
+    (branches : list (string * list ident * expr))
     : option string :=
   match defs with
   | [] => None
@@ -1442,6 +1456,14 @@ Fixpoint first_missing_variant_branch
       if has_branch_b (enum_variant_name v) branches
       then first_missing_variant_branch rest branches
       else Some (enum_variant_name v)
+  end.
+
+Fixpoint first_payload_binder_branch
+    (branches : list (string * list ident * expr)) : option string :=
+  match branches with
+  | [] => None
+  | (name, [], _) :: rest => first_payload_binder_branch rest
+  | (name, _ :: _, _) :: _ => Some name
   end.
 
 Fixpoint first_payload_variant (defs : list enum_variant_def) : option string :=
@@ -1452,6 +1474,14 @@ Fixpoint first_payload_variant (defs : list enum_variant_def) : option string :=
       | [] => first_payload_variant rest
       | _ :: _ => Some (enum_variant_name v)
       end
+  end.
+
+Definition first_unsupported_match_payload
+    (branches : list (string * list ident * expr))
+    (defs : list enum_variant_def) : option string :=
+  match first_payload_binder_branch branches with
+  | Some name => Some name
+  | None => first_payload_variant defs
   end.
 
 Fixpoint usage_max_tys_nonempty (head : Ty) (tail : list Ty) : usage :=
@@ -2206,7 +2236,7 @@ Fixpoint infer_core_env_fuel (fuel : nat)
                                 match first_missing_variant_branch (enum_variants edef) branches with
                                 | Some name => infer_err (ErrMissingVariant name)
                                 | None =>
-                                    match first_payload_variant (enum_variants edef) with
+                                    match first_unsupported_match_payload branches (enum_variants edef) with
                                     | Some name => infer_err (ErrMatchPayloadUnsupported name)
                                     | None =>
                                   let fix infer_first (defs : list enum_variant_def)
@@ -3357,7 +3387,7 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
                           match first_missing_variant_branch (enum_variants edef) branches with
                           | Some name => infer_err (ErrMissingVariant name)
                           | None =>
-                              match first_payload_variant (enum_variants edef) with
+                              match first_unsupported_match_payload branches (enum_variants edef) with
                               | Some name => infer_err (ErrMatchPayloadUnsupported name)
                               | None =>
                                   let fix infer_first (defs : list enum_variant_def)
@@ -3976,11 +4006,13 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
                           match first_missing_variant_branch (enum_variants edef) branches with
                           | Some name => infer_err (ErrMissingVariant name)
                           | None =>
-                              match first_payload_variant (enum_variants edef) with
+                              match first_unsupported_match_payload branches (enum_variants edef) with
                               | Some name => infer_err (ErrMatchPayloadUnsupported name)
                               | None =>
                                   let fix infer_first (defs : list enum_variant_def)
-                                      : infer_result (Ty * list sctx * list Ty * list (string * expr)) :=
+                                      : infer_result
+                                          (Ty * list sctx * list Ty *
+                                           list (string * list ident * expr)) :=
                                     match defs with
                                     | [] => infer_err (ErrMissingVariant "")
                                     | v :: rest =>
@@ -3993,7 +4025,9 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
                                                 let fix infer_rest
                                                     (T_head : Ty)
                                                     (defs0 : list enum_variant_def)
-                                                    : infer_result (list sctx * list Ty * list (string * expr)) :=
+                                                    : infer_result
+                                                        (list sctx * list Ty *
+                                                         list (string * list ident * expr)) :=
                                                   match defs0 with
                                                   | [] => infer_ok ([], [], [])
                                                   | v0 :: rest0 =>
@@ -4012,7 +4046,7 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
                                                                 | infer_ok (Σs, Ts, bs) =>
                                                                     infer_ok
                                                                       (Σ0 :: Σs, T0 :: Ts,
-                                                                       (enum_variant_name v0, e0') :: bs)
+                                                                       (enum_variant_name v0, [], e0') :: bs)
                                                                 end
                                                               else infer_err (ErrTypeMismatch (ty_core T0) (ty_core T_head))
                                                           end
@@ -4024,7 +4058,7 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
                                                 | infer_ok (Σs, Ts, bs) =>
                                                     infer_ok
                                                       (T_branch, Σ_branch :: Σs, Ts,
-                                                       (enum_variant_name v, e_branch') :: bs)
+                                                       (enum_variant_name v, [], e_branch') :: bs)
                                                 end
                                             end
                                         end
@@ -4490,10 +4524,10 @@ Fixpoint preservation_ready_expr_b (e : expr) : bool :=
       forallb preservation_ready_expr_b payloads
   | EMatch scrut branches =>
       preservation_ready_expr_b scrut &&
-      let fix go (branches0 : list (string * expr)) : bool :=
+      let fix go (branches0 : list (string * list ident * expr)) : bool :=
         match branches0 with
         | [] => true
-        | (_, e_branch) :: rest =>
+        | (_, _, e_branch) :: rest =>
             preservation_ready_expr_b e_branch && go rest
         end
       in go branches
@@ -4562,10 +4596,10 @@ Fixpoint provenance_ready_expr_b (e : expr) : bool :=
       forallb provenance_ready_expr_b payloads
   | EMatch scrut branches =>
       provenance_ready_expr_b scrut &&
-      let fix go (branches0 : list (string * expr)) : bool :=
+      let fix go (branches0 : list (string * list ident * expr)) : bool :=
         match branches0 with
         | [] => true
-        | (_, e_branch) :: rest =>
+        | (_, _, e_branch) :: rest =>
             provenance_ready_expr_b e_branch && go rest
         end
       in go branches
@@ -4921,7 +4955,7 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
                           match first_missing_variant_branch (enum_variants edef) branches with
                           | Some name => infer_err (ErrMissingVariant name)
                           | None =>
-                              match first_payload_variant (enum_variants edef) with
+                              match first_unsupported_match_payload branches (enum_variants edef) with
                               | Some name => infer_err (ErrMatchPayloadUnsupported name)
                               | None =>
                                   let fix infer_first (defs : list enum_variant_def)
@@ -5566,7 +5600,7 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
                           match first_missing_variant_branch (enum_variants edef) branches with
                           | Some name => infer_err (ErrMissingVariant name)
                           | None =>
-                              match first_payload_variant (enum_variants edef) with
+                              match first_unsupported_match_payload branches (enum_variants edef) with
                               | Some name => infer_err (ErrMatchPayloadUnsupported name)
                               | None =>
                                   let fix infer_first (defs : list enum_variant_def)
@@ -6905,7 +6939,7 @@ Fixpoint borrow_check_env (env : global_env) (PBS : path_borrow_state) (Γ : ctx
       | infer_err err => infer_err err
       | infer_ok PBS1 =>
           let fix go (expected : option path_borrow_state)
-              (branches0 : list (string * expr))
+              (branches0 : list (string * list ident * expr))
               : infer_result path_borrow_state :=
             match branches0 with
             | [] =>
@@ -6913,7 +6947,10 @@ Fixpoint borrow_check_env (env : global_env) (PBS : path_borrow_state) (Γ : ctx
                 | Some PBS_out => infer_ok PBS_out
                 | None => infer_err (ErrMissingVariant "")
                 end
-            | (_, e_branch) :: rest =>
+            | (_, binders, e_branch) :: rest =>
+                match binders with
+                | _ :: _ => infer_err ErrNotImplemented
+                | [] =>
                 match borrow_check_env env PBS1 Γ e_branch with
                 | infer_err err => infer_err err
                 | infer_ok PBS_branch =>
@@ -6924,6 +6961,7 @@ Fixpoint borrow_check_env (env : global_env) (PBS : path_borrow_state) (Γ : ctx
                         then go expected rest
                         else infer_err ErrContextCheckFailed
                     end
+                end
                 end
             end
           in go None branches
@@ -8285,7 +8323,7 @@ Inductive raw_expr : Type :=
 | RawCallExpr : raw_expr -> list raw_expr -> raw_expr
 | RawStruct : string -> list lifetime -> list Ty -> list (string * raw_expr) -> raw_expr
 | RawEnum : string -> string -> list lifetime -> list Ty -> list raw_expr -> raw_expr
-| RawMatch : raw_expr -> list (string * raw_expr) -> raw_expr
+| RawMatch : raw_expr -> list (string * list ident * raw_expr) -> raw_expr
 | RawReplace : place -> raw_expr -> raw_expr
 | RawAssign : place -> raw_expr -> raw_expr
 | RawBorrow : ref_kind -> place -> raw_expr
@@ -8693,7 +8731,10 @@ Fixpoint elaborate_raw_expr_fuel
               let fix go_branches env0 next0 branches0 :=
                 match branches0 with
                 | [] => infer_ok ([], [], next0)
-                | (variant_name, e_branch) :: rest =>
+                | (variant_name, binders, e_branch) :: rest =>
+                    match binders with
+                    | _ :: _ => infer_err (ErrMatchPayloadUnsupported variant_name)
+                    | [] =>
                     match elaborate_raw_expr_fuel fuel' expected env0 Ω n Σ1 next0 e_branch with
                     | infer_err err => infer_err err
                     | infer_ok (e_branch', _, extras_branch, next_branch) =>
@@ -8701,9 +8742,10 @@ Fixpoint elaborate_raw_expr_fuel
                         match go_branches env_branch next_branch rest with
                         | infer_err err => infer_err err
                         | infer_ok (rest', extras_rest, next_rest) =>
-                            infer_ok ((variant_name, e_branch') :: rest',
+                            infer_ok ((variant_name, [], e_branch') :: rest',
                                       extras_branch ++ extras_rest, next_rest)
                         end
+                    end
                     end
                 end
               in

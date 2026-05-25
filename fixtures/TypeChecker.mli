@@ -223,7 +223,7 @@ type expr =
 | ECallExpr of expr * expr list
 | EStruct of string * lifetime list * ty list * (string * expr) list
 | EEnum of string * string * lifetime list * ty list * expr list
-| EMatch of expr * (string * expr) list
+| EMatch of expr * ((string * ident list) * expr) list
 | EReplace of place * expr
 | EAssign of place * expr
 | EBorrow of ref_kind * place
@@ -232,6 +232,8 @@ type expr =
 | EIf of expr * expr * expr
 
 val expr_as_place : expr -> place option
+
+val match_branch_name : ((string * ident list) * expr) -> string
 
 type param = { param_mutability : mutability; param_name : ident;
                param_ty : ty }
@@ -431,6 +433,9 @@ val closure_capture_usage : ty list -> usage
 
 val ctx_merge : ctx -> ctx -> ctx option
 
+val lookup_expr_branch :
+  string -> ((string * ident list) * expr) list -> expr option
+
 val fn_signature_ty_with_usage : usage -> fn_def -> ty
 
 val closure_value_ty_at : lifetime -> fn_def -> ty list -> ty
@@ -512,6 +517,9 @@ val args_local_store_names_with :
 
 val fields_local_store_names_with :
   (expr -> ident list) -> (string * expr) list -> ident list
+
+val match_branches_local_store_names_with :
+  (expr -> ident list) -> ((string * ident list) * expr) list -> ident list
 
 val expr_local_store_names : expr -> ident list
 
@@ -736,19 +744,30 @@ val first_unknown_field :
 val first_missing_field :
   field_def list -> (string * expr) list -> string option
 
-val lookup_branch_b : string -> (string * expr) list -> expr option
+val lookup_branch_b :
+  string -> ((string * ident list) * expr) list -> expr option
 
-val has_branch_b : string -> (string * expr) list -> bool
+val has_branch_b : string -> ((string * ident list) * expr) list -> bool
 
-val first_duplicate_branch : (string * expr) list -> string option
+val first_duplicate_branch :
+  ((string * ident list) * expr) list -> string option
 
 val first_unknown_variant_branch :
-  (string * expr) list -> enum_variant_def list -> string option
+  ((string * ident list) * expr) list -> enum_variant_def list -> string
+  option
 
 val first_missing_variant_branch :
-  enum_variant_def list -> (string * expr) list -> string option
+  enum_variant_def list -> ((string * ident list) * expr) list -> string
+  option
+
+val first_payload_binder_branch :
+  ((string * ident list) * expr) list -> string option
 
 val first_payload_variant : enum_variant_def list -> string option
+
+val first_unsupported_match_payload :
+  ((string * ident list) * expr) list -> enum_variant_def list -> string
+  option
 
 val usage_max_tys_nonempty : ty -> ty list -> usage
 
@@ -1120,7 +1139,7 @@ type raw_expr =
 | RawCallExpr of raw_expr * raw_expr list
 | RawStruct of string * lifetime list * ty list * (string * raw_expr) list
 | RawEnum of string * string * lifetime list * ty list * raw_expr list
-| RawMatch of raw_expr * (string * raw_expr) list
+| RawMatch of raw_expr * ((string * ident list) * raw_expr) list
 | RawReplace of place * raw_expr
 | RawAssign of place * raw_expr
 | RawBorrow of ref_kind * place

@@ -912,7 +912,7 @@ type expr =
 | ECallExpr of expr * expr list
 | EStruct of string * lifetime list * ty list * (string * expr) list
 | EEnum of string * string * lifetime list * ty list * expr list
-| EMatch of expr * (string * expr) list
+| EMatch of expr * ((string * ident list) * expr) list
 | EReplace of place * expr
 | EAssign of place * expr
 | EBorrow of ref_kind * place
@@ -930,6 +930,11 @@ let rec expr_as_place = function
    | Some p -> Some (PDeref p)
    | None -> None)
 | _ -> None
+
+(** val match_branch_name : ((string * ident list) * expr) -> string **)
+
+let match_branch_name = function
+| (p, _) -> let (name, _) = p in name
 
 type param = { param_mutability : mutability; param_name : ident;
                param_ty : ty }
@@ -1855,6 +1860,16 @@ let rec ctx_merge _UU0393_2 _UU0393_3 =
                     m) :: rest))
              | None -> None))
 
+(** val lookup_expr_branch :
+    string -> ((string * ident list) * expr) list -> expr option **)
+
+let rec lookup_expr_branch name = function
+| [] -> None
+| p :: rest ->
+  let (p0, e) = p in
+  let (name', _) = p0 in
+  if (=) name name' then Some e else lookup_expr_branch name rest
+
 (** val fn_signature_ty_with_usage : usage -> fn_def -> ty **)
 
 let fn_signature_ty_with_usage u f =
@@ -2134,10 +2149,11 @@ let rec alpha_rename_expr _UU03c1_ used = function
     let rec go used0 = function
     | [] -> ([], used0)
     | p :: rest ->
-      let (variant_name, e0) = p in
+      let (p0, e0) = p in
+      let (variant_name, binders) = p0 in
       let (e', used1') = alpha_rename_expr _UU03c1_ used0 e0 in
       let (rest', used2) = go used1' rest in
-      (((variant_name, e') :: rest'), used2)
+      ((((variant_name, binders), e') :: rest'), used2)
     in go
   in
   let (branches', used') = go used1 branches in
@@ -2314,6 +2330,15 @@ let rec fields_local_store_names_with expr_names = function
   let (_, e) = p in
   app (expr_names e) (fields_local_store_names_with expr_names rest)
 
+(** val match_branches_local_store_names_with :
+    (expr -> ident list) -> ((string * ident list) * expr) list -> ident list **)
+
+let rec match_branches_local_store_names_with expr_names = function
+| [] -> []
+| p :: rest ->
+  let (_, e) = p in
+  app (expr_names e) (match_branches_local_store_names_with expr_names rest)
+
 (** val expr_local_store_names : expr -> ident list **)
 
 let rec expr_local_store_names = function
@@ -2333,7 +2358,7 @@ let rec expr_local_store_names = function
   args_local_store_names_with expr_local_store_names payloads
 | EMatch (scrut, branches) ->
   app (expr_local_store_names scrut)
-    (fields_local_store_names_with expr_local_store_names branches)
+    (match_branches_local_store_names_with expr_local_store_names branches)
 | EReplace (_, e_new) -> expr_local_store_names e_new
 | EAssign (_, e_new) -> expr_local_store_names e_new
 | EDeref e' -> expr_local_store_names e'
@@ -3879,35 +3904,48 @@ let rec first_missing_field defs fields =
     then first_missing_field rest fields
     else Some f.field_name
 
-(** val lookup_branch_b : string -> (string * expr) list -> expr option **)
+(** val lookup_branch_b :
+    string -> ((string * ident list) * expr) list -> expr option **)
 
 let lookup_branch_b =
-  lookup_field_b
+  lookup_expr_branch
 
-(** val has_branch_b : string -> (string * expr) list -> bool **)
+(** val has_branch_b :
+    string -> ((string * ident list) * expr) list -> bool **)
 
-let has_branch_b =
-  has_field_b
+let rec has_branch_b name = function
+| [] -> false
+| p :: rest ->
+  let (p0, _) = p in
+  let (name', _) = p0 in
+  if (=) name name' then true else has_branch_b name rest
 
-(** val first_duplicate_branch : (string * expr) list -> string option **)
+(** val first_duplicate_branch :
+    ((string * ident list) * expr) list -> string option **)
 
-let first_duplicate_branch =
-  first_duplicate_field
+let rec first_duplicate_branch = function
+| [] -> None
+| b :: rest ->
+  let name = match_branch_name b in
+  if has_branch_b name rest then Some name else first_duplicate_branch rest
 
 (** val first_unknown_variant_branch :
-    (string * expr) list -> enum_variant_def list -> string option **)
+    ((string * ident list) * expr) list -> enum_variant_def list -> string
+    option **)
 
 let rec first_unknown_variant_branch branches defs =
   match branches with
   | [] -> None
   | p :: rest ->
-    let (name, _) = p in
+    let (p0, _) = p in
+    let (name, _) = p0 in
     (match lookup_enum_variant name defs with
      | Some _ -> first_unknown_variant_branch rest defs
      | None -> Some name)
 
 (** val first_missing_variant_branch :
-    enum_variant_def list -> (string * expr) list -> string option **)
+    enum_variant_def list -> ((string * ident list) * expr) list -> string
+    option **)
 
 let rec first_missing_variant_branch defs branches =
   match defs with
@@ -3917,6 +3955,18 @@ let rec first_missing_variant_branch defs branches =
     then first_missing_variant_branch rest branches
     else Some v.enum_variant_name
 
+(** val first_payload_binder_branch :
+    ((string * ident list) * expr) list -> string option **)
+
+let rec first_payload_binder_branch = function
+| [] -> None
+| p :: rest ->
+  let (p0, _) = p in
+  let (name, l) = p0 in
+  (match l with
+   | [] -> first_payload_binder_branch rest
+   | _ :: _ -> Some name)
+
 (** val first_payload_variant : enum_variant_def list -> string option **)
 
 let rec first_payload_variant = function
@@ -3925,6 +3975,15 @@ let rec first_payload_variant = function
   (match v.enum_variant_fields with
    | [] -> first_payload_variant rest
    | _ :: _ -> Some v.enum_variant_name)
+
+(** val first_unsupported_match_payload :
+    ((string * ident list) * expr) list -> enum_variant_def list -> string
+    option **)
+
+let first_unsupported_match_payload branches defs =
+  match first_payload_binder_branch branches with
+  | Some name -> Some name
+  | None -> first_payload_variant defs
 
 (** val usage_max_tys_nonempty : ty -> ty list -> usage **)
 
@@ -4986,8 +5045,8 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
                                    | Some name ->
                                      Infer_err (ErrMissingVariant name)
                                    | None ->
-                                     (match first_payload_variant
-                                              edef.enum_variants with
+                                     (match first_unsupported_match_payload
+                                              branches edef.enum_variants with
                                       | Some name ->
                                         Infer_err (ErrMatchPayloadUnsupported
                                           name)
@@ -5717,7 +5776,8 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
                               branches with
                       | Some name -> Infer_err (ErrMissingVariant name)
                       | None ->
-                        (match first_payload_variant edef.enum_variants with
+                        (match first_unsupported_match_payload branches
+                                 edef.enum_variants with
                          | Some name ->
                            Infer_err (ErrMatchPayloadUnsupported name)
                          | None ->
@@ -5761,8 +5821,8 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
                                                        Infer_ok
                                                        (((_UU03a3_0 :: _UU03a3_s),
                                                        (t0 :: ts)),
-                                                       ((v0.enum_variant_name,
-                                                       e0') :: bs))
+                                                       (((v0.enum_variant_name,
+                                                       []), e0') :: bs))
                                                      | Infer_err err ->
                                                        Infer_err err)
                                                else Infer_err
@@ -5781,7 +5841,7 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
                                         let (_UU03a3_s, ts) = p4 in
                                         Infer_ok (((t_branch,
                                         (_UU03a3__branch :: _UU03a3_s)), ts),
-                                        ((v.enum_variant_name,
+                                        (((v.enum_variant_name, []),
                                         e_branch') :: bs))
                                       | Infer_err err -> Infer_err err)
                                    | Infer_err err -> Infer_err err)
@@ -6634,8 +6694,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                                    | Some name ->
                                      Infer_err (ErrMissingVariant name)
                                    | None ->
-                                     (match first_payload_variant
-                                              edef.enum_variants with
+                                     (match first_unsupported_match_payload
+                                              branches edef.enum_variants with
                                       | Some name ->
                                         Infer_err (ErrMatchPayloadUnsupported
                                           name)
@@ -7419,8 +7479,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                                    | Some name ->
                                      Infer_err (ErrMissingVariant name)
                                    | None ->
-                                     (match first_payload_variant
-                                              edef.enum_variants with
+                                     (match first_unsupported_match_payload
+                                              branches edef.enum_variants with
                                       | Some name ->
                                         Infer_err (ErrMatchPayloadUnsupported
                                           name)
@@ -8163,16 +8223,20 @@ let rec borrow_check_env env pBS _UU0393_ = function
         | Some pBS_out -> Infer_ok pBS_out
         | None -> Infer_err (ErrMissingVariant ""))
      | p :: rest ->
-       let (_, e_branch) = p in
-       (match borrow_check_env env pBS1 _UU0393_ e_branch with
-        | Infer_ok pBS_branch ->
-          (match expected with
-           | Some pBS_expected ->
-             if pbs_eqb pBS_branch pBS_expected
-             then go expected rest
-             else Infer_err ErrContextCheckFailed
-           | None -> go (Some pBS_branch) rest)
-        | Infer_err err -> Infer_err err)
+       let (p0, e_branch) = p in
+       let (_, binders) = p0 in
+       (match binders with
+        | [] ->
+          (match borrow_check_env env pBS1 _UU0393_ e_branch with
+           | Infer_ok pBS_branch ->
+             (match expected with
+              | Some pBS_expected ->
+                if pbs_eqb pBS_branch pBS_expected
+                then go expected rest
+                else Infer_err ErrContextCheckFailed
+              | None -> go (Some pBS_branch) rest)
+           | Infer_err err -> Infer_err err)
+        | _ :: _ -> Infer_err ErrNotImplemented)
      in go None branches
    | Infer_err err -> Infer_err err)
 | EReplace (p, e_new) ->
@@ -8883,7 +8947,7 @@ type raw_expr =
 | RawCallExpr of raw_expr * raw_expr list
 | RawStruct of string * lifetime list * ty list * (string * raw_expr) list
 | RawEnum of string * string * lifetime list * ty list * raw_expr list
-| RawMatch of raw_expr * (string * raw_expr) list
+| RawMatch of raw_expr * ((string * ident list) * raw_expr) list
 | RawReplace of place * raw_expr
 | RawAssign of place * raw_expr
 | RawBorrow of ref_kind * place
@@ -9400,22 +9464,26 @@ let rec elaborate_raw_expr_fuel fuel expected env _UU03a9_ n _UU03a3_ next e =
             let rec go_branches env0 next0 = function
             | [] -> Infer_ok (([], []), next0)
             | y :: rest ->
-              let (variant_name, e_branch) = y in
-              (match elaborate_raw_expr_fuel fuel' expected env0 _UU03a9_ n
-                       _UU03a3_1 next0 e_branch with
-               | Infer_ok p2 ->
-                 let (p3, next_branch) = p2 in
-                 let (p4, extras_branch) = p3 in
-                 let (e_branch', _) = p4 in
-                 let env_branch = append_env_fns env0 extras_branch in
-                 (match go_branches env_branch next_branch rest with
-                  | Infer_ok p5 ->
-                    let (p6, next_rest) = p5 in
-                    let (rest', extras_rest) = p6 in
-                    Infer_ok ((((variant_name, e_branch') :: rest'),
-                    (app extras_branch extras_rest)), next_rest)
+              let (y0, e_branch) = y in
+              let (variant_name, binders) = y0 in
+              (match binders with
+               | [] ->
+                 (match elaborate_raw_expr_fuel fuel' expected env0 _UU03a9_
+                          n _UU03a3_1 next0 e_branch with
+                  | Infer_ok p2 ->
+                    let (p3, next_branch) = p2 in
+                    let (p4, extras_branch) = p3 in
+                    let (e_branch', _) = p4 in
+                    let env_branch = append_env_fns env0 extras_branch in
+                    (match go_branches env_branch next_branch rest with
+                     | Infer_ok p5 ->
+                       let (p6, next_rest) = p5 in
+                       let (rest', extras_rest) = p6 in
+                       Infer_ok (((((variant_name, []), e_branch') :: rest'),
+                       (app extras_branch extras_rest)), next_rest)
+                     | Infer_err err -> Infer_err err)
                   | Infer_err err -> Infer_err err)
-               | Infer_err err -> Infer_err err)
+               | _ :: _ -> Infer_err (ErrMatchPayloadUnsupported variant_name))
             in go_branches
           in
           (match go_branches env1 next1 branches with

@@ -19,6 +19,20 @@ Proof.
     + apply in_or_app. right. apply IH. exact Hin.
 Qed.
 
+Lemma match_branches_local_store_names_in_expr :
+  forall name binders e branches x,
+    In (name, binders, e) branches ->
+    In x (expr_local_store_names e) ->
+    In x (match_branches_local_store_names branches).
+Proof.
+  intros name binders e branches x Hin Hx.
+  induction branches as [| [[name' binders'] e'] rest IH]; simpl in *.
+  - contradiction.
+  - destruct Hin as [Hin | Hin].
+    + inversion Hin; subst. apply in_or_app. left. exact Hx.
+    + apply in_or_app. right. apply IH. exact Hin.
+Qed.
+
 Scheme hidden_frame_eval_ind' := Induction for eval Sort Prop
 with hidden_frame_eval_args_ind' := Induction for eval_args Sort Prop
 with hidden_frame_eval_struct_fields_ind' :=
@@ -39,6 +53,13 @@ Fixpoint fields_free_vars_ts (fields : list (string * expr)) : list ident :=
   match fields with
   | [] => []
   | (_, e) :: rest => free_vars_expr e ++ fields_free_vars_ts rest
+  end.
+
+Fixpoint match_branches_free_vars_ts
+    (branches : list (string * list ident * expr)) : list ident :=
+  match branches with
+  | [] => []
+  | (_, _, e) :: rest => free_vars_expr e ++ match_branches_free_vars_ts rest
   end.
 
 Lemma args_free_vars_ts_cons_notin :
@@ -127,6 +148,33 @@ Proof.
   eapply fields_free_vars_ts_in_expr; eassumption.
 Qed.
 
+Lemma match_branches_free_vars_ts_in_expr :
+  forall name binders e branches x,
+    In (name, binders, e) branches ->
+    In x (free_vars_expr e) ->
+    In x (match_branches_free_vars_ts branches).
+Proof.
+  intros name binders e branches x Hin Hx.
+  induction branches as [| [[name' binders'] e'] rest IH]; simpl in *;
+    try contradiction.
+  destruct Hin as [Hin | Hin].
+  - inversion Hin; subst. apply in_or_app. left. exact Hx.
+  - apply in_or_app. right. eapply IH; eassumption.
+Qed.
+
+Lemma match_branches_free_vars_ts_lookup_notin :
+  forall x lookup_name branches e,
+    lookup_expr_branch lookup_name branches = Some e ->
+    ~ In x (match_branches_free_vars_ts branches) ->
+    ~ In x (free_vars_expr e).
+Proof.
+  intros x lookup_name branches e Hlookup Hnotin Hin.
+  destruct (lookup_expr_branch_in_alpha lookup_name branches e Hlookup)
+    as [binders Hbranch].
+  apply Hnotin.
+  eapply match_branches_free_vars_ts_in_expr; eassumption.
+Qed.
+
 Lemma fields_local_store_names_lookup_notin :
   forall x lookup_name fields e,
     lookup_expr_field lookup_name fields = Some e ->
@@ -138,6 +186,19 @@ Proof.
     as [field_name Hfield].
   apply Hnotin.
   eapply fields_local_store_names_in_expr; eassumption.
+Qed.
+
+Lemma match_branches_local_store_names_lookup_notin :
+  forall x lookup_name branches e,
+    lookup_expr_branch lookup_name branches = Some e ->
+    ~ In x (match_branches_local_store_names branches) ->
+    ~ In x (expr_local_store_names e).
+Proof.
+  intros x lookup_name branches e Hlookup Hnotin Hin.
+  destruct (lookup_expr_branch_in_alpha lookup_name branches e Hlookup)
+    as [binders Hbranch].
+  apply Hnotin.
+  eapply match_branches_local_store_names_in_expr; eassumption.
 Qed.
 
 Theorem hidden_frame_eval_strip_mutual :
@@ -569,14 +630,14 @@ Proof.
     subst s_scrut.
     assert (Hready_branch : preservation_ready_expr e_branch).
     { eapply lookup_match_branch_preservation_ready; eassumption. }
-    assert (Hfree_branches : ~ In x (fields_free_vars_ts branches)).
+    assert (Hfree_branches : ~ In x (match_branches_free_vars_ts branches)).
     { simpl in Hfree. intros Hin. apply Hfree. apply in_or_app. right. exact Hin. }
     assert (Hfree_branch : ~ In x (free_vars_expr e_branch)).
-    { eapply fields_free_vars_ts_lookup_notin; eassumption. }
-    assert (Hlocal_branches : ~ In x (fields_local_store_names branches)).
+    { eapply match_branches_free_vars_ts_lookup_notin; eassumption. }
+    assert (Hlocal_branches : ~ In x (match_branches_local_store_names branches)).
     { simpl in Hlocal. intros Hin. apply Hlocal. apply in_or_app. right. exact Hin. }
     assert (Hlocal_branch : ~ In x (expr_local_store_names e_branch)).
-    { eapply fields_local_store_names_lookup_notin; eassumption. }
+    { eapply match_branches_local_store_names_lookup_notin; eassumption. }
     destruct (IHbranch x T hidden s_scrut_base eq_refl Hready_branch
                 Hfree_branch Hlocal_branch Hrefs_scrut)
       as [s'_base [Hs' [Heval_branch_base [Hrefs' Hv]]]].

@@ -256,7 +256,7 @@ Proof.
   induction Htail as
     [Σ branches expected_core
     |Σ branches v rest e0 T0 Σv Σs Ts expected_core
-       Hfields Hlookup Htyped Hcore Htail IHtail];
+       Hfields Hbinders Hlookup Htyped Hcore Htail IHtail];
     intros Hvariant Hbranch.
   - simpl in Hvariant. discriminate.
   - simpl in Hvariant.

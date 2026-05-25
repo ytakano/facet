@@ -24,7 +24,7 @@ Proof.
   induction Htail as
     [R Σ branches expected_core R_out
     |R Σ branches v rest e0 T Σv Rv R_out roots Σs Ts rootss
-       expected_core Hfields Hlookup Htyped Hcore Hequiv Htail IHtail];
+       expected_core Hfields Hbinders Hlookup Htyped Hcore Hequiv Htail IHtail];
     intros Hvariant Hbranch.
   - simpl in Hvariant. discriminate.
   - simpl in Hvariant.
@@ -664,7 +664,7 @@ Proof.
       as [Hroots_scrut [_ [Hnodup_scrut Hrn_scrut]]].
     assert (Hready_branch : provenance_ready_expr e_branch).
     { unfold lookup_match_branch in Hlookup_branch_eval.
-      eapply provenance_ready_fields_lookup; eassumption. }
+      eapply provenance_ready_match_branches_lookup; eassumption. }
     unfold lookup_match_branch in Hlookup_branch_eval.
     assert (Hlookup_branch :
       lookup_expr_branch variant_name branches = Some e_branch).
@@ -682,7 +682,7 @@ Proof.
       assert (Hbranch_eq : e_branch = e_head).
       {
         eapply lookup_expr_branch_deterministic;
-          [ exact Hlookup_branch | exact H8 ].
+          [ exact Hlookup_branch | exact H9 ].
       }
       subst e_branch.
       destruct (IHbranch Ω n R1 Σ1 T_head Σ_head R_out roots_head
@@ -696,7 +696,7 @@ Proof.
         -- eapply store_ref_targets_preserved_trans; eassumption.
     + destruct (typed_match_tail_roots_lookup env Ω n R1 Σ1 branches v_tail
                   (ty_core T_head) R_out Σ_tail Ts_tail roots_tail
-                  variant_name vdef_runtime e_branch H9
+                  variant_name vdef_runtime e_branch H10
                   Hvariant_runtime Hlookup_branch)
         as [T_branch [Σ_branch [R_branch [roots_branch
              [Htyped_branch [Hcore_branch [_ [HinΣ HinT]]]]]]]].
@@ -737,7 +737,7 @@ Proof.
         -- exact Hsame_head_branch.
         -- exact Hsame_head_tail.
         -- simpl. right. exact HinΣ.
-        -- exact H10.
+        -- exact H11.
       * split.
         -- eapply value_has_type_match_tail_result; eassumption.
         -- eapply store_ref_targets_preserved_trans; eassumption.

@@ -274,10 +274,13 @@ Scheme preservation_ready_expr_ind_closure :=
 with preservation_ready_args_ind_closure :=
   Induction for preservation_ready_args Sort Prop
 with preservation_ready_fields_ind_closure :=
-  Induction for preservation_ready_fields Sort Prop.
+  Induction for preservation_ready_fields Sort Prop
+with preservation_ready_match_branches_ind_closure :=
+  Induction for preservation_ready_match_branches Sort Prop.
 Combined Scheme preservation_ready_mutind_closure
   from preservation_ready_expr_ind_closure, preservation_ready_args_ind_closure,
-       preservation_ready_fields_ind_closure.
+       preservation_ready_fields_ind_closure,
+       preservation_ready_match_branches_ind_closure.
 
 Lemma preservation_ready_args_implies_provenance_ready_closure :
   forall args,
@@ -293,7 +296,10 @@ Proof.
       provenance_ready_args args) /\
     (forall fields,
       preservation_ready_fields fields ->
-      provenance_ready_fields fields)).
+      provenance_ready_fields fields) /\
+    (forall branches,
+      preservation_ready_match_branches branches ->
+      provenance_ready_match_branches branches)).
   { apply preservation_ready_mutind_closure;
       try solve [econstructor; eauto]. }
   exact (proj1 (proj2 Hmut)).

@@ -14,6 +14,14 @@ Fixpoint ident_in (x : ident) (xs : list ident) : bool :=
   | y :: ys => if ident_eqb x y then true else ident_in x ys
   end.
 
+Fixpoint remove_idents (xs ys : list ident) : list ident :=
+  match ys with
+  | [] => []
+  | y :: rest =>
+      if ident_in y xs then remove_idents xs rest
+      else y :: remove_idents xs rest
+  end.
+
 Fixpoint lookup_rename (x : ident) (ρ : rename_env) : ident :=
   match ρ with
   | [] => x
@@ -92,10 +100,10 @@ Fixpoint free_vars_expr (e : expr) : list ident :=
         end
       in go payloads
   | EMatch scrut branches =>
-      let fix go (branches0 : list (string * expr)) : list ident :=
+      let fix go (branches0 : list (string * list ident * expr)) : list ident :=
         match branches0 with
         | [] => []
-        | (_, e) :: rest => free_vars_expr e ++ go rest
+        | (_, _, e) :: rest => free_vars_expr e ++ go rest
         end
       in free_vars_expr scrut ++ go branches
   | EReplace p e_new => place_name p :: free_vars_expr e_new
@@ -197,14 +205,15 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
       (EEnum enum_name variant_name lts args payloads', used')
   | EMatch scrut branches =>
       let (scrut', used1) := alpha_rename_expr ρ used scrut in
-      let fix go (used0 : list ident) (branches0 : list (string * expr))
-          : list (string * expr) * list ident :=
+      let fix go (used0 : list ident)
+          (branches0 : list (string * list ident * expr))
+          : list (string * list ident * expr) * list ident :=
         match branches0 with
         | [] => ([], used0)
-        | (variant_name, e) :: rest =>
+        | (variant_name, binders, e) :: rest =>
             let (e', used1') := alpha_rename_expr ρ used0 e in
             let (rest', used2) := go used1' rest in
-            ((variant_name, e') :: rest', used2)
+            ((variant_name, binders, e') :: rest', used2)
         end
       in
       let (branches', used') := go used1 branches in

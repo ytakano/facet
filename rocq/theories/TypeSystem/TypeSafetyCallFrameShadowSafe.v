@@ -68,7 +68,7 @@ Qed.
 Lemma root_env_tail_fresh_names_lookup_expr_branch :
   forall R_tail name branches e,
     lookup_expr_branch name branches = Some e ->
-    root_env_tail_fresh_names R_tail (fields_local_store_names branches) ->
+    root_env_tail_fresh_names R_tail (match_branches_local_store_names branches) ->
     root_env_tail_fresh_names R_tail (expr_local_store_names e).
 Proof.
   unfold root_env_tail_fresh_names.
@@ -98,7 +98,7 @@ Theorem typed_roots_shadow_safe_tail_frame_mutual :
   (forall R Σ branches variants expected_core R_out Σs Ts rootss,
     typed_match_tail_roots_shadow_safe env Ω n R Σ branches variants
       expected_core R_out Σs Ts rootss ->
-    root_env_tail_fresh_names R_tail (fields_local_store_names branches) ->
+    root_env_tail_fresh_names R_tail (match_branches_local_store_names branches) ->
     typed_match_tail_roots_shadow_safe env Ω n (R ++ R_tail) Σ branches
       variants expected_core (R_out ++ R_tail) Σs Ts rootss).
 Proof.
@@ -137,10 +137,11 @@ Proof.
     + exact e5.
     + exact e6.
     + exact e7.
+    + exact e8.
     + apply H0.
       eapply root_env_tail_fresh_names_lookup_expr_branch; eassumption.
     + apply H1. exact Hfresh_branches.
-    + exact e8.
+    + exact e9.
   - pose proof (root_env_tail_fresh_names_app_l _ _ _ H1) as Hfresh1.
     pose proof (root_env_tail_fresh_names_app_r _ _ _ H1) as Hfresh_tail.
     destruct (root_env_tail_fresh_names_cons_head _ _ _ Hfresh_tail)
@@ -245,8 +246,9 @@ Proof.
   - eapply TERSMatchTail_Cons.
     + exact e0.
     + exact e1.
+    + eassumption.
     + apply H. eapply root_env_tail_fresh_names_lookup_expr_branch; eassumption.
-    + exact e2.
+    + eassumption.
     + apply root_env_equiv_app.
       * exact r.
       * apply root_env_equiv_refl.

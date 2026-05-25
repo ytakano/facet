@@ -636,6 +636,16 @@ Fixpoint fields_local_store_names_with
       expr_names e ++ fields_local_store_names_with expr_names rest
   end.
 
+Fixpoint match_branches_local_store_names_with
+    (expr_names : expr -> list ident)
+    (branches : list (string * list ident * expr)) : list ident :=
+  match branches with
+  | [] => []
+  | (_, _, e) :: rest =>
+      expr_names e ++
+      match_branches_local_store_names_with expr_names rest
+  end.
+
 Fixpoint expr_local_store_names (e : expr) : list ident :=
   match e with
   | EUnit => []
@@ -661,7 +671,7 @@ Fixpoint expr_local_store_names (e : expr) : list ident :=
       args_local_store_names_with expr_local_store_names payloads
   | EMatch scrut branches =>
       expr_local_store_names scrut ++
-      fields_local_store_names_with expr_local_store_names branches
+      match_branches_local_store_names_with expr_local_store_names branches
   | EReplace _ e_new => expr_local_store_names e_new
   | EAssign _ e_new => expr_local_store_names e_new
   | EBorrow _ _ => []
@@ -679,6 +689,10 @@ Definition args_local_store_names (args : list expr) : list ident :=
 Definition fields_local_store_names (fields : list (string * expr))
     : list ident :=
   fields_local_store_names_with expr_local_store_names fields.
+
+Definition match_branches_local_store_names
+    (branches : list (string * list ident * expr)) : list ident :=
+  match_branches_local_store_names_with expr_local_store_names branches.
 
 Lemma expr_local_store_names_call :
   forall fname args,

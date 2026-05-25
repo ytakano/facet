@@ -1,0 +1,11 @@
+enum Switch {
+  Off,
+  On
+}
+
+fn toggled(s: unrestricted Switch) -> unrestricted isize {
+  match s {
+    Off => 0,
+    On => 1,
+  }
+}

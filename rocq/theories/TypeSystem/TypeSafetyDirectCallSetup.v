@@ -98,7 +98,10 @@ Proof.
       provenance_ready_args args) /\
     (forall fields,
       preservation_ready_fields fields ->
-      provenance_ready_fields fields)).
+      provenance_ready_fields fields) /\
+    (forall branches,
+      preservation_ready_match_branches branches ->
+      provenance_ready_match_branches branches)).
   { apply preservation_ready_mutind_closure;
       try solve [econstructor; eauto]. }
   exact (proj1 Hmut).

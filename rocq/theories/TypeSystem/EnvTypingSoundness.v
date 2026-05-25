@@ -60,7 +60,7 @@ Fixpoint call_expr (e : expr) : bool :=
   | ECallExpr callee args => call_expr callee && forallb call_expr args
   | EEnum _ _ _ _ payloads => forallb call_expr payloads
   | EMatch scrut branches =>
-      call_expr scrut && forallb (fun '(_, e_branch) => call_expr e_branch) branches
+      call_expr scrut && forallb (fun '(_, _, e_branch) => call_expr e_branch) branches
   | EDeref e1 => call_expr e1
   | EDrop e1 => call_expr e1
   | EIf e1 e2 e3 => call_expr e1 && call_expr e2 && call_expr e3
@@ -176,7 +176,7 @@ Fixpoint struct_expr (e : expr) : bool :=
   | EStruct _ _ _ fields => forallb (fun '(_, e_field) => struct_expr e_field) fields
   | EEnum _ _ _ _ payloads => forallb struct_expr payloads
   | EMatch scrut branches =>
-      struct_expr scrut && forallb (fun '(_, e_branch) => struct_expr e_branch) branches
+      struct_expr scrut && forallb (fun '(_, _, e_branch) => struct_expr e_branch) branches
   | EReplace _ e_new => struct_expr e_new
   | EAssign _ e_new => struct_expr e_new
   | EBorrow _ _ => true
@@ -218,19 +218,19 @@ Lemma lookup_branch_b_lookup_expr_branch :
     lookup_branch_b name branches = lookup_expr_branch name branches.
 Proof.
   intros name branches.
-  unfold lookup_branch_b, lookup_field_b.
-  induction branches as [|[name' e] rest IH]; simpl; [reflexivity |].
+  unfold lookup_branch_b.
+  induction branches as [|[[name' binders] e] rest IH]; simpl; [reflexivity |].
   destruct (String.eqb name name'); [reflexivity | exact IH].
 Qed.
 
 Lemma lookup_expr_branch_forallb_true :
   forall (P : expr -> bool) branches name e,
-    forallb (fun '(_, e_branch) => P e_branch) branches = true ->
+    forallb (fun '(_, _, e_branch) => P e_branch) branches = true ->
     lookup_expr_branch name branches = Some e ->
     P e = true.
 Proof.
   intros P branches.
-  induction branches as [|[name' e'] rest IH]; intros name e Hbranches Hlookup;
+  induction branches as [|[[name' binders] e'] rest IH]; intros name e Hbranches Hlookup;
     simpl in *.
   - discriminate.
   - apply andb_true_iff in Hbranches as [Hhead Htail].
@@ -239,8 +239,35 @@ Proof.
     + eapply IH; eassumption.
 Qed.
 
+Lemma first_payload_binder_branch_lookup_none :
+  forall branches name e,
+    first_payload_binder_branch branches = None ->
+    lookup_expr_branch name branches = Some e ->
+    lookup_expr_branch_binders name branches = Some [].
+Proof.
+  induction branches as [| [[name0 binders0] e0] rest IH];
+    intros name e Hbinders Hlookup; simpl in Hbinders, Hlookup.
+  - discriminate.
+  - destruct binders0 as [| b bs]; [| discriminate].
+    destruct (String.eqb name name0) eqn:Hname.
+    + simpl. rewrite Hname. reflexivity.
+    + simpl. rewrite Hname. eapply IH; eassumption.
+Qed.
+
+Lemma first_unsupported_match_payload_none :
+  forall branches variants,
+    first_unsupported_match_payload branches variants = None ->
+    first_payload_binder_branch branches = None /\
+    first_payload_variant variants = None.
+Proof.
+  intros branches variants Hunsupported.
+  unfold first_unsupported_match_payload in Hunsupported.
+  destruct (first_payload_binder_branch branches); try discriminate.
+  split; [reflexivity | exact Hunsupported].
+Qed.
+
 Fixpoint infer_env_match_tail_collect fuel env Ω n (Σ : sctx)
-    (branches : list (string * expr)) (T_head : Ty)
+    (branches : list (string * list ident * expr)) (T_head : Ty)
     (defs : list enum_variant_def) : infer_result (list sctx * list Ty) :=
   match defs with
   | [] => infer_ok ([], [])
@@ -268,7 +295,8 @@ Lemma infer_env_match_tail_collect_sound :
     infer_env_match_tail_collect fuel env Ω n Σ branches T_head variants =
       infer_ok (Σs, Ts) ->
     first_payload_variant variants = None ->
-    forallb (fun '(_, e_branch) => call_expr e_branch) branches = true ->
+    first_payload_binder_branch branches = None ->
+    forallb (fun '(_, _, e_branch) => call_expr e_branch) branches = true ->
     (forall Σ0 e T Σ1,
         call_expr e = true ->
         infer_core_env_state_fuel fuel env Ω n Σ0 e = infer_ok (T, Σ1) ->
@@ -277,7 +305,7 @@ Lemma infer_env_match_tail_collect_sound :
       (ty_core T_head) Σs Ts.
 Proof.
   intros fuel env Ω n Σ branches T_head variants.
-  induction variants as [|v rest IH]; intros Σs Ts Hcollect Hpayloads Hbranches Hexpr;
+  induction variants as [|v rest IH]; intros Σs Ts Hcollect Hpayloads Hbinders Hbranches Hexpr;
     simpl in Hcollect.
   - inversion Hcollect; subst. constructor.
   - simpl in Hpayloads.
@@ -293,6 +321,7 @@ Proof.
     rewrite lookup_branch_b_lookup_expr_branch in Hlookup.
     eapply TESMatchTail_Cons.
     + exact Hfields.
+    + eapply first_payload_binder_branch_lookup_none; eassumption.
     + exact Hlookup.
     + eapply Hexpr.
       * eapply lookup_expr_branch_forallb_true; eassumption.
@@ -301,6 +330,7 @@ Proof.
     + eapply IH.
       * reflexivity.
       * exact Hpayloads.
+      * exact Hbinders.
       * exact Hbranches.
       * exact Hexpr.
 Qed.
@@ -1165,8 +1195,10 @@ Proof.
         eqn:Hunknown; try discriminate.
       destruct (first_missing_variant_branch (enum_variants edef) l) as [missing |]
         eqn:Hmissing; try discriminate.
-      destruct (first_payload_variant (enum_variants edef)) as [payload |]
-        eqn:Hpayload; try discriminate.
+      destruct (first_unsupported_match_payload l (enum_variants edef)) as [payload |]
+        eqn:Hunsupported; try discriminate.
+      destruct (first_unsupported_match_payload_none _ _ Hunsupported)
+        as [Hbinders Hpayload].
       destruct (enum_variants edef) as [|v_head v_tail] eqn:Hvariants;
         try discriminate.
       simpl in Hinfer.
@@ -1208,7 +1240,7 @@ Proof.
         typed_match_tail_env_structural env Ω n Σ1 l v_tail
           (ty_core T_head) Σ_tail Ts_tail).
       {
-        clear Hinfer Hvariants Hunknown Hmissing Hdup Hpayload.
+        clear Hinfer Hvariants Hunknown Hmissing Hdup Hunsupported Hpayload.
         revert Σ_tail Ts_tail Htail Hpayload_tail.
         induction v_tail as [|v rest IHtail]; intros Σ_tail Ts_tail Htail0 Hpayload0;
           simpl in Htail0.
@@ -1249,6 +1281,7 @@ Proof.
           rewrite lookup_branch_b_lookup_expr_branch in Hlookup0.
           eapply TESMatchTail_Cons.
           + exact Hfields.
+          + eapply first_payload_binder_branch_lookup_none; eassumption.
           + exact Hlookup0.
           + eapply IH.
             -- eapply lookup_expr_branch_forallb_true; eassumption.
@@ -1279,6 +1312,7 @@ Proof.
       * destruct (enum_variant_fields v_head) eqn:Hfields; [reflexivity |].
         simpl in Hpayload.
         rewrite Hfields in Hpayload. discriminate.
+      * eapply first_payload_binder_branch_lookup_none; eassumption.
       * exact Hlookup_branch.
       * eapply IH.
         -- eapply lookup_expr_branch_forallb_true; eassumption.
@@ -1700,8 +1734,10 @@ Proof.
         eqn:Hunknown; try discriminate.
       destruct (first_missing_variant_branch (enum_variants edef) l) as [missing |]
         eqn:Hmissing; try discriminate.
-      destruct (first_payload_variant (enum_variants edef)) as [payload |]
-        eqn:Hpayload; try discriminate.
+      destruct (first_unsupported_match_payload l (enum_variants edef)) as [payload |]
+        eqn:Hunsupported; try discriminate.
+      destruct (first_unsupported_match_payload_none _ _ Hunsupported)
+        as [Hbinders Hpayload].
       destruct (enum_variants edef) as [|v_head v_tail] eqn:Hvariants;
         try discriminate.
       simpl in Hinfer.
@@ -1743,7 +1779,7 @@ Proof.
         typed_match_tail_env_structural env Ω n Σ1 l v_tail
           (ty_core T_head) Σ_tail Ts_tail).
       {
-        clear Hinfer Hvariants Hunknown Hmissing Hdup Hpayload.
+        clear Hinfer Hvariants Hunknown Hmissing Hdup Hunsupported Hpayload.
         revert Σ_tail Ts_tail Htail Hpayload_tail.
         induction v_tail as [|v rest IHtail]; intros Σ_tail Ts_tail Htail0 Hpayload0;
           simpl in Htail0.
@@ -1784,6 +1820,7 @@ Proof.
           rewrite lookup_branch_b_lookup_expr_branch in Hlookup0.
           eapply TESMatchTail_Cons.
           + exact Hfields.
+          + eapply first_payload_binder_branch_lookup_none; eassumption.
           + exact Hlookup0.
           + eapply IH.
             -- eapply lookup_expr_branch_forallb_true; eassumption.
@@ -1814,6 +1851,7 @@ Proof.
       * destruct (enum_variant_fields v_head) eqn:Hfields; [reflexivity |].
         simpl in Hpayload.
         rewrite Hfields in Hpayload. discriminate.
+      * eapply first_payload_binder_branch_lookup_none; eassumption.
       * exact Hlookup_branch.
       * eapply IH.
         -- eapply lookup_expr_branch_forallb_true; eassumption.

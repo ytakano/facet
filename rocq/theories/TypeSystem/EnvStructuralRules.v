@@ -644,6 +644,7 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       first_unknown_variant_branch branches (enum_variants edef) = None ->
       enum_variants edef = v_head :: v_tail ->
       enum_variant_fields v_head = [] ->
+      lookup_expr_branch_binders (enum_variant_name v_head) branches = Some [] ->
       lookup_expr_branch (enum_variant_name v_head) branches = Some e_head ->
       typed_env_structural env Ω n Σ1 e_head T_head Σ_head ->
       typed_match_tail_env_structural env Ω n Σ1 branches v_tail
@@ -763,13 +764,14 @@ with typed_fields_env_structural
       typed_fields_env_structural env Ω n lts args Σ fields (f :: rest) Σ2
 with typed_match_tail_env_structural
     (env : global_env) (Ω : outlives_ctx) (n : nat)
-    : sctx -> list (string * expr) -> list enum_variant_def ->
+    : sctx -> list (string * list ident * expr) -> list enum_variant_def ->
       TypeCore Ty -> list sctx -> list Ty -> Prop :=
   | TESMatchTail_Nil : forall Σ branches expected_core,
       typed_match_tail_env_structural env Ω n Σ branches []
         expected_core [] []
   | TESMatchTail_Cons : forall Σ branches v rest e T Σv Σs Ts expected_core,
       enum_variant_fields v = [] ->
+      lookup_expr_branch_binders (enum_variant_name v) branches = Some [] ->
       lookup_expr_branch (enum_variant_name v) branches = Some e ->
       typed_env_structural env Ω n Σ e T Σv ->
       ty_core T = expected_core ->
@@ -907,6 +909,7 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       first_unknown_variant_branch branches (enum_variants edef) = None ->
       enum_variants edef = v_head :: v_tail ->
       enum_variant_fields v_head = [] ->
+      lookup_expr_branch_binders (enum_variant_name v_head) branches = Some [] ->
       lookup_expr_branch (enum_variant_name v_head) branches = Some e_head ->
       typed_env_roots env Ω n R1 Σ1 e_head T_head Σ_head R_out roots_head ->
       typed_match_tail_roots env Ω n R1 Σ1 branches v_tail
@@ -1028,7 +1031,7 @@ with typed_fields_roots
         (root_set_union roots_field roots_rest)
 with typed_match_tail_roots
     (env : global_env) (Ω : outlives_ctx) (n : nat)
-    : root_env -> sctx -> list (string * expr) -> list enum_variant_def ->
+    : root_env -> sctx -> list (string * list ident * expr) -> list enum_variant_def ->
       TypeCore Ty -> root_env -> list sctx -> list Ty -> list root_set -> Prop :=
   | TERMatchTail_Nil : forall R Σ branches expected_core R_out,
       typed_match_tail_roots env Ω n R Σ branches []
@@ -1036,6 +1039,7 @@ with typed_match_tail_roots
   | TERMatchTail_Cons : forall R Σ branches v rest e T Σv Rv R_out roots
       Σs Ts rootss expected_core,
       enum_variant_fields v = [] ->
+      lookup_expr_branch_binders (enum_variant_name v) branches = Some [] ->
       lookup_expr_branch (enum_variant_name v) branches = Some e ->
       typed_env_roots env Ω n R Σ e T Σv Rv roots ->
       ty_core T = expected_core ->
@@ -1104,18 +1108,19 @@ Lemma lookup_expr_branch_local_store_names_in :
   forall x name branches e,
     lookup_expr_branch name branches = Some e ->
     In x (expr_local_store_names e) ->
-    In x (fields_local_store_names branches).
+    In x (match_branches_local_store_names branches).
 Proof.
   intros x name branches.
-  induction branches as [|[name0 e0] rest IH]; intros e Hlookup Hin;
+  induction branches as [|[[name0 binders0] e0] rest IH]; intros e Hlookup Hin;
     simpl in Hlookup.
   - discriminate.
-  - unfold fields_local_store_names. simpl.
-    fold (fields_local_store_names_with expr_local_store_names rest).
+  - unfold match_branches_local_store_names. simpl.
+    fold (match_branches_local_store_names_with expr_local_store_names rest).
     destruct (String.eqb name name0) eqn:Hname.
-    + inversion Hlookup; subst. apply in_or_app. left. exact Hin.
+    + inversion Hlookup; subst.
+      apply in_or_app. left. exact Hin.
     + apply in_or_app. right.
-      unfold fields_local_store_names in IH.
+      unfold match_branches_local_store_names in IH.
       eapply IH; eauto.
 Qed.
 
@@ -1290,7 +1295,7 @@ Theorem typed_roots_instantiate_fresh_mutual :
   (forall R Σ branches variants expected_core R_out Σs Ts rootss,
     typed_match_tail_roots env Ω n R Σ branches variants expected_core
       R_out Σs Ts rootss ->
-    root_subst_images_exclude_names (fields_local_store_names branches) rho ->
+    root_subst_images_exclude_names (match_branches_local_store_names branches) rho ->
     forall R0 R0_out,
       root_env_no_shadow R ->
       root_env_no_shadow R0 ->
@@ -1469,7 +1474,7 @@ Proof.
   - intros R R1 R_out Σ Σ1 Σ_head Σ_tail Γ_out scrut branches enum_name
       lts args edef v_head v_tail e_head T_scrut T_head Ts_tail roots_scrut
       roots_head roots_tail Hscrut IHscrut Hcore Hlookup Hlen_lts Hlen_args
-      Hbounds Hunknown Hvariants Hfields_head Hlookup_head Hhead IHhead
+      Hbounds Hunknown Hvariants Hfields_head Hbinders_head Hlookup_head Hhead IHhead
       Htail IHtail Hmerge Hfresh R0 HnsR HnsR0 HR0.
     simpl in Hfresh.
     apply root_subst_images_exclude_names_app_inv in Hfresh.
@@ -1849,7 +1854,7 @@ Proof.
     + constructor.
     + constructor.
   - intros R Σ branches v rest e T Σv Rv R_out roots Σs Ts rootss
-      expected_core Hfields Hlookup Htyped IHtyped Hcore Heq_tail Htail IHtail
+      expected_core Hfields Hbinders Hlookup Htyped IHtyped Hcore Heq_tail Htail IHtail
       Hfresh R0 R0_out HnsR HnsR0 HnsR0_out HR0 HR0_out.
     assert (Hfresh_e :
       root_subst_images_exclude_names (expr_local_store_names e) rho).
@@ -2047,7 +2052,7 @@ Proof.
 	    induction Htyped.
 	    + constructor.
 	    + constructor.
-	      * eapply typed_env_structural_same_bindings. exact H1.
+	      * eapply typed_env_structural_same_bindings. exact H2.
 	      * exact IHHtyped.
 Qed.
 
@@ -2092,9 +2097,9 @@ Inductive borrow_ok_env_structural (env : global_env)
       borrow_ok_env_structural env PBS1 Γ branch PBS2 ->
       Forall
         (fun branch0 =>
-          borrow_ok_env_structural env PBS1 Γ (snd branch0) PBS2)
+          borrow_ok_env_structural env PBS1 Γ (match_branch_expr branch0) PBS2)
         rest ->
-      borrow_ok_env_structural env PBS Γ (EMatch scrut ((name, branch) :: rest)) PBS2
+      borrow_ok_env_structural env PBS Γ (EMatch scrut ((name, [], branch) :: rest)) PBS2
   | BOES_BorrowShared : forall PBS Γ p x path,
       borrow_target_of_place p = (x, path) ->
       pbs_has_mut x path PBS = false ->

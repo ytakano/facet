@@ -38,7 +38,7 @@ Proof.
   induction Htail as
     [R Σ branches expected_core R_out
     |R Σ branches v rest e0 T Σv Rv R_out roots Σs Ts rootss
-       expected_core Hfields Hlookup Htyped Hcore Hequiv Htail IHtail];
+       expected_core Hfields Hbinders Hlookup Htyped Hcore Hequiv Htail IHtail];
     intros Hvariant Hbranch.
   - simpl in Hvariant. discriminate.
   - simpl in Hvariant.
@@ -58,7 +58,7 @@ Lemma first_unknown_variant_branch_lookup_some :
     exists vdef, lookup_enum_variant name variants = Some vdef.
 Proof.
   intros branches.
-  induction branches as [| [name0 e0] rest IH]; intros variants name e
+  induction branches as [| [[name0 binders0] e0] rest IH]; intros variants name e
     Hunknown Hlookup; simpl in Hunknown, Hlookup.
   - discriminate.
   - destruct (lookup_enum_variant name0 variants) as [vdef0 |] eqn:Hknown0;
@@ -71,12 +71,9 @@ Qed.
 
 Lemma lookup_expr_branch_lookup_expr_field :
   forall name branches,
-    lookup_expr_branch name branches = lookup_expr_field name branches.
+    lookup_expr_branch name branches = lookup_match_branch name branches.
 Proof.
-  intros name branches.
-  induction branches as [| [name0 e0] rest IH]; simpl.
-  - reflexivity.
-  - destruct (String.eqb name name0); auto.
+  reflexivity.
 Qed.
 
 Lemma value_roots_within_root_sets_union_in :
@@ -192,7 +189,7 @@ Proof.
     pose proof (H1 Hrn1 Henv1) as Hroots_tail.
     assert (Hsame_head_final :
       sctx_same_bindings Σ_head (sctx_of_ctx Γ_out)).
-    { eapply ctx_merge_many_same_bindings_left. exact e8. }
+    { eapply ctx_merge_many_same_bindings_left. exact e9. }
     assert (Hsame_1_head : sctx_same_bindings Σ1 Σ_head).
     { eapply typed_env_structural_same_bindings.
       eapply typed_env_roots_structural. exact t0. }
@@ -1071,7 +1068,7 @@ Proof.
       as [Hroots_scrut [_ [Hnodup_scrut Hrn_scrut]]].
     assert (Hready_branch : provenance_ready_expr e_branch).
     { unfold lookup_match_branch in Hlookup.
-      eapply provenance_ready_fields_lookup; eassumption. }
+      eapply provenance_ready_match_branches_lookup; eassumption. }
     unfold lookup_match_branch in Hlookup.
     assert (Hlookup_branch :
       lookup_expr_branch variant_name branches = Some e_branch).
@@ -1088,7 +1085,8 @@ Proof.
     destruct (String.eqb variant_name (enum_variant_name v_head))
       eqn:Hvariant_head.
     + apply String.eqb_eq in Hvariant_head. subst variant_name.
-      rewrite H8 in Hlookup_branch. inversion Hlookup_branch; subst e_branch.
+      rewrite H9 in Hlookup_branch.
+      inversion Hlookup_branch; subst.
       destruct (IHbranch Ω n R1 Σ1 T_head Σ_head R_out roots_head
                   Hready_branch Hroots_scrut Hnodup_scrut Hrn_scrut Htyped2)
         as [Hroots_branch [Hv_branch [Hnodup_branch Hrn_branch]]].
@@ -1098,10 +1096,12 @@ Proof.
       * exact Hnodup_branch.
       * exact Hrn_branch.
     + destruct Hvariant_known as [vdef_tail Hvariant_tail].
-      destruct (typed_match_tail_roots_lookup_ready env Ω n R1 Σ1 branches
-                  v_tail (ty_core T_head) R_out Σ_tail Ts_tail roots_tail
-                  variant_name vdef_tail e_branch H9 Hvariant_tail
-                  Hlookup_branch)
+	      destruct (typed_match_tail_roots_lookup_ready env Ω n R1 Σ1 branches
+	                  v_tail (ty_core T_head) R_out Σ_tail Ts_tail roots_tail
+	                  variant_name vdef_tail e_branch
+	                  H10
+	                  Hvariant_tail
+	                  Hlookup_branch)
         as [T_branch [Σ_branch [R_branch [roots_branch
              [Htyped_branch [_ [Hequiv_branch Hin_roots]]]]]]].
       destruct (IHbranch Ω n R1 Σ1 T_branch Σ_branch R_branch

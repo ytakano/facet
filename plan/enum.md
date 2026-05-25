@@ -150,6 +150,13 @@ before adding payload ownership.
 
 Add variant payload destructuring.
 
+Status: partially implemented as parser/core groundwork only. Match branches
+now carry payload binder lists through Rocq syntax, checker extraction, parser,
+de Bruijn conversion, and FIR integration. Non-empty branch binders are parsed
+but intentionally rejected by the checker as `ErrMatchPayloadUnsupported`, and
+FIR lowering also guards against them. Prop-level match typing still requires
+empty binders, so payload ownership typing/runtime semantics remain pending.
+
 - Extend match branches with payload binder lists.
 - Instantiate the selected variant payload types from the scrutinee `TEnum`.
 - Add payload binders to the branch context.
@@ -183,6 +190,28 @@ Invalid cases:
 - linear payload not consumed;
 - branch result type mismatch;
 - use of scrutinee after match when it was consumed.
+
+Completed groundwork:
+
+- Core `EMatch` and raw `RawMatch` branches carry `(variant, binders, body)`.
+- Surface syntax accepts both `Variant => expr` and `Variant(x, y) => expr`.
+- No-payload match behavior is preserved by structural, roots, readiness,
+  preservation, and runtime soundness proofs.
+- Non-empty branch binders are rejected before they can be treated as ordinary
+  in-scope variables.
+- Regression coverage checks no-payload match still succeeds and payload binder
+  syntax is rejected until ownership-sensitive payload typing is implemented.
+
+Remaining work:
+
+- Define selected-variant payload binding semantics in Prop typing rules.
+- Add checker support for binder arity/type checks against instantiated variant
+  field types.
+- Extend branch-local contexts/root environments and erase payload binders after
+  each branch.
+- Add runtime match semantics for `VEnum enum variant payloads`.
+- Prove ownership, root, readiness, and preservation obligations for bound
+  payload values.
 
 ## Phase 5: Drop Lowering
 

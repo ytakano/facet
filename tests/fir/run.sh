@@ -81,6 +81,8 @@ run_case tests/fir/generic_direct_call.facet "call %t0#0 as affine isize = id#0 
 run_case tests/valid/struct/basic_literal.facet "Pair { x = 1 as unrestricted isize, y = true as unrestricted bool } as unrestricted Pair"
 run_case tests/fir/enum_match.facet "match b#1 as unrestricted BoolLike { Yes => match_Yes_"
 run_case tests/fir/enum_match.facet "No => match_No_"
+run_case tests/fir/enum_no_payload_match_regression.facet "match s#1 as unrestricted Switch { Off => match_Off_"
+run_case tests/fir/enum_no_payload_match_regression.facet "On => match_On_"
 run_case tests/fir/enum_structural_no_payload_match.facet "match d#1 as unrestricted Direction { North => match_North_"
 run_case tests/fir/enum_structural_no_payload_match.facet "West => match_West_"
 run_case tests/valid/struct/basic_literal.facet "project %t0#0 as unrestricted isize = p#1.x as unrestricted isize"

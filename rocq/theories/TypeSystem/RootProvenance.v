@@ -657,6 +657,8 @@ Fixpoint expr_local_store_names (e : expr) : list ident :=
       args_local_store_names_with expr_local_store_names args
   | EStruct _ _ _ fields =>
       fields_local_store_names_with expr_local_store_names fields
+  | EEnum _ _ _ _ payloads =>
+      args_local_store_names_with expr_local_store_names payloads
   | EReplace _ e_new => expr_local_store_names e_new
   | EAssign _ e_new => expr_local_store_names e_new
   | EBorrow _ _ => []
@@ -705,6 +707,14 @@ Lemma expr_local_store_names_struct :
     fields_local_store_names fields.
 Proof.
   intros sname lts args fields. reflexivity.
+Qed.
+
+Lemma expr_local_store_names_enum :
+  forall enum_name variant_name lts args payloads,
+    expr_local_store_names (EEnum enum_name variant_name lts args payloads) =
+    args_local_store_names payloads.
+Proof.
+  intros enum_name variant_name lts args payloads. reflexivity.
 Qed.
 
 Definition root_env_excludes (x : ident) (R : root_env) : Prop :=

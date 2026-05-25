@@ -1,0 +1,8 @@
+enum Slot<T> {
+  Full(unrestricted T),
+  Empty
+}
+
+fn full(x: unrestricted isize) -> unrestricted Slot<unrestricted isize> {
+  Slot<unrestricted isize>::Full(x)
+}

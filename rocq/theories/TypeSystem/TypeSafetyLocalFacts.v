@@ -405,7 +405,20 @@ Proof.
   apply value_roots_within_mutind; intros; try solve [constructor; eauto].
   - constructor.
     intros root Hexclude.
-    apply s.
+    match goal with
+    | Hvalue : forall root, roots_exclude root _ -> _ |- _ =>
+        apply Hvalue
+    end.
+    unfold roots_exclude in *.
+    intros Hin.
+    apply Hexclude.
+    apply H. exact Hin.
+  - constructor.
+    intros root Hexclude.
+    match goal with
+    | Hvalue : forall root, roots_exclude root _ -> _ |- _ =>
+        apply Hvalue
+    end.
     unfold roots_exclude in *.
     intros Hin.
     apply Hexclude.

@@ -38,6 +38,20 @@ Proof.
           -- apply IHfields.
              ++ simpl. simpl in Hlt. lia.
              ++ exact Hrest.
+      + apply PRE_Enum.
+        induction l1 as [| payload rest IHpayloads].
+        * constructor.
+        * simpl in Hready.
+          apply andb_true_iff in Hready as [Hpayload Hrest].
+          constructor.
+          -- apply IH with (e := payload).
+             ++ pose proof (expr_size_enum_payload_lt s s0 l l0
+                  (payload :: rest) payload (or_introl eq_refl)).
+                lia.
+             ++ exact Hpayload.
+          -- apply IHpayloads.
+             ++ simpl. simpl in Hlt. lia.
+             ++ exact Hrest.
       + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
         eapply PRE_Replace.
         * exact Hpath.
@@ -149,6 +163,20 @@ Proof.
                 lia.
              ++ exact Hfield.
           -- apply IHfields.
+             ++ simpl. simpl in Hlt. lia.
+             ++ exact Hrest.
+      + apply ProvReady_Enum.
+        induction l1 as [| payload rest IHpayloads].
+        * constructor.
+        * simpl in Hready.
+          apply andb_true_iff in Hready as [Hpayload Hrest].
+          constructor.
+          -- apply IH with (e := payload).
+             ++ pose proof (expr_size_enum_payload_lt s s0 l l0
+                  (payload :: rest) payload (or_introl eq_refl)).
+                lia.
+             ++ exact Hpayload.
+          -- apply IHpayloads.
              ++ simpl. simpl in Hlt. lia.
              ++ exact Hrest.
       + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.

@@ -29,7 +29,12 @@ with cleanup_struct_fields_have_type_global_env_with_local_bounds :
   forall env bounds s lts args fields defs,
     struct_fields_have_type env s lts args fields defs ->
     struct_fields_have_type (global_env_with_local_bounds env bounds)
-      s lts args fields defs.
+      s lts args fields defs
+with cleanup_enum_values_have_type_global_env_with_local_bounds :
+  forall env bounds s values tys,
+    enum_values_have_type env s values tys ->
+    enum_values_have_type (global_env_with_local_bounds env bounds)
+      s values tys.
 Proof.
   - intros env bounds s v T H.
     induction H;
@@ -38,6 +43,8 @@ Proof.
           rewrite ?cleanup_type_lookup_path_global_env_with_local_bounds;
           eauto ].
   - intros env bounds s lts args fields defs H.
+    induction H; try solve [econstructor; eauto].
+  - intros env bounds s values tys H.
     induction H; try solve [econstructor; eauto].
 Qed.
 
@@ -49,7 +56,12 @@ with cleanup_struct_fields_have_type_clear_global_env_local_bounds :
   forall env bounds s lts args fields defs,
     struct_fields_have_type (global_env_with_local_bounds env bounds)
       s lts args fields defs ->
-    struct_fields_have_type env s lts args fields defs.
+    struct_fields_have_type env s lts args fields defs
+with cleanup_enum_values_have_type_clear_global_env_local_bounds :
+  forall env bounds s values tys,
+    enum_values_have_type (global_env_with_local_bounds env bounds)
+      s values tys ->
+    enum_values_have_type env s values tys.
 Proof.
   - intros env bounds s v T H.
     remember (global_env_with_local_bounds env bounds) as env' eqn:Heq.
@@ -68,6 +80,12 @@ Proof.
     revert env bounds Heq.
     induction H; intros env0 bounds Heq; try solve [econstructor; eauto].
     all: try (subst; eapply SFHT_Cons; eauto;
+      eapply cleanup_value_has_type_clear_global_env_local_bounds; eauto).
+  - intros env bounds s values tys H.
+    remember (global_env_with_local_bounds env bounds) as env' eqn:Heq.
+    revert env bounds Heq.
+    induction H; intros env0 bounds Heq; try solve [econstructor; eauto].
+    all: try (subst; eapply EVHT_Cons; eauto;
       eapply cleanup_value_has_type_clear_global_env_local_bounds; eauto).
 Qed.
 
@@ -141,13 +159,26 @@ Lemma value_roots_within_stores_subset_cleanup :
       value_fields_roots_within roots' fields).
 Proof.
   apply value_roots_within_mutind; intros; try solve [constructor; eauto].
-  constructor.
-  intros root Hexclude.
-  apply s.
-  unfold roots_exclude in *.
-  intros Hin.
-  apply Hexclude.
-  apply H. exact Hin.
+  - constructor.
+    intros root Hexclude.
+    match goal with
+    | Hvalue : forall root, roots_exclude root _ -> _ |- _ =>
+        apply Hvalue
+    end.
+    unfold roots_exclude in *.
+    intros Hin.
+    apply Hexclude.
+    apply H. exact Hin.
+  - constructor.
+    intros root Hexclude.
+    match goal with
+    | Hvalue : forall root, roots_exclude root _ -> _ |- _ =>
+        apply Hvalue
+    end.
+    unfold roots_exclude in *.
+    intros Hin.
+    apply Hexclude.
+    apply H. exact Hin.
 Qed.
 
 Lemma value_roots_within_store_subset_cleanup :

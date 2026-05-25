@@ -1,0 +1,7 @@
+enum BoolLike {
+  Yes
+}
+
+fn bad() -> unrestricted BoolLike {
+  BoolLike::No()
+}

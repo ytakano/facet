@@ -352,7 +352,10 @@ Lemma runtime_path_lookup_typing :
       value_lookup_path field_value rest = Some v_path ->
       type_lookup_path env (instantiate_struct_field_ty lts args fdef) rest =
         Some T_path ->
-      value_has_type env s v_path T_path).
+      value_has_type env s v_path T_path) /\
+  (forall values tys,
+    enum_values_have_type env s values tys ->
+    True).
 Proof.
   intros env s.
   apply runtime_typing_ind; intros; subst; simpl in *; try discriminate.
@@ -393,6 +396,12 @@ Proof.
           value_has_type env s v_path T_path |- _ =>
           eapply IHfields; eassumption
       end.
+  - destruct path; simpl in *; try discriminate.
+    match goal with
+    | Hvalue : Some _ = Some _, Htype : Some _ = Some _ |- _ =>
+        inversion Hvalue; inversion Htype; subst
+    end.
+    eapply VHT_Enum; eassumption.
   - match goal with
     | Hvalue : value_lookup_path (VRef _ _) ?lookup_path = Some _ |- _ =>
         destruct lookup_path
@@ -459,6 +468,8 @@ Proof.
       inversion H2; subst fdef.
       eapply H; eassumption.
     + eapply H0; eassumption.
+  - exact I.
+  - exact I.
 Qed.
 
 Lemma value_lookup_path_has_type :

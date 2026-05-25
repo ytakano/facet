@@ -5,6 +5,21 @@ From Facet.TypeSystem Require Import TypeSafetyRootsReadyCtx.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
+Lemma roots_exclude_root_sets_union_inv :
+  forall x roots_list,
+    roots_exclude x (root_sets_union roots_list) ->
+    Forall (roots_exclude x) roots_list.
+Proof.
+  intros x roots_list Hexclude.
+  induction roots_list as [|roots rest IH]; simpl in *.
+  - constructor.
+  - constructor.
+    + unfold roots_exclude in *. intros Hin.
+      apply Hexclude. apply root_set_union_in_l. exact Hin.
+    + apply IH. unfold roots_exclude in *. intros Hin.
+      apply Hexclude. apply root_set_union_in_r. exact Hin.
+Qed.
+
 Theorem typed_roots_ctx_roots_named_mutual :
   forall env Ω n,
   (forall R Σ e T Σ' R' roots,
@@ -81,6 +96,16 @@ Proof.
       Hrn : root_env_no_shadow ?R,
       Henv : root_env_ctx_roots_named ?R ?Σ |- _ =>
         exact (IH Hrn Henv)
+    end.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_ctx_roots_named ?R ?Σ ->
+        root_env_ctx_roots_named ?R' ?Σ' /\
+        Forall (fun roots => root_set_ctx_roots_named roots ?Σ') ?arg_roots,
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_ctx_roots_named ?R ?Σ |- _ =>
+        destruct (IH Hrn Henv) as [Henv_args Hroots_args];
+        split; [exact Henv_args | apply root_sets_ctx_roots_named_union; exact Hroots_args]
     end.
   - destruct (H H1 H2) as [Henv1 Hroots1].
     assert (Hrn1 : root_env_no_shadow R1)
@@ -245,6 +270,14 @@ Proof.
       Henv : root_env_ctx_keys_named ?R ?Σ |- _ =>
         exact (IH Hrn Henv)
     end.
+	  - match goal with
+	    | IH : root_env_no_shadow ?R ->
+	        root_env_ctx_keys_named ?R ?Σ ->
+	        root_env_ctx_keys_named ?R' ?Σ',
+	      Hrn : root_env_no_shadow ?R,
+	      Henv : root_env_ctx_keys_named ?R ?Σ |- _ =>
+	        exact (IH Hrn Henv)
+	    end.
 	  - match goal with
 	    | IH : root_env_no_shadow ?R ->
 	        root_env_ctx_keys_named ?R ?Σ ->
@@ -530,6 +563,33 @@ Proof.
     end.
     repeat split; try assumption.
     constructor. exact Hvals.
+  - intros s s' enum_name variant_name lts args payloads values edef vdef
+      Hlookup Hvariant Heval_args IHargs Ω n R Σ T Σ' R' roots Hready Hroots
+      Hnodup Hrn Htyped.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    match goal with
+    | Hlookup_typed : lookup_enum enum_name env = Some ?edef_typed |- _ =>
+        rewrite Hlookup in Hlookup_typed; inversion Hlookup_typed; subst edef_typed
+    end.
+    match goal with
+    | Hvariant_typed : lookup_enum_variant variant_name (enum_variants edef) =
+          Some ?vdef_typed |- _ =>
+        rewrite Hvariant in Hvariant_typed; inversion Hvariant_typed; subst vdef_typed
+    end.
+    match goal with
+    | Hready_args : provenance_ready_args payloads,
+      Htyped_args : typed_args_roots env Ω n R Σ payloads _ Σ' R' ?payload_roots |- _ =>
+        destruct (IHargs Ω n R Σ _ Σ' R' payload_roots
+                    Hready_args Hroots Hnodup Hrn Htyped_args)
+          as [Hroots' [Hvals [Hnodup' Hrn']]]
+    end.
+    repeat split; try assumption.
+    apply VRW_Enum.
+    intros root Hexclude.
+    eapply value_roots_exclude_root_forall2.
+    + exact Hvals.
+    + apply roots_exclude_root_sets_union_inv. exact Hexclude.
   - intros s s1 s2 m x T_ann e1 e2 v1 v2 Heval1 IH1 Heval2 IH2
       Ω n R Σ T Σ' R' roots Hready Hroots Hnodup Hrn Htyped.
     dependent destruction Hready.

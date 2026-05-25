@@ -1,0 +1,7 @@
+enum Box {
+  Wrap(unrestricted isize)
+}
+
+fn wrap(x: unrestricted isize) -> unrestricted Box {
+  Box::Wrap(x)
+}

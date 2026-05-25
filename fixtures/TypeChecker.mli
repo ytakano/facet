@@ -222,6 +222,7 @@ type expr =
 | ECallGeneric of ident * ty list * expr list
 | ECallExpr of expr * expr list
 | EStruct of string * lifetime list * ty list * (string * expr) list
+| EEnum of string * string * lifetime list * ty list * expr list
 | EReplace of place * expr
 | EAssign of place * expr
 | EBorrow of ref_kind * place
@@ -327,17 +328,28 @@ val lookup_enum_in : string -> enum_def list -> enum_def option
 
 val lookup_enum : string -> global_env -> enum_def option
 
+val lookup_enum_variant :
+  string -> enum_variant_def list -> enum_variant_def option
+
 val lookup_field : string -> field_def list -> field_def option
 
 val lookup_trait_in : string -> trait_def list -> trait_def option
 
 val lookup_trait : string -> global_env -> trait_def option
 
+val usage_max_decl : usage -> usage -> usage
+
 val subst_type_params_ty : ty list -> ty -> ty
 
 val instantiate_struct_field_ty : lifetime list -> ty list -> field_def -> ty
 
 val instantiate_enum_variant_field_ty : lifetime list -> ty list -> ty -> ty
+
+val usage_max_ty_list : ty list -> usage
+
+val usage_max_enum_variants : enum_variant_def list -> usage
+
+val instantiate_enum_ty : enum_def -> lifetime list -> ty list -> ty
 
 val usage_eqb_decl : usage -> usage -> bool
 
@@ -575,6 +587,8 @@ type infer_error =
 | ErrHrtMonomorphicUsedBound
 | ErrMalformedHrtBody of ty typeCore
 | ErrStructNotFound of string
+| ErrEnumNotFound of string
+| ErrVariantNotFound of string
 | ErrFieldNotFound of string
 | ErrDuplicateField of string
 | ErrMissingField of string
@@ -1079,6 +1093,7 @@ type raw_expr =
 | RawCallGeneric of ident * ty list * raw_expr list
 | RawCallExpr of raw_expr * raw_expr list
 | RawStruct of string * lifetime list * ty list * (string * raw_expr) list
+| RawEnum of string * string * lifetime list * ty list * raw_expr list
 | RawReplace of place * raw_expr
 | RawAssign of place * raw_expr
 | RawBorrow of ref_kind * place

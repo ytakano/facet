@@ -668,6 +668,8 @@ Inductive infer_error : Type :=
   | ErrHrtMonomorphicUsedBound : infer_error
   | ErrMalformedHrtBody : TypeCore Ty -> infer_error
   | ErrStructNotFound : string -> infer_error
+  | ErrEnumNotFound : string -> infer_error
+  | ErrVariantNotFound : string -> infer_error
   | ErrFieldNotFound : string -> infer_error
   | ErrDuplicateField : string -> infer_error
   | ErrMissingField : string -> infer_error
@@ -1560,6 +1562,7 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
   | EPlace _ => infer_err ErrNotImplemented
 
   | EStruct _ _ _ _ => infer_err ErrNotImplemented
+  | EEnum _ _ _ _ _ => infer_err ErrNotImplemented
 
   | ELet m x T e1 e2 =>
       match infer_core fenv Ω n Γ e1 with
@@ -2066,6 +2069,45 @@ Fixpoint infer_core_env_fuel (fuel : nat)
                           | infer_ok Γ' => infer_ok (instantiate_struct_ty s lts args, Γ')
                           end
                         end
+                  end
+              end
+          end
+      end
+  | EEnum enum_name variant_name lts args payloads =>
+      match lookup_enum enum_name env with
+      | None => infer_err (ErrEnumNotFound enum_name)
+      | Some edef =>
+          if negb (Nat.eqb (List.length lts) (enum_lifetimes edef))
+          then infer_err ErrArityMismatch
+          else if negb (Nat.eqb (List.length args) (enum_type_params edef))
+          then infer_err ErrArityMismatch
+          else
+          match check_struct_bounds env (enum_bounds edef) args with
+          | Some err => infer_err err
+          | None =>
+              match lookup_enum_variant variant_name (enum_variants edef) with
+              | None => infer_err (ErrVariantNotFound variant_name)
+              | Some vdef =>
+                  let fix go (Γ0 : ctx) (fields : list Ty) (es : list expr)
+                      : infer_result ctx :=
+                    match fields, es with
+                    | [], [] => infer_ok Γ0
+                    | T_field :: fields', e_payload :: es' =>
+                        match infer_core_env_fuel fuel' env Ω n Γ0 e_payload with
+                        | infer_err err => infer_err err
+                        | infer_ok (T_payload, Γ1) =>
+                            let T_expected :=
+                              instantiate_enum_variant_field_ty lts args T_field in
+                            if ty_compatible_b Ω T_payload T_expected
+                            then go Γ1 fields' es'
+                            else infer_err (compatible_error T_payload T_expected)
+                        end
+                    | _, _ => infer_err ErrArityMismatch
+                    end
+                  in
+                  match go Γ (enum_variant_fields vdef) payloads with
+                  | infer_err err => infer_err err
+                  | infer_ok Γ' => infer_ok (instantiate_enum_ty edef lts args, Γ')
                   end
               end
           end
@@ -3086,6 +3128,45 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
               end
           end
       end
+  | EEnum enum_name variant_name lts args payloads =>
+      match lookup_enum enum_name env with
+      | None => infer_err (ErrEnumNotFound enum_name)
+      | Some edef =>
+          if negb (Nat.eqb (List.length lts) (enum_lifetimes edef))
+          then infer_err ErrArityMismatch
+          else if negb (Nat.eqb (List.length args) (enum_type_params edef))
+          then infer_err ErrArityMismatch
+          else
+          match check_struct_bounds env (enum_bounds edef) args with
+          | Some err => infer_err err
+          | None =>
+              match lookup_enum_variant variant_name (enum_variants edef) with
+              | None => infer_err (ErrVariantNotFound variant_name)
+              | Some vdef =>
+                  let fix go (Σ0 : sctx) (fields : list Ty) (es : list expr)
+                      : infer_result sctx :=
+                    match fields, es with
+                    | [], [] => infer_ok Σ0
+                    | T_field :: fields', e_payload :: es' =>
+                        match infer_core_env_state_fuel fuel' env Ω n Σ0 e_payload with
+                        | infer_err err => infer_err err
+                        | infer_ok (T_payload, Σ1) =>
+                            let T_expected :=
+                              instantiate_enum_variant_field_ty lts args T_field in
+                            if ty_compatible_b Ω T_payload T_expected
+                            then go Σ1 fields' es'
+                            else infer_err (compatible_error T_payload T_expected)
+                        end
+                    | _, _ => infer_err ErrArityMismatch
+                    end
+                  in
+                  match go Σ (enum_variant_fields vdef) payloads with
+                  | infer_err err => infer_err err
+                  | infer_ok Σ' => infer_ok (instantiate_enum_ty edef lts args, Σ')
+                  end
+              end
+          end
+      end
   | ELet m x T e1 e2 =>
       match infer_core_env_state_fuel fuel' env Ω n Σ e1 with
       | infer_err err => infer_err err
@@ -3570,6 +3651,51 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
               end
           end
       end
+  | EEnum enum_name variant_name lts args payloads =>
+      match lookup_enum enum_name env with
+      | None => infer_err (ErrEnumNotFound enum_name)
+      | Some edef =>
+          if negb (Nat.eqb (List.length lts) (enum_lifetimes edef))
+          then infer_err ErrArityMismatch
+          else if negb (Nat.eqb (List.length args) (enum_type_params edef))
+          then infer_err ErrArityMismatch
+          else
+          match check_struct_bounds env (enum_bounds edef) args with
+          | Some err => infer_err err
+          | None =>
+              match lookup_enum_variant variant_name (enum_variants edef) with
+              | None => infer_err (ErrVariantNotFound variant_name)
+              | Some vdef =>
+                  let fix go (Σ0 : sctx) (fields : list Ty) (es : list expr)
+                      : infer_result (sctx * list expr) :=
+                    match fields, es with
+                    | [], [] => infer_ok (Σ0, [])
+                    | T_field :: fields', e_payload :: es' =>
+                        match infer_core_env_state_fuel_elab fuel' env Ω n Σ0 e_payload with
+                        | infer_err err => infer_err err
+                        | infer_ok (T_payload, Σ1, e_payload') =>
+                            let T_expected :=
+                              instantiate_enum_variant_field_ty lts args T_field in
+                            if ty_compatible_b Ω T_payload T_expected
+                            then match go Σ1 fields' es' with
+                                 | infer_err err => infer_err err
+                                 | infer_ok (Σ2, payloads') =>
+                                     infer_ok (Σ2, e_payload' :: payloads')
+                                 end
+                            else infer_err (compatible_error T_payload T_expected)
+                        end
+                    | _, _ => infer_err ErrArityMismatch
+                    end
+                  in
+                  match go Σ (enum_variant_fields vdef) payloads with
+                  | infer_err err => infer_err err
+                  | infer_ok (Σ', payloads') =>
+                      infer_ok (instantiate_enum_ty edef lts args, Σ',
+                        EEnum enum_name variant_name lts args payloads')
+                  end
+              end
+          end
+      end
   | ELet m x T e1 e2 =>
       match infer_core_env_state_fuel_elab fuel' env Ω n Σ e1 with
       | infer_err err => infer_err err
@@ -4003,6 +4129,8 @@ Fixpoint preservation_ready_expr_b (e : expr) : bool :=
             preservation_ready_expr_b e_field && go rest
         end
       in go fields
+  | EEnum _ _ _ _ payloads =>
+      forallb preservation_ready_expr_b payloads
   | EDrop e1 => preservation_ready_expr_b e1
   | EAssign p e_new =>
       match place_path p with
@@ -4064,6 +4192,8 @@ Fixpoint provenance_ready_expr_b (e : expr) : bool :=
             provenance_ready_expr_b e_field && go rest
         end
       in go fields
+  | EEnum _ _ _ _ payloads =>
+      forallb provenance_ready_expr_b payloads
   | ELet _ _ _ e1 e2 =>
       provenance_ready_expr_b e1 && provenance_ready_expr_b e2
   | ELetInfer _ _ e1 e2 =>
@@ -4338,6 +4468,55 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
                                 (instantiate_struct_instance_ty s lts args, Σ', R', roots)
                           end
                         end
+                  end
+              end
+          end
+      end
+  | EEnum enum_name variant_name lts args payloads =>
+      match lookup_enum enum_name env with
+      | None => infer_err (ErrEnumNotFound enum_name)
+      | Some edef =>
+          if negb (Nat.eqb (List.length lts) (enum_lifetimes edef))
+          then infer_err ErrArityMismatch
+          else if negb (Nat.eqb (List.length args) (enum_type_params edef))
+          then infer_err ErrArityMismatch
+          else
+          match check_struct_bounds env (enum_bounds edef) args with
+          | Some err => infer_err err
+          | None =>
+              match lookup_enum_variant variant_name (enum_variants edef) with
+              | None => infer_err (ErrVariantNotFound variant_name)
+              | Some vdef =>
+                  let fix go (Σ0 : sctx) (R0 : root_env)
+                      (fields : list Ty) (es : list expr)
+                      : infer_result (sctx * root_env * root_set) :=
+                    match fields, es with
+                    | [], [] => infer_ok (Σ0, R0, [])
+                    | T_field :: fields', e_payload :: es' =>
+                        match infer_core_env_state_fuel_roots
+                                fuel' env Ω n R0 Σ0 e_payload with
+                        | infer_err err => infer_err err
+                        | infer_ok (T_payload, Σ1, R1, roots_payload) =>
+                            let T_expected :=
+                              instantiate_enum_variant_field_ty lts args T_field in
+                            if ty_compatible_b Ω T_payload T_expected
+                            then
+                              match go Σ1 R1 fields' es' with
+                              | infer_err err => infer_err err
+                              | infer_ok (Σ2, R2, roots_rest) =>
+                                  infer_ok
+                                    (Σ2, R2,
+                                     root_set_union roots_payload roots_rest)
+                              end
+                            else infer_err (compatible_error T_payload T_expected)
+                        end
+                    | _, _ => infer_err ErrArityMismatch
+                    end
+                  in
+                  match go Σ R (enum_variant_fields vdef) payloads with
+                  | infer_err err => infer_err err
+                  | infer_ok (Σ', R', roots) =>
+                      infer_ok (instantiate_enum_ty edef lts args, Σ', R', roots)
                   end
               end
           end
@@ -4817,6 +4996,55 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
                                 (instantiate_struct_instance_ty s lts args, Σ', R', roots)
                           end
                         end
+                  end
+              end
+          end
+      end
+  | EEnum enum_name variant_name lts args payloads =>
+      match lookup_enum enum_name env with
+      | None => infer_err (ErrEnumNotFound enum_name)
+      | Some edef =>
+          if negb (Nat.eqb (List.length lts) (enum_lifetimes edef))
+          then infer_err ErrArityMismatch
+          else if negb (Nat.eqb (List.length args) (enum_type_params edef))
+          then infer_err ErrArityMismatch
+          else
+          match check_struct_bounds env (enum_bounds edef) args with
+          | Some err => infer_err err
+          | None =>
+              match lookup_enum_variant variant_name (enum_variants edef) with
+              | None => infer_err (ErrVariantNotFound variant_name)
+              | Some vdef =>
+                  let fix go (Σ0 : sctx) (R0 : root_env)
+                      (fields : list Ty) (es : list expr)
+                      : infer_result (sctx * root_env * root_set) :=
+                    match fields, es with
+                    | [], [] => infer_ok (Σ0, R0, [])
+                    | T_field :: fields', e_payload :: es' =>
+                        match infer_core_env_state_fuel_roots_shadow_safe
+                                fuel' env Ω n R0 Σ0 e_payload with
+                        | infer_err err => infer_err err
+                        | infer_ok (T_payload, Σ1, R1, roots_payload) =>
+                            let T_expected :=
+                              instantiate_enum_variant_field_ty lts args T_field in
+                            if ty_compatible_b Ω T_payload T_expected
+                            then
+                              match go Σ1 R1 fields' es' with
+                              | infer_err err => infer_err err
+                              | infer_ok (Σ2, R2, roots_rest) =>
+                                  infer_ok
+                                    (Σ2, R2,
+                                     root_set_union roots_payload roots_rest)
+                              end
+                            else infer_err (compatible_error T_payload T_expected)
+                        end
+                    | _, _ => infer_err ErrArityMismatch
+                    end
+                  in
+                  match go Σ R (enum_variant_fields vdef) payloads with
+                  | infer_err err => infer_err err
+                  | infer_ok (Σ', R', roots) =>
+                      infer_ok (instantiate_enum_ty edef lts args, Σ', R', roots)
                   end
               end
           end
@@ -5793,6 +6021,17 @@ Fixpoint borrow_check (fenv : list fn_def) (BS : borrow_state) (Γ : ctx)
         end
       in go captures
   | EStruct _ _ _ _ => infer_err ErrNotImplemented
+  | EEnum _ _ _ _ payloads =>
+      let fix go (BS0 : borrow_state) (as_ : list expr) : infer_result borrow_state :=
+        match as_ with
+        | [] => infer_ok BS0
+        | a :: rest =>
+            match borrow_check fenv BS0 Γ a with
+            | infer_err err => infer_err err
+            | infer_ok BS1 => go BS1 rest
+            end
+        end
+      in go BS payloads
 
   | EBorrow RShared (PVar x) =>
       if bs_has_mut x BS
@@ -6039,6 +6278,18 @@ Fixpoint borrow_check_env (env : global_env) (PBS : path_borrow_state) (Γ : ctx
             end
         end
       in go PBS fields
+  | EEnum _ _ _ _ payloads =>
+      let fix go (PBS0 : path_borrow_state) (args0 : list expr)
+          : infer_result path_borrow_state :=
+        match args0 with
+        | [] => infer_ok PBS0
+        | a :: rest =>
+            match borrow_check_env env PBS0 Γ a with
+            | infer_err err => infer_err err
+            | infer_ok PBS1 => go PBS1 rest
+            end
+        end
+      in go PBS payloads
   | EBorrow RShared p =>
       let '(x, path) := borrow_target_of_place p in
       if pbs_has_mut x path PBS
@@ -7395,6 +7646,7 @@ Inductive raw_expr : Type :=
 | RawCallGeneric : ident -> list Ty -> list raw_expr -> raw_expr
 | RawCallExpr : raw_expr -> list raw_expr -> raw_expr
 | RawStruct : string -> list lifetime -> list Ty -> list (string * raw_expr) -> raw_expr
+| RawEnum : string -> string -> list lifetime -> list Ty -> list raw_expr -> raw_expr
 | RawReplace : place -> raw_expr -> raw_expr
 | RawAssign : place -> raw_expr -> raw_expr
 | RawBorrow : ref_kind -> place -> raw_expr
@@ -7786,6 +8038,13 @@ Fixpoint elaborate_raw_expr_fuel
           | infer_ok (fields', _, extras, next') =>
               finish (append_env_fns env extras)
                 (EStruct sname lts tys fields') extras next'
+          end
+      | RawEnum enum_name variant_name lts tys payloads =>
+          match go_args fuel' env Σ next payloads with
+          | infer_err err => infer_err err
+          | infer_ok (payloads', _, extras, next') =>
+              finish (append_env_fns env extras)
+                (EEnum enum_name variant_name lts tys payloads') extras next'
           end
       | RawReplace p e1 =>
           let expected_rhs :=

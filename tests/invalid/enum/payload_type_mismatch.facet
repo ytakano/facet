@@ -1,0 +1,7 @@
+enum NeedsBool {
+  Wrap(unrestricted bool)
+}
+
+fn bad() -> unrestricted NeedsBool {
+  NeedsBool::Wrap(1)
+}

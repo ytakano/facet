@@ -911,6 +911,7 @@ type expr =
 | ECallGeneric of ident * ty list * expr list
 | ECallExpr of expr * expr list
 | EStruct of string * lifetime list * ty list * (string * expr) list
+| EEnum of string * string * lifetime list * ty list * expr list
 | EReplace of place * expr
 | EAssign of place * expr
 | EBorrow of ref_kind * place
@@ -1132,6 +1133,16 @@ let rec lookup_enum_in name = function
 let lookup_enum name env =
   lookup_enum_in name env.env_enums
 
+(** val lookup_enum_variant :
+    string -> enum_variant_def list -> enum_variant_def option **)
+
+let rec lookup_enum_variant name = function
+| [] -> None
+| v :: rest ->
+  if (=) name v.enum_variant_name
+  then Some v
+  else lookup_enum_variant name rest
+
 (** val lookup_field : string -> field_def list -> field_def option **)
 
 let rec lookup_field name = function
@@ -1150,6 +1161,16 @@ let rec lookup_trait_in name = function
 
 let lookup_trait name env =
   lookup_trait_in name env.env_traits
+
+(** val usage_max_decl : usage -> usage -> usage **)
+
+let usage_max_decl u1 u2 =
+  match u1 with
+  | ULinear -> ULinear
+  | UAffine -> (match u2 with
+                | ULinear -> ULinear
+                | _ -> UAffine)
+  | UUnrestricted -> u2
 
 (** val subst_type_params_ty : ty list -> ty -> ty **)
 
@@ -1209,6 +1230,26 @@ let instantiate_struct_field_ty lifetime_args type_args f =
 
 let instantiate_enum_variant_field_ty lifetime_args type_args t =
   subst_type_params_ty type_args (apply_lt_ty lifetime_args t)
+
+(** val usage_max_ty_list : ty list -> usage **)
+
+let rec usage_max_ty_list = function
+| [] -> UUnrestricted
+| t :: rest -> usage_max_decl (ty_usage t) (usage_max_ty_list rest)
+
+(** val usage_max_enum_variants : enum_variant_def list -> usage **)
+
+let rec usage_max_enum_variants = function
+| [] -> UUnrestricted
+| v :: rest ->
+  usage_max_decl (usage_max_ty_list v.enum_variant_fields)
+    (usage_max_enum_variants rest)
+
+(** val instantiate_enum_ty : enum_def -> lifetime list -> ty list -> ty **)
+
+let instantiate_enum_ty e lifetime_args type_args =
+  MkTy ((usage_max_enum_variants e.enum_variants), (TEnum (e.enum_name,
+    lifetime_args, type_args)))
 
 (** val usage_eqb_decl : usage -> usage -> bool **)
 
@@ -1973,6 +2014,11 @@ let rec free_vars_expr = function
   | [] -> []
   | p :: rest -> let (_, e0) = p in app (free_vars_expr e0) (go rest)
   in go fields
+| EEnum (_, _, _, _, payloads) ->
+  let rec go = function
+  | [] -> []
+  | e0 :: rest -> app (free_vars_expr e0) (go rest)
+  in go payloads
 | EReplace (p, e_new) -> (place_name p) :: (free_vars_expr e_new)
 | EAssign (p, e_new) -> (place_name p) :: (free_vars_expr e_new)
 | EBorrow (_, p) -> (place_name p) :: []
@@ -2062,6 +2108,17 @@ let rec alpha_rename_expr _UU03c1_ used = function
   in
   let (fields', used') = go used fields in
   ((EStruct (name, lts, args, fields')), used')
+| EEnum (enum_name0, variant_name, lts, args, payloads) ->
+  let go =
+    let rec go used0 = function
+    | [] -> ([], used0)
+    | e0 :: rest ->
+      let (e', used1) = alpha_rename_expr _UU03c1_ used0 e0 in
+      let (rest', used2) = go used1 rest in ((e' :: rest'), used2)
+    in go
+  in
+  let (payloads', used') = go used payloads in
+  ((EEnum (enum_name0, variant_name, lts, args, payloads')), used')
 | EReplace (p, e_new) ->
   let (e_new', used') = alpha_rename_expr _UU03c1_ used e_new in
   ((EReplace ((rename_place _UU03c1_ p), e_new')), used')
@@ -2249,6 +2306,8 @@ let rec expr_local_store_names = function
     (args_local_store_names_with expr_local_store_names args)
 | EStruct (_, _, _, fields) ->
   fields_local_store_names_with expr_local_store_names fields
+| EEnum (_, _, _, _, payloads) ->
+  args_local_store_names_with expr_local_store_names payloads
 | EReplace (_, e_new) -> expr_local_store_names e_new
 | EAssign (_, e_new) -> expr_local_store_names e_new
 | EDeref e' -> expr_local_store_names e'
@@ -3074,6 +3133,8 @@ type infer_error =
 | ErrHrtMonomorphicUsedBound
 | ErrMalformedHrtBody of ty typeCore
 | ErrStructNotFound of string
+| ErrEnumNotFound of string
+| ErrVariantNotFound of string
 | ErrFieldNotFound of string
 | ErrDuplicateField of string
 | ErrMissingField of string
@@ -4750,6 +4811,54 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
                                     _UU03a3_')
                                 | Infer_err err -> Infer_err err)))))
        | None -> Infer_err (ErrStructNotFound sname))
+    | EEnum (enum_name0, variant_name, lts, args, payloads) ->
+      (match lookup_enum enum_name0 env with
+       | Some edef ->
+         if negb (Nat.eqb (length lts) edef.enum_lifetimes)
+         then Infer_err ErrArityMismatch
+         else if negb (Nat.eqb (length args) edef.enum_type_params)
+              then Infer_err ErrArityMismatch
+              else (match check_struct_bounds env edef.enum_bounds args with
+                    | Some err -> Infer_err err
+                    | None ->
+                      (match lookup_enum_variant variant_name
+                               edef.enum_variants with
+                       | Some vdef ->
+                         let go =
+                           let rec go _UU03a3_0 fields es =
+                             match fields with
+                             | [] ->
+                               (match es with
+                                | [] -> Infer_ok _UU03a3_0
+                                | _ :: _ -> Infer_err ErrArityMismatch)
+                             | t_field :: fields' ->
+                               (match es with
+                                | [] -> Infer_err ErrArityMismatch
+                                | e_payload :: es' ->
+                                  (match infer_core_env_state_fuel fuel' env
+                                           _UU03a9_ n _UU03a3_0 e_payload with
+                                   | Infer_ok p ->
+                                     let (t_payload, _UU03a3_1) = p in
+                                     let t_expected =
+                                       instantiate_enum_variant_field_ty lts
+                                         args t_field
+                                     in
+                                     if ty_compatible_b _UU03a9_ t_payload
+                                          t_expected
+                                     then go _UU03a3_1 fields' es'
+                                     else Infer_err
+                                            (compatible_error t_payload
+                                              t_expected)
+                                   | Infer_err err -> Infer_err err))
+                           in go
+                         in
+                         (match go _UU03a3_ vdef.enum_variant_fields payloads with
+                          | Infer_ok _UU03a3_' ->
+                            Infer_ok ((instantiate_enum_ty edef lts args),
+                              _UU03a3_')
+                          | Infer_err err -> Infer_err err)
+                       | None -> Infer_err (ErrVariantNotFound variant_name)))
+       | None -> Infer_err (ErrEnumNotFound enum_name0))
     | EReplace (p, e_new) ->
       (match infer_place_sctx env _UU03a3_ p with
        | Infer_ok t_old ->
@@ -5287,6 +5396,63 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
                                   fields')))
                                 | Infer_err err -> Infer_err err)))))
        | None -> Infer_err (ErrStructNotFound sname))
+    | EEnum (enum_name0, variant_name, lts, args, payloads) ->
+      (match lookup_enum enum_name0 env with
+       | Some edef ->
+         if negb (Nat.eqb (length lts) edef.enum_lifetimes)
+         then Infer_err ErrArityMismatch
+         else if negb (Nat.eqb (length args) edef.enum_type_params)
+              then Infer_err ErrArityMismatch
+              else (match check_struct_bounds env edef.enum_bounds args with
+                    | Some err -> Infer_err err
+                    | None ->
+                      (match lookup_enum_variant variant_name
+                               edef.enum_variants with
+                       | Some vdef ->
+                         let go =
+                           let rec go _UU03a3_0 fields es =
+                             match fields with
+                             | [] ->
+                               (match es with
+                                | [] -> Infer_ok (_UU03a3_0, [])
+                                | _ :: _ -> Infer_err ErrArityMismatch)
+                             | t_field :: fields' ->
+                               (match es with
+                                | [] -> Infer_err ErrArityMismatch
+                                | e_payload :: es' ->
+                                  (match infer_core_env_state_fuel_elab fuel'
+                                           env _UU03a9_ n _UU03a3_0 e_payload with
+                                   | Infer_ok p ->
+                                     let (p0, e_payload') = p in
+                                     let (t_payload, _UU03a3_1) = p0 in
+                                     let t_expected =
+                                       instantiate_enum_variant_field_ty lts
+                                         args t_field
+                                     in
+                                     if ty_compatible_b _UU03a9_ t_payload
+                                          t_expected
+                                     then (match go _UU03a3_1 fields' es' with
+                                           | Infer_ok p1 ->
+                                             let (_UU03a3_2, payloads') = p1
+                                             in
+                                             Infer_ok (_UU03a3_2,
+                                             (e_payload' :: payloads'))
+                                           | Infer_err err -> Infer_err err)
+                                     else Infer_err
+                                            (compatible_error t_payload
+                                              t_expected)
+                                   | Infer_err err -> Infer_err err))
+                           in go
+                         in
+                         (match go _UU03a3_ vdef.enum_variant_fields payloads with
+                          | Infer_ok p ->
+                            let (_UU03a3_', payloads') = p in
+                            Infer_ok (((instantiate_enum_ty edef lts args),
+                            _UU03a3_'), (EEnum (enum_name0, variant_name,
+                            lts, args, payloads')))
+                          | Infer_err err -> Infer_err err)
+                       | None -> Infer_err (ErrVariantNotFound variant_name)))
+       | None -> Infer_err (ErrEnumNotFound enum_name0))
     | EReplace (p, e_new) ->
       (match infer_place_sctx env _UU03a3_ p with
        | Infer_ok t_old ->
@@ -5539,6 +5705,7 @@ let rec preservation_ready_expr_b = function
   | p :: rest ->
     let (_, e_field) = p in (&&) (preservation_ready_expr_b e_field) (go rest)
   in go fields
+| EEnum (_, _, _, _, payloads) -> forallb preservation_ready_expr_b payloads
 | EReplace (p, e_new) ->
   (match place_path p with
    | Some _ -> preservation_ready_expr_b e_new
@@ -5589,6 +5756,7 @@ let rec provenance_ready_expr_b = function
   | p :: rest ->
     let (_, e_field) = p in (&&) (provenance_ready_expr_b e_field) (go rest)
   in go fields
+| EEnum (_, _, _, _, payloads) -> forallb provenance_ready_expr_b payloads
 | EReplace (p, e_new) ->
   (match place_path p with
    | Some _ -> provenance_ready_expr_b e_new
@@ -6000,6 +6168,66 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                                   _UU03a3_'), r'), roots)
                                 | Infer_err err -> Infer_err err)))))
        | None -> Infer_err (ErrStructNotFound sname))
+    | EEnum (enum_name0, variant_name, lts, args, payloads) ->
+      (match lookup_enum enum_name0 env with
+       | Some edef ->
+         if negb (Nat.eqb (length lts) edef.enum_lifetimes)
+         then Infer_err ErrArityMismatch
+         else if negb (Nat.eqb (length args) edef.enum_type_params)
+              then Infer_err ErrArityMismatch
+              else (match check_struct_bounds env edef.enum_bounds args with
+                    | Some err -> Infer_err err
+                    | None ->
+                      (match lookup_enum_variant variant_name
+                               edef.enum_variants with
+                       | Some vdef ->
+                         let go =
+                           let rec go _UU03a3_0 r0 fields es =
+                             match fields with
+                             | [] ->
+                               (match es with
+                                | [] -> Infer_ok ((_UU03a3_0, r0), [])
+                                | _ :: _ -> Infer_err ErrArityMismatch)
+                             | t_field :: fields' ->
+                               (match es with
+                                | [] -> Infer_err ErrArityMismatch
+                                | e_payload :: es' ->
+                                  (match infer_core_env_state_fuel_roots
+                                           fuel' env _UU03a9_ n r0 _UU03a3_0
+                                           e_payload with
+                                   | Infer_ok p ->
+                                     let (p0, roots_payload) = p in
+                                     let (p1, r1) = p0 in
+                                     let (t_payload, _UU03a3_1) = p1 in
+                                     let t_expected =
+                                       instantiate_enum_variant_field_ty lts
+                                         args t_field
+                                     in
+                                     if ty_compatible_b _UU03a9_ t_payload
+                                          t_expected
+                                     then (match go _UU03a3_1 r1 fields' es' with
+                                           | Infer_ok p2 ->
+                                             let (p3, roots_rest) = p2 in
+                                             Infer_ok (p3,
+                                             (root_set_union roots_payload
+                                               roots_rest))
+                                           | Infer_err err -> Infer_err err)
+                                     else Infer_err
+                                            (compatible_error t_payload
+                                              t_expected)
+                                   | Infer_err err -> Infer_err err))
+                           in go
+                         in
+                         (match go _UU03a3_ r vdef.enum_variant_fields
+                                  payloads with
+                          | Infer_ok p ->
+                            let (p0, roots) = p in
+                            let (_UU03a3_', r') = p0 in
+                            Infer_ok ((((instantiate_enum_ty edef lts args),
+                            _UU03a3_'), r'), roots)
+                          | Infer_err err -> Infer_err err)
+                       | None -> Infer_err (ErrVariantNotFound variant_name)))
+       | None -> Infer_err (ErrEnumNotFound enum_name0))
     | EReplace (p, e_new) ->
       (match place_path p with
        | Some p0 ->
@@ -6545,6 +6773,66 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                                   _UU03a3_'), r'), roots)
                                 | Infer_err err -> Infer_err err)))))
        | None -> Infer_err (ErrStructNotFound sname))
+    | EEnum (enum_name0, variant_name, lts, args, payloads) ->
+      (match lookup_enum enum_name0 env with
+       | Some edef ->
+         if negb (Nat.eqb (length lts) edef.enum_lifetimes)
+         then Infer_err ErrArityMismatch
+         else if negb (Nat.eqb (length args) edef.enum_type_params)
+              then Infer_err ErrArityMismatch
+              else (match check_struct_bounds env edef.enum_bounds args with
+                    | Some err -> Infer_err err
+                    | None ->
+                      (match lookup_enum_variant variant_name
+                               edef.enum_variants with
+                       | Some vdef ->
+                         let go =
+                           let rec go _UU03a3_0 r0 fields es =
+                             match fields with
+                             | [] ->
+                               (match es with
+                                | [] -> Infer_ok ((_UU03a3_0, r0), [])
+                                | _ :: _ -> Infer_err ErrArityMismatch)
+                             | t_field :: fields' ->
+                               (match es with
+                                | [] -> Infer_err ErrArityMismatch
+                                | e_payload :: es' ->
+                                  (match infer_core_env_state_fuel_roots_shadow_safe
+                                           fuel' env _UU03a9_ n r0 _UU03a3_0
+                                           e_payload with
+                                   | Infer_ok p ->
+                                     let (p0, roots_payload) = p in
+                                     let (p1, r1) = p0 in
+                                     let (t_payload, _UU03a3_1) = p1 in
+                                     let t_expected =
+                                       instantiate_enum_variant_field_ty lts
+                                         args t_field
+                                     in
+                                     if ty_compatible_b _UU03a9_ t_payload
+                                          t_expected
+                                     then (match go _UU03a3_1 r1 fields' es' with
+                                           | Infer_ok p2 ->
+                                             let (p3, roots_rest) = p2 in
+                                             Infer_ok (p3,
+                                             (root_set_union roots_payload
+                                               roots_rest))
+                                           | Infer_err err -> Infer_err err)
+                                     else Infer_err
+                                            (compatible_error t_payload
+                                              t_expected)
+                                   | Infer_err err -> Infer_err err))
+                           in go
+                         in
+                         (match go _UU03a3_ r vdef.enum_variant_fields
+                                  payloads with
+                          | Infer_ok p ->
+                            let (p0, roots) = p in
+                            let (_UU03a3_', r') = p0 in
+                            Infer_ok ((((instantiate_enum_ty edef lts args),
+                            _UU03a3_'), r'), roots)
+                          | Infer_err err -> Infer_err err)
+                       | None -> Infer_err (ErrVariantNotFound variant_name)))
+       | None -> Infer_err (ErrEnumNotFound enum_name0))
     | EReplace (p, e_new) ->
       (match place_path p with
        | Some p0 ->
@@ -7124,6 +7412,14 @@ let rec borrow_check_env env pBS _UU0393_ = function
      | Infer_ok pBS1 -> go pBS1 rest
      | Infer_err err -> Infer_err err)
   in go pBS fields
+| EEnum (_, _, _, _, payloads) ->
+  let rec go pBS0 = function
+  | [] -> Infer_ok pBS0
+  | a :: rest ->
+    (match borrow_check_env env pBS0 _UU0393_ a with
+     | Infer_ok pBS1 -> go pBS1 rest
+     | Infer_err err -> Infer_err err)
+  in go pBS payloads
 | EReplace (p, e_new) ->
   let (x, path) = borrow_target_of_place p in
   if pbs_has_any x path pBS
@@ -7831,6 +8127,7 @@ type raw_expr =
 | RawCallGeneric of ident * ty list * raw_expr list
 | RawCallExpr of raw_expr * raw_expr list
 | RawStruct of string * lifetime list * ty list * (string * raw_expr) list
+| RawEnum of string * string * lifetime list * ty list * raw_expr list
 | RawReplace of place * raw_expr
 | RawAssign of place * raw_expr
 | RawBorrow of ref_kind * place
@@ -8325,6 +8622,15 @@ let rec elaborate_raw_expr_fuel fuel expected env _UU03a9_ n _UU03a3_ next e =
           let (fields', _) = p1 in
           finish (append_env_fns env extras) (EStruct (sname, lts, tys,
             fields')) extras next'
+        | Infer_err err -> Infer_err err)
+     | RawEnum (enum_name0, variant_name, lts, tys, payloads) ->
+       (match go_args fuel' env _UU03a3_ next payloads with
+        | Infer_ok p ->
+          let (p0, next') = p in
+          let (p1, extras) = p0 in
+          let (payloads', _) = p1 in
+          finish (append_env_fns env extras) (EEnum (enum_name0,
+            variant_name, lts, tys, payloads')) extras next'
         | Infer_err err -> Infer_err err)
      | RawReplace (p, e1) ->
        let expected_rhs =

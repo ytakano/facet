@@ -29,7 +29,12 @@ with struct_fields_have_type_global_env_with_local_bounds :
   forall env bounds s lts args fields defs,
     struct_fields_have_type env s lts args fields defs ->
     struct_fields_have_type (global_env_with_local_bounds env bounds)
-      s lts args fields defs.
+      s lts args fields defs
+with enum_values_have_type_global_env_with_local_bounds :
+  forall env bounds s values tys,
+    enum_values_have_type env s values tys ->
+    enum_values_have_type (global_env_with_local_bounds env bounds)
+      s values tys.
 Proof.
   - intros env bounds s v T H.
     induction H;
@@ -37,6 +42,8 @@ Proof.
         [ econstructor; simpl in *; eauto;
           rewrite ?type_lookup_path_global_env_with_local_bounds; eauto ].
   - intros env bounds s lts args fields defs H.
+    induction H; try solve [econstructor; eauto].
+  - intros env bounds s values tys H.
     induction H; try solve [econstructor; eauto].
 Qed.
 
@@ -48,7 +55,12 @@ with struct_fields_have_type_clear_global_env_local_bounds :
   forall env bounds s lts args fields defs,
     struct_fields_have_type (global_env_with_local_bounds env bounds)
       s lts args fields defs ->
-    struct_fields_have_type env s lts args fields defs.
+    struct_fields_have_type env s lts args fields defs
+with enum_values_have_type_clear_global_env_local_bounds :
+  forall env bounds s values tys,
+    enum_values_have_type (global_env_with_local_bounds env bounds)
+      s values tys ->
+    enum_values_have_type env s values tys.
 Proof.
   - intros env bounds s v T H.
     remember (global_env_with_local_bounds env bounds) as env' eqn:Heq.
@@ -66,6 +78,29 @@ Proof.
     induction H; intros env0 bounds Heq; try solve [econstructor; eauto].
     all: try (subst; eapply SFHT_Cons; eauto;
       eapply value_has_type_clear_global_env_local_bounds; eauto).
+  - intros env bounds s values tys H.
+    remember (global_env_with_local_bounds env bounds) as env' eqn:Heq.
+    revert env bounds Heq.
+    induction H; intros env0 bounds Heq; try solve [econstructor; eauto].
+    all: try (subst; eapply EVHT_Cons; eauto;
+      eapply value_has_type_clear_global_env_local_bounds; eauto).
+Qed.
+
+Lemma eval_args_values_have_types_params_of_tys_enum_values :
+  forall env Ω s values tys,
+    eval_args_values_have_types env Ω s values (params_of_tys tys) ->
+    enum_values_have_type env s values tys.
+Proof.
+  intros env Ω s values.
+  induction values as [| v values IH]; intros tys Htyped;
+    destruct tys as [| T tys]; simpl in Htyped.
+  - constructor.
+  - inversion Htyped.
+  - inversion Htyped.
+  - inversion Htyped; subst.
+    constructor.
+    + eapply VHT_Compatible; eassumption.
+    + apply IH. assumption.
 Qed.
 
 Lemma store_entry_typed_global_env_with_local_bounds :
@@ -258,6 +293,41 @@ Proof.
     + split.
       * econstructor; eassumption.
       * exact Hpres_fields.
+  - intros s s' enum_name variant_name lts args payloads values edef vdef
+      Hlookup Hvariant Heval_args IHargs Ω n Σ T Σ' Hready Hstore Htyped.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    match goal with
+    | Htyped_lookup : lookup_enum enum_name env = Some ?edef_typed |- _ =>
+        rewrite Hlookup in Htyped_lookup;
+        inversion Htyped_lookup; subst edef_typed
+    end.
+    match goal with
+    | Htyped_variant :
+        lookup_enum_variant variant_name (enum_variants edef) =
+          Some ?vdef_typed |- _ =>
+        rewrite Hvariant in Htyped_variant;
+        inversion Htyped_variant; subst vdef_typed
+    end.
+    match goal with
+    | Hready_args : preservation_ready_args payloads,
+      Htyped_args : typed_args_env_structural env Ω n Σ payloads
+        (params_of_tys
+          (map (instantiate_enum_variant_field_ty lts args)
+            (enum_variant_fields vdef))) Σ' |- _ =>
+        destruct (IHargs Ω n Σ
+                    (params_of_tys
+                      (map (instantiate_enum_variant_field_ty lts args)
+                        (enum_variant_fields vdef))) Σ'
+                    Hready_args Hstore Htyped_args)
+          as [Hstore' [Hvalues Hpres_args]]
+    end.
+    repeat split.
+    + exact Hstore'.
+    + eapply VHT_Enum; eauto.
+      eapply eval_args_values_have_types_params_of_tys_enum_values.
+      exact Hvalues.
+    + exact Hpres_args.
   - intros s s1 s2 m x T_ann e1 e2 v1 v2 Heval1 IH1 Heval2 IH2
       Ω n Σ T Σ' Hready Hstore Htyped.
     inversion Hready.

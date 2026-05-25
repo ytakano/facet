@@ -105,6 +105,7 @@ Proof.
   - eapply TERS_MakeClosure_Static; eauto.
   - eapply TERS_CallExpr_MakeClosure; eauto.
   - eapply TERS_Struct; eauto.
+  - eapply TERS_Enum; eauto.
   - pose proof (root_env_tail_fresh_names_app_l _ _ _ H1) as Hfresh1.
     pose proof (root_env_tail_fresh_names_app_r _ _ _ H1) as Hfresh_tail.
     destruct (root_env_tail_fresh_names_cons_head _ _ _ Hfresh_tail)

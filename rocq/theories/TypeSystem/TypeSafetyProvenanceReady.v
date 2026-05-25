@@ -30,6 +30,9 @@ Inductive provenance_ready_expr : expr -> Prop :=
   | ProvReady_Struct : forall sname lts args fields,
       provenance_ready_fields fields ->
       provenance_ready_expr (EStruct sname lts args fields)
+  | ProvReady_Enum : forall enum_name variant_name lts args payloads,
+      provenance_ready_args payloads ->
+      provenance_ready_expr (EEnum enum_name variant_name lts args payloads)
   | ProvReady_Let : forall m x T e1 e2,
       provenance_ready_expr e1 ->
       provenance_ready_expr e2 ->
@@ -181,6 +184,20 @@ Proof.
       inversion Hrename; subst.
       apply ProvReady_Struct.
       eapply alpha_rename_provenance_ready_fields; eauto.
+    + destruct
+        ((fix go (used0 : list ident) (args0 : list expr)
+             {struct args0} : list expr * list ident :=
+            match args0 with
+            | [] => ([], used0)
+            | arg :: rest =>
+                let (arg', used1) := alpha_rename_expr ρ used0 arg in
+                let (rest', used2) := go used1 rest in
+                (arg' :: rest', used2)
+            end) used payloads)
+        as [payloadsr used_payloads] eqn:Hpayloads.
+      inversion Hrename; subst.
+      apply ProvReady_Enum.
+      eapply alpha_rename_provenance_ready_args; eauto.
     + destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
       destruct (alpha_rename_expr
         ((x, fresh_ident x (x :: free_vars_expr e2 ++ used1)) :: ρ)
@@ -379,4 +396,3 @@ Proof.
   exact (proj1 (proj2 (proj2 value_roots_within_excludes))
     R s Hwithin root Hexclude Hnames).
 Qed.
-

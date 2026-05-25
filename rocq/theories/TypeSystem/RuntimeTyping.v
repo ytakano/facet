@@ -618,6 +618,14 @@ Inductive value_has_type (env : global_env) (s : store) : value -> Ty -> Prop :=
       struct_fields_have_type env s lts args fields (struct_fields sdef) ->
       value_has_type env s (VStruct name fields)
         (instantiate_struct_instance_ty sdef lts args)
+  | VHT_Enum : forall enum_name variant_name lts args values edef vdef,
+      lookup_enum enum_name env = Some edef ->
+      lookup_enum_variant variant_name (enum_variants edef) = Some vdef ->
+      enum_values_have_type env s values
+        (map (instantiate_enum_variant_field_ty lts args)
+          (enum_variant_fields vdef)) ->
+      value_has_type env s (VEnum enum_name variant_name values)
+        (instantiate_enum_ty edef lts args)
   | VHT_Ref : forall u la rk x path se v T,
       store_lookup x s = Some se ->
       value_lookup_path (se_val se) path = Some v ->
@@ -648,12 +656,22 @@ with struct_fields_have_type
       name = field_name f ->
       value_has_type env s v (instantiate_struct_field_ty lts args f) ->
       struct_fields_have_type env s lts args fields defs ->
-      struct_fields_have_type env s lts args ((name, v) :: fields) (f :: defs).
+      struct_fields_have_type env s lts args ((name, v) :: fields) (f :: defs)
+with enum_values_have_type
+    (env : global_env) (s : store) : list value -> list Ty -> Prop :=
+  | EVHT_Nil :
+      enum_values_have_type env s [] []
+  | EVHT_Cons : forall v values T tys,
+      value_has_type env s v T ->
+      enum_values_have_type env s values tys ->
+      enum_values_have_type env s (v :: values) (T :: tys).
 
 Scheme value_has_type_ind' := Induction for value_has_type Sort Prop
-with struct_fields_have_type_ind' := Induction for struct_fields_have_type Sort Prop.
+with struct_fields_have_type_ind' := Induction for struct_fields_have_type Sort Prop
+with enum_values_have_type_ind' := Induction for enum_values_have_type Sort Prop.
 Combined Scheme runtime_typing_ind
-  from value_has_type_ind', struct_fields_have_type_ind'.
+  from value_has_type_ind', struct_fields_have_type_ind',
+       enum_values_have_type_ind'.
 
 (* References in surviving runtime values must not point at a removed
    store root. *)
@@ -669,6 +687,9 @@ Inductive value_refs_exclude_root (root : ident) : value -> Prop :=
   | VRE_Struct : forall name fields,
       value_fields_refs_exclude_root root fields ->
       value_refs_exclude_root root (VStruct name fields)
+  | VRE_Enum : forall enum_name variant_name values,
+      Forall (value_refs_exclude_root root) values ->
+      value_refs_exclude_root root (VEnum enum_name variant_name values)
   | VRE_Ref : forall x path,
       ident_eqb root x = false ->
       value_refs_exclude_root root (VRef x path)
@@ -741,10 +762,16 @@ Lemma runtime_typing_store_preserved :
     struct_fields_have_type env s lts args fields defs ->
     forall s',
       store_ref_targets_preserved env s s' ->
-      struct_fields_have_type env s' lts args fields defs).
+      struct_fields_have_type env s' lts args fields defs) /\
+  (forall values tys,
+    enum_values_have_type env s values tys ->
+    forall s',
+      store_ref_targets_preserved env s s' ->
+      enum_values_have_type env s' values tys).
 Proof.
   intros env s.
-  apply runtime_typing_ind; intros; eauto using value_has_type, struct_fields_have_type.
+  apply runtime_typing_ind; intros;
+    eauto using value_has_type, struct_fields_have_type, enum_values_have_type.
   - match goal with
     | Hpres : store_ref_targets_preserved env s ?s',
       Hlookup : store_lookup x s = Some se,
@@ -799,14 +826,24 @@ Lemma runtime_typing_store_remove_excluding_root :
   (forall lts args fields defs,
     struct_fields_have_type env s lts args fields defs ->
     value_fields_refs_exclude_root root fields ->
-    struct_fields_have_type env (store_remove root s) lts args fields defs).
+    struct_fields_have_type env (store_remove root s) lts args fields defs) /\
+  (forall values tys,
+    enum_values_have_type env s values tys ->
+    Forall (value_refs_exclude_root root) values ->
+    enum_values_have_type env (store_remove root s) values tys).
 Proof.
   intros env s root.
   apply runtime_typing_ind; intros;
-    eauto using value_has_type, struct_fields_have_type.
+    eauto using value_has_type, struct_fields_have_type, enum_values_have_type.
   - apply VHT_Struct with (sdef := sdef); [assumption |].
     match goal with
     | Hexclude : value_refs_exclude_root root (VStruct _ _) |- _ =>
+        inversion Hexclude; subst
+    end.
+    eauto.
+  - eapply VHT_Enum; eauto.
+    match goal with
+    | Hexclude : value_refs_exclude_root root (VEnum _ _ _) |- _ =>
         inversion Hexclude; subst
     end.
     eauto.
@@ -820,6 +857,11 @@ Proof.
     + eassumption.
   - match goal with
     | Hexclude : value_fields_refs_exclude_root root ((_ , _) :: _) |- _ =>
+        inversion Hexclude; subst
+    end.
+    econstructor; eauto.
+  - match goal with
+    | Hexclude : Forall (value_refs_exclude_root root) (_ :: _) |- _ =>
         inversion Hexclude; subst
     end.
     econstructor; eauto.
@@ -843,8 +885,19 @@ Lemma struct_fields_have_type_store_remove_excluding_root :
     struct_fields_have_type env (store_remove root s) lts args fields defs.
 Proof.
   intros env s root lts args fields defs Htyped Hexclude.
-  exact (proj2 (runtime_typing_store_remove_excluding_root env s root)
+  exact (proj1 (proj2 (runtime_typing_store_remove_excluding_root env s root))
     lts args fields defs Htyped Hexclude).
+Qed.
+
+Lemma enum_values_have_type_store_remove_excluding_root :
+  forall env s root values tys,
+    enum_values_have_type env s values tys ->
+    Forall (value_refs_exclude_root root) values ->
+    enum_values_have_type env (store_remove root s) values tys.
+Proof.
+  intros env s root values tys Htyped Hexclude.
+  exact (proj2 (proj2 (runtime_typing_store_remove_excluding_root env s root))
+    values tys Htyped Hexclude).
 Qed.
 
 Lemma value_has_type_compatible :
@@ -876,8 +929,20 @@ Lemma struct_fields_have_type_store_preserved :
       struct_fields_have_type env s' lts args fields defs.
 Proof.
   intros env s lts args fields defs H s' Hpres.
-  exact (proj2 (runtime_typing_store_preserved env s)
+  exact (proj1 (proj2 (runtime_typing_store_preserved env s))
     lts args fields defs H s' Hpres).
+Qed.
+
+Lemma enum_values_have_type_store_preserved :
+  forall env s values tys,
+    enum_values_have_type env s values tys ->
+    forall s',
+      store_ref_targets_preserved env s s' ->
+      enum_values_have_type env s' values tys.
+Proof.
+  intros env s values tys H s' Hpres.
+  exact (proj2 (proj2 (runtime_typing_store_preserved env s))
+    values tys H s' Hpres).
 Qed.
 
 (* ------------------------------------------------------------------ *)
@@ -3191,7 +3256,9 @@ Lemma runtime_path_exists_typing :
       exists field_value v_path,
         lookup_value_field name fields = Some field_value /\
         value_lookup_path field_value rest = Some v_path /\
-        value_has_type env s v_path T_path).
+        value_has_type env s v_path T_path) /\
+  (forall values tys,
+    enum_values_have_type env s values tys -> True).
 Proof.
   intros env s.
   apply runtime_typing_ind; intros; subst; simpl in *; try discriminate.
@@ -3220,6 +3287,15 @@ Proof.
       exists v_path. split.
       * rewrite Hlookup. exact Hvalue.
       * exact Hv.
+  - destruct lookup_path as [|seg rest].
+    + simpl in *.
+      match goal with
+      | Hquery : Some _ = Some _ |- _ => inversion Hquery; subst
+      end.
+      exists (VEnum enum_name variant_name values).
+      split; [reflexivity | econstructor; eassumption].
+    + simpl in *.
+      discriminate.
   - destruct lookup_path as [|seg rest].
     + match goal with
       | Hquery : type_lookup_path env (MkTy _ (TRef _ _ _)) [] = Some _ |- _ =>
@@ -3292,6 +3368,8 @@ Proof.
       exists field_value, v_path.
       split; [exact Hlookup |].
       split; assumption.
+  - exact I.
+  - exact I.
 Qed.
 
 Lemma value_has_type_path_exists :
@@ -3319,7 +3397,7 @@ Lemma struct_fields_have_type_path_exists :
       value_has_type env s v_path T_path.
 Proof.
   intros env s lts args fields defs name fdef rest T_path Htyped Hfield Htype.
-  exact (proj2 (runtime_path_exists_typing env s)
+  exact (proj1 (proj2 (runtime_path_exists_typing env s))
     lts args fields defs Htyped name fdef rest T_path Hfield Htype).
 Qed.
 
@@ -3340,7 +3418,9 @@ Lemma runtime_path_update_typing :
         Some T_path ->
       value_has_type env s v_new T_path ->
       update_value_field_path name rest v_new fields = Some fields' ->
-      struct_fields_have_type env s lts args fields' defs).
+      struct_fields_have_type env s lts args fields' defs) /\
+  (forall values tys,
+    enum_values_have_type env s values tys -> True).
 Proof.
   intros env s.
   apply runtime_typing_ind; intros; subst; simpl in *; try discriminate.
@@ -3376,6 +3456,11 @@ Proof.
       econstructor.
       * exact e.
       * eapply H; eassumption.
+  - destruct upd_path; simpl in *; try discriminate.
+    repeat match goal with
+    | Hsome : Some _ = Some _ |- _ => inversion Hsome; clear Hsome; subst
+    end.
+    assumption.
   - destruct upd_path; simpl in *; try discriminate.
     inversion H; inversion H1; subst. exact H0.
   - destruct upd_path; simpl in *; try discriminate.
@@ -3441,6 +3526,8 @@ Proof.
         -- eassumption.
         -- eassumption.
         -- exact Hupdate_tail.
+  - exact I.
+  - exact I.
 Qed.
 
 Lemma value_update_path_has_type :
@@ -3787,6 +3874,9 @@ Inductive runtime_refs_wf (env : global_env) (s : store) : value -> Prop :=
   | RRW_Struct : forall name fields,
       Forall (fun fv => runtime_refs_wf env s (snd fv)) fields ->
       runtime_refs_wf env s (VStruct name fields)
+  | RRW_Enum : forall enum_name variant_name values,
+      Forall (runtime_refs_wf env s) values ->
+      runtime_refs_wf env s (VEnum enum_name variant_name values)
   | RRW_Ref : forall x path se T v,
       store_lookup x s = Some se ->
       type_lookup_path env (se_ty se) path = Some T ->

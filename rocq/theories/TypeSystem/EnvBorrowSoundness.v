@@ -247,6 +247,21 @@ Proof.
          exact Hfield.
       -- apply IHfields; [simpl in *; lia | exact Hcheck].
 
+  (* EEnum *)
+  + apply BOES_Enum.
+    revert PBS PBS' Hcheck.
+    induction l1 as [| a rest IHargs]; intros PBS PBS' Hcheck.
+    * simpl in Hcheck. injection Hcheck as <-. constructor.
+    * simpl in Hcheck.
+      destruct (borrow_check_env env PBS Γ a) as [PBS1|] eqn:Ha; [|discriminate].
+      apply BOESArgs_Cons with (PBS1 := PBS1).
+      -- apply IH with (e := a).
+         pose proof (expr_size_enum_payload_lt s s0 l l0 (a :: rest) a
+           (or_introl eq_refl)).
+         simpl in Hlt. lia.
+         exact Ha.
+      -- apply IHargs; [simpl in *; lia | exact Hcheck].
+
   (* EReplace *)
   + destruct (pbs_has_any (place_root p) (place_suffix_path p) PBS) eqn:Hany.
     * discriminate Hcheck.

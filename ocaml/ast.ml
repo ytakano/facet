@@ -48,6 +48,7 @@ type named_expr =
   | NLet    of TypeChecker.mutability * name * named_ty option * named_expr * named_expr
   | NCall   of name * named_type_arg list * named_expr list
   | NStruct of name * named_type_arg list * (name * named_expr) list
+  | NEnum   of name * named_type_arg list * name * named_expr list
   | NReplace of named_place * named_expr
   | NAssign of named_place * named_expr
   | NBorrow of TypeChecker.ref_kind * named_place
@@ -79,6 +80,18 @@ type named_struct_def = {
   ns_fields   : named_field_def list;
 }
 
+type named_enum_variant_def = {
+  nev_name   : name;
+  nev_fields : named_ty list;
+}
+
+type named_enum_def = {
+  ne_name     : name;
+  ne_generics : named_generic_param list;
+  ne_bounds   : named_trait_bound list;
+  ne_variants : named_enum_variant_def list;
+}
+
 type named_trait_def = {
   nt_name     : name;
   nt_generics : named_generic_param list;
@@ -95,5 +108,6 @@ type named_impl_def = {
 type named_item =
   | NIFn of named_fn_def
   | NIStruct of named_struct_def
+  | NIEnum of named_enum_def
   | NITrait of named_trait_def
   | NIImpl of named_impl_def

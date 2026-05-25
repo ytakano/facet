@@ -26,6 +26,7 @@ let keywords = [
   "fn",           Parser.KW_FN;
   "for",          Parser.KW_FOR;
   "struct",       Parser.KW_STRUCT;
+  "enum",         Parser.KW_ENUM;
   "trait",        Parser.KW_TRAIT;
   "impl",         Parser.KW_IMPL;
   "let",          Parser.KW_LET;
@@ -96,6 +97,7 @@ let rec tokenize st =
   | '.' -> Parser.DOT
   | '+' -> Parser.PLUS
   | ',' -> Parser.COMMA
+  | ':', ':' -> Parser.DCOLON
   | ':' -> Parser.COLON
   | '=' -> Parser.EQUAL
   | ';' -> Parser.SEMI

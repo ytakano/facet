@@ -84,6 +84,13 @@ Fixpoint free_vars_expr (e : expr) : list ident :=
         | (_, e) :: rest => free_vars_expr e ++ go rest
         end
       in go fields
+  | EEnum _ _ _ _ payloads =>
+      let fix go (payloads0 : list expr) : list ident :=
+        match payloads0 with
+        | [] => []
+        | e :: rest => free_vars_expr e ++ go rest
+        end
+      in go payloads
   | EReplace p e_new => place_name p :: free_vars_expr e_new
   | EAssign p e_new => place_name p :: free_vars_expr e_new
   | EBorrow _ p => [place_name p]
@@ -168,6 +175,19 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
       in
       let (fields', used') := go used fields in
       (EStruct name lts args fields', used')
+  | EEnum enum_name variant_name lts args payloads =>
+      let fix go (used0 : list ident) (payloads0 : list expr)
+          : list expr * list ident :=
+        match payloads0 with
+        | [] => ([], used0)
+        | e :: rest =>
+            let (e', used1) := alpha_rename_expr ρ used0 e in
+            let (rest', used2) := go used1 rest in
+            (e' :: rest', used2)
+        end
+      in
+      let (payloads', used') := go used payloads in
+      (EEnum enum_name variant_name lts args payloads', used')
   | EReplace p e_new =>
       let (e_new', used') := alpha_rename_expr ρ used e_new in
       (EReplace (rename_place ρ p) e_new', used')

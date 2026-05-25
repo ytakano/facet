@@ -7,6 +7,7 @@ type scope = (string * int) list
 type ty_scope = {
   type_params  : string list;
   struct_names : string list;
+  enum_names   : string list;
 }
 
 let current_depth scope name =
@@ -64,8 +65,9 @@ and lower_named_ty_core ty_scope c =
       TParam (Big_int_Z.big_int_of_int i)
     | None ->
       let (lts, tys) = split_type_args ty_scope args in
-      if List.mem s ty_scope.struct_names || args <> []
-      then TStruct (s, lts, tys)
+      if List.mem s ty_scope.struct_names then TStruct (s, lts, tys)
+      else if List.mem s ty_scope.enum_names then TEnum (s, lts, tys)
+      else if args <> [] then TStruct (s, lts, tys)
       else TNamed s
     end
   | NTFn (ts, ret) ->
@@ -235,6 +237,10 @@ let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (
     let (lts, tys) = split_expr_type_args ty_scope args in
     EStruct (name, lts, tys,
       List.map (fun (field, e1) -> (field, convert fn_names ty_scope scope e1)) fields)
+  | NEnum (enum_name, args, variant_name, payloads) ->
+    let (lts, tys) = split_expr_type_args ty_scope args in
+    EEnum (enum_name, variant_name, lts, tys,
+      List.map (convert fn_names ty_scope scope) payloads)
   | NLet (m, name, Some ty, e1, e2) ->
     if named_ty_has_elided_ref_lifetime ty
     then failwith "cannot elide lifetime in local type annotation";
@@ -295,6 +301,10 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
     let (lts, tys) = split_expr_type_args ty_scope args in
     RawStruct (name, lts, tys,
       List.map (fun (field, e1) -> (field, convert_raw fn_names ty_scope scope e1)) fields)
+  | NEnum (enum_name, args, variant_name, payloads) ->
+    let (lts, tys) = split_expr_type_args ty_scope args in
+    RawEnum (enum_name, variant_name, lts, tys,
+      List.map (convert_raw fn_names ty_scope scope) payloads)
   | NLet (m, name, Some ty, e1, e2) ->
     if named_ty_has_elided_ref_lifetime ty
     then failwith "cannot elide lifetime in local type annotation";
@@ -324,11 +334,12 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
     RawClosure (capture_ids, raw_params, lower_named_ty ty_scope ret,
       convert_raw fn_names ty_scope body_scope body)
 
-let convert_fn_def_with_names struct_names fn_names (f : named_fn_def) : fn_def =
+let convert_fn_def_with_names struct_names enum_names fn_names (f : named_fn_def) : fn_def =
   let (lts, tys) = split_generics f.nf_generics in
   let ty_scope = {
     type_params = tys;
     struct_names;
+    enum_names;
   } in
   let (scope, params, next_lifetime, input_lts) = List.fold_left
     (fun (sc, acc, next_lt, input_lts) np ->
@@ -353,11 +364,12 @@ let convert_fn_def_with_names struct_names fn_names (f : named_fn_def) : fn_def 
     fn_type_params = Big_int_Z.big_int_of_int (List.length tys);
     fn_bounds = List.map (trait_bound_of_named ty_scope tys) f.nf_bounds }
 
-let convert_raw_fn_def_with_names struct_names fn_names (f : named_fn_def) : raw_fn_def =
+let convert_raw_fn_def_with_names struct_names enum_names fn_names (f : named_fn_def) : raw_fn_def =
   let (lts, tys) = split_generics f.nf_generics in
   let ty_scope = {
     type_params = tys;
     struct_names;
+    enum_names;
   } in
   let (scope, params, next_lifetime, input_lts) = List.fold_left
     (fun (sc, acc, next_lt, input_lts) np ->
@@ -381,9 +393,9 @@ let convert_raw_fn_def_with_names struct_names fn_names (f : named_fn_def) : raw
     raw_fn_type_params = Big_int_Z.big_int_of_int (List.length tys);
     raw_fn_bounds = List.map (trait_bound_of_named ty_scope tys) f.nf_bounds }
 
-let convert_struct struct_names s =
+let convert_struct struct_names enum_names s =
   let (lts, tys) = split_generics s.ns_generics in
-  let ty_scope = { type_params = tys; struct_names } in
+  let ty_scope = { type_params = tys; struct_names; enum_names } in
   { struct_name = s.ns_name;
     struct_lifetimes = Big_int_Z.big_int_of_int (List.length lts);
     struct_type_params = Big_int_Z.big_int_of_int (List.length tys);
@@ -396,16 +408,30 @@ let convert_struct struct_names s =
             field_ty = lower_named_ty ty_scope f.nfield_ty })
         s.ns_fields }
 
-let convert_trait struct_names t =
+let convert_enum struct_names enum_names e =
+  let (lts, tys) = split_generics e.ne_generics in
+  let ty_scope = { type_params = tys; struct_names; enum_names } in
+  { enum_name = e.ne_name;
+    enum_lifetimes = Big_int_Z.big_int_of_int (List.length lts);
+    enum_type_params = Big_int_Z.big_int_of_int (List.length tys);
+    enum_bounds = List.map (trait_bound_of_named ty_scope tys) e.ne_bounds;
+    enum_variants =
+      List.map
+        (fun v ->
+          { enum_variant_name = v.nev_name;
+            enum_variant_fields = List.map (lower_named_ty ty_scope) v.nev_fields })
+        e.ne_variants }
+
+let convert_trait struct_names enum_names t =
   let (_lts, tys) = split_generics t.nt_generics in
-  let ty_scope = { type_params = tys; struct_names } in
+  let ty_scope = { type_params = tys; struct_names; enum_names } in
   { trait_name = t.nt_name;
     trait_type_params = Big_int_Z.big_int_of_int (List.length tys);
     trait_bounds = List.map (trait_bound_of_named ty_scope tys) t.nt_bounds }
 
-let convert_impl struct_names i =
+let convert_impl struct_names enum_names i =
   let (lts, tys) = split_generics i.ni_generics in
-  let ty_scope = { type_params = tys; struct_names } in
+  let ty_scope = { type_params = tys; struct_names; enum_names } in
   let (trait_lts, trait_args) = split_expr_type_args ty_scope i.ni_trait_args in
   if trait_lts <> []
   then failwith ("trait impl target cannot take lifetime arguments: " ^ i.ni_trait_name);
@@ -425,6 +451,7 @@ let duplicate_name names =
 let validate_env env =
   let top_names =
     List.map (fun s -> s.struct_name) env.env_structs @
+    List.map (fun e -> e.enum_name) env.env_enums @
     List.map (fun t -> t.trait_name) env.env_traits @
     List.map (fun f -> fst f.fn_name) env.env_fns
   in
@@ -435,6 +462,9 @@ let validate_env env =
     let big_len xs = Big_int_Z.big_int_of_int (List.length xs) in
     let find_struct name =
       List.find_opt (fun s -> s.struct_name = name) env.env_structs
+    in
+    let find_enum name =
+      List.find_opt (fun e -> e.enum_name = name) env.env_enums
     in
     let find_trait name =
       List.find_opt (fun t -> t.trait_name = name) env.env_traits
@@ -482,10 +512,18 @@ let validate_env env =
                List.map (type_error ty_params lt_params bound_depth) args)
         end
       | TEnum (name, lts, args) ->
-        first_some
-          (List.map (lifetime_error lt_params bound_depth) lts @
-           List.map (type_error ty_params lt_params bound_depth) args @
-           [Some ("unknown enum type: " ^ name)])
+        begin match find_enum name with
+        | None -> Some ("unknown enum type: " ^ name)
+        | Some e ->
+          if not (Big_int_Z.eq_big_int (big_len lts) e.enum_lifetimes)
+          then Some ("enum lifetime arity mismatch: " ^ name)
+          else if not (Big_int_Z.eq_big_int (big_len args) e.enum_type_params)
+          then Some ("enum type arity mismatch: " ^ name)
+          else
+            first_some
+              (List.map (lifetime_error lt_params bound_depth) lts @
+               List.map (type_error ty_params lt_params bound_depth) args)
+        end
       | TFn (args, ret) ->
         first_some
           (List.map (type_error ty_params lt_params bound_depth) args @
@@ -597,6 +635,18 @@ let validate_env env =
              s.struct_fields @
            List.map (validate_bound s.struct_type_params s.struct_lifetimes) s.struct_bounds)
     in
+    let validate_enum e =
+      match duplicate_name (List.map (fun v -> v.enum_variant_name) e.enum_variants) with
+      | Some variant -> Some ("duplicate variant in enum " ^ e.enum_name ^ ": " ^ variant)
+      | None ->
+        first_some
+          (List.concat_map
+             (fun v ->
+                List.map (type_error e.enum_type_params e.enum_lifetimes zero)
+                  v.enum_variant_fields)
+             e.enum_variants @
+           List.map (validate_bound e.enum_type_params e.enum_lifetimes) e.enum_bounds)
+    in
     let validate_trait t =
       first_some (List.map (validate_bound t.trait_type_params zero) t.trait_bounds)
     in
@@ -630,6 +680,7 @@ let validate_env env =
     in
     match first_some (List.map validate_acyclic_struct env.env_structs @
                       List.map validate_struct env.env_structs @
+                      List.map validate_enum env.env_enums @
                       List.map validate_trait env.env_traits @
                       List.map validate_impl env.env_impls @
                       List.map validate_fn env.env_fns) with
@@ -649,13 +700,16 @@ let validate_env env =
 
 let convert_program_items (items : named_item list) : global_env =
   let structs = List.filter_map (function NIStruct s -> Some s | _ -> None) items in
+  let enums = List.filter_map (function NIEnum e -> Some e | _ -> None) items in
   let traits = List.filter_map (function NITrait t -> Some t | _ -> None) items in
   let impls = List.filter_map (function NIImpl i -> Some i | _ -> None) items in
   let fns = List.filter_map (function NIFn f -> Some f | _ -> None) items in
   let struct_names = List.map (fun s -> s.ns_name) structs in
+  let enum_names = List.map (fun e -> e.ne_name) enums in
   let fn_names = List.map (fun f -> f.nf_name) fns in
   let top_names =
     List.map (fun s -> s.ns_name) structs @
+    enum_names @
     List.map (fun t -> t.nt_name) traits @
     fn_names
   in
@@ -664,10 +718,10 @@ let convert_program_items (items : named_item list) : global_env =
   | None -> ()
   end;
   let base_env = {
-    env_structs = List.map (convert_struct struct_names) structs;
-    env_enums = [];
-    env_traits = List.map (convert_trait struct_names) traits;
-    env_impls = List.map (convert_impl struct_names) impls;
+    env_structs = List.map (convert_struct struct_names enum_names) structs;
+    env_enums = List.map (convert_enum struct_names enum_names) enums;
+    env_traits = List.map (convert_trait struct_names enum_names) traits;
+    env_impls = List.map (convert_impl struct_names enum_names) impls;
     env_local_bounds = [];
     env_fns = [];
   } in
@@ -675,7 +729,8 @@ let convert_program_items (items : named_item list) : global_env =
   | None -> ()
   | Some msg -> failwith msg
   end;
-  let raw_fns = List.map (convert_raw_fn_def_with_names struct_names fn_names) fns in
+  let raw_fns =
+    List.map (convert_raw_fn_def_with_names struct_names enum_names fn_names) fns in
   let env =
     match elaborate_raw_global_env base_env raw_fns with
     | Infer_ok env -> env
@@ -688,4 +743,4 @@ let convert_program_items (items : named_item list) : global_env =
 let convert_program (items : named_item list) : fn_def list =
   (convert_program_items items).env_fns
 
-let convert_fn_def f = convert_fn_def_with_names [] [] f
+let convert_fn_def f = convert_fn_def_with_names [] [] [] f

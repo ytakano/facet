@@ -122,6 +122,8 @@ let rec diagnostic_add_expr map original alpha =
     diagnostic_add_exprs map original_args alpha_args
   | EStruct (_, _, _, original_fields), EStruct (_, _, _, alpha_fields) ->
     diagnostic_add_fields map original_fields alpha_fields
+  | EEnum (_, _, _, _, original_payloads), EEnum (_, _, _, _, alpha_payloads) ->
+    diagnostic_add_exprs map original_payloads alpha_payloads
   | EReplace (original_p, original_e), EReplace (alpha_p, alpha_e)
   | EAssign (original_p, original_e), EAssign (alpha_p, alpha_e) ->
     let map = diagnostic_add_place map original_p alpha_p in
@@ -226,6 +228,10 @@ let string_of_infer_error ?(diagnostics = []) = function
     Printf.sprintf "higher-rank type body is not a function: %s" (string_of_ty_core c)
   | ErrStructNotFound name ->
     Printf.sprintf "struct not found: %s" name
+  | ErrEnumNotFound name ->
+    Printf.sprintf "enum not found: %s" name
+  | ErrVariantNotFound name ->
+    Printf.sprintf "enum variant not found: %s" name
   | ErrFieldNotFound name ->
     Printf.sprintf "field not found: %s" name
   | ErrDuplicateField name ->

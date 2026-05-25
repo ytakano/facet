@@ -331,6 +331,20 @@ Proof.
     + subst s'. eapply Eval_Struct; eassumption.
     + split; try assumption.
       constructor. exact Hvalues.
+  - intros s s' enum_name variant_name lts args payloads values edef vdef
+      Hlookup Hvariant Heval_args IH x T hidden s_base Hs Hready Hfree
+      Hlocal Hrefs.
+    subst s. inversion Hready; subst.
+    destruct (IH x T hidden s_base eq_refl
+                ltac:(match goal with
+                | H : preservation_ready_args payloads |- _ => exact H
+                end) Hfree Hlocal Hrefs)
+      as [s_base' [Hs' [Heval_base [Hrefs' Hvalues]]]].
+    exists s_base'. split; try assumption.
+    split.
+    + subst s'. eapply Eval_Enum; eassumption.
+    + split; try assumption.
+      constructor. exact Hvalues.
   - intros s s1 s2 m y Ty e1 e2 v1 v2 Heval1 IH1 Heval2 IH2
       x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
     inversion Hready.

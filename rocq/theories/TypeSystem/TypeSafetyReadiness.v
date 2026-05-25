@@ -119,6 +119,9 @@ Inductive preservation_ready_expr : expr -> Prop :=
   | PRE_Struct : forall sname lts args fields,
       preservation_ready_fields fields ->
       preservation_ready_expr (EStruct sname lts args fields)
+  | PRE_Enum : forall enum_name variant_name lts args payloads,
+      preservation_ready_args payloads ->
+      preservation_ready_expr (EEnum enum_name variant_name lts args payloads)
   | PRE_Drop : forall e,
       preservation_ready_expr e ->
       preservation_ready_expr (EDrop e)
@@ -257,6 +260,20 @@ Proof.
       inversion Hrename; subst.
       apply PRE_Struct.
       eapply alpha_rename_preservation_ready_fields; eauto.
+    + destruct
+        ((fix go (used0 : list ident) (args0 : list expr)
+             {struct args0} : list expr * list ident :=
+            match args0 with
+            | [] => ([], used0)
+            | arg :: rest =>
+                let (arg', used1) := alpha_rename_expr ρ used0 arg in
+                let (rest', used2) := go used1 rest in
+                (arg' :: rest', used2)
+            end) used payloads)
+        as [payloadsr used_payloads] eqn:Hpayloads.
+      inversion Hrename; subst.
+      apply PRE_Enum.
+      eapply alpha_rename_preservation_ready_args; eauto.
     + destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
       inversion Hrename; subst.
       apply PRE_Drop.
@@ -462,6 +479,12 @@ Proof.
     inversion Hready; subst. apply IH.
     match goal with
     | H : preservation_ready_fields fields |- _ => exact H
+    end.
+  - intros s s' enum_name variant_name lts args payloads values edef vdef
+      Hlookup Hvariant Heval_args IH Hready.
+    inversion Hready; subst. apply IH.
+    match goal with
+    | H : preservation_ready_args payloads |- _ => exact H
     end.
   - intros s s1 s2 m x T e1 e2 v1 v2 Heval1 IH1 Heval2 IH2
       Hready.

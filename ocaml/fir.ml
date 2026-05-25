@@ -10,6 +10,7 @@ type fir_value =
   | FVVar of ident
   | FVClosure of ident * fir_tval list
   | FVStruct of string * (string * fir_tval) list
+  | FVEnum of string * string * fir_tval list
 and fir_tval = { fv : fir_value; ft : ty }
 
 type fir_place =
@@ -161,7 +162,7 @@ let get_fn_value_ty env f =
 let ident_of_tval env tv =
   match tv.fv with
   | FVVar x -> x
-  | FVClosure _ | FVStruct _ ->
+  | FVClosure _ | FVStruct _ | FVEnum _ ->
     let tmp = fresh_id env in
     emit env (FILet (tmp, tv.ft, tv));
     tmp
@@ -245,6 +246,15 @@ let rec to_value env = function
     in
     { fv = FVStruct (sname, field_values);
       ft = instantiate_struct_instance_ty struct_def lts args }
+  | EEnum (enum_name, variant_name, lts, args, payloads) ->
+    let enum_def =
+      match lookup_enum enum_name env.env with
+      | Some e -> e
+      | None -> failwith ("FIR: enum not found: " ^ enum_name)
+    in
+    let payload_values = List.map (to_value env) payloads in
+    { fv = FVEnum (enum_name, variant_name, payload_values);
+      ft = instantiate_enum_ty enum_def lts args }
   | EDrop (EVar x) ->
     let tmp = fresh_id env in
     drop_place env tmp (PVar x);
@@ -532,6 +542,9 @@ let rec pp_tval tv =
         |> String.concat ", "
       in
       name ^ " { " ^ field_s ^ " }"
+    | FVEnum (enum_name, variant_name, payloads) ->
+      let payload_s = String.concat ", " (List.map pp_tval payloads) in
+      enum_name ^ "::" ^ variant_name ^ "(" ^ payload_s ^ ")"
   in
   vs ^ " as " ^ pp_ty tv.ft
 

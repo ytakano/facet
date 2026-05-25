@@ -108,6 +108,17 @@ Fixpoint lookup_enum_in (name : string) (enums : list enum_def) : option enum_de
 Definition lookup_enum (name : string) (env : global_env) : option enum_def :=
   lookup_enum_in name (env_enums env).
 
+Fixpoint lookup_enum_variant
+    (name : string) (variants : list enum_variant_def)
+    : option enum_variant_def :=
+  match variants with
+  | [] => None
+  | v :: rest =>
+      if String.eqb name (enum_variant_name v)
+      then Some v
+      else lookup_enum_variant name rest
+  end.
+
 Fixpoint lookup_field (name : string) (fields : list field_def) : option field_def :=
   match fields with
   | [] => None

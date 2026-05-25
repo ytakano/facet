@@ -396,6 +396,26 @@ Proof.
         exact (IHfields Ω n lts args R Σ Σ' R' roots ps frame
           Hready_fields Htyped_fields Hcover Hscope)
     end.
+  - intros s s' enum_name variant_name lts args payloads values edef vdef
+      Hlookup Hvariant Heval_args IHargs Ω n R Σ T Σ' R' roots ps frame
+      Hready Htyped Hcover Hscope.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    match goal with
+    | Hlookup_typed : lookup_enum enum_name env = Some ?edef_typed |- _ =>
+        rewrite Hlookup in Hlookup_typed; inversion Hlookup_typed; subst edef_typed
+    end.
+    match goal with
+    | Hvariant_typed : lookup_enum_variant variant_name (enum_variants edef) =
+          Some ?vdef_typed |- _ =>
+        rewrite Hvariant in Hvariant_typed; inversion Hvariant_typed; subst vdef_typed
+    end.
+    match goal with
+    | Hready_args : provenance_ready_args payloads,
+      Htyped_args : typed_args_roots env Ω n R Σ payloads _ Σ' R' ?payload_roots |- _ =>
+        exact (IHargs Ω n R Σ _ Σ' R' payload_roots ps frame
+          Hready_args Htyped_args Hcover Hscope)
+    end.
   - intros s s1 s2 m x T_ann e1 e2 v1 v2 Heval1 IH1 Heval2 IH2
       Ω n R Σ T Σ' R' roots ps frame Hready Htyped Hcover Hscope.
     dependent destruction Hready.

@@ -521,6 +521,19 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_fields_env_structural env Ω n lts args Σ fields (struct_fields sdef) Σ' ->
       typed_env_structural env Ω n Σ (EStruct sname lts args fields)
         (instantiate_struct_instance_ty sdef lts args) Σ'
+  | TES_Enum : forall Σ Σ' enum_name variant_name lts args payloads edef vdef,
+      lookup_enum enum_name env = Some edef ->
+      lookup_enum_variant variant_name (enum_variants edef) = Some vdef ->
+      Datatypes.length lts = enum_lifetimes edef ->
+      Datatypes.length args = enum_type_params edef ->
+      check_struct_bounds env (enum_bounds edef) args = None ->
+      typed_args_env_structural env Ω n Σ payloads
+        (params_of_tys
+          (map (instantiate_enum_variant_field_ty lts args)
+            (enum_variant_fields vdef))) Σ' ->
+      typed_env_structural env Ω n Σ
+        (EEnum enum_name variant_name lts args payloads)
+        (instantiate_enum_ty edef lts args) Σ'
   | TES_Let : forall Σ Σ1 Σ2 m x T T1 e1 e2 T2,
       typed_env_structural env Ω n Σ e1 T1 Σ1 ->
       ty_compatible_b Ω T1 T = true ->
@@ -814,6 +827,21 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_fields_roots env Ω n lts args R Σ fields (struct_fields sdef) Σ' R' roots ->
       typed_env_roots env Ω n R Σ (EStruct sname lts args fields)
         (instantiate_struct_instance_ty sdef lts args) Σ' R' roots
+  | TER_Enum : forall R R' Σ Σ' enum_name variant_name lts args payloads
+      edef vdef payload_roots,
+      lookup_enum enum_name env = Some edef ->
+      lookup_enum_variant variant_name (enum_variants edef) = Some vdef ->
+      Datatypes.length lts = enum_lifetimes edef ->
+      Datatypes.length args = enum_type_params edef ->
+      check_struct_bounds env (enum_bounds edef) args = None ->
+      typed_args_roots env Ω n R Σ payloads
+        (params_of_tys
+          (map (instantiate_enum_variant_field_ty lts args)
+            (enum_variant_fields vdef))) Σ' R' payload_roots ->
+      typed_env_roots env Ω n R Σ
+        (EEnum enum_name variant_name lts args payloads)
+        (instantiate_enum_ty edef lts args) Σ' R'
+        (root_sets_union payload_roots)
   | TER_Let : forall R R1 R2 Σ Σ1 Σ2 m x T T1 e1 e2 T2 roots1 roots2,
       typed_env_roots env Ω n R Σ e1 T1 Σ1 R1 roots1 ->
       ty_compatible_b Ω T1 T = true ->
@@ -1275,6 +1303,19 @@ Proof.
     + exact HnsR0'.
     + exact HR0'.
     + exact Hroots0.
+  - intros R R' Σ Σ' enum_name variant_name lts args payloads edef vdef
+      payload_roots Hlookup Hvariant Hlen_lts Hlen_args Hbounds Hpayloads
+      IHpayloads Hfresh R0 HnsR HnsR0 HR0.
+    rewrite expr_local_store_names_enum in Hfresh.
+    destruct (IHpayloads Hfresh R0 HnsR HnsR0 HR0)
+      as [R0' [payload_roots0 [Hpayloads0 [HnsR0' [HR0' Hpayload_roots0]]]]].
+    exists R0', (root_sets_union payload_roots0). split; [| split; [| split]].
+    + eapply TER_Enum; eauto.
+    + exact HnsR0'.
+    + exact HR0'.
+    + eapply root_set_equiv_trans.
+      * apply root_sets_union_equiv. exact Hpayload_roots0.
+      * apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
   - intros R R1 R2 Σ Σ1 Σ2 m x T T1 e1 e2 T2 roots1 roots2
       He1 IHe1 Hcompat Hlookup_none He2 IHe2 Hcheck
       Hexcl_roots Hexcl_env Hfresh R0 HnsR HnsR0 HR0.
@@ -1707,6 +1748,10 @@ Proof.
       match goal with
       | H : typed_fields_env_structural _ _ _ _ _ _ _ _ _ |- _ => exact H
       end.
+    + eapply typed_args_env_structural_same_bindings.
+      match goal with
+      | H : typed_args_env_structural _ _ _ _ _ _ _ |- _ => exact H
+      end.
     + eapply sctx_same_bindings_remove_added.
       * exact IHHtyped1.
       * exact IHHtyped2.
@@ -1800,6 +1845,10 @@ Inductive borrow_ok_env_structural (env : global_env)
   | BOES_Struct : forall PBS PBS' Γ sname lts args fields,
       borrow_ok_fields_env_structural env PBS Γ fields PBS' ->
       borrow_ok_env_structural env PBS Γ (EStruct sname lts args fields) PBS'
+  | BOES_Enum : forall PBS PBS' Γ enum_name variant_name lts args payloads,
+      borrow_ok_args_env_structural env PBS Γ payloads PBS' ->
+      borrow_ok_env_structural env PBS Γ
+        (EEnum enum_name variant_name lts args payloads) PBS'
   | BOES_BorrowShared : forall PBS Γ p x path,
       borrow_target_of_place p = (x, path) ->
       pbs_has_mut x path PBS = false ->

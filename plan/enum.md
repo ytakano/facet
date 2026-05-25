@@ -59,6 +59,10 @@ struct machinery. Do not introduce trait-solver search for enums.
 
 Add value construction before match.
 
+Status: implemented. Core/surface construction, runtime `VEnum`, checker
+branches, FIR emission, borrow traversal, runtime ref safety, preservation/root
+proofs, extraction, and valid/invalid regression tests are in place.
+
 - Add a core expression for variant construction, such as
   `EEnum enum_name variant_name lifetime_args type_args args`.
 - Add a raw/surface expression for `Enum::Variant(...)` or an equivalent
@@ -69,7 +73,17 @@ Add value construction before match.
   construction sites.
 - Runtime values should carry the enum name, variant name, and payload values;
   type and lifetime args remain erased.
-- FIR emission can initially preserve a primitive enum constructor operation.
+- FIR emission currently preserves a primitive enum constructor operation.
+
+Implementation notes kept for future phases:
+
+- `VHT_Enum` depends on `enum_values_have_type`, the third mutual predicate of
+  runtime typing. Future enum runtime proofs should recurse through that
+  predicate instead of treating payloads as untyped.
+- `runtime_refs_wf` recurses through enum payloads. New enum operations that
+  expose or transform payloads must preserve this invariant.
+- Borrow checking traverses constructor payloads through `BO_Enum` and
+  `borrow_ok_args`.
 
 Initial valid cases:
 

@@ -204,6 +204,11 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
       expr_alpha ρ (ECallExpr callee args) (ECallExpr calleer argsr)
   | EA_Struct : forall ρ name lts args fields fieldsr,
       expr_alpha ρ (EStruct name lts args fields) (EStruct name lts args fieldsr)
+  | EA_Enum : forall ρ enum_name variant_name lts args payloads payloadsr,
+      exprs_alpha ρ payloads payloadsr ->
+      expr_alpha ρ
+        (EEnum enum_name variant_name lts args payloads)
+        (EEnum enum_name variant_name lts args payloadsr)
   | EA_Replace : forall ρ p pr e er,
       place_alpha ρ p pr ->
       expr_alpha ρ e er ->
@@ -1124,14 +1129,24 @@ Proof.
                      (arg' :: rest', used2)
                  end) used0 l).
     injection Hrename as <- _. simpl in Hplace. discriminate.
-  - destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
-                : list (string * expr) * list ident :=
-                 match fields0 with
-                 | [] => ([], used0)
+	  - destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+	                : list (string * expr) * list ident :=
+	                 match fields0 with
+	                 | [] => ([], used0)
                  | (fname, e0) :: rest =>
                      let (e0', used1) := alpha_rename_expr ρ used0 e0 in
                      let (rest', used2) := go used1 rest in
                      ((fname, e0') :: rest', used2)
+                 end) used l1).
+    injection Hrename as <- _. simpl in Hplace. discriminate.
+  - destruct ((fix go (used0 : list ident) (payloads0 : list expr)
+                : list expr * list ident :=
+                 match payloads0 with
+                 | [] => ([], used0)
+                 | e0 :: rest =>
+                     let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+                     let (rest', used2) := go used1 rest in
+                     (e0' :: rest', used2)
                  end) used l1).
     injection Hrename as <- _. simpl in Hplace. discriminate.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
@@ -1215,6 +1230,16 @@ Proof.
                      let (e0', used1) := alpha_rename_expr ρ used0 e0 in
                      let (rest', used2) := go used1 rest in
                      ((fname, e0') :: rest', used2)
+                 end) used l1).
+    injection Hrename as <- _. reflexivity.
+  - destruct ((fix go (used0 : list ident) (payloads0 : list expr)
+                : list expr * list ident :=
+                 match payloads0 with
+                 | [] => ([], used0)
+                 | e0 :: rest =>
+                     let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+                     let (rest', used2) := go used1 rest in
+                     (e0' :: rest', used2)
                  end) used l1).
     injection Hrename as <- _. reflexivity.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
@@ -1436,6 +1461,12 @@ Fixpoint expr_size (e : expr) : nat :=
             | [] => 0
             | (_, e) :: rest => expr_size e + go rest
             end) fields)
+  | EEnum _ _ _ _ payloads =>
+      S ((fix go (payloads0 : list expr) : nat :=
+            match payloads0 with
+            | [] => 0
+            | e :: rest => expr_size e + go rest
+            end) payloads)
   | EReplace _ e => S (expr_size e)
   | EAssign _ e => S (expr_size e)
   | EBorrow _ _ => 1
@@ -1511,6 +1542,19 @@ Proof.
       eapply Nat.lt_le_trans.
       * exact IH.
       * simpl. lia.
+Qed.
+
+Lemma expr_size_enum_payload_lt :
+  forall enum_name variant_name lts args payloads payload,
+    In payload payloads ->
+    expr_size payload < expr_size (EEnum enum_name variant_name lts args payloads).
+Proof.
+  intros enum_name variant_name lts args payloads.
+  induction payloads as [| p rest IH]; intros payload Hin.
+  - contradiction.
+  - simpl in *. destruct Hin as [<- | Hin].
+    + lia.
+    + specialize (IH payload Hin). simpl in IH. lia.
 Qed.
 
 Lemma alpha_rename_call_args_used_extends : forall ρ used args argsr used',
@@ -1773,10 +1817,10 @@ Proof.
         exact Hlt_callee.
       -- exact Hcallee.
       -- exact Hin.
-  + remember
-      ((fix go (used0 : list ident) (fields0 : list (string * expr))
-          : list (string * expr) * list ident :=
-          match fields0 with
+		  + remember
+		      ((fix go (used0 : list ident) (fields0 : list (string * expr))
+		          : list (string * expr) * list ident :=
+		          match fields0 with
           | [] => ([], used0)
           | (fname, e0) :: rest =>
               let (e0', used1) := alpha_rename_expr ρ used0 e0 in
@@ -1793,6 +1837,28 @@ Proof.
          exact Hlt_field.
       -- exact Hrename0.
     * symmetry. exact Hfields.
+    * exact Hin.
+  + remember
+      ((fix go (used0 : list ident) (payloads0 : list expr)
+          : list expr * list ident :=
+          match payloads0 with
+          | [] => ([], used0)
+          | e0 :: rest =>
+              let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+              let (rest', used2) := go used1 rest in
+              (e0' :: rest', used2)
+          end) used l1) as r eqn:Hpayloads.
+    destruct r as [payloadsr used_payloads].
+    injection Hrename as _ <-.
+    eapply alpha_rename_call_args_used_extends.
+    * intros used_arg epayload er0 used_tail Hin_payload Hrename0.
+      eapply IH.
+      -- pose proof (expr_size_enum_payload_lt s s0 l l0 l1 epayload Hin_payload)
+           as Hpayload_lt.
+         assert (expr_size epayload < n) as Hlt_payload by lia.
+         exact Hlt_payload.
+      -- exact Hrename0.
+    * symmetry. exact Hpayloads.
     * exact Hin.
   + destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as _ <-.
@@ -2152,7 +2218,29 @@ Proof.
         -- pose proof (expr_size_struct_field_lt s l l0 l1 fname efield Hin_field) as Hfield_lt.
            assert (expr_size efield < n) as Hlt_field by lia. exact Hlt_field.
         -- exact Hrename0.
-      * symmetry. exact Hfields.
+    * symmetry. exact Hfields.
+    * exact Hin.
+    + remember
+        ((fix go (used0 : list ident) (payloads0 : list expr)
+            : list expr * list ident :=
+            match payloads0 with
+            | [] => ([], used0)
+            | e0 :: rest =>
+                let (e0', used1) := alpha_rename_expr rho used0 e0 in
+                let (rest', used2) := go used1 rest in
+                (e0' :: rest', used2)
+            end) used l1) as r eqn:Hpayloads.
+      destruct r as [payloadsr used_payloads].
+      injection Hrename as <- <-.
+      rewrite expr_local_store_names_enum in Hin.
+      eapply alpha_rename_call_args_local_store_names_in_used.
+      * intros used_arg epayload er0 used_tail Hin_payload Hrename0.
+        eapply IH.
+        -- pose proof (expr_size_enum_payload_lt s s0 l l0 l1 epayload Hin_payload)
+             as Hpayload_lt.
+           assert (expr_size epayload < n) as Hlt_payload by lia. exact Hlt_payload.
+        -- exact Hrename0.
+      * symmetry. exact Hpayloads.
       * exact Hin.
     + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
       injection Hrename as <- <-.
@@ -2474,6 +2562,28 @@ Proof.
            exact Hlt_field.
         -- exact Hrename0.
       * symmetry. exact Hfields.
+    + remember
+        ((fix go (used0 : list ident) (payloads0 : list expr)
+            : list expr * list ident :=
+            match payloads0 with
+            | [] => ([], used0)
+            | e0 :: rest =>
+                let (e0', used1) := alpha_rename_expr rho used0 e0 in
+                let (rest', used2) := go used1 rest in
+                (e0' :: rest', used2)
+            end) used l1) as r eqn:Hpayloads.
+      destruct r as [payloadsr used_payloads].
+      injection Hrename as <- _.
+      rewrite expr_local_store_names_enum.
+      eapply alpha_rename_call_args_local_store_names_fresh_used.
+      * intros used0 epayload er0 used1 Hin_payload Hrename0.
+        eapply IH.
+        -- pose proof (expr_size_enum_payload_lt s s0 l l0 l1 epayload Hin_payload)
+             as Hpayload_lt.
+           assert (expr_size epayload < n) as Hlt_payload by lia.
+           exact Hlt_payload.
+        -- exact Hrename0.
+      * symmetry. exact Hpayloads.
     + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
       inversion Hrename; subst. simpl.
       eapply IH.
@@ -2831,6 +2941,27 @@ Proof.
            assert (expr_size efield < n) as Hlt_field by lia. exact Hlt_field.
         -- exact Hrename0.
       * symmetry. exact Hfields.
+    + remember
+        ((fix go (used0 : list ident) (payloads0 : list expr)
+            : list expr * list ident :=
+            match payloads0 with
+            | [] => ([], used0)
+            | e0 :: rest =>
+                let (e0', used1) := alpha_rename_expr rho used0 e0 in
+                let (rest', used2) := go used1 rest in
+                (e0' :: rest', used2)
+            end) used l1) as r eqn:Hpayloads.
+      destruct r as [payloadsr used_payloads].
+      injection Hrename as <- _.
+      rewrite expr_local_store_names_enum.
+      eapply alpha_rename_call_args_local_store_names_nodup.
+      * intros used0 epayload er0 used1 Hin_payload Hrename0.
+        eapply IH.
+        -- pose proof (expr_size_enum_payload_lt s s0 l l0 l1 epayload Hin_payload)
+             as Hpayload_lt.
+           assert (expr_size epayload < n) as Hlt_payload by lia. exact Hlt_payload.
+        -- exact Hrename0.
+      * symmetry. exact Hpayloads.
     + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
       injection Hrename as <- _.
       simpl.
@@ -3714,11 +3845,35 @@ Proof.
 	              let (rest', used2) := go used1 rest in
 	              ((fname, e0') :: rest', used2)
 	          end) used l1) as r eqn:Hfields.
-	    destruct r as [fieldsr used_fields].
-	    injection Hrename as <- _.
-	    apply EA_Struct.
-	  + (* EReplace p e *)
-    destruct (disjoint_names_cons_l (place_name p) (free_vars_expr e)
+		    destruct r as [fieldsr used_fields].
+		    injection Hrename as <- _.
+		    apply EA_Struct.
+		  + remember
+		      ((fix go (used0 : list ident) (payloads0 : list expr)
+		          : list expr * list ident :=
+		          match payloads0 with
+		          | [] => ([], used0)
+		          | e0 :: rest =>
+		              let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+		              let (rest', used2) := go used1 rest in
+		              (e0' :: rest', used2)
+		          end) used l1) as r eqn:Hpayloads.
+		    destruct r as [payloadsr used_payloads].
+		    injection Hrename as <- _.
+		    apply EA_Enum.
+		    eapply alpha_rename_call_args_sound.
+		    * intros used0 epayload er0 used1 Hin Hdisj0 Hrename0.
+		      eapply IH.
+		      -- pose proof (expr_size_enum_payload_lt s s0 l l0 l1 epayload Hin)
+		           as Hpayload_lt.
+		         assert (expr_size epayload < n) as Hlt_payload by lia.
+		         exact Hlt_payload.
+		      -- exact Hdisj0.
+		      -- exact Hrename0.
+		    * exact Hdisj.
+		    * symmetry. exact Hpayloads.
+		  + (* EReplace p e *)
+	    destruct (disjoint_names_cons_l (place_name p) (free_vars_expr e)
       (rename_range ρ) Hdisj) as [Hpx Hdisj_e].
     destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     injection Hrename as <- _.
@@ -4624,11 +4779,21 @@ Proof.
                  | (fname, e0) :: rest =>
                      let (e0', used1) := alpha_rename_expr ρ used0 e0 in
                      let (rest', used2) := go used1 rest in
-                     ((fname, e0') :: rest', used2)
-                 end) used l1).
-    injection Hrename as <- _. discriminate.
-  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
-    injection Hrename as <- _. discriminate.
+	                     ((fname, e0') :: rest', used2)
+	                 end) used l1).
+	    injection Hrename as <- _. discriminate.
+	  - destruct ((fix go (used0 : list ident) (payloads0 : list expr)
+	                : list expr * list ident :=
+	                 match payloads0 with
+	                 | [] => ([], used0)
+	                 | e0 :: rest =>
+	                     let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+	                     let (rest', used2) := go used1 rest in
+	                     (e0' :: rest', used2)
+	                 end) used l1).
+	    injection Hrename as <- _. discriminate.
+	  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+	    injection Hrename as <- _. discriminate.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
     injection Hrename as <- _. discriminate.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
@@ -4698,18 +4863,28 @@ Proof.
                      (arg' :: rest', used2)
                  end) used0 l).
     injection Hrename as <- _. reflexivity.
-  - destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
-                : list (string * expr) * list ident :=
-                 match fields0 with
-                 | [] => ([], used0)
+	  - destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+	                : list (string * expr) * list ident :=
+	                 match fields0 with
+	                 | [] => ([], used0)
                  | (fname, e0) :: rest =>
                      let (e0', used1) := alpha_rename_expr ρ used0 e0 in
                      let (rest', used2) := go used1 rest in
-                     ((fname, e0') :: rest', used2)
-                 end) used l1).
-    injection Hrename as <- _. reflexivity.
-  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
-    injection Hrename as <- _. reflexivity.
+	                     ((fname, e0') :: rest', used2)
+	                 end) used l1).
+	    injection Hrename as <- _. reflexivity.
+	  - destruct ((fix go (used0 : list ident) (payloads0 : list expr)
+	                : list expr * list ident :=
+	                 match payloads0 with
+	                 | [] => ([], used0)
+	                 | e0 :: rest =>
+	                     let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+	                     let (rest', used2) := go used1 rest in
+	                     (e0' :: rest', used2)
+	                 end) used l1).
+	    injection Hrename as <- _. reflexivity.
+	  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+	    injection Hrename as <- _. reflexivity.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0].
     injection Hrename as <- _. reflexivity.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
@@ -4891,6 +5066,47 @@ Proof.
         * exact H3.
         * exists Σr'. split.
           -- eapply TES_Struct; eauto.
+          -- exact Hctx_r.
+      + destruct ((fix go (used0 : list ident) (args0 : list expr)
+                    : list expr * list ident :=
+                    match args0 with
+                    | [] => ([], used0)
+                    | arg :: rest =>
+                        let (arg', used1) := alpha_rename_expr ρ used0 arg in
+                        let (rest', used2) := go used1 rest in
+                        (arg' :: rest', used2)
+                    end) used payloads) as [payloadsr used_payloads] eqn:Hpayloads.
+        injection Hrename as <- <-.
+        destruct (alpha_rename_typed_args_env_structural_forward
+          env Ω n ρ Σ Σr payloads payloadsr used used_payloads
+          (params_of_tys
+            (map (instantiate_enum_variant_field_ty lts args)
+              (enum_variant_fields vdef)))
+          (params_of_tys
+            (map (instantiate_enum_variant_field_ty lts args)
+              (enum_variant_fields vdef))) Σ') as [Σr' [Hpayloads_r Hctx_r]].
+        * intros Σa Σb used0 e0 er0 used1 T0 Σa' Hin Halpha Hcu Hru Hd Hr Ht.
+          eapply IH.
+          -- pose proof (expr_size_enum_payload_lt enum_name variant_name lts args
+               payloads e0 Hin) as Hpayload_lt.
+             eapply Nat.lt_le_trans.
+             ++ exact Hpayload_lt.
+             ++ apply Nat.lt_succ_r. exact Hlt.
+          -- exact Halpha.
+          -- exact Hcu.
+          -- exact Hru.
+          -- exact Hd.
+          -- exact Hr.
+          -- exact Ht.
+        * exact Hctx.
+        * exact Hctx_used.
+        * exact Hrange_used.
+        * exact Hdisj.
+        * apply params_alpha_refl.
+        * exact Hpayloads.
+        * exact H4.
+        * exists Σr'. split.
+          -- eapply TES_Enum; eauto.
           -- exact Hctx_r.
       + destruct (disjoint_names_app_l (free_vars_expr e1) (free_vars_expr e2)
           (rename_range ρ)) as [Hdisj1 Hdisj2].
@@ -5888,6 +6104,22 @@ Inductive typed_env_roots_shadow_safe
       typed_env_roots_shadow_safe env Ω n R Σ
         (EStruct sname lts args fields)
         (instantiate_struct_instance_ty sdef lts args) Σ' R' roots
+  | TERS_Enum : forall R R' Σ Σ' enum_name variant_name lts args payloads
+      edef vdef payload_roots,
+      Program.lookup_enum enum_name env = Some edef ->
+      Program.lookup_enum_variant variant_name (Program.enum_variants edef) =
+        Some vdef ->
+      Datatypes.length lts = Program.enum_lifetimes edef ->
+      Datatypes.length args = Program.enum_type_params edef ->
+      check_struct_bounds env (Program.enum_bounds edef) args = None ->
+      typed_args_roots_shadow_safe env Ω n R Σ payloads
+        (params_of_tys
+          (map (instantiate_enum_variant_field_ty lts args)
+            (Program.enum_variant_fields vdef))) Σ' R' payload_roots ->
+      typed_env_roots_shadow_safe env Ω n R Σ
+        (EEnum enum_name variant_name lts args payloads)
+        (instantiate_enum_ty edef lts args) Σ' R'
+        (root_sets_union payload_roots)
   | TERS_Let : forall R R1 R2 Σ Σ1 Σ2 m x T T1 e1 e2 T2
       roots1 roots2,
       typed_env_roots_shadow_safe env Ω n R Σ e1 T1 Σ1 R1 roots1 ->
@@ -6267,6 +6499,19 @@ Proof.
     + exact HnsR0'.
     + exact HR0'.
     + exact Hroots0.
+  - intros R R' Σ Σ' enum_name variant_name lts args payloads edef vdef
+      payload_roots Hlookup Hvariant Hlen_lts Hlen_args Hbounds Hpayloads
+      IHpayloads Hfresh R0 HnsR HnsR0 HR0.
+    rewrite expr_local_store_names_enum in Hfresh.
+    destruct (IHpayloads Hfresh R0 HnsR HnsR0 HR0)
+      as [R0' [payload_roots0 [Hpayloads0 [HnsR0' [HR0' Hpayload_roots0]]]]].
+    exists R0', (root_sets_union payload_roots0). split; [| split; [| split]].
+    + eapply TERS_Enum; eauto.
+    + exact HnsR0'.
+    + exact HR0'.
+    + eapply root_set_equiv_trans.
+      * apply root_sets_union_equiv. exact Hpayload_roots0.
+      * apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
   - intros R R1 R2 Σ Σ1 Σ2 m x T T1 e1 e2 T2 roots1 roots2
       He1 IHe1 Hcompat Hlookup_none Hexcl_roots1 Hexcl_env1
       He2 IHe2 Hcheck Hexcl_roots2 Hexcl_env2 Hfresh R0 HnsR HnsR0 HR0.
@@ -8174,6 +8419,14 @@ Proof.
       Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
         exact (IH Hrn Henv)
     end.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_sctx_keys_named ?R ?Σ ->
+        root_env_sctx_keys_named ?R' ?Σ',
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
+        exact (IH Hrn Henv)
+    end.
   - pose proof (H H1 H2) as Hkeys1.
     assert (Hrn1 : root_env_no_shadow R1)
       by (eapply typed_env_roots_no_shadow;
@@ -8375,6 +8628,18 @@ Proof.
       Hrn : root_env_no_shadow ?R,
       Henv : root_env_sctx_roots_named ?R ?Σ |- _ =>
         exact (IH Hrn Henv)
+    end.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_sctx_roots_named ?R ?Σ ->
+        root_env_sctx_roots_named ?R' ?Σ' /\
+        Forall (fun roots => root_set_sctx_roots_named roots ?Σ') ?arg_roots,
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_sctx_roots_named ?R ?Σ |- _ =>
+        destruct (IH Hrn Henv) as [Henv_args Hroots_args];
+        split;
+        [ exact Henv_args
+        | apply root_sets_sctx_roots_named_union; exact Hroots_args ]
     end.
   - destruct (H H1 H2) as [Henv1 Hroots1].
     assert (Hrn1 : root_env_no_shadow R1)
@@ -9516,6 +9781,7 @@ Lemma typed_roots_root_env_names_subset_mutual :
 Proof.
   intros env Ω n.
   apply typed_roots_ind; intros; subst; try assumption.
+  - eapply H. exact H0.
   - eapply H. exact H0.
   - eapply H. exact H0.
   - eapply H. exact H0.
@@ -14595,12 +14861,70 @@ Proof.
         * exact HnocollR.
         * exact HnocollR'.
         * exact Hctx_used.
-        * exact Hrange_used.
-        * exact Hdisj.
-        * exact Hrename.
-      + eapply (alpha_rename_typed_env_roots_replace_shadow_safe_support_forward
-          env Ω n rho R Rr Σ Σr p e er used used' T Σ' R' roots).
-        * intros R0 R0r Σa Σb used0 er0 used1 T0 Σa' R0' roots0
+	        * exact Hrange_used.
+	        * exact Hdisj.
+	        * exact Hrename.
+	      + simpl in Hrename.
+	        destruct ((fix go (used0 : list ident) (args0 : list expr) {struct args0}
+	                    : list expr * list ident :=
+	                    match args0 with
+	                    | [] => ([], used0)
+	                    | arg :: rest =>
+	                        let (arg', used1) := alpha_rename_expr rho used0 arg in
+	                        let (rest', used2) := go used1 rest in
+	                        (arg' :: rest', used2)
+	                    end) used l1) as [payloadsr used_payloads] eqn:Hpayloads.
+	        injection Hrename as <- <-.
+	        inversion Htyped; subst.
+	        destruct (alpha_rename_typed_args_roots_shadow_safe_support_forward
+	          env Ω n rho R Rr Σ Σr l1 payloadsr used used_payloads
+	          (params_of_tys
+	            (map (instantiate_enum_variant_field_ty l l0)
+	              (enum_variant_fields vdef)))
+	          (params_of_tys
+	            (map (instantiate_enum_variant_field_ty l l0)
+	              (enum_variant_fields vdef))) Σ' R' payload_roots)
+	          as [Σr' [Rr' [payload_rootsr
+	            [Hpayloads_r [Hctx_r [HnsRr' [HRr' Hpayload_roots]]]]]]].
+	        * intros R0 R0r Σa Σb used0 e0 er0 used1 T0 Σa' R0' roots0
+	            Hin Htyped0 Halpha HnsR0 HnsR0r HR0r Hkeys0 Hroots0
+	            Hnocoll0 Hnocoll0' Hcu Hru Hd Hr.
+	          eapply (IH env Ω n rho R0 R0r Σa Σb e0 er0 used0 used1
+	            T0 Σa' R0' roots0).
+	          { pose proof (expr_size_enum_payload_lt s s0 l l0 l1 e0 Hin)
+	              as Hpayload_lt.
+	            simpl in *. lia. }
+	          all: eassumption.
+	        * match goal with
+	          | H : typed_args_roots_shadow_safe _ _ _ _ _ l1
+	                (params_of_tys
+	                  (map (instantiate_enum_variant_field_ty l l0)
+	                    (enum_variant_fields vdef))) _ _ payload_roots |- _ =>
+	              exact H
+	          end.
+	        * exact Hctx.
+	        * exact HnsR.
+	        * exact HnsRr.
+	        * exact HRr.
+	        * exact Hkeys.
+	        * exact Hroots.
+	        * exact HnocollR.
+	        * exact HnocollR'.
+	        * exact Hctx_used.
+	        * exact Hrange_used.
+	        * exact Hdisj.
+	        * apply params_alpha_refl.
+	        * exact Hpayloads.
+	        * exists Σr', Rr', (root_sets_union payload_rootsr).
+	          split; [| split; [| split; [| split]]].
+	          -- eapply TERS_Enum; eauto.
+	          -- exact Hctx_r.
+	          -- exact HnsRr'.
+	          -- exact HRr'.
+	          -- eapply root_sets_union_rename_equiv. exact Hpayload_roots.
+	      + eapply (alpha_rename_typed_env_roots_replace_shadow_safe_support_forward
+	          env Ω n rho R Rr Σ Σr p e er used used' T Σ' R' roots).
+	        * intros R0 R0r Σa Σb used0 er0 used1 T0 Σa' R0' roots0
             Htyped0 Halpha HnsR0 HnsR0r HR0r Hkeys0 Hroots0 Hnocoll0
             Hnocoll0' Hcu Hru Hd Hr.
           eapply (IH env Ω n rho R0 R0r Σa Σb e er0 used0 used1

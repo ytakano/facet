@@ -17,6 +17,11 @@ Inductive value_roots_within : root_set -> value -> Prop :=
   | VRW_Struct : forall roots name fields,
       value_fields_roots_within roots fields ->
       value_roots_within roots (VStruct name fields)
+  | VRW_Enum : forall roots enum_name variant_name values,
+      (forall root,
+        roots_exclude root roots ->
+        Forall (value_refs_exclude_root root) values) ->
+      value_roots_within roots (VEnum enum_name variant_name values)
   | VRW_Ref : forall roots x path,
       In (RStore x) roots ->
       value_roots_within roots (VRef x path)
@@ -320,6 +325,117 @@ Proof.
   inversion Hlookup2. reflexivity.
 Qed.
 
+Lemma lookup_enum_deterministic :
+  forall env name edef1 edef2,
+    lookup_enum name env = Some edef1 ->
+    lookup_enum name env = Some edef2 ->
+    edef1 = edef2.
+Proof.
+  intros env name edef1 edef2 Hlookup1 Hlookup2.
+  rewrite Hlookup1 in Hlookup2.
+  inversion Hlookup2. reflexivity.
+Qed.
+
+Lemma lookup_enum_in_success_rootfacts :
+  forall name enums e,
+    lookup_enum_in name enums = Some e ->
+    In e enums /\ enum_name e = name.
+Proof.
+  intros name enums.
+  induction enums as [| h rest IH]; intros e Hlookup; simpl in Hlookup.
+  - discriminate.
+  - destruct (String.eqb name (enum_name h)) eqn:Hname.
+    + inversion Hlookup; subst.
+      apply String.eqb_eq in Hname.
+      split; [left; reflexivity | symmetry; exact Hname].
+    + destruct (IH e Hlookup) as [Hin Henum].
+      split; [right; exact Hin | exact Henum].
+Qed.
+
+Lemma lookup_enum_success_rootfacts :
+  forall env name e,
+    lookup_enum name env = Some e ->
+    In e (env_enums env) /\ enum_name e = name.
+Proof.
+  unfold lookup_enum. intros env name e H.
+  apply lookup_enum_in_success_rootfacts. exact H.
+Qed.
+
+Lemma lookup_enum_variant_runtime_rootless :
+  forall env lts args variants variant_name vdef,
+    lookup_enum_variant variant_name variants = Some vdef ->
+    runtime_rootless_enum_variants env lts args variants ->
+    runtime_rootless_enum_fields env lts args (enum_variant_fields vdef).
+Proof.
+  intros env lts args variants.
+  induction variants as [| v variants IH]; intros variant_name vdef Hlookup Hrootless;
+    simpl in Hlookup.
+  - discriminate.
+  - inversion Hrootless; subst.
+    destruct (String.eqb variant_name (enum_variant_name v)) eqn:Hname.
+    + inversion Hlookup; subst. assumption.
+    + eapply IH; eassumption.
+Qed.
+
+Lemma runtime_rootless_enum_fields_Forall :
+  forall env lts args Ts,
+    runtime_rootless_enum_fields env lts args Ts ->
+    Forall (runtime_rootless_ty env)
+      (map (instantiate_enum_variant_field_ty lts args) Ts).
+Proof.
+  intros env lts args Ts Hrootless.
+  induction Hrootless.
+  - constructor.
+  - simpl. constructor; assumption.
+Qed.
+
+Lemma value_roots_within_excludes_rootfacts :
+  (forall roots v,
+    value_roots_within roots v ->
+    forall root,
+      roots_exclude root roots ->
+      value_refs_exclude_root root v) /\
+  (forall R se,
+    store_entry_roots_within R se ->
+    forall root,
+      root_env_excludes root R ->
+      se_name se <> root ->
+      store_entry_refs_exclude_root root se) /\
+  (forall R s,
+    store_roots_within R s ->
+    forall root,
+      root_env_excludes root R ->
+      (forall se, In se s -> se_name se <> root) ->
+      store_refs_exclude_root root s) /\
+  (forall roots fields,
+    value_fields_roots_within roots fields ->
+    forall root,
+      roots_exclude root roots ->
+      value_fields_refs_exclude_root root fields).
+Proof.
+  apply value_roots_within_mutind; intros;
+    try solve [constructor; eauto].
+  - econstructor.
+    destruct (ident_eqb root x) eqn:Hroot; try reflexivity.
+    apply ident_eqb_eq in Hroot. subst x. contradiction.
+  - constructor. constructor.
+  - constructor.
+    + eapply H; eauto.
+      eapply H2. simpl. left. reflexivity.
+    + eapply H0; eauto.
+      intros se0 Hin. eapply H2. simpl. right. exact Hin.
+Qed.
+
+Lemma value_roots_within_empty_refs_exclude :
+  forall v root,
+    value_roots_within [] v ->
+    value_refs_exclude_root root v.
+Proof.
+  intros v root Hwithin.
+  eapply (proj1 value_roots_within_excludes_rootfacts); eauto.
+  unfold roots_exclude. intros Hin. contradiction.
+Qed.
+
 Lemma value_has_type_runtime_rootless_empty_roots_mut :
   forall env s,
   (forall v T,
@@ -329,7 +445,11 @@ Lemma value_has_type_runtime_rootless_empty_roots_mut :
   (forall lts args fields defs,
     struct_fields_have_type env s lts args fields defs ->
     runtime_rootless_fields env lts args defs ->
-    value_fields_roots_within [] fields).
+    value_fields_roots_within [] fields) /\
+  (forall values tys,
+    enum_values_have_type env s values tys ->
+    Forall (runtime_rootless_ty env) tys ->
+    forall root, Forall (value_refs_exclude_root root) values).
 Proof.
   intros env s.
   apply (runtime_typing_ind env s
@@ -337,7 +457,10 @@ Proof.
       runtime_rootless_ty env T -> value_roots_within [] v)
     (fun lts args fields defs _ =>
       runtime_rootless_fields env lts args defs ->
-      value_fields_roots_within [] fields));
+      value_fields_roots_within [] fields)
+    (fun values tys _ =>
+      Forall (runtime_rootless_ty env) tys ->
+      forall root, Forall (value_refs_exclude_root root) values));
     try solve [intros; constructor].
   - intros name lts args fields sdef Hlookup Hfields IHfields Hrootless.
     unfold instantiate_struct_instance_ty in Hrootless.
@@ -351,6 +474,20 @@ Proof.
     | Hroot_fields : runtime_rootless_fields env lts args (struct_fields sdef) |- _ =>
         eapply IHfields; exact Hroot_fields
     end.
+  - intros enum_name variant_name lts args values edef vdef Hlookup Hvariant
+      Hvalues IHvalues Hrootless.
+    destruct (lookup_enum_success_rootfacts env enum_name edef Hlookup)
+      as [_ Henum_name].
+    subst enum_name.
+    unfold instantiate_enum_ty in Hrootless.
+    inversion Hrootless; subst.
+    assert (edef0 = edef) as ->.
+    { eapply lookup_enum_deterministic; eassumption. }
+    constructor.
+    intros root _.
+    eapply IHvalues.
+    eapply runtime_rootless_enum_fields_Forall.
+    eapply lookup_enum_variant_runtime_rootless; eassumption.
   - intros u la rk x path se v T Hstore Hvalue Htype Hrootless.
     inversion Hrootless.
   - intros Ω v T_actual T_expected Htyped IHtyped Hcompat Hrootless.
@@ -372,6 +509,12 @@ Proof.
       | Hroot_fields : runtime_rootless_fields env lts args defs |- _ =>
           apply IHfields; exact Hroot_fields
       end.
+  - intros v values T tys Htyped IHtyped Hvalues IHvalues Hrootless root.
+    inversion Hrootless; subst.
+    constructor.
+    + apply value_roots_within_empty_refs_exclude.
+      apply IHtyped. assumption.
+    + apply IHvalues. assumption.
 Qed.
 
 Lemma value_has_type_runtime_rootless_empty_roots :
@@ -392,8 +535,19 @@ Lemma struct_fields_have_type_runtime_rootless_empty_roots :
     value_fields_roots_within [] fields.
 Proof.
   intros env s lts args fields defs Htyped Hrootless.
-  exact (proj2 (value_has_type_runtime_rootless_empty_roots_mut env s)
+  exact (proj1 (proj2 (value_has_type_runtime_rootless_empty_roots_mut env s))
     lts args fields defs Htyped Hrootless).
+Qed.
+
+Lemma enum_values_have_type_runtime_rootless_empty_roots :
+  forall env s values tys,
+    enum_values_have_type env s values tys ->
+    Forall (runtime_rootless_ty env) tys ->
+    forall root, Forall (value_refs_exclude_root root) values.
+Proof.
+  intros env s values tys Htyped Hrootless root.
+  exact (proj2 (proj2 (value_has_type_runtime_rootless_empty_roots_mut env s))
+    values tys Htyped Hrootless root).
 Qed.
 
 Lemma value_has_type_runtime_rootless_store_any_mut :
@@ -405,7 +559,11 @@ Lemma value_has_type_runtime_rootless_store_any_mut :
   (forall lts args fields defs,
     struct_fields_have_type env s lts args fields defs ->
     runtime_rootless_fields env lts args defs ->
-    forall s', struct_fields_have_type env s' lts args fields defs).
+    forall s', struct_fields_have_type env s' lts args fields defs) /\
+  (forall values tys,
+    enum_values_have_type env s values tys ->
+    Forall (runtime_rootless_ty env) tys ->
+    forall s', enum_values_have_type env s' values tys).
 Proof.
   intros env s.
   apply (runtime_typing_ind env s
@@ -413,7 +571,10 @@ Proof.
       runtime_rootless_ty env T -> forall s', value_has_type env s' v T)
     (fun lts args fields defs _ =>
       runtime_rootless_fields env lts args defs ->
-      forall s', struct_fields_have_type env s' lts args fields defs)).
+      forall s', struct_fields_have_type env s' lts args fields defs)
+    (fun values tys _ =>
+      Forall (runtime_rootless_ty env) tys ->
+      forall s', enum_values_have_type env s' values tys)).
   - intros u Hrootless s'. constructor.
   - intros u i Hrootless s'. constructor.
   - intros u f Hrootless s'. constructor.
@@ -432,6 +593,21 @@ Proof.
           (struct_fields sdef) |- _ =>
           exact (IHfields Hroot_fields s')
       end.
+  - intros enum_name variant_name lts args values edef vdef Hlookup Hvariant
+      Hvalues IHvalues Hrootless s'.
+    destruct (lookup_enum_success_rootfacts env enum_name edef Hlookup)
+      as [_ Henum_name].
+    subst enum_name.
+    unfold instantiate_enum_ty in Hrootless.
+    inversion Hrootless; subst.
+    assert (edef0 = edef) as ->.
+    { eapply lookup_enum_deterministic; eassumption. }
+    eapply VHT_Enum.
+    + exact Hlookup.
+    + exact Hvariant.
+    + eapply IHvalues.
+      eapply runtime_rootless_enum_fields_Forall.
+      eapply lookup_enum_variant_runtime_rootless; eassumption.
   - intros u la rk x path se v T Hstore Hvalue Htype Hrootless s'.
     inversion Hrootless.
   - intros fname fdef Hlookup Hrootless s'. constructor. exact Hlookup.
@@ -465,6 +641,12 @@ Proof.
       | Hroot_fields : runtime_rootless_fields env lts args defs |- _ =>
           exact (IHfields Hroot_fields s')
       end.
+  - intros Hrootless s'. constructor.
+  - intros v values T tys Htyped IHtyped Hvalues IHvalues Hrootless s'.
+    inversion Hrootless; subst.
+    constructor.
+    + apply IHtyped. assumption.
+    + apply IHvalues. assumption.
 Qed.
 
 Lemma value_has_type_runtime_rootless_store_any :
@@ -485,8 +667,19 @@ Lemma struct_fields_have_type_runtime_rootless_store_any :
     struct_fields_have_type env s' lts args fields defs.
 Proof.
   intros env s s' lts args fields defs Htyped Hrootless.
-  exact (proj2 (value_has_type_runtime_rootless_store_any_mut env s)
+  exact (proj1 (proj2 (value_has_type_runtime_rootless_store_any_mut env s))
     lts args fields defs Htyped Hrootless s').
+Qed.
+
+Lemma enum_values_have_type_runtime_rootless_store_any :
+  forall env s s' values tys,
+    enum_values_have_type env s values tys ->
+    Forall (runtime_rootless_ty env) tys ->
+    enum_values_have_type env s' values tys.
+Proof.
+  intros env s s' values tys Htyped Hrootless.
+  exact (proj2 (proj2 (value_has_type_runtime_rootless_store_any_mut env s))
+    values tys Htyped Hrootless s').
 Qed.
 
 Lemma root_set_stores_subset_equiv :

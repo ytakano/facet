@@ -16,6 +16,9 @@ Inductive refs_in_value : value -> ident -> field_path -> Prop :=
   | RIV_Struct : forall name fields x path,
       refs_in_fields fields x path ->
       refs_in_value (VStruct name fields) x path
+  | RIV_Enum : forall enum_name variant_name values x path,
+      refs_in_values values x path ->
+      refs_in_value (VEnum enum_name variant_name values) x path
   | RIV_Ref : forall x path,
       refs_in_value (VRef x path) x path
 with refs_in_store_entry : store_entry -> ident -> field_path -> Prop :=
@@ -35,15 +38,23 @@ with refs_in_fields : list (string * value) -> ident -> field_path -> Prop :=
       refs_in_fields ((name, v) :: rest) x path
   | RIF_Tail : forall fv rest x path,
       refs_in_fields rest x path ->
-      refs_in_fields (fv :: rest) x path.
+      refs_in_fields (fv :: rest) x path
+with refs_in_values : list value -> ident -> field_path -> Prop :=
+  | RIVS_Head : forall v rest x path,
+      refs_in_value v x path ->
+      refs_in_values (v :: rest) x path
+  | RIVS_Tail : forall v rest x path,
+      refs_in_values rest x path ->
+      refs_in_values (v :: rest) x path.
 
 Scheme refs_in_value_ind' := Induction for refs_in_value Sort Prop
 with refs_in_store_entry_ind' := Induction for refs_in_store_entry Sort Prop
 with refs_in_store_ind' := Induction for refs_in_store Sort Prop
-with refs_in_fields_ind' := Induction for refs_in_fields Sort Prop.
+with refs_in_fields_ind' := Induction for refs_in_fields Sort Prop
+with refs_in_values_ind' := Induction for refs_in_values Sort Prop.
 Combined Scheme refs_in_mutind
   from refs_in_value_ind', refs_in_store_entry_ind',
-       refs_in_store_ind', refs_in_fields_ind'.
+       refs_in_store_ind', refs_in_fields_ind', refs_in_values_ind'.
 
 Lemma runtime_refs_wf_ref_target :
   forall env s x path,
@@ -74,12 +85,22 @@ with runtime_refs_wf_refs_in_fields_target :
     exists se v_target T,
       store_lookup x s = Some se /\
       value_lookup_path (se_val se) path = Some v_target /\
+      type_lookup_path env (se_ty se) path = Some T
+with runtime_refs_wf_refs_in_values_target :
+  forall env s values x path,
+    Forall (runtime_refs_wf env s) values ->
+    refs_in_values values x path ->
+    exists se v_target T,
+      store_lookup x s = Some se /\
+      value_lookup_path (se_val se) path = Some v_target /\
       type_lookup_path env (se_ty se) path = Some T.
 Proof.
   - intros env s v x path Hwf Hrefs.
     destruct Hrefs.
     + inversion Hwf; subst.
       eapply runtime_refs_wf_refs_in_fields_target; eassumption.
+    + inversion Hwf; subst.
+      eapply runtime_refs_wf_refs_in_values_target; eassumption.
     + eapply runtime_refs_wf_ref_target. exact Hwf.
   - intros env s fields x path Hwf_fields Hrefs.
     destruct Hrefs.
@@ -87,6 +108,12 @@ Proof.
       eapply runtime_refs_wf_refs_in_value_target; eassumption.
     + inversion Hwf_fields; subst.
       eapply runtime_refs_wf_refs_in_fields_target; eassumption.
+  - intros env s values x path Hwf_values Hrefs.
+    destruct Hrefs.
+    + inversion Hwf_values; subst.
+      eapply runtime_refs_wf_refs_in_value_target; eassumption.
+    + inversion Hwf_values; subst.
+      eapply runtime_refs_wf_refs_in_values_target; eassumption.
 Qed.
 
 Lemma store_entry_refs_wf_refs_in_target :
@@ -137,6 +164,66 @@ Proof.
   eapply store_refs_wf_refs_in_store_target_aux; eassumption.
 Qed.
 
+Lemma root_store_in_dec :
+  forall x roots,
+    {In (RStore x) roots} + {~ In (RStore x) roots}.
+Proof.
+  intros x roots.
+  induction roots as [| atom rest IH].
+  - right. intros Hin. inversion Hin.
+  - destruct IH as [Hin | Hnot].
+    + left. right. exact Hin.
+    + destruct atom as [y | y].
+      * destruct (ident_eqb x y) eqn:Heq.
+        -- apply ident_eqb_eq in Heq. subst y.
+           left. left. reflexivity.
+        -- right. intros [Heq_atom | Hin_rest].
+           ++ inversion Heq_atom; subst y.
+              rewrite ident_eqb_refl in Heq. discriminate.
+           ++ contradiction.
+      * right. intros [Heq_atom | Hin_rest].
+        -- inversion Heq_atom.
+        -- contradiction.
+Qed.
+
+Lemma refs_in_value_excluded_false :
+  forall root v path,
+    refs_in_value v root path ->
+    value_refs_exclude_root root v ->
+    False
+with refs_in_fields_excluded_false :
+  forall root fields path,
+    refs_in_fields fields root path ->
+    value_fields_refs_exclude_root root fields ->
+    False
+with refs_in_values_excluded_false :
+  forall root values path,
+    refs_in_values values root path ->
+    Forall (value_refs_exclude_root root) values ->
+    False.
+Proof.
+  - intros root v path Hrefs Hexcl.
+    destruct Hrefs.
+    + inversion Hexcl; subst.
+      eapply refs_in_fields_excluded_false; eassumption.
+    + inversion Hexcl; subst.
+      eapply refs_in_values_excluded_false; eassumption.
+    + inversion Hexcl; subst.
+      rewrite ident_eqb_refl in H0. discriminate.
+  - intros root fields path Hrefs Hexcl.
+    destruct Hrefs.
+    + inversion Hexcl; subst.
+      eapply refs_in_value_excluded_false; eassumption.
+    + inversion Hexcl; subst.
+      eapply refs_in_fields_excluded_false; eassumption.
+  - intros root values path Hrefs Hexcl.
+    destruct Hrefs.
+    + inversion Hexcl; subst.
+      eapply refs_in_value_excluded_false; eassumption.
+    + inversion Hexcl; subst.
+      eapply refs_in_values_excluded_false; eassumption.
+Qed.
+
 Lemma value_roots_within_refs_in :
   forall roots v x path,
     value_roots_within roots v ->
@@ -152,6 +239,16 @@ Proof.
     destruct Hrefs.
     + inversion Hwithin; subst.
       eapply value_fields_roots_within_refs_in; eassumption.
+    + inversion Hwithin; subst.
+      destruct (root_store_in_dec x roots) as [Hin | Hnot].
+      * exact Hin.
+      * exfalso.
+        match goal with
+        | Hpayloads : forall root, roots_exclude root roots ->
+            Forall (value_refs_exclude_root root) values |- _ =>
+            pose proof (Hpayloads x Hnot) as Hexcluded
+        end.
+        eapply refs_in_values_excluded_false; eassumption.
     + inversion Hwithin; subst. assumption.
   - intros roots fields x path Hwithin Hrefs.
     destruct Hrefs.
@@ -168,7 +265,10 @@ Lemma runtime_typing_refs_wf :
     runtime_refs_wf env s v) /\
   (forall lts args fields defs,
     struct_fields_have_type env s lts args fields defs ->
-    Forall (fun fv => runtime_refs_wf env s (snd fv)) fields).
+    Forall (fun fv => runtime_refs_wf env s (snd fv)) fields) /\
+  (forall values tys,
+    enum_values_have_type env s values tys ->
+    Forall (runtime_refs_wf env s) values).
 Proof.
   intros env s.
   apply runtime_typing_ind; intros.
@@ -177,11 +277,14 @@ Proof.
   - constructor.
   - constructor.
   - constructor. assumption.
+  - constructor. assumption.
   - eapply RRW_Ref; eassumption.
   - constructor. constructor.
   - constructor. constructor.
   - assumption.
   - assumption.
+  - constructor.
+  - constructor; assumption.
   - constructor.
   - constructor; assumption.
 Qed.
@@ -201,8 +304,18 @@ Lemma struct_fields_have_type_runtime_refs_wf :
     Forall (fun fv => runtime_refs_wf env s (snd fv)) fields.
 Proof.
   intros env s lts args fields defs Htyped.
-  exact (proj2 (runtime_typing_refs_wf env s)
+  exact (proj1 (proj2 (runtime_typing_refs_wf env s))
     lts args fields defs Htyped).
+Qed.
+
+Lemma enum_values_have_type_runtime_refs_wf :
+  forall env s values tys,
+    enum_values_have_type env s values tys ->
+    Forall (runtime_refs_wf env s) values.
+Proof.
+  intros env s values tys Htyped.
+  exact (proj2 (proj2 (runtime_typing_refs_wf env s))
+    values tys Htyped).
 Qed.
 
 Lemma store_typed_entries_refs_wf :

@@ -80,15 +80,34 @@ Proof.
   apply value_roots_within_mutind; intros; try solve [constructor; eauto].
   - constructor.
     intros root Hexclude.
-    apply s.
+    match goal with
+    | Henum : forall root, roots_exclude root _ -> _ |- _ =>
+        apply Henum
+    end.
     unfold roots_exclude in *.
     intros Hin.
     apply Hexclude.
     apply H. exact Hin.
-  - destruct (H0 sx roots e) as [roots' [Hlookup Hincl]].
-    eapply SERW_Entry.
-    + exact Hlookup.
-    + eapply H. exact Hincl.
+  - constructor.
+    intros root Hexclude.
+    match goal with
+    | Hclosure : forall root, roots_exclude root _ -> _ |- _ =>
+        apply Hclosure
+    end.
+    unfold roots_exclude in *.
+    intros Hin.
+    apply Hexclude.
+    apply H. exact Hin.
+  - match goal with
+    | Hlookup : root_env_lookup ?x ?R = Some ?roots,
+      Hweaken : forall x roots,
+          root_env_lookup x ?R = Some roots ->
+          exists roots', root_env_lookup x ?R' = Some roots' /\
+            forall y, In y roots -> In y roots',
+      IH : forall roots', (forall x, In x ?roots -> In x roots') -> _ |- _ =>
+        destruct (Hweaken x roots Hlookup) as [roots' [Hlookup' Hincl]];
+        eapply SERW_Entry; [exact Hlookup' | eapply IH; exact Hincl]
+    end.
 Qed.
 
 Lemma root_env_store_roots_named_weaken_store :

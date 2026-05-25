@@ -29,7 +29,12 @@ with direct_call_struct_fields_have_type_global_env_with_local_bounds :
   forall env bounds s lts args fields defs,
     struct_fields_have_type env s lts args fields defs ->
     struct_fields_have_type (global_env_with_local_bounds env bounds)
-      s lts args fields defs.
+      s lts args fields defs
+with direct_call_enum_values_have_type_global_env_with_local_bounds :
+  forall env bounds s values tys,
+    enum_values_have_type env s values tys ->
+    enum_values_have_type (global_env_with_local_bounds env bounds)
+      s values tys.
 Proof.
   - intros env bounds s v T H.
     induction H;
@@ -38,6 +43,8 @@ Proof.
           rewrite ?direct_call_type_lookup_path_global_env_with_local_bounds;
           eauto ].
   - intros env bounds s lts args fields defs H.
+    induction H; try solve [econstructor; eauto].
+  - intros env bounds s values tys H.
     induction H; try solve [econstructor; eauto].
 Qed.
 
@@ -49,7 +56,12 @@ with direct_call_struct_fields_have_type_clear_global_env_local_bounds :
   forall env bounds s lts args fields defs,
     struct_fields_have_type (global_env_with_local_bounds env bounds)
       s lts args fields defs ->
-    struct_fields_have_type env s lts args fields defs.
+    struct_fields_have_type env s lts args fields defs
+with direct_call_enum_values_have_type_clear_global_env_local_bounds :
+  forall env bounds s values tys,
+    enum_values_have_type (global_env_with_local_bounds env bounds)
+      s values tys ->
+    enum_values_have_type env s values tys.
 Proof.
   - intros env bounds s v T H.
     remember (global_env_with_local_bounds env bounds) as env' eqn:Heq.
@@ -68,6 +80,12 @@ Proof.
     revert env bounds Heq.
     induction H; intros env0 bounds Heq; try solve [econstructor; eauto].
     all: try (subst; eapply SFHT_Cons; eauto;
+      eapply direct_call_value_has_type_clear_global_env_local_bounds; eauto).
+  - intros env bounds s values tys H.
+    remember (global_env_with_local_bounds env bounds) as env' eqn:Heq.
+    revert env bounds Heq.
+    induction H; intros env0 bounds Heq; try solve [econstructor; eauto].
+    all: try (subst; eapply EVHT_Cons; eauto;
       eapply direct_call_value_has_type_clear_global_env_local_bounds; eauto).
 Qed.
 

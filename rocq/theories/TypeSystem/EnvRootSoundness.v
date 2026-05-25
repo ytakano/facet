@@ -170,6 +170,105 @@ Proof.
       * exact Hcheck.
 Qed.
 
+Fixpoint infer_env_enum_payloads_collect_roots fuel env Ω n lts args
+    (R : root_env) (Σ : sctx) (fields : list Ty) (payloads : list expr)
+    : infer_result (sctx * root_env * root_set) :=
+  match fields, payloads with
+  | [], [] => infer_ok (Σ, R, [])
+  | T_field :: fields', e_payload :: payloads' =>
+      match infer_core_env_state_fuel_roots fuel env Ω n R Σ e_payload with
+      | infer_err err => infer_err err
+      | infer_ok (T_payload, Σ1, R1, roots_payload) =>
+          let T_expected := instantiate_enum_variant_field_ty lts args T_field in
+          if ty_compatible_b Ω T_payload T_expected
+          then
+            match infer_env_enum_payloads_collect_roots fuel env Ω n lts args
+                    R1 Σ1 fields' payloads' with
+            | infer_err err => infer_err err
+            | infer_ok (Σ2, R2, roots_rest) =>
+                infer_ok (Σ2, R2, root_set_union roots_payload roots_rest)
+            end
+          else infer_err (compatible_error T_payload T_expected)
+      end
+  | _, _ => infer_err ErrArityMismatch
+  end.
+
+Lemma infer_env_enum_payloads_collect_roots_eq :
+  forall fuel env Ω n lts args fields payloads R Σ,
+    (fix go (Σ0 : sctx) (R0 : root_env)
+        (fields0 : list Ty) (es : list expr)
+        : infer_result (sctx * root_env * root_set) :=
+       match fields0, es with
+       | [], [] => infer_ok (Σ0, R0, [])
+       | T_field :: fields', e_payload :: es' =>
+           match infer_core_env_state_fuel_roots fuel env Ω n R0 Σ0 e_payload with
+           | infer_err err => infer_err err
+           | infer_ok (T_payload, Σ1, R1, roots_payload) =>
+               let T_expected :=
+                 instantiate_enum_variant_field_ty lts args T_field in
+               if ty_compatible_b Ω T_payload T_expected
+               then
+                 match go Σ1 R1 fields' es' with
+                 | infer_err err => infer_err err
+                 | infer_ok (Σ2, R2, roots_rest) =>
+                     infer_ok (Σ2, R2, root_set_union roots_payload roots_rest)
+                 end
+               else infer_err (compatible_error T_payload T_expected)
+           end
+       | _, _ => infer_err ErrArityMismatch
+       end) Σ R fields payloads =
+    infer_env_enum_payloads_collect_roots fuel env Ω n lts args R Σ fields payloads.
+Proof.
+  intros fuel env Ω n lts args fields.
+  induction fields as [|T_field rest IH]; intros payloads R Σ;
+    destruct payloads as [|e_payload payloads']; simpl; try reflexivity.
+  destruct (infer_core_env_state_fuel_roots fuel env Ω n R Σ e_payload)
+    as [[[[T_payload Σ1] R1] roots_payload] | err] eqn:Hpayload;
+    try reflexivity.
+  destruct (ty_compatible_b Ω T_payload
+    (instantiate_enum_variant_field_ty lts args T_field)); try reflexivity.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma infer_env_enum_payloads_collect_roots_sound :
+  forall fuel env Ω n lts args R Σ fields payloads Σ' R' roots,
+    infer_env_enum_payloads_collect_roots fuel env Ω n lts args R Σ fields payloads =
+      infer_ok (Σ', R', roots) ->
+    (forall R0 Σ0 e T Σ1 R1 roots1,
+        infer_core_env_state_fuel_roots fuel env Ω n R0 Σ0 e =
+          infer_ok (T, Σ1, R1, roots1) ->
+        typed_env_roots env Ω n R0 Σ0 e T Σ1 R1 roots1) ->
+    exists payload_roots,
+      typed_args_roots env Ω n R Σ payloads
+        (params_of_tys
+          (map (instantiate_enum_variant_field_ty lts args) fields))
+        Σ' R' payload_roots /\
+      roots = root_sets_union payload_roots.
+Proof.
+  intros fuel env Ω n lts args R Σ fields.
+  revert R Σ.
+  induction fields as [|T_field rest IH]; intros R Σ payloads Σ' R' roots Hcollect Hexpr;
+    destruct payloads as [|e_payload payloads']; simpl in Hcollect; try discriminate.
+  - inversion Hcollect; subst. exists []. split; [constructor | reflexivity].
+  - destruct (infer_core_env_state_fuel_roots fuel env Ω n R Σ e_payload)
+      as [[[[T_payload Σ1] R1] roots_payload] | err] eqn:Hp; try discriminate.
+    destruct (ty_compatible_b Ω T_payload
+      (instantiate_enum_variant_field_ty lts args T_field)) eqn:Hcompat;
+      try discriminate.
+    destruct (infer_env_enum_payloads_collect_roots fuel env Ω n lts args
+      R1 Σ1 rest payloads') as [[[Σ2 R2] roots_rest] | err] eqn:Hrest;
+      try discriminate.
+    inversion Hcollect; subst.
+    destruct (IH R1 Σ1 payloads' Σ' R' roots_rest Hrest Hexpr)
+      as [payload_roots [Hpayload_roots Hroots_rest]].
+    exists (roots_payload :: payload_roots). split.
+    + eapply TERArgs_Cons.
+      * eapply Hexpr. exact Hp.
+      * exact Hcompat.
+      * exact Hpayload_roots.
+    + simpl. rewrite Hroots_rest. reflexivity.
+Qed.
+
 Fixpoint infer_env_fields_collect_roots fuel env Ω n lts args
     (R : root_env) (Σ : sctx) (fields : list (string * expr))
     (defs : list field_def)
@@ -350,6 +449,108 @@ Proof.
       * exact Hcheck.
 Qed.
 
+Fixpoint infer_env_enum_payloads_collect_roots_shadow_safe fuel env Ω n lts args
+    (R : root_env) (Σ : sctx) (fields : list Ty) (payloads : list expr)
+    : infer_result (sctx * root_env * root_set) :=
+  match fields, payloads with
+  | [], [] => infer_ok (Σ, R, [])
+  | T_field :: fields', e_payload :: payloads' =>
+      match infer_core_env_state_fuel_roots_shadow_safe fuel env Ω n R Σ e_payload with
+      | infer_err err => infer_err err
+      | infer_ok (T_payload, Σ1, R1, roots_payload) =>
+          let T_expected := instantiate_enum_variant_field_ty lts args T_field in
+          if ty_compatible_b Ω T_payload T_expected
+          then
+            match infer_env_enum_payloads_collect_roots_shadow_safe
+                    fuel env Ω n lts args R1 Σ1 fields' payloads' with
+            | infer_err err => infer_err err
+            | infer_ok (Σ2, R2, roots_rest) =>
+                infer_ok (Σ2, R2, root_set_union roots_payload roots_rest)
+            end
+          else infer_err (compatible_error T_payload T_expected)
+      end
+  | _, _ => infer_err ErrArityMismatch
+  end.
+
+Lemma infer_env_enum_payloads_collect_roots_shadow_safe_eq :
+  forall fuel env Ω n lts args fields payloads R Σ,
+    (fix go (Σ0 : sctx) (R0 : root_env)
+        (fields0 : list Ty) (es : list expr)
+        : infer_result (sctx * root_env * root_set) :=
+       match fields0, es with
+       | [], [] => infer_ok (Σ0, R0, [])
+       | T_field :: fields', e_payload :: es' =>
+           match infer_core_env_state_fuel_roots_shadow_safe
+                   fuel env Ω n R0 Σ0 e_payload with
+           | infer_err err => infer_err err
+           | infer_ok (T_payload, Σ1, R1, roots_payload) =>
+               let T_expected :=
+                 instantiate_enum_variant_field_ty lts args T_field in
+               if ty_compatible_b Ω T_payload T_expected
+               then
+                 match go Σ1 R1 fields' es' with
+                 | infer_err err => infer_err err
+                 | infer_ok (Σ2, R2, roots_rest) =>
+                     infer_ok (Σ2, R2, root_set_union roots_payload roots_rest)
+                 end
+               else infer_err (compatible_error T_payload T_expected)
+           end
+       | _, _ => infer_err ErrArityMismatch
+       end) Σ R fields payloads =
+    infer_env_enum_payloads_collect_roots_shadow_safe
+      fuel env Ω n lts args R Σ fields payloads.
+Proof.
+  intros fuel env Ω n lts args fields.
+  induction fields as [|T_field rest IH]; intros payloads R Σ;
+    destruct payloads as [|e_payload payloads']; simpl; try reflexivity.
+  destruct (infer_core_env_state_fuel_roots_shadow_safe fuel env Ω n R Σ e_payload)
+    as [[[[T_payload Σ1] R1] roots_payload] | err] eqn:Hpayload;
+    try reflexivity.
+  destruct (ty_compatible_b Ω T_payload
+    (instantiate_enum_variant_field_ty lts args T_field)); try reflexivity.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma infer_env_enum_payloads_collect_roots_shadow_safe_sound :
+  forall fuel env Ω n lts args R Σ fields payloads Σ' R' roots,
+    infer_env_enum_payloads_collect_roots_shadow_safe
+      fuel env Ω n lts args R Σ fields payloads =
+      infer_ok (Σ', R', roots) ->
+    (forall R0 Σ0 e T Σ1 R1 roots1,
+        infer_core_env_state_fuel_roots_shadow_safe fuel env Ω n R0 Σ0 e =
+          infer_ok (T, Σ1, R1, roots1) ->
+        typed_env_roots_shadow_safe env Ω n R0 Σ0 e T Σ1 R1 roots1) ->
+    exists payload_roots,
+      typed_args_roots_shadow_safe env Ω n R Σ payloads
+        (params_of_tys
+          (map (instantiate_enum_variant_field_ty lts args) fields))
+        Σ' R' payload_roots /\
+      roots = root_sets_union payload_roots.
+Proof.
+  intros fuel env Ω n lts args R Σ fields.
+  revert R Σ.
+  induction fields as [|T_field rest IH]; intros R Σ payloads Σ' R' roots Hcollect Hexpr;
+    destruct payloads as [|e_payload payloads']; simpl in Hcollect; try discriminate.
+  - inversion Hcollect; subst. exists []. split; [constructor | reflexivity].
+  - destruct (infer_core_env_state_fuel_roots_shadow_safe fuel env Ω n R Σ e_payload)
+      as [[[[T_payload Σ1] R1] roots_payload] | err] eqn:Hp; try discriminate.
+    destruct (ty_compatible_b Ω T_payload
+      (instantiate_enum_variant_field_ty lts args T_field)) eqn:Hcompat;
+      try discriminate.
+    destruct (infer_env_enum_payloads_collect_roots_shadow_safe fuel env Ω n lts args
+      R1 Σ1 rest payloads') as [[[Σ2 R2] roots_rest] | err] eqn:Hrest;
+      try discriminate.
+    inversion Hcollect; subst.
+    destruct (IH R1 Σ1 payloads' Σ' R' roots_rest Hrest Hexpr)
+      as [payload_roots [Hpayload_roots Hroots_rest]].
+    exists (roots_payload :: payload_roots). split.
+    + eapply TERSArgs_Cons.
+      * eapply Hexpr. exact Hp.
+      * exact Hcompat.
+      * exact Hpayload_roots.
+    + simpl. rewrite Hroots_rest. reflexivity.
+Qed.
+
 Fixpoint infer_env_fields_collect_roots_shadow_safe fuel env Ω n lts args
     (R : root_env) (Σ : sctx) (fields : list (string * expr))
     (defs : list field_def)
@@ -470,7 +671,7 @@ Proof.
   induction fuel as [|fuel' IH]; intros env Ω n R Σ e T Σ' R' roots Hinfer.
   - simpl in Hinfer. discriminate.
 	  - destruct e as [|l|i|m i t e1 e2|m i e1 e2|i|i l|p|i l|i l l0|e l|
-	        s l l0 l1|p e|p e|r p|e|e|e1 e2 e3];
+	        s l l0 l1|s s0 l l0 l1|p e|p e|r p|e|e|e1 e2 e3];
       simpl in Hinfer; try discriminate.
     + inversion Hinfer; subst. constructor.
     + destruct l; inversion Hinfer; subst; constructor.
@@ -691,6 +892,35 @@ Proof.
         -- exact Hfields.
         -- intros R0 Σ0 e0 T0 Σ1 R1 roots1 Hinfer0.
            eapply IH. exact Hinfer0.
+    + destruct (lookup_enum s env) as [edef |] eqn:Hlookup; try discriminate.
+      destruct (negb (Nat.eqb (Datatypes.length l) (enum_lifetimes edef))) eqn:Hlts;
+        try discriminate.
+      destruct (negb (Nat.eqb (Datatypes.length l0) (enum_type_params edef))) eqn:Hargslen;
+        try discriminate.
+      destruct (check_struct_bounds env (enum_bounds edef) l0) as [err |] eqn:Hbounds;
+        try discriminate.
+      destruct (lookup_enum_variant s0 (enum_variants edef)) as [vdef |] eqn:Hvariant;
+        try discriminate.
+      rewrite infer_env_enum_payloads_collect_roots_eq in Hinfer.
+      destruct (infer_env_enum_payloads_collect_roots fuel' env Ω n l l0 R Σ
+        (enum_variant_fields vdef) l1) as [[[Σpayloads Rpayloads] roots_payloads] | err]
+        eqn:Hpayloads; try discriminate.
+      inversion Hinfer; subst.
+      apply negb_false_iff in Hlts. apply Nat.eqb_eq in Hlts.
+      apply negb_false_iff in Hargslen. apply Nat.eqb_eq in Hargslen.
+      destruct (infer_env_enum_payloads_collect_roots_sound fuel' env Ω n l l0
+        R Σ (enum_variant_fields vdef) l1 Σ' R' roots
+        Hpayloads) as [payload_roots [Hpayload_roots Hroots]].
+      { intros R0 Σ0 e0 T0 Σ1 R1 roots1 Hinfer0.
+        eapply IH. exact Hinfer0. }
+      subst roots.
+      eapply TER_Enum.
+      * exact Hlookup.
+      * exact Hvariant.
+      * exact Hlts.
+      * exact Hargslen.
+      * exact Hbounds.
+      * exact Hpayload_roots.
     + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
       destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
       destruct (root_env_lookup x R) as [roots_result |] eqn:Hroot_result; try discriminate.
@@ -806,7 +1036,7 @@ Proof.
   induction fuel as [|fuel' IH]; intros env Ω n R Σ e T Σ' R' roots Hinfer.
   - simpl in Hinfer. discriminate.
   - destruct e as [|l|i|m i t e1 e2|m i e1 e2|i|i l|p|i l|i l l0|e l|
-      s l l0 l1|p e|p e|r p|e|e|e1 e2 e3];
+      s l l0 l1|s s0 l l0 l1|p e|p e|r p|e|e|e1 e2 e3];
       simpl in Hinfer; try discriminate.
     + inversion Hinfer; subst. constructor.
     + destruct l; inversion Hinfer; subst; constructor.
@@ -1035,6 +1265,36 @@ Proof.
         -- exact Hfields.
         -- intros R0 Σ0 e0 T0 Σ1 R1 roots1 Hinfer0.
            eapply IH. exact Hinfer0.
+    + destruct (lookup_enum s env) as [edef |] eqn:Hlookup; try discriminate.
+      destruct (negb (Nat.eqb (Datatypes.length l) (enum_lifetimes edef))) eqn:Hlts;
+        try discriminate.
+      destruct (negb (Nat.eqb (Datatypes.length l0) (enum_type_params edef))) eqn:Hargslen;
+        try discriminate.
+      destruct (check_struct_bounds env (enum_bounds edef) l0) as [err |] eqn:Hbounds;
+        try discriminate.
+      destruct (lookup_enum_variant s0 (enum_variants edef)) as [vdef |] eqn:Hvariant;
+        try discriminate.
+      rewrite infer_env_enum_payloads_collect_roots_shadow_safe_eq in Hinfer.
+      destruct (infer_env_enum_payloads_collect_roots_shadow_safe fuel' env Ω n l l0 R Σ
+        (enum_variant_fields vdef) l1) as [[[Σpayloads Rpayloads] roots_payloads] | err]
+        eqn:Hpayloads; try discriminate.
+      inversion Hinfer; subst.
+      apply negb_false_iff in Hlts. apply Nat.eqb_eq in Hlts.
+      apply negb_false_iff in Hargslen. apply Nat.eqb_eq in Hargslen.
+      destruct (infer_env_enum_payloads_collect_roots_shadow_safe_sound
+        fuel' env Ω n l l0 R Σ (enum_variant_fields vdef) l1
+        Σ' R' roots Hpayloads)
+        as [payload_roots [Hpayload_roots Hroots]].
+      { intros R0 Σ0 e0 T0 Σ1 R1 roots1 Hinfer0.
+        eapply IH. exact Hinfer0. }
+      subst roots.
+      eapply TERS_Enum.
+      * exact Hlookup.
+      * exact Hvariant.
+      * exact Hlts.
+      * exact Hargslen.
+      * exact Hbounds.
+      * exact Hpayload_roots.
     + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
       destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
       destruct (root_env_lookup x R) as [roots_result |] eqn:Hroot_result; try discriminate.

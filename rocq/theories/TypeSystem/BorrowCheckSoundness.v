@@ -172,6 +172,21 @@ Proof.
 	         ++ apply IHargs; [simpl; simpl in Hlt; lia | exact Hcheck].
   (* EStruct *)
   + discriminate.
+  (* EEnum *)
+  + apply BO_Enum.
+    apply borrow_check_call_go in Hcheck.
+    revert BS BS' Hcheck.
+    induction l1 as [| a rest IHargs]; intros BS BS' Hcheck.
+    * simpl in Hcheck. injection Hcheck as <-. constructor.
+    * simpl in Hcheck.
+      destruct (borrow_check fenv BS Γ a) as [BS1|] eqn:Ha; [|discriminate].
+      apply BO_Args_Cons with (BS1 := BS1).
+      -- apply IH with (e := a).
+         pose proof (expr_size_enum_payload_lt s s0 l l0 (a :: rest) a
+           (or_introl eq_refl)) as Harg_lt.
+         simpl in Hlt. lia.
+         exact Ha.
+      -- apply IHargs; [simpl; simpl in Hlt; lia | exact Hcheck].
   (* EReplace *)
   + destruct p as [x | q | q f].
     * apply BO_Replace.
@@ -361,9 +376,15 @@ Proof.
 	    apply borrow_check_call_go.
 	    exact IHargs.
 
-	  (* BO_CallExpr *)
+  (* BO_CallExpr *)
   - intros BS BS1 BS2 Γ callee args _ IHcallee _ IHargs.
     simpl. rewrite IHcallee.
+    apply borrow_check_call_go.
+    exact IHargs.
+
+  (* BO_Enum *)
+  - intros BS BS' Γ enum_name variant_name lts args payloads _ IHargs.
+    simpl.
     apply borrow_check_call_go.
     exact IHargs.
 

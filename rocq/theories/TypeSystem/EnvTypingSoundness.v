@@ -24,6 +24,7 @@ Fixpoint basic_expr (e : expr) : bool :=
   | ECallGeneric _ _ _ => false
   | ECallExpr _ _ => false
   | EStruct _ _ _ _ => false
+  | EEnum _ _ _ _ _ => false
   | EReplace _ _ => false
   | EAssign _ _ => false
   | EBorrow _ _ => false
@@ -56,6 +57,7 @@ Fixpoint call_expr (e : expr) : bool :=
   | ECall _ args => forallb call_expr args
   | ECallGeneric _ _ args => forallb call_expr args
   | ECallExpr callee args => call_expr callee && forallb call_expr args
+  | EEnum _ _ _ _ payloads => forallb call_expr payloads
   | EDeref e1 => call_expr e1
   | EDrop e1 => call_expr e1
   | EIf e1 e2 e3 => call_expr e1 && call_expr e2 && call_expr e3
@@ -169,6 +171,7 @@ Fixpoint struct_expr (e : expr) : bool :=
   | ECallGeneric _ _ args => forallb struct_expr args
   | ECallExpr callee args => struct_expr callee && forallb struct_expr args
   | EStruct _ _ _ fields => forallb (fun '(_, e_field) => struct_expr e_field) fields
+  | EEnum _ _ _ _ payloads => forallb struct_expr payloads
   | EReplace _ e_new => struct_expr e_new
   | EAssign _ e_new => struct_expr e_new
   | EBorrow _ _ => true
@@ -287,6 +290,111 @@ Proof.
       * exact Hfields.
       * exact Hcollect.
       * exact Hexpr.
+Qed.
+
+Fixpoint infer_env_enum_payloads_collect fuel env Ω n lts args
+    (Σ : sctx) (fields : list Ty) (payloads : list expr)
+    : infer_result sctx :=
+  match fields, payloads with
+  | [], [] => infer_ok Σ
+  | T_field :: fields', e_payload :: payloads' =>
+      match infer_core_env_state_fuel fuel env Ω n Σ e_payload with
+      | infer_err err => infer_err err
+      | infer_ok (T_payload, Σ1) =>
+          let T_expected := instantiate_enum_variant_field_ty lts args T_field in
+          if ty_compatible_b Ω T_payload T_expected
+          then infer_env_enum_payloads_collect fuel env Ω n lts args
+                 Σ1 fields' payloads'
+          else infer_err (compatible_error T_payload T_expected)
+      end
+  | _, _ => infer_err ErrArityMismatch
+  end.
+
+Lemma infer_env_enum_payloads_collect_eq :
+  forall fuel env Ω n lts args fields payloads Σ,
+    (fix go (Σ0 : sctx) (fields0 : list Ty) (es : list expr)
+        : infer_result sctx :=
+       match fields0, es with
+       | [], [] => infer_ok Σ0
+       | T_field :: fields', e_payload :: es' =>
+           match infer_core_env_state_fuel fuel env Ω n Σ0 e_payload with
+           | infer_err err => infer_err err
+           | infer_ok (T_payload, Σ1) =>
+               let T_expected :=
+                 instantiate_enum_variant_field_ty lts args T_field in
+               if ty_compatible_b Ω T_payload T_expected
+               then go Σ1 fields' es'
+               else infer_err (compatible_error T_payload T_expected)
+           end
+       | _, _ => infer_err ErrArityMismatch
+       end) Σ fields payloads =
+    infer_env_enum_payloads_collect fuel env Ω n lts args Σ fields payloads.
+Proof.
+  intros fuel env Ω n lts args fields.
+  induction fields as [|T_field rest IH]; intros payloads Σ; destruct payloads as [|e_payload es];
+    simpl; try reflexivity.
+  destruct (infer_core_env_state_fuel fuel env Ω n Σ e_payload)
+    as [[T_payload Σ1] | err] eqn:Hpayload; try reflexivity.
+  destruct (ty_compatible_b Ω T_payload
+    (instantiate_enum_variant_field_ty lts args T_field)); [rewrite IH |]; reflexivity.
+Qed.
+
+Lemma infer_env_enum_payloads_collect_sound :
+  forall fuel env Ω n lts args Σ fields payloads Σ',
+    forallb struct_expr payloads = true ->
+    infer_env_enum_payloads_collect fuel env Ω n lts args Σ fields payloads =
+      infer_ok Σ' ->
+    (forall Σ0 e T Σ1,
+        struct_expr e = true ->
+        infer_core_env_state_fuel fuel env Ω n Σ0 e = infer_ok (T, Σ1) ->
+        typed_env_structural env Ω n Σ0 e T Σ1) ->
+    typed_args_env_structural env Ω n Σ payloads
+      (params_of_tys (map (instantiate_enum_variant_field_ty lts args) fields)) Σ'.
+Proof.
+  intros fuel env Ω n lts args Σ fields.
+  revert Σ.
+  induction fields as [|T_field rest IH]; intros Σ payloads Σ' Hpayloads Hcollect Hexpr;
+    destruct payloads as [|e_payload payloads']; simpl in *; try discriminate.
+  - inversion Hcollect; subst. constructor.
+  - apply andb_true_iff in Hpayloads as [Hpayload Hpayloads'].
+    destruct (infer_core_env_state_fuel fuel env Ω n Σ e_payload)
+      as [[T_payload Σ1] | err] eqn:Hp; try discriminate.
+    destruct (ty_compatible_b Ω T_payload
+      (instantiate_enum_variant_field_ty lts args T_field)) eqn:Hcompat;
+      try discriminate.
+    eapply TESArgs_Cons.
+    + eapply Hexpr; eassumption.
+    + exact Hcompat.
+    + eapply IH; eassumption.
+Qed.
+
+Lemma infer_env_enum_payloads_collect_call_sound :
+  forall fuel env Ω n lts args Σ fields payloads Σ',
+    forallb call_expr payloads = true ->
+    infer_env_enum_payloads_collect fuel env Ω n lts args Σ fields payloads =
+      infer_ok Σ' ->
+    (forall Σ0 e T Σ1,
+        call_expr e = true ->
+        infer_core_env_state_fuel fuel env Ω n Σ0 e = infer_ok (T, Σ1) ->
+        typed_env_structural env Ω n Σ0 e T Σ1) ->
+    typed_args_env_structural env Ω n Σ payloads
+      (params_of_tys (map (instantiate_enum_variant_field_ty lts args) fields)) Σ'.
+Proof.
+  intros fuel env Ω n lts args Σ fields.
+  revert Σ.
+  induction fields as [|T_field rest IH]; intros Σ payloads Σ' Hpayloads Hcollect Hexpr;
+    destruct payloads as [|e_payload payloads']; simpl in *; try discriminate.
+  - inversion Hcollect; subst. constructor.
+  - apply andb_true_iff in Hpayloads as [Hpayload Hpayloads'].
+    destruct (infer_core_env_state_fuel fuel env Ω n Σ e_payload)
+      as [[T_payload Σ1] | err] eqn:Hp; try discriminate.
+    destruct (ty_compatible_b Ω T_payload
+      (instantiate_enum_variant_field_ty lts args T_field)) eqn:Hcompat;
+      try discriminate.
+    eapply TESArgs_Cons.
+    + eapply Hexpr; eassumption.
+    + exact Hcompat.
+    + eapply IH; eassumption.
 Qed.
 
 Lemma sctx_path_available_success :
@@ -917,6 +1025,33 @@ Proof.
 	            eapply IH;
 	            [ eapply call_exprs_in_true; eassumption | exact Hinfer_arg ]
 	          | rewrite <- check_arg_tys_params_of_tys; exact Hcheck ].
+    + destruct (lookup_enum s env) as [edef |] eqn:Hlookup; try discriminate.
+      destruct (negb (Nat.eqb (Datatypes.length l) (enum_lifetimes edef))) eqn:Hlts;
+        try discriminate.
+      destruct (negb (Nat.eqb (Datatypes.length l0) (enum_type_params edef))) eqn:Hargslen;
+        try discriminate.
+      destruct (check_struct_bounds env (enum_bounds edef) l0) as [err |] eqn:Hbounds;
+        try discriminate.
+      destruct (lookup_enum_variant s0 (enum_variants edef)) as [vdef |] eqn:Hvariant;
+        try discriminate.
+      rewrite infer_env_enum_payloads_collect_eq in Hinfer.
+      destruct (infer_env_enum_payloads_collect fuel' env Ω n l l0 Σ
+        (enum_variant_fields vdef) l1) as [Σpayloads | err] eqn:Hpayloads;
+        try discriminate.
+      inversion Hinfer; subst.
+      apply negb_false_iff in Hlts. apply Nat.eqb_eq in Hlts.
+      apply negb_false_iff in Hargslen. apply Nat.eqb_eq in Hargslen.
+      eapply TES_Enum.
+      * exact Hlookup.
+      * exact Hvariant.
+      * exact Hlts.
+      * exact Hargslen.
+      * exact Hbounds.
+      * eapply infer_env_enum_payloads_collect_call_sound.
+        -- exact Hcall.
+        -- exact Hpayloads.
+        -- intros Σ0 e0 T0 Σ1 Hexpr Hinfer0.
+           eapply IH; [exact Hexpr | exact Hinfer0].
 			    + destruct (expr_as_place e) as [p |] eqn:Hplace_expr.
       * destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
         destruct Tp as [u c]; simpl in *.
@@ -1287,6 +1422,33 @@ Proof.
       * eapply infer_env_fields_collect_sound.
         -- exact Hstruct.
         -- exact Hfields.
+        -- intros Σ0 e0 T0 Σ1 Hexpr Hinfer0.
+           eapply IH; [exact Hexpr | exact Hinfer0].
+    + destruct (lookup_enum s env) as [edef |] eqn:Hlookup; try discriminate.
+      destruct (negb (Nat.eqb (Datatypes.length l) (enum_lifetimes edef))) eqn:Hlts;
+        try discriminate.
+      destruct (negb (Nat.eqb (Datatypes.length l0) (enum_type_params edef))) eqn:Hargslen;
+        try discriminate.
+      destruct (check_struct_bounds env (enum_bounds edef) l0) as [err |] eqn:Hbounds;
+        try discriminate.
+      destruct (lookup_enum_variant s0 (enum_variants edef)) as [vdef |] eqn:Hvariant;
+        try discriminate.
+      rewrite infer_env_enum_payloads_collect_eq in Hinfer.
+      destruct (infer_env_enum_payloads_collect fuel' env Ω n l l0 Σ
+        (enum_variant_fields vdef) l1) as [Σpayloads | err] eqn:Hpayloads;
+        try discriminate.
+      inversion Hinfer; subst.
+      apply negb_false_iff in Hlts. apply Nat.eqb_eq in Hlts.
+      apply negb_false_iff in Hargslen. apply Nat.eqb_eq in Hargslen.
+      eapply TES_Enum.
+      * exact Hlookup.
+      * exact Hvariant.
+      * exact Hlts.
+      * exact Hargslen.
+      * exact Hbounds.
+      * eapply infer_env_enum_payloads_collect_sound.
+        -- exact Hstruct.
+        -- exact Hpayloads.
         -- intros Σ0 e0 T0 Σ1 Hexpr Hinfer0.
            eapply IH; [exact Hexpr | exact Hinfer0].
     + destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.

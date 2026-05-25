@@ -147,6 +147,41 @@ Proof.
     + split.
       * econstructor; eassumption.
       * exact Hpres_fields.
+  - intros s s' enum_name variant_name lts args payloads values edef vdef
+      Hlookup Hvariant Heval_args IHargs Ω n Σ T Σ' Hready Hstore Htyped.
+    dependent destruction Hready.
+    inversion Htyped; subst.
+    match goal with
+    | Htyped_lookup : lookup_enum enum_name env = Some ?edef_typed |- _ =>
+        rewrite Hlookup in Htyped_lookup;
+        inversion Htyped_lookup; subst edef_typed
+    end.
+    match goal with
+    | Htyped_variant :
+        lookup_enum_variant variant_name (enum_variants edef) =
+          Some ?vdef_typed |- _ =>
+        rewrite Hvariant in Htyped_variant;
+        inversion Htyped_variant; subst vdef_typed
+    end.
+    match goal with
+    | Hready_args : preservation_ready_args payloads,
+      Htyped_args : typed_args_env_structural env Ω n Σ payloads
+        (params_of_tys
+          (map (instantiate_enum_variant_field_ty lts args)
+            (enum_variant_fields vdef))) Σ' |- _ =>
+        destruct (IHargs Ω n Σ
+                    (params_of_tys
+                      (map (instantiate_enum_variant_field_ty lts args)
+                        (enum_variant_fields vdef))) Σ'
+                    Hready_args Hstore Htyped_args)
+          as [Hstore' [Hvalues Hpres_args]]
+    end.
+    repeat split.
+    + exact Hstore'.
+    + eapply VHT_Enum; eauto.
+      eapply eval_args_values_have_types_params_of_tys_enum_values.
+      exact Hvalues.
+    + exact Hpres_args.
   - intros s s1 s2 m x T_ann e1 e2 v1 v2 Heval1 IH1 Heval2 IH2
       Ω n Σ T Σ' Hready Hstore Htyped.
     inversion Hready.

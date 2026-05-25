@@ -477,6 +477,11 @@ and pp_ty_core = function
     let arg_s = List.map pp_ty args in
     let all = lt_s @ arg_s in
     if all = [] then name else Printf.sprintf "%s<%s>" name (String.concat ", " all)
+  | TEnum (name, lts, args) ->
+    let lt_s = List.map (fun _ -> "'_") lts in
+    let arg_s = List.map pp_ty args in
+    let all = lt_s @ arg_s in
+    if all = [] then name else Printf.sprintf "%s<%s>" name (String.concat ", " all)
   | TFn (ts, r) ->
     "fn(" ^ String.concat ", " (List.map pp_ty ts) ^ ") -> " ^ pp_ty r
   | TClosure (_, ts, r) ->

@@ -481,6 +481,11 @@ let validate_env env =
               (List.map (lifetime_error lt_params bound_depth) lts @
                List.map (type_error ty_params lt_params bound_depth) args)
         end
+      | TEnum (name, lts, args) ->
+        first_some
+          (List.map (lifetime_error lt_params bound_depth) lts @
+           List.map (type_error ty_params lt_params bound_depth) args @
+           [Some ("unknown enum type: " ^ name)])
       | TFn (args, ret) ->
         first_some
           (List.map (type_error ty_params lt_params bound_depth) args @
@@ -546,6 +551,8 @@ let validate_env env =
       match core with
       | TStruct (name, _, args) ->
         name :: List.concat_map type_struct_refs args
+      | TEnum (_, _, args) ->
+        List.concat_map type_struct_refs args
       | TFn (args, ret) ->
         List.concat_map type_struct_refs args @ type_struct_refs ret
       | TClosure (_, args, ret) ->
@@ -658,6 +665,7 @@ let convert_program_items (items : named_item list) : global_env =
   end;
   let base_env = {
     env_structs = List.map (convert_struct struct_names) structs;
+    env_enums = [];
     env_traits = List.map (convert_trait struct_names) traits;
     env_impls = List.map (convert_impl struct_names) impls;
     env_local_bounds = [];

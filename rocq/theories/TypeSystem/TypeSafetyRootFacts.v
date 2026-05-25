@@ -108,6 +108,10 @@ Inductive runtime_rootless_ty (env : global_env) : Ty -> Prop :=
       lookup_struct name env = Some sdef ->
       runtime_rootless_fields env lts args (struct_fields sdef) ->
       runtime_rootless_ty env (MkTy u (TStruct name lts args))
+  | RRT_Enum : forall u name lts args edef,
+      lookup_enum name env = Some edef ->
+      runtime_rootless_enum_variants env lts args (enum_variants edef) ->
+      runtime_rootless_ty env (MkTy u (TEnum name lts args))
   | RRT_Fn : forall u params ret,
       runtime_rootless_ty env (MkTy u (TFn params ret))
   | RRT_Forall : forall u n Ω body,
@@ -123,12 +127,34 @@ with runtime_rootless_fields
   | RRF_Cons : forall lts args f fs,
       runtime_rootless_ty env (instantiate_struct_field_ty lts args f) ->
       runtime_rootless_fields env lts args fs ->
-      runtime_rootless_fields env lts args (f :: fs).
+      runtime_rootless_fields env lts args (f :: fs)
+with runtime_rootless_enum_variants
+    (env : global_env) : list lifetime -> list Ty -> list enum_variant_def -> Prop :=
+  | RREV_Nil : forall lts args,
+      runtime_rootless_enum_variants env lts args []
+  | RREV_Cons : forall lts args v vs,
+      runtime_rootless_enum_fields env lts args (enum_variant_fields v) ->
+      runtime_rootless_enum_variants env lts args vs ->
+      runtime_rootless_enum_variants env lts args (v :: vs)
+with runtime_rootless_enum_fields
+    (env : global_env) : list lifetime -> list Ty -> list Ty -> Prop :=
+  | RREF_Nil : forall lts args,
+      runtime_rootless_enum_fields env lts args []
+  | RREF_Cons : forall lts args T Ts,
+      runtime_rootless_ty env (instantiate_enum_variant_field_ty lts args T) ->
+      runtime_rootless_enum_fields env lts args Ts ->
+      runtime_rootless_enum_fields env lts args (T :: Ts).
 
 Scheme runtime_rootless_ty_ind' := Induction for runtime_rootless_ty Sort Prop
-with runtime_rootless_fields_ind' := Induction for runtime_rootless_fields Sort Prop.
+with runtime_rootless_fields_ind' := Induction for runtime_rootless_fields Sort Prop
+with runtime_rootless_enum_variants_ind' :=
+  Induction for runtime_rootless_enum_variants Sort Prop
+with runtime_rootless_enum_fields_ind' :=
+  Induction for runtime_rootless_enum_fields Sort Prop.
 Combined Scheme runtime_rootless_ind
-  from runtime_rootless_ty_ind', runtime_rootless_fields_ind'.
+  from runtime_rootless_ty_ind', runtime_rootless_fields_ind',
+       runtime_rootless_enum_variants_ind',
+       runtime_rootless_enum_fields_ind'.
 
 Lemma runtime_rootless_ty_change_usage :
   forall env T u,
@@ -173,13 +199,26 @@ with ty_lifetime_equiv_runtime_rootless_fields_actual :
   forall env lts_actual lts_expected args_actual args_expected fdefs,
     Forall2 ty_lifetime_equiv args_actual args_expected ->
     runtime_rootless_fields env lts_expected args_expected fdefs ->
-    runtime_rootless_fields env lts_actual args_actual fdefs.
+    runtime_rootless_fields env lts_actual args_actual fdefs
+with ty_lifetime_equiv_runtime_rootless_enum_variants_actual :
+  forall env lts_actual lts_expected args_actual args_expected variants,
+    Forall2 ty_lifetime_equiv args_actual args_expected ->
+    runtime_rootless_enum_variants env lts_expected args_expected variants ->
+    runtime_rootless_enum_variants env lts_actual args_actual variants
+with ty_lifetime_equiv_runtime_rootless_enum_fields_actual :
+  forall env lts_actual lts_expected args_actual args_expected Ts,
+    Forall2 ty_lifetime_equiv args_actual args_expected ->
+    runtime_rootless_enum_fields env lts_expected args_expected Ts ->
+    runtime_rootless_enum_fields env lts_actual args_actual Ts.
 Proof.
   - intros env T_actual T_expected Heq Hrootless.
     destruct Heq; inversion Hrootless; subst; try solve [constructor].
     + eapply RRT_Struct.
       * exact H2.
       * eapply ty_lifetime_equiv_runtime_rootless_fields_actual; eassumption.
+	    + eapply RRT_Enum.
+	      * exact H2.
+	      * eapply ty_lifetime_equiv_runtime_rootless_enum_variants_actual; eassumption.
 	    + apply RRT_Forall.
 	      eapply ty_lifetime_equiv_runtime_rootless_actual; eassumption.
 	    + apply RRT_TypeForall.
@@ -191,6 +230,22 @@ Proof.
     + constructor.
       * eapply ty_lifetime_equiv_runtime_rootless_actual.
         -- eapply instantiate_struct_field_ty_lifetime_equiv. exact Hargs.
+        -- exact H.
+	      * apply IHHfields. exact Hargs.
+  - intros env lts_actual lts_expected args_actual args_expected variants
+      Hargs Hvariants.
+    induction Hvariants.
+    + constructor.
+    + constructor.
+      * eapply ty_lifetime_equiv_runtime_rootless_enum_fields_actual; eassumption.
+      * apply IHHvariants. exact Hargs.
+  - intros env lts_actual lts_expected args_actual args_expected Ts
+      Hargs Hfields.
+    induction Hfields.
+    + constructor.
+    + constructor.
+      * eapply ty_lifetime_equiv_runtime_rootless_actual.
+        -- eapply instantiate_enum_variant_field_ty_lifetime_equiv. exact Hargs.
         -- exact H.
       * apply IHHfields. exact Hargs.
 Qed.
@@ -204,7 +259,7 @@ Proof.
     try discriminate.
   destruct T as [u core].
   destruct core as
-    [| | | | named | tparam | name lts args | params ret
+    [| | | | named | tparam | name lts args | name lts args | params ret
      | env_lt params ret | n Ω body | tn tbounds tbody | la rk inner];
     simpl in *; try discriminate.
   - constructor.
@@ -214,15 +269,31 @@ Proof.
   - apply andb_true_iff in Hfree as [Hargs Hfields_lookup].
     destruct (lookup_struct name env) as [sdef |] eqn:Hlookup;
       try discriminate.
-    eapply RRT_Struct.
-    + exact Hlookup.
-    + clear Hargs.
-      induction (struct_fields sdef) as [| f fs IHfs]; simpl in *.
+	    eapply RRT_Struct.
+	    + exact Hlookup.
+	    + clear Hargs.
+	      induction (struct_fields sdef) as [| f fs IHfs]; simpl in *.
       * constructor.
       * apply andb_true_iff in Hfields_lookup as [Hfield Hfields].
         constructor.
-        -- apply IH. exact Hfield.
-        -- apply IHfs. exact Hfields.
+	        -- apply IH. exact Hfield.
+	        -- apply IHfs. exact Hfields.
+  - apply andb_true_iff in Hfree as [Hargs Hvariants_lookup].
+    destruct (lookup_enum name env) as [edef |] eqn:Hlookup;
+      try discriminate.
+	    eapply RRT_Enum.
+	    + exact Hlookup.
+	    + induction (enum_variants edef) as [| v vs IHvs]; simpl in *.
+	      * constructor.
+	      * apply andb_true_iff in Hvariants_lookup as [Hv Hvs].
+	        constructor.
+	        -- induction (enum_variant_fields v) as [| T Ts IHTs]; simpl in *.
+	           ++ constructor.
+	           ++ apply andb_true_iff in Hv as [HT HTs].
+	              constructor.
+	              ** apply IH. exact HT.
+	              ** apply IHTs. exact HTs.
+	        -- apply IHvs. exact Hvs.
   - constructor.
   - apply RRT_Forall. apply IH. exact Hfree.
   - apply RRT_TypeForall. apply IH. exact Hfree.

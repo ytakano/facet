@@ -387,8 +387,8 @@ Proof.
   induction fuel as [| fuel IH]; intros env bounds T; simpl.
   - reflexivity.
   - destruct T as [u core].
-    destruct core as [| | | | name | idx | name lts args | ts ret
-      | env_lt args ret | n Ω body | n type_bounds body | l rk inner];
+	    destruct core as [| | | | name | idx | name lts args | name lts args | ts ret
+	      | env_lt args ret | n Ω body | n type_bounds body | l rk inner];
       simpl; try reflexivity.
     + assert (Hargs :
         forallb
@@ -420,11 +420,64 @@ Proof.
           - simpl.
             rewrite (IH env bounds (instantiate_struct_field_ty lts args field)).
             rewrite IHfields. reflexivity. }
-        rewrite Hfields. reflexivity.
-      * change (lookup_struct name (global_env_with_local_bounds env bounds))
-          with (lookup_struct name env) in Hlookup_body.
+	        rewrite Hfields. reflexivity.
+	      * change (lookup_struct name (global_env_with_local_bounds env bounds))
+	          with (lookup_struct name env) in Hlookup_body.
+	        rewrite Hlookup_body. reflexivity.
+    + assert (Hargs :
+        forallb
+          (capture_ref_free_ty_b_fuel fuel
+            (global_env_with_local_bounds env bounds)) args =
+        forallb (capture_ref_free_ty_b_fuel fuel env) args).
+      { induction args as [| T Ts IHTs]; simpl; [reflexivity |].
+        rewrite (IH env bounds T), IHTs. reflexivity. }
+      rewrite Hargs.
+      destruct (lookup_enum name (global_env_with_local_bounds env bounds))
+        as [edef |] eqn:Hlookup_body.
+      * change (lookup_enum name (global_env_with_local_bounds env bounds))
+          with (lookup_enum name env) in Hlookup_body.
+        rewrite Hlookup_body.
+        assert (Hvariants :
+          forallb
+            (fun v : enum_variant_def =>
+              forallb
+                (fun T : Ty =>
+                  capture_ref_free_ty_b_fuel fuel
+                    (global_env_with_local_bounds env bounds)
+                    (instantiate_enum_variant_field_ty lts args T))
+                (enum_variant_fields v)) (enum_variants edef) =
+          forallb
+            (fun v : enum_variant_def =>
+              forallb
+                (fun T : Ty =>
+                  capture_ref_free_ty_b_fuel fuel env
+                    (instantiate_enum_variant_field_ty lts args T))
+                (enum_variant_fields v)) (enum_variants edef)).
+        { induction (enum_variants edef) as [| v vs IHvs]; simpl.
+          - reflexivity.
+          - assert (Hfields :
+              forallb
+                (fun T : Ty =>
+                  capture_ref_free_ty_b_fuel fuel
+                    (global_env_with_local_bounds env bounds)
+                    (instantiate_enum_variant_field_ty lts args T))
+                (enum_variant_fields v) =
+              forallb
+                (fun T : Ty =>
+                  capture_ref_free_ty_b_fuel fuel env
+                    (instantiate_enum_variant_field_ty lts args T))
+                (enum_variant_fields v)).
+            { induction (enum_variant_fields v) as [| T Ts IHTs]; simpl.
+              - reflexivity.
+              - rewrite (IH env bounds
+                  (instantiate_enum_variant_field_ty lts args T)).
+                rewrite IHTs. reflexivity. }
+            rewrite Hfields, IHvs. reflexivity. }
+        rewrite Hvariants. reflexivity.
+      * change (lookup_enum name (global_env_with_local_bounds env bounds))
+          with (lookup_enum name env) in Hlookup_body.
         rewrite Hlookup_body. reflexivity.
-    + assert (Hts :
+	    + assert (Hts :
         forallb
           (capture_ref_free_ty_b_fuel fuel
             (global_env_with_local_bounds env bounds)) ts =
@@ -443,10 +496,13 @@ Lemma capture_ref_free_ty_b_global_env_with_local_bounds :
 Proof.
   intros env bounds T.
   unfold capture_ref_free_ty_b.
+	  change (Datatypes.length
+	    (env_structs (global_env_with_local_bounds env bounds)))
+	    with (Datatypes.length (env_structs env)).
   change (Datatypes.length
-    (env_structs (global_env_with_local_bounds env bounds)))
-    with (Datatypes.length (env_structs env)).
-  apply capture_ref_free_ty_b_fuel_global_env_with_local_bounds.
+    (env_enums (global_env_with_local_bounds env bounds)))
+    with (Datatypes.length (env_enums env)).
+	  apply capture_ref_free_ty_b_fuel_global_env_with_local_bounds.
 Qed.
 
 Lemma closure_capture_allowed_b_global_env_with_local_bounds :

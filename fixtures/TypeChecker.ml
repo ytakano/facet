@@ -639,6 +639,7 @@ type 'a typeCore =
 | TNamed of string
 | TParam of Big_int_Z.big_int
 | TStruct of string * lifetime list * 'a list
+| TEnum of string * lifetime list * 'a list
 | TFn of 'a list * 'a
 | TClosure of lifetime * 'a list * 'a
 | TForall of Big_int_Z.big_int * outlives_ctx * 'a
@@ -715,6 +716,15 @@ let rec apply_lt_ty _UU03c3_ = function
      in
      MkTy (u, (TStruct (name, (map (apply_lt_lifetime _UU03c3_) lts),
      (map_lt args))))
+   | TEnum (name, lts, args) ->
+     let map_lt =
+       let rec map_lt = function
+       | [] -> []
+       | x :: xs' -> (apply_lt_ty _UU03c3_ x) :: (map_lt xs')
+       in map_lt
+     in
+     MkTy (u, (TEnum (name, (map (apply_lt_lifetime _UU03c3_) lts),
+     (map_lt args))))
    | TFn (ts, r) ->
      let map_lt =
        let rec map_lt = function
@@ -757,6 +767,14 @@ let rec map_lifetimes_ty f = function
        in go
      in
      MkTy (u, (TStruct (name, (map f lts), (go args))))
+   | TEnum (name, lts, args) ->
+     let go =
+       let rec go = function
+       | [] -> []
+       | x :: xs' -> (map_lifetimes_ty f x) :: (go xs')
+       in go
+     in
+     MkTy (u, (TEnum (name, (map f lts), (go args))))
    | TFn (ts, r) ->
      let go =
        let rec go = function
@@ -839,6 +857,9 @@ let rec contains_lbound_ty = function
 | MkTy (_, t0) ->
   (match t0 with
    | TStruct (_, lts, args) ->
+     (||) (existsb contains_lbound_lifetime lts)
+       (existsb contains_lbound_ty args)
+   | TEnum (_, lts, args) ->
      (||) (existsb contains_lbound_lifetime lts)
        (existsb contains_lbound_ty args)
    | TFn (ts, r) ->
@@ -1026,6 +1047,14 @@ type struct_def = { struct_name : string;
                     struct_bounds : trait_bound list;
                     struct_fields : field_def list }
 
+type enum_variant_def = { enum_variant_name : string;
+                          enum_variant_fields : ty list }
+
+type enum_def = { enum_name : string; enum_lifetimes : Big_int_Z.big_int;
+                  enum_type_params : Big_int_Z.big_int;
+                  enum_bounds : trait_bound list;
+                  enum_variants : enum_variant_def list }
+
 type trait_def = { trait_name : string;
                    trait_type_params : Big_int_Z.big_int;
                    trait_bounds : trait_bound list }
@@ -1035,7 +1064,7 @@ type impl_def = { impl_lifetimes : Big_int_Z.big_int;
                   impl_trait_name : string; impl_trait_args : ty list;
                   impl_for_ty : ty }
 
-type global_env = { env_structs : struct_def list;
+type global_env = { env_structs : struct_def list; env_enums : enum_def list;
                     env_traits : trait_def list; env_impls : impl_def list;
                     env_local_bounds : trait_bound list; env_fns : fn_def list }
 
@@ -1043,8 +1072,9 @@ type global_env = { env_structs : struct_def list;
     global_env -> trait_bound list -> global_env **)
 
 let global_env_with_local_bounds env bounds =
-  { env_structs = env.env_structs; env_traits = env.env_traits; env_impls =
-    env.env_impls; env_local_bounds = bounds; env_fns = env.env_fns }
+  { env_structs = env.env_structs; env_enums = env.env_enums; env_traits =
+    env.env_traits; env_impls = env.env_impls; env_local_bounds = bounds;
+    env_fns = env.env_fns }
 
 (** val core_trait_ref_of_trait_ref : trait_ref -> ty core_trait_ref **)
 
@@ -1090,6 +1120,18 @@ let rec lookup_struct_in name = function
 let lookup_struct name env =
   lookup_struct_in name env.env_structs
 
+(** val lookup_enum_in : string -> enum_def list -> enum_def option **)
+
+let rec lookup_enum_in name = function
+| [] -> None
+| e :: rest ->
+  if (=) name e.enum_name then Some e else lookup_enum_in name rest
+
+(** val lookup_enum : string -> global_env -> enum_def option **)
+
+let lookup_enum name env =
+  lookup_enum_in name env.env_enums
+
 (** val lookup_field : string -> field_def list -> field_def option **)
 
 let rec lookup_field name = function
@@ -1126,6 +1168,14 @@ let rec subst_type_params_ty _UU03c3_ = function
        in go
      in
      MkTy (u, (TStruct (name, lts, (go args))))
+   | TEnum (name, lts, args) ->
+     let go =
+       let rec go = function
+       | [] -> []
+       | x :: xs' -> (subst_type_params_ty _UU03c3_ x) :: (go xs')
+       in go
+     in
+     MkTy (u, (TEnum (name, lts, (go args))))
    | TFn (ps, r) ->
      let go =
        let rec go = function
@@ -1153,6 +1203,12 @@ let rec subst_type_params_ty _UU03c3_ = function
 
 let instantiate_struct_field_ty lifetime_args type_args f =
   subst_type_params_ty type_args (apply_lt_ty lifetime_args f.field_ty)
+
+(** val instantiate_enum_variant_field_ty :
+    lifetime list -> ty list -> ty -> ty **)
+
+let instantiate_enum_variant_field_ty lifetime_args type_args t =
+  subst_type_params_ty type_args (apply_lt_ty lifetime_args t)
 
 (** val usage_eqb_decl : usage -> usage -> bool **)
 
@@ -1235,6 +1291,21 @@ let rec ty_eqb_decl t1 t2 =
      | TStruct (n1, lts1, args1) ->
        (match c2 with
         | TStruct (n2, lts2, args2) ->
+          (&&) ((&&) ((=) n1 n2) (lifetime_list_eqb_decl lts1 lts2))
+            (let rec go xs ys =
+               match xs with
+               | [] -> (match ys with
+                        | [] -> true
+                        | _ :: _ -> false)
+               | x :: xs' ->
+                 (match ys with
+                  | [] -> false
+                  | y :: ys' -> (&&) (ty_eqb_decl x y) (go xs' ys'))
+             in go args1 args2)
+        | _ -> false)
+     | TEnum (n1, lts1, args1) ->
+       (match c2 with
+        | TEnum (n2, lts2, args2) ->
           (&&) ((&&) ((=) n1 n2) (lifetime_list_eqb_decl lts1 lts2))
             (let rec go xs ys =
                match xs with
@@ -1479,6 +1550,16 @@ let rec match_ty ty_params lt_params fuel pattern actual st =
                         | None -> None)
                   else None
                 | _ -> None)
+             | TEnum (n1, lts1, args1) ->
+               (match c_a with
+                | TEnum (n2, lts2, args2) ->
+                  if (=) n1 n2
+                  then (match match_lifetimes lt_params lts1 lts2 st with
+                        | Some st' ->
+                          match_tys ty_params lt_params fuel' args1 args2 st'
+                        | None -> None)
+                  else None
+                | _ -> None)
              | TFn (ps1, r1) ->
                (match c_a with
                 | TFn (ps2, r2) ->
@@ -1545,6 +1626,11 @@ let rec ty_match_fuel = function
 | MkTy (_, t0) ->
   (match t0 with
    | TStruct (_, lts, args) ->
+     Big_int_Z.succ_big_int
+       (add (length lts)
+         (fold_right (fun t1 acc -> add (ty_match_fuel t1) acc)
+           Big_int_Z.zero_big_int args))
+   | TEnum (_, lts, args) ->
      Big_int_Z.succ_big_int
        (add (length lts)
          (fold_right (fun t1 acc -> add (ty_match_fuel t1) acc)
@@ -2285,6 +2371,21 @@ let rec ty_eqb t1 t2 =
                   | t4 :: l2' -> (&&) (ty_eqb t3 t4) (go_args l1' l2'))
              in go_args args1 args2)
         | _ -> false)
+     | TEnum (name1, lts1, args1) ->
+       (match c2 with
+        | TEnum (name2, lts2, args2) ->
+          (&&) ((&&) ((=) name1 name2) (lifetime_list_eqb lts1 lts2))
+            (let rec go_args l1 l2 =
+               match l1 with
+               | [] -> (match l2 with
+                        | [] -> true
+                        | _ :: _ -> false)
+               | t3 :: l1' ->
+                 (match l2 with
+                  | [] -> false
+                  | t4 :: l2' -> (&&) (ty_eqb t3 t4) (go_args l1' l2'))
+             in go_args args1 args2)
+        | _ -> false)
      | TFn (ts1, r1) ->
        (match c2 with
         | TFn (ts2, r2) ->
@@ -2419,6 +2520,21 @@ let ty_core_eqb c1 c2 =
                | t2 :: l2' -> (&&) (ty_eqb t1 t2) (go_args l1' l2'))
           in go_args args1 args2)
      | _ -> false)
+  | TEnum (name1, lts1, args1) ->
+    (match c2 with
+     | TEnum (name2, lts2, args2) ->
+       (&&) ((&&) ((=) name1 name2) (lifetime_list_eqb lts1 lts2))
+         (let rec go_args l1 l2 =
+            match l1 with
+            | [] -> (match l2 with
+                     | [] -> true
+                     | _ :: _ -> false)
+            | t1 :: l1' ->
+              (match l2 with
+               | [] -> false
+               | t2 :: l2' -> (&&) (ty_eqb t1 t2) (go_args l1' l2'))
+          in go_args args1 args2)
+     | _ -> false)
   | TFn (ts1, r1) ->
     (match c2 with
      | TFn (ts2, r2) ->
@@ -2520,6 +2636,13 @@ let rec ty_depth = function
 | MkTy (_, c) ->
   (match c with
    | TStruct (_, lts, args) ->
+     Big_int_Z.succ_big_int
+       (add (length lts)
+         (let rec go = function
+          | [] -> Big_int_Z.zero_big_int
+          | t0 :: l' -> add (Big_int_Z.succ_big_int (ty_depth t0)) (go l')
+          in go args))
+   | TEnum (_, lts, args) ->
      Big_int_Z.succ_big_int
        (add (length lts)
          (let rec go = function
@@ -2650,16 +2773,6 @@ let rec ty_compatible_b_fuel fuel _UU03a9_ t_actual t_expected =
                  (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
              | p :: l -> ty_core_eqb ca (TForall (n0, (p :: l), tb)))
           | x -> ty_core_eqb ca x)
-       | TStruct (s, l, l0) ->
-         let ca = TStruct (s, l, l0) in
-         (match ty_core t_expected with
-          | TForall (n, o, tb) ->
-            (match o with
-             | [] ->
-               (&&) (negb (contains_lbound_ty tb))
-                 (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
-             | p :: l1 -> ty_core_eqb ca (TForall (n, (p :: l1), tb)))
-          | x -> ty_core_eqb ca x)
        | TFn (params_a, ret_a) ->
          let ca = TFn (params_a, ret_a) in
          (match ty_core t_expected with
@@ -2778,7 +2891,16 @@ let rec ty_compatible_b_fuel fuel _UU03a9_ t_actual t_expected =
               (match rka with
                | RShared -> ty_compatible_b_fuel fuel' _UU03a9_ ta tb
                | RUnique -> ty_eqb ta tb)
-          | x -> ty_core_eqb ca x)))
+          | x -> ty_core_eqb ca x)
+       | x ->
+         (match ty_core t_expected with
+          | TForall (n, o, tb) ->
+            (match o with
+             | [] ->
+               (&&) (negb (contains_lbound_ty tb))
+                 (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
+             | p :: l1 -> ty_core_eqb x (TForall (n, (p :: l1), tb)))
+          | x0 -> ty_core_eqb x x0)))
     fuel
 
 (** val ty_compatible_b : outlives_ctx -> ty -> ty -> bool **)
@@ -2810,6 +2932,17 @@ let rec capture_ref_free_ty_b_fuel fuel env t =
                 (instantiate_struct_field_ty lts args f))
               sdef.struct_fields
           | None -> false)
+     | TEnum (name, lts, args) ->
+       (&&) (forallb (capture_ref_free_ty_b_fuel fuel' env) args)
+         (match lookup_enum name env with
+          | Some edef ->
+            forallb (fun v ->
+              forallb (fun t1 ->
+                capture_ref_free_ty_b_fuel fuel' env
+                  (instantiate_enum_variant_field_ty lts args t1))
+                v.enum_variant_fields)
+              edef.enum_variants
+          | None -> false)
      | TFn (ts, r) ->
        (&&) (forallb (capture_ref_free_ty_b_fuel fuel' env) ts)
          (capture_ref_free_ty_b_fuel fuel' env r)
@@ -2822,7 +2955,8 @@ let rec capture_ref_free_ty_b_fuel fuel env t =
 
 let capture_ref_free_ty_b env t =
   capture_ref_free_ty_b_fuel (Big_int_Z.succ_big_int
-    (add (length env.env_structs) (ty_depth t))) env t
+    (add (add (length env.env_structs) (length env.env_enums)) (ty_depth t)))
+    env t
 
 (** val ctx_lookup_b : ident -> ctx -> (ty * bool) option **)
 
@@ -2878,6 +3012,9 @@ let rec wf_type_at_b bound_depth _UU0394_ = function
 | MkTy (u, t0) ->
   (match t0 with
    | TStruct (_, lts, args) ->
+     (&&) (forallb (wf_lifetime_at_b bound_depth _UU0394_) lts)
+       (forallb (wf_type_at_b bound_depth _UU0394_) args)
+   | TEnum (_, lts, args) ->
      (&&) (forallb (wf_lifetime_at_b bound_depth _UU0394_) lts)
        (forallb (wf_type_at_b bound_depth _UU0394_) args)
    | TFn (ts, r) ->
@@ -3091,6 +3228,17 @@ let rec infer_type_args_from_ty fuel formal actual _UU03c3_ =
        let MkTy (_, t0) = actual in
        (match t0 with
         | TStruct (name_a, lts_a, args_a) ->
+          if (&&) ((=) name_f name_a) (lifetime_list_eqb lts_f lts_a)
+          then infer_type_args_from_tys fuel' args_f args_a _UU03c3_
+          else None
+        | _ ->
+          if ty_core_eqb (ty_core formal) (ty_core actual)
+          then Some _UU03c3_
+          else None)
+     | TEnum (name_f, lts_f, args_f) ->
+       let MkTy (_, t0) = actual in
+       (match t0 with
+        | TEnum (name_a, lts_a, args_a) ->
           if (&&) ((=) name_f name_a) (lifetime_list_eqb lts_f lts_a)
           then infer_type_args_from_tys fuel' args_f args_a _UU03c3_
           else None
@@ -6645,17 +6793,38 @@ let rec string_names_unique_b = function
 let fn_name_strings fns =
   map (fun f -> fst f.fn_name) fns
 
+(** val enum_variant_names : enum_def -> string list **)
+
+let enum_variant_names e =
+  map (fun e0 -> e0.enum_variant_name) e.enum_variants
+
 (** val top_level_names : global_env -> string list **)
 
 let top_level_names env =
   app (map (fun s -> s.struct_name) env.env_structs)
-    (app (map (fun t -> t.trait_name) env.env_traits)
-      (fn_name_strings env.env_fns))
+    (app (map (fun e -> e.enum_name) env.env_enums)
+      (app (map (fun t -> t.trait_name) env.env_traits)
+        (fn_name_strings env.env_fns)))
 
 (** val top_level_names_unique_b : global_env -> bool **)
 
 let top_level_names_unique_b env =
   string_names_unique_b (top_level_names env)
+
+(** val enum_variants_unique_b : enum_def -> bool **)
+
+let enum_variants_unique_b e =
+  string_names_unique_b (enum_variant_names e)
+
+(** val enum_variant_names_unique_b : global_env -> bool **)
+
+let enum_variant_names_unique_b env =
+  forallb enum_variants_unique_b env.env_enums
+
+(** val global_names_unique_b : global_env -> bool **)
+
+let global_names_unique_b env =
+  (&&) (top_level_names_unique_b env) (enum_variant_names_unique_b env)
 
 (** val infer_env : global_env -> fn_def -> (ty * ctx) infer_result **)
 
@@ -7037,9 +7206,9 @@ let infer_full_env_roots env f r0 =
 (** val alpha_normalize_global_env : global_env -> global_env **)
 
 let alpha_normalize_global_env env =
-  { env_structs = env.env_structs; env_traits = env.env_traits; env_impls =
-    env.env_impls; env_local_bounds = env.env_local_bounds; env_fns =
-    (alpha_rename_syntax env.env_fns) }
+  { env_structs = env.env_structs; env_enums = env.env_enums; env_traits =
+    env.env_traits; env_impls = env.env_impls; env_local_bounds =
+    env.env_local_bounds; env_fns = (alpha_rename_syntax env.env_fns) }
 
 (** val infer_fns_env_elab :
     global_env -> fn_def list -> fn_def list infer_result **)
@@ -7062,9 +7231,10 @@ let infer_program_env_alpha_elab env =
   let env_alpha = alpha_normalize_global_env env in
   (match infer_fns_env_elab env_alpha env_alpha.env_fns with
    | Infer_ok fns' ->
-     Infer_ok { env_structs = env_alpha.env_structs; env_traits =
-       env_alpha.env_traits; env_impls = env_alpha.env_impls;
-       env_local_bounds = env_alpha.env_local_bounds; env_fns = fns' }
+     Infer_ok { env_structs = env_alpha.env_structs; env_enums =
+       env_alpha.env_enums; env_traits = env_alpha.env_traits; env_impls =
+       env_alpha.env_impls; env_local_bounds = env_alpha.env_local_bounds;
+       env_fns = fns' }
    | Infer_err err -> Infer_err err)
 
 (** val fn_params_roots_exclude_b : param list -> root_set -> bool **)
@@ -7586,7 +7756,7 @@ let check_program_env env =
 (** val check_program_env_alpha : global_env -> bool **)
 
 let check_program_env_alpha env =
-  (&&) (top_level_names_unique_b (alpha_normalize_global_env env))
+  (&&) (global_names_unique_b (alpha_normalize_global_env env))
     (check_program_env (alpha_normalize_global_env env))
 
 (** val check_program_env_alpha_validated : global_env -> bool **)
@@ -7597,7 +7767,7 @@ let check_program_env_alpha_validated =
 (** val check_program_env_alpha_elab : global_env -> bool **)
 
 let check_program_env_alpha_elab env =
-  (&&) (top_level_names_unique_b (alpha_normalize_global_env env))
+  (&&) (global_names_unique_b (alpha_normalize_global_env env))
     (match infer_program_env_alpha_elab env with
      | Infer_ok env' -> check_program_env env'
      | Infer_err _ -> false)
@@ -7689,9 +7859,9 @@ let fn_stub_of_raw f =
 (** val append_env_fns : global_env -> fn_def list -> global_env **)
 
 let append_env_fns env fns =
-  { env_structs = env.env_structs; env_traits = env.env_traits; env_impls =
-    env.env_impls; env_local_bounds = env.env_local_bounds; env_fns =
-    (app env.env_fns fns) }
+  { env_structs = env.env_structs; env_enums = env.env_enums; env_traits =
+    env.env_traits; env_impls = env.env_impls; env_local_bounds =
+    env.env_local_bounds; env_fns = (app env.env_fns fns) }
 
 (** val closure_elab_suffix : Big_int_Z.big_int -> string **)
 
@@ -8311,14 +8481,16 @@ let rec elaborate_raw_fns_fuel fuel base_env done0 next = function
 
 let elaborate_raw_global_env env fs =
   let stubs = map fn_stub_of_raw fs in
-  let base = { env_structs = env.env_structs; env_traits = env.env_traits;
-    env_impls = env.env_impls; env_local_bounds = []; env_fns = stubs }
+  let base = { env_structs = env.env_structs; env_enums = env.env_enums;
+    env_traits = env.env_traits; env_impls = env.env_impls;
+    env_local_bounds = []; env_fns = stubs }
   in
   (match elaborate_raw_fns_fuel
            (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) base []
            Big_int_Z.zero_big_int fs with
    | Infer_ok p ->
      let (fns, _) = p in
-     Infer_ok { env_structs = env.env_structs; env_traits = env.env_traits;
-     env_impls = env.env_impls; env_local_bounds = []; env_fns = fns }
+     Infer_ok { env_structs = env.env_structs; env_enums = env.env_enums;
+     env_traits = env.env_traits; env_impls = env.env_impls;
+     env_local_bounds = []; env_fns = fns }
    | Infer_err err -> Infer_err err)

@@ -20,6 +20,14 @@ let rec string_of_ty_core : ty typeCore -> string = function
     let all = lt_s @ arg_s in
     if all = [] then name
     else Printf.sprintf "%s<%s>" name (String.concat ", " all)
+  | TEnum (name, lts, args) ->
+    let lt_s =
+      List.map (fun _ -> "'_") lts
+    in
+    let arg_s = List.map string_of_ty args in
+    let all = lt_s @ arg_s in
+    if all = [] then name
+    else Printf.sprintf "%s<%s>" name (String.concat ", " all)
   | TFn (ts, r) ->
     Printf.sprintf "fn(%s) -> %s"
       (String.concat ", " (List.map string_of_ty ts))

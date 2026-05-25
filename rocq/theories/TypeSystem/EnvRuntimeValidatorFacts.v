@@ -368,7 +368,9 @@ Proof.
   intros env Hcheck.
   unfold check_program_env_alpha_validated, check_program_env_alpha in Hcheck.
   apply andb_true_iff in Hcheck.
-  destruct Hcheck as [Hunique _].
+  destruct Hcheck as [Hunique_global _].
+  apply andb_true_iff in Hunique_global.
+  destruct Hunique_global as [Hunique _].
   apply top_level_names_unique_b_fn_env_unique_by_name.
   exact Hunique.
 Qed.
@@ -380,7 +382,9 @@ Lemma check_program_env_alpha_unique :
 Proof.
   intros env Hcheck.
   unfold check_program_env_alpha in Hcheck.
-  apply andb_true_iff in Hcheck as [Hunique _].
+  apply andb_true_iff in Hcheck as [Hunique_global _].
+  apply andb_true_iff in Hunique_global.
+  destruct Hunique_global as [Hunique _].
   apply top_level_names_unique_b_fn_env_unique_by_name.
   exact Hunique.
 Qed.

@@ -41,9 +41,11 @@ Lemma apply_lt_ty_nil_ts :
 Proof.
   fix IH 1.
   intros [u core].
-  destruct core; cbn [apply_lt_ty]; try reflexivity.
-  - assert (Hlts : map (apply_lt_lifetime []) l = l).
-    { induction l as [| lt l IHl]; cbn [map].
+  destruct core as [| | | | s | i | s lts args | s lts args
+                   | ts r | l ts r | n o body | n bounds body | l rk t];
+    cbn [apply_lt_ty]; try reflexivity.
+  - assert (Hlts : map (apply_lt_lifetime []) lts = lts).
+    { induction lts as [| lt lts IHl]; cbn [map].
       - reflexivity.
       - rewrite apply_lt_lifetime_nil_ts. rewrite IHl. reflexivity. }
     assert (Hargs :
@@ -51,8 +53,22 @@ Proof.
         match xs with
         | [] => []
         | x :: xs' => apply_lt_ty [] x :: map_lt xs'
-        end) l0 = l0).
-    { induction l0 as [| T l0 IHl]; simpl.
+        end) args = args).
+    { induction args as [| T args IHl]; simpl.
+      - reflexivity.
+      - rewrite IH. rewrite IHl. reflexivity. }
+    rewrite Hlts. rewrite Hargs. reflexivity.
+  - assert (Hlts : map (apply_lt_lifetime []) lts = lts).
+    { induction lts as [| lt lts IHl]; cbn [map].
+      - reflexivity.
+      - rewrite apply_lt_lifetime_nil_ts. rewrite IHl. reflexivity. }
+    assert (Hargs :
+      (fix map_lt (xs : list Ty) : list Ty :=
+        match xs with
+        | [] => []
+        | x :: xs' => apply_lt_ty [] x :: map_lt xs'
+        end) args = args).
+    { induction args as [| T args IHl]; simpl.
       - reflexivity.
       - rewrite IH. rewrite IHl. reflexivity. }
     rewrite Hlts. rewrite Hargs. reflexivity.
@@ -61,8 +77,8 @@ Proof.
         match xs with
         | [] => []
         | x :: xs' => apply_lt_ty [] x :: map_lt xs'
-        end) l = l).
-    { induction l as [| T l IHl]; simpl.
+        end) ts = ts).
+    { induction ts as [| T ts IHl]; simpl.
       - reflexivity.
       - rewrite IH. rewrite IHl. reflexivity. }
     rewrite Hargs. rewrite IH. reflexivity.
@@ -71,16 +87,16 @@ Proof.
         match xs with
         | [] => []
         | x :: xs' => apply_lt_ty [] x :: map_lt xs'
-        end) l0 = l0).
-    { induction l0 as [| T l0 IHl]; simpl.
+        end) ts = ts).
+    { induction ts as [| T ts IHl]; simpl.
       - reflexivity.
       - rewrite IH. rewrite IHl. reflexivity. }
     rewrite apply_lt_lifetime_nil_ts. rewrite Hargs. rewrite IH.
     reflexivity.
 	  - rewrite apply_lt_outlives_nil_ts. rewrite IH. reflexivity.
 		  - assert (Hbounds :
-		      map (map_core_trait_bound (apply_lt_ty [])) l = l).
-		    { induction l as [| b bs IHbs]; simpl; try reflexivity.
+			      map (map_core_trait_bound (apply_lt_ty [])) bounds = bounds).
+			    { induction bounds as [| b bs IHbs]; simpl; try reflexivity.
 		      destruct b as [idx refs]; simpl.
 		      assert (Hrefs :
 		        map (map_core_trait_ref (apply_lt_ty [])) refs = refs).

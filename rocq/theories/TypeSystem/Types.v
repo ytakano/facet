@@ -34,6 +34,7 @@ Inductive TypeCore (A : Type) : Type :=
 | TNamed    : string -> TypeCore A
 | TParam    : nat -> TypeCore A
 | TStruct   : string -> list lifetime -> list A -> TypeCore A
+| TEnum     : string -> list lifetime -> list A -> TypeCore A
 | TFn       : list A -> A -> TypeCore A
 | TClosure  : lifetime -> list A -> A -> TypeCore A
 | TForall   : nat -> outlives_ctx -> A -> TypeCore A
@@ -47,6 +48,7 @@ Arguments TBooleans {A}.
 Arguments TNamed {A} _.
 Arguments TParam {A} _.
 Arguments TStruct {A} _ _ _.
+Arguments TEnum {A} _ _ _.
 Arguments TFn {A} _ _.
 Arguments TClosure {A} _ _ _.
 Arguments TForall {A} _ _ _.
@@ -126,6 +128,14 @@ Fixpoint apply_lt_ty (σ : list lifetime) (T : Ty) {struct T} : Ty :=
         end
       in
       MkTy u (TStruct name (map (apply_lt_lifetime σ) lts) (map_lt args))
+  | MkTy u (TEnum name lts args) =>
+      let fix map_lt (xs : list Ty) : list Ty :=
+        match xs with
+        | [] => []
+        | x :: xs' => apply_lt_ty σ x :: map_lt xs'
+        end
+      in
+      MkTy u (TEnum name (map (apply_lt_lifetime σ) lts) (map_lt args))
   | MkTy u (TFn ts r) =>
       let fix map_lt (xs : list Ty) : list Ty :=
         match xs with
@@ -169,6 +179,14 @@ Fixpoint map_lifetimes_ty
         end
       in
       MkTy u (TStruct name (map f lts) (go args))
+  | MkTy u (TEnum name lts args) =>
+      let fix go (xs : list Ty) : list Ty :=
+        match xs with
+        | [] => []
+        | x :: xs' => map_lifetimes_ty f x :: go xs'
+        end
+      in
+      MkTy u (TEnum name (map f lts) (go args))
   | MkTy u (TFn ts r) =>
       let fix go (xs : list Ty) : list Ty :=
         match xs with
@@ -209,9 +227,12 @@ Lemma map_lifetimes_ty_close_fn_lifetime_0 :
     map_lifetimes_ty (close_fn_lifetime 0) T = T.
 Proof.
   fix IH 1.
-  intros [u core]; destruct core; simpl; try reflexivity.
-  - assert (Hlts : map (close_fn_lifetime 0) l = l).
-    { induction l as [| lt lts IHlts]; simpl.
+  intros [u core].
+  destruct core as [| | | | s | i | s lts args | s lts args
+                   | ts r | l ts r | n o body | n bounds body | l rk t];
+    simpl; try reflexivity.
+  - assert (Hlts : map (close_fn_lifetime 0) lts = lts).
+    { induction lts as [| lt lts IHlts]; simpl.
       - reflexivity.
       - rewrite close_fn_lifetime_0, IHlts. reflexivity. }
     assert (Hargs :
@@ -219,8 +240,21 @@ Proof.
          match xs with
          | [] => []
          | x :: xs' => map_lifetimes_ty (close_fn_lifetime 0) x :: go xs'
-         end) l0 = l0).
-    { induction l0 as [| T Ts IHTs]; simpl; try reflexivity.
+         end) args = args).
+    { induction args as [| T Ts IHTs]; simpl; try reflexivity.
+      rewrite IH, IHTs. reflexivity. }
+    rewrite Hlts, Hargs. reflexivity.
+  - assert (Hlts : map (close_fn_lifetime 0) lts = lts).
+    { induction lts as [| lt lts IHlts]; simpl.
+      - reflexivity.
+      - rewrite close_fn_lifetime_0, IHlts. reflexivity. }
+    assert (Hargs :
+      (fix go (xs : list Ty) : list Ty :=
+         match xs with
+         | [] => []
+         | x :: xs' => map_lifetimes_ty (close_fn_lifetime 0) x :: go xs'
+         end) args = args).
+    { induction args as [| T Ts IHTs]; simpl; try reflexivity.
       rewrite IH, IHTs. reflexivity. }
     rewrite Hlts, Hargs. reflexivity.
   - assert (Hargs :
@@ -228,8 +262,8 @@ Proof.
          match xs with
          | [] => []
          | x :: xs' => map_lifetimes_ty (close_fn_lifetime 0) x :: go xs'
-         end) l = l).
-    { induction l as [| T Ts IHTs]; simpl; try reflexivity.
+         end) ts = ts).
+    { induction ts as [| T Ts IHTs]; simpl; try reflexivity.
       rewrite IH, IHTs. reflexivity. }
     rewrite Hargs, IH. reflexivity.
   - assert (Hargs :
@@ -237,8 +271,8 @@ Proof.
          match xs with
          | [] => []
          | x :: xs' => map_lifetimes_ty (close_fn_lifetime 0) x :: go xs'
-         end) l0 = l0).
-    { induction l0 as [| T Ts IHTs]; simpl; try reflexivity.
+         end) ts = ts).
+    { induction ts as [| T Ts IHTs]; simpl; try reflexivity.
       rewrite IH, IHTs. reflexivity. }
     rewrite close_fn_lifetime_0, Hargs, IH. reflexivity.
   - assert (Hbounds :
@@ -297,6 +331,8 @@ Fixpoint contains_lbound_ty (T : Ty) : bool :=
   match T with
   | MkTy _ (TStruct _ lts args) =>
       existsb contains_lbound_lifetime lts || existsb contains_lbound_ty args
+  | MkTy _ (TEnum _ lts args) =>
+      existsb contains_lbound_lifetime lts || existsb contains_lbound_ty args
   | MkTy _ (TFn ts r) =>
       existsb contains_lbound_ty ts || contains_lbound_ty r
   | MkTy _ (TClosure l ts r) =>
@@ -318,6 +354,8 @@ Fixpoint contains_lbound_ty (T : Ty) : bool :=
 Fixpoint ty_ref_free_b (T : Ty) : bool :=
   match T with
   | MkTy _ (TStruct _ _ args) =>
+      forallb ty_ref_free_b args
+  | MkTy _ (TEnum _ _ args) =>
       forallb ty_ref_free_b args
   | MkTy _ (TFn ts r) =>
       forallb ty_ref_free_b ts && ty_ref_free_b r

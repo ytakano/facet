@@ -147,6 +147,7 @@ type 'a typeCore =
 | TNamed of string
 | TParam of Big_int_Z.big_int
 | TStruct of string * lifetime list * 'a list
+| TEnum of string * lifetime list * 'a list
 | TFn of 'a list * 'a
 | TClosure of lifetime * 'a list * 'a
 | TForall of Big_int_Z.big_int * outlives_ctx * 'a
@@ -283,6 +284,14 @@ type struct_def = { struct_name : string;
                     struct_bounds : trait_bound list;
                     struct_fields : field_def list }
 
+type enum_variant_def = { enum_variant_name : string;
+                          enum_variant_fields : ty list }
+
+type enum_def = { enum_name : string; enum_lifetimes : Big_int_Z.big_int;
+                  enum_type_params : Big_int_Z.big_int;
+                  enum_bounds : trait_bound list;
+                  enum_variants : enum_variant_def list }
+
 type trait_def = { trait_name : string;
                    trait_type_params : Big_int_Z.big_int;
                    trait_bounds : trait_bound list }
@@ -292,7 +301,7 @@ type impl_def = { impl_lifetimes : Big_int_Z.big_int;
                   impl_trait_name : string; impl_trait_args : ty list;
                   impl_for_ty : ty }
 
-type global_env = { env_structs : struct_def list;
+type global_env = { env_structs : struct_def list; env_enums : enum_def list;
                     env_traits : trait_def list; env_impls : impl_def list;
                     env_local_bounds : trait_bound list; env_fns : fn_def list }
 
@@ -314,6 +323,10 @@ val lookup_struct_in : string -> struct_def list -> struct_def option
 
 val lookup_struct : string -> global_env -> struct_def option
 
+val lookup_enum_in : string -> enum_def list -> enum_def option
+
+val lookup_enum : string -> global_env -> enum_def option
+
 val lookup_field : string -> field_def list -> field_def option
 
 val lookup_trait_in : string -> trait_def list -> trait_def option
@@ -323,6 +336,8 @@ val lookup_trait : string -> global_env -> trait_def option
 val subst_type_params_ty : ty list -> ty -> ty
 
 val instantiate_struct_field_ty : lifetime list -> ty list -> field_def -> ty
+
+val instantiate_enum_variant_field_ty : lifetime list -> ty list -> ty -> ty
 
 val usage_eqb_decl : usage -> usage -> bool
 
@@ -889,9 +904,17 @@ val string_names_unique_b : string list -> bool
 
 val fn_name_strings : fn_def list -> string list
 
+val enum_variant_names : enum_def -> string list
+
 val top_level_names : global_env -> string list
 
 val top_level_names_unique_b : global_env -> bool
+
+val enum_variants_unique_b : enum_def -> bool
+
+val enum_variant_names_unique_b : global_env -> bool
+
+val global_names_unique_b : global_env -> bool
 
 val infer_env : global_env -> fn_def -> (ty * ctx) infer_result
 

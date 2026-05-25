@@ -21,6 +21,9 @@ they require branch-local lifetime opening and escape checks.
 
 Add enum types parallel to struct types.
 
+Status: implemented in the Rocq core model/checker/extraction path. Surface
+enum syntax and enum construction are intentionally left for later phases.
+
 - Add `TEnum name lifetime_args type_args` beside `TStruct`.
 - Add `enum_def` and `enum_variant_def` to the global program model.
 - Extend `global_env` with `env_enums` and enum lookup helpers.

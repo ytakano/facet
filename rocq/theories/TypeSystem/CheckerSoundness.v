@@ -227,8 +227,10 @@ Proof.
         (destruct u1, u2; simpl in Hu; try discriminate; reflexivity).
       subst u2.
       f_equal.
-      destruct c1 as [| | | | s1 | i1 | name1 lts1 args1 | ts1 r1 | lc1 cts1 cr1 | n1 Ω1 b1 | tn1 bs1 tb1 | l1 k1 t1],
-               c2 as [| | | | s2 | i2 | name2 lts2 args2 | ts2 r2 | lc2 cts2 cr2 | n2 Ω2 b2 | tn2 bs2 tb2 | l2 k2 t2];
+	      destruct c1 as [| | | | s1 | i1 | name1 lts1 args1 | name1 lts1 args1
+                     | ts1 r1 | lc1 cts1 cr1 | n1 Ω1 b1 | tn1 bs1 tb1 | l1 k1 t1],
+	               c2 as [| | | | s2 | i2 | name2 lts2 args2 | name2 lts2 args2
+                     | ts2 r2 | lc2 cts2 cr2 | n2 Ω2 b2 | tn2 bs2 tb2 | l2 k2 t2];
         simpl in Hc; try discriminate.
       + reflexivity.
       + reflexivity.
@@ -247,9 +249,22 @@ Proof.
         * destruct args2 as [| t2 args2']; [discriminate |].
           simpl in Hargs. apply andb_true_iff in Hargs as [Ht Htail].
           f_equal.
-          { apply IH; [simpl in Hlt; lia | exact Ht]. }
-          { apply IHargs; [simpl in *; lia | exact Htail]. }
-      + apply andb_true_iff in Hc as [Hlist Hr].
+	          { apply IH; [simpl in Hlt; lia | exact Ht]. }
+	          { apply IHargs; [simpl in *; lia | exact Htail]. }
+	      + apply andb_true_iff in Hc as [Hname_lts Hargs].
+	        apply andb_true_iff in Hname_lts as [Hname Hlts].
+	        apply String.eqb_eq in Hname. subst name2.
+	        apply lifetime_list_eqb_true in Hlts. subst lts2.
+	        f_equal.
+	        revert args2 Hlt Hargs.
+	        induction args1 as [| t1 args1' IHargs]; intros args2 Hlt Hargs.
+	        * destruct args2; [reflexivity | discriminate].
+	        * destruct args2 as [| t2 args2']; [discriminate |].
+	          simpl in Hargs. apply andb_true_iff in Hargs as [Ht Htail].
+	          f_equal.
+	          { apply IH; [simpl in Hlt; lia | exact Ht]. }
+	          { apply IHargs; [simpl in *; lia | exact Htail]. }
+	      + apply andb_true_iff in Hc as [Hlist Hr].
         assert (Heqr : r1 = r2) by
           (apply IH; [pose proof (ty_depth_fn_ret_lt u1 ts1 r1); lia | exact Hr]).
         subst r2. f_equal.
@@ -344,8 +359,10 @@ Lemma ty_core_eqb_true : forall c1 c2,
   ty_core_eqb c1 c2 = true -> c1 = c2.
 Proof.
   intros c1 c2 H.
-  destruct c1 as [| | | | s1 | i1 | name1 lts1 args1 | ts1 r1 | lc1 cts1 cr1 | n1 Ω1 b1 | tn1 bs1 tb1 | l1 k1 t1],
-           c2 as [| | | | s2 | i2 | name2 lts2 args2 | ts2 r2 | lc2 cts2 cr2 | n2 Ω2 b2 | tn2 bs2 tb2 | l2 k2 t2];
+  destruct c1 as [| | | | s1 | i1 | name1 lts1 args1 | name1 lts1 args1
+                  | ts1 r1 | lc1 cts1 cr1 | n1 Ω1 b1 | tn1 bs1 tb1 | l1 k1 t1],
+           c2 as [| | | | s2 | i2 | name2 lts2 args2 | name2 lts2 args2
+                  | ts2 r2 | lc2 cts2 cr2 | n2 Ω2 b2 | tn2 bs2 tb2 | l2 k2 t2];
     simpl in H; try discriminate.
   - reflexivity.
   - reflexivity.
@@ -353,6 +370,19 @@ Proof.
   - reflexivity.
   - apply String.eqb_eq in H. subst. reflexivity.
   - apply Nat.eqb_eq in H. subst. reflexivity.
+  - apply andb_true_iff in H as [Hname_lts Hargs].
+    apply andb_true_iff in Hname_lts as [Hname Hlts].
+    apply String.eqb_eq in Hname. subst name2.
+    apply lifetime_list_eqb_true in Hlts. subst lts2.
+    f_equal.
+    revert args2 Hargs.
+    induction args1 as [| t1 args1' IHargs]; intros args2 Hargs.
+    + destruct args2; [reflexivity | discriminate].
+    + destruct args2 as [| t2 args2']; [discriminate |].
+      simpl in Hargs. apply andb_true_iff in Hargs as [Ht Htail].
+      f_equal.
+      * apply ty_eqb_true. exact Ht.
+      * apply IHargs. exact Htail.
   - apply andb_true_iff in H as [Hname_lts Hargs].
     apply andb_true_iff in Hname_lts as [Hname Hlts].
     apply String.eqb_eq in Hname. subst name2.
@@ -483,8 +513,10 @@ Proof.
   - simpl in H. discriminate.
   - destruct T_actual as [ua ca], T_expected as [ue ce].
     simpl in H. apply andb_true_iff in H as [Hu Hc].
-    destruct ca as [| | | | sa | ia | struct_a ltsa argsa | tsa ra | lca ctsa cra | na Ωa body_a | tna boundsa tbody_a | la rka Ta],
-             ce as [| | | | se | ie | struct_e ltse argse | tse re | lce ctse cre | nb Ωb body_b | tnb boundsb tbody_b | lb rkb Tb];
+	    destruct ca as [| | | | sa | ia | struct_a ltsa argsa | enum_a ltsa argsa
+                     | tsa ra | lca ctsa cra | na Ωa body_a | tna boundsa tbody_a | la rka Ta],
+	             ce as [| | | | se | ie | struct_e ltse argse | enum_e ltse argse
+                     | tse re | lce ctse cre | nb Ωb body_b | tnb boundsb tbody_b | lb rkb Tb];
       simpl in Hc; try discriminate;
 	      try (apply TC_Core;
 	           [apply usage_sub_bool_sound; exact Hu
@@ -531,14 +563,21 @@ Proof.
 	      * exact Hu.
 	      * exact Hnob.
 	      * eapply IH. exact Hrec.
-	    + destruct Ωb as [|p Ωb]; [|discriminate].
-	      apply andb_true_iff in Hc as [Hnob Hrec].
-	      apply negb_true_iff in Hnob.
-	      eapply ty_compatible_forall_generalize_unused_sound.
-	      * exact Hu.
-	      * exact Hnob.
-	      * eapply IH. exact Hrec.
-	    + apply andb_true_iff in Hc as [Hargs Hret].
+		    + destruct Ωb as [|p Ωb]; [|discriminate].
+		      apply andb_true_iff in Hc as [Hnob Hrec].
+		      apply negb_true_iff in Hnob.
+		      eapply ty_compatible_forall_generalize_unused_sound.
+		      * exact Hu.
+		      * exact Hnob.
+		      * eapply IH. exact Hrec.
+		    + destruct Ωb as [|p Ωb]; [|discriminate].
+		      apply andb_true_iff in Hc as [Hnob Hrec].
+		      apply negb_true_iff in Hnob.
+		      eapply ty_compatible_forall_generalize_unused_sound.
+		      * exact Hu.
+		      * exact Hnob.
+		      * eapply IH. exact Hrec.
+		    + apply andb_true_iff in Hc as [Hargs Hret].
       apply TC_Fn.
       * apply usage_sub_bool_sound. exact Hu.
       * eapply ty_compatible_args_contra_b_sound.
@@ -1074,11 +1113,12 @@ Proof.
 	        * discriminate.
 	        * discriminate.
 	        * discriminate.
-	        * discriminate.
-	        * discriminate.
-	        * discriminate.
-	        * discriminate.
-        * destruct (check_arg_tys Ω arg_tys l0) as [err |] eqn:Hcheck; [discriminate |].
+		        * discriminate.
+		        * discriminate.
+		        * discriminate.
+		        * discriminate.
+		        * discriminate.
+	        * destruct (check_arg_tys Ω arg_tys l0) as [err |] eqn:Hcheck; [discriminate |].
           injection Hinfer as <- <-.
           eapply T_CallExpr_Fn.
           -- replace (MkTy (ty_usage Tcallee) (TFn l0 t)) with Tcallee.

@@ -20,6 +20,19 @@ Record struct_def : Type := MkStructDef {
   struct_fields    : list field_def
 }.
 
+Record enum_variant_def : Type := MkEnumVariantDef {
+  enum_variant_name   : string;
+  enum_variant_fields : list Ty
+}.
+
+Record enum_def : Type := MkEnumDef {
+  enum_name        : string;
+  enum_lifetimes   : nat;
+  enum_type_params : nat;
+  enum_bounds      : list trait_bound;
+  enum_variants    : list enum_variant_def
+}.
+
 Record trait_def : Type := MkTraitDef {
   trait_name        : string;
   trait_type_params : nat;
@@ -36,6 +49,7 @@ Record impl_def : Type := MkImplDef {
 
 Record global_env : Type := MkGlobalEnv {
   env_structs : list struct_def;
+  env_enums   : list enum_def;
   env_traits  : list trait_def;
   env_impls   : list impl_def;
   env_local_bounds : list trait_bound;
@@ -43,11 +57,11 @@ Record global_env : Type := MkGlobalEnv {
 }.
 
 Definition empty_global_env (fenv : list fn_def) : global_env :=
-  MkGlobalEnv [] [] [] [] fenv.
+  MkGlobalEnv [] [] [] [] [] fenv.
 
 Definition global_env_with_local_bounds
     (env : global_env) (bounds : list trait_bound) : global_env :=
-  MkGlobalEnv (env_structs env) (env_traits env) (env_impls env)
+  MkGlobalEnv (env_structs env) (env_enums env) (env_traits env) (env_impls env)
     bounds (env_fns env).
 
 Definition core_trait_ref_of_trait_ref (tr : trait_ref) : core_trait_ref Ty :=
@@ -81,6 +95,18 @@ Fixpoint lookup_struct_in (name : string) (structs : list struct_def) : option s
 
 Definition lookup_struct (name : string) (env : global_env) : option struct_def :=
   lookup_struct_in name (env_structs env).
+
+Fixpoint lookup_enum_in (name : string) (enums : list enum_def) : option enum_def :=
+  match enums with
+  | [] => None
+  | e :: rest =>
+      if String.eqb name (enum_name e)
+      then Some e
+      else lookup_enum_in name rest
+  end.
+
+Definition lookup_enum (name : string) (env : global_env) : option enum_def :=
+  lookup_enum_in name (env_enums env).
 
 Fixpoint lookup_field (name : string) (fields : list field_def) : option field_def :=
   match fields with
@@ -144,6 +170,14 @@ Fixpoint subst_type_params_ty (σ : list Ty) (T : Ty) {struct T} : Ty :=
         end
       in
       MkTy u (TStruct name lts (go args))
+  | MkTy u (TEnum name lts args) =>
+      let fix go (xs : list Ty) : list Ty :=
+        match xs with
+        | [] => []
+        | x :: xs' => subst_type_params_ty σ x :: go xs'
+        end
+      in
+      MkTy u (TEnum name lts (go args))
   | MkTy u (TFn ps r) =>
       let fix go (xs : list Ty) : list Ty :=
         match xs with
@@ -176,6 +210,30 @@ Definition instantiate_struct_ty
     (s : struct_def) (lifetime_args : list lifetime) (type_args : list Ty) : Ty :=
   MkTy (usage_max_list (struct_fields s))
        (TStruct (struct_name s) lifetime_args type_args).
+
+Definition instantiate_enum_variant_field_ty
+    (lifetime_args : list lifetime) (type_args : list Ty)
+    (T : Ty) : Ty :=
+  subst_type_params_ty type_args (apply_lt_ty lifetime_args T).
+
+Fixpoint usage_max_ty_list (tys : list Ty) : usage :=
+  match tys with
+  | [] => UUnrestricted
+  | T :: rest => usage_max_decl (ty_usage T) (usage_max_ty_list rest)
+  end.
+
+Fixpoint usage_max_enum_variants (variants : list enum_variant_def) : usage :=
+  match variants with
+  | [] => UUnrestricted
+  | v :: rest =>
+      usage_max_decl (usage_max_ty_list (enum_variant_fields v))
+        (usage_max_enum_variants rest)
+  end.
+
+Definition instantiate_enum_ty
+    (e : enum_def) (lifetime_args : list lifetime) (type_args : list Ty) : Ty :=
+  MkTy (usage_max_enum_variants (enum_variants e))
+       (TEnum (enum_name e) lifetime_args type_args).
 
 (* ------------------------------------------------------------------ *)
 (* Decidable matching helpers for generic impl lookup                    *)
@@ -223,6 +281,14 @@ Fixpoint ty_eqb_decl (T1 T2 : Ty) {struct T1} : bool :=
       | TNamed s1, TNamed s2 => String.eqb s1 s2
       | TParam i1, TParam i2 => Nat.eqb i1 i2
       | TStruct n1 lts1 args1, TStruct n2 lts2 args2 =>
+          String.eqb n1 n2 && lifetime_list_eqb_decl lts1 lts2 &&
+          (fix go (xs ys : list Ty) : bool :=
+             match xs, ys with
+             | [], [] => true
+             | x :: xs', y :: ys' => ty_eqb_decl x y && go xs' ys'
+             | _, _ => false
+             end) args1 args2
+      | TEnum n1 lts1 args1, TEnum n2 lts2 args2 =>
           String.eqb n1 n2 && lifetime_list_eqb_decl lts1 lts2 &&
           (fix go (xs ys : list Ty) : bool :=
              match xs, ys with
@@ -372,6 +438,13 @@ Fixpoint match_ty
                    | None => None
                    end
               else None
+          | TEnum n1 lts1 args1, TEnum n2 lts2 args2 =>
+              if String.eqb n1 n2
+              then match match_lifetimes lt_params lts1 lts2 st with
+                   | Some st' => match_tys ty_params lt_params fuel' args1 args2 st'
+                   | None => None
+                   end
+              else None
           | TFn ps1 r1, TFn ps2 r2 =>
               match match_tys ty_params lt_params fuel' ps1 ps2 st with
               | Some st' => match_ty ty_params lt_params fuel' r1 r2 st'
@@ -419,6 +492,8 @@ with match_tys
 Fixpoint ty_match_fuel (T : Ty) : nat :=
   match T with
   | MkTy _ (TStruct _ lts args) =>
+      S (List.length lts + fold_right (fun T acc => ty_match_fuel T + acc) 0 args)
+  | MkTy _ (TEnum _ lts args) =>
       S (List.length lts + fold_right (fun T acc => ty_match_fuel T + acc) 0 args)
   | MkTy _ (TFn ps r) =>
       S (ty_match_fuel r + fold_right (fun T acc => ty_match_fuel T + acc) 0 ps)

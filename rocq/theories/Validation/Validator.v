@@ -143,6 +143,7 @@ Fixpoint type_env_wf_b
           forallb (lifetime_wf_b lt_params bound_depth) lts &&
           forallb (type_env_wf_b structs ty_params lt_params bound_depth) args
       end
+  | MkTy _ (TEnum _ _ _) => false
   | MkTy _ (TFn args ret) =>
       forallb (type_env_wf_b structs ty_params lt_params bound_depth) args &&
       type_env_wf_b structs ty_params lt_params bound_depth ret
@@ -185,6 +186,13 @@ Fixpoint used_type_params_ty (T : Ty) : list nat :=
         | x :: rest => used_type_params_ty x ++ go rest
         end
       in go args
+  | MkTy _ (TEnum _ _ args) =>
+      let fix go (xs : list Ty) : list nat :=
+        match xs with
+        | [] => []
+        | x :: rest => used_type_params_ty x ++ go rest
+        end
+      in go args
   | MkTy _ (TFn args ret) =>
       let fix go (xs : list Ty) : list nat :=
         match xs with
@@ -208,6 +216,19 @@ Fixpoint used_type_params_ty (T : Ty) : list nat :=
 Fixpoint used_lifetime_vars_ty (T : Ty) : list nat :=
   match T with
   | MkTy _ (TStruct _ lts args) =>
+      let lifetime_indices :=
+        fold_right (fun l acc =>
+          match l with
+          | LVar i => i :: acc
+          | _ => acc
+          end) [] lts in
+      let fix go (xs : list Ty) : list nat :=
+        match xs with
+        | [] => lifetime_indices
+        | x :: rest => used_lifetime_vars_ty x ++ go rest
+        end
+      in go args
+  | MkTy _ (TEnum _ lts args) =>
       let lifetime_indices :=
         fold_right (fun l acc =>
           match l with
@@ -389,7 +410,7 @@ Definition ex_impl_show_box : impl_def :=
     (MkTy UUnrestricted (TStruct "Box" [] [MkTy UUnrestricted (TParam 0)])).
 
 Definition ex_env_show_box : global_env :=
-  MkGlobalEnv [ex_struct_box] [ex_trait_show] [ex_impl_show_box] [] [].
+  MkGlobalEnv [ex_struct_box] [] [ex_trait_show] [ex_impl_show_box] [] [].
 
 Example validate_env_show_box :
   validate_env ex_env_show_box = Some ex_env_show_box.
@@ -408,7 +429,7 @@ Definition ex_struct_b : struct_def :=
   MkStructDef "B" 0 0 [] [MkFieldDef "a" MImmutable (MkTy UUnrestricted (TStruct "A" [] []))].
 
 Definition ex_env_recursive : global_env :=
-  MkGlobalEnv [ex_struct_a; ex_struct_b] [] [] [] [].
+  MkGlobalEnv [ex_struct_a; ex_struct_b] [] [] [] [] [].
 
 Example validate_env_rejects_recursive_structs :
   validate_env ex_env_recursive = None.

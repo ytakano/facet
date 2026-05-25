@@ -25,6 +25,11 @@ Inductive ty_lifetime_equiv : Ty -> Ty -> Prop :=
       ty_lifetime_equiv
         (MkTy u (TStruct name lts_actual args_actual))
         (MkTy u (TStruct name lts_expected args_expected))
+  | TLE_Enum : forall u name lts_actual lts_expected args_actual args_expected,
+      Forall2 ty_lifetime_equiv args_actual args_expected ->
+      ty_lifetime_equiv
+        (MkTy u (TEnum name lts_actual args_actual))
+        (MkTy u (TEnum name lts_expected args_expected))
   | TLE_Fn : forall u params_actual params_expected ret_actual ret_expected,
       Forall2 ty_lifetime_equiv params_actual params_expected ->
       ty_lifetime_equiv ret_actual ret_expected ->
@@ -71,6 +76,15 @@ Fixpoint ty_lifetime_equiv_refl (T : Ty) : ty_lifetime_equiv T T :=
         end
       in
       TLE_Struct u name lts lts args args (go args)
+  | MkTy u (TEnum name lts args) =>
+      let fix go (xs : list Ty) : Forall2 ty_lifetime_equiv xs xs :=
+        match xs with
+        | [] => @Forall2_nil Ty Ty ty_lifetime_equiv
+        | x :: xs' => @Forall2_cons Ty Ty ty_lifetime_equiv x x xs' xs'
+            (ty_lifetime_equiv_refl x) (go xs')
+        end
+      in
+      TLE_Enum u name lts lts args args (go args)
   | MkTy u (TFn params ret) =>
       let fix go (xs : list Ty) : Forall2 ty_lifetime_equiv xs xs :=
         match xs with
@@ -130,6 +144,35 @@ Fixpoint ty_lifetime_equiv_apply_lt_ty
         end
       in
       TLE_Struct u name lts (map (apply_lt_lifetime σ) lts)
+        args
+        ((fix map_lt (xs : list Ty) : list Ty :=
+            match xs with
+            | [] => []
+            | x :: xs' => apply_lt_ty σ x :: map_lt xs'
+            end) args)
+        (go args)
+  | MkTy u (TEnum name lts args) =>
+      let fix go (xs : list Ty)
+          : Forall2 ty_lifetime_equiv
+              xs
+              ((fix map_lt (ys : list Ty) : list Ty :=
+                  match ys with
+                  | [] => []
+                  | y :: ys' => apply_lt_ty σ y :: map_lt ys'
+                  end) xs) :=
+        match xs with
+        | [] => @Forall2_nil Ty Ty ty_lifetime_equiv
+        | x :: xs' => @Forall2_cons Ty Ty ty_lifetime_equiv
+            x (apply_lt_ty σ x) xs'
+            ((fix map_lt (ys : list Ty) : list Ty :=
+                match ys with
+                | [] => []
+                | y :: ys' => apply_lt_ty σ y :: map_lt ys'
+                end) xs')
+            (ty_lifetime_equiv_apply_lt_ty σ x) (go xs')
+        end
+      in
+      TLE_Enum u name lts (map (apply_lt_lifetime σ) lts)
         args
         ((fix map_lt (xs : list Ty) : list Ty :=
             match xs with
@@ -237,6 +280,7 @@ Proof.
   - constructor.
   - constructor.
   - constructor. induction H; constructor; eauto.
+  - constructor. induction H; constructor; eauto.
   - constructor.
     + induction H; constructor; eauto.
     + apply IH. exact Heq.
@@ -290,6 +334,51 @@ Fixpoint ty_lifetime_equiv_apply_lt_ty_two
         end
       in
       TLE_Struct u name
+        (map (apply_lt_lifetime σ_actual) lts)
+        (map (apply_lt_lifetime σ_expected) lts)
+        ((fix map_lt (xs : list Ty) : list Ty :=
+            match xs with
+            | [] => []
+            | x :: xs' => apply_lt_ty σ_actual x :: map_lt xs'
+            end) args)
+        ((fix map_lt (xs : list Ty) : list Ty :=
+            match xs with
+            | [] => []
+            | x :: xs' => apply_lt_ty σ_expected x :: map_lt xs'
+            end) args)
+        (go args)
+  | MkTy u (TEnum name lts args) =>
+      let fix go (xs : list Ty)
+          : Forall2 ty_lifetime_equiv
+              ((fix map_lt (ys : list Ty) : list Ty :=
+                  match ys with
+                  | [] => []
+                  | y :: ys' => apply_lt_ty σ_actual y :: map_lt ys'
+                  end) xs)
+              ((fix map_lt (ys : list Ty) : list Ty :=
+                  match ys with
+                  | [] => []
+                  | y :: ys' => apply_lt_ty σ_expected y :: map_lt ys'
+                  end) xs) :=
+        match xs with
+        | [] => @Forall2_nil Ty Ty ty_lifetime_equiv
+        | x :: xs' => @Forall2_cons Ty Ty ty_lifetime_equiv
+            (apply_lt_ty σ_actual x) (apply_lt_ty σ_expected x)
+            ((fix map_lt (ys : list Ty) : list Ty :=
+                match ys with
+                | [] => []
+                | y :: ys' => apply_lt_ty σ_actual y :: map_lt ys'
+                end) xs')
+            ((fix map_lt (ys : list Ty) : list Ty :=
+                match ys with
+                | [] => []
+                | y :: ys' => apply_lt_ty σ_expected y :: map_lt ys'
+                end) xs')
+            (ty_lifetime_equiv_apply_lt_ty_two σ_actual σ_expected x)
+            (go xs')
+        end
+      in
+      TLE_Enum u name
         (map (apply_lt_lifetime σ_actual) lts)
         (map (apply_lt_lifetime σ_expected) lts)
         ((fix map_lt (xs : list Ty) : list Ty :=
@@ -477,6 +566,8 @@ Proof.
     subst_type_params_param_lifetime_equiv.
   - apply TLE_Struct.
     induction H; simpl; constructor; eauto.
+  - apply TLE_Enum.
+    induction H; simpl; constructor; eauto.
   - apply TLE_Fn.
     + induction H; simpl; constructor; eauto.
     + eapply IH; eassumption.
@@ -494,6 +585,20 @@ Lemma instantiate_struct_field_ty_lifetime_equiv :
 Proof.
   intros lts_actual lts_expected args_actual args_expected fdef Hargs.
   unfold instantiate_struct_field_ty.
+  apply subst_type_params_ty_lifetime_equiv.
+  - exact Hargs.
+  - apply ty_lifetime_equiv_apply_lt_ty_two.
+Qed.
+
+Lemma instantiate_enum_variant_field_ty_lifetime_equiv :
+  forall lts_actual lts_expected args_actual args_expected T,
+    Forall2 ty_lifetime_equiv args_actual args_expected ->
+    ty_lifetime_equiv
+      (instantiate_enum_variant_field_ty lts_actual args_actual T)
+      (instantiate_enum_variant_field_ty lts_expected args_expected T).
+Proof.
+  intros lts_actual lts_expected args_actual args_expected T Hargs.
+  unfold instantiate_enum_variant_field_ty.
   apply subst_type_params_ty_lifetime_equiv.
   - exact Hargs.
   - apply ty_lifetime_equiv_apply_lt_ty_two.

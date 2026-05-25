@@ -1,0 +1,11 @@
+enum BoolLike {
+  Yes,
+  No
+}
+
+fn score(b: unrestricted BoolLike) -> unrestricted isize {
+  match b {
+    Yes => 1,
+    No => true,
+  }
+}

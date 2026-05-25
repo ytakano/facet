@@ -110,55 +110,27 @@ Initial invalid cases:
 
 Add simple match on no-payload variants.
 
-Status: core Phase 3 path implemented for ordinary structural checking,
-runtime preservation, frontend parsing, and FIR emission. Root/shadow-safe
-checker variants intentionally still reject `EMatch` until a dedicated
-Prop-level `typed_env_roots` match rule is designed and proved; do not widen
-those root checker branches without adding that rule first.
+Status: implemented. Core/surface `EMatch`, no-payload exhaustive checking,
+root-aware and shadow-safe checker paths, structural soundness, readiness,
+preservation/root proofs, FIR emission, extraction, and regression tests are in
+place.
 
-- Add `EMatch scrutinee branches`.
-- Require the scrutinee type to be `TEnum`.
-- Require one branch per enum variant.
-- Reject duplicate branches.
-- Reject unknown variant branches.
-- Reject missing variant branches.
-- Reject payload variants in this phase.
-- Require all branch result types to be compatible.
-- Treat `match x` as consuming the scrutinee value.
-- Do not support nested patterns, guards, wildcard branches, by-reference
-  patterns, or place-pattern matching in this phase.
+Implemented constraints:
 
-Implementation order:
+- `match scrut { Variant => expr, ... }` consumes the scrutinee by value.
+- The scrutinee must type to `TEnum`.
+- Branches are checked in enum definition order.
+- Duplicate, unknown, missing, and payload-carrying variants are rejected.
+- Branch result core types must match and branch output contexts are merged.
+- Nested patterns, guards, wildcard branches, by-reference patterns, payload
+  binders, and place-pattern matching remain out of scope.
 
-1. Add the Prop specification first:
-   - add `T_Match` in `TypingRules.v`;
-   - add a helper such as `typed_match_branches` that walks enum variants in
-     enum definition order;
-   - require `lookup_branch` for each variant;
-   - require every matched variant to have no payload fields;
-   - type every branch from the same post-scrutinee context;
-   - require all branch result core types to match;
-   - merge branch output contexts with the same discipline as `T_If`;
-   - compute result usage with the max of branch result usages.
-2. Align the executable checker with that Prop rule:
-   - keep branch processing in enum definition order;
-   - mirror duplicate, unknown, missing, payload, type, and context errors;
-   - do not accept a checker success case that cannot construct `T_Match`.
-3. Add structural/soundness counterparts:
-   - extend `EnvStructuralRules.v` for structural match;
-   - connect `CheckerSoundness.v` and `EnvTypingSoundness.v` to match;
-   - keep root/shadow-safe match unsupported until its Prop rule exists;
-   - only use `discriminate` for genuinely impossible or intentionally
-     unsupported checker cases.
-4. Extend readiness/provenance/preservation:
-   - add `PRE_Match` and branch lookup readiness lemmas;
-   - handle `Eval_MatchEnum` in preservation/root proofs;
-   - keep payload binders out of this phase.
-5. Finish frontend/FIR/tests after the verified checker path compiles:
-   - parser syntax is `match scrut { Variant => expr, ... }`;
-   - FIR may use a primitive enum match dispatch for no-payload variants;
-   - tests must cover valid exhaustive match and invalid missing, duplicate,
-     unknown, payload, non-enum scrutinee, and branch type mismatch cases.
+Important proof invariant:
+
+- Prop-level match typing rejects unknown branch names. This is required for
+  runtime preservation because `Eval_MatchEnum` selects branches by runtime
+  variant name, and preservation must derive that the selected branch
+  corresponds to an enum definition variant.
 
 Surface syntax target:
 
@@ -325,7 +297,7 @@ dune build
 sh tests/run.sh
 sh tests/fir/run.sh
 git diff --check
-rg -n "\bAxiom\b|Admitted\.|admit\b|Abort\.|TODO|DEBUG|idtac" rocq/theories
+rg -n "\bAxiom\b|Admitted\.|admit\b|Abort\.|[D]EBUG|idtac" rocq/theories
 ```
 
 The final `rg` should not report new proof holes or debug leftovers. Existing

@@ -1111,6 +1111,10 @@ Inductive infer_result (A : Type) : Type :=
 Arguments infer_ok {_} _.
 Arguments infer_err {_} _.
 
+Definition infer_if_bool {A : Type} (b : bool)
+    (ok err : infer_result A) : infer_result A :=
+  if b then ok else err.
+
 Fixpoint tys_depth (ts : list Ty) : nat :=
   match ts with
   | [] => 0
@@ -2231,7 +2235,9 @@ Fixpoint infer_core_env_fuel (fuel : nat)
                                                           | infer_ok (T0, Γ0) =>
                                                               if ty_core_eqb (ty_core T0) (ty_core T_head)
                                                               then
-                                                                match infer_rest T_head rest0 with
+                                                                let rest_result :=
+                                                                  infer_rest T_head rest0 in
+                                                                match rest_result with
                                                                 | infer_err err => infer_err err
                                                                 | infer_ok (Γs, Ts) =>
                                                                     infer_ok (Γ0 :: Γs, T0 :: Ts)
@@ -3380,7 +3386,9 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
                                                           | infer_ok (T0, Σ0) =>
                                                               if ty_core_eqb (ty_core T0) (ty_core T_head)
                                                               then
-                                                                match infer_rest T_head rest0 with
+                                                                let rest_result :=
+                                                                  infer_rest T_head rest0 in
+                                                                match rest_result with
                                                                 | infer_err err => infer_err err
                                                                 | infer_ok (Σs, Ts) =>
                                                                     infer_ok (Σ0 :: Σs, T0 :: Ts)
@@ -3997,7 +4005,9 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
                                                           | infer_ok (T0, Σ0, e0') =>
                                                               if ty_core_eqb (ty_core T0) (ty_core T_head)
                                                               then
-                                                                match infer_rest T_head rest0 with
+                                                                let rest_result :=
+                                                                  infer_rest T_head rest0 in
+                                                                match rest_result with
                                                                 | infer_err err => infer_err err
                                                                 | infer_ok (Σs, Ts, bs) =>
                                                                     infer_ok
@@ -4886,7 +4896,123 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
               end
           end
       end
-  | EMatch _ _ => infer_err ErrNotImplemented
+  | EMatch scrut branches =>
+      match infer_core_env_state_fuel_roots fuel' env Ω n R Σ scrut with
+      | infer_err err => infer_err err
+      | infer_ok (T_scrut, Σ1, R1, roots_scrut) =>
+          match ty_core T_scrut with
+          | TEnum enum_name lts args =>
+              match lookup_enum enum_name env with
+              | None => infer_err (ErrEnumNotFound enum_name)
+              | Some edef =>
+                  if negb (Nat.eqb (Datatypes.length lts) (enum_lifetimes edef))
+                  then infer_err ErrArityMismatch
+                  else if negb (Nat.eqb (Datatypes.length args) (enum_type_params edef))
+                  then infer_err ErrArityMismatch
+                  else match check_struct_bounds env (enum_bounds edef) args with
+                  | Some err => infer_err err
+                  | None =>
+                  match first_duplicate_branch branches with
+                  | Some name => infer_err (ErrDuplicateVariant name)
+                  | None =>
+                      match first_unknown_variant_branch branches (enum_variants edef) with
+                      | Some name => infer_err (ErrVariantNotFound name)
+                      | None =>
+                          match first_missing_variant_branch (enum_variants edef) branches with
+                          | Some name => infer_err (ErrMissingVariant name)
+                          | None =>
+                              match first_payload_variant (enum_variants edef) with
+                              | Some name => infer_err (ErrMatchPayloadUnsupported name)
+                              | None =>
+                                  let fix infer_first (defs : list enum_variant_def)
+                                      : infer_result
+                                          (Ty * sctx * root_env * root_set *
+                                           list sctx * list Ty * list root_set) :=
+                                    match defs with
+                                    | [] => infer_err (ErrMissingVariant "")
+                                    | v :: rest =>
+                                        match lookup_branch_b (enum_variant_name v) branches with
+                                        | None => infer_err (ErrMissingVariant (enum_variant_name v))
+                                        | Some e_branch =>
+                                            match infer_core_env_state_fuel_roots
+                                                    fuel' env Ω n R1 Σ1 e_branch with
+                                            | infer_err err => infer_err err
+                                            | infer_ok (T_branch, Σ_branch, R_branch, roots_branch) =>
+                                                let fix infer_rest
+                                                    (T_head : Ty)
+                                                    (R_out : root_env)
+                                                    (defs0 : list enum_variant_def)
+                                                    : infer_result
+                                                        (list sctx * list Ty * list root_set) :=
+                                                  match defs0 with
+                                                  | [] => infer_ok ([], [], [])
+                                                  | v0 :: rest0 =>
+                                                      match lookup_branch_b (enum_variant_name v0) branches with
+                                                      | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                                                      | Some e0 =>
+                                                          match infer_core_env_state_fuel_roots
+                                                                  fuel' env Ω n R1 Σ1 e0 with
+                                                          | infer_err err => infer_err err
+                                                          | infer_ok (T0, Σ0, R0, roots0) =>
+                                                              if ty_core_eqb (ty_core T0) (ty_core T_head)
+                                                              then
+                                                                let rest_ok :=
+                                                                  let rest_result :=
+                                                                    infer_rest T_head R_out rest0 in
+                                                                  match rest_result with
+                                                                  | infer_err err => infer_err err
+                                                                  | infer_ok (Σs, Ts, rootss) =>
+                                                                      infer_ok
+                                                                        (Σ0 :: Σs,
+                                                                         T0 :: Ts,
+                                                                         roots0 :: rootss)
+                                                                  end
+                                                                in
+                                                                let context_error :=
+                                                                  infer_err ErrContextCheckFailed in
+                                                                infer_if_bool
+                                                                  (root_env_eqb R0 R_out)
+                                                                  rest_ok context_error
+                                                              else infer_err (ErrTypeMismatch (ty_core T0) (ty_core T_head))
+                                                          end
+                                                      end
+                                                  end
+                                                in
+                                                match infer_rest T_branch R_branch rest with
+                                                | infer_err err => infer_err err
+                                                | infer_ok (Σs, Ts, rootss) =>
+                                                    infer_ok
+                                                      (T_branch, Σ_branch, R_branch, roots_branch,
+                                                       Σs, Ts, rootss)
+                                                end
+                                            end
+                                        end
+                                    end
+                                  in
+                                  match infer_first (enum_variants edef) with
+                                  | infer_err err => infer_err err
+                                  | infer_ok (T_head, Σ_head, R_out, roots_head,
+                                              Σ_tail, Ts_tail, roots_tail) =>
+                                      match ctx_merge_many (ctx_of_sctx Σ_head)
+                                              (map ctx_of_sctx Σ_tail) with
+                                      | Some Γ_out =>
+                                          infer_ok
+                                            (MkTy (usage_max_tys_nonempty T_head Ts_tail)
+                                                  (ty_core T_head),
+                                             sctx_of_ctx Γ_out, R_out,
+                                             root_sets_union (roots_head :: roots_tail))
+                                      | None => infer_err ErrContextCheckFailed
+                                      end
+                                  end
+                              end
+                          end
+                      end
+                  end
+                  end
+              end
+          | c => infer_err (ErrNotAnEnum c)
+          end
+      end
   | ELet m x T e1 e2 =>
       match infer_core_env_state_fuel_roots fuel' env Ω n R Σ e1 with
       | infer_err err => infer_err err
@@ -5415,7 +5541,123 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
               end
           end
       end
-  | EMatch _ _ => infer_err ErrNotImplemented
+  | EMatch scrut branches =>
+      match infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ scrut with
+      | infer_err err => infer_err err
+      | infer_ok (T_scrut, Σ1, R1, roots_scrut) =>
+          match ty_core T_scrut with
+          | TEnum enum_name lts args =>
+              match lookup_enum enum_name env with
+              | None => infer_err (ErrEnumNotFound enum_name)
+              | Some edef =>
+                  if negb (Nat.eqb (Datatypes.length lts) (enum_lifetimes edef))
+                  then infer_err ErrArityMismatch
+                  else if negb (Nat.eqb (Datatypes.length args) (enum_type_params edef))
+                  then infer_err ErrArityMismatch
+                  else match check_struct_bounds env (enum_bounds edef) args with
+                  | Some err => infer_err err
+                  | None =>
+                  match first_duplicate_branch branches with
+                  | Some name => infer_err (ErrDuplicateVariant name)
+                  | None =>
+                      match first_unknown_variant_branch branches (enum_variants edef) with
+                      | Some name => infer_err (ErrVariantNotFound name)
+                      | None =>
+                          match first_missing_variant_branch (enum_variants edef) branches with
+                          | Some name => infer_err (ErrMissingVariant name)
+                          | None =>
+                              match first_payload_variant (enum_variants edef) with
+                              | Some name => infer_err (ErrMatchPayloadUnsupported name)
+                              | None =>
+                                  let fix infer_first (defs : list enum_variant_def)
+                                      : infer_result
+                                          (Ty * sctx * root_env * root_set *
+                                           list sctx * list Ty * list root_set) :=
+                                    match defs with
+                                    | [] => infer_err (ErrMissingVariant "")
+                                    | v :: rest =>
+                                        match lookup_branch_b (enum_variant_name v) branches with
+                                        | None => infer_err (ErrMissingVariant (enum_variant_name v))
+                                        | Some e_branch =>
+                                            match infer_core_env_state_fuel_roots_shadow_safe
+                                                    fuel' env Ω n R1 Σ1 e_branch with
+                                            | infer_err err => infer_err err
+                                            | infer_ok (T_branch, Σ_branch, R_branch, roots_branch) =>
+                                                let fix infer_rest
+                                                    (T_head : Ty)
+                                                    (R_out : root_env)
+                                                    (defs0 : list enum_variant_def)
+                                                    : infer_result
+                                                        (list sctx * list Ty * list root_set) :=
+                                                  match defs0 with
+                                                  | [] => infer_ok ([], [], [])
+                                                  | v0 :: rest0 =>
+                                                      match lookup_branch_b (enum_variant_name v0) branches with
+                                                      | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                                                      | Some e0 =>
+                                                          match infer_core_env_state_fuel_roots_shadow_safe
+                                                                  fuel' env Ω n R1 Σ1 e0 with
+                                                          | infer_err err => infer_err err
+                                                          | infer_ok (T0, Σ0, R0, roots0) =>
+                                                              if ty_core_eqb (ty_core T0) (ty_core T_head)
+                                                              then
+                                                                let rest_ok :=
+                                                                  let rest_result :=
+                                                                    infer_rest T_head R_out rest0 in
+                                                                  match rest_result with
+                                                                  | infer_err err => infer_err err
+                                                                  | infer_ok (Σs, Ts, rootss) =>
+                                                                      infer_ok
+                                                                        (Σ0 :: Σs,
+                                                                         T0 :: Ts,
+                                                                         roots0 :: rootss)
+                                                                  end
+                                                                in
+                                                                let context_error :=
+                                                                  infer_err ErrContextCheckFailed in
+                                                                infer_if_bool
+                                                                  (root_env_eqb R0 R_out)
+                                                                  rest_ok context_error
+                                                              else infer_err (ErrTypeMismatch (ty_core T0) (ty_core T_head))
+                                                          end
+                                                      end
+                                                  end
+                                                in
+                                                match infer_rest T_branch R_branch rest with
+                                                | infer_err err => infer_err err
+                                                | infer_ok (Σs, Ts, rootss) =>
+                                                    infer_ok
+                                                      (T_branch, Σ_branch, R_branch, roots_branch,
+                                                       Σs, Ts, rootss)
+                                                end
+                                            end
+                                        end
+                                    end
+                                  in
+                                  match infer_first (enum_variants edef) with
+                                  | infer_err err => infer_err err
+                                  | infer_ok (T_head, Σ_head, R_out, roots_head,
+                                              Σ_tail, Ts_tail, roots_tail) =>
+                                      match ctx_merge_many (ctx_of_sctx Σ_head)
+                                              (map ctx_of_sctx Σ_tail) with
+                                      | Some Γ_out =>
+                                          infer_ok
+                                            (MkTy (usage_max_tys_nonempty T_head Ts_tail)
+                                                  (ty_core T_head),
+                                             sctx_of_ctx Γ_out, R_out,
+                                             root_sets_union (roots_head :: roots_tail))
+                                      | None => infer_err ErrContextCheckFailed
+                                      end
+                                  end
+                              end
+                          end
+                      end
+                  end
+                  end
+              end
+          | c => infer_err (ErrNotAnEnum c)
+          end
+      end
   | ELet m x T e1 e2 =>
       match infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ e1 with
       | infer_err err => infer_err err

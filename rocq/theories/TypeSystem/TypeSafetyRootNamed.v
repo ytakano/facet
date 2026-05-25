@@ -132,7 +132,8 @@ Proof.
         as [Hstore' _].
       assert (Hctx_named : root_env_ctx_roots_named R Σ)
         by (eapply root_env_store_roots_named_to_ctx; eassumption).
-      destruct (proj2 (proj2 (typed_roots_ctx_roots_named_mutual env Ω n))
+      destruct (proj1 (proj2 (proj2
+                  (typed_roots_ctx_roots_named_mutual env Ω n)))
                   lts args R Σ fields defs Σ' R' roots Htyped Hrn
                   Hctx_named)
         as [Henv_named Hroot_named].
@@ -259,7 +260,8 @@ Proof.
         as [Hstore' _].
       assert (Hctx_named : root_env_ctx_keys_named R Σ)
         by (eapply root_env_store_keys_named_to_ctx; eassumption).
-      pose proof (proj2 (proj2 (typed_roots_ctx_keys_named_mutual env Ω n))
+      pose proof (proj1 (proj2 (proj2
+                    (typed_roots_ctx_keys_named_mutual env Ω n)))
                     lts args R Σ fields defs Σ' R' roots Htyped Hrn
                     Hctx_named)
         as Henv_named.

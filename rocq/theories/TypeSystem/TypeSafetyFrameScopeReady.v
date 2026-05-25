@@ -5,6 +5,38 @@ From Facet.TypeSystem Require Export TypeSafetyParamScopeReady.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
+Lemma typed_match_tail_roots_lookup_frame_ready :
+  forall env Ω n R Σ branches variants expected_core R_out Σs Ts rootss
+      name vdef e,
+    typed_match_tail_roots env Ω n R Σ branches variants
+      expected_core R_out Σs Ts rootss ->
+    lookup_enum_variant name variants = Some vdef ->
+    lookup_expr_branch name branches = Some e ->
+    exists T Σv Rv roots,
+      typed_env_roots env Ω n R Σ e T Σv Rv roots /\
+      ty_core T = expected_core /\
+      root_env_equiv Rv R_out /\
+      In Σv Σs /\
+      In roots rootss.
+Proof.
+  intros env Ω n R Σ branches variants expected_core R_out Σs Ts rootss
+    name vdef e Htail.
+  induction Htail as
+    [R Σ branches expected_core R_out
+    |R Σ branches v rest e0 T Σv Rv R_out roots Σs Ts rootss
+       expected_core Hfields Hlookup Htyped Hcore Hequiv Htail IHtail];
+    intros Hvariant Hbranch.
+  - simpl in Hvariant. discriminate.
+  - simpl in Hvariant.
+    destruct (String.eqb name (enum_variant_name v)) eqn:Hname.
+    + apply String.eqb_eq in Hname. subst name.
+      rewrite Hlookup in Hbranch. inversion Hbranch; subst e.
+      exists T, Σv, Rv, roots. repeat split; simpl; auto.
+    + destruct (IHtail Hvariant Hbranch) as
+        [T' [Σ' [Rv' [roots' [Htyped' [Hcore' [Hequiv' [HinΣ Hin]]]]]]]].
+      exists T', Σ', Rv', roots'. repeat split; simpl; auto.
+Qed.
+
 Definition frame_scope_roots_ready_result
     (ps : list param) (R : root_env) (Σ : sctx) (s : store)
     (frame : store) : Prop :=
@@ -1031,8 +1063,81 @@ Proof.
 	      * exact Hfresh3.
   - intros s s_scrut s' scrut branches enum_name variant_name e_branch v
       Heval_scrut IHscrut Hlookup Heval_branch IHbranch
-      Ω n R Σ T Σ' R' roots ps frame Hready Htyped _ _ _ _ _ _.
-    inversion Hready; subst. inversion Htyped.
+      Ω n R Σ T Σ' R' roots ps frame Hready Htyped Hcover Hroots
+      Hshadow Hrn Hscope Hfresh.
+    dependent destruction Hready.
+    dependent destruction Htyped.
+    destruct (proj1 eval_preserves_roots_ready_mutual env s scrut s_scrut
+                (VEnum enum_name variant_name []) Heval_scrut Ω n R Σ
+                T_scrut Σ1 R1 roots_scrut Hready Hroots Hshadow Hrn Htyped1)
+      as [Hroots1 [_ [Hshadow1 Hrn1]]].
+    destruct (IHscrut Ω n R Σ T_scrut Σ1 R1 roots_scrut ps frame
+                Hready Htyped1 Hcover Hroots Hshadow Hrn Hscope Hfresh)
+      as [Hcover1 [Hscope1 Hfresh1]].
+    assert (Hready_branch : provenance_ready_expr e_branch).
+    { unfold lookup_match_branch in Hlookup.
+      eapply provenance_ready_fields_lookup; eassumption. }
+    unfold lookup_match_branch in Hlookup.
+    assert (Hlookup_branch :
+      lookup_expr_branch variant_name branches = Some e_branch).
+    { rewrite lookup_expr_branch_lookup_expr_field. exact Hlookup. }
+    assert (Hvariant_known :
+      exists vdef, lookup_enum_variant variant_name (enum_variants edef) =
+        Some vdef).
+    { eapply first_unknown_variant_branch_lookup_some; eassumption. }
+    rewrite H6 in Hvariant_known. simpl in Hvariant_known.
+    assert (Hsame_head_final :
+      sctx_same_bindings Σ_head (sctx_of_ctx Γ_out)).
+    { eapply ctx_merge_many_same_bindings_left. exact H10. }
+    destruct (String.eqb variant_name (enum_variant_name v_head))
+      eqn:Hvariant_head.
+    + apply String.eqb_eq in Hvariant_head. subst variant_name.
+      rewrite H8 in Hlookup_branch. inversion Hlookup_branch; subst e_branch.
+      destruct (IHbranch Ω n R1 Σ1 T_head Σ_head R_out roots_head ps frame
+                  Hready_branch Htyped2 Hcover1 Hroots1 Hshadow1 Hrn1
+                  Hscope1 Hfresh1)
+        as [Hcover_branch [Hscope_branch Hfresh_branch]].
+      repeat split.
+      * exact Hcover_branch.
+      * eapply store_frame_scope_same_bindings.
+        -- exact Hsame_head_final.
+        -- exact Hscope_branch.
+      * eapply store_frame_static_fresh_same_bindings.
+        -- exact Hsame_head_final.
+        -- exact Hfresh_branch.
+    + destruct Hvariant_known as [vdef_tail Hvariant_tail].
+      destruct (typed_match_tail_roots_lookup_frame_ready env Ω n R1 Σ1 branches
+                  v_tail (ty_core T_head) R_out Σ_tail Ts_tail roots_tail
+                  variant_name vdef_tail e_branch H9 Hvariant_tail
+                  Hlookup_branch)
+        as [T_branch [Σ_branch [R_branch [roots_branch
+             [Htyped_branch [_ [Hequiv_branch [_ _]]]]]]]].
+      destruct (IHbranch Ω n R1 Σ1 T_branch Σ_branch R_branch roots_branch
+                  ps frame Hready_branch Htyped_branch Hcover1 Hroots1 Hshadow1
+                  Hrn1 Hscope1 Hfresh1)
+        as [Hcover_branch [Hscope_branch Hfresh_branch]].
+      assert (Hsame_1_head : sctx_same_bindings Σ1 Σ_head).
+      { eapply typed_env_structural_same_bindings.
+        eapply typed_env_roots_structural. exact Htyped2. }
+      assert (Hsame_branch_1 : sctx_same_bindings Σ_branch Σ1).
+      { apply sctx_same_bindings_sym.
+        eapply typed_env_structural_same_bindings.
+        eapply typed_env_roots_structural. exact Htyped_branch. }
+      assert (Hsame_branch_final :
+        sctx_same_bindings Σ_branch (sctx_of_ctx Γ_out)).
+      { eapply sctx_same_bindings_trans.
+        - exact Hsame_branch_1.
+        - eapply sctx_same_bindings_trans; eassumption. }
+      repeat split.
+      * eapply root_env_covers_params_equiv.
+        -- exact Hequiv_branch.
+        -- exact Hcover_branch.
+      * eapply store_frame_scope_same_bindings.
+        -- exact Hsame_branch_final.
+        -- exact Hscope_branch.
+      * eapply store_frame_static_fresh_same_bindings.
+        -- exact Hsame_branch_final.
+        -- exact Hfresh_branch.
 		  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
 		      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
 		      roots ps frame Hready _ _ _ _ _ _ _.

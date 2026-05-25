@@ -583,8 +583,47 @@ Proof.
 	    + exists frame3. exact Hscope3.
   - intros s s_scrut s' scrut branches enum_name variant_name e_branch v
       Heval_scrut IHscrut Hlookup Heval_branch IHbranch
-      Ω n R Σ T Σ' R' roots ps frame Hready Htyped _ _.
-    inversion Hready; subst. inversion Htyped.
+      Ω n R Σ T Σ' R' roots ps frame Hready Htyped Hcover Hscope.
+    dependent destruction Hready.
+    dependent destruction Htyped.
+    destruct (IHscrut Ω n R Σ T_scrut Σ1 R1 roots_scrut ps frame
+                Hready Htyped1 Hcover Hscope)
+      as [Hcover1 [frame1 Hscope1]].
+    assert (Hready_branch : provenance_ready_expr e_branch).
+    { unfold lookup_match_branch in Hlookup.
+      eapply provenance_ready_fields_lookup; eassumption. }
+    unfold lookup_match_branch in Hlookup.
+    assert (Hlookup_branch :
+      lookup_expr_branch variant_name branches = Some e_branch).
+    { rewrite lookup_expr_branch_lookup_expr_field. exact Hlookup. }
+    assert (Hvariant_known :
+      exists vdef, lookup_enum_variant variant_name (enum_variants edef) =
+        Some vdef).
+    { eapply first_unknown_variant_branch_lookup_some; eassumption. }
+    rewrite H6 in Hvariant_known. simpl in Hvariant_known.
+    destruct (String.eqb variant_name (enum_variant_name v_head))
+      eqn:Hvariant_head.
+    + apply String.eqb_eq in Hvariant_head. subst variant_name.
+      rewrite H8 in Hlookup_branch. inversion Hlookup_branch; subst e_branch.
+      destruct (IHbranch Ω n R1 Σ1 T_head Σ_head R_out roots_head ps frame1
+                  Hready_branch Htyped2 Hcover1 Hscope1)
+        as [Hcover_branch [frame_branch Hscope_branch]].
+      split; [exact Hcover_branch | exists frame_branch; exact Hscope_branch].
+    + destruct Hvariant_known as [vdef_tail Hvariant_tail].
+      destruct (typed_match_tail_roots_lookup_ready env Ω n R1 Σ1 branches
+                  v_tail (ty_core T_head) R_out Σ_tail Ts_tail roots_tail
+                  variant_name vdef_tail e_branch H9 Hvariant_tail
+                  Hlookup_branch)
+        as [T_branch [Σ_branch [R_branch [roots_branch
+             [Htyped_branch [_ [Hequiv_branch _]]]]]]].
+      destruct (IHbranch Ω n R1 Σ1 T_branch Σ_branch R_branch roots_branch
+                  ps frame1 Hready_branch Htyped_branch Hcover1 Hscope1)
+        as [Hcover_branch [frame_branch Hscope_branch]].
+      split.
+      * eapply root_env_covers_params_equiv.
+        -- exact Hequiv_branch.
+        -- exact Hcover_branch.
+      * exists frame_branch. exact Hscope_branch.
 		  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
 		      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
 		      roots ps frame Hready _ _ _.

@@ -5073,6 +5073,41 @@ Proof.
         -- exact Hin.
 Qed.
 
+Lemma alpha_rename_match_branches_first_unknown_variant_branch :
+  forall ρ used branches branchesr used' defs,
+  ((fix go (used0 : list ident) (branches0 : list (string * expr))
+      : list (string * expr) * list ident :=
+      match branches0 with
+      | [] => ([], used0)
+      | (name0, e0) :: rest =>
+          let (e0', used1) := alpha_rename_expr ρ used0 e0 in
+          let (rest', used2) := go used1 rest in
+          ((name0, e0') :: rest', used2)
+      end) used branches) = (branchesr, used') ->
+  first_unknown_variant_branch branches defs = None ->
+  first_unknown_variant_branch branchesr defs = None.
+Proof.
+  intros ρ used branches.
+  revert used.
+  induction branches as [| [name e] rest IH]; intros used branchesr used' defs
+    Hrename Hunknown; simpl in Hrename, Hunknown.
+  - injection Hrename as <- <-. reflexivity.
+  - destruct (alpha_rename_expr ρ used e) as [er used1] eqn:Her.
+    destruct ((fix go (used0 : list ident) (branches0 : list (string * expr))
+        : list (string * expr) * list ident :=
+        match branches0 with
+        | [] => ([], used0)
+        | (name0, e0) :: rest0 =>
+            let (e0', used2) := alpha_rename_expr ρ used0 e0 in
+            let (rest', used3) := go used2 rest0 in
+            ((name0, e0') :: rest', used3)
+        end) used1 rest) as [restr used2] eqn:Hrest.
+    injection Hrename as <- <-.
+    simpl.
+    destruct (lookup_enum_variant name defs) as [vdef |] eqn:Hlookup;
+      [eapply IH; eauto | discriminate].
+Qed.
+
 Lemma lookup_expr_branch_disjoint_alpha :
   forall name branches e ρ,
     lookup_expr_branch name branches = Some e ->
@@ -5948,11 +5983,11 @@ Proof.
         { intros y Hy. eapply alpha_rename_expr_used_extends; eauto. }
         destruct (alpha_rename_match_branches_lookup_exists_forward
           ρ used_scrut branches branchesr used_branches
-          (enum_variant_name v_head) e_head Hbranches H6)
+          (enum_variant_name v_head) e_head Hbranches H7)
           as [e_headr [used_head [used_head_out
             [Hlookup_head_r [Hrename_head Hused_head]]]]].
         assert (Hhead_in : In (enum_variant_name v_head, e_head) branches).
-        { eapply lookup_expr_branch_in_alpha. exact H6. }
+        { eapply lookup_expr_branch_in_alpha. exact H7. }
         destruct (IH env Ω n ρ Σ1 Σr1 e_head e_headr used_head
           used_head_out T_head Σ_head) as [Σ_headr [Hhead_r Hctx_head_r]].
         * pose proof (expr_size_match_branch_lt scrut branches
@@ -5989,15 +6024,16 @@ Proof.
           -- exact Hrange_used1.
           -- exact Hdisj_branches.
           -- exact Hbranches.
-          -- exact H7.
+          -- exact H8.
           -- destruct (ctx_alpha_merge_many_forward ρ
                Σ_head Σ_headr Σ_tail Σ_tailr Γ_out)
                as [Γ_outr [Hmerge_r Hctx_merge_r]].
              ++ exact Hctx_head_r.
              ++ exact Hctx_tail_r.
-             ++ exact H8.
+             ++ exact H9.
              ++ exists (sctx_of_ctx Γ_outr). split.
                 ** eapply TES_Match; eauto.
+                   eapply alpha_rename_match_branches_first_unknown_variant_branch; eauto.
                 ** unfold sctx_of_ctx. exact Hctx_merge_r.
       + destruct ((fix go (used0 : list ident) (args0 : list expr)
                     : list expr * list ident :=
@@ -6693,6 +6729,27 @@ Inductive typed_env_roots_shadow_safe
         (EEnum enum_name variant_name lts args payloads)
         (instantiate_enum_ty edef lts args) Σ' R'
         (root_sets_union payload_roots)
+  | TERS_Match : forall R R1 R_out Σ Σ1 Σ_head Σ_tail Γ_out scrut branches
+        enum_name lts args edef v_head v_tail e_head T_scrut T_head Ts_tail
+        roots_scrut roots_head roots_tail,
+      typed_env_roots_shadow_safe env Ω n R Σ scrut T_scrut Σ1 R1 roots_scrut ->
+      ty_core T_scrut = TEnum enum_name lts args ->
+      Program.lookup_enum enum_name env = Some edef ->
+      Datatypes.length lts = Program.enum_lifetimes edef ->
+      Datatypes.length args = Program.enum_type_params edef ->
+      check_struct_bounds env (Program.enum_bounds edef) args = None ->
+      first_unknown_variant_branch branches (Program.enum_variants edef) = None ->
+      Program.enum_variants edef = v_head :: v_tail ->
+      Program.enum_variant_fields v_head = [] ->
+      lookup_expr_branch (Program.enum_variant_name v_head) branches = Some e_head ->
+      typed_env_roots_shadow_safe env Ω n R1 Σ1 e_head T_head Σ_head R_out roots_head ->
+      typed_match_tail_roots_shadow_safe env Ω n R1 Σ1 branches v_tail
+        (ty_core T_head) R_out Σ_tail Ts_tail roots_tail ->
+      ctx_merge_many (ctx_of_sctx Σ_head) (map ctx_of_sctx Σ_tail) =
+        Some Γ_out ->
+      typed_env_roots_shadow_safe env Ω n R Σ (EMatch scrut branches)
+        (MkTy (usage_max_tys_nonempty T_head Ts_tail) (ty_core T_head))
+        (sctx_of_ctx Γ_out) R_out (root_sets_union (roots_head :: roots_tail))
   | TERS_Let : forall R R1 R2 Σ Σ1 Σ2 m x T T1 e1 e2 T2
       roots1 roots2,
       typed_env_roots_shadow_safe env Ω n R Σ e1 T1 Σ1 R1 roots1 ->
@@ -6820,18 +6877,39 @@ with typed_fields_roots_shadow_safe
       typed_fields_roots_shadow_safe env Ω n lts args R1 Σ1 fields rest
         Σ2 R2 roots_rest ->
       typed_fields_roots_shadow_safe env Ω n lts args R Σ fields (f :: rest)
-        Σ2 R2 (root_set_union roots_field roots_rest).
+        Σ2 R2 (root_set_union roots_field roots_rest)
+with typed_match_tail_roots_shadow_safe
+    (env : Program.global_env) (Ω : Lifetime.outlives_ctx) (n : nat)
+    : root_env -> sctx -> list (string * expr) -> list Program.enum_variant_def ->
+      TypeCore Ty -> root_env -> list sctx -> list Ty -> list root_set -> Prop :=
+  | TERSMatchTail_Nil : forall R Σ branches expected_core R_out,
+      typed_match_tail_roots_shadow_safe env Ω n R Σ branches []
+        expected_core R_out [] [] []
+  | TERSMatchTail_Cons : forall R Σ branches v rest e T Σv Rv R_out roots
+      Σs Ts rootss expected_core,
+      Program.enum_variant_fields v = [] ->
+      lookup_expr_branch (Program.enum_variant_name v) branches = Some e ->
+      typed_env_roots_shadow_safe env Ω n R Σ e T Σv Rv roots ->
+      ty_core T = expected_core ->
+      root_env_equiv Rv R_out ->
+      typed_match_tail_roots_shadow_safe env Ω n R Σ branches rest
+        expected_core R_out Σs Ts rootss ->
+      typed_match_tail_roots_shadow_safe env Ω n R Σ branches (v :: rest)
+        expected_core R_out (Σv :: Σs) (T :: Ts) (roots :: rootss).
 
 Scheme typed_env_roots_shadow_safe_ind' :=
   Induction for typed_env_roots_shadow_safe Sort Prop
 with typed_args_roots_shadow_safe_ind' :=
   Induction for typed_args_roots_shadow_safe Sort Prop
 with typed_fields_roots_shadow_safe_ind' :=
-  Induction for typed_fields_roots_shadow_safe Sort Prop.
+  Induction for typed_fields_roots_shadow_safe Sort Prop
+with typed_match_tail_roots_shadow_safe_ind' :=
+  Induction for typed_match_tail_roots_shadow_safe Sort Prop.
 Combined Scheme typed_roots_shadow_safe_ind
   from typed_env_roots_shadow_safe_ind',
     typed_args_roots_shadow_safe_ind',
-    typed_fields_roots_shadow_safe_ind'.
+    typed_fields_roots_shadow_safe_ind',
+    typed_match_tail_roots_shadow_safe_ind'.
 
 Lemma typed_roots_shadow_safe_roots :
   forall env Ω n,
@@ -6844,7 +6922,12 @@ Lemma typed_roots_shadow_safe_roots :
   (forall lts args R Σ fields defs Σ' R' roots,
     typed_fields_roots_shadow_safe env Ω n lts args R Σ fields defs
       Σ' R' roots ->
-    typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots).
+    typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots) /\
+  (forall R Σ branches variants expected_core R_out Σs Ts rootss,
+    typed_match_tail_roots_shadow_safe env Ω n R Σ branches variants
+      expected_core R_out Σs Ts rootss ->
+    typed_match_tail_roots env Ω n R Σ branches variants expected_core
+      R_out Σs Ts rootss).
 Proof.
   intros env Ω n.
   apply typed_roots_shadow_safe_ind; intros; subst; try solve [econstructor; eauto].
@@ -6877,8 +6960,20 @@ Lemma typed_fields_roots_shadow_safe_roots :
     typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots.
 Proof.
   intros env Ω n lts args R Σ fields defs Σ' R' roots H.
-  exact (proj2 (proj2 (typed_roots_shadow_safe_roots env Ω n))
+  exact (proj1 (proj2 (proj2 (typed_roots_shadow_safe_roots env Ω n)))
     lts args R Σ fields defs Σ' R' roots H).
+Qed.
+
+Lemma typed_match_tail_roots_shadow_safe_roots :
+  forall env Ω n R Σ branches variants expected_core R_out Σs Ts rootss,
+    typed_match_tail_roots_shadow_safe env Ω n R Σ branches variants
+      expected_core R_out Σs Ts rootss ->
+    typed_match_tail_roots env Ω n R Σ branches variants expected_core
+      R_out Σs Ts rootss.
+Proof.
+  intros env Ω n R Σ branches variants expected_core R_out Σs Ts rootss H.
+  exact (proj2 (proj2 (proj2 (typed_roots_shadow_safe_roots env Ω n)))
+    R Σ branches variants expected_core R_out Σs Ts rootss H).
 Qed.
 
 Theorem typed_roots_shadow_safe_instantiate_fresh_mutual :
@@ -6920,7 +7015,22 @@ Theorem typed_roots_shadow_safe_instantiate_fresh_mutual :
           Σ' R0' roots0 /\
         root_env_no_shadow R0' /\
         root_env_equiv R0' (root_env_instantiate rho R') /\
-        root_set_equiv roots0 (root_set_instantiate rho roots)).
+        root_set_equiv roots0 (root_set_instantiate rho roots)) /\
+  (forall R Σ branches variants expected_core R_out Σs Ts rootss,
+    typed_match_tail_roots_shadow_safe env Ω n R Σ branches variants
+      expected_core R_out Σs Ts rootss ->
+    root_subst_images_exclude_names (fields_local_store_names branches) rho ->
+    forall R0 R0_out,
+      root_env_no_shadow R ->
+      root_env_no_shadow R0 ->
+      root_env_no_shadow R0_out ->
+      root_env_equiv R0 (root_env_instantiate rho R) ->
+      root_env_equiv R0_out (root_env_instantiate rho R_out) ->
+      exists rootss0,
+        typed_match_tail_roots_shadow_safe env Ω n R0 Σ branches variants
+          expected_core R0_out Σs Ts rootss0 /\
+        Forall2 root_set_equiv rootss0
+          (map (root_set_instantiate rho) rootss)).
 Proof.
   intros env Ω n rho.
   apply typed_roots_shadow_safe_ind.
@@ -7085,6 +7195,45 @@ Proof.
     + eapply root_set_equiv_trans.
       * apply root_sets_union_equiv. exact Hpayload_roots0.
       * apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
+  - intros R R1 R_out Σ Σ1 Σ_head Σ_tail Γ_out scrut branches enum_name
+      lts args edef v_head v_tail e_head T_scrut T_head Ts_tail roots_scrut
+      roots_head roots_tail Hscrut IHscrut Hcore Hlookup Hlen_lts Hlen_args
+      Hbounds Hunknown Hvariants Hfields_head Hlookup_head Hhead IHhead Htail
+      IHtail Hmerge Hfresh R0 HnsR HnsR0 HR0.
+    simpl in Hfresh.
+    apply root_subst_images_exclude_names_app_inv in Hfresh.
+    destruct Hfresh as [Hfresh_scrut Hfresh_branches].
+    destruct (IHscrut Hfresh_scrut R0 HnsR HnsR0 HR0)
+      as [R10 [roots_scrut0 [Hscrut0 [HnsR10 [HR10 Hroots_scrut0]]]]].
+    assert (Hfresh_head :
+      root_subst_images_exclude_names (expr_local_store_names e_head) rho).
+    {
+      eapply Forall_forall. intros x Hin.
+      eapply root_subst_images_exclude_names_in.
+      - exact Hfresh_branches.
+      - eapply lookup_expr_branch_local_store_names_in; eassumption.
+    }
+    assert (Hns_R1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow.
+      - eapply typed_env_roots_shadow_safe_roots. exact Hscrut.
+      - exact HnsR. }
+    destruct (IHhead Hfresh_head R10 Hns_R1 HnsR10 HR10)
+      as [Rout0 [roots_head0 [Hhead0 [HnsRout0 [HRout0 Hroots_head0]]]]].
+    destruct (IHtail Hfresh_branches R10 Rout0 Hns_R1 HnsR10 HnsRout0
+      HR10 HRout0)
+      as [roots_tail0 [Htail0 Hroots_tail0]].
+    exists Rout0, (root_sets_union (roots_head0 :: roots_tail0)).
+    split; [| split; [| split]].
+    + eapply TERS_Match; eauto.
+    + exact HnsRout0.
+    + exact HRout0.
+    + eapply root_set_equiv_trans.
+      * apply root_sets_union_equiv.
+        simpl. constructor.
+        -- exact Hroots_head0.
+        -- exact Hroots_tail0.
+      * apply root_set_equiv_sym.
+        apply root_sets_instantiate_union_equiv.
   - intros R R1 R2 Σ Σ1 Σ2 m x T T1 e1 e2 T2 roots1 roots2
       He1 IHe1 Hcompat Hlookup_none Hexcl_roots1 Hexcl_env1
       He2 IHe2 Hcheck Hexcl_roots2 Hexcl_env2 Hfresh R0 HnsR HnsR0 HR0.
@@ -7454,6 +7603,34 @@ Proof.
     + eapply root_set_equiv_trans.
       * apply root_set_union_equiv; eassumption.
       * apply root_set_equiv_sym. apply root_set_instantiate_union_equiv.
+  - intros R Σ branches expected_core R_out Hfresh R0 R0_out HnsR HnsR0
+      HnsR0_out HR0 HR0_out.
+    exists []. split.
+    + constructor.
+    + constructor.
+  - intros R Σ branches v rest e T Σv Rv R_out roots Σs Ts rootss
+      expected_core Hfields Hlookup Htyped IHtyped Hcore Heq_tail Htail IHtail
+      Hfresh R0 R0_out HnsR HnsR0 HnsR0_out HR0 HR0_out.
+    assert (Hfresh_e :
+      root_subst_images_exclude_names (expr_local_store_names e) rho).
+    {
+      eapply Forall_forall. intros x Hin.
+      eapply root_subst_images_exclude_names_in.
+      - exact Hfresh.
+      - eapply lookup_expr_branch_local_store_names_in; eassumption.
+    }
+    destruct (IHtyped Hfresh_e R0 HnsR HnsR0 HR0)
+      as [R0_branch [roots0 [Htyped0 [Hns_branch [HR_branch Hroots0]]]]].
+    destruct (IHtail Hfresh R0 R0_out HnsR HnsR0 HnsR0_out HR0 HR0_out)
+      as [rootss0 [Htail0 Hrootss0]].
+    exists (roots0 :: rootss0). split.
+    + eapply TERSMatchTail_Cons; eauto.
+      eapply root_env_equiv_trans.
+      * exact HR_branch.
+      * eapply root_env_equiv_trans.
+        -- apply root_env_equiv_instantiate. exact Heq_tail.
+        -- apply root_env_equiv_sym. exact HR0_out.
+    + simpl. constructor; assumption.
 Qed.
 
 Lemma typed_env_roots_shadow_safe_instantiate_fresh :
@@ -7509,7 +7686,7 @@ Lemma typed_fields_roots_shadow_safe_instantiate_fresh :
 Proof.
   intros env Ω n rho lts args R Σ fields defs Σ' R' roots R0
     Htyped Hfresh HnsR HnsR0 HR0.
-  exact (proj2 (proj2 (typed_roots_shadow_safe_instantiate_fresh_mutual env Ω n rho))
+  exact (proj1 (proj2 (proj2 (typed_roots_shadow_safe_instantiate_fresh_mutual env Ω n rho)))
     lts args R Σ fields defs Σ' R' roots Htyped Hfresh R0 HnsR HnsR0 HR0).
 Qed.
 
@@ -8950,7 +9127,13 @@ Theorem typed_roots_shadow_safe_sctx_keys_named_mutual :
       Σ' R' roots ->
     root_env_no_shadow R ->
     root_env_sctx_keys_named R Σ ->
-    root_env_sctx_keys_named R' Σ').
+    root_env_sctx_keys_named R' Σ') /\
+  (forall R Σ branches variants expected_core R_out Σs Ts rootss,
+    typed_match_tail_roots_shadow_safe env Ω n R Σ branches variants
+      expected_core R_out Σs Ts rootss ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R Σ ->
+    True).
 Proof.
   intros env Ω n.
   apply typed_roots_shadow_safe_ind; intros; try assumption.
@@ -8999,6 +9182,28 @@ Proof.
       Hrn : root_env_no_shadow ?R,
       Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
         exact (IH Hrn Henv)
+    end.
+  - match goal with
+    | Hscrut : typed_env_roots_shadow_safe env Ω n ?R ?Σ _ _ ?Σ1 ?R1 _,
+      IHscrut : root_env_no_shadow ?R ->
+        root_env_sctx_keys_named ?R ?Σ ->
+        root_env_sctx_keys_named ?R1 ?Σ1,
+      IHhead : root_env_no_shadow ?R1 ->
+        root_env_sctx_keys_named ?R1 ?Σ1 ->
+        root_env_sctx_keys_named ?Rout ?Σhead,
+      Hmerge : ctx_merge_many (ctx_of_sctx ?Σhead) (map ctx_of_sctx ?tail) =
+        Some ?Γout,
+      Hrn : root_env_no_shadow ?R,
+      Hkeys : root_env_sctx_keys_named ?R ?Σ |- _ =>
+        pose proof (IHscrut Hrn Hkeys) as Hkeys1;
+        assert (Hrn1 : root_env_no_shadow R1)
+          by (eapply typed_env_roots_no_shadow;
+              [eapply typed_env_roots_shadow_safe_roots; exact Hscrut
+              | exact Hrn]);
+        pose proof (IHhead Hrn1 Hkeys1) as Hkeys_head;
+        eapply root_env_sctx_keys_named_same_bindings;
+        [ eapply ctx_merge_many_same_bindings_left; exact Hmerge
+        | exact Hkeys_head ]
     end.
   - pose proof (H H1 H2) as Hkeys1.
     assert (Hrn1 : root_env_no_shadow R1)
@@ -9112,6 +9317,8 @@ Proof.
               | exact Hrn]);
         exact (Hrest Hrn1 Hkeys1)
     end.
+  - exact I.
+  - exact I.
 Qed.
 
 Theorem typed_roots_shadow_safe_sctx_roots_named_mutual :
@@ -9134,7 +9341,13 @@ Theorem typed_roots_shadow_safe_sctx_roots_named_mutual :
     root_env_no_shadow R ->
     root_env_sctx_roots_named R Σ ->
     root_env_sctx_roots_named R' Σ' /\
-    root_set_sctx_roots_named roots Σ').
+    root_set_sctx_roots_named roots Σ') /\
+  (forall R Σ branches variants expected_core R_out Σs Ts rootss,
+    typed_match_tail_roots_shadow_safe env Ω n R Σ branches variants
+      expected_core R_out Σs Ts rootss ->
+    root_env_no_shadow R ->
+    root_env_sctx_roots_named R Σ ->
+    Forall (fun roots => root_set_sctx_roots_named roots Σ) rootss).
 Proof.
   intros env Ω n.
   apply typed_roots_shadow_safe_ind; intros; try solve
@@ -9214,6 +9427,41 @@ Proof.
         [ exact Henv_args
         | apply root_sets_sctx_roots_named_union; exact Hroots_args ]
     end.
+  - destruct (H H2 H3) as [Henv1 _].
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow;
+          [eapply typed_env_roots_shadow_safe_roots; exact t | exact H2]).
+    destruct (H0 Hrn1 Henv1) as [Henv_head Hroots_head].
+    pose proof (H1 Hrn1 Henv1) as Hroots_tail.
+    assert (Hsame_head_final :
+      sctx_same_bindings Σ_head (sctx_of_ctx Γ_out)).
+    { eapply ctx_merge_many_same_bindings_left. exact e8. }
+    assert (Hsame_1_head : sctx_same_bindings Σ1 Σ_head).
+    { eapply typed_env_structural_same_bindings.
+      eapply typed_env_roots_structural.
+      eapply typed_env_roots_shadow_safe_roots. exact t0. }
+    assert (Hsame_1_final :
+      sctx_same_bindings Σ1 (sctx_of_ctx Γ_out)).
+    { eapply sctx_same_bindings_trans; eassumption. }
+    assert (Hroots_tail_final :
+      Forall (fun roots => root_set_sctx_roots_named roots (sctx_of_ctx Γ_out))
+        roots_tail).
+    { eapply Forall_impl.
+      - intros roots Hnamed.
+        eapply root_set_sctx_roots_named_same_bindings.
+        + exact Hsame_1_final.
+        + exact Hnamed.
+      - exact Hroots_tail. }
+    split.
+    + eapply root_env_sctx_roots_named_same_bindings.
+      * exact Hsame_head_final.
+      * exact Henv_head.
+    + apply root_sets_sctx_roots_named_union.
+      simpl. constructor.
+      * eapply root_set_sctx_roots_named_same_bindings.
+        -- exact Hsame_head_final.
+        -- exact Hroots_head.
+      * exact Hroots_tail_final.
   - destruct (H H1 H2) as [Henv1 Hroots1].
     assert (Hrn1 : root_env_no_shadow R1)
       by (eapply typed_env_roots_no_shadow;
@@ -9346,6 +9594,28 @@ Proof.
         [ exact Henv2
         | apply root_set_sctx_roots_named_union; [| exact Hroots_rest] ];
         eapply root_set_sctx_roots_named_typed_fields_tail; eassumption
+    end.
+  - constructor.
+  - match goal with
+    | Htyped : typed_env_roots_shadow_safe env Ω n ?R ?Σ _ _ ?Σv ?Rv ?roots,
+      IHtyped : root_env_no_shadow ?R ->
+        root_env_sctx_roots_named ?R ?Σ ->
+        root_env_sctx_roots_named ?Rv ?Σv /\
+        root_set_sctx_roots_named ?roots ?Σv,
+      IHtail : root_env_no_shadow ?R ->
+        root_env_sctx_roots_named ?R ?Σ ->
+        Forall (fun roots0 => root_set_sctx_roots_named roots0 ?Σ) ?rootss,
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_sctx_roots_named ?R ?Σ |- _ =>
+        destruct (IHtyped Hrn Henv) as [_ Hroot];
+        pose proof (IHtail Hrn Henv) as Hroots_tail;
+        constructor; [| exact Hroots_tail];
+        eapply root_set_sctx_roots_named_same_bindings;
+        [ apply sctx_same_bindings_sym;
+          eapply typed_env_structural_same_bindings;
+          eapply typed_env_roots_structural;
+          eapply typed_env_roots_shadow_safe_roots; exact Htyped
+        | exact Hroot ]
     end.
 Qed.
 
@@ -10350,7 +10620,11 @@ Lemma typed_roots_root_env_names_subset_mutual :
     forall x, In x (root_env_names R) -> In x (root_env_names R')) /\
   (forall lts args R Σ fields defs Σ' R' roots,
     typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
-    forall x, In x (root_env_names R) -> In x (root_env_names R')).
+    forall x, In x (root_env_names R) -> In x (root_env_names R')) /\
+  (forall R Σ branches variants expected_core R_out Σs Ts rootss,
+    typed_match_tail_roots env Ω n R Σ branches variants expected_core
+      R_out Σs Ts rootss ->
+    True).
 Proof.
   intros env Ω n.
   apply typed_roots_ind; intros; subst; try assumption.
@@ -10359,6 +10633,10 @@ Proof.
   - eapply H. exact H0.
   - eapply H. exact H0.
   - eapply H. exact H0.
+  - eapply H0. eapply H.
+    match goal with
+    | Hin : In _ (root_env_names _) |- _ => exact Hin
+    end.
   - eapply root_env_names_remove_preserve_neq.
     + intros Heq. subst x0.
       eapply root_env_lookup_none_not_in_names; eauto.
@@ -10388,6 +10666,7 @@ Proof.
     match goal with
     | Hin : In _ (root_env_names _) |- _ => exact Hin
     end.
+  - exact I.
 Qed.
 
 Lemma typed_env_roots_root_env_names_subset :
@@ -10440,7 +10719,7 @@ Lemma typed_fields_roots_root_env_names_subset :
     In x (root_env_names R').
 Proof.
   intros env Ω n lts args R Σ fields defs Σ' R' roots x Htyped Hin.
-  exact (proj2 (proj2 (typed_roots_root_env_names_subset_mutual env Ω n))
+  exact (proj1 (proj2 (proj2 (typed_roots_root_env_names_subset_mutual env Ω n)))
     lts args R Σ fields defs Σ' R' roots Htyped x Hin).
 Qed.
 
@@ -14180,6 +14459,159 @@ Proof.
         -- apply root_set_equiv_sym. apply root_set_union_rename_equiv.
 Qed.
 
+Lemma root_env_names_in_lookup :
+  forall x R,
+    In x (root_env_names R) ->
+    exists roots, root_env_lookup x R = Some roots.
+Proof.
+  intros x R Hin.
+  induction R as [| [y roots_y] rest IH]; simpl in Hin; try contradiction.
+  simpl.
+  destruct Hin as [Heq | Hin].
+  - subst y. rewrite ident_eqb_refl. eauto.
+  - destruct (ident_eqb x y); eauto.
+Qed.
+
+Lemma root_env_equiv_names_subset_l :
+  forall R R' x,
+    root_env_equiv R R' ->
+    In x (root_env_names R) ->
+    In x (root_env_names R').
+Proof.
+  intros R R' x Heq Hin.
+  destruct (root_env_names_in_lookup x R Hin) as [roots Hlookup].
+  destruct (root_env_equiv_lookup_l R R' x roots Heq Hlookup)
+    as [roots' [Hlookup' _]].
+  eapply root_env_lookup_some_in_names. exact Hlookup'.
+Qed.
+
+Lemma alpha_rename_typed_match_tail_roots_shadow_safe_forward :
+  forall env Ω n rho R Rr Σ Σr branches branchesr used used'
+      variants expected_core R_out Rr_out Σs Ts rootss,
+  (forall R0 R0r Σa Σb used0 variant e er used1 T Σa' R0' roots0,
+      In (variant, e) branches ->
+      typed_env_roots_shadow_safe env Ω n R0 Σa e T Σa' R0' roots0 ->
+      ctx_alpha rho Σa Σb ->
+      root_env_no_shadow R0 ->
+      root_env_no_shadow R0r ->
+      root_env_equiv R0r (root_env_rename rho R0) ->
+      root_env_sctx_keys_named R0 Σa ->
+      root_env_sctx_roots_named R0 Σa ->
+      rename_no_collision_on rho (root_env_names R0) ->
+      rename_no_collision_on rho (root_env_names R0') ->
+      (forall x, In x (ctx_names Σb) -> In x used0) ->
+      (forall x, In x (rename_range rho) -> In x used0) ->
+      disjoint_names (free_vars_expr e) (rename_range rho) ->
+      alpha_rename_expr rho used0 e = (er, used1) ->
+      exists Σb' R0r' roots0r,
+        typed_env_roots_shadow_safe env Ω n R0r Σb er T
+          Σb' R0r' roots0r /\
+        ctx_alpha rho Σa' Σb' /\
+        root_env_no_shadow R0r' /\
+        root_env_equiv R0r' (root_env_rename rho R0') /\
+        root_set_equiv roots0r (root_set_rename rho roots0)) ->
+  typed_match_tail_roots_shadow_safe env Ω n R Σ branches variants
+    expected_core R_out Σs Ts rootss ->
+  ctx_alpha rho Σ Σr ->
+  root_env_no_shadow R ->
+  root_env_no_shadow R_out ->
+  root_env_no_shadow Rr ->
+  root_env_equiv Rr (root_env_rename rho R) ->
+  root_env_sctx_keys_named R Σ ->
+  root_env_sctx_roots_named R Σ ->
+  rename_no_collision_on rho (root_env_names R) ->
+  rename_no_collision_on rho (root_env_names R_out) ->
+  (forall x, In x (ctx_names Σr) -> In x used) ->
+  (forall x, In x (rename_range rho) -> In x used) ->
+  disjoint_names
+    ((fix go (branches0 : list (string * expr)) : list ident :=
+        match branches0 with
+        | [] => []
+        | (_, e) :: rest => free_vars_expr e ++ go rest
+        end) branches)
+    (rename_range rho) ->
+  ((fix go (used0 : list ident) (branches0 : list (string * expr))
+      : list (string * expr) * list ident :=
+      match branches0 with
+      | [] => ([], used0)
+      | (name, e) :: rest =>
+          let (e', used1) := alpha_rename_expr rho used0 e in
+          let (rest', used2) := go used1 rest in
+          ((name, e') :: rest', used2)
+      end) used branches) = (branchesr, used') ->
+  root_env_equiv Rr_out (root_env_rename rho R_out) ->
+  exists Σrs rootssr,
+    typed_match_tail_roots_shadow_safe env Ω n Rr Σr branchesr variants
+      expected_core Rr_out Σrs Ts rootssr /\
+    Forall2 (ctx_alpha rho) Σs Σrs /\
+    Forall2 root_set_equiv rootssr (map (root_set_rename rho) rootss).
+Proof.
+  intros env Ω n rho R Rr Σ Σr branches branchesr used used'
+    variants expected_core R_out Rr_out Σs Ts rootss Hexpr Htyped_tail
+    Hctx HnsR HnsRout HnsRr HRr Hkeys Hroots HnocollR HnocollRout Hctx_used
+    Hrange_used Hdisj Hrename HRout.
+  induction Htyped_tail.
+  - exists [], []. repeat split; constructor.
+  - destruct (alpha_rename_match_branches_lookup_exists_forward
+      rho used branches branchesr used' (Program.enum_variant_name v) e
+      Hrename H0)
+      as [er [used_branch [used_branch_out
+        [Hlookup_r [Hrename_branch Hused_prefix]]]]].
+    assert (Hbranch_in : In (Program.enum_variant_name v, e) branches).
+    { eapply lookup_expr_branch_in_alpha. exact H0. }
+    assert (HnocollRv : rename_no_collision_on rho (root_env_names Rv)).
+    { eapply rename_no_collision_on_weaken_names.
+      - exact HnocollRout.
+      - intros x Hin.
+        eapply root_env_equiv_names_subset_l.
+        + exact H3.
+        + exact Hin. }
+    assert (HnsRv : root_env_no_shadow Rv).
+    { eapply typed_env_roots_no_shadow.
+      - eapply typed_env_roots_shadow_safe_roots. exact H1.
+      - exact HnsR. }
+    destruct (Hexpr R Rr Σ Σr used_branch (Program.enum_variant_name v)
+      e er used_branch_out T Σv Rv roots)
+      as [Σvr [Rvr [rootsr
+        [Htyped_branch_r [Hctx_branch [HnsRvr [HRvr Hrootsr]]]]]]].
+    + exact Hbranch_in.
+    + exact H1.
+    + exact Hctx.
+    + exact HnsR.
+    + exact HnsRr.
+    + exact HRr.
+    + exact Hkeys.
+    + exact Hroots.
+    + exact HnocollR.
+    + exact HnocollRv.
+    + intros x Hin. apply Hused_prefix. apply Hctx_used. exact Hin.
+    + intros x Hin. apply Hused_prefix. apply Hrange_used. exact Hin.
+    + eapply lookup_expr_branch_disjoint_alpha; eauto.
+    + exact Hrename_branch.
+    + destruct (IHHtyped_tail Hexpr Hctx HnsR HnsRout HRr Hkeys Hroots
+        HnocollR HnocollRout Hdisj Hrename HRout)
+        as [Σrs [rootssr [Htail_r [Hctx_tail Hroots_tail]]]].
+      exists (Σvr :: Σrs), (rootsr :: rootssr).
+      split.
+      * eapply TERSMatchTail_Cons.
+        -- exact H.
+        -- exact Hlookup_r.
+        -- exact Htyped_branch_r.
+        -- exact H2.
+        -- eapply root_env_equiv_trans.
+           ++ exact HRvr.
+           ++ eapply root_env_equiv_trans.
+              ** apply root_env_equiv_rename.
+                 --- exact H3.
+                 --- exact HnsRv.
+                 --- exact HnsRout.
+                 --- exact HnocollRv.
+                 --- exact HnocollRout.
+              ** apply root_env_equiv_sym. exact HRout.
+        -- exact Htail_r.
+      * split; constructor; assumption.
+Qed.
+
 Lemma alpha_rename_typed_env_roots_call_forward :
   forall env Ω n rho R Rr Σ Σr fname args er used used' T Σ' R' roots,
   (forall R0 R0r Σa Σb used0 e er0 used1 T0 Σa' R0' roots0,
@@ -15509,7 +15941,227 @@ Proof.
 		                        ((variant_name, e0') :: rest', used2)
 		                    end) used_scrut l) as [branchesr used_branches] eqn:Hbranches.
 		        injection Hrename as <- <-.
-			        exfalso. inversion Htyped.
+		        destruct (disjoint_names_app_l (free_vars_expr e)
+		          ((fix go (branches0 : list (string * expr)) : list ident :=
+		              match branches0 with
+		              | [] => []
+		              | (_, e0) :: rest => free_vars_expr e0 ++ go rest
+		              end) l) (rename_range rho) Hdisj)
+		          as [Hdisj_scrut Hdisj_branches].
+		        inversion Htyped; subst.
+		        assert (HnsR1 : root_env_no_shadow R1).
+		        { eapply typed_env_roots_no_shadow.
+		          - eapply typed_env_roots_shadow_safe_roots. eassumption.
+		          - exact HnsR. }
+		        assert (HnsRout : root_env_no_shadow R').
+		        { eapply typed_env_roots_no_shadow.
+		          - eapply typed_env_roots_shadow_safe_roots. eassumption.
+		          - exact HnsR1. }
+		        assert (HnocollR1 : rename_no_collision_on rho (root_env_names R1)).
+		        { eapply rename_no_collision_on_weaken_names.
+		          - exact HnocollR'.
+		          - intros x Hin.
+		            eapply typed_env_roots_root_env_names_subset.
+		            + eapply typed_env_roots_shadow_safe_roots.
+		              match goal with
+		              | H : typed_env_roots_shadow_safe env Ω n R1 Σ1 e_head
+		                    T_head Σ_head R' roots_head |- _ => exact H
+		              end.
+		            + exact Hin. }
+		        destruct (IH env Ω n rho R Rr Σ Σr e scrutr used used_scrut
+		          T_scrut Σ1 R1 roots_scrut)
+		          as [Σr1 [Rr1 [roots_scrutr
+		            [Hscrut_r [Hctx1_r [HnsRr1 [HRr1 Hroots_scrut]]]]]]].
+		        * simpl in *. lia.
+		        * match goal with
+		          | H : typed_env_roots_shadow_safe env Ω n R Σ e T_scrut
+		                Σ1 R1 roots_scrut |- _ => exact H
+		          end.
+		        * exact Hctx.
+		        * exact HnsR.
+		        * exact HnsRr.
+		        * exact HRr.
+		        * exact Hkeys.
+		        * exact Hroots.
+		        * exact HnocollR.
+		        * exact HnocollR1.
+		        * exact Hctx_used.
+		        * exact Hrange_used.
+		        * exact Hdisj_scrut.
+		        * exact Hscrut.
+		        * assert (Hctx_used1 : forall y, In y (ctx_names Σr1) -> In y used_scrut).
+		          { intros y Hy.
+		            eapply alpha_rename_expr_used_extends.
+		            - exact Hscrut.
+		            - apply Hctx_used.
+		              rewrite <- (sctx_same_bindings_names_alpha Σr Σr1).
+		              + exact Hy.
+		              + eapply typed_env_structural_same_bindings.
+		                eapply typed_env_roots_structural.
+		                eapply typed_env_roots_shadow_safe_roots. exact Hscrut_r. }
+		          assert (Hrange_used1 : forall y, In y (rename_range rho) -> In y used_scrut).
+		          { intros y Hy. eapply alpha_rename_expr_used_extends; eauto. }
+		          destruct (alpha_rename_match_branches_lookup_exists_forward
+		            rho used_scrut l branchesr used_branches
+		            (Program.enum_variant_name v_head) e_head Hbranches)
+		            as [e_headr [used_head [used_head_out
+		              [Hlookup_head_r [Hrename_head Hused_head]]]]].
+		          -- match goal with
+		             | H : lookup_expr_branch (Program.enum_variant_name v_head) l =
+		                   Some e_head |- _ => exact H
+		             end.
+		          -- assert (Hhead_in : In (Program.enum_variant_name v_head, e_head) l).
+		             { eapply lookup_expr_branch_in_alpha.
+		               match goal with
+		               | H : lookup_expr_branch (Program.enum_variant_name v_head) l =
+		                     Some e_head |- _ => exact H
+		               end. }
+		             destruct (IH env Ω n rho R1 Rr1 Σ1 Σr1 e_head e_headr
+		               used_head used_head_out T_head Σ_head R' roots_head)
+		               as [Σ_headr [Rr_out [roots_headr
+		                 [Hhead_r [Hctx_head_r [HnsRr_out [HRr_out Hroots_head]]]]]]].
+		             ++ pose proof (expr_size_match_branch_lt e l
+		                  (Program.enum_variant_name v_head) e_head Hhead_in).
+		                simpl in *. lia.
+		             ++ match goal with
+		                | H : typed_env_roots_shadow_safe env Ω n R1 Σ1 e_head
+		                      T_head Σ_head R' roots_head |- _ => exact H
+		                end.
+		             ++ exact Hctx1_r.
+		             ++ exact HnsR1.
+		             ++ exact HnsRr1.
+		             ++ exact HRr1.
+		             ++ match goal with
+		                | H : typed_env_roots_shadow_safe env Ω n R Σ e T_scrut
+		                      Σ1 R1 roots_scrut |- _ =>
+		                    destruct (typed_roots_shadow_safe_sctx_keys_named_mutual env Ω n)
+		                      as [Hkeys_env _];
+		                    eapply Hkeys_env; eassumption
+		                end.
+		             ++ match goal with
+		                | H : typed_env_roots_shadow_safe env Ω n R Σ e T_scrut
+		                      Σ1 R1 roots_scrut |- _ =>
+		                    destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env Ω n)
+		                      as [Hroots_env _];
+		                    destruct (Hroots_env R Σ e T_scrut Σ1 R1 roots_scrut)
+		                      as [Hroots_env1 _]; eauto
+		                end.
+		             ++ exact HnocollR1.
+		             ++ exact HnocollR'.
+		             ++ intros y Hy. apply Hused_head. apply Hctx_used1. exact Hy.
+		             ++ intros y Hy. apply Hused_head. apply Hrange_used1. exact Hy.
+		             ++ eapply lookup_expr_branch_disjoint_alpha; eauto.
+		             ++ exact Hrename_head.
+		             ++ destruct (alpha_rename_typed_match_tail_roots_shadow_safe_forward
+		                  env Ω n rho R1 Rr1 Σ1 Σr1 l branchesr used_scrut
+		                  used_branches v_tail (ty_core T_head) R' Rr_out
+		                  Σ_tail Ts_tail roots_tail)
+		                  as [Σ_tailr [roots_tailr [Htail_r [Hctx_tail_r Hroots_tail]]]].
+		                ** intros R0 R0r Σa Σb used0 variant e0 er0 used1 T0
+		                     Σa' R0' roots0 Hin Htyped0 Halpha HnsR0 HnsR0r
+		                     HR0r Hkeys0 Hroots0 Hnocoll0 Hnocoll0' Hcu Hru Hd Hr.
+		                   eapply (IH env Ω n rho R0 R0r Σa Σb e0 er0 used0
+		                     used1 T0 Σa' R0' roots0).
+		                   --- pose proof (expr_size_match_branch_lt e l variant e0 Hin).
+		                       simpl in *. lia.
+		                   --- exact Htyped0.
+		                   --- exact Halpha.
+		                   --- exact HnsR0.
+		                   --- exact HnsR0r.
+		                   --- exact HR0r.
+		                   --- exact Hkeys0.
+		                   --- exact Hroots0.
+		                   --- exact Hnocoll0.
+		                   --- exact Hnocoll0'.
+		                   --- exact Hcu.
+		                   --- exact Hru.
+		                   --- exact Hd.
+		                   --- exact Hr.
+		                ** match goal with
+		                   | H : typed_match_tail_roots_shadow_safe env Ω n R1 Σ1 l
+		                         v_tail (ty_core T_head) R' Σ_tail Ts_tail
+		                         roots_tail |- _ => exact H
+		                   end.
+		                ** exact Hctx1_r.
+		                ** exact HnsR1.
+		                ** exact HnsRout.
+		                ** exact HnsRr1.
+		                ** exact HRr1.
+		                ** match goal with
+		                   | H : typed_env_roots_shadow_safe env Ω n R Σ e T_scrut
+		                         Σ1 R1 roots_scrut |- _ =>
+		                       destruct (typed_roots_shadow_safe_sctx_keys_named_mutual env Ω n)
+		                         as [Hkeys_env _];
+		                       eapply Hkeys_env; eassumption
+		                   end.
+		                ** match goal with
+		                   | H : typed_env_roots_shadow_safe env Ω n R Σ e T_scrut
+		                         Σ1 R1 roots_scrut |- _ =>
+		                       destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env Ω n)
+		                         as [Hroots_env _];
+		                       destruct (Hroots_env R Σ e T_scrut Σ1 R1 roots_scrut)
+		                         as [Hroots_env1 _]; eauto
+		                   end.
+		                ** exact HnocollR1.
+		                ** exact HnocollR'.
+		                ** exact Hctx_used1.
+		                ** exact Hrange_used1.
+		                ** exact Hdisj_branches.
+		                ** exact Hbranches.
+		                ** exact HRr_out.
+		                ** destruct (ctx_alpha_merge_many_forward rho
+		                     Σ_head Σ_headr Σ_tail Σ_tailr Γ_out)
+		                     as [Γ_outr [Hmerge_r Hctx_merge_r]].
+		                   --- exact Hctx_head_r.
+		                   --- exact Hctx_tail_r.
+		                   --- match goal with
+		                       | H : ctx_merge_many (ctx_of_sctx Σ_head)
+		                             (map ctx_of_sctx Σ_tail) = Some Γ_out |- _ =>
+		                           exact H
+		                       end.
+			                   --- exists (sctx_of_ctx Γ_outr), Rr_out,
+			                         (root_sets_union (roots_headr :: roots_tailr)).
+				                       split; [| split; [| split; [| split]]].
+				                       { eapply TERS_Match.
+				                         - exact Hscrut_r.
+				                         - match goal with
+				                           | H : ty_core T_scrut = TEnum enum_name lts args |- _ =>
+				                               exact H
+				                           end.
+				                         - match goal with
+				                           | H : Program.lookup_enum enum_name env = Some edef |- _ =>
+				                               exact H
+				                           end.
+				                         - match goal with
+				                           | H : Datatypes.length lts = Program.enum_lifetimes edef |- _ =>
+				                               exact H
+				                           end.
+				                         - match goal with
+				                           | H : Datatypes.length args = Program.enum_type_params edef |- _ =>
+				                               exact H
+				                           end.
+				                         - match goal with
+				                           | H : check_struct_bounds env (Program.enum_bounds edef) args =
+				                                 None |- _ => exact H
+				                           end.
+				                         - eapply alpha_rename_match_branches_first_unknown_variant_branch; eauto.
+				                         - match goal with
+				                           | H : Program.enum_variants edef = v_head :: v_tail |- _ =>
+				                               exact H
+				                           end.
+				                         - match goal with
+				                           | H : Program.enum_variant_fields v_head = [] |- _ =>
+				                               exact H
+				                           end.
+				                         - exact Hlookup_head_r.
+				                         - exact Hhead_r.
+				                         - exact Htail_r.
+				                         - exact Hmerge_r. }
+			                       { unfold sctx_of_ctx. exact Hctx_merge_r. }
+			                       { exact HnsRr_out. }
+			                       { exact HRr_out. }
+			                       { eapply root_sets_union_rename_equiv.
+			                         simpl. constructor; assumption. }
 		      + eapply (alpha_rename_typed_env_roots_replace_shadow_safe_support_forward
 		          env Ω n rho R Rr Σ Σr p e er used used' T Σ' R' roots).
 	        * intros R0 R0r Σa Σb used0 er0 used1 T0 Σa' R0' roots0

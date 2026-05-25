@@ -5,6 +5,40 @@ From Facet.TypeSystem Require Export TypeSafetyPrefixPreservationLetRoots.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
+Lemma typed_match_tail_roots_lookup :
+  forall env Ω n R Σ branches variants expected_core R_out Σs Ts rootss
+      name vdef e,
+    typed_match_tail_roots env Ω n R Σ branches variants
+      expected_core R_out Σs Ts rootss ->
+    lookup_enum_variant name variants = Some vdef ->
+    lookup_expr_branch name branches = Some e ->
+    exists T Σv Rv roots,
+      typed_env_roots env Ω n R Σ e T Σv Rv roots /\
+      ty_core T = expected_core /\
+      root_env_equiv Rv R_out /\
+      In Σv Σs /\
+      In T Ts.
+Proof.
+  intros env Ω n R Σ branches variants expected_core R_out Σs Ts rootss
+    name vdef e Htail.
+  induction Htail as
+    [R Σ branches expected_core R_out
+    |R Σ branches v rest e0 T Σv Rv R_out roots Σs Ts rootss
+       expected_core Hfields Hlookup Htyped Hcore Hequiv Htail IHtail];
+    intros Hvariant Hbranch.
+  - simpl in Hvariant. discriminate.
+  - simpl in Hvariant.
+    destruct (String.eqb name (enum_variant_name v)) eqn:Hname.
+    + apply String.eqb_eq in Hname. subst name.
+      rewrite Hlookup in Hbranch. inversion Hbranch; subst e.
+      exists T, Σv, Rv, roots.
+      repeat split; simpl; auto.
+    + eapply IHtail in Hvariant; [| exact Hbranch].
+      destruct Hvariant as
+        [T' [Σ' [Rv' [roots' [Htyped' [Hcore' [Hequiv' [HinΣ HinT]]]]]]]].
+      exists T', Σ', Rv', roots'. repeat split; simpl; auto.
+Qed.
+
 Theorem eval_preserves_typing_roots_ready_prefix_mutual_core :
   (forall env s e s' v,
     eval env s e s' v ->
@@ -617,8 +651,96 @@ Proof.
 	    end.
   - intros s s_scrut s' scrut branches enum_name variant_name e_branch v
       Heval_scrut IHscrut Hlookup_branch_eval Heval_branch IHbranch
-      Ω n R Σ T Σ' R' roots Hready _ _ _ _ Htyped.
-    inversion Htyped.
+      Ω n R Σ T Σ' R' roots Hready Hstore Hroots Hnodup Hrn Htyped.
+    dependent destruction Hready.
+    dependent destruction Htyped.
+    destruct (IHscrut Ω n R Σ T_scrut Σ1 R1 roots_scrut
+                Hready Hstore Hroots Hnodup Hrn Htyped1)
+      as [Hstore_scrut [Hv_scrut Hpres_scrut]].
+    destruct (proj1 eval_preserves_roots_ready_mutual env s scrut s_scrut
+                (VEnum enum_name variant_name []) Heval_scrut Ω n R Σ
+                T_scrut Σ1 R1 roots_scrut Hready Hroots Hnodup Hrn
+                Htyped1)
+      as [Hroots_scrut [_ [Hnodup_scrut Hrn_scrut]]].
+    assert (Hready_branch : provenance_ready_expr e_branch).
+    { unfold lookup_match_branch in Hlookup_branch_eval.
+      eapply provenance_ready_fields_lookup; eassumption. }
+    unfold lookup_match_branch in Hlookup_branch_eval.
+    assert (Hlookup_branch :
+      lookup_expr_branch variant_name branches = Some e_branch).
+    { rewrite lookup_expr_branch_lookup_expr_field. exact Hlookup_branch_eval. }
+    destruct (value_has_type_enum_variant_lookup env s_scrut enum_name
+                variant_name [] T_scrut enum_name0 lts args edef Hv_scrut
+                H0 H1)
+      as [vdef_runtime [Henum_name Hvariant_runtime]].
+    subst enum_name.
+    rewrite H6 in Hvariant_runtime.
+    simpl in Hvariant_runtime.
+    destruct (String.eqb variant_name (enum_variant_name v_head))
+      eqn:Hvariant_head.
+    + apply String.eqb_eq in Hvariant_head. subst variant_name.
+      assert (Hbranch_eq : e_branch = e_head).
+      {
+        eapply lookup_expr_branch_deterministic;
+          [ exact Hlookup_branch | exact H8 ].
+      }
+      subst e_branch.
+      destruct (IHbranch Ω n R1 Σ1 T_head Σ_head R_out roots_head
+                  Hready_branch Hstore_scrut Hroots_scrut Hnodup_scrut
+                  Hrn_scrut Htyped2)
+        as [Hstore_branch [Hv_branch Hpres_branch]].
+      split.
+      * eapply store_typed_prefix_ctx_merge_many_left; eassumption.
+      * split.
+        -- eapply value_has_type_match_head_result. exact Hv_branch.
+        -- eapply store_ref_targets_preserved_trans; eassumption.
+    + destruct (typed_match_tail_roots_lookup env Ω n R1 Σ1 branches v_tail
+                  (ty_core T_head) R_out Σ_tail Ts_tail roots_tail
+                  variant_name vdef_runtime e_branch H9
+                  Hvariant_runtime Hlookup_branch)
+        as [T_branch [Σ_branch [R_branch [roots_branch
+             [Htyped_branch [Hcore_branch [_ [HinΣ HinT]]]]]]]].
+      destruct (IHbranch Ω n R1 Σ1 T_branch Σ_branch R_branch
+                  roots_branch Hready_branch Hstore_scrut Hroots_scrut
+                  Hnodup_scrut Hrn_scrut Htyped_branch)
+        as [Hstore_branch [Hv_branch Hpres_branch]].
+      assert (Hsame_head_tail : Forall (sctx_same_bindings Σ_head) Σ_tail).
+      {
+        assert (Hsame_head : sctx_same_bindings Σ1 Σ_head)
+          by (eapply typed_env_structural_same_bindings;
+              eapply typed_env_roots_structural; eassumption).
+        assert (Hsame_tail : Forall (sctx_same_bindings Σ1) Σ_tail)
+          by (eapply typed_match_tail_env_structural_same_bindings;
+              eapply typed_match_tail_roots_structural; eassumption).
+        eapply Forall_impl.
+        - intros Σt Hsame_t.
+          eapply sctx_same_bindings_trans.
+          + apply sctx_same_bindings_sym. exact Hsame_head.
+          + exact Hsame_t.
+        - exact Hsame_tail.
+      }
+      assert (Hsame_head_branch : sctx_same_bindings Σ_head Σ_branch).
+      {
+        assert (Hsame_head : sctx_same_bindings Σ1 Σ_head)
+          by (eapply typed_env_structural_same_bindings;
+              eapply typed_env_roots_structural; eassumption).
+        assert (Hsame_branch : sctx_same_bindings Σ1 Σ_branch)
+          by (eapply typed_env_structural_same_bindings;
+              eapply typed_env_roots_structural; eassumption).
+        eapply sctx_same_bindings_trans.
+        - apply sctx_same_bindings_sym. exact Hsame_head.
+        - exact Hsame_branch.
+      }
+      split.
+      * eapply store_typed_prefix_ctx_merge_many_selected.
+        -- exact Hstore_branch.
+        -- exact Hsame_head_branch.
+        -- exact Hsame_head_tail.
+        -- simpl. right. exact HinΣ.
+        -- exact H10.
+      * split.
+        -- eapply value_has_type_match_tail_result; eassumption.
+        -- eapply store_ref_targets_preserved_trans; eassumption.
 		  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
 		      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
 		      roots Hready _ _ _ _ _.

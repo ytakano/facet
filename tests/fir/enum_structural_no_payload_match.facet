@@ -1,0 +1,15 @@
+enum Direction {
+  North,
+  South,
+  East,
+  West
+}
+
+fn turn_back(d: unrestricted Direction) -> unrestricted Direction {
+  match d {
+    North => Direction::South(),
+    South => Direction::North(),
+    East => Direction::West(),
+    West => Direction::East(),
+  }
+}

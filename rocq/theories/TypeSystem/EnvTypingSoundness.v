@@ -1274,6 +1274,7 @@ Proof.
       * apply negb_false_iff in Hlts. apply Nat.eqb_eq in Hlts. exact Hlts.
       * apply negb_false_iff in Hargslen. apply Nat.eqb_eq in Hargslen. exact Hargslen.
       * exact Hbounds.
+      * rewrite Hvariants. exact Hunknown.
       * exact Hvariants.
       * destruct (enum_variant_fields v_head) eqn:Hfields; [reflexivity |].
         simpl in Hpayload.
@@ -1808,6 +1809,7 @@ Proof.
       * apply negb_false_iff in Hlts. apply Nat.eqb_eq in Hlts. exact Hlts.
       * apply negb_false_iff in Hargslen. apply Nat.eqb_eq in Hargslen. exact Hargslen.
       * exact Hbounds.
+      * rewrite Hvariants. exact Hunknown.
       * exact Hvariants.
       * destruct (enum_variant_fields v_head) eqn:Hfields; [reflexivity |].
         simpl in Hpayload.

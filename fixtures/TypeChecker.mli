@@ -691,6 +691,9 @@ type 'a infer_result =
 | Infer_ok of 'a
 | Infer_err of infer_error
 
+val infer_if_bool :
+  bool -> 'a1 infer_result -> 'a1 infer_result -> 'a1 infer_result
+
 val tys_depth : ty list -> Big_int_Z.big_int
 
 val infer_type_forall_args :

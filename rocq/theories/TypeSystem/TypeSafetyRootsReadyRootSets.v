@@ -79,15 +79,30 @@ Lemma value_roots_within_weaken :
 Proof.
   apply value_roots_within_mutind; intros; try solve [constructor; eauto].
   - constructor.
-    intros root Hexclude.
-    match goal with
-    | Henum : forall root, roots_exclude root _ -> _ |- _ =>
-        apply Henum
-    end.
-    unfold roots_exclude in *.
-    intros Hin.
-    apply Hexclude.
-    apply H. exact Hin.
+    + induction f as [| v values Hv Hvs IHvs].
+      * constructor.
+      * constructor.
+        -- apply value_roots_within_from_refs_exclude.
+           intros root Hexclude.
+           match goal with
+           | Henum : forall root, roots_exclude root _ -> _ |- _ =>
+               pose proof (Henum root ltac:(unfold roots_exclude in *;
+                 intros Hin; apply Hexclude; apply H; exact Hin)) as Hvalues
+           end.
+           inversion Hvalues; subst. assumption.
+        -- apply IHvs.
+           intros root Hexcl.
+           pose proof (f0 root Hexcl) as Hvalues.
+           inversion Hvalues; subst. assumption.
+    + intros root Hexclude.
+      match goal with
+      | Henum : forall root, roots_exclude root _ -> _ |- _ =>
+          apply Henum
+      end.
+      unfold roots_exclude in *.
+      intros Hin.
+      apply Hexclude.
+      apply H. exact Hin.
   - constructor.
     intros root Hexclude.
     match goal with

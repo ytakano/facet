@@ -127,6 +127,17 @@ Fixpoint rename_place (ρ : rename_env) (p : place) : place :=
   | PField q f => PField (rename_place ρ q) f
   end.
 
+Fixpoint alpha_rename_idents (ρ : rename_env) (used : list ident)
+    (xs : list ident) : list ident * rename_env * list ident :=
+  match xs with
+  | [] => ([], ρ, used)
+  | x :: rest =>
+      let x' := fresh_ident x used in
+      let used1 := x' :: used in
+      let '(rest', ρ', used2) := alpha_rename_idents ρ used1 rest in
+      (x' :: rest', (x, x') :: ρ', used2)
+  end.
+
 Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
     (e : expr) : expr * list ident :=
   match e with
@@ -211,9 +222,12 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
         match branches0 with
         | [] => ([], used0)
         | (variant_name, binders, e) :: rest =>
-            let (e', used1') := alpha_rename_expr ρ used0 e in
-            let (rest', used2) := go used1' rest in
-            ((variant_name, binders, e') :: rest', used2)
+            let binder_seed := binders ++ free_vars_expr e ++ used0 in
+            let '(binders', ρ_branch, used1') :=
+              alpha_rename_idents ρ binder_seed binders in
+            let (e', used2') := alpha_rename_expr ρ_branch used1' e in
+            let (rest', used3) := go used2' rest in
+            ((variant_name, binders', e') :: rest', used3)
         end
       in
       let (branches', used') := go used1 branches in

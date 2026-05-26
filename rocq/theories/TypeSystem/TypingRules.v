@@ -283,6 +283,24 @@ Fixpoint lookup_expr_branch_binders (name : string)
       else lookup_expr_branch_binders name rest
   end.
 
+Fixpoint match_binder_params_opt (binders : list ident) (tys : list Ty)
+    : option (list param) :=
+  match binders, tys with
+  | [], [] => Some []
+  | x :: xs, T :: Ts =>
+      match match_binder_params_opt xs Ts with
+      | Some ps => Some (MkParam MImmutable x T :: ps)
+      | None => None
+      end
+  | _, _ => None
+  end.
+
+Definition match_payload_params_opt
+    (binders : list ident) (lts : list lifetime) (args : list Ty)
+    (v : enum_variant_def) : option (list param) :=
+  match_binder_params_opt binders
+    (map (instantiate_enum_variant_field_ty lts args) (enum_variant_fields v)).
+
 Definition fn_signature_ty_with_usage (u : usage) (f : fn_def) : Ty :=
   let m := fn_lifetimes f in
   let body :=

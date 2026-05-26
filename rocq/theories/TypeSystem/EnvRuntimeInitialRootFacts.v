@@ -162,8 +162,8 @@ Definition value_roots_within_leaf_b (roots : root_set) (v : value) : bool :=
   | VBool _ => true
   | VStruct _ [] => true
   | VStruct _ (_ :: _) => false
-  | VEnum _ _ [] => true
-  | VEnum _ _ (_ :: _) => false
+  | VEnum _ _ _ _ [] => true
+  | VEnum _ _ _ _ (_ :: _) => false
   | VRef x _ => root_atom_in_b (RStore x) roots
   | VClosure _ captured =>
       match captured with
@@ -193,7 +193,7 @@ Lemma value_roots_within_leaf_b_sound :
     value_roots_within roots v.
 Proof.
   intros roots v Hwithin.
-  destruct v as [| i | f | b | name fields | enum_name variant_name values | x path | fname captured];
+  destruct v as [| i | f | b | name fields | enum_name variant_name lts args values | x path | fname captured];
     simpl in Hwithin.
   - constructor.
   - constructor.
@@ -202,7 +202,9 @@ Proof.
   - destruct fields as [| field rest]; try discriminate.
     apply VRW_Struct. constructor.
   - destruct values as [| value values]; try discriminate.
-    apply VRW_Enum. intros root Hexclude. constructor.
+    apply VRW_Enum.
+    + constructor.
+    + intros root Hexclude. constructor.
   - apply VRW_Ref.
     apply root_atom_in_b_true_in. exact Hwithin.
   - destruct captured as [| se captured]; try discriminate.
@@ -228,7 +230,7 @@ Lemma value_roots_within_b_sound :
     value_roots_within roots v.
 Proof.
   intros roots v Hwithin.
-  destruct v as [| i | f | b | name fields | enum_name variant_name values | x path | fname captured];
+  destruct v as [| i | f | b | name fields | enum_name variant_name lts args values | x path | fname captured];
     simpl in Hwithin; try (apply value_roots_within_leaf_b_sound; exact Hwithin).
   apply VRW_Struct.
   apply value_fields_roots_within_b_sound. exact Hwithin.

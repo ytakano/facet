@@ -266,33 +266,54 @@ Proof.
   split; [reflexivity | exact Hunsupported].
 Qed.
 
-Fixpoint infer_env_match_tail_collect fuel env Ω n (Σ : sctx)
+Fixpoint infer_env_match_tail_collect fuel env Ω n
+    (lts : list lifetime) (args : list Ty) (Σ : sctx)
     (branches : list (string * list ident * expr)) (T_head : Ty)
     (defs : list enum_variant_def) : infer_result (list sctx * list Ty) :=
   match defs with
   | [] => infer_ok ([], [])
   | v :: rest =>
-      match lookup_branch_b (enum_variant_name v) branches with
-      | Some e =>
-          match infer_core_env_state_fuel fuel env Ω n Σ e with
-          | infer_ok (T, Σv) =>
-              if ty_core_eqb (ty_core T) (ty_core T_head)
-              then
-                match infer_env_match_tail_collect fuel env Ω n Σ branches
-                    T_head rest with
-                | infer_ok (Σs, Ts) => infer_ok (Σv :: Σs, T :: Ts)
+      match
+        match lookup_expr_branch_binders (enum_variant_name v) branches with
+        | Some binders =>
+            match lookup_branch_b (enum_variant_name v) branches with
+            | Some e =>
+                match match_payload_params binders lts args v with
+                | infer_ok ps =>
+                    if params_names_nodup_b ps && ctx_lookup_params_none_b ps Σ
+                    then
+                      match infer_core_env_state_fuel fuel env Ω n
+                              (sctx_add_params ps Σ) e with
+                      | infer_ok (T, Σv_payload) =>
+                          if params_ok_sctx_b env ps Σv_payload
+                          then infer_ok (T, sctx_remove_params ps Σv_payload)
+                          else infer_err ErrContextCheckFailed
+                      | infer_err err => infer_err err
+                      end
+                    else infer_err ErrContextCheckFailed
                 | infer_err err => infer_err err
                 end
-              else infer_err (ErrTypeMismatch (ty_core T) (ty_core T_head))
-          | infer_err err => infer_err err
-          end
-      | None => infer_err (ErrMissingVariant (enum_variant_name v))
+            | None => infer_err (ErrMissingVariant (enum_variant_name v))
+            end
+        | None => infer_err (ErrMissingVariant (enum_variant_name v))
+        end
+      with
+      | infer_ok (T, Σv) =>
+          if ty_core_eqb (ty_core T) (ty_core T_head)
+          then
+            match infer_env_match_tail_collect fuel env Ω n lts args Σ
+                branches T_head rest with
+            | infer_ok (Σs, Ts) => infer_ok (Σv :: Σs, T :: Ts)
+            | infer_err err => infer_err err
+            end
+          else infer_err (ErrTypeMismatch (ty_core T) (ty_core T_head))
+      | infer_err err => infer_err err
       end
   end.
 
 Lemma infer_env_match_tail_collect_sound :
-  forall fuel env Ω n Σ branches T_head variants Σs Ts,
-    infer_env_match_tail_collect fuel env Ω n Σ branches T_head variants =
+  forall fuel env Ω n lts args Σ branches T_head variants Σs Ts,
+    infer_env_match_tail_collect fuel env Ω n lts args Σ branches T_head variants =
       infer_ok (Σs, Ts) ->
     first_payload_variant variants = None ->
     first_payload_binder_branch branches = None ->
@@ -301,38 +322,61 @@ Lemma infer_env_match_tail_collect_sound :
         call_expr e = true ->
         infer_core_env_state_fuel fuel env Ω n Σ0 e = infer_ok (T, Σ1) ->
         typed_env_structural env Ω n Σ0 e T Σ1) ->
-    typed_match_tail_env_structural env Ω n Σ branches variants
-      (ty_core T_head) Σs Ts.
+	    typed_match_tail_env_structural env Ω n lts args Σ branches variants
+	      (ty_core T_head) Σs Ts.
 Proof.
-  intros fuel env Ω n Σ branches T_head variants.
+  intros fuel env Ω n lts args Σ branches T_head variants.
   induction variants as [|v rest IH]; intros Σs Ts Hcollect Hpayloads Hbinders Hbranches Hexpr;
     simpl in Hcollect.
   - inversion Hcollect; subst. constructor.
   - simpl in Hpayloads.
     destruct (enum_variant_fields v) eqn:Hfields; try discriminate.
+    destruct (lookup_expr_branch_binders (enum_variant_name v) branches)
+      as [binders |] eqn:Hbinders_v; try discriminate.
     destruct (lookup_branch_b (enum_variant_name v) branches) as [e |] eqn:Hlookup;
       try discriminate.
-    destruct (infer_core_env_state_fuel fuel env Ω n Σ e) as [[T Σv] | err]
+    destruct (match_payload_params binders lts args v) as [ps | err_params]
+      eqn:Hparams; try discriminate.
+    destruct (params_names_nodup_b ps && ctx_lookup_params_none_b ps Σ)
+      eqn:Hparam_checks; try discriminate.
+    apply andb_true_iff in Hparam_checks as [Hnodup Hnone].
+    destruct (infer_core_env_state_fuel fuel env Ω n (sctx_add_params ps Σ) e)
+      as [[T Σv_payload] | err]
       eqn:Hinfer; try discriminate.
+    destruct (params_ok_sctx_b env ps Σv_payload) eqn:Hparams_ok; try discriminate.
     destruct (ty_core_eqb (ty_core T) (ty_core T_head)) eqn:Hcore; try discriminate.
-    destruct (infer_env_match_tail_collect fuel env Ω n Σ branches T_head rest)
-      as [[Σtail Ttail] | err'] eqn:Htail; try discriminate.
+	    destruct (infer_env_match_tail_collect fuel env Ω n lts args Σ branches T_head rest)
+	      as [[Σtail Ttail] | err'] eqn:Htail; try discriminate.
     inversion Hcollect; subst.
     rewrite lookup_branch_b_lookup_expr_branch in Hlookup.
-    eapply TESMatchTail_Cons.
-    + exact Hfields.
-    + eapply first_payload_binder_branch_lookup_none; eassumption.
-    + exact Hlookup.
-    + eapply Hexpr.
-      * eapply lookup_expr_branch_forallb_true; eassumption.
-      * exact Hinfer.
-    + apply ty_core_eqb_true. exact Hcore.
-    + eapply IH.
+    assert (Hbinders_nil : binders = []).
+    {
+      pose proof (first_payload_binder_branch_lookup_none
+        branches (enum_variant_name v) e Hbinders Hlookup) as Hnone_lookup.
+      rewrite Hbinders_v in Hnone_lookup. inversion Hnone_lookup. reflexivity.
+    }
+    subst binders.
+	    eapply TESMatchTail_Cons.
+	    + exact Hfields.
+	    + reflexivity.
+	    + exact Hbinders_v.
+	    + exact Hparams.
+	    + exact Hnodup.
+	    + exact Hnone.
+	    + exact Hlookup.
+	    + eapply Hexpr.
+	      * eapply lookup_expr_branch_forallb_true; eassumption.
+	      * exact Hinfer.
+	    + exact Hparams_ok.
+	    + reflexivity.
+	    + apply ty_core_eqb_true. exact Hcore.
+	    + eapply IH.
       * reflexivity.
       * exact Hpayloads.
       * exact Hbinders.
       * exact Hbranches.
       * exact Hexpr.
+  all: eauto.
 Qed.
 
 Fixpoint infer_env_fields_collect fuel env Ω n lts args
@@ -1193,43 +1237,89 @@ Proof.
       destruct (first_duplicate_branch l) as [dup |] eqn:Hdup; try discriminate.
       destruct (first_unknown_variant_branch l (enum_variants edef)) as [unknown |]
         eqn:Hunknown; try discriminate.
+      unfold first_unsupported_match_payload in Hinfer.
+      destruct (first_payload_binder_branch l) as [payload_binders |]
+        eqn:Hbinders; try discriminate.
+      destruct (first_payload_variant (enum_variants edef)) as [payload_variant |]
+        eqn:Hpayload; try discriminate.
       destruct (first_missing_variant_branch (enum_variants edef) l) as [missing |]
         eqn:Hmissing; try discriminate.
-      destruct (first_unsupported_match_payload l (enum_variants edef)) as [payload |]
-        eqn:Hunsupported; try discriminate.
-      destruct (first_unsupported_match_payload_none _ _ Hunsupported)
-        as [Hbinders Hpayload].
-      destruct (enum_variants edef) as [|v_head v_tail] eqn:Hvariants;
-        try discriminate.
-      simpl in Hinfer.
-      destruct (lookup_branch_b (enum_variant_name v_head) l) as [e_head |]
-        eqn:Hlookup_branch; try discriminate.
-      destruct (infer_core_env_state_fuel fuel' env Ω n Σ1 e_head)
+      destruct (enum_variants edef) as [|v_head v_tail] eqn:Hvariants.
+      * exfalso. cbn in Hinfer. discriminate Hinfer.
+      * simpl in Hinfer.
+        destruct (lookup_branch_b (enum_variant_name v_head) l) as [e_head |]
+          eqn:Hlookup_branch.
+        2: {
+          destruct (lookup_expr_branch_binders (enum_variant_name v_head) l);
+            discriminate.
+        }
+      assert (Hfields_head : enum_variant_fields v_head = []).
+      {
+        simpl in Hpayload.
+        destruct (enum_variant_fields v_head) eqn:Hfields; [reflexivity | discriminate].
+      }
+      assert (Hbinders_head :
+        lookup_expr_branch_binders (enum_variant_name v_head) l = Some []).
+      {
+        rewrite lookup_branch_b_lookup_expr_branch in Hlookup_branch.
+        eapply first_payload_binder_branch_lookup_none; eassumption.
+      }
+      rewrite Hbinders_head in Hinfer.
+      assert (Hparams_head :
+        match_payload_params [] l0 l1 v_head = infer_ok []).
+      {
+        unfold match_payload_params, instantiate_enum_variant_field_tys.
+        rewrite Hfields_head. simpl. reflexivity.
+      }
+      rewrite Hparams_head in Hinfer. simpl in Hinfer.
+      destruct (infer_core_env_state_fuel fuel' env Ω n (sctx_add_params [] Σ1) e_head)
         as [[T_head Σ_head] | err_head] eqn:Hhead; try discriminate.
-      remember
+      destruct
         ((fix infer_rest (T_head0 : Ty) (defs0 : list enum_variant_def)
             {struct defs0} : infer_result (list sctx * list Ty) :=
             match defs0 with
             | [] => infer_ok ([], [])
             | v0 :: rest0 =>
-                match lookup_branch_b (enum_variant_name v0) l with
-                | None => infer_err (ErrMissingVariant (enum_variant_name v0))
-                | Some e0 =>
-                    match infer_core_env_state_fuel fuel' env Ω n Σ1 e0 with
-                    | infer_err err => infer_err err
-                    | infer_ok (T0, Σ0) =>
-                        if ty_core_eqb (ty_core T0) (ty_core T_head0)
-                        then
-                          match infer_rest T_head0 rest0 with
+                match
+                  match lookup_expr_branch_binders (enum_variant_name v0) l with
+                  | Some binders =>
+                      match lookup_branch_b (enum_variant_name v0) l with
+                      | Some e_branch =>
+                          match match_payload_params binders l0 l1 v0 with
+                          | infer_ok ps =>
+                              if params_names_nodup_b ps &&
+                                 ctx_lookup_params_none_b ps Σ1
+                              then
+                                match infer_core_env_state_fuel fuel' env Ω n
+                                        (sctx_add_params ps Σ1) e_branch with
+                                | infer_ok (T_branch, Σ_branch_payload) =>
+                                    if params_ok_sctx_b env ps Σ_branch_payload
+                                    then infer_ok
+                                      (T_branch,
+                                       sctx_remove_params ps Σ_branch_payload)
+                                    else infer_err ErrContextCheckFailed
+                                | infer_err err => infer_err err
+                                end
+                              else infer_err ErrContextCheckFailed
                           | infer_err err => infer_err err
-                          | infer_ok (Σs, Ts) => infer_ok (Σ0 :: Σs, T0 :: Ts)
                           end
-                        else infer_err (ErrTypeMismatch (ty_core T0) (ty_core T_head0))
-                    end
+                      | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                      end
+                  | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                  end
+                with
+                | infer_ok (T0, Σ0) =>
+                    if ty_core_eqb (ty_core T0) (ty_core T_head0)
+                    then
+                      match infer_rest T_head0 rest0 with
+                      | infer_err err => infer_err err
+                      | infer_ok (Σs, Ts) => infer_ok (Σ0 :: Σs, T0 :: Ts)
+                      end
+                    else infer_err (ErrTypeMismatch (ty_core T0) (ty_core T_head0))
+                | infer_err err => infer_err err
                 end
-            end) T_head v_tail) as tail_result eqn:Htail.
-      destruct tail_result as [[Σ_tail Ts_tail] | err_tail]; try discriminate.
-      symmetry in Htail.
+            end) T_head v_tail)
+        as [[Σ_tail Ts_tail] | err_tail] eqn:Htail; try discriminate.
       assert (Hpayload_tail : first_payload_variant v_tail = None).
       {
         simpl in Hpayload.
@@ -1237,89 +1327,145 @@ Proof.
         exact Hpayload.
       }
       assert (Htail_typed :
-        typed_match_tail_env_structural env Ω n Σ1 l v_tail
+        typed_match_tail_env_structural env Ω n l0 l1 Σ1 l v_tail
           (ty_core T_head) Σ_tail Ts_tail).
       {
-        clear Hinfer Hvariants Hunknown Hmissing Hdup Hunsupported Hpayload.
+        clear Hinfer Hvariants Hunknown Hmissing Hdup Hpayload Hhead.
         revert Σ_tail Ts_tail Htail Hpayload_tail.
         induction v_tail as [|v rest IHtail]; intros Σ_tail Ts_tail Htail0 Hpayload0;
           simpl in Htail0.
         - inversion Htail0; subst. constructor.
         - simpl in Hpayload0.
           destruct (enum_variant_fields v) eqn:Hfields; try discriminate.
+          destruct (lookup_expr_branch_binders (enum_variant_name v) l)
+            as [binders |] eqn:Hbinders0; try discriminate.
           destruct (lookup_branch_b (enum_variant_name v) l) as [e0 |]
             eqn:Hlookup0; try discriminate.
-          destruct (infer_core_env_state_fuel fuel' env Ω n Σ1 e0)
+          destruct (match_payload_params binders l0 l1 v) as [ps | err_params]
+            eqn:Hparams; try discriminate.
+          destruct (params_names_nodup_b ps && ctx_lookup_params_none_b ps Σ1)
+            eqn:Hparam_checks; try discriminate.
+          apply andb_true_iff in Hparam_checks as [Hnodup Hnone].
+          destruct (infer_core_env_state_fuel fuel' env Ω n (sctx_add_params ps Σ1) e0)
             as [[T0 Σ0] | err0] eqn:Hinfer0; try discriminate.
+          destruct (params_ok_sctx_b env ps Σ0) eqn:Hparams_ok; try discriminate.
           destruct (ty_core_eqb (ty_core T0) (ty_core T_head)) eqn:Hcore0;
             try discriminate.
-          remember
+          destruct
             ((fix infer_rest (T_head0 : Ty) (defs0 : list enum_variant_def)
                 {struct defs0} : infer_result (list sctx * list Ty) :=
                 match defs0 with
                 | [] => infer_ok ([], [])
                 | v0 :: rest0 =>
-                    match lookup_branch_b (enum_variant_name v0) l with
-                    | None => infer_err (ErrMissingVariant (enum_variant_name v0))
-                    | Some e1 =>
-                        match infer_core_env_state_fuel fuel' env Ω n Σ1 e1 with
-                        | infer_err err => infer_err err
-                        | infer_ok (T1, Σv) =>
-                            if ty_core_eqb (ty_core T1) (ty_core T_head0)
-                            then
-                              match infer_rest T_head0 rest0 with
+                    match
+                      match lookup_expr_branch_binders (enum_variant_name v0) l with
+                      | Some binders0 =>
+                          match lookup_branch_b (enum_variant_name v0) l with
+                          | Some e1 =>
+                              match match_payload_params binders0 l0 l1 v0 with
+                              | infer_ok ps0 =>
+                                  if params_names_nodup_b ps0 &&
+                                     ctx_lookup_params_none_b ps0 Σ1
+                                  then
+                                    match infer_core_env_state_fuel fuel' env Ω n
+                                            (sctx_add_params ps0 Σ1) e1 with
+                                    | infer_ok (T1, Σ1_payload) =>
+                                        if params_ok_sctx_b env ps0 Σ1_payload
+                                        then infer_ok
+                                          (T1, sctx_remove_params ps0 Σ1_payload)
+                                        else infer_err ErrContextCheckFailed
+                                    | infer_err err => infer_err err
+                                    end
+                                  else infer_err ErrContextCheckFailed
                               | infer_err err => infer_err err
-                              | infer_ok (Σs, Ts) => infer_ok (Σv :: Σs, T1 :: Ts)
                               end
-                            else infer_err (ErrTypeMismatch (ty_core T1) (ty_core T_head0))
-                        end
+                          | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                          end
+                      | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                      end
+                    with
+                    | infer_ok (T1, Σv1) =>
+                        if ty_core_eqb (ty_core T1) (ty_core T_head0)
+                        then
+                          match infer_rest T_head0 rest0 with
+                          | infer_err err => infer_err err
+                          | infer_ok (Σs, Ts) => infer_ok (Σv1 :: Σs, T1 :: Ts)
+                          end
+                        else infer_err (ErrTypeMismatch (ty_core T1) (ty_core T_head0))
+                    | infer_err err => infer_err err
                     end
-                end) T_head rest) as tail0 eqn:Htail_rest.
-          destruct tail0 as [[Σs Ts] | err_tail0]; try discriminate.
+                end) T_head rest)
+            as [[Σs Ts] | err_tail0] eqn:Htail_rest; try discriminate.
           inversion Htail0; subst.
-          symmetry in Htail_rest.
           rewrite lookup_branch_b_lookup_expr_branch in Hlookup0.
-          eapply TESMatchTail_Cons.
+          assert (Hbinders_nil : binders = []).
+          {
+            pose proof (first_payload_binder_branch_lookup_none
+              l (enum_variant_name v) e0 Hbinders Hlookup0) as Hnone_lookup.
+            rewrite Hbinders0 in Hnone_lookup. inversion Hnone_lookup. reflexivity.
+          }
+          subst binders.
+          eapply TESMatchTail_Cons with
+            (Σ := Σ1) (branches := l) (v := v) (rest := rest)
+            (Σv_payload := Σ0) (Σv := sctx_remove_params ps Σ0)
+            (Σs := Σs) (Ts := Ts) (T := T0) (e := e0)
+            (expected_core := ty_core T_head) (binders := []) (ps := ps)
+            (lts := l0) (args := l1).
           + exact Hfields.
-          + eapply first_payload_binder_branch_lookup_none; eassumption.
+          + reflexivity.
+          + exact Hbinders0.
+          + exact Hparams.
+          + exact Hnodup.
+          + exact Hnone.
           + exact Hlookup0.
           + eapply IH.
-            -- eapply lookup_expr_branch_forallb_true; eassumption.
-            -- exact Hinfer0.
+            * eapply lookup_expr_branch_forallb_true; eassumption.
+            * exact Hinfer0.
+          + exact Hparams_ok.
+          + reflexivity.
           + apply ty_core_eqb_true. exact Hcore0.
-          + eapply IHtail.
-            * reflexivity.
-            * exact Hpayload0.
+          + exact (IHtail Σs Ts eq_refl Hpayload0).
+          all: try solve [eauto | reflexivity].
       }
       destruct (ctx_merge_many (ctx_of_sctx Σ_head) (map ctx_of_sctx Σ_tail))
         as [Γ_out |] eqn:Hmerge; try discriminate.
       simpl in Hinfer.
       inversion Hinfer; subst.
       rewrite lookup_branch_b_lookup_expr_branch in Hlookup_branch.
+      change (typed_env_structural env Ω n Σ (EMatch e l)
+        (MkTy (usage_max_tys_nonempty T_head Ts_tail) (ty_core T_head))
+        (sctx_of_ctx Γ_out)).
       eapply TES_Match with
-        (Σ1 := Σ1) (Σ_head := Σ_head) (Σ_tail := Σ_tail)
+        (Σ1 := Σ1) (Σ_head_payload := Σ_head) (Σ_head := Σ_head)
+        (Σ_tail := Σ_tail)
         (Γ_out := Γ_out) (edef := edef) (v_head := v_head)
         (v_tail := v_tail) (e_head := e_head) (T_scrut := T_scrut)
-        (T_head := T_head) (Ts_tail := Ts_tail).
-      * eapply IH; [exact Hscrut_call | exact Hscrut].
-      * exact Hscrut_core.
-      * exact Hlookup.
-      * apply negb_false_iff in Hlts. apply Nat.eqb_eq in Hlts. exact Hlts.
-      * apply negb_false_iff in Hargslen. apply Nat.eqb_eq in Hargslen. exact Hargslen.
-      * exact Hbounds.
-      * rewrite Hvariants. exact Hunknown.
-      * exact Hvariants.
-      * destruct (enum_variant_fields v_head) eqn:Hfields; [reflexivity |].
-        simpl in Hpayload.
-        rewrite Hfields in Hpayload. discriminate.
-      * eapply first_payload_binder_branch_lookup_none; eassumption.
-      * exact Hlookup_branch.
-      * eapply IH.
-        -- eapply lookup_expr_branch_forallb_true; eassumption.
-        -- exact Hhead.
-      * exact Htail_typed.
-      * exact Hmerge.
-			    + destruct (expr_as_place e) as [p |] eqn:Hplace_expr.
+        (T_head := T_head) (Ts_tail := Ts_tail)
+        (binders_head := []) (ps_head := []);
+        [ eapply IH; [exact Hscrut_call | exact Hscrut]
+        | exact Hscrut_core
+        | exact Hlookup
+        | apply negb_false_iff in Hlts; apply Nat.eqb_eq in Hlts; exact Hlts
+        | apply negb_false_iff in Hargslen; apply Nat.eqb_eq in Hargslen; exact Hargslen
+        | exact Hbounds
+        | rewrite Hvariants; exact Hunknown
+        | exact Hvariants
+        | exact Hfields_head
+        | reflexivity
+        | exact Hbinders_head
+        | unfold match_payload_params, instantiate_enum_variant_field_tys;
+          rewrite Hfields_head; simpl; reflexivity
+        | reflexivity
+        | reflexivity
+        | exact Hlookup_branch
+        | eapply IH;
+          [eapply lookup_expr_branch_forallb_true; eassumption | exact Hhead]
+        | reflexivity
+        | reflexivity
+        | exact Htail_typed
+        | exact Hmerge ];
+        try solve [eauto | reflexivity].
+				    + destruct (expr_as_place e) as [p |] eqn:Hplace_expr.
       * destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
         destruct Tp as [u c]; simpl in *.
         destruct c; try discriminate.
@@ -1732,43 +1878,89 @@ Proof.
       destruct (first_duplicate_branch l) as [dup |] eqn:Hdup; try discriminate.
       destruct (first_unknown_variant_branch l (enum_variants edef)) as [unknown |]
         eqn:Hunknown; try discriminate.
+      unfold first_unsupported_match_payload in Hinfer.
+      destruct (first_payload_binder_branch l) as [payload_binders |]
+        eqn:Hbinders; try discriminate.
+      destruct (first_payload_variant (enum_variants edef)) as [payload_variant |]
+        eqn:Hpayload; try discriminate.
       destruct (first_missing_variant_branch (enum_variants edef) l) as [missing |]
         eqn:Hmissing; try discriminate.
-      destruct (first_unsupported_match_payload l (enum_variants edef)) as [payload |]
-        eqn:Hunsupported; try discriminate.
-      destruct (first_unsupported_match_payload_none _ _ Hunsupported)
-        as [Hbinders Hpayload].
-      destruct (enum_variants edef) as [|v_head v_tail] eqn:Hvariants;
-        try discriminate.
-      simpl in Hinfer.
-      destruct (lookup_branch_b (enum_variant_name v_head) l) as [e_head |]
-        eqn:Hlookup_branch; try discriminate.
-      destruct (infer_core_env_state_fuel fuel' env Ω n Σ1 e_head)
+      destruct (enum_variants edef) as [|v_head v_tail] eqn:Hvariants.
+      * exfalso. cbn in Hinfer. discriminate Hinfer.
+      * simpl in Hinfer.
+        destruct (lookup_branch_b (enum_variant_name v_head) l) as [e_head |]
+          eqn:Hlookup_branch.
+        2: {
+          destruct (lookup_expr_branch_binders (enum_variant_name v_head) l);
+            discriminate.
+        }
+      assert (Hfields_head : enum_variant_fields v_head = []).
+      {
+        simpl in Hpayload.
+        destruct (enum_variant_fields v_head) eqn:Hfields; [reflexivity | discriminate].
+      }
+      assert (Hbinders_head :
+        lookup_expr_branch_binders (enum_variant_name v_head) l = Some []).
+      {
+        rewrite lookup_branch_b_lookup_expr_branch in Hlookup_branch.
+        eapply first_payload_binder_branch_lookup_none; eassumption.
+      }
+      rewrite Hbinders_head in Hinfer.
+      assert (Hparams_head :
+        match_payload_params [] l0 l1 v_head = infer_ok []).
+      {
+        unfold match_payload_params, instantiate_enum_variant_field_tys.
+        rewrite Hfields_head. simpl. reflexivity.
+      }
+      rewrite Hparams_head in Hinfer. simpl in Hinfer.
+      destruct (infer_core_env_state_fuel fuel' env Ω n (sctx_add_params [] Σ1) e_head)
         as [[T_head Σ_head] | err_head] eqn:Hhead; try discriminate.
-      remember
+      destruct
         ((fix infer_rest (T_head0 : Ty) (defs0 : list enum_variant_def)
             {struct defs0} : infer_result (list sctx * list Ty) :=
             match defs0 with
             | [] => infer_ok ([], [])
             | v0 :: rest0 =>
-                match lookup_branch_b (enum_variant_name v0) l with
-                | None => infer_err (ErrMissingVariant (enum_variant_name v0))
-                | Some e0 =>
-                    match infer_core_env_state_fuel fuel' env Ω n Σ1 e0 with
-                    | infer_err err => infer_err err
-                    | infer_ok (T0, Σ0) =>
-                        if ty_core_eqb (ty_core T0) (ty_core T_head0)
-                        then
-                          match infer_rest T_head0 rest0 with
+                match
+                  match lookup_expr_branch_binders (enum_variant_name v0) l with
+                  | Some binders =>
+                      match lookup_branch_b (enum_variant_name v0) l with
+                      | Some e_branch =>
+                          match match_payload_params binders l0 l1 v0 with
+                          | infer_ok ps =>
+                              if params_names_nodup_b ps &&
+                                 ctx_lookup_params_none_b ps Σ1
+                              then
+                                match infer_core_env_state_fuel fuel' env Ω n
+                                        (sctx_add_params ps Σ1) e_branch with
+                                | infer_ok (T_branch, Σ_branch_payload) =>
+                                    if params_ok_sctx_b env ps Σ_branch_payload
+                                    then infer_ok
+                                      (T_branch,
+                                       sctx_remove_params ps Σ_branch_payload)
+                                    else infer_err ErrContextCheckFailed
+                                | infer_err err => infer_err err
+                                end
+                              else infer_err ErrContextCheckFailed
                           | infer_err err => infer_err err
-                          | infer_ok (Σs, Ts) => infer_ok (Σ0 :: Σs, T0 :: Ts)
                           end
-                        else infer_err (ErrTypeMismatch (ty_core T0) (ty_core T_head0))
-                    end
+                      | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                      end
+                  | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                  end
+                with
+                | infer_ok (T0, Σ0) =>
+                    if ty_core_eqb (ty_core T0) (ty_core T_head0)
+                    then
+                      match infer_rest T_head0 rest0 with
+                      | infer_err err => infer_err err
+                      | infer_ok (Σs, Ts) => infer_ok (Σ0 :: Σs, T0 :: Ts)
+                      end
+                    else infer_err (ErrTypeMismatch (ty_core T0) (ty_core T_head0))
+                | infer_err err => infer_err err
                 end
-            end) T_head v_tail) as tail_result eqn:Htail.
-      destruct tail_result as [[Σ_tail Ts_tail] | err_tail]; try discriminate.
-      symmetry in Htail.
+            end) T_head v_tail)
+        as [[Σ_tail Ts_tail] | err_tail] eqn:Htail; try discriminate.
       assert (Hpayload_tail : first_payload_variant v_tail = None).
       {
         simpl in Hpayload.
@@ -1776,88 +1968,144 @@ Proof.
         exact Hpayload.
       }
       assert (Htail_typed :
-        typed_match_tail_env_structural env Ω n Σ1 l v_tail
+        typed_match_tail_env_structural env Ω n l0 l1 Σ1 l v_tail
           (ty_core T_head) Σ_tail Ts_tail).
       {
-        clear Hinfer Hvariants Hunknown Hmissing Hdup Hunsupported Hpayload.
+        clear Hinfer Hvariants Hunknown Hmissing Hdup Hpayload Hhead.
         revert Σ_tail Ts_tail Htail Hpayload_tail.
         induction v_tail as [|v rest IHtail]; intros Σ_tail Ts_tail Htail0 Hpayload0;
           simpl in Htail0.
         - inversion Htail0; subst. constructor.
         - simpl in Hpayload0.
           destruct (enum_variant_fields v) eqn:Hfields; try discriminate.
+          destruct (lookup_expr_branch_binders (enum_variant_name v) l)
+            as [binders |] eqn:Hbinders0; try discriminate.
           destruct (lookup_branch_b (enum_variant_name v) l) as [e0 |]
             eqn:Hlookup0; try discriminate.
-          destruct (infer_core_env_state_fuel fuel' env Ω n Σ1 e0)
+          destruct (match_payload_params binders l0 l1 v) as [ps | err_params]
+            eqn:Hparams; try discriminate.
+          destruct (params_names_nodup_b ps && ctx_lookup_params_none_b ps Σ1)
+            eqn:Hparam_checks; try discriminate.
+          apply andb_true_iff in Hparam_checks as [Hnodup Hnone].
+          destruct (infer_core_env_state_fuel fuel' env Ω n (sctx_add_params ps Σ1) e0)
             as [[T0 Σ0] | err0] eqn:Hinfer0; try discriminate.
+          destruct (params_ok_sctx_b env ps Σ0) eqn:Hparams_ok; try discriminate.
           destruct (ty_core_eqb (ty_core T0) (ty_core T_head)) eqn:Hcore0;
             try discriminate.
-          remember
+          destruct
             ((fix infer_rest (T_head0 : Ty) (defs0 : list enum_variant_def)
                 {struct defs0} : infer_result (list sctx * list Ty) :=
                 match defs0 with
                 | [] => infer_ok ([], [])
                 | v0 :: rest0 =>
-                    match lookup_branch_b (enum_variant_name v0) l with
-                    | None => infer_err (ErrMissingVariant (enum_variant_name v0))
-                    | Some e1 =>
-                        match infer_core_env_state_fuel fuel' env Ω n Σ1 e1 with
-                        | infer_err err => infer_err err
-                        | infer_ok (T1, Σv) =>
-                            if ty_core_eqb (ty_core T1) (ty_core T_head0)
-                            then
-                              match infer_rest T_head0 rest0 with
+                    match
+                      match lookup_expr_branch_binders (enum_variant_name v0) l with
+                      | Some binders0 =>
+                          match lookup_branch_b (enum_variant_name v0) l with
+                          | Some e1 =>
+                              match match_payload_params binders0 l0 l1 v0 with
+                              | infer_ok ps0 =>
+                                  if params_names_nodup_b ps0 &&
+                                     ctx_lookup_params_none_b ps0 Σ1
+                                  then
+                                    match infer_core_env_state_fuel fuel' env Ω n
+                                            (sctx_add_params ps0 Σ1) e1 with
+                                    | infer_ok (T1, Σ1_payload) =>
+                                        if params_ok_sctx_b env ps0 Σ1_payload
+                                        then infer_ok
+                                          (T1, sctx_remove_params ps0 Σ1_payload)
+                                        else infer_err ErrContextCheckFailed
+                                    | infer_err err => infer_err err
+                                    end
+                                  else infer_err ErrContextCheckFailed
                               | infer_err err => infer_err err
-                              | infer_ok (Σs, Ts) => infer_ok (Σv :: Σs, T1 :: Ts)
                               end
-                            else infer_err (ErrTypeMismatch (ty_core T1) (ty_core T_head0))
-                        end
+                          | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                          end
+                      | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                      end
+                    with
+                    | infer_ok (T1, Σv1) =>
+                        if ty_core_eqb (ty_core T1) (ty_core T_head0)
+                        then
+                          match infer_rest T_head0 rest0 with
+                          | infer_err err => infer_err err
+                          | infer_ok (Σs, Ts) => infer_ok (Σv1 :: Σs, T1 :: Ts)
+                          end
+                        else infer_err (ErrTypeMismatch (ty_core T1) (ty_core T_head0))
+                    | infer_err err => infer_err err
                     end
-                end) T_head rest) as tail0 eqn:Htail_rest.
-          destruct tail0 as [[Σs Ts] | err_tail0]; try discriminate.
+                end) T_head rest)
+            as [[Σs Ts] | err_tail0] eqn:Htail_rest; try discriminate.
           inversion Htail0; subst.
-          symmetry in Htail_rest.
           rewrite lookup_branch_b_lookup_expr_branch in Hlookup0.
-          eapply TESMatchTail_Cons.
+          assert (Hbinders_nil : binders = []).
+          {
+            pose proof (first_payload_binder_branch_lookup_none
+              l (enum_variant_name v) e0 Hbinders Hlookup0) as Hnone_lookup.
+            rewrite Hbinders0 in Hnone_lookup. inversion Hnone_lookup. reflexivity.
+          }
+          subst binders.
+          eapply TESMatchTail_Cons with
+            (Σ := Σ1) (branches := l) (v := v) (rest := rest)
+            (Σv_payload := Σ0) (Σv := sctx_remove_params ps Σ0)
+            (Σs := Σs) (Ts := Ts) (T := T0) (e := e0)
+            (expected_core := ty_core T_head) (binders := []) (ps := ps)
+            (lts := l0) (args := l1).
           + exact Hfields.
-          + eapply first_payload_binder_branch_lookup_none; eassumption.
+          + reflexivity.
+          + exact Hbinders0.
+          + exact Hparams.
+          + exact Hnodup.
+          + exact Hnone.
           + exact Hlookup0.
           + eapply IH.
-            -- eapply lookup_expr_branch_forallb_true; eassumption.
-            -- exact Hinfer0.
+            * eapply lookup_expr_branch_forallb_true; eassumption.
+            * exact Hinfer0.
+          + exact Hparams_ok.
+          + reflexivity.
           + apply ty_core_eqb_true. exact Hcore0.
-          + eapply IHtail.
-            * reflexivity.
-            * exact Hpayload0.
+          + exact (IHtail Σs Ts eq_refl Hpayload0).
+          all: try solve [eauto | reflexivity].
       }
       destruct (ctx_merge_many (ctx_of_sctx Σ_head) (map ctx_of_sctx Σ_tail))
         as [Γ_out |] eqn:Hmerge; try discriminate.
       simpl in Hinfer.
       inversion Hinfer; subst.
       rewrite lookup_branch_b_lookup_expr_branch in Hlookup_branch.
+      change (typed_env_structural env Ω n Σ (EMatch e l)
+        (MkTy (usage_max_tys_nonempty T_head Ts_tail) (ty_core T_head))
+        (sctx_of_ctx Γ_out)).
       eapply TES_Match with
-        (Σ1 := Σ1) (Σ_head := Σ_head) (Σ_tail := Σ_tail)
+        (Σ1 := Σ1) (Σ_head_payload := Σ_head) (Σ_head := Σ_head)
+        (Σ_tail := Σ_tail)
         (Γ_out := Γ_out) (edef := edef) (v_head := v_head)
         (v_tail := v_tail) (e_head := e_head) (T_scrut := T_scrut)
-        (T_head := T_head) (Ts_tail := Ts_tail).
-      * eapply IH; [exact Hscrut_struct | exact Hscrut].
-      * exact Hscrut_core.
-      * exact Hlookup.
-      * apply negb_false_iff in Hlts. apply Nat.eqb_eq in Hlts. exact Hlts.
-      * apply negb_false_iff in Hargslen. apply Nat.eqb_eq in Hargslen. exact Hargslen.
-      * exact Hbounds.
-      * rewrite Hvariants. exact Hunknown.
-      * exact Hvariants.
-      * destruct (enum_variant_fields v_head) eqn:Hfields; [reflexivity |].
-        simpl in Hpayload.
-        rewrite Hfields in Hpayload. discriminate.
-      * eapply first_payload_binder_branch_lookup_none; eassumption.
-      * exact Hlookup_branch.
-      * eapply IH.
-        -- eapply lookup_expr_branch_forallb_true; eassumption.
-        -- exact Hhead.
-      * exact Htail_typed.
-      * exact Hmerge.
+        (T_head := T_head) (Ts_tail := Ts_tail)
+        (binders_head := []) (ps_head := []);
+        [ eapply IH; [exact Hscrut_struct | exact Hscrut]
+        | exact Hscrut_core
+        | exact Hlookup
+        | apply negb_false_iff in Hlts; apply Nat.eqb_eq in Hlts; exact Hlts
+        | apply negb_false_iff in Hargslen; apply Nat.eqb_eq in Hargslen; exact Hargslen
+        | exact Hbounds
+        | rewrite Hvariants; exact Hunknown
+        | exact Hvariants
+        | exact Hfields_head
+        | reflexivity
+        | exact Hbinders_head
+        | unfold match_payload_params, instantiate_enum_variant_field_tys;
+          rewrite Hfields_head; simpl; reflexivity
+        | reflexivity
+        | reflexivity
+        | exact Hlookup_branch
+        | eapply IH;
+          [eapply lookup_expr_branch_forallb_true; eassumption | exact Hhead]
+        | reflexivity
+        | reflexivity
+        | exact Htail_typed
+        | exact Hmerge ];
+        try solve [eauto | reflexivity].
     + destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
       destruct (place_path p) as [[x path] |] eqn:Hpath.
       * destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.

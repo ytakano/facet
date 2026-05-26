@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Types Syntax PathState Program TypingRules Renaming.
+From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program TypingRules Renaming.
 From Stdlib Require Import List String ZArith Bool.
 Import ListNotations.
 
@@ -12,7 +12,7 @@ Inductive value : Type :=
   | VFloat   : string -> value
   | VBool    : bool -> value
   | VStruct  : string -> list (string * value) -> value
-  | VEnum    : string -> string -> list value -> value
+  | VEnum    : string -> string -> list lifetime -> list Ty -> list value -> value
   | VRef     : ident -> field_path -> value
   | VClosure : ident -> list store_entry -> value
 with store_entry : Type :=
@@ -405,7 +405,7 @@ Inductive eval (env : global_env) : store -> expr -> store -> value -> Prop :=
       lookup_enum_variant variant_name (enum_variants edef) = Some vdef ->
       eval_args env s payloads s' values ->
       eval env s (EEnum enum_name variant_name lts args payloads) s'
-        (VEnum enum_name variant_name values)
+        (VEnum enum_name variant_name lts args values)
 
   (* let x: T = e1 in e2 *)
   | Eval_Let : forall s s1 s2 m x T e1 e2 v1 v2,
@@ -494,10 +494,17 @@ Inductive eval (env : global_env) : store -> expr -> store -> value -> Prop :=
       eval env s1 e3 s2 v ->
       eval env s (EIf e1 e2 e3) s2 v
 
-  | Eval_MatchEnum : forall s s_scrut s' scrut branches enum_name variant_name e_branch v,
-      eval env s scrut s_scrut (VEnum enum_name variant_name []) ->
+  | Eval_MatchEnum : forall s s_scrut s_branch s' scrut branches
+        enum_name variant_name lts args values edef vdef binders ps e_branch v,
+      eval env s scrut s_scrut (VEnum enum_name variant_name lts args values) ->
+      lookup_enum enum_name env = Some edef ->
+      lookup_enum_variant variant_name (enum_variants edef) = Some vdef ->
+      lookup_expr_branch_binders variant_name branches = Some binders ->
+      match_payload_params_opt binders lts args vdef = Some ps ->
+      List.length values = List.length ps ->
       lookup_match_branch variant_name branches = Some e_branch ->
-      eval env s_scrut e_branch s' v ->
+      eval env (bind_params ps values s_scrut) e_branch s_branch v ->
+      s' = store_remove_params ps s_branch ->
       eval env s (EMatch scrut branches) s' v
 
   (* f(args): look up function, evaluate arguments, evaluate body. *)

@@ -641,8 +641,8 @@ Fixpoint match_branches_local_store_names_with
     (branches : list (string * list ident * expr)) : list ident :=
   match branches with
   | [] => []
-  | (_, _, e) :: rest =>
-      expr_names e ++
+  | (_, binders, e) :: rest =>
+      binders ++ expr_names e ++
       match_branches_local_store_names_with expr_names rest
   end.
 

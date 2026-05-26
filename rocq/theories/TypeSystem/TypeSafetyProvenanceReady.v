@@ -179,9 +179,12 @@ with alpha_rename_provenance_ready_match_branches :
        match branches0 with
        | [] => ([], used0)
        | (name, binders, e) :: rest =>
-           let (e', used1) := alpha_rename_expr ρ used0 e in
-           let (rest', used2) := go used1 rest in
-           ((name, binders, e') :: rest', used2)
+           let binder_seed := binders ++ free_vars_expr e ++ used0 in
+           let '(binders', ρ_branch, used1) :=
+             alpha_rename_idents ρ binder_seed binders in
+           let (e', used2) := alpha_rename_expr ρ_branch used1 e in
+           let (rest', used3) := go used2 rest in
+           ((name, binders', e') :: rest', used3)
        end) used branches = (branchesr, used') ->
     provenance_ready_match_branches branches ->
     provenance_ready_match_branches branchesr.
@@ -236,9 +239,12 @@ Proof.
             match branches0 with
             | [] => ([], used0)
             | (variant_name, binders, e) :: rest =>
-                let (e', used1') := alpha_rename_expr ρ used0 e in
-                let (rest', used2) := go used1' rest in
-                ((variant_name, binders, e') :: rest', used2)
+                let binder_seed := binders ++ free_vars_expr e ++ used0 in
+                let '(binders', ρ_branch, used1') :=
+                  alpha_rename_idents ρ binder_seed binders in
+                let (e', used2') := alpha_rename_expr ρ_branch used1' e in
+                let (rest', used3) := go used2' rest in
+                ((variant_name, binders', e') :: rest', used3)
             end) used_scrut branches)
         as [branchesr used_branches] eqn:Hbranches.
       inversion Hrename; subst.
@@ -339,7 +345,10 @@ Proof.
   - intros ρ used branches branchesr used' Hrename Hready.
     destruct Hready as [| name binders e rest He Hrest]; simpl in Hrename.
     + inversion Hrename; subst. constructor.
-    + destruct (alpha_rename_expr ρ used e) as [er used1] eqn:He_ren.
+    + destruct (alpha_rename_idents ρ (binders ++ free_vars_expr e ++ used)
+          binders) as [[bindersr ρ_branch] used1] eqn:Hbinders_ren.
+      destruct (alpha_rename_expr ρ_branch used1 e)
+        as [er used2] eqn:He_ren.
       destruct
         ((fix go (used0 : list ident)
              (branches0 : list (string * list ident * expr))
@@ -347,11 +356,14 @@ Proof.
             match branches0 with
             | [] => ([], used0)
             | (name0, binders0, e0) :: rest0 =>
-                let (e', used2) := alpha_rename_expr ρ used0 e0 in
-                let (rest', used3) := go used2 rest0 in
-                ((name0, binders0, e') :: rest', used3)
-            end) used1 rest)
-        as [restr used2] eqn:Hrest_ren.
+                let binder_seed := binders0 ++ free_vars_expr e0 ++ used0 in
+                let '(binders0', ρ_branch0, used3) :=
+                  alpha_rename_idents ρ binder_seed binders0 in
+                let (e', used4) := alpha_rename_expr ρ_branch0 used3 e0 in
+                let (rest', used5) := go used4 rest0 in
+                ((name0, binders0', e') :: rest', used5)
+            end) used2 rest)
+        as [restr used3] eqn:Hrest_ren.
       inversion Hrename; subst.
       constructor.
       * eapply alpha_rename_provenance_ready_expr; eauto.

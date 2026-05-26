@@ -935,18 +935,42 @@ Proof.
       destruct (first_duplicate_branch l) as [dup |] eqn:Hdup; try discriminate.
       destruct (first_unknown_variant_branch l (enum_variants edef)) as [unknown |]
         eqn:Hunknown; try discriminate.
-      destruct (first_missing_variant_branch (enum_variants edef) l) as [missing |]
-        eqn:Hmissing; try discriminate.
       destruct (first_unsupported_match_payload l (enum_variants edef)) as [payload |]
         eqn:Hunsupported; try discriminate.
       destruct (first_unsupported_match_payload_none _ _ Hunsupported)
         as [Hbinders Hpayload].
+      destruct (first_missing_variant_branch (enum_variants edef) l) as [missing |]
+        eqn:Hmissing; try discriminate.
       destruct (enum_variants edef) as [|v_head v_tail] eqn:Hvariants;
         try discriminate.
       simpl in Hinfer.
       destruct (lookup_branch_b (enum_variant_name v_head) l) as [e_head |]
-        eqn:Hlookup_branch; try discriminate.
-      destruct (infer_core_env_state_fuel_roots fuel' env Ω n R1 Σ1 e_head)
+        eqn:Hlookup_branch.
+      2: {
+        destruct (lookup_expr_branch_binders (enum_variant_name v_head) l);
+          discriminate.
+      }
+      assert (Hfields_head : enum_variant_fields v_head = []).
+      {
+        simpl in Hpayload.
+        destruct (enum_variant_fields v_head) eqn:Hfields; [reflexivity | discriminate].
+      }
+      assert (Hbinders_head :
+        lookup_expr_branch_binders (enum_variant_name v_head) l = Some []).
+      {
+        rewrite lookup_branch_b_lookup_expr_branch in Hlookup_branch.
+        eapply first_payload_binder_branch_lookup_none; eassumption.
+      }
+      rewrite Hbinders_head in Hinfer.
+      assert (Hparams_head :
+        match_payload_params [] l0 l1 v_head = infer_ok []).
+      {
+        unfold match_payload_params, instantiate_enum_variant_field_tys.
+        rewrite Hfields_head. simpl. reflexivity.
+      }
+      rewrite Hparams_head in Hinfer. simpl in Hinfer.
+      destruct (infer_core_env_state_fuel_roots fuel' env Ω n R1
+          (sctx_add_params [] Σ1) e_head)
         as [[[[T_head Σ_head] R_out] roots_head] | err_head] eqn:Hhead;
         try discriminate.
       remember
@@ -956,23 +980,54 @@ Proof.
             match defs0 with
             | [] => infer_ok ([], [], [])
             | v0 :: rest0 =>
-                match lookup_branch_b (enum_variant_name v0) l with
-                | None => infer_err (ErrMissingVariant (enum_variant_name v0))
-                | Some e0 =>
-                    match infer_core_env_state_fuel_roots fuel' env Ω n R1 Σ1 e0 with
-                    | infer_err err => infer_err err
-                    | infer_ok (T0, Σ0, R0, roots0) =>
-                        if ty_core_eqb (ty_core T0) (ty_core T_head0)
-                        then
-                          infer_if_bool (root_env_eqb R0 R_out0)
-                            match infer_rest T_head0 R_out0 rest0 with
-                            | infer_err err => infer_err err
-                            | infer_ok (Σs, Ts, rootss) =>
-                                infer_ok (Σ0 :: Σs, T0 :: Ts, roots0 :: rootss)
-                            end
-                            (infer_err ErrContextCheckFailed)
-                        else infer_err (ErrTypeMismatch (ty_core T0) (ty_core T_head0))
-                    end
+                match
+                  match lookup_expr_branch_binders (enum_variant_name v0) l with
+                  | Some binders =>
+                      match lookup_branch_b (enum_variant_name v0) l with
+                      | Some e_branch =>
+                          match match_payload_params binders l0 l1 v0 with
+                          | infer_ok ps =>
+                              if params_names_nodup_b ps &&
+                                 ctx_lookup_params_none_b ps Σ1 &&
+                                 root_env_lookup_params_none_b ps R1
+                              then
+                                match infer_core_env_state_fuel_roots fuel' env Ω n
+                                        (root_env_add_params_roots_same ps roots_scrut R1)
+                                        (sctx_add_params ps Σ1) e_branch with
+                                | infer_ok (T_branch, Σ_branch_payload,
+                                            R_branch_payload, roots_branch) =>
+                                    if params_ok_sctx_b env ps Σ_branch_payload &&
+                                       roots_exclude_params_b ps roots_branch &&
+                                       root_env_excludes_params_b ps
+                                         (root_env_remove_match_params ps R_branch_payload)
+                                    then infer_ok
+                                      (T_branch,
+                                       sctx_remove_params ps Σ_branch_payload,
+                                       root_env_remove_match_params ps R_branch_payload,
+                                       roots_branch)
+                                    else infer_err ErrContextCheckFailed
+                                | infer_err err => infer_err err
+                                end
+                              else infer_err ErrContextCheckFailed
+                          | infer_err err => infer_err err
+                          end
+                      | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                      end
+                  | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                  end
+                with
+                | infer_ok (T0, Σ0, R0, roots0) =>
+                    if ty_core_eqb (ty_core T0) (ty_core T_head0)
+                    then
+                      infer_if_bool (root_env_eqb R0 R_out0)
+                        match infer_rest T_head0 R_out0 rest0 with
+                        | infer_err err => infer_err err
+                        | infer_ok (Σs, Ts, rootss) =>
+                            infer_ok (Σ0 :: Σs, T0 :: Ts, roots0 :: rootss)
+                        end
+                        (infer_err ErrContextCheckFailed)
+                    else infer_err (ErrTypeMismatch (ty_core T0) (ty_core T_head0))
+                | infer_err err => infer_err err
                 end
             end) T_head R_out v_tail) as tail_result eqn:Htail.
       destruct tail_result as [[[Σ_tail Ts_tail] roots_tail] | err_tail];
@@ -985,7 +1040,7 @@ Proof.
         exact Hpayload.
       }
       assert (Htail_typed :
-        typed_match_tail_roots env Ω n R1 Σ1 l v_tail
+        typed_match_tail_roots env Ω n l0 l1 R1 roots_scrut Σ1 l v_tail
           (ty_core T_head) R_out Σ_tail Ts_tail roots_tail).
       {
         clear Hinfer Hvariants Hunknown Hmissing Hdup Hunsupported Hpayload.
@@ -995,13 +1050,26 @@ Proof.
         - inversion Htail0; subst. constructor.
         - simpl in Hpayload0.
           destruct (enum_variant_fields v) eqn:Hfields; try discriminate.
+          destruct (lookup_expr_branch_binders (enum_variant_name v) l)
+            as [binders |] eqn:Hbinders0; try discriminate.
           destruct (lookup_branch_b (enum_variant_name v) l) as [e0 |]
             eqn:Hlookup0; try discriminate.
-          destruct (infer_core_env_state_fuel_roots fuel' env Ω n R1 Σ1 e0)
+          destruct (match_payload_params binders l0 l1 v) as [ps | err_params]
+            eqn:Hparams; try discriminate.
+          destruct (params_names_nodup_b ps && ctx_lookup_params_none_b ps Σ1 &&
+              root_env_lookup_params_none_b ps R1) eqn:Hparam_checks; try discriminate.
+          destruct (infer_core_env_state_fuel_roots fuel' env Ω n
+              (root_env_add_params_roots_same ps roots_scrut R1)
+              (sctx_add_params ps Σ1) e0)
             as [[[[T0 Σ0] R0] roots0] | err0] eqn:Hinfer0; try discriminate.
+          destruct (params_ok_sctx_b env ps Σ0 &&
+              roots_exclude_params_b ps roots0 &&
+              root_env_excludes_params_b ps (root_env_remove_match_params ps R0))
+            eqn:Hcleanup_checks; try discriminate.
           destruct (ty_core_eqb (ty_core T0) (ty_core T_head)) eqn:Hcore0;
             try discriminate.
-          destruct (root_env_eqb R0 R_out) eqn:Hroot0; try discriminate.
+          destruct (root_env_eqb (root_env_remove_match_params ps R0) R_out)
+            eqn:Hroot0; try discriminate.
           change (infer_if_bool true ?ok ?err) with ok in Htail0.
           remember
             ((fix infer_rest (T_head0 : Ty) (R_out0 : root_env)
@@ -1010,34 +1078,95 @@ Proof.
                 match defs0 with
                 | [] => infer_ok ([], [], [])
                 | v0 :: rest0 =>
-                    match lookup_branch_b (enum_variant_name v0) l with
-                    | None => infer_err (ErrMissingVariant (enum_variant_name v0))
-                    | Some e1 =>
-                        match infer_core_env_state_fuel_roots fuel' env Ω n R1 Σ1 e1 with
-                        | infer_err err => infer_err err
-                        | infer_ok (T1, Σv, Rv, rootsv) =>
-                            if ty_core_eqb (ty_core T1) (ty_core T_head0)
-                            then
-                              infer_if_bool (root_env_eqb Rv R_out0)
-                                match infer_rest T_head0 R_out0 rest0 with
-                                | infer_err err => infer_err err
-                                | infer_ok (Σs, Ts, rootss) =>
-                                    infer_ok (Σv :: Σs, T1 :: Ts, rootsv :: rootss)
-                                end
-                                (infer_err ErrContextCheckFailed)
-                            else infer_err (ErrTypeMismatch (ty_core T1) (ty_core T_head0))
-                        end
+                    match
+                      match lookup_expr_branch_binders (enum_variant_name v0) l with
+                      | Some binders0 =>
+                          match lookup_branch_b (enum_variant_name v0) l with
+                          | Some e1 =>
+                              match match_payload_params binders0 l0 l1 v0 with
+                              | infer_ok ps0 =>
+                                  if params_names_nodup_b ps0 &&
+                                     ctx_lookup_params_none_b ps0 Σ1 &&
+                                     root_env_lookup_params_none_b ps0 R1
+                                  then
+                                    match infer_core_env_state_fuel_roots fuel' env Ω n
+                                            (root_env_add_params_roots_same ps0 roots_scrut R1)
+                                            (sctx_add_params ps0 Σ1) e1 with
+                                    | infer_ok (T1, Σ1_payload, R1_payload, roots1) =>
+                                        if params_ok_sctx_b env ps0 Σ1_payload &&
+                                           roots_exclude_params_b ps0 roots1 &&
+                                           root_env_excludes_params_b ps0
+                                             (root_env_remove_match_params ps0 R1_payload)
+                                        then infer_ok
+                                          (T1, sctx_remove_params ps0 Σ1_payload,
+                                           root_env_remove_match_params ps0 R1_payload,
+                                           roots1)
+                                        else infer_err ErrContextCheckFailed
+                                    | infer_err err => infer_err err
+                                    end
+                                  else infer_err ErrContextCheckFailed
+                              | infer_err err => infer_err err
+                              end
+                          | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                          end
+                      | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                      end
+                    with
+                    | infer_ok (T1, Σv, Rv, rootsv) =>
+                        if ty_core_eqb (ty_core T1) (ty_core T_head0)
+                        then
+                          infer_if_bool (root_env_eqb Rv R_out0)
+                            match infer_rest T_head0 R_out0 rest0 with
+                            | infer_err err => infer_err err
+                            | infer_ok (Σs, Ts, rootss) =>
+                                infer_ok (Σv :: Σs, T1 :: Ts, rootsv :: rootss)
+                            end
+                            (infer_err ErrContextCheckFailed)
+                        else infer_err (ErrTypeMismatch (ty_core T1) (ty_core T_head0))
+                    | infer_err err => infer_err err
                     end
                 end) T_head R_out rest) as tail0 eqn:Htail_rest.
           destruct tail0 as [[[Σs Ts] rootss] | err_tail0]; try discriminate.
           inversion Htail0; subst.
           symmetry in Htail_rest.
           rewrite lookup_branch_b_lookup_expr_branch in Hlookup0.
-          eapply TERMatchTail_Cons.
+          assert (Hbinders_nil : binders = []).
+          {
+            pose proof (first_payload_binder_branch_lookup_none
+              l (enum_variant_name v) e0 Hbinders Hlookup0) as Hnone_lookup.
+            rewrite Hbinders0 in Hnone_lookup. inversion Hnone_lookup. reflexivity.
+          }
+          subst binders.
+          assert (Hps_nil : ps = []).
+          {
+            unfold match_payload_params, instantiate_enum_variant_field_tys in Hparams.
+            rewrite Hfields in Hparams. simpl in Hparams.
+            inversion Hparams. reflexivity.
+          }
+          subst ps.
+          simpl in Hparam_checks, Hcleanup_checks.
+          eapply TERMatchTail_Cons with
+            (R_payload := R1) (Rv_payload := R0) (Rv := R0)
+            (Σv_payload := Σ0) (Σv := Σ0)
+            (Σs := Σs) (Ts := Ts) (rootss := rootss)
+            (T := T0) (e := e0) (binders := []) (ps := [])
+            (lts := l0) (args := l1) (roots_scrut := roots_scrut).
           + exact Hfields.
-          + eapply first_payload_binder_branch_lookup_none; eassumption.
+          + reflexivity.
+          + exact Hbinders0.
+          + unfold match_payload_params, instantiate_enum_variant_field_tys.
+            rewrite Hfields. simpl. reflexivity.
+          + reflexivity.
+          + reflexivity.
+          + reflexivity.
           + exact Hlookup0.
+          + reflexivity.
           + eapply IH. exact Hinfer0.
+          + reflexivity.
+          + constructor.
+          + reflexivity.
+          + constructor.
+          + reflexivity.
           + apply ty_core_eqb_true. exact Hcore0.
           + apply root_env_eqb_true_equiv. exact Hroot0.
           + eapply IHtail.
@@ -1048,26 +1177,45 @@ Proof.
         as [Γ_out |] eqn:Hmerge; try discriminate.
       inversion Hinfer; subst.
       rewrite lookup_branch_b_lookup_expr_branch in Hlookup_branch.
+      change (typed_env_roots env Ω n R Σ (EMatch e l)
+        (MkTy (usage_max_tys_nonempty T_head Ts_tail) (ty_core T_head))
+        (sctx_of_ctx Γ_out) R'
+        (root_set_union roots_head (root_sets_union roots_tail))).
       eapply TER_Match with
-        (Σ1 := Σ1) (Σ_head := Σ_head) (Σ_tail := Σ_tail)
+        (R1 := R1) (R_payload := R1) (R_head_payload := R')
+        (R_out := R') (Σ1 := Σ1) (Σ_head_payload := Σ_head)
+        (Σ_head := Σ_head) (Σ_tail := Σ_tail)
         (Γ_out := Γ_out) (edef := edef) (v_head := v_head)
         (v_tail := v_tail) (e_head := e_head) (T_scrut := T_scrut)
-        (T_head := T_head) (Ts_tail := Ts_tail).
-      * eapply IH. exact Hscrut.
-      * exact Hscrut_core.
-      * exact Hlookup.
-      * apply negb_false_iff in Hlts. apply Nat.eqb_eq in Hlts. exact Hlts.
-      * apply negb_false_iff in Hargslen. apply Nat.eqb_eq in Hargslen. exact Hargslen.
-      * exact Hbounds.
-      * rewrite Hvariants. exact Hunknown.
-      * exact Hvariants.
-      * destruct (enum_variant_fields v_head) eqn:Hfields; [reflexivity |].
-        simpl in Hpayload. rewrite Hfields in Hpayload. discriminate.
-      * eapply first_payload_binder_branch_lookup_none; eassumption.
-      * exact Hlookup_branch.
-      * eapply IH. exact Hhead.
-      * exact Htail_typed.
-      * exact Hmerge.
+        (T_head := T_head) (Ts_tail := Ts_tail)
+        (roots_scrut := roots_scrut) (roots_head := roots_head)
+        (roots_tail := roots_tail) (binders_head := []) (ps_head := []);
+        [ eapply IH; exact Hscrut
+        | exact Hscrut_core
+        | exact Hlookup
+        | apply negb_false_iff in Hlts; apply Nat.eqb_eq in Hlts; exact Hlts
+        | apply negb_false_iff in Hargslen; apply Nat.eqb_eq in Hargslen; exact Hargslen
+        | exact Hbounds
+        | rewrite Hvariants; exact Hunknown
+        | exact Hvariants
+        | exact Hfields_head
+        | reflexivity
+        | exact Hbinders_head
+        | exact Hparams_head
+        | reflexivity
+        | reflexivity
+        | reflexivity
+        | exact Hlookup_branch
+        | reflexivity
+        | eapply IH; exact Hhead
+        | reflexivity
+        | constructor
+        | reflexivity
+        | constructor
+        | reflexivity
+        | exact Htail_typed
+        | exact Hmerge ];
+        try solve [eauto | reflexivity].
 	    + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
 	      destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
       destruct (root_env_lookup x R) as [roots_result |] eqn:Hroot_result; try discriminate.
@@ -1456,18 +1604,42 @@ Proof.
       destruct (first_duplicate_branch l) as [dup |] eqn:Hdup; try discriminate.
       destruct (first_unknown_variant_branch l (enum_variants edef)) as [unknown |]
         eqn:Hunknown; try discriminate.
-      destruct (first_missing_variant_branch (enum_variants edef) l) as [missing |]
-        eqn:Hmissing; try discriminate.
       destruct (first_unsupported_match_payload l (enum_variants edef)) as [payload |]
         eqn:Hunsupported; try discriminate.
       destruct (first_unsupported_match_payload_none _ _ Hunsupported)
         as [Hbinders Hpayload].
+      destruct (first_missing_variant_branch (enum_variants edef) l) as [missing |]
+        eqn:Hmissing; try discriminate.
       destruct (enum_variants edef) as [|v_head v_tail] eqn:Hvariants;
         try discriminate.
       simpl in Hinfer.
       destruct (lookup_branch_b (enum_variant_name v_head) l) as [e_head |]
-        eqn:Hlookup_branch; try discriminate.
-      destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R1 Σ1 e_head)
+        eqn:Hlookup_branch.
+      2: {
+        destruct (lookup_expr_branch_binders (enum_variant_name v_head) l);
+          discriminate.
+      }
+      assert (Hfields_head : enum_variant_fields v_head = []).
+      {
+        simpl in Hpayload.
+        destruct (enum_variant_fields v_head) eqn:Hfields; [reflexivity | discriminate].
+      }
+      assert (Hbinders_head :
+        lookup_expr_branch_binders (enum_variant_name v_head) l = Some []).
+      {
+        rewrite lookup_branch_b_lookup_expr_branch in Hlookup_branch.
+        eapply first_payload_binder_branch_lookup_none; eassumption.
+      }
+      rewrite Hbinders_head in Hinfer.
+      assert (Hparams_head :
+        match_payload_params [] l0 l1 v_head = infer_ok []).
+      {
+        unfold match_payload_params, instantiate_enum_variant_field_tys.
+        rewrite Hfields_head. simpl. reflexivity.
+      }
+      rewrite Hparams_head in Hinfer. simpl in Hinfer.
+      destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R1
+          (sctx_add_params [] Σ1) e_head)
         as [[[[T_head Σ_head] R_out] roots_head] | err_head] eqn:Hhead;
         try discriminate.
       remember
@@ -1477,23 +1649,54 @@ Proof.
             match defs0 with
             | [] => infer_ok ([], [], [])
             | v0 :: rest0 =>
-                match lookup_branch_b (enum_variant_name v0) l with
-                | None => infer_err (ErrMissingVariant (enum_variant_name v0))
-                | Some e0 =>
-                    match infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R1 Σ1 e0 with
-                    | infer_err err => infer_err err
-                    | infer_ok (T0, Σ0, R0, roots0) =>
-                        if ty_core_eqb (ty_core T0) (ty_core T_head0)
-                        then
-                          infer_if_bool (root_env_eqb R0 R_out0)
-                            match infer_rest T_head0 R_out0 rest0 with
-                            | infer_err err => infer_err err
-                            | infer_ok (Σs, Ts, rootss) =>
-                                infer_ok (Σ0 :: Σs, T0 :: Ts, roots0 :: rootss)
-                            end
-                            (infer_err ErrContextCheckFailed)
-                        else infer_err (ErrTypeMismatch (ty_core T0) (ty_core T_head0))
-                    end
+                match
+                  match lookup_expr_branch_binders (enum_variant_name v0) l with
+                  | Some binders =>
+                      match lookup_branch_b (enum_variant_name v0) l with
+                      | Some e_branch =>
+                          match match_payload_params binders l0 l1 v0 with
+                          | infer_ok ps =>
+                              if params_names_nodup_b ps &&
+                                 ctx_lookup_params_none_b ps Σ1 &&
+                                 root_env_lookup_params_none_b ps R1
+                              then
+                                match infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n
+                                        (root_env_add_params_roots_same ps roots_scrut R1)
+                                        (sctx_add_params ps Σ1) e_branch with
+                                | infer_ok (T_branch, Σ_branch_payload,
+                                            R_branch_payload, roots_branch) =>
+                                    if params_ok_sctx_b env ps Σ_branch_payload &&
+                                       roots_exclude_params_b ps roots_branch &&
+                                       root_env_excludes_params_b ps
+                                         (root_env_remove_match_params ps R_branch_payload)
+                                    then infer_ok
+                                      (T_branch,
+                                       sctx_remove_params ps Σ_branch_payload,
+                                       root_env_remove_match_params ps R_branch_payload,
+                                       roots_branch)
+                                    else infer_err ErrContextCheckFailed
+                                | infer_err err => infer_err err
+                                end
+                              else infer_err ErrContextCheckFailed
+                          | infer_err err => infer_err err
+                          end
+                      | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                      end
+                  | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                  end
+                with
+                | infer_ok (T0, Σ0, R0, roots0) =>
+                    if ty_core_eqb (ty_core T0) (ty_core T_head0)
+                    then
+                      infer_if_bool (root_env_eqb R0 R_out0)
+                        match infer_rest T_head0 R_out0 rest0 with
+                        | infer_err err => infer_err err
+                        | infer_ok (Σs, Ts, rootss) =>
+                            infer_ok (Σ0 :: Σs, T0 :: Ts, roots0 :: rootss)
+                        end
+                        (infer_err ErrContextCheckFailed)
+                    else infer_err (ErrTypeMismatch (ty_core T0) (ty_core T_head0))
+                | infer_err err => infer_err err
                 end
             end) T_head R_out v_tail) as tail_result eqn:Htail.
       destruct tail_result as [[[Σ_tail Ts_tail] roots_tail] | err_tail];
@@ -1506,7 +1709,7 @@ Proof.
         exact Hpayload.
       }
       assert (Htail_typed :
-        typed_match_tail_roots_shadow_safe env Ω n R1 Σ1 l v_tail
+        typed_match_tail_roots_shadow_safe env Ω n l0 l1 R1 roots_scrut Σ1 l v_tail
           (ty_core T_head) R_out Σ_tail Ts_tail roots_tail).
       {
         clear Hinfer Hvariants Hunknown Hmissing Hdup Hunsupported Hpayload.
@@ -1516,13 +1719,26 @@ Proof.
         - inversion Htail0; subst. constructor.
         - simpl in Hpayload0.
           destruct (enum_variant_fields v) eqn:Hfields; try discriminate.
+          destruct (lookup_expr_branch_binders (enum_variant_name v) l)
+            as [binders |] eqn:Hbinders0; try discriminate.
           destruct (lookup_branch_b (enum_variant_name v) l) as [e0 |]
             eqn:Hlookup0; try discriminate.
-          destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R1 Σ1 e0)
+          destruct (match_payload_params binders l0 l1 v) as [ps | err_params]
+            eqn:Hparams; try discriminate.
+          destruct (params_names_nodup_b ps && ctx_lookup_params_none_b ps Σ1 &&
+              root_env_lookup_params_none_b ps R1) eqn:Hparam_checks; try discriminate.
+          destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n
+              (root_env_add_params_roots_same ps roots_scrut R1)
+              (sctx_add_params ps Σ1) e0)
             as [[[[T0 Σ0] R0] roots0] | err0] eqn:Hinfer0; try discriminate.
+          destruct (params_ok_sctx_b env ps Σ0 &&
+              roots_exclude_params_b ps roots0 &&
+              root_env_excludes_params_b ps (root_env_remove_match_params ps R0))
+            eqn:Hcleanup_checks; try discriminate.
           destruct (ty_core_eqb (ty_core T0) (ty_core T_head)) eqn:Hcore0;
             try discriminate.
-          destruct (root_env_eqb R0 R_out) eqn:Hroot0; try discriminate.
+          destruct (root_env_eqb (root_env_remove_match_params ps R0) R_out)
+            eqn:Hroot0; try discriminate.
           change (infer_if_bool true ?ok ?err) with ok in Htail0.
           remember
             ((fix infer_rest (T_head0 : Ty) (R_out0 : root_env)
@@ -1531,34 +1747,95 @@ Proof.
                 match defs0 with
                 | [] => infer_ok ([], [], [])
                 | v0 :: rest0 =>
-                    match lookup_branch_b (enum_variant_name v0) l with
-                    | None => infer_err (ErrMissingVariant (enum_variant_name v0))
-                    | Some e1 =>
-                        match infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R1 Σ1 e1 with
-                        | infer_err err => infer_err err
-                        | infer_ok (T1, Σv, Rv, rootsv) =>
-                            if ty_core_eqb (ty_core T1) (ty_core T_head0)
-                            then
-                              infer_if_bool (root_env_eqb Rv R_out0)
-                                match infer_rest T_head0 R_out0 rest0 with
-                                | infer_err err => infer_err err
-                                | infer_ok (Σs, Ts, rootss) =>
-                                    infer_ok (Σv :: Σs, T1 :: Ts, rootsv :: rootss)
-                                end
-                                (infer_err ErrContextCheckFailed)
-                            else infer_err (ErrTypeMismatch (ty_core T1) (ty_core T_head0))
-                        end
+                    match
+                      match lookup_expr_branch_binders (enum_variant_name v0) l with
+                      | Some binders0 =>
+                          match lookup_branch_b (enum_variant_name v0) l with
+                          | Some e1 =>
+                              match match_payload_params binders0 l0 l1 v0 with
+                              | infer_ok ps0 =>
+                                  if params_names_nodup_b ps0 &&
+                                     ctx_lookup_params_none_b ps0 Σ1 &&
+                                     root_env_lookup_params_none_b ps0 R1
+                                  then
+                                    match infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n
+                                            (root_env_add_params_roots_same ps0 roots_scrut R1)
+                                            (sctx_add_params ps0 Σ1) e1 with
+                                    | infer_ok (T1, Σ1_payload, R1_payload, roots1) =>
+                                        if params_ok_sctx_b env ps0 Σ1_payload &&
+                                           roots_exclude_params_b ps0 roots1 &&
+                                           root_env_excludes_params_b ps0
+                                             (root_env_remove_match_params ps0 R1_payload)
+                                        then infer_ok
+                                          (T1, sctx_remove_params ps0 Σ1_payload,
+                                           root_env_remove_match_params ps0 R1_payload,
+                                           roots1)
+                                        else infer_err ErrContextCheckFailed
+                                    | infer_err err => infer_err err
+                                    end
+                                  else infer_err ErrContextCheckFailed
+                              | infer_err err => infer_err err
+                              end
+                          | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                          end
+                      | None => infer_err (ErrMissingVariant (enum_variant_name v0))
+                      end
+                    with
+                    | infer_ok (T1, Σv, Rv, rootsv) =>
+                        if ty_core_eqb (ty_core T1) (ty_core T_head0)
+                        then
+                          infer_if_bool (root_env_eqb Rv R_out0)
+                            match infer_rest T_head0 R_out0 rest0 with
+                            | infer_err err => infer_err err
+                            | infer_ok (Σs, Ts, rootss) =>
+                                infer_ok (Σv :: Σs, T1 :: Ts, rootsv :: rootss)
+                            end
+                            (infer_err ErrContextCheckFailed)
+                        else infer_err (ErrTypeMismatch (ty_core T1) (ty_core T_head0))
+                    | infer_err err => infer_err err
                     end
                 end) T_head R_out rest) as tail0 eqn:Htail_rest.
           destruct tail0 as [[[Σs Ts] rootss] | err_tail0]; try discriminate.
           inversion Htail0; subst.
           symmetry in Htail_rest.
           rewrite lookup_branch_b_lookup_expr_branch in Hlookup0.
-          eapply TERSMatchTail_Cons.
+          assert (Hbinders_nil : binders = []).
+          {
+            pose proof (first_payload_binder_branch_lookup_none
+              l (enum_variant_name v) e0 Hbinders Hlookup0) as Hnone_lookup.
+            rewrite Hbinders0 in Hnone_lookup. inversion Hnone_lookup. reflexivity.
+          }
+          subst binders.
+          assert (Hps_nil : ps = []).
+          {
+            unfold match_payload_params, instantiate_enum_variant_field_tys in Hparams.
+            rewrite Hfields in Hparams. simpl in Hparams.
+            inversion Hparams. reflexivity.
+          }
+          subst ps.
+          simpl in Hparam_checks, Hcleanup_checks.
+          eapply TERSMatchTail_Cons with
+            (R_payload := R1) (Rv_payload := R0) (Rv := R0)
+            (Σv_payload := Σ0) (Σv := Σ0)
+            (Σs := Σs) (Ts := Ts) (rootss := rootss)
+            (T := T0) (e := e0) (binders := []) (ps := [])
+            (lts := l0) (args := l1) (roots_scrut := roots_scrut).
           + exact Hfields.
-          + eapply first_payload_binder_branch_lookup_none; eassumption.
+          + reflexivity.
+          + exact Hbinders0.
+          + unfold match_payload_params, instantiate_enum_variant_field_tys.
+            rewrite Hfields. simpl. reflexivity.
+          + reflexivity.
+          + reflexivity.
+          + reflexivity.
           + exact Hlookup0.
+          + reflexivity.
           + eapply IH. exact Hinfer0.
+          + reflexivity.
+          + constructor.
+          + reflexivity.
+          + constructor.
+          + reflexivity.
           + apply ty_core_eqb_true. exact Hcore0.
           + apply root_env_eqb_true_equiv. exact Hroot0.
           + eapply IHtail.
@@ -1569,26 +1846,45 @@ Proof.
         as [Γ_out |] eqn:Hmerge; try discriminate.
       inversion Hinfer; subst.
       rewrite lookup_branch_b_lookup_expr_branch in Hlookup_branch.
+      change (typed_env_roots_shadow_safe env Ω n R Σ (EMatch e l)
+        (MkTy (usage_max_tys_nonempty T_head Ts_tail) (ty_core T_head))
+        (sctx_of_ctx Γ_out) R'
+        (root_set_union roots_head (root_sets_union roots_tail))).
       eapply TERS_Match with
-        (Σ1 := Σ1) (Σ_head := Σ_head) (Σ_tail := Σ_tail)
+        (R1 := R1) (R_payload := R1) (R_head_payload := R')
+        (R_out := R') (Σ1 := Σ1) (Σ_head_payload := Σ_head)
+        (Σ_head := Σ_head) (Σ_tail := Σ_tail)
         (Γ_out := Γ_out) (edef := edef) (v_head := v_head)
         (v_tail := v_tail) (e_head := e_head) (T_scrut := T_scrut)
-        (T_head := T_head) (Ts_tail := Ts_tail).
-      * eapply IH. exact Hscrut.
-      * exact Hscrut_core.
-      * exact Hlookup.
-      * apply negb_false_iff in Hlts. apply Nat.eqb_eq in Hlts. exact Hlts.
-      * apply negb_false_iff in Hargslen. apply Nat.eqb_eq in Hargslen. exact Hargslen.
-      * exact Hbounds.
-      * rewrite Hvariants. exact Hunknown.
-      * exact Hvariants.
-      * destruct (enum_variant_fields v_head) eqn:Hfields; [reflexivity |].
-        simpl in Hpayload. rewrite Hfields in Hpayload. discriminate.
-      * eapply first_payload_binder_branch_lookup_none; eassumption.
-      * exact Hlookup_branch.
-      * eapply IH. exact Hhead.
-      * exact Htail_typed.
-      * exact Hmerge.
+        (T_head := T_head) (Ts_tail := Ts_tail)
+        (roots_scrut := roots_scrut) (roots_head := roots_head)
+        (roots_tail := roots_tail) (binders_head := []) (ps_head := []);
+        [ eapply IH; exact Hscrut
+        | exact Hscrut_core
+        | exact Hlookup
+        | apply negb_false_iff in Hlts; apply Nat.eqb_eq in Hlts; exact Hlts
+        | apply negb_false_iff in Hargslen; apply Nat.eqb_eq in Hargslen; exact Hargslen
+        | exact Hbounds
+        | rewrite Hvariants; exact Hunknown
+        | exact Hvariants
+        | exact Hfields_head
+        | reflexivity
+        | exact Hbinders_head
+        | exact Hparams_head
+        | reflexivity
+        | reflexivity
+        | reflexivity
+        | exact Hlookup_branch
+        | reflexivity
+        | eapply IH; exact Hhead
+        | reflexivity
+        | constructor
+        | reflexivity
+        | constructor
+        | reflexivity
+        | exact Htail_typed
+        | exact Hmerge ];
+        try solve [eauto | reflexivity].
     + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
       destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
       destruct (root_env_lookup x R) as [roots_result |] eqn:Hroot_result; try discriminate.

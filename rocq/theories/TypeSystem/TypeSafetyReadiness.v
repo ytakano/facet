@@ -101,6 +101,33 @@ Proof.
   rewrite IH. reflexivity.
 Qed.
 
+Lemma store_names_bind_params_length_readiness :
+  forall ps vs s,
+    List.length vs = List.length ps ->
+    store_names (bind_params ps vs s) =
+      ctx_names (params_ctx ps) ++ store_names s.
+Proof.
+  induction ps as [| p ps IH]; intros vs s Hlen.
+  - destruct vs; simpl in Hlen; try discriminate. reflexivity.
+  - destruct vs as [| v vs]; simpl in Hlen; try discriminate.
+    inversion Hlen as [Hlen_tail].
+    simpl. rewrite IH by exact Hlen_tail. reflexivity.
+Qed.
+
+Lemma store_names_remove_params_prefix_readiness :
+  forall ps s_body s_tail,
+    store_names s_body = ctx_names (params_ctx ps) ++ store_names s_tail ->
+    store_names (store_remove_params ps s_body) = store_names s_tail.
+Proof.
+  induction ps as [| p ps IH]; intros s_body s_tail Hnames.
+  - simpl in Hnames. exact Hnames.
+  - destruct s_body as [| se rest]; simpl in Hnames; try discriminate.
+    inversion Hnames as [[Hhead Hrest]].
+    simpl.
+    rewrite Hhead, ident_eqb_refl.
+    apply IH. exact Hrest.
+Qed.
+
 Inductive preservation_ready_expr : expr -> Prop :=
   | PRE_Unit :
       preservation_ready_expr EUnit
@@ -264,9 +291,12 @@ with alpha_rename_preservation_ready_match_branches :
        match branches0 with
        | [] => ([], used0)
        | (name, binders, e) :: rest =>
-           let (e', used1) := alpha_rename_expr ρ used0 e in
-           let (rest', used2) := go used1 rest in
-           ((name, binders, e') :: rest', used2)
+           let binder_seed := binders ++ free_vars_expr e ++ used0 in
+           let '(binders', ρ_branch, used1) :=
+             alpha_rename_idents ρ binder_seed binders in
+           let (e', used2) := alpha_rename_expr ρ_branch used1 e in
+           let (rest', used3) := go used2 rest in
+           ((name, binders', e') :: rest', used3)
        end) used branches = (branchesr, used') ->
     preservation_ready_match_branches branches ->
     preservation_ready_match_branches branchesr.
@@ -322,9 +352,12 @@ Proof.
             match branches0 with
             | [] => ([], used0)
             | (name, binders, e) :: rest =>
-                let (e', used1) := alpha_rename_expr ρ used0 e in
-                let (rest', used2) := go used1 rest in
-                ((name, binders, e') :: rest', used2)
+                let binder_seed := binders ++ free_vars_expr e ++ used0 in
+                let '(binders', ρ_branch, used1) :=
+                  alpha_rename_idents ρ binder_seed binders in
+                let (e', used2) := alpha_rename_expr ρ_branch used1 e in
+                let (rest', used3) := go used2 rest in
+                ((name, binders', e') :: rest', used3)
             end) used_scrut branches)
         as [branchesr used_branches] eqn:Hbranches.
       inversion Hrename; subst.
@@ -400,7 +433,10 @@ Proof.
   - intros ρ used branches branchesr used' Hrename Hready.
     destruct Hready as [| name binders e rest He Hrest]; simpl in Hrename.
     + inversion Hrename; subst. constructor.
-    + destruct (alpha_rename_expr ρ used e) as [er used1] eqn:He_ren.
+    + destruct (alpha_rename_idents ρ (binders ++ free_vars_expr e ++ used)
+          binders) as [[bindersr ρ_branch] used1] eqn:Hbinders_ren.
+      destruct (alpha_rename_expr ρ_branch used1 e)
+        as [er used2] eqn:He_ren.
       destruct
         ((fix go (used0 : list ident)
              (branches0 : list (string * list ident * expr))
@@ -408,11 +444,14 @@ Proof.
             match branches0 with
             | [] => ([], used0)
             | (name0, binders0, e0) :: rest0 =>
-                let (e', used2) := alpha_rename_expr ρ used0 e0 in
-                let (rest', used3) := go used2 rest0 in
-                ((name0, binders0, e') :: rest', used3)
-            end) used1 rest)
-        as [restr used2] eqn:Hrest_ren.
+                let binder_seed := binders0 ++ free_vars_expr e0 ++ used0 in
+                let '(binders0', ρ_branch0, used3) :=
+                  alpha_rename_idents ρ binder_seed binders0 in
+                let (e', used4) := alpha_rename_expr ρ_branch0 used3 e0 in
+                let (rest', used5) := go used4 rest0 in
+                ((name0, binders0', e') :: rest', used5)
+            end) used2 rest)
+        as [restr used3] eqn:Hrest_ren.
       inversion Hrename; subst.
       constructor.
       * eapply alpha_rename_preservation_ready_expr; eauto.
@@ -634,19 +673,23 @@ Proof.
 	    match goal with
 	    | H : preservation_ready_expr e1 |- _ => exact H
 	    end.
-	  - intros s s_scrut s' scrut branches enum_name variant_name e_branch v
-	      Heval_scrut IHscrut Hlookup Heval_branch IHbranch Hready.
+	  - intros s s_scrut s_branch s' scrut branches enum_name variant_name
+	      lts args values edef vdef binders ps e_branch v
+	      Heval_scrut IHscrut Hlookup_enum Hlookup_variant Hbinders Hparams Hlen
+	      Hlookup Heval_branch IHbranch Hstore Hready.
 	    inversion Hready; subst.
-	    rewrite (IHbranch ltac:(match goal with
+	    rewrite (store_names_remove_params_prefix_readiness ps s_branch s_scrut).
+	    + apply IHscrut.
+	      match goal with
+	      | H : preservation_ready_expr scrut |- _ => exact H
+	      end.
+	    + rewrite (IHbranch ltac:(match goal with
 	      | H : preservation_ready_match_branches branches |- _ =>
 	          eapply lookup_match_branch_preservation_ready; eauto
 	      | H : preservation_ready_expr e_branch |- _ => exact H
 	      end)).
-	    apply IHscrut.
-	    match goal with
-	    | H : preservation_ready_expr scrut |- _ => exact H
-	    end.
-		  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
+	      apply store_names_bind_params_length_readiness. exact Hlen.
+	  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
 	      Hcaps Heval_args IHargs Hrename Heval_body IHbody Hready.
 	    inversion Hready.
 	  - intros s s_args s_body fname type_args fdef fcall args vs ret used'

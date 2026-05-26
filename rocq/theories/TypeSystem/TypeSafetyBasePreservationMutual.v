@@ -2,6 +2,7 @@ From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules TypeChecker RuntimeTyping RootProvenance
   EnvStructuralRules AlphaRenaming EnvSoundnessFacts CheckerSoundness.
 From Facet.TypeSystem Require Export TypeSafetyBasePreservationAssign.
+From Facet.TypeSystem Require Import TypeSafetyClosureCleanupFrame.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
@@ -99,8 +100,150 @@ Proof.
   - inversion Htyped.
   - inversion Htyped; subst.
     constructor.
-    + eapply VHT_Compatible; eassumption.
-    + apply IH. assumption.
+	    + eapply VHT_Compatible; eassumption.
+	    + apply IH. assumption.
+Qed.
+
+Lemma ty_compatible_refl_exact :
+  forall Ω T,
+    ty_compatible Ω T T.
+Proof.
+  intros Ω [u core].
+  apply TC_Core.
+  - constructor.
+  - reflexivity.
+Qed.
+
+Lemma enum_values_have_type_eval_args_values :
+  forall env Ω s values tys ps,
+    enum_values_have_type env s values tys ->
+    map param_ty ps = tys ->
+    eval_args_values_have_types env Ω s values ps.
+Proof.
+  intros env Ω s values tys ps Hvalues.
+  revert ps.
+  induction Hvalues as [| v values T tys Hv Hrest IH]; intros ps Htys;
+    destruct ps as [| p ps]; simpl in Htys; try discriminate.
+  - constructor.
+  - inversion Htys; subst.
+    eapply AHT_Cons with (T_actual := param_ty p).
+    + exact Hv.
+    + apply ty_compatible_refl_exact.
+    + apply IH. reflexivity.
+Qed.
+
+Lemma eval_args_values_have_types_param_tys :
+  forall env Ω s values ps1 ps2,
+    eval_args_values_have_types env Ω s values ps1 ->
+    map param_ty ps2 = map param_ty ps1 ->
+    eval_args_values_have_types env Ω s values ps2.
+Proof.
+  intros env Ω s values ps1 ps2 Hargs.
+  revert ps2.
+  induction Hargs as [| v values p ps T_actual Hv Hcompat Hargs IH];
+    intros ps2 Htys; destruct ps2 as [| p2 ps2]; simpl in Htys; try discriminate.
+  - constructor.
+  - inversion Htys; subst.
+    econstructor.
+    + exact Hv.
+    + rewrite H0. exact Hcompat.
+    + apply IH. exact H1.
+Qed.
+
+Lemma match_binder_params_opt_param_tys :
+  forall binders tys ps,
+    match_binder_params_opt binders tys = Some ps ->
+    map param_ty ps = tys.
+Proof.
+  induction binders as [| x xs IH]; intros tys ps Hmatch;
+    destruct tys as [| T Ts]; simpl in Hmatch; try discriminate.
+  - inversion Hmatch. reflexivity.
+  - destruct (match_binder_params_opt xs Ts) as [ps_tail |] eqn:Htail;
+      try discriminate.
+    inversion Hmatch; subst ps. simpl.
+    rewrite (IH Ts ps_tail Htail). reflexivity.
+Qed.
+
+Lemma match_payload_params_opt_param_tys :
+  forall binders lts args v ps,
+    match_payload_params_opt binders lts args v = Some ps ->
+    map param_ty ps =
+      map (instantiate_enum_variant_field_ty lts args) (enum_variant_fields v).
+Proof.
+  intros binders lts args v ps Hmatch.
+  unfold match_payload_params_opt in Hmatch.
+  eapply match_binder_params_opt_param_tys. exact Hmatch.
+Qed.
+
+Lemma store_typed_params_fresh :
+  forall env s Σ ps,
+    store_typed env s Σ ->
+    ctx_lookup_params_none_b ps Σ = true ->
+    params_fresh_in_store ps s.
+Proof.
+  intros env s Σ ps Hstore Hnone x Hin Hstore_name.
+  rewrite (store_typed_names env s Σ Hstore) in Hstore_name.
+  eapply ctx_lookup_params_none_b_not_in_names; eassumption.
+Qed.
+
+Lemma store_typed_bind_params_same_ctx :
+  forall env Ω s Σ values ps_store ps_ctx,
+    store_typed env s Σ ->
+    NoDup (ctx_names (params_ctx ps_store)) ->
+    params_fresh_in_store ps_store s ->
+    eval_args_values_have_types env Ω s values ps_ctx ->
+    ctx_names (params_ctx ps_store) = ctx_names (params_ctx ps_ctx) ->
+    map param_ty ps_store = map param_ty ps_ctx ->
+    store_typed env (bind_params ps_store values s) (sctx_add_params ps_ctx Σ).
+Proof.
+  intros env Ω s Σ values ps_store ps_ctx Hstore Hnodup Hfresh Hargs.
+  revert ps_store Hnodup Hfresh.
+  induction Hargs as [| v values p ps T_actual Hv Hcompat Hargs IH];
+    intros ps_store Hnodup Hfresh Hnames Htys.
+  - destruct ps_store as [| p_store ps_store]; simpl in Hnames; try discriminate.
+    simpl. exact Hstore.
+  - destruct ps_store as [| p_store ps_store]; simpl in Hnames; try discriminate.
+    simpl in Htys. inversion Hnames as [[Hname_eq Hnames_tail]].
+    inversion Htys as [[Hty_eq Htys_tail]].
+    assert (Hargs_store_tail :
+      eval_args_values_have_types env Ω s values ps_store).
+    { eapply eval_args_values_have_types_param_tys.
+      - exact Hargs.
+      - exact Htys_tail. }
+    simpl.
+    constructor.
+    + simpl. split.
+      * exact Hname_eq.
+      * split.
+        -- exact Hty_eq.
+        -- split.
+           ++ apply binding_state_refines_refl.
+           ++ eapply value_has_type_store_preserved.
+              ** eapply VHT_Compatible.
+                 --- exact Hv.
+                 --- rewrite Hty_eq. exact Hcompat.
+              ** eapply (bind_params_ref_targets_preserved env Ω s (v :: values)
+                    (p_store :: ps_store)).
+                 --- exact Hnodup.
+                 --- exact Hfresh.
+                 --- eapply eval_args_values_have_types_param_tys.
+                     +++ exact (AHT_Cons env Ω s v values p ps T_actual
+                           Hv Hcompat Hargs).
+                     +++ exact Htys.
+    + eapply store_typed_store_param_preserved.
+      * eapply IH.
+        -- eapply params_ctx_names_nodup_tail. exact Hnodup.
+        -- eapply params_fresh_in_store_tail. exact Hfresh.
+        -- exact Hnames_tail.
+        -- exact Htys_tail.
+      * eapply store_add_fresh_ref_targets_preserved.
+        apply store_lookup_not_in_names.
+        eapply bind_params_head_fresh_in_tail.
+        -- exact Hnodup.
+        -- exact Hfresh.
+        -- eapply eval_args_values_have_types_param_tys.
+           ++ exact Hargs.
+           ++ exact Htys_tail.
 Qed.
 
 Lemma store_typed_ctx_merge_many_left :
@@ -241,35 +384,71 @@ Proof.
 Qed.
 
 Lemma typed_match_tail_lookup :
-  forall env Ω n Σ branches variants expected_core Σs Ts name vdef e,
-    typed_match_tail_env_structural env Ω n Σ branches variants
+  forall env Ω n lts args Σ branches variants expected_core Σs Ts name vdef e,
+    typed_match_tail_env_structural env Ω n lts args Σ branches variants
       expected_core Σs Ts ->
     lookup_enum_variant name variants = Some vdef ->
     lookup_expr_branch name branches = Some e ->
-    exists T Σv,
-      typed_env_structural env Ω n Σ e T Σv /\
+    exists T Σv_payload Σv ps binders,
+      lookup_expr_branch_binders name branches = Some binders /\
+      match_payload_params_opt binders lts args vdef = Some ps /\
+      typed_env_structural env Ω n (sctx_add_params ps Σ) e T Σv_payload /\
+      Σv = sctx_remove_params ps Σv_payload /\
       ty_core T = expected_core /\
       In Σv Σs /\
       In T Ts.
 Proof.
-  intros env Ω n Σ branches variants expected_core Σs Ts name vdef e Htail.
+  intros env Ω n lts args Σ branches variants expected_core Σs Ts name vdef e Htail.
   induction Htail as
-    [Σ branches expected_core
-    |Σ branches v rest e0 T0 Σv Σs Ts expected_core
-       Hfields Hbinders Hlookup Htyped Hcore Htail IHtail];
+    [lts args Σ branches expected_core
+    |Σ branches v rest e0 T0 Σv_payload Σv Σs Ts expected_core
+       binders ps lts args Hfields_empty Hbinders_empty Hbinders Hparams
+       Hnodup Hctx_none Hlookup Htyped Hparams_ok Hremove Hcore
+       Htail IHtail];
     intros Hvariant Hbranch.
   - simpl in Hvariant. discriminate.
   - simpl in Hvariant.
     destruct (String.eqb name (enum_variant_name v)) eqn:Hname.
     + apply String.eqb_eq in Hname. subst name.
       rewrite Hlookup in Hbranch. inversion Hbranch; subst e.
-      exists T0, Σv.
-      split; [exact Htyped |].
-      split; [exact Hcore |].
-      split; simpl; auto.
+      inversion Hvariant; subst vdef.
+      exists T0, Σv_payload, Σv, ps, binders.
+      repeat split; simpl; auto.
+      eapply match_payload_params_opt_infer_ok. exact Hparams.
     + eapply IHtail in Hvariant; [| exact Hbranch].
-      destruct Hvariant as [T' [Σ' [Htyped' [Hcore' [HinΣ HinT]]]]].
-      exists T', Σ'. repeat split; simpl; auto.
+      destruct Hvariant as [T' [Σpayload' [Σ' [ps' [binders' Hrest]]]]].
+      destruct Hrest as [Hbinders' [Hparams' [Htyped' [Hremove'
+        [Hcore' [HinΣ HinT]]]]]].
+      exists T', Σpayload', Σ', ps', binders'. repeat split; simpl; auto.
+Qed.
+
+Lemma typed_match_tail_lookup_no_payload :
+  forall env Ω n lts args Σ branches variants expected_core Σs Ts
+      name vdef binders,
+    typed_match_tail_env_structural env Ω n lts args Σ branches variants
+      expected_core Σs Ts ->
+    lookup_enum_variant name variants = Some vdef ->
+    lookup_expr_branch_binders name branches = Some binders ->
+    enum_variant_fields vdef = [] /\ binders = [].
+Proof.
+  intros env Ω n lts args Σ branches variants expected_core Σs Ts
+    name vdef binders Htail.
+  induction Htail as
+    [lts args Σ branches expected_core
+    |Σ branches v rest e0 T0 Σv_payload Σv Σs Ts expected_core
+       binders0 ps lts args Hfields_empty Hbinders_empty Hbinders
+       Hparams Hnodup Hctx_none Hlookup Htyped Hparams_ok Hremove Hcore
+       Htail IHtail];
+    intros Hvariant Hbranch_binders.
+  - simpl in Hvariant. discriminate.
+  - simpl in Hvariant.
+    destruct (String.eqb name (enum_variant_name v)) eqn:Hname.
+    + apply String.eqb_eq in Hname. subst name.
+      inversion Hvariant; subst vdef.
+      rewrite Hbinders in Hbranch_binders.
+      inversion Hbranch_binders; subst binders.
+      split; assumption.
+    + eapply IHtail; eassumption.
 Qed.
 
 Lemma lookup_expr_branch_deterministic :
@@ -282,16 +461,103 @@ Proof.
   rewrite H1 in H2. inversion H2. reflexivity.
 Qed.
 
+Lemma lookup_enum_variant_deterministic :
+  forall name variants v1 v2,
+    lookup_enum_variant name variants = Some v1 ->
+    lookup_enum_variant name variants = Some v2 ->
+    v1 = v2.
+Proof.
+  intros name variants.
+  induction variants as [| v variants IH]; intros v1 v2 H1 H2; simpl in *.
+  - discriminate.
+  - destruct (String.eqb name (enum_variant_name v)).
+    + inversion H1; inversion H2; subst. reflexivity.
+    + eapply IH; eassumption.
+Qed.
+
+Lemma enum_variant_field_tys_lifetime_equiv :
+  forall lts_actual lts_expected args_actual args_expected fields,
+    Forall2 ty_lifetime_equiv args_actual args_expected ->
+    Forall2 ty_lifetime_equiv
+      (map (instantiate_enum_variant_field_ty lts_actual args_actual) fields)
+      (map (instantiate_enum_variant_field_ty lts_expected args_expected) fields).
+Proof.
+  intros lts_actual lts_expected args_actual args_expected fields Hargs.
+  induction fields as [| T fields IH]; simpl; constructor.
+  - eapply instantiate_enum_variant_field_ty_lifetime_equiv. exact Hargs.
+  - exact IH.
+Qed.
+
+Lemma enum_values_have_type_lifetime_equiv :
+  forall env s values tys_actual tys_expected,
+    enum_values_have_type env s values tys_actual ->
+    Forall2 ty_lifetime_equiv tys_actual tys_expected ->
+    enum_values_have_type env s values tys_expected.
+Proof.
+  intros env s values tys_actual tys_expected Hvalues Hequiv.
+  revert tys_expected Hequiv.
+  induction Hvalues as [| v values T tys Hv Hrest IH];
+    intros tys_expected Hequiv; inversion Hequiv; subst.
+  - constructor.
+  - constructor.
+    + eapply VHT_LifetimeEquiv; eassumption.
+    + eapply IH. assumption.
+Qed.
+
+Lemma value_has_type_enum_values_lookup :
+  forall env s enum_name variant_name lts_val args_val values T enum_typed
+      lts args edef vdef,
+    value_has_type env s (VEnum enum_name variant_name lts_val args_val values) T ->
+    ty_core T = TEnum enum_typed lts args ->
+    lookup_enum enum_typed env = Some edef ->
+    lookup_enum_variant variant_name (enum_variants edef) = Some vdef ->
+    enum_values_have_type env s values
+      (map (instantiate_enum_variant_field_ty lts args)
+        (enum_variant_fields vdef)).
+Proof.
+  intros env s enum_name variant_name lts_val args_val values T enum_typed
+    lts args edef vdef Htyped.
+  revert enum_typed lts args edef vdef.
+  dependent induction Htyped; intros enum_typed lts0 args0 edef0 vdef0
+    Hcore Hlookup_typed Hvariant_typed; try discriminate.
+  - unfold instantiate_enum_ty in Hcore. simpl in Hcore.
+    inversion Hcore; subst.
+    destruct (lookup_enum_success_rootfacts env enum_name edef H) as [_ Hedef_name].
+    subst enum_name.
+    pose proof (lookup_enum_deterministic env (Program.enum_name edef) edef edef0
+      H Hlookup_typed) as Heq.
+    subst edef0.
+    pose proof (lookup_enum_variant_deterministic variant_name
+      (enum_variants edef) vdef vdef0 H0 Hvariant_typed) as Hvdef.
+    subst vdef0. exact H1.
+  - destruct T_expected as [ue ce], T_actual as [ua ca].
+    simpl in Hcore. subst ce.
+    match goal with
+    | Hcompat : ty_compatible _ _ _ |- _ =>
+        inversion Hcompat; subst; try discriminate
+    end.
+    eapply IHHtyped; eauto; reflexivity.
+	  - destruct T_expected as [ue ce], T_actual as [ua ca].
+	    simpl in Hcore. subst ce.
+	    match goal with
+	    | Hequiv : ty_lifetime_equiv _ _ |- _ =>
+	        inversion Hequiv; subst; try discriminate
+	    end.
+	    eapply enum_values_have_type_lifetime_equiv.
+	    + eapply IHHtyped; eauto; reflexivity.
+	    + eapply enum_variant_field_tys_lifetime_equiv. eassumption.
+Qed.
+
 Lemma value_has_type_enum_variant_lookup :
-  forall env s enum_name variant_name values T enum_typed lts args edef,
-    value_has_type env s (VEnum enum_name variant_name values) T ->
+  forall env s enum_name variant_name lts_val args_val values T enum_typed lts args edef,
+    value_has_type env s (VEnum enum_name variant_name lts_val args_val values) T ->
     ty_core T = TEnum enum_typed lts args ->
     lookup_enum enum_typed env = Some edef ->
     exists vdef,
       enum_name = enum_typed /\
       lookup_enum_variant variant_name (enum_variants edef) = Some vdef.
 Proof.
-  intros env s enum_name variant_name values T enum_typed lts args edef Htyped.
+  intros env s enum_name variant_name lts_val args_val values T enum_typed lts args edef Htyped.
   revert enum_typed lts args edef.
   dependent induction Htyped; intros enum_typed lts0 args0 edef0 Hcore Hlookup_typed;
     try discriminate.
@@ -830,8 +1096,12 @@ Proof.
 	          [ eapply value_has_type_if_right_result; eassumption
 	          | eapply store_ref_targets_preserved_trans; eassumption ] ]
 	    end.
-  - intros s s_scrut s' scrut branches enum_name variant_name e_branch v
-      Heval_scrut IHscrut Hlookup_branch_eval Heval_branch IHbranch
+  - intros s s_scrut s_branch s' scrut branches enum_name variant_name
+      lts_val args_val values edef_runtime vdef_runtime binders ps_payload
+      e_branch v
+      Heval_scrut IHscrut Hlookup_enum_runtime Hlookup_variant_runtime
+      Hlookup_binders Hpayload_runtime Hvalues_len Hlookup_branch_eval
+      Heval_branch IHbranch Hremove_params
       Ω n Σ T Σ' Hready Hstore Htyped.
     dependent destruction Hready.
     dependent destruction Htyped.
@@ -839,15 +1109,15 @@ Proof.
       as [Hstore_scrut [Hv_scrut Hpres_scrut]].
     assert (Hready_branch : preservation_ready_expr e_branch)
       by (eapply lookup_match_branch_preservation_ready; eassumption).
-    unfold lookup_match_branch in Hlookup_branch_eval.
-    match goal with
-    | Hscrut_core : ty_core ?T_scrut = TEnum ?enum_typed ?lts ?args,
-      Hlookup_typed : lookup_enum ?enum_typed env = Some ?edef_typed,
-      Hvariants : enum_variants ?edef_typed = ?v_head :: ?v_tail0,
-      Hhead_branch : lookup_expr_branch (enum_variant_name ?v_head) branches = Some ?e_head0 |- _ =>
-        destruct (value_has_type_enum_variant_lookup env s_scrut enum_name variant_name []
-          T_scrut enum_typed lts args edef_typed Hv_scrut Hscrut_core Hlookup_typed)
-          as [vdef_runtime [Henum_name Hvariant_runtime]];
+	    unfold lookup_match_branch in Hlookup_branch_eval.
+	    match goal with
+	    | Hscrut_core : ty_core ?T_scrut = TEnum ?enum_typed ?lts ?args,
+	      Hlookup_typed : lookup_enum ?enum_typed env = Some ?edef_typed,
+	      Hvariants : enum_variants ?edef_typed = ?v_head :: ?v_tail0 |- _ =>
+        destruct (value_has_type_enum_variant_lookup env s_scrut enum_name variant_name
+          lts_val args_val values T_scrut enum_typed lts args edef_typed
+          Hv_scrut Hscrut_core Hlookup_typed)
+          as [vdef_typed_runtime [Henum_name Hvariant_runtime]];
         subst enum_name;
         rewrite Hvariants in Hvariant_runtime;
         simpl in Hvariant_runtime;
@@ -861,34 +1131,113 @@ Proof.
             eapply lookup_expr_branch_deterministic;
             [ exact Hlookup_branch_eval | exact Hhead_lookup ]
         end.
-      }
-      subst e_branch.
-      match goal with
-      | Htyped_head : typed_env_structural env Ω n Σ1 e_head T_head Σ_head |- _ =>
-          destruct (IHbranch Ω n Σ1 T_head Σ_head
-                    Hready_branch Hstore_scrut Htyped_head)
-            as [Hstore_branch [Hv_branch Hpres_branch]]
-      end.
-      split.
-      * eapply store_typed_ctx_merge_many_left; eassumption.
-      * split.
-        -- eapply value_has_type_match_head_result. exact Hv_branch.
-        -- eapply store_ref_targets_preserved_trans; eassumption.
-    + match goal with
-      | Htail_typed : typed_match_tail_env_structural env Ω n Σ1 branches v_tail
-          (ty_core T_head) Σ_tail Ts_tail |- _ =>
-          destruct (typed_match_tail_lookup env Ω n Σ1 branches v_tail
-            (ty_core T_head) Σ_tail Ts_tail variant_name vdef_runtime e_branch
-            Htail_typed Hvariant_runtime Hlookup_branch_eval)
-          as [T_branch [Σ_branch [Htyped_branch [Hcore_branch [HinΣ HinT]]]]]
-      end.
-      destruct (IHbranch Ω n Σ1 T_branch Σ_branch
-                  Hready_branch Hstore_scrut Htyped_branch)
-        as [Hstore_branch [Hv_branch Hpres_branch]].
-      assert (Hsame_head_tail : Forall (sctx_same_bindings Σ_head) Σ_tail).
-      {
-        assert (Hsame_head : sctx_same_bindings Σ1 Σ_head)
-          by (eapply typed_env_structural_same_bindings; eassumption).
+	      }
+	      subst e_branch.
+	      assert (Hfields_runtime : enum_variant_fields vdef_runtime = []).
+	      { assert (Hedef_same : edef_runtime = edef) by congruence.
+	        subst edef_runtime.
+	        rewrite H6 in Hlookup_variant_runtime. simpl in Hlookup_variant_runtime.
+	        rewrite String.eqb_refl in Hlookup_variant_runtime.
+	        inversion Hlookup_variant_runtime; subst. exact H7. }
+	      assert (Hbinders_nil : binders = []).
+	      { rewrite Hlookup_binders in H9. inversion H9. reflexivity. }
+	      assert (Hpayload_nil : ps_payload = []).
+	      { unfold match_payload_params_opt in Hpayload_runtime.
+	        unfold TypingRules.match_payload_params_opt in Hpayload_runtime.
+	        rewrite Hfields_runtime in Hpayload_runtime.
+	        rewrite Hbinders_nil in Hpayload_runtime.
+	        simpl in Hpayload_runtime. inversion Hpayload_runtime. reflexivity. }
+	      assert (Hps_head_nil : ps_head = []).
+	      { unfold match_payload_params in H10.
+	        unfold instantiate_enum_variant_field_tys in H10.
+	        rewrite H7 in H10. simpl in H10.
+	        inversion H10. reflexivity. }
+	      assert (Hvalues_nil : values = []).
+	      { rewrite Hpayload_nil in Hvalues_len.
+	        destruct values as [| value values']; simpl in Hvalues_len;
+	          [reflexivity | discriminate]. }
+	      assert (Hstore_payload :
+	        store_typed env (bind_params ps_payload values s_scrut)
+	          (sctx_add_params ps_head Σ1)).
+	      { rewrite Hpayload_nil, Hps_head_nil, Hvalues_nil. simpl.
+	        exact Hstore_scrut. }
+	      destruct (IHbranch Ω n (sctx_add_params ps_head Σ1) T_head
+	                Σ_head_payload Hready_branch Hstore_payload Htyped2)
+	        as [Hstore_branch [Hv_branch Hpres_branch]].
+	      split.
+	      * subst s'. rewrite Hpayload_nil. simpl.
+	        rewrite Hps_head_nil in H17. simpl in H17.
+	        eapply store_typed_ctx_merge_many_left.
+	        -- exact Hstore_branch.
+	        -- exact H17.
+	      * split.
+	        -- rewrite Hremove_params, Hpayload_nil. simpl.
+	           eapply value_has_type_match_head_result. exact Hv_branch.
+	        -- rewrite Hremove_params, Hpayload_nil. simpl.
+	           rewrite Hpayload_nil, Hvalues_nil in Hpres_branch. simpl in Hpres_branch.
+	           eapply store_ref_targets_preserved_trans.
+	           ++ exact Hpres_scrut.
+	           ++ exact Hpres_branch.
+	    + assert (Hvdef_runtime_tail : vdef_runtime = vdef_typed_runtime).
+	      { assert (Hedef_same : edef_runtime = edef) by congruence.
+	        subst edef_runtime.
+	        rewrite H6 in Hlookup_variant_runtime. simpl in Hlookup_variant_runtime.
+	        rewrite Hvariant_head in Hlookup_variant_runtime.
+	        congruence. }
+	      subst vdef_typed_runtime.
+	      destruct (typed_match_tail_lookup env Ω n lts args Σ1 branches v_tail
+		            (ty_core T_head) Σ_tail Ts_tail variant_name vdef_runtime e_branch
+		            H16 Hvariant_runtime Hlookup_branch_eval)
+	          as [T_branch [Σ_branch_payload [Σ_branch [ps_branch
+	             [binders_branch Htail_branch]]]]];
+	          destruct Htail_branch as [Hbinders_branch [Hparams_branch
+	            [Htyped_branch [Hremove_branch [Hcore_branch [HinΣ HinT]]]]]].
+	      destruct (typed_match_tail_lookup_no_payload env Ω n lts args Σ1
+	          branches v_tail (ty_core T_head) Σ_tail Ts_tail
+	          variant_name vdef_runtime binders_branch H16 Hvariant_runtime
+	          Hbinders_branch) as [Hfields_runtime_tail Hbinders_branch_nil].
+	      assert (Hbinders_nil : binders = []).
+	      { rewrite Hbinders_branch_nil in Hbinders_branch.
+	        rewrite Hlookup_binders in Hbinders_branch.
+	        inversion Hbinders_branch. reflexivity. }
+	      assert (Hpayload_nil : ps_payload = []).
+	      { unfold match_payload_params_opt in Hpayload_runtime.
+	        unfold TypingRules.match_payload_params_opt in Hpayload_runtime.
+	        rewrite Hfields_runtime_tail in Hpayload_runtime.
+	        rewrite Hbinders_nil in Hpayload_runtime.
+	        simpl in Hpayload_runtime. inversion Hpayload_runtime. reflexivity. }
+	      assert (Hps_branch_nil : ps_branch = []).
+	      { unfold match_payload_params_opt in Hparams_branch.
+	        unfold TypingRules.match_payload_params_opt in Hparams_branch.
+	        rewrite Hfields_runtime_tail in Hparams_branch.
+	        rewrite Hbinders_branch_nil in Hparams_branch.
+	        simpl in Hparams_branch. inversion Hparams_branch. reflexivity. }
+	      assert (Hvalues_nil : values = []).
+	      { rewrite Hpayload_nil in Hvalues_len.
+	        destruct values as [| value values']; simpl in Hvalues_len;
+	          [reflexivity | discriminate]. }
+	      assert (Hstore_payload :
+	        store_typed env (bind_params ps_payload values s_scrut)
+	          (sctx_add_params ps_branch Σ1)).
+	      { rewrite Hpayload_nil, Hps_branch_nil, Hvalues_nil. simpl.
+	        exact Hstore_scrut. }
+	      destruct (IHbranch Ω n (sctx_add_params ps_branch Σ1) T_branch
+	                  Σ_branch_payload Hready_branch Hstore_payload Htyped_branch)
+	        as [Hstore_branch [Hv_branch Hpres_branch]].
+	      assert (Hps_head_nil_tail : ps_head = []).
+	      { unfold match_payload_params in H10.
+	        unfold instantiate_enum_variant_field_tys in H10.
+	        rewrite H7 in H10. simpl in H10.
+	        inversion H10. reflexivity. }
+	      pose (Σ_head := sctx_remove_params ps_head Σ_head_payload).
+	      fold Σ_head in H17.
+	      assert (Hsame_head_tail : Forall (sctx_same_bindings Σ_head) Σ_tail).
+	      {
+	        assert (Hsame_head : sctx_same_bindings Σ1 Σ_head).
+	        { subst Σ_head. rewrite Hps_head_nil_tail. simpl.
+	          pose proof Htyped2 as Htyped2_nil.
+	          rewrite Hps_head_nil_tail in Htyped2_nil. simpl in Htyped2_nil.
+	          eapply typed_env_structural_same_bindings. exact Htyped2_nil. }
         assert (Hsame_tail : Forall (sctx_same_bindings Σ1) Σ_tail)
           by (eapply typed_match_tail_env_structural_same_bindings; eassumption).
         eapply Forall_impl.
@@ -898,19 +1247,29 @@ Proof.
           + exact Hsame_t.
         - exact Hsame_tail.
       }
-      assert (Hsame_head_branch : sctx_same_bindings Σ_head Σ_branch).
-      {
-        assert (Hsame_head : sctx_same_bindings Σ1 Σ_head)
-          by (eapply typed_env_structural_same_bindings; eassumption).
-        assert (Hsame_branch : sctx_same_bindings Σ1 Σ_branch)
-          by (eapply typed_env_structural_same_bindings; eassumption).
+	      assert (Hsame_head_branch : sctx_same_bindings Σ_head Σ_branch).
+	      {
+	        assert (Hsame_head : sctx_same_bindings Σ1 Σ_head).
+	        { subst Σ_head. rewrite Hps_head_nil_tail. simpl.
+	          pose proof Htyped2 as Htyped2_nil.
+	          rewrite Hps_head_nil_tail in Htyped2_nil. simpl in Htyped2_nil.
+	          eapply typed_env_structural_same_bindings. exact Htyped2_nil. }
+	        assert (Hsame_branch : sctx_same_bindings Σ1 Σ_branch).
+	        { rewrite Hremove_branch, Hps_branch_nil. simpl.
+	          pose proof Htyped_branch as Htyped_branch_nil.
+	          rewrite Hps_branch_nil in Htyped_branch_nil.
+	          simpl in Htyped_branch_nil.
+	          eapply typed_env_structural_same_bindings.
+	          exact Htyped_branch_nil. }
         eapply sctx_same_bindings_trans.
         - apply sctx_same_bindings_sym. exact Hsame_head.
         - exact Hsame_branch.
       }
-      split.
-      * eapply store_typed_ctx_merge_many_selected.
-        -- exact Hstore_branch.
+	      split.
+	      * rewrite Hremove_params, Hpayload_nil. simpl.
+	        eapply store_typed_ctx_merge_many_selected.
+	        -- rewrite Hremove_branch, Hps_branch_nil. simpl.
+	           exact Hstore_branch.
         -- exact Hsame_head_branch.
         -- exact Hsame_head_tail.
         -- simpl. right. exact HinΣ.
@@ -918,9 +1277,18 @@ Proof.
            | Hmerge : ctx_merge_many (ctx_of_sctx Σ_head) (map ctx_of_sctx Σ_tail) = Some Γ_out |- _ =>
                exact Hmerge
            end.
-      * split.
-        -- eapply value_has_type_match_tail_result; eassumption.
-        -- eapply store_ref_targets_preserved_trans; eassumption.
+	      * split.
+	        -- rewrite Hremove_params, Hpayload_nil. simpl.
+	           eapply value_has_type_match_tail_result.
+	           ++ exact HinT.
+	           ++ exact Hcore_branch.
+	           ++ exact Hv_branch.
+	        -- rewrite Hremove_params, Hpayload_nil. simpl.
+	           rewrite Hpayload_nil, Hvalues_nil in Hpres_branch.
+	           simpl in Hpres_branch.
+	           eapply store_ref_targets_preserved_trans.
+	           ++ exact Hpres_scrut.
+	           ++ exact Hpres_branch.
 		  - intros s s_args s_body fname fdef fcall args vs ret used' Hlookup
 		      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n Σ T Σ'
 		      Hready _ _.

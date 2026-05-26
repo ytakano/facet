@@ -77,6 +77,106 @@ Proof.
   eapply lookup_expr_branch_local_store_names_in; eassumption.
 Qed.
 
+Lemma root_env_tail_fresh_names_lookup_expr_branch_binders :
+  forall R_tail name branches binders,
+    lookup_expr_branch_binders name branches = Some binders ->
+    root_env_tail_fresh_names R_tail (match_branches_local_store_names branches) ->
+    root_env_tail_fresh_names R_tail binders.
+Proof.
+  unfold root_env_tail_fresh_names.
+  intros R_tail name branches binders Hlookup Hfresh x Hin.
+  apply Hfresh.
+  eapply lookup_expr_branch_binders_local_store_names_in; eassumption.
+Qed.
+
+Lemma root_env_tail_fresh_names_params_lookup_none :
+  forall R_tail ps names,
+    root_env_tail_fresh_names R_tail names ->
+    (forall x, In x (ctx_names (params_ctx ps)) -> In x names) ->
+    root_env_lookup_params_none_b ps R_tail = true.
+Proof.
+  induction ps as [| [m x T] ps IH]; intros names Hfresh Hnames.
+  - reflexivity.
+  - simpl.
+    destruct (Hfresh x) as [Hlookup _].
+    { apply Hnames. simpl. left. reflexivity. }
+    rewrite Hlookup.
+    apply IH with (names := names).
+    + exact Hfresh.
+    + intros y Hy. apply Hnames. simpl. right. exact Hy.
+Qed.
+
+Lemma root_env_tail_fresh_names_params_excludes :
+  forall R_tail ps names,
+    root_env_tail_fresh_names R_tail names ->
+    (forall x, In x (ctx_names (params_ctx ps)) -> In x names) ->
+    root_env_excludes_params ps R_tail.
+Proof.
+  unfold root_env_excludes_params.
+  intros R_tail ps names Hfresh Hnames.
+  apply Forall_forall. intros x Hin.
+  destruct (Hfresh x) as [_ Hexcl].
+  - apply Hnames. exact Hin.
+  - exact Hexcl.
+Qed.
+
+Lemma root_env_excludes_params_app_local :
+  forall ps R1 R2,
+    root_env_excludes_params ps R1 ->
+    root_env_excludes_params ps R2 ->
+    root_env_excludes_params ps (R1 ++ R2).
+Proof.
+  unfold root_env_excludes_params.
+  intros ps R1 R2 Hexcl1 Hexcl2.
+  apply Forall_forall. intros x Hin.
+  eapply root_env_excludes_app.
+  - eapply Forall_forall in Hexcl1; eauto.
+  - eapply Forall_forall in Hexcl2; eauto.
+Qed.
+
+Lemma root_env_add_params_roots_same_app_left :
+  forall ps roots R R_tail,
+    root_env_add_params_roots_same ps roots (R ++ R_tail) =
+    root_env_add_params_roots_same ps roots R ++ R_tail.
+Proof.
+  induction ps as [| p ps IH]; intros roots R R_tail.
+  - reflexivity.
+  - simpl. rewrite IH. reflexivity.
+Qed.
+
+Lemma root_env_remove_match_params_app_left :
+  forall ps R R_tail,
+    root_env_lookup_params_none_b ps R_tail = true ->
+    root_env_remove_match_params ps (R ++ R_tail) =
+    root_env_remove_match_params ps R ++ R_tail.
+Proof.
+  induction ps as [| p ps IH]; intros R R_tail Hnone.
+  - reflexivity.
+  - simpl in Hnone |- *.
+    destruct (root_env_lookup (param_name p) R_tail) eqn:Hlookup_tail;
+      try discriminate.
+    rewrite root_env_remove_app_left by exact Hlookup_tail.
+    apply IH. exact Hnone.
+Qed.
+
+Lemma root_env_lookup_params_none_b_app :
+  forall ps R1 R2,
+    root_env_lookup_params_none_b ps R1 = true ->
+    root_env_lookup_params_none_b ps R2 = true ->
+    root_env_lookup_params_none_b ps (R1 ++ R2) = true.
+Proof.
+  induction ps as [| p ps IH]; intros R1 R2 Hnone1 Hnone2.
+  - reflexivity.
+  - simpl in *.
+    destruct (root_env_lookup (param_name p) R1) eqn:Hlookup1;
+      try discriminate.
+    destruct (root_env_lookup (param_name p) R2) eqn:Hlookup2;
+      try discriminate.
+    rewrite root_env_lookup_app_right by exact Hlookup1.
+    rewrite Hlookup2.
+    apply IH; assumption.
+Qed.
+
 Theorem typed_roots_shadow_safe_tail_frame_mutual :
   forall env Ω n R_tail,
   (forall R Σ e T Σ' R' roots,
@@ -95,11 +195,11 @@ Theorem typed_roots_shadow_safe_tail_frame_mutual :
     root_env_tail_fresh_names R_tail (fields_local_store_names fields) ->
     typed_fields_roots_shadow_safe env Ω n lts args (R ++ R_tail) Σ
       fields defs Σ' (R' ++ R_tail) roots) /\
-  (forall R Σ branches variants expected_core R_out Σs Ts rootss,
-    typed_match_tail_roots_shadow_safe env Ω n R Σ branches variants
+  (forall lts args R roots_scrut Σ branches variants expected_core R_out Σs Ts rootss,
+    typed_match_tail_roots_shadow_safe env Ω n lts args R roots_scrut Σ branches variants
       expected_core R_out Σs Ts rootss ->
     root_env_tail_fresh_names R_tail (match_branches_local_store_names branches) ->
-    typed_match_tail_roots_shadow_safe env Ω n (R ++ R_tail) Σ branches
+    typed_match_tail_roots_shadow_safe env Ω n lts args (R ++ R_tail) roots_scrut Σ branches
       variants expected_core (R_out ++ R_tail) Σs Ts rootss).
 Proof.
   intros env Ω n R_tail.
@@ -126,7 +226,27 @@ Proof.
   - eapply TERS_Enum; eauto.
   - pose proof (root_env_tail_fresh_names_app_l _ _ _ H2) as Hfresh_scrut.
     pose proof (root_env_tail_fresh_names_app_r _ _ _ H2) as Hfresh_branches.
-    eapply TERS_Match.
+    assert (Hfresh_binders :
+      root_env_tail_fresh_names R_tail binders_head).
+    { eapply root_env_tail_fresh_names_lookup_expr_branch_binders;
+      eassumption. }
+    assert (Htail_params_none :
+      root_env_lookup_params_none_b ps_head R_tail = true).
+    { eapply root_env_tail_fresh_names_params_lookup_none.
+      - exact Hfresh_binders.
+      - intros x Hin.
+	        rewrite (match_payload_params_names _ _ _ _ _ e9) in Hin.
+        exact Hin. }
+    assert (Htail_params_excl :
+      root_env_excludes_params ps_head R_tail).
+    { eapply root_env_tail_fresh_names_params_excludes.
+      - exact Hfresh_binders.
+      - intros x Hin.
+	        rewrite (match_payload_params_names _ _ _ _ _ e9) in Hin.
+        exact Hin. }
+    eapply TERS_Match
+      with (R_payload := R_payload ++ R_tail)
+           (R_head_payload := R_head_payload ++ R_tail).
     + apply H. exact Hfresh_scrut.
     + exact e.
     + exact e0.
@@ -136,12 +256,26 @@ Proof.
     + exact e4.
     + exact e5.
     + exact e6.
-    + exact e7.
-    + exact e8.
-    + apply H0.
-      eapply root_env_tail_fresh_names_lookup_expr_branch; eassumption.
-    + apply H1. exact Hfresh_branches.
-    + exact e9.
+	    + exact e7.
+	    + exact e8.
+	    + exact e9.
+	    + exact e10.
+	    + exact e11.
+	    + apply root_env_lookup_params_none_b_app; assumption.
+	    + exact e13.
+	    + rewrite e14. symmetry.
+	      apply root_env_add_params_roots_same_app_left.
+	    + apply H0.
+	      eapply root_env_tail_fresh_names_lookup_expr_branch; eassumption.
+	    + exact e15.
+	    + exact r.
+	    + rewrite e16. symmetry.
+	      apply root_env_remove_match_params_app_left.
+	      exact Htail_params_none.
+	    + apply root_env_excludes_params_app_local; assumption.
+	    + exact e17.
+	    + apply H1. exact Hfresh_branches.
+	    + exact e18.
   - pose proof (root_env_tail_fresh_names_app_l _ _ _ H1) as Hfresh1.
     pose proof (root_env_tail_fresh_names_app_r _ _ _ H1) as Hfresh_tail.
     destruct (root_env_tail_fresh_names_cons_head _ _ _ Hfresh_tail)
@@ -243,14 +377,49 @@ Proof.
     + exact e0.
     + apply H0. exact H1.
   - constructor.
-  - eapply TERSMatchTail_Cons.
+  - assert (Hfresh_binders :
+      root_env_tail_fresh_names R_tail binders).
+    { eapply root_env_tail_fresh_names_lookup_expr_branch_binders;
+      eassumption. }
+    assert (Htail_params_none :
+      root_env_lookup_params_none_b ps R_tail = true).
+    { eapply root_env_tail_fresh_names_params_lookup_none.
+      - exact Hfresh_binders.
+      - intros x Hin.
+	        rewrite (match_payload_params_names _ _ _ _ _ e3) in Hin.
+        exact Hin. }
+    assert (Htail_params_excl :
+      root_env_excludes_params ps R_tail).
+    { eapply root_env_tail_fresh_names_params_excludes.
+      - exact Hfresh_binders.
+      - intros x Hin.
+	        rewrite (match_payload_params_names _ _ _ _ _ e3) in Hin.
+        exact Hin. }
+    eapply TERSMatchTail_Cons
+      with (R_payload := R_payload ++ R_tail)
+           (Rv_payload := Rv_payload ++ R_tail)
+           (Rv := Rv ++ R_tail).
     + exact e0.
-    + exact e1.
-    + eassumption.
-    + apply H. eapply root_env_tail_fresh_names_lookup_expr_branch; eassumption.
-    + eassumption.
+	    + exact e1.
+	    + exact e2.
+	    + exact e3.
+	    + exact e4.
+	    + exact e5.
+	    + apply root_env_lookup_params_none_b_app; assumption.
+	    + exact e7.
+	    + rewrite e8. symmetry.
+	      apply root_env_add_params_roots_same_app_left.
+	    + apply H. eapply root_env_tail_fresh_names_lookup_expr_branch; eassumption.
+	    + exact e9.
+	    + exact r.
+	    + rewrite e10. symmetry.
+	      apply root_env_remove_match_params_app_left.
+	      exact Htail_params_none.
+	    + apply root_env_excludes_params_app_local; assumption.
+	    + exact e11.
+	    + exact e12.
     + apply root_env_equiv_app.
-      * exact r.
+      * exact r1.
       * apply root_env_equiv_refl.
     + apply H0. exact H1.
 Qed.

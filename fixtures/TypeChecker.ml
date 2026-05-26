@@ -1870,6 +1870,18 @@ let rec lookup_expr_branch name = function
   let (name', _) = p0 in
   if (=) name name' then Some e else lookup_expr_branch name rest
 
+(** val lookup_expr_branch_binders :
+    string -> ((string * ident list) * expr) list -> ident list option **)
+
+let rec lookup_expr_branch_binders name = function
+| [] -> None
+| p :: rest ->
+  let (p0, _) = p in
+  let (name', binders) = p0 in
+  if (=) name name'
+  then Some binders
+  else lookup_expr_branch_binders name rest
+
 (** val fn_signature_ty_with_usage : usage -> fn_def -> ty **)
 
 let fn_signature_ty_with_usage u f =
@@ -2065,6 +2077,19 @@ let rec rename_place _UU03c1_ = function
 | PDeref q -> PDeref (rename_place _UU03c1_ q)
 | PField (q, f) -> PField ((rename_place _UU03c1_ q), f)
 
+(** val alpha_rename_idents :
+    rename_env -> ident list -> ident list -> (ident
+    list * rename_env) * ident list **)
+
+let rec alpha_rename_idents _UU03c1_ used = function
+| [] -> (([], _UU03c1_), used)
+| x :: rest ->
+  let x' = fresh_ident x used in
+  let used1 = x' :: used in
+  let (p, used2) = alpha_rename_idents _UU03c1_ used1 rest in
+  let (rest', _UU03c1_') = p in
+  (((x' :: rest'), ((x, x') :: _UU03c1_')), used2)
+
 (** val alpha_rename_expr :
     rename_env -> ident list -> expr -> expr * ident list **)
 
@@ -2151,9 +2176,12 @@ let rec alpha_rename_expr _UU03c1_ used = function
     | p :: rest ->
       let (p0, e0) = p in
       let (variant_name, binders) = p0 in
-      let (e', used1') = alpha_rename_expr _UU03c1_ used0 e0 in
-      let (rest', used2) = go used1' rest in
-      ((((variant_name, binders), e') :: rest'), used2)
+      let binder_seed = app binders (app (free_vars_expr e0) used0) in
+      let (p1, used1') = alpha_rename_idents _UU03c1_ binder_seed binders in
+      let (binders', _UU03c1__branch) = p1 in
+      let (e', used2') = alpha_rename_expr _UU03c1__branch used1' e0 in
+      let (rest', used3) = go used2' rest in
+      ((((variant_name, binders'), e') :: rest'), used3)
     in go
   in
   let (branches', used') = go used1 branches in
@@ -2336,8 +2364,11 @@ let rec fields_local_store_names_with expr_names = function
 let rec match_branches_local_store_names_with expr_names = function
 | [] -> []
 | p :: rest ->
-  let (_, e) = p in
-  app (expr_names e) (match_branches_local_store_names_with expr_names rest)
+  let (p0, e) = p in
+  let (_, binders) = p0 in
+  app binders
+    (app (expr_names e)
+      (match_branches_local_store_names_with expr_names rest))
 
 (** val expr_local_store_names : expr -> ident list **)
 
@@ -3082,6 +3113,16 @@ let rec ctx_lookup_b x = function
 
 let ctx_add_b x t m _UU0393_ =
   (((x, t), (binding_state_of_bool false)), m) :: _UU0393_
+
+(** val ctx_remove_b : ident -> ctx -> ctx **)
+
+let rec ctx_remove_b x = function
+| [] -> []
+| c :: t ->
+  let (p, m) = c in
+  let (p0, st) = p in
+  let (n, t0) = p0 in
+  if ident_eqb x n then t else (((n, t0), st), m) :: (ctx_remove_b x t)
 
 (** val lookup_fn_b : ident -> fn_def list -> fn_def option **)
 
@@ -4000,6 +4041,85 @@ let rec ctx_merge_many head = function
    | Some merged -> ctx_merge_many merged rest
    | None -> None)
 
+(** val match_binder_params :
+    ident list -> ty list -> param list infer_result **)
+
+let rec match_binder_params binders tys =
+  match binders with
+  | [] ->
+    (match tys with
+     | [] -> Infer_ok []
+     | _ :: _ -> Infer_err ErrArityMismatch)
+  | x :: xs ->
+    (match tys with
+     | [] -> Infer_err ErrArityMismatch
+     | t :: ts ->
+       (match match_binder_params xs ts with
+        | Infer_ok ps ->
+          Infer_ok ({ param_mutability = MImmutable; param_name = x;
+            param_ty = t } :: ps)
+        | Infer_err err -> Infer_err err))
+
+(** val instantiate_enum_variant_field_tys :
+    lifetime list -> ty list -> enum_variant_def -> ty list **)
+
+let instantiate_enum_variant_field_tys lts args v =
+  map (instantiate_enum_variant_field_ty lts args) v.enum_variant_fields
+
+(** val match_payload_params :
+    ident list -> lifetime list -> ty list -> enum_variant_def -> param list
+    infer_result **)
+
+let match_payload_params binders lts args v =
+  match_binder_params binders (instantiate_enum_variant_field_tys lts args v)
+
+(** val ctx_add_params : param list -> ctx -> ctx **)
+
+let ctx_add_params ps _UU0393_ =
+  app (params_ctx ps) _UU0393_
+
+(** val ctx_remove_params : param list -> ctx -> ctx **)
+
+let rec ctx_remove_params ps _UU0393_ =
+  match ps with
+  | [] -> _UU0393_
+  | p :: rest -> ctx_remove_params rest (ctx_remove_b p.param_name _UU0393_)
+
+(** val ident_in_b : ident -> ident list -> bool **)
+
+let rec ident_in_b x = function
+| [] -> false
+| y :: rest -> (||) (ident_eqb x y) (ident_in_b x rest)
+
+(** val ident_nodup_b : ident list -> bool **)
+
+let rec ident_nodup_b = function
+| [] -> true
+| x :: rest -> (&&) (negb (ident_in_b x rest)) (ident_nodup_b rest)
+
+(** val params_names_nodup_b : param list -> bool **)
+
+let params_names_nodup_b ps =
+  ident_nodup_b (ctx_names (params_ctx ps))
+
+(** val ctx_lookup_params_none_b : param list -> ctx -> bool **)
+
+let rec ctx_lookup_params_none_b ps _UU0393_ =
+  match ps with
+  | [] -> true
+  | p :: rest ->
+    (match ctx_lookup_state p.param_name _UU0393_ with
+     | Some _ -> false
+     | None -> ctx_lookup_params_none_b rest _UU0393_)
+
+(** val unrestricted_unit_params_of_binders : ident list -> param list **)
+
+let rec unrestricted_unit_params_of_binders = function
+| [] -> []
+| x :: rest ->
+  { param_mutability = MImmutable; param_name = x; param_ty = (MkTy
+    (UUnrestricted, TUnits)) } :: (unrestricted_unit_params_of_binders rest)
+
 (** val infer_place_env : global_env -> ctx -> place -> ty infer_result **)
 
 let rec infer_place_env env _UU0393_ = function
@@ -4411,6 +4531,16 @@ let rec params_ok_sctx_b env ps _UU03a3_ =
 
 let params_ok_env_b env ps _UU0393_ =
   params_ok_sctx_b env ps (sctx_of_ctx _UU0393_)
+
+(** val sctx_add_params : param list -> sctx -> sctx **)
+
+let sctx_add_params =
+  ctx_add_params
+
+(** val sctx_remove_params : param list -> sctx -> sctx **)
+
+let sctx_remove_params =
+  ctx_remove_params
 
 (** val sctx_path_available :
     sctx -> ident -> field_path -> unit infer_result **)
@@ -5040,100 +5170,125 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
                                 | Some name ->
                                   Infer_err (ErrVariantNotFound name)
                                 | None ->
-                                  (match first_missing_variant_branch
-                                           edef.enum_variants branches with
+                                  (match first_unsupported_match_payload
+                                           branches edef.enum_variants with
                                    | Some name ->
-                                     Infer_err (ErrMissingVariant name)
+                                     Infer_err (ErrMatchPayloadUnsupported
+                                       name)
                                    | None ->
-                                     (match first_unsupported_match_payload
-                                              branches edef.enum_variants with
+                                     (match first_missing_variant_branch
+                                              edef.enum_variants branches with
                                       | Some name ->
-                                        Infer_err (ErrMatchPayloadUnsupported
-                                          name)
+                                        Infer_err (ErrMissingVariant name)
                                       | None ->
                                         let infer_first = fun defs ->
                                           match defs with
                                           | [] ->
                                             Infer_err (ErrMissingVariant "")
                                           | v :: rest ->
-                                            (match lookup_branch_b
-                                                     v.enum_variant_name
-                                                     branches with
-                                             | Some e_branch ->
-                                               (match infer_core_env_state_fuel
-                                                        fuel' env _UU03a9_ n
-                                                        _UU03a3_1 e_branch with
-                                                | Infer_ok p0 ->
-                                                  let (t_branch,
-                                                       _UU03a3__branch) =
-                                                    p0
-                                                  in
-                                                  let infer_rest =
-                                                    let rec infer_rest t_head = function
-                                                    | [] -> Infer_ok ([], [])
-                                                    | v0 :: rest0 ->
-                                                      (match lookup_branch_b
-                                                               v0.enum_variant_name
-                                                               branches with
-                                                       | Some e0 ->
-                                                         (match infer_core_env_state_fuel
-                                                                  fuel' env
-                                                                  _UU03a9_ n
-                                                                  _UU03a3_1 e0 with
-                                                          | Infer_ok p1 ->
-                                                            let (t0, _UU03a3_0) =
-                                                              p1
-                                                            in
-                                                            if ty_core_eqb
-                                                                 (ty_core t0)
-                                                                 (ty_core
-                                                                   t_head)
-                                                            then let rest_result =
-                                                                   infer_rest
-                                                                    t_head
-                                                                    rest0
-                                                                 in
-                                                                 (match rest_result with
-                                                                  | Infer_ok p2 ->
-                                                                    let (
-                                                                    _UU03a3_s,
-                                                                    ts) = p2
-                                                                    in
-                                                                    Infer_ok
-                                                                    ((_UU03a3_0 :: _UU03a3_s),
-                                                                    (t0 :: ts))
-                                                                  | Infer_err err ->
-                                                                    Infer_err
-                                                                    err)
-                                                            else Infer_err
-                                                                   (ErrTypeMismatch
-                                                                   ((ty_core
-                                                                    t0),
-                                                                   (ty_core
-                                                                    t_head)))
-                                                          | Infer_err err ->
-                                                            Infer_err err)
-                                                       | None ->
-                                                         Infer_err
-                                                           (ErrMissingVariant
-                                                           v0.enum_variant_name))
-                                                    in infer_rest
-                                                  in
-                                                  (match infer_rest t_branch
-                                                           rest with
-                                                   | Infer_ok p1 ->
-                                                     let (_UU03a3_s, ts) = p1
-                                                     in
-                                                     Infer_ok ((t_branch,
-                                                     (_UU03a3__branch :: _UU03a3_s)),
-                                                     ts)
-                                                   | Infer_err err ->
-                                                     Infer_err err)
+                                            let infer_branch = fun v0 ->
+                                              match lookup_expr_branch_binders
+                                                      v0.enum_variant_name
+                                                      branches with
+                                              | Some binders ->
+                                                (match lookup_branch_b
+                                                         v0.enum_variant_name
+                                                         branches with
+                                                 | Some e_branch ->
+                                                   (match match_payload_params
+                                                            binders lts args
+                                                            v0 with
+                                                    | Infer_ok ps ->
+                                                      if (&&)
+                                                           (params_names_nodup_b
+                                                             ps)
+                                                           (ctx_lookup_params_none_b
+                                                             ps _UU03a3_1)
+                                                      then (match infer_core_env_state_fuel
+                                                                    fuel' env
+                                                                    _UU03a9_
+                                                                    n
+                                                                    (sctx_add_params
+                                                                    ps
+                                                                    _UU03a3_1)
+                                                                    e_branch with
+                                                            | Infer_ok p0 ->
+                                                              let (t_branch,
+                                                                   _UU03a3__branch_payload) =
+                                                                p0
+                                                              in
+                                                              if params_ok_sctx_b
+                                                                   env ps
+                                                                   _UU03a3__branch_payload
+                                                              then Infer_ok
+                                                                    (t_branch,
+                                                                    (sctx_remove_params
+                                                                    ps
+                                                                    _UU03a3__branch_payload))
+                                                              else Infer_err
+                                                                    ErrContextCheckFailed
+                                                            | Infer_err err ->
+                                                              Infer_err err)
+                                                      else Infer_err
+                                                             ErrContextCheckFailed
+                                                    | Infer_err err ->
+                                                      Infer_err err)
+                                                 | None ->
+                                                   Infer_err
+                                                     (ErrMissingVariant
+                                                     v0.enum_variant_name))
+                                              | None ->
+                                                Infer_err (ErrMissingVariant
+                                                  v0.enum_variant_name)
+                                            in
+                                            (match infer_branch v with
+                                             | Infer_ok p0 ->
+                                               let (t_branch, _UU03a3__branch) =
+                                                 p0
+                                               in
+                                               let infer_rest =
+                                                 let rec infer_rest t_head = function
+                                                 | [] -> Infer_ok ([], [])
+                                                 | v0 :: rest0 ->
+                                                   (match infer_branch v0 with
+                                                    | Infer_ok p1 ->
+                                                      let (t0, _UU03a3_0) = p1
+                                                      in
+                                                      if ty_core_eqb
+                                                           (ty_core t0)
+                                                           (ty_core t_head)
+                                                      then let rest_result =
+                                                             infer_rest
+                                                               t_head rest0
+                                                           in
+                                                           (match rest_result with
+                                                            | Infer_ok p2 ->
+                                                              let (_UU03a3_s,
+                                                                   ts) =
+                                                                p2
+                                                              in
+                                                              Infer_ok
+                                                              ((_UU03a3_0 :: _UU03a3_s),
+                                                              (t0 :: ts))
+                                                            | Infer_err err ->
+                                                              Infer_err err)
+                                                      else Infer_err
+                                                             (ErrTypeMismatch
+                                                             ((ty_core t0),
+                                                             (ty_core t_head)))
+                                                    | Infer_err err ->
+                                                      Infer_err err)
+                                                 in infer_rest
+                                               in
+                                               (match infer_rest t_branch rest with
+                                                | Infer_ok p1 ->
+                                                  let (_UU03a3_s, ts) = p1 in
+                                                  Infer_ok ((t_branch,
+                                                  (_UU03a3__branch :: _UU03a3_s)),
+                                                  ts)
                                                 | Infer_err err ->
                                                   Infer_err err)
-                                             | None ->
-                                               Infer_err (ErrMissingVariant
-                                                 v.enum_variant_name))
+                                             | Infer_err err -> Infer_err err)
                                         in
                                         (match infer_first edef.enum_variants with
                                          | Infer_ok p0 ->
@@ -5762,7 +5917,7 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
          let (p0, scrut') = p in
          let (t_scrut, _UU03a3_1) = p0 in
          (match ty_core t_scrut with
-          | TEnum (enum_name0, _, _) ->
+          | TEnum (enum_name0, lts, args) ->
             (match lookup_enum enum_name0 env with
              | Some edef ->
                (match first_duplicate_branch branches with
@@ -5772,82 +5927,109 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
                            edef.enum_variants with
                    | Some name -> Infer_err (ErrVariantNotFound name)
                    | None ->
-                     (match first_missing_variant_branch edef.enum_variants
-                              branches with
-                      | Some name -> Infer_err (ErrMissingVariant name)
+                     (match first_unsupported_match_payload branches
+                              edef.enum_variants with
+                      | Some name ->
+                        Infer_err (ErrMatchPayloadUnsupported name)
                       | None ->
-                        (match first_unsupported_match_payload branches
-                                 edef.enum_variants with
-                         | Some name ->
-                           Infer_err (ErrMatchPayloadUnsupported name)
+                        (match first_missing_variant_branch
+                                 edef.enum_variants branches with
+                         | Some name -> Infer_err (ErrMissingVariant name)
                          | None ->
                            let infer_first = fun defs ->
                              match defs with
                              | [] -> Infer_err (ErrMissingVariant "")
                              | v :: rest ->
-                               (match lookup_branch_b v.enum_variant_name
-                                        branches with
-                                | Some e_branch ->
-                                  (match infer_core_env_state_fuel_elab fuel'
-                                           env _UU03a9_ n _UU03a3_1 e_branch with
-                                   | Infer_ok p1 ->
-                                     let (p2, e_branch') = p1 in
-                                     let (t_branch, _UU03a3__branch) = p2 in
-                                     let infer_rest =
-                                       let rec infer_rest t_head = function
-                                       | [] -> Infer_ok (([], []), [])
-                                       | v0 :: rest0 ->
-                                         (match lookup_branch_b
-                                                  v0.enum_variant_name
-                                                  branches with
-                                          | Some e0 ->
-                                            (match infer_core_env_state_fuel_elab
-                                                     fuel' env _UU03a9_ n
-                                                     _UU03a3_1 e0 with
-                                             | Infer_ok p3 ->
-                                               let (p4, e0') = p3 in
-                                               let (t0, _UU03a3_0) = p4 in
-                                               if ty_core_eqb (ty_core t0)
-                                                    (ty_core t_head)
-                                               then let rest_result =
-                                                      infer_rest t_head rest0
-                                                    in
-                                                    (match rest_result with
-                                                     | Infer_ok p5 ->
-                                                       let (p6, bs) = p5 in
-                                                       let (_UU03a3_s, ts) =
-                                                         p6
-                                                       in
-                                                       Infer_ok
-                                                       (((_UU03a3_0 :: _UU03a3_s),
-                                                       (t0 :: ts)),
-                                                       (((v0.enum_variant_name,
-                                                       []), e0') :: bs))
-                                                     | Infer_err err ->
-                                                       Infer_err err)
-                                               else Infer_err
-                                                      (ErrTypeMismatch
-                                                      ((ty_core t0),
-                                                      (ty_core t_head)))
-                                             | Infer_err err -> Infer_err err)
-                                          | None ->
-                                            Infer_err (ErrMissingVariant
-                                              v0.enum_variant_name))
-                                       in infer_rest
-                                     in
-                                     (match infer_rest t_branch rest with
-                                      | Infer_ok p3 ->
-                                        let (p4, bs) = p3 in
-                                        let (_UU03a3_s, ts) = p4 in
-                                        Infer_ok (((t_branch,
-                                        (_UU03a3__branch :: _UU03a3_s)), ts),
-                                        (((v.enum_variant_name, []),
-                                        e_branch') :: bs))
-                                      | Infer_err err -> Infer_err err)
+                               let infer_branch = fun v0 ->
+                                 match lookup_expr_branch_binders
+                                         v0.enum_variant_name branches with
+                                 | Some binders ->
+                                   (match lookup_branch_b
+                                            v0.enum_variant_name branches with
+                                    | Some e_branch ->
+                                      (match match_payload_params binders lts
+                                               args v0 with
+                                       | Infer_ok ps ->
+                                         if (&&) (params_names_nodup_b ps)
+                                              (ctx_lookup_params_none_b ps
+                                                _UU03a3_1)
+                                         then (match infer_core_env_state_fuel_elab
+                                                       fuel' env _UU03a9_ n
+                                                       (sctx_add_params ps
+                                                         _UU03a3_1)
+                                                       e_branch with
+                                               | Infer_ok p1 ->
+                                                 let (p2, e_branch') = p1 in
+                                                 let (t_branch,
+                                                      _UU03a3__branch_payload) =
+                                                   p2
+                                                 in
+                                                 if params_ok_sctx_b env ps
+                                                      _UU03a3__branch_payload
+                                                 then Infer_ok (((t_branch,
+                                                        (sctx_remove_params
+                                                          ps
+                                                          _UU03a3__branch_payload)),
+                                                        e_branch'), binders)
+                                                 else Infer_err
+                                                        ErrContextCheckFailed
+                                               | Infer_err err ->
+                                                 Infer_err err)
+                                         else Infer_err ErrContextCheckFailed
+                                       | Infer_err err -> Infer_err err)
+                                    | None ->
+                                      Infer_err (ErrMissingVariant
+                                        v0.enum_variant_name))
+                                 | None ->
+                                   Infer_err (ErrMissingVariant
+                                     v0.enum_variant_name)
+                               in
+                               (match infer_branch v with
+                                | Infer_ok p1 ->
+                                  let (p2, binders) = p1 in
+                                  let (p3, e_branch') = p2 in
+                                  let (t_branch, _UU03a3__branch) = p3 in
+                                  let infer_rest =
+                                    let rec infer_rest t_head = function
+                                    | [] -> Infer_ok (([], []), [])
+                                    | v0 :: rest0 ->
+                                      (match infer_branch v0 with
+                                       | Infer_ok p4 ->
+                                         let (p5, binders0) = p4 in
+                                         let (p6, e0') = p5 in
+                                         let (t0, _UU03a3_0) = p6 in
+                                         if ty_core_eqb (ty_core t0)
+                                              (ty_core t_head)
+                                         then let rest_result =
+                                                infer_rest t_head rest0
+                                              in
+                                              (match rest_result with
+                                               | Infer_ok p7 ->
+                                                 let (p8, bs) = p7 in
+                                                 let (_UU03a3_s, ts) = p8 in
+                                                 Infer_ok
+                                                 (((_UU03a3_0 :: _UU03a3_s),
+                                                 (t0 :: ts)),
+                                                 (((v0.enum_variant_name,
+                                                 binders0), e0') :: bs))
+                                               | Infer_err err ->
+                                                 Infer_err err)
+                                         else Infer_err (ErrTypeMismatch
+                                                ((ty_core t0),
+                                                (ty_core t_head)))
+                                       | Infer_err err -> Infer_err err)
+                                    in infer_rest
+                                  in
+                                  (match infer_rest t_branch rest with
+                                   | Infer_ok p4 ->
+                                     let (p5, bs) = p4 in
+                                     let (_UU03a3_s, ts) = p5 in
+                                     Infer_ok (((t_branch,
+                                     (_UU03a3__branch :: _UU03a3_s)), ts),
+                                     (((v.enum_variant_name, binders),
+                                     e_branch') :: bs))
                                    | Infer_err err -> Infer_err err)
-                                | None ->
-                                  Infer_err (ErrMissingVariant
-                                    v.enum_variant_name))
+                                | Infer_err err -> Infer_err err)
                            in
                            (match infer_first edef.enum_variants with
                             | Infer_ok p1 ->
@@ -6106,6 +6288,52 @@ let rec root_env_excludes_b x = function
   let (y, roots) = p in
   (&&) (if ident_eqb x y then true else roots_exclude_b x roots)
     (root_env_excludes_b x rest)
+
+(** val roots_exclude_params_b : param list -> root_set -> bool **)
+
+let rec roots_exclude_params_b ps roots =
+  match ps with
+  | [] -> true
+  | p :: rest ->
+    (&&) (roots_exclude_b p.param_name roots)
+      (roots_exclude_params_b rest roots)
+
+(** val root_env_excludes_params_b : param list -> root_env -> bool **)
+
+let rec root_env_excludes_params_b ps r =
+  match ps with
+  | [] -> true
+  | p :: rest ->
+    (&&) (root_env_excludes_b p.param_name r)
+      (root_env_excludes_params_b rest r)
+
+(** val root_env_add_params_roots_same :
+    param list -> root_set -> root_env -> root_env **)
+
+let rec root_env_add_params_roots_same ps roots r =
+  match ps with
+  | [] -> r
+  | p :: rest ->
+    root_env_add p.param_name roots
+      (root_env_add_params_roots_same rest roots r)
+
+(** val root_env_remove_match_params : param list -> root_env -> root_env **)
+
+let rec root_env_remove_match_params ps r =
+  match ps with
+  | [] -> r
+  | p :: rest ->
+    root_env_remove_match_params rest (root_env_remove p.param_name r)
+
+(** val root_env_lookup_params_none_b : param list -> root_env -> bool **)
+
+let rec root_env_lookup_params_none_b ps r =
+  match ps with
+  | [] -> true
+  | p :: rest ->
+    (match root_env_lookup p.param_name r with
+     | Some _ -> false
+     | None -> root_env_lookup_params_none_b rest r)
 
 (** val preservation_ready_expr_b : expr -> bool **)
 
@@ -6666,7 +6894,7 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
       (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r _UU03a3_
                scrut with
        | Infer_ok p ->
-         let (p0, _) = p in
+         let (p0, roots_scrut) = p in
          let (p1, r1) = p0 in
          let (t_scrut, _UU03a3_1) = p1 in
          (match ty_core t_scrut with
@@ -6689,130 +6917,182 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                                 | Some name ->
                                   Infer_err (ErrVariantNotFound name)
                                 | None ->
-                                  (match first_missing_variant_branch
-                                           edef.enum_variants branches with
+                                  (match first_unsupported_match_payload
+                                           branches edef.enum_variants with
                                    | Some name ->
-                                     Infer_err (ErrMissingVariant name)
+                                     Infer_err (ErrMatchPayloadUnsupported
+                                       name)
                                    | None ->
-                                     (match first_unsupported_match_payload
-                                              branches edef.enum_variants with
+                                     (match first_missing_variant_branch
+                                              edef.enum_variants branches with
                                       | Some name ->
-                                        Infer_err (ErrMatchPayloadUnsupported
-                                          name)
+                                        Infer_err (ErrMissingVariant name)
                                       | None ->
                                         let infer_first = fun defs ->
                                           match defs with
                                           | [] ->
                                             Infer_err (ErrMissingVariant "")
                                           | v :: rest ->
-                                            (match lookup_branch_b
-                                                     v.enum_variant_name
-                                                     branches with
-                                             | Some e_branch ->
-                                               (match infer_core_env_state_fuel_roots
-                                                        fuel' env _UU03a9_ n
-                                                        r1 _UU03a3_1 e_branch with
-                                                | Infer_ok p2 ->
-                                                  let (p3, roots_branch) = p2
-                                                  in
-                                                  let (p4, r_branch) = p3 in
-                                                  let (t_branch,
-                                                       _UU03a3__branch) =
-                                                    p4
-                                                  in
-                                                  let infer_rest =
-                                                    let rec infer_rest t_head r_out = function
-                                                    | [] ->
-                                                      Infer_ok (([], []), [])
-                                                    | v0 :: rest0 ->
-                                                      (match lookup_branch_b
-                                                               v0.enum_variant_name
-                                                               branches with
-                                                       | Some e0 ->
-                                                         (match infer_core_env_state_fuel_roots
-                                                                  fuel' env
-                                                                  _UU03a9_ n
-                                                                  r1
-                                                                  _UU03a3_1 e0 with
-                                                          | Infer_ok p5 ->
-                                                            let (p6, roots0) =
-                                                              p5
-                                                            in
-                                                            let (p7, r0) = p6
-                                                            in
-                                                            let (t0, _UU03a3_0) =
-                                                              p7
-                                                            in
-                                                            if ty_core_eqb
-                                                                 (ty_core t0)
-                                                                 (ty_core
-                                                                   t_head)
-                                                            then let rest_ok =
-                                                                   let rest_result =
-                                                                    infer_rest
-                                                                    t_head
-                                                                    r_out
-                                                                    rest0
-                                                                   in
-                                                                   (match rest_result with
-                                                                    | Infer_ok p8 ->
-                                                                    let (
-                                                                    p9, rootss) =
-                                                                    p8
-                                                                    in
-                                                                    let (
-                                                                    _UU03a3_s,
-                                                                    ts) = p9
-                                                                    in
-                                                                    Infer_ok
-                                                                    (((_UU03a3_0 :: _UU03a3_s),
-                                                                    (t0 :: ts)),
-                                                                    (roots0 :: rootss))
-                                                                    | Infer_err err ->
-                                                                    Infer_err
-                                                                    err)
-                                                                 in
-                                                                 let context_error =
-                                                                   Infer_err
-                                                                   ErrContextCheckFailed
-                                                                 in
-                                                                 infer_if_bool
-                                                                   (root_env_eqb
-                                                                    r0 r_out)
-                                                                   rest_ok
-                                                                   context_error
-                                                            else Infer_err
-                                                                   (ErrTypeMismatch
-                                                                   ((ty_core
-                                                                    t0),
-                                                                   (ty_core
-                                                                    t_head)))
-                                                          | Infer_err err ->
-                                                            Infer_err err)
-                                                       | None ->
-                                                         Infer_err
-                                                           (ErrMissingVariant
-                                                           v0.enum_variant_name))
-                                                    in infer_rest
-                                                  in
-                                                  (match infer_rest t_branch
-                                                           r_branch rest with
-                                                   | Infer_ok p5 ->
-                                                     let (p6, rootss) = p5 in
-                                                     let (_UU03a3_s, ts) = p6
-                                                     in
-                                                     Infer_ok ((((((t_branch,
-                                                     _UU03a3__branch),
-                                                     r_branch),
-                                                     roots_branch),
-                                                     _UU03a3_s), ts), rootss)
-                                                   | Infer_err err ->
-                                                     Infer_err err)
+                                            let infer_branch = fun v0 ->
+                                              match lookup_expr_branch_binders
+                                                      v0.enum_variant_name
+                                                      branches with
+                                              | Some binders ->
+                                                (match lookup_branch_b
+                                                         v0.enum_variant_name
+                                                         branches with
+                                                 | Some e_branch ->
+                                                   (match match_payload_params
+                                                            binders lts args
+                                                            v0 with
+                                                    | Infer_ok ps ->
+                                                      if (&&)
+                                                           ((&&)
+                                                             (params_names_nodup_b
+                                                               ps)
+                                                             (ctx_lookup_params_none_b
+                                                               ps _UU03a3_1))
+                                                           (root_env_lookup_params_none_b
+                                                             ps r1)
+                                                      then let r_payload =
+                                                             root_env_add_params_roots_same
+                                                               ps roots_scrut
+                                                               r1
+                                                           in
+                                                           (match infer_core_env_state_fuel_roots
+                                                                    fuel' env
+                                                                    _UU03a9_
+                                                                    n
+                                                                    r_payload
+                                                                    (sctx_add_params
+                                                                    ps
+                                                                    _UU03a3_1)
+                                                                    e_branch with
+                                                            | Infer_ok p2 ->
+                                                              let (p3,
+                                                                   roots_branch) =
+                                                                p2
+                                                              in
+                                                              let (p4,
+                                                                   r_branch_payload) =
+                                                                p3
+                                                              in
+                                                              let (t_branch,
+                                                                   _UU03a3__branch_payload) =
+                                                                p4
+                                                              in
+                                                              let r_branch =
+                                                                root_env_remove_match_params
+                                                                  ps
+                                                                  r_branch_payload
+                                                              in
+                                                              if (&&)
+                                                                   ((&&)
+                                                                    (params_ok_sctx_b
+                                                                    env ps
+                                                                    _UU03a3__branch_payload)
+                                                                    (roots_exclude_params_b
+                                                                    ps
+                                                                    roots_branch))
+                                                                   (root_env_excludes_params_b
+                                                                    ps
+                                                                    r_branch)
+                                                              then Infer_ok
+                                                                    (((t_branch,
+                                                                    (sctx_remove_params
+                                                                    ps
+                                                                    _UU03a3__branch_payload)),
+                                                                    r_branch),
+                                                                    roots_branch)
+                                                              else Infer_err
+                                                                    ErrContextCheckFailed
+                                                            | Infer_err err ->
+                                                              Infer_err err)
+                                                      else Infer_err
+                                                             ErrContextCheckFailed
+                                                    | Infer_err err ->
+                                                      Infer_err err)
+                                                 | None ->
+                                                   Infer_err
+                                                     (ErrMissingVariant
+                                                     v0.enum_variant_name))
+                                              | None ->
+                                                Infer_err (ErrMissingVariant
+                                                  v0.enum_variant_name)
+                                            in
+                                            (match infer_branch v with
+                                             | Infer_ok p2 ->
+                                               let (p3, roots_branch) = p2 in
+                                               let (p4, r_branch) = p3 in
+                                               let (t_branch, _UU03a3__branch) =
+                                                 p4
+                                               in
+                                               let infer_rest =
+                                                 let rec infer_rest t_head r_out = function
+                                                 | [] ->
+                                                   Infer_ok (([], []), [])
+                                                 | v0 :: rest0 ->
+                                                   (match infer_branch v0 with
+                                                    | Infer_ok p5 ->
+                                                      let (p6, roots0) = p5 in
+                                                      let (p7, r0) = p6 in
+                                                      let (t0, _UU03a3_0) = p7
+                                                      in
+                                                      if ty_core_eqb
+                                                           (ty_core t0)
+                                                           (ty_core t_head)
+                                                      then let rest_ok =
+                                                             let rest_result =
+                                                               infer_rest
+                                                                 t_head r_out
+                                                                 rest0
+                                                             in
+                                                             (match rest_result with
+                                                              | Infer_ok p8 ->
+                                                                let (
+                                                                  p9, rootss) =
+                                                                  p8
+                                                                in
+                                                                let (
+                                                                  _UU03a3_s,
+                                                                  ts) = p9
+                                                                in
+                                                                Infer_ok
+                                                                (((_UU03a3_0 :: _UU03a3_s),
+                                                                (t0 :: ts)),
+                                                                (roots0 :: rootss))
+                                                              | Infer_err err ->
+                                                                Infer_err err)
+                                                           in
+                                                           let context_error =
+                                                             Infer_err
+                                                             ErrContextCheckFailed
+                                                           in
+                                                           infer_if_bool
+                                                             (root_env_eqb r0
+                                                               r_out)
+                                                             rest_ok
+                                                             context_error
+                                                      else Infer_err
+                                                             (ErrTypeMismatch
+                                                             ((ty_core t0),
+                                                             (ty_core t_head)))
+                                                    | Infer_err err ->
+                                                      Infer_err err)
+                                                 in infer_rest
+                                               in
+                                               (match infer_rest t_branch
+                                                        r_branch rest with
+                                                | Infer_ok p5 ->
+                                                  let (p6, rootss) = p5 in
+                                                  let (_UU03a3_s, ts) = p6 in
+                                                  Infer_ok ((((((t_branch,
+                                                  _UU03a3__branch),
+                                                  r_branch), roots_branch),
+                                                  _UU03a3_s), ts), rootss)
                                                 | Infer_err err ->
                                                   Infer_err err)
-                                             | None ->
-                                               Infer_err (ErrMissingVariant
-                                                 v.enum_variant_name))
+                                             | Infer_err err -> Infer_err err)
                                         in
                                         (match infer_first edef.enum_variants with
                                          | Infer_ok p2 ->
@@ -7451,7 +7731,7 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
       (match infer_core_env_state_fuel_roots_shadow_safe fuel' env _UU03a9_ n
                r _UU03a3_ scrut with
        | Infer_ok p ->
-         let (p0, _) = p in
+         let (p0, roots_scrut) = p in
          let (p1, r1) = p0 in
          let (t_scrut, _UU03a3_1) = p1 in
          (match ty_core t_scrut with
@@ -7474,130 +7754,182 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                                 | Some name ->
                                   Infer_err (ErrVariantNotFound name)
                                 | None ->
-                                  (match first_missing_variant_branch
-                                           edef.enum_variants branches with
+                                  (match first_unsupported_match_payload
+                                           branches edef.enum_variants with
                                    | Some name ->
-                                     Infer_err (ErrMissingVariant name)
+                                     Infer_err (ErrMatchPayloadUnsupported
+                                       name)
                                    | None ->
-                                     (match first_unsupported_match_payload
-                                              branches edef.enum_variants with
+                                     (match first_missing_variant_branch
+                                              edef.enum_variants branches with
                                       | Some name ->
-                                        Infer_err (ErrMatchPayloadUnsupported
-                                          name)
+                                        Infer_err (ErrMissingVariant name)
                                       | None ->
                                         let infer_first = fun defs ->
                                           match defs with
                                           | [] ->
                                             Infer_err (ErrMissingVariant "")
                                           | v :: rest ->
-                                            (match lookup_branch_b
-                                                     v.enum_variant_name
-                                                     branches with
-                                             | Some e_branch ->
-                                               (match infer_core_env_state_fuel_roots_shadow_safe
-                                                        fuel' env _UU03a9_ n
-                                                        r1 _UU03a3_1 e_branch with
-                                                | Infer_ok p2 ->
-                                                  let (p3, roots_branch) = p2
-                                                  in
-                                                  let (p4, r_branch) = p3 in
-                                                  let (t_branch,
-                                                       _UU03a3__branch) =
-                                                    p4
-                                                  in
-                                                  let infer_rest =
-                                                    let rec infer_rest t_head r_out = function
-                                                    | [] ->
-                                                      Infer_ok (([], []), [])
-                                                    | v0 :: rest0 ->
-                                                      (match lookup_branch_b
-                                                               v0.enum_variant_name
-                                                               branches with
-                                                       | Some e0 ->
-                                                         (match infer_core_env_state_fuel_roots_shadow_safe
-                                                                  fuel' env
-                                                                  _UU03a9_ n
-                                                                  r1
-                                                                  _UU03a3_1 e0 with
-                                                          | Infer_ok p5 ->
-                                                            let (p6, roots0) =
-                                                              p5
-                                                            in
-                                                            let (p7, r0) = p6
-                                                            in
-                                                            let (t0, _UU03a3_0) =
-                                                              p7
-                                                            in
-                                                            if ty_core_eqb
-                                                                 (ty_core t0)
-                                                                 (ty_core
-                                                                   t_head)
-                                                            then let rest_ok =
-                                                                   let rest_result =
-                                                                    infer_rest
-                                                                    t_head
-                                                                    r_out
-                                                                    rest0
-                                                                   in
-                                                                   (match rest_result with
-                                                                    | Infer_ok p8 ->
-                                                                    let (
-                                                                    p9, rootss) =
-                                                                    p8
-                                                                    in
-                                                                    let (
-                                                                    _UU03a3_s,
-                                                                    ts) = p9
-                                                                    in
-                                                                    Infer_ok
-                                                                    (((_UU03a3_0 :: _UU03a3_s),
-                                                                    (t0 :: ts)),
-                                                                    (roots0 :: rootss))
-                                                                    | Infer_err err ->
-                                                                    Infer_err
-                                                                    err)
-                                                                 in
-                                                                 let context_error =
-                                                                   Infer_err
-                                                                   ErrContextCheckFailed
-                                                                 in
-                                                                 infer_if_bool
-                                                                   (root_env_eqb
-                                                                    r0 r_out)
-                                                                   rest_ok
-                                                                   context_error
-                                                            else Infer_err
-                                                                   (ErrTypeMismatch
-                                                                   ((ty_core
-                                                                    t0),
-                                                                   (ty_core
-                                                                    t_head)))
-                                                          | Infer_err err ->
-                                                            Infer_err err)
-                                                       | None ->
-                                                         Infer_err
-                                                           (ErrMissingVariant
-                                                           v0.enum_variant_name))
-                                                    in infer_rest
-                                                  in
-                                                  (match infer_rest t_branch
-                                                           r_branch rest with
-                                                   | Infer_ok p5 ->
-                                                     let (p6, rootss) = p5 in
-                                                     let (_UU03a3_s, ts) = p6
-                                                     in
-                                                     Infer_ok ((((((t_branch,
-                                                     _UU03a3__branch),
-                                                     r_branch),
-                                                     roots_branch),
-                                                     _UU03a3_s), ts), rootss)
-                                                   | Infer_err err ->
-                                                     Infer_err err)
+                                            let infer_branch = fun v0 ->
+                                              match lookup_expr_branch_binders
+                                                      v0.enum_variant_name
+                                                      branches with
+                                              | Some binders ->
+                                                (match lookup_branch_b
+                                                         v0.enum_variant_name
+                                                         branches with
+                                                 | Some e_branch ->
+                                                   (match match_payload_params
+                                                            binders lts args
+                                                            v0 with
+                                                    | Infer_ok ps ->
+                                                      if (&&)
+                                                           ((&&)
+                                                             (params_names_nodup_b
+                                                               ps)
+                                                             (ctx_lookup_params_none_b
+                                                               ps _UU03a3_1))
+                                                           (root_env_lookup_params_none_b
+                                                             ps r1)
+                                                      then let r_payload =
+                                                             root_env_add_params_roots_same
+                                                               ps roots_scrut
+                                                               r1
+                                                           in
+                                                           (match infer_core_env_state_fuel_roots_shadow_safe
+                                                                    fuel' env
+                                                                    _UU03a9_
+                                                                    n
+                                                                    r_payload
+                                                                    (sctx_add_params
+                                                                    ps
+                                                                    _UU03a3_1)
+                                                                    e_branch with
+                                                            | Infer_ok p2 ->
+                                                              let (p3,
+                                                                   roots_branch) =
+                                                                p2
+                                                              in
+                                                              let (p4,
+                                                                   r_branch_payload) =
+                                                                p3
+                                                              in
+                                                              let (t_branch,
+                                                                   _UU03a3__branch_payload) =
+                                                                p4
+                                                              in
+                                                              let r_branch =
+                                                                root_env_remove_match_params
+                                                                  ps
+                                                                  r_branch_payload
+                                                              in
+                                                              if (&&)
+                                                                   ((&&)
+                                                                    (params_ok_sctx_b
+                                                                    env ps
+                                                                    _UU03a3__branch_payload)
+                                                                    (roots_exclude_params_b
+                                                                    ps
+                                                                    roots_branch))
+                                                                   (root_env_excludes_params_b
+                                                                    ps
+                                                                    r_branch)
+                                                              then Infer_ok
+                                                                    (((t_branch,
+                                                                    (sctx_remove_params
+                                                                    ps
+                                                                    _UU03a3__branch_payload)),
+                                                                    r_branch),
+                                                                    roots_branch)
+                                                              else Infer_err
+                                                                    ErrContextCheckFailed
+                                                            | Infer_err err ->
+                                                              Infer_err err)
+                                                      else Infer_err
+                                                             ErrContextCheckFailed
+                                                    | Infer_err err ->
+                                                      Infer_err err)
+                                                 | None ->
+                                                   Infer_err
+                                                     (ErrMissingVariant
+                                                     v0.enum_variant_name))
+                                              | None ->
+                                                Infer_err (ErrMissingVariant
+                                                  v0.enum_variant_name)
+                                            in
+                                            (match infer_branch v with
+                                             | Infer_ok p2 ->
+                                               let (p3, roots_branch) = p2 in
+                                               let (p4, r_branch) = p3 in
+                                               let (t_branch, _UU03a3__branch) =
+                                                 p4
+                                               in
+                                               let infer_rest =
+                                                 let rec infer_rest t_head r_out = function
+                                                 | [] ->
+                                                   Infer_ok (([], []), [])
+                                                 | v0 :: rest0 ->
+                                                   (match infer_branch v0 with
+                                                    | Infer_ok p5 ->
+                                                      let (p6, roots0) = p5 in
+                                                      let (p7, r0) = p6 in
+                                                      let (t0, _UU03a3_0) = p7
+                                                      in
+                                                      if ty_core_eqb
+                                                           (ty_core t0)
+                                                           (ty_core t_head)
+                                                      then let rest_ok =
+                                                             let rest_result =
+                                                               infer_rest
+                                                                 t_head r_out
+                                                                 rest0
+                                                             in
+                                                             (match rest_result with
+                                                              | Infer_ok p8 ->
+                                                                let (
+                                                                  p9, rootss) =
+                                                                  p8
+                                                                in
+                                                                let (
+                                                                  _UU03a3_s,
+                                                                  ts) = p9
+                                                                in
+                                                                Infer_ok
+                                                                (((_UU03a3_0 :: _UU03a3_s),
+                                                                (t0 :: ts)),
+                                                                (roots0 :: rootss))
+                                                              | Infer_err err ->
+                                                                Infer_err err)
+                                                           in
+                                                           let context_error =
+                                                             Infer_err
+                                                             ErrContextCheckFailed
+                                                           in
+                                                           infer_if_bool
+                                                             (root_env_eqb r0
+                                                               r_out)
+                                                             rest_ok
+                                                             context_error
+                                                      else Infer_err
+                                                             (ErrTypeMismatch
+                                                             ((ty_core t0),
+                                                             (ty_core t_head)))
+                                                    | Infer_err err ->
+                                                      Infer_err err)
+                                                 in infer_rest
+                                               in
+                                               (match infer_rest t_branch
+                                                        r_branch rest with
+                                                | Infer_ok p5 ->
+                                                  let (p6, rootss) = p5 in
+                                                  let (_UU03a3_s, ts) = p6 in
+                                                  Infer_ok ((((((t_branch,
+                                                  _UU03a3__branch),
+                                                  r_branch), roots_branch),
+                                                  _UU03a3_s), ts), rootss)
                                                 | Infer_err err ->
                                                   Infer_err err)
-                                             | None ->
-                                               Infer_err (ErrMissingVariant
-                                                 v.enum_variant_name))
+                                             | Infer_err err -> Infer_err err)
                                         in
                                         (match infer_first edef.enum_variants with
                                          | Infer_ok p2 ->
@@ -8225,18 +8557,18 @@ let rec borrow_check_env env pBS _UU0393_ = function
      | p :: rest ->
        let (p0, e_branch) = p in
        let (_, binders) = p0 in
-       (match binders with
-        | [] ->
-          (match borrow_check_env env pBS1 _UU0393_ e_branch with
-           | Infer_ok pBS_branch ->
-             (match expected with
-              | Some pBS_expected ->
-                if pbs_eqb pBS_branch pBS_expected
-                then go expected rest
-                else Infer_err ErrContextCheckFailed
-              | None -> go (Some pBS_branch) rest)
-           | Infer_err err -> Infer_err err)
-        | _ :: _ -> Infer_err ErrNotImplemented)
+       let _UU0393__branch =
+         ctx_add_params (unrestricted_unit_params_of_binders binders) _UU0393_
+       in
+       (match borrow_check_env env pBS1 _UU0393__branch e_branch with
+        | Infer_ok pBS_branch ->
+          (match expected with
+           | Some pBS_expected ->
+             if pbs_eqb pBS_branch pBS_expected
+             then go expected rest
+             else Infer_err ErrContextCheckFailed
+           | None -> go (Some pBS_branch) rest)
+        | Infer_err err -> Infer_err err)
      in go None branches
    | Infer_err err -> Infer_err err)
 | EReplace (p, e_new) ->
@@ -9460,39 +9792,77 @@ let rec elaborate_raw_expr_fuel fuel expected env _UU03a9_ n _UU03a3_ next e =
           let (p1, extras_scrut) = p0 in
           let (scrut', _UU03a3_1) = p1 in
           let env1 = append_env_fns env extras_scrut in
-          let go_branches =
-            let rec go_branches env0 next0 = function
-            | [] -> Infer_ok (([], []), next0)
-            | y :: rest ->
-              let (y0, e_branch) = y in
-              let (variant_name, binders) = y0 in
-              (match binders with
-               | [] ->
-                 (match elaborate_raw_expr_fuel fuel' expected env0 _UU03a9_
-                          n _UU03a3_1 next0 e_branch with
-                  | Infer_ok p2 ->
-                    let (p3, next_branch) = p2 in
-                    let (p4, extras_branch) = p3 in
-                    let (e_branch', _) = p4 in
-                    let env_branch = append_env_fns env0 extras_branch in
-                    (match go_branches env_branch next_branch rest with
-                     | Infer_ok p5 ->
-                       let (p6, next_rest) = p5 in
-                       let (rest', extras_rest) = p6 in
-                       Infer_ok (((((variant_name, []), e_branch') :: rest'),
-                       (app extras_branch extras_rest)), next_rest)
-                     | Infer_err err -> Infer_err err)
-                  | Infer_err err -> Infer_err err)
-               | _ :: _ -> Infer_err (ErrMatchPayloadUnsupported variant_name))
-            in go_branches
-          in
-          (match go_branches env1 next1 branches with
+          (match infer_core_env_state_fuel fuel' env1 _UU03a9_ n _UU03a3_
+                   scrut' with
            | Infer_ok p2 ->
-             let (p3, next') = p2 in
-             let (branches', extras_branches) = p3 in
-             let extras = app extras_scrut extras_branches in
-             finish (append_env_fns env extras) (EMatch (scrut', branches'))
-               extras next'
+             let (t_scrut, _) = p2 in
+             (match ty_core t_scrut with
+              | TEnum (enum_name0, lts, args) ->
+                (match lookup_enum enum_name0 env1 with
+                 | Some edef ->
+                   let go_branches =
+                     let rec go_branches env0 next0 = function
+                     | [] -> Infer_ok (([], []), next0)
+                     | y :: rest ->
+                       let (y0, e_branch) = y in
+                       let (variant_name, binders) = y0 in
+                       (match lookup_enum_variant variant_name
+                                edef.enum_variants with
+                        | Some vdef ->
+                          (match binders with
+                           | [] ->
+                             (match vdef.enum_variant_fields with
+                              | [] ->
+                                (match match_payload_params binders lts args
+                                         vdef with
+                                 | Infer_ok ps ->
+                                   if (&&) (params_names_nodup_b ps)
+                                        (ctx_lookup_params_none_b ps
+                                          _UU03a3_1)
+                                   then (match elaborate_raw_expr_fuel fuel'
+                                                 expected env0 _UU03a9_ n
+                                                 (sctx_add_params ps
+                                                   _UU03a3_1)
+                                                 next0 e_branch with
+                                         | Infer_ok p3 ->
+                                           let (p4, next_branch) = p3 in
+                                           let (p5, extras_branch) = p4 in
+                                           let (e_branch', _) = p5 in
+                                           let env_branch =
+                                             append_env_fns env0 extras_branch
+                                           in
+                                           (match go_branches env_branch
+                                                    next_branch rest with
+                                            | Infer_ok p6 ->
+                                              let (p7, next_rest) = p6 in
+                                              let (rest', extras_rest) = p7 in
+                                              Infer_ok (((((variant_name,
+                                              binders), e_branch') :: rest'),
+                                              (app extras_branch extras_rest)),
+                                              next_rest)
+                                            | Infer_err err -> Infer_err err)
+                                         | Infer_err err -> Infer_err err)
+                                   else Infer_err ErrContextCheckFailed
+                                 | Infer_err err -> Infer_err err)
+                              | _ :: _ ->
+                                Infer_err (ErrMatchPayloadUnsupported
+                                  variant_name))
+                           | _ :: _ ->
+                             Infer_err (ErrMatchPayloadUnsupported
+                               variant_name))
+                        | None -> Infer_err (ErrVariantNotFound variant_name))
+                     in go_branches
+                   in
+                   (match go_branches env1 next1 branches with
+                    | Infer_ok p3 ->
+                      let (p4, next') = p3 in
+                      let (branches', extras_branches) = p4 in
+                      let extras = app extras_scrut extras_branches in
+                      finish (append_env_fns env extras) (EMatch (scrut',
+                        branches')) extras next'
+                    | Infer_err err -> Infer_err err)
+                 | None -> Infer_err (ErrEnumNotFound enum_name0))
+              | x -> Infer_err (ErrNotAnEnum x))
            | Infer_err err -> Infer_err err)
         | Infer_err err -> Infer_err err)
      | RawReplace (p, e1) ->

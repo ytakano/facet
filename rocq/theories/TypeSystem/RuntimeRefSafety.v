@@ -16,9 +16,9 @@ Inductive refs_in_value : value -> ident -> field_path -> Prop :=
   | RIV_Struct : forall name fields x path,
       refs_in_fields fields x path ->
       refs_in_value (VStruct name fields) x path
-  | RIV_Enum : forall enum_name variant_name values x path,
+  | RIV_Enum : forall enum_name variant_name lts args values x path,
       refs_in_values values x path ->
-      refs_in_value (VEnum enum_name variant_name values) x path
+      refs_in_value (VEnum enum_name variant_name lts args values) x path
   | RIV_Ref : forall x path,
       refs_in_value (VRef x path) x path
 with refs_in_store_entry : store_entry -> ident -> field_path -> Prop :=

@@ -3,6 +3,78 @@ From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
 From Stdlib Require Import Bool List String.
 Import ListNotations.
 
+Definition roots_exclude_params (ps : list param) (roots : root_set) : Prop :=
+  Forall (fun x => roots_exclude x roots) (ctx_names (params_ctx ps)).
+
+Definition root_env_excludes_params (ps : list param) (R : root_env) : Prop :=
+  Forall (fun x => root_env_excludes x R) (ctx_names (params_ctx ps)).
+
+Lemma roots_exclude_params_instantiate_local :
+  forall ps rho roots,
+    roots_exclude_params ps roots ->
+    root_subst_images_exclude_names (ctx_names (params_ctx ps)) rho ->
+    roots_exclude_params ps (root_set_instantiate rho roots).
+Proof.
+  unfold roots_exclude_params.
+  intros ps rho roots Hexcl Hfresh.
+  induction Hexcl as [| x xs Hx Hxs IH]; constructor.
+  - eapply root_set_instantiate_excludes_images.
+    + exact Hx.
+    + apply root_subst_images_exclude_names_cons_inv in Hfresh.
+      exact (proj1 Hfresh).
+  - apply IH.
+    apply root_subst_images_exclude_names_cons_inv in Hfresh.
+    exact (proj2 Hfresh).
+Qed.
+
+Lemma root_env_excludes_params_instantiate_local :
+  forall ps rho R,
+    root_env_excludes_params ps R ->
+    root_subst_images_exclude_names (ctx_names (params_ctx ps)) rho ->
+    root_env_excludes_params ps (root_env_instantiate rho R).
+Proof.
+  unfold root_env_excludes_params.
+  intros ps rho R Hexcl Hfresh.
+  induction Hexcl as [| x xs Hx Hxs IH]; constructor.
+  - eapply root_env_instantiate_excludes_images.
+    + exact Hx.
+    + apply root_subst_images_exclude_names_cons_inv in Hfresh.
+      exact (proj1 Hfresh).
+  - apply IH.
+    apply root_subst_images_exclude_names_cons_inv in Hfresh.
+    exact (proj2 Hfresh).
+Qed.
+
+Lemma roots_exclude_params_equiv_local :
+  forall ps roots roots',
+    root_set_equiv roots roots' ->
+    roots_exclude_params ps roots ->
+    roots_exclude_params ps roots'.
+Proof.
+  unfold roots_exclude_params.
+  intros ps roots roots' Heq Hexcl.
+  induction Hexcl as [| x xs Hx Hxs IH]; constructor.
+  - eapply roots_exclude_equiv.
+    + exact Heq.
+    + exact Hx.
+  - exact IH.
+Qed.
+
+Lemma root_env_excludes_params_equiv_local :
+  forall ps R R',
+    root_env_equiv R R' ->
+    root_env_excludes_params ps R ->
+    root_env_excludes_params ps R'.
+Proof.
+  unfold root_env_excludes_params.
+  intros ps R R' Heq Hexcl.
+  induction Hexcl as [| x xs Hx Hxs IH]; constructor.
+  - eapply root_env_excludes_equiv.
+    + exact Heq.
+    + exact Hx.
+  - exact IH.
+Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Context shadowing summaries                                          *)
 (* ------------------------------------------------------------------ *)
@@ -433,6 +505,20 @@ Proof.
   eapply sctx_same_bindings_trans; eassumption.
 Qed.
 
+Lemma sctx_same_bindings_remove_added_params :
+  forall ps Σ Σ2,
+    sctx_same_bindings (sctx_add_params ps Σ) Σ2 ->
+    sctx_same_bindings Σ (sctx_remove_params ps Σ2).
+Proof.
+  induction ps as [| p ps IH]; intros Σ Σ2 Hsame; simpl in *.
+  - exact Hsame.
+  - destruct p as [m x T]. simpl in *.
+    apply IH.
+    eapply sctx_same_bindings_remove_added.
+    + apply sctx_same_bindings_refl.
+    + exact Hsame.
+Qed.
+
 Lemma ctx_merge_same_bindings_left :
   forall Σ2 Σ3 Σ4,
     ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
@@ -633,8 +719,9 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->
       typed_env_structural env Ω n Σ (EIf e1 e2 e3)
         (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2)) Σ4
-  | TES_Match : forall Σ Σ1 Σ_head Σ_tail Γ_out scrut branches
-        enum_name lts args edef v_head v_tail e_head T_scrut T_head Ts_tail,
+  | TES_Match : forall Σ Σ1 Σ_head_payload Σ_head Σ_tail Γ_out scrut branches
+        enum_name lts args edef v_head v_tail e_head T_scrut T_head Ts_tail
+        binders_head ps_head,
       typed_env_structural env Ω n Σ scrut T_scrut Σ1 ->
       ty_core T_scrut = TEnum enum_name lts args ->
       lookup_enum enum_name env = Some edef ->
@@ -644,10 +731,17 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       first_unknown_variant_branch branches (enum_variants edef) = None ->
       enum_variants edef = v_head :: v_tail ->
       enum_variant_fields v_head = [] ->
-      lookup_expr_branch_binders (enum_variant_name v_head) branches = Some [] ->
+      binders_head = [] ->
+      lookup_expr_branch_binders (enum_variant_name v_head) branches = Some binders_head ->
+      match_payload_params binders_head lts args v_head = infer_ok ps_head ->
+      params_names_nodup_b ps_head = true ->
+      ctx_lookup_params_none_b ps_head Σ1 = true ->
       lookup_expr_branch (enum_variant_name v_head) branches = Some e_head ->
-      typed_env_structural env Ω n Σ1 e_head T_head Σ_head ->
-      typed_match_tail_env_structural env Ω n Σ1 branches v_tail
+      typed_env_structural env Ω n (sctx_add_params ps_head Σ1)
+        e_head T_head Σ_head_payload ->
+      params_ok_sctx_b env ps_head Σ_head_payload = true ->
+      Σ_head = sctx_remove_params ps_head Σ_head_payload ->
+      typed_match_tail_env_structural env Ω n lts args Σ1 branches v_tail
         (ty_core T_head) Σ_tail Ts_tail ->
       ctx_merge_many (ctx_of_sctx Σ_head) (map ctx_of_sctx Σ_tail) =
         Some Γ_out ->
@@ -764,20 +858,27 @@ with typed_fields_env_structural
       typed_fields_env_structural env Ω n lts args Σ fields (f :: rest) Σ2
 with typed_match_tail_env_structural
     (env : global_env) (Ω : outlives_ctx) (n : nat)
-    : sctx -> list (string * list ident * expr) -> list enum_variant_def ->
+    : list lifetime -> list Ty -> sctx -> list (string * list ident * expr) -> list enum_variant_def ->
       TypeCore Ty -> list sctx -> list Ty -> Prop :=
-  | TESMatchTail_Nil : forall Σ branches expected_core,
-      typed_match_tail_env_structural env Ω n Σ branches []
+  | TESMatchTail_Nil : forall lts args Σ branches expected_core,
+      typed_match_tail_env_structural env Ω n lts args Σ branches []
         expected_core [] []
-  | TESMatchTail_Cons : forall Σ branches v rest e T Σv Σs Ts expected_core,
+  | TESMatchTail_Cons : forall Σ branches v rest e T Σv_payload Σv Σs Ts
+        expected_core binders ps lts args,
       enum_variant_fields v = [] ->
-      lookup_expr_branch_binders (enum_variant_name v) branches = Some [] ->
+      binders = [] ->
+      lookup_expr_branch_binders (enum_variant_name v) branches = Some binders ->
+      match_payload_params binders lts args v = infer_ok ps ->
+      params_names_nodup_b ps = true ->
+      ctx_lookup_params_none_b ps Σ = true ->
       lookup_expr_branch (enum_variant_name v) branches = Some e ->
-      typed_env_structural env Ω n Σ e T Σv ->
+      typed_env_structural env Ω n (sctx_add_params ps Σ) e T Σv_payload ->
+      params_ok_sctx_b env ps Σv_payload = true ->
+      Σv = sctx_remove_params ps Σv_payload ->
       ty_core T = expected_core ->
-      typed_match_tail_env_structural env Ω n Σ branches rest
+      typed_match_tail_env_structural env Ω n lts args Σ branches rest
         expected_core Σs Ts ->
-      typed_match_tail_env_structural env Ω n Σ branches (v :: rest)
+      typed_match_tail_env_structural env Ω n lts args Σ branches (v :: rest)
         expected_core (Σv :: Σs) (T :: Ts).
 
 Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
@@ -897,9 +998,10 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
         (EEnum enum_name variant_name lts args payloads)
         (instantiate_enum_ty edef lts args) Σ' R'
         (root_sets_union payload_roots)
-  | TER_Match : forall R R1 R_out Σ Σ1 Σ_head Σ_tail Γ_out scrut branches
+  | TER_Match : forall R R1 R_payload R_head_payload R_out Σ Σ1
+        Σ_head_payload Σ_head Σ_tail Γ_out scrut branches
         enum_name lts args edef v_head v_tail e_head T_scrut T_head Ts_tail
-        roots_scrut roots_head roots_tail,
+        roots_scrut roots_head roots_tail binders_head ps_head,
       typed_env_roots env Ω n R Σ scrut T_scrut Σ1 R1 roots_scrut ->
       ty_core T_scrut = TEnum enum_name lts args ->
       lookup_enum enum_name env = Some edef ->
@@ -909,10 +1011,22 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       first_unknown_variant_branch branches (enum_variants edef) = None ->
       enum_variants edef = v_head :: v_tail ->
       enum_variant_fields v_head = [] ->
-      lookup_expr_branch_binders (enum_variant_name v_head) branches = Some [] ->
+      binders_head = [] ->
+      lookup_expr_branch_binders (enum_variant_name v_head) branches = Some binders_head ->
+      match_payload_params binders_head lts args v_head = infer_ok ps_head ->
+      params_names_nodup_b ps_head = true ->
+      ctx_lookup_params_none_b ps_head Σ1 = true ->
+      root_env_lookup_params_none_b ps_head R1 = true ->
       lookup_expr_branch (enum_variant_name v_head) branches = Some e_head ->
-      typed_env_roots env Ω n R1 Σ1 e_head T_head Σ_head R_out roots_head ->
-      typed_match_tail_roots env Ω n R1 Σ1 branches v_tail
+      R_payload = root_env_add_params_roots_same ps_head roots_scrut R1 ->
+      typed_env_roots env Ω n R_payload (sctx_add_params ps_head Σ1)
+        e_head T_head Σ_head_payload R_head_payload roots_head ->
+      params_ok_sctx_b env ps_head Σ_head_payload = true ->
+      roots_exclude_params ps_head roots_head ->
+      R_out = root_env_remove_match_params ps_head R_head_payload ->
+      root_env_excludes_params ps_head R_out ->
+      Σ_head = sctx_remove_params ps_head Σ_head_payload ->
+      typed_match_tail_roots env Ω n lts args R1 roots_scrut Σ1 branches v_tail
         (ty_core T_head) R_out Σ_tail Ts_tail roots_tail ->
       ctx_merge_many (ctx_of_sctx Σ_head) (map ctx_of_sctx Σ_tail) =
         Some Γ_out ->
@@ -1031,22 +1145,36 @@ with typed_fields_roots
         (root_set_union roots_field roots_rest)
 with typed_match_tail_roots
     (env : global_env) (Ω : outlives_ctx) (n : nat)
-    : root_env -> sctx -> list (string * list ident * expr) -> list enum_variant_def ->
+    : list lifetime -> list Ty -> root_env -> root_set -> sctx ->
+      list (string * list ident * expr) -> list enum_variant_def ->
       TypeCore Ty -> root_env -> list sctx -> list Ty -> list root_set -> Prop :=
-  | TERMatchTail_Nil : forall R Σ branches expected_core R_out,
-      typed_match_tail_roots env Ω n R Σ branches []
+  | TERMatchTail_Nil : forall lts args R roots_scrut Σ branches expected_core R_out,
+      typed_match_tail_roots env Ω n lts args R roots_scrut Σ branches []
         expected_core R_out [] [] []
-  | TERMatchTail_Cons : forall R Σ branches v rest e T Σv Rv R_out roots
-      Σs Ts rootss expected_core,
+  | TERMatchTail_Cons : forall R R_payload Rv_payload Rv Σ branches v rest e T
+      Σv_payload Σv R_out roots Σs Ts rootss expected_core
+      binders ps lts args roots_scrut,
       enum_variant_fields v = [] ->
-      lookup_expr_branch_binders (enum_variant_name v) branches = Some [] ->
+      binders = [] ->
+      lookup_expr_branch_binders (enum_variant_name v) branches = Some binders ->
+      match_payload_params binders lts args v = infer_ok ps ->
+      params_names_nodup_b ps = true ->
+      ctx_lookup_params_none_b ps Σ = true ->
+      root_env_lookup_params_none_b ps R = true ->
       lookup_expr_branch (enum_variant_name v) branches = Some e ->
-      typed_env_roots env Ω n R Σ e T Σv Rv roots ->
+      R_payload = root_env_add_params_roots_same ps roots_scrut R ->
+      typed_env_roots env Ω n R_payload (sctx_add_params ps Σ)
+        e T Σv_payload Rv_payload roots ->
+      params_ok_sctx_b env ps Σv_payload = true ->
+      roots_exclude_params ps roots ->
+      Rv = root_env_remove_match_params ps Rv_payload ->
+      root_env_excludes_params ps Rv ->
+      Σv = sctx_remove_params ps Σv_payload ->
       ty_core T = expected_core ->
       root_env_equiv Rv R_out ->
-      typed_match_tail_roots env Ω n R Σ branches rest
+      typed_match_tail_roots env Ω n lts args R roots_scrut Σ branches rest
         expected_core R_out Σs Ts rootss ->
-      typed_match_tail_roots env Ω n R Σ branches (v :: rest)
+      typed_match_tail_roots env Ω n lts args R roots_scrut Σ branches (v :: rest)
         expected_core R_out (Σv :: Σs) (T :: Ts) (roots :: rootss).
 
 Scheme typed_env_roots_ind' := Induction for typed_env_roots Sort Prop
@@ -1118,8 +1246,28 @@ Proof.
     fold (match_branches_local_store_names_with expr_local_store_names rest).
     destruct (String.eqb name name0) eqn:Hname.
     + inversion Hlookup; subst.
+      apply in_or_app. right. apply in_or_app. left. exact Hin.
+    + apply in_or_app. right. apply in_or_app. right.
+      unfold match_branches_local_store_names in IH.
+      eapply IH; eauto.
+Qed.
+
+Lemma lookup_expr_branch_binders_local_store_names_in :
+  forall x name branches binders,
+    lookup_expr_branch_binders name branches = Some binders ->
+    In x binders ->
+    In x (match_branches_local_store_names branches).
+Proof.
+  intros x name branches.
+  induction branches as [|[[name0 binders0] e0] rest IH];
+    intros binders Hlookup Hin; simpl in Hlookup.
+  - discriminate.
+  - unfold match_branches_local_store_names. simpl.
+    fold (match_branches_local_store_names_with expr_local_store_names rest).
+    destruct (String.eqb name name0) eqn:Hname.
+    + inversion Hlookup; subst.
       apply in_or_app. left. exact Hin.
-    + apply in_or_app. right.
+    + apply in_or_app. right. apply in_or_app. right.
       unfold match_branches_local_store_names in IH.
       eapply IH; eauto.
 Qed.
@@ -1135,10 +1283,10 @@ Lemma typed_roots_structural :
   (forall lts args R Σ fields defs Σ' R' roots,
     typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
     typed_fields_env_structural env Ω n lts args Σ fields defs Σ') /\
-  (forall R Σ branches variants expected_core R_out Σs Ts rootss,
-    typed_match_tail_roots env Ω n R Σ branches variants expected_core
+  (forall lts args R roots_scrut Σ branches variants expected_core R_out Σs Ts rootss,
+    typed_match_tail_roots env Ω n lts args R roots_scrut Σ branches variants expected_core
       R_out Σs Ts rootss ->
-    typed_match_tail_env_structural env Ω n Σ branches variants
+    typed_match_tail_env_structural env Ω n lts args Σ branches variants
       expected_core Σs Ts).
 Proof.
   intros env Ω n.
@@ -1184,15 +1332,15 @@ Proof.
 Qed.
 
 Lemma typed_match_tail_roots_structural :
-  forall env Ω n R Σ branches variants expected_core R_out Σs Ts rootss,
-    typed_match_tail_roots env Ω n R Σ branches variants expected_core
+  forall env Ω n lts args R roots_scrut Σ branches variants expected_core R_out Σs Ts rootss,
+    typed_match_tail_roots env Ω n lts args R roots_scrut Σ branches variants expected_core
       R_out Σs Ts rootss ->
-    typed_match_tail_env_structural env Ω n Σ branches variants
+    typed_match_tail_env_structural env Ω n lts args Σ branches variants
       expected_core Σs Ts.
 Proof.
-  intros env Ω n R Σ branches variants expected_core R_out Σs Ts rootss H.
+  intros env Ω n lts args R roots_scrut Σ branches variants expected_core R_out Σs Ts rootss H.
   exact (proj2 (proj2 (proj2 (typed_roots_structural env Ω n)))
-    R Σ branches variants expected_core R_out Σs Ts rootss H).
+    lts args R roots_scrut Σ branches variants expected_core R_out Σs Ts rootss H).
 Qed.
 
 Lemma typed_roots_no_shadow :
@@ -1209,16 +1357,33 @@ Lemma typed_roots_no_shadow :
     typed_fields_roots env Ω n lts args R Σ fields defs Σ' R' roots ->
     root_env_no_shadow R ->
     root_env_no_shadow R') /\
-  (forall R Σ branches variants expected_core R_out Σs Ts rootss,
-    typed_match_tail_roots env Ω n R Σ branches variants expected_core
+  (forall lts args R roots_scrut Σ branches variants expected_core R_out Σs Ts rootss,
+    typed_match_tail_roots env Ω n lts args R roots_scrut Σ branches variants expected_core
       R_out Σs Ts rootss ->
     root_env_no_shadow R ->
     True).
 Proof.
   intros env Ω n.
   apply typed_roots_ind; intros;
-    eauto using root_env_no_shadow_add, root_env_no_shadow_remove,
-      root_env_no_shadow_update.
+    try exact I;
+    try solve [eauto using root_env_no_shadow_add, root_env_no_shadow_remove,
+      root_env_no_shadow_update, root_env_add_params_roots_same_no_shadow,
+      root_env_remove_match_params_no_shadow].
+  all: try match goal with
+  | Hscrut : root_env_no_shadow ?R -> root_env_no_shadow ?R1,
+    Hbranch : root_env_no_shadow ?Rpayload -> root_env_no_shadow ?Rhead,
+    Hbase : root_env_no_shadow ?R,
+    Hpayload : ?Rpayload = root_env_add_params_roots_same ?ps ?roots ?R1,
+    Hout : ?Rout = root_env_remove_match_params ?ps ?Rhead,
+    Hfresh : root_env_lookup_params_none_b ?ps ?R1 = true,
+    Hnodup : params_names_nodup_b ?ps = true
+    |- root_env_no_shadow ?Rout =>
+      subst;
+      apply root_env_remove_match_params_no_shadow;
+      apply Hbranch;
+      apply root_env_add_params_roots_same_no_shadow;
+      [ apply Hscrut; exact Hbase | exact Hfresh | exact Hnodup ]
+  end.
 Qed.
 
 Lemma typed_env_roots_no_shadow :
@@ -1292,18 +1457,19 @@ Theorem typed_roots_instantiate_fresh_mutual :
         root_env_no_shadow R0' /\
         root_env_equiv R0' (root_env_instantiate rho R') /\
         root_set_equiv roots0 (root_set_instantiate rho roots)) /\
-  (forall R Σ branches variants expected_core R_out Σs Ts rootss,
-    typed_match_tail_roots env Ω n R Σ branches variants expected_core
+  (forall lts args R roots_scrut Σ branches variants expected_core R_out Σs Ts rootss,
+    typed_match_tail_roots env Ω n lts args R roots_scrut Σ branches variants expected_core
       R_out Σs Ts rootss ->
     root_subst_images_exclude_names (match_branches_local_store_names branches) rho ->
-    forall R0 R0_out,
+    forall roots_scrut0 R0 R0_out,
+      root_set_equiv roots_scrut0 (root_set_instantiate rho roots_scrut) ->
       root_env_no_shadow R ->
       root_env_no_shadow R0 ->
       root_env_no_shadow R0_out ->
       root_env_equiv R0 (root_env_instantiate rho R) ->
       root_env_equiv R0_out (root_env_instantiate rho R_out) ->
       exists rootss0,
-        typed_match_tail_roots env Ω n R0 Σ branches variants expected_core
+        typed_match_tail_roots env Ω n lts args R0 roots_scrut0 Σ branches variants expected_core
           R0_out Σs Ts rootss0 /\
         Forall2 root_set_equiv rootss0
           (map (root_set_instantiate rho) rootss)).
@@ -1471,16 +1637,36 @@ Proof.
     + eapply root_set_equiv_trans.
 	      * apply root_sets_union_equiv. exact Hpayload_roots0.
 	      * apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
-  - intros R R1 R_out Σ Σ1 Σ_head Σ_tail Γ_out scrut branches enum_name
-      lts args edef v_head v_tail e_head T_scrut T_head Ts_tail roots_scrut
-      roots_head roots_tail Hscrut IHscrut Hcore Hlookup Hlen_lts Hlen_args
-      Hbounds Hunknown Hvariants Hfields_head Hbinders_head Hlookup_head Hhead IHhead
-      Htail IHtail Hmerge Hfresh R0 HnsR HnsR0 HR0.
+  - intros R R1 R_payload R_head_payload R_out Σ Σ1 Σ_head_payload
+      Σ_head Σ_tail Γ_out scrut branches enum_name lts args edef v_head
+	      v_tail e_head T_scrut T_head Ts_tail roots_scrut roots_head
+	      roots_tail binders_head ps_head Hscrut IHscrut Hcore Hlookup
+	      Hlen_lts Hlen_args Hbounds Hunknown Hvariants Hfields_head
+	      Hbinders_empty_head Hbinders_head Hpayload_head Hnodup_head
+	      Hctx_fresh_head Hroot_fresh_head
+      Hlookup_head HRpayload Hhead IHhead Hparams_ok_head Hroots_excl_head
+      HRout Henv_excl_head HΣhead Htail IHtail Hmerge Hfresh R0 HnsR
+      HnsR0 HR0.
     simpl in Hfresh.
     apply root_subst_images_exclude_names_app_inv in Hfresh.
     destruct Hfresh as [Hfresh_scrut Hfresh_branches].
     destruct (IHscrut Hfresh_scrut R0 HnsR HnsR0 HR0)
       as [R10 [roots_scrut0 [Hscrut0 [HnsR10 [HR10 Hroots_scrut0]]]]].
+    assert (HnsR1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow; eassumption. }
+    assert (Hfresh_R10 :
+      root_env_lookup_params_none_b ps_head R10 = true).
+    { eapply root_env_lookup_params_none_b_instantiate_equiv; eassumption. }
+    assert (Hfresh_ps_head :
+      root_subst_images_exclude_names (ctx_names (params_ctx ps_head)) rho).
+    {
+      rewrite (match_payload_params_names binders_head lts args v_head ps_head
+        Hpayload_head).
+      eapply Forall_forall. intros x Hin.
+      eapply root_subst_images_exclude_names_in.
+      - exact Hfresh_branches.
+      - eapply lookup_expr_branch_binders_local_store_names_in; eassumption.
+    }
     assert (Hfresh_head :
       root_subst_images_exclude_names (expr_local_store_names e_head) rho).
     {
@@ -1489,17 +1675,37 @@ Proof.
       - exact Hfresh_branches.
       - eapply lookup_expr_branch_local_store_names_in; eassumption.
     }
-    destruct (IHhead Hfresh_head R10
-      (typed_env_roots_no_shadow env Ω n R Σ scrut T_scrut Σ1 R1
-        roots_scrut Hscrut HnsR) HnsR10 HR10)
-      as [Rout0 [roots_head0 [Hhead0 [HnsRout0 [HRout0 Hroots_head0]]]]].
-    destruct (IHtail Hfresh_branches R10 Rout0
-      (typed_env_roots_no_shadow env Ω n R Σ scrut T_scrut Σ1 R1
-        roots_scrut Hscrut HnsR) HnsR10 HnsRout0 HR10 HRout0)
+    assert (HnsRpayload : root_env_no_shadow R_payload).
+    { subst R_payload. eapply root_env_add_params_roots_same_no_shadow; eauto. }
+    pose (Rpayload0 := root_env_add_params_roots_same ps_head roots_scrut0 R10).
+    assert (HnsRpayload0 : root_env_no_shadow Rpayload0).
+    { unfold Rpayload0. eapply root_env_add_params_roots_same_no_shadow; eauto. }
+    assert (HRpayload0 :
+      root_env_equiv Rpayload0 (root_env_instantiate rho R_payload)).
+    { subst R_payload. unfold Rpayload0.
+      eapply root_env_add_params_roots_same_instantiate_equiv; eauto. }
+    destruct (IHhead Hfresh_head Rpayload0 HnsRpayload HnsRpayload0 HRpayload0)
+      as [Rhead0 [roots_head0 [Hhead0 [HnsRhead0 [HRhead0 Hroots_head0]]]]].
+    assert (HnsRhead_payload : root_env_no_shadow R_head_payload).
+    { eapply typed_env_roots_no_shadow; eassumption. }
+    pose (Rout0 := root_env_remove_match_params ps_head Rhead0).
+    assert (HnsRout0 : root_env_no_shadow Rout0).
+    { unfold Rout0. apply root_env_remove_match_params_no_shadow. exact HnsRhead0. }
+    assert (HRout0 : root_env_equiv Rout0 (root_env_instantiate rho R_out)).
+    { subst R_out. unfold Rout0.
+      eapply root_env_remove_match_params_instantiate_equiv; eauto. }
+    destruct (IHtail Hfresh_branches roots_scrut0 R10 Rout0
+      Hroots_scrut0 HnsR1 HnsR10 HnsRout0 HR10 HRout0)
       as [roots_tail0 [Htail0 Hroots_tail0]].
     exists Rout0, (root_sets_union (roots_head0 :: roots_tail0)).
     split; [| split; [| split]].
     + eapply TER_Match; eauto.
+      * eapply roots_exclude_params_equiv_local.
+        -- apply root_set_equiv_sym. exact Hroots_head0.
+        -- eapply roots_exclude_params_instantiate_local; eassumption.
+      * eapply root_env_excludes_params_equiv_local.
+        -- apply root_env_equiv_sym. exact HRout0.
+        -- eapply root_env_excludes_params_instantiate_local; eassumption.
     + exact HnsRout0.
     + exact HRout0.
 	    + eapply root_set_equiv_trans.
@@ -1848,14 +2054,30 @@ Proof.
 	    + eapply root_set_equiv_trans.
 	      * apply root_set_union_equiv; eassumption.
 	      * apply root_set_equiv_sym. apply root_set_instantiate_union_equiv.
-  - intros R Σ branches expected_core R_out Hfresh R0 R0_out HnsR HnsR0
-      HnsR0_out HR0 HR0_out.
+  - intros lts args R roots_scrut Σ branches expected_core R_out Hfresh
+      roots_scrut0 R0 R0_out Hroots_scrut0 HnsR HnsR0 HnsR0_out HR0
+      HR0_out.
     exists []. split.
     + constructor.
     + constructor.
-  - intros R Σ branches v rest e T Σv Rv R_out roots Σs Ts rootss
-      expected_core Hfields Hbinders Hlookup Htyped IHtyped Hcore Heq_tail Htail IHtail
-      Hfresh R0 R0_out HnsR HnsR0 HnsR0_out HR0 HR0_out.
+	  - intros R R_payload Rv_payload Rv Σ branches v rest e T
+	      Σv_payload Σv R_out roots Σs Ts rootss expected_core binders ps
+	      lts args roots_scrut Hfields Hbinders_empty Hbinders Hpayload
+	      Hnodup Hctx_fresh Hroot_fresh Hlookup HRpayload Htyped IHtyped
+	      Hparams_ok Hroots_excl HRv Henv_excl HΣv Hcore Heq_tail Htail
+	      IHtail Hfresh roots_scrut0
+      R0 R0_out Hroots_scrut0 HnsR HnsR0 HnsR0_out HR0 HR0_out.
+    assert (Hfresh_R0 : root_env_lookup_params_none_b ps R0 = true).
+    { eapply root_env_lookup_params_none_b_instantiate_equiv; eassumption. }
+    assert (Hfresh_ps :
+      root_subst_images_exclude_names (ctx_names (params_ctx ps)) rho).
+    {
+      rewrite (match_payload_params_names binders lts args v ps Hpayload).
+      eapply Forall_forall. intros x Hin.
+      eapply root_subst_images_exclude_names_in.
+      - exact Hfresh.
+      - eapply lookup_expr_branch_binders_local_store_names_in; eassumption.
+    }
     assert (Hfresh_e :
       root_subst_images_exclude_names (expr_local_store_names e) rho).
     {
@@ -1864,17 +2086,41 @@ Proof.
       - exact Hfresh.
       - eapply lookup_expr_branch_local_store_names_in; eassumption.
     }
-    destruct (IHtyped Hfresh_e R0 HnsR HnsR0 HR0)
-      as [R0_branch [roots0 [Htyped0 [Hns_branch [HR_branch Hroots0]]]]].
-    destruct (IHtail Hfresh R0 R0_out HnsR HnsR0 HnsR0_out HR0 HR0_out)
+    assert (HnsRpayload : root_env_no_shadow R_payload).
+    { subst R_payload. eapply root_env_add_params_roots_same_no_shadow; eauto. }
+    pose (Rpayload0 := root_env_add_params_roots_same ps roots_scrut0 R0).
+    assert (HnsRpayload0 : root_env_no_shadow Rpayload0).
+    { unfold Rpayload0. eapply root_env_add_params_roots_same_no_shadow; eauto. }
+    assert (HRpayload0 :
+      root_env_equiv Rpayload0 (root_env_instantiate rho R_payload)).
+    { subst R_payload. unfold Rpayload0.
+      eapply root_env_add_params_roots_same_instantiate_equiv; eauto. }
+    destruct (IHtyped Hfresh_e Rpayload0 HnsRpayload HnsRpayload0 HRpayload0)
+      as [Rv_payload0 [roots0 [Htyped0 [Hns_payload0 [HR_payload0 Hroots0]]]]].
+    assert (HnsRv_payload : root_env_no_shadow Rv_payload).
+    { eapply typed_env_roots_no_shadow; eassumption. }
+    pose (Rv0 := root_env_remove_match_params ps Rv_payload0).
+    assert (HnsRv0 : root_env_no_shadow Rv0).
+    { unfold Rv0. apply root_env_remove_match_params_no_shadow. exact Hns_payload0. }
+    assert (HRv0 : root_env_equiv Rv0 (root_env_instantiate rho Rv)).
+    { subst Rv. unfold Rv0.
+      eapply root_env_remove_match_params_instantiate_equiv; eauto. }
+    destruct (IHtail Hfresh roots_scrut0 R0 R0_out Hroots_scrut0
+      HnsR HnsR0 HnsR0_out HR0 HR0_out)
       as [rootss0 [Htail0 Hrootss0]].
     exists (roots0 :: rootss0). split.
     + eapply TERMatchTail_Cons; eauto.
-      eapply root_env_equiv_trans.
-      * exact HR_branch.
+      * eapply roots_exclude_params_equiv_local.
+        -- apply root_set_equiv_sym. exact Hroots0.
+        -- eapply roots_exclude_params_instantiate_local; eassumption.
+      * eapply root_env_excludes_params_equiv_local.
+        -- apply root_env_equiv_sym. exact HRv0.
+        -- eapply root_env_excludes_params_instantiate_local; eassumption.
       * eapply root_env_equiv_trans.
-        -- apply root_env_equiv_instantiate. exact Heq_tail.
-        -- apply root_env_equiv_sym. exact HR0_out.
+        -- exact HRv0.
+        -- eapply root_env_equiv_trans.
+           ++ apply root_env_equiv_instantiate. exact Heq_tail.
+           ++ apply root_env_equiv_sym. exact HR0_out.
     + simpl. constructor; assumption.
 Qed.
 
@@ -1946,8 +2192,8 @@ with typed_fields_env_structural_same_bindings :
     typed_fields_env_structural env Ω n lts args Σ fields defs Σ' ->
     sctx_same_bindings Σ Σ'
 with typed_match_tail_env_structural_same_bindings :
-  forall env Ω n Σ branches variants expected_core Σs Ts,
-    typed_match_tail_env_structural env Ω n Σ branches variants
+  forall env Ω n lts args Σ branches variants expected_core Σs Ts,
+    typed_match_tail_env_structural env Ω n lts args Σ branches variants
       expected_core Σs Ts ->
     Forall (sctx_same_bindings Σ) Σs.
 Proof.
@@ -2010,13 +2256,18 @@ Proof.
 	    + eapply sctx_same_bindings_trans.
 	      * exact IHHtyped1.
 	      * eapply sctx_same_bindings_trans.
-	        -- eapply typed_env_structural_same_bindings.
-	           match goal with
-	           | H : typed_env_structural _ _ _ _ _ _ _ |- _ => exact H
-	           end.
-	        -- eapply ctx_merge_many_same_bindings_left.
-	           match goal with
-	           | H : ctx_merge_many _ _ = Some _ |- _ => exact H
+	        -- subst; apply sctx_same_bindings_remove_added_params;
+	           eapply typed_env_structural_same_bindings; eassumption.
+	        -- match goal with
+	           | Hremove : ?Σhead = sctx_remove_params ?ps ?Σpayload,
+	             Hmerge : ctx_merge_many (ctx_of_sctx ?Σhead) _ = Some _ |- _ =>
+	               rewrite <- Hremove;
+	               eapply ctx_merge_many_same_bindings_left;
+	               exact Hmerge
+	           | Hmerge : ctx_merge_many
+	               (ctx_of_sctx (sctx_remove_params ?ps ?Σpayload)) _ = Some _ |- _ =>
+	               eapply ctx_merge_many_same_bindings_left;
+	               exact Hmerge
 	           end.
 	    + eauto using typed_args_env_structural_same_bindings,
 	        sctx_same_bindings_trans.
@@ -2048,11 +2299,13 @@ Proof.
 	    + eapply sctx_same_bindings_trans.
 	      * eapply typed_env_structural_same_bindings. exact H0.
 	      * exact IHHtyped.
-	  - intros env Ω n Σ branches variants expected_core Σs Ts Htyped.
+	  - intros env Ω n lts args Σ branches variants expected_core Σs Ts Htyped.
 	    induction Htyped.
 	    + constructor.
 	    + constructor.
-	      * eapply typed_env_structural_same_bindings. exact H2.
+	      * subst.
+	        apply sctx_same_bindings_remove_added_params.
+	        eapply typed_env_structural_same_bindings. eassumption.
 	      * exact IHHtyped.
 Qed.
 
@@ -2092,14 +2345,19 @@ Inductive borrow_ok_env_structural (env : global_env)
       borrow_ok_args_env_structural env PBS Γ payloads PBS' ->
       borrow_ok_env_structural env PBS Γ
         (EEnum enum_name variant_name lts args payloads) PBS'
-  | BOES_Match : forall PBS PBS1 PBS2 Γ scrut name branch rest,
+  | BOES_Match : forall PBS PBS1 PBS2 Γ scrut name binders branch rest,
       borrow_ok_env_structural env PBS Γ scrut PBS1 ->
-      borrow_ok_env_structural env PBS1 Γ branch PBS2 ->
+      borrow_ok_env_structural env PBS1
+        (ctx_add_params (unrestricted_unit_params_of_binders binders) Γ)
+        branch PBS2 ->
       Forall
         (fun branch0 =>
-          borrow_ok_env_structural env PBS1 Γ (match_branch_expr branch0) PBS2)
+          borrow_ok_env_structural env PBS1
+            (ctx_add_params
+              (unrestricted_unit_params_of_binders (match_branch_binders branch0)) Γ)
+            (match_branch_expr branch0) PBS2)
         rest ->
-      borrow_ok_env_structural env PBS Γ (EMatch scrut ((name, [], branch) :: rest)) PBS2
+      borrow_ok_env_structural env PBS Γ (EMatch scrut ((name, binders, branch) :: rest)) PBS2
   | BOES_BorrowShared : forall PBS Γ p x path,
       borrow_target_of_place p = (x, path) ->
       pbs_has_mut x path PBS = false ->

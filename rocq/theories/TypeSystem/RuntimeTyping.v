@@ -624,7 +624,7 @@ Inductive value_has_type (env : global_env) (s : store) : value -> Ty -> Prop :=
       enum_values_have_type env s values
         (map (instantiate_enum_variant_field_ty lts args)
           (enum_variant_fields vdef)) ->
-      value_has_type env s (VEnum enum_name variant_name values)
+      value_has_type env s (VEnum enum_name variant_name lts args values)
         (instantiate_enum_ty edef lts args)
   | VHT_Ref : forall u la rk x path se v T,
       store_lookup x s = Some se ->
@@ -687,9 +687,9 @@ Inductive value_refs_exclude_root (root : ident) : value -> Prop :=
   | VRE_Struct : forall name fields,
       value_fields_refs_exclude_root root fields ->
       value_refs_exclude_root root (VStruct name fields)
-  | VRE_Enum : forall enum_name variant_name values,
+  | VRE_Enum : forall enum_name variant_name lts args values,
       Forall (value_refs_exclude_root root) values ->
-      value_refs_exclude_root root (VEnum enum_name variant_name values)
+      value_refs_exclude_root root (VEnum enum_name variant_name lts args values)
   | VRE_Ref : forall x path,
       ident_eqb root x = false ->
       value_refs_exclude_root root (VRef x path)
@@ -843,7 +843,7 @@ Proof.
     eauto.
   - eapply VHT_Enum; eauto.
     match goal with
-    | Hexclude : value_refs_exclude_root root (VEnum _ _ _) |- _ =>
+    | Hexclude : value_refs_exclude_root root (VEnum _ _ _ _ _) |- _ =>
         inversion Hexclude; subst
     end.
     eauto.
@@ -3292,7 +3292,7 @@ Proof.
       match goal with
       | Hquery : Some _ = Some _ |- _ => inversion Hquery; subst
       end.
-      exists (VEnum enum_name variant_name values).
+      exists (VEnum enum_name variant_name lts args values).
       split; [reflexivity | econstructor; eassumption].
     + simpl in *.
       discriminate.
@@ -3874,9 +3874,9 @@ Inductive runtime_refs_wf (env : global_env) (s : store) : value -> Prop :=
   | RRW_Struct : forall name fields,
       Forall (fun fv => runtime_refs_wf env s (snd fv)) fields ->
       runtime_refs_wf env s (VStruct name fields)
-  | RRW_Enum : forall enum_name variant_name values,
+  | RRW_Enum : forall enum_name variant_name lts args values,
       Forall (runtime_refs_wf env s) values ->
-      runtime_refs_wf env s (VEnum enum_name variant_name values)
+      runtime_refs_wf env s (VEnum enum_name variant_name lts args values)
   | RRW_Ref : forall x path se T v,
       store_lookup x s = Some se ->
       type_lookup_path env (se_ty se) path = Some T ->

@@ -45,6 +45,93 @@ Proof.
       constructor; assumption.
 Qed.
 
+Lemma store_param_scope_bind_params_non_params :
+  forall ps_keep ps_add vs s frame,
+    (forall x,
+      In x (ctx_names (params_ctx ps_add)) ->
+      ~ In x (ctx_names (params_ctx ps_keep))) ->
+    store_param_scope ps_keep s frame ->
+    store_param_scope ps_keep (bind_params ps_add vs s) frame.
+Proof.
+  induction ps_add as [| p ps_add IH]; intros vs s frame Hdisjoint Hscope;
+    simpl.
+  - exact Hscope.
+  - destruct vs as [| v vs']; simpl.
+    + exact Hscope.
+    + apply store_param_scope_add.
+      * apply Hdisjoint. simpl. left. reflexivity.
+      * apply IH.
+        -- intros x Hin Hkeep.
+           apply (Hdisjoint x); [simpl; right; exact Hin | exact Hkeep].
+        -- exact Hscope.
+Qed.
+
+Lemma store_param_scope_remove_params_non_params :
+  forall ps_keep ps_remove s frame,
+    (forall x,
+      In x (ctx_names (params_ctx ps_remove)) ->
+      ~ In x (ctx_names (params_ctx ps_keep))) ->
+    store_param_scope ps_keep s frame ->
+    exists frame',
+      store_param_scope ps_keep (store_remove_params ps_remove s) frame'.
+Proof.
+  induction ps_remove as [| p ps_remove IH]; intros s frame Hdisjoint Hscope;
+    simpl.
+  - exists frame. exact Hscope.
+  - destruct (store_param_scope_remove_non_param ps_keep s frame (param_name p)
+      Hscope ltac:(apply Hdisjoint; simpl; left; reflexivity))
+      as [frame1 Hscope1].
+    eapply IH.
+    + intros x Hin Hkeep.
+      apply (Hdisjoint x); [simpl; right; exact Hin | exact Hkeep].
+    + exact Hscope1.
+Qed.
+
+Lemma root_env_covers_params_add_params_roots_same_preserve :
+  forall ps_keep ps_add roots R,
+    root_env_covers_params ps_keep R ->
+    root_env_covers_params ps_keep
+      (root_env_add_params_roots_same ps_add roots R).
+Proof.
+  induction ps_add as [| p ps_add IH]; intros roots R Hcover; simpl.
+  - exact Hcover.
+  - apply root_env_covers_params_add.
+    apply IH. exact Hcover.
+Qed.
+
+Lemma root_env_lookup_params_none_b_disjoint_covers :
+  forall ps_add ps_keep R,
+    root_env_lookup_params_none_b ps_add R = true ->
+    root_env_covers_params ps_keep R ->
+    forall x,
+      In x (ctx_names (params_ctx ps_add)) ->
+      ~ In x (ctx_names (params_ctx ps_keep)).
+Proof.
+  intros ps_add ps_keep R Hnone Hcover x Hin_add Hin_keep.
+  pose proof (root_env_lookup_params_none_b_not_in ps_add R x Hnone Hin_add)
+    as Hnotin_roots.
+  destruct (Hcover x Hin_keep) as [roots Hlookup].
+  apply Hnotin_roots. eapply root_env_lookup_some_in_names. exact Hlookup.
+Qed.
+
+Lemma root_env_covers_params_remove_match_params_non_params :
+  forall ps_keep ps_remove R,
+    (forall x,
+      In x (ctx_names (params_ctx ps_remove)) ->
+      ~ In x (ctx_names (params_ctx ps_keep))) ->
+    root_env_covers_params ps_keep R ->
+    root_env_covers_params ps_keep (root_env_remove_match_params ps_remove R).
+Proof.
+  induction ps_remove as [| p ps_remove IH]; intros R Hdisjoint Hcover; simpl.
+  - exact Hcover.
+  - apply IH.
+    + intros x Hin Hkeep.
+      apply (Hdisjoint x); [simpl; right; exact Hin | exact Hkeep].
+    + eapply root_env_covers_params_remove_non_param.
+      * exact Hcover.
+      * apply Hdisjoint. simpl. left. reflexivity.
+Qed.
+
 
 Lemma store_param_prefix_update_state :
   forall ps s_param s x f s',
@@ -581,8 +668,10 @@ Proof.
 	      * apply root_env_equiv_sym. exact H2.
 	      * exact Hcover3.
 	    + exists frame3. exact Hscope3.
-  - intros s s_scrut s' scrut branches enum_name variant_name e_branch v
-      Heval_scrut IHscrut Hlookup Heval_branch IHbranch
+  - intros s s_scrut s_branch s' scrut branches enum_name variant_name
+      lts args values edef_runtime vdef_runtime binders payload_ps e_branch v
+      Heval_scrut IHscrut Hlookup_runtime Hvariant_runtime Hlookup_binders
+      Hparams_runtime Hlen Hlookup Heval_branch IHbranch Hremove
       Ω n R Σ T Σ' R' roots ps frame Hready Htyped Hcover Hscope.
     dependent destruction Hready.
     dependent destruction Htyped.
@@ -603,27 +692,127 @@ Proof.
     rewrite H6 in Hvariant_known. simpl in Hvariant_known.
     destruct (String.eqb variant_name (enum_variant_name v_head))
       eqn:Hvariant_head.
-    + apply String.eqb_eq in Hvariant_head. subst variant_name.
-      rewrite H9 in Hlookup_branch. inversion Hlookup_branch; subst.
-      destruct (IHbranch Ω n R1 Σ1 T_head Σ_head R_out roots_head ps frame1
-                  Hready_branch Htyped2 Hcover1 Hscope1)
-        as [Hcover_branch [frame_branch Hscope_branch]].
-      split; [exact Hcover_branch | exists frame_branch; exact Hscope_branch].
-    + destruct Hvariant_known as [vdef_tail Hvariant_tail].
-      destruct (typed_match_tail_roots_lookup_ready env Ω n R1 Σ1 branches
-                  v_tail (ty_core T_head) R_out Σ_tail Ts_tail roots_tail
-                  variant_name vdef_tail e_branch H10 Hvariant_tail
-                  Hlookup_branch)
-        as [T_branch [Σ_branch [R_branch [roots_branch
-             [Htyped_branch [_ [Hequiv_branch _]]]]]]].
-      destruct (IHbranch Ω n R1 Σ1 T_branch Σ_branch R_branch roots_branch
-                  ps frame1 Hready_branch Htyped_branch Hcover1 Hscope1)
-        as [Hcover_branch [frame_branch Hscope_branch]].
-      split.
-      * eapply root_env_covers_params_equiv.
-        -- exact Hequiv_branch.
-        -- exact Hcover_branch.
-      * exists frame_branch. exact Hscope_branch.
+	    + apply String.eqb_eq in Hvariant_head. subst variant_name.
+	      match goal with
+	      | Htyped_head : typed_env_roots _ _ _ _ _ ?e_head _ _ _ _,
+	        Hbranch_head : lookup_expr_branch (enum_variant_name v_head) branches =
+	          Some ?e_head |- _ =>
+	          rewrite Hbranch_head in Hlookup_branch
+	      end.
+	      inversion Hlookup_branch; subst.
+		      assert (Hnames_payload : ctx_names (params_ctx payload_ps) =
+		        ctx_names (params_ctx ps_head)).
+		      { assert (Hnames_runtime :
+		          ctx_names (params_ctx payload_ps) = binders).
+		        { eapply match_payload_params_opt_names. exact Hparams_runtime. }
+		        assert (Hhead :
+		          exists binders_head,
+		            lookup_expr_branch_binders (enum_variant_name v_head) branches =
+		              Some binders_head /\
+		            ctx_names (params_ctx ps_head) = binders_head).
+		        { match goal with
+		          | Hlookup_head : lookup_expr_branch_binders
+		              (enum_variant_name v_head) branches = Some ?binders_head,
+		            Hparams_head : match_payload_params ?binders_head ?lts_head
+		              ?args_head v_head = infer_ok ps_head |- _ =>
+		              exists binders_head; split;
+		              [ exact Hlookup_head
+		              | eapply match_payload_params_names; exact Hparams_head ]
+		          end. }
+		        destruct Hhead as [binders_head [Hlookup_head Hnames_head]].
+		        rewrite Hnames_runtime, Hnames_head.
+		        rewrite Hlookup_binders in Hlookup_head.
+		        inversion Hlookup_head. reflexivity. }
+	      assert (Hdisjoint_payload :
+	        forall x,
+	          In x (ctx_names (params_ctx payload_ps)) ->
+	          ~ In x (ctx_names (params_ctx ps))).
+	      { intros x Hin.
+	        eapply root_env_lookup_params_none_b_disjoint_covers.
+	        - eassumption.
+	        - exact Hcover1.
+	        - rewrite <- Hnames_payload. exact Hin. }
+	      assert (Hscope_payload :
+	        store_param_scope ps (bind_params payload_ps values s_scrut) frame1).
+	      { eapply store_param_scope_bind_params_non_params; eassumption. }
+	      assert (Hcover_payload :
+	        root_env_covers_params ps
+	          (root_env_add_params_roots_same ps_head roots_scrut R1)).
+	      { apply root_env_covers_params_add_params_roots_same_preserve.
+	        exact Hcover1. }
+	      destruct (IHbranch Ω n
+	                  (root_env_add_params_roots_same ps_head roots_scrut R1)
+	                  (sctx_add_params ps_head Σ1)
+	                  T_head Σ_head_payload R_head_payload roots_head
+	                  ps frame1 Hready_branch Htyped2 Hcover_payload
+	                  Hscope_payload)
+	        as [Hcover_branch [frame_branch Hscope_branch]].
+	      split.
+	      * eapply root_env_covers_params_remove_match_params_non_params.
+	        -- intros x Hin.
+	           apply Hdisjoint_payload.
+	           rewrite Hnames_payload. exact Hin.
+	        -- exact Hcover_branch.
+	      * eapply store_param_scope_remove_params_non_params; eassumption.
+	    + destruct Hvariant_known as [vdef_tail Hvariant_tail].
+	      destruct (typed_match_tail_roots_lookup_ready env Ω n lts0 args0 R1
+		                  roots_scrut Σ1 branches v_tail (ty_core T_head)
+		                  (root_env_remove_match_params ps_head R_head_payload)
+		                  Σ_tail Ts_tail roots_tail
+		                  variant_name vdef_tail e_branch H21 Hvariant_tail
+		                  Hlookup_branch)
+	        as [T_branch [Σ_branch_payload [R_branch_payload [R_branch
+	             [roots_branch [ps_branch [binders_branch [R_payload_branch
+	             [HRpayload [Hnodup_branch [Hnone_branch [Hbinders_branch
+	             [Hparams_branch [Htyped_branch [Hremove_branch
+	             [Hcore_branch [Hequiv_branch Hin_roots]]]]]]]]]]]]]]]]].
+	      assert (Hbinders_same : binders_branch = binders).
+	      { rewrite Hlookup_binders in Hbinders_branch.
+	        inversion Hbinders_branch. reflexivity. }
+	      subst binders_branch.
+	      assert (Hnames_payload : ctx_names (params_ctx payload_ps) =
+	        ctx_names (params_ctx ps_branch)).
+	      { rewrite (match_payload_params_opt_names binders lts args vdef_runtime
+	          payload_ps Hparams_runtime).
+	        rewrite (match_payload_params_opt_names binders lts0 args0 vdef_tail
+	          ps_branch Hparams_branch).
+	        reflexivity. }
+	      assert (Hdisjoint_payload :
+	        forall x,
+	          In x (ctx_names (params_ctx payload_ps)) ->
+	          ~ In x (ctx_names (params_ctx ps))).
+		      { intros x Hin.
+		        eapply root_env_lookup_params_none_b_disjoint_covers.
+		        - exact Hnone_branch.
+		        - exact Hcover1.
+		        - rewrite <- Hnames_payload. exact Hin. }
+		      assert (Hscope_payload :
+		        store_param_scope ps (bind_params payload_ps values s_scrut) frame1).
+		      { eapply store_param_scope_bind_params_non_params; eassumption. }
+	      assert (Hcover_payload :
+	        root_env_covers_params ps
+	          (root_env_add_params_roots_same ps_branch roots_scrut R1)).
+	      { apply root_env_covers_params_add_params_roots_same_preserve.
+	        exact Hcover1. }
+	      subst R_payload_branch.
+	      destruct (IHbranch Ω n
+	                  (root_env_add_params_roots_same ps_branch roots_scrut R1)
+	                  (sctx_add_params ps_branch Σ1)
+	                  T_branch Σ_branch_payload R_branch_payload roots_branch
+	                  ps frame1 Hready_branch Htyped_branch Hcover_payload
+	                  Hscope_payload)
+	        as [Hcover_branch [frame_branch Hscope_branch]].
+	      split.
+	      * eapply root_env_covers_params_equiv.
+	        -- exact Hequiv_branch.
+	        -- rewrite Hremove_branch.
+	           eapply root_env_covers_params_remove_match_params_non_params.
+	           ++ intros x Hin.
+	              apply Hdisjoint_payload.
+	              rewrite Hnames_payload. exact Hin.
+	           ++ exact Hcover_branch.
+	      * subst s'.
+	        eapply store_param_scope_remove_params_non_params; eassumption.
 		  - intros s s_args s_body fname fdef fcall args0 vs ret used' Hlookup
 		      Hcaps Heval_args IHargs Hrename Heval_body IHbody Ω n R Σ T Σ' R'
 		      roots ps frame Hready _ _ _.

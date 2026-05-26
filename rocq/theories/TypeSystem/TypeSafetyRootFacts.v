@@ -1,7 +1,7 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules TypeChecker RuntimeTyping RootProvenance
   EnvStructuralRules AlphaRenaming EnvSoundnessFacts CheckerSoundness.
-From Stdlib Require Import List Bool ZArith String Program.Equality.
+From Stdlib Require Import List Bool ZArith String Program.Equality Lia.
 Import ListNotations.
 
 Inductive value_roots_within : root_set -> value -> Prop :=
@@ -17,11 +17,12 @@ Inductive value_roots_within : root_set -> value -> Prop :=
   | VRW_Struct : forall roots name fields,
       value_fields_roots_within roots fields ->
       value_roots_within roots (VStruct name fields)
-  | VRW_Enum : forall roots enum_name variant_name values,
+  | VRW_Enum : forall roots enum_name variant_name lts args values,
+      Forall (value_roots_within roots) values ->
       (forall root,
         roots_exclude root roots ->
         Forall (value_refs_exclude_root root) values) ->
-      value_roots_within roots (VEnum enum_name variant_name values)
+      value_roots_within roots (VEnum enum_name variant_name lts args values)
   | VRW_Ref : forall roots x path,
       In (RStore x) roots ->
       value_roots_within roots (VRef x path)
@@ -436,6 +437,121 @@ Proof.
   unfold roots_exclude. intros Hin. contradiction.
 Qed.
 
+Definition root_atom_eq_dec : forall a b : root_atom, {a = b} + {a <> b}.
+Proof.
+  intros [x | x] [y | y].
+  - destruct x as [xs xn], y as [ys yn].
+    destruct (string_dec xs ys) as [Hs | Hs]; subst.
+    + destruct (Nat.eq_dec xn yn) as [Hn | Hn]; subst.
+      * left. reflexivity.
+      * right. intros H. inversion H. contradiction.
+    + right. intros H. inversion H. contradiction.
+  - right. discriminate.
+  - right. discriminate.
+  - destruct x as [xs xn], y as [ys yn].
+    destruct (string_dec xs ys) as [Hs | Hs]; subst.
+    + destruct (Nat.eq_dec xn yn) as [Hn | Hn]; subst.
+      * left. reflexivity.
+      * right. intros H. inversion H. contradiction.
+    + right. intros H. inversion H. contradiction.
+Defined.
+
+Fixpoint value_size (v : value) : nat :=
+  match v with
+  | VStruct _ fields =>
+      S ((fix fields_size (fields : list (string * value)) : nat :=
+            match fields with
+            | [] => 0
+            | (_, fv) :: rest => value_size fv + fields_size rest
+            end) fields)
+  | VEnum _ _ _ _ values =>
+      S ((fix values_size (values : list value) : nat :=
+            match values with
+            | [] => 0
+            | fv :: rest => value_size fv + values_size rest
+            end) values)
+  | VClosure _ _ => 1
+  | _ => 1
+  end.
+
+Lemma value_roots_within_from_refs_exclude :
+  forall roots v,
+    (forall root, roots_exclude root roots -> value_refs_exclude_root root v) ->
+    value_roots_within roots v.
+Proof.
+  intros roots v.
+  remember (S (value_size v)) as n eqn:Hn.
+  assert (Hlt : value_size v < n) by lia.
+  clear Hn.
+  revert v roots Hlt.
+  induction n as [| n IH]; intros v roots Hlt Hrefs; [lia |].
+  destruct v as [| i | f | b | name fields | enum_name variant_name lts args values
+               | x path | fname captured]; try solve [constructor].
+  - apply VRW_Struct.
+    revert Hlt Hrefs.
+    induction fields as [| [fname fv] rest IHfields]; intros Hlt Hrefs; simpl in *.
+    + constructor.
+    + constructor.
+      * apply IH.
+        -- lia.
+        -- intros root Hexcl.
+           pose proof (Hrefs root Hexcl) as Hstruct.
+           inversion Hstruct; subst.
+           match goal with
+           | Hfields : value_fields_refs_exclude_root root _ |- _ =>
+               inversion Hfields; subst; assumption
+           end.
+      * apply IHfields.
+        -- lia.
+        -- intros root Hexcl.
+           constructor.
+           pose proof (Hrefs root Hexcl) as Hstruct.
+           inversion Hstruct; subst.
+           match goal with
+           | Hfields : value_fields_refs_exclude_root root _ |- _ =>
+               inversion Hfields; subst; assumption
+           end.
+  - apply VRW_Enum.
+    + revert Hlt Hrefs.
+      induction values as [| v values IHvalues]; intros Hlt Hrefs; simpl in *.
+      * constructor.
+      * constructor.
+        -- apply IH.
+           ++ lia.
+           ++ intros root Hexcl.
+              pose proof (Hrefs root Hexcl) as Henum.
+              inversion Henum; subst.
+              repeat match goal with
+              | Hvalues : Forall (value_refs_exclude_root root) (_ :: _) |- _ =>
+                  inversion Hvalues; subst; clear Hvalues
+              end; assumption.
+        -- apply IHvalues.
+           ++ lia.
+           ++ intros root Hexcl.
+              constructor.
+              pose proof (Hrefs root Hexcl) as Henum.
+              inversion Henum; subst.
+              repeat match goal with
+              | Hvalues : Forall (value_refs_exclude_root root) (_ :: _) |- _ =>
+                  inversion Hvalues; subst; clear Hvalues
+              end; assumption.
+    + intros root Hexcl.
+      pose proof (Hrefs root Hexcl) as Henum.
+      inversion Henum; subst. assumption.
+  - destruct (in_dec root_atom_eq_dec (RStore x) roots) as [Hin | Hnotin].
+    + apply VRW_Ref. exact Hin.
+    + exfalso.
+      pose proof (Hrefs x Hnotin) as Href.
+      inversion Href; subst.
+      rewrite ident_eqb_refl in H0. discriminate.
+  - destruct captured as [| se rest].
+    + apply VRW_ClosureEmpty.
+    + apply VRW_ClosureCaptured.
+      intros root Hexcl.
+      pose proof (Hrefs root Hexcl) as Hclosure.
+      inversion Hclosure; subst. exact H0.
+Qed.
+
 Lemma value_has_type_runtime_rootless_empty_roots_mut :
   forall env s,
   (forall v T,
@@ -449,6 +565,7 @@ Lemma value_has_type_runtime_rootless_empty_roots_mut :
   (forall values tys,
     enum_values_have_type env s values tys ->
     Forall (runtime_rootless_ty env) tys ->
+    Forall (value_roots_within []) values /\
     forall root, Forall (value_refs_exclude_root root) values).
 Proof.
   intros env s.
@@ -460,6 +577,7 @@ Proof.
       value_fields_roots_within [] fields)
     (fun values tys _ =>
       Forall (runtime_rootless_ty env) tys ->
+      Forall (value_roots_within []) values /\
       forall root, Forall (value_refs_exclude_root root) values));
     try solve [intros; constructor].
   - intros name lts args fields sdef Hlookup Hfields IHfields Hrootless.
@@ -484,10 +602,13 @@ Proof.
     assert (edef0 = edef) as ->.
     { eapply lookup_enum_deterministic; eassumption. }
     constructor.
-    intros root _.
-    eapply IHvalues.
-    eapply runtime_rootless_enum_fields_Forall.
-    eapply lookup_enum_variant_runtime_rootless; eassumption.
+    + apply IHvalues.
+      eapply runtime_rootless_enum_fields_Forall.
+      eapply lookup_enum_variant_runtime_rootless; eassumption.
+    + intros root _.
+      apply IHvalues.
+      eapply runtime_rootless_enum_fields_Forall.
+      eapply lookup_enum_variant_runtime_rootless; eassumption.
   - intros u la rk x path se v T Hstore Hvalue Htype Hrootless.
     inversion Hrootless.
   - intros Ω v T_actual T_expected Htyped IHtyped Hcompat Hrootless.
@@ -509,12 +630,18 @@ Proof.
       | Hroot_fields : runtime_rootless_fields env lts args defs |- _ =>
           apply IHfields; exact Hroot_fields
       end.
-  - intros v values T tys Htyped IHtyped Hvalues IHvalues Hrootless root.
+  - intros _.
+    split; [constructor | intros root; constructor].
+  - intros v values T tys Htyped IHtyped Hvalues IHvalues Hrootless.
     inversion Hrootless; subst.
-    constructor.
-    + apply value_roots_within_empty_refs_exclude.
-      apply IHtyped. assumption.
-    + apply IHvalues. assumption.
+    split.
+    + constructor.
+      * apply IHtyped. assumption.
+      * apply IHvalues. assumption.
+    + intros root. constructor.
+      * apply value_roots_within_empty_refs_exclude.
+        apply IHtyped. assumption.
+      * apply IHvalues. assumption.
 Qed.
 
 Lemma value_has_type_runtime_rootless_empty_roots :
@@ -546,8 +673,8 @@ Lemma enum_values_have_type_runtime_rootless_empty_roots :
     forall root, Forall (value_refs_exclude_root root) values.
 Proof.
   intros env s values tys Htyped Hrootless root.
-  exact (proj2 (proj2 (value_has_type_runtime_rootless_empty_roots_mut env s))
-    values tys Htyped Hrootless root).
+  exact (proj2 (proj2 (proj2 (value_has_type_runtime_rootless_empty_roots_mut env s))
+    values tys Htyped Hrootless) root).
 Qed.
 
 Lemma value_has_type_runtime_rootless_store_any_mut :

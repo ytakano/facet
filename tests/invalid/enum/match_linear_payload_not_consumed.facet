@@ -1,0 +1,11 @@
+enum Maybe {
+  Some(linear isize),
+  None
+}
+
+fn value(m: linear Maybe) -> unrestricted isize {
+  match m {
+    Some(v) => 0,
+    None => 0,
+  }
+}

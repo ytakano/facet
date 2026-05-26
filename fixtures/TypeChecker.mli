@@ -436,6 +436,9 @@ val ctx_merge : ctx -> ctx -> ctx option
 val lookup_expr_branch :
   string -> ((string * ident list) * expr) list -> expr option
 
+val lookup_expr_branch_binders :
+  string -> ((string * ident list) * expr) list -> ident list option
+
 val fn_signature_ty_with_usage : usage -> fn_def -> ty
 
 val closure_value_ty_at : lifetime -> fn_def -> ty list -> ty
@@ -471,6 +474,10 @@ val free_vars_expr : expr -> ident list
 val param_names : param list -> ident list
 
 val rename_place : rename_env -> place -> place
+
+val alpha_rename_idents :
+  rename_env -> ident list -> ident list -> (ident list * rename_env) * ident
+  list
 
 val alpha_rename_expr : rename_env -> ident list -> expr -> expr * ident list
 
@@ -559,6 +566,8 @@ val capture_ref_free_ty_b : global_env -> ty -> bool
 val ctx_lookup_b : ident -> ctx -> (ty * bool) option
 
 val ctx_add_b : ident -> ty -> mutability -> ctx -> ctx
+
+val ctx_remove_b : ident -> ctx -> ctx
 
 val lookup_fn_b : ident -> fn_def list -> fn_def option
 
@@ -773,6 +782,29 @@ val usage_max_tys_nonempty : ty -> ty list -> usage
 
 val ctx_merge_many : ctx -> ctx list -> ctx option
 
+val match_binder_params : ident list -> ty list -> param list infer_result
+
+val instantiate_enum_variant_field_tys :
+  lifetime list -> ty list -> enum_variant_def -> ty list
+
+val match_payload_params :
+  ident list -> lifetime list -> ty list -> enum_variant_def -> param list
+  infer_result
+
+val ctx_add_params : param list -> ctx -> ctx
+
+val ctx_remove_params : param list -> ctx -> ctx
+
+val ident_in_b : ident -> ident list -> bool
+
+val ident_nodup_b : ident list -> bool
+
+val params_names_nodup_b : param list -> bool
+
+val ctx_lookup_params_none_b : param list -> ctx -> bool
+
+val unrestricted_unit_params_of_binders : ident list -> param list
+
 val infer_place_env : global_env -> ctx -> place -> ty infer_result
 
 val wf_outlives_b : region_ctx -> outlives_ctx -> bool
@@ -854,6 +886,10 @@ val params_ok_sctx_b : global_env -> param list -> sctx -> bool
 
 val params_ok_env_b : global_env -> param list -> ctx -> bool
 
+val sctx_add_params : param list -> sctx -> sctx
+
+val sctx_remove_params : param list -> sctx -> sctx
+
 val sctx_path_available : sctx -> ident -> field_path -> unit infer_result
 
 val sctx_consume_path : sctx -> ident -> field_path -> sctx infer_result
@@ -910,6 +946,17 @@ val root_env_eqb : root_env -> root_env -> bool
 val roots_exclude_b : ident -> root_set -> bool
 
 val root_env_excludes_b : ident -> root_env -> bool
+
+val roots_exclude_params_b : param list -> root_set -> bool
+
+val root_env_excludes_params_b : param list -> root_env -> bool
+
+val root_env_add_params_roots_same :
+  param list -> root_set -> root_env -> root_env
+
+val root_env_remove_match_params : param list -> root_env -> root_env
+
+val root_env_lookup_params_none_b : param list -> root_env -> bool
 
 val preservation_ready_expr_b : expr -> bool
 

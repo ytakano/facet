@@ -128,12 +128,24 @@ Proof.
       forall roots',
         root_set_stores_subset roots roots' ->
         value_fields_roots_within roots' fields)).
-  { apply value_roots_within_mutind; intros; try solve [constructor; eauto].
-    - constructor.
-      intros root Hexclude.
-      match goal with
-      | Hvalue : forall root, roots_exclude root _ -> _ |- _ =>
-          apply Hvalue
+	  { apply value_roots_within_mutind; intros; try solve [constructor; eauto].
+	    - constructor.
+	      + match goal with
+	        | Hexclude_payload : forall root, roots_exclude root ?roots0 ->
+	            Forall (value_refs_exclude_root root) ?values,
+	          Hsubset : root_set_stores_subset ?roots0 ?roots1 |- _ =>
+	            apply Forall_forall; intros v Hin;
+	            apply value_roots_within_from_refs_exclude;
+	            intros root Hexclude;
+	            pose proof (Hexclude_payload root
+	              (roots_exclude_stores_subset root roots0 roots1 Hsubset Hexclude))
+	              as Hall;
+	            eapply Forall_forall in Hall; eauto
+	        end.
+	      + intros root Hexclude.
+	      match goal with
+	      | Hvalue : forall root, roots_exclude root _ -> _ |- _ =>
+	          apply Hvalue
       end.
       unfold roots_exclude in *.
       intros Hin.

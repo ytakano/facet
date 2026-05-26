@@ -195,8 +195,11 @@ Completed groundwork:
 
 - Core `EMatch` and raw `RawMatch` branches carry `(variant, binders, body)`.
 - Surface syntax accepts both `Variant => expr` and `Variant(x, y) => expr`.
-- No-payload match behavior is preserved by structural, roots, readiness,
-  preservation, and runtime soundness proofs.
+- Runtime `VEnum` carries erased enum lifetime/type args:
+  `VEnum enum_name variant_name lts args payloads`.
+- No-payload match behavior is preserved by structural, roots, shadow-safe
+  roots, readiness, preservation, runtime soundness, borrow soundness, and
+  initial root facts.
 - Non-empty branch binders are rejected before they can be treated as ordinary
   in-scope variables.
 - Regression coverage checks no-payload match still succeeds and payload binder
@@ -204,14 +207,24 @@ Completed groundwork:
 
 Remaining work:
 
-- Define selected-variant payload binding semantics in Prop typing rules.
-- Add checker support for binder arity/type checks against instantiated variant
-  field types.
-- Extend branch-local contexts/root environments and erase payload binders after
-  each branch.
-- Add runtime match semantics for `VEnum enum variant payloads`.
-- Prove ownership, root, readiness, and preservation obligations for bound
-  payload values.
+- Keep payload branch execution as:
+  `bind_params ps payloads s_scrut`, evaluate the selected branch, then
+  `store_remove_params ps` from the branch result store.
+- Keep `match_payload_params_opt` in the shared pre-`OperationalSemantics`
+  layer; keep checker-facing `match_payload_params` as an `infer_result`
+  wrapper.
+- Current blocker for real payload ownership: `TypeSafetyBasePreservationMutual.v`
+  is too weak for payload cleanup. After branch evaluation, preservation must
+  justify `store_remove_params ps_payload s_branch`, but the base theorem does
+  not carry the root/scope evidence needed to prove surviving values do not
+  reference removed payload params.
+- Fix direction: do not add an ad hoc names-only bridge for payload params.
+  Route payload-match preservation through the stronger root/frame readiness
+  invariants, or strengthen the base preservation contract with a scoped-root
+  exclusion fact that is proved by the existing readiness pipeline.
+- After this scoped cleanup fact is available, finish
+  `TypeSafetyBasePreservationMutual.v` by using the exact payload param types
+  from `match_payload_params_opt`, then remove obsolete no-payload shortcuts.
 
 ## Phase 5: Drop Lowering
 

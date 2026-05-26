@@ -2,7 +2,8 @@ From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules TypeChecker RuntimeTyping RootProvenance
   EnvStructuralRules AlphaRenaming EnvSoundnessFacts CheckerSoundness.
 From Facet.TypeSystem Require Export TypeSafetyBasePreservationAssign.
-From Facet.TypeSystem Require Import TypeSafetyClosureCleanupFrame.
+From Facet.TypeSystem Require Import TypeSafetyClosureCleanupFrame
+  TypeSafetyHiddenFrameCleanupFacts.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
@@ -271,6 +272,39 @@ Proof.
     + reflexivity.
   - exact Hnames.
   - exact Htys.
+Qed.
+
+Lemma store_remove_match_payload_cleanup_value_typed_names :
+  forall ps_runtime ps_typed env s_body frame R roots v T,
+    ctx_names (params_ctx ps_runtime) = ctx_names (params_ctx ps_typed) ->
+    store_param_scope ps_runtime s_body frame ->
+    store_roots_within R s_body ->
+    value_roots_within roots v ->
+    store_no_shadow s_body ->
+    params_names_nodup_b ps_typed = true ->
+    roots_exclude_params ps_typed roots ->
+    root_env_excludes_params ps_typed R ->
+    value_has_type env s_body v T ->
+    exists locals,
+      store_remove_params ps_runtime s_body = locals ++ frame /\
+      value_has_type env (store_remove_params ps_runtime s_body) v T /\
+      store_refs_exclude_params ps_runtime
+        (store_remove_params ps_runtime s_body).
+Proof.
+  intros ps_runtime ps_typed env s_body frame R roots v T Hnames Hscope
+    Hstore Hvalue_roots Hshadow Hnodup Hroots_excl Henv_excl Hvalue.
+  eapply store_remove_params_cleanup_value_typed_excludes.
+  - exact Hscope.
+  - exact Hstore.
+  - exact Hvalue_roots.
+  - exact Hshadow.
+  - rewrite Hnames.
+    eapply params_names_nodup_b_sound. exact Hnodup.
+  - unfold roots_exclude_params in *.
+    rewrite Hnames. exact Hroots_excl.
+  - unfold root_env_excludes_params in *.
+    rewrite Hnames. exact Henv_excl.
+  - exact Hvalue.
 Qed.
 
 Lemma store_typed_ctx_merge_many_left :

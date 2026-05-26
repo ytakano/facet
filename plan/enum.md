@@ -234,6 +234,13 @@ Remaining work:
   directly would need to prove that a returned `VRef` does not point at an
   erased payload binding, but that fact lives in the roots/provenance
   preservation path, not in plain `typed_env_structural`.
+- Do not try to prove `store_typed (store_remove_params ps s)
+  (sctx_remove_params ps Σ)` from only final
+  `store_refs_exclude_params ps (store_remove_params ps s)`: it is too weak for
+  the existing one-step `store_typed_remove_excluding_root` proof because
+  payload entries removed later may still reference payload entries removed
+  earlier. The cleanup package needs either a direct multi-remove store typing
+  proof over final entries or a stronger per-step exclusion invariant.
 
 Next implementation step:
 

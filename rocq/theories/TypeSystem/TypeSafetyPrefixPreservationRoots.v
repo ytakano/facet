@@ -741,7 +741,7 @@ Proof.
                 (VEnum enum_name variant_name lts_val args_val values)
                 Heval_scrut Ω n R Σ T_scrut Σ1 R1 roots_scrut Hready
                 Hroots Hnodup Hrn Htyped1)
-      as [Hroots_scrut [_ [Hnodup_scrut Hrn_scrut]]].
+      as [Hroots_scrut [Hv_roots_scrut [Hnodup_scrut Hrn_scrut]]].
     assert (Hready_branch : provenance_ready_expr e_branch).
     { unfold lookup_match_branch in Hlookup_branch_eval.
       eapply provenance_ready_match_branches_lookup; eassumption. }
@@ -859,6 +859,35 @@ Proof.
       destruct Htail_branch as [Hcore_branch Htail_branch].
       destruct Htail_branch as [Hequiv_branch Htail_branch].
       destruct Htail_branch as [HinΣ HinT].
+      assert (Hbinders_same : binders_branch = binders).
+      { rewrite Hlookup_binders in Hbinders_branch.
+        inversion Hbinders_branch. reflexivity. }
+      destruct (value_has_type_enum_args_lifetime_equiv env s_scrut enum_name0
+                  variant_name lts_val args_val values T_scrut enum_name0
+                  lts args edef Hv_scrut H0 H1)
+        as [_ Hargs_equiv].
+      destruct (match_payload_params_opt_lifetime_equiv binders binders_branch
+                  lts_val lts args_val args vdef_runtime ps_payload ps_branch
+                  (eq_sym Hbinders_same) Hargs_equiv Hpayload_runtime
+                  Hparams_branch)
+        as [Hnames_payload Htys_payload].
+      assert (Hvalues_typed_branch :
+        enum_values_have_type env s_scrut values (map param_ty ps_branch)).
+      { rewrite (match_payload_params_opt_param_tys binders_branch lts args
+          vdef_runtime ps_branch Hparams_branch).
+        assert (Hvariant_runtime_full :
+          lookup_enum_variant variant_name (enum_variants edef) =
+            Some vdef_runtime).
+        { rewrite H6. simpl. rewrite Hvariant_head. exact Hvariant_runtime. }
+        eapply (value_has_type_enum_values_lookup env s_scrut enum_name0
+          variant_name lts_val args_val values T_scrut enum_name0 lts args
+          edef vdef_runtime).
+        - exact Hv_scrut.
+        - exact H0.
+        - exact H1.
+        - exact Hvariant_runtime_full. }
+      pose proof (value_roots_within_enum_payloads roots_scrut enum_name0
+        variant_name lts_val args_val values Hv_roots_scrut) as Hvalues_roots.
       destruct (typed_match_tail_roots_lookup_no_payload env Ω n lts args
         R1 roots_scrut Σ1 branches v_tail (ty_core T_head)
         (root_env_remove_match_params ps_head R_head_payload)
@@ -888,18 +917,44 @@ Proof.
       assert (Hstore_payload :
         store_typed_prefix env (bind_params ps_payload values s_scrut)
           (sctx_add_params ps_branch Σ1)).
-      { rewrite Hpayload_nil, Hps_branch_nil, Hvalues_nil. simpl.
-        exact Hstore_scrut. }
+      { eapply store_typed_prefix_bind_match_payload_params_lifetime.
+        - exact Hstore_scrut.
+        - exact Hnodup_branch_params.
+        - eapply store_roots_within_params_fresh_in_store.
+          + eapply (root_env_lookup_params_none_b_names ps_branch ps_payload).
+            * symmetry. exact Hnames_payload.
+            * exact Hroot_none_branch.
+          + exact Hroots_scrut.
+        - exact Hvalues_typed_branch.
+        - exact Hnames_payload.
+        - exact Htys_payload. }
       assert (Hroots_payload :
         store_roots_within R_payload (bind_params ps_payload values s_scrut)).
       { subst R_payload.
-        rewrite Hpayload_nil, Hps_branch_nil, Hvalues_nil. simpl.
-        exact Hroots_scrut. }
+        eapply store_roots_within_bind_params_roots_same_names.
+        - exact Hnames_payload.
+        - exact Hnodup_branch_params.
+        - exact Hroot_none_branch.
+        - exact Hroots_scrut.
+        - exact Hvalues_roots.
+        - exact Hvalues_len. }
       assert (Hnodup_payload :
         store_no_shadow (bind_params ps_payload values s_scrut)).
-      { rewrite Hpayload_nil, Hvalues_nil. simpl. exact Hnodup_scrut. }
+      { eapply bind_params_store_no_shadow_names.
+        - eapply params_names_nodup_b_sound.
+          eapply (params_names_nodup_b_names ps_branch ps_payload).
+          + symmetry. exact Hnames_payload.
+          + exact Hnodup_branch_params.
+        - eapply store_roots_within_params_fresh_in_store.
+          + eapply (root_env_lookup_params_none_b_names ps_branch ps_payload).
+            * symmetry. exact Hnames_payload.
+            * exact Hroot_none_branch.
+          + exact Hroots_scrut.
+        - exact Hvalues_len.
+        - exact Hnodup_scrut. }
       assert (Hrn_payload : root_env_no_shadow R_payload).
-      { subst R_payload. rewrite Hps_branch_nil. simpl. exact Hrn_scrut. }
+      { subst R_payload.
+        eapply root_env_add_params_roots_same_no_shadow; eauto. }
       destruct (IHbranch Ω n R_payload (sctx_add_params ps_branch Σ1)
                   T_branch Σ_branch_payload Rv_payload
                   roots_branch Hready_branch Hstore_payload Hroots_payload

@@ -234,6 +234,10 @@ Remaining work:
   context/root freshness, payload params-ok, branch result root exclusion, and
   post-removal root-env exclusion. This avoids re-deriving those facts in the
   selected runtime branch proof.
+- Root-aware and prefix-root preservation now build the selected tail branch
+  input store/root/no-shadow facts using payload binders, lifetime-equivalent
+  runtime payload params, and payload value roots. The final selected-branch
+  cleanup still uses the no-payload rewrite and remains the next proof step.
 - Soundness blocker before widening Prop/checker payload typing:
   structural/base preservation has no roots fact for the returned value after
   `store_remove_params ps_payload`. Replacing `typed_match_tail_lookup_no_payload`

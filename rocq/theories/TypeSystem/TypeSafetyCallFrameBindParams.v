@@ -105,20 +105,23 @@ Qed.
 
 Lemma store_typed_entries_params_store_param_prefix :
   forall env full captured caps,
+    sctx_of_store captured = sctx_of_ctx (params_ctx caps) ->
     Forall2 (store_entry_typed env full) captured (params_ctx caps) ->
     store_param_prefix caps captured [].
 Proof.
   intros env full captured.
-  induction captured as [| se captured IH]; intros caps Htyped;
-    destruct caps as [| cap caps]; simpl in Htyped; inversion Htyped; subst.
+  induction captured as [| se captured IH]; intros caps Hshape Htyped;
+    destruct caps as [| cap caps]; simpl in Htyped, Hshape; inversion Htyped; subst.
   - constructor.
   - destruct se as [sx sT sv sst].
     destruct cap as [pname pty pmut].
-    simpl in H2.
-    destruct H2 as [Hname [Hty [_ _]]].
-    simpl in *. subst sx sT.
+    injection Hshape as Hhead Htail_shape.
+    subst sx sT sst pname.
+    simpl in *.
     constructor.
-    eapply IH. exact H4.
+    eapply IH.
+    + exact H1.
+    + exact H4.
 Qed.
 
 Lemma captured_params_store_typed_store_param_prefix :
@@ -128,14 +131,17 @@ Lemma captured_params_store_typed_store_param_prefix :
 Proof.
   intros env captured caps Htyped.
   unfold captured_params_store_typed, store_typed in Htyped.
+  destruct Htyped as [Htyped Hshape].
   eapply store_typed_entries_params_store_param_prefix.
-  exact Htyped.
+  - exact Hshape.
+  - exact Htyped.
 Qed.
 
 Definition captured_params_store_typed_in_frame
     (env : global_env) (captured frame : store) (caps : list param) : Prop :=
   Forall2 (store_entry_typed env (captured ++ frame))
-    captured (params_ctx caps).
+    captured (params_ctx caps) /\
+  sctx_of_store captured = sctx_of_ctx (params_ctx caps).
 
 Definition captured_call_frame_params_ready_in_frame
     (env : global_env) (captured : store) (Rcap : root_env)
@@ -150,8 +156,10 @@ Lemma captured_params_store_typed_in_frame_store_param_prefix :
 Proof.
   intros env captured frame caps Htyped.
   unfold captured_params_store_typed_in_frame in Htyped.
+  destruct Htyped as [Htyped Hshape].
   eapply store_typed_entries_params_store_param_prefix.
-  exact Htyped.
+  - exact Hshape.
+  - exact Htyped.
 Qed.
 
 Lemma captured_params_store_typed_in_frame_prefix_frame :
@@ -162,6 +170,7 @@ Lemma captured_params_store_typed_in_frame_prefix_frame :
 Proof.
   intros env captured caps frame Htyped.
   unfold captured_params_store_typed_in_frame, store_typed_prefix in *.
+  destruct Htyped as [Htyped _].
   exists captured, frame.
   split; [reflexivity | exact Htyped].
 Qed.
@@ -174,9 +183,12 @@ Proof.
   intros env captured caps frame Htyped.
   unfold captured_params_store_typed, captured_params_store_typed_in_frame,
     store_typed in *.
-  eapply store_typed_entries_store_preserved.
-  - exact Htyped.
-  - apply store_ref_targets_preserved_app_left.
+  destruct Htyped as [Htyped Hshape].
+  split.
+  - eapply store_typed_entries_store_preserved.
+    + exact Htyped.
+    + apply store_ref_targets_preserved_app_left.
+  - exact Hshape.
 Qed.
 
 Lemma captured_call_frame_params_ready_in_frame_from_self :
@@ -212,7 +224,7 @@ Proof.
       Ω env s Σ captures caps captured env_lt captured_tys
       Hstore Hcopy Hcheck) as Heq.
   rewrite Heq in Htyped.
-  exact Htyped.
+  split; [exact Htyped | exact Heq].
 Qed.
 
 Lemma captured_params_store_typed_prefix_frame :
@@ -223,6 +235,7 @@ Lemma captured_params_store_typed_prefix_frame :
 Proof.
   intros env captured caps frame Htyped.
   unfold captured_params_store_typed, store_typed_prefix in *.
+  destruct Htyped as [Htyped _].
   exists captured, frame.
   split; [reflexivity |].
   eapply store_typed_entries_store_preserved.

@@ -289,7 +289,8 @@ Definition captured_call_frame_ready_in_frame
 
 Definition captured_params_store_typed
     (env : global_env) (captured : store) (caps : list param) : Prop :=
-  store_typed env captured (sctx_of_ctx (params_ctx caps)).
+  store_typed env captured (sctx_of_ctx (params_ctx caps)) /\
+  sctx_of_store captured = sctx_of_ctx (params_ctx caps).
 
 Definition captured_call_frame_params_ready
     (env : global_env) (captured : store) (Rcap : root_env)

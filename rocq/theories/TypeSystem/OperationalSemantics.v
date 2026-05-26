@@ -242,7 +242,7 @@ Fixpoint copy_capture_store_as
              end
           then match copy_capture_store_as rest ps s with
                | Some captured =>
-                   Some (MkStoreEntry (param_name p) (se_ty se) (se_val se)
+                   Some (MkStoreEntry (param_name p) (param_ty p) (se_val se)
                      (se_state se) :: captured)
                | None => None
                end

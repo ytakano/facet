@@ -211,12 +211,7 @@ Proof.
   { eapply value_lookup_path_has_type.
     - exact Hvroot.
     - exact Hvalue_lookup.
-    - match goal with
-      | Hty : se_ty se = T_root0 |- _ =>
-          rewrite Hty; exact Htype_old
-      | Hty : T_root0 = se_ty se |- _ =>
-          rewrite <- Hty; exact Htype_old
-      end.
+    - exact Htype_old.
   }
   pose proof (ty_compatible_b_sound Ω T_new T_old Hcompat) as Hcompat_prop.
   assert (Hstore2 : store_typed env s2 Σ1).
@@ -623,4 +618,3 @@ Proof.
   intros env Ω n Σ Σ' s s' m x e1 e2 T v _ _ Heval.
   inversion Heval.
 Qed.
-

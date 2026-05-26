@@ -260,11 +260,11 @@ Proof.
     apply ty_eqb_true in Hty_eq.
     assert (Hrootless_T : runtime_rootless_ty env T).
     { apply capture_ref_free_ty_b_runtime_rootless. exact Href_free. }
-    assert (Hrootless : runtime_rootless_ty env (se_ty se)).
-    { rewrite <- H0. exact Hrootless_T. }
-    assert (Hvalue_target : value_has_type env s_target (se_val se) (se_ty se)).
+    assert (Hrootless : runtime_rootless_ty env (param_ty cap)).
+    { rewrite <- Hty_eq. exact Hrootless_T. }
+    assert (Hvalue_target : value_has_type env s_target (se_val se) (param_ty cap)).
     { eapply value_has_type_runtime_rootless_store_any.
-      - exact Hvalue.
+      - rewrite <- Hty_eq. exact Hvalue.
       - exact Hrootless. }
     destruct (IH s_target caps captured_rest captured_rest_tys
                 Hstore Hcopy_rest Hrest_check)
@@ -272,7 +272,7 @@ Proof.
     split.
     + simpl. constructor.
       * exact (conj eq_refl
-          (conj eq_refl
+          (conj (ty_lifetime_equiv_refl (param_ty cap))
             (conj (binding_state_refines_refl (se_state se))
               Hvalue_target))).
       * exact Htyped_tail.
@@ -333,10 +333,12 @@ Proof.
     apply ty_eqb_true in Hty_eq.
     simpl. constructor.
     + exact (conj eq_refl
-        (conj eq_refl
+        (conj (ty_lifetime_equiv_refl (param_ty cap))
           (conj (binding_state_refines_refl (se_state se))
-            (value_has_type_store_preserved env s (se_val se) (se_ty se)
-              Hvalue s_target Hpres)))).
+            (value_has_type_store_preserved env s (se_val se) (param_ty cap)
+              (eq_rect T (fun T0 => value_has_type env s (se_val se) T0)
+                 Hvalue (param_ty cap) Hty_eq)
+              s_target Hpres)))).
     + eapply IH; eassumption.
 Qed.
 
@@ -434,17 +436,15 @@ Proof.
       * left.
         assert (Hrootless_T : runtime_rootless_ty env T).
         { apply capture_ref_free_ty_b_runtime_rootless. exact Hfree. }
-        assert (Hrootless : runtime_rootless_ty env (se_ty se)).
-        { rewrite <- H0. exact Hrootless_T. }
         eapply value_has_type_runtime_rootless_empty_roots.
         -- exact Hvalue.
-        -- exact Hrootless.
+        -- exact Hrootless_T.
       * right.
         destruct T as [u core]. simpl in Href.
         destruct core; try discriminate.
         destruct r; try discriminate.
         eapply value_has_type_ref_ty_value.
-        rewrite H0. exact Hvalue.
+        exact Hvalue.
     + eapply IH; eassumption.
 Qed.
 

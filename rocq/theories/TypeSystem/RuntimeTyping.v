@@ -1419,7 +1419,7 @@ Definition store_entry_typed
   match se, ce with
   | MkStoreEntry sx sT sv sst, (cx, cT, cst, _) =>
       sx = cx /\
-      sT = cT /\
+      ty_lifetime_equiv sT cT /\
       binding_state_refines sst cst /\
       value_has_type env s sv sT
   end.
@@ -1573,7 +1573,7 @@ Lemma store_typed_lookup_entries :
     exists (T : Ty) (st : binding_state) (m : mutability),
       sctx_lookup x Σ = Some (T, st) /\
       se_name se = x /\
-      se_ty se = T /\
+      ty_lifetime_equiv (se_ty se) T /\
       binding_state_refines (se_state se) st /\
       value_has_type env s_param (se_val se) T.
 Proof.
@@ -1594,7 +1594,7 @@ Proof.
       * simpl. symmetry. exact Hsx.
       * simpl. exact HT.
       * simpl. exact Hst.
-      * simpl. rewrite <- HT. exact Hv.
+      * simpl. eapply VHT_LifetimeEquiv; eassumption.
     + destruct (IH Hlookup) as [T [st [m [HΣ [Hn [HTy [Hst' Hv']]]]]]].
       exists T, st, m.
       repeat split.
@@ -1617,7 +1617,7 @@ Lemma store_typed_lookup :
     exists (T : Ty) (st : binding_state) (m : mutability),
       sctx_lookup x Σ = Some (T, st) /\
       se_name se = x /\
-      se_ty se = T /\
+      ty_lifetime_equiv (se_ty se) T /\
       binding_state_refines (se_state se) st /\
       value_has_type env s (se_val se) T.
 Proof.
@@ -1632,7 +1632,7 @@ Lemma store_typed_lookup_sctx_entries :
     exists se,
       store_lookup x entries = Some se /\
       se_name se = x /\
-      se_ty se = T /\
+      ty_lifetime_equiv (se_ty se) T /\
       binding_state_refines (se_state se) st /\
       value_has_type env s_param (se_val se) T.
 Proof.
@@ -1652,7 +1652,7 @@ Proof.
       * simpl. apply ident_eqb_eq in Hcx. rewrite Hname. symmetry. exact Hcx.
       * simpl. exact HT.
       * simpl. exact Hst.
-      * simpl. rewrite <- HT. exact Hv.
+      * simpl. eapply VHT_LifetimeEquiv; eassumption.
     + destruct (IH Hlookup) as [se' [Hs [Hn [HTy [Hst' Hv']]]]].
       exists se'.
       repeat split.
@@ -1675,7 +1675,7 @@ Lemma store_typed_lookup_sctx :
     exists se,
       store_lookup x s = Some se /\
       se_name se = x /\
-      se_ty se = T /\
+      ty_lifetime_equiv (se_ty se) T /\
       binding_state_refines (se_state se) st /\
       value_has_type env s (se_val se) T.
 Proof.
@@ -1690,7 +1690,7 @@ Lemma store_typed_prefix_lookup_sctx :
     exists se,
       store_lookup x s = Some se /\
       se_name se = x /\
-      se_ty se = T /\
+      ty_lifetime_equiv (se_ty se) T /\
       binding_state_refines (se_state se) st /\
       value_has_type env s (se_val se) T.
 Proof.
@@ -1715,8 +1715,10 @@ Proof.
   intros env s Σ x T m v Htyped Hv Hpres.
   unfold store_add, sctx_add, store_typed.
   constructor.
-  - simpl. repeat split; try reflexivity.
-    eapply value_has_type_store_preserved; eassumption.
+  - simpl.
+    repeat split; try reflexivity.
+    + apply ty_lifetime_equiv_refl.
+    + eapply value_has_type_store_preserved; eassumption.
   - eapply store_typed_store_param_preserved; eassumption.
 Qed.
 
@@ -1735,8 +1737,10 @@ Proof.
   split.
   - simpl. subst s. reflexivity.
   - constructor.
-    + simpl. repeat split; try reflexivity.
-      eapply value_has_type_store_preserved; eassumption.
+    + simpl.
+      repeat split; try reflexivity.
+      * apply ty_lifetime_equiv_refl.
+      * eapply value_has_type_store_preserved; eassumption.
     + eapply store_typed_store_param_preserved; eassumption.
 Qed.
 
@@ -2319,7 +2323,11 @@ Proof.
         -- exact Hname.
         -- exact HT.
         -- exact Hst.
-        -- rewrite HT. eapply value_has_type_store_preserved; eassumption.
+        -- eapply value_has_type_store_preserved.
+           ++ eapply VHT_LifetimeEquiv.
+              ** exact Hv.
+              ** apply ty_lifetime_equiv_sym. exact HT.
+           ++ exact Hpres.
       * eapply store_typed_store_param_preserved; eassumption.
     + apply ident_eqb_eq in Hsx. apply ident_eqb_neq in Hcx. subst sx.
       contradiction.
@@ -2357,7 +2365,7 @@ Lemma store_typed_lookup_path :
     exists (se : store_entry) (T_root : Ty) (st : binding_state) (m : mutability),
       sctx_lookup x Σ = Some (T_root, st) /\
       se_name se = x /\
-      se_ty se = T_root /\
+      ty_lifetime_equiv (se_ty se) T_root /\
       store_lookup x s = Some se /\
       value_lookup_path (se_val se) path = Some v.
 Proof.
@@ -2417,14 +2425,15 @@ Proof.
         -- exact Hname.
         -- exact HT.
         -- exact Hst.
-        -- rewrite HT.
-           eapply value_has_type_store_preserved.
-           ++ eapply Hroot.
-              ** simpl. rewrite Hsx. reflexivity.
-              ** simpl. rewrite <- Hname.
-                 apply ident_eqb_eq in Hsx.
-                 rewrite <- Hsx. rewrite ident_eqb_refl. reflexivity.
-              ** exact Hvalue.
+        -- eapply value_has_type_store_preserved.
+           ++ eapply VHT_LifetimeEquiv.
+              ** eapply Hroot.
+                 --- simpl. rewrite Hsx. reflexivity.
+                 --- simpl. rewrite <- Hname.
+                     apply ident_eqb_eq in Hsx.
+                     rewrite <- Hsx. rewrite ident_eqb_refl. reflexivity.
+                 --- exact Hvalue.
+              ** apply ty_lifetime_equiv_sym. exact HT.
            ++ exact Hpres.
       * eapply store_typed_store_param_preserved; eassumption.
     + destruct (store_update_path x path v_new s_tail) as [s_tail' |]
@@ -3023,7 +3032,7 @@ Proof.
     destruct Hentry as [Hname [HT [Href Hv]]].
     apply negb_false_iff in Hneq.
     apply ident_eqb_eq in Hneq.
-    assert (HT_left : cT2 = sT) by (rewrite Htype_head; symmetry; exact HT).
+    assert (HT_left : ty_lifetime_equiv sT cT2) by (rewrite Htype_head; exact HT).
     destruct (ty_usage cT2) eqn:Husage.
     + destruct (Bool.eqb (st_consumed cst2) (st_consumed cst3)) eqn:Hconsumed;
         try discriminate.
@@ -3031,7 +3040,7 @@ Proof.
       constructor.
       * simpl. repeat split.
         -- transitivity cx3; [exact Hname | symmetry; exact Hneq].
-        -- symmetry. exact HT_left.
+        -- exact HT_left.
         -- assert (Hmerge_ref :
              binding_state_refines cst3
                (MkBindingState (st_consumed cst2)
@@ -3051,7 +3060,7 @@ Proof.
       constructor.
       * simpl. repeat split.
         -- transitivity cx3; [exact Hname | symmetry; exact Hneq].
-        -- symmetry. exact HT_left.
+        -- exact HT_left.
         -- exact (binding_state_refines_trans sst cst3
              (MkBindingState (st_consumed cst2 || st_consumed cst3)
                (st_moved_paths cst2 ++ st_moved_paths cst3))
@@ -3062,7 +3071,7 @@ Proof.
       constructor.
       * simpl. repeat split.
         -- transitivity cx3; [exact Hname | symmetry; exact Hneq].
-        -- symmetry. exact HT_left.
+        -- exact HT_left.
         -- exact (binding_state_refines_trans sst cst3
              (MkBindingState (st_consumed cst2 || st_consumed cst3)
                (st_moved_paths cst2 ++ st_moved_paths cst3))
@@ -3573,15 +3582,16 @@ Proof.
         rewrite ident_eqb_refl in HΣ.
         inversion HΣ; subst T st.
         simpl in Htype.
-        assert (Htype_cT : type_lookup_path env cT path = Some T_path).
-        { rewrite <- HT. exact Htype. }
-        destruct (value_has_type_path_exists env s_param v cT path T_path
+        destruct (type_lookup_path_lifetime_equiv env cT sT path T_path
+                  (ty_lifetime_equiv_sym _ _ HT) Htype)
+          as [T_c_path [Htype_cT _]].
+        destruct (value_has_type_path_exists env s_param v cT path T_c_path
                   Hv Htype_cT)
-          as [v_path [Hvalue_path Hv_path]].
+          as [v_path [Hvalue_path _]].
         exists (MkStoreEntry sx sT v sst), v_path.
         split; [simpl; rewrite Hy; reflexivity |].
         split; [simpl; exact Hvalue_path |].
-        simpl. rewrite HT. exact Htype_cT.
+        simpl. exact Htype.
       * exists se_old, v_old.
         repeat split; simpl; try (rewrite Hy; exact Hlookup); assumption.
     + destruct (store_update_val x v entries_tail) as [tail' |] eqn:Htail_update;
@@ -3653,20 +3663,21 @@ Proof.
         rewrite Hname in HΣ.
         rewrite ident_eqb_refl in HΣ.
         inversion HΣ; subst T_root st.
-        assert (Htype_cT : type_lookup_path env cT path = Some T_path).
-        { rewrite <- HT. exact Htype. }
+        destruct (type_lookup_path_lifetime_equiv env cT sT path T_path
+                  (ty_lifetime_equiv_sym _ _ HT) Htype)
+          as [T_c_path [Htype_cT _]].
         assert (Hsv_cT : value_has_type env s_param sv cT).
-        { rewrite <- HT. exact Hsv. }
+        { eapply VHT_LifetimeEquiv; eassumption. }
         pose proof (value_update_path_has_type env s_param sv cT
           path_update v_new T_update v_root
           Hsv_cT Htype_update Hvnew Hvalue_update) as Hvroot.
         destruct (value_has_type_path_exists env s_param v_root cT
-                  path T_path Hvroot Htype_cT)
-          as [v_path [Hvalue_path Hv_path]].
+                  path T_c_path Hvroot Htype_cT)
+          as [v_path [Hvalue_path _]].
         exists (MkStoreEntry sx sT v_root sst), v_path.
         split; [simpl; rewrite Hy; reflexivity |].
         split; [simpl; exact Hvalue_path |].
-        simpl. rewrite HT. exact Htype_cT.
+        simpl. exact Htype.
       * exists se_old, v_old.
         repeat split; simpl; try (rewrite Hy; exact Hlookup); assumption.
     + destruct (store_update_path x path_update v_new entries_tail)
@@ -3844,15 +3855,10 @@ Proof.
       as [Tse [stse [m [HΣlookup [Hname [HT [Href Hvroot]]]]]]].
     rewrite HΣ in HΣlookup.
     inversion HΣlookup; subst Tse stse.
-    eapply (value_update_path_has_type env s (se_val se) (se_ty se)
+    eapply (value_update_path_has_type env s (se_val se) T_root
       path v_new T_path v_root).
     + exact Hvroot.
-    + match goal with
-      | Hty : T_root = se_ty se |- _ =>
-          rewrite <- Hty; exact Htype_path
-      | Hty : se_ty se = T_root |- _ =>
-          rewrite Hty; exact Htype_path
-      end.
+    + exact Htype_path.
     + exact Hvnew.
     + exact Hvalue_update.
   - exact Hupdate.

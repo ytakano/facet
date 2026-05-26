@@ -85,7 +85,7 @@ Proof.
     destruct ce as [[[cx cT] cst] cm].
     simpl in Hentry.
     destruct Hentry as [Hname [HT [_ Hvalue]]].
-    subst cx cT.
+    subst cx.
     unfold root_env_store_roots_named in *.
     intros x roots z Hlookup Hin.
     simpl in Hlookup.
@@ -383,6 +383,7 @@ Proof.
   destruct Hready as [Hframe_ready Htyped_cap].
   unfold captured_call_frame_ready in Hframe_ready.
   destruct Hframe_ready as [_ [_ [Hshadow_frame _]]].
+  destruct Htyped_cap as [Htyped_cap _].
   eapply store_typed_app.
   - exact Htyped_cap.
   - exact Htyped_args.

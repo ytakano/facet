@@ -395,12 +395,9 @@ Proof.
       ((param_name cap, param_ty cap, binding_state_of_bool false,
         param_mutability cap) :: sctx_of_ctx (params_ctx caps)).
     rewrite Hcap_mut.
-    f_equal.
-    + rewrite <- H0, Hty_eq. reflexivity.
-    + eapply IH.
-      * exact Hstore.
-      * exact Hcopy_rest.
-      * exact Hrest_check.
+    rewrite (IH caps captured_rest captured_rest_tys Hstore Hcopy_rest
+      Hrest_check).
+    reflexivity.
 Qed.
 
 Lemma copy_capture_store_exact_with_env_sctx_of_store :
@@ -470,11 +467,8 @@ Proof.
       ((param_name cap, param_ty cap, binding_state_of_bool false,
         param_mutability cap) :: sctx_of_ctx (params_ctx caps)).
     rewrite Hcap_mut.
-    f_equal.
-    + rewrite <- H0, Hty_eq. reflexivity.
-    + eapply IH.
-      * exact Hcopy_rest.
-      * exact Hrest_check.
+    rewrite (IH caps captured_rest captured_rest_tys Hcopy_rest Hrest_check).
+    reflexivity.
 Qed.
 
 Lemma captured_store_typed_as_params :
@@ -486,5 +480,5 @@ Proof.
   intros env captured caps Htyped Heq.
   unfold captured_store_typed, captured_params_store_typed in *.
   rewrite <- Heq.
-  exact Htyped.
+  split; [exact Htyped | reflexivity].
 Qed.

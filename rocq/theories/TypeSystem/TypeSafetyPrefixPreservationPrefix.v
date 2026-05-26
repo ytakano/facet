@@ -522,10 +522,11 @@ Proof.
           destruct (eval_place_direct_runtime_target_exists_prefix
                       env Σ0 s p T_place x_static path_static x path
                       Hstore0 Hplace Hpath Heval_place)
-            as [se [v_target [Hlookup [Hvalue Htype_eval]]]];
+            as [se [v_target [T_eval [Hlookup [Hvalue [Htype_eval Heq_eval]]]]]];
           destruct (eval_borrow_shared_preserves_typing_prefix
-                      env Ω n Σ0 s p T_place x path se v_target
-                      Hstore0 Hplace Heval_place Hlookup Htype_eval Hvalue)
+                      env Ω n Σ0 s p T_place x path se v_target T_eval
+                      Hstore0 Hplace Heval_place Hlookup Htype_eval
+                      Heq_eval Hvalue)
             as [Hstore' Hv];
           repeat split; try assumption;
           apply store_ref_targets_preserved_refl
@@ -538,11 +539,11 @@ Proof.
           destruct (eval_place_direct_runtime_target_exists_prefix
                       env Σ0 s p T_place x_static path_static x path
                       Hstore0 Hplace Hpath Heval_place)
-            as [se [v_target [Hlookup [Hvalue Htype_eval]]]];
+            as [se [v_target [T_eval [Hlookup [Hvalue [Htype_eval Heq_eval]]]]]];
           destruct (eval_borrow_unique_preserves_typing_prefix
                       env Ω n Σ0 s p T_place x_static path_static x path
-                      se v_target Hstore0 Hplace Hpath Hmut Heval_place
-                      Hlookup Htype_eval Hvalue)
+                      se v_target T_eval Hstore0 Hplace Hpath Hmut Heval_place
+                      Hlookup Htype_eval Heq_eval Hvalue)
             as [Hstore' Hv];
           repeat split; try assumption;
           apply store_ref_targets_preserved_refl

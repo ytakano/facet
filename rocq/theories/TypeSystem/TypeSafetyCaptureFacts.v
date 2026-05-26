@@ -169,6 +169,7 @@ Lemma capture_store_root_sets_store_roots_named_in_frame :
 Proof.
   intros env captured frame caps Htyped.
   unfold captured_params_store_typed_in_frame in Htyped.
+  destruct Htyped as [Htyped _].
   assert (Hentries :
     forall entries Σ,
       Forall2 (store_entry_typed env (captured ++ frame)) entries Σ ->

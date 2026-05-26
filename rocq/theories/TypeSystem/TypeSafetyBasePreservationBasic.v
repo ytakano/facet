@@ -290,9 +290,6 @@ Proof.
     as [T_static [st_static [HΣstatic [_ Htype_static]]]].
   rewrite HΣstatic in HΣ.
   inversion HΣ; subst T_static st_static.
-  rewrite HTy in Htype_eval.
-  rewrite Htype_static in Htype_eval.
-  inversion Htype_eval; subst T_eval.
   split; [exact Hstore |].
   eapply value_lookup_path_has_type; eassumption.
 Qed.
@@ -327,9 +324,6 @@ Proof.
     as [T_static [st_static [HΣstatic [_ Htype_static]]]].
   rewrite HΣstatic in HΣ.
   inversion HΣ; subst T_static st_static.
-  rewrite HTy in Htype_eval.
-  rewrite Htype_static in Htype_eval.
-  inversion Htype_eval; subst T_eval.
   assert (Hvpath : value_has_type env s v T).
   { eapply value_lookup_path_has_type; eassumption. }
   split.
@@ -425,9 +419,6 @@ Proof.
     as [se' [Hlookup' [_ [HTy [_ Hvroot]]]]].
   rewrite Hlookup in Hlookup'.
   inversion Hlookup'; subst se'.
-  rewrite HTy in Htype_eval.
-  rewrite Htype_static in Htype_eval.
-  inversion Htype_eval; subst T_eval.
   split; [exact Hstore |].
   eapply value_lookup_path_has_type; eassumption.
 Qed.
@@ -463,9 +454,6 @@ Proof.
     as [se' [Hlookup' [_ [HTy [_ Hvroot]]]]].
   rewrite Hlookup in Hlookup'.
   inversion Hlookup'; subst se'.
-  rewrite HTy in Htype_eval.
-  rewrite Htype_static in Htype_eval.
-  inversion Htype_eval; subst T_eval.
   assert (Hvpath : value_has_type env s v T).
   { eapply value_lookup_path_has_type; eassumption. }
   split.

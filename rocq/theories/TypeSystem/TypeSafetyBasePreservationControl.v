@@ -372,40 +372,50 @@ Proof.
 Qed.
 
 Lemma eval_borrow_shared_preserves_typing :
-  forall env (Ω : outlives_ctx) (n : nat) Σ s p T x path se v_target,
+  forall env (Ω : outlives_ctx) (n : nat) Σ s p T x path se v_target T_eval,
     store_typed env s Σ ->
     typed_place_env_structural env Σ p T ->
     eval_place s p x path ->
     store_lookup x s = Some se ->
-    type_lookup_path env (se_ty se) path = Some T ->
+    type_lookup_path env (se_ty se) path = Some T_eval ->
+    ty_lifetime_equiv T_eval T ->
     value_lookup_path (se_val se) path = Some v_target ->
     store_typed env s Σ /\
     value_has_type env s (VRef x path)
       (MkTy UUnrestricted (TRef (LVar n) RShared T)).
 Proof.
-  intros env Ω n Σ s p T x path se v_target Hstore _ _
-    Hlookup Htype Hvalue.
-  split; [exact Hstore | econstructor; eassumption].
+  intros env Ω n Σ s p T x path se v_target T_eval Hstore _ _
+    Hlookup Htype Heq Hvalue.
+  split; [exact Hstore |].
+  eapply VHT_LifetimeEquiv with
+    (T_actual := MkTy UUnrestricted (TRef (LVar n) RShared T_eval)).
+  - econstructor; eassumption.
+  - constructor. exact Heq.
 Qed.
 
 Lemma eval_borrow_unique_preserves_typing :
   forall env (Ω : outlives_ctx) (n : nat) Σ s p T x_static path_static
-      x_eval path_eval se v_target,
+      x_eval path_eval se v_target T_eval,
     store_typed env s Σ ->
     typed_place_env_structural env Σ p T ->
     place_path p = Some (x_static, path_static) ->
     sctx_lookup_mut x_static Σ = Some MMutable ->
     eval_place s p x_eval path_eval ->
     store_lookup x_eval s = Some se ->
-    type_lookup_path env (se_ty se) path_eval = Some T ->
+    type_lookup_path env (se_ty se) path_eval = Some T_eval ->
+    ty_lifetime_equiv T_eval T ->
     value_lookup_path (se_val se) path_eval = Some v_target ->
     store_typed env s Σ /\
     value_has_type env s (VRef x_eval path_eval)
       (MkTy UAffine (TRef (LVar n) RUnique T)).
 Proof.
   intros env Ω n Σ s p T x_static path_static x_eval path_eval
-    se v_target Hstore _ _ _ _ Hlookup Htype Hvalue.
-  split; [exact Hstore | econstructor; eassumption].
+    se v_target T_eval Hstore _ _ _ _ Hlookup Htype Heq Hvalue.
+  split; [exact Hstore |].
+  eapply VHT_LifetimeEquiv with
+    (T_actual := MkTy UAffine (TRef (LVar n) RUnique T_eval)).
+  - econstructor; eassumption.
+  - constructor. exact Heq.
 Qed.
 
 Lemma eval_borrow_unique_indirect_preserves_typing :
@@ -428,39 +438,48 @@ Proof.
 Qed.
 
 Lemma eval_borrow_shared_preserves_typing_prefix :
-  forall env (Ω : outlives_ctx) (n : nat) Σ s p T x path se v_target,
+  forall env (Ω : outlives_ctx) (n : nat) Σ s p T x path se v_target T_eval,
     store_typed_prefix env s Σ ->
     typed_place_env_structural env Σ p T ->
     eval_place s p x path ->
     store_lookup x s = Some se ->
-    type_lookup_path env (se_ty se) path = Some T ->
+    type_lookup_path env (se_ty se) path = Some T_eval ->
+    ty_lifetime_equiv T_eval T ->
     value_lookup_path (se_val se) path = Some v_target ->
     store_typed_prefix env s Σ /\
     value_has_type env s (VRef x path)
       (MkTy UUnrestricted (TRef (LVar n) RShared T)).
 Proof.
-  intros env Ω n Σ s p T x path se v_target Hstore _ _
-    Hlookup Htype Hvalue.
-  split; [exact Hstore | econstructor; eassumption].
+  intros env Ω n Σ s p T x path se v_target T_eval Hstore _ _
+    Hlookup Htype Heq Hvalue.
+  split; [exact Hstore |].
+  eapply VHT_LifetimeEquiv with
+    (T_actual := MkTy UUnrestricted (TRef (LVar n) RShared T_eval)).
+  - econstructor; eassumption.
+  - constructor. exact Heq.
 Qed.
 
 Lemma eval_borrow_unique_preserves_typing_prefix :
   forall env (Ω : outlives_ctx) (n : nat) Σ s p T x_static path_static
-      x_eval path_eval se v_target,
+      x_eval path_eval se v_target T_eval,
     store_typed_prefix env s Σ ->
     typed_place_env_structural env Σ p T ->
     place_path p = Some (x_static, path_static) ->
     sctx_lookup_mut x_static Σ = Some MMutable ->
     eval_place s p x_eval path_eval ->
     store_lookup x_eval s = Some se ->
-    type_lookup_path env (se_ty se) path_eval = Some T ->
+    type_lookup_path env (se_ty se) path_eval = Some T_eval ->
+    ty_lifetime_equiv T_eval T ->
     value_lookup_path (se_val se) path_eval = Some v_target ->
     store_typed_prefix env s Σ /\
     value_has_type env s (VRef x_eval path_eval)
       (MkTy UAffine (TRef (LVar n) RUnique T)).
 Proof.
   intros env Ω n Σ s p T x_static path_static x_eval path_eval
-    se v_target Hstore _ _ _ _ Hlookup Htype Hvalue.
-  split; [exact Hstore | econstructor; eassumption].
+    se v_target T_eval Hstore _ _ _ _ Hlookup Htype Heq Hvalue.
+  split; [exact Hstore |].
+  eapply VHT_LifetimeEquiv with
+    (T_actual := MkTy UAffine (TRef (LVar n) RUnique T_eval)).
+  - econstructor; eassumption.
+  - constructor. exact Heq.
 Qed.
-

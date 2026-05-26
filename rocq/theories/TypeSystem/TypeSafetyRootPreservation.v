@@ -570,10 +570,11 @@ Proof.
           destruct (eval_place_direct_runtime_target_exists
                       env Σ0 s p T_place x_static path_static x path
                       Hstore Hplace Hpath Heval_place)
-            as [se [v_target [Hlookup [Hvalue Htype_eval]]]];
+            as [se [v_target [T_eval [Hlookup [Hvalue [Htype_eval Heq_eval]]]]]];
           destruct (eval_borrow_shared_preserves_typing
-                      env Ω n Σ0 s p T_place x path se v_target
-                      Hstore Hplace Heval_place Hlookup Htype_eval Hvalue)
+                      env Ω n Σ0 s p T_place x path se v_target T_eval
+                      Hstore Hplace Heval_place Hlookup Htype_eval
+                      Heq_eval Hvalue)
             as [Hstore' Hv];
           repeat split; try assumption;
           apply store_ref_targets_preserved_refl
@@ -585,11 +586,11 @@ Proof.
           destruct (eval_place_direct_runtime_target_exists
                       env Σ0 s p T_place x_static path_static x path
                       Hstore Hplace Hpath Heval_place)
-            as [se [v_target [Hlookup [Hvalue Htype_eval]]]];
+            as [se [v_target [T_eval [Hlookup [Hvalue [Htype_eval Heq_eval]]]]]];
           destruct (eval_borrow_unique_preserves_typing
                       env Ω n Σ0 s p T_place x_static path_static x path
-                      se v_target Hstore Hplace Hpath Hmut Heval_place
-                      Hlookup Htype_eval Hvalue)
+                      se v_target T_eval Hstore Hplace Hpath Hmut Heval_place
+                      Hlookup Htype_eval Heq_eval Hvalue)
             as [Hstore' Hv];
           repeat split; try assumption;
           apply store_ref_targets_preserved_refl
@@ -612,9 +613,6 @@ Proof.
         as [T_static [st_static [HΣstatic [_ Htype_path]]]].
       rewrite HΣstatic in HΣ.
       inversion HΣ; subst T_static st_static.
-      rewrite HTy in Htype_eval.
-      rewrite Htype_path in Htype_eval.
-      inversion Htype_eval; subst T_eval.
       repeat split; try assumption;
         try apply store_ref_targets_preserved_refl;
         try (eapply value_lookup_path_has_type; eassumption);
@@ -628,9 +626,6 @@ Proof.
         as [T_static [st_static [HΣstatic [_ Htype_path]]]].
       rewrite HΣstatic in HΣ.
       inversion HΣ; subst T_static st_static.
-      rewrite HTy in Htype_eval.
-      rewrite Htype_path in Htype_eval.
-      inversion Htype_eval; subst T_eval.
       repeat split; try assumption;
         try apply store_ref_targets_preserved_refl;
         try (eapply value_lookup_path_has_type; eassumption);

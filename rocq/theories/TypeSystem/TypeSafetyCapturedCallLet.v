@@ -228,6 +228,7 @@ Proof.
     List.length (fn_captures fdef)).
   { rewrite capture_store_root_sets_length.
     unfold captured_params_store_typed_in_frame in Hcaptured_params_typed.
+    destruct Hcaptured_params_typed as [Hcaptured_params_typed Hcaptured_shape].
     pose proof (Forall2_length Hcaptured_params_typed) as Hlen_captured.
     rewrite params_ctx_length_ts in Hlen_captured.
     rewrite Hlen_captured.

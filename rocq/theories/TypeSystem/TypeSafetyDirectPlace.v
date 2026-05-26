@@ -69,16 +69,26 @@ Proof.
   exists st. exact Hlookup.
 Qed.
 
+Lemma ty_lifetime_equiv_usage :
+  forall T_actual T_expected,
+    ty_lifetime_equiv T_actual T_expected ->
+    ty_usage T_actual = ty_usage T_expected.
+Proof.
+  intros T_actual T_expected Heq.
+  inversion Heq; reflexivity.
+Qed.
+
 Lemma eval_place_direct_runtime_target_exists :
   forall env Σ s p T x_static path_static x_eval path_eval,
     store_typed env s Σ ->
     typed_place_env_structural env Σ p T ->
     place_path p = Some (x_static, path_static) ->
     eval_place s p x_eval path_eval ->
-    exists se v_target,
+    exists se v_target T_eval,
       store_lookup x_eval s = Some se /\
       value_lookup_path (se_val se) path_eval = Some v_target /\
-      type_lookup_path env (se_ty se) path_eval = Some T.
+      type_lookup_path env (se_ty se) path_eval = Some T_eval /\
+      ty_lifetime_equiv T_eval T.
 Proof.
   intros env Σ s p T x_static path_static x_eval path_eval
     Hstore Hplace Hpath_static Heval_place.
@@ -92,13 +102,16 @@ Proof.
   destruct (store_typed_lookup_sctx env s Σ x_static T_root st Hstore HΣ)
     as [se [Hlookup [_ [Hse_ty [_ Hvroot]]]]].
   assert (Hvroot_se : value_has_type env s (se_val se) (se_ty se)).
-  { rewrite Hse_ty. exact Hvroot. }
-  assert (Htype_path_se : type_lookup_path env (se_ty se) path_static = Some T).
-  { rewrite Hse_ty. exact Htype_path. }
+  { eapply VHT_LifetimeEquiv.
+    - exact Hvroot.
+    - apply ty_lifetime_equiv_sym. exact Hse_ty. }
+  destruct (type_lookup_path_lifetime_equiv env (se_ty se) T_root
+              path_static T Hse_ty Htype_path)
+    as [T_eval [Htype_path_se Heq_path]].
   destruct (value_has_type_path_exists env s (se_val se) (se_ty se)
-              path_static T Hvroot_se Htype_path_se)
+              path_static T_eval Hvroot_se Htype_path_se)
     as [v_target [Hvalue_path _]].
-  exists se, v_target.
+  exists se, v_target, T_eval.
   repeat split; assumption.
 Qed.
 
@@ -138,10 +151,9 @@ Proof.
       rewrite Hsctx in HΣ
   end.
   inversion HΣ; subst Tse stse.
-  match goal with
-  | Heq : T = se_ty se |- _ => rewrite Heq in Husage
-  end.
-  exact (needs_consume_true_usage (se_ty se) Hconsume Husage).
+  pose proof (ty_lifetime_equiv_usage _ _ HT) as Husage_eq.
+  apply (needs_consume_true_usage (se_ty se) Hconsume).
+  rewrite Husage_eq. exact Husage.
 Qed.
 
 Lemma eval_var_copy_static_move_contradiction :
@@ -162,10 +174,9 @@ Proof.
       rewrite Hsctx in HΣ
   end.
   inversion HΣ; subst Tse stse.
-  match goal with
-  | Heq : T = se_ty se |- _ => rewrite Heq in Husage
-  end.
   apply Husage.
+  pose proof (ty_lifetime_equiv_usage _ _ HT) as Husage_eq.
+  rewrite <- Husage_eq.
   exact (needs_consume_false_usage (se_ty se) Hconsume).
 Qed.
 
@@ -193,10 +204,14 @@ Proof.
     as [T_static [st_static [HΣstatic [_ Htype_static]]]].
   rewrite HΣstatic in HΣ.
   inversion HΣ; subst T_static st_static.
-  rewrite HTy in Htype_eval.
-  rewrite Htype_static in Htype_eval.
-  inversion Htype_eval; subst T_eval.
-  apply (needs_consume_true_usage T Hconsume Husage).
+  destruct (type_lookup_path_lifetime_equiv env (se_ty se) T_root
+              path_static T HTy Htype_static)
+    as [T_actual [Htype_actual Heq_path]].
+  rewrite Htype_eval in Htype_actual.
+  inversion Htype_actual; subst T_actual.
+  apply (needs_consume_true_usage T_eval Hconsume).
+  pose proof (ty_lifetime_equiv_usage _ _ Heq_path) as Husage_eq.
+  rewrite Husage_eq. exact Husage.
 Qed.
 
 Lemma eval_place_copy_static_move_direct_contradiction :
@@ -223,11 +238,15 @@ Proof.
     as [T_static [st_static [HΣstatic [_ Htype_static]]]].
   rewrite HΣstatic in HΣ.
   inversion HΣ; subst T_static st_static.
-  rewrite HTy in Htype_eval.
-  rewrite Htype_static in Htype_eval.
-  inversion Htype_eval; subst T_eval.
   apply Husage.
-  exact (needs_consume_false_usage T Hconsume).
+  destruct (type_lookup_path_lifetime_equiv env (se_ty se) T_root
+              path_static T HTy Htype_static)
+    as [T_actual [Htype_actual Heq_path]].
+  rewrite Htype_eval in Htype_actual.
+  inversion Htype_actual; subst T_actual.
+  pose proof (ty_lifetime_equiv_usage _ _ Heq_path) as Husage_eq.
+  rewrite <- Husage_eq.
+  exact (needs_consume_false_usage T_eval Hconsume).
 Qed.
 
 Lemma eval_var_consume_static_copy_contradiction_prefix :
@@ -247,8 +266,11 @@ Proof.
     as [se' [Hlookup' [_ [HT [_ _]]]]].
   rewrite Hlookup in Hlookup'.
   inversion Hlookup'; subst se'.
-  rewrite HT in Hconsume.
-  exact (needs_consume_true_usage T Hconsume Husage).
+  pose proof (needs_consume_true_usage (se_ty se) Hconsume) as Husage_se.
+  pose proof (ty_lifetime_equiv_usage _ _ HT) as Husage_eq.
+  apply Husage_se.
+  rewrite Husage_eq.
+  exact Husage.
 Qed.
 
 Lemma eval_var_copy_static_move_contradiction_prefix :
@@ -269,8 +291,10 @@ Proof.
   rewrite Hlookup in Hlookup'.
   inversion Hlookup'; subst se'.
   apply Husage.
-  rewrite HT in Hconsume.
-  exact (needs_consume_false_usage T Hconsume).
+  pose proof (needs_consume_false_usage (se_ty se) Hconsume) as Husage_se.
+  pose proof (ty_lifetime_equiv_usage _ _ HT) as Husage_eq.
+  rewrite <- Husage_eq.
+  exact Husage_se.
 Qed.
 
 Lemma eval_place_consume_static_copy_direct_contradiction_prefix :
@@ -298,10 +322,14 @@ Proof.
     as [se' [Hlookup' [_ [HTy [_ _]]]]].
   rewrite Hlookup in Hlookup'.
   inversion Hlookup'; subst se'.
-  rewrite HTy in Htype_eval.
-  rewrite Htype_static in Htype_eval.
-  inversion Htype_eval; subst T_eval.
-  apply (needs_consume_true_usage T Hconsume Husage).
+  destruct (type_lookup_path_lifetime_equiv env (se_ty se) T_static
+              path_static T HTy Htype_static)
+    as [T_actual [Htype_actual Heq_path]].
+  rewrite Htype_eval in Htype_actual.
+  inversion Htype_actual; subst T_actual.
+  apply (needs_consume_true_usage T_eval Hconsume).
+  pose proof (ty_lifetime_equiv_usage _ _ Heq_path) as Husage_eq.
+  rewrite Husage_eq. exact Husage.
 Qed.
 
 Lemma eval_place_copy_static_move_direct_contradiction_prefix :
@@ -329,11 +357,16 @@ Proof.
     as [se' [Hlookup' [_ [HTy [_ _]]]]].
   rewrite Hlookup in Hlookup'.
   inversion Hlookup'; subst se'.
-  rewrite HTy in Htype_eval.
-  rewrite Htype_static in Htype_eval.
-  inversion Htype_eval; subst T_eval.
   apply Husage.
-  exact (needs_consume_false_usage T Hconsume).
+  destruct (type_lookup_path_lifetime_equiv env (se_ty se) T_static
+              path_static T HTy Htype_static)
+    as [T_actual [Htype_actual Heq_path]].
+  rewrite Htype_eval in Htype_actual.
+  inversion Htype_actual; subst T_actual.
+  pose proof (needs_consume_false_usage T_eval Hconsume) as Husage_eval.
+  pose proof (ty_lifetime_equiv_usage _ _ Heq_path) as Husage_eq.
+  rewrite <- Husage_eq.
+  exact Husage_eval.
 Qed.
 
 Lemma runtime_path_lookup_typing :
@@ -489,10 +522,11 @@ Lemma eval_place_direct_runtime_target_exists_prefix :
     typed_place_env_structural env Σ p T ->
     place_path p = Some (x_static, path_static) ->
     eval_place s p x_eval path_eval ->
-    exists se v_target,
+    exists se v_target T_eval,
       store_lookup x_eval s = Some se /\
       value_lookup_path (se_val se) path_eval = Some v_target /\
-      type_lookup_path env (se_ty se) path_eval = Some T.
+      type_lookup_path env (se_ty se) path_eval = Some T_eval /\
+      ty_lifetime_equiv T_eval T.
 Proof.
   intros env Σ s p T x_static path_static x_eval path_eval
     Hstore Hplace Hpath_static Heval_place.
@@ -507,12 +541,15 @@ Proof.
               env s Σ x_static T_root st Hstore HΣ)
     as [se [Hlookup [_ [Hse_ty [_ Hvroot]]]]].
   assert (Hvroot_se : value_has_type env s (se_val se) (se_ty se)).
-  { rewrite Hse_ty. exact Hvroot. }
-  assert (Htype_path_se : type_lookup_path env (se_ty se) path_static = Some T).
-  { rewrite Hse_ty. exact Htype_path. }
+  { eapply VHT_LifetimeEquiv.
+    - exact Hvroot.
+    - apply ty_lifetime_equiv_sym. exact Hse_ty. }
+  destruct (type_lookup_path_lifetime_equiv env (se_ty se) T_root
+              path_static T Hse_ty Htype_path)
+    as [T_eval [Htype_path_se Heq_path]].
   destruct (value_has_type_path_exists env s (se_val se) (se_ty se)
-              path_static T Hvroot_se Htype_path_se)
+              path_static T_eval Hvroot_se Htype_path_se)
     as [v_target [Hvalue_path _]].
-  exists se, v_target.
+  exists se, v_target, T_eval.
   repeat split; assumption.
 Qed.

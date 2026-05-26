@@ -241,6 +241,12 @@ Remaining work:
   payload entries removed later may still reference payload entries removed
   earlier. The cleanup package needs either a direct multi-remove store typing
   proof over final entries or a stronger per-step exclusion invariant.
+- The direct proof should be generalized over a source store and a target store:
+  recursive frame-scope tails remain typed against the original branch store,
+  while surviving entries must be retyped against the final
+  `store_remove_params` store using value-ref exclusion. A non-generalized
+  prefix induction incorrectly requires the tail payload entries to be typed
+  against an intermediate store.
 
 Next implementation step:
 

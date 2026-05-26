@@ -118,6 +118,51 @@ Proof.
   eapply value_has_type_store_remove_params_excluding; eassumption.
 Qed.
 
+Lemma ctx_remove_params_cons_non_param :
+  forall ps x T st m Γ,
+    ~ In x (ctx_names (params_ctx ps)) ->
+    sctx_remove_params ps ((x, T, st, m) :: Γ) =
+      (x, T, st, m) :: sctx_remove_params ps Γ.
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros x T st m Γ Hnotin.
+  - reflexivity.
+  - simpl in *.
+    destruct (ident_eqb (param_name p) x) eqn:Heq.
+    + apply ident_eqb_eq in Heq. contradiction Hnotin.
+      left. exact Heq.
+    + rewrite IH.
+      * reflexivity.
+      * intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma store_entry_refs_exclude_params_head :
+  forall ps se s,
+    store_refs_exclude_params ps (se :: s) ->
+    value_refs_exclude_params ps (se_val se).
+Proof.
+  intros ps se s Hexclude x Hin.
+  specialize (Hexclude x Hin).
+  inversion Hexclude; subst.
+  match goal with
+  | Hentry : store_entry_refs_exclude_root _ se |- _ =>
+      destruct se; inversion Hentry; subst; assumption
+  end.
+Qed.
+
+Lemma store_entry_typed_remove_params_excluding :
+  forall env ps s se ce,
+    store_entry_typed env s se ce ->
+    value_refs_exclude_params ps (se_val se) ->
+    store_entry_typed env (store_remove_params ps s) se ce.
+Proof.
+  intros env ps s [sx sT sv sst] [[[cx cT] cst] cm] Htyped Hexclude.
+  simpl in *.
+  destruct Htyped as [Hname [HT [Hst Hv]]].
+  repeat split; try assumption.
+  eapply value_has_type_store_remove_params_excluding; eassumption.
+Qed.
+
 Lemma store_ref_targets_preserved_remove_params_after_absent :
   forall ps env s s',
     store_ref_targets_preserved env s s' ->

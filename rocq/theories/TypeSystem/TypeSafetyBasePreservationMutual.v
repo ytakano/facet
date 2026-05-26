@@ -682,6 +682,35 @@ Proof.
   - exact IH.
 Qed.
 
+Lemma match_payload_params_opt_lifetime_equiv :
+  forall binders_runtime binders_typed lts_runtime lts_typed args_runtime
+      args_typed v ps_runtime ps_typed,
+    binders_runtime = binders_typed ->
+    Forall2 ty_lifetime_equiv args_runtime args_typed ->
+    match_payload_params_opt binders_runtime lts_runtime args_runtime v =
+      Some ps_runtime ->
+    match_payload_params_opt binders_typed lts_typed args_typed v =
+      Some ps_typed ->
+    ctx_names (params_ctx ps_runtime) = ctx_names (params_ctx ps_typed) /\
+    Forall2 ty_lifetime_equiv
+      (map param_ty ps_runtime) (map param_ty ps_typed).
+Proof.
+  intros binders_runtime binders_typed lts_runtime lts_typed args_runtime
+    args_typed v ps_runtime ps_typed Hbinders Hargs Hruntime Htyped.
+  subst binders_runtime.
+  split.
+  - rewrite (match_payload_params_opt_names binders_typed lts_runtime
+      args_runtime v ps_runtime Hruntime).
+    rewrite (match_payload_params_opt_names binders_typed lts_typed
+      args_typed v ps_typed Htyped).
+    reflexivity.
+  - rewrite (match_payload_params_opt_param_tys binders_typed lts_runtime
+      args_runtime v ps_runtime Hruntime).
+    rewrite (match_payload_params_opt_param_tys binders_typed lts_typed
+      args_typed v ps_typed Htyped).
+    eapply enum_variant_field_tys_lifetime_equiv. exact Hargs.
+Qed.
+
 Lemma enum_values_have_type_lifetime_equiv :
   forall env s values tys_actual tys_expected,
     enum_values_have_type env s values tys_actual ->
@@ -740,6 +769,53 @@ Proof.
 	    eapply enum_values_have_type_lifetime_equiv.
 	    + eapply IHHtyped; eauto; reflexivity.
 	    + eapply enum_variant_field_tys_lifetime_equiv. eassumption.
+Qed.
+
+Lemma value_has_type_enum_args_lifetime_equiv :
+  forall env s enum_name variant_name lts_val args_val values T enum_typed
+      lts args edef,
+    value_has_type env s (VEnum enum_name variant_name lts_val args_val values) T ->
+    ty_core T = TEnum enum_typed lts args ->
+    lookup_enum enum_typed env = Some edef ->
+    enum_name = enum_typed /\
+    Forall2 ty_lifetime_equiv args_val args.
+Proof.
+  intros env s enum_name variant_name lts_val args_val values T enum_typed
+    lts args edef Htyped.
+  revert enum_typed lts args edef.
+  dependent induction Htyped; intros enum_typed lts0 args0 edef0
+    Hcore Hlookup_typed; try discriminate.
+  - unfold instantiate_enum_ty in Hcore. simpl in Hcore.
+    inversion Hcore; subst.
+    destruct (lookup_enum_success_rootfacts env enum_name edef H) as [_ Hedef_name].
+    subst enum_name.
+    pose proof (lookup_enum_deterministic env (Program.enum_name edef) edef edef0
+      H Hlookup_typed) as Heq.
+    subst edef0.
+    split; [reflexivity |].
+    clear H1 Hlookup_typed Hcore.
+    induction args0 as [| T_arg args0 IHargs]; constructor.
+    + apply ty_lifetime_equiv_refl.
+    + exact IHargs.
+  - destruct T_expected as [ue ce], T_actual as [ua ca].
+    simpl in Hcore. subst ce.
+    match goal with
+    | Hcompat : ty_compatible _ _ _ |- _ =>
+        inversion Hcompat; subst; try discriminate
+    end.
+    eapply IHHtyped; eauto; reflexivity.
+  - destruct T_expected as [ue ce], T_actual as [ua ca].
+    simpl in Hcore. subst ce.
+    match goal with
+    | Hequiv : ty_lifetime_equiv _ _ |- _ =>
+        inversion Hequiv; subst; try discriminate
+    end.
+    destruct (IHHtyped enum_name variant_name lts_val args_val values
+      eq_refl enum_typed lts_actual args_actual edef0
+      eq_refl Hlookup_typed) as [Hname Hargs].
+    split.
+    + exact Hname.
+    + eapply Forall2_ty_lifetime_equiv_trans; eassumption.
 Qed.
 
 Lemma value_has_type_enum_variant_lookup :

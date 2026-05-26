@@ -112,6 +112,42 @@ Fixpoint ty_lifetime_equiv_refl (T : Ty) : ty_lifetime_equiv T T :=
       TLE_Ref u l l rk Tinner Tinner (ty_lifetime_equiv_refl Tinner)
   end.
 
+Lemma ty_lifetime_equiv_trans :
+  forall T1 T2 T3,
+    ty_lifetime_equiv T1 T2 ->
+    ty_lifetime_equiv T2 T3 ->
+    ty_lifetime_equiv T1 T3.
+Proof.
+  fix IH 4.
+  intros T1 T2 T3 H12 H23.
+  destruct H12; inversion H23; subst; clear H23; try constructor.
+  - revert args_expected0 H5.
+    induction H; intros zs Hzs; inversion Hzs; subst; constructor; eauto.
+  - revert args_expected0 H5.
+    induction H; intros zs Hzs; inversion Hzs; subst; constructor; eauto.
+  - revert params_expected0 H4.
+    induction H; intros zs Hzs; inversion Hzs; subst; constructor; eauto.
+  - eapply IH; eassumption.
+  - revert params_expected0 H5.
+    induction H; intros zs Hzs; inversion Hzs; subst; constructor; eauto.
+  - eapply IH; eassumption.
+  - eapply IH; eassumption.
+  - eapply IH; eassumption.
+  - eapply IH; eassumption.
+Qed.
+
+Lemma Forall2_ty_lifetime_equiv_trans :
+  forall xs ys zs,
+    Forall2 ty_lifetime_equiv xs ys ->
+    Forall2 ty_lifetime_equiv ys zs ->
+    Forall2 ty_lifetime_equiv xs zs.
+Proof.
+  intros xs ys zs Hxy Hyz.
+  revert zs Hyz.
+  induction Hxy; intros zs Hyz; inversion Hyz; subst; constructor; eauto.
+  eapply ty_lifetime_equiv_trans; eassumption.
+Qed.
+
 Fixpoint ty_lifetime_equiv_apply_lt_ty
     (σ : list lifetime) (T : Ty)
     : ty_lifetime_equiv T (apply_lt_ty σ T) :=

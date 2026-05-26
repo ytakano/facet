@@ -225,10 +225,24 @@ Remaining work:
   closure capture copies keep param-type annotations. Base and prefix
   preservation also have payload bind helpers for runtime params whose payload
   types are lifetime-equivalent to typed branch params.
-- Next step: replace `typed_match_tail_lookup_no_payload` in base/prefix/root
-  match preservation with payload lookup facts that return selected branch
-  params, runtime params, name equality, and lifetime-equivalent payload param
-  types. Do not widen the checker until these preservation branches compile.
+- Runtime lifetime-equivalence is now transitive, and base preservation has
+  helpers to relate runtime payload params to typed branch params when enum
+  type arguments differ only by lifetime-equivalence.
+- Soundness blocker before widening Prop/checker payload typing:
+  structural/base preservation has no roots fact for the returned value after
+  `store_remove_params ps_payload`. Replacing `typed_match_tail_lookup_no_payload`
+  directly would need to prove that a returned `VRef` does not point at an
+  erased payload binding, but that fact lives in the roots/provenance
+  preservation path, not in plain `typed_env_structural`.
+
+Next implementation step:
+
+- Factor match preservation so payload cleanup is discharged in the roots-aware
+  theorem first, then make the structural/base theorem consume that packaged
+  roots result or restrict structural payload match to a no-escaped-ref lemma
+  proved from roots readiness. Do not remove the no-payload premises from
+  Prop-level match typing and do not widen `TypeChecker.v` until this returned
+  value cleanup proof is available.
 
 ## Phase 5: Drop Lowering
 

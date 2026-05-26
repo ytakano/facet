@@ -73,6 +73,86 @@ Proof.
       * exact Hmerge.
 Qed.
 
+Lemma store_typed_prefix_bind_params_same_ctx :
+  forall env Ω s Σ values ps_store ps_ctx,
+    store_typed_prefix env s Σ ->
+    NoDup (ctx_names (params_ctx ps_store)) ->
+    params_fresh_in_store ps_store s ->
+    eval_args_values_have_types env Ω s values ps_ctx ->
+    ctx_names (params_ctx ps_store) = ctx_names (params_ctx ps_ctx) ->
+    map param_ty ps_store = map param_ty ps_ctx ->
+    store_typed_prefix env (bind_params ps_store values s)
+      (sctx_add_params ps_ctx Σ).
+Proof.
+  intros env Ω s Σ values ps_store ps_ctx Hstore Hnodup Hfresh Hargs.
+  revert ps_store Hnodup Hfresh.
+  induction Hargs as [| v values p ps T_actual Hv Hcompat Hargs IH];
+    intros ps_store Hnodup Hfresh Hnames Htys.
+  - destruct ps_store as [| p_store ps_store]; simpl in Hnames; try discriminate.
+    simpl. exact Hstore.
+  - destruct ps_store as [| p_store ps_store]; simpl in Hnames; try discriminate.
+    simpl in Htys. inversion Hnames as [[Hname_eq Hnames_tail]].
+    inversion Htys as [[Hty_eq Htys_tail]].
+    assert (Hnodup_head : NoDup (ctx_names (params_ctx (p :: ps_store)))).
+    { simpl in *. rewrite <- Hname_eq. exact Hnodup. }
+    assert (Hfresh_head : params_fresh_in_store (p :: ps_store) s).
+    { unfold params_fresh_in_store in *.
+      intros x Hin. simpl in Hin. rewrite <- Hname_eq in Hin.
+      eapply Hfresh. exact Hin. }
+    assert (Hargs_store_tail :
+      eval_args_values_have_types env Ω s values ps_store).
+    { eapply eval_args_values_have_types_param_tys.
+      - exact Hargs.
+      - exact Htys_tail. }
+    simpl.
+    rewrite Hname_eq, Hty_eq.
+    eapply store_typed_prefix_add_compatible.
+    + eapply IH.
+      * eapply params_ctx_names_nodup_tail. exact Hnodup.
+      * eapply params_fresh_in_store_tail. exact Hfresh.
+      * exact Hnames_tail.
+      * exact Htys_tail.
+    + eapply value_has_type_store_preserved.
+      * exact Hv.
+      * eapply bind_params_ref_targets_preserved.
+        -- eapply params_ctx_names_nodup_tail. exact Hnodup.
+        -- eapply params_fresh_in_store_tail. exact Hfresh.
+        -- exact Hargs_store_tail.
+    + exact Hcompat.
+    + eapply store_add_fresh_ref_targets_preserved.
+      apply store_lookup_not_in_names.
+      eapply bind_params_head_fresh_in_tail.
+      * exact Hnodup_head.
+      * exact Hfresh_head.
+      * exact Hargs_store_tail.
+Qed.
+
+Lemma store_typed_prefix_bind_match_payload_params :
+  forall env (Ω : outlives_ctx) s Σ values ps_runtime ps_typed,
+    store_typed_prefix env s Σ ->
+    params_names_nodup_b ps_typed = true ->
+    ctx_lookup_params_none_b ps_typed Σ = true ->
+    params_fresh_in_store ps_runtime s ->
+    enum_values_have_type env s values (map param_ty ps_typed) ->
+    ctx_names (params_ctx ps_runtime) = ctx_names (params_ctx ps_typed) ->
+    map param_ty ps_runtime = map param_ty ps_typed ->
+    store_typed_prefix env (bind_params ps_runtime values s)
+      (sctx_add_params ps_typed Σ).
+Proof.
+  intros env Ω s Σ values ps_runtime ps_typed Hstore Hnodup _ Hfresh
+    Hvalues Hnames Htys.
+  eapply store_typed_prefix_bind_params_same_ctx with (Ω := Ω).
+  - exact Hstore.
+  - rewrite Hnames.
+    eapply params_names_nodup_b_sound. exact Hnodup.
+  - exact Hfresh.
+  - eapply enum_values_have_type_eval_args_values.
+    + exact Hvalues.
+    + reflexivity.
+  - exact Hnames.
+  - exact Htys.
+Qed.
+
 Theorem eval_preserves_typing_ready_prefix_mutual_core :
   (forall env s e s' v,
     eval env s e s' v ->

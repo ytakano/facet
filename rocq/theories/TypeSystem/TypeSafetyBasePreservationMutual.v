@@ -187,6 +187,57 @@ Proof.
   eapply ctx_lookup_params_none_b_not_in_names; eassumption.
 Qed.
 
+Lemma store_names_bind_params_in_any :
+  forall ps vs s x,
+    In x (store_names (bind_params ps vs s)) ->
+    In x (ctx_names (params_ctx ps)) \/ In x (store_names s).
+Proof.
+  induction ps as [| p ps IH]; intros vs s x Hin.
+  - simpl in Hin. right. exact Hin.
+  - destruct vs as [| v vs].
+    + simpl in Hin. right. exact Hin.
+    + simpl in Hin.
+      destruct Hin as [Hin_head | Hin_tail].
+      * left. simpl. left. exact Hin_head.
+      * destruct (IH vs s x Hin_tail) as [Hin_params | Hin_store].
+        -- left. simpl. right. exact Hin_params.
+        -- right. exact Hin_store.
+Qed.
+
+Lemma bind_params_head_fresh_in_tail_any :
+  forall s p ps vs,
+    NoDup (ctx_names (params_ctx (p :: ps))) ->
+    params_fresh_in_store (p :: ps) s ->
+    ~ In (param_name p) (store_names (bind_params ps vs s)).
+Proof.
+  intros s p ps vs Hnodup Hfresh Hin.
+  destruct (store_names_bind_params_in_any ps vs s (param_name p) Hin)
+    as [Hin_params | Hin_store].
+  - eapply params_ctx_names_nodup_head_not_tail; eassumption.
+  - eapply params_fresh_in_store_head; eassumption.
+Qed.
+
+Lemma bind_params_ref_targets_preserved_fresh :
+  forall env s ps vs,
+    NoDup (ctx_names (params_ctx ps)) ->
+    params_fresh_in_store ps s ->
+    store_ref_targets_preserved env s (bind_params ps vs s).
+Proof.
+  intros env s ps.
+  induction ps as [| p ps IH]; intros vs Hnodup Hfresh.
+  - simpl. apply store_ref_targets_preserved_refl.
+  - destruct vs as [| v vs].
+    + simpl. apply store_ref_targets_preserved_refl.
+    + simpl.
+      eapply store_ref_targets_preserved_trans.
+      * eapply IH.
+        -- eapply params_ctx_names_nodup_tail. exact Hnodup.
+        -- eapply params_fresh_in_store_tail. exact Hfresh.
+      * eapply store_add_fresh_ref_targets_preserved.
+        apply store_lookup_not_in_names.
+        eapply bind_params_head_fresh_in_tail_any; eassumption.
+Qed.
+
 Lemma store_typed_bind_params_same_ctx :
   forall env Ω s Σ values ps_store ps_ctx,
     store_typed env s Σ ->
@@ -272,6 +323,88 @@ Proof.
     + reflexivity.
   - exact Hnames.
   - exact Htys.
+Qed.
+
+Lemma store_typed_bind_match_payload_params_lifetime_aux :
+  forall env s Σ values ps_runtime ps_typed,
+    store_typed env s Σ ->
+    enum_values_have_type env s values (map param_ty ps_typed) ->
+    ctx_names (params_ctx ps_runtime) = ctx_names (params_ctx ps_typed) ->
+    Forall2 ty_lifetime_equiv
+      (map param_ty ps_runtime) (map param_ty ps_typed) ->
+    NoDup (ctx_names (params_ctx ps_runtime)) ->
+    params_fresh_in_store ps_runtime s ->
+    store_typed env (bind_params ps_runtime values s)
+      (sctx_add_params ps_typed Σ).
+Proof.
+  intros env s Σ values ps_runtime ps_typed Hstore Hvalues.
+  revert values ps_runtime Hvalues.
+  induction ps_typed as [| p_typed ps_typed IH];
+    intros values ps_runtime Hvalues Hnames Hequiv Hnodup Hfresh.
+  - simpl in Hvalues.
+    inversion Hvalues; subst values.
+    destruct ps_runtime; simpl in Hnames; try discriminate.
+    simpl. exact Hstore.
+  - destruct values as [| v values]; simpl in Hvalues; inversion Hvalues;
+      subst.
+    destruct ps_runtime as [| p_runtime ps_runtime];
+      simpl in Hnames, Hequiv; try discriminate.
+    inversion Hnames as [[Hname_eq Hnames_tail]].
+    inversion Hequiv as [| T_runtime T_typed tys_runtime tys_typed
+      Hty_equiv Htys_equiv]; subst.
+    simpl.
+    constructor.
+    + simpl.
+      split.
+      * exact Hname_eq.
+      * split.
+        -- exact Hty_equiv.
+        -- split.
+           ++ apply binding_state_refines_refl.
+           ++ eapply value_has_type_store_preserved.
+              ** eapply VHT_LifetimeEquiv.
+                 --- exact H2.
+                 --- apply ty_lifetime_equiv_sym. exact Hty_equiv.
+              ** eapply (bind_params_ref_targets_preserved_fresh
+                   env s (p_runtime :: ps_runtime) (v :: values)).
+                 --- exact Hnodup.
+                 --- exact Hfresh.
+    + eapply store_typed_store_param_preserved.
+      * eapply IH.
+        -- exact H4.
+        -- exact Hnames_tail.
+        -- exact Htys_equiv.
+        -- eapply params_ctx_names_nodup_tail. exact Hnodup.
+        -- eapply params_fresh_in_store_tail. exact Hfresh.
+      * eapply store_add_fresh_ref_targets_preserved.
+        apply store_lookup_not_in_names.
+        eapply bind_params_head_fresh_in_tail_any; eassumption.
+Qed.
+
+Lemma store_typed_bind_match_payload_params_lifetime :
+  forall env s Σ values ps_runtime ps_typed,
+    store_typed env s Σ ->
+    params_names_nodup_b ps_typed = true ->
+    ctx_lookup_params_none_b ps_typed Σ = true ->
+    enum_values_have_type env s values (map param_ty ps_typed) ->
+    ctx_names (params_ctx ps_runtime) = ctx_names (params_ctx ps_typed) ->
+    Forall2 ty_lifetime_equiv
+      (map param_ty ps_runtime) (map param_ty ps_typed) ->
+    store_typed env (bind_params ps_runtime values s)
+      (sctx_add_params ps_typed Σ).
+Proof.
+  intros env s Σ values ps_runtime ps_typed Hstore Hnodup Hnone Hvalues
+    Hnames Hequiv.
+  eapply store_typed_bind_match_payload_params_lifetime_aux.
+  - exact Hstore.
+  - exact Hvalues.
+  - exact Hnames.
+  - exact Hequiv.
+  - rewrite Hnames.
+    eapply params_names_nodup_b_sound. exact Hnodup.
+  - unfold params_fresh_in_store in *.
+    rewrite Hnames.
+    eapply store_typed_params_fresh; eassumption.
 Qed.
 
 Lemma store_remove_match_payload_cleanup_value_typed_names :

@@ -221,17 +221,14 @@ Remaining work:
 - `TypeSafetyHiddenFrameCleanupFacts.v` now has a focused helper packaging the
   payload cleanup fact needed for returned-value typing after
   `store_remove_params`.
-- Base and prefix preservation now have helper lemmas for binding runtime
-  payload params against typed branch params when binder names and exact param
-  types match.
-- Current blocker: exact param type equality is too strong in general.
-  `Eval_MatchEnum` computes runtime payload params from the erased enum value's
-  lifetime/type args, while preservation may type the scrutinee through
-  `VHT_LifetimeEquiv`. The next step must either make match evaluation bind
-  payloads using the typed scrutinee's instantiated params, or add a
-  lifetime-equivalent store typing rule/helper for `bind_params` entries.
-  Do not remove `typed_match_tail_lookup_no_payload` or widen the checker until
-  this choice is implemented and preservation compiles.
+- Store typing now accepts lifetime-equivalent store/context entry types, while
+  closure capture copies keep param-type annotations. Base and prefix
+  preservation also have payload bind helpers for runtime params whose payload
+  types are lifetime-equivalent to typed branch params.
+- Next step: replace `typed_match_tail_lookup_no_payload` in base/prefix/root
+  match preservation with payload lookup facts that return selected branch
+  params, runtime params, name equality, and lifetime-equivalent payload param
+  types. Do not widen the checker until these preservation branches compile.
 
 ## Phase 5: Drop Lowering
 

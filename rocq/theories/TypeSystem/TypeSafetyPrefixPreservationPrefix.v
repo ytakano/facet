@@ -153,6 +153,104 @@ Proof.
   - exact Htys.
 Qed.
 
+Lemma store_typed_prefix_add_lifetime :
+  forall env s Σ x T_store T_ctx m v,
+    store_typed_prefix env s Σ ->
+    value_has_type env s v T_store ->
+    ty_lifetime_equiv T_store T_ctx ->
+    store_ref_targets_preserved env s (store_add x T_store v s) ->
+    store_typed_prefix env (store_add x T_store v s) (sctx_add x T_ctx m Σ).
+Proof.
+  intros env s Σ x T_store T_ctx m v Htyped Hv Heq Hpres.
+  unfold store_typed_prefix in Htyped.
+  destruct Htyped as [entries [frame [Hs Hentries]]].
+  unfold store_typed_prefix, store_add, sctx_add.
+  exists (MkStoreEntry x T_store v (binding_state_of_bool false) :: entries),
+    frame.
+  split.
+  - simpl. subst s. reflexivity.
+  - constructor.
+    + simpl.
+      repeat split; try reflexivity.
+      * exact Heq.
+      * eapply value_has_type_store_preserved; eassumption.
+    + eapply store_typed_store_param_preserved; eassumption.
+Qed.
+
+Lemma store_typed_prefix_bind_match_payload_params_lifetime_aux :
+  forall env s Σ values ps_runtime ps_typed,
+    store_typed_prefix env s Σ ->
+    enum_values_have_type env s values (map param_ty ps_typed) ->
+    ctx_names (params_ctx ps_runtime) = ctx_names (params_ctx ps_typed) ->
+    Forall2 ty_lifetime_equiv
+      (map param_ty ps_runtime) (map param_ty ps_typed) ->
+    NoDup (ctx_names (params_ctx ps_runtime)) ->
+    params_fresh_in_store ps_runtime s ->
+    store_typed_prefix env (bind_params ps_runtime values s)
+      (sctx_add_params ps_typed Σ).
+Proof.
+  intros env s Σ values ps_runtime ps_typed Hstore Hvalues.
+  revert values ps_runtime Hvalues.
+  induction ps_typed as [| p_typed ps_typed IH];
+    intros values ps_runtime Hvalues Hnames Hequiv Hnodup Hfresh.
+  - simpl in Hvalues.
+    inversion Hvalues; subst values.
+    destruct ps_runtime; simpl in Hnames; try discriminate.
+    simpl. exact Hstore.
+  - destruct values as [| v values]; simpl in Hvalues; inversion Hvalues;
+      subst.
+    destruct ps_runtime as [| p_runtime ps_runtime];
+      simpl in Hnames, Hequiv; try discriminate.
+    inversion Hnames as [[Hname_eq Hnames_tail]].
+    inversion Hequiv as [| T_runtime T_typed tys_runtime tys_typed
+      Hty_equiv Htys_equiv]; subst.
+    simpl.
+    rewrite Hname_eq.
+    eapply store_typed_prefix_add_lifetime.
+    + eapply IH.
+      * exact H4.
+      * exact Hnames_tail.
+      * exact Htys_equiv.
+      * eapply params_ctx_names_nodup_tail. exact Hnodup.
+      * eapply params_fresh_in_store_tail. exact Hfresh.
+    + eapply value_has_type_store_preserved.
+      * eapply VHT_LifetimeEquiv.
+        -- exact H2.
+        -- apply ty_lifetime_equiv_sym. exact Hty_equiv.
+      * eapply bind_params_ref_targets_preserved_fresh.
+        -- eapply params_ctx_names_nodup_tail. exact Hnodup.
+        -- eapply params_fresh_in_store_tail. exact Hfresh.
+    + exact Hty_equiv.
+    + eapply store_add_fresh_ref_targets_preserved.
+      apply store_lookup_not_in_names.
+      rewrite <- Hname_eq.
+      eapply bind_params_head_fresh_in_tail_any; eassumption.
+Qed.
+
+Lemma store_typed_prefix_bind_match_payload_params_lifetime :
+  forall env s Σ values ps_runtime ps_typed,
+    store_typed_prefix env s Σ ->
+    params_names_nodup_b ps_typed = true ->
+    params_fresh_in_store ps_runtime s ->
+    enum_values_have_type env s values (map param_ty ps_typed) ->
+    ctx_names (params_ctx ps_runtime) = ctx_names (params_ctx ps_typed) ->
+    Forall2 ty_lifetime_equiv
+      (map param_ty ps_runtime) (map param_ty ps_typed) ->
+    store_typed_prefix env (bind_params ps_runtime values s)
+      (sctx_add_params ps_typed Σ).
+Proof.
+  intros env s Σ values ps_runtime ps_typed Hstore Hnodup Hfresh Hvalues
+    Hnames Hequiv.
+  eapply store_typed_prefix_bind_match_payload_params_lifetime_aux.
+  - exact Hstore.
+  - exact Hvalues.
+  - exact Hnames.
+  - exact Hequiv.
+  - rewrite Hnames.
+    eapply params_names_nodup_b_sound. exact Hnodup.
+  - exact Hfresh.
+Qed.
+
 Theorem eval_preserves_typing_ready_prefix_mutual_core :
   (forall env s e s' v,
     eval env s e s' v ->

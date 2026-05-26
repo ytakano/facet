@@ -388,6 +388,38 @@ Proof.
   - intros se Hin. exact Hin.
 Qed.
 
+Lemma store_param_prefix_bind_params_length :
+  forall ps vs s,
+    Datatypes.length vs = Datatypes.length ps ->
+    store_param_prefix ps (bind_params ps vs s) s.
+Proof.
+  induction ps as [| p ps IH]; intros vs s Hlen.
+  - constructor.
+  - destruct vs as [| v vs]; simpl in Hlen; try discriminate.
+    simpl. constructor.
+    apply IH. inversion Hlen. reflexivity.
+Qed.
+
+Lemma store_param_scope_bind_params_length :
+  forall ps vs s,
+    Datatypes.length vs = Datatypes.length ps ->
+    store_param_scope ps (bind_params ps vs s) s.
+Proof.
+  intros ps vs s Hlen.
+  constructor.
+  apply store_param_prefix_bind_params_length. exact Hlen.
+Qed.
+
+Lemma store_frame_scope_bind_params_length :
+  forall ps vs s Σ,
+    Datatypes.length vs = Datatypes.length ps ->
+    store_frame_scope ps Σ (bind_params ps vs s) s.
+Proof.
+  intros ps vs s Σ Hlen.
+  constructor.
+  apply store_param_prefix_bind_params_length. exact Hlen.
+Qed.
+
 Lemma store_ref_targets_preserved_remove_params_after_absent :
   forall ps env s s',
     store_ref_targets_preserved env s s' ->

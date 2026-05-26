@@ -136,6 +136,64 @@ Proof.
       * intros Hin. apply Hnotin. right. exact Hin.
 Qed.
 
+Lemma store_remove_params_nil :
+  forall ps,
+    store_remove_params ps [] = [].
+Proof.
+  induction ps as [| p ps IH]; simpl; auto.
+Qed.
+
+Lemma ctx_remove_params_nil :
+  forall ps,
+    sctx_remove_params ps [] = [].
+Proof.
+  induction ps as [| p ps IH]; simpl; auto.
+Qed.
+
+Lemma ctx_remove_b_not_in_names :
+  forall x Γ,
+    ~ In x (ctx_names Γ) ->
+    ctx_remove_b x Γ = Γ.
+Proof.
+  intros x Γ Hnotin.
+  induction Γ as [| [[[y T] st] m] Γ IH]; simpl; try reflexivity.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. contradiction Hnotin.
+    left. symmetry. exact Heq.
+  - rewrite IH; [reflexivity |].
+    intros Hin. apply Hnotin. right. exact Hin.
+Qed.
+
+Lemma ctx_remove_b_names_in :
+  forall x y Γ,
+    In y (ctx_names (ctx_remove_b x Γ)) ->
+    In y (ctx_names Γ).
+Proof.
+  intros x y Γ.
+  induction Γ as [| [[[z T] st] m] Γ IH]; intros Hin; simpl in *.
+  - contradiction.
+  - destruct (ident_eqb x z).
+    + right. exact Hin.
+    + simpl in Hin. destruct Hin as [Hin | Hin].
+      * left. exact Hin.
+      * right. apply IH. exact Hin.
+Qed.
+
+Lemma store_remove_names_in :
+  forall x y s,
+    In y (store_names (store_remove x s)) ->
+    In y (store_names s).
+Proof.
+  intros x y s.
+  induction s as [| se s IH]; intros Hin; simpl in *.
+  - contradiction.
+  - destruct (ident_eqb x (se_name se)).
+    + right. exact Hin.
+    + simpl in Hin. destruct Hin as [Hin | Hin].
+      * left. exact Hin.
+      * right. apply IH. exact Hin.
+Qed.
+
 Lemma store_entry_refs_exclude_params_head :
   forall ps se s,
     store_refs_exclude_params ps (se :: s) ->
@@ -161,6 +219,173 @@ Proof.
   destruct Htyped as [Hname [HT [Hst Hv]]].
   repeat split; try assumption.
   eapply value_has_type_store_remove_params_excluding; eassumption.
+Qed.
+
+Lemma store_entries_typed_names :
+  forall env s_source entries Σ,
+    Forall2 (store_entry_typed env s_source) entries Σ ->
+    store_names entries = ctx_names Σ.
+Proof.
+  intros env s_source entries Σ Htyped.
+  induction Htyped as [| se ce entries_tail Σ_tail Hentry _ IH].
+  - reflexivity.
+  - destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname _].
+    simpl. rewrite Hname, IH. reflexivity.
+Qed.
+
+Lemma store_refs_exclude_params_in :
+  forall ps s se,
+    store_refs_exclude_params ps s ->
+    In se s ->
+    value_refs_exclude_params ps (se_val se).
+Proof.
+  intros ps s se Hexclude Hin x Hx.
+  specialize (Hexclude x Hx).
+  induction Hexclude as [| se0 rest Hentry Hrest IH].
+  - contradiction.
+  - simpl in Hin. destruct Hin as [Heq | Hin].
+    + subst se0. destruct se; inversion Hentry; subst. assumption.
+    + apply IH. exact Hin.
+Qed.
+
+Lemma store_remove_params_cons_param :
+  forall ps se s,
+    In (se_name se) (ctx_names (params_ctx ps)) ->
+    ~ In (se_name se) (store_names s) ->
+    store_remove_params ps (se :: s) = store_remove_params ps s.
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros se s Hin Hnotin.
+  - simpl in Hin. contradiction.
+  - simpl in Hin |- *.
+    destruct Hin as [Hin | Hin].
+    + rewrite Hin. rewrite ident_eqb_refl.
+      rewrite store_remove_not_in_names; [reflexivity | exact Hnotin].
+    + destruct (ident_eqb (param_name p) (se_name se)) eqn:Heq.
+      * apply ident_eqb_eq in Heq.
+        rewrite Heq.
+        rewrite store_remove_not_in_names; [reflexivity | exact Hnotin].
+      * rewrite IH; [reflexivity | exact Hin |].
+        intros Hbad. apply Hnotin.
+        eapply store_remove_names_in. exact Hbad.
+Qed.
+
+Lemma ctx_remove_params_cons_param :
+  forall ps x T st m Γ,
+    In x (ctx_names (params_ctx ps)) ->
+    ~ In x (ctx_names Γ) ->
+    sctx_remove_params ps ((x, T, st, m) :: Γ) =
+      sctx_remove_params ps Γ.
+Proof.
+  intros ps.
+  induction ps as [| p ps IH]; intros x T st m Γ Hin Hnotin.
+  - simpl in Hin. contradiction.
+  - simpl in Hin |- *.
+    destruct Hin as [Hin | Hin].
+    + rewrite Hin. rewrite ident_eqb_refl.
+      rewrite ctx_remove_b_not_in_names; [reflexivity | exact Hnotin].
+    + destruct (ident_eqb (param_name p) x) eqn:Heq.
+      * apply ident_eqb_eq in Heq.
+        rewrite Heq.
+        rewrite ctx_remove_b_not_in_names; [reflexivity | exact Hnotin].
+      * rewrite IH; [reflexivity | exact Hin |].
+        intros Hbad. apply Hnotin.
+        eapply ctx_remove_b_names_in. exact Hbad.
+Qed.
+
+Lemma store_typed_entries_remove_params_excluding_final :
+  forall env ps_all ps_store ps_ctx s_source s_target entries Σ,
+    ctx_names (params_ctx ps_store) = ctx_names (params_ctx ps_ctx) ->
+    s_target = store_remove_params ps_all s_source ->
+    Forall2 (store_entry_typed env s_source) entries Σ ->
+    NoDup (store_names entries) ->
+    store_refs_exclude_params ps_all s_target ->
+    (forall se,
+      In se (store_remove_params ps_store entries) ->
+      In se s_target) ->
+    Forall2 (store_entry_typed env s_target)
+      (store_remove_params ps_store entries)
+      (sctx_remove_params ps_ctx Σ).
+Proof.
+  intros env ps_all ps_store ps_ctx s_source s_target entries Σ
+    Hnames Htarget Htyped.
+  subst s_target.
+  revert ps_store ps_ctx Hnames.
+  induction Htyped as [| se ce entries_tail Σ_tail Hentry Htail IH];
+    intros ps_store ps_ctx Hnames Hnodup Hexclude Hin_target.
+  - rewrite store_remove_params_nil, ctx_remove_params_nil. constructor.
+  - destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [Hst Hv]]].
+    simpl in Hnodup.
+    inversion Hnodup as [| ? ? Hnotin_tail Hnodup_tail].
+    destruct (in_dec
+      (fun a b : ident => ltac:(decide equality; [apply Nat.eq_dec | apply string_dec]))
+      sx (ctx_names (params_ctx ps_store)))
+      as [Hin_ps | Hnotin_ps].
+    + rewrite store_remove_params_cons_param.
+      * rewrite ctx_remove_params_cons_param.
+        -- eapply IH.
+           ++ exact Hnames.
+           ++ exact Hnodup_tail.
+           ++ exact Hexclude.
+           ++ intros se Hin.
+              apply Hin_target.
+              rewrite store_remove_params_cons_param.
+              ** exact Hin.
+              ** exact Hin_ps.
+              ** exact Hnotin_tail.
+        -- rewrite <- Hname. rewrite <- Hnames. exact Hin_ps.
+        -- rewrite <- Hname.
+           rewrite <- (store_entries_typed_names env s_source entries_tail Σ_tail).
+           ++ exact Hnotin_tail.
+           ++ exact Htail.
+      * exact Hin_ps.
+      * exact Hnotin_tail.
+    + rewrite store_remove_params_cons_non_param.
+      * rewrite ctx_remove_params_cons_non_param.
+        -- constructor.
+           ++ eapply store_entry_typed_remove_params_excluding.
+              ** simpl. repeat split; try eassumption.
+              ** eapply store_refs_exclude_params_in.
+                 --- exact Hexclude.
+                 --- apply Hin_target.
+                     rewrite store_remove_params_cons_non_param by exact Hnotin_ps.
+                     simpl. left. reflexivity.
+           ++ eapply IH.
+              ** exact Hnames.
+              ** exact Hnodup_tail.
+              ** exact Hexclude.
+              ** intros se Hin.
+                 apply Hin_target.
+                 rewrite store_remove_params_cons_non_param by exact Hnotin_ps.
+                 simpl. right. exact Hin.
+        -- rewrite <- Hname. rewrite <- Hnames. exact Hnotin_ps.
+      * exact Hnotin_ps.
+Qed.
+
+Lemma store_typed_remove_params_excluding_final :
+  forall env ps_store ps_ctx s Σ,
+    ctx_names (params_ctx ps_store) = ctx_names (params_ctx ps_ctx) ->
+    store_typed env s Σ ->
+    store_no_shadow s ->
+    store_refs_exclude_params ps_store (store_remove_params ps_store s) ->
+    store_typed env (store_remove_params ps_store s)
+      (sctx_remove_params ps_ctx Σ).
+Proof.
+  intros env ps_store ps_ctx s Σ Hnames Htyped Hshadow Hexclude.
+  eapply store_typed_entries_remove_params_excluding_final
+    with (ps_all := ps_store) (s_source := s).
+  - exact Hnames.
+  - reflexivity.
+  - exact Htyped.
+  - exact Hshadow.
+  - exact Hexclude.
+  - intros se Hin. exact Hin.
 Qed.
 
 Lemma store_ref_targets_preserved_remove_params_after_absent :

@@ -228,6 +228,11 @@ Remaining work:
 - Runtime lifetime-equivalence is now transitive, and base preservation has
   helpers to relate runtime payload params to typed branch params when enum
   type arguments differ only by lifetime-equivalence.
+- Root-aware and prefix-root match-tail lookup helpers now expose the branch
+  payload cleanup facts already present in `typed_match_tail_roots`:
+  context/root freshness, payload params-ok, branch result root exclusion, and
+  post-removal root-env exclusion. This avoids re-deriving those facts in the
+  selected runtime branch proof.
 - Soundness blocker before widening Prop/checker payload typing:
   structural/base preservation has no roots fact for the returned value after
   `store_remove_params ps_payload`. Replacing `typed_match_tail_lookup_no_payload`
@@ -250,12 +255,12 @@ Remaining work:
 
 Next implementation step:
 
-- Factor match preservation so payload cleanup is discharged in the roots-aware
-  theorem first, then make the structural/base theorem consume that packaged
-  roots result or restrict structural payload match to a no-escaped-ref lemma
-  proved from roots readiness. Do not remove the no-payload premises from
-  Prop-level match typing and do not widen `TypeChecker.v` until this returned
-  value cleanup proof is available.
+- In the selected tail branch of the roots-aware preservation theorem, replace
+  the no-payload rewrite with the existing payload bind, param-scope
+  preservation, returned-value cleanup, final store-typing, and ref-target
+  preservation helpers. Then mirror the same proof shape in prefix-root
+  preservation. Do not remove the no-payload premises from Prop-level match
+  typing and do not widen `TypeChecker.v` until this proof path compiles.
 
 ## Phase 5: Drop Lowering
 

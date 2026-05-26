@@ -25,7 +25,10 @@ Lemma typed_match_tail_roots_lookup :
       match_payload_params_opt binders lts args vdef = Some ps /\
       typed_env_roots env Ω n R_payload (sctx_add_params ps Σ) e T
         Σv_payload Rv_payload roots /\
+      params_ok_sctx_b env ps Σv_payload = true /\
+      EnvStructuralRules.roots_exclude_params ps roots /\
       Rv = root_env_remove_match_params ps Rv_payload /\
+      EnvStructuralRules.root_env_excludes_params ps Rv /\
       Σv = sctx_remove_params ps Σv_payload /\
       ty_core T = expected_core /\
       root_env_equiv Rv R_out /\
@@ -57,8 +60,9 @@ Proof.
         [T' [Σpayload' [Rv_payload' [Σ' [Rv' [roots' [ps' Hrest]]]]]]].
       destruct Hrest as [binders' [Rpayload' Hrest]].
       destruct Hrest as [HRpayload' [Hnodup' [Hctx_none' [Hroot_none' [Hbinders'
-        [Hparams' [Htyped' [Hremove' [Hctx_remove' [Hcore'
-        [Hequiv' [HinΣ HinT]]]]]]]]]]]].
+        [Hparams' [Htyped' [Hparams_ok' [Hroots_excl' [Hremove'
+        [Henv_excl' [Hctx_remove' [Hcore' [Hequiv'
+        [HinΣ HinT]]]]]]]]]]]]]]].
       exists T', Σpayload', Rv_payload', Σ', Rv', roots', ps', binders',
         Rpayload'.
       repeat split; simpl; auto.
@@ -820,8 +824,9 @@ Proof.
              [roots_branch [ps_branch [binders_branch [R_payload Htail_branch]]]]]]]]].
       destruct Htail_branch as [HRpayload [Hnodup_branch_params
         [Hctx_none_branch [Hroot_none_branch [Hbinders_branch [Hparams_branch
-        [Htyped_branch [Hremove_branch [Hctx_remove_branch [Hcore_branch
-        [Hequiv_branch [HinΣ HinT]]]]]]]]]]]].
+        [Htyped_branch [Hparams_ok_branch [Hroots_excl_branch [Hremove_branch
+        [Henv_excl_branch [Hctx_remove_branch [Hcore_branch
+        [Hequiv_branch [HinΣ HinT]]]]]]]]]]]]]]].
       destruct (typed_match_tail_roots_lookup_no_payload env Ω n lts args
         R1 roots_scrut Σ1 branches v_tail (ty_core T_head)
         (root_env_remove_match_params ps_head R_head_payload)

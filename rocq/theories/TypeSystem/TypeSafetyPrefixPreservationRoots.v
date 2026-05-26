@@ -15,12 +15,16 @@ Lemma typed_match_tail_roots_lookup :
     exists T Σv_payload Rv_payload Σv Rv roots ps binders R_payload,
       R_payload = root_env_add_params_roots_same ps roots_scrut R /\
       params_names_nodup_b ps = true /\
+      ctx_lookup_params_none_b ps Σ = true /\
       root_env_lookup_params_none_b ps R = true /\
       lookup_expr_branch_binders name branches = Some binders /\
       match_payload_params_opt binders lts args vdef = Some ps /\
       typed_env_roots env Ω n R_payload (sctx_add_params ps Σ) e T
         Σv_payload Rv_payload roots /\
+      params_ok_sctx_b env ps Σv_payload = true /\
+      EnvStructuralRules.roots_exclude_params ps roots /\
       Rv = root_env_remove_match_params ps Rv_payload /\
+      EnvStructuralRules.root_env_excludes_params ps Rv /\
       Σv = sctx_remove_params ps Σv_payload /\
       ty_core T = expected_core /\
       root_env_equiv Rv R_out /\
@@ -45,15 +49,40 @@ Proof.
       rewrite Hlookup in Hbranch. inversion Hbranch; subst e.
       inversion Hvariant; subst vdef.
       exists T, Σv_payload, Rv_payload, Σv, Rv, roots, ps, binders, R_payload.
-      repeat split; simpl; auto.
-      eapply match_payload_params_opt_infer_ok. exact Hparams.
+      split; [exact Hpayload|].
+      split; [exact Hnodup|].
+      split; [exact Hctx_none|].
+      split; [exact Hroot_none|].
+      split; [exact Hbinders|].
+      split; [eapply match_payload_params_opt_infer_ok; exact Hparams|].
+      split; [exact Htyped|].
+      split; [exact Hparams_ok|].
+      split; [exact Hroots_excl|].
+      split; [exact Hremove|].
+      split; [exact Henv_excl|].
+      split; [exact Hctx_remove|].
+      split; [exact Hcore|].
+      split; [exact Hequiv|].
+      split; simpl; auto.
     + eapply IHtail in Hvariant; [| exact Hbranch].
       destruct Hvariant as
         [T' [Σpayload' [Rv_payload' [Σ' [Rv' [roots' [ps' Hrest]]]]]]].
       destruct Hrest as [binders' [Rpayload' Hrest]].
-      destruct Hrest as [HRpayload' [Hnodup' [Hroot_none' [Hbinders'
-        [Hparams' [Htyped' [Hremove' [Hctx_remove' [Hcore'
-        [Hequiv' [HinΣ HinT]]]]]]]]]]].
+      destruct Hrest as [HRpayload' Hrest].
+      destruct Hrest as [Hnodup' Hrest].
+      destruct Hrest as [Hctx_none' Hrest].
+      destruct Hrest as [Hroot_none' Hrest].
+      destruct Hrest as [Hbinders' Hrest].
+      destruct Hrest as [Hparams' Hrest].
+      destruct Hrest as [Htyped' Hrest].
+      destruct Hrest as [Hparams_ok' Hrest].
+      destruct Hrest as [Hroots_excl' Hrest].
+      destruct Hrest as [Hremove' Hrest].
+      destruct Hrest as [Henv_excl' Hrest].
+      destruct Hrest as [Hctx_remove' Hrest].
+      destruct Hrest as [Hcore' Hrest].
+      destruct Hrest as [Hequiv' Hrest].
+      destruct Hrest as [HinΣ HinT].
       exists T', Σpayload', Rv_payload', Σ', Rv', roots', ps', binders',
         Rpayload'.
       repeat split; simpl; auto.
@@ -815,10 +844,21 @@ Proof.
                   Hvariant_runtime Hlookup_branch)
         as [T_branch [Σ_branch_payload [Rv_payload [Σ_branch [R_branch
              [roots_branch [ps_branch [binders_branch [R_payload Htail_branch]]]]]]]]].
-      destruct Htail_branch as [HRpayload [Hnodup_branch_params
-        [Hroot_none_branch [Hbinders_branch [Hparams_branch
-        [Htyped_branch [Hremove_branch [Hctx_remove_branch [Hcore_branch
-        [Hequiv_branch [HinΣ HinT]]]]]]]]]]].
+      destruct Htail_branch as [HRpayload Htail_branch].
+      destruct Htail_branch as [Hnodup_branch_params Htail_branch].
+      destruct Htail_branch as [Hctx_none_branch Htail_branch].
+      destruct Htail_branch as [Hroot_none_branch Htail_branch].
+      destruct Htail_branch as [Hbinders_branch Htail_branch].
+      destruct Htail_branch as [Hparams_branch Htail_branch].
+      destruct Htail_branch as [Htyped_branch Htail_branch].
+      destruct Htail_branch as [Hparams_ok_branch Htail_branch].
+      destruct Htail_branch as [Hroots_excl_branch Htail_branch].
+      destruct Htail_branch as [Hremove_branch Htail_branch].
+      destruct Htail_branch as [Henv_excl_branch Htail_branch].
+      destruct Htail_branch as [Hctx_remove_branch Htail_branch].
+      destruct Htail_branch as [Hcore_branch Htail_branch].
+      destruct Htail_branch as [Hequiv_branch Htail_branch].
+      destruct Htail_branch as [HinΣ HinT].
       destruct (typed_match_tail_roots_lookup_no_payload env Ω n lts args
         R1 roots_scrut Σ1 branches v_tail (ty_core T_head)
         (root_env_remove_match_params ps_head R_head_payload)

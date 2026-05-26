@@ -218,6 +218,16 @@ Remaining work:
   justify `store_remove_params ps_payload s_branch`, but the base theorem does
   not carry the root/scope evidence needed to prove surviving values do not
   reference removed payload params.
+- Do not remove the no-payload premises from Prop-level match typing until the
+  preservation theorem is refactored. A proof-first attempt showed the old
+  helper `typed_match_tail_lookup_no_payload` becomes false as soon as
+  payload binders are allowed, and both base and prefix preservation currently
+  depend on that no-payload fact to type the runtime branch store.
+- The next proof step should introduce a payload-aware preservation package for
+  match branches. It must relate runtime payload params (`ps_payload`) to typed
+  branch params (`ps_head`/`ps_branch`) by binder names and exact store-entry
+  types, then prove branch-result cleanup using root/scope evidence before the
+  checker accepts non-empty binders.
 - `TypeSafetyHiddenFrameCleanupFacts.v` now has a focused helper packaging the
   payload cleanup fact needed for returned-value typing after
   `store_remove_params`.

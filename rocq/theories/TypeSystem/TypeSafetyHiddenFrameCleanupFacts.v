@@ -93,6 +93,31 @@ Proof.
       apply Hexclude. simpl. right. exact Hin.
 Qed.
 
+Lemma store_remove_params_cleanup_value_typed_excludes :
+  forall ps env s_body frame R roots v T,
+    store_param_scope ps s_body frame ->
+    store_roots_within R s_body ->
+    value_roots_within roots v ->
+    store_no_shadow s_body ->
+    NoDup (ctx_names (params_ctx ps)) ->
+    roots_exclude_params ps roots ->
+    root_env_excludes_params ps R ->
+    value_has_type env s_body v T ->
+    exists locals,
+      store_remove_params ps s_body = locals ++ frame /\
+      value_has_type env (store_remove_params ps s_body) v T /\
+      store_refs_exclude_params ps (store_remove_params ps s_body).
+Proof.
+  intros ps env s_body frame R roots v T Hscope Hstore Hvalue_roots
+    Hshadow Hnodup Hexclude_roots Hexclude_env Hvalue.
+  destruct (store_remove_params_cleanup_excludes ps s_body frame R roots v
+              Hscope Hstore Hvalue_roots Hshadow Hnodup Hexclude_roots
+              Hexclude_env)
+    as [locals [Hremoved [Hvalue_exclude Hstore_exclude]]].
+  exists locals. repeat split; try assumption.
+  eapply value_has_type_store_remove_params_excluding; eassumption.
+Qed.
+
 Lemma store_ref_targets_preserved_remove_params_after_absent :
   forall ps env s s',
     store_ref_targets_preserved env s s' ->

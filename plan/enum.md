@@ -218,13 +218,13 @@ Remaining work:
   justify `store_remove_params ps_payload s_branch`, but the base theorem does
   not carry the root/scope evidence needed to prove surviving values do not
   reference removed payload params.
-- Fix direction: do not add an ad hoc names-only bridge for payload params.
-  Route payload-match preservation through the stronger root/frame readiness
-  invariants, or strengthen the base preservation contract with a scoped-root
-  exclusion fact that is proved by the existing readiness pipeline.
-- After this scoped cleanup fact is available, finish
-  `TypeSafetyBasePreservationMutual.v` by using the exact payload param types
-  from `match_payload_params_opt`, then remove obsolete no-payload shortcuts.
+- `TypeSafetyHiddenFrameCleanupFacts.v` now has a focused helper packaging the
+  payload cleanup fact needed for returned-value typing after
+  `store_remove_params`.
+- Remaining blocker: wire that helper into `TypeSafetyBasePreservationMutual.v`
+  to preserve store/context facts for `store_remove_params ps_payload s_branch`,
+  using the exact payload param types from `match_payload_params_opt`, then
+  remove obsolete no-payload shortcuts.
 
 ## Phase 5: Drop Lowering
 

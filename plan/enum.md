@@ -213,28 +213,21 @@ Remaining work:
 - Keep `match_payload_params_opt` in the shared pre-`OperationalSemantics`
   layer; keep checker-facing `match_payload_params` as an `infer_result`
   wrapper.
-- Current blocker for real payload ownership: `TypeSafetyBasePreservationMutual.v`
-  is too weak for payload cleanup. After branch evaluation, preservation must
-  justify `store_remove_params ps_payload s_branch`, but the base theorem does
-  not carry the root/scope evidence needed to prove surviving values do not
-  reference removed payload params.
 - Do not remove the no-payload premises from Prop-level match typing until the
   preservation theorem is refactored. A proof-first attempt showed the old
   helper `typed_match_tail_lookup_no_payload` becomes false as soon as
   payload binders are allowed, and both base and prefix preservation currently
   depend on that no-payload fact to type the runtime branch store.
-- The next proof step should introduce a payload-aware preservation package for
-  match branches. It must relate runtime payload params (`ps_payload`) to typed
-  branch params (`ps_head`/`ps_branch`) by binder names and exact store-entry
-  types, then prove branch-result cleanup using root/scope evidence before the
-  checker accepts non-empty binders.
 - `TypeSafetyHiddenFrameCleanupFacts.v` now has a focused helper packaging the
   payload cleanup fact needed for returned-value typing after
   `store_remove_params`.
-- Remaining blocker: wire that helper into `TypeSafetyBasePreservationMutual.v`
-  to preserve store/context facts for `store_remove_params ps_payload s_branch`,
-  using the exact payload param types from `match_payload_params_opt`, then
-  remove obsolete no-payload shortcuts.
+- Base and prefix preservation now have helper lemmas for binding runtime
+  payload params against typed branch params by matching binder names and exact
+  param types.
+- Remaining blocker: use the new bind/cleanup helpers inside the match
+  preservation cases, derive the required root/scope evidence from the existing
+  roots-ready, param-scope, and frame-scope readiness lemmas, then remove the
+  obsolete no-payload shortcuts.
 
 ## Phase 5: Drop Lowering
 

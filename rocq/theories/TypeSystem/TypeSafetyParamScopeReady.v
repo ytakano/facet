@@ -759,13 +759,24 @@ Proof.
 		                  roots_scrut Σ1 branches v_tail (ty_core T_head)
 		                  (root_env_remove_match_params ps_head R_head_payload)
 		                  Σ_tail Ts_tail roots_tail
-		                  variant_name vdef_tail e_branch H21 Hvariant_tail
-		                  Hlookup_branch)
+	                  variant_name vdef_tail e_branch H21 Hvariant_tail
+	                  Hlookup_branch)
 	        as [T_branch [Σ_branch_payload [R_branch_payload [R_branch
 	             [roots_branch [ps_branch [binders_branch [R_payload_branch
-	             [HRpayload [Hnodup_branch [Hnone_branch [Hbinders_branch
-	             [Hparams_branch [Htyped_branch [Hremove_branch
-	             [Hcore_branch [Hequiv_branch Hin_roots]]]]]]]]]]]]]]]]].
+	             Htail_branch]]]]]]]].
+	      destruct Htail_branch as [HRpayload Htail_branch].
+	      destruct Htail_branch as [Hnodup_branch Htail_branch].
+	      destruct Htail_branch as [Hctx_none_branch Htail_branch].
+	      destruct Htail_branch as [Hnone_branch Htail_branch].
+	      destruct Htail_branch as [Hbinders_branch Htail_branch].
+	      destruct Htail_branch as [Hparams_branch Htail_branch].
+	      destruct Htail_branch as [Htyped_branch Htail_branch].
+	      destruct Htail_branch as [Hparams_ok_branch Htail_branch].
+	      destruct Htail_branch as [Hroots_excl_branch Htail_branch].
+	      destruct Htail_branch as [Hremove_branch Htail_branch].
+	      destruct Htail_branch as [Henv_excl_branch Htail_branch].
+	      destruct Htail_branch as [Hcore_branch Htail_branch].
+	      destruct Htail_branch as [Hequiv_branch Hin_roots].
 	      assert (Hbinders_same : binders_branch = binders).
 	      { rewrite Hlookup_binders in Hbinders_branch.
 	        inversion Hbinders_branch. reflexivity. }

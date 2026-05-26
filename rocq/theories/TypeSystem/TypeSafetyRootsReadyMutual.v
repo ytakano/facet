@@ -79,12 +79,16 @@ Lemma typed_match_tail_roots_lookup_ready :
     exists T Σv_payload Rv_payload Rv roots ps binders R_payload,
       R_payload = root_env_add_params_roots_same ps roots_scrut R /\
       params_names_nodup_b ps = true /\
+      ctx_lookup_params_none_b ps Σ = true /\
       root_env_lookup_params_none_b ps R = true /\
       lookup_expr_branch_binders name branches = Some binders /\
       match_payload_params_opt binders lts args vdef = Some ps /\
       typed_env_roots env Ω n R_payload (sctx_add_params ps Σ) e T
         Σv_payload Rv_payload roots /\
+      params_ok_sctx_b env ps Σv_payload = true /\
+      EnvStructuralRules.roots_exclude_params ps roots /\
       Rv = root_env_remove_match_params ps Rv_payload /\
+      EnvStructuralRules.root_env_excludes_params ps Rv /\
       ty_core T = expected_core /\
       root_env_equiv Rv R_out /\
       In roots rootss.
@@ -112,9 +116,20 @@ Proof.
 	      * left. reflexivity.
 	    + destruct (IHtail Hvariant Hbranch) as
 	        [T' [Σ' [Rv_payload' [Rv' [roots' [ps' [binders'
-	          [R_payload' [Hpayload' [Hnodup' [Hroot_none' [Hbinders'
-	          [Hparams' [Htyped' [Hremove' [Hcore'
-	          [Hequiv' Hin]]]]]]]]]]]]]]]]].
+	          [R_payload' Hrest]]]]]]]].
+	      destruct Hrest as [Hpayload' Hrest].
+	      destruct Hrest as [Hnodup' Hrest].
+	      destruct Hrest as [Hctx_none' Hrest].
+	      destruct Hrest as [Hroot_none' Hrest].
+	      destruct Hrest as [Hbinders' Hrest].
+	      destruct Hrest as [Hparams' Hrest].
+	      destruct Hrest as [Htyped' Hrest].
+	      destruct Hrest as [Hparams_ok' Hrest].
+	      destruct Hrest as [Hroots_excl' Hrest].
+	      destruct Hrest as [Hremove' Hrest].
+	      destruct Hrest as [Henv_excl' Hrest].
+	      destruct Hrest as [Hcore' Hrest].
+	      destruct Hrest as [Hequiv' Hin].
 	      exists T', Σ', Rv_payload', Rv', roots', ps', binders', R_payload'.
 	      repeat split; simpl; try assumption.
 	      right. exact Hin.
@@ -1551,15 +1566,20 @@ Proof.
 	            [ps_branch
 		            [binders_branch
 		            [R_payload
-		            [HRpayload
-		            [Hnodup_branch_params
-		            [Hroot_none_branch
-		            [Hbinders_branch
-		            [Hparams_branch
-		            [Htyped_branch
-		            [Hremove_branch
-		            [Hcore_branch
-		            [Hequiv_branch Hin_roots]]]]]]]]]]]]]]]]].
+		            Htail_branch]]]]]]]].
+	      destruct Htail_branch as [HRpayload Htail_branch].
+	      destruct Htail_branch as [Hnodup_branch_params Htail_branch].
+	      destruct Htail_branch as [Hctx_none_branch Htail_branch].
+	      destruct Htail_branch as [Hroot_none_branch Htail_branch].
+	      destruct Htail_branch as [Hbinders_branch Htail_branch].
+	      destruct Htail_branch as [Hparams_branch Htail_branch].
+	      destruct Htail_branch as [Htyped_branch Htail_branch].
+	      destruct Htail_branch as [Hparams_ok_branch Htail_branch].
+	      destruct Htail_branch as [Hroots_excl_branch Htail_branch].
+	      destruct Htail_branch as [Hremove_branch Htail_branch].
+	      destruct Htail_branch as [Henv_excl_branch Htail_branch].
+	      destruct Htail_branch as [Hcore_branch Htail_branch].
+	      destruct Htail_branch as [Hequiv_branch Hin_roots].
 	      assert (Hbinders_same : binders_branch = binders).
 	      { rewrite Hlookup_binders in Hbinders_branch.
 	        inversion Hbinders_branch. reflexivity. }

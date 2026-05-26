@@ -228,8 +228,9 @@ Remaining work:
 - Runtime lifetime-equivalence is now transitive, and base preservation has
   helpers to relate runtime payload params to typed branch params when enum
   type arguments differ only by lifetime-equivalence.
-- Root-aware and prefix-root match-tail lookup helpers now expose the branch
-  payload cleanup facts already present in `typed_match_tail_roots`:
+- Root-aware, prefix-root, and roots-readiness match-tail lookup helpers now
+  expose the branch payload cleanup facts already present in
+  `typed_match_tail_roots`:
   context/root freshness, payload params-ok, branch result root exclusion, and
   post-removal root-env exclusion. This avoids re-deriving those facts in the
   selected runtime branch proof.

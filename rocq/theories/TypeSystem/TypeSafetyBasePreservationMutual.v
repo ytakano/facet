@@ -246,6 +246,33 @@ Proof.
            ++ exact Htys_tail.
 Qed.
 
+Lemma store_typed_bind_match_payload_params :
+  forall env (Ω : outlives_ctx) s Σ values ps_runtime ps_typed,
+    store_typed env s Σ ->
+    params_names_nodup_b ps_typed = true ->
+    ctx_lookup_params_none_b ps_typed Σ = true ->
+    enum_values_have_type env s values (map param_ty ps_typed) ->
+    ctx_names (params_ctx ps_runtime) = ctx_names (params_ctx ps_typed) ->
+    map param_ty ps_runtime = map param_ty ps_typed ->
+    store_typed env (bind_params ps_runtime values s)
+      (sctx_add_params ps_typed Σ).
+Proof.
+  intros env Ω s Σ values ps_runtime ps_typed Hstore Hnodup Hnone
+    Hvalues Hnames Htys.
+  eapply store_typed_bind_params_same_ctx with (Ω := Ω).
+  - exact Hstore.
+  - rewrite Hnames.
+    eapply params_names_nodup_b_sound. exact Hnodup.
+  - unfold params_fresh_in_store in *.
+    rewrite Hnames.
+    eapply store_typed_params_fresh; eassumption.
+  - eapply enum_values_have_type_eval_args_values.
+    + exact Hvalues.
+    + reflexivity.
+  - exact Hnames.
+  - exact Htys.
+Qed.
+
 Lemma store_typed_ctx_merge_many_left :
   forall env s Σ tail Γ,
     store_typed env s Σ ->

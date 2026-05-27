@@ -118,6 +118,98 @@ Proof.
   eapply value_has_type_store_remove_params_excluding; eassumption.
 Qed.
 
+Lemma root_env_covers_params_add_params_roots_same_names :
+  forall ps_cover ps_add roots R,
+    ctx_names (params_ctx ps_cover) = ctx_names (params_ctx ps_add) ->
+    params_names_nodup_b ps_add = true ->
+    root_env_covers_params ps_cover
+      (root_env_add_params_roots_same ps_add roots R).
+Proof.
+  intros ps_cover ps_add roots R Hnames Hnodup x Hin.
+  induction ps_add as [| p ps_add IH] in ps_cover, Hnames, Hnodup, Hin |- *.
+  - simpl in Hnames. rewrite Hnames in Hin. contradiction.
+  - destruct ps_cover as [| p_cover ps_cover]; simpl in Hnames; try discriminate.
+    inversion Hnames as [[Hhead Htail]].
+    simpl in Hnodup.
+    apply andb_true_iff in Hnodup as [_ Hnodup_tail].
+    simpl in Hin.
+    destruct Hin as [Hin | Hin].
+    + subst x. rewrite Hhead.
+      exists roots. apply root_env_lookup_add_eq.
+    + destruct (IH ps_cover Htail Hnodup_tail Hin) as [roots_old Hlookup].
+      destruct (ident_eqb x (param_name p)) eqn:Heq.
+      * apply ident_eqb_eq in Heq. subst x.
+        exists roots. apply root_env_lookup_add_eq.
+      * exists roots_old.
+        unfold root_env_add. simpl. rewrite Heq. exact Hlookup.
+Qed.
+
+Lemma root_env_excludes_params_names :
+  forall ps1 ps2 R,
+    ctx_names (params_ctx ps1) = ctx_names (params_ctx ps2) ->
+    EnvStructuralRules.root_env_excludes_params ps2 R ->
+    root_env_excludes_params ps1 R.
+Proof.
+  unfold root_env_excludes_params.
+  intros ps1 ps2 R Hnames Hexclude x Hin.
+  eapply Forall_forall in Hexclude.
+  - exact Hexclude.
+  - rewrite <- Hnames. exact Hin.
+Qed.
+
+Lemma store_refs_exclude_params_removed_names :
+  forall ps_store ps_env R s,
+    ctx_names (params_ctx ps_store) = ctx_names (params_ctx ps_env) ->
+    store_roots_within R (store_remove_params ps_store s) ->
+    params_names_nodup_b ps_env = true ->
+    store_no_shadow s ->
+    EnvStructuralRules.root_env_excludes_params ps_env R ->
+    store_refs_exclude_params ps_store (store_remove_params ps_store s).
+Proof.
+  intros ps_store ps_env R s Hnames Hroots Hnodup Hshadow Hexclude.
+  eapply store_roots_exclude_params.
+  - exact Hroots.
+  - eapply root_env_excludes_params_names; eassumption.
+  - intros x Hin se Hse.
+    eapply store_remove_params_no_param_names.
+    + eapply params_names_nodup_b_sound.
+      eapply (params_names_nodup_b_names ps_env ps_store).
+      * symmetry. exact Hnames.
+      * exact Hnodup.
+    + exact Hshadow.
+    + exact Hin.
+    + exact Hse.
+Qed.
+
+Lemma store_remove_match_payload_cleanup_value_typed_roots_names :
+  forall ps_runtime ps_typed env s_body frame roots v T,
+    ctx_names (params_ctx ps_runtime) = ctx_names (params_ctx ps_typed) ->
+    store_param_scope ps_runtime s_body frame ->
+    value_roots_within roots v ->
+    params_names_nodup_b ps_typed = true ->
+    EnvStructuralRules.roots_exclude_params ps_typed roots ->
+    value_has_type env s_body v T ->
+    exists locals,
+      store_remove_params ps_runtime s_body = locals ++ frame /\
+      value_has_type env (store_remove_params ps_runtime s_body) v T /\
+      value_refs_exclude_params ps_runtime v.
+Proof.
+  intros ps_runtime ps_typed env s_body frame roots v T Hnames Hscope
+    Hvalue_roots Hnodup Hroots_excl Hvalue.
+  destruct (store_remove_params_store_param_scope ps_runtime s_body frame
+              Hscope) as [locals Hremoved].
+  assert (Hvalue_exclude : value_refs_exclude_params ps_runtime v).
+  { eapply value_roots_exclude_params.
+    - exact Hvalue_roots.
+    - unfold roots_exclude_params.
+      intros x Hin.
+      eapply Forall_forall in Hroots_excl.
+      + exact Hroots_excl.
+      + rewrite <- Hnames. exact Hin. }
+  exists locals. repeat split; try assumption.
+  eapply value_has_type_store_remove_params_excluding; eassumption.
+Qed.
+
 Lemma ctx_remove_params_cons_non_param :
   forall ps x T st m Γ,
     ~ In x (ctx_names (params_ctx ps)) ->

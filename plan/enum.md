@@ -236,8 +236,13 @@ Remaining work:
   selected runtime branch proof.
 - Root-aware and prefix-root preservation now build the selected tail branch
   input store/root/no-shadow facts using payload binders, lifetime-equivalent
-  runtime payload params, and payload value roots. The final selected-branch
-  cleanup still uses the no-payload rewrite and remains the next proof step.
+  runtime payload params, and payload value roots.
+- Root-aware and prefix-root preservation now also clean up the selected tail
+  branch with real payload binders: branch param-scope is preserved through
+  evaluation, returned-value typing is re-established after
+  `store_remove_params`, final store/prefix-store typing uses multi-remove
+  exclusion, and ref-target preservation is composed through payload bind and
+  payload removal.
 - Soundness blocker before widening Prop/checker payload typing:
   structural/base preservation has no roots fact for the returned value after
   `store_remove_params ps_payload`. Replacing `typed_match_tail_lookup_no_payload`
@@ -260,12 +265,11 @@ Remaining work:
 
 Next implementation step:
 
-- In the selected tail branch of the roots-aware preservation theorem, replace
-  the no-payload rewrite with the existing payload bind, param-scope
-  preservation, returned-value cleanup, final store-typing, and ref-target
-  preservation helpers. Then mirror the same proof shape in prefix-root
-  preservation. Do not remove the no-payload premises from Prop-level match
-  typing and do not widen `TypeChecker.v` until this proof path compiles.
+- Move the same payload cleanup package toward structural/base preservation, or
+  introduce a small packaged theorem that lets structural/base preservation
+  consume the roots-aware cleanup result. Do not remove the no-payload premises
+  from Prop-level match typing and do not widen `TypeChecker.v` until that
+  structural/base path compiles.
 
 ## Phase 5: Drop Lowering
 

@@ -1,17 +1,22 @@
-# Refactoring Roadmap: Renaming and Alpha Relations
+# Refactoring Roadmap: AlphaRenaming Aggregator Completion
 
 ## Current status
 
 Completed and committed:
 
 - Removed stale `--debug-alpha` documentation.
-- Split general expression-size facts into `ExprFacts.v`.
+- Split expression-size facts into `ExprFacts.v`.
 - Split core alpha-renaming facts into focused modules:
   `AlphaCore.v`, `AlphaCtx.v`, `AlphaPlace.v`, `AlphaExpr.v`, and
   `AlphaFn.v`.
-- Kept `AlphaRenaming.v` as the compatibility aggregator.
 - Renamed the conservative expression name collector to `expr_names`, with
   `free_vars_expr` retained as a compatibility alias.
+- Strengthened `expr_alpha` for `EStruct` with `fields_alpha`.
+- Strengthened `expr_alpha` for `EMatch` with `binders_alpha` and
+  `branches_alpha`.
+- Added unfold-friendly traversal helpers in `Renaming.v`:
+  `alpha_rename_exprs`, `alpha_rename_fields`, `alpha_rename_payloads`, and
+  `alpha_rename_branches`.
 - Moved lookup, context-operation, and typed-place alpha facts out of the
   aggregator.
 
@@ -22,138 +27,140 @@ Deferred by request:
 
 Current caveat:
 
-- `expr_alpha` is still too weak for compound expressions. `EStruct` does not
-  require field expressions to be alpha-related, and `EMatch` does not yet
-  specify how branch binders extend the rename environment.
+- `AlphaRenaming.v` is still not a pure compatibility aggregator. It still
+  contains schemes, relations, definitions, theorems, and many proof blocks.
+  The target state is for `AlphaRenaming.v` to contain only `Require Export`
+  lines for the focused alpha modules.
 
-## Next task: strengthen `EStruct` alpha
+## Next task: move expression-renaming soundness
 
-Do this before touching match branches, because struct fields have no binder
-scoping issue.
+Move expression-level executable-renamer soundness out of `AlphaRenaming.v`.
 
 Targets:
 
 - `rocq/theories/TypeSystem/AlphaExpr.v`
 - `rocq/theories/TypeSystem/AlphaRenaming.v`
 
-Implementation steps:
+Move these groups together:
 
-1. Add a structural `fields_alpha` relation in `AlphaExpr.v`.
-2. Change the `EA_Struct` constructor to require `fields_alpha ρ fields fieldsr`.
-3. Add or update helper lemmas in `AlphaRenaming.v` so
-   `alpha_rename_expr_sound` constructs `fields_alpha` for `EStruct`.
-4. Keep `alpha_rename_expr` output unchanged.
-5. Run:
-
-   ```sh
-   cd rocq && make
-   rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
-   ```
-
-Commit when this task passes.
-
-## Later task: strengthen `EMatch` branch alpha
-
-Use a pure alpha relation for branch binders. Do not put the executable
-renamer's `used` state, `binder_seed`, or `fresh_ident` behavior into the
-relation. Those details belong in helper lemmas proving that
-`alpha_rename_expr` produces the relation.
-
-Design:
-
-- Each branch has `(variant, binders, body)`.
-- Variant names must match structurally.
-- Binder lists must have the same length and order.
-- Renamed binders must not collide with each other; require this through the
-  binder relation, for example by carrying a `NoDup bindersr` proof.
-- Do not require renamed binders to be fresh against `rename_range ρ`. The
-  current `alpha_rename_expr_sound` theorem does not assume `rename_range ρ` is
-  included in `used`, and `alpha_rename_expr` must keep its existing output.
-- The branch body is related under an environment extended from original
-  binders to renamed binders.
-- Capture avoidance for free variables remains handled by the existing
-  `disjoint_names (free_vars_expr e) (rename_range ρ)` premise and the `EA_Var`
-  side condition.
-
-Expected shape:
-
-```coq
-Inductive binders_alpha :
-    rename_env -> list ident -> list ident -> rename_env -> Prop :=
-  | BA_Nil : forall ρ,
-      binders_alpha ρ [] [] ρ
-  | BA_Cons : forall ρ x xr xs xsr ρ_branch,
-      ~ In xr xsr ->
-      binders_alpha ρ xs xsr ρ_branch ->
-      binders_alpha ρ (x :: xs) (xr :: xsr) ((x, xr) :: ρ_branch).
-```
-
-This relation pairs binders positionally and constructs the same extended
-rename environment shape as `alpha_rename_idents`. It intentionally only rules
-out collisions among the renamed binders. If later work needs freshness against
-`rename_range ρ`, first strengthen the theorem premises or change the renamer
-seed in a separate semantic change.
-
-```coq
-Inductive branches_alpha : rename_env ->
-    list (string * list ident * expr) ->
-    list (string * list ident * expr) -> Prop :=
-  | BrA_Nil : forall ρ,
-      branches_alpha ρ [] []
-  | BrA_Cons : forall ρ variant binders bindersr body bodyr rest restr ρ_branch,
-      binders_alpha ρ binders bindersr ρ_branch ->
-      expr_alpha ρ_branch body bodyr ->
-      branches_alpha ρ rest restr ->
-      branches_alpha ρ
-        ((variant, binders, body) :: rest)
-        ((variant, bindersr, bodyr) :: restr).
-```
-
-`EA_Match` should become:
-
-```coq
-| EA_Match : forall ρ scrut scrutr branches branchesr,
-    expr_alpha ρ scrut scrutr ->
-    branches_alpha ρ branches branchesr ->
-    expr_alpha ρ
-      (EMatch scrut branches)
-      (EMatch scrutr branchesr)
-```
-
-Implementation steps:
-
-1. Add `binders_alpha` and `branches_alpha` in `AlphaExpr.v`.
-2. Add a helper lemma connecting `alpha_rename_idents` to `binders_alpha`, using
-   `alpha_rename_idents_outputs_nodup` for binder non-collision.
-3. Add a helper lemma connecting the match-branch traversal in
-   `alpha_rename_expr` to `branches_alpha`.
-4. Strengthen `EA_Match` and update `alpha_rename_expr_sound`.
-5. Keep `alpha_rename_expr` output unchanged.
-
-Acceptance criteria for the later task:
-
-- `EA_Match` requires `expr_alpha` for the scrutinee.
-- `EA_Match` requires `branches_alpha` for branches.
-- `alpha_rename_expr_sound` proves the match case without adding a new theorem
-  premise or changing `alpha_rename_expr` output.
-- `cd rocq && make` passes with no `Axiom`, `Admitted.`, or `Abort.` in
-  `rocq/theories`.
-
-## Cleanup task: traversal helpers
-
-After `EStruct` and `EMatch` are both strengthened, consider extracting shared
-accumulator traversals from `alpha_rename_expr` and its proofs.
-
-Possible helpers:
-
-- `alpha_rename_exprs`
-- `alpha_rename_fields`
-- `alpha_rename_payloads`
-- `alpha_rename_branches`
+- `alpha_rename_call_args_sound`
+- `alpha_rename_struct_fields_sound`
+- `alpha_rename_idents_binders_alpha`
+- `alpha_rename_idents_range`
+- `alpha_rename_idents_branch_body_disjoint`
+- `alpha_rename_match_branches_sound`
+- `alpha_rename_expr_sound`
 
 Constraints:
 
-- Preserve `alpha_rename_expr` output exactly.
-- Keep helper definitions unfold-friendly for Rocq proofs.
-- Regenerate extracted OCaml only through `cd rocq && make`; never edit
-  `fixtures/TypeChecker.ml` or `.mli` manually.
+- Do not change theorem statements.
+- Do not change `alpha_rename_expr` output.
+- Keep imports minimal in `AlphaExpr.v`; only add dependencies that these
+  proofs actually need.
+- `AlphaRenaming.v` must continue to `Require Export AlphaExpr`, so existing
+  downstream imports remain valid.
+
+Acceptance criteria:
+
+```sh
+cd rocq && make
+rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
+```
+
+Commit when this task passes.
+
+## Follow-up task: split typing and structural alpha proofs
+
+Create focused modules for typed and structural preservation proof groups, then
+move the corresponding blocks out of `AlphaRenaming.v`.
+
+Proposed modules:
+
+- `AlphaTyping.v`
+- `AlphaEnvStructural.v`
+
+Move these groups by dependency order, in separate commits:
+
+1. `ctx_same_bindings` and typed same-binding/merge helpers needed by typing
+   preservation.
+2. `alpha_rename_typed_args_env_structural_forward` and
+   `alpha_rename_typed_fields_env_structural_forward`.
+3. `alpha_rename_typed_match_tail_env_structural_forward`.
+4. `alpha_rename_typed_env_structural_forward` and related typed preservation
+   wrappers.
+
+Constraints:
+
+- Prefer moving proof blocks without changing statements.
+- Add the new modules to `rocq/_CoqProject` before `AlphaRenaming.v`.
+- Re-export the new modules from `AlphaRenaming.v`.
+- Do not make downstream files import the new modules directly in this phase.
+
+Acceptance criteria for each commit:
+
+```sh
+cd rocq && make
+rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
+```
+
+## Follow-up task: split roots, shadow, and provenance proofs
+
+Move root/shadow/provenance alpha proof groups out of `AlphaRenaming.v` after
+`AlphaTyping.v` and `AlphaEnvStructural.v` are stable.
+
+Proposed modules:
+
+- `AlphaRoots.v`
+- `AlphaShadowProvenance.v`
+
+Move these groups by dependency order, in separate commits:
+
+1. root-env and root-set rename/equiv helpers.
+2. `typed_env_roots_shadow_safe` and its mutual induction schemes.
+3. shadow-safe instantiation and support lemmas.
+4. captured-call, closure, and provenance-specific alpha preservation lemmas.
+5. final alpha-renaming wrappers for functions and full syntax.
+
+Constraints:
+
+- Preserve theorem names and statements.
+- Keep `AlphaRenaming.v` as the only compatibility import surface during the
+  migration.
+- If a proof group has hidden dependencies on previous sections, move the
+  dependency first rather than duplicating helpers.
+
+Acceptance criteria for each commit:
+
+```sh
+cd rocq && make
+rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
+```
+
+## Final task: make `AlphaRenaming.v` a pure aggregator
+
+After all proof groups are moved, reduce `AlphaRenaming.v` to exports only.
+
+Target shape:
+
+```coq
+From Facet.TypeSystem Require Export
+  ExprFacts AlphaCore AlphaCtx AlphaPlace AlphaExpr AlphaFn
+  AlphaTyping AlphaEnvStructural AlphaRoots AlphaShadowProvenance.
+```
+
+Acceptance criteria:
+
+- `AlphaRenaming.v` has no `Lemma`, `Theorem`, `Definition`, `Fixpoint`,
+  `Inductive`, `Scheme`, or `Combined Scheme` declarations.
+- Existing downstream files that import `AlphaRenaming` still compile.
+- `cd rocq && make` passes.
+- `rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories` has no matches.
+- `dune build` passes after the final Rocq build.
+
+## General constraints
+
+- Generated OCaml files under `fixtures/` must only be changed by
+  `cd rocq && make`; never edit them manually.
+- Keep commits small: one moved proof group or one new module per commit.
+- Ignore the existing unstaged `plan/review.md` unless explicitly asked to edit
+  it.

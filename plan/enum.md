@@ -231,7 +231,11 @@ Status: **implemented**. Phase 4 is complete.
 - `tests/valid/enum/payload_match.facet` passes; the former invalid regression
   `match_payload_binder_unsupported.facet` was moved to valid.
 - Shadow-safe roots guard (`infer_core_env_state_fuel_roots_shadow_safe`) and
-  `TERS_Match` remain no-payload; that is intentional pending Phase 4 extension.
+  `TERS_Match`/`TERSMatchTail_Cons` now support non-empty enum payload binders
+  (Phase 4 extension complete). The `first_unsupported_match_payload` guard was
+  removed from the shadow-safe checker and the corresponding proofs in
+  `AlphaRenaming.v`, `EnvRootSoundness.v`, and
+  `TypeSafetyCallFrameShadowSafe.v` were updated accordingly.
 - The basic checker guard (`infer_core_env_state_fuel`) remains no-payload;
   payload match goes through the roots path instead.
 

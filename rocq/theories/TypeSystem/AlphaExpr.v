@@ -45,6 +45,7 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
       exprs_alpha ρ args argsr ->
       expr_alpha ρ (ECallExpr callee args) (ECallExpr calleer argsr)
   | EA_Struct : forall ρ name lts args fields fieldsr,
+      fields_alpha ρ fields fieldsr ->
       expr_alpha ρ (EStruct name lts args fields) (EStruct name lts args fieldsr)
   | EA_Enum : forall ρ enum_name variant_name lts args payloads payloadsr,
       exprs_alpha ρ payloads payloadsr ->
@@ -83,7 +84,14 @@ with exprs_alpha : rename_env -> list expr -> list expr -> Prop :=
   | EAs_Cons : forall ρ e er es esr,
       expr_alpha ρ e er ->
       exprs_alpha ρ es esr ->
-      exprs_alpha ρ (e :: es) (er :: esr).
+      exprs_alpha ρ (e :: es) (er :: esr)
+with fields_alpha : rename_env -> list (string * expr) -> list (string * expr) -> Prop :=
+  | FAs_Nil : forall ρ,
+      fields_alpha ρ [] []
+  | FAs_Cons : forall ρ name e er fields fieldsr,
+      expr_alpha ρ e er ->
+      fields_alpha ρ fields fieldsr ->
+      fields_alpha ρ ((name, e) :: fields) ((name, er) :: fieldsr).
 
 Definition same_param_shape (p pr : param) : Prop :=
   param_mutability p = param_mutability pr /\

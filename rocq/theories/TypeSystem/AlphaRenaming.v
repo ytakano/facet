@@ -3234,6 +3234,67 @@ Proof.
       * exact Hrest.
 Qed.
 
+Lemma alpha_rename_struct_fields_sound : forall ρ used fields fieldsr used' ,
+  (forall used0 fname e er used1,
+      In (fname, e) fields ->
+      disjoint_names (free_vars_expr e) (rename_range ρ) ->
+      alpha_rename_expr ρ used0 e = (er, used1) ->
+      expr_alpha ρ e er) ->
+  disjoint_names
+    ((fix go (fields0 : list (string * expr)) : list ident :=
+        match fields0 with
+        | [] => []
+        | (_, e) :: rest => free_vars_expr e ++ go rest
+        end) fields)
+    (rename_range ρ) ->
+  ((fix go (used0 : list ident) (fields0 : list (string * expr))
+      : list (string * expr) * list ident :=
+      match fields0 with
+      | [] => ([], used0)
+      | (fname, e) :: rest =>
+          let (e', used1) := alpha_rename_expr ρ used0 e in
+          let (rest', used2) := go used1 rest in
+          ((fname, e') :: rest', used2)
+      end) used fields) = (fieldsr, used') ->
+  fields_alpha ρ fields fieldsr.
+Proof.
+  intros ρ used fields.
+  revert used.
+  induction fields as [| [fname e] rest IH];
+    intros used fieldsr used' Hexpr Hdisj Hrename; simpl in Hrename.
+  - injection Hrename as <- _. constructor.
+  - destruct (disjoint_names_app_l (free_vars_expr e)
+      ((fix go (fields0 : list (string * expr)) : list ident :=
+          match fields0 with
+          | [] => []
+          | (_, e0) :: rest0 => free_vars_expr e0 ++ go rest0
+          end) rest) (rename_range ρ) Hdisj) as [Hdisj_e Hdisj_rest].
+    destruct (alpha_rename_expr ρ used e) as [er used1] eqn:He.
+    destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+          : list (string * expr) * list ident :=
+          match fields0 with
+          | [] => ([], used0)
+          | (fname0, e0) :: rest0 =>
+              let (e0', used2) := alpha_rename_expr ρ used0 e0 in
+              let (rest', used3) := go used2 rest0 in
+              ((fname0, e0') :: rest', used3)
+          end) used1 rest) as [restr used2] eqn:Hrest.
+    injection Hrename as <- _.
+    constructor.
+    + eapply Hexpr.
+      * left. reflexivity.
+      * exact Hdisj_e.
+      * exact He.
+    + eapply IH.
+      * intros used0 fname0 e0 er0 used_tail Hin Hdisj0 Hrename0.
+        eapply Hexpr.
+        -- right. exact Hin.
+        -- exact Hdisj0.
+        -- exact Hrename0.
+      * exact Hdisj_rest.
+      * exact Hrest.
+Qed.
+
 Lemma alpha_rename_expr_sound : forall ρ used e er used',
   disjoint_names (free_vars_expr e) (rename_range ρ) ->
   alpha_rename_expr ρ used e = (er, used') ->
@@ -3404,6 +3465,17 @@ Proof.
 		    destruct r as [fieldsr used_fields].
 		    injection Hrename as <- _.
 		    apply EA_Struct.
+		    eapply alpha_rename_struct_fields_sound.
+		    * intros used0 fname field_expr er0 used1 Hin Hdisj0 Hrename0.
+		      eapply IH.
+		      -- pose proof (expr_size_struct_field_lt s l l0 l1 fname field_expr Hin)
+		           as Hfield_lt.
+		         assert (expr_size field_expr < n) as Hlt_field by lia.
+		         exact Hlt_field.
+		      -- exact Hdisj0.
+		      -- exact Hrename0.
+		    * exact Hdisj.
+		    * symmetry. exact Hfields.
 		  + remember
 		      ((fix go (used0 : list ident) (payloads0 : list expr)
 		          : list expr * list ident :=

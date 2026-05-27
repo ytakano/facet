@@ -1047,37 +1047,30 @@ Proof.
                   ps_payload s_scrut Hready_branch Htyped_branch
                   Hcover_payload Hscope_payload_start)
         as [frame_branch Hscope_branch].
-      destruct (store_remove_match_payload_cleanup_value_typed_roots_names
-                  ps_payload ps_branch env s_branch frame_branch roots_branch
-                  v T_branch Hnames_payload Hscope_branch Hv_roots_branch
-                  Hnodup_branch_params Hroots_excl_branch Hv_branch)
-        as [locals_branch [Hremoved_branch [Hv_removed Hvalue_excl]]].
-      assert (Hroots_removed :
-        store_roots_within R_branch (store_remove_params ps_payload s_branch)).
+      destruct (store_remove_match_payload_cleanup_prefix_store_typed_names
+                  ps_payload ps_branch env s_branch frame_branch R_branch
+                  roots_branch v T_branch Σ_branch_payload Hnames_payload
+                  Hscope_branch)
+        as [locals_branch [Hremoved_branch [Hv_removed
+             [Hstore_refs_excl Hstore_removed_remove]]]].
       { rewrite Hremove_branch.
         eapply store_roots_within_remove_match_params_names.
         - exact Hnames_payload.
         - exact Hroots_branch_store.
         - eapply params_names_nodup_b_sound. exact Hnodup_branch_params.
         - exact Hnodup_branch_store. }
-      assert (Hstore_refs_excl :
-        store_refs_exclude_params ps_payload
-          (store_remove_params ps_payload s_branch)).
-      { eapply store_refs_exclude_params_removed_names.
-        - exact Hnames_payload.
-        - exact Hroots_removed.
-        - exact Hnodup_branch_params.
-        - exact Hnodup_branch_store.
-        - exact Henv_excl_branch. }
+      { exact Hv_roots_branch. }
+      { exact Hnodup_branch_store. }
+      { exact Hnodup_branch_params. }
+      { exact Hroots_excl_branch. }
+      { exact Henv_excl_branch. }
+      { exact Hv_branch. }
+      { exact Hstore_branch. }
       assert (Hstore_removed :
         store_typed_prefix env (store_remove_params ps_payload s_branch)
           Σ_branch).
       { rewrite Hctx_remove_branch.
-        eapply store_typed_prefix_remove_params_excluding_final.
-        - exact Hnames_payload.
-        - exact Hstore_branch.
-        - exact Hnodup_branch_store.
-        - exact Hstore_refs_excl. }
+        exact Hstore_removed_remove. }
       assert (Hps_head_nil_tail : ps_head = []).
       { unfold match_payload_params in H10.
         unfold instantiate_enum_variant_field_tys in H10.

@@ -45,9 +45,14 @@ dune exec ocaml/main.exe -- --generate-grammar
 # Differential-test alpha-renaming path against direct path
 dune exec ocaml/main.exe -- --debug-alpha path/to/file.facet
 
-# Run all tests (valid/ expects exit 0; invalid/ expects exit 1)
-for f in tests/valid/**/*.facet; do dune exec ocaml/main.exe -- "$f" || echo "FAIL: $f"; done
-for f in tests/invalid/**/*.facet; do dune exec ocaml/main.exe -- "$f" && echo "FAIL (expected error): $f"; done
+# Run all valid/invalid regression tests
+sh tests/run.sh
+
+# Run FIR emission smoke tests
+sh tests/fir/run.sh
+
+# Type-check a single test file (valid expects exit 0; invalid expects exit 1)
+dune exec ocaml/main.exe -- tests/valid/basic/hello.facet
 ```
 
 ### Docker Development Environment (from repo root)
@@ -64,18 +69,43 @@ sh docker/rebuild.sh     # rebuild from scratch
 
 ### Rocq Module Structure
 
-`rocq/_CoqProject` declares the library mapping and **compilation order** — do not reorder entries:
+`rocq/_CoqProject` declares the library mapping and **compilation order** — do not reorder entries. There are two namespaces:
 
 ```
 rocq/theories/TypeSystem/   ← namespace: Facet.TypeSystem
+  Lifetime.v                ← Lifetime definitions
   Types.v                   ← Core type definitions (usage, Ty, TypeCore)
   Syntax.v                  ← AST (expr, fn_def, param, ident)
+  PathState.v               ← Path/place state for references
+  Program.v                 ← Top-level program structure
+  Renaming.v                ← Variable renaming utilities
   OperationalSemantics.v    ← Big-step eval with runtime store
   TypingRules.v             ← Inductive typing judgements + context helpers
+  RootProvenance.v          ← Root provenance tracking for borrows
   TypeChecker.v             ← Decidable infer function; OCaml extraction target
+  RuntimeTyping.v           ← Runtime type invariants
+  EnvStructuralRules.v      ← Structural rules for environment typing
+  WFType.v                  ← Well-formedness of types
   AlphaRenaming.v           ← Proofs that fresh renaming preserves typing/semantics
   CheckerSoundness.v        ← Soundness theorems (infer ↔ typed)
+  EnvSoundnessFacts.v       ← Environment soundness lemmas
+  TypeSafety*.v             ← Large cluster (~80 files) proving type safety:
+                              TypeSafetyReadiness, TypeSafetyHiddenFrame*,
+                              TypeSafetyCallFrame*, TypeSafetyRootsReady*,
+                              TypeSafetyClosure*, TypeSafetyDirectCall*,
+                              TypeSafetyCapturedCall*, TypeSafetyBasePreservation*,
+                              TypeSafetyPrefixPreservation*, TypeSafety (top-level)
+  Env*.v                    ← Environment soundness cluster:
+                              EnvTypingSoundness, EnvBorrowSoundness,
+                              EnvRootSoundness, BorrowStateSafety,
+                              EnvRuntime*Safety, EnvRuntimeShadow*Facts,
+                              EnvFullSoundness
   CheckerUsageSoundness.v   ← Usage constraints: linear vars consumed exactly once
+  BorrowCheckSoundness.v    ← Soundness of borrow checker
+
+rocq/theories/Validation/   ← namespace: Facet.Validation
+  Validator.v               ← Standalone validator
+  ValidatorSoundness.v      ← Soundness of the validator
 ```
 
 ### OCaml Frontend Pipeline
@@ -109,12 +139,14 @@ lexer.ml (sedlex) → parser.mly (Menhir) → ast.ml → debruijn.ml → main.ml
 
 ## Key Conventions
 
-- **Rocq imports**: `From Facet.TypeSystem Require Import ...` for local modules; `Stdlib` for Rocq library.
+- **Rocq imports**: `From Facet.TypeSystem Require Import ...` for local modules; `From Facet.Validation Require Import ...` for validation modules; `Stdlib` for Rocq library.
 - **`_b` suffix**: decidable (boolean) mirrors of context helpers (e.g., `ctx_lookup_b` ↔ `ctx_lookup`). Correspondences proven in `CheckerSoundness.v` via lemmas like `ctx_lookup_b_eq`.
 - **Generated files**: `fixtures/TypeChecker.ml` and `fixtures/TypeChecker.mli` are extracted by Rocq — never edit manually. Always run `cd rocq && make` first, then `dune build`.
 - **Termination trick**: `infer` uses an inline `let fix go` for argument processing so Rocq's termination checker sees structural recursion. A separate top-level `infer_args` exists for use in theorem statements.
 - **Runtime vs. static tracking**: `OperationalSemantics.store` uses `se_used` flag; `TypingRules.ctx` uses `consumed` bool. Both must agree (proven in `CheckerUsageSoundness.v`).
 - **Alpha renaming**: `infer_core` renames free variables before processing function bodies to prevent capture. `--debug-alpha` runs both paths and reports disagreements.
+- **TypeSafety proof decomposition**: The type safety proof is split across ~80 files to manage Rocq's memory and compilation time. Each file handles a narrow lemma cluster; `TypeSafety.v` is the top-level assembler.
+- **No `Admitted` in core files**: Soundness files must compile without `Admitted`. Any in-progress proofs must be kept in separate development branches.
 - **Rocq style**: two-space indentation in matches and proof scripts; short section comments for major blocks.
 - **Commits**: short imperative subjects (`add docker files`); call out regenerated `fixtures/TypeChecker.ml`.
 

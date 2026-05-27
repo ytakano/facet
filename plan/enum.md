@@ -150,12 +150,20 @@ before adding payload ownership.
 
 Add variant payload destructuring.
 
-Status: partially implemented as parser/core groundwork only. Match branches
-now carry payload binder lists through Rocq syntax, checker extraction, parser,
-de Bruijn conversion, and FIR integration. Non-empty branch binders are parsed
-but intentionally rejected by the checker as `ErrMatchPayloadUnsupported`, and
-FIR lowering also guards against them. Prop-level match typing still requires
-empty binders, so payload ownership typing/runtime semantics remain pending.
+Status: partially implemented. Match branches now carry payload binder lists
+through Rocq syntax, checker extraction, parser, de Bruijn conversion, and FIR
+integration. Non-empty branch binders are parsed but intentionally rejected by
+the checker as `ErrMatchPayloadUnsupported`, and FIR lowering also guards
+against them.
+
+The Prop-level and checker-internal match helpers can now compute payload
+params for both head and tail branches. Root-aware preservation and structural
+base preservation can type the selected runtime tail branch using the real
+payload store `bind_params ps_payload payloads s_scrut`, with lifetime-equivalent
+runtime and typed payload params. Prefix preservation still keeps the selected
+tail branch on the no-payload route because `store_typed_prefix` alone does not
+provide enough freshness/provenance information to safely bind runtime payload
+params.
 
 - Extend match branches with payload binder lists.
 - Instantiate the selected variant payload types from the scrutinee `TEnum`.
@@ -204,6 +212,11 @@ Completed groundwork:
   in-scope variables.
 - Regression coverage checks no-payload match still succeeds and payload binder
   syntax is rejected until ownership-sensitive payload typing is implemented.
+- `typed_match_tail_lookup` exposes payload binder freshness and
+  `params_ok_sctx_b` facts for selected tail branches.
+- Structural base preservation uses `store_typed_bind_match_payload_params_lifetime`
+  for selected tail branch input stores instead of pretending payloads are
+  absent.
 
 Remaining work:
 
@@ -213,11 +226,12 @@ Remaining work:
 - Keep `match_payload_params_opt` in the shared pre-`OperationalSemantics`
   layer; keep checker-facing `match_payload_params` as an `infer_result`
   wrapper.
-- Do not remove the no-payload premises from Prop-level match typing until the
-  preservation theorem is refactored. A proof-first attempt showed the old
-  helper `typed_match_tail_lookup_no_payload` becomes false as soon as
-  payload binders are allowed, and both base and prefix preservation currently
-  depend on that no-payload fact to type the runtime branch store.
+- Do not remove the checker rejection of payload binders until prefix
+  preservation has a sound payload route.
+- Prefix preservation needs either a freshness/provenance bridge from
+  `store_typed_prefix` to payload param binding, or a roots-aware selected-branch
+  cleanup package reused from root preservation. Until then its tail-branch
+  input and final cleanup stay no-payload.
 - `TypeSafetyHiddenFrameCleanupFacts.v` now has a focused helper packaging the
   payload cleanup fact needed for returned-value typing after
   `store_remove_params`.

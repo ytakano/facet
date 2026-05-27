@@ -808,8 +808,15 @@ Proof.
                 H16 Hvariant_runtime Hlookup_branch_eval)
         as [T_branch [Σ_branch_payload [Σ_branch [ps_branch
           [binders_branch Htail_branch]]]]];
-        destruct Htail_branch as [Hbinders_branch [Hparams_branch
-          [Htyped_branch [Hremove_branch [Hcore_branch [HinΣ HinT]]]]]].
+      destruct Htail_branch as [Hbinders_branch Htail_branch].
+      destruct Htail_branch as [Hparams_branch Htail_branch].
+      destruct Htail_branch as [Hnodup_branch_params Htail_branch].
+      destruct Htail_branch as [Hctx_none_branch Htail_branch].
+      destruct Htail_branch as [Htyped_branch Htail_branch].
+      destruct Htail_branch as [Hparams_ok_branch Htail_branch].
+      destruct Htail_branch as [Hremove_branch Htail_branch].
+      destruct Htail_branch as [Hcore_branch Htail_branch].
+      destruct Htail_branch as [HinΣ HinT].
       destruct (typed_match_tail_lookup_no_payload env Ω n lts args Σ1
         branches v_tail (ty_core T_head) Σ_tail Ts_tail
         variant_name vdef_runtime binders_branch H16 Hvariant_runtime

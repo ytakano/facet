@@ -586,7 +586,10 @@ Lemma typed_match_tail_lookup :
     exists T Σv_payload Σv ps binders,
       lookup_expr_branch_binders name branches = Some binders /\
       match_payload_params_opt binders lts args vdef = Some ps /\
+      params_names_nodup_b ps = true /\
+      ctx_lookup_params_none_b ps Σ = true /\
       typed_env_structural env Ω n (sctx_add_params ps Σ) e T Σv_payload /\
+      params_ok_sctx_b env ps Σv_payload = true /\
       Σv = sctx_remove_params ps Σv_payload /\
       ty_core T = expected_core /\
       In Σv Σs /\
@@ -611,8 +614,8 @@ Proof.
       eapply match_payload_params_opt_infer_ok. exact Hparams.
     + eapply IHtail in Hvariant; [| exact Hbranch].
       destruct Hvariant as [T' [Σpayload' [Σ' [ps' [binders' Hrest]]]]].
-      destruct Hrest as [Hbinders' [Hparams' [Htyped' [Hremove'
-        [Hcore' [HinΣ HinT]]]]]].
+      destruct Hrest as [Hbinders' [Hparams' [Hnodup' [Hctx_none'
+        [Htyped' [Hparams_ok' [Hremove' [Hcore' [HinΣ HinT]]]]]]]]].
       exists T', Σpayload', Σ', ps', binders'. repeat split; simpl; auto.
 Qed.
 
@@ -1461,8 +1464,43 @@ Proof.
 		            H16 Hvariant_runtime Hlookup_branch_eval)
 	          as [T_branch [Σ_branch_payload [Σ_branch [ps_branch
 	             [binders_branch Htail_branch]]]]];
-	          destruct Htail_branch as [Hbinders_branch [Hparams_branch
-	            [Htyped_branch [Hremove_branch [Hcore_branch [HinΣ HinT]]]]]].
+	      destruct Htail_branch as [Hbinders_branch Htail_branch].
+	      destruct Htail_branch as [Hparams_branch Htail_branch].
+	      destruct Htail_branch as [Hnodup_branch_params Htail_branch].
+	      destruct Htail_branch as [Hctx_none_branch Htail_branch].
+	      destruct Htail_branch as [Htyped_branch Htail_branch].
+	      destruct Htail_branch as [Hparams_ok_branch Htail_branch].
+	      destruct Htail_branch as [Hremove_branch Htail_branch].
+	      destruct Htail_branch as [Hcore_branch Htail_branch].
+	      destruct Htail_branch as [HinΣ HinT].
+	      assert (Hbinders_same : binders_branch = binders).
+	      { rewrite Hlookup_binders in Hbinders_branch.
+	        inversion Hbinders_branch. reflexivity. }
+	      destruct (value_has_type_enum_args_lifetime_equiv env s_scrut enum_name0
+	                  variant_name lts_val args_val values T_scrut enum_name0
+	                  lts args edef Hv_scrut H0 H1)
+	        as [_ Hargs_equiv].
+	      destruct (match_payload_params_opt_lifetime_equiv binders binders_branch
+	                  lts_val lts args_val args vdef_runtime ps_payload ps_branch
+	                  (eq_sym Hbinders_same) Hargs_equiv Hpayload_runtime
+	                  Hparams_branch)
+	        as [Hnames_payload Htys_payload].
+	      assert (Hvalues_typed_branch :
+	        enum_values_have_type env s_scrut values (map param_ty ps_branch)).
+	      { rewrite (match_payload_params_opt_param_tys binders_branch lts args
+	          vdef_runtime ps_branch Hparams_branch).
+	        assert (Hvariant_runtime_full :
+	          lookup_enum_variant variant_name (enum_variants edef) =
+	            Some vdef_runtime).
+	        { rewrite H6. simpl. rewrite Hvariant_head.
+	          exact Hvariant_runtime. }
+	        eapply (value_has_type_enum_values_lookup env s_scrut enum_name0
+	          variant_name lts_val args_val values T_scrut enum_name0 lts args
+	          edef vdef_runtime).
+	        - exact Hv_scrut.
+	        - exact H0.
+	        - exact H1.
+	        - exact Hvariant_runtime_full. }
 	      destruct (typed_match_tail_lookup_no_payload env Ω n lts args Σ1
 	          branches v_tail (ty_core T_head) Σ_tail Ts_tail
 	          variant_name vdef_runtime binders_branch H16 Hvariant_runtime
@@ -1490,8 +1528,13 @@ Proof.
 	      assert (Hstore_payload :
 	        store_typed env (bind_params ps_payload values s_scrut)
 	          (sctx_add_params ps_branch Σ1)).
-	      { rewrite Hpayload_nil, Hps_branch_nil, Hvalues_nil. simpl.
-	        exact Hstore_scrut. }
+	      { eapply store_typed_bind_match_payload_params_lifetime.
+	        - exact Hstore_scrut.
+	        - exact Hnodup_branch_params.
+	        - exact Hctx_none_branch.
+	        - exact Hvalues_typed_branch.
+	        - exact Hnames_payload.
+	        - exact Htys_payload. }
 	      destruct (IHbranch Ω n (sctx_add_params ps_branch Σ1) T_branch
 	                  Σ_branch_payload Hready_branch Hstore_payload Htyped_branch)
 	        as [Hstore_branch [Hv_branch Hpres_branch]].

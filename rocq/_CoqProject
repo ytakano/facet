@@ -21,6 +21,7 @@ theories/TypeSystem/AlphaFn.v
 theories/TypeSystem/AlphaTyping.v
 theories/TypeSystem/AlphaEnvStructural.v
 theories/TypeSystem/AlphaRoots.v
+theories/TypeSystem/AlphaShadowProvenance.v
 theories/TypeSystem/AlphaRenaming.v
 theories/TypeSystem/CheckerSoundness.v
 theories/TypeSystem/EnvSoundnessFacts.v

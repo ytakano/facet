@@ -480,6 +480,44 @@ Proof.
   - intros se Hin. exact Hin.
 Qed.
 
+Lemma store_remove_match_payload_cleanup_store_typed_names :
+  forall ps_runtime ps_typed env s_body frame R roots v T Σ,
+    ctx_names (params_ctx ps_runtime) = ctx_names (params_ctx ps_typed) ->
+    store_param_scope ps_runtime s_body frame ->
+    store_roots_within R (store_remove_params ps_runtime s_body) ->
+    value_roots_within roots v ->
+    store_no_shadow s_body ->
+    params_names_nodup_b ps_typed = true ->
+    EnvStructuralRules.roots_exclude_params ps_typed roots ->
+    EnvStructuralRules.root_env_excludes_params ps_typed R ->
+    value_has_type env s_body v T ->
+    store_typed env s_body Σ ->
+    exists locals,
+      store_remove_params ps_runtime s_body = locals ++ frame /\
+      value_has_type env (store_remove_params ps_runtime s_body) v T /\
+      store_refs_exclude_params ps_runtime
+        (store_remove_params ps_runtime s_body) /\
+      store_typed env (store_remove_params ps_runtime s_body)
+        (sctx_remove_params ps_typed Σ).
+Proof.
+  intros ps_runtime ps_typed env s_body frame R roots v T Σ Hnames Hscope
+    Hroots_removed Hvalue_roots Hshadow Hnodup Hroots_excl Henv_excl
+    Hvalue Hstore.
+  destruct (store_remove_match_payload_cleanup_value_typed_roots_names
+              ps_runtime ps_typed env s_body frame roots v T Hnames Hscope
+              Hvalue_roots Hnodup Hroots_excl Hvalue)
+    as [locals [Hremoved [Hvalue_removed _]]].
+  assert (Hstore_refs_excl :
+    store_refs_exclude_params ps_runtime
+      (store_remove_params ps_runtime s_body)).
+  { eapply store_refs_exclude_params_removed_names; eassumption. }
+  assert (Hstore_removed :
+    store_typed env (store_remove_params ps_runtime s_body)
+      (sctx_remove_params ps_typed Σ)).
+  { eapply store_typed_remove_params_excluding_final; eassumption. }
+  exists locals. repeat split; eassumption.
+Qed.
+
 Lemma store_param_prefix_bind_params_length :
   forall ps vs s,
     Datatypes.length vs = Datatypes.length ps ->

@@ -106,6 +106,7 @@ theories/TypeSystem/TypeSafety.v
 theories/TypeSystem/EnvTypingSoundness.v
 theories/TypeSystem/EnvBorrowSoundness.v
 theories/TypeSystem/EnvRootSoundness.v
+theories/TypeSystem/End2EndSafety.v
 theories/TypeSystem/BorrowStateSafety.v
 theories/TypeSystem/EnvRuntimeRootCheckFacts.v
 theories/TypeSystem/EnvRuntimeInitialRootFacts.v

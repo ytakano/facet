@@ -64,10 +64,16 @@ Design:
 - Each branch has `(variant, binders, body)`.
 - Variant names must match structurally.
 - Binder lists must have the same length and order.
+- Renamed binders must not collide with each other; require this through the
+  binder relation, for example by carrying a `NoDup bindersr` proof.
+- Do not require renamed binders to be fresh against `rename_range ρ`. The
+  current `alpha_rename_expr_sound` theorem does not assume `rename_range ρ` is
+  included in `used`, and `alpha_rename_expr` must keep its existing output.
 - The branch body is related under an environment extended from original
   binders to renamed binders.
-- Freshness/capture avoidance should be expressed as a binder relation, not by
-  threading `used` through `branches_alpha`.
+- Capture avoidance for free variables remains handled by the existing
+  `disjoint_names (free_vars_expr e) (rename_range ρ)` premise and the `EA_Var`
+  side condition.
 
 Expected shape:
 
@@ -77,10 +83,18 @@ Inductive binders_alpha :
   | BA_Nil : forall ρ,
       binders_alpha ρ [] [] ρ
   | BA_Cons : forall ρ x xr xs xsr ρ_branch,
-      (* freshness condition for xr against the extended range *)
+      ~ In xr xsr ->
       binders_alpha ρ xs xsr ρ_branch ->
       binders_alpha ρ (x :: xs) (xr :: xsr) ((x, xr) :: ρ_branch).
+```
 
+This relation pairs binders positionally and constructs the same extended
+rename environment shape as `alpha_rename_idents`. It intentionally only rules
+out collisions among the renamed binders. If later work needs freshness against
+`rename_range ρ`, first strengthen the theorem premises or change the renamer
+seed in a separate semantic change.
+
+```coq
 Inductive branches_alpha : rename_env ->
     list (string * list ident * expr) ->
     list (string * list ident * expr) -> Prop :=
@@ -109,7 +123,8 @@ Inductive branches_alpha : rename_env ->
 Implementation steps:
 
 1. Add `binders_alpha` and `branches_alpha` in `AlphaExpr.v`.
-2. Add a helper lemma connecting `alpha_rename_idents` to `binders_alpha`.
+2. Add a helper lemma connecting `alpha_rename_idents` to `binders_alpha`, using
+   `alpha_rename_idents_outputs_nodup` for binder non-collision.
 3. Add a helper lemma connecting the match-branch traversal in
    `alpha_rename_expr` to `branches_alpha`.
 4. Strengthen `EA_Match` and update `alpha_rename_expr_sound`.
@@ -119,8 +134,8 @@ Acceptance criteria for the later task:
 
 - `EA_Match` requires `expr_alpha` for the scrutinee.
 - `EA_Match` requires `branches_alpha` for branches.
-- `alpha_rename_expr_sound` proves the match case without weakening the
-  relation.
+- `alpha_rename_expr_sound` proves the match case without adding a new theorem
+  premise or changing `alpha_rename_expr` output.
 - `cd rocq && make` passes with no `Axiom`, `Admitted.`, or `Abort.` in
   `rocq/theories`.
 

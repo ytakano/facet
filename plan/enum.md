@@ -228,13 +228,11 @@ Remaining work:
   wrapper.
 - Do not remove the checker rejection of payload binders until prefix
   preservation has a sound payload route.
-- Prefix preservation needs either a freshness/provenance bridge from
-  `store_typed_prefix` to payload param binding, or a roots-aware selected-branch
-  cleanup package reused from root preservation. Until then its tail-branch
-  input and final cleanup stay no-payload.
-- `TypeSafetyHiddenFrameCleanupFacts.v` now has a focused helper packaging the
-  payload cleanup fact needed for returned-value typing after
-  `store_remove_params`.
+- Plain prefix preservation still needs a freshness/provenance bridge from
+  `store_typed_prefix` to payload param binding before its tail-branch input and
+  final cleanup can leave the no-payload route.
+- `TypeSafetyHiddenFrameCleanupFacts.v` and the prefix-root proof now package
+  the payload cleanup facts needed after `store_remove_params`.
 - Store typing now accepts lifetime-equivalent store/context entry types, while
   closure capture copies keep param-type annotations. Base and prefix
   preservation also have payload bind helpers for runtime params whose payload
@@ -254,36 +252,25 @@ Remaining work:
 - Root-aware and prefix-root preservation now also clean up the selected tail
   branch with real payload binders: branch param-scope is preserved through
   evaluation, returned-value typing is re-established after
-  `store_remove_params`, final store/prefix-store typing uses multi-remove
-  exclusion, and ref-target preservation is composed through payload bind and
-  payload removal.
+  `store_remove_params`, final store/prefix-store typing uses packaged
+  multi-remove exclusion, and ref-target preservation is composed through
+  payload bind and payload removal.
 - Soundness blocker before widening Prop/checker payload typing:
   structural/base preservation has no roots fact for the returned value after
   `store_remove_params ps_payload`. Replacing `typed_match_tail_lookup_no_payload`
   directly would need to prove that a returned `VRef` does not point at an
   erased payload binding, but that fact lives in the roots/provenance
   preservation path, not in plain `typed_env_structural`.
-- Do not try to prove `store_typed (store_remove_params ps s)
-  (sctx_remove_params ps Σ)` from only final
-  `store_refs_exclude_params ps (store_remove_params ps s)`: it is too weak for
-  the existing one-step `store_typed_remove_excluding_root` proof because
-  payload entries removed later may still reference payload entries removed
-  earlier. The cleanup package needs either a direct multi-remove store typing
-  proof over final entries or a stronger per-step exclusion invariant.
-- The direct proof should be generalized over a source store and a target store:
-  recursive frame-scope tails remain typed against the original branch store,
-  while surviving entries must be retyped against the final
-  `store_remove_params` store using value-ref exclusion. A non-generalized
-  prefix induction incorrectly requires the tail payload entries to be typed
-  against an intermediate store.
+- The multi-remove store typing proof is packaged for roots-aware cleanup.
+  Reuse it instead of re-deriving per-step payload removal facts at selected
+  runtime branch call sites.
 
 Next implementation step:
 
-- Move the same payload cleanup package toward structural/base preservation, or
-  introduce a small packaged theorem that lets structural/base preservation
-  consume the roots-aware cleanup result. Do not remove the no-payload premises
-  from Prop-level match typing and do not widen `TypeChecker.v` until that
-  structural/base path compiles.
+- Decide whether structural/base preservation can soundly consume roots-aware
+  cleanup facts, or whether plain structural preservation must remain
+  no-payload. Do not remove the no-payload premises from Prop-level match typing
+  and do not widen `TypeChecker.v` until that path compiles.
 
 ## Phase 5: Drop Lowering
 

@@ -1237,41 +1237,30 @@ Proof.
         eqn:Hunknown; try discriminate.
       unfold first_unsupported_match_payload in Hinfer.
       destruct (first_payload_binder_branch l) as [payload_binders |]
-        eqn:Hbinders; try discriminate.
-      destruct (first_payload_variant (enum_variants edef)) as [payload_variant |]
-        eqn:Hpayload; try discriminate.
-      destruct (first_missing_variant_branch (enum_variants edef) l) as [missing |]
-        eqn:Hmissing; try discriminate.
-      destruct (enum_variants edef) as [|v_head v_tail] eqn:Hvariants.
-      * exfalso. cbn in Hinfer. discriminate Hinfer.
-      * simpl in Hinfer.
+        eqn:Hbinders.
+      * simpl in Hinfer. discriminate.
+      * destruct (first_payload_variant (enum_variants edef)) as [payload_variant |]
+          eqn:Hpayload.
+        { simpl in Hinfer. discriminate. }
+        destruct (first_missing_variant_branch (enum_variants edef) l) as [missing |]
+          eqn:Hmissing; try discriminate.
+        destruct (enum_variants edef) as [|v_head v_tail] eqn:Hvariants;
+          try discriminate.
+        simpl in Hinfer.
+        destruct (lookup_expr_branch_binders (enum_variant_name v_head) l)
+          as [binders_head |] eqn:Hbinders_head; try discriminate.
         destruct (lookup_branch_b (enum_variant_name v_head) l) as [e_head |]
-          eqn:Hlookup_branch.
-        2: {
-          destruct (lookup_expr_branch_binders (enum_variant_name v_head) l);
-            discriminate.
-        }
-      assert (Hfields_head : enum_variant_fields v_head = []).
-      {
-        simpl in Hpayload.
-        destruct (enum_variant_fields v_head) eqn:Hfields; [reflexivity | discriminate].
-      }
-      assert (Hbinders_head :
-        lookup_expr_branch_binders (enum_variant_name v_head) l = Some []).
-      {
-        rewrite lookup_branch_b_lookup_expr_branch in Hlookup_branch.
-        eapply first_payload_binder_branch_lookup_none; eassumption.
-      }
-      rewrite Hbinders_head in Hinfer.
-      assert (Hparams_head :
-        match_payload_params [] l0 l1 v_head = infer_ok []).
-      {
-        unfold match_payload_params, instantiate_enum_variant_field_tys.
-        rewrite Hfields_head. simpl. reflexivity.
-      }
-      rewrite Hparams_head in Hinfer. simpl in Hinfer.
-      destruct (infer_core_env_state_fuel fuel' env Ω n (sctx_add_params [] Σ1) e_head)
-        as [[T_head Σ_head] | err_head] eqn:Hhead; try discriminate.
+          eqn:Hlookup_branch; try discriminate.
+        destruct (match_payload_params binders_head l0 l1 v_head)
+          as [ps_head | err_params_head] eqn:Hparams_head; try discriminate.
+        destruct (params_names_nodup_b ps_head &&
+            ctx_lookup_params_none_b ps_head Σ1) eqn:Hnodup_head;
+          try discriminate.
+        apply andb_true_iff in Hnodup_head as [Hnodup_head Hnone_head].
+        destruct (infer_core_env_state_fuel fuel' env Ω n (sctx_add_params ps_head Σ1) e_head)
+          as [[T_head Σ_head_payload] | err_head] eqn:Hhead; try discriminate.
+        destruct (params_ok_sctx_b env ps_head Σ_head_payload) eqn:Hcleanup_head;
+          try discriminate.
       destruct
         ((fix infer_rest (T_head0 : Ty) (defs0 : list enum_variant_def)
             {struct defs0} : infer_result (list sctx * list Ty) :=
@@ -1318,24 +1307,16 @@ Proof.
                 end
             end) T_head v_tail)
         as [[Σ_tail Ts_tail] | err_tail] eqn:Htail; try discriminate.
-      assert (Hpayload_tail : first_payload_variant v_tail = None).
-      {
-        simpl in Hpayload.
-        destruct (enum_variant_fields v_head); try discriminate.
-        exact Hpayload.
-      }
       assert (Htail_typed :
         typed_match_tail_env_structural env Ω n l0 l1 Σ1 l v_tail
           (ty_core T_head) Σ_tail Ts_tail).
       {
-        clear Hinfer Hvariants Hunknown Hmissing Hdup Hpayload Hhead.
-        revert Σ_tail Ts_tail Htail Hpayload_tail.
-        induction v_tail as [|v rest IHtail]; intros Σ_tail Ts_tail Htail0 Hpayload0;
+        clear Hinfer Hvariants Hunknown Hmissing Hdup Hbinders Hpayload Hhead.
+        revert Σ_tail Ts_tail Htail.
+        induction v_tail as [|v rest IHtail]; intros Σ_tail Ts_tail Htail0;
           simpl in Htail0.
         - inversion Htail0; subst. constructor.
-        - simpl in Hpayload0.
-          destruct (enum_variant_fields v) eqn:Hfields; try discriminate.
-          destruct (lookup_expr_branch_binders (enum_variant_name v) l)
+        - destruct (lookup_expr_branch_binders (enum_variant_name v) l)
             as [binders |] eqn:Hbinders0; try discriminate.
           destruct (lookup_branch_b (enum_variant_name v) l) as [e0 |]
             eqn:Hlookup0; try discriminate.
@@ -1396,21 +1377,14 @@ Proof.
             as [[Σs Ts] | err_tail0] eqn:Htail_rest; try discriminate.
           inversion Htail0; subst.
           rewrite lookup_branch_b_lookup_expr_branch in Hlookup0.
-          assert (Hbinders_nil : binders = []).
-          {
-            pose proof (first_payload_binder_branch_lookup_none
-              l (enum_variant_name v) e0 Hbinders Hlookup0) as Hnone_lookup.
-            rewrite Hbinders0 in Hnone_lookup. inversion Hnone_lookup. reflexivity.
-          }
-          subst binders.
           eapply TESMatchTail_Cons with
             (Σ := Σ1) (branches := l) (v := v) (rest := rest)
             (Σv_payload := Σ0) (Σv := sctx_remove_params ps Σ0)
-	            (Σs := Σs) (Ts := Ts) (T := T0) (e := e0)
-	            (expected_core := ty_core T_head) (binders := []) (ps := ps)
-	            (lts := l0) (args := l1).
-	          + exact Hbinders0.
-	          + exact Hparams.
+            (Σs := Σs) (Ts := Ts) (T := T0) (e := e0)
+            (expected_core := ty_core T_head) (binders := binders) (ps := ps)
+            (lts := l0) (args := l1).
+          + exact Hbinders0.
+          + exact Hparams.
           + exact Hnodup.
           + exact Hnone.
           + exact Hlookup0.
@@ -1420,11 +1394,12 @@ Proof.
           + exact Hparams_ok.
           + reflexivity.
           + apply ty_core_eqb_true. exact Hcore0.
-          + exact (IHtail Σs Ts eq_refl Hpayload0).
+          + exact (IHtail Σs Ts eq_refl).
           all: try solve [eauto | reflexivity].
       }
-      destruct (ctx_merge_many (ctx_of_sctx Σ_head) (map ctx_of_sctx Σ_tail))
-        as [Γ_out |] eqn:Hmerge; try discriminate.
+      destruct (ctx_merge_many
+          (ctx_of_sctx (sctx_remove_params ps_head Σ_head_payload))
+          (map ctx_of_sctx Σ_tail)) as [Γ_out |] eqn:Hmerge; try discriminate.
       simpl in Hinfer.
       inversion Hinfer; subst.
       rewrite lookup_branch_b_lookup_expr_branch in Hlookup_branch.
@@ -1432,29 +1407,29 @@ Proof.
         (MkTy (usage_max_tys_nonempty T_head Ts_tail) (ty_core T_head))
         (sctx_of_ctx Γ_out)).
       eapply TES_Match with
-        (Σ1 := Σ1) (Σ_head_payload := Σ_head) (Σ_head := Σ_head)
+        (Σ1 := Σ1) (Σ_head_payload := Σ_head_payload)
+        (Σ_head := sctx_remove_params ps_head Σ_head_payload)
         (Σ_tail := Σ_tail)
         (Γ_out := Γ_out) (edef := edef) (v_head := v_head)
         (v_tail := v_tail) (e_head := e_head) (T_scrut := T_scrut)
         (T_head := T_head) (Ts_tail := Ts_tail)
-        (binders_head := []) (ps_head := []);
+        (binders_head := binders_head) (ps_head := ps_head);
         [ eapply IH; [exact Hscrut_call | exact Hscrut]
         | exact Hscrut_core
         | exact Hlookup
         | apply negb_false_iff in Hlts; apply Nat.eqb_eq in Hlts; exact Hlts
         | apply negb_false_iff in Hargslen; apply Nat.eqb_eq in Hargslen; exact Hargslen
-	        | exact Hbounds
-	        | rewrite Hvariants; exact Hunknown
-	        | exact Hvariants
-	        | exact Hbinders_head
-	        | unfold match_payload_params, instantiate_enum_variant_field_tys;
-          rewrite Hfields_head; simpl; reflexivity
-        | reflexivity
-        | reflexivity
+        | exact Hbounds
+        | rewrite Hvariants; exact Hunknown
+        | exact Hvariants
+        | exact Hbinders_head
+        | exact Hparams_head
+        | exact Hnodup_head
+        | exact Hnone_head
         | exact Hlookup_branch
         | eapply IH;
           [eapply lookup_expr_branch_forallb_true; eassumption | exact Hhead]
-        | reflexivity
+        | exact Hcleanup_head
         | reflexivity
         | exact Htail_typed
         | exact Hmerge ];
@@ -1874,41 +1849,30 @@ Proof.
         eqn:Hunknown; try discriminate.
       unfold first_unsupported_match_payload in Hinfer.
       destruct (first_payload_binder_branch l) as [payload_binders |]
-        eqn:Hbinders; try discriminate.
-      destruct (first_payload_variant (enum_variants edef)) as [payload_variant |]
-        eqn:Hpayload; try discriminate.
-      destruct (first_missing_variant_branch (enum_variants edef) l) as [missing |]
-        eqn:Hmissing; try discriminate.
-      destruct (enum_variants edef) as [|v_head v_tail] eqn:Hvariants.
-      * exfalso. cbn in Hinfer. discriminate Hinfer.
-      * simpl in Hinfer.
+        eqn:Hbinders.
+      * simpl in Hinfer. discriminate.
+      * destruct (first_payload_variant (enum_variants edef)) as [payload_variant |]
+          eqn:Hpayload.
+        { simpl in Hinfer. discriminate. }
+        destruct (first_missing_variant_branch (enum_variants edef) l) as [missing |]
+          eqn:Hmissing; try discriminate.
+        destruct (enum_variants edef) as [|v_head v_tail] eqn:Hvariants;
+          try discriminate.
+        simpl in Hinfer.
+        destruct (lookup_expr_branch_binders (enum_variant_name v_head) l)
+          as [binders_head |] eqn:Hbinders_head; try discriminate.
         destruct (lookup_branch_b (enum_variant_name v_head) l) as [e_head |]
-          eqn:Hlookup_branch.
-        2: {
-          destruct (lookup_expr_branch_binders (enum_variant_name v_head) l);
-            discriminate.
-        }
-      assert (Hfields_head : enum_variant_fields v_head = []).
-      {
-        simpl in Hpayload.
-        destruct (enum_variant_fields v_head) eqn:Hfields; [reflexivity | discriminate].
-      }
-      assert (Hbinders_head :
-        lookup_expr_branch_binders (enum_variant_name v_head) l = Some []).
-      {
-        rewrite lookup_branch_b_lookup_expr_branch in Hlookup_branch.
-        eapply first_payload_binder_branch_lookup_none; eassumption.
-      }
-      rewrite Hbinders_head in Hinfer.
-      assert (Hparams_head :
-        match_payload_params [] l0 l1 v_head = infer_ok []).
-      {
-        unfold match_payload_params, instantiate_enum_variant_field_tys.
-        rewrite Hfields_head. simpl. reflexivity.
-      }
-      rewrite Hparams_head in Hinfer. simpl in Hinfer.
-      destruct (infer_core_env_state_fuel fuel' env Ω n (sctx_add_params [] Σ1) e_head)
-        as [[T_head Σ_head] | err_head] eqn:Hhead; try discriminate.
+          eqn:Hlookup_branch; try discriminate.
+        destruct (match_payload_params binders_head l0 l1 v_head)
+          as [ps_head | err_params_head] eqn:Hparams_head; try discriminate.
+        destruct (params_names_nodup_b ps_head &&
+            ctx_lookup_params_none_b ps_head Σ1) eqn:Hnodup_head;
+          try discriminate.
+        apply andb_true_iff in Hnodup_head as [Hnodup_head Hnone_head].
+        destruct (infer_core_env_state_fuel fuel' env Ω n (sctx_add_params ps_head Σ1) e_head)
+          as [[T_head Σ_head_payload] | err_head] eqn:Hhead; try discriminate.
+        destruct (params_ok_sctx_b env ps_head Σ_head_payload) eqn:Hcleanup_head;
+          try discriminate.
       destruct
         ((fix infer_rest (T_head0 : Ty) (defs0 : list enum_variant_def)
             {struct defs0} : infer_result (list sctx * list Ty) :=
@@ -1955,24 +1919,16 @@ Proof.
                 end
             end) T_head v_tail)
         as [[Σ_tail Ts_tail] | err_tail] eqn:Htail; try discriminate.
-      assert (Hpayload_tail : first_payload_variant v_tail = None).
-      {
-        simpl in Hpayload.
-        destruct (enum_variant_fields v_head); try discriminate.
-        exact Hpayload.
-      }
       assert (Htail_typed :
         typed_match_tail_env_structural env Ω n l0 l1 Σ1 l v_tail
           (ty_core T_head) Σ_tail Ts_tail).
       {
-        clear Hinfer Hvariants Hunknown Hmissing Hdup Hpayload Hhead.
-        revert Σ_tail Ts_tail Htail Hpayload_tail.
-        induction v_tail as [|v rest IHtail]; intros Σ_tail Ts_tail Htail0 Hpayload0;
+        clear Hinfer Hvariants Hunknown Hmissing Hdup Hbinders Hpayload Hhead.
+        revert Σ_tail Ts_tail Htail.
+        induction v_tail as [|v rest IHtail]; intros Σ_tail Ts_tail Htail0;
           simpl in Htail0.
         - inversion Htail0; subst. constructor.
-        - simpl in Hpayload0.
-          destruct (enum_variant_fields v) eqn:Hfields; try discriminate.
-          destruct (lookup_expr_branch_binders (enum_variant_name v) l)
+        - destruct (lookup_expr_branch_binders (enum_variant_name v) l)
             as [binders |] eqn:Hbinders0; try discriminate.
           destruct (lookup_branch_b (enum_variant_name v) l) as [e0 |]
             eqn:Hlookup0; try discriminate.
@@ -2033,21 +1989,14 @@ Proof.
             as [[Σs Ts] | err_tail0] eqn:Htail_rest; try discriminate.
           inversion Htail0; subst.
           rewrite lookup_branch_b_lookup_expr_branch in Hlookup0.
-          assert (Hbinders_nil : binders = []).
-          {
-            pose proof (first_payload_binder_branch_lookup_none
-              l (enum_variant_name v) e0 Hbinders Hlookup0) as Hnone_lookup.
-            rewrite Hbinders0 in Hnone_lookup. inversion Hnone_lookup. reflexivity.
-          }
-          subst binders.
           eapply TESMatchTail_Cons with
             (Σ := Σ1) (branches := l) (v := v) (rest := rest)
             (Σv_payload := Σ0) (Σv := sctx_remove_params ps Σ0)
-	            (Σs := Σs) (Ts := Ts) (T := T0) (e := e0)
-	            (expected_core := ty_core T_head) (binders := []) (ps := ps)
-	            (lts := l0) (args := l1).
-	          + exact Hbinders0.
-	          + exact Hparams.
+            (Σs := Σs) (Ts := Ts) (T := T0) (e := e0)
+            (expected_core := ty_core T_head) (binders := binders) (ps := ps)
+            (lts := l0) (args := l1).
+          + exact Hbinders0.
+          + exact Hparams.
           + exact Hnodup.
           + exact Hnone.
           + exact Hlookup0.
@@ -2057,11 +2006,12 @@ Proof.
           + exact Hparams_ok.
           + reflexivity.
           + apply ty_core_eqb_true. exact Hcore0.
-          + exact (IHtail Σs Ts eq_refl Hpayload0).
+          + exact (IHtail Σs Ts eq_refl).
           all: try solve [eauto | reflexivity].
       }
-      destruct (ctx_merge_many (ctx_of_sctx Σ_head) (map ctx_of_sctx Σ_tail))
-        as [Γ_out |] eqn:Hmerge; try discriminate.
+      destruct (ctx_merge_many
+          (ctx_of_sctx (sctx_remove_params ps_head Σ_head_payload))
+          (map ctx_of_sctx Σ_tail)) as [Γ_out |] eqn:Hmerge; try discriminate.
       simpl in Hinfer.
       inversion Hinfer; subst.
       rewrite lookup_branch_b_lookup_expr_branch in Hlookup_branch.
@@ -2069,29 +2019,29 @@ Proof.
         (MkTy (usage_max_tys_nonempty T_head Ts_tail) (ty_core T_head))
         (sctx_of_ctx Γ_out)).
       eapply TES_Match with
-        (Σ1 := Σ1) (Σ_head_payload := Σ_head) (Σ_head := Σ_head)
+        (Σ1 := Σ1) (Σ_head_payload := Σ_head_payload)
+        (Σ_head := sctx_remove_params ps_head Σ_head_payload)
         (Σ_tail := Σ_tail)
         (Γ_out := Γ_out) (edef := edef) (v_head := v_head)
         (v_tail := v_tail) (e_head := e_head) (T_scrut := T_scrut)
         (T_head := T_head) (Ts_tail := Ts_tail)
-        (binders_head := []) (ps_head := []);
+        (binders_head := binders_head) (ps_head := ps_head);
         [ eapply IH; [exact Hscrut_struct | exact Hscrut]
         | exact Hscrut_core
         | exact Hlookup
         | apply negb_false_iff in Hlts; apply Nat.eqb_eq in Hlts; exact Hlts
         | apply negb_false_iff in Hargslen; apply Nat.eqb_eq in Hargslen; exact Hargslen
-	        | exact Hbounds
-	        | rewrite Hvariants; exact Hunknown
-	        | exact Hvariants
-	        | exact Hbinders_head
-	        | unfold match_payload_params, instantiate_enum_variant_field_tys;
-          rewrite Hfields_head; simpl; reflexivity
-        | reflexivity
-        | reflexivity
+        | exact Hbounds
+        | rewrite Hvariants; exact Hunknown
+        | exact Hvariants
+        | exact Hbinders_head
+        | exact Hparams_head
+        | exact Hnodup_head
+        | exact Hnone_head
         | exact Hlookup_branch
         | eapply IH;
           [eapply lookup_expr_branch_forallb_true; eassumption | exact Hhead]
-        | reflexivity
+        | exact Hcleanup_head
         | reflexivity
         | exact Htail_typed
         | exact Hmerge ];

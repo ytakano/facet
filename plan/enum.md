@@ -217,70 +217,23 @@ Completed groundwork:
   for selected tail branch input stores instead of pretending payloads are
   absent.
 
-Remaining work:
+Status: **implemented**. Phase 4 is complete.
 
-- Keep payload branch execution as:
-  `bind_params ps payloads s_scrut`, evaluate the selected branch, then
-  `store_remove_params ps` from the branch result store.
-- Keep `match_payload_params_opt` in the shared pre-`OperationalSemantics`
-  layer; keep checker-facing `match_payload_params` as an `infer_result`
-  wrapper.
-- Do not remove the checker rejection of payload binders until the roots checker
-  soundness theorem is payload-capable and `cd rocq && make` compiles.
-- Plain ordinary preservation is intentionally no-payload-gated. Payload match
-  execution should be validated through the roots/provenance path, not by
-  weakening returned-value safety in the plain structural route.
-- `TypeSafetyHiddenFrameCleanupFacts.v` and the prefix-root proof now package
-  the payload cleanup facts needed after `store_remove_params`.
-- Store typing now accepts lifetime-equivalent store/context entry types, while
-  closure capture copies keep param-type annotations. Base and prefix
-  preservation also have payload bind helpers for runtime params whose payload
-  types are lifetime-equivalent to typed branch params.
-- Runtime lifetime-equivalence is now transitive, and base preservation has
-  helpers to relate runtime payload params to typed branch params when enum
-  type arguments differ only by lifetime-equivalence.
-- Root-aware, prefix-root, and roots-readiness match-tail lookup helpers now
-  expose the branch payload cleanup facts already present in
-  `typed_match_tail_roots`:
-  context/root freshness, payload params-ok, branch result root exclusion, and
-  post-removal root-env exclusion. This avoids re-deriving those facts in the
-  selected runtime branch proof.
-- Root-aware and prefix-root preservation now build selected head and tail
-  branch input store/root/no-shadow facts using payload binders,
-  lifetime-equivalent runtime payload params, and payload value roots.
-- Root-aware and prefix-root preservation now also clean up selected head and
-  tail branches with real payload binders: branch param-scope is preserved
-  through evaluation, returned-value typing is re-established after
-  `store_remove_params`, final store/prefix-store typing uses packaged
-  multi-remove exclusion, and ref-target preservation is composed through
-  payload bind and payload removal.
-- Structural and roots soundness proofs have been updated to the widened
-  Prop-level constructors while the executable checker remains no-payload for
-  match binders. Shadow-safe roots constructors still intentionally retain the
-  no-payload premises.
-- Current blocker before enabling executable payload match: `EnvRootSoundness.v`
-  still proves the roots checker by using `first_unsupported_match_payload_none`
-  and no-payload selected-branch facts. Removing the roots checker rejection
-  exposes the real obligation: derive payload binder params, bind payload
-  runtime values under `root_env_add_params_roots_same`, prove branch roots, and
-  package cleanup in the checker-soundness proof just as preservation now does.
-- The multi-remove store typing proof is packaged for roots-aware cleanup.
-  Reuse it instead of re-deriving per-step payload removal facts at selected
-  runtime branch call sites.
-
-Next implementation step:
-
-- Extend `EnvRootSoundness.v` for payload-capable roots match. Start with the
-  selected head branch, then the selected tail branch, reusing the preservation
-  payload route:
-  `match_payload_params_opt_lifetime_equiv`,
-  `store_roots_within_bind_params_roots_same_names`, roots/no-shadow payload
-  facts, and the existing match-payload cleanup lemmas.
-- Only after roots checker soundness compiles, remove
-  `first_unsupported_match_payload` from the roots and shadow-safe roots checker
-  branches, switch the OCaml CLI from `infer_full_env` to
-  `infer_full_env_roots env f (initial_root_env_for_fn f)`, and move the payload
-  binder regression from invalid to valid.
+- `EnvRootSoundness.v` proves the roots checker sound for non-empty payload
+  match binders. The `first_unsupported_match_payload` guard was removed from
+  `infer_core_env_state_fuel_roots` (roots checker).
+- `EnvTypingSoundness.v` elab EMatch proof updated for payload-capable
+  elaboration; the guard was also removed from `infer_core_env_state_fuel_elab`.
+- The OCaml CLI uses `infer_full_env_roots` (roots checker path) as the primary
+  checker; falls back to `infer_full_env` only for expression forms not yet
+  handled by the roots checker (e.g. `ECallExpr` on function values). Closure
+  captures are included in the initial root env.
+- `tests/valid/enum/payload_match.facet` passes; the former invalid regression
+  `match_payload_binder_unsupported.facet` was moved to valid.
+- Shadow-safe roots guard (`infer_core_env_state_fuel_roots_shadow_safe`) and
+  `TERS_Match` remain no-payload; that is intentional pending Phase 4 extension.
+- The basic checker guard (`infer_core_env_state_fuel`) remains no-payload;
+  payload match goes through the roots path instead.
 
 ## Phase 5: Drop Lowering
 

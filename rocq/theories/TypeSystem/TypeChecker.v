@@ -4138,10 +4138,6 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
 	                      match first_unknown_variant_branch branches (enum_variants edef) with
 	                      | Some name => infer_err (ErrVariantNotFound name)
 	                      | None =>
-	                          match first_unsupported_match_payload branches
-	                                  (enum_variants edef) with
-	                          | Some name => infer_err (ErrMatchPayloadUnsupported name)
-	                          | None =>
 	                          match first_missing_variant_branch (enum_variants edef) branches with
                           | Some name => infer_err (ErrMissingVariant name)
                           | None =>
@@ -4234,7 +4230,6 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
                                       end
 	                                  | infer_ok (_, [], _, _) => infer_err ErrContextCheckFailed
 	                                  end
-	                          end
 	                          end
 	                      end
                   end
@@ -5306,10 +5301,6 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
 	                      match first_unknown_variant_branch branches (enum_variants edef) with
 	                      | Some name => infer_err (ErrVariantNotFound name)
 	                      | None =>
-	                          match first_unsupported_match_payload branches
-	                                  (enum_variants edef) with
-	                          | Some name => infer_err (ErrMatchPayloadUnsupported name)
-	                          | None =>
 	                          match first_missing_variant_branch (enum_variants edef) branches with
                           | Some name => infer_err (ErrMissingVariant name)
                           | None =>
@@ -5419,7 +5410,6 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
 	                                      | None => infer_err ErrContextCheckFailed
 	                                      end
 	                                  end
-	                          end
 	                      end
 	                  end
 	                  end
@@ -9148,8 +9138,6 @@ Fixpoint elaborate_raw_expr_fuel
                                 match lookup_enum_variant variant_name (enum_variants edef) with
 	                                | None => infer_err (ErrVariantNotFound variant_name)
 	                                | Some vdef =>
-	                                    match binders, enum_variant_fields vdef with
-	                                    | [], [] =>
 	                                    match match_payload_params binders lts args vdef with
                                     | infer_err err => infer_err err
                                     | infer_ok ps =>
@@ -9170,9 +9158,6 @@ Fixpoint elaborate_raw_expr_fuel
                                         end
 	                                        else infer_err ErrContextCheckFailed
 	                                    end
-	                                    | _ :: _, _ => infer_err (ErrMatchPayloadUnsupported variant_name)
-	                                    | _, _ :: _ => infer_err (ErrMatchPayloadUnsupported variant_name)
-	                                    end
 	                                end
                             end
                           in
@@ -9180,8 +9165,13 @@ Fixpoint elaborate_raw_expr_fuel
                           | infer_err err => infer_err err
                           | infer_ok (branches', extras_branches, next') =>
                               let extras := extras_scrut ++ extras_branches in
-                              finish (append_env_fns env extras)
-                                (EMatch scrut' branches') extras next'
+                              let env' := append_env_fns env extras in
+                              match infer_core_env_state_fuel_elab fuel env' Ω n Σ
+                                      (EMatch scrut' branches') with
+                              | infer_err err => infer_err err
+                              | infer_ok (_, Σ', e_match') =>
+                                  infer_ok (e_match', Σ', extras, next')
+                              end
                           end
                       end
                   | c => infer_err (ErrNotAnEnum c)

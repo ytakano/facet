@@ -178,14 +178,19 @@ let string_of_diagnostic_ident diagnostics id =
   | Some name -> name
   | None -> string_of_ident id
 
-let result_of_infer_result = function
-  | Infer_ok value -> Ok value
-  | Infer_err err -> Error err
-
 let check_alpha_normalized_fn env_for_checker diagnostics f =
-  { env_for_checker;
-    diagnostic_map = diagnostics;
-    result = result_of_infer_result (infer_full_env env_for_checker f) }
+  let r0 = initial_root_env_for_params (f.fn_params @ f.fn_captures) in
+  let result = match infer_full_env_roots env_for_checker f r0 with
+    | Infer_ok (((ty, ctx), _root_env), _roots) -> Ok (ty, ctx)
+    | Infer_err ErrNotImplemented ->
+      (* Fall back to ordinary checker for expression forms not yet handled
+         by the roots checker (e.g. ECallExpr on function values). *)
+      (match infer_full_env env_for_checker f with
+       | Infer_ok (ty, ctx) -> Ok (ty, ctx)
+       | Infer_err err -> Error err)
+    | Infer_err err -> Error err
+  in
+  { env_for_checker; diagnostic_map = diagnostics; result }
 
 let string_of_infer_error ?(diagnostics = []) = function
   | ErrUnknownVar id      ->

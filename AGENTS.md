@@ -110,3 +110,17 @@ Before completing a type-system-related change, run:
 ## Rule
 
 Do not duplicate type-checking logic in OCaml.
+
+The OCaml CLI accept/reject path must use the extracted Rocq
+`infer_program_env_end2end` entrypoint as its only checker authority. Do not add
+fallback acceptance paths to `infer_full_env`, `infer_full_env_roots`,
+`check_program_env`, or handwritten OCaml checker logic. `ErrNotImplemented`
+from the extracted end-to-end checker is a rejection, not a signal to retry with
+another checker.
+
+When extending the language, typing rules, executable checker, borrow/root
+rules, desugaring-to-core translation, or extraction boundary, preserve or
+extend the end-to-end checker soundness and type-safety theorems. The required
+program-level theorem names are `infer_program_env_end2end_sound`,
+`check_program_env_end2end_sound`, and
+`infer_program_env_end2end_big_step_safe_checked_initial_ready`.

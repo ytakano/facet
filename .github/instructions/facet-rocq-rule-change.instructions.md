@@ -37,7 +37,8 @@ Facet has Rocq proofs for core type safety. Changes to typing-related rules must
    - the checker soundness proof,
    - the documented mismatch,
    - or an explicit proof-gap note.
-7. Update type-safety-related proofs as needed:
+7. Preserve or extend the end-to-end checker theorems `infer_program_env_end2end_sound`, `check_program_env_end2end_sound`, and `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
+8. Update type-safety-related proofs as needed:
    - preservation
    - progress
    - substitution
@@ -49,16 +50,16 @@ Facet has Rocq proofs for core type safety. Changes to typing-related rules must
    - drop preservation
    - effect preservation
    - checker soundness
-8. Record proof gaps explicitly.
+9. Record proof gaps explicitly.
    - List any `Admitted`, `Axiom`, unfinished lemma, or intentionally weakened theorem.
    - Explain whether the gap affects type safety, checker soundness, or only convenience lemmas.
-9. Add valid and invalid examples in `tests/`.
+10. Add valid and invalid examples in `tests/`.
    - Include negative tests for rejected programs.
    - Include examples that exercise the source construct and the corresponding core construct when applicable.
    - Include ownership/borrowing/drop/effect edge cases.
-10. Run the Rocq build.
+11. Run the Rocq build.
     - When Rocq compile times are high, profile and optimize the bottlenecks before committing changes.
-11. If extraction is affected, run extraction and OCaml tests.
+12. If extraction is affected, run extraction and OCaml tests.
 
 ## Hard constraints
 
@@ -89,3 +90,5 @@ When finishing a change, report:
 7. Tests added or updated.
 8. Rocq build result.
 9. Extraction/OCaml test result, if relevant.
+
+- Do not weaken, remove, or bypass the end-to-end checker soundness/type-safety theorem statements to make checker changes pass.

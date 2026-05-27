@@ -619,6 +619,9 @@ type infer_error =
 | ErrTraitImplNotFound of string * ty
 | ErrTraitImplAmbiguous of string * ty
 | ErrTypeArgInferenceFailed
+| ErrEndToEndSafetyGateFailed
+| ErrGlobalNamesNotUnique
+| ErrInFunction of ident * infer_error
 
 val compatible_error : ty -> ty -> infer_error
 
@@ -1174,6 +1177,15 @@ val check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_
 
 val check_program_env_alpha_validated_root_shadow_provenance :
   global_env -> bool
+
+val infer_fn_env_end2end :
+  global_env -> fn_def -> (((ty * ctx) * root_env) * root_set) infer_result
+
+val infer_fns_env_end2end : global_env -> fn_def list -> unit infer_result
+
+val infer_program_env_end2end : global_env -> global_env infer_result
+
+val check_program_env_end2end : global_env -> bool
 
 type raw_expr =
 | RawUnit

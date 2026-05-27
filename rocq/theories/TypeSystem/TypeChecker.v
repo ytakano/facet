@@ -679,7 +679,10 @@ Inductive infer_error : Type :=
   | ErrMissingField : string -> infer_error
   | ErrTraitImplNotFound : string -> Ty -> infer_error
   | ErrTraitImplAmbiguous : string -> Ty -> infer_error
-  | ErrTypeArgInferenceFailed : infer_error.
+  | ErrTypeArgInferenceFailed : infer_error
+  | ErrEndToEndSafetyGateFailed : infer_error
+  | ErrGlobalNamesNotUnique : infer_error
+  | ErrInFunction : ident -> infer_error -> infer_error.
 
 Definition compatible_error (T_actual T_expected : Ty) : infer_error :=
   match ty_core T_actual, ty_core T_expected with
@@ -7996,6 +7999,44 @@ Definition check_program_env_alpha_validated_root_shadow_provenance
      (alpha_normalize_global_env env) &&
    check_env_preservation_ready (alpha_normalize_global_env env)).
 
+Definition infer_fn_env_end2end (env : global_env) (f : fn_def)
+    : infer_result (Ty * ctx * root_env * root_set) :=
+  let R0 := initial_root_env_for_params (fn_params f ++ fn_captures f) in
+  match infer_full_env_roots env f R0 with
+  | infer_err err => infer_err err
+  | infer_ok res =>
+      if check_fn_root_shadow_captured_call_provenance_summary env f
+      then infer_ok res
+      else infer_err ErrEndToEndSafetyGateFailed
+  end.
+
+Fixpoint infer_fns_env_end2end (env : global_env) (fns : list fn_def)
+    : infer_result unit :=
+  match fns with
+  | [] => infer_ok tt
+  | f :: rest =>
+      match infer_fn_env_end2end env f with
+      | infer_err err => infer_err (ErrInFunction (fn_name f) err)
+      | infer_ok _ => infer_fns_env_end2end env rest
+      end
+  end.
+
+Definition infer_program_env_end2end (env : global_env)
+    : infer_result global_env :=
+  let env_alpha := alpha_normalize_global_env env in
+  if global_names_unique_b env_alpha then
+    match infer_fns_env_end2end env_alpha (env_fns env_alpha) with
+    | infer_err err => infer_err err
+    | infer_ok _ => infer_ok env_alpha
+    end
+  else infer_err ErrGlobalNamesNotUnique.
+
+Definition check_program_env_end2end (env : global_env) : bool :=
+  match infer_program_env_end2end env with
+  | infer_ok _ => true
+  | infer_err _ => false
+  end.
+
 Definition ex_ready_gap_let_fn : fn_def :=
   MkFnDef (("ready_gap_let"%string), 0) 0 [] [] []
     (MkTy UUnrestricted TUnits)
@@ -9332,4 +9373,5 @@ Extraction "../fixtures/TypeChecker.ml"
   check_program_env_alpha_validated_root_shadow_provenance_summary
   check_program_env_alpha_validated_root_shadow_direct_call_provenance_summary
   check_program_env_alpha_elab_validated_root_shadow_captured_call_provenance_summary
-  check_program_env_alpha_validated_root_shadow_provenance.
+  check_program_env_alpha_validated_root_shadow_provenance
+  infer_fn_env_end2end infer_program_env_end2end check_program_env_end2end.

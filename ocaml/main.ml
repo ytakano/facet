@@ -172,7 +172,7 @@ let string_of_diagnostic_ident diagnostics id =
   | Some name -> name
   | None -> string_of_ident id
 
-let string_of_infer_error ?(diagnostics = []) = function
+let rec string_of_infer_error ?(diagnostics = []) = function
   | ErrUnknownVar id      ->
     Printf.sprintf "unknown variable: %s" (string_of_diagnostic_ident diagnostics id)
   | ErrAlreadyConsumed id ->
@@ -239,6 +239,14 @@ let string_of_infer_error ?(diagnostics = []) = function
     Printf.sprintf "trait impl is ambiguous: %s for %s" name (string_of_ty ty)
   | ErrTypeArgInferenceFailed ->
     "could not infer generic type arguments"
+  | ErrEndToEndSafetyGateFailed ->
+    "end-to-end safety gate failed"
+  | ErrGlobalNamesNotUnique ->
+    "global names are not unique"
+  | ErrInFunction (id, err) ->
+    Printf.sprintf "in function %s: %s"
+      (string_of_diagnostic_ident diagnostics id)
+      (string_of_infer_error ~diagnostics err)
 
 let () =
   let args = Sys.argv in

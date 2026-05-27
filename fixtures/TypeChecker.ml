@@ -3241,6 +3241,9 @@ type infer_error =
 | ErrTraitImplNotFound of string * ty
 | ErrTraitImplAmbiguous of string * ty
 | ErrTypeArgInferenceFailed
+| ErrEndToEndSafetyGateFailed
+| ErrGlobalNamesNotUnique
+| ErrInFunction of ident * infer_error
 
 (** val compatible_error : ty -> ty -> infer_error **)
 
@@ -9229,6 +9232,45 @@ let check_program_env_alpha_validated_root_shadow_provenance env =
       (check_env_root_shadow_provenance_summary
         (alpha_normalize_global_env env))
       (check_env_preservation_ready (alpha_normalize_global_env env)))
+
+(** val infer_fn_env_end2end :
+    global_env -> fn_def -> (((ty * ctx) * root_env) * root_set) infer_result **)
+
+let infer_fn_env_end2end env f =
+  let r0 = initial_root_env_for_params (app f.fn_params f.fn_captures) in
+  (match infer_full_env_roots env f r0 with
+   | Infer_ok res ->
+     if check_fn_root_shadow_captured_call_provenance_summary env f
+     then Infer_ok res
+     else Infer_err ErrEndToEndSafetyGateFailed
+   | Infer_err err -> Infer_err err)
+
+(** val infer_fns_env_end2end :
+    global_env -> fn_def list -> unit infer_result **)
+
+let rec infer_fns_env_end2end env = function
+| [] -> Infer_ok ()
+| f :: rest ->
+  (match infer_fn_env_end2end env f with
+   | Infer_ok _ -> infer_fns_env_end2end env rest
+   | Infer_err err -> Infer_err (ErrInFunction (f.fn_name, err)))
+
+(** val infer_program_env_end2end : global_env -> global_env infer_result **)
+
+let infer_program_env_end2end env =
+  let env_alpha = alpha_normalize_global_env env in
+  if global_names_unique_b env_alpha
+  then (match infer_fns_env_end2end env_alpha env_alpha.env_fns with
+        | Infer_ok _ -> Infer_ok env_alpha
+        | Infer_err err -> Infer_err err)
+  else Infer_err ErrGlobalNamesNotUnique
+
+(** val check_program_env_end2end : global_env -> bool **)
+
+let check_program_env_end2end env =
+  match infer_program_env_end2end env with
+  | Infer_ok _ -> true
+  | Infer_err _ -> false
 
 type raw_expr =
 | RawUnit

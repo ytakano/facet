@@ -14,6 +14,8 @@ theories/TypeSystem/EnvStructuralRules.v
 theories/TypeSystem/WFType.v
 theories/TypeSystem/ExprFacts.v
 theories/TypeSystem/AlphaCore.v
+theories/TypeSystem/AlphaCtx.v
+theories/TypeSystem/AlphaPlace.v
 theories/TypeSystem/AlphaRenaming.v
 theories/TypeSystem/CheckerSoundness.v
 theories/TypeSystem/EnvSoundnessFacts.v

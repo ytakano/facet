@@ -1,5 +1,5 @@
 From Facet.TypeSystem Require Import Types Syntax PathState Program Renaming TypingRules RootProvenance TypeChecker EnvStructuralRules.
-From Facet.TypeSystem Require Export ExprFacts AlphaCore.
+From Facet.TypeSystem Require Export ExprFacts AlphaCore AlphaCtx AlphaPlace.
 From Stdlib Require Import List String Bool Lia PeanoNat Program.Equality.
 Import ListNotations.
 
@@ -16,75 +16,6 @@ Combined Scheme typed_env_structural_mutind from
   typed_fields_env_structural_ind'.
 
 (* ------------------------------------------------------------------ *)
-
-Inductive ctx_alpha : rename_env -> ctx -> ctx -> Prop :=
-  | CtxAlpha_Base : forall Γ,
-      ctx_alpha [] Γ Γ
-  | CtxAlpha_Bind : forall ρ Γ Γr x xr T b m,
-      ctx_alpha ρ Γ Γr ->
-      ~ In xr (ctx_names Γr) ->
-      ~ In xr (rename_range ρ) ->
-      ctx_alpha ((x, xr) :: ρ) ((x, T, b, m) :: Γ) ((xr, T, b, m) :: Γr).
-
-Lemma ctx_alpha_nil_eq : forall Γ Γr,
-  ctx_alpha [] Γ Γr ->
-  Γ = Γr.
-Proof.
-  intros Γ Γr H.
-  inversion H. reflexivity.
-Qed.
-
-Lemma ctx_consume_preserves_names : forall x Γ Γ',
-  ctx_consume x Γ = Some Γ' ->
-  ctx_names Γ' = ctx_names Γ.
-Proof.
-  intros x Γ. revert x.
-  induction Γ as [| [[[n T] b] m] Γ IH]; intros x Γ' Hconsume.
-  - simpl in Hconsume. discriminate.
-  - simpl in Hconsume.
-    destruct (ident_eqb x n).
-    + injection Hconsume as <-. reflexivity.
-    + destruct (ctx_consume x Γ) as [Γt |] eqn:Htail.
-      2: discriminate.
-      injection Hconsume as <-.
-      simpl. rewrite (IH x Γt Htail). reflexivity.
-Qed.
-
-(* Alpha-renaming relation for places: rename_place ρ maps PVar x to
-   PVar (lookup_rename x ρ) and PDeref recursively. *)
-Inductive place_alpha (ρ : rename_env) : place -> place -> Prop :=
-  | PA_Var : forall x,
-      ~ In x (rename_range ρ) ->
-      place_alpha ρ (PVar x) (PVar (lookup_rename x ρ))
-  | PA_Deref : forall p pr,
-      place_alpha ρ p pr ->
-      place_alpha ρ (PDeref p) (PDeref pr)
-  | PA_Field : forall p pr f,
-      place_alpha ρ p pr ->
-      place_alpha ρ (PField p f) (PField pr f).
-
-(* place_name gives the root variable; disjointness of root ↔ place_alpha holds. *)
-Lemma rename_place_alpha_sound : forall ρ p,
-  ~ In (place_name p) (rename_range ρ) ->
-  place_alpha ρ p (rename_place ρ p).
-Proof.
-  intros ρ p Hdisj. induction p; simpl in *.
-  - apply PA_Var. exact Hdisj.
-  - apply PA_Deref. apply IHp. exact Hdisj.
-  - apply PA_Field. apply IHp. exact Hdisj.
-Qed.
-
-Lemma place_name_root : forall p,
-  place_name p = place_root p.
-Proof.
-  induction p; simpl; auto.
-Qed.
-
-Lemma place_root_rename_place : forall ρ p,
-  place_root (rename_place ρ p) = lookup_rename (place_root p) ρ.
-Proof.
-  induction p; simpl; auto.
-Qed.
 
 Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
   | EA_Unit : forall ρ,

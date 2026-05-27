@@ -52,26 +52,68 @@ Implementation steps:
 
 Commit when this task passes.
 
-## Later task: specify `EMatch` branch alpha
+## Later task: strengthen `EMatch` branch alpha
 
-Do not implement this until the branch-binder relation is explicit.
+Use a pure alpha relation for branch binders. Do not put the executable
+renamer's `used` state, `binder_seed`, or `fresh_ident` behavior into the
+relation. Those details belong in helper lemmas proving that
+`alpha_rename_expr` produces the relation.
 
-Open design point:
+Design:
 
 - Each branch has `(variant, binders, body)`.
-- The branch body must be related under an environment extended from original
+- Variant names must match structurally.
+- Binder lists must have the same length and order.
+- The branch body is related under an environment extended from original
   binders to renamed binders.
-- The plan must decide whether `branches_alpha` mirrors executable
-  `alpha_rename_idents` and its `used` state, or stays as a pure relation over
-  binder lists and bodies.
+- Freshness/capture avoidance should be expressed as a binder relation, not by
+  threading `used` through `branches_alpha`.
 
-Expected shape after the design is fixed:
+Expected shape:
 
 ```coq
+Inductive binders_alpha :
+    rename_env -> list ident -> list ident -> rename_env -> Prop :=
+  | BA_Nil : forall ρ,
+      binders_alpha ρ [] [] ρ
+  | BA_Cons : forall ρ x xr xs xsr ρ_branch,
+      (* freshness condition for xr against the extended range *)
+      binders_alpha ρ xs xsr ρ_branch ->
+      binders_alpha ρ (x :: xs) (xr :: xsr) ((x, xr) :: ρ_branch).
+
 Inductive branches_alpha : rename_env ->
     list (string * list ident * expr) ->
-    list (string * list ident * expr) -> Prop := ...
+    list (string * list ident * expr) -> Prop :=
+  | BrA_Nil : forall ρ,
+      branches_alpha ρ [] []
+  | BrA_Cons : forall ρ variant binders bindersr body bodyr rest restr ρ_branch,
+      binders_alpha ρ binders bindersr ρ_branch ->
+      expr_alpha ρ_branch body bodyr ->
+      branches_alpha ρ rest restr ->
+      branches_alpha ρ
+        ((variant, binders, body) :: rest)
+        ((variant, bindersr, bodyr) :: restr).
 ```
+
+`EA_Match` should become:
+
+```coq
+| EA_Match : forall ρ scrut scrutr branches branchesr,
+    expr_alpha ρ scrut scrutr ->
+    branches_alpha ρ branches branchesr ->
+    expr_alpha ρ
+      (EMatch scrut branches)
+      (EMatch scrutr branchesr)
+```
+
+Implementation steps:
+
+1. Add `binders_alpha` and `branches_alpha` in `AlphaExpr.v`.
+2. Add a helper lemma connecting `alpha_rename_idents` to `binders_alpha`.
+3. Add a helper lemma connecting the match-branch traversal in
+   `alpha_rename_expr` to `branches_alpha`.
+4. Strengthen `EA_Match` and update `alpha_rename_expr_sound`.
+5. Keep `alpha_rename_expr` output unchanged.
 
 Acceptance criteria for the later task:
 

@@ -469,6 +469,8 @@ val ctx_names : ctx -> ident list
 
 val place_name : place -> ident
 
+val expr_names : expr -> ident list
+
 val free_vars_expr : expr -> ident list
 
 val param_names : param list -> ident list

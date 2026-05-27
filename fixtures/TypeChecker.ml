@@ -2010,59 +2010,63 @@ let rec place_name = function
 | PDeref q -> place_name q
 | PField (q, _) -> place_name q
 
-(** val free_vars_expr : expr -> ident list **)
+(** val expr_names : expr -> ident list **)
 
-let rec free_vars_expr = function
+let rec expr_names = function
 | EVar x -> x :: []
-| ELet (_, x, _, e1, e2) -> x :: (app (free_vars_expr e1) (free_vars_expr e2))
-| ELetInfer (_, x, e1, e2) ->
-  x :: (app (free_vars_expr e1) (free_vars_expr e2))
+| ELet (_, x, _, e1, e2) -> x :: (app (expr_names e1) (expr_names e2))
+| ELetInfer (_, x, e1, e2) -> x :: (app (expr_names e1) (expr_names e2))
 | EMakeClosure (_, captures) -> captures
 | EPlace p -> (place_name p) :: []
 | ECall (_, args) ->
   let rec go = function
   | [] -> []
-  | arg :: rest -> app (free_vars_expr arg) (go rest)
+  | arg :: rest -> app (expr_names arg) (go rest)
   in go args
 | ECallGeneric (_, _, args) ->
   let rec go = function
   | [] -> []
-  | arg :: rest -> app (free_vars_expr arg) (go rest)
+  | arg :: rest -> app (expr_names arg) (go rest)
   in go args
 | ECallExpr (callee, args) ->
   let go =
     let rec go = function
     | [] -> []
-    | arg :: rest -> app (free_vars_expr arg) (go rest)
+    | arg :: rest -> app (expr_names arg) (go rest)
     in go
   in
-  app (free_vars_expr callee) (go args)
+  app (expr_names callee) (go args)
 | EStruct (_, _, _, fields) ->
   let rec go = function
   | [] -> []
-  | p :: rest -> let (_, e0) = p in app (free_vars_expr e0) (go rest)
+  | p :: rest -> let (_, e0) = p in app (expr_names e0) (go rest)
   in go fields
 | EEnum (_, _, _, _, payloads) ->
   let rec go = function
   | [] -> []
-  | e0 :: rest -> app (free_vars_expr e0) (go rest)
+  | e0 :: rest -> app (expr_names e0) (go rest)
   in go payloads
 | EMatch (scrut, branches) ->
   let go =
     let rec go = function
     | [] -> []
-    | p :: rest -> let (_, e0) = p in app (free_vars_expr e0) (go rest)
+    | p :: rest -> let (_, e0) = p in app (expr_names e0) (go rest)
     in go
   in
-  app (free_vars_expr scrut) (go branches)
-| EReplace (p, e_new) -> (place_name p) :: (free_vars_expr e_new)
-| EAssign (p, e_new) -> (place_name p) :: (free_vars_expr e_new)
+  app (expr_names scrut) (go branches)
+| EReplace (p, e_new) -> (place_name p) :: (expr_names e_new)
+| EAssign (p, e_new) -> (place_name p) :: (expr_names e_new)
 | EBorrow (_, p) -> (place_name p) :: []
-| EDeref e1 -> free_vars_expr e1
-| EDrop e1 -> free_vars_expr e1
+| EDeref e1 -> expr_names e1
+| EDrop e1 -> expr_names e1
 | EIf (e1, e2, e3) ->
-  app (free_vars_expr e1) (app (free_vars_expr e2) (free_vars_expr e3))
+  app (expr_names e1) (app (expr_names e2) (expr_names e3))
 | _ -> []
+
+(** val free_vars_expr : expr -> ident list **)
+
+let free_vars_expr =
+  expr_names
 
 (** val param_names : param list -> ident list **)
 
@@ -2344,31 +2348,31 @@ let rec root_env_remove x = function
 (** val args_local_store_names_with :
     (expr -> ident list) -> expr list -> ident list **)
 
-let rec args_local_store_names_with expr_names = function
+let rec args_local_store_names_with expr_names0 = function
 | [] -> []
 | e :: rest ->
-  app (expr_names e) (args_local_store_names_with expr_names rest)
+  app (expr_names0 e) (args_local_store_names_with expr_names0 rest)
 
 (** val fields_local_store_names_with :
     (expr -> ident list) -> (string * expr) list -> ident list **)
 
-let rec fields_local_store_names_with expr_names = function
+let rec fields_local_store_names_with expr_names0 = function
 | [] -> []
 | p :: rest ->
   let (_, e) = p in
-  app (expr_names e) (fields_local_store_names_with expr_names rest)
+  app (expr_names0 e) (fields_local_store_names_with expr_names0 rest)
 
 (** val match_branches_local_store_names_with :
     (expr -> ident list) -> ((string * ident list) * expr) list -> ident list **)
 
-let rec match_branches_local_store_names_with expr_names = function
+let rec match_branches_local_store_names_with expr_names0 = function
 | [] -> []
 | p :: rest ->
   let (p0, e) = p in
   let (_, binders) = p0 in
   app binders
-    (app (expr_names e)
-      (match_branches_local_store_names_with expr_names rest))
+    (app (expr_names0 e)
+      (match_branches_local_store_names_with expr_names0 rest))
 
 (** val expr_local_store_names : expr -> ident list **)
 

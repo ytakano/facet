@@ -54,7 +54,7 @@ Fixpoint place_name (p : place) : ident :=
   | PField q _ => place_name q
   end.
 
-Fixpoint free_vars_expr (e : expr) : list ident :=
+Fixpoint expr_names (e : expr) : list ident :=
   match e with
   | EUnit => []
   | ELit _ => []
@@ -62,57 +62,59 @@ Fixpoint free_vars_expr (e : expr) : list ident :=
   | EFn _ => []
   | EMakeClosure _ captures => captures
   | EPlace p => [place_name p]
-  | ELet _ x _ e1 e2 => x :: free_vars_expr e1 ++ free_vars_expr e2
-  | ELetInfer _ x e1 e2 => x :: free_vars_expr e1 ++ free_vars_expr e2
+  | ELet _ x _ e1 e2 => x :: expr_names e1 ++ expr_names e2
+  | ELetInfer _ x e1 e2 => x :: expr_names e1 ++ expr_names e2
   | ECall _ args =>
       let fix go (args0 : list expr) : list ident :=
         match args0 with
         | [] => []
-        | arg :: rest => free_vars_expr arg ++ go rest
+        | arg :: rest => expr_names arg ++ go rest
         end
       in go args
   | ECallGeneric _ _ args =>
       let fix go (args0 : list expr) : list ident :=
         match args0 with
         | [] => []
-        | arg :: rest => free_vars_expr arg ++ go rest
+        | arg :: rest => expr_names arg ++ go rest
         end
       in go args
   | ECallExpr callee args =>
       let fix go (args0 : list expr) : list ident :=
         match args0 with
         | [] => []
-        | arg :: rest => free_vars_expr arg ++ go rest
+        | arg :: rest => expr_names arg ++ go rest
         end
-      in free_vars_expr callee ++ go args
+      in expr_names callee ++ go args
   | EStruct _ _ _ fields =>
       let fix go (fields0 : list (string * expr)) : list ident :=
         match fields0 with
         | [] => []
-        | (_, e) :: rest => free_vars_expr e ++ go rest
+        | (_, e) :: rest => expr_names e ++ go rest
         end
       in go fields
   | EEnum _ _ _ _ payloads =>
       let fix go (payloads0 : list expr) : list ident :=
         match payloads0 with
         | [] => []
-        | e :: rest => free_vars_expr e ++ go rest
+        | e :: rest => expr_names e ++ go rest
         end
       in go payloads
   | EMatch scrut branches =>
       let fix go (branches0 : list (string * list ident * expr)) : list ident :=
         match branches0 with
         | [] => []
-        | (_, _, e) :: rest => free_vars_expr e ++ go rest
+        | (_, _, e) :: rest => expr_names e ++ go rest
         end
-      in free_vars_expr scrut ++ go branches
-  | EReplace p e_new => place_name p :: free_vars_expr e_new
-  | EAssign p e_new => place_name p :: free_vars_expr e_new
+      in expr_names scrut ++ go branches
+  | EReplace p e_new => place_name p :: expr_names e_new
+  | EAssign p e_new => place_name p :: expr_names e_new
   | EBorrow _ p => [place_name p]
-  | EDeref e1 => free_vars_expr e1
-  | EDrop e1 => free_vars_expr e1
-  | EIf e1 e2 e3 => free_vars_expr e1 ++ free_vars_expr e2 ++ free_vars_expr e3
+  | EDeref e1 => expr_names e1
+  | EDrop e1 => expr_names e1
+  | EIf e1 e2 e3 => expr_names e1 ++ expr_names e2 ++ expr_names e3
   end.
+
+Definition free_vars_expr := expr_names.
 
 Fixpoint param_names (ps : list param) : list ident :=
   match ps with

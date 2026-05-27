@@ -269,6 +269,42 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
       (EIf e1' e2' e3', used3)
   end.
 
+Fixpoint alpha_rename_exprs (ρ : rename_env) (used : list ident)
+    (args : list expr) : list expr * list ident :=
+  match args with
+  | [] => ([], used)
+  | arg :: rest =>
+      let (arg', used1) := alpha_rename_expr ρ used arg in
+      let (rest', used2) := alpha_rename_exprs ρ used1 rest in
+      (arg' :: rest', used2)
+  end.
+
+Fixpoint alpha_rename_fields (ρ : rename_env) (used : list ident)
+    (fields : list (string * expr)) : list (string * expr) * list ident :=
+  match fields with
+  | [] => ([], used)
+  | (fname, e) :: rest =>
+      let (e', used1) := alpha_rename_expr ρ used e in
+      let (rest', used2) := alpha_rename_fields ρ used1 rest in
+      ((fname, e') :: rest', used2)
+  end.
+
+Definition alpha_rename_payloads := alpha_rename_exprs.
+
+Fixpoint alpha_rename_branches (ρ : rename_env) (used : list ident)
+    (branches : list (string * list ident * expr))
+    : list (string * list ident * expr) * list ident :=
+  match branches with
+  | [] => ([], used)
+  | (variant_name, binders, e) :: rest =>
+      let binder_seed := binders ++ free_vars_expr e ++ used in
+      let '(binders', ρ_branch, used1) :=
+        alpha_rename_idents ρ binder_seed binders in
+      let (e', used2) := alpha_rename_expr ρ_branch used1 e in
+      let (rest', used3) := alpha_rename_branches ρ used2 rest in
+      ((variant_name, binders', e') :: rest', used3)
+  end.
+
 Fixpoint alpha_rename_params (ρ : rename_env) (used : list ident)
     (ps : list param) : list param * rename_env * list ident :=
   match ps with

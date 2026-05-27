@@ -261,16 +261,27 @@ Remaining work:
   directly would need to prove that a returned `VRef` does not point at an
   erased payload binding, but that fact lives in the roots/provenance
   preservation path, not in plain `typed_env_structural`.
+- Current implementation attempt confirmed this blocker concretely: removing
+  the no-payload premises from `TES_Match`/`TESMatchTail_Cons` and the roots
+  match constructors lets alpha-renaming and roots-readiness be repaired
+  mechanically, but `typed_match_tail_lookup_no_payload` becomes false. The
+  remaining plain/base and plain-prefix preservation proofs still rely on that
+  lemma to erase payload params without proving returned-value root exclusion.
+  Do not land that widening until one of the two routes below is implemented.
 - The multi-remove store typing proof is packaged for roots-aware cleanup.
   Reuse it instead of re-deriving per-step payload removal facts at selected
   runtime branch call sites.
 
 Next implementation step:
 
-- Decide whether structural/base preservation can soundly consume roots-aware
-  cleanup facts, or whether plain structural preservation must remain
-  no-payload. Do not remove the no-payload premises from Prop-level match typing
-  and do not widen `TypeChecker.v` until that path compiles.
+- Choose and implement one proof architecture before changing `TypeChecker.v`:
+  either make the ordinary preservation theorem explicitly no-payload-gated and
+  keep executable payload match on the roots checker path only, or retire the
+  plain preservation route for payload match by threading roots/provenance
+  cleanup facts through the preservation theorem that validates payload branch
+  execution. In both cases, do not remove the checker rejection of payload
+  binders until `cd rocq && make` compiles without weakening returned-value
+  safety.
 
 ## Phase 5: Drop Lowering
 

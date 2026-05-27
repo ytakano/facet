@@ -187,6 +187,7 @@ with preservation_ready_match_branches : list (string * list ident * expr) -> Pr
   | PRMB_Nil :
       preservation_ready_match_branches []
   | PRMB_Cons : forall name binders e rest,
+      binders = [] ->
       preservation_ready_expr e ->
       preservation_ready_match_branches rest ->
       preservation_ready_match_branches ((name, binders, e) :: rest).
@@ -198,10 +199,25 @@ Lemma lookup_match_branch_preservation_ready :
     preservation_ready_expr e.
 Proof.
   intros variant branches e Hready Hlookup.
-  induction Hready as [| name binders e0 rest He0 Hrest IH]; simpl in Hlookup.
+  induction Hready as [| name binders e0 rest Hbinders He0 Hrest IH]; simpl in Hlookup.
   - discriminate.
   - destruct (String.eqb variant name) eqn:Heq.
     + inversion Hlookup; subst. exact He0.
+    + apply IH. exact Hlookup.
+Qed.
+
+Lemma lookup_expr_branch_binders_preservation_ready_empty :
+  forall variant branches binders,
+    preservation_ready_match_branches branches ->
+    lookup_expr_branch_binders variant branches = Some binders ->
+    binders = [].
+Proof.
+  intros variant branches binders Hready Hlookup.
+  induction Hready as [| name binders0 e rest Hbinders0 _ Hrest IH];
+    simpl in Hlookup.
+  - discriminate.
+  - destruct (String.eqb variant name).
+    + inversion Hlookup; subst. reflexivity.
     + apply IH. exact Hlookup.
 Qed.
 
@@ -431,7 +447,8 @@ Proof.
       * eapply alpha_rename_preservation_ready_expr; eauto.
       * eapply alpha_rename_preservation_ready_fields; eauto.
   - intros ρ used branches branchesr used' Hrename Hready.
-    destruct Hready as [| name binders e rest He Hrest]; simpl in Hrename.
+    destruct Hready as [| name binders e rest Hbinders_nil He Hrest];
+      simpl in Hrename.
     + inversion Hrename; subst. constructor.
     + destruct (alpha_rename_idents ρ (binders ++ free_vars_expr e ++ used)
           binders) as [[bindersr ρ_branch] used1] eqn:Hbinders_ren.
@@ -452,8 +469,12 @@ Proof.
                 ((name0, binders0', e') :: rest', used5)
             end) used2 rest)
         as [restr used3] eqn:Hrest_ren.
+      assert (Hbindersr_nil : bindersr = []).
+      { subst binders. simpl in Hbinders_ren.
+        inversion Hbinders_ren. reflexivity. }
       inversion Hrename; subst.
       constructor.
+      * reflexivity.
       * eapply alpha_rename_preservation_ready_expr; eauto.
       * eapply alpha_rename_preservation_ready_match_branches; eauto.
 Qed.

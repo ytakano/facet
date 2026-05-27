@@ -99,7 +99,7 @@ Proof.
     [lts args R roots_scrut Σ branches expected_core R_out
     |R R_payload Rv_payload Rv Σ branches v rest e0 T
        Σv_payload Σv R_out roots Σs Ts rootss expected_core
-       binders ps lts args roots_scrut Hfields_empty Hbinders_empty
+       binders ps lts args roots_scrut
        Hbinders Hparams Hnodup Hctx_none Hroot_none Hlookup Hpayload
        Htyped Hparams_ok Hroots_excl Hremove Henv_excl Hctx_remove
        Hcore Hequiv Htail IHtail];
@@ -578,12 +578,20 @@ Proof.
     pose proof (H1 Hrn1 Henv1 Hroots_scrut_named) as Hroots_tail.
     assert (Hsame_head_final :
       sctx_same_bindings Σ_head (sctx_of_ctx Γ_out)).
-    { eapply ctx_merge_many_same_bindings_left. exact e18. }
+    { eapply ctx_merge_many_same_bindings_left.
+      match goal with
+      | Hmerge : ctx_merge_many (ctx_of_sctx Σ_head) _ = Some Γ_out |- _ =>
+          exact Hmerge
+      end. }
     assert (Hsame_1_head : sctx_same_bindings Σ1 Σ_head).
     { subst Σ_head.
       apply sctx_same_bindings_remove_added_params.
       eapply typed_env_structural_same_bindings.
-      eapply typed_env_roots_structural. exact t0. }
+      eapply typed_env_roots_structural.
+      match goal with
+      | Htyped : typed_env_roots _ _ _ R_payload (sctx_add_params ps_head Σ1) _ _ _ _ _ |- _ =>
+          exact Htyped
+      end. }
     assert (Hsame_1_final :
       sctx_same_bindings Σ1 (sctx_of_ctx Γ_out)).
     { eapply sctx_same_bindings_trans; eassumption. }
@@ -752,7 +760,7 @@ Proof.
       apply sctx_same_bindings_remove_added_params.
       eapply typed_env_structural_same_bindings.
       eapply typed_env_roots_structural. exact t.
-    + rewrite <- e11. exact Hroot_scoped.
+    + rewrite <- e9. exact Hroot_scoped.
 Qed.
 
 Theorem typed_roots_ctx_keys_named_mutual :
@@ -843,7 +851,11 @@ Proof.
     { subst R_out Σ_head.
       eapply root_env_sctx_keys_named_remove_match_params; eassumption. }
     eapply root_env_ctx_keys_named_same_bindings.
-    + eapply ctx_merge_many_same_bindings_left. exact e18.
+    + eapply ctx_merge_many_same_bindings_left.
+      match goal with
+      | Hmerge : ctx_merge_many (ctx_of_sctx Σ_head) _ = Some _ |- _ =>
+          exact Hmerge
+      end.
     + exact Hkeys_out.
 	  - pose proof (H H1 H2) as Hkeys1.
     assert (Hrn1 : root_env_no_shadow R1)
@@ -1505,7 +1517,7 @@ Proof.
 	              [ exact Hlookup_head
 	              | eapply match_payload_params_names; exact Hparams_head ]
 	          end. }
-	        destruct Hhead as [binders_head [Hlookup_head Hnames_head]].
+	        destruct Hhead as [binders_head0 [Hlookup_head Hnames_head]].
 	        rewrite Hnames_runtime, Hnames_head.
 	        rewrite Hlookup_binders in Hlookup_head.
 	        inversion Hlookup_head. reflexivity. }
@@ -1556,7 +1568,12 @@ Proof.
 		                  (ty_core T_head)
 		                  (root_env_remove_match_params ps_head R_head_payload)
 		                  Σ_tail Ts_tail roots_tail
-		                  variant_name vdef_tail e_branch H21 Hvariant_tail
+		                  variant_name vdef_tail e_branch
+		                  ltac:(match goal with
+		                    | Htail : typed_match_tail_roots _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ |- _ =>
+		                        exact Htail
+		                    end)
+		                  Hvariant_tail
 		                  Hlookup_branch)
 	        as [T_branch
 	            [Σ_branch

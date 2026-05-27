@@ -153,17 +153,16 @@ Add variant payload destructuring.
 Status: partially implemented. Match branches now carry payload binder lists
 through Rocq syntax, checker extraction, parser, de Bruijn conversion, and FIR
 integration. Non-empty branch binders are parsed but intentionally rejected by
-the checker as `ErrMatchPayloadUnsupported`, and FIR lowering also guards
-against them.
+the executable checker as `ErrMatchPayloadUnsupported`, and FIR lowering also
+guards against them.
 
-The Prop-level and checker-internal match helpers can now compute payload
-params for both head and tail branches. Root-aware preservation and structural
-base preservation can type the selected runtime tail branch using the real
-payload store `bind_params ps_payload payloads s_scrut`, with lifetime-equivalent
-runtime and typed payload params. Prefix preservation still keeps the selected
-tail branch on the no-payload route because `store_typed_prefix` alone does not
-provide enough freshness/provenance information to safely bind runtime payload
-params.
+The Prop-level structural and roots match constructors now accept payload
+binders. Ordinary preservation is explicitly kept no-payload-gated through
+`preservation_ready_match_branches`, while root-aware and prefix-root
+preservation can type selected runtime head and tail branches using the real
+payload store `bind_params ps_payload payloads s_scrut`, with
+lifetime-equivalent runtime and typed payload params, root environments, and
+payload cleanup after branch evaluation.
 
 - Extend match branches with payload binder lists.
 - Instantiate the selected variant payload types from the scrutinee `TEnum`.
@@ -226,11 +225,11 @@ Remaining work:
 - Keep `match_payload_params_opt` in the shared pre-`OperationalSemantics`
   layer; keep checker-facing `match_payload_params` as an `infer_result`
   wrapper.
-- Do not remove the checker rejection of payload binders until prefix
-  preservation has a sound payload route.
-- Plain prefix preservation still needs a freshness/provenance bridge from
-  `store_typed_prefix` to payload param binding before its tail-branch input and
-  final cleanup can leave the no-payload route.
+- Do not remove the checker rejection of payload binders until the roots checker
+  soundness theorem is payload-capable and `cd rocq && make` compiles.
+- Plain ordinary preservation is intentionally no-payload-gated. Payload match
+  execution should be validated through the roots/provenance path, not by
+  weakening returned-value safety in the plain structural route.
 - `TypeSafetyHiddenFrameCleanupFacts.v` and the prefix-root proof now package
   the payload cleanup facts needed after `store_remove_params`.
 - Store typing now accepts lifetime-equivalent store/context entry types, while
@@ -246,42 +245,42 @@ Remaining work:
   context/root freshness, payload params-ok, branch result root exclusion, and
   post-removal root-env exclusion. This avoids re-deriving those facts in the
   selected runtime branch proof.
-- Root-aware and prefix-root preservation now build the selected tail branch
-  input store/root/no-shadow facts using payload binders, lifetime-equivalent
-  runtime payload params, and payload value roots.
-- Root-aware and prefix-root preservation now also clean up the selected tail
-  branch with real payload binders: branch param-scope is preserved through
-  evaluation, returned-value typing is re-established after
+- Root-aware and prefix-root preservation now build selected head and tail
+  branch input store/root/no-shadow facts using payload binders,
+  lifetime-equivalent runtime payload params, and payload value roots.
+- Root-aware and prefix-root preservation now also clean up selected head and
+  tail branches with real payload binders: branch param-scope is preserved
+  through evaluation, returned-value typing is re-established after
   `store_remove_params`, final store/prefix-store typing uses packaged
   multi-remove exclusion, and ref-target preservation is composed through
   payload bind and payload removal.
-- Soundness blocker before widening Prop/checker payload typing:
-  structural/base preservation has no roots fact for the returned value after
-  `store_remove_params ps_payload`. Replacing `typed_match_tail_lookup_no_payload`
-  directly would need to prove that a returned `VRef` does not point at an
-  erased payload binding, but that fact lives in the roots/provenance
-  preservation path, not in plain `typed_env_structural`.
-- Current implementation attempt confirmed this blocker concretely: removing
-  the no-payload premises from `TES_Match`/`TESMatchTail_Cons` and the roots
-  match constructors lets alpha-renaming and roots-readiness be repaired
-  mechanically, but `typed_match_tail_lookup_no_payload` becomes false. The
-  remaining plain/base and plain-prefix preservation proofs still rely on that
-  lemma to erase payload params without proving returned-value root exclusion.
-  Do not land that widening until one of the two routes below is implemented.
+- Structural and roots soundness proofs have been updated to the widened
+  Prop-level constructors while the executable checker remains no-payload for
+  match binders. Shadow-safe roots constructors still intentionally retain the
+  no-payload premises.
+- Current blocker before enabling executable payload match: `EnvRootSoundness.v`
+  still proves the roots checker by using `first_unsupported_match_payload_none`
+  and no-payload selected-branch facts. Removing the roots checker rejection
+  exposes the real obligation: derive payload binder params, bind payload
+  runtime values under `root_env_add_params_roots_same`, prove branch roots, and
+  package cleanup in the checker-soundness proof just as preservation now does.
 - The multi-remove store typing proof is packaged for roots-aware cleanup.
   Reuse it instead of re-deriving per-step payload removal facts at selected
   runtime branch call sites.
 
 Next implementation step:
 
-- Choose and implement one proof architecture before changing `TypeChecker.v`:
-  either make the ordinary preservation theorem explicitly no-payload-gated and
-  keep executable payload match on the roots checker path only, or retire the
-  plain preservation route for payload match by threading roots/provenance
-  cleanup facts through the preservation theorem that validates payload branch
-  execution. In both cases, do not remove the checker rejection of payload
-  binders until `cd rocq && make` compiles without weakening returned-value
-  safety.
+- Extend `EnvRootSoundness.v` for payload-capable roots match. Start with the
+  selected head branch, then the selected tail branch, reusing the preservation
+  payload route:
+  `match_payload_params_opt_lifetime_equiv`,
+  `store_roots_within_bind_params_roots_same_names`, roots/no-shadow payload
+  facts, and the existing match-payload cleanup lemmas.
+- Only after roots checker soundness compiles, remove
+  `first_unsupported_match_payload` from the roots and shadow-safe roots checker
+  branches, switch the OCaml CLI from `infer_full_env` to
+  `infer_full_env_roots env f (initial_root_env_for_fn f)`, and move the payload
+  binder regression from invalid to valid.
 
 ## Phase 5: Drop Lowering
 

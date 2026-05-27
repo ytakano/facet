@@ -719,7 +719,7 @@ Proof.
 		              [ exact Hlookup_head
 		              | eapply match_payload_params_names; exact Hparams_head ]
 		          end. }
-		        destruct Hhead as [binders_head [Hlookup_head Hnames_head]].
+		        destruct Hhead as [binders_head0 [Hlookup_head Hnames_head]].
 		        rewrite Hnames_runtime, Hnames_head.
 		        rewrite Hlookup_binders in Hlookup_head.
 		        inversion Hlookup_head. reflexivity. }
@@ -759,7 +759,12 @@ Proof.
 		                  roots_scrut Σ1 branches v_tail (ty_core T_head)
 		                  (root_env_remove_match_params ps_head R_head_payload)
 		                  Σ_tail Ts_tail roots_tail
-	                  variant_name vdef_tail e_branch H21 Hvariant_tail
+	                  variant_name vdef_tail e_branch
+	                  ltac:(match goal with
+	                    | Htail : typed_match_tail_roots _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ |- _ =>
+	                        exact Htail
+	                    end)
+	                  Hvariant_tail
 	                  Hlookup_branch)
 	        as [T_branch [Σ_branch_payload [R_branch_payload [R_branch
 	             [roots_branch [ps_branch [binders_branch [R_payload_branch

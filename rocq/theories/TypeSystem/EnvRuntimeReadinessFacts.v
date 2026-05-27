@@ -59,16 +59,18 @@ Proof.
              lia.
           -- exact Hscrut.
         * induction l as [| [[name binders] branch] rest IHbranches].
-          -- constructor.
-          -- simpl in Hbranches.
-             apply andb_true_iff in Hbranches as [Hbranch Hrest].
-             constructor.
-             ++ apply IH with (e := branch).
-                ** pose proof (expr_size_match_branch_lt e
-                     ((name, binders, branch) :: rest) name binders branch
-                     (or_introl eq_refl)).
-                   lia.
-                ** exact Hbranch.
+	          -- constructor.
+	          -- simpl in Hbranches.
+	             destruct binders as [| binder binders']; try discriminate.
+	             apply andb_true_iff in Hbranches as [Hbranch Hrest].
+	             constructor.
+	             ++ reflexivity.
+	             ++ apply IH with (e := branch).
+	                ** pose proof (expr_size_match_branch_lt e
+	                     ((name, [], branch) :: rest) name [] branch
+	                     (or_introl eq_refl)).
+	                   lia.
+	                ** exact Hbranch.
              ++ apply IHbranches.
                 ** simpl. simpl in Hlt. lia.
                 ** exact Hrest.

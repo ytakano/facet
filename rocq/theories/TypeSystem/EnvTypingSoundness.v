@@ -355,13 +355,11 @@ Proof.
         branches (enum_variant_name v) e Hbinders Hlookup) as Hnone_lookup.
       rewrite Hbinders_v in Hnone_lookup. inversion Hnone_lookup. reflexivity.
     }
-    subst binders.
-	    eapply TESMatchTail_Cons.
-	    + exact Hfields.
-	    + reflexivity.
-	    + exact Hbinders_v.
-	    + exact Hparams.
-	    + exact Hnodup.
+	    subst binders.
+		    eapply TESMatchTail_Cons.
+		    + exact Hbinders_v.
+		    + exact Hparams.
+		    + exact Hnodup.
 	    + exact Hnone.
 	    + exact Hlookup.
 	    + eapply Hexpr.
@@ -1408,13 +1406,11 @@ Proof.
           eapply TESMatchTail_Cons with
             (Σ := Σ1) (branches := l) (v := v) (rest := rest)
             (Σv_payload := Σ0) (Σv := sctx_remove_params ps Σ0)
-            (Σs := Σs) (Ts := Ts) (T := T0) (e := e0)
-            (expected_core := ty_core T_head) (binders := []) (ps := ps)
-            (lts := l0) (args := l1).
-          + exact Hfields.
-          + reflexivity.
-          + exact Hbinders0.
-          + exact Hparams.
+	            (Σs := Σs) (Ts := Ts) (T := T0) (e := e0)
+	            (expected_core := ty_core T_head) (binders := []) (ps := ps)
+	            (lts := l0) (args := l1).
+	          + exact Hbinders0.
+	          + exact Hparams.
           + exact Hnodup.
           + exact Hnone.
           + exact Hlookup0.
@@ -1447,13 +1443,11 @@ Proof.
         | exact Hlookup
         | apply negb_false_iff in Hlts; apply Nat.eqb_eq in Hlts; exact Hlts
         | apply negb_false_iff in Hargslen; apply Nat.eqb_eq in Hargslen; exact Hargslen
-        | exact Hbounds
-        | rewrite Hvariants; exact Hunknown
-        | exact Hvariants
-        | exact Hfields_head
-        | reflexivity
-        | exact Hbinders_head
-        | unfold match_payload_params, instantiate_enum_variant_field_tys;
+	        | exact Hbounds
+	        | rewrite Hvariants; exact Hunknown
+	        | exact Hvariants
+	        | exact Hbinders_head
+	        | unfold match_payload_params, instantiate_enum_variant_field_tys;
           rewrite Hfields_head; simpl; reflexivity
         | reflexivity
         | reflexivity
@@ -2049,13 +2043,11 @@ Proof.
           eapply TESMatchTail_Cons with
             (Σ := Σ1) (branches := l) (v := v) (rest := rest)
             (Σv_payload := Σ0) (Σv := sctx_remove_params ps Σ0)
-            (Σs := Σs) (Ts := Ts) (T := T0) (e := e0)
-            (expected_core := ty_core T_head) (binders := []) (ps := ps)
-            (lts := l0) (args := l1).
-          + exact Hfields.
-          + reflexivity.
-          + exact Hbinders0.
-          + exact Hparams.
+	            (Σs := Σs) (Ts := Ts) (T := T0) (e := e0)
+	            (expected_core := ty_core T_head) (binders := []) (ps := ps)
+	            (lts := l0) (args := l1).
+	          + exact Hbinders0.
+	          + exact Hparams.
           + exact Hnodup.
           + exact Hnone.
           + exact Hlookup0.
@@ -2088,13 +2080,11 @@ Proof.
         | exact Hlookup
         | apply negb_false_iff in Hlts; apply Nat.eqb_eq in Hlts; exact Hlts
         | apply negb_false_iff in Hargslen; apply Nat.eqb_eq in Hargslen; exact Hargslen
-        | exact Hbounds
-        | rewrite Hvariants; exact Hunknown
-        | exact Hvariants
-        | exact Hfields_head
-        | reflexivity
-        | exact Hbinders_head
-        | unfold match_payload_params, instantiate_enum_variant_field_tys;
+	        | exact Hbounds
+	        | rewrite Hvariants; exact Hunknown
+	        | exact Hvariants
+	        | exact Hbinders_head
+	        | unfold match_payload_params, instantiate_enum_variant_field_tys;
           rewrite Hfields_head; simpl; reflexivity
         | reflexivity
         | reflexivity

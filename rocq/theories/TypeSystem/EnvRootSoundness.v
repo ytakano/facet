@@ -1145,16 +1145,14 @@ Proof.
           }
           subst ps.
           simpl in Hparam_checks, Hcleanup_checks.
-          eapply TERMatchTail_Cons with
-            (R_payload := R1) (Rv_payload := R0) (Rv := R0)
-            (Σv_payload := Σ0) (Σv := Σ0)
-            (Σs := Σs) (Ts := Ts) (rootss := rootss)
-            (T := T0) (e := e0) (binders := []) (ps := [])
-            (lts := l0) (args := l1) (roots_scrut := roots_scrut).
-          + exact Hfields.
-          + reflexivity.
-          + exact Hbinders0.
-          + unfold match_payload_params, instantiate_enum_variant_field_tys.
+	          eapply TERMatchTail_Cons with
+	            (R_payload := R1) (Rv_payload := R0) (Rv := R0)
+	            (Σv_payload := Σ0) (Σv := Σ0)
+		            (Σs := Σs) (Ts := Ts) (rootss := rootss)
+		            (T := T0) (e := e0) (binders := []) (ps := [])
+		            (lts := l0) (args := l1) (roots_scrut := roots_scrut).
+		          + exact Hbinders0.
+	          + unfold match_payload_params, instantiate_enum_variant_field_tys.
             rewrite Hfields. simpl. reflexivity.
           + reflexivity.
           + reflexivity.
@@ -1181,7 +1179,7 @@ Proof.
         (MkTy (usage_max_tys_nonempty T_head Ts_tail) (ty_core T_head))
         (sctx_of_ctx Γ_out) R'
         (root_set_union roots_head (root_sets_union roots_tail))).
-      eapply TER_Match with
+	      eapply TER_Match with
         (R1 := R1) (R_payload := R1) (R_head_payload := R')
         (R_out := R') (Σ1 := Σ1) (Σ_head_payload := Σ_head)
         (Σ_head := Σ_head) (Σ_tail := Σ_tail)
@@ -1195,13 +1193,11 @@ Proof.
         | exact Hlookup
         | apply negb_false_iff in Hlts; apply Nat.eqb_eq in Hlts; exact Hlts
         | apply negb_false_iff in Hargslen; apply Nat.eqb_eq in Hargslen; exact Hargslen
-        | exact Hbounds
-        | rewrite Hvariants; exact Hunknown
-        | exact Hvariants
-        | exact Hfields_head
-        | reflexivity
-        | exact Hbinders_head
-        | exact Hparams_head
+	        | exact Hbounds
+	        | rewrite Hvariants; exact Hunknown
+	        | exact Hvariants
+		        | exact Hbinders_head
+	        | exact Hparams_head
         | reflexivity
         | reflexivity
         | reflexivity
@@ -1814,16 +1810,16 @@ Proof.
           }
           subst ps.
           simpl in Hparam_checks, Hcleanup_checks.
-          eapply TERSMatchTail_Cons with
+	          eapply TERSMatchTail_Cons with
             (R_payload := R1) (Rv_payload := R0) (Rv := R0)
             (Σv_payload := Σ0) (Σv := Σ0)
-            (Σs := Σs) (Ts := Ts) (rootss := rootss)
-            (T := T0) (e := e0) (binders := []) (ps := [])
-            (lts := l0) (args := l1) (roots_scrut := roots_scrut).
-          + exact Hfields.
-          + reflexivity.
-          + exact Hbinders0.
-          + unfold match_payload_params, instantiate_enum_variant_field_tys.
+	            (Σs := Σs) (Ts := Ts) (rootss := rootss)
+	            (T := T0) (e := e0) (binders := []) (ps := [])
+	            (lts := l0) (args := l1) (roots_scrut := roots_scrut).
+		          + exact Hfields.
+		          + reflexivity.
+		          + exact Hbinders0.
+	          + unfold match_payload_params, instantiate_enum_variant_field_tys.
             rewrite Hfields. simpl. reflexivity.
           + reflexivity.
           + reflexivity.
@@ -1850,7 +1846,7 @@ Proof.
         (MkTy (usage_max_tys_nonempty T_head Ts_tail) (ty_core T_head))
         (sctx_of_ctx Γ_out) R'
         (root_set_union roots_head (root_sets_union roots_tail))).
-      eapply TERS_Match with
+	      eapply TERS_Match with
         (R1 := R1) (R_payload := R1) (R_head_payload := R')
         (R_out := R') (Σ1 := Σ1) (Σ_head_payload := Σ_head)
         (Σ_head := Σ_head) (Σ_tail := Σ_tail)
@@ -1864,13 +1860,13 @@ Proof.
         | exact Hlookup
         | apply negb_false_iff in Hlts; apply Nat.eqb_eq in Hlts; exact Hlts
         | apply negb_false_iff in Hargslen; apply Nat.eqb_eq in Hargslen; exact Hargslen
-        | exact Hbounds
-        | rewrite Hvariants; exact Hunknown
-        | exact Hvariants
-        | exact Hfields_head
-        | reflexivity
-        | exact Hbinders_head
-        | exact Hparams_head
+	        | exact Hbounds
+	        | rewrite Hvariants; exact Hunknown
+	        | exact Hvariants
+		        | exact Hfields_head
+		        | reflexivity
+		        | exact Hbinders_head
+	        | exact Hparams_head
         | reflexivity
         | reflexivity
         | reflexivity

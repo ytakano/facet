@@ -730,8 +730,6 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       check_struct_bounds env (enum_bounds edef) args = None ->
       first_unknown_variant_branch branches (enum_variants edef) = None ->
       enum_variants edef = v_head :: v_tail ->
-      enum_variant_fields v_head = [] ->
-      binders_head = [] ->
       lookup_expr_branch_binders (enum_variant_name v_head) branches = Some binders_head ->
       match_payload_params binders_head lts args v_head = infer_ok ps_head ->
       params_names_nodup_b ps_head = true ->
@@ -865,8 +863,6 @@ with typed_match_tail_env_structural
         expected_core [] []
   | TESMatchTail_Cons : forall Σ branches v rest e T Σv_payload Σv Σs Ts
         expected_core binders ps lts args,
-      enum_variant_fields v = [] ->
-      binders = [] ->
       lookup_expr_branch_binders (enum_variant_name v) branches = Some binders ->
       match_payload_params binders lts args v = infer_ok ps ->
       params_names_nodup_b ps = true ->
@@ -1010,8 +1006,6 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       check_struct_bounds env (enum_bounds edef) args = None ->
       first_unknown_variant_branch branches (enum_variants edef) = None ->
       enum_variants edef = v_head :: v_tail ->
-      enum_variant_fields v_head = [] ->
-      binders_head = [] ->
       lookup_expr_branch_binders (enum_variant_name v_head) branches = Some binders_head ->
       match_payload_params binders_head lts args v_head = infer_ok ps_head ->
       params_names_nodup_b ps_head = true ->
@@ -1154,8 +1148,6 @@ with typed_match_tail_roots
   | TERMatchTail_Cons : forall R R_payload Rv_payload Rv Σ branches v rest e T
       Σv_payload Σv R_out roots Σs Ts rootss expected_core
       binders ps lts args roots_scrut,
-      enum_variant_fields v = [] ->
-      binders = [] ->
       lookup_expr_branch_binders (enum_variant_name v) branches = Some binders ->
       match_payload_params binders lts args v = infer_ok ps ->
       params_names_nodup_b ps = true ->
@@ -1641,8 +1633,8 @@ Proof.
       Σ_head Σ_tail Γ_out scrut branches enum_name lts args edef v_head
 	      v_tail e_head T_scrut T_head Ts_tail roots_scrut roots_head
 	      roots_tail binders_head ps_head Hscrut IHscrut Hcore Hlookup
-	      Hlen_lts Hlen_args Hbounds Hunknown Hvariants Hfields_head
-	      Hbinders_empty_head Hbinders_head Hpayload_head Hnodup_head
+	      Hlen_lts Hlen_args Hbounds Hunknown Hvariants
+	      Hbinders_head Hpayload_head Hnodup_head
 	      Hctx_fresh_head Hroot_fresh_head
       Hlookup_head HRpayload Hhead IHhead Hparams_ok_head Hroots_excl_head
       HRout Henv_excl_head HΣhead Htail IHtail Hmerge Hfresh R0 HnsR
@@ -2062,7 +2054,7 @@ Proof.
     + constructor.
 	  - intros R R_payload Rv_payload Rv Σ branches v rest e T
 	      Σv_payload Σv R_out roots Σs Ts rootss expected_core binders ps
-	      lts args roots_scrut Hfields Hbinders_empty Hbinders Hpayload
+	      lts args roots_scrut Hbinders Hpayload
 	      Hnodup Hctx_fresh Hroot_fresh Hlookup HRpayload Htyped IHtyped
 	      Hparams_ok Hroots_excl HRv Henv_excl HΣv Hcore Heq_tail Htail
 	      IHtail Hfresh roots_scrut0

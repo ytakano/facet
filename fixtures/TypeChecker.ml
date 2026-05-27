@@ -6357,8 +6357,11 @@ let rec preservation_ready_expr_b = function
     (let rec go = function
      | [] -> true
      | p :: rest ->
-       let (_, e_branch) = p in
-       (&&) (preservation_ready_expr_b e_branch) (go rest)
+       let (p0, e_branch) = p in
+       let (_, binders) = p0 in
+       (match binders with
+        | [] -> (&&) (preservation_ready_expr_b e_branch) (go rest)
+        | _ :: _ -> false)
      in go branches)
 | EReplace (p, e_new) ->
   (match place_path p with

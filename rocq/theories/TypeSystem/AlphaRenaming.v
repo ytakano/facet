@@ -6033,19 +6033,19 @@ Proof.
     Htyped_tail.
   induction Htyped_tail.
   - exists []. split; [constructor | constructor].
-	  - destruct (alpha_rename_match_branches_lookup_payload_forward
-	      ρ used branches branchesr used' (enum_variant_name v) binders e
-	      Hrename H1 H5)
+  - destruct (alpha_rename_match_branches_lookup_payload_forward
+      ρ used branches branchesr used' (enum_variant_name v) binders e
+      Hrename H H3)
 	      as [bindersr [ρ_branch [er [used_pre [used_branch [used_branch_out
 	        [Hbinders_r [Hlookup_r [Hrename_binders
 		          [Hrename_branch Hused_prefix]]]]]]]]]].
-	    pose proof (lookup_expr_branch_binders_expr_in_alpha _ _ _ _ H1 H5)
+	    pose proof (lookup_expr_branch_binders_expr_in_alpha _ _ _ _ H H3)
 	      as Hbranch_in.
-	    unfold match_payload_params in H2.
+	    unfold match_payload_params in H0.
 	    destruct (match_binder_params_alpha_rename_idents
 	      ρ (binders ++ free_vars_expr e ++ used_pre) binders bindersr ρ_branch
 	      used_branch (instantiate_enum_variant_field_tys lts args v) ps
-	      Hrename_binders H2) as [psr [Hparams_r [Hparams_alpha Hrename_params]]].
+	      Hrename_binders H0) as [psr [Hparams_r [Hparams_alpha Hrename_params]]].
     assert (Hparams_nodup_r : params_names_nodup_b psr = true).
     { apply params_names_nodup_b_complete_alpha.
       rewrite (match_binder_params_names _ _ _ Hparams_r).
@@ -6102,42 +6102,32 @@ Proof.
         -- exact Hrename_params.
         -- exact Hin_params.
         -- apply in_or_app. right. apply in_or_app. left. exact Hfree.
-	      * eapply lookup_expr_branch_disjoint_alpha.
-	        -- exact H5.
+      * eapply lookup_expr_branch_disjoint_alpha.
+	        -- exact H3.
 	        -- exact Hdisj.
 	        -- exact Hfree.
 	        -- exact Hin_range.
 	    + exact Hrename_branch.
-	    + exact H6.
+	    + exact H4.
 	    + assert (Hparams_ok_r :
 	        params_ok_sctx_b env psr Σv_payload_r = true).
 	      { eapply alpha_rename_params_params_ok_sctx_b_forward_gen.
 	        - exact Hrename_params.
 	        - rewrite <- params_ctx_names_param_names.
-	          eapply params_names_nodup_b_sound. exact H3.
+	          eapply params_names_nodup_b_sound. exact H1.
 		        - intros x Hin.
 		          rewrite <- params_ctx_names_param_names in Hin.
-		          rewrite (match_binder_params_names _ _ _ H2) in Hin.
+		          rewrite (match_binder_params_names _ _ _ H0) in Hin.
 		          apply in_or_app. left. exact Hin.
 	        - intros x Hin.
 	          apply in_or_app. right. apply in_or_app. right.
 	          apply Hused_prefix. apply Hrange_used. exact Hin.
 	        - exact Hctx_branch_payload.
-	        - exact H7. }
-	      assert (Hbinders_r_nil : bindersr = []).
-	      { pose proof (alpha_rename_match_branches_lookup_binders_forward
-	          ρ used branches branchesr used' (enum_variant_name v)
-	          Hrename) as Hlookup_empty.
-	        rewrite H0 in H1.
-	        specialize (Hlookup_empty H1).
-	        rewrite Hbinders_r in Hlookup_empty.
-	        inversion Hlookup_empty. reflexivity. }
+	        - exact H5. }
 	      specialize (IHHtyped_tail Hexpr Hctx Hdisj Hrename).
 	      destruct IHHtyped_tail as [Σrs [Htail_r Hctxs_tail]].
 	      exists (sctx_remove_params psr Σv_payload_r :: Σrs). split.
 	      * eapply TESMatchTail_Cons.
-	        -- exact H.
-	        -- exact Hbinders_r_nil.
 	        -- exact Hbinders_r.
 	        -- unfold match_payload_params. exact Hparams_r.
 	        -- exact Hparams_nodup_r.
@@ -6146,7 +6136,7 @@ Proof.
 	        -- exact Htyped_branch_r.
 	        -- exact Hparams_ok_r.
 	        -- reflexivity.
-	        -- exact H9.
+	        -- exact H7.
 	        -- exact Htail_r.
       * constructor.
         -- subst Σv.
@@ -6941,19 +6931,19 @@ Proof.
         { intros y Hy. eapply alpha_rename_expr_used_extends; eauto. }
 	        destruct (alpha_rename_match_branches_lookup_payload_forward
 	          ρ used_scrut branches branchesr used_branches
-	          (enum_variant_name v_head) binders_head e_head Hbranches H8 H12)
+	          (enum_variant_name v_head) binders_head e_head Hbranches H6 H10)
 	          as [binders_head_r [ρ_head [e_headr
 	            [used_head_pre [used_head [used_head_out
 	              [Hbinders_head_r [Hlookup_head_r [Hrename_head_binders
 	                [Hrename_head Hused_head_pre]]]]]]]]]].
-	        pose proof (lookup_expr_branch_binders_expr_in_alpha _ _ _ _ H8 H12)
+	        pose proof (lookup_expr_branch_binders_expr_in_alpha _ _ _ _ H6 H10)
 	          as Hhead_in.
-	        unfold match_payload_params in H9.
+	        unfold match_payload_params in H7.
 	        destruct (match_binder_params_alpha_rename_idents
 	          ρ (binders_head ++ free_vars_expr e_head ++ used_head_pre)
 	          binders_head binders_head_r ρ_head used_head
 	          (instantiate_enum_variant_field_tys lts args v_head) ps_head
-	          Hrename_head_binders H9)
+	          Hrename_head_binders H7)
 	          as [ps_head_r [Hparams_head_r [Hparams_head_alpha
 	            Hrename_head_params]]].
         assert (Hparams_head_nodup_r :
@@ -7027,7 +7017,7 @@ Proof.
             + exact Hy_params.
             + apply in_or_app. right. apply in_or_app. left. exact Hfree.
 	          - eapply lookup_expr_branch_disjoint_alpha.
-	            + exact H12.
+	            + exact H10.
 	            + exact Hdisj_branches.
 	            + exact Hfree.
 	            + exact Hy_range. }
@@ -7043,24 +7033,16 @@ Proof.
           { eapply alpha_rename_params_params_ok_sctx_b_forward_gen.
 	            - exact Hrename_head_params.
 	            - rewrite <- params_ctx_names_param_names.
-	              eapply params_names_nodup_b_sound. exact H10.
+	              eapply params_names_nodup_b_sound. exact H8.
 	            - intros y Hy.
 	              rewrite <- params_ctx_names_param_names in Hy.
-	              rewrite (match_binder_params_names _ _ _ H9) in Hy.
+	              rewrite (match_binder_params_names _ _ _ H7) in Hy.
 	              apply in_or_app. left. exact Hy.
             - intros y Hy.
               apply in_or_app. right. apply in_or_app. right.
 	              apply Hused_head_pre. apply Hrange_used1. exact Hy.
 	            - exact Hctx_head_payload_r.
-	            - exact H13. }
-	          assert (Hbinders_head_r_nil : binders_head_r = []).
-	          { pose proof (alpha_rename_match_branches_lookup_binders_forward
-	              ρ used_scrut branches branchesr used_branches
-	              (enum_variant_name v_head) Hbranches) as Hlookup_empty.
-	            rewrite H7 in H8.
-	            specialize (Hlookup_empty H8).
-	            rewrite Hbinders_head_r in Hlookup_empty.
-	            inversion Hlookup_empty. reflexivity. }
+	            - exact H11. }
           assert (Hctx_head_r :
             ctx_alpha ρ Σ_head
               (sctx_remove_params ps_head_r Σ_head_payload_r)).
@@ -7091,20 +7073,18 @@ Proof.
           -- exact Hrange_used1.
 	          -- exact Hdisj_branches.
 	          -- exact Hbranches.
-	          -- exact H15.
+	          -- exact H13.
 	          -- destruct (ctx_alpha_merge_many_forward ρ
 	               Σ_head (sctx_remove_params ps_head_r Σ_head_payload_r)
 	               Σ_tail Σ_tailr Γ_out)
                as [Γ_outr [Hmerge_r Hctx_merge_r]].
 	             ++ exact Hctx_head_r.
 	             ++ exact Hctx_tail_r.
-	             ++ exact H16.
+	             ++ exact H14.
 	             ++ exists (sctx_of_ctx Γ_outr). split.
 	                ** { eapply TES_Match; eauto;
 	                     try solve
 	                       [ eapply alpha_rename_match_branches_first_unknown_variant_branch; eauto
-	                       | exact H6
-	                       | exact Hbinders_head_r_nil
 	                       | exact Hbinders_head_r
 	                       | unfold match_payload_params; exact Hparams_head_r
                        | exact Hparams_head_nodup_r
@@ -13003,8 +12983,11 @@ Proof.
   - eapply root_env_remove_match_params_preserve_name_not_params.
 	    + intros y Hy Heq.
 	      subst y.
-		      pose proof (root_env_lookup_params_none_b_not_in _ _ _ e12 Hy)
-	        as Hnot.
+		      match goal with
+		      | Hnone : root_env_lookup_params_none_b _ _ = true |- _ =>
+		          pose proof (root_env_lookup_params_none_b_not_in _ _ _ Hnone Hy)
+		            as Hnot
+		      end.
 	      apply Hnot. eapply H. exact H2.
     + eapply H0.
       apply root_env_add_params_roots_same_preserve_name.

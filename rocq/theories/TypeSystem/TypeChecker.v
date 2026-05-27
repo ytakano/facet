@@ -4878,8 +4878,11 @@ Fixpoint preservation_ready_expr_b (e : expr) : bool :=
       let fix go (branches0 : list (string * list ident * expr)) : bool :=
         match branches0 with
         | [] => true
-        | (_, _, e_branch) :: rest =>
-            preservation_ready_expr_b e_branch && go rest
+        | (_, binders, e_branch) :: rest =>
+            match binders with
+            | [] => preservation_ready_expr_b e_branch && go rest
+            | _ :: _ => false
+            end
         end
       in go branches
   | EDrop e1 => preservation_ready_expr_b e1

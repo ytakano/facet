@@ -63,7 +63,12 @@ Priority gaps to close:
 
 For each construct:
 
-- Update the executable roots checker first.
+- Add any missing `typed_env_roots` and `typed_env_roots_shadow_safe` evidence first.
+  `ECallExpr` support specifically requires function-value and polymorphic
+  call-expression roots constructors before the executable roots checker can
+  accept those forms.
+- Update the executable roots checker after the Prop-level roots evidence is in
+  place.
 - Prove the corresponding roots checker soundness lemma.
 - Connect the construct to the existing runtime type-safety path.
 - Add valid and invalid CLI regression tests for the construct.

@@ -7,6 +7,15 @@ Import ListNotations.
 (* Expression alpha-renaming relations                                 *)
 (* ------------------------------------------------------------------ *)
 
+Inductive binders_alpha :
+    rename_env -> list ident -> list ident -> rename_env -> Prop :=
+  | BA_Nil : forall ρ,
+      binders_alpha ρ [] [] ρ
+  | BA_Cons : forall ρ x xr xs xsr ρ_branch,
+      ~ In xr xsr ->
+      binders_alpha ρ xs xsr ρ_branch ->
+      binders_alpha ρ (x :: xs) (xr :: xsr) ((x, xr) :: ρ_branch).
+
 Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
   | EA_Unit : forall ρ,
       expr_alpha ρ EUnit EUnit
@@ -53,6 +62,8 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
         (EEnum enum_name variant_name lts args payloads)
         (EEnum enum_name variant_name lts args payloadsr)
   | EA_Match : forall ρ scrut scrutr branches branchesr,
+      expr_alpha ρ scrut scrutr ->
+      branches_alpha ρ branches branchesr ->
       expr_alpha ρ
         (EMatch scrut branches)
         (EMatch scrutr branchesr)
@@ -91,7 +102,19 @@ with fields_alpha : rename_env -> list (string * expr) -> list (string * expr) -
   | FAs_Cons : forall ρ name e er fields fieldsr,
       expr_alpha ρ e er ->
       fields_alpha ρ fields fieldsr ->
-      fields_alpha ρ ((name, e) :: fields) ((name, er) :: fieldsr).
+      fields_alpha ρ ((name, e) :: fields) ((name, er) :: fieldsr)
+with branches_alpha : rename_env ->
+    list (string * list ident * expr) ->
+    list (string * list ident * expr) -> Prop :=
+  | BrA_Nil : forall ρ,
+      branches_alpha ρ [] []
+  | BrA_Cons : forall ρ variant binders bindersr body bodyr rest restr ρ_branch,
+      binders_alpha ρ binders bindersr ρ_branch ->
+      expr_alpha ρ_branch body bodyr ->
+      branches_alpha ρ rest restr ->
+      branches_alpha ρ
+        ((variant, binders, body) :: rest)
+        ((variant, bindersr, bodyr) :: restr).
 
 Definition same_param_shape (p pr : param) : Prop :=
   param_mutability p = param_mutability pr /\

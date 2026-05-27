@@ -3295,6 +3295,147 @@ Proof.
       * exact Hrest.
 Qed.
 
+
+Lemma alpha_rename_idents_binders_alpha :
+  forall ρ used binders bindersr ρ' used',
+    alpha_rename_idents ρ used binders = (bindersr, ρ', used') ->
+    binders_alpha ρ binders bindersr ρ'.
+Proof.
+  intros ρ used binders.
+  revert ρ used.
+  induction binders as [| x xs IH]; intros ρ used bindersr ρ' used' Hrename;
+    simpl in Hrename.
+  - injection Hrename as <- <- _. constructor.
+  - destruct (alpha_rename_idents ρ (fresh_ident x used :: used) xs)
+      as [[xsr ρ_tail] used_tail] eqn:Htail.
+    injection Hrename as <- <- _.
+    constructor.
+    + pose proof (alpha_rename_idents_fresh_used _ _ _ _ _ _ Htail)
+        as Hfresh.
+      rewrite Forall_forall in Hfresh.
+      intros Hin.
+      specialize (Hfresh (fresh_ident x used) Hin).
+      apply Hfresh. left. reflexivity.
+    + eapply IH. exact Htail.
+Qed.
+
+Lemma alpha_rename_idents_range :
+  forall ρ used binders bindersr ρ' used',
+    alpha_rename_idents ρ used binders = (bindersr, ρ', used') ->
+    forall x, In x (rename_range ρ') -> In x bindersr \/ In x (rename_range ρ).
+Proof.
+  intros ρ used binders.
+  revert ρ used.
+  induction binders as [| b bs IH]; intros ρ used bindersr ρ' used' Hrename x Hin;
+    simpl in Hrename.
+  - injection Hrename as <- <- _. right. exact Hin.
+  - destruct (alpha_rename_idents ρ (fresh_ident b used :: used) bs)
+      as [[bsr ρ_tail] used_tail] eqn:Htail.
+    injection Hrename as <- <- _.
+    simpl in Hin. destruct Hin as [Hx | Hin].
+    + subst x. left. left. reflexivity.
+    + destruct (IH _ _ _ _ _ Htail x Hin) as [Hbs | Hrange].
+      * left. right. exact Hbs.
+      * right. exact Hrange.
+Qed.
+
+Lemma alpha_rename_idents_branch_body_disjoint :
+  forall ρ used binders bindersr ρ_branch used' e,
+    alpha_rename_idents ρ (binders ++ free_vars_expr e ++ used) binders =
+      (bindersr, ρ_branch, used') ->
+    disjoint_names (free_vars_expr e) (rename_range ρ) ->
+    disjoint_names (free_vars_expr e) (rename_range ρ_branch).
+Proof.
+  intros ρ used binders bindersr ρ_branch used' e Hrename Hdisj x Hin Hrange.
+  destruct (alpha_rename_idents_range _ _ _ _ _ _ Hrename x Hrange)
+    as [Hin_bindersr | Hin_range].
+  - pose proof (alpha_rename_idents_fresh_used _ _ _ _ _ _ Hrename)
+      as Hfresh.
+    rewrite Forall_forall in Hfresh.
+    specialize (Hfresh x Hin_bindersr).
+    apply Hfresh.
+    apply in_or_app. right. apply in_or_app. left. exact Hin.
+  - exact (Hdisj x Hin Hin_range).
+Qed.
+
+Lemma alpha_rename_match_branches_sound :
+  forall ρ used branches branchesr used',
+  (forall ρ0 used0 name binders e er used1,
+      In (name, binders, e) branches ->
+      disjoint_names (free_vars_expr e) (rename_range ρ0) ->
+      alpha_rename_expr ρ0 used0 e = (er, used1) ->
+      expr_alpha ρ0 e er) ->
+  disjoint_names
+    ((fix go (branches0 : list (string * list ident * expr)) : list ident :=
+        match branches0 with
+        | [] => []
+        | (_, _, e) :: rest => free_vars_expr e ++ go rest
+        end) branches)
+    (rename_range ρ) ->
+  ((fix go (used0 : list ident)
+      (branches0 : list (string * list ident * expr))
+      : list (string * list ident * expr) * list ident :=
+      match branches0 with
+      | [] => ([], used0)
+      | (name, binders, e) :: rest =>
+          let binder_seed := binders ++ free_vars_expr e ++ used0 in
+          let '(binders', ρ_branch, used1) :=
+            alpha_rename_idents ρ binder_seed binders in
+          let (e', used2) := alpha_rename_expr ρ_branch used1 e in
+          let (rest', used3) := go used2 rest in
+          ((name, binders', e') :: rest', used3)
+      end) used branches) = (branchesr, used') ->
+  branches_alpha ρ branches branchesr.
+Proof.
+  intros ρ used branches.
+  revert used.
+  induction branches as [| [[name binders] e] rest IH];
+    intros used branchesr used' Hexpr Hdisj Hrename; simpl in Hrename.
+  - injection Hrename as <- _. constructor.
+  - destruct (disjoint_names_app_l (free_vars_expr e)
+      ((fix go (branches0 : list (string * list ident * expr)) : list ident :=
+          match branches0 with
+          | [] => []
+          | (_, _, e0) :: rest0 => free_vars_expr e0 ++ go rest0
+          end) rest) (rename_range ρ) Hdisj) as [Hdisj_e Hdisj_rest].
+    set (binder_seed := binders ++ free_vars_expr e ++ used).
+    destruct (alpha_rename_idents ρ binder_seed binders)
+      as [[bindersr ρ_branch] used1] eqn:Hbinders.
+    destruct (alpha_rename_expr ρ_branch used1 e) as [er used2] eqn:He.
+    subst binder_seed.
+    simpl in Hrename. rewrite Hbinders in Hrename. rewrite He in Hrename.
+    destruct ((fix go (used0 : list ident)
+          (branches0 : list (string * list ident * expr))
+          : list (string * list ident * expr) * list ident :=
+          match branches0 with
+          | [] => ([], used0)
+          | (name0, binders0, e0) :: rest0 =>
+              let binder_seed0 := binders0 ++ free_vars_expr e0 ++ used0 in
+              let '(binders0', ρ_branch0, used3) :=
+                alpha_rename_idents ρ binder_seed0 binders0 in
+              let (e0', used4) := alpha_rename_expr ρ_branch0 used3 e0 in
+              let (rest', used5) := go used4 rest0 in
+              ((name0, binders0', e0') :: rest', used5)
+          end) used2 rest) as [restr used3] eqn:Hrest.
+    injection Hrename as <- _.
+    eapply BrA_Cons with (ρ_branch := ρ_branch).
+    + eapply alpha_rename_idents_binders_alpha. exact Hbinders.
+    + eapply Hexpr.
+      * left. reflexivity.
+      * eapply alpha_rename_idents_branch_body_disjoint.
+        -- exact Hbinders.
+        -- exact Hdisj_e.
+      * exact He.
+    + eapply IH.
+      * intros ρ0 used0 name0 binders0 e0 er0 used_tail Hin Hdisj0 Hrename0.
+        eapply Hexpr.
+        -- right. exact Hin.
+        -- exact Hdisj0.
+        -- exact Hrename0.
+      * exact Hdisj_rest.
+      * exact Hrest.
+Qed.
+
 Lemma alpha_rename_expr_sound : forall ρ used e er used',
   disjoint_names (free_vars_expr e) (rename_range ρ) ->
   alpha_rename_expr ρ used e = (er, used') ->
@@ -3517,6 +3658,36 @@ Proof.
 			    destruct r as [branchesr used_branches].
 			    injection Hrename as <- _.
 			    apply EA_Match.
+			    * eapply IH.
+			      -- pose proof (expr_size_match_scrutinee_lt e l) as Hscrut_lt.
+			         assert (expr_size e < n) as Hlt_scrut by lia.
+			         exact Hlt_scrut.
+			      -- destruct (disjoint_names_app_l (free_vars_expr e)
+			           ((fix go (branches0 : list (string * list ident * expr)) : list ident :=
+			               match branches0 with
+			               | [] => []
+			               | (_, _, e0) :: rest => free_vars_expr e0 ++ go rest
+			               end) l) (rename_range ρ) Hdisj) as [Hdisj_scrut _].
+			         exact Hdisj_scrut.
+			      -- exact Hscrut.
+			    * eapply alpha_rename_match_branches_sound.
+			      -- intros ρ0 used_branch variant binders branch branchr used_tail
+			           Hin Hdisj_branch Hrename_branch.
+			         eapply IH.
+			         ++ pose proof (expr_size_match_branch_lt e l variant binders branch Hin)
+			              as Hbranch_lt.
+			            assert (expr_size branch < n) as Hlt_branch by lia.
+			            exact Hlt_branch.
+			         ++ exact Hdisj_branch.
+			         ++ exact Hrename_branch.
+			      -- destruct (disjoint_names_app_l (free_vars_expr e)
+			           ((fix go (branches0 : list (string * list ident * expr)) : list ident :=
+			               match branches0 with
+			               | [] => []
+			               | (_, _, e0) :: rest => free_vars_expr e0 ++ go rest
+			               end) l) (rename_range ρ) Hdisj) as [_ Hdisj_branches].
+			         exact Hdisj_branches.
+			      -- symmetry. exact Hbranches.
 			  + (* EReplace p e *)
 		    destruct (disjoint_names_cons_l (place_name p) (free_vars_expr e)
 	      (rename_range ρ) Hdisj) as [Hpx Hdisj_e].

@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Types Syntax Program RootProvenance TypeChecker EnvRootSoundness.
+From Facet.TypeSystem Require Import Types Syntax Program RootProvenance TypeChecker EnvRootSoundness EnvRuntimeCapturedSafety.
 From Stdlib Require Import List Bool.
 Import ListNotations.
 
@@ -96,4 +96,63 @@ Proof.
   destruct (infer_program_env_end2end_sound env env' f Hprog Hin')
     as [Heq Hsound].
   rewrite Heq in Hsound. exact Hsound.
+Qed.
+
+Lemma infer_fn_env_end2end_gate :
+  forall env f T Γ_out R_out roots,
+    infer_fn_env_end2end env f = infer_ok (T, Γ_out, R_out, roots) ->
+    check_fn_root_shadow_captured_call_provenance_summary env f = true.
+Proof.
+  intros env f T Γ_out R_out roots Hend.
+  unfold infer_fn_env_end2end in Hend.
+  destruct (infer_full_env_roots env f
+      (initial_root_env_for_params (fn_params f ++ fn_captures f)))
+    as [[[[T0 Γ0] R0_out] roots0] | err] eqn:Hroots; try discriminate.
+  destruct (check_fn_root_shadow_captured_call_provenance_summary env f)
+    eqn:Hgate; try discriminate.
+  reflexivity.
+Qed.
+
+Lemma infer_fns_env_end2end_check_env_ready :
+  forall env fns,
+    infer_fns_env_end2end env fns = infer_ok tt ->
+    forallb (check_fn_root_shadow_captured_call_provenance_summary env) fns = true.
+Proof.
+  intros env fns.
+  induction fns as [| f rest IH]; intros Hinfer; simpl in *.
+  - reflexivity.
+  - destruct (infer_fn_env_end2end env f)
+      as [[[[T Γ] R] roots] | err] eqn:Hhead; try discriminate.
+    apply andb_true_iff. split.
+    + eapply infer_fn_env_end2end_gate. exact Hhead.
+    + eapply IH. exact Hinfer.
+Qed.
+
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready :
+  forall env env' f s s' v,
+    infer_program_env_end2end env = infer_ok env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros env env' f s s' v Hprog Hinitial Hin Hstore Heval.
+  unfold infer_program_env_end2end in Hprog.
+  set (env_alpha := alpha_normalize_global_env env) in *.
+  destruct (global_names_unique_b env_alpha) eqn:Hunique_global; try discriminate.
+  destruct (infer_fns_env_end2end env_alpha (env_fns env_alpha))
+    as [[] | err] eqn:Hfns; try discriminate.
+  injection Hprog as <-.
+  eapply env_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready.
+  - apply andb_true_iff in Hunique_global as [Hunique_top _].
+    apply top_level_names_unique_b_fn_env_unique_by_name.
+    exact Hunique_top.
+  - apply check_env_root_shadow_captured_call_provenance_summary_ready.
+    unfold check_env_root_shadow_captured_call_provenance_summary.
+    eapply infer_fns_env_end2end_check_env_ready. exact Hfns.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
 Qed.

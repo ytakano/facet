@@ -42,9 +42,6 @@ dune exec ocaml/main.exe -- --emit-fir output.fir path/to/file.facet
 # Print the embedded EBNF grammar
 dune exec ocaml/main.exe -- --generate-grammar
 
-# Differential-test alpha-renaming path against direct path
-dune exec ocaml/main.exe -- --debug-alpha path/to/file.facet
-
 # Run all valid/invalid regression tests
 sh tests/run.sh
 
@@ -144,7 +141,7 @@ lexer.ml (sedlex) → parser.mly (Menhir) → ast.ml → debruijn.ml → main.ml
 - **Generated files**: `fixtures/TypeChecker.ml` and `fixtures/TypeChecker.mli` are extracted by Rocq — never edit manually. Always run `cd rocq && make` first, then `dune build`.
 - **Termination trick**: `infer` uses an inline `let fix go` for argument processing so Rocq's termination checker sees structural recursion. A separate top-level `infer_args` exists for use in theorem statements.
 - **Runtime vs. static tracking**: `OperationalSemantics.store` uses `se_used` flag; `TypingRules.ctx` uses `consumed` bool. Both must agree (proven in `CheckerUsageSoundness.v`).
-- **Alpha renaming**: `infer_core` renames free variables before processing function bodies to prevent capture. `--debug-alpha` runs both paths and reports disagreements.
+- **Alpha renaming**: `infer_core` renames free variables before processing function bodies to prevent capture. The OCaml CLI uses the extracted checker path directly.
 - **TypeSafety proof decomposition**: The type safety proof is split across ~80 files to manage Rocq's memory and compilation time. Each file handles a narrow lemma cluster; `TypeSafety.v` is the top-level assembler.
 - **No `Admitted` in core files**: Soundness files must compile without `Admitted`. Any in-progress proofs must be kept in separate development branches.
 - **Rocq style**: two-space indentation in matches and proof scripts; short section comments for major blocks.

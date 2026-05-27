@@ -45,9 +45,6 @@ dune exec ocaml/main.exe -- --emit-fir output.fir path/to/file.facet
 # Print the language grammar
 dune exec ocaml/main.exe -- --generate-grammar
 
-# Differential-test alpha-renaming path against direct path
-dune exec ocaml/main.exe -- --debug-alpha path/to/file.facet
-
 # Run all .facet tests (expect exit 0 for valid/, exit 1 for invalid/)
 for f in tests/valid/**/*.facet; do dune exec ocaml/main.exe -- "$f" || echo "FAIL: $f"; done
 for f in tests/invalid/**/*.facet; do dune exec ocaml/main.exe -- "$f" && echo "FAIL (expected error): $f"; done
@@ -150,7 +147,7 @@ Pipeline stages:
 **Alpha renaming in the type checker**:
 - `infer_core` calls `alpha_rename_for_infer` to rename free variables before processing function bodies
 - Prevents capture of type variables in nested scopes
-- `infer_direct` in `TypeChecker.v` is the non-renaming path; `--debug-alpha` in the OCaml frontend runs both and reports any disagreement (differential testing)
+- The OCaml CLI uses the extracted checker path; there is no separate debug flag for differential alpha-renaming tests
 
 **Out of scope (Rocq formalization)**:
 - `TRef`, `TFn` type inference, mutability checking, borrowing/ownership

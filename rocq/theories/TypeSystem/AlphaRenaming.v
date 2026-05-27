@@ -54,31 +54,6 @@ Proof.
       * rewrite Hrename_tail. reflexivity.
 Qed.
 
-Lemma lookup_rename_in_range_or_self : forall ρ x,
-  In (lookup_rename x ρ) (rename_range ρ) \/ lookup_rename x ρ = x.
-Proof.
-  intros ρ x.
-  induction ρ as [| [old fresh] ρ IH].
-  - simpl. right. reflexivity.
-  - simpl.
-    destruct (ident_eqb x old) eqn:Heq.
-    + left. left. reflexivity.
-    + destruct IH as [Hin | Heq_lookup].
-      * left. right. exact Hin.
-      * right. exact Heq_lookup.
-Qed.
-
-Lemma lookup_rename_not_in_range_neq : forall ρ x y,
-  ~ In y (rename_range ρ) ->
-  x <> y ->
-  lookup_rename x ρ <> y.
-Proof.
-  intros ρ x y Hnot Hyx Heq.
-  destruct (lookup_rename_in_range_or_self ρ x) as [Hin | Hself].
-  - rewrite Heq in Hin. contradiction.
-  - rewrite Hself in Heq. contradiction.
-Qed.
-
 Lemma ctx_alpha_lookup_backward : forall ρ Γ Γr x T b,
   ctx_alpha ρ Γ Γr ->
   ~ In x (rename_range ρ) ->

@@ -19,6 +19,7 @@ theories/TypeSystem/AlphaPlace.v
 theories/TypeSystem/AlphaExpr.v
 theories/TypeSystem/AlphaFn.v
 theories/TypeSystem/AlphaTyping.v
+theories/TypeSystem/AlphaEnvStructural.v
 theories/TypeSystem/AlphaRenaming.v
 theories/TypeSystem/CheckerSoundness.v
 theories/TypeSystem/EnvSoundnessFacts.v

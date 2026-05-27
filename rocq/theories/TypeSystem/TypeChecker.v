@@ -5968,10 +5968,6 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
 	                      match first_unknown_variant_branch branches (enum_variants edef) with
 	                      | Some name => infer_err (ErrVariantNotFound name)
 	                      | None =>
-	                          match first_unsupported_match_payload branches
-	                                  (enum_variants edef) with
-	                          | Some name => infer_err (ErrMatchPayloadUnsupported name)
-	                          | None =>
 	                          match first_missing_variant_branch (enum_variants edef) branches with
                           | Some name => infer_err (ErrMissingVariant name)
                           | None =>
@@ -6081,7 +6077,6 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
 	                                      | None => infer_err ErrContextCheckFailed
 	                                      end
 	                                  end
-	                          end
 	                      end
 	                  end
 	                  end

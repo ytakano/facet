@@ -235,14 +235,14 @@ Proof.
     { eapply root_env_tail_fresh_names_params_lookup_none.
       - exact Hfresh_binders.
       - intros x Hin.
-	        rewrite (match_payload_params_names _ _ _ _ _ e9) in Hin.
+	        rewrite (match_payload_params_names _ _ _ _ _ e7) in Hin.
         exact Hin. }
     assert (Htail_params_excl :
       root_env_excludes_params ps_head R_tail).
     { eapply root_env_tail_fresh_names_params_excludes.
       - exact Hfresh_binders.
       - intros x Hin.
-	        rewrite (match_payload_params_names _ _ _ _ _ e9) in Hin.
+	        rewrite (match_payload_params_names _ _ _ _ _ e7) in Hin.
         exact Hin. }
     eapply TERS_Match
       with (R_payload := R_payload ++ R_tail)
@@ -255,27 +255,25 @@ Proof.
     + exact e3.
     + exact e4.
     + exact e5.
-    + exact e6.
+	    + exact e6.
 	    + exact e7.
 	    + exact e8.
 	    + exact e9.
-	    + exact e10.
-	    + exact e11.
 	    + apply root_env_lookup_params_none_b_app; assumption.
-	    + exact e13.
-	    + rewrite e14. symmetry.
+	    + exact e11.
+	    + rewrite e12. symmetry.
 	      apply root_env_add_params_roots_same_app_left.
 	    + apply H0.
 	      eapply root_env_tail_fresh_names_lookup_expr_branch; eassumption.
-	    + exact e15.
+	    + exact e13.
 	    + exact r.
-	    + rewrite e16. symmetry.
+	    + rewrite e14. symmetry.
 	      apply root_env_remove_match_params_app_left.
 	      exact Htail_params_none.
 	    + apply root_env_excludes_params_app_local; assumption.
-	    + exact e17.
+	    + exact e15.
 	    + apply H1. exact Hfresh_branches.
-	    + exact e18.
+	    + exact e16.
   - pose proof (root_env_tail_fresh_names_app_l _ _ _ H1) as Hfresh1.
     pose proof (root_env_tail_fresh_names_app_r _ _ _ H1) as Hfresh_tail.
     destruct (root_env_tail_fresh_names_cons_head _ _ _ Hfresh_tail)
@@ -386,14 +384,14 @@ Proof.
     { eapply root_env_tail_fresh_names_params_lookup_none.
       - exact Hfresh_binders.
       - intros x Hin.
-	        rewrite (match_payload_params_names _ _ _ _ _ e3) in Hin.
+	        rewrite (match_payload_params_names _ _ _ _ _ e1) in Hin.
         exact Hin. }
     assert (Htail_params_excl :
       root_env_excludes_params ps R_tail).
     { eapply root_env_tail_fresh_names_params_excludes.
       - exact Hfresh_binders.
       - intros x Hin.
-	        rewrite (match_payload_params_names _ _ _ _ _ e3) in Hin.
+	        rewrite (match_payload_params_names _ _ _ _ _ e1) in Hin.
         exact Hin. }
     eapply TERSMatchTail_Cons
       with (R_payload := R_payload ++ R_tail)
@@ -403,21 +401,19 @@ Proof.
 	    + exact e1.
 	    + exact e2.
 	    + exact e3.
-	    + exact e4.
-	    + exact e5.
 	    + apply root_env_lookup_params_none_b_app; assumption.
-	    + exact e7.
-	    + rewrite e8. symmetry.
+	    + exact e5.
+	    + rewrite e6. symmetry.
 	      apply root_env_add_params_roots_same_app_left.
 	    + apply H. eapply root_env_tail_fresh_names_lookup_expr_branch; eassumption.
-	    + exact e9.
+	    + exact e7.
 	    + exact r.
-	    + rewrite e10. symmetry.
+	    + rewrite e8. symmetry.
 	      apply root_env_remove_match_params_app_left.
 	      exact Htail_params_none.
 	    + apply root_env_excludes_params_app_local; assumption.
-	    + exact e11.
-	    + exact e12.
+	    + exact e9.
+	    + exact e10.
     + apply root_env_equiv_app.
       * exact r1.
       * apply root_env_equiv_refl.

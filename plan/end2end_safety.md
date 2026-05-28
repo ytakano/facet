@@ -21,7 +21,8 @@ this roadmap.
 | T3: switch OCaml CLI to `infer_program_env_end2end` | done |
 | T4: CI enforcement of entrypoint policy | done (8bd3d82) |
 | T2a: `ECallGeneric` safety gate | blocked: generic runtime instantiation proof gap |
-| T2e: function-value parameter/local call safety gate | blocked: runtime callee bridge needed |
+| T2e.1: monomorphic `TFn` variable call safety gate | in progress |
+| T2e.2: HRT/closure function-value calls | blocked: runtime callee bridge needed |
 | T2g: mixed lifetime/type forall roots calls | done |
 | T2b: `ELetInfer` captured closure call safety gate | blocked: captured callee return roots |
 | T2f: deref/reborrow/ref-write roots coverage | blocked: nested place root model needed |
@@ -33,10 +34,10 @@ With the CLI using `infer_program_env_end2end`, `sh tests/run.sh` currently has
 
 - 27 `ErrEndToEndSafetyGateFailed`
   - `ECallGeneric fname type_args args` direct-call bodies.
-  - `ECallExpr (EVar x) args` function-value calls.  T2e targets
-    non-type-generic function values first (`TFn`, `TClosure`, and
-    lifetime-only `TForall`).  Type-forall and mixed `for<'a, T>` function
-    values remain under T2a until runtime type-parameter instantiation exists.
+  - `ECallExpr (EVar x) args` function-value calls.  T2e.1 targets
+    monomorphic `TFn` variables first.  `TClosure`, lifetime-only `TForall`,
+    type-forall, and mixed `for<'a, T>` function values remain blocked until
+    their runtime callee bridges exist.
   - captured closure calls through local bindings.  These fail first in the
     synthesized `__facet_closure` callee because returning a hidden capture
     leaves roots tied to `fn_params ++ fn_captures`.
@@ -65,12 +66,11 @@ Required before accepting this gate:
 
 ### T2e: function-value parameter/local call safety gate
 
-Blocked by runtime evidence.  Root/shadow-safe typing can show the callee
-variable has a function type, but the safety proof also needs evidence that the
-runtime value is a non-capturing `VClosure fname []` whose target function has a
-callee-body provenance summary.
+T2e.1 accepts only monomorphic `TFn` variable callees:
+`ECallExpr (EVar x) args`.  The safety proof must recover that the runtime
+`VClosure fname []` target has a base callee-body provenance summary.
 
-Required before accepting this gate:
+T2e.1 tasks:
 
 - Done prep: add checker/Prop summary evidence for general
   `ECallExpr callee args` function-value calls.
@@ -88,15 +88,19 @@ Required before accepting this gate:
 - Done prep: add empty-closure `TFn` evidence for non-generic, non-HRT callees.
 - Done prep: add a `TFn` wrapper that builds callee-route evidence from the
   callee summary.
-- Strengthen function-value evidence so a runtime closure target is known to
-  have a base callee-body provenance summary, not just the recursive
-  non-capturing summary for its defining function.
-- Then extend the non-capturing and captured runtime safety theorems to consume
-  the general `ECallExpr callee args` summary branch for supported `TFn`
-  callees.
-- Target valid failures: non-type-generic function-parameter and local
-  function-value calls.  Type-forall function-value and generic item-as-value
-  calls stay blocked by T2a.
+- Narrow the general function-value gate to `EVar` callees inferred as `TFn`.
+- Strengthen initial-store runtime evidence so stored empty function closures
+  target functions with base callee-body provenance summaries.
+- Extend non-capturing and captured runtime safety to consume the new `EVar`
+  `TFn` branch.
+- Target valid failures: monomorphic function-parameter and local
+  function-value calls.
+
+Remaining T2e blockers:
+
+- `TForall` function values need lifetime-instantiated runtime callee evidence.
+- `TClosure` values need captured-callee return-root evidence.
+- Type-forall and mixed forall function values stay under T2a.
 
 ### T2g: mixed lifetime/type forall roots calls
 

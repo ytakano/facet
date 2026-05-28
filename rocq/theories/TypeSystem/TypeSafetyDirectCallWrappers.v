@@ -485,6 +485,152 @@ Proof.
   eapply Eval_Call; eassumption.
 Qed.
 
+Lemma typed_args_roots_shadow_safe_param_tys_roots :
+  forall env (Ω : outlives_ctx) (n : nat) R Σ args ps_shadow Σ' R'
+      roots ps,
+    typed_args_roots_shadow_safe env Ω n R Σ args ps_shadow Σ' R' roots ->
+    Forall2 (fun p_shadow p => param_ty p_shadow = param_ty p)
+      ps_shadow ps ->
+    typed_args_roots env Ω n R Σ args ps Σ' R' roots.
+Proof.
+  intros env Ω n R Σ args ps_shadow Σ' R' roots ps Htyped.
+  revert ps.
+  induction Htyped; intros ps_target Hparams.
+  - inversion Hparams; subst. constructor.
+  - inversion Hparams; subst.
+    eapply TERArgs_Cons.
+    + eapply typed_env_roots_shadow_safe_roots. exact H.
+    + lazymatch goal with
+      | Hparam : param_ty _ = param_ty _ |- _ =>
+          rewrite <- Hparam; exact H0
+      end.
+    + lazymatch goal with
+      | IH : forall ps_target,
+          Forall2 (fun p_shadow p => param_ty p_shadow = param_ty p) _ ps_target ->
+          typed_args_roots _ _ _ _ _ _ ps_target _ _ _ |- _ =>
+          eapply IH
+      end; eassumption.
+Qed.
+
+Lemma params_of_tys_map_param_ty_Forall2 :
+  forall ps,
+    Forall2 (fun p_shadow p => param_ty p_shadow = param_ty p)
+      (params_of_tys (map param_ty ps)) ps.
+Proof.
+  induction ps as [| p ps IH].
+  - constructor.
+  - simpl. constructor.
+    + reflexivity.
+    + exact IH.
+Qed.
+
+Lemma typed_args_roots_shadow_safe_params_of_tys_map_param_ty_roots :
+  forall env (Ω : outlives_ctx) (n : nat) R Σ args ps Σ' R' roots,
+    typed_args_roots_shadow_safe env Ω n R Σ args
+      (params_of_tys (map param_ty ps)) Σ' R' roots ->
+    typed_args_roots env Ω n R Σ args ps Σ' R' roots.
+Proof.
+  intros env Ω n R Σ args ps Σ' R' roots Htyped.
+  eapply typed_args_roots_shadow_safe_param_tys_roots.
+  - exact Htyped.
+  - apply params_of_tys_map_param_ty_Forall2.
+Qed.
+
+Lemma typed_empty_closure_call_expr_tfn_components_direct_call_roots :
+  forall env (Ω : outlives_ctx) (n : nat) R Σ Σ1 R1 Σ' R'
+      callee args fname fdef u roots_callee arg_roots,
+    typed_env_roots_shadow_safe env Ω n R Σ callee
+      (MkTy u (TFn (map param_ty (fn_params fdef)) (fn_ret fdef)))
+      Σ1 R1 roots_callee ->
+    typed_args_roots_shadow_safe env Ω n R1 Σ1 args
+      (params_of_tys (map param_ty (fn_params fdef))) Σ' R' arg_roots ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    fn_captures fdef = [] ->
+    fn_type_params fdef = 0 ->
+    Forall (fun '(a, b) => outlives Ω a b) (fn_outlives fdef) ->
+    typed_env_roots env Ω n R1 Σ1 (ECall fname args)
+      (fn_ret fdef) Σ' R' (root_sets_union arg_roots).
+Proof.
+  intros env Ω n R Σ Σ1 R1 Σ' R' callee args fname fdef u
+    roots_callee arg_roots _ Htyped_args Hlookup Hcaps Htype_params
+    Houtlives.
+  destruct (lookup_fn_in_name_readiness fname (env_fns env) fdef Hlookup)
+    as [Hin Hname].
+  rewrite <- (apply_lt_ty_nil_ts (fn_ret fdef)).
+  eapply TER_Call with (fdef := fdef) (σ := []).
+  - exact Hin.
+  - exact Hname.
+  - exact Hcaps.
+  - exact Htype_params.
+  - rewrite apply_lt_params_nil_ts.
+    eapply typed_args_roots_shadow_safe_params_of_tys_map_param_ty_roots.
+    exact Htyped_args.
+  - rewrite apply_lt_outlives_nil_ts.
+    exact Houtlives.
+Qed.
+
+Theorem eval_empty_closure_call_expr_tfn_components_preserve_typing_with_callee_summary :
+  forall env s s_fn s_args s_body callee fname args fdef fcall vs ret used',
+    eval env s callee s_fn (VClosure fname []) ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    fn_captures fdef = [] ->
+    eval_args env s_fn args s_args vs ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    eval env (bind_params (fn_params fcall) vs s_args)
+      (fn_body fcall) s_body ret ->
+    forall (Omega : outlives_ctx) (n : nat) R Sigma Sigma1 R1 Sigma' R'
+        callee_roots arg_roots u fsummary,
+      typed_env_roots_shadow_safe env Omega n R Sigma callee
+        (MkTy u (TFn (map param_ty (fn_params fdef)) (fn_ret fdef)))
+        Sigma1 R1 callee_roots ->
+      typed_args_roots_shadow_safe env Omega n R1 Sigma1 args
+        (params_of_tys (map param_ty (fn_params fdef)))
+        Sigma' R' arg_roots ->
+      fn_type_params fdef = 0 ->
+      Forall (fun '(a, b) => outlives Omega a b) (fn_outlives fdef) ->
+      preservation_ready_args args ->
+      store_typed env s_fn Sigma1 ->
+      store_roots_within R1 s_fn ->
+      store_no_shadow s_fn ->
+      root_env_no_shadow R1 ->
+      root_env_store_roots_named R1 s_fn ->
+      root_env_store_keys_named R1 s_fn ->
+      fn_env_unique_by_name env ->
+      In fsummary (env_fns env) ->
+      fn_name fsummary = fname ->
+      callee_body_root_shadow_provenance_summary env fsummary ->
+      store_typed env (store_remove_params (fn_params fcall) s_body) Sigma' /\
+      value_has_type env (store_remove_params (fn_params fcall) s_body)
+        ret (fn_ret fdef) /\
+      store_ref_targets_preserved env s_fn
+        (store_remove_params (fn_params fcall) s_body) /\
+      store_roots_within R'
+        (store_remove_params (fn_params fcall) s_body) /\
+      value_roots_within (root_sets_union arg_roots) ret /\
+      store_no_shadow (store_remove_params (fn_params fcall) s_body) /\
+      root_env_no_shadow R'.
+Proof.
+  intros env s s_fn s_args s_body callee fname args fdef fcall vs ret
+    used' Heval_callee Hlookup Hcaps Heval_args Hrename Heval_body Omega n R
+    Sigma Sigma1 R1 Sigma' R' callee_roots arg_roots u fsummary
+    Htyped_callee Htyped_args Htype_params Houtlives Hready_args Hstore
+    Hroots Hshadow Hrn Hnamed Hkeys Hunique Hin_summary Hfname_summary
+    Hcallee_summary.
+  pose proof
+    (typed_empty_closure_call_expr_tfn_components_direct_call_roots
+      env Omega n R Sigma Sigma1 R1 Sigma' R' callee args fname fdef u
+      callee_roots arg_roots Htyped_callee Htyped_args Hlookup Hcaps
+      Htype_params Houtlives)
+    as Htyped_call.
+  pose proof
+    (eval_empty_closure_call_expr_components_as_direct_call
+      env s s_fn s_args s_body callee args fname fdef fcall vs ret used'
+      Heval_callee Hlookup Hcaps Heval_args Hrename Heval_body)
+    as Heval_call.
+  eapply eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary;
+    eassumption.
+Qed.
+
 Theorem eval_empty_closure_call_expr_components_preserve_typing_with_callee_summary :
   forall env s s_fn s_args s_body callee fname args fdef fcall vs ret used',
     eval env s callee s_fn (VClosure fname []) ->

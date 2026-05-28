@@ -602,6 +602,12 @@ Proof.
       | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>
           exact (Hn fname caps eq_refl)
       end.
+      (* TERS_CallExpr_MixedForall with EMakeClosure: impossible, guard violated *)
+      exfalso.
+      match goal with
+      | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>
+          exact (Hn fname caps eq_refl)
+      end.
       (* TERS_CallExpr_Forall_Fn with EMakeClosure: impossible, guard violated *)
       exfalso.
       match goal with

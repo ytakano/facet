@@ -5750,11 +5750,22 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
                        root_set_union roots_callee (root_sets_union arg_roots))
                  end
               | TForall m bounds body =>
-                  match infer_hrt_call_env Ω m bounds body arg_tys with
-                  | infer_err err => infer_err err
-                  | infer_ok ret =>
-                      infer_ok (ret, Σ', R',
-                        root_set_union roots_callee (root_sets_union arg_roots))
+                  match ty_core body with
+                  | TTypeForall type_params type_bounds type_body =>
+                      match infer_mixed_forall_call_env env Ω n m bounds
+                              type_params type_bounds type_body arg_tys with
+                      | infer_err err => infer_err err
+                      | infer_ok ret =>
+                          infer_ok (ret, Σ', R',
+                            root_set_union roots_callee (root_sets_union arg_roots))
+                      end
+                  | _ =>
+                      match infer_hrt_call_env Ω m bounds body arg_tys with
+                      | infer_err err => infer_err err
+                      | infer_ok ret =>
+                          infer_ok (ret, Σ', R',
+                            root_set_union roots_callee (root_sets_union arg_roots))
+                      end
                   end
               | _ => infer_err ErrNotImplemented
               end
@@ -6482,11 +6493,22 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
                        root_set_union roots_callee (root_sets_union arg_roots))
                  end
               | TForall m bounds body =>
-                  match infer_hrt_call_env Ω m bounds body arg_tys with
-                  | infer_err err => infer_err err
-                  | infer_ok ret =>
-                      infer_ok (ret, Σ', R',
-                        root_set_union roots_callee (root_sets_union arg_roots))
+                  match ty_core body with
+                  | TTypeForall type_params type_bounds type_body =>
+                      match infer_mixed_forall_call_env env Ω n m bounds
+                              type_params type_bounds type_body arg_tys with
+                      | infer_err err => infer_err err
+                      | infer_ok ret =>
+                          infer_ok (ret, Σ', R',
+                            root_set_union roots_callee (root_sets_union arg_roots))
+                      end
+                  | _ =>
+                      match infer_hrt_call_env Ω m bounds body arg_tys with
+                      | infer_err err => infer_err err
+                      | infer_ok ret =>
+                          infer_ok (ret, Σ', R',
+                            root_set_union roots_callee (root_sets_union arg_roots))
+                      end
                   end
               | _ => infer_err ErrNotImplemented
               end

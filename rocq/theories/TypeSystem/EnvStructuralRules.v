@@ -986,6 +986,26 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_env_roots env Ω n R Σ (ECallExpr callee args)
         (subst_type_params_ty type_args ret_inner)
         Σ' R' (root_set_union roots_callee (root_sets_union arg_roots))
+  | TER_CallExpr_MixedForall : forall R R1 R' Σ Σ1 Σ' callee args u u_body
+      m bounds type_params type_bounds body_ty param_tys ret σ type_args
+      arg_roots roots_callee,
+      typed_env_roots env Ω n R Σ callee
+        (MkTy u (TForall m bounds
+          (MkTy u_body (TTypeForall type_params type_bounds body_ty))))
+        Σ1 R1 roots_callee ->
+      ty_core body_ty = TFn param_tys ret ->
+      check_type_forall_bounds env (open_core_trait_bounds σ type_bounds) type_args = None ->
+      contains_lbound_ty (open_bound_ty σ (subst_type_params_ty type_args ret)) = false ->
+      contains_lbound_outlives (open_bound_outlives σ bounds) = false ->
+      Forall (fun '(a, b) => outlives Ω a b) (open_bound_outlives σ bounds) ->
+      typed_args_roots env Ω n R1 Σ1 args
+        (params_of_tys
+          (map (open_bound_ty σ)
+            (map (subst_type_params_ty type_args) param_tys)))
+        Σ' R' arg_roots ->
+      typed_env_roots env Ω n R Σ (ECallExpr callee args)
+        (open_bound_ty σ (subst_type_params_ty type_args ret))
+        Σ' R' (root_set_union roots_callee (root_sets_union arg_roots))
   | TER_CallExpr_Forall_Fn : forall R R1 R' Σ Σ1 Σ' callee args u
       m bounds body_ty param_tys ret σ arg_roots roots_callee,
       typed_env_roots env Ω n R Σ callee
@@ -1700,6 +1720,31 @@ Proof.
        -- eapply root_set_equiv_trans.
           ++ apply root_sets_union_equiv. exact Harg_roots0.
           ++ apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
+      * apply root_set_equiv_sym. apply root_set_instantiate_union_equiv.
+  - intros R R1 R' Σ Σ1 Σ' callee args u u_body m bounds type_params
+      type_bounds body_ty param_tys ret σ type_args arg_roots roots_callee
+      Hcallee IHcallee Hbody Htf_bounds Hret_ok Hbounds_ok Hout Hargs IHargs
+      Hfresh R0 HnsR HnsR0 HR0.
+    rewrite expr_local_store_names_call_expr in Hfresh.
+    apply root_subst_images_exclude_names_app_inv in Hfresh.
+    destruct Hfresh as [Hfresh_callee Hfresh_args].
+    assert (HnsR1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow; [exact Hcallee | exact HnsR]. }
+    destruct (IHcallee Hfresh_callee R0 HnsR HnsR0 HR0)
+      as [R10 [roots_callee0 [Hcallee0 [HnsR10 [HR10 Hroots_callee0]]]]].
+    destruct (IHargs Hfresh_args R10 HnsR1 HnsR10 HR10)
+      as [R0' [arg_roots0 [Hargs0 [HnsR0' [HR0' Harg_roots0]]]]].
+    exists R0', (root_set_union roots_callee0 (root_sets_union arg_roots0)).
+    split; [| split; [| split]].
+    + eapply TER_CallExpr_MixedForall; eauto.
+    + exact HnsR0'.
+    + exact HR0'.
+    + eapply root_set_equiv_trans.
+      * apply root_set_union_equiv.
+        -- exact Hroots_callee0.
+        -- eapply root_set_equiv_trans.
+           ++ apply root_sets_union_equiv. exact Harg_roots0.
+           ++ apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
       * apply root_set_equiv_sym. apply root_set_instantiate_union_equiv.
   - intros R R1 R' Σ Σ1 Σ' callee args u m bounds body_ty param_tys ret σ
       arg_roots roots_callee Hcallee IHcallee Hbody Hret_ok Hbounds_ok Hout

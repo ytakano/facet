@@ -264,6 +264,12 @@ Proof.
   | H : forall fname' caps', EMakeClosure ?fn ?cs <> EMakeClosure fname' caps' |- _ =>
       exact (H fn cs eq_refl)
   end.
+  (* TERS_CallExpr_MixedForall with EMakeClosure: impossible, guard violated *)
+  exfalso.
+  match goal with
+  | H : forall fname' caps', EMakeClosure ?fn ?cs <> EMakeClosure fname' caps' |- _ =>
+      exact (H fn cs eq_refl)
+  end.
   (* TERS_CallExpr_Forall_Fn with EMakeClosure: impossible, guard violated *)
   exfalso.
   match goal with
@@ -407,6 +413,12 @@ Proof.
     | H : forall fname' caps', EMakeClosure ?fn ?cs <> EMakeClosure fname' caps' |- _ =>
         exact (H fn cs eq_refl)
     end.
+  - (* TERS_CallExpr_MixedForall with EMakeClosure: impossible, guard violated *)
+    exfalso.
+    match goal with
+    | H : forall fname' caps', EMakeClosure ?fn ?cs <> EMakeClosure fname' caps' |- _ =>
+        exact (H fn cs eq_refl)
+    end.
   - (* TERS_CallExpr_Forall_Fn with EMakeClosure: impossible, guard violated *)
     exfalso.
     match goal with
@@ -523,6 +535,12 @@ Proof.
         exact (Hn fname caps eq_refl)
     end.
     (* TERS_CallExpr_TypeForall with EMakeClosure: impossible, guard violated *)
+    exfalso.
+    match goal with
+    | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>
+        exact (Hn fname caps eq_refl)
+    end.
+    (* TERS_CallExpr_MixedForall with EMakeClosure: impossible, guard violated *)
     exfalso.
     match goal with
     | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>
@@ -742,6 +760,12 @@ Proof.
         exact (Hn fname caps eq_refl)
     end.
     (* TERS_CallExpr_TypeForall with EMakeClosure: impossible, guard violated *)
+    exfalso.
+    match goal with
+    | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>
+        exact (Hn fname caps eq_refl)
+    end.
+    (* TERS_CallExpr_MixedForall with EMakeClosure: impossible, guard violated *)
     exfalso.
     match goal with
     | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>

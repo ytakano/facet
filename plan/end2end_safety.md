@@ -22,7 +22,7 @@ this roadmap.
 | T4: CI enforcement of entrypoint policy | done (8bd3d82) |
 | T2a: `ECallGeneric` safety gate | blocked: generic runtime instantiation proof gap |
 | T2e: function-value parameter/local call safety gate | blocked: runtime callee bridge needed |
-| T2g: mixed lifetime/type forall roots calls | blocked: mixed roots branch needed |
+| T2g: mixed lifetime/type forall roots calls | done |
 | T2b: `ELetInfer` captured closure call safety gate | blocked: captured callee return roots |
 | T2f: deref/reborrow/ref-write roots coverage | blocked: nested place root model needed |
 
@@ -31,18 +31,16 @@ this roadmap.
 With the CLI using `infer_program_env_end2end`, `sh tests/run.sh` currently has
 38 valid-test failures:
 
-- 24 `ErrEndToEndSafetyGateFailed`
+- 27 `ErrEndToEndSafetyGateFailed`
   - `ECallGeneric fname type_args args` direct-call bodies.
-  - `ECallExpr (EVar x) args` function-value calls.  A prototype gate branch
-    accepts the checker shape but lacks a sound runtime bridge from a typed
-    callee variable to the concrete non-capturing `VClosure fname []` and its
-    callee-body summary.
+  - `ECallExpr (EVar x) args` function-value calls, including HRT,
+    type-forall, and mixed `for<'a, T>` callees.  The roots checker accepts
+    the mixed shape, but the safety gate still lacks a runtime bridge from a
+    typed callee variable to the concrete non-capturing `VClosure fname []`
+    and its callee-body summary.
   - captured closure calls through local bindings.  These fail first in the
     synthesized `__facet_closure` callee because returning a hidden capture
     leaves roots tied to `fn_params ++ fn_captures`.
-- 3 mixed `for<'a, T>` function-value calls rejected as malformed HRT bodies.
-  A prototype reusing `infer_mixed_forall_call_env` type-checks through
-  `EnvTypingSoundness` but leaves `EnvRootSoundness` call-case proof fallout.
 - 11 `ErrNotImplemented`
   - deref/reborrow/write-through-reference roots coverage.  Nested `PDeref`
     places make `place_path` return `None`; roots typing needs explicit
@@ -85,22 +83,11 @@ Required before accepting this gate:
 
 ### T2g: mixed lifetime/type forall roots calls
 
-Blocked at `EnvRootSoundness`.  A narrow prototype added the checker route and
-mixed call constructors for roots/shadow-safe typing, and compiled through
-`EnvTypingSoundness`; the remaining proof needs the `ECallExpr` roots soundness
-case refactored so non-callable callee contradictions and mixed-forall calls use
-the callee inference equation directly instead of the current broad `try` proof
-wrapper.
-
-Required before accepting this gate:
-
-- Done prep: make malformed call-body proof branches explicit in
-  `EnvRootSoundness`.
-- Add mixed `TForall`/`TTypeForall` roots and shadow-safe call constructors.
-- Route roots and shadow-safe checkers through `infer_mixed_forall_call_env`.
-- Refactor `EnvRootSoundness` `ECallExpr` cases to handle mixed calls and
-  non-callable callees without swallowed proof failures.
-- Target valid failures: `mixed_forall_fn_value_*`.
+Done.  Roots and shadow-safe checkers route mixed `TForall`/`TTypeForall`
+callee bodies through `infer_mixed_forall_call_env`, with matching roots,
+alpha-renaming, readiness, and runtime-safety proof branches.  The remaining
+mixed valid failures are function-value safety-gate failures under T2e, not
+malformed HRT-body roots rejections.
 
 ### T2b: captured closure local binding safety gate
 

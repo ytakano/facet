@@ -924,14 +924,72 @@ Proof.
             | _ => discriminate
             end
           | _ = TForall ?m ?bounds ?body =>
-            unfold infer_hrt_call_env in Hinfer;
-            destruct (ty_core body) eqn:Hbody; cbn iota in Hinfer; try discriminate;
-            (* Only TFn body survives *)
+            destruct body as [u_body body_core]; cbn in Hinfer;
+            destruct body_core eqn:Hbody; cbn iota in Hinfer; try discriminate;
             lazymatch type of Hbody with
+            | _ = TTypeForall ?type_params ?type_bounds ?type_body =>
+              unfold infer_mixed_forall_call_env in Hinfer;
+              cbn [ty_core] in Hinfer;
+              destruct type_body as [u_type_body type_body_core]; cbn in Hinfer;
+              destruct type_body_core eqn:Htypebody; cbn iota in Hinfer; try discriminate;
+              lazymatch type of Htypebody with
+              | _ = TFn ?param_tys ?ret =>
+                destruct (infer_type_forall_args type_params param_tys arg_tys)
+                  as [type_args |] eqn:Htypeargs;
+                  cbn iota in Hinfer; try discriminate;
+                destruct (build_bound_sigma (repeat None m) arg_tys
+                    (map (subst_type_params_ty type_args) param_tys))
+                  as [σ0 |] eqn:Hσ;
+                  cbn iota in Hinfer; try discriminate;
+                set (σ := complete_bound_sigma_with_vars n σ0);
+                change (complete_bound_sigma_with_vars n σ0) with σ in Hinfer;
+                destruct (check_arg_tys Ω arg_tys
+                    (map (open_bound_ty σ)
+                      (map (subst_type_params_ty type_args) param_tys)))
+                  as [err |] eqn:Hcheck;
+                  cbn iota in Hinfer; try discriminate;
+                destruct (contains_lbound_ty
+                    (open_bound_ty σ (subst_type_params_ty type_args ret)) ||
+                    contains_lbound_outlives (open_bound_outlives σ bounds) ||
+                    existsb
+                      (fun b =>
+                        existsb
+                          (fun tr =>
+                            existsb contains_lbound_ty (core_trait_ref_args Ty tr))
+                          (core_bound_traits Ty b))
+                      (open_core_trait_bounds σ type_bounds)) eqn:Hlbound;
+                  cbn iota in Hinfer; try discriminate;
+                destruct (outlives_constraints_hold_b Ω (open_bound_outlives σ bounds))
+                  eqn:Hout;
+                  cbn iota in Hinfer; try discriminate;
+                destruct (check_type_forall_bounds env
+                    (open_core_trait_bounds σ type_bounds) type_args)
+                  as [err |] eqn:Hbounds;
+                  cbn iota in Hinfer; try discriminate;
+                inversion Hinfer; subst;
+                repeat rewrite Bool.orb_false_iff in Hlbound;
+                destruct Hlbound as [[Hret_ok Hbounds_ok] _];
+                eapply TER_CallExpr_MixedForall with
+                  (u := u_callee) (u_body := u_body)
+                  (σ := σ) (type_args := type_args);
+                [ eapply IH; exact Hcallee_res
+                | reflexivity
+                | exact Hbounds
+                | exact Hret_ok
+                | exact Hbounds_ok
+                | apply outlives_constraints_hold_b_sound; exact Hout
+                | eapply infer_env_args_collect_roots_sound;
+                    [ exact Hcollect
+                    | intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0
+                    | rewrite <- check_arg_tys_params_of_tys; exact Hcheck ] ]
+              | _ => discriminate
+              end
             | _ = TFn ?param_tys ?ret =>
+              unfold infer_hrt_call_env in Hinfer;
+              cbn [ty_core] in Hinfer;
               destruct (build_bound_sigma (repeat None m) arg_tys param_tys)
                 as [σ |] eqn:Hσ;
-                cbn iota in Hinfer; try discriminate;
+                [ cbn iota in Hinfer | cbn iota in Hinfer; discriminate ];
               destruct (check_arg_tys Ω arg_tys (map (open_bound_ty σ) param_tys))
                 as [err |] eqn:Hcheck;
                 cbn iota in Hinfer; try discriminate;
@@ -946,7 +1004,7 @@ Proof.
               apply Bool.orb_false_iff in Hlbound as [Hret_ok Hbounds_ok];
               eapply TER_CallExpr_Forall_Fn;
               [ eapply IH; exact Hcallee_res
-              | exact Hbody
+              | reflexivity
               | exact Hret_ok
               | exact Hbounds_ok
               | apply outlives_constraints_hold_b_sound; exact Hout
@@ -954,8 +1012,9 @@ Proof.
                   [ exact Hcollect
                   | intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0
                   | rewrite <- check_arg_tys_params_of_tys; exact Hcheck ]]
-            | _ => discriminate
+            | _ => cbn in Hinfer; discriminate
             end
+          | _ => cbn in Hinfer; discriminate
           end
         end
       ).
@@ -1697,14 +1756,73 @@ Proof.
             | _ => discriminate
             end
           | _ = TForall ?m ?bounds ?body =>
-            unfold infer_hrt_call_env in Hinfer;
-            destruct (ty_core body) eqn:Hbody; cbn iota in Hinfer; try discriminate;
-            (* Only TFn body survives *)
+            destruct body as [u_body body_core]; cbn in Hinfer;
+            destruct body_core eqn:Hbody; cbn iota in Hinfer; try discriminate;
             lazymatch type of Hbody with
+            | _ = TTypeForall ?type_params ?type_bounds ?type_body =>
+              unfold infer_mixed_forall_call_env in Hinfer;
+              cbn [ty_core] in Hinfer;
+              destruct type_body as [u_type_body type_body_core]; cbn in Hinfer;
+              destruct type_body_core eqn:Htypebody; cbn iota in Hinfer; try discriminate;
+              lazymatch type of Htypebody with
+              | _ = TFn ?param_tys ?ret =>
+                destruct (infer_type_forall_args type_params param_tys arg_tys)
+                  as [type_args |] eqn:Htypeargs;
+                  cbn iota in Hinfer; try discriminate;
+                destruct (build_bound_sigma (repeat None m) arg_tys
+                    (map (subst_type_params_ty type_args) param_tys))
+                  as [σ0 |] eqn:Hσ;
+                  cbn iota in Hinfer; try discriminate;
+                set (σ := complete_bound_sigma_with_vars n σ0);
+                change (complete_bound_sigma_with_vars n σ0) with σ in Hinfer;
+                destruct (check_arg_tys Ω arg_tys
+                    (map (open_bound_ty σ)
+                      (map (subst_type_params_ty type_args) param_tys)))
+                  as [err |] eqn:Hcheck;
+                  cbn iota in Hinfer; try discriminate;
+                destruct (contains_lbound_ty
+                    (open_bound_ty σ (subst_type_params_ty type_args ret)) ||
+                    contains_lbound_outlives (open_bound_outlives σ bounds) ||
+                    existsb
+                      (fun b =>
+                        existsb
+                          (fun tr =>
+                            existsb contains_lbound_ty (core_trait_ref_args Ty tr))
+                          (core_bound_traits Ty b))
+                      (open_core_trait_bounds σ type_bounds)) eqn:Hlbound;
+                  cbn iota in Hinfer; try discriminate;
+                destruct (outlives_constraints_hold_b Ω (open_bound_outlives σ bounds))
+                  eqn:Hout;
+                  cbn iota in Hinfer; try discriminate;
+                destruct (check_type_forall_bounds env
+                    (open_core_trait_bounds σ type_bounds) type_args)
+                  as [err |] eqn:Hbounds;
+                  cbn iota in Hinfer; try discriminate;
+                inversion Hinfer; subst;
+                repeat rewrite Bool.orb_false_iff in Hlbound;
+                destruct Hlbound as [[Hret_ok Hbounds_ok] _];
+                eapply TERS_CallExpr_MixedForall with
+                  (u := u_callee) (u_body := u_body)
+                  (σ := σ) (type_args := type_args);
+                [ intros fname' caps'; discriminate
+                | eapply IH; exact Hcallee_res
+                | reflexivity
+                | exact Hbounds
+                | exact Hret_ok
+                | exact Hbounds_ok
+                | apply outlives_constraints_hold_b_sound; exact Hout
+                | eapply infer_env_args_collect_roots_shadow_safe_sound;
+                    [ exact Hcollect
+                    | intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0
+                    | rewrite <- check_arg_tys_params_of_tys; exact Hcheck ] ]
+              | _ => discriminate
+              end
             | _ = TFn ?param_tys ?ret =>
+              unfold infer_hrt_call_env in Hinfer;
+              cbn [ty_core] in Hinfer;
               destruct (build_bound_sigma (repeat None m) arg_tys param_tys)
                 as [σ |] eqn:Hσ;
-                cbn iota in Hinfer; try discriminate;
+                [ cbn iota in Hinfer | cbn iota in Hinfer; discriminate ];
               destruct (check_arg_tys Ω arg_tys (map (open_bound_ty σ) param_tys))
                 as [err |] eqn:Hcheck;
                 cbn iota in Hinfer; try discriminate;
@@ -1720,7 +1838,7 @@ Proof.
               eapply TERS_CallExpr_Forall_Fn;
               [ intros fname' caps'; discriminate
               | eapply IH; exact Hcallee_res
-              | exact Hbody
+              | reflexivity
               | exact Hret_ok
               | exact Hbounds_ok
               | apply outlives_constraints_hold_b_sound; exact Hout
@@ -1728,8 +1846,9 @@ Proof.
                   [ exact Hcollect
                   | intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0
                   | rewrite <- check_arg_tys_params_of_tys; exact Hcheck ]]
-            | _ => discriminate
+            | _ => cbn in Hinfer; discriminate
             end
+          | _ => discriminate
           end
         end]).
       (* EMakeClosure callee: dedicated path *)

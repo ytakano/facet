@@ -737,9 +737,10 @@ Proof.
       eapply lookup_enum_variant_runtime_rootless; eassumption.
   - intros u la rk x path se v T Hstore Hvalue Htype Hrootless s'.
     inversion Hrootless.
-  - intros fname fdef Hlookup Hrootless s'. constructor. exact Hlookup.
-  - intros fname fdef Hin Hname Hrootless s'.
-    econstructor; eassumption.
+  - intros fname fdef Hlookup Hcaps Hrootless s'.
+    eapply VHT_ClosureEmpty; [exact Hlookup | exact Hcaps].
+  - intros fname fdef Hin Hname Hcaps Hrootless s'.
+    eapply VHT_ClosureIn; eassumption.
   - intros Ω v T_actual T_expected Htyped IHtyped Hcompat Hrootless s'.
     eapply VHT_Compatible.
     + eapply IHtyped.

@@ -1319,7 +1319,7 @@ Proof.
     split.
     + exact Hstore.
     + split.
-      * eapply VHT_ClosureIn; [eassumption | reflexivity].
+      * eapply VHT_ClosureIn; [eassumption | reflexivity | eassumption].
       * apply store_ref_targets_preserved_refl.
   - intros s fname captures captured fdef Hlookup Hcheck Ω n Σ T Σ'
       Hready _ _.

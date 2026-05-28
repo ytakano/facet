@@ -451,7 +451,7 @@ Proof.
     | Hvalue : Some _ = Some _, Htype : Some _ = Some _ |- _ =>
         inversion Hvalue; inversion Htype; subst
     end.
-    eapply VHT_ClosureEmpty. eassumption.
+    eapply VHT_ClosureEmpty; eassumption.
   - match goal with
     | Hvalue : value_lookup_path (VClosure _ _) ?lookup_path = Some _ |- _ =>
         destruct lookup_path
@@ -462,7 +462,7 @@ Proof.
     end.
     match goal with
     | Hin : In ?fdef (env_fns env) |- _ =>
-        eapply VHT_ClosureIn; [exact Hin | reflexivity]
+        eapply VHT_ClosureIn; [exact Hin | reflexivity | eassumption]
     end.
   - match goal with
     | Hcompat : ty_compatible ?Omega ?T_actual ?T_expected,

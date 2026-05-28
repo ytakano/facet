@@ -223,7 +223,7 @@ Proof.
 	        assert (Hv_closure_actual :
 	          value_has_type body_env s1
 	            (VClosure (fn_name fcallee) []) (fn_value_ty fdef))
-          by (eapply VHT_ClosureIn; [exact H | exact x]).
+          by (eapply VHT_ClosureIn; [exact H | exact x | eassumption]).
 	        assert (Hv_closure :
 	          value_has_type body_env s1
 	            (VClosure (fn_name fcallee) []) T)

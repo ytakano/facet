@@ -669,10 +669,12 @@ Inductive value_has_type (env : global_env) (s : store) : value -> Ty -> Prop :=
       value_has_type env s (VRef x path) (MkTy u (TRef la rk T))
   | VHT_ClosureEmpty : forall fname fdef,
       lookup_fn fname (env_fns env) = Some fdef ->
+      fn_captures fdef = [] ->
       value_has_type env s (VClosure fname []) (fn_value_ty fdef)
   | VHT_ClosureIn : forall fname fdef,
       In fdef (env_fns env) ->
       fn_name fdef = fname ->
+      fn_captures fdef = [] ->
       value_has_type env s (VClosure fname []) (fn_value_ty fdef)
   | VHT_Compatible : forall Ω v T_actual T_expected,
       value_has_type env s v T_actual ->
@@ -3387,7 +3389,7 @@ Proof.
       repeat match goal with
       | Hsome : Some _ = Some _ |- _ => inversion Hsome; clear Hsome; subst
       end.
-      split; [reflexivity | eapply VHT_ClosureIn; [eassumption | reflexivity]].
+      split; [reflexivity | eapply VHT_ClosureIn; [eassumption | reflexivity | eassumption]].
 	    + unfold fn_value_ty, fn_signature_ty_with_usage in *.
 	      destruct (fn_type_params fdef); destruct (fn_lifetimes fdef);
 	        simpl in *; discriminate.

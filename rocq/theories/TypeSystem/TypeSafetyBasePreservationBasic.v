@@ -198,10 +198,11 @@ Lemma eval_fn_preserves_typing :
     store_typed env s Σ ->
     In fdef (env_fns env) ->
     fn_name fdef = fname ->
+    fn_captures fdef = [] ->
     store_typed env s Σ /\
     value_has_type env s (VClosure fname []) (fn_value_ty fdef).
 Proof.
-  intros env Ω n Σ s fname fdef Hstore Hin Hname.
+  intros env Ω n Σ s fname fdef Hstore Hin Hname Hcaps.
   split; [exact Hstore |].
   eapply VHT_ClosureIn; eassumption.
 Qed.

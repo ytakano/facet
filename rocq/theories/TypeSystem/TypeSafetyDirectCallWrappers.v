@@ -536,6 +536,254 @@ Proof.
   - apply params_of_tys_map_param_ty_Forall2.
 Qed.
 
+Inductive runtime_tfn_signature_bridge
+    : list Ty -> Ty -> list Ty -> Ty -> Prop :=
+  | RTSB_Refl : forall params ret,
+      runtime_tfn_signature_bridge params ret params ret
+  | RTSB_Compatible : forall Ω params0 ret0 params1 ret1 params2 ret2,
+      runtime_tfn_signature_bridge params0 ret0 params1 ret1 ->
+      Forall2 (fun expected actual => ty_compatible Ω expected actual)
+        params2 params1 ->
+      ty_compatible Ω ret1 ret2 ->
+      runtime_tfn_signature_bridge params0 ret0 params2 ret2
+  | RTSB_LifetimeEquiv : forall params0 ret0 params1 ret1 params2 ret2,
+      runtime_tfn_signature_bridge params0 ret0 params1 ret1 ->
+      Forall2 ty_lifetime_equiv params1 params2 ->
+      ty_lifetime_equiv ret1 ret2 ->
+      runtime_tfn_signature_bridge params0 ret0 params2 ret2.
+
+Lemma runtime_tfn_signature_bridge_trans :
+  forall params0 ret0 params1 ret1 params2 ret2,
+    runtime_tfn_signature_bridge params0 ret0 params1 ret1 ->
+    runtime_tfn_signature_bridge params1 ret1 params2 ret2 ->
+    runtime_tfn_signature_bridge params0 ret0 params2 ret2.
+Proof.
+  intros params0 ret0 params1 ret1 params2 ret2 H01 H12.
+  revert params0 ret0 H01.
+  induction H12 as
+    [params ret
+    | Ω params1 ret1 params_mid ret_mid params2 ret2 Hmid IH Hparams Hret
+    | params1 ret1 params_mid ret_mid params2 ret2 Hmid IH Hparams Hret];
+    intros params_base ret_base Hbase.
+  - exact Hbase.
+  - eapply RTSB_Compatible.
+    + apply IH. exact Hbase.
+    + exact Hparams.
+    + exact Hret.
+  - eapply RTSB_LifetimeEquiv.
+    + apply IH. exact Hbase.
+    + exact Hparams.
+    + exact Hret.
+Qed.
+
+Lemma ty_compatible_tfn_signature_bridge :
+  forall Ω T_actual u params ret,
+    ty_compatible Ω T_actual (MkTy u (TFn params ret)) ->
+    exists u_actual params_actual ret_actual,
+      T_actual = MkTy u_actual (TFn params_actual ret_actual) /\
+      runtime_tfn_signature_bridge params_actual ret_actual params ret.
+Proof.
+  intros Ω [u_actual core_actual] u params ret Hcompat.
+  destruct core_actual; inversion Hcompat; subst; try discriminate.
+  - match goal with
+    | Hcore : TFn _ _ = TFn _ _ |- _ => inversion Hcore; subst; clear Hcore
+    end.
+    exists u_actual, params, ret. split.
+    + reflexivity.
+    + apply RTSB_Refl.
+  - exists u_actual, l, t. split.
+    + reflexivity.
+    + eapply RTSB_Compatible.
+      * apply RTSB_Refl.
+      * eassumption.
+      * eassumption.
+Qed.
+
+Lemma ty_lifetime_equiv_tfn_signature_bridge :
+  forall T_actual u params ret,
+    ty_lifetime_equiv T_actual (MkTy u (TFn params ret)) ->
+    exists params_actual ret_actual,
+      T_actual = MkTy u (TFn params_actual ret_actual) /\
+      runtime_tfn_signature_bridge params_actual ret_actual params ret.
+Proof.
+  intros [u_actual core_actual] u params ret Hequiv.
+  destruct core_actual; inversion Hequiv; subst; try discriminate.
+  exists l, t. split.
+  - reflexivity.
+  - eapply RTSB_LifetimeEquiv.
+    + apply RTSB_Refl.
+    + eassumption.
+    + eassumption.
+Qed.
+
+Lemma eval_args_values_have_types_params_of_tys_compatible :
+  forall env Ω_args Ω_bridge Ω_out s vs params_expected params_actual,
+    Forall2 (fun expected actual => ty_compatible Ω_bridge expected actual)
+      params_expected params_actual ->
+    eval_args_values_have_types env Ω_args s vs (params_of_tys params_expected) ->
+    eval_args_values_have_types env Ω_out s vs (params_of_tys params_actual).
+Proof.
+  intros env Ω_args Ω_bridge Ω_out s vs params_expected params_actual
+    Hparams Hargs.
+  revert vs Hargs.
+  induction Hparams as [| expected actual params_expected params_actual
+      Hcompat_param Hparams IH]; intros vs Hargs;
+    destruct vs as [| v vs]; simpl in Hargs; inversion Hargs; subst.
+  - constructor.
+  - simpl. econstructor.
+    + eapply VHT_Compatible.
+      * eapply VHT_Compatible; eassumption.
+      * exact Hcompat_param.
+    + apply ty_compatible_refl_exact.
+    + apply IH. exact H5.
+Qed.
+
+Lemma eval_args_values_have_types_params_of_tys_lifetime_equiv :
+  forall env Ω_args Ω_out s vs params_actual params_expected,
+    Forall2 ty_lifetime_equiv params_actual params_expected ->
+    eval_args_values_have_types env Ω_args s vs (params_of_tys params_expected) ->
+    eval_args_values_have_types env Ω_out s vs (params_of_tys params_actual).
+Proof.
+  intros env Ω_args Ω_out s vs params_actual params_expected Hparams Hargs.
+  revert vs Hargs.
+  induction Hparams as [| actual expected params_actual params_expected
+      Hequiv_param Hparams IH]; intros vs Hargs;
+    destruct vs as [| v vs]; simpl in Hargs; inversion Hargs; subst.
+  - constructor.
+  - simpl. econstructor.
+    + eapply VHT_LifetimeEquiv.
+      * eapply VHT_Compatible; eassumption.
+      * apply ty_lifetime_equiv_sym. exact Hequiv_param.
+    + apply ty_compatible_refl_exact.
+    + apply IH. exact H5.
+Qed.
+
+Lemma eval_args_values_have_types_params_of_tys_outlives_any :
+  forall env Ω_args Ω_out s vs params,
+    eval_args_values_have_types env Ω_args s vs (params_of_tys params) ->
+    eval_args_values_have_types env Ω_out s vs (params_of_tys params).
+Proof.
+  intros env Ω_args Ω_out s vs params Hargs.
+  revert vs Hargs.
+  induction params as [| T params IH]; intros vs Hargs;
+    destruct vs as [| v vs]; simpl in Hargs; inversion Hargs; subst.
+  - constructor.
+  - simpl. econstructor.
+    + eapply VHT_Compatible; eassumption.
+    + apply ty_compatible_refl_exact.
+    + apply IH. exact H5.
+Qed.
+
+Lemma runtime_tfn_signature_bridge_args_values :
+  forall env Ω_args Ω_out s vs params_actual ret_actual params_expected
+      ret_expected,
+    runtime_tfn_signature_bridge params_actual ret_actual
+      params_expected ret_expected ->
+    eval_args_values_have_types env Ω_args s vs (params_of_tys params_expected) ->
+    eval_args_values_have_types env Ω_out s vs (params_of_tys params_actual).
+Proof.
+  intros env Ω_args Ω_out s vs params_actual ret_actual params_expected
+    ret_expected Hbridge.
+  revert Ω_args Ω_out vs.
+  induction Hbridge; intros Ω_args Ω_out vs Hargs.
+  - eapply eval_args_values_have_types_params_of_tys_outlives_any. exact Hargs.
+  - eapply IHHbridge with (Ω_args := Ω_out).
+    eapply eval_args_values_have_types_params_of_tys_compatible;
+      eassumption.
+  - eapply IHHbridge with (Ω_args := Ω_out).
+    eapply eval_args_values_have_types_params_of_tys_lifetime_equiv;
+      eassumption.
+Qed.
+
+Lemma runtime_tfn_signature_bridge_result_value :
+  forall env s v params_actual ret_actual params_expected ret_expected,
+    runtime_tfn_signature_bridge params_actual ret_actual
+      params_expected ret_expected ->
+    value_has_type env s v ret_actual ->
+    value_has_type env s v ret_expected.
+Proof.
+  intros env s v params_actual ret_actual params_expected ret_expected
+    Hbridge Htyped.
+  induction Hbridge.
+  - exact Htyped.
+  - eapply VHT_Compatible.
+    + apply IHHbridge. exact Htyped.
+    + eassumption.
+  - eapply VHT_LifetimeEquiv.
+    + apply IHHbridge. exact Htyped.
+    + eassumption.
+Qed.
+
+Lemma value_has_type_empty_closure_tfn_signature_bridge :
+  forall env s fname fdef u param_tys ret,
+    value_has_type env s (VClosure fname [])
+      (MkTy u (TFn param_tys ret)) ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    fn_env_unique_by_name env ->
+    fn_type_params fdef = 0 ->
+    fn_lifetimes fdef = 0 ->
+    runtime_tfn_signature_bridge
+      (map param_ty (fn_params fdef)) (fn_ret fdef) param_tys ret.
+Proof.
+  intros env s fname fdef u param_tys ret Htyped.
+  remember (VClosure fname []) as v eqn:Hv.
+  remember (MkTy u (TFn param_tys ret)) as T eqn:HT.
+  revert fname fdef u param_tys ret Hv HT.
+  induction Htyped; intros fname0 fdef0 u0 param_tys0 ret0 Hv HT
+      Hlookup Hunique Htype_params Hlifetimes; try discriminate.
+  - inversion Hv; subst fname0.
+    rewrite H in Hlookup. inversion Hlookup; subst fdef0.
+    unfold fn_value_ty, fn_signature_ty_with_usage in HT.
+    rewrite Htype_params in HT. rewrite Hlifetimes in HT.
+    simpl in HT.
+    rewrite map_lifetimes_tys_close_fn_lifetime_0 in HT.
+    rewrite map_lifetimes_ty_close_fn_lifetime_0 in HT.
+    inversion HT; subst. apply RTSB_Refl.
+  - inversion Hv; subst fname0.
+    pose proof
+      (lookup_fn_unique_by_name env fname fdef0 fdef Hlookup H H0 Hunique)
+      as Heq.
+    subst fdef.
+    unfold fn_value_ty, fn_signature_ty_with_usage in HT.
+    rewrite Htype_params in HT. rewrite Hlifetimes in HT.
+    simpl in HT.
+    rewrite map_lifetimes_tys_close_fn_lifetime_0 in HT.
+    rewrite map_lifetimes_ty_close_fn_lifetime_0 in HT.
+    inversion HT; subst. apply RTSB_Refl.
+  - match goal with
+    | Hcompat : ty_compatible _ _ ?Texpect,
+      HTy : ?Texpect = MkTy _ (TFn _ _) |- _ => rewrite HTy in Hcompat
+    | Hcompat : ty_compatible _ _ ?Texpect,
+      HTy : MkTy _ (TFn _ _) = ?Texpect |- _ => rewrite <- HTy in Hcompat
+    end.
+    match goal with
+    | Hcompat : ty_compatible ?Ωc ?Tactual (MkTy u0 (TFn param_tys0 ret0)) |- _ =>
+        destruct (ty_compatible_tfn_signature_bridge Ωc Tactual u0
+          param_tys0 ret0 Hcompat)
+          as [u_actual [params_actual [ret_actual [HTactual Hstep]]]]
+    end.
+    subst T_actual.
+    eapply runtime_tfn_signature_bridge_trans.
+    + eapply IHHtyped; eauto.
+    + exact Hstep.
+  - match goal with
+    | Hequiv : ty_lifetime_equiv _ ?Texpect,
+      HTy : ?Texpect = MkTy _ (TFn _ _) |- _ => rewrite HTy in Hequiv
+    | Hequiv : ty_lifetime_equiv _ ?Texpect,
+      HTy : MkTy _ (TFn _ _) = ?Texpect |- _ => rewrite <- HTy in Hequiv
+    end.
+    match goal with
+    | Hequiv : ty_lifetime_equiv ?Tactual (MkTy u0 (TFn param_tys0 ret0)) |- _ =>
+        destruct (ty_lifetime_equiv_tfn_signature_bridge Tactual u0
+          param_tys0 ret0 Hequiv)
+          as [params_actual [ret_actual [HTactual Hstep]]]
+    end.
+    subst T_actual.
+    eapply runtime_tfn_signature_bridge_trans.
+    + eapply IHHtyped; eauto.
+    + exact Hstep.
+Qed.
+
 Lemma typed_empty_closure_call_expr_tfn_components_direct_call_roots :
   forall env (Ω : outlives_ctx) (n : nat) R Σ Σ1 R1 Σ' R'
       callee args fname fdef u roots_callee arg_roots,

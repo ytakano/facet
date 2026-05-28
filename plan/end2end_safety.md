@@ -79,6 +79,8 @@ Required before accepting this gate:
   direct-call callee summary route after callee inversion, including a `TFn`
   direct-call roots synthesis helper.
 - Done prep: add a value-typing inversion that runtime closures are empty.
+- Done prep: add `TFn` signature-bridge helpers for exact, compatible, and
+  lifetime-equivalent runtime closure signatures.
 - Prove the runtime bridge from the typed callee variable lookup to that
   non-capturing closure target.
 - Then extend the executable gate and captured runtime safety theorem.

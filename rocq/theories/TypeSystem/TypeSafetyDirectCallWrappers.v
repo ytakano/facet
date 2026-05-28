@@ -714,6 +714,66 @@ Proof.
     + eassumption.
 Qed.
 
+Lemma value_has_type_empty_closure_plain_tfn_non_generic :
+  forall env s fname fdef u param_tys ret,
+    value_has_type env s (VClosure fname [])
+      (MkTy u (TFn param_tys ret)) ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    fn_env_unique_by_name env ->
+    fn_type_params fdef = 0 /\ fn_lifetimes fdef = 0.
+Proof.
+  intros env s fname fdef u param_tys ret Htyped.
+  remember (VClosure fname []) as v eqn:Hv.
+  remember (MkTy u (TFn param_tys ret)) as T eqn:HT.
+  revert fname fdef u param_tys ret Hv HT.
+  induction Htyped; intros fname0 fdef0 u0 param_tys0 ret0 Hv HT
+      Hlookup Hunique; try discriminate.
+  - inversion Hv; subst fname0.
+    assert (fdef0 = fdef) as ->.
+    { eapply lookup_fn_deterministic; eassumption. }
+    unfold fn_value_ty, fn_signature_ty_with_usage in HT.
+    destruct (fn_type_params fdef) eqn:Htype_params;
+      destruct (fn_lifetimes fdef) eqn:Hlifetimes; try discriminate.
+    split; reflexivity.
+  - inversion Hv; subst fname0.
+    pose proof
+      (lookup_fn_unique_by_name env fname fdef0 fdef Hlookup H H0 Hunique)
+      as Heq.
+    subst fdef.
+    unfold fn_value_ty, fn_signature_ty_with_usage in HT.
+    destruct (fn_type_params fdef0) eqn:Htype_params;
+      destruct (fn_lifetimes fdef0) eqn:Hlifetimes; try discriminate.
+    split; reflexivity.
+  - match goal with
+    | Hcompat : ty_compatible _ _ ?Texpect,
+      HTy : ?Texpect = MkTy _ (TFn _ _) |- _ => rewrite HTy in Hcompat
+    | Hcompat : ty_compatible _ _ ?Texpect,
+      HTy : MkTy _ (TFn _ _) = ?Texpect |- _ => rewrite <- HTy in Hcompat
+    end.
+    match goal with
+    | Hcompat : ty_compatible ?Ωc ?Tactual (MkTy u0 (TFn param_tys0 ret0)) |- _ =>
+        destruct (ty_compatible_tfn_signature_bridge Ωc Tactual u0
+          param_tys0 ret0 Hcompat)
+          as [u_actual [params_actual [ret_actual [HTactual _]]]]
+    end.
+    subst T_actual.
+    eapply IHHtyped; eauto.
+  - match goal with
+    | Hequiv : ty_lifetime_equiv _ ?Texpect,
+      HTy : ?Texpect = MkTy _ (TFn _ _) |- _ => rewrite HTy in Hequiv
+    | Hequiv : ty_lifetime_equiv _ ?Texpect,
+      HTy : MkTy _ (TFn _ _) = ?Texpect |- _ => rewrite <- HTy in Hequiv
+    end.
+    match goal with
+    | Hequiv : ty_lifetime_equiv ?Tactual (MkTy u0 (TFn param_tys0 ret0)) |- _ =>
+        destruct (ty_lifetime_equiv_tfn_signature_bridge Tactual u0
+          param_tys0 ret0 Hequiv)
+          as [params_actual [ret_actual [HTactual _]]]
+    end.
+    subst T_actual.
+    eapply IHHtyped; eauto.
+Qed.
+
 Lemma value_has_type_empty_closure_tfn_signature_bridge :
   forall env s fname fdef u param_tys ret,
     value_has_type env s (VClosure fname [])

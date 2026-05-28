@@ -85,6 +85,7 @@ Required before accepting this gate:
 - Done prep: restrict general function-value summary evidence to
   non-type-generic callee types.
 - Done prep: add a composed `TFn` `ECallExpr` runtime preservation wrapper.
+- Done prep: add empty-closure `TFn` evidence for non-generic, non-HRT callees.
 - Prove a composed `ECallExpr` runtime preservation wrapper that evaluates
   the callee first, transports store/root facts to the argument phase, inverts
   the empty closure target, and covers non-type-generic `TFn`, `TClosure`, and

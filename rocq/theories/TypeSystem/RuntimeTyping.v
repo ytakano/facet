@@ -709,6 +709,19 @@ Combined Scheme runtime_typing_ind
   from value_has_type_ind', struct_fields_have_type_ind',
        enum_values_have_type_ind'.
 
+Lemma value_has_type_closure_captured_nil :
+  forall env s fname captured T,
+    value_has_type env s (VClosure fname captured) T ->
+    captured = [].
+Proof.
+  intros env s fname captured T Htyped.
+  remember (VClosure fname captured) as v eqn:Hv.
+  induction Htyped; try discriminate; eauto.
+  - inversion Hv. reflexivity.
+  - inversion Hv. reflexivity.
+Qed.
+
+
 (* References in surviving runtime values must not point at a removed
    store root. *)
 Inductive value_refs_exclude_root (root : ident) : value -> Prop :=

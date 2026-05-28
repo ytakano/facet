@@ -78,6 +78,7 @@ Required before accepting this gate:
 - Done prep: add empty-capture `ECallExpr` runtime helpers that reuse the
   direct-call callee summary route after callee inversion, including a `TFn`
   direct-call roots synthesis helper.
+- Done prep: add a value-typing inversion that runtime closures are empty.
 - Prove the runtime bridge from the typed callee variable lookup to that
   non-capturing closure target.
 - Then extend the executable gate and captured runtime safety theorem.

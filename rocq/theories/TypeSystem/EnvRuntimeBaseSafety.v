@@ -59,6 +59,21 @@ Proof.
   induction Hsummary; constructor; auto.
 Qed.
 
+Lemma store_function_closure_targets_summary_lookup :
+  forall env s x se,
+    store_function_closure_targets_summary env s ->
+    store_lookup x s = Some se ->
+    value_function_closure_targets_summary env (se_val se).
+Proof.
+  unfold store_function_closure_targets_summary.
+  intros env s x se Hsummary Hlookup.
+  induction Hsummary as [| se0 rest Hhead Htail IH]; simpl in Hlookup.
+  - discriminate.
+  - destruct (ident_eqb x (se_name se0)) eqn:Heq.
+    + inversion Hlookup; subst. exact Hhead.
+    + apply IH. exact Hlookup.
+Qed.
+
 Lemma initial_root_env_for_params_covers :
   forall ps,
     root_env_covers_params ps (initial_root_env_for_params ps).

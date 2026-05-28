@@ -2,6 +2,7 @@ From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules RootProvenance TypeChecker RuntimeTyping
   EnvStructuralRules CheckerSoundness AlphaRenaming EnvTypingSoundness.
 From Facet.TypeSystem Require Export EnvRuntimeNonCapturingSafety.
+From Facet.TypeSystem Require Import TypeSafetyDirectCallWrappers.
 From Stdlib Require Import List Bool Lia String Program.Equality.
 Import ListNotations.
 
@@ -22,7 +23,7 @@ Proof.
   destruct (check_initial_root_runtime_ready_sound f s Hinitial) as
     [Hroots [Hstore_shadow [Hnamed Hkeys]]].
   destruct Hfn_summary as [Hnoncapturing | Hcaptured_summary].
-  - destruct Hnoncapturing as [Hdirect_or_prov | Hlocal_summary].
+  - destruct Hnoncapturing as [Hdirect_or_prov | [Hlocal_summary | Hvar_summary]].
     + destruct Hdirect_or_prov as [Hprov_summary | Hdirect_summary].
       * destruct Hprov_summary as [Hnodup Hbody_summary].
         unfold callee_body_root_shadow_provenance_ready_at in Hbody_summary.
@@ -298,6 +299,148 @@ Proof.
 	        -- exact Hv_removed_env.
         -- apply ty_compatible_b_sound. exact Hcompat.
       * inversion Heval.
+    + destruct Hvar_summary as
+      (x & args & T_callee & Γ_callee & R_callee & roots_callee &
+        param_tys & ret & T_body & Γ_out & R_body & roots_body &
+        Hbody & Hready_args & Hinfer_callee & HTFn & Hnodup &
+        Htyped_shadow & Hcompat & Hexclude_roots & Hexclude_env).
+    pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
+    rewrite Hbody in Heval.
+    pose (body_env :=
+      global_env_with_local_bounds env
+        (fn_bounds f)).
+    assert (Hstore_body_env :
+        store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
+    { subst body_env.
+      eapply store_typed_global_env_with_local_bounds.
+      eapply initial_store_for_fn_store_typed. exact Hstore. }
+    assert (Hstore_summary_body :
+        store_function_closure_targets_summary body_env s).
+    { subst body_env.
+      apply store_function_closure_targets_summary_global_env_with_local_bounds.
+      eapply initial_store_for_fn_closure_targets_summary. exact Hstore. }
+    set (callee_var := x).
+    assert (Heval_body_env : eval body_env s (ECallExpr (EVar callee_var) args) s' v).
+    { subst body_env.
+      eapply eval_global_env_with_local_bounds. exact Heval. }
+    dependent destruction Heval_body_env.
+    match goal with
+    | Hcallee_eval : eval body_env s (EVar callee_var) ?s_fn (VClosure ?fname ?captured) |- _ =>
+        rename Hcallee_eval into Heval_callee
+    end.
+    match goal with
+    | Hlookup_runtime : lookup_fn ?fname (env_fns body_env) = Some ?fdef_runtime |- _ =>
+        rename Hlookup_runtime into Hlookup_runtime
+    end.
+    rewrite Hbody in Htyped_shadow.
+    dependent destruction Htyped_shadow.
+    * match goal with
+      | Htyped_callee_shadow : typed_env_roots_shadow_safe _ _ _ _ _ _ (MkTy _ (TFn _ _)) _ _ _ |- _ =>
+          pose proof (typed_env_roots_shadow_safe_roots _ _ _ _ _ _ _ _ _ _
+            Htyped_callee_shadow) as Htyped_callee_roots
+      end.
+      destruct (proj1 eval_preserves_typing_roots_ready_mutual
+          body_env s (EVar x) s_fn (VClosure fname captured) Heval_callee
+          (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+          (sctx_of_ctx (fn_body_ctx f)) (MkTy u (TFn param_tys0 ret1))
+          Σ1 R1 roots_callee0
+          (ProvReady_Var x) Hstore_body_env Hroots Hstore_shadow Hroot_shadow
+          Htyped_callee_roots)
+        as [_ [Hv_callee _]].
+      pose proof
+        (value_has_type_closure_captured_nil body_env s_fn fname captured _
+          Hv_callee) as Hcaptured_nil.
+      subst captured.
+      assert (Hcallee_summary_runtime :
+          callee_body_root_shadow_provenance_summary body_env fdef).
+      { inversion Heval_callee; subst.
+        - match goal with
+          | Hlookup_store : store_lookup ?x_lookup ?s_lookup = Some ?se,
+            Hsummary_store : store_function_closure_targets_summary body_env ?s_lookup |- _ =>
+              pose proof
+                (store_function_closure_targets_summary_lookup body_env s_lookup x_lookup se
+                  Hsummary_store Hlookup_store) as Hvalue_summary
+          end.
+          match goal with
+          | Hvalue_eq : se_val _ = VClosure _ _ |- _ =>
+              rewrite Hvalue_eq in Hvalue_summary
+          | Hvalue_eq : VClosure _ _ = se_val _ |- _ =>
+              rewrite <- Hvalue_eq in Hvalue_summary
+          | _ => idtac
+          end.
+          simpl in Hvalue_summary.
+          destruct Hvalue_summary as (fdef_summary & Hlookup_summary & Hsummary_target).
+          assert (fdef_summary = fdef) as ->
+            by (eapply lookup_fn_deterministic; eassumption).
+          exact Hsummary_target.
+        - match goal with
+          | Hlookup_store : store_lookup ?x_lookup ?s_lookup = Some ?se,
+            Hsummary_store : store_function_closure_targets_summary body_env ?s_lookup |- _ =>
+              pose proof
+                (store_function_closure_targets_summary_lookup body_env s_lookup x_lookup se
+                  Hsummary_store Hlookup_store) as Hvalue_summary
+          end.
+          match goal with
+          | Hvalue_eq : se_val _ = VClosure _ _ |- _ =>
+              rewrite Hvalue_eq in Hvalue_summary
+          | Hvalue_eq : VClosure _ _ = se_val _ |- _ =>
+              rewrite <- Hvalue_eq in Hvalue_summary
+          | _ => idtac
+          end.
+          simpl in Hvalue_summary.
+          destruct Hvalue_summary as (fdef_summary & Hlookup_summary & Hsummary_target).
+          assert (fdef_summary = fdef) as ->
+            by (eapply lookup_fn_deterministic; eassumption).
+          exact Hsummary_target. }
+      simpl in *.
+      destruct (eval_call_expr_tfn_components_preserve_typing_with_callee_summary
+        body_env s s_fn s_args s_body (EVar callee_var) args fname [] fdef fcall
+        vs ret0 used' Heval_callee H1 H2 H3 Heval_body_env2
+        (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+        (sctx_of_ctx (fn_body_ctx f)) Σ1 R1 (sctx_of_ctx Γ_out) R'
+        roots_callee0 arg_roots u param_tys0 ret1
+        Hready_args (ProvReady_Var x) Hstore_body_env Hroots Hstore_shadow
+        Hroot_shadow Hnamed Hkeys Htyped_shadow H0 Hunique
+        Hcallee_summary_runtime)
+      as [_ [Hv _]].
+      assert (Hv_env :
+          value_has_type env
+            (store_remove_params (fn_captures fcall)
+               (store_remove_params (fn_params fcall) s_body))
+            ret0 ret1).
+      { subst body_env.
+        eapply value_has_type_clear_global_env_local_bounds. exact Hv. }
+      eapply VHT_Compatible;
+        [ exact Hv_env | apply ty_compatible_b_sound; exact Hcompat ].
+    * pose proof
+        (typed_env_roots_shadow_safe_evar_infer_core
+          body_env (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+          (fn_body_ctx f) x (MkTy u (TClosure env_lt param_tys0 ret1))
+          Σ1 R1 roots_callee0 T_callee Γ_callee R_callee roots_callee
+          Htyped_shadow Hinfer_callee) as Hcore.
+      simpl in Hcore. rewrite HTFn in Hcore. discriminate.
+    * pose proof
+        (typed_env_roots_shadow_safe_evar_infer_core
+          body_env (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+          (fn_body_ctx f) x (MkTy u (TTypeForall type_params bounds body_ty))
+          Σ1 R1 roots_callee0 T_callee Γ_callee R_callee roots_callee
+          Htyped_shadow Hinfer_callee) as Hcore.
+      simpl in Hcore. rewrite HTFn in Hcore. discriminate.
+    * pose proof
+        (typed_env_roots_shadow_safe_evar_infer_core
+          body_env (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+          (fn_body_ctx f) x
+          (MkTy u (TForall m bounds (MkTy u_body (TTypeForall type_params type_bounds body_ty))))
+          Σ1 R1 roots_callee0 T_callee Γ_callee R_callee roots_callee
+          Htyped_shadow Hinfer_callee) as Hcore.
+      simpl in Hcore. rewrite HTFn in Hcore. discriminate.
+    * pose proof
+        (typed_env_roots_shadow_safe_evar_infer_core
+          body_env (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+          (fn_body_ctx f) x (MkTy u (TForall m bounds body_ty))
+          Σ1 R1 roots_callee0 T_callee Γ_callee R_callee roots_callee
+          Htyped_shadow Hinfer_callee) as Hcore.
+      simpl in Hcore. rewrite HTFn in Hcore. discriminate.
   - destruct Hcaptured_summary as
       [Hcaptured_summary | [Hif_summary | Hlocal_captured_summary]].
 	    + destruct Hcaptured_summary as
@@ -384,7 +527,8 @@ Proof.
           env (fn_outlives f) (fn_lifetimes f)
           (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
           (fn_body f) T_body (sctx_of_ctx Γ_out) R_body roots_body
-          ret_roots Hexpr_summary s s' v Hstore Hroots Hstore_shadow
+          ret_roots Hexpr_summary s s' v
+          (initial_store_for_fn_store_typed env f s Hstore) Hroots Hstore_shadow
           Hroot_shadow Hnamed Hkeys Heval Hunique) as [_ Hv].
       eapply VHT_Compatible.
       * exact Hv.

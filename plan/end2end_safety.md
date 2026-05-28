@@ -88,12 +88,12 @@ Required before accepting this gate:
 - Done prep: add empty-closure `TFn` evidence for non-generic, non-HRT callees.
 - Done prep: add a `TFn` wrapper that builds callee-route evidence from the
   callee summary.
-- Prove a composed `ECallExpr` runtime preservation wrapper that evaluates
-  the callee first, transports store/root facts to the argument phase, inverts
-  the empty closure target, and covers non-type-generic `TFn`, `TClosure`, and
-  lifetime-only `TForall` callees.
+- Strengthen function-value evidence so a runtime closure target is known to
+  have a base callee-body provenance summary, not just the recursive
+  non-capturing summary for its defining function.
 - Then extend the non-capturing and captured runtime safety theorems to consume
-  the general `ECallExpr callee args` summary branch.
+  the general `ECallExpr callee args` summary branch for supported `TFn`
+  callees.
 - Target valid failures: non-type-generic function-parameter and local
   function-value calls.  Type-forall function-value and generic item-as-value
   calls stay blocked by T2a.

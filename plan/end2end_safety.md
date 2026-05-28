@@ -24,7 +24,7 @@ this roadmap.
 | T2e: function-value parameter/local call safety gate | blocked: runtime callee bridge needed |
 | T2g: mixed lifetime/type forall roots calls | blocked: roots proof refactor needed |
 | T2b: `ELetInfer` captured closure call safety gate | pending |
-| T2f: deref/reborrow/ref-write roots coverage | pending |
+| T2f: deref/reborrow/ref-write roots coverage | blocked: nested place root model needed |
 
 ## Current blockers
 
@@ -42,7 +42,9 @@ With the CLI using `infer_program_env_end2end`, `sh tests/run.sh` currently has
   A prototype reusing `infer_mixed_forall_call_env` type-checks through
   `EnvTypingSoundness` but leaves `EnvRootSoundness` call-case proof fallout.
 - 11 `ErrNotImplemented`
-  - deref/reborrow/write-through-reference roots coverage.
+  - deref/reborrow/write-through-reference roots coverage.  Nested `PDeref`
+    places make `place_path` return `None`; roots typing needs explicit
+    location/value root resolution before these paths can be accepted.
 
 ## Remaining implementation slices
 
@@ -105,10 +107,19 @@ Required before accepting this gate:
 
 ### T2f: deref/reborrow/ref-write roots coverage
 
-- Add roots and shadow-safe coverage for `EDeref` and nested `PDeref` write and
-  reborrow paths required by the valid suite.
-- Preserve existing invalid rejections for linear refs, immutable writes, and
-  borrow conflicts.
+Blocked by nested place roots.  Current roots typing relies on
+`place_path p = Some (x, path)`, but `PDeref` returns `None`, so nested deref
+places are rejected before borrow, assign, replace, or deref-borrow rules can
+run.
+
+Required before accepting this gate:
+
+- Add root-resolution helpers for nested places that separate location roots
+  from value roots behind references.
+- Define how writes through `PDeref` update the resolved store root.
+- Add matching roots/shadow-safe constructors and soundness lemmas.
+- Preserve invalid rejections for linear refs, immutable writes, and borrow
+  conflicts.
 - Target valid failures: assign-through-ref, reborrow, and replace-through-ref
   cases.
 

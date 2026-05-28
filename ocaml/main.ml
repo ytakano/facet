@@ -313,15 +313,19 @@ let () =
   in
   let env_for_checker = alpha_normalize_global_env env in
   let diagnostics = diagnostic_map_of_envs env env_for_checker in
-  let ok = ref true in
+  let checked_env = ref None in
   (match infer_program_env_end2end env_for_checker with
   | Infer_ok env' ->
+    checked_env := Some env';
     List.iter (fun f ->
       let (fname, _) = f.fn_name in
       Printf.printf "OK: %s\n" fname
     ) env'.env_fns
   | Infer_err e ->
     Printf.eprintf "Type error: %s\n" (string_of_infer_error ~diagnostics e);
-    ok := false);
-  if not !ok then exit 1;
-  Option.iter (fun fname -> Fir.emit_fir fname env_for_checker) !emit_fir_file
+    exit 1);
+  Option.iter (fun fname ->
+    match !checked_env with
+    | Some env' -> Fir.emit_fir fname env'
+    | None -> assert false
+  ) !emit_fir_file

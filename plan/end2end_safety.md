@@ -1,251 +1,114 @@
 # End-to-end safety roadmap
 
+## Goal
+
+Use one extracted Rocq checker path for CLI acceptance:
+`infer_program_env_end2end`.  The OCaml CLI must not recover
+`ErrNotImplemented` by falling back to `infer_full_env`, `infer_full_env_roots`,
+`check_program_env`, or handwritten checker logic.
+
+The theorem boundary is the alpha-normalized core `global_env` produced after
+the parser/de Bruijn frontend.  Parser and de Bruijn correctness are outside
+this roadmap.
+
 ## Status
 
 | Task | Status |
 |------|--------|
-| T1: ECallExpr TFn/TClosure in roots checker | ✅ done (commit 276b83e) |
-| T2c: TTypeForall in roots checker | ✅ done (commit 80ca8bf) |
-| T2d: TForall (HRT) in roots checker | ✅ done (commit a4ea88a) |
-| T2e: fn-value-param call safety gate (5 hrt_* failures) | pending |
-| T2a: ECallGeneric in safety gate (12 gate failures) | pending |
-| T2b: ELetInfer closure form in safety gate (4 gate failures) | pending |
-| T2f: reborrow/ref/HRT roots checker (18 ErrNotImplemented) | pending |
-| T3: Switch OCaml CLI to infer_program_env_end2end | blocked by T2a-T2f |
-| T4: CI enforcement of entrypoint policy | pending |
+| T1: ECallExpr TFn/TClosure in roots checker | done (276b83e) |
+| T2c: TTypeForall in roots checker | done (80ca8bf) |
+| T2d: TForall (HRT) in roots checker | done (a4ea88a) |
+| T3: switch OCaml CLI to `infer_program_env_end2end` | done |
+| T4: CI enforcement of entrypoint policy | done (8bd3d82) |
+| T2a: `ECallGeneric` safety gate | pending |
+| T2e: function-value parameter/local call safety gate | pending |
+| T2g: mixed lifetime/type forall roots calls | pending |
+| T2b: `ELetInfer` captured closure call safety gate | pending |
+| T2f: deref/reborrow/ref-write roots coverage | pending |
 
-## T3 blockers (found when testing end2end CLI)
+## Current blockers
 
-When `infer_program_env_end2end` is used as the CLI accept path, 34 of the
-valid tests fail:
+With the CLI using `infer_program_env_end2end`, `sh tests/run.sh` currently has
+38 valid-test failures:
 
-**16 tests: `ErrEndToEndSafetyGateFailed`** (roots checker passes, safety gate
-rejects) — safety gate patterns do not recognise:
-- `ECallExpr (EVar x) args` where `x` is a fn-value parameter (T2e)
-- `ECallGeneric fname type_args args` as a direct call body (T2a)
-- `ELetInfer m x (EMakeClosure ...) (ECallExpr (EVar x) args)` closure form (T2b)
+- 24 `ErrEndToEndSafetyGateFailed`
+  - `ECallGeneric fname type_args args` direct-call bodies.
+  - `ECallExpr (EVar x) args` function-value calls.
+  - captured closure calls through local bindings.
+- 3 mixed `for<'a, T>` function-value calls rejected as malformed HRT bodies.
+- 11 `ErrNotImplemented`
+  - deref/reborrow/write-through-reference roots coverage.
 
-**18 tests: `ErrNotImplemented`** (roots checker has no coverage for):
-- `ECallExpr callee args` where callee has TForall/TTypeForall type (T2c/T2d)
-- reborrow, ref assign, HRT fn-value call forms (T2e)
+## Remaining implementation slices
 
-## Proof impact of T2e (fn-value-param call safety gate)
+### T2a: `ECallGeneric` safety gate
 
-5 hrt_* tests fail because the safety gate has no case for
-`ECallExpr (EVar x) args` where `x` is a function-value parameter
-(type TForall or TFn). All existing gate cases assume a known global callee.
+- Extend the direct-call Prop summary and executable checker to recognize
+  `ECallGeneric fname type_args args` without erasing type arguments
+  unsoundly.
+- Prove the checker branch sound and bridge generic-call evaluation to the
+  existing direct-call runtime safety route.
+- Target valid failures: `explicit_generic_call`, `generic_direct_call_*`, and
+  generic expected-call forms.
 
-Proof extension required:
-- Add `ERSCE_FnValueParamCall` constructor to
-  `expr_root_shadow_captured_call_provenance_summary_exact` with hypothesis
-  `typed_env_roots_shadow_safe env Ω n R Σ (ECallExpr (EVar x) args) T Σ' R' roots`
-  and `preservation_ready_args args`.
-- Add a 5th disjunct to `callee_body_root_shadow_captured_call_provenance_summary`
-  for functions whose body is `ECallExpr (EVar x) args` with preservation-ready args
-  and successful roots check.
-- Add new boolean check in `check_fn_root_shadow_captured_call_provenance_summary`
-  and a soundness lemma bridging it to the new Prop disjunct.
-- Add proof branch in `EnvRuntimeCapturedSafety.v`:
-  invert `Eval_CallExpr` → get `VClosure fname []` from store typing →
-  apply `Hsummary` to get callee summary → apply callee-body safety theorem.
-- Touches: EnvRuntimeShadowSummaryFacts.v, TypeChecker.v,
-  EnvRuntimeCapturedSafety.v, EnvRuntimeShadowCheckerFacts.v.
+### T2e: function-value parameter/local call safety gate
 
-## Proof impact of T2a (ECallGeneric safety gate)
+- Add a summary case for `ECallExpr (EVar x) args` when roots/shadow-safe typing
+  proves the callee is a valid function value.
+- Extend the executable gate and soundness proof.
+- Extend captured runtime safety to route evaluated closure values through the
+  callee-body safety theorem.
+- Target valid failures: HRT function-parameter calls, type-forall
+  function-value calls, and generic item-as-value calls.
 
-- `Eval_CallGeneric` is operationally identical to `Eval_Call`; need
-  `eval_call_generic_as_call` lemma in TypeSafetyDirectCallRoute.v.
-- Must add `TER_CallExpr_Generic` Prop case and extend
-  `callee_body_root_shadow_direct_call_provenance_summary` with a new disjunct.
-- Must update `check_fn_root_shadow_direct_call_provenance_summary` and its
-  soundness lemma, propagate through non-capturing and captured gate layers.
-- Touches: TypeChecker.v, EnvRuntimeShadowSummaryFacts.v,
-  EnvRuntimeShadowCheckerFacts.v, EnvRuntimeDirectSafety.v,
-  TypeSafetyDirectCallRoute.v, End2EndSafety.v.
+### T2g: mixed lifetime/type forall roots calls
 
-## Goal
+- Reuse `infer_mixed_forall_call_env` in roots and shadow-safe `ECallExpr`
+  branches when a `TForall` body is `TTypeForall`.
+- Keep structural, elaborated, roots, and shadow-safe call inference aligned.
+- Target valid failures: `mixed_forall_fn_value_*`.
 
-Unify the executable type-checking entrypoint used by the OCaml CLI so that
-end-to-end soundness and type safety can be stated against one extracted Rocq
-checker path.  The target design has no `infer_full_env` fallback: programs are
-accepted only when the roots checker and its safety gates accept them.
+### T2b: captured closure local binding safety gate
 
-The initial end-to-end claim is for the core `global_env` produced after the
-current parser/de Bruijn frontend.  Parser and de Bruijn correctness remain
-outside this roadmap unless a separate frontend-correctness proof is added.
+- Accept `ELetInfer m x (EMakeClosure ...) (ECallExpr (EVar x) args)` with the
+  same freshness, capture, and root-exclusion checks as annotated local closure
+  calls.
+- Target valid failures: `tests/valid/closure/capture_*`.
 
-## Current issue
+### T2f: deref/reborrow/ref-write roots coverage
 
-The OCaml CLI currently alpha-normalizes the frontend output, then checks each
-function with `infer_full_env_roots`.  If that checker returns
-`ErrNotImplemented`, the CLI falls back to `infer_full_env`.
+- Add roots and shadow-safe coverage for `EDeref` and nested `PDeref` write and
+  reborrow paths required by the valid suite.
+- Preserve existing invalid rejections for linear refs, immutable writes, and
+  borrow conflicts.
+- Target valid failures: assign-through-ref, reborrow, and replace-through-ref
+  cases.
 
-This is useful operationally, but it prevents a clean end-to-end theorem:
+## Required checks
 
-- `infer_full_env_roots` has roots/provenance soundness and conditional runtime
-  type-safety theorems.
-- `infer_full_env` has structural checker soundness, but it does not produce the
-  roots/provenance evidence needed by the stronger runtime safety path.
-- The OCaml accept/reject predicate is a handwritten combination of both paths,
-  not one Rocq-level checker predicate with a matching theorem.
-
-## Roadmap
-
-### 1. Define a single Rocq checker entrypoint
-
-Add a fallback-free checker entrypoint in `TypeChecker.v`.
-
-- `infer_fn_env_end2end env f`
-  - Computes `R0 := initial_root_env_for_params (fn_params f ++ fn_captures f)`.
-  - Calls `infer_full_env_roots env f R0`.
-  - Applies the required root/shadow/provenance safety gates.
-  - Returns `infer_ok` only when the function is accepted by the roots path.
-  - Returns `infer_err err` directly; `ErrNotImplemented` is not recovered.
-- `infer_program_env_end2end env`
-  - Alpha-normalizes `env`.
-  - Checks global name uniqueness.
-  - Checks every function with `infer_fn_env_end2end`.
-  - Returns the alpha-normalized environment on success.
-- `check_program_env_end2end env`
-  - Boolean wrapper for proofs and tests.
-
-Do not duplicate type-checking logic in OCaml.  OCaml should call the extracted
-program-level entrypoint.
-
-### 2. Complete roots checker coverage
-
-Remove accepted-program dependence on `ErrNotImplemented`.
-
-Priority gaps to close:
-
-- General `ECallExpr`, including function values and closures.
-- `EDeref`.
-- Field-place variants of `EReplace`, `EAssign`, and `EBorrow`.
-- Struct and match cases where roots/shadow/provenance gates still reject or
-  return `ErrNotImplemented`.
-
-For each construct:
-
-- Add any missing `typed_env_roots` and `typed_env_roots_shadow_safe` evidence first.
-  `ECallExpr` support specifically requires function-value and polymorphic
-  call-expression roots constructors before the executable roots checker can
-  accept those forms.
-- Update the executable roots checker after the Prop-level roots evidence is in
-  place.
-- Prove the corresponding roots checker soundness lemma.
-- Connect the construct to the existing runtime type-safety path.
-- Add valid and invalid CLI regression tests for the construct.
-
-### 3. Prove checker soundness for the unified entrypoint
-
-Prove that the new function-level checker implies the existing Prop-level
-checked relation.
-
-Expected theorem shape:
-
-```coq
-Theorem infer_fn_env_end2end_sound :
-  forall env f env' T Γ' R' roots,
-    infer_fn_env_end2end env f = infer_ok (...) ->
-    checked_fn_env_roots env' f ... .
-```
-
-The exact return type should follow the implementation, but the theorem must
-reuse `infer_full_env_roots_sound` and preserve the roots/provenance evidence
-needed by runtime safety.
-
-Then prove the program-level version:
-
-```coq
-Theorem check_program_env_end2end_sound :
-  forall env,
-    check_program_env_end2end env = true ->
-    forall f,
-      In f (env_fns (alpha_normalize_global_env env)) ->
-      checked_fn_env_roots ... .
-```
-
-### 4. Prove end-to-end type safety for the unified checker
-
-Connect the unified checker to the runtime theorem.
-
-Expected theorem shape:
-
-```coq
-Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready :
-  forall env env' f s s' v,
-    infer_program_env_end2end env = infer_ok env' ->
-    check_initial_root_runtime_ready f s = true ->
-    In f (env_fns env') ->
-    initial_store_for_fn env' f s ->
-    eval env' s (fn_body f) s' v ->
-    value_has_type env' s' v (fn_ret f).
-```
-
-This theorem should be the primary end-to-end statement for the extracted
-checker.  It still assumes a core environment and a checked initial runtime
-store; it does not claim parser correctness.
-
-### 5. Switch OCaml to the unified extracted checker
-
-Update the extraction list and OCaml CLI.
-
-- Extract `infer_program_env_end2end` and `check_program_env_end2end`.
-- Regenerate `fixtures/TypeChecker.ml` and `.mli` with `cd rocq && make`.
-- In `ocaml/main.ml`, remove the per-function fallback logic.
-- Accept only when `infer_program_env_end2end env` returns `infer_ok env'`.
-- Use `env'` for FIR emission and diagnostics.
-- Preserve `infer_err` as CLI failure without reinterpretation.
-
-`infer_full_env` may remain extracted for development or legacy tests, but it
-must not be used by the CLI accept path.
-
-### 6. Make the rule durable for future agents and changes
-
-After the unified checker and proofs are in place, codify the policy so future
-language work cannot bypass it.
-
-- Add an `AGENTS.md` rule requiring the OCaml CLI accept/reject path to use only
-  the extracted `infer_program_env_end2end` entrypoint.
-- State that language features, typing rules, checker behavior, borrow/root
-  rules, desugaring-to-core changes, and extraction changes must preserve or
-  extend the end-to-end soundness and type-safety theorems.
-- Explicitly forbid OCaml fallback paths to `infer_full_env`,
-  `infer_full_env_roots`, or `check_program_env` for acceptance.
-- Add CI checks that fail if OCaml CLI code calls forbidden checker entrypoints
-  or if the required end-to-end theorem names disappear.
-- Require valid/invalid CLI tests for new language constructs to pass through
-  `infer_program_env_end2end` without `ErrNotImplemented`.
-
-## Tests and checks
-
-Run after each phase:
+Run after each Rocq/extraction slice:
 
 - `cd rocq && make`
 - `rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories`
+- `dune build`
+- targeted CLI tests for the slice
 
-Run after OCaml integration:
+Run before declaring the roadmap complete:
 
+- `cd rocq && make`
+- `rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories`
 - `dune build`
 - `sh tests/run.sh`
 - `sh tests/fir/run.sh`
 
-Add regression coverage:
-
-- Valid function-value and closure calls that previously required fallback.
-- Invalid function-value calls with type mismatch and arity mismatch.
-- Valid and invalid deref, field borrow, field assign, and field replace cases.
-- Struct and match programs that exercise root/shadow/provenance checks.
-- A CLI regression asserting accepted valid tests do not produce
-  `ErrNotImplemented`.
-
 ## Acceptance criteria
 
-- `ocaml/main.ml` no longer calls `infer_full_env` for fallback.
-- Accepted CLI programs pass through one extracted Rocq checker entrypoint.
-- `ErrNotImplemented` is treated as a rejection, not as a fallback trigger.
-- Rocq has a program-level theorem connecting the extracted end-to-end checker
-  success to runtime type safety for the alpha-normalized core environment.
+- Accepted CLI programs pass through `infer_program_env_end2end`.
+- `ErrNotImplemented` is a rejection, never a fallback trigger.
+- Required theorem names remain present:
+  `infer_program_env_end2end_sound`,
+  `check_program_env_end2end_sound`, and
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
 - Generated OCaml fixtures are updated only by Rocq extraction.
-- Repository guidelines and CI enforce `infer_program_env_end2end` as the only
-  OCaml CLI acceptance authority for future changes.
+- CI and `AGENTS.md` enforce the end-to-end checker entrypoint policy.
+- All tests must pass finally.

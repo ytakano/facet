@@ -20,7 +20,7 @@ this roadmap.
 | T2d: TForall (HRT) in roots checker | done (a4ea88a) |
 | T3: switch OCaml CLI to `infer_program_env_end2end` | done |
 | T4: CI enforcement of entrypoint policy | done (8bd3d82) |
-| T2a: `ECallGeneric` safety gate | pending |
+| T2a: `ECallGeneric` safety gate | blocked: generic runtime instantiation proof gap |
 | T2e: function-value parameter/local call safety gate | pending |
 | T2g: mixed lifetime/type forall roots calls | pending |
 | T2b: `ELetInfer` captured closure call safety gate | pending |
@@ -43,13 +43,19 @@ With the CLI using `infer_program_env_end2end`, `sh tests/run.sh` currently has
 
 ### T2a: `ECallGeneric` safety gate
 
-- Extend the direct-call Prop summary and executable checker to recognize
-  `ECallGeneric fname type_args args` without erasing type arguments
-  unsoundly.
-- Prove the checker branch sound and bridge generic-call evaluation to the
-  existing direct-call runtime safety route.
-- Target valid failures: `explicit_generic_call`, `generic_direct_call_*`, and
-  generic expected-call forms.
+Blocked by generic runtime semantics.  The checker types `ECallGeneric` against
+`apply_type_params type_args (fn_params fdef)` and
+`subst_type_params_ty type_args (fn_ret fdef)`, but `Eval_CallGeneric` currently
+alpha-renames and evaluates the uninstantiated `fdef` body and binds
+uninstantiated params.  The direct-call runtime proof cannot soundly invert an
+instantiated argument value, such as `isize`, back to `TParam 0`.
+
+Required before accepting this gate:
+
+- Add expression/function type-parameter instantiation for runtime calls.
+- Evaluate `ECallGeneric` using the instantiated function body and params.
+- Prove roots/shadow-safe preservation across type-parameter substitution.
+- Then extend the safety gate and runtime route for generic direct calls.
 
 ### T2e: function-value parameter/local call safety gate
 

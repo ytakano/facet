@@ -7782,6 +7782,28 @@ Definition local_fn_value_call_target_expr
   | _ => None
   end.
 
+Definition supported_non_type_generic_function_value_call_callee_ty_b
+    (T : Ty) : bool :=
+  match ty_core T with
+  | TFn _ _ => true
+  | TClosure _ _ _ => true
+  | TForall _ _ body =>
+      match ty_core body with
+      | TFn _ _ => true
+      | _ => false
+      end
+  | _ => false
+  end.
+
+Definition check_supported_non_type_generic_function_value_call_expr
+    (env : global_env) (Ω : outlives_ctx) (n : nat)
+    (R : root_env) (Γ : ctx) (callee : expr) : bool :=
+  match infer_core_env_roots_shadow_safe env Ω n R Γ callee with
+  | infer_ok (T_callee, _, _, _) =>
+      supported_non_type_generic_function_value_call_callee_ty_b T_callee
+  | infer_err _ => false
+  end.
+
 Definition check_fn_root_shadow_non_capturing_call_provenance_summary
     (env : global_env) (fdef : fn_def) : bool :=
   match check_fn_root_shadow_direct_call_provenance_summary env fdef with
@@ -7808,6 +7830,13 @@ Definition check_fn_root_shadow_non_capturing_call_provenance_summary
           | ECallExpr callee args =>
               preservation_ready_expr_b callee &&
               preservation_ready_args_b args &&
+              check_supported_non_type_generic_function_value_call_expr
+                (global_env_with_local_bounds env (fn_bounds fdef))
+                (fn_outlives fdef)
+                (fn_lifetimes fdef)
+                (initial_root_env_for_fn fdef)
+                (fn_body_ctx fdef)
+                callee &&
               match infer_env_roots_shadow_safe env fdef
                       (initial_root_env_for_fn fdef) with
               | infer_ok (_, _, R_out, roots) =>

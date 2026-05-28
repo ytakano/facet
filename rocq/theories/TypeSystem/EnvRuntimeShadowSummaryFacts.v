@@ -47,6 +47,25 @@ Definition env_fns_root_shadow_direct_call_provenance_summary_check_ready
     lookup_fn fname (env_fns env) = Some fdef ->
     callee_body_root_shadow_direct_call_provenance_summary env fdef.
 
+Definition supported_non_type_generic_function_value_call_callee_ty
+    (T : Ty) : Prop :=
+  match ty_core T with
+  | TFn _ _ => True
+  | TClosure _ _ _ => True
+  | TForall _ _ body =>
+      match ty_core body with
+      | TFn _ _ => True
+      | _ => False
+      end
+  | _ => False
+  end.
+
+Definition supported_non_type_generic_function_value_call_expr
+    (env : global_env) (Ω : outlives_ctx) (n : nat)
+    (R : root_env) (Γ : ctx) (callee : expr) (_args : list expr) : Prop :=
+  check_supported_non_type_generic_function_value_call_expr
+    env Ω n R Γ callee = true.
+
 Definition callee_body_root_shadow_non_capturing_call_provenance_summary
     (env : global_env) (fdef : fn_def) : Prop :=
   callee_body_root_shadow_direct_call_provenance_summary env fdef \/
@@ -74,6 +93,13 @@ Definition callee_body_root_shadow_non_capturing_call_provenance_summary
     fn_body fdef = ECallExpr callee args /\
     preservation_ready_expr callee /\
     preservation_ready_args args /\
+    supported_non_type_generic_function_value_call_expr
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef)
+      (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (fn_body_ctx fdef)
+      callee args /\
     NoDup (ctx_names (params_ctx (fn_params fdef))) /\
     typed_env_roots_shadow_safe
       (global_env_with_local_bounds env (fn_bounds fdef))

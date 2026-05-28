@@ -82,6 +82,8 @@ Required before accepting this gate:
   lifetime-equivalent runtime closure signatures.
 - Done prep: strengthen runtime empty-closure typing so `fn_value_ty`
   witnesses require `fn_captures fdef = []`.
+- Done prep: restrict general function-value summary evidence to
+  non-type-generic callee types.
 - Prove a composed `ECallExpr` runtime preservation wrapper that evaluates
   the callee first, transports store/root facts to the argument phase, inverts
   the empty closure target, and covers non-type-generic `TFn`, `TClosure`, and

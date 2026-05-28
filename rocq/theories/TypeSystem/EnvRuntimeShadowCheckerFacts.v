@@ -352,6 +352,30 @@ Proof.
     apply fn_params_root_env_excludes_b_sound. exact Henv.
 Qed.
 
+Lemma supported_non_type_generic_function_value_call_callee_ty_b_sound :
+  forall T,
+    supported_non_type_generic_function_value_call_callee_ty_b T = true ->
+    supported_non_type_generic_function_value_call_callee_ty T.
+Proof.
+  intros [u c] H.
+  unfold supported_non_type_generic_function_value_call_callee_ty in *.
+  simpl in *.
+  destruct c; simpl in H; try discriminate; try exact I.
+  destruct t as [u_body c_body].
+  destruct c_body; simpl in *; try discriminate; exact I.
+Qed.
+
+Lemma check_supported_non_type_generic_function_value_call_expr_sound :
+  forall env Ω n R Γ callee args,
+    check_supported_non_type_generic_function_value_call_expr
+      env Ω n R Γ callee = true ->
+    supported_non_type_generic_function_value_call_expr
+      env Ω n R Γ callee args.
+Proof.
+  intros env Ω n R Γ callee args Hcheck.
+  exact Hcheck.
+Qed.
+
 Lemma check_fn_root_shadow_non_capturing_call_provenance_summary_sound :
   forall env fdef,
     check_fn_root_shadow_non_capturing_call_provenance_summary env fdef = true ->
@@ -406,7 +430,7 @@ Proof.
     + right.
       destruct (fn_body fdef) eqn:Hbody; try discriminate.
       repeat rewrite andb_true_iff in Hcheck.
-      destruct Hcheck as [[Hready_callee Hready_args] Hsummary].
+      destruct Hcheck as [[[Hready_callee Hready_args] Hsupported] Hsummary].
       destruct (infer_env_roots_shadow_safe env fdef
         (initial_root_env_for_fn fdef))
         as [[[[T_check Γ_check] R_out] roots] | err] eqn:Hinfer;
@@ -423,6 +447,9 @@ Proof.
       split; [reflexivity|].
       split; [apply preservation_ready_expr_b_sound; exact Hready_callee|].
       split; [apply preservation_ready_args_b_sound; exact Hready_args|].
+      split.
+      { apply check_supported_non_type_generic_function_value_call_expr_sound.
+        exact Hsupported. }
       split.
       { eapply infer_env_roots_shadow_safe_params_nodup. exact Hinfer. }
       split; [exact Htyped|].

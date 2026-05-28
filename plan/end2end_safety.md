@@ -5,7 +5,7 @@
 | Task | Status |
 |------|--------|
 | T1: ECallExpr TFn/TClosure in roots checker | ✅ done (commit 276b83e) |
-| T2c: TTypeForall in roots checker | pending |
+| T2c: TTypeForall in roots checker | ✅ done (commit 80ca8bf) |
 | T2d: TForall (HRT) in roots checker | pending |
 | T2a: ECallGeneric in safety gate (12 gate failures) | pending |
 | T2b: ELetInfer closure form in safety gate (4 gate failures) | pending |

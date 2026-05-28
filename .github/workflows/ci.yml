@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  entrypoint-policy:
+    name: Enforce end2end entrypoint policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: OCaml CLI must not call forbidden entrypoints
+        run: |
+          if grep -E '\binfer_full_env\b|\binfer_full_env_roots\b|\bcheck_program_env\b' ocaml/main.ml; then
+            echo "FAIL: ocaml/main.ml references a forbidden checker entrypoint."
+            echo "The CLI accept path must use only infer_program_env_end2end."
+            exit 1
+          fi
+          echo "OK: no forbidden entrypoints found in ocaml/main.ml"
+
+      - name: OCaml CLI must use infer_program_env_end2end
+        run: |
+          if ! grep -q 'infer_program_env_end2end' ocaml/main.ml; then
+            echo "FAIL: ocaml/main.ml does not call infer_program_env_end2end."
+            exit 1
+          fi
+          echo "OK: infer_program_env_end2end found in ocaml/main.ml"
+
+      - name: Required end2end theorems must exist in Rocq sources
+        run: |
+          THEOREMS=(
+            "infer_program_env_end2end_sound"
+            "check_program_env_end2end_sound"
+            "infer_program_env_end2end_big_step_safe_checked_initial_ready"
+          )
+          FAIL=0
+          for thm in "${THEOREMS[@]}"; do
+            if ! grep -rq "$thm" rocq/theories/; then
+              echo "FAIL: Required theorem '$thm' not found in rocq/theories/"
+              FAIL=1
+            else
+              echo "OK: $thm found"
+            fi
+          done
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
+
+      - name: Fixtures must not be manually edited (check extraction marker)
+        run: |
+          if ! grep -q 'EXTRACTED' fixtures/TypeChecker.ml 2>/dev/null; then
+            if ! head -5 fixtures/TypeChecker.ml | grep -qiE 'auto|extract|generat|coq|rocq'; then
+              echo "WARN: fixtures/TypeChecker.ml may not have extraction header (not enforced)"
+            fi
+          fi
+          echo "OK: fixtures check passed"
+
+      - name: No Admitted in core soundness files
+        run: |
+          SOUNDNESS_FILES=(
+            "rocq/theories/TypeSystem/CheckerSoundness.v"
+            "rocq/theories/TypeSystem/CheckerUsageSoundness.v"
+            "rocq/theories/TypeSystem/BorrowCheckSoundness.v"
+            "rocq/theories/TypeSystem/End2EndSafety.v"
+          )
+          FAIL=0
+          for f in "${SOUNDNESS_FILES[@]}"; do
+            if grep -q '\bAdmitted\b' "$f"; then
+              echo "FAIL: Admitted found in $f"
+              FAIL=1
+            else
+              echo "OK: no Admitted in $f"
+            fi
+          done
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi

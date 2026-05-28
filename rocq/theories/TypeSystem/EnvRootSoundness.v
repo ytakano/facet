@@ -857,40 +857,86 @@ Proof.
 	           eapply IH. exact Hinfer0.
 	        -- exact Hcheck.
 	      * apply outlives_constraints_hold_b_sound. exact Hout.
-	    + destruct e; try discriminate.
-      destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup;
-        try discriminate.
-      destruct (check_make_closure_captures_sctx_with_env env Ω Σ l0
-        (fn_captures fdef)) as [[env_lt captured_tys] | err] eqn:Hcaptures;
-        try discriminate.
-      rewrite infer_env_args_collect_roots_eq in Hinfer.
-      destruct (infer_env_args_collect_roots fuel' env Ω n R Σ l)
-        as [[[[arg_tys Σargs] Rargs] arg_roots] | err] eqn:Hcollect;
-        try discriminate.
-      destruct (build_sigma (fn_lifetimes fdef)
-        (repeat None (fn_lifetimes fdef)) arg_tys (fn_params fdef))
-        as [σ_acc |] eqn:Hbuild; try discriminate.
-      remember (finalize_subst σ_acc) as σ.
-      remember (apply_lt_params σ (fn_params fdef)) as ps_subst.
-      destruct (check_args Ω arg_tys ps_subst) as [err |] eqn:Hcheck;
-        try discriminate.
-      destruct (forallb (wf_lifetime_b (mk_region_ctx n)) σ) eqn:Hwf;
-        try discriminate.
-      destruct (outlives_constraints_hold_b Ω
-        (apply_lt_outlives σ (fn_outlives fdef))) eqn:Hout;
-        try discriminate.
-      inversion Hinfer; subst.
-      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
-      eapply TER_CallExpr_MakeClosure with (σ := finalize_subst σ_acc).
-      * exact Hin.
-      * exact Hname.
-      * exact Hcaptures.
-      * eapply infer_env_args_collect_roots_sound.
-        -- exact Hcollect.
-        -- intros R0 Σ0 e0 T0 Σ1 R1 roots1 Hinfer0.
-           eapply IH. exact Hinfer0.
-        -- exact Hcheck.
-      * apply outlives_constraints_hold_b_sound. exact Hout.
+    + (* ECallExpr e l *)
+      destruct e.
+      all: try (
+        (* Non-EMakeClosure callee: general TFn/TClosure path.
+           cbn iota reduces [match concrete_callee with EMakeClosure...|_=>general end]
+           to the general path body. *)
+        cbn iota in Hinfer;
+        lazymatch goal with
+        | |- typed_env_roots _ _ _ _ _ (ECallExpr ?callee ?args) _ _ _ _ =>
+          destruct (infer_core_env_state_fuel_roots fuel' env Ω n R Σ callee)
+            as [[[[T_callee Σ1] R1] roots_callee] | err_callee] eqn:Hcallee_res;
+            [| discriminate];
+          cbn iota in Hinfer;
+          rewrite infer_env_args_collect_roots_eq in Hinfer;
+          destruct (infer_env_args_collect_roots fuel' env Ω n R1 Σ1 args)
+            as [[[[arg_tys Σarg] Rarg] arg_roots] | err_arg] eqn:Hcollect;
+            [| discriminate];
+          cbn iota in Hinfer;
+          destruct T_callee as [u_callee c_callee];
+          unfold ty_core in Hinfer; cbn iota in Hinfer;
+          destruct c_callee eqn:Hcore; cbn iota in Hinfer; try discriminate;
+          lazymatch type of Hcore with
+          | _ = TFn ?param_tys ?ret =>
+            destruct (check_arg_tys Ω arg_tys param_tys) eqn:Hcheck; try discriminate;
+            inversion Hinfer; subst;
+            eapply TER_CallExpr_Fn with (u := u_callee);
+            [ eapply IH; exact Hcallee_res
+            | eapply infer_env_args_collect_roots_sound;
+                [exact Hcollect |
+                 intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0 |
+                 rewrite <- check_arg_tys_params_of_tys; exact Hcheck]]
+          | _ = TClosure ?lts ?param_tys ?ret =>
+            destruct (check_arg_tys Ω arg_tys param_tys) eqn:Hcheck; try discriminate;
+            inversion Hinfer; subst;
+            eapply TER_CallExpr_Closure with (u := u_callee);
+            [ eapply IH; exact Hcallee_res
+            | eapply infer_env_args_collect_roots_sound;
+                [exact Hcollect |
+                 intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0 |
+                 rewrite <- check_arg_tys_params_of_tys; exact Hcheck]]
+          end
+        end
+      ).
+      (* EMakeClosure callee: dedicated path *)
+      cbn iota in Hinfer.
+      lazymatch goal with
+      | |- typed_env_roots _ _ _ _ _ (ECallExpr (EMakeClosure ?fn_name ?caps) ?args) _ _ _ _ =>
+        destruct (lookup_fn_b fn_name (env_fns env)) as [fdef |] eqn:Hlookup;
+          try discriminate;
+        destruct (check_make_closure_captures_sctx_with_env env Ω Σ caps
+            (fn_captures fdef)) as [[env_lt captured_tys] | err] eqn:Hcaptures;
+          try discriminate;
+        rewrite infer_env_args_collect_roots_eq in Hinfer;
+        destruct (infer_env_args_collect_roots fuel' env Ω n R Σ args)
+          as [[[[arg_tys Σargs] Rargs] arg_roots] | err] eqn:Hcollect;
+          try discriminate;
+        destruct (build_sigma (fn_lifetimes fdef)
+            (repeat None (fn_lifetimes fdef)) arg_tys (fn_params fdef))
+          as [σ_acc |] eqn:Hbuild; try discriminate;
+        remember (finalize_subst σ_acc) as σ;
+        remember (apply_lt_params σ (fn_params fdef)) as ps_subst;
+        destruct (check_args Ω arg_tys ps_subst) as [err |] eqn:Hcheck;
+          try discriminate;
+        destruct (forallb (wf_lifetime_b (mk_region_ctx n)) σ) eqn:Hwf;
+          try discriminate;
+        destruct (outlives_constraints_hold_b Ω
+            (apply_lt_outlives σ (fn_outlives fdef))) eqn:Hout;
+          try discriminate;
+        inversion Hinfer; subst;
+        destruct (lookup_fn_b_sound fn_name (env_fns env) fdef Hlookup) as [Hin Hname];
+        eapply TER_CallExpr_MakeClosure with (σ := finalize_subst σ_acc);
+        [ exact Hin
+        | exact Hname
+        | exact Hcaptures
+        | eapply infer_env_args_collect_roots_sound;
+            [ exact Hcollect
+            | intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0
+            | exact Hcheck]
+        | apply outlives_constraints_hold_b_sound; exact Hout]
+      end.
     + destruct (lookup_struct s env) as [sdef |] eqn:Hlookup; try discriminate.
       destruct (negb (Nat.eqb (Datatypes.length l) (struct_lifetimes sdef))) eqn:Hlts;
         try discriminate.
@@ -1524,40 +1570,85 @@ Proof.
 	           eapply IH. exact Hinfer0.
 	        -- exact Hcheck.
 	      * apply outlives_constraints_hold_b_sound. exact Hout.
-	    + destruct e; try discriminate.
-      destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup;
-        try discriminate.
-      destruct (check_make_closure_captures_sctx_with_env env Ω Σ l0
-        (fn_captures fdef)) as [[env_lt captured_tys] | err] eqn:Hcaptures;
-        try discriminate.
-      rewrite infer_env_args_collect_roots_shadow_safe_eq in Hinfer.
-      destruct (infer_env_args_collect_roots_shadow_safe fuel' env Ω n R Σ l)
-        as [[[[arg_tys Σargs] Rargs] arg_roots] | err] eqn:Hcollect;
-        try discriminate.
-      destruct (build_sigma (fn_lifetimes fdef)
-        (repeat None (fn_lifetimes fdef)) arg_tys (fn_params fdef))
-        as [σ_acc |] eqn:Hbuild; try discriminate.
-      remember (finalize_subst σ_acc) as σ.
-      remember (apply_lt_params σ (fn_params fdef)) as ps_subst.
-      destruct (check_args Ω arg_tys ps_subst) as [err |] eqn:Hcheck;
-        try discriminate.
-      destruct (forallb (wf_lifetime_b (mk_region_ctx n)) σ) eqn:Hwf;
-        try discriminate.
-      destruct (outlives_constraints_hold_b Ω
-        (apply_lt_outlives σ (fn_outlives fdef))) eqn:Hout;
-        try discriminate.
-      inversion Hinfer; subst.
-      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup) as [Hin Hname].
-      eapply TERS_CallExpr_MakeClosure with (σ := finalize_subst σ_acc).
-      * exact Hin.
-      * exact Hname.
-      * exact Hcaptures.
-      * eapply infer_env_args_collect_roots_shadow_safe_sound.
-        -- exact Hcollect.
-        -- intros R0 Σ0 e0 T0 Σ1 R1 roots1 Hinfer0.
-           eapply IH. exact Hinfer0.
-        -- exact Hcheck.
-      * apply outlives_constraints_hold_b_sound. exact Hout.
+	    + (* ECallExpr e l (shadow-safe) *)
+      destruct e.
+      all: try (
+        cbn iota in Hinfer;
+        first [discriminate |
+        lazymatch goal with
+        | |- typed_env_roots_shadow_safe _ _ _ _ _ (ECallExpr ?callee ?args) _ _ _ _ =>
+          destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ callee)
+            as [[[[T_callee Σ1] R1] roots_callee] | err_callee] eqn:Hcallee_res;
+            [| discriminate];
+          cbn iota in Hinfer;
+          rewrite infer_env_args_collect_roots_shadow_safe_eq in Hinfer;
+          destruct (infer_env_args_collect_roots_shadow_safe fuel' env Ω n R1 Σ1 args)
+            as [[[[arg_tys Σarg] Rarg] arg_roots] | err_arg] eqn:Hcollect;
+            [| discriminate];
+          cbn iota in Hinfer;
+          destruct T_callee as [u_callee c_callee];
+          unfold ty_core in Hinfer; cbn iota in Hinfer;
+          destruct c_callee eqn:Hcore; cbn iota in Hinfer; try discriminate;
+          lazymatch type of Hcore with
+          | _ = TFn ?param_tys ?ret =>
+            destruct (check_arg_tys Ω arg_tys param_tys) eqn:Hcheck; try discriminate;
+            inversion Hinfer; subst;
+            eapply TERS_CallExpr_Fn with (u := u_callee);
+            [ intros fname' caps'; discriminate
+            | eapply IH; exact Hcallee_res
+            | eapply infer_env_args_collect_roots_shadow_safe_sound;
+                [exact Hcollect |
+                 intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0 |
+                 rewrite <- check_arg_tys_params_of_tys; exact Hcheck]]
+          | _ = TClosure ?lts ?param_tys ?ret =>
+            destruct (check_arg_tys Ω arg_tys param_tys) eqn:Hcheck; try discriminate;
+            inversion Hinfer; subst;
+            eapply TERS_CallExpr_Closure with (u := u_callee);
+            [ intros fname' caps'; discriminate
+            | eapply IH; exact Hcallee_res
+            | eapply infer_env_args_collect_roots_shadow_safe_sound;
+                [exact Hcollect |
+                 intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0 |
+                 rewrite <- check_arg_tys_params_of_tys; exact Hcheck]]
+          end
+        end]).
+      (* EMakeClosure callee: dedicated path *)
+      cbn iota in Hinfer.
+      lazymatch goal with
+      | |- typed_env_roots_shadow_safe _ _ _ _ _ (ECallExpr (EMakeClosure ?fn_name ?caps) ?args) _ _ _ _ =>
+        destruct (lookup_fn_b fn_name (env_fns env)) as [fdef |] eqn:Hlookup;
+          try discriminate;
+        destruct (check_make_closure_captures_sctx_with_env env Ω Σ caps
+            (fn_captures fdef)) as [[env_lt captured_tys] | err] eqn:Hcaptures;
+          try discriminate;
+        rewrite infer_env_args_collect_roots_shadow_safe_eq in Hinfer;
+        destruct (infer_env_args_collect_roots_shadow_safe fuel' env Ω n R Σ args)
+          as [[[[arg_tys Σargs] Rargs] arg_roots] | err] eqn:Hcollect;
+          try discriminate;
+        destruct (build_sigma (fn_lifetimes fdef)
+            (repeat None (fn_lifetimes fdef)) arg_tys (fn_params fdef))
+          as [σ_acc |] eqn:Hbuild; try discriminate;
+        remember (finalize_subst σ_acc) as σ;
+        remember (apply_lt_params σ (fn_params fdef)) as ps_subst;
+        destruct (check_args Ω arg_tys ps_subst) as [err |] eqn:Hcheck;
+          try discriminate;
+        destruct (forallb (wf_lifetime_b (mk_region_ctx n)) σ) eqn:Hwf;
+          try discriminate;
+        destruct (outlives_constraints_hold_b Ω
+            (apply_lt_outlives σ (fn_outlives fdef))) eqn:Hout;
+          try discriminate;
+        inversion Hinfer; subst;
+        destruct (lookup_fn_b_sound fn_name (env_fns env) fdef Hlookup) as [Hin Hname];
+        eapply TERS_CallExpr_MakeClosure with (σ := finalize_subst σ_acc);
+        [ exact Hin
+        | exact Hname
+        | exact Hcaptures
+        | eapply infer_env_args_collect_roots_shadow_safe_sound;
+            [ exact Hcollect
+            | intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0
+            | exact Hcheck]
+        | apply outlives_constraints_hold_b_sound; exact Hout]
+      end.
     + destruct (lookup_struct s env) as [sdef |] eqn:Hlookup; try discriminate.
       destruct (negb (Nat.eqb (Datatypes.length l) (struct_lifetimes sdef))) eqn:Hlts;
         try discriminate.

@@ -6707,8 +6707,314 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                   | Infer_err err -> Infer_err err))
          else Infer_err ErrArityMismatch
        | None -> Infer_err (ErrFunctionNotFound fname))
-    | ECallExpr (e0, args) ->
-      (match e0 with
+    | ECallExpr (callee, args) ->
+      (match callee with
+       | EUnit ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | ELit _ ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EVar _ ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | ELet (_, _, _, _, _) ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | ELetInfer (_, _, _, _) ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EFn _ ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
        | EMakeClosure (fname, captures) ->
          (match lookup_fn_b fname env.env_fns with
           | Some fdef ->
@@ -6766,7 +7072,669 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                 | Infer_err err -> Infer_err err)
              | Infer_err err -> Infer_err err)
           | None -> Infer_err (ErrFunctionNotFound fname))
-       | _ -> Infer_err ErrNotImplemented)
+       | EPlace _ ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | ECall (_, _) ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | ECallGeneric (_, _, _) ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | ECallExpr (_, _) ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EStruct (_, _, _, _) ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EEnum (_, _, _, _, _) ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EMatch (_, _) ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EReplace (_, _) ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EAssign (_, _) ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EBorrow (_, _) ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EDeref _ ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EDrop _ ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EIf (_, _, _) ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err))
     | EStruct (sname, lts, args, fields) ->
       (match lookup_struct sname env with
        | Some s ->
@@ -7527,8 +8495,264 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                   | Infer_err err -> Infer_err err))
          else Infer_err ErrArityMismatch
        | None -> Infer_err (ErrFunctionNotFound fname))
-    | ECallExpr (e0, args) ->
-      (match e0 with
+    | ECallExpr (callee, args) ->
+      (match callee with
+       | EUnit ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | ELit _ ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EVar _ ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | ELet (_, _, _, _, _) ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | ELetInfer (_, _, _, _) ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EFn _ -> Infer_err ErrNotImplemented
        | EMakeClosure (fname, captures) ->
          (match lookup_fn_b fname env.env_fns with
           | Some fdef ->
@@ -7586,7 +8810,669 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                 | Infer_err err -> Infer_err err)
              | Infer_err err -> Infer_err err)
           | None -> Infer_err (ErrFunctionNotFound fname))
-       | _ -> Infer_err ErrNotImplemented)
+       | EPlace _ ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | ECall (_, _) ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | ECallGeneric (_, _, _) ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | ECallExpr (_, _) ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EStruct (_, _, _, _) ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EEnum (_, _, _, _, _) ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EMatch (_, _) ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EReplace (_, _) ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EAssign (_, _) ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EBorrow (_, _) ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EDeref _ ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EDrop _ ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
+       | EIf (_, _, _) ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err))
     | EStruct (sname, lts, args, fields) ->
       (match lookup_struct sname env with
        | Some s ->

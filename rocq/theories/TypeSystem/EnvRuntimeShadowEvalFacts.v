@@ -246,6 +246,18 @@ Proof.
       eapply direct_call_value_roots_within_store_subset;
         [ exact Hvalue_roots | exact Hret_subset ]
   end.
+  (* TERS_CallExpr_Fn with EMakeClosure: impossible, guard violated *)
+  exfalso.
+  match goal with
+  | H : forall fname' caps', EMakeClosure ?fn ?cs <> EMakeClosure fname' caps' |- _ =>
+      exact (H fn cs eq_refl)
+  end.
+  (* TERS_CallExpr_Closure with EMakeClosure: impossible, guard violated *)
+  exfalso.
+  match goal with
+  | H : forall fname' caps', EMakeClosure ?fn ?cs <> EMakeClosure fname' caps' |- _ =>
+      exact (H fn cs eq_refl)
+  end.
 Qed.
 
 Lemma eval_make_closure_captured_call_expr_shadow_preserves_typing_with_callee_components :
@@ -365,6 +377,18 @@ Proof.
       .eval_make_closure_captured_call_expr_preserves_typing_with_callee_components;
     try eassumption.
   - eapply typed_args_roots_shadow_safe_roots; eassumption.
+  - (* TERS_CallExpr_Fn with EMakeClosure: impossible, guard violated *)
+    exfalso.
+    match goal with
+    | H : forall fname' caps', EMakeClosure ?fn ?cs <> EMakeClosure fname' caps' |- _ =>
+        exact (H fn cs eq_refl)
+    end.
+  - (* TERS_CallExpr_Closure with EMakeClosure: impossible, guard violated *)
+    exfalso.
+    match goal with
+    | H : forall fname' caps', EMakeClosure ?fn ?cs <> EMakeClosure fname' caps' |- _ =>
+        exact (H fn cs eq_refl)
+    end.
 Qed.
 
 Lemma eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_typing :
@@ -431,37 +455,49 @@ Proof.
     { apply store_lookup_none_not_in_store_names.
       eapply store_roots_within_lookup_none; eassumption. }
     dependent destruction H17.
-    pose proof (lookup_fn_in_unique_by_name env (fn_name fdef) fdef
-                  H17 eq_refl Hunique) as Hlookup_direct.
-    pose proof (lookup_fn_in_unique_by_name env (fn_name fdef) fcallee
-                  H5 H6 Hunique) as Hlookup_callee.
-    rewrite Hlookup_direct in Hlookup_callee.
-    inversion Hlookup_callee; subst fdef.
-		pose proof (typed_args_roots_shadow_safe_roots env Ω n R Σ args
-		                  (apply_lt_params σ (fn_params fcallee))
-		                  Σ' R' arg_roots H20)
-		    as Htyped_args_roots.
-    destruct
-      (eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components_with_preservation_core
-        eval_preserves_typing_ready_mutual
-        eval_preserves_roots_ready_mutual
-        eval_preserves_root_names_ready_mutual
-        eval_preserves_root_keys_named_ready_mutual
-        eval_preserves_frame_scope_roots_ready_mutual
-        (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
-          eval_preserves_typing_roots_ready_prefix_mutual)
-        eval_preserves_param_scope_roots_ready_mutual
-	        env Ω n R Σ m x_hidden T_hidden args (fn_name fcallee) captures fcallee σ s s' ret
-	        R' Σ' arg_roots env_lt captured_tys T_body Γ_out R_body
-        roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys H Heval H8
-        Hnodup_caps H4 Htyped_args_roots H9 H10 H11 H12 H13 H14
-        Hlookup_direct Hfresh_s H1 H2 H3)
-      as [Hstore' [Hv _]].
-    split.
-    + exact Hstore'.
-	    + eapply VHT_Compatible.
-      * exact Hv.
-      * apply ty_compatible_b_sound. exact H22.
+    { pose proof (lookup_fn_in_unique_by_name env (fn_name fdef) fdef
+                    H17 eq_refl Hunique) as Hlookup_direct.
+      pose proof (lookup_fn_in_unique_by_name env (fn_name fdef) fcallee
+                    H5 H6 Hunique) as Hlookup_callee.
+      rewrite Hlookup_direct in Hlookup_callee.
+      inversion Hlookup_callee; subst fdef.
+  		pose proof (typed_args_roots_shadow_safe_roots env Ω n R Σ args
+  		                  (apply_lt_params σ (fn_params fcallee))
+  		                  Σ' R' arg_roots H20)
+  		    as Htyped_args_roots.
+      destruct
+        (eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components_with_preservation_core
+          eval_preserves_typing_ready_mutual
+          eval_preserves_roots_ready_mutual
+          eval_preserves_root_names_ready_mutual
+          eval_preserves_root_keys_named_ready_mutual
+          eval_preserves_frame_scope_roots_ready_mutual
+          (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+            eval_preserves_typing_roots_ready_prefix_mutual)
+          eval_preserves_param_scope_roots_ready_mutual
+  	        env Ω n R Σ m x_hidden T_hidden args (fn_name fcallee) captures fcallee σ s s' ret
+  	        R' Σ' arg_roots env_lt captured_tys T_body Γ_out R_body
+          roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys H Heval H8
+          Hnodup_caps H4 Htyped_args_roots H9 H10 H11 H12 H13 H14
+          Hlookup_direct Hfresh_s H1 H2 H3)
+        as [Hstore' [Hv _]].
+      split.
+      + exact Hstore'.
+  	    + eapply VHT_Compatible.
+        * exact Hv.
+        * apply ty_compatible_b_sound. exact H22. }
+    (* TERS_CallExpr_Fn with EMakeClosure: impossible, guard violated *)
+    exfalso.
+    match goal with
+    | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>
+        exact (Hn fname caps eq_refl)
+    end.
+    (* TERS_CallExpr_Closure with EMakeClosure: impossible, guard violated *)
+    exfalso.
+    match goal with
+    | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>
+        exact (Hn fname caps eq_refl)
+    end.
   - dependent destruction Heval.
     + destruct (proj1 eval_preserves_typing_roots_ready_mutual
           env s e1 s1 (VBool true) Heval1 Ω n R Σ T_cond Σ1 R1
@@ -615,48 +651,60 @@ Proof.
     { apply store_lookup_none_not_in_store_names.
       eapply store_roots_within_lookup_none; eassumption. }
     dependent destruction H17.
-    pose proof (lookup_fn_in_unique_by_name env (fn_name fdef) fdef
-                  H17 eq_refl Hunique) as Hlookup_direct.
-    pose proof (lookup_fn_in_unique_by_name env (fn_name fdef) fcallee
-                  H5 H6 Hunique) as Hlookup_callee.
-    rewrite Hlookup_direct in Hlookup_callee.
-    inversion Hlookup_callee; subst fdef.
-		pose proof (typed_args_roots_shadow_safe_roots env Ω n R Σ args
-		                  (apply_lt_params σ (fn_params fcallee))
-		                  Σ' R' arg_roots H20)
-		    as Htyped_args_roots.
-    destruct
-      (eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components_with_preservation_core
-        eval_preserves_typing_ready_mutual
-        eval_preserves_roots_ready_mutual
-        eval_preserves_root_names_ready_mutual
-        eval_preserves_root_keys_named_ready_mutual
-        eval_preserves_frame_scope_roots_ready_mutual
-        (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
-          eval_preserves_typing_roots_ready_prefix_mutual)
-        eval_preserves_param_scope_roots_ready_mutual
-	        env Ω n R Σ m x_hidden T_hidden args (fn_name fcallee) captures fcallee σ s s' ret
-	        R' Σ' arg_roots env_lt captured_tys T_body Γ_out R_body
-        roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys H Heval H8
-        Hnodup_caps H4 Htyped_args_roots H9 H10 H11 H12 H13 H14
-        Hlookup_direct Hfresh_s H1 H2 H3)
-      as [Hstore' [Hv [captured_final [Hcopy Hrooted]]]].
-    pose proof (capture_store_root_sets_bound_from_capture_root_bound
-      R s captures (fn_captures fcallee) captured_final capture_roots
-      Hcopy Hroots H15) as Hcap_subset.
-    destruct Hrooted as [Hroots' Hvalue_roots Hshadow' Hrn'].
-    repeat split.
-    + exact Hstore'.
-	    + eapply VHT_Compatible.
-      * exact Hv.
-      * apply ty_compatible_b_sound. exact H22.
-    + exact Hroots'.
-    + eapply value_roots_within_store_subset.
-      * exact Hvalue_roots.
-      * eapply root_sets_union_app_stores_subset_union.
-        exact Hcap_subset.
-    + exact Hshadow'.
-    + exact Hrn'.
+    { pose proof (lookup_fn_in_unique_by_name env (fn_name fdef) fdef
+                    H17 eq_refl Hunique) as Hlookup_direct.
+      pose proof (lookup_fn_in_unique_by_name env (fn_name fdef) fcallee
+                    H5 H6 Hunique) as Hlookup_callee.
+      rewrite Hlookup_direct in Hlookup_callee.
+      inversion Hlookup_callee; subst fdef.
+  		pose proof (typed_args_roots_shadow_safe_roots env Ω n R Σ args
+  		                  (apply_lt_params σ (fn_params fcallee))
+  		                  Σ' R' arg_roots H20)
+  		    as Htyped_args_roots.
+      destruct
+        (eval_let_make_closure_captured_call_expr_preserves_typing_with_callee_components_with_preservation_core
+          eval_preserves_typing_ready_mutual
+          eval_preserves_roots_ready_mutual
+          eval_preserves_root_names_ready_mutual
+          eval_preserves_root_keys_named_ready_mutual
+          eval_preserves_frame_scope_roots_ready_mutual
+          (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+            eval_preserves_typing_roots_ready_prefix_mutual)
+          eval_preserves_param_scope_roots_ready_mutual
+  	        env Ω n R Σ m x_hidden T_hidden args (fn_name fcallee) captures fcallee σ s s' ret
+  	        R' Σ' arg_roots env_lt captured_tys T_body Γ_out R_body
+          roots_body Hstore Hroots Hshadow Hrn Hnamed Hkeys H Heval H8
+          Hnodup_caps H4 Htyped_args_roots H9 H10 H11 H12 H13 H14
+          Hlookup_direct Hfresh_s H1 H2 H3)
+        as [Hstore' [Hv [captured_final [Hcopy Hrooted]]]].
+      pose proof (capture_store_root_sets_bound_from_capture_root_bound
+        R s captures (fn_captures fcallee) captured_final capture_roots
+        Hcopy Hroots H15) as Hcap_subset.
+      destruct Hrooted as [Hroots' Hvalue_roots Hshadow' Hrn'].
+      repeat split.
+      + exact Hstore'.
+  	    + eapply VHT_Compatible.
+        * exact Hv.
+        * apply ty_compatible_b_sound. exact H22.
+      + exact Hroots'.
+      + eapply value_roots_within_store_subset.
+        * exact Hvalue_roots.
+        * eapply root_sets_union_app_stores_subset_union.
+          exact Hcap_subset.
+      + exact Hshadow'.
+      + exact Hrn'. }
+    (* TERS_CallExpr_Fn with EMakeClosure: impossible, guard violated *)
+    exfalso.
+    match goal with
+    | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>
+        exact (Hn fname caps eq_refl)
+    end.
+    (* TERS_CallExpr_Closure with EMakeClosure: impossible, guard violated *)
+    exfalso.
+    match goal with
+    | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>
+        exact (Hn fname caps eq_refl)
+    end.
   - dependent destruction Heval.
     + destruct (proj1 eval_preserves_typing_roots_ready_mutual
           env s e1 s1 (VBool true) Heval1 Ω n R Σ T_cond Σ1 R1

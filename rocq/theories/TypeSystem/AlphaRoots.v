@@ -252,6 +252,24 @@ Inductive typed_env_roots_shadow_safe
       typed_env_roots_shadow_safe env Ω n R Σ
         (ECallExpr (EMakeClosure fname captures) args)
         (apply_lt_ty σ (fn_ret fdef)) Σ' R' (root_sets_union arg_roots)
+  | TERS_CallExpr_Fn : forall R R1 R' Σ Σ1 Σ' callee args u
+        param_tys ret arg_roots roots_callee,
+      (forall fname caps, callee <> EMakeClosure fname caps) ->
+      typed_env_roots_shadow_safe env Ω n R Σ callee
+        (MkTy u (TFn param_tys ret)) Σ1 R1 roots_callee ->
+      typed_args_roots_shadow_safe env Ω n R1 Σ1 args
+        (params_of_tys param_tys) Σ' R' arg_roots ->
+      typed_env_roots_shadow_safe env Ω n R Σ (ECallExpr callee args) ret
+        Σ' R' (root_set_union roots_callee (root_sets_union arg_roots))
+  | TERS_CallExpr_Closure : forall R R1 R' Σ Σ1 Σ' callee args u
+        env_lt param_tys ret arg_roots roots_callee,
+      (forall fname caps, callee <> EMakeClosure fname caps) ->
+      typed_env_roots_shadow_safe env Ω n R Σ callee
+        (MkTy u (TClosure env_lt param_tys ret)) Σ1 R1 roots_callee ->
+      typed_args_roots_shadow_safe env Ω n R1 Σ1 args
+        (params_of_tys param_tys) Σ' R' arg_roots ->
+      typed_env_roots_shadow_safe env Ω n R Σ (ECallExpr callee args) ret
+        Σ' R' (root_set_union roots_callee (root_sets_union arg_roots))
   | TERS_Struct : forall R R' Σ Σ' sname lts args fields sdef roots,
       Program.lookup_struct sname env = Some sdef ->
       Datatypes.length lts = Program.struct_lifetimes sdef ->
@@ -553,6 +571,141 @@ Proof.
     rootss H).
 Qed.
 
+Lemma alpha_rename_expr_is_make_closure_inv :
+  forall rho used e fn cs used',
+    alpha_rename_expr rho used e = (EMakeClosure fn cs, used') ->
+    exists fn0 cs0, e = EMakeClosure fn0 cs0.
+Proof.
+  intros rho used e fn cs used' Hrename.
+  destruct e.
+  - (* EUnit *) simpl in Hrename. congruence.
+  - (* ELit *) simpl in Hrename. congruence.
+  - (* EVar *) simpl in Hrename. congruence.
+  - (* ELet m i t e1 e2 *)
+    simpl in Hrename.
+    destruct (alpha_rename_expr rho used e1) as [e1' u1] eqn:He1.
+    cbv zeta in Hrename.
+    destruct (alpha_rename_expr
+      ((i, fresh_ident i (i :: free_vars_expr e2 ++ u1)) :: rho)
+      (fresh_ident i (i :: free_vars_expr e2 ++ u1) :: i :: free_vars_expr e2 ++ u1)
+      e2) as [e2' u3] eqn:He2.
+    congruence.
+  - (* ELetInfer m i e1 e2 *)
+    simpl in Hrename.
+    destruct (alpha_rename_expr rho used e1) as [e1' u1] eqn:He1.
+    cbv zeta in Hrename.
+    destruct (alpha_rename_expr
+      ((i, fresh_ident i (i :: free_vars_expr e2 ++ u1)) :: rho)
+      (fresh_ident i (i :: free_vars_expr e2 ++ u1) :: i :: free_vars_expr e2 ++ u1)
+      e2) as [e2' u3] eqn:He2.
+    congruence.
+  - (* EFn *) simpl in Hrename. congruence.
+  - (* EMakeClosure fn0 cs0 *) eexists. eexists. reflexivity.
+  - (* EPlace *) simpl in Hrename. congruence.
+  - (* ECall fn0 args *)
+    simpl in Hrename.
+    destruct ((fix go (used0 : list ident) (args0 : list expr)
+        : list expr * list ident :=
+        match args0 with
+        | nil => (nil, used0)
+        | arg :: rest =>
+            let (arg', used1) := alpha_rename_expr rho used0 arg in
+            let (rest', used2) := go used1 rest in
+            (arg' :: rest', used2)
+        end) used l) as [args' u'] eqn:Hargs.
+    congruence.
+  - (* ECallGeneric fn0 tys args *)
+    simpl in Hrename.
+    destruct ((fix go (used0 : list ident) (args0 : list expr)
+        : list expr * list ident :=
+        match args0 with
+        | nil => (nil, used0)
+        | arg :: rest =>
+            let (arg', used1) := alpha_rename_expr rho used0 arg in
+            let (rest', used2) := go used1 rest in
+            (arg' :: rest', used2)
+        end) used l0) as [args' u'] eqn:Hargs.
+    congruence.
+  - (* ECallExpr callee args *)
+    simpl in Hrename.
+    destruct (alpha_rename_expr rho used e) as [c' u1] eqn:Hcallee.
+    destruct ((fix go (used0 : list ident) (args0 : list expr)
+        : list expr * list ident :=
+        match args0 with
+        | nil => (nil, used0)
+        | arg :: rest =>
+            let (arg', used1') := alpha_rename_expr rho used0 arg in
+            let (rest', used2) := go used1' rest in
+            (arg' :: rest', used2)
+        end) u1 l) as [args' u'] eqn:Hargs.
+    congruence.
+  - (* EStruct name lts tys fields *)
+    simpl in Hrename.
+    destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
+        : list (string * expr) * list ident :=
+        match fields0 with
+        | nil => (nil, used0)
+        | (fname, fe) :: rest =>
+            let (fe', used1) := alpha_rename_expr rho used0 fe in
+            let (rest', used2) := go used1 rest in
+            ((fname, fe') :: rest', used2)
+        end) used l1) as [fields' u'] eqn:Hfields.
+    congruence.
+  - (* EEnum enum_name variant_name lts tys payloads *)
+    simpl in Hrename.
+    destruct ((fix go (used0 : list ident) (payloads0 : list expr)
+        : list expr * list ident :=
+        match payloads0 with
+        | nil => (nil, used0)
+        | ep :: rest =>
+            let (ep', used1) := alpha_rename_expr rho used0 ep in
+            let (rest', used2) := go used1 rest in
+            (ep' :: rest', used2)
+        end) used l1) as [payloads' u'] eqn:Hpayloads.
+    congruence.
+  - (* EMatch scrut branches *)
+    simpl in Hrename.
+    destruct (alpha_rename_expr rho used e) as [scrut' u1] eqn:Hscrut.
+    destruct ((fix go (used0 : list ident)
+        (branches0 : list (string * list ident * expr))
+        : list (string * list ident * expr) * list ident :=
+        match branches0 with
+        | nil => (nil, used0)
+        | (variant_name, binders, eb) :: rest =>
+            let binder_seed := binders ++ free_vars_expr eb ++ used0 in
+            let '(binders', rho_branch, used1') :=
+              alpha_rename_idents rho binder_seed binders in
+            let (eb', used2') := alpha_rename_expr rho_branch used1' eb in
+            let (rest', used3) := go used2' rest in
+            ((variant_name, binders', eb') :: rest', used3)
+        end) u1 l) as [br' u'] eqn:Hbr.
+    congruence.
+  - (* EReplace p e *)
+    simpl in Hrename.
+    destruct (alpha_rename_expr rho used e) as [e' u'] eqn:He.
+    congruence.
+  - (* EAssign p e *)
+    simpl in Hrename.
+    destruct (alpha_rename_expr rho used e) as [e' u'] eqn:He.
+    congruence.
+  - (* EBorrow *) simpl in Hrename. congruence.
+  - (* EDeref e *)
+    simpl in Hrename.
+    destruct (alpha_rename_expr rho used e) as [e' u'] eqn:He.
+    congruence.
+  - (* EDrop e *)
+    simpl in Hrename.
+    destruct (alpha_rename_expr rho used e) as [e' u'] eqn:He.
+    congruence.
+  - (* EIf e1 e2 e3 *)
+    simpl in Hrename.
+    destruct (alpha_rename_expr rho used e1) as [e1' u1] eqn:He1.
+    destruct (alpha_rename_expr rho u1 e2) as [e2' u2] eqn:He2.
+    destruct (alpha_rename_expr rho u2 e3) as [e3' u3] eqn:He3.
+    congruence.
+Qed.
+
+
 Theorem typed_roots_shadow_safe_instantiate_fresh_mutual :
   forall env Ω n rho,
   (forall R Σ e T Σ' R' roots,
@@ -750,6 +903,56 @@ Proof.
     + eapply root_set_equiv_trans.
       * apply root_sets_union_equiv. exact Harg_roots0.
       * apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
+  - intros R R1 R' Σ Σ1 Σ' callee args u param_tys ret arg_roots roots_callee
+      Hnot_mc Hcallee IHcallee Hargs IHargs Hfresh R0 HnsR HnsR0 HR0.
+    rewrite expr_local_store_names_call_expr in Hfresh.
+    apply root_subst_images_exclude_names_app_inv in Hfresh.
+    destruct Hfresh as [Hfresh_callee Hfresh_args].
+    destruct (IHcallee Hfresh_callee R0 HnsR HnsR0 HR0)
+      as [R10 [roots_callee0 [Hcallee0 [HnsR10 [HR10 Hroots_callee0]]]]].
+    assert (Hns_R1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow.
+      - eapply typed_env_roots_shadow_safe_roots. exact Hcallee.
+      - exact HnsR. }
+    destruct (IHargs Hfresh_args R10 Hns_R1 HnsR10 HR10)
+      as [R20 [arg_roots0 [Hargs0 [HnsR20 [HR20 Harg_roots0]]]]].
+    exists R20, (root_set_union roots_callee0 (root_sets_union arg_roots0)).
+    split; [| split; [| split]].
+    + eapply TERS_CallExpr_Fn; eauto.
+    + exact HnsR20.
+    + exact HR20.
+    + eapply root_set_equiv_trans.
+      * apply root_set_union_equiv.
+        -- exact Hroots_callee0.
+        -- eapply root_set_equiv_trans.
+           ++ apply root_sets_union_equiv. exact Harg_roots0.
+           ++ apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
+      * apply root_set_equiv_sym. apply root_set_instantiate_union_equiv.
+  - intros R R1 R' Σ Σ1 Σ' callee args u env_lt param_tys ret arg_roots roots_callee
+      Hnot_mc Hcallee IHcallee Hargs IHargs Hfresh R0 HnsR HnsR0 HR0.
+    rewrite expr_local_store_names_call_expr in Hfresh.
+    apply root_subst_images_exclude_names_app_inv in Hfresh.
+    destruct Hfresh as [Hfresh_callee Hfresh_args].
+    destruct (IHcallee Hfresh_callee R0 HnsR HnsR0 HR0)
+      as [R10 [roots_callee0 [Hcallee0 [HnsR10 [HR10 Hroots_callee0]]]]].
+    assert (Hns_R1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow.
+      - eapply typed_env_roots_shadow_safe_roots. exact Hcallee.
+      - exact HnsR. }
+    destruct (IHargs Hfresh_args R10 Hns_R1 HnsR10 HR10)
+      as [R20 [arg_roots0 [Hargs0 [HnsR20 [HR20 Harg_roots0]]]]].
+    exists R20, (root_set_union roots_callee0 (root_sets_union arg_roots0)).
+    split; [| split; [| split]].
+    + eapply TERS_CallExpr_Closure; eauto.
+    + exact HnsR20.
+    + exact HR20.
+    + eapply root_set_equiv_trans.
+      * apply root_set_union_equiv.
+        -- exact Hroots_callee0.
+        -- eapply root_set_equiv_trans.
+           ++ apply root_sets_union_equiv. exact Harg_roots0.
+           ++ apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
+      * apply root_set_equiv_sym. apply root_set_instantiate_union_equiv.
   - intros R R' Σ Σ' sname lts args fields sdef roots Hlookup Hlen_lts
       Hlen_args Hbounds Hfields IHfields Hfresh R0 HnsR HnsR0 HR0.
     rewrite expr_local_store_names_struct in Hfresh.

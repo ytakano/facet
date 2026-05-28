@@ -415,7 +415,7 @@ Proof.
 		      rewrite Hdirect in Htyped_let.
 		      rewrite Hdirect in Htyped_direct.
 		      dependent destruction Htyped_direct.
-		      repeat match goal with
+		      { repeat match goal with
 		      | Hlookup_typed : lookup_fn ?fname0 (env_fns ?env_typed) = Some ?f_typed,
 		        Hname_callee0 : fn_name fcallee = ?fname0,
 		        Hunique_typed : fn_env_unique_by_name ?env_typed,
@@ -583,7 +583,19 @@ Proof.
 		            eapply value_has_type_clear_global_env_local_bounds;
 		            exact Hv
 		        end.
-      * apply ty_compatible_b_sound. exact Hcompat_direct.
+      * apply ty_compatible_b_sound. exact Hcompat_direct. }
+      (* TERS_CallExpr_Fn with EMakeClosure: impossible, guard violated *)
+      exfalso.
+      match goal with
+      | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>
+          exact (Hn fname caps eq_refl)
+      end.
+      (* TERS_CallExpr_Closure with EMakeClosure: impossible, guard violated *)
+      exfalso.
+      match goal with
+      | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>
+          exact (Hn fname caps eq_refl)
+      end.
 Qed.
 
 Theorem check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready :

@@ -6,11 +6,12 @@
 |------|--------|
 | T1: ECallExpr TFn/TClosure in roots checker | ✅ done (commit 276b83e) |
 | T2c: TTypeForall in roots checker | ✅ done (commit 80ca8bf) |
-| T2d: TForall (HRT) in roots checker | pending |
+| T2d: TForall (HRT) in roots checker | ✅ done (commit a4ea88a) |
+| T2e: fn-value-param call safety gate (5 hrt_* failures) | pending |
 | T2a: ECallGeneric in safety gate (12 gate failures) | pending |
 | T2b: ELetInfer closure form in safety gate (4 gate failures) | pending |
-| T2e: reborrow/ref/HRT roots checker (18 ErrNotImplemented) | pending |
-| T3: Switch OCaml CLI to infer_program_env_end2end | blocked by T2a-T2e |
+| T2f: reborrow/ref/HRT roots checker (18 ErrNotImplemented) | pending |
+| T3: Switch OCaml CLI to infer_program_env_end2end | blocked by T2a-T2f |
 | T4: CI enforcement of entrypoint policy | pending |
 
 ## T3 blockers (found when testing end2end CLI)
@@ -20,12 +21,35 @@ valid tests fail:
 
 **16 tests: `ErrEndToEndSafetyGateFailed`** (roots checker passes, safety gate
 rejects) — safety gate patterns do not recognise:
+- `ECallExpr (EVar x) args` where `x` is a fn-value parameter (T2e)
 - `ECallGeneric fname type_args args` as a direct call body (T2a)
 - `ELetInfer m x (EMakeClosure ...) (ECallExpr (EVar x) args)` closure form (T2b)
 
 **18 tests: `ErrNotImplemented`** (roots checker has no coverage for):
 - `ECallExpr callee args` where callee has TForall/TTypeForall type (T2c/T2d)
 - reborrow, ref assign, HRT fn-value call forms (T2e)
+
+## Proof impact of T2e (fn-value-param call safety gate)
+
+5 hrt_* tests fail because the safety gate has no case for
+`ECallExpr (EVar x) args` where `x` is a function-value parameter
+(type TForall or TFn). All existing gate cases assume a known global callee.
+
+Proof extension required:
+- Add `ERSCE_FnValueParamCall` constructor to
+  `expr_root_shadow_captured_call_provenance_summary_exact` with hypothesis
+  `typed_env_roots_shadow_safe env Ω n R Σ (ECallExpr (EVar x) args) T Σ' R' roots`
+  and `preservation_ready_args args`.
+- Add a 5th disjunct to `callee_body_root_shadow_captured_call_provenance_summary`
+  for functions whose body is `ECallExpr (EVar x) args` with preservation-ready args
+  and successful roots check.
+- Add new boolean check in `check_fn_root_shadow_captured_call_provenance_summary`
+  and a soundness lemma bridging it to the new Prop disjunct.
+- Add proof branch in `EnvRuntimeCapturedSafety.v`:
+  invert `Eval_CallExpr` → get `VClosure fname []` from store typing →
+  apply `Hsummary` to get callee summary → apply callee-body safety theorem.
+- Touches: EnvRuntimeShadowSummaryFacts.v, TypeChecker.v,
+  EnvRuntimeCapturedSafety.v, EnvRuntimeShadowCheckerFacts.v.
 
 ## Proof impact of T2a (ECallGeneric safety gate)
 

@@ -7803,7 +7803,20 @@ Definition check_fn_root_shadow_non_capturing_call_provenance_summary
               | infer_err _ => false
               end
           end
-      | None => false
+      | None =>
+          match fn_body fdef with
+          | ECallExpr callee args =>
+              preservation_ready_expr_b callee &&
+              preservation_ready_args_b args &&
+              match infer_env_roots_shadow_safe env fdef
+                      (initial_root_env_for_fn fdef) with
+              | infer_ok (_, _, R_out, roots) =>
+                  fn_params_roots_exclude_b (fn_params fdef) roots &&
+                  fn_params_root_env_excludes_b (fn_params fdef) R_out
+              | infer_err _ => false
+              end
+          | _ => false
+          end
       end
   end.
 

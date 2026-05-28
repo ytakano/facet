@@ -73,8 +73,8 @@ callee-body provenance summary.
 
 Required before accepting this gate:
 
-- Add summary evidence for `ECallExpr (EVar x) args` that records the concrete
-  callee function and proves its body summary.
+- Done prep: add checker/Prop summary evidence for general
+  `ECallExpr callee args` function-value calls.
 - Prove the runtime bridge from the typed callee variable lookup to that
   non-capturing closure target.
 - Then extend the executable gate and captured runtime safety theorem.

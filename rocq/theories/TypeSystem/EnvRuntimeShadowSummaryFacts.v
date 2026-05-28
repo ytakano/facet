@@ -50,7 +50,7 @@ Definition env_fns_root_shadow_direct_call_provenance_summary_check_ready
 Definition callee_body_root_shadow_non_capturing_call_provenance_summary
     (env : global_env) (fdef : fn_def) : Prop :=
   callee_body_root_shadow_direct_call_provenance_summary env fdef \/
-  exists fname args raw_body synthetic_body fcallee T_body Γ_out R_body roots_body,
+  (exists fname args raw_body synthetic_body fcallee T_body Γ_out R_body roots_body,
     fn_body fdef = raw_body /\
     local_fn_value_call_target_expr raw_body = Some (fname, args, synthetic_body) /\
     preservation_ready_args args /\
@@ -66,6 +66,22 @@ Definition callee_body_root_shadow_non_capturing_call_provenance_summary
       (initial_root_env_for_fn fdef)
       (sctx_of_ctx (fn_body_ctx (fn_with_body fdef synthetic_body)))
       (fn_body (fn_with_body fdef synthetic_body)) T_body
+      (sctx_of_ctx Γ_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
+    roots_exclude_params (fn_params fdef) roots_body /\
+    root_env_excludes_params (fn_params fdef) R_body) \/
+  exists callee args T_body Γ_out R_body roots_body,
+    fn_body fdef = ECallExpr callee args /\
+    preservation_ready_expr callee /\
+    preservation_ready_args args /\
+    NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef)
+      (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      (fn_body fdef) T_body
       (sctx_of_ctx Γ_out) R_body roots_body /\
     ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
     roots_exclude_params (fn_params fdef) roots_body /\

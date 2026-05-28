@@ -11634,7 +11634,21 @@ let check_fn_root_shadow_non_capturing_call_provenance_summary env fdef =
                       (fn_params_root_env_excludes_b fdef.fn_params r_out)
                   | Infer_err _ -> false)
              | None -> false)
-        | None -> false)
+        | None ->
+          (match fdef.fn_body with
+           | ECallExpr (callee, args) ->
+             (&&)
+               ((&&) (preservation_ready_expr_b callee)
+                 (preservation_ready_args_b args))
+               (match infer_env_roots_shadow_safe env fdef
+                        (initial_root_env_for_fn fdef) with
+                | Infer_ok p ->
+                  let (p0, roots) = p in
+                  let (_, r_out) = p0 in
+                  (&&) (fn_params_roots_exclude_b fdef.fn_params roots)
+                    (fn_params_root_env_excludes_b fdef.fn_params r_out)
+                | Infer_err _ -> false)
+           | _ -> false))
 
 (** val captured_call_target_expr :
     expr -> ((ident * ident list) * expr list) option **)

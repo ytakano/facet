@@ -365,43 +365,70 @@ Proof.
     exact Hold.
   - right.
     destruct (local_fn_value_call_target_expr (fn_body fdef))
-      as [[[fname args] synthetic_body] |] eqn:Htarget; try discriminate.
-    apply andb_true_iff in Hcheck as [Hready_args Hrest].
-    destruct (lookup_fn_b fname (env_fns env)) as [fcallee |] eqn:Hlookup_b;
-      try discriminate.
-    apply andb_true_iff in Hrest as [Hcallee Hsummary].
-    destruct (infer_env_roots_shadow_safe env
-      (fn_with_body fdef synthetic_body)
-      (initial_root_env_for_fn fdef))
-      as [[[[T_check Γ_check] R_out] roots] | err] eqn:Hinfer;
-      try discriminate.
-    apply andb_true_iff in Hsummary as [Hroots Henv].
-    destruct (lookup_fn_b_sound fname (env_fns env) fcallee Hlookup_b)
-      as [Hin_callee Hname_callee].
-    pose proof (infer_env_roots_shadow_safe_sound
-                  env (fn_with_body fdef synthetic_body)
-                  (initial_root_env_for_fn fdef)
-                  T_check Γ_check R_out roots Hinfer) as Htyped_fn.
-    unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
-    destruct Htyped_fn as
-      (T_body & Γ_out & Htyped & Hcompat & _).
-    exists fname, args, (fn_body fdef), synthetic_body, fcallee,
-      T_body, Γ_out, R_out, roots.
-    split; [reflexivity|].
-    split; [exact Htarget|].
-    split; [apply preservation_ready_args_b_sound; exact Hready_args|].
-    split; [exact Hin_callee|].
-    split; [exact Hname_callee|].
-    split; [apply check_fn_root_shadow_provenance_summary_sound; exact Hcallee|].
-    split.
-    { change (NoDup
-        (ctx_names
-          (params_ctx (fn_params (fn_with_body fdef synthetic_body))))).
-      eapply infer_env_roots_shadow_safe_params_nodup. exact Hinfer. }
-    split; [exact Htyped|].
-    split; [exact Hcompat|].
-    split; [apply fn_params_roots_exclude_b_sound; exact Hroots|].
-    apply fn_params_root_env_excludes_b_sound. exact Henv.
+      as [[[fname args] synthetic_body] |] eqn:Htarget.
+    + left.
+      apply andb_true_iff in Hcheck as [Hready_args Hrest].
+      destruct (lookup_fn_b fname (env_fns env)) as [fcallee |] eqn:Hlookup_b;
+        try discriminate.
+      apply andb_true_iff in Hrest as [Hcallee Hsummary].
+      destruct (infer_env_roots_shadow_safe env
+        (fn_with_body fdef synthetic_body)
+        (initial_root_env_for_fn fdef))
+        as [[[[T_check Γ_check] R_out] roots] | err] eqn:Hinfer;
+        try discriminate.
+      apply andb_true_iff in Hsummary as [Hroots Henv].
+      destruct (lookup_fn_b_sound fname (env_fns env) fcallee Hlookup_b)
+        as [Hin_callee Hname_callee].
+      pose proof (infer_env_roots_shadow_safe_sound
+                    env (fn_with_body fdef synthetic_body)
+                    (initial_root_env_for_fn fdef)
+                    T_check Γ_check R_out roots Hinfer) as Htyped_fn.
+      unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
+      destruct Htyped_fn as
+        (T_body & Γ_out & Htyped & Hcompat & _).
+      exists fname, args, (fn_body fdef), synthetic_body, fcallee,
+        T_body, Γ_out, R_out, roots.
+      split; [reflexivity|].
+      split; [exact Htarget|].
+      split; [apply preservation_ready_args_b_sound; exact Hready_args|].
+      split; [exact Hin_callee|].
+      split; [exact Hname_callee|].
+      split; [apply check_fn_root_shadow_provenance_summary_sound; exact Hcallee|].
+      split.
+      { change (NoDup
+          (ctx_names
+            (params_ctx (fn_params (fn_with_body fdef synthetic_body))))).
+        eapply infer_env_roots_shadow_safe_params_nodup. exact Hinfer. }
+      split; [exact Htyped|].
+      split; [exact Hcompat|].
+      split; [apply fn_params_roots_exclude_b_sound; exact Hroots|].
+      apply fn_params_root_env_excludes_b_sound. exact Henv.
+    + right.
+      destruct (fn_body fdef) eqn:Hbody; try discriminate.
+      repeat rewrite andb_true_iff in Hcheck.
+      destruct Hcheck as [[Hready_callee Hready_args] Hsummary].
+      destruct (infer_env_roots_shadow_safe env fdef
+        (initial_root_env_for_fn fdef))
+        as [[[[T_check Γ_check] R_out] roots] | err] eqn:Hinfer;
+        try discriminate.
+      apply andb_true_iff in Hsummary as [Hroots Henv].
+      pose proof (infer_env_roots_shadow_safe_sound
+                    env fdef (initial_root_env_for_fn fdef)
+                    T_check Γ_check R_out roots Hinfer) as Htyped_fn.
+      unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
+      destruct Htyped_fn as
+        (T_body & Γ_out & Htyped & Hcompat & _).
+      rewrite Hbody in Htyped.
+      exists e, l, T_body, Γ_out, R_out, roots.
+      split; [reflexivity|].
+      split; [apply preservation_ready_expr_b_sound; exact Hready_callee|].
+      split; [apply preservation_ready_args_b_sound; exact Hready_args|].
+      split.
+      { eapply infer_env_roots_shadow_safe_params_nodup. exact Hinfer. }
+      split; [exact Htyped|].
+      split; [exact Hcompat|].
+      split; [apply fn_params_roots_exclude_b_sound; exact Hroots|].
+      apply fn_params_root_env_excludes_b_sound. exact Henv.
 Qed.
 
 Lemma check_fn_root_shadow_captured_callee_provenance_summary_sound :

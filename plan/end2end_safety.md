@@ -24,7 +24,9 @@ this roadmap.
 | T2e.1: monomorphic `TFn` variable call safety gate | done |
 | T2e.2: HRT/closure function-value calls | blocked: runtime callee bridge needed |
 | T2g: mixed lifetime/type forall roots calls | done |
-| T2b: `ELetInfer` captured closure call safety gate | blocked: captured callee return roots |
+| T2b.1: captured callee return-root evidence | in progress |
+| T2b.2: captured closure runtime safety | pending |
+| T2b.3: captured closure regressions | pending |
 | T2f: deref/reborrow/ref-write roots coverage | blocked: nested place root model needed |
 
 ## Current blockers
@@ -111,18 +113,20 @@ malformed HRT-body roots rejections.
 
 ### T2b: captured closure local binding safety gate
 
-Blocked before the local wrapper.  Closure tests fail in the generated
-`__facet_closure` callee: the captured-callee gate requires roots to exclude all
-`fn_params ++ fn_captures`, but a body such as `EVar y` returns roots for hidden
-capture `y`.
+T2b targets source closures elaborated to `EMakeClosure` plus
+`ECallExpr (EVar x) args`.  The generated `__facet_closure` callee may safely
+return roots from hidden captures, but must still exclude ordinary params.
 
-Required before accepting this gate:
+T2b tasks:
 
-- Decide and prove how captured-callee summaries handle safe return roots that
-  originate from hidden captures.
-- Then add the `ELetInfer m x (EMakeClosure ...) (ECallExpr (EVar x) args)`
-  wrapper case with the existing freshness, capture, and root-exclusion checks.
-- Target valid failures: `tests/valid/closure/capture_*`.
+- T2b.1: relax captured-callee summaries/checkers to allow return roots from
+  `fn_captures` while preserving param exclusion, readiness, typing, and
+  capture exactness.
+- T2b.2: update captured-call runtime proofs so returned roots are bounded by
+  argument roots plus copied capture roots, and temporary closure bindings stay
+  excluded.
+- T2b.3: run `tests/valid/closure/capture_*` and `tests/invalid/closure/*`,
+  then record the remaining valid failure count.
 
 ### T2f: deref/reborrow/ref-write roots coverage
 

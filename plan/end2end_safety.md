@@ -83,9 +83,12 @@ Required before accepting this gate:
   lifetime-equivalent runtime closure signatures.
 - Done prep: strengthen runtime empty-closure typing so `fn_value_ty`
   witnesses require `fn_captures fdef = []`.
-- Prove the runtime bridge from the typed callee variable lookup to that
-  non-capturing closure target.
-- Then extend the executable gate and captured runtime safety theorem.
+- Prove a composed `ECallExpr` runtime preservation wrapper that evaluates
+  the callee first, transports store/root facts to the argument phase, inverts
+  the empty closure target, and covers `TFn`, `TForall`, `TTypeForall`, and
+  mixed forall callees.
+- Then extend the non-capturing and captured runtime safety theorems to consume
+  the general `ECallExpr callee args` summary branch.
 - Target valid failures: HRT function-parameter calls, type-forall
   function-value calls, and generic item-as-value calls.
 

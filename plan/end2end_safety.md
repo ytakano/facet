@@ -24,9 +24,9 @@ this roadmap.
 | T2e.1: monomorphic `TFn` variable call safety gate | done |
 | T2e.2: HRT/closure function-value calls | blocked: runtime callee bridge needed |
 | T2g: mixed lifetime/type forall roots calls | done |
-| T2b.1: captured callee return-root evidence | done |
-| T2b.2: captured closure runtime safety | in progress |
-| T2b.3: captured closure regressions | pending |
+| T2b.1: captured callee return-root evidence | blocked: cleanup bridge needed |
+| T2b.2: captured closure runtime safety | blocked: same bridge |
+| T2b.3: captured closure regressions | done: status recorded |
 | T2f: deref/reborrow/ref-write roots coverage | blocked: nested place root model needed |
 
 ## Current blockers
@@ -114,19 +114,19 @@ malformed HRT-body roots rejections.
 ### T2b: captured closure local binding safety gate
 
 T2b targets source closures elaborated to `EMakeClosure` plus
-`ECallExpr (EVar x) args`.  The generated `__facet_closure` callee may safely
-return roots from hidden captures, but must still exclude ordinary params.
+`ECallExpr (EVar x) args`.  The generated `__facet_closure` callee may return
+capture-derived roots only after runtime cleanup proves the instantiated body
+roots/env cannot mention erased param or capture store slots.
 
-T2b tasks:
+T2b status:
 
-- Done: relax captured-callee summaries/checkers to allow return roots from
-  `fn_captures` while preserving param exclusion, readiness, typing, and
-  capture exactness.
-- T2b.2: update captured-call runtime proofs so returned roots are bounded by
-  argument roots plus copied capture roots, and temporary closure bindings stay
-  excluded.
-- T2b.3: run `tests/valid/closure/capture_*` and `tests/invalid/closure/*`,
-  then record the remaining valid failure count.
+- Attempted captured-callee relaxation breaks `EnvRuntimeShadowEvalFacts`: the
+  cleanup wrappers still need `fn_params ++ fn_captures` exclusion.
+- Restored strict captured-callee roots/env gates to keep Rocq safety compiling.
+- Required bridge: show substituted body roots/env are bounded by
+  `arg_roots ++ capture_store_root_sets captured` and exclude erased frame names.
+- Targeted tests: 4 `tests/valid/closure/capture_*` still fail at
+  `__facet_closure`; all `tests/invalid/closure/*` reject.
 
 ### T2f: deref/reborrow/ref-write roots coverage
 

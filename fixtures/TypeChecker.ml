@@ -11736,8 +11736,11 @@ let check_fn_root_shadow_captured_callee_provenance_summary env fdef =
      | Infer_ok p ->
        let (p0, roots) = p in
        let (_, r_out) = p0 in
-       (&&) (fn_params_roots_exclude_b fdef.fn_params roots)
-         (fn_params_root_env_excludes_b fdef.fn_params r_out)
+       (&&)
+         (fn_params_roots_exclude_b (app fdef.fn_params fdef.fn_captures)
+           roots)
+         (fn_params_root_env_excludes_b (app fdef.fn_params fdef.fn_captures)
+           r_out)
      | Infer_err _ -> false)
 
 (** val capture_root_bound :

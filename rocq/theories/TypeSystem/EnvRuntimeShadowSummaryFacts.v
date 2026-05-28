@@ -129,8 +129,8 @@ Definition callee_body_root_shadow_captured_callee_provenance_summary
       (sctx_of_ctx (fn_body_ctx fdef))
       (fn_body fdef) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
     ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
-    roots_exclude_params (fn_params fdef) roots_body /\
-    root_env_excludes_params (fn_params fdef) R_body.
+    roots_exclude_params (fn_params fdef ++ fn_captures fdef) roots_body /\
+    root_env_excludes_params (fn_params fdef ++ fn_captures fdef) R_body.
 
 Definition callee_hidden_capture_args_disjoint
     (callee : fn_def) (args : list expr) : Prop :=
@@ -177,8 +177,8 @@ Inductive expr_root_shadow_captured_call_provenance_summary
         (fn_body fcallee) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
       ty_compatible_b (fn_outlives fcallee) T_body
         (fn_ret fcallee) = true ->
-      roots_exclude_params (fn_params fcallee) roots_body ->
-      root_env_excludes_params (fn_params fcallee) R_body ->
+      roots_exclude_params (fn_params fcallee ++ fn_captures fcallee) roots_body ->
+      root_env_excludes_params (fn_params fcallee ++ fn_captures fcallee) R_body ->
       expr_root_shadow_captured_call_provenance_summary env Ω n R Γ e
   | ERSC_If : forall R Γ e1 e2 e3 T_cond Γ1 R1 roots_cond,
       typed_env_roots_shadow_safe env Ω n R (sctx_of_ctx Γ)
@@ -234,8 +234,8 @@ Inductive expr_root_shadow_captured_call_provenance_summary_exact
         (fn_body fcallee) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
       ty_compatible_b (fn_outlives fcallee) T_body
         (fn_ret fcallee) = true ->
-      roots_exclude_params (fn_params fcallee) roots_body ->
-      root_env_excludes_params (fn_params fcallee) R_body ->
+      roots_exclude_params (fn_params fcallee ++ fn_captures fcallee) roots_body ->
+      root_env_excludes_params (fn_params fcallee ++ fn_captures fcallee) R_body ->
       capture_root_bound R captures (fn_captures fcallee) =
         Some capture_roots ->
       typed_env_roots_shadow_safe env Ω n R Σ
@@ -269,8 +269,8 @@ Inductive expr_root_shadow_captured_call_provenance_summary_exact
         (fn_body fcallee) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
       ty_compatible_b (fn_outlives fcallee) T_body
         (fn_ret fcallee) = true ->
-      roots_exclude_params (fn_params fcallee) roots_body ->
-      root_env_excludes_params (fn_params fcallee) R_body ->
+      roots_exclude_params (fn_params fcallee ++ fn_captures fcallee) roots_body ->
+      root_env_excludes_params (fn_params fcallee ++ fn_captures fcallee) R_body ->
       capture_root_bound R captures (fn_captures fcallee) =
         Some capture_roots ->
       root_env_lookup x R = None ->

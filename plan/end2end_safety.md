@@ -81,6 +81,9 @@ Required before accepting this gate:
 - Done prep: add a value-typing inversion that runtime closures are empty.
 - Done prep: add `TFn` signature-bridge helpers for exact, compatible, and
   lifetime-equivalent runtime closure signatures.
+- Strengthen runtime closure typing or add an invariant so
+  `value_has_type env s (VClosure fname []) (fn_value_ty fdef)` implies
+  `fn_captures fdef = []` before reusing the direct-call route.
 - Prove the runtime bridge from the typed callee variable lookup to that
   non-capturing closure target.
 - Then extend the executable gate and captured runtime safety theorem.

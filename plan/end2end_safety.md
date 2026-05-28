@@ -33,11 +33,10 @@ With the CLI using `infer_program_env_end2end`, `sh tests/run.sh` currently has
 
 - 27 `ErrEndToEndSafetyGateFailed`
   - `ECallGeneric fname type_args args` direct-call bodies.
-  - `ECallExpr (EVar x) args` function-value calls, including HRT,
-    type-forall, and mixed `for<'a, T>` callees.  The roots checker accepts
-    the mixed shape, but the safety gate still lacks a runtime bridge from a
-    typed callee variable to the concrete non-capturing `VClosure fname []`
-    and its callee-body summary.
+  - `ECallExpr (EVar x) args` function-value calls.  T2e targets
+    non-type-generic function values first (`TFn`, `TClosure`, and
+    lifetime-only `TForall`).  Type-forall and mixed `for<'a, T>` function
+    values remain under T2a until runtime type-parameter instantiation exists.
   - captured closure calls through local bindings.  These fail first in the
     synthesized `__facet_closure` callee because returning a hidden capture
     leaves roots tied to `fn_params ++ fn_captures`.
@@ -85,12 +84,13 @@ Required before accepting this gate:
   witnesses require `fn_captures fdef = []`.
 - Prove a composed `ECallExpr` runtime preservation wrapper that evaluates
   the callee first, transports store/root facts to the argument phase, inverts
-  the empty closure target, and covers `TFn`, `TForall`, `TTypeForall`, and
-  mixed forall callees.
+  the empty closure target, and covers non-type-generic `TFn`, `TClosure`, and
+  lifetime-only `TForall` callees.
 - Then extend the non-capturing and captured runtime safety theorems to consume
   the general `ECallExpr callee args` summary branch.
-- Target valid failures: HRT function-parameter calls, type-forall
-  function-value calls, and generic item-as-value calls.
+- Target valid failures: non-type-generic function-parameter and local
+  function-value calls.  Type-forall function-value and generic item-as-value
+  calls stay blocked by T2a.
 
 ### T2g: mixed lifetime/type forall roots calls
 

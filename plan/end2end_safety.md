@@ -30,14 +30,13 @@ this roadmap.
 ## Current blockers
 
 With the CLI using `infer_program_env_end2end`, `sh tests/run.sh` currently has
-38 valid-test failures:
+36 valid-test failures:
 
-- 27 `ErrEndToEndSafetyGateFailed`
+- 25 `ErrEndToEndSafetyGateFailed`
   - `ECallGeneric fname type_args args` direct-call bodies.
-  - `ECallExpr (EVar x) args` function-value calls.  T2e.1 targets
-    monomorphic `TFn` variables first.  `TClosure`, lifetime-only `TForall`,
-    type-forall, and mixed `for<'a, T>` function values remain blocked until
-    their runtime callee bridges exist.
+  - Remaining function-value calls: `TClosure`, lifetime-only `TForall`,
+    type-forall, mixed `for<'a, T>`, and generic-item function values still
+    need their runtime callee bridges.
   - captured closure calls through local bindings.  These fail first in the
     synthesized `__facet_closure` callee because returning a hidden capture
     leaves roots tied to `fn_params ++ fn_captures`.

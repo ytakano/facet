@@ -88,9 +88,9 @@ T2e.1 tasks:
 - Done prep: add empty-closure `TFn` evidence for non-generic, non-HRT callees.
 - Done prep: add a `TFn` wrapper that builds callee-route evidence from the
   callee summary.
-- Narrow the general function-value gate to `EVar` callees inferred as `TFn`.
-- Strengthen initial-store runtime evidence so stored empty function closures
-  target functions with base callee-body provenance summaries.
+- Done: narrow the general function-value gate to `EVar` callees inferred as `TFn`.
+- Done: strengthen initial-store runtime evidence so stored empty function
+  closures target functions with base callee-body provenance summaries.
 - Extend non-capturing and captured runtime safety to consume the new `EVar`
   `TFn` branch.
 - Target valid failures: monomorphic function-parameter and local

@@ -219,7 +219,8 @@ Proof.
   assert (Hstore_body_env :
       store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
   { subst body_env.
-    eapply store_typed_global_env_with_local_bounds. exact Hstore. }
+    eapply store_typed_global_env_with_local_bounds.
+        eapply initial_store_for_fn_store_typed. exact Hstore. }
   assert (Heval_body_env : eval body_env s (fn_body f) s' v).
   { subst body_env.
     eapply eval_global_env_with_local_bounds. exact Heval. }
@@ -305,7 +306,8 @@ Proof.
 	    assert (Hstore_body_env :
 	        store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
 	    { subst body_env.
-	      eapply store_typed_global_env_with_local_bounds. exact Hstore. }
+	      eapply store_typed_global_env_with_local_bounds.
+        eapply initial_store_for_fn_store_typed. exact Hstore. }
 	    assert (Heval_body_env : eval body_env s (fn_body f) s' v).
 	    { subst body_env.
 	      eapply eval_global_env_with_local_bounds. exact Heval. }
@@ -342,7 +344,8 @@ Proof.
 	    assert (Hstore_body_env :
 	        store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
 	    { subst body_env.
-	      eapply store_typed_global_env_with_local_bounds. exact Hstore. }
+	      eapply store_typed_global_env_with_local_bounds.
+        eapply initial_store_for_fn_store_typed. exact Hstore. }
 	    assert (Heval_body_env : eval body_env s raw_body s' v).
 	    { subst body_env.
 	      eapply eval_global_env_with_local_bounds. exact Heval. }

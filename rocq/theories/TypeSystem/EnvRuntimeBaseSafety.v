@@ -6,8 +6,58 @@ From Facet.TypeSystem Require Export EnvRuntimeValidatorFacts.
 From Stdlib Require Import List Bool Lia String Program.Equality.
 Import ListNotations.
 
+Definition value_function_closure_targets_summary
+    (env : global_env) (v : value) : Prop :=
+  match v with
+  | VClosure fname [] =>
+      exists fdef,
+        lookup_fn fname (env_fns env) = Some fdef /\
+        callee_body_root_shadow_provenance_summary env fdef
+  | _ => True
+  end.
+
+Definition store_function_closure_targets_summary
+    (env : global_env) (s : store) : Prop :=
+  Forall (fun se => value_function_closure_targets_summary env (se_val se)) s.
+
 Definition initial_store_for_fn (env : global_env) (f : fn_def) (s : store) : Prop :=
-  store_typed env s (sctx_of_ctx (fn_body_ctx f)).
+  store_typed env s (sctx_of_ctx (fn_body_ctx f)) /\
+  store_function_closure_targets_summary env s.
+
+Lemma initial_store_for_fn_store_typed :
+  forall env f s,
+    initial_store_for_fn env f s ->
+    store_typed env s (sctx_of_ctx (fn_body_ctx f)).
+Proof.
+  intros env f s Hinitial. exact (proj1 Hinitial).
+Qed.
+
+Lemma initial_store_for_fn_closure_targets_summary :
+  forall env f s,
+    initial_store_for_fn env f s ->
+    store_function_closure_targets_summary env s.
+Proof.
+  intros env f s Hinitial. exact (proj2 Hinitial).
+Qed.
+
+Lemma value_function_closure_targets_summary_global_env_with_local_bounds :
+  forall env bounds v,
+    value_function_closure_targets_summary env v ->
+    value_function_closure_targets_summary (global_env_with_local_bounds env bounds) v.
+Proof.
+  intros env bounds v Hsummary.
+  destruct v; simpl in *; auto.
+Qed.
+
+Lemma store_function_closure_targets_summary_global_env_with_local_bounds :
+  forall env bounds s,
+    store_function_closure_targets_summary env s ->
+    store_function_closure_targets_summary (global_env_with_local_bounds env bounds) s.
+Proof.
+  unfold store_function_closure_targets_summary.
+  intros env bounds s Hsummary.
+  induction Hsummary; constructor; auto.
+Qed.
 
 Lemma initial_root_env_for_params_covers :
   forall ps,
@@ -148,7 +198,8 @@ Proof.
   pose (body_env := global_env_with_local_bounds env (fn_bounds f)).
   assert (Hstore_body_env : store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
   { subst body_env.
-    eapply store_typed_global_env_with_local_bounds. exact Hstore. }
+    eapply store_typed_global_env_with_local_bounds.
+        eapply initial_store_for_fn_store_typed. exact Hstore. }
   assert (Heval_body_env : eval body_env s (fn_body f) s' v).
   { subst body_env.
     eapply eval_global_env_with_local_bounds. exact Heval. }
@@ -202,7 +253,7 @@ Proof.
   eapply typed_fn_env_structural_big_step_safe_ready.
   - eapply infer_env_runtime_structural_sound. exact Hinfer_env.
   - exact Hready.
-  - exact Hstore.
+  - eapply initial_store_for_fn_store_typed. exact Hstore.
   - exact Heval.
 Qed.
 
@@ -233,7 +284,8 @@ Proof.
   pose (body_env := global_env_with_local_bounds env (fn_bounds f)).
   assert (Hstore_body_env : store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
   { subst body_env.
-    eapply store_typed_global_env_with_local_bounds. exact Hstore. }
+    eapply store_typed_global_env_with_local_bounds.
+        eapply initial_store_for_fn_store_typed. exact Hstore. }
   assert (Heval_body_env : eval body_env s (fn_body f) s' v).
   { subst body_env.
     eapply eval_global_env_with_local_bounds. exact Heval. }
@@ -286,7 +338,8 @@ Proof.
   pose (body_env := global_env_with_local_bounds env (fn_bounds f)).
   assert (Hstore_body_env : store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
   { subst body_env.
-    eapply store_typed_global_env_with_local_bounds. exact Hstore. }
+    eapply store_typed_global_env_with_local_bounds.
+        eapply initial_store_for_fn_store_typed. exact Hstore. }
   assert (Heval_body_env : eval body_env s (fn_body f) s' v).
   { subst body_env.
     eapply eval_global_env_with_local_bounds. exact Heval. }
@@ -512,7 +565,8 @@ Proof.
   assert (Hstore_body_env :
       store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
   { subst body_env.
-    eapply store_typed_global_env_with_local_bounds. exact Hstore. }
+    eapply store_typed_global_env_with_local_bounds.
+        eapply initial_store_for_fn_store_typed. exact Hstore. }
   assert (Heval_body_env : eval body_env s (fn_body f) s' v).
   { subst body_env.
     eapply eval_global_env_with_local_bounds. exact Heval. }

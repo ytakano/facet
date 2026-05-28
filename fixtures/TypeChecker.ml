@@ -3828,8 +3828,8 @@ let infer_type_forall_call_env env _UU03a9_ type_params bounds body arg_tys =
        (match check_type_forall_bounds env bounds type_args with
         | Some err -> Infer_err err
         | None ->
-          let param_tys' = map (subst_type_params_ty type_args) param_tys in
-          (match check_arg_tys _UU03a9_ arg_tys param_tys' with
+          (match check_arg_tys _UU03a9_ arg_tys
+                   (map (subst_type_params_ty type_args) param_tys) with
            | Some err -> Infer_err err
            | None -> Infer_ok (subst_type_params_ty type_args ret)))
      | None -> Infer_err ErrTypeArgInferenceFailed)
@@ -6757,6 +6757,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -6808,6 +6816,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -6859,6 +6875,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -6910,6 +6934,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -6961,6 +6993,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -7012,6 +7052,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -7120,6 +7168,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -7171,6 +7227,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -7222,6 +7286,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -7273,6 +7345,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -7324,6 +7404,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -7375,6 +7463,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -7426,6 +7522,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -7477,6 +7581,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -7528,6 +7640,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -7579,6 +7699,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -7630,6 +7758,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -7681,6 +7817,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -7732,6 +7876,14 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err))
@@ -8545,6 +8697,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -8596,6 +8756,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -8647,6 +8815,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -8698,6 +8874,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -8749,6 +8933,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -8858,6 +9050,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -8909,6 +9109,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -8960,6 +9168,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -9011,6 +9227,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -9062,6 +9286,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -9113,6 +9345,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -9164,6 +9404,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -9215,6 +9463,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -9266,6 +9522,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -9317,6 +9581,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -9368,6 +9640,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -9419,6 +9699,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
@@ -9470,6 +9758,14 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                      Infer_ok (((ret, _UU03a3_'), r'),
                        (root_set_union roots_callee
                          (root_sets_union arg_roots))))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err))

@@ -1172,8 +1172,7 @@ Definition infer_type_forall_call_env
           match check_type_forall_bounds env bounds type_args with
           | Some err => infer_err err
           | None =>
-              let param_tys' := map (subst_type_params_ty type_args) param_tys in
-              match check_arg_tys Ω arg_tys param_tys' with
+              match check_arg_tys Ω arg_tys (map (subst_type_params_ty type_args) param_tys) with
               | Some err => infer_err err
               | None => infer_ok (subst_type_params_ty type_args ret)
               end
@@ -5719,6 +5718,13 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
                       infer_ok (ret, Σ', R',
                         root_set_union roots_callee (root_sets_union arg_roots))
                   end
+              | TTypeForall type_params bounds body =>
+                 match infer_type_forall_call_env env Ω type_params bounds body arg_tys with
+                 | infer_err err => infer_err err
+                 | infer_ok ret =>
+                     infer_ok (ret, Σ', R',
+                       root_set_union roots_callee (root_sets_union arg_roots))
+                 end
               | _ => infer_err ErrNotImplemented
               end
           end
@@ -6437,6 +6443,13 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
                       infer_ok (ret, Σ', R',
                         root_set_union roots_callee (root_sets_union arg_roots))
                   end
+              | TTypeForall type_params bounds body =>
+                 match infer_type_forall_call_env env Ω type_params bounds body arg_tys with
+                 | infer_err err => infer_err err
+                 | infer_ok ret =>
+                     infer_ok (ret, Σ', R',
+                       root_set_union roots_callee (root_sets_union arg_roots))
+                 end
               | _ => infer_err ErrNotImplemented
               end
           end

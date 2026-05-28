@@ -897,6 +897,31 @@ Proof.
                 [exact Hcollect |
                  intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0 |
                  rewrite <- check_arg_tys_params_of_tys; exact Hcheck]]
+          | _ = TTypeForall ?type_params ?bounds ?body =>
+            unfold infer_type_forall_call_env in Hinfer;
+            destruct (ty_core body) eqn:Hbody; cbn iota in Hinfer; try discriminate;
+            (* Only TFn body survives *)
+            lazymatch type of Hbody with
+            | _ = TFn ?param_tys ?ret_inner =>
+              destruct (infer_type_forall_args type_params param_tys arg_tys)
+                as [type_args |] eqn:Htype_args;
+                cbn iota in Hinfer; try discriminate;
+              destruct (check_type_forall_bounds env bounds type_args) as [err |]
+                eqn:Htf_bounds;
+                cbn iota in Hinfer; try discriminate;
+              destruct (check_arg_tys Ω arg_tys (map (subst_type_params_ty type_args) param_tys))
+                as [err |] eqn:Hcheck;
+                cbn iota in Hinfer; try discriminate;
+              inversion Hinfer; subst;
+              eapply TER_CallExpr_TypeForall;
+              [ eapply IH; exact Hcallee_res
+              | exact Hbody
+              | exact Htf_bounds
+              | eapply infer_env_args_collect_roots_sound;
+                  [ exact Hcollect
+                  | intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0
+                  | rewrite <- check_arg_tys_params_of_tys; exact Hcheck ]]
+            end
           end
         end
       ).
@@ -1610,6 +1635,32 @@ Proof.
                 [exact Hcollect |
                  intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0 |
                  rewrite <- check_arg_tys_params_of_tys; exact Hcheck]]
+          | _ = TTypeForall ?type_params ?bounds ?body =>
+            unfold infer_type_forall_call_env in Hinfer;
+            destruct (ty_core body) eqn:Hbody; cbn iota in Hinfer; try discriminate;
+            (* Only TFn body survives *)
+            lazymatch type of Hbody with
+            | _ = TFn ?param_tys ?ret_inner =>
+              destruct (infer_type_forall_args type_params param_tys arg_tys)
+                as [type_args |] eqn:Htype_args;
+                cbn iota in Hinfer; try discriminate;
+              destruct (check_type_forall_bounds env bounds type_args) as [err |]
+                eqn:Htf_bounds;
+                cbn iota in Hinfer; try discriminate;
+              destruct (check_arg_tys Ω arg_tys (map (subst_type_params_ty type_args) param_tys))
+                as [err |] eqn:Hcheck;
+                cbn iota in Hinfer; try discriminate;
+              inversion Hinfer; subst;
+              eapply TERS_CallExpr_TypeForall;
+              [ intros fname' caps'; discriminate
+              | eapply IH; exact Hcallee_res
+              | exact Hbody
+              | exact Htf_bounds
+              | eapply infer_env_args_collect_roots_shadow_safe_sound;
+                  [exact Hcollect |
+                   intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0 |
+                   rewrite <- check_arg_tys_params_of_tys; exact Hcheck]]
+            end
           end
         end]).
       (* EMakeClosure callee: dedicated path *)

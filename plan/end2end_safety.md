@@ -1,5 +1,44 @@
 # End-to-end safety roadmap
 
+## Status
+
+| Task | Status |
+|------|--------|
+| T1: ECallExpr TFn/TClosure in roots checker | ✅ done (commit 276b83e) |
+| T2c: TTypeForall in roots checker | pending |
+| T2d: TForall (HRT) in roots checker | pending |
+| T2a: ECallGeneric in safety gate (12 gate failures) | pending |
+| T2b: ELetInfer closure form in safety gate (4 gate failures) | pending |
+| T2e: reborrow/ref/HRT roots checker (18 ErrNotImplemented) | pending |
+| T3: Switch OCaml CLI to infer_program_env_end2end | blocked by T2a-T2e |
+| T4: CI enforcement of entrypoint policy | pending |
+
+## T3 blockers (found when testing end2end CLI)
+
+When `infer_program_env_end2end` is used as the CLI accept path, 34 of the
+valid tests fail:
+
+**16 tests: `ErrEndToEndSafetyGateFailed`** (roots checker passes, safety gate
+rejects) — safety gate patterns do not recognise:
+- `ECallGeneric fname type_args args` as a direct call body (T2a)
+- `ELetInfer m x (EMakeClosure ...) (ECallExpr (EVar x) args)` closure form (T2b)
+
+**18 tests: `ErrNotImplemented`** (roots checker has no coverage for):
+- `ECallExpr callee args` where callee has TForall/TTypeForall type (T2c/T2d)
+- reborrow, ref assign, HRT fn-value call forms (T2e)
+
+## Proof impact of T2a (ECallGeneric safety gate)
+
+- `Eval_CallGeneric` is operationally identical to `Eval_Call`; need
+  `eval_call_generic_as_call` lemma in TypeSafetyDirectCallRoute.v.
+- Must add `TER_CallExpr_Generic` Prop case and extend
+  `callee_body_root_shadow_direct_call_provenance_summary` with a new disjunct.
+- Must update `check_fn_root_shadow_direct_call_provenance_summary` and its
+  soundness lemma, propagate through non-capturing and captured gate layers.
+- Touches: TypeChecker.v, EnvRuntimeShadowSummaryFacts.v,
+  EnvRuntimeShadowCheckerFacts.v, EnvRuntimeDirectSafety.v,
+  TypeSafetyDirectCallRoute.v, End2EndSafety.v.
+
 ## Goal
 
 Unify the executable type-checking entrypoint used by the OCaml CLI so that

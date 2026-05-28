@@ -258,6 +258,12 @@ Proof.
   | H : forall fname' caps', EMakeClosure ?fn ?cs <> EMakeClosure fname' caps' |- _ =>
       exact (H fn cs eq_refl)
   end.
+  (* TERS_CallExpr_TypeForall with EMakeClosure: impossible, guard violated *)
+  exfalso.
+  match goal with
+  | H : forall fname' caps', EMakeClosure ?fn ?cs <> EMakeClosure fname' caps' |- _ =>
+      exact (H fn cs eq_refl)
+  end.
 Qed.
 
 Lemma eval_make_closure_captured_call_expr_shadow_preserves_typing_with_callee_components :
@@ -389,6 +395,12 @@ Proof.
     | H : forall fname' caps', EMakeClosure ?fn ?cs <> EMakeClosure fname' caps' |- _ =>
         exact (H fn cs eq_refl)
     end.
+  - (* TERS_CallExpr_TypeForall with EMakeClosure: impossible, guard violated *)
+    exfalso.
+    match goal with
+    | H : forall fname' caps', EMakeClosure ?fn ?cs <> EMakeClosure fname' caps' |- _ =>
+        exact (H fn cs eq_refl)
+    end.
 Qed.
 
 Lemma eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_typing :
@@ -493,6 +505,12 @@ Proof.
         exact (Hn fname caps eq_refl)
     end.
     (* TERS_CallExpr_Closure with EMakeClosure: impossible, guard violated *)
+    exfalso.
+    match goal with
+    | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>
+        exact (Hn fname caps eq_refl)
+    end.
+    (* TERS_CallExpr_TypeForall with EMakeClosure: impossible, guard violated *)
     exfalso.
     match goal with
     | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>
@@ -700,6 +718,12 @@ Proof.
         exact (Hn fname caps eq_refl)
     end.
     (* TERS_CallExpr_Closure with EMakeClosure: impossible, guard violated *)
+    exfalso.
+    match goal with
+    | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>
+        exact (Hn fname caps eq_refl)
+    end.
+    (* TERS_CallExpr_TypeForall with EMakeClosure: impossible, guard violated *)
     exfalso.
     match goal with
     | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>

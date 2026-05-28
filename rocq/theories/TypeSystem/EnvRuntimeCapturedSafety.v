@@ -596,6 +596,12 @@ Proof.
       | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>
           exact (Hn fname caps eq_refl)
       end.
+      (* TERS_CallExpr_TypeForall with EMakeClosure: impossible, guard violated *)
+      exfalso.
+      match goal with
+      | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>
+          exact (Hn fname caps eq_refl)
+      end.
 Qed.
 
 Theorem check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready :

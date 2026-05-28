@@ -22,7 +22,7 @@ this roadmap.
 | T4: CI enforcement of entrypoint policy | done (8bd3d82) |
 | T2a: `ECallGeneric` safety gate | blocked: generic runtime instantiation proof gap |
 | T2e: function-value parameter/local call safety gate | blocked: runtime callee bridge needed |
-| T2g: mixed lifetime/type forall roots calls | blocked: roots proof refactor needed |
+| T2g: mixed lifetime/type forall roots calls | blocked: mixed roots branch needed |
 | T2b: `ELetInfer` captured closure call safety gate | blocked: captured callee return roots |
 | T2f: deref/reborrow/ref-write roots coverage | blocked: nested place root model needed |
 
@@ -94,6 +94,8 @@ wrapper.
 
 Required before accepting this gate:
 
+- Done prep: make malformed call-body proof branches explicit in
+  `EnvRootSoundness`.
 - Add mixed `TForall`/`TTypeForall` roots and shadow-safe call constructors.
 - Route roots and shadow-safe checkers through `infer_mixed_forall_call_env`.
 - Refactor `EnvRootSoundness` `ECallExpr` cases to handle mixed calls and

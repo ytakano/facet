@@ -921,6 +921,7 @@ Proof.
                   [ exact Hcollect
                   | intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0
                   | rewrite <- check_arg_tys_params_of_tys; exact Hcheck ]]
+            | _ => discriminate
             end
           | _ = TForall ?m ?bounds ?body =>
             unfold infer_hrt_call_env in Hinfer;
@@ -953,6 +954,7 @@ Proof.
                   [ exact Hcollect
                   | intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0
                   | rewrite <- check_arg_tys_params_of_tys; exact Hcheck ]]
+            | _ => discriminate
             end
           end
         end
@@ -1692,6 +1694,7 @@ Proof.
                   [exact Hcollect |
                    intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0 |
                    rewrite <- check_arg_tys_params_of_tys; exact Hcheck]]
+            | _ => discriminate
             end
           | _ = TForall ?m ?bounds ?body =>
             unfold infer_hrt_call_env in Hinfer;
@@ -1725,6 +1728,7 @@ Proof.
                   [ exact Hcollect
                   | intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0
                   | rewrite <- check_arg_tys_params_of_tys; exact Hcheck ]]
+            | _ => discriminate
             end
           end
         end]).

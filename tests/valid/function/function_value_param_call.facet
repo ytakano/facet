@@ -1,0 +1,3 @@
+fn apply(f: unrestricted fn(unrestricted isize) -> unrestricted isize, x: unrestricted isize) -> unrestricted isize {
+  (f x)
+}

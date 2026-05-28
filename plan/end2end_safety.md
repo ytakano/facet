@@ -21,7 +21,7 @@ this roadmap.
 | T3: switch OCaml CLI to `infer_program_env_end2end` | done |
 | T4: CI enforcement of entrypoint policy | done (8bd3d82) |
 | T2a: `ECallGeneric` safety gate | blocked: generic runtime instantiation proof gap |
-| T2e.1: monomorphic `TFn` variable call safety gate | runtime proof done; regressions pending |
+| T2e.1: monomorphic `TFn` variable call safety gate | done |
 | T2e.2: HRT/closure function-value calls | blocked: runtime callee bridge needed |
 | T2g: mixed lifetime/type forall roots calls | done |
 | T2b: `ELetInfer` captured closure call safety gate | blocked: captured callee return roots |
@@ -93,8 +93,8 @@ T2e.1 tasks:
   closures target functions with base callee-body provenance summaries.
 - Done: extend non-capturing and captured runtime safety to consume the new
   `EVar` `TFn` branch.
-- Target valid failures: monomorphic function-parameter and local
-  function-value calls.
+- Done: targeted local and function-parameter monomorphic function-value
+  call regressions pass.
 
 Remaining T2e blockers:
 

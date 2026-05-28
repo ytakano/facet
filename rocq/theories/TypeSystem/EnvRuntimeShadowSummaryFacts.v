@@ -49,22 +49,18 @@ Definition env_fns_root_shadow_direct_call_provenance_summary_check_ready
 
 Definition supported_non_type_generic_function_value_call_callee_ty
     (T : Ty) : Prop :=
-  match ty_core T with
-  | TFn _ _ => True
-  | TClosure _ _ _ => True
-  | TForall _ _ body =>
-      match ty_core body with
-      | TFn _ _ => True
-      | _ => False
-      end
-  | _ => False
-  end.
+  exists param_tys ret,
+    ty_core T = TFn param_tys ret.
 
 Definition supported_non_type_generic_function_value_call_expr
     (env : global_env) (Ω : outlives_ctx) (n : nat)
-    (R : root_env) (Γ : ctx) (callee : expr) (_args : list expr) : Prop :=
-  check_supported_non_type_generic_function_value_call_expr
-    env Ω n R Γ callee = true.
+    (R : root_env) (Γ : ctx) (callee : expr) (args : list expr) : Prop :=
+  exists x T_callee Γ_callee R_callee roots_callee param_tys ret,
+    callee = EVar x /\
+    ECallExpr callee args = ECallExpr (EVar x) args /\
+    infer_core_env_roots_shadow_safe env Ω n R Γ (EVar x) =
+      infer_ok (T_callee, Γ_callee, R_callee, roots_callee) /\
+    ty_core T_callee = TFn param_tys ret.
 
 Definition callee_body_root_shadow_non_capturing_call_provenance_summary
     (env : global_env) (fdef : fn_def) : Prop :=
@@ -89,17 +85,19 @@ Definition callee_body_root_shadow_non_capturing_call_provenance_summary
     ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
     roots_exclude_params (fn_params fdef) roots_body /\
     root_env_excludes_params (fn_params fdef) R_body) \/
-  exists callee args T_body Γ_out R_body roots_body,
-    fn_body fdef = ECallExpr callee args /\
-    preservation_ready_expr callee /\
+  exists x args T_callee Γ_callee R_callee roots_callee param_tys ret
+      T_body Γ_out R_body roots_body,
+    fn_body fdef = ECallExpr (EVar x) args /\
     preservation_ready_args args /\
-    supported_non_type_generic_function_value_call_expr
+    infer_core_env_roots_shadow_safe
       (global_env_with_local_bounds env (fn_bounds fdef))
       (fn_outlives fdef)
       (fn_lifetimes fdef)
       (initial_root_env_for_fn fdef)
       (fn_body_ctx fdef)
-      callee args /\
+      (EVar x) = infer_ok
+        (T_callee, Γ_callee, R_callee, roots_callee) /\
+    ty_core T_callee = TFn param_tys ret /\
     NoDup (ctx_names (params_ctx (fn_params fdef))) /\
     typed_env_roots_shadow_safe
       (global_env_with_local_bounds env (fn_bounds fdef))

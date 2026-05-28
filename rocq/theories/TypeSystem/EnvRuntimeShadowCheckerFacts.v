@@ -358,11 +358,10 @@ Lemma supported_non_type_generic_function_value_call_callee_ty_b_sound :
     supported_non_type_generic_function_value_call_callee_ty T.
 Proof.
   intros [u c] H.
-  unfold supported_non_type_generic_function_value_call_callee_ty in *.
-  simpl in *.
-  destruct c; simpl in H; try discriminate; try exact I.
-  destruct t as [u_body c_body].
-  destruct c_body; simpl in *; try discriminate; exact I.
+  unfold supported_non_type_generic_function_value_call_callee_ty.
+  simpl in H.
+  destruct c; try discriminate.
+  eexists. eexists. reflexivity.
 Qed.
 
 Lemma check_supported_non_type_generic_function_value_call_expr_sound :
@@ -373,7 +372,17 @@ Lemma check_supported_non_type_generic_function_value_call_expr_sound :
       env Ω n R Γ callee args.
 Proof.
   intros env Ω n R Γ callee args Hcheck.
-  exact Hcheck.
+  unfold check_supported_non_type_generic_function_value_call_expr in Hcheck.
+  destruct callee; try discriminate.
+  destruct (infer_core_env_roots_shadow_safe env Ω n R Γ (EVar i))
+    as [[[[T_callee Γ_callee] R_callee] roots_callee] | err]
+    eqn:Hinfer; try discriminate.
+  destruct T_callee as [u c]. simpl in Hcheck.
+  destruct c; try discriminate.
+  unfold supported_non_type_generic_function_value_call_expr.
+  exists i, (MkTy u (TFn l t)), Γ_callee, R_callee, roots_callee, l, t.
+  repeat split; try reflexivity.
+  exact Hinfer.
 Qed.
 
 Lemma check_fn_root_shadow_non_capturing_call_provenance_summary_sound :
@@ -443,13 +452,23 @@ Proof.
       destruct Htyped_fn as
         (T_body & Γ_out & Htyped & Hcompat & _).
       rewrite Hbody in Htyped.
-      exists e, l, T_body, Γ_out, R_out, roots.
+      pose proof
+        (check_supported_non_type_generic_function_value_call_expr_sound
+          (global_env_with_local_bounds env (fn_bounds fdef))
+          (fn_outlives fdef)
+          (fn_lifetimes fdef)
+          (initial_root_env_for_fn fdef)
+          (fn_body_ctx fdef) e l Hsupported) as Hsupported_prop.
+      destruct Hsupported_prop as
+        (x & T_callee & Γ_callee & R_callee & roots_callee &
+         param_tys & ret & Hcallee_var & _ & Hinfer_callee & HTFn).
+      subst e.
+      exists x, l, T_callee, Γ_callee, R_callee, roots_callee,
+        param_tys, ret, T_body, Γ_out, R_out, roots.
       split; [reflexivity|].
-      split; [apply preservation_ready_expr_b_sound; exact Hready_callee|].
       split; [apply preservation_ready_args_b_sound; exact Hready_args|].
-      split.
-      { apply check_supported_non_type_generic_function_value_call_expr_sound.
-        exact Hsupported. }
+      split; [exact Hinfer_callee|].
+      split; [exact HTFn|].
       split.
       { eapply infer_env_roots_shadow_safe_params_nodup. exact Hinfer. }
       split; [exact Htyped|].

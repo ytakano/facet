@@ -7786,22 +7786,20 @@ Definition supported_non_type_generic_function_value_call_callee_ty_b
     (T : Ty) : bool :=
   match ty_core T with
   | TFn _ _ => true
-  | TClosure _ _ _ => true
-  | TForall _ _ body =>
-      match ty_core body with
-      | TFn _ _ => true
-      | _ => false
-      end
   | _ => false
   end.
 
 Definition check_supported_non_type_generic_function_value_call_expr
     (env : global_env) (Ω : outlives_ctx) (n : nat)
     (R : root_env) (Γ : ctx) (callee : expr) : bool :=
-  match infer_core_env_roots_shadow_safe env Ω n R Γ callee with
-  | infer_ok (T_callee, _, _, _) =>
-      supported_non_type_generic_function_value_call_callee_ty_b T_callee
-  | infer_err _ => false
+  match callee with
+  | EVar _ =>
+      match infer_core_env_roots_shadow_safe env Ω n R Γ callee with
+      | infer_ok (T_callee, _, _, _) =>
+          supported_non_type_generic_function_value_call_callee_ty_b T_callee
+      | infer_err _ => false
+      end
+  | _ => false
   end.
 
 Definition check_fn_root_shadow_non_capturing_call_provenance_summary

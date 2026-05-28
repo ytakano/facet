@@ -21,7 +21,7 @@ this roadmap.
 | T3: switch OCaml CLI to `infer_program_env_end2end` | done |
 | T4: CI enforcement of entrypoint policy | done (8bd3d82) |
 | T2a: `ECallGeneric` safety gate | blocked: generic runtime instantiation proof gap |
-| T2e: function-value parameter/local call safety gate | pending |
+| T2e: function-value parameter/local call safety gate | blocked: runtime callee bridge needed |
 | T2g: mixed lifetime/type forall roots calls | blocked: roots proof refactor needed |
 | T2b: `ELetInfer` captured closure call safety gate | pending |
 | T2f: deref/reborrow/ref-write roots coverage | pending |
@@ -33,7 +33,10 @@ With the CLI using `infer_program_env_end2end`, `sh tests/run.sh` currently has
 
 - 24 `ErrEndToEndSafetyGateFailed`
   - `ECallGeneric fname type_args args` direct-call bodies.
-  - `ECallExpr (EVar x) args` function-value calls.
+  - `ECallExpr (EVar x) args` function-value calls.  A prototype gate branch
+    accepts the checker shape but lacks a sound runtime bridge from a typed
+    callee variable to the concrete non-capturing `VClosure fname []` and its
+    callee-body summary.
   - captured closure calls through local bindings.
 - 3 mixed `for<'a, T>` function-value calls rejected as malformed HRT bodies.
   A prototype reusing `infer_mixed_forall_call_env` type-checks through
@@ -61,11 +64,18 @@ Required before accepting this gate:
 
 ### T2e: function-value parameter/local call safety gate
 
-- Add a summary case for `ECallExpr (EVar x) args` when roots/shadow-safe typing
-  proves the callee is a valid function value.
-- Extend the executable gate and soundness proof.
-- Extend captured runtime safety to route evaluated closure values through the
-  callee-body safety theorem.
+Blocked by runtime evidence.  Root/shadow-safe typing can show the callee
+variable has a function type, but the safety proof also needs evidence that the
+runtime value is a non-capturing `VClosure fname []` whose target function has a
+callee-body provenance summary.
+
+Required before accepting this gate:
+
+- Add summary evidence for `ECallExpr (EVar x) args` that records the concrete
+  callee function and proves its body summary.
+- Prove the runtime bridge from the typed callee variable lookup to that
+  non-capturing closure target.
+- Then extend the executable gate and captured runtime safety theorem.
 - Target valid failures: HRT function-parameter calls, type-forall
   function-value calls, and generic item-as-value calls.
 

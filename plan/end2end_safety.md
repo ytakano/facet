@@ -23,7 +23,7 @@ this roadmap.
 | T2a: `ECallGeneric` safety gate | blocked: generic runtime instantiation proof gap |
 | T2e: function-value parameter/local call safety gate | blocked: runtime callee bridge needed |
 | T2g: mixed lifetime/type forall roots calls | blocked: roots proof refactor needed |
-| T2b: `ELetInfer` captured closure call safety gate | pending |
+| T2b: `ELetInfer` captured closure call safety gate | blocked: captured callee return roots |
 | T2f: deref/reborrow/ref-write roots coverage | blocked: nested place root model needed |
 
 ## Current blockers
@@ -37,7 +37,9 @@ With the CLI using `infer_program_env_end2end`, `sh tests/run.sh` currently has
     accepts the checker shape but lacks a sound runtime bridge from a typed
     callee variable to the concrete non-capturing `VClosure fname []` and its
     callee-body summary.
-  - captured closure calls through local bindings.
+  - captured closure calls through local bindings.  These fail first in the
+    synthesized `__facet_closure` callee because returning a hidden capture
+    leaves roots tied to `fn_params ++ fn_captures`.
 - 3 mixed `for<'a, T>` function-value calls rejected as malformed HRT bodies.
   A prototype reusing `infer_mixed_forall_call_env` type-checks through
   `EnvTypingSoundness` but leaves `EnvRootSoundness` call-case proof fallout.
@@ -100,9 +102,17 @@ Required before accepting this gate:
 
 ### T2b: captured closure local binding safety gate
 
-- Accept `ELetInfer m x (EMakeClosure ...) (ECallExpr (EVar x) args)` with the
-  same freshness, capture, and root-exclusion checks as annotated local closure
-  calls.
+Blocked before the local wrapper.  Closure tests fail in the generated
+`__facet_closure` callee: the captured-callee gate requires roots to exclude all
+`fn_params ++ fn_captures`, but a body such as `EVar y` returns roots for hidden
+capture `y`.
+
+Required before accepting this gate:
+
+- Decide and prove how captured-callee summaries handle safe return roots that
+  originate from hidden captures.
+- Then add the `ELetInfer m x (EMakeClosure ...) (ECallExpr (EVar x) args)`
+  wrapper case with the existing freshness, capture, and root-exclusion checks.
 - Target valid failures: `tests/valid/closure/capture_*`.
 
 ### T2f: deref/reborrow/ref-write roots coverage

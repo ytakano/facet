@@ -146,6 +146,60 @@ Proof.
   apply Hnamed. exact Hin.
 Qed.
 
+Ltac solve_sctx_keys_single_ih :=
+  match goal with
+  | IH : root_env_no_shadow ?R ->
+          root_env_sctx_keys_named ?R ?Σ ->
+          root_env_sctx_keys_named ?R' ?Σ',
+    Hrn : root_env_no_shadow ?R,
+    Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
+      exact (IH Hrn Henv)
+  end.
+
+Ltac solve_sctx_keys_callee_args :=
+  match goal with
+  | Htyped : typed_env_roots_shadow_safe ?env ?Ω ?n ?R ?Σ _ _ ?Σ1 ?R1 _,
+    Hcallee : root_env_no_shadow ?R ->
+      root_env_sctx_keys_named ?R ?Σ ->
+      root_env_sctx_keys_named ?R1 ?Σ1,
+    Hargs : root_env_no_shadow ?R1 ->
+      root_env_sctx_keys_named ?R1 ?Σ1 ->
+      root_env_sctx_keys_named ?R2 ?Σ2,
+    Hrn : root_env_no_shadow ?R,
+    Hkeys : root_env_sctx_keys_named ?R ?Σ |- _ =>
+      pose proof (Hcallee Hrn Hkeys) as Hkeys1;
+      assert (Hrn1 : root_env_no_shadow R1)
+        by (eapply typed_env_roots_no_shadow;
+            [eapply typed_env_roots_shadow_safe_roots; exact Htyped
+            | exact Hrn]);
+      exact (Hargs Hrn1 Hkeys1)
+  end.
+
+Ltac solve_sctx_roots_args_union :=
+  match goal with
+  | IH : root_env_no_shadow ?R ->
+          root_env_sctx_roots_named ?R ?Σ ->
+          root_env_sctx_roots_named ?R' ?Σ' /\
+          Forall (fun roots => root_set_sctx_roots_named roots ?Σ') ?arg_roots,
+    Hrn : root_env_no_shadow ?R,
+    Henv : root_env_sctx_roots_named ?R ?Σ |- _ =>
+      destruct (IH Hrn Henv) as [Henv_args Hroots_args];
+      split;
+      [ exact Henv_args
+      | apply root_sets_sctx_roots_named_union; exact Hroots_args ]
+  end.
+
+Ltac solve_sctx_roots_single_ih :=
+  match goal with
+  | IH : root_env_no_shadow ?R ->
+          root_env_sctx_roots_named ?R ?Σ ->
+          root_env_sctx_roots_named ?R' ?Σ' /\
+          root_set_sctx_roots_named ?roots ?Σ',
+    Hrn : root_env_no_shadow ?R,
+    Henv : root_env_sctx_roots_named ?R ?Σ |- _ =>
+      exact (IH Hrn Henv)
+  end.
+
 Lemma root_env_sctx_roots_named_same_bindings :
   forall R Σ Σ',
     sctx_same_bindings Σ Σ' ->
@@ -2312,46 +2366,11 @@ Proof.
   - eapply root_env_sctx_keys_named_same_bindings.
     + eapply sctx_consume_path_same_bindings. eassumption.
     + assumption.
-  - match goal with
-    | IH : root_env_no_shadow ?R ->
-        root_env_sctx_keys_named ?R ?Σ ->
-        root_env_sctx_keys_named ?R' ?Σ',
-      Hrn : root_env_no_shadow ?R,
-      Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
-        exact (IH Hrn Henv)
-    end.
-  - match goal with
-    | IH : root_env_no_shadow ?R ->
-        root_env_sctx_keys_named ?R ?Σ ->
-        root_env_sctx_keys_named ?R' ?Σ',
-      Hrn : root_env_no_shadow ?R,
-      Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
-        exact (IH Hrn Henv)
-    end.
-  - match goal with
-    | IH : root_env_no_shadow ?R ->
-        root_env_sctx_keys_named ?R ?Σ ->
-        root_env_sctx_keys_named ?R' ?Σ',
-      Hrn : root_env_no_shadow ?R,
-      Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
-        exact (IH Hrn Henv)
-    end.
-  - match goal with
-    | IH : root_env_no_shadow ?R ->
-        root_env_sctx_keys_named ?R ?Σ ->
-        root_env_sctx_keys_named ?R' ?Σ',
-      Hrn : root_env_no_shadow ?R,
-      Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
-        exact (IH Hrn Henv)
-    end.
-  - match goal with
-    | IH : root_env_no_shadow ?R ->
-        root_env_sctx_keys_named ?R ?Σ ->
-        root_env_sctx_keys_named ?R' ?Σ',
-      Hrn : root_env_no_shadow ?R,
-      Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
-        exact (IH Hrn Henv)
-    end.
+  - solve_sctx_keys_single_ih.
+  - solve_sctx_keys_single_ih.
+  - solve_sctx_keys_single_ih.
+  - solve_sctx_keys_single_ih.
+  - solve_sctx_keys_single_ih.
   - match goal with
     | Hscrut : typed_env_roots_shadow_safe env Ω n ?R ?Σ _ _ ?Σ1 ?R1 _,
       IHscrut : root_env_no_shadow ?R ->
@@ -2428,14 +2447,7 @@ Proof.
       - eapply typed_env_roots_shadow_safe_roots. eassumption.
       - exact Hrn_add. }
     apply root_env_sctx_keys_named_remove_binding; assumption.
-  - match goal with
-    | IH : root_env_no_shadow ?R ->
-        root_env_sctx_keys_named ?R ?Σ ->
-        root_env_sctx_keys_named ?R' ?Σ',
-      Hrn : root_env_no_shadow ?R,
-      Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
-        exact (IH Hrn Henv)
-    end.
+  - solve_sctx_keys_single_ih.
   - match goal with
     | IH : root_env_no_shadow ?R ->
         root_env_sctx_keys_named ?R ?Σ ->
@@ -2475,23 +2487,7 @@ Proof.
     eapply root_env_sctx_keys_named_same_bindings.
     + eapply ctx_merge_same_bindings_left. eassumption.
     + eassumption.
-  - match goal with
-    | Htyped1 : typed_env_roots_shadow_safe env Ω n ?R ?Σ _ _ ?Σ1 ?R1 _,
-      Hexpr : root_env_no_shadow ?R ->
-        root_env_sctx_keys_named ?R ?Σ ->
-        root_env_sctx_keys_named ?R1 ?Σ1,
-      Hargs : root_env_no_shadow ?R1 ->
-        root_env_sctx_keys_named ?R1 ?Σ1 ->
-        root_env_sctx_keys_named ?R2 ?Σ2,
-      Hrn : root_env_no_shadow ?R,
-      Hkeys : root_env_sctx_keys_named ?R ?Σ |- _ =>
-        pose proof (Hexpr Hrn Hkeys) as Hkeys1;
-        assert (Hrn1 : root_env_no_shadow R1)
-          by (eapply typed_env_roots_no_shadow;
-              [eapply typed_env_roots_shadow_safe_roots; exact Htyped1
-              | exact Hrn]);
-        exact (Hargs Hrn1 Hkeys1)
-    end.
+  - solve_sctx_keys_callee_args.
   - match goal with
     | Hfield : root_env_no_shadow ?R ->
         root_env_sctx_keys_named ?R ?Σ ->
@@ -2562,63 +2558,11 @@ Proof.
     + eapply root_set_sctx_roots_named_same_bindings.
       * eapply sctx_consume_path_same_bindings. eassumption.
       * eapply root_env_lookup_sctx_roots_named; eassumption.
-  - match goal with
-    | IH : root_env_no_shadow ?R ->
-        root_env_sctx_roots_named ?R ?Σ ->
-        root_env_sctx_roots_named ?R' ?Σ' /\
-        Forall (fun roots => root_set_sctx_roots_named roots ?Σ') ?arg_roots,
-      Hrn : root_env_no_shadow ?R,
-      Henv : root_env_sctx_roots_named ?R ?Σ |- _ =>
-        destruct (IH Hrn Henv) as [Henv_args Hroots_args];
-        split;
-        [ exact Henv_args
-        | apply root_sets_sctx_roots_named_union; exact Hroots_args ]
-    end.
-  - match goal with
-    | IH : root_env_no_shadow ?R ->
-        root_env_sctx_roots_named ?R ?Σ ->
-        root_env_sctx_roots_named ?R' ?Σ' /\
-        Forall (fun roots => root_set_sctx_roots_named roots ?Σ') ?arg_roots,
-      Hrn : root_env_no_shadow ?R,
-      Henv : root_env_sctx_roots_named ?R ?Σ |- _ =>
-        destruct (IH Hrn Henv) as [Henv_args Hroots_args];
-        split;
-        [ exact Henv_args
-        | apply root_sets_sctx_roots_named_union; exact Hroots_args ]
-    end.
-  - match goal with
-    | IH : root_env_no_shadow ?R ->
-        root_env_sctx_roots_named ?R ?Σ ->
-        root_env_sctx_roots_named ?R' ?Σ' /\
-        Forall (fun roots => root_set_sctx_roots_named roots ?Σ') ?arg_roots,
-      Hrn : root_env_no_shadow ?R,
-      Henv : root_env_sctx_roots_named ?R ?Σ |- _ =>
-        destruct (IH Hrn Henv) as [Henv_args Hroots_args];
-        split;
-        [ exact Henv_args
-        | apply root_sets_sctx_roots_named_union; exact Hroots_args ]
-    end.
-  - match goal with
-    | IH : root_env_no_shadow ?R ->
-        root_env_sctx_roots_named ?R ?Σ ->
-        root_env_sctx_roots_named ?R' ?Σ' /\
-        root_set_sctx_roots_named ?roots ?Σ',
-      Hrn : root_env_no_shadow ?R,
-      Henv : root_env_sctx_roots_named ?R ?Σ |- _ =>
-        exact (IH Hrn Henv)
-    end.
-  - match goal with
-    | IH : root_env_no_shadow ?R ->
-        root_env_sctx_roots_named ?R ?Σ ->
-        root_env_sctx_roots_named ?R' ?Σ' /\
-        Forall (fun roots => root_set_sctx_roots_named roots ?Σ') ?arg_roots,
-      Hrn : root_env_no_shadow ?R,
-      Henv : root_env_sctx_roots_named ?R ?Σ |- _ =>
-        destruct (IH Hrn Henv) as [Henv_args Hroots_args];
-        split;
-        [ exact Henv_args
-        | apply root_sets_sctx_roots_named_union; exact Hroots_args ]
-    end.
+  - solve_sctx_roots_args_union.
+  - solve_sctx_roots_args_union.
+  - solve_sctx_roots_args_union.
+  - solve_sctx_roots_single_ih.
+  - solve_sctx_roots_args_union.
 	  - destruct (H H2 H3) as [Henv1 Hroots_scrut_named].
 	    assert (Hrn1 : root_env_no_shadow R1)
 	      by (eapply typed_env_roots_no_shadow;

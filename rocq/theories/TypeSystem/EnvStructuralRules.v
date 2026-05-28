@@ -958,6 +958,22 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
         infer_ok captured_tys ->
       typed_env_roots env Ω n R Σ (EMakeClosure fname captures)
         (closure_value_ty fdef captured_tys) Σ R []
+  | TER_CallExpr_Fn : forall R R1 R' Σ Σ1 Σ' callee args u
+      param_tys ret arg_roots roots_callee,
+      typed_env_roots env Ω n R Σ callee (MkTy u (TFn param_tys ret))
+        Σ1 R1 roots_callee ->
+      typed_args_roots env Ω n R1 Σ1 args (params_of_tys param_tys)
+        Σ' R' arg_roots ->
+      typed_env_roots env Ω n R Σ (ECallExpr callee args) ret
+        Σ' R' (root_set_union roots_callee (root_sets_union arg_roots))
+  | TER_CallExpr_Closure : forall R R1 R' Σ Σ1 Σ' callee args u
+      env_lt param_tys ret arg_roots roots_callee,
+      typed_env_roots env Ω n R Σ callee (MkTy u (TClosure env_lt param_tys ret))
+        Σ1 R1 roots_callee ->
+      typed_args_roots env Ω n R1 Σ1 args (params_of_tys param_tys)
+        Σ' R' arg_roots ->
+      typed_env_roots env Ω n R Σ (ECallExpr callee args) ret
+        Σ' R' (root_set_union roots_callee (root_sets_union arg_roots))
   | TER_CallExpr_MakeClosure : forall R R' Σ Σ' fname fdef captures
       env_lt captured_tys args σ arg_roots,
       In fdef (env_fns env) ->
@@ -1591,6 +1607,52 @@ Proof.
     + exact HnsR0.
     + exact HR0.
     + apply root_set_equiv_refl.
+  - intros R R1 R' Σ Σ1 Σ' callee args u param_tys ret arg_roots
+      roots_callee Hcallee IHcallee Hargs IHargs Hfresh R0 HnsR HnsR0 HR0.
+    rewrite expr_local_store_names_call_expr in Hfresh.
+    apply root_subst_images_exclude_names_app_inv in Hfresh.
+    destruct Hfresh as [Hfresh_callee Hfresh_args].
+    assert (HnsR1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow; [exact Hcallee | exact HnsR]. }
+    destruct (IHcallee Hfresh_callee R0 HnsR HnsR0 HR0)
+      as [R10 [roots_callee0 [Hcallee0 [HnsR10 [HR10 Hroots_callee0]]]]].
+    destruct (IHargs Hfresh_args R10 HnsR1 HnsR10 HR10)
+      as [R0' [arg_roots0 [Hargs0 [HnsR0' [HR0' Harg_roots0]]]]].
+    exists R0', (root_set_union roots_callee0 (root_sets_union arg_roots0)).
+    split; [| split; [| split]].
+    + eapply TER_CallExpr_Fn; eauto.
+    + exact HnsR0'.
+    + exact HR0'.
+    + eapply root_set_equiv_trans.
+      * apply root_set_union_equiv.
+        -- exact Hroots_callee0.
+        -- eapply root_set_equiv_trans.
+           ++ apply root_sets_union_equiv. exact Harg_roots0.
+           ++ apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
+      * apply root_set_equiv_sym. apply root_set_instantiate_union_equiv.
+  - intros R R1 R' Σ Σ1 Σ' callee args u env_lt param_tys ret arg_roots
+      roots_callee Hcallee IHcallee Hargs IHargs Hfresh R0 HnsR HnsR0 HR0.
+    rewrite expr_local_store_names_call_expr in Hfresh.
+    apply root_subst_images_exclude_names_app_inv in Hfresh.
+    destruct Hfresh as [Hfresh_callee Hfresh_args].
+    assert (HnsR1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow; [exact Hcallee | exact HnsR]. }
+    destruct (IHcallee Hfresh_callee R0 HnsR HnsR0 HR0)
+      as [R10 [roots_callee0 [Hcallee0 [HnsR10 [HR10 Hroots_callee0]]]]].
+    destruct (IHargs Hfresh_args R10 HnsR1 HnsR10 HR10)
+      as [R0' [arg_roots0 [Hargs0 [HnsR0' [HR0' Harg_roots0]]]]].
+    exists R0', (root_set_union roots_callee0 (root_sets_union arg_roots0)).
+    split; [| split; [| split]].
+    + eapply TER_CallExpr_Closure; eauto.
+    + exact HnsR0'.
+    + exact HR0'.
+    + eapply root_set_equiv_trans.
+      * apply root_set_union_equiv.
+        -- exact Hroots_callee0.
+        -- eapply root_set_equiv_trans.
+           ++ apply root_sets_union_equiv. exact Harg_roots0.
+           ++ apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
+      * apply root_set_equiv_sym. apply root_set_instantiate_union_equiv.
   - intros R R' Σ Σ' fname fdef captures env_lt captured_tys args σ
       arg_roots Hin Hfname Hcaptures Hargs IHargs Hout Hfresh R0 HnsR HnsR0
       HR0.

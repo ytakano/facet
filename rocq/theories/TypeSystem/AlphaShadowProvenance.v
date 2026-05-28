@@ -4028,6 +4028,8 @@ Proof.
   apply typed_roots_ind; intros; subst; try assumption.
   - eapply H. exact H0.
   - eapply H. exact H0.
+  - eapply H0. eapply H. exact H1.
+  - eapply H0. eapply H. exact H1.
   - eapply H. exact H0.
   - eapply H. exact H0.
   - eapply H. exact H0.

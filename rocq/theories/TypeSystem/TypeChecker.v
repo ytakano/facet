@@ -7883,8 +7883,8 @@ Definition check_fn_root_shadow_captured_callee_provenance_summary
   match infer_env_roots_shadow_safe env fdef
           (initial_root_env_for_params (fn_params fdef ++ fn_captures fdef)) with
   | infer_ok (_, _, R_out, roots) =>
-      fn_params_roots_exclude_b (fn_params fdef ++ fn_captures fdef) roots &&
-      fn_params_root_env_excludes_b (fn_params fdef ++ fn_captures fdef) R_out
+      fn_params_roots_exclude_b (fn_params fdef) roots &&
+      fn_params_root_env_excludes_b (fn_params fdef) R_out
   | infer_err _ => false
   end.
 

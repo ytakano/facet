@@ -11610,6 +11610,29 @@ let local_fn_value_call_target_expr = function
    | _ -> None)
 | _ -> None
 
+(** val supported_non_type_generic_function_value_call_callee_ty_b :
+    ty -> bool **)
+
+let supported_non_type_generic_function_value_call_callee_ty_b t =
+  match ty_core t with
+  | TFn (_, _) -> true
+  | _ -> false
+
+(** val check_supported_non_type_generic_function_value_call_expr :
+    global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx ->
+    expr -> bool **)
+
+let check_supported_non_type_generic_function_value_call_expr env _UU03a9_ n r _UU0393_ callee = match callee with
+| EVar _ ->
+  (match infer_core_env_roots_shadow_safe env _UU03a9_ n r _UU0393_ callee with
+   | Infer_ok p ->
+     let (p0, _) = p in
+     let (p1, _) = p0 in
+     let (t_callee, _) = p1 in
+     supported_non_type_generic_function_value_call_callee_ty_b t_callee
+   | Infer_err _ -> false)
+| _ -> false
+
 (** val check_fn_root_shadow_non_capturing_call_provenance_summary :
     global_env -> fn_def -> bool **)
 
@@ -11638,8 +11661,13 @@ let check_fn_root_shadow_non_capturing_call_provenance_summary env fdef =
           (match fdef.fn_body with
            | ECallExpr (callee, args) ->
              (&&)
-               ((&&) (preservation_ready_expr_b callee)
-                 (preservation_ready_args_b args))
+               ((&&)
+                 ((&&) (preservation_ready_expr_b callee)
+                   (preservation_ready_args_b args))
+                 (check_supported_non_type_generic_function_value_call_expr
+                   (global_env_with_local_bounds env fdef.fn_bounds)
+                   fdef.fn_outlives fdef.fn_lifetimes
+                   (initial_root_env_for_fn fdef) (fn_body_ctx fdef) callee))
                (match infer_env_roots_shadow_safe env fdef
                         (initial_root_env_for_fn fdef) with
                 | Infer_ok p ->
@@ -11708,11 +11736,8 @@ let check_fn_root_shadow_captured_callee_provenance_summary env fdef =
      | Infer_ok p ->
        let (p0, roots) = p in
        let (_, r_out) = p0 in
-       (&&)
-         (fn_params_roots_exclude_b (app fdef.fn_params fdef.fn_captures)
-           roots)
-         (fn_params_root_env_excludes_b (app fdef.fn_params fdef.fn_captures)
-           r_out)
+       (&&) (fn_params_roots_exclude_b fdef.fn_params roots)
+         (fn_params_root_env_excludes_b fdef.fn_params r_out)
      | Infer_err _ -> false)
 
 (** val capture_root_bound :

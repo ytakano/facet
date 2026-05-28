@@ -24,8 +24,8 @@ this roadmap.
 | T2e.1: monomorphic `TFn` variable call safety gate | done |
 | T2e.2: HRT/closure function-value calls | blocked: runtime callee bridge needed |
 | T2g: mixed lifetime/type forall roots calls | done |
-| T2b.1: captured callee return-root evidence | in progress |
-| T2b.2: captured closure runtime safety | pending |
+| T2b.1: captured callee return-root evidence | done |
+| T2b.2: captured closure runtime safety | in progress |
 | T2b.3: captured closure regressions | pending |
 | T2f: deref/reborrow/ref-write roots coverage | blocked: nested place root model needed |
 
@@ -119,7 +119,7 @@ return roots from hidden captures, but must still exclude ordinary params.
 
 T2b tasks:
 
-- T2b.1: relax captured-callee summaries/checkers to allow return roots from
+- Done: relax captured-callee summaries/checkers to allow return roots from
   `fn_captures` while preserving param exclusion, readiness, typing, and
   capture exactness.
 - T2b.2: update captured-call runtime proofs so returned roots are bounded by

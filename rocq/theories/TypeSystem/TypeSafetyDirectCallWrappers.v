@@ -466,3 +466,68 @@ Proof.
       eval_preserves_param_scope_roots_ready_mutual);
     eassumption.
 Qed.
+
+
+Lemma eval_empty_closure_call_expr_components_as_direct_call :
+  forall env s s_fn s_args s_body callee args fname fdef fcall vs ret used',
+    eval env s callee s_fn (VClosure fname []) ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    fn_captures fdef = [] ->
+    eval_args env s_fn args s_args vs ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    eval env (bind_params (fn_params fcall) vs s_args)
+      (fn_body fcall) s_body ret ->
+    eval env s_fn (ECall fname args)
+      (store_remove_params (fn_params fcall) s_body) ret.
+Proof.
+  intros env s s_fn s_args s_body callee args fname fdef fcall vs ret
+    used' _ Hlookup Hcaps Heval_args Hrename Heval_body.
+  eapply Eval_Call; eassumption.
+Qed.
+
+Theorem eval_empty_closure_call_expr_components_preserve_typing_with_callee_summary :
+  forall env s s_fn s_args s_body callee fname args fdef fcall vs ret used',
+    eval env s callee s_fn (VClosure fname []) ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    fn_captures fdef = [] ->
+    eval_args env s_fn args s_args vs ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    eval env (bind_params (fn_params fcall) vs s_args)
+      (fn_body fcall) s_body ret ->
+    forall (Omega : outlives_ctx) (n : nat) R Sigma T Sigma' R' roots fsummary,
+      preservation_ready_args args ->
+      store_typed env s_fn Sigma ->
+      store_roots_within R s_fn ->
+      store_no_shadow s_fn ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s_fn ->
+      root_env_store_keys_named R s_fn ->
+      typed_env_roots env Omega n R Sigma (ECall fname args) T Sigma' R' roots ->
+      fn_env_unique_by_name env ->
+      In fsummary (env_fns env) ->
+      fn_name fsummary = fname ->
+      callee_body_root_shadow_provenance_summary env fsummary ->
+      store_typed env (store_remove_params (fn_params fcall) s_body) Sigma' /\
+      value_has_type env (store_remove_params (fn_params fcall) s_body)
+        ret T /\
+      store_ref_targets_preserved env s_fn
+        (store_remove_params (fn_params fcall) s_body) /\
+      store_roots_within R'
+        (store_remove_params (fn_params fcall) s_body) /\
+      value_roots_within roots ret /\
+      store_no_shadow (store_remove_params (fn_params fcall) s_body) /\
+      root_env_no_shadow R'.
+Proof.
+  intros env s s_fn s_args s_body callee fname args fdef fcall vs ret
+    used' Heval_callee Hlookup Hcaps Heval_args Hrename Heval_body Omega n R
+    Sigma T Sigma' R' roots fsummary Hready_args Hstore Hroots Hshadow Hrn
+    Hnamed Hkeys Htyped Hunique Hin_summary Hfname_summary
+    Hcallee_summary.
+  pose proof
+    (eval_empty_closure_call_expr_components_as_direct_call
+      env s s_fn s_args s_body callee args fname fdef fcall vs ret used'
+      Heval_callee Hlookup Hcaps Heval_args Hrename Heval_body)
+    as Heval_call.
+  eapply eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary;
+    eassumption.
+Qed.

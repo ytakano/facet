@@ -75,6 +75,8 @@ Required before accepting this gate:
 
 - Done prep: add checker/Prop summary evidence for general
   `ECallExpr callee args` function-value calls.
+- Done prep: add an empty-capture `ECallExpr` runtime helper that reuses the
+  direct-call callee summary route after callee inversion.
 - Prove the runtime bridge from the typed callee variable lookup to that
   non-capturing closure target.
 - Then extend the executable gate and captured runtime safety theorem.

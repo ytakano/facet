@@ -411,12 +411,13 @@ Proof.
     as [Htyped_fn _].
   unfold typed_fn_env_roots in Htyped_fn.
   destruct Htyped_fn as [T_body [Γ_out [Htyped _]]].
-  unfold initial_store_for_fn in Hstore.
+  pose proof (initial_store_for_fn_store_typed env f s Hstore)
+    as Hstore_typed.
   pose (body_env := global_env_with_local_bounds env (fn_bounds f)).
   assert (Hstore_body_env :
       store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
   { subst body_env.
-    eapply store_typed_global_env_with_local_bounds. exact Hstore. }
+    eapply store_typed_global_env_with_local_bounds. exact Hstore_typed. }
   assert (Heval_body_env : eval body_env s (fn_body f) s' v).
   { subst body_env.
     eapply eval_global_env_with_local_bounds. exact Heval. }

@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Types Syntax PathState Program Renaming TypingRules RootProvenance TypeChecker EnvStructuralRules.
+From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program Renaming TypingRules RootProvenance TypeChecker EnvStructuralRules.
 From Facet.TypeSystem Require Export ExprFacts AlphaCore AlphaCtx AlphaPlace AlphaExpr AlphaFn AlphaTyping AlphaEnvStructural.
 From Stdlib Require Import List String Bool Lia PeanoNat Program.Equality.
 Import ListNotations.
@@ -283,6 +283,19 @@ Inductive typed_env_roots_shadow_safe
       typed_env_roots_shadow_safe env Ω n R Σ (ECallExpr callee args)
         (subst_type_params_ty type_args ret_inner)
         Σ' R' (root_set_union roots_callee (root_sets_union arg_roots))
+  | TERS_CallExpr_Forall_Fn : forall R R1 R' Σ Σ1 Σ' callee args u
+      m bounds body_ty param_tys ret σ arg_roots roots_callee,
+      (forall fname caps, callee <> EMakeClosure fname caps) ->
+      typed_env_roots_shadow_safe env Ω n R Σ callee
+        (MkTy u (TForall m bounds body_ty)) Σ1 R1 roots_callee ->
+      ty_core body_ty = TFn param_tys ret ->
+      contains_lbound_ty (open_bound_ty σ ret) = false ->
+      contains_lbound_outlives (open_bound_outlives σ bounds) = false ->
+      Forall (fun '(a, b) => outlives Ω a b) (open_bound_outlives σ bounds) ->
+      typed_args_roots_shadow_safe env Ω n R1 Σ1 args
+        (params_of_tys (map (open_bound_ty σ) param_tys)) Σ' R' arg_roots ->
+      typed_env_roots_shadow_safe env Ω n R Σ (ECallExpr callee args)
+        (open_bound_ty σ ret) Σ' R' (root_set_union roots_callee (root_sets_union arg_roots))
   | TERS_Struct : forall R R' Σ Σ' sname lts args fields sdef roots,
       Program.lookup_struct sname env = Some sdef ->
       Datatypes.length lts = Program.struct_lifetimes sdef ->
@@ -991,6 +1004,32 @@ Proof.
         -- eapply root_set_equiv_trans.
            ++ apply root_sets_union_equiv. exact Harg_roots0.
            ++ apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
+      * apply root_set_equiv_sym. apply root_set_instantiate_union_equiv.
+  - intros R R1 R' Σ Σ1 Σ' callee args u m bounds body_ty param_tys ret σ
+      arg_roots roots_callee Hnot_mc Hcallee IHcallee Hbody Hret_ok Hbounds_ok
+      Hout Hargs IHargs Hfresh R0 HnsR HnsR0 HR0.
+    rewrite expr_local_store_names_call_expr in Hfresh.
+    apply root_subst_images_exclude_names_app_inv in Hfresh.
+    destruct Hfresh as [Hfresh_callee Hfresh_args].
+    destruct (IHcallee Hfresh_callee R0 HnsR HnsR0 HR0)
+      as [R10 [roots_callee0 [Hcallee0 [HnsR10 [HR10 Hroots_callee0]]]]].
+    assert (Hns_R1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow.
+      - eapply typed_env_roots_shadow_safe_roots. exact Hcallee.
+      - exact HnsR. }
+    destruct (IHargs Hfresh_args R10 Hns_R1 HnsR10 HR10)
+      as [R20 [arg_roots0 [Hargs0 [HnsR20 [HR20 Harg_roots0]]]]].
+    exists R20, (root_set_union roots_callee0 (root_sets_union arg_roots0)).
+    split; [| split; [| split]].
+    + eapply TERS_CallExpr_Forall_Fn; eauto.
+    + exact HnsR20.
+    + exact HR20.
+    + eapply root_set_equiv_trans.
+      * apply root_set_union_equiv.
+       -- exact Hroots_callee0.
+       -- eapply root_set_equiv_trans.
+          ++ apply root_sets_union_equiv. exact Harg_roots0.
+          ++ apply root_set_equiv_sym. apply root_sets_instantiate_union_equiv.
       * apply root_set_equiv_sym. apply root_set_instantiate_union_equiv.
   - intros R R' Σ Σ' sname lts args fields sdef roots Hlookup Hlen_lts
       Hlen_args Hbounds Hfields IHfields Hfresh R0 HnsR HnsR0 HR0.

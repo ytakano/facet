@@ -313,36 +313,15 @@ let () =
   in
   let env_for_checker = alpha_normalize_global_env env in
   let diagnostics = diagnostic_map_of_envs env env_for_checker in
-  let fn_defs = env_for_checker.env_fns in
-  (* Type check each function.
-     Primary path: infer_full_env_roots — proven type-safe by
-       Theorem infer_full_env_roots_big_step_safe_ready.
-     Fallback (ErrNotImplemented only): infer_full_env — proven sound by
-       Theorem infer_sound (CheckerSoundness.v).
-     The fallback is used only when the roots checker does not yet implement
-     the expression form (e.g. ECallExpr on function values). *)
   let ok = ref true in
-  List.iter (fun f ->
-    let (fname, _) = f.fn_name in
-    let r0 = initial_root_env_for_params (f.fn_params @ f.fn_captures) in
-    let result =
-      match infer_full_env_roots env_for_checker f r0 with
-      | Infer_ok (((ty, ctx), _root_env), _roots) -> Ok (ty, ctx)
-      | Infer_err ErrNotImplemented ->
-        (* Fall back to ordinary checker for expression forms not yet handled
-           by the roots checker (e.g. ECallExpr on function values). *)
-        (match infer_full_env env_for_checker f with
-         | Infer_ok (ty, ctx) -> Ok (ty, ctx)
-         | Infer_err err -> Error err)
-      | Infer_err err -> Error err
-    in
-    match result with
-    | Error e ->
-      Printf.eprintf "Type error in function '%s': %s\n"
-        fname (string_of_infer_error ~diagnostics e);
-      ok := false
-    | Ok _ ->
+  (match infer_program_env_end2end env_for_checker with
+  | Infer_ok env' ->
+    List.iter (fun f ->
+      let (fname, _) = f.fn_name in
       Printf.printf "OK: %s\n" fname
-  ) fn_defs;
+    ) env'.env_fns
+  | Infer_err e ->
+    Printf.eprintf "Type error: %s\n" (string_of_infer_error ~diagnostics e);
+    ok := false);
   if not !ok then exit 1;
   Option.iter (fun fname -> Fir.emit_fir fname env_for_checker) !emit_fir_file

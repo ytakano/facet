@@ -816,6 +816,10 @@ val wf_outlives_b : region_ctx -> outlives_ctx -> bool
 
 val outlives_constraints_hold_b : outlives_ctx -> outlives_ctx -> bool
 
+val infer_hrt_call_env :
+  outlives_ctx -> Big_int_Z.big_int -> outlives_ctx -> ty -> ty list -> ty
+  infer_result
+
 val open_core_trait_bounds :
   lifetime option list -> ty core_trait_bound list -> ty core_trait_bound list
 

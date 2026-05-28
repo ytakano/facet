@@ -1639,6 +1639,30 @@ Definition wf_outlives_b (Δ : region_ctx) (Ω : outlives_ctx) : bool :=
 Definition outlives_constraints_hold_b (Ω : outlives_ctx) (constraints : outlives_ctx) : bool :=
   forallb (fun '(a, b) => outlives_b Ω a b) constraints.
 
+(* Infer the return type for a HRT (for<'a,...> fn(&...) -> ...) call.
+   Used by the roots checker to handle TForall callee types. *)
+Definition infer_hrt_call_env
+    (Ω : outlives_ctx) (m : nat) (bounds : outlives_ctx) (body : Ty) (arg_tys : list Ty)
+    : infer_result Ty :=
+  match ty_core body with
+  | TFn param_tys ret =>
+      match build_bound_sigma (repeat None m) arg_tys param_tys with
+      | None => infer_err ErrLifetimeConflict
+      | Some σ =>
+          match check_arg_tys Ω arg_tys (map (open_bound_ty σ) param_tys) with
+          | Some err => infer_err err
+          | None =>
+              if contains_lbound_ty (open_bound_ty σ ret) ||
+                 contains_lbound_outlives (open_bound_outlives σ bounds)
+              then infer_err ErrHrtUnresolvedBound
+              else if outlives_constraints_hold_b Ω (open_bound_outlives σ bounds)
+                   then infer_ok (open_bound_ty σ ret)
+                   else infer_err ErrHrtBoundUnsatisfied
+          end
+      end
+  | c => infer_err (ErrMalformedHrtBody c)
+  end.
+
 Definition open_core_trait_bounds
     (σ : list (option lifetime)) (bounds : list (core_trait_bound Ty))
     : list (core_trait_bound Ty) :=
@@ -5725,6 +5749,13 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
                      infer_ok (ret, Σ', R',
                        root_set_union roots_callee (root_sets_union arg_roots))
                  end
+              | TForall m bounds body =>
+                  match infer_hrt_call_env Ω m bounds body arg_tys with
+                  | infer_err err => infer_err err
+                  | infer_ok ret =>
+                      infer_ok (ret, Σ', R',
+                        root_set_union roots_callee (root_sets_union arg_roots))
+                  end
               | _ => infer_err ErrNotImplemented
               end
           end
@@ -6450,6 +6481,13 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
                      infer_ok (ret, Σ', R',
                        root_set_union roots_callee (root_sets_union arg_roots))
                  end
+              | TForall m bounds body =>
+                  match infer_hrt_call_env Ω m bounds body arg_tys with
+                  | infer_err err => infer_err err
+                  | infer_ok ret =>
+                      infer_ok (ret, Σ', R',
+                        root_set_union roots_callee (root_sets_union arg_roots))
+                  end
               | _ => infer_err ErrNotImplemented
               end
           end

@@ -605,6 +605,42 @@ Proof.
   - eapply TERS_LetInfer; eauto.
 Qed.
 
+Lemma expr_root_shadow_store_safe_narrow_summary_alpha_rename_let_body_no_collision_from_summary :
+  forall env Omega n rho Sigma1 Sigma2 Sigma1r R1 R2 roots1 roots2
+      x xr T m e2 T2 ret_roots,
+    ctx_alpha rho Sigma1 Sigma1r ->
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n (root_env_add x roots1 R1) (sctx_add x T m Sigma1)
+      e2 T2 Sigma2 R2 roots2 ret_roots ->
+    root_env_no_shadow (root_env_add x roots1 R1) ->
+    root_env_sctx_keys_named (root_env_add x roots1 R1)
+      (sctx_add x T m Sigma1) ->
+    ~ In xr (ctx_names Sigma1r) ->
+    rename_no_collision_on rho (root_env_names (root_env_remove x R2)) ->
+    rename_no_collision_on ((x, xr) :: rho) (root_env_names R2).
+Proof.
+  intros env Omega n rho Sigma1 Sigma2 Sigma1r R1 R2 roots1 roots2
+    x xr T m e2 T2 ret_roots Hctx Hsummary Hns_add Hkeys_add
+    Hfresh Hnocoll.
+  pose proof (expr_root_shadow_store_safe_narrow_summary_typed
+    env Omega n (root_env_add x roots1 R1) (sctx_add x T m Sigma1)
+    e2 T2 Sigma2 R2 roots2 ret_roots Hsummary) as Htyped.
+  assert (HnsR2 : root_env_no_shadow R2).
+  { eapply typed_env_roots_no_shadow.
+    - eapply typed_env_roots_shadow_safe_roots. exact Htyped.
+    - exact Hns_add. }
+  assert (HkeysR2 : root_env_sctx_keys_named R2 Sigma2).
+  { destruct (typed_roots_shadow_safe_sctx_keys_named_mutual env Omega n)
+      as [Hkeys_env _].
+    eapply Hkeys_env; eassumption. }
+  assert (Hsame : sctx_same_bindings (sctx_add x T m Sigma1) Sigma2).
+  { eapply typed_env_structural_same_bindings.
+    eapply typed_env_roots_structural.
+    eapply typed_env_roots_shadow_safe_roots. exact Htyped. }
+  eapply expr_root_shadow_store_safe_narrow_summary_alpha_rename_let_body_no_collision;
+    eassumption.
+Qed.
+
 Lemma expr_root_shadow_store_safe_narrow_summary_runtime_names_from_store_typed :
   forall env Omega n R Σ e T Σ' R' roots ret_roots s s',
     expr_root_shadow_store_safe_narrow_summary

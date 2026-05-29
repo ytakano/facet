@@ -171,6 +171,8 @@ T2e.2 tasks:
   store-safe summaries.
 - Done prep: factor renamed `let` root-exclusion and collision side
   conditions for narrow alpha preservation.
+- Done prep: derive renamed `let` body no-collision from narrow
+  summaries.
 - Blocked: direct `ECall` still requires old
   `callee_body_root_shadow_provenance_summary` evidence.  To accept
   `caller` in `hrt_call_twice`, first finish narrow-summary preservation across

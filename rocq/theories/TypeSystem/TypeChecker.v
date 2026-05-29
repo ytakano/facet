@@ -8348,6 +8348,33 @@ Definition check_fn_root_shadow_captured_call_provenance_summary
       end)
   end.
 
+Definition check_fn_root_shadow_captured_call_store_safe_summary
+    (env : global_env) (fdef : fn_def) : bool :=
+  check_fn_root_shadow_captured_call_provenance_summary env fdef ||
+  match infer_core_env_roots_shadow_safe env
+              (fn_outlives fdef)
+              (fn_lifetimes fdef)
+              (initial_root_env_for_fn fdef)
+              (fn_body_ctx fdef)
+              (fn_body fdef),
+            infer_env_roots_shadow_safe env fdef
+              (initial_root_env_for_fn fdef) with
+  | infer_ok (T_body, _, R_out, roots), infer_ok _ =>
+      check_expr_root_shadow_store_safe_narrow_summary
+        env (fn_outlives fdef) (fn_lifetimes fdef)
+        (initial_root_env_for_fn fdef)
+        (fn_body_ctx fdef) (fn_body fdef) &&
+      ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) &&
+      fn_params_roots_exclude_b (fn_params fdef) roots &&
+      fn_params_root_env_excludes_b (fn_params fdef) R_out
+  | _, _ => false
+  end.
+
+Definition check_env_root_shadow_captured_call_store_safe_summary
+    (env : global_env) : bool :=
+  forallb (check_fn_root_shadow_captured_call_store_safe_summary env)
+    (env_fns env).
+
 Definition check_env_root_shadow_direct_call_provenance_summary
     (env : global_env) : bool :=
   forallb (check_fn_root_shadow_direct_call_provenance_summary env)

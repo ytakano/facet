@@ -124,8 +124,10 @@ T2e.2 tasks:
   sequential-let runtime route.
 - Done prep: move the non-function value classifier into the checker and
   require narrow `let` bindings to be non-function values.
-- Next: wire the store-safe summary into function-level safety for sequential
-  `let` bodies; current target: `hrt_call_twice`.
+- Done prep: add a combined captured-call/store-safe checker helper without
+  routing the end-to-end entrypoint to it yet.
+- Next: prove the combined runtime safety/readiness theorem, then route
+  `infer_fn_env_end2end` through the combined gate; current target: `hrt_call_twice`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.
 
 Out of scope for T2e.2:

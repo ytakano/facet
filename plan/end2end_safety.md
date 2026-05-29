@@ -161,6 +161,8 @@ T2e.2 tasks:
   Prop-level callee typing instead of executable `EVar` inference witnesses.
 - Done prep: prove structural root-instantiation preservation for
   narrow store-safe summaries.
+- Done prep: prove store-safe direct-call argument evidence is
+  preserved by alpha-renaming.
 - Blocked: direct `ECall` still requires old
   `callee_body_root_shadow_provenance_summary` evidence.  To accept
   `caller` in `hrt_call_twice`, first prove narrow-summary preservation across

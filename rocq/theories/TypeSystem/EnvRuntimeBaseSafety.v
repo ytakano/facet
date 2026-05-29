@@ -306,6 +306,78 @@ Proof.
       * apply IH. exact Hrest.
 Qed.
 
+Lemma store_safe_function_value_call_arg_alpha_rename_expr :
+  forall env rho used arg ar used',
+    store_safe_function_value_call_arg env arg ->
+    alpha_rename_expr rho used arg = (ar, used') ->
+    store_safe_function_value_call_arg env ar.
+Proof.
+  intros env rho used arg ar used' Harg Hrename.
+  destruct Harg as [x | fname fdef Hin Hname Hsummary];
+    simpl in Hrename; inversion Hrename; subst.
+  - constructor.
+  - eapply SSFVCArg_Fn; eauto.
+Qed.
+
+Lemma store_safe_function_value_call_args_alpha_rename_exprs :
+  forall env rho used args argsr used',
+    store_safe_function_value_call_args env args ->
+    alpha_rename_exprs rho used args = (argsr, used') ->
+    store_safe_function_value_call_args env argsr.
+Proof.
+  intros env rho used args.
+  revert used.
+  induction args as [| arg rest IH];
+    intros used argsr used' Hargs Hrename; simpl in Hrename.
+  - inversion Hrename; subst. constructor.
+  - inversion Hargs; subst.
+    destruct (alpha_rename_expr rho used arg) as [ar used1] eqn:Harg.
+    destruct (alpha_rename_exprs rho used1 rest) as [restr used2]
+      eqn:Hrest.
+    inversion Hrename; subst.
+    constructor.
+    + eapply store_safe_function_value_call_arg_alpha_rename_expr;
+        eassumption.
+    + eapply IH; eassumption.
+Qed.
+
+Lemma store_safe_function_value_call_args_alpha_rename_call_go :
+  forall env rho used args argsr used',
+    store_safe_function_value_call_args env args ->
+    ((fix go (used0 : list ident) (args0 : list expr)
+        : list expr * list ident :=
+        match args0 with
+        | [] => ([], used0)
+        | arg :: rest =>
+            let (arg', used1) := alpha_rename_expr rho used0 arg in
+            let (rest', used2) := go used1 rest in
+            (arg' :: rest', used2)
+        end) used args) = (argsr, used') ->
+    store_safe_function_value_call_args env argsr.
+Proof.
+  intros env rho used args.
+  revert used.
+  induction args as [| arg rest IH];
+    intros used argsr used' Hargs Hrename; simpl in Hrename.
+  - inversion Hrename; subst. constructor.
+  - inversion Hargs; subst.
+    destruct (alpha_rename_expr rho used arg) as [ar used1] eqn:Harg.
+    destruct ((fix go (used0 : list ident) (args0 : list expr)
+        : list expr * list ident :=
+        match args0 with
+        | [] => ([], used0)
+        | arg0 :: rest0 =>
+            let (arg', used2) := alpha_rename_expr rho used0 arg0 in
+            let (rest', used3) := go used2 rest0 in
+            (arg' :: rest', used3)
+        end) used1 rest) as [restr used2] eqn:Hrest.
+    inversion Hrename; subst.
+    constructor.
+    + eapply store_safe_function_value_call_arg_alpha_rename_expr;
+        eassumption.
+    + eapply IH; eassumption.
+Qed.
+
 Inductive expr_root_shadow_store_safe_narrow_summary
     (env : global_env) (Omega : outlives_ctx) (n : nat)
     : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set ->

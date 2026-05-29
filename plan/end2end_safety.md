@@ -173,6 +173,8 @@ T2e.2 tasks:
   conditions for narrow alpha preservation.
 - Done prep: derive renamed `let` body no-collision from narrow
   summaries.
+- Done prep: prove `EVar` callee output preserves rename no-collision
+  for narrow alpha preservation.
 - Blocked: direct `ECall` still requires old
   `callee_body_root_shadow_provenance_summary` evidence.  Remaining proof gap:
   finish the generalized structural alpha-preservation theorem for narrow

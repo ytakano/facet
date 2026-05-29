@@ -751,6 +751,16 @@ Proof.
     end.
 Qed.
 
+Lemma typed_env_roots_shadow_safe_evar_rename_no_collision_on_output_base :
+  forall env Ω n rho R Σ x T Σ' R' roots,
+    typed_env_roots_shadow_safe env Ω n R Σ (EVar x) T Σ' R' roots ->
+    rename_no_collision_on rho (root_env_names R) ->
+    rename_no_collision_on rho (root_env_names R').
+Proof.
+  intros env Ω n rho R Σ x T Σ' R' roots Htyped Hnocoll.
+  dependent destruction Htyped; exact Hnocoll.
+Qed.
+
 Lemma expr_root_shadow_store_safe_narrow_summary_instantiate_fresh :
   forall env Omega n rho R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_store_safe_narrow_summary

@@ -141,6 +141,8 @@ T2e.2 tasks:
   wrappers for monomorphic and lifetime-forall `EVar` calls.
 - Done prep: prove narrow function-value calls preserve closure-target
   store summaries through monomorphic and lifetime-forall direct-call cleanup.
+- Done prep: factor captured-call runtime safety into a reusable
+  single-function theorem for the combined gate.
 - Next: prove the combined runtime safety/readiness theorem, then route
   `infer_fn_env_end2end` through the combined gate; current target: `hrt_call_twice`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.

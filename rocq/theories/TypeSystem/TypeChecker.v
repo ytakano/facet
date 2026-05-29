@@ -8024,7 +8024,9 @@ Definition check_fn_root_shadow_captured_call_provenance_summary
   match check_fn_root_shadow_non_capturing_call_provenance_summary env fdef with
   | true => true
   | false =>
-      match captured_call_target_expr (fn_body fdef) with
+      (preservation_ready_expr_b (fn_body fdef) &&
+       check_fn_root_shadow_captured_callee_provenance_summary env fdef) ||
+      (match captured_call_target_expr (fn_body fdef) with
       | Some (fname, captures, args) =>
           preservation_ready_args_b args &&
           match lookup_fn_b fname (env_fns env) with
@@ -8108,7 +8110,7 @@ Definition check_fn_root_shadow_captured_call_provenance_summary
               end
           end
       | None => false
-      end
+      end)
   end.
 
 Definition check_env_root_shadow_direct_call_provenance_summary

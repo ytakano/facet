@@ -441,9 +441,44 @@ Proof.
           Σ1 R1 roots_callee0 T_callee Γ_callee R_callee roots_callee
           Htyped_shadow Hinfer_callee) as Hcore.
       simpl in Hcore. rewrite HTFn in Hcore. discriminate.
-  - destruct Hcaptured_summary as
-      [Hcaptured_summary | [Hif_summary | Hlocal_captured_summary]].
-	    + destruct Hcaptured_summary as
+  - destruct Hcaptured_summary as [Hbase_captured | Hcaptured_summary].
+    + destruct Hbase_captured as [Hbase_captured Hready_body].
+      destruct Hbase_captured as
+        [Hnodup_binding
+         (T_body & Γ_out & R_body & roots_body & Hprov_body &
+          Htyped_shadow & Hcompat & _ & _)].
+      pose (body_env := global_env_with_local_bounds env (fn_bounds f)).
+      assert (Hstore_body_env :
+          store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
+      { subst body_env.
+        eapply store_typed_global_env_with_local_bounds.
+        eapply initial_store_for_fn_store_typed. exact Hstore. }
+      assert (Heval_body_env : eval body_env s (fn_body f) s' v).
+      { subst body_env.
+        eapply eval_global_env_with_local_bounds. exact Heval. }
+      destruct (proj1 eval_preserves_typing_ready_mutual
+          body_env s (fn_body f) s' v Heval_body_env
+          (fn_outlives f) (fn_lifetimes f)
+          (sctx_of_ctx (fn_body_ctx f)) T_body (sctx_of_ctx Γ_out)
+          Hready_body Hstore_body_env
+          (typed_env_roots_structural
+            body_env (fn_outlives f) (fn_lifetimes f)
+            (initial_root_env_for_params (fn_params f ++ fn_captures f))
+            (sctx_of_ctx (fn_body_ctx f)) (fn_body f) T_body
+            (sctx_of_ctx Γ_out) R_body roots_body
+            (typed_env_roots_shadow_safe_roots
+              body_env (fn_outlives f) (fn_lifetimes f)
+              (initial_root_env_for_params (fn_params f ++ fn_captures f))
+              (sctx_of_ctx (fn_body_ctx f)) (fn_body f) T_body
+              (sctx_of_ctx Γ_out) R_body roots_body Htyped_shadow)))
+        as [_ [Hv _]].
+      eapply VHT_Compatible.
+      * subst body_env.
+        eapply value_has_type_clear_global_env_local_bounds. exact Hv.
+      * apply ty_compatible_b_sound. exact Hcompat.
+    + destruct Hcaptured_summary as
+        [Hcaptured_summary | [Hif_summary | Hlocal_captured_summary]].
+      * destruct Hcaptured_summary as
 	      (fname & captures & args & fcallee & env_lt & captured_tys &
 	        T_body & Γ_out & R_body & roots_body &
 	        Hbody & Htarget & Hready_args & Hin_callee & Hname_callee &
@@ -516,9 +551,9 @@ Proof.
 	      { subst body_env.
 	        eapply value_has_type_clear_global_env_local_bounds. exact Hv. }
 	      eapply VHT_Compatible.
-	      * exact Hv_env.
-	      * apply ty_compatible_b_sound. exact Hcompat.
-    + destruct Hif_summary as
+	      -- exact Hv_env.
+	      -- apply ty_compatible_b_sound. exact Hcompat.
+      * destruct Hif_summary as
         (T_body & Γ_out & R_body & roots_body & ret_roots & Hnodup &
           Hexpr_summary & Hcompat & _ & _).
       pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hroot_shadow.
@@ -531,9 +566,9 @@ Proof.
           (initial_store_for_fn_store_typed env f s Hstore) Hroots Hstore_shadow
           Hroot_shadow Hnamed Hkeys Heval Hunique) as [_ Hv].
       eapply VHT_Compatible.
-      * exact Hv.
-      * apply ty_compatible_b_sound. exact Hcompat.
-    + destruct Hlocal_captured_summary as
+      -- exact Hv.
+      -- apply ty_compatible_b_sound. exact Hcompat.
+      * destruct Hlocal_captured_summary as
         (fname & captures & args & m & x & T & direct_body & let_body &
           fcallee & env_lt & captured_tys & T_direct & Γ_direct & R_direct &
           roots_direct & T_let & Γ_let & R_let & roots_let &

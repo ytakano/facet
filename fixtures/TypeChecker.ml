@@ -11915,15 +11915,84 @@ let check_fn_root_shadow_captured_call_provenance_summary env fdef =
   if check_fn_root_shadow_non_capturing_call_provenance_summary env fdef
   then true
   else (||)
+         ((&&) (preservation_ready_expr_b fdef.fn_body)
+           (check_fn_root_shadow_captured_callee_provenance_summary env fdef))
          ((||)
-           (match captured_call_target_expr fdef.fn_body with
+           ((||)
+             (match captured_call_target_expr fdef.fn_body with
+              | Some p ->
+                let (p0, args) = p in
+                let (fname, captures) = p0 in
+                (&&) (preservation_ready_args_b args)
+                  (match lookup_fn_b fname env.env_fns with
+                   | Some callee ->
+                     (&&) (callee_hidden_capture_args_disjoint_b callee args)
+                       (match check_make_closure_captures_exact_sctx_with_env
+                                env fdef.fn_outlives
+                                (sctx_of_ctx (fn_body_ctx fdef)) captures
+                                callee.fn_captures with
+                        | Infer_ok _ ->
+                          (&&)
+                            (check_fn_root_shadow_captured_callee_provenance_summary
+                              env callee)
+                            (match infer_env_roots_shadow_safe env fdef
+                                     (initial_root_env_for_fn fdef) with
+                             | Infer_ok p1 ->
+                               let (p2, roots) = p1 in
+                               let (_, r_out) = p2 in
+                               (&&)
+                                 (fn_params_roots_exclude_b fdef.fn_params
+                                   roots)
+                                 (fn_params_root_env_excludes_b
+                                   fdef.fn_params r_out)
+                             | Infer_err _ -> false)
+                        | Infer_err _ -> false)
+                   | None -> false)
+              | None -> false)
+             (match fdef.fn_body with
+              | EIf (_, _, _) ->
+                (match infer_core_env_roots_shadow_safe env fdef.fn_outlives
+                         fdef.fn_lifetimes (initial_root_env_for_fn fdef)
+                         (fn_body_ctx fdef) fdef.fn_body with
+                 | Infer_ok p ->
+                   let (p0, roots) = p in
+                   let (p1, r_out) = p0 in
+                   let (t_body, _) = p1 in
+                   (match infer_env_roots_shadow_safe env fdef
+                            (initial_root_env_for_fn fdef) with
+                    | Infer_ok _ ->
+                      (&&)
+                        ((&&)
+                          ((&&)
+                            (check_expr_root_shadow_captured_call_provenance_summary
+                              env fdef.fn_outlives fdef.fn_lifetimes
+                              (initial_root_env_for_fn fdef)
+                              (fn_body_ctx fdef) fdef.fn_body)
+                            (ty_compatible_b fdef.fn_outlives t_body
+                              fdef.fn_ret))
+                          (fn_params_roots_exclude_b fdef.fn_params roots))
+                        (fn_params_root_env_excludes_b fdef.fn_params r_out)
+                    | Infer_err _ -> false)
+                 | Infer_err _ -> false)
+              | _ -> false))
+           (match local_captured_call_target_expr fdef.fn_body with
             | Some p ->
-              let (p0, args) = p in
-              let (fname, captures) = p0 in
+              let (p0, let_body) = p in
+              let (p1, direct_body) = p0 in
+              let (p2, _) = p1 in
+              let (p3, x) = p2 in
+              let (p4, _) = p3 in
+              let (p5, args) = p4 in
+              let (fname, captures) = p5 in
               (&&) (preservation_ready_args_b args)
                 (match lookup_fn_b fname env.env_fns with
                  | Some callee ->
-                   (&&) (callee_hidden_capture_args_disjoint_b callee args)
+                   (&&)
+                     ((&&)
+                       (callee_hidden_capture_args_disjoint_b callee args)
+                       (negb
+                         (existsb (ident_eqb x)
+                           (ctx_names (params_ctx callee.fn_captures)))))
                      (match check_make_closure_captures_exact_sctx_with_env
                               env fdef.fn_outlives
                               (sctx_of_ctx (fn_body_ctx fdef)) captures
@@ -11932,90 +12001,26 @@ let check_fn_root_shadow_captured_call_provenance_summary env fdef =
                         (&&)
                           (check_fn_root_shadow_captured_callee_provenance_summary
                             env callee)
-                          (match infer_env_roots_shadow_safe env fdef
+                          (match infer_env_roots_shadow_safe env
+                                   (fn_with_body fdef direct_body)
                                    (initial_root_env_for_fn fdef) with
-                           | Infer_ok p1 ->
-                             let (p2, roots) = p1 in
-                             let (_, r_out) = p2 in
-                             (&&)
-                               (fn_params_roots_exclude_b fdef.fn_params
-                                 roots)
-                               (fn_params_root_env_excludes_b fdef.fn_params
-                                 r_out)
+                           | Infer_ok p6 ->
+                             let (p7, roots_direct) = p6 in
+                             let (_, r_direct) = p7 in
+                             (match infer_env_roots_shadow_safe env
+                                      (fn_with_body fdef let_body)
+                                      (initial_root_env_for_fn fdef) with
+                              | Infer_ok _ ->
+                                (&&)
+                                  (fn_params_roots_exclude_b fdef.fn_params
+                                    roots_direct)
+                                  (fn_params_root_env_excludes_b
+                                    fdef.fn_params r_direct)
+                              | Infer_err _ -> false)
                            | Infer_err _ -> false)
                       | Infer_err _ -> false)
                  | None -> false)
-            | None -> false)
-           (match fdef.fn_body with
-            | EIf (_, _, _) ->
-              (match infer_core_env_roots_shadow_safe env fdef.fn_outlives
-                       fdef.fn_lifetimes (initial_root_env_for_fn fdef)
-                       (fn_body_ctx fdef) fdef.fn_body with
-               | Infer_ok p ->
-                 let (p0, roots) = p in
-                 let (p1, r_out) = p0 in
-                 let (t_body, _) = p1 in
-                 (match infer_env_roots_shadow_safe env fdef
-                          (initial_root_env_for_fn fdef) with
-                  | Infer_ok _ ->
-                    (&&)
-                      ((&&)
-                        ((&&)
-                          (check_expr_root_shadow_captured_call_provenance_summary
-                            env fdef.fn_outlives fdef.fn_lifetimes
-                            (initial_root_env_for_fn fdef) (fn_body_ctx fdef)
-                            fdef.fn_body)
-                          (ty_compatible_b fdef.fn_outlives t_body
-                            fdef.fn_ret))
-                        (fn_params_roots_exclude_b fdef.fn_params roots))
-                      (fn_params_root_env_excludes_b fdef.fn_params r_out)
-                  | Infer_err _ -> false)
-               | Infer_err _ -> false)
-            | _ -> false))
-         (match local_captured_call_target_expr fdef.fn_body with
-          | Some p ->
-            let (p0, let_body) = p in
-            let (p1, direct_body) = p0 in
-            let (p2, _) = p1 in
-            let (p3, x) = p2 in
-            let (p4, _) = p3 in
-            let (p5, args) = p4 in
-            let (fname, captures) = p5 in
-            (&&) (preservation_ready_args_b args)
-              (match lookup_fn_b fname env.env_fns with
-               | Some callee ->
-                 (&&)
-                   ((&&) (callee_hidden_capture_args_disjoint_b callee args)
-                     (negb
-                       (existsb (ident_eqb x)
-                         (ctx_names (params_ctx callee.fn_captures)))))
-                   (match check_make_closure_captures_exact_sctx_with_env env
-                            fdef.fn_outlives (sctx_of_ctx (fn_body_ctx fdef))
-                            captures callee.fn_captures with
-                    | Infer_ok _ ->
-                      (&&)
-                        (check_fn_root_shadow_captured_callee_provenance_summary
-                          env callee)
-                        (match infer_env_roots_shadow_safe env
-                                 (fn_with_body fdef direct_body)
-                                 (initial_root_env_for_fn fdef) with
-                         | Infer_ok p6 ->
-                           let (p7, roots_direct) = p6 in
-                           let (_, r_direct) = p7 in
-                           (match infer_env_roots_shadow_safe env
-                                    (fn_with_body fdef let_body)
-                                    (initial_root_env_for_fn fdef) with
-                            | Infer_ok _ ->
-                              (&&)
-                                (fn_params_roots_exclude_b fdef.fn_params
-                                  roots_direct)
-                                (fn_params_root_env_excludes_b fdef.fn_params
-                                  r_direct)
-                            | Infer_err _ -> false)
-                         | Infer_err _ -> false)
-                    | Infer_err _ -> false)
-               | None -> false)
-          | None -> false)
+            | None -> false))
 
 (** val check_env_root_shadow_direct_call_provenance_summary :
     global_env -> bool **)

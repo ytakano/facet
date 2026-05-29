@@ -323,6 +323,8 @@ Qed.
 Definition callee_body_root_shadow_captured_call_provenance_summary
     (env : global_env) (fdef : fn_def) : Prop :=
   callee_body_root_shadow_non_capturing_call_provenance_summary env fdef \/
+  (callee_body_root_shadow_captured_callee_provenance_summary env fdef /\
+   preservation_ready_expr (fn_body fdef)) \/
   (
   exists fname captures args fcallee env_lt captured_tys
       T_body Γ_out R_body roots_body,

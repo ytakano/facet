@@ -24,8 +24,8 @@ this roadmap.
 | T2e.1: monomorphic `TFn` variable call safety gate | done |
 | T2e.2: HRT/closure function-value calls | blocked: runtime callee bridge needed |
 | T2g: mixed lifetime/type forall roots calls | done |
-| T2b.1: captured callee base gate | in progress |
-| T2b.2: capture-return cleanup bridge | pending |
+| T2b.1: captured callee base gate | done |
+| T2b.2: local captured-call bridge | in progress |
 | T2b.3: captured closure regressions | pending |
 | T2f: deref/reborrow/ref-write roots coverage | blocked: nested place root model needed |
 
@@ -119,12 +119,15 @@ checked as a top-level function, but only has captured-callee evidence.
 
 T2b tasks:
 
-- T2b.1: add a base captured-callee branch to the captured-call gate and safety
+- Done: add a base captured-callee branch to the captured-call gate and safety
   proof.  Keep strict `fn_params ++ fn_captures` roots/env exclusion.
-- T2b.2: only if still needed, prove the capture-return cleanup bridge and then
-  relax captured-callee return-root evidence.
+- T2b.2: finish the local captured-call safety bridge for `main`; do not relax
+  captured-callee return-root evidence unless a proof requires it.
 - T2b.3: run `tests/valid/closure/capture_*` and `tests/invalid/closure/*`,
-  then record the remaining valid failure count.
+  then record the remaining valid failure count.  Current targeted status: one
+  valid `capture_*` passes, two local captured-call cases fail in `main`, the
+  shared-ref case is under the T2e higher-rank closure-value blocker, and all
+  invalid closure cases reject.
 
 ### T2f: deref/reborrow/ref-write roots coverage
 

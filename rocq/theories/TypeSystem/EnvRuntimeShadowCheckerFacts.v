@@ -776,9 +776,15 @@ Proof.
     eqn:Hold.
   - left. apply check_fn_root_shadow_non_capturing_call_provenance_summary_sound.
     exact Hold.
-  - apply orb_true_iff in Hcheck as [Hcheck | Hlocal_check].
-    apply orb_true_iff in Hcheck as [Hcheck | Hif_check].
-    + right. left.
+  - apply orb_true_iff in Hcheck as [Hbase_check | Hcheck].
+    + apply andb_true_iff in Hbase_check as [Hbase_ready Hbase_summary].
+      right. left. split.
+      * apply check_fn_root_shadow_captured_callee_provenance_summary_sound.
+        exact Hbase_summary.
+      * apply preservation_ready_expr_b_sound. exact Hbase_ready.
+    + apply orb_true_iff in Hcheck as [Hcheck | Hlocal_check].
+      apply orb_true_iff in Hcheck as [Hcheck | Hif_check].
+      * right. right. left.
     destruct (captured_call_target_expr (fn_body fdef))
       as [[[fname captures] args] |] eqn:Htarget; try discriminate.
     apply andb_true_iff in Hcheck as [Hready_args Hrest].
@@ -833,8 +839,8 @@ Proof.
     split; [exact Hcompat|].
     split; [apply fn_params_roots_exclude_b_sound; exact Hroots|].
     apply fn_params_root_env_excludes_b_sound. exact Henv.
-    + right. right. left.
-      destruct (fn_body fdef) eqn:Hbody_if; try discriminate.
+      * right. right. right. left.
+        destruct (fn_body fdef) eqn:Hbody_if; try discriminate.
       destruct (infer_core_env_roots_shadow_safe env
         (fn_outlives fdef)
         (fn_lifetimes fdef)
@@ -858,14 +864,14 @@ Proof.
         as [ret_roots Hexpr_summary].
       exists T_body, Γ_out, R_body, roots_body, ret_roots.
       repeat split.
-      * eapply infer_env_roots_shadow_safe_params_nodup.
-        exact Hinfer_env.
-      * exact Hexpr_summary.
-      * exact Hcompat.
-      * apply fn_params_roots_exclude_b_sound. exact Hroots.
-      * apply fn_params_root_env_excludes_b_sound. exact Henv.
-    + right. right. right.
-      destruct (local_captured_call_target_expr (fn_body fdef))
+      -- eapply infer_env_roots_shadow_safe_params_nodup.
+         exact Hinfer_env.
+      -- exact Hexpr_summary.
+      -- exact Hcompat.
+      -- apply fn_params_roots_exclude_b_sound. exact Hroots.
+      -- apply fn_params_root_env_excludes_b_sound. exact Henv.
+      * right. right. right. right.
+        destruct (local_captured_call_target_expr (fn_body fdef))
         as [[[[[[[[fname captures] args] m] x] T] direct_body]
               let_body] |] eqn:Htarget; try discriminate.
       apply andb_true_iff in Hlocal_check as [Hready_args Hrest].

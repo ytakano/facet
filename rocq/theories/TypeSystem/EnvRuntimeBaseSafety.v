@@ -52,6 +52,34 @@ Proof.
   eapply store_typed_function_closure_targets_summary; eassumption.
 Qed.
 
+Lemma eval_var_empty_closure_target_summary_of_store_function_closure_targets_summary :
+  forall env s s' x fname fdef,
+    store_function_closure_targets_summary env s ->
+    eval env s (EVar x) s' (VClosure fname []) ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_provenance_summary env fdef.
+Proof.
+  intros env s s' x fname fdef Hstore Heval Hlookup.
+  inversion Heval; subst;
+    match goal with
+    | Hlookup_store : store_lookup ?x_lookup ?s_lookup = Some ?se |- _ =>
+        pose proof
+          (store_function_closure_targets_summary_lookup env s_lookup x_lookup se
+            Hstore Hlookup_store) as Hvalue_summary
+    end;
+    match goal with
+    | Hvalue_eq : se_val _ = VClosure _ _ |- _ =>
+        rewrite Hvalue_eq in Hvalue_summary
+    | Hvalue_eq : VClosure _ _ = se_val _ |- _ =>
+        rewrite <- Hvalue_eq in Hvalue_summary
+    end;
+    simpl in Hvalue_summary;
+    destruct Hvalue_summary as (fdef_summary & Hlookup_summary & Hsummary);
+    assert (fdef_summary = fdef) as -> by
+      (eapply lookup_fn_deterministic; eassumption);
+    exact Hsummary.
+Qed.
+
 Inductive expr_root_shadow_store_safe_summary
     (env : global_env) (Omega : outlives_ctx) (n : nat)
     : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set ->

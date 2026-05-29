@@ -126,6 +126,8 @@ T2e.2 tasks:
   require narrow `let` bindings to be non-function values.
 - Done prep: add a combined captured-call/store-safe checker helper without
   routing the end-to-end entrypoint to it yet.
+- Done prep: prove Prop-level soundness and env-readiness for the combined
+  checker helper.
 - Next: prove the combined runtime safety/readiness theorem, then route
   `infer_fn_env_end2end` through the combined gate; current target: `hrt_call_twice`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.

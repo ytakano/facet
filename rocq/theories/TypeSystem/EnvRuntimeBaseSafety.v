@@ -292,6 +292,77 @@ Proof.
     eassumption.
 Qed.
 
+Definition callee_body_root_shadow_captured_call_store_safe_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  callee_body_root_shadow_captured_call_provenance_summary env fdef \/
+  exists T_body Gamma_out R_body roots_body ret_roots,
+    NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+    expr_root_shadow_store_safe_narrow_summary env
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      (fn_body fdef) T_body (sctx_of_ctx Gamma_out) R_body roots_body
+      ret_roots /\
+    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
+    roots_exclude_params (fn_params fdef) roots_body /\
+    root_env_excludes_params (fn_params fdef) R_body.
+
+Lemma check_fn_root_shadow_captured_call_store_safe_summary_sound :
+  forall env fdef,
+    check_fn_root_shadow_captured_call_store_safe_summary env fdef = true ->
+    callee_body_root_shadow_captured_call_store_safe_summary env fdef.
+Proof.
+  intros env fdef Hcheck.
+  unfold check_fn_root_shadow_captured_call_store_safe_summary in Hcheck.
+  apply orb_true_iff in Hcheck as [Hold | Hnarrow].
+  - left. apply check_fn_root_shadow_captured_call_provenance_summary_sound.
+    exact Hold.
+  - right.
+    destruct (infer_core_env_roots_shadow_safe env
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef) (fn_body_ctx fdef) (fn_body fdef))
+      as [[[[T_body Gamma_body] R_body] roots_body] | err] eqn:Hcore;
+      try discriminate.
+    destruct (infer_env_roots_shadow_safe env fdef
+      (initial_root_env_for_fn fdef))
+      as [[[[T_env Gamma_env] R_env] roots_env] | err] eqn:Hinfer_env;
+      try discriminate.
+    repeat rewrite andb_true_iff in Hnarrow.
+    destruct Hnarrow as [[[Hexpr Hcompat] Hroots] Henv].
+    destruct (check_expr_root_shadow_store_safe_narrow_summary_sound
+      env (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef) (fn_body_ctx fdef) (fn_body fdef)
+      T_body Gamma_body R_body roots_body Hcore Hexpr)
+      as [ret_roots Hsummary].
+    exists T_body, Gamma_body, R_body, roots_body, ret_roots.
+    repeat split.
+    + eapply infer_env_roots_shadow_safe_params_nodup. exact Hinfer_env.
+    + exact Hsummary.
+    + exact Hcompat.
+    + apply fn_params_roots_exclude_b_sound. exact Hroots.
+    + apply fn_params_root_env_excludes_b_sound. exact Henv.
+Qed.
+
+Definition env_fns_root_shadow_captured_call_store_safe_summary_check_ready
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_captured_call_store_safe_summary env fdef.
+
+Lemma check_env_root_shadow_captured_call_store_safe_summary_ready :
+  forall env,
+    check_env_root_shadow_captured_call_store_safe_summary env = true ->
+    env_fns_root_shadow_captured_call_store_safe_summary_check_ready env.
+Proof.
+  intros env Hcheck fname fdef Hlookup.
+  unfold check_env_root_shadow_captured_call_store_safe_summary in Hcheck.
+  destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+    as [Hin _].
+  apply forallb_forall with (x := fdef) in Hcheck; [| exact Hin].
+  apply check_fn_root_shadow_captured_call_store_safe_summary_sound.
+  exact Hcheck.
+Qed.
+
 Lemma check_expr_root_shadow_store_safe_summary_fuel_sound :
   forall fuel env Omega n R Sigma e T Sigma' R' roots,
     infer_core_env_state_fuel_roots_shadow_safe fuel env Omega n R Sigma e =

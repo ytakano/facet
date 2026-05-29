@@ -143,6 +143,8 @@ T2e.2 tasks:
   store summaries through monomorphic and lifetime-forall direct-call cleanup.
 - Done prep: factor captured-call runtime safety into a reusable
   single-function theorem for the combined gate.
+- Done prep: add a monomorphic `TFn` narrow function-value-call
+  runtime package lemma.
 - Next: prove the combined runtime safety/readiness theorem, then route
   `infer_fn_env_end2end` through the combined gate; current target: `hrt_call_twice`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.

@@ -1166,6 +1166,20 @@ Proof.
   - dependent destruction Heval.
 Qed.
 
+Definition callee_body_root_shadow_store_safe_narrow_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  exists T_body Gamma_out R_body roots_body ret_roots,
+    NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+    expr_root_shadow_store_safe_narrow_summary env
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      (fn_body fdef) T_body (sctx_of_ctx Gamma_out) R_body roots_body
+      ret_roots /\
+    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
+    roots_exclude_params (fn_params fdef) roots_body /\
+    root_env_excludes_params (fn_params fdef) R_body.
+
 Definition callee_body_root_shadow_captured_call_store_safe_summary
     (env : global_env) (fdef : fn_def) : Prop :=
   callee_body_root_shadow_captured_call_provenance_summary env fdef \/

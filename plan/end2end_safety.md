@@ -149,6 +149,8 @@ T2e.2 tasks:
   runtime package lemma.
 - Done prep: prove the recursive narrow runtime package theorem.
 - Done prep: prove the combined runtime safety/readiness theorem.
+- Done prep: factor narrow store-safe callee Prop; measured checker-level
+  branch factoring as a `Qed` bottleneck and kept the checker inline.
 - Done prep: route `infer_fn_env_end2end` through the combined gate and
   support narrow `let`/`let-infer` cleanup via root exclusion.
 - Blocked: direct `ECall` still requires old

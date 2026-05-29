@@ -293,6 +293,44 @@ Proof.
   - eapply TERS_Let; eauto.
 Qed.
 
+Lemma expr_root_shadow_store_safe_narrow_summary_runtime_names_from_store_typed :
+  forall env Omega n R Sigma e T Sigma' R' roots ret_roots s s',
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n R Sigma e T Sigma' R' roots ret_roots ->
+    store_typed env s Sigma ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_typed env s' Sigma' ->
+    root_env_no_shadow R' ->
+    root_env_store_roots_named R' s' /\
+    root_set_store_roots_named roots s' /\
+    root_env_store_keys_named R' s'.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots ret_roots s s'
+    Hsummary Hstore Hrn Hnamed Hkeys Hstore' Hrn'.
+  pose proof (expr_root_shadow_store_safe_narrow_summary_typed
+    env Omega n R Sigma e T Sigma' R' roots ret_roots Hsummary)
+    as Htyped_shadow.
+  pose proof (typed_env_roots_shadow_safe_roots
+    env Omega n R Sigma e T Sigma' R' roots Htyped_shadow)
+    as Htyped_roots.
+  assert (Hctx_roots : root_env_ctx_roots_named R Sigma)
+    by (eapply root_env_store_roots_named_to_ctx; eassumption).
+  destruct (proj1 (typed_roots_ctx_roots_named_mutual env Omega n)
+    R Sigma e T Sigma' R' roots Htyped_roots Hrn Hctx_roots)
+    as [Hctx_roots' Hctx_set'].
+  assert (Hctx_keys : root_env_sctx_keys_named R Sigma)
+    by (eapply root_env_store_keys_named_to_ctx; eassumption).
+  pose proof (proj1 (typed_roots_shadow_safe_sctx_keys_named_mutual
+    env Omega n) R Sigma e T Sigma' R' roots Htyped_shadow
+    Hrn Hctx_keys) as Hctx_keys'.
+  repeat split.
+  - eapply root_env_ctx_roots_named_store_typed; eassumption.
+  - eapply root_set_ctx_roots_named_store_typed; eassumption.
+  - eapply root_env_ctx_keys_named_store_typed; eassumption.
+Qed.
+
 Lemma check_expr_root_shadow_store_safe_narrow_summary_fuel_sound :
   forall fuel env Omega n R Sigma e T Sigma' R' roots,
     infer_core_env_state_fuel_roots_shadow_safe fuel env Omega n R Sigma e =

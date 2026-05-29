@@ -16,6 +16,187 @@ Definition env_fns_root_shadow_provenance_summary_check_ready
     lookup_fn fname (env_fns env) = Some fdef ->
     callee_body_root_shadow_provenance_summary env fdef.
 
+Definition value_function_closure_targets_summary
+    (env : global_env) (v : value) : Prop :=
+  match v with
+  | VClosure fname [] =>
+      exists fdef,
+        lookup_fn fname (env_fns env) = Some fdef /\
+        callee_body_root_shadow_provenance_summary env fdef
+  | _ => True
+  end.
+
+Definition store_function_closure_targets_summary
+    (env : global_env) (s : store) : Prop :=
+  Forall (fun se => value_function_closure_targets_summary env (se_val se)) s.
+
+Lemma value_function_closure_targets_summary_global_env_with_local_bounds :
+  forall env bounds v,
+    value_function_closure_targets_summary env v ->
+    value_function_closure_targets_summary (global_env_with_local_bounds env bounds) v.
+Proof.
+  intros env bounds v Hsummary.
+  destruct v; simpl in *; auto.
+Qed.
+
+Lemma store_function_closure_targets_summary_global_env_with_local_bounds :
+  forall env bounds s,
+    store_function_closure_targets_summary env s ->
+    store_function_closure_targets_summary (global_env_with_local_bounds env bounds) s.
+Proof.
+  unfold store_function_closure_targets_summary.
+  intros env bounds s Hsummary.
+  induction Hsummary; constructor; auto.
+Qed.
+
+Lemma store_function_closure_targets_summary_lookup :
+  forall env s x se,
+    store_function_closure_targets_summary env s ->
+    store_lookup x s = Some se ->
+    value_function_closure_targets_summary env (se_val se).
+Proof.
+  unfold store_function_closure_targets_summary.
+  intros env s x se Hsummary Hlookup.
+  induction Hsummary as [| se0 rest Hhead Htail IH]; simpl in Hlookup.
+  - discriminate.
+  - destruct (ident_eqb x (se_name se0)) eqn:Heq.
+    + inversion Hlookup; subst. exact Hhead.
+    + apply IH. exact Hlookup.
+Qed.
+
+Fixpoint non_function_value_ty_b (T : Ty) : bool :=
+  match T with
+  | MkTy _ (TFn _ _) => false
+  | MkTy _ (TClosure _ _ _) => false
+  | MkTy _ (TForall _ _ body) => non_function_value_ty_b body
+  | MkTy _ (TTypeForall _ _ body) => non_function_value_ty_b body
+  | _ => true
+  end.
+
+Lemma non_function_value_ty_b_fn_value_ty :
+  forall f,
+    non_function_value_ty_b (fn_value_ty f) = false.
+Proof.
+  intros f.
+  unfold non_function_value_ty_b, fn_value_ty, fn_signature_ty_with_usage.
+  destruct (fn_type_params f); destruct (fn_lifetimes f); simpl; reflexivity.
+Qed.
+
+Lemma ty_compatible_non_function_value_ty_b :
+  forall Ω T_actual T_expected,
+    ty_compatible Ω T_actual T_expected ->
+    non_function_value_ty_b T_expected = true ->
+    non_function_value_ty_b T_actual = true.
+Proof.
+  intros Ω T_actual T_expected Hcompat.
+  induction Hcompat; simpl; intros Hnonfn; try discriminate; auto.
+  - subst. exact Hnonfn.
+Qed.
+
+Lemma ty_lifetime_equiv_non_function_value_ty_b :
+  forall T_actual T_expected,
+    ty_lifetime_equiv T_actual T_expected ->
+    non_function_value_ty_b T_expected = true ->
+    non_function_value_ty_b T_actual = true.
+Proof.
+  intros T_actual T_expected Hequiv.
+  induction Hequiv; simpl; intros Hnonfn; try discriminate; auto.
+Qed.
+
+Lemma value_has_type_empty_closure_non_function_value_ty_b_false :
+  forall env s fname T,
+    value_has_type env s (VClosure fname []) T ->
+    non_function_value_ty_b T = false.
+Proof.
+  intros env s fname T Htyped.
+  remember (VClosure fname []) as v eqn:Hv.
+  induction Htyped; try discriminate.
+  - apply non_function_value_ty_b_fn_value_ty.
+  - apply non_function_value_ty_b_fn_value_ty.
+  - assert (Hactual : non_function_value_ty_b T_actual = false) by auto.
+    destruct (non_function_value_ty_b T_expected) eqn:Hexpected; auto.
+    pose proof (ty_compatible_non_function_value_ty_b
+      Ω T_actual T_expected H Hexpected) as Hactual_true.
+    rewrite Hactual in Hactual_true. discriminate.
+  - assert (Hactual : non_function_value_ty_b T_actual = false) by auto.
+    destruct (non_function_value_ty_b T_expected) eqn:Hexpected; auto.
+    pose proof (ty_lifetime_equiv_non_function_value_ty_b
+      T_actual T_expected H Hexpected) as Hactual_true.
+    rewrite Hactual in Hactual_true. discriminate.
+Qed.
+
+Lemma value_has_type_non_function_value_summary :
+  forall env s v T,
+    value_has_type env s v T ->
+    non_function_value_ty_b T = true ->
+    value_function_closure_targets_summary env v.
+Proof.
+  intros env s v T Htyped Hnonfn.
+  destruct v; simpl; auto.
+  destruct l as [| se captured]; simpl; auto.
+  pose proof (value_has_type_empty_closure_non_function_value_ty_b_false
+    env s i T Htyped) as Hfalse.
+  rewrite Hnonfn in Hfalse. discriminate.
+Qed.
+
+Lemma store_function_closure_targets_summary_add_value_summary :
+  forall env s x T v,
+    store_function_closure_targets_summary env s ->
+    value_function_closure_targets_summary env v ->
+    store_function_closure_targets_summary env (store_add x T v s).
+Proof.
+  unfold store_function_closure_targets_summary, store_add.
+  intros env s x T v Hsummary Hvalue.
+  constructor; auto.
+Qed.
+
+Lemma store_function_closure_targets_summary_add_non_function :
+  forall env s x T v,
+    store_function_closure_targets_summary env s ->
+    value_has_type env s v T ->
+    non_function_value_ty_b T = true ->
+    store_function_closure_targets_summary env (store_add x T v s).
+Proof.
+  intros env s x T v Hsummary Htyped Hnonfn.
+  apply store_function_closure_targets_summary_add_value_summary; auto.
+  eapply value_has_type_non_function_value_summary; eassumption.
+Qed.
+
+Lemma value_has_type_function_closure_targets_summary :
+  forall env,
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    fn_env_unique_by_name env ->
+    forall s v T,
+      value_has_type env s v T ->
+      value_function_closure_targets_summary env v.
+Proof.
+  intros env Hevidence Hunique s v T Htyped.
+  induction Htyped; simpl; auto.
+  - exists fdef. split; auto.
+    eapply Hevidence. exact H.
+  - pose proof (lookup_fn_in_unique_by_name env fname fdef
+      H H0 Hunique) as Hlookup.
+    exists fdef. split; auto.
+    eapply Hevidence. exact Hlookup.
+Qed.
+
+Lemma store_typed_function_closure_targets_summary :
+  forall env,
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    fn_env_unique_by_name env ->
+    forall s Σ,
+      store_typed env s Σ ->
+      store_function_closure_targets_summary env s.
+Proof.
+  intros env Hevidence Hunique s Σ Hstore.
+  induction Hstore as [| se ce rest Sigma_tail Hentry _ Htail]; constructor; auto.
+  destruct se as [sx sT sv sst].
+  destruct ce as [[[cx cT] cst] cm].
+  simpl in Hentry.
+  destruct Hentry as [_ [_ [_ Htyped]]].
+  eapply value_has_type_function_closure_targets_summary; eassumption.
+Qed.
+
 Definition callee_body_root_shadow_direct_call_provenance_summary
     (env : global_env) (fdef : fn_def) : Prop :=
   callee_body_root_shadow_provenance_summary env fdef \/

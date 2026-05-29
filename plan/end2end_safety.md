@@ -111,6 +111,9 @@ T2e.2 tasks:
   closure-target summaries across let-bound non-function values.
 - Done prep: add store-typed/exact-summary closure-target summary helpers for
   the sequential-let runtime route.
+- Done prep: relocate closure-target store summary helpers from
+  `EnvRuntimeBaseSafety.v` to `EnvRuntimeShadowSummaryFacts.v` so later runtime
+  safety modules can share them earlier in the dependency order.
 - Next: add expression-summary routing for sequential `let` bodies with HRT
   function-value calls; current target: `hrt_call_twice`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.

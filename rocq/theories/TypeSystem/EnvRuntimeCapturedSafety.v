@@ -965,6 +965,48 @@ Proof.
   - exact Heval.
 Qed.
 
+
+Theorem env_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready :
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_captured_call_store_safe_summary_check_ready env ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hunique Hsummary Hinitial Hin Hstore Heval.
+  pose proof (lookup_fn_in_unique_by_name env
+    (fn_name f) f Hin eq_refl Hunique) as Hlookup.
+  destruct (Hsummary (fn_name f) f Hlookup) as [Hold | Hnarrow].
+  - eapply callee_body_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready.
+    + exact Hunique.
+    + exact Hold.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+  - destruct Hnarrow as
+      (T_body & Gamma_out & R_body & roots_body & ret_roots & Hnodup &
+        Hnarrow & Hcompat & _ & _).
+    destruct (check_initial_root_runtime_ready_sound f s Hinitial) as
+      [Hroots [Hshadow [Hnamed Hkeys]]].
+    pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hrn.
+    destruct (expr_root_shadow_store_safe_narrow_summary_runtime_package
+      env (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+      (sctx_of_ctx (fn_body_ctx f)) (fn_body f) T_body
+      (sctx_of_ctx Gamma_out) R_body roots_body ret_roots Hnarrow
+      s s' v
+      (initial_store_for_fn_store_typed env f s Hstore)
+      Hroots Hshadow Hrn Hnamed Hkeys
+      (initial_store_for_fn_closure_targets_summary env f s Hstore)
+      Heval Hunique)
+      as [_ [Hv _]].
+    eapply VHT_Compatible.
+    + exact Hv.
+    + apply ty_compatible_b_sound. exact Hcompat.
+Qed.
+
 Theorem check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready :
   forall env f s s' v,
     check_program_env_alpha_validated_root_shadow_captured_call_provenance_summary env = true ->

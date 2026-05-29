@@ -148,8 +148,9 @@ T2e.2 tasks:
 - Done prep: add a lifetime-forall `TFn` narrow function-value-call
   runtime package lemma.
 - Done prep: prove the recursive narrow runtime package theorem.
-- Next: prove the combined runtime safety/readiness theorem, then route
-  `infer_fn_env_end2end` through the combined gate; current target: `hrt_call_twice`.
+- Done prep: prove the combined runtime safety/readiness theorem.
+- Next: route `infer_fn_env_end2end` through the combined gate; current
+  target: `hrt_call_twice`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.
 
 Out of scope for T2e.2:

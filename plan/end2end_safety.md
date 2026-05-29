@@ -159,11 +159,12 @@ T2e.2 tasks:
   support narrow `let`/`let-infer` cleanup via root exclusion.
 - Blocked: direct `ECall` still requires old
   `callee_body_root_shadow_provenance_summary` evidence.  To accept
-  `caller` in `hrt_call_twice`, add a runtime direct-call route whose callee
-  body may be proven by `callee_body_root_shadow_captured_call_store_safe_summary`.
-  Existing direct-call wrappers require provenance-ready callee bodies, so the
-  new route must build call-frame readiness for the alpha-renamed callee and
-  run the narrow/store-safe runtime package before cleanup.
+  `caller` in `hrt_call_twice`, first prove narrow-summary preservation across
+  callee alpha-renaming and call-parameter root instantiation; the current
+  blocker is the embedded executable `infer_core_env_roots_shadow_safe (EVar x)`
+  witness in `ERSSN_FunctionValueCall`.  Then add a direct-call runtime route
+  that runs the narrow/store-safe package for the renamed callee body before
+  parameter cleanup.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.
 
 Out of scope for T2e.2:

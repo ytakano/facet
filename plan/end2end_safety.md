@@ -32,9 +32,9 @@ this roadmap.
 ## Current blockers
 
 With the CLI using `infer_program_env_end2end`, the last full `sh tests/run.sh`
-run had 34 valid-test failures:
+run after `ad74b28` had 33 valid-test failures:
 
-- 24 `ErrEndToEndSafetyGateFailed`
+- 23 `ErrEndToEndSafetyGateFailed`
   - `ECallGeneric fname type_args args` direct-call bodies.
   - Remaining function-value calls: `TClosure`, lifetime-only `TForall`,
     type-forall, mixed `for<'a, T>`, and generic-item function values still need
@@ -105,6 +105,8 @@ T2e.2 tasks:
 - Done: connect summary evidence and non-capturing/captured runtime safety
   branches for direct-body HRT `TFn` EVar calls;
   `hrt_call_function_param` passes.
+- Done: refresh the full-suite baseline after `ad74b28`; one HRT safety-gate
+  failure was removed.
 - Next: add expression-summary routing for sequential `let` bodies with HRT
   function-value calls; current target: `hrt_call_twice`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.

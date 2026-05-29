@@ -157,6 +157,8 @@ T2e.2 tasks:
   bind-param preservation does not require env-wide provenance.
 - Done prep: route `infer_fn_env_end2end` through the combined gate and
   support narrow `let`/`let-infer` cleanup via root exclusion.
+- Done prep: refactor narrow function-value-call summaries to use
+  Prop-level callee typing instead of executable `EVar` inference witnesses.
 - Blocked: direct `ECall` still requires old
   `callee_body_root_shadow_provenance_summary` evidence.  To accept
   `caller` in `hrt_call_twice`, first prove narrow-summary preservation across

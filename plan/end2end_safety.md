@@ -107,6 +107,8 @@ T2e.2 tasks:
   `hrt_call_function_param` passes.
 - Done: refresh the full-suite baseline after `ad74b28`; one HRT safety-gate
   failure was removed.
+- Done prep: add non-function value/store summary helpers needed to preserve
+  closure-target summaries across let-bound non-function values.
 - Next: add expression-summary routing for sequential `let` bodies with HRT
   function-value calls; current target: `hrt_call_twice`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.

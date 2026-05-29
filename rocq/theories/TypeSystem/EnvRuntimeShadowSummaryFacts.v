@@ -207,6 +207,55 @@ Proof.
     eapply Hevidence. exact Hlookup.
 Qed.
 
+Lemma eval_args_values_have_types_values_function_closure_targets_summary :
+  forall env,
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    fn_env_unique_by_name env ->
+    forall Ω s vs ps,
+      eval_args_values_have_types env Ω s vs ps ->
+      Forall (value_function_closure_targets_summary env) vs.
+Proof.
+  intros env Hevidence Hunique Ω s vs ps Hargs.
+  induction Hargs as [| v vs p ps T_actual Htyped _ _ IH].
+  - constructor.
+  - constructor.
+    + eapply value_has_type_function_closure_targets_summary; eassumption.
+    + exact IH.
+Qed.
+
+Lemma store_function_closure_targets_summary_bind_params_values :
+  forall env ps vs s,
+    store_function_closure_targets_summary env s ->
+    Forall (value_function_closure_targets_summary env) vs ->
+    store_function_closure_targets_summary env (bind_params ps vs s).
+Proof.
+  intros env ps.
+  induction ps as [| p ps IH]; intros vs s Hsummary Hvalues.
+  - simpl. exact Hsummary.
+  - destruct vs as [| v vs]; simpl.
+    + exact Hsummary.
+    + inversion Hvalues as [| v0 vs0 Hvalue Htail]; subst.
+      apply store_function_closure_targets_summary_add_value_summary.
+      * apply IH; assumption.
+      * exact Hvalue.
+Qed.
+
+Lemma store_function_closure_targets_summary_bind_params_eval_args_values :
+  forall env,
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    fn_env_unique_by_name env ->
+    forall Ω s vs ps,
+      store_function_closure_targets_summary env s ->
+      eval_args_values_have_types env Ω s vs ps ->
+      store_function_closure_targets_summary env (bind_params ps vs s).
+Proof.
+  intros env Hevidence Hunique Ω s vs ps Hsummary Hargs.
+  eapply store_function_closure_targets_summary_bind_params_values.
+  - exact Hsummary.
+  - eapply eval_args_values_have_types_values_function_closure_targets_summary;
+      eassumption.
+Qed.
+
 Lemma store_typed_function_closure_targets_summary :
   forall env,
     env_fns_root_shadow_provenance_summary_evidence env ->

@@ -153,6 +153,8 @@ T2e.2 tasks:
   branch factoring as a `Qed` bottleneck and kept the checker inline.
 - Done prep: add direct-call argument bind helpers for preserving
   closure-target summaries across `bind_params`.
+- Done prep: add store-safe direct-call arg value summaries so
+  bind-param preservation does not require env-wide provenance.
 - Done prep: route `infer_fn_env_end2end` through the combined gate and
   support narrow `let`/`let-infer` cleanup via root exclusion.
 - Blocked: direct `ECall` still requires old

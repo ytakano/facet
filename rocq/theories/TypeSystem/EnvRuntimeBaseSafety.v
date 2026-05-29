@@ -221,6 +221,66 @@ Proof.
     + eassumption.
 Qed.
 
+Lemma store_safe_function_value_call_arg_eval_value_summary :
+  forall env arg s s' v,
+    fn_env_unique_by_name env ->
+    store_safe_function_value_call_arg env arg ->
+    store_function_closure_targets_summary env s ->
+    eval env s arg s' v ->
+    value_function_closure_targets_summary env v.
+Proof.
+  intros env arg s s' v Hunique Harg Hsummary Heval_arg.
+  destruct Harg as [x | fname fdef Hin Hname Hcallee].
+  - inversion Heval_arg; subst;
+      match goal with
+      | Hlookup : store_lookup _ _ = Some _ |- _ =>
+          eapply store_function_closure_targets_summary_lookup; eassumption
+      end.
+  - pose proof (lookup_fn_in_unique_by_name env fname fdef
+        Hin Hname Hunique) as Hlookup.
+    inversion Heval_arg; subst.
+    simpl. exists fdef. split.
+    + exact Hlookup.
+    + exact Hcallee.
+Qed.
+
+Lemma store_safe_function_value_call_args_eval_values_summary :
+  forall env args s s' vs,
+    fn_env_unique_by_name env ->
+    store_safe_function_value_call_args env args ->
+    store_function_closure_targets_summary env s ->
+    eval_args env s args s' vs ->
+    Forall (value_function_closure_targets_summary env) vs.
+Proof.
+  intros env args s s' vs Hunique Hargs Hsummary Heval_args.
+  revert s s' vs Hsummary Heval_args.
+  induction Hargs as [| arg rest Harg Hrest IH]; intros s s' vs Hsummary Heval_args.
+  - inversion Heval_args; subst. constructor.
+  - inversion Heval_args; subst.
+    constructor.
+    + eapply store_safe_function_value_call_arg_eval_value_summary; eassumption.
+    + eapply IH.
+      * eapply store_safe_function_value_call_arg_eval_preserves_store_function_closure_targets_summary;
+          eassumption.
+      * eassumption.
+Qed.
+
+Lemma store_safe_function_value_call_args_bind_params_summary :
+  forall env args ps s s_args vs,
+    fn_env_unique_by_name env ->
+    store_safe_function_value_call_args env args ->
+    store_function_closure_targets_summary env s ->
+    eval_args env s args s_args vs ->
+    store_function_closure_targets_summary env
+      (bind_params ps vs s_args).
+Proof.
+  intros env args ps s s_args vs Hunique Hargs Hsummary Heval_args.
+  eapply store_function_closure_targets_summary_bind_params_values.
+  - eapply store_safe_function_value_call_args_eval_preserves_store_function_closure_targets_summary;
+      eassumption.
+  - eapply store_safe_function_value_call_args_eval_values_summary; eassumption.
+Qed.
+
 Lemma store_safe_function_value_call_args_b_sound :
   forall env args,
     store_safe_function_value_call_args_b env args = true ->

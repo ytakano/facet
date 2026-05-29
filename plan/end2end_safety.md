@@ -24,9 +24,9 @@ this roadmap.
 | T2e.1: monomorphic `TFn` variable call safety gate | done |
 | T2e.2: HRT/closure function-value calls | blocked: runtime callee bridge needed |
 | T2g: mixed lifetime/type forall roots calls | done |
-| T2b.1: captured callee return-root evidence | blocked: cleanup bridge needed |
-| T2b.2: captured closure runtime safety | blocked: same bridge |
-| T2b.3: captured closure regressions | done: status recorded |
+| T2b.1: captured callee base gate | in progress |
+| T2b.2: capture-return cleanup bridge | pending |
+| T2b.3: captured closure regressions | pending |
 | T2f: deref/reborrow/ref-write roots coverage | blocked: nested place root model needed |
 
 ## Current blockers
@@ -114,19 +114,17 @@ malformed HRT-body roots rejections.
 ### T2b: captured closure local binding safety gate
 
 T2b targets source closures elaborated to `EMakeClosure` plus
-`ECallExpr (EVar x) args`.  The generated `__facet_closure` callee may return
-capture-derived roots only after runtime cleanup proves the instantiated body
-roots/env cannot mention erased param or capture store slots.
+`ECallExpr (EVar x) args`.  The generated `__facet_closure` callee is currently
+checked as a top-level function, but only has captured-callee evidence.
 
-T2b status:
+T2b tasks:
 
-- Attempted captured-callee relaxation breaks `EnvRuntimeShadowEvalFacts`: the
-  cleanup wrappers still need `fn_params ++ fn_captures` exclusion.
-- Restored strict captured-callee roots/env gates to keep Rocq safety compiling.
-- Required bridge: show substituted body roots/env are bounded by
-  `arg_roots ++ capture_store_root_sets captured` and exclude erased frame names.
-- Targeted tests: 4 `tests/valid/closure/capture_*` still fail at
-  `__facet_closure`; all `tests/invalid/closure/*` reject.
+- T2b.1: add a base captured-callee branch to the captured-call gate and safety
+  proof.  Keep strict `fn_params ++ fn_captures` roots/env exclusion.
+- T2b.2: only if still needed, prove the capture-return cleanup bridge and then
+  relax captured-callee return-root evidence.
+- T2b.3: run `tests/valid/closure/capture_*` and `tests/invalid/closure/*`,
+  then record the remaining valid failure count.
 
 ### T2f: deref/reborrow/ref-write roots coverage
 

@@ -473,6 +473,87 @@ Proof.
   - exact Hcall.
 Qed.
 
+Lemma expr_root_shadow_store_safe_narrow_summary_alpha_rename_let_intro :
+  forall env Omega n rho Rr Sigmar m x xr T_hidden e1 e2 er used used'
+      e1r used1 used2 e2r used3 T1 Sigma1r R1r roots1r ret_roots1r
+      T2 Sigma2r R2r roots2r ret_roots,
+    alpha_rename_expr rho used (ELet m x T_hidden e1 e2) = (er, used') ->
+    alpha_rename_expr rho used e1 = (e1r, used1) ->
+    xr = fresh_ident x (x :: free_vars_expr e2 ++ used1) ->
+    used2 = xr :: x :: free_vars_expr e2 ++ used1 ->
+    alpha_rename_expr ((x, xr) :: rho) used2 e2 = (e2r, used3) ->
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n Rr Sigmar e1r T1 Sigma1r R1r roots1r ret_roots1r ->
+    ty_compatible_b Omega T1 T_hidden = true ->
+    non_function_value_ty_b T_hidden = true ->
+    root_env_lookup xr R1r = None ->
+    roots_exclude xr roots1r ->
+    root_env_excludes xr R1r ->
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n (root_env_add xr roots1r R1r)
+      (sctx_add xr T_hidden m Sigma1r) e2r T2 Sigma2r R2r
+      roots2r ret_roots ->
+    sctx_check_ok env xr T_hidden Sigma2r = true ->
+    roots_exclude xr roots2r ->
+    root_env_excludes xr (root_env_remove xr R2r) ->
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n Rr Sigmar er T2
+      (sctx_remove xr Sigma2r) (root_env_remove xr R2r) roots2r
+      ret_roots.
+Proof.
+  intros env Omega n rho Rr Sigmar m x xr T_hidden e1 e2 er used used'
+    e1r used1 used2 e2r used3 T1 Sigma1r R1r roots1r ret_roots1r
+    T2 Sigma2r R2r roots2r ret_roots Hrename He1 Hxr Hused2 He2
+    Hsummary1 Hcompat Hnonfun Hlookup Hexcl_roots1 Hexcl_env1
+    Hsummary2 Hcheck Hexcl_roots2 Hexcl_env2.
+  subst xr used2.
+  simpl in Hrename.
+  rewrite He1 in Hrename.
+  rewrite He2 in Hrename.
+  inversion Hrename; subst er used'.
+  eapply ERSSN_Let; eassumption.
+Qed.
+
+Lemma expr_root_shadow_store_safe_narrow_summary_alpha_rename_let_infer_intro :
+  forall env Omega n rho Rr Sigmar m x xr e1 e2 er used used'
+      e1r used1 used2 e2r used3 T1 Sigma1r R1r roots1r ret_roots1r
+      T2 Sigma2r R2r roots2r ret_roots,
+    alpha_rename_expr rho used (ELetInfer m x e1 e2) = (er, used') ->
+    alpha_rename_expr rho used e1 = (e1r, used1) ->
+    xr = fresh_ident x (x :: free_vars_expr e2 ++ used1) ->
+    used2 = xr :: x :: free_vars_expr e2 ++ used1 ->
+    alpha_rename_expr ((x, xr) :: rho) used2 e2 = (e2r, used3) ->
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n Rr Sigmar e1r T1 Sigma1r R1r roots1r ret_roots1r ->
+    non_function_value_ty_b T1 = true ->
+    root_env_lookup xr R1r = None ->
+    roots_exclude xr roots1r ->
+    root_env_excludes xr R1r ->
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n (root_env_add xr roots1r R1r)
+      (sctx_add xr T1 m Sigma1r) e2r T2 Sigma2r R2r roots2r
+      ret_roots ->
+    sctx_check_ok env xr T1 Sigma2r = true ->
+    roots_exclude xr roots2r ->
+    root_env_excludes xr (root_env_remove xr R2r) ->
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n Rr Sigmar er T2
+      (sctx_remove xr Sigma2r) (root_env_remove xr R2r) roots2r
+      ret_roots.
+Proof.
+  intros env Omega n rho Rr Sigmar m x xr e1 e2 er used used'
+    e1r used1 used2 e2r used3 T1 Sigma1r R1r roots1r ret_roots1r
+    T2 Sigma2r R2r roots2r ret_roots Hrename He1 Hxr Hused2 He2
+    Hsummary1 Hnonfun Hlookup Hexcl_roots1 Hexcl_env1 Hsummary2
+    Hcheck Hexcl_roots2 Hexcl_env2.
+  subst xr used2.
+  simpl in Hrename.
+  rewrite He1 in Hrename.
+  rewrite He2 in Hrename.
+  inversion Hrename; subst er used'.
+  eapply ERSSN_LetInfer; eassumption.
+Qed.
+
 Lemma expr_root_shadow_store_safe_narrow_summary_typed :
   forall env Omega n R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_store_safe_narrow_summary

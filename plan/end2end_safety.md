@@ -167,6 +167,8 @@ T2e.2 tasks:
   narrow alpha preservation.
 - Done prep: add alpha-renamed function-value-call intro for narrow
   store-safe summaries.
+- Done prep: add alpha-renamed `let`/`let-infer` intros for narrow
+  store-safe summaries.
 - Blocked: direct `ECall` still requires old
   `callee_body_root_shadow_provenance_summary` evidence.  To accept
   `caller` in `hrt_call_twice`, first finish narrow-summary preservation across

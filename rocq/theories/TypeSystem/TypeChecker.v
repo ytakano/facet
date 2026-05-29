@@ -8118,6 +8118,81 @@ Definition check_expr_root_shadow_captured_call_provenance_summary
   check_expr_root_shadow_captured_call_provenance_summary_fuel
     10000 env Ω n R (sctx_of_ctx Γ) e.
 
+Fixpoint check_expr_root_shadow_store_safe_summary_fuel
+    (fuel : nat) (env : global_env) (Ω : outlives_ctx) (n : nat)
+    (R : root_env) (Σ : sctx) (e : expr) : bool :=
+  match fuel with
+  | 0 => false
+  | S fuel' =>
+  match infer_core_env_state_fuel_roots_shadow_safe fuel env Ω n R Σ e with
+  | infer_err _ => false
+  | infer_ok _ =>
+      check_expr_root_shadow_captured_call_provenance_summary_fuel
+        fuel env Ω n R Σ e ||
+      match e with
+      | ECallExpr callee args =>
+          preservation_ready_args_b args &&
+          check_supported_non_type_generic_function_value_call_expr
+            env Ω n R (ctx_of_sctx Σ) callee
+      | _ => false
+      end ||
+      match e with
+      | ELet m x T_hidden e1 e2 =>
+          match infer_core_env_state_fuel_roots_shadow_safe
+                  fuel' env Ω n R Σ e1 with
+          | infer_err _ => false
+          | infer_ok (T1, Σ1, R1, roots1) =>
+              ty_compatible_b Ω T1 T_hidden &&
+              check_expr_root_shadow_store_safe_summary_fuel
+                fuel' env Ω n R Σ e1 &&
+              match root_env_lookup x R1 with
+              | Some _ => false
+              | None =>
+                  roots_exclude_b x roots1 &&
+                  root_env_excludes_b x R1 &&
+                  match infer_core_env_state_fuel_roots_shadow_safe
+                          fuel' env Ω n
+                          (root_env_add x roots1 R1)
+                          (sctx_add x T_hidden m Σ1) e2 with
+                  | infer_err _ => false
+                  | infer_ok (T2, Σ2, R2, roots2) =>
+                      capture_ref_free_ty_b env T2 &&
+                      sctx_check_ok env x T_hidden Σ2 &&
+                      roots_exclude_b x roots2 &&
+                      root_env_excludes_b x (root_env_remove x R2) &&
+                      check_expr_root_shadow_store_safe_summary_fuel
+                        fuel' env Ω n
+                        (root_env_add x roots1 R1)
+                        (sctx_add x T_hidden m Σ1) e2
+                  end
+              end
+          end
+      | _ => false
+      end ||
+      match e with
+      | EIf e1 e2 e3 =>
+          match infer_core_env_state_fuel_roots_shadow_safe
+                  fuel' env Ω n R Σ e1 with
+          | infer_err _ => false
+          | infer_ok (T_cond, Σ1, R1, _) =>
+              ty_core_eqb (ty_core T_cond) TBooleans &&
+              provenance_ready_expr_b e1 &&
+              check_expr_root_shadow_store_safe_summary_fuel
+                fuel' env Ω n R1 Σ1 e2 &&
+              check_expr_root_shadow_store_safe_summary_fuel
+                fuel' env Ω n R1 Σ1 e3
+          end
+      | _ => false
+      end
+  end
+  end.
+
+Definition check_expr_root_shadow_store_safe_summary
+    (env : global_env) (Ω : outlives_ctx) (n : nat)
+    (R : root_env) (Γ : ctx) (e : expr) : bool :=
+  check_expr_root_shadow_store_safe_summary_fuel
+    10000 env Ω n R (sctx_of_ctx Γ) e.
+
 Definition check_fn_root_shadow_captured_call_provenance_summary
     (env : global_env) (fdef : fn_def) : bool :=
   match check_fn_root_shadow_non_capturing_call_provenance_summary env fdef with

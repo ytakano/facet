@@ -116,8 +116,10 @@ T2e.2 tasks:
   safety modules can share them earlier in the dependency order.
 - Done prep: add a later store-safe expression-summary Prop for recursive
   function-value calls without changing the extracted checker.
-- Next: add expression-summary routing for sequential `let` bodies with HRT
-  function-value calls; current target: `hrt_call_twice`.
+- Done prep: add the extracted store-safe expression-summary checker helper;
+  soundness and gate wiring remain separate.
+- Next: prove the store-safe checker helper and use it for sequential `let`
+  bodies with HRT function-value calls; current target: `hrt_call_twice`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.
 
 Out of scope for T2e.2:

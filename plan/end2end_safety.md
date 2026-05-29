@@ -159,6 +159,8 @@ T2e.2 tasks:
   support narrow `let`/`let-infer` cleanup via root exclusion.
 - Done prep: refactor narrow function-value-call summaries to use
   Prop-level callee typing instead of executable `EVar` inference witnesses.
+- Done prep: prove structural root-instantiation preservation for
+  narrow store-safe summaries.
 - Blocked: direct `ECall` still requires old
   `callee_body_root_shadow_provenance_summary` evidence.  To accept
   `caller` in `hrt_call_twice`, first prove narrow-summary preservation across

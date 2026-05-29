@@ -479,6 +479,214 @@ Proof.
     end.
 Qed.
 
+Lemma expr_root_shadow_store_safe_narrow_summary_instantiate_fresh :
+  forall env Omega n rho R Σ e T Σ' R' roots ret_roots,
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n R Σ e T Σ' R' roots ret_roots ->
+    root_subst_images_exclude_names (expr_local_store_names e) rho ->
+    forall R0,
+      root_env_no_shadow R ->
+      root_env_no_shadow R0 ->
+      root_env_equiv R0 (root_env_instantiate rho R) ->
+      exists R0' roots0 ret_roots0,
+        expr_root_shadow_store_safe_narrow_summary
+          env Omega n R0 Σ e T Σ' R0' roots0 ret_roots0 /\
+        root_env_no_shadow R0' /\
+        root_env_equiv R0' (root_env_instantiate rho R') /\
+        root_set_equiv roots0 (root_set_instantiate rho roots).
+Proof.
+  intros env Omega n rho R Σ e T Σ' R' roots ret_roots Hsummary.
+  induction Hsummary; intros Hfresh R0 HnsR HnsR0 HR0.
+  - destruct (typed_env_roots_shadow_safe_instantiate_fresh
+      env Omega n rho R Σ (ECallExpr (EVar x) args) T Σ' R' roots
+      R0 H2 Hfresh HnsR HnsR0 HR0)
+      as (Rcall0 & roots0 & Htyped_call0 & Hns_call0 & HR_call0 & Hroots0).
+    destruct (typed_env_roots_shadow_safe_instantiate_fresh
+      env Omega n rho R Σ (EVar x) T_callee Σ_callee R_callee
+      roots_callee R0 H0 (root_subst_images_exclude_names_nil rho) HnsR HnsR0 HR0)
+      as (Rcallee0 & roots_callee0 & Htyped_callee0 & _ & _ & _).
+    exists Rcall0, roots0, roots0. split.
+    + eapply ERSSN_FunctionValueCall.
+      * exact H.
+      * exact Htyped_callee0.
+      * exact H1.
+      * exact Htyped_call0.
+    + split; [exact Hns_call0 |].
+      split; [exact HR_call0 |].
+      exact Hroots0.
+  - destruct (root_subst_images_exclude_names_app_inv
+      (expr_local_store_names e1) (x :: expr_local_store_names e2) rho
+      Hfresh) as [Hfresh1 Hfresh_tail].
+    destruct (root_subst_images_exclude_names_cons_inv
+      x (expr_local_store_names e2) rho Hfresh_tail)
+      as [Hfresh_x Hfresh2].
+    destruct (IHHsummary1 Hfresh1 R0 HnsR HnsR0 HR0)
+      as (R10 & roots10 & ret_roots10 & Hsummary10 & HnsR10 & HR10 & Hroots10).
+    assert (Hlookup_inst_none :
+      root_env_lookup x (root_env_instantiate rho R1) = None)
+      by (apply root_env_lookup_instantiate_none; exact H1).
+    assert (Hlookup_R10_none : root_env_lookup x R10 = None)
+      by (eapply root_env_equiv_lookup_none_r; eassumption).
+    assert (Hns_R1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow.
+      - eapply typed_env_roots_shadow_safe_roots.
+        eapply expr_root_shadow_store_safe_narrow_summary_typed.
+        exact Hsummary1.
+      - exact HnsR. }
+    assert (Hns_R2 : root_env_no_shadow R2).
+    { eapply typed_env_roots_no_shadow.
+      - eapply typed_env_roots_shadow_safe_roots.
+        eapply expr_root_shadow_store_safe_narrow_summary_typed.
+        exact Hsummary2.
+      - apply root_env_no_shadow_add; assumption. }
+    assert (Hns_add : root_env_no_shadow (root_env_add x roots10 R10))
+      by (apply root_env_no_shadow_add; assumption).
+    assert (Heq_add :
+      root_env_equiv (root_env_add x roots10 R10)
+        (root_env_instantiate rho (root_env_add x roots1 R1))).
+    { eapply root_env_equiv_trans.
+      - apply root_env_equiv_add.
+        + exact Hroots10.
+        + exact HR10.
+      - apply root_env_equiv_sym.
+        apply root_env_instantiate_add_equiv.
+        + apply root_set_equiv_refl.
+        + apply root_env_equiv_refl. }
+    assert (Hexcl_roots10 : roots_exclude x roots10).
+    { eapply roots_exclude_equiv.
+      - apply root_set_equiv_sym. exact Hroots10.
+      - eapply root_set_instantiate_excludes_images; eassumption. }
+    assert (Hexcl_env10 : root_env_excludes x R10).
+    { eapply root_env_excludes_equiv.
+      - apply root_env_equiv_sym. exact HR10.
+      - eapply root_env_instantiate_excludes_images; eassumption. }
+    destruct (IHHsummary2 Hfresh2 (root_env_add x roots10 R10)
+      (root_env_no_shadow_add x roots1 R1 Hns_R1 H1)
+      Hns_add Heq_add)
+      as (R20 & roots20 & ret_roots20 & Hsummary20 & HnsR20 & HR20 & Hroots20).
+    exists (root_env_remove x R20), roots20, ret_roots20. split.
+    + eapply ERSSN_Let.
+      * exact Hsummary10.
+      * exact H.
+      * exact H0.
+      * exact Hlookup_R10_none.
+      * exact Hexcl_roots10.
+      * exact Hexcl_env10.
+      * exact Hsummary20.
+      * exact H4.
+      * eapply roots_exclude_equiv.
+        -- apply root_set_equiv_sym. exact Hroots20.
+        -- eapply root_set_instantiate_excludes_images; eassumption.
+      * eapply root_env_excludes_equiv.
+        -- apply root_env_equiv_sym.
+           apply (root_env_equiv_remove x R20
+             (root_env_instantiate rho R2)).
+           ++ exact HnsR20.
+           ++ apply root_env_instantiate_no_shadow. exact Hns_R2.
+           ++ exact HR20.
+        -- rewrite <- root_env_instantiate_remove.
+           eapply root_env_instantiate_excludes_images; eassumption.
+    + split.
+      * apply root_env_no_shadow_remove. exact HnsR20.
+      * split.
+        -- eapply root_env_equiv_trans.
+           ++ apply root_env_equiv_remove.
+              ** exact HnsR20.
+              ** apply root_env_instantiate_no_shadow. exact Hns_R2.
+              ** exact HR20.
+           ++ apply root_env_equiv_sym.
+              apply root_env_instantiate_remove_equiv.
+              ** exact Hns_R2.
+              ** exact Hns_R2.
+              ** apply root_env_equiv_refl.
+        -- exact Hroots20.
+  - destruct (root_subst_images_exclude_names_app_inv
+      (expr_local_store_names e1) (x :: expr_local_store_names e2) rho
+      Hfresh) as [Hfresh1 Hfresh_tail].
+    destruct (root_subst_images_exclude_names_cons_inv
+      x (expr_local_store_names e2) rho Hfresh_tail)
+      as [Hfresh_x Hfresh2].
+    destruct (IHHsummary1 Hfresh1 R0 HnsR HnsR0 HR0)
+      as (R10 & roots10 & ret_roots10 & Hsummary10 & HnsR10 & HR10 & Hroots10).
+    assert (Hlookup_inst_none :
+      root_env_lookup x (root_env_instantiate rho R1) = None)
+      by (apply root_env_lookup_instantiate_none; exact H0).
+    assert (Hlookup_R10_none : root_env_lookup x R10 = None)
+      by (eapply root_env_equiv_lookup_none_r; eassumption).
+    assert (Hns_R1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow.
+      - eapply typed_env_roots_shadow_safe_roots.
+        eapply expr_root_shadow_store_safe_narrow_summary_typed.
+        exact Hsummary1.
+      - exact HnsR. }
+    assert (Hns_R2 : root_env_no_shadow R2).
+    { eapply typed_env_roots_no_shadow.
+      - eapply typed_env_roots_shadow_safe_roots.
+        eapply expr_root_shadow_store_safe_narrow_summary_typed.
+        exact Hsummary2.
+      - apply root_env_no_shadow_add; assumption. }
+    assert (Hns_add : root_env_no_shadow (root_env_add x roots10 R10))
+      by (apply root_env_no_shadow_add; assumption).
+    assert (Heq_add :
+      root_env_equiv (root_env_add x roots10 R10)
+        (root_env_instantiate rho (root_env_add x roots1 R1))).
+    { eapply root_env_equiv_trans.
+      - apply root_env_equiv_add.
+        + exact Hroots10.
+        + exact HR10.
+      - apply root_env_equiv_sym.
+        apply root_env_instantiate_add_equiv.
+        + apply root_set_equiv_refl.
+        + apply root_env_equiv_refl. }
+    assert (Hexcl_roots10 : roots_exclude x roots10).
+    { eapply roots_exclude_equiv.
+      - apply root_set_equiv_sym. exact Hroots10.
+      - eapply root_set_instantiate_excludes_images; eassumption. }
+    assert (Hexcl_env10 : root_env_excludes x R10).
+    { eapply root_env_excludes_equiv.
+      - apply root_env_equiv_sym. exact HR10.
+      - eapply root_env_instantiate_excludes_images; eassumption. }
+    destruct (IHHsummary2 Hfresh2 (root_env_add x roots10 R10)
+      (root_env_no_shadow_add x roots1 R1 Hns_R1 H0)
+      Hns_add Heq_add)
+      as (R20 & roots20 & ret_roots20 & Hsummary20 & HnsR20 & HR20 & Hroots20).
+    exists (root_env_remove x R20), roots20, ret_roots20. split.
+    + eapply ERSSN_LetInfer.
+      * exact Hsummary10.
+      * exact H.
+      * exact Hlookup_R10_none.
+      * exact Hexcl_roots10.
+      * exact Hexcl_env10.
+      * exact Hsummary20.
+      * exact H3.
+      * eapply roots_exclude_equiv.
+        -- apply root_set_equiv_sym. exact Hroots20.
+        -- eapply root_set_instantiate_excludes_images; eassumption.
+      * eapply root_env_excludes_equiv.
+        -- apply root_env_equiv_sym.
+           apply (root_env_equiv_remove x R20
+             (root_env_instantiate rho R2)).
+           ++ exact HnsR20.
+           ++ apply root_env_instantiate_no_shadow. exact Hns_R2.
+           ++ exact HR20.
+        -- rewrite <- root_env_instantiate_remove.
+           eapply root_env_instantiate_excludes_images; eassumption.
+    + split.
+      * apply root_env_no_shadow_remove. exact HnsR20.
+      * split.
+        -- eapply root_env_equiv_trans.
+           ++ apply root_env_equiv_remove.
+              ** exact HnsR20.
+              ** apply root_env_instantiate_no_shadow. exact Hns_R2.
+              ** exact HR20.
+           ++ apply root_env_equiv_sym.
+              apply root_env_instantiate_remove_equiv.
+              ** exact Hns_R2.
+              ** exact Hns_R2.
+              ** apply root_env_equiv_refl.
+        -- exact Hroots20.
+Qed.
+
 Lemma check_expr_root_shadow_store_safe_narrow_summary_fuel_sound :
   forall fuel env Omega n R Σ e T Σ' R' roots,
     infer_core_env_state_fuel_roots_shadow_safe fuel env Omega n R Σ e =

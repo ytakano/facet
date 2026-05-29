@@ -554,6 +554,44 @@ Proof.
   eapply ERSSN_LetInfer; eassumption.
 Qed.
 
+Lemma expr_root_shadow_store_safe_narrow_summary_alpha_rename_let_init_support :
+  forall rho R Rr roots rootsr Sigma Sigmar xr,
+    ctx_alpha rho Sigma Sigmar ->
+    root_env_no_shadow R ->
+    root_env_no_shadow Rr ->
+    root_env_equiv Rr (root_env_rename rho R) ->
+    root_set_equiv rootsr (root_set_rename rho roots) ->
+    root_env_sctx_keys_named R Sigma ->
+    root_env_sctx_roots_named R Sigma ->
+    root_set_sctx_roots_named roots Sigma ->
+    ~ In xr (ctx_names Sigmar) ->
+    root_env_lookup xr Rr = None /\
+    roots_exclude xr rootsr /\
+    root_env_excludes xr Rr.
+Proof.
+  intros rho R Rr roots rootsr Sigma Sigmar xr Hctx Hrn Hrn_r HR
+    Hroots Hkeys Hroot_names Hroot_set_names Hfresh.
+  exact (root_env_sctx_support_fresh_renamed_let_init rho R Rr roots rootsr
+    Sigma Sigmar xr Hctx Hrn Hrn_r HR Hroots Hkeys Hroot_names
+    Hroot_set_names Hfresh).
+Qed.
+
+Lemma expr_root_shadow_store_safe_narrow_summary_alpha_rename_let_body_no_collision :
+  forall rho Sigma Sigma2 Sigmar R x xr T m,
+    ctx_alpha rho Sigma Sigmar ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R Sigma2 ->
+    sctx_same_bindings (sctx_add x T m Sigma) Sigma2 ->
+    ~ In xr (ctx_names Sigmar) ->
+    rename_no_collision_on rho (root_env_names (root_env_remove x R)) ->
+    rename_no_collision_on ((x, xr) :: rho) (root_env_names R).
+Proof.
+  intros rho Sigma Sigma2 Sigmar R x xr T m Hctx Hrn Hkeys Hsame
+    Hfresh Hnocoll.
+  eapply root_env_remove_shadow_safe_rename_no_collision_on_same_bindings;
+    eassumption.
+Qed.
+
 Lemma expr_root_shadow_store_safe_narrow_summary_typed :
   forall env Omega n R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_store_safe_narrow_summary

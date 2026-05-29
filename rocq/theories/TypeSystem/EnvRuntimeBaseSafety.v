@@ -44,10 +44,10 @@ Lemma eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_sto
       store_function_closure_targets_summary env s'.
 Proof.
   intros env Ω n R Σ e T Σ' R' roots ret_roots Hevidence Hsummary
-    s s' ret Hstore Hroots Hshadow Hrn Hnamed Hkeys _ Heval Hunique.
+    s s' ret Hstore Hroots Hshadow Hrn Hnamed Hkeys _ Heval_callee Hunique.
   destruct (eval_expr_root_shadow_captured_call_provenance_summary_exact_package
     env Ω n R Σ e T Σ' R' roots ret_roots Hsummary s s' ret
-    Hstore Hroots Hshadow Hrn Hnamed Hkeys Heval Hunique)
+    Hstore Hroots Hshadow Hrn Hnamed Hkeys Heval_callee Hunique)
     as [Hstore' _].
   eapply store_typed_function_closure_targets_summary; eassumption.
 Qed.
@@ -59,8 +59,8 @@ Lemma eval_var_empty_closure_target_summary_of_store_function_closure_targets_su
     lookup_fn fname (env_fns env) = Some fdef ->
     callee_body_root_shadow_provenance_summary env fdef.
 Proof.
-  intros env s s' x fname fdef Hstore Heval Hlookup.
-  inversion Heval; subst;
+  intros env s s' x fname fdef Hstore Heval_callee Hlookup.
+  inversion Heval_callee; subst;
     match goal with
     | Hlookup_store : store_lookup ?x_lookup ?s_lookup = Some ?se |- _ =>
         pose proof
@@ -84,66 +84,66 @@ Inductive expr_root_shadow_store_safe_summary
     (env : global_env) (Omega : outlives_ctx) (n : nat)
     : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set ->
       root_set -> Prop :=
-  | ERSS_Exact : forall R Sigma e T Sigma' R' roots ret_roots,
+  | ERSS_Exact : forall R Σ e T Σ' R' roots ret_roots,
       expr_root_shadow_captured_call_provenance_summary_exact
-        env Omega n R Sigma e T Sigma' R' roots ret_roots ->
+        env Omega n R Σ e T Σ' R' roots ret_roots ->
       expr_root_shadow_store_safe_summary
-        env Omega n R Sigma e T Sigma' R' roots ret_roots
-  | ERSS_FunctionValueCall : forall R Sigma x args T_callee Gamma_callee
-      R_callee roots_callee T Sigma' R' roots,
+        env Omega n R Σ e T Σ' R' roots ret_roots
+  | ERSS_FunctionValueCall : forall R Σ x args T_callee Gamma_callee
+      R_callee roots_callee T Σ' R' roots,
       preservation_ready_args args ->
-      infer_core_env_roots_shadow_safe env Omega n R (ctx_of_sctx Sigma)
+      infer_core_env_roots_shadow_safe env Omega n R (ctx_of_sctx Σ)
         (EVar x) = infer_ok
           (T_callee, Gamma_callee, R_callee, roots_callee) ->
       supported_non_type_generic_function_value_call_callee_shape T_callee ->
-      typed_env_roots_shadow_safe env Omega n R Sigma
-        (ECallExpr (EVar x) args) T Sigma' R' roots ->
+      typed_env_roots_shadow_safe env Omega n R Σ
+        (ECallExpr (EVar x) args) T Σ' R' roots ->
       expr_root_shadow_store_safe_summary
-        env Omega n R Sigma (ECallExpr (EVar x) args) T Sigma' R' roots roots
-  | ERSS_Let : forall R R1 R2 Sigma Sigma1 Sigma2 m x T_hidden T1 e1 e2
+        env Omega n R Σ (ECallExpr (EVar x) args) T Σ' R' roots roots
+  | ERSS_Let : forall R R1 R2 Σ Σ1 Sigma2 m x T_hidden T1 e1 e2
       T2 roots1 roots2 ret_roots1 ret_roots,
       expr_root_shadow_store_safe_summary
-        env Omega n R Sigma e1 T1 Sigma1 R1 roots1 ret_roots1 ->
+        env Omega n R Σ e1 T1 Σ1 R1 roots1 ret_roots1 ->
       ty_compatible_b Omega T1 T_hidden = true ->
       root_env_lookup x R1 = None ->
       roots_exclude x roots1 ->
       root_env_excludes x R1 ->
       expr_root_shadow_store_safe_summary
         env Omega n (root_env_add x roots1 R1)
-        (sctx_add x T_hidden m Sigma1) e2 T2 Sigma2 R2 roots2 ret_roots ->
+        (sctx_add x T_hidden m Σ1) e2 T2 Sigma2 R2 roots2 ret_roots ->
       capture_ref_free_ty_b env T2 = true ->
       sctx_check_ok env x T_hidden Sigma2 = true ->
       roots_exclude x roots2 ->
       root_env_excludes x (root_env_remove x R2) ->
       expr_root_shadow_store_safe_summary
-        env Omega n R Sigma (ELet m x T_hidden e1 e2) T2
+        env Omega n R Σ (ELet m x T_hidden e1 e2) T2
         (sctx_remove x Sigma2) (root_env_remove x R2) roots2 ret_roots
-  | ERSS_If : forall R R1 R2 R3 Sigma Sigma1 Sigma2 Sigma3 Sigma4
+  | ERSS_If : forall R R1 R2 R3 Σ Σ1 Sigma2 Sigma3 Sigma4
       e1 e2 e3 T_cond T2 T3 roots_cond roots2 roots3 ret_roots2 ret_roots3,
       provenance_ready_expr e1 ->
-      typed_env_roots_shadow_safe env Omega n R Sigma e1 T_cond Sigma1 R1
+      typed_env_roots_shadow_safe env Omega n R Σ e1 T_cond Σ1 R1
         roots_cond ->
       ty_core T_cond = TBooleans ->
       expr_root_shadow_store_safe_summary
-        env Omega n R1 Sigma1 e2 T2 Sigma2 R2 roots2 ret_roots2 ->
+        env Omega n R1 Σ1 e2 T2 Sigma2 R2 roots2 ret_roots2 ->
       expr_root_shadow_store_safe_summary
-        env Omega n R1 Sigma1 e3 T3 Sigma3 R3 roots3 ret_roots3 ->
+        env Omega n R1 Σ1 e3 T3 Sigma3 R3 roots3 ret_roots3 ->
       ty_core T2 = ty_core T3 ->
       ctx_merge (ctx_of_sctx Sigma2) (ctx_of_sctx Sigma3) = Some Sigma4 ->
       R2 = R3 ->
       expr_root_shadow_store_safe_summary
-        env Omega n R Sigma (EIf e1 e2 e3)
+        env Omega n R Σ (EIf e1 e2 e3)
         (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2))
         (sctx_of_ctx Sigma4) R2 (root_set_union roots2 roots3)
         (root_set_union ret_roots2 ret_roots3).
 
 Lemma expr_root_shadow_store_safe_summary_typed :
-  forall env Omega n R Sigma e T Sigma' R' roots ret_roots,
+  forall env Omega n R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_store_safe_summary
-      env Omega n R Sigma e T Sigma' R' roots ret_roots ->
-    typed_env_roots_shadow_safe env Omega n R Sigma e T Sigma' R' roots.
+      env Omega n R Σ e T Σ' R' roots ret_roots ->
+    typed_env_roots_shadow_safe env Omega n R Σ e T Σ' R' roots.
 Proof.
-  intros env Omega n R Sigma e T Sigma' R' roots ret_roots Hsummary.
+  intros env Omega n R Σ e T Σ' R' roots ret_roots Hsummary.
   induction Hsummary.
   - eapply expr_root_shadow_captured_call_provenance_summary_exact_typed.
     exact H.
@@ -197,10 +197,10 @@ Lemma store_safe_function_value_call_arg_eval_preserves_store_function_closure_t
     eval env s arg s' v ->
     store_function_closure_targets_summary env s'.
 Proof.
-  intros env arg s s' v Harg Hsummary Heval.
+  intros env arg s s' v Harg Hsummary Heval_callee.
   destruct Harg.
   - eapply store_function_closure_targets_summary_eval_var; eassumption.
-  - inversion Heval; subst; auto.
+  - inversion Heval_callee; subst; auto.
 Qed.
 
 Lemma store_safe_function_value_call_args_eval_preserves_store_function_closure_targets_summary :
@@ -210,11 +210,11 @@ Lemma store_safe_function_value_call_args_eval_preserves_store_function_closure_
     eval_args env s args s' vs ->
     store_function_closure_targets_summary env s'.
 Proof.
-  intros env args s s' vs Hargs Hsummary Heval.
-  revert s s' vs Hsummary Heval.
-  induction Hargs as [| arg rest Harg Hrest IH]; intros s s' vs Hsummary Heval.
-  - inversion Heval; subst. exact Hsummary.
-  - inversion Heval; subst.
+  intros env args s s' vs Hargs Hsummary Heval_callee.
+  revert s s' vs Hsummary Heval_callee.
+  induction Hargs as [| arg rest Harg Hrest IH]; intros s s' vs Hsummary Heval_callee.
+  - inversion Heval_callee; subst. exact Hsummary.
+  - inversion Heval_callee; subst.
     eapply IH.
     + eapply store_safe_function_value_call_arg_eval_preserves_store_function_closure_targets_summary;
         eassumption.
@@ -250,21 +250,21 @@ Inductive expr_root_shadow_store_safe_narrow_summary
     (env : global_env) (Omega : outlives_ctx) (n : nat)
     : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set ->
       root_set -> Prop :=
-  | ERSSN_FunctionValueCall : forall R Sigma x args T_callee Gamma_callee
-      R_callee roots_callee T Sigma' R' roots,
+  | ERSSN_FunctionValueCall : forall R Σ x args T_callee Gamma_callee
+      R_callee roots_callee T Σ' R' roots,
       store_safe_function_value_call_args env args ->
-      infer_core_env_roots_shadow_safe env Omega n R (ctx_of_sctx Sigma)
+      infer_core_env_roots_shadow_safe env Omega n R (ctx_of_sctx Σ)
         (EVar x) = infer_ok
           (T_callee, Gamma_callee, R_callee, roots_callee) ->
       supported_non_type_generic_function_value_call_callee_shape T_callee ->
-      typed_env_roots_shadow_safe env Omega n R Sigma
-        (ECallExpr (EVar x) args) T Sigma' R' roots ->
+      typed_env_roots_shadow_safe env Omega n R Σ
+        (ECallExpr (EVar x) args) T Σ' R' roots ->
       expr_root_shadow_store_safe_narrow_summary
-        env Omega n R Sigma (ECallExpr (EVar x) args) T Sigma' R' roots roots
-  | ERSSN_Let : forall R R1 R2 Sigma Sigma1 Sigma2 m x T_hidden T1 e1 e2
+        env Omega n R Σ (ECallExpr (EVar x) args) T Σ' R' roots roots
+  | ERSSN_Let : forall R R1 R2 Σ Σ1 Sigma2 m x T_hidden T1 e1 e2
       T2 roots1 roots2 ret_roots1 ret_roots,
       expr_root_shadow_store_safe_narrow_summary
-        env Omega n R Sigma e1 T1 Sigma1 R1 roots1 ret_roots1 ->
+        env Omega n R Σ e1 T1 Σ1 R1 roots1 ret_roots1 ->
       ty_compatible_b Omega T1 T_hidden = true ->
       non_function_value_ty_b T_hidden = true ->
       root_env_lookup x R1 = None ->
@@ -272,58 +272,58 @@ Inductive expr_root_shadow_store_safe_narrow_summary
       root_env_excludes x R1 ->
       expr_root_shadow_store_safe_narrow_summary
         env Omega n (root_env_add x roots1 R1)
-        (sctx_add x T_hidden m Sigma1) e2 T2 Sigma2 R2 roots2 ret_roots ->
+        (sctx_add x T_hidden m Σ1) e2 T2 Sigma2 R2 roots2 ret_roots ->
       capture_ref_free_ty_b env T2 = true ->
       sctx_check_ok env x T_hidden Sigma2 = true ->
       roots_exclude x roots2 ->
       root_env_excludes x (root_env_remove x R2) ->
       expr_root_shadow_store_safe_narrow_summary
-        env Omega n R Sigma (ELet m x T_hidden e1 e2) T2
+        env Omega n R Σ (ELet m x T_hidden e1 e2) T2
         (sctx_remove x Sigma2) (root_env_remove x R2) roots2 ret_roots.
 
 Lemma expr_root_shadow_store_safe_narrow_summary_typed :
-  forall env Omega n R Sigma e T Sigma' R' roots ret_roots,
+  forall env Omega n R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_store_safe_narrow_summary
-      env Omega n R Sigma e T Sigma' R' roots ret_roots ->
-    typed_env_roots_shadow_safe env Omega n R Sigma e T Sigma' R' roots.
+      env Omega n R Σ e T Σ' R' roots ret_roots ->
+    typed_env_roots_shadow_safe env Omega n R Σ e T Σ' R' roots.
 Proof.
-  intros env Omega n R Sigma e T Sigma' R' roots ret_roots Hsummary.
+  intros env Omega n R Σ e T Σ' R' roots ret_roots Hsummary.
   induction Hsummary.
   - exact H2.
   - eapply TERS_Let; eauto.
 Qed.
 
 Lemma expr_root_shadow_store_safe_narrow_summary_runtime_names_from_store_typed :
-  forall env Omega n R Sigma e T Sigma' R' roots ret_roots s s',
+  forall env Omega n R Σ e T Σ' R' roots ret_roots s s',
     expr_root_shadow_store_safe_narrow_summary
-      env Omega n R Sigma e T Sigma' R' roots ret_roots ->
-    store_typed env s Sigma ->
+      env Omega n R Σ e T Σ' R' roots ret_roots ->
+    store_typed env s Σ ->
     root_env_no_shadow R ->
     root_env_store_roots_named R s ->
     root_env_store_keys_named R s ->
-    store_typed env s' Sigma' ->
+    store_typed env s' Σ' ->
     root_env_no_shadow R' ->
     root_env_store_roots_named R' s' /\
     root_set_store_roots_named roots s' /\
     root_env_store_keys_named R' s'.
 Proof.
-  intros env Omega n R Sigma e T Sigma' R' roots ret_roots s s'
+  intros env Omega n R Σ e T Σ' R' roots ret_roots s s'
     Hsummary Hstore Hrn Hnamed Hkeys Hstore' Hrn'.
   pose proof (expr_root_shadow_store_safe_narrow_summary_typed
-    env Omega n R Sigma e T Sigma' R' roots ret_roots Hsummary)
+    env Omega n R Σ e T Σ' R' roots ret_roots Hsummary)
     as Htyped_shadow.
   pose proof (typed_env_roots_shadow_safe_roots
-    env Omega n R Sigma e T Sigma' R' roots Htyped_shadow)
+    env Omega n R Σ e T Σ' R' roots Htyped_shadow)
     as Htyped_roots.
-  assert (Hctx_roots : root_env_ctx_roots_named R Sigma)
+  assert (Hctx_roots : root_env_ctx_roots_named R Σ)
     by (eapply root_env_store_roots_named_to_ctx; eassumption).
   destruct (proj1 (typed_roots_ctx_roots_named_mutual env Omega n)
-    R Sigma e T Sigma' R' roots Htyped_roots Hrn Hctx_roots)
+    R Σ e T Σ' R' roots Htyped_roots Hrn Hctx_roots)
     as [Hctx_roots' Hctx_set'].
-  assert (Hctx_keys : root_env_sctx_keys_named R Sigma)
+  assert (Hctx_keys : root_env_sctx_keys_named R Σ)
     by (eapply root_env_store_keys_named_to_ctx; eassumption).
   pose proof (proj1 (typed_roots_shadow_safe_sctx_keys_named_mutual
-    env Omega n) R Sigma e T Sigma' R' roots Htyped_shadow
+    env Omega n) R Σ e T Σ' R' roots Htyped_shadow
     Hrn Hctx_keys) as Hctx_keys'.
   repeat split.
   - eapply root_env_ctx_roots_named_store_typed; eassumption.
@@ -332,16 +332,16 @@ Proof.
 Qed.
 
 Lemma check_expr_root_shadow_store_safe_narrow_summary_fuel_sound :
-  forall fuel env Omega n R Sigma e T Sigma' R' roots,
-    infer_core_env_state_fuel_roots_shadow_safe fuel env Omega n R Sigma e =
-      infer_ok (T, Sigma', R', roots) ->
+  forall fuel env Omega n R Σ e T Σ' R' roots,
+    infer_core_env_state_fuel_roots_shadow_safe fuel env Omega n R Σ e =
+      infer_ok (T, Σ', R', roots) ->
     check_expr_root_shadow_store_safe_narrow_summary_fuel
-      fuel env Omega n R Sigma e = true ->
+      fuel env Omega n R Σ e = true ->
     exists ret_roots,
       expr_root_shadow_store_safe_narrow_summary
-        env Omega n R Sigma e T Sigma' R' roots ret_roots.
+        env Omega n R Σ e T Σ' R' roots ret_roots.
 Proof.
-  induction fuel as [| fuel' IH]; intros env Omega n R Sigma e T Sigma' R'
+  induction fuel as [| fuel' IH]; intros env Omega n R Σ e T Σ' R'
     roots Hinfer Hcheck.
   - simpl in Hinfer. discriminate.
   - cbn [check_expr_root_shadow_store_safe_narrow_summary_fuel] in Hcheck.
@@ -349,28 +349,28 @@ Proof.
     destruct e; try discriminate.
     + simpl in Hinfer, Hcheck.
       destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Omega n R
-        Sigma e1) as [[[[T1 Sigma1] R1] roots1] | err] eqn:Hbound;
+        Σ e1) as [[[[T1 Σ1] R1] roots1] | err] eqn:Hbound;
         try discriminate.
       destruct (ty_compatible_b Omega T1 t) eqn:Hcompat;
         try discriminate.
       destruct (non_function_value_ty_b t) eqn:Hnonfn;
         try discriminate.
       apply andb_true_iff in Hcheck as [Hhead Hcheck].
-      destruct (IH env Omega n R Sigma e1 T1 Sigma1 R1 roots1 Hbound Hhead)
+      destruct (IH env Omega n R Σ e1 T1 Σ1 R1 roots1 Hbound Hhead)
         as [ret_roots1 Hbound_summary].
       destruct (root_env_lookup i R1) as [roots_x |] eqn:Hlookup_x;
         try discriminate.
       apply andb_true_iff in Hcheck as [Hfresh Hcheck].
       apply andb_true_iff in Hfresh as [Hroots1 Henv1].
       destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Omega n
-        (root_env_add i roots1 R1) (sctx_add i t m Sigma1) e2)
+        (root_env_add i roots1 R1) (sctx_add i t m Σ1) e2)
         as [[[[T2 Sigma2] R2] roots2] | err] eqn:Hbody;
         try discriminate.
       repeat rewrite andb_true_iff in Hcheck.
       destruct Hcheck as [[[[Hfree_ret Hsctx_ok] Hroots2] Henv2]
         Hbody_check].
       destruct (IH env Omega n (root_env_add i roots1 R1)
-        (sctx_add i t m Sigma1) e2 T2 Sigma2 R2 roots2 Hbody
+        (sctx_add i t m Σ1) e2 T2 Sigma2 R2 roots2 Hbody
         Hbody_check) as [ret_roots Hbody_summary].
       simpl in Hinfer.
       rewrite Hroots1, Henv1, Hsctx_ok, Hroots2, Henv2 in Hinfer.
@@ -387,7 +387,7 @@ Proof.
     + apply andb_true_iff in Hcheck as [Hready_args Hsupported].
       pose proof
         (check_supported_non_type_generic_function_value_call_expr_sound
-          env Omega n R (ctx_of_sctx Sigma) e l Hsupported)
+          env Omega n R (ctx_of_sctx Σ) e l Hsupported)
         as Hsupported_prop.
       destruct Hsupported_prop as
         (x & T_callee & Gamma_callee & R_callee & roots_callee &
@@ -422,6 +422,222 @@ Proof.
   inversion Hinfer; subst.
   eapply check_expr_root_shadow_store_safe_narrow_summary_fuel_sound;
     eassumption.
+Qed.
+
+Lemma infer_core_env_roots_shadow_safe_evar_lookup_core_base :
+  forall env Ω n R Γ x T_infer Γ_out R_out roots T_lookup st,
+    infer_core_env_roots_shadow_safe env Ω n R Γ (EVar x) =
+      infer_ok (T_infer, Γ_out, R_out, roots) ->
+    sctx_lookup x (sctx_of_ctx Γ) = Some (T_lookup, st) ->
+    ty_core T_infer = ty_core T_lookup.
+Proof.
+  intros env Ω n R Γ x T_infer Γ_out R_out roots T_lookup st
+    Hinfer Hlookup.
+  unfold infer_core_env_roots_shadow_safe in Hinfer.
+  cbn in Hinfer.
+  unfold consume_direct_place_value_roots, infer_place_roots in Hinfer.
+  cbn in Hinfer.
+  rewrite Hlookup in Hinfer.
+  destruct (binding_available_b st []) eqn:Havailable; try discriminate.
+  destruct (root_env_lookup x R) as [roots0 |] eqn:Hroot; try discriminate.
+  destruct (usage_eqb (ty_usage T_lookup) UUnrestricted) eqn:Husage.
+  - inversion Hinfer; subst. reflexivity.
+  - destruct (sctx_consume_path (sctx_of_ctx Γ) x []) as [Σc | err]
+      eqn:Hconsume; try discriminate.
+    inversion Hinfer; subst. reflexivity.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_evar_infer_core_base :
+  forall env Ω n R Γ x T_typed Σ_out R_out roots_typed
+      T_infer Γ_infer R_infer roots_infer,
+    typed_env_roots_shadow_safe env Ω n R (sctx_of_ctx Γ) (EVar x)
+      T_typed Σ_out R_out roots_typed ->
+    infer_core_env_roots_shadow_safe env Ω n R Γ (EVar x) =
+      infer_ok (T_infer, Γ_infer, R_infer, roots_infer) ->
+    ty_core T_infer = ty_core T_typed.
+Proof.
+  intros env Ω n R Γ x T_typed Σ_out R_out roots_typed
+    T_infer Γ_infer R_infer roots_infer Htyped Hinfer.
+  dependent destruction Htyped.
+  - match goal with
+    | Hplace : typed_place_env_structural _ _ (PVar _) _ |- _ =>
+        inversion Hplace; subst
+    end.
+    eapply infer_core_env_roots_shadow_safe_evar_lookup_core_base; eassumption.
+  - match goal with
+    | Hplace : typed_place_env_structural _ _ (PVar _) _ |- _ =>
+        inversion Hplace; subst
+    end.
+    eapply infer_core_env_roots_shadow_safe_evar_lookup_core_base; eassumption.
+Qed.
+
+Lemma expr_root_shadow_store_safe_narrow_function_call_preserves_store_function_closure_targets_summary :
+  forall env Omega n R Σ x args T_callee Gamma_callee R_callee roots_callee T Σ' R' roots,
+    store_safe_function_value_call_args env args ->
+    infer_core_env_roots_shadow_safe env Omega n R (ctx_of_sctx Σ)
+      (EVar x) = infer_ok (T_callee, Gamma_callee, R_callee, roots_callee) ->
+    supported_non_type_generic_function_value_call_callee_shape T_callee ->
+    typed_env_roots_shadow_safe env Omega n R Σ
+      (ECallExpr (EVar x) args) T Σ' R' roots ->
+    forall s s' ret,
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      store_function_closure_targets_summary env s ->
+      eval env s (ECallExpr (EVar x) args) s' ret ->
+      fn_env_unique_by_name env ->
+      store_function_closure_targets_summary env s'.
+Proof.
+  intros env Omega n R Σ x args T_callee Gamma_callee R_callee roots_callee T Σ' R' roots Hargs Hinfer_callee Hcallee_shape Htyped
+    s s' ret Hstore Hroots Hshadow Hrn Hnamed Hkeys Hsummary Heval_callee Hunique.
+  dependent destruction Heval_callee.
+  match goal with
+  | Hcallee_eval : eval env s (EVar x) s_fn (VClosure fname captured) |- _ =>
+      rename Hcallee_eval into Heval_callee
+  end.
+  match goal with
+  | Hlookup_fn : lookup_fn fname (env_fns env) = Some fdef |- _ =>
+      rename Hlookup_fn into Hlookup
+  end.
+  match goal with
+  | Hargs_eval : eval_args env s_fn args s_args vs |- _ =>
+      rename Hargs_eval into Heval_args
+  end.
+  match goal with
+  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = (fcall, used') |- _ =>
+      rename Halpha into Hrename
+  end.
+  match goal with
+  | Hbody_eval : eval env (bind_params (fn_params fcall) vs (captured ++ s_args)) (fn_body fcall) s_body ret |- _ =>
+      rename Hbody_eval into Heval_body
+  end.
+  pose proof (store_function_closure_targets_summary_eval_var
+    env s s_fn x (VClosure fname captured) Hsummary Heval_callee) as Hsummary_fn.
+  pose proof
+    (store_safe_function_value_call_args_eval_preserves_store_function_closure_targets_summary
+      env args s_fn s_args vs Hargs Hsummary_fn Heval_args) as Hsummary_args.
+  dependent destruction Htyped.
+  - pose proof (typed_env_roots_shadow_safe_roots
+      env Omega n R Σ (EVar x) (MkTy u (TFn param_tys ret))
+      Σ1 R1 roots_callee0 Htyped) as Htyped_callee_roots.
+    destruct (proj1 eval_preserves_typing_roots_ready_mutual
+      env s (EVar x) s_fn (VClosure fname captured) Heval_callee
+      Omega n R Σ (MkTy u (TFn param_tys ret))
+      Σ1 R1 roots_callee0 (ProvReady_Var x) Hstore Hroots Hshadow Hrn
+      Htyped_callee_roots) as [_ [Hv_callee _]].
+    pose proof (value_has_type_closure_captured_nil env s_fn fname captured
+      (MkTy u (TFn param_tys ret)) Hv_callee) as Hcaptured_nil.
+    subst captured.
+    pose proof (eval_var_empty_closure_target_summary_of_store_function_closure_targets_summary
+      env s s_fn x fname fdef Hsummary Heval_callee Hlookup) as Hcallee_summary.
+    pose proof (eval_call_expr_tfn_components_final_store_eq
+      env s s_fn s_args s_body (EVar x) args fname [] fdef fcall
+      vs ret0 used' Heval_callee Hlookup Heval_args Hrename Heval_body
+      Omega n R Σ Σ1 R1 Σ' R' roots_callee0 arg_roots u
+      param_tys ret (store_safe_function_value_call_args_preservation_ready env args Hargs)
+      (ProvReady_Var x) Hstore Hroots Hshadow Hrn
+      Hnamed Hkeys Htyped H0 Hunique Hcallee_summary) as Heq_final.
+    rewrite Heq_final. exact Hsummary_args.
+  - pose proof (typed_env_roots_shadow_safe_evar_infer_core_base
+      env Omega n R (ctx_of_sctx Σ) x (MkTy u (TClosure env_lt param_tys ret))
+      Σ1 R1 roots_callee0 T_callee Gamma_callee R_callee roots_callee
+      Htyped Hinfer_callee) as Hcore.
+    destruct Hcallee_shape as
+      [Tshape params_shape ret_shape Hshape
+      | Tshape m_shape bounds_shape body_shape params_shape ret_shape
+          Hshape Hbody_shape];
+      rewrite Hcore in Hshape; simpl in Hshape; discriminate.
+  - match goal with
+    | Htyped_callee : typed_env_roots_shadow_safe _ _ _ _ _ (EVar x)
+        ?T_typed ?Σ_typed ?R_typed ?roots_typed |- _ =>
+        pose proof (typed_env_roots_shadow_safe_evar_infer_core_base
+          env Omega n R (ctx_of_sctx Σ) x T_typed
+          Σ_typed R_typed roots_typed
+          T_callee Gamma_callee R_callee roots_callee
+          Htyped_callee Hinfer_callee) as Hcore;
+        destruct Hcallee_shape as
+          [Tshape params_shape ret_shape Hshape
+          | Tshape m_shape bounds_shape body_shape params_shape ret_shape
+              Hshape Hbody_shape];
+        rewrite Hcore in Hshape; simpl in Hshape;
+        first [discriminate | inversion Hshape; subst; simpl in Hbody_shape; discriminate]
+    end.
+  - match goal with
+    | Htyped_callee : typed_env_roots_shadow_safe _ _ _ _ _ (EVar x)
+        ?T_typed ?Σ_typed ?R_typed ?roots_typed |- _ =>
+        pose proof (typed_env_roots_shadow_safe_evar_infer_core_base
+          env Omega n R (ctx_of_sctx Σ) x T_typed
+          Σ_typed R_typed roots_typed
+          T_callee Gamma_callee R_callee roots_callee
+          Htyped_callee Hinfer_callee) as Hcore;
+        destruct Hcallee_shape as
+          [Tshape params_shape ret_shape Hshape
+          | Tshape m_shape bounds_shape body_shape params_shape ret_shape
+              Hshape Hbody_shape];
+        rewrite Hcore in Hshape; simpl in Hshape;
+        first [discriminate | inversion Hshape; subst; simpl in Hbody_shape; discriminate]
+    end.
+  - pose proof (typed_env_roots_shadow_safe_roots
+      env Omega n R Σ (EVar x) (MkTy u (TForall m bounds body_ty))
+      Σ1 R1 roots_callee0 Htyped) as Htyped_callee_roots.
+    destruct (proj1 eval_preserves_typing_roots_ready_mutual
+      env s (EVar x) s_fn (VClosure fname captured) Heval_callee
+      Omega n R Σ (MkTy u (TForall m bounds body_ty))
+      Σ1 R1 roots_callee0 (ProvReady_Var x) Hstore Hroots Hshadow Hrn
+      Htyped_callee_roots) as [Hstore_fn [Hv_callee [_ [Hroots_fn [_ [Hshadow_fn Hrn_fn]]]]]].
+    destruct (proj1 eval_preserves_root_names_ready_mutual
+      env s (EVar x) s_fn (VClosure fname captured) Heval_callee
+      Omega n R Σ (MkTy u (TForall m bounds body_ty))
+      Σ1 R1 roots_callee0 (ProvReady_Var x) Hstore Hroots Hshadow Hrn
+      Hnamed Htyped_callee_roots) as [Hnamed_fn _].
+    pose proof (proj1 eval_preserves_root_keys_named_ready_mutual
+      env s (EVar x) s_fn (VClosure fname captured) Heval_callee
+      Omega n R Σ (MkTy u (TForall m bounds body_ty))
+      Σ1 R1 roots_callee0 (ProvReady_Var x) Hstore Hroots Hshadow Hrn
+      Hkeys Htyped_callee_roots) as Hkeys_fn.
+    pose proof (value_has_type_closure_captured_nil env s_fn fname captured
+      (MkTy u (TForall m bounds body_ty)) Hv_callee) as Hcaptured_nil.
+    subst captured.
+    simpl in Hrename, Heval_body.
+    pose proof (eval_var_empty_closure_target_summary_of_store_function_closure_targets_summary
+      env s s_fn x fname fdef Hsummary Heval_callee Hlookup) as Hcallee_summary.
+    destruct (value_has_type_empty_closure_tforall_tfn_components
+      env s_fn fname fdef u m bounds body_ty param_tys ret σ
+      Hv_callee Hlookup Hunique H0) as [Htype_params [Hcaps_fdef Hbridge]].
+    pose proof (typed_args_roots_shadow_safe_roots
+      env Omega n R1 Σ1 args
+      (params_of_tys (map (open_bound_ty σ) param_tys))
+      Σ' R' arg_roots H4) as Htyped_args.
+    pose proof (preservation_ready_args_implies_provenance_ready_closure
+      args (store_safe_function_value_call_args_preservation_ready env args Hargs)) as Hprov_args.
+    assert (Hcallee_route :
+      callee_body_root_shadow_provenance_ready_at_result_subset env fcall
+        (call_param_root_env (fn_params fcall) arg_roots R')
+        (root_sets_union arg_roots)).
+    { eapply direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_tfn_with_result_subset;
+        eassumption. }
+    pose proof (eval_evar_call_expr_lifetime_forall_tfn_components_final_store_eq
+      env s s_fn s_args s_body x args fname [] fdef fcall vs ret0 used'
+      Heval_callee Hlookup Heval_args Hrename Heval_body Omega n R Σ Σ1 R1 Σ' R'
+      roots_callee0 arg_roots u m bounds body_ty param_tys ret σ (store_safe_function_value_call_args_preservation_ready env args Hargs)
+      Hstore Hroots Hshadow Hrn Htyped H0 H4 Htype_params Hcaps_fdef
+      Hbridge Hcallee_route) as Heq_final.
+    rewrite Heq_final. exact Hsummary_args.
+  - pose proof (typed_env_roots_shadow_safe_evar_infer_core_base
+      env Omega n R (ctx_of_sctx Σ) x (MkTy u (TForall m bounds body_ty))
+      Σ1 R1 roots_callee0 T_callee Gamma_callee R_callee roots_callee
+      Htyped Hinfer_callee) as Hcore.
+    destruct Hcallee_shape as
+      [Tshape params_shape ret_shape Hshape
+      | Tshape m_shape bounds_shape body_shape params_shape ret_shape
+          Hshape Hbody_shape].
+    + rewrite Hcore in Hshape; simpl in Hshape; discriminate.
+    + rewrite Hcore in Hshape; simpl in Hshape.
+      inversion Hshape; subst.
+      simpl in Hbody_shape. rewrite H0 in Hbody_shape. discriminate.
 Qed.
 
 Definition callee_body_root_shadow_captured_call_store_safe_summary
@@ -496,30 +712,30 @@ Proof.
 Qed.
 
 Lemma check_expr_root_shadow_store_safe_summary_fuel_sound :
-  forall fuel env Omega n R Sigma e T Sigma' R' roots,
-    infer_core_env_state_fuel_roots_shadow_safe fuel env Omega n R Sigma e =
-      infer_ok (T, Sigma', R', roots) ->
+  forall fuel env Omega n R Σ e T Σ' R' roots,
+    infer_core_env_state_fuel_roots_shadow_safe fuel env Omega n R Σ e =
+      infer_ok (T, Σ', R', roots) ->
     check_expr_root_shadow_store_safe_summary_fuel
-      fuel env Omega n R Sigma e = true ->
+      fuel env Omega n R Σ e = true ->
     exists ret_roots,
       expr_root_shadow_store_safe_summary
-        env Omega n R Sigma e T Sigma' R' roots ret_roots.
+        env Omega n R Σ e T Σ' R' roots ret_roots.
 Proof.
-  induction fuel as [| fuel' IH]; intros env Omega n R Sigma e T Sigma' R'
+  induction fuel as [| fuel' IH]; intros env Omega n R Σ e T Σ' R'
     roots Hinfer Hcheck.
   - simpl in Hinfer. discriminate.
   - cbn [check_expr_root_shadow_store_safe_summary_fuel] in Hcheck.
     rewrite Hinfer in Hcheck.
     repeat (apply orb_true_iff in Hcheck as [Hcheck | Hcheck]).
     + destruct (check_expr_root_shadow_captured_call_provenance_summary_fuel_sound
-        (S fuel') env Omega n R Sigma e T Sigma' R' roots Hinfer Hcheck)
+        (S fuel') env Omega n R Σ e T Σ' R' roots Hinfer Hcheck)
         as [ret_roots Hexact].
       exists ret_roots. apply ERSS_Exact. exact Hexact.
     + destruct e; try discriminate.
       apply andb_true_iff in Hcheck as [Hready_args Hsupported].
       pose proof
         (check_supported_non_type_generic_function_value_call_expr_sound
-          env Omega n R (ctx_of_sctx Sigma) e l Hsupported)
+          env Omega n R (ctx_of_sctx Σ) e l Hsupported)
         as Hsupported_prop.
       destruct Hsupported_prop as
         (x & T_callee & Gamma_callee & R_callee & roots_callee &
@@ -535,26 +751,26 @@ Proof.
     + destruct e; try discriminate.
       simpl in Hinfer, Hcheck.
       destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Omega n R
-        Sigma e1) as [[[[T1 Sigma1] R1] roots1] | err] eqn:Hbound;
+        Σ e1) as [[[[T1 Σ1] R1] roots1] | err] eqn:Hbound;
         try discriminate.
       destruct (ty_compatible_b Omega T1 t) eqn:Hcompat;
         try discriminate.
       apply andb_true_iff in Hcheck as [Hhead Hcheck].
-      destruct (IH env Omega n R Sigma e1 T1 Sigma1 R1 roots1 Hbound Hhead)
+      destruct (IH env Omega n R Σ e1 T1 Σ1 R1 roots1 Hbound Hhead)
         as [ret_roots1 Hbound_summary].
       destruct (root_env_lookup i R1) as [roots_x |] eqn:Hlookup_x;
         try discriminate.
       apply andb_true_iff in Hcheck as [Hfresh Hcheck].
       apply andb_true_iff in Hfresh as [Hroots1 Henv1].
       destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Omega n
-        (root_env_add i roots1 R1) (sctx_add i t m Sigma1) e2)
+        (root_env_add i roots1 R1) (sctx_add i t m Σ1) e2)
         as [[[[T2 Sigma2] R2] roots2] | err] eqn:Hbody;
         try discriminate.
       repeat rewrite andb_true_iff in Hcheck.
       destruct Hcheck as [[[[Hfree_ret Hsctx_ok] Hroots2] Henv2]
         Hbody_check].
       destruct (IH env Omega n (root_env_add i roots1 R1)
-        (sctx_add i t m Sigma1) e2 T2 Sigma2 R2 roots2 Hbody
+        (sctx_add i t m Σ1) e2 T2 Sigma2 R2 roots2 Hbody
         Hbody_check) as [ret_roots Hbody_summary].
       simpl in Hinfer.
       rewrite Hroots1, Henv1, Hsctx_ok, Hroots2, Henv2 in Hinfer.
@@ -574,7 +790,7 @@ Proof.
     + destruct e; try discriminate.
       simpl in Hinfer, Hcheck.
       destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Omega n R
-        Sigma e1) as [[[[T_cond Sigma1] R1] roots_cond] | err]
+        Σ e1) as [[[[T_cond Σ1] R1] roots_cond] | err]
         eqn:Hcond; try discriminate.
       destruct (ty_core_eqb (ty_core T_cond) TBooleans) eqn:Hcond_core;
         try discriminate.
@@ -582,19 +798,19 @@ Proof.
       apply andb_true_iff in Hhead as [Hhead Hthen_check].
       apply andb_true_iff in Hhead as [Hcond_bool Hready_cond].
       destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Omega n R1
-        Sigma1 e2) as [[[[T2 Sigma2] R2] roots2] | err] eqn:Hthen;
+        Σ1 e2) as [[[[T2 Sigma2] R2] roots2] | err] eqn:Hthen;
         try discriminate.
       destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Omega n R1
-        Sigma1 e3) as [[[[T3 Sigma3] R3] roots3] | err] eqn:Helse;
+        Σ1 e3) as [[[[T3 Sigma3] R3] roots3] | err] eqn:Helse;
         try discriminate.
       destruct (ty_core_eqb (ty_core T2) (ty_core T3))
         eqn:Hbranch_core; try discriminate.
       destruct (root_env_eqb R2 R3) eqn:Hroot_eq; try discriminate.
       destruct (ctx_merge (ctx_of_sctx Sigma2) (ctx_of_sctx Sigma3))
         as [Sigma4 |] eqn:Hmerge; try discriminate.
-      destruct (IH env Omega n R1 Sigma1 e2 T2 Sigma2 R2 roots2 Hthen
+      destruct (IH env Omega n R1 Σ1 e2 T2 Sigma2 R2 roots2 Hthen
         Hthen_check) as [ret_roots2 Hthen_summary].
-      destruct (IH env Omega n R1 Sigma1 e3 T3 Sigma3 R3 roots3 Helse
+      destruct (IH env Omega n R1 Σ1 e3 T3 Sigma3 R3 roots3 Helse
         Helse_check) as [ret_roots3 Helse_summary].
       inversion Hinfer; subst; clear Hinfer.
       exists (root_set_union ret_roots2 ret_roots3).

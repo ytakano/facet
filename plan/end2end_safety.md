@@ -139,6 +139,8 @@ T2e.2 tasks:
   preserving closure-target summaries after function-value calls.
 - Done prep: add high-level function-value-call final-store equality
   wrappers for monomorphic and lifetime-forall `EVar` calls.
+- Done prep: prove narrow function-value calls preserve closure-target
+  store summaries through monomorphic and lifetime-forall direct-call cleanup.
 - Next: prove the combined runtime safety/readiness theorem, then route
   `infer_fn_env_end2end` through the combined gate; current target: `hrt_call_twice`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.

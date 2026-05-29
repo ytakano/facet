@@ -32,9 +32,9 @@ this roadmap.
 ## Current blockers
 
 With the CLI using `infer_program_env_end2end`, the last full `sh tests/run.sh`
-run had 35 valid-test failures:
+run had 34 valid-test failures:
 
-- 25 `ErrEndToEndSafetyGateFailed`
+- 24 `ErrEndToEndSafetyGateFailed`
   - `ECallGeneric fname type_args args` direct-call bodies.
   - Remaining function-value calls: `TClosure`, lifetime-only `TForall`,
     type-forall, mixed `for<'a, T>`, and generic-item function values still need

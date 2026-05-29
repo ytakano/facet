@@ -1012,6 +1012,38 @@ Proof.
                   [ exact Hcollect
                   | intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0
                   | rewrite <- check_arg_tys_params_of_tys; exact Hcheck ]]
+            | _ = TClosure ?env_lt ?param_tys ?ret =>
+              unfold infer_hrt_call_env in Hinfer;
+              cbn [ty_core] in Hinfer;
+              destruct (build_bound_sigma (repeat None m) arg_tys param_tys)
+                as [σ0 |] eqn:Hσ;
+                [ cbn iota in Hinfer | cbn iota in Hinfer; discriminate ];
+              set (σ := complete_bound_sigma_with_vars n σ0) in *;
+              destruct (check_arg_tys Ω arg_tys (map (open_bound_ty σ) param_tys))
+                as [err |] eqn:Hcheck;
+                cbn iota in Hinfer; try discriminate;
+              destruct (contains_lbound_lifetime (open_bound_lifetime σ env_lt) ||
+                        contains_lbound_ty (open_bound_ty σ ret) ||
+                        contains_lbound_outlives (open_bound_outlives σ bounds))
+                eqn:Hlbound;
+                cbn iota in Hinfer; try discriminate;
+              destruct (outlives_constraints_hold_b Ω (open_bound_outlives σ bounds))
+                eqn:Hout;
+                cbn iota in Hinfer; try discriminate;
+              inversion Hinfer; subst;
+              repeat rewrite Bool.orb_false_iff in Hlbound;
+              destruct Hlbound as [[Henv_ok Hret_ok] Hbounds_ok];
+              eapply TER_CallExpr_Forall_Closure;
+              [ eapply IH; exact Hcallee_res
+              | reflexivity
+              | exact Henv_ok
+              | exact Hret_ok
+              | exact Hbounds_ok
+              | apply outlives_constraints_hold_b_sound; exact Hout
+              | eapply infer_env_args_collect_roots_sound;
+                  [ exact Hcollect
+                  | intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0
+                  | rewrite <- check_arg_tys_params_of_tys; exact Hcheck ]]
             | _ => cbn in Hinfer; discriminate
             end
           | _ => cbn in Hinfer; discriminate
@@ -1839,6 +1871,39 @@ Proof.
               [ intros fname' caps'; discriminate
               | eapply IH; exact Hcallee_res
               | reflexivity
+              | exact Hret_ok
+              | exact Hbounds_ok
+              | apply outlives_constraints_hold_b_sound; exact Hout
+              | eapply infer_env_args_collect_roots_shadow_safe_sound;
+                  [ exact Hcollect
+                  | intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0
+                  | rewrite <- check_arg_tys_params_of_tys; exact Hcheck ]]
+            | _ = TClosure ?env_lt ?param_tys ?ret =>
+              unfold infer_hrt_call_env in Hinfer;
+              cbn [ty_core] in Hinfer;
+              destruct (build_bound_sigma (repeat None m) arg_tys param_tys)
+                as [σ0 |] eqn:Hσ;
+                [ cbn iota in Hinfer | cbn iota in Hinfer; discriminate ];
+              set (σ := complete_bound_sigma_with_vars n σ0) in *;
+              destruct (check_arg_tys Ω arg_tys (map (open_bound_ty σ) param_tys))
+                as [err |] eqn:Hcheck;
+                cbn iota in Hinfer; try discriminate;
+              destruct (contains_lbound_lifetime (open_bound_lifetime σ env_lt) ||
+                        contains_lbound_ty (open_bound_ty σ ret) ||
+                        contains_lbound_outlives (open_bound_outlives σ bounds))
+                eqn:Hlbound;
+                cbn iota in Hinfer; try discriminate;
+              destruct (outlives_constraints_hold_b Ω (open_bound_outlives σ bounds))
+                eqn:Hout;
+                cbn iota in Hinfer; try discriminate;
+              inversion Hinfer; subst;
+              repeat rewrite Bool.orb_false_iff in Hlbound;
+              destruct Hlbound as [[Henv_ok Hret_ok] Hbounds_ok];
+              eapply TERS_CallExpr_Forall_Closure;
+              [ intros fname' caps'; discriminate
+              | eapply IH; exact Hcallee_res
+              | reflexivity
+              | exact Henv_ok
               | exact Hret_ok
               | exact Hbounds_ok
               | apply outlives_constraints_hold_b_sound; exact Hout

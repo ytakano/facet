@@ -97,8 +97,11 @@ T2e.1 tasks:
 
 T2e.2 tasks:
 
-- Add `TClosure` evidence for `ECallExpr (EVar x) args` and route runtime
-  safety through captured-callee summaries.
+- Done: add roots/shadow typing and soundness for lifetime-only `TForall`
+  bodies whose core is `TClosure`; `capture_shared_ref` now reaches the
+  existing safety-gate path and passes.
+- Next: add function-value summary evidence and runtime routing for remaining
+  lifetime-only `TForall` `EVar` callees.
 - Add lifetime-only `TForall` evidence whose body is `TFn` or `TClosure`, then
   reuse the monomorphic runtime routes after lifetime instantiation.
 - Re-run targeted closure/HRT valid and invalid tests, then update this count.

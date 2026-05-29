@@ -2374,6 +2374,7 @@ Proof.
   - solve_sctx_keys_callee_args.
   - solve_sctx_keys_callee_args.
   - solve_sctx_keys_callee_args.
+  - solve_sctx_keys_callee_args.
   - solve_sctx_keys_single_ih.
   - solve_sctx_keys_single_ih.
   - match goal with
@@ -2679,6 +2680,34 @@ Proof.
           | apply root_sets_sctx_roots_named_union; exact Harg_roots ] ]
     end.
   - (* TERS_CallExpr_Forall_Fn: same pattern as Fn/Closure/TypeForall *)
+    match goal with
+    | Htyped : typed_env_roots_shadow_safe ?env ?Ω ?n ?R ?Σ _ _ ?Σ1 ?R1 _,
+      IHcallee : root_env_no_shadow ?R ->
+        root_env_sctx_roots_named ?R ?Σ ->
+        root_env_sctx_roots_named ?R1 ?Σ1 /\ root_set_sctx_roots_named ?roots_callee ?Σ1,
+      Hargs : typed_args_roots_shadow_safe ?env ?Ω ?n ?R1 ?Σ1 _ _ ?Σ' ?R' _,
+      IHargs : root_env_no_shadow ?R1 ->
+        root_env_sctx_roots_named ?R1 ?Σ1 ->
+        root_env_sctx_roots_named ?R' ?Σ' /\
+        Forall (fun roots => root_set_sctx_roots_named roots ?Σ') ?arg_roots,
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_sctx_roots_named ?R ?Σ |- _ =>
+        destruct (IHcallee Hrn Henv) as [Henv1 Hroots_callee];
+        assert (Hrn1 : root_env_no_shadow R1)
+          by (eapply typed_env_roots_no_shadow;
+              [eapply typed_env_roots_shadow_safe_roots; exact Htyped | exact Hrn]);
+        destruct (IHargs Hrn1 Henv1) as [Henv' Harg_roots];
+        assert (Hsame : sctx_same_bindings Σ1 Σ')
+          by (eapply typed_args_env_structural_same_bindings;
+              eapply typed_args_roots_structural;
+              eapply typed_args_roots_shadow_safe_roots; exact Hargs);
+        split;
+        [ exact Henv'
+        | apply root_set_sctx_roots_named_union;
+          [ eapply root_set_sctx_roots_named_same_bindings; [exact Hsame | exact Hroots_callee]
+          | apply root_sets_sctx_roots_named_union; exact Harg_roots ] ]
+    end.
+  - (* TERS_CallExpr_Forall_Closure: same pattern as Forall_Fn *)
     match goal with
     | Htyped : typed_env_roots_shadow_safe ?env ?Ω ?n ?R ?Σ _ _ ?Σ1 ?R1 _,
       IHcallee : root_env_no_shadow ?R ->
@@ -4173,6 +4202,7 @@ Proof.
   apply typed_roots_ind; intros; subst; try assumption.
   - eapply H. exact H0.
   - eapply H. exact H0.
+  - eapply H0. eapply H. exact H1.
   - eapply H0. eapply H. exact H1.
   - eapply H0. eapply H. exact H1.
   - eapply H0. eapply H. exact H1.
@@ -9704,6 +9734,118 @@ Proof.
             | H : forall fn cs, callee <> EMakeClosure fn cs |- _ =>
                 exact (H fn0 cs0 Hcallee_eq)
             end.
+          - eauto.
+          - eauto.
+          - eauto.
+          - eauto.
+          - eauto.
+          - eauto. }
+        { exact Hctx_r. }
+        { exact HnsRr'. }
+        { exact HRr'. }
+        { eapply root_set_equiv_trans.
+          - apply root_set_union_equiv.
+            + exact Hrootscallee_r.
+            + eapply root_sets_union_rename_equiv. exact Harg_roots.
+          - apply root_set_equiv_sym.
+            apply root_set_union_rename_equiv. }
+  - (* TERS_CallExpr_Forall_Closure: same structure as Forall_Fn *)
+    assert (HnsR1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow.
+      - eapply typed_env_roots_shadow_safe_roots.
+        match goal with
+        | H : typed_env_roots_shadow_safe _ _ _ _ _ callee _ _ _ _ |- _ => exact H
+        end.
+      - exact HnsR. }
+    assert (HkeysR1 : root_env_sctx_keys_named R1 Σ1).
+    { destruct (typed_roots_shadow_safe_sctx_keys_named_mutual env Ω n)
+        as [Hkeys_env _].
+      eapply Hkeys_env.
+      - match goal with
+        | H : typed_env_roots_shadow_safe _ _ _ _ _ callee _ _ _ _ |- _ => exact H
+        end.
+      - exact HnsR.
+      - exact Hkeys. }
+    assert (HrootsR1 : root_env_sctx_roots_named R1 Σ1).
+    { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env Ω n)
+        as [Hroots_env _].
+      eapply proj1. eapply Hroots_env.
+      - match goal with
+        | H : typed_env_roots_shadow_safe _ _ _ _ _ callee _ _ _ _ |- _ => exact H
+        end.
+      - exact HnsR.
+      - exact Hroots. }
+    assert (HnocollR1 : rename_no_collision_on rho (root_env_names R1)).
+    { eapply rename_no_collision_on_weaken_names.
+      - exact HnocollR'.
+      - intros x Hin.
+        eapply (proj1 (proj2 (typed_roots_root_env_names_subset_mutual env Ω n))).
+        + eapply typed_args_roots_shadow_safe_roots.
+          match goal with
+          | H : typed_args_roots_shadow_safe _ _ _ _ _ args _ _ _ _ |- _ => exact H
+          end.
+        + exact Hin. }
+    destruct (Hcallee_ih R Rr Σ Σr used callee_r used_callee _ Σ1 R1 roots_callee
+              ltac:(match goal with
+                    | H : typed_env_roots_shadow_safe _ _ _ _ _ callee _ Σ1 R1 roots_callee |- _ =>
+                        exact H
+                    end)
+              Hctx HnsR HnsRr HRr Hkeys Hroots HnocollR HnocollR1 Hctx_used Hrange_used
+              Hdisj_callee Hcallee_rename)
+      as [Σ1r [R1r [roots_callee_r [H_callee_r [Hctx1r [HnsR1r [HR1r Hrootscallee_r]]]]]]].
+    assert (Hctx_used1 : forall x, In x (ctx_names Σ1r) -> In x used_callee).
+      { intros x Hin.
+        eapply alpha_rename_expr_used_extends; [exact Hcallee_rename |].
+        apply Hctx_used.
+        assert (Hsame : sctx_same_bindings Σr Σ1r) by
+          (eapply typed_env_structural_same_bindings;
+           eapply typed_env_roots_structural;
+           eapply typed_env_roots_shadow_safe_roots; exact H_callee_r).
+        rewrite (sctx_same_bindings_names_alpha Σr Σ1r Hsame) in Hin.
+        exact Hin. }
+      assert (Hrange_used1 : forall x, In x (rename_range rho) -> In x used_callee).
+      { intros x Hin.
+        eapply alpha_rename_expr_used_extends; [exact Hcallee_rename |].
+        exact (Hrange_used x Hin). }
+      destruct (alpha_rename_typed_args_roots_shadow_safe_support_forward
+        env Ω n rho R1 R1r Σ1 Σ1r args argsr used_callee used_args
+        (params_of_tys (map (open_bound_ty σ) param_tys))
+        (params_of_tys (map (open_bound_ty σ) param_tys)) Σ' R' arg_roots)
+        as [Σr' [Rr' [arg_rootsr
+          [Hargs_r [Hctx_r [HnsRr' [HRr' Harg_roots]]]]]]].
+      * exact Hexpr.
+      * match goal with
+        | H : typed_args_roots_shadow_safe _ _ _ _ _ args
+              (params_of_tys (map (open_bound_ty σ) param_tys)) _ _ arg_roots |- _ =>
+            exact H
+        end.
+      * exact Hctx1r.
+      * exact HnsR1.
+      * exact HnsR1r.
+      * exact HR1r.
+      * exact HkeysR1.
+      * exact HrootsR1.
+      * exact HnocollR1.
+      * exact HnocollR'.
+      * exact Hctx_used1.
+      * exact Hrange_used1.
+      * exact Hdisj_args.
+      * apply params_alpha_refl.
+      * exact Hargs_rename.
+      * exists Σr', Rr',
+          (root_set_union roots_callee_r (root_sets_union arg_rootsr)).
+        split; [| split; [| split; [| split]]].
+        { eapply TERS_CallExpr_Forall_Closure.
+          - intros fname' caps' Heq_r.
+            subst callee_r.
+            destruct (alpha_rename_expr_is_make_closure_inv
+                rho used callee fname' caps' used_callee Hcallee_rename)
+              as [fn0 [cs0 Hcallee_eq]].
+            match goal with
+            | H : forall fn cs, callee <> EMakeClosure fn cs |- _ =>
+                exact (H fn0 cs0 Hcallee_eq)
+            end.
+          - eauto.
           - eauto.
           - eauto.
           - eauto.

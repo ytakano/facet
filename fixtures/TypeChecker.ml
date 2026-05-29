@@ -4168,10 +4168,10 @@ let outlives_constraints_hold_b _UU03a9_ constraints =
   forallb (fun pat -> let (a, b) = pat in outlives_b _UU03a9_ a b) constraints
 
 (** val infer_hrt_call_env :
-    outlives_ctx -> Big_int_Z.big_int -> outlives_ctx -> ty -> ty list -> ty
-    infer_result **)
+    outlives_ctx -> Big_int_Z.big_int -> Big_int_Z.big_int -> outlives_ctx ->
+    ty -> ty list -> ty infer_result **)
 
-let infer_hrt_call_env _UU03a9_ m bounds body arg_tys =
+let infer_hrt_call_env _UU03a9_ n m bounds body arg_tys =
   match ty_core body with
   | TFn (param_tys, ret) ->
     (match build_bound_sigma (repeat None m) arg_tys param_tys with
@@ -4187,6 +4187,26 @@ let infer_hrt_call_env _UU03a9_ m bounds body arg_tys =
           else if outlives_constraints_hold_b _UU03a9_
                     (open_bound_outlives _UU03c3_ bounds)
                then Infer_ok (open_bound_ty _UU03c3_ ret)
+               else Infer_err ErrHrtBoundUnsatisfied)
+     | None -> Infer_err ErrLifetimeConflict)
+  | TClosure (env_lt, param_tys, ret) ->
+    (match build_bound_sigma (repeat None m) arg_tys param_tys with
+     | Some _UU03c3_0 ->
+       let _UU03c3_ = complete_bound_sigma_with_vars n _UU03c3_0 in
+       (match check_arg_tys _UU03a9_ arg_tys
+                (map (open_bound_ty _UU03c3_) param_tys) with
+        | Some err -> Infer_err err
+        | None ->
+          let env_open = open_bound_lifetime _UU03c3_ env_lt in
+          let ret_open = open_bound_ty _UU03c3_ ret in
+          let bounds_open = open_bound_outlives _UU03c3_ bounds in
+          if (||)
+               ((||) (contains_lbound_lifetime env_open)
+                 (contains_lbound_ty ret_open))
+               (contains_lbound_outlives bounds_open)
+          then Infer_err ErrHrtUnresolvedBound
+          else if outlives_constraints_hold_b _UU03a9_ bounds_open
+               then Infer_ok ret_open
                else Infer_err ErrHrtBoundUnsatisfied)
      | None -> Infer_err ErrLifetimeConflict)
   | x -> Infer_err (ErrMalformedHrtBody x)
@@ -6792,7 +6812,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -6868,7 +6889,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -6944,7 +6966,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -7020,7 +7043,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -7096,7 +7120,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -7172,7 +7197,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -7305,7 +7331,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -7381,7 +7408,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -7457,7 +7485,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -7533,7 +7562,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -7609,7 +7639,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -7685,7 +7716,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -7761,7 +7793,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -7837,7 +7870,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -7913,7 +7947,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -7989,7 +8024,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -8065,7 +8101,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -8141,7 +8178,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -8217,7 +8255,8 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -9055,7 +9094,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -9131,7 +9171,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -9207,7 +9248,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -9283,7 +9325,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -9359,7 +9402,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -9493,7 +9537,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -9569,7 +9614,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -9645,7 +9691,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -9721,7 +9768,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -9797,7 +9845,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -9873,7 +9922,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -9949,7 +9999,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -10025,7 +10076,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -10101,7 +10153,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -10177,7 +10230,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -10253,7 +10307,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -10329,7 +10384,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee
@@ -10405,7 +10461,8 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                             (root_sets_union arg_roots)))
                       | Infer_err err -> Infer_err err)
                    | _ ->
-                     (match infer_hrt_call_env _UU03a9_ m bounds body arg_tys with
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
                       | Infer_ok ret ->
                         Infer_ok (((ret, _UU03a3_'), r'),
                           (root_set_union roots_callee

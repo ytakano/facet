@@ -441,6 +441,13 @@ Proof.
           Σ1 R1 roots_callee0 T_callee Γ_callee R_callee roots_callee
           Htyped_shadow Hinfer_callee) as Hcore.
       simpl in Hcore. rewrite HTFn in Hcore. discriminate.
+    * pose proof
+        (typed_env_roots_shadow_safe_evar_infer_core
+          body_env (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+          (fn_body_ctx f) x (MkTy u (TForall m bounds body_ty))
+          Σ1 R1 roots_callee0 T_callee Γ_callee R_callee roots_callee
+          Htyped_shadow Hinfer_callee) as Hcore.
+      simpl in Hcore. rewrite HTFn in Hcore. discriminate.
   - destruct Hcaptured_summary as [Hbase_captured | Hcaptured_summary].
     + destruct Hbase_captured as [Hbase_captured Hready_body].
       destruct Hbase_captured as
@@ -793,6 +800,12 @@ Proof.
           exact (Hn fname caps eq_refl)
       end.
       (* TERS_CallExpr_Forall_Fn with EMakeClosure: impossible, guard violated *)
+      exfalso.
+      match goal with
+      | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>
+          exact (Hn fname caps eq_refl)
+      end.
+      (* TERS_CallExpr_Forall_Closure with EMakeClosure: impossible, guard violated *)
       exfalso.
       match goal with
       | Hn : forall fn cs, EMakeClosure ?fname ?caps <> EMakeClosure fn cs |- _ =>

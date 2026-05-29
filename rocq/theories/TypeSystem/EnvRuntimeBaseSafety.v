@@ -172,6 +172,7 @@ Inductive expr_root_shadow_store_safe_narrow_summary
       expr_root_shadow_store_safe_narrow_summary
         env Omega n R Sigma e1 T1 Sigma1 R1 roots1 ret_roots1 ->
       ty_compatible_b Omega T1 T_hidden = true ->
+      non_function_value_ty_b T_hidden = true ->
       root_env_lookup x R1 = None ->
       roots_exclude x roots1 ->
       root_env_excludes x R1 ->
@@ -220,6 +221,8 @@ Proof.
         try discriminate.
       destruct (ty_compatible_b Omega T1 t) eqn:Hcompat;
         try discriminate.
+      destruct (non_function_value_ty_b t) eqn:Hnonfn;
+        try discriminate.
       apply andb_true_iff in Hcheck as [Hhead Hcheck].
       destruct (IH env Omega n R Sigma e1 T1 Sigma1 R1 roots1 Hbound Hhead)
         as [ret_roots1 Hbound_summary].
@@ -242,16 +245,13 @@ Proof.
       inversion Hinfer; subst; clear Hinfer.
       exists ret_roots.
       eapply ERSSN_Let.
-      * exact Hbound_summary.
-      * exact Hcompat.
-      * exact Hlookup_x.
-      * apply roots_exclude_b_sound. exact Hroots1.
-      * apply root_env_excludes_b_sound. exact Henv1.
-      * exact Hbody_summary.
-      * exact Hfree_ret.
-      * exact Hsctx_ok.
-      * apply roots_exclude_b_sound. exact Hroots2.
-      * apply root_env_excludes_b_sound. exact Henv2.
+      all: try eassumption.
+      all: try (apply roots_exclude_b_sound; assumption).
+      all: try (apply root_env_excludes_b_sound; assumption).
+      Unshelve.
+      all: try eassumption.
+      all: try (apply roots_exclude_b_sound; assumption).
+      all: try (apply root_env_excludes_b_sound; assumption).
     + apply andb_true_iff in Hcheck as [Hready_args Hsupported].
       pose proof
         (check_supported_non_type_generic_function_value_call_expr_sound

@@ -122,6 +122,8 @@ T2e.2 tasks:
   proof for the sequential-let route.
 - Done prep: add an EVar closure-target summary recovery helper for the
   sequential-let runtime route.
+- Done prep: move the non-function value classifier into the checker and
+  require narrow `let` bindings to be non-function values.
 - Next: wire the store-safe summary into function-level safety for sequential
   `let` bodies; current target: `hrt_call_twice`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.

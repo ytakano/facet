@@ -64,15 +64,6 @@ Proof.
     + apply IH. exact Hlookup.
 Qed.
 
-Fixpoint non_function_value_ty_b (T : Ty) : bool :=
-  match T with
-  | MkTy _ (TFn _ _) => false
-  | MkTy _ (TClosure _ _ _) => false
-  | MkTy _ (TForall _ _ body) => non_function_value_ty_b body
-  | MkTy _ (TTypeForall _ _ body) => non_function_value_ty_b body
-  | _ => true
-  end.
-
 Lemma non_function_value_ty_b_fn_value_ty :
   forall f,
     non_function_value_ty_b (fn_value_ty f) = false.

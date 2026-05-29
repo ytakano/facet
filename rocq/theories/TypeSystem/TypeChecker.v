@@ -8118,6 +8118,15 @@ Definition check_expr_root_shadow_captured_call_provenance_summary
   check_expr_root_shadow_captured_call_provenance_summary_fuel
     10000 env Ω n R (sctx_of_ctx Γ) e.
 
+Fixpoint non_function_value_ty_b (T : Ty) : bool :=
+  match T with
+  | MkTy _ (TFn _ _) => false
+  | MkTy _ (TClosure _ _ _) => false
+  | MkTy _ (TForall _ _ body) => non_function_value_ty_b body
+  | MkTy _ (TTypeForall _ _ body) => non_function_value_ty_b body
+  | _ => true
+  end.
+
 Fixpoint check_expr_root_shadow_store_safe_summary_fuel
     (fuel : nat) (env : global_env) (Ω : outlives_ctx) (n : nat)
     (R : root_env) (Σ : sctx) (e : expr) : bool :=
@@ -8213,6 +8222,7 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_fuel
           | infer_err _ => false
           | infer_ok (T1, Σ1, R1, roots1) =>
               ty_compatible_b Ω T1 T_hidden &&
+              non_function_value_ty_b T_hidden &&
               check_expr_root_shadow_store_safe_narrow_summary_fuel
                 fuel' env Ω n R Σ e1 &&
               match root_env_lookup x R1 with

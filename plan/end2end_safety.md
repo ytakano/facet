@@ -165,10 +165,10 @@ T2e.2 tasks:
   preserved by alpha-renaming.
 - Blocked: direct `ECall` still requires old
   `callee_body_root_shadow_provenance_summary` evidence.  To accept
-  `caller` in `hrt_call_twice`, first prove narrow-summary preservation across
-  callee alpha-renaming and call-parameter root instantiation; the current
-  blocker is the embedded executable `infer_core_env_roots_shadow_safe (EVar x)`
-  witness in `ERSSN_FunctionValueCall`.  Then add a direct-call runtime route
+  `caller` in `hrt_call_twice`, first finish narrow-summary preservation across
+  callee alpha-renaming; the next proof must generalize over the rename
+  environment so `let` bodies can recurse under `((x, xr) :: rho)`.  Then compose
+  that with root-instantiation preservation and add a direct-call runtime route
   that runs the narrow/store-safe package for the renamed callee body before
   parameter cleanup.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.

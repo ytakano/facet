@@ -165,6 +165,8 @@ T2e.2 tasks:
   preserved by alpha-renaming.
 - Done prep: add focused `ECallExpr`/`EVar` disjointness helper for
   narrow alpha preservation.
+- Done prep: add alpha-renamed function-value-call intro for narrow
+  store-safe summaries.
 - Blocked: direct `ECall` still requires old
   `callee_body_root_shadow_provenance_summary` evidence.  To accept
   `caller` in `hrt_call_twice`, first finish narrow-summary preservation across

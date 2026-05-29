@@ -438,6 +438,41 @@ Proof.
   apply Hdisj. simpl. left. reflexivity.
 Qed.
 
+Lemma expr_root_shadow_store_safe_narrow_summary_alpha_rename_function_value_call_intro :
+  forall env Omega n rho Rr Sigmar x args er used used' T Sigma' R' roots
+      T_callee_r Sigma_callee_r R_callee_r roots_callee_r,
+    store_safe_function_value_call_args env args ->
+    alpha_rename_expr rho used (ECallExpr (EVar x) args) = (er, used') ->
+    typed_env_roots_shadow_safe env Omega n Rr Sigmar
+      (EVar (lookup_rename x rho)) T_callee_r Sigma_callee_r
+      R_callee_r roots_callee_r ->
+    supported_non_type_generic_function_value_call_callee_shape T_callee_r ->
+    typed_env_roots_shadow_safe env Omega n Rr Sigmar er T Sigma' R' roots ->
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n Rr Sigmar er T Sigma' R' roots roots.
+Proof.
+  intros env Omega n rho Rr Sigmar x args er used used' T Sigma' R' roots
+    T_callee_r Sigma_callee_r R_callee_r roots_callee_r Hargs Hrename
+    Hcallee Hshape Hcall.
+  simpl in Hrename.
+  destruct ((fix go (used0 : list ident) (args0 : list expr)
+      : list expr * list ident :=
+      match args0 with
+      | [] => ([], used0)
+      | arg :: rest =>
+          let (arg', used1) := alpha_rename_expr rho used0 arg in
+          let (rest', used2) := go used1 rest in
+          (arg' :: rest', used2)
+      end) used args) as [argsr used_args] eqn:Hargsr.
+  inversion Hrename; subst er used'.
+  eapply ERSSN_FunctionValueCall.
+  - eapply store_safe_function_value_call_args_alpha_rename_call_go;
+      eassumption.
+  - exact Hcallee.
+  - exact Hshape.
+  - exact Hcall.
+Qed.
+
 Lemma expr_root_shadow_store_safe_narrow_summary_typed :
   forall env Omega n R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_store_safe_narrow_summary

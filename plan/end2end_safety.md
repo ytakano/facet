@@ -22,7 +22,7 @@ this roadmap.
 | T4: CI enforcement of entrypoint policy | done (8bd3d82) |
 | T2a: `ECallGeneric` safety gate | blocked: generic runtime instantiation proof gap |
 | T2e.1: monomorphic `TFn` variable call safety gate | done |
-| T2e.2: HRT/closure function-value calls | blocked: runtime callee bridge needed |
+| T2e.2: HRT/closure function-value calls | in progress |
 | T2g: mixed lifetime/type forall roots calls | done |
 | T2b.1: captured callee base gate | done |
 | T2b.2: local captured-call bridge | done |
@@ -31,16 +31,15 @@ this roadmap.
 
 ## Current blockers
 
-With the CLI using `infer_program_env_end2end`, the last recorded full
-`sh tests/run.sh` run had 36 valid-test failures:
+With the CLI using `infer_program_env_end2end`, the last full `sh tests/run.sh`
+run had 35 valid-test failures:
 
 - 25 `ErrEndToEndSafetyGateFailed`
   - `ECallGeneric fname type_args args` direct-call bodies.
   - Remaining function-value calls: `TClosure`, lifetime-only `TForall`,
-    type-forall, mixed `for<'a, T>`, and generic-item function values still
-    need their runtime callee bridges.
-  - captured shared-ref closure function-value calls remain under T2e higher-rank
-    closure-value evidence.
+    type-forall, mixed `for<'a, T>`, and generic-item function values still need
+    runtime callee bridges.
+  - Captured shared-ref closure function-value calls remain under T2e.2.
 - 11 `ErrNotImplemented`
   - deref/reborrow/write-through-reference roots coverage.  Nested `PDeref`
     places make `place_path` return `None`; roots typing needs explicit
@@ -96,10 +95,16 @@ T2e.1 tasks:
 - Done: targeted local and function-parameter monomorphic function-value
   call regressions pass.
 
-Remaining T2e blockers:
+T2e.2 tasks:
 
-- `TForall` function values need lifetime-instantiated runtime callee evidence.
-- `TClosure` values need captured-callee return-root evidence.
+- Add `TClosure` evidence for `ECallExpr (EVar x) args` and route runtime
+  safety through captured-callee summaries.
+- Add lifetime-only `TForall` evidence whose body is `TFn` or `TClosure`, then
+  reuse the monomorphic runtime routes after lifetime instantiation.
+- Re-run targeted closure/HRT valid and invalid tests, then update this count.
+
+Out of scope for T2e.2:
+
 - Type-forall and mixed forall function values stay under T2a.
 
 ### T2g: mixed lifetime/type forall roots calls

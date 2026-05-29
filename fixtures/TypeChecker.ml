@@ -11673,6 +11673,10 @@ let local_fn_value_call_target_expr = function
 let supported_non_type_generic_function_value_call_callee_ty_b t =
   match ty_core t with
   | TFn (_, _) -> true
+  | TForall (_, _, body) ->
+    (match ty_core body with
+     | TFn (_, _) -> true
+     | _ -> false)
   | _ -> false
 
 (** val check_supported_non_type_generic_function_value_call_expr :

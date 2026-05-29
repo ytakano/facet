@@ -7848,6 +7848,11 @@ Definition supported_non_type_generic_function_value_call_callee_ty_b
     (T : Ty) : bool :=
   match ty_core T with
   | TFn _ _ => true
+  | TForall _ _ body =>
+      match ty_core body with
+      | TFn _ _ => true
+      | _ => false
+      end
   | _ => false
   end.
 

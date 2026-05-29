@@ -22,7 +22,7 @@ this roadmap.
 | T4: CI enforcement of entrypoint policy | done (8bd3d82) |
 | T2a: `ECallGeneric` safety gate | blocked: generic runtime instantiation proof gap |
 | T2e.1: monomorphic `TFn` variable call safety gate | done |
-| T2e.2: HRT/closure function-value calls | in progress |
+| T2e.2: HRT/closure function-value calls | in progress: direct HRT TFn EVar calls pass |
 | T2g: mixed lifetime/type forall roots calls | done |
 | T2b.1: captured callee base gate | done |
 | T2b.2: local captured-call bridge | done |
@@ -100,12 +100,14 @@ T2e.2 tasks:
 - Done: add roots/shadow typing and soundness for lifetime-only `TForall`
   bodies whose core is `TClosure`; `capture_shared_ref` now reaches the
   existing safety-gate path and passes.
-- Done prep: add a compiled runtime wrapper for lifetime-only `TForall`
-  `EVar` callees whose body is `TFn`.
-- Next: connect summary evidence and runtime safety branches to that wrapper.
-- Add lifetime-only `TForall` evidence whose body is `TFn` or `TClosure`, then
-  reuse the monomorphic runtime routes after lifetime instantiation.
-- Re-run targeted closure/HRT valid and invalid tests, then update this count.
+- Done: add compiled runtime wrappers for lifetime-only `TForall` `EVar`
+  callees whose body is `TFn`.
+- Done: connect summary evidence and non-capturing/captured runtime safety
+  branches for direct-body HRT `TFn` EVar calls;
+  `hrt_call_function_param` passes.
+- Next: add expression-summary routing for sequential `let` bodies with HRT
+  function-value calls; current target: `hrt_call_twice`.
+- Then re-run the remaining HRT valid/invalid tests and update the full count.
 
 Out of scope for T2e.2:
 

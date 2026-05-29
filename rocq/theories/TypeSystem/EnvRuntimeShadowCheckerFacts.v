@@ -361,7 +361,10 @@ Proof.
   unfold supported_non_type_generic_function_value_call_callee_ty.
   simpl in H.
   destruct c; try discriminate.
-  eexists. eexists. reflexivity.
+  - eapply SFV_TFn. reflexivity.
+  - destruct t as [u_body c_body]. simpl in H.
+    destruct c_body; try discriminate.
+    eapply SFV_TForall_TFn; reflexivity.
 Qed.
 
 Lemma check_supported_non_type_generic_function_value_call_expr_sound :
@@ -379,10 +382,19 @@ Proof.
     eqn:Hinfer; try discriminate.
   destruct T_callee as [u c]. simpl in Hcheck.
   destruct c; try discriminate.
-  unfold supported_non_type_generic_function_value_call_expr.
-  exists i, (MkTy u (TFn l t)), Γ_callee, R_callee, roots_callee, l, t.
-  repeat split; try reflexivity.
-  exact Hinfer.
+  - unfold supported_non_type_generic_function_value_call_expr.
+    exists i, (MkTy u (TFn l t)), Γ_callee, R_callee, roots_callee.
+    repeat split; try reflexivity.
+    + exact Hinfer.
+    + eapply SFV_TFn. reflexivity.
+  - destruct t as [u_body c_body]. simpl in Hcheck.
+    destruct c_body; try discriminate.
+    unfold supported_non_type_generic_function_value_call_expr.
+    exists i, (MkTy u (TForall n0 o (MkTy u_body (TFn l t)))),
+      Γ_callee, R_callee, roots_callee.
+    repeat split; try reflexivity.
+    + exact Hinfer.
+    + eapply SFV_TForall_TFn; reflexivity.
 Qed.
 
 Lemma check_fn_root_shadow_non_capturing_call_provenance_summary_sound :
@@ -461,14 +473,14 @@ Proof.
           (fn_body_ctx fdef) e l Hsupported) as Hsupported_prop.
       destruct Hsupported_prop as
         (x & T_callee & Γ_callee & R_callee & roots_callee &
-         param_tys & ret & Hcallee_var & _ & Hinfer_callee & HTFn).
+         Hcallee_var & _ & Hinfer_callee & Hcallee_shape).
       subst e.
       exists x, l, T_callee, Γ_callee, R_callee, roots_callee,
-        param_tys, ret, T_body, Γ_out, R_out, roots.
+        T_body, Γ_out, R_out, roots.
       split; [reflexivity|].
       split; [apply preservation_ready_args_b_sound; exact Hready_args|].
       split; [exact Hinfer_callee|].
-      split; [exact HTFn|].
+      split; [exact Hcallee_shape|].
       split.
       { eapply infer_env_roots_shadow_safe_params_nodup. exact Hinfer. }
       split; [exact Htyped|].

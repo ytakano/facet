@@ -866,6 +866,284 @@ Proof.
     + exact Hstep.
 Qed.
 
+Lemma ty_lifetime_equiv_map_lifetimes_ty :
+  forall f T,
+    ty_lifetime_equiv T (map_lifetimes_ty f T).
+Proof.
+  fix IH 2.
+  intros f [u core].
+  destruct core as [| | | | s | i | name lts args | name lts args
+                   | params ret | env_lt params ret | n Ω body
+                   | n bounds body | lt rk body]; simpl.
+  - constructor.
+  - constructor.
+  - constructor.
+  - constructor.
+  - constructor.
+  - constructor.
+  - apply TLE_Struct.
+    induction args as [| T Ts IHTs]; simpl; constructor; auto.
+  - apply TLE_Enum.
+    induction args as [| T Ts IHTs]; simpl; constructor; auto.
+  - apply TLE_Fn.
+    + induction params as [| T Ts IHTs]; simpl; constructor; auto.
+    + apply IH.
+  - apply TLE_Closure.
+    + induction params as [| T Ts IHTs]; simpl; constructor; auto.
+    + apply IH.
+  - apply TLE_Forall. apply IH.
+  - apply TLE_TypeForall. apply IH.
+  - apply TLE_Ref. apply IH.
+Qed.
+
+Lemma ty_lifetime_equiv_map_lifetimes_tys :
+  forall f ts,
+    Forall2 ty_lifetime_equiv ts (map (map_lifetimes_ty f) ts).
+Proof.
+  intros f ts.
+  induction ts; simpl; constructor; auto.
+  apply ty_lifetime_equiv_map_lifetimes_ty.
+Qed.
+
+Lemma ty_lifetime_equiv_map_lifetimes_tys_go :
+  forall f ts,
+    Forall2 ty_lifetime_equiv ts
+      ((fix go (xs : list Ty) : list Ty :=
+          match xs with
+          | [] => []
+          | x :: xs' => map_lifetimes_ty f x :: go xs'
+          end) ts).
+Proof.
+  intros f ts.
+  induction ts as [| T Ts IHTs]; simpl; constructor; auto.
+  apply ty_lifetime_equiv_map_lifetimes_ty.
+Qed.
+
+Lemma Forall2_ty_lifetime_equiv_map_lifetimes_tys_sym :
+  forall f ts,
+    Forall2 ty_lifetime_equiv (map (map_lifetimes_ty f) ts) ts.
+Proof.
+  intros f ts.
+  induction ts as [| T Ts IHTs]; simpl; constructor; auto.
+  apply ty_lifetime_equiv_sym.
+  apply ty_lifetime_equiv_map_lifetimes_ty.
+Qed.
+
+Lemma runtime_tfn_signature_bridge_open_bound_rhs :
+  forall sigma params0 ret0 params1 ret1,
+    runtime_tfn_signature_bridge params0 ret0 params1 ret1 ->
+    runtime_tfn_signature_bridge params0 ret0
+      (map (open_bound_ty sigma) params1) (open_bound_ty sigma ret1).
+Proof.
+  intros sigma params0 ret0 params1 ret1 Hbridge.
+  eapply runtime_tfn_signature_bridge_trans.
+  - exact Hbridge.
+  - eapply RTSB_LifetimeEquiv.
+    + apply RTSB_Refl.
+    + unfold open_bound_ty. apply ty_lifetime_equiv_map_lifetimes_tys.
+    + unfold open_bound_ty. apply ty_lifetime_equiv_map_lifetimes_ty.
+Qed.
+
+Lemma runtime_tfn_signature_bridge_open_bound_both :
+  forall sigma params0 ret0 params1 ret1,
+    runtime_tfn_signature_bridge params0 ret0 params1 ret1 ->
+    runtime_tfn_signature_bridge
+      (map (open_bound_ty sigma) params0) (open_bound_ty sigma ret0)
+      (map (open_bound_ty sigma) params1) (open_bound_ty sigma ret1).
+Proof.
+  intros sigma params0 ret0 params1 ret1 Hbridge.
+  eapply runtime_tfn_signature_bridge_trans.
+  - eapply RTSB_LifetimeEquiv.
+    + apply RTSB_Refl.
+    + unfold open_bound_ty.
+      apply Forall2_ty_lifetime_equiv_map_lifetimes_tys_sym.
+    + unfold open_bound_ty.
+      apply ty_lifetime_equiv_sym.
+      apply ty_lifetime_equiv_map_lifetimes_ty.
+  - eapply runtime_tfn_signature_bridge_open_bound_rhs.
+    exact Hbridge.
+Qed.
+
+Lemma value_has_type_empty_closure_lookup_captures_for_tforall :
+  forall env s fname fdef T,
+    value_has_type env s (VClosure fname []) T ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    fn_env_unique_by_name env ->
+    fn_captures fdef = [].
+Proof.
+  intros env s fname fdef T Htyped.
+  remember (VClosure fname []) as v eqn:Hv.
+  revert fname fdef Hv.
+  induction Htyped; intros fname0 fdef0 Hv Hlookup Hunique; try discriminate.
+  - inversion Hv; subst fname0.
+    assert (fdef0 = fdef) as -> by (eapply lookup_fn_deterministic; eassumption).
+    exact H0.
+  - inversion Hv; subst fname0.
+    pose proof
+      (lookup_fn_unique_by_name env fname fdef0 fdef Hlookup H H0 Hunique)
+      as Heq.
+    subst fdef.
+    exact H1.
+  - eapply IHHtyped; eauto.
+  - eapply IHHtyped; eauto.
+Qed.
+
+Lemma value_has_type_empty_closure_tforall_tfn_components :
+  forall env s fname fdef u m bounds body param_tys ret sigma,
+    value_has_type env s (VClosure fname [])
+      (MkTy u (TForall m bounds body)) ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    fn_env_unique_by_name env ->
+    ty_core body = TFn param_tys ret ->
+    fn_type_params fdef = 0 /\
+    fn_captures fdef = [] /\
+    runtime_tfn_signature_bridge
+      (map param_ty (fn_params fdef)) (fn_ret fdef)
+      (map (open_bound_ty sigma) param_tys) (open_bound_ty sigma ret).
+Proof.
+  intros env s fname fdef u m bounds body param_tys ret sigma Htyped.
+  remember (VClosure fname []) as v eqn:Hv.
+  remember (MkTy u (TForall m bounds body)) as T eqn:HT.
+  revert fname fdef u m bounds body param_tys ret sigma Hv HT.
+  induction Htyped; intros fname0 fdef0 u0 m0 bounds0 body0 param_tys0 ret0 sigma0
+      Hv HT Hlookup Hunique Hbody; try discriminate.
+  - inversion Hv; subst fname0.
+    assert (fdef0 = fdef) as -> by (eapply lookup_fn_deterministic; eassumption).
+    unfold fn_value_ty, fn_signature_ty_with_usage in HT.
+    destruct (fn_type_params fdef) eqn:Htype_params.
+    2: { simpl in HT.
+         destruct (fn_lifetimes fdef); inversion HT; subst;
+           simpl in Hbody; discriminate. }
+    destruct (fn_lifetimes fdef) eqn:Hlifetimes; try discriminate.
+    simpl in HT. inversion HT; subst.
+    unfold close_fn_ty in Hbody. simpl in Hbody. inversion Hbody; subst.
+    split; [reflexivity|].
+    split; [exact H0|].
+    eapply RTSB_LifetimeEquiv;
+      [ apply RTSB_Refl
+      | eapply Forall2_ty_lifetime_equiv_trans with
+          (ys := ((fix go (xs : list Ty) : list Ty :=
+                     match xs with
+                     | [] => []
+                     | x :: xs' => map_lifetimes_ty (close_fn_lifetime (S n)) x :: go xs'
+                     end) (map param_ty (fn_params fdef))));
+        [ apply ty_lifetime_equiv_map_lifetimes_tys_go
+        | unfold open_bound_ty; apply ty_lifetime_equiv_map_lifetimes_tys ]
+      | eapply ty_lifetime_equiv_trans with
+          (T2 := map_lifetimes_ty (close_fn_lifetime (S n)) (fn_ret fdef));
+        [ apply ty_lifetime_equiv_map_lifetimes_ty
+        | unfold open_bound_ty; apply ty_lifetime_equiv_map_lifetimes_ty ] ].
+  - inversion Hv; subst fname0.
+    pose proof (lookup_fn_unique_by_name env fname fdef0 fdef Hlookup H H0 Hunique) as Heq.
+    subst fdef.
+    unfold fn_value_ty, fn_signature_ty_with_usage in HT.
+    destruct (fn_type_params fdef0) eqn:Htype_params.
+    2: { simpl in HT.
+         destruct (fn_lifetimes fdef0); inversion HT; subst;
+           simpl in Hbody; discriminate. }
+    destruct (fn_lifetimes fdef0) eqn:Hlifetimes; try discriminate.
+    simpl in HT. inversion HT; subst.
+    unfold close_fn_ty in Hbody. simpl in Hbody. inversion Hbody; subst.
+    split; [reflexivity|].
+    split; [exact H1|].
+    eapply RTSB_LifetimeEquiv;
+      [ apply RTSB_Refl
+      | eapply Forall2_ty_lifetime_equiv_trans with
+          (ys := ((fix go (xs : list Ty) : list Ty :=
+                     match xs with
+                     | [] => []
+                     | x :: xs' => map_lifetimes_ty (close_fn_lifetime (S n)) x :: go xs'
+                     end) (map param_ty (fn_params fdef0))));
+        [ apply ty_lifetime_equiv_map_lifetimes_tys_go
+        | unfold open_bound_ty; apply ty_lifetime_equiv_map_lifetimes_tys ]
+      | eapply ty_lifetime_equiv_trans with
+          (T2 := map_lifetimes_ty (close_fn_lifetime (S n)) (fn_ret fdef0));
+        [ apply ty_lifetime_equiv_map_lifetimes_ty
+        | unfold open_bound_ty; apply ty_lifetime_equiv_map_lifetimes_ty ] ].
+  - match goal with
+    | Hcompat : ty_compatible _ _ ?Texpect,
+      HTy : ?Texpect = MkTy _ (TForall _ _ _) |- _ => rewrite HTy in Hcompat
+    | Hcompat : ty_compatible _ _ ?Texpect,
+      HTy : MkTy _ (TForall _ _ _) = ?Texpect |- _ => rewrite <- HTy in Hcompat
+    end.
+    inversion H; subst; try discriminate.
+    + destruct body0 as [u_body core_body].
+      simpl in Hbody. rewrite Hbody in *.
+      destruct (IHHtyped fname0 fdef0 _ _ _
+        (MkTy u_body (TFn param_tys0 ret0))
+        param_tys0 ret0 sigma0 eq_refl eq_refl Hlookup Hunique eq_refl)
+        as [Htype_params [Hcaptures Hbridge]].
+      repeat split; try exact Htype_params; try exact Hcaptures.
+      exact Hbridge.
+    + destruct body0 as [u_body core_body].
+      simpl in Hbody. rewrite Hbody in *.
+      match goal with
+      | Hcompat_body : ty_compatible ?Ωc ?Tbody_actual
+          (MkTy u_body (TFn param_tys0 ret0)) |- _ =>
+          destruct (ty_compatible_tfn_signature_bridge Ωc Tbody_actual
+            u_body param_tys0 ret0 Hcompat_body)
+            as [u_actual [params_actual [ret_actual [HTbody_actual Hstep]]]]
+      end.
+      subst.
+      destruct (IHHtyped fname0 fdef0 _ _ _
+        (MkTy u_actual (TFn params_actual ret_actual))
+        params_actual ret_actual sigma0 eq_refl eq_refl Hlookup Hunique eq_refl)
+        as [Htype_params [Hcaptures Hbridge]].
+      repeat split; try exact Htype_params; try exact Hcaptures.
+      eapply runtime_tfn_signature_bridge_trans.
+      * exact Hbridge.
+      * eapply runtime_tfn_signature_bridge_open_bound_both.
+        exact Hstep.
+    + destruct body0 as [u_body core_body].
+      simpl in Hbody. rewrite Hbody in *.
+      match goal with
+      | Hcompat_body : ty_compatible ?Ωc ?Tbody_actual
+          (MkTy u_body (TFn param_tys0 ret0)) |- _ =>
+          destruct (ty_compatible_tfn_signature_bridge Ωc Tbody_actual
+            u_body param_tys0 ret0 Hcompat_body)
+            as [u_actual [params_actual [ret_actual [HTbody_actual Hstep]]]]
+      end.
+      inversion HTbody_actual; subst; clear HTbody_actual.
+      destruct (value_has_type_empty_closure_plain_tfn_non_generic
+        env s fname0 fdef0 u_actual params_actual ret_actual Htyped
+        Hlookup Hunique) as [Htype_params Hlifetimes].
+      repeat split.
+      * exact Htype_params.
+      * eapply value_has_type_empty_closure_lookup_captures_for_tforall;
+          eassumption.
+      * eapply runtime_tfn_signature_bridge_trans.
+        -- eapply value_has_type_empty_closure_tfn_signature_bridge;
+             eassumption.
+        -- eapply runtime_tfn_signature_bridge_open_bound_rhs.
+           exact Hstep.
+  - match goal with
+    | Hequiv : ty_lifetime_equiv _ ?Texpect,
+      HTy : ?Texpect = MkTy _ (TForall _ _ _) |- _ => rewrite HTy in Hequiv
+    | Hequiv : ty_lifetime_equiv _ ?Texpect,
+      HTy : MkTy _ (TForall _ _ _) = ?Texpect |- _ => rewrite <- HTy in Hequiv
+    end.
+    inversion H; subst; try discriminate.
+    destruct body0 as [u_body core_body].
+    simpl in Hbody. rewrite Hbody in *.
+    match goal with
+    | Hequiv_body : ty_lifetime_equiv ?Tbody_actual
+        (MkTy u_body (TFn param_tys0 ret0)) |- _ =>
+        destruct (ty_lifetime_equiv_tfn_signature_bridge Tbody_actual
+          u_body param_tys0 ret0 Hequiv_body)
+          as [params_actual [ret_actual [HTbody_actual Hstep]]]
+    end.
+    subst.
+    destruct (IHHtyped fname0 fdef0 _ _ _
+      (MkTy u_body (TFn params_actual ret_actual))
+      params_actual ret_actual sigma0 eq_refl eq_refl Hlookup Hunique eq_refl)
+      as [Htype_params [Hcaptures Hbridge]].
+    repeat split; try exact Htype_params; try exact Hcaptures.
+    eapply runtime_tfn_signature_bridge_trans.
+    + exact Hbridge.
+    + eapply runtime_tfn_signature_bridge_open_bound_both.
+      exact Hstep.
+Qed.
+
 Lemma value_has_type_empty_closure_lookup_captures :
   forall env s fname fdef T,
     value_has_type env s (VClosure fname []) T ->

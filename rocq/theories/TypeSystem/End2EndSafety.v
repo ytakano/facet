@@ -19,7 +19,7 @@ Proof.
     as R0 eqn:HR0.
   destruct (infer_full_env_roots env f R0)
     as [[[[T0 Γ0] R0_out] roots0] | err] eqn:Hroots; try discriminate.
-  destruct (check_fn_root_shadow_captured_call_provenance_summary env f);
+  destruct (check_fn_root_shadow_captured_call_store_safe_summary env f);
     try discriminate.
   injection Hend as <- <- <- <-.
   eapply infer_full_env_roots_sound. exact Hroots.
@@ -101,14 +101,14 @@ Qed.
 Lemma infer_fn_env_end2end_gate :
   forall env f T Γ_out R_out roots,
     infer_fn_env_end2end env f = infer_ok (T, Γ_out, R_out, roots) ->
-    check_fn_root_shadow_captured_call_provenance_summary env f = true.
+    check_fn_root_shadow_captured_call_store_safe_summary env f = true.
 Proof.
   intros env f T Γ_out R_out roots Hend.
   unfold infer_fn_env_end2end in Hend.
   destruct (infer_full_env_roots env f
       (initial_root_env_for_params (fn_params f ++ fn_captures f)))
     as [[[[T0 Γ0] R0_out] roots0] | err] eqn:Hroots; try discriminate.
-  destruct (check_fn_root_shadow_captured_call_provenance_summary env f)
+  destruct (check_fn_root_shadow_captured_call_store_safe_summary env f)
     eqn:Hgate; try discriminate.
   reflexivity.
 Qed.
@@ -116,7 +116,7 @@ Qed.
 Lemma infer_fns_env_end2end_check_env_ready :
   forall env fns,
     infer_fns_env_end2end env fns = infer_ok tt ->
-    forallb (check_fn_root_shadow_captured_call_provenance_summary env) fns = true.
+    forallb (check_fn_root_shadow_captured_call_store_safe_summary env) fns = true.
 Proof.
   intros env fns.
   induction fns as [| f rest IH]; intros Hinfer; simpl in *.
@@ -144,12 +144,12 @@ Proof.
   destruct (infer_fns_env_end2end env_alpha (env_fns env_alpha))
     as [[] | err] eqn:Hfns; try discriminate.
   injection Hprog as <-.
-  eapply env_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready.
+  eapply env_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready.
   - apply andb_true_iff in Hunique_global as [Hunique_top _].
     apply top_level_names_unique_b_fn_env_unique_by_name.
     exact Hunique_top.
-  - apply check_env_root_shadow_captured_call_provenance_summary_ready.
-    unfold check_env_root_shadow_captured_call_provenance_summary.
+  - apply check_env_root_shadow_captured_call_store_safe_summary_ready.
+    unfold check_env_root_shadow_captured_call_store_safe_summary.
     eapply infer_fns_env_end2end_check_env_ready. exact Hfns.
   - exact Hinitial.
   - exact Hin.

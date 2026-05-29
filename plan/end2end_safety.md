@@ -149,8 +149,11 @@ T2e.2 tasks:
   runtime package lemma.
 - Done prep: prove the recursive narrow runtime package theorem.
 - Done prep: prove the combined runtime safety/readiness theorem.
-- Next: route `infer_fn_env_end2end` through the combined gate; current
-  target: `hrt_call_twice`.
+- Done prep: route `infer_fn_env_end2end` through the combined gate and
+  support narrow `let`/`let-infer` cleanup via root exclusion.
+- Next: add direct-call evidence that accepts callees proven by the combined
+  gate; `hrt_call_twice` now reaches `caller`, whose direct call to
+  `call_twice` still sees only the old callee-summary gate.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.
 
 Out of scope for T2e.2:

@@ -1110,6 +1110,8 @@ val check_fn_root_shadow_provenance_summary : global_env -> fn_def -> bool
 
 val check_env_root_shadow_provenance_summary : global_env -> bool
 
+val store_safe_function_value_call_args_b : global_env -> expr list -> bool
+
 val direct_call_target_expr : expr -> ((ident * expr list) * expr) option
 
 val direct_call_ready_expr_b : expr -> bool
@@ -1154,7 +1156,20 @@ val check_expr_root_shadow_captured_call_provenance_summary :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
   -> bool
 
+val non_function_value_ty_b : ty -> bool
+
+val check_expr_root_shadow_store_safe_narrow_summary_fuel :
+  Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+  root_env -> sctx -> expr -> bool
+
+val check_expr_root_shadow_store_safe_narrow_summary :
+  global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
+  -> bool
+
 val check_fn_root_shadow_captured_call_provenance_summary :
+  global_env -> fn_def -> bool
+
+val check_fn_root_shadow_captured_call_store_safe_summary :
   global_env -> fn_def -> bool
 
 val check_env_root_shadow_direct_call_provenance_summary : global_env -> bool

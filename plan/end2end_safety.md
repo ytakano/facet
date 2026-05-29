@@ -109,6 +109,8 @@ T2e.2 tasks:
   failure was removed.
 - Done prep: add non-function value/store summary helpers needed to preserve
   closure-target summaries across let-bound non-function values.
+- Done prep: add store-typed/exact-summary closure-target summary helpers for
+  the sequential-let runtime route.
 - Next: add expression-summary routing for sequential `let` bodies with HRT
   function-value calls; current target: `hrt_call_twice`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.

@@ -172,6 +172,67 @@ Proof.
   eapply value_has_type_non_function_value_summary; eassumption.
 Qed.
 
+Lemma value_has_type_function_closure_targets_summary :
+  forall env,
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    fn_env_unique_by_name env ->
+    forall s v T,
+      value_has_type env s v T ->
+      value_function_closure_targets_summary env v.
+Proof.
+  intros env Hevidence Hunique s v T Htyped.
+  induction Htyped; simpl; auto.
+  - exists fdef. split; auto.
+    eapply Hevidence. exact H.
+  - pose proof (lookup_fn_in_unique_by_name env fname fdef
+      H H0 Hunique) as Hlookup.
+    exists fdef. split; auto.
+    eapply Hevidence. exact Hlookup.
+Qed.
+
+Lemma store_typed_function_closure_targets_summary :
+  forall env,
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    fn_env_unique_by_name env ->
+    forall s Σ,
+      store_typed env s Σ ->
+      store_function_closure_targets_summary env s.
+Proof.
+  intros env Hevidence Hunique s Σ Hstore.
+  induction Hstore as [| se ce rest Sigma_tail Hentry _ Htail]; constructor; auto.
+  destruct se as [sx sT sv sst].
+  destruct ce as [[[cx cT] cst] cm].
+  simpl in Hentry.
+  destruct Hentry as [_ [_ [_ Htyped]]].
+  eapply value_has_type_function_closure_targets_summary; eassumption.
+Qed.
+
+Lemma eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_store_function_closure_targets_summary :
+  forall env Ω n R Σ e T Σ' R' roots ret_roots,
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    expr_root_shadow_captured_call_provenance_summary_exact
+      env Ω n R Σ e T Σ' R' roots ret_roots ->
+    forall s s' ret,
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      store_function_closure_targets_summary env s ->
+      eval env s e s' ret ->
+      fn_env_unique_by_name env ->
+      store_function_closure_targets_summary env s'.
+Proof.
+  intros env Ω n R Σ e T Σ' R' roots ret_roots Hevidence Hsummary
+    s s' ret Hstore Hroots Hshadow Hrn Hnamed Hkeys _ Heval Hunique.
+  destruct (eval_expr_root_shadow_captured_call_provenance_summary_exact_package
+    env Ω n R Σ e T Σ' R' roots ret_roots Hsummary s s' ret
+    Hstore Hroots Hshadow Hrn Hnamed Hkeys Heval Hunique)
+    as [Hstore' _].
+  eapply store_typed_function_closure_targets_summary; eassumption.
+Qed.
+
 Lemma initial_root_env_for_params_covers :
   forall ps,
     root_env_covers_params ps (initial_root_env_for_params ps).

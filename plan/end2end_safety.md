@@ -100,8 +100,9 @@ T2e.2 tasks:
 - Done: add roots/shadow typing and soundness for lifetime-only `TForall`
   bodies whose core is `TClosure`; `capture_shared_ref` now reaches the
   existing safety-gate path and passes.
-- Next: add function-value summary evidence and runtime routing for remaining
-  lifetime-only `TForall` `EVar` callees.
+- Done prep: add a compiled runtime wrapper for lifetime-only `TForall`
+  `EVar` callees whose body is `TFn`.
+- Next: connect summary evidence and runtime safety branches to that wrapper.
 - Add lifetime-only `TForall` evidence whose body is `TFn` or `TClosure`, then
   reuse the monomorphic runtime routes after lifetime instantiation.
 - Re-run targeted closure/HRT valid and invalid tests, then update this count.

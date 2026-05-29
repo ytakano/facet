@@ -190,6 +190,37 @@ Proof.
   eapply store_safe_function_value_call_arg_preservation_ready; eassumption.
 Qed.
 
+Lemma store_safe_function_value_call_arg_eval_preserves_store_function_closure_targets_summary :
+  forall env arg s s' v,
+    store_safe_function_value_call_arg env arg ->
+    store_function_closure_targets_summary env s ->
+    eval env s arg s' v ->
+    store_function_closure_targets_summary env s'.
+Proof.
+  intros env arg s s' v Harg Hsummary Heval.
+  destruct Harg.
+  - eapply store_function_closure_targets_summary_eval_var; eassumption.
+  - inversion Heval; subst; auto.
+Qed.
+
+Lemma store_safe_function_value_call_args_eval_preserves_store_function_closure_targets_summary :
+  forall env args s s' vs,
+    store_safe_function_value_call_args env args ->
+    store_function_closure_targets_summary env s ->
+    eval_args env s args s' vs ->
+    store_function_closure_targets_summary env s'.
+Proof.
+  intros env args s s' vs Hargs Hsummary Heval.
+  revert s s' vs Hsummary Heval.
+  induction Hargs as [| arg rest Harg Hrest IH]; intros s s' vs Hsummary Heval.
+  - inversion Heval; subst. exact Hsummary.
+  - inversion Heval; subst.
+    eapply IH.
+    + eapply store_safe_function_value_call_arg_eval_preserves_store_function_closure_targets_summary;
+        eassumption.
+    + eassumption.
+Qed.
+
 Lemma store_safe_function_value_call_args_b_sound :
   forall env args,
     store_safe_function_value_call_args_b env args = true ->

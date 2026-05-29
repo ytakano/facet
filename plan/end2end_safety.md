@@ -131,6 +131,8 @@ T2e.2 tasks:
 - Done prep: narrow the store-safe function-value-call argument checker
   to vars and provenance-proven `fn` items, and add store-summary
   preservation helpers for `EVar`, `store_mark_used`, and `store_remove`.
+- Done prep: prove narrow argument evaluation preserves closure-target
+  store summaries for the sequential-call runtime route.
 - Next: prove the combined runtime safety/readiness theorem, then route
   `infer_fn_env_end2end` through the combined gate; current target: `hrt_call_twice`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.

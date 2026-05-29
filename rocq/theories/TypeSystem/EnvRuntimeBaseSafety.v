@@ -152,13 +152,76 @@ Proof.
   - subst R3. eapply TERS_If; eauto. apply root_env_equiv_refl.
 Qed.
 
+Inductive store_safe_function_value_call_arg
+    (env : global_env) : expr -> Prop :=
+  | SSFVCArg_Var : forall x,
+      store_safe_function_value_call_arg env (EVar x)
+  | SSFVCArg_Fn : forall fname fdef,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      callee_body_root_shadow_provenance_summary env fdef ->
+      store_safe_function_value_call_arg env (EFn fname).
+
+Inductive store_safe_function_value_call_args
+    (env : global_env) : list expr -> Prop :=
+  | SSFVCArgs_Nil :
+      store_safe_function_value_call_args env []
+  | SSFVCArgs_Cons : forall arg rest,
+      store_safe_function_value_call_arg env arg ->
+      store_safe_function_value_call_args env rest ->
+      store_safe_function_value_call_args env (arg :: rest).
+
+Lemma store_safe_function_value_call_arg_preservation_ready :
+  forall env arg,
+    store_safe_function_value_call_arg env arg ->
+    preservation_ready_expr arg.
+Proof.
+  intros env arg Harg.
+  destruct Harg; constructor.
+Qed.
+
+Lemma store_safe_function_value_call_args_preservation_ready :
+  forall env args,
+    store_safe_function_value_call_args env args ->
+    preservation_ready_args args.
+Proof.
+  intros env args Hargs.
+  induction Hargs; constructor; auto.
+  eapply store_safe_function_value_call_arg_preservation_ready; eassumption.
+Qed.
+
+Lemma store_safe_function_value_call_args_b_sound :
+  forall env args,
+    store_safe_function_value_call_args_b env args = true ->
+    store_safe_function_value_call_args env args.
+Proof.
+  intros env args.
+  induction args as [| arg rest IH]; intros Hcheck.
+  - constructor.
+  - destruct arg; try discriminate; simpl in Hcheck.
+    + constructor.
+      * constructor.
+      * apply IH. exact Hcheck.
+    + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup;
+        try discriminate.
+      apply andb_true_iff in Hcheck as [Hcallee Hrest].
+      destruct (lookup_fn_b_sound i (env_fns env) fdef Hlookup)
+        as [Hin Hname].
+      constructor.
+      * eapply SSFVCArg_Fn.
+        -- exact Hin.
+        -- exact Hname.
+        -- apply check_fn_root_shadow_provenance_summary_sound. exact Hcallee.
+      * apply IH. exact Hrest.
+Qed.
+
 Inductive expr_root_shadow_store_safe_narrow_summary
     (env : global_env) (Omega : outlives_ctx) (n : nat)
     : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set ->
       root_set -> Prop :=
   | ERSSN_FunctionValueCall : forall R Sigma x args T_callee Gamma_callee
       R_callee roots_callee T Sigma' R' roots,
-      preservation_ready_args args ->
+      store_safe_function_value_call_args env args ->
       infer_core_env_roots_shadow_safe env Omega n R (ctx_of_sctx Sigma)
         (EVar x) = infer_ok
           (T_callee, Gamma_callee, R_callee, roots_callee) ->
@@ -263,7 +326,7 @@ Proof.
       subst e.
       exists roots.
       eapply ERSSN_FunctionValueCall.
-      * apply preservation_ready_args_b_sound. exact Hready_args.
+      * apply store_safe_function_value_call_args_b_sound. exact Hready_args.
       * exact Hinfer_callee.
       * exact Hcallee_shape.
       * eapply infer_core_env_state_fuel_roots_shadow_safe_sound.

@@ -141,6 +141,42 @@ Proof.
   constructor; auto.
 Qed.
 
+Lemma store_function_closure_targets_summary_store_mark_used :
+  forall env s x,
+    store_function_closure_targets_summary env s ->
+    store_function_closure_targets_summary env (store_mark_used x s).
+Proof.
+  unfold store_function_closure_targets_summary.
+  intros env s x Hsummary.
+  induction Hsummary as [| se rest Hhead Htail IH]; simpl.
+  - constructor.
+  - destruct (ident_eqb x (se_name se)); constructor; auto.
+Qed.
+
+Lemma store_function_closure_targets_summary_store_remove :
+  forall env s x,
+    store_function_closure_targets_summary env s ->
+    store_function_closure_targets_summary env (store_remove x s).
+Proof.
+  unfold store_function_closure_targets_summary.
+  intros env s x Hsummary.
+  induction Hsummary as [| se rest Hhead Htail IH]; simpl.
+  - constructor.
+  - destruct (ident_eqb x (se_name se)); auto.
+Qed.
+
+Lemma store_function_closure_targets_summary_eval_var :
+  forall env s s' x v,
+    store_function_closure_targets_summary env s ->
+    eval env s (EVar x) s' v ->
+    store_function_closure_targets_summary env s'.
+Proof.
+  intros env s s' x v Hsummary Heval.
+  inversion Heval; subst; auto.
+  apply store_function_closure_targets_summary_store_mark_used.
+  exact Hsummary.
+Qed.
+
 Lemma store_function_closure_targets_summary_add_non_function :
   forall env s x T v,
     store_function_closure_targets_summary env s ->

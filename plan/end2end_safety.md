@@ -128,6 +128,9 @@ T2e.2 tasks:
   routing the end-to-end entrypoint to it yet.
 - Done prep: prove Prop-level soundness and env-readiness for the combined
   checker helper.
+- Done prep: narrow the store-safe function-value-call argument checker
+  to vars and provenance-proven `fn` items, and add store-summary
+  preservation helpers for `EVar`, `store_mark_used`, and `store_remove`.
 - Next: prove the combined runtime safety/readiness theorem, then route
   `infer_fn_env_end2end` through the combined gate; current target: `hrt_call_twice`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.

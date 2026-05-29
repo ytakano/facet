@@ -7792,6 +7792,22 @@ Definition check_env_root_shadow_provenance_summary
     (env : global_env) : bool :=
   forallb (check_fn_root_shadow_provenance_summary env) (env_fns env).
 
+Fixpoint store_safe_function_value_call_args_b
+    (env : global_env) (args : list expr) : bool :=
+  match args with
+  | [] => true
+  | EVar _ :: rest =>
+      store_safe_function_value_call_args_b env rest
+  | EFn fname :: rest =>
+      match lookup_fn_b fname (env_fns env) with
+      | Some callee =>
+          check_fn_root_shadow_provenance_summary env callee &&
+          store_safe_function_value_call_args_b env rest
+      | None => false
+      end
+  | _ :: _ => false
+  end.
+
 Definition direct_call_target_expr (e : expr) : option (ident * list expr * expr) :=
   match e with
   | ECall fname args => Some (fname, args, ECall fname args)
@@ -8213,7 +8229,7 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_fuel
   | infer_ok _ =>
       match e with
       | ECallExpr callee args =>
-          preservation_ready_args_b args &&
+          store_safe_function_value_call_args_b env args &&
           check_supported_non_type_generic_function_value_call_expr
             env Ω n R (ctx_of_sctx Σ) callee
       | ELet m x T_hidden e1 e2 =>

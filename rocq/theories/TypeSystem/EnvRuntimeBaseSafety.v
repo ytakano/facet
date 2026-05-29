@@ -1,7 +1,7 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules RootProvenance TypeChecker RuntimeTyping
   EnvStructuralRules CheckerSoundness AlphaRenaming EnvTypingSoundness
-  TypeSafetyBasePreservationMutual.
+  TypeSafetyBasePreservationMutual TypeSafetyDirectCallWrappers.
 From Facet.TypeSystem Require Export EnvRuntimeValidatorFacts.
 From Stdlib Require Import List Bool Lia String Program.Equality.
 Import ListNotations.

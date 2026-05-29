@@ -163,6 +163,8 @@ T2e.2 tasks:
   narrow store-safe summaries.
 - Done prep: prove store-safe direct-call argument evidence is
   preserved by alpha-renaming.
+- Done prep: add focused `ECallExpr`/`EVar` disjointness helper for
+  narrow alpha preservation.
 - Blocked: direct `ECall` still requires old
   `callee_body_root_shadow_provenance_summary` evidence.  To accept
   `caller` in `hrt_call_twice`, first finish narrow-summary preservation across

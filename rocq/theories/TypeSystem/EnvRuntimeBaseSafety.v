@@ -428,6 +428,16 @@ Inductive expr_root_shadow_store_safe_narrow_summary
         env Omega n R Σ (ELetInfer m x e1 e2) T2
         (sctx_remove x Sigma2) (root_env_remove x R2) roots2 ret_roots.
 
+Lemma disjoint_names_evar_of_call_expr :
+  forall x args ys,
+    disjoint_names (free_vars_expr (ECallExpr (EVar x) args)) ys ->
+    disjoint_names (free_vars_expr (EVar x)) ys.
+Proof.
+  intros x args ys Hdisj y Hy.
+  simpl in Hy. destruct Hy as [Hy | Hy]; [subst y | contradiction].
+  apply Hdisj. simpl. left. reflexivity.
+Qed.
+
 Lemma expr_root_shadow_store_safe_narrow_summary_typed :
   forall env Omega n R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_store_safe_narrow_summary

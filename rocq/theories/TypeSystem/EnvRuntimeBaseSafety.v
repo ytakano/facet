@@ -124,6 +124,146 @@ Proof.
   - subst R3. eapply TERS_If; eauto. apply root_env_equiv_refl.
 Qed.
 
+Inductive expr_root_shadow_store_safe_narrow_summary
+    (env : global_env) (Omega : outlives_ctx) (n : nat)
+    : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set ->
+      root_set -> Prop :=
+  | ERSSN_FunctionValueCall : forall R Sigma x args T_callee Gamma_callee
+      R_callee roots_callee T Sigma' R' roots,
+      preservation_ready_args args ->
+      infer_core_env_roots_shadow_safe env Omega n R (ctx_of_sctx Sigma)
+        (EVar x) = infer_ok
+          (T_callee, Gamma_callee, R_callee, roots_callee) ->
+      supported_non_type_generic_function_value_call_callee_shape T_callee ->
+      typed_env_roots_shadow_safe env Omega n R Sigma
+        (ECallExpr (EVar x) args) T Sigma' R' roots ->
+      expr_root_shadow_store_safe_narrow_summary
+        env Omega n R Sigma (ECallExpr (EVar x) args) T Sigma' R' roots roots
+  | ERSSN_Let : forall R R1 R2 Sigma Sigma1 Sigma2 m x T_hidden T1 e1 e2
+      T2 roots1 roots2 ret_roots1 ret_roots,
+      expr_root_shadow_store_safe_narrow_summary
+        env Omega n R Sigma e1 T1 Sigma1 R1 roots1 ret_roots1 ->
+      ty_compatible_b Omega T1 T_hidden = true ->
+      root_env_lookup x R1 = None ->
+      roots_exclude x roots1 ->
+      root_env_excludes x R1 ->
+      expr_root_shadow_store_safe_narrow_summary
+        env Omega n (root_env_add x roots1 R1)
+        (sctx_add x T_hidden m Sigma1) e2 T2 Sigma2 R2 roots2 ret_roots ->
+      capture_ref_free_ty_b env T2 = true ->
+      sctx_check_ok env x T_hidden Sigma2 = true ->
+      roots_exclude x roots2 ->
+      root_env_excludes x (root_env_remove x R2) ->
+      expr_root_shadow_store_safe_narrow_summary
+        env Omega n R Sigma (ELet m x T_hidden e1 e2) T2
+        (sctx_remove x Sigma2) (root_env_remove x R2) roots2 ret_roots.
+
+Lemma expr_root_shadow_store_safe_narrow_summary_typed :
+  forall env Omega n R Sigma e T Sigma' R' roots ret_roots,
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n R Sigma e T Sigma' R' roots ret_roots ->
+    typed_env_roots_shadow_safe env Omega n R Sigma e T Sigma' R' roots.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots ret_roots Hsummary.
+  induction Hsummary.
+  - exact H2.
+  - eapply TERS_Let; eauto.
+Qed.
+
+Lemma check_expr_root_shadow_store_safe_narrow_summary_fuel_sound :
+  forall fuel env Omega n R Sigma e T Sigma' R' roots,
+    infer_core_env_state_fuel_roots_shadow_safe fuel env Omega n R Sigma e =
+      infer_ok (T, Sigma', R', roots) ->
+    check_expr_root_shadow_store_safe_narrow_summary_fuel
+      fuel env Omega n R Sigma e = true ->
+    exists ret_roots,
+      expr_root_shadow_store_safe_narrow_summary
+        env Omega n R Sigma e T Sigma' R' roots ret_roots.
+Proof.
+  induction fuel as [| fuel' IH]; intros env Omega n R Sigma e T Sigma' R'
+    roots Hinfer Hcheck.
+  - simpl in Hinfer. discriminate.
+  - cbn [check_expr_root_shadow_store_safe_narrow_summary_fuel] in Hcheck.
+    rewrite Hinfer in Hcheck.
+    destruct e; try discriminate.
+    + simpl in Hinfer, Hcheck.
+      destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Omega n R
+        Sigma e1) as [[[[T1 Sigma1] R1] roots1] | err] eqn:Hbound;
+        try discriminate.
+      destruct (ty_compatible_b Omega T1 t) eqn:Hcompat;
+        try discriminate.
+      apply andb_true_iff in Hcheck as [Hhead Hcheck].
+      destruct (IH env Omega n R Sigma e1 T1 Sigma1 R1 roots1 Hbound Hhead)
+        as [ret_roots1 Hbound_summary].
+      destruct (root_env_lookup i R1) as [roots_x |] eqn:Hlookup_x;
+        try discriminate.
+      apply andb_true_iff in Hcheck as [Hfresh Hcheck].
+      apply andb_true_iff in Hfresh as [Hroots1 Henv1].
+      destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Omega n
+        (root_env_add i roots1 R1) (sctx_add i t m Sigma1) e2)
+        as [[[[T2 Sigma2] R2] roots2] | err] eqn:Hbody;
+        try discriminate.
+      repeat rewrite andb_true_iff in Hcheck.
+      destruct Hcheck as [[[[Hfree_ret Hsctx_ok] Hroots2] Henv2]
+        Hbody_check].
+      destruct (IH env Omega n (root_env_add i roots1 R1)
+        (sctx_add i t m Sigma1) e2 T2 Sigma2 R2 roots2 Hbody
+        Hbody_check) as [ret_roots Hbody_summary].
+      simpl in Hinfer.
+      rewrite Hroots1, Henv1, Hsctx_ok, Hroots2, Henv2 in Hinfer.
+      inversion Hinfer; subst; clear Hinfer.
+      exists ret_roots.
+      eapply ERSSN_Let.
+      * exact Hbound_summary.
+      * exact Hcompat.
+      * exact Hlookup_x.
+      * apply roots_exclude_b_sound. exact Hroots1.
+      * apply root_env_excludes_b_sound. exact Henv1.
+      * exact Hbody_summary.
+      * exact Hfree_ret.
+      * exact Hsctx_ok.
+      * apply roots_exclude_b_sound. exact Hroots2.
+      * apply root_env_excludes_b_sound. exact Henv2.
+    + apply andb_true_iff in Hcheck as [Hready_args Hsupported].
+      pose proof
+        (check_supported_non_type_generic_function_value_call_expr_sound
+          env Omega n R (ctx_of_sctx Sigma) e l Hsupported)
+        as Hsupported_prop.
+      destruct Hsupported_prop as
+        (x & T_callee & Gamma_callee & R_callee & roots_callee &
+         Hcallee & _ & Hinfer_callee & Hcallee_shape).
+      subst e.
+      exists roots.
+      eapply ERSSN_FunctionValueCall.
+      * apply preservation_ready_args_b_sound. exact Hready_args.
+      * exact Hinfer_callee.
+      * exact Hcallee_shape.
+      * eapply infer_core_env_state_fuel_roots_shadow_safe_sound.
+        exact Hinfer.
+Qed.
+
+Lemma check_expr_root_shadow_store_safe_narrow_summary_sound :
+  forall env Omega n R Gamma e T Gamma' R' roots,
+    infer_core_env_roots_shadow_safe env Omega n R Gamma e =
+      infer_ok (T, Gamma', R', roots) ->
+    check_expr_root_shadow_store_safe_narrow_summary
+      env Omega n R Gamma e = true ->
+    exists ret_roots,
+      expr_root_shadow_store_safe_narrow_summary
+        env Omega n R (sctx_of_ctx Gamma) e T (sctx_of_ctx Gamma') R'
+        roots ret_roots.
+Proof.
+  unfold check_expr_root_shadow_store_safe_narrow_summary,
+    infer_core_env_roots_shadow_safe.
+  intros env Omega n R Gamma e T Gamma' R' roots Hinfer Hcheck.
+  destruct (infer_core_env_state_fuel_roots_shadow_safe 10000 env Omega n R
+    (sctx_of_ctx Gamma) e) as [[[[T0 Sigma0] R0] roots0] | err]
+    eqn:Hstate; try discriminate.
+  inversion Hinfer; subst.
+  eapply check_expr_root_shadow_store_safe_narrow_summary_fuel_sound;
+    eassumption.
+Qed.
+
 Lemma check_expr_root_shadow_store_safe_summary_fuel_sound :
   forall fuel env Omega n R Sigma e T Sigma' R' roots,
     infer_core_env_state_fuel_roots_shadow_safe fuel env Omega n R Sigma e =

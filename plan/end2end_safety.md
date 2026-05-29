@@ -118,6 +118,8 @@ T2e.2 tasks:
   function-value calls without changing the extracted checker.
 - Done prep: add the extracted store-safe expression-summary checker helper.
 - Done prep: prove the store-safe expression-summary checker helper sound.
+- Done prep: add a focused store-safe EVar-call/`let` checker and soundness
+  proof for the sequential-let route.
 - Next: wire the store-safe summary into function-level safety for sequential
   `let` bodies; current target: `hrt_call_twice`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.

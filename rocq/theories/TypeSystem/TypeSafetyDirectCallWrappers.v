@@ -128,6 +128,55 @@ Proof.
     eassumption.
 Qed.
 
+Lemma eval_direct_call_body_cleanup_final_store_eq :
+  forall env (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+      (fname : ident) args fdef fcall σ s s_args s_body vs ret used'
+      T_body Γ_out R_params R_body roots_body,
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    provenance_ready_args args ->
+    preservation_ready_args args ->
+    typed_args_roots env Ω n R Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    store_roots_within R_params
+      (bind_params (fn_params fcall) vs s_args) ->
+    store_no_shadow (bind_params (fn_params fcall) vs s_args) ->
+    root_env_no_shadow R_params ->
+    root_env_covers_params (fn_params fcall) R_params ->
+    provenance_ready_expr (fn_body fcall) ->
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
+      R_params (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body ->
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true ->
+    roots_exclude_params (fn_params fcall) roots_body ->
+    root_env_excludes_params (fn_params fcall) R_body ->
+    eval env (bind_params (fn_params fcall) vs s_args)
+      (fn_body fcall) s_body ret ->
+    store_remove_params (fn_params fcall) s_body = s_args.
+Proof.
+  intros env Ω n R Σ Σ_args R_args arg_roots fname args fdef fcall σ
+    s s_args s_body vs ret used' T_body Γ_out R_params R_body roots_body
+    Hstore Hroots Hshadow Hrn Hprov_args Hready_args Htyped_args Heval_args
+    Hrename Hroots_params Hshadow_params Hrn_params Hcover_params Hprov_body
+    Htyped_body Hcompat Hexclude_roots Hexclude_env Heval_body.
+  destruct
+    (eval_direct_call_body_cleanup_preserves_value_and_refs
+      env Ω n R Σ Σ_args R_args arg_roots fname args fdef fcall σ
+      s s_args s_body vs ret used' T_body Γ_out R_params R_body roots_body
+      Hstore Hroots Hshadow Hrn Hprov_args Hready_args Htyped_args
+      Heval_args Hrename Hroots_params Hshadow_params Hrn_params
+      Hcover_params Hprov_body Htyped_body Hcompat Hexclude_roots
+      Hexclude_env Heval_body)
+    as [_ [_ [_ [_ [_ [_ [_ [_ [frame_final [locals Hcleanup]]]]]]]]]].
+  destruct Hcleanup as [_ [_ [_ [_ [Heq _]]]]].
+  exact Heq.
+Qed.
+
 Lemma eval_args_root_subst_images_exclude_names_for_fresh_call :
   forall env Ω n R Σ ps_typed Σ_args R_args arg_roots args s s_args vs
       fdef fcall used',

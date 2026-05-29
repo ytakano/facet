@@ -135,6 +135,8 @@ T2e.2 tasks:
   store summaries for the sequential-call runtime route.
 - Done prep: derive runtime root-name/key outputs from typed narrow
   summaries and output store typing.
+- Done prep: expose direct-call cleanup final-store equality for
+  preserving closure-target summaries after function-value calls.
 - Next: prove the combined runtime safety/readiness theorem, then route
   `infer_fn_env_end2end` through the combined gate; current target: `hrt_call_twice`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.

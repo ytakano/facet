@@ -52,6 +52,78 @@ Proof.
   eapply store_typed_function_closure_targets_summary; eassumption.
 Qed.
 
+Inductive expr_root_shadow_store_safe_summary
+    (env : global_env) (Omega : outlives_ctx) (n : nat)
+    : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set ->
+      root_set -> Prop :=
+  | ERSS_Exact : forall R Sigma e T Sigma' R' roots ret_roots,
+      expr_root_shadow_captured_call_provenance_summary_exact
+        env Omega n R Sigma e T Sigma' R' roots ret_roots ->
+      expr_root_shadow_store_safe_summary
+        env Omega n R Sigma e T Sigma' R' roots ret_roots
+  | ERSS_FunctionValueCall : forall R Sigma x args T_callee Gamma_callee
+      R_callee roots_callee T Sigma' R' roots,
+      preservation_ready_args args ->
+      infer_core_env_roots_shadow_safe env Omega n R (ctx_of_sctx Sigma)
+        (EVar x) = infer_ok
+          (T_callee, Gamma_callee, R_callee, roots_callee) ->
+      supported_non_type_generic_function_value_call_callee_shape T_callee ->
+      typed_env_roots_shadow_safe env Omega n R Sigma
+        (ECallExpr (EVar x) args) T Sigma' R' roots ->
+      expr_root_shadow_store_safe_summary
+        env Omega n R Sigma (ECallExpr (EVar x) args) T Sigma' R' roots roots
+  | ERSS_Let : forall R R1 R2 Sigma Sigma1 Sigma2 m x T_hidden T1 e1 e2
+      T2 roots1 roots2 ret_roots1 ret_roots,
+      expr_root_shadow_store_safe_summary
+        env Omega n R Sigma e1 T1 Sigma1 R1 roots1 ret_roots1 ->
+      ty_compatible_b Omega T1 T_hidden = true ->
+      root_env_lookup x R1 = None ->
+      roots_exclude x roots1 ->
+      root_env_excludes x R1 ->
+      expr_root_shadow_store_safe_summary
+        env Omega n (root_env_add x roots1 R1)
+        (sctx_add x T_hidden m Sigma1) e2 T2 Sigma2 R2 roots2 ret_roots ->
+      capture_ref_free_ty_b env T2 = true ->
+      sctx_check_ok env x T_hidden Sigma2 = true ->
+      roots_exclude x roots2 ->
+      root_env_excludes x (root_env_remove x R2) ->
+      expr_root_shadow_store_safe_summary
+        env Omega n R Sigma (ELet m x T_hidden e1 e2) T2
+        (sctx_remove x Sigma2) (root_env_remove x R2) roots2 ret_roots
+  | ERSS_If : forall R R1 R2 R3 Sigma Sigma1 Sigma2 Sigma3 Sigma4
+      e1 e2 e3 T_cond T2 T3 roots_cond roots2 roots3 ret_roots2 ret_roots3,
+      provenance_ready_expr e1 ->
+      typed_env_roots_shadow_safe env Omega n R Sigma e1 T_cond Sigma1 R1
+        roots_cond ->
+      ty_core T_cond = TBooleans ->
+      expr_root_shadow_store_safe_summary
+        env Omega n R1 Sigma1 e2 T2 Sigma2 R2 roots2 ret_roots2 ->
+      expr_root_shadow_store_safe_summary
+        env Omega n R1 Sigma1 e3 T3 Sigma3 R3 roots3 ret_roots3 ->
+      ty_core T2 = ty_core T3 ->
+      ctx_merge (ctx_of_sctx Sigma2) (ctx_of_sctx Sigma3) = Some Sigma4 ->
+      R2 = R3 ->
+      expr_root_shadow_store_safe_summary
+        env Omega n R Sigma (EIf e1 e2 e3)
+        (MkTy (usage_max (ty_usage T2) (ty_usage T3)) (ty_core T2))
+        (sctx_of_ctx Sigma4) R2 (root_set_union roots2 roots3)
+        (root_set_union ret_roots2 ret_roots3).
+
+Lemma expr_root_shadow_store_safe_summary_typed :
+  forall env Omega n R Sigma e T Sigma' R' roots ret_roots,
+    expr_root_shadow_store_safe_summary
+      env Omega n R Sigma e T Sigma' R' roots ret_roots ->
+    typed_env_roots_shadow_safe env Omega n R Sigma e T Sigma' R' roots.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots ret_roots Hsummary.
+  induction Hsummary.
+  - eapply expr_root_shadow_captured_call_provenance_summary_exact_typed.
+    exact H.
+  - exact H2.
+  - eapply TERS_Let; eauto.
+  - subst R3. eapply TERS_If; eauto. apply root_env_equiv_refl.
+Qed.
+
 Lemma initial_root_env_for_params_covers :
   forall ps,
     root_env_covers_params ps (initial_root_env_for_params ps).

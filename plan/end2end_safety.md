@@ -114,6 +114,8 @@ T2e.2 tasks:
 - Done prep: relocate closure-target store summary helpers from
   `EnvRuntimeBaseSafety.v` to `EnvRuntimeShadowSummaryFacts.v` so later runtime
   safety modules can share them earlier in the dependency order.
+- Done prep: add a later store-safe expression-summary Prop for recursive
+  function-value calls without changing the extracted checker.
 - Next: add expression-summary routing for sequential `let` bodies with HRT
   function-value calls; current target: `hrt_call_twice`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.

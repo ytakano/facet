@@ -286,6 +286,24 @@ Inductive expr_root_shadow_captured_call_provenance_summary_exact
         (ELet m x T_hidden (EMakeClosure fname captures)
           (ECallExpr (EVar x) args))
         T Σ' R' roots (root_set_union roots_direct capture_roots)
+  | ERSCE_Let : forall R R1 R2 Σ Σ1 Σ2 m x T_hidden T1 e1 e2
+      T2 roots1 roots2 ret_roots,
+      provenance_ready_expr e1 ->
+      typed_env_roots_shadow_safe env Ω n R Σ e1 T1 Σ1 R1 roots1 ->
+      ty_compatible_b Ω T1 T_hidden = true ->
+      root_env_lookup x R1 = None ->
+      roots_exclude x roots1 ->
+      root_env_excludes x R1 ->
+      expr_root_shadow_captured_call_provenance_summary_exact
+        env Ω n (root_env_add x roots1 R1)
+        (sctx_add x T_hidden m Σ1) e2 T2 Σ2 R2 roots2 ret_roots ->
+      capture_ref_free_ty_b env T2 = true ->
+      sctx_check_ok env x T_hidden Σ2 = true ->
+      roots_exclude x roots2 ->
+      root_env_excludes x (root_env_remove x R2) ->
+      expr_root_shadow_captured_call_provenance_summary_exact
+        env Ω n R Σ (ELet m x T_hidden e1 e2) T2
+        (sctx_remove x Σ2) (root_env_remove x R2) roots2 ret_roots
   | ERSCE_If : forall R R1 R2 R3 Σ Σ1 Σ2 Σ3 Σ4 e1 e2 e3
       T_cond T2 T3 roots_cond roots2 roots3 ret_roots2 ret_roots3,
       provenance_ready_expr e1 ->
@@ -317,6 +335,7 @@ Proof.
   - exact H5.
   - exact H11.
   - exact H18.
+  - eapply TERS_Let; eauto.
   - subst R3. eapply TERS_If; eauto. apply root_env_equiv_refl.
 Qed.
 

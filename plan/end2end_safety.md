@@ -25,23 +25,22 @@ this roadmap.
 | T2e.2: HRT/closure function-value calls | blocked: runtime callee bridge needed |
 | T2g: mixed lifetime/type forall roots calls | done |
 | T2b.1: captured callee base gate | done |
-| T2b.2: local captured-call bridge | in progress |
-| T2b.3: captured closure regressions | pending |
+| T2b.2: local captured-call bridge | done |
+| T2b.3: captured closure regressions | done |
 | T2f: deref/reborrow/ref-write roots coverage | blocked: nested place root model needed |
 
 ## Current blockers
 
-With the CLI using `infer_program_env_end2end`, `sh tests/run.sh` currently has
-36 valid-test failures:
+With the CLI using `infer_program_env_end2end`, the last recorded full
+`sh tests/run.sh` run had 36 valid-test failures:
 
 - 25 `ErrEndToEndSafetyGateFailed`
   - `ECallGeneric fname type_args args` direct-call bodies.
   - Remaining function-value calls: `TClosure`, lifetime-only `TForall`,
     type-forall, mixed `for<'a, T>`, and generic-item function values still
     need their runtime callee bridges.
-  - captured closure calls through local bindings.  These fail first in the
-    synthesized `__facet_closure` callee because returning a hidden capture
-    leaves roots tied to `fn_params ++ fn_captures`.
+  - captured shared-ref closure function-value calls remain under T2e higher-rank
+    closure-value evidence.
 - 11 `ErrNotImplemented`
   - deref/reborrow/write-through-reference roots coverage.  Nested `PDeref`
     places make `place_path` return `None`; roots typing needs explicit
@@ -121,13 +120,9 @@ T2b tasks:
 
 - Done: add a base captured-callee branch to the captured-call gate and safety
   proof.  Keep strict `fn_params ++ fn_captures` roots/env exclusion.
-- T2b.2: finish the local captured-call safety bridge for `main`; do not relax
-  captured-callee return-root evidence unless a proof requires it.
-- T2b.3: run `tests/valid/closure/capture_*` and `tests/invalid/closure/*`,
-  then record the remaining valid failure count.  Current targeted status: one
-  valid `capture_*` passes, two local captured-call cases fail in `main`, the
-  shared-ref case is under the T2e higher-rank closure-value blocker, and all
-  invalid closure cases reject.
+- Done: add an outer-`let` expression-summary bridge for local captured calls returning runtime-rootless values.
+- Done: generalize the function gate to consume exact expression summaries for non-`if` bodies.
+- Done: `capture_function_param`, `capture_unrestricted_annotated_let_call`, and `capture_unrestricted_let_call` pass; `capture_shared_ref` remains under the T2e higher-rank closure-value blocker; all `tests/invalid/closure/*` reject.
 
 ### T2f: deref/reborrow/ref-write roots coverage
 

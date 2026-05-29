@@ -7995,7 +7995,39 @@ Fixpoint check_expr_root_shadow_captured_call_provenance_summary_fuel
           end
       | None => false
       end ||
-	      match e with
+      match e with
+      | ELet m x T_hidden e1 e2 =>
+          match infer_core_env_state_fuel_roots_shadow_safe
+                  fuel' env Ω n R Σ e1 with
+          | infer_err _ => false
+          | infer_ok (T1, Σ1, R1, roots1) =>
+              ty_compatible_b Ω T1 T_hidden &&
+              provenance_ready_expr_b e1 &&
+              match root_env_lookup x R1 with
+              | Some _ => false
+              | None =>
+                  roots_exclude_b x roots1 &&
+                  root_env_excludes_b x R1 &&
+                  match infer_core_env_state_fuel_roots_shadow_safe
+                          fuel' env Ω n
+                          (root_env_add x roots1 R1)
+                          (sctx_add x T_hidden m Σ1) e2 with
+                  | infer_err _ => false
+                  | infer_ok (T2, Σ2, R2, roots2) =>
+                      capture_ref_free_ty_b env T2 &&
+                      sctx_check_ok env x T_hidden Σ2 &&
+                      roots_exclude_b x roots2 &&
+                      root_env_excludes_b x (root_env_remove x R2) &&
+                      check_expr_root_shadow_captured_call_provenance_summary_fuel
+                        fuel' env Ω n
+                        (root_env_add x roots1 R1)
+                        (sctx_add x T_hidden m Σ1) e2
+                  end
+              end
+          end
+      | _ => false
+      end ||
+      match e with
       | EIf e1 e2 e3 =>
           match infer_core_env_state_fuel_roots_shadow_safe
                   fuel' env Ω n R Σ e1 with
@@ -8053,9 +8085,7 @@ Definition check_fn_root_shadow_captured_call_provenance_summary
           end
       | None => false
       end ||
-      match fn_body fdef with
-      | EIf _ _ _ =>
-          match infer_core_env_roots_shadow_safe env
+      (match infer_core_env_roots_shadow_safe env
                   (fn_outlives fdef)
                   (fn_lifetimes fdef)
                   (initial_root_env_for_fn fdef)
@@ -8072,9 +8102,7 @@ Definition check_fn_root_shadow_captured_call_provenance_summary
               fn_params_roots_exclude_b (fn_params fdef) roots &&
               fn_params_root_env_excludes_b (fn_params fdef) R_out
           | _, _ => false
-          end
-      | _ => false
-      end ||
+          end) ||
       match local_captured_call_target_expr (fn_body fdef) with
       | Some (fname, captures, args, m, x, T, direct_body, let_body) =>
           preservation_ready_args_b args &&
@@ -8554,8 +8582,8 @@ Definition ex_ready_gap_captured_closure_call_env : global_env :=
   MkGlobalEnv [] [] [] [] []
     [ex_nonempty_capture_callee_fn; ex_ready_gap_captured_closure_call_fn].
 
-Example ready_gap_matrix_captured_closure_call_checker_rejects :
-  check_program_env_alpha ex_ready_gap_captured_closure_call_env = false.
+Example ready_gap_matrix_captured_closure_call_checker_accepts :
+  check_program_env_alpha ex_ready_gap_captured_closure_call_env = true.
 Proof. vm_compute. reflexivity. Qed.
 
 Example ready_gap_matrix_captured_closure_call_validator_rejects :

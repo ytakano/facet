@@ -557,7 +557,8 @@ Proof.
       in Hcheck.
     rewrite Hinfer in Hcheck.
     apply orb_true_iff in Hcheck as [Hnon_if | Hif].
-    + apply orb_true_iff in Hnon_if as [Hnon_local | Hlocal].
+    + apply orb_true_iff in Hnon_if as [Hnon_let | Hlet].
+      apply orb_true_iff in Hnon_let as [Hnon_local | Hlocal].
       apply orb_true_iff in Hnon_local as [Hprov_or_direct | Hcaptured].
       * apply orb_true_iff in Hprov_or_direct as [Hprov | Hdirect].
         -- eexists. eapply ERSCE_Provenance.
@@ -706,6 +707,45 @@ Proof.
         -- eapply infer_core_env_state_fuel_roots_shadow_safe_sound.
            exact Hlet.
         -- exact Hlocal_infer.
+      * destruct e; try discriminate.
+        simpl in Hinfer, Hlet.
+        destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R
+          Σ e1) as [[[[T1 Σ1] R1] roots1] | err] eqn:Hbound;
+          try discriminate.
+        destruct (ty_compatible_b Ω T1 t) eqn:Hcompat;
+          try discriminate.
+        apply andb_true_iff in Hlet as [Hready_bound Hlet].
+        destruct (root_env_lookup i R1) as [roots_x |] eqn:Hlookup_x;
+          try discriminate.
+        apply andb_true_iff in Hlet as [Hroots1 Hlet].
+        apply andb_true_iff in Hroots1 as [Hroots1 Henv1].
+        destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n
+          (root_env_add i roots1 R1) (sctx_add i t m Σ1) e2)
+          as [[[[T2 Σ2] R2] roots2] | err] eqn:Hbody;
+          try discriminate.
+        repeat rewrite andb_true_iff in Hlet.
+        destruct Hlet as [[[[Hfree_ret Hsctx_ok] Hroots2] Henv2]
+          Hbody_check].
+        destruct (IH env Ω n (root_env_add i roots1 R1)
+          (sctx_add i t m Σ1) e2 T2 Σ2 R2 roots2 Hbody
+          Hbody_check) as [ret_roots Hbody_summary].
+        apply andb_true_iff in Hready_bound as [_ Hready_bound].
+        simpl in Hinfer.
+        rewrite Hroots1, Henv1, Hsctx_ok, Hroots2, Henv2 in Hinfer.
+        inversion Hinfer; subst; clear Hinfer.
+        eexists. eapply ERSCE_Let.
+        -- apply provenance_ready_expr_b_sound. exact Hready_bound.
+        -- eapply infer_core_env_state_fuel_roots_shadow_safe_sound.
+           exact Hbound.
+        -- exact Hcompat.
+        -- exact Hlookup_x.
+        -- apply roots_exclude_b_sound. exact Hroots1.
+        -- apply root_env_excludes_b_sound. exact Henv1.
+        -- exact Hbody_summary.
+        -- exact Hfree_ret.
+        -- exact Hsctx_ok.
+        -- apply roots_exclude_b_sound. exact Hroots2.
+        -- apply root_env_excludes_b_sound. exact Henv2.
     + destruct e; try discriminate.
       simpl in Hinfer, Hif.
       destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R
@@ -840,28 +880,27 @@ Proof.
     split; [apply fn_params_roots_exclude_b_sound; exact Hroots|].
     apply fn_params_root_env_excludes_b_sound. exact Henv.
       * right. right. right. left.
-        destruct (fn_body fdef) eqn:Hbody_if; try discriminate.
-      destruct (infer_core_env_roots_shadow_safe env
-        (fn_outlives fdef)
-        (fn_lifetimes fdef)
-        (initial_root_env_for_fn fdef)
-        (fn_body_ctx fdef)
-        (EIf e1 e2 e3))
-        as [[[[T_body Γ_out] R_body] roots_body] | err]
-        eqn:Hcore; try discriminate.
-      destruct (infer_env_roots_shadow_safe env fdef
-        (initial_root_env_for_fn fdef))
-        as [[[[T_env Γ_env] R_env] roots_env] | err]
-        eqn:Hinfer_env; try discriminate.
-      apply andb_true_iff in Hif_check as [Hif_head Henv].
-      apply andb_true_iff in Hif_head as [Hif_head Hroots].
-      apply andb_true_iff in Hif_head as [Hexpr Hcompat].
-      destruct
-        (check_expr_root_shadow_captured_call_provenance_summary_sound_early
-          env (fn_outlives fdef) (fn_lifetimes fdef)
-          (initial_root_env_for_fn fdef) (fn_body_ctx fdef)
-          (EIf e1 e2 e3) T_body Γ_out R_body roots_body Hcore Hexpr)
-        as [ret_roots Hexpr_summary].
+        destruct (infer_core_env_roots_shadow_safe env
+          (fn_outlives fdef)
+          (fn_lifetimes fdef)
+          (initial_root_env_for_fn fdef)
+          (fn_body_ctx fdef)
+          (fn_body fdef))
+          as [[[[T_body Γ_out] R_body] roots_body] | err]
+          eqn:Hcore; try discriminate.
+        destruct (infer_env_roots_shadow_safe env fdef
+          (initial_root_env_for_fn fdef))
+          as [[[[T_env Γ_env] R_env] roots_env] | err]
+          eqn:Hinfer_env; try discriminate.
+        apply andb_true_iff in Hif_check as [Hif_head Henv].
+        apply andb_true_iff in Hif_head as [Hif_head Hroots].
+        apply andb_true_iff in Hif_head as [Hexpr Hcompat].
+        destruct
+          (check_expr_root_shadow_captured_call_provenance_summary_sound_early
+            env (fn_outlives fdef) (fn_lifetimes fdef)
+            (initial_root_env_for_fn fdef) (fn_body_ctx fdef)
+            (fn_body fdef) T_body Γ_out R_body roots_body Hcore Hexpr)
+          as [ret_roots Hexpr_summary].
       exists T_body, Γ_out, R_body, roots_body, ret_roots.
       repeat split.
       -- eapply infer_env_roots_shadow_safe_params_nodup.

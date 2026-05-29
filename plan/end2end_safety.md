@@ -151,9 +151,13 @@ T2e.2 tasks:
 - Done prep: prove the combined runtime safety/readiness theorem.
 - Done prep: route `infer_fn_env_end2end` through the combined gate and
   support narrow `let`/`let-infer` cleanup via root exclusion.
-- Next: add direct-call evidence that accepts callees proven by the combined
-  gate; `hrt_call_twice` now reaches `caller`, whose direct call to
-  `call_twice` still sees only the old callee-summary gate.
+- Blocked: direct `ECall` still requires old
+  `callee_body_root_shadow_provenance_summary` evidence.  To accept
+  `caller` in `hrt_call_twice`, add a runtime direct-call route whose callee
+  body may be proven by `callee_body_root_shadow_captured_call_store_safe_summary`.
+  Existing direct-call wrappers require provenance-ready callee bodies, so the
+  new route must build call-frame readiness for the alpha-renamed callee and
+  run the narrow/store-safe runtime package before cleanup.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.
 
 Out of scope for T2e.2:

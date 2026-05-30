@@ -219,6 +219,7 @@ T2e.2 tasks:
 - Done prep: thread store-ref-target preservation through narrow prefix runtime packages.
 - Done prep: add prefix-named final-store equality and frame-scope helpers for narrow `TFn` calls.
 - Done prep: lift frame-scope preservation to recursive narrow summaries.
+- Done prep: lift param-cover and param-scope preservation to recursive narrow summaries.
 - Remaining proof gap: finish the captured-call direct-narrow branch.  The
   summary now has provenance, direct-narrow, and body-narrow cases; the proof
   needs a direct-call runtime wrapper that consumes callee store-safe narrow

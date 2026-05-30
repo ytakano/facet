@@ -1131,6 +1131,22 @@ Definition place_resolved_write_root (R : root_env) (p : place)
   | None => None
   end.
 
+Fixpoint place_resolved_write_target (R : root_env) (p : place)
+    : option ident :=
+  match p with
+  | PVar x => Some x
+  | PField q _ => place_resolved_write_target R q
+  | PDeref q =>
+      match place_resolved_write_target R q with
+      | Some target =>
+          match root_env_lookup target R with
+          | Some roots => singleton_store_root roots
+          | None => None
+          end
+      | None => None
+      end
+  end.
+
 Lemma resolve_root_set_fuel_store_lookup_none :
   forall fuel R x,
     root_env_lookup x R = None ->
@@ -3619,6 +3635,57 @@ Proof.
   inversion Hsingle; subst x. simpl. left. reflexivity.
 Qed.
 
+Lemma place_resolved_write_target_path_root :
+  forall R p x path,
+    place_path p = Some (x, path) ->
+    place_resolved_write_target R p = Some x.
+Proof.
+  intros R p.
+  induction p as [y | p IH | p IH f]; intros x path Hpath;
+    simpl in *; try discriminate.
+  - inversion Hpath. reflexivity.
+  - destruct (place_path p) as [[y parent_path] |] eqn:Hparent;
+      try discriminate.
+    inversion Hpath. subst x path.
+    apply (IH y parent_path). reflexivity.
+Qed.
+
+Lemma place_resolved_write_target_deref :
+  forall R q target roots x,
+    place_resolved_write_target R q = Some target ->
+    root_env_lookup target R = Some roots ->
+    singleton_store_root roots = Some x ->
+    place_resolved_write_target R (PDeref q) = Some x.
+Proof.
+  intros R q target roots x Htarget Hlookup Hsingle.
+  simpl. rewrite Htarget. rewrite Hlookup. exact Hsingle.
+Qed.
+
+Lemma place_resolved_write_target_deref_var :
+  forall R r roots x,
+    root_env_lookup r R = Some roots ->
+    singleton_store_root roots = Some x ->
+    place_resolved_write_target R (PDeref (PVar r)) = Some x.
+Proof.
+  intros R r roots x Hlookup Hsingle.
+  apply place_resolved_write_target_deref with (target := r) (roots := roots);
+    simpl; auto.
+Qed.
+
+Lemma place_resolved_write_target_deref_deref_var :
+  forall R rr roots r roots_r x,
+    root_env_lookup rr R = Some roots ->
+    singleton_store_root roots = Some r ->
+    root_env_lookup r R = Some roots_r ->
+    singleton_store_root roots_r = Some x ->
+    place_resolved_write_target R (PDeref (PDeref (PVar rr))) = Some x.
+Proof.
+  intros R rr roots r roots_r x Hlookup Hsingle Hlookup_r Hsingle_r.
+  apply place_resolved_write_target_deref
+    with (target := r) (roots := roots_r); auto.
+  apply place_resolved_write_target_deref_var with (roots := roots); auto.
+Qed.
+
 Lemma same_store_root_rename_inv :
   forall rho names x rest,
     rename_no_collision_on rho names ->
@@ -3690,6 +3757,79 @@ Proof.
     apply singleton_store_root_some_equiv. exact Hsingle.
   - apply root_set_instantiate_store_singleton_equiv.
 Qed.
+
+Lemma place_resolved_write_target_instantiate :
+  forall rho R p x,
+    place_resolved_write_target R p = Some x ->
+    place_resolved_write_target (root_env_instantiate rho R) p = Some x.
+Proof.
+  intros rho R p.
+  induction p as [y | p IH | p IH f]; intros x Htarget; simpl in *.
+  - exact Htarget.
+  - destruct (place_resolved_write_target R p) as [target |] eqn:Hq;
+      try discriminate.
+    destruct (root_env_lookup target R) as [roots |] eqn:Hlookup;
+      try discriminate.
+    destruct (singleton_store_root roots) as [store_x |] eqn:Hsingle;
+      try discriminate.
+    inversion Htarget; subst store_x.
+    rewrite (IH target eq_refl).
+    rewrite (root_env_lookup_instantiate target rho R roots Hlookup).
+    apply root_set_instantiate_singleton_store_root. exact Hsingle.
+  - apply IH. exact Htarget.
+Qed.
+
+Lemma place_resolved_write_target_equiv :
+  forall R R' p x,
+    root_env_equiv R R' ->
+    place_resolved_write_target R p = Some x ->
+    place_resolved_write_target R' p = Some x.
+Proof.
+  intros R R' p.
+  induction p as [y | p IH | p IH f]; intros x HRR' Htarget; simpl in *.
+  - exact Htarget.
+  - destruct (place_resolved_write_target R p) as [target |] eqn:Hq;
+      try discriminate.
+    destruct (root_env_lookup target R) as [roots |] eqn:Hlookup;
+      try discriminate.
+    destruct (singleton_store_root roots) as [store_x |] eqn:Hsingle;
+      try discriminate.
+    inversion Htarget; subst store_x.
+    rewrite (IH target HRR' eq_refl).
+    destruct (root_env_equiv_lookup_l R R' target roots HRR' Hlookup)
+      as [roots' [Hlookup' Hroots]].
+    rewrite Hlookup'.
+    rewrite <- (singleton_store_root_equiv roots roots' Hroots).
+    exact Hsingle.
+  - apply IH; assumption.
+Qed.
+
+Lemma place_resolved_write_target_rename :
+  forall rho R p x,
+    rename_no_collision_on rho (root_env_names R) ->
+    place_resolved_write_target R p = Some x ->
+    place_resolved_write_target (root_env_rename rho R) (rename_place rho p) =
+      Some (lookup_rename x rho).
+Proof.
+  intros rho R p.
+  induction p as [y | p IH | p IH f]; intros x Hnocoll Htarget; simpl in *.
+  - inversion Htarget. reflexivity.
+  - destruct (place_resolved_write_target R p) as [target |] eqn:Hq;
+      try discriminate.
+    destruct (root_env_lookup target R) as [roots |] eqn:Hlookup;
+      try discriminate.
+    destruct (singleton_store_root roots) as [store_x |] eqn:Hsingle;
+      try discriminate.
+    inversion Htarget; subst store_x.
+    rewrite (IH target Hnocoll eq_refl).
+    rewrite (root_env_lookup_rename rho R target roots).
+    + apply singleton_store_root_rename_some. exact Hsingle.
+    + apply Hnocoll.
+      eapply root_env_lookup_some_in_names. exact Hlookup.
+    + exact Hlookup.
+  - apply IH; assumption.
+Qed.
+
 
 Lemma resolve_root_set_fuel_rename_equiv :
   forall fuel rho R roots out names,

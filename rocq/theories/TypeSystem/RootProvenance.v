@@ -305,6 +305,52 @@ Proof.
     + right. apply Hb. exact Hin.
 Qed.
 
+Definition root_atom_store_names (atom : root_atom) : list ident :=
+  match atom with
+  | RStore x => [x]
+  | RParam _ => []
+  end.
+
+Fixpoint root_set_store_names (roots : root_set) : list ident :=
+  match roots with
+  | [] => []
+  | atom :: rest => root_atom_store_names atom ++ root_set_store_names rest
+  end.
+
+Fixpoint root_env_all_store_names (R : root_env) : list ident :=
+  match R with
+  | [] => []
+  | (x, roots) :: rest =>
+      x :: root_set_store_names roots ++ root_env_all_store_names rest
+  end.
+
+Lemma root_set_store_names_in_store :
+  forall roots x,
+    In (RStore x) roots ->
+    In x (root_set_store_names roots).
+Proof.
+  induction roots as [| atom rest IH]; intros x Hin; simpl in *;
+    try contradiction.
+  destruct Hin as [Hin | Hin].
+  - subst atom. simpl. left. reflexivity.
+  - destruct atom as [y | y]; simpl.
+    + right. apply IH. exact Hin.
+    + apply IH. exact Hin.
+Qed.
+
+Lemma root_env_names_all_store_names :
+  forall R x,
+    In x (root_env_names R) ->
+    In x (root_env_all_store_names R).
+Proof.
+  induction R as [| [y roots] rest IH]; intros x Hin;
+    simpl in *; try contradiction.
+  destruct Hin as [Hin | Hin].
+  - left. exact Hin.
+  - right. apply in_or_app. right. apply IH. exact Hin.
+Qed.
+
+
 Lemma root_set_rename_in :
   forall rho atom roots,
     In atom roots ->
@@ -1439,6 +1485,21 @@ Proof.
   - destruct (ident_eqb x y) eqn:Hxy.
     + exists roots_y. reflexivity.
     + apply IH. exact Hin.
+Qed.
+
+Lemma root_env_lookup_store_names :
+  forall R x roots y,
+    root_env_lookup x R = Some roots ->
+    In y (root_set_store_names roots) ->
+    In y (root_env_all_store_names R).
+Proof.
+  induction R as [| [z roots_z] rest IH]; intros x roots y Hlookup Hin;
+    simpl in *; try discriminate.
+  destruct (ident_eqb x z) eqn:Hxz.
+  - inversion Hlookup; subst roots_z.
+    right. apply in_or_app. left. exact Hin.
+  - right. apply in_or_app. right.
+    eapply IH; eassumption.
 Qed.
 
 Lemma root_env_lookup_rename :
@@ -2924,6 +2985,56 @@ Proof.
     + apply root_set_equiv_refl.
 Qed.
 
+Lemma place_borrow_roots_store_names :
+  forall R p roots names,
+    (forall x, In x (root_env_all_store_names R) -> In x names) ->
+    (forall x, In x (root_set_store_names (root_of_place p)) -> In x names) ->
+    place_borrow_roots R p = Some roots ->
+    forall x, In x (root_set_store_names roots) -> In x names.
+Proof.
+  intros R p roots names Henv_names Hplace_names Hborrow x Hin.
+  unfold place_borrow_roots in Hborrow.
+  destruct (place_path p) as [[y path] |] eqn:Hpath.
+  - inversion Hborrow; subst roots. apply Hplace_names. exact Hin.
+  - assert (Hlookup :
+      root_env_lookup (root_provenance_place_name p) R = Some roots).
+    { rewrite <- (place_root_lookup_indirect R p Hpath). exact Hborrow. }
+    apply Henv_names. eapply root_env_lookup_store_names; eassumption.
+Qed.
+
+Lemma place_borrow_roots_rename_exact :
+  forall rho R p roots names,
+    rename_no_collision_on rho names ->
+    (forall x, In x (root_env_all_store_names R) -> In x names) ->
+    place_borrow_roots R p = Some roots ->
+    place_borrow_roots (root_env_rename rho R) (rename_place rho p) =
+      Some (root_set_rename rho roots).
+Proof.
+  intros rho R p roots names Hnocoll Henv_names Hborrow.
+  unfold place_borrow_roots in *.
+  destruct (place_path p) as [[x path] |] eqn:Hpath.
+  - rewrite (place_path_rename_place_some rho p x path Hpath).
+    inversion Hborrow; subst roots.
+    rewrite root_of_place_rename_place. reflexivity.
+  - assert (Hpath_ren := place_path_rename_place_none rho p Hpath).
+    rewrite Hpath_ren.
+    assert (Hlookup :
+      root_env_lookup (root_provenance_place_name p) R = Some roots).
+    { rewrite <- (place_root_lookup_indirect R p Hpath). exact Hborrow. }
+    rewrite (place_root_lookup_indirect (root_env_rename rho R)
+      (rename_place rho p) Hpath_ren).
+    rewrite root_provenance_place_name_rename_place.
+    eapply root_env_lookup_rename.
+    + apply rename_no_collision_for_weaken_names with (names' := names).
+      * apply Hnocoll.
+        apply Henv_names.
+        apply root_env_names_all_store_names.
+        eapply root_env_lookup_some_in_names. exact Hlookup.
+      * intros y Hy. apply Henv_names.
+        apply root_env_names_all_store_names. exact Hy.
+    + exact Hlookup.
+Qed.
+
 Lemma same_store_root_true_all :
   forall x roots atom,
     same_store_root x roots = true ->
@@ -3021,6 +3132,91 @@ Proof.
     rewrite Hsingle in Hroots_single. discriminate.
 Qed.
 
+Lemma singleton_store_root_rename_some :
+  forall rho roots x,
+    singleton_store_root roots = Some x ->
+    singleton_store_root (root_set_rename rho roots) =
+      Some (lookup_rename x rho).
+Proof.
+  intros rho roots x Hsingle.
+  apply singleton_store_root_of_singleton_equiv.
+  eapply root_set_equiv_trans.
+  - apply root_set_rename_equiv.
+    apply singleton_store_root_some_equiv. exact Hsingle.
+  - apply root_set_equiv_refl.
+Qed.
+
+Lemma singleton_store_root_store_name_in :
+  forall roots x,
+    singleton_store_root roots = Some x ->
+    In x (root_set_store_names roots).
+Proof.
+  intros roots x Hsingle.
+  destruct roots as [| atom rest]; simpl in Hsingle; try discriminate.
+  destruct atom as [y | y]; try discriminate.
+  destruct (same_store_root y rest) eqn:Hsame; try discriminate.
+  inversion Hsingle; subst x. simpl. left. reflexivity.
+Qed.
+
+Lemma same_store_root_rename_inv :
+  forall rho names x rest,
+    rename_no_collision_on rho names ->
+    In x names ->
+    (forall y, In y (root_set_store_names rest) -> In y names) ->
+    same_store_root (lookup_rename x rho) (root_set_rename rho rest) = true ->
+    same_store_root x rest = true.
+Proof.
+  intros rho names x rest Hnocoll Hx Hnames Hsame.
+  apply same_store_root_true_of_all.
+  intros atom Hin.
+  destruct atom as [y | y].
+  - assert (Hin_ren :
+      In (RStore (lookup_rename y rho)) (root_set_rename rho rest)).
+    { change (In (root_atom_rename rho (RStore y))
+        (root_set_rename rho rest)).
+      apply root_set_rename_in. exact Hin. }
+    assert (Hatom : RStore (lookup_rename y rho) =
+        RStore (lookup_rename x rho)).
+    { eapply same_store_root_true_all; eassumption. }
+    inversion Hatom as [Hxy_ren].
+    destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx. subst y. reflexivity.
+    + apply ident_eqb_neq in Hyx.
+      exfalso.
+      apply (Hnocoll x Hx y).
+      * apply Hnames. eapply root_set_store_names_in_store. exact Hin.
+      * intros Heq. subst y. apply Hyx. reflexivity.
+      * exact Hxy_ren.
+  - assert (Hin_ren : In (RParam y) (root_set_rename rho rest)).
+    { change (In (root_atom_rename rho (RParam y))
+        (root_set_rename rho rest)).
+      apply root_set_rename_in. exact Hin. }
+    assert (Hatom : RParam y = RStore (lookup_rename x rho)).
+    { eapply same_store_root_true_all; eassumption. }
+    discriminate.
+Qed.
+
+Lemma singleton_store_root_rename_none :
+  forall rho roots names,
+    rename_no_collision_on rho names ->
+    (forall x, In x (root_set_store_names roots) -> In x names) ->
+    singleton_store_root roots = None ->
+    singleton_store_root (root_set_rename rho roots) = None.
+Proof.
+  intros rho roots names Hnocoll Hnames Hsingle.
+  destruct roots as [| atom rest]; simpl in *; try reflexivity.
+  destruct atom as [x | x]; simpl in *; try reflexivity.
+  destruct (same_store_root (lookup_rename x rho)
+      (root_set_rename rho rest)) eqn:Hsame_ren; try reflexivity.
+  assert (Hsame : same_store_root x rest = true).
+  { eapply same_store_root_rename_inv.
+    - exact Hnocoll.
+    - apply Hnames. simpl. left. reflexivity.
+    - intros y Hy. apply Hnames. simpl. right. exact Hy.
+    - exact Hsame_ren. }
+  rewrite Hsame in Hsingle. discriminate.
+Qed.
+
 Lemma root_set_instantiate_singleton_store_root :
   forall rho roots x,
     singleton_store_root roots = Some x ->
@@ -3032,6 +3228,90 @@ Proof.
   - eapply root_set_instantiate_equiv.
     apply singleton_store_root_some_equiv. exact Hsingle.
   - apply root_set_instantiate_store_singleton_equiv.
+Qed.
+
+Lemma resolve_root_set_fuel_rename_equiv :
+  forall fuel rho R roots out names,
+    rename_no_collision_on rho names ->
+    (forall x, In x (root_env_all_store_names R) -> In x names) ->
+    (forall x, In x (root_set_store_names roots) -> In x names) ->
+    resolve_root_set_fuel fuel R roots = Some out ->
+    exists outr,
+      resolve_root_set_fuel fuel (root_env_rename rho R)
+        (root_set_rename rho roots) = Some outr /\
+      root_set_equiv outr (root_set_rename rho out).
+Proof.
+  induction fuel as [| fuel IH];
+    intros rho R roots out names Hnocoll Henv_names Hroot_names Hres;
+    simpl in Hres; try discriminate.
+  simpl.
+  destruct (singleton_store_root roots) as [x |] eqn:Hsingle.
+  - rewrite (singleton_store_root_rename_some rho roots x Hsingle).
+    destruct (root_env_lookup x R) as [env_roots |] eqn:Hlookup.
+    + assert (Hlookup_ren :
+        root_env_lookup (lookup_rename x rho) (root_env_rename rho R) =
+          Some (root_set_rename rho env_roots)).
+      { eapply root_env_lookup_rename.
+        - apply rename_no_collision_for_weaken_names with (names' := names).
+          + apply Hnocoll.
+            apply Henv_names.
+            apply root_env_names_all_store_names.
+            eapply root_env_lookup_some_in_names. exact Hlookup.
+          + intros y Hy. apply Henv_names.
+            apply root_env_names_all_store_names. exact Hy.
+        - exact Hlookup. }
+      rewrite Hlookup_ren.
+      destruct (singleton_store_root env_roots) as [y |] eqn:Hsingle_env.
+      * rewrite (singleton_store_root_rename_some rho env_roots y Hsingle_env).
+        destruct (ident_eqb x y) eqn:Hxy.
+        -- apply ident_eqb_eq in Hxy. subst y.
+           rewrite ident_eqb_refl. inversion Hres; subst out.
+           exists (root_set_rename rho roots). split.
+           ++ reflexivity.
+           ++ apply root_set_equiv_refl.
+        -- apply ident_eqb_neq in Hxy.
+           destruct (ident_eqb (lookup_rename x rho)
+               (lookup_rename y rho)) eqn:Hxy_ren.
+           ++ apply ident_eqb_eq in Hxy_ren. exfalso.
+              assert (Hx_names : In x names).
+              { apply Hroot_names.
+                eapply singleton_store_root_store_name_in. exact Hsingle. }
+              assert (Hy_names : In y names).
+              { apply Henv_names.
+                eapply root_env_lookup_store_names; eauto.
+                eapply singleton_store_root_store_name_in. exact Hsingle_env. }
+              assert (Hyx : y <> x).
+              { intros Heq. apply Hxy. symmetry. exact Heq. }
+              apply (Hnocoll x Hx_names y Hy_names Hyx). symmetry. exact Hxy_ren.
+           ++ eapply IH; eauto.
+              ** intros z Hz. apply Henv_names.
+                 eapply root_env_lookup_store_names; eassumption.
+      * rewrite (singleton_store_root_rename_none rho env_roots names).
+        -- eapply IH; eauto.
+           intros z Hz. apply Henv_names.
+           eapply root_env_lookup_store_names; eassumption.
+        -- exact Hnocoll.
+        -- intros z Hz. apply Henv_names.
+           eapply root_env_lookup_store_names; eassumption.
+        -- exact Hsingle_env.
+    + assert (Hlookup_ren :
+        root_env_lookup (lookup_rename x rho) (root_env_rename rho R) = None).
+      { eapply root_env_lookup_rename_none.
+        - apply rename_no_collision_for_weaken_names with (names' := names).
+          + apply Hnocoll. apply Hroot_names.
+            eapply singleton_store_root_store_name_in. exact Hsingle.
+          + intros y Hy. apply Henv_names.
+            apply root_env_names_all_store_names. exact Hy.
+        - exact Hlookup. }
+      rewrite Hlookup_ren. inversion Hres; subst out.
+      exists (root_set_rename rho roots). split.
+      * reflexivity.
+      * apply root_set_equiv_refl.
+  - rewrite (singleton_store_root_rename_none rho roots names); try assumption.
+    inversion Hres; subst out.
+    exists (root_set_rename rho roots). split.
+    + reflexivity.
+    + apply root_set_equiv_refl.
 Qed.
 
 Lemma resolve_root_set_fuel_equiv :
@@ -3326,6 +3606,69 @@ Proof.
     + exact Hroots0.
   - rewrite <- (singleton_store_root_equiv roots_inst roots0 Hroots0).
     exact Hsingle_inst.
+Qed.
+
+Lemma place_resolved_roots_rename_no_shadow_equiv :
+  forall rho R Rr p roots,
+    root_env_no_shadow R ->
+    root_env_no_shadow Rr ->
+    root_env_equiv Rr (root_env_rename rho R) ->
+    rename_no_collision_on rho
+      (root_env_all_store_names R ++ root_set_store_names (root_of_place p)) ->
+    place_resolved_roots R p = Some roots ->
+    exists rootsr,
+      place_resolved_roots Rr (rename_place rho p) = Some rootsr /\
+      root_set_equiv rootsr (root_set_rename rho roots).
+Proof.
+  intros rho R Rr p roots HnsR HnsRr HRr Hnocoll Hresolved.
+  set (names := root_env_all_store_names R ++ root_set_store_names (root_of_place p)).
+  assert (Henv_names :
+    forall x, In x (root_env_all_store_names R) -> In x names).
+  { intros x Hin. unfold names. apply in_or_app. left. exact Hin. }
+  assert (Hplace_names :
+    forall x, In x (root_set_store_names (root_of_place p)) -> In x names).
+  { intros x Hin. unfold names. apply in_or_app. right. exact Hin. }
+  unfold place_resolved_roots in Hresolved.
+  destruct (place_borrow_roots R p) as [borrow_roots |] eqn:Hborrow;
+    try discriminate.
+  unfold resolve_root_set in Hresolved.
+  destruct (resolve_root_set_fuel_rename_equiv
+      (S (List.length R)) rho R borrow_roots roots names
+      Hnocoll Henv_names
+      (place_borrow_roots_store_names R p borrow_roots names
+        Henv_names Hplace_names Hborrow) Hresolved) as
+    [roots_ren [Hresolved_ren Hroots_ren]].
+  assert (Hresolved_rename_place :
+    place_resolved_roots (root_env_rename rho R) (rename_place rho p) =
+      Some roots_ren).
+  { unfold place_resolved_roots, resolve_root_set.
+    rewrite (place_borrow_roots_rename_exact rho R p borrow_roots names
+      Hnocoll Henv_names Hborrow).
+    rewrite root_env_rename_length. exact Hresolved_ren. }
+  assert (Hnocoll_env : rename_no_collision_on rho (root_env_names R)).
+  { unfold rename_no_collision_on in *.
+    intros x Hxin.
+    apply rename_no_collision_for_weaken_names with (names' := names).
+    - apply Hnocoll. apply Henv_names.
+      apply root_env_names_all_store_names. exact Hxin.
+    - intros y Hyin. apply Henv_names.
+      apply root_env_names_all_store_names. exact Hyin. }
+  assert (HnsR_ren : root_env_no_shadow (root_env_rename rho R)).
+  { apply root_env_rename_no_shadow; assumption. }
+  assert (Hlen : List.length (root_env_rename rho R) = List.length Rr).
+  { eapply root_env_equiv_length.
+    - exact HnsR_ren.
+    - exact HnsRr.
+    - apply root_env_equiv_sym. exact HRr. }
+  destruct (place_resolved_roots_equiv_same_length
+      (root_env_rename rho R) Rr (rename_place rho p) roots_ren
+      Hlen (root_env_equiv_sym _ _ HRr) Hresolved_rename_place) as
+    [rootsr [Hresolved_r Hroots_r]].
+  exists rootsr. split.
+  - exact Hresolved_r.
+  - eapply root_set_equiv_trans.
+    + apply root_set_equiv_sym. exact Hroots_r.
+    + exact Hroots_ren.
 Qed.
 
 Lemma place_resolved_roots_direct_lookup_none_rename :

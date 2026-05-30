@@ -42,8 +42,7 @@ Latest full `sh tests/run.sh` baseline: 29 valid-test failures.
 1. Done: add concrete `place_resolved_roots` indirect none/self/one-hop facts.
 2. Done: canonicalize singleton store-root resolution and prove same-length equivalence transport.
 3. Done: prove no-shadow domain/length wrapper for resolved-root equivalence.
-4. In progress: prove resolved-root rename transport in Alpha/Shadow contexts;
-   plain `RootProvenance` rename transport needs root-set collision invariants.
+4. Done: prove resolved-root rename transport in Alpha/Shadow contexts under scoped collision invariants.
 5. Blocked: current instantiate theorem is too weak for resolved roots.
    `EBorrow` adds no local store names, so substitution can introduce a store
    key that `root_env_instantiate` then resolves through `R`.

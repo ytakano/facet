@@ -216,6 +216,7 @@ T2e.2 tasks:
   narrow monomorphic and lifetime-forall `TFn` calls, including `let` cleanup.
 - Done prep: transfer store-safe narrow summaries through
   `global_env_with_local_bounds` for direct-call runtime wiring.
+- Done prep: thread store-ref-target preservation through narrow prefix runtime packages.
 - Remaining proof gap: finish the captured-call direct-narrow branch.  The
   summary now has provenance, direct-narrow, and body-narrow cases; the proof
   needs a direct-call runtime wrapper that consumes callee store-safe narrow

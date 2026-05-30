@@ -4419,6 +4419,7 @@ Lemma expr_root_shadow_store_safe_narrow_tfn_function_value_call_preserves_runti
       fn_env_unique_by_name env ->
       store_typed_prefix env s' Σ' /\
       value_has_type env s' ret ret_ty /\
+      store_ref_targets_preserved env s s' /\
       store_roots_within R' s' /\
       value_roots_within
         (root_set_union roots_callee_typed (root_sets_union arg_roots)) ret /\
@@ -4550,7 +4551,7 @@ Proof.
     (store_safe_function_value_call_args_preservation_ready env args Hargs)
     (ProvReady_Var x) Hstore Hroots Hshadow Hrn Htyped_callee
     Htyped_args Hunique Htype_params Hlifetimes Hcallee_route)
-    as [Hstore' [Hv [_ [Hroots' [Hvroots [Hshadow' Hrn']]]]]].
+    as [Hstore' [Hv [Hpres' [Hroots' [Hvroots [Hshadow' Hrn']]]]]].
   pose proof (eval_call_expr_tfn_components_final_store_eq_route_prefix_start
     env s s_fn s_args s_body (EVar x) args fname [] fdef fcall vs ret used'
     Heval_callee Hlookup Heval_args Hrename Heval_body
@@ -4621,6 +4622,7 @@ Lemma expr_root_shadow_store_safe_narrow_tforall_tfn_function_value_call_preserv
       fn_env_unique_by_name env ->
       store_typed_prefix env s' Σ' /\
       value_has_type env s' ret (open_bound_ty σ ret_ty) /\
+      store_ref_targets_preserved env s s' /\
       store_roots_within R' s' /\
       value_roots_within
         (root_set_union roots_callee_typed (root_sets_union arg_roots)) ret /\
@@ -4758,7 +4760,7 @@ Proof.
     (store_safe_function_value_call_args_preservation_ready env args Hargs)
     Hstore Hroots Hshadow Hrn Htyped_callee Hbody_shape Htyped_args
     Htype_params Hcaps_fdef Hbridge Hcallee_route)
-    as [Hstore' [Hv [_ [Hroots' [Hvroots [Hshadow' Hrn']]]]]].
+    as [Hstore' [Hv [Hpres' [Hroots' [Hvroots [Hshadow' Hrn']]]]]].
   pose proof (eval_evar_call_expr_lifetime_forall_tfn_components_final_store_eq_prefix_start
     env s s_fn s_args s_body x args fname [] fdef fcall vs ret used'
     Heval_callee Hlookup Heval_args Hrename Heval_body
@@ -5021,6 +5023,7 @@ Lemma expr_root_shadow_store_safe_narrow_summary_runtime_package_prefix_named :
       fn_env_unique_by_name env ->
       store_typed_prefix env s' Σ' /\
       value_has_type env s' ret T /\
+      store_ref_targets_preserved env s s' /\
       store_roots_within R' s' /\
       value_roots_within roots ret /\
       root_set_store_roots_named roots s' /\
@@ -5092,8 +5095,8 @@ Proof.
   - dependent destruction Heval.
     destruct (IHHsummary1 s s1 v1 Hstore Hroots Hshadow Hrn Hnamed Hkeys
       Hsummary_store Heval1 Hunique)
-      as [Hstore1 [Hv1 [Hroots1_runtime [Hv1_roots [Hroots1_named
-        [Hshadow1 [Hrn1 [Hnamed1 [Hkeys1 Hsummary1_store]]]]]]]]].
+      as [Hstore1 [Hv1 [Hpres1 [Hroots1_runtime [Hv1_roots [Hroots1_named
+        [Hshadow1 [Hrn1 [Hnamed1 [Hkeys1 Hsummary1_store]]]]]]]]]].
     assert (Hfresh_store : store_lookup x s1 = None)
       by (eapply store_roots_within_lookup_none; eassumption).
     assert (Hadd_pres :
@@ -5135,8 +5138,8 @@ Proof.
     destruct (IHHsummary2 (store_add x T_hidden v1 s1) s2 v2
       Hstore_add Hadd_roots Hadd_shadow Hadd_rn Hadd_named Hadd_keys
       Hsummary_add Heval2 Hunique)
-      as [Hstore2 [Hv2 [Hroots2_runtime [Hvalue_roots [Hroots2_named
-        [Hshadow2 [Hrn2 [Hnamed2 [Hkeys2 Hsummary2_store]]]]]]]]].
+      as [Hstore2 [Hv2 [Hpres2 [Hroots2_runtime [Hvalue_roots [Hroots2_named
+        [Hshadow2 [Hrn2 [Hnamed2 [Hkeys2 Hsummary2_store]]]]]]]]]].
     assert (Hremove_names :
       forall se, In se (store_remove x s2) -> se_name se <> x)
       by (apply store_no_shadow_remove_no_name; exact Hshadow2).
@@ -5186,11 +5189,22 @@ Proof.
     assert (Hkeys_final :
       root_env_store_keys_named (root_env_remove x R2) (store_remove x s2)).
     { eapply root_env_store_keys_named_remove_env_store_remove; eassumption. }
+    assert (Hpres_add_body :
+      store_ref_targets_preserved env s1 s2).
+    { eapply store_ref_targets_preserved_trans; eassumption. }
+    assert (Hpres_removed_from_s1 :
+      store_ref_targets_preserved env s1 (store_remove x s2)).
+    { eapply store_ref_targets_preserved_remove_after_absent_root;
+        eassumption. }
+    assert (Hpres_final :
+      store_ref_targets_preserved env s (store_remove x s2)).
+    { eapply store_ref_targets_preserved_trans; eassumption. }
     repeat split.
     + exact Hstore_final.
     + eapply value_has_type_store_remove_excluding_root.
       * exact Hv2.
       * eapply value_roots_exclude_root; eassumption.
+    + exact Hpres_final.
     + exact Hroots_removed.
     + exact Hvalue_roots.
     + exact Hrootset_final.

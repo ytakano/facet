@@ -810,6 +810,45 @@ Proof.
     eapply root_env_lookup_sctx_roots_named; eassumption.
 Qed.
 
+Lemma resolve_root_set_fuel_sctx_roots_named :
+  forall fuel R Σ roots out,
+    root_env_sctx_roots_named R Σ ->
+    root_set_sctx_roots_named roots Σ ->
+    resolve_root_set_fuel fuel R roots = Some out ->
+    root_set_sctx_roots_named out Σ.
+Proof.
+  induction fuel as [| fuel IH]; intros R Σ roots out Henv Hroots Hres;
+    simpl in Hres; try discriminate.
+  destruct (singleton_store_root roots) as [x |] eqn:Hsingle.
+  - destruct (root_env_lookup x R) as [env_roots |] eqn:Hlookup.
+    + assert (Henv_roots : root_set_sctx_roots_named env_roots Σ).
+      { eapply root_env_lookup_sctx_roots_named; eassumption. }
+      destruct (singleton_store_root env_roots) as [y |] eqn:Henv_single.
+      * destruct (ident_eqb x y) eqn:Hxy.
+        -- inversion Hres; subst out. exact Hroots.
+        -- eapply IH; eassumption.
+      * eapply IH; eassumption.
+    + inversion Hres; subst out. exact Hroots.
+  - inversion Hres; subst out. exact Hroots.
+Qed.
+
+Lemma place_resolved_roots_sctx_roots_named :
+  forall R Σ p roots,
+    root_env_sctx_roots_named R Σ ->
+    root_set_sctx_roots_named (root_of_place p) Σ ->
+    place_resolved_roots R p = Some roots ->
+    root_set_sctx_roots_named roots Σ.
+Proof.
+  intros R Σ p roots Henv Hplace Hresolved.
+  unfold place_resolved_roots in Hresolved.
+  destruct (place_borrow_roots R p) as [borrow_roots |] eqn:Hborrow;
+    try discriminate.
+  assert (Hborrow_named : root_set_sctx_roots_named borrow_roots Σ).
+  { eapply place_borrow_roots_sctx_roots_named; eassumption. }
+  unfold resolve_root_set in Hresolved.
+  eapply resolve_root_set_fuel_sctx_roots_named; eassumption.
+Qed.
+
 Lemma place_borrow_roots_rename_alpha :
   forall rho Σ Σr R p roots,
     ctx_alpha rho Σ Σr ->

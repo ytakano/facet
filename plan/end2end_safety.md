@@ -44,11 +44,13 @@ Latest full `sh tests/run.sh` baseline: 29 valid-test failures.
 3. Done: prove no-shadow domain/length wrapper for resolved-root equivalence.
 4. Done: prove resolved-root rename transport in Alpha/Shadow contexts under scoped collision invariants.
 5. Done: add concrete instantiate facts for stable singleton store chains.
-6. Next: route indirect borrow and immediate deref-borrow root cleanup through
+6. Done: add semantic singleton-result instantiate and resolved-root namedness
+   helpers.
+7. Next: route indirect borrow and immediate deref-borrow root cleanup through
    `place_resolved_roots` only for resolved singleton stores; keep raw-root fallback.
-7. Route `EAssign`/`EReplace` through resolved `PDeref` roots when resolution
+8. Route `EAssign`/`EReplace` through resolved `PDeref` roots when resolution
    yields one store target.
-8. Preserve invalid rejections for linear refs, immutable writes, borrow
+9. Preserve invalid rejections for linear refs, immutable writes, borrow
    conflicts, unresolved roots, and ambiguous roots.
 
 The resolver remains narrow: it follows bounded singleton store-root chains and

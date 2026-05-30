@@ -1057,6 +1057,12 @@ Definition singleton_store_root (roots : root_set) : option ident :=
   | RParam _ :: _ => None
   end.
 
+Definition singleton_param_root (roots : root_set) : option ident :=
+  match roots with
+  | [RParam x] => Some x
+  | _ => None
+  end.
+
 Fixpoint resolve_root_set_fuel (fuel : nat) (R : root_env)
     (roots : root_set) : option root_set :=
   match fuel with
@@ -1085,6 +1091,43 @@ Definition resolve_root_set (R : root_env) (roots : root_set) : option root_set 
 Definition place_resolved_roots (R : root_env) (p : place) : option root_set :=
   match place_borrow_roots R p with
   | Some roots => resolve_root_set R roots
+  | None => None
+  end.
+
+Fixpoint resolve_write_root_fuel (fuel : nat) (R : root_env)
+    (roots : root_set) : option ident :=
+  match fuel with
+  | O => None
+  | S fuel' =>
+      match singleton_store_root roots with
+      | None => None
+      | Some x =>
+          match root_env_lookup x R with
+          | Some roots' =>
+              match singleton_store_root roots' with
+              | Some y =>
+                  if ident_eqb x y
+                  then Some x
+                  else resolve_write_root_fuel fuel' R roots'
+              | None =>
+                  match singleton_param_root roots' with
+                  | Some _ => Some x
+                  | None => None
+                  end
+              end
+          | None => Some x
+          end
+      end
+  end.
+
+Definition resolve_write_root (R : root_env) (roots : root_set)
+    : option ident :=
+  resolve_write_root_fuel (S (List.length R)) R roots.
+
+Definition place_resolved_write_root (R : root_env) (p : place)
+    : option ident :=
+  match place_borrow_roots R p with
+  | Some roots => resolve_write_root R roots
   | None => None
   end.
 
@@ -1117,6 +1160,65 @@ Proof.
   destruct (ident_eqb x y) eqn:Hxy.
   - apply ident_eqb_eq in Hxy. subst y. reflexivity.
   - simpl. rewrite Hlookup_y. unfold singleton_store_root, same_store_root. rewrite ident_eqb_refl. reflexivity.
+Qed.
+
+Lemma resolve_write_root_fuel_store_lookup_none :
+  forall fuel R x,
+    root_env_lookup x R = None ->
+    resolve_write_root_fuel (S fuel) R [RStore x] = Some x.
+Proof.
+  intros fuel R x Hlookup.
+  simpl. rewrite Hlookup. reflexivity.
+Qed.
+
+Lemma resolve_write_root_fuel_store_self :
+  forall fuel R x,
+    root_env_lookup x R = Some [RStore x] ->
+    resolve_write_root_fuel (S fuel) R [RStore x] = Some x.
+Proof.
+  intros fuel R x Hlookup.
+  simpl. rewrite Hlookup.
+  unfold singleton_store_root, same_store_root.
+  rewrite ident_eqb_refl. reflexivity.
+Qed.
+
+Lemma resolve_write_root_fuel_store_one_hop :
+  forall fuel R x y,
+    root_env_lookup x R = Some [RStore y] ->
+    root_env_lookup y R = Some [RStore y] ->
+    resolve_write_root_fuel (S (S fuel)) R [RStore x] = Some y.
+Proof.
+  intros fuel R x y Hlookup_x Hlookup_y.
+  simpl. rewrite Hlookup_x.
+  unfold singleton_store_root, same_store_root.
+  destruct (ident_eqb x y) eqn:Hxy.
+  - apply ident_eqb_eq in Hxy. subst y. reflexivity.
+  - simpl. rewrite Hlookup_y.
+    unfold singleton_store_root, same_store_root.
+    rewrite ident_eqb_refl. reflexivity.
+Qed.
+
+Lemma resolve_write_root_fuel_store_param :
+  forall fuel R x y,
+    root_env_lookup x R = Some [RParam y] ->
+    resolve_write_root_fuel (S fuel) R [RStore x] = Some x.
+Proof.
+  intros fuel R x y Hlookup.
+  simpl. rewrite Hlookup. reflexivity.
+Qed.
+
+Lemma resolve_write_root_fuel_store_one_hop_param :
+  forall fuel R x y z,
+    root_env_lookup x R = Some [RStore y] ->
+    root_env_lookup y R = Some [RParam z] ->
+    resolve_write_root_fuel (S (S fuel)) R [RStore x] = Some y.
+Proof.
+  intros fuel R x y z Hlookup_x Hlookup_y.
+  simpl. rewrite Hlookup_x.
+  unfold singleton_store_root, same_store_root.
+  destruct (ident_eqb x y) eqn:Hxy.
+  - apply ident_eqb_eq in Hxy. subst y. reflexivity.
+  - simpl. rewrite Hlookup_y. reflexivity.
 Qed.
 
 
@@ -1196,6 +1298,82 @@ Proof.
   rewrite (place_borrow_roots_indirect ((z, roots_z) :: rest) p Hpath).
   rewrite Hname. rewrite Hlookup_x.
   apply resolve_root_set_fuel_store_one_hop; assumption.
+Qed.
+
+Lemma place_resolved_write_root_direct_lookup_none :
+  forall R p x path,
+    place_path p = Some (x, path) ->
+    root_env_lookup x R = None ->
+    place_resolved_write_root R p = Some x.
+Proof.
+  intros R p x path Hpath Hlookup.
+  unfold place_resolved_write_root, resolve_write_root.
+  rewrite (place_borrow_roots_direct R p x path Hpath).
+  apply resolve_write_root_fuel_store_lookup_none. exact Hlookup.
+Qed.
+
+Lemma place_resolved_write_root_indirect_self :
+  forall R p x,
+    place_path p = None ->
+    root_provenance_place_name p = x ->
+    root_env_lookup x R = Some [RStore x] ->
+    place_resolved_write_root R p = Some x.
+Proof.
+  intros R p x Hpath Hname Hlookup.
+  unfold place_resolved_write_root, resolve_write_root.
+  rewrite (place_borrow_roots_indirect R p Hpath).
+  rewrite Hname. rewrite Hlookup.
+  apply resolve_write_root_fuel_store_self. exact Hlookup.
+Qed.
+
+Lemma place_resolved_write_root_indirect_one_hop :
+  forall R p x y,
+    place_path p = None ->
+    root_provenance_place_name p = x ->
+    root_env_lookup x R = Some [RStore y] ->
+    root_env_lookup y R = Some [RStore y] ->
+    place_resolved_write_root R p = Some y.
+Proof.
+  intros R p x y Hpath Hname Hlookup_x Hlookup_y.
+  destruct R as [| [z roots_z] rest]; simpl in Hlookup_y; try discriminate.
+  unfold place_resolved_write_root, resolve_write_root.
+  rewrite (place_borrow_roots_indirect ((z, roots_z) :: rest) p Hpath).
+  rewrite Hname. rewrite Hlookup_x.
+  apply resolve_write_root_fuel_store_one_hop; assumption.
+Qed.
+
+Lemma place_resolved_write_root_direct_param :
+  forall R p x path y,
+    place_path p = Some (x, path) ->
+    root_env_lookup x R = Some [RParam y] ->
+    place_resolved_write_root R p = Some x.
+Proof.
+  intros R p x path y Hpath Hlookup.
+  unfold place_resolved_write_root, resolve_write_root.
+  rewrite (place_borrow_roots_direct R p x path Hpath).
+  apply resolve_write_root_fuel_store_param with (y := y). exact Hlookup.
+Qed.
+
+Lemma place_resolved_write_root_indirect_one_hop_param :
+  forall R p x y z,
+    place_path p = None ->
+    root_provenance_place_name p = x ->
+    root_env_lookup x R = Some [RStore y] ->
+    root_env_lookup y R = Some [RParam z] ->
+    place_resolved_write_root R p = Some y.
+Proof.
+  intros R p x y z Hpath Hname Hlookup_x Hlookup_y.
+  destruct R as [| [w roots_w] rest].
+  - simpl in Hlookup_x. discriminate.
+  - unfold place_resolved_write_root, resolve_write_root.
+    rewrite (place_borrow_roots_indirect ((w, roots_w) :: rest) p Hpath).
+    rewrite Hname. rewrite Hlookup_x.
+    unfold singleton_store_root, same_store_root.
+    destruct (ident_eqb x y) eqn:Hxy.
+    + apply ident_eqb_eq in Hxy. subst y.
+      rewrite Hlookup_x in Hlookup_y. discriminate.
+    + apply resolve_write_root_fuel_store_param with (y := z).
+      exact Hlookup_y.
 Qed.
 
 

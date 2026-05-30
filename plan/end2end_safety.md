@@ -181,6 +181,8 @@ T2e.2 tasks:
   store-safe summaries.
 - Done prep: add Prop-level direct-call branch for callee narrow
   store-safe summaries.
+- Done prep: wire executable direct-call narrow checker branch and
+  prove checker soundness for it.
 - Blocked: direct `ECall` still requires old
   `callee_body_root_shadow_provenance_summary` evidence.  Remaining proof gap:
   finish the generalized structural alpha-preservation theorem for narrow

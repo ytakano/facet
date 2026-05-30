@@ -761,6 +761,33 @@ Proof.
   dependent destruction Htyped; exact Hnocoll.
 Qed.
 
+Lemma expr_root_shadow_store_safe_narrow_summary_roots_ret_equiv :
+  forall env Omega n R Σ e T Σ' R' roots ret_roots,
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n R Σ e T Σ' R' roots ret_roots ->
+    root_set_equiv roots ret_roots.
+Proof.
+  intros env Omega n R Σ e T Σ' R' roots ret_roots Hsummary.
+  induction Hsummary.
+  - apply root_set_equiv_refl.
+  - exact IHHsummary2.
+  - exact IHHsummary2.
+Qed.
+
+Lemma expr_root_shadow_store_safe_narrow_summary_ret_roots_exclude :
+  forall env Omega n R Σ e T Σ' R' roots ret_roots x,
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n R Σ e T Σ' R' roots ret_roots ->
+    roots_exclude x roots ->
+    roots_exclude x ret_roots.
+Proof.
+  intros env Omega n R Σ e T Σ' R' roots ret_roots x Hsummary Hexcl.
+  eapply roots_exclude_equiv.
+  - eapply expr_root_shadow_store_safe_narrow_summary_roots_ret_equiv.
+    exact Hsummary.
+  - exact Hexcl.
+Qed.
+
 Lemma expr_root_shadow_store_safe_narrow_summary_instantiate_fresh :
   forall env Omega n rho R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_store_safe_narrow_summary

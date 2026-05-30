@@ -788,6 +788,556 @@ Proof.
   - exact Hexcl.
 Qed.
 
+
+Lemma expr_root_shadow_store_safe_narrow_summary_alpha_rename_forward :
+  forall env Omega n R Σ e T Σ' R' roots ret_roots,
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n R Σ e T Σ' R' roots ret_roots ->
+    forall rho Rr Σr er used used',
+      ctx_alpha rho Σ Σr ->
+      root_env_no_shadow R ->
+      root_env_no_shadow Rr ->
+      root_env_equiv Rr (root_env_rename rho R) ->
+      root_env_sctx_keys_named R Σ ->
+      root_env_sctx_roots_named R Σ ->
+      rename_no_collision_on rho (root_env_names R) ->
+      rename_no_collision_on rho (root_env_names R') ->
+      (forall x, In x (ctx_names Σr) -> In x used) ->
+      (forall x, In x (rename_range rho) -> In x used) ->
+      disjoint_names (free_vars_expr e) (rename_range rho) ->
+      alpha_rename_expr rho used e = (er, used') ->
+      exists Σr' Rr' rootsr ret_rootsr,
+        expr_root_shadow_store_safe_narrow_summary
+          env Omega n Rr Σr er T Σr' Rr' rootsr ret_rootsr /\
+        ctx_alpha rho Σ' Σr' /\
+        root_env_no_shadow Rr' /\
+        root_env_equiv Rr' (root_env_rename rho R') /\
+        root_set_equiv rootsr (root_set_rename rho roots) /\
+        root_set_equiv ret_rootsr (root_set_rename rho ret_roots).
+Proof.
+  intros env Omega n R Σ e T Σ' R' roots ret_roots Hsummary.
+  induction Hsummary as
+    [ R Σ x args T_callee Σ_callee R_callee roots_callee T Σ' R' roots
+      Hargs Hcallee Hshape Hcall
+    | R R1 R2 Σ Σ1 Sigma2 m x T_hidden T1 e1 e2 T2 roots1 roots2
+      ret_roots1 ret_roots Hsummary1 IH1 Hcompat Hnonfun Hlookup
+      Hexcl_roots1 Hexcl_env1 Hsummary2 IH2 Hcheck Hexcl_roots2
+      Hexcl_env2
+    | R R1 R2 Σ Σ1 Sigma2 m x T1 e1 e2 T2 roots1 roots2
+      ret_roots1 ret_roots Hsummary1 IH1 Hnonfun Hlookup
+      Hexcl_roots1 Hexcl_env1 Hsummary2 IH2 Hcheck Hexcl_roots2
+      Hexcl_env2 ];
+    intros rho Rr0 Σr0 er used used' Hctx HnsR HnsRr HRr Hkeys
+      Hroots HnocollR HnocollR' Hctx_used Hrange_used Hdisj Hrename.
+  - destruct (alpha_rename_typed_env_roots_shadow_safe_full_support_forward
+      env Omega n rho R Rr0 Σ Σr0 (ECallExpr (EVar x) args) er used
+      used' T Σ' R' roots Hcall Hctx HnsR HnsRr HRr Hkeys Hroots
+      HnocollR HnocollR' Hctx_used Hrange_used Hdisj Hrename)
+      as (Σcall_r & Rcall_r & roots_r & Hcall_r & Hctx_r &
+        HnsR_r & HR_r & Hroots_r).
+    assert (Hnocoll_callee :
+      rename_no_collision_on rho (root_env_names R_callee)).
+    { eapply typed_env_roots_shadow_safe_evar_rename_no_collision_on_output_base;
+        eassumption. }
+    destruct (alpha_rename_typed_env_roots_shadow_safe_full_support_forward
+      env Omega n rho R Rr0 Σ Σr0 (EVar x)
+      (EVar (lookup_rename x rho)) used used T_callee Σ_callee
+      R_callee roots_callee Hcallee Hctx HnsR HnsRr HRr Hkeys Hroots
+      HnocollR Hnocoll_callee Hctx_used Hrange_used
+      (disjoint_names_evar_of_call_expr x args (rename_range rho) Hdisj)
+      eq_refl)
+      as (Σcallee_r & Rcallee_r & roots_callee_r & Hcallee_r & _).
+    exists Σcall_r, Rcall_r, roots_r, roots_r.
+    split.
+    + eapply expr_root_shadow_store_safe_narrow_summary_alpha_rename_function_value_call_intro;
+        eassumption.
+    + split; [exact Hctx_r |].
+      split; [exact HnsR_r |].
+      split; [exact HR_r |].
+      split; [exact Hroots_r | exact Hroots_r].
+  - simpl in Hrename.
+    destruct (disjoint_names_cons_l x
+      (free_vars_expr e1 ++ free_vars_expr e2) (rename_range rho) Hdisj)
+      as [Hsafe_x Hdisj_tail].
+    destruct (disjoint_names_app_l (free_vars_expr e1)
+      (free_vars_expr e2) (rename_range rho) Hdisj_tail)
+      as [Hdisj1 Hdisj2].
+    destruct (alpha_rename_expr rho used e1) as [e1r used1] eqn:He1.
+    set (xr := fresh_ident x (x :: free_vars_expr e2 ++ used1)).
+    assert (Hxr : xr = fresh_ident x (x :: free_vars_expr e2 ++ used1))
+      by reflexivity.
+    set (used2 := xr :: x :: free_vars_expr e2 ++ used1).
+    assert (Hused2 : used2 = xr :: x :: free_vars_expr e2 ++ used1)
+      by reflexivity.
+    destruct (alpha_rename_expr ((x, xr) :: rho) used2 e2)
+      as [e2r used3] eqn:He2.
+    assert (Htyped1 :
+      typed_env_roots_shadow_safe env Omega n R Σ e1 T1 Σ1 R1 roots1)
+      by (eapply expr_root_shadow_store_safe_narrow_summary_typed;
+          exact Hsummary1).
+    assert (Htyped2 :
+      typed_env_roots_shadow_safe env Omega n (root_env_add x roots1 R1)
+        (sctx_add x T_hidden m Σ1) e2 T2 Sigma2 R2 roots2)
+      by (eapply expr_root_shadow_store_safe_narrow_summary_typed;
+          exact Hsummary2).
+    assert (HnsR1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow.
+      - eapply typed_env_roots_shadow_safe_roots. exact Htyped1.
+      - exact HnsR. }
+    assert (HkeysR1 : root_env_sctx_keys_named R1 Σ1).
+    { destruct (typed_roots_shadow_safe_sctx_keys_named_mutual env Omega n)
+        as [Hkeys_env _].
+      eapply Hkeys_env; eassumption. }
+    assert (HrootsR1 : root_env_sctx_roots_named R1 Σ1).
+    { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env Omega n)
+        as [Hroots_env _].
+      destruct (Hroots_env R Σ e1 T1 Σ1 R1 roots1)
+        as [Hroots_env1 _]; eauto. }
+    assert (Hroots1_named : root_set_sctx_roots_named roots1 Σ1).
+    { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env Omega n)
+        as [Hroots_env _].
+      destruct (Hroots_env R Σ e1 T1 Σ1 R1 roots1)
+        as [_ Hroots_set1]; eauto. }
+    assert (HnocollR1 : rename_no_collision_on rho (root_env_names R1)).
+    { eapply typed_env_roots_let_body_no_collision_from_removed.
+      - eapply typed_env_roots_shadow_safe_roots. exact Htyped2.
+      - exact Hlookup.
+      - exact HnocollR'. }
+    destruct (IH1 rho Rr0 Σr0 e1r used used1 Hctx HnsR HnsRr HRr
+      Hkeys Hroots HnocollR HnocollR1 Hctx_used Hrange_used Hdisj1 He1)
+      as (Σ1r & R1r & roots1r & ret_roots1r & Hsummary1r &
+        Hctx1r & HnsR1r & HR1r & Hroots1r & _).
+    assert (Htyped1r :
+      typed_env_roots_shadow_safe env Omega n Rr0 Σr0 e1r T1 Σ1r R1r
+        roots1r)
+      by (eapply expr_root_shadow_store_safe_narrow_summary_typed;
+          exact Hsummary1r).
+    assert (Hctx_used1 : forall y, In y (ctx_names Σ1r) -> In y used1).
+    { intros y Hy.
+      eapply alpha_rename_expr_used_extends.
+      - exact He1.
+      - apply Hctx_used.
+        rewrite <- (sctx_same_bindings_names_alpha Σr0 Σ1r).
+        + exact Hy.
+        + eapply typed_env_structural_same_bindings.
+          eapply typed_env_roots_structural.
+          eapply typed_env_roots_shadow_safe_roots. exact Htyped1r. }
+    assert (Hrange_used1 : forall y, In y (rename_range rho) -> In y used1).
+    { intros y Hy. eapply alpha_rename_expr_used_extends; eauto. }
+    assert (Hfresh_ctx : ~ In xr (ctx_names Σ1r)).
+    { unfold xr. intro Hin.
+      apply (fresh_ident_not_in x (x :: free_vars_expr e2 ++ used1)).
+      right. apply in_or_app. right. apply Hctx_used1. exact Hin. }
+    assert (Hfresh_range : ~ In xr (rename_range rho)).
+    { unfold xr. intro Hin.
+      apply (fresh_ident_not_in x (x :: free_vars_expr e2 ++ used1)).
+      right. apply in_or_app. right. apply Hrange_used1. exact Hin. }
+    destruct (expr_root_shadow_store_safe_narrow_summary_alpha_rename_let_init_support
+      rho R1 R1r roots1 roots1r Σ1 Σ1r xr Hctx1r HnsR1 HnsR1r
+      HR1r Hroots1r HkeysR1 HrootsR1 Hroots1_named Hfresh_ctx)
+      as [Hlookup_xr [Hexcl_roots1r Hexcl_env1r]].
+    assert (Hctx_body : ctx_alpha ((x, xr) :: rho)
+      (sctx_add x T_hidden m Σ1) (sctx_add xr T_hidden m Σ1r)).
+    { eapply ctx_alpha_add_fresh_forward; eauto. }
+    assert (Hns_add :
+      root_env_no_shadow (root_env_add x roots1 R1))
+      by (apply root_env_no_shadow_add; assumption).
+    assert (Hns_add_r :
+      root_env_no_shadow (root_env_add xr roots1r R1r))
+      by (apply root_env_no_shadow_add; assumption).
+    assert (HRadd :
+      root_env_equiv (root_env_add xr roots1r R1r)
+        (root_env_rename ((x, xr) :: rho)
+          (root_env_add x roots1 R1))).
+    { eapply root_env_add_shadow_safe_rename_equiv; eassumption. }
+    assert (Hkeys_add :
+      root_env_sctx_keys_named (root_env_add x roots1 R1)
+        (sctx_add x T_hidden m Σ1)).
+    { apply root_env_sctx_keys_named_add_binding. exact HkeysR1. }
+    assert (Hroots_add :
+      root_env_sctx_roots_named (root_env_add x roots1 R1)
+        (sctx_add x T_hidden m Σ1)).
+    { apply root_env_sctx_roots_named_add_binding; assumption. }
+    assert (Hnocoll_add :
+      rename_no_collision_on ((x, xr) :: rho)
+        (root_env_names (root_env_add x roots1 R1))).
+    { eapply root_env_add_shadow_safe_rename_no_collision_on;
+        eassumption. }
+    assert (HnocollR2_cons :
+      rename_no_collision_on ((x, xr) :: rho) (root_env_names R2)).
+    { eapply expr_root_shadow_store_safe_narrow_summary_alpha_rename_let_body_no_collision_from_summary;
+        eassumption. }
+    assert (Hctx_used2 : forall y,
+      In y (ctx_names (sctx_add xr T_hidden m Σ1r)) -> In y used2).
+    { unfold used2. intros y Hy. simpl in Hy.
+      destruct Hy as [Hy | Hy]; [left; exact Hy |].
+      right. right. apply in_or_app. right.
+      apply Hctx_used1. exact Hy. }
+    assert (Hrange_used2 : forall y,
+      In y (rename_range ((x, xr) :: rho)) -> In y used2).
+    { unfold used2. intros y Hy. simpl in Hy.
+      destruct Hy as [Hy | Hy].
+      - left. exact Hy.
+      - right. right. apply in_or_app. right.
+        apply Hrange_used1. exact Hy. }
+    destruct (IH2 ((x, xr) :: rho) (root_env_add xr roots1r R1r)
+      (sctx_add xr T_hidden m Σ1r) e2r used2 used3 Hctx_body
+      Hns_add Hns_add_r HRadd Hkeys_add Hroots_add Hnocoll_add
+      HnocollR2_cons Hctx_used2 Hrange_used2
+      (alpha_rename_let_body_disjoint_forward rho used1 x xr e2 Hxr Hdisj2)
+      He2)
+      as (Σ2r & R2r & roots2r & ret_roots2r & Hsummary2r &
+        Hctx2r & HnsR2r & HR2r_cons & Hroots2r_cons & Hret2r_cons).
+    assert (HnsR2 : root_env_no_shadow R2).
+    { eapply typed_env_roots_no_shadow.
+      - eapply typed_env_roots_shadow_safe_roots. exact Htyped2.
+      - exact Hns_add. }
+    assert (HkeysR2 : root_env_sctx_keys_named R2 Sigma2).
+    { destruct (typed_roots_shadow_safe_sctx_keys_named_mutual env Omega n)
+        as [Hkeys_env _].
+      eapply Hkeys_env; eassumption. }
+    assert (HrootsR2 : root_env_sctx_roots_named R2 Sigma2).
+    { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env Omega n)
+        as [Hroots_env _].
+      destruct (Hroots_env (root_env_add x roots1 R1)
+        (sctx_add x T_hidden m Σ1) e2 T2 Sigma2 R2 roots2)
+        as [Hroots_env2 _]; eauto. }
+    assert (Hroots2_named : root_set_sctx_roots_named roots2 Sigma2).
+    { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env Omega n)
+        as [Hroots_env _].
+      destruct (Hroots_env (root_env_add x roots1 R1)
+        (sctx_add x T_hidden m Σ1) e2 T2 Sigma2 R2 roots2)
+        as [_ Hroots_set2]; eauto. }
+    assert (Hsame_body :
+      sctx_same_bindings (sctx_add x T_hidden m Σ1) Sigma2).
+    { eapply typed_env_structural_same_bindings.
+      eapply typed_env_roots_structural.
+      eapply typed_env_roots_shadow_safe_roots. exact Htyped2. }
+    assert (Hnocoll_x :
+      rename_no_collision_for ((x, xr) :: rho) x (root_env_names R2)).
+    { eapply root_env_sctx_keys_named_added_no_collision_for_head.
+      - exact Hctx1r.
+      - eapply root_env_sctx_keys_named_same_bindings.
+        + apply sctx_same_bindings_sym. exact Hsame_body.
+        + exact HkeysR2.
+      - exact Hfresh_ctx. }
+    assert (HRremove :
+      root_env_equiv (root_env_remove xr R2r)
+        (root_env_rename rho (root_env_remove x R2))).
+    { eapply root_env_remove_shadow_safe_rename_body_equiv;
+        eassumption. }
+    assert (Hroots2r :
+      root_set_equiv roots2r (root_set_rename rho roots2)).
+    { eapply root_set_shadow_safe_rename_body_equiv; eassumption. }
+    assert (Hret_roots_excl : roots_exclude x ret_roots).
+    { eapply expr_root_shadow_store_safe_narrow_summary_ret_roots_exclude;
+        eassumption. }
+    assert (Hret2r :
+      root_set_equiv ret_roots2r (root_set_rename rho ret_roots)).
+    { eapply root_set_shadow_safe_rename_body_equiv; eassumption. }
+    assert (Hroots2r_excl : roots_exclude xr roots2r).
+    { eapply roots_exclude_shadow_safe_rename_body.
+      - exact Hctx1r.
+      - eapply root_set_sctx_roots_named_strip_added_same_bindings.
+        + exact Hexcl_roots2.
+        + exact Hroots2_named.
+        + exact Hsame_body.
+      - exact Hfresh_ctx.
+      - exact Hroots2r_cons.
+      - exact Hexcl_roots2. }
+    assert (Hremove_ext :
+      root_env_equiv (root_env_remove xr R2r)
+        (root_env_rename ((x, xr) :: rho) (root_env_remove x R2))).
+    { eapply root_env_remove_shadow_safe_rename_body_ext_equiv;
+        eassumption. }
+    assert (Henv2r_excl :
+      root_env_excludes xr (root_env_remove xr R2r)).
+    { eapply root_env_excludes_shadow_safe_rename_body.
+      - exact Hctx1r.
+      - apply root_env_no_shadow_remove. exact HnsR2.
+      - eapply root_env_sctx_keys_named_remove_strip_added_same_bindings;
+          eassumption.
+      - eapply root_env_sctx_roots_named_remove_strip_added_same_bindings;
+          eassumption.
+      - exact Hfresh_ctx.
+      - exact Hremove_ext.
+      - exact Hexcl_env2. }
+    change (fresh_ident x (x :: free_vars_expr e2 ++ used1)) with xr
+      in Hrename.
+    change (xr :: x :: free_vars_expr e2 ++ used1) with used2
+      in Hrename.
+    rewrite He2 in Hrename.
+    injection Hrename as <- <-.
+    exists (sctx_remove xr Σ2r), (root_env_remove xr R2r), roots2r,
+      ret_roots2r.
+    split.
+    + eapply ERSSN_Let.
+      * exact Hsummary1r.
+      * exact Hcompat.
+      * exact Hnonfun.
+      * exact Hlookup_xr.
+      * exact Hexcl_roots1r.
+      * exact Hexcl_env1r.
+      * exact Hsummary2r.
+      * assert (Hlookup_xr_rename :
+          lookup_rename x ((x, xr) :: rho) = xr)
+          by (simpl; rewrite ident_eqb_refl; reflexivity).
+        rewrite <- Hlookup_xr_rename.
+        eapply ctx_alpha_check_ok_forward.
+        -- exact Hctx2r.
+        -- eapply alpha_rename_let_bound_safe_forward; eassumption.
+        -- exact Hcheck.
+      * exact Hroots2r_excl.
+      * exact Henv2r_excl.
+    + split.
+      * eapply ctx_alpha_remove_bound. exact Hctx2r.
+      * split.
+        -- apply root_env_no_shadow_remove. exact HnsR2r.
+        -- split.
+           ++ exact HRremove.
+           ++ split; [exact Hroots2r | exact Hret2r].
+  - simpl in Hrename.
+    destruct (disjoint_names_cons_l x
+      (free_vars_expr e1 ++ free_vars_expr e2) (rename_range rho) Hdisj)
+      as [Hsafe_x Hdisj_tail].
+    destruct (disjoint_names_app_l (free_vars_expr e1)
+      (free_vars_expr e2) (rename_range rho) Hdisj_tail)
+      as [Hdisj1 Hdisj2].
+    destruct (alpha_rename_expr rho used e1) as [e1r used1] eqn:He1.
+    set (xr := fresh_ident x (x :: free_vars_expr e2 ++ used1)).
+    assert (Hxr : xr = fresh_ident x (x :: free_vars_expr e2 ++ used1))
+      by reflexivity.
+    set (used2 := xr :: x :: free_vars_expr e2 ++ used1).
+    assert (Hused2 : used2 = xr :: x :: free_vars_expr e2 ++ used1)
+      by reflexivity.
+    destruct (alpha_rename_expr ((x, xr) :: rho) used2 e2)
+      as [e2r used3] eqn:He2.
+    assert (Htyped1 :
+      typed_env_roots_shadow_safe env Omega n R Σ e1 T1 Σ1 R1 roots1)
+      by (eapply expr_root_shadow_store_safe_narrow_summary_typed;
+          exact Hsummary1).
+    assert (Htyped2 :
+      typed_env_roots_shadow_safe env Omega n (root_env_add x roots1 R1)
+        (sctx_add x T1 m Σ1) e2 T2 Sigma2 R2 roots2)
+      by (eapply expr_root_shadow_store_safe_narrow_summary_typed;
+          exact Hsummary2).
+    assert (HnsR1 : root_env_no_shadow R1).
+    { eapply typed_env_roots_no_shadow.
+      - eapply typed_env_roots_shadow_safe_roots. exact Htyped1.
+      - exact HnsR. }
+    assert (HkeysR1 : root_env_sctx_keys_named R1 Σ1).
+    { destruct (typed_roots_shadow_safe_sctx_keys_named_mutual env Omega n)
+        as [Hkeys_env _].
+      eapply Hkeys_env; eassumption. }
+    assert (HrootsR1 : root_env_sctx_roots_named R1 Σ1).
+    { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env Omega n)
+        as [Hroots_env _].
+      destruct (Hroots_env R Σ e1 T1 Σ1 R1 roots1)
+        as [Hroots_env1 _]; eauto. }
+    assert (Hroots1_named : root_set_sctx_roots_named roots1 Σ1).
+    { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env Omega n)
+        as [Hroots_env _].
+      destruct (Hroots_env R Σ e1 T1 Σ1 R1 roots1)
+        as [_ Hroots_set1]; eauto. }
+    assert (HnocollR1 : rename_no_collision_on rho (root_env_names R1)).
+    { eapply typed_env_roots_let_body_no_collision_from_removed.
+      - eapply typed_env_roots_shadow_safe_roots. exact Htyped2.
+      - exact Hlookup.
+      - exact HnocollR'. }
+    destruct (IH1 rho Rr0 Σr0 e1r used used1 Hctx HnsR HnsRr HRr
+      Hkeys Hroots HnocollR HnocollR1 Hctx_used Hrange_used Hdisj1 He1)
+      as (Σ1r & R1r & roots1r & ret_roots1r & Hsummary1r &
+        Hctx1r & HnsR1r & HR1r & Hroots1r & _).
+    assert (Htyped1r :
+      typed_env_roots_shadow_safe env Omega n Rr0 Σr0 e1r T1 Σ1r R1r
+        roots1r)
+      by (eapply expr_root_shadow_store_safe_narrow_summary_typed;
+          exact Hsummary1r).
+    assert (Hctx_used1 : forall y, In y (ctx_names Σ1r) -> In y used1).
+    { intros y Hy.
+      eapply alpha_rename_expr_used_extends.
+      - exact He1.
+      - apply Hctx_used.
+        rewrite <- (sctx_same_bindings_names_alpha Σr0 Σ1r).
+        + exact Hy.
+        + eapply typed_env_structural_same_bindings.
+          eapply typed_env_roots_structural.
+          eapply typed_env_roots_shadow_safe_roots. exact Htyped1r. }
+    assert (Hrange_used1 : forall y, In y (rename_range rho) -> In y used1).
+    { intros y Hy. eapply alpha_rename_expr_used_extends; eauto. }
+    assert (Hfresh_ctx : ~ In xr (ctx_names Σ1r)).
+    { unfold xr. intro Hin.
+      apply (fresh_ident_not_in x (x :: free_vars_expr e2 ++ used1)).
+      right. apply in_or_app. right. apply Hctx_used1. exact Hin. }
+    assert (Hfresh_range : ~ In xr (rename_range rho)).
+    { unfold xr. intro Hin.
+      apply (fresh_ident_not_in x (x :: free_vars_expr e2 ++ used1)).
+      right. apply in_or_app. right. apply Hrange_used1. exact Hin. }
+    destruct (expr_root_shadow_store_safe_narrow_summary_alpha_rename_let_init_support
+      rho R1 R1r roots1 roots1r Σ1 Σ1r xr Hctx1r HnsR1 HnsR1r
+      HR1r Hroots1r HkeysR1 HrootsR1 Hroots1_named Hfresh_ctx)
+      as [Hlookup_xr [Hexcl_roots1r Hexcl_env1r]].
+    assert (Hctx_body : ctx_alpha ((x, xr) :: rho)
+      (sctx_add x T1 m Σ1) (sctx_add xr T1 m Σ1r)).
+    { eapply ctx_alpha_add_fresh_forward; eauto. }
+    assert (Hns_add :
+      root_env_no_shadow (root_env_add x roots1 R1))
+      by (apply root_env_no_shadow_add; assumption).
+    assert (Hns_add_r :
+      root_env_no_shadow (root_env_add xr roots1r R1r))
+      by (apply root_env_no_shadow_add; assumption).
+    assert (HRadd :
+      root_env_equiv (root_env_add xr roots1r R1r)
+        (root_env_rename ((x, xr) :: rho)
+          (root_env_add x roots1 R1))).
+    { eapply root_env_add_shadow_safe_rename_equiv; eassumption. }
+    assert (Hkeys_add :
+      root_env_sctx_keys_named (root_env_add x roots1 R1)
+        (sctx_add x T1 m Σ1)).
+    { apply root_env_sctx_keys_named_add_binding. exact HkeysR1. }
+    assert (Hroots_add :
+      root_env_sctx_roots_named (root_env_add x roots1 R1)
+        (sctx_add x T1 m Σ1)).
+    { apply root_env_sctx_roots_named_add_binding; assumption. }
+    assert (Hnocoll_add :
+      rename_no_collision_on ((x, xr) :: rho)
+        (root_env_names (root_env_add x roots1 R1))).
+    { eapply root_env_add_shadow_safe_rename_no_collision_on;
+        eassumption. }
+    assert (HnocollR2_cons :
+      rename_no_collision_on ((x, xr) :: rho) (root_env_names R2)).
+    { eapply expr_root_shadow_store_safe_narrow_summary_alpha_rename_let_body_no_collision_from_summary;
+        eassumption. }
+    assert (Hctx_used2 : forall y,
+      In y (ctx_names (sctx_add xr T1 m Σ1r)) -> In y used2).
+    { unfold used2. intros y Hy. simpl in Hy.
+      destruct Hy as [Hy | Hy]; [left; exact Hy |].
+      right. right. apply in_or_app. right.
+      apply Hctx_used1. exact Hy. }
+    assert (Hrange_used2 : forall y,
+      In y (rename_range ((x, xr) :: rho)) -> In y used2).
+    { unfold used2. intros y Hy. simpl in Hy.
+      destruct Hy as [Hy | Hy].
+      - left. exact Hy.
+      - right. right. apply in_or_app. right.
+        apply Hrange_used1. exact Hy. }
+    destruct (IH2 ((x, xr) :: rho) (root_env_add xr roots1r R1r)
+      (sctx_add xr T1 m Σ1r) e2r used2 used3 Hctx_body
+      Hns_add Hns_add_r HRadd Hkeys_add Hroots_add Hnocoll_add
+      HnocollR2_cons Hctx_used2 Hrange_used2
+      (alpha_rename_let_body_disjoint_forward rho used1 x xr e2 Hxr Hdisj2)
+      He2)
+      as (Σ2r & R2r & roots2r & ret_roots2r & Hsummary2r &
+        Hctx2r & HnsR2r & HR2r_cons & Hroots2r_cons & Hret2r_cons).
+    assert (HnsR2 : root_env_no_shadow R2).
+    { eapply typed_env_roots_no_shadow.
+      - eapply typed_env_roots_shadow_safe_roots. exact Htyped2.
+      - exact Hns_add. }
+    assert (HkeysR2 : root_env_sctx_keys_named R2 Sigma2).
+    { destruct (typed_roots_shadow_safe_sctx_keys_named_mutual env Omega n)
+        as [Hkeys_env _].
+      eapply Hkeys_env; eassumption. }
+    assert (HrootsR2 : root_env_sctx_roots_named R2 Sigma2).
+    { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env Omega n)
+        as [Hroots_env _].
+      destruct (Hroots_env (root_env_add x roots1 R1)
+        (sctx_add x T1 m Σ1) e2 T2 Sigma2 R2 roots2)
+        as [Hroots_env2 _]; eauto. }
+    assert (Hroots2_named : root_set_sctx_roots_named roots2 Sigma2).
+    { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env Omega n)
+        as [Hroots_env _].
+      destruct (Hroots_env (root_env_add x roots1 R1)
+        (sctx_add x T1 m Σ1) e2 T2 Sigma2 R2 roots2)
+        as [_ Hroots_set2]; eauto. }
+    assert (Hsame_body :
+      sctx_same_bindings (sctx_add x T1 m Σ1) Sigma2).
+    { eapply typed_env_structural_same_bindings.
+      eapply typed_env_roots_structural.
+      eapply typed_env_roots_shadow_safe_roots. exact Htyped2. }
+    assert (Hnocoll_x :
+      rename_no_collision_for ((x, xr) :: rho) x (root_env_names R2)).
+    { eapply root_env_sctx_keys_named_added_no_collision_for_head.
+      - exact Hctx1r.
+      - eapply root_env_sctx_keys_named_same_bindings.
+        + apply sctx_same_bindings_sym. exact Hsame_body.
+        + exact HkeysR2.
+      - exact Hfresh_ctx. }
+    assert (HRremove :
+      root_env_equiv (root_env_remove xr R2r)
+        (root_env_rename rho (root_env_remove x R2))).
+    { eapply root_env_remove_shadow_safe_rename_body_equiv;
+        eassumption. }
+    assert (Hroots2r :
+      root_set_equiv roots2r (root_set_rename rho roots2)).
+    { eapply root_set_shadow_safe_rename_body_equiv; eassumption. }
+    assert (Hret_roots_excl : roots_exclude x ret_roots).
+    { eapply expr_root_shadow_store_safe_narrow_summary_ret_roots_exclude;
+        eassumption. }
+    assert (Hret2r :
+      root_set_equiv ret_roots2r (root_set_rename rho ret_roots)).
+    { eapply root_set_shadow_safe_rename_body_equiv; eassumption. }
+    assert (Hroots2r_excl : roots_exclude xr roots2r).
+    { eapply roots_exclude_shadow_safe_rename_body.
+      - exact Hctx1r.
+      - eapply root_set_sctx_roots_named_strip_added_same_bindings.
+        + exact Hexcl_roots2.
+        + exact Hroots2_named.
+        + exact Hsame_body.
+      - exact Hfresh_ctx.
+      - exact Hroots2r_cons.
+      - exact Hexcl_roots2. }
+    assert (Hremove_ext :
+      root_env_equiv (root_env_remove xr R2r)
+        (root_env_rename ((x, xr) :: rho) (root_env_remove x R2))).
+    { eapply root_env_remove_shadow_safe_rename_body_ext_equiv;
+        eassumption. }
+    assert (Henv2r_excl :
+      root_env_excludes xr (root_env_remove xr R2r)).
+    { eapply root_env_excludes_shadow_safe_rename_body.
+      - exact Hctx1r.
+      - apply root_env_no_shadow_remove. exact HnsR2.
+      - eapply root_env_sctx_keys_named_remove_strip_added_same_bindings;
+          eassumption.
+      - eapply root_env_sctx_roots_named_remove_strip_added_same_bindings;
+          eassumption.
+      - exact Hfresh_ctx.
+      - exact Hremove_ext.
+      - exact Hexcl_env2. }
+    change (fresh_ident x (x :: free_vars_expr e2 ++ used1)) with xr
+      in Hrename.
+    change (xr :: x :: free_vars_expr e2 ++ used1) with used2
+      in Hrename.
+    rewrite He2 in Hrename.
+    injection Hrename as <- <-.
+    exists (sctx_remove xr Σ2r), (root_env_remove xr R2r), roots2r,
+      ret_roots2r.
+    split.
+    + eapply ERSSN_LetInfer.
+      * exact Hsummary1r.
+      * exact Hnonfun.
+      * exact Hlookup_xr.
+      * exact Hexcl_roots1r.
+      * exact Hexcl_env1r.
+      * exact Hsummary2r.
+      * assert (Hlookup_xr_rename :
+          lookup_rename x ((x, xr) :: rho) = xr)
+          by (simpl; rewrite ident_eqb_refl; reflexivity).
+        rewrite <- Hlookup_xr_rename.
+        eapply ctx_alpha_check_ok_forward.
+        -- exact Hctx2r.
+        -- eapply alpha_rename_let_bound_safe_forward; eassumption.
+        -- exact Hcheck.
+      * exact Hroots2r_excl.
+      * exact Henv2r_excl.
+    + split.
+      * eapply ctx_alpha_remove_bound. exact Hctx2r.
+      * split.
+        -- apply root_env_no_shadow_remove. exact HnsR2r.
+        -- split.
+           ++ exact HRremove.
+           ++ split; [exact Hroots2r | exact Hret2r].
+Qed.
+
 Lemma expr_root_shadow_store_safe_narrow_summary_instantiate_fresh :
   forall env Omega n rho R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_store_safe_narrow_summary

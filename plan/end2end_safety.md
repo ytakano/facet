@@ -177,6 +177,8 @@ T2e.2 tasks:
   for narrow alpha preservation.
 - Done prep: relate narrow summary roots to return roots and preserve
   return-root exclusion.
+- Done prep: prove structural alpha-renaming preservation for narrow
+  store-safe summaries.
 - Blocked: direct `ECall` still requires old
   `callee_body_root_shadow_provenance_summary` evidence.  Remaining proof gap:
   finish the generalized structural alpha-preservation theorem for narrow

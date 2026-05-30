@@ -5218,6 +5218,367 @@ Proof.
 Qed.
 
 
+Lemma expr_root_shadow_store_safe_narrow_tfn_function_value_call_final_store_eq_prefix_named :
+  forall env Omega n R Sigma x args u param_tys ret_ty Sigma1 R1
+      roots_callee_typed arg_roots Sigma' R',
+    store_safe_function_value_call_args env args ->
+    typed_env_roots_shadow_safe env Omega n R Sigma (EVar x)
+      (MkTy u (TFn param_tys ret_ty)) Sigma1 R1 roots_callee_typed ->
+    typed_args_roots_shadow_safe env Omega n R1 Sigma1 args
+      (params_of_tys param_tys) Sigma' R' arg_roots ->
+    forall s s' ret,
+      store_typed_prefix env s Sigma ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      store_function_closure_targets_summary env s ->
+      eval env s (ECallExpr (EVar x) args) s' ret ->
+      fn_env_unique_by_name env ->
+      exists s_fn s_args vs fname,
+        eval env s (EVar x) s_fn (VClosure fname []) /\
+        eval_args env s_fn args s_args vs /\
+        s' = s_args.
+Proof.
+  intros env Omega n R Sigma x args u param_tys ret_ty Sigma1 R1
+    roots_callee_typed arg_roots Sigma' R' Hargs Htyped_callee Htyped_args
+    s s' ret Hstore Hroots Hshadow Hrn Hnamed Hkeys
+    Hsummary Heval_call Hunique.
+  dependent destruction Heval_call.
+  match goal with
+  | Hcallee_eval : eval env s (EVar x) s_fn (VClosure fname captured) |- _ =>
+      rename Hcallee_eval into Heval_callee
+  end.
+  match goal with
+  | Hlookup_fn : lookup_fn fname (env_fns env) = Some fdef |- _ =>
+      rename Hlookup_fn into Hlookup
+  end.
+  match goal with
+  | Hargs_eval : eval_args env s_fn args s_args vs |- _ =>
+      rename Hargs_eval into Heval_args
+  end.
+  match goal with
+  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = (fcall, used') |- _ =>
+      rename Halpha into Hrename
+  end.
+  match goal with
+  | Hbody_eval : eval env (bind_params (fn_params fcall) vs (captured ++ s_args)) (fn_body fcall) s_body ret |- _ =>
+      rename Hbody_eval into Heval_body
+  end.
+  pose proof (typed_env_roots_shadow_safe_roots
+    env Omega n R Sigma (EVar x) (MkTy u (TFn param_tys ret_ty))
+    Sigma1 R1 roots_callee_typed Htyped_callee) as Htyped_callee_roots.
+  destruct (proj1 eval_preserves_typing_roots_ready_prefix_mutual
+    env s (EVar x) s_fn (VClosure fname captured) Heval_callee
+    Omega n R Sigma (MkTy u (TFn param_tys ret_ty))
+    Sigma1 R1 roots_callee_typed (ProvReady_Var x) Hstore Hroots Hshadow Hrn
+    Htyped_callee_roots) as [Hstore_fn [Hv_callee [_ [Hroots_fn [_ [Hshadow_fn Hrn_fn]]]]]].
+  destruct (typed_env_roots_shadow_safe_evar_store_named
+    env Omega n R Sigma x (MkTy u (TFn param_tys ret_ty))
+    Sigma1 R1 roots_callee_typed s Htyped_callee Hnamed Hkeys)
+    as [Hnamed_fn_s [Hcallee_roots_named_s Hkeys_fn_s]].
+  pose proof (proj1 preservation_ready_eval_store_names_mutual
+    env s (EVar x) s_fn (VClosure fname captured) Heval_callee
+    (PRE_Var x)) as Hcallee_names.
+  assert (Hnamed_fn : root_env_store_roots_named R1 s_fn).
+  { eapply root_env_store_roots_named_store_names_eq; eassumption. }
+  assert (Hkeys_fn : root_env_store_keys_named R1 s_fn).
+  { eapply root_env_store_keys_named_store_names_eq; eassumption. }
+  pose proof (value_has_type_closure_captured_nil env s_fn fname captured
+    (MkTy u (TFn param_tys ret_ty)) Hv_callee) as Hcaptured_nil.
+  subst captured.
+  simpl in Hrename, Heval_body.
+  pose proof (eval_var_empty_closure_target_summary_of_store_function_closure_targets_summary
+    env s s_fn x fname fdef Hsummary Heval_callee Hlookup) as Hcallee_summary.
+  destruct (value_has_type_empty_closure_plain_tfn_non_generic
+    env s_fn fname fdef u param_tys ret_ty Hv_callee Hlookup Hunique)
+    as [Htype_params Hlifetimes].
+  destruct (value_has_type_empty_closure_tfn_components
+    env s_fn fname fdef u param_tys ret_ty Hv_callee Hlookup Hunique
+    Htype_params Hlifetimes) as [Hcaps_fdef Hbridge].
+  pose proof (typed_args_roots_shadow_safe_roots
+    env Omega n R1 Sigma1 args (params_of_tys param_tys)
+    Sigma' R' arg_roots Htyped_args) as Htyped_args_roots.
+  pose proof (preservation_ready_args_implies_provenance_ready_closure
+    args (store_safe_function_value_call_args_preservation_ready env args Hargs))
+    as Hprov_args.
+  assert (Hcallee_route :
+      callee_body_root_shadow_provenance_ready_at_result_subset env fcall
+        (call_param_root_env (fn_params fcall) arg_roots R')
+        (root_sets_union arg_roots)).
+  { eapply (direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_tfn_with_result_subset_prefix_named
+      env Omega n R1 Sigma1 Sigma' R' arg_roots args fdef fcall
+      param_tys ret_ty s_fn s_args vs used').
+    - exact Hcallee_summary.
+    - exact Hcaps_fdef.
+    - exact Hbridge.
+    - exact Hargs.
+    - exact Htyped_args_roots.
+    - exact Heval_args.
+    - exact Hprov_args.
+    - exact Hstore_fn.
+    - exact Hroots_fn.
+    - exact Hshadow_fn.
+    - exact Hrn_fn.
+    - exact Hnamed_fn.
+    - exact Hkeys_fn.
+    - exact Hrename. }
+  pose proof (eval_call_expr_tfn_components_final_store_eq_route_prefix_start
+    env s s_fn s_args s_body (EVar x) args fname [] fdef fcall vs ret used'
+    Heval_callee Hlookup Heval_args Hrename Heval_body
+    Omega n R Sigma Sigma1 R1 Sigma' R' roots_callee_typed arg_roots u
+    param_tys ret_ty
+    (store_safe_function_value_call_args_preservation_ready env args Hargs)
+    (ProvReady_Var x) Hstore Hroots Hshadow Hrn Htyped_callee
+    Htyped_args Hunique Htype_params Hlifetimes Hcallee_route) as Heq_final.
+  exists s_fn, s_args, vs, fname.
+  repeat split; assumption.
+Qed.
+
+
+Lemma expr_root_shadow_store_safe_narrow_tforall_tfn_function_value_call_final_store_eq_prefix_named :
+  forall env Omega n R Sigma x args u m bounds body_ty param_tys ret_ty sigma
+      Sigma1 R1 roots_callee_typed arg_roots Sigma' R',
+    store_safe_function_value_call_args env args ->
+    typed_env_roots_shadow_safe env Omega n R Sigma (EVar x)
+      (MkTy u (TForall m bounds body_ty)) Sigma1 R1 roots_callee_typed ->
+    ty_core body_ty = TFn param_tys ret_ty ->
+    contains_lbound_ty (open_bound_ty sigma ret_ty) = false ->
+    contains_lbound_outlives (open_bound_outlives sigma bounds) = false ->
+    Forall (fun '(a, b) => outlives Omega a b) (open_bound_outlives sigma bounds) ->
+    typed_args_roots_shadow_safe env Omega n R1 Sigma1 args
+      (params_of_tys (map (open_bound_ty sigma) param_tys)) Sigma' R' arg_roots ->
+    forall s s' ret,
+      store_typed_prefix env s Sigma ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      store_function_closure_targets_summary env s ->
+      eval env s (ECallExpr (EVar x) args) s' ret ->
+      fn_env_unique_by_name env ->
+      exists s_fn s_args vs fname,
+        eval env s (EVar x) s_fn (VClosure fname []) /\
+        eval_args env s_fn args s_args vs /\
+        s' = s_args.
+Proof.
+  intros env Omega n R Sigma x args u m bounds body_ty param_tys ret_ty sigma
+    Sigma1 R1 roots_callee_typed arg_roots Sigma' R' Hargs Htyped_callee Hbody_shape
+    Hret_closed Hbounds_closed Hbounds Htyped_args
+    s s' ret Hstore Hroots Hshadow Hrn Hnamed Hkeys
+    Hsummary Heval_call Hunique.
+  dependent destruction Heval_call.
+  match goal with
+  | Hcallee_eval : eval env s (EVar x) s_fn (VClosure fname captured) |- _ =>
+      rename Hcallee_eval into Heval_callee
+  end.
+  match goal with
+  | Hlookup_fn : lookup_fn fname (env_fns env) = Some fdef |- _ =>
+      rename Hlookup_fn into Hlookup
+  end.
+  match goal with
+  | Hargs_eval : eval_args env s_fn args s_args vs |- _ =>
+      rename Hargs_eval into Heval_args
+  end.
+  match goal with
+  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = (fcall, used') |- _ =>
+      rename Halpha into Hrename
+  end.
+  match goal with
+  | Hbody_eval : eval env (bind_params (fn_params fcall) vs (captured ++ s_args)) (fn_body fcall) s_body ret |- _ =>
+      rename Hbody_eval into Heval_body
+  end.
+  pose proof (typed_env_roots_shadow_safe_roots
+    env Omega n R Sigma (EVar x) (MkTy u (TForall m bounds body_ty))
+    Sigma1 R1 roots_callee_typed Htyped_callee) as Htyped_callee_roots.
+  destruct (proj1 eval_preserves_typing_roots_ready_prefix_mutual
+    env s (EVar x) s_fn (VClosure fname captured) Heval_callee
+    Omega n R Sigma (MkTy u (TForall m bounds body_ty))
+    Sigma1 R1 roots_callee_typed (ProvReady_Var x) Hstore Hroots Hshadow Hrn
+    Htyped_callee_roots) as [Hstore_fn [Hv_callee [_ [Hroots_fn [_ [Hshadow_fn Hrn_fn]]]]]].
+  destruct (typed_env_roots_shadow_safe_evar_store_named
+    env Omega n R Sigma x (MkTy u (TForall m bounds body_ty))
+    Sigma1 R1 roots_callee_typed s Htyped_callee Hnamed Hkeys)
+    as [Hnamed_fn_s [Hcallee_roots_named_s Hkeys_fn_s]].
+  pose proof (proj1 preservation_ready_eval_store_names_mutual
+    env s (EVar x) s_fn (VClosure fname captured) Heval_callee
+    (PRE_Var x)) as Hcallee_names.
+  assert (Hnamed_fn : root_env_store_roots_named R1 s_fn).
+  { eapply root_env_store_roots_named_store_names_eq; eassumption. }
+  assert (Hkeys_fn : root_env_store_keys_named R1 s_fn).
+  { eapply root_env_store_keys_named_store_names_eq; eassumption. }
+  pose proof (value_has_type_closure_captured_nil env s_fn fname captured
+    (MkTy u (TForall m bounds body_ty)) Hv_callee) as Hcaptured_nil.
+  subst captured.
+  simpl in Hrename, Heval_body.
+  pose proof (eval_var_empty_closure_target_summary_of_store_function_closure_targets_summary
+    env s s_fn x fname fdef Hsummary Heval_callee Hlookup) as Hcallee_summary.
+  destruct (value_has_type_empty_closure_tforall_tfn_components
+    env s_fn fname fdef u m bounds body_ty param_tys ret_ty sigma
+    Hv_callee Hlookup Hunique Hbody_shape) as [Htype_params [Hcaps_fdef Hbridge]].
+  pose proof (typed_args_roots_shadow_safe_roots
+    env Omega n R1 Sigma1 args
+    (params_of_tys (map (open_bound_ty sigma) param_tys))
+    Sigma' R' arg_roots Htyped_args) as Htyped_args_roots.
+  pose proof (preservation_ready_args_implies_provenance_ready_closure
+    args (store_safe_function_value_call_args_preservation_ready env args Hargs))
+    as Hprov_args.
+  assert (Hcallee_route :
+      callee_body_root_shadow_provenance_ready_at_result_subset env fcall
+        (call_param_root_env (fn_params fcall) arg_roots R')
+        (root_sets_union arg_roots)).
+  { eapply (direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_tfn_with_result_subset_prefix_named
+      env Omega n R1 Sigma1 Sigma' R' arg_roots args fdef fcall
+      (map (open_bound_ty sigma) param_tys) (open_bound_ty sigma ret_ty)
+      s_fn s_args vs used').
+    - exact Hcallee_summary.
+    - exact Hcaps_fdef.
+    - exact Hbridge.
+    - exact Hargs.
+    - exact Htyped_args_roots.
+    - exact Heval_args.
+    - exact Hprov_args.
+    - exact Hstore_fn.
+    - exact Hroots_fn.
+    - exact Hshadow_fn.
+    - exact Hrn_fn.
+    - exact Hnamed_fn.
+    - exact Hkeys_fn.
+    - exact Hrename. }
+  pose proof (eval_evar_call_expr_lifetime_forall_tfn_components_final_store_eq_prefix_start
+    env s s_fn s_args s_body x args fname [] fdef fcall vs ret used'
+    Heval_callee Hlookup Heval_args Hrename Heval_body
+    Omega n R Sigma Sigma1 R1 Sigma' R' roots_callee_typed arg_roots u
+    m bounds body_ty param_tys ret_ty sigma
+    (store_safe_function_value_call_args_preservation_ready env args Hargs)
+    Hstore Hroots Hshadow Hrn Htyped_callee Hbody_shape Htyped_args
+    Htype_params Hcaps_fdef Hbridge Hcallee_route) as Heq_final.
+  exists s_fn, s_args, vs, fname.
+  repeat split; assumption.
+Qed.
+
+
+Lemma expr_root_shadow_store_safe_narrow_tfn_function_value_call_preserves_frame_scope_prefix_named :
+  forall env Omega n R Sigma x args u param_tys ret_ty Sigma1 R1
+      roots_callee_typed arg_roots Sigma' R',
+    store_safe_function_value_call_args env args ->
+    typed_env_roots_shadow_safe env Omega n R Sigma (EVar x)
+      (MkTy u (TFn param_tys ret_ty)) Sigma1 R1 roots_callee_typed ->
+    typed_args_roots_shadow_safe env Omega n R1 Sigma1 args
+      (params_of_tys param_tys) Sigma' R' arg_roots ->
+    forall s s' ret ps frame,
+      store_typed_prefix env s Sigma ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      store_function_closure_targets_summary env s ->
+      eval env s (ECallExpr (EVar x) args) s' ret ->
+      fn_env_unique_by_name env ->
+      root_env_covers_params ps R ->
+      store_frame_scope ps Sigma s frame ->
+      store_frame_static_fresh Sigma frame ->
+      frame_scope_roots_ready_result ps R' Sigma' s' frame.
+Proof.
+  intros env Omega n R Sigma x args u param_tys ret_ty Sigma1 R1
+    roots_callee_typed arg_roots Sigma' R' Hargs Htyped_callee Htyped_args
+    s s' ret ps frame Hstore Hroots Hshadow Hrn Hnamed Hkeys Hsummary
+    Heval_call Hunique Hcover Hscope Hfresh.
+  destruct (expr_root_shadow_store_safe_narrow_tfn_function_value_call_final_store_eq_prefix_named
+    env Omega n R Sigma x args u param_tys ret_ty Sigma1 R1 roots_callee_typed
+    arg_roots Sigma' R' Hargs Htyped_callee Htyped_args s s' ret
+    Hstore Hroots Hshadow Hrn Hnamed Hkeys Hsummary Heval_call Hunique)
+    as [s_fn [s_args [vs [fname [Heval_callee [Heval_args Heq_final]]]]]].
+  pose proof (typed_env_roots_shadow_safe_roots
+    env Omega n R Sigma (EVar x) (MkTy u (TFn param_tys ret_ty))
+    Sigma1 R1 roots_callee_typed Htyped_callee) as Htyped_callee_roots.
+  destruct (proj1 eval_preserves_frame_scope_roots_ready_mutual
+    env s (EVar x) s_fn (VClosure fname []) Heval_callee
+    Omega n R Sigma (MkTy u (TFn param_tys ret_ty)) Sigma1 R1
+    roots_callee_typed ps frame
+    (ProvReady_Var x) Htyped_callee_roots Hcover Hroots Hshadow Hrn
+    Hscope Hfresh) as
+    [Hcover_fn [Hroots_fn [Hshadow_fn [Hrn_fn [Hscope_fn Hfresh_fn]]]]].
+  pose proof (typed_args_roots_shadow_safe_roots
+    env Omega n R1 Sigma1 args (params_of_tys param_tys)
+    Sigma' R' arg_roots Htyped_args) as Htyped_args_roots.
+  pose proof (preservation_ready_args_implies_provenance_ready_closure
+    args (store_safe_function_value_call_args_preservation_ready env args Hargs))
+    as Hprov_args.
+  pose proof (proj1 (proj2 eval_preserves_frame_scope_roots_ready_mutual)
+    env s_fn args s_args vs Heval_args Omega n R1 Sigma1
+    (params_of_tys param_tys) Sigma' R' arg_roots ps frame
+    Hprov_args Htyped_args_roots Hcover_fn Hroots_fn Hshadow_fn Hrn_fn
+    Hscope_fn Hfresh_fn) as Hframe_args.
+  rewrite Heq_final. exact Hframe_args.
+Qed.
+
+Lemma expr_root_shadow_store_safe_narrow_tforall_tfn_function_value_call_preserves_frame_scope_prefix_named :
+  forall env Omega n R Sigma x args u m bounds body_ty param_tys ret_ty sigma
+      Sigma1 R1 roots_callee_typed arg_roots Sigma' R',
+    store_safe_function_value_call_args env args ->
+    typed_env_roots_shadow_safe env Omega n R Sigma (EVar x)
+      (MkTy u (TForall m bounds body_ty)) Sigma1 R1 roots_callee_typed ->
+    ty_core body_ty = TFn param_tys ret_ty ->
+    contains_lbound_ty (open_bound_ty sigma ret_ty) = false ->
+    contains_lbound_outlives (open_bound_outlives sigma bounds) = false ->
+    Forall (fun '(a, b) => outlives Omega a b) (open_bound_outlives sigma bounds) ->
+    typed_args_roots_shadow_safe env Omega n R1 Sigma1 args
+      (params_of_tys (map (open_bound_ty sigma) param_tys)) Sigma' R' arg_roots ->
+    forall s s' ret ps frame,
+      store_typed_prefix env s Sigma ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      store_function_closure_targets_summary env s ->
+      eval env s (ECallExpr (EVar x) args) s' ret ->
+      fn_env_unique_by_name env ->
+      root_env_covers_params ps R ->
+      store_frame_scope ps Sigma s frame ->
+      store_frame_static_fresh Sigma frame ->
+      frame_scope_roots_ready_result ps R' Sigma' s' frame.
+Proof.
+  intros env Omega n R Sigma x args u m bounds body_ty param_tys ret_ty sigma
+    Sigma1 R1 roots_callee_typed arg_roots Sigma' R' Hargs Htyped_callee
+    Hbody_shape Hret_closed Hbounds_closed Hbounds Htyped_args
+    s s' ret ps frame Hstore Hroots Hshadow Hrn Hnamed Hkeys Hsummary
+    Heval_call Hunique Hcover Hscope Hfresh.
+  destruct (expr_root_shadow_store_safe_narrow_tforall_tfn_function_value_call_final_store_eq_prefix_named
+    env Omega n R Sigma x args u m bounds body_ty param_tys ret_ty sigma
+    Sigma1 R1 roots_callee_typed arg_roots Sigma' R' Hargs Htyped_callee
+    Hbody_shape Hret_closed Hbounds_closed Hbounds Htyped_args s s' ret
+    Hstore Hroots Hshadow Hrn Hnamed Hkeys Hsummary Heval_call Hunique)
+    as [s_fn [s_args [vs [fname [Heval_callee [Heval_args Heq_final]]]]]].
+  pose proof (typed_env_roots_shadow_safe_roots
+    env Omega n R Sigma (EVar x) (MkTy u (TForall m bounds body_ty))
+    Sigma1 R1 roots_callee_typed Htyped_callee) as Htyped_callee_roots.
+  destruct (proj1 eval_preserves_frame_scope_roots_ready_mutual
+    env s (EVar x) s_fn (VClosure fname []) Heval_callee
+    Omega n R Sigma (MkTy u (TForall m bounds body_ty)) Sigma1 R1
+    roots_callee_typed ps frame
+    (ProvReady_Var x) Htyped_callee_roots Hcover Hroots Hshadow Hrn
+    Hscope Hfresh) as
+    [Hcover_fn [Hroots_fn [Hshadow_fn [Hrn_fn [Hscope_fn Hfresh_fn]]]]].
+  pose proof (typed_args_roots_shadow_safe_roots
+    env Omega n R1 Sigma1 args
+    (params_of_tys (map (open_bound_ty sigma) param_tys))
+    Sigma' R' arg_roots Htyped_args) as Htyped_args_roots.
+  pose proof (preservation_ready_args_implies_provenance_ready_closure
+    args (store_safe_function_value_call_args_preservation_ready env args Hargs))
+    as Hprov_args.
+  pose proof (proj1 (proj2 eval_preserves_frame_scope_roots_ready_mutual)
+    env s_fn args s_args vs Heval_args Omega n R1 Sigma1
+    (params_of_tys (map (open_bound_ty sigma) param_tys)) Sigma' R' arg_roots
+    ps frame Hprov_args Htyped_args_roots Hcover_fn Hroots_fn Hshadow_fn
+    Hrn_fn Hscope_fn Hfresh_fn) as Hframe_args.
+  rewrite Heq_final. exact Hframe_args.
+Qed.
+
 
 Definition callee_body_root_shadow_captured_call_direct_narrow_store_safe_summary
     (env : global_env) (fdef : fn_def) : Prop :=

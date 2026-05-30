@@ -4267,6 +4267,8 @@ Lemma alpha_rename_typed_env_roots_borrow_forward :
     root_env_equiv Rr (root_env_rename rho R) ->
     rename_no_collision_on rho (root_env_names R) ->
     rename_no_collision_on rho (root_env_names R') ->
+    rename_no_collision_on rho
+      (root_env_all_store_names R ++ root_set_store_names (root_of_place p)) ->
     (forall x, In x (ctx_names Σr) -> In x used) ->
     (forall x, In x (rename_range rho) -> In x used) ->
     disjoint_names (free_vars_expr (EBorrow rk p)) (rename_range rho) ->
@@ -4279,7 +4281,7 @@ Lemma alpha_rename_typed_env_roots_borrow_forward :
       root_set_equiv rootsr (root_set_rename rho roots).
 Proof.
   intros env Ω n rho R Rr Σ Σr rk p er used used' T Σ' R' roots
-    Htyped Hctx HnsR HnsRr HRr HnocollR HnocollR'
+    Htyped Hctx HnsR HnsRr HRr HnocollR HnocollR' HnocollResolved
     Hctx_used Hrange_used Hdisj Hrename.
   simpl in Hrename. destruct rk; injection Hrename as <- <-;
     inversion Htyped; subst.
@@ -4317,6 +4319,33 @@ Proof.
         -- match goal with Hpath : place_path p = None |- _ =>
              apply place_path_rename_place_none; exact Hpath
            end.
+    + exact Hctx.
+    + exact HnsRr.
+    + exact HRr.
+    + apply Hrootsr.
+    + apply Hrootsr.
+  - assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+    { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+    match goal with
+    | Hresolved : place_resolved_roots ?Rsrc p = Some roots,
+      Hns : root_env_no_shadow ?Rsrc,
+      Heq : root_env_equiv Rr (root_env_rename rho ?Rsrc) |- _ =>
+        destruct (place_resolved_roots_rename_no_shadow_equiv
+          rho Rsrc Rr p roots Hns HnsRr Heq HnocollResolved Hresolved)
+          as [rootsr [Hresolved_r Hrootsr]]
+    end.
+    exists Σr, Rr, rootsr. repeat split.
+    + eapply TER_BorrowShared_Resolved.
+      * eapply alpha_rename_typed_place_env_structural_forward; eauto.
+      * match goal with Hpath : place_path p = None |- _ =>
+          apply place_path_rename_place_none; exact Hpath
+        end.
+      * exact Hresolved_r.
+      * rewrite (singleton_store_root_equiv rootsr (root_set_rename rho roots) Hrootsr).
+        apply singleton_store_root_rename_some.
+        match goal with Hsingle : singleton_store_root roots = Some _ |- _ =>
+          exact Hsingle
+        end.
     + exact Hctx.
     + exact HnsRr.
     + exact HRr.
@@ -4368,6 +4397,34 @@ Proof.
         -- match goal with Hpath : place_path p = None |- _ =>
              apply place_path_rename_place_none; exact Hpath
            end.
+    + exact Hctx.
+    + exact HnsRr.
+    + exact HRr.
+    + apply Hrootsr.
+    + apply Hrootsr.
+  - assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+    { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+    match goal with
+    | Hresolved : place_resolved_roots ?Rsrc p = Some roots,
+      Hns : root_env_no_shadow ?Rsrc,
+      Heq : root_env_equiv Rr (root_env_rename rho ?Rsrc) |- _ =>
+        destruct (place_resolved_roots_rename_no_shadow_equiv
+          rho Rsrc Rr p roots Hns HnsRr Heq HnocollResolved Hresolved)
+          as [rootsr [Hresolved_r Hrootsr]]
+    end.
+    exists Σr, Rr, rootsr. repeat split.
+    + eapply TER_BorrowUnique_Resolved.
+      * eapply alpha_rename_typed_place_env_structural_forward; eauto.
+      * match goal with Hpath : place_path p = None |- _ =>
+          apply place_path_rename_place_none; exact Hpath
+        end.
+      * eapply alpha_rename_place_under_unique_ref_structural_forward; eauto.
+      * exact Hresolved_r.
+      * rewrite (singleton_store_root_equiv rootsr (root_set_rename rho roots) Hrootsr).
+        apply singleton_store_root_rename_some.
+        match goal with Hsingle : singleton_store_root roots = Some _ |- _ =>
+          exact Hsingle
+        end.
     + exact Hctx.
     + exact HnsRr.
     + exact HRr.

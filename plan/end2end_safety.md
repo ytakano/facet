@@ -50,13 +50,15 @@ Latest full `sh tests/run.sh` baseline: 29 valid-test failures.
 8. Done: prove non-shadow resolved-root rename transport without namedness.
 9. Done: add store-name collision weakening/transport helpers for resolved
    root alpha support.
-10. Next: thread store-name collision through borrow alpha support and add
-    mirrored resolved borrow/deref Prop rules.
-11. Route indirect borrow and immediate deref-borrow root cleanup through
+10. Done: add non-shadow resolved borrow/deref Prop rules and alpha
+    support; keep shadow-safe rules out for now.
+11. Blocked: resolved shadow-safe Prop rules need call-frame tail stability;
+    appending outer roots can change `place_resolved_roots`.
+12. Route indirect borrow and immediate deref-borrow root cleanup through
    `place_resolved_roots` only for resolved singleton stores; keep raw-root fallback.
-12. Route `EAssign`/`EReplace` through resolved `PDeref` roots when resolution
+13. Route `EAssign`/`EReplace` through resolved `PDeref` roots when resolution
     yields one store target.
-13. Preserve invalid rejections for linear refs, immutable writes, borrow
+14. Preserve invalid rejections for linear refs, immutable writes, borrow
     conflicts, unresolved roots, and ambiguous roots.
 
 The resolver remains narrow: it follows bounded singleton store-root chains and

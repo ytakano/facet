@@ -69,6 +69,62 @@ Proof.
   eapply match_binder_params_opt_names. exact Hmatch.
 Qed.
 
+Lemma place_borrow_roots_ctx_roots_named :
+  forall R Σ p roots,
+    root_env_ctx_roots_named R Σ ->
+    root_set_ctx_roots_named (root_of_place p) Σ ->
+    place_borrow_roots R p = Some roots ->
+    root_set_ctx_roots_named roots Σ.
+Proof.
+  intros R Σ p roots Henv Hplace Hborrow.
+  unfold place_borrow_roots in Hborrow.
+  destruct (place_path p) as [[x path] |] eqn:Hpath.
+  - inversion Hborrow; subst roots. exact Hplace.
+  - assert (Hlookup :
+      root_env_lookup (root_provenance_place_name p) R = Some roots).
+    { rewrite <- (place_root_lookup_indirect R p Hpath). exact Hborrow. }
+    eapply root_env_lookup_ctx_roots_named; eassumption.
+Qed.
+
+Lemma resolve_root_set_fuel_ctx_roots_named :
+  forall fuel R Σ roots out,
+    root_env_ctx_roots_named R Σ ->
+    root_set_ctx_roots_named roots Σ ->
+    resolve_root_set_fuel fuel R roots = Some out ->
+    root_set_ctx_roots_named out Σ.
+Proof.
+  induction fuel as [| fuel IH]; intros R Σ roots out Henv Hroots Hres;
+    simpl in Hres; try discriminate.
+  destruct (singleton_store_root roots) as [x |] eqn:Hsingle.
+  - destruct (root_env_lookup x R) as [env_roots |] eqn:Hlookup.
+    + assert (Henv_roots : root_set_ctx_roots_named env_roots Σ).
+      { eapply root_env_lookup_ctx_roots_named; eassumption. }
+      destruct (singleton_store_root env_roots) as [y |] eqn:Henv_single.
+      * destruct (ident_eqb x y) eqn:Hxy.
+        -- inversion Hres; subst out. exact Hroots.
+        -- eapply IH; eassumption.
+      * eapply IH; eassumption.
+    + inversion Hres; subst out. exact Hroots.
+  - inversion Hres; subst out. exact Hroots.
+Qed.
+
+Lemma place_resolved_roots_ctx_roots_named :
+  forall R Σ p roots,
+    root_env_ctx_roots_named R Σ ->
+    root_set_ctx_roots_named (root_of_place p) Σ ->
+    place_resolved_roots R p = Some roots ->
+    root_set_ctx_roots_named roots Σ.
+Proof.
+  intros R Σ p roots Henv Hplace Hresolved.
+  unfold place_resolved_roots in Hresolved.
+  destruct (place_borrow_roots R p) as [borrow_roots |] eqn:Hborrow;
+    try discriminate.
+  assert (Hborrow_named : root_set_ctx_roots_named borrow_roots Σ).
+  { eapply place_borrow_roots_ctx_roots_named; eassumption. }
+  unfold resolve_root_set in Hresolved.
+  eapply resolve_root_set_fuel_ctx_roots_named; eassumption.
+Qed.
+
 Lemma typed_match_tail_roots_lookup_ready :
   forall env Ω n lts args R roots_scrut Σ branches variants expected_core R_out Σs Ts rootss
       name vdef e,
@@ -814,6 +870,11 @@ Proof.
         eapply root_env_lookup_ctx_roots_named; eassumption
     end.
   - split; try assumption.
+    eapply place_resolved_roots_ctx_roots_named.
+    + eassumption.
+    + eapply root_of_place_ctx_roots_named. eassumption.
+    + eassumption.
+  - split; try assumption.
     eapply root_store_single_ctx_roots_named_of_place_path; eassumption.
   - split; try assumption.
     match goal with
@@ -824,15 +885,10 @@ Proof.
         eapply root_env_lookup_ctx_roots_named; eassumption
     end.
   - split; try assumption.
-    eapply root_env_lookup_ctx_roots_named; eassumption.
-  - split; try assumption.
-    match goal with
-    | Hpath : place_path ?p = None,
-      Hlookup : place_root_lookup ?R ?p = Some ?roots |-
-        root_set_ctx_roots_named ?roots ?Σ =>
-        rewrite (place_root_lookup_indirect R p Hpath) in Hlookup;
-        eapply root_env_lookup_ctx_roots_named; eassumption
-    end.
+    eapply place_resolved_roots_ctx_roots_named.
+    + eassumption.
+    + eapply root_of_place_ctx_roots_named. eassumption.
+    + eassumption.
   - split; try assumption.
     eapply root_env_lookup_ctx_roots_named; eassumption.
   - split; try assumption.
@@ -843,6 +899,26 @@ Proof.
         rewrite (place_root_lookup_indirect R p Hpath) in Hlookup;
         eapply root_env_lookup_ctx_roots_named; eassumption
     end.
+  - split; try assumption.
+    eapply place_resolved_roots_ctx_roots_named.
+    + eassumption.
+    + eapply root_of_place_ctx_roots_named. eassumption.
+    + eassumption.
+  - split; try assumption.
+    eapply root_env_lookup_ctx_roots_named; eassumption.
+  - split; try assumption.
+    match goal with
+    | Hpath : place_path ?p = None,
+      Hlookup : place_root_lookup ?R ?p = Some ?roots |-
+        root_set_ctx_roots_named ?roots ?Σ =>
+        rewrite (place_root_lookup_indirect R p Hpath) in Hlookup;
+        eapply root_env_lookup_ctx_roots_named; eassumption
+    end.
+  - split; try assumption.
+    eapply place_resolved_roots_ctx_roots_named.
+    + eassumption.
+    + eapply root_of_place_ctx_roots_named. eassumption.
+    + eassumption.
   - match goal with
     | IHcond : root_env_no_shadow ?R ->
         root_env_ctx_roots_named ?R ?Σ ->

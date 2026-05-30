@@ -3975,10 +3975,6 @@ Proof.
     { rewrite <- (root_env_names_update x
         (root_set_union roots_old roots_new) R1).
       exact HnocollR'. }
-    match goal with
-    | H : place_resolved_roots ?Rsrc p = Some ?rr |- _ =>
-        set (roots_result0 := rr) in *
-    end.
     destruct (Hexpr R Rr Σ Σr used er_new used_new T_new Σ' R1 roots_new)
       as [Σr1 [Rr1 [roots_newr
         [Htyped_new_r [Hctx_new_r [HnsRr1 [HRr1 Hroots_new]]]]]]].
@@ -3996,14 +3992,21 @@ Proof.
     + exact Hrange_used.
     + exact Hdisj_new.
     + exact Hnew.
-    + match goal with
-      | Hresolved : place_resolved_roots ?Rsrc p = Some roots_result0,
-        Hns : root_env_no_shadow ?Rsrc,
-        Heq : root_env_equiv Rr (root_env_rename rho ?Rsrc) |- _ =>
-          destruct (place_resolved_roots_rename_no_shadow_equiv
-            rho Rsrc Rr p roots_result0 Hns HnsRr Heq HnocollResolved Hresolved)
-            as [roots_resultr [Hresolved_r Hroots_result]]
-      end.
+    + assert (Htarget_r :
+        place_resolved_write_target Rr (rename_place rho p) =
+        Some (lookup_rename x rho)).
+      { eapply place_resolved_write_target_equiv.
+        - apply root_env_equiv_sym. exact HRr.
+        - apply place_resolved_write_target_rename.
+          + exact HnocollR.
+          + match goal with
+            | H : place_resolved_write_target R p = Some x |- _ => exact H
+            end. }
+      destruct (root_env_equiv_rename_lookup_forward rho R Rr x roots
+        HRr HnocollR
+        ltac:(match goal with
+        | H : root_env_lookup x R = Some roots |- _ => exact H
+        end)) as [roots_resultr [Hlookup_result_r Hroots_result]].
       destruct (root_env_equiv_rename_lookup_forward rho R1 Rr1 x roots_old
         HRr1 HnocollR1
         ltac:(match goal with
@@ -4019,13 +4022,8 @@ Proof.
         -- match goal with Hpath : place_path p = None |- _ =>
              apply place_path_rename_place_none; exact Hpath
            end.
-        -- exact Hresolved_r.
-        -- rewrite (singleton_store_root_equiv roots_resultr
-             (root_set_rename rho roots_result0) Hroots_result).
-           apply singleton_store_root_rename_some.
-           match goal with Hsingle : singleton_store_root roots_result0 = Some _ |- _ =>
-             exact Hsingle
-           end.
+        -- exact Htarget_r.
+        -- exact Hlookup_result_r.
         -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
         -- exact Htyped_new_r.
         -- exact Hlookup_old_r.
@@ -4176,14 +4174,16 @@ Proof.
     + exact Hrange_used.
     + exact Hdisj_new.
     + exact Hnew.
-    + match goal with
-      | Hresolved : place_resolved_roots ?Rsrc p = Some roots_result,
-        Hns : root_env_no_shadow ?Rsrc,
-        Heq : root_env_equiv Rr (root_env_rename rho ?Rsrc) |- _ =>
-          destruct (place_resolved_roots_rename_no_shadow_equiv
-            rho Rsrc Rr p roots_result Hns HnsRr Heq HnocollResolved Hresolved)
-            as [roots_resultr [Hresolved_r Hroots_result]]
-      end.
+    + assert (Htarget_r :
+        place_resolved_write_target Rr (rename_place rho p) =
+        Some (lookup_rename x rho)).
+      { eapply place_resolved_write_target_equiv.
+        - apply root_env_equiv_sym. exact HRr.
+        - apply place_resolved_write_target_rename.
+          + exact HnocollR.
+          + match goal with
+            | H : place_resolved_write_target R p = Some x |- _ => exact H
+            end. }
       destruct (root_env_equiv_rename_lookup_forward rho R1 Rr1 x roots_old
         HRr1 HnocollR1
         ltac:(match goal with
@@ -4202,13 +4202,7 @@ Proof.
         -- match goal with Hpath : place_path p = None |- _ =>
              apply place_path_rename_place_none; exact Hpath
            end.
-        -- exact Hresolved_r.
-        -- rewrite (singleton_store_root_equiv roots_resultr
-             (root_set_rename rho roots_result) Hroots_result).
-           apply singleton_store_root_rename_some.
-           match goal with Hsingle : singleton_store_root roots_result = Some _ |- _ =>
-             exact Hsingle
-           end.
+        -- exact Htarget_r.
         -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
         -- exact Htyped_new_r.
         -- exact Hlookup_old_r.

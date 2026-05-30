@@ -60,8 +60,9 @@ Latest full `sh tests/run.sh` baseline (2026-05-30): 29 valid-test failures; inv
     singleton `PDeref` roots; shadow-safe unchanged.
 14. Done: invalid rejections preserved for linear refs, immutable writes,
     borrow conflicts, unresolved roots, and ambiguous roots.
-15. In progress: add stable depth-based resolved write target, then use
-    target root lookup for indirect `EAssign`/`EReplace` result/restoration.
+15. Done: add stable depth-based resolved write target and route
+    non-shadow indirect `EAssign`/`EReplace` through target root lookup.
+16. Next: run full extraction/CLI tests, then address remaining reborrow cleanup.
 
 The resolver remains narrow: it follows bounded singleton store-root chains and
 does not accept ambiguous/non-singleton update targets.

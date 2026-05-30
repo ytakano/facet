@@ -1461,8 +1461,8 @@ Proof.
         -- exact Havailable.
         -- exact Hrestore.
       * destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
-        destruct (place_resolved_roots R p) as [roots_result |] eqn:Hresolved; try discriminate.
-        destruct (singleton_store_root roots_result) as [x |] eqn:Hsingle; try discriminate.
+        destruct (place_resolved_write_target R p) as [x |] eqn:Htarget; try discriminate.
+        destruct (root_env_lookup x R) as [roots_result |] eqn:Hroot_result; try discriminate.
         destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
         destruct mut; try discriminate.
         destruct (writable_place_b env Σ p) eqn:Hwrite; try discriminate.
@@ -1474,8 +1474,8 @@ Proof.
         eapply TER_Replace_Resolved.
         -- eapply infer_place_sctx_structural_sound. exact Hplace.
         -- exact Hpath.
-        -- exact Hresolved.
-        -- exact Hsingle.
+        -- exact Htarget.
+        -- exact Hroot_result.
         -- apply writable_place_b_sound. exact Hwrite.
         -- eapply IH. exact Hnew.
         -- exact Hroot_old.
@@ -1503,8 +1503,7 @@ Proof.
         -- exact Havailable.
       * destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
         destruct (usage_eqb (ty_usage Told) ULinear) eqn:Hlinear; try discriminate.
-        destruct (place_resolved_roots R p) as [roots_result |] eqn:Hresolved; try discriminate.
-        destruct (singleton_store_root roots_result) as [x |] eqn:Hsingle; try discriminate.
+        destruct (place_resolved_write_target R p) as [x |] eqn:Htarget; try discriminate.
         destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
         destruct mut; try discriminate.
         destruct (writable_place_b env Σ p) eqn:Hwrite; try discriminate.
@@ -1517,8 +1516,7 @@ Proof.
         -- eapply infer_place_sctx_structural_sound. exact Hplace.
         -- intro Hu. rewrite Hu in Hlinear. simpl in Hlinear. discriminate.
         -- exact Hpath.
-        -- exact Hresolved.
-        -- exact Hsingle.
+        -- exact Htarget.
         -- apply writable_place_b_sound. exact Hwrite.
         -- eapply IH. exact Hnew.
         -- exact Hroot_old.

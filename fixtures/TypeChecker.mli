@@ -553,6 +553,8 @@ val resolve_root_set : root_env -> root_set -> root_set option
 
 val place_resolved_roots : root_env -> place -> root_set option
 
+val place_resolved_write_target : root_env -> place -> ident option
+
 val usage_eqb : usage -> usage -> bool
 
 val usage_sub_bool : usage -> usage -> bool

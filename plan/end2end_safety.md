@@ -216,11 +216,10 @@ T2e.2 tasks:
   narrow monomorphic and lifetime-forall `TFn` calls, including `let` cleanup.
 - Done prep: transfer store-safe narrow summaries through
   `global_env_with_local_bounds` for direct-call runtime wiring.
-- Remaining proof gap: finish the direct-call runtime route for callees proven
-  by narrow summaries.  The direct narrow branch now has store-safe args and
-  alpha/root/tail-frame bridge evidence; the missing piece is a local-bounds
-  narrow runtime package/transfer for evaluating `fn_body fcall` under
-  `global_env_with_local_bounds`.
+- Remaining proof gap: finish the captured-call direct-narrow branch.  The
+  summary now has provenance, direct-narrow, and body-narrow cases; the proof
+  needs a direct-call runtime wrapper that consumes callee store-safe narrow
+  summaries.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.
 
 Out of scope for T2e.2:

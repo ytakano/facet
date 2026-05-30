@@ -1,5 +1,5 @@
 From Facet.TypeSystem Require Import Syntax PathState Renaming TypingRules.
-From Stdlib Require Import List String Bool.
+From Stdlib Require Import List String Bool PeanoNat.
 Import ListNotations.
 
 (* ------------------------------------------------------------------ *)
@@ -82,6 +82,14 @@ Fixpoint root_env_names (R : root_env) : list ident :=
 
 Definition root_env_no_shadow (R : root_env) : Prop :=
   NoDup (root_env_names R).
+
+Lemma root_env_names_length :
+  forall R,
+    List.length (root_env_names R) = List.length R.
+Proof.
+  intros R.
+  induction R as [| [x roots] rest IH]; simpl; auto.
+Qed.
 
 Lemma root_env_rename_cons_initial_root_env_for_params_origin_notin :
   forall x x' rho ps_orig ps_current,
@@ -1416,6 +1424,23 @@ Proof.
   - right. eapply IH. exact Hlookup.
 Qed.
 
+Lemma root_env_in_names_lookup_some :
+  forall x R,
+    In x (root_env_names R) ->
+    exists roots,
+      root_env_lookup x R = Some roots.
+Proof.
+  intros x R.
+  induction R as [| [y roots_y] rest IH]; intros Hin;
+    simpl in *; try contradiction.
+  destruct Hin as [Hin | Hin].
+  - subst y. rewrite ident_eqb_refl.
+    exists roots_y. reflexivity.
+  - destruct (ident_eqb x y) eqn:Hxy.
+    + exists roots_y. reflexivity.
+    + apply IH. exact Hin.
+Qed.
+
 Lemma root_env_lookup_rename :
   forall rho R x roots,
     rename_no_collision_for rho x (root_env_names R) ->
@@ -2477,6 +2502,76 @@ Proof.
   apply root_env_equiv_lookup_none_l with (R := R') (R' := R).
   - apply root_env_equiv_sym. exact Heq.
   - exact Hlookup.
+Qed.
+
+Lemma root_env_equiv_names_in_l :
+  forall R R' x,
+    root_env_equiv R R' ->
+    In x (root_env_names R) ->
+    In x (root_env_names R').
+Proof.
+  intros R R' x Heq Hin.
+  destruct (root_env_in_names_lookup_some x R Hin)
+    as [roots Hlookup].
+  unfold root_env_equiv in Heq.
+  specialize (Heq x). rewrite Hlookup in Heq.
+  destruct (root_env_lookup x R') as [roots' |] eqn:Hlookup';
+    try contradiction.
+  eapply root_env_lookup_some_in_names. exact Hlookup'.
+Qed.
+
+Lemma root_env_equiv_names_in_r :
+  forall R R' x,
+    root_env_equiv R R' ->
+    In x (root_env_names R') ->
+    In x (root_env_names R).
+Proof.
+  intros R R' x Heq Hin.
+  apply root_env_equiv_names_in_l with (R := R') (R' := R).
+  - apply root_env_equiv_sym. exact Heq.
+  - exact Hin.
+Qed.
+
+Lemma root_env_equiv_names_in :
+  forall R R' x,
+    root_env_equiv R R' ->
+    In x (root_env_names R) <-> In x (root_env_names R').
+Proof.
+  intros R R' x Heq. split; intro Hin.
+  - eapply root_env_equiv_names_in_l; eassumption.
+  - eapply root_env_equiv_names_in_r; eassumption.
+Qed.
+
+Lemma root_env_equiv_names_length :
+  forall R R',
+    root_env_no_shadow R ->
+    root_env_no_shadow R' ->
+    root_env_equiv R R' ->
+    List.length (root_env_names R) =
+    List.length (root_env_names R').
+Proof.
+  unfold root_env_no_shadow.
+  intros R R' Hnodup Hnodup' Heq.
+  apply Nat.le_antisymm.
+  - apply NoDup_incl_length.
+    + exact Hnodup.
+    + intros x Hin. eapply root_env_equiv_names_in_l; eassumption.
+  - apply NoDup_incl_length.
+    + exact Hnodup'.
+    + intros x Hin. eapply root_env_equiv_names_in_r; eassumption.
+Qed.
+
+Lemma root_env_equiv_length :
+  forall R R',
+    root_env_no_shadow R ->
+    root_env_no_shadow R' ->
+    root_env_equiv R R' ->
+    List.length R = List.length R'.
+Proof.
+  intros R R' Hnodup Hnodup' Heq.
+  rewrite <- (root_env_names_length R).
+  rewrite <- (root_env_names_length R').
+  eapply root_env_equiv_names_length; eassumption.
 Qed.
 
 Lemma root_env_excludes_equiv :

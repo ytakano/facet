@@ -48,10 +48,10 @@ Latest full `sh tests/run.sh` baseline: 29 valid-test failures.
    helpers.
 7. Done: add no-shadow equivalent transport for resolved singleton instantiate.
 8. Done: prove non-shadow resolved-root rename transport without namedness.
-9. Blocked: mirrored resolved borrow/deref Prop rules need alpha support with
-   no-collision over store names inside root sets, not only root-env keys.
-10. Next: strengthen non-shadow alpha support assumptions or avoid non-shadow
-    erasure for resolved shadow-safe rules.
+9. Done: add store-name collision weakening/transport helpers for resolved
+   root alpha support.
+10. Next: thread store-name collision through borrow alpha support and add
+    mirrored resolved borrow/deref Prop rules.
 11. Route indirect borrow and immediate deref-borrow root cleanup through
    `place_resolved_roots` only for resolved singleton stores; keep raw-root fallback.
 12. Route `EAssign`/`EReplace` through resolved `PDeref` roots when resolution

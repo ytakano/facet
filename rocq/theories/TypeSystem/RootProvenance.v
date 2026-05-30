@@ -338,6 +338,44 @@ Proof.
     + apply IH. exact Hin.
 Qed.
 
+Lemma root_set_store_names_store_in :
+  forall roots x,
+    In x (root_set_store_names roots) ->
+    In (RStore x) roots.
+Proof.
+  induction roots as [| atom rest IH]; intros x Hin; simpl in *;
+    try contradiction.
+  destruct atom as [y | y]; simpl in *.
+  - destruct Hin as [Hin | Hin].
+    + subst y. left. reflexivity.
+    + right. apply IH. exact Hin.
+  - right. apply IH. exact Hin.
+Qed.
+
+Lemma root_set_equiv_store_names_in_l :
+  forall roots roots' x,
+    root_set_equiv roots roots' ->
+    In x (root_set_store_names roots) ->
+    In x (root_set_store_names roots').
+Proof.
+  intros roots roots' x Heq Hin.
+  apply root_set_store_names_in_store.
+  apply Heq.
+  apply root_set_store_names_store_in. exact Hin.
+Qed.
+
+Lemma root_set_equiv_store_names_in_r :
+  forall roots roots' x,
+    root_set_equiv roots roots' ->
+    In x (root_set_store_names roots') ->
+    In x (root_set_store_names roots).
+Proof.
+  intros roots roots' x Heq Hin.
+  eapply root_set_equiv_store_names_in_l.
+  - apply root_set_equiv_sym. exact Heq.
+  - exact Hin.
+Qed.
+
 Lemma root_env_names_all_store_names :
   forall R x,
     In x (root_env_names R) ->
@@ -511,6 +549,36 @@ Fixpoint root_sets_union (sets : list root_set) : root_set :=
   | roots :: rest => root_set_union roots (root_sets_union rest)
   end.
 
+Lemma root_set_store_names_union_subset :
+  forall roots_left roots_right x,
+    In x (root_set_store_names (root_set_union roots_left roots_right)) ->
+    In x (root_set_store_names roots_left ++ root_set_store_names roots_right).
+Proof.
+  induction roots_left as [| atom rest IH]; intros roots_right x Hin;
+    simpl in *.
+  - exact Hin.
+  - destruct (existsb (root_atom_eqb atom) roots_right) eqn:Hexists.
+    + specialize (IH roots_right x Hin).
+      apply in_app_or in IH as [Hin_rest | Hin_right].
+      * destruct atom as [y | y]; simpl.
+        -- right. apply in_or_app. left. exact Hin_rest.
+        -- apply in_or_app. left. exact Hin_rest.
+      * destruct atom as [y | y]; simpl.
+        -- right. apply in_or_app. right. exact Hin_right.
+        -- apply in_or_app. right. exact Hin_right.
+    + simpl in Hin. destruct atom as [y | y]; simpl in *.
+      * destruct Hin as [Hin | Hin].
+        -- left. exact Hin.
+        -- specialize (IH roots_right x Hin).
+           apply in_app_or in IH as [Hin_rest | Hin_right].
+           ++ right. apply in_or_app. left. exact Hin_rest.
+           ++ right. apply in_or_app. right. exact Hin_right.
+      * specialize (IH roots_right x Hin).
+        apply in_app_or in IH as [Hin_rest | Hin_right].
+        -- apply in_or_app. left. exact Hin_rest.
+        -- apply in_or_app. right. exact Hin_right.
+Qed.
+
 Fixpoint root_env_lookup (x : ident) (R : root_env) : option root_set :=
   match R with
   | [] => None
@@ -543,6 +611,50 @@ Fixpoint root_env_remove (x : ident) (R : root_env) : root_env :=
   | (y, roots) :: rest =>
       if ident_eqb x y then rest else (y, roots) :: root_env_remove x rest
   end.
+
+Lemma root_env_all_store_names_remove_subset :
+  forall x R y,
+    In y (root_env_all_store_names (root_env_remove x R)) ->
+    In y (root_env_all_store_names R).
+Proof.
+  intros x R.
+  induction R as [| [z roots] rest IH]; intros y Hin; simpl in *;
+    try contradiction.
+  destruct (ident_eqb x z) eqn:Hxz.
+  - right. apply in_or_app. right. exact Hin.
+  - simpl in Hin.
+    destruct Hin as [Hin | Hin].
+    + left. exact Hin.
+    + apply in_app_or in Hin as [Hin | Hin].
+      * right. apply in_or_app. left. exact Hin.
+      * right. apply in_or_app. right. apply IH. exact Hin.
+Qed.
+
+Lemma root_env_all_store_names_update_subset :
+  forall x roots R y,
+    In y (root_env_all_store_names (root_env_update x roots R)) ->
+    In y (root_set_store_names roots ++ root_env_all_store_names R).
+Proof.
+  intros x roots R.
+  induction R as [| [z roots_z] rest IH]; intros y Hin; simpl in *;
+    try contradiction.
+  destruct (ident_eqb x z) eqn:Hxz.
+  - simpl in Hin.
+    destruct Hin as [Hin | Hin].
+    + apply in_or_app. right. left. exact Hin.
+    + apply in_app_or in Hin as [Hin | Hin].
+      * apply in_or_app. left. exact Hin.
+      * apply in_or_app. right. right. apply in_or_app. right. exact Hin.
+  - simpl in Hin.
+    destruct Hin as [Hin | Hin].
+    + apply in_or_app. right. left. exact Hin.
+    + apply in_app_or in Hin as [Hin | Hin].
+      * apply in_or_app. right. right. apply in_or_app. left. exact Hin.
+      * assert (Hin_sub := IH y Hin).
+        apply in_app_or in Hin_sub as [Hin_roots | Hin_env].
+        -- apply in_or_app. left. exact Hin_roots.
+        -- apply in_or_app. right. right. apply in_or_app. right. exact Hin_env.
+Qed.
 
 Lemma root_env_excludes_atom_remove :
   forall x y R,
@@ -1952,6 +2064,19 @@ Proof.
   - exact Hyx.
 Qed.
 
+Lemma rename_no_collision_on_weaken :
+  forall rho names names',
+    rename_no_collision_on rho names' ->
+    (forall x, In x names -> In x names') ->
+    rename_no_collision_on rho names.
+Proof.
+  unfold rename_no_collision_on.
+  intros rho names names' Hnocoll Hsub x Hin.
+  eapply rename_no_collision_for_weaken_names.
+  - apply Hnocoll. apply Hsub. exact Hin.
+  - exact Hsub.
+Qed.
+
 Lemma rename_no_collision_on_remove :
   forall rho x R,
     rename_no_collision_on rho (root_env_names R) ->
@@ -1974,6 +2099,62 @@ Lemma rename_no_collision_on_update :
 Proof.
   intros rho x roots R Hnocoll.
   rewrite root_env_names_update. exact Hnocoll.
+Qed.
+
+Lemma rename_no_collision_on_all_store_names_weaken :
+  forall rho names R,
+    rename_no_collision_on rho names ->
+    (forall x, In x (root_env_all_store_names R) -> In x names) ->
+    rename_no_collision_on rho (root_env_all_store_names R).
+Proof.
+  intros rho names R Hnocoll Hsub.
+  eapply rename_no_collision_on_weaken; eassumption.
+Qed.
+
+Lemma rename_no_collision_on_all_store_names_remove :
+  forall rho x R,
+    rename_no_collision_on rho (root_env_all_store_names R) ->
+    rename_no_collision_on rho
+      (root_env_all_store_names (root_env_remove x R)).
+Proof.
+  intros rho x R Hnocoll.
+  eapply rename_no_collision_on_all_store_names_weaken.
+  - exact Hnocoll.
+  - intros y Hy. eapply root_env_all_store_names_remove_subset; eassumption.
+Qed.
+
+Lemma rename_no_collision_on_all_store_names_update :
+  forall rho x roots R,
+    rename_no_collision_on rho
+      (root_set_store_names roots ++ root_env_all_store_names R) ->
+    rename_no_collision_on rho
+      (root_env_all_store_names (root_env_update x roots R)).
+Proof.
+  intros rho x roots R Hnocoll.
+  eapply rename_no_collision_on_all_store_names_weaken.
+  - exact Hnocoll.
+  - intros y Hy. eapply root_env_all_store_names_update_subset; eassumption.
+Qed.
+
+Lemma rename_no_collision_on_all_store_names_update_union :
+  forall rho x roots_left roots_right R,
+    rename_no_collision_on rho
+      (root_set_store_names roots_left ++ root_set_store_names roots_right ++
+       root_env_all_store_names R) ->
+    rename_no_collision_on rho
+      (root_env_all_store_names
+        (root_env_update x (root_set_union roots_left roots_right) R)).
+Proof.
+  intros rho x roots_left roots_right R Hnocoll.
+  apply rename_no_collision_on_all_store_names_update.
+  eapply rename_no_collision_on_weaken.
+  - exact Hnocoll.
+  - intros y Hy. apply in_app_or in Hy as [Hy | Hy].
+    + apply root_set_store_names_union_subset in Hy.
+      apply in_app_or in Hy as [Hy | Hy].
+      * apply in_or_app. left. exact Hy.
+      * apply in_or_app. right. apply in_or_app. left. exact Hy.
+    + apply in_or_app. right. apply in_or_app. right. exact Hy.
 Qed.
 
 Lemma root_env_no_shadow_update :
@@ -2735,6 +2916,108 @@ Proof.
     rewrite (root_env_lookup_remove_neq y x R Hyx).
     rewrite (root_env_lookup_remove_neq y x R' Hyx).
     apply HRR'.
+Qed.
+
+Lemma root_env_equiv_all_store_names_in_l :
+  forall R R' x,
+    root_env_no_shadow R ->
+    root_env_no_shadow R' ->
+    root_env_equiv R R' ->
+    In x (root_env_all_store_names R) ->
+    In x (root_env_all_store_names R').
+Proof.
+  induction R as [| [y roots] rest IH]; intros R' x Hns Hns' Heq Hin;
+    simpl in Hin; try contradiction.
+  unfold root_env_no_shadow in Hns. simpl in Hns.
+  inversion Hns as [| ? ? Hnotin Hns_rest]; subst.
+  destruct Hin as [Hin | Hin].
+  - subst x. apply root_env_names_all_store_names.
+    eapply root_env_equiv_names_in_l.
+    + exact Heq.
+    + left. reflexivity.
+  - apply in_app_or in Hin as [Hin_roots | Hin_rest].
+    + assert (Hlookup : root_env_lookup y ((y, roots) :: rest) = Some roots).
+      { simpl. rewrite ident_eqb_refl. reflexivity. }
+      destruct (root_env_equiv_lookup_l _ _ y roots Heq Hlookup)
+        as [roots' [Hlookup' Hroots]].
+      eapply root_env_lookup_store_names.
+      * exact Hlookup'.
+      * eapply root_set_equiv_store_names_in_l; eassumption.
+    + apply root_env_all_store_names_remove_subset with (x := y).
+      apply IH with (R' := root_env_remove y R').
+      * unfold root_env_no_shadow. exact Hns_rest.
+      * apply root_env_no_shadow_remove. exact Hns'.
+      * assert (Heq_removed :
+          root_env_equiv (root_env_remove y ((y, roots) :: rest))
+            (root_env_remove y R')).
+        { apply root_env_equiv_remove.
+          - unfold root_env_no_shadow. exact Hns.
+          - exact Hns'.
+          - exact Heq. }
+        simpl in Heq_removed. rewrite ident_eqb_refl in Heq_removed.
+        exact Heq_removed.
+      * exact Hin_rest.
+Qed.
+
+Lemma root_env_equiv_all_store_names_in_r :
+  forall R R' x,
+    root_env_no_shadow R ->
+    root_env_no_shadow R' ->
+    root_env_equiv R R' ->
+    In x (root_env_all_store_names R') ->
+    In x (root_env_all_store_names R).
+Proof.
+  intros R R' x Hns Hns' Heq Hin.
+  eapply root_env_equiv_all_store_names_in_l.
+  - exact Hns'.
+  - exact Hns.
+  - apply root_env_equiv_sym. exact Heq.
+  - exact Hin.
+Qed.
+
+Lemma root_env_equiv_all_store_names_in :
+  forall R R' x,
+    root_env_no_shadow R ->
+    root_env_no_shadow R' ->
+    root_env_equiv R R' ->
+    In x (root_env_all_store_names R) <->
+    In x (root_env_all_store_names R').
+Proof.
+  intros R R' x Hns Hns' Heq. split; intro Hin.
+  - eapply root_env_equiv_all_store_names_in_l with (R := R) (R' := R');
+      eassumption.
+  - eapply root_env_equiv_all_store_names_in_r with (R := R) (R' := R');
+      eassumption.
+Qed.
+
+Lemma rename_no_collision_on_all_store_names_equiv_l :
+  forall rho R R',
+    root_env_no_shadow R ->
+    root_env_no_shadow R' ->
+    root_env_equiv R R' ->
+    rename_no_collision_on rho (root_env_all_store_names R') ->
+    rename_no_collision_on rho (root_env_all_store_names R).
+Proof.
+  intros rho R R' Hns Hns' Heq Hnocoll.
+  eapply rename_no_collision_on_all_store_names_weaken.
+  - exact Hnocoll.
+  - intros x Hin.
+    eapply root_env_equiv_all_store_names_in_l with (R := R) (R' := R');
+      eassumption.
+Qed.
+
+Lemma rename_no_collision_on_all_store_names_equiv_r :
+  forall rho R R',
+    root_env_no_shadow R ->
+    root_env_no_shadow R' ->
+    root_env_equiv R R' ->
+    rename_no_collision_on rho (root_env_all_store_names R) ->
+    rename_no_collision_on rho (root_env_all_store_names R').
+Proof.
+  intros rho R R' Hns Hns' Heq Hnocoll.
+  eapply rename_no_collision_on_all_store_names_weaken.
+  - exact Hnocoll.
+  - intros x Hin. eapply root_env_equiv_all_store_names_in_r; eassumption.
 Qed.
 
 Lemma root_env_equiv_instantiate :

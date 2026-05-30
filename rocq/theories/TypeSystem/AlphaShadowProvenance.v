@@ -1992,6 +1992,67 @@ Proof.
       * exact Hin.
 Qed.
 
+Lemma root_env_add_params_roots_same_all_store_names_subset :
+  forall ps roots R x,
+    In x (root_env_all_store_names
+      (root_env_add_params_roots_same ps roots R)) ->
+    In x (ctx_names (params_ctx ps) ++
+      root_set_store_names roots ++ root_env_all_store_names R).
+Proof.
+  induction ps as [| [m y T] ps IH]; intros roots R x Hin; simpl in *.
+  - apply in_or_app. right. exact Hin.
+  - destruct Hin as [Hin | Hin].
+    + left. exact Hin.
+    + apply in_app_or in Hin as [Hin | Hin].
+      * right. apply in_or_app. right. apply in_or_app. left. exact Hin.
+      * specialize (IH roots R x Hin).
+        apply in_app_or in IH as [Hin_params | Hin_tail].
+        -- right. apply in_or_app. left. exact Hin_params.
+        -- apply in_app_or in Hin_tail as [Hin_roots | Hin_env].
+           ++ right. apply in_or_app. right. apply in_or_app. left. exact Hin_roots.
+           ++ right. apply in_or_app. right. apply in_or_app. right. exact Hin_env.
+Qed.
+
+Lemma rename_no_collision_on_all_store_names_add_params_roots_same :
+  forall rho ps roots R,
+    rename_no_collision_on rho
+      (ctx_names (params_ctx ps) ++
+       root_set_store_names roots ++ root_env_all_store_names R) ->
+    rename_no_collision_on rho
+      (root_env_all_store_names
+        (root_env_add_params_roots_same ps roots R)).
+Proof.
+  intros rho ps roots R Hnocoll.
+  eapply rename_no_collision_on_all_store_names_weaken.
+  - exact Hnocoll.
+  - intros x Hin.
+    eapply root_env_add_params_roots_same_all_store_names_subset; eassumption.
+Qed.
+
+Lemma root_env_remove_match_params_all_store_names_subset :
+  forall ps R x,
+    In x (root_env_all_store_names (root_env_remove_match_params ps R)) ->
+    In x (root_env_all_store_names R).
+Proof.
+  induction ps as [| [m y T] ps IH]; intros R x Hin; simpl in *.
+  - exact Hin.
+  - apply root_env_all_store_names_remove_subset with (x := y).
+    apply IH. exact Hin.
+Qed.
+
+Lemma rename_no_collision_on_all_store_names_remove_match_params :
+  forall rho ps R,
+    rename_no_collision_on rho (root_env_all_store_names R) ->
+    rename_no_collision_on rho
+      (root_env_all_store_names (root_env_remove_match_params ps R)).
+Proof.
+  intros rho ps R Hnocoll.
+  eapply rename_no_collision_on_all_store_names_weaken.
+  - exact Hnocoll.
+  - intros x Hin.
+    eapply root_env_remove_match_params_all_store_names_subset; eassumption.
+Qed.
+
 Lemma root_env_lookup_params_none_b_remove_match_params :
   forall ps R,
     root_env_no_shadow R ->

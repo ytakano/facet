@@ -185,6 +185,8 @@ T2e.2 tasks:
   prove checker soundness for it.
 - Done prep: preserve narrow store-safe summaries under appended fresh
   caller root frames.
+- Done prep: recover root-name/key facts from prefix store typing for
+  narrow runtime summaries.
 - Remaining proof gap: add the direct-call runtime route for callees proven by
   narrow store-safe summaries, using alpha-renaming, root-instantiation, the
   fresh caller frame, and parameter cleanup.

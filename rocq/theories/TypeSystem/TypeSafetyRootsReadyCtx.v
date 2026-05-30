@@ -4,6 +4,21 @@ From Facet.TypeSystem Require Import TypeSafetyRootsReadyStoreOps.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
+Lemma roots_ready_store_entries_typed_names :
+  forall env s_source entries Σ,
+    Forall2 (store_entry_typed env s_source) entries Σ ->
+    store_names entries = ctx_names Σ.
+Proof.
+  intros env s_source entries Σ Htyped.
+  induction Htyped as [| se ce entries_tail Σ_tail Hentry _ IH].
+  - reflexivity.
+  - destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname _].
+    simpl. rewrite Hname, IH. reflexivity.
+Qed.
+
 Lemma root_env_ctx_roots_named_store_typed :
   forall env s Σ R,
     store_typed env s Σ ->
@@ -25,6 +40,38 @@ Proof.
   unfold root_set_ctx_roots_named, root_set_store_roots_named.
   intros env s Σ roots Htyped Hnamed z Hin.
   rewrite (store_typed_names env s Σ Htyped).
+  apply Hnamed. exact Hin.
+Qed.
+
+Lemma root_env_ctx_roots_named_store_typed_prefix :
+  forall env s Σ R,
+    store_typed_prefix env s Σ ->
+    root_env_ctx_roots_named R Σ ->
+    root_env_store_roots_named R s.
+Proof.
+  unfold root_env_ctx_roots_named, root_env_store_roots_named.
+  intros env s Σ R Htyped Hnamed x roots z Hlookup Hin.
+  destruct Htyped as [entries [frame [Hs Hentries]]].
+  subst s.
+  rewrite store_names_app.
+  apply in_or_app. left.
+  rewrite (roots_ready_store_entries_typed_names env (entries ++ frame) entries Σ Hentries).
+  eapply Hnamed; eassumption.
+Qed.
+
+Lemma root_set_ctx_roots_named_store_typed_prefix :
+  forall env s Σ roots,
+    store_typed_prefix env s Σ ->
+    root_set_ctx_roots_named roots Σ ->
+    root_set_store_roots_named roots s.
+Proof.
+  unfold root_set_ctx_roots_named, root_set_store_roots_named.
+  intros env s Σ roots Htyped Hnamed z Hin.
+  destruct Htyped as [entries [frame [Hs Hentries]]].
+  subst s.
+  rewrite store_names_app.
+  apply in_or_app. left.
+  rewrite (roots_ready_store_entries_typed_names env (entries ++ frame) entries Σ Hentries).
   apply Hnamed. exact Hin.
 Qed.
 
@@ -475,6 +522,25 @@ Proof.
   - exact Hkeys.
   - intros x Hin.
     rewrite (store_typed_names env s Σ Hstore).
+    exact Hin.
+Qed.
+
+Lemma root_env_ctx_keys_named_store_typed_prefix :
+  forall env s Σ R,
+    store_typed_prefix env s Σ ->
+    root_env_ctx_keys_named R Σ ->
+    root_env_store_keys_named R s.
+Proof.
+  unfold root_env_store_keys_named, root_env_ctx_keys_named.
+  intros env s Σ R Hstore Hkeys.
+  destruct Hstore as [entries [frame [Hs Hentries]]].
+  subst s.
+  eapply root_env_keys_named_weaken.
+  - exact Hkeys.
+  - intros x Hin.
+    rewrite store_names_app.
+    apply in_or_app. left.
+    rewrite (roots_ready_store_entries_typed_names env (entries ++ frame) entries Σ Hentries).
     exact Hin.
 Qed.
 

@@ -542,6 +542,17 @@ val place_root_lookup : root_env -> place -> root_set option
 
 val place_borrow_roots : root_env -> place -> root_set option
 
+val same_store_root : ident -> root_set -> bool
+
+val singleton_store_root : root_set -> ident option
+
+val resolve_root_set_fuel :
+  Big_int_Z.big_int -> root_env -> root_set -> root_set option
+
+val resolve_root_set : root_env -> root_set -> root_set option
+
+val place_resolved_roots : root_env -> place -> root_set option
+
 val usage_eqb : usage -> usage -> bool
 
 val usage_sub_bool : usage -> usage -> bool

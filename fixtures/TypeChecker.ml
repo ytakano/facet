@@ -2436,6 +2436,58 @@ let place_borrow_roots r p =
   | Some _ -> Some (root_of_place p)
   | None -> place_root_lookup r p
 
+(** val same_store_root : ident -> root_set -> bool **)
+
+let rec same_store_root x = function
+| [] -> true
+| r :: rest ->
+  (match r with
+   | RStore y -> (&&) (ident_eqb y x) (same_store_root x rest)
+   | RParam _ -> false)
+
+(** val singleton_store_root : root_set -> ident option **)
+
+let singleton_store_root = function
+| [] -> None
+| r :: rest ->
+  (match r with
+   | RStore x -> if same_store_root x rest then Some x else None
+   | RParam _ -> None)
+
+(** val resolve_root_set_fuel :
+    Big_int_Z.big_int -> root_env -> root_set -> root_set option **)
+
+let rec resolve_root_set_fuel fuel r roots =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> None)
+    (fun fuel' ->
+    match singleton_store_root roots with
+    | Some x ->
+      (match root_env_lookup x r with
+       | Some roots' ->
+         (match singleton_store_root roots' with
+          | Some y ->
+            if ident_eqb x y
+            then Some roots
+            else resolve_root_set_fuel fuel' r roots'
+          | None -> resolve_root_set_fuel fuel' r roots')
+       | None -> Some roots)
+    | None -> Some roots)
+    fuel
+
+(** val resolve_root_set : root_env -> root_set -> root_set option **)
+
+let resolve_root_set r roots =
+  resolve_root_set_fuel (Big_int_Z.succ_big_int (length r)) r roots
+
+(** val place_resolved_roots : root_env -> place -> root_set option **)
+
+let place_resolved_roots r p =
+  match place_borrow_roots r p with
+  | Some roots -> resolve_root_set r roots
+  | None -> None
+
 (** val usage_eqb : usage -> usage -> bool **)
 
 let usage_eqb u1 u2 =
@@ -8684,7 +8736,43 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                 | None -> Infer_err (ErrUnknownVar x))
              | None -> Infer_err ErrContextCheckFailed)
           | Infer_err err -> Infer_err err)
-       | None -> Infer_err ErrNotImplemented)
+       | None ->
+         (match infer_place_sctx env _UU03a3_ p with
+          | Infer_ok t_old ->
+            (match place_resolved_roots r p with
+             | Some roots_result ->
+               (match singleton_store_root roots_result with
+                | Some x ->
+                  (match sctx_lookup_mut x _UU03a3_ with
+                   | Some m ->
+                     (match m with
+                      | MImmutable -> Infer_err (ErrNotMutable x)
+                      | MMutable ->
+                        if writable_place_b env _UU03a3_ p
+                        then (match infer_core_env_state_fuel_roots fuel' env
+                                      _UU03a9_ n r _UU03a3_ e_new with
+                              | Infer_ok p0 ->
+                                let (p1, roots_new) = p0 in
+                                let (p2, r1) = p1 in
+                                let (t_new, _UU03a3_1) = p2 in
+                                (match root_env_lookup x r1 with
+                                 | Some roots_old ->
+                                   if ty_compatible_b _UU03a9_ t_new t_old
+                                   then Infer_ok (((t_old, _UU03a3_1),
+                                          (root_env_update x
+                                            (root_set_union roots_old
+                                              roots_new)
+                                            r1)),
+                                          roots_result)
+                                   else Infer_err
+                                          (compatible_error t_new t_old)
+                                 | None -> Infer_err ErrContextCheckFailed)
+                              | Infer_err err -> Infer_err err)
+                        else Infer_err (ErrNotMutable x))
+                   | None -> Infer_err (ErrUnknownVar x))
+                | None -> Infer_err ErrNotImplemented)
+             | None -> Infer_err ErrNotImplemented)
+          | Infer_err err -> Infer_err err))
     | EAssign (p, e_new) ->
       (match place_path p with
        | Some p0 ->
@@ -8726,7 +8814,50 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                        else Infer_err (ErrNotMutable x))
                   | None -> Infer_err (ErrUnknownVar x))
           | Infer_err err -> Infer_err err)
-       | None -> Infer_err ErrNotImplemented)
+       | None ->
+         (match infer_place_sctx env _UU03a3_ p with
+          | Infer_ok t_old ->
+            if usage_eqb (ty_usage t_old) ULinear
+            then Infer_err (ErrUsageMismatch ((ty_usage t_old), UAffine))
+            else (match place_resolved_roots r p with
+                  | Some roots_result ->
+                    (match singleton_store_root roots_result with
+                     | Some x ->
+                       (match sctx_lookup_mut x _UU03a3_ with
+                        | Some m ->
+                          (match m with
+                           | MImmutable -> Infer_err (ErrNotMutable x)
+                           | MMutable ->
+                             if writable_place_b env _UU03a3_ p
+                             then (match infer_core_env_state_fuel_roots
+                                           fuel' env _UU03a9_ n r _UU03a3_
+                                           e_new with
+                                   | Infer_ok p0 ->
+                                     let (p1, roots_new) = p0 in
+                                     let (p2, r1) = p1 in
+                                     let (t_new, _UU03a3_1) = p2 in
+                                     (match root_env_lookup x r1 with
+                                      | Some roots_old ->
+                                        if ty_compatible_b _UU03a9_ t_new
+                                             t_old
+                                        then Infer_ok ((((MkTy
+                                               (UUnrestricted, TUnits)),
+                                               _UU03a3_1),
+                                               (root_env_update x
+                                                 (root_set_union roots_old
+                                                   roots_new)
+                                                 r1)),
+                                               [])
+                                        else Infer_err
+                                               (compatible_error t_new t_old)
+                                      | None ->
+                                        Infer_err ErrContextCheckFailed)
+                                   | Infer_err err -> Infer_err err)
+                             else Infer_err (ErrNotMutable x))
+                        | None -> Infer_err (ErrUnknownVar x))
+                     | None -> Infer_err ErrNotImplemented)
+                  | None -> Infer_err ErrNotImplemented)
+          | Infer_err err -> Infer_err err))
     | EBorrow (rk, p) ->
       (match infer_place_sctx env _UU03a3_ p with
        | Infer_ok t_p ->
@@ -8749,18 +8880,44 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
           | None ->
             (match rk with
              | RShared ->
-               (match place_borrow_roots r p with
+               (match place_resolved_roots r p with
                 | Some roots ->
-                  Infer_ok ((((MkTy (UUnrestricted, (TRef ((LVar n), RShared,
-                    t_p)))), _UU03a3_), r), roots)
-                | None -> Infer_err ErrContextCheckFailed)
+                  (match singleton_store_root roots with
+                   | Some _ ->
+                     Infer_ok ((((MkTy (UUnrestricted, (TRef ((LVar n),
+                       RShared, t_p)))), _UU03a3_), r), roots)
+                   | None ->
+                     (match place_borrow_roots r p with
+                      | Some roots0 ->
+                        Infer_ok ((((MkTy (UUnrestricted, (TRef ((LVar n),
+                          RShared, t_p)))), _UU03a3_), r), roots0)
+                      | None -> Infer_err ErrContextCheckFailed))
+                | None ->
+                  (match place_borrow_roots r p with
+                   | Some roots ->
+                     Infer_ok ((((MkTy (UUnrestricted, (TRef ((LVar n),
+                       RShared, t_p)))), _UU03a3_), r), roots)
+                   | None -> Infer_err ErrContextCheckFailed))
              | RUnique ->
                if place_under_unique_ref_b env _UU03a3_ p
-               then (match place_borrow_roots r p with
+               then (match place_resolved_roots r p with
                      | Some roots ->
-                       Infer_ok ((((MkTy (UAffine, (TRef ((LVar n), RUnique,
-                         t_p)))), _UU03a3_), r), roots)
-                     | None -> Infer_err ErrContextCheckFailed)
+                       (match singleton_store_root roots with
+                        | Some _ ->
+                          Infer_ok ((((MkTy (UAffine, (TRef ((LVar n),
+                            RUnique, t_p)))), _UU03a3_), r), roots)
+                        | None ->
+                          (match place_borrow_roots r p with
+                           | Some roots0 ->
+                             Infer_ok ((((MkTy (UAffine, (TRef ((LVar n),
+                               RUnique, t_p)))), _UU03a3_), r), roots0)
+                           | None -> Infer_err ErrContextCheckFailed))
+                     | None ->
+                       (match place_borrow_roots r p with
+                        | Some roots ->
+                          Infer_ok ((((MkTy (UAffine, (TRef ((LVar n),
+                            RUnique, t_p)))), _UU03a3_), r), roots)
+                        | None -> Infer_err ErrContextCheckFailed))
                else Infer_err (ErrImmutableBorrow (place_name p))))
        | Infer_err err -> Infer_err err)
     | EDeref e0 ->
@@ -8786,15 +8943,40 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                            | None -> Infer_err (ErrUnknownVar x)))
                      | None -> Infer_err ErrContextCheckFailed)
                   | None ->
-                    (match place_root_lookup r p with
-                     | Some roots ->
-                       (match rk with
-                        | RShared -> Infer_ok (((t_p, _UU03a3_), r), roots)
-                        | RUnique ->
-                          if place_under_unique_ref_b env _UU03a3_ p
-                          then Infer_ok (((t_p, _UU03a3_), r), roots)
-                          else Infer_err (ErrImmutableBorrow (place_name p)))
-                     | None -> Infer_err ErrContextCheckFailed))
+                    (match rk with
+                     | RShared ->
+                       (match place_resolved_roots r p with
+                        | Some roots ->
+                          (match singleton_store_root roots with
+                           | Some _ -> Infer_ok (((t_p, _UU03a3_), r), roots)
+                           | None ->
+                             (match place_root_lookup r p with
+                              | Some roots0 ->
+                                Infer_ok (((t_p, _UU03a3_), r), roots0)
+                              | None -> Infer_err ErrContextCheckFailed))
+                        | None ->
+                          (match place_root_lookup r p with
+                           | Some roots ->
+                             Infer_ok (((t_p, _UU03a3_), r), roots)
+                           | None -> Infer_err ErrContextCheckFailed))
+                     | RUnique ->
+                       if place_under_unique_ref_b env _UU03a3_ p
+                       then (match place_resolved_roots r p with
+                             | Some roots ->
+                               (match singleton_store_root roots with
+                                | Some _ ->
+                                  Infer_ok (((t_p, _UU03a3_), r), roots)
+                                | None ->
+                                  (match place_root_lookup r p with
+                                   | Some roots0 ->
+                                     Infer_ok (((t_p, _UU03a3_), r), roots0)
+                                   | None -> Infer_err ErrContextCheckFailed))
+                             | None ->
+                               (match place_root_lookup r p with
+                                | Some roots ->
+                                  Infer_ok (((t_p, _UU03a3_), r), roots)
+                                | None -> Infer_err ErrContextCheckFailed))
+                       else Infer_err (ErrImmutableBorrow (place_name p))))
             else Infer_err (ErrUsageMismatch ((ty_usage t_p), UUnrestricted))
           | Infer_err err -> Infer_err err)
        | _ -> Infer_err ErrNotImplemented)

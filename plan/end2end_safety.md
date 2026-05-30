@@ -197,6 +197,8 @@ T2e.2 tasks:
   monomorphic `TFn` call expressions.
 - Done prep: add prefix-start direct-call final-store equality for
   monomorphic `TFn` call expressions.
+- Done prep: add prefix-start direct-call component and final-store wrappers
+  for lifetime-forall `TFn` `EVar` calls.
 - Done prep: add prefix/ctx tail-fresh support for direct-call narrow
   callee-route bridging.
 - Done prep: add a prefix/ctx direct-call narrow callee-route bridge.

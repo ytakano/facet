@@ -22,12 +22,12 @@ this roadmap.
 | T4: CI enforcement of entrypoint policy | done (8bd3d82) |
 | T2a: `ECallGeneric` safety gate | blocked: generic runtime instantiation proof gap |
 | T2e.1: monomorphic `TFn` variable call safety gate | done |
-| T2e.2: HRT/closure function-value calls | in progress: direct HRT TFn EVar calls pass |
+| T2e.2: HRT/closure function-value calls | done |
 | T2g: mixed lifetime/type forall roots calls | done |
 | T2b.1: captured callee base gate | done |
 | T2b.2: local captured-call bridge | done |
 | T2b.3: captured closure regressions | done |
-| T2f: deref/reborrow/ref-write roots coverage | blocked: nested place root model needed |
+| T2f: deref/reborrow/ref-write roots coverage | in progress: nested place root model |
 
 ## Current blockers
 
@@ -260,10 +260,11 @@ Blocked by nested place roots.  Current roots typing relies on
 places are rejected before borrow, assign, replace, or deref-borrow rules can
 run.
 
-Required before accepting this gate:
+Next slices:
 
-- Add root-resolution helpers for nested places that separate location roots
+- Add typed root-resolution helpers for nested places that separate location roots
   from value roots behind references.
+- Prove agreement with `place_path` for existing `PVar`/`PField` cases.
 - Define how writes through `PDeref` update the resolved store root.
 - Add matching roots/shadow-safe constructors and soundness lemmas.
 - Preserve invalid rejections for linear refs, immutable writes, and borrow

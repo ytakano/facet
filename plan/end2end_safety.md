@@ -193,9 +193,11 @@ T2e.2 tasks:
   alpha-renaming, root instantiation, and caller tail frames.
 - Done prep: require store-safe direct-call args for direct narrow
   captured-call summaries so bound params preserve closure-target summaries.
-- Remaining proof gap: add the direct-call runtime route for callees proven by
-  narrow store-safe summaries, using alpha-renaming, root-instantiation, the
-  fresh caller frame, and parameter cleanup.
+- Remaining proof gap: finish the direct-call runtime route for callees proven
+  by narrow summaries.  The direct narrow branch now has store-safe args and
+  alpha/root/tail-frame bridge evidence; the missing piece is a local-bounds
+  narrow runtime package/transfer for evaluating `fn_body fcall` under
+  `global_env_with_local_bounds`.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.
 
 Out of scope for T2e.2:

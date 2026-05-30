@@ -183,12 +183,11 @@ T2e.2 tasks:
   store-safe summaries.
 - Done prep: wire executable direct-call narrow checker branch and
   prove checker soundness for it.
-- Blocked: direct `ECall` still requires old
-  `callee_body_root_shadow_provenance_summary` evidence.  Remaining proof gap:
-  finish the generalized structural alpha-preservation theorem for narrow
-  summaries using the factored call/`let` helpers, then compose it with
-  root-instantiation preservation and add a direct-call runtime route for the
-  renamed callee body before parameter cleanup.
+- Done prep: preserve narrow store-safe summaries under appended fresh
+  caller root frames.
+- Remaining proof gap: add the direct-call runtime route for callees proven by
+  narrow store-safe summaries, using alpha-renaming, root-instantiation, the
+  fresh caller frame, and parameter cleanup.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.
 
 Out of scope for T2e.2:

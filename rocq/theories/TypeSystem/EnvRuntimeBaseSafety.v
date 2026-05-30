@@ -789,6 +789,77 @@ Proof.
 Qed.
 
 
+Lemma expr_root_shadow_store_safe_narrow_summary_tail_frame :
+  forall env Omega n R Σ e T Σ' R' roots ret_roots,
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n R Σ e T Σ' R' roots ret_roots ->
+    forall R_tail,
+      root_env_tail_fresh_names R_tail (expr_local_store_names e) ->
+      expr_root_shadow_store_safe_narrow_summary
+        env Omega n (R ++ R_tail) Σ e T Σ' (R' ++ R_tail)
+        roots ret_roots.
+Proof.
+  intros env Omega n R Σ e T Σ' R' roots ret_roots Hsummary.
+  induction Hsummary; intros R_tail Hfresh; simpl in Hfresh.
+  - eapply ERSSN_FunctionValueCall.
+    + exact H.
+    + eapply typed_env_roots_shadow_safe_tail_frame.
+      * exact H0.
+      * unfold root_env_tail_fresh_names. intros y Hy. contradiction.
+    + exact H1.
+    + eapply typed_env_roots_shadow_safe_tail_frame; eassumption.
+  - pose proof (root_env_tail_fresh_names_app_l _ _ _ Hfresh) as Hfresh1.
+    pose proof (root_env_tail_fresh_names_app_r _ _ _ Hfresh) as Hfresh_tail.
+    destruct (root_env_tail_fresh_names_cons_head _ _ _ Hfresh_tail)
+      as [Htail_lookup Htail_excl].
+    pose proof (root_env_tail_fresh_names_cons_tail _ _ _ Hfresh_tail)
+      as Hfresh2.
+    replace (root_env_remove x R2 ++ R_tail)
+      with (root_env_remove x (R2 ++ R_tail)).
+    eapply ERSSN_Let.
+    + apply IHHsummary1. exact Hfresh1.
+    + exact H.
+    + exact H0.
+    + rewrite root_env_lookup_app_right by exact H1.
+      exact Htail_lookup.
+    + exact H2.
+    + apply root_env_excludes_app; assumption.
+    + replace (root_env_add x roots1 R1 ++ R_tail)
+        with (root_env_add x roots1 (R1 ++ R_tail)) by reflexivity.
+      apply IHHsummary2. exact Hfresh2.
+    + exact H4.
+    + exact H5.
+    + rewrite root_env_remove_app_left by exact Htail_lookup.
+      apply root_env_excludes_app; assumption.
+    + rewrite root_env_remove_app_left by exact Htail_lookup.
+      reflexivity.
+  - pose proof (root_env_tail_fresh_names_app_l _ _ _ Hfresh) as Hfresh1.
+    pose proof (root_env_tail_fresh_names_app_r _ _ _ Hfresh) as Hfresh_tail.
+    destruct (root_env_tail_fresh_names_cons_head _ _ _ Hfresh_tail)
+      as [Htail_lookup Htail_excl].
+    pose proof (root_env_tail_fresh_names_cons_tail _ _ _ Hfresh_tail)
+      as Hfresh2.
+    replace (root_env_remove x R2 ++ R_tail)
+      with (root_env_remove x (R2 ++ R_tail)).
+    eapply ERSSN_LetInfer.
+    + apply IHHsummary1. exact Hfresh1.
+    + exact H.
+    + rewrite root_env_lookup_app_right by exact H0.
+      exact Htail_lookup.
+    + exact H1.
+    + apply root_env_excludes_app; assumption.
+    + replace (root_env_add x roots1 R1 ++ R_tail)
+        with (root_env_add x roots1 (R1 ++ R_tail)) by reflexivity.
+      apply IHHsummary2. exact Hfresh2.
+    + exact H3.
+    + exact H4.
+    + rewrite root_env_remove_app_left by exact Htail_lookup.
+      apply root_env_excludes_app; assumption.
+    + rewrite root_env_remove_app_left by exact Htail_lookup.
+      reflexivity.
+Qed.
+
+
 Lemma expr_root_shadow_store_safe_narrow_summary_alpha_rename_forward :
   forall env Omega n R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_store_safe_narrow_summary

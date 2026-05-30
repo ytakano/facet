@@ -1,5 +1,5 @@
 From Facet.TypeSystem Require Import Syntax PathState Renaming TypingRules.
-From Stdlib Require Import List String.
+From Stdlib Require Import List String Bool.
 Import ListNotations.
 
 (* ------------------------------------------------------------------ *)
@@ -877,10 +877,18 @@ Definition place_borrow_roots (R : root_env) (p : place) : option root_set :=
   | Some _ => Some (root_of_place p)
   | None => place_root_lookup R p
   end.
+Fixpoint same_store_root (x : ident) (roots : root_set) : bool :=
+  match roots with
+  | [] => true
+  | RStore y :: rest => ident_eqb y x && same_store_root x rest
+  | RParam _ :: _ => false
+  end.
+
 Definition singleton_store_root (roots : root_set) : option ident :=
   match roots with
-  | [RStore x] => Some x
-  | _ => None
+  | [] => None
+  | RStore x :: rest => if same_store_root x rest then Some x else None
+  | RParam _ :: _ => None
   end.
 
 Fixpoint resolve_root_set_fuel (fuel : nat) (R : root_env)
@@ -893,12 +901,12 @@ Fixpoint resolve_root_set_fuel (fuel : nat) (R : root_env)
       | Some x =>
           match root_env_lookup x R with
           | Some roots' =>
-              match roots' with
-              | [RStore y] =>
+              match singleton_store_root roots' with
+              | Some y =>
                   if ident_eqb x y
                   then Some roots
                   else resolve_root_set_fuel fuel' R roots'
-              | _ => resolve_root_set_fuel fuel' R roots'
+              | None => resolve_root_set_fuel fuel' R roots'
               end
           | None => Some roots
           end
@@ -929,7 +937,7 @@ Lemma resolve_root_set_fuel_store_self :
     resolve_root_set_fuel (S fuel) R [RStore x] = Some [RStore x].
 Proof.
   intros fuel R x Hlookup.
-  simpl. rewrite Hlookup. rewrite ident_eqb_refl. reflexivity.
+  simpl. rewrite Hlookup. unfold singleton_store_root, same_store_root. rewrite ident_eqb_refl. reflexivity.
 Qed.
 
 Lemma resolve_root_set_fuel_store_one_hop :
@@ -939,10 +947,10 @@ Lemma resolve_root_set_fuel_store_one_hop :
     resolve_root_set_fuel (S (S fuel)) R [RStore x] = Some [RStore y].
 Proof.
   intros fuel R x y Hlookup_x Hlookup_y.
-  simpl. rewrite Hlookup_x.
+  simpl. rewrite Hlookup_x. unfold singleton_store_root, same_store_root.
   destruct (ident_eqb x y) eqn:Hxy.
   - apply ident_eqb_eq in Hxy. subst y. reflexivity.
-  - simpl. rewrite Hlookup_y. rewrite ident_eqb_refl. reflexivity.
+  - simpl. rewrite Hlookup_y. unfold singleton_store_root, same_store_root. rewrite ident_eqb_refl. reflexivity.
 Qed.
 
 
@@ -2714,6 +2722,340 @@ Proof.
   - apply root_env_instantiate_no_shadow. exact Hnodup.
   - apply root_env_instantiate_no_shadow. exact Hnodup'.
   - apply root_env_equiv_instantiate. exact HRR'.
+Qed.
+
+Lemma place_borrow_roots_equiv :
+  forall R R' p roots,
+    root_env_equiv R R' ->
+    place_borrow_roots R p = Some roots ->
+    exists roots',
+      place_borrow_roots R' p = Some roots' /\
+      root_set_equiv roots roots'.
+Proof.
+  intros R R' p roots HRR' Hborrow.
+  unfold place_borrow_roots in *.
+  destruct (place_path p) as [[x path] |] eqn:Hpath.
+  - inversion Hborrow; subst.
+    exists (root_of_place p). split.
+    + reflexivity.
+    + apply root_set_equiv_refl.
+  - assert (Hlookup :
+      root_env_lookup (root_provenance_place_name p) R = Some roots).
+    { rewrite <- (place_root_lookup_indirect R p Hpath). exact Hborrow. }
+    destruct (root_env_equiv_lookup_l R R'
+      (root_provenance_place_name p) roots HRR' Hlookup)
+      as [roots' [Hlookup' Hroots]].
+    exists roots'. split.
+    + rewrite (place_root_lookup_indirect R' p Hpath). exact Hlookup'.
+    + exact Hroots.
+Qed.
+
+Lemma place_borrow_roots_equiv_none :
+  forall R R' p,
+    root_env_equiv R R' ->
+    place_borrow_roots R p = None ->
+    place_borrow_roots R' p = None.
+Proof.
+  intros R R' p HRR' Hborrow.
+  unfold place_borrow_roots in *.
+  destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
+  assert (Hlookup :
+    root_env_lookup (root_provenance_place_name p) R = None).
+  { rewrite <- (place_root_lookup_indirect R p Hpath). exact Hborrow. }
+  rewrite (place_root_lookup_indirect R' p Hpath).
+  apply root_env_equiv_lookup_none_l with (R := R).
+  - exact HRR'.
+  - exact Hlookup.
+Qed.
+
+Lemma place_borrow_roots_instantiate_equiv :
+  forall rho R p roots,
+    place_borrow_roots R p = Some roots ->
+    exists roots',
+      place_borrow_roots (root_env_instantiate rho R) p = Some roots' /\
+      root_set_equiv (root_set_instantiate rho roots) roots'.
+Proof.
+  intros rho R p roots Hborrow.
+  unfold place_borrow_roots in *.
+  destruct (place_path p) as [[x path] |] eqn:Hpath.
+  - inversion Hborrow; subst.
+    exists (root_of_place p). split.
+    + reflexivity.
+    + apply root_set_instantiate_root_of_place_equiv.
+  - assert (Hlookup :
+      root_env_lookup (root_provenance_place_name p) R = Some roots).
+    { rewrite <- (place_root_lookup_indirect R p Hpath). exact Hborrow. }
+    exists (root_set_instantiate rho roots). split.
+    + rewrite (place_root_lookup_indirect (root_env_instantiate rho R)
+        p Hpath).
+      rewrite (root_env_lookup_instantiate
+        (root_provenance_place_name p) rho R roots Hlookup).
+      reflexivity.
+    + apply root_set_equiv_refl.
+Qed.
+
+Lemma place_borrow_roots_rename_equiv :
+  forall rho R p roots,
+    root_env_no_shadow R ->
+    rename_no_collision_for rho (root_provenance_place_name p)
+      (root_env_names R) ->
+    place_borrow_roots R p = Some roots ->
+    exists roots',
+      place_borrow_roots (root_env_rename rho R) (rename_place rho p) =
+        Some roots' /\
+      root_set_equiv (root_set_rename rho roots) roots'.
+Proof.
+  intros rho R p roots Hnodup Hnocoll Hborrow.
+  unfold place_borrow_roots in *.
+  destruct (place_path p) as [[x path] |] eqn:Hpath.
+  - rewrite (place_path_rename_place_some rho p x path Hpath).
+    inversion Hborrow; subst.
+    exists (root_of_place (rename_place rho p)). split.
+    + reflexivity.
+    + rewrite root_of_place_rename_place.
+      apply root_set_equiv_refl.
+  - assert (Hpath_ren := place_path_rename_place_none rho p Hpath).
+    rewrite Hpath_ren.
+    assert (Hlookup :
+      root_env_lookup (root_provenance_place_name p) R = Some roots).
+    { rewrite <- (place_root_lookup_indirect R p Hpath). exact Hborrow. }
+    exists (root_set_rename rho roots). split.
+    + rewrite (place_root_lookup_indirect (root_env_rename rho R)
+        (rename_place rho p) Hpath_ren).
+      rewrite root_provenance_place_name_rename_place.
+      rewrite (root_env_lookup_rename rho R
+        (root_provenance_place_name p) roots Hnocoll Hlookup).
+      reflexivity.
+    + apply root_set_equiv_refl.
+Qed.
+
+Lemma same_store_root_true_all :
+  forall x roots atom,
+    same_store_root x roots = true ->
+    In atom roots ->
+    atom = RStore x.
+Proof.
+  intros x roots.
+  induction roots as [| atom0 rest IH]; intros atom Hsame Hin;
+    simpl in *; try contradiction.
+  destruct atom0 as [y | y]; try discriminate.
+  apply andb_true_iff in Hsame.
+  destruct Hsame as [Hy Hrest].
+  apply ident_eqb_eq in Hy. subst y.
+  destruct Hin as [Hin | Hin].
+  - subst atom. reflexivity.
+  - apply IH; assumption.
+Qed.
+
+Lemma same_store_root_true_of_all :
+  forall x roots,
+    (forall atom, In atom roots -> atom = RStore x) ->
+    same_store_root x roots = true.
+Proof.
+  intros x roots Hall.
+  induction roots as [| atom rest IH]; simpl; try reflexivity.
+  assert (Hhead : atom = RStore x).
+  { apply Hall. left. reflexivity. }
+  destruct atom as [y | y]; inversion Hhead; subst.
+  rewrite ident_eqb_refl. simpl.
+  apply IH. intros atom Hin. apply Hall. right. exact Hin.
+Qed.
+
+Lemma singleton_store_root_some_equiv :
+  forall roots x,
+    singleton_store_root roots = Some x ->
+    root_set_equiv roots [RStore x].
+Proof.
+  intros roots x Hsingle atom. split; intro Hin.
+  - destruct roots as [| atom0 rest]; simpl in Hsingle; try discriminate.
+    destruct atom0 as [y | y]; try discriminate.
+    destruct (same_store_root y rest) eqn:Hsame; try discriminate.
+    inversion Hsingle; subst x.
+    destruct Hin as [Hin | Hin].
+    + subst atom. left. reflexivity.
+    + left. symmetry. apply same_store_root_true_all with (roots := rest); assumption.
+  - simpl in Hin. destruct Hin as [Hin | Hin]; try contradiction.
+    subst atom.
+    destruct roots as [| atom0 rest]; simpl in Hsingle; try discriminate.
+    destruct atom0 as [y | y]; try discriminate.
+    destruct (same_store_root y rest) eqn:Hsame; try discriminate.
+    inversion Hsingle; subst x.
+    left. reflexivity.
+Qed.
+
+Lemma singleton_store_root_of_singleton_equiv :
+  forall roots x,
+    root_set_equiv roots [RStore x] ->
+    singleton_store_root roots = Some x.
+Proof.
+  intros roots x Heq.
+  destruct roots as [| atom rest].
+  - destruct (Heq (RStore x)) as [_ H].
+    specialize (H (or_introl eq_refl)). contradiction.
+  - assert (Hatom : atom = RStore x).
+    { destruct (Heq atom) as [H _].
+      specialize (H (or_introl eq_refl)).
+      simpl in H. destruct H as [H | H]; try contradiction. symmetry. exact H. }
+    subst atom. simpl.
+    assert (Hall : forall atom, In atom rest -> atom = RStore x).
+    { intros atom Hin.
+      destruct (Heq atom) as [H _].
+      specialize (H (or_intror Hin)).
+      simpl in H. destruct H as [H | H]; try contradiction. symmetry. exact H. }
+    rewrite same_store_root_true_of_all; [reflexivity | exact Hall].
+Qed.
+
+Lemma singleton_store_root_equiv :
+  forall roots roots',
+    root_set_equiv roots roots' ->
+    singleton_store_root roots = singleton_store_root roots'.
+Proof.
+  intros roots roots' Heq.
+  destruct (singleton_store_root roots) as [x |] eqn:Hsingle.
+  - symmetry. apply singleton_store_root_of_singleton_equiv.
+    eapply root_set_equiv_trans.
+    + apply root_set_equiv_sym. exact Heq.
+    + apply singleton_store_root_some_equiv. exact Hsingle.
+  - destruct (singleton_store_root roots') as [x |] eqn:Hsingle'; try reflexivity.
+    exfalso.
+    assert (Hroots_single : singleton_store_root roots = Some x).
+    { apply singleton_store_root_of_singleton_equiv.
+      eapply root_set_equiv_trans.
+      - exact Heq.
+      - apply singleton_store_root_some_equiv. exact Hsingle'. }
+    rewrite Hsingle in Hroots_single. discriminate.
+Qed.
+
+Lemma resolve_root_set_fuel_equiv :
+  forall fuel R R' roots roots' out,
+    root_env_equiv R R' ->
+    root_set_equiv roots roots' ->
+    resolve_root_set_fuel fuel R roots = Some out ->
+    exists out',
+      resolve_root_set_fuel fuel R' roots' = Some out' /\
+      root_set_equiv out out'.
+Proof.
+  induction fuel as [| fuel IH]; intros R R' roots roots' out HRR' Hroots Hres;
+    simpl in Hres; try discriminate.
+  simpl.
+  rewrite <- (singleton_store_root_equiv roots roots' Hroots).
+  destruct (singleton_store_root roots) as [x |] eqn:Hsingle.
+  - destruct (root_env_lookup x R) as [env_roots |] eqn:Hlookup.
+    + destruct (root_env_equiv_lookup_l R R' x env_roots HRR' Hlookup)
+        as [env_roots' [Hlookup' Henv_roots]].
+      rewrite Hlookup'.
+      rewrite <- (singleton_store_root_equiv env_roots env_roots' Henv_roots).
+      destruct (singleton_store_root env_roots) as [y |] eqn:Henv_single.
+      * destruct (ident_eqb x y) eqn:Hxy.
+        -- inversion Hres; subst out.
+           exists roots'. split; [reflexivity | exact Hroots].
+        -- apply IH with (R' := R') (roots' := env_roots') in Hres;
+             try assumption.
+      * apply IH with (R' := R') (roots' := env_roots') in Hres;
+          try assumption.
+    + assert (Hlookup' : root_env_lookup x R' = None).
+      { eapply root_env_equiv_lookup_none_l; eassumption. }
+      rewrite Hlookup'. inversion Hres; subst out.
+      exists roots'. split; [reflexivity | exact Hroots].
+  - inversion Hres; subst out.
+    exists roots'. split; [reflexivity | exact Hroots].
+Qed.
+
+Lemma place_resolved_roots_equiv_same_length :
+  forall R R' p roots,
+    List.length R = List.length R' ->
+    root_env_equiv R R' ->
+    place_resolved_roots R p = Some roots ->
+    exists roots',
+      place_resolved_roots R' p = Some roots' /\
+      root_set_equiv roots roots'.
+Proof.
+  intros R R' p roots Hlen HRR' Hresolved.
+  unfold place_resolved_roots in Hresolved.
+  destruct (place_borrow_roots R p) as [borrow_roots |] eqn:Hborrow;
+    try discriminate.
+  destruct (place_borrow_roots_equiv R R' p borrow_roots HRR' Hborrow)
+    as [borrow_roots' [Hborrow' Hborrow_roots]].
+  unfold place_resolved_roots. rewrite Hborrow'.
+  unfold resolve_root_set in *.
+  rewrite <- Hlen.
+  eapply resolve_root_set_fuel_equiv; eassumption.
+Qed.
+
+Lemma root_env_rename_length :
+  forall rho R,
+    List.length (root_env_rename rho R) = List.length R.
+Proof.
+  intros rho R.
+  induction R as [| [x roots] rest IH]; simpl; auto.
+Qed.
+
+Lemma root_env_instantiate_length :
+  forall rho R,
+    List.length (root_env_instantiate rho R) = List.length R.
+Proof.
+  intros rho R.
+  induction R as [| [x roots] rest IH]; simpl; auto.
+Qed.
+
+Lemma resolve_root_set_fuel_store_lookup_none_equiv :
+  forall fuel R R' x,
+    root_env_equiv R R' ->
+    root_env_lookup x R = None ->
+    resolve_root_set_fuel (S fuel) R' [RStore x] = Some [RStore x].
+Proof.
+  intros fuel R R' x HRR' Hlookup.
+  apply resolve_root_set_fuel_store_lookup_none.
+  eapply root_env_equiv_lookup_none_l; eassumption.
+Qed.
+
+Lemma place_resolved_roots_direct_lookup_none_equiv :
+  forall R R' p x path,
+    root_env_equiv R R' ->
+    place_path p = Some (x, path) ->
+    root_env_lookup x R = None ->
+    place_resolved_roots R' p = Some [RStore x].
+Proof.
+  intros R R' p x path HRR' Hpath Hlookup.
+  rewrite (place_resolved_roots_direct R' p x path Hpath).
+  unfold resolve_root_set.
+  apply resolve_root_set_fuel_store_lookup_none_equiv with (R := R).
+  - exact HRR'.
+  - exact Hlookup.
+Qed.
+
+Lemma place_resolved_roots_direct_lookup_none_instantiate :
+  forall rho R p x path,
+    place_path p = Some (x, path) ->
+    root_env_lookup x R = None ->
+    place_resolved_roots (root_env_instantiate rho R) p =
+      Some [RStore x].
+Proof.
+  intros rho R p x path Hpath Hlookup.
+  rewrite (place_resolved_roots_direct
+    (root_env_instantiate rho R) p x path Hpath).
+  unfold resolve_root_set.
+  apply resolve_root_set_fuel_store_lookup_none.
+  apply root_env_lookup_instantiate_none.
+  exact Hlookup.
+Qed.
+
+Lemma place_resolved_roots_direct_lookup_none_rename :
+  forall rho R p x path,
+    rename_no_collision_for rho x (root_env_names R) ->
+    place_path p = Some (x, path) ->
+    root_env_lookup x R = None ->
+    place_resolved_roots (root_env_rename rho R) (rename_place rho p) =
+      Some [RStore (lookup_rename x rho)].
+Proof.
+  intros rho R p x path Hnocoll Hpath Hlookup.
+  rewrite (place_resolved_roots_direct
+    (root_env_rename rho R) (rename_place rho p)
+    (lookup_rename x rho) path).
+  - unfold resolve_root_set.
+    apply resolve_root_set_fuel_store_lookup_none.
+    apply root_env_lookup_rename_none; assumption.
+  - apply place_path_rename_place_some. exact Hpath.
 Qed.
 
 Lemma root_subst_of_params_lookup_head :

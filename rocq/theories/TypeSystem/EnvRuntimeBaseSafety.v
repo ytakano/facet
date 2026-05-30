@@ -2592,6 +2592,274 @@ Definition callee_body_root_shadow_store_safe_narrow_summary
     roots_exclude_params (fn_params fdef) roots_body /\
     root_env_excludes_params (fn_params fdef) R_body.
 
+Lemma store_safe_function_value_call_arg_global_env_with_local_bounds :
+  forall env bounds arg,
+    store_safe_function_value_call_arg env arg ->
+    store_safe_function_value_call_arg
+      (global_env_with_local_bounds env bounds) arg.
+Proof.
+  intros env bounds arg Harg.
+  destruct Harg as [x | fname fdef Hin Hname Hsummary].
+  - constructor.
+  - eapply SSFVCArg_Fn.
+    + exact Hin.
+    + exact Hname.
+    + apply callee_body_root_shadow_provenance_summary_global_env_with_local_bounds.
+      exact Hsummary.
+Qed.
+
+Lemma store_safe_function_value_call_args_global_env_with_local_bounds :
+  forall env bounds args,
+    store_safe_function_value_call_args env args ->
+    store_safe_function_value_call_args
+      (global_env_with_local_bounds env bounds) args.
+Proof.
+  intros env bounds args Hargs.
+  induction Hargs.
+  - constructor.
+  - constructor.
+    + eapply store_safe_function_value_call_arg_global_env_with_local_bounds.
+      exact H.
+    + exact IHHargs.
+Qed.
+
+Lemma typed_place_env_structural_pvar_global_env_with_local_bounds :
+  forall env bounds Sigma x T,
+    typed_place_env_structural env Sigma (PVar x) T ->
+    typed_place_env_structural
+      (global_env_with_local_bounds env bounds) Sigma (PVar x) T.
+Proof.
+  intros env bounds Sigma x T Hplace.
+  inversion Hplace; subst.
+  eapply TPES_Var; eassumption.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_evar_global_env_with_local_bounds :
+  forall env bounds Omega n R Sigma x T Sigma' R' roots,
+    typed_env_roots_shadow_safe env Omega n R Sigma (EVar x) T Sigma' R' roots ->
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env bounds) Omega n R Sigma
+      (EVar x) T Sigma' R' roots.
+Proof.
+  intros env bounds Omega n R Sigma x T Sigma' R' roots Htyped.
+  dependent destruction Htyped.
+  - eapply TERS_Var_Copy.
+    + match goal with
+      | Hplace : typed_place_env_structural _ _ (PVar _) _ |- _ =>
+          eapply typed_place_env_structural_pvar_global_env_with_local_bounds;
+          exact Hplace
+      end.
+    + assumption.
+    + assumption.
+  - eapply TERS_Var_Move.
+    + match goal with
+      | Hplace : typed_place_env_structural _ _ (PVar _) _ |- _ =>
+          eapply typed_place_env_structural_pvar_global_env_with_local_bounds;
+          exact Hplace
+      end.
+    + assumption.
+    + assumption.
+    + assumption.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_efn_global_env_with_local_bounds :
+  forall env bounds Omega n R Sigma fname T Sigma' R' roots,
+    typed_env_roots_shadow_safe env Omega n R Sigma (EFn fname) T Sigma' R' roots ->
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env bounds) Omega n R Sigma
+      (EFn fname) T Sigma' R' roots.
+Proof.
+  intros env bounds Omega n R Sigma fname T Sigma' R' roots Htyped.
+  dependent destruction Htyped.
+  change (env_fns (global_env_with_local_bounds env bounds)) with (env_fns env).
+  eapply TERS_Fn.
+  - match goal with
+    | Hin : In _ (env_fns env) |- _ => exact Hin
+    end.
+  - reflexivity.
+  - match goal with
+    | Hcaps : fn_captures _ = [] |- _ => exact Hcaps
+    end.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_store_safe_arg_global_env_with_local_bounds :
+  forall env bounds Omega n R Sigma arg T Sigma' R' roots,
+    store_safe_function_value_call_arg env arg ->
+    typed_env_roots_shadow_safe env Omega n R Sigma arg T Sigma' R' roots ->
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env bounds) Omega n R Sigma
+      arg T Sigma' R' roots.
+Proof.
+  intros env bounds Omega n R Sigma arg T Sigma' R' roots Hsafe Htyped.
+  inversion Hsafe; subst.
+  - eapply typed_env_roots_shadow_safe_evar_global_env_with_local_bounds.
+    exact Htyped.
+  - eapply typed_env_roots_shadow_safe_efn_global_env_with_local_bounds.
+    exact Htyped.
+Qed.
+
+Lemma typed_args_roots_shadow_safe_store_safe_global_env_with_local_bounds :
+  forall env bounds Omega n R Sigma args ps Sigma' R' roots,
+    store_safe_function_value_call_args env args ->
+    typed_args_roots_shadow_safe env Omega n R Sigma args ps Sigma' R' roots ->
+    typed_args_roots_shadow_safe
+      (global_env_with_local_bounds env bounds) Omega n R Sigma
+      args ps Sigma' R' roots.
+Proof.
+  intros env bounds Omega n R Sigma args ps Sigma' R' roots Hsafe Htyped.
+  revert bounds Hsafe.
+  induction Htyped; intros bounds Hsafe.
+  - constructor.
+  - inversion Hsafe; subst.
+    eapply TERSArgs_Cons.
+    + eapply typed_env_roots_shadow_safe_store_safe_arg_global_env_with_local_bounds;
+        eassumption.
+    + exact H0.
+    + apply IHHtyped. exact H4.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_evar_ty_eq :
+  forall env Omega n R Sigma x T1 Sigma1 R1 roots1 T2 Sigma2 R2 roots2,
+    typed_env_roots_shadow_safe env Omega n R Sigma (EVar x) T1 Sigma1 R1 roots1 ->
+    typed_env_roots_shadow_safe env Omega n R Sigma (EVar x) T2 Sigma2 R2 roots2 ->
+    T1 = T2.
+Proof.
+  intros env Omega n R Sigma x T1 Sigma1 R1 roots1 T2 Sigma2 R2 roots2 H1 H2.
+  inversion H1; subst; inversion H2; subst;
+    match goal with
+    | Hplace1 : typed_place_env_structural _ _ (PVar _) _,
+      Hplace2 : typed_place_env_structural _ _ (PVar _) _ |- _ =>
+        inversion Hplace1; subst; inversion Hplace2; subst;
+        match goal with
+        | Hlookup1 : sctx_lookup _ _ = Some (_, _),
+          Hlookup2 : sctx_lookup _ _ = Some (_, _) |- _ =>
+            rewrite Hlookup1 in Hlookup2; inversion Hlookup2; reflexivity
+        end
+    end.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_evar_call_store_safe_global_env_with_local_bounds :
+  forall env bounds Omega n R Sigma x args T_callee Sigma_callee R_callee
+      roots_callee T Sigma' R' roots,
+    store_safe_function_value_call_args env args ->
+    typed_env_roots_shadow_safe env Omega n R Sigma (EVar x)
+      T_callee Sigma_callee R_callee roots_callee ->
+    supported_non_type_generic_function_value_call_callee_shape T_callee ->
+    typed_env_roots_shadow_safe env Omega n R Sigma
+      (ECallExpr (EVar x) args) T Sigma' R' roots ->
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env bounds) Omega n R Sigma
+      (ECallExpr (EVar x) args) T Sigma' R' roots.
+Proof.
+  intros env bounds Omega n R Sigma x args T_callee Sigma_callee R_callee
+    roots_callee T Sigma' R' roots Hsafe Hcallee Hshape Hcall.
+  dependent destruction Hcall.
+  - eapply TERS_CallExpr_Fn.
+    + exact H.
+    + eapply typed_env_roots_shadow_safe_evar_global_env_with_local_bounds;
+        eassumption.
+    + eapply typed_args_roots_shadow_safe_store_safe_global_env_with_local_bounds;
+        eassumption.
+  - assert (Heq :
+        MkTy u (TClosure env_lt param_tys ret) = T_callee)
+      by (eapply typed_env_roots_shadow_safe_evar_ty_eq; eassumption).
+    subst T_callee. inversion Hshape; subst; simpl in *; discriminate.
+  - assert (Heq :
+        MkTy u (TTypeForall type_params bounds0 body_ty) = T_callee)
+      by (eapply typed_env_roots_shadow_safe_evar_ty_eq; eassumption).
+    subst T_callee. inversion Hshape; subst; simpl in *; discriminate.
+  - assert (Heq :
+        MkTy u
+          (TForall m bounds0
+            (MkTy u_body (TTypeForall type_params type_bounds body_ty))) =
+        T_callee)
+      by (eapply typed_env_roots_shadow_safe_evar_ty_eq; eassumption).
+    subst T_callee.
+    inversion Hshape as [T0 param_tys0 ret0 Hcore_shape
+      | T0 m0 bounds_shape body_shape param_tys0 ret0 Hcore_shape Hbody_shape];
+      subst.
+    + simpl in Hcore_shape. discriminate.
+    + simpl in Hcore_shape. inversion Hcore_shape; subst.
+      simpl in Hbody_shape. discriminate.
+  - eapply TERS_CallExpr_Forall_Fn.
+    + exact H.
+    + eapply typed_env_roots_shadow_safe_evar_global_env_with_local_bounds;
+        eassumption.
+    + exact H0.
+    + exact H1.
+    + exact H2.
+    + exact H3.
+    + eapply typed_args_roots_shadow_safe_store_safe_global_env_with_local_bounds;
+        eassumption.
+  - assert (Heq :
+        MkTy u (TForall m bounds0 body_ty) = T_callee)
+      by (eapply typed_env_roots_shadow_safe_evar_ty_eq; eassumption).
+    subst T_callee.
+    inversion Hshape as [T0 param_tys0 ret0 Hcore_shape
+      | T0 m0 bounds_shape body_shape param_tys0 ret0 Hcore_shape Hbody_shape];
+      subst.
+    + simpl in Hcore_shape. discriminate.
+    + simpl in Hcore_shape. inversion Hcore_shape; subst. congruence.
+Qed.
+
+Lemma expr_root_shadow_store_safe_narrow_summary_global_env_with_local_bounds :
+  forall env bounds Omega n R Sigma e T Sigma' R' roots ret_roots,
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n R Sigma e T Sigma' R' roots ret_roots ->
+    expr_root_shadow_store_safe_narrow_summary
+      (global_env_with_local_bounds env bounds)
+      Omega n R Sigma e T Sigma' R' roots ret_roots.
+Proof.
+  intros env bounds Omega n R Sigma e T Sigma' R' roots ret_roots Hsummary.
+  induction Hsummary.
+  - eapply ERSSN_FunctionValueCall.
+    + eapply store_safe_function_value_call_args_global_env_with_local_bounds.
+      exact H.
+    + eapply typed_env_roots_shadow_safe_evar_global_env_with_local_bounds.
+      exact H0.
+    + exact H1.
+    + eapply typed_env_roots_shadow_safe_evar_call_store_safe_global_env_with_local_bounds;
+        eassumption.
+  - eapply ERSSN_Let.
+    + exact IHHsummary1.
+    + exact H.
+    + exact H0.
+    + exact H1.
+    + exact H2.
+    + exact H3.
+    + exact IHHsummary2.
+    + rewrite sctx_check_ok_global_env_with_local_bounds. exact H4.
+    + exact H5.
+    + exact H6.
+  - eapply ERSSN_LetInfer.
+    + exact IHHsummary1.
+    + exact H.
+    + exact H0.
+    + exact H1.
+    + exact H2.
+    + exact IHHsummary2.
+    + rewrite sctx_check_ok_global_env_with_local_bounds. exact H3.
+    + exact H4.
+    + exact H5.
+Qed.
+
+Lemma callee_body_root_shadow_store_safe_narrow_summary_global_env_with_local_bounds :
+  forall env bounds fdef,
+    callee_body_root_shadow_store_safe_narrow_summary env fdef ->
+    callee_body_root_shadow_store_safe_narrow_summary
+      (global_env_with_local_bounds env bounds) fdef.
+Proof.
+  intros env bounds fdef Hsummary.
+  unfold callee_body_root_shadow_store_safe_narrow_summary in *.
+  destruct Hsummary as
+    (T_body & Gamma_out & R_body & roots_body & ret_roots &
+      Hnodup & Hexpr & Hcompat & Hroots & Henv).
+  exists T_body, Gamma_out, R_body, roots_body, ret_roots.
+  repeat split; try assumption.
+  apply expr_root_shadow_store_safe_narrow_summary_global_env_with_local_bounds.
+  exact Hexpr.
+Qed.
+
 
 Lemma eval_args_root_tail_fresh_names_for_fresh_call_prefix_ctx :
   forall env Ω n R Σ ps_typed Σ_args R_args arg_roots args s s_args vs

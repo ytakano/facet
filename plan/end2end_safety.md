@@ -262,9 +262,8 @@ run.
 
 Next slices:
 
-- Add typed root-resolution helpers for nested places that separate location roots
-  from value roots behind references.
-- Prove agreement with `place_path` for existing `PVar`/`PField` cases.
+- Done prep: add `place_root_lookup` with direct/indirect agreement lemmas.
+- Next: wire roots checker to use indirect reference-place roots for proven cases.
 - Define how writes through `PDeref` update the resolved store root.
 - Add matching roots/shadow-safe constructors and soundness lemmas.
 - Preserve invalid rejections for linear refs, immutable writes, and borrow

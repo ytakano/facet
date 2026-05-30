@@ -844,6 +844,34 @@ Definition root_of_place (p : place) : root_set :=
   | None => [RStore (root_provenance_place_name p)]
   end.
 
+Definition place_root_lookup (R : root_env) (p : place) : option root_set :=
+  match place_path p with
+  | Some (x, _) => root_env_lookup x R
+  | None => root_env_lookup (root_provenance_place_name p) R
+  end.
+
+Lemma place_root_lookup_direct :
+  forall R p x path,
+    place_path p = Some (x, path) ->
+    place_root_lookup R p = root_env_lookup x R.
+Proof.
+  intros R p x path Hpath.
+  unfold place_root_lookup.
+  rewrite Hpath.
+  reflexivity.
+Qed.
+
+Lemma place_root_lookup_indirect :
+  forall R p,
+    place_path p = None ->
+    place_root_lookup R p = root_env_lookup (root_provenance_place_name p) R.
+Proof.
+  intros R p Hpath.
+  unfold place_root_lookup.
+  rewrite Hpath.
+  reflexivity.
+Qed.
+
 Lemma root_provenance_place_name_rename_place :
   forall rho p,
     root_provenance_place_name (rename_place rho p) =

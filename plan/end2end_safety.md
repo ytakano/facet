@@ -54,8 +54,8 @@ Latest full `sh tests/run.sh` baseline: 29 valid-test failures.
     support; keep shadow-safe rules out for now.
 11. Blocked: resolved shadow-safe Prop rules need call-frame tail stability;
     appending outer roots can change `place_resolved_roots`.
-12. Route indirect borrow and immediate deref-borrow root cleanup through
-   `place_resolved_roots` only for resolved singleton stores; keep raw-root fallback.
+12. Done: route indirect borrow and immediate deref-borrow roots through
+   `place_resolved_roots` for singleton stores; keep raw-root fallback.
 13. Route `EAssign`/`EReplace` through resolved `PDeref` roots when resolution
     yields one store target.
 14. Preserve invalid rejections for linear refs, immutable writes, borrow

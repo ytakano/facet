@@ -679,6 +679,39 @@ Proof.
   - eapply root_env_ctx_keys_named_store_typed; eassumption.
 Qed.
 
+Lemma expr_root_shadow_store_safe_narrow_summary_runtime_names_from_store_typed_prefix_ctx :
+  forall env Omega n R Σ e T Σ' R' roots ret_roots s',
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n R Σ e T Σ' R' roots ret_roots ->
+    root_env_no_shadow R ->
+    root_env_ctx_roots_named R Σ ->
+    root_env_sctx_keys_named R Σ ->
+    store_typed_prefix env s' Σ' ->
+    root_env_no_shadow R' ->
+    root_env_store_roots_named R' s' /\
+    root_set_store_roots_named roots s' /\
+    root_env_store_keys_named R' s'.
+Proof.
+  intros env Omega n R Σ e T Σ' R' roots ret_roots s'
+    Hsummary Hrn Hctx_roots Hctx_keys Hstore' Hrn'.
+  pose proof (expr_root_shadow_store_safe_narrow_summary_typed
+    env Omega n R Σ e T Σ' R' roots ret_roots Hsummary)
+    as Htyped_shadow.
+  pose proof (typed_env_roots_shadow_safe_roots
+    env Omega n R Σ e T Σ' R' roots Htyped_shadow)
+    as Htyped_roots.
+  destruct (proj1 (typed_roots_ctx_roots_named_mutual env Omega n)
+    R Σ e T Σ' R' roots Htyped_roots Hrn Hctx_roots)
+    as [Hctx_roots' Hctx_set'].
+  pose proof (proj1 (typed_roots_shadow_safe_sctx_keys_named_mutual
+    env Omega n) R Σ e T Σ' R' roots Htyped_shadow
+    Hrn Hctx_keys) as Hctx_keys'.
+  repeat split.
+  - eapply root_env_ctx_roots_named_store_typed_prefix; eassumption.
+  - eapply root_set_ctx_roots_named_store_typed_prefix; eassumption.
+  - eapply root_env_ctx_keys_named_store_typed_prefix; eassumption.
+Qed.
+
 Lemma infer_core_env_roots_shadow_safe_evar_lookup_core_base :
   forall env Ω n R Γ x T_infer Γ_out R_out roots T_lookup st,
     infer_core_env_roots_shadow_safe env Ω n R Γ (EVar x) =

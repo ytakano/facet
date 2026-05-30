@@ -187,6 +187,8 @@ T2e.2 tasks:
   caller root frames.
 - Done prep: recover root-name/key facts from prefix store typing for
   narrow runtime summaries.
+- Done prep: derive narrow runtime output root-name/key facts from
+  context-named inputs and prefix store typing.
 - Remaining proof gap: add the direct-call runtime route for callees proven by
   narrow store-safe summaries, using alpha-renaming, root-instantiation, the
   fresh caller frame, and parameter cleanup.

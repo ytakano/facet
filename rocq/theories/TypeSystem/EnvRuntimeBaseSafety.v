@@ -2433,6 +2433,59 @@ Definition callee_body_root_shadow_store_safe_narrow_summary
     root_env_excludes_params (fn_params fdef) R_body.
 
 
+Lemma eval_args_root_tail_fresh_names_for_fresh_call_prefix_ctx :
+  forall env Ω n R Σ ps_typed Σ_args R_args arg_roots args s s_args vs
+      fdef fcall used',
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed_prefix env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_ctx_roots_named R Σ ->
+    root_env_sctx_keys_named R Σ ->
+    typed_args_roots env Ω n R Σ args ps_typed Σ_args R_args arg_roots ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    root_env_tail_fresh_names (root_env_remove_params (fn_params fcall) R_args)
+      (expr_local_store_names (fn_body fcall)).
+Proof.
+  unfold root_env_tail_fresh_names.
+  intros env Ω n R Σ ps_typed Σ_args R_args arg_roots args s s_args vs
+    fdef fcall used' Heval_args Hprov_args Hstore Hroots Hshadow Hrn
+    Hctx_roots Hctx_keys Htyped_args Hrename x Hin.
+  destruct (proj1 (proj2 eval_preserves_typing_roots_ready_prefix_mutual)
+              env s args s_args vs Heval_args Ω n R Σ ps_typed Σ_args
+              R_args arg_roots Hprov_args Hstore Hroots Hshadow Hrn
+              Htyped_args)
+    as [Hstore_args [_ [_ [_ [_ [_ Hrn_args]]]]]].
+  destruct (proj1 (proj2 (typed_roots_ctx_roots_named_mutual env Ω n))
+              R Σ args ps_typed Σ_args R_args arg_roots Htyped_args Hrn
+              Hctx_roots)
+    as [Hctx_roots_args _].
+  pose proof (proj1 (proj2 (typed_roots_ctx_keys_named_mutual env Ω n))
+                R Σ args ps_typed Σ_args R_args arg_roots Htyped_args Hrn
+                Hctx_keys) as Hctx_keys_args.
+  assert (Harg_roots_named : root_env_store_roots_named R_args s_args).
+  { eapply root_env_ctx_roots_named_store_typed_prefix; eassumption. }
+  assert (Harg_keys_named : root_env_store_keys_named R_args s_args).
+  { eapply root_env_ctx_keys_named_store_typed_prefix; eassumption. }
+  pose proof (alpha_rename_fn_def_body_local_store_names_fresh_used
+                (store_names s_args) fdef fcall used' Hrename)
+    as Hfresh_names.
+  assert (Hfresh_x : ~ In x (store_names s_args)).
+  { apply (proj1 (Forall_forall _ _) Hfresh_names). exact Hin. }
+  assert (Hlookup : root_env_lookup x R_args = None).
+  { eapply root_env_store_keys_named_lookup_excludes_name; eassumption. }
+  assert (Hexcl : root_env_excludes x R_args).
+  { eapply root_env_store_roots_named_excludes_name; eassumption. }
+  split.
+  - apply root_env_lookup_remove_params_none_preserved. exact Hlookup.
+  - apply root_env_remove_params_preserves_excludes.
+    + eapply typed_args_roots_no_shadow; eassumption.
+    + exact Hexcl.
+Qed.
+
+
 Lemma direct_call_callee_body_root_shadow_store_safe_narrow_summary_bridge_of_summary_tfn_with_result_subset :
   forall env (Omega : outlives_ctx) (n : nat) R Sigma Sigma_args R_args
       arg_roots args fdef fcall param_tys ret_ty s s_args vs used',

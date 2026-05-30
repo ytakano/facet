@@ -264,8 +264,8 @@ Next slices:
 
 - Done: wire shared/unique borrow and immediate deref-borrow roots through
   indirect reference-place roots.
-- Next: define write/update roots for `EAssign`/`EReplace` through `PDeref`.
-- Add matching roots/shadow-safe constructors and soundness lemmas.
+- Next: add bounded singleton resolved-root chains for nested refs.
+- Then wire `EAssign`/`EReplace` through resolved `PDeref` roots.
 - Preserve invalid rejections for linear refs, immutable writes, and borrow
   conflicts.
 - Target valid failures: assign-through-ref, reborrow, and replace-through-ref

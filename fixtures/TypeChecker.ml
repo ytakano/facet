@@ -12258,7 +12258,7 @@ let check_fn_root_shadow_captured_call_store_safe_summary env fdef =
        | Some p ->
          let (p0, synthetic_body) = p in
          let (fname, args) = p0 in
-         (&&) (preservation_ready_args_b args)
+         (&&) (store_safe_function_value_call_args_b env args)
            (match lookup_fn_b fname env.env_fns with
             | Some callee ->
               (match infer_core_env_roots_shadow_safe env callee.fn_outlives

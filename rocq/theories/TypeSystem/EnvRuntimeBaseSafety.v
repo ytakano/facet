@@ -2713,7 +2713,7 @@ Definition callee_body_root_shadow_captured_call_direct_narrow_store_safe_summar
     fn_body fdef = raw_body /\
     direct_call_target_expr raw_body = Some (fname, args, synthetic_body) /\
     synthetic_body = ECall fname args /\
-    preservation_ready_args args /\
+    store_safe_function_value_call_args env args /\
     In fcallee (env_fns env) /\
     fn_name fcallee = fname /\
     callee_body_root_shadow_store_safe_narrow_summary env fcallee /\
@@ -2805,7 +2805,7 @@ Proof.
         - inversion Htarget. reflexivity.
         - destruct e; try discriminate.
           inversion Htarget. reflexivity. }
-      split; [apply preservation_ready_args_b_sound; exact Hready_args |].
+      split; [apply store_safe_function_value_call_args_b_sound; exact Hready_args |].
       split; [exact Hin_callee |].
       split; [exact Hname_callee |].
       split.

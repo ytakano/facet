@@ -191,6 +191,8 @@ T2e.2 tasks:
   context-named inputs and prefix store typing.
 - Done prep: bridge direct-call callees with narrow summaries through
   alpha-renaming, root instantiation, and caller tail frames.
+- Done prep: require store-safe direct-call args for direct narrow
+  captured-call summaries so bound params preserve closure-target summaries.
 - Remaining proof gap: add the direct-call runtime route for callees proven by
   narrow store-safe summaries, using alpha-renaming, root-instantiation, the
   fresh caller frame, and parameter cleanup.

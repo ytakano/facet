@@ -8397,7 +8397,7 @@ Definition check_fn_root_shadow_captured_call_store_safe_summary
   check_fn_root_shadow_captured_call_provenance_summary env fdef ||
   (match direct_call_target_expr (fn_body fdef) with
    | Some (fname, args, synthetic_body) =>
-       preservation_ready_args_b args &&
+       store_safe_function_value_call_args_b env args &&
        match lookup_fn_b fname (env_fns env) with
        | None => false
        | Some callee =>

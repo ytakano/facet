@@ -179,6 +179,8 @@ T2e.2 tasks:
   return-root exclusion.
 - Done prep: prove structural alpha-renaming preservation for narrow
   store-safe summaries.
+- Done prep: add Prop-level direct-call branch for callee narrow
+  store-safe summaries.
 - Blocked: direct `ECall` still requires old
   `callee_body_root_shadow_provenance_summary` evidence.  Remaining proof gap:
   finish the generalized structural alpha-preservation theorem for narrow

@@ -206,6 +206,8 @@ T2e.2 tasks:
   store-safe narrow `TFn` calls.
 - Done prep: add lifetime-forall prefix-start runtime package support for
   store-safe narrow `TFn` calls.
+- Done prep: add recursive prefix/ctx runtime package support for
+  store-safe narrow summaries.
 - Remaining proof gap: finish the direct-call runtime route for callees proven
   by narrow summaries.  The direct narrow branch now has store-safe args and
   alpha/root/tail-frame bridge evidence; the missing piece is a local-bounds

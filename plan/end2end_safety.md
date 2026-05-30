@@ -200,6 +200,8 @@ T2e.2 tasks:
 - Done prep: add prefix/ctx tail-fresh support for direct-call narrow
   callee-route bridging.
 - Done prep: add a prefix/ctx direct-call narrow callee-route bridge.
+- Done prep: add monomorphic prefix-start runtime package support for
+  store-safe narrow `TFn` calls.
 - Remaining proof gap: finish the direct-call runtime route for callees proven
   by narrow summaries.  The direct narrow branch now has store-safe args and
   alpha/root/tail-frame bridge evidence; the missing piece is a local-bounds

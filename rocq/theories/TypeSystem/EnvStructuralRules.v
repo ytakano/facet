@@ -1262,6 +1262,18 @@ Proof.
   - simpl. econstructor; eauto.
 Qed.
 
+Lemma typed_args_roots_params_of_tys_map_param_ty :
+  forall env Ω n R Σ args ps Σ' R' roots,
+    typed_args_roots env Ω n R Σ args ps Σ' R' roots ->
+    typed_args_roots env Ω n R Σ args
+      (params_of_tys (map param_ty ps)) Σ' R' roots.
+Proof.
+  intros env Ω n R Σ args ps Σ' R' roots Hargs.
+  induction Hargs.
+  - constructor.
+  - simpl. econstructor; eauto.
+Qed.
+
 Lemma check_make_closure_captures_exact_sctx_implies_sctx :
   forall env Ω Σ captures params captured_tys,
     check_make_closure_captures_exact_sctx env Ω Σ captures params =

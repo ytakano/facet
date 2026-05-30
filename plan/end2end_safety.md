@@ -218,6 +218,7 @@ T2e.2 tasks:
   `global_env_with_local_bounds` for direct-call runtime wiring.
 - Done prep: thread store-ref-target preservation through narrow prefix runtime packages.
 - Done prep: add prefix-named final-store equality and frame-scope helpers for narrow `TFn` calls.
+- Done prep: add `typed_args_roots` adapter from lifetime-substituted params to anonymous param-ty lists.
 - Done prep: lift frame-scope preservation to recursive narrow summaries.
 - Done prep: lift param-cover and param-scope preservation to recursive narrow summaries.
 - Done prep: add store-named direct-call narrow callee-route bridge.

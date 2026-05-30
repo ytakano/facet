@@ -190,6 +190,117 @@ Proof.
   eapply store_safe_function_value_call_arg_preservation_ready; eassumption.
 Qed.
 
+Lemma root_env_store_roots_named_store_names_eq :
+  forall R s s',
+    store_names s' = store_names s ->
+    root_env_store_roots_named R s ->
+    root_env_store_roots_named R s'.
+Proof.
+  unfold root_env_store_roots_named.
+  intros R s s' Hnames Hnamed x roots z Hlookup Hin.
+  rewrite Hnames. eapply Hnamed; eassumption.
+Qed.
+
+Lemma root_set_store_roots_named_store_names_eq :
+  forall roots s s',
+    store_names s' = store_names s ->
+    root_set_store_roots_named roots s ->
+    root_set_store_roots_named roots s'.
+Proof.
+  unfold root_set_store_roots_named.
+  intros roots s s' Hnames Hnamed z Hin.
+  rewrite Hnames. eapply Hnamed; eassumption.
+Qed.
+
+Lemma root_env_store_keys_named_store_names_eq :
+  forall R s s',
+    store_names s' = store_names s ->
+    root_env_store_keys_named R s ->
+    root_env_store_keys_named R s'.
+Proof.
+  unfold root_env_store_keys_named, root_env_keys_named.
+  intros R s s' Hnames Hkeys x Hin.
+  rewrite Hnames. eapply Hkeys; eassumption.
+Qed.
+
+Lemma store_safe_function_value_call_args_typed_roots_static_named :
+  forall env Omega n R Sigma args ps Sigma' R' arg_roots,
+    typed_args_roots env Omega n R Sigma args ps Sigma' R' arg_roots ->
+    store_safe_function_value_call_args env args ->
+    forall s,
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      R' = R /\
+      Forall (fun roots => root_set_store_roots_named roots s) arg_roots /\
+      root_env_store_roots_named R' s /\
+      root_env_store_keys_named R' s.
+Proof.
+  intros env Omega n R Sigma args ps Sigma' R' arg_roots Htyped.
+  induction Htyped; intros Hsafe s Hnamed Hkeys.
+  - dependent destruction Hsafe.
+    repeat split; try reflexivity; try constructor; assumption.
+  - dependent destruction Hsafe.
+    match goal with
+    | Harg : store_safe_function_value_call_arg _ _ |- _ =>
+        destruct Harg as [x | fname fdef Hin Hname Hsummary]
+    end.
+    + dependent destruction H.
+      * destruct (IHHtyped Hsafe s Hnamed Hkeys)
+          as [HR [Hroots_rest [Hnamed' Hkeys']]].
+        subst R2.
+        repeat split; try assumption.
+        constructor.
+        -- unfold root_set_store_roots_named.
+           intros z Hin_z. eapply Hnamed; eassumption.
+        -- exact Hroots_rest.
+      * destruct (IHHtyped Hsafe s Hnamed Hkeys)
+          as [HR [Hroots_rest [Hnamed' Hkeys']]].
+        subst R2.
+        repeat split; try assumption.
+        constructor.
+        -- unfold root_set_store_roots_named.
+           intros z Hin_z. eapply Hnamed; eassumption.
+        -- exact Hroots_rest.
+    + dependent destruction H.
+      destruct (IHHtyped Hsafe s Hnamed Hkeys)
+        as [HR [Hroots_rest [Hnamed' Hkeys']]].
+      subst R2.
+      repeat split; try assumption.
+      constructor.
+      * unfold root_set_store_roots_named. intros z Hin_z. contradiction.
+      * exact Hroots_rest.
+Qed.
+
+Lemma store_safe_function_value_call_args_typed_roots_store_named :
+  forall env Omega n R Sigma args ps Sigma' R' arg_roots s s' vs,
+    store_safe_function_value_call_args env args ->
+    typed_args_roots env Omega n R Sigma args ps Sigma' R' arg_roots ->
+    eval_args env s args s' vs ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    root_env_store_roots_named R' s' /\
+    Forall (fun roots => root_set_store_roots_named roots s') arg_roots /\
+    root_env_store_keys_named R' s'.
+Proof.
+  intros env Omega n R Sigma args ps Sigma' R' arg_roots s s' vs
+    Hsafe Htyped Heval Hnamed Hkeys.
+  pose proof (store_safe_function_value_call_args_preservation_ready
+                env args Hsafe) as Hready.
+  pose proof (proj1 (proj2 preservation_ready_eval_store_names_mutual)
+                env s args s' vs Heval Hready) as Hnames.
+  destruct (store_safe_function_value_call_args_typed_roots_static_named
+              env Omega n R Sigma args ps Sigma' R' arg_roots Htyped
+              Hsafe s Hnamed Hkeys)
+    as [HR [Hroots [Hnamed' Hkeys']]].
+  subst R'.
+  repeat split.
+  - eapply root_env_store_roots_named_store_names_eq; eassumption.
+  - eapply Forall_impl; [| exact Hroots].
+    intros roots Hroot.
+    eapply root_set_store_roots_named_store_names_eq; eassumption.
+  - eapply root_env_store_keys_named_store_names_eq; eassumption.
+Qed.
+
 Lemma store_safe_function_value_call_arg_eval_preserves_store_function_closure_targets_summary :
   forall env arg s s' v,
     store_safe_function_value_call_arg env arg ->

@@ -60,16 +60,8 @@ Latest full `sh tests/run.sh` baseline (2026-05-30): 29 valid-test failures; inv
     singleton `PDeref` roots; shadow-safe unchanged.
 14. Done: invalid rejections preserved for linear refs, immutable writes,
     borrow conflicts, unresolved roots, and ambiguous roots.
-15. Next: route inferred-let/root cleanup that still blocks source-level
-    indirect assign/replace and mutable reborrow valid tests.
-
-## Current proof blocker
-
-Resolved write support for parameter-backed roots needs a stronger invariant:
-`place_resolved_write_root` and the returned `place_resolved_roots` result are
-not preserved by arbitrary `root_env_instantiate`. Example:
-`R=[(a,[RStore b]);(b,[RParam z])]`, `p=*a`, `rho=[(z,[])]`; write root
-changes from `Some b` to `None`.
+15. In progress: add stable depth-based resolved write target, then use
+    target root lookup for indirect `EAssign`/`EReplace` result/restoration.
 
 The resolver remains narrow: it follows bounded singleton store-root chains and
 does not accept ambiguous/non-singleton update targets.

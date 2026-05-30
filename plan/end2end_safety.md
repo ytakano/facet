@@ -31,15 +31,13 @@ this roadmap.
 
 ## Current blockers
 
-With the CLI using `infer_program_env_end2end`, the last full `sh tests/run.sh`
-run after `ad74b28` had 33 valid-test failures:
+With the CLI using `infer_program_env_end2end`, the latest full
+`sh tests/run.sh` run after the direct-narrow captured-call proof has 29
+valid-test failures:
 
-- 23 `ErrEndToEndSafetyGateFailed`
-  - `ECallGeneric fname type_args args` direct-call bodies.
-  - Remaining function-value calls: `TClosure`, lifetime-only `TForall`,
-    type-forall, mixed `for<'a, T>`, and generic-item function values still need
-    runtime callee bridges.
-  - Captured shared-ref closure function-value calls remain under T2e.2.
+- 18 `ErrEndToEndSafetyGateFailed`
+  - Generic direct calls, type-forall function values, mixed forall function
+    values, generic-item function values, and generic local-bound bodies.
 - 11 `ErrNotImplemented`
   - deref/reborrow/write-through-reference roots coverage.  Nested `PDeref`
     places make `place_path` return `None`; roots typing needs explicit
@@ -227,7 +225,7 @@ T2e.2 tasks:
 - Done prep: add store-named direct-call narrow callee-route bridge.
 - Done: wire the captured-call direct-narrow branch through the store-safe
   narrow callee runtime wrapper.
-- Then re-run the remaining HRT valid/invalid tests and update the full count.
+- Done: refresh the full-suite baseline; 29 valid-test failures remain.
 
 Out of scope for T2e.2:
 

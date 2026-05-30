@@ -199,6 +199,7 @@ T2e.2 tasks:
   monomorphic `TFn` call expressions.
 - Done prep: add prefix/ctx tail-fresh support for direct-call narrow
   callee-route bridging.
+- Done prep: add a prefix/ctx direct-call narrow callee-route bridge.
 - Remaining proof gap: finish the direct-call runtime route for callees proven
   by narrow summaries.  The direct narrow branch now has store-safe args and
   alpha/root/tail-frame bridge evidence; the missing piece is a local-bounds

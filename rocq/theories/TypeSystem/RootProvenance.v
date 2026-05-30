@@ -914,6 +914,38 @@ Definition place_resolved_roots (R : root_env) (p : place) : option root_set :=
   | None => None
   end.
 
+Lemma resolve_root_set_fuel_store_lookup_none :
+  forall fuel R x,
+    root_env_lookup x R = None ->
+    resolve_root_set_fuel (S fuel) R [RStore x] = Some [RStore x].
+Proof.
+  intros fuel R x Hlookup.
+  simpl. rewrite Hlookup. reflexivity.
+Qed.
+
+Lemma resolve_root_set_fuel_store_self :
+  forall fuel R x,
+    root_env_lookup x R = Some [RStore x] ->
+    resolve_root_set_fuel (S fuel) R [RStore x] = Some [RStore x].
+Proof.
+  intros fuel R x Hlookup.
+  simpl. rewrite Hlookup. rewrite ident_eqb_refl. reflexivity.
+Qed.
+
+Lemma resolve_root_set_fuel_store_one_hop :
+  forall fuel R x y,
+    root_env_lookup x R = Some [RStore y] ->
+    root_env_lookup y R = Some [RStore y] ->
+    resolve_root_set_fuel (S (S fuel)) R [RStore x] = Some [RStore y].
+Proof.
+  intros fuel R x y Hlookup_x Hlookup_y.
+  simpl. rewrite Hlookup_x.
+  destruct (ident_eqb x y) eqn:Hxy.
+  - apply ident_eqb_eq in Hxy. subst y. reflexivity.
+  - simpl. rewrite Hlookup_y. rewrite ident_eqb_refl. reflexivity.
+Qed.
+
+
 
 Lemma place_borrow_roots_direct :
   forall R p x path,
@@ -937,6 +969,32 @@ Proof.
   apply place_root_lookup_indirect.
   exact Hpath.
 Qed.
+
+Lemma place_resolved_roots_direct :
+  forall R p x path,
+    place_path p = Some (x, path) ->
+    place_resolved_roots R p = resolve_root_set R [RStore x].
+Proof.
+  intros R p x path Hpath.
+  unfold place_resolved_roots.
+  rewrite (place_borrow_roots_direct R p x path Hpath).
+  reflexivity.
+Qed.
+
+Lemma place_resolved_roots_indirect_self :
+  forall R p x,
+    place_path p = None ->
+    root_provenance_place_name p = x ->
+    root_env_lookup x R = Some [RStore x] ->
+    place_resolved_roots R p = Some [RStore x].
+Proof.
+  intros R p x Hpath Hname Hlookup.
+  unfold place_resolved_roots, resolve_root_set.
+  rewrite (place_borrow_roots_indirect R p Hpath).
+  rewrite Hname. rewrite Hlookup.
+  apply resolve_root_set_fuel_store_self. exact Hlookup.
+Qed.
+
 
 Lemma root_provenance_place_name_rename_place :
   forall rho p,

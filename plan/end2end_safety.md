@@ -195,6 +195,8 @@ T2e.2 tasks:
   captured-call summaries so bound params preserve closure-target summaries.
 - Done prep: add a prefix-start direct-call component route for
   monomorphic `TFn` call expressions.
+- Done prep: add prefix-start direct-call final-store equality for
+  monomorphic `TFn` call expressions.
 - Remaining proof gap: finish the direct-call runtime route for callees proven
   by narrow summaries.  The direct narrow branch now has store-safe args and
   alpha/root/tail-frame bridge evidence; the missing piece is a local-bounds

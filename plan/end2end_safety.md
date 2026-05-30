@@ -264,7 +264,8 @@ Next slices:
 
 - Done: wire shared/unique borrow and immediate deref-borrow roots through
   indirect reference-place roots.
-- Next: add bounded singleton resolved-root chains for nested refs.
+- Done prep: add bounded singleton resolved-root chain helper.
+- Next: use resolved roots for indirect borrow/deref cleanup.
 - Then wire `EAssign`/`EReplace` through resolved `PDeref` roots.
 - Preserve invalid rejections for linear refs, immutable writes, and borrow
   conflicts.

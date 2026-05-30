@@ -877,6 +877,43 @@ Definition place_borrow_roots (R : root_env) (p : place) : option root_set :=
   | Some _ => Some (root_of_place p)
   | None => place_root_lookup R p
   end.
+Definition singleton_store_root (roots : root_set) : option ident :=
+  match roots with
+  | [RStore x] => Some x
+  | _ => None
+  end.
+
+Fixpoint resolve_root_set_fuel (fuel : nat) (R : root_env)
+    (roots : root_set) : option root_set :=
+  match fuel with
+  | O => None
+  | S fuel' =>
+      match singleton_store_root roots with
+      | None => Some roots
+      | Some x =>
+          match root_env_lookup x R with
+          | Some roots' =>
+              match roots' with
+              | [RStore y] =>
+                  if ident_eqb x y
+                  then Some roots
+                  else resolve_root_set_fuel fuel' R roots'
+              | _ => resolve_root_set_fuel fuel' R roots'
+              end
+          | None => Some roots
+          end
+      end
+  end.
+
+Definition resolve_root_set (R : root_env) (roots : root_set) : option root_set :=
+  resolve_root_set_fuel (S (List.length R)) R roots.
+
+Definition place_resolved_roots (R : root_env) (p : place) : option root_set :=
+  match place_borrow_roots R p with
+  | Some roots => resolve_root_set R roots
+  | None => None
+  end.
+
 
 Lemma place_borrow_roots_direct :
   forall R p x path,

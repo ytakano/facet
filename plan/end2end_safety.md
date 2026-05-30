@@ -43,11 +43,9 @@ Latest full `sh tests/run.sh` baseline: 29 valid-test failures.
 2. Done: canonicalize singleton store-root resolution and prove same-length equivalence transport.
 3. Done: prove no-shadow domain/length wrapper for resolved-root equivalence.
 4. Done: prove resolved-root rename transport in Alpha/Shadow contexts under scoped collision invariants.
-5. Blocked: current instantiate theorem is too weak for resolved roots.
-   `EBorrow` adds no local store names, so substitution can introduce a store
-   key that `root_env_instantiate` then resolves through `R`.
-6. Then route indirect borrow and immediate deref-borrow root cleanup through
-   `place_resolved_roots`.
+5. Done: add concrete instantiate facts for stable singleton store chains.
+6. Next: route indirect borrow and immediate deref-borrow root cleanup through
+   `place_resolved_roots` only for resolved singleton stores; keep raw-root fallback.
 7. Route `EAssign`/`EReplace` through resolved `PDeref` roots when resolution
    yields one store target.
 8. Preserve invalid rejections for linear refs, immutable writes, borrow

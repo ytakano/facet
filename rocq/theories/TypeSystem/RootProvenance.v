@@ -3135,6 +3135,67 @@ Proof.
   exact Hlookup.
 Qed.
 
+Lemma resolve_root_set_fuel_store_self_instantiate :
+  forall fuel rho R x,
+    root_env_lookup x R = Some [RStore x] ->
+    resolve_root_set_fuel (S fuel) (root_env_instantiate rho R)
+      [RStore x] = Some [RStore x].
+Proof.
+  intros fuel rho R x Hlookup.
+  apply resolve_root_set_fuel_store_self.
+  rewrite (root_env_lookup_instantiate x rho R [RStore x] Hlookup).
+  reflexivity.
+Qed.
+
+Lemma resolve_root_set_fuel_store_one_hop_instantiate :
+  forall fuel rho R x y,
+    root_env_lookup x R = Some [RStore y] ->
+    root_env_lookup y R = Some [RStore y] ->
+    resolve_root_set_fuel (S (S fuel)) (root_env_instantiate rho R)
+      [RStore x] = Some [RStore y].
+Proof.
+  intros fuel rho R x y Hlookup_x Hlookup_y.
+  apply resolve_root_set_fuel_store_one_hop.
+  - rewrite (root_env_lookup_instantiate x rho R [RStore y] Hlookup_x).
+    reflexivity.
+  - rewrite (root_env_lookup_instantiate y rho R [RStore y] Hlookup_y).
+    reflexivity.
+Qed.
+
+Lemma place_resolved_roots_indirect_self_instantiate :
+  forall rho R p x,
+    place_path p = None ->
+    root_provenance_place_name p = x ->
+    root_env_lookup x R = Some [RStore x] ->
+    place_resolved_roots (root_env_instantiate rho R) p = Some [RStore x].
+Proof.
+  intros rho R p x Hpath Hname Hlookup.
+  unfold place_resolved_roots, resolve_root_set.
+  rewrite (place_borrow_roots_indirect (root_env_instantiate rho R) p Hpath).
+  rewrite Hname.
+  rewrite (root_env_lookup_instantiate x rho R [RStore x] Hlookup).
+  apply resolve_root_set_fuel_store_self_instantiate. exact Hlookup.
+Qed.
+
+Lemma place_resolved_roots_indirect_one_hop_instantiate :
+  forall rho R p x y,
+    place_path p = None ->
+    root_provenance_place_name p = x ->
+    root_env_lookup x R = Some [RStore y] ->
+    root_env_lookup y R = Some [RStore y] ->
+    place_resolved_roots (root_env_instantiate rho R) p = Some [RStore y].
+Proof.
+  intros rho R p x y Hpath Hname Hlookup_x Hlookup_y.
+  destruct R as [| [z roots_z] rest]; simpl in Hlookup_y; try discriminate.
+  unfold place_resolved_roots, resolve_root_set.
+  rewrite (place_borrow_roots_indirect
+    (root_env_instantiate rho ((z, roots_z) :: rest)) p Hpath).
+  rewrite Hname.
+  rewrite (root_env_lookup_instantiate x rho ((z, roots_z) :: rest)
+    [RStore y] Hlookup_x).
+  apply resolve_root_set_fuel_store_one_hop_instantiate; assumption.
+Qed.
+
 Lemma place_resolved_roots_direct_lookup_none_rename :
   forall rho R p x path,
     rename_no_collision_for rho x (root_env_names R) ->

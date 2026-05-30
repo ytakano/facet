@@ -39,12 +39,13 @@ Latest full `sh tests/run.sh` baseline: 29 valid-test failures.
 
 ## Active T2f slices
 
-1. Prove `place_resolved_roots` transport and namedness facts.
-2. Route indirect borrow and immediate deref-borrow root cleanup through
+1. Done: add concrete `place_resolved_roots` indirect none/self/one-hop facts.
+2. Next: prove equivalence-safe resolved-root transport and namedness facts.
+3. Route indirect borrow and immediate deref-borrow root cleanup through
    `place_resolved_roots`.
-3. Route `EAssign`/`EReplace` through resolved `PDeref` roots when resolution
+4. Route `EAssign`/`EReplace` through resolved `PDeref` roots when resolution
    yields one store target.
-4. Preserve invalid rejections for linear refs, immutable writes, borrow
+5. Preserve invalid rejections for linear refs, immutable writes, borrow
    conflicts, unresolved roots, and ambiguous roots.
 
 The resolver remains narrow: it follows bounded singleton store-root chains and

@@ -995,6 +995,35 @@ Proof.
   apply resolve_root_set_fuel_store_self. exact Hlookup.
 Qed.
 
+Lemma place_resolved_roots_indirect_lookup_none :
+  forall R p x,
+    place_path p = None ->
+    root_provenance_place_name p = x ->
+    root_env_lookup x R = None ->
+    place_resolved_roots R p = None.
+Proof.
+  intros R p x Hpath Hname Hlookup.
+  unfold place_resolved_roots.
+  rewrite (place_borrow_roots_indirect R p Hpath).
+  rewrite Hname. rewrite Hlookup. reflexivity.
+Qed.
+
+Lemma place_resolved_roots_indirect_one_hop :
+  forall R p x y,
+    place_path p = None ->
+    root_provenance_place_name p = x ->
+    root_env_lookup x R = Some [RStore y] ->
+    root_env_lookup y R = Some [RStore y] ->
+    place_resolved_roots R p = Some [RStore y].
+Proof.
+  intros R p x y Hpath Hname Hlookup_x Hlookup_y.
+  destruct R as [| [z roots_z] rest]; simpl in Hlookup_y; try discriminate.
+  unfold place_resolved_roots, resolve_root_set.
+  rewrite (place_borrow_roots_indirect ((z, roots_z) :: rest) p Hpath).
+  rewrite Hname. rewrite Hlookup_x.
+  apply resolve_root_set_fuel_store_one_hop; assumption.
+Qed.
+
 
 Lemma root_provenance_place_name_rename_place :
   forall rho p,

@@ -601,6 +601,23 @@ Inductive runtime_tfn_signature_bridge
       ty_lifetime_equiv ret1 ret2 ->
       runtime_tfn_signature_bridge params0 ret0 params2 ret2.
 
+Lemma runtime_tfn_signature_bridge_apply_lt_params :
+  forall σ ps ret,
+    runtime_tfn_signature_bridge (map param_ty ps) ret
+      (map param_ty (apply_lt_params σ ps)) (apply_lt_ty σ ret).
+Proof.
+  intros σ ps ret.
+  eapply RTSB_LifetimeEquiv.
+  - apply RTSB_Refl.
+  - unfold apply_lt_params.
+    induction ps as [| p ps IH].
+    + constructor.
+    + simpl. constructor.
+      * apply ty_lifetime_equiv_apply_lt_ty.
+      * exact IH.
+  - apply ty_lifetime_equiv_apply_lt_ty.
+Qed.
+
 Lemma runtime_tfn_signature_bridge_trans :
   forall params0 ret0 params1 ret1 params2 ret2,
     runtime_tfn_signature_bridge params0 ret0 params1 ret1 ->

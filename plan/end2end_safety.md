@@ -262,7 +262,7 @@ run.
 
 Next slices:
 
-- Done prep: add `place_root_lookup` with direct/indirect agreement lemmas.
+- Done prep: add `place_root_lookup` and `place_borrow_roots` helpers.
 - Next: wire roots checker to use indirect reference-place roots for proven cases.
 - Define how writes through `PDeref` update the resolved store root.
 - Add matching roots/shadow-safe constructors and soundness lemmas.

@@ -872,6 +872,35 @@ Proof.
   reflexivity.
 Qed.
 
+Definition place_borrow_roots (R : root_env) (p : place) : option root_set :=
+  match place_path p with
+  | Some _ => Some (root_of_place p)
+  | None => place_root_lookup R p
+  end.
+
+Lemma place_borrow_roots_direct :
+  forall R p x path,
+    place_path p = Some (x, path) ->
+    place_borrow_roots R p = Some [RStore x].
+Proof.
+  intros R p x path Hpath.
+  unfold place_borrow_roots, root_of_place.
+  rewrite Hpath.
+  reflexivity.
+Qed.
+
+Lemma place_borrow_roots_indirect :
+  forall R p,
+    place_path p = None ->
+    place_borrow_roots R p = root_env_lookup (root_provenance_place_name p) R.
+Proof.
+  intros R p Hpath.
+  unfold place_borrow_roots.
+  rewrite Hpath.
+  apply place_root_lookup_indirect.
+  exact Hpath.
+Qed.
+
 Lemma root_provenance_place_name_rename_place :
   forall rho p,
     root_provenance_place_name (rename_place rho p) =

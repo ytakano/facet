@@ -46,12 +46,15 @@ Latest full `sh tests/run.sh` baseline: 29 valid-test failures.
 5. Done: add concrete instantiate facts for stable singleton store chains.
 6. Done: add semantic singleton-result instantiate and resolved-root namedness
    helpers.
-7. Next: route indirect borrow and immediate deref-borrow root cleanup through
+7. Done: add no-shadow equivalent transport for resolved singleton instantiate.
+8. Next: prove non-shadow resolved-root rename transport without namedness, then
+   add mirrored resolved borrow/deref Prop rules.
+9. Route indirect borrow and immediate deref-borrow root cleanup through
    `place_resolved_roots` only for resolved singleton stores; keep raw-root fallback.
-8. Route `EAssign`/`EReplace` through resolved `PDeref` roots when resolution
-   yields one store target.
-9. Preserve invalid rejections for linear refs, immutable writes, borrow
-   conflicts, unresolved roots, and ambiguous roots.
+10. Route `EAssign`/`EReplace` through resolved `PDeref` roots when resolution
+    yields one store target.
+11. Preserve invalid rejections for linear refs, immutable writes, borrow
+    conflicts, unresolved roots, and ambiguous roots.
 
 The resolver remains narrow: it follows bounded singleton store-root chains and
 does not accept ambiguous/non-singleton update targets.

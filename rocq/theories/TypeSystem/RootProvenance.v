@@ -3294,6 +3294,40 @@ Proof.
     eassumption.
 Qed.
 
+Lemma place_resolved_roots_instantiate_singleton_equiv_result :
+  forall rho R R0 p roots x,
+    root_env_no_shadow R ->
+    root_env_no_shadow R0 ->
+    root_env_equiv R0 (root_env_instantiate rho R) ->
+    place_resolved_roots R p = Some roots ->
+    singleton_store_root roots = Some x ->
+    exists roots0,
+      place_resolved_roots R0 p = Some roots0 /\
+      root_set_equiv roots0 (root_set_instantiate rho roots) /\
+      singleton_store_root roots0 = Some x.
+Proof.
+  intros rho R R0 p roots x HnsR HnsR0 HR0 Hresolved Hsingle.
+  destruct (place_resolved_roots_instantiate_singleton_result
+      rho R p roots x Hresolved Hsingle) as
+    [roots_inst [Hresolved_inst [Hroots_inst Hsingle_inst]]].
+  assert (Hlen : List.length (root_env_instantiate rho R) = List.length R0).
+  { symmetry. eapply root_env_equiv_length.
+    - exact HnsR0.
+    - apply root_env_instantiate_no_shadow. exact HnsR.
+    - exact HR0. }
+  destruct (place_resolved_roots_equiv_same_length
+      (root_env_instantiate rho R) R0 p roots_inst Hlen
+      (root_env_equiv_sym _ _ HR0) Hresolved_inst) as
+    [roots0 [Hresolved0 Hroots0]].
+  exists roots0. split; [exact Hresolved0 | split].
+  - apply root_set_equiv_sym.
+    eapply root_set_equiv_trans.
+    + exact Hroots_inst.
+    + exact Hroots0.
+  - rewrite <- (singleton_store_root_equiv roots_inst roots0 Hroots0).
+    exact Hsingle_inst.
+Qed.
+
 Lemma place_resolved_roots_direct_lookup_none_rename :
   forall rho R p x path,
     rename_no_collision_for rho x (root_env_names R) ->

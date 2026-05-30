@@ -5638,12 +5638,11 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
           end
       end
   | EBorrow rk p =>
-      match place_path p with
-      | None => infer_err ErrNotImplemented
-      | Some (x, _) =>
-          match infer_place_sctx env Σ p with
-          | infer_err err => infer_err err
-          | infer_ok T_p =>
+      match infer_place_sctx env Σ p with
+      | infer_err err => infer_err err
+      | infer_ok T_p =>
+          match place_path p with
+          | Some (x, _) =>
               match rk with
               | RShared =>
                   infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_p), Σ, R, [RStore x])
@@ -5655,17 +5654,34 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
                   | None => infer_err (ErrUnknownVar x)
                   end
               end
+          | None =>
+              match rk with
+              | RShared =>
+                  match place_borrow_roots R p with
+                  | Some roots =>
+                      infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_p), Σ, R, roots)
+                  | None => infer_err ErrContextCheckFailed
+                  end
+              | RUnique =>
+                  if place_under_unique_ref_b env Σ p
+                  then
+                    match place_borrow_roots R p with
+                    | Some roots =>
+                        infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, roots)
+                    | None => infer_err ErrContextCheckFailed
+                    end
+                  else infer_err (ErrImmutableBorrow (place_name p))
+              end
           end
       end
   | EDeref (EBorrow rk p) =>
-      match place_path p with
-      | None => infer_err ErrNotImplemented
-      | Some (x, _) =>
-          match infer_place_sctx env Σ p with
-          | infer_err err => infer_err err
-          | infer_ok T_p =>
-              if usage_eqb (ty_usage T_p) UUnrestricted
-              then
+      match infer_place_sctx env Σ p with
+      | infer_err err => infer_err err
+      | infer_ok T_p =>
+          if usage_eqb (ty_usage T_p) UUnrestricted
+          then
+            match place_path p with
+            | Some (x, _) =>
                 match root_env_lookup x R with
                 | None => infer_err ErrContextCheckFailed
                 | Some roots =>
@@ -5679,8 +5695,20 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
                         end
                     end
                 end
-              else infer_err (ErrUsageMismatch (ty_usage T_p) UUnrestricted)
-          end
+            | None =>
+                match place_root_lookup R p with
+                | None => infer_err ErrContextCheckFailed
+                | Some roots =>
+                    match rk with
+                    | RShared => infer_ok (T_p, Σ, R, roots)
+                    | RUnique =>
+                        if place_under_unique_ref_b env Σ p
+                        then infer_ok (T_p, Σ, R, roots)
+                        else infer_err (ErrImmutableBorrow (place_name p))
+                    end
+                end
+            end
+          else infer_err (ErrUsageMismatch (ty_usage T_p) UUnrestricted)
       end
   | EDeref _ => infer_err ErrNotImplemented
   | EIf e1 e2 e3 =>
@@ -6378,12 +6406,11 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
           end
       end
   | EBorrow rk p =>
-      match place_path p with
-      | None => infer_err ErrNotImplemented
-      | Some (x, _) =>
-          match infer_place_sctx env Σ p with
-          | infer_err err => infer_err err
-          | infer_ok T_p =>
+      match infer_place_sctx env Σ p with
+      | infer_err err => infer_err err
+      | infer_ok T_p =>
+          match place_path p with
+          | Some (x, _) =>
               match rk with
               | RShared =>
                   infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_p), Σ, R, [RStore x])
@@ -6395,17 +6422,34 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
                   | None => infer_err (ErrUnknownVar x)
                   end
               end
+          | None =>
+              match rk with
+              | RShared =>
+                  match place_borrow_roots R p with
+                  | Some roots =>
+                      infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_p), Σ, R, roots)
+                  | None => infer_err ErrContextCheckFailed
+                  end
+              | RUnique =>
+                  if place_under_unique_ref_b env Σ p
+                  then
+                    match place_borrow_roots R p with
+                    | Some roots =>
+                        infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, roots)
+                    | None => infer_err ErrContextCheckFailed
+                    end
+                  else infer_err (ErrImmutableBorrow (place_name p))
+              end
           end
       end
   | EDeref (EBorrow rk p) =>
-      match place_path p with
-      | None => infer_err ErrNotImplemented
-      | Some (x, _) =>
-          match infer_place_sctx env Σ p with
-          | infer_err err => infer_err err
-          | infer_ok T_p =>
-              if usage_eqb (ty_usage T_p) UUnrestricted
-              then
+      match infer_place_sctx env Σ p with
+      | infer_err err => infer_err err
+      | infer_ok T_p =>
+          if usage_eqb (ty_usage T_p) UUnrestricted
+          then
+            match place_path p with
+            | Some (x, _) =>
                 match root_env_lookup x R with
                 | None => infer_err ErrContextCheckFailed
                 | Some roots =>
@@ -6419,8 +6463,20 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
                         end
                     end
                 end
-              else infer_err (ErrUsageMismatch (ty_usage T_p) UUnrestricted)
-          end
+            | None =>
+                match place_root_lookup R p with
+                | None => infer_err ErrContextCheckFailed
+                | Some roots =>
+                    match rk with
+                    | RShared => infer_ok (T_p, Σ, R, roots)
+                    | RUnique =>
+                        if place_under_unique_ref_b env Σ p
+                        then infer_ok (T_p, Σ, R, roots)
+                        else infer_err (ErrImmutableBorrow (place_name p))
+                    end
+                end
+            end
+          else infer_err (ErrUsageMismatch (ty_usage T_p) UUnrestricted)
       end
   | EDeref _ => infer_err ErrNotImplemented
   | EIf e1 e2 e3 =>

@@ -534,6 +534,14 @@ val expr_local_store_names : expr -> ident list
 
 val args_local_store_names : expr list -> ident list
 
+val root_provenance_place_name : place -> ident
+
+val root_of_place : place -> root_set
+
+val place_root_lookup : root_env -> place -> root_set option
+
+val place_borrow_roots : root_env -> place -> root_set option
+
 val usage_eqb : usage -> usage -> bool
 
 val usage_sub_bool : usage -> usage -> bool

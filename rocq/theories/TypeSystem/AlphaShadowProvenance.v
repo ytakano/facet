@@ -2853,11 +2853,43 @@ Proof.
   - split; try assumption.
     eapply root_of_place_sctx_roots_named. eassumption.
   - split; try assumption.
+    match goal with
+    | Hpath : place_path ?p = None,
+      Hlookup : place_borrow_roots ?R ?p = Some ?roots |-
+        root_set_sctx_roots_named ?roots ?Σ =>
+        rewrite (place_borrow_roots_indirect R p Hpath) in Hlookup;
+        eapply root_env_lookup_sctx_roots_named; eassumption
+    end.
+  - split; try assumption.
     eapply root_store_single_sctx_roots_named_of_place_path; eassumption.
   - split; try assumption.
-    eapply root_env_lookup_sctx_roots_named; eassumption.
+    match goal with
+    | Hpath : place_path ?p = None,
+      Hlookup : place_borrow_roots ?R ?p = Some ?roots |-
+        root_set_sctx_roots_named ?roots ?Σ =>
+        rewrite (place_borrow_roots_indirect R p Hpath) in Hlookup;
+        eapply root_env_lookup_sctx_roots_named; eassumption
+    end.
   - split; try assumption.
     eapply root_env_lookup_sctx_roots_named; eassumption.
+  - split; try assumption.
+    match goal with
+    | Hpath : place_path ?p = None,
+      Hlookup : place_root_lookup ?R ?p = Some ?roots |-
+        root_set_sctx_roots_named ?roots ?Σ =>
+        rewrite (place_root_lookup_indirect R p Hpath) in Hlookup;
+        eapply root_env_lookup_sctx_roots_named; eassumption
+    end.
+  - split; try assumption.
+    eapply root_env_lookup_sctx_roots_named; eassumption.
+  - split; try assumption.
+    match goal with
+    | Hpath : place_path ?p = None,
+      Hlookup : place_root_lookup ?R ?p = Some ?roots |-
+        root_set_sctx_roots_named ?roots ?Σ =>
+        rewrite (place_root_lookup_indirect R p Hpath) in Hlookup;
+        eapply root_env_lookup_sctx_roots_named; eassumption
+    end.
   - match goal with
     | IHcond : root_env_no_shadow ?R ->
         root_env_sctx_roots_named ?R ?Σ ->
@@ -3833,6 +3865,35 @@ Proof.
     + rewrite root_of_place_rename_place. simpl. tauto.
   - assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
     { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+    match goal with
+    | Hpath : place_path p = None,
+      Hborrow : place_borrow_roots ?R0 p = Some roots,
+      Heq : root_env_equiv Rr (root_env_rename rho ?R0) |- _ =>
+        assert (Hlookup_root :
+          root_env_lookup (root_provenance_place_name p) R0 = Some roots)
+          by (rewrite <- (place_borrow_roots_indirect R0 p Hpath); exact Hborrow);
+        destruct (root_env_equiv_rename_lookup_forward rho R0 Rr
+          (root_provenance_place_name p) roots Heq HnocollR Hlookup_root)
+          as [rootsr [Hlookup_r Hrootsr]]
+    end.
+    exists Σr, Rr, rootsr. repeat split.
+    + eapply TER_BorrowShared_Indirect.
+      * eapply alpha_rename_typed_place_env_structural_forward; eauto.
+      * match goal with Hpath : place_path p = None |- _ =>
+          apply place_path_rename_place_none; exact Hpath
+        end.
+      * rewrite (place_borrow_roots_indirect Rr (rename_place rho p)).
+        -- rewrite root_provenance_place_name_rename_place. exact Hlookup_r.
+        -- match goal with Hpath : place_path p = None |- _ =>
+             apply place_path_rename_place_none; exact Hpath
+           end.
+    + exact Hctx.
+    + exact HnsRr.
+    + exact HRr.
+    + apply Hrootsr.
+    + apply Hrootsr.
+  - assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+    { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
     assert (Hsafe_x : ~ In x (rename_range rho)).
     { rewrite <- (place_path_root p x path
         ltac:(match goal with
@@ -3852,8 +3913,37 @@ Proof.
     + exact HRr.
     + simpl. tauto.
     + simpl. tauto.
+  - assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+    { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+    match goal with
+    | Hpath : place_path p = None,
+      Hborrow : place_borrow_roots ?R0 p = Some roots,
+      Heq : root_env_equiv Rr (root_env_rename rho ?R0) |- _ =>
+        assert (Hlookup_root :
+          root_env_lookup (root_provenance_place_name p) R0 = Some roots)
+          by (rewrite <- (place_borrow_roots_indirect R0 p Hpath); exact Hborrow);
+        destruct (root_env_equiv_rename_lookup_forward rho R0 Rr
+          (root_provenance_place_name p) roots Heq HnocollR Hlookup_root)
+          as [rootsr [Hlookup_r Hrootsr]]
+    end.
+    exists Σr, Rr, rootsr. repeat split.
+    + eapply TER_BorrowUnique_Indirect.
+      * eapply alpha_rename_typed_place_env_structural_forward; eauto.
+      * match goal with Hpath : place_path p = None |- _ =>
+          apply place_path_rename_place_none; exact Hpath
+        end.
+      * eapply alpha_rename_place_under_unique_ref_structural_forward; eauto.
+      * rewrite (place_borrow_roots_indirect Rr (rename_place rho p)).
+        -- rewrite root_provenance_place_name_rename_place. exact Hlookup_r.
+        -- match goal with Hpath : place_path p = None |- _ =>
+             apply place_path_rename_place_none; exact Hpath
+           end.
+    + exact Hctx.
+    + exact HnsRr.
+    + exact HRr.
+    + apply Hrootsr.
+    + apply Hrootsr.
 Qed.
-
 Lemma root_env_names_remove_preserve_neq :
   forall x y R,
     x <> y ->
@@ -6080,6 +6170,35 @@ Proof.
     + rewrite root_of_place_rename_place. simpl. tauto.
   - assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
     { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+    match goal with
+    | Hpath : place_path p = None,
+      Hborrow : place_borrow_roots ?R0 p = Some roots,
+      Heq : root_env_equiv Rr (root_env_rename rho ?R0) |- _ =>
+        assert (Hlookup_root :
+          root_env_lookup (root_provenance_place_name p) R0 = Some roots)
+          by (rewrite <- (place_borrow_roots_indirect R0 p Hpath); exact Hborrow);
+        destruct (root_env_equiv_rename_lookup_forward rho R0 Rr
+          (root_provenance_place_name p) roots Heq HnocollR Hlookup_root)
+          as [rootsr [Hlookup_r Hrootsr]]
+    end.
+    exists Σr, Rr, rootsr. repeat split.
+    + eapply TERS_BorrowShared_Indirect.
+      * eapply alpha_rename_typed_place_env_structural_forward; eauto.
+      * match goal with Hpath : place_path p = None |- _ =>
+          apply place_path_rename_place_none; exact Hpath
+        end.
+      * rewrite (place_borrow_roots_indirect Rr (rename_place rho p)).
+        -- rewrite root_provenance_place_name_rename_place. exact Hlookup_r.
+        -- match goal with Hpath : place_path p = None |- _ =>
+             apply place_path_rename_place_none; exact Hpath
+           end.
+    + exact Hctx.
+    + exact HnsRr.
+    + exact HRr.
+    + apply Hrootsr.
+    + apply Hrootsr.
+  - assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+    { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
     assert (Hsafe_x : ~ In x (rename_range rho)).
     { rewrite <- (place_path_root p x path
         ltac:(match goal with
@@ -6099,8 +6218,37 @@ Proof.
     + exact HRr.
     + simpl. tauto.
     + simpl. tauto.
+  - assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+    { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+    match goal with
+    | Hpath : place_path p = None,
+      Hborrow : place_borrow_roots ?R0 p = Some roots,
+      Heq : root_env_equiv Rr (root_env_rename rho ?R0) |- _ =>
+        assert (Hlookup_root :
+          root_env_lookup (root_provenance_place_name p) R0 = Some roots)
+          by (rewrite <- (place_borrow_roots_indirect R0 p Hpath); exact Hborrow);
+        destruct (root_env_equiv_rename_lookup_forward rho R0 Rr
+          (root_provenance_place_name p) roots Heq HnocollR Hlookup_root)
+          as [rootsr [Hlookup_r Hrootsr]]
+    end.
+    exists Σr, Rr, rootsr. repeat split.
+    + eapply TERS_BorrowUnique_Indirect.
+      * eapply alpha_rename_typed_place_env_structural_forward; eauto.
+      * match goal with Hpath : place_path p = None |- _ =>
+          apply place_path_rename_place_none; exact Hpath
+        end.
+      * eapply alpha_rename_place_under_unique_ref_structural_forward; eauto.
+      * rewrite (place_borrow_roots_indirect Rr (rename_place rho p)).
+        -- rewrite root_provenance_place_name_rename_place. exact Hlookup_r.
+        -- match goal with Hpath : place_path p = None |- _ =>
+             apply place_path_rename_place_none; exact Hpath
+           end.
+    + exact Hctx.
+    + exact HnsRr.
+    + exact HRr.
+    + apply Hrootsr.
+    + apply Hrootsr.
 Qed.
-
 Lemma alpha_rename_typed_env_roots_borrow_shadow_safe_support_forward :
   forall env Ω n rho R Rr Σ Σr rk p er used used' T Σ' R' roots,
     typed_env_roots_shadow_safe env Ω n R Σ (EBorrow rk p) T Σ' R' roots ->
@@ -11417,10 +11565,10 @@ Proof.
           eauto.
       + inversion Htyped; subst; simpl in Hrename; injection Hrename as <- <-.
         * match goal with
-          | Hlookup : root_env_lookup x ?R0 = Some roots,
+          | Hlookup : root_env_lookup ?x0 ?R0 = Some roots,
             HR : root_env_equiv Rr (root_env_rename rho ?R0) |- _ =>
               assert (Hlookup_ren :
-                root_env_lookup (lookup_rename x rho)
+                root_env_lookup (lookup_rename x0 rho)
                   (root_env_rename rho R0) =
                 Some (root_set_rename rho roots));
               [ apply root_env_lookup_rename;
@@ -11428,7 +11576,7 @@ Proof.
                   eapply root_env_lookup_some_in_names; exact Hlookup
                 | exact Hlookup ]
               | destruct (root_env_equiv_lookup_r Rr (root_env_rename rho R0)
-                  (lookup_rename x rho) (root_set_rename rho roots)
+                  (lookup_rename x0 rho) (root_set_rename rho roots)
                   HR Hlookup_ren) as [rootsr [Hlookup_r Hroots_r]] ]
           end.
           assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
@@ -11442,10 +11590,37 @@ Proof.
              ++ exact Hlookup_r.
           -- split; [exact Hctx | split; [exact HnsRr | split; [exact HRr | exact Hroots_r]]].
         * match goal with
-          | Hlookup : root_env_lookup x ?R0 = Some roots,
+          | Hpath : place_path p = None,
+            Hlookup : place_root_lookup ?R0 p = Some roots,
+            HR : root_env_equiv Rr (root_env_rename rho ?R0) |- _ =>
+              assert (Hlookup_root :
+                root_env_lookup (root_provenance_place_name p) R0 = Some roots)
+                by (rewrite <- (place_root_lookup_indirect R0 p Hpath); exact Hlookup);
+              destruct (root_env_equiv_rename_lookup_forward rho R0 Rr
+                (root_provenance_place_name p) roots HR HnocollR Hlookup_root)
+                as [rootsr [Hlookup_r Hroots_r]]
+          end.
+          assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+          { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+          exists Σr, Rr, rootsr.
+          split.
+          -- eapply TERS_DerefBorrowShared_Indirect.
+             ++ eapply alpha_rename_typed_place_env_structural_forward; eauto.
+             ++ assumption.
+             ++ match goal with Hpath : place_path p = None |- _ =>
+                  apply place_path_rename_place_none; exact Hpath
+                end.
+             ++ rewrite (place_root_lookup_indirect Rr (rename_place rho p)).
+                ** rewrite root_provenance_place_name_rename_place. exact Hlookup_r.
+                ** match goal with Hpath : place_path p = None |- _ =>
+                     apply place_path_rename_place_none; exact Hpath
+                   end.
+          -- split; [exact Hctx | split; [exact HnsRr | split; [exact HRr | exact Hroots_r]]].
+        * match goal with
+          | Hlookup : root_env_lookup ?x0 ?R0 = Some roots,
             HR : root_env_equiv Rr (root_env_rename rho ?R0) |- _ =>
               assert (Hlookup_ren :
-                root_env_lookup (lookup_rename x rho)
+                root_env_lookup (lookup_rename x0 rho)
                   (root_env_rename rho R0) =
                 Some (root_set_rename rho roots));
               [ apply root_env_lookup_rename;
@@ -11453,7 +11628,7 @@ Proof.
                   eapply root_env_lookup_some_in_names; exact Hlookup
                 | exact Hlookup ]
               | destruct (root_env_equiv_lookup_r Rr (root_env_rename rho R0)
-                  (lookup_rename x rho) (root_set_rename rho roots)
+                  (lookup_rename x0 rho) (root_set_rename rho roots)
                   HR Hlookup_ren) as [rootsr [Hlookup_r Hroots_r]] ]
           end.
           assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
@@ -11466,10 +11641,40 @@ Proof.
              ++ eapply place_path_rename_place_some. eassumption.
              ++ eapply ctx_alpha_lookup_mut_forward.
                 ** exact Hctx.
-                ** rewrite <- (place_path_root p x path ltac:(eassumption)).
-                   exact Hsafe_root.
+                ** match goal with
+                   | Hpath : place_path p = Some (?x0, ?path0) |- _ =>
+                       rewrite <- (place_path_root p x0 path0 Hpath); exact Hsafe_root
+                   end.
                 ** eassumption.
              ++ exact Hlookup_r.
+          -- split; [exact Hctx | split; [exact HnsRr | split; [exact HRr | exact Hroots_r]]].
+        * match goal with
+          | Hpath : place_path p = None,
+            Hlookup : place_root_lookup ?R0 p = Some roots,
+            HR : root_env_equiv Rr (root_env_rename rho ?R0) |- _ =>
+              assert (Hlookup_root :
+                root_env_lookup (root_provenance_place_name p) R0 = Some roots)
+                by (rewrite <- (place_root_lookup_indirect R0 p Hpath); exact Hlookup);
+              destruct (root_env_equiv_rename_lookup_forward rho R0 Rr
+                (root_provenance_place_name p) roots HR HnocollR Hlookup_root)
+                as [rootsr [Hlookup_r Hroots_r]]
+          end.
+          assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+          { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+          exists Σr, Rr, rootsr.
+          split.
+          -- eapply TERS_DerefBorrowUnique_Indirect.
+             ++ eapply alpha_rename_typed_place_env_structural_forward; eauto.
+             ++ assumption.
+             ++ match goal with Hpath : place_path p = None |- _ =>
+                  apply place_path_rename_place_none; exact Hpath
+                end.
+             ++ eapply alpha_rename_place_under_unique_ref_structural_forward; eauto.
+             ++ rewrite (place_root_lookup_indirect Rr (rename_place rho p)).
+                ** rewrite root_provenance_place_name_rename_place. exact Hlookup_r.
+                ** match goal with Hpath : place_path p = None |- _ =>
+                     apply place_path_rename_place_none; exact Hpath
+                   end.
           -- split; [exact Hctx | split; [exact HnsRr | split; [exact HRr | exact Hroots_r]]].
       + eapply (alpha_rename_typed_env_roots_drop_shadow_safe_support_forward
           env Ω n rho R Rr Σ Σr e er used used' T Σ' R' roots).

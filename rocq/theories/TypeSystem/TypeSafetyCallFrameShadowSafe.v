@@ -382,11 +382,43 @@ Proof.
         by eassumption.
       reflexivity.
   - eapply TERS_BorrowShared; eauto.
+  - eapply TERS_BorrowShared_Indirect; eauto.
+    match goal with
+    | Hpath : place_path p = None,
+      Hborrow : place_borrow_roots R p = Some roots |- _ =>
+        rewrite (place_borrow_roots_indirect (R ++ R_tail) p Hpath);
+        rewrite (place_borrow_roots_indirect R p Hpath) in Hborrow;
+        eapply root_env_lookup_app_left; exact Hborrow
+    end.
   - eapply TERS_BorrowUnique; eauto.
+  - eapply TERS_BorrowUnique_Indirect; eauto.
+    match goal with
+    | Hpath : place_path p = None,
+      Hborrow : place_borrow_roots R p = Some roots |- _ =>
+        rewrite (place_borrow_roots_indirect (R ++ R_tail) p Hpath);
+        rewrite (place_borrow_roots_indirect R p Hpath) in Hborrow;
+        eapply root_env_lookup_app_left; exact Hborrow
+    end.
   - eapply TERS_DerefBorrowShared; eauto.
     eapply root_env_lookup_app_left; eassumption.
+  - eapply TERS_DerefBorrowShared_Indirect; eauto.
+    match goal with
+    | Hpath : place_path p = None,
+      Hlookup : place_root_lookup R p = Some roots |- _ =>
+        rewrite (place_root_lookup_indirect (R ++ R_tail) p Hpath);
+        rewrite (place_root_lookup_indirect R p Hpath) in Hlookup;
+        eapply root_env_lookup_app_left; exact Hlookup
+    end.
   - eapply TERS_DerefBorrowUnique; eauto.
     eapply root_env_lookup_app_left; eassumption.
+  - eapply TERS_DerefBorrowUnique_Indirect; eauto.
+    match goal with
+    | Hpath : place_path p = None,
+      Hlookup : place_root_lookup R p = Some roots |- _ =>
+        rewrite (place_root_lookup_indirect (R ++ R_tail) p Hpath);
+        rewrite (place_root_lookup_indirect R p Hpath) in Hlookup;
+        eapply root_env_lookup_app_left; exact Hlookup
+    end.
   - pose proof (root_env_tail_fresh_names_app_l _ _ _ H2) as Hfresh1.
     pose proof (root_env_tail_fresh_names_app_r _ _ _ H2) as Hfresh_tail.
     pose proof (root_env_tail_fresh_names_app_l _ _ _ Hfresh_tail) as Hfresh2.

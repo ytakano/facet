@@ -806,11 +806,43 @@ Proof.
   - split; try assumption.
     eapply root_of_place_ctx_roots_named. eassumption.
   - split; try assumption.
+    match goal with
+    | Hpath : place_path ?p = None,
+      Hlookup : place_borrow_roots ?R ?p = Some ?roots |-
+        root_set_ctx_roots_named ?roots ?Σ =>
+        rewrite (place_borrow_roots_indirect R p Hpath) in Hlookup;
+        eapply root_env_lookup_ctx_roots_named; eassumption
+    end.
+  - split; try assumption.
     eapply root_store_single_ctx_roots_named_of_place_path; eassumption.
   - split; try assumption.
-    eapply root_env_lookup_ctx_roots_named; eassumption.
+    match goal with
+    | Hpath : place_path ?p = None,
+      Hlookup : place_borrow_roots ?R ?p = Some ?roots |-
+        root_set_ctx_roots_named ?roots ?Σ =>
+        rewrite (place_borrow_roots_indirect R p Hpath) in Hlookup;
+        eapply root_env_lookup_ctx_roots_named; eassumption
+    end.
   - split; try assumption.
     eapply root_env_lookup_ctx_roots_named; eassumption.
+  - split; try assumption.
+    match goal with
+    | Hpath : place_path ?p = None,
+      Hlookup : place_root_lookup ?R ?p = Some ?roots |-
+        root_set_ctx_roots_named ?roots ?Σ =>
+        rewrite (place_root_lookup_indirect R p Hpath) in Hlookup;
+        eapply root_env_lookup_ctx_roots_named; eassumption
+    end.
+  - split; try assumption.
+    eapply root_env_lookup_ctx_roots_named; eassumption.
+  - split; try assumption.
+    match goal with
+    | Hpath : place_path ?p = None,
+      Hlookup : place_root_lookup ?R ?p = Some ?roots |-
+        root_set_ctx_roots_named ?roots ?Σ =>
+        rewrite (place_root_lookup_indirect R p Hpath) in Hlookup;
+        eapply root_env_lookup_ctx_roots_named; eassumption
+    end.
   - match goal with
     | IHcond : root_env_no_shadow ?R ->
         root_env_ctx_roots_named ?R ?Σ ->
@@ -1573,7 +1605,7 @@ Proof.
   - intros s p x path rk Heval_place Ω n R Σ T Σ' R' roots Hready
       Hroots Hnodup Hrn Htyped.
     dependent destruction Hready.
-    inversion Htyped; subst.
+    inversion Htyped; subst; try congruence.
     + repeat split; try assumption.
       match goal with
       | Hpath_static : place_path p = Some (?x_static, ?path_static) |- _ =>
@@ -1602,7 +1634,7 @@ Proof.
       Htyped.
     dependent destruction Hready.
     inversion Heval_r; subst.
-    dependent destruction Htyped.
+    dependent destruction Htyped; try congruence.
     + repeat split; try assumption.
       match goal with
       | Hevalp : eval_place ?s0 ?p0 ?x0 ?path0,

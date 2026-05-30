@@ -32,16 +32,16 @@ this roadmap.
 ## Current blockers
 
 With the CLI using `infer_program_env_end2end`, the latest full
-`sh tests/run.sh` run after the direct-narrow captured-call proof has 29
-valid-test failures:
+`sh tests/run.sh` run after the indirect borrow/deref roots slice still has
+29 valid-test failures:
 
 - 18 `ErrEndToEndSafetyGateFailed`
   - Generic direct calls, type-forall function values, mixed forall function
     values, generic-item function values, and generic local-bound bodies.
-- 11 `ErrNotImplemented`
-  - deref/reborrow/write-through-reference roots coverage.  Nested `PDeref`
-    places make `place_path` return `None`; roots typing needs explicit
-    location/value root resolution before these paths can be accepted.
+- 11 T2f failures
+  - 10 `ErrNotImplemented` write/reborrow cases still blocked by
+    `EAssign`/`EReplace` through `PDeref` and inferred-let coverage.
+  - 1 `ErrContextCheckFailed`: nested shared reborrow root cleanup.
 
 ## Remaining implementation slices
 
@@ -262,9 +262,9 @@ run.
 
 Next slices:
 
-- Done prep: add `place_root_lookup` and `place_borrow_roots` helpers.
-- Next: wire roots checker to use indirect reference-place roots for proven cases.
-- Define how writes through `PDeref` update the resolved store root.
+- Done: wire shared/unique borrow and immediate deref-borrow roots through
+  indirect reference-place roots.
+- Next: define write/update roots for `EAssign`/`EReplace` through `PDeref`.
 - Add matching roots/shadow-safe constructors and soundness lemmas.
 - Preserve invalid rejections for linear refs, immutable writes, and borrow
   conflicts.

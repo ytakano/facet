@@ -536,7 +536,7 @@ Proof.
   - intros s p x path rk Heval_place Ω n R Σ T Σ' R' roots Hready
       Hstore _ _ _ Htyped.
     dependent destruction Hready.
-    inversion Htyped; subst.
+    inversion Htyped; subst; try congruence.
     + match goal with
       | Hplace : typed_place_env_structural env ?Σ0 p ?T_place,
         Hpath : place_path p = Some (?x_static, ?path_static) |- _ =>
@@ -576,7 +576,7 @@ Proof.
       Hnodup Hrn Htyped.
     dependent destruction Hready.
     inversion Heval_r; subst.
-    dependent destruction Htyped.
+    dependent destruction Htyped; try congruence.
     + destruct (eval_place_matches_place_path s_r p x path x1 path1 H4 H2)
         as [Hx Hpath].
       subst x path.

@@ -220,6 +220,7 @@ T2e.2 tasks:
 - Done prep: add prefix-named final-store equality and frame-scope helpers for narrow `TFn` calls.
 - Done prep: add `typed_args_roots` adapter from lifetime-substituted params to anonymous param-ty lists.
 - Done prep: add runtime signature bridge for lifetime-substituted direct-call params.
+- Done prep: add bind-param root/key naming helpers for direct narrow runtime starts.
 - Done prep: lift frame-scope preservation to recursive narrow summaries.
 - Done prep: lift param-cover and param-scope preservation to recursive narrow summaries.
 - Done prep: add store-named direct-call narrow callee-route bridge.

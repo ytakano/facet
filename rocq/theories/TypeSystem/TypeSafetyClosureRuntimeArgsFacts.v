@@ -134,6 +134,128 @@ Proof.
       eapply eval_args_values_have_types_length. exact Hargs_values.
 Qed.
 
+Lemma root_env_store_roots_named_weaken_store_names :
+  forall R s s',
+    root_env_store_roots_named R s ->
+    (forall x, In x (store_names s) -> In x (store_names s')) ->
+    root_env_store_roots_named R s'.
+Proof.
+  unfold root_env_store_roots_named.
+  intros R s s' Hnamed Hsub x roots z Hlookup Hin.
+  apply Hsub. eapply Hnamed; eassumption.
+Qed.
+
+Lemma root_env_store_keys_named_weaken_store_names :
+  forall R s s',
+    root_env_store_keys_named R s ->
+    (forall x, In x (store_names s) -> In x (store_names s')) ->
+    root_env_store_keys_named R s'.
+Proof.
+  unfold root_env_store_keys_named, root_env_keys_named.
+  intros R s s' Hkeys Hsub x Hin.
+  apply Hsub. apply Hkeys. exact Hin.
+Qed.
+
+Lemma root_set_store_roots_named_weaken_store_names :
+  forall roots s s',
+    root_set_store_roots_named roots s ->
+    (forall x, In x (store_names s) -> In x (store_names s')) ->
+    root_set_store_roots_named roots s'.
+Proof.
+  unfold root_set_store_roots_named.
+  intros roots s s' Hnamed Hsub x Hin.
+  apply Hsub. apply Hnamed. exact Hin.
+Qed.
+
+Lemma root_env_store_roots_named_remove_params :
+  forall ps R s,
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_roots_named (root_env_remove_params ps R) s.
+Proof.
+  induction ps as [| p ps IH]; intros R s Hrn Hnamed; simpl.
+  - exact Hnamed.
+  - apply IH.
+    + apply root_env_no_shadow_remove. exact Hrn.
+    + eapply root_env_store_roots_named_remove_env; eassumption.
+Qed.
+
+Lemma root_env_store_keys_named_remove_params :
+  forall ps R s,
+    root_env_store_keys_named R s ->
+    root_env_store_keys_named (root_env_remove_params ps R) s.
+Proof.
+  induction ps as [| p ps IH]; intros R s Hkeys; simpl.
+  - exact Hkeys.
+  - apply IH.
+    unfold root_env_store_keys_named in *.
+    apply root_env_keys_named_remove. exact Hkeys.
+Qed.
+
+Lemma root_env_store_roots_named_call_param_bind_params :
+  forall env Ω s vs ps arg_roots R_tail,
+    eval_args_values_have_types env Ω s vs ps ->
+    Forall (fun roots => root_set_store_roots_named roots s) arg_roots ->
+    root_env_no_shadow R_tail ->
+    root_env_store_roots_named R_tail s ->
+    root_env_store_roots_named
+      (call_param_root_env ps arg_roots R_tail) (bind_params ps vs s).
+Proof.
+  intros env Ω s vs ps arg_roots R_tail Hargs Hroots Hrn Hnamed.
+  unfold call_param_root_env.
+  revert arg_roots R_tail Hroots Hrn Hnamed.
+  induction Hargs as [| v vs p ps T_actual Hv Hcompat Htail IH];
+    intros arg_roots R_tail Hroots Hrn Hnamed; simpl.
+  - eapply root_env_store_roots_named_weaken_store_names.
+    + exact Hnamed.
+    + intros x Hin. exact Hin.
+  - destruct arg_roots as [| roots arg_roots].
+    + eapply root_env_store_roots_named_weaken_store_names.
+      * eapply (root_env_store_roots_named_remove_params (p :: ps)); eassumption.
+      * intros x Hin. simpl. right.
+        rewrite (store_names_bind_params env Ω s vs ps Htail).
+        apply in_or_app. right. exact Hin.
+    + inversion Hroots as [| ? ? Hroots_head Hroots_tail]; subst.
+      assert (Hroots_head_bind :
+        root_set_store_roots_named roots (bind_params ps vs s)).
+      { eapply root_set_store_roots_named_weaken_store_names.
+        - exact Hroots_head.
+        - intros x Hin.
+          rewrite (store_names_bind_params env Ω s vs ps Htail).
+          apply in_or_app. right. exact Hin. }
+      eapply root_env_store_roots_named_add_env_store_add.
+      * eapply IH.
+        -- exact Hroots_tail.
+        -- apply root_env_no_shadow_remove. exact Hrn.
+        -- eapply root_env_store_roots_named_remove_env; eassumption.
+      * exact Hroots_head_bind.
+Qed.
+
+Lemma root_env_store_keys_named_call_param_bind_params :
+  forall env Ω s vs ps arg_roots R_tail,
+    eval_args_values_have_types env Ω s vs ps ->
+    root_env_store_keys_named R_tail s ->
+    root_env_store_keys_named
+      (call_param_root_env ps arg_roots R_tail) (bind_params ps vs s).
+Proof.
+  intros env Ω s vs ps arg_roots R_tail Hargs Hkeys.
+  unfold call_param_root_env.
+  revert arg_roots R_tail Hkeys.
+  induction Hargs as [| v vs p ps T_actual Hv Hcompat Htail IH];
+    intros arg_roots R_tail Hkeys; simpl.
+  - exact Hkeys.
+  - destruct arg_roots as [| roots arg_roots].
+    + eapply root_env_store_keys_named_weaken_store_names.
+      * eapply (root_env_store_keys_named_remove_params (p :: ps)). exact Hkeys.
+      * intros x Hin. simpl. right.
+        rewrite (store_names_bind_params env Ω s vs ps Htail).
+        apply in_or_app. right. exact Hin.
+    + eapply root_env_store_keys_named_add_env_store_add.
+      eapply IH.
+      unfold root_env_store_keys_named in *.
+      apply root_env_keys_named_remove. exact Hkeys.
+Qed.
+
 Lemma captured_call_bind_params_call_param_root_env_ready :
   forall env captured Rcap s_args R_args ps_bind vs Ω arg_roots,
     captured_call_frame_ready env captured Rcap s_args R_args ->

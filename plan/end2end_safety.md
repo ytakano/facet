@@ -225,10 +225,8 @@ T2e.2 tasks:
 - Done prep: lift frame-scope preservation to recursive narrow summaries.
 - Done prep: lift param-cover and param-scope preservation to recursive narrow summaries.
 - Done prep: add store-named direct-call narrow callee-route bridge.
-- Remaining proof gap: finish the captured-call direct-narrow branch.  The
-  summary now has provenance, direct-narrow, and body-narrow cases; the proof
-  needs a direct-call runtime wrapper that consumes callee store-safe narrow
-  summaries.
+- Done: wire the captured-call direct-narrow branch through the store-safe
+  narrow callee runtime wrapper.
 - Then re-run the remaining HRT valid/invalid tests and update the full count.
 
 Out of scope for T2e.2:

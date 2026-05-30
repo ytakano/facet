@@ -212,6 +212,8 @@ T2e.2 tasks:
   store-safe function-value-call args.
 - Done prep: add store-named direct-call bridge helpers for
   prefix narrow runtime routes.
+- Done prep: add store-named prefix-start runtime package support for
+  narrow monomorphic and lifetime-forall `TFn` calls, including `let` cleanup.
 - Remaining proof gap: finish the direct-call runtime route for callees proven
   by narrow summaries.  The direct narrow branch now has store-safe args and
   alpha/root/tail-frame bridge evidence; the missing piece is a local-bounds

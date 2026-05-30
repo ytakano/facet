@@ -600,6 +600,11 @@ Proof.
           [ exact Hpres_new
           | eapply store_ref_targets_preserved_trans; eassumption ]
       end.
+    + match goal with
+      | Hready_path : place_path p = Some _,
+        Htyped_none : place_path p = None |- _ =>
+          rewrite Hready_path in Htyped_none; discriminate
+      end.
   - intros s s1 s2 p x_eval path_eval e_new v_new Heval_place
       Heval_new IHnew Hupdate Ω n R Σ T Σ' R' roots Hready Hstore
       Hroots Hnodup Hrn Htyped.
@@ -641,6 +646,11 @@ Proof.
             as [Hstore_final Hv_final];
           repeat split; try assumption;
           eapply store_ref_targets_preserved_trans; eassumption
+      end.
+    + match goal with
+      | Hready_path : place_path p = Some _,
+        Htyped_none : place_path p = None |- _ =>
+          rewrite Hready_path in Htyped_none; discriminate
       end.
   - intros s p x path rk Heval_place Ω n R Σ T Σ' R' roots Hready
       Hstore _ _ _ Htyped.

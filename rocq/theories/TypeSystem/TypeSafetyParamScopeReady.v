@@ -604,6 +604,11 @@ Proof.
         [ apply root_env_covers_params_update; exact Hcover1
         | exists frame3; exact Hscope3 ]
     end.
+    match goal with
+    | Hready_path : place_path p = Some _,
+      Htyped_none : place_path p = None |- _ =>
+        rewrite Hready_path in Htyped_none; discriminate
+    end.
   - intros s s1 s2 p x_eval path_eval e_new v_new Heval_place
       Heval_new IHnew Hupdate Ω n R Σ T Σ' R' roots ps frame
       Hready Htyped Hcover Hscope.
@@ -622,6 +627,11 @@ Proof.
         split;
         [ apply root_env_covers_params_update; exact Hcover1
         | exists frame2; exact Hscope2 ]
+    end.
+    match goal with
+    | Hready_path : place_path p = Some _,
+      Htyped_none : place_path p = None |- _ =>
+        rewrite Hready_path in Htyped_none; discriminate
     end.
   - intros s p x path rk Heval_place Ω n R Σ T Σ' R' roots ps frame
       Hready Htyped Hcover Hscope.

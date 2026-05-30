@@ -27,7 +27,7 @@ Required theorem names stay intact:
 
 ## Current baseline
 
-Latest full `sh tests/run.sh` baseline: 29 valid-test failures.
+Latest full `sh tests/run.sh` baseline (2026-05-30): 29 valid-test failures; invalid tests pass.
 
 - 18 `ErrEndToEndSafetyGateFailed`: generic direct calls, type-forall
   function values, mixed forall function values, generic-item function values,
@@ -56,10 +56,12 @@ Latest full `sh tests/run.sh` baseline: 29 valid-test failures.
     appending outer roots can change `place_resolved_roots`.
 12. Done: route indirect borrow and immediate deref-borrow roots through
    `place_resolved_roots` for singleton stores; keep raw-root fallback.
-13. Route `EAssign`/`EReplace` through resolved `PDeref` roots when resolution
-    yields one store target.
-14. Preserve invalid rejections for linear refs, immutable writes, borrow
-    conflicts, unresolved roots, and ambiguous roots.
+13. Done: route non-shadow `EAssign`/`EReplace` through resolved
+    singleton `PDeref` roots; shadow-safe unchanged.
+14. Done: invalid rejections preserved for linear refs, immutable writes,
+    borrow conflicts, unresolved roots, and ambiguous roots.
+15. Next: route inferred-let/root cleanup that still blocks source-level
+    indirect assign/replace and mutable reborrow valid tests.
 
 The resolver remains narrow: it follows bounded singleton store-root chains and
 does not accept ambiguous/non-singleton update targets.

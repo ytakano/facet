@@ -854,6 +854,30 @@ Proof.
   - destruct (H H0 H1) as [Henv1 Hroots_new].
     assert (Hrn1 : root_env_no_shadow R1)
       by (eapply typed_env_roots_no_shadow; eassumption).
+    assert (Hroots_old : root_set_ctx_roots_named roots_old Σ1)
+      by (eapply root_env_lookup_ctx_roots_named; eassumption).
+    assert (Hroots_result_Σ : root_set_ctx_roots_named roots_result Σ).
+    { eapply place_resolved_roots_ctx_roots_named.
+      - eassumption.
+      - eapply root_of_place_ctx_roots_named. eassumption.
+      - eassumption. }
+    assert (Hsame : sctx_same_bindings Σ Σ1).
+    { eapply typed_env_structural_same_bindings.
+      eapply typed_env_roots_structural. eassumption. }
+    split.
+    + eapply root_env_ctx_roots_named_update_union; eassumption.
+    + eapply root_set_ctx_roots_named_same_bindings; eassumption.
+  - destruct (H H0 H1) as [Henv1 Hroots_new].
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow; eassumption).
+    assert (Hroots_old : root_set_ctx_roots_named roots_old Σ')
+      by (eapply root_env_lookup_ctx_roots_named; eassumption).
+    split.
+    + eapply root_env_ctx_roots_named_update_union; eassumption.
+    + apply root_set_ctx_roots_named_nil.
+  - destruct (H H0 H1) as [Henv1 Hroots_new].
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow; eassumption).
     assert (Hroots_old : root_set_ctx_roots_named roots_old Σ')
       by (eapply root_env_lookup_ctx_roots_named; eassumption).
     split.
@@ -1234,6 +1258,24 @@ Proof.
         eapply root_env_ctx_keys_named_same_bindings;
         [ eapply sctx_restore_path_same_bindings; exact Hrestore
         | exact (IH Hrn Henv) ]
+    end.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_ctx_keys_named ?R ?Σ ->
+        root_env_ctx_keys_named ?R1 ?Σ',
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_ctx_keys_named ?R ?Σ |- _ =>
+        apply root_env_ctx_keys_named_update;
+        exact (IH Hrn Henv)
+    end.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_ctx_keys_named ?R ?Σ ->
+        root_env_ctx_keys_named ?R1 ?Σ',
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_ctx_keys_named ?R ?Σ |- _ =>
+        apply root_env_ctx_keys_named_update;
+        exact (IH Hrn Henv)
     end.
   - match goal with
     | IH : root_env_no_shadow ?R ->
@@ -1654,6 +1696,11 @@ Proof.
             exact Hroot_lookup
         end.
     + apply root_env_no_shadow_update. exact Hrn1.
+    + match goal with
+      | Hready_path : place_path p = Some _,
+        Htyped_none : place_path p = None |- _ =>
+          rewrite Hready_path in Htyped_none; discriminate
+      end.
   - intros s s1 s2 p x_eval path_eval e_new v_new Heval_place
       Heval_new IHnew Hupdate Ω n R Σ T Σ' R' roots Hready
       Hroots Hnodup Hrn Htyped.
@@ -1678,6 +1725,11 @@ Proof.
     + constructor.
     + eapply store_no_shadow_update_path; eassumption.
     + apply root_env_no_shadow_update. exact Hrn1.
+    + match goal with
+      | Hready_path : place_path p = Some _,
+        Htyped_none : place_path p = None |- _ =>
+          rewrite Hready_path in Htyped_none; discriminate
+      end.
   - intros s p x path rk Heval_place Ω n R Σ T Σ' R' roots Hready
       Hroots Hnodup Hrn Htyped.
     dependent destruction Hready.

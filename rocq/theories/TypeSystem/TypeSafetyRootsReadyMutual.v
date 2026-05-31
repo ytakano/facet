@@ -856,11 +856,8 @@ Proof.
       by (eapply typed_env_roots_no_shadow; eassumption).
     assert (Hroots_old : root_set_ctx_roots_named roots_old Σ1)
       by (eapply root_env_lookup_ctx_roots_named; eassumption).
-    assert (Hroots_result_Σ : root_set_ctx_roots_named roots_result Σ).
-    { eapply place_resolved_roots_ctx_roots_named.
-      - eassumption.
-      - eapply root_of_place_ctx_roots_named. eassumption.
-      - eassumption. }
+    assert (Hroots_result_Σ : root_set_ctx_roots_named roots_result Σ)
+      by (eapply root_env_lookup_ctx_roots_named; eassumption).
     assert (Hsame : sctx_same_bindings Σ Σ1).
     { eapply typed_env_structural_same_bindings.
       eapply typed_env_roots_structural. eassumption. }

@@ -62,7 +62,8 @@ Latest full `sh tests/run.sh` baseline (2026-05-30): 29 valid-test failures; inv
     borrow conflicts, unresolved roots, and ambiguous roots.
 15. Done: add stable depth-based resolved write target and route
     non-shadow indirect `EAssign`/`EReplace` through target root lookup.
-16. Next: run full extraction/CLI tests, then address remaining reborrow cleanup.
+16. Done: route shadow-safe resolved `EAssign`/`EReplace` through target root lookup; full Rocq/extraction and OCaml build pass.
+17. Next: prove pathless resolved writes admissible for provenance/readiness gate; targeted valid indirect writes still reject there.
 
 The resolver remains narrow: it follows bounded singleton store-root chains and
 does not accept ambiguous/non-singleton update targets.

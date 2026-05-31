@@ -435,6 +435,19 @@ Inductive typed_env_roots_shadow_safe
       typed_env_roots_shadow_safe env Ω n R Σ (EReplace p e_new) T_old Σ2
         (root_env_update x (root_set_union roots_old roots_new) R1)
         roots_result
+  | TERS_Replace_Resolved : forall R R1 Σ Σ1 p e_new T_old T_new
+      roots_result x roots_old roots_new,
+      typed_place_env_structural env Σ p T_old ->
+      place_path p = None ->
+      place_resolved_write_target R p = Some x ->
+      root_env_lookup x R = Some roots_result ->
+      writable_place_env_structural env Σ p ->
+      typed_env_roots_shadow_safe env Ω n R Σ e_new T_new Σ1 R1 roots_new ->
+      root_env_lookup x R1 = Some roots_old ->
+      ty_compatible_b Ω T_new T_old = true ->
+      typed_env_roots_shadow_safe env Ω n R Σ (EReplace p e_new) T_old Σ1
+        (root_env_update x (root_set_union roots_old roots_new) R1)
+        roots_result
   | TERS_Assign_Path : forall R R1 Σ Σ' p e_new T_old T_new
       x path roots_old roots_new,
       typed_place_env_structural env Σ p T_old ->
@@ -445,6 +458,19 @@ Inductive typed_env_roots_shadow_safe
       root_env_lookup x R1 = Some roots_old ->
       ty_compatible_b Ω T_new T_old = true ->
       sctx_path_available Σ' x path = infer_ok tt ->
+      typed_env_roots_shadow_safe env Ω n R Σ (EAssign p e_new)
+        (MkTy UUnrestricted TUnits) Σ'
+        (root_env_update x (root_set_union roots_old roots_new) R1) []
+  | TERS_Assign_Resolved : forall R R1 Σ Σ' p e_new T_old T_new
+      x roots_old roots_new,
+      typed_place_env_structural env Σ p T_old ->
+      ty_usage T_old <> ULinear ->
+      place_path p = None ->
+      place_resolved_write_target R p = Some x ->
+      writable_place_env_structural env Σ p ->
+      typed_env_roots_shadow_safe env Ω n R Σ e_new T_new Σ' R1 roots_new ->
+      root_env_lookup x R1 = Some roots_old ->
+      ty_compatible_b Ω T_new T_old = true ->
       typed_env_roots_shadow_safe env Ω n R Σ (EAssign p e_new)
         (MkTy UUnrestricted TUnits) Σ'
         (root_env_update x (root_set_union roots_old roots_new) R1) []
@@ -1458,6 +1484,46 @@ Proof.
       * apply root_env_equiv_sym.
         apply root_env_instantiate_update_union_equiv.
     + exact Hroots_result0.
+  - intros R R1 Σ Σ1 p e_new T_old T_new roots_result x roots_old roots_new
+      Hplace Hpath Htarget Hlookup_result Hwritable He_new IHe_new Hlookup_old
+      Hcompat Hfresh R0 HnsR HnsR0 HR0.
+    assert (Htarget0 : place_resolved_write_target R0 p = Some x).
+    { eapply place_resolved_write_target_equiv.
+      - apply root_env_equiv_sym. exact HR0.
+      - apply place_resolved_write_target_instantiate. exact Htarget. }
+    assert (Hlookup_result_inst :
+      root_env_lookup x (root_env_instantiate rho R) =
+      Some (root_set_instantiate rho roots_result)).
+    { apply root_env_lookup_instantiate. exact Hlookup_result. }
+    destruct (root_env_equiv_lookup_r R0 (root_env_instantiate rho R)
+      x (root_set_instantiate rho roots_result) HR0 Hlookup_result_inst)
+      as [roots_result0 [Hlookup_result0 Hroots_result0]].
+    destruct (IHe_new Hfresh R0 HnsR HnsR0 HR0)
+      as [R10 [roots_new0 [He_new0 [HnsR10 [HR10 Hroots_new0]]]]].
+    assert (Hlookup_old_inst :
+      root_env_lookup x (root_env_instantiate rho R1) =
+      Some (root_set_instantiate rho roots_old)).
+    { apply root_env_lookup_instantiate. exact Hlookup_old. }
+    destruct (root_env_equiv_lookup_r R10 (root_env_instantiate rho R1)
+      x (root_set_instantiate rho roots_old) HR10 Hlookup_old_inst)
+      as [roots_old0 [Hlookup_old0 Hroots_old0]].
+    exists (root_env_update x (root_set_union roots_old0 roots_new0) R10),
+      roots_result0.
+    split; [| split; [| split]].
+    + eapply TERS_Replace_Resolved; eauto.
+    + apply root_env_no_shadow_update. exact HnsR10.
+    + eapply root_env_equiv_trans with
+        (R' := root_env_update x
+          (root_set_union
+            (root_set_instantiate rho roots_old)
+            (root_set_instantiate rho roots_new))
+          (root_env_instantiate rho R1)).
+      * apply root_env_equiv_update.
+        -- apply root_set_union_equiv; assumption.
+        -- exact HR10.
+      * apply root_env_equiv_sym.
+        apply root_env_instantiate_update_union_equiv.
+    + exact Hroots_result0.
   - intros R R1 Σ Σ' p e_new T_old T_new x path roots_old roots_new
       Hplace Husage Hpath Hwritable He_new IHe_new Hlookup_old Hcompat
       Havailable Hfresh R0 HnsR HnsR0 HR0.
@@ -1474,6 +1540,39 @@ Proof.
       [].
     split; [| split; [| split]].
     + eapply TERS_Assign_Path; eauto.
+    + apply root_env_no_shadow_update. exact HnsR10.
+    + eapply root_env_equiv_trans with
+        (R' := root_env_update x
+          (root_set_union
+            (root_set_instantiate rho roots_old)
+            (root_set_instantiate rho roots_new))
+          (root_env_instantiate rho R1)).
+      * apply root_env_equiv_update.
+        -- apply root_set_union_equiv; assumption.
+        -- exact HR10.
+      * apply root_env_equiv_sym.
+        apply root_env_instantiate_update_union_equiv.
+    + apply root_set_equiv_refl.
+  - intros R R1 Σ Σ' p e_new T_old T_new x roots_old roots_new
+      Hplace Husage Hpath Htarget Hwritable He_new IHe_new
+      Hlookup_old Hcompat Hfresh R0 HnsR HnsR0 HR0.
+    assert (Htarget0 : place_resolved_write_target R0 p = Some x).
+    { eapply place_resolved_write_target_equiv.
+      - apply root_env_equiv_sym. exact HR0.
+      - apply place_resolved_write_target_instantiate. exact Htarget. }
+    destruct (IHe_new Hfresh R0 HnsR HnsR0 HR0)
+      as [R10 [roots_new0 [He_new0 [HnsR10 [HR10 Hroots_new0]]]]].
+    assert (Hlookup_old_inst :
+      root_env_lookup x (root_env_instantiate rho R1) =
+      Some (root_set_instantiate rho roots_old)).
+    { apply root_env_lookup_instantiate. exact Hlookup_old. }
+    destruct (root_env_equiv_lookup_r R10 (root_env_instantiate rho R1)
+      x (root_set_instantiate rho roots_old) HR10 Hlookup_old_inst)
+      as [roots_old0 [Hlookup_old0 Hroots_old0]].
+    exists (root_env_update x (root_set_union roots_old0 roots_new0) R10),
+      [].
+    split; [| split; [| split]].
+    + eapply TERS_Assign_Resolved; eauto.
     + apply root_env_no_shadow_update. exact HnsR10.
     + eapply root_env_equiv_trans with
         (R' := root_env_update x

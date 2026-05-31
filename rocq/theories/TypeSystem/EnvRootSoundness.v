@@ -2441,50 +2441,90 @@ Proof.
         | exact Htail_typed
         | exact Hmerge ];
         try solve [eauto | reflexivity].
-    + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
-      destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
-      destruct (root_env_lookup x R) as [roots_result |] eqn:Hroot_result; try discriminate.
-      destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
-      destruct mut; try discriminate.
-      destruct (writable_place_b env Σ p) eqn:Hwrite; try discriminate.
-      destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ e)
-        as [[[[Tnew Σ1] R1] roots_new] | err] eqn:Hnew; try discriminate.
-      destruct (root_env_lookup x R1) as [roots_old |] eqn:Hroot_old; try discriminate.
-      destruct (ty_compatible_b Ω Tnew Told) eqn:Hcompat; try discriminate.
-      destruct (sctx_path_available Σ1 x path) as [[] | err] eqn:Havailable; try discriminate.
-      destruct (sctx_restore_path Σ1 x path) as [Σ2 | err] eqn:Hrestore; try discriminate.
-      inversion Hinfer; subst.
-      eapply TERS_Replace_Path.
-      * eapply infer_place_sctx_structural_sound. exact Hplace.
-      * exact Hpath.
-      * apply writable_place_b_sound. exact Hwrite.
-      * exact Hroot_result.
-      * eapply IH. exact Hnew.
-      * exact Hroot_old.
-      * exact Hcompat.
-      * exact Havailable.
-      * exact Hrestore.
-    + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
-      destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
-      destruct (usage_eqb (ty_usage Told) ULinear) eqn:Hlinear; try discriminate.
-      destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
-      destruct mut; try discriminate.
-      destruct (writable_place_b env Σ p) eqn:Hwrite; try discriminate.
-      destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ e)
-        as [[[[Tnew Σ1] R1] roots_new] | err] eqn:Hnew; try discriminate.
-      destruct (root_env_lookup x R1) as [roots_old |] eqn:Hroot_old; try discriminate.
-      destruct (ty_compatible_b Ω Tnew Told) eqn:Hcompat; try discriminate.
-      destruct (sctx_path_available Σ1 x path) as [[] | err] eqn:Havailable; try discriminate.
-      inversion Hinfer; subst.
-      eapply TERS_Assign_Path.
-      * eapply infer_place_sctx_structural_sound. exact Hplace.
-      * intro Hu. rewrite Hu in Hlinear. simpl in Hlinear. discriminate.
-      * exact Hpath.
-      * apply writable_place_b_sound. exact Hwrite.
-      * eapply IH. exact Hnew.
-      * exact Hroot_old.
-      * exact Hcompat.
-      * exact Havailable.
+    + destruct (place_path p) as [[x path] |] eqn:Hpath.
+      * destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
+        destruct (root_env_lookup x R) as [roots_result |] eqn:Hroot_result; try discriminate.
+        destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
+        destruct mut; try discriminate.
+        destruct (writable_place_b env Σ p) eqn:Hwrite; try discriminate.
+        destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ e)
+          as [[[[Tnew Σ1] R1] roots_new] | err] eqn:Hnew; try discriminate.
+        destruct (root_env_lookup x R1) as [roots_old |] eqn:Hroot_old; try discriminate.
+        destruct (ty_compatible_b Ω Tnew Told) eqn:Hcompat; try discriminate.
+        destruct (sctx_path_available Σ1 x path) as [[] | err] eqn:Havailable; try discriminate.
+        destruct (sctx_restore_path Σ1 x path) as [Σ2 | err] eqn:Hrestore; try discriminate.
+        inversion Hinfer; subst.
+        eapply TERS_Replace_Path.
+        -- eapply infer_place_sctx_structural_sound. exact Hplace.
+        -- exact Hpath.
+        -- apply writable_place_b_sound. exact Hwrite.
+        -- exact Hroot_result.
+        -- eapply IH. exact Hnew.
+        -- exact Hroot_old.
+        -- exact Hcompat.
+        -- exact Havailable.
+        -- exact Hrestore.
+      * destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
+        destruct (place_resolved_write_target R p) as [x |] eqn:Htarget; try discriminate.
+        destruct (root_env_lookup x R) as [roots_result |] eqn:Hroot_result; try discriminate.
+        destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
+        destruct mut; try discriminate.
+        destruct (writable_place_b env Σ p) eqn:Hwrite; try discriminate.
+        destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ e)
+          as [[[[Tnew Σ1] R1] roots_new] | err] eqn:Hnew; try discriminate.
+        destruct (root_env_lookup x R1) as [roots_old |] eqn:Hroot_old; try discriminate.
+        destruct (ty_compatible_b Ω Tnew Told) eqn:Hcompat; try discriminate.
+        inversion Hinfer; subst.
+        eapply TERS_Replace_Resolved.
+        -- eapply infer_place_sctx_structural_sound. exact Hplace.
+        -- exact Hpath.
+        -- exact Htarget.
+        -- exact Hroot_result.
+        -- apply writable_place_b_sound. exact Hwrite.
+        -- eapply IH. exact Hnew.
+        -- exact Hroot_old.
+        -- exact Hcompat.
+    + destruct (place_path p) as [[x path] |] eqn:Hpath.
+      * destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
+        destruct (usage_eqb (ty_usage Told) ULinear) eqn:Hlinear; try discriminate.
+        destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
+        destruct mut; try discriminate.
+        destruct (writable_place_b env Σ p) eqn:Hwrite; try discriminate.
+        destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ e)
+          as [[[[Tnew Σ1] R1] roots_new] | err] eqn:Hnew; try discriminate.
+        destruct (root_env_lookup x R1) as [roots_old |] eqn:Hroot_old; try discriminate.
+        destruct (ty_compatible_b Ω Tnew Told) eqn:Hcompat; try discriminate.
+        destruct (sctx_path_available Σ1 x path) as [[] | err] eqn:Havailable; try discriminate.
+        inversion Hinfer; subst.
+        eapply TERS_Assign_Path.
+        -- eapply infer_place_sctx_structural_sound. exact Hplace.
+        -- intro Hu. rewrite Hu in Hlinear. simpl in Hlinear. discriminate.
+        -- exact Hpath.
+        -- apply writable_place_b_sound. exact Hwrite.
+        -- eapply IH. exact Hnew.
+        -- exact Hroot_old.
+        -- exact Hcompat.
+        -- exact Havailable.
+      * destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
+        destruct (usage_eqb (ty_usage Told) ULinear) eqn:Hlinear; try discriminate.
+        destruct (place_resolved_write_target R p) as [x |] eqn:Htarget; try discriminate.
+        destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
+        destruct mut; try discriminate.
+        destruct (writable_place_b env Σ p) eqn:Hwrite; try discriminate.
+        destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ e)
+          as [[[[Tnew Σ1] R1] roots_new] | err] eqn:Hnew; try discriminate.
+        destruct (root_env_lookup x R1) as [roots_old |] eqn:Hroot_old; try discriminate.
+        destruct (ty_compatible_b Ω Tnew Told) eqn:Hcompat; try discriminate.
+        inversion Hinfer; subst.
+        eapply TERS_Assign_Resolved.
+        -- eapply infer_place_sctx_structural_sound. exact Hplace.
+        -- intro Hu. rewrite Hu in Hlinear. simpl in Hlinear. discriminate.
+        -- exact Hpath.
+        -- exact Htarget.
+        -- apply writable_place_b_sound. exact Hwrite.
+        -- eapply IH. exact Hnew.
+        -- exact Hroot_old.
+        -- exact Hcompat.
     + destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
       destruct (place_path p) as [[x path] |] eqn:Hpath.
       * destruct r.

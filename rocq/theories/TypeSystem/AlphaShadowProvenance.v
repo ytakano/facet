@@ -2901,7 +2901,28 @@ Proof.
         root_env_sctx_keys_named ?R ?Σ ->
         root_env_sctx_keys_named ?R1 ?Σ',
       Hrn : root_env_no_shadow ?R,
-      Henv : root_env_sctx_keys_named ?R ?Σ |- _ =>
+      Henv : root_env_sctx_keys_named ?R ?Σ |-
+        root_env_sctx_keys_named (root_env_update _ _ ?R1) ?Σ' =>
+        apply root_env_sctx_keys_named_update;
+        exact (IH Hrn Henv)
+    end.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_sctx_keys_named ?R ?Σ ->
+        root_env_sctx_keys_named ?R1 ?Σ',
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_sctx_keys_named ?R ?Σ |-
+        root_env_sctx_keys_named (root_env_update _ _ ?R1) ?Σ' =>
+        apply root_env_sctx_keys_named_update;
+        exact (IH Hrn Henv)
+    end.
+  - match goal with
+    | IH : root_env_no_shadow ?R ->
+        root_env_sctx_keys_named ?R ?Σ ->
+        root_env_sctx_keys_named ?R1 ?Σ',
+      Hrn : root_env_no_shadow ?R,
+      Henv : root_env_sctx_keys_named ?R ?Σ |-
+        root_env_sctx_keys_named (root_env_update _ _ ?R1) ?Σ' =>
         apply root_env_sctx_keys_named_update;
         exact (IH Hrn Henv)
     end.
@@ -3271,6 +3292,25 @@ Proof.
         eassumption.
     + eapply root_env_lookup_result_sctx_roots_named_after_typed_restore_path;
         eassumption.
+  - destruct (H H0 H1) as [Henv1 Hroots_new].
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow;
+          [eapply typed_env_roots_shadow_safe_roots; eassumption | eassumption]).
+    assert (Hroots_old : root_set_sctx_roots_named roots_old Σ1)
+      by (eapply root_env_lookup_sctx_roots_named; eassumption).
+    split.
+    + eapply root_env_sctx_roots_named_update_union; eassumption.
+    + eapply root_env_lookup_result_sctx_roots_named_after_typed;
+        eassumption.
+  - destruct (H H0 H1) as [Henv1 Hroots_new].
+    assert (Hrn1 : root_env_no_shadow R1)
+      by (eapply typed_env_roots_no_shadow;
+          [eapply typed_env_roots_shadow_safe_roots; eassumption | eassumption]).
+    assert (Hroots_old : root_set_sctx_roots_named roots_old Σ')
+      by (eapply root_env_lookup_sctx_roots_named; eassumption).
+    split.
+    + eapply root_env_sctx_roots_named_update_union; eassumption.
+    + apply root_set_sctx_roots_named_nil.
   - destruct (H H0 H1) as [Henv1 Hroots_new].
     assert (Hrn1 : root_env_no_shadow R1)
       by (eapply typed_env_roots_no_shadow;
@@ -7025,6 +7065,73 @@ Proof.
       | H : root_env_lookup x R1 = Some roots_old |- _ => exact H
       end.
     + exact Hroots_result.
+  - assert (HnocollR1 : rename_no_collision_on rho (root_env_names R1)).
+    { rewrite <- (root_env_names_update x
+        (root_set_union roots_old roots_new) R1).
+      exact HnocollR'. }
+    destruct (Hexpr R Rr Σ Σr used er_new used_new T_new Σ' R1 roots_new)
+      as [Σr1 [Rr1 [roots_newr
+        [Htyped_new_r [Hctx_new_r [HnsRr1 [HRr1 Hroots_new]]]]]]].
+    + match goal with
+      | H : typed_env_roots_shadow_safe env Ω n R Σ e_new T_new Σ' R1 roots_new |- _ =>
+          exact H
+      end.
+    + exact Hctx.
+    + exact HnsR.
+    + exact HnsRr.
+    + exact HRr.
+    + exact HnocollR.
+    + exact HnocollR1.
+    + exact Hctx_used.
+    + exact Hrange_used.
+    + exact Hdisj_new.
+    + exact Hnew.
+    + assert (Htarget_r :
+        place_resolved_write_target Rr (rename_place rho p) =
+        Some (lookup_rename x rho)).
+      { eapply place_resolved_write_target_equiv.
+        - apply root_env_equiv_sym. exact HRr.
+        - apply place_resolved_write_target_rename.
+          + exact HnocollR.
+          + match goal with
+            | H : place_resolved_write_target R p = Some x |- _ => exact H
+            end. }
+      destruct (root_env_equiv_rename_lookup_forward rho R Rr x roots
+        HRr HnocollR
+        ltac:(match goal with
+        | H : root_env_lookup x R = Some roots |- _ => exact H
+        end)) as [roots_resultr [Hlookup_result_r Hroots_result]].
+      destruct (root_env_equiv_rename_lookup_forward rho R1 Rr1 x roots_old
+        HRr1 HnocollR1
+        ltac:(match goal with
+        | H : root_env_lookup x R1 = Some roots_old |- _ => exact H
+        end)) as [roots_oldr [Hlookup_old_r Hroots_old]].
+      exists Σr1,
+        (root_env_update (lookup_rename x rho)
+          (root_set_union roots_oldr roots_newr) Rr1),
+        roots_resultr.
+      split; [| split; [| split; [| split]]].
+      * eapply TERS_Replace_Resolved.
+        -- eapply alpha_rename_typed_place_env_structural_forward; eauto.
+        -- match goal with Hpath : place_path p = None |- _ =>
+             apply place_path_rename_place_none; exact Hpath
+           end.
+        -- exact Htarget_r.
+        -- exact Hlookup_result_r.
+        -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
+        -- exact Htyped_new_r.
+        -- exact Hlookup_old_r.
+        -- match goal with
+           | H : ty_compatible_b Ω T_new T = true |- _ => exact H
+           end.
+      * exact Hctx_new_r.
+      * apply root_env_no_shadow_update. exact HnsRr1.
+      * eapply root_env_equiv_update_rename_union; eauto.
+        apply HnocollR1. eapply root_env_lookup_some_in_names.
+        match goal with
+        | H : root_env_lookup x R1 = Some roots_old |- _ => exact H
+        end.
+      * exact Hroots_result.
 Qed.
 
 Lemma alpha_rename_typed_env_roots_replace_shadow_safe_support_forward :
@@ -7156,6 +7263,75 @@ Proof.
       | H : root_env_lookup x R1 = Some roots_old |- _ => exact H
       end.
     + exact Hroots_result.
+  - assert (HnocollR1 : rename_no_collision_on rho (root_env_names R1)).
+    { rewrite <- (root_env_names_update x
+        (root_set_union roots_old roots_new) R1).
+      exact HnocollR'. }
+    destruct (Hexpr R Rr Σ Σr used er_new used_new T_new Σ' R1 roots_new)
+      as [Σr1 [Rr1 [roots_newr
+        [Htyped_new_r [Hctx_new_r [HnsRr1 [HRr1 Hroots_new]]]]]]].
+    + match goal with
+      | H : typed_env_roots_shadow_safe env Ω n R Σ e_new T_new Σ' R1 roots_new |- _ =>
+          exact H
+      end.
+    + exact Hctx.
+    + exact HnsR.
+    + exact HnsRr.
+    + exact HRr.
+    + exact Hkeys.
+    + exact Hroots.
+    + exact HnocollR.
+    + exact HnocollR1.
+    + exact Hctx_used.
+    + exact Hrange_used.
+    + exact Hdisj_new.
+    + exact Hnew.
+    + assert (Htarget_r :
+        place_resolved_write_target Rr (rename_place rho p) =
+        Some (lookup_rename x rho)).
+      { eapply place_resolved_write_target_equiv.
+        - apply root_env_equiv_sym. exact HRr.
+        - apply place_resolved_write_target_rename.
+          + exact HnocollR.
+          + match goal with
+            | H : place_resolved_write_target R p = Some x |- _ => exact H
+            end. }
+      destruct (root_env_equiv_rename_lookup_forward rho R Rr x roots
+        HRr HnocollR
+        ltac:(match goal with
+        | H : root_env_lookup x R = Some roots |- _ => exact H
+        end)) as [roots_resultr [Hlookup_result_r Hroots_result]].
+      destruct (root_env_equiv_rename_lookup_forward rho R1 Rr1 x roots_old
+        HRr1 HnocollR1
+        ltac:(match goal with
+        | H : root_env_lookup x R1 = Some roots_old |- _ => exact H
+        end)) as [roots_oldr [Hlookup_old_r Hroots_old]].
+      exists Σr1,
+        (root_env_update (lookup_rename x rho)
+          (root_set_union roots_oldr roots_newr) Rr1),
+        roots_resultr.
+      split; [| split; [| split; [| split]]].
+      * eapply TERS_Replace_Resolved.
+        -- eapply alpha_rename_typed_place_env_structural_forward; eauto.
+        -- match goal with Hpath : place_path p = None |- _ =>
+             apply place_path_rename_place_none; exact Hpath
+           end.
+        -- exact Htarget_r.
+        -- exact Hlookup_result_r.
+        -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
+        -- exact Htyped_new_r.
+        -- exact Hlookup_old_r.
+        -- match goal with
+           | H : ty_compatible_b Ω T_new T = true |- _ => exact H
+           end.
+      * exact Hctx_new_r.
+      * apply root_env_no_shadow_update. exact HnsRr1.
+      * eapply root_env_equiv_update_rename_union; eauto.
+        apply HnocollR1. eapply root_env_lookup_some_in_names.
+        match goal with
+        | H : root_env_lookup x R1 = Some roots_old |- _ => exact H
+        end.
+      * exact Hroots_result.
 Qed.
 
 Lemma alpha_rename_typed_env_roots_assign_shadow_safe_forward :
@@ -7271,6 +7447,53 @@ Proof.
       | H : root_env_lookup x R1 = Some roots_old |- _ => exact H
       end.
     + apply root_set_equiv_refl.
+  - assert (HnocollR1 : rename_no_collision_on rho (root_env_names R1)).
+    { rewrite <- (root_env_names_update x
+        (root_set_union roots_old roots_new) R1).
+      exact HnocollR'. }
+    destruct (Hexpr R Rr Σ Σr used er_new used_new T_new Σ' R1 roots_new)
+      as [Σr1 [Rr1 [roots_newr
+        [Htyped_new_r [Hctx_new_r [HnsRr1 [HRr1 Hroots_new]]]]]]].
+    + match goal with
+      | H : typed_env_roots_shadow_safe env Ω n R Σ e_new T_new Σ' R1 roots_new |- _ => exact H
+      end.
+    + exact Hctx.
+    + exact HnsR.
+    + exact HnsRr.
+    + exact HRr.
+    + exact HnocollR.
+    + exact HnocollR1.
+    + exact Hctx_used.
+    + exact Hrange_used.
+    + exact Hdisj_new.
+    + exact Hnew.
+    + assert (Htarget_r : place_resolved_write_target Rr (rename_place rho p) = Some (lookup_rename x rho)).
+      { eapply place_resolved_write_target_equiv.
+        - apply root_env_equiv_sym. exact HRr.
+        - apply place_resolved_write_target_rename.
+          + exact HnocollR.
+          + match goal with H : place_resolved_write_target R p = Some x |- _ => exact H end. }
+      destruct (root_env_equiv_rename_lookup_forward rho R1 Rr1 x roots_old HRr1 HnocollR1
+        ltac:(match goal with H : root_env_lookup x R1 = Some roots_old |- _ => exact H end))
+        as [roots_oldr [Hlookup_old_r Hroots_old]].
+      exists Σr1, (root_env_update (lookup_rename x rho)
+        (root_set_union roots_oldr roots_newr) Rr1), [].
+      split; [| split; [| split; [| split]]].
+      * eapply TERS_Assign_Resolved.
+        -- eapply alpha_rename_typed_place_env_structural_forward; eauto.
+        -- match goal with H : ty_usage T_old <> ULinear |- _ => exact H end.
+        -- match goal with Hpath : place_path p = None |- _ => apply place_path_rename_place_none; exact Hpath end.
+        -- exact Htarget_r.
+        -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
+        -- exact Htyped_new_r.
+        -- exact Hlookup_old_r.
+        -- match goal with H : ty_compatible_b Ω T_new T_old = true |- _ => exact H end.
+      * exact Hctx_new_r.
+      * apply root_env_no_shadow_update. exact HnsRr1.
+      * eapply root_env_equiv_update_rename_union; eauto.
+        apply HnocollR1. eapply root_env_lookup_some_in_names.
+        match goal with H : root_env_lookup x R1 = Some roots_old |- _ => exact H end.
+      * apply root_set_equiv_refl.
 Qed.
 
 Lemma alpha_rename_typed_env_roots_assign_shadow_safe_support_forward :
@@ -7392,6 +7615,55 @@ Proof.
       | H : root_env_lookup x R1 = Some roots_old |- _ => exact H
       end.
     + apply root_set_equiv_refl.
+  - assert (HnocollR1 : rename_no_collision_on rho (root_env_names R1)).
+    { rewrite <- (root_env_names_update x
+        (root_set_union roots_old roots_new) R1).
+      exact HnocollR'. }
+    destruct (Hexpr R Rr Σ Σr used er_new used_new T_new Σ' R1 roots_new)
+      as [Σr1 [Rr1 [roots_newr
+        [Htyped_new_r [Hctx_new_r [HnsRr1 [HRr1 Hroots_new]]]]]]].
+    + match goal with
+      | H : typed_env_roots_shadow_safe env Ω n R Σ e_new T_new Σ' R1 roots_new |- _ => exact H
+      end.
+    + exact Hctx.
+    + exact HnsR.
+    + exact HnsRr.
+    + exact HRr.
+    + exact Hkeys.
+    + exact Hroots.
+    + exact HnocollR.
+    + exact HnocollR1.
+    + exact Hctx_used.
+    + exact Hrange_used.
+    + exact Hdisj_new.
+    + exact Hnew.
+    + assert (Htarget_r : place_resolved_write_target Rr (rename_place rho p) = Some (lookup_rename x rho)).
+      { eapply place_resolved_write_target_equiv.
+        - apply root_env_equiv_sym. exact HRr.
+        - apply place_resolved_write_target_rename.
+          + exact HnocollR.
+          + match goal with H : place_resolved_write_target R p = Some x |- _ => exact H end. }
+      destruct (root_env_equiv_rename_lookup_forward rho R1 Rr1 x roots_old HRr1 HnocollR1
+        ltac:(match goal with H : root_env_lookup x R1 = Some roots_old |- _ => exact H end))
+        as [roots_oldr [Hlookup_old_r Hroots_old]].
+      exists Σr1, (root_env_update (lookup_rename x rho)
+        (root_set_union roots_oldr roots_newr) Rr1), [].
+      split; [| split; [| split; [| split]]].
+      * eapply TERS_Assign_Resolved.
+        -- eapply alpha_rename_typed_place_env_structural_forward; eauto.
+        -- match goal with H : ty_usage T_old <> ULinear |- _ => exact H end.
+        -- match goal with Hpath : place_path p = None |- _ => apply place_path_rename_place_none; exact Hpath end.
+        -- exact Htarget_r.
+        -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
+        -- exact Htyped_new_r.
+        -- exact Hlookup_old_r.
+        -- match goal with H : ty_compatible_b Ω T_new T_old = true |- _ => exact H end.
+      * exact Hctx_new_r.
+      * apply root_env_no_shadow_update. exact HnsRr1.
+      * eapply root_env_equiv_update_rename_union; eauto.
+        apply HnocollR1. eapply root_env_lookup_some_in_names.
+        match goal with H : root_env_lookup x R1 = Some roots_old |- _ => exact H end.
+      * apply root_set_equiv_refl.
 Qed.
 
 Lemma alpha_rename_typed_env_roots_if_shadow_safe_forward :

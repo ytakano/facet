@@ -6449,7 +6449,43 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
       end
   | EReplace p e_new =>
       match place_path p with
-      | None => infer_err ErrNotImplemented
+      | None =>
+          match infer_place_sctx env Σ p with
+          | infer_err err => infer_err err
+          | infer_ok T_old =>
+              match place_resolved_write_target R p with
+              | None => infer_err ErrNotImplemented
+              | Some x =>
+                  match root_env_lookup x R with
+                  | None => infer_err ErrContextCheckFailed
+                  | Some roots_result =>
+                      match sctx_lookup_mut x Σ with
+                      | Some MMutable =>
+                          if writable_place_b env Σ p
+                          then
+                            match infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ e_new with
+                            | infer_err err => infer_err err
+                            | infer_ok (T_new, Σ1, R1, roots_new) =>
+                                match root_env_lookup x R1 with
+                                | None => infer_err ErrContextCheckFailed
+                                | Some roots_old =>
+                                    if ty_compatible_b Ω T_new T_old
+                                    then
+                                      infer_ok
+                                        (T_old, Σ1,
+                                         root_env_update x
+                                           (root_set_union roots_old roots_new) R1,
+                                         roots_result)
+                                    else infer_err (compatible_error T_new T_old)
+                                end
+                            end
+                          else infer_err (ErrNotMutable x)
+                      | Some MImmutable => infer_err (ErrNotMutable x)
+                      | None => infer_err (ErrUnknownVar x)
+                      end
+                  end
+              end
+          end
       | Some (x, path) =>
           match infer_place_sctx env Σ p with
           | infer_err err => infer_err err
@@ -6494,7 +6530,42 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
       end
   | EAssign p e_new =>
       match place_path p with
-      | None => infer_err ErrNotImplemented
+      | None =>
+          match infer_place_sctx env Σ p with
+          | infer_err err => infer_err err
+          | infer_ok T_old =>
+              if usage_eqb (ty_usage T_old) ULinear
+              then infer_err (ErrUsageMismatch (ty_usage T_old) UAffine)
+              else
+              match place_resolved_write_target R p with
+              | None => infer_err ErrNotImplemented
+              | Some x =>
+                  match sctx_lookup_mut x Σ with
+                  | Some MMutable =>
+                      if writable_place_b env Σ p
+                      then
+                        match infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ e_new with
+                        | infer_err err => infer_err err
+                        | infer_ok (T_new, Σ1, R1, roots_new) =>
+                            match root_env_lookup x R1 with
+                            | None => infer_err ErrContextCheckFailed
+                            | Some roots_old =>
+                                if ty_compatible_b Ω T_new T_old
+                                then
+                                  infer_ok
+                                    (MkTy UUnrestricted TUnits, Σ1,
+                                     root_env_update x
+                                       (root_set_union roots_old roots_new) R1,
+                                     [])
+                                else infer_err (compatible_error T_new T_old)
+                            end
+                        end
+                      else infer_err (ErrNotMutable x)
+                  | Some MImmutable => infer_err (ErrNotMutable x)
+                  | None => infer_err (ErrUnknownVar x)
+                  end
+              end
+          end
       | Some (x, path) =>
           match infer_place_sctx env Σ p with
           | infer_err err => infer_err err

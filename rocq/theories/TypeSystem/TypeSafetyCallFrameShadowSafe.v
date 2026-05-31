@@ -120,6 +120,26 @@ Proof.
   - exact Hexcl.
 Qed.
 
+Lemma place_resolved_write_target_app_left :
+  forall R R_tail p x,
+    place_resolved_write_target R p = Some x ->
+    place_resolved_write_target (R ++ R_tail) p = Some x.
+Proof.
+  induction p; intros x Htarget; simpl in Htarget |- *.
+  - exact Htarget.
+  - case_eq (place_resolved_write_target R p).
+    + intros target Hq.
+      rewrite (IHp target Hq).
+      destruct (root_env_lookup target R) as [roots |] eqn:Hlookup.
+      * rewrite (root_env_lookup_app_left target R R_tail roots Hlookup).
+        rewrite Hq in Htarget. rewrite Hlookup in Htarget.
+        exact Htarget.
+      * rewrite Hq in Htarget. rewrite Hlookup in Htarget. discriminate.
+    + intros Hq. rewrite Hq in Htarget. discriminate.
+  - apply IHp. exact Htarget.
+Qed.
+
+
 Lemma root_env_excludes_params_app_local :
   forall ps R1 R2,
     root_env_excludes_params ps R1 ->
@@ -376,7 +396,28 @@ Proof.
         R_tail)
       with (root_env_update x (root_set_union roots_old roots_new)
         (R1 ++ R_tail)).
+    eapply TERS_Replace_Resolved; eauto.
+    + eapply place_resolved_write_target_app_left; eassumption.
+    + eapply root_env_lookup_app_left; eassumption.
+    + eapply root_env_lookup_app_left; eassumption.
+    + rewrite root_env_update_app_left with (roots_old := roots_old)
+        by eassumption.
+      reflexivity.
+  - replace (root_env_update x (root_set_union roots_old roots_new) R1 ++
+        R_tail)
+      with (root_env_update x (root_set_union roots_old roots_new)
+        (R1 ++ R_tail)).
     eapply TERS_Assign_Path; eauto.
+    + eapply root_env_lookup_app_left; eassumption.
+    + rewrite root_env_update_app_left with (roots_old := roots_old)
+        by eassumption.
+      reflexivity.
+  - replace (root_env_update x (root_set_union roots_old roots_new) R1 ++
+        R_tail)
+      with (root_env_update x (root_set_union roots_old roots_new)
+        (R1 ++ R_tail)).
+    eapply TERS_Assign_Resolved; eauto.
+    + eapply place_resolved_write_target_app_left; eassumption.
     + eapply root_env_lookup_app_left; eassumption.
     + rewrite root_env_update_app_left with (roots_old := roots_old)
         by eassumption.

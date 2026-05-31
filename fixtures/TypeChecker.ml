@@ -11101,7 +11101,43 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                 | None -> Infer_err (ErrUnknownVar x))
              | None -> Infer_err ErrContextCheckFailed)
           | Infer_err err -> Infer_err err)
-       | None -> Infer_err ErrNotImplemented)
+       | None ->
+         (match infer_place_sctx env _UU03a3_ p with
+          | Infer_ok t_old ->
+            (match place_resolved_write_target r p with
+             | Some x ->
+               (match root_env_lookup x r with
+                | Some roots_result ->
+                  (match sctx_lookup_mut x _UU03a3_ with
+                   | Some m ->
+                     (match m with
+                      | MImmutable -> Infer_err (ErrNotMutable x)
+                      | MMutable ->
+                        if writable_place_b env _UU03a3_ p
+                        then (match infer_core_env_state_fuel_roots_shadow_safe
+                                      fuel' env _UU03a9_ n r _UU03a3_ e_new with
+                              | Infer_ok p0 ->
+                                let (p1, roots_new) = p0 in
+                                let (p2, r1) = p1 in
+                                let (t_new, _UU03a3_1) = p2 in
+                                (match root_env_lookup x r1 with
+                                 | Some roots_old ->
+                                   if ty_compatible_b _UU03a9_ t_new t_old
+                                   then Infer_ok (((t_old, _UU03a3_1),
+                                          (root_env_update x
+                                            (root_set_union roots_old
+                                              roots_new)
+                                            r1)),
+                                          roots_result)
+                                   else Infer_err
+                                          (compatible_error t_new t_old)
+                                 | None -> Infer_err ErrContextCheckFailed)
+                              | Infer_err err -> Infer_err err)
+                        else Infer_err (ErrNotMutable x))
+                   | None -> Infer_err (ErrUnknownVar x))
+                | None -> Infer_err ErrContextCheckFailed)
+             | None -> Infer_err ErrNotImplemented)
+          | Infer_err err -> Infer_err err))
     | EAssign (p, e_new) ->
       (match place_path p with
        | Some p0 ->
@@ -11143,7 +11179,43 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                        else Infer_err (ErrNotMutable x))
                   | None -> Infer_err (ErrUnknownVar x))
           | Infer_err err -> Infer_err err)
-       | None -> Infer_err ErrNotImplemented)
+       | None ->
+         (match infer_place_sctx env _UU03a3_ p with
+          | Infer_ok t_old ->
+            if usage_eqb (ty_usage t_old) ULinear
+            then Infer_err (ErrUsageMismatch ((ty_usage t_old), UAffine))
+            else (match place_resolved_write_target r p with
+                  | Some x ->
+                    (match sctx_lookup_mut x _UU03a3_ with
+                     | Some m ->
+                       (match m with
+                        | MImmutable -> Infer_err (ErrNotMutable x)
+                        | MMutable ->
+                          if writable_place_b env _UU03a3_ p
+                          then (match infer_core_env_state_fuel_roots_shadow_safe
+                                        fuel' env _UU03a9_ n r _UU03a3_ e_new with
+                                | Infer_ok p0 ->
+                                  let (p1, roots_new) = p0 in
+                                  let (p2, r1) = p1 in
+                                  let (t_new, _UU03a3_1) = p2 in
+                                  (match root_env_lookup x r1 with
+                                   | Some roots_old ->
+                                     if ty_compatible_b _UU03a9_ t_new t_old
+                                     then Infer_ok ((((MkTy (UUnrestricted,
+                                            TUnits)), _UU03a3_1),
+                                            (root_env_update x
+                                              (root_set_union roots_old
+                                                roots_new)
+                                              r1)),
+                                            [])
+                                     else Infer_err
+                                            (compatible_error t_new t_old)
+                                   | None -> Infer_err ErrContextCheckFailed)
+                                | Infer_err err -> Infer_err err)
+                          else Infer_err (ErrNotMutable x))
+                     | None -> Infer_err (ErrUnknownVar x))
+                  | None -> Infer_err ErrNotImplemented)
+          | Infer_err err -> Infer_err err))
     | EBorrow (rk, p) ->
       (match infer_place_sctx env _UU03a3_ p with
        | Infer_ok t_p ->

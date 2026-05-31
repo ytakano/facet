@@ -75,6 +75,7 @@ Latest full `sh tests/run.sh` baseline (2026-05-31): 24 valid-test failures; inv
     target chains; shared-ref compatibility gives `ty_compatible`, not the
     `ty_lifetime_equiv` required by preservation.
 29. Done: re-narrow resolved write chain to the proven direct-parent fragment.
+30. Done: verify full Rocq build, proof-hole scan, OCaml build, and targeted direct/nested CLI cases.
 
 Resolved writes remain narrow: only direct-parent pathless writes are accepted;
 recursive deref-chain writes are blocked until their preservation invariant is strengthened.

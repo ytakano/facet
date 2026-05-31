@@ -504,6 +504,40 @@ Proof.
       * exact Hlookup.
 Qed.
 
+
+Lemma ctx_lookup_mut_in_names : forall Γ x m,
+  ctx_lookup_mut x Γ = Some m ->
+  In x (ctx_names Γ).
+Proof.
+  induction Γ as [| [[[y T] b] my] rest IH]; intros x m Hlookup;
+    simpl in *; try discriminate.
+  destruct (ident_eqb x y) eqn:Hxy.
+  - apply ident_eqb_eq in Hxy. subst y. left. reflexivity.
+  - right. eapply IH. exact Hlookup.
+Qed.
+Lemma ctx_alpha_lookup_mut_forward_any : forall ρ Γ Γr x m,
+  ctx_alpha ρ Γ Γr ->
+  ctx_lookup_mut x Γ = Some m ->
+  ctx_lookup_mut (lookup_rename x ρ) Γr = Some m.
+Proof.
+  intros ρ Γ Γr x m Halpha.
+  revert x m.
+  induction Halpha; intros y m0 Hlookup.
+  - simpl in Hlookup. exact Hlookup.
+  - simpl in Hlookup.
+    destruct (ident_eqb y x) eqn:Hyx.
+    + apply ident_eqb_eq in Hyx. subst y.
+      simpl. rewrite ident_eqb_refl. rewrite ident_eqb_refl.
+      exact Hlookup.
+    + simpl. rewrite Hyx.
+      specialize (IHHalpha y m0 Hlookup).
+      destruct (ident_eqb (lookup_rename y ρ) xr) eqn:Hcoll.
+      * apply ident_eqb_eq in Hcoll.
+        apply ctx_lookup_mut_in_names in IHHalpha.
+        rewrite Hcoll in IHHalpha. contradiction.
+      * exact IHHalpha.
+Qed.
+
 Lemma check_make_closure_captures_sctx_alpha_forward :
   forall env ρ Σ Σr Ω captures params captured_tys,
     ctx_alpha ρ Σ Σr ->

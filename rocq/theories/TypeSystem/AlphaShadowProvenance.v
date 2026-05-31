@@ -4064,6 +4064,7 @@ Proof.
            end.
         -- exact Htarget_r.
         -- exact Hlookup_result_r.
+        -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
         -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
         -- exact Htyped_new_r.
         -- exact Hlookup_old_r.
@@ -4243,6 +4244,7 @@ Proof.
              apply place_path_rename_place_none; exact Hpath
            end.
         -- exact Htarget_r.
+        -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
         -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
         -- exact Htyped_new_r.
         -- exact Hlookup_old_r.
@@ -4541,7 +4543,7 @@ Proof.
         match goal with
         | H : place_path p = Some (x, path) |- _ => exact H
         end.
-      * eapply ctx_alpha_lookup_mut_forward; eauto.
+      * eapply ctx_alpha_lookup_mut_forward_any; eauto.
     + exact Hctx.
     + exact HnsRr.
     + exact HRr.
@@ -6876,7 +6878,7 @@ Proof.
         match goal with
         | H : place_path p = Some (x, path) |- _ => exact H
         end.
-      * eapply ctx_alpha_lookup_mut_forward; eauto.
+      * eapply ctx_alpha_lookup_mut_forward_any; eauto.
     + exact Hctx.
     + exact HnsRr.
     + exact HRr.
@@ -7118,6 +7120,7 @@ Proof.
            end.
         -- exact Htarget_r.
         -- exact Hlookup_result_r.
+        -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
         -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
         -- exact Htyped_new_r.
         -- exact Hlookup_old_r.
@@ -7318,6 +7321,7 @@ Proof.
            end.
         -- exact Htarget_r.
         -- exact Hlookup_result_r.
+        -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
         -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
         -- exact Htyped_new_r.
         -- exact Hlookup_old_r.
@@ -7484,6 +7488,7 @@ Proof.
         -- match goal with H : ty_usage T_old <> ULinear |- _ => exact H end.
         -- match goal with Hpath : place_path p = None |- _ => apply place_path_rename_place_none; exact Hpath end.
         -- exact Htarget_r.
+        -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
         -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
         -- exact Htyped_new_r.
         -- exact Hlookup_old_r.
@@ -7654,6 +7659,7 @@ Proof.
         -- match goal with H : ty_usage T_old <> ULinear |- _ => exact H end.
         -- match goal with Hpath : place_path p = None |- _ => apply place_path_rename_place_none; exact Hpath end.
         -- exact Htarget_r.
+        -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
         -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
         -- exact Htyped_new_r.
         -- exact Hlookup_old_r.

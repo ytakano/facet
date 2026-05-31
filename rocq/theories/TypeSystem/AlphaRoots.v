@@ -441,6 +441,7 @@ Inductive typed_env_roots_shadow_safe
       place_path p = None ->
       place_resolved_write_target R p = Some x ->
       root_env_lookup x R = Some roots_result ->
+      sctx_lookup_mut x Σ = Some MMutable ->
       writable_place_env_structural env Σ p ->
       typed_env_roots_shadow_safe env Ω n R Σ e_new T_new Σ1 R1 roots_new ->
       root_env_lookup x R1 = Some roots_old ->
@@ -467,6 +468,7 @@ Inductive typed_env_roots_shadow_safe
       ty_usage T_old <> ULinear ->
       place_path p = None ->
       place_resolved_write_target R p = Some x ->
+      sctx_lookup_mut x Σ = Some MMutable ->
       writable_place_env_structural env Σ p ->
       typed_env_roots_shadow_safe env Ω n R Σ e_new T_new Σ' R1 roots_new ->
       root_env_lookup x R1 = Some roots_old ->
@@ -1485,8 +1487,8 @@ Proof.
         apply root_env_instantiate_update_union_equiv.
     + exact Hroots_result0.
   - intros R R1 Σ Σ1 p e_new T_old T_new roots_result x roots_old roots_new
-      Hplace Hpath Htarget Hlookup_result Hwritable He_new IHe_new Hlookup_old
-      Hcompat Hfresh R0 HnsR HnsR0 HR0.
+      Hplace Hpath Htarget Hlookup_result Hmut Hwritable He_new IHe_new
+      Hlookup_old Hcompat Hfresh R0 HnsR HnsR0 HR0.
     assert (Htarget0 : place_resolved_write_target R0 p = Some x).
     { eapply place_resolved_write_target_equiv.
       - apply root_env_equiv_sym. exact HR0.
@@ -1554,7 +1556,7 @@ Proof.
         apply root_env_instantiate_update_union_equiv.
     + apply root_set_equiv_refl.
   - intros R R1 Σ Σ' p e_new T_old T_new x roots_old roots_new
-      Hplace Husage Hpath Htarget Hwritable He_new IHe_new
+      Hplace Husage Hpath Htarget Hmut Hwritable He_new IHe_new
       Hlookup_old Hcompat Hfresh R0 HnsR HnsR0 HR0.
     assert (Htarget0 : place_resolved_write_target R0 p = Some x).
     { eapply place_resolved_write_target_equiv.

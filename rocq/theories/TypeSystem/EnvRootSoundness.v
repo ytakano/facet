@@ -1476,6 +1476,7 @@ Proof.
         -- exact Hpath.
         -- exact Htarget.
         -- exact Hroot_result.
+        -- exact Hmut.
         -- apply writable_place_b_sound. exact Hwrite.
         -- eapply IH. exact Hnew.
         -- exact Hroot_old.
@@ -1517,6 +1518,7 @@ Proof.
         -- intro Hu. rewrite Hu in Hlinear. simpl in Hlinear. discriminate.
         -- exact Hpath.
         -- exact Htarget.
+        -- exact Hmut.
         -- apply writable_place_b_sound. exact Hwrite.
         -- eapply IH. exact Hnew.
         -- exact Hroot_old.
@@ -2480,6 +2482,7 @@ Proof.
         -- exact Hpath.
         -- exact Htarget.
         -- exact Hroot_result.
+        -- exact Hmut.
         -- apply writable_place_b_sound. exact Hwrite.
         -- eapply IH. exact Hnew.
         -- exact Hroot_old.
@@ -2521,6 +2524,7 @@ Proof.
         -- intro Hu. rewrite Hu in Hlinear. simpl in Hlinear. discriminate.
         -- exact Hpath.
         -- exact Htarget.
+        -- exact Hmut.
         -- apply writable_place_b_sound. exact Hwrite.
         -- eapply IH. exact Hnew.
         -- exact Hroot_old.

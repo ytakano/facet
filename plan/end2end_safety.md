@@ -85,7 +85,8 @@ Latest full `sh tests/run.sh` baseline (2026-05-31): 24 valid-test failures; inv
 38. Done: prove direct EBorrow narrow-summary runtime package and gate.
 39. Done: add unique direct-parent resolved EBorrow narrow-summary runtime package.
 40. Done: add EUnit leaf to narrow summaries for reborrow tails.
-41. In progress: add assignment leaf needed by resolved reborrow CLI regressions.
+41. Done: add literal assignment leaf needed by resolved reborrow CLI regressions.
+42. In progress: direct reborrow still safety-gated after literal assignment; isolate next missing narrow leaf.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes.

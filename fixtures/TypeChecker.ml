@@ -12585,6 +12585,9 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
          (&&) (store_safe_function_value_call_args_b env args)
            (check_supported_non_type_generic_function_value_call_expr env
              _UU03a9_ n r (ctx_of_sctx _UU03a3_) callee)
+       | EAssign (_, e0) -> (match e0 with
+                             | ELit _ -> true
+                             | _ -> false)
        | EBorrow (rk, p0) ->
          (match place_path p0 with
           | Some _ -> true

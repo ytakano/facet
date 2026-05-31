@@ -1360,6 +1360,47 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma path_conflicts_any_remove_restored_paths_false :
+  forall q p paths,
+    path_conflicts_any_b q paths = false ->
+    path_conflicts_any_b q (remove_restored_paths p paths) = false.
+Proof.
+  intros q p paths.
+  induction paths as [|r rest IH]; intros Hconflicts.
+  - reflexivity.
+  - simpl in Hconflicts.
+    destruct (path_conflict_b q r) eqn:Hqr; try discriminate.
+    simpl.
+    destruct (path_prefix_b p r); simpl; [apply IH |].
+    + exact Hconflicts.
+    + rewrite Hqr. apply IH. exact Hconflicts.
+Qed.
+
+Lemma state_restore_path_preserves_available :
+  forall st p q,
+    binding_available_b st q = true ->
+    binding_available_b (state_restore_path p st) q = true.
+Proof.
+  intros [consumed moved] p q Havailable.
+  unfold binding_available_b in Havailable |- *.
+  simpl in Havailable |- *.
+  destruct consumed; try discriminate.
+  destruct (path_conflicts_any_b q moved) eqn:Hconflicts; try discriminate.
+  rewrite (path_conflicts_any_remove_restored_paths_false q p moved Hconflicts).
+  reflexivity.
+Qed.
+
+Lemma binding_state_refines_restore_path_left :
+  forall runtime static p,
+    binding_state_refines runtime static ->
+    binding_state_refines (state_restore_path p runtime) static.
+Proof.
+  unfold binding_state_refines.
+  intros runtime static p Href q Havailable.
+  apply state_restore_path_preserves_available.
+  apply Href. exact Havailable.
+Qed.
+
 Lemma binding_state_refines_restore_path_available :
   forall runtime static p,
     binding_state_refines runtime static ->
@@ -2106,6 +2147,44 @@ Proof.
         -- reflexivity.
 Qed.
 
+Lemma store_typed_update_state_same_ctx_entries :
+  forall env s_param s_target entries Σ x f entries',
+    Forall2 (store_entry_typed env s_param) entries Σ ->
+    store_ref_targets_preserved env s_param s_target ->
+    (forall runtime static,
+      binding_state_refines runtime static ->
+      binding_state_refines (f runtime) static) ->
+    store_update_state x f entries = Some entries' ->
+    Forall2 (store_entry_typed env s_target) entries' Σ.
+Proof.
+  intros env s_param s_target entries Σ x f entries' Htyped Hpres Hrefines.
+  revert entries'.
+  induction Htyped as [|se ce s_tail Σ_tail Hentry Htail IH];
+    intros entries' Hs.
+  - discriminate.
+  - destruct se as [sx sT sv sst].
+    destruct ce as [[[cx cT] cst] cm].
+    simpl in Hentry.
+    destruct Hentry as [Hname [HT [Hst Hv]]].
+    simpl in Hs.
+    destruct (ident_eqb x sx) eqn:Hsx.
+    + inversion Hs; subst entries'.
+      constructor.
+      * simpl. repeat split.
+        -- exact Hname.
+        -- exact HT.
+        -- apply Hrefines. exact Hst.
+        -- eapply value_has_type_store_preserved; eassumption.
+      * eapply store_typed_store_param_preserved; eassumption.
+    + destruct (store_update_state x f s_tail) as [s_tail' |] eqn:Hs_tail;
+        try discriminate.
+      inversion Hs; subst entries'.
+      constructor.
+      * simpl. repeat split; try assumption.
+        eapply value_has_type_store_preserved; eassumption.
+      * eapply IH. reflexivity.
+Qed.
+
 Lemma store_typed_update_state :
   forall env s Σ x f s' Σ',
     store_typed env s Σ ->
@@ -2566,6 +2645,94 @@ Proof.
       split.
       * simpl. rewrite Hsx. rewrite Hentries. reflexivity.
       * reflexivity.
+Qed.
+
+Lemma store_typed_prefix_update_state_same_ctx_split :
+  forall env s_typed s_update s_target entries frame Σ x f s',
+    s_update = entries ++ frame ->
+    Forall2 (store_entry_typed env s_typed) entries Σ ->
+    store_ref_targets_preserved env s_typed s_target ->
+    (forall runtime static,
+      binding_state_refines runtime static ->
+      binding_state_refines (f runtime) static) ->
+    store_update_state x f s_update = Some s' ->
+    exists entries' frame',
+      s' = entries' ++ frame' /\
+      Forall2 (store_entry_typed env s_target) entries' Σ.
+Proof.
+  intros env s_typed s_update s_target entries frame Σ x f s'
+    Hsplit Htyped Hpres Hrefines.
+  subst s_update.
+  revert frame Σ s' Htyped.
+  induction entries as [|se entries_tail IH]; intros frame Σ s' Htyped Hs.
+  - inversion Htyped; subst.
+    exists [], s'. split; [reflexivity | constructor].
+  - inversion Htyped; subst.
+    destruct se as [sx sT sv sst].
+    destruct y as [[[cx cT] cst] cm].
+    simpl in H1.
+    destruct H1 as [Hname [HT [Hst Hv]]].
+    simpl in Hs.
+    destruct (ident_eqb x sx) eqn:Hsx.
+    + inversion Hs; subst s'.
+      exists (MkStoreEntry sx sT sv (f sst) :: entries_tail), frame.
+      split; [reflexivity |].
+      constructor.
+      * simpl. repeat split.
+        -- exact Hname.
+        -- exact HT.
+        -- apply Hrefines. exact Hst.
+        -- eapply value_has_type_store_preserved; eassumption.
+      * eapply store_typed_store_param_preserved; eassumption.
+    + destruct (store_update_state x f (entries_tail ++ frame)) as [tail_frame' |]
+        eqn:Htail_update; try discriminate.
+      inversion Hs; subst s'.
+      destruct (IH frame l' tail_frame' H3 Htail_update)
+        as [entries' [frame' [Hsplit_tail Htyped_tail]]].
+      subst tail_frame'.
+      exists (MkStoreEntry sx sT sv sst :: entries'), frame'.
+      split; [reflexivity |].
+      constructor.
+      * simpl. repeat split; try assumption.
+        eapply value_has_type_store_preserved; eassumption.
+      * exact Htyped_tail.
+Qed.
+
+Lemma store_typed_prefix_update_state_same_ctx :
+  forall env s Σ x f s',
+    store_typed_prefix env s Σ ->
+    (forall runtime static,
+      binding_state_refines runtime static ->
+      binding_state_refines (f runtime) static) ->
+    store_update_state x f s = Some s' ->
+    store_typed_prefix env s' Σ.
+Proof.
+  intros env s Σ x f s' Htyped Hrefines Hs.
+  unfold store_typed_prefix in Htyped.
+  destruct Htyped as [entries [frame [Hs_eq Hentries]]].
+  destruct (store_typed_prefix_update_state_same_ctx_split
+    env s s s' entries frame Σ x f s' Hs_eq Hentries
+    ltac:(eapply store_update_state_ref_targets_preserved; exact Hs)
+    Hrefines Hs)
+    as [entries' [frame' [Hs' Htyped']]].
+  subst s'.
+  unfold store_typed_prefix.
+  exists entries', frame'. split; [reflexivity | exact Htyped'].
+Qed.
+
+Lemma store_typed_prefix_restore_path_same_ctx :
+  forall env s Σ x p s',
+    store_typed_prefix env s Σ ->
+    store_restore_path x p s = Some s' ->
+    store_typed_prefix env s' Σ.
+Proof.
+  intros env s Σ x p s' Htyped Hrestore.
+  unfold store_restore_path in Hrestore.
+  eapply store_typed_prefix_update_state_same_ctx.
+  - exact Htyped.
+  - intros runtime static Href.
+    apply binding_state_refines_restore_path_left. exact Href.
+  - exact Hrestore.
 Qed.
 
 Lemma store_update_restore_available_prefix_hit :

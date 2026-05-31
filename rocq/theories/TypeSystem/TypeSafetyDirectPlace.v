@@ -2,6 +2,7 @@ From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules TypeChecker RuntimeTyping RootProvenance
   EnvStructuralRules AlphaRenaming EnvSoundnessFacts CheckerSoundness.
 From Facet.TypeSystem Require Export TypeSafetyCapturedCall.
+From Facet.TypeSystem Require Import TypeSafetyHiddenFrameBaseCapture.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
@@ -514,6 +515,36 @@ Lemma value_lookup_path_has_type :
 Proof.
   intros env s path v T v_path T_path Htyped Hvalue Htype.
   exact (proj1 (runtime_path_lookup_typing env s) v T Htyped path v_path T_path Hvalue Htype).
+Qed.
+
+Lemma value_has_type_unique_ref_target_lifetime_equiv :
+  forall env s x path T_actual u la T_expected,
+    value_has_type env s (VRef x path) T_actual ->
+    ty_lifetime_equiv T_actual (MkTy u (TRef la RUnique T_expected)) ->
+    exists se v_target T_target,
+      store_lookup x s = Some se /\
+      value_lookup_path (se_val se) path = Some v_target /\
+      type_lookup_path env (se_ty se) path = Some T_target /\
+      ty_lifetime_equiv T_target T_expected.
+Proof.
+  intros env s x path T_actual u la T_expected Htyped.
+  remember (VRef x path) as v eqn:Hvref.
+  revert x path u la T_expected Hvref.
+  induction Htyped; intros x0 path0 u_ref la_ref T_expected0 Hvref Heq;
+    inversion Hvref; subst; try discriminate.
+  - inversion Heq; subst.
+    exists se, v, T. repeat split; assumption.
+  - inversion Heq; subst.
+    inversion H; subst; try discriminate.
+    + eapply (IHHtyped x0 path0 ua la_ref T_expected0).
+      * reflexivity.
+      * constructor. exact H3.
+    + eapply (IHHtyped x0 path0 ua la_ref T_expected0).
+      * reflexivity.
+      * constructor. exact H3.
+  - eapply (IHHtyped x0 path0 u_ref la_ref T_expected0).
+    + reflexivity.
+    + exact (ty_lifetime_equiv_trans _ _ _ H Heq).
 Qed.
 
 Lemma eval_place_direct_runtime_target_exists_prefix :

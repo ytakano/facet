@@ -64,7 +64,7 @@ Latest full `sh tests/run.sh` baseline (2026-05-30): 29 valid-test failures; inv
     non-shadow indirect `EAssign`/`EReplace` through target root lookup.
 16. Done: route shadow-safe resolved `EAssign`/`EReplace` through target root lookup; full Rocq/extraction and OCaml build pass.
 17. Done: align resolved write Prop rules with checker-enforced target mutability.
-18. Next: prove pathless resolved writes admissible for provenance/readiness gate; targeted valid indirect writes still reject there.
+18. In progress: runtime target/restore helpers for pathless resolved writes compile; prefix preservation proof remains.
 
 The resolver remains narrow: it follows bounded singleton store-root chains and
 does not accept ambiguous/non-singleton update targets.

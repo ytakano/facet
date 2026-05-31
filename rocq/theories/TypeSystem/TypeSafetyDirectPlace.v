@@ -3,6 +3,7 @@ From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   EnvStructuralRules AlphaRenaming EnvSoundnessFacts CheckerSoundness.
 From Facet.TypeSystem Require Export TypeSafetyCapturedCall.
 From Facet.TypeSystem Require Import TypeSafetyHiddenFrameBaseCapture.
+From Facet.TypeSystem Require Import TypeSafetyRootsReadyCtx.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
@@ -731,6 +732,23 @@ Proof.
   - eapply (IHHtyped x0 path0 u_ref la_ref T_expected0).
     + reflexivity.
     + exact (ty_lifetime_equiv_trans _ _ _ H Heq).
+Qed.
+
+
+
+Lemma eval_place_resolved_writable_target_matches_prefix :
+  forall env R Σ s p T x x_eval path_eval,
+    store_typed_prefix env s Σ ->
+    typed_place_env_structural env Σ p T ->
+    writable_place_env_structural env Σ p ->
+    store_roots_within R s ->
+    place_resolved_write_target R p = Some x ->
+    sctx_lookup_mut x Σ = Some MMutable ->
+    eval_place s p x_eval path_eval ->
+    x_eval = x.
+Proof.
+  intros env R Σ s p T x x_eval path_eval _ _ _ Hroots Htarget _ Heval.
+  eapply eval_place_resolved_write_target_matches_root; eassumption.
 Qed.
 
 Lemma eval_place_unique_ref_direct_runtime_target_exists_prefix :

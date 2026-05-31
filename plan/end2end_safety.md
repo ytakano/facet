@@ -86,7 +86,8 @@ Latest full `sh tests/run.sh` baseline (2026-05-31): 24 valid-test failures; inv
 39. Done: add unique direct-parent resolved EBorrow narrow-summary runtime package.
 40. Done: add EUnit leaf to narrow summaries for reborrow tails.
 41. Done: add literal assignment leaf needed by resolved reborrow CLI regressions.
-42. In progress: direct reborrow still safety-gated after literal assignment; isolate next missing narrow leaf.
+42. Done: isolate remaining direct reborrow gate to auto-drop tail `EDrop (EPlace _)`/`EVar` leaves.
+43. In progress: add auto-drop tail narrow leaves for resolved reborrow regressions.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes.

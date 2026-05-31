@@ -537,102 +537,97 @@ Proof.
       IHnew Hupdate Hrestore Ω n R Σ T Σ' R' roots ps frame
       Hready Htyped Hcover Hscope.
     dependent destruction Hready.
-    inversion Htyped; subst; try discriminate.
+    inversion Htyped; subst; simpl in *; try discriminate.
     match goal with
-    | Hpath_var : place_path (PVar _) = Some _ |- _ =>
-        simpl in Hpath_var; inversion Hpath_var; subst; clear Hpath_var
+    | Hpath : Some _ = Some _ |- _ => inversion Hpath; subst; clear Hpath
     end.
-    assert (Hready_new : provenance_ready_expr e_new) by assumption.
+    destruct (IHnew Ω n R Σ T_new Σ1 R1 roots_new ps frame
+                ltac:(assumption) H5 Hcover Hscope)
+      as [Hcover1 [frame1 Hscope1]].
     match goal with
-    | Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new ?Σ1
-        ?R1 ?roots_new |- _ =>
-        destruct (IHnew Ω n R Σ T_new Σ1 R1 roots_new ps frame
-                    Hready_new Htyped_new Hcover Hscope)
-          as [Hcover1 [frame1 Hscope1]];
+    | Hup : store_update_val ?x_store v_new s1 = Some s2 |- _ =>
         destruct (store_param_scope_update_val
-                    ps s1 frame1 x v_new s2 Hscope1 Hupdate)
+                    ps s1 frame1 x_store v_new s2 Hscope1 Hup)
           as [frame2 Hscope2];
         destruct (store_param_scope_restore_path
-                    ps s2 frame2 x [] s3 Hscope2 Hrestore)
-          as [frame3 Hscope3];
-        split;
-        [ apply root_env_covers_params_update; exact Hcover1
-        | exists frame3; exact Hscope3 ]
+                    ps s2 frame2 x_store [] s3 Hscope2 Hrestore)
+          as [frame3 Hscope3]
     end.
+    split.
+    + apply root_env_covers_params_update. exact Hcover1.
+    + exists frame3. exact Hscope3.
   - intros s s1 s2 x old_e e_new v_new Hlookup Heval_new
       IHnew Hupdate Ω n R Σ T Σ' R' roots ps frame Hready Htyped
       Hcover Hscope.
     dependent destruction Hready.
-    inversion Htyped; subst; try discriminate.
+    inversion Htyped; subst; simpl in *; try discriminate.
     match goal with
-    | Hpath_var : place_path (PVar _) = Some _ |- _ =>
-        simpl in Hpath_var; inversion Hpath_var; subst; clear Hpath_var
+    | Hpath : Some _ = Some _ |- _ => inversion Hpath; subst; clear Hpath
     end.
-    assert (Hready_new : provenance_ready_expr e_new) by assumption.
+    destruct (IHnew Ω n R Σ T_new Σ' R1 roots_new ps frame
+                ltac:(assumption) H5 Hcover Hscope)
+      as [Hcover1 [frame1 Hscope1]].
     match goal with
-    | Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new Σ' ?R1
-        ?roots_new |- _ =>
-        destruct (IHnew Ω n R Σ T_new Σ' R1 roots_new ps frame
-                    Hready_new Htyped_new Hcover Hscope)
-          as [Hcover1 [frame1 Hscope1]];
+    | Hup : store_update_val ?x_store v_new s1 = Some s2 |- _ =>
         destruct (store_param_scope_update_val
-                    ps s1 frame1 x v_new s2 Hscope1 Hupdate)
-          as [frame2 Hscope2];
-        split;
-        [ apply root_env_covers_params_update; exact Hcover1
-        | exists frame2; exact Hscope2 ]
+                    ps s1 frame1 x_store v_new s2 Hscope1 Hup)
+          as [frame2 Hscope2]
     end.
+    split.
+    + apply root_env_covers_params_update. exact Hcover1.
+    + exists frame2. exact Hscope2.
   - intros s s1 s2 s3 p x_eval path_eval old_v e_new v_new
       Heval_place Hlookup_old Heval_new IHnew Hupdate Hrestore
       Ω n R Σ T Σ' R' roots ps frame Hready Htyped Hcover Hscope.
     dependent destruction Hready.
     inversion Htyped; subst; try discriminate.
-    assert (Hready_new : provenance_ready_expr e_new) by assumption.
-    match goal with
-    | Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new ?Σ1
-        ?R1 ?roots_new |- _ =>
-        destruct (IHnew Ω n R Σ T_new Σ1 R1 roots_new ps frame
-                    Hready_new Htyped_new Hcover Hscope)
-          as [Hcover1 [frame1 Hscope1]];
-        destruct (store_param_scope_update_path
-                    ps s1 frame1 x_eval path_eval v_new s2 Hscope1 Hupdate)
-          as [frame2 Hscope2];
-        destruct (store_param_scope_restore_path
-                    ps s2 frame2 x_eval path_eval s3 Hscope2 Hrestore)
-          as [frame3 Hscope3];
-        split;
-        [ apply root_env_covers_params_update; exact Hcover1
-        | exists frame3; exact Hscope3 ]
-    end.
-    match goal with
-    | Hready_path : place_path p = Some _,
-      Htyped_none : place_path p = None |- _ =>
-        rewrite Hready_path in Htyped_none; discriminate
-    end.
+    destruct (IHnew Ω n R Σ T_new Σ1 R1 roots_new ps frame
+                ltac:(assumption) H5 Hcover Hscope)
+      as [Hcover1 [frame1 Hscope1]].
+    destruct (store_param_scope_update_path
+                ps s1 frame1 x_eval path_eval v_new s2 Hscope1 Hupdate)
+      as [frame2 Hscope2].
+    destruct (store_param_scope_restore_path
+                ps s2 frame2 x_eval path_eval s3 Hscope2 Hrestore)
+      as [frame3 Hscope3].
+    split.
+    + apply root_env_covers_params_update. exact Hcover1.
+    + exists frame3. exact Hscope3.
+    + destruct (IHnew Ω n R Σ T_new Σ' R1 roots_new ps frame
+                  ltac:(assumption) H8 Hcover Hscope)
+        as [Hcover1 [frame1 Hscope1]].
+      destruct (store_param_scope_update_path
+                  ps s1 frame1 x_eval path_eval v_new s2 Hscope1 Hupdate)
+        as [frame2 Hscope2].
+      destruct (store_param_scope_restore_path
+                  ps s2 frame2 x_eval path_eval s3 Hscope2 Hrestore)
+        as [frame3 Hscope3].
+      split.
+      * apply root_env_covers_params_update. exact Hcover1.
+      * exists frame3. exact Hscope3.
   - intros s s1 s2 p x_eval path_eval e_new v_new Heval_place
       Heval_new IHnew Hupdate Ω n R Σ T Σ' R' roots ps frame
       Hready Htyped Hcover Hscope.
     dependent destruction Hready.
     inversion Htyped; subst; try discriminate.
-    assert (Hready_new : provenance_ready_expr e_new) by assumption.
-    match goal with
-    | Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new Σ' ?R1
-        ?roots_new |- _ =>
-        destruct (IHnew Ω n R Σ T_new Σ' R1 roots_new ps frame
-                    Hready_new Htyped_new Hcover Hscope)
-          as [Hcover1 [frame1 Hscope1]];
-        destruct (store_param_scope_update_path
-                    ps s1 frame1 x_eval path_eval v_new s2 Hscope1 Hupdate)
-          as [frame2 Hscope2];
-        split;
-        [ apply root_env_covers_params_update; exact Hcover1
-        | exists frame2; exact Hscope2 ]
-    end.
-    match goal with
-    | Hready_path : place_path p = Some _,
-      Htyped_none : place_path p = None |- _ =>
-        rewrite Hready_path in Htyped_none; discriminate
-    end.
+    destruct (IHnew Ω n R Σ T_new Σ' R1 roots_new ps frame
+                ltac:(assumption) H5 Hcover Hscope)
+      as [Hcover1 [frame1 Hscope1]].
+    destruct (store_param_scope_update_path
+                ps s1 frame1 x_eval path_eval v_new s2 Hscope1 Hupdate)
+      as [frame2 Hscope2].
+    split.
+    + apply root_env_covers_params_update. exact Hcover1.
+    + exists frame2. exact Hscope2.
+    + destruct (IHnew Ω n R Σ T_new Σ' R1 roots_new ps frame
+                  ltac:(assumption) H8 Hcover Hscope)
+        as [Hcover1 [frame1 Hscope1]].
+      destruct (store_param_scope_update_path
+                  ps s1 frame1 x_eval path_eval v_new s2 Hscope1 Hupdate)
+        as [frame2 Hscope2].
+      split.
+      * apply root_env_covers_params_update. exact Hcover1.
+      * exists frame2. exact Hscope2.
   - intros s p x path rk Heval_place Ω n R Σ T Σ' R' roots ps frame
       Hready Htyped Hcover Hscope.
     dependent destruction Hready.

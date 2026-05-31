@@ -968,6 +968,99 @@ Proof.
 Qed.
 
 
+Lemma eval_place_resolved_writable_chain_runtime_target_exists_prefix :
+  forall env R Σ s p T x x_eval path_eval,
+    store_typed_prefix env s Σ ->
+    typed_place_env_structural env Σ p T ->
+    writable_place_env_structural env Σ p ->
+    store_roots_within R s ->
+    place_resolved_write_writable_chain env R Σ p ->
+    place_resolved_write_target R p = Some x ->
+    sctx_lookup_mut x Σ = Some MMutable ->
+    eval_place s p x_eval path_eval ->
+    exists se v_target T_eval,
+      x_eval = x /\
+      store_lookup x s = Some se /\
+      value_lookup_path (se_val se) path_eval = Some v_target /\
+      type_lookup_path env (se_ty se) path_eval = Some T_eval /\
+      ty_lifetime_equiv T_eval T /\
+      value_has_type env s v_target T_eval.
+Proof.
+  intros env R Σ s p T x x_eval path_eval Hstore Htyped Hwrite Hroots Hchain.
+  revert T x x_eval path_eval Htyped Hwrite.
+  induction Hchain as [p Hdirect | p x_parent Hchain IH Hwrite_parent Htarget_parent Hmut_parent];
+    intros T x x_eval path_eval Htyped Hwrite Htarget Hmut Heval.
+  - destruct Hdirect as [q [x_static [path_static [Hp Hpath_parent]]]].
+    subst p.
+    eapply eval_place_resolved_writable_indirect_unique_deref_runtime_target_exists_prefix;
+      eassumption.
+  - inversion Htyped as
+      [| p_t la_t rk_t T_t u_t Hparent_typed
+       | |]; subst.
+    inversion Hwrite as
+      [| p_w la_w T_w u_w Hparent_unique
+       |]; subst.
+    inversion Heval; subst.
+    destruct (IH (MkTy u_w (TRef la_w RUnique T_w))
+              x_parent r rpath Hparent_unique Hwrite_parent
+              Htarget_parent Hmut_parent H0)
+      as [se_parent [v_parent [T_parent_eval
+          [Hr_eq [Hlookup_parent [Hvalue_parent
+            [Htype_parent [Hequiv_parent Hv_parent]]]]]]]].
+    subst r.
+    rewrite Hlookup_parent in H1. inversion H1; subst se_r.
+    rewrite Hvalue_parent in H3. inversion H3; subst v_parent.
+    assert (Hx : x_eval = x).
+    { eapply eval_place_resolved_write_target_matches_root; eassumption. }
+    subst x_eval.
+    destruct (value_has_type_unique_ref_target_lifetime_equiv
+                env s x path_eval T_parent_eval u_w la_w T_w
+                Hv_parent Hequiv_parent)
+      as [se [v_target [T_eval
+          [Hlookup [Hvalue [Htype Hequiv_target]]]]]].
+    assert (Hvtarget : value_has_type env s v_target T_eval).
+    { eapply store_typed_prefix_lookup_path_value_has_type; eassumption. }
+    assert (Hequiv_typed : ty_lifetime_equiv T_w T).
+    { eapply typed_place_env_structural_unique_ref_target_lifetime_equiv.
+      - exact Hparent_unique.
+      - exact Hparent_typed. }
+    exists se, v_target, T_eval.
+    repeat split; try assumption.
+    eapply ty_lifetime_equiv_trans; eassumption.
+Qed.
+
+Lemma eval_place_resolved_writable_chain_runtime_target_exists :
+  forall env R Σ s p T x x_eval path_eval,
+    store_typed env s Σ ->
+    typed_place_env_structural env Σ p T ->
+    writable_place_env_structural env Σ p ->
+    store_roots_within R s ->
+    place_resolved_write_writable_chain env R Σ p ->
+    place_resolved_write_target R p = Some x ->
+    sctx_lookup_mut x Σ = Some MMutable ->
+    eval_place s p x_eval path_eval ->
+    exists se v_target T_eval,
+      x_eval = x /\
+      store_lookup x s = Some se /\
+      value_lookup_path (se_val se) path_eval = Some v_target /\
+      type_lookup_path env (se_ty se) path_eval = Some T_eval /\
+      ty_lifetime_equiv T_eval T /\
+      value_has_type env s v_target T_eval.
+Proof.
+  intros env R Σ s p T x x_eval path_eval Hstore Htyped Hwrite Hroots
+    Hchain Htarget Hmut Heval.
+  eapply eval_place_resolved_writable_chain_runtime_target_exists_prefix.
+  - apply store_typed_prefix_exact. exact Hstore.
+  - exact Htyped.
+  - exact Hwrite.
+  - exact Hroots.
+  - exact Hchain.
+  - exact Htarget.
+  - exact Hmut.
+  - exact Heval.
+Qed.
+
+
 Lemma eval_place_direct_runtime_target_exists_prefix :
   forall env Σ s p T x_static path_static x_eval path_eval,
     store_typed_prefix env s Σ ->

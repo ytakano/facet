@@ -601,28 +601,22 @@ Proof.
           | eapply store_ref_targets_preserved_trans; eassumption ]
       end.
     + match goal with
-      | Hchain : place_resolved_write_mutable_chain _ _ _ |- _ =>
-          inversion Hchain as [? Hshape]; subst; clear Hchain
-      end;
-      match goal with
       | Hready_new : provenance_ready_expr e_new,
         Hplace : typed_place_env_structural env Σ p ?T_old,
         Hpath_none : place_path p = None,
-        Hshape : place_resolved_write_direct_parent p,
+        Hchain : place_resolved_write_writable_chain env R Σ p,
         Htarget_res : place_resolved_write_target R p = Some ?x_target,
         Hmut : sctx_lookup_mut ?x_target Σ = Some MMutable,
         Hwritable : writable_place_env_structural env Σ p,
         Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new ?Σ1 ?R1 ?roots_new,
         Hcompat : ty_compatible_b Ω ?T_new ?T_old = true |- _ =>
-          destruct Hshape as [q [x_static [path_static [Hp Hpath_parent]]]];
-          subst p;
           destruct (IHnew Ω n R Σ T_new Σ1 R1 roots_new Hready_new
                       Hstore Hroots Hnodup Hrn Htyped_new)
             as [Hstore1 [Hvnew Hpres_new]];
-          destruct (eval_place_resolved_writable_indirect_unique_deref_runtime_target_exists_prefix
-                      env R Σ s q T_old x_target x_static path_static
-                      x_eval path_eval Hstore Hplace Hwritable Hroots
-                      Htarget_res Hmut Hpath_parent Heval_place)
+          destruct (eval_place_resolved_writable_chain_runtime_target_exists_prefix
+                      env R Σ s p T_old x_target x_eval path_eval
+                      Hstore Hplace Hwritable Hroots Hchain Htarget_res Hmut
+                      Heval_place)
             as [se [v_target [T_eval
                 [Hx_eval [Hlookup_runtime [Hvalue_runtime
                   [Htype_runtime [Hequiv_runtime Hvtarget]]]]]]]];
@@ -735,28 +729,22 @@ Proof.
           eapply store_ref_targets_preserved_trans; eassumption
       end.
     + match goal with
-      | Hchain : place_resolved_write_mutable_chain _ _ _ |- _ =>
-          inversion Hchain as [? Hshape]; subst; clear Hchain
-      end;
-      match goal with
       | Hready_new : provenance_ready_expr e_new,
         Hplace : typed_place_env_structural env Σ p ?T_old,
         Hpath_none : place_path p = None,
-        Hshape : place_resolved_write_direct_parent p,
+        Hchain : place_resolved_write_writable_chain env R Σ p,
         Htarget_res : place_resolved_write_target R p = Some ?x_target,
         Hmut : sctx_lookup_mut ?x_target Σ = Some MMutable,
         Hwritable : writable_place_env_structural env Σ p,
         Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new Σ' ?R1 ?roots_new,
         Hcompat : ty_compatible_b Ω ?T_new ?T_old = true |- _ =>
-          destruct Hshape as [q [x_static [path_static [Hp Hpath_parent]]]];
-          subst p;
           destruct (IHnew Ω n R Σ T_new Σ' R1 roots_new Hready_new
                       Hstore Hroots Hnodup Hrn Htyped_new)
             as [Hstore1 [Hvnew Hpres_new]];
-          destruct (eval_place_resolved_writable_indirect_unique_deref_runtime_target_exists_prefix
-                      env R Σ s q T_old x_target x_static path_static
-                      x_eval path_eval Hstore Hplace Hwritable Hroots
-                      Htarget_res Hmut Hpath_parent Heval_place)
+          destruct (eval_place_resolved_writable_chain_runtime_target_exists_prefix
+                      env R Σ s p T_old x_target x_eval path_eval
+                      Hstore Hplace Hwritable Hroots Hchain Htarget_res Hmut
+                      Heval_place)
             as [se [v_target [T_eval
                 [Hx_eval [Hlookup_runtime [Hvalue_runtime
                   [Htype_runtime [Hequiv_runtime Hvtarget]]]]]]]];

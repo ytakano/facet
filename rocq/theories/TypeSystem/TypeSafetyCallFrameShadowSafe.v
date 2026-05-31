@@ -140,6 +140,21 @@ Proof.
 Qed.
 
 
+Lemma place_resolved_write_mutable_chain_app_left :
+  forall R R_tail Σ p,
+    place_resolved_write_mutable_chain R Σ p ->
+    place_resolved_write_mutable_chain (R ++ R_tail) Σ p.
+Proof.
+  intros R R_tail Σ p Hchain.
+  induction Hchain.
+  - apply PRWMC_Direct. exact H.
+  - eapply PRWMC_Deref.
+    + exact IHHchain.
+    + eapply place_resolved_write_target_app_left. exact H.
+    + exact H0.
+Qed.
+
+
 Lemma root_env_excludes_params_app_local :
   forall ps R1 R2,
     root_env_excludes_params ps R1 ->
@@ -397,6 +412,7 @@ Proof.
       with (root_env_update x (root_set_union roots_old roots_new)
         (R1 ++ R_tail)).
     eapply TERS_Replace_Resolved; eauto.
+    + eapply place_resolved_write_mutable_chain_app_left; eassumption.
     + eapply place_resolved_write_target_app_left; eassumption.
     + eapply root_env_lookup_app_left; eassumption.
     + eapply root_env_lookup_app_left; eassumption.
@@ -417,6 +433,7 @@ Proof.
       with (root_env_update x (root_set_union roots_old roots_new)
         (R1 ++ R_tail)).
     eapply TERS_Assign_Resolved; eauto.
+    + eapply place_resolved_write_mutable_chain_app_left; eassumption.
     + eapply place_resolved_write_target_app_left; eassumption.
     + eapply root_env_lookup_app_left; eassumption.
     + rewrite root_env_update_app_left with (roots_old := roots_old)

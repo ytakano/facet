@@ -1047,6 +1047,16 @@ let place_resolved_write_direct_parent_b = function
                | None -> false)
 | _ -> false
 
+(** val place_resolved_write_shape_b : place -> bool **)
+
+let rec place_resolved_write_shape_b p =
+  if place_resolved_write_direct_parent_b p
+  then true
+  else (match p with
+        | PVar _ -> false
+        | PDeref q -> place_resolved_write_shape_b q
+        | PField (q, _) -> place_resolved_write_shape_b q)
+
 (** val place_suffix_path : place -> field_path **)
 
 let rec place_suffix_path = function
@@ -8754,7 +8764,7 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
        | None ->
          (match infer_place_sctx env _UU03a3_ p with
           | Infer_ok t_old ->
-            if place_resolved_write_direct_parent_b p
+            if place_resolved_write_shape_b p
             then (match place_resolved_write_target r p with
                   | Some x ->
                     (match root_env_lookup x r with
@@ -8839,7 +8849,7 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
           | Infer_ok t_old ->
             if usage_eqb (ty_usage t_old) ULinear
             then Infer_err (ErrUsageMismatch ((ty_usage t_old), UAffine))
-            else if place_resolved_write_direct_parent_b p
+            else if place_resolved_write_shape_b p
                  then (match place_resolved_write_target r p with
                        | Some x ->
                          (match sctx_lookup_mut x _UU03a3_ with
@@ -11118,7 +11128,7 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
        | None ->
          (match infer_place_sctx env _UU03a3_ p with
           | Infer_ok t_old ->
-            if place_resolved_write_direct_parent_b p
+            if place_resolved_write_shape_b p
             then (match place_resolved_write_target r p with
                   | Some x ->
                     (match root_env_lookup x r with
@@ -11203,7 +11213,7 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
           | Infer_ok t_old ->
             if usage_eqb (ty_usage t_old) ULinear
             then Infer_err (ErrUsageMismatch ((ty_usage t_old), UAffine))
-            else if place_resolved_write_direct_parent_b p
+            else if place_resolved_write_shape_b p
                  then (match place_resolved_write_target r p with
                        | Some x ->
                          (match sctx_lookup_mut x _UU03a3_ with

@@ -5550,7 +5550,7 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
           match infer_place_sctx env Σ p with
           | infer_err err => infer_err err
           | infer_ok T_old =>
-              if place_resolved_write_direct_parent_b p then
+              if place_resolved_write_shape_b p then
               match place_resolved_write_target R p with
               | None => infer_err ErrNotImplemented
               | Some x =>
@@ -5636,7 +5636,7 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
               if usage_eqb (ty_usage T_old) ULinear
               then infer_err (ErrUsageMismatch (ty_usage T_old) UAffine)
               else
-              if place_resolved_write_direct_parent_b p then
+              if place_resolved_write_shape_b p then
               match place_resolved_write_target R p with
               | None => infer_err ErrNotImplemented
               | Some x =>
@@ -6449,7 +6449,7 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
           match infer_place_sctx env Σ p with
           | infer_err err => infer_err err
           | infer_ok T_old =>
-              if place_resolved_write_direct_parent_b p then
+              if place_resolved_write_shape_b p then
               match place_resolved_write_target R p with
               | None => infer_err ErrNotImplemented
               | Some x =>
@@ -6535,7 +6535,7 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
               if usage_eqb (ty_usage T_old) ULinear
               then infer_err (ErrUsageMismatch (ty_usage T_old) UAffine)
               else
-              if place_resolved_write_direct_parent_b p then
+              if place_resolved_write_shape_b p then
               match place_resolved_write_target R p with
               | None => infer_err ErrNotImplemented
               | Some x =>

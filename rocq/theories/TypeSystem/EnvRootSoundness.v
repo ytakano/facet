@@ -1461,8 +1461,8 @@ Proof.
         -- exact Havailable.
         -- exact Hrestore.
       * destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
-        destruct (place_resolved_write_direct_parent_b p) eqn:Hshape; try discriminate.
-        pose proof (place_resolved_write_direct_parent_b_sound p Hshape) as Hshape_prop.
+        destruct (place_resolved_write_shape_b p) eqn:Hshape; try discriminate.
+        pose proof (place_resolved_write_shape_b_sound p Hshape) as Hshape_prop.
         destruct (place_resolved_write_target R p) as [x |] eqn:Htarget; try discriminate.
         destruct (root_env_lookup x R) as [roots_result |] eqn:Hroot_result; try discriminate.
         destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
@@ -1507,8 +1507,8 @@ Proof.
         -- exact Havailable.
       * destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
         destruct (usage_eqb (ty_usage Told) ULinear) eqn:Hlinear; try discriminate.
-        destruct (place_resolved_write_direct_parent_b p) eqn:Hshape; try discriminate.
-        pose proof (place_resolved_write_direct_parent_b_sound p Hshape) as Hshape_prop.
+        destruct (place_resolved_write_shape_b p) eqn:Hshape; try discriminate.
+        pose proof (place_resolved_write_shape_b_sound p Hshape) as Hshape_prop.
         destruct (place_resolved_write_target R p) as [x |] eqn:Htarget; try discriminate.
         destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
         destruct mut; try discriminate.
@@ -2473,8 +2473,8 @@ Proof.
         -- exact Havailable.
         -- exact Hrestore.
       * destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
-        destruct (place_resolved_write_direct_parent_b p) eqn:Hshape; try discriminate.
-        pose proof (place_resolved_write_direct_parent_b_sound p Hshape) as Hshape_prop.
+        destruct (place_resolved_write_shape_b p) eqn:Hshape; try discriminate.
+        pose proof (place_resolved_write_shape_b_sound p Hshape) as Hshape_prop.
         destruct (place_resolved_write_target R p) as [x |] eqn:Htarget; try discriminate.
         destruct (root_env_lookup x R) as [roots_result |] eqn:Hroot_result; try discriminate.
         destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
@@ -2519,8 +2519,8 @@ Proof.
         -- exact Havailable.
       * destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
         destruct (usage_eqb (ty_usage Told) ULinear) eqn:Hlinear; try discriminate.
-        destruct (place_resolved_write_direct_parent_b p) eqn:Hshape; try discriminate.
-        pose proof (place_resolved_write_direct_parent_b_sound p Hshape) as Hshape_prop.
+        destruct (place_resolved_write_shape_b p) eqn:Hshape; try discriminate.
+        pose proof (place_resolved_write_shape_b_sound p Hshape) as Hshape_prop.
         destruct (place_resolved_write_target R p) as [x |] eqn:Htarget; try discriminate.
         destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
         destruct mut; try discriminate.

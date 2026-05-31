@@ -69,7 +69,8 @@ Latest full `sh tests/run.sh` baseline (2026-05-31): 24 valid-test failures; inv
 23. Done: rebuild dependent safety chain and remove stale proof fallout.
 24. Done: run extraction consumers and CLI regression checks.
 25. Done: choose proof path and add generalized nested resolved-write shape.
-26. In progress: route resolved write rules and checker through generalized shape.
+26. Done: route resolved write rules and checker through generalized shape.
+27. In progress: prove generalized nested resolved write runtime target helpers.
 
 The resolver remains narrow: it follows bounded singleton store-root chains and
 does not accept ambiguous/non-singleton update targets.

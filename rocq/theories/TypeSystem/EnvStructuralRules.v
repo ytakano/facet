@@ -1143,7 +1143,7 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       roots_result x roots_old roots_new,
       typed_place_env_structural env Σ p T_old ->
       place_path p = None ->
-      place_resolved_write_direct_parent p ->
+      place_resolved_write_shape p ->
       place_resolved_write_target R p = Some x ->
       root_env_lookup x R = Some roots_result ->
       sctx_lookup_mut x Σ = Some MMutable ->
@@ -1172,7 +1172,7 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_place_env_structural env Σ p T_old ->
       ty_usage T_old <> ULinear ->
       place_path p = None ->
-      place_resolved_write_direct_parent p ->
+      place_resolved_write_shape p ->
       place_resolved_write_target R p = Some x ->
       sctx_lookup_mut x Σ = Some MMutable ->
       writable_place_env_structural env Σ p ->

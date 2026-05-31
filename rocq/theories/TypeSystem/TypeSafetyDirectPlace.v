@@ -116,6 +116,54 @@ Proof.
   repeat split; assumption.
 Qed.
 
+
+Lemma writable_place_none_under_unique_ref :
+  forall env Σ p,
+    writable_place_env_structural env Σ p ->
+    place_path p = None ->
+    place_under_unique_ref_structural env Σ p.
+Proof.
+  intros env Σ p Hwrite.
+  induction Hwrite; intros Hpath; simpl in Hpath; try discriminate.
+  - econstructor 1. exact H.
+  - constructor 2.
+    apply IHHwrite.
+    destruct (place_path p) as [[x path] |] eqn:Hparent;
+      simpl in Hpath; try discriminate; reflexivity.
+Qed.
+
+Lemma typed_place_type_env_structural_functional :
+  forall env Σ p T1,
+    typed_place_type_env_structural env Σ p T1 ->
+    forall T2,
+      typed_place_type_env_structural env Σ p T2 ->
+      T1 = T2.
+Proof.
+  intros env Σ p T1 Htyped1.
+  induction Htyped1; intros T2 Htyped2; inversion Htyped2; subst.
+  - match goal with
+    | Hleft : sctx_lookup x Σ = Some (T, st),
+      Hright : sctx_lookup x Σ = Some (T2, st0) |- _ =>
+        rewrite Hleft in Hright; inversion Hright; reflexivity
+    end.
+  - match goal with
+    | IH : forall T2, typed_place_type_env_structural env Σ p T2 -> _ = T2,
+      Hsub : typed_place_type_env_structural env Σ p ?Tsub |- _ =>
+        specialize (IH Tsub Hsub); inversion IH; reflexivity
+    end.
+  - match goal with
+    | IH : forall T2, typed_place_type_env_structural env Σ p T2 -> _ = T2,
+      Hsub : typed_place_type_env_structural env Σ p ?Tsub |- _ =>
+        specialize (IH Tsub Hsub); subst Tsub
+    end.
+    repeat match goal with
+    | H1 : ?lhs = Some ?a, H2 : ?lhs = Some ?b |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    end.
+    congruence.
+Qed.
+
+
 Lemma needs_consume_false_usage :
   forall T,
     needs_consume T = false ->

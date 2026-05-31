@@ -76,7 +76,8 @@ Latest full `sh tests/run.sh` baseline (2026-05-31): 24 valid-test failures; inv
 29. Done: re-narrow resolved write chain to the proven direct-parent fragment.
 30. Done: verify full Rocq build, proof-hole scan, OCaml build, and targeted direct/nested CLI cases.
 31. Done: add writable-prefix resolved write chain guard and checker soundness.
-32. In progress: prove reusable runtime target helpers for writable-prefix chains.
+32. Done: prove reusable runtime target helpers and writable-chain tail transport.
+33. In progress: prove nested resolved write preservation branches.
 
 Resolved writes remain narrow: only direct-parent pathless writes are accepted;
 recursive deref-chain writes are blocked until their preservation invariant is strengthened.

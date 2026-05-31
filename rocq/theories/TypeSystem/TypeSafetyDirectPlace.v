@@ -704,6 +704,28 @@ Proof.
   exact (proj1 (runtime_path_lookup_typing env s) v T Htyped path v_path T_path Hvalue Htype).
 Qed.
 
+Lemma store_typed_prefix_lookup_path_value_has_type :
+  forall env s Σ x m se path v_target T_eval,
+    store_typed_prefix env s Σ ->
+    sctx_lookup_mut x Σ = Some m ->
+    store_lookup x s = Some se ->
+    value_lookup_path (se_val se) path = Some v_target ->
+    type_lookup_path env (se_ty se) path = Some T_eval ->
+    value_has_type env s v_target T_eval.
+Proof.
+  intros env s Σ x m se path v_target T_eval
+    Hstore Hmut Hlookup Hvalue Htype.
+  destruct (sctx_lookup_mut_some_lookup x Σ m Hmut) as [T_static [st HΣ]].
+  destruct (store_typed_prefix_lookup_sctx env s Σ x T_static st Hstore HΣ)
+    as [se_static [Hlookup_static [_ [Hse_ty [_ Hvroot]]]]].
+  rewrite Hlookup in Hlookup_static. inversion Hlookup_static; subst se_static.
+  assert (Hvroot_se : value_has_type env s (se_val se) (se_ty se)).
+  { eapply VHT_LifetimeEquiv.
+    - exact Hvroot.
+    - apply ty_lifetime_equiv_sym. exact Hse_ty. }
+  eapply value_lookup_path_has_type; eassumption.
+Qed.
+
 Lemma value_has_type_unique_ref_target_lifetime_equiv :
   forall env s x path T_actual u la T_expected,
     value_has_type env s (VRef x path) T_actual ->
@@ -811,6 +833,31 @@ Proof.
   eapply value_has_type_unique_ref_target_lifetime_equiv in Hv_parent.
   - exact Hv_parent.
   - exact Heq_parent.
+Qed.
+
+Lemma eval_place_unique_ref_direct_runtime_target_typed_exists_prefix :
+  forall env Σ s p T u la x_static path_static x_eval path_eval m,
+    store_typed_prefix env s Σ ->
+    typed_place_env_structural env Σ p (MkTy u (TRef la RUnique T)) ->
+    place_path p = Some (x_static, path_static) ->
+    sctx_lookup_mut x_eval Σ = Some m ->
+    eval_place s (PDeref p) x_eval path_eval ->
+    exists se v_target T_eval,
+      store_lookup x_eval s = Some se /\
+      value_lookup_path (se_val se) path_eval = Some v_target /\
+      type_lookup_path env (se_ty se) path_eval = Some T_eval /\
+      ty_lifetime_equiv T_eval T /\
+      value_has_type env s v_target T_eval.
+Proof.
+  intros env Σ s p T u la x_static path_static x_eval path_eval m
+    Hstore Hplace Hpath_static Hmut Heval_place.
+  destruct (eval_place_unique_ref_direct_runtime_target_exists_prefix
+              env Σ s p T u la x_static path_static x_eval path_eval
+              Hstore Hplace Hpath_static Heval_place)
+    as [se [v_target [T_eval [Hlookup [Hvalue [Htype Hequiv]]]]]].
+  exists se, v_target, T_eval.
+  repeat split; try assumption.
+  eapply store_typed_prefix_lookup_path_value_has_type; eassumption.
 Qed.
 
 Lemma eval_pathless_writable_unique_deref_runtime_target_exists_prefix :

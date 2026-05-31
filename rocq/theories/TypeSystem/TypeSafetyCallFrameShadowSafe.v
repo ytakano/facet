@@ -140,14 +140,19 @@ Proof.
 Qed.
 
 
-Lemma place_resolved_write_mutable_chain_app_left :
-  forall R R_tail Σ p,
-    place_resolved_write_mutable_chain R Σ p ->
-    place_resolved_write_mutable_chain (R ++ R_tail) Σ p.
+Lemma place_resolved_write_writable_chain_app_left :
+  forall env R R_tail Σ p,
+    place_resolved_write_writable_chain env R Σ p ->
+    place_resolved_write_writable_chain env (R ++ R_tail) Σ p.
 Proof.
-  intros R R_tail Σ p Hchain.
-  inversion Hchain; subst.
-  apply PRWMC_Direct. exact H.
+  intros env R R_tail Σ p Hchain.
+  induction Hchain.
+  - apply PRWWC_Direct. exact H.
+  - eapply PRWWC_Deref.
+    + exact IHHchain.
+    + exact H.
+    + eapply place_resolved_write_target_app_left. exact H0.
+    + exact H1.
 Qed.
 
 
@@ -408,7 +413,7 @@ Proof.
       with (root_env_update x (root_set_union roots_old roots_new)
         (R1 ++ R_tail)).
     eapply TERS_Replace_Resolved; eauto.
-    + eapply place_resolved_write_mutable_chain_app_left; eassumption.
+    + eapply place_resolved_write_writable_chain_app_left; eassumption.
     + eapply place_resolved_write_target_app_left; eassumption.
     + eapply root_env_lookup_app_left; eassumption.
     + eapply root_env_lookup_app_left; eassumption.
@@ -429,7 +434,7 @@ Proof.
       with (root_env_update x (root_set_union roots_old roots_new)
         (R1 ++ R_tail)).
     eapply TERS_Assign_Resolved; eauto.
-    + eapply place_resolved_write_mutable_chain_app_left; eassumption.
+    + eapply place_resolved_write_writable_chain_app_left; eassumption.
     + eapply place_resolved_write_target_app_left; eassumption.
     + eapply root_env_lookup_app_left; eassumption.
     + rewrite root_env_update_app_left with (roots_old := roots_old)

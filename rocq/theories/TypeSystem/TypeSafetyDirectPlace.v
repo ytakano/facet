@@ -163,6 +163,48 @@ Proof.
     congruence.
 Qed.
 
+Lemma typed_place_env_structural_to_type_env_structural :
+  forall env Σ p T,
+    typed_place_env_structural env Σ p T ->
+    typed_place_type_env_structural env Σ p T.
+Proof.
+  intros env Σ p T Htyped.
+  induction Htyped.
+  - econstructor. exact H.
+  - econstructor. exact IHHtyped.
+  - econstructor; eassumption.
+  - econstructor; eassumption.
+Qed.
+
+Lemma typed_place_env_structural_functional :
+  forall env Σ p T1,
+    typed_place_env_structural env Σ p T1 ->
+    forall T2,
+      typed_place_env_structural env Σ p T2 ->
+      T1 = T2.
+Proof.
+  intros env Σ p T1 Htyped1 T2 Htyped2.
+  eapply typed_place_type_env_structural_functional.
+  - apply typed_place_env_structural_to_type_env_structural. exact Htyped1.
+  - apply typed_place_env_structural_to_type_env_structural. exact Htyped2.
+Qed.
+
+Lemma typed_place_env_structural_unique_ref_target_lifetime_equiv :
+  forall env Σ p u la T_unique u2 la2 rk2 T_other,
+    typed_place_env_structural env Σ p
+      (MkTy u (TRef la RUnique T_unique)) ->
+    typed_place_env_structural env Σ p
+      (MkTy u2 (TRef la2 rk2 T_other)) ->
+    ty_lifetime_equiv T_unique T_other.
+Proof.
+  intros env Σ p u la T_unique u2 la2 rk2 T_other Hunique Hother.
+  pose proof (typed_place_env_structural_functional
+                env Σ p (MkTy u (TRef la RUnique T_unique)) Hunique
+                (MkTy u2 (TRef la2 rk2 T_other)) Hother) as Heq.
+  inversion Heq; subst.
+  apply ty_lifetime_equiv_refl.
+Qed.
+
 
 Lemma needs_consume_false_usage :
   forall T,

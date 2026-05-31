@@ -4082,6 +4082,42 @@ Proof.
   - exact Hupdate.
 Qed.
 
+Lemma store_typed_prefix_update_path_runtime_typed :
+  forall env s Σ x path v_new se T_path s',
+    store_typed_prefix env s Σ ->
+    store_ref_targets_preserved env s s' ->
+    store_lookup x s = Some se ->
+    type_lookup_path env (se_ty se) path = Some T_path ->
+    value_has_type env s v_new T_path ->
+    store_update_path x path v_new s = Some s' ->
+    store_typed_prefix env s' Σ.
+Proof.
+  intros env s Σ x path v_new se T_path s'
+    Htyped Hpres Hlookup Htype_path Hvnew Hupdate.
+  eapply store_typed_prefix_update_path.
+  - exact Htyped.
+  - exact Hpres.
+  - intros se0 T_static st Hlookup0 HΣ v_root Hvalue_update.
+    rewrite Hlookup in Hlookup0.
+    inversion Hlookup0; subst se0.
+    destruct (store_typed_prefix_lookup_sctx env s Σ x T_static st
+      Htyped HΣ)
+      as [se_static [Hlookup_static [_ [HTy [_ Hvroot]]]]].
+    rewrite Hlookup in Hlookup_static.
+    inversion Hlookup_static; subst se_static.
+    destruct (type_lookup_path_lifetime_equiv env T_static (se_ty se)
+      path T_path (ty_lifetime_equiv_sym _ _ HTy) Htype_path)
+      as [T_static_path [Htype_static_path HTy_path]].
+    eapply value_update_path_has_type.
+    + exact Hvroot.
+    + exact Htype_static_path.
+    + eapply VHT_LifetimeEquiv.
+      * exact Hvnew.
+      * apply ty_lifetime_equiv_sym. exact HTy_path.
+    + exact Hvalue_update.
+  - exact Hupdate.
+Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Runtime reference well-formedness                                    *)
 (* ------------------------------------------------------------------ *)

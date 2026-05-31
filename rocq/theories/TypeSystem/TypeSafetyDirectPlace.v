@@ -266,6 +266,27 @@ Proof.
   repeat split; assumption.
 Qed.
 
+Lemma eval_writable_place_runtime_target_exists_prefix :
+  forall env Σ s p T x_eval path_eval,
+    store_typed_prefix env s Σ ->
+    typed_place_env_structural env Σ p T ->
+    writable_place_env_structural env Σ p ->
+    (exists x_static path_static,
+      place_path p = Some (x_static, path_static)) ->
+    eval_place s p x_eval path_eval ->
+    exists se v_target T_eval,
+      store_lookup x_eval s = Some se /\
+      value_lookup_path (se_val se) path_eval = Some v_target /\
+      type_lookup_path env (se_ty se) path_eval = Some T_eval /\
+      ty_lifetime_equiv T_eval T /\
+      value_has_type env s v_target T_eval.
+Proof.
+  intros env Σ s p T x_eval path_eval Hstore Htyped _ Hpath_exists Heval.
+  destruct Hpath_exists as [x_static [path_static Hpath_static]].
+  eapply eval_place_direct_runtime_target_typed_exists_prefix;
+    eassumption.
+Qed.
+
 
 Lemma sctx_lookup_mut_some_lookup :
   forall x Σ m,

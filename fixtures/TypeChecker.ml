@@ -4453,12 +4453,6 @@ let sctx_lookup =
 let sctx_lookup_mut =
   ctx_lookup_mut
 
-(** val place_resolved_write_mutable_chain_b :
-    root_env -> sctx -> place -> bool **)
-
-let place_resolved_write_mutable_chain_b _ _ =
-  place_resolved_write_direct_parent_b
-
 (** val check_make_closure_captures_sctx_base :
     global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list
     infer_result **)
@@ -4851,6 +4845,28 @@ let rec writable_place_b env _UU03a3_ = function
            | _ -> false)
         | Infer_err _ -> false)
   else false
+
+(** val place_resolved_write_writable_chain_b :
+    global_env -> root_env -> sctx -> place -> bool **)
+
+let rec place_resolved_write_writable_chain_b env r _UU03a3_ p =
+  if place_resolved_write_direct_parent_b p
+  then true
+  else (match p with
+        | PDeref q ->
+          (&&)
+            ((&&) (place_resolved_write_writable_chain_b env r _UU03a3_ q)
+              (writable_place_b env _UU03a3_ q))
+            (match place_resolved_write_target r q with
+             | Some x ->
+               (match sctx_lookup_mut x _UU03a3_ with
+                | Some m ->
+                  (match m with
+                   | MImmutable -> false
+                   | MMutable -> true)
+                | None -> false)
+             | None -> false)
+        | _ -> false)
 
 (** val consume_place_value :
     global_env -> sctx -> place -> ty -> sctx infer_result **)
@@ -8760,7 +8776,7 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
        | None ->
          (match infer_place_sctx env _UU03a3_ p with
           | Infer_ok t_old ->
-            if place_resolved_write_mutable_chain_b r _UU03a3_ p
+            if place_resolved_write_writable_chain_b env r _UU03a3_ p
             then (match place_resolved_write_target r p with
                   | Some x ->
                     (match root_env_lookup x r with
@@ -8845,7 +8861,7 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
           | Infer_ok t_old ->
             if usage_eqb (ty_usage t_old) ULinear
             then Infer_err (ErrUsageMismatch ((ty_usage t_old), UAffine))
-            else if place_resolved_write_mutable_chain_b r _UU03a3_ p
+            else if place_resolved_write_writable_chain_b env r _UU03a3_ p
                  then (match place_resolved_write_target r p with
                        | Some x ->
                          (match sctx_lookup_mut x _UU03a3_ with
@@ -11124,7 +11140,7 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
        | None ->
          (match infer_place_sctx env _UU03a3_ p with
           | Infer_ok t_old ->
-            if place_resolved_write_mutable_chain_b r _UU03a3_ p
+            if place_resolved_write_writable_chain_b env r _UU03a3_ p
             then (match place_resolved_write_target r p with
                   | Some x ->
                     (match root_env_lookup x r with
@@ -11209,7 +11225,7 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
           | Infer_ok t_old ->
             if usage_eqb (ty_usage t_old) ULinear
             then Infer_err (ErrUsageMismatch ((ty_usage t_old), UAffine))
-            else if place_resolved_write_mutable_chain_b r _UU03a3_ p
+            else if place_resolved_write_writable_chain_b env r _UU03a3_ p
                  then (match place_resolved_write_target r p with
                        | Some x ->
                          (match sctx_lookup_mut x _UU03a3_ with

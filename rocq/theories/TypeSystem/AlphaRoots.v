@@ -439,7 +439,7 @@ Inductive typed_env_roots_shadow_safe
       roots_result x roots_old roots_new,
       typed_place_env_structural env Σ p T_old ->
       place_path p = None ->
-      place_resolved_write_mutable_chain R Σ p ->
+      place_resolved_write_writable_chain env R Σ p ->
       place_resolved_write_target R p = Some x ->
       root_env_lookup x R = Some roots_result ->
       sctx_lookup_mut x Σ = Some MMutable ->
@@ -468,7 +468,7 @@ Inductive typed_env_roots_shadow_safe
       typed_place_env_structural env Σ p T_old ->
       ty_usage T_old <> ULinear ->
       place_path p = None ->
-      place_resolved_write_mutable_chain R Σ p ->
+      place_resolved_write_writable_chain env R Σ p ->
       place_resolved_write_target R p = Some x ->
       sctx_lookup_mut x Σ = Some MMutable ->
       writable_place_env_structural env Σ p ->
@@ -1495,10 +1495,10 @@ Proof.
     { eapply place_resolved_write_target_equiv.
       - apply root_env_equiv_sym. exact HR0.
       - apply place_resolved_write_target_instantiate. exact Htarget. }
-    assert (Hshape0 : place_resolved_write_mutable_chain R0 Σ p).
-    { eapply place_resolved_write_mutable_chain_equiv.
+    assert (Hshape0 : place_resolved_write_writable_chain env R0 Σ p).
+    { eapply place_resolved_write_writable_chain_equiv.
       - apply root_env_equiv_sym. exact HR0.
-      - apply place_resolved_write_mutable_chain_instantiate. exact Hshape. }
+      - apply place_resolved_write_writable_chain_instantiate. exact Hshape. }
     assert (Hlookup_result_inst :
       root_env_lookup x (root_env_instantiate rho R) =
       Some (root_set_instantiate rho roots_result)).
@@ -1568,10 +1568,10 @@ Proof.
     { eapply place_resolved_write_target_equiv.
       - apply root_env_equiv_sym. exact HR0.
       - apply place_resolved_write_target_instantiate. exact Htarget. }
-    assert (Hshape0 : place_resolved_write_mutable_chain R0 Σ p).
-    { eapply place_resolved_write_mutable_chain_equiv.
+    assert (Hshape0 : place_resolved_write_writable_chain env R0 Σ p).
+    { eapply place_resolved_write_writable_chain_equiv.
       - apply root_env_equiv_sym. exact HR0.
-      - apply place_resolved_write_mutable_chain_instantiate. exact Hshape. }
+      - apply place_resolved_write_writable_chain_instantiate. exact Hshape. }
     destruct (IHe_new Hfresh R0 HnsR HnsR0 HR0)
       as [R10 [roots_new0 [He_new0 [HnsR10 [HR10 Hroots_new0]]]]].
     assert (Hlookup_old_inst :

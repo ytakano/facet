@@ -3408,6 +3408,24 @@ Fixpoint writable_place_b (env : global_env) (Σ : sctx) (p : place) : bool :=
       else false
   end.
 
+Fixpoint place_resolved_write_writable_chain_b
+    (env : global_env) (R : root_env) (Σ : sctx) (p : place) : bool :=
+  if place_resolved_write_direct_parent_b p then true
+  else match p with
+  | PDeref q =>
+      place_resolved_write_writable_chain_b env R Σ q &&
+      writable_place_b env Σ q &&
+      match place_resolved_write_target R q with
+      | Some x =>
+          match sctx_lookup_mut x Σ with
+          | Some MMutable => true
+          | _ => false
+          end
+      | None => false
+      end
+  | _ => false
+  end.
+
 Definition consume_place_value (env : global_env) (Σ : sctx) (p : place) (T : Ty)
     : infer_result sctx :=
   if usage_eqb (ty_usage T) UUnrestricted
@@ -5597,7 +5615,7 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
           match infer_place_sctx env Σ p with
           | infer_err err => infer_err err
           | infer_ok T_old =>
-              if place_resolved_write_mutable_chain_b R Σ p then
+              if place_resolved_write_writable_chain_b env R Σ p then
               match place_resolved_write_target R p with
               | None => infer_err ErrNotImplemented
               | Some x =>
@@ -5683,7 +5701,7 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
               if usage_eqb (ty_usage T_old) ULinear
               then infer_err (ErrUsageMismatch (ty_usage T_old) UAffine)
               else
-              if place_resolved_write_mutable_chain_b R Σ p then
+              if place_resolved_write_writable_chain_b env R Σ p then
               match place_resolved_write_target R p with
               | None => infer_err ErrNotImplemented
               | Some x =>
@@ -6496,7 +6514,7 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
           match infer_place_sctx env Σ p with
           | infer_err err => infer_err err
           | infer_ok T_old =>
-              if place_resolved_write_mutable_chain_b R Σ p then
+              if place_resolved_write_writable_chain_b env R Σ p then
               match place_resolved_write_target R p with
               | None => infer_err ErrNotImplemented
               | Some x =>
@@ -6582,7 +6600,7 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
               if usage_eqb (ty_usage T_old) ULinear
               then infer_err (ErrUsageMismatch (ty_usage T_old) UAffine)
               else
-              if place_resolved_write_mutable_chain_b R Σ p then
+              if place_resolved_write_writable_chain_b env R Σ p then
               match place_resolved_write_target R p with
               | None => infer_err ErrNotImplemented
               | Some x =>

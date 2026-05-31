@@ -71,11 +71,12 @@ Latest full `sh tests/run.sh` baseline (2026-05-31): 24 valid-test failures; inv
 25. Done: choose proof path and add generalized nested resolved-write shape.
 26. Done: route resolved write rules and checker through generalized shape.
 27. Done: prove mutable-chain tail transport for shadow-safe resolved writes.
-28. Blocked: nested resolved writes need an invariant stronger than mutable
-    target chains; shared-ref compatibility gives `ty_compatible`, not the
-    `ty_lifetime_equiv` required by preservation.
+28. Done: identify needed invariant: recursive resolved writes require
+    writable deref prefixes, not mutable targets alone.
 29. Done: re-narrow resolved write chain to the proven direct-parent fragment.
 30. Done: verify full Rocq build, proof-hole scan, OCaml build, and targeted direct/nested CLI cases.
+31. Done: add writable-prefix resolved write chain guard and checker soundness.
+32. In progress: prove reusable runtime target helpers for writable-prefix chains.
 
 Resolved writes remain narrow: only direct-parent pathless writes are accepted;
 recursive deref-chain writes are blocked until their preservation invariant is strengthened.

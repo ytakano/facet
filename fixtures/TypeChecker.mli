@@ -875,8 +875,6 @@ val sctx_lookup : ident -> sctx -> (ty * binding_state) option
 
 val sctx_lookup_mut : ident -> sctx -> mutability option
 
-val place_resolved_write_mutable_chain_b : root_env -> sctx -> place -> bool
-
 val check_make_closure_captures_sctx_base :
   global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list
   infer_result
@@ -937,6 +935,9 @@ val infer_place_type_sctx : global_env -> sctx -> place -> ty infer_result
 val place_under_unique_ref_b : global_env -> sctx -> place -> bool
 
 val writable_place_b : global_env -> sctx -> place -> bool
+
+val place_resolved_write_writable_chain_b :
+  global_env -> root_env -> sctx -> place -> bool
 
 val consume_place_value :
   global_env -> sctx -> place -> ty -> sctx infer_result

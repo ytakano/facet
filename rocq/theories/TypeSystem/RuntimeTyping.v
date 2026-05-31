@@ -2917,6 +2917,30 @@ Proof.
       simpl. rewrite Hy. exact (IH x path v_new rest' y Htail Hlookup).
 Qed.
 
+Lemma store_update_path_source_lookup :
+  forall x path v_new entries entries',
+    store_update_path x path v_new entries = Some entries' ->
+    exists se v_root,
+      store_lookup x entries = Some se /\
+      value_update_path (se_val se) path v_new = Some v_root.
+Proof.
+  intros x path v_new entries.
+  revert x path v_new.
+  induction entries as [|entry rest IH]; intros x path v_new entries' Hupdate.
+  - discriminate.
+  - destruct entry as [sx sT sv sst].
+    simpl in Hupdate |- *.
+    destruct (ident_eqb x sx) eqn:Hsx.
+    + destruct (value_update_path sv path v_new) as [v_root |] eqn:Hvalue;
+        try discriminate.
+      exists (MkStoreEntry sx sT sv sst), v_root.
+      repeat split; assumption.
+    + destruct (store_update_path x path v_new rest) as [rest' |] eqn:Hrest;
+        try discriminate.
+      destruct (IH x path v_new rest' Hrest) as [se [v_root [Hlookup Hvalue]]].
+      exists se, v_root. repeat split; assumption.
+Qed.
+
 Lemma store_update_path_exists_from_lookup :
   forall x path v_new entries se v_root,
     store_lookup x entries = Some se ->

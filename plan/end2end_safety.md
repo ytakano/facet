@@ -89,6 +89,7 @@ Latest full `sh tests/run.sh` baseline (2026-05-31): 24 valid-test failures; inv
 42. Done: isolate remaining direct reborrow gate to auto-drop tail `EDrop (EPlace _)`/`EVar` leaves.
 43. In progress: add auto-drop tail narrow leaves for resolved reborrow regressions.
     - T43a done: non-function `EVar` narrow leaf; Rocq/extraction and OCaml build pass.
+    - T43b done: direct `EDrop (EPlace _)` leaf; three direct reborrow valid cases pass; nested immutable-bound case still safety-gated.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes.

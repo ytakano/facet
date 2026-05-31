@@ -153,6 +153,37 @@ Proof.
   - destruct (ident_eqb x (se_name se)); constructor; auto.
 Qed.
 
+Lemma store_function_closure_targets_summary_store_update_state :
+  forall env s x f s',
+    store_function_closure_targets_summary env s ->
+    store_update_state x f s = Some s' ->
+    store_function_closure_targets_summary env s'.
+Proof.
+  unfold store_function_closure_targets_summary.
+  intros env s x f s' Hsummary Hupdate.
+  revert s' Hupdate.
+  induction Hsummary as [| se rest Hhead Htail IH]; intros s' Hupdate; simpl in Hupdate.
+  - discriminate.
+  - destruct (ident_eqb x (se_name se)) eqn:Heq.
+    + inversion Hupdate; subst. constructor; auto.
+    + destruct (store_update_state x f rest) as [rest' |] eqn:Htail_update;
+        try discriminate.
+      inversion Hupdate; subst. constructor; auto.
+Qed.
+
+Lemma store_function_closure_targets_summary_store_consume_path :
+  forall env s x path s',
+    store_function_closure_targets_summary env s ->
+    store_consume_path x path s = Some s' ->
+    store_function_closure_targets_summary env s'.
+Proof.
+  intros env s x path s' Hsummary Hconsume.
+  unfold store_consume_path in Hconsume.
+  destruct (store_lookup x s) as [se |] eqn:Hlookup; try discriminate.
+  destruct (binding_available_b (se_state se) path) eqn:Havailable; try discriminate.
+  eapply store_function_closure_targets_summary_store_update_state; eassumption.
+Qed.
+
 Lemma store_function_closure_targets_summary_store_remove :
   forall env s x,
     store_function_closure_targets_summary env s ->

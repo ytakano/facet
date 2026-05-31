@@ -12605,6 +12605,13 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
                      | Some root_y -> ident_eqb root_x root_y
                      | None -> false)
                   | None -> false)))
+       | EDrop e0 ->
+         (match e0 with
+          | EPlace p2 ->
+            (match place_path p2 with
+             | Some _ -> true
+             | None -> false)
+          | _ -> false)
        | _ -> false)
     | Infer_err _ -> false)
     fuel

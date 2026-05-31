@@ -704,7 +704,13 @@ Inductive expr_root_shadow_store_safe_narrow_summary
       typed_env_roots_shadow_safe env Omega n R Σ (EVar x) T Σ' R' roots ->
       non_function_value_ty_b T = true ->
       expr_root_shadow_store_safe_narrow_summary
-        env Omega n R Σ (EVar x) T Σ' R' roots roots.
+        env Omega n R Σ (EVar x) T Σ' R' roots roots
+  | ERSSN_DropPlaceDirect : forall R Σ p T Σ' R' roots x path,
+      typed_env_roots_shadow_safe env Omega n R Σ (EDrop (EPlace p))
+        T Σ' R' roots ->
+      place_path p = Some (x, path) ->
+      expr_root_shadow_store_safe_narrow_summary
+        env Omega n R Σ (EDrop (EPlace p)) T Σ' R' roots roots.
 
 Lemma disjoint_names_evar_of_call_expr :
   forall x args ys,
@@ -881,6 +887,7 @@ Proof.
   - exact H2.
   - eapply TERS_Let; eauto.
   - eapply TERS_LetInfer; eauto.
+  - exact H.
   - exact H.
   - exact H.
   - exact H.
@@ -1093,6 +1100,7 @@ Proof.
   - apply root_set_equiv_refl.
   - apply root_set_equiv_refl.
   - apply root_set_equiv_refl.
+  - apply root_set_equiv_refl.
 Qed.
 
 Lemma expr_root_shadow_store_safe_narrow_summary_ret_roots_exclude :
@@ -1206,6 +1214,11 @@ Proof.
       * exact H.
       * unfold root_env_tail_fresh_names. intros y Hy. contradiction.
     + exact H0.
+  - eapply ERSSN_DropPlaceDirect.
+    + eapply typed_env_roots_shadow_safe_tail_frame.
+      * exact H.
+      * exact Hfresh.
+    + exact H0.
 Qed.
 
 
@@ -1251,7 +1264,8 @@ Proof.
     | R Σ p T Σ' R' roots x Htyped Hpath Hdirect Htarget Hsingle
     | R Σ T Σ' R' roots Htyped
     | R Σ p lit T Σ' R' roots Htyped
-    | R Σ x T Σ' R' roots Htyped Hnonfun ];
+    | R Σ x T Σ' R' roots Htyped Hnonfun
+    | R Σ p T Σ' R' roots x path Htyped Hpath ];
     intros rho Rr0 Σr0 er used used' Hctx HnsR HnsRr HRr Hkeys
       Hroots HnocollR HnocollR' Hctx_used Hrange_used Hdisj Hrename.
   - destruct (alpha_rename_typed_env_roots_shadow_safe_full_support_forward
@@ -1829,6 +1843,18 @@ Proof.
     split.
     + eapply ERSSN_VarNonFunction; eassumption.
     + repeat split; try eassumption; try apply Hrootsr.
+  - destruct (alpha_rename_typed_env_roots_shadow_safe_full_support_forward
+      env Omega n rho R Rr0 Σ Σr0 (EDrop (EPlace p)) er used used'
+      T Σ' R' roots Htyped Hctx HnsR HnsRr HRr Hkeys Hroots
+      HnocollR HnocollR' Hctx_used Hrange_used Hdisj Hrename)
+      as (Σr' & Rr' & rootsr & Htypedr & Hctxr & Hnsr & HRr' & Hrootsr).
+    simpl in Hrename. injection Hrename as <- <-.
+    exists Σr', Rr', rootsr, rootsr.
+    split.
+    + eapply ERSSN_DropPlaceDirect.
+      * exact Htypedr.
+      * eapply RootProvenance.place_path_rename_place_some. exact Hpath.
+    + repeat split; try eassumption; try apply Hrootsr.
 Qed.
 
 Lemma expr_root_shadow_store_safe_narrow_summary_instantiate_fresh :
@@ -2086,6 +2112,13 @@ Proof.
     exists Rvar0, roots0, roots0. split.
     + eapply ERSSN_VarNonFunction; eassumption.
     + split; [exact Hns0 | split; [exact HRvar0 | exact Hroots0]].
+  - destruct (typed_env_roots_shadow_safe_instantiate_fresh
+      env Omega n rho R Σ (EDrop (EPlace p)) T Σ' R' roots
+      R0 H Hfresh HnsR HnsR0 HR0)
+      as (Rdrop0 & roots0 & Htyped0 & Hns0 & HRdrop0 & Hroots0).
+    exists Rdrop0, roots0, roots0. split.
+    + eapply ERSSN_DropPlaceDirect; eassumption.
+    + split; [exact Hns0 | split; [exact HRdrop0 | exact Hroots0]].
 
 Qed.
 
@@ -2273,6 +2306,14 @@ Proof.
         -- apply place_resolved_write_direct_parent_b_sound. exact Hdirect.
         -- exact Htarget.
         -- exact Hsingle.
+    + simpl in Hcheck.
+      pose proof (infer_core_env_state_fuel_roots_shadow_safe_sound
+        (S fuel') env Omega n R Σ (EDrop e) T Σ' R' roots Hinfer)
+        as Htyped_drop.
+      destruct e; try discriminate.
+      destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
+      exists roots.
+      eapply ERSSN_DropPlaceDirect; eassumption.
 Qed.
 
 Lemma check_expr_root_shadow_store_safe_narrow_summary_sound :
@@ -2758,6 +2799,20 @@ Proof.
   repeat split; eassumption.
 Qed.
 
+Lemma store_function_closure_targets_summary_eval_drop_place_direct :
+  forall env s s' p ret,
+    store_function_closure_targets_summary env s ->
+    eval env s (EDrop (EPlace p)) s' ret ->
+    store_function_closure_targets_summary env s'.
+Proof.
+  intros env s s' p ret Hsummary Heval.
+  inversion Heval; subst.
+  match goal with
+  | Hplace : eval env s (EPlace p) s' _ |- _ =>
+      inversion Hplace; subst; eauto using store_function_closure_targets_summary_store_consume_path
+  end.
+Qed.
+
 
 Lemma expr_root_shadow_store_safe_narrow_summary_runtime_package :
   forall env Omega n R Σ e T Σ' R' roots ret_roots,
@@ -3118,6 +3173,24 @@ Proof.
       as Hkeys'.
     pose proof (store_function_closure_targets_summary_eval_var
       env s s' x ret Hsummary_store Heval) as Hsummary'.
+    repeat split; try eassumption.
+  - pose proof (typed_env_roots_shadow_safe_roots
+      env Omega n R Σ (EDrop (EPlace p)) T Σ' R' roots H) as Htyped_roots.
+    assert (Hready : provenance_ready_expr (EDrop (EPlace p))).
+    { apply ProvReady_Drop. eapply ProvReady_Place_Direct. exact H0. }
+    destruct (proj1 eval_preserves_typing_roots_ready_mutual
+      env s (EDrop (EPlace p)) s' ret Heval Omega n R Σ T Σ' R' roots
+      Hready Hstore Hroots Hshadow Hrn Htyped_roots)
+      as [Hstore' [Hvalue [Hpres [Hroots' [Hvalue_roots [Hshadow' Hrn']]]]]].
+    destruct (proj1 eval_preserves_root_names_ready_mutual
+      env s (EDrop (EPlace p)) s' ret Heval Omega n R Σ T Σ' R' roots
+      Hready Hstore Hroots Hshadow Hrn Hnamed Htyped_roots)
+      as [Hnamed' Hrootset_named].
+    pose proof (proj1 eval_preserves_root_keys_named_ready_mutual
+      env s (EDrop (EPlace p)) s' ret Heval Omega n R Σ T Σ' R' roots
+      Hready Hstore Hroots Hshadow Hrn Hkeys Htyped_roots) as Hkeys'.
+    pose proof (store_function_closure_targets_summary_eval_drop_place_direct
+      env s s' p ret Hsummary_store Heval) as Hsummary'.
     repeat split; try eassumption.
 
 Qed.
@@ -3560,6 +3633,15 @@ Proof.
   - eapply ERSSN_VarNonFunction.
     + eapply typed_env_roots_shadow_safe_evar_global_env_with_local_bounds.
       exact H.
+    + exact H0.
+  - eapply ERSSN_DropPlaceDirect.
+    + inversion H; subst; try congruence.
+      eapply TERS_Drop.
+      inversion H4; subst; try congruence.
+      * eapply TERS_Place_Copy; eauto using
+          typed_place_env_structural_global_env_with_local_bounds.
+      * eapply TERS_Place_Move; eauto using
+          typed_place_env_structural_global_env_with_local_bounds.
     + exact H0.
 Qed.
 
@@ -6181,6 +6263,24 @@ Proof.
     pose proof (store_function_closure_targets_summary_eval_var
       env s s' x ret Hsummary_store Heval) as Hsummary'.
     repeat split; try eassumption.
+  - pose proof (typed_env_roots_shadow_safe_roots
+      env Omega n R Σ (EDrop (EPlace p)) T Σ' R' roots H) as Htyped_roots.
+    assert (Hready : provenance_ready_expr (EDrop (EPlace p))).
+    { apply ProvReady_Drop. eapply ProvReady_Place_Direct. exact H0. }
+    destruct (proj1 eval_preserves_typing_roots_ready_prefix_mutual
+      env s (EDrop (EPlace p)) s' ret Heval Omega n R Σ T Σ' R' roots
+      Hready Hstore Hroots Hshadow Hrn Htyped_roots)
+      as [Hstore' [Hvalue [Hpres [Hroots' [Hvalue_roots [Hshadow' Hrn']]]]]].
+    assert (Hnarrow : expr_root_shadow_store_safe_narrow_summary
+        env Omega n R Σ (EDrop (EPlace p)) T Σ' R' roots roots).
+    { eapply ERSSN_DropPlaceDirect; eassumption. }
+    destruct (expr_root_shadow_store_safe_narrow_summary_runtime_names_from_store_typed_prefix_ctx
+      env Omega n R Σ (EDrop (EPlace p)) T Σ' R' roots roots s'
+      Hnarrow Hrn Hctx_roots Hctx_keys Hstore' Hrn')
+      as [Hnamed' [Hrootset_named Hkeys']].
+    pose proof (store_function_closure_targets_summary_eval_drop_place_direct
+      env s s' p ret Hsummary_store Heval) as Hsummary'.
+    repeat split; try eassumption.
 Qed.
 
 
@@ -6628,6 +6728,48 @@ Proof.
     { inversion H; subst; try congruence; inversion Heval; subst;
         unfold root_env_store_keys_named in *;
         try exact Hkeys; rewrite store_names_mark_used; exact Hkeys. }
+    repeat split; try eassumption.
+  - pose proof (typed_env_roots_shadow_safe_roots
+      env Omega n R Σ (EDrop (EPlace p)) T Σ' R' roots H) as Htyped_roots.
+    assert (Hready : provenance_ready_expr (EDrop (EPlace p))).
+    { apply ProvReady_Drop. eapply ProvReady_Place_Direct. exact H0. }
+    destruct (proj1 eval_preserves_typing_roots_ready_prefix_mutual
+      env s (EDrop (EPlace p)) s' ret Heval Omega n R Σ T Σ' R' roots
+      Hready Hstore Hroots Hshadow Hrn Htyped_roots)
+      as [Hstore' [Hvalue [Hpres [Hroots' [Hvalue_roots [Hshadow' Hrn']]]]]].
+    assert (Hsummary' : store_function_closure_targets_summary env s')
+      by (eapply store_function_closure_targets_summary_eval_drop_place_direct; eassumption).
+    assert (Hnamed' : root_env_store_roots_named R' s').
+    { inversion H; subst; try congruence.
+      match goal with
+      | Hplace_typed : typed_env_roots_shadow_safe _ _ _ _ _ (EPlace p) _ _ _ _ |- _ =>
+          inversion Hplace_typed; subst; try congruence
+      end;
+      inversion Heval; subst;
+      match goal with
+      | Hplace_eval : eval _ _ (EPlace p) _ _ |- _ =>
+          inversion Hplace_eval; subst; eauto using root_env_store_roots_named_store_consume_path
+      end. }
+    assert (Hrootset_named : root_set_store_roots_named roots s').
+    { inversion H; subst; try congruence.
+      unfold root_set_store_roots_named. intros z Hin. contradiction. }
+    assert (Hkeys' : root_env_store_keys_named R' s').
+    { inversion H; subst; try congruence.
+      repeat match goal with
+      | Hplace_typed : typed_env_roots_shadow_safe _ _ _ _ _ (EPlace _) _ _ _ _ |- _ =>
+          inversion Hplace_typed; subst; clear Hplace_typed
+      end;
+      inversion Heval; subst;
+      repeat match goal with
+      | Hplace_eval : eval _ _ (EPlace _) _ _ |- _ =>
+          inversion Hplace_eval; subst; clear Hplace_eval
+      end;
+      unfold root_env_store_keys_named in *;
+      try solve [exact Hkeys];
+      match goal with
+      | Hconsume : store_consume_path _ _ _ = Some _ |- _ =>
+          rewrite (store_consume_path_names _ _ _ _ Hconsume); exact Hkeys
+      end. }
     repeat split; try eassumption.
 Qed.
 
@@ -7401,6 +7543,11 @@ Proof.
     eapply (proj1 eval_preserves_frame_scope_roots_ready_mutual);
       try eassumption.
     apply ProvReady_Var.
+  - pose proof (typed_env_roots_shadow_safe_roots
+      env Omega n R Σ (EDrop (EPlace p)) T Σ' R' roots H) as Htyped_roots.
+    eapply (proj1 eval_preserves_frame_scope_roots_ready_mutual);
+      try eassumption.
+    apply ProvReady_Drop. eapply ProvReady_Place_Direct. exact H0.
 Qed.
 
 
@@ -7449,6 +7596,11 @@ Proof.
       end;
       apply root_env_covers_params_update; exact Hcover.
   - inversion H; subst; try congruence; exact Hcover.
+  - inversion H; subst; try congruence.
+    match goal with
+    | Hplace_typed : typed_env_roots_shadow_safe _ _ _ _ _ (EPlace _) _ _ _ _ |- _ =>
+        inversion Hplace_typed; subst; try congruence; exact Hcover
+    end.
 Qed.
 
 
@@ -7605,6 +7757,11 @@ Proof.
     eapply (proj1 eval_preserves_param_scope_roots_ready_mutual);
       try eassumption.
     apply ProvReady_Var.
+  - pose proof (typed_env_roots_shadow_safe_roots
+      env Omega n R Σ (EDrop (EPlace p)) T Σ' R' roots H) as Htyped_roots.
+    eapply (proj1 eval_preserves_param_scope_roots_ready_mutual);
+      try eassumption.
+    apply ProvReady_Drop. eapply ProvReady_Place_Direct. exact H0.
 Qed.
 
 

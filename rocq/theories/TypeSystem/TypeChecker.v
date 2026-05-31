@@ -8629,6 +8629,12 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_fuel
       | EVar _ => non_function_value_ty_b T
       | EAssign _ (ELit _) => true
       | EAssign _ _ => false
+      | EDrop (EPlace p) =>
+          match place_path p with
+          | Some _ => true
+          | None => false
+          end
+      | EDrop _ => false
       | EBorrow rk p =>
           match place_path p with
           | Some _ => true

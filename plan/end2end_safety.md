@@ -27,15 +27,12 @@ Required theorem names stay intact:
 
 ## Current baseline
 
-Latest full `sh tests/run.sh` baseline (2026-05-30): 29 valid-test failures; invalid tests pass.
+Latest full `sh tests/run.sh` baseline (2026-05-31): 24 valid-test failures; invalid tests pass.
 
-- 18 `ErrEndToEndSafetyGateFailed`: generic direct calls, type-forall
-  function values, mixed forall function values, generic-item function values,
-  and generic local-bound bodies.
-- 11 T2f failures:
-  - 10 `ErrNotImplemented`: `EAssign`/`EReplace` through `PDeref` and
-    inferred-let coverage.
-  - 1 `ErrContextCheckFailed`: nested shared reborrow cleanup.
+- Generic/function-value gates remain `ErrEndToEndSafetyGateFailed`.
+- Reborrow gates remain safety-gated or context-check failures.
+- Nested pathless `EAssign`/`EReplace` remain rejected by the deliberate
+  direct-parent resolved-write narrowing.
 
 ## Active T2f slices
 
@@ -70,7 +67,8 @@ Latest full `sh tests/run.sh` baseline (2026-05-30): 29 valid-test failures; inv
 21. Done: narrow resolved write checker and Prop rules to direct-parent shape.
 22. Done: close direct-parent resolved assign/replace prefix branches.
 23. Done: rebuild dependent safety chain and remove stale proof fallout.
-24. In progress: run extraction consumers and CLI regression checks.
+24. Done: run extraction consumers and CLI regression checks.
+25. In progress: decide whether to prove nested pathless writes or rebaseline them as rejected.
 
 The resolver remains narrow: it follows bounded singleton store-root chains and
 does not accept ambiguous/non-singleton update targets.

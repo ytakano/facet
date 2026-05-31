@@ -116,6 +116,18 @@ Proof.
   apply place_path_rename_place_some. exact Hpath.
 Qed.
 
+Lemma place_resolved_write_shape_rename : forall ρ p,
+  place_resolved_write_shape p ->
+  place_resolved_write_shape (rename_place ρ p).
+Proof.
+  intros ρ p Hshape.
+  induction Hshape.
+  - apply PRWS_Direct.
+    apply place_resolved_write_direct_parent_rename. exact H.
+  - simpl. apply PRWS_Deref. exact IHHshape.
+  - simpl. apply PRWS_Field. exact IHHshape.
+Qed.
+
 Lemma place_path_rename_place_none : forall ρ p,
   place_path p = None ->
   place_path (rename_place ρ p) = None.

@@ -68,7 +68,8 @@ Latest full `sh tests/run.sh` baseline (2026-05-31): 24 valid-test failures; inv
 22. Done: close direct-parent resolved assign/replace prefix branches.
 23. Done: rebuild dependent safety chain and remove stale proof fallout.
 24. Done: run extraction consumers and CLI regression checks.
-25. In progress: decide whether to prove nested pathless writes or rebaseline them as rejected.
+25. Done: choose proof path and add generalized nested resolved-write shape.
+26. In progress: route resolved write rules and checker through generalized shape.
 
 The resolver remains narrow: it follows bounded singleton store-root chains and
 does not accept ambiguous/non-singleton update targets.

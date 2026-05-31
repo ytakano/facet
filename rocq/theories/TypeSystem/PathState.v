@@ -104,6 +104,54 @@ Proof.
   subst p. reflexivity.
 Qed.
 
+Inductive place_resolved_write_shape : place -> Prop :=
+  | PRWS_Direct : forall p,
+      place_resolved_write_direct_parent p ->
+      place_resolved_write_shape p
+  | PRWS_Deref : forall p,
+      place_resolved_write_shape p ->
+      place_resolved_write_shape (PDeref p)
+  | PRWS_Field : forall p f,
+      place_resolved_write_shape p ->
+      place_resolved_write_shape (PField p f).
+
+Fixpoint place_resolved_write_shape_b (p : place) : bool :=
+  if place_resolved_write_direct_parent_b p then true
+  else match p with
+  | PDeref q => place_resolved_write_shape_b q
+  | PField q _ => place_resolved_write_shape_b q
+  | _ => false
+  end.
+
+Lemma place_resolved_write_shape_b_sound :
+  forall p,
+    place_resolved_write_shape_b p = true ->
+    place_resolved_write_shape p.
+Proof.
+  induction p as [x | p IH | p IH f]; intros Hshape; simpl in Hshape.
+  - discriminate.
+  - destruct (place_path p) as [[x path] |] eqn:Hpath.
+    + apply PRWS_Direct.
+      exists p, x, path. split; reflexivity || exact Hpath.
+    + apply PRWS_Deref. apply IH. exact Hshape.
+  - destruct (place_resolved_write_direct_parent_b (PField p f)) eqn:Hdirect.
+    + apply PRWS_Direct.
+      apply place_resolved_write_direct_parent_b_sound. exact Hdirect.
+    + apply PRWS_Field. apply IH. exact Hshape.
+Qed.
+
+Lemma place_resolved_write_shape_path_none :
+  forall p,
+    place_resolved_write_shape p ->
+    place_path p = None.
+Proof.
+  intros p Hshape.
+  induction Hshape.
+  - eapply place_resolved_write_direct_parent_path_none. exact H.
+  - reflexivity.
+  - simpl. rewrite IHHshape. reflexivity.
+Qed.
+
 Fixpoint place_suffix_path (p : place) : field_path :=
   match p with
   | PVar _ => []

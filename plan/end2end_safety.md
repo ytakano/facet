@@ -82,7 +82,8 @@ Latest full `sh tests/run.sh` baseline (2026-05-31): 24 valid-test failures; inv
 35. Done: isolate reborrow gate to missing narrow store-safe EBorrow leaf.
 36. Done: route shadow-safe EBorrow through resolved singleton roots and prove checker soundness.
 37. Done: add tail-stable resolved EBorrow invariant and checker soundness.
-38. In progress: prove EBorrow narrow-summary runtime package.
+38. Done: prove direct EBorrow narrow-summary runtime package and gate.
+39. In progress: add resolved EBorrow value-typing helper for pathless narrow summaries.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes.

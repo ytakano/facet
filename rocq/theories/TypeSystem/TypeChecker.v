@@ -8623,8 +8623,13 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_fuel
   | S fuel' =>
   match infer_core_env_state_fuel_roots_shadow_safe fuel env Ω n R Σ e with
   | infer_err _ => false
-  | infer_ok _ =>
+  | infer_ok (T, Σ', R', roots) =>
       match e with
+      | EBorrow rk p =>
+          match place_path p with
+          | Some _ => true
+          | None => false
+          end
       | ECallExpr callee args =>
           store_safe_function_value_call_args_b env args &&
           check_supported_non_type_generic_function_value_call_expr

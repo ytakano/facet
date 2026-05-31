@@ -12583,6 +12583,10 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
          (&&) (store_safe_function_value_call_args_b env args)
            (check_supported_non_type_generic_function_value_call_expr env
              _UU03a9_ n r (ctx_of_sctx _UU03a3_) callee)
+       | EBorrow (_, p) ->
+         (match place_path p with
+          | Some _ -> true
+          | None -> false)
        | _ -> false)
     | Infer_err _ -> false)
     fuel

@@ -472,6 +472,20 @@ Proof.
   destruct Hequiv as [Heq | []]. inversion Heq. reflexivity.
 Qed.
 
+Lemma singleton_store_root_ref_roots_within :
+  forall roots x path x_final,
+    singleton_store_root roots = Some x_final ->
+    x = x_final ->
+    value_roots_within roots (VRef x path).
+Proof.
+  intros roots x path x_final Hsingle Heq.
+  subst x.
+  constructor.
+  destruct (singleton_store_root_some_equiv roots x_final Hsingle
+    (RStore x_final)) as [_ Hin].
+  apply Hin. simpl. left. reflexivity.
+Qed.
+
 Lemma eval_place_resolved_write_target_matches_root :
   forall R s p x_eval path_eval x,
     store_roots_within R s ->
@@ -501,6 +515,49 @@ Proof.
             exact Hvalue_path
         end. }
     eapply value_roots_within_singleton_ref_target; eassumption.
+Qed.
+
+Lemma eval_place_resolved_write_target_ref_roots_within :
+  forall R s p x path roots x_final,
+    store_roots_within R s ->
+    eval_place s p x path ->
+    place_resolved_write_target R p = Some x_final ->
+    singleton_store_root roots = Some x_final ->
+    value_roots_within roots (VRef x path).
+Proof.
+  intros R s p x path roots x_final Hwithin Heval Htarget Hsingle.
+  assert (Hx : x = x_final).
+  { eapply eval_place_resolved_write_target_matches_root; eassumption. }
+  eapply singleton_store_root_ref_roots_within; eassumption.
+Qed.
+
+Lemma eval_place_resolved_write_target_ref_runtime_root :
+  forall R s p x path roots x_final,
+    store_roots_within R s ->
+    eval_place s p x path ->
+    place_resolved_write_target R p = Some x_final ->
+    singleton_store_root roots = Some x_final ->
+    x = x_final /\ value_roots_within roots (VRef x path).
+Proof.
+  intros R s p x path roots x_final Hwithin Heval Htarget Hsingle.
+  assert (Hx : x = x_final).
+  { eapply eval_place_resolved_write_target_matches_root; eassumption. }
+  split.
+  - exact Hx.
+  - eapply singleton_store_root_ref_roots_within; eassumption.
+Qed.
+
+Lemma eval_place_resolved_roots_write_target_ref_runtime_root :
+  forall R s p x path roots x_final,
+    store_roots_within R s ->
+    eval_place s p x path ->
+    place_resolved_roots R p = Some roots ->
+    place_resolved_write_target R p = Some x_final ->
+    singleton_store_root roots = Some x_final ->
+    x = x_final /\ value_roots_within roots (VRef x path).
+Proof.
+  intros R s p x path roots x_final Hwithin Heval _ Htarget Hsingle.
+  eapply eval_place_resolved_write_target_ref_runtime_root; eassumption.
 Qed.
 
 Lemma eval_place_resolved_lookup_path_roots_within :

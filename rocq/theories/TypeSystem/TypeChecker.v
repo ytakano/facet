@@ -8626,6 +8626,7 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_fuel
   | infer_ok (T, Σ', R', roots) =>
       match e with
       | EUnit => true
+      | EVar _ => non_function_value_ty_b T
       | EAssign _ (ELit _) => true
       | EAssign _ _ => false
       | EBorrow rk p =>

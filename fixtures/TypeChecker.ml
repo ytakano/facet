@@ -12508,16 +12508,19 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
     match infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r
             _UU03a3_ e with
     | Infer_ok p ->
-      let (_, roots) = p in
+      let (p0, roots) = p in
+      let (p1, _) = p0 in
+      let (t, _) = p1 in
       (match e with
        | EUnit -> true
+       | EVar _ -> non_function_value_ty_b t
        | ELet (m, x, t_hidden, e1, e2) ->
          (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
                   _UU03a9_ n r _UU03a3_ e1 with
-          | Infer_ok p0 ->
-            let (p1, roots1) = p0 in
-            let (p2, r1) = p1 in
-            let (t1, _UU03a3_1) = p2 in
+          | Infer_ok p2 ->
+            let (p3, roots1) = p2 in
+            let (p4, r1) = p3 in
+            let (t1, _UU03a3_1) = p4 in
             (&&)
               ((&&)
                 ((&&) (ty_compatible_b _UU03a9_ t1 t_hidden)
@@ -12533,10 +12536,10 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
                    (match infer_core_env_state_fuel_roots_shadow_safe fuel'
                             env _UU03a9_ n (root_env_add x roots1 r1)
                             (sctx_add x t_hidden m _UU03a3_1) e2 with
-                    | Infer_ok p3 ->
-                      let (p4, roots2) = p3 in
-                      let (p5, r2) = p4 in
-                      let (_, _UU03a3_2) = p5 in
+                    | Infer_ok p5 ->
+                      let (p6, roots2) = p5 in
+                      let (p7, r2) = p6 in
+                      let (_, _UU03a3_2) = p7 in
                       (&&)
                         ((&&)
                           ((&&) (sctx_check_ok env x t_hidden _UU03a3_2)
@@ -12550,10 +12553,10 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
        | ELetInfer (m, x, e1, e2) ->
          (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
                   _UU03a9_ n r _UU03a3_ e1 with
-          | Infer_ok p0 ->
-            let (p1, roots1) = p0 in
-            let (p2, r1) = p1 in
-            let (t1, _UU03a3_1) = p2 in
+          | Infer_ok p2 ->
+            let (p3, roots1) = p2 in
+            let (p4, r1) = p3 in
+            let (t1, _UU03a3_1) = p4 in
             (&&)
               ((&&) (non_function_value_ty_b t1)
                 (check_expr_root_shadow_store_safe_narrow_summary_fuel fuel'
@@ -12567,10 +12570,10 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
                    (match infer_core_env_state_fuel_roots_shadow_safe fuel'
                             env _UU03a9_ n (root_env_add x roots1 r1)
                             (sctx_add x t1 m _UU03a3_1) e2 with
-                    | Infer_ok p3 ->
-                      let (p4, roots2) = p3 in
-                      let (p5, r2) = p4 in
-                      let (_, _UU03a3_2) = p5 in
+                    | Infer_ok p5 ->
+                      let (p6, roots2) = p5 in
+                      let (p7, r2) = p6 in
+                      let (_, _UU03a3_2) = p7 in
                       (&&)
                         ((&&)
                           ((&&) (sctx_check_ok env x t1 _UU03a3_2)
@@ -12588,15 +12591,15 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
        | EAssign (_, e0) -> (match e0 with
                              | ELit _ -> true
                              | _ -> false)
-       | EBorrow (rk, p0) ->
-         (match place_path p0 with
+       | EBorrow (rk, p2) ->
+         (match place_path p2 with
           | Some _ -> true
           | None ->
             (match rk with
              | RShared -> false
              | RUnique ->
-               (&&) (place_resolved_write_direct_parent_b p0)
-                 (match place_resolved_write_target r p0 with
+               (&&) (place_resolved_write_direct_parent_b p2)
+                 (match place_resolved_write_target r p2 with
                   | Some root_x ->
                     (match singleton_store_root roots with
                      | Some root_y -> ident_eqb root_x root_y

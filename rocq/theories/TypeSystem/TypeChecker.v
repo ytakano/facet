@@ -8642,7 +8642,7 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_fuel
               match rk with
               | RShared => false
               | RUnique =>
-                  place_resolved_write_direct_parent_b p &&
+                  place_resolved_write_writable_chain_b env R Σ p &&
                   match place_resolved_write_target R p with
                   | Some root_x =>
                       match singleton_store_root roots with

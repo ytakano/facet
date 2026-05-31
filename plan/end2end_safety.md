@@ -90,10 +90,12 @@ Latest full `sh tests/run.sh` baseline (2026-05-31): 24 valid-test failures; inv
 43. Done: add auto-drop tail narrow leaves for resolved reborrow regressions.
     - T43a done: non-function `EVar` narrow leaf; Rocq/extraction and OCaml build pass.
     - T43b done: direct `EDrop (EPlace _)` leaf; three direct reborrow valid cases pass.
-44. In progress: nested immutable-bound reborrow remains gated at `EBorrow unique (PDeref (PDeref (PVar rr)))`; not an auto-drop tail.
+44. Done: widen resolved unique `EBorrow` narrow leaf from direct-parent to writable-chain; Rocq/extraction and OCaml build pass.
+45. In progress: nested immutable-bound reborrow still fails whole-body narrow summary after the borrow leaf passes; next isolate `ELet`/tail gate.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
-deref-chain prefixes.
+deref-chain prefixes. Resolved unique borrows accept writable recursive
+deref-chain prefixes at the leaf.
 
 ## Required checks
 

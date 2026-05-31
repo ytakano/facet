@@ -12598,7 +12598,7 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
             (match rk with
              | RShared -> false
              | RUnique ->
-               (&&) (place_resolved_write_direct_parent_b p2)
+               (&&) (place_resolved_write_writable_chain_b env r _UU03a3_ p2)
                  (match place_resolved_write_target r p2 with
                   | Some root_x ->
                     (match singleton_store_root roots with

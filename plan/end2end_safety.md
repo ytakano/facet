@@ -78,7 +78,8 @@ Latest full `sh tests/run.sh` baseline (2026-05-31): 24 valid-test failures; inv
 31. Done: add writable-prefix resolved write chain guard and checker soundness.
 32. Done: prove reusable runtime target helpers and writable-chain tail transport.
 33. Done: prove writable-prefix nested resolved write preservation branches.
-34. In progress: add annotated nested resolved write CLI regressions and verify.
+34. Done: verify nested resolved write CLI regressions; annotations unnecessary because unannotated replace/assign now pass.
+35. In progress: keep T2f open for reborrow safety-gated cases and lifetime-annotation validation cleanup.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes.

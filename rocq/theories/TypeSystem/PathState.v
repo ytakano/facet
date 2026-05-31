@@ -69,6 +69,41 @@ Fixpoint place_path (p : place) : option (ident * field_path) :=
   | PDeref _ => None
   end.
 
+Definition place_resolved_write_direct_parent (p : place) : Prop :=
+  exists q x path,
+    p = PDeref q /\
+    place_path q = Some (x, path).
+
+Definition place_resolved_write_direct_parent_b (p : place) : bool :=
+  match p with
+  | PDeref q =>
+      match place_path q with
+      | Some _ => true
+      | None => false
+      end
+  | _ => false
+  end.
+
+Lemma place_resolved_write_direct_parent_b_sound :
+  forall p,
+    place_resolved_write_direct_parent_b p = true ->
+    place_resolved_write_direct_parent p.
+Proof.
+  intros p H.
+  destruct p; simpl in H; try discriminate.
+  destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
+  exists p, x, path. split; reflexivity || exact Hpath.
+Qed.
+
+Lemma place_resolved_write_direct_parent_path_none :
+  forall p,
+    place_resolved_write_direct_parent p ->
+    place_path p = None.
+Proof.
+  intros p [q [x [path [Hp _]]]].
+  subst p. reflexivity.
+Qed.
+
 Fixpoint place_suffix_path (p : place) : field_path :=
   match p with
   | PVar _ => []

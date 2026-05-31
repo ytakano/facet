@@ -66,7 +66,8 @@ Latest full `sh tests/run.sh` baseline (2026-05-30): 29 valid-test failures; inv
 17. Done: align resolved write Prop rules with checker-enforced target mutability.
 18. Done: add direct resolved write runtime target helper.
 19. Done: add one-hop indirect resolved write target helper.
-20. Blocked: nested resolved write chains need a static-prefix invariant for intermediate singleton roots.
+20. Done: add explicit direct-parent shape for resolved writes.
+21. In progress: narrow resolved write checker and Prop rules to direct-parent shape.
 
 The resolver remains narrow: it follows bounded singleton store-root chains and
 does not accept ambiguous/non-singleton update targets.

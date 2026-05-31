@@ -762,6 +762,40 @@ Proof.
   - exact Heq_parent.
 Qed.
 
+Lemma eval_pathless_writable_unique_deref_runtime_target_exists_prefix :
+  forall env Σ s p T x_static path_static x_eval path_eval,
+    store_typed_prefix env s Σ ->
+    typed_place_env_structural env Σ (PDeref p) T ->
+    writable_place_env_structural env Σ (PDeref p) ->
+    place_path p = Some (x_static, path_static) ->
+    eval_place s (PDeref p) x_eval path_eval ->
+    exists se v_target T_eval,
+      store_lookup x_eval s = Some se /\
+      value_lookup_path (se_val se) path_eval = Some v_target /\
+      type_lookup_path env (se_ty se) path_eval = Some T_eval /\
+      ty_lifetime_equiv T_eval T.
+Proof.
+  intros env Σ s p T x_static path_static x_eval path_eval
+    Hstore Htyped Hwrite Hpath_parent Heval.
+  inversion Htyped as
+    [| p_t la_t rk_t T_t u_t Hparent_typed
+     | |]; subst.
+  inversion Hwrite as
+    [| p_w la_w T_w u_w Hparent_unique
+     |]; subst.
+  destruct (eval_place_unique_ref_direct_runtime_target_exists_prefix
+              env Σ s p T_w u_w la_w x_static path_static x_eval path_eval
+              Hstore Hparent_unique Hpath_parent Heval)
+    as [se [v_target [T_eval [Hlookup [Hvalue [Htype Heq_eval]]]]]].
+  exists se, v_target, T_eval.
+  repeat split; try assumption.
+  eapply ty_lifetime_equiv_trans.
+  - exact Heq_eval.
+  - eapply typed_place_env_structural_unique_ref_target_lifetime_equiv.
+    + exact Hparent_unique.
+    + exact Hparent_typed.
+Qed.
+
 Lemma eval_place_direct_runtime_target_exists_prefix :
   forall env Σ s p T x_static path_static x_eval path_eval,
     store_typed_prefix env s Σ ->

@@ -290,6 +290,62 @@ Proof.
   eapply Hnamed; eassumption.
 Qed.
 
+Lemma root_set_store_names_sctx_names :
+  forall roots Σ x,
+    root_set_sctx_roots_named roots Σ ->
+    In x (root_set_store_names roots) ->
+    In x (ctx_names Σ).
+Proof.
+  induction roots as [| atom rest IH]; intros Σ x Hnamed Hin; simpl in Hin.
+  - contradiction.
+  - destruct atom as [y | y]; simpl in Hin.
+    + destruct Hin as [Hin | Hin].
+      * subst x. apply Hnamed. simpl. left. reflexivity.
+      * apply IH.
+        -- unfold root_set_sctx_roots_named in *.
+           intros z Hz. apply Hnamed. simpl. right. exact Hz.
+        -- exact Hin.
+    + apply IH.
+      * unfold root_set_sctx_roots_named in *.
+        intros z Hz. apply Hnamed. simpl. right. exact Hz.
+      * exact Hin.
+Qed.
+
+Lemma root_env_all_store_names_sctx_names :
+  forall R Σ x,
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R Σ ->
+    root_env_sctx_roots_named R Σ ->
+    In x (root_env_all_store_names R) ->
+    In x (ctx_names Σ).
+Proof.
+  induction R as [| [y roots] rest IH]; intros Σ x Hns Hkeys Hroots Hin; simpl in Hin.
+  - contradiction.
+  - inversion Hns as [| ? ? Hnot_tail Hns_tail]; subst.
+    destruct Hin as [Hin | Hin].
+    + subst x. apply Hkeys. simpl. left. reflexivity.
+    + apply in_app_or in Hin. destruct Hin as [Hin | Hin].
+      * eapply root_set_store_names_sctx_names.
+        -- eapply (root_env_lookup_sctx_roots_named ((y, roots) :: rest) Σ y roots).
+           ++ simpl. rewrite ident_eqb_refl. reflexivity.
+           ++ exact Hroots.
+        -- exact Hin.
+      * eapply IH.
+        -- exact Hns_tail.
+        -- unfold root_env_sctx_keys_named, root_env_keys_named in *.
+           intros z Hz. apply Hkeys. simpl. right. exact Hz.
+        -- unfold root_env_sctx_roots_named in *.
+           intros z roots0 w Hlookup Hinw.
+           apply (Hroots z roots0 w).
+           ++ simpl. destruct (ident_eqb z y) eqn:Hzy.
+              ** apply ident_eqb_eq in Hzy. subst z.
+                 exfalso. apply Hnot_tail.
+                 eapply root_env_lookup_some_in_names; exact Hlookup.
+              ** exact Hlookup.
+           ++ exact Hinw.
+        -- exact Hin.
+Qed.
+
 Lemma root_set_sctx_roots_named_fresh_exclude :
   forall roots Σ x,
     root_set_sctx_roots_named roots Σ ->
@@ -416,12 +472,67 @@ Proof.
     + subst x0. simpl. rewrite ident_eqb_refl. left. reflexivity.
     + destruct (ident_eqb x0 x) eqn:Hx0x.
       * apply ident_eqb_eq in Hx0x. subst x0.
+
         simpl. rewrite ident_eqb_refl. left. reflexivity.
       * simpl.
         assert (Hxx0 : ident_eqb x x0 = false).
         { apply ident_eqb_neq. intro Heq. subst x0.
           rewrite ident_eqb_refl in Hx0x. discriminate. }
         rewrite Hxx0. right. apply IHHalpha. exact Hin.
+Qed.
+
+Lemma ctx_alpha_lookup_rename_not_fresh :
+  forall rho Γ Γr x xr,
+    ctx_alpha rho Γ Γr ->
+    In x (ctx_names Γ) ->
+    ~ In xr (ctx_names Γr) ->
+    ~ In xr (rename_range rho) ->
+    lookup_rename x rho <> xr.
+Proof.
+  intros rho Γ Γr x xr Halpha Hin Hfresh_ctx Hfresh_range Heq.
+  destruct (lookup_rename_in_range_or_self rho x) as [Hin_range | Hself].
+  - apply Hfresh_range. rewrite <- Heq. exact Hin_range.
+  - apply Hfresh_ctx. rewrite <- Heq.
+    eapply ctx_alpha_lookup_rename_in_names; eassumption.
+Qed.
+
+Lemma ctx_alpha_no_collision_on_any :
+  forall rho Σ Σr,
+    ctx_alpha rho Σ Σr ->
+    rename_no_collision_on rho (ctx_names Σ).
+Proof.
+  unfold rename_no_collision_on, rename_no_collision_for.
+  intros rho Σ Σr Halpha.
+  induction Halpha as [Γ | rho Γ Γr x xr T b m Halpha IH Hfresh_ctx Hfresh_range];
+    intros a Ha y Hy Hya Heq.
+  - simpl in Heq. contradiction.
+  - simpl in Ha, Hy.
+    destruct Ha as [Ha | Ha].
+    + subst a. destruct Hy as [Hy | Hy].
+      * subst y. contradiction.
+
+      * simpl in Heq. destruct (ident_eqb y x) eqn:Hyx.
+        -- apply ident_eqb_eq in Hyx. subst y. contradiction.
+        -- try rewrite Hyx in Heq. try rewrite ident_eqb_refl in Heq.
+           eapply (ctx_alpha_lookup_rename_not_fresh rho Γ Γr y xr); eauto; exact Heq.
+    + destruct Hy as [Hy | Hy].
+      * subst y. simpl in Heq. destruct (ident_eqb a x) eqn:Hax.
+        -- apply ident_eqb_eq in Hax. subst a. contradiction.
+        -- try rewrite Hax in Heq. try rewrite ident_eqb_refl in Heq.
+           symmetry in Heq.
+           eapply (ctx_alpha_lookup_rename_not_fresh rho Γ Γr a xr); eauto; exact Heq.
+      * simpl in Heq. destruct (ident_eqb a x) eqn:Hax.
+        -- apply ident_eqb_eq in Hax. subst a.
+           destruct (ident_eqb y x) eqn:Hyx.
+           ++ apply ident_eqb_eq in Hyx. subst y. contradiction.
+           ++ try rewrite Hyx in Heq. try rewrite ident_eqb_refl in Heq.
+              eapply (ctx_alpha_lookup_rename_not_fresh rho Γ Γr y xr); eauto; exact Heq.
+        -- destruct (ident_eqb y x) eqn:Hyx.
+           ++ apply ident_eqb_eq in Hyx. subst y.
+              try rewrite Hax in Heq. try rewrite ident_eqb_refl in Heq. symmetry in Heq.
+              eapply (ctx_alpha_lookup_rename_not_fresh rho Γ Γr a xr); eauto; exact Heq.
+           ++ try rewrite Hax in Heq; try rewrite Hyx in Heq.
+              exact (IH a Ha y Hy Hya Heq).
 Qed.
 
 Lemma ctx_alpha_no_collision_on :
@@ -445,7 +556,7 @@ Proof.
     + subst a.
       assert (Hyx : y <> x).
       { intros Heq_yx. subst y. contradiction. }
-      simpl in Heq. rewrite ident_eqb_refl in Heq.
+      simpl in Heq. try rewrite ident_eqb_refl in Heq.
       destruct (ident_eqb y x) eqn:Hyeq.
       * apply ident_eqb_eq in Hyeq. contradiction.
       * apply Hxr_notin.
@@ -454,7 +565,7 @@ Proof.
     + subst y.
       assert (Hax : a <> x).
       { intros Heq_ax. subst a. contradiction. }
-      simpl in Heq. rewrite ident_eqb_refl in Heq.
+      simpl in Heq. try rewrite ident_eqb_refl in Heq.
       destruct (ident_eqb a x) eqn:Heq_ax.
       * apply ident_eqb_eq in Heq_ax. contradiction.
       * apply Hxr_notin.
@@ -1193,14 +1304,14 @@ Proof.
       destruct (ident_eqb y x) eqn:Hyx.
       * apply ident_eqb_eq in Hyx. subst y. contradiction.
       * intros Heq. apply (Hfresh y Hy).
-        rewrite ident_eqb_refl in Heq. exact Heq.
+        try rewrite ident_eqb_refl in Heq. exact Heq.
   - destruct Hy as [Hy | Hy].
     + subst y.
       simpl.
       destruct (ident_eqb x0 x) eqn:Hx0x.
       * apply ident_eqb_eq in Hx0x. subst x0. contradiction.
       * intros Heq. apply (Hfresh x0 Hx0).
-        rewrite ident_eqb_refl in Heq. symmetry. exact Heq.
+        try rewrite ident_eqb_refl in Heq. symmetry. exact Heq.
     + simpl.
       destruct (ident_eqb y x) eqn:Hyx.
       * apply ident_eqb_eq in Hyx. subst y. contradiction.
@@ -3357,6 +3468,11 @@ Proof.
         eapply root_env_lookup_sctx_roots_named; eassumption
     end.
   - split; try assumption.
+    eapply place_resolved_roots_sctx_roots_named.
+    + eassumption.
+    + eapply root_of_place_sctx_roots_named; eassumption.
+    + eassumption.
+  - split; try assumption.
     eapply root_store_single_sctx_roots_named_of_place_path; eassumption.
   - split; try assumption.
     match goal with
@@ -3366,6 +3482,11 @@ Proof.
         rewrite (place_borrow_roots_indirect R p Hpath) in Hlookup;
         eapply root_env_lookup_sctx_roots_named; eassumption
     end.
+  - split; try assumption.
+    eapply place_resolved_roots_sctx_roots_named.
+    + eassumption.
+    + eapply root_of_place_sctx_roots_named; eassumption.
+    + eassumption.
   - split; try assumption.
     eapply root_env_lookup_sctx_roots_named; eassumption.
   - split; try assumption.
@@ -3941,8 +4062,6 @@ Lemma alpha_rename_typed_env_roots_replace_forward :
     root_env_equiv Rr (root_env_rename rho R) ->
     rename_no_collision_on rho (root_env_names R) ->
     rename_no_collision_on rho (root_env_names R') ->
-    rename_no_collision_on rho
-      (root_env_all_store_names R ++ root_set_store_names (root_of_place p)) ->
     (forall x, In x (ctx_names Σr) -> In x used) ->
     (forall x, In x (rename_range rho) -> In x used) ->
     disjoint_names (free_vars_expr (EReplace p e_new)) (rename_range rho) ->
@@ -3955,7 +4074,7 @@ Lemma alpha_rename_typed_env_roots_replace_forward :
       root_set_equiv rootsr (root_set_rename rho roots).
 Proof.
   intros env Ω n rho R Rr Σ Σr p e_new er used used' T Σ' R' roots
-    Hexpr Htyped Hctx HnsR HnsRr HRr HnocollR HnocollR' HnocollResolved
+    Hexpr Htyped Hctx HnsR HnsRr HRr HnocollR HnocollR'
     Hctx_used Hrange_used Hdisj Hrename.
   simpl in Hrename.
   destruct (disjoint_names_cons_l (place_name p) (free_vars_expr e_new)
@@ -4140,8 +4259,6 @@ Lemma alpha_rename_typed_env_roots_assign_forward :
     root_env_equiv Rr (root_env_rename rho R) ->
     rename_no_collision_on rho (root_env_names R) ->
     rename_no_collision_on rho (root_env_names R') ->
-    rename_no_collision_on rho
-      (root_env_all_store_names R ++ root_set_store_names (root_of_place p)) ->
     (forall x, In x (ctx_names Σr) -> In x used) ->
     (forall x, In x (rename_range rho) -> In x used) ->
     disjoint_names (free_vars_expr (EAssign p e_new)) (rename_range rho) ->
@@ -4154,7 +4271,7 @@ Lemma alpha_rename_typed_env_roots_assign_forward :
       root_set_equiv rootsr (root_set_rename rho roots).
 Proof.
   intros env Ω n rho R Rr Σ Σr p e_new er used used' T Σ' R' roots
-    Hexpr Htyped Hctx HnsR HnsRr HRr HnocollR HnocollR' HnocollResolved
+    Hexpr Htyped Hctx HnsR HnsRr HRr HnocollR HnocollR'
     Hctx_used Hrange_used Hdisj Hrename.
   simpl in Hrename.
   destruct (disjoint_names_cons_l (place_name p) (free_vars_expr e_new)
@@ -6846,6 +6963,8 @@ Lemma alpha_rename_typed_env_roots_borrow_shadow_safe_forward :
     root_env_equiv Rr (root_env_rename rho R) ->
     rename_no_collision_on rho (root_env_names R) ->
     rename_no_collision_on rho (root_env_names R') ->
+    rename_no_collision_on rho
+      (root_env_all_store_names R ++ root_set_store_names (root_of_place p)) ->
     (forall x, In x (ctx_names Σr) -> In x used) ->
     (forall x, In x (rename_range rho) -> In x used) ->
     disjoint_names (free_vars_expr (EBorrow rk p)) (rename_range rho) ->
@@ -6858,7 +6977,7 @@ Lemma alpha_rename_typed_env_roots_borrow_shadow_safe_forward :
       root_set_equiv rootsr (root_set_rename rho roots).
 Proof.
   intros env Ω n rho R Rr Σ Σr rk p er used used' T Σ' R' roots
-    Htyped Hctx HnsR HnsRr HRr HnocollR HnocollR'
+    Htyped Hctx HnsR HnsRr HRr HnocollR HnocollR' HnocollResolved
     Hctx_used Hrange_used Hdisj Hrename.
   simpl in Hrename. destruct rk; injection Hrename as <- <-;
     inversion Htyped; subst.
@@ -6896,6 +7015,33 @@ Proof.
         -- match goal with Hpath : place_path p = None |- _ =>
              apply place_path_rename_place_none; exact Hpath
            end.
+    + exact Hctx.
+    + exact HnsRr.
+    + exact HRr.
+    + apply Hrootsr.
+    + apply Hrootsr.
+  - assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+    { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+    match goal with
+    | Hresolved : place_resolved_roots ?Rsrc p = Some roots,
+      Hns : root_env_no_shadow ?Rsrc,
+      Heq : root_env_equiv Rr (root_env_rename rho ?Rsrc) |- _ =>
+        destruct (place_resolved_roots_rename_no_shadow_equiv
+          rho Rsrc Rr p roots Hns HnsRr Heq HnocollResolved Hresolved)
+          as [rootsr [Hresolved_r Hrootsr]]
+    end.
+    exists Σr, Rr, rootsr. repeat split.
+    + eapply TERS_BorrowShared_Resolved.
+      * eapply alpha_rename_typed_place_env_structural_forward; eauto.
+      * match goal with Hpath : place_path p = None |- _ =>
+          apply place_path_rename_place_none; exact Hpath
+        end.
+      * exact Hresolved_r.
+      * rewrite (singleton_store_root_equiv rootsr (root_set_rename rho roots) Hrootsr).
+        apply singleton_store_root_rename_some.
+        match goal with Hsingle : singleton_store_root roots = Some _ |- _ =>
+          exact Hsingle
+        end.
     + exact Hctx.
     + exact HnsRr.
     + exact HRr.
@@ -6952,6 +7098,34 @@ Proof.
     + exact HRr.
     + apply Hrootsr.
     + apply Hrootsr.
+  - assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+    { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+    match goal with
+    | Hresolved : place_resolved_roots ?Rsrc p = Some roots,
+      Hns : root_env_no_shadow ?Rsrc,
+      Heq : root_env_equiv Rr (root_env_rename rho ?Rsrc) |- _ =>
+        destruct (place_resolved_roots_rename_no_shadow_equiv
+          rho Rsrc Rr p roots Hns HnsRr Heq HnocollResolved Hresolved)
+          as [rootsr [Hresolved_r Hrootsr]]
+    end.
+    exists Σr, Rr, rootsr. repeat split.
+    + eapply TERS_BorrowUnique_Resolved.
+      * eapply alpha_rename_typed_place_env_structural_forward; eauto.
+      * match goal with Hpath : place_path p = None |- _ =>
+          apply place_path_rename_place_none; exact Hpath
+        end.
+      * eapply alpha_rename_place_under_unique_ref_structural_forward; eauto.
+      * exact Hresolved_r.
+      * rewrite (singleton_store_root_equiv rootsr (root_set_rename rho roots) Hrootsr).
+        apply singleton_store_root_rename_some.
+        match goal with Hsingle : singleton_store_root roots = Some _ |- _ =>
+          exact Hsingle
+        end.
+    + exact Hctx.
+    + exact HnsRr.
+    + exact HRr.
+    + apply Hrootsr.
+    + apply Hrootsr.
 Qed.
 Lemma alpha_rename_typed_env_roots_borrow_shadow_safe_support_forward :
   forall env Ω n rho R Rr Σ Σr rk p er used used' T Σ' R' roots,
@@ -6976,8 +7150,17 @@ Lemma alpha_rename_typed_env_roots_borrow_shadow_safe_support_forward :
       root_set_equiv rootsr (root_set_rename rho roots).
 Proof.
   intros env Ω n rho R Rr Σ Σr rk p er used used' T Σ' R' roots
-    Htyped Hctx HnsR HnsRr HRr _ _ HnocollR HnocollR'
+    Htyped Hctx HnsR HnsRr HRr Hkeys Hroots HnocollR HnocollR'
     Hctx_used Hrange_used Hdisj Hrename.
+  assert (Hplace_roots : root_set_sctx_roots_named (root_of_place p) Σ).
+  { inversion Htyped; subst; eapply root_of_place_sctx_roots_named; eassumption. }
+  assert (HnocollResolved : rename_no_collision_on rho
+      (root_env_all_store_names R ++ root_set_store_names (root_of_place p))).
+  { eapply rename_no_collision_on_weaken.
+    - eapply ctx_alpha_no_collision_on_any. exact Hctx.
+    - intros x Hin. apply in_app_or in Hin. destruct Hin as [Hin | Hin].
+      + eapply (root_env_all_store_names_sctx_names R Σ x); eassumption.
+      + eapply (root_set_store_names_sctx_names (root_of_place p) Σ x); eassumption. }
   eapply alpha_rename_typed_env_roots_borrow_shadow_safe_forward;
     eassumption.
 Qed.

@@ -489,6 +489,13 @@ Inductive typed_env_roots_shadow_safe
       place_borrow_roots R p = Some roots ->
       typed_env_roots_shadow_safe env Ω n R Σ (EBorrow RShared p)
         (MkTy UUnrestricted (TRef (Lifetime.LVar n) RShared T)) Σ R roots
+  | TERS_BorrowShared_Resolved : forall R Σ p T roots x,
+      typed_place_env_structural env Σ p T ->
+      place_path p = None ->
+      place_resolved_roots R p = Some roots ->
+      singleton_store_root roots = Some x ->
+      typed_env_roots_shadow_safe env Ω n R Σ (EBorrow RShared p)
+        (MkTy UUnrestricted (TRef (Lifetime.LVar n) RShared T)) Σ R roots
   | TERS_BorrowUnique : forall R Σ p T x path,
       typed_place_env_structural env Σ p T ->
       place_path p = Some (x, path) ->
@@ -500,6 +507,14 @@ Inductive typed_env_roots_shadow_safe
       place_path p = None ->
       place_under_unique_ref_structural env Σ p ->
       place_borrow_roots R p = Some roots ->
+      typed_env_roots_shadow_safe env Ω n R Σ (EBorrow RUnique p)
+        (MkTy UAffine (TRef (Lifetime.LVar n) RUnique T)) Σ R roots
+  | TERS_BorrowUnique_Resolved : forall R Σ p T roots x,
+      typed_place_env_structural env Σ p T ->
+      place_path p = None ->
+      place_under_unique_ref_structural env Σ p ->
+      place_resolved_roots R p = Some roots ->
+      singleton_store_root roots = Some x ->
       typed_env_roots_shadow_safe env Ω n R Σ (EBorrow RUnique p)
         (MkTy UAffine (TRef (Lifetime.LVar n) RUnique T)) Σ R roots
   | TERS_DerefBorrowShared : forall R Σ p T x path roots,
@@ -1621,6 +1636,16 @@ Proof.
     + exact HnsR0.
     + exact HR0.
     + exact Hroots0.
+  - intros R Σ p T roots x Hplace Hpath Hresolved Hsingle
+      Hfresh R0 HnsR HnsR0 HR0.
+    destruct (place_resolved_roots_instantiate_singleton_equiv_result
+      rho R R0 p roots x HnsR HnsR0 HR0 Hresolved Hsingle)
+      as [roots0 [Hresolved0 [Hroots0 Hsingle0]]].
+    exists R0, roots0. split; [| split; [| split]].
+    + eapply TERS_BorrowShared_Resolved; eauto.
+    + exact HnsR0.
+    + exact HR0.
+    + exact Hroots0.
   - intros R Σ p T x path Hplace Hpath Hmut Hfresh R0 HnsR HnsR0 HR0.
     exists R0, [RStore x]. split; [| split; [| split]].
     + eapply TERS_BorrowUnique; eauto.
@@ -1641,6 +1666,16 @@ Proof.
     exists R0, roots0. split; [| split; [| split]].
     + eapply TERS_BorrowUnique_Indirect; eauto.
       rewrite (place_borrow_roots_indirect R0 p Hpath). exact Hlookup0.
+    + exact HnsR0.
+    + exact HR0.
+    + exact Hroots0.
+  - intros R Σ p T roots x Hplace Hpath Hunique Hresolved Hsingle Hfresh R0
+      HnsR HnsR0 HR0.
+    destruct (place_resolved_roots_instantiate_singleton_equiv_result
+      rho R R0 p roots x HnsR HnsR0 HR0 Hresolved Hsingle) as
+      [roots0 [Hresolved0 [Hroots0 Hsingle0]]].
+    exists R0, roots0. split; [| split; [| split]].
+    + eapply TERS_BorrowUnique_Resolved; eauto.
     + exact HnsR0.
     + exact HR0.
     + exact Hroots0.

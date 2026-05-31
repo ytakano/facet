@@ -6688,18 +6688,46 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
           | None =>
               match rk with
               | RShared =>
-                  match place_borrow_roots R p with
+                  match place_resolved_roots R p with
                   | Some roots =>
-                      infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_p), Σ, R, roots)
-                  | None => infer_err ErrContextCheckFailed
+                      match singleton_store_root roots with
+                      | Some _ =>
+                          infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_p), Σ, R, roots)
+                      | None =>
+                          match place_borrow_roots R p with
+                          | Some roots =>
+                              infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_p), Σ, R, roots)
+                          | None => infer_err ErrContextCheckFailed
+                          end
+                      end
+                  | None =>
+                      match place_borrow_roots R p with
+                      | Some roots =>
+                          infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_p), Σ, R, roots)
+                      | None => infer_err ErrContextCheckFailed
+                      end
                   end
               | RUnique =>
                   if place_under_unique_ref_b env Σ p
                   then
-                    match place_borrow_roots R p with
+                    match place_resolved_roots R p with
                     | Some roots =>
-                        infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, roots)
-                    | None => infer_err ErrContextCheckFailed
+                        match singleton_store_root roots with
+                        | Some _ =>
+                            infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, roots)
+                        | None =>
+                            match place_borrow_roots R p with
+                            | Some roots =>
+                                infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, roots)
+                            | None => infer_err ErrContextCheckFailed
+                            end
+                        end
+                    | None =>
+                        match place_borrow_roots R p with
+                        | Some roots =>
+                            infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, roots)
+                        | None => infer_err ErrContextCheckFailed
+                        end
                     end
                   else infer_err (ErrImmutableBorrow (place_name p))
               end

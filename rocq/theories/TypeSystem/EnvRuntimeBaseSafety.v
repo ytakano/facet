@@ -602,7 +602,11 @@ Inductive expr_root_shadow_store_safe_narrow_summary
       place_resolved_write_target R p = Some x ->
       singleton_store_root roots = Some x ->
       expr_root_shadow_store_safe_narrow_summary
-        env Omega n R Σ (EBorrow RUnique p) T Σ' R' roots roots.
+        env Omega n R Σ (EBorrow RUnique p) T Σ' R' roots roots
+  | ERSSN_Unit : forall R Σ T Σ' R' roots,
+      typed_env_roots_shadow_safe env Omega n R Σ EUnit T Σ' R' roots ->
+      expr_root_shadow_store_safe_narrow_summary
+        env Omega n R Σ EUnit T Σ' R' roots roots.
 
 Lemma disjoint_names_evar_of_call_expr :
   forall x args ys,
@@ -779,6 +783,7 @@ Proof.
   - exact H2.
   - eapply TERS_Let; eauto.
   - eapply TERS_LetInfer; eauto.
+  - exact H.
   - exact H.
   - exact H.
 Qed.
@@ -985,6 +990,7 @@ Proof.
   - exact IHHsummary2.
   - apply root_set_equiv_refl.
   - apply root_set_equiv_refl.
+  - apply root_set_equiv_refl.
 Qed.
 
 Lemma expr_root_shadow_store_safe_narrow_summary_ret_roots_exclude :
@@ -1085,6 +1091,10 @@ Proof.
     + eapply place_resolved_write_target_app_left.
       exact H2.
     + exact H3.
+  - apply ERSSN_Unit.
+    eapply typed_env_roots_shadow_safe_tail_frame.
+    + exact H.
+    + unfold root_env_tail_fresh_names. intros y Hy. contradiction.
 Qed.
 
 
@@ -1127,7 +1137,8 @@ Proof.
       Hexcl_roots1 Hexcl_env1 Hsummary2 IH2 Hcheck Hexcl_roots2
       Hexcl_env2
     | R Σ rk p T Σ' R' roots x path Htyped Hpath Hsingle
-    | R Σ p T Σ' R' roots x Htyped Hpath Hdirect Htarget Hsingle ];
+    | R Σ p T Σ' R' roots x Htyped Hpath Hdirect Htarget Hsingle
+    | R Σ T Σ' R' roots Htyped ];
     intros rho Rr0 Σr0 er used used' Hctx HnsR HnsRr HRr Hkeys
       Hroots HnocollR HnocollR' Hctx_used Hrange_used Hdisj Hrename.
   - destruct (alpha_rename_typed_env_roots_shadow_safe_full_support_forward
@@ -1674,6 +1685,17 @@ Proof.
           (root_set_rename rho roots) Hrootsr).
         apply singleton_store_root_rename_some. exact Hsingle.
     + repeat split; try eassumption; try apply Hrootsr.
+
+  - destruct (alpha_rename_typed_env_roots_shadow_safe_full_support_forward
+      env Omega n rho R Rr0 Σ Σr0 EUnit er used used' T Σ' R' roots
+      Htyped Hctx HnsR HnsRr HRr Hkeys Hroots HnocollR HnocollR'
+      Hctx_used Hrange_used Hdisj Hrename)
+      as (Σr' & Rr' & rootsr & Htypedr & Hctxr & Hnsr & HRr' & Hrootsr).
+    simpl in Hrename. injection Hrename as <- <-.
+    exists Σr', Rr', rootsr, rootsr.
+    split.
+    + apply ERSSN_Unit. exact Htypedr.
+    + repeat split; try eassumption; try apply Hrootsr.
 Qed.
 
 Lemma expr_root_shadow_store_safe_narrow_summary_instantiate_fresh :
@@ -1910,6 +1932,13 @@ Proof.
           (root_set_instantiate rho roots) Hroots0).
         apply root_set_instantiate_singleton_store_root. exact H3.
     + split; [exact Hns0 | split; [exact HRborrow0 | exact Hroots0]].
+  - destruct (typed_env_roots_shadow_safe_instantiate_fresh
+      env Omega n rho R Σ EUnit T Σ' R' roots
+      R0 H Hfresh HnsR HnsR0 HR0)
+      as (Runit0 & roots0 & Htyped0 & Hns0 & HRunit0 & Hroots0).
+    exists Runit0, roots0, roots0. split.
+    + apply ERSSN_Unit. exact Htyped0.
+    + split; [exact Hns0 | split; [exact HRunit0 | exact Hroots0]].
 
 Qed.
 
@@ -1959,6 +1988,11 @@ Proof.
   - cbn [check_expr_root_shadow_store_safe_narrow_summary_fuel] in Hcheck.
     rewrite Hinfer in Hcheck.
     destruct e; try discriminate.
+    + pose proof (infer_core_env_state_fuel_roots_shadow_safe_sound
+        (S fuel') env Omega n R Σ EUnit T Σ' R' roots Hinfer)
+        as Htyped_unit.
+      exists roots.
+      apply ERSSN_Unit. exact Htyped_unit.
     + simpl in Hinfer, Hcheck.
       destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Omega n R
         Σ e1) as [[[[T1 Σ1] R1] roots1] | err] eqn:Hbound;
@@ -2871,6 +2905,12 @@ Proof.
         try exact Hvalue_roots; try exact Hrootset_named; try exact Hshadow;
         try exact Hrn; try exact Hnamed; try exact Hkeys; try exact Hsummary_store;
         eauto.
+  - inversion Heval; subst.
+    inversion H; subst; try congruence;
+      repeat split; try exact Hstore; try constructor; try exact Hroots;
+      try exact Hshadow; try exact Hrn; try exact Hnamed; try exact Hkeys;
+      try exact Hsummary_store; eauto.
+    unfold root_set_store_roots_named. intros z Hin. contradiction.
 
 Qed.
 
@@ -3232,6 +3272,9 @@ Proof.
     + exact H1.
     + exact H2.
     + exact H3.
+  - apply ERSSN_Unit.
+    inversion H; subst; try congruence.
+    constructor.
 Qed.
 
 Lemma callee_body_root_shadow_store_safe_narrow_summary_global_env_with_local_bounds :
@@ -5803,6 +5846,12 @@ Proof.
         try exact Hvalue_roots; try exact Hrootset_named; try exact Hshadow;
         try exact Hrn; try exact Hnamed; try exact Hkeys; try exact Hsummary_store;
         eauto.
+  - inversion Heval; subst.
+    inversion H; subst; try congruence;
+      repeat split; try exact Hstore; try constructor; try exact Hroots;
+      try exact Hshadow; try exact Hrn; try exact Hnamed; try exact Hkeys;
+      try exact Hsummary_store; eauto.
+    unfold root_set_store_roots_named. intros z Hin. contradiction.
 Qed.
 
 
@@ -6153,6 +6202,13 @@ Proof.
         try exact Hvalue_roots; try exact Hrootset_named; try exact Hshadow;
         try exact Hrn; try exact Hnamed; try exact Hkeys; try exact Hsummary_store;
         eauto.
+  - inversion Heval; subst.
+    inversion H; subst; try congruence;
+      repeat split; try exact Hstore; try constructor;
+      try apply store_ref_targets_preserved_refl; try exact Hroots;
+      try exact Hshadow; try exact Hrn; try exact Hnamed; try exact Hkeys;
+      try exact Hsummary_store; eauto.
+    unfold root_set_store_roots_named. intros z Hin. contradiction.
 Qed.
 
 
@@ -6862,6 +6918,10 @@ Proof.
     inversion H; subst; try congruence;
       repeat split; try exact Hcover; try exact Hroots; try exact Hshadow;
       try exact Hrn; try exact Hscope; try exact Hfresh.
+  - inversion Heval; subst.
+    inversion H; subst; try congruence;
+      repeat split; try exact Hcover; try exact Hroots; try exact Hshadow;
+      try exact Hrn; try exact Hscope; try exact Hfresh.
 Qed.
 
 
@@ -6900,6 +6960,7 @@ Proof.
       ps R1 x roots1 Hcover1) as Hcover_add.
     pose proof (IHHsummary2 ps Hcover_add) as Hcover2.
     eapply root_env_covers_params_remove_non_param; eassumption.
+  - inversion H; subst; try congruence; exact Hcover.
   - inversion H; subst; try congruence; exact Hcover.
   - inversion H; subst; try congruence; exact Hcover.
 Qed.
@@ -7045,6 +7106,7 @@ Proof.
       Hsummary_add Heval2 Hunique Hcover_add Hscope_add) as [frame2 Hscope2].
     eapply store_param_scope_remove_non_param; eassumption.
   - dependent destruction Heval.
+  - inversion Heval; subst. exists frame. inversion H; subst; try congruence; exact Hscope.
   - inversion Heval; subst. exists frame. inversion H; subst; try congruence; exact Hscope.
   - inversion Heval; subst. exists frame. inversion H; subst; try congruence; exact Hscope.
 Qed.

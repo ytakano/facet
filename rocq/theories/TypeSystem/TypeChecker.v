@@ -8625,6 +8625,7 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_fuel
   | infer_err _ => false
   | infer_ok (T, Σ', R', roots) =>
       match e with
+      | EUnit => true
       | EBorrow rk p =>
           match place_path p with
           | Some _ => true

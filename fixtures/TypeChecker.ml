@@ -12510,6 +12510,7 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
     | Infer_ok p ->
       let (_, roots) = p in
       (match e with
+       | EUnit -> true
        | ELet (m, x, t_hidden, e1, e2) ->
          (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
                   _UU03a9_ n r _UU03a3_ e1 with

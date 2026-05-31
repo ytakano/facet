@@ -81,7 +81,8 @@ Latest full `sh tests/run.sh` baseline (2026-05-31): 24 valid-test failures; inv
 34. Done: verify nested resolved write CLI regressions; annotations unnecessary because unannotated replace/assign now pass.
 35. Done: isolate reborrow gate to missing narrow store-safe EBorrow leaf.
 36. Done: route shadow-safe EBorrow through resolved singleton roots and prove checker soundness.
-37. In progress: add tail-stable resolved EBorrow invariant, then prove narrow-summary runtime package.
+37. Done: add tail-stable resolved EBorrow invariant and checker soundness.
+38. In progress: prove EBorrow narrow-summary runtime package.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes.

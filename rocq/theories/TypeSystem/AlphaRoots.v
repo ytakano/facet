@@ -489,11 +489,13 @@ Inductive typed_env_roots_shadow_safe
       place_borrow_roots R p = Some roots ->
       typed_env_roots_shadow_safe env Ω n R Σ (EBorrow RShared p)
         (MkTy UUnrestricted (TRef (Lifetime.LVar n) RShared T)) Σ R roots
-  | TERS_BorrowShared_Resolved : forall R Σ p T roots x,
+  | TERS_BorrowShared_Resolved : forall R Σ p T roots x roots_x,
       typed_place_env_structural env Σ p T ->
       place_path p = None ->
       place_resolved_roots R p = Some roots ->
       singleton_store_root roots = Some x ->
+      root_env_lookup x R = Some roots_x ->
+      singleton_store_root roots_x = Some x ->
       typed_env_roots_shadow_safe env Ω n R Σ (EBorrow RShared p)
         (MkTy UUnrestricted (TRef (Lifetime.LVar n) RShared T)) Σ R roots
   | TERS_BorrowUnique : forall R Σ p T x path,
@@ -509,12 +511,14 @@ Inductive typed_env_roots_shadow_safe
       place_borrow_roots R p = Some roots ->
       typed_env_roots_shadow_safe env Ω n R Σ (EBorrow RUnique p)
         (MkTy UAffine (TRef (Lifetime.LVar n) RUnique T)) Σ R roots
-  | TERS_BorrowUnique_Resolved : forall R Σ p T roots x,
+  | TERS_BorrowUnique_Resolved : forall R Σ p T roots x roots_x,
       typed_place_env_structural env Σ p T ->
       place_path p = None ->
       place_under_unique_ref_structural env Σ p ->
       place_resolved_roots R p = Some roots ->
       singleton_store_root roots = Some x ->
+      root_env_lookup x R = Some roots_x ->
+      singleton_store_root roots_x = Some x ->
       typed_env_roots_shadow_safe env Ω n R Σ (EBorrow RUnique p)
         (MkTy UAffine (TRef (Lifetime.LVar n) RUnique T)) Σ R roots
   | TERS_DerefBorrowShared : forall R Σ p T x path roots,
@@ -1636,11 +1640,22 @@ Proof.
     + exact HnsR0.
     + exact HR0.
     + exact Hroots0.
-  - intros R Σ p T roots x Hplace Hpath Hresolved Hsingle
-      Hfresh R0 HnsR HnsR0 HR0.
+  - intros R Σ p T roots x roots_x Hplace Hpath Hresolved Hsingle
+      Hlookup_x Hsingle_x Hfresh R0 HnsR HnsR0 HR0.
     destruct (place_resolved_roots_instantiate_singleton_equiv_result
       rho R R0 p roots x HnsR HnsR0 HR0 Hresolved Hsingle)
       as [roots0 [Hresolved0 [Hroots0 Hsingle0]]].
+    assert (Hlookup_x_inst :
+      root_env_lookup x (root_env_instantiate rho R) =
+      Some (root_set_instantiate rho roots_x)).
+    { apply root_env_lookup_instantiate. exact Hlookup_x. }
+    destruct (root_env_equiv_lookup_r R0 (root_env_instantiate rho R)
+      x (root_set_instantiate rho roots_x) HR0 Hlookup_x_inst)
+      as [roots_x0 [Hlookup_x0 Hroots_x0]].
+    assert (Hsingle_x0 : singleton_store_root roots_x0 = Some x).
+    { rewrite (singleton_store_root_equiv
+        roots_x0 (root_set_instantiate rho roots_x) Hroots_x0).
+      apply root_set_instantiate_singleton_store_root. exact Hsingle_x. }
     exists R0, roots0. split; [| split; [| split]].
     + eapply TERS_BorrowShared_Resolved; eauto.
     + exact HnsR0.
@@ -1669,11 +1684,22 @@ Proof.
     + exact HnsR0.
     + exact HR0.
     + exact Hroots0.
-  - intros R Σ p T roots x Hplace Hpath Hunique Hresolved Hsingle Hfresh R0
-      HnsR HnsR0 HR0.
+  - intros R Σ p T roots x roots_x Hplace Hpath Hunique Hresolved Hsingle
+      Hlookup_x Hsingle_x Hfresh R0 HnsR HnsR0 HR0.
     destruct (place_resolved_roots_instantiate_singleton_equiv_result
       rho R R0 p roots x HnsR HnsR0 HR0 Hresolved Hsingle) as
       [roots0 [Hresolved0 [Hroots0 Hsingle0]]].
+    assert (Hlookup_x_inst :
+      root_env_lookup x (root_env_instantiate rho R) =
+      Some (root_set_instantiate rho roots_x)).
+    { apply root_env_lookup_instantiate. exact Hlookup_x. }
+    destruct (root_env_equiv_lookup_r R0 (root_env_instantiate rho R)
+      x (root_set_instantiate rho roots_x) HR0 Hlookup_x_inst)
+      as [roots_x0 [Hlookup_x0 Hroots_x0]].
+    assert (Hsingle_x0 : singleton_store_root roots_x0 = Some x).
+    { rewrite (singleton_store_root_equiv
+        roots_x0 (root_set_instantiate rho roots_x) Hroots_x0).
+      apply root_set_instantiate_singleton_store_root. exact Hsingle_x. }
     exists R0, roots0. split; [| split; [| split]].
     + eapply TERS_BorrowUnique_Resolved; eauto.
     + exact HnsR0.

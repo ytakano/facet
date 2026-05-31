@@ -139,6 +139,65 @@ Proof.
   - apply IHp. exact Htarget.
 Qed.
 
+Lemma resolve_root_set_fuel_tail_stable_app_left :
+  forall fuel R R_tail roots out x roots_x,
+    resolve_root_set_fuel fuel R roots = Some out ->
+    singleton_store_root out = Some x ->
+    root_env_lookup x R = Some roots_x ->
+    singleton_store_root roots_x = Some x ->
+    resolve_root_set_fuel (fuel + List.length R_tail) (R ++ R_tail) roots = Some out.
+Proof.
+  induction fuel as [| fuel IH]; intros R R_tail roots out x roots_x
+      Hres Hsingle_out Hlookup_x Hsingle_x; simpl in Hres; try discriminate.
+  destruct R_tail as [| [tail_x tail_roots] R_tail']; simpl.
+  - rewrite app_nil_r. rewrite Nat.add_0_r. exact Hres.
+  - simpl.
+    destruct (singleton_store_root roots) as [root_x |] eqn:Hsingle_roots.
+    + destruct (root_env_lookup root_x R) as [env_roots |] eqn:Hlookup.
+      * rewrite (root_env_lookup_app_left root_x R
+          ((tail_x, tail_roots) :: R_tail') env_roots Hlookup).
+        destruct (singleton_store_root env_roots) as [root_y |] eqn:Hsingle_env.
+        -- destruct (ident_eqb root_x root_y) eqn:Heq.
+           ++ exact Hres.
+           ++ eapply (IH R ((tail_x, tail_roots) :: R_tail') env_roots out x roots_x); eassumption.
+        -- eapply (IH R ((tail_x, tail_roots) :: R_tail') env_roots out x roots_x); eassumption.
+      * destruct (ident_eqb root_x x) eqn:Hroot_x.
+        -- apply ident_eqb_eq in Hroot_x. subst root_x.
+           rewrite Hlookup_x in Hlookup. discriminate.
+        -- inversion Hres; subst out.
+           rewrite Hsingle_roots in Hsingle_out. inversion Hsingle_out; subst x.
+           rewrite ident_eqb_refl in Hroot_x. discriminate.
+    + exact Hres.
+Qed.
+
+Lemma place_resolved_roots_tail_stable_app_left :
+  forall R R_tail p roots x roots_x,
+    place_resolved_roots R p = Some roots ->
+    singleton_store_root roots = Some x ->
+    root_env_lookup x R = Some roots_x ->
+    singleton_store_root roots_x = Some x ->
+    place_resolved_roots (R ++ R_tail) p = Some roots.
+Proof.
+  intros R R_tail p roots x roots_x Hresolved Hsingle Hlookup Hsingle_x.
+  unfold place_resolved_roots in *.
+  destruct (place_borrow_roots R p) as [borrow_roots |] eqn:Hborrow;
+    try discriminate.
+  assert (Hborrow_tail :
+    place_borrow_roots (R ++ R_tail) p = Some borrow_roots).
+  { unfold place_borrow_roots in *.
+    destruct (place_path p) as [[y path] |] eqn:Hpath.
+    - exact Hborrow.
+    - rewrite (place_root_lookup_indirect R p Hpath) in Hborrow.
+      rewrite (place_root_lookup_indirect (R ++ R_tail) p Hpath).
+      eapply root_env_lookup_app_left. exact Hborrow. }
+  rewrite Hborrow_tail.
+  unfold resolve_root_set in *.
+  rewrite app_length.
+  change (S (Datatypes.length R + Datatypes.length R_tail)) with
+    (S (Datatypes.length R) + Datatypes.length R_tail).
+  eapply resolve_root_set_fuel_tail_stable_app_left; eassumption.
+Qed.
+
 
 Lemma place_resolved_write_writable_chain_app_left :
   forall env R R_tail Σ p,
@@ -449,6 +508,9 @@ Proof.
         rewrite (place_borrow_roots_indirect R p Hpath) in Hborrow;
         eapply root_env_lookup_app_left; exact Hborrow
     end.
+  - eapply TERS_BorrowShared_Resolved; eauto.
+    + eapply place_resolved_roots_tail_stable_app_left; eassumption.
+    + eapply root_env_lookup_app_left; eassumption.
   - eapply TERS_BorrowUnique; eauto.
   - eapply TERS_BorrowUnique_Indirect; eauto.
     match goal with
@@ -458,6 +520,9 @@ Proof.
         rewrite (place_borrow_roots_indirect R p Hpath) in Hborrow;
         eapply root_env_lookup_app_left; exact Hborrow
     end.
+  - eapply TERS_BorrowUnique_Resolved; eauto.
+    + eapply place_resolved_roots_tail_stable_app_left; eassumption.
+    + eapply root_env_lookup_app_left; eassumption.
   - eapply TERS_DerefBorrowShared; eauto.
     eapply root_env_lookup_app_left; eassumption.
   - eapply TERS_DerefBorrowShared_Indirect; eauto.

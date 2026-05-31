@@ -7030,6 +7030,20 @@ Proof.
           rho Rsrc Rr p roots Hns HnsRr Heq HnocollResolved Hresolved)
           as [rootsr [Hresolved_r Hrootsr]]
     end.
+    match goal with
+    | Hlookup : root_env_lookup ?x ?Rsrc = Some ?roots_x,
+      Heq : root_env_equiv Rr (root_env_rename rho ?Rsrc) |- _ =>
+        destruct (root_env_equiv_rename_lookup_forward rho Rsrc Rr x roots_x
+          Heq HnocollR Hlookup) as [roots_xr [Hlookup_xr Hroots_xr]]
+    end.
+    assert (Hsingle_xr :
+      singleton_store_root roots_xr = Some (lookup_rename x rho)).
+    { rewrite (singleton_store_root_equiv roots_xr
+        (root_set_rename rho roots_x) Hroots_xr).
+      apply singleton_store_root_rename_some.
+      match goal with Hsingle_x : singleton_store_root roots_x = Some x |- _ =>
+        exact Hsingle_x
+      end. }
     exists Σr, Rr, rootsr. repeat split.
     + eapply TERS_BorrowShared_Resolved.
       * eapply alpha_rename_typed_place_env_structural_forward; eauto.
@@ -7042,6 +7056,8 @@ Proof.
         match goal with Hsingle : singleton_store_root roots = Some _ |- _ =>
           exact Hsingle
         end.
+      * exact Hlookup_xr.
+      * exact Hsingle_xr.
     + exact Hctx.
     + exact HnsRr.
     + exact HRr.
@@ -7108,6 +7124,20 @@ Proof.
           rho Rsrc Rr p roots Hns HnsRr Heq HnocollResolved Hresolved)
           as [rootsr [Hresolved_r Hrootsr]]
     end.
+    match goal with
+    | Hlookup : root_env_lookup ?x ?Rsrc = Some ?roots_x,
+      Heq : root_env_equiv Rr (root_env_rename rho ?Rsrc) |- _ =>
+        destruct (root_env_equiv_rename_lookup_forward rho Rsrc Rr x roots_x
+          Heq HnocollR Hlookup) as [roots_xr [Hlookup_xr Hroots_xr]]
+    end.
+    assert (Hsingle_xr :
+      singleton_store_root roots_xr = Some (lookup_rename x rho)).
+    { rewrite (singleton_store_root_equiv roots_xr
+        (root_set_rename rho roots_x) Hroots_xr).
+      apply singleton_store_root_rename_some.
+      match goal with Hsingle_x : singleton_store_root roots_x = Some x |- _ =>
+        exact Hsingle_x
+      end. }
     exists Σr, Rr, rootsr. repeat split.
     + eapply TERS_BorrowUnique_Resolved.
       * eapply alpha_rename_typed_place_env_structural_forward; eauto.
@@ -7121,6 +7151,8 @@ Proof.
         match goal with Hsingle : singleton_store_root roots = Some _ |- _ =>
           exact Hsingle
         end.
+      * exact Hlookup_xr.
+      * exact Hsingle_xr.
     + exact Hctx.
     + exact HnsRr.
     + exact HRr.

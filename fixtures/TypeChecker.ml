@@ -11289,9 +11289,33 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                (match place_resolved_roots r p with
                 | Some roots ->
                   (match singleton_store_root roots with
-                   | Some _ ->
-                     Infer_ok ((((MkTy (UUnrestricted, (TRef ((LVar n),
-                       RShared, t_p)))), _UU03a3_), r), roots)
+                   | Some root_x ->
+                     (match root_env_lookup root_x r with
+                      | Some roots_x ->
+                        (match singleton_store_root roots_x with
+                         | Some root_y ->
+                           if ident_eqb root_x root_y
+                           then Infer_ok ((((MkTy (UUnrestricted, (TRef
+                                  ((LVar n), RShared, t_p)))), _UU03a3_), r),
+                                  roots)
+                           else (match place_borrow_roots r p with
+                                 | Some roots0 ->
+                                   Infer_ok ((((MkTy (UUnrestricted, (TRef
+                                     ((LVar n), RShared, t_p)))), _UU03a3_),
+                                     r), roots0)
+                                 | None -> Infer_err ErrContextCheckFailed)
+                         | None ->
+                           (match place_borrow_roots r p with
+                            | Some roots0 ->
+                              Infer_ok ((((MkTy (UUnrestricted, (TRef ((LVar
+                                n), RShared, t_p)))), _UU03a3_), r), roots0)
+                            | None -> Infer_err ErrContextCheckFailed))
+                      | None ->
+                        (match place_borrow_roots r p with
+                         | Some roots0 ->
+                           Infer_ok ((((MkTy (UUnrestricted, (TRef ((LVar n),
+                             RShared, t_p)))), _UU03a3_), r), roots0)
+                         | None -> Infer_err ErrContextCheckFailed))
                    | None ->
                      (match place_borrow_roots r p with
                       | Some roots0 ->
@@ -11309,9 +11333,35 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                then (match place_resolved_roots r p with
                      | Some roots ->
                        (match singleton_store_root roots with
-                        | Some _ ->
-                          Infer_ok ((((MkTy (UAffine, (TRef ((LVar n),
-                            RUnique, t_p)))), _UU03a3_), r), roots)
+                        | Some root_x ->
+                          (match root_env_lookup root_x r with
+                           | Some roots_x ->
+                             (match singleton_store_root roots_x with
+                              | Some root_y ->
+                                if ident_eqb root_x root_y
+                                then Infer_ok ((((MkTy (UAffine, (TRef ((LVar
+                                       n), RUnique, t_p)))), _UU03a3_), r),
+                                       roots)
+                                else (match place_borrow_roots r p with
+                                      | Some roots0 ->
+                                        Infer_ok ((((MkTy (UAffine, (TRef
+                                          ((LVar n), RUnique, t_p)))),
+                                          _UU03a3_), r), roots0)
+                                      | None ->
+                                        Infer_err ErrContextCheckFailed)
+                              | None ->
+                                (match place_borrow_roots r p with
+                                 | Some roots0 ->
+                                   Infer_ok ((((MkTy (UAffine, (TRef ((LVar
+                                     n), RUnique, t_p)))), _UU03a3_), r),
+                                     roots0)
+                                 | None -> Infer_err ErrContextCheckFailed))
+                           | None ->
+                             (match place_borrow_roots r p with
+                              | Some roots0 ->
+                                Infer_ok ((((MkTy (UAffine, (TRef ((LVar n),
+                                  RUnique, t_p)))), _UU03a3_), r), roots0)
+                              | None -> Infer_err ErrContextCheckFailed))
                         | None ->
                           (match place_borrow_roots r p with
                            | Some roots0 ->

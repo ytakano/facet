@@ -6691,8 +6691,33 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
                   match place_resolved_roots R p with
                   | Some roots =>
                       match singleton_store_root roots with
-                      | Some _ =>
-                          infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_p), Σ, R, roots)
+                      | Some root_x =>
+                          match root_env_lookup root_x R with
+                          | Some roots_x =>
+                              match singleton_store_root roots_x with
+                              | Some root_y =>
+                                  if ident_eqb root_x root_y
+                                  then infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_p), Σ, R, roots)
+                                  else
+                                    match place_borrow_roots R p with
+                                    | Some roots =>
+                                        infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_p), Σ, R, roots)
+                                    | None => infer_err ErrContextCheckFailed
+                                    end
+                              | None =>
+                                  match place_borrow_roots R p with
+                                  | Some roots =>
+                                      infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_p), Σ, R, roots)
+                                  | None => infer_err ErrContextCheckFailed
+                                  end
+                              end
+                          | None =>
+                              match place_borrow_roots R p with
+                              | Some roots =>
+                                  infer_ok (MkTy UUnrestricted (TRef (LVar n) RShared T_p), Σ, R, roots)
+                              | None => infer_err ErrContextCheckFailed
+                              end
+                          end
                       | None =>
                           match place_borrow_roots R p with
                           | Some roots =>
@@ -6713,8 +6738,33 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
                     match place_resolved_roots R p with
                     | Some roots =>
                         match singleton_store_root roots with
-                        | Some _ =>
-                            infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, roots)
+                        | Some root_x =>
+                            match root_env_lookup root_x R with
+                            | Some roots_x =>
+                                match singleton_store_root roots_x with
+                                | Some root_y =>
+                                    if ident_eqb root_x root_y
+                                    then infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, roots)
+                                    else
+                                      match place_borrow_roots R p with
+                                      | Some roots =>
+                                          infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, roots)
+                                      | None => infer_err ErrContextCheckFailed
+                                      end
+                                | None =>
+                                    match place_borrow_roots R p with
+                                    | Some roots =>
+                                        infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, roots)
+                                    | None => infer_err ErrContextCheckFailed
+                                    end
+                                end
+                            | None =>
+                                match place_borrow_roots R p with
+                                | Some roots =>
+                                    infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, roots)
+                                | None => infer_err ErrContextCheckFailed
+                                end
+                            end
                         | None =>
                             match place_borrow_roots R p with
                             | Some roots =>

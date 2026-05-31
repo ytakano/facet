@@ -2905,6 +2905,95 @@ Definition sctx_lookup (x : ident) (Σ : sctx) : option (Ty * binding_state) :=
 Definition sctx_lookup_mut (x : ident) (Σ : sctx) : option mutability :=
   ctx_lookup_mut x Σ.
 
+Inductive place_resolved_write_mutable_chain
+    (R : root_env) (Σ : sctx) : place -> Prop :=
+  | PRWMC_Direct : forall p,
+      place_resolved_write_direct_parent p ->
+      place_resolved_write_mutable_chain R Σ p
+  | PRWMC_Deref : forall p x,
+      place_resolved_write_mutable_chain R Σ p ->
+      place_resolved_write_target R p = Some x ->
+      sctx_lookup_mut x Σ = Some MMutable ->
+      place_resolved_write_mutable_chain R Σ (PDeref p).
+
+Fixpoint place_resolved_write_mutable_chain_b
+    (R : root_env) (Σ : sctx) (p : place) : bool :=
+  if place_resolved_write_direct_parent_b p then true
+  else match p with
+  | PDeref q =>
+      place_resolved_write_mutable_chain_b R Σ q &&
+      match place_resolved_write_target R q with
+      | Some x =>
+          match sctx_lookup_mut x Σ with
+          | Some MMutable => true
+          | _ => false
+          end
+      | None => false
+      end
+  | _ => false
+  end.
+
+Lemma place_resolved_write_mutable_chain_b_sound : forall R Σ p,
+  place_resolved_write_mutable_chain_b R Σ p = true ->
+  place_resolved_write_mutable_chain R Σ p.
+Proof.
+  intros R Σ p.
+  induction p as [x | p IH | p IH f]; intros Hchain; simpl in Hchain.
+  - discriminate.
+  - destruct (place_path p) as [[y path] |] eqn:Hpath.
+    + apply PRWMC_Direct.
+      exists p, y, path. split; reflexivity || exact Hpath.
+    + apply andb_true_iff in Hchain.
+      destruct Hchain as [Hchain Hmut].
+      destruct (place_resolved_write_target R p) as [target |] eqn:Htarget;
+        try discriminate.
+      destruct (sctx_lookup_mut target Σ) as [m |] eqn:Hlookup;
+        try discriminate.
+      destruct m; try discriminate.
+      eapply PRWMC_Deref.
+      * apply IH. exact Hchain.
+      * exact Htarget.
+      * exact Hlookup.
+  - discriminate.
+Qed.
+
+Lemma place_resolved_write_mutable_chain_shape : forall R Σ p,
+  place_resolved_write_mutable_chain R Σ p ->
+  place_resolved_write_shape p.
+Proof.
+  intros R Σ p Hchain.
+  induction Hchain.
+  - apply PRWS_Direct. exact H.
+  - apply PRWS_Deref. exact IHHchain.
+Qed.
+
+Lemma place_resolved_write_mutable_chain_instantiate : forall rho R Σ p,
+  place_resolved_write_mutable_chain R Σ p ->
+  place_resolved_write_mutable_chain (root_env_instantiate rho R) Σ p.
+Proof.
+  intros rho R Σ p Hchain.
+  induction Hchain.
+  - apply PRWMC_Direct. exact H.
+  - eapply PRWMC_Deref.
+    + exact IHHchain.
+    + apply place_resolved_write_target_instantiate. exact H.
+    + exact H0.
+Qed.
+
+Lemma place_resolved_write_mutable_chain_equiv : forall R R' Σ p,
+  root_env_equiv R R' ->
+  place_resolved_write_mutable_chain R Σ p ->
+  place_resolved_write_mutable_chain R' Σ p.
+Proof.
+  intros R R' Σ p Hequiv Hchain.
+  induction Hchain.
+  - apply PRWMC_Direct. exact H.
+  - eapply PRWMC_Deref.
+    + exact IHHchain.
+    + eapply place_resolved_write_target_equiv; eassumption.
+    + exact H0.
+Qed.
+
 Fixpoint check_make_closure_captures_sctx_base
     (env : global_env) (Ω : outlives_ctx) (Σ : sctx)
     (captures : list ident) (params : list param)
@@ -5550,7 +5639,7 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
           match infer_place_sctx env Σ p with
           | infer_err err => infer_err err
           | infer_ok T_old =>
-              if place_resolved_write_shape_b p then
+              if place_resolved_write_mutable_chain_b R Σ p then
               match place_resolved_write_target R p with
               | None => infer_err ErrNotImplemented
               | Some x =>
@@ -5636,7 +5725,7 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
               if usage_eqb (ty_usage T_old) ULinear
               then infer_err (ErrUsageMismatch (ty_usage T_old) UAffine)
               else
-              if place_resolved_write_shape_b p then
+              if place_resolved_write_mutable_chain_b R Σ p then
               match place_resolved_write_target R p with
               | None => infer_err ErrNotImplemented
               | Some x =>
@@ -6449,7 +6538,7 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
           match infer_place_sctx env Σ p with
           | infer_err err => infer_err err
           | infer_ok T_old =>
-              if place_resolved_write_shape_b p then
+              if place_resolved_write_mutable_chain_b R Σ p then
               match place_resolved_write_target R p with
               | None => infer_err ErrNotImplemented
               | Some x =>
@@ -6535,7 +6624,7 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
               if usage_eqb (ty_usage T_old) ULinear
               then infer_err (ErrUsageMismatch (ty_usage T_old) UAffine)
               else
-              if place_resolved_write_shape_b p then
+              if place_resolved_write_mutable_chain_b R Σ p then
               match place_resolved_write_target R p with
               | None => infer_err ErrNotImplemented
               | Some x =>

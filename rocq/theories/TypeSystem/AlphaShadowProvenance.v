@@ -3,6 +3,30 @@ From Facet.TypeSystem Require Export ExprFacts AlphaCore AlphaCtx AlphaPlace Alp
 From Stdlib Require Import List String Bool Lia PeanoNat Program.Equality.
 Import ListNotations.
 
+
+Lemma place_resolved_write_mutable_chain_rename :
+  forall rho R Rr Σ Σr p,
+    root_env_equiv (root_env_rename rho R) Rr ->
+    rename_no_collision_on rho (root_env_names R) ->
+    ctx_alpha rho Σ Σr ->
+    place_resolved_write_mutable_chain R Σ p ->
+    place_resolved_write_mutable_chain Rr Σr (rename_place rho p).
+Proof.
+  intros rho R Rr Σ Σr p HR Hnocoll Halpha Hchain.
+  induction Hchain.
+  - apply PRWMC_Direct.
+    apply place_resolved_write_direct_parent_rename. exact H.
+  - simpl.
+    eapply PRWMC_Deref.
+    + exact IHHchain.
+    + eapply place_resolved_write_target_equiv.
+      * exact HR.
+      * apply place_resolved_write_target_rename.
+        -- exact Hnocoll.
+        -- exact H.
+    + eapply ctx_alpha_lookup_mut_forward_any; eassumption.
+Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Shadow provenance alpha-renaming proofs                             *)
 (* ------------------------------------------------------------------ *)
@@ -4062,9 +4086,11 @@ Proof.
         -- match goal with Hpath : place_path p = None |- _ =>
              apply place_path_rename_place_none; exact Hpath
            end.
-        -- match goal with Hshape : place_resolved_write_shape p |- _ =>
-             apply place_resolved_write_shape_rename; exact Hshape
-           end.
+        -- eapply place_resolved_write_mutable_chain_rename;
+           [ apply root_env_equiv_sym; exact HRr
+           | exact HnocollR
+           | exact Hctx
+           | eassumption ].
         -- exact Htarget_r.
         -- exact Hlookup_result_r.
         -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
@@ -4246,9 +4272,11 @@ Proof.
         -- match goal with Hpath : place_path p = None |- _ =>
              apply place_path_rename_place_none; exact Hpath
            end.
-        -- match goal with Hshape : place_resolved_write_shape p |- _ =>
-             apply place_resolved_write_shape_rename; exact Hshape
-           end.
+        -- eapply place_resolved_write_mutable_chain_rename;
+           [ apply root_env_equiv_sym; exact HRr
+           | exact HnocollR
+           | exact Hctx
+           | eassumption ].
         -- exact Htarget_r.
         -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
         -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
@@ -7124,9 +7152,11 @@ Proof.
         -- match goal with Hpath : place_path p = None |- _ =>
              apply place_path_rename_place_none; exact Hpath
            end.
-        -- match goal with Hshape : place_resolved_write_shape p |- _ =>
-             apply place_resolved_write_shape_rename; exact Hshape
-           end.
+        -- eapply place_resolved_write_mutable_chain_rename;
+           [ apply root_env_equiv_sym; exact HRr
+           | exact HnocollR
+           | exact Hctx
+           | eassumption ].
         -- exact Htarget_r.
         -- exact Hlookup_result_r.
         -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
@@ -7328,9 +7358,11 @@ Proof.
         -- match goal with Hpath : place_path p = None |- _ =>
              apply place_path_rename_place_none; exact Hpath
            end.
-        -- match goal with Hshape : place_resolved_write_shape p |- _ =>
-             apply place_resolved_write_shape_rename; exact Hshape
-           end.
+        -- eapply place_resolved_write_mutable_chain_rename;
+           [ apply root_env_equiv_sym; exact HRr
+           | exact HnocollR
+           | exact Hctx
+           | eassumption ].
         -- exact Htarget_r.
         -- exact Hlookup_result_r.
         -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
@@ -7499,9 +7531,11 @@ Proof.
         -- eapply alpha_rename_typed_place_env_structural_forward; eauto.
         -- match goal with H : ty_usage T_old <> ULinear |- _ => exact H end.
         -- match goal with Hpath : place_path p = None |- _ => apply place_path_rename_place_none; exact Hpath end.
-        -- match goal with Hshape : place_resolved_write_shape p |- _ =>
-             apply place_resolved_write_shape_rename; exact Hshape
-           end.
+        -- eapply place_resolved_write_mutable_chain_rename;
+           [ apply root_env_equiv_sym; exact HRr
+           | exact HnocollR
+           | exact Hctx
+           | eassumption ].
         -- exact Htarget_r.
         -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
         -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
@@ -7673,9 +7707,11 @@ Proof.
         -- eapply alpha_rename_typed_place_env_structural_forward; eauto.
         -- match goal with H : ty_usage T_old <> ULinear |- _ => exact H end.
         -- match goal with Hpath : place_path p = None |- _ => apply place_path_rename_place_none; exact Hpath end.
-        -- match goal with Hshape : place_resolved_write_shape p |- _ =>
-             apply place_resolved_write_shape_rename; exact Hshape
-           end.
+        -- eapply place_resolved_write_mutable_chain_rename;
+           [ apply root_env_equiv_sym; exact HRr
+           | exact HnocollR
+           | exact Hctx
+           | eassumption ].
         -- exact Htarget_r.
         -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
         -- eapply alpha_rename_writable_place_env_structural_forward; eauto.

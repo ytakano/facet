@@ -125,7 +125,6 @@ Proof.
   - apply PRWS_Direct.
     apply place_resolved_write_direct_parent_rename. exact H.
   - simpl. apply PRWS_Deref. exact IHHshape.
-  - simpl. apply PRWS_Field. exact IHHshape.
 Qed.
 
 Lemma place_path_rename_place_none : forall ρ p,

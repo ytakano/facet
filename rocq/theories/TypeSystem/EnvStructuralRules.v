@@ -1143,7 +1143,7 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       roots_result x roots_old roots_new,
       typed_place_env_structural env Σ p T_old ->
       place_path p = None ->
-      place_resolved_write_shape p ->
+      place_resolved_write_mutable_chain R Σ p ->
       place_resolved_write_target R p = Some x ->
       root_env_lookup x R = Some roots_result ->
       sctx_lookup_mut x Σ = Some MMutable ->
@@ -1172,7 +1172,7 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_place_env_structural env Σ p T_old ->
       ty_usage T_old <> ULinear ->
       place_path p = None ->
-      place_resolved_write_shape p ->
+      place_resolved_write_mutable_chain R Σ p ->
       place_resolved_write_target R p = Some x ->
       sctx_lookup_mut x Σ = Some MMutable ->
       writable_place_env_structural env Σ p ->
@@ -2218,6 +2218,10 @@ Proof.
     { eapply place_resolved_write_target_equiv.
       - apply root_env_equiv_sym. exact HR0.
       - apply place_resolved_write_target_instantiate. exact Htarget. }
+    assert (Hshape0 : place_resolved_write_mutable_chain R0 Σ p).
+    { eapply place_resolved_write_mutable_chain_equiv.
+      - apply root_env_equiv_sym. exact HR0.
+      - apply place_resolved_write_mutable_chain_instantiate. exact Hshape. }
     assert (Hlookup_result_inst :
       root_env_lookup x (root_env_instantiate rho R) =
       Some (root_set_instantiate rho roots_result)).
@@ -2237,7 +2241,7 @@ Proof.
     exists (root_env_update x (root_set_union roots_old0 roots_new0) R10),
       roots_result0.
     split; [| split; [| split]].
-    + eapply TER_Replace_Resolved; eauto.
+    + eapply TER_Replace_Resolved; eauto; exact Hshape0.
     + apply root_env_no_shadow_update. exact HnsR10.
     + eapply root_env_equiv_trans with
         (R' := root_env_update x
@@ -2287,6 +2291,10 @@ Proof.
     { eapply place_resolved_write_target_equiv.
       - apply root_env_equiv_sym. exact HR0.
       - apply place_resolved_write_target_instantiate. exact Htarget. }
+    assert (Hshape0 : place_resolved_write_mutable_chain R0 Σ p).
+    { eapply place_resolved_write_mutable_chain_equiv.
+      - apply root_env_equiv_sym. exact HR0.
+      - apply place_resolved_write_mutable_chain_instantiate. exact Hshape. }
     destruct (IHe_new Hfresh R0 HnsR HnsR0 HR0)
       as [R10 [roots_new0 [He_new0 [HnsR10 [HR10 Hroots_new0]]]]].
     assert (Hlookup_old_inst :
@@ -2299,7 +2307,7 @@ Proof.
     exists (root_env_update x (root_set_union roots_old0 roots_new0) R10),
       [].
     split; [| split; [| split]].
-    + eapply TER_Assign_Resolved; eauto.
+    + eapply TER_Assign_Resolved; eauto; exact Hshape0.
     + apply root_env_no_shadow_update. exact HnsR10.
     + eapply root_env_equiv_trans with
         (R' := root_env_update x

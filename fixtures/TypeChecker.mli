@@ -279,8 +279,6 @@ val place_path : place -> (ident * field_path) option
 
 val place_resolved_write_direct_parent_b : place -> bool
 
-val place_resolved_write_shape_b : place -> bool
-
 val place_suffix_path : place -> field_path
 
 type field_def = { field_name : string; field_mutability : mutability;
@@ -876,6 +874,8 @@ val sctx_eqb : sctx -> sctx -> bool
 val sctx_lookup : ident -> sctx -> (ty * binding_state) option
 
 val sctx_lookup_mut : ident -> sctx -> mutability option
+
+val place_resolved_write_mutable_chain_b : root_env -> sctx -> place -> bool
 
 val check_make_closure_captures_sctx_base :
   global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list

@@ -65,7 +65,8 @@ Latest full `sh tests/run.sh` baseline (2026-05-30): 29 valid-test failures; inv
 16. Done: route shadow-safe resolved `EAssign`/`EReplace` through target root lookup; full Rocq/extraction and OCaml build pass.
 17. Done: align resolved write Prop rules with checker-enforced target mutability.
 18. Done: add direct resolved write runtime target helper.
-19. In progress: indirect resolved assign/replace prefix branches remain.
+19. Done: add one-hop indirect resolved write target helper.
+20. In progress: indirect resolved assign/replace prefix branches remain.
 
 The resolver remains narrow: it follows bounded singleton store-root chains and
 does not accept ambiguous/non-singleton update targets.

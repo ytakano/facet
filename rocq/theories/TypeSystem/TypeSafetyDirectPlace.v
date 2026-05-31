@@ -206,6 +206,40 @@ Proof.
 Qed.
 
 
+
+Lemma value_lookup_path_app_some :
+  forall v p q v_mid v_final,
+    value_lookup_path v p = Some v_mid ->
+    value_lookup_path v_mid q = Some v_final ->
+    value_lookup_path v (p ++ q) = Some v_final.
+Proof.
+  intros v p.
+  revert v.
+  induction p as [|seg rest IH]; intros v q v_mid v_final Hmid Hfinal.
+  - simpl in Hmid. inversion Hmid; subst. exact Hfinal.
+  - simpl in *.
+    destruct v; try discriminate.
+    match goal with
+    | H : match ?lookup_result with Some fv => value_lookup_path fv rest | None => None end = Some v_mid |- _ =>
+        destruct lookup_result as [fv |] eqn:Hfield; try discriminate
+    end.
+    eapply IH; eassumption.
+Qed.
+
+Lemma sctx_lookup_mut_some_lookup :
+  forall x Σ m,
+    sctx_lookup_mut x Σ = Some m ->
+    exists T st,
+      sctx_lookup x Σ = Some (T, st).
+Proof.
+  intros x Σ m Hmut.
+  unfold sctx_lookup_mut, sctx_lookup in *.
+  induction Σ as [|[[[y T] st] my] rest IH]; simpl in *; try discriminate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - exists T, st. reflexivity.
+  - apply IH. exact Hmut.
+Qed.
+
 Lemma needs_consume_false_usage :
   forall T,
     needs_consume T = false ->

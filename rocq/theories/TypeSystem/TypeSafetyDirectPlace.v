@@ -112,7 +112,45 @@ Proof.
     as [T_eval [Htype_path_se Heq_path]].
   destruct (value_has_type_path_exists env s (se_val se) (se_ty se)
               path_static T_eval Hvroot_se Htype_path_se)
-    as [v_target [Hvalue_path _]].
+    as [v_target [Hvalue_path Hvalue_typed]].
+  exists se, v_target, T_eval.
+  repeat split; assumption.
+Qed.
+
+Lemma eval_place_direct_runtime_target_has_type :
+  forall env Σ s p T x_static path_static x_eval path_eval,
+    store_typed env s Σ ->
+    typed_place_env_structural env Σ p T ->
+    place_path p = Some (x_static, path_static) ->
+    eval_place s p x_eval path_eval ->
+    exists se v_target T_eval,
+      store_lookup x_eval s = Some se /\
+      value_lookup_path (se_val se) path_eval = Some v_target /\
+      type_lookup_path env (se_ty se) path_eval = Some T_eval /\
+      ty_lifetime_equiv T_eval T /\
+      value_has_type env s v_target T_eval.
+Proof.
+  intros env Σ s p T x_static path_static x_eval path_eval
+    Hstore Hplace Hpath_static Heval_place.
+  destruct (eval_place_matches_place_path s p x_eval path_eval
+              x_static path_static Heval_place Hpath_static)
+    as [Hx Hpath].
+  subst x_eval path_eval.
+  destruct (typed_place_direct_lookup env Σ p T x_static path_static
+              Hplace Hpath_static)
+    as [T_root [st [HΣ [_ Htype_path]]]].
+  destruct (store_typed_lookup_sctx env s Σ x_static T_root st Hstore HΣ)
+    as [se [Hlookup [_ [Hse_ty [_ Hvroot]]]]].
+  assert (Hvroot_se : value_has_type env s (se_val se) (se_ty se)).
+  { eapply VHT_LifetimeEquiv.
+    - exact Hvroot.
+    - apply ty_lifetime_equiv_sym. exact Hse_ty. }
+  destruct (type_lookup_path_lifetime_equiv env (se_ty se) T_root
+              path_static T Hse_ty Htype_path)
+    as [T_eval [Htype_path_se Heq_path]].
+  destruct (value_has_type_path_exists env s (se_val se) (se_ty se)
+              path_static T_eval Hvroot_se Htype_path_se)
+    as [v_target [Hvalue_path Hvalue_typed]].
   exists se, v_target, T_eval.
   repeat split; assumption.
 Qed.
@@ -1094,7 +1132,46 @@ Proof.
     as [T_eval [Htype_path_se Heq_path]].
   destruct (value_has_type_path_exists env s (se_val se) (se_ty se)
               path_static T_eval Hvroot_se Htype_path_se)
-    as [v_target [Hvalue_path _]].
+    as [v_target [Hvalue_path Hvalue_typed]].
+  exists se, v_target, T_eval.
+  repeat split; assumption.
+Qed.
+
+Lemma eval_place_direct_runtime_target_has_type_prefix :
+  forall env Σ s p T x_static path_static x_eval path_eval,
+    store_typed_prefix env s Σ ->
+    typed_place_env_structural env Σ p T ->
+    place_path p = Some (x_static, path_static) ->
+    eval_place s p x_eval path_eval ->
+    exists se v_target T_eval,
+      store_lookup x_eval s = Some se /\
+      value_lookup_path (se_val se) path_eval = Some v_target /\
+      type_lookup_path env (se_ty se) path_eval = Some T_eval /\
+      ty_lifetime_equiv T_eval T /\
+      value_has_type env s v_target T_eval.
+Proof.
+  intros env Σ s p T x_static path_static x_eval path_eval
+    Hstore Hplace Hpath_static Heval_place.
+  destruct (eval_place_matches_place_path s p x_eval path_eval
+              x_static path_static Heval_place Hpath_static)
+    as [Hx Hpath].
+  subst x_eval path_eval.
+  destruct (typed_place_direct_lookup env Σ p T x_static path_static
+              Hplace Hpath_static)
+    as [T_root [st [HΣ [_ Htype_path]]]].
+  destruct (store_typed_prefix_lookup_sctx
+              env s Σ x_static T_root st Hstore HΣ)
+    as [se [Hlookup [_ [Hse_ty [_ Hvroot]]]]].
+  assert (Hvroot_se : value_has_type env s (se_val se) (se_ty se)).
+  { eapply VHT_LifetimeEquiv.
+    - exact Hvroot.
+    - apply ty_lifetime_equiv_sym. exact Hse_ty. }
+  destruct (type_lookup_path_lifetime_equiv env (se_ty se) T_root
+              path_static T Hse_ty Htype_path)
+    as [T_eval [Htype_path_se Heq_path]].
+  destruct (value_has_type_path_exists env s (se_val se) (se_ty se)
+              path_static T_eval Hvroot_se Htype_path_se)
+    as [v_target [Hvalue_path Hvalue_typed]].
   exists se, v_target, T_eval.
   repeat split; assumption.
 Qed.

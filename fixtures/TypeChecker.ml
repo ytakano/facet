@@ -12507,15 +12507,16 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
     (fun fuel' ->
     match infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r
             _UU03a3_ e with
-    | Infer_ok _ ->
+    | Infer_ok p ->
+      let (_, roots) = p in
       (match e with
        | ELet (m, x, t_hidden, e1, e2) ->
          (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
                   _UU03a9_ n r _UU03a3_ e1 with
-          | Infer_ok p ->
-            let (p0, roots1) = p in
-            let (p1, r1) = p0 in
-            let (t1, _UU03a3_1) = p1 in
+          | Infer_ok p0 ->
+            let (p1, roots1) = p0 in
+            let (p2, r1) = p1 in
+            let (t1, _UU03a3_1) = p2 in
             (&&)
               ((&&)
                 ((&&) (ty_compatible_b _UU03a9_ t1 t_hidden)
@@ -12531,10 +12532,10 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
                    (match infer_core_env_state_fuel_roots_shadow_safe fuel'
                             env _UU03a9_ n (root_env_add x roots1 r1)
                             (sctx_add x t_hidden m _UU03a3_1) e2 with
-                    | Infer_ok p2 ->
-                      let (p3, roots2) = p2 in
-                      let (p4, r2) = p3 in
-                      let (_, _UU03a3_2) = p4 in
+                    | Infer_ok p3 ->
+                      let (p4, roots2) = p3 in
+                      let (p5, r2) = p4 in
+                      let (_, _UU03a3_2) = p5 in
                       (&&)
                         ((&&)
                           ((&&) (sctx_check_ok env x t_hidden _UU03a3_2)
@@ -12548,10 +12549,10 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
        | ELetInfer (m, x, e1, e2) ->
          (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
                   _UU03a9_ n r _UU03a3_ e1 with
-          | Infer_ok p ->
-            let (p0, roots1) = p in
-            let (p1, r1) = p0 in
-            let (t1, _UU03a3_1) = p1 in
+          | Infer_ok p0 ->
+            let (p1, roots1) = p0 in
+            let (p2, r1) = p1 in
+            let (t1, _UU03a3_1) = p2 in
             (&&)
               ((&&) (non_function_value_ty_b t1)
                 (check_expr_root_shadow_store_safe_narrow_summary_fuel fuel'
@@ -12565,10 +12566,10 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
                    (match infer_core_env_state_fuel_roots_shadow_safe fuel'
                             env _UU03a9_ n (root_env_add x roots1 r1)
                             (sctx_add x t1 m _UU03a3_1) e2 with
-                    | Infer_ok p2 ->
-                      let (p3, roots2) = p2 in
-                      let (p4, r2) = p3 in
-                      let (_, _UU03a3_2) = p4 in
+                    | Infer_ok p3 ->
+                      let (p4, roots2) = p3 in
+                      let (p5, r2) = p4 in
+                      let (_, _UU03a3_2) = p5 in
                       (&&)
                         ((&&)
                           ((&&) (sctx_check_ok env x t1 _UU03a3_2)
@@ -12583,10 +12584,20 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
          (&&) (store_safe_function_value_call_args_b env args)
            (check_supported_non_type_generic_function_value_call_expr env
              _UU03a9_ n r (ctx_of_sctx _UU03a3_) callee)
-       | EBorrow (_, p) ->
-         (match place_path p with
+       | EBorrow (rk, p0) ->
+         (match place_path p0 with
           | Some _ -> true
-          | None -> false)
+          | None ->
+            (match rk with
+             | RShared -> false
+             | RUnique ->
+               (&&) (place_resolved_write_direct_parent_b p0)
+                 (match place_resolved_write_target r p0 with
+                  | Some root_x ->
+                    (match singleton_store_root roots with
+                     | Some root_y -> ident_eqb root_x root_y
+                     | None -> false)
+                  | None -> false)))
        | _ -> false)
     | Infer_err _ -> false)
     fuel

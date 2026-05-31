@@ -8628,7 +8628,20 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_fuel
       | EBorrow rk p =>
           match place_path p with
           | Some _ => true
-          | None => false
+          | None =>
+              match rk with
+              | RShared => false
+              | RUnique =>
+                  place_resolved_write_direct_parent_b p &&
+                  match place_resolved_write_target R p with
+                  | Some root_x =>
+                      match singleton_store_root roots with
+                      | Some root_y => ident_eqb root_x root_y
+                      | None => false
+                      end
+                  | None => false
+                  end
+              end
           end
       | ECallExpr callee args =>
           store_safe_function_value_call_args_b env args &&

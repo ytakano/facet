@@ -593,7 +593,16 @@ Inductive expr_root_shadow_store_safe_narrow_summary
       place_path p = Some (x, path) ->
       singleton_store_root roots = Some x ->
       expr_root_shadow_store_safe_narrow_summary
-        env Omega n R Σ (EBorrow rk p) T Σ' R' roots roots.
+        env Omega n R Σ (EBorrow rk p) T Σ' R' roots roots
+  | ERSSN_BorrowUniqueResolvedDirect : forall R Σ p T Σ' R' roots x,
+      typed_env_roots_shadow_safe env Omega n R Σ (EBorrow RUnique p)
+        T Σ' R' roots ->
+      place_path p = None ->
+      place_resolved_write_direct_parent p ->
+      place_resolved_write_target R p = Some x ->
+      singleton_store_root roots = Some x ->
+      expr_root_shadow_store_safe_narrow_summary
+        env Omega n R Σ (EBorrow RUnique p) T Σ' R' roots roots.
 
 Lemma disjoint_names_evar_of_call_expr :
   forall x args ys,
@@ -770,6 +779,7 @@ Proof.
   - exact H2.
   - eapply TERS_Let; eauto.
   - eapply TERS_LetInfer; eauto.
+  - exact H.
   - exact H.
 Qed.
 
@@ -974,6 +984,7 @@ Proof.
   - exact IHHsummary2.
   - exact IHHsummary2.
   - apply root_set_equiv_refl.
+  - apply root_set_equiv_refl.
 Qed.
 
 Lemma expr_root_shadow_store_safe_narrow_summary_ret_roots_exclude :
@@ -1065,6 +1076,15 @@ Proof.
       * unfold root_env_tail_fresh_names. intros y Hy. contradiction.
     + exact H0.
     + exact H1.
+  - eapply ERSSN_BorrowUniqueResolvedDirect.
+    + eapply typed_env_roots_shadow_safe_tail_frame.
+      * exact H.
+      * unfold root_env_tail_fresh_names. intros y Hy. contradiction.
+    + exact H0.
+    + exact H1.
+    + eapply place_resolved_write_target_app_left.
+      exact H2.
+    + exact H3.
 Qed.
 
 
@@ -1106,7 +1126,8 @@ Proof.
       ret_roots1 ret_roots Hsummary1 IH1 Hnonfun Hlookup
       Hexcl_roots1 Hexcl_env1 Hsummary2 IH2 Hcheck Hexcl_roots2
       Hexcl_env2
-    | R Σ rk p T Σ' R' roots x path Htyped Hpath Hsingle ];
+    | R Σ rk p T Σ' R' roots x path Htyped Hpath Hsingle
+    | R Σ p T Σ' R' roots x Htyped Hpath Hdirect Htarget Hsingle ];
     intros rho Rr0 Σr0 er used used' Hctx HnsR HnsRr HRr Hkeys
       Hroots HnocollR HnocollR' Hctx_used Hrange_used Hdisj Hrename.
   - destruct (alpha_rename_typed_env_roots_shadow_safe_full_support_forward
@@ -1631,6 +1652,28 @@ Proof.
           (root_set_rename rho roots) Hrootsr).
         apply singleton_store_root_rename_some. exact Hsingle.
     + repeat split; try eassumption; try apply Hrootsr.
+
+  - destruct (alpha_rename_typed_env_roots_borrow_shadow_safe_support_forward
+      env Omega n rho R Rr0 Σ Σr0 RUnique p er used used' T Σ' R' roots
+      Htyped Hctx HnsR HnsRr HRr Hkeys Hroots HnocollR HnocollR'
+      Hctx_used Hrange_used Hdisj Hrename)
+      as [Σr' [Rr' [rootsr [Htypedr [Hctxr [Hnsr [HRr' Hrootsr]]]]]]].
+    simpl in Hrename. injection Hrename as <- <-.
+    exists Σr', Rr', rootsr, rootsr.
+    split.
+    + eapply ERSSN_BorrowUniqueResolvedDirect.
+      * exact Htypedr.
+      * eapply RootProvenance.place_path_rename_place_none. exact Hpath.
+      * apply place_resolved_write_direct_parent_rename. exact Hdirect.
+      * eapply place_resolved_write_target_equiv.
+        -- apply root_env_equiv_sym. exact HRr.
+        -- apply place_resolved_write_target_rename.
+           ++ exact HnocollR.
+           ++ exact Htarget.
+      * rewrite (singleton_store_root_equiv rootsr
+          (root_set_rename rho roots) Hrootsr).
+        apply singleton_store_root_rename_some. exact Hsingle.
+    + repeat split; try eassumption; try apply Hrootsr.
 Qed.
 
 Lemma expr_root_shadow_store_safe_narrow_summary_instantiate_fresh :
@@ -1851,6 +1894,23 @@ Proof.
           (root_set_instantiate rho roots) Hroots0).
         apply root_set_instantiate_singleton_store_root. exact H1.
     + split; [exact Hns0 | split; [exact HRborrow0 | exact Hroots0]].
+  - destruct (typed_env_roots_shadow_safe_instantiate_fresh
+      env Omega n rho R Σ (EBorrow RUnique p) T Σ' R' roots
+      R0 H Hfresh HnsR HnsR0 HR0)
+      as (Rborrow0 & roots0 & Htyped0 & Hns0 & HRborrow0 & Hroots0).
+    exists Rborrow0, roots0, roots0. split.
+    + eapply ERSSN_BorrowUniqueResolvedDirect.
+      * exact Htyped0.
+      * exact H0.
+      * exact H1.
+      * eapply place_resolved_write_target_equiv.
+        -- apply root_env_equiv_sym. exact HR0.
+        -- apply place_resolved_write_target_instantiate. exact H2.
+      * rewrite (singleton_store_root_equiv roots0
+          (root_set_instantiate rho roots) Hroots0).
+        apply root_set_instantiate_singleton_store_root. exact H3.
+    + split; [exact Hns0 | split; [exact HRborrow0 | exact Hroots0]].
+
 Qed.
 
 
@@ -1994,13 +2054,29 @@ Proof.
       pose proof (infer_core_env_state_fuel_roots_shadow_safe_sound
         (S fuel') env Omega n R Σ (EBorrow r p) T Σ' R' roots Hinfer)
         as Htyped_borrow.
-      destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
-      exists roots.
-      eapply ERSSN_BorrowDirect.
-      * exact Htyped_borrow.
-      * exact Hpath.
-      * eapply typed_env_roots_shadow_safe_borrow_direct_singleton_store_root;
-          eassumption.
+      destruct (place_path p) as [[x path] |] eqn:Hpath.
+      * exists roots.
+        eapply ERSSN_BorrowDirect.
+        -- exact Htyped_borrow.
+        -- exact Hpath.
+        -- eapply typed_env_roots_shadow_safe_borrow_direct_singleton_store_root;
+             eassumption.
+      * destruct r; try discriminate.
+        destruct (place_resolved_write_direct_parent_b p) eqn:Hdirect;
+          try discriminate.
+        destruct (place_resolved_write_target R p) as [root_x |] eqn:Htarget;
+          try discriminate.
+        destruct (singleton_store_root roots) as [root_y |] eqn:Hsingle;
+          try discriminate.
+        destruct (ident_eqb root_x root_y) eqn:Heq; try discriminate.
+        apply ident_eqb_eq in Heq. subst root_y.
+        exists roots.
+        eapply ERSSN_BorrowUniqueResolvedDirect.
+        -- exact Htyped_borrow.
+        -- exact Hpath.
+        -- apply place_resolved_write_direct_parent_b_sound. exact Hdirect.
+        -- exact Htarget.
+        -- exact Hsingle.
 Qed.
 
 Lemma check_expr_root_shadow_store_safe_narrow_summary_sound :
@@ -2692,6 +2768,110 @@ Proof.
       try exact Hroots; try exact Hvalue_roots; try exact Hrootset_named;
       try exact Hshadow; try exact Hrn; try exact Hnamed; try exact Hkeys;
       try exact Hsummary_store.
+  - destruct H1 as [q [qx [qpath [Hp Hqpath]]]]. subst p.
+    inversion Heval; subst.
+    inversion H; subst; try congruence.
+    + inversion H6; subst. inversion H8; subst.
+      assert (HTeq : T = T0).
+      { eapply typed_place_env_structural_functional.
+        - eapply TPES_Deref. exact H7.
+        - exact H4. }
+      subst T0.
+      destruct (eval_place_direct_runtime_target_has_type
+        env Σ' s' q (MkTy u (TRef la RUnique T))
+        qx qpath r rpath Hstore H7 Hqpath H9)
+        as [se_parent [v_parent [T_parent
+          [Hlookup_parent [Hvalue_parent [Htype_parent
+            [Hequiv_parent Hparent_value]]]]]]].
+      rewrite H11 in Hlookup_parent.
+      inversion Hlookup_parent; subst se_parent.
+      rewrite H13 in Hvalue_parent.
+      inversion Hvalue_parent; subst v_parent.
+      assert (Hparent_ref :
+        value_has_type env s' (VRef x0 path)
+          (MkTy u (TRef la RUnique T))).
+      { eapply VHT_LifetimeEquiv.
+        - exact Hparent_value.
+        - exact Hequiv_parent. }
+      destruct (value_has_type_unique_ref_target_lifetime_equiv
+        env s' x0 path (MkTy u (TRef la RUnique T)) u la T
+        Hparent_ref (ty_lifetime_equiv_refl _))
+        as [se_target [v_target [T_target
+          [Hlookup_target [Hvalue_target [Htype_target Hequiv_target]]]]]].
+      assert (Hvalue :
+        value_has_type env s' (VRef x0 path)
+          (MkTy UAffine (TRef (LVar n) RUnique T))).
+      { eapply VHT_LifetimeEquiv with
+          (T_actual := MkTy UAffine (TRef (LVar n) RUnique T_target)).
+        - eapply VHT_Ref; eassumption.
+        - constructor. exact Hequiv_target. }
+      destruct (eval_place_resolved_write_target_ref_runtime_root
+        R' s' (PDeref q) x0 path roots x Hroots H8 H2 H3)
+        as [Hxroot Hvalue_roots].
+      subst x0.
+      assert (Hrootset_named : root_set_store_roots_named roots s').
+      { unfold root_set_store_roots_named. intros z Hin.
+        assert (Hz : z = x).
+        { destruct (singleton_store_root_some_equiv roots x H3 (RStore z))
+            as [Hto _].
+          specialize (Hto Hin). simpl in Hto.
+          destruct Hto as [Hz | []]. inversion Hz. reflexivity. }
+        subst z. eapply value_has_type_vref_store_name. exact Hvalue. }
+      repeat split; try exact Hstore; try exact Hvalue; try exact Hroots;
+        try exact Hvalue_roots; try exact Hrootset_named; try exact Hshadow;
+        try exact Hrn; try exact Hnamed; try exact Hkeys; try exact Hsummary_store;
+        eauto.
+    + inversion H6; subst. inversion H8; subst.
+      assert (HTeq : T = T0).
+      { eapply typed_place_env_structural_functional.
+        - eapply TPES_Deref. exact H11.
+        - exact H4. }
+      subst T0.
+      destruct (eval_place_direct_runtime_target_has_type
+        env Σ' s' q (MkTy u (TRef la RUnique T))
+        qx qpath r rpath Hstore H11 Hqpath H12)
+        as [se_parent [v_parent [T_parent
+          [Hlookup_parent [Hvalue_parent [Htype_parent
+            [Hequiv_parent Hparent_value]]]]]]].
+      rewrite H14 in Hlookup_parent.
+      inversion Hlookup_parent; subst se_parent.
+      rewrite H16 in Hvalue_parent.
+      inversion Hvalue_parent; subst v_parent.
+      assert (Hparent_ref :
+        value_has_type env s' (VRef x0 path)
+          (MkTy u (TRef la RUnique T))).
+      { eapply VHT_LifetimeEquiv.
+        - exact Hparent_value.
+        - exact Hequiv_parent. }
+      destruct (value_has_type_unique_ref_target_lifetime_equiv
+        env s' x0 path (MkTy u (TRef la RUnique T)) u la T
+        Hparent_ref (ty_lifetime_equiv_refl _))
+        as [se_target [v_target [T_target
+          [Hlookup_target [Hvalue_target [Htype_target Hequiv_target]]]]]].
+      assert (Hvalue :
+        value_has_type env s' (VRef x0 path)
+          (MkTy UAffine (TRef (LVar n) RUnique T))).
+      { eapply VHT_LifetimeEquiv with
+          (T_actual := MkTy UAffine (TRef (LVar n) RUnique T_target)).
+        - eapply VHT_Ref; eassumption.
+        - constructor. exact Hequiv_target. }
+      destruct (eval_place_resolved_write_target_ref_runtime_root
+        R' s' (PDeref q) x0 path roots x Hroots H8 H2 H3)
+        as [Hxroot Hvalue_roots].
+      subst x0.
+      assert (Hrootset_named : root_set_store_roots_named roots s').
+      { unfold root_set_store_roots_named. intros z Hin.
+        assert (Hz : z = x).
+        { destruct (singleton_store_root_some_equiv roots x H3 (RStore z))
+            as [Hto _].
+          specialize (Hto Hin). simpl in Hto.
+          destruct Hto as [Hz | []]. inversion Hz. reflexivity. }
+        subst z. eapply value_has_type_vref_store_name. exact Hvalue. }
+      repeat split; try exact Hstore; try exact Hvalue; try exact Hroots;
+        try exact Hvalue_roots; try exact Hrootset_named; try exact Hshadow;
+        try exact Hrn; try exact Hnamed; try exact Hkeys; try exact Hsummary_store;
+        eauto.
+
 Qed.
 
 Definition callee_body_root_shadow_store_safe_narrow_summary
@@ -2967,6 +3147,21 @@ Proof.
     + exact H3.
 Qed.
 
+Lemma place_under_unique_ref_structural_global_env_with_local_bounds :
+  forall env bounds Sigma p,
+    place_under_unique_ref_structural env Sigma p ->
+    place_under_unique_ref_structural
+      (global_env_with_local_bounds env bounds) Sigma p.
+Proof.
+  intros env bounds Sigma p H.
+  induction H.
+  - eapply PUURS_Deref.
+    eapply typed_place_env_structural_global_env_with_local_bounds.
+    exact H.
+  - eapply PUURS_Field.
+    exact IHplace_under_unique_ref_structural.
+Qed.
+
 Lemma expr_root_shadow_store_safe_narrow_summary_global_env_with_local_bounds :
   forall env bounds Omega n R Sigma e T Sigma' R' roots ret_roots,
     expr_root_shadow_store_safe_narrow_summary
@@ -3021,6 +3216,22 @@ Proof.
         -- exact H12.
       * exact H0.
       * exact H1.
+  - eapply ERSSN_BorrowUniqueResolvedDirect.
+    + inversion H; subst; try congruence.
+      * eapply TERS_BorrowUnique_Indirect; try eassumption.
+        -- eapply typed_place_env_structural_global_env_with_local_bounds.
+           eassumption.
+        -- eapply place_under_unique_ref_structural_global_env_with_local_bounds.
+           eassumption.
+      * eapply TERS_BorrowUnique_Resolved; try eassumption.
+        -- eapply typed_place_env_structural_global_env_with_local_bounds.
+           eassumption.
+        -- eapply place_under_unique_ref_structural_global_env_with_local_bounds.
+           eassumption.
+    + exact H0.
+    + exact H1.
+    + exact H2.
+    + exact H3.
 Qed.
 
 Lemma callee_body_root_shadow_store_safe_narrow_summary_global_env_with_local_bounds :
@@ -5488,6 +5699,110 @@ Proof.
       try exact Hroots; try exact Hvalue_roots; try exact Hrootset_named;
       try exact Hshadow; try exact Hrn; try exact Hnamed; try exact Hkeys;
       try exact Hsummary_store.
+
+  - destruct H1 as [q [qx [qpath [Hp Hqpath]]]]. subst p.
+    inversion Heval; subst.
+    inversion H; subst; try congruence.
+    + inversion H6; subst. inversion H8; subst.
+      assert (HTeq : T = T0).
+      { eapply typed_place_env_structural_functional.
+        - eapply TPES_Deref. exact H7.
+        - exact H4. }
+      subst T0.
+      destruct (eval_place_direct_runtime_target_has_type_prefix
+        env Σ' s' q (MkTy u (TRef la RUnique T))
+        qx qpath r rpath Hstore H7 Hqpath H9)
+        as [se_parent [v_parent [T_parent
+          [Hlookup_parent [Hvalue_parent [Htype_parent
+            [Hequiv_parent Hparent_value]]]]]]].
+      rewrite H11 in Hlookup_parent.
+      inversion Hlookup_parent; subst se_parent.
+      rewrite H13 in Hvalue_parent.
+      inversion Hvalue_parent; subst v_parent.
+      assert (Hparent_ref :
+        value_has_type env s' (VRef x0 path)
+          (MkTy u (TRef la RUnique T))).
+      { eapply VHT_LifetimeEquiv.
+        - exact Hparent_value.
+        - exact Hequiv_parent. }
+      destruct (value_has_type_unique_ref_target_lifetime_equiv
+        env s' x0 path (MkTy u (TRef la RUnique T)) u la T
+        Hparent_ref (ty_lifetime_equiv_refl _))
+        as [se_target [v_target [T_target
+          [Hlookup_target [Hvalue_target [Htype_target Hequiv_target]]]]]].
+      assert (Hvalue :
+        value_has_type env s' (VRef x0 path)
+          (MkTy UAffine (TRef (LVar n) RUnique T))).
+      { eapply VHT_LifetimeEquiv with
+          (T_actual := MkTy UAffine (TRef (LVar n) RUnique T_target)).
+        - eapply VHT_Ref; eassumption.
+        - constructor. exact Hequiv_target. }
+      destruct (eval_place_resolved_write_target_ref_runtime_root
+        R' s' (PDeref q) x0 path roots x Hroots H8 H2 H3)
+        as [Hxroot Hvalue_roots].
+      subst x0.
+      assert (Hrootset_named : root_set_store_roots_named roots s').
+      { unfold root_set_store_roots_named. intros z Hin.
+        assert (Hz : z = x).
+        { destruct (singleton_store_root_some_equiv roots x H3 (RStore z))
+            as [Hto _].
+          specialize (Hto Hin). simpl in Hto.
+          destruct Hto as [Hz | []]. inversion Hz. reflexivity. }
+        subst z. eapply value_has_type_vref_store_name. exact Hvalue. }
+      repeat split; try exact Hstore; try exact Hvalue; try exact Hroots;
+        try exact Hvalue_roots; try exact Hrootset_named; try exact Hshadow;
+        try exact Hrn; try exact Hnamed; try exact Hkeys; try exact Hsummary_store;
+        eauto.
+    + inversion H6; subst. inversion H8; subst.
+      assert (HTeq : T = T0).
+      { eapply typed_place_env_structural_functional.
+        - eapply TPES_Deref. exact H11.
+        - exact H4. }
+      subst T0.
+      destruct (eval_place_direct_runtime_target_has_type_prefix
+        env Σ' s' q (MkTy u (TRef la RUnique T))
+        qx qpath r rpath Hstore H11 Hqpath H12)
+        as [se_parent [v_parent [T_parent
+          [Hlookup_parent [Hvalue_parent [Htype_parent
+            [Hequiv_parent Hparent_value]]]]]]].
+      rewrite H14 in Hlookup_parent.
+      inversion Hlookup_parent; subst se_parent.
+      rewrite H16 in Hvalue_parent.
+      inversion Hvalue_parent; subst v_parent.
+      assert (Hparent_ref :
+        value_has_type env s' (VRef x0 path)
+          (MkTy u (TRef la RUnique T))).
+      { eapply VHT_LifetimeEquiv.
+        - exact Hparent_value.
+        - exact Hequiv_parent. }
+      destruct (value_has_type_unique_ref_target_lifetime_equiv
+        env s' x0 path (MkTy u (TRef la RUnique T)) u la T
+        Hparent_ref (ty_lifetime_equiv_refl _))
+        as [se_target [v_target [T_target
+          [Hlookup_target [Hvalue_target [Htype_target Hequiv_target]]]]]].
+      assert (Hvalue :
+        value_has_type env s' (VRef x0 path)
+          (MkTy UAffine (TRef (LVar n) RUnique T))).
+      { eapply VHT_LifetimeEquiv with
+          (T_actual := MkTy UAffine (TRef (LVar n) RUnique T_target)).
+        - eapply VHT_Ref; eassumption.
+        - constructor. exact Hequiv_target. }
+      destruct (eval_place_resolved_write_target_ref_runtime_root
+        R' s' (PDeref q) x0 path roots x Hroots H8 H2 H3)
+        as [Hxroot Hvalue_roots].
+      subst x0.
+      assert (Hrootset_named : root_set_store_roots_named roots s').
+      { unfold root_set_store_roots_named. intros z Hin.
+        assert (Hz : z = x).
+        { destruct (singleton_store_root_some_equiv roots x H3 (RStore z))
+            as [Hto _].
+          specialize (Hto Hin). simpl in Hto.
+          destruct Hto as [Hz | []]. inversion Hz. reflexivity. }
+        subst z. eapply value_has_type_vref_store_name. exact Hvalue. }
+      repeat split; try exact Hstore; try exact Hvalue; try exact Hroots;
+        try exact Hvalue_roots; try exact Hrootset_named; try exact Hshadow;
+        try exact Hrn; try exact Hnamed; try exact Hkeys; try exact Hsummary_store;
+        eauto.
 Qed.
 
 
@@ -5732,6 +6047,112 @@ Proof.
       try exact Hroots; try exact Hvalue_roots; try exact Hrootset_named;
       try exact Hshadow; try exact Hrn; try exact Hnamed; try exact Hkeys;
       try exact Hsummary_store.
+
+  - destruct H1 as [q [qx [qpath [Hp Hqpath]]]]. subst p.
+    inversion Heval; subst.
+    inversion H; subst; try congruence.
+    + inversion H6; subst. inversion H8; subst.
+      assert (HTeq : T = T0).
+      { eapply typed_place_env_structural_functional.
+        - eapply TPES_Deref. exact H7.
+        - exact H4. }
+      subst T0.
+      destruct (eval_place_direct_runtime_target_has_type_prefix
+        env Σ' s' q (MkTy u (TRef la RUnique T))
+        qx qpath r rpath Hstore H7 Hqpath H9)
+        as [se_parent [v_parent [T_parent
+          [Hlookup_parent [Hvalue_parent [Htype_parent
+            [Hequiv_parent Hparent_value]]]]]]].
+      rewrite H11 in Hlookup_parent.
+      inversion Hlookup_parent; subst se_parent.
+      rewrite H13 in Hvalue_parent.
+      inversion Hvalue_parent; subst v_parent.
+      assert (Hparent_ref :
+        value_has_type env s' (VRef x0 path)
+          (MkTy u (TRef la RUnique T))).
+      { eapply VHT_LifetimeEquiv.
+        - exact Hparent_value.
+        - exact Hequiv_parent. }
+      destruct (value_has_type_unique_ref_target_lifetime_equiv
+        env s' x0 path (MkTy u (TRef la RUnique T)) u la T
+        Hparent_ref (ty_lifetime_equiv_refl _))
+        as [se_target [v_target [T_target
+          [Hlookup_target [Hvalue_target [Htype_target Hequiv_target]]]]]].
+      assert (Hvalue :
+        value_has_type env s' (VRef x0 path)
+          (MkTy UAffine (TRef (LVar n) RUnique T))).
+      { eapply VHT_LifetimeEquiv with
+          (T_actual := MkTy UAffine (TRef (LVar n) RUnique T_target)).
+        - eapply VHT_Ref; eassumption.
+        - constructor. exact Hequiv_target. }
+      destruct (eval_place_resolved_write_target_ref_runtime_root
+        R' s' (PDeref q) x0 path roots x Hroots H8 H2 H3)
+        as [Hxroot Hvalue_roots].
+      subst x0.
+      assert (Hrootset_named : root_set_store_roots_named roots s').
+      { unfold root_set_store_roots_named. intros z Hin.
+        assert (Hz : z = x).
+        { destruct (singleton_store_root_some_equiv roots x H3 (RStore z))
+            as [Hto _].
+          specialize (Hto Hin). simpl in Hto.
+          destruct Hto as [Hz | []]. inversion Hz. reflexivity. }
+        subst z. eapply value_has_type_vref_store_name. exact Hvalue. }
+      repeat split; try exact Hstore; try exact Hvalue;
+        try apply store_ref_targets_preserved_refl; try exact Hroots;
+        try exact Hvalue_roots; try exact Hrootset_named; try exact Hshadow;
+        try exact Hrn; try exact Hnamed; try exact Hkeys; try exact Hsummary_store;
+        eauto.
+    + inversion H6; subst. inversion H8; subst.
+      assert (HTeq : T = T0).
+      { eapply typed_place_env_structural_functional.
+        - eapply TPES_Deref. exact H11.
+        - exact H4. }
+      subst T0.
+      destruct (eval_place_direct_runtime_target_has_type_prefix
+        env Σ' s' q (MkTy u (TRef la RUnique T))
+        qx qpath r rpath Hstore H11 Hqpath H12)
+        as [se_parent [v_parent [T_parent
+          [Hlookup_parent [Hvalue_parent [Htype_parent
+            [Hequiv_parent Hparent_value]]]]]]].
+      rewrite H14 in Hlookup_parent.
+      inversion Hlookup_parent; subst se_parent.
+      rewrite H16 in Hvalue_parent.
+      inversion Hvalue_parent; subst v_parent.
+      assert (Hparent_ref :
+        value_has_type env s' (VRef x0 path)
+          (MkTy u (TRef la RUnique T))).
+      { eapply VHT_LifetimeEquiv.
+        - exact Hparent_value.
+        - exact Hequiv_parent. }
+      destruct (value_has_type_unique_ref_target_lifetime_equiv
+        env s' x0 path (MkTy u (TRef la RUnique T)) u la T
+        Hparent_ref (ty_lifetime_equiv_refl _))
+        as [se_target [v_target [T_target
+          [Hlookup_target [Hvalue_target [Htype_target Hequiv_target]]]]]].
+      assert (Hvalue :
+        value_has_type env s' (VRef x0 path)
+          (MkTy UAffine (TRef (LVar n) RUnique T))).
+      { eapply VHT_LifetimeEquiv with
+          (T_actual := MkTy UAffine (TRef (LVar n) RUnique T_target)).
+        - eapply VHT_Ref; eassumption.
+        - constructor. exact Hequiv_target. }
+      destruct (eval_place_resolved_write_target_ref_runtime_root
+        R' s' (PDeref q) x0 path roots x Hroots H8 H2 H3)
+        as [Hxroot Hvalue_roots].
+      subst x0.
+      assert (Hrootset_named : root_set_store_roots_named roots s').
+      { unfold root_set_store_roots_named. intros z Hin.
+        assert (Hz : z = x).
+        { destruct (singleton_store_root_some_equiv roots x H3 (RStore z))
+            as [Hto _].
+          specialize (Hto Hin). simpl in Hto.
+          destruct Hto as [Hz | []]. inversion Hz. reflexivity. }
+        subst z. eapply value_has_type_vref_store_name. exact Hvalue. }
+      repeat split; try exact Hstore; try exact Hvalue;
+        try apply store_ref_targets_preserved_refl; try exact Hroots;
+        try exact Hvalue_roots; try exact Hrootset_named; try exact Hshadow;
+        try exact Hrn; try exact Hnamed; try exact Hkeys; try exact Hsummary_store;
+        eauto.
 Qed.
 
 
@@ -6437,6 +6858,10 @@ Proof.
     inversion H; subst; try congruence;
       repeat split; try exact Hcover; try exact Hroots; try exact Hshadow;
       try exact Hrn; try exact Hscope; try exact Hfresh.
+  - inversion Heval; subst.
+    inversion H; subst; try congruence;
+      repeat split; try exact Hcover; try exact Hroots; try exact Hshadow;
+      try exact Hrn; try exact Hscope; try exact Hfresh.
 Qed.
 
 
@@ -6475,6 +6900,7 @@ Proof.
       ps R1 x roots1 Hcover1) as Hcover_add.
     pose proof (IHHsummary2 ps Hcover_add) as Hcover2.
     eapply root_env_covers_params_remove_non_param; eassumption.
+  - inversion H; subst; try congruence; exact Hcover.
   - inversion H; subst; try congruence; exact Hcover.
 Qed.
 
@@ -6619,6 +7045,7 @@ Proof.
       Hsummary_add Heval2 Hunique Hcover_add Hscope_add) as [frame2 Hscope2].
     eapply store_param_scope_remove_non_param; eassumption.
   - dependent destruction Heval.
+  - inversion Heval; subst. exists frame. inversion H; subst; try congruence; exact Hscope.
   - inversion Heval; subst. exists frame. inversion H; subst; try congruence; exact Hscope.
 Qed.
 

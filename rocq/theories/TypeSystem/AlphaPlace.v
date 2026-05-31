@@ -105,6 +105,17 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma place_resolved_write_direct_parent_rename : forall ρ p,
+  place_resolved_write_direct_parent p ->
+  place_resolved_write_direct_parent (rename_place ρ p).
+Proof.
+  intros ρ p [q [x [path [Hp Hpath]]]].
+  subst p.
+  exists (rename_place ρ q), (lookup_rename x ρ), path.
+  split; [reflexivity |].
+  apply place_path_rename_place_some. exact Hpath.
+Qed.
+
 Lemma place_path_rename_place_none : forall ρ p,
   place_path p = None ->
   place_path (rename_place ρ p) = None.

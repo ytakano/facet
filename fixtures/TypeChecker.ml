@@ -1039,6 +1039,14 @@ let rec place_path = function
    | Some p0 -> let (x, path) = p0 in Some (x, (app path (f :: [])))
    | None -> None)
 
+(** val place_resolved_write_direct_parent_b : place -> bool **)
+
+let place_resolved_write_direct_parent_b = function
+| PDeref q -> (match place_path q with
+               | Some _ -> true
+               | None -> false)
+| _ -> false
+
 (** val place_suffix_path : place -> field_path **)
 
 let rec place_suffix_path = function
@@ -6557,14 +6565,8 @@ let rec provenance_ready_expr_b = function
        let (_, e_branch) = p in
        (&&) (provenance_ready_expr_b e_branch) (go rest)
      in go branches)
-| EReplace (p, e_new) ->
-  (match place_path p with
-   | Some _ -> provenance_ready_expr_b e_new
-   | None -> false)
-| EAssign (p, e_new) ->
-  (match place_path p with
-   | Some _ -> provenance_ready_expr_b e_new
-   | None -> false)
+| EReplace (_, e_new) -> provenance_ready_expr_b e_new
+| EAssign (_, e_new) -> provenance_ready_expr_b e_new
 | EBorrow (_, p) -> (match place_path p with
                      | Some _ -> true
                      | None -> false)
@@ -8752,39 +8754,44 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
        | None ->
          (match infer_place_sctx env _UU03a3_ p with
           | Infer_ok t_old ->
-            (match place_resolved_write_target r p with
-             | Some x ->
-               (match root_env_lookup x r with
-                | Some roots_result ->
-                  (match sctx_lookup_mut x _UU03a3_ with
-                   | Some m ->
-                     (match m with
-                      | MImmutable -> Infer_err (ErrNotMutable x)
-                      | MMutable ->
-                        if writable_place_b env _UU03a3_ p
-                        then (match infer_core_env_state_fuel_roots fuel' env
-                                      _UU03a9_ n r _UU03a3_ e_new with
-                              | Infer_ok p0 ->
-                                let (p1, roots_new) = p0 in
-                                let (p2, r1) = p1 in
-                                let (t_new, _UU03a3_1) = p2 in
-                                (match root_env_lookup x r1 with
-                                 | Some roots_old ->
-                                   if ty_compatible_b _UU03a9_ t_new t_old
-                                   then Infer_ok (((t_old, _UU03a3_1),
-                                          (root_env_update x
-                                            (root_set_union roots_old
-                                              roots_new)
-                                            r1)),
-                                          roots_result)
-                                   else Infer_err
-                                          (compatible_error t_new t_old)
-                                 | None -> Infer_err ErrContextCheckFailed)
-                              | Infer_err err -> Infer_err err)
-                        else Infer_err (ErrNotMutable x))
-                   | None -> Infer_err (ErrUnknownVar x))
-                | None -> Infer_err ErrContextCheckFailed)
-             | None -> Infer_err ErrNotImplemented)
+            if place_resolved_write_direct_parent_b p
+            then (match place_resolved_write_target r p with
+                  | Some x ->
+                    (match root_env_lookup x r with
+                     | Some roots_result ->
+                       (match sctx_lookup_mut x _UU03a3_ with
+                        | Some m ->
+                          (match m with
+                           | MImmutable -> Infer_err (ErrNotMutable x)
+                           | MMutable ->
+                             if writable_place_b env _UU03a3_ p
+                             then (match infer_core_env_state_fuel_roots
+                                           fuel' env _UU03a9_ n r _UU03a3_
+                                           e_new with
+                                   | Infer_ok p0 ->
+                                     let (p1, roots_new) = p0 in
+                                     let (p2, r1) = p1 in
+                                     let (t_new, _UU03a3_1) = p2 in
+                                     (match root_env_lookup x r1 with
+                                      | Some roots_old ->
+                                        if ty_compatible_b _UU03a9_ t_new
+                                             t_old
+                                        then Infer_ok (((t_old, _UU03a3_1),
+                                               (root_env_update x
+                                                 (root_set_union roots_old
+                                                   roots_new)
+                                                 r1)),
+                                               roots_result)
+                                        else Infer_err
+                                               (compatible_error t_new t_old)
+                                      | None ->
+                                        Infer_err ErrContextCheckFailed)
+                                   | Infer_err err -> Infer_err err)
+                             else Infer_err (ErrNotMutable x))
+                        | None -> Infer_err (ErrUnknownVar x))
+                     | None -> Infer_err ErrContextCheckFailed)
+                  | None -> Infer_err ErrNotImplemented)
+            else Infer_err ErrNotImplemented
           | Infer_err err -> Infer_err err))
     | EAssign (p, e_new) ->
       (match place_path p with
@@ -8832,37 +8839,44 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
           | Infer_ok t_old ->
             if usage_eqb (ty_usage t_old) ULinear
             then Infer_err (ErrUsageMismatch ((ty_usage t_old), UAffine))
-            else (match place_resolved_write_target r p with
-                  | Some x ->
-                    (match sctx_lookup_mut x _UU03a3_ with
-                     | Some m ->
-                       (match m with
-                        | MImmutable -> Infer_err (ErrNotMutable x)
-                        | MMutable ->
-                          if writable_place_b env _UU03a3_ p
-                          then (match infer_core_env_state_fuel_roots fuel'
-                                        env _UU03a9_ n r _UU03a3_ e_new with
-                                | Infer_ok p0 ->
-                                  let (p1, roots_new) = p0 in
-                                  let (p2, r1) = p1 in
-                                  let (t_new, _UU03a3_1) = p2 in
-                                  (match root_env_lookup x r1 with
-                                   | Some roots_old ->
-                                     if ty_compatible_b _UU03a9_ t_new t_old
-                                     then Infer_ok ((((MkTy (UUnrestricted,
-                                            TUnits)), _UU03a3_1),
-                                            (root_env_update x
-                                              (root_set_union roots_old
-                                                roots_new)
-                                              r1)),
-                                            [])
-                                     else Infer_err
-                                            (compatible_error t_new t_old)
-                                   | None -> Infer_err ErrContextCheckFailed)
-                                | Infer_err err -> Infer_err err)
-                          else Infer_err (ErrNotMutable x))
-                     | None -> Infer_err (ErrUnknownVar x))
-                  | None -> Infer_err ErrNotImplemented)
+            else if place_resolved_write_direct_parent_b p
+                 then (match place_resolved_write_target r p with
+                       | Some x ->
+                         (match sctx_lookup_mut x _UU03a3_ with
+                          | Some m ->
+                            (match m with
+                             | MImmutable -> Infer_err (ErrNotMutable x)
+                             | MMutable ->
+                               if writable_place_b env _UU03a3_ p
+                               then (match infer_core_env_state_fuel_roots
+                                             fuel' env _UU03a9_ n r _UU03a3_
+                                             e_new with
+                                     | Infer_ok p0 ->
+                                       let (p1, roots_new) = p0 in
+                                       let (p2, r1) = p1 in
+                                       let (t_new, _UU03a3_1) = p2 in
+                                       (match root_env_lookup x r1 with
+                                        | Some roots_old ->
+                                          if ty_compatible_b _UU03a9_ t_new
+                                               t_old
+                                          then Infer_ok ((((MkTy
+                                                 (UUnrestricted, TUnits)),
+                                                 _UU03a3_1),
+                                                 (root_env_update x
+                                                   (root_set_union roots_old
+                                                     roots_new)
+                                                   r1)),
+                                                 [])
+                                          else Infer_err
+                                                 (compatible_error t_new
+                                                   t_old)
+                                        | None ->
+                                          Infer_err ErrContextCheckFailed)
+                                     | Infer_err err -> Infer_err err)
+                               else Infer_err (ErrNotMutable x))
+                          | None -> Infer_err (ErrUnknownVar x))
+                       | None -> Infer_err ErrNotImplemented)
+                 else Infer_err ErrNotImplemented
           | Infer_err err -> Infer_err err))
     | EBorrow (rk, p) ->
       (match infer_place_sctx env _UU03a3_ p with
@@ -11104,39 +11118,44 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
        | None ->
          (match infer_place_sctx env _UU03a3_ p with
           | Infer_ok t_old ->
-            (match place_resolved_write_target r p with
-             | Some x ->
-               (match root_env_lookup x r with
-                | Some roots_result ->
-                  (match sctx_lookup_mut x _UU03a3_ with
-                   | Some m ->
-                     (match m with
-                      | MImmutable -> Infer_err (ErrNotMutable x)
-                      | MMutable ->
-                        if writable_place_b env _UU03a3_ p
-                        then (match infer_core_env_state_fuel_roots_shadow_safe
-                                      fuel' env _UU03a9_ n r _UU03a3_ e_new with
-                              | Infer_ok p0 ->
-                                let (p1, roots_new) = p0 in
-                                let (p2, r1) = p1 in
-                                let (t_new, _UU03a3_1) = p2 in
-                                (match root_env_lookup x r1 with
-                                 | Some roots_old ->
-                                   if ty_compatible_b _UU03a9_ t_new t_old
-                                   then Infer_ok (((t_old, _UU03a3_1),
-                                          (root_env_update x
-                                            (root_set_union roots_old
-                                              roots_new)
-                                            r1)),
-                                          roots_result)
-                                   else Infer_err
-                                          (compatible_error t_new t_old)
-                                 | None -> Infer_err ErrContextCheckFailed)
-                              | Infer_err err -> Infer_err err)
-                        else Infer_err (ErrNotMutable x))
-                   | None -> Infer_err (ErrUnknownVar x))
-                | None -> Infer_err ErrContextCheckFailed)
-             | None -> Infer_err ErrNotImplemented)
+            if place_resolved_write_direct_parent_b p
+            then (match place_resolved_write_target r p with
+                  | Some x ->
+                    (match root_env_lookup x r with
+                     | Some roots_result ->
+                       (match sctx_lookup_mut x _UU03a3_ with
+                        | Some m ->
+                          (match m with
+                           | MImmutable -> Infer_err (ErrNotMutable x)
+                           | MMutable ->
+                             if writable_place_b env _UU03a3_ p
+                             then (match infer_core_env_state_fuel_roots_shadow_safe
+                                           fuel' env _UU03a9_ n r _UU03a3_
+                                           e_new with
+                                   | Infer_ok p0 ->
+                                     let (p1, roots_new) = p0 in
+                                     let (p2, r1) = p1 in
+                                     let (t_new, _UU03a3_1) = p2 in
+                                     (match root_env_lookup x r1 with
+                                      | Some roots_old ->
+                                        if ty_compatible_b _UU03a9_ t_new
+                                             t_old
+                                        then Infer_ok (((t_old, _UU03a3_1),
+                                               (root_env_update x
+                                                 (root_set_union roots_old
+                                                   roots_new)
+                                                 r1)),
+                                               roots_result)
+                                        else Infer_err
+                                               (compatible_error t_new t_old)
+                                      | None ->
+                                        Infer_err ErrContextCheckFailed)
+                                   | Infer_err err -> Infer_err err)
+                             else Infer_err (ErrNotMutable x))
+                        | None -> Infer_err (ErrUnknownVar x))
+                     | None -> Infer_err ErrContextCheckFailed)
+                  | None -> Infer_err ErrNotImplemented)
+            else Infer_err ErrNotImplemented
           | Infer_err err -> Infer_err err))
     | EAssign (p, e_new) ->
       (match place_path p with
@@ -11184,37 +11203,44 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
           | Infer_ok t_old ->
             if usage_eqb (ty_usage t_old) ULinear
             then Infer_err (ErrUsageMismatch ((ty_usage t_old), UAffine))
-            else (match place_resolved_write_target r p with
-                  | Some x ->
-                    (match sctx_lookup_mut x _UU03a3_ with
-                     | Some m ->
-                       (match m with
-                        | MImmutable -> Infer_err (ErrNotMutable x)
-                        | MMutable ->
-                          if writable_place_b env _UU03a3_ p
-                          then (match infer_core_env_state_fuel_roots_shadow_safe
-                                        fuel' env _UU03a9_ n r _UU03a3_ e_new with
-                                | Infer_ok p0 ->
-                                  let (p1, roots_new) = p0 in
-                                  let (p2, r1) = p1 in
-                                  let (t_new, _UU03a3_1) = p2 in
-                                  (match root_env_lookup x r1 with
-                                   | Some roots_old ->
-                                     if ty_compatible_b _UU03a9_ t_new t_old
-                                     then Infer_ok ((((MkTy (UUnrestricted,
-                                            TUnits)), _UU03a3_1),
-                                            (root_env_update x
-                                              (root_set_union roots_old
-                                                roots_new)
-                                              r1)),
-                                            [])
-                                     else Infer_err
-                                            (compatible_error t_new t_old)
-                                   | None -> Infer_err ErrContextCheckFailed)
-                                | Infer_err err -> Infer_err err)
-                          else Infer_err (ErrNotMutable x))
-                     | None -> Infer_err (ErrUnknownVar x))
-                  | None -> Infer_err ErrNotImplemented)
+            else if place_resolved_write_direct_parent_b p
+                 then (match place_resolved_write_target r p with
+                       | Some x ->
+                         (match sctx_lookup_mut x _UU03a3_ with
+                          | Some m ->
+                            (match m with
+                             | MImmutable -> Infer_err (ErrNotMutable x)
+                             | MMutable ->
+                               if writable_place_b env _UU03a3_ p
+                               then (match infer_core_env_state_fuel_roots_shadow_safe
+                                             fuel' env _UU03a9_ n r _UU03a3_
+                                             e_new with
+                                     | Infer_ok p0 ->
+                                       let (p1, roots_new) = p0 in
+                                       let (p2, r1) = p1 in
+                                       let (t_new, _UU03a3_1) = p2 in
+                                       (match root_env_lookup x r1 with
+                                        | Some roots_old ->
+                                          if ty_compatible_b _UU03a9_ t_new
+                                               t_old
+                                          then Infer_ok ((((MkTy
+                                                 (UUnrestricted, TUnits)),
+                                                 _UU03a3_1),
+                                                 (root_env_update x
+                                                   (root_set_union roots_old
+                                                     roots_new)
+                                                   r1)),
+                                                 [])
+                                          else Infer_err
+                                                 (compatible_error t_new
+                                                   t_old)
+                                        | None ->
+                                          Infer_err ErrContextCheckFailed)
+                                     | Infer_err err -> Infer_err err)
+                               else Infer_err (ErrNotMutable x))
+                          | None -> Infer_err (ErrUnknownVar x))
+                       | None -> Infer_err ErrNotImplemented)
+                 else Infer_err ErrNotImplemented
           | Infer_err err -> Infer_err err))
     | EBorrow (rk, p) ->
       (match infer_place_sctx env _UU03a3_ p with

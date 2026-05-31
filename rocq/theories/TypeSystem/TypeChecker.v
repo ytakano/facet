@@ -5045,16 +5045,8 @@ Fixpoint provenance_ready_expr_b (e : expr) : bool :=
   | ELetInfer _ _ e1 e2 =>
       provenance_ready_expr_b e1 && provenance_ready_expr_b e2
   | EDrop e1 => provenance_ready_expr_b e1
-  | EAssign p e_new =>
-      match place_path p with
-      | Some _ => provenance_ready_expr_b e_new
-      | None => false
-      end
-  | EReplace p e_new =>
-      match place_path p with
-      | Some _ => provenance_ready_expr_b e_new
-      | None => false
-      end
+  | EAssign _ e_new => provenance_ready_expr_b e_new
+  | EReplace _ e_new => provenance_ready_expr_b e_new
   | EIf e1 e2 e3 =>
       provenance_ready_expr_b e1 &&
       provenance_ready_expr_b e2 &&
@@ -5558,6 +5550,7 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
           match infer_place_sctx env Σ p with
           | infer_err err => infer_err err
           | infer_ok T_old =>
+              if place_resolved_write_direct_parent_b p then
               match place_resolved_write_target R p with
               | None => infer_err ErrNotImplemented
               | Some x =>
@@ -5590,6 +5583,7 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
                       end
                   end
               end
+              else infer_err ErrNotImplemented
           end
       | Some (x, path) =>
           match infer_place_sctx env Σ p with
@@ -5642,6 +5636,7 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
               if usage_eqb (ty_usage T_old) ULinear
               then infer_err (ErrUsageMismatch (ty_usage T_old) UAffine)
               else
+              if place_resolved_write_direct_parent_b p then
               match place_resolved_write_target R p with
               | None => infer_err ErrNotImplemented
               | Some x =>
@@ -5670,6 +5665,7 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
                   | None => infer_err (ErrUnknownVar x)
                   end
               end
+              else infer_err ErrNotImplemented
           end
       | Some (x, path) =>
           match infer_place_sctx env Σ p with
@@ -6453,6 +6449,7 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
           match infer_place_sctx env Σ p with
           | infer_err err => infer_err err
           | infer_ok T_old =>
+              if place_resolved_write_direct_parent_b p then
               match place_resolved_write_target R p with
               | None => infer_err ErrNotImplemented
               | Some x =>
@@ -6485,6 +6482,7 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
                       end
                   end
               end
+              else infer_err ErrNotImplemented
           end
       | Some (x, path) =>
           match infer_place_sctx env Σ p with
@@ -6537,6 +6535,7 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
               if usage_eqb (ty_usage T_old) ULinear
               then infer_err (ErrUsageMismatch (ty_usage T_old) UAffine)
               else
+              if place_resolved_write_direct_parent_b p then
               match place_resolved_write_target R p with
               | None => infer_err ErrNotImplemented
               | Some x =>
@@ -6565,6 +6564,7 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
                   | None => infer_err (ErrUnknownVar x)
                   end
               end
+              else infer_err ErrNotImplemented
           end
       | Some (x, path) =>
           match infer_place_sctx env Σ p with

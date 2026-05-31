@@ -1461,6 +1461,8 @@ Proof.
         -- exact Havailable.
         -- exact Hrestore.
       * destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
+        destruct (place_resolved_write_direct_parent_b p) eqn:Hshape; try discriminate.
+        pose proof (place_resolved_write_direct_parent_b_sound p Hshape) as Hshape_prop.
         destruct (place_resolved_write_target R p) as [x |] eqn:Htarget; try discriminate.
         destruct (root_env_lookup x R) as [roots_result |] eqn:Hroot_result; try discriminate.
         destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
@@ -1474,6 +1476,7 @@ Proof.
         eapply TER_Replace_Resolved.
         -- eapply infer_place_sctx_structural_sound. exact Hplace.
         -- exact Hpath.
+        -- exact Hshape_prop.
         -- exact Htarget.
         -- exact Hroot_result.
         -- exact Hmut.
@@ -1504,6 +1507,8 @@ Proof.
         -- exact Havailable.
       * destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
         destruct (usage_eqb (ty_usage Told) ULinear) eqn:Hlinear; try discriminate.
+        destruct (place_resolved_write_direct_parent_b p) eqn:Hshape; try discriminate.
+        pose proof (place_resolved_write_direct_parent_b_sound p Hshape) as Hshape_prop.
         destruct (place_resolved_write_target R p) as [x |] eqn:Htarget; try discriminate.
         destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
         destruct mut; try discriminate.
@@ -1517,6 +1522,7 @@ Proof.
         -- eapply infer_place_sctx_structural_sound. exact Hplace.
         -- intro Hu. rewrite Hu in Hlinear. simpl in Hlinear. discriminate.
         -- exact Hpath.
+        -- exact Hshape_prop.
         -- exact Htarget.
         -- exact Hmut.
         -- apply writable_place_b_sound. exact Hwrite.
@@ -2467,6 +2473,8 @@ Proof.
         -- exact Havailable.
         -- exact Hrestore.
       * destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
+        destruct (place_resolved_write_direct_parent_b p) eqn:Hshape; try discriminate.
+        pose proof (place_resolved_write_direct_parent_b_sound p Hshape) as Hshape_prop.
         destruct (place_resolved_write_target R p) as [x |] eqn:Htarget; try discriminate.
         destruct (root_env_lookup x R) as [roots_result |] eqn:Hroot_result; try discriminate.
         destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
@@ -2480,6 +2488,7 @@ Proof.
         eapply TERS_Replace_Resolved.
         -- eapply infer_place_sctx_structural_sound. exact Hplace.
         -- exact Hpath.
+        -- exact Hshape_prop.
         -- exact Htarget.
         -- exact Hroot_result.
         -- exact Hmut.
@@ -2510,6 +2519,8 @@ Proof.
         -- exact Havailable.
       * destruct (infer_place_sctx env Σ p) as [Told | err] eqn:Hplace; try discriminate.
         destruct (usage_eqb (ty_usage Told) ULinear) eqn:Hlinear; try discriminate.
+        destruct (place_resolved_write_direct_parent_b p) eqn:Hshape; try discriminate.
+        pose proof (place_resolved_write_direct_parent_b_sound p Hshape) as Hshape_prop.
         destruct (place_resolved_write_target R p) as [x |] eqn:Htarget; try discriminate.
         destruct (sctx_lookup_mut x Σ) as [mut |] eqn:Hmut; try discriminate.
         destruct mut; try discriminate.
@@ -2523,6 +2534,7 @@ Proof.
         -- eapply infer_place_sctx_structural_sound. exact Hplace.
         -- intro Hu. rewrite Hu in Hlinear. simpl in Hlinear. discriminate.
         -- exact Hpath.
+        -- exact Hshape_prop.
         -- exact Htarget.
         -- exact Hmut.
         -- apply writable_place_b_sound. exact Hwrite.

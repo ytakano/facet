@@ -277,6 +277,8 @@ val state_restore_path : field_path -> binding_state -> binding_state
 
 val place_path : place -> (ident * field_path) option
 
+val place_resolved_write_direct_parent_b : place -> bool
+
 val place_suffix_path : place -> field_path
 
 type field_def = { field_name : string; field_mutability : mutability;

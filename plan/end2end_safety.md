@@ -67,7 +67,8 @@ Latest full `sh tests/run.sh` baseline (2026-05-30): 29 valid-test failures; inv
 18. Done: add direct resolved write runtime target helper.
 19. Done: add one-hop indirect resolved write target helper.
 20. Done: add explicit direct-parent shape for resolved writes.
-21. In progress: narrow resolved write checker and Prop rules to direct-parent shape.
+21. Done: narrow resolved write checker and Prop rules to direct-parent shape.
+22. In progress: close direct-parent resolved assign/replace prefix branches.
 
 The resolver remains narrow: it follows bounded singleton store-root chains and
 does not accept ambiguous/non-singleton update targets.

@@ -4062,6 +4062,9 @@ Proof.
         -- match goal with Hpath : place_path p = None |- _ =>
              apply place_path_rename_place_none; exact Hpath
            end.
+        -- match goal with Hshape : place_resolved_write_direct_parent p |- _ =>
+             apply place_resolved_write_direct_parent_rename; exact Hshape
+           end.
         -- exact Htarget_r.
         -- exact Hlookup_result_r.
         -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
@@ -4242,6 +4245,9 @@ Proof.
            end.
         -- match goal with Hpath : place_path p = None |- _ =>
              apply place_path_rename_place_none; exact Hpath
+           end.
+        -- match goal with Hshape : place_resolved_write_direct_parent p |- _ =>
+             apply place_resolved_write_direct_parent_rename; exact Hshape
            end.
         -- exact Htarget_r.
         -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
@@ -7118,6 +7124,9 @@ Proof.
         -- match goal with Hpath : place_path p = None |- _ =>
              apply place_path_rename_place_none; exact Hpath
            end.
+        -- match goal with Hshape : place_resolved_write_direct_parent p |- _ =>
+             apply place_resolved_write_direct_parent_rename; exact Hshape
+           end.
         -- exact Htarget_r.
         -- exact Hlookup_result_r.
         -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
@@ -7319,6 +7328,9 @@ Proof.
         -- match goal with Hpath : place_path p = None |- _ =>
              apply place_path_rename_place_none; exact Hpath
            end.
+        -- match goal with Hshape : place_resolved_write_direct_parent p |- _ =>
+             apply place_resolved_write_direct_parent_rename; exact Hshape
+           end.
         -- exact Htarget_r.
         -- exact Hlookup_result_r.
         -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
@@ -7487,6 +7499,9 @@ Proof.
         -- eapply alpha_rename_typed_place_env_structural_forward; eauto.
         -- match goal with H : ty_usage T_old <> ULinear |- _ => exact H end.
         -- match goal with Hpath : place_path p = None |- _ => apply place_path_rename_place_none; exact Hpath end.
+        -- match goal with Hshape : place_resolved_write_direct_parent p |- _ =>
+             apply place_resolved_write_direct_parent_rename; exact Hshape
+           end.
         -- exact Htarget_r.
         -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
         -- eapply alpha_rename_writable_place_env_structural_forward; eauto.
@@ -7658,6 +7673,9 @@ Proof.
         -- eapply alpha_rename_typed_place_env_structural_forward; eauto.
         -- match goal with H : ty_usage T_old <> ULinear |- _ => exact H end.
         -- match goal with Hpath : place_path p = None |- _ => apply place_path_rename_place_none; exact Hpath end.
+        -- match goal with Hshape : place_resolved_write_direct_parent p |- _ =>
+             apply place_resolved_write_direct_parent_rename; exact Hshape
+           end.
         -- exact Htarget_r.
         -- eapply ctx_alpha_lookup_mut_forward_any; eauto.
         -- eapply alpha_rename_writable_place_env_structural_forward; eauto.

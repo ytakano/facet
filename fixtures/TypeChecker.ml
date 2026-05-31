@@ -4456,22 +4456,8 @@ let sctx_lookup_mut =
 (** val place_resolved_write_mutable_chain_b :
     root_env -> sctx -> place -> bool **)
 
-let rec place_resolved_write_mutable_chain_b r _UU03a3_ p =
-  if place_resolved_write_direct_parent_b p
-  then true
-  else (match p with
-        | PDeref q ->
-          (&&) (place_resolved_write_mutable_chain_b r _UU03a3_ q)
-            (match place_resolved_write_target r q with
-             | Some x ->
-               (match sctx_lookup_mut x _UU03a3_ with
-                | Some m ->
-                  (match m with
-                   | MImmutable -> false
-                   | MMutable -> true)
-                | None -> false)
-             | None -> false)
-        | _ -> false)
+let place_resolved_write_mutable_chain_b _ _ =
+  place_resolved_write_direct_parent_b
 
 (** val check_make_closure_captures_sctx_base :
     global_env -> outlives_ctx -> sctx -> ident list -> param list -> ty list

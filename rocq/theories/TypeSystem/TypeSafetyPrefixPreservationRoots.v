@@ -601,6 +601,10 @@ Proof.
           | eapply store_ref_targets_preserved_trans; eassumption ]
       end.
     + match goal with
+      | Hchain : place_resolved_write_mutable_chain _ _ _ |- _ =>
+          inversion Hchain as [? Hshape]; subst; clear Hchain
+      end;
+      match goal with
       | Hready_new : provenance_ready_expr e_new,
         Hplace : typed_place_env_structural env Σ p ?T_old,
         Hpath_none : place_path p = None,
@@ -731,6 +735,10 @@ Proof.
           eapply store_ref_targets_preserved_trans; eassumption
       end.
     + match goal with
+      | Hchain : place_resolved_write_mutable_chain _ _ _ |- _ =>
+          inversion Hchain as [? Hshape]; subst; clear Hchain
+      end;
+      match goal with
       | Hready_new : provenance_ready_expr e_new,
         Hplace : typed_place_env_structural env Σ p ?T_old,
         Hpath_none : place_path p = None,

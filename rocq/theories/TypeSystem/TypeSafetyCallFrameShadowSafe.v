@@ -146,12 +146,8 @@ Lemma place_resolved_write_mutable_chain_app_left :
     place_resolved_write_mutable_chain (R ++ R_tail) Σ p.
 Proof.
   intros R R_tail Σ p Hchain.
-  induction Hchain.
-  - apply PRWMC_Direct. exact H.
-  - eapply PRWMC_Deref.
-    + exact IHHchain.
-    + eapply place_resolved_write_target_app_left. exact H.
-    + exact H0.
+  inversion Hchain; subst.
+  apply PRWMC_Direct. exact H.
 Qed.
 
 

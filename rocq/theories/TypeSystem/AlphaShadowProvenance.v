@@ -13,18 +13,9 @@ Lemma place_resolved_write_mutable_chain_rename :
     place_resolved_write_mutable_chain Rr Σr (rename_place rho p).
 Proof.
   intros rho R Rr Σ Σr p HR Hnocoll Halpha Hchain.
-  induction Hchain.
-  - apply PRWMC_Direct.
-    apply place_resolved_write_direct_parent_rename. exact H.
-  - simpl.
-    eapply PRWMC_Deref.
-    + exact IHHchain.
-    + eapply place_resolved_write_target_equiv.
-      * exact HR.
-      * apply place_resolved_write_target_rename.
-        -- exact Hnocoll.
-        -- exact H.
-    + eapply ctx_alpha_lookup_mut_forward_any; eassumption.
+  inversion Hchain; subst.
+  apply PRWMC_Direct.
+  apply place_resolved_write_direct_parent_rename. exact H.
 Qed.
 
 (* ------------------------------------------------------------------ *)

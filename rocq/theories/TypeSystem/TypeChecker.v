@@ -2909,52 +2909,19 @@ Inductive place_resolved_write_mutable_chain
     (R : root_env) (Σ : sctx) : place -> Prop :=
   | PRWMC_Direct : forall p,
       place_resolved_write_direct_parent p ->
-      place_resolved_write_mutable_chain R Σ p
-  | PRWMC_Deref : forall p x,
-      place_resolved_write_mutable_chain R Σ p ->
-      place_resolved_write_target R p = Some x ->
-      sctx_lookup_mut x Σ = Some MMutable ->
-      place_resolved_write_mutable_chain R Σ (PDeref p).
+      place_resolved_write_mutable_chain R Σ p.
 
-Fixpoint place_resolved_write_mutable_chain_b
-    (R : root_env) (Σ : sctx) (p : place) : bool :=
-  if place_resolved_write_direct_parent_b p then true
-  else match p with
-  | PDeref q =>
-      place_resolved_write_mutable_chain_b R Σ q &&
-      match place_resolved_write_target R q with
-      | Some x =>
-          match sctx_lookup_mut x Σ with
-          | Some MMutable => true
-          | _ => false
-          end
-      | None => false
-      end
-  | _ => false
-  end.
+Definition place_resolved_write_mutable_chain_b
+    (_R : root_env) (_Σ : sctx) (p : place) : bool :=
+  place_resolved_write_direct_parent_b p.
 
 Lemma place_resolved_write_mutable_chain_b_sound : forall R Σ p,
   place_resolved_write_mutable_chain_b R Σ p = true ->
   place_resolved_write_mutable_chain R Σ p.
 Proof.
-  intros R Σ p.
-  induction p as [x | p IH | p IH f]; intros Hchain; simpl in Hchain.
-  - discriminate.
-  - destruct (place_path p) as [[y path] |] eqn:Hpath.
-    + apply PRWMC_Direct.
-      exists p, y, path. split; reflexivity || exact Hpath.
-    + apply andb_true_iff in Hchain.
-      destruct Hchain as [Hchain Hmut].
-      destruct (place_resolved_write_target R p) as [target |] eqn:Htarget;
-        try discriminate.
-      destruct (sctx_lookup_mut target Σ) as [m |] eqn:Hlookup;
-        try discriminate.
-      destruct m; try discriminate.
-      eapply PRWMC_Deref.
-      * apply IH. exact Hchain.
-      * exact Htarget.
-      * exact Hlookup.
-  - discriminate.
+  intros R Σ p Hchain.
+  apply PRWMC_Direct.
+  apply place_resolved_write_direct_parent_b_sound. exact Hchain.
 Qed.
 
 Lemma place_resolved_write_mutable_chain_shape : forall R Σ p,
@@ -2962,9 +2929,8 @@ Lemma place_resolved_write_mutable_chain_shape : forall R Σ p,
   place_resolved_write_shape p.
 Proof.
   intros R Σ p Hchain.
-  induction Hchain.
-  - apply PRWS_Direct. exact H.
-  - apply PRWS_Deref. exact IHHchain.
+  inversion Hchain; subst.
+  apply PRWS_Direct. exact H.
 Qed.
 
 Lemma place_resolved_write_mutable_chain_instantiate : forall rho R Σ p,
@@ -2972,12 +2938,8 @@ Lemma place_resolved_write_mutable_chain_instantiate : forall rho R Σ p,
   place_resolved_write_mutable_chain (root_env_instantiate rho R) Σ p.
 Proof.
   intros rho R Σ p Hchain.
-  induction Hchain.
-  - apply PRWMC_Direct. exact H.
-  - eapply PRWMC_Deref.
-    + exact IHHchain.
-    + apply place_resolved_write_target_instantiate. exact H.
-    + exact H0.
+  inversion Hchain; subst.
+  apply PRWMC_Direct. exact H.
 Qed.
 
 Lemma place_resolved_write_mutable_chain_equiv : forall R R' Σ p,
@@ -2985,13 +2947,9 @@ Lemma place_resolved_write_mutable_chain_equiv : forall R R' Σ p,
   place_resolved_write_mutable_chain R Σ p ->
   place_resolved_write_mutable_chain R' Σ p.
 Proof.
-  intros R R' Σ p Hequiv Hchain.
-  induction Hchain.
-  - apply PRWMC_Direct. exact H.
-  - eapply PRWMC_Deref.
-    + exact IHHchain.
-    + eapply place_resolved_write_target_equiv; eassumption.
-    + exact H0.
+  intros R R' Σ p _ Hchain.
+  inversion Hchain; subst.
+  apply PRWMC_Direct. exact H.
 Qed.
 
 Fixpoint check_make_closure_captures_sctx_base

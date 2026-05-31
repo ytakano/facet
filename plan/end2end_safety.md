@@ -69,7 +69,8 @@ Latest full `sh tests/run.sh` baseline (2026-05-30): 29 valid-test failures; inv
 20. Done: add explicit direct-parent shape for resolved writes.
 21. Done: narrow resolved write checker and Prop rules to direct-parent shape.
 22. Done: close direct-parent resolved assign/replace prefix branches.
-23. In progress: rebuild dependent safety chain and remove stale proof fallout.
+23. Done: rebuild dependent safety chain and remove stale proof fallout.
+24. In progress: run extraction consumers and CLI regression checks.
 
 The resolver remains narrow: it follows bounded singleton store-root chains and
 does not accept ambiguous/non-singleton update targets.

@@ -5,6 +5,21 @@ From Facet.TypeSystem Require Export TypeSafetyParamScopeReady.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
+Lemma sctx_lookup_mut_in_ctx_names :
+  forall x Σ m,
+    sctx_lookup_mut x Σ = Some m ->
+    In x (ctx_names Σ).
+Proof.
+  unfold sctx_lookup_mut.
+  intros x Σ.
+  induction Σ as [| [[[y Ty] st] my] rest IH]; intros m Hlookup;
+    simpl in *; try discriminate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - apply ident_eqb_eq in Heq. subst y.
+    left. reflexivity.
+  - right. eapply IH. exact Hlookup.
+Qed.
+
 Lemma typed_match_tail_roots_lookup_frame_ready :
   forall env Ω n lts args R roots_scrut Σ branches variants expected_core R_out Σs Ts rootss
       name vdef e,
@@ -1004,8 +1019,11 @@ Proof.
                 ltac:(eassumption) ltac:(eassumption)
                 Hcover Hroots Hshadow Hrn Hscope Hfresh)
       as [Hcover1 [Hscope1 Hfresh1]].
-    destruct (sctx_path_available_success _ x [] ltac:(eassumption))
-      as [T_root [st [Hlookup_ctx _]]].
+    match goal with
+    | Havail : sctx_path_available _ ?x_store [] = infer_ok tt |- _ =>
+        destruct (sctx_path_available_success _ x_store [] Havail)
+          as [T_root [st [Hlookup_ctx _]]]
+    end.
     assert (Hscope2 : store_frame_scope ps _ s2 frame)
       by (eapply store_frame_scope_update_val;
           [ eapply sctx_lookup_in_ctx_names; exact Hlookup_ctx
@@ -1035,8 +1053,11 @@ Proof.
                 ltac:(eassumption) ltac:(eassumption)
                 Hcover Hroots Hshadow Hrn Hscope Hfresh)
       as [Hcover1 [Hscope1 Hfresh1]].
-    destruct (sctx_path_available_success _ x [] ltac:(eassumption))
-      as [T_root [st [Hlookup_ctx _]]].
+    match goal with
+    | Havail : sctx_path_available _ ?x_store [] = infer_ok tt |- _ =>
+        destruct (sctx_path_available_success _ x_store [] Havail)
+          as [T_root [st [Hlookup_ctx _]]]
+    end.
     repeat split.
     + apply root_env_covers_params_update. exact Hcover1.
     + eapply store_frame_scope_update_val.
@@ -1051,34 +1072,37 @@ Proof.
       Hshadow Hrn Hscope Hfresh.
     dependent destruction Hready.
     inversion Htyped; subst; try discriminate.
-    match goal with
-    | Hready_path : place_path p = Some (x, path),
-      Htyped_path : place_path p = Some (?x_typed, ?path_typed) |- _ =>
-        rewrite Hready_path in Htyped_path;
-        inversion Htyped_path; subst x_typed path_typed; clear Htyped_path
-    end.
-    match goal with
-    | Hready_new : provenance_ready_expr e_new,
-      Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new ?Σ1
+    all: try solve [simpl in *; congruence].
+    all: match goal with
+    | Hready_new : provenance_ready_expr _,
+      Htyped_new : typed_env_roots ?env0 ?omega0 ?n0 ?R0 ?Sigma0 _ ?T_new ?Sigma1
         ?R1 ?roots_new,
-      Havailable : sctx_path_available ?Σ1 x path = infer_ok tt,
-      Hrestore_ctx : sctx_restore_path ?Σ1 x path = infer_ok Σ' |- _ =>
-        destruct (eval_place_matches_place_path s p x_eval path_eval x path
-                    Heval_place H) as [Hx_eval Hpath_eval];
+      Hplace : typed_place_env_structural ?envp ?Sigmap ?p0 _,
+      Htyped_path : place_path ?p0 = Some (?x0, ?path0),
+      Hrestore_ctx : sctx_restore_path ?Sigma_restore ?x0 ?path0 = infer_ok ?Sigma_final |- _ =>
+        destruct (eval_place_matches_place_path s p0 x_eval path_eval x0 path0
+                    Heval_place Htyped_path) as [Hx_eval Hpath_eval];
         subst x_eval path_eval;
-        destruct (IHnew Ω n R Σ T_new Σ1 R1 roots_new ps frame
+        destruct (IHnew omega0 n0 R0 Sigma0 T_new Sigma1 R1 roots_new ps frame
                     Hready_new Htyped_new Hcover Hroots Hshadow Hrn
                     Hscope Hfresh)
           as [Hcover1 [Hscope1 Hfresh1]];
-        destruct (sctx_path_available_success Σ1 x path Havailable)
+        destruct (typed_place_direct_lookup envp Sigmap p0 _ x0 path0
+                    Hplace Htyped_path)
           as [T_root [st [Hlookup_ctx _]]];
-        assert (Hscope2 : store_frame_scope ps Σ1 s2 frame)
+        destruct (sctx_same_bindings_lookup Sigmap Sigma1 x0 T_root st
+                    ltac:(eapply typed_env_structural_same_bindings;
+                          eapply typed_env_roots_structural;
+                          exact Htyped_new)
+                    Hlookup_ctx)
+          as [st1 Hlookup_ctx1];
+        assert (Hscope2 : store_frame_scope ps Sigma1 s2 frame)
           by (eapply store_frame_scope_update_path;
-              [ eapply sctx_lookup_in_ctx_names; exact Hlookup_ctx
+              [ eapply sctx_lookup_in_ctx_names; exact Hlookup_ctx1
               | exact Hfresh1 | exact Hscope1 | exact Hupdate ]);
-        assert (Hscope3 : store_frame_scope ps Σ1 s3 frame)
+        assert (Hscope3 : store_frame_scope ps Sigma1 s3 frame)
           by (eapply store_frame_scope_restore_path;
-              [ eapply sctx_lookup_in_ctx_names; exact Hlookup_ctx
+              [ eapply sctx_lookup_in_ctx_names; exact Hlookup_ctx1
               | exact Hfresh1 | exact Hscope2 | exact Hrestore ]);
         repeat split;
         [ apply root_env_covers_params_update; exact Hcover1
@@ -1088,48 +1112,99 @@ Proof.
         | eapply store_frame_static_fresh_same_bindings;
           [ eapply sctx_restore_path_same_bindings; exact Hrestore_ctx
           | exact Hfresh1 ] ]
-    end.
-    match goal with
-    | Hready_path : place_path p = Some _,
-      Htyped_none : place_path p = None |- _ =>
-        rewrite Hready_path in Htyped_none; discriminate
+    | Hready_new : provenance_ready_expr _,
+      Htyped_new : typed_env_roots ?env0 ?omega0 ?n0 ?R0 ?Sigma0 _ ?T_new ?Sigma1
+        ?R1 ?roots_new,
+      Htyped_none : place_path ?p0 = None,
+      Htarget : place_resolved_write_target ?Rtarget ?p0 = Some ?x0,
+      Hlookup_mut : sctx_lookup_mut ?x0 ?Sigma_mut = Some MMutable |- _ =>
+        assert (Hx_eval : x_eval = x0)
+          by (eapply eval_place_resolved_write_target_matches_root;
+              [ exact Hroots | exact Heval_place | exact Htarget ]);
+        subst x_eval;
+        destruct (IHnew omega0 n0 R0 Sigma0 T_new Sigma1 R1 roots_new ps frame
+                    Hready_new Htyped_new Hcover Hroots Hshadow Hrn
+                    Hscope Hfresh)
+          as [Hcover1 [Hscope1 Hfresh1]];
+        assert (Hlookup_mut1 : sctx_lookup_mut x0 Sigma1 = Some MMutable)
+          by (eapply sctx_same_bindings_lookup_mut;
+              [ eapply typed_env_structural_same_bindings;
+                eapply typed_env_roots_structural; exact Htyped_new
+              | exact Hlookup_mut ]);
+        assert (Hin_ctx1 : In x0 (ctx_names Sigma1))
+          by (eapply sctx_lookup_mut_in_ctx_names; exact Hlookup_mut1);
+        assert (Hscope2 : store_frame_scope ps Sigma1 s2 frame)
+          by (eapply store_frame_scope_update_path;
+              [ exact Hin_ctx1 | exact Hfresh1 | exact Hscope1 | exact Hupdate ]);
+        assert (Hscope3 : store_frame_scope ps Sigma1 s3 frame)
+          by (eapply store_frame_scope_restore_path;
+              [ exact Hin_ctx1 | exact Hfresh1 | exact Hscope2 | exact Hrestore ]);
+        repeat split;
+        [ apply root_env_covers_params_update; exact Hcover1
+        | exact Hscope3
+        | exact Hfresh1 ]
     end.
   - intros s s1 s2 p x_eval path_eval e_new v_new Heval_place
       Heval_new IHnew Hupdate Ω n R Σ T Σ' R' roots ps frame
       Hready Htyped Hcover Hroots Hshadow Hrn Hscope Hfresh.
     dependent destruction Hready.
     inversion Htyped; subst; try discriminate.
-    match goal with
-    | Hready_path : place_path p = Some (x, path),
-      Htyped_path : place_path p = Some (?x_typed, ?path_typed) |- _ =>
-        rewrite Hready_path in Htyped_path;
-        inversion Htyped_path; subst x_typed path_typed; clear Htyped_path
-    end.
-    match goal with
-    | Hready_new : provenance_ready_expr e_new,
-      Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new Σ' ?R1
-        ?roots_new,
-      Havailable : sctx_path_available Σ' x path = infer_ok tt |- _ =>
-        destruct (eval_place_matches_place_path s p x_eval path_eval x path
-                    Heval_place H) as [Hx_eval Hpath_eval];
+    all: try solve [simpl in *; congruence].
+    all: match goal with
+    | Hready_new : provenance_ready_expr _,
+      Htyped_new : typed_env_roots ?env0 ?omega0 ?n0 ?R0 ?Sigma0 _ ?T_new ?Sigma1
+        ?R1 ?roots_new,
+      Hplace : typed_place_env_structural ?envp ?Sigmap ?p0 _,
+      Htyped_path : place_path ?p0 = Some (?x0, ?path0),
+      Havailable : sctx_path_available ?Sigma_after ?x0 ?path0 = infer_ok tt |- _ =>
+        destruct (eval_place_matches_place_path s p0 x_eval path_eval x0 path0
+                    Heval_place Htyped_path) as [Hx_eval Hpath_eval];
         subst x_eval path_eval;
-        destruct (IHnew Ω n R Σ T_new Σ' R1 roots_new ps frame
+        destruct (IHnew omega0 n0 R0 Sigma0 T_new Sigma1 R1 roots_new ps frame
                     Hready_new Htyped_new Hcover Hroots Hshadow Hrn
                     Hscope Hfresh)
           as [Hcover1 [Hscope1 Hfresh1]];
-        destruct (sctx_path_available_success Σ' x path Havailable)
+        destruct (typed_place_direct_lookup envp Sigmap p0 _ x0 path0
+                    Hplace Htyped_path)
           as [T_root [st [Hlookup_ctx _]]];
+        destruct (sctx_same_bindings_lookup Sigmap Sigma1 x0 T_root st
+                    ltac:(eapply typed_env_structural_same_bindings;
+                          eapply typed_env_roots_structural;
+                          exact Htyped_new)
+                    Hlookup_ctx)
+          as [st1 Hlookup_ctx1];
         repeat split;
         [ apply root_env_covers_params_update; exact Hcover1
         | eapply store_frame_scope_update_path;
-          [ eapply sctx_lookup_in_ctx_names; exact Hlookup_ctx
+          [ eapply sctx_lookup_in_ctx_names; exact Hlookup_ctx1
           | exact Hfresh1 | exact Hscope1 | exact Hupdate ]
         | exact Hfresh1 ]
-    end.
-    match goal with
-    | Hready_path : place_path p = Some _,
-      Htyped_none : place_path p = None |- _ =>
-        rewrite Hready_path in Htyped_none; discriminate
+    | Hready_new : provenance_ready_expr _,
+      Htyped_new : typed_env_roots ?env0 ?omega0 ?n0 ?R0 ?Sigma0 _ ?T_new ?Sigma1
+        ?R1 ?roots_new,
+      Htyped_none : place_path ?p0 = None,
+      Htarget : place_resolved_write_target ?Rtarget ?p0 = Some ?x0,
+      Hlookup_mut : sctx_lookup_mut ?x0 ?Sigma_mut = Some MMutable |- _ =>
+        assert (Hx_eval : x_eval = x0)
+          by (eapply eval_place_resolved_write_target_matches_root;
+              [ exact Hroots | exact Heval_place | exact Htarget ]);
+        subst x_eval;
+        destruct (IHnew omega0 n0 R0 Sigma0 T_new Sigma1 R1 roots_new ps frame
+                    Hready_new Htyped_new Hcover Hroots Hshadow Hrn
+                    Hscope Hfresh)
+          as [Hcover1 [Hscope1 Hfresh1]];
+        assert (Hlookup_mut1 : sctx_lookup_mut x0 Sigma1 = Some MMutable)
+          by (eapply sctx_same_bindings_lookup_mut;
+              [ eapply typed_env_structural_same_bindings;
+                eapply typed_env_roots_structural; exact Htyped_new
+              | exact Hlookup_mut ]);
+        assert (Hin_ctx1 : In x0 (ctx_names Sigma1))
+          by (eapply sctx_lookup_mut_in_ctx_names; exact Hlookup_mut1);
+        repeat split;
+        [ apply root_env_covers_params_update; exact Hcover1
+        | eapply store_frame_scope_update_path;
+          [ exact Hin_ctx1 | exact Hfresh1 | exact Hscope1 | exact Hupdate ]
+        | exact Hfresh1 ]
     end.
   - intros s p x path rk Heval_place Ω n R Σ T Σ' R' roots ps frame
       Hready Htyped Hcover _ _ _ Hscope Hfresh.

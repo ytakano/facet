@@ -889,6 +889,37 @@ Proof.
   exists se, v_target, T_eval.
   repeat split; assumption.
 Qed.
+Lemma eval_place_resolved_writable_indirect_unique_deref_runtime_target_exists :
+  forall env R Σ s p T x x_static path_static x_eval path_eval,
+    store_typed env s Σ ->
+    typed_place_env_structural env Σ (PDeref p) T ->
+    writable_place_env_structural env Σ (PDeref p) ->
+    store_roots_within R s ->
+    place_resolved_write_target R (PDeref p) = Some x ->
+    sctx_lookup_mut x Σ = Some MMutable ->
+    place_path p = Some (x_static, path_static) ->
+    eval_place s (PDeref p) x_eval path_eval ->
+    exists se v_target T_eval,
+      x_eval = x /\
+      store_lookup x s = Some se /\
+      value_lookup_path (se_val se) path_eval = Some v_target /\
+      type_lookup_path env (se_ty se) path_eval = Some T_eval /\
+      ty_lifetime_equiv T_eval T /\
+      value_has_type env s v_target T_eval.
+Proof.
+  intros env R Σ s p T x x_static path_static x_eval path_eval
+    Hstore Htyped Hwrite Hroots Htarget Hmut Hpath_parent Heval.
+  eapply eval_place_resolved_writable_indirect_unique_deref_runtime_target_exists_prefix.
+  - apply store_typed_prefix_exact. exact Hstore.
+  - exact Htyped.
+  - exact Hwrite.
+  - exact Hroots.
+  - exact Htarget.
+  - exact Hmut.
+  - exact Hpath_parent.
+  - exact Heval.
+Qed.
+
 
 Lemma eval_place_direct_runtime_target_exists_prefix :
   forall env Σ s p T x_static path_static x_eval path_eval,

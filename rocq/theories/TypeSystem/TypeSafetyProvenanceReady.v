@@ -48,12 +48,10 @@ Inductive provenance_ready_expr : expr -> Prop :=
   | ProvReady_Drop : forall e,
       provenance_ready_expr e ->
       provenance_ready_expr (EDrop e)
-  | ProvReady_Assign : forall p e_new x path,
-      place_path p = Some (x, path) ->
+  | ProvReady_Assign : forall p e_new,
       provenance_ready_expr e_new ->
       provenance_ready_expr (EAssign p e_new)
-  | ProvReady_Replace : forall p e_new x path,
-      place_path p = Some (x, path) ->
+  | ProvReady_Replace : forall p e_new,
       provenance_ready_expr e_new ->
       provenance_ready_expr (EReplace p e_new)
   | ProvReady_If : forall e1 e2 e3,
@@ -278,19 +276,13 @@ Proof.
     + destruct (alpha_rename_expr ρ used e_new) as [er_new used_new]
         eqn:Hnew.
       inversion Hrename; subst.
-      destruct (place_path_rename_place_some ρ p x path H)
-        as [xr Hpath].
-      eapply ProvReady_Assign.
-      * exact Hpath.
-      * eapply alpha_rename_provenance_ready_expr; eauto.
+      apply ProvReady_Assign.
+      eapply alpha_rename_provenance_ready_expr; eauto.
     + destruct (alpha_rename_expr ρ used e_new) as [er_new used_new]
         eqn:Hnew.
       inversion Hrename; subst.
-      destruct (place_path_rename_place_some ρ p x path H)
-        as [xr Hpath].
-      eapply ProvReady_Replace.
-      * exact Hpath.
-      * eapply alpha_rename_provenance_ready_expr; eauto.
+      apply ProvReady_Replace.
+      eapply alpha_rename_provenance_ready_expr; eauto.
     + destruct (alpha_rename_expr ρ used e1) as [e1r used1] eqn:He1.
       destruct (alpha_rename_expr ρ used1 e2) as [e2r used2] eqn:He2.
       destruct (alpha_rename_expr ρ used2 e3) as [e3r used3] eqn:He3.

@@ -1595,13 +1595,19 @@ Proof.
                     Hready_new Hroots Hnodup Hrn Htyped_new)
           as [Hroots1 [Hvnew [Hnodup1 Hrn1]]]
     end.
-    assert (Hroots2 : store_roots_within
-      (root_env_update x (root_set_union roots_old roots_new) R1) s2).
+    match goal with
+    | Hlookup_store : store_lookup ?x_store s = Some old_e |- _ =>
+        assert (Hroots2 : store_roots_within
+          (root_env_update x_store (root_set_union roots_old roots_new) R1) s2)
+    end.
     { eapply store_update_val_roots_within_union; eassumption. }
     assert (Hnodup2 : store_no_shadow s2)
       by (eapply store_no_shadow_update_val; eassumption).
-    assert (Hroots3 : store_roots_within
-      (root_env_update x (root_set_union roots_old roots_new) R1) s3).
+    match goal with
+    | Hlookup_store : store_lookup ?x_store s = Some old_e |- _ =>
+        assert (Hroots3 : store_roots_within
+          (root_env_update x_store (root_set_union roots_old roots_new) R1) s3)
+    end.
     { unfold store_restore_path in Hrestore.
       eapply store_update_state_roots_within; eassumption. }
     assert (Hnodup3 : store_no_shadow s3).
@@ -1644,12 +1650,6 @@ Proof.
     dependent destruction Hready.
     inversion Htyped; subst; try discriminate.
     match goal with
-    | Hready_path : place_path p = Some (x, path),
-      Htyped_path : place_path p = Some (?x_typed, ?path_typed) |- _ =>
-        rewrite Hready_path in Htyped_path;
-        inversion Htyped_path; subst x_typed path_typed; clear Htyped_path
-    end.
-    match goal with
     | Hready_new : provenance_ready_expr e_new,
       Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new0 ?Σ1_new
         ?R1_new ?roots_new0 |- _ =>
@@ -1667,7 +1667,10 @@ Proof.
             exact Hpath_static
         end.
       - exact Heval_place.
-      - exact H7.
+      - match goal with
+        | Hroot_old_lookup : root_env_lookup x R1 = Some roots_old |- _ =>
+            exact Hroot_old_lookup
+        end.
       - exact Hvnew.
       - exact Hupdate. }
     assert (Hnodup2 : store_no_shadow s2)
@@ -1694,21 +1697,59 @@ Proof.
         end.
     + apply root_env_no_shadow_update. exact Hrn1.
     + match goal with
-      | Hready_path : place_path p = Some _,
-        Htyped_none : place_path p = None |- _ =>
-          rewrite Hready_path in Htyped_none; discriminate
+      | Hready_new : provenance_ready_expr e_new,
+        Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new0 ?Σ1_new
+          ?R1_new ?roots_new0 |- _ =>
+          destruct (IHnew Ω n R Σ T_new0 Σ1_new R1_new roots_new0
+                      Hready_new Hroots Hnodup Hrn Htyped_new)
+            as [Hroots1 [Hvnew [Hnodup1 Hrn1]]]
       end.
+      assert (Hroots2 : store_roots_within
+        (root_env_update x (root_set_union roots_old roots_new) R1) s2).
+      { eapply eval_place_resolved_update_path_roots_within_union.
+        - exact Hroots.
+        - match goal with
+          | Hstore_nodup : store_no_shadow s1 |- _ => exact Hstore_nodup
+          end.
+        - match goal with
+          | Hstore_roots : store_roots_within R1 s1 |- _ => exact Hstore_roots
+          end.
+        - match goal with
+          | Hroot_old_lookup : root_env_lookup x R1 = Some roots_old |- _ =>
+              exact Hroot_old_lookup
+          end.
+        - exact Heval_place.
+        - match goal with
+          | Htarget : place_resolved_write_target R p = Some x |- _ => exact Htarget
+          end.
+        - exact Hvnew.
+        - exact Hupdate. }
+      assert (Hnodup2 : store_no_shadow s2)
+        by (eapply store_no_shadow_update_path; eassumption).
+      assert (Hroots3 : store_roots_within
+        (root_env_update x (root_set_union roots_old roots_new) R1) s3).
+      { unfold store_restore_path in Hrestore.
+        eapply store_update_state_roots_within; eassumption. }
+      assert (Hnodup3 : store_no_shadow s3).
+      { unfold store_restore_path in Hrestore.
+        eapply store_no_shadow_update_state; eassumption. }
+      repeat split; try assumption.
+      * eapply eval_place_resolved_lookup_path_roots_within.
+        -- exact Hroots.
+        -- exact Heval_place.
+        -- exact Hlookup_old.
+        -- match goal with
+           | Htarget : place_resolved_write_target R p = Some x |- _ => exact Htarget
+           end.
+        -- match goal with
+           | Hroot_lookup : root_env_lookup x R = Some roots |- _ => exact Hroot_lookup
+           end.
+      * apply root_env_no_shadow_update. exact Hrn1.
   - intros s s1 s2 p x_eval path_eval e_new v_new Heval_place
       Heval_new IHnew Hupdate Ω n R Σ T Σ' R' roots Hready
       Hroots Hnodup Hrn Htyped.
     dependent destruction Hready.
     inversion Htyped; subst; try discriminate.
-    match goal with
-    | Hready_path : place_path p = Some (x, path),
-      Htyped_path : place_path p = Some (?x_typed, ?path_typed) |- _ =>
-        rewrite Hready_path in Htyped_path;
-        inversion Htyped_path; subst x_typed path_typed; clear Htyped_path
-    end.
     match goal with
     | Hready_new : provenance_ready_expr e_new,
       Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new0 ?Σ1_new
@@ -1723,10 +1764,35 @@ Proof.
     + eapply store_no_shadow_update_path; eassumption.
     + apply root_env_no_shadow_update. exact Hrn1.
     + match goal with
-      | Hready_path : place_path p = Some _,
-        Htyped_none : place_path p = None |- _ =>
-          rewrite Hready_path in Htyped_none; discriminate
+      | Hready_new : provenance_ready_expr e_new,
+        Htyped_new : typed_env_roots env Ω n R Σ e_new ?T_new0 ?Σ1_new
+          ?R1_new ?roots_new0 |- _ =>
+          destruct (IHnew Ω n R Σ T_new0 Σ1_new R1_new roots_new0
+                      Hready_new Hroots Hnodup Hrn Htyped_new)
+            as [Hroots1 [Hvnew [Hnodup1 Hrn1]]]
       end.
+      repeat split.
+      * eapply eval_place_resolved_update_path_roots_within_union.
+        -- exact Hroots.
+        -- match goal with
+           | Hstore_nodup : store_no_shadow s1 |- _ => exact Hstore_nodup
+           end.
+        -- match goal with
+           | Hstore_roots : store_roots_within R1 s1 |- _ => exact Hstore_roots
+           end.
+        -- match goal with
+           | Hroot_old_lookup : root_env_lookup x R1 = Some roots_old |- _ =>
+               exact Hroot_old_lookup
+           end.
+        -- exact Heval_place.
+        -- match goal with
+           | Htarget : place_resolved_write_target R p = Some x |- _ => exact Htarget
+           end.
+        -- exact Hvnew.
+        -- exact Hupdate.
+      * constructor.
+      * eapply store_no_shadow_update_path; eassumption.
+      * apply root_env_no_shadow_update. exact Hrn1.
   - intros s p x path rk Heval_place Ω n R Σ T Σ' R' roots Hready
       Hroots Hnodup Hrn Htyped.
     dependent destruction Hready.

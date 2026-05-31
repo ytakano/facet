@@ -453,6 +453,101 @@ Proof.
   eapply store_update_path_roots_within_union; eassumption.
 Qed.
 
+
+Lemma value_roots_within_singleton_ref_target :
+  forall roots x_eval path_eval x,
+    value_roots_within roots (VRef x_eval path_eval) ->
+    singleton_store_root roots = Some x ->
+    x_eval = x.
+Proof.
+  intros roots x_eval path_eval x Hwithin Hsingle.
+  inversion Hwithin; subst.
+  pose proof (singleton_store_root_some_equiv roots x Hsingle) as Hequiv.
+  specialize (Hequiv (RStore x_eval)).
+  destruct Hequiv as [Hequiv _].
+  match goal with
+  | Hin : In (RStore x_eval) roots |- _ => specialize (Hequiv Hin)
+  end.
+  simpl in Hequiv.
+  destruct Hequiv as [Heq | []]. inversion Heq. reflexivity.
+Qed.
+
+Lemma eval_place_resolved_write_target_matches_root :
+  forall R s p x_eval path_eval x,
+    store_roots_within R s ->
+    eval_place s p x_eval path_eval ->
+    place_resolved_write_target R p = Some x ->
+    x_eval = x.
+Proof.
+  intros R s p x_eval path_eval x Hwithin Heval.
+  revert x.
+  induction Heval; intros target_final Htarget; simpl in Htarget.
+  - inversion Htarget. reflexivity.
+  - eapply IHHeval; eassumption.
+  - destruct (place_resolved_write_target R p) as [target_parent |] eqn:Htarget_p;
+      try discriminate.
+    destruct (root_env_lookup target_parent R) as [target_roots |]
+      eqn:Hlookup_target; try discriminate.
+    destruct (singleton_store_root target_roots) as [target_ref |] eqn:Hsingle;
+      try discriminate.
+    inversion Htarget; subst target_ref.
+    assert (Hr : r = target_parent) by (apply (IHHeval Hwithin target_parent eq_refl)).
+    subst r.
+    assert (Hvalue_ref : value_roots_within target_roots (VRef x path)).
+    { eapply value_lookup_path_roots_within.
+      - eapply store_roots_within_lookup_value; eassumption.
+      - match goal with
+        | Hvalue_path : value_lookup_path (se_val se_r) rpath = Some (VRef x path) |- _ =>
+            exact Hvalue_path
+        end. }
+    eapply value_roots_within_singleton_ref_target; eassumption.
+Qed.
+
+Lemma eval_place_resolved_lookup_path_roots_within :
+  forall R s p x_eval path_eval old_v x roots,
+    store_roots_within R s ->
+    eval_place s p x_eval path_eval ->
+    store_lookup_path x_eval path_eval s = Some old_v ->
+    place_resolved_write_target R p = Some x ->
+    root_env_lookup x R = Some roots ->
+    value_roots_within roots old_v.
+Proof.
+  intros R s p x_eval path_eval old_v x roots Hwithin Heval Hlookup_path
+    Htarget Hroot_lookup.
+  assert (Hx : x_eval = x).
+  { eapply eval_place_resolved_write_target_matches_root; eassumption. }
+  subst x_eval.
+  unfold store_lookup_path in Hlookup_path.
+  destruct (store_lookup x s) as [se |] eqn:Hlookup_store; try discriminate.
+  eapply value_lookup_path_roots_within.
+  - eapply store_roots_within_lookup_value; eassumption.
+  - exact Hlookup_path.
+Qed.
+
+Lemma eval_place_resolved_update_path_roots_within_union :
+  forall R R1 s s1 s2 p x_eval path_eval x v_new roots_old roots_new,
+    store_roots_within R s ->
+    store_no_shadow s1 ->
+    store_roots_within R1 s1 ->
+    root_env_lookup x R1 = Some roots_old ->
+    eval_place s p x_eval path_eval ->
+    place_resolved_write_target R p = Some x ->
+    value_roots_within roots_new v_new ->
+    store_update_path x_eval path_eval v_new s1 = Some s2 ->
+    store_roots_within
+      (root_env_update x (root_set_union roots_old roots_new) R1) s2.
+Proof.
+  intros R R1 s s1 s2 p x_eval path_eval x v_new roots_old roots_new
+    Hwithin Hnodup Hwithin1 Hlookup_old Heval Htarget Hvalue Hupdate.
+  assert (Hx : x_eval = x).
+  { eapply eval_place_resolved_write_target_matches_root.
+    - exact Hwithin.
+    - exact Heval.
+    - exact Htarget. }
+  subst x_eval.
+  eapply store_update_path_roots_within_union; eassumption.
+Qed.
+
 Lemma lookup_alpha_rename_fn_def_typed_structural :
   forall env fname fdef fcall used used',
     lookup_fn fname (env_fns env) = Some fdef ->

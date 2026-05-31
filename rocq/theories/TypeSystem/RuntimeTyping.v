@@ -2185,6 +2185,23 @@ Proof.
       * eapply IH. reflexivity.
 Qed.
 
+Lemma store_typed_update_state_same_ctx :
+  forall env s Σ x f s',
+    store_typed env s Σ ->
+    (forall runtime static,
+      binding_state_refines runtime static ->
+      binding_state_refines (f runtime) static) ->
+    store_update_state x f s = Some s' ->
+    store_typed env s' Σ.
+Proof.
+  intros env s Σ x f s' Htyped Hrefines Hs.
+  eapply store_typed_update_state_same_ctx_entries.
+  - exact Htyped.
+  - eapply store_update_state_ref_targets_preserved. exact Hs.
+  - exact Hrefines.
+  - exact Hs.
+Qed.
+
 Lemma store_typed_update_state :
   forall env s Σ x f s' Σ',
     store_typed env s Σ ->

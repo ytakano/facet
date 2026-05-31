@@ -221,14 +221,10 @@ Proof.
              ++ apply IHbranches.
                 ** simpl. simpl in Hlt. lia.
                 ** exact Hrest.
-	      + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
-	        eapply ProvReady_Replace.
-        * exact Hpath.
-        * apply IH with (e := e); [simpl in Hlt; lia | exact Hready].
-      + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
-        eapply ProvReady_Assign.
-        * exact Hpath.
-        * apply IH with (e := e); [simpl in Hlt; lia | exact Hready].
+	      + apply ProvReady_Replace.
+        apply IH with (e := e); [simpl in Hlt; lia | exact Hready].
+      + apply ProvReady_Assign.
+        apply IH with (e := e); [simpl in Hlt; lia | exact Hready].
       + destruct (place_path p) as [[x path] |] eqn:Hpath; try discriminate.
         eapply ProvReady_Borrow. exact Hpath.
       + destruct e; simpl in Hready; try discriminate.

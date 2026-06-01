@@ -380,6 +380,51 @@ Proof.
   rewrite subst_type_params_param_nil, IH. reflexivity.
 Qed.
 
+Lemma subst_type_params_expr_nil : forall e,
+  subst_type_params_expr [] e = e.
+Proof.
+  fix IH 1. intros e.
+  destruct e as
+    [| lit | x | m x T e1 e2 | m x e1 e2 | fname | fname captures
+     | p | fname args | fname type_args args | ef args
+     | name lts type_args fields | enum_name variant lts type_args args
+     | discr branches | p rhs | p rhs | rk p | e | e | e1 e2 e3];
+    simpl; try reflexivity.
+  - rewrite subst_type_params_ty_nil, (IH e1), (IH e2). reflexivity.
+  - rewrite (IH e1), (IH e2). reflexivity.
+  - apply f_equal.
+    induction args as [| e args IHargs]; simpl; auto.
+    rewrite (IH e), IHargs. reflexivity.
+  - rewrite map_subst_type_params_ty_nil. apply f_equal.
+    induction args as [| e args IHargs]; simpl; auto.
+    rewrite (IH e), IHargs. reflexivity.
+  - rewrite (IH ef). apply f_equal.
+    induction args as [| arg args IHargs]; simpl; auto.
+    rewrite (IH arg), IHargs. reflexivity.
+  - rewrite map_subst_type_params_ty_nil. apply f_equal.
+    induction fields as [| [field e] fields IHfields]; simpl; auto.
+    rewrite (IH e), IHfields. reflexivity.
+  - rewrite map_subst_type_params_ty_nil. apply f_equal.
+    induction args as [| e args IHargs]; simpl; auto.
+    rewrite (IH e), IHargs. reflexivity.
+  - rewrite (IH discr). apply f_equal.
+    induction branches as [| [[branch_name binders] branch] branches IHbranches];
+      simpl; auto.
+    rewrite (IH branch), IHbranches. reflexivity.
+  - rewrite (IH rhs). reflexivity.
+  - rewrite (IH rhs). reflexivity.
+  - rewrite (IH e). reflexivity.
+  - rewrite (IH e). reflexivity.
+  - rewrite (IH e1), (IH e2), (IH e3). reflexivity.
+Qed.
+
+Lemma map_subst_type_params_expr_nil : forall args,
+  map (subst_type_params_expr []) args = args.
+Proof.
+  induction args as [| e args IH]; simpl; auto.
+  rewrite subst_type_params_expr_nil, IH. reflexivity.
+Qed.
+
 Fixpoint compose_type_params_go
     (σ τ fallback : list Ty) {struct τ} : list Ty :=
   match τ, fallback with

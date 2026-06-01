@@ -162,6 +162,19 @@ Fixpoint apply_lt_ty (σ : list lifetime) (T : Ty) {struct T} : Ty :=
       MkTy u (TRef (apply_lt_lifetime σ l) rk (apply_lt_ty σ t))
   end.
 
+Lemma ty_usage_apply_lt_ty : forall σ T,
+  ty_usage (apply_lt_ty σ T) = ty_usage T.
+Proof.
+  intros σ [u c]. destruct c; reflexivity.
+Qed.
+
+Lemma apply_lt_ty_outer_usage_core : forall σ u T,
+  apply_lt_ty σ (MkTy u (ty_core T)) =
+  MkTy u (ty_core (apply_lt_ty σ T)).
+Proof.
+  intros σ u [u' c]. destruct c; reflexivity.
+Qed.
+
 Fixpoint map_lifetimes_ty
     (f : lifetime -> lifetime) (T : Ty) {struct T} : Ty :=
   match T with

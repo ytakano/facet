@@ -8883,6 +8883,9 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
           fuel env Ω n R Σ e with
   | true => true
   | false =>
+      match infer_core_env_state_fuel_roots_shadow_safe fuel env Ω n R Σ e with
+      | infer_ok _ => false
+      | infer_err _ =>
       match fuel with
       | 0 => false
       | S fuel' =>
@@ -8948,6 +8951,7 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
               end
           | _ => false
           end
+      end
       end
   end.
 

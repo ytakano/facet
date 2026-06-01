@@ -115,6 +115,8 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
       remaining nested reborrow failure is the store-safe gate.
     - T48c1 done: add checked narrow store-safe summary relation
       and executable checked narrow checker wrapper.
+    - T48c2 done: restrict checked narrow fallback to top-level
+      unchecked inference failures; TypeChecker compiles.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

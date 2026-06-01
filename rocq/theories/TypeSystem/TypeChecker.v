@@ -8884,7 +8884,15 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
   | true => true
   | false =>
       match infer_core_env_state_fuel_roots_shadow_safe fuel env Ω n R Σ e with
-      | infer_ok _ => false
+      | infer_ok (T, _, _, _) =>
+          match e with
+          | EDeref (EBorrow RShared p) =>
+              match place_path p with
+              | Some _ => capture_ref_free_ty_b env T
+              | None => false
+              end
+          | _ => false
+          end
       | infer_err _ =>
       match fuel with
       | 0 => false
@@ -8897,7 +8905,7 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
               | infer_ok (T1, Σ1, R1, roots1) =>
                   ty_compatible_b Ω T1 T_hidden &&
                   non_function_value_ty_b T_hidden &&
-                  check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
+                  check_expr_root_shadow_store_safe_narrow_summary_fuel
                     fuel' env Ω n R Σ e1 &&
                   match root_env_lookup x R1 with
                   | Some _ => false
@@ -8926,7 +8934,7 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
               | infer_err _ => false
               | infer_ok (T1, Σ1, R1, roots1) =>
                   non_function_value_ty_b T1 &&
-                  check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
+                  check_expr_root_shadow_store_safe_narrow_summary_fuel
                     fuel' env Ω n R Σ e1 &&
                   match root_env_lookup x R1 with
                   | Some _ => false

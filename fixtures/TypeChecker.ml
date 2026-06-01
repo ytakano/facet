@@ -12875,7 +12875,22 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_checked_fuel fuel env _
   then true
   else (match infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n
                 r _UU03a3_ e with
-        | Infer_ok _ -> false
+        | Infer_ok p ->
+          let (p0, _) = p in
+          let (p1, _) = p0 in
+          let (t, _) = p1 in
+          (match e with
+           | EDeref e0 ->
+             (match e0 with
+              | EBorrow (r0, p2) ->
+                (match r0 with
+                 | RShared ->
+                   (match place_path p2 with
+                    | Some _ -> capture_ref_free_ty_b env t
+                    | None -> false)
+                 | RUnique -> false)
+              | _ -> false)
+           | _ -> false)
         | Infer_err _ ->
           ((fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
   else fS (Big_int_Z.pred_big_int n))
@@ -12893,7 +12908,7 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_checked_fuel fuel env _
                     ((&&)
                       ((&&) (ty_compatible_b _UU03a9_ t1 t_hidden)
                         (non_function_value_ty_b t_hidden))
-                      (check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
+                      (check_expr_root_shadow_store_safe_narrow_summary_fuel
                         fuel' env _UU03a9_ n r _UU03a3_ e1))
                     (match root_env_lookup x r1 with
                      | Some _ -> false
@@ -12930,7 +12945,7 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_checked_fuel fuel env _
                   let (t1, _UU03a3_1) = p1 in
                   (&&)
                     ((&&) (non_function_value_ty_b t1)
-                      (check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
+                      (check_expr_root_shadow_store_safe_narrow_summary_fuel
                         fuel' env _UU03a9_ n r _UU03a3_ e1))
                     (match root_env_lookup x r1 with
                      | Some _ -> false

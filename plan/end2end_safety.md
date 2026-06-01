@@ -124,9 +124,11 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
       EnvRuntimeCapturedSafety compiles.
     - T48c6 done: use checked function-level roots companion in the
       normal store-safe gate; EnvRuntimeCapturedSafety and dune build pass.
-    - T48c7 blocked: `nested_shared_reborrow.facet` still fails at
-      resolved `EBorrow` under `EDeref`; proving the leaf needs a
-      non-direct borrow preservation/readiness theorem.
+    - T48c7 done: prove direct `EDeref (EBorrow RShared p)` checked narrow
+      leaf for capture-ref-free results; EnvRuntimeBaseSafety and dune build pass.
+    - T48c8 blocked: `nested_shared_reborrow.facet` still fails at indirect
+      `EDeref (EBorrow RShared (PDeref _))`; needs non-direct borrow
+      preservation/readiness or a general typed `eval_place` target theorem.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

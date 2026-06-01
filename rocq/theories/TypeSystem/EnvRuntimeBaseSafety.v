@@ -728,6 +728,13 @@ Inductive expr_root_shadow_store_safe_narrow_summary_checked
       capture_ref_free_ty_b env T = true ->
       expr_root_shadow_store_safe_narrow_summary_checked
         env Omega n R Σ e T Σ' R' [] ret_roots
+  | ERSSNC_DerefBorrowShared_CaptureRefFreeResult : forall R Σ p T Σ' R' roots x path,
+      typed_env_roots_shadow_safe env Omega n R Σ
+        (EDeref (EBorrow RShared p)) T Σ' R' roots ->
+      place_path p = Some (x, path) ->
+      capture_ref_free_ty_b env T = true ->
+      expr_root_shadow_store_safe_narrow_summary_checked
+        env Omega n R Σ (EDeref (EBorrow RShared p)) T Σ' R' [] []
   | ERSSNC_Let_CaptureRefFreeResult : forall R R1 R2 Σ Σ1 Sigma2 m x T_hidden T1 e1 e2
       T2 roots1 roots2 ret_roots1 ret_roots,
       expr_root_shadow_store_safe_narrow_summary_checked
@@ -2211,6 +2218,107 @@ Proof.
   - eapply IHHvalue; reflexivity.
   - eapply IHHvalue; reflexivity.
 Qed.
+
+Lemma value_has_type_ref_target_expected :
+  forall env s x path T_actual u la rk T_expected,
+    value_has_type env s (VRef x path) T_actual ->
+    ty_lifetime_equiv T_actual (MkTy u (TRef la rk T_expected)) ->
+    exists se v_target T_target,
+      store_lookup x s = Some se /\
+      value_lookup_path (se_val se) path = Some v_target /\
+      type_lookup_path env (se_ty se) path = Some T_target /\
+      (value_has_type env s v_target T_target ->
+       value_has_type env s v_target T_expected).
+Proof.
+  intros env s x path T_actual u la rk T_expected Htyped.
+  remember (VRef x path) as v eqn:Hvref.
+  revert x path u la rk T_expected Hvref.
+  induction Htyped; intros x0 path0 u_ref la_ref rk_ref T_expected0 Hvref Heq;
+    inversion Hvref; subst; try discriminate.
+  - inversion Heq; subst.
+    exists se, v, T. repeat split; try assumption.
+    intros Hv. eapply VHT_LifetimeEquiv; eassumption.
+  - inversion Heq; subst.
+    inversion H; subst; try discriminate.
+    + destruct (IHHtyped x0 path0 _ _ _ _ eq_refl (ty_lifetime_equiv_refl _))
+        as [se0 [v0 [T0 [Hlookup [Hvalue [Htype Hcast]]]]]].
+      exists se0, v0, T0. repeat split; try assumption.
+      intros Hv0.
+      match goal with
+      | Hinner : ty_lifetime_equiv ?T_mid T_expected0 |- _ =>
+          eapply VHT_LifetimeEquiv; [exact (Hcast Hv0) | exact Hinner]
+      end.
+    + destruct (IHHtyped x0 path0 _ _ _ _ eq_refl (ty_lifetime_equiv_refl _))
+        as [se0 [v0 [T0 [Hlookup [Hvalue [Htype Hcast]]]]]].
+      exists se0, v0, T0. repeat split; try assumption.
+      intros Hv0.
+      match goal with
+      | Hcompat : ty_compatible _ ?T_inner_actual ?T_inner_expected,
+        Hinner : ty_lifetime_equiv ?T_inner_expected T_expected0 |- _ =>
+          eapply VHT_LifetimeEquiv;
+          [ eapply VHT_Compatible; [exact (Hcast Hv0) | exact Hcompat]
+          | exact Hinner ]
+      end.
+    + destruct (IHHtyped x0 path0 _ _ _ _ eq_refl (ty_lifetime_equiv_refl _))
+        as [se0 [v0 [T0 [Hlookup [Hvalue [Htype Hcast]]]]]].
+      exists se0, v0, T0. repeat split; try assumption.
+      intros Hv0.
+      match goal with
+      | Hinner : ty_lifetime_equiv ?T_mid T_expected0 |- _ =>
+          eapply VHT_LifetimeEquiv; [exact (Hcast Hv0) | exact Hinner]
+      end.
+  - destruct (IHHtyped x0 path0 u_ref la_ref rk_ref T_expected0 eq_refl
+      (ty_lifetime_equiv_trans _ _ _ H Heq))
+      as [se0 [v0 [T0 [Hlookup [Hvalue [Htype Hcast]]]]]].
+    exists se0, v0, T0. repeat split; try assumption.
+Qed.
+
+Lemma eval_place_deref_runtime_target_has_type_from_ref :
+  forall env Sigma s T u la rk x path,
+    store_typed env s Sigma ->
+    value_has_type env s (VRef x path) (MkTy u (TRef la rk T)) ->
+    exists se v T_eval,
+      store_lookup x s = Some se /\
+      value_lookup_path (se_val se) path = Some v /\
+      type_lookup_path env (se_ty se) path = Some T_eval /\
+      value_has_type env s v T.
+Proof.
+  intros env Sigma s T u la rk x path Hstore Href.
+  destruct (value_has_type_ref_target_expected
+    env s x path (MkTy u (TRef la rk T)) u la rk T
+    Href (ty_lifetime_equiv_refl _))
+    as [se_target [v_target [T_target [Hlookup_target
+      [Hvalue_target [Htype_target Hcast_target]]]]]].
+  destruct (store_typed_lookup env s Sigma x se_target
+    Hstore Hlookup_target)
+    as [T_root [st [m [Hsigma [Hname [Hse_ty [Hstate Hv_root]]]]]]].
+  assert (Hv_root_actual : value_has_type env s (se_val se_target)
+    (se_ty se_target)).
+  { eapply VHT_LifetimeEquiv.
+    - exact Hv_root.
+    - apply ty_lifetime_equiv_sym. exact Hse_ty. }
+  assert (Hv_target : value_has_type env s v_target T_target).
+  { eapply value_lookup_path_has_type; eassumption. }
+  exists se_target, v_target, T_target.
+  repeat split; try assumption.
+  exact (Hcast_target Hv_target).
+Qed.
+
+Lemma eval_place_typed_runtime_target_has_type :
+  forall env Sigma s p T u la rk x path,
+    store_typed env s Sigma ->
+    typed_place_env_structural env Sigma p (MkTy u (TRef la rk T)) ->
+    value_has_type env s (VRef x path) (MkTy u (TRef la rk T)) ->
+    exists se v T_eval,
+      store_lookup x s = Some se /\
+      value_lookup_path (se_val se) path = Some v /\
+      type_lookup_path env (se_ty se) path = Some T_eval /\
+      value_has_type env s v T.
+Proof.
+  intros env Sigma s p T u la rk x path Hstore _ Href.
+  eapply eval_place_deref_runtime_target_has_type_from_ref; eassumption.
+Qed.
+
 Lemma check_expr_root_shadow_store_safe_narrow_summary_fuel_sound :
   forall fuel env Omega n R Σ e T Σ' R' roots,
     infer_core_env_state_fuel_roots_shadow_safe fuel env Omega n R Σ e =
@@ -2434,112 +2542,126 @@ Proof.
       * discriminate Hnarrow.
     + cbn [infer_core_env_state_fuel_roots_shadow_safe_checked] in Hinfer.
       destruct (infer_core_env_state_fuel_roots_shadow_safe
-        (S fuel') env Omega n R Σ e) eqn:Hun_top; try discriminate.
-      destruct fuel' as [| fuel''].
-      { destruct e; cbn [check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
-          infer_core_env_state_fuel_roots_shadow_safe
-          infer_core_env_state_fuel_roots_shadow_safe_checked]
-          in Hcheck; discriminate. }
-      destruct e as [|lit|xv|mlet xlet t e1 e2|mlet xlet e1 e2|fn|fn caps|p|f args|f tys args|callee args|sn ls tys fields|en variant ls tys args|scrut branches|p e1|p e1|rk p|e1|e1|e1 e2 e3];
-        cbn [check_expr_root_shadow_store_safe_narrow_summary_checked_fuel]
-          in Hcheck; try discriminate.
-        destruct (infer_core_env_state_fuel_roots_shadow_safe
-          (S fuel'') env Omega n R Σ e1)
-          as [[[[T1 Σ1] R1] roots1] | err1] eqn:He1;
+        (S fuel') env Omega n R Σ e)
+        as [[[[Ttop Sigmatop] Rtop] roots_top] | err_top]
+        eqn:Hun_top.
+      * destruct e; try discriminate.
+        destruct e; try discriminate.
+        destruct r; try discriminate.
+        destruct (place_path p) as [[x_path path_path] |] eqn:Hpath_top;
           try discriminate.
-        destruct (ty_compatible_b Omega T1 t) eqn:Hcompat;
+        destruct (capture_ref_free_ty_b env Ttop) eqn:Hfree_top;
           try discriminate.
-        destruct (non_function_value_ty_b t) eqn:Hnonfn;
-          try discriminate.
-        apply andb_true_iff in Hcheck as [He1_check Hcheck].
-        repeat rewrite andb_true_iff in He1_check.
-        destruct He1_check as [[_ _] He1_narrow_check].
-        destruct (check_expr_root_shadow_store_safe_narrow_summary_fuel
-          (S fuel'') env Omega n R Σ e1) eqn:He1_narrow;
-          try discriminate.
-        destruct (check_expr_root_shadow_store_safe_narrow_summary_fuel_sound
-          (S fuel'') env Omega n R Σ e1 T1 Σ1 R1 roots1 He1 He1_narrow)
-          as [ret_roots1 Hsummary1_legacy].
-        pose proof (ERSSNC_Conservative env Omega n R Σ e1 T1 Σ1 R1
-          roots1 ret_roots1 Hsummary1_legacy) as Hsummary1.
-        destruct (root_env_lookup xlet R1) as [roots_x |] eqn:Hlookup_x;
-          try discriminate.
-        apply andb_true_iff in Hcheck as [Hroots1 Hcheck].
-        apply andb_true_iff in Hroots1 as [Hroots1 Henv1].
-        destruct (infer_core_env_state_fuel_roots_shadow_safe_checked
-          (S fuel'') env Omega n (root_env_add xlet roots1 R1)
-          (sctx_add xlet t mlet Σ1) e2)
-          as [[[[T2 Sigma2] R2] roots2] | err2] eqn:He2;
-          try discriminate.
-        repeat rewrite andb_true_iff in Hcheck.
-        destruct Hcheck as [[[Hsctx_ok Hfree] Henv2] He2_check].
-        destruct (IH env Omega n (root_env_add xlet roots1 R1)
-          (sctx_add xlet t mlet Σ1) e2 T2 Sigma2 R2 roots2 He2
-          He2_check) as [ret_roots Hsummary2].
-        simpl in Hinfer.
-        try rewrite He1 in Hinfer.
-        try rewrite Hcompat in Hinfer.
-        try rewrite Hlookup_x in Hinfer.
-        try rewrite Hroots1 in Hinfer.
-        try rewrite Henv1 in Hinfer.
-        try rewrite He2 in Hinfer.
-        try rewrite Hsctx_ok in Hinfer.
-        try rewrite Hfree in Hinfer.
-        try rewrite Henv2 in Hinfer.
         unfold roots_for_checked_result in Hinfer.
-        rewrite Hfree in Hinfer.
+        rewrite Hfree_top in Hinfer.
         inversion Hinfer; subst; clear Hinfer.
-        exists ret_roots.
-        eapply ERSSNC_Let_CaptureRefFreeResult.
-        all: try eassumption.
-        all: try (apply roots_exclude_b_sound; assumption).
-        all: try (apply root_env_excludes_b_sound; assumption).
-        destruct (infer_core_env_state_fuel_roots_shadow_safe
-          (S fuel'') env Omega n R Σ e1)
-          as [[[[T1 Σ1] R1] roots1] | err1] eqn:He1;
-          try discriminate.
-        destruct (non_function_value_ty_b T1) eqn:Hnonfn;
-          try discriminate.
-        apply andb_true_iff in Hcheck as [He1_check Hcheck].
-        destruct (check_expr_root_shadow_store_safe_narrow_summary_fuel
-          (S fuel'') env Omega n R Σ e1) eqn:He1_narrow;
-          try discriminate.
-        destruct (check_expr_root_shadow_store_safe_narrow_summary_fuel_sound
-          (S fuel'') env Omega n R Σ e1 T1 Σ1 R1 roots1 He1 He1_narrow)
-          as [ret_roots1 Hsummary1_legacy].
-        pose proof (ERSSNC_Conservative env Omega n R Σ e1 T1 Σ1 R1
-          roots1 ret_roots1 Hsummary1_legacy) as Hsummary1.
-        destruct (root_env_lookup xlet R1) as [roots_x |] eqn:Hlookup_x;
-          try discriminate.
-        apply andb_true_iff in Hcheck as [Hroots1 Hcheck].
-        apply andb_true_iff in Hroots1 as [Hroots1 Henv1].
-        destruct (infer_core_env_state_fuel_roots_shadow_safe_checked
-          (S fuel'') env Omega n (root_env_add xlet roots1 R1)
-          (sctx_add xlet T1 mlet Σ1) e2)
-          as [[[[T2 Sigma2] R2] roots2] | err2] eqn:He2;
-          try discriminate.
-        repeat rewrite andb_true_iff in Hcheck.
-        destruct Hcheck as [[[Hsctx_ok Hfree] Henv2] He2_check].
-        destruct (IH env Omega n (root_env_add xlet roots1 R1)
-          (sctx_add xlet T1 mlet Σ1) e2 T2 Sigma2 R2 roots2 He2
-          He2_check) as [ret_roots Hsummary2].
-        simpl in Hinfer.
-        try rewrite He1 in Hinfer.
-        try rewrite Hlookup_x in Hinfer.
-        try rewrite Hroots1 in Hinfer.
-        try rewrite Henv1 in Hinfer.
-        try rewrite He2 in Hinfer.
-        try rewrite Hsctx_ok in Hinfer.
-        try rewrite Hfree in Hinfer.
-        try rewrite Henv2 in Hinfer.
-        unfold roots_for_checked_result in Hinfer.
-        rewrite Hfree in Hinfer.
-        inversion Hinfer; subst; clear Hinfer.
-        exists ret_roots.
-        eapply ERSSNC_LetInfer_CaptureRefFreeResult.
-        all: try eassumption.
-        all: try (apply roots_exclude_b_sound; assumption).
-        all: try (apply root_env_excludes_b_sound; assumption).
+        exists [].
+        eapply ERSSNC_DerefBorrowShared_CaptureRefFreeResult.
+        -- eapply infer_core_env_state_fuel_roots_shadow_safe_sound.
+           exact Hun_top.
+        -- exact Hpath_top.
+        -- exact Hfree_top.
+      * destruct fuel' as [| fuel''].
+        { destruct e; cbn [check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
+            infer_core_env_state_fuel_roots_shadow_safe
+            infer_core_env_state_fuel_roots_shadow_safe_checked]
+            in Hcheck; discriminate. }
+        destruct e as [|lit|xv|mlet xlet t e1 e2|mlet xlet e1 e2|fn|fn caps|p|f args|f tys args|callee args|sn ls tys fields|en variant ls tys args|scrut branches|p e1|p e1|rk p|e1|e1|e1 e2 e3];
+          cbn [check_expr_root_shadow_store_safe_narrow_summary_checked_fuel]
+            in Hcheck; try discriminate.
+        -- destruct (infer_core_env_state_fuel_roots_shadow_safe
+            (S fuel'') env Omega n R Σ e1)
+            as [[[[T1 Σ1] R1] roots1] | err1] eqn:He1;
+            try discriminate.
+          destruct (ty_compatible_b Omega T1 t) eqn:Hcompat;
+            try discriminate.
+          destruct (non_function_value_ty_b t) eqn:Hnonfn;
+            try discriminate.
+          apply andb_true_iff in Hcheck as [He1_check Hcheck].
+          repeat rewrite andb_true_iff in He1_check.
+          destruct He1_check as [[_ _] He1_narrow_check].
+          destruct (check_expr_root_shadow_store_safe_narrow_summary_fuel
+            (S fuel'') env Omega n R Σ e1) eqn:He1_narrow;
+            try discriminate.
+          destruct (check_expr_root_shadow_store_safe_narrow_summary_fuel_sound
+            (S fuel'') env Omega n R Σ e1 T1 Σ1 R1 roots1 He1 He1_narrow)
+            as [ret_roots1 Hsummary1_legacy].
+          pose proof (ERSSNC_Conservative env Omega n R Σ e1 T1 Σ1 R1
+            roots1 ret_roots1 Hsummary1_legacy) as Hsummary1.
+          destruct (root_env_lookup xlet R1) as [roots_x |] eqn:Hlookup_x;
+            try discriminate.
+          apply andb_true_iff in Hcheck as [Hroots1 Hcheck].
+          apply andb_true_iff in Hroots1 as [Hroots1 Henv1].
+          destruct (infer_core_env_state_fuel_roots_shadow_safe_checked
+            (S fuel'') env Omega n (root_env_add xlet roots1 R1)
+            (sctx_add xlet t mlet Σ1) e2)
+            as [[[[T2 Sigma2] R2] roots2] | err2] eqn:He2;
+            try discriminate.
+          repeat rewrite andb_true_iff in Hcheck.
+          destruct Hcheck as [[[Hsctx_ok Hfree] Henv2] He2_check].
+          destruct (IH env Omega n (root_env_add xlet roots1 R1)
+            (sctx_add xlet t mlet Σ1) e2 T2 Sigma2 R2 roots2 He2
+            He2_check) as [ret_roots Hsummary2].
+          simpl in Hinfer.
+          try rewrite He1 in Hinfer.
+          try rewrite Hcompat in Hinfer.
+          try rewrite Hlookup_x in Hinfer.
+          try rewrite Hroots1 in Hinfer.
+          try rewrite Henv1 in Hinfer.
+          try rewrite He2 in Hinfer.
+          try rewrite Hsctx_ok in Hinfer.
+          try rewrite Hfree in Hinfer.
+          try rewrite Henv2 in Hinfer.
+          unfold roots_for_checked_result in Hinfer.
+          rewrite Hfree in Hinfer.
+          inversion Hinfer; subst; clear Hinfer.
+          exists ret_roots.
+          eapply ERSSNC_Let_CaptureRefFreeResult;
+            eauto using roots_exclude_b_sound, root_env_excludes_b_sound.
+        -- destruct (infer_core_env_state_fuel_roots_shadow_safe
+            (S fuel'') env Omega n R Σ e1)
+            as [[[[T1 Σ1] R1] roots1] | err1] eqn:He1;
+            try discriminate.
+          destruct (non_function_value_ty_b T1) eqn:Hnonfn;
+            try discriminate.
+          apply andb_true_iff in Hcheck as [He1_check Hcheck].
+          destruct (check_expr_root_shadow_store_safe_narrow_summary_fuel
+            (S fuel'') env Omega n R Σ e1) eqn:He1_narrow;
+            try discriminate.
+          destruct (check_expr_root_shadow_store_safe_narrow_summary_fuel_sound
+            (S fuel'') env Omega n R Σ e1 T1 Σ1 R1 roots1 He1 He1_narrow)
+            as [ret_roots1 Hsummary1_legacy].
+          pose proof (ERSSNC_Conservative env Omega n R Σ e1 T1 Σ1 R1
+            roots1 ret_roots1 Hsummary1_legacy) as Hsummary1.
+          destruct (root_env_lookup xlet R1) as [roots_x |] eqn:Hlookup_x;
+            try discriminate.
+          apply andb_true_iff in Hcheck as [Hroots1 Hcheck].
+          apply andb_true_iff in Hroots1 as [Hroots1 Henv1].
+          destruct (infer_core_env_state_fuel_roots_shadow_safe_checked
+            (S fuel'') env Omega n (root_env_add xlet roots1 R1)
+            (sctx_add xlet T1 mlet Σ1) e2)
+            as [[[[T2 Sigma2] R2] roots2] | err2] eqn:He2;
+            try discriminate.
+          repeat rewrite andb_true_iff in Hcheck.
+          destruct Hcheck as [[[Hsctx_ok Hfree] Henv2] He2_check].
+          destruct (IH env Omega n (root_env_add xlet roots1 R1)
+            (sctx_add xlet T1 mlet Σ1) e2 T2 Sigma2 R2 roots2 He2
+            He2_check) as [ret_roots Hsummary2].
+          simpl in Hinfer.
+          try rewrite He1 in Hinfer.
+          try rewrite Hlookup_x in Hinfer.
+          try rewrite Hroots1 in Hinfer.
+          try rewrite Henv1 in Hinfer.
+          try rewrite He2 in Hinfer.
+          try rewrite Hsctx_ok in Hinfer.
+          try rewrite Hfree in Hinfer.
+          try rewrite Henv2 in Hinfer.
+          unfold roots_for_checked_result in Hinfer.
+          rewrite Hfree in Hinfer.
+          inversion Hinfer; subst; clear Hinfer.
+          exists ret_roots.
+          eapply ERSSNC_LetInfer_CaptureRefFreeResult;
+            eauto using roots_exclude_b_sound, root_env_excludes_b_sound.
 Qed.
 
 Lemma check_expr_root_shadow_store_safe_narrow_summary_checked_sound :
@@ -2600,7 +2722,7 @@ Proof.
       rename Hargs_eval into Heval_args
   end.
   match goal with
-  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = (fcall, used') |- _ =>
+  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = _ |- _ =>
       rename Halpha into Hrename
   end.
   match goal with
@@ -2809,7 +2931,7 @@ Proof.
       rename Hargs_eval into Heval_args
   end.
   match goal with
-  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = (fcall, used') |- _ =>
+  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = _ |- _ =>
       rename Halpha into Hrename
   end.
   match goal with
@@ -2943,7 +3065,7 @@ Proof.
       rename Hargs_eval into Heval_args
   end.
   match goal with
-  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = (fcall, used') |- _ =>
+  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = _ |- _ =>
       rename Halpha into Hrename
   end.
   match goal with
@@ -5561,7 +5683,7 @@ Proof.
       rename Hargs_eval into Heval_args
   end.
   match goal with
-  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = (fcall, used') |- _ =>
+  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = _ |- _ =>
       rename Halpha into Hrename
   end.
   match goal with
@@ -5737,7 +5859,7 @@ Proof.
       rename Hargs_eval into Heval_args
   end.
   match goal with
-  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = (fcall, used') |- _ =>
+  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = _ |- _ =>
       rename Halpha into Hrename
   end.
   match goal with
@@ -5902,7 +6024,7 @@ Proof.
       rename Hargs_eval into Heval_args
   end.
   match goal with
-  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = (fcall, used') |- _ =>
+  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = _ |- _ =>
       rename Halpha into Hrename
   end.
   match goal with
@@ -6112,7 +6234,7 @@ Proof.
       rename Hargs_eval into Heval_args
   end.
   match goal with
-  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = (fcall, used') |- _ =>
+  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = _ |- _ =>
       rename Halpha into Hrename
   end.
   match goal with
@@ -6279,6 +6401,39 @@ Proof.
     + eapply value_has_type_runtime_rootless_empty_roots.
       * exact Hv.
       * eapply capture_ref_free_ty_b_runtime_rootless. exact H0.
+    + apply root_set_store_roots_named_nil.
+  - pose proof (typed_env_roots_shadow_safe_roots
+      env Omega n R Σ (EDeref (EBorrow RShared p)) T Σ' R' roots H)
+      as Htyped_roots.
+    assert (Hready : provenance_ready_expr (EDeref (EBorrow RShared p))).
+    { eapply ProvReady_DerefBorrow. exact H0. }
+    destruct (proj1 eval_preserves_typing_roots_ready_mutual
+      env s (EDeref (EBorrow RShared p)) s' ret Heval
+      Omega n R Σ T Σ' R' roots Hready Hstore Hroots Hshadow Hrn
+      Htyped_roots)
+      as [Hstore' [Hv [Hpres [Hroots' [Hvalue_roots [Hshadow' Hrn']]]]]].
+    destruct (proj1 eval_preserves_root_names_ready_mutual
+      env s (EDeref (EBorrow RShared p)) s' ret Heval
+      Omega n R Σ T Σ' R' roots Hready Hstore Hroots Hshadow Hrn
+      Hnamed Htyped_roots) as [Hnamed' Hrootset_named].
+    pose proof (proj1 eval_preserves_root_keys_named_ready_mutual
+      env s (EDeref (EBorrow RShared p)) s' ret Heval
+      Omega n R Σ T Σ' R' roots Hready Hstore Hroots Hshadow Hrn
+      Hkeys Htyped_roots) as Hkeys'.
+    assert (Hsummary' : store_function_closure_targets_summary env s').
+    { inversion Heval; subst.
+      - match goal with
+        | Hplace : expr_as_place (EBorrow RShared p) = Some _ |- _ =>
+            simpl in Hplace; discriminate
+        end.
+      - match goal with
+        | Hborrow : eval env s (EBorrow RShared p) _ _ |- _ =>
+            inversion Hborrow; subst; exact Hsummary_store
+        end. }
+    repeat split; try eassumption.
+    + eapply value_has_type_runtime_rootless_empty_roots.
+      * exact Hv.
+      * eapply capture_ref_free_ty_b_runtime_rootless. exact H1.
     + apply root_set_store_roots_named_nil.
   - dependent destruction Heval.
     destruct (IHHsummary1 s s1 v1 Hstore Hroots Hshadow Hrn Hnamed Hkeys
@@ -7563,7 +7718,7 @@ Proof.
       rename Hargs_eval into Heval_args
   end.
   match goal with
-  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = (fcall, used') |- _ =>
+  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = _ |- _ =>
       rename Halpha into Hrename
   end.
   match goal with
@@ -7687,7 +7842,7 @@ Proof.
       rename Hargs_eval into Heval_args
   end.
   match goal with
-  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = (fcall, used') |- _ =>
+  | Halpha : alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = _ |- _ =>
       rename Halpha into Hrename
   end.
   match goal with
@@ -8945,16 +9100,16 @@ Proof.
       apply andb_true_iff in Hfresh as [Hroots1 Henv1].
       destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Omega n
         (root_env_add i roots1 R1) (sctx_add i t m Σ1) e2)
-        as [[[[T2 Sigma2] R2] roots2] | err] eqn:Hbody;
+        as [[[[T2i Sigma2i] R2i] roots2i] | err] eqn:Hbody;
         try discriminate.
       repeat rewrite andb_true_iff in Hcheck.
-      destruct Hcheck as [[[[Hfree_ret Hsctx_ok] Hroots2] Henv2]
+      destruct Hcheck as [[[[Hfreei_ret Hsctx_oki] Hroots2i] Henv2i]
         Hbody_check].
       destruct (IH env Omega n (root_env_add i roots1 R1)
-        (sctx_add i t m Σ1) e2 T2 Sigma2 R2 roots2 Hbody
+        (sctx_add i t m Σ1) e2 T2i Sigma2i R2i roots2i Hbody
         Hbody_check) as [ret_roots Hbody_summary].
       simpl in Hinfer.
-      rewrite Hroots1, Henv1, Hsctx_ok, Hroots2, Henv2 in Hinfer.
+      rewrite Hroots1, Henv1, Hsctx_oki, Hroots2i, Henv2i in Hinfer.
       inversion Hinfer; subst; clear Hinfer.
       exists ret_roots.
       eapply ERSS_Let.
@@ -8964,10 +9119,10 @@ Proof.
       * apply roots_exclude_b_sound. exact Hroots1.
       * apply root_env_excludes_b_sound. exact Henv1.
       * exact Hbody_summary.
-      * exact Hfree_ret.
-      * exact Hsctx_ok.
-      * apply roots_exclude_b_sound. exact Hroots2.
-      * apply root_env_excludes_b_sound. exact Henv2.
+      * exact Hfreei_ret.
+      * exact Hsctx_oki.
+      * apply roots_exclude_b_sound. exact Hroots2i.
+      * apply root_env_excludes_b_sound. exact Henv2i.
     + destruct e; try discriminate.
       simpl in Hinfer, Hcheck.
       destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Omega n R
@@ -8979,22 +9134,22 @@ Proof.
       apply andb_true_iff in Hhead as [Hhead Hthen_check].
       apply andb_true_iff in Hhead as [Hcond_bool Hready_cond].
       destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Omega n R1
-        Σ1 e2) as [[[[T2 Sigma2] R2] roots2] | err] eqn:Hthen;
+        Σ1 e2) as [[[[T2i Sigma2i] R2i] roots2i] | err] eqn:Hthen;
         try discriminate.
       destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Omega n R1
         Σ1 e3) as [[[[T3 Sigma3] R3] roots3] | err] eqn:Helse;
         try discriminate.
-      destruct (ty_core_eqb (ty_core T2) (ty_core T3))
+      destruct (ty_core_eqb (ty_core T2i) (ty_core T3))
         eqn:Hbranch_core; try discriminate.
-      destruct (root_env_eqb R2 R3) eqn:Hroot_eq; try discriminate.
-      destruct (ctx_merge (ctx_of_sctx Sigma2) (ctx_of_sctx Sigma3))
+      destruct (root_env_eqb R2i R3) eqn:Hroot_eq; try discriminate.
+      destruct (ctx_merge (ctx_of_sctx Sigma2i) (ctx_of_sctx Sigma3))
         as [Sigma4 |] eqn:Hmerge; try discriminate.
-      destruct (IH env Omega n R1 Σ1 e2 T2 Sigma2 R2 roots2 Hthen
-        Hthen_check) as [ret_roots2 Hthen_summary].
+      destruct (IH env Omega n R1 Σ1 e2 T2i Sigma2i R2i roots2i Hthen
+        Hthen_check) as [ret_roots2i Hthen_summary].
       destruct (IH env Omega n R1 Σ1 e3 T3 Sigma3 R3 roots3 Helse
         Helse_check) as [ret_roots3 Helse_summary].
       inversion Hinfer; subst; clear Hinfer.
-      exists (root_set_union ret_roots2 ret_roots3).
+      exists (root_set_union ret_roots2i ret_roots3).
       eapply ERSS_If.
       * apply provenance_ready_expr_b_sound. exact Hready_cond.
       * eapply infer_core_env_state_fuel_roots_shadow_safe_sound.

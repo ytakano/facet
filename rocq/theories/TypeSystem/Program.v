@@ -322,6 +322,17 @@ Proof.
     simpl; auto.
 Qed.
 
+Lemma nth_error_map_subst_type_params_expr : forall σ args i,
+  nth_error (map (subst_type_params_expr σ) args) i =
+  match nth_error args i with
+  | Some e => Some (subst_type_params_expr σ e)
+  | None => None
+  end.
+Proof.
+  intros σ args. induction args as [| e args IH]; intros [| i];
+    simpl; auto.
+Qed.
+
 Lemma subst_type_params_ty_nil : forall T,
   subst_type_params_ty [] T = T.
 Proof.

@@ -225,6 +225,9 @@ failures; invalid tests pass.
       bodies is false: a linear `TParam` field instantiated with unrestricted
       type changes field obligation `[f]` to normalized whole obligation `[[]]`.
       Use typing/eval substitution transport instead of forcing this theorem.
+    - T2a2d1x done: add mapped expression type-substitution `nth_error`
+      helper; `Program.v` focused compile and proof-hole scan pass. Sub-agent
+      spawn remains unavailable due thread limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

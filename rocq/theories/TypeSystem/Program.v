@@ -358,6 +358,28 @@ Proof.
   - rewrite (IH t). reflexivity.
 Qed.
 
+Lemma map_subst_type_params_ty_nil : forall args,
+  map (subst_type_params_ty []) args = args.
+Proof.
+  induction args as [| T args IH]; simpl; auto.
+  rewrite subst_type_params_ty_nil, IH. reflexivity.
+Qed.
+
+Lemma subst_type_params_param_nil : forall p,
+  subst_type_params_param [] p = p.
+Proof.
+  intros [m x T].
+  change (MkParam m x (subst_type_params_ty [] T) = MkParam m x T).
+  rewrite subst_type_params_ty_nil. reflexivity.
+Qed.
+
+Lemma map_subst_type_params_param_nil : forall ps,
+  map (subst_type_params_param []) ps = ps.
+Proof.
+  induction ps as [| p ps IH]; simpl; auto.
+  rewrite subst_type_params_param_nil, IH. reflexivity.
+Qed.
+
 Fixpoint compose_type_params_go
     (σ τ fallback : list Ty) {struct τ} : list Ty :=
   match τ, fallback with

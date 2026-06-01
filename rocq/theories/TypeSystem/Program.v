@@ -311,6 +311,17 @@ Proof.
   destruct (nth_error σ n) as [[u' c'] |]; reflexivity.
 Qed.
 
+Lemma nth_error_map_subst_type_params_ty : forall σ args i,
+  nth_error (map (subst_type_params_ty σ) args) i =
+  match nth_error args i with
+  | Some T => Some (subst_type_params_ty σ T)
+  | None => None
+  end.
+Proof.
+  intros σ args. induction args as [| T args IH]; intros [| i];
+    simpl; auto.
+Qed.
+
 Fixpoint compose_type_params_go
     (σ τ fallback : list Ty) {struct τ} : list Ty :=
   match τ, fallback with

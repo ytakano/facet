@@ -311,6 +311,78 @@ Proof.
       apply obligation_refines_nil_right.
 Qed.
 
+Definition type_args_obligation_refines_upto
+    (fuel : nat) (env : global_env) (old_args new_args : list Ty) : Prop :=
+  (forall i T_old,
+    nth_error old_args i = Some T_old ->
+    exists T_new, nth_error new_args i = Some T_new) /\
+  (forall fuel' i T_old T_new,
+    fuel' <= fuel ->
+    nth_error old_args i = Some T_old ->
+    nth_error new_args i = Some T_new ->
+    obligation_refines
+      (linear_obligation_paths_fuel fuel' env T_old)
+      (linear_obligation_paths_fuel fuel' env T_new)).
+
+Lemma type_args_obligation_refines_upto_le :
+  forall fuel fuel' env old_args new_args,
+    fuel' <= fuel ->
+    type_args_obligation_refines_upto fuel env old_args new_args ->
+    type_args_obligation_refines_upto fuel' env old_args new_args.
+Proof.
+  unfold type_args_obligation_refines_upto.
+  intros fuel fuel' env old_args new_args Hle [Hdom Href].
+  split.
+  - exact Hdom.
+  - intros fuel'' i T_old T_new Hle' HOld HNew.
+    eapply Href; eauto. lia.
+Qed.
+
+Lemma type_args_obligation_refines_upto_nil_left :
+  forall fuel env new_args,
+    type_args_obligation_refines_upto fuel env [] new_args.
+Proof.
+  unfold type_args_obligation_refines_upto.
+  intros fuel env new_args. split.
+  - intros i T_old HOld. destruct i; discriminate.
+  - intros fuel' i T_old T_new Hle HOld HNew target Hin.
+    destruct i; discriminate.
+Qed.
+
+Lemma type_args_obligation_refines_upto_refl :
+  forall fuel env args,
+    type_args_obligation_refines_upto fuel env args args.
+Proof.
+  unfold type_args_obligation_refines_upto.
+  intros fuel env args. split.
+  - intros i T Hnth. exists T. exact Hnth.
+  - intros fuel' i T_old T_new Hle HOld HNew.
+    rewrite HOld in HNew. inversion HNew; subst.
+    apply obligation_refines_refl.
+Qed.
+
+Lemma type_args_obligation_refines_upto_map_subst :
+  forall fuel env σ args,
+    (forall fuel' T,
+      fuel' <= fuel ->
+      obligation_refines
+        (linear_obligation_paths_fuel fuel' env T)
+        (linear_obligation_paths_fuel fuel' env
+          (subst_type_params_ty σ T))) ->
+    type_args_obligation_refines_upto fuel env args
+      (map (subst_type_params_ty σ) args).
+Proof.
+  unfold type_args_obligation_refines_upto.
+  intros fuel env σ args Hsubst. split.
+  - intros i T_old HOld.
+    rewrite (nth_error_map_subst_type_params_ty σ args i).
+    rewrite HOld. eexists. reflexivity.
+  - intros fuel' i T_old T_new Hle HOld HNew.
+    rewrite (nth_error_map_subst_type_params_ty σ args i) in HNew.
+    rewrite HOld in HNew. inversion HNew; subst.
+    apply Hsubst. exact Hle.
+Qed.
+
 Lemma linear_obligation_paths_fuel_global_env_with_local_bounds :
   forall fuel env bounds T,
     linear_obligation_paths_fuel fuel

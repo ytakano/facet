@@ -197,6 +197,10 @@ failures; invalid tests pass.
     - T2a2d1p done: add mapped type-argument `nth_error` helper;
       `Program.v` focused compile and proof-hole scan pass.
       Sub-agent spawn remains unavailable due thread limit.
+    - T2a2d1q done: add fuel-indexed type-argument obligation-refinement
+      relation and map/nil/refl helpers; `EnvRuntimeRootCheckFacts.v`
+      focused compile and proof-hole scan pass. Sub-agent spawn remains
+      unavailable due thread limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

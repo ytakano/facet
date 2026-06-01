@@ -160,6 +160,81 @@ Proof.
   apply Hrefines. right. exact Hin_target.
 Qed.
 
+Lemma path_prefix_b_refl :
+  forall p,
+    path_prefix_b p p = true.
+Proof.
+  induction p as [| x xs IH]; simpl; auto.
+  rewrite String.eqb_refl. exact IH.
+Qed.
+
+Lemma path_prefix_b_app_same_prefix :
+  forall prefix p q,
+    path_prefix_b p q = true ->
+    path_prefix_b (prefix ++ p) (prefix ++ q) = true.
+Proof.
+  induction prefix as [| x xs IH]; intros p q Hprefix; simpl; auto.
+  rewrite String.eqb_refl. simpl. apply IH. exact Hprefix.
+Qed.
+
+Lemma prefix_obligation_paths_in :
+  forall prefix obligations obligation,
+    In obligation obligations ->
+    In (prefix ++ obligation) (prefix_obligation_paths prefix obligations).
+Proof.
+  intros prefix obligations obligation Hin.
+  induction obligations as [| head rest IH]; simpl in *; [contradiction |].
+  destruct Hin as [Heq | Hin].
+  - subst head. left. reflexivity.
+  - right. apply IH. exact Hin.
+Qed.
+
+Lemma obligation_refines_refl :
+  forall obligations,
+    obligation_refines obligations obligations.
+Proof.
+  unfold obligation_refines. intros obligations obligation Hin.
+  exists obligation. split; [exact Hin | apply path_prefix_b_refl].
+Qed.
+
+Lemma obligation_refines_app :
+  forall old1 old2 new1 new2,
+    obligation_refines old1 new1 ->
+    obligation_refines old2 new2 ->
+    obligation_refines (old1 ++ old2) (new1 ++ new2).
+Proof.
+  unfold obligation_refines.
+  intros old1 old2 new1 new2 Href1 Href2 obligation Hin.
+  apply in_app_iff in Hin as [Hin | Hin].
+  - destruct (Href1 obligation Hin) as [old [Hold Hprefix]].
+    exists old. split; [apply in_app_iff; left; exact Hold | exact Hprefix].
+  - destruct (Href2 obligation Hin) as [old [Hold Hprefix]].
+    exists old. split; [apply in_app_iff; right; exact Hold | exact Hprefix].
+Qed.
+
+Lemma obligation_refines_prefix_obligation_paths :
+  forall prefix old_obligations new_obligations,
+    obligation_refines old_obligations new_obligations ->
+    obligation_refines
+      (prefix_obligation_paths prefix old_obligations)
+      (prefix_obligation_paths prefix new_obligations).
+Proof.
+  unfold obligation_refines.
+  intros prefix old_obligations new_obligations Hrefines target Hin.
+  induction new_obligations as [| new_obligation rest IH]; simpl in Hin;
+    [contradiction |].
+  destruct Hin as [Htarget | Hin].
+  - subst target.
+    destruct (Hrefines new_obligation (or_introl eq_refl)) as
+      [old_obligation [Hold Hprefix]].
+    exists (prefix ++ old_obligation). split.
+    + apply prefix_obligation_paths_in. exact Hold.
+    + apply path_prefix_b_app_same_prefix. exact Hprefix.
+  - apply IH.
+    + intros target' Htarget'. apply Hrefines. right. exact Htarget'.
+    + exact Hin.
+Qed.
+
 Lemma linear_obligation_paths_fuel_global_env_with_local_bounds :
   forall fuel env bounds T,
     linear_obligation_paths_fuel fuel

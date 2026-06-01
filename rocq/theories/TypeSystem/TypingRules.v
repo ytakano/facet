@@ -418,6 +418,43 @@ Definition apply_type_param (type_args : list Ty) (p : param) : param :=
 Definition apply_type_params (type_args : list Ty) (ps : list param) : list param :=
   map (apply_type_param type_args) ps.
 
+Definition subst_type_params_ctx_entry
+    (type_args : list Ty) (entry : ctx_entry) : ctx_entry :=
+  let '(x, T, st, m) := entry in
+  (x, subst_type_params_ty type_args T, st, m).
+
+Definition subst_type_params_ctx (type_args : list Ty) (Γ : ctx) : ctx :=
+  map (subst_type_params_ctx_entry type_args) Γ.
+
+Lemma apply_type_param_subst_type_params_param : forall type_args p,
+  apply_type_param type_args p = subst_type_params_param type_args p.
+Proof.
+  intros type_args [m x T]. reflexivity.
+Qed.
+
+Lemma param_ctx_entry_apply_type_param : forall type_args p,
+  param_ctx_entry (apply_type_param type_args p) =
+  subst_type_params_ctx_entry type_args (param_ctx_entry p).
+Proof.
+  intros type_args [m x T]. reflexivity.
+Qed.
+
+Lemma params_ctx_apply_type_params : forall type_args ps,
+  params_ctx (apply_type_params type_args ps) =
+  subst_type_params_ctx type_args (params_ctx ps).
+Proof.
+  intros type_args ps. induction ps as [| p ps IH]; simpl; auto.
+  rewrite param_ctx_entry_apply_type_param, IH. reflexivity.
+Qed.
+
+Lemma subst_type_params_ctx_app : forall type_args (Γ1 Γ2 : ctx),
+  subst_type_params_ctx type_args (List.app Γ1 Γ2) =
+  List.app (subst_type_params_ctx type_args Γ1) (subst_type_params_ctx type_args Γ2).
+Proof.
+  intros type_args Γ1 Γ2. unfold subst_type_params_ctx.
+  rewrite map_app. reflexivity.
+Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Typing judgement                                                      *)
 (*                                                                      *)

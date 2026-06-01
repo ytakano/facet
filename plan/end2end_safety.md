@@ -156,6 +156,8 @@ failures; invalid tests pass.
     - T2a2d1 done: add expression/parameter type-substitution utilities;
       `Program.v` focused compile and proof-hole scan pass. Sub-agent spawn was
       unavailable because the agent thread limit was reached.
+    - T2a2d1b done: add parameter-context type-substitution helpers;
+      `TypingRules.v` focused compile and proof-hole scan pass.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

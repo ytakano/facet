@@ -502,6 +502,27 @@ Proof.
   rewrite apply_type_param_compose, IH. reflexivity.
 Qed.
 
+Lemma apply_lt_param_apply_type_param : forall σ type_args p,
+  apply_lt_param σ (apply_type_param type_args p) =
+  apply_type_param (map (apply_lt_ty σ) type_args) (apply_lt_param σ p).
+Proof.
+  intros σ type_args [m x T].
+  change (MkParam m x (apply_lt_ty σ (subst_type_params_ty type_args T)) =
+    MkParam m x
+      (subst_type_params_ty (map (apply_lt_ty σ) type_args)
+        (apply_lt_ty σ T))).
+  rewrite apply_lt_ty_subst_type_params_ty. reflexivity.
+Qed.
+
+Lemma apply_lt_params_apply_type_params : forall σ type_args ps,
+  apply_lt_params σ (apply_type_params type_args ps) =
+  apply_type_params (map (apply_lt_ty σ) type_args) (apply_lt_params σ ps).
+Proof.
+  intros σ type_args ps. unfold apply_lt_params, apply_type_params.
+  induction ps as [| p ps IH]; simpl; auto.
+  rewrite apply_lt_param_apply_type_param, IH. reflexivity.
+Qed.
+
 Lemma subst_type_params_ctx_entry_compose : forall σ τ entry,
   subst_type_params_ctx_entry σ (subst_type_params_ctx_entry τ entry) =
   subst_type_params_ctx_entry (compose_type_params σ τ) entry.

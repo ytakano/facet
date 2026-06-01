@@ -27,11 +27,11 @@ Required theorem names stay intact:
 
 ## Current baseline
 
-Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; invalid tests pass.
+Latest full `sh tests/run.sh` baseline (2026-06-01): 18 valid-test
+failures; invalid tests pass.
 
 - Generic/function-value gates remain `ErrEndToEndSafetyGateFailed`.
-- Reborrow coverage has one remaining failure: `nested_shared_reborrow.facet`
-  now passes checked roots but fails the end-to-end store-safe gate.
+- Reborrow valid tests pass, including `nested_shared_reborrow.facet`.
 - Generic/type-forall function cases remain under blocked T2a.
 
 ## Active T2f slices
@@ -131,9 +131,11 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
     - T48c9a done: add/prove checked-let bound-expression path for
       capture-ref-free bound values with nonempty ordinary roots; full Rocq
       build and dune build pass.
-    - T48c9b next: route ordinary-success `ELet`/`ELetInfer` through the
-      recursive checked summary branch; `nested_shared_reborrow.facet` still
-      fails before reaching the new checked-let proof path.
+    - T48c9b done: route ordinary-success `ELet`/`ELetInfer` through the
+      recursive checked summary branch; full Rocq build, dune build, proof-hole
+      scan, and reborrow CLI checks pass.
+    - T48c10 next: remeasure baseline failures and continue blocked
+      generic/function-value gate under T2a.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

@@ -8887,6 +8887,79 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
       | infer_ok (T, _, _, _) =>
           match e with
           | EDeref (EBorrow RShared _) => capture_ref_free_ty_b env T
+          | ELet m x T_hidden e1 e2 =>
+              match fuel with
+              | 0 => false
+              | S fuel' =>
+                  match infer_core_env_state_fuel_roots_shadow_safe
+                          fuel' env Ω n R Σ e1 with
+                  | infer_err _ => false
+                  | infer_ok (T1, Σ1, R1, roots1) =>
+                      ty_compatible_b Ω T1 T_hidden &&
+                      non_function_value_ty_b T_hidden &&
+                      (check_expr_root_shadow_store_safe_narrow_summary_fuel
+                         fuel' env Ω n R Σ e1 ||
+                       (capture_ref_free_ty_b env T1 &&
+                        check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
+                          fuel' env Ω n R Σ e1)) &&
+                      match root_env_lookup x R1 with
+                      | Some _ => false
+                      | None =>
+                          roots_exclude_b x roots1 &&
+                          root_env_excludes_b x R1 &&
+                          match infer_core_env_state_fuel_roots_shadow_safe
+                                  fuel' env Ω n
+                                  (root_env_add x roots1 R1)
+                                  (sctx_add x T_hidden m Σ1) e2 with
+                          | infer_err _ => false
+                          | infer_ok (T2, Σ2, R2, _) =>
+                              sctx_check_ok env x T_hidden Σ2 &&
+                              capture_ref_free_ty_b env T2 &&
+                              root_env_excludes_b x (root_env_remove x R2) &&
+                              check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
+                                fuel' env Ω n
+                                (root_env_add x roots1 R1)
+                                (sctx_add x T_hidden m Σ1) e2
+                          end
+                      end
+                  end
+              end
+          | ELetInfer m x e1 e2 =>
+              match fuel with
+              | 0 => false
+              | S fuel' =>
+                  match infer_core_env_state_fuel_roots_shadow_safe
+                          fuel' env Ω n R Σ e1 with
+                  | infer_err _ => false
+                  | infer_ok (T1, Σ1, R1, roots1) =>
+                      non_function_value_ty_b T1 &&
+                      (check_expr_root_shadow_store_safe_narrow_summary_fuel
+                         fuel' env Ω n R Σ e1 ||
+                       (capture_ref_free_ty_b env T1 &&
+                        check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
+                          fuel' env Ω n R Σ e1)) &&
+                      match root_env_lookup x R1 with
+                      | Some _ => false
+                      | None =>
+                          roots_exclude_b x roots1 &&
+                          root_env_excludes_b x R1 &&
+                          match infer_core_env_state_fuel_roots_shadow_safe
+                                  fuel' env Ω n
+                                  (root_env_add x roots1 R1)
+                                  (sctx_add x T1 m Σ1) e2 with
+                          | infer_err _ => false
+                          | infer_ok (T2, Σ2, R2, _) =>
+                              sctx_check_ok env x T1 Σ2 &&
+                              capture_ref_free_ty_b env T2 &&
+                              root_env_excludes_b x (root_env_remove x R2) &&
+                              check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
+                                fuel' env Ω n
+                                (root_env_add x roots1 R1)
+                                (sctx_add x T1 m Σ1) e2
+                          end
+                      end
+                  end
+              end
           | _ => false
           end
       | infer_err _ =>

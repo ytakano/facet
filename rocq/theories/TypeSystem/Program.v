@@ -322,6 +322,31 @@ Proof.
     simpl; auto.
 Qed.
 
+Lemma subst_type_params_ty_nil : forall T,
+  subst_type_params_ty [] T = T.
+Proof.
+  fix IH 1. intros [u c]. destruct c; simpl; try reflexivity.
+  - destruct n; reflexivity.
+  - induction l0 as [| T0 Ts IHTs].
+    + reflexivity.
+    + simpl in *. rewrite (IH T0). injection IHTs as Htail.
+      rewrite Htail. reflexivity.
+  - induction l0 as [| T0 Ts IHTs].
+    + reflexivity.
+    + simpl in *. rewrite (IH T0). injection IHTs as Htail.
+      rewrite Htail. reflexivity.
+  - induction l as [| T0 Ts IHTs].
+    + simpl. rewrite (IH t). reflexivity.
+    + simpl in *. rewrite (IH T0). injection IHTs as Hparams Hret.
+      rewrite Hparams, Hret. reflexivity.
+  - induction l0 as [| T0 Ts IHTs].
+    + simpl. rewrite (IH t). reflexivity.
+    + simpl in *. rewrite (IH T0). injection IHTs as Hparams Hret.
+      rewrite Hparams, Hret. reflexivity.
+  - rewrite (IH t). reflexivity.
+  - rewrite (IH t). reflexivity.
+Qed.
+
 Fixpoint compose_type_params_go
     (σ τ fallback : list Ty) {struct τ} : list Ty :=
   match τ, fallback with

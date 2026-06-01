@@ -201,6 +201,9 @@ failures; invalid tests pass.
       relation and map/nil/refl helpers; `EnvRuntimeRootCheckFacts.v`
       focused compile and proof-hole scan pass. Sub-agent spawn remains
       unavailable due thread limit.
+    - T2a2d1r done: prove empty type-parameter substitution identity;
+      `Program.v` focused compile and proof-hole scan pass. Sub-agent spawn
+      remains unavailable due thread limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

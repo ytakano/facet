@@ -175,6 +175,17 @@ Proof.
   intros σ u [u' c]. destruct c; reflexivity.
 Qed.
 
+Lemma nth_error_map_apply_lt_ty : forall σ args i,
+  nth_error (map (apply_lt_ty σ) args) i =
+  match nth_error args i with
+  | Some T => Some (apply_lt_ty σ T)
+  | None => None
+  end.
+Proof.
+  intros σ args. induction args as [| T args IH]; intros [| i];
+    simpl; auto.
+Qed.
+
 Fixpoint map_lifetimes_ty
     (f : lifetime -> lifetime) (T : Ty) {struct T} : Ty :=
   match T with

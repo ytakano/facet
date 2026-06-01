@@ -96,6 +96,9 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
     store-typing-aware roots-readiness theorem; current
     `eval_preserves_roots_ready_mutual` cannot prove empty roots for
     statically ref-free values in arbitrary stores.
+47. In progress: typed rootless readiness path.
+    - T47a done: add typed rooted eval statement and rootless value
+      projection for capture-ref-free result types.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

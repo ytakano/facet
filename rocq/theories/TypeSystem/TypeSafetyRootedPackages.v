@@ -1,6 +1,7 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules TypeChecker RuntimeTyping RootProvenance
-  EnvStructuralRules AlphaRenaming EnvSoundnessFacts CheckerSoundness.
+  EnvStructuralRules AlphaRenaming EnvSoundnessFacts CheckerSoundness
+  TypeSafetyRootFacts.
 From Facet.TypeSystem Require Export TypeSafetyClosureRuntimeArgsFacts.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
@@ -39,6 +40,31 @@ Record typed_rooted_eval_result
   typed_rooted_eval_refs_preserved : store_ref_targets_preserved env s s';
   typed_rooted_eval_roots : rooted_eval_result R' s' roots v
 }.
+
+Definition eval_preserves_typed_rooted_eval_statement : Prop :=
+  forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      provenance_ready_expr e ->
+      preservation_ready_expr e ->
+      store_typed_prefix env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      typed_rooted_eval_result env s s' v T Σ' R' roots.
+
+Lemma typed_rooted_eval_capture_ref_free_empty_roots :
+  forall env s s' v T Σ' R' roots,
+    typed_rooted_eval_result env s s' v T Σ' R' roots ->
+    capture_ref_free_ty_b env T = true ->
+    value_roots_within [] v.
+Proof.
+  intros env s s' v T Σ' R' roots Htyped Hfree.
+  eapply value_has_type_runtime_rootless_empty_roots.
+  - exact (typed_rooted_eval_value_type _ _ _ _ _ _ _ _ Htyped).
+  - eapply capture_ref_free_ty_b_runtime_rootless. exact Hfree.
+Qed.
 
 Definition eval_preserves_typing_ready_mutual_statement : Prop :=
   (forall env s e s' v,

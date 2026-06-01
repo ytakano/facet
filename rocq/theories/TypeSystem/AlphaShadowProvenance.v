@@ -1888,6 +1888,42 @@ Proof.
   eapply typed_place_root_name_in_sctx_names. exact Htyped.
 Qed.
 
+Lemma place_resolved_write_target_writable_chain_sctx_roots_named :
+  forall env R Σ p x,
+    root_env_sctx_roots_named R Σ ->
+    place_resolved_write_writable_chain env R Σ p ->
+    place_resolved_write_target R p = Some x ->
+    root_set_sctx_roots_named [RStore x] Σ.
+Proof.
+  intros env R Σ p x Henv Hchain Htarget_out.
+  revert x Htarget_out.
+  induction Hchain as [p Hdirect | p target Hchain IH Hwritable Htarget Hmut];
+    intros x Htarget_out.
+  - destruct Hdirect as [q [root [path [Hp Hpath]]]]. subst p.
+    simpl in Htarget_out.
+    rewrite (place_resolved_write_target_path_root R q root path Hpath)
+      in Htarget_out.
+    destruct (root_env_lookup root R) as [roots |] eqn:Hlookup;
+      try discriminate.
+    destruct (singleton_store_root roots) as [target |] eqn:Hsingle;
+      try discriminate.
+    inversion Htarget_out. subst target.
+    apply root_set_sctx_roots_named_single.
+    eapply root_set_store_names_sctx_names.
+    + eapply root_env_lookup_sctx_roots_named; eassumption.
+    + eapply singleton_store_root_store_name_in. exact Hsingle.
+  - simpl in Htarget_out. rewrite Htarget in Htarget_out.
+    destruct (root_env_lookup target R) as [roots |] eqn:Hlookup;
+      try discriminate.
+    destruct (singleton_store_root roots) as [target_out |] eqn:Hsingle;
+      try discriminate.
+    inversion Htarget_out. subst target_out.
+    apply root_set_sctx_roots_named_single.
+    eapply root_set_store_names_sctx_names.
+    + eapply root_env_lookup_sctx_roots_named; eassumption.
+    + eapply singleton_store_root_store_name_in. exact Hsingle.
+Qed.
+
 Lemma root_env_sctx_roots_named_add_binding :
   forall R Σ x T m roots,
     root_env_sctx_roots_named R Σ ->
@@ -3488,6 +3524,8 @@ Proof.
     + eapply root_of_place_sctx_roots_named; eassumption.
     + eassumption.
   - split; try assumption.
+    eapply place_resolved_write_target_writable_chain_sctx_roots_named; eassumption.
+  - split; try assumption.
     eapply root_env_lookup_sctx_roots_named; eassumption.
   - split; try assumption.
     match goal with
@@ -4642,7 +4680,10 @@ Proof.
     end.
     exists Σr, Rr, rootsr. repeat split.
     + eapply TER_BorrowShared_Indirect.
-      * eapply alpha_rename_typed_place_env_structural_forward; eauto.
+      * eapply alpha_rename_typed_place_env_structural_forward.
+        -- exact Hctx.
+        -- exact Hsafe_root.
+        -- eassumption.
       * match goal with Hpath : place_path p = None |- _ =>
           apply place_path_rename_place_none; exact Hpath
         end.
@@ -4762,6 +4803,46 @@ Proof.
     + exact HRr.
     + apply Hrootsr.
     + apply Hrootsr.
+  - assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+    { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+    assert (Hchain_r :
+      place_resolved_write_writable_chain env Rr Σr (rename_place rho p)).
+    { eapply place_resolved_write_writable_chain_rename.
+      - apply root_env_equiv_sym. exact HRr.
+      - exact HnocollR.
+      - exact Hctx.
+      - exact Hsafe_root.
+      - eassumption. }
+    assert (Htarget_r :
+      place_resolved_write_target Rr (rename_place rho p) =
+        Some (lookup_rename x rho)).
+    { eapply place_resolved_write_target_equiv.
+      - apply root_env_equiv_sym. exact HRr.
+      - apply place_resolved_write_target_rename.
+        + exact HnocollR.
+        + eassumption. }
+    exists Σr, Rr, [RStore (lookup_rename x rho)]. repeat split.
+    + eapply TER_BorrowUnique_ResolvedTarget.
+      * eapply alpha_rename_typed_place_env_structural_forward.
+        -- exact Hctx.
+        -- exact Hsafe_root.
+        -- eassumption.
+      * match goal with Hpath : place_path p = None |- _ =>
+          apply place_path_rename_place_none; exact Hpath
+        end.
+      * eapply alpha_rename_place_under_unique_ref_structural_forward.
+        -- exact Hctx.
+        -- exact Hsafe_root.
+        -- eassumption.
+      * exact Hchain_r.
+      * exact Htarget_r.
+    + exact Hctx.
+    + exact HnsRr.
+    + exact HRr.
+    + simpl. tauto.
+    + simpl. tauto.
+  Unshelve.
+  all: try exact Hsafe_root; try exact HnocollR; try exact HnocollR'; try exact HnocollResolved; try exact Hctx; eauto.
 Qed.
 Lemma root_env_names_remove_preserve_neq :
   forall x y R,
@@ -7158,6 +7239,44 @@ Proof.
     + exact HRr.
     + apply Hrootsr.
     + apply Hrootsr.
+  - assert (Hsafe_root : ~ In (place_root p) (rename_range rho)).
+    { rewrite <- place_name_root. apply Hdisj. simpl. left. reflexivity. }
+    assert (Hchain_r :
+      place_resolved_write_writable_chain env Rr Σr (rename_place rho p)).
+    { eapply place_resolved_write_writable_chain_rename.
+      - apply root_env_equiv_sym. exact HRr.
+      - exact HnocollR.
+      - exact Hctx.
+      - exact Hsafe_root.
+      - eassumption. }
+    assert (Htarget_r :
+      place_resolved_write_target Rr (rename_place rho p) =
+        Some (lookup_rename x rho)).
+    { eapply place_resolved_write_target_equiv.
+      - apply root_env_equiv_sym. exact HRr.
+      - apply place_resolved_write_target_rename.
+        + exact HnocollR.
+        + eassumption. }
+    exists Σr, Rr, [RStore (lookup_rename x rho)]. repeat split.
+    + eapply TERS_BorrowUnique_ResolvedTarget.
+      * eapply alpha_rename_typed_place_env_structural_forward.
+        -- exact Hctx.
+        -- exact Hsafe_root.
+        -- eassumption.
+      * match goal with Hpath : place_path p = None |- _ =>
+          apply place_path_rename_place_none; exact Hpath
+        end.
+      * eapply alpha_rename_place_under_unique_ref_structural_forward.
+        -- exact Hctx.
+        -- exact Hsafe_root.
+        -- eassumption.
+      * exact Hchain_r.
+      * exact Htarget_r.
+    + exact Hctx.
+    + exact HnsRr.
+    + exact HRr.
+    + simpl. tauto.
+    + simpl. tauto.
 Qed.
 Lemma alpha_rename_typed_env_roots_borrow_shadow_safe_support_forward :
   forall env Ω n rho R Rr Σ Σr rk p er used used' T Σ' R' roots,

@@ -1075,6 +1075,52 @@ Proof.
   eapply sctx_lookup_in_ctx_names_root_names. exact Hlookup.
 Qed.
 
+Lemma place_resolved_write_target_writable_chain_ctx_roots_named :
+  forall env R Σ p x,
+    root_env_ctx_roots_named R Σ ->
+    place_resolved_write_writable_chain env R Σ p ->
+    place_resolved_write_target R p = Some x ->
+    root_set_ctx_roots_named [RStore x] Σ.
+Proof.
+  intros env R Σ p x Henv Hchain Htarget_out.
+  revert x Htarget_out.
+  induction Hchain as [p Hdirect | p target Hchain IH Hwritable Htarget Hmut];
+    intros x Htarget_out.
+  - destruct Hdirect as [q [root [path [Hp Hpath]]]]. subst p.
+    simpl in Htarget_out.
+    rewrite (place_resolved_write_target_path_root R q root path Hpath)
+      in Htarget_out.
+    destruct (root_env_lookup root R) as [roots |] eqn:Hlookup;
+      try discriminate.
+    destruct (singleton_store_root roots) as [target |] eqn:Hsingle;
+      try discriminate.
+    inversion Htarget_out. subst target.
+    unfold root_set_ctx_roots_named. intros z Hin.
+    simpl in Hin. destruct Hin as [Hin | Hin]; try contradiction.
+    inversion Hin. subst z.
+    pose proof (root_env_lookup_ctx_roots_named R Σ root roots Hlookup Henv)
+      as Hroots.
+    unfold root_set_ctx_roots_named in Hroots.
+    apply Hroots.
+    apply root_set_store_names_store_in.
+    eapply singleton_store_root_store_name_in. exact Hsingle.
+  - simpl in Htarget_out. rewrite Htarget in Htarget_out.
+    destruct (root_env_lookup target R) as [roots |] eqn:Hlookup;
+      try discriminate.
+    destruct (singleton_store_root roots) as [target_out |] eqn:Hsingle;
+      try discriminate.
+    inversion Htarget_out. subst target_out.
+    unfold root_set_ctx_roots_named. intros z Hin.
+    simpl in Hin. destruct Hin as [Hin | Hin]; try contradiction.
+    inversion Hin. subst z.
+    pose proof (root_env_lookup_ctx_roots_named R Σ target roots Hlookup Henv)
+      as Hroots.
+    unfold root_set_ctx_roots_named in Hroots.
+    apply Hroots.
+    apply root_set_store_names_store_in.
+    eapply singleton_store_root_store_name_in. exact Hsingle.
+Qed.
+
 Lemma root_set_ctx_roots_named_ctx_merge_left :
   forall roots Σ2 Σ3 Σ4,
     ctx_merge (ctx_of_sctx Σ2) (ctx_of_sctx Σ3) = Some Σ4 ->

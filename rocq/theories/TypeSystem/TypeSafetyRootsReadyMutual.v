@@ -911,6 +911,8 @@ Proof.
     + eapply root_of_place_ctx_roots_named. eassumption.
     + eassumption.
   - split; try assumption.
+    eapply place_resolved_write_target_writable_chain_ctx_roots_named; eassumption.
+  - split; try assumption.
     eapply root_env_lookup_ctx_roots_named; eassumption.
   - split; try assumption.
     match goal with

@@ -1263,6 +1263,14 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       singleton_store_root roots = Some x ->
       typed_env_roots env Ω n R Σ (EBorrow RUnique p)
         (MkTy UAffine (TRef (LVar n) RUnique T)) Σ R roots
+  | TER_BorrowUnique_ResolvedTarget : forall R Σ p T x,
+      typed_place_env_structural env Σ p T ->
+      place_path p = None ->
+      place_under_unique_ref_structural env Σ p ->
+      place_resolved_write_writable_chain env R Σ p ->
+      place_resolved_write_target R p = Some x ->
+      typed_env_roots env Ω n R Σ (EBorrow RUnique p)
+        (MkTy UAffine (TRef (LVar n) RUnique T)) Σ R [RStore x]
   | TER_DerefBorrowShared : forall R Σ p T x path roots,
       typed_place_env_structural env Σ p T ->
       ty_usage T = UUnrestricted ->
@@ -2430,6 +2438,21 @@ Proof.
     + exact HnsR0.
     + exact HR0.
     + exact Hroots0.
+  - intros R Σ p T x Hplace Hpath Hunique Hchain Htarget Hfresh R0
+      HnsR HnsR0 HR0.
+    assert (Htarget0 : place_resolved_write_target R0 p = Some x).
+    { eapply place_resolved_write_target_equiv.
+      - apply root_env_equiv_sym. exact HR0.
+      - apply place_resolved_write_target_instantiate. exact Htarget. }
+    assert (Hchain0 : place_resolved_write_writable_chain env R0 Σ p).
+    { eapply place_resolved_write_writable_chain_equiv.
+      - apply root_env_equiv_sym. exact HR0.
+      - apply place_resolved_write_writable_chain_instantiate. exact Hchain. }
+    exists R0, [RStore x]. split; [| split; [| split]].
+    + eapply TER_BorrowUnique_ResolvedTarget; eauto.
+    + exact HnsR0.
+    + exact HR0.
+    + apply root_set_equiv_sym. apply root_set_instantiate_store_singleton_equiv.
   - intros R Σ p T x path roots Hplace Husage Hpath Hlookup
       Hfresh R0 HnsR HnsR0 HR0.
     assert (Hlookup_inst :

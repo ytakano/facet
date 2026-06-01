@@ -523,6 +523,9 @@ Proof.
   - eapply TERS_BorrowUnique_Resolved; eauto.
     + eapply place_resolved_roots_tail_stable_app_left; eassumption.
     + eapply root_env_lookup_app_left; eassumption.
+  - eapply TERS_BorrowUnique_ResolvedTarget; eauto.
+    + eapply place_resolved_write_writable_chain_app_left; eassumption.
+    + eapply place_resolved_write_target_app_left; eassumption.
   - eapply TERS_DerefBorrowShared; eauto.
     eapply root_env_lookup_app_left; eassumption.
   - eapply TERS_DerefBorrowShared_Indirect; eauto.

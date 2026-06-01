@@ -5811,6 +5811,17 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
               | RUnique =>
                   if place_under_unique_ref_b env Σ p
                   then
+                    match
+                      if place_resolved_write_writable_chain_b env R Σ p then
+                        match place_resolved_write_target R p with
+                        | Some x => Some [RStore x]
+                        | None => None
+                        end
+                      else None
+                    with
+                    | Some roots =>
+                        infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, roots)
+                    | None =>
                     match place_resolved_roots R p with
                     | Some roots =>
                         match singleton_store_root roots with
@@ -5829,6 +5840,7 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
                             infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, roots)
                         | None => infer_err ErrContextCheckFailed
                         end
+                    end
                     end
                   else infer_err (ErrImmutableBorrow (place_name p))
               end
@@ -6735,6 +6747,17 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
               | RUnique =>
                   if place_under_unique_ref_b env Σ p
                   then
+                    match
+                      if place_resolved_write_writable_chain_b env R Σ p then
+                        match place_resolved_write_target R p with
+                        | Some x => Some [RStore x]
+                        | None => None
+                        end
+                      else None
+                    with
+                    | Some roots =>
+                        infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, roots)
+                    | None =>
                     match place_resolved_roots R p with
                     | Some roots =>
                         match singleton_store_root roots with
@@ -6778,6 +6801,7 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
                             infer_ok (MkTy UAffine (TRef (LVar n) RUnique T_p), Σ, R, roots)
                         | None => infer_err ErrContextCheckFailed
                         end
+                    end
                     end
                   else infer_err (ErrImmutableBorrow (place_name p))
               end

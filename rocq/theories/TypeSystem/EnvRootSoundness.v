@@ -1592,29 +1592,64 @@ Proof.
               ** exact Hpath.
               ** exact Hborrow.
         -- destruct (place_under_unique_ref_b env Σ p) eqn:Hunique; try discriminate.
-           destruct (place_resolved_roots R p) as [roots_res |] eqn:Hresolved.
-           ++ destruct (singleton_store_root roots_res) as [root_x |] eqn:Hsingle.
-              ** inversion Hinfer; subst.
-                 eapply TER_BorrowUnique_Resolved.
-                 --- eapply infer_place_sctx_structural_sound. exact Hplace.
-                 --- exact Hpath.
-                 --- apply place_under_unique_ref_b_sound. exact Hunique.
-                 --- exact Hresolved.
-                 --- exact Hsingle.
-              ** destruct (place_borrow_roots R p) as [roots0 |] eqn:Hborrow; try discriminate.
+           destruct (place_resolved_write_writable_chain_b env R Σ p) eqn:Hchain.
+           { destruct (place_resolved_write_target R p) as [target_x |] eqn:Htarget.
+             { change (infer_ok (MkTy UAffine (TRef (LVar n) RUnique Tp), Σ, R, [RStore target_x]) =
+                 infer_ok (T, Σ', R', roots)) in Hinfer.
+               injection Hinfer as Hroots_eq HR_eq HΣ_eq HT_eq.
+               rewrite <- HT_eq. rewrite <- HΣ_eq. rewrite <- HR_eq. rewrite <- Hroots_eq.
+               exact (@TER_BorrowUnique_ResolvedTarget env Ω n R Σ p Tp target_x
+                 (infer_place_sctx_structural_sound env Σ p Tp Hplace)
+                 Hpath
+                 (place_under_unique_ref_b_sound env Σ p Hunique)
+                 (place_resolved_write_writable_chain_b_sound env R Σ p Hchain)
+                 Htarget). }
+             { destruct (place_resolved_roots R p) as [roots_res |] eqn:Hresolved.
+               { destruct (singleton_store_root roots_res) as [root_x |] eqn:Hsingle.
+                 { inversion Hinfer; subst.
+                   eapply TER_BorrowUnique_Resolved.
+                   - eapply infer_place_sctx_structural_sound. exact Hplace.
+                   - exact Hpath.
+                   - apply place_under_unique_ref_b_sound. exact Hunique.
+                   - exact Hresolved.
+                   - exact Hsingle. }
+                 { destruct (place_borrow_roots R p) as [roots0 |] eqn:Hborrow; try discriminate.
+                   inversion Hinfer; subst.
+                   eapply TER_BorrowUnique_Indirect.
+                   - eapply infer_place_sctx_structural_sound. exact Hplace.
+                   - exact Hpath.
+                   - apply place_under_unique_ref_b_sound. exact Hunique.
+                   - exact Hborrow. } }
+               { destruct (place_borrow_roots R p) as [roots0 |] eqn:Hborrow; try discriminate.
                  inversion Hinfer; subst.
                  eapply TER_BorrowUnique_Indirect.
-                 --- eapply infer_place_sctx_structural_sound. exact Hplace.
-                 --- exact Hpath.
-                 --- apply place_under_unique_ref_b_sound. exact Hunique.
-                 --- exact Hborrow.
-           ++ destruct (place_borrow_roots R p) as [roots0 |] eqn:Hborrow; try discriminate.
-              inversion Hinfer; subst.
-              eapply TER_BorrowUnique_Indirect.
-              ** eapply infer_place_sctx_structural_sound. exact Hplace.
-              ** exact Hpath.
-              ** apply place_under_unique_ref_b_sound. exact Hunique.
-              ** exact Hborrow.
+                 - eapply infer_place_sctx_structural_sound. exact Hplace.
+                 - exact Hpath.
+                 - apply place_under_unique_ref_b_sound. exact Hunique.
+                 - exact Hborrow. } } }
+           { destruct (place_resolved_roots R p) as [roots_res |] eqn:Hresolved.
+             { destruct (singleton_store_root roots_res) as [root_x |] eqn:Hsingle.
+               { inversion Hinfer; subst.
+                 eapply TER_BorrowUnique_Resolved.
+                 - eapply infer_place_sctx_structural_sound. exact Hplace.
+                 - exact Hpath.
+                 - apply place_under_unique_ref_b_sound. exact Hunique.
+                 - exact Hresolved.
+                 - exact Hsingle. }
+               { destruct (place_borrow_roots R p) as [roots0 |] eqn:Hborrow; try discriminate.
+                 inversion Hinfer; subst.
+                 eapply TER_BorrowUnique_Indirect.
+                 - eapply infer_place_sctx_structural_sound. exact Hplace.
+                 - exact Hpath.
+                 - apply place_under_unique_ref_b_sound. exact Hunique.
+                 - exact Hborrow. } }
+             { destruct (place_borrow_roots R p) as [roots0 |] eqn:Hborrow; try discriminate.
+               inversion Hinfer; subst.
+               eapply TER_BorrowUnique_Indirect.
+               - eapply infer_place_sctx_structural_sound. exact Hplace.
+               - exact Hpath.
+               - apply place_under_unique_ref_b_sound. exact Hunique.
+               - exact Hborrow. } }
     + destruct e; try discriminate.
       destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
       destruct (usage_eqb (ty_usage Tp) UUnrestricted) eqn:Husage; try discriminate.
@@ -2617,9 +2652,60 @@ Proof.
               ** exact Hpath.
               ** exact Hborrow.
         -- destruct (place_under_unique_ref_b env Σ p) eqn:Hunique; try discriminate.
-           destruct (place_resolved_roots R p) as [roots_res |] eqn:Hresolved.
-           ++ destruct (singleton_store_root roots_res) as [root_x |] eqn:Hsingle.
-              ** destruct (root_env_lookup root_x R) as [roots_x |] eqn:Hlookup_x.
+           destruct (place_resolved_write_writable_chain_b env R Σ p) eqn:Hchain.
+           { destruct (place_resolved_write_target R p) as [target_x |] eqn:Htarget.
+             { change (infer_ok (MkTy UAffine (TRef (LVar n) RUnique Tp), Σ, R, [RStore target_x]) =
+                 infer_ok (T, Σ', R', roots)) in Hinfer.
+               injection Hinfer as Hroots_eq HR_eq HΣ_eq HT_eq.
+               rewrite <- HT_eq. rewrite <- HΣ_eq. rewrite <- HR_eq. rewrite <- Hroots_eq.
+               exact (@TERS_BorrowUnique_ResolvedTarget env Ω n R Σ p Tp target_x
+                 (infer_place_sctx_structural_sound env Σ p Tp Hplace)
+                 Hpath
+                 (place_under_unique_ref_b_sound env Σ p Hunique)
+                 (place_resolved_write_writable_chain_b_sound env R Σ p Hchain)
+                 Htarget). }
+             { destruct (place_resolved_roots R p) as [roots_res |] eqn:Hresolved.
+               { destruct (singleton_store_root roots_res) as [root_x |] eqn:Hsingle.
+                 { destruct (root_env_lookup root_x R) as [roots_x |] eqn:Hlookup_x.
+                   { destruct (singleton_store_root roots_x) as [root_y |] eqn:Hsingle_x.
+                     { destruct (ident_eqb root_x root_y) eqn:Heq.
+                       { apply ident_eqb_eq in Heq. subst root_y.
+                         inversion Hinfer; subst.
+                         eapply TERS_BorrowUnique_Resolved; eauto.
+                         - eapply infer_place_sctx_structural_sound. exact Hplace.
+                         - apply place_under_unique_ref_b_sound. exact Hunique. }
+                       { destruct (place_borrow_roots R p) as [roots0 |] eqn:Hborrow; try discriminate.
+                         inversion Hinfer; subst.
+                         eapply TERS_BorrowUnique_Indirect; eauto.
+                         - eapply infer_place_sctx_structural_sound. exact Hplace.
+                         - apply place_under_unique_ref_b_sound. exact Hunique. } }
+                     { destruct (place_borrow_roots R p) as [roots0 |] eqn:Hborrow; try discriminate.
+                       inversion Hinfer; subst.
+                       eapply TERS_BorrowUnique_Indirect; eauto.
+                       - eapply infer_place_sctx_structural_sound. exact Hplace.
+                       - apply place_under_unique_ref_b_sound. exact Hunique. } }
+                   { destruct (place_borrow_roots R p) as [roots0 |] eqn:Hborrow; try discriminate.
+                     inversion Hinfer; subst.
+                     eapply TERS_BorrowUnique_Indirect; eauto.
+                     - eapply infer_place_sctx_structural_sound. exact Hplace.
+                     - apply place_under_unique_ref_b_sound. exact Hunique. } }
+                 { destruct (place_borrow_roots R p) as [roots0 |] eqn:Hborrow; try discriminate.
+                   inversion Hinfer; subst.
+                   eapply TERS_BorrowUnique_Indirect.
+                   - eapply infer_place_sctx_structural_sound. exact Hplace.
+                   - exact Hpath.
+                   - apply place_under_unique_ref_b_sound. exact Hunique.
+                   - exact Hborrow. } }
+               { destruct (place_borrow_roots R p) as [roots0 |] eqn:Hborrow; try discriminate.
+                 inversion Hinfer; subst.
+                 eapply TERS_BorrowUnique_Indirect.
+                 - eapply infer_place_sctx_structural_sound. exact Hplace.
+                 - exact Hpath.
+                 - apply place_under_unique_ref_b_sound. exact Hunique.
+                 - exact Hborrow. } } }
+           { destruct (place_resolved_roots R p) as [roots_res |] eqn:Hresolved.
+             { destruct (singleton_store_root roots_res) as [root_x |] eqn:Hsingle.
+               { destruct (root_env_lookup root_x R) as [roots_x |] eqn:Hlookup_x.
                  { destruct (singleton_store_root roots_x) as [root_y |] eqn:Hsingle_x.
                    { destruct (ident_eqb root_x root_y) eqn:Heq.
                      { apply ident_eqb_eq in Heq. subst root_y.
@@ -2641,21 +2727,21 @@ Proof.
                    inversion Hinfer; subst.
                    eapply TERS_BorrowUnique_Indirect; eauto.
                    - eapply infer_place_sctx_structural_sound. exact Hplace.
-                   - apply place_under_unique_ref_b_sound. exact Hunique. }
-              ** destruct (place_borrow_roots R p) as [roots0 |] eqn:Hborrow; try discriminate.
+                   - apply place_under_unique_ref_b_sound. exact Hunique. } }
+               { destruct (place_borrow_roots R p) as [roots0 |] eqn:Hborrow; try discriminate.
                  inversion Hinfer; subst.
                  eapply TERS_BorrowUnique_Indirect.
-                 --- eapply infer_place_sctx_structural_sound. exact Hplace.
-                 --- exact Hpath.
-                 --- apply place_under_unique_ref_b_sound. exact Hunique.
-                 --- exact Hborrow.
-           ++ destruct (place_borrow_roots R p) as [roots0 |] eqn:Hborrow; try discriminate.
-              inversion Hinfer; subst.
-              eapply TERS_BorrowUnique_Indirect.
-              ** eapply infer_place_sctx_structural_sound. exact Hplace.
-              ** exact Hpath.
-              ** apply place_under_unique_ref_b_sound. exact Hunique.
-              ** exact Hborrow.
+                 - eapply infer_place_sctx_structural_sound. exact Hplace.
+                 - exact Hpath.
+                 - apply place_under_unique_ref_b_sound. exact Hunique.
+                 - exact Hborrow. } }
+             { destruct (place_borrow_roots R p) as [roots0 |] eqn:Hborrow; try discriminate.
+               inversion Hinfer; subst.
+               eapply TERS_BorrowUnique_Indirect.
+               - eapply infer_place_sctx_structural_sound. exact Hplace.
+               - exact Hpath.
+               - apply place_under_unique_ref_b_sound. exact Hunique.
+               - exact Hborrow. } }
     + destruct e; try discriminate.
       destruct (infer_place_sctx env Σ p) as [Tp | err] eqn:Hplace; try discriminate.
       destruct (usage_eqb (ty_usage Tp) UUnrestricted) eqn:Husage; try discriminate.

@@ -1306,6 +1306,37 @@ Proof.
     exact Houtlives.
 Qed.
 
+Lemma typed_generic_direct_call_roots :
+  forall env (Ω : outlives_ctx) (n : nat) R Σ Σ' R'
+      fname fdef type_args args sigma arg_roots,
+    typed_args_roots_shadow_safe env Ω n R Σ args
+      (apply_lt_params sigma (apply_type_params type_args (fn_params fdef)))
+      Σ' R' arg_roots ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    fn_captures fdef = [] ->
+    Datatypes.length type_args = fn_type_params fdef ->
+    check_struct_bounds env (fn_bounds fdef) type_args = None ->
+    Forall (fun '(a, b) => outlives Ω a b)
+      (apply_lt_outlives sigma (fn_outlives fdef)) ->
+    typed_env_roots env Ω n R Σ (ECallGeneric fname type_args args)
+      (apply_lt_ty sigma (subst_type_params_ty type_args (fn_ret fdef)))
+      Σ' R' (root_sets_union arg_roots).
+Proof.
+  intros env Ω n R Σ Σ' R' fname fdef type_args args sigma
+    arg_roots Htyped_args Hlookup Hcaps Htype_params Hbounds Houtlives.
+  destruct (lookup_fn_in_name_readiness fname (env_fns env) fdef Hlookup)
+    as [Hin Hname].
+  eapply typed_env_roots_shadow_safe_roots.
+  eapply TERS_CallGeneric with (fdef := fdef) (σ := sigma).
+  - exact Hin.
+  - exact Hname.
+  - exact Hcaps.
+  - exact Htype_params.
+  - exact Hbounds.
+  - exact Htyped_args.
+  - exact Houtlives.
+Qed.
+
 Lemma direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_tfn_with_result_subset :
   forall env (Omega : outlives_ctx) (n : nat) R Sigma Sigma_args R_args
       arg_roots args fdef fcall param_tys ret_ty s s_args vs used',

@@ -142,7 +142,9 @@ failures; invalid tests pass.
       `Datatypes.length type_args = fn_type_params fdef`, instantiated callee
       body narrow summary, and `Eval_CallGeneric`, prove result value type and
       root/shadow/store preservation.
-    - T2a2 next: prove the generic direct-call runtime-instantiation bridge
+    - T2a2a done: prove generic direct-call roots typing bridge using
+      `T_Call_Generic`; `TypeSafetyDirectCallWrappers.vo` and proof-hole scan pass.
+    - T2a2b next: prove the generic direct-call runtime/store bridge
       before adding an executable `ECallGeneric` store-safe checker branch.
 
 Resolved writes accept direct-parent pathless writes and writable recursive

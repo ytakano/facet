@@ -304,6 +304,13 @@ Proof.
   destruct (nth_error σ n) as [[u'' c''] |]; reflexivity.
 Qed.
 
+Lemma ty_usage_subst_type_params_ty : forall σ T,
+  ty_usage (subst_type_params_ty σ T) = ty_usage T.
+Proof.
+  intros σ [u c]. destruct c; simpl; try reflexivity.
+  destruct (nth_error σ n) as [[u' c'] |]; reflexivity.
+Qed.
+
 Fixpoint compose_type_params_go
     (σ τ fallback : list Ty) {struct τ} : list Ty :=
   match τ, fallback with

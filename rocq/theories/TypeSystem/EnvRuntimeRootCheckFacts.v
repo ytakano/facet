@@ -32,6 +32,61 @@ Proof.
   apply moved_paths_satisfy_obligations_b_whole_path.
 Qed.
 
+Lemma path_prefix_b_nil_right_true :
+  forall p,
+    path_prefix_b p [] = true ->
+    p = [].
+Proof.
+  intros p Hprefix. destruct p as [| x xs]; simpl in *; congruence.
+Qed.
+
+Lemma moved_path_satisfies_empty_obligation_in_whole :
+  forall moved_paths,
+    moved_path_satisfies_obligation_b moved_paths [] = true ->
+    In [] moved_paths.
+Proof.
+  intros moved_paths. unfold moved_path_satisfies_obligation_b.
+  induction moved_paths as [| moved rest IH]; simpl; intros Hsat;
+    try discriminate.
+  apply orb_true_iff in Hsat as [Hprefix | Hrest].
+  - left. apply path_prefix_b_nil_right_true. exact Hprefix.
+  - right. apply IH. exact Hrest.
+Qed.
+
+Lemma moved_path_satisfies_obligation_b_of_in_whole :
+  forall moved_paths obligation,
+    In [] moved_paths ->
+    moved_path_satisfies_obligation_b moved_paths obligation = true.
+Proof.
+  intros moved_paths obligation Hin. unfold moved_path_satisfies_obligation_b.
+  induction moved_paths as [| moved rest IH]; simpl in *; [contradiction |].
+  destruct Hin as [Hwhole | Hin].
+  - subst moved. reflexivity.
+  - rewrite IH by exact Hin. destruct (path_prefix_b moved obligation); reflexivity.
+Qed.
+
+Lemma moved_paths_satisfy_obligations_b_of_in_whole :
+  forall moved_paths obligations,
+    In [] moved_paths ->
+    moved_paths_satisfy_obligations_b moved_paths obligations = true.
+Proof.
+  intros moved_paths obligations Hin.
+  induction obligations as [| obligation rest IH]; simpl; auto.
+  rewrite moved_path_satisfies_obligation_b_of_in_whole by exact Hin.
+  exact IH.
+Qed.
+
+Lemma moved_paths_satisfy_obligations_b_of_empty_obligation :
+  forall moved_paths obligations,
+    moved_paths_satisfy_obligations_b moved_paths [[]] = true ->
+    moved_paths_satisfy_obligations_b moved_paths obligations = true.
+Proof.
+  intros moved_paths obligations Hempty. simpl in Hempty.
+  apply andb_true_iff in Hempty as [Hsat _].
+  apply moved_paths_satisfy_obligations_b_of_in_whole.
+  apply moved_path_satisfies_empty_obligation_in_whole. exact Hsat.
+Qed.
+
 Lemma linear_obligation_paths_fuel_global_env_with_local_bounds :
   forall fuel env bounds T,
     linear_obligation_paths_fuel fuel

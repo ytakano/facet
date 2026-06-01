@@ -128,9 +128,12 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
       leaf for capture-ref-free results; EnvRuntimeBaseSafety and dune build pass.
     - T48c8 done: prove typed `eval_place` target theorem and widen shared
       deref-borrow checked leaf to indirect places; full Rocq build passes.
-    - T48c9 next: `nested_shared_reborrow.facet` now fails because a
-      desugared `let` has a checked-safe, non-narrow bound expression with
-      nonempty ordinary roots; add/prove a checked-let bound-expression path.
+    - T48c9a done: add/prove checked-let bound-expression path for
+      capture-ref-free bound values with nonempty ordinary roots; full Rocq
+      build and dune build pass.
+    - T48c9b next: route ordinary-success `ELet`/`ELetInfer` through the
+      recursive checked summary branch; `nested_shared_reborrow.facet` still
+      fails before reaching the new checked-let proof path.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

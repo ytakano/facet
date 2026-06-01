@@ -752,6 +752,45 @@ Inductive expr_root_shadow_store_safe_narrow_summary_checked
       expr_root_shadow_store_safe_narrow_summary_checked
         env Omega n R Σ (ELet m x T_hidden e1 e2) T2
         (sctx_remove x Sigma2) (root_env_remove x R2) [] ret_roots
+  | ERSSNC_Let_BoundCheckedCaptureRefFreeResult : forall R R1 R2 Σ Σ1 Sigma2 m x T_hidden T1 e1 e2
+      T2 roots1 roots2 ret_roots1 ret_roots,
+      typed_env_roots_shadow_safe env Omega n R Σ e1 T1 Σ1 R1 roots1 ->
+      expr_root_shadow_store_safe_narrow_summary_checked
+        env Omega n R Σ e1 T1 Σ1 R1 [] ret_roots1 ->
+      capture_ref_free_ty_b env T1 = true ->
+      ty_compatible_b Omega T1 T_hidden = true ->
+      non_function_value_ty_b T_hidden = true ->
+      root_env_lookup x R1 = None ->
+      roots_exclude x roots1 ->
+      root_env_excludes x R1 ->
+      expr_root_shadow_store_safe_narrow_summary_checked
+        env Omega n (root_env_add x roots1 R1)
+        (sctx_add x T_hidden m Σ1) e2 T2 Sigma2 R2 roots2 ret_roots ->
+      capture_ref_free_ty_b env T2 = true ->
+      sctx_check_ok env x T_hidden Sigma2 = true ->
+      root_env_excludes x (root_env_remove x R2) ->
+      expr_root_shadow_store_safe_narrow_summary_checked
+        env Omega n R Σ (ELet m x T_hidden e1 e2) T2
+        (sctx_remove x Sigma2) (root_env_remove x R2) [] ret_roots
+  | ERSSNC_LetInfer_BoundCheckedCaptureRefFreeResult : forall R R1 R2 Σ Σ1 Sigma2 m x T1 e1 e2
+      T2 roots1 roots2 ret_roots1 ret_roots,
+      typed_env_roots_shadow_safe env Omega n R Σ e1 T1 Σ1 R1 roots1 ->
+      expr_root_shadow_store_safe_narrow_summary_checked
+        env Omega n R Σ e1 T1 Σ1 R1 [] ret_roots1 ->
+      capture_ref_free_ty_b env T1 = true ->
+      non_function_value_ty_b T1 = true ->
+      root_env_lookup x R1 = None ->
+      roots_exclude x roots1 ->
+      root_env_excludes x R1 ->
+      expr_root_shadow_store_safe_narrow_summary_checked
+        env Omega n (root_env_add x roots1 R1)
+        (sctx_add x T1 m Σ1) e2 T2 Sigma2 R2 roots2 ret_roots ->
+      capture_ref_free_ty_b env T2 = true ->
+      sctx_check_ok env x T1 Sigma2 = true ->
+      root_env_excludes x (root_env_remove x R2) ->
+      expr_root_shadow_store_safe_narrow_summary_checked
+        env Omega n R Σ (ELetInfer m x e1 e2) T2
+        (sctx_remove x Sigma2) (root_env_remove x R2) [] ret_roots
   | ERSSNC_LetInfer_CaptureRefFreeResult : forall R R1 R2 Σ Σ1 Sigma2 m x T1 e1 e2
       T2 roots1 roots2 ret_roots1 ret_roots,
       expr_root_shadow_store_safe_narrow_summary_checked
@@ -2668,16 +2707,41 @@ Proof.
           destruct (non_function_value_ty_b t) eqn:Hnonfn;
             try discriminate.
           apply andb_true_iff in Hcheck as [He1_check Hcheck].
-          repeat rewrite andb_true_iff in He1_check.
-          destruct He1_check as [[_ _] He1_narrow_check].
-          destruct (check_expr_root_shadow_store_safe_narrow_summary_fuel
-            (S fuel'') env Omega n R Σ e1) eqn:He1_narrow;
-            try discriminate.
-          destruct (check_expr_root_shadow_store_safe_narrow_summary_fuel_sound
-            (S fuel'') env Omega n R Σ e1 T1 Σ1 R1 roots1 He1 He1_narrow)
-            as [ret_roots1 Hsummary1_legacy].
-          pose proof (ERSSNC_Conservative env Omega n R Σ e1 T1 Σ1 R1
-            roots1 ret_roots1 Hsummary1_legacy) as Hsummary1.
+          assert (Hsummary1_pack : exists ret_roots1,
+            expr_root_shadow_store_safe_narrow_summary_checked
+              env Omega n R Σ e1 T1 Σ1 R1 roots1 ret_roots1 \/
+            (typed_env_roots_shadow_safe env Omega n R Σ e1 T1 Σ1 R1 roots1 /\
+             expr_root_shadow_store_safe_narrow_summary_checked
+               env Omega n R Σ e1 T1 Σ1 R1 [] ret_roots1 /\
+             capture_ref_free_ty_b env T1 = true)).
+          { destruct (check_expr_root_shadow_store_safe_narrow_summary_fuel
+              (S fuel'') env Omega n R Σ e1) eqn:He1_narrow.
+            - destruct (check_expr_root_shadow_store_safe_narrow_summary_fuel_sound
+                (S fuel'') env Omega n R Σ e1 T1 Σ1 R1 roots1 He1 He1_narrow)
+                as [ret_roots1 Hsummary1_legacy].
+              pose proof (ERSSNC_Conservative env Omega n R Σ e1 T1 Σ1 R1
+                roots1 ret_roots1 Hsummary1_legacy) as Hsummary1.
+              exists ret_roots1. left. exact Hsummary1.
+            - simpl in He1_check.
+              apply andb_true_iff in He1_check as [Hfree1 He1_checked_check].
+              assert (He1_checked :
+                infer_core_env_state_fuel_roots_shadow_safe_checked
+                  (S fuel'') env Omega n R Σ e1 =
+                infer_ok (T1, Σ1, R1, [])).
+              { cbn [infer_core_env_state_fuel_roots_shadow_safe_checked].
+                rewrite He1. unfold roots_for_checked_result. rewrite Hfree1.
+                reflexivity. }
+              assert (He1_checked_check_full :
+                check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
+                  (S fuel'') env Omega n R Σ e1 = true).
+              { cbn [check_expr_root_shadow_store_safe_narrow_summary_checked_fuel].
+                rewrite He1_narrow. rewrite He1. exact He1_checked_check. }
+              destruct (IH env Omega n R Σ e1 T1 Σ1 R1 [] He1_checked
+                He1_checked_check_full) as [ret_roots1 Hsummary1].
+              pose proof (infer_core_env_state_fuel_roots_shadow_safe_sound
+                (S fuel'') env Omega n R Σ e1 T1 Σ1 R1 roots1 He1) as Htyped1.
+              exists ret_roots1. right. repeat split; assumption. }
+          destruct Hsummary1_pack as [ret_roots1 Hsummary1_case].
           destruct (root_env_lookup xlet R1) as [roots_x |] eqn:Hlookup_x;
             try discriminate.
           apply andb_true_iff in Hcheck as [Hroots1 Hcheck].
@@ -2706,8 +2770,11 @@ Proof.
           rewrite Hfree in Hinfer.
           inversion Hinfer; subst; clear Hinfer.
           exists ret_roots.
-          eapply ERSSNC_Let_CaptureRefFreeResult;
-            eauto using roots_exclude_b_sound, root_env_excludes_b_sound.
+          destruct Hsummary1_case as [Hsummary1 | [Htyped1 [Hsummary1 Hfree1]]].
+          { eapply ERSSNC_Let_CaptureRefFreeResult;
+              eauto using roots_exclude_b_sound, root_env_excludes_b_sound. }
+          { eapply ERSSNC_Let_BoundCheckedCaptureRefFreeResult;
+              eauto using roots_exclude_b_sound, root_env_excludes_b_sound. }
         -- destruct (infer_core_env_state_fuel_roots_shadow_safe
             (S fuel'') env Omega n R Σ e1)
             as [[[[T1 Σ1] R1] roots1] | err1] eqn:He1;
@@ -2715,14 +2782,41 @@ Proof.
           destruct (non_function_value_ty_b T1) eqn:Hnonfn;
             try discriminate.
           apply andb_true_iff in Hcheck as [He1_check Hcheck].
-          destruct (check_expr_root_shadow_store_safe_narrow_summary_fuel
-            (S fuel'') env Omega n R Σ e1) eqn:He1_narrow;
-            try discriminate.
-          destruct (check_expr_root_shadow_store_safe_narrow_summary_fuel_sound
-            (S fuel'') env Omega n R Σ e1 T1 Σ1 R1 roots1 He1 He1_narrow)
-            as [ret_roots1 Hsummary1_legacy].
-          pose proof (ERSSNC_Conservative env Omega n R Σ e1 T1 Σ1 R1
-            roots1 ret_roots1 Hsummary1_legacy) as Hsummary1.
+          assert (Hsummary1_pack : exists ret_roots1,
+            expr_root_shadow_store_safe_narrow_summary_checked
+              env Omega n R Σ e1 T1 Σ1 R1 roots1 ret_roots1 \/
+            (typed_env_roots_shadow_safe env Omega n R Σ e1 T1 Σ1 R1 roots1 /\
+             expr_root_shadow_store_safe_narrow_summary_checked
+               env Omega n R Σ e1 T1 Σ1 R1 [] ret_roots1 /\
+             capture_ref_free_ty_b env T1 = true)).
+          { destruct (check_expr_root_shadow_store_safe_narrow_summary_fuel
+              (S fuel'') env Omega n R Σ e1) eqn:He1_narrow.
+            - destruct (check_expr_root_shadow_store_safe_narrow_summary_fuel_sound
+                (S fuel'') env Omega n R Σ e1 T1 Σ1 R1 roots1 He1 He1_narrow)
+                as [ret_roots1 Hsummary1_legacy].
+              pose proof (ERSSNC_Conservative env Omega n R Σ e1 T1 Σ1 R1
+                roots1 ret_roots1 Hsummary1_legacy) as Hsummary1.
+              exists ret_roots1. left. exact Hsummary1.
+            - simpl in He1_check.
+              apply andb_true_iff in He1_check as [Hfree1 He1_checked_check].
+              assert (He1_checked :
+                infer_core_env_state_fuel_roots_shadow_safe_checked
+                  (S fuel'') env Omega n R Σ e1 =
+                infer_ok (T1, Σ1, R1, [])).
+              { cbn [infer_core_env_state_fuel_roots_shadow_safe_checked].
+                rewrite He1. unfold roots_for_checked_result. rewrite Hfree1.
+                reflexivity. }
+              assert (He1_checked_check_full :
+                check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
+                  (S fuel'') env Omega n R Σ e1 = true).
+              { cbn [check_expr_root_shadow_store_safe_narrow_summary_checked_fuel].
+                rewrite He1_narrow. rewrite He1. exact He1_checked_check. }
+              destruct (IH env Omega n R Σ e1 T1 Σ1 R1 [] He1_checked
+                He1_checked_check_full) as [ret_roots1 Hsummary1].
+              pose proof (infer_core_env_state_fuel_roots_shadow_safe_sound
+                (S fuel'') env Omega n R Σ e1 T1 Σ1 R1 roots1 He1) as Htyped1.
+              exists ret_roots1. right. repeat split; assumption. }
+          destruct Hsummary1_pack as [ret_roots1 Hsummary1_case].
           destruct (root_env_lookup xlet R1) as [roots_x |] eqn:Hlookup_x;
             try discriminate.
           apply andb_true_iff in Hcheck as [Hroots1 Hcheck].
@@ -2750,8 +2844,11 @@ Proof.
           rewrite Hfree in Hinfer.
           inversion Hinfer; subst; clear Hinfer.
           exists ret_roots.
-          eapply ERSSNC_LetInfer_CaptureRefFreeResult;
-            eauto using roots_exclude_b_sound, root_env_excludes_b_sound.
+          destruct Hsummary1_case as [Hsummary1 | [Htyped1 [Hsummary1 Hfree1]]].
+          { eapply ERSSNC_LetInfer_CaptureRefFreeResult;
+              eauto using roots_exclude_b_sound, root_env_excludes_b_sound. }
+          { eapply ERSSNC_LetInfer_BoundCheckedCaptureRefFreeResult;
+              eauto using roots_exclude_b_sound, root_env_excludes_b_sound. }
 Qed.
 
 Lemma check_expr_root_shadow_store_safe_narrow_summary_checked_sound :
@@ -6452,6 +6549,18 @@ Qed.
 
 
 
+
+Lemma value_roots_within_nil_weaken :
+  forall roots v,
+    value_roots_within [] v ->
+    value_roots_within roots v.
+Proof.
+  intros roots v Hwithin.
+  eapply value_roots_within_store_subset.
+  - exact Hwithin.
+  - unfold root_set_stores_subset. intros z Hin. inversion Hin.
+Qed.
+
 Lemma expr_root_shadow_store_safe_narrow_summary_checked_runtime_package :
   forall env Omega n R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_store_safe_narrow_summary_checked
@@ -6617,6 +6726,120 @@ Proof.
     + apply store_function_closure_targets_summary_store_remove.
       exact Hsummary2_store.
   - dependent destruction Heval.
+    destruct (IHHsummary1 s s1 v1 Hstore Hroots Hshadow Hrn Hnamed Hkeys
+      Hsummary_store Heval1 Hunique)
+      as [Hstore1 [Hv1 [Hroots1_runtime [Hv1_roots_empty [_
+        [Hshadow1 [Hrn1 [Hnamed1 [Hkeys1 Hsummary1_store]]]]]]]]].
+    assert (Hv1_roots : value_roots_within roots1 v1)
+      by (eapply value_roots_within_nil_weaken; exact Hv1_roots_empty).
+    assert (Hfresh_store : store_lookup x s1 = None)
+      by (eapply store_roots_within_lookup_none; eassumption).
+    assert (Hadd_pres :
+      store_ref_targets_preserved env s1 (store_add x T_hidden v1 s1))
+      by (apply store_add_fresh_ref_targets_preserved; exact Hfresh_store).
+    assert (Hv1_hidden : value_has_type env s1 v1 T_hidden).
+    { eapply VHT_Compatible.
+      - exact Hv1.
+      - apply ty_compatible_b_sound. exact H1. }
+    assert (Hstore_add :
+      store_typed env (store_add x T_hidden v1 s1)
+        (sctx_add x T_hidden m Σ1)).
+    { eapply store_typed_add_compatible.
+      - exact Hstore1.
+      - exact Hv1.
+      - apply ty_compatible_b_sound. exact H1.
+      - exact Hadd_pres. }
+    assert (Hadd_roots :
+      store_roots_within (root_env_add x roots1 R1)
+        (store_add x T_hidden v1 s1))
+      by (eapply store_add_roots_within; eassumption).
+    assert (Hadd_shadow : store_no_shadow (store_add x T_hidden v1 s1))
+      by (apply store_no_shadow_add; assumption).
+    assert (Hadd_rn : root_env_no_shadow (root_env_add x roots1 R1))
+      by (apply root_env_no_shadow_add; assumption).
+    assert (Hctx_roots : root_env_ctx_roots_named R Σ)
+      by (eapply root_env_store_roots_named_to_ctx; eassumption).
+    assert (Hroots1_ctx : root_set_ctx_roots_named roots1 Σ1).
+    { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual env Omega n)
+        as [Htyped_named _].
+      destruct (Htyped_named R Σ e1 T1 Σ1 R1 roots1 H Hrn Hctx_roots)
+        as [_ Hroots_ctx].
+      exact Hroots_ctx. }
+    assert (Hroots1_named_store : root_set_store_roots_named roots1 s1).
+    { eapply root_set_ctx_roots_named_store_typed; eassumption. }
+    assert (Hadd_named :
+      root_env_store_roots_named (root_env_add x roots1 R1)
+        (store_add x T_hidden v1 s1)).
+    { eapply root_env_store_roots_named_add_env_store_add; eassumption. }
+    assert (Hadd_keys :
+      root_env_store_keys_named (root_env_add x roots1 R1)
+        (store_add x T_hidden v1 s1))
+      by (eapply root_env_store_keys_named_add_env_store_add; eassumption).
+    assert (Hsummary_add :
+      store_function_closure_targets_summary env
+        (store_add x T_hidden v1 s1)).
+    { eapply store_function_closure_targets_summary_add_non_function;
+        eassumption. }
+    destruct (IHHsummary2 (store_add x T_hidden v1 s1) s2 v2
+      Hstore_add Hadd_roots Hadd_shadow Hadd_rn Hadd_named Hadd_keys
+      Hsummary_add Heval2 Hunique)
+      as [Hstore2 [Hv2 [Hroots2_runtime [Hvalue_roots [Hroots2_named
+        [Hshadow2 [Hrn2 [Hnamed2 [Hkeys2 Hsummary2_store]]]]]]]]].
+    assert (Hremove_names :
+      forall se, In se (store_remove x s2) -> se_name se <> x)
+      by (apply store_no_shadow_remove_no_name; exact Hshadow2).
+    assert (Hroots_removed :
+      store_roots_within (root_env_remove x R2) (store_remove x s2))
+      by (eapply store_remove_roots_within; eassumption).
+    assert (Hexclude_store : store_refs_exclude_root x (store_remove x s2)).
+    { eapply store_roots_exclude_root.
+      - exact Hroots_removed.
+      - exact H8.
+      - exact Hremove_names. }
+    assert (Hstore_final :
+      store_typed env (store_remove x s2) (sctx_remove x Sigma2))
+      by (eapply store_typed_remove_excluding_root; eassumption).
+    assert (Hrn_final : root_env_no_shadow (root_env_remove x R2))
+      by (apply root_env_no_shadow_remove; exact Hrn2).
+    assert (Hremain_names :
+      forall z, In z (store_names s2) -> z <> x ->
+        In z (store_names (store_remove x s2)))
+      by (intros z Hin Hneq; apply store_names_remove_keeps_other; assumption).
+    assert (Hnamed_removed :
+      root_env_store_roots_named (root_env_remove x R2) s2).
+    { eapply root_env_store_roots_named_remove_env; eassumption. }
+    assert (Hnamed_final :
+      root_env_store_roots_named (root_env_remove x R2) (store_remove x s2)).
+    { eapply root_env_store_roots_named_store_remove_excluding.
+      - intros y roots Hlookup.
+        apply H8 with (y := y) (roots := roots); [exact Hlookup|].
+        intros Heq. subst y.
+        rewrite root_env_lookup_remove_eq_no_shadow in Hlookup by exact Hrn2.
+        discriminate.
+      - exact Hnamed_removed.
+      - exact Hremain_names. }
+    assert (Hkeys_final :
+      root_env_store_keys_named (root_env_remove x R2) (store_remove x s2)).
+    { eapply root_env_store_keys_named_remove_env_store_remove; eassumption. }
+    repeat split.
+    + exact Hstore_final.
+    + eapply value_has_type_runtime_rootless_store_any.
+      * exact Hv2.
+      * eapply capture_ref_free_ty_b_runtime_rootless. exact H6.
+    + exact Hroots_removed.
+    + eapply value_has_type_runtime_rootless_empty_roots.
+      * exact Hv2.
+      * eapply capture_ref_free_ty_b_runtime_rootless. exact H6.
+    + apply root_set_store_roots_named_nil.
+    + apply store_no_shadow_remove. exact Hshadow2.
+    + exact Hrn_final.
+    + exact Hnamed_final.
+    + exact Hkeys_final.
+    + apply store_function_closure_targets_summary_store_remove.
+      exact Hsummary2_store.
+  - dependent destruction Heval.
+  - dependent destruction Heval.
+
 Qed.
 
 Lemma expr_root_shadow_store_safe_narrow_summary_runtime_package_prefix_ctx :
@@ -7260,8 +7483,8 @@ Proof.
       by (apply root_env_no_shadow_add; assumption).
     assert (Hadd_named :
       root_env_store_roots_named (root_env_add x roots1 R1)
-        (store_add x T_hidden v1 s1))
-      by (eapply root_env_store_roots_named_add_env_store_add; eassumption).
+        (store_add x T_hidden v1 s1)).
+    { eapply root_env_store_roots_named_add_env_store_add; eassumption. }
     assert (Hadd_keys :
       root_env_store_keys_named (root_env_add x roots1 R1)
         (store_add x T_hidden v1 s1))
@@ -9403,7 +9626,7 @@ Proof.
   assert (Hstore_body_env : store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
   { subst body_env.
     eapply store_typed_global_env_with_local_bounds.
-        eapply initial_store_for_fn_store_typed. exact Hstore. }
+    exact (initial_store_for_fn_store_typed env f s Hstore). }
   assert (Heval_body_env : eval body_env s (fn_body f) s' v).
   { subst body_env.
     eapply eval_global_env_with_local_bounds. exact Heval. }
@@ -9457,7 +9680,7 @@ Proof.
   eapply typed_fn_env_structural_big_step_safe_ready.
   - eapply infer_env_runtime_structural_sound. exact Hinfer_env.
   - exact Hready.
-  - eapply initial_store_for_fn_store_typed. exact Hstore.
+  - exact (initial_store_for_fn_store_typed (alpha_normalize_global_env env) f s Hstore).
   - exact Heval.
 Qed.
 
@@ -9489,7 +9712,7 @@ Proof.
   assert (Hstore_body_env : store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
   { subst body_env.
     eapply store_typed_global_env_with_local_bounds.
-        eapply initial_store_for_fn_store_typed. exact Hstore. }
+    exact (initial_store_for_fn_store_typed env f s Hstore). }
   assert (Heval_body_env : eval body_env s (fn_body f) s' v).
   { subst body_env.
     eapply eval_global_env_with_local_bounds. exact Heval. }
@@ -9543,7 +9766,7 @@ Proof.
   assert (Hstore_body_env : store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
   { subst body_env.
     eapply store_typed_global_env_with_local_bounds.
-        eapply initial_store_for_fn_store_typed. exact Hstore. }
+    exact (initial_store_for_fn_store_typed env f s Hstore). }
   assert (Heval_body_env : eval body_env s (fn_body f) s' v).
   { subst body_env.
     eapply eval_global_env_with_local_bounds. exact Heval. }
@@ -9770,7 +9993,7 @@ Proof.
       store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
   { subst body_env.
     eapply store_typed_global_env_with_local_bounds.
-        eapply initial_store_for_fn_store_typed. exact Hstore. }
+    exact (initial_store_for_fn_store_typed (alpha_normalize_global_env env) f s Hstore). }
   assert (Heval_body_env : eval body_env s (fn_body f) s' v).
   { subst body_env.
     eapply eval_global_env_with_local_bounds. exact Heval. }

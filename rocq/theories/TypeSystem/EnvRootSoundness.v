@@ -2811,17 +2811,72 @@ Theorem infer_core_env_state_fuel_roots_shadow_safe_checked_sound :
       infer_ok (T, Σ', R', roots) ->
     typed_env_roots_shadow_safe_checked env Ω n R Σ e T Σ' R' roots.
 Proof.
-  intros fuel env Ω n R Σ e T Σ' R' roots Hchecked.
-  unfold infer_core_env_state_fuel_roots_shadow_safe_checked in Hchecked.
-  destruct (infer_core_env_state_fuel_roots_shadow_safe fuel env Ω n R Σ e)
-    as [[[[T0 Σ0] R0] roots0] | err] eqn:Hinfer; try discriminate.
-  unfold roots_for_checked_result in Hchecked.
-  destruct (capture_ref_free_ty_b env T0) eqn:Hfree; inversion Hchecked; subst.
-  - eapply TERSC_CaptureRefFreeResult.
-    + eapply infer_core_env_state_fuel_roots_shadow_safe_sound. exact Hinfer.
-    + exact Hfree.
-  - apply TERSC_Conservative.
-    eapply infer_core_env_state_fuel_roots_shadow_safe_sound. exact Hinfer.
+  induction fuel as [|fuel' IH]; intros env Ω n R Σ e T Σ' R' roots Hchecked.
+  - cbn [infer_core_env_state_fuel_roots_shadow_safe_checked] in Hchecked.
+    discriminate.
+  - cbn [infer_core_env_state_fuel_roots_shadow_safe_checked] in Hchecked.
+    destruct (infer_core_env_state_fuel_roots_shadow_safe (S fuel') env Ω n R Σ e)
+      as [[[[T0 Σ0] R0] roots0] | err] eqn:Hinfer.
+    + unfold roots_for_checked_result in Hchecked.
+      destruct (capture_ref_free_ty_b env T0) eqn:Hfree.
+      * inversion Hchecked; subst; clear Hchecked.
+        eapply TERSC_CaptureRefFreeResult.
+        -- eapply infer_core_env_state_fuel_roots_shadow_safe_sound. exact Hinfer.
+        -- exact Hfree.
+      * inversion Hchecked; subst; clear Hchecked.
+        apply TERSC_Conservative.
+        eapply infer_core_env_state_fuel_roots_shadow_safe_sound. exact Hinfer.
+    + destruct e as [|lit|y|m x Tann e1 e2|m x e1 e2|fname|fname caps|p|fname args|fname tys args|callee args|sname lts tys fields|ename vname lts tys args|scrut branches|p e_new|p e_new|rk p|e1|e1|e1 e2 e3]; try discriminate.
+      * destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ e1)
+          as [[[[T1 Σ1] R1] roots1] | err1] eqn:He1; try discriminate.
+        destruct (ty_compatible_b Ω T1 Tann) eqn:Hcompat; try discriminate.
+        destruct (root_env_lookup x R1) as [roots_x |] eqn:Hlookup; try discriminate.
+        destruct (roots_exclude_b x roots1 && root_env_excludes_b x R1) eqn:Hpre; try discriminate.
+        apply andb_true_iff in Hpre as [Hroots1 Henv1].
+        destruct (infer_core_env_state_fuel_roots_shadow_safe_checked fuel' env Ω n
+                    (root_env_add x roots1 R1) (sctx_add x Tann m Σ1) e2)
+          as [[[[T2 Σ2] R2] roots2] | err2] eqn:He2; try discriminate.
+        destruct (sctx_check_ok env x Tann Σ2 && capture_ref_free_ty_b env T2 &&
+                    root_env_excludes_b x (root_env_remove x R2)) eqn:Hpost; try discriminate.
+        apply andb_true_iff in Hpost as [Hpost12 Henv2].
+        apply andb_true_iff in Hpost12 as [Hcheck Hfree].
+        unfold roots_for_checked_result in Hchecked.
+        rewrite Hfree in Hchecked.
+        inversion Hchecked; subst; clear Hchecked.
+        eapply TERSC_Let_CaptureRefFreeResult.
+        -- eapply infer_core_env_state_fuel_roots_shadow_safe_sound. exact He1.
+        -- exact Hcompat.
+        -- exact Hlookup.
+        -- apply roots_exclude_b_sound. exact Hroots1.
+        -- apply root_env_excludes_b_sound. exact Henv1.
+        -- eapply IH. exact He2.
+        -- exact Hcheck.
+        -- apply root_env_excludes_b_sound. exact Henv2.
+        -- exact Hfree.
+      * destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ e1)
+          as [[[[T1 Σ1] R1] roots1] | err1] eqn:He1; try discriminate.
+        destruct (root_env_lookup x R1) as [roots_x |] eqn:Hlookup; try discriminate.
+        destruct (roots_exclude_b x roots1 && root_env_excludes_b x R1) eqn:Hpre; try discriminate.
+        apply andb_true_iff in Hpre as [Hroots1 Henv1].
+        destruct (infer_core_env_state_fuel_roots_shadow_safe_checked fuel' env Ω n
+                    (root_env_add x roots1 R1) (sctx_add x T1 m Σ1) e2)
+          as [[[[T2 Σ2] R2] roots2] | err2] eqn:He2; try discriminate.
+        destruct (sctx_check_ok env x T1 Σ2 && capture_ref_free_ty_b env T2 &&
+                    root_env_excludes_b x (root_env_remove x R2)) eqn:Hpost; try discriminate.
+        apply andb_true_iff in Hpost as [Hpost12 Henv2].
+        apply andb_true_iff in Hpost12 as [Hcheck Hfree].
+        unfold roots_for_checked_result in Hchecked.
+        rewrite Hfree in Hchecked.
+        inversion Hchecked; subst; clear Hchecked.
+        eapply TERSC_LetInfer_CaptureRefFreeResult.
+        -- eapply infer_core_env_state_fuel_roots_shadow_safe_sound. exact He1.
+        -- exact Hlookup.
+        -- apply roots_exclude_b_sound. exact Hroots1.
+        -- apply root_env_excludes_b_sound. exact Henv1.
+        -- eapply IH. exact He2.
+        -- exact Hcheck.
+        -- apply root_env_excludes_b_sound. exact Henv2.
+        -- exact Hfree.
 Qed.
 
 Theorem infer_core_env_roots_sound :

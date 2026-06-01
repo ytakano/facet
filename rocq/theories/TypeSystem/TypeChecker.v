@@ -7004,14 +7004,74 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
   end
   end.
 
-Definition infer_core_env_state_fuel_roots_shadow_safe_checked (fuel : nat)
+Fixpoint infer_core_env_state_fuel_roots_shadow_safe_checked (fuel : nat)
     (env : global_env) (Ω : outlives_ctx) (n : nat)
     (R : root_env) (Σ : sctx) (e : expr)
     : infer_result (Ty * sctx * root_env * root_set) :=
   match infer_core_env_state_fuel_roots_shadow_safe fuel env Ω n R Σ e with
   | infer_ok (T, Σ', R', roots) =>
       infer_ok (T, Σ', R', roots_for_checked_result env T roots)
-  | infer_err err => infer_err err
+  | infer_err err =>
+      match fuel with
+      | O => infer_err err
+      | S fuel' =>
+          match e with
+          | ELet m x T e1 e2 =>
+              match infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ e1 with
+              | infer_err err1 => infer_err err1
+              | infer_ok (T1, Σ1, R1, roots1) =>
+                  if ty_compatible_b Ω T1 T
+                  then
+                    match root_env_lookup x R1 with
+                    | Some _ => infer_err ErrContextCheckFailed
+                    | None =>
+                        if roots_exclude_b x roots1 && root_env_excludes_b x R1
+                        then
+                          match infer_core_env_state_fuel_roots_shadow_safe_checked fuel' env Ω n
+                                  (root_env_add x roots1 R1) (sctx_add x T m Σ1) e2 with
+                          | infer_err err2 => infer_err err2
+                          | infer_ok (T2, Σ2, R2, roots2) =>
+                              if sctx_check_ok env x T Σ2 &&
+                                 capture_ref_free_ty_b env T2 &&
+                                 root_env_excludes_b x (root_env_remove x R2)
+                              then
+                                infer_ok
+                                  (T2, sctx_remove x Σ2, root_env_remove x R2,
+                                   roots_for_checked_result env T2 roots2)
+                              else infer_err ErrContextCheckFailed
+                          end
+                        else infer_err ErrContextCheckFailed
+                    end
+                  else infer_err (compatible_error T1 T)
+              end
+          | ELetInfer m x e1 e2 =>
+              match infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ e1 with
+              | infer_err err1 => infer_err err1
+              | infer_ok (T1, Σ1, R1, roots1) =>
+                  match root_env_lookup x R1 with
+                  | Some _ => infer_err ErrContextCheckFailed
+                  | None =>
+                      if roots_exclude_b x roots1 && root_env_excludes_b x R1
+                      then
+                        match infer_core_env_state_fuel_roots_shadow_safe_checked fuel' env Ω n
+                                (root_env_add x roots1 R1) (sctx_add x T1 m Σ1) e2 with
+                        | infer_err err2 => infer_err err2
+                        | infer_ok (T2, Σ2, R2, roots2) =>
+                            if sctx_check_ok env x T1 Σ2 &&
+                               capture_ref_free_ty_b env T2 &&
+                               root_env_excludes_b x (root_env_remove x R2)
+                            then
+                              infer_ok
+                                (T2, sctx_remove x Σ2, root_env_remove x R2,
+                                 roots_for_checked_result env T2 roots2)
+                            else infer_err ErrContextCheckFailed
+                        end
+                      else infer_err ErrContextCheckFailed
+                  end
+              end
+          | _ => infer_err err
+          end
+      end
   end.
 
 Definition infer_core_env_roots_shadow_safe

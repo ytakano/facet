@@ -109,6 +109,8 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
       that prunes capture-free result roots after conservative success.
     - T48b2 done: add checked let constructors for capture-free
       results without final root exclusion.
+    - T48b3 done: add recursive checked let inferencer and
+      shadow-safe soundness; end-to-end routing still conservative.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

@@ -169,6 +169,8 @@ failures; invalid tests pass.
     - T2a2d1f done: prove conditional non-function type-substitution helper;
       `EnvRuntimeBaseSafety.v` focused compile and proof-hole scan pass.
       Sub-agent spawn remains unavailable due thread limit.
+    - T2a2d1g done: lift non-function type-substitution to parameters;
+      `EnvRuntimeBaseSafety.v` focused compile and proof-hole scan pass.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

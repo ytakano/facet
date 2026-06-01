@@ -46,6 +46,29 @@ Proof.
   - exact Hnon.
 Qed.
 
+Lemma non_function_value_ty_b_apply_type_param :
+  forall type_args p,
+    Forall (fun Targ => non_function_value_ty_b Targ = true) type_args ->
+    non_function_value_ty_b (param_ty p) = true ->
+    non_function_value_ty_b (param_ty (apply_type_param type_args p)) = true.
+Proof.
+  intros type_args [m x T] Hargs Hnon. simpl in *.
+  eapply non_function_value_ty_b_subst_type_params_ty; eassumption.
+Qed.
+
+Lemma Forall_non_function_value_ty_b_apply_type_params :
+  forall type_args ps,
+    Forall (fun Targ => non_function_value_ty_b Targ = true) type_args ->
+    Forall (fun p => non_function_value_ty_b (param_ty p) = true) ps ->
+    Forall (fun p => non_function_value_ty_b (param_ty p) = true)
+      (apply_type_params type_args ps).
+Proof.
+  intros type_args ps Hargs Hps. induction Hps as [| p ps Hp Hps IH];
+    simpl; constructor.
+  - eapply non_function_value_ty_b_apply_type_param; eassumption.
+  - exact IH.
+Qed.
+
 Lemma eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_store_function_closure_targets_summary :
   forall env Ω n R Σ e T Σ' R' roots ret_roots,
     env_fns_root_shadow_provenance_summary_evidence env ->

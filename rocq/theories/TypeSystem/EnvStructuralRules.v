@@ -45,6 +45,143 @@ Proof.
     exact (proj2 Hfresh).
 Qed.
 
+Lemma ctx_names_subst_type_params_ctx : forall type_args Γ,
+  ctx_names (subst_type_params_ctx type_args Γ) = ctx_names Γ.
+Proof.
+  intros type_args Γ. induction Γ as [| [[[x T] st] m] Γ IH]; simpl; auto.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma subst_type_params_ctx_sctx_add : forall type_args x T m Σ,
+  subst_type_params_ctx type_args (sctx_add x T m Σ) =
+  sctx_add x (subst_type_params_ty type_args T) m
+    (subst_type_params_ctx type_args Σ).
+Proof.
+  reflexivity.
+Qed.
+
+Lemma subst_type_params_ctx_ctx_remove : forall type_args x Γ,
+  subst_type_params_ctx type_args (ctx_remove x Γ) =
+  ctx_remove x (subst_type_params_ctx type_args Γ).
+Proof.
+  intros type_args x Γ. induction Γ as [| [[[y T] st] m] Γ IH]; simpl; auto.
+  destruct (ident_eqb x y); simpl; auto.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma subst_type_params_ctx_ctx_remove_b : forall type_args x Γ,
+  subst_type_params_ctx type_args (ctx_remove_b x Γ) =
+  ctx_remove_b x (subst_type_params_ctx type_args Γ).
+Proof.
+  intros type_args x Γ. induction Γ as [| [[[y T] st] m] Γ IH]; simpl; auto.
+  destruct (ident_eqb x y); simpl; auto.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma subst_type_params_ctx_sctx_remove : forall type_args x Σ,
+  subst_type_params_ctx type_args (sctx_remove x Σ) =
+  sctx_remove x (subst_type_params_ctx type_args Σ).
+Proof.
+  intros type_args x Σ. unfold sctx_remove.
+  apply subst_type_params_ctx_ctx_remove.
+Qed.
+
+Lemma subst_type_params_ctx_ctx_add_params : forall type_args ps Γ,
+  subst_type_params_ctx type_args (ctx_add_params ps Γ) =
+  ctx_add_params (apply_type_params type_args ps)
+    (subst_type_params_ctx type_args Γ).
+Proof.
+  intros type_args ps Γ. unfold ctx_add_params.
+  rewrite subst_type_params_ctx_app.
+  rewrite <- params_ctx_apply_type_params.
+  reflexivity.
+Qed.
+
+Lemma subst_type_params_ctx_sctx_add_params : forall type_args ps Σ,
+  subst_type_params_ctx type_args (sctx_add_params ps Σ) =
+  sctx_add_params (apply_type_params type_args ps)
+    (subst_type_params_ctx type_args Σ).
+Proof.
+  intros type_args ps Σ. unfold sctx_add_params.
+  apply subst_type_params_ctx_ctx_add_params.
+Qed.
+
+Lemma subst_type_params_ctx_ctx_remove_params : forall type_args ps Γ,
+  subst_type_params_ctx type_args (ctx_remove_params ps Γ) =
+  ctx_remove_params ps (subst_type_params_ctx type_args Γ).
+Proof.
+  intros type_args ps. induction ps as [| p ps IH]; intros Γ; simpl; auto.
+  rewrite IH, subst_type_params_ctx_ctx_remove_b. reflexivity.
+Qed.
+
+Lemma subst_type_params_ctx_sctx_remove_params : forall type_args ps Σ,
+  subst_type_params_ctx type_args (sctx_remove_params ps Σ) =
+  sctx_remove_params ps (subst_type_params_ctx type_args Σ).
+Proof.
+  intros type_args ps Σ. unfold sctx_remove_params.
+  apply subst_type_params_ctx_ctx_remove_params.
+Qed.
+
+Lemma sctx_lookup_subst_type_params_ctx_eq : forall type_args x Σ,
+  sctx_lookup x (subst_type_params_ctx type_args Σ) =
+  match sctx_lookup x Σ with
+  | Some (T, st) => Some (subst_type_params_ty type_args T, st)
+  | None => None
+  end.
+Proof.
+  intros type_args x Σ. unfold sctx_lookup.
+  induction Σ as [| [[[y T] st] m] Σ IH]; simpl; auto.
+  destruct (ident_eqb x y); auto.
+Qed.
+
+Lemma sctx_path_available_subst_type_params_ctx : forall type_args Σ x path,
+  sctx_path_available (subst_type_params_ctx type_args Σ) x path =
+  sctx_path_available Σ x path.
+Proof.
+  intros type_args Σ x path. unfold sctx_path_available.
+  rewrite sctx_lookup_subst_type_params_ctx_eq.
+  destruct (sctx_lookup x Σ) as [[T st] |]; reflexivity.
+Qed.
+
+Lemma ctx_update_state_subst_type_params_ctx :
+  forall type_args x f Σ,
+    ctx_update_state x f (subst_type_params_ctx type_args Σ) =
+    match ctx_update_state x f Σ with
+    | Some Σ' => Some (subst_type_params_ctx type_args Σ')
+    | None => None
+    end.
+Proof.
+  intros type_args x f Σ. induction Σ as [| [[[y T] st] m] Σ IH]; simpl; auto.
+  destruct (ident_eqb x y); simpl; auto.
+  destruct (ctx_update_state x f Σ) as [Σ' |]; simpl; rewrite IH; reflexivity.
+Qed.
+
+Lemma sctx_consume_path_subst_type_params_ctx : forall type_args Σ x path,
+  sctx_consume_path (subst_type_params_ctx type_args Σ) x path =
+  match sctx_consume_path Σ x path with
+  | infer_ok Σ' => infer_ok (subst_type_params_ctx type_args Σ')
+  | infer_err err => infer_err err
+  end.
+Proof.
+  intros type_args Σ x path. unfold sctx_consume_path, sctx_update_state.
+  rewrite sctx_path_available_subst_type_params_ctx.
+  destruct (sctx_path_available Σ x path) as [u | err]; simpl; auto.
+  rewrite ctx_update_state_subst_type_params_ctx.
+  destruct (ctx_update_state x (state_consume_path path) Σ); reflexivity.
+Qed.
+
+Lemma sctx_restore_path_subst_type_params_ctx : forall type_args Σ x path,
+  sctx_restore_path (subst_type_params_ctx type_args Σ) x path =
+  match sctx_restore_path Σ x path with
+  | infer_ok Σ' => infer_ok (subst_type_params_ctx type_args Σ')
+  | infer_err err => infer_err err
+  end.
+Proof.
+  intros type_args Σ x path. unfold sctx_restore_path, sctx_update_state.
+  rewrite ctx_update_state_subst_type_params_ctx.
+  destruct (ctx_update_state x (state_restore_path path) Σ); reflexivity.
+Qed.
+
 Lemma roots_exclude_params_equiv_local :
   forall ps roots roots',
     root_set_equiv roots roots' ->

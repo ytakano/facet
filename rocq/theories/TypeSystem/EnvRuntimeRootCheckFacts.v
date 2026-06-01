@@ -235,6 +235,21 @@ Proof.
     + exact Hin.
 Qed.
 
+Lemma obligation_refines_nil_right :
+  forall old_obligations,
+    obligation_refines old_obligations [].
+Proof.
+  unfold obligation_refines. intros old_obligations target Hin. contradiction.
+Qed.
+
+Lemma obligation_refines_singleton_empty_left :
+  forall new_obligations,
+    obligation_refines [[]] new_obligations.
+Proof.
+  unfold obligation_refines. intros new_obligations target Hin.
+  exists []. split; [left; reflexivity | reflexivity].
+Qed.
+
 Lemma linear_obligation_paths_fuel_global_env_with_local_bounds :
   forall fuel env bounds T,
     linear_obligation_paths_fuel fuel

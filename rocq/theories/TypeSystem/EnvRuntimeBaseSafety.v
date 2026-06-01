@@ -8754,7 +8754,7 @@ Definition callee_body_root_shadow_captured_call_store_safe_summary
     env fdef \/
   exists T_body Gamma_out R_body roots_body ret_roots,
     NoDup (ctx_names (params_ctx (fn_params fdef))) /\
-    expr_root_shadow_store_safe_narrow_summary env
+    expr_root_shadow_store_safe_narrow_summary_checked env
       (fn_outlives fdef) (fn_lifetimes fdef)
       (initial_root_env_for_fn fdef)
       (sctx_of_ctx (fn_body_ctx fdef))
@@ -8846,7 +8846,7 @@ Proof.
       split; [apply fn_params_roots_exclude_b_sound; exact Hroots |].
       apply fn_params_root_env_excludes_b_sound. exact Henv.
   - right. right.
-    destruct (infer_core_env_roots_shadow_safe env
+    destruct (infer_core_env_roots_shadow_safe_checked env
       (fn_outlives fdef) (fn_lifetimes fdef)
       (initial_root_env_for_fn fdef) (fn_body_ctx fdef) (fn_body fdef))
       as [[[[T_body Gamma_body] R_body] roots_body] | err] eqn:Hcore;
@@ -8857,7 +8857,7 @@ Proof.
       try discriminate.
     repeat rewrite andb_true_iff in Hnarrow.
     destruct Hnarrow as [[[Hexpr Hcompat] Hroots] Henv].
-    destruct (check_expr_root_shadow_store_safe_narrow_summary_sound
+    destruct (check_expr_root_shadow_store_safe_narrow_summary_checked_sound
       env (fn_outlives fdef) (fn_lifetimes fdef)
       (initial_root_env_for_fn fdef) (fn_body_ctx fdef) (fn_body fdef)
       T_body Gamma_body R_body roots_body Hcore Hexpr)

@@ -12865,6 +12865,110 @@ let check_expr_root_shadow_store_safe_narrow_summary env _UU03a9_ n r _UU0393_ e
     (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) env _UU03a9_ n r
     (sctx_of_ctx _UU0393_) e
 
+(** val check_expr_root_shadow_store_safe_narrow_summary_checked_fuel :
+    Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+    root_env -> sctx -> expr -> bool **)
+
+let rec check_expr_root_shadow_store_safe_narrow_summary_checked_fuel fuel env _UU03a9_ n r _UU03a3_ e =
+  if check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_
+       n r _UU03a3_ e
+  then true
+  else (match infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n
+                r _UU03a3_ e with
+        | Infer_ok _ -> false
+        | Infer_err _ ->
+          ((fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+             (fun _ -> false)
+             (fun fuel' ->
+             match e with
+             | ELet (m, x, t_hidden, e1, e2) ->
+               (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                        _UU03a9_ n r _UU03a3_ e1 with
+                | Infer_ok p ->
+                  let (p0, roots1) = p in
+                  let (p1, r1) = p0 in
+                  let (t1, _UU03a3_1) = p1 in
+                  (&&)
+                    ((&&)
+                      ((&&) (ty_compatible_b _UU03a9_ t1 t_hidden)
+                        (non_function_value_ty_b t_hidden))
+                      (check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
+                        fuel' env _UU03a9_ n r _UU03a3_ e1))
+                    (match root_env_lookup x r1 with
+                     | Some _ -> false
+                     | None ->
+                       (&&)
+                         ((&&) (roots_exclude_b x roots1)
+                           (root_env_excludes_b x r1))
+                         (match infer_core_env_state_fuel_roots_shadow_safe_checked
+                                  fuel' env _UU03a9_ n
+                                  (root_env_add x roots1 r1)
+                                  (sctx_add x t_hidden m _UU03a3_1) e2 with
+                          | Infer_ok p2 ->
+                            let (p3, _) = p2 in
+                            let (p4, r2) = p3 in
+                            let (t2, _UU03a3_2) = p4 in
+                            (&&)
+                              ((&&)
+                                ((&&)
+                                  (sctx_check_ok env x t_hidden _UU03a3_2)
+                                  (capture_ref_free_ty_b env t2))
+                                (root_env_excludes_b x (root_env_remove x r2)))
+                              (check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
+                                fuel' env _UU03a9_ n
+                                (root_env_add x roots1 r1)
+                                (sctx_add x t_hidden m _UU03a3_1) e2)
+                          | Infer_err _ -> false))
+                | Infer_err _ -> false)
+             | ELetInfer (m, x, e1, e2) ->
+               (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                        _UU03a9_ n r _UU03a3_ e1 with
+                | Infer_ok p ->
+                  let (p0, roots1) = p in
+                  let (p1, r1) = p0 in
+                  let (t1, _UU03a3_1) = p1 in
+                  (&&)
+                    ((&&) (non_function_value_ty_b t1)
+                      (check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
+                        fuel' env _UU03a9_ n r _UU03a3_ e1))
+                    (match root_env_lookup x r1 with
+                     | Some _ -> false
+                     | None ->
+                       (&&)
+                         ((&&) (roots_exclude_b x roots1)
+                           (root_env_excludes_b x r1))
+                         (match infer_core_env_state_fuel_roots_shadow_safe_checked
+                                  fuel' env _UU03a9_ n
+                                  (root_env_add x roots1 r1)
+                                  (sctx_add x t1 m _UU03a3_1) e2 with
+                          | Infer_ok p2 ->
+                            let (p3, _) = p2 in
+                            let (p4, r2) = p3 in
+                            let (t2, _UU03a3_2) = p4 in
+                            (&&)
+                              ((&&)
+                                ((&&) (sctx_check_ok env x t1 _UU03a3_2)
+                                  (capture_ref_free_ty_b env t2))
+                                (root_env_excludes_b x (root_env_remove x r2)))
+                              (check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
+                                fuel' env _UU03a9_ n
+                                (root_env_add x roots1 r1)
+                                (sctx_add x t1 m _UU03a3_1) e2)
+                          | Infer_err _ -> false))
+                | Infer_err _ -> false)
+             | _ -> false)
+             fuel))
+
+(** val check_expr_root_shadow_store_safe_narrow_summary_checked :
+    global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx ->
+    expr -> bool **)
+
+let check_expr_root_shadow_store_safe_narrow_summary_checked env _UU03a9_ n r _UU0393_ e =
+  check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
+    (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) env _UU03a9_ n r
+    (sctx_of_ctx _UU0393_) e
+
 (** val check_fn_root_shadow_captured_call_provenance_summary :
     global_env -> fn_def -> bool **)
 
@@ -13031,7 +13135,7 @@ let check_fn_root_shadow_captured_call_store_safe_summary env fdef =
                | Infer_err _ -> false)
             | None -> false)
        | None -> false))
-    (match infer_core_env_roots_shadow_safe env fdef.fn_outlives
+    (match infer_core_env_roots_shadow_safe_checked env fdef.fn_outlives
              fdef.fn_lifetimes (initial_root_env_for_fn fdef)
              (fn_body_ctx fdef) fdef.fn_body with
      | Infer_ok p ->
@@ -13044,7 +13148,7 @@ let check_fn_root_shadow_captured_call_store_safe_summary env fdef =
           (&&)
             ((&&)
               ((&&)
-                (check_expr_root_shadow_store_safe_narrow_summary env
+                (check_expr_root_shadow_store_safe_narrow_summary_checked env
                   fdef.fn_outlives fdef.fn_lifetimes
                   (initial_root_env_for_fn fdef) (fn_body_ctx fdef)
                   fdef.fn_body)

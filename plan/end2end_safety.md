@@ -120,6 +120,8 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
     - T48c3 done: prove checked narrow store-safe checker
       soundness; EnvRuntimeBaseSafety compiles.
     - T48c4 done: prove checked narrow runtime package.
+    - T48c5 done: route normal store-safe gate through checked narrow;
+      EnvRuntimeCapturedSafety compiles.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

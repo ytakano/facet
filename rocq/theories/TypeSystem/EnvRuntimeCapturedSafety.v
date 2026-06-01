@@ -1062,7 +1062,7 @@ Proof.
     destruct (check_initial_root_runtime_ready_sound f s Hinitial) as
       [Hroots [Hshadow [Hnamed Hkeys]]].
     pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hrn.
-    destruct (expr_root_shadow_store_safe_narrow_summary_runtime_package
+    destruct (expr_root_shadow_store_safe_narrow_summary_checked_runtime_package
       env (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
       (sctx_of_ctx (fn_body_ctx f)) (fn_body f) T_body
       (sctx_of_ctx Gamma_out) R_body roots_body ret_roots Hnarrow

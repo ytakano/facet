@@ -144,8 +144,14 @@ failures; invalid tests pass.
       root/shadow/store preservation.
     - T2a2a done: prove generic direct-call roots typing bridge using
       `T_Call_Generic`; `TypeSafetyDirectCallWrappers.vo` and proof-hole scan pass.
-    - T2a2b next: prove the generic direct-call runtime/store bridge
-      before adding an executable `ECallGeneric` store-safe checker branch.
+    - T2a2b blocked: generic direct-call runtime/store bridge needs a
+      parametric runtime typing theorem. Current runtime evaluates the
+      unsubstituted body with `fn_params fcall`; caller arguments are typed at
+      `apply_type_params type_args (fn_params fdef)`, and no sound lemma converts
+      concrete argument values to unsubstituted `TParam` parameter types.
+    - T2a2c next: choose and prove a sound generic-body strategy: either
+      monomorphize the runtime body/type context before evaluation, or add a
+      parametric value/store typing relation that justifies `TParam` bind params.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

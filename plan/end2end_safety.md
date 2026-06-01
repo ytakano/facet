@@ -113,6 +113,8 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
       shadow-safe soundness.
     - T48b4 done: route end-to-end inference through checked roots;
       remaining nested reborrow failure is the store-safe gate.
+    - T48c1 done: add checked narrow store-safe summary relation
+      and executable checked narrow checker wrapper.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

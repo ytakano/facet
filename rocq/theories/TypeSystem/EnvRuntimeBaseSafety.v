@@ -1,7 +1,8 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules RootProvenance TypeChecker RuntimeTyping
   EnvStructuralRules CheckerSoundness AlphaRenaming EnvTypingSoundness
-  TypeSafetyBasePreservationMutual TypeSafetyDirectCallWrappers.
+  TypeSafetyBasePreservationMutual TypeSafetyDirectCallWrappers
+  TypeSafetyCheckedRoots.
 From Facet.TypeSystem Require Export EnvRuntimeValidatorFacts.
 From Stdlib Require Import List Bool Lia String Program.Equality.
 Import ListNotations.
@@ -711,6 +712,51 @@ Inductive expr_root_shadow_store_safe_narrow_summary
       place_path p = Some (x, path) ->
       expr_root_shadow_store_safe_narrow_summary
         env Omega n R Σ (EDrop (EPlace p)) T Σ' R' roots roots.
+
+Inductive expr_root_shadow_store_safe_narrow_summary_checked
+    (env : global_env) (Omega : outlives_ctx) (n : nat)
+    : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set ->
+      root_set -> Prop :=
+  | ERSSNC_Conservative : forall R Σ e T Σ' R' roots ret_roots,
+      expr_root_shadow_store_safe_narrow_summary
+        env Omega n R Σ e T Σ' R' roots ret_roots ->
+      expr_root_shadow_store_safe_narrow_summary_checked
+        env Omega n R Σ e T Σ' R' roots ret_roots
+  | ERSSNC_Let_CaptureRefFreeResult : forall R R1 R2 Σ Σ1 Sigma2 m x T_hidden T1 e1 e2
+      T2 roots1 roots2 ret_roots1 ret_roots,
+      expr_root_shadow_store_safe_narrow_summary_checked
+        env Omega n R Σ e1 T1 Σ1 R1 roots1 ret_roots1 ->
+      ty_compatible_b Omega T1 T_hidden = true ->
+      non_function_value_ty_b T_hidden = true ->
+      root_env_lookup x R1 = None ->
+      roots_exclude x roots1 ->
+      root_env_excludes x R1 ->
+      expr_root_shadow_store_safe_narrow_summary_checked
+        env Omega n (root_env_add x roots1 R1)
+        (sctx_add x T_hidden m Σ1) e2 T2 Sigma2 R2 roots2 ret_roots ->
+      capture_ref_free_ty_b env T2 = true ->
+      sctx_check_ok env x T_hidden Sigma2 = true ->
+      root_env_excludes x (root_env_remove x R2) ->
+      expr_root_shadow_store_safe_narrow_summary_checked
+        env Omega n R Σ (ELet m x T_hidden e1 e2) T2
+        (sctx_remove x Sigma2) (root_env_remove x R2) [] ret_roots
+  | ERSSNC_LetInfer_CaptureRefFreeResult : forall R R1 R2 Σ Σ1 Sigma2 m x T1 e1 e2
+      T2 roots1 roots2 ret_roots1 ret_roots,
+      expr_root_shadow_store_safe_narrow_summary_checked
+        env Omega n R Σ e1 T1 Σ1 R1 roots1 ret_roots1 ->
+      non_function_value_ty_b T1 = true ->
+      root_env_lookup x R1 = None ->
+      roots_exclude x roots1 ->
+      root_env_excludes x R1 ->
+      expr_root_shadow_store_safe_narrow_summary_checked
+        env Omega n (root_env_add x roots1 R1)
+        (sctx_add x T1 m Σ1) e2 T2 Sigma2 R2 roots2 ret_roots ->
+      capture_ref_free_ty_b env T2 = true ->
+      sctx_check_ok env x T1 Sigma2 = true ->
+      root_env_excludes x (root_env_remove x R2) ->
+      expr_root_shadow_store_safe_narrow_summary_checked
+        env Omega n R Σ (ELetInfer m x e1 e2) T2
+        (sctx_remove x Sigma2) (root_env_remove x R2) [] ret_roots.
 
 Lemma disjoint_names_evar_of_call_expr :
   forall x args ys,

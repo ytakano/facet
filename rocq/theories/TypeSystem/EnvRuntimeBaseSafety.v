@@ -27,6 +27,25 @@ Proof.
   intros env f s Hinitial. exact (proj2 Hinitial).
 Qed.
 
+Lemma non_function_value_ty_b_subst_type_params_ty :
+  forall type_args T,
+    Forall (fun Targ => non_function_value_ty_b Targ = true) type_args ->
+    non_function_value_ty_b T = true ->
+    non_function_value_ty_b (subst_type_params_ty type_args T) = true.
+Proof.
+  intros type_args T Hargs. revert T.
+  fix IH 1. intros [u c] Hnon.
+  destruct c; simpl in *; try reflexivity; try discriminate.
+  - destruct (nth_error type_args n) as [Targ |] eqn:Hnth; simpl; auto.
+    apply nth_error_In in Hnth.
+    rewrite Forall_forall in Hargs.
+    specialize (Hargs Targ Hnth).
+    destruct Targ as [uarg carg]. destruct carg; simpl in *; try reflexivity;
+      try discriminate; exact Hargs.
+  - apply IH. exact Hnon.
+  - exact Hnon.
+Qed.
+
 Lemma eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_store_function_closure_targets_summary :
   forall env Ω n R Σ e T Σ' R' roots ret_roots,
     env_fns_root_shadow_provenance_summary_evidence env ->

@@ -728,10 +728,9 @@ Inductive expr_root_shadow_store_safe_narrow_summary_checked
       capture_ref_free_ty_b env T = true ->
       expr_root_shadow_store_safe_narrow_summary_checked
         env Omega n R Σ e T Σ' R' [] ret_roots
-  | ERSSNC_DerefBorrowShared_CaptureRefFreeResult : forall R Σ p T Σ' R' roots x path,
+  | ERSSNC_DerefBorrowShared_CaptureRefFreeResult : forall R Σ p T Σ' R' roots,
       typed_env_roots_shadow_safe env Omega n R Σ
         (EDeref (EBorrow RShared p)) T Σ' R' roots ->
-      place_path p = Some (x, path) ->
       capture_ref_free_ty_b env T = true ->
       expr_root_shadow_store_safe_narrow_summary_checked
         env Omega n R Σ (EDeref (EBorrow RShared p)) T Σ' R' [] []
@@ -2319,6 +2318,100 @@ Proof.
   eapply eval_place_deref_runtime_target_has_type_from_ref; eassumption.
 Qed.
 
+Lemma value_lookup_path_app_inv_exists :
+  forall v p q v_final,
+    value_lookup_path v (p ++ q) = Some v_final ->
+    exists v_mid,
+      value_lookup_path v p = Some v_mid /\
+      value_lookup_path v_mid q = Some v_final.
+Proof.
+  intros v p.
+  revert v.
+  induction p as [|seg rest IH]; intros v q v_final Hlookup.
+  - exists v. simpl. split; [reflexivity | exact Hlookup].
+  - simpl in Hlookup.
+    destruct v as [|z|fl|b|sname fields|ename variant lts tys vals|x path|fname captured];
+      try discriminate.
+    destruct ((fix lookup (fields0 : list (string * value)) : option value :=
+      match fields0 with
+      | [] => None
+      | (name, fv) :: tail =>
+          if String.eqb seg name then Some fv else lookup tail
+      end) fields) as [field_value |] eqn:Hfield; try discriminate.
+    destruct (IH field_value q v_final Hlookup) as [v_mid [Hmid Hfinal]].
+    exists v_mid. simpl. rewrite Hfield. split; assumption.
+Qed.
+
+Lemma eval_place_type_runtime_target_value_has_type :
+  forall env Sigma s p T x path se v,
+    store_typed env s Sigma ->
+    typed_place_type_env_structural env Sigma p T ->
+    eval_place s p x path ->
+    store_lookup x s = Some se ->
+    value_lookup_path (se_val se) path = Some v ->
+    value_has_type env s v T.
+Proof.
+  intros env Sigma s p T x path se v Hstore Htyped.
+  revert x path se v.
+  induction Htyped; intros x_eval path_eval se_eval v_eval Heval Hlookup Hvalue.
+  - inversion Heval; subst.
+    simpl in Hvalue. inversion Hvalue; subst v_eval.
+    destruct (store_typed_lookup env s Sigma x_eval se_eval Hstore Hlookup) as
+      [T_store [st_store [m_store [Hsigma [Hname [Heq_ty [_ Hv]]]]]]].
+    match goal with
+    | Hsctx_lookup : sctx_lookup x_eval Sigma = Some (?T_static, ?st_static) |- _ =>
+        rewrite Hsctx_lookup in Hsigma;
+        inversion Hsigma; subst T_store st_store;
+        exact Hv
+    end.
+  - inversion Heval; subst.
+    assert (Href : value_has_type env s (VRef x_eval path_eval) (MkTy u (TRef la rk T))).
+    { eapply IHHtyped; eassumption. }
+    destruct (eval_place_deref_runtime_target_has_type_from_ref
+      env Sigma s T u la rk x_eval path_eval Hstore Href) as
+      [se_target [v_target [T_target [Hlookup_target
+        [Hvalue_target [Htype_target Hv_target]]]]]].
+    rewrite Hlookup in Hlookup_target.
+    inversion Hlookup_target; subst se_target.
+    rewrite Hvalue in Hvalue_target.
+    inversion Hvalue_target; subst v_target.
+    exact Hv_target.
+  - inversion Heval; subst.
+    destruct (value_lookup_path_app_inv_exists
+      (se_val se_eval) path [field_name fdef] v_eval Hvalue)
+      as [v_parent [Hvalue_parent Hvalue_field]].
+    assert (Hv_parent : value_has_type env s v_parent T_parent).
+    { eapply IHHtyped; eassumption. }
+    assert (Hfield_type :
+      type_lookup_path env T_parent [field_name fdef] =
+        Some (instantiate_struct_field_ty lts args fdef)).
+    { simpl. rewrite H. rewrite H0. rewrite H1. reflexivity. }
+    destruct (value_has_type_path_exists env s v_parent T_parent
+      [field_name fdef] (instantiate_struct_field_ty lts args fdef)
+      Hv_parent Hfield_type) as [v_field [Hvalue_field' Hv_field]].
+    rewrite Hvalue_field in Hvalue_field'.
+    inversion Hvalue_field'; subst v_field.
+    exact Hv_field.
+Qed.
+
+Lemma eval_place_runtime_target_value_has_type :
+  forall env Sigma s p T x path se v,
+    store_typed env s Sigma ->
+    typed_place_env_structural env Sigma p T ->
+    eval_place s p x path ->
+    store_lookup x s = Some se ->
+    value_lookup_path (se_val se) path = Some v ->
+    value_has_type env s v T.
+Proof.
+  intros env Sigma s p T x path se v Hstore Htyped Heval Hlookup Hvalue.
+  eapply eval_place_type_runtime_target_value_has_type.
+  - exact Hstore.
+  - apply typed_place_env_structural_to_type_env_structural. exact Htyped.
+  - exact Heval.
+  - exact Hlookup.
+  - exact Hvalue.
+Qed.
+
 Lemma check_expr_root_shadow_store_safe_narrow_summary_fuel_sound :
   forall fuel env Omega n R Σ e T Σ' R' roots,
     infer_core_env_state_fuel_roots_shadow_safe fuel env Omega n R Σ e =
@@ -2548,19 +2641,16 @@ Proof.
       * destruct e; try discriminate.
         destruct e; try discriminate.
         destruct r; try discriminate.
-        destruct (place_path p) as [[x_path path_path] |] eqn:Hpath_top;
-          try discriminate.
         destruct (capture_ref_free_ty_b env Ttop) eqn:Hfree_top;
           try discriminate.
         unfold roots_for_checked_result in Hinfer.
         rewrite Hfree_top in Hinfer.
         inversion Hinfer; subst; clear Hinfer.
         exists [].
-        eapply ERSSNC_DerefBorrowShared_CaptureRefFreeResult.
-        -- eapply infer_core_env_state_fuel_roots_shadow_safe_sound.
-           exact Hun_top.
-        -- exact Hpath_top.
-        -- exact Hfree_top.
+        refine (ERSSNC_DerefBorrowShared_CaptureRefFreeResult env Omega n R Σ
+          p T Σ' R' roots_top _ Hfree_top).
+        eapply infer_core_env_state_fuel_roots_shadow_safe_sound.
+        exact Hun_top.
       * destruct fuel' as [| fuel''].
         { destruct e; cbn [check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
             infer_core_env_state_fuel_roots_shadow_safe
@@ -6402,39 +6492,28 @@ Proof.
       * exact Hv.
       * eapply capture_ref_free_ty_b_runtime_rootless. exact H0.
     + apply root_set_store_roots_named_nil.
-  - pose proof (typed_env_roots_shadow_safe_roots
-      env Omega n R Σ (EDeref (EBorrow RShared p)) T Σ' R' roots H)
-      as Htyped_roots.
-    assert (Hready : provenance_ready_expr (EDeref (EBorrow RShared p))).
-    { eapply ProvReady_DerefBorrow. exact H0. }
-    destruct (proj1 eval_preserves_typing_roots_ready_mutual
-      env s (EDeref (EBorrow RShared p)) s' ret Heval
-      Omega n R Σ T Σ' R' roots Hready Hstore Hroots Hshadow Hrn
-      Htyped_roots)
-      as [Hstore' [Hv [Hpres [Hroots' [Hvalue_roots [Hshadow' Hrn']]]]]].
-    destruct (proj1 eval_preserves_root_names_ready_mutual
-      env s (EDeref (EBorrow RShared p)) s' ret Heval
-      Omega n R Σ T Σ' R' roots Hready Hstore Hroots Hshadow Hrn
-      Hnamed Htyped_roots) as [Hnamed' Hrootset_named].
-    pose proof (proj1 eval_preserves_root_keys_named_ready_mutual
-      env s (EDeref (EBorrow RShared p)) s' ret Heval
-      Omega n R Σ T Σ' R' roots Hready Hstore Hroots Hshadow Hrn
-      Hkeys Htyped_roots) as Hkeys'.
-    assert (Hsummary' : store_function_closure_targets_summary env s').
-    { inversion Heval; subst.
-      - match goal with
-        | Hplace : expr_as_place (EBorrow RShared p) = Some _ |- _ =>
-            simpl in Hplace; discriminate
-        end.
-      - match goal with
-        | Hborrow : eval env s (EBorrow RShared p) _ _ |- _ =>
-            inversion Hborrow; subst; exact Hsummary_store
-        end. }
-    repeat split; try eassumption.
-    + eapply value_has_type_runtime_rootless_empty_roots.
-      * exact Hv.
-      * eapply capture_ref_free_ty_b_runtime_rootless. exact H1.
-    + apply root_set_store_roots_named_nil.
+  - inversion Heval; subst.
+    + match goal with
+      | Hplace : expr_as_place (EBorrow RShared p) = Some _ |- _ =>
+          simpl in Hplace; discriminate
+      end.
+    + match goal with
+      | Hborrow : eval env s (EBorrow RShared p) _ _ |- _ =>
+          inversion Hborrow; subst; clear Hborrow
+      end.
+      inversion H; subst; try congruence;
+        try solve [
+          match goal with
+          | Hplace_eval : eval_place ?st_eval _ _ _,
+            Hvalue_eval : value_lookup_path _ _ = Some ret |- _ =>
+              assert (Hv_target : value_has_type env st_eval ret T) by
+                (eapply eval_place_runtime_target_value_has_type; eassumption);
+              repeat split; try eassumption;
+              [ eapply value_has_type_runtime_rootless_empty_roots;
+                [ exact Hv_target
+                | eapply capture_ref_free_ty_b_runtime_rootless; exact H0 ]
+              | apply root_set_store_roots_named_nil ]
+          end ].
   - dependent destruction Heval.
     destruct (IHHsummary1 s s1 v1 Hstore Hroots Hshadow Hrn Hnamed Hkeys
       Hsummary_store Heval1 Hunique)

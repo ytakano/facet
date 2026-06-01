@@ -8886,11 +8886,7 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
       match infer_core_env_state_fuel_roots_shadow_safe fuel env Ω n R Σ e with
       | infer_ok (T, _, _, _) =>
           match e with
-          | EDeref (EBorrow RShared p) =>
-              match place_path p with
-              | Some _ => capture_ref_free_ty_b env T
-              | None => false
-              end
+          | EDeref (EBorrow RShared _) => capture_ref_free_ty_b env T
           | _ => false
           end
       | infer_err _ =>

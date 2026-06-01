@@ -12882,12 +12882,9 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_checked_fuel fuel env _
           (match e with
            | EDeref e0 ->
              (match e0 with
-              | EBorrow (r0, p2) ->
+              | EBorrow (r0, _) ->
                 (match r0 with
-                 | RShared ->
-                   (match place_path p2 with
-                    | Some _ -> capture_ref_free_ty_b env t
-                    | None -> false)
+                 | RShared -> capture_ref_free_ty_b env t
                  | RUnique -> false)
               | _ -> false)
            | _ -> false)

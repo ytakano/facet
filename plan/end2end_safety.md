@@ -126,9 +126,11 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
       normal store-safe gate; EnvRuntimeCapturedSafety and dune build pass.
     - T48c7 done: prove direct `EDeref (EBorrow RShared p)` checked narrow
       leaf for capture-ref-free results; EnvRuntimeBaseSafety and dune build pass.
-    - T48c8 blocked: `nested_shared_reborrow.facet` still fails at indirect
-      `EDeref (EBorrow RShared (PDeref _))`; needs non-direct borrow
-      preservation/readiness or a general typed `eval_place` target theorem.
+    - T48c8 done: prove typed `eval_place` target theorem and widen shared
+      deref-borrow checked leaf to indirect places; full Rocq build passes.
+    - T48c9 next: `nested_shared_reborrow.facet` now fails because a
+      desugared `let` has a checked-safe, non-narrow bound expression with
+      nonempty ordinary roots; add/prove a checked-let bound-expression path.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

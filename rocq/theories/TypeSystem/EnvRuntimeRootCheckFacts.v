@@ -384,6 +384,36 @@ Proof.
     apply Hsubst. exact Hle.
 Qed.
 
+Lemma type_args_obligation_refines_upto_map_subst_pair :
+  forall fuel env old_args new_args args,
+    (forall fuel' T,
+      fuel' <= fuel ->
+      obligation_refines
+        (linear_obligation_paths_fuel fuel' env
+          (subst_type_params_ty old_args T))
+        (linear_obligation_paths_fuel fuel' env
+          (subst_type_params_ty new_args T))) ->
+    type_args_obligation_refines_upto fuel env
+      (map (subst_type_params_ty old_args) args)
+      (map (subst_type_params_ty new_args) args).
+Proof.
+  unfold type_args_obligation_refines_upto.
+  intros fuel env old_args new_args args Hsubst. split.
+  - intros i T_old HOld.
+    rewrite (nth_error_map_subst_type_params_ty new_args args i).
+    rewrite (nth_error_map_subst_type_params_ty old_args args i) in HOld.
+    destruct (nth_error args i) as [T |] eqn:Harg; try discriminate.
+    eexists. reflexivity.
+  - intros fuel' i T_old T_new u Hle HOld HNew.
+    rewrite (nth_error_map_subst_type_params_ty old_args args i) in HOld.
+    rewrite (nth_error_map_subst_type_params_ty new_args args i) in HNew.
+    destruct (nth_error args i) as [T |] eqn:Harg; try discriminate.
+    inversion HOld; inversion HNew; subst.
+    rewrite <- (subst_type_params_ty_outer_usage_core old_args u T).
+    rewrite <- (subst_type_params_ty_outer_usage_core new_args u T).
+    apply Hsubst. exact Hle.
+Qed.
+
 Lemma linear_obligation_paths_fuel_global_env_with_local_bounds :
   forall fuel env bounds T,
     linear_obligation_paths_fuel fuel

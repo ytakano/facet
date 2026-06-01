@@ -107,6 +107,8 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
       roots-ready expression theorem.
     - T48b1 done: add checked shadow-safe inferencer wrapper
       that prunes capture-free result roots after conservative success.
+    - T48b2 done: add checked let constructors for capture-free
+      results without final root exclusion.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

@@ -14,7 +14,28 @@ Inductive typed_env_roots_checked
   | TERC_CaptureRefFreeResult : forall R Σ e T Σ' R' roots,
       typed_env_roots env Ω n R Σ e T Σ' R' roots ->
       capture_ref_free_ty_b env T = true ->
-      typed_env_roots_checked env Ω n R Σ e T Σ' R' [].
+      typed_env_roots_checked env Ω n R Σ e T Σ' R' []
+  | TERC_Let_CaptureRefFreeResult : forall R R1 R2 Σ Σ1 Σ2 m x T T1 e1 e2 T2 roots1 roots2,
+      typed_env_roots env Ω n R Σ e1 T1 Σ1 R1 roots1 ->
+      ty_compatible_b Ω T1 T = true ->
+      root_env_lookup x R1 = None ->
+      typed_env_roots env Ω n (root_env_add x roots1 R1)
+        (sctx_add x T m Σ1) e2 T2 Σ2 R2 roots2 ->
+      sctx_check_ok env x T Σ2 = true ->
+      root_env_excludes x (root_env_remove x R2) ->
+      capture_ref_free_ty_b env T2 = true ->
+      typed_env_roots_checked env Ω n R Σ (ELet m x T e1 e2) T2
+        (sctx_remove x Σ2) (root_env_remove x R2) []
+  | TERC_LetInfer_CaptureRefFreeResult : forall R R1 R2 Σ Σ1 Σ2 m x T1 e1 e2 T2 roots1 roots2,
+      typed_env_roots env Ω n R Σ e1 T1 Σ1 R1 roots1 ->
+      root_env_lookup x R1 = None ->
+      typed_env_roots env Ω n (root_env_add x roots1 R1)
+        (sctx_add x T1 m Σ1) e2 T2 Σ2 R2 roots2 ->
+      sctx_check_ok env x T1 Σ2 = true ->
+      root_env_excludes x (root_env_remove x R2) ->
+      capture_ref_free_ty_b env T2 = true ->
+      typed_env_roots_checked env Ω n R Σ (ELetInfer m x e1 e2) T2
+        (sctx_remove x Σ2) (root_env_remove x R2) [].
 
 Inductive typed_env_roots_shadow_safe_checked
     (env : global_env) (Ω : outlives_ctx) (n : nat)
@@ -50,16 +71,12 @@ Lemma typed_env_roots_checked_underlying_roots :
   forall env Ω n R Σ e T Σ' R' roots,
     typed_env_roots_checked env Ω n R Σ e T Σ' R' roots ->
     exists roots0,
-      typed_env_roots env Ω n R Σ e T Σ' R' roots0 /\
+      typed_env_roots_checked env Ω n R Σ e T Σ' R' roots0 /\
       (roots = roots0 \/
         (roots = [] /\ capture_ref_free_ty_b env T = true)).
 Proof.
   intros env Ω n R Σ e T Σ' R' roots Hchecked.
-  destruct Hchecked as
-    [R0 Σ0 e0 T0 Σ0' R0' roots0 Htyped
-    |R0 Σ0 e0 T0 Σ0' R0' roots0 Htyped Hfree].
-  - exists roots0. split; [exact Htyped | left; reflexivity].
-  - exists roots0. split; [exact Htyped | right; split; reflexivity || exact Hfree].
+  exists roots. split; [exact Hchecked | left; reflexivity].
 Qed.
 
 Lemma typed_env_roots_checked_prune_capture_ref_free :
@@ -69,9 +86,17 @@ Lemma typed_env_roots_checked_prune_capture_ref_free :
     typed_env_roots_checked env Ω n R Σ e T Σ' R' [].
 Proof.
   intros env Ω n R Σ e T Σ' R' roots Hchecked Hfree.
-  destruct (typed_env_roots_checked_underlying_roots env Ω n R Σ e T Σ' R' roots
-    Hchecked) as [roots0 [Htyped _]].
-  eapply typed_env_roots_checked_capture_ref_free; eassumption.
+  destruct Hchecked as
+    [R0 Σ0 e0 T0 Σ0' R0' roots0 Htyped
+    |R0 Σ0 e0 T0 Σ0' R0' roots0 Htyped _
+    |R0 R1 R2 Σ0 Σ1 Σ2 m x Tann T1 e1 e2 T2 roots1 roots2
+      Htyped1 Hcompat Hlookup Htyped2 Hcheck Hexcl _
+    |R0 R1 R2 Σ0 Σ1 Σ2 m x T1 e1 e2 T2 roots1 roots2
+      Htyped1 Hlookup Htyped2 Hcheck Hexcl _].
+  - eapply TERC_CaptureRefFreeResult; eassumption.
+  - eapply TERC_CaptureRefFreeResult; eassumption.
+  - eapply TERC_Let_CaptureRefFreeResult; eassumption.
+  - eapply TERC_LetInfer_CaptureRefFreeResult; eassumption.
 Qed.
 
 Lemma typed_env_roots_shadow_safe_checked_of_roots :
@@ -139,8 +164,17 @@ Lemma typed_env_roots_checked_structural :
     typed_env_structural env Ω n Σ e T Σ'.
 Proof.
   intros env Ω n R Σ e T Σ' R' roots Hchecked.
-  destruct Hchecked as [? ? ? ? ? ? ? Htyped | ? ? ? ? ? ? ? Htyped _];
-    eapply typed_env_roots_structural; exact Htyped.
+  destruct Hchecked as
+    [? ? ? ? ? ? ? Htyped
+    |? ? ? ? ? ? ? Htyped _
+    |R0 R1 R2 Σ0 Σ1 Σ2 m x Tann T1 e1 e2 T2 roots1 roots2
+      Htyped1 Hcompat Hlookup Htyped2 Hcheck _ _
+    |R0 R1 R2 Σ0 Σ1 Σ2 m x T1 e1 e2 T2 roots1 roots2
+      Htyped1 Hlookup Htyped2 Hcheck _ _].
+  - eapply typed_env_roots_structural; exact Htyped.
+  - eapply typed_env_roots_structural; exact Htyped.
+  - eapply TES_Let; eauto using typed_env_roots_structural.
+  - eapply TES_LetInfer; eauto using typed_env_roots_structural.
 Qed.
 
 Lemma typed_env_roots_shadow_safe_checked_checked :
@@ -180,7 +214,11 @@ Proof.
     Hprov Hready Hstore Hroots Hshadow Hrn Hchecked.
   destruct Hchecked as
     [R0 Σ0 e0 T0 Σ0' R0' roots0 Htyped
-    |R0 Σ0 e0 T0 Σ0' R0' roots0 Htyped Hfree].
+    |R0 Σ0 e0 T0 Σ0' R0' roots0 Htyped Hfree
+    |R0 R1 R2 Σ0 Σ1 Σ2 m x Tann T1 e1 e2 T2 roots1 roots2
+      Htyped1 Hcompat Hlookup Htyped2 Hcheck Hexcl Hfree
+    |R0 R1 R2 Σ0 Σ1 Σ2 m x T1 e1 e2 T2 roots1 roots2
+      Htyped1 Hlookup Htyped2 Hcheck Hexcl Hfree].
   - eapply (proj1 (eval_preserves_roots_ready_prefix_mutual_with_preservation_core
       Hpres)); eassumption.
   - destruct (proj1 Hpres env s e0 s' v Heval Ω n Σ0 T0 Σ0'
@@ -194,4 +232,6 @@ Proof.
     eapply value_has_type_runtime_rootless_empty_roots.
     + exact Hv_typed.
     + eapply capture_ref_free_ty_b_runtime_rootless. exact Hfree.
+  - inversion Hready.
+  - inversion Hready.
 Qed.

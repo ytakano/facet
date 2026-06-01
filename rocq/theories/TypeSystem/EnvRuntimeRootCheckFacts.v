@@ -5,6 +5,33 @@ From Facet.TypeSystem Require Export TypeSafety EnvRootSoundness.
 From Stdlib Require Import List Bool Lia String Program.Equality.
 Import ListNotations.
 
+Lemma moved_path_satisfies_obligation_b_whole_path :
+  forall moved_paths obligation,
+    moved_path_satisfies_obligation_b ([] :: moved_paths) obligation = true.
+Proof.
+  intros moved_paths obligation. unfold moved_path_satisfies_obligation_b.
+  simpl. reflexivity.
+Qed.
+
+Lemma moved_paths_satisfy_obligations_b_whole_path :
+  forall moved_paths obligations,
+    moved_paths_satisfy_obligations_b ([] :: moved_paths) obligations = true.
+Proof.
+  intros moved_paths obligations. induction obligations as [| obligation rest IH];
+    simpl.
+  - reflexivity.
+  - exact IH.
+Qed.
+
+Lemma moved_paths_satisfy_prefix_obligations_b_whole_path :
+  forall moved_paths prefix obligations,
+    moved_paths_satisfy_obligations_b
+      ([] :: moved_paths) (prefix_obligation_paths prefix obligations) = true.
+Proof.
+  intros moved_paths prefix obligations.
+  apply moved_paths_satisfy_obligations_b_whole_path.
+Qed.
+
 Lemma linear_obligation_paths_fuel_global_env_with_local_bounds :
   forall fuel env bounds T,
     linear_obligation_paths_fuel fuel

@@ -173,6 +173,9 @@ failures; invalid tests pass.
       `EnvRuntimeBaseSafety.v` focused compile and proof-hole scan pass.
     - T2a2d1h done: prove type substitution preserves outer usage;
       `Program.v` focused compile and proof-hole scan pass.
+    - T2a2d1i done: add whole-path linear-obligation coverage helpers;
+      `EnvRuntimeRootCheckFacts.v` focused compile and proof-hole scan pass.
+      Sub-agent spawn remains unavailable due thread limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

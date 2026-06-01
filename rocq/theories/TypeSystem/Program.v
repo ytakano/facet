@@ -496,6 +496,35 @@ Proof.
   - simpl. rewrite (IH t). reflexivity.
 Qed.
 
+Lemma apply_lt_ty_subst_type_params_ty : forall σ type_args T,
+  apply_lt_ty σ (subst_type_params_ty type_args T) =
+  subst_type_params_ty (map (apply_lt_ty σ) type_args) (apply_lt_ty σ T).
+Proof.
+  intros σ type_args. fix IH 1. intros [u c]. destruct c; simpl; try reflexivity.
+  - rewrite nth_error_map_apply_lt_ty.
+    destruct (nth_error type_args n) as [T' |] eqn:Harg.
+    + simpl. exact (apply_lt_ty_outer_usage_core σ u T').
+    + reflexivity.
+  - induction l0 as [| T0 Ts IHTs].
+    + reflexivity.
+    + simpl in *. rewrite (IH T0). injection IHTs as Htail.
+      rewrite Htail. reflexivity.
+  - induction l0 as [| T0 Ts IHTs].
+    + reflexivity.
+    + simpl in *. rewrite (IH T0). injection IHTs as Htail.
+      rewrite Htail. reflexivity.
+  - induction l as [| T0 Ts IHTs].
+    + simpl. rewrite (IH t). reflexivity.
+    + simpl in *. rewrite (IH T0). injection IHTs as Hparams Hret.
+      rewrite Hparams, Hret. reflexivity.
+  - induction l0 as [| T0 Ts IHTs].
+    + simpl. rewrite (IH t). reflexivity.
+    + simpl in *. rewrite (IH T0). injection IHTs as Hparams Hret.
+      rewrite Hparams, Hret. reflexivity.
+  - simpl. rewrite (IH t). reflexivity.
+  - simpl. rewrite (IH t). reflexivity.
+Qed.
+
 Definition instantiate_struct_field_ty
     (lifetime_args : list lifetime) (type_args : list Ty) (f : field_def) : Ty :=
   subst_type_params_ty type_args (apply_lt_ty lifetime_args (field_ty f)).

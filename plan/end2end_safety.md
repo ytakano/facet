@@ -27,12 +27,12 @@ Required theorem names stay intact:
 
 ## Current baseline
 
-Latest full `sh tests/run.sh` baseline (2026-05-31): 24 valid-test failures; invalid tests pass.
+Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; invalid tests pass.
 
 - Generic/function-value gates remain `ErrEndToEndSafetyGateFailed`.
-- Reborrow gates remain safety-gated or context-check failures.
-- Nested pathless `EAssign`/`EReplace` remain rejected by the deliberate
-  direct-parent resolved-write narrowing.
+- Reborrow coverage has one remaining failure: `nested_shared_reborrow.facet`
+  is rejected by a context-check root escape after auto-drop ret binding.
+- Generic/type-forall function cases remain under blocked T2a.
 
 ## Active T2f slices
 
@@ -92,6 +92,10 @@ Latest full `sh tests/run.sh` baseline (2026-05-31): 24 valid-test failures; inv
     - T43b done: direct `EDrop (EPlace _)` leaf; three direct reborrow valid cases pass.
 44. Done: widen resolved unique `EBorrow` narrow leaf from direct-parent to writable-chain; Rocq/extraction and OCaml build pass.
 45. Done: route resolved unique `EBorrow` roots to the writable target root for nested reborrows; Rocq/extraction, OCaml build, and reborrow CLI checks pass.
+46. Blocked: pruning ref-free deref/borrow result roots needs a
+    store-typing-aware roots-readiness theorem; current
+    `eval_preserves_roots_ready_mutual` cannot prove empty roots for
+    statically ref-free values in arbitrary stores.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

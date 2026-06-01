@@ -136,8 +136,14 @@ failures; invalid tests pass.
       scan, and reborrow CLI checks pass.
     - T48c10 done: remeasured baseline after reborrow fix: 18 valid
       failures, all generic/function-value gate failures under T2a.
-    - T2a1 next: isolate and route direct `ECallGeneric` store-safe
-      summary without adding OCaml fallback paths.
+    - T2a1 blocked: direct `ECallGeneric` store-safe summary needs a
+      generic direct-call runtime theorem; existing direct-call wrappers require
+      `fn_type_params fdef = 0`. Needed shape: from typed generic args,
+      `Datatypes.length type_args = fn_type_params fdef`, instantiated callee
+      body narrow summary, and `Eval_CallGeneric`, prove result value type and
+      root/shadow/store preservation.
+    - T2a2 next: prove the generic direct-call runtime-instantiation bridge
+      before adding an executable `ECallGeneric` store-safe checker branch.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

@@ -455,6 +455,38 @@ Proof.
   rewrite map_app. reflexivity.
 Qed.
 
+Lemma ctx_lookup_subst_type_params_ctx : forall type_args x Γ T consumed,
+  ctx_lookup x Γ = Some (T, consumed) ->
+  ctx_lookup x (subst_type_params_ctx type_args Γ) =
+    Some (subst_type_params_ty type_args T, consumed).
+Proof.
+  intros type_args x Γ. induction Γ as [| [[[y Ty] st] m] Γ IH];
+    intros T consumed Hlookup; simpl in *; try discriminate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - inversion Hlookup. reflexivity.
+  - apply IH. exact Hlookup.
+Qed.
+
+Lemma ctx_lookup_state_subst_type_params_ctx : forall type_args x Γ T st,
+  ctx_lookup_state x Γ = Some (T, st) ->
+  ctx_lookup_state x (subst_type_params_ctx type_args Γ) =
+    Some (subst_type_params_ty type_args T, st).
+Proof.
+  intros type_args x Γ. induction Γ as [| [[[y Ty] st0] m] Γ IH];
+    intros T st Hlookup; simpl in *; try discriminate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - inversion Hlookup. reflexivity.
+  - apply IH. exact Hlookup.
+Qed.
+
+Lemma ctx_lookup_mut_subst_type_params_ctx : forall type_args x Γ,
+  ctx_lookup_mut x (subst_type_params_ctx type_args Γ) = ctx_lookup_mut x Γ.
+Proof.
+  intros type_args x Γ. induction Γ as [| [[[y Ty] st] m] Γ IH];
+    simpl; auto.
+  destruct (ident_eqb x y); auto.
+Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Typing judgement                                                      *)
 (*                                                                      *)

@@ -6445,6 +6445,12 @@ let rec root_env_eqb r1 r2 =
 let roots_exclude_b x roots =
   negb (existsb (root_atom_eqb (RStore x)) roots)
 
+(** val roots_for_checked_result :
+    global_env -> ty -> root_set -> root_set **)
+
+let roots_for_checked_result env t roots =
+  if capture_ref_free_ty_b env t then [] else roots
+
 (** val root_env_excludes_b : ident -> root_env -> bool **)
 
 let rec root_env_excludes_b x = function
@@ -11549,12 +11555,112 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
        | Infer_err err -> Infer_err err))
     fuel
 
+(** val infer_core_env_state_fuel_roots_shadow_safe_checked :
+    Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+    root_env -> sctx -> expr -> (((ty * sctx) * root_env) * root_set)
+    infer_result **)
+
+let rec infer_core_env_state_fuel_roots_shadow_safe_checked fuel env _UU03a9_ n r _UU03a3_ e =
+  match infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r
+          _UU03a3_ e with
+  | Infer_ok p ->
+    let (p0, roots) = p in
+    let (p1, r') = p0 in
+    let (t, _UU03a3_') = p1 in
+    Infer_ok (((t, _UU03a3_'), r'), (roots_for_checked_result env t roots))
+  | Infer_err err ->
+    ((fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+       (fun _ -> Infer_err err)
+       (fun fuel' ->
+       match e with
+       | ELet (m, x, t, e1, e2) ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ e1 with
+          | Infer_ok p ->
+            let (p0, roots1) = p in
+            let (p1, r1) = p0 in
+            let (t1, _UU03a3_1) = p1 in
+            if ty_compatible_b _UU03a9_ t1 t
+            then (match root_env_lookup x r1 with
+                  | Some _ -> Infer_err ErrContextCheckFailed
+                  | None ->
+                    if (&&) (roots_exclude_b x roots1)
+                         (root_env_excludes_b x r1)
+                    then (match infer_core_env_state_fuel_roots_shadow_safe_checked
+                                  fuel' env _UU03a9_ n
+                                  (root_env_add x roots1 r1)
+                                  (sctx_add x t m _UU03a3_1) e2 with
+                          | Infer_ok p2 ->
+                            let (p3, roots2) = p2 in
+                            let (p4, r2) = p3 in
+                            let (t2, _UU03a3_2) = p4 in
+                            if (&&)
+                                 ((&&) (sctx_check_ok env x t _UU03a3_2)
+                                   (capture_ref_free_ty_b env t2))
+                                 (root_env_excludes_b x
+                                   (root_env_remove x r2))
+                            then Infer_ok (((t2, (sctx_remove x _UU03a3_2)),
+                                   (root_env_remove x r2)),
+                                   (roots_for_checked_result env t2 roots2))
+                            else Infer_err ErrContextCheckFailed
+                          | Infer_err err2 -> Infer_err err2)
+                    else Infer_err ErrContextCheckFailed)
+            else Infer_err (compatible_error t1 t)
+          | Infer_err err1 -> Infer_err err1)
+       | ELetInfer (m, x, e1, e2) ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ e1 with
+          | Infer_ok p ->
+            let (p0, roots1) = p in
+            let (p1, r1) = p0 in
+            let (t1, _UU03a3_1) = p1 in
+            (match root_env_lookup x r1 with
+             | Some _ -> Infer_err ErrContextCheckFailed
+             | None ->
+               if (&&) (roots_exclude_b x roots1) (root_env_excludes_b x r1)
+               then (match infer_core_env_state_fuel_roots_shadow_safe_checked
+                             fuel' env _UU03a9_ n (root_env_add x roots1 r1)
+                             (sctx_add x t1 m _UU03a3_1) e2 with
+                     | Infer_ok p2 ->
+                       let (p3, roots2) = p2 in
+                       let (p4, r2) = p3 in
+                       let (t2, _UU03a3_2) = p4 in
+                       if (&&)
+                            ((&&) (sctx_check_ok env x t1 _UU03a3_2)
+                              (capture_ref_free_ty_b env t2))
+                            (root_env_excludes_b x (root_env_remove x r2))
+                       then Infer_ok (((t2, (sctx_remove x _UU03a3_2)),
+                              (root_env_remove x r2)),
+                              (roots_for_checked_result env t2 roots2))
+                       else Infer_err ErrContextCheckFailed
+                     | Infer_err err2 -> Infer_err err2)
+               else Infer_err ErrContextCheckFailed)
+          | Infer_err err1 -> Infer_err err1)
+       | _ -> Infer_err err)
+       fuel)
+
 (** val infer_core_env_roots_shadow_safe :
     global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx ->
     expr -> (((ty * ctx) * root_env) * root_set) infer_result **)
 
 let infer_core_env_roots_shadow_safe env _UU03a9_ n r _UU0393_ e =
   match infer_core_env_state_fuel_roots_shadow_safe
+          (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) env
+          _UU03a9_ n r (sctx_of_ctx _UU0393_) e with
+  | Infer_ok p ->
+    let (p0, roots) = p in
+    let (p1, r') = p0 in
+    let (t, _UU03a3_) = p1 in
+    Infer_ok (((t, (ctx_of_sctx _UU03a3_)), r'), roots)
+  | Infer_err err -> Infer_err err
+
+(** val infer_core_env_roots_shadow_safe_checked :
+    global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx ->
+    expr -> (((ty * ctx) * root_env) * root_set) infer_result **)
+
+let infer_core_env_roots_shadow_safe_checked env _UU03a9_ n r _UU0393_ e =
+  match infer_core_env_state_fuel_roots_shadow_safe_checked
           (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) env
           _UU03a9_ n r (sctx_of_ctx _UU0393_) e with
   | Infer_ok p ->
@@ -11762,6 +11868,38 @@ let infer_env_roots_shadow_safe env f r0 =
              | None ->
                (match infer_core_env_roots_shadow_safe body_env _UU03a9_ n r0
                         (fn_body_ctx f) f.fn_body with
+                | Infer_ok p ->
+                  let (p0, roots) = p in
+                  let (p1, r_out) = p0 in
+                  let (t_body, _UU0393__out) = p1 in
+                  if negb (wf_type_b _UU0394_ t_body)
+                  then Infer_err ErrLifetimeLeak
+                  else if ty_compatible_b _UU03a9_ t_body f.fn_ret
+                       then if params_ok_env_b env f.fn_params _UU0393__out
+                            then Infer_ok (((f.fn_ret, _UU0393__out), r_out),
+                                   roots)
+                            else Infer_err ErrContextCheckFailed
+                       else Infer_err (compatible_error t_body f.fn_ret)
+                | Infer_err err -> Infer_err err))
+
+(** val infer_env_roots_shadow_safe_checked :
+    global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
+    infer_result **)
+
+let infer_env_roots_shadow_safe_checked env f r0 =
+  let n = f.fn_lifetimes in
+  let _UU03a9_ = f.fn_outlives in
+  let _UU0394_ = mk_region_ctx n in
+  let body_env = global_env_with_local_bounds env f.fn_bounds in
+  if negb (wf_outlives_b _UU0394_ _UU03a9_)
+  then Infer_err ErrLifetimeLeak
+  else if negb (wf_type_b _UU0394_ f.fn_ret)
+       then Infer_err ErrLifetimeLeak
+       else (match check_fn_binding_params _UU0394_ f with
+             | Some err -> Infer_err err
+             | None ->
+               (match infer_core_env_roots_shadow_safe_checked body_env
+                        _UU03a9_ n r0 (fn_body_ctx f) f.fn_body with
                 | Infer_ok p ->
                   let (p0, roots) = p in
                   let (p1, r_out) = p0 in
@@ -12051,6 +12189,18 @@ let infer_full_env_elab env f =
 
 let infer_full_env_roots env f r0 =
   match infer_env_roots env f r0 with
+  | Infer_ok res ->
+    (match borrow_check_env env [] (fn_body_ctx f) f.fn_body with
+     | Infer_ok _ -> Infer_ok res
+     | Infer_err err -> Infer_err err)
+  | Infer_err err -> Infer_err err
+
+(** val infer_full_env_roots_checked :
+    global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
+    infer_result **)
+
+let infer_full_env_roots_checked env f r0 =
+  match infer_env_roots_shadow_safe_checked env f r0 with
   | Infer_ok res ->
     (match borrow_check_env env [] (fn_body_ctx f) f.fn_body with
      | Infer_ok _ -> Infer_ok res
@@ -13002,7 +13152,7 @@ let check_program_env_alpha_validated_root_shadow_provenance env =
 
 let infer_fn_env_end2end env f =
   let r0 = initial_root_env_for_params (app f.fn_params f.fn_captures) in
-  (match infer_full_env_roots env f r0 with
+  (match infer_full_env_roots_checked env f r0 with
    | Infer_ok res ->
      if check_fn_root_shadow_captured_call_store_safe_summary env f
      then Infer_ok res

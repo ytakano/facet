@@ -980,6 +980,8 @@ val root_env_eqb : root_env -> root_env -> bool
 
 val roots_exclude_b : ident -> root_set -> bool
 
+val roots_for_checked_result : global_env -> ty -> root_set -> root_set
+
 val root_env_excludes_b : ident -> root_env -> bool
 
 val roots_exclude_params_b : param list -> root_set -> bool
@@ -1027,7 +1029,16 @@ val infer_core_env_state_fuel_roots_shadow_safe :
   root_env -> sctx -> expr -> (((ty * sctx) * root_env) * root_set)
   infer_result
 
+val infer_core_env_state_fuel_roots_shadow_safe_checked :
+  Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+  root_env -> sctx -> expr -> (((ty * sctx) * root_env) * root_set)
+  infer_result
+
 val infer_core_env_roots_shadow_safe :
+  global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
+  -> (((ty * ctx) * root_env) * root_set) infer_result
+
+val infer_core_env_roots_shadow_safe_checked :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
   -> (((ty * ctx) * root_env) * root_set) infer_result
 
@@ -1069,6 +1080,10 @@ val infer_env_roots :
   infer_result
 
 val infer_env_roots_shadow_safe :
+  global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
+  infer_result
+
+val infer_env_roots_shadow_safe_checked :
   global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
   infer_result
 
@@ -1115,6 +1130,10 @@ val infer_full_env_elab :
   global_env -> fn_def -> ((ty * ctx) * fn_def) infer_result
 
 val infer_full_env_roots :
+  global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
+  infer_result
+
+val infer_full_env_roots_checked :
   global_env -> fn_def -> root_env -> (((ty * ctx) * root_env) * root_set)
   infer_result
 

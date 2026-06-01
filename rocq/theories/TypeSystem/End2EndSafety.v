@@ -9,7 +9,7 @@ Import ListNotations.
 Theorem infer_fn_env_end2end_sound :
   forall env f T Γ_out R_out roots,
     infer_fn_env_end2end env f = infer_ok (T, Γ_out, R_out, roots) ->
-    checked_fn_env_roots env f
+    checked_fn_env_roots_checked env f
       (initial_root_env_for_params (fn_params f ++ fn_captures f))
       R_out roots.
 Proof.
@@ -17,12 +17,12 @@ Proof.
   unfold infer_fn_env_end2end in Hend.
   remember (initial_root_env_for_params (fn_params f ++ fn_captures f))
     as R0 eqn:HR0.
-  destruct (infer_full_env_roots env f R0)
+  destruct (infer_full_env_roots_checked env f R0)
     as [[[[T0 Γ0] R0_out] roots0] | err] eqn:Hroots; try discriminate.
   destruct (check_fn_root_shadow_captured_call_store_safe_summary env f);
     try discriminate.
   injection Hend as <- <- <- <-.
-  eapply infer_full_env_roots_sound. exact Hroots.
+  eapply infer_full_env_roots_checked_sound. exact Hroots.
 Qed.
 
 Lemma infer_fns_env_end2end_in_sound :
@@ -31,7 +31,7 @@ Lemma infer_fns_env_end2end_in_sound :
     In f fns ->
     exists T Γ_out R_out roots,
       infer_fn_env_end2end env f = infer_ok (T, Γ_out, R_out, roots) /\
-      checked_fn_env_roots env f
+      checked_fn_env_roots_checked env f
         (initial_root_env_for_params (fn_params f ++ fn_captures f))
         R_out roots.
 Proof.
@@ -56,7 +56,7 @@ Theorem infer_program_env_end2end_sound :
     env' = alpha_normalize_global_env env /\
     exists T Γ_out R_out roots,
       infer_fn_env_end2end env' f = infer_ok (T, Γ_out, R_out, roots) /\
-      checked_fn_env_roots env' f
+      checked_fn_env_roots_checked env' f
         (initial_root_env_for_params (fn_params f ++ fn_captures f))
         R_out roots.
 Proof.
@@ -78,7 +78,7 @@ Theorem check_program_env_end2end_sound :
     exists T Γ_out R_out roots,
       infer_fn_env_end2end (alpha_normalize_global_env env) f =
         infer_ok (T, Γ_out, R_out, roots) /\
-      checked_fn_env_roots (alpha_normalize_global_env env) f
+      checked_fn_env_roots_checked (alpha_normalize_global_env env) f
         (initial_root_env_for_params (fn_params f ++ fn_captures f))
         R_out roots.
 Proof.
@@ -105,7 +105,7 @@ Lemma infer_fn_env_end2end_gate :
 Proof.
   intros env f T Γ_out R_out roots Hend.
   unfold infer_fn_env_end2end in Hend.
-  destruct (infer_full_env_roots env f
+  destruct (infer_full_env_roots_checked env f
       (initial_root_env_for_params (fn_params f ++ fn_captures f)))
     as [[[[T0 Γ0] R0_out] roots0] | err] eqn:Hroots; try discriminate.
   destruct (check_fn_root_shadow_captured_call_store_safe_summary env f)

@@ -7083,6 +7083,15 @@ Definition infer_core_env_roots_shadow_safe
   | infer_err err => infer_err err
   end.
 
+Definition infer_core_env_roots_shadow_safe_checked
+    (env : global_env) (Ω : outlives_ctx) (n : nat)
+    (R : root_env) (Γ : ctx) (e : expr)
+    : infer_result (Ty * ctx * root_env * root_set) :=
+  match infer_core_env_state_fuel_roots_shadow_safe_checked 10000 env Ω n R (sctx_of_ctx Γ) e with
+  | infer_ok (T, Σ, R', roots) => infer_ok (T, ctx_of_sctx Σ, R', roots)
+  | infer_err err => infer_err err
+  end.
+
 Definition infer_body (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx) (e : expr)
     : infer_result (Ty * ctx) :=
   infer_core fenv Ω n Γ e.
@@ -7521,6 +7530,37 @@ Definition infer_env_roots_shadow_safe
   | Some err => infer_err err
   | None =>
   match infer_core_env_roots_shadow_safe
+          body_env Ω n R0 (fn_body_ctx f) (fn_body f) with
+  | infer_err err => infer_err err
+  | infer_ok (T_body, Γ_out, R_out, roots) =>
+      if negb (wf_type_b Δ T_body)
+      then infer_err ErrLifetimeLeak
+      else
+      if ty_compatible_b Ω T_body (fn_ret f) then
+        if params_ok_env_b env (fn_params f) Γ_out
+        then infer_ok (fn_ret f, Γ_out, R_out, roots)
+        else infer_err ErrContextCheckFailed
+      else infer_err (compatible_error T_body (fn_ret f))
+  end
+  end.
+
+Definition infer_env_roots_shadow_safe_checked
+    (env : global_env) (f : fn_def) (R0 : root_env)
+    : infer_result (Ty * ctx * root_env * root_set) :=
+  let n := fn_lifetimes f in
+  let Ω := fn_outlives f in
+  let Δ := mk_region_ctx n in
+  let body_env := global_env_with_local_bounds env (fn_bounds f) in
+  if negb (wf_outlives_b Δ Ω)
+  then infer_err ErrLifetimeLeak
+  else
+  if negb (wf_type_b Δ (fn_ret f))
+  then infer_err ErrLifetimeLeak
+  else
+  match check_fn_binding_params Δ f with
+  | Some err => infer_err err
+  | None =>
+  match infer_core_env_roots_shadow_safe_checked
           body_env Ω n R0 (fn_body_ctx f) (fn_body f) with
   | infer_err err => infer_err err
   | infer_ok (T_body, Γ_out, R_out, roots) =>
@@ -8217,6 +8257,17 @@ Definition infer_full_env_elab (env : global_env) (f : fn_def)
 Definition infer_full_env_roots (env : global_env) (f : fn_def) (R0 : root_env)
     : infer_result (Ty * ctx * root_env * root_set) :=
   match infer_env_roots env f R0 with
+  | infer_err err => infer_err err
+  | infer_ok res =>
+      match borrow_check_env env [] (fn_body_ctx f) (fn_body f) with
+      | infer_err err => infer_err err
+      | infer_ok _ => infer_ok res
+      end
+  end.
+
+Definition infer_full_env_roots_checked (env : global_env) (f : fn_def) (R0 : root_env)
+    : infer_result (Ty * ctx * root_env * root_set) :=
+  match infer_env_roots_shadow_safe_checked env f R0 with
   | infer_err err => infer_err err
   | infer_ok res =>
       match borrow_check_env env [] (fn_body_ctx f) (fn_body f) with
@@ -9068,7 +9119,7 @@ Definition check_program_env_alpha_validated_root_shadow_provenance
 Definition infer_fn_env_end2end (env : global_env) (f : fn_def)
     : infer_result (Ty * ctx * root_env * root_set) :=
   let R0 := initial_root_env_for_params (fn_params f ++ fn_captures f) in
-  match infer_full_env_roots env f R0 with
+  match infer_full_env_roots_checked env f R0 with
   | infer_err err => infer_err err
   | infer_ok res =>
       if check_fn_root_shadow_captured_call_store_safe_summary env f

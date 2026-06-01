@@ -2907,10 +2907,35 @@ Proof.
   eapply infer_core_env_state_fuel_roots_shadow_safe_sound. exact Hcore.
 Qed.
 
+Theorem infer_core_env_roots_shadow_safe_checked_sound :
+  forall env Ω n R Γ e T Γ' R' roots,
+    infer_core_env_roots_shadow_safe_checked env Ω n R Γ e =
+      infer_ok (T, Γ', R', roots) ->
+    typed_env_roots_shadow_safe_checked env Ω n R (sctx_of_ctx Γ) e T
+      (sctx_of_ctx Γ') R' roots.
+Proof.
+  unfold infer_core_env_roots_shadow_safe_checked, sctx_of_ctx, ctx_of_sctx.
+  intros env Ω n R Γ e T Γ' R' roots Hinfer.
+  destruct (infer_core_env_state_fuel_roots_shadow_safe_checked 10000 env Ω n R Γ e)
+    as [[[[T0 Σ] R0] roots0] | err] eqn:Hcore; try discriminate.
+  inversion Hinfer; subst.
+  eapply infer_core_env_state_fuel_roots_shadow_safe_checked_sound. exact Hcore.
+Qed.
+
 Definition typed_fn_env_roots (env : global_env) (f : fn_def)
     (R0 R_out : root_env) (roots : root_set) : Prop :=
   exists T_body Γ_out,
     typed_env_roots (global_env_with_local_bounds env (fn_bounds f))
+      (fn_outlives f) (fn_lifetimes f)
+      R0 (sctx_of_ctx (fn_body_ctx f))
+      (fn_body f) T_body (sctx_of_ctx Γ_out) R_out roots /\
+    ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+    params_ok_env_b env (fn_params f) Γ_out = true.
+
+Definition typed_fn_env_roots_checked (env : global_env) (f : fn_def)
+    (R0 R_out : root_env) (roots : root_set) : Prop :=
+  exists T_body Γ_out,
+    typed_env_roots_checked (global_env_with_local_bounds env (fn_bounds f))
       (fn_outlives f) (fn_lifetimes f)
       R0 (sctx_of_ctx (fn_body_ctx f))
       (fn_body f) T_body (sctx_of_ctx Γ_out) R_out roots /\
@@ -2924,10 +2949,28 @@ Definition checked_fn_env_roots (env : global_env) (f : fn_def)
     borrow_ok_env_structural env [] (fn_body_ctx f) (fn_body f) PBS') /\
   NoDup (ctx_names (params_ctx (fn_params f))).
 
+Definition checked_fn_env_roots_checked (env : global_env) (f : fn_def)
+    (R0 R_out : root_env) (roots : root_set) : Prop :=
+  typed_fn_env_roots_checked env f R0 R_out roots /\
+  (exists PBS',
+    borrow_ok_env_structural env [] (fn_body_ctx f) (fn_body f) PBS') /\
+  NoDup (ctx_names (params_ctx (fn_params f))).
+
 Definition typed_fn_env_roots_shadow_safe (env : global_env) (f : fn_def)
     (R0 R_out : root_env) (roots : root_set) : Prop :=
   exists T_body Γ_out,
     typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds f))
+      (fn_outlives f) (fn_lifetimes f)
+      R0 (sctx_of_ctx (fn_body_ctx f))
+      (fn_body f) T_body (sctx_of_ctx Γ_out) R_out roots /\
+    ty_compatible_b (fn_outlives f) T_body (fn_ret f) = true /\
+    params_ok_env_b env (fn_params f) Γ_out = true.
+
+Definition typed_fn_env_roots_shadow_safe_checked (env : global_env) (f : fn_def)
+    (R0 R_out : root_env) (roots : root_set) : Prop :=
+  exists T_body Γ_out,
+    typed_env_roots_shadow_safe_checked
       (global_env_with_local_bounds env (fn_bounds f))
       (fn_outlives f) (fn_lifetimes f)
       R0 (sctx_of_ctx (fn_body_ctx f))
@@ -2953,6 +2996,34 @@ Proof.
   exists T_body, Γ_out.
   repeat split.
   - eapply typed_env_roots_structural. exact Htyped.
+  - exact Hcompat.
+  - exact Hparams.
+Qed.
+
+Lemma typed_fn_env_roots_checked_of_roots :
+  forall env f R0 R_out roots,
+    typed_fn_env_roots env f R0 R_out roots ->
+    typed_fn_env_roots_checked env f R0 R_out roots.
+Proof.
+  unfold typed_fn_env_roots, typed_fn_env_roots_checked.
+  intros env f R0 R_out roots Htyped.
+  destruct Htyped as [T_body [Γ_out [Htyped [Hcompat Hparams]]]].
+  exists T_body, Γ_out.
+  repeat split; try assumption.
+  apply TERC_Conservative. exact Htyped.
+Qed.
+
+Lemma typed_fn_env_roots_checked_structural :
+  forall env f R0 R_out roots,
+    typed_fn_env_roots_checked env f R0 R_out roots ->
+    typed_fn_env_structural env f.
+Proof.
+  unfold typed_fn_env_roots_checked, typed_fn_env_structural.
+  intros env f R0 R_out roots Htyped.
+  destruct Htyped as [T_body [Γ_out [Htyped [Hcompat Hparams]]]].
+  exists T_body, Γ_out.
+  repeat split.
+  - eapply typed_env_roots_checked_structural. exact Htyped.
   - exact Hcompat.
   - exact Hparams.
 Qed.
@@ -2990,6 +3061,30 @@ Proof.
   intros env f R0 R_out roots Htyped.
   eapply typed_fn_env_roots_structural.
   eapply typed_fn_env_roots_shadow_safe_roots.
+  exact Htyped.
+Qed.
+
+Lemma typed_fn_env_roots_shadow_safe_checked_checked :
+  forall env f R0 R_out roots,
+    typed_fn_env_roots_shadow_safe_checked env f R0 R_out roots ->
+    typed_fn_env_roots_checked env f R0 R_out roots.
+Proof.
+  unfold typed_fn_env_roots_shadow_safe_checked, typed_fn_env_roots_checked.
+  intros env f R0 R_out roots Htyped.
+  destruct Htyped as [T_body [Γ_out [Htyped [Hcompat Hparams]]]].
+  exists T_body, Γ_out.
+  repeat split; try assumption.
+  eapply typed_env_roots_shadow_safe_checked_checked. exact Htyped.
+Qed.
+
+Lemma typed_fn_env_roots_shadow_safe_checked_structural :
+  forall env f R0 R_out roots,
+    typed_fn_env_roots_shadow_safe_checked env f R0 R_out roots ->
+    typed_fn_env_structural env f.
+Proof.
+  intros env f R0 R_out roots Htyped.
+  eapply typed_fn_env_roots_checked_structural.
+  eapply typed_fn_env_roots_shadow_safe_checked_checked.
   exact Htyped.
 Qed.
 
@@ -3075,6 +3170,42 @@ Proof.
   - exact Hparams.
 Qed.
 
+Theorem infer_env_roots_shadow_safe_checked_sound :
+  forall env f R0 T Γ_out R_out roots,
+    infer_env_roots_shadow_safe_checked env f R0 =
+      infer_ok (T, Γ_out, R_out, roots) ->
+    typed_fn_env_roots_shadow_safe_checked env f R0 R_out roots.
+Proof.
+  unfold infer_env_roots_shadow_safe_checked, typed_fn_env_roots_shadow_safe_checked.
+  intros env f R0 T Γ_out R_out roots Hinfer.
+  destruct (negb (wf_outlives_b (mk_region_ctx (fn_lifetimes f)) (fn_outlives f)));
+    try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f)));
+    try discriminate.
+  destruct (check_fn_binding_params (mk_region_ctx (fn_lifetimes f)) f);
+    try discriminate.
+  destruct (infer_core_env_roots_shadow_safe_checked
+      (global_env_with_local_bounds env (fn_bounds f))
+      (fn_outlives f) (fn_lifetimes f) R0 (fn_body_ctx f) (fn_body f))
+    as [[[[T_body Γ_body] R_body] roots_body] | err] eqn:Hcore;
+    try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) T_body));
+    try discriminate.
+  destruct (ty_compatible_b (fn_outlives f) T_body (fn_ret f))
+    eqn:Hcompat; try discriminate.
+  destruct (params_ok_env_b env (fn_params f) Γ_body) eqn:Hparams;
+    try discriminate.
+  inversion Hinfer; subst.
+  exists T_body, Γ_out.
+  repeat split.
+  - exact (infer_core_env_roots_shadow_safe_checked_sound
+      (global_env_with_local_bounds env (fn_bounds f))
+      (fn_outlives f) (fn_lifetimes f) R0 (fn_body_ctx f) (fn_body f)
+      T_body Γ_out R_out roots Hcore).
+  - exact Hcompat.
+  - exact Hparams.
+Qed.
+
 Lemma infer_env_roots_shadow_safe_params_nodup :
   forall env f R0 T Γ' R' roots,
     infer_env_roots_shadow_safe env f R0 = infer_ok (T, Γ', R', roots) ->
@@ -3119,6 +3250,50 @@ Proof.
   eapply duplicate_param_name_none_nodup_params_ctx. exact Hdup.
 Qed.
 
+Lemma infer_env_roots_shadow_safe_checked_params_nodup :
+  forall env f R0 T Γ' R' roots,
+    infer_env_roots_shadow_safe_checked env f R0 = infer_ok (T, Γ', R', roots) ->
+    NoDup (ctx_names (params_ctx (fn_params f))).
+Proof.
+  intros env f R0 T Γ' R' roots Hinfer.
+  unfold infer_env_roots_shadow_safe_checked in Hinfer.
+  destruct (negb (wf_outlives_b (mk_region_ctx (fn_lifetimes f)) (fn_outlives f)));
+    try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f)));
+    try discriminate.
+  unfold check_fn_binding_params in Hinfer.
+  destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_captures f)));
+    try discriminate.
+  destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_params f)));
+    try discriminate.
+  destruct (duplicate_param_name (fn_binding_params f)) as [dup |] eqn:Hdup;
+    try discriminate.
+  unfold fn_binding_params in Hdup.
+  eapply duplicate_param_name_none_nodup_params_ctx_prefix. exact Hdup.
+Qed.
+
+Lemma infer_env_roots_shadow_safe_checked_binding_params_nodup :
+  forall env f R0 T Γ' R' roots,
+    infer_env_roots_shadow_safe_checked env f R0 = infer_ok (T, Γ', R', roots) ->
+    NoDup (ctx_names (params_ctx (fn_params f ++ fn_captures f))).
+Proof.
+  intros env f R0 T Γ' R' roots Hinfer.
+  unfold infer_env_roots_shadow_safe_checked in Hinfer.
+  destruct (negb (wf_outlives_b (mk_region_ctx (fn_lifetimes f)) (fn_outlives f)));
+    try discriminate.
+  destruct (negb (wf_type_b (mk_region_ctx (fn_lifetimes f)) (fn_ret f)));
+    try discriminate.
+  unfold check_fn_binding_params in Hinfer.
+  destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_captures f)));
+    try discriminate.
+  destruct (negb (wf_params_b (mk_region_ctx (fn_lifetimes f)) (fn_params f)));
+    try discriminate.
+  destruct (duplicate_param_name (fn_binding_params f)) as [dup |] eqn:Hdup;
+    try discriminate.
+  unfold fn_binding_params in Hdup.
+  eapply duplicate_param_name_none_nodup_params_ctx. exact Hdup.
+Qed.
+
 Theorem infer_full_env_roots_sound :
   forall env f R0 T Γ_out R_out roots,
     infer_full_env_roots env f R0 = infer_ok (T, Γ_out, R_out, roots) ->
@@ -3136,4 +3311,24 @@ Proof.
   - split.
     + exists PBS'. eapply borrow_check_env_structural_sound. exact Hborrow.
     + eapply infer_env_roots_params_nodup. exact Hinfer.
+Qed.
+
+Theorem infer_full_env_roots_checked_sound :
+  forall env f R0 T Γ_out R_out roots,
+    infer_full_env_roots_checked env f R0 = infer_ok (T, Γ_out, R_out, roots) ->
+    checked_fn_env_roots_checked env f R0 R_out roots.
+Proof.
+  unfold infer_full_env_roots_checked, checked_fn_env_roots_checked.
+  intros env f R0 T Γ_out R_out roots Hfull.
+  destruct (infer_env_roots_shadow_safe_checked env f R0)
+    as [[[[T0 Γ0] R1] roots1] | err] eqn:Hinfer; try discriminate.
+  destruct (borrow_check_env env [] (fn_body_ctx f) (fn_body f))
+    as [PBS' | err] eqn:Hborrow; try discriminate.
+  inversion Hfull; subst.
+  split.
+  - eapply typed_fn_env_roots_shadow_safe_checked_checked.
+    eapply infer_env_roots_shadow_safe_checked_sound. exact Hinfer.
+  - split.
+    + exists PBS'. eapply borrow_check_env_structural_sound. exact Hborrow.
+    + eapply infer_env_roots_shadow_safe_checked_params_nodup. exact Hinfer.
 Qed.

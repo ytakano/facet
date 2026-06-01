@@ -31,7 +31,7 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
 
 - Generic/function-value gates remain `ErrEndToEndSafetyGateFailed`.
 - Reborrow coverage has one remaining failure: `nested_shared_reborrow.facet`
-  is rejected by a context-check root escape after auto-drop ret binding.
+  now passes checked roots but fails the end-to-end store-safe gate.
 - Generic/type-forall function cases remain under blocked T2a.
 
 ## Active T2f slices
@@ -110,7 +110,9 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
     - T48b2 done: add checked let constructors for capture-free
       results without final root exclusion.
     - T48b3 done: add recursive checked let inferencer and
-      shadow-safe soundness; end-to-end routing still conservative.
+      shadow-safe soundness.
+    - T48b4 done: route end-to-end inference through checked roots;
+      remaining nested reborrow failure is the store-safe gate.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

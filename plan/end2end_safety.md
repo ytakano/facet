@@ -119,6 +119,7 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
       unchecked inference failures; TypeChecker compiles.
     - T48c3 done: prove checked narrow store-safe checker
       soundness; EnvRuntimeBaseSafety compiles.
+    - T48c4 done: prove checked narrow runtime package.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

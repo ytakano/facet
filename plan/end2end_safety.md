@@ -217,6 +217,10 @@ failures; invalid tests pass.
       with explicit no-collapse premise; `EnvRuntimeRootCheckFacts.v` focused
       compile and proof-hole scan pass. Sub-agent spawn remains unavailable due
       thread limit.
+    - T2a2d1v done: add empty-reflection helpers for normalized struct-field
+      obligation lists; `EnvRuntimeRootCheckFacts.v` focused compile and
+      proof-hole scan pass. Sub-agent spawn remains unavailable due thread
+      limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

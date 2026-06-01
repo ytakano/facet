@@ -294,6 +294,63 @@ Definition obligation_refines_normalize_no_collapse
     In old_obligation (normalize_linear_struct_obligations old_obligations) /\
     path_prefix_b old_obligation [] = true.
 
+Definition obligation_refines_empty_reflects
+    (old_obligations new_obligations : list field_path) : Prop :=
+  new_obligations = [] -> old_obligations = [].
+
+Lemma obligation_refines_normalize_no_collapse_of_empty_reflects :
+  forall old_obligations new_obligations,
+    obligation_refines_empty_reflects old_obligations new_obligations ->
+    obligation_refines_normalize_no_collapse old_obligations new_obligations.
+Proof.
+  unfold obligation_refines_empty_reflects,
+    obligation_refines_normalize_no_collapse,
+    normalize_linear_struct_obligations.
+  intros old_obligations new_obligations Hreflect Hnew.
+  rewrite (Hreflect Hnew). exists []. split; [left; reflexivity | reflexivity].
+Qed.
+
+Definition field_obligation_paths
+    (fields : list field_def) (obligations_of : field_def -> list field_path)
+    : list field_path :=
+  (fix go (fields : list field_def) : list field_path :=
+    match fields with
+    | [] => []
+    | f :: rest =>
+        prefix_obligation_paths [field_name f] (obligations_of f) ++ go rest
+    end) fields.
+
+Lemma prefix_obligation_paths_nil_inv :
+  forall prefix obligations,
+    prefix_obligation_paths prefix obligations = [] ->
+    obligations = [].
+Proof.
+  intros prefix obligations Hnil.
+  destruct obligations as [| obligation rest]; [reflexivity | discriminate].
+Qed.
+
+Lemma field_obligation_paths_empty_reflects :
+  forall fields old_obligations_of new_obligations_of,
+    (forall f,
+      In f fields ->
+      obligation_refines_empty_reflects
+        (old_obligations_of f) (new_obligations_of f)) ->
+    obligation_refines_empty_reflects
+      (field_obligation_paths fields old_obligations_of)
+      (field_obligation_paths fields new_obligations_of).
+Proof.
+  unfold obligation_refines_empty_reflects.
+  induction fields as [| f rest IH]; intros old_obligations_of
+    new_obligations_of Hpoint Hnew; simpl in *.
+  - reflexivity.
+  - apply app_eq_nil in Hnew as [Hnew_head Hnew_rest].
+    apply prefix_obligation_paths_nil_inv in Hnew_head.
+    rewrite (Hpoint f (or_introl eq_refl) Hnew_head).
+    rewrite (IH old_obligations_of new_obligations_of
+      (fun f' Hin => Hpoint f' (or_intror Hin)) Hnew_rest).
+    reflexivity.
+Qed.
+
 Lemma obligation_refines_normalize_linear_struct_obligations :
   forall old_obligations new_obligations,
     obligation_refines old_obligations new_obligations ->

@@ -256,6 +256,10 @@ failures; invalid tests pass.
       contexts and prove type-parameter commutation; `TypingRules.v` make
       target and proof-hole scan pass. Sub-agent spawn remains unavailable
       due thread limit.
+    - T2a2d1ah done: prove `apply_lt_ctx` lookup transport for type,
+      state, and mutability queries; `TypingRules.v` make target and
+      proof-hole scan pass. Sub-agent spawn remains unavailable due thread
+      limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

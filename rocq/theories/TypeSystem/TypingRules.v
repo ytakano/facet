@@ -607,6 +607,36 @@ Proof.
   destruct (ident_eqb x y); auto.
 Qed.
 
+Lemma ctx_lookup_apply_lt_ctx : forall σ x Γ T consumed,
+  ctx_lookup x Γ = Some (T, consumed) ->
+  ctx_lookup x (apply_lt_ctx σ Γ) = Some (apply_lt_ty σ T, consumed).
+Proof.
+  intros σ x Γ. induction Γ as [| [[[y Ty] st] m] Γ IH];
+    intros T consumed Hlookup; simpl in *; try discriminate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - inversion Hlookup. reflexivity.
+  - apply IH. exact Hlookup.
+Qed.
+
+Lemma ctx_lookup_state_apply_lt_ctx : forall σ x Γ T st,
+  ctx_lookup_state x Γ = Some (T, st) ->
+  ctx_lookup_state x (apply_lt_ctx σ Γ) = Some (apply_lt_ty σ T, st).
+Proof.
+  intros σ x Γ. induction Γ as [| [[[y Ty] st0] m] Γ IH];
+    intros T st Hlookup; simpl in *; try discriminate.
+  destruct (ident_eqb x y) eqn:Heq.
+  - inversion Hlookup. reflexivity.
+  - apply IH. exact Hlookup.
+Qed.
+
+Lemma ctx_lookup_mut_apply_lt_ctx : forall σ x Γ,
+  ctx_lookup_mut x (apply_lt_ctx σ Γ) = ctx_lookup_mut x Γ.
+Proof.
+  intros σ x Γ. induction Γ as [| [[[y Ty] st] m] Γ IH];
+    simpl; auto.
+  destruct (ident_eqb x y); auto.
+Qed.
+
 (* ------------------------------------------------------------------ *)
 (* Typing judgement                                                      *)
 (*                                                                      *)

@@ -99,6 +99,9 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
 47. In progress: typed rootless readiness path.
     - T47a done: add typed rooted eval statement and rootless value
       projection for capture-ref-free result types.
+    - T47b blocked: checker root pruning reaches
+      `TypeSafetyRootsReadyMutual.v`; rootless constructors require a
+      typed roots-ready theorem, not the current untyped mutual theorem.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

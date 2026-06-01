@@ -483,6 +483,44 @@ Proof.
   intros ps. rewrite apply_type_params_nil. reflexivity.
 Qed.
 
+Lemma apply_type_param_compose : forall σ τ p,
+  apply_type_param σ (apply_type_param τ p) =
+  apply_type_param (compose_type_params σ τ) p.
+Proof.
+  intros σ τ [m x T].
+  change (MkParam m x (subst_type_params_ty σ (subst_type_params_ty τ T)) =
+    MkParam m x (subst_type_params_ty (compose_type_params σ τ) T)).
+  rewrite subst_type_params_ty_compose. reflexivity.
+Qed.
+
+Lemma apply_type_params_compose : forall σ τ ps,
+  apply_type_params σ (apply_type_params τ ps) =
+  apply_type_params (compose_type_params σ τ) ps.
+Proof.
+  intros σ τ ps. unfold apply_type_params.
+  induction ps as [| p ps IH]; simpl; auto.
+  rewrite apply_type_param_compose, IH. reflexivity.
+Qed.
+
+Lemma subst_type_params_ctx_entry_compose : forall σ τ entry,
+  subst_type_params_ctx_entry σ (subst_type_params_ctx_entry τ entry) =
+  subst_type_params_ctx_entry (compose_type_params σ τ) entry.
+Proof.
+  intros σ τ [[[x T] st] m].
+  change ((x, subst_type_params_ty σ (subst_type_params_ty τ T), st, m) =
+    (x, subst_type_params_ty (compose_type_params σ τ) T, st, m)).
+  rewrite subst_type_params_ty_compose. reflexivity.
+Qed.
+
+Lemma subst_type_params_ctx_compose : forall σ τ Γ,
+  subst_type_params_ctx σ (subst_type_params_ctx τ Γ) =
+  subst_type_params_ctx (compose_type_params σ τ) Γ.
+Proof.
+  intros σ τ Γ. unfold subst_type_params_ctx.
+  induction Γ as [| entry Γ IH]; simpl; auto.
+  rewrite subst_type_params_ctx_entry_compose, IH. reflexivity.
+Qed.
+
 Lemma subst_type_params_ctx_app : forall type_args (Γ1 Γ2 : ctx),
   subst_type_params_ctx type_args (List.app Γ1 Γ2) =
   List.app (subst_type_params_ctx type_args Γ1) (subst_type_params_ctx type_args Γ2).

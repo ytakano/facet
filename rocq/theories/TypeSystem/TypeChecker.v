@@ -9096,7 +9096,7 @@ Definition check_fn_root_shadow_captured_call_store_safe_summary
               (initial_root_env_for_fn fdef)
               (fn_body_ctx fdef)
               (fn_body fdef),
-            infer_env_roots_shadow_safe env fdef
+            infer_env_roots_shadow_safe_checked env fdef
               (initial_root_env_for_fn fdef) with
   | infer_ok (T_body, _, R_out, roots), infer_ok _ =>
       check_expr_root_shadow_store_safe_narrow_summary_checked

@@ -122,6 +122,11 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
     - T48c4 done: prove checked narrow runtime package.
     - T48c5 done: route normal store-safe gate through checked narrow;
       EnvRuntimeCapturedSafety compiles.
+    - T48c6 done: use checked function-level roots companion in the
+      normal store-safe gate; EnvRuntimeCapturedSafety and dune build pass.
+    - T48c7 blocked: `nested_shared_reborrow.facet` still fails at
+      resolved `EBorrow` under `EDeref`; proving the leaf needs a
+      non-direct borrow preservation/readiness theorem.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

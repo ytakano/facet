@@ -8851,7 +8851,7 @@ Proof.
       (initial_root_env_for_fn fdef) (fn_body_ctx fdef) (fn_body fdef))
       as [[[[T_body Gamma_body] R_body] roots_body] | err] eqn:Hcore;
       try discriminate.
-    destruct (infer_env_roots_shadow_safe env fdef
+    destruct (infer_env_roots_shadow_safe_checked env fdef
       (initial_root_env_for_fn fdef))
       as [[[[T_env Gamma_env] R_env] roots_env] | err] eqn:Hinfer_env;
       try discriminate.
@@ -8864,7 +8864,8 @@ Proof.
       as [ret_roots Hsummary].
     exists T_body, Gamma_body, R_body, roots_body, ret_roots.
     repeat split.
-    + eapply infer_env_roots_shadow_safe_params_nodup. exact Hinfer_env.
+    + eapply infer_env_roots_shadow_safe_checked_params_nodup.
+      exact Hinfer_env.
     + exact Hsummary.
     + exact Hcompat.
     + apply fn_params_roots_exclude_b_sound. exact Hroots.

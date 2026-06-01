@@ -13142,7 +13142,7 @@ let check_fn_root_shadow_captured_call_store_safe_summary env fdef =
        let (p0, roots) = p in
        let (p1, r_out) = p0 in
        let (t_body, _) = p1 in
-       (match infer_env_roots_shadow_safe env fdef
+       (match infer_env_roots_shadow_safe_checked env fdef
                 (initial_root_env_for_fn fdef) with
         | Infer_ok _ ->
           (&&)

@@ -316,13 +316,13 @@ Definition type_args_obligation_refines_upto
   (forall i T_old,
     nth_error old_args i = Some T_old ->
     exists T_new, nth_error new_args i = Some T_new) /\
-  (forall fuel' i T_old T_new,
+  (forall fuel' i T_old T_new u,
     fuel' <= fuel ->
     nth_error old_args i = Some T_old ->
     nth_error new_args i = Some T_new ->
     obligation_refines
-      (linear_obligation_paths_fuel fuel' env T_old)
-      (linear_obligation_paths_fuel fuel' env T_new)).
+      (linear_obligation_paths_fuel fuel' env (MkTy u (ty_core T_old)))
+      (linear_obligation_paths_fuel fuel' env (MkTy u (ty_core T_new)))).
 
 Lemma type_args_obligation_refines_upto_le :
   forall fuel fuel' env old_args new_args,
@@ -334,7 +334,7 @@ Proof.
   intros fuel fuel' env old_args new_args Hle [Hdom Href].
   split.
   - exact Hdom.
-  - intros fuel'' i T_old T_new Hle' HOld HNew.
+  - intros fuel'' i T_old T_new u Hle' HOld HNew.
     eapply Href; eauto. lia.
 Qed.
 
@@ -345,7 +345,7 @@ Proof.
   unfold type_args_obligation_refines_upto.
   intros fuel env new_args. split.
   - intros i T_old HOld. destruct i; discriminate.
-  - intros fuel' i T_old T_new Hle HOld HNew target Hin.
+  - intros fuel' i T_old T_new u Hle HOld HNew target Hin.
     destruct i; discriminate.
 Qed.
 
@@ -356,7 +356,7 @@ Proof.
   unfold type_args_obligation_refines_upto.
   intros fuel env args. split.
   - intros i T Hnth. exists T. exact Hnth.
-  - intros fuel' i T_old T_new Hle HOld HNew.
+  - intros fuel' i T_old T_new u Hle HOld HNew.
     rewrite HOld in HNew. inversion HNew; subst.
     apply obligation_refines_refl.
 Qed.
@@ -377,9 +377,10 @@ Proof.
   - intros i T_old HOld.
     rewrite (nth_error_map_subst_type_params_ty σ args i).
     rewrite HOld. eexists. reflexivity.
-  - intros fuel' i T_old T_new Hle HOld HNew.
+  - intros fuel' i T_old T_new u Hle HOld HNew.
     rewrite (nth_error_map_subst_type_params_ty σ args i) in HNew.
     rewrite HOld in HNew. inversion HNew; subst.
+    rewrite <- (subst_type_params_ty_outer_usage_core σ u T_old).
     apply Hsubst. exact Hle.
 Qed.
 

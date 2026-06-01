@@ -179,6 +179,9 @@ failures; invalid tests pass.
     - T2a2d1j done: add empty-obligation inversion and whole-path coverage
       helpers; `EnvRuntimeRootCheckFacts.v` focused compile and proof-hole scan pass.
       Sub-agent spawn remains unavailable due thread limit.
+    - T2a2d1k done: add path-prefix transitivity and obligation-refinement
+      helpers; `EnvRuntimeRootCheckFacts.v` focused compile and proof-hole scan pass.
+      Sub-agent spawn remains unavailable due thread limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

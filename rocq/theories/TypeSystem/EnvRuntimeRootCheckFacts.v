@@ -87,6 +87,79 @@ Proof.
   apply moved_path_satisfies_empty_obligation_in_whole. exact Hsat.
 Qed.
 
+Lemma path_prefix_b_trans :
+  forall p q r,
+    path_prefix_b p q = true ->
+    path_prefix_b q r = true ->
+    path_prefix_b p r = true.
+Proof.
+  induction p as [| px ps IH]; intros q r Hpq Hqr; simpl in *; auto.
+  destruct q as [| qx qs]; simpl in Hpq; try discriminate.
+  destruct r as [| rx rs]; simpl in Hqr; try discriminate.
+  apply andb_true_iff in Hpq as [Hpx Hpq].
+  apply andb_true_iff in Hqr as [Hqx Hqr].
+  apply String.eqb_eq in Hpx. subst qx.
+  apply String.eqb_eq in Hqx. subst rx.
+  simpl. rewrite String.eqb_refl. simpl.
+  eapply IH; eassumption.
+Qed.
+
+Lemma moved_path_satisfies_obligation_b_prefix :
+  forall moved_paths old_obligation new_obligation,
+    path_prefix_b old_obligation new_obligation = true ->
+    moved_path_satisfies_obligation_b moved_paths old_obligation = true ->
+    moved_path_satisfies_obligation_b moved_paths new_obligation = true.
+Proof.
+  intros moved_paths old_obligation new_obligation Hprefix Hsat.
+  unfold moved_path_satisfies_obligation_b in *.
+  induction moved_paths as [| moved rest IH]; simpl in *; try discriminate.
+  apply orb_true_iff in Hsat as [Hmoved | Hrest].
+  - rewrite (path_prefix_b_trans moved old_obligation new_obligation Hmoved Hprefix).
+    reflexivity.
+  - rewrite (IH Hrest). destruct (path_prefix_b moved new_obligation); reflexivity.
+Qed.
+
+Definition obligation_refines (old_obligations new_obligations : list field_path) : Prop :=
+  forall new_obligation,
+    In new_obligation new_obligations ->
+    exists old_obligation,
+      In old_obligation old_obligations /\
+      path_prefix_b old_obligation new_obligation = true.
+
+Lemma moved_paths_satisfy_obligations_b_in :
+  forall moved_paths obligations obligation,
+    moved_paths_satisfy_obligations_b moved_paths obligations = true ->
+    In obligation obligations ->
+    moved_path_satisfies_obligation_b moved_paths obligation = true.
+Proof.
+  intros moved_paths obligations. induction obligations as [| obligation rest IH];
+    intros target Hsat Hin; simpl in *; [contradiction |].
+  apply andb_true_iff in Hsat as [Hhead Htail].
+  destruct Hin as [Heq | Hin].
+  - subst target. exact Hhead.
+  - eapply IH; eassumption.
+Qed.
+
+Lemma moved_paths_satisfy_obligations_b_refines :
+  forall moved_paths old_obligations new_obligations,
+    obligation_refines old_obligations new_obligations ->
+    moved_paths_satisfy_obligations_b moved_paths old_obligations = true ->
+    moved_paths_satisfy_obligations_b moved_paths new_obligations = true.
+Proof.
+  intros moved_paths old_obligations new_obligations Hrefines Hsat_old.
+  induction new_obligations as [| new_obligation rest IH]; simpl; auto.
+  assert (Hin_head : In new_obligation (new_obligation :: rest)) by (left; reflexivity).
+  destruct (Hrefines new_obligation Hin_head) as
+    [old_obligation [Hin_old Hprefix]].
+  assert (Hsat_old_obligation :
+    moved_path_satisfies_obligation_b moved_paths old_obligation = true).
+  { eapply moved_paths_satisfy_obligations_b_in; eassumption. }
+  rewrite (moved_path_satisfies_obligation_b_prefix
+    moved_paths old_obligation new_obligation Hprefix Hsat_old_obligation).
+  apply IH. intros target Hin_target.
+  apply Hrefines. right. exact Hin_target.
+Qed.
+
 Lemma linear_obligation_paths_fuel_global_env_with_local_bounds :
   forall fuel env bounds T,
     linear_obligation_paths_fuel fuel

@@ -158,6 +158,9 @@ failures; invalid tests pass.
       unavailable because the agent thread limit was reached.
     - T2a2d1b done: add parameter-context type-substitution helpers;
       `TypingRules.v` focused compile and proof-hole scan pass.
+    - T2a2d1c done: prove partial type-substitution overlay composition
+      and struct/enum field-instantiation transport helpers; `Program.v` and
+      `TypingRules.v` focused compiles plus proof-hole scan pass.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

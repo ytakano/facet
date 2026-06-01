@@ -296,6 +296,85 @@ Definition subst_type_params_param (σ : list Ty) (p : param) : param :=
   MkParam (param_mutability p) (param_name p)
     (subst_type_params_ty σ (param_ty p)).
 
+Lemma subst_type_params_ty_outer_usage_core : forall σ u T,
+  subst_type_params_ty σ (MkTy u (ty_core T)) =
+  MkTy u (ty_core (subst_type_params_ty σ T)).
+Proof.
+  intros σ u [u' c]. destruct c; simpl; try reflexivity.
+  destruct (nth_error σ n) as [[u'' c''] |]; reflexivity.
+Qed.
+
+Fixpoint compose_type_params_go
+    (σ τ fallback : list Ty) {struct τ} : list Ty :=
+  match τ, fallback with
+  | [], fb => fb
+  | T :: τ', [] =>
+      subst_type_params_ty σ T :: compose_type_params_go σ τ' []
+  | T :: τ', _ :: fb' =>
+      subst_type_params_ty σ T :: compose_type_params_go σ τ' fb'
+  end.
+
+Definition compose_type_params (σ τ : list Ty) : list Ty :=
+  compose_type_params_go σ τ σ.
+
+Lemma nth_error_compose_type_params_go : forall σ τ fallback i,
+  nth_error (compose_type_params_go σ τ fallback) i =
+  match nth_error τ i with
+  | Some T => Some (subst_type_params_ty σ T)
+  | None => nth_error fallback i
+  end.
+Proof.
+  intros σ τ. induction τ as [| T τ IH]; intros fallback [| i];
+    destruct fallback as [| F fallback']; simpl; try reflexivity.
+  - specialize (IH [] i).
+    destruct (nth_error τ i) eqn:Hτi.
+    + exact IH.
+    + destruct i; simpl in IH; exact IH.
+  - exact (IH fallback' i).
+Qed.
+
+Lemma nth_error_compose_type_params : forall σ τ i,
+  nth_error (compose_type_params σ τ) i =
+  match nth_error τ i with
+  | Some T => Some (subst_type_params_ty σ T)
+  | None => nth_error σ i
+  end.
+Proof.
+  intros σ τ i. unfold compose_type_params.
+  apply nth_error_compose_type_params_go.
+Qed.
+
+Lemma subst_type_params_ty_compose : forall σ τ T,
+  subst_type_params_ty σ (subst_type_params_ty τ T) =
+  subst_type_params_ty (compose_type_params σ τ) T.
+Proof.
+  intros σ τ. fix IH 1. intros [u c]. destruct c; simpl; try reflexivity.
+  - rewrite nth_error_compose_type_params.
+    destruct (nth_error τ n) as [T' |] eqn:Hτ.
+    + simpl. exact (subst_type_params_ty_outer_usage_core σ u T').
+    + destruct (nth_error σ n) as [[u' c'] |] eqn:Hσ.
+      * simpl. rewrite Hσ. reflexivity.
+      * simpl. rewrite Hσ. reflexivity.
+  - induction l0 as [| T0 Ts IHTs].
+    + reflexivity.
+    + simpl in *. rewrite (IH T0). injection IHTs as Htail.
+      rewrite Htail. reflexivity.
+  - induction l0 as [| T0 Ts IHTs].
+    + reflexivity.
+    + simpl in *. rewrite (IH T0). injection IHTs as Htail.
+      rewrite Htail. reflexivity.
+  - induction l as [| T0 Ts IHTs].
+    + simpl. rewrite (IH t). reflexivity.
+    + simpl in *. rewrite (IH T0). injection IHTs as Hparams Hret.
+      rewrite Hparams, Hret. reflexivity.
+  - induction l0 as [| T0 Ts IHTs].
+    + simpl. rewrite (IH t). reflexivity.
+    + simpl in *. rewrite (IH T0). injection IHTs as Hparams Hret.
+      rewrite Hparams, Hret. reflexivity.
+  - simpl. rewrite (IH t). reflexivity.
+  - simpl. rewrite (IH t). reflexivity.
+Qed.
+
 Definition instantiate_struct_field_ty
     (lifetime_args : list lifetime) (type_args : list Ty) (f : field_def) : Ty :=
   subst_type_params_ty type_args (apply_lt_ty lifetime_args (field_ty f)).
@@ -309,6 +388,22 @@ Definition instantiate_enum_variant_field_ty
     (lifetime_args : list lifetime) (type_args : list Ty)
     (T : Ty) : Ty :=
   subst_type_params_ty type_args (apply_lt_ty lifetime_args T).
+
+Lemma instantiate_struct_field_ty_type_subst_compose : forall σ lts args f,
+  subst_type_params_ty σ (instantiate_struct_field_ty lts args f) =
+  instantiate_struct_field_ty lts (compose_type_params σ args) f.
+Proof.
+  intros σ lts args f. unfold instantiate_struct_field_ty.
+  apply subst_type_params_ty_compose.
+Qed.
+
+Lemma instantiate_enum_variant_field_ty_type_subst_compose : forall σ lts args T,
+  subst_type_params_ty σ (instantiate_enum_variant_field_ty lts args T) =
+  instantiate_enum_variant_field_ty lts (compose_type_params σ args) T.
+Proof.
+  intros σ lts args T. unfold instantiate_enum_variant_field_ty.
+  apply subst_type_params_ty_compose.
+Qed.
 
 Fixpoint usage_max_ty_list (tys : list Ty) : usage :=
   match tys with

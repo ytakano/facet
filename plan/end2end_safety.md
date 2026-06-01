@@ -134,8 +134,10 @@ failures; invalid tests pass.
     - T48c9b done: route ordinary-success `ELet`/`ELetInfer` through the
       recursive checked summary branch; full Rocq build, dune build, proof-hole
       scan, and reborrow CLI checks pass.
-    - T48c10 next: remeasure baseline failures and continue blocked
-      generic/function-value gate under T2a.
+    - T48c10 done: remeasured baseline after reborrow fix: 18 valid
+      failures, all generic/function-value gate failures under T2a.
+    - T2a1 next: isolate and route direct `ECallGeneric` store-safe
+      summary without adding OCaml fallback paths.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

@@ -153,8 +153,11 @@ failures; invalid tests pass.
       runtime semantics and do not make `value_has_type` accept arbitrary
       `TParam`; instead transport body typing/store-safe summaries to
       `apply_type_params type_args (fn_params fcall)` and substituted return.
-    - T2a2d next: prove type-substitution transport for function-body typing
-      and narrow store-safe summaries, then use it in the generic runtime bridge.
+    - T2a2d1 done: add expression/parameter type-substitution utilities;
+      `Program.v` focused compile and proof-hole scan pass. Sub-agent spawn was
+      unavailable because the agent thread limit was reached.
+    - T2a2d2 next: prove typing/root transport for substituted generic
+      function bodies and narrow store-safe summaries.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

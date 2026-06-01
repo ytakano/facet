@@ -213,6 +213,89 @@ Fixpoint subst_type_params_ty (σ : list Ty) (T : Ty) {struct T} : Ty :=
       MkTy u (TRef l rk (subst_type_params_ty σ inner))
   end.
 
+Fixpoint subst_type_params_expr (σ : list Ty) (e : expr) {struct e} : expr :=
+  match e with
+  | EUnit => EUnit
+  | ELit lit => ELit lit
+  | EVar x => EVar x
+  | ELet mut x T e1 e2 =>
+      ELet mut x (subst_type_params_ty σ T)
+        (subst_type_params_expr σ e1)
+        (subst_type_params_expr σ e2)
+  | ELetInfer mut x e1 e2 =>
+      ELetInfer mut x
+        (subst_type_params_expr σ e1)
+        (subst_type_params_expr σ e2)
+  | EFn fname => EFn fname
+  | EMakeClosure fname captures => EMakeClosure fname captures
+  | EPlace p => EPlace p
+  | ECall fname args =>
+      let fix go (es : list expr) : list expr :=
+        match es with
+        | [] => []
+        | e' :: es' => subst_type_params_expr σ e' :: go es'
+        end
+      in
+      ECall fname (go args)
+  | ECallGeneric fname type_args args =>
+      let fix go (es : list expr) : list expr :=
+        match es with
+        | [] => []
+        | e' :: es' => subst_type_params_expr σ e' :: go es'
+        end
+      in
+      ECallGeneric fname (map (subst_type_params_ty σ) type_args) (go args)
+  | ECallExpr ef args =>
+      let fix go (es : list expr) : list expr :=
+        match es with
+        | [] => []
+        | e' :: es' => subst_type_params_expr σ e' :: go es'
+        end
+      in
+      ECallExpr (subst_type_params_expr σ ef) (go args)
+  | EStruct name lts type_args fields =>
+      let fix go (fs : list (string * expr)) : list (string * expr) :=
+        match fs with
+        | [] => []
+        | (field, e') :: fs' => (field, subst_type_params_expr σ e') :: go fs'
+        end
+      in
+      EStruct name lts (map (subst_type_params_ty σ) type_args) (go fields)
+  | EEnum name variant lts type_args args =>
+      let fix go (es : list expr) : list expr :=
+        match es with
+        | [] => []
+        | e' :: es' => subst_type_params_expr σ e' :: go es'
+        end
+      in
+      EEnum name variant lts (map (subst_type_params_ty σ) type_args) (go args)
+  | EMatch discr branches =>
+      let fix go (bs : list (string * list ident * expr))
+          : list (string * list ident * expr) :=
+        match bs with
+        | [] => []
+        | (name, binders, e') :: bs' =>
+            (name, binders, subst_type_params_expr σ e') :: go bs'
+        end
+      in
+      EMatch (subst_type_params_expr σ discr) (go branches)
+  | EReplace p rhs =>
+      EReplace p (subst_type_params_expr σ rhs)
+  | EAssign p rhs =>
+      EAssign p (subst_type_params_expr σ rhs)
+  | EBorrow rk p => EBorrow rk p
+  | EDeref e' => EDeref (subst_type_params_expr σ e')
+  | EDrop e' => EDrop (subst_type_params_expr σ e')
+  | EIf e1 e2 e3 =>
+      EIf (subst_type_params_expr σ e1)
+        (subst_type_params_expr σ e2)
+        (subst_type_params_expr σ e3)
+  end.
+
+Definition subst_type_params_param (σ : list Ty) (p : param) : param :=
+  MkParam (param_mutability p) (param_name p)
+    (subst_type_params_ty σ (param_ty p)).
+
 Definition instantiate_struct_field_ty
     (lifetime_args : list lifetime) (type_args : list Ty) (f : field_def) : Ty :=
   subst_type_params_ty type_args (apply_lt_ty lifetime_args (field_ty f)).

@@ -149,9 +149,12 @@ failures; invalid tests pass.
       unsubstituted body with `fn_params fcall`; caller arguments are typed at
       `apply_type_params type_args (fn_params fdef)`, and no sound lemma converts
       concrete argument values to unsubstituted `TParam` parameter types.
-    - T2a2c next: choose and prove a sound generic-body strategy: either
-      monomorphize the runtime body/type context before evaluation, or add a
-      parametric value/store typing relation that justifies `TParam` bind params.
+    - T2a2c done: choose static type-substitution transport. Do not change
+      runtime semantics and do not make `value_has_type` accept arbitrary
+      `TParam`; instead transport body typing/store-safe summaries to
+      `apply_type_params type_args (fn_params fcall)` and substituted return.
+    - T2a2d next: prove type-substitution transport for function-body typing
+      and narrow store-safe summaries, then use it in the generic runtime bridge.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

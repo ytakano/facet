@@ -117,6 +117,8 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
       and executable checked narrow checker wrapper.
     - T48c2 done: restrict checked narrow fallback to top-level
       unchecked inference failures; TypeChecker compiles.
+    - T48c3 done: prove checked narrow store-safe checker
+      soundness; EnvRuntimeBaseSafety compiles.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

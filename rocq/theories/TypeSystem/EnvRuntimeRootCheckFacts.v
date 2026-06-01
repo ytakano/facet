@@ -242,6 +242,36 @@ Proof.
   unfold obligation_refines. intros old_obligations target Hin. contradiction.
 Qed.
 
+Lemma obligation_refines_field_prefix_go :
+  forall fields old_obligations_of new_obligations_of,
+    (forall f,
+      In f fields ->
+      obligation_refines (old_obligations_of f) (new_obligations_of f)) ->
+    obligation_refines
+      ((fix go (fields : list field_def) : list field_path :=
+          match fields with
+          | [] => []
+          | f :: rest =>
+              prefix_obligation_paths [field_name f] (old_obligations_of f) ++
+              go rest
+          end) fields)
+      ((fix go (fields : list field_def) : list field_path :=
+          match fields with
+          | [] => []
+          | f :: rest =>
+              prefix_obligation_paths [field_name f] (new_obligations_of f) ++
+              go rest
+          end) fields).
+Proof.
+  induction fields as [| f rest IH]; intros old_obligations_of new_obligations_of Hpoint;
+    simpl.
+  - apply obligation_refines_nil_right.
+  - apply obligation_refines_app.
+    + apply obligation_refines_prefix_obligation_paths.
+      apply Hpoint. left. reflexivity.
+    + apply IH. intros f' Hin. apply Hpoint. right. exact Hin.
+Qed.
+
 Lemma obligation_refines_singleton_empty_left :
   forall new_obligations,
     obligation_refines [[]] new_obligations.

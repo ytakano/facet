@@ -105,6 +105,8 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
 48. In progress: checked rootless end-to-end path.
     - T48a done: add checked roots relation and typed rootless
       roots-ready expression theorem.
+    - T48b1 done: add checked shadow-safe inferencer wrapper
+      that prunes capture-free result roots after conservative success.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

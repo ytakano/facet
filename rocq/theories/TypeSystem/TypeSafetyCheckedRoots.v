@@ -27,6 +27,112 @@ Inductive typed_env_roots_shadow_safe_checked
       capture_ref_free_ty_b env T = true ->
       typed_env_roots_shadow_safe_checked env Ω n R Σ e T Σ' R' [].
 
+Lemma typed_env_roots_checked_of_roots :
+  forall env Ω n R Σ e T Σ' R' roots,
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    typed_env_roots_checked env Ω n R Σ e T Σ' R' roots.
+Proof.
+  intros env Ω n R Σ e T Σ' R' roots Htyped.
+  apply TERC_Conservative. exact Htyped.
+Qed.
+
+Lemma typed_env_roots_checked_capture_ref_free :
+  forall env Ω n R Σ e T Σ' R' roots,
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    capture_ref_free_ty_b env T = true ->
+    typed_env_roots_checked env Ω n R Σ e T Σ' R' [].
+Proof.
+  intros env Ω n R Σ e T Σ' R' roots Htyped Hfree.
+  eapply TERC_CaptureRefFreeResult; eassumption.
+Qed.
+
+Lemma typed_env_roots_checked_underlying_roots :
+  forall env Ω n R Σ e T Σ' R' roots,
+    typed_env_roots_checked env Ω n R Σ e T Σ' R' roots ->
+    exists roots0,
+      typed_env_roots env Ω n R Σ e T Σ' R' roots0 /\
+      (roots = roots0 \/
+        (roots = [] /\ capture_ref_free_ty_b env T = true)).
+Proof.
+  intros env Ω n R Σ e T Σ' R' roots Hchecked.
+  destruct Hchecked as
+    [R0 Σ0 e0 T0 Σ0' R0' roots0 Htyped
+    |R0 Σ0 e0 T0 Σ0' R0' roots0 Htyped Hfree].
+  - exists roots0. split; [exact Htyped | left; reflexivity].
+  - exists roots0. split; [exact Htyped | right; split; reflexivity || exact Hfree].
+Qed.
+
+Lemma typed_env_roots_checked_prune_capture_ref_free :
+  forall env Ω n R Σ e T Σ' R' roots,
+    typed_env_roots_checked env Ω n R Σ e T Σ' R' roots ->
+    capture_ref_free_ty_b env T = true ->
+    typed_env_roots_checked env Ω n R Σ e T Σ' R' [].
+Proof.
+  intros env Ω n R Σ e T Σ' R' roots Hchecked Hfree.
+  destruct (typed_env_roots_checked_underlying_roots env Ω n R Σ e T Σ' R' roots
+    Hchecked) as [roots0 [Htyped _]].
+  eapply typed_env_roots_checked_capture_ref_free; eassumption.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_checked_of_roots :
+  forall env Ω n R Σ e T Σ' R' roots,
+    typed_env_roots_shadow_safe env Ω n R Σ e T Σ' R' roots ->
+    typed_env_roots_shadow_safe_checked env Ω n R Σ e T Σ' R' roots.
+Proof.
+  intros env Ω n R Σ e T Σ' R' roots Htyped.
+  apply TERSC_Conservative. exact Htyped.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_checked_capture_ref_free :
+  forall env Ω n R Σ e T Σ' R' roots,
+    typed_env_roots_shadow_safe env Ω n R Σ e T Σ' R' roots ->
+    capture_ref_free_ty_b env T = true ->
+    typed_env_roots_shadow_safe_checked env Ω n R Σ e T Σ' R' [].
+Proof.
+  intros env Ω n R Σ e T Σ' R' roots Htyped Hfree.
+  eapply TERSC_CaptureRefFreeResult; eassumption.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_checked_underlying_roots :
+  forall env Ω n R Σ e T Σ' R' roots,
+    typed_env_roots_shadow_safe_checked env Ω n R Σ e T Σ' R' roots ->
+    exists roots0,
+      typed_env_roots_shadow_safe env Ω n R Σ e T Σ' R' roots0 /\
+      (roots = roots0 \/
+        (roots = [] /\ capture_ref_free_ty_b env T = true)).
+Proof.
+  intros env Ω n R Σ e T Σ' R' roots Hchecked.
+  destruct Hchecked as
+    [R0 Σ0 e0 T0 Σ0' R0' roots0 Htyped
+    |R0 Σ0 e0 T0 Σ0' R0' roots0 Htyped Hfree].
+  - exists roots0. split; [exact Htyped | left; reflexivity].
+  - exists roots0. split; [exact Htyped | right; split; reflexivity || exact Hfree].
+Qed.
+
+Lemma typed_env_roots_shadow_safe_checked_prune_capture_ref_free :
+  forall env Ω n R Σ e T Σ' R' roots,
+    typed_env_roots_shadow_safe_checked env Ω n R Σ e T Σ' R' roots ->
+    capture_ref_free_ty_b env T = true ->
+    typed_env_roots_shadow_safe_checked env Ω n R Σ e T Σ' R' [].
+Proof.
+  intros env Ω n R Σ e T Σ' R' roots Hchecked Hfree.
+  destruct (typed_env_roots_shadow_safe_checked_underlying_roots
+    env Ω n R Σ e T Σ' R' roots Hchecked) as [roots0 [Htyped _]].
+  eapply typed_env_roots_shadow_safe_checked_capture_ref_free; eassumption.
+Qed.
+
+Lemma typed_env_roots_checked_empty_of_shadow_safe_capture_ref_free :
+  forall env Ω n R Σ e T Σ' R' roots,
+    typed_env_roots_shadow_safe env Ω n R Σ e T Σ' R' roots ->
+    capture_ref_free_ty_b env T = true ->
+    typed_env_roots_checked env Ω n R Σ e T Σ' R' [].
+Proof.
+  intros env Ω n R Σ e T Σ' R' roots Htyped Hfree.
+  eapply typed_env_roots_checked_capture_ref_free.
+  - eapply typed_env_roots_shadow_safe_roots. exact Htyped.
+  - exact Hfree.
+Qed.
+
 Lemma typed_env_roots_checked_structural :
   forall env Ω n R Σ e T Σ' R' roots,
     typed_env_roots_checked env Ω n R Σ e T Σ' R' roots ->

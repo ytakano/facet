@@ -1,6 +1,6 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program Renaming TypingRules
   RootProvenance TypeChecker EnvStructuralRules CheckerSoundness
-  EnvTypingSoundness EnvBorrowSoundness AlphaRenaming.
+  EnvTypingSoundness EnvBorrowSoundness AlphaRenaming TypeSafetyCheckedRoots.
 From Stdlib Require Import Bool List String PeanoNat.
 Import ListNotations.
 
@@ -2803,6 +2803,25 @@ Proof.
       * apply ty_core_eqb_true. exact Hcore.
       * exact Hmerge.
       * apply root_env_eqb_true_equiv. exact Hroot_eq.
+Qed.
+
+Theorem infer_core_env_state_fuel_roots_shadow_safe_checked_sound :
+  forall fuel env Ω n R Σ e T Σ' R' roots,
+    infer_core_env_state_fuel_roots_shadow_safe_checked fuel env Ω n R Σ e =
+      infer_ok (T, Σ', R', roots) ->
+    typed_env_roots_shadow_safe_checked env Ω n R Σ e T Σ' R' roots.
+Proof.
+  intros fuel env Ω n R Σ e T Σ' R' roots Hchecked.
+  unfold infer_core_env_state_fuel_roots_shadow_safe_checked in Hchecked.
+  destruct (infer_core_env_state_fuel_roots_shadow_safe fuel env Ω n R Σ e)
+    as [[[[T0 Σ0] R0] roots0] | err] eqn:Hinfer; try discriminate.
+  unfold roots_for_checked_result in Hchecked.
+  destruct (capture_ref_free_ty_b env T0) eqn:Hfree; inversion Hchecked; subst.
+  - eapply TERSC_CaptureRefFreeResult.
+    + eapply infer_core_env_state_fuel_roots_shadow_safe_sound. exact Hinfer.
+    + exact Hfree.
+  - apply TERSC_Conservative.
+    eapply infer_core_env_state_fuel_roots_shadow_safe_sound. exact Hinfer.
 Qed.
 
 Theorem infer_core_env_roots_sound :

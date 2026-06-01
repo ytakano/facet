@@ -4790,6 +4790,10 @@ Fixpoint root_env_eqb (R1 R2 : root_env) : bool :=
 Definition roots_exclude_b (x : ident) (roots : root_set) : bool :=
   negb (existsb (root_atom_eqb (RStore x)) roots).
 
+Definition roots_for_checked_result
+    (env : global_env) (T : Ty) (roots : root_set) : root_set :=
+  if capture_ref_free_ty_b env T then [] else roots.
+
 Fixpoint root_env_excludes_b (x : ident) (R : root_env) : bool :=
   match R with
   | [] => true
@@ -6998,6 +7002,16 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
           end
       end
   end
+  end.
+
+Definition infer_core_env_state_fuel_roots_shadow_safe_checked (fuel : nat)
+    (env : global_env) (Ω : outlives_ctx) (n : nat)
+    (R : root_env) (Σ : sctx) (e : expr)
+    : infer_result (Ty * sctx * root_env * root_set) :=
+  match infer_core_env_state_fuel_roots_shadow_safe fuel env Ω n R Σ e with
+  | infer_ok (T, Σ', R', roots) =>
+      infer_ok (T, Σ', R', roots_for_checked_result env T roots)
+  | infer_err err => infer_err err
   end.
 
 Definition infer_core_env_roots_shadow_safe

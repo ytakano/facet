@@ -102,6 +102,9 @@ Latest full `sh tests/run.sh` baseline (2026-06-01): 19 valid-test failures; inv
     - T47b blocked: checker root pruning reaches
       `TypeSafetyRootsReadyMutual.v`; rootless constructors require a
       typed roots-ready theorem, not the current untyped mutual theorem.
+48. In progress: checked rootless end-to-end path.
+    - T48a done: add checked roots relation and typed rootless
+      roots-ready expression theorem.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

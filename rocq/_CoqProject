@@ -59,6 +59,7 @@ theories/TypeSystem/TypeSafetyFrameScopeReady.v
 theories/TypeSystem/TypeSafetyHiddenFrameCleanupFacts.v
 theories/TypeSystem/TypeSafetyHiddenFrame.v
 theories/TypeSystem/TypeSafetyRootedPackages.v
+theories/TypeSystem/TypeSafetyCheckedRoots.v
 theories/TypeSystem/TypeSafetyClosureRuntimeArgsFacts.v
 theories/TypeSystem/TypeSafetyClosureRuntimeArgsBase.v
 theories/TypeSystem/TypeSafetyClosureRuntimeArgsMake.v

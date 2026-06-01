@@ -234,6 +234,9 @@ failures; invalid tests pass.
     - T2a2d1z done: add empty-substitution identity lemmas for expressions;
       `Program.v` focused compile and proof-hole scan pass. Sub-agent spawn
       remains unavailable due thread limit.
+    - T2a2d1aa done: add empty-substitution identity lemmas for parameter
+      and typing contexts; `TypingRules.v` make target and proof-hole scan pass.
+      Sub-agent spawn remains unavailable due thread limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

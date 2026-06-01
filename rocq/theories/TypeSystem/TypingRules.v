@@ -447,6 +447,42 @@ Proof.
   rewrite param_ctx_entry_apply_type_param, IH. reflexivity.
 Qed.
 
+Lemma apply_type_param_nil : forall p,
+  apply_type_param [] p = p.
+Proof.
+  intros p. rewrite apply_type_param_subst_type_params_param.
+  apply subst_type_params_param_nil.
+Qed.
+
+Lemma apply_type_params_nil : forall ps,
+  apply_type_params [] ps = ps.
+Proof.
+  intros ps. unfold apply_type_params.
+  induction ps as [| p ps IH]; simpl; auto.
+  rewrite apply_type_param_nil, IH. reflexivity.
+Qed.
+
+Lemma subst_type_params_ctx_entry_nil : forall entry,
+  subst_type_params_ctx_entry [] entry = entry.
+Proof.
+  intros [[[x T] st] m]. simpl.
+  rewrite subst_type_params_ty_nil. reflexivity.
+Qed.
+
+Lemma subst_type_params_ctx_nil : forall Γ,
+  subst_type_params_ctx [] Γ = Γ.
+Proof.
+  intros Γ. unfold subst_type_params_ctx.
+  induction Γ as [| entry Γ IH]; simpl; auto.
+  rewrite subst_type_params_ctx_entry_nil, IH. reflexivity.
+Qed.
+
+Lemma params_ctx_apply_type_params_nil : forall ps,
+  params_ctx (apply_type_params [] ps) = params_ctx ps.
+Proof.
+  intros ps. rewrite apply_type_params_nil. reflexivity.
+Qed.
+
 Lemma subst_type_params_ctx_app : forall type_args (Γ1 Γ2 : ctx),
   subst_type_params_ctx type_args (List.app Γ1 Γ2) =
   List.app (subst_type_params_ctx type_args Γ1) (subst_type_params_ctx type_args Γ2).

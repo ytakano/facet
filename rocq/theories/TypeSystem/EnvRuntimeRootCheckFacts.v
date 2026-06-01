@@ -280,6 +280,49 @@ Proof.
   exists []. split; [left; reflexivity | reflexivity].
 Qed.
 
+Definition normalize_linear_struct_obligations
+    (obligations : list field_path) : list field_path :=
+  match obligations with
+  | [] => [[]]
+  | _ => obligations
+  end.
+
+Definition obligation_refines_normalize_no_collapse
+    (old_obligations new_obligations : list field_path) : Prop :=
+  new_obligations = [] ->
+  exists old_obligation,
+    In old_obligation (normalize_linear_struct_obligations old_obligations) /\
+    path_prefix_b old_obligation [] = true.
+
+Lemma obligation_refines_normalize_linear_struct_obligations :
+  forall old_obligations new_obligations,
+    obligation_refines old_obligations new_obligations ->
+    obligation_refines_normalize_no_collapse old_obligations new_obligations ->
+    obligation_refines
+      (normalize_linear_struct_obligations old_obligations)
+      (normalize_linear_struct_obligations new_obligations).
+Proof.
+  unfold obligation_refines_normalize_no_collapse, obligation_refines,
+    normalize_linear_struct_obligations.
+  intros old_obligations new_obligations Hrefines Hnocollapse target Hin.
+  destruct new_obligations as [| new_obligation rest].
+  - simpl in Hin. destruct Hin as [Htarget | Hin]; [subst target | contradiction].
+    apply Hnocollapse. reflexivity.
+  - simpl in Hin. destruct old_obligations as [| old_obligation rest_old].
+    + destruct (Hrefines target Hin) as [old [Hold _]]. contradiction.
+    + apply Hrefines. exact Hin.
+Qed.
+
+Lemma obligation_refines_normalize_no_collapse_nil_left :
+  forall new_obligations,
+    obligation_refines_normalize_no_collapse [] new_obligations.
+Proof.
+  unfold obligation_refines_normalize_no_collapse,
+    normalize_linear_struct_obligations.
+  intros new_obligations Hnew.
+  exists []. split; [left; reflexivity | reflexivity].
+Qed.
+
 Lemma linear_obligation_paths_fuel_subst_tparam_refines :
   forall fuel env type_args u i,
     obligation_refines

@@ -213,6 +213,10 @@ failures; invalid tests pass.
       Broad generic obligation refinement needs a no-collapse invariant for
       struct field obligations because empty field obligation lists normalize
       to whole-path `[[]]`.
+    - T2a2d1u done: add normalized linear-struct obligation refinement helper
+      with explicit no-collapse premise; `EnvRuntimeRootCheckFacts.v` focused
+      compile and proof-hole scan pass. Sub-agent spawn remains unavailable due
+      thread limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

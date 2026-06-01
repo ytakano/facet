@@ -250,6 +250,37 @@ Proof.
   exists []. split; [left; reflexivity | reflexivity].
 Qed.
 
+Lemma linear_obligation_paths_fuel_subst_tparam_refines :
+  forall fuel env type_args u i,
+    obligation_refines
+      (linear_obligation_paths_fuel fuel env (MkTy u (TParam i)))
+      (linear_obligation_paths_fuel fuel env
+        (subst_type_params_ty type_args (MkTy u (TParam i)))).
+Proof.
+  intros fuel env type_args u i. destruct u; destruct fuel;
+    cbn [linear_obligation_paths_fuel subst_type_params_ty ty_usage ty_core].
+  - destruct (nth_error type_args i) as [[u' core] |];
+      cbn [linear_obligation_paths_fuel ty_usage ty_core].
+    + apply obligation_refines_singleton_empty_left.
+    + apply obligation_refines_refl.
+  - destruct (nth_error type_args i) as [[u' core] |];
+      cbn [linear_obligation_paths_fuel ty_usage ty_core].
+    + apply obligation_refines_singleton_empty_left.
+    + apply obligation_refines_refl.
+  - destruct (nth_error type_args i) as [[u' core] |];
+      cbn [linear_obligation_paths_fuel ty_usage ty_core];
+      apply obligation_refines_nil_right.
+  - destruct (nth_error type_args i) as [[u' core] |];
+      cbn [linear_obligation_paths_fuel ty_usage ty_core];
+      apply obligation_refines_nil_right.
+  - destruct (nth_error type_args i) as [[u' core] |];
+      cbn [linear_obligation_paths_fuel ty_usage ty_core];
+      apply obligation_refines_nil_right.
+  - destruct (nth_error type_args i) as [[u' core] |];
+      cbn [linear_obligation_paths_fuel ty_usage ty_core];
+      apply obligation_refines_nil_right.
+Qed.
+
 Lemma linear_obligation_paths_fuel_global_env_with_local_bounds :
   forall fuel env bounds T,
     linear_obligation_paths_fuel fuel

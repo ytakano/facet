@@ -426,6 +426,13 @@ Definition subst_type_params_ctx_entry
 Definition subst_type_params_ctx (type_args : list Ty) (Γ : ctx) : ctx :=
   map (subst_type_params_ctx_entry type_args) Γ.
 
+Definition apply_lt_ctx_entry (σ : list lifetime) (entry : ctx_entry) : ctx_entry :=
+  let '(x, T, st, m) := entry in
+  (x, apply_lt_ty σ T, st, m).
+
+Definition apply_lt_ctx (σ : list lifetime) (Γ : ctx) : ctx :=
+  map (apply_lt_ctx_entry σ) Γ.
+
 Lemma apply_type_param_subst_type_params_param : forall type_args p,
   apply_type_param type_args p = subst_type_params_param type_args p.
 Proof.
@@ -521,6 +528,24 @@ Proof.
   intros σ type_args ps. unfold apply_lt_params, apply_type_params.
   induction ps as [| p ps IH]; simpl; auto.
   rewrite apply_lt_param_apply_type_param, IH. reflexivity.
+Qed.
+
+Lemma apply_lt_ctx_entry_subst_type_params_ctx_entry : forall σ type_args entry,
+  apply_lt_ctx_entry σ (subst_type_params_ctx_entry type_args entry) =
+  subst_type_params_ctx_entry (map (apply_lt_ty σ) type_args)
+    (apply_lt_ctx_entry σ entry).
+Proof.
+  intros σ type_args [[[x T] st] m]. simpl.
+  rewrite apply_lt_ty_subst_type_params_ty. reflexivity.
+Qed.
+
+Lemma apply_lt_ctx_subst_type_params_ctx : forall σ type_args Γ,
+  apply_lt_ctx σ (subst_type_params_ctx type_args Γ) =
+  subst_type_params_ctx (map (apply_lt_ty σ) type_args) (apply_lt_ctx σ Γ).
+Proof.
+  intros σ type_args Γ. unfold apply_lt_ctx, subst_type_params_ctx.
+  induction Γ as [| entry Γ IH]; simpl; auto.
+  rewrite apply_lt_ctx_entry_subst_type_params_ctx_entry, IH. reflexivity.
 Qed.
 
 Lemma subst_type_params_ctx_entry_compose : forall σ τ entry,

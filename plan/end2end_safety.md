@@ -252,6 +252,10 @@ failures; invalid tests pass.
     - T2a2d1af done: prove lifetime/type-parameter substitution
       commutation for params; `TypingRules.v` make target and proof-hole scan pass.
       Sub-agent spawn remains unavailable due thread limit.
+    - T2a2d1ag done: add structural lifetime substitution for typing
+      contexts and prove type-parameter commutation; `TypingRules.v` make
+      target and proof-hole scan pass. Sub-agent spawn remains unavailable
+      due thread limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

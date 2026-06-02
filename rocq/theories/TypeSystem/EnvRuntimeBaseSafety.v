@@ -11093,6 +11093,19 @@ Proof.
   - right. repeat eexists; repeat split; eauto.
 Qed.
 
+Lemma callee_body_root_shadow_store_safe_narrow_summary_instantiated_of_fuel_zero :
+  forall env fdef type_args,
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env 0 fdef type_args ->
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated
+      env fdef type_args.
+Proof.
+  intros env fdef type_args Hsummary.
+  inversion Hsummary; subst; try discriminate.
+  unfold callee_body_root_shadow_store_safe_narrow_summary_instantiated.
+  repeat eexists; repeat split; eauto.
+Qed.
+
 Lemma generic_direct_call_callee_body_root_shadow_store_safe_narrow_summary_bridge_of_summary_tfn_with_result_subset_prefix_named :
   forall env (Omega : outlives_ctx) (n : nat) R Sigma Sigma_args R_args
       arg_roots args type_args fdef fcall param_tys ret_ty s s_args vs used',

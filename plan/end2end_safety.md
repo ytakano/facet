@@ -418,6 +418,10 @@ failures; invalid tests pass.
       - T2a2d2am done: captured generic branch skeleton type-checks up
         to the missing `eval_generic_direct_call_store_safe_narrow_summary_value_prefix_named`;
         keep branch unwired until that base theorem is proved.
+      - T2a2d2an blocked: proving that theorem by substituted-body
+        narrow-summary transport reintroduces false general `ty_compatible_b`
+        substitution for `ELet`/`EAssign`; do not narrow accepted generic
+        programs or add closed-type-argument guards.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

@@ -274,6 +274,10 @@ Qed.
 
 Inductive store_safe_function_value_call_arg
     (env : global_env) : expr -> Prop :=
+  | SSFVCArg_Unit :
+      store_safe_function_value_call_arg env EUnit
+  | SSFVCArg_Lit : forall lit,
+      store_safe_function_value_call_arg env (ELit lit)
   | SSFVCArg_Var : forall x,
       store_safe_function_value_call_arg env (EVar x)
   | SSFVCArg_Fn : forall fname fdef,
@@ -411,8 +415,38 @@ Proof.
   - dependent destruction Hsafe.
     match goal with
     | Harg : store_safe_function_value_call_arg _ _ |- _ =>
-        destruct Harg as [x | fname fdef Hin Hname Hsummary]
+        destruct Harg as [| lit | x | fname fdef Hin Hname Hsummary]
     end.
+    + dependent destruction H.
+      destruct (IHHtyped Hsafe s Hnamed Hkeys)
+        as [HR [Hroots_rest [Hnamed' Hkeys']]].
+      subst R2.
+      repeat split; try assumption.
+      constructor.
+      * unfold root_set_store_roots_named. intros z Hin_z. contradiction.
+      * exact Hroots_rest.
+    + dependent destruction H.
+      * destruct (IHHtyped Hsafe s Hnamed Hkeys)
+          as [HR [Hroots_rest [Hnamed' Hkeys']]].
+        subst R2.
+        repeat split; try assumption.
+        constructor.
+        -- unfold root_set_store_roots_named. intros z Hin_z. contradiction.
+        -- exact Hroots_rest.
+      * destruct (IHHtyped Hsafe s Hnamed Hkeys)
+          as [HR [Hroots_rest [Hnamed' Hkeys']]].
+        subst R2.
+        repeat split; try assumption.
+        constructor.
+        -- unfold root_set_store_roots_named. intros z Hin_z. contradiction.
+        -- exact Hroots_rest.
+      * destruct (IHHtyped Hsafe s Hnamed Hkeys)
+          as [HR [Hroots_rest [Hnamed' Hkeys']]].
+        subst R2.
+        repeat split; try assumption.
+        constructor.
+        -- unfold root_set_store_roots_named. intros z Hin_z. contradiction.
+        -- exact Hroots_rest.
     + dependent destruction H.
       * destruct (IHHtyped Hsafe s Hnamed Hkeys)
           as [HR [Hroots_rest [Hnamed' Hkeys']]].
@@ -479,6 +513,8 @@ Lemma store_safe_function_value_call_arg_eval_preserves_store_function_closure_t
 Proof.
   intros env arg s s' v Harg Hsummary Heval_callee.
   destruct Harg.
+  - inversion Heval_callee; subst; auto.
+  - inversion Heval_callee; subst; auto.
   - eapply store_function_closure_targets_summary_eval_var; eassumption.
   - inversion Heval_callee; subst; auto.
 Qed.
@@ -510,7 +546,9 @@ Lemma store_safe_function_value_call_arg_eval_value_summary :
     value_function_closure_targets_summary env v.
 Proof.
   intros env arg s s' v Hunique Harg Hsummary Heval_arg.
-  destruct Harg as [x | fname fdef Hin Hname Hcallee].
+  destruct Harg as [| lit | x | fname fdef Hin Hname Hcallee].
+  - inversion Heval_arg; subst; simpl; auto.
+  - inversion Heval_arg; subst; simpl; auto.
   - inversion Heval_arg; subst;
       match goal with
       | Hlookup : store_lookup _ _ = Some _ |- _ =>
@@ -847,9 +885,15 @@ Proof.
   intros env args.
   induction args as [| arg rest IH]; intros Hcheck.
   - constructor.
-  - destruct arg; try discriminate; simpl in Hcheck.
+  - destruct arg; simpl in Hcheck; try discriminate.
     + constructor.
-      * constructor.
+      * apply SSFVCArg_Unit.
+      * apply IH. exact Hcheck.
+    + constructor.
+      * apply SSFVCArg_Lit.
+      * apply IH. exact Hcheck.
+    + constructor.
+      * apply SSFVCArg_Var.
       * apply IH. exact Hcheck.
     + destruct (lookup_fn_b i (env_fns env)) as [fdef |] eqn:Hlookup;
         try discriminate.
@@ -871,7 +915,9 @@ Lemma store_safe_function_value_call_arg_subst_type_params_expr :
       (subst_type_params_expr type_args arg).
 Proof.
   intros env type_args arg Harg.
-  destruct Harg as [x | fname fdef Hin Hname Hsummary]; simpl.
+  destruct Harg as [| lit | x | fname fdef Hin Hname Hsummary]; simpl.
+  - constructor.
+  - constructor.
   - constructor.
   - eapply SSFVCArg_Fn; eassumption.
 Qed.
@@ -925,8 +971,10 @@ Lemma store_safe_function_value_call_arg_alpha_rename_expr :
     store_safe_function_value_call_arg env ar.
 Proof.
   intros env rho used arg ar used' Harg Hrename.
-  destruct Harg as [x | fname fdef Hin Hname Hsummary];
+  destruct Harg as [| lit | x | fname fdef Hin Hname Hsummary];
     simpl in Hrename; inversion Hrename; subst.
+  - constructor.
+  - constructor.
   - constructor.
   - eapply SSFVCArg_Fn; eauto.
 Qed.
@@ -5210,7 +5258,9 @@ Lemma store_safe_function_value_call_arg_global_env_with_local_bounds :
       (global_env_with_local_bounds env bounds) arg.
 Proof.
   intros env bounds arg Harg.
-  destruct Harg as [x | fname fdef Hin Hname Hsummary].
+  destruct Harg as [| lit | x | fname fdef Hin Hname Hsummary].
+  - constructor.
+  - constructor.
   - constructor.
   - eapply SSFVCArg_Fn.
     + exact Hin.
@@ -5303,6 +5353,8 @@ Lemma typed_env_roots_shadow_safe_store_safe_arg_global_env_with_local_bounds :
 Proof.
   intros env bounds Omega n R Sigma arg T Sigma' R' roots Hsafe Htyped.
   inversion Hsafe; subst.
+  - dependent destruction Htyped. constructor.
+  - dependent destruction Htyped; constructor.
   - eapply typed_env_roots_shadow_safe_evar_global_env_with_local_bounds.
     exact Htyped.
   - eapply typed_env_roots_shadow_safe_efn_global_env_with_local_bounds.
@@ -11024,7 +11076,8 @@ Definition callee_body_root_shadow_captured_call_generic_direct_narrow_store_saf
     In fcallee (env_fns env) /\
     fn_name fcallee = fname /\
     Datatypes.length type_args = fn_type_params fcallee /\
-    check_struct_bounds env (fn_bounds fcallee) type_args = None /\
+    check_struct_bounds (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_bounds fcallee) type_args = None /\
     callee_body_root_shadow_store_safe_narrow_summary_instantiated
       env fcallee type_args /\
     NoDup (ctx_names (params_ctx (fn_params fdef))) /\
@@ -11149,7 +11202,9 @@ Proof.
         try discriminate.
       apply andb_true_iff in Hgeneric as [Htype_params Hgeneric].
       apply Nat.eqb_eq in Htype_params.
-      destruct (check_struct_bounds env (fn_bounds fcallee) type_args)
+      destruct (check_struct_bounds
+        (global_env_with_local_bounds env (fn_bounds fdef))
+        (fn_bounds fcallee) type_args)
         as [bounds_err |] eqn:Hbounds; try discriminate.
       destruct (infer_core_env_roots_shadow_safe env
         (fn_outlives fcallee) (fn_lifetimes fcallee)

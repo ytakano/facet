@@ -12389,6 +12389,8 @@ let rec store_safe_function_value_call_args_b env = function
 | [] -> true
 | e :: rest ->
   (match e with
+   | EUnit -> store_safe_function_value_call_args_b env rest
+   | ELit _ -> store_safe_function_value_call_args_b env rest
    | EVar _ -> store_safe_function_value_call_args_b env rest
    | EFn fname ->
      (match lookup_fn_b fname env.env_fns with
@@ -13364,7 +13366,9 @@ let check_fn_root_shadow_captured_call_store_safe_summary env fdef =
            (match lookup_fn_b fname env.env_fns with
             | Some callee ->
               (&&) (Nat.eqb (length type_args) callee.fn_type_params)
-                (match check_struct_bounds env callee.fn_bounds type_args with
+                (match check_struct_bounds
+                         (global_env_with_local_bounds env fdef.fn_bounds)
+                         callee.fn_bounds type_args with
                  | Some _ -> false
                  | None ->
                    (match infer_core_env_roots_shadow_safe env

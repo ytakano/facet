@@ -446,6 +446,10 @@ failures; invalid tests pass.
       - T2a2d2aa done: wired captured generic direct-call store-safe
         branch into the final captured safety theorem;
         `EnvRuntimeCapturedSafety.v` target and proof-hole scan pass.
+      - T2a2d2ab1 done: widened generic direct-call gate for
+        unit/literal args and caller local bounds; `EnvRuntimeBaseSafety.v`,
+        `dune build`, proof-hole scan, and top-level generic CLI checks pass;
+        nested instantiated generic callee summaries remain.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

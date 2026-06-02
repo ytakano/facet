@@ -8342,6 +8342,10 @@ Fixpoint store_safe_function_value_call_args_b
     (env : global_env) (args : list expr) : bool :=
   match args with
   | [] => true
+  | EUnit :: rest =>
+      store_safe_function_value_call_args_b env rest
+  | ELit _ :: rest =>
+      store_safe_function_value_call_args_b env rest
   | EVar _ :: rest =>
       store_safe_function_value_call_args_b env rest
   | EFn fname :: rest =>
@@ -9188,7 +9192,9 @@ Definition check_fn_root_shadow_captured_call_store_safe_summary
        | None => false
        | Some callee =>
            Nat.eqb (Datatypes.length type_args) (fn_type_params callee) &&
-           match check_struct_bounds env (fn_bounds callee) type_args with
+           match check_struct_bounds
+                   (global_env_with_local_bounds env (fn_bounds fdef))
+                   (fn_bounds callee) type_args with
            | Some _ => false
            | None =>
                match infer_core_env_roots_shadow_safe env

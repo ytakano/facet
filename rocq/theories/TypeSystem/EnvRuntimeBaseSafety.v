@@ -1626,6 +1626,25 @@ Proof.
     + exact H0.
 Qed.
 
+Lemma expr_root_shadow_store_safe_narrow_summary_tail_frame_subst_type_params_expr :
+  forall env Omega n R Σ type_args e T Σ' R' roots ret_roots,
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n R Σ (subst_type_params_expr type_args e) T Σ' R' roots
+      ret_roots ->
+    forall R_tail,
+      root_env_tail_fresh_names R_tail (expr_local_store_names e) ->
+      expr_root_shadow_store_safe_narrow_summary
+        env Omega n (R ++ R_tail) Σ (subst_type_params_expr type_args e) T
+        Σ' (R' ++ R_tail) roots ret_roots.
+Proof.
+  intros env Omega n R Σ type_args e T Σ' R' roots ret_roots Hsummary
+    R_tail Hfresh.
+  eapply expr_root_shadow_store_safe_narrow_summary_tail_frame.
+  - exact Hsummary.
+  - eapply root_env_tail_fresh_names_subst_type_params_expr.
+    exact Hfresh.
+Qed.
+
 
 Lemma expr_root_shadow_store_safe_narrow_summary_alpha_rename_forward :
   forall env Omega n R Σ e T Σ' R' roots ret_roots,

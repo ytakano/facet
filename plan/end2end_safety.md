@@ -357,6 +357,9 @@ failures; invalid tests pass.
       type-substituted expressions; `EnvRuntimeBaseSafety.v` target and
       proof-hole scan pass. Sub-agent spawn remains unavailable due thread
       limit.
+    - T2a2d2x done: add narrow-summary tail-frame helper for substituted
+      expressions; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
+      Sub-agent spawn remains unavailable due thread limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

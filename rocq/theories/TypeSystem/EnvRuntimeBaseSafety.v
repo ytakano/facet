@@ -11481,6 +11481,34 @@ Proof.
     eassumption.
 Qed.
 
+
+Lemma generic_direct_call_target_alpha_rename_subst_type_params_runtime_eval :
+  forall env type_args used fdef fcall used' fname nested_type_args args
+      raw_body synthetic_body s s' ret,
+    raw_body = subst_type_params_expr type_args (fn_body fdef) ->
+    generic_direct_call_target_expr raw_body =
+      Some (fname, nested_type_args, args, synthetic_body) ->
+    synthetic_body = ECallGeneric fname nested_type_args args ->
+    store_safe_function_value_call_args env args ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    eval env s (subst_type_params_expr type_args (fn_body fcall)) s' ret ->
+    exists argsr,
+      store_safe_function_value_call_args env argsr /\
+      eval env s (ECallGeneric fname nested_type_args argsr) s' ret.
+Proof.
+  intros env type_args used fdef fcall used' fname nested_type_args args
+    raw_body synthetic_body s s' ret Hbody Htarget Hsynthetic Hsafe Hrename
+    Heval.
+  destruct (generic_direct_call_target_alpha_rename_subst_type_params_runtime
+    env type_args used fdef fcall used' fname nested_type_args args raw_body
+    synthetic_body Hbody Htarget Hsynthetic Hsafe Hrename)
+    as [argsr [Hbody_runtime Hsafe_runtime]].
+  exists argsr.
+  split; [exact Hsafe_runtime |].
+  rewrite <- Hbody_runtime.
+  exact Heval.
+Qed.
+
 Lemma eval_generic_direct_call_store_safe_narrow_summary_exact_package_prefix_named_expr :
   forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args
       arg_roots s s' ret fdef,

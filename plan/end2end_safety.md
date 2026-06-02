@@ -314,6 +314,10 @@ failures; invalid tests pass.
       root environments unchanged; `RootProvenance.v` make target and
       proof-hole scan pass. Sub-agent spawn remains unavailable due thread
       limit.
+    - T2a2d2l done: make `Eval_CallGeneric` bind instantiated parameters;
+      `OperationalSemantics.v`, `TypeChecker.v`, `TypeSafetyDirectCallWrappers.v`
+      targets and proof-hole scan pass. Sub-agent spawn remains unavailable
+      due thread limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

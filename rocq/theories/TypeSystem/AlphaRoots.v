@@ -635,6 +635,32 @@ with typed_match_tail_roots_shadow_safe
       typed_match_tail_roots_shadow_safe env Ω n lts args R roots_scrut Σ branches (v :: rest)
         expected_core R_out (Σv :: Σs) (T :: Ts) (roots :: rootss).
 
+Lemma typed_env_roots_shadow_safe_evar_subst_type_params_ctx :
+  forall env Omega n R Sigma x T Sigma' R' roots type_args,
+    typed_env_roots_shadow_safe env Omega n R Sigma (EVar x)
+      T Sigma' R' roots ->
+    typed_env_roots_shadow_safe env Omega n R
+      (subst_type_params_ctx type_args Sigma) (EVar x)
+      (subst_type_params_ty type_args T)
+      (subst_type_params_ctx type_args Sigma') R' roots.
+Proof.
+  intros env Omega n R Sigma x T Sigma' R' roots type_args Htyped.
+  inversion Htyped; subst; try discriminate.
+  - eapply TERS_Var_Copy.
+    + eapply typed_place_env_structural_pvar_subst_type_params_ctx. eassumption.
+    + rewrite ty_usage_subst_type_params_ty. eassumption.
+    + eassumption.
+  - eapply TERS_Var_Move.
+    + eapply typed_place_env_structural_pvar_subst_type_params_ctx. eassumption.
+    + rewrite ty_usage_subst_type_params_ty. eassumption.
+    + rewrite sctx_consume_path_subst_type_params_ctx.
+      match goal with
+      | Hconsume : sctx_consume_path _ _ _ = infer_ok _ |- _ =>
+          rewrite Hconsume; reflexivity
+      end.
+    + eassumption.
+Qed.
+
 Scheme typed_env_roots_shadow_safe_ind' :=
   Induction for typed_env_roots_shadow_safe Sort Prop
 with typed_args_roots_shadow_safe_ind' :=

@@ -478,6 +478,23 @@ Inductive typed_place_env_structural (env : global_env) (Σ : sctx)
       place_path (PField p (field_name fdef)) = None ->
       typed_place_env_structural env Σ (PField p (field_name fdef))
         (instantiate_struct_field_ty lts args fdef).
+Lemma typed_place_env_structural_pvar_subst_type_params_ctx :
+  forall env type_args Sigma x T,
+    typed_place_env_structural env Sigma (PVar x) T ->
+    typed_place_env_structural env (subst_type_params_ctx type_args Sigma)
+      (PVar x) (subst_type_params_ty type_args T).
+Proof.
+  intros env type_args Sigma x T Hplace.
+  destruct (sctx_lookup x Sigma) as [[T0 st] |] eqn:Hlookup.
+  - inversion Hplace; subst; try congruence.
+    rewrite Hlookup in H0. inversion H0; subst.
+    eapply TPES_Var.
+    + rewrite sctx_lookup_subst_type_params_ctx_eq.
+      rewrite Hlookup. reflexivity.
+    + eassumption.
+  - inversion Hplace; subst; congruence.
+Qed.
+
 Inductive place_under_unique_ref_structural (env : global_env) (Σ : sctx)
     : place -> Prop :=
   | PUURS_Deref : forall p la T u,

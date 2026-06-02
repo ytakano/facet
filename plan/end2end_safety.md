@@ -374,7 +374,10 @@ failures; invalid tests pass.
     - T2a2d2ab done: add consumed-binding `sctx_check_ok` and mutability
       lookup helpers for type-substituted contexts; `EnvStructuralRules.v`
       target and proof-hole scan pass. Sub-agent worker implemented this slice.
-    - T2a2d2ac in progress: keep generic type arguments fully general.
+    - T2a2d2ac done: add `PVar` place and shadow-safe `EVar`
+      type-substitution transport; `EnvStructuralRules.v` and `AlphaRoots.v`
+      targets pass.
+    - T2a2d2ad in progress: keep generic type arguments fully general.
       Do not add `Forall non_function_value_ty_b type_args`; instead prove a
       substituted-body runtime package by induction on the original narrow
       summary, using returned value closure-target summaries for `let` binds.

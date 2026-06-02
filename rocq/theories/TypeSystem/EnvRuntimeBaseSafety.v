@@ -1501,6 +1501,93 @@ Proof.
 Qed.
 
 
+Lemma expr_names_subst_type_params_expr :
+  forall type_args e,
+    expr_names (subst_type_params_expr type_args e) = expr_names e.
+Proof.
+  fix IH 2. intros type_args e.
+  destruct e as
+    [| lit | x | m x T e1 e2 | m x e1 e2 | fname | fname captures
+     | p | fname args | fname type_args' args | ef args
+     | name lts type_args' fields | enum_name variant lts type_args' args
+     | discr branches | p rhs | p rhs | rk p | e | e | e1 e2 e3];
+    simpl; try reflexivity.
+  - rewrite (IH type_args e1), (IH type_args e2). reflexivity.
+  - rewrite (IH type_args e1), (IH type_args e2). reflexivity.
+  - induction args as [| arg args IHargs]; simpl; auto.
+    rewrite (IH type_args arg), IHargs. reflexivity.
+  - induction args as [| arg args IHargs]; simpl; auto.
+    rewrite (IH type_args arg), IHargs. reflexivity.
+  - assert (Hargs :
+      ((fix go (args0 : list expr) : list ident :=
+          match args0 with
+          | [] => []
+          | arg :: rest => expr_names arg ++ go rest
+          end)
+        ((fix go (es : list expr) : list expr :=
+            match es with
+            | [] => []
+            | e' :: es' => subst_type_params_expr type_args e' :: go es'
+            end) args)) =
+      ((fix go (args0 : list expr) : list ident :=
+          match args0 with
+          | [] => []
+          | arg :: rest => expr_names arg ++ go rest
+          end) args)).
+    { induction args as [| arg args IHargs]; simpl; auto.
+      rewrite (IH type_args arg), IHargs. reflexivity. }
+    rewrite (IH type_args ef), Hargs. reflexivity.
+  - induction fields as [| [field expr] fields IHfields]; simpl; auto.
+    rewrite (IH type_args expr), IHfields. reflexivity.
+  - induction args as [| arg args IHargs]; simpl; auto.
+    rewrite (IH type_args arg), IHargs. reflexivity.
+  - assert (Hbranches :
+      ((fix go (branches0 : list (string * list ident * expr)) : list ident :=
+          match branches0 with
+          | [] => []
+          | (_, _, e) :: rest => expr_names e ++ go rest
+          end)
+        ((fix go (bs : list (string * list ident * expr))
+            : list (string * list ident * expr) :=
+            match bs with
+            | [] => []
+            | (name, binders, e') :: bs' =>
+                (name, binders, subst_type_params_expr type_args e') :: go bs'
+            end) branches)) =
+      ((fix go (branches0 : list (string * list ident * expr)) : list ident :=
+          match branches0 with
+          | [] => []
+          | (_, _, e) :: rest => expr_names e ++ go rest
+          end) branches)).
+    { induction branches as [| [[branch_name binders] branch] branches IHbranches];
+        simpl; auto.
+      rewrite (IH type_args branch), IHbranches. reflexivity. }
+    rewrite (IH type_args discr), Hbranches. reflexivity.
+  - rewrite (IH type_args rhs). reflexivity.
+  - rewrite (IH type_args rhs). reflexivity.
+  - rewrite (IH type_args e). reflexivity.
+  - rewrite (IH type_args e). reflexivity.
+  - rewrite (IH type_args e1), (IH type_args e2), (IH type_args e3).
+    reflexivity.
+Qed.
+
+Lemma ctx_alpha_subst_type_params_ctx :
+  forall type_args rho Gamma Gammar,
+    ctx_alpha rho Gamma Gammar ->
+    ctx_alpha rho
+      (subst_type_params_ctx type_args Gamma)
+      (subst_type_params_ctx type_args Gammar).
+Proof.
+  intros type_args rho Gamma Gammar Halpha.
+  induction Halpha.
+  - simpl. constructor.
+  - simpl. constructor.
+    + exact IHHalpha.
+    + rewrite ctx_names_subst_type_params_ctx. exact H.
+    + exact H0.
+Qed.
+
+
 Lemma root_env_tail_fresh_names_subst_type_params_expr :
   forall type_args R_tail e,
     root_env_tail_fresh_names R_tail (expr_local_store_names e) ->

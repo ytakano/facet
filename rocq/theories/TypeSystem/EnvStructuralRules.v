@@ -106,6 +106,23 @@ Proof.
   apply subst_type_params_ctx_ctx_add_params.
 Qed.
 
+Lemma apply_lt_ctx_ctx_add_params : forall σ ps Γ,
+  apply_lt_ctx σ (ctx_add_params ps Γ) =
+  ctx_add_params (apply_lt_params σ ps) (apply_lt_ctx σ Γ).
+Proof.
+  intros σ ps Γ. unfold ctx_add_params.
+  rewrite params_ctx_apply_lt_params. unfold apply_lt_ctx.
+  rewrite map_app. reflexivity.
+Qed.
+
+Lemma apply_lt_ctx_sctx_add_params : forall σ ps Σ,
+  apply_lt_ctx σ (sctx_add_params ps Σ) =
+  sctx_add_params (apply_lt_params σ ps) (apply_lt_ctx σ Σ).
+Proof.
+  intros σ ps Σ. unfold sctx_add_params.
+  apply apply_lt_ctx_ctx_add_params.
+Qed.
+
 Lemma subst_type_params_ctx_ctx_remove_params : forall type_args ps Γ,
   subst_type_params_ctx type_args (ctx_remove_params ps Γ) =
   ctx_remove_params ps (subst_type_params_ctx type_args Γ).

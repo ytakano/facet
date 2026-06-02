@@ -264,6 +264,10 @@ failures; invalid tests pass.
       parameter-to-context conversion; `TypingRules.v` make target and
       proof-hole scan pass. Sub-agent spawn remains unavailable due thread
       limit.
+    - T2a2d1aj done: prove `apply_lt_ctx` transport for
+      `ctx_add_params`/`sctx_add_params`; `EnvStructuralRules.v` make target
+      and proof-hole scan pass. Sub-agent spawn remains unavailable due
+      thread limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

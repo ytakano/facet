@@ -440,6 +440,9 @@ failures; invalid tests pass.
       - T2a2d2as2 done: bridged instantiated generic callee summaries
         through the type-substituted direct-call summary path;
         `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
+      - T2a2d2z done: proved generic direct-call runtime value
+        theorem for instantiated bodies and apply-type-param bind/remove;
+        `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

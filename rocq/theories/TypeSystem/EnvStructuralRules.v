@@ -633,6 +633,73 @@ Proof.
     + exact H3.
 Qed.
 
+Lemma typed_place_type_env_structural_subst_type_params_ctx :
+  forall env sigma Sigma p T,
+    typed_place_type_env_structural env Sigma p T ->
+    typed_place_type_env_structural env (subst_type_params_ctx sigma Sigma)
+      p (subst_type_params_ty sigma T).
+Proof.
+  intros env sigma Sigma p T Hplace.
+  induction Hplace.
+  - simpl. eapply TPTES_Var.
+    rewrite sctx_lookup_subst_type_params_ctx_eq.
+    rewrite H. reflexivity.
+  - simpl. eapply TPTES_Deref. exact IHHplace.
+  - rewrite (instantiate_struct_field_ty_type_subst_compose sigma lts args fdef).
+    eapply TPTES_Field with
+      (T_parent := subst_type_params_ty sigma T_parent)
+      (sdef := sdef).
+    + exact IHHplace.
+    + destruct T_parent as [u core]; simpl in *; subst core;
+      unfold compose_type_params; rewrite subst_type_params_ty_args_compose_go;
+      reflexivity.
+    + exact H0.
+    + exact H1.
+Qed.
+
+Lemma typed_place_env_structural_subst_type_params_ctx :
+  forall env sigma Sigma p T,
+    typed_place_env_structural env Sigma p T ->
+    typed_place_env_structural env (subst_type_params_ctx sigma Sigma)
+      p (subst_type_params_ty sigma T).
+Proof.
+  intros env sigma Sigma p T Hplace.
+  induction Hplace.
+  - simpl. eapply TPES_Var.
+    + rewrite sctx_lookup_subst_type_params_ctx_eq.
+      rewrite H. reflexivity.
+    + exact H0.
+  - simpl. eapply TPES_Deref. exact IHHplace.
+  - rewrite (instantiate_struct_field_ty_type_subst_compose sigma lts args fdef).
+    eapply TPES_Field with
+      (T_parent := subst_type_params_ty sigma T_parent)
+      (sdef := sdef) (T_root := subst_type_params_ty sigma T_root)
+      (st := st).
+    + eapply typed_place_type_env_structural_subst_type_params_ctx;
+        eassumption.
+    + destruct T_parent as [u core]; simpl in *; subst core;
+      unfold compose_type_params; rewrite subst_type_params_ty_args_compose_go;
+      reflexivity.
+    + exact H1.
+    + exact H2.
+    + exact H3.
+    + rewrite sctx_lookup_subst_type_params_ctx_eq.
+      rewrite H4. reflexivity.
+    + exact H5.
+  - rewrite (instantiate_struct_field_ty_type_subst_compose sigma lts args fdef).
+    eapply TPES_Field_Indirect with
+      (T_parent := subst_type_params_ty sigma T_parent)
+      (sdef := sdef).
+    + eapply typed_place_type_env_structural_subst_type_params_ctx;
+        eassumption.
+    + destruct T_parent as [u core]; simpl in *; subst core;
+      unfold compose_type_params; rewrite subst_type_params_ty_args_compose_go;
+      reflexivity.
+    + exact H1.
+    + exact H2.
+    + exact H3.
+Qed.
+
 Inductive place_under_unique_ref_structural (env : global_env) (Σ : sctx)
     : place -> Prop :=
   | PUURS_Deref : forall p la T u,
@@ -670,6 +737,70 @@ Inductive place_resolved_write_writable_chain
       place_resolved_write_target R p = Some x ->
       sctx_lookup_mut x Σ = Some MMutable ->
       place_resolved_write_writable_chain env R Σ (PDeref p).
+
+Lemma place_under_unique_ref_structural_subst_type_params_ctx :
+  forall env sigma Sigma p,
+    place_under_unique_ref_structural env Sigma p ->
+    place_under_unique_ref_structural env (subst_type_params_ctx sigma Sigma) p.
+Proof.
+  intros env sigma Sigma p Hplace.
+  induction Hplace.
+  - eapply (PUURS_Deref env (subst_type_params_ctx sigma Sigma) p la
+      (subst_type_params_ty sigma T) u).
+    change (MkTy u (TRef la RUnique (subst_type_params_ty sigma T))) with
+      (subst_type_params_ty sigma (MkTy u (TRef la RUnique T))).
+    eapply typed_place_env_structural_subst_type_params_ctx.
+    exact H.
+  - eapply PUURS_Field. exact IHHplace.
+Qed.
+
+Lemma writable_place_env_structural_subst_type_params_ctx :
+  forall env sigma Sigma p,
+    writable_place_env_structural env Sigma p ->
+    writable_place_env_structural env (subst_type_params_ctx sigma Sigma) p.
+Proof.
+  intros env sigma Sigma p Hplace.
+  induction Hplace.
+  - eapply WPES_Var.
+    rewrite sctx_lookup_mut_subst_type_params_ctx.
+    exact H.
+  - eapply (WPES_Deref env (subst_type_params_ctx sigma Sigma) p la
+      (subst_type_params_ty sigma T) u).
+    change (MkTy u (TRef la RUnique (subst_type_params_ty sigma T))) with
+      (subst_type_params_ty sigma (MkTy u (TRef la RUnique T))).
+    eapply typed_place_env_structural_subst_type_params_ctx.
+    exact H.
+  - eapply (WPES_Field env (subst_type_params_ctx sigma Sigma) p sname lts
+      (compose_type_params sigma args) sdef fdef
+      (subst_type_params_ty sigma T_parent)).
+    + exact IHHplace.
+    + eapply typed_place_type_env_structural_subst_type_params_ctx.
+      exact H.
+    + destruct T_parent as [u core]; simpl in *; inversion H0; subst;
+      unfold compose_type_params; rewrite subst_type_params_ty_args_compose_go;
+      reflexivity.
+    + exact H1.
+    + exact H2.
+    + exact H3.
+Qed.
+
+Lemma place_resolved_write_writable_chain_subst_type_params_ctx :
+  forall env sigma R Sigma p,
+    place_resolved_write_writable_chain env R Sigma p ->
+    place_resolved_write_writable_chain env R
+      (subst_type_params_ctx sigma Sigma) p.
+Proof.
+  intros env sigma R Sigma p Hchain.
+  induction Hchain.
+  - apply PRWWC_Direct. exact H.
+  - eapply PRWWC_Deref.
+    + exact IHHchain.
+    + eapply writable_place_env_structural_subst_type_params_ctx.
+      exact H.
+    + exact H0.
+    + rewrite sctx_lookup_mut_subst_type_params_ctx.
+      exact H1.
+Qed.
 
 Lemma place_resolved_write_writable_chain_instantiate :
   forall env rho R Σ p,

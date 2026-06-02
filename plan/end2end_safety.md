@@ -410,6 +410,9 @@ failures; invalid tests pass.
         and proof-hole scan pass.
       - T2a2d2aj4 done: verify fallback-semantics fallout through
         `EnvRuntimeBaseSafety.v`; target and proof-hole scan pass.
+      - T2a2d2ak done: add safe place/borrow/drop/typed-args
+        type-substitution transports without generic compatibility widening;
+        `AlphaRoots.v` target and proof-hole scan pass.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

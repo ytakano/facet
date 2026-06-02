@@ -728,6 +728,120 @@ Proof.
     + exact H6.
 Qed.
 
+Lemma typed_env_roots_shadow_safe_eplace_subst_type_params_ctx :
+  forall env Omega n R Sigma p T Sigma' R' roots type_args,
+    typed_env_roots_shadow_safe env Omega n R Sigma (EPlace p)
+      T Sigma' R' roots ->
+    typed_env_roots_shadow_safe env Omega n R
+      (subst_type_params_ctx type_args Sigma) (EPlace p)
+      (subst_type_params_ty type_args T)
+      (subst_type_params_ctx type_args Sigma') R' roots.
+Proof.
+  intros env Omega n R Sigma p T Sigma' R' roots type_args Htyped.
+  inversion Htyped; subst; try discriminate.
+  - eapply TERS_Place_Copy.
+    + eapply typed_place_env_structural_subst_type_params_ctx. exact H0.
+    + rewrite ty_usage_subst_type_params_ty. exact H1.
+    + exact H2.
+    + exact H5.
+  - eapply TERS_Place_Move.
+    + eapply typed_place_env_structural_subst_type_params_ctx. exact H0.
+    + rewrite ty_usage_subst_type_params_ty. exact H1.
+    + exact H2.
+    + rewrite sctx_consume_path_subst_type_params_ctx.
+      rewrite H3. reflexivity.
+    + exact H6.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_eborrow_subst_type_params_ctx :
+  forall env Omega n R Sigma rk p T Sigma' R' roots type_args,
+    typed_env_roots_shadow_safe env Omega n R Sigma (EBorrow rk p)
+      T Sigma' R' roots ->
+    typed_env_roots_shadow_safe env Omega n R
+      (subst_type_params_ctx type_args Sigma) (EBorrow rk p)
+      (subst_type_params_ty type_args T)
+      (subst_type_params_ctx type_args Sigma') R' roots.
+Proof.
+  intros env Omega n R Sigma rk p T Sigma' R' roots type_args Htyped.
+  inversion Htyped; subst; try discriminate; simpl;
+    try solve
+      [ econstructor;
+        eauto using typed_place_env_structural_subst_type_params_ctx,
+          place_under_unique_ref_structural_subst_type_params_ctx,
+          place_resolved_write_writable_chain_subst_type_params_ctx;
+        match goal with
+        | Hmut : sctx_lookup_mut _ _ = Some MMutable
+          |- sctx_lookup_mut _ (subst_type_params_ctx _ _) = Some MMutable =>
+            rewrite sctx_lookup_mut_subst_type_params_ctx; exact Hmut
+        | _ => idtac
+        end ].
+Qed.
+
+
+Lemma typed_env_roots_shadow_safe_edrop_eplace_subst_type_params_ctx :
+  forall env Omega n R Sigma p T Sigma' R' roots type_args,
+    typed_env_roots_shadow_safe env Omega n R Sigma (EDrop (EPlace p))
+      T Sigma' R' roots ->
+    typed_env_roots_shadow_safe env Omega n R
+      (subst_type_params_ctx type_args Sigma) (EDrop (EPlace p))
+      (subst_type_params_ty type_args T)
+      (subst_type_params_ctx type_args Sigma') R' roots.
+Proof.
+  intros env Omega n R Sigma p T Sigma' R' roots type_args Htyped.
+  inversion Htyped; subst; try discriminate; simpl.
+  eapply TERS_Drop.
+  eapply typed_env_roots_shadow_safe_eplace_subst_type_params_ctx.
+  match goal with
+  | Hinner : typed_env_roots_shadow_safe _ _ _ _ _ (EPlace p) _ _ _ _ |- _ =>
+      exact Hinner
+  end.
+Qed.
+
+Lemma typed_args_roots_shadow_safe_subst_type_params_expr_params_of_tys :
+  forall env Omega n R Sigma args param_tys Sigma' R' roots type_args,
+    typed_args_roots_shadow_safe env Omega n R Sigma args
+      (params_of_tys param_tys) Sigma' R' roots ->
+    (forall R0 Sigma0 e T0 Sigma0' R0' roots0,
+        In e args ->
+        typed_env_roots_shadow_safe env Omega n R0 Sigma0 e
+          T0 Sigma0' R0' roots0 ->
+        typed_env_roots_shadow_safe env Omega n R0
+          (subst_type_params_ctx type_args Sigma0)
+          (subst_type_params_expr type_args e)
+          (subst_type_params_ty type_args T0)
+          (subst_type_params_ctx type_args Sigma0') R0' roots0) ->
+    (forall T_actual T_expected,
+        ty_compatible_b Omega T_actual T_expected = true ->
+        ty_compatible_b Omega (subst_type_params_ty type_args T_actual)
+          (subst_type_params_ty type_args T_expected) = true) ->
+    typed_args_roots_shadow_safe env Omega n R
+      (subst_type_params_ctx type_args Sigma)
+      (map (subst_type_params_expr type_args) args)
+      (params_of_tys (map (subst_type_params_ty type_args) param_tys))
+      (subst_type_params_ctx type_args Sigma') R' roots.
+Proof.
+  intros env Omega n R Sigma args param_tys Sigma' R' roots type_args
+    Hargs Hexpr_subst Hcompat_subst.
+  remember (params_of_tys param_tys) as ps eqn:Hps.
+  revert param_tys Hps Hexpr_subst.
+  induction Hargs; intros param_tys Hps Hexpr_subst;
+    destruct param_tys as [| param_ty_hd param_tys_tl]; simpl in Hps;
+    inversion Hps; subst; simpl.
+  - constructor.
+  - eapply TERSArgs_Cons.
+    + eapply Hexpr_subst.
+      * simpl. left. reflexivity.
+      * exact H.
+    + simpl. apply Hcompat_subst. exact H0.
+    + eapply IHHargs.
+      * reflexivity.
+      * intros R0 Sigma0 e0 T0 Sigma0' R0' roots0 Hin Htyped.
+        eapply Hexpr_subst.
+        -- simpl. right. exact Hin.
+        -- exact Htyped.
+Qed.
+
+
 Scheme typed_env_roots_shadow_safe_ind' :=
   Induction for typed_env_roots_shadow_safe Sort Prop
 with typed_args_roots_shadow_safe_ind' :=

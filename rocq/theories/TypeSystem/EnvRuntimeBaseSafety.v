@@ -9452,6 +9452,32 @@ Definition callee_body_root_shadow_captured_call_direct_narrow_store_safe_summar
     roots_exclude_params (fn_params fdef) roots_body /\
     root_env_excludes_params (fn_params fdef) R_body.
 
+Definition callee_body_root_shadow_captured_call_generic_direct_narrow_store_safe_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  exists fname type_args args raw_body synthetic_body fcallee T_body Gamma_out
+      R_body roots_body,
+    fn_body fdef = raw_body /\
+    generic_direct_call_target_expr raw_body =
+      Some (fname, type_args, args, synthetic_body) /\
+    synthetic_body = ECallGeneric fname type_args args /\
+    store_safe_function_value_call_args env args /\
+    In fcallee (env_fns env) /\
+    fn_name fcallee = fname /\
+    Datatypes.length type_args = fn_type_params fcallee /\
+    check_struct_bounds env (fn_bounds fcallee) type_args = None /\
+    callee_body_root_shadow_store_safe_narrow_summary env fcallee /\
+    NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef)
+      (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      synthetic_body T_body (sctx_of_ctx Gamma_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
+    roots_exclude_params (fn_params fdef) roots_body /\
+    root_env_excludes_params (fn_params fdef) R_body.
+
 Definition callee_body_root_shadow_captured_call_store_safe_summary
     (env : global_env) (fdef : fn_def) : Prop :=
   callee_body_root_shadow_captured_call_provenance_summary env fdef \/

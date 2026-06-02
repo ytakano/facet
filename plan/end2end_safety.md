@@ -306,6 +306,10 @@ failures; invalid tests pass.
     - T2a2d2i done: package generic direct-call argument bind readiness;
       `TypeSafetyDirectCallWrappers.v` make target and proof-hole scan pass.
       Sub-agent spawn remains unavailable due thread limit.
+    - T2a2d2j done: prove type-parameter substitution leaves initial
+      parameter root environments unchanged; `RootProvenance.v` make target
+      and proof-hole scan pass. Sub-agent spawn remains unavailable due
+      thread limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

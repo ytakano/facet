@@ -28,6 +28,29 @@ Definition initial_root_env_for_params (ps : list param) : root_env :=
 Definition initial_root_env_for_fn (f : fn_def) : root_env :=
   initial_root_env_for_params (fn_params f).
 
+Lemma initial_root_env_for_params_origin_apply_type_params :
+  forall type_args ps_orig ps_current,
+    initial_root_env_for_params_origin
+      (apply_type_params type_args ps_orig)
+      (apply_type_params type_args ps_current) =
+    initial_root_env_for_params_origin ps_orig ps_current.
+Proof.
+  intros type_args ps_orig.
+  induction ps_orig as [| p_orig ps_orig IH]; intros ps_current;
+    destruct ps_current as [| p_current ps_current]; simpl; auto.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma initial_root_env_for_params_apply_type_params :
+  forall type_args ps,
+    initial_root_env_for_params (apply_type_params type_args ps) =
+    initial_root_env_for_params ps.
+Proof.
+  intros type_args ps.
+  unfold initial_root_env_for_params.
+  apply initial_root_env_for_params_origin_apply_type_params.
+Qed.
+
 Definition root_atom_rename (rho : rename_env) (atom : root_atom)
     : root_atom :=
   match atom with

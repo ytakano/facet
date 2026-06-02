@@ -10970,6 +10970,71 @@ Proof.
   exact Hcheck.
 Qed.
 
+Lemma callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel_global_env_with_local_bounds :
+  forall env bounds fuel fdef type_args,
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env fuel fdef type_args ->
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      (global_env_with_local_bounds env bounds) fuel fdef type_args.
+Proof.
+  intros env bounds fuel fdef type_args Hsummary.
+  revert bounds.
+  induction Hsummary; intros bounds.
+  - eapply CBRSSNI_Expr.
+    + exact H.
+    + eapply expr_root_shadow_store_safe_narrow_summary_global_env_with_local_bounds.
+      exact H0.
+    + exact H1.
+    + exact H2.
+    + exact H3.
+  - eapply CBRSSNI_GenericDirect with
+      (raw_body := raw_body) (synthetic_body := synthetic_body)
+      (fcallee := fcallee) (T_body := T_body)
+      (Gamma_out := Gamma_out) (R_body := R_body)
+      (roots_body := roots_body).
+    + exact H.
+    + exact H0.
+    + exact H1.
+    + apply store_safe_function_value_call_args_global_env_with_local_bounds.
+      exact H2.
+    + change (env_fns (global_env_with_local_bounds env bounds))
+        with (env_fns env).
+      exact H3.
+    + exact H4.
+    + exact H5.
+    + change (check_struct_bounds
+        (global_env_with_local_bounds
+          (global_env_with_local_bounds env bounds)
+          (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+        (fn_bounds fcallee) nested_type_args)
+        with (check_struct_bounds
+          (global_env_with_local_bounds env
+            (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+          (fn_bounds fcallee) nested_type_args).
+      exact H6.
+    + apply IHHsummary.
+    + exact H7.
+    + change (typed_env_roots_shadow_safe
+        (global_env_with_local_bounds
+          (global_env_with_local_bounds env bounds)
+          (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+        (fn_outlives fdef) (fn_lifetimes fdef)
+        (initial_root_env_for_fn fdef)
+        (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fdef)))
+        synthetic_body T_body (sctx_of_ctx Gamma_out) R_body roots_body)
+        with (typed_env_roots_shadow_safe
+          (global_env_with_local_bounds env
+            (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+          (fn_outlives fdef) (fn_lifetimes fdef)
+          (initial_root_env_for_fn fdef)
+          (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fdef)))
+          synthetic_body T_body (sctx_of_ctx Gamma_out) R_body roots_body).
+      exact H8.
+    + exact H9.
+    + exact H10.
+    + exact H11.
+Qed.
+
 Lemma generic_direct_call_callee_body_root_shadow_store_safe_narrow_summary_bridge_of_summary_tfn_with_result_subset_prefix_named :
   forall env (Omega : outlives_ctx) (n : nat) R Sigma Sigma_args R_args
       arg_roots args type_args fdef fcall param_tys ret_ty s s_args vs used',

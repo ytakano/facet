@@ -9931,6 +9931,24 @@ Definition callee_body_root_shadow_captured_call_direct_narrow_store_safe_summar
     roots_exclude_params (fn_params fdef) roots_body /\
     root_env_excludes_params (fn_params fdef) R_body.
 
+Definition callee_body_root_shadow_store_safe_narrow_summary_instantiated
+    (env : global_env) (fdef : fn_def) (type_args : list Ty) : Prop :=
+  exists T_body Gamma_out R_body roots_body ret_roots,
+    NoDup (ctx_names (params_ctx
+      (apply_type_params type_args (fn_params fdef)))) /\
+    expr_root_shadow_store_safe_narrow_summary env
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fdef)))
+      (subst_type_params_expr type_args (fn_body fdef))
+      T_body (sctx_of_ctx Gamma_out) R_body roots_body ret_roots /\
+    ty_compatible_b (fn_outlives fdef) T_body
+      (subst_type_params_ty type_args (fn_ret fdef)) = true /\
+    roots_exclude_params (apply_type_params type_args (fn_params fdef))
+      roots_body /\
+    root_env_excludes_params (apply_type_params type_args (fn_params fdef))
+      R_body.
+
 Definition callee_body_root_shadow_captured_call_generic_direct_narrow_store_safe_summary
     (env : global_env) (fdef : fn_def) : Prop :=
   exists fname type_args args raw_body synthetic_body fcallee T_body Gamma_out
@@ -9944,7 +9962,8 @@ Definition callee_body_root_shadow_captured_call_generic_direct_narrow_store_saf
     fn_name fcallee = fname /\
     Datatypes.length type_args = fn_type_params fcallee /\
     check_struct_bounds env (fn_bounds fcallee) type_args = None /\
-    callee_body_root_shadow_store_safe_narrow_summary env fcallee /\
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated
+      env fcallee type_args /\
     NoDup (ctx_names (params_ctx (fn_params fdef))) /\
     typed_env_roots_shadow_safe
       (global_env_with_local_bounds env (fn_bounds fdef))
@@ -10071,8 +10090,9 @@ Proof.
         as [bounds_err |] eqn:Hbounds; try discriminate.
       destruct (infer_core_env_roots_shadow_safe env
         (fn_outlives fcallee) (fn_lifetimes fcallee)
-        (initial_root_env_for_fn fcallee) (fn_body_ctx fcallee)
-        (fn_body fcallee))
+        (initial_root_env_for_fn fcallee)
+        (subst_type_params_ctx type_args (fn_body_ctx fcallee))
+        (subst_type_params_expr type_args (fn_body fcallee)))
         as [[[[T_callee Gamma_callee] R_callee] roots_callee] | err]
         eqn:Hcallee_core; try discriminate.
       destruct (infer_env_roots_shadow_safe env fcallee
@@ -10092,8 +10112,10 @@ Proof.
       destruct Hlookup_b as [Hin_callee Hname_callee].
       destruct (check_expr_root_shadow_store_safe_narrow_summary_sound
         env (fn_outlives fcallee) (fn_lifetimes fcallee)
-        (initial_root_env_for_fn fcallee) (fn_body_ctx fcallee)
-        (fn_body fcallee) T_callee Gamma_callee R_callee roots_callee
+        (initial_root_env_for_fn fcallee)
+        (subst_type_params_ctx type_args (fn_body_ctx fcallee))
+        (subst_type_params_expr type_args (fn_body fcallee))
+        T_callee Gamma_callee R_callee roots_callee
         Hcallee_core Hcallee_expr) as [ret_roots_callee Hcallee_summary].
       pose proof (infer_env_roots_shadow_safe_sound env
         (fn_with_body fdef synthetic_body) (initial_root_env_for_fn fdef)
@@ -10118,7 +10140,9 @@ Proof.
       { exists T_callee, Gamma_callee, R_callee, roots_callee,
           ret_roots_callee.
         repeat split.
-        - eapply infer_env_roots_shadow_safe_params_nodup.
+        - rewrite params_ctx_apply_type_params.
+          rewrite ctx_names_subst_type_params_ctx.
+          eapply infer_env_roots_shadow_safe_params_nodup.
           exact Hcallee_env.
         - exact Hcallee_summary.
         - exact Hcallee_compat.

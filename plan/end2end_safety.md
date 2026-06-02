@@ -425,6 +425,9 @@ failures; invalid tests pass.
       - T2a2d2ao done: generic direct-call gate checks the runtime-instantiated
         callee body/context/return; `TypeChecker.v` target and proof-hole
         scan pass, extraction fixtures updated.
+      - T2a2d2ap done: generic direct-call summary/soundness carries the
+        instantiated callee body/context/return; `EnvRuntimeBaseSafety.v`
+        target and proof-hole scan pass; sub-agent spawn unavailable.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

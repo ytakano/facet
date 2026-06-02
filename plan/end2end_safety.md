@@ -368,6 +368,9 @@ failures; invalid tests pass.
     - T2a2d2z done: prove narrow-summary return values carry
       closure-target summaries without restricting generic type arguments;
       `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
+    - T2a2d2aa done: add type-substitution lookup helpers for state
+      contexts and parameter freshness checks; `EnvStructuralRules.v` target
+      and proof-hole scan pass.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

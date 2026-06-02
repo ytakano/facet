@@ -158,6 +158,18 @@ Proof.
   destruct (ident_eqb x y); auto.
 Qed.
 
+Lemma ctx_lookup_state_subst_type_params_ctx_eq : forall type_args x Γ,
+  ctx_lookup_state x (subst_type_params_ctx type_args Γ) =
+  match ctx_lookup_state x Γ with
+  | Some (T, st) => Some (subst_type_params_ty type_args T, st)
+  | None => None
+  end.
+Proof.
+  intros type_args x Γ.
+  induction Γ as [| [[[y T] st] m] Γ IH]; simpl; auto.
+  destruct (ident_eqb x y); auto.
+Qed.
+
 Lemma sctx_path_available_subst_type_params_ctx : forall type_args Σ x path,
   sctx_path_available (subst_type_params_ctx type_args Σ) x path =
   sctx_path_available Σ x path.
@@ -204,6 +216,18 @@ Proof.
   intros type_args Σ x path. unfold sctx_restore_path, sctx_update_state.
   rewrite ctx_update_state_subst_type_params_ctx.
   destruct (ctx_update_state x (state_restore_path path) Σ); reflexivity.
+Qed.
+
+Lemma ctx_lookup_params_none_b_subst_type_params_ctx :
+  forall type_args ps Σ,
+    ctx_lookup_params_none_b (apply_type_params type_args ps)
+      (subst_type_params_ctx type_args Σ) =
+    ctx_lookup_params_none_b ps Σ.
+Proof.
+  intros type_args ps Σ.
+  induction ps as [| p ps IH]; simpl; auto.
+  rewrite ctx_lookup_state_subst_type_params_ctx_eq.
+  destruct (ctx_lookup_state (param_name p) Σ) as [[T st] |]; simpl; auto.
 Qed.
 
 Lemma roots_exclude_params_equiv_local :

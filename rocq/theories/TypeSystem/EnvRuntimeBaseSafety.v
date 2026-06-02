@@ -11436,6 +11436,51 @@ Proof.
 Qed.
 
 
+
+Lemma generic_direct_call_target_alpha_rename_subst_type_params_runtime :
+  forall env type_args used fdef fcall used' fname nested_type_args args
+      raw_body synthetic_body,
+    raw_body = subst_type_params_expr type_args (fn_body fdef) ->
+    generic_direct_call_target_expr raw_body =
+      Some (fname, nested_type_args, args, synthetic_body) ->
+    synthetic_body = ECallGeneric fname nested_type_args args ->
+    store_safe_function_value_call_args env args ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    exists argsr,
+      subst_type_params_expr type_args (fn_body fcall) =
+        ECallGeneric fname nested_type_args argsr /\
+      store_safe_function_value_call_args env argsr.
+Proof.
+  intros env type_args used fdef fcall used' fname nested_type_args args
+    raw_body synthetic_body Hbody Htarget Hsynthetic Hsafe Hrename.
+  subst raw_body synthetic_body.
+  unfold generic_direct_call_target_expr in Htarget.
+  destruct (subst_type_params_expr type_args (fn_body fdef)) eqn:Hsubst;
+    try discriminate.
+  inversion Htarget; subst i l l0; clear Htarget.
+  destruct (alpha_rename_fn_def_params_body used fdef fcall used' Hrename)
+    as (rho & used_params & Hparams & Hbody_rename).
+  pose proof (alpha_rename_expr_subst_type_params_expr type_args rho
+    used_params (fn_body fdef) (fn_body fcall) used' Hbody_rename)
+    as Hbody_subst_rename.
+  rewrite Hsubst in Hbody_subst_rename.
+  simpl in Hbody_subst_rename.
+  destruct ((fix go (used0 : list ident) (args0 : list expr)
+      : list expr * list ident :=
+      match args0 with
+      | [] => ([], used0)
+      | arg :: rest =>
+          let (arg', used1) := alpha_rename_expr rho used0 arg in
+          let (rest', used2) := go used1 rest in
+          (arg' :: rest', used2)
+      end) used_params args) as [argsr used_args] eqn:Hargsr.
+  inversion Hbody_subst_rename; subst.
+  exists argsr.
+  split; [reflexivity |].
+  eapply store_safe_function_value_call_args_alpha_rename_call_go;
+    eassumption.
+Qed.
+
 Lemma eval_generic_direct_call_store_safe_narrow_summary_exact_package_prefix_named_expr :
   forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args
       arg_roots s s' ret fdef,

@@ -6,7 +6,8 @@ From Facet.TypeSystem Require Export TypeSafetyRootFacts TypeSafetyReadiness
   TypeSafetyCapturedCall TypeSafetyDirectPlace
   TypeSafetyLocalFacts TypeSafetyRootNamed TypeSafetyBasePreservation
   TypeSafetyPrefixPreservation TypeSafetyRootPreservation
-  TypeSafetyPreservationWrappers TypeSafetyClosureWrappers.
+  TypeSafetyPreservationWrappers TypeSafetyClosureWrappers
+  TypeSafetyCallFrameParams TypeSafetyClosureRuntimeArgsFacts.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
@@ -1393,6 +1394,68 @@ Proof.
   - exact Hbounds.
   - rewrite apply_lt_params_apply_type_params. exact Htyped_args.
   - exact Houtlives.
+Qed.
+
+Lemma generic_direct_call_args_bind_params_ready :
+  forall env Ω n R Σ args type_args sigma fdef fcall used'
+      s s_args vs Σ_args R_args arg_roots,
+    eval_args env s args s_args vs ->
+    preservation_ready_args args ->
+    typed_args_roots env Ω n R Σ args
+      (apply_lt_params sigma (apply_type_params type_args (fn_params fdef)))
+      Σ_args R_args arg_roots ->
+    store_typed_prefix env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    store_roots_within
+      (call_param_root_env
+        (apply_lt_params sigma
+          (apply_type_params type_args (fn_params fcall)))
+        arg_roots R_args)
+      (bind_params
+        (apply_lt_params sigma
+          (apply_type_params type_args (fn_params fcall)))
+        vs s_args) /\
+    store_no_shadow
+      (bind_params
+        (apply_lt_params sigma
+          (apply_type_params type_args (fn_params fcall)))
+        vs s_args) /\
+    root_env_no_shadow
+      (call_param_root_env
+        (apply_lt_params sigma
+          (apply_type_params type_args (fn_params fcall)))
+        arg_roots R_args) /\
+    root_env_covers_params
+      (apply_lt_params sigma
+        (apply_type_params type_args (fn_params fcall)))
+      (call_param_root_env
+        (apply_lt_params sigma
+          (apply_type_params type_args (fn_params fcall)))
+        arg_roots R_args).
+Proof.
+  intros env Ω n R Σ args type_args sigma fdef fcall used' s s_args
+    vs Σ_args R_args arg_roots Heval_args Hready_args Htyped_args
+    Hstore Hroots Hshadow Hrn Hrename.
+  pose proof (preservation_ready_args_implies_provenance_ready_closure
+                args Hready_args) as Hprov_args.
+  destruct (proj1 (proj2 eval_preserves_typing_roots_ready_prefix_mutual)
+              env s args s_args vs Heval_args Ω n R Σ
+              (apply_lt_params sigma
+                (apply_type_params type_args (fn_params fdef)))
+              Σ_args R_args arg_roots Hprov_args Hstore Hroots Hshadow Hrn
+              Htyped_args)
+    as [_ [Hargs_values_fdef [_ [_ [_ [_ _]]]]]].
+  pose proof (alpha_rename_fn_def_shape (store_names s_args)
+                fdef fcall used' Hrename) as Hshape.
+  destruct (alpha_rename_fn_def_generic_call_bind_params_premises
+              env Ω s_args vs sigma type_args fdef fcall used'
+              Hargs_values_fdef Hshape Hrename)
+    as [Hnodup [Hfresh Hargs_values_fcall]].
+  eapply eval_args_bind_params_call_param_root_env_ready;
+    eassumption.
 Qed.
 
 Lemma direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_tfn_with_result_subset :

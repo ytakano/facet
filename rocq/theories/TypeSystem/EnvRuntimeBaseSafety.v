@@ -11436,7 +11436,7 @@ Proof.
 Qed.
 
 
-Lemma eval_generic_direct_call_store_safe_narrow_summary_package_prefix_named_expr :
+Lemma eval_generic_direct_call_store_safe_narrow_summary_exact_package_prefix_named_expr :
   forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args
       arg_roots s s' ret fdef,
     store_safe_function_value_call_args env args ->
@@ -11462,7 +11462,9 @@ Lemma eval_generic_direct_call_store_safe_narrow_summary_package_prefix_named_ex
       (apply_lt_outlives sigma (fn_outlives fdef)) ->
     generic_direct_call_runtime_package env s s' ret Sigma_args R_args
       arg_roots
-      (apply_lt_ty sigma (subst_type_params_ty type_args (fn_ret fdef))).
+      (apply_lt_ty sigma (subst_type_params_ty type_args (fn_ret fdef))) /\
+    exists s_args vs,
+      eval_args env s args s_args vs /\ s' = s_args.
 Proof.
   intros env Omega n R Sigma fname type_args args sigma Sigma_args R_args
     arg_roots s s' ret fdef Hsafe_args Hsummary Hstore Hroots Hshadow Hrn
@@ -11689,17 +11691,54 @@ Proof.
     - exact Hframe_scope_body. }
   fold ps_runtime.
   rewrite Hremoved_exact.
-  constructor.
-  - exact Hstore_args.
-  - rewrite <- Hremoved_exact. exact Hv_final.
-  - exact Hpres_args.
-  - exact Hroots_args.
-  - eapply direct_call_value_roots_within_store_subset; eassumption.
-  - exact Hshadow_args.
-  - exact Hrn_args.
-  - exact Hnamed_args.
-  - exact Hkeys_args.
-  - exact Hsummary_args.
+  split.
+  - constructor.
+    + exact Hstore_args.
+    + rewrite <- Hremoved_exact. exact Hv_final.
+    + exact Hpres_args.
+    + exact Hroots_args.
+    + eapply direct_call_value_roots_within_store_subset; eassumption.
+    + exact Hshadow_args.
+    + exact Hrn_args.
+    + exact Hnamed_args.
+    + exact Hkeys_args.
+    + exact Hsummary_args.
+  - exists s_args, vs.
+    split; [exact Heval_args | reflexivity].
+Qed.
+
+Lemma eval_generic_direct_call_store_safe_narrow_summary_package_prefix_named_expr :
+  forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args
+      arg_roots s s' ret fdef,
+    store_safe_function_value_call_args env args ->
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated
+      env fdef type_args ->
+    store_typed_prefix env s Sigma ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_function_closure_targets_summary env s ->
+    eval env s (ECallGeneric fname type_args args) s' ret ->
+    fn_env_unique_by_name env ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    typed_args_roots env Omega n R Sigma args
+      (apply_lt_params sigma
+        (apply_type_params type_args (fn_params fdef)))
+      Sigma_args R_args arg_roots ->
+    Forall (fun '(a, b) => outlives Omega a b)
+      (apply_lt_outlives sigma (fn_outlives fdef)) ->
+    generic_direct_call_runtime_package env s s' ret Sigma_args R_args
+      arg_roots
+      (apply_lt_ty sigma (subst_type_params_ty type_args (fn_ret fdef))).
+Proof.
+  intros.
+  destruct (eval_generic_direct_call_store_safe_narrow_summary_exact_package_prefix_named_expr
+    env Omega n R Sigma fname type_args args sigma Sigma_args R_args
+    arg_roots s s' ret fdef) as [Hpkg _]; eauto.
 Qed.
 
 

@@ -365,3 +365,40 @@ Proof.
       exact Hparams_alpha.
     + exact Hargs.
 Qed.
+
+Lemma alpha_rename_fn_def_generic_call_bind_params_premises :
+  forall env Ω s vs σ type_args f fr used',
+    eval_args_values_have_types env Ω s vs
+      (apply_lt_params σ (apply_type_params type_args (fn_params f))) ->
+    same_fn_shape f fr ->
+    alpha_rename_fn_def (store_names s) f = (fr, used') ->
+    NoDup
+      (ctx_names
+        (params_ctx
+          (apply_lt_params σ (apply_type_params type_args (fn_params fr))))) /\
+    params_fresh_in_store
+      (apply_lt_params σ (apply_type_params type_args (fn_params fr))) s /\
+    eval_args_values_have_types env Ω s vs
+      (apply_lt_params σ (apply_type_params type_args (fn_params fr))).
+Proof.
+  intros env Ω s vs σ type_args f fr used' Hargs Hshape Hrename.
+  destruct Hshape as [_ [_ Hparams_alpha]].
+  repeat split.
+  - rewrite params_ctx_apply_lt_params.
+    rewrite ctx_names_apply_lt_ctx.
+    rewrite params_ctx_apply_type_params.
+    rewrite ctx_names_subst_type_params_ctx.
+    eapply alpha_rename_fn_def_params_nodup_ctx_names.
+    exact Hrename.
+  - apply params_fresh_in_store_apply_lt_params.
+    unfold params_fresh_in_store.
+    rewrite params_ctx_apply_type_params.
+    rewrite ctx_names_subst_type_params_ctx.
+    eapply alpha_rename_fn_def_params_fresh_in_store.
+    exact Hrename.
+  - eapply eval_args_values_have_types_params_alpha.
+    + apply params_alpha_apply_lt_compat.
+      apply params_alpha_apply_type_compat.
+      exact Hparams_alpha.
+    + exact Hargs.
+Qed.

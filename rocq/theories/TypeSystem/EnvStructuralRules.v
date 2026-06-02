@@ -52,6 +52,13 @@ Proof.
   rewrite IH. reflexivity.
 Qed.
 
+Lemma ctx_names_apply_lt_ctx : forall σ Γ,
+  ctx_names (apply_lt_ctx σ Γ) = ctx_names Γ.
+Proof.
+  intros σ Γ. induction Γ as [| [[[x T] st] m] Γ IH]; simpl; auto.
+  rewrite IH. reflexivity.
+Qed.
+
 Lemma subst_type_params_ctx_sctx_add : forall type_args x T m Σ,
   subst_type_params_ctx type_args (sctx_add x T m Σ) =
   sctx_add x (subst_type_params_ty type_args T) m

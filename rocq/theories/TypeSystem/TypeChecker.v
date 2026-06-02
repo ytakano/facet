@@ -8361,6 +8361,14 @@ Definition direct_call_target_expr (e : expr) : option (ident * list expr * expr
   | _ => None
   end.
 
+Definition generic_direct_call_target_expr
+    (e : expr) : option (ident * list Ty * list expr * expr) :=
+  match e with
+  | ECallGeneric fname type_args args =>
+      Some (fname, type_args, args, ECallGeneric fname type_args args)
+  | _ => None
+  end.
+
 Definition direct_call_ready_expr_b (e : expr) : bool :=
   match direct_call_target_expr e with
   | Some (_, args, _) => preservation_ready_args_b args

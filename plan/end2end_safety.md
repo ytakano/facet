@@ -276,6 +276,9 @@ failures; invalid tests pass.
     - T2a2d1am done: add lifetime-first generic direct-call shadow-safe
       wrapper; `TypeSafetyDirectCallWrappers.v` make target and proof-hole
       scan pass. Sub-agent spawn remains unavailable due thread limit.
+    - T2a2d2a done: add generic direct-call target recognizer;
+      `TypeChecker.v` make target and proof-hole scan pass. Sub-agent spawn
+      remains unavailable due thread limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

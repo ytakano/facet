@@ -1501,6 +1501,17 @@ Proof.
 Qed.
 
 
+Lemma root_env_tail_fresh_names_subst_type_params_expr :
+  forall type_args R_tail e,
+    root_env_tail_fresh_names R_tail (expr_local_store_names e) ->
+    root_env_tail_fresh_names R_tail
+      (expr_local_store_names (subst_type_params_expr type_args e)).
+Proof.
+  intros type_args R_tail e Hfresh.
+  rewrite expr_local_store_names_subst_type_params_expr.
+  exact Hfresh.
+Qed.
+
 Lemma expr_root_shadow_store_safe_narrow_summary_tail_frame :
   forall env Omega n R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_store_safe_narrow_summary

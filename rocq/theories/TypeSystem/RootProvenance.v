@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Syntax PathState Renaming TypingRules.
+From Facet.TypeSystem Require Import Syntax PathState Program Renaming TypingRules.
 From Stdlib Require Import List String Bool PeanoNat.
 Import ListNotations.
 
@@ -905,6 +905,61 @@ Definition fields_local_store_names (fields : list (string * expr))
 Definition match_branches_local_store_names
     (branches : list (string * list ident * expr)) : list ident :=
   match_branches_local_store_names_with expr_local_store_names branches.
+
+Lemma expr_local_store_names_subst_type_params_expr :
+  forall type_args e,
+    expr_local_store_names (subst_type_params_expr type_args e) =
+    expr_local_store_names e.
+Proof.
+  fix IH 2. intros type_args e.
+  destruct e as
+    [| lit | x | m x T e1 e2 | m x e1 e2 | fname | fname captures
+     | p | fname args | fname type_args' args | ef args
+     | name lts type_args' fields | enum_name variant lts type_args' args
+     | discr branches | p rhs | p rhs | rk p | e | e | e1 e2 e3];
+    simpl; try reflexivity.
+  - rewrite (IH type_args e1), (IH type_args e2). reflexivity.
+  - rewrite (IH type_args e1), (IH type_args e2). reflexivity.
+  - induction args as [| arg args IHargs]; simpl; auto.
+    rewrite (IH type_args arg), IHargs. reflexivity.
+  - induction args as [| arg args IHargs]; simpl; auto.
+    rewrite (IH type_args arg), IHargs. reflexivity.
+  - assert (Hargs :
+      args_local_store_names_with expr_local_store_names
+        ((fix go (es : list expr) : list expr :=
+            match es with
+            | [] => []
+            | e' :: es' => subst_type_params_expr type_args e' :: go es'
+            end) args) =
+      args_local_store_names_with expr_local_store_names args).
+    { induction args as [| arg args IHargs]; simpl; auto.
+      rewrite (IH type_args arg), IHargs. reflexivity. }
+    rewrite (IH type_args ef), Hargs. reflexivity.
+  - induction fields as [| [field expr] fields IHfields]; simpl; auto.
+    rewrite (IH type_args expr), IHfields. reflexivity.
+  - induction args as [| arg args IHargs]; simpl; auto.
+    rewrite (IH type_args arg), IHargs. reflexivity.
+  - assert (Hbranches :
+      match_branches_local_store_names_with expr_local_store_names
+        ((fix go (bs : list (string * list ident * expr))
+            : list (string * list ident * expr) :=
+            match bs with
+            | [] => []
+            | (name, binders, e') :: bs' =>
+                (name, binders, subst_type_params_expr type_args e') :: go bs'
+            end) branches) =
+      match_branches_local_store_names_with expr_local_store_names branches).
+    { induction branches as [| [[branch_name binders] branch] branches IHbranches];
+        simpl; auto.
+      rewrite (IH type_args branch), IHbranches. reflexivity. }
+    rewrite (IH type_args discr), Hbranches. reflexivity.
+  - rewrite (IH type_args rhs). reflexivity.
+  - rewrite (IH type_args rhs). reflexivity.
+  - rewrite (IH type_args e). reflexivity.
+  - rewrite (IH type_args e). reflexivity.
+  - rewrite (IH type_args e1), (IH type_args e2), (IH type_args e3).
+    reflexivity.
+Qed.
 
 Lemma expr_local_store_names_call :
   forall fname args,

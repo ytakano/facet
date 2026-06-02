@@ -399,6 +399,9 @@ failures; invalid tests pass.
       runtime argument that preserves current fallback semantics for
       under-applied struct type arguments, instead of using general place
       type-substitution transport.
+      - T2a2d2aj1 done: align `TStruct`/`TEnum` type-parameter
+        substitution with compose fallback semantics; `Program.v` target and
+        proof-hole scan pass.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

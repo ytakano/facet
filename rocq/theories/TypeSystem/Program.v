@@ -174,21 +174,23 @@ Fixpoint subst_type_params_ty (σ : list Ty) (T : Ty) {struct T} : Ty :=
       | None => MkTy u (TParam i)
       end
   | MkTy u (TStruct name lts args) =>
-      let fix go (xs : list Ty) : list Ty :=
-        match xs with
-        | [] => []
-        | x :: xs' => subst_type_params_ty σ x :: go xs'
+      let fix go (xs fallback : list Ty) : list Ty :=
+        match xs, fallback with
+        | [], fb => fb
+        | x :: xs', [] => subst_type_params_ty σ x :: go xs' []
+        | x :: xs', _ :: fb' => subst_type_params_ty σ x :: go xs' fb'
         end
       in
-      MkTy u (TStruct name lts (go args))
+      MkTy u (TStruct name lts (go args σ))
   | MkTy u (TEnum name lts args) =>
-      let fix go (xs : list Ty) : list Ty :=
-        match xs with
-        | [] => []
-        | x :: xs' => subst_type_params_ty σ x :: go xs'
+      let fix go (xs fallback : list Ty) : list Ty :=
+        match xs, fallback with
+        | [], fb => fb
+        | x :: xs', [] => subst_type_params_ty σ x :: go xs' []
+        | x :: xs', _ :: fb' => subst_type_params_ty σ x :: go xs' fb'
         end
       in
-      MkTy u (TEnum name lts (go args))
+      MkTy u (TEnum name lts (go args σ))
   | MkTy u (TFn ps r) =>
       let fix go (xs : list Ty) : list Ty :=
         match xs with
@@ -476,14 +478,92 @@ Proof.
     + destruct (nth_error σ n) as [[u' c'] |] eqn:Hσ.
       * simpl. rewrite Hσ. reflexivity.
       * simpl. rewrite Hσ. reflexivity.
-  - induction l0 as [| T0 Ts IHTs].
-    + reflexivity.
-    + simpl in *. rewrite (IH T0). injection IHTs as Htail.
-      rewrite Htail. reflexivity.
-  - induction l0 as [| T0 Ts IHTs].
-    + reflexivity.
-    + simpl in *. rewrite (IH T0). injection IHTs as Htail.
-      rewrite Htail. reflexivity.
+  - apply (f_equal (fun xs => MkTy u (TStruct s l xs))).
+    set (go_sigma := fix go (xs fallback : list Ty) {struct xs} : list Ty :=
+      match xs with
+      | [] => fallback
+      | x :: xs' =>
+          match fallback with
+          | [] => subst_type_params_ty σ x :: go xs' []
+          | _ :: fb' => subst_type_params_ty σ x :: go xs' fb'
+          end
+      end).
+    set (go_tau := fix go (xs fallback : list Ty) {struct xs} : list Ty :=
+      match xs with
+      | [] => fallback
+      | x :: xs' =>
+          match fallback with
+          | [] => subst_type_params_ty τ x :: go xs' []
+          | _ :: fb' => subst_type_params_ty τ x :: go xs' fb'
+          end
+      end).
+    set (go_comp := fix go (xs fallback : list Ty) {struct xs} : list Ty :=
+      match xs with
+      | [] => fallback
+      | x :: xs' =>
+          match fallback with
+          | [] => subst_type_params_ty (compose_type_params σ τ) x :: go xs' []
+          | _ :: fb' => subst_type_params_ty (compose_type_params σ τ) x :: go xs' fb'
+          end
+      end).
+    change (go_sigma (go_tau l0 τ) σ = go_comp l0 (compose_type_params σ τ)).
+    assert (Hgo_sigma : forall xs fallback,
+      go_sigma xs fallback = compose_type_params_go σ xs fallback).
+    { induction xs as [| X Xs IHxs]; intros fallback;
+        destruct fallback as [| F fb]; simpl; try reflexivity;
+        rewrite IHxs; reflexivity. }
+    assert (Hlist : forall xs inner_fb outer_fb,
+      go_sigma (go_tau xs inner_fb) outer_fb =
+      go_comp xs (compose_type_params_go σ inner_fb outer_fb)).
+    { induction xs as [| X Xs IHxs]; intros inner_fb outer_fb; simpl.
+      - apply Hgo_sigma.
+      - destruct inner_fb as [| IF inner_tail];
+          destruct outer_fb as [| OF outer_tail]; simpl;
+          rewrite (IH X); rewrite IHxs; reflexivity. }
+    unfold compose_type_params. apply Hlist.
+  - apply (f_equal (fun xs => MkTy u (TEnum s l xs))).
+    set (go_sigma := fix go (xs fallback : list Ty) {struct xs} : list Ty :=
+      match xs with
+      | [] => fallback
+      | x :: xs' =>
+          match fallback with
+          | [] => subst_type_params_ty σ x :: go xs' []
+          | _ :: fb' => subst_type_params_ty σ x :: go xs' fb'
+          end
+      end).
+    set (go_tau := fix go (xs fallback : list Ty) {struct xs} : list Ty :=
+      match xs with
+      | [] => fallback
+      | x :: xs' =>
+          match fallback with
+          | [] => subst_type_params_ty τ x :: go xs' []
+          | _ :: fb' => subst_type_params_ty τ x :: go xs' fb'
+          end
+      end).
+    set (go_comp := fix go (xs fallback : list Ty) {struct xs} : list Ty :=
+      match xs with
+      | [] => fallback
+      | x :: xs' =>
+          match fallback with
+          | [] => subst_type_params_ty (compose_type_params σ τ) x :: go xs' []
+          | _ :: fb' => subst_type_params_ty (compose_type_params σ τ) x :: go xs' fb'
+          end
+      end).
+    change (go_sigma (go_tau l0 τ) σ = go_comp l0 (compose_type_params σ τ)).
+    assert (Hgo_sigma : forall xs fallback,
+      go_sigma xs fallback = compose_type_params_go σ xs fallback).
+    { induction xs as [| X Xs IHxs]; intros fallback;
+        destruct fallback as [| F fb]; simpl; try reflexivity;
+        rewrite IHxs; reflexivity. }
+    assert (Hlist : forall xs inner_fb outer_fb,
+      go_sigma (go_tau xs inner_fb) outer_fb =
+      go_comp xs (compose_type_params_go σ inner_fb outer_fb)).
+    { induction xs as [| X Xs IHxs]; intros inner_fb outer_fb; simpl.
+      - apply Hgo_sigma.
+      - destruct inner_fb as [| IF inner_tail];
+          destruct outer_fb as [| OF outer_tail]; simpl;
+          rewrite (IH X); rewrite IHxs; reflexivity. }
+    unfold compose_type_params. apply Hlist.
   - induction l as [| T0 Ts IHTs].
     + simpl. rewrite (IH t). reflexivity.
     + simpl in *. rewrite (IH T0). injection IHTs as Hparams Hret.
@@ -505,14 +585,76 @@ Proof.
     destruct (nth_error type_args n) as [T' |] eqn:Harg.
     + simpl. exact (apply_lt_ty_outer_usage_core σ u T').
     + reflexivity.
-  - induction l0 as [| T0 Ts IHTs].
-    + reflexivity.
-    + simpl in *. rewrite (IH T0). injection IHTs as Htail.
-      rewrite Htail. reflexivity.
-  - induction l0 as [| T0 Ts IHTs].
-    + reflexivity.
-    + simpl in *. rewrite (IH T0). injection IHTs as Htail.
-      rewrite Htail. reflexivity.
+  - apply (f_equal (fun xs =>
+      MkTy u (TStruct s (map (apply_lt_lifetime σ) l) xs))).
+    set (go_type := fix go (xs fallback : list Ty) {struct xs} : list Ty :=
+      match xs with
+      | [] => fallback
+      | x :: xs' =>
+          match fallback with
+          | [] => subst_type_params_ty type_args x :: go xs' []
+          | _ :: fb' => subst_type_params_ty type_args x :: go xs' fb'
+          end
+      end).
+    set (go_subst := fix go (xs fallback : list Ty) {struct xs} : list Ty :=
+      match xs with
+      | [] => fallback
+      | x :: xs' =>
+          match fallback with
+          | [] => subst_type_params_ty (map (apply_lt_ty σ) type_args) x :: go xs' []
+          | _ :: fb' => subst_type_params_ty (map (apply_lt_ty σ) type_args) x :: go xs' fb'
+          end
+      end).
+    set (map_lt := fix go (xs : list Ty) : list Ty :=
+      match xs with
+      | [] => []
+      | x :: xs' => apply_lt_ty σ x :: go xs'
+      end).
+    change (map_lt (go_type l0 type_args) =
+      go_subst (map_lt l0) (map (apply_lt_ty σ) type_args)).
+    change (map (apply_lt_ty σ) type_args) with (map_lt type_args).
+    assert (Hlist : forall xs fallback,
+      map_lt (go_type xs fallback) = go_subst (map_lt xs) (map_lt fallback)).
+    { induction xs as [| X Xs IHxs]; intros fallback; simpl.
+      - reflexivity.
+      - destruct fallback as [| F fb]; simpl;
+          rewrite (IH X); rewrite IHxs; reflexivity. }
+    apply Hlist.
+  - apply (f_equal (fun xs =>
+      MkTy u (TEnum s (map (apply_lt_lifetime σ) l) xs))).
+    set (go_type := fix go (xs fallback : list Ty) {struct xs} : list Ty :=
+      match xs with
+      | [] => fallback
+      | x :: xs' =>
+          match fallback with
+          | [] => subst_type_params_ty type_args x :: go xs' []
+          | _ :: fb' => subst_type_params_ty type_args x :: go xs' fb'
+          end
+      end).
+    set (go_subst := fix go (xs fallback : list Ty) {struct xs} : list Ty :=
+      match xs with
+      | [] => fallback
+      | x :: xs' =>
+          match fallback with
+          | [] => subst_type_params_ty (map (apply_lt_ty σ) type_args) x :: go xs' []
+          | _ :: fb' => subst_type_params_ty (map (apply_lt_ty σ) type_args) x :: go xs' fb'
+          end
+      end).
+    set (map_lt := fix go (xs : list Ty) : list Ty :=
+      match xs with
+      | [] => []
+      | x :: xs' => apply_lt_ty σ x :: go xs'
+      end).
+    change (map_lt (go_type l0 type_args) =
+      go_subst (map_lt l0) (map (apply_lt_ty σ) type_args)).
+    change (map (apply_lt_ty σ) type_args) with (map_lt type_args).
+    assert (Hlist : forall xs fallback,
+      map_lt (go_type xs fallback) = go_subst (map_lt xs) (map_lt fallback)).
+    { induction xs as [| X Xs IHxs]; intros fallback; simpl.
+      - reflexivity.
+      - destruct fallback as [| F fb]; simpl;
+          rewrite (IH X); rewrite IHxs; reflexivity. }
+    apply Hlist.
   - induction l as [| T0 Ts IHTs].
     + simpl. rewrite (IH t). reflexivity.
     + simpl in *. rewrite (IH T0). injection IHTs as Hparams Hret.

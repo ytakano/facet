@@ -555,7 +555,7 @@ Inductive eval (env : global_env) : store -> expr -> store -> value -> Prop :=
       eval env
         (bind_params (apply_type_params type_args (fn_params fcall))
           vs s_args)
-        (fn_body fcall) s_body ret ->
+        (subst_type_params_expr type_args (fn_body fcall)) s_body ret ->
       eval env s (ECallGeneric fname type_args args)
         (store_remove_params
           (apply_type_params type_args (fn_params fcall)) s_body) ret

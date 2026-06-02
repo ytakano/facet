@@ -377,10 +377,13 @@ failures; invalid tests pass.
     - T2a2d2ac done: add `PVar` place and shadow-safe `EVar`
       type-substitution transport; `EnvStructuralRules.v` and `AlphaRoots.v`
       targets pass.
-    - T2a2d2ad in progress: keep generic type arguments fully general.
-      Do not add `Forall non_function_value_ty_b type_args`; instead prove a
-      substituted-body runtime package by induction on the original narrow
-      summary, using returned value closure-target summaries for `let` binds.
+    - T2a2d2ad done: prove substituted `EVar` narrow runtime leaf;
+      `EnvRuntimeBaseSafety.v` target passes.
+    - T2a2d2ae blocked locally: unconditional `ty_compatible_b` transport
+      through type substitution is false for `TForall`/`LBound`; do not use it.
+    - T2a2d2af in progress: keep generic type arguments fully general and
+      prove substituted-body runtime package by induction on the original
+      narrow summary, using returned value closure-target summaries for lets.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

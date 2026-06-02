@@ -7899,6 +7899,70 @@ Qed.
 
 
 
+Lemma expr_root_shadow_store_safe_narrow_summary_evar_subst_runtime_package_prefix_named :
+  forall env Omega n R Sigma x T Sigma' R' roots type_args,
+    typed_env_roots_shadow_safe env Omega n R Sigma (EVar x)
+      T Sigma' R' roots ->
+    forall s s' ret,
+      store_typed_prefix env s (subst_type_params_ctx type_args Sigma) ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      store_function_closure_targets_summary env s ->
+      eval env s (EVar x) s' ret ->
+      fn_env_unique_by_name env ->
+      store_typed_prefix env s' (subst_type_params_ctx type_args Sigma') /\
+      value_has_type env s' ret (subst_type_params_ty type_args T) /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots ret /\
+      root_set_store_roots_named roots s' /\
+      store_no_shadow s' /\
+      root_env_no_shadow R' /\
+      root_env_store_roots_named R' s' /\
+      root_env_store_keys_named R' s' /\
+      store_function_closure_targets_summary env s'.
+Proof.
+  intros env Omega n R Sigma x T Sigma' R' roots type_args Htyped
+    s s' ret Hstore Hroots Hshadow Hrn Hnamed Hkeys Hsummary_store
+    Heval Hunique.
+  pose proof (typed_env_roots_shadow_safe_evar_subst_type_params_ctx
+    env Omega n R Sigma x T Sigma' R' roots type_args Htyped)
+    as Htyped_subst.
+  pose proof (typed_env_roots_shadow_safe_roots
+    env Omega n R (subst_type_params_ctx type_args Sigma) (EVar x)
+    (subst_type_params_ty type_args T)
+    (subst_type_params_ctx type_args Sigma') R' roots Htyped_subst)
+    as Htyped_roots.
+  destruct (proj1 eval_preserves_typing_roots_ready_prefix_mutual
+    env s (EVar x) s' ret Heval Omega n R
+    (subst_type_params_ctx type_args Sigma)
+    (subst_type_params_ty type_args T)
+    (subst_type_params_ctx type_args Sigma') R' roots
+    (ProvReady_Var x) Hstore Hroots Hshadow Hrn Htyped_roots)
+    as [Hstore' [Hvalue [Hpres [Hroots' [Hvalue_roots
+      [Hshadow' Hrn']]]]]].
+  pose proof (proj1 preservation_ready_eval_store_names_mutual
+    env s (EVar x) s' ret Heval (PRE_Var x)) as Hnames.
+  assert (Hrootset_named_start : root_set_store_roots_named roots s).
+  { unfold root_set_store_roots_named. intros z Hin.
+    inversion Htyped; subst; try discriminate;
+      unfold root_env_store_roots_named in Hnamed; eapply Hnamed; eassumption. }
+  assert (Hrootset_named : root_set_store_roots_named roots s').
+  { eapply root_set_store_roots_named_store_names_eq; eassumption. }
+  assert (Hnamed' : root_env_store_roots_named R' s').
+  { inversion Htyped; subst; try discriminate;
+      eapply root_env_store_roots_named_store_names_eq; eassumption. }
+  assert (Hkeys' : root_env_store_keys_named R' s').
+  { inversion Htyped; subst; try discriminate;
+      eapply root_env_store_keys_named_store_names_eq; eassumption. }
+  pose proof (store_function_closure_targets_summary_eval_var
+    env s s' x ret Hsummary_store Heval) as Hsummary'.
+  repeat split; try eassumption.
+Qed.
+
 Lemma expr_root_shadow_store_safe_narrow_summary_runtime_package_prefix_named :
   forall env Omega n R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_store_safe_narrow_summary

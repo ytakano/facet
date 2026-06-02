@@ -11222,7 +11222,7 @@ Proof.
   - exact Hret_exclude.
 Qed.
 
-Lemma eval_generic_direct_call_store_safe_narrow_summary_value_prefix_named :
+Lemma eval_generic_direct_call_store_safe_narrow_summary_value_prefix_named_expr :
   forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args
       arg_roots s s' ret fdef,
     store_safe_function_value_call_args env args ->
@@ -11406,6 +11406,38 @@ Proof.
     - exact Hv_ret_fdef.
     - exact Hret_exclude. }
   exact Hv_final.
+Qed.
+
+Lemma eval_generic_direct_call_store_safe_narrow_summary_value_prefix_named :
+  forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args
+      arg_roots s s' ret fdef,
+    store_safe_function_value_call_args env args ->
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated
+      env fdef type_args ->
+    store_typed_prefix env s Sigma ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_function_closure_targets_summary env s ->
+    eval env s (ECallGeneric fname type_args args) s' ret ->
+    fn_env_unique_by_name env ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    typed_args_roots env Omega n R Sigma args
+      (apply_lt_params sigma
+        (apply_type_params type_args (fn_params fdef)))
+      Sigma_args R_args arg_roots ->
+    Forall (fun '(a, b) => outlives Omega a b)
+      (apply_lt_outlives sigma (fn_outlives fdef)) ->
+    value_has_type env s' ret
+      (apply_lt_ty sigma (subst_type_params_ty type_args (fn_ret fdef))).
+Proof.
+  intros.
+  eapply eval_generic_direct_call_store_safe_narrow_summary_value_prefix_named_expr;
+    eassumption.
 Qed.
 
 

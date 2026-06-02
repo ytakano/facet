@@ -455,6 +455,7 @@ failures; invalid tests pass.
       - T2a2d2ab3b done: add fuel-summary expression/generic case splitter; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
       - T2a2d2ab3c done: add generic direct-call body cleanup helper; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
       - T2a2d2ab3d done: add zero-fuel instantiated summary expression bridge; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
+      - T2a2d2ab3e done: factor expression-only generic direct-call value theorem for fuel wrapper reuse; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

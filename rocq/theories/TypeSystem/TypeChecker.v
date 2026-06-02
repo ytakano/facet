@@ -9181,6 +9181,47 @@ Definition check_fn_root_shadow_captured_call_store_safe_summary
        end
    | None => false
    end) ||
+  (match generic_direct_call_target_expr (fn_body fdef) with
+   | Some (fname, type_args, args, synthetic_body) =>
+       store_safe_function_value_call_args_b env args &&
+       match lookup_fn_b fname (env_fns env) with
+       | None => false
+       | Some callee =>
+           Nat.eqb (Datatypes.length type_args) (fn_type_params callee) &&
+           match check_struct_bounds env (fn_bounds callee) type_args with
+           | Some _ => false
+           | None =>
+               match infer_core_env_roots_shadow_safe env
+                         (fn_outlives callee)
+                         (fn_lifetimes callee)
+                         (initial_root_env_for_fn callee)
+                         (fn_body_ctx callee)
+                         (fn_body callee),
+                     infer_env_roots_shadow_safe env callee
+                       (initial_root_env_for_fn callee),
+                     infer_env_roots_shadow_safe env
+                       (fn_with_body fdef synthetic_body)
+                       (initial_root_env_for_fn fdef) with
+               | infer_ok (T_callee, _, R_callee, roots_callee),
+                 infer_ok _,
+                 infer_ok (T_body, _, R_out, roots) =>
+                   check_expr_root_shadow_store_safe_narrow_summary
+                     env (fn_outlives callee) (fn_lifetimes callee)
+                     (initial_root_env_for_fn callee)
+                     (fn_body_ctx callee) (fn_body callee) &&
+                   ty_compatible_b (fn_outlives callee) T_callee
+                     (fn_ret callee) &&
+                   fn_params_roots_exclude_b (fn_params callee) roots_callee &&
+                   fn_params_root_env_excludes_b (fn_params callee) R_callee &&
+                   ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) &&
+                   fn_params_roots_exclude_b (fn_params fdef) roots &&
+                   fn_params_root_env_excludes_b (fn_params fdef) R_out
+               | _, _, _ => false
+               end
+           end
+       end
+   | None => false
+   end) ||
   match infer_core_env_roots_shadow_safe_checked env
               (fn_outlives fdef)
               (fn_lifetimes fdef)

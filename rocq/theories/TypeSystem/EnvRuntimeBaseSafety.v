@@ -9504,11 +9504,12 @@ Lemma check_fn_root_shadow_captured_call_store_safe_summary_sound :
 Proof.
   intros env fdef Hcheck.
   unfold check_fn_root_shadow_captured_call_store_safe_summary in Hcheck.
-  apply orb_true_iff in Hcheck as [Hhead | Hnarrow].
-  - apply orb_true_iff in Hhead as [Hold | Hdirect].
-    + left. apply check_fn_root_shadow_captured_call_provenance_summary_sound.
-      exact Hold.
-    + right. left.
+  apply orb_true_iff in Hcheck as [Hprefix | Hnarrow].
+  - apply orb_true_iff in Hprefix as [Hhead | Hgeneric].
+    + apply orb_true_iff in Hhead as [Hold | Hdirect].
+      * left. apply check_fn_root_shadow_captured_call_provenance_summary_sound.
+        exact Hold.
+      * right. left.
       destruct (direct_call_target_expr (fn_body fdef))
         as [[[fname args] synthetic_body] |] eqn:Htarget; try discriminate.
       apply andb_true_iff in Hdirect as [Hready_args Hdirect].
@@ -9559,6 +9560,81 @@ Proof.
       split; [apply store_safe_function_value_call_args_b_sound; exact Hready_args |].
       split; [exact Hin_callee |].
       split; [exact Hname_callee |].
+      split.
+      { exists T_callee, Gamma_callee, R_callee, roots_callee,
+          ret_roots_callee.
+        repeat split.
+        - eapply infer_env_roots_shadow_safe_params_nodup.
+          exact Hcallee_env.
+        - exact Hcallee_summary.
+        - exact Hcallee_compat.
+        - apply fn_params_roots_exclude_b_sound. exact Hcallee_roots.
+        - apply fn_params_root_env_excludes_b_sound. exact Hcallee_env_excl. }
+      split.
+      { change (NoDup
+          (ctx_names
+            (params_ctx (fn_params (fn_with_body fdef synthetic_body))))).
+        eapply infer_env_roots_shadow_safe_params_nodup. exact Hbody_env. }
+      split; [exact Htyped_body |].
+      split; [exact Hcompat_body |].
+      split; [apply fn_params_roots_exclude_b_sound; exact Hroots |].
+      apply fn_params_root_env_excludes_b_sound. exact Henv.
+    + right. right. left.
+      destruct (generic_direct_call_target_expr (fn_body fdef))
+        as [[[[fname type_args] args] synthetic_body] |] eqn:Htarget;
+        try discriminate.
+      apply andb_true_iff in Hgeneric as [Hsafe_args Hgeneric].
+      destruct (lookup_fn_b fname (env_fns env)) as [fcallee |] eqn:Hlookup_b;
+        try discriminate.
+      apply andb_true_iff in Hgeneric as [Htype_params Hgeneric].
+      apply Nat.eqb_eq in Htype_params.
+      destruct (check_struct_bounds env (fn_bounds fcallee) type_args)
+        as [bounds_err |] eqn:Hbounds; try discriminate.
+      destruct (infer_core_env_roots_shadow_safe env
+        (fn_outlives fcallee) (fn_lifetimes fcallee)
+        (initial_root_env_for_fn fcallee) (fn_body_ctx fcallee)
+        (fn_body fcallee))
+        as [[[[T_callee Gamma_callee] R_callee] roots_callee] | err]
+        eqn:Hcallee_core; try discriminate.
+      destruct (infer_env_roots_shadow_safe env fcallee
+        (initial_root_env_for_fn fcallee))
+        as [[[[T_callee_env Gamma_callee_env] R_callee_env]
+              roots_callee_env] | err] eqn:Hcallee_env; try discriminate.
+      destruct (infer_env_roots_shadow_safe env
+        (fn_with_body fdef synthetic_body)
+        (initial_root_env_for_fn fdef))
+        as [[[[T_body Gamma_body] R_body] roots_body] | err]
+        eqn:Hbody_env; try discriminate.
+      repeat rewrite andb_true_iff in Hgeneric.
+      destruct Hgeneric as
+        [[[[[[Hcallee_expr Hcallee_compat] Hcallee_roots]
+             Hcallee_env_excl] Hcompat] Hroots] Henv].
+      apply lookup_fn_b_sound in Hlookup_b.
+      destruct Hlookup_b as [Hin_callee Hname_callee].
+      destruct (check_expr_root_shadow_store_safe_narrow_summary_sound
+        env (fn_outlives fcallee) (fn_lifetimes fcallee)
+        (initial_root_env_for_fn fcallee) (fn_body_ctx fcallee)
+        (fn_body fcallee) T_callee Gamma_callee R_callee roots_callee
+        Hcallee_core Hcallee_expr) as [ret_roots_callee Hcallee_summary].
+      pose proof (infer_env_roots_shadow_safe_sound env
+        (fn_with_body fdef synthetic_body) (initial_root_env_for_fn fdef)
+        T_body Gamma_body R_body roots_body Hbody_env) as Htyped_fn.
+      unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
+      destruct Htyped_fn as
+        (T_body_actual & Gamma_out_actual & Htyped_body & Hcompat_body & _).
+      exists fname, type_args, args, (fn_body fdef), synthetic_body, fcallee,
+        T_body_actual, Gamma_out_actual, R_body, roots_body.
+      split; [reflexivity |].
+      split; [exact Htarget |].
+      split.
+      { unfold generic_direct_call_target_expr in Htarget.
+        destruct (fn_body fdef); try discriminate.
+        inversion Htarget. reflexivity. }
+      split; [apply store_safe_function_value_call_args_b_sound; exact Hsafe_args |].
+      split; [exact Hin_callee |].
+      split; [exact Hname_callee |].
+      split; [exact Htype_params |].
+      split; [exact Hbounds |].
       split.
       { exists T_callee, Gamma_callee, R_callee, roots_callee,
           ret_roots_callee.

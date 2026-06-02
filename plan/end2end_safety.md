@@ -286,6 +286,10 @@ failures; invalid tests pass.
       store-safe aggregate; `EnvRuntimeBaseSafety.v` make target and
       proof-hole scan pass. Sub-agent spawn remains unavailable due thread
       limit.
+    - T2a2d2d done: wire generic direct-narrow captured-call checker
+      branch and prove soundness; `EnvRuntimeBaseSafety.v`, proof-hole scan,
+      and `dune build` pass. Sub-agent spawn remains unavailable due thread
+      limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

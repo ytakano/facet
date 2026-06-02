@@ -1159,6 +1159,9 @@ val store_safe_function_value_call_args_b : global_env -> expr list -> bool
 
 val direct_call_target_expr : expr -> ((ident * expr list) * expr) option
 
+val generic_direct_call_target_expr :
+  expr -> (((ident * ty list) * expr list) * expr) option
+
 val direct_call_ready_expr_b : expr -> bool
 
 val check_fn_root_shadow_direct_call_provenance_summary :

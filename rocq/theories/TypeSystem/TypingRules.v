@@ -454,6 +454,20 @@ Proof.
   rewrite param_ctx_entry_apply_type_param, IH. reflexivity.
 Qed.
 
+Lemma param_ctx_entry_apply_lt_param : forall σ p,
+  param_ctx_entry (apply_lt_param σ p) =
+  apply_lt_ctx_entry σ (param_ctx_entry p).
+Proof.
+  intros σ [m x T]. reflexivity.
+Qed.
+
+Lemma params_ctx_apply_lt_params : forall σ ps,
+  params_ctx (apply_lt_params σ ps) = apply_lt_ctx σ (params_ctx ps).
+Proof.
+  intros σ ps. induction ps as [| p ps IH]; simpl; auto.
+  rewrite param_ctx_entry_apply_lt_param, IH. reflexivity.
+Qed.
+
 Lemma apply_type_param_nil : forall p,
   apply_type_param [] p = p.
 Proof.

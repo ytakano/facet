@@ -260,6 +260,10 @@ failures; invalid tests pass.
       state, and mutability queries; `TypingRules.v` make target and
       proof-hole scan pass. Sub-agent spawn remains unavailable due thread
       limit.
+    - T2a2d1ai done: prove lifetime substitution transport for
+      parameter-to-context conversion; `TypingRules.v` make target and
+      proof-hole scan pass. Sub-agent spawn remains unavailable due thread
+      limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

@@ -353,6 +353,10 @@ failures; invalid tests pass.
     - T2a2d2v done: prove tail freshness transport for type-substituted
       expressions; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
       Sub-agent spawn remains unavailable due thread limit.
+    - T2a2d2w done: prove reverse tail freshness transport from
+      type-substituted expressions; `EnvRuntimeBaseSafety.v` target and
+      proof-hole scan pass. Sub-agent spawn remains unavailable due thread
+      limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

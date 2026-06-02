@@ -290,6 +290,10 @@ failures; invalid tests pass.
       branch and prove soundness; `EnvRuntimeBaseSafety.v`, proof-hole scan,
       and `dune build` pass. Sub-agent spawn remains unavailable due thread
       limit.
+    - T2a2d2e done: add valid regression for generic direct call with
+      variable argument; targeted CLI passes, full `tests/run.sh` still has
+      existing generic/function-value safety-gate failures. Sub-agent spawn
+      remains unavailable due thread limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

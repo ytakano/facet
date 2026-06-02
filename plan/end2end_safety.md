@@ -452,6 +452,7 @@ failures; invalid tests pass.
         nested instantiated generic callee summaries remain.
       - T2a2d2ab2 done: add fuel-indexed nested generic instantiated summary checker/soundness; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass; sub-agent closed after local completion.
       - T2a2d2ab3a done: add fuel-summary local-bounds transport; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
+      - T2a2d2ab3b done: add fuel-summary expression/generic case splitter; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

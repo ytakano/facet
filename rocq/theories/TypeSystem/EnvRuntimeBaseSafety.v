@@ -11035,6 +11035,64 @@ Proof.
     + exact H11.
 Qed.
 
+Lemma callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel_cases :
+  forall env fuel fdef type_args,
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env fuel fdef type_args ->
+    (exists T_body Gamma_out R_body roots_body ret_roots,
+      NoDup (ctx_names (params_ctx
+        (apply_type_params type_args (fn_params fdef)))) /\
+      expr_root_shadow_store_safe_narrow_summary env
+        (fn_outlives fdef) (fn_lifetimes fdef)
+        (initial_root_env_for_fn fdef)
+        (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fdef)))
+        (subst_type_params_expr type_args (fn_body fdef))
+        T_body (sctx_of_ctx Gamma_out) R_body roots_body ret_roots /\
+      ty_compatible_b (fn_outlives fdef) T_body
+        (subst_type_params_ty type_args (fn_ret fdef)) = true /\
+      roots_exclude_params (apply_type_params type_args (fn_params fdef))
+        roots_body /\
+      root_env_excludes_params (apply_type_params type_args (fn_params fdef))
+        R_body) \/
+    (exists fuel' fname nested_type_args args raw_body synthetic_body fcallee
+        T_body Gamma_out R_body roots_body,
+      fuel = S fuel' /\
+      raw_body = subst_type_params_expr type_args (fn_body fdef) /\
+      generic_direct_call_target_expr raw_body =
+        Some (fname, nested_type_args, args, synthetic_body) /\
+      synthetic_body = ECallGeneric fname nested_type_args args /\
+      store_safe_function_value_call_args env args /\
+      In fcallee (env_fns env) /\
+      fn_name fcallee = fname /\
+      Datatypes.length nested_type_args = fn_type_params fcallee /\
+      check_struct_bounds
+        (global_env_with_local_bounds env
+          (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+        (fn_bounds fcallee) nested_type_args = None /\
+      callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+        env fuel' fcallee nested_type_args /\
+      NoDup (ctx_names (params_ctx
+        (apply_type_params type_args (fn_params fdef)))) /\
+      typed_env_roots_shadow_safe
+        (global_env_with_local_bounds env
+          (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+        (fn_outlives fdef) (fn_lifetimes fdef)
+        (initial_root_env_for_fn fdef)
+        (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fdef)))
+        synthetic_body T_body (sctx_of_ctx Gamma_out) R_body roots_body /\
+      ty_compatible_b (fn_outlives fdef) T_body
+        (subst_type_params_ty type_args (fn_ret fdef)) = true /\
+      roots_exclude_params (apply_type_params type_args (fn_params fdef))
+        roots_body /\
+      root_env_excludes_params (apply_type_params type_args (fn_params fdef))
+        R_body).
+Proof.
+  intros env fuel fdef type_args Hsummary.
+  inversion Hsummary; subst.
+  - left. repeat eexists; repeat split; eauto.
+  - right. repeat eexists; repeat split; eauto.
+Qed.
+
 Lemma generic_direct_call_callee_body_root_shadow_store_safe_narrow_summary_bridge_of_summary_tfn_with_result_subset_prefix_named :
   forall env (Omega : outlives_ctx) (n : nat) R Sigma Sigma_args R_args
       arg_roots args type_args fdef fcall param_tys ret_ty s s_args vs used',

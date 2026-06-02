@@ -1588,6 +1588,538 @@ Proof.
 Qed.
 
 
+Lemma alpha_rename_expr_subst_type_params_expr :
+  forall type_args rho used e er used',
+    alpha_rename_expr rho used e = (er, used') ->
+    alpha_rename_expr rho used (subst_type_params_expr type_args e) =
+      (subst_type_params_expr type_args er, used').
+Proof.
+  intros type_args.
+  assert (Hsize : forall n rho used e er used',
+    expr_size e < n ->
+    alpha_rename_expr rho used e = (er, used') ->
+    alpha_rename_expr rho used (subst_type_params_expr type_args e) =
+      (subst_type_params_expr type_args er, used')).
+  { induction n as [| n IH]; intros rho used e er used' Hlt Hrename.
+    - lia.
+    - destruct e as
+        [| lit | x | m x T e1 e2 | m x e1 e2 | fname | fname captures
+         | p | fname args | fname type_args0 args | callee args
+         | sname lts type_args0 fields | ename variant lts type_args0 payloads
+         | scrut branches | p rhs | p rhs | rk p | e | e | e1 e2 e3];
+        simpl in Hrename |- *; try (inversion Hrename; subst; reflexivity).
+      + destruct (alpha_rename_expr rho used e1) as [e1r used1] eqn:He1.
+        rewrite expr_names_subst_type_params_expr.
+        destruct (alpha_rename_expr
+          ((x, fresh_ident x (x :: free_vars_expr e2 ++ used1)) :: rho)
+          (fresh_ident x (x :: free_vars_expr e2 ++ used1) ::
+            x :: free_vars_expr e2 ++ used1) e2)
+          as [e2r used2] eqn:He2.
+        injection Hrename as <- <-.
+        rewrite (IH rho used e1 e1r used1); [| simpl in Hlt; lia | exact He1].
+        simpl.
+        rewrite (IH _ _ e2 e2r used2); [reflexivity | simpl in Hlt; lia | exact He2].
+      + destruct (alpha_rename_expr rho used e1) as [e1r used1] eqn:He1.
+        rewrite expr_names_subst_type_params_expr.
+        destruct (alpha_rename_expr
+          ((x, fresh_ident x (x :: free_vars_expr e2 ++ used1)) :: rho)
+          (fresh_ident x (x :: free_vars_expr e2 ++ used1) ::
+            x :: free_vars_expr e2 ++ used1) e2)
+          as [e2r used2] eqn:He2.
+        injection Hrename as <- <-.
+        rewrite (IH rho used e1 e1r used1); [| simpl in Hlt; lia | exact He1].
+        simpl.
+        rewrite (IH _ _ e2 e2r used2); [reflexivity | simpl in Hlt; lia | exact He2].
+      + assert (Hargs : forall args0 used0 argsr usedr,
+          (forall a, In a args0 -> In a args) ->
+          ((fix go (used1 : list ident) (args1 : list expr) {struct args1}
+              : list expr * list ident :=
+              match args1 with
+              | [] => ([], used1)
+              | arg :: rest =>
+                  let (arg', used2) := alpha_rename_expr rho used1 arg in
+                  let (rest', used3) := go used2 rest in
+                  (arg' :: rest', used3)
+              end) used0 args0) = (argsr, usedr) ->
+          ((fix go (used1 : list ident) (args1 : list expr) {struct args1}
+              : list expr * list ident :=
+              match args1 with
+              | [] => ([], used1)
+              | arg :: rest =>
+                  let (arg', used2) := alpha_rename_expr rho used1 arg in
+                  let (rest', used3) := go used2 rest in
+                  (arg' :: rest', used3)
+              end) used0
+            ((fix subst_go (es : list expr) : list expr :=
+              match es with
+              | [] => []
+              | e0 :: es0 => subst_type_params_expr type_args e0 :: subst_go es0
+              end) args0)) =
+          ((fix subst_go (es : list expr) : list expr :=
+              match es with
+              | [] => []
+              | e0 :: es0 => subst_type_params_expr type_args e0 :: subst_go es0
+              end) argsr, usedr)).
+        { induction args0 as [| arg rest IHargs]; intros used0 argsr usedr Hincl Hgo; simpl in Hgo |- *.
+          - inversion Hgo; subst. reflexivity.
+          - destruct (alpha_rename_expr rho used0 arg) as [ar used1] eqn:Harg.
+            destruct ((fix go (used2 : list ident) (args1 : list expr) {struct args1}
+              : list expr * list ident :=
+              match args1 with
+              | [] => ([], used2)
+              | arg0 :: rest0 =>
+                  let (arg', used3) := alpha_rename_expr rho used2 arg0 in
+                  let (rest', used4) := go used3 rest0 in
+                  (arg' :: rest', used4)
+              end) used1 rest) as [restr used2] eqn:Hrest.
+            injection Hgo as <- <-.
+            rewrite (IH rho used0 arg ar used1).
+            + simpl.
+              rewrite (IHargs used1 restr used2); auto.
+              intros a Ha. apply Hincl. right. exact Ha.
+            + pose proof (expr_size_call_arg_lt fname args arg (Hincl arg (or_introl eq_refl))). lia.
+            + exact Harg. }
+        destruct ((fix go (used0 : list ident) (args0 : list expr) {struct args0}
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used0)
+          | arg :: rest =>
+              let (arg', used1) := alpha_rename_expr rho used0 arg in
+              let (rest', used2) := go used1 rest in
+              (arg' :: rest', used2)
+          end) used args) as [argsr used_args] eqn:Hgo.
+        injection Hrename as <- <-.
+        rewrite (Hargs args used argsr used_args (fun a H => H) Hgo). reflexivity.
+      + assert (Hargs : forall args0 used0 argsr usedr,
+          (forall a, In a args0 -> In a args) ->
+          ((fix go (used1 : list ident) (args1 : list expr) {struct args1}
+              : list expr * list ident :=
+              match args1 with
+              | [] => ([], used1)
+              | arg :: rest =>
+                  let (arg', used2) := alpha_rename_expr rho used1 arg in
+                  let (rest', used3) := go used2 rest in
+                  (arg' :: rest', used3)
+              end) used0 args0) = (argsr, usedr) ->
+          ((fix go (used1 : list ident) (args1 : list expr) {struct args1}
+              : list expr * list ident :=
+              match args1 with
+              | [] => ([], used1)
+              | arg :: rest =>
+                  let (arg', used2) := alpha_rename_expr rho used1 arg in
+                  let (rest', used3) := go used2 rest in
+                  (arg' :: rest', used3)
+              end) used0
+            ((fix subst_go (es : list expr) : list expr :=
+              match es with
+              | [] => []
+              | e0 :: es0 => subst_type_params_expr type_args e0 :: subst_go es0
+              end) args0)) =
+          ((fix subst_go (es : list expr) : list expr :=
+              match es with
+              | [] => []
+              | e0 :: es0 => subst_type_params_expr type_args e0 :: subst_go es0
+              end) argsr, usedr)).
+        { induction args0 as [| arg rest IHargs]; intros used0 argsr usedr Hincl Hgo; simpl in Hgo |- *.
+          - inversion Hgo; subst. reflexivity.
+          - destruct (alpha_rename_expr rho used0 arg) as [ar used1] eqn:Harg.
+            destruct ((fix go (used2 : list ident) (args1 : list expr) {struct args1}
+              : list expr * list ident :=
+              match args1 with
+              | [] => ([], used2)
+              | arg0 :: rest0 =>
+                  let (arg', used3) := alpha_rename_expr rho used2 arg0 in
+                  let (rest', used4) := go used3 rest0 in
+                  (arg' :: rest', used4)
+              end) used1 rest) as [restr used2] eqn:Hrest.
+            injection Hgo as <- <-.
+            rewrite (IH rho used0 arg ar used1).
+            + simpl.
+              rewrite (IHargs used1 restr used2); auto.
+              intros a Ha. apply Hincl. right. exact Ha.
+            + pose proof (expr_size_call_generic_arg_lt fname type_args0 args arg (Hincl arg (or_introl eq_refl))). lia.
+            + exact Harg. }
+        destruct ((fix go (used0 : list ident) (args0 : list expr) {struct args0}
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used0)
+          | arg :: rest =>
+              let (arg', used1) := alpha_rename_expr rho used0 arg in
+              let (rest', used2) := go used1 rest in
+              (arg' :: rest', used2)
+          end) used args) as [argsr used_args] eqn:Hgo.
+        injection Hrename as <- <-.
+        rewrite (Hargs args used argsr used_args (fun a H => H) Hgo). reflexivity.
+      + destruct (alpha_rename_expr rho used callee) as [calleer used0] eqn:Hcallee.
+        assert (Hargs : forall args0 used1 argsr usedr,
+          (forall a, In a args0 -> In a args) ->
+          ((fix go (used2 : list ident) (args1 : list expr) {struct args1}
+              : list expr * list ident :=
+              match args1 with
+              | [] => ([], used2)
+              | arg :: rest =>
+                  let (arg', used3) := alpha_rename_expr rho used2 arg in
+                  let (rest', used4) := go used3 rest in
+                  (arg' :: rest', used4)
+              end) used1 args0) = (argsr, usedr) ->
+          ((fix go (used2 : list ident) (args1 : list expr) {struct args1}
+              : list expr * list ident :=
+              match args1 with
+              | [] => ([], used2)
+              | arg :: rest =>
+                  let (arg', used3) := alpha_rename_expr rho used2 arg in
+                  let (rest', used4) := go used3 rest in
+                  (arg' :: rest', used4)
+              end) used1
+            ((fix subst_go (es : list expr) : list expr :=
+              match es with
+              | [] => []
+              | e0 :: es0 => subst_type_params_expr type_args e0 :: subst_go es0
+              end) args0)) =
+          ((fix subst_go (es : list expr) : list expr :=
+              match es with
+              | [] => []
+              | e0 :: es0 => subst_type_params_expr type_args e0 :: subst_go es0
+              end) argsr, usedr)).
+        { induction args0 as [| arg rest IHargs]; intros used1 argsr usedr Hincl Hgo; simpl in Hgo |- *.
+          - inversion Hgo; subst. reflexivity.
+          - destruct (alpha_rename_expr rho used1 arg) as [ar used2] eqn:Harg.
+            destruct ((fix go (used3 : list ident) (args1 : list expr) {struct args1}
+              : list expr * list ident :=
+              match args1 with
+              | [] => ([], used3)
+              | arg0 :: rest0 =>
+                  let (arg', used4) := alpha_rename_expr rho used3 arg0 in
+                  let (rest', used5) := go used4 rest0 in
+                  (arg' :: rest', used5)
+              end) used2 rest) as [restr used3] eqn:Hrest.
+            injection Hgo as <- <-.
+            rewrite (IH rho used1 arg ar used2).
+            + simpl.
+              rewrite (IHargs used2 restr used3); auto.
+              intros a Ha. apply Hincl. right. exact Ha.
+            + pose proof (expr_size_callexpr_arg_lt callee args arg (Hincl arg (or_introl eq_refl))). lia.
+            + exact Harg. }
+        destruct ((fix go (used1 : list ident) (args0 : list expr) {struct args0}
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used1)
+          | arg :: rest =>
+              let (arg', used2) := alpha_rename_expr rho used1 arg in
+              let (rest', used3) := go used2 rest in
+              (arg' :: rest', used3)
+          end) used0 args) as [argsr used_args] eqn:Hgo.
+        injection Hrename as <- <-.
+        rewrite (IH rho used callee calleer used0); [| pose proof (expr_size_callexpr_callee_lt callee args); lia | exact Hcallee].
+        simpl. rewrite (Hargs args used0 argsr used_args (fun a H => H) Hgo). reflexivity.
+      + assert (Hfields : forall fields0 used0 fieldsr usedr,
+          (forall field e0, In (field, e0) fields0 -> In (field, e0) fields) ->
+          ((fix go (used1 : list ident) (fields1 : list (string * expr)) {struct fields1}
+              : list (string * expr) * list ident :=
+              match fields1 with
+              | [] => ([], used1)
+              | (field, e0) :: rest =>
+                  let (e0', used2) := alpha_rename_expr rho used1 e0 in
+                  let (rest', used3) := go used2 rest in
+                  ((field, e0') :: rest', used3)
+              end) used0 fields0) = (fieldsr, usedr) ->
+          ((fix go (used1 : list ident) (fields1 : list (string * expr)) {struct fields1}
+              : list (string * expr) * list ident :=
+              match fields1 with
+              | [] => ([], used1)
+              | (field, e0) :: rest =>
+                  let (e0', used2) := alpha_rename_expr rho used1 e0 in
+                  let (rest', used3) := go used2 rest in
+                  ((field, e0') :: rest', used3)
+              end) used0
+            ((fix subst_go (fs : list (string * expr)) : list (string * expr) :=
+              match fs with
+              | [] => []
+              | (field, e0) :: fs0 =>
+                  (field, subst_type_params_expr type_args e0) :: subst_go fs0
+              end) fields0)) =
+          ((fix subst_go (fs : list (string * expr)) : list (string * expr) :=
+              match fs with
+              | [] => []
+              | (field, e0) :: fs0 =>
+                  (field, subst_type_params_expr type_args e0) :: subst_go fs0
+              end) fieldsr, usedr)).
+        { induction fields0 as [| [field e0] rest IHfields];
+            intros used0 fieldsr usedr Hincl Hgo; simpl in Hgo |- *.
+          - injection Hgo as <- <-. reflexivity.
+          - destruct (alpha_rename_expr rho used0 e0) as [e0r used1] eqn:He0.
+            destruct ((fix go (used2 : list ident) (fields1 : list (string * expr)) {struct fields1}
+              : list (string * expr) * list ident :=
+              match fields1 with
+              | [] => ([], used2)
+              | (field0, e1) :: rest0 =>
+                  let (e1', used3) := alpha_rename_expr rho used2 e1 in
+                  let (rest', used4) := go used3 rest0 in
+                  ((field0, e1') :: rest', used4)
+              end) used1 rest) as [restr used2] eqn:Hrest.
+            injection Hgo as <- <-.
+            rewrite (IH rho used0 e0 e0r used1).
+            + simpl.
+              rewrite (IHfields used1 restr used2); auto.
+              intros field0 e1 Hin. apply Hincl. right. exact Hin.
+            + pose proof (expr_size_struct_field_lt sname lts type_args0 fields field e0
+                (Hincl field e0 (or_introl eq_refl))). lia.
+            + exact He0. }
+        destruct ((fix go (used0 : list ident) (fields0 : list (string * expr)) {struct fields0}
+          : list (string * expr) * list ident :=
+          match fields0 with
+          | [] => ([], used0)
+          | (field, e0) :: rest =>
+              let (e0', used1) := alpha_rename_expr rho used0 e0 in
+              let (rest', used2) := go used1 rest in
+              ((field, e0') :: rest', used2)
+          end) used fields) as [fieldsr used_fields] eqn:Hgo.
+        injection Hrename as <- <-.
+        rewrite (Hfields fields used fieldsr used_fields
+          (fun field e0 H => H) Hgo). reflexivity.
+      + assert (Hpayloads : forall payloads0 used0 payloadsr usedr,
+          (forall e0, In e0 payloads0 -> In e0 payloads) ->
+          ((fix go (used1 : list ident) (payloads1 : list expr) {struct payloads1}
+              : list expr * list ident :=
+              match payloads1 with
+              | [] => ([], used1)
+              | e0 :: rest =>
+                  let (e0', used2) := alpha_rename_expr rho used1 e0 in
+                  let (rest', used3) := go used2 rest in
+                  (e0' :: rest', used3)
+              end) used0 payloads0) = (payloadsr, usedr) ->
+          ((fix go (used1 : list ident) (payloads1 : list expr) {struct payloads1}
+              : list expr * list ident :=
+              match payloads1 with
+              | [] => ([], used1)
+              | e0 :: rest =>
+                  let (e0', used2) := alpha_rename_expr rho used1 e0 in
+                  let (rest', used3) := go used2 rest in
+                  (e0' :: rest', used3)
+              end) used0
+            ((fix subst_go (es : list expr) : list expr :=
+              match es with
+              | [] => []
+              | e0 :: es0 => subst_type_params_expr type_args e0 :: subst_go es0
+              end) payloads0)) =
+          ((fix subst_go (es : list expr) : list expr :=
+              match es with
+              | [] => []
+              | e0 :: es0 => subst_type_params_expr type_args e0 :: subst_go es0
+              end) payloadsr, usedr)).
+        { induction payloads0 as [| e0 rest IHpayloads];
+            intros used0 payloadsr usedr Hincl Hgo; simpl in Hgo |- *.
+          - injection Hgo as <- <-. reflexivity.
+          - destruct (alpha_rename_expr rho used0 e0) as [e0r used1] eqn:He0.
+            destruct ((fix go (used2 : list ident) (payloads1 : list expr) {struct payloads1}
+              : list expr * list ident :=
+              match payloads1 with
+              | [] => ([], used2)
+              | e1 :: rest0 =>
+                  let (e1', used3) := alpha_rename_expr rho used2 e1 in
+                  let (rest', used4) := go used3 rest0 in
+                  (e1' :: rest', used4)
+              end) used1 rest) as [restr used2] eqn:Hrest.
+            injection Hgo as <- <-.
+            rewrite (IH rho used0 e0 e0r used1).
+            + simpl.
+              rewrite (IHpayloads used1 restr used2); auto.
+              intros e1 Hin. apply Hincl. right. exact Hin.
+            + pose proof (expr_size_enum_payload_lt ename variant lts type_args0 payloads e0
+                (Hincl e0 (or_introl eq_refl))). lia.
+            + exact He0. }
+        destruct ((fix go (used0 : list ident) (payloads0 : list expr) {struct payloads0}
+          : list expr * list ident :=
+          match payloads0 with
+          | [] => ([], used0)
+          | e0 :: rest =>
+              let (e0', used1) := alpha_rename_expr rho used0 e0 in
+              let (rest', used2) := go used1 rest in
+              (e0' :: rest', used2)
+          end) used payloads) as [payloadsr used_payloads] eqn:Hgo.
+        injection Hrename as <- <-.
+        rewrite (Hpayloads payloads used payloadsr used_payloads
+          (fun e0 H => H) Hgo). reflexivity.
+      + (* EMatch *)
+        destruct (alpha_rename_expr rho used scrut) as [scrutr used0] eqn:Hscrut.
+        destruct ((fix go (used1 : list ident) (branches0 : list (string * list ident * expr)) {struct branches0}
+          : list (string * list ident * expr) * list ident :=
+          match branches0 with
+          | [] => ([], used1)
+          | (variant_name, binders, e0) :: rest =>
+              let binder_seed := binders ++ free_vars_expr e0 ++ used1 in
+              let '(binders', rho_branch, used2) := alpha_rename_idents rho binder_seed binders in
+              let (e0', used3) := alpha_rename_expr rho_branch used2 e0 in
+              let (rest', used4) := go used3 rest in
+              ((variant_name, binders', e0') :: rest', used4)
+          end) used0 branches) as [branchesr used_branches] eqn:Hbranches.
+        injection Hrename as <- <-.
+        rewrite (IH rho used scrut scrutr used0); [| pose proof (expr_size_match_scrutinee_lt scrut branches); lia | exact Hscrut].
+        simpl.
+        assert (Hbranches_comm : forall branches0 used1 branchesr0 usedr,
+          (forall name binders branch,
+              In (name, binders, branch) branches0 ->
+              In (name, binders, branch) branches) ->
+          ((fix go (used2 : list ident) (branches1 : list (string * list ident * expr)) {struct branches1}
+              : list (string * list ident * expr) * list ident :=
+              match branches1 with
+              | [] => ([], used2)
+              | (variant_name, binders, e0) :: rest =>
+                  let binder_seed := binders ++ free_vars_expr e0 ++ used2 in
+                  let '(binders', rho_branch, used3) :=
+                    alpha_rename_idents rho binder_seed binders in
+                  let (e0', used4) := alpha_rename_expr rho_branch used3 e0 in
+                  let (rest', used5) := go used4 rest in
+                  ((variant_name, binders', e0') :: rest', used5)
+              end) used1 branches0) = (branchesr0, usedr) ->
+          ((fix go (used2 : list ident) (branches1 : list (string * list ident * expr)) {struct branches1}
+              : list (string * list ident * expr) * list ident :=
+              match branches1 with
+              | [] => ([], used2)
+              | (variant_name, binders, e0) :: rest =>
+                  let binder_seed := binders ++ free_vars_expr e0 ++ used2 in
+                  let '(binders', rho_branch, used3) :=
+                    alpha_rename_idents rho binder_seed binders in
+                  let (e0', used4) := alpha_rename_expr rho_branch used3 e0 in
+                  let (rest', used5) := go used4 rest in
+                  ((variant_name, binders', e0') :: rest', used5)
+              end) used1
+            ((fix subst_go (bs : list (string * list ident * expr))
+                : list (string * list ident * expr) :=
+                match bs with
+                | [] => []
+                | (name, binders, e0) :: bs0 =>
+                    (name, binders, subst_type_params_expr type_args e0)
+                      :: subst_go bs0
+                end) branches0)) =
+          ((fix subst_go (bs : list (string * list ident * expr))
+              : list (string * list ident * expr) :=
+              match bs with
+              | [] => []
+              | (name, binders, e0) :: bs0 =>
+                  (name, binders, subst_type_params_expr type_args e0)
+                    :: subst_go bs0
+              end) branchesr0, usedr)).
+        { induction branches0 as [| [[branch_name binders] branch] rest IHbranches];
+            intros used1 branchesr0 usedr Hincl Hgo; simpl in Hgo |- *.
+          - injection Hgo as <- <-. reflexivity.
+          - rewrite expr_names_subst_type_params_expr.
+            destruct (alpha_rename_idents rho
+              (binders ++ free_vars_expr branch ++ used1) binders)
+              as [[bindersr rho_branch] used2] eqn:Hbinders.
+            destruct (alpha_rename_expr rho_branch used2 branch)
+              as [branchr used3] eqn:Hbranch.
+            destruct ((fix go (used4 : list ident) (branches1 : list (string * list ident * expr)) {struct branches1}
+              : list (string * list ident * expr) * list ident :=
+              match branches1 with
+              | [] => ([], used4)
+              | (variant_name, binders0, e0) :: rest0 =>
+                  let binder_seed := binders0 ++ free_vars_expr e0 ++ used4 in
+                  let '(binders0', rho_branch0, used5) :=
+                    alpha_rename_idents rho binder_seed binders0 in
+                  let (e0', used6) := alpha_rename_expr rho_branch0 used5 e0 in
+                  let (rest', used7) := go used6 rest0 in
+                  ((variant_name, binders0', e0') :: rest', used7)
+              end) used3 rest) as [restr used4] eqn:Hrest.
+            injection Hgo as <- <-.
+            simpl.
+            replace (binders ++
+              free_vars_expr (subst_type_params_expr type_args branch) ++ used1)
+              with (binders ++ free_vars_expr branch ++ used1)
+              by (rewrite expr_names_subst_type_params_expr; reflexivity).
+            change (expr_names branch) with (free_vars_expr branch).
+            rewrite Hbinders.
+            rewrite (IH rho_branch used2 branch branchr used3).
+            + simpl.
+              destruct (((fix go
+                (used2 : list ident)
+                (branches1 : list (string * list ident * expr)) {struct branches1}
+                : list (string * list ident * expr) * list ident :=
+                match branches1 with
+                | [] => ([], used2)
+                | (variant_name, binders0, e0) :: rest0 =>
+                    let binder_seed := binders0 ++ free_vars_expr e0 ++ used2 in
+                    let '(binders0', rho_branch0, used5) :=
+                      alpha_rename_idents rho binder_seed binders0 in
+                    let (e0', used6) := alpha_rename_expr rho_branch0 used5 e0 in
+                    let (rest', used7) := go used6 rest0 in
+                    ((variant_name, binders0', e0') :: rest', used7)
+                end)
+                used3
+                ((fix subst_go (bs : list (string * list ident * expr))
+                  : list (string * list ident * expr) :=
+                  match bs with
+                  | [] => []
+                  | (name, binders0, e0) :: bs0 =>
+                      (name, binders0, subst_type_params_expr type_args e0)
+                      :: subst_go bs0
+                  end) rest))) as [restr_sub used_sub] eqn:Hrest_sub.
+              pose proof (IHbranches used3 restr used4) as Hrest_comm.
+              assert (Hincl_rest : forall (name0 : string)
+                  (binders0 : list ident) (branch0 : expr),
+                  In (name0, binders0, branch0) rest ->
+                  In (name0, binders0, branch0) branches).
+              { intros name0 binders0 branch0 Hin.
+                apply Hincl. right. exact Hin. }
+              specialize (Hrest_comm Hincl_rest Hrest).
+              rewrite Hrest_sub in Hrest_comm.
+              injection Hrest_comm as <- <-.
+              reflexivity.
+            + pose proof (expr_size_match_branch_lt scrut branches branch_name binders branch
+                (Hincl branch_name binders branch (or_introl eq_refl))). lia.
+            + exact Hbranch. }
+        destruct (((fix go (used1 : list ident)
+          (branches0 : list (string * list ident * expr)) {struct branches0}
+          : list (string * list ident * expr) * list ident :=
+          match branches0 with
+          | [] => ([], used1)
+          | (variant_name, binders, e0) :: rest =>
+              let binder_seed := binders ++ free_vars_expr e0 ++ used1 in
+              let '(binders', rho_branch, used2) :=
+                alpha_rename_idents rho binder_seed binders in
+              let (e0', used3) := alpha_rename_expr rho_branch used2 e0 in
+              let (rest', used4) := go used3 rest in
+              ((variant_name, binders', e0') :: rest', used4)
+          end) used0
+          ((fix subst_go (bs : list (string * list ident * expr))
+            : list (string * list ident * expr) :=
+            match bs with
+            | [] => []
+            | (name, binders, e0) :: bs0 =>
+                (name, binders, subst_type_params_expr type_args e0)
+                :: subst_go bs0
+            end) branches))) as [branches_sub used_sub] eqn:Hbranches_sub.
+        pose proof (Hbranches_comm branches used0 branchesr used_branches
+          (fun name binders branch H => H) Hbranches) as Hbranches_comm'.
+        rewrite Hbranches_sub in Hbranches_comm'.
+        injection Hbranches_comm' as <- <-.
+        reflexivity.
+      + destruct (alpha_rename_expr rho used rhs) as [rhsr used0] eqn:Hrhs.
+        injection Hrename as <- <-.
+        rewrite (IH rho used rhs rhsr used0); [reflexivity | simpl in Hlt; lia | exact Hrhs].
+      + destruct (alpha_rename_expr rho used rhs) as [rhsr used0] eqn:Hrhs.
+        injection Hrename as <- <-.
+        rewrite (IH rho used rhs rhsr used0); [reflexivity | simpl in Hlt; lia | exact Hrhs].
+      + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
+        injection Hrename as <- <-.
+        rewrite (IH rho used e er0 used0); [reflexivity | simpl in Hlt; lia | exact He].
+      + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
+        injection Hrename as <- <-.
+        rewrite (IH rho used e er0 used0); [reflexivity | simpl in Hlt; lia | exact He].
+      + destruct (alpha_rename_expr rho used e1) as [e1r used1] eqn:He1.
+        destruct (alpha_rename_expr rho used1 e2) as [e2r used2] eqn:He2.
+        destruct (alpha_rename_expr rho used2 e3) as [e3r used3] eqn:He3.
+        injection Hrename as <- <-.
+        rewrite (IH rho used e1 e1r used1); [| simpl in Hlt; lia | exact He1].
+        simpl.
+        rewrite (IH rho used1 e2 e2r used2); [| simpl in Hlt; lia | exact He2].
+        simpl.
+        rewrite (IH rho used2 e3 e3r used3); [reflexivity | simpl in Hlt; lia | exact He3]. }
+  intros rho used e er used' Hrename.
+  eapply Hsize with (n := S (expr_size e)); [lia | exact Hrename].
+Qed.
+
+
 Lemma root_env_tail_fresh_names_subst_type_params_expr :
   forall type_args R_tail e,
     root_env_tail_fresh_names R_tail (expr_local_store_names e) ->

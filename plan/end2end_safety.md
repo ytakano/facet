@@ -431,6 +431,9 @@ failures; invalid tests pass.
       - T2a2d2aq done: added subst-type-param name/ctx-alpha helper
         transports for the generic runtime bridge; `EnvRuntimeBaseSafety.v`
         target and proof-hole scan pass; sub-agent closed.
+      - T2a2d2ar done: proved alpha-renaming commutes with type-argument
+        substitution for expressions; `EnvRuntimeBaseSafety.v` target and
+        proof-hole scan pass.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

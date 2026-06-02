@@ -333,6 +333,9 @@ failures; invalid tests pass.
       roots/shadow/coverage/scope facts; `EnvRuntimeBaseSafety.v` target and
       proof-hole scan pass. Sub-agent spawn remains unavailable due thread
       limit.
+    - T2a2d2q done: add runtime-accurate generic argument frame package for
+      type-instantiated params; `EnvRuntimeBaseSafety.v` target and proof-hole
+      scan pass. Sub-agent spawn remains unavailable due thread limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

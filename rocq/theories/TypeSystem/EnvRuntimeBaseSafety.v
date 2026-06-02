@@ -9483,6 +9483,8 @@ Definition callee_body_root_shadow_captured_call_store_safe_summary
   callee_body_root_shadow_captured_call_provenance_summary env fdef \/
   callee_body_root_shadow_captured_call_direct_narrow_store_safe_summary
     env fdef \/
+  callee_body_root_shadow_captured_call_generic_direct_narrow_store_safe_summary
+    env fdef \/
   exists T_body Gamma_out R_body roots_body ret_roots,
     NoDup (ctx_names (params_ctx (fn_params fdef))) /\
     expr_root_shadow_store_safe_narrow_summary_checked env
@@ -9576,7 +9578,7 @@ Proof.
       split; [exact Hcompat_body |].
       split; [apply fn_params_roots_exclude_b_sound; exact Hroots |].
       apply fn_params_root_env_excludes_b_sound. exact Henv.
-  - right. right.
+  - right. right. right.
     destruct (infer_core_env_roots_shadow_safe_checked env
       (fn_outlives fdef) (fn_lifetimes fdef)
       (initial_root_env_for_fn fdef) (fn_body_ctx fdef) (fn_body fdef))

@@ -1,6 +1,6 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming TypingRules RootProvenance TypeChecker.
-From Stdlib Require Import Bool List String.
+From Stdlib Require Import Bool List String Lia.
 Import ListNotations.
 
 Definition roots_exclude_params (ps : list param) (roots : root_set) : Prop :=
@@ -493,6 +493,197 @@ Proof.
       rewrite Hlookup. reflexivity.
     + eassumption.
   - inversion Hplace; subst; congruence.
+Qed.
+
+Fixpoint type_params_bounded_ty_fuel
+    (fuel n : nat) (T : Ty) {struct fuel} : Prop :=
+  match fuel with
+  | O => False
+  | S fuel' =>
+      match T with
+      | MkTy _ TUnits => True
+      | MkTy _ TIntegers => True
+      | MkTy _ TFloats => True
+      | MkTy _ TBooleans => True
+      | MkTy _ (TNamed _) => True
+      | MkTy _ (TParam i) => i < n
+      | MkTy _ (TStruct _ _ args) =>
+          Forall (type_params_bounded_ty_fuel fuel' n) args
+      | MkTy _ (TEnum _ _ args) =>
+          Forall (type_params_bounded_ty_fuel fuel' n) args
+      | MkTy _ (TFn params ret) =>
+          Forall (type_params_bounded_ty_fuel fuel' n) params /\
+          type_params_bounded_ty_fuel fuel' n ret
+      | MkTy _ (TClosure _ params ret) =>
+          Forall (type_params_bounded_ty_fuel fuel' n) params /\
+          type_params_bounded_ty_fuel fuel' n ret
+      | MkTy _ (TForall _ _ body) =>
+          type_params_bounded_ty_fuel fuel' n body
+      | MkTy _ (TTypeForall _ _ _) => True
+      | MkTy _ (TRef _ _ inner) =>
+          type_params_bounded_ty_fuel fuel' n inner
+      end
+  end.
+
+Definition type_params_bounded_ty (n : nat) (T : Ty) : Prop :=
+  exists fuel, type_params_bounded_ty_fuel fuel n T.
+
+Lemma subst_type_params_ty_compose_map_bounded_fuel : forall fuel sigma args T,
+  type_params_bounded_ty_fuel fuel (Datatypes.length args) T ->
+  subst_type_params_ty (compose_type_params sigma args) T =
+  subst_type_params_ty (map (subst_type_params_ty sigma) args) T.
+Proof.
+  induction fuel as [| fuel IHfuel]; intros sigma args [u core] Hbounded.
+  - contradiction.
+  - destruct core; simpl in *; try reflexivity.
+    + rewrite nth_error_compose_type_params.
+      rewrite nth_error_map_subst_type_params_ty.
+      destruct (nth_error args n) as [Targ |] eqn:Harg.
+      * reflexivity.
+      * apply nth_error_None in Harg. lia.
+    + apply (f_equal (fun xs => MkTy u (TStruct s l xs))).
+      induction Hbounded as [| T Ts HT HTs IHTs]; simpl.
+      * reflexivity.
+      * rewrite (IHfuel sigma args T HT). rewrite IHTs. reflexivity.
+    + apply (f_equal (fun xs => MkTy u (TEnum s l xs))).
+      induction Hbounded as [| T Ts HT HTs IHTs]; simpl.
+      * reflexivity.
+      * rewrite (IHfuel sigma args T HT). rewrite IHTs. reflexivity.
+    + destruct Hbounded as [Hparams Hret].
+      rewrite (IHfuel sigma args t Hret).
+      apply (f_equal (fun xs => MkTy u (TFn xs
+        (subst_type_params_ty (map (subst_type_params_ty sigma) args) t)))).
+      induction Hparams as [| T Ts HT HTs IHTs]; simpl.
+      * reflexivity.
+      * rewrite (IHfuel sigma args T HT). rewrite IHTs. reflexivity.
+    + destruct Hbounded as [Hparams Hret].
+      rewrite (IHfuel sigma args t Hret).
+      apply (f_equal (fun xs => MkTy u (TClosure l xs
+        (subst_type_params_ty (map (subst_type_params_ty sigma) args) t)))).
+      induction Hparams as [| T Ts HT HTs IHTs]; simpl.
+      * reflexivity.
+      * rewrite (IHfuel sigma args T HT). rewrite IHTs. reflexivity.
+    + rewrite (IHfuel sigma args t Hbounded). reflexivity.
+    + rewrite (IHfuel sigma args t Hbounded). reflexivity.
+Qed.
+
+Lemma subst_type_params_ty_compose_map_bounded : forall sigma args T,
+  type_params_bounded_ty (Datatypes.length args) T ->
+  subst_type_params_ty (compose_type_params sigma args) T =
+  subst_type_params_ty (map (subst_type_params_ty sigma) args) T.
+Proof.
+  intros sigma args T [fuel Hbounded].
+  eapply subst_type_params_ty_compose_map_bounded_fuel.
+  exact Hbounded.
+Qed.
+
+Lemma instantiate_struct_field_ty_subst_type_params_map_bounded :
+  forall sigma lts args f,
+    type_params_bounded_ty (Datatypes.length args)
+      (apply_lt_ty lts (field_ty f)) ->
+    subst_type_params_ty sigma (instantiate_struct_field_ty lts args f) =
+    instantiate_struct_field_ty lts (map (subst_type_params_ty sigma) args) f.
+Proof.
+  intros sigma lts args f Hbounded.
+  unfold instantiate_struct_field_ty.
+  rewrite subst_type_params_ty_compose.
+  apply subst_type_params_ty_compose_map_bounded.
+  exact Hbounded.
+Qed.
+
+Lemma typed_place_type_env_structural_subst_type_params_ctx_field_bounded :
+  forall env sigma Sigma p T,
+    typed_place_type_env_structural env Sigma p T ->
+    (forall p0 T_parent sname lts (args : list Ty) sdef,
+        typed_place_type_env_structural env Sigma p0 T_parent ->
+        ty_core T_parent = TStruct sname lts args ->
+        lookup_struct sname env = Some sdef ->
+        Datatypes.length args = struct_type_params sdef) ->
+    (forall sname lts (args : list Ty) sdef fdef,
+        lookup_struct sname env = Some sdef ->
+        lookup_field (field_name fdef) (struct_fields sdef) = Some fdef ->
+        Datatypes.length args = struct_type_params sdef ->
+        type_params_bounded_ty (Datatypes.length args)
+          (apply_lt_ty lts (field_ty fdef))) ->
+    typed_place_type_env_structural env (subst_type_params_ctx sigma Sigma)
+      p (subst_type_params_ty sigma T).
+Proof.
+  intros env sigma Sigma p T Hplace Hargs_ok Hfield_ok.
+  induction Hplace.
+  - simpl. eapply TPTES_Var.
+    rewrite sctx_lookup_subst_type_params_ctx_eq.
+    rewrite H. reflexivity.
+  - simpl. eapply TPTES_Deref. exact IHHplace.
+  - rewrite (instantiate_struct_field_ty_subst_type_params_map_bounded sigma lts args fdef).
+    + eapply TPTES_Field with
+        (T_parent := subst_type_params_ty sigma T_parent)
+        (sdef := sdef).
+      * exact IHHplace.
+      * destruct T_parent as [u core]; simpl in *; subst core; reflexivity.
+      * exact H0.
+      * exact H1.
+    + eapply Hfield_ok.
+      * exact H0.
+      * exact H1.
+      * eapply Hargs_ok; eassumption.
+Qed.
+
+Lemma typed_place_env_structural_subst_type_params_ctx_field_bounded :
+  forall env sigma Sigma p T,
+    typed_place_env_structural env Sigma p T ->
+    (forall p0 T_parent sname lts (args : list Ty) sdef,
+        typed_place_type_env_structural env Sigma p0 T_parent ->
+        ty_core T_parent = TStruct sname lts args ->
+        lookup_struct sname env = Some sdef ->
+        Datatypes.length args = struct_type_params sdef) ->
+    (forall sname lts (args : list Ty) sdef fdef,
+        lookup_struct sname env = Some sdef ->
+        lookup_field (field_name fdef) (struct_fields sdef) = Some fdef ->
+        Datatypes.length args = struct_type_params sdef ->
+        type_params_bounded_ty (Datatypes.length args)
+          (apply_lt_ty lts (field_ty fdef))) ->
+    typed_place_env_structural env (subst_type_params_ctx sigma Sigma)
+      p (subst_type_params_ty sigma T).
+Proof.
+  intros env sigma Sigma p T Hplace Hargs_ok Hfield_ok.
+  induction Hplace.
+  - simpl. eapply TPES_Var.
+    + rewrite sctx_lookup_subst_type_params_ctx_eq.
+      rewrite H. reflexivity.
+    + exact H0.
+  - simpl. eapply TPES_Deref. exact IHHplace.
+  - rewrite (instantiate_struct_field_ty_subst_type_params_map_bounded sigma lts args fdef).
+    + eapply TPES_Field with
+        (T_parent := subst_type_params_ty sigma T_parent)
+        (sdef := sdef) (T_root := subst_type_params_ty sigma T_root)
+        (st := st).
+      * eapply typed_place_type_env_structural_subst_type_params_ctx_field_bounded;
+          eassumption.
+      * destruct T_parent as [u core]; simpl in *; subst core; reflexivity.
+      * exact H1.
+      * exact H2.
+      * exact H3.
+      * rewrite sctx_lookup_subst_type_params_ctx_eq.
+        rewrite H4. reflexivity.
+      * exact H5.
+    + eapply Hfield_ok.
+      * exact H1.
+      * exact H2.
+      * eapply Hargs_ok; eassumption.
+  - rewrite (instantiate_struct_field_ty_subst_type_params_map_bounded sigma lts args fdef).
+    + eapply TPES_Field_Indirect with
+        (T_parent := subst_type_params_ty sigma T_parent)
+        (sdef := sdef).
+      * eapply typed_place_type_env_structural_subst_type_params_ctx_field_bounded;
+          eassumption.
+      * destruct T_parent as [u core]; simpl in *; subst core; reflexivity.
+      * exact H1.
+      * exact H2.
+      * exact H3.
+    + eapply Hfield_ok.
+      * exact H1.
+      * exact H2.
+      * eapply Hargs_ok; eassumption.
 Qed.
 
 Inductive place_under_unique_ref_structural (env : global_env) (Σ : sctx)

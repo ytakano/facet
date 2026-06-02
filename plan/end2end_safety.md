@@ -387,9 +387,12 @@ failures; invalid tests pass.
     - T2a2d2ag blocked locally: unconditional place type-substitution
       transport is insufficient for field places because struct field
       instantiation needs `compose_type_params`; do not narrow to `PVar`.
-    - T2a2d2ah in progress: add only the missing well-formed field/type-arg
-      support needed to transport direct `place_path` leaves without reducing
-      accepted generic programs.
+    - T2a2d2ah done: add bounded type-parameter support and
+      arity/boundedness-premised field-place type-substitution transports;
+      `EnvStructuralRules.v` target passes without narrowing accepted generic
+      programs. Sub-agent patch was fixed locally before commit.
+    - T2a2d2ai in progress: use the bounded transports to prove substituted
+      direct-place runtime leaves and then the generic direct-call body bridge.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

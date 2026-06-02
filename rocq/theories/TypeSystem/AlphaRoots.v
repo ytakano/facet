@@ -689,6 +689,45 @@ Proof.
     simpl; constructor.
 Qed.
 
+Lemma typed_env_roots_shadow_safe_eplace_subst_type_params_ctx_field_bounded :
+  forall env Omega n R Sigma p T Sigma' R' roots type_args,
+    typed_env_roots_shadow_safe env Omega n R Sigma (EPlace p)
+      T Sigma' R' roots ->
+    (forall p0 T_parent sname lts (args : list Ty) sdef,
+        typed_place_type_env_structural env Sigma p0 T_parent ->
+        ty_core T_parent = TStruct sname lts args ->
+        lookup_struct sname env = Some sdef ->
+        Datatypes.length args = struct_type_params sdef) ->
+    (forall sname lts (args : list Ty) sdef fdef,
+        lookup_struct sname env = Some sdef ->
+        lookup_field (field_name fdef) (struct_fields sdef) = Some fdef ->
+        Datatypes.length args = struct_type_params sdef ->
+        type_params_bounded_ty (Datatypes.length args)
+          (apply_lt_ty lts (field_ty fdef))) ->
+    typed_env_roots_shadow_safe env Omega n R
+      (subst_type_params_ctx type_args Sigma) (EPlace p)
+      (subst_type_params_ty type_args T)
+      (subst_type_params_ctx type_args Sigma') R' roots.
+Proof.
+  intros env Omega n R Sigma p T Sigma' R' roots type_args
+    Htyped Hargs_ok Hfield_ok.
+  inversion Htyped; subst; try discriminate.
+  - eapply TERS_Place_Copy.
+    + eapply typed_place_env_structural_subst_type_params_ctx_field_bounded;
+        eassumption.
+    + rewrite ty_usage_subst_type_params_ty. exact H1.
+    + exact H2.
+    + exact H5.
+  - eapply TERS_Place_Move.
+    + eapply typed_place_env_structural_subst_type_params_ctx_field_bounded;
+        eassumption.
+    + rewrite ty_usage_subst_type_params_ty. exact H1.
+    + exact H2.
+    + rewrite sctx_consume_path_subst_type_params_ctx.
+      rewrite H3. reflexivity.
+    + exact H6.
+Qed.
+
 Scheme typed_env_roots_shadow_safe_ind' :=
   Induction for typed_env_roots_shadow_safe Sort Prop
 with typed_args_roots_shadow_safe_ind' :=

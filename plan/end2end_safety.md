@@ -371,8 +371,13 @@ failures; invalid tests pass.
     - T2a2d2aa done: add type-substitution lookup helpers for state
       contexts and parameter freshness checks; `EnvStructuralRules.v` target
       and proof-hole scan pass.
-    - T2a2d2 next: prove typing/root transport for substituted generic
-      function bodies and narrow store-safe summaries.
+    - T2a2d2ab done: add consumed-binding `sctx_check_ok` and mutability
+      lookup helpers for type-substituted contexts; `EnvStructuralRules.v`
+      target and proof-hole scan pass. Sub-agent worker implemented this slice.
+    - T2a2d2ac in progress: keep generic type arguments fully general.
+      Do not add `Forall non_function_value_ty_b type_args`; instead prove a
+      substituted-body runtime package by induction on the original narrow
+      summary, using returned value closure-target summaries for `let` binds.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

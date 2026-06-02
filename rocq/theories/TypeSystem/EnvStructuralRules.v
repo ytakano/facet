@@ -179,6 +179,41 @@ Proof.
   destruct (sctx_lookup x Σ) as [[T st] |]; reflexivity.
 Qed.
 
+Lemma linear_scope_ok_b_subst_type_params_ty_consumed :
+  forall env type_args T st,
+    st_consumed st = true ->
+    linear_scope_ok_b env (subst_type_params_ty type_args T) st = true.
+Proof.
+  intros env type_args T st Hconsumed.
+  unfold linear_scope_ok_b. rewrite Hconsumed. reflexivity.
+Qed.
+
+Lemma sctx_check_ok_subst_type_params_ctx_consumed :
+  forall env type_args x T Σ T0 st,
+    sctx_check_ok env x T Σ = true ->
+    sctx_lookup x Σ = Some (T0, st) ->
+    st_consumed st = true ->
+    sctx_check_ok env x (subst_type_params_ty type_args T)
+      (subst_type_params_ctx type_args Σ) = true.
+Proof.
+  intros env type_args x T Σ T0 st Hcheck Hlookup Hconsumed.
+  unfold sctx_check_ok in *.
+  rewrite ty_usage_subst_type_params_ty.
+  destruct (ty_usage T); try reflexivity.
+  rewrite sctx_lookup_subst_type_params_ctx_eq.
+  rewrite Hlookup. simpl.
+  apply linear_scope_ok_b_subst_type_params_ty_consumed. exact Hconsumed.
+Qed.
+
+Lemma sctx_lookup_mut_subst_type_params_ctx :
+  forall type_args x Σ,
+    sctx_lookup_mut x (subst_type_params_ctx type_args Σ) =
+    sctx_lookup_mut x Σ.
+Proof.
+  intros type_args x Σ. unfold sctx_lookup_mut.
+  apply ctx_lookup_mut_subst_type_params_ctx.
+Qed.
+
 Lemma ctx_update_state_subst_type_params_ctx :
   forall type_args x f Σ,
     ctx_update_state x f (subst_type_params_ctx type_args Σ) =

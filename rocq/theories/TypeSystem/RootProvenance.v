@@ -51,6 +51,29 @@ Proof.
   apply initial_root_env_for_params_origin_apply_type_params.
 Qed.
 
+Lemma initial_root_env_for_params_origin_apply_lt_params :
+  forall sigma ps_orig ps_current,
+    initial_root_env_for_params_origin
+      (apply_lt_params sigma ps_orig)
+      (apply_lt_params sigma ps_current) =
+    initial_root_env_for_params_origin ps_orig ps_current.
+Proof.
+  intros sigma ps_orig.
+  induction ps_orig as [| p_orig ps_orig IH]; intros ps_current;
+    destruct ps_current as [| p_current ps_current]; simpl; auto.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma initial_root_env_for_params_apply_lt_params :
+  forall sigma ps,
+    initial_root_env_for_params (apply_lt_params sigma ps) =
+    initial_root_env_for_params ps.
+Proof.
+  intros sigma ps.
+  unfold initial_root_env_for_params.
+  apply initial_root_env_for_params_origin_apply_lt_params.
+Qed.
+
 Definition root_atom_rename (rho : rename_env) (atom : root_atom)
     : root_atom :=
   match atom with

@@ -268,6 +268,8 @@ failures; invalid tests pass.
       `ctx_add_params`/`sctx_add_params`; `EnvStructuralRules.v` make target
       and proof-hole scan pass. Sub-agent spawn remains unavailable due
       thread limit.
+    - T2a2d1ak done: full `cd rocq && make` and proof-hole scan pass
+      after substitution-transport helper chain.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

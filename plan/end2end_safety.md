@@ -329,6 +329,10 @@ failures; invalid tests pass.
     - T2a2d2o done: add `store_remove_params` identities for type/lifetime
       instantiated params; `OperationalSemantics.v` target and proof-hole scan
       pass. Sub-agent spawn remains unavailable due thread limit.
+    - T2a2d2p done: strengthen generic argument-frame package with
+      roots/shadow/coverage/scope facts; `EnvRuntimeBaseSafety.v` target and
+      proof-hole scan pass. Sub-agent spawn remains unavailable due thread
+      limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

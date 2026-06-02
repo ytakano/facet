@@ -505,6 +505,12 @@ Lemma generic_direct_call_args_bind_params_runtime_package :
       apply_lt_params sigma (apply_type_params type_args (fn_params fcall)) in
     store_typed_prefix env (bind_params ps_call vs s_args)
       (sctx_of_ctx (params_ctx ps_call)) /\
+    store_roots_within (call_param_root_env ps_call arg_roots R_args)
+      (bind_params ps_call vs s_args) /\
+    store_no_shadow (bind_params ps_call vs s_args) /\
+    root_env_no_shadow (call_param_root_env ps_call arg_roots R_args) /\
+    root_env_covers_params ps_call
+      (call_param_root_env ps_call arg_roots R_args) /\
     root_env_store_roots_named
       (call_param_root_env ps_call arg_roots R_args)
       (bind_params ps_call vs s_args) /\
@@ -512,7 +518,8 @@ Lemma generic_direct_call_args_bind_params_runtime_package :
       (call_param_root_env ps_call arg_roots R_args)
       (bind_params ps_call vs s_args) /\
     store_function_closure_targets_summary env
-      (bind_params ps_call vs s_args).
+      (bind_params ps_call vs s_args) /\
+    store_param_scope ps_call (bind_params ps_call vs s_args) s_args.
 Proof.
   intros env Ω n R Σ args type_args sigma fdef fcall used' s s_args
     vs Σ_args R_args arg_roots Hsafe_args Heval_args Htyped_args Hstore
@@ -534,6 +541,14 @@ Proof.
               env Ω s_args vs sigma type_args fdef fcall used'
               Hargs_values_fdef Hshape Hrename)
     as [Hnodup [Hfresh Hargs_values_fcall]].
+  destruct (eval_args_bind_params_call_param_root_env_ready
+              env s args s_args vs Ω n R Σ
+              (apply_lt_params sigma
+                (apply_type_params type_args (fn_params fdef)))
+              Σ_args R_args arg_roots ps_call Heval_args Hprov_args
+              Htyped_args Hroots Hshadow Hrn Hnodup Hfresh
+              Hargs_values_fcall)
+    as [Hroots_bind [Hshadow_bind [Hrn_bind Hcover_bind]]].
   destruct (store_safe_function_value_call_args_typed_roots_store_named
               env Ω n R Σ args
               (apply_lt_params sigma
@@ -543,12 +558,17 @@ Proof.
     as [Hnamed_args [Harg_roots_named Hkeys_args]].
   repeat split.
   - eapply bind_params_store_typed_prefix; eassumption.
+  - exact Hroots_bind.
+  - exact Hshadow_bind.
+  - exact Hrn_bind.
+  - exact Hcover_bind.
   - eapply root_env_store_roots_named_call_param_bind_params;
       eassumption.
   - eapply root_env_store_keys_named_call_param_bind_params;
       eassumption.
   - eapply store_safe_function_value_call_args_bind_params_summary;
       eassumption.
+  - eapply store_param_scope_bind_params. exact Hargs_values_fcall.
 Qed.
 
 Lemma value_update_path_function_closure_targets_summary :

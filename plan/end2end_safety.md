@@ -384,9 +384,12 @@ failures; invalid tests pass.
     - T2a2d2af done: add substituted `EUnit`/literal shadow-safe
       transports and runtime leaves; `AlphaRoots.v` and
       `EnvRuntimeBaseSafety.v` targets pass.
-    - T2a2d2ag in progress: keep generic type arguments fully general and
-      prove substituted-body runtime package by induction on the original
-      narrow summary, using returned value closure-target summaries for lets.
+    - T2a2d2ag blocked locally: unconditional place type-substitution
+      transport is insufficient for field places because struct field
+      instantiation needs `compose_type_params`; do not narrow to `PVar`.
+    - T2a2d2ah in progress: add only the missing well-formed field/type-arg
+      support needed to transport direct `place_path` leaves without reducing
+      accepted generic programs.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

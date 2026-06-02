@@ -69,6 +69,83 @@ Proof.
   - exact IH.
 Qed.
 
+Lemma root_subst_of_params_apply_type_params :
+  forall type_args ps arg_roots,
+    root_subst_of_params (apply_type_params type_args ps) arg_roots =
+    root_subst_of_params ps arg_roots.
+Proof.
+  intros type_args ps.
+  induction ps as [| p ps IH]; intros arg_roots;
+    destruct arg_roots as [| roots arg_roots]; simpl; auto.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma roots_exclude_params_apply_type_params_iff :
+  forall type_args ps roots,
+    roots_exclude_params (apply_type_params type_args ps) roots <->
+    roots_exclude_params ps roots.
+Proof.
+  intros type_args ps roots.
+  unfold roots_exclude_params.
+  rewrite params_ctx_apply_type_params.
+  rewrite ctx_names_subst_type_params_ctx.
+  split; intro H; exact H.
+Qed.
+
+Lemma roots_exclude_params_apply_type_params :
+  forall type_args ps roots,
+    roots_exclude_params ps roots ->
+    roots_exclude_params (apply_type_params type_args ps) roots.
+Proof.
+  intros type_args ps roots Hexclude.
+  apply roots_exclude_params_apply_type_params_iff.
+  exact Hexclude.
+Qed.
+
+Lemma roots_exclude_params_unapply_type_params :
+  forall type_args ps roots,
+    roots_exclude_params (apply_type_params type_args ps) roots ->
+    roots_exclude_params ps roots.
+Proof.
+  intros type_args ps roots Hexclude.
+  apply (proj1 (roots_exclude_params_apply_type_params_iff
+    type_args ps roots)).
+  exact Hexclude.
+Qed.
+
+Lemma root_env_excludes_params_apply_type_params_iff :
+  forall type_args ps R,
+    root_env_excludes_params (apply_type_params type_args ps) R <->
+    root_env_excludes_params ps R.
+Proof.
+  intros type_args ps R.
+  unfold root_env_excludes_params.
+  rewrite params_ctx_apply_type_params.
+  rewrite ctx_names_subst_type_params_ctx.
+  split; intro H; exact H.
+Qed.
+
+Lemma root_env_excludes_params_apply_type_params :
+  forall type_args ps R,
+    root_env_excludes_params ps R ->
+    root_env_excludes_params (apply_type_params type_args ps) R.
+Proof.
+  intros type_args ps R Hexclude.
+  apply root_env_excludes_params_apply_type_params_iff.
+  exact Hexclude.
+Qed.
+
+Lemma root_env_excludes_params_unapply_type_params :
+  forall type_args ps R,
+    root_env_excludes_params (apply_type_params type_args ps) R ->
+    root_env_excludes_params ps R.
+Proof.
+  intros type_args ps R Hexclude.
+  apply (proj1 (root_env_excludes_params_apply_type_params_iff
+    type_args ps R)).
+  exact Hexclude.
+Qed.
+
 Lemma eval_expr_root_shadow_captured_call_provenance_summary_exact_preserves_store_function_closure_targets_summary :
   forall env Ω n R Σ e T Σ' R' roots ret_roots,
     env_fns_root_shadow_provenance_summary_evidence env ->
@@ -1615,7 +1692,7 @@ Proof.
           (fresh_ident x (x :: free_vars_expr e2 ++ used1) ::
             x :: free_vars_expr e2 ++ used1) e2)
           as [e2r used2] eqn:He2.
-        injection Hrename as <- <-.
+        inversion Hrename; subst; clear Hrename.
         rewrite (IH rho used e1 e1r used1); [| simpl in Hlt; lia | exact He1].
         simpl.
         rewrite (IH _ _ e2 e2r used2); [reflexivity | simpl in Hlt; lia | exact He2].
@@ -1626,7 +1703,7 @@ Proof.
           (fresh_ident x (x :: free_vars_expr e2 ++ used1) ::
             x :: free_vars_expr e2 ++ used1) e2)
           as [e2r used2] eqn:He2.
-        injection Hrename as <- <-.
+        inversion Hrename; subst; clear Hrename.
         rewrite (IH rho used e1 e1r used1); [| simpl in Hlt; lia | exact He1].
         simpl.
         rewrite (IH _ _ e2 e2r used2); [reflexivity | simpl in Hlt; lia | exact He2].
@@ -1688,7 +1765,7 @@ Proof.
               let (rest', used2) := go used1 rest in
               (arg' :: rest', used2)
           end) used args) as [argsr used_args] eqn:Hgo.
-        injection Hrename as <- <-.
+        inversion Hrename; subst; clear Hrename.
         rewrite (Hargs args used argsr used_args (fun a H => H) Hgo). reflexivity.
       + assert (Hargs : forall args0 used0 argsr usedr,
           (forall a, In a args0 -> In a args) ->
@@ -1748,7 +1825,7 @@ Proof.
               let (rest', used2) := go used1 rest in
               (arg' :: rest', used2)
           end) used args) as [argsr used_args] eqn:Hgo.
-        injection Hrename as <- <-.
+        inversion Hrename; subst; clear Hrename.
         rewrite (Hargs args used argsr used_args (fun a H => H) Hgo). reflexivity.
       + destruct (alpha_rename_expr rho used callee) as [calleer used0] eqn:Hcallee.
         assert (Hargs : forall args0 used1 argsr usedr,
@@ -1809,7 +1886,7 @@ Proof.
               let (rest', used3) := go used2 rest in
               (arg' :: rest', used3)
           end) used0 args) as [argsr used_args] eqn:Hgo.
-        injection Hrename as <- <-.
+        inversion Hrename; subst; clear Hrename.
         rewrite (IH rho used callee calleer used0); [| pose proof (expr_size_callexpr_callee_lt callee args); lia | exact Hcallee].
         simpl. rewrite (Hargs args used0 argsr used_args (fun a H => H) Hgo). reflexivity.
       + assert (Hfields : forall fields0 used0 fieldsr usedr,
@@ -1874,7 +1951,7 @@ Proof.
               let (rest', used2) := go used1 rest in
               ((field, e0') :: rest', used2)
           end) used fields) as [fieldsr used_fields] eqn:Hgo.
-        injection Hrename as <- <-.
+        inversion Hrename; subst; clear Hrename.
         rewrite (Hfields fields used fieldsr used_fields
           (fun field e0 H => H) Hgo). reflexivity.
       + assert (Hpayloads : forall payloads0 used0 payloadsr usedr,
@@ -1937,7 +2014,7 @@ Proof.
               let (rest', used2) := go used1 rest in
               (e0' :: rest', used2)
           end) used payloads) as [payloadsr used_payloads] eqn:Hgo.
-        injection Hrename as <- <-.
+        inversion Hrename; subst; clear Hrename.
         rewrite (Hpayloads payloads used payloadsr used_payloads
           (fun e0 H => H) Hgo). reflexivity.
       + (* EMatch *)
@@ -1953,7 +2030,7 @@ Proof.
               let (rest', used4) := go used3 rest in
               ((variant_name, binders', e0') :: rest', used4)
           end) used0 branches) as [branchesr used_branches] eqn:Hbranches.
-        injection Hrename as <- <-.
+        inversion Hrename; subst; clear Hrename.
         rewrite (IH rho used scrut scrutr used0); [| pose proof (expr_size_match_scrutinee_lt scrut branches); lia | exact Hscrut].
         simpl.
         assert (Hbranches_comm : forall branches0 used1 branchesr0 usedr,
@@ -2095,21 +2172,21 @@ Proof.
         injection Hbranches_comm' as <- <-.
         reflexivity.
       + destruct (alpha_rename_expr rho used rhs) as [rhsr used0] eqn:Hrhs.
-        injection Hrename as <- <-.
+        inversion Hrename; subst; clear Hrename.
         rewrite (IH rho used rhs rhsr used0); [reflexivity | simpl in Hlt; lia | exact Hrhs].
       + destruct (alpha_rename_expr rho used rhs) as [rhsr used0] eqn:Hrhs.
-        injection Hrename as <- <-.
+        inversion Hrename; subst; clear Hrename.
         rewrite (IH rho used rhs rhsr used0); [reflexivity | simpl in Hlt; lia | exact Hrhs].
       + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
-        injection Hrename as <- <-.
+        inversion Hrename; subst; clear Hrename.
         rewrite (IH rho used e er0 used0); [reflexivity | simpl in Hlt; lia | exact He].
       + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
-        injection Hrename as <- <-.
+        inversion Hrename; subst; clear Hrename.
         rewrite (IH rho used e er0 used0); [reflexivity | simpl in Hlt; lia | exact He].
       + destruct (alpha_rename_expr rho used e1) as [e1r used1] eqn:He1.
         destruct (alpha_rename_expr rho used1 e2) as [e2r used2] eqn:He2.
         destruct (alpha_rename_expr rho used2 e3) as [e3r used3] eqn:He3.
-        injection Hrename as <- <-.
+        inversion Hrename; subst; clear Hrename.
         rewrite (IH rho used e1 e1r used1); [| simpl in Hlt; lia | exact He1].
         simpl.
         rewrite (IH rho used1 e2 e2r used2); [| simpl in Hlt; lia | exact He2].
@@ -2119,6 +2196,71 @@ Proof.
   eapply Hsize with (n := S (expr_size e)); [lia | exact Hrename].
 Qed.
 
+
+Definition fn_subst_type_params (type_args : list Ty) (f : fn_def) : fn_def :=
+  MkFnDef (fn_name f) (fn_lifetimes f) (fn_outlives f)
+    (apply_type_params type_args (fn_captures f))
+    (apply_type_params type_args (fn_params f))
+    (subst_type_params_ty type_args (fn_ret f))
+    (subst_type_params_expr type_args (fn_body f))
+    (fn_type_params f) (fn_bounds f).
+
+Lemma param_names_apply_type_params :
+  forall type_args ps,
+    param_names (apply_type_params type_args ps) = param_names ps.
+Proof.
+  intros type_args ps.
+  induction ps as [| p ps IH]; simpl; auto.
+  destruct p as [m x T]. simpl. rewrite IH. reflexivity.
+Qed.
+
+Lemma alpha_rename_params_apply_type_params :
+  forall type_args rho used ps psr rhor used',
+    alpha_rename_params rho used ps = (psr, rhor, used') ->
+    alpha_rename_params rho used (apply_type_params type_args ps) =
+      (apply_type_params type_args psr, rhor, used').
+Proof.
+  intros type_args rho used ps.
+  revert rho used.
+  induction ps as [| p ps IH]; intros rho used psr rhor used' Hrename;
+    simpl in Hrename |- *.
+  - injection Hrename as <- <- <-. reflexivity.
+  - destruct p as [m x T]. simpl in Hrename |- *.
+    destruct (alpha_rename_params rho (fresh_ident x used :: used) ps)
+      as [[psr_tail rhor_tail] used_tail] eqn:Htail.
+    injection Hrename as <- <- <-.
+    simpl. rewrite (IH _ _ _ _ _ Htail). reflexivity.
+Qed.
+
+Lemma alpha_rename_fn_def_subst_type_params :
+  forall type_args used f fr used',
+    alpha_rename_fn_def used f = (fr, used') ->
+    alpha_rename_fn_def used (fn_subst_type_params type_args f) =
+      (fn_subst_type_params type_args fr, used').
+Proof.
+  intros type_args used f fr used' Hrename.
+  unfold alpha_rename_fn_def in Hrename |- *.
+  unfold fn_subst_type_params.
+  simpl in Hrename |- *.
+  repeat rewrite param_names_apply_type_params.
+  rewrite expr_names_subst_type_params_expr.
+  destruct (alpha_rename_params []
+    (param_names (fn_params f) ++ param_names (fn_captures f) ++
+      expr_names (fn_body f) ++ used) (fn_params f))
+    as [[paramsr rho] used1] eqn:Hparams.
+  change (map (apply_type_param type_args) (fn_params f)) with
+    (apply_type_params type_args (fn_params f)).
+  rewrite (alpha_rename_params_apply_type_params type_args []
+    (param_names (fn_params f) ++ param_names (fn_captures f) ++
+      expr_names (fn_body f) ++ used)
+    (fn_params f) paramsr rho used1 Hparams).
+  destruct (alpha_rename_expr rho used1 (fn_body f))
+    as [bodyr used2] eqn:Hbody.
+  inversion Hrename; subst; clear Hrename.
+  rewrite (alpha_rename_expr_subst_type_params_expr type_args rho used1
+    (fn_body f) bodyr used2 Hbody).
+  reflexivity.
+Qed.
 
 Lemma root_env_tail_fresh_names_subst_type_params_expr :
   forall type_args R_tail e,
@@ -2549,7 +2691,7 @@ Proof.
     change (xr :: x :: free_vars_expr e2 ++ used1) with used2
       in Hrename.
     rewrite He2 in Hrename.
-    injection Hrename as <- <-.
+    inversion Hrename; subst; clear Hrename.
     exists (sctx_remove xr Σ2r), (root_env_remove xr R2r), roots2r,
       ret_roots2r.
     split.
@@ -2790,7 +2932,7 @@ Proof.
     change (xr :: x :: free_vars_expr e2 ++ used1) with used2
       in Hrename.
     rewrite He2 in Hrename.
-    injection Hrename as <- <-.
+    inversion Hrename; subst; clear Hrename.
     exists (sctx_remove xr Σ2r), (root_env_remove xr R2r), roots2r,
       ret_roots2r.
     split.

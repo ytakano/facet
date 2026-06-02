@@ -11165,6 +11165,50 @@ Proof.
   repeat split; try assumption.
 Qed.
 
+Lemma generic_direct_call_cleanup_value_from_body_package :
+  forall env sigma type_args ps_runtime fdef fcall s_body ret T_body R_body
+      roots_body frame_final,
+    value_has_type env s_body ret T_body ->
+    ty_compatible_b (fn_outlives fcall) T_body
+      (subst_type_params_ty type_args (fn_ret fcall)) = true ->
+    alpha_rename_fn_def [] fdef = (fcall, []) \/
+      fn_ret fcall = fn_ret fdef ->
+    store_param_scope ps_runtime s_body frame_final ->
+    store_roots_within R_body s_body ->
+    value_roots_within roots_body ret ->
+    store_no_shadow s_body ->
+    NoDup (ctx_names (params_ctx ps_runtime)) ->
+    roots_exclude_params ps_runtime roots_body ->
+    root_env_excludes_params ps_runtime R_body ->
+    (fn_ret fcall = fn_ret fdef) ->
+    value_has_type env (store_remove_params ps_runtime s_body) ret
+      (apply_lt_ty sigma (subst_type_params_ty type_args (fn_ret fdef))).
+Proof.
+  intros env sigma type_args ps_runtime fdef fcall s_body ret T_body R_body
+    roots_body frame_final Hv_body Hcompat _ Hscope Hroots Hret_roots Hshadow
+    Hnodup Hexclude_roots Hexclude_env Hret_eq.
+  assert (Hv_ret_fcall :
+    value_has_type env s_body ret
+      (subst_type_params_ty type_args (fn_ret fcall))).
+  { eapply value_has_type_compatible.
+    - exact Hv_body.
+    - apply ty_compatible_b_sound with (Ω := fn_outlives fcall).
+      exact Hcompat. }
+  assert (Hv_ret_fdef :
+    value_has_type env s_body ret
+      (subst_type_params_ty type_args (fn_ret fdef))).
+  { rewrite <- Hret_eq. exact Hv_ret_fcall. }
+  destruct (store_remove_params_cleanup_excludes
+              ps_runtime s_body frame_final R_body roots_body ret
+              Hscope Hroots Hret_roots Hshadow Hnodup
+              Hexclude_roots Hexclude_env)
+    as [locals [Hremoved [Hret_exclude Hstore_exclude]]].
+  apply value_has_type_apply_lt_ty.
+  eapply value_has_type_store_remove_params_excluding.
+  - exact Hv_ret_fdef.
+  - exact Hret_exclude.
+Qed.
+
 Lemma eval_generic_direct_call_store_safe_narrow_summary_value_prefix_named :
   forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args
       arg_roots s s' ret fdef,

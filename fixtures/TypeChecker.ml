@@ -1197,20 +1197,28 @@ let rec subst_type_params_ty _UU03c3_ = function
       | None -> MkTy (u, (TParam i)))
    | TStruct (name, lts, args) ->
      let go =
-       let rec go = function
-       | [] -> []
-       | x :: xs' -> (subst_type_params_ty _UU03c3_ x) :: (go xs')
+       let rec go xs fallback =
+         match xs with
+         | [] -> fallback
+         | x :: xs' ->
+           (match fallback with
+            | [] -> (subst_type_params_ty _UU03c3_ x) :: (go xs' [])
+            | _ :: fb' -> (subst_type_params_ty _UU03c3_ x) :: (go xs' fb'))
        in go
      in
-     MkTy (u, (TStruct (name, lts, (go args))))
+     MkTy (u, (TStruct (name, lts, (go args _UU03c3_))))
    | TEnum (name, lts, args) ->
      let go =
-       let rec go = function
-       | [] -> []
-       | x :: xs' -> (subst_type_params_ty _UU03c3_ x) :: (go xs')
+       let rec go xs fallback =
+         match xs with
+         | [] -> fallback
+         | x :: xs' ->
+           (match fallback with
+            | [] -> (subst_type_params_ty _UU03c3_ x) :: (go xs' [])
+            | _ :: fb' -> (subst_type_params_ty _UU03c3_ x) :: (go xs' fb'))
        in go
      in
-     MkTy (u, (TEnum (name, lts, (go args))))
+     MkTy (u, (TEnum (name, lts, (go args _UU03c3_))))
    | TFn (ps, r) ->
      let go =
        let rec go = function

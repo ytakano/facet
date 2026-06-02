@@ -443,6 +443,9 @@ failures; invalid tests pass.
       - T2a2d2z done: proved generic direct-call runtime value
         theorem for instantiated bodies and apply-type-param bind/remove;
         `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
+      - T2a2d2aa done: wired captured generic direct-call store-safe
+        branch into the final captured safety theorem;
+        `EnvRuntimeCapturedSafety.v` target and proof-hole scan pass.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

@@ -437,6 +437,9 @@ failures; invalid tests pass.
       - T2a2d2as1 done: added root/exclusion and function-level
         type-argument substitution helpers for the instantiated generic
         summary bridge; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
+      - T2a2d2as2 done: bridged instantiated generic callee summaries
+        through the type-substituted direct-call summary path;
+        `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

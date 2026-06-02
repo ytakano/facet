@@ -1692,7 +1692,7 @@ Proof.
           (fresh_ident x (x :: free_vars_expr e2 ++ used1) ::
             x :: free_vars_expr e2 ++ used1) e2)
           as [e2r used2] eqn:He2.
-        inversion Hrename; subst; clear Hrename.
+        injection Hrename as <- <-.
         rewrite (IH rho used e1 e1r used1); [| simpl in Hlt; lia | exact He1].
         simpl.
         rewrite (IH _ _ e2 e2r used2); [reflexivity | simpl in Hlt; lia | exact He2].
@@ -1703,7 +1703,7 @@ Proof.
           (fresh_ident x (x :: free_vars_expr e2 ++ used1) ::
             x :: free_vars_expr e2 ++ used1) e2)
           as [e2r used2] eqn:He2.
-        inversion Hrename; subst; clear Hrename.
+        injection Hrename as <- <-.
         rewrite (IH rho used e1 e1r used1); [| simpl in Hlt; lia | exact He1].
         simpl.
         rewrite (IH _ _ e2 e2r used2); [reflexivity | simpl in Hlt; lia | exact He2].
@@ -1765,7 +1765,7 @@ Proof.
               let (rest', used2) := go used1 rest in
               (arg' :: rest', used2)
           end) used args) as [argsr used_args] eqn:Hgo.
-        inversion Hrename; subst; clear Hrename.
+        injection Hrename as <- <-.
         rewrite (Hargs args used argsr used_args (fun a H => H) Hgo). reflexivity.
       + assert (Hargs : forall args0 used0 argsr usedr,
           (forall a, In a args0 -> In a args) ->
@@ -1825,7 +1825,7 @@ Proof.
               let (rest', used2) := go used1 rest in
               (arg' :: rest', used2)
           end) used args) as [argsr used_args] eqn:Hgo.
-        inversion Hrename; subst; clear Hrename.
+        injection Hrename as <- <-.
         rewrite (Hargs args used argsr used_args (fun a H => H) Hgo). reflexivity.
       + destruct (alpha_rename_expr rho used callee) as [calleer used0] eqn:Hcallee.
         assert (Hargs : forall args0 used1 argsr usedr,
@@ -1886,7 +1886,7 @@ Proof.
               let (rest', used3) := go used2 rest in
               (arg' :: rest', used3)
           end) used0 args) as [argsr used_args] eqn:Hgo.
-        inversion Hrename; subst; clear Hrename.
+        injection Hrename as <- <-.
         rewrite (IH rho used callee calleer used0); [| pose proof (expr_size_callexpr_callee_lt callee args); lia | exact Hcallee].
         simpl. rewrite (Hargs args used0 argsr used_args (fun a H => H) Hgo). reflexivity.
       + assert (Hfields : forall fields0 used0 fieldsr usedr,
@@ -1951,7 +1951,7 @@ Proof.
               let (rest', used2) := go used1 rest in
               ((field, e0') :: rest', used2)
           end) used fields) as [fieldsr used_fields] eqn:Hgo.
-        inversion Hrename; subst; clear Hrename.
+        injection Hrename as <- <-.
         rewrite (Hfields fields used fieldsr used_fields
           (fun field e0 H => H) Hgo). reflexivity.
       + assert (Hpayloads : forall payloads0 used0 payloadsr usedr,
@@ -2014,7 +2014,7 @@ Proof.
               let (rest', used2) := go used1 rest in
               (e0' :: rest', used2)
           end) used payloads) as [payloadsr used_payloads] eqn:Hgo.
-        inversion Hrename; subst; clear Hrename.
+        injection Hrename as <- <-.
         rewrite (Hpayloads payloads used payloadsr used_payloads
           (fun e0 H => H) Hgo). reflexivity.
       + (* EMatch *)
@@ -2030,7 +2030,7 @@ Proof.
               let (rest', used4) := go used3 rest in
               ((variant_name, binders', e0') :: rest', used4)
           end) used0 branches) as [branchesr used_branches] eqn:Hbranches.
-        inversion Hrename; subst; clear Hrename.
+        injection Hrename as <- <-.
         rewrite (IH rho used scrut scrutr used0); [| pose proof (expr_size_match_scrutinee_lt scrut branches); lia | exact Hscrut].
         simpl.
         assert (Hbranches_comm : forall branches0 used1 branchesr0 usedr,
@@ -2172,21 +2172,21 @@ Proof.
         injection Hbranches_comm' as <- <-.
         reflexivity.
       + destruct (alpha_rename_expr rho used rhs) as [rhsr used0] eqn:Hrhs.
-        inversion Hrename; subst; clear Hrename.
+        injection Hrename as <- <-.
         rewrite (IH rho used rhs rhsr used0); [reflexivity | simpl in Hlt; lia | exact Hrhs].
       + destruct (alpha_rename_expr rho used rhs) as [rhsr used0] eqn:Hrhs.
-        inversion Hrename; subst; clear Hrename.
+        injection Hrename as <- <-.
         rewrite (IH rho used rhs rhsr used0); [reflexivity | simpl in Hlt; lia | exact Hrhs].
       + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
-        inversion Hrename; subst; clear Hrename.
+        injection Hrename as <- <-.
         rewrite (IH rho used e er0 used0); [reflexivity | simpl in Hlt; lia | exact He].
       + destruct (alpha_rename_expr rho used e) as [er0 used0] eqn:He.
-        inversion Hrename; subst; clear Hrename.
+        injection Hrename as <- <-.
         rewrite (IH rho used e er0 used0); [reflexivity | simpl in Hlt; lia | exact He].
       + destruct (alpha_rename_expr rho used e1) as [e1r used1] eqn:He1.
         destruct (alpha_rename_expr rho used1 e2) as [e2r used2] eqn:He2.
         destruct (alpha_rename_expr rho used2 e3) as [e3r used3] eqn:He3.
-        inversion Hrename; subst; clear Hrename.
+        injection Hrename as <- <-.
         rewrite (IH rho used e1 e1r used1); [| simpl in Hlt; lia | exact He1].
         simpl.
         rewrite (IH rho used1 e2 e2r used2); [| simpl in Hlt; lia | exact He2].
@@ -2204,6 +2204,47 @@ Definition fn_subst_type_params (type_args : list Ty) (f : fn_def) : fn_def :=
     (subst_type_params_ty type_args (fn_ret f))
     (subst_type_params_expr type_args (fn_body f))
     (fn_type_params f) (fn_bounds f).
+
+Lemma apply_type_params_app :
+  forall type_args ps1 ps2,
+    apply_type_params type_args (ps1 ++ ps2) =
+    apply_type_params type_args ps1 ++ apply_type_params type_args ps2.
+Proof.
+  intros type_args ps1 ps2.
+  induction ps1 as [| p ps1 IH]; simpl; auto.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma fn_body_params_fn_subst_type_params :
+  forall type_args f,
+    fn_body_params (fn_subst_type_params type_args f) =
+    apply_type_params type_args (fn_body_params f).
+Proof.
+  intros type_args f.
+  unfold fn_subst_type_params, fn_body_params. simpl.
+  rewrite apply_type_params_app. reflexivity.
+Qed.
+
+Lemma fn_body_ctx_fn_subst_type_params :
+  forall type_args f,
+    fn_body_ctx (fn_subst_type_params type_args f) =
+    subst_type_params_ctx type_args (fn_body_ctx f).
+Proof.
+  intros type_args f.
+  unfold fn_body_ctx.
+  rewrite fn_body_params_fn_subst_type_params.
+  apply params_ctx_apply_type_params.
+Qed.
+
+Lemma initial_root_env_for_fn_fn_subst_type_params :
+  forall type_args f,
+    initial_root_env_for_fn (fn_subst_type_params type_args f) =
+    initial_root_env_for_fn f.
+Proof.
+  intros type_args f.
+  unfold initial_root_env_for_fn, fn_subst_type_params. simpl.
+  apply initial_root_env_for_params_apply_type_params.
+Qed.
 
 Lemma param_names_apply_type_params :
   forall type_args ps,
@@ -2256,9 +2297,11 @@ Proof.
     (fn_params f) paramsr rho used1 Hparams).
   destruct (alpha_rename_expr rho used1 (fn_body f))
     as [bodyr used2] eqn:Hbody.
-  inversion Hrename; subst; clear Hrename.
+  change (free_vars_expr (fn_body f)) with (expr_names (fn_body f)) in Hrename.
+  rewrite Hparams in Hrename. rewrite Hbody in Hrename.
   rewrite (alpha_rename_expr_subst_type_params_expr type_args rho used1
     (fn_body f) bodyr used2 Hbody).
+  inversion Hrename; subst; clear Hrename.
   reflexivity.
 Qed.
 
@@ -2691,7 +2734,7 @@ Proof.
     change (xr :: x :: free_vars_expr e2 ++ used1) with used2
       in Hrename.
     rewrite He2 in Hrename.
-    inversion Hrename; subst; clear Hrename.
+    injection Hrename as <- <-.
     exists (sctx_remove xr Σ2r), (root_env_remove xr R2r), roots2r,
       ret_roots2r.
     split.
@@ -2932,7 +2975,7 @@ Proof.
     change (xr :: x :: free_vars_expr e2 ++ used1) with used2
       in Hrename.
     rewrite He2 in Hrename.
-    inversion Hrename; subst; clear Hrename.
+    injection Hrename as <- <-.
     exists (sctx_remove xr Σ2r), (root_env_remove xr R2r), roots2r,
       ret_roots2r.
     split.
@@ -10709,6 +10752,79 @@ Definition callee_body_root_shadow_store_safe_narrow_summary_instantiated
       roots_body /\
     root_env_excludes_params (apply_type_params type_args (fn_params fdef))
       R_body.
+
+Lemma generic_direct_call_callee_body_root_shadow_store_safe_narrow_summary_bridge_of_summary_tfn_with_result_subset_prefix_named :
+  forall env (Omega : outlives_ctx) (n : nat) R Sigma Sigma_args R_args
+      arg_roots args type_args fdef fcall param_tys ret_ty s s_args vs used',
+      callee_body_root_shadow_store_safe_narrow_summary_instantiated
+        env fdef type_args ->
+      fn_captures fdef = [] ->
+      runtime_tfn_signature_bridge
+        (map param_ty (apply_type_params type_args (fn_params fdef)))
+        (subst_type_params_ty type_args (fn_ret fdef)) param_tys ret_ty ->
+      store_safe_function_value_call_args env args ->
+      typed_args_roots env Omega n R Sigma args
+        (params_of_tys param_tys) Sigma_args R_args arg_roots ->
+      eval_args env s args s_args vs ->
+      provenance_ready_args args ->
+      store_typed_prefix env s Sigma ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+      exists T_body Sigma_out R_body roots_body ret_roots,
+        expr_root_shadow_store_safe_narrow_summary env
+          (fn_outlives fcall) (fn_lifetimes fcall)
+          (call_param_root_env
+            (apply_type_params type_args (fn_params fcall)) arg_roots R_args)
+          (sctx_of_ctx (params_ctx
+            (apply_type_params type_args (fn_params fcall))))
+          (subst_type_params_expr type_args (fn_body fcall)) T_body Sigma_out
+          R_body roots_body ret_roots /\
+        ty_compatible_b (fn_outlives fcall) T_body
+          (subst_type_params_ty type_args (fn_ret fcall)) = true /\
+        roots_exclude_params (apply_type_params type_args (fn_params fcall))
+          roots_body /\
+        root_env_excludes_params
+          (apply_type_params type_args (fn_params fcall)) R_body /\
+        root_set_stores_subset roots_body (root_sets_union arg_roots).
+Proof.
+  intros env Omega n R Sigma Sigma_args R_args arg_roots args type_args
+    fdef fcall param_tys ret_ty s s_args vs used' Hsummary Hcaps Hbridge
+    Hsafe_args Htyped_args Heval_args Hprov_args Hstore Hroots Hshadow Hrn
+    Hnamed Hkeys Hrename.
+  set (fdefT := fn_subst_type_params type_args fdef).
+  set (fcallT := fn_subst_type_params type_args fcall).
+  assert (HsummaryT :
+    callee_body_root_shadow_store_safe_narrow_summary env fdefT).
+  { subst fdefT. unfold callee_body_root_shadow_store_safe_narrow_summary.
+    unfold callee_body_root_shadow_store_safe_narrow_summary_instantiated in Hsummary.
+    destruct Hsummary as (T_body & Gamma_out & R_body & roots_body & ret_roots &
+      Hnodup & Hbody & Hcompat & Hexcl_roots & Hexcl_env).
+    exists T_body, Gamma_out, R_body, roots_body, ret_roots.
+    simpl. repeat split; try assumption.
+    - rewrite initial_root_env_for_fn_fn_subst_type_params.
+      rewrite fn_body_ctx_fn_subst_type_params.
+      exact Hbody. }
+  assert (HcapsT : fn_captures fdefT = []).
+  { subst fdefT. simpl. rewrite Hcaps. reflexivity. }
+  assert (HrenameT :
+    alpha_rename_fn_def (store_names s_args) fdefT = (fcallT, used')).
+  { subst fdefT fcallT.
+    apply alpha_rename_fn_def_subst_type_params. exact Hrename. }
+  destruct (direct_call_callee_body_root_shadow_store_safe_narrow_summary_bridge_of_summary_tfn_with_result_subset_prefix_named
+    env Omega n R Sigma Sigma_args R_args arg_roots args fdefT fcallT
+    param_tys ret_ty s s_args vs used' HsummaryT HcapsT Hbridge Hsafe_args
+    Htyped_args Heval_args Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys
+    HrenameT) as (T_body & Sigma_out & R_body & roots_body & ret_roots &
+      Hbody & Hcompat & Hexcl_roots & Hexcl_env & Hsubset).
+  subst fcallT. simpl in *.
+  exists T_body, Sigma_out, R_body, roots_body, ret_roots.
+  repeat split; try assumption.
+Qed.
+
 
 Definition callee_body_root_shadow_captured_call_generic_direct_narrow_store_safe_summary
     (env : global_env) (fdef : fn_def) : Prop :=

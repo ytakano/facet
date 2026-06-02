@@ -360,6 +360,11 @@ failures; invalid tests pass.
     - T2a2d2x done: add narrow-summary tail-frame helper for substituted
       expressions; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
       Sub-agent spawn remains unavailable due thread limit.
+    - T2a2d2y blocked: generic direct-call runtime theorem needs
+      type-parameter substitution transport for `typed_env_roots_shadow_safe`
+      and `expr_root_shadow_store_safe_narrow_summary`; no existing support
+      lemma covers substituted function bodies. Sub-agent delegation succeeded
+      but returned no patch after identifying the same proof-transport gap.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

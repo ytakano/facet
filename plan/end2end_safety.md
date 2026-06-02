@@ -365,6 +365,9 @@ failures; invalid tests pass.
       and `expr_root_shadow_store_safe_narrow_summary`; no existing support
       lemma covers substituted function bodies. Sub-agent delegation succeeded
       but returned no patch after identifying the same proof-transport gap.
+    - T2a2d2z done: prove narrow-summary return values carry
+      closure-target summaries without restricting generic type arguments;
+      `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

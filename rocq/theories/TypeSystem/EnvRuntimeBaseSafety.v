@@ -9015,6 +9015,34 @@ Proof.
 Qed.
 
 
+Lemma eval_expr_root_shadow_store_safe_narrow_summary_value_function_closure_targets_summary_prefix_named :
+  forall env Omega n R Σ e T Σ' R' roots ret_roots,
+    env_fns_root_shadow_provenance_summary_evidence env ->
+    expr_root_shadow_store_safe_narrow_summary
+      env Omega n R Σ e T Σ' R' roots ret_roots ->
+    forall s s' ret,
+      store_typed_prefix env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      store_function_closure_targets_summary env s ->
+      eval env s e s' ret ->
+      fn_env_unique_by_name env ->
+      value_function_closure_targets_summary env ret.
+Proof.
+  intros env Omega n R Σ e T Σ' R' roots ret_roots Hevidence Hsummary
+    s s' ret Hstore Hroots Hshadow Hrn Hnamed Hkeys Hsummary_store
+    Heval Hunique.
+  destruct (expr_root_shadow_store_safe_narrow_summary_runtime_package_prefix_named
+    env Omega n R Σ e T Σ' R' roots ret_roots Hsummary
+    s s' ret Hstore Hroots Hshadow Hrn Hnamed Hkeys Hsummary_store
+    Heval Hunique)
+    as [_ [Hv _]].
+  eapply value_has_type_function_closure_targets_summary; eassumption.
+Qed.
+
 Lemma expr_root_shadow_store_safe_narrow_summary_preserves_frame_scope_prefix_named :
   forall env Omega n R Sigma e T Sigma' R' roots ret_roots,
     expr_root_shadow_store_safe_narrow_summary env Omega n R Sigma e T

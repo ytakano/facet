@@ -318,6 +318,10 @@ failures; invalid tests pass.
       `OperationalSemantics.v`, `TypeChecker.v`, `TypeSafetyDirectCallWrappers.v`
       targets and proof-hole scan pass. Sub-agent spawn remains unavailable
       due thread limit.
+    - T2a2d2m done: add root-env/call-param identities for type/lifetime
+      instantiated params; `TypeSafetyCallFrameRootEnv.v` target and
+      proof-hole scan pass. Sub-agent spawn remains unavailable due thread
+      limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

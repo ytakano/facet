@@ -152,6 +152,81 @@ Definition call_param_root_env
   root_env_add_params_roots ps arg_roots
     (root_env_remove_params ps R_tail).
 
+Lemma root_env_add_params_roots_apply_type_params :
+  forall type_args ps roots R,
+    root_env_add_params_roots (apply_type_params type_args ps) roots R =
+    root_env_add_params_roots ps roots R.
+Proof.
+  intros type_args ps.
+  induction ps as [| p ps IH]; intros roots R;
+    destruct roots as [| roots roots_tail]; simpl; auto.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma root_env_remove_params_apply_type_params :
+  forall type_args ps R,
+    root_env_remove_params (apply_type_params type_args ps) R =
+    root_env_remove_params ps R.
+Proof.
+  intros type_args ps.
+  induction ps as [| p ps IH]; intros R; simpl; auto.
+Qed.
+
+Lemma call_param_root_env_apply_type_params :
+  forall type_args ps roots R,
+    call_param_root_env (apply_type_params type_args ps) roots R =
+    call_param_root_env ps roots R.
+Proof.
+  intros type_args ps roots R.
+  unfold call_param_root_env.
+  rewrite root_env_add_params_roots_apply_type_params.
+  rewrite root_env_remove_params_apply_type_params.
+  reflexivity.
+Qed.
+
+Lemma root_env_add_params_roots_apply_lt_params :
+  forall sigma ps roots R,
+    root_env_add_params_roots (apply_lt_params sigma ps) roots R =
+    root_env_add_params_roots ps roots R.
+Proof.
+  intros sigma ps.
+  induction ps as [| p ps IH]; intros roots R;
+    destruct roots as [| roots roots_tail]; simpl; auto.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma root_env_remove_params_apply_lt_params :
+  forall sigma ps R,
+    root_env_remove_params (apply_lt_params sigma ps) R =
+    root_env_remove_params ps R.
+Proof.
+  intros sigma ps.
+  induction ps as [| p ps IH]; intros R; simpl; auto.
+Qed.
+
+Lemma call_param_root_env_apply_lt_params :
+  forall sigma ps roots R,
+    call_param_root_env (apply_lt_params sigma ps) roots R =
+    call_param_root_env ps roots R.
+Proof.
+  intros sigma ps roots R.
+  unfold call_param_root_env.
+  rewrite root_env_add_params_roots_apply_lt_params.
+  rewrite root_env_remove_params_apply_lt_params.
+  reflexivity.
+Qed.
+
+Lemma call_param_root_env_apply_lt_type_params :
+  forall sigma type_args ps roots R,
+    call_param_root_env
+      (apply_lt_params sigma (apply_type_params type_args ps)) roots R =
+    call_param_root_env ps roots R.
+Proof.
+  intros sigma type_args ps roots R.
+  rewrite call_param_root_env_apply_lt_params.
+  apply call_param_root_env_apply_type_params.
+Qed.
+
 Lemma root_env_add_params_roots_app_tail :
   forall ps roots_list R_tail,
     root_env_add_params_roots ps roots_list R_tail =

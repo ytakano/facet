@@ -661,6 +661,34 @@ Proof.
     + eassumption.
 Qed.
 
+Lemma typed_env_roots_shadow_safe_eunit_subst_type_params_ctx :
+  forall env Omega n R Sigma T Sigma' R' roots type_args,
+    typed_env_roots_shadow_safe env Omega n R Sigma EUnit
+      T Sigma' R' roots ->
+    typed_env_roots_shadow_safe env Omega n R
+      (subst_type_params_ctx type_args Sigma) EUnit
+      (subst_type_params_ty type_args T)
+      (subst_type_params_ctx type_args Sigma') R' roots.
+Proof.
+  intros env Omega n R Sigma T Sigma' R' roots type_args Htyped.
+  inversion Htyped; subst; try discriminate.
+  simpl. constructor.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_elit_subst_type_params_ctx :
+  forall env Omega n R Sigma lit T Sigma' R' roots type_args,
+    typed_env_roots_shadow_safe env Omega n R Sigma (ELit lit)
+      T Sigma' R' roots ->
+    typed_env_roots_shadow_safe env Omega n R
+      (subst_type_params_ctx type_args Sigma) (ELit lit)
+      (subst_type_params_ty type_args T)
+      (subst_type_params_ctx type_args Sigma') R' roots.
+Proof.
+  intros env Omega n R Sigma lit T Sigma' R' roots type_args Htyped.
+  inversion Htyped; subst; try discriminate;
+    simpl; constructor.
+Qed.
+
 Scheme typed_env_roots_shadow_safe_ind' :=
   Induction for typed_env_roots_shadow_safe Sort Prop
 with typed_args_roots_shadow_safe_ind' :=

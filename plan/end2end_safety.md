@@ -381,7 +381,10 @@ failures; invalid tests pass.
       `EnvRuntimeBaseSafety.v` target passes.
     - T2a2d2ae blocked locally: unconditional `ty_compatible_b` transport
       through type substitution is false for `TForall`/`LBound`; do not use it.
-    - T2a2d2af in progress: keep generic type arguments fully general and
+    - T2a2d2af done: add substituted `EUnit`/literal shadow-safe
+      transports and runtime leaves; `AlphaRoots.v` and
+      `EnvRuntimeBaseSafety.v` targets pass.
+    - T2a2d2ag in progress: keep generic type arguments fully general and
       prove substituted-body runtime package by induction on the original
       narrow summary, using returned value closure-target summaries for lets.
 

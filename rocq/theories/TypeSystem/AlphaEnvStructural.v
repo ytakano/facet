@@ -61,6 +61,22 @@ Proof.
     + exact IH.
 Qed.
 
+Lemma params_alpha_apply_type_compat : forall type_args ps psr,
+  params_alpha ps psr ->
+  params_alpha (apply_type_params type_args ps)
+    (apply_type_params type_args psr).
+Proof.
+  intros type_args ps psr H.
+  induction H as [| p pr ps' psr' Hshape Htail IH].
+  - constructor.
+  - simpl. constructor.
+    + unfold same_param_shape in *. destruct Hshape as [Hmut Hty].
+      split.
+      * exact Hmut.
+      * simpl. now rewrite Hty.
+    + exact IH.
+Qed.
+
 Lemma alpha_rename_call_args_typed_backward : forall fenv0 fenvr Ω n ρ Γ0 Γr args argsr used used' ps0 psr Γr',
   (forall Γa Γb used0 e er used1 T Γb',
       In e args ->

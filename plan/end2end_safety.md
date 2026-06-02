@@ -297,6 +297,9 @@ failures; invalid tests pass.
     - T2a2d2f done: isolate remaining literal generic direct-call gap to
       missing generic direct-call runtime package; `preservation_ready_expr`
       has no call constructors, so a narrow leaf alone is insufficient.
+    - T2a2d2g done: prove `params_alpha` transport through type-parameter
+      substitution; `AlphaEnvStructural.v` make target and proof-hole scan pass.
+      Sub-agent spawn remains unavailable due thread limit.
     - T2a2d2 next: prove typing/root transport for substituted generic
       function bodies and narrow store-safe summaries.
 

@@ -199,6 +199,35 @@ Fixpoint store_remove_params (params : list param) (s : store) : store :=
   | p :: ps => store_remove_params ps (store_remove (param_name p) s)
   end.
 
+Lemma store_remove_params_apply_type_params :
+  forall type_args ps s,
+    store_remove_params (apply_type_params type_args ps) s =
+    store_remove_params ps s.
+Proof.
+  intros type_args ps.
+  induction ps as [| p ps IH]; intros s; simpl; auto.
+Qed.
+
+Lemma store_remove_params_apply_lt_params :
+  forall sigma ps s,
+    store_remove_params (apply_lt_params sigma ps) s =
+    store_remove_params ps s.
+Proof.
+  intros sigma ps.
+  induction ps as [| p ps IH]; intros s; simpl; auto.
+Qed.
+
+Lemma store_remove_params_apply_lt_type_params :
+  forall sigma type_args ps s,
+    store_remove_params
+      (apply_lt_params sigma (apply_type_params type_args ps)) s =
+    store_remove_params ps s.
+Proof.
+  intros sigma type_args ps s.
+  rewrite store_remove_params_apply_lt_params.
+  apply store_remove_params_apply_type_params.
+Qed.
+
 Fixpoint bind_params (params : list param) (vs : list value) (s : store) : store :=
   match params, vs with
   | [],      _        => s

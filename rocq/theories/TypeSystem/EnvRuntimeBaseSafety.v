@@ -787,6 +787,33 @@ Proof.
       * apply IH. exact Hrest.
 Qed.
 
+Lemma store_safe_function_value_call_arg_subst_type_params_expr :
+  forall env type_args arg,
+    store_safe_function_value_call_arg env arg ->
+    store_safe_function_value_call_arg env
+      (subst_type_params_expr type_args arg).
+Proof.
+  intros env type_args arg Harg.
+  destruct Harg as [x | fname fdef Hin Hname Hsummary]; simpl.
+  - constructor.
+  - eapply SSFVCArg_Fn; eassumption.
+Qed.
+
+Lemma store_safe_function_value_call_args_subst_type_params_expr :
+  forall env type_args args,
+    store_safe_function_value_call_args env args ->
+    store_safe_function_value_call_args env
+      (map (subst_type_params_expr type_args) args).
+Proof.
+  intros env type_args args Hargs.
+  induction Hargs as [| arg rest Harg Hrest IH]; simpl.
+  - constructor.
+  - constructor.
+    + eapply store_safe_function_value_call_arg_subst_type_params_expr.
+      exact Harg.
+    + exact IH.
+Qed.
+
 Lemma store_safe_function_value_call_arg_alpha_rename_expr :
   forall env rho used arg ar used',
     store_safe_function_value_call_arg env arg ->

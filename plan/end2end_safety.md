@@ -405,6 +405,9 @@ failures; invalid tests pass.
       - T2a2d2aj2 done: repair field-place substitution transports for
         compose fallback semantics; `EnvStructuralRules.v` target and
         proof-hole scan pass.
+      - T2a2d2aj3 done: repair lifetime-equivalence transport for
+        fallback-aware type-parameter substitution; `RuntimeTyping.v` target
+        and proof-hole scan pass.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

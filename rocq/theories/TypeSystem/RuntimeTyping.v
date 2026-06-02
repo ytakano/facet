@@ -597,13 +597,81 @@ Lemma subst_type_params_ty_lifetime_equiv :
       (subst_type_params_ty args_expected T_expected).
 Proof.
   fix IH 6.
-  intros args_actual args_expected T_actual T_expected Hargs Heq.
+  intros sigma_actual sigma_expected T_actual T_expected Hargs Heq.
   destruct Heq; simpl; eauto using ty_lifetime_equiv,
     subst_type_params_param_lifetime_equiv.
   - apply TLE_Struct.
-    induction H; simpl; constructor; eauto.
+    assert (Hgo : forall xs_actual xs_expected fallback_actual fallback_expected,
+      Forall2 ty_lifetime_equiv xs_actual xs_expected ->
+      Forall2 ty_lifetime_equiv fallback_actual fallback_expected ->
+      Forall2 ty_lifetime_equiv
+        ((fix go (xs fallback : list Ty) {struct xs} : list Ty :=
+            match xs with
+            | [] => fallback
+            | x :: xs' =>
+                match fallback with
+                | [] => subst_type_params_ty sigma_actual x :: go xs' []
+                | _ :: fb' => subst_type_params_ty sigma_actual x :: go xs' fb'
+                end
+            end) xs_actual fallback_actual)
+        ((fix go (xs fallback : list Ty) {struct xs} : list Ty :=
+            match xs with
+            | [] => fallback
+            | x :: xs' =>
+                match fallback with
+                | [] => subst_type_params_ty sigma_expected x :: go xs' []
+                | _ :: fb' => subst_type_params_ty sigma_expected x :: go xs' fb'
+                end
+            end) xs_expected fallback_expected)).
+    { intros xs_actual xs_expected fallback_actual fallback_expected Hxs.
+      revert fallback_actual fallback_expected.
+      induction Hxs as [| Xa Xe Xas Xes HX HXs IHHxs];
+        intros fallback_actual fallback_expected Hfallback; simpl.
+      - exact Hfallback.
+      - destruct fallback_actual as [| Fa Fas];
+          destruct fallback_expected as [| Fe Fes]; simpl.
+        + constructor; [eapply IH; eassumption | apply IHHxs; constructor].
+        + inversion Hfallback.
+        + inversion Hfallback.
+        + inversion Hfallback as [| ? ? ? ? HF HFtail]; subst.
+          constructor; [eapply IH; eassumption | apply IHHxs; exact HFtail]. }
+    apply Hgo; assumption.
   - apply TLE_Enum.
-    induction H; simpl; constructor; eauto.
+    assert (Hgo : forall xs_actual xs_expected fallback_actual fallback_expected,
+      Forall2 ty_lifetime_equiv xs_actual xs_expected ->
+      Forall2 ty_lifetime_equiv fallback_actual fallback_expected ->
+      Forall2 ty_lifetime_equiv
+        ((fix go (xs fallback : list Ty) {struct xs} : list Ty :=
+            match xs with
+            | [] => fallback
+            | x :: xs' =>
+                match fallback with
+                | [] => subst_type_params_ty sigma_actual x :: go xs' []
+                | _ :: fb' => subst_type_params_ty sigma_actual x :: go xs' fb'
+                end
+            end) xs_actual fallback_actual)
+        ((fix go (xs fallback : list Ty) {struct xs} : list Ty :=
+            match xs with
+            | [] => fallback
+            | x :: xs' =>
+                match fallback with
+                | [] => subst_type_params_ty sigma_expected x :: go xs' []
+                | _ :: fb' => subst_type_params_ty sigma_expected x :: go xs' fb'
+                end
+            end) xs_expected fallback_expected)).
+    { intros xs_actual xs_expected fallback_actual fallback_expected Hxs.
+      revert fallback_actual fallback_expected.
+      induction Hxs as [| Xa Xe Xas Xes HX HXs IHHxs];
+        intros fallback_actual fallback_expected Hfallback; simpl.
+      - exact Hfallback.
+      - destruct fallback_actual as [| Fa Fas];
+          destruct fallback_expected as [| Fe Fes]; simpl.
+        + constructor; [eapply IH; eassumption | apply IHHxs; constructor].
+        + inversion Hfallback.
+        + inversion Hfallback.
+        + inversion Hfallback as [| ? ? ? ? HF HFtail]; subst.
+          constructor; [eapply IH; eassumption | apply IHHxs; exact HFtail]. }
+    apply Hgo; assumption.
   - apply TLE_Fn.
     + induction H; simpl; constructor; eauto.
     + eapply IH; eassumption.

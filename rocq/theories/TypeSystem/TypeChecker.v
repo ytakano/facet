@@ -9195,8 +9195,8 @@ Definition check_fn_root_shadow_captured_call_store_safe_summary
                          (fn_outlives callee)
                          (fn_lifetimes callee)
                          (initial_root_env_for_fn callee)
-                         (fn_body_ctx callee)
-                         (fn_body callee),
+                         (subst_type_params_ctx type_args (fn_body_ctx callee))
+                         (subst_type_params_expr type_args (fn_body callee)),
                      infer_env_roots_shadow_safe env callee
                        (initial_root_env_for_fn callee),
                      infer_env_roots_shadow_safe env
@@ -9208,11 +9208,16 @@ Definition check_fn_root_shadow_captured_call_store_safe_summary
                    check_expr_root_shadow_store_safe_narrow_summary
                      env (fn_outlives callee) (fn_lifetimes callee)
                      (initial_root_env_for_fn callee)
-                     (fn_body_ctx callee) (fn_body callee) &&
+                     (subst_type_params_ctx type_args (fn_body_ctx callee))
+                     (subst_type_params_expr type_args (fn_body callee)) &&
                    ty_compatible_b (fn_outlives callee) T_callee
-                     (fn_ret callee) &&
-                   fn_params_roots_exclude_b (fn_params callee) roots_callee &&
-                   fn_params_root_env_excludes_b (fn_params callee) R_callee &&
+                     (subst_type_params_ty type_args (fn_ret callee)) &&
+                   fn_params_roots_exclude_b
+                     (apply_type_params type_args (fn_params callee))
+                     roots_callee &&
+                   fn_params_root_env_excludes_b
+                     (apply_type_params type_args (fn_params callee))
+                     R_callee &&
                    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) &&
                    fn_params_roots_exclude_b (fn_params fdef) roots &&
                    fn_params_root_env_excludes_b (fn_params fdef) R_out

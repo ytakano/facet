@@ -422,6 +422,9 @@ failures; invalid tests pass.
         narrow-summary transport reintroduces false general `ty_compatible_b`
         substitution for `ELet`/`EAssign`; do not narrow accepted generic
         programs or add closed-type-argument guards.
+      - T2a2d2ao done: generic direct-call gate checks the runtime-instantiated
+        callee body/context/return; `TypeChecker.v` target and proof-hole
+        scan pass, extraction fixtures updated.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

@@ -1241,6 +1241,82 @@ let rec subst_type_params_ty _UU03c3_ = function
      MkTy (u, (TRef (l, rk, (subst_type_params_ty _UU03c3_ inner))))
    | x -> MkTy (u, x))
 
+(** val subst_type_params_expr : ty list -> expr -> expr **)
+
+let rec subst_type_params_expr _UU03c3_ = function
+| ELet (mut, x, t, e1, e2) ->
+  ELet (mut, x, (subst_type_params_ty _UU03c3_ t),
+    (subst_type_params_expr _UU03c3_ e1),
+    (subst_type_params_expr _UU03c3_ e2))
+| ELetInfer (mut, x, e1, e2) ->
+  ELetInfer (mut, x, (subst_type_params_expr _UU03c3_ e1),
+    (subst_type_params_expr _UU03c3_ e2))
+| ECall (fname, args) ->
+  let go =
+    let rec go = function
+    | [] -> []
+    | e' :: es' -> (subst_type_params_expr _UU03c3_ e') :: (go es')
+    in go
+  in
+  ECall (fname, (go args))
+| ECallGeneric (fname, type_args, args) ->
+  let go =
+    let rec go = function
+    | [] -> []
+    | e' :: es' -> (subst_type_params_expr _UU03c3_ e') :: (go es')
+    in go
+  in
+  ECallGeneric (fname, (map (subst_type_params_ty _UU03c3_) type_args),
+  (go args))
+| ECallExpr (ef, args) ->
+  let go =
+    let rec go = function
+    | [] -> []
+    | e' :: es' -> (subst_type_params_expr _UU03c3_ e') :: (go es')
+    in go
+  in
+  ECallExpr ((subst_type_params_expr _UU03c3_ ef), (go args))
+| EStruct (name, lts, type_args, fields) ->
+  let go =
+    let rec go = function
+    | [] -> []
+    | p :: fs' ->
+      let (field, e') = p in
+      (field, (subst_type_params_expr _UU03c3_ e')) :: (go fs')
+    in go
+  in
+  EStruct (name, lts, (map (subst_type_params_ty _UU03c3_) type_args),
+  (go fields))
+| EEnum (name, variant, lts, type_args, args) ->
+  let go =
+    let rec go = function
+    | [] -> []
+    | e' :: es' -> (subst_type_params_expr _UU03c3_ e') :: (go es')
+    in go
+  in
+  EEnum (name, variant, lts, (map (subst_type_params_ty _UU03c3_) type_args),
+  (go args))
+| EMatch (discr, branches) ->
+  let go =
+    let rec go = function
+    | [] -> []
+    | p :: bs' ->
+      let (p0, e') = p in
+      let (name, binders) = p0 in
+      ((name, binders), (subst_type_params_expr _UU03c3_ e')) :: (go bs')
+    in go
+  in
+  EMatch ((subst_type_params_expr _UU03c3_ discr), (go branches))
+| EReplace (p, rhs) -> EReplace (p, (subst_type_params_expr _UU03c3_ rhs))
+| EAssign (p, rhs) -> EAssign (p, (subst_type_params_expr _UU03c3_ rhs))
+| EDeref e' -> EDeref (subst_type_params_expr _UU03c3_ e')
+| EDrop e' -> EDrop (subst_type_params_expr _UU03c3_ e')
+| EIf (e1, e2, e3) ->
+  EIf ((subst_type_params_expr _UU03c3_ e1),
+    (subst_type_params_expr _UU03c3_ e2),
+    (subst_type_params_expr _UU03c3_ e3))
+| x -> x
+
 (** val instantiate_struct_field_ty :
     lifetime list -> ty list -> field_def -> ty **)
 
@@ -1977,6 +2053,18 @@ let apply_type_param type_args p =
 
 let apply_type_params type_args ps =
   map (apply_type_param type_args) ps
+
+(** val subst_type_params_ctx_entry : ty list -> ctx_entry -> ctx_entry **)
+
+let subst_type_params_ctx_entry type_args = function
+| (p, m) ->
+  let (p0, st) = p in
+  let (x, t) = p0 in (((x, (subst_type_params_ty type_args t)), st), m)
+
+(** val subst_type_params_ctx : ty list -> ctx -> ctx **)
+
+let subst_type_params_ctx type_args _UU0393_ =
+  map (subst_type_params_ctx_entry type_args) _UU0393_
 
 (** val expr_ref_root : expr -> ident option **)
 
@@ -13282,7 +13370,9 @@ let check_fn_root_shadow_captured_call_store_safe_summary env fdef =
                    (match infer_core_env_roots_shadow_safe env
                             callee.fn_outlives callee.fn_lifetimes
                             (initial_root_env_for_fn callee)
-                            (fn_body_ctx callee) callee.fn_body with
+                            (subst_type_params_ctx type_args
+                              (fn_body_ctx callee))
+                            (subst_type_params_expr type_args callee.fn_body) with
                     | Infer_ok p2 ->
                       let (p3, roots_callee) = p2 in
                       let (p4, r_callee) = p3 in
@@ -13307,13 +13397,22 @@ let check_fn_root_shadow_captured_call_store_safe_summary env fdef =
                                           env callee.fn_outlives
                                           callee.fn_lifetimes
                                           (initial_root_env_for_fn callee)
-                                          (fn_body_ctx callee) callee.fn_body)
+                                          (subst_type_params_ctx type_args
+                                            (fn_body_ctx callee))
+                                          (subst_type_params_expr type_args
+                                            callee.fn_body))
                                         (ty_compatible_b callee.fn_outlives
-                                          t_callee callee.fn_ret))
+                                          t_callee
+                                          (subst_type_params_ty type_args
+                                            callee.fn_ret)))
                                       (fn_params_roots_exclude_b
-                                        callee.fn_params roots_callee))
+                                        (apply_type_params type_args
+                                          callee.fn_params)
+                                        roots_callee))
                                     (fn_params_root_env_excludes_b
-                                      callee.fn_params r_callee))
+                                      (apply_type_params type_args
+                                        callee.fn_params)
+                                      r_callee))
                                   (ty_compatible_b fdef.fn_outlives t_body
                                     fdef.fn_ret))
                                 (fn_params_roots_exclude_b fdef.fn_params

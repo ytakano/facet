@@ -346,6 +346,8 @@ val usage_max_decl : usage -> usage -> usage
 
 val subst_type_params_ty : ty list -> ty -> ty
 
+val subst_type_params_expr : ty list -> expr -> expr
+
 val instantiate_struct_field_ty : lifetime list -> ty list -> field_def -> ty
 
 val instantiate_enum_variant_field_ty : lifetime list -> ty list -> ty -> ty
@@ -456,6 +458,10 @@ val apply_lt_params : lifetime list -> param list -> param list
 val apply_type_param : ty list -> param -> param
 
 val apply_type_params : ty list -> param list -> param list
+
+val subst_type_params_ctx_entry : ty list -> ctx_entry -> ctx_entry
+
+val subst_type_params_ctx : ty list -> ctx -> ctx
 
 val expr_ref_root : expr -> ident option
 

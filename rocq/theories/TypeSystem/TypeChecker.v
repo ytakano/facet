@@ -726,6 +726,20 @@ Definition instantiate_trait_ref (args : list Ty) (tr : trait_ref) : trait_ref :
   MkTraitRef (trait_ref_name tr)
     (map (subst_type_params_ty args) (trait_ref_args tr)).
 
+Definition subst_type_params_trait_ref
+    (args : list Ty) (tr : trait_ref) : trait_ref :=
+  MkTraitRef (trait_ref_name tr)
+    (map (subst_type_params_ty args) (trait_ref_args tr)).
+
+Definition subst_type_params_trait_bound
+    (args : list Ty) (b : trait_bound) : trait_bound :=
+  MkTraitBound (bound_type_index b)
+    (map (subst_type_params_trait_ref args) (bound_traits b)).
+
+Definition subst_type_params_trait_bounds
+    (args : list Ty) (bounds : list trait_bound) : list trait_bound :=
+  map (subst_type_params_trait_bound args) bounds.
+
 Fixpoint ty_list_eqb (xs ys : list Ty) : bool :=
   match xs, ys with
   | [], [] => true
@@ -8888,6 +8902,74 @@ Definition check_expr_root_shadow_store_safe_narrow_summary
   check_expr_root_shadow_store_safe_narrow_summary_fuel
     10000 env Ω n R (sctx_of_ctx Γ) e.
 
+Fixpoint check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+    (fuel : nat) (env : global_env) (fdef : fn_def)
+    (type_args : list Ty) : bool :=
+  match fuel with
+  | 0 => false
+  | S fuel' =>
+      let body_ctx := subst_type_params_ctx type_args (fn_body_ctx fdef) in
+      let body := subst_type_params_expr type_args (fn_body fdef) in
+      let params := apply_type_params type_args (fn_params fdef) in
+      let body_env :=
+        global_env_with_local_bounds env
+          (subst_type_params_trait_bounds type_args (fn_bounds fdef)) in
+      match infer_env_roots_shadow_safe env fdef
+              (initial_root_env_for_fn fdef) with
+      | infer_err _ => false
+      | infer_ok _ =>
+          (match infer_core_env_roots_shadow_safe env
+                   (fn_outlives fdef)
+                   (fn_lifetimes fdef)
+                   (initial_root_env_for_fn fdef)
+                   body_ctx body with
+           | infer_ok (T_body, _, R_body, roots_body) =>
+               check_expr_root_shadow_store_safe_narrow_summary
+                 env (fn_outlives fdef) (fn_lifetimes fdef)
+                 (initial_root_env_for_fn fdef) body_ctx body &&
+               ty_compatible_b (fn_outlives fdef) T_body
+                 (subst_type_params_ty type_args (fn_ret fdef)) &&
+               fn_params_roots_exclude_b params roots_body &&
+               fn_params_root_env_excludes_b params R_body
+           | infer_err _ => false
+           end) ||
+          match generic_direct_call_target_expr body with
+          | Some (fname, nested_type_args, args, synthetic_body) =>
+              store_safe_function_value_call_args_b env args &&
+              match lookup_fn_b fname (env_fns env) with
+              | None => false
+              | Some fcallee =>
+                  Nat.eqb (Datatypes.length nested_type_args)
+                    (fn_type_params fcallee) &&
+                  match check_struct_bounds body_env (fn_bounds fcallee)
+                          nested_type_args with
+                  | Some _ => false
+                  | None =>
+                      match infer_core_env_roots_shadow_safe body_env
+                              (fn_outlives fdef) (fn_lifetimes fdef)
+                              (initial_root_env_for_fn fdef) body_ctx
+                              synthetic_body with
+                      | infer_ok (T_synth, _, R_synth, roots_synth) =>
+                          check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+                            fuel' env fcallee nested_type_args &&
+                          ty_compatible_b (fn_outlives fdef) T_synth
+                            (subst_type_params_ty type_args (fn_ret fdef)) &&
+                          fn_params_roots_exclude_b params roots_synth &&
+                          fn_params_root_env_excludes_b params R_synth
+                      | infer_err _ => false
+                      end
+                  end
+              end
+          | None => false
+          end
+      end
+  end.
+
+Definition check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
+    (env : global_env) (fdef : fn_def) (type_args : list Ty) : bool :=
+  check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+    10000 env fdef type_args.
+
 Fixpoint check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
     (fuel : nat) (env : global_env) (Ω : outlives_ctx) (n : nat)
     (R : root_env) (Σ : sctx) (e : expr) : bool :=
@@ -9211,11 +9293,8 @@ Definition check_fn_root_shadow_captured_call_store_safe_summary
                | infer_ok (T_callee, _, R_callee, roots_callee),
                  infer_ok _,
                  infer_ok (T_body, _, R_out, roots) =>
-                   check_expr_root_shadow_store_safe_narrow_summary
-                     env (fn_outlives callee) (fn_lifetimes callee)
-                     (initial_root_env_for_fn callee)
-                     (subst_type_params_ctx type_args (fn_body_ctx callee))
-                     (subst_type_params_expr type_args (fn_body callee)) &&
+                   check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
+                     env callee type_args &&
                    ty_compatible_b (fn_outlives callee) T_callee
                      (subst_type_params_ty type_args (fn_ret callee)) &&
                    fn_params_roots_exclude_b

@@ -661,6 +661,13 @@ val trait_impl_error_with_args :
 
 val instantiate_trait_ref : ty list -> trait_ref -> trait_ref
 
+val subst_type_params_trait_ref : ty list -> trait_ref -> trait_ref
+
+val subst_type_params_trait_bound : ty list -> trait_bound -> trait_bound
+
+val subst_type_params_trait_bounds :
+  ty list -> trait_bound list -> trait_bound list
+
 val ty_list_eqb : ty list -> ty list -> bool
 
 val trait_ref_eqb : trait_ref -> trait_ref -> bool
@@ -1219,6 +1226,12 @@ val check_expr_root_shadow_store_safe_narrow_summary_fuel :
 val check_expr_root_shadow_store_safe_narrow_summary :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
   -> bool
+
+val check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel :
+  Big_int_Z.big_int -> global_env -> fn_def -> ty list -> bool
+
+val check_callee_body_root_shadow_store_safe_narrow_summary_instantiated :
+  global_env -> fn_def -> ty list -> bool
 
 val check_expr_root_shadow_store_safe_narrow_summary_checked_fuel :
   Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->

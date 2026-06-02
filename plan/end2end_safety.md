@@ -450,6 +450,7 @@ failures; invalid tests pass.
         unit/literal args and caller local bounds; `EnvRuntimeBaseSafety.v`,
         `dune build`, proof-hole scan, and top-level generic CLI checks pass;
         nested instantiated generic callee summaries remain.
+      - T2a2d2ab2 done: add fuel-indexed nested generic instantiated summary checker/soundness; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass; sub-agent closed after local completion.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

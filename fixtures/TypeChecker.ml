@@ -3490,6 +3490,25 @@ let instantiate_trait_ref args tr =
   { trait_ref_name = tr.trait_ref_name; trait_ref_args =
     (map (subst_type_params_ty args) tr.trait_ref_args) }
 
+(** val subst_type_params_trait_ref : ty list -> trait_ref -> trait_ref **)
+
+let subst_type_params_trait_ref args tr =
+  { trait_ref_name = tr.trait_ref_name; trait_ref_args =
+    (map (subst_type_params_ty args) tr.trait_ref_args) }
+
+(** val subst_type_params_trait_bound :
+    ty list -> trait_bound -> trait_bound **)
+
+let subst_type_params_trait_bound args b =
+  { bound_type_index = b.bound_type_index; bound_traits =
+    (map (subst_type_params_trait_ref args) b.bound_traits) }
+
+(** val subst_type_params_trait_bounds :
+    ty list -> trait_bound list -> trait_bound list **)
+
+let subst_type_params_trait_bounds args bounds =
+  map (subst_type_params_trait_bound args) bounds
+
 (** val ty_list_eqb : ty list -> ty list -> bool **)
 
 let rec ty_list_eqb xs ys =
@@ -12971,6 +12990,87 @@ let check_expr_root_shadow_store_safe_narrow_summary env _UU03a9_ n r _UU0393_ e
     (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) env _UU03a9_ n r
     (sctx_of_ctx _UU0393_) e
 
+(** val check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel :
+    Big_int_Z.big_int -> global_env -> fn_def -> ty list -> bool **)
+
+let rec check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel fuel env fdef type_args =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> false)
+    (fun fuel' ->
+    let body_ctx = subst_type_params_ctx type_args (fn_body_ctx fdef) in
+    let body = subst_type_params_expr type_args fdef.fn_body in
+    let params = apply_type_params type_args fdef.fn_params in
+    let body_env =
+      global_env_with_local_bounds env
+        (subst_type_params_trait_bounds type_args fdef.fn_bounds)
+    in
+    (match infer_env_roots_shadow_safe env fdef (initial_root_env_for_fn fdef) with
+     | Infer_ok _ ->
+       (||)
+         (match infer_core_env_roots_shadow_safe env fdef.fn_outlives
+                  fdef.fn_lifetimes (initial_root_env_for_fn fdef) body_ctx
+                  body with
+          | Infer_ok p ->
+            let (p0, roots_body) = p in
+            let (p1, r_body) = p0 in
+            let (t_body, _) = p1 in
+            (&&)
+              ((&&)
+                ((&&)
+                  (check_expr_root_shadow_store_safe_narrow_summary env
+                    fdef.fn_outlives fdef.fn_lifetimes
+                    (initial_root_env_for_fn fdef) body_ctx body)
+                  (ty_compatible_b fdef.fn_outlives t_body
+                    (subst_type_params_ty type_args fdef.fn_ret)))
+                (fn_params_roots_exclude_b params roots_body))
+              (fn_params_root_env_excludes_b params r_body)
+          | Infer_err _ -> false)
+         (match generic_direct_call_target_expr body with
+          | Some p ->
+            let (p0, synthetic_body) = p in
+            let (p1, args) = p0 in
+            let (fname, nested_type_args) = p1 in
+            (&&) (store_safe_function_value_call_args_b env args)
+              (match lookup_fn_b fname env.env_fns with
+               | Some fcallee ->
+                 (&&)
+                   (Nat.eqb (length nested_type_args) fcallee.fn_type_params)
+                   (match check_struct_bounds body_env fcallee.fn_bounds
+                            nested_type_args with
+                    | Some _ -> false
+                    | None ->
+                      (match infer_core_env_roots_shadow_safe body_env
+                               fdef.fn_outlives fdef.fn_lifetimes
+                               (initial_root_env_for_fn fdef) body_ctx
+                               synthetic_body with
+                       | Infer_ok p2 ->
+                         let (p3, roots_synth) = p2 in
+                         let (p4, r_synth) = p3 in
+                         let (t_synth, _) = p4 in
+                         (&&)
+                           ((&&)
+                             ((&&)
+                               (check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+                                 fuel' env fcallee nested_type_args)
+                               (ty_compatible_b fdef.fn_outlives t_synth
+                                 (subst_type_params_ty type_args fdef.fn_ret)))
+                             (fn_params_roots_exclude_b params roots_synth))
+                           (fn_params_root_env_excludes_b params r_synth)
+                       | Infer_err _ -> false))
+               | None -> false)
+          | None -> false)
+     | Infer_err _ -> false))
+    fuel
+
+(** val check_callee_body_root_shadow_store_safe_narrow_summary_instantiated :
+    global_env -> fn_def -> ty list -> bool **)
+
+let check_callee_body_root_shadow_store_safe_narrow_summary_instantiated env fdef type_args =
+  check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+    (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D0 Nil))))))) env fdef
+    type_args
+
 (** val check_expr_root_shadow_store_safe_narrow_summary_checked_fuel :
     Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
     root_env -> sctx -> expr -> bool **)
@@ -13397,14 +13497,8 @@ let check_fn_root_shadow_captured_call_store_safe_summary env fdef =
                                   ((&&)
                                     ((&&)
                                       ((&&)
-                                        (check_expr_root_shadow_store_safe_narrow_summary
-                                          env callee.fn_outlives
-                                          callee.fn_lifetimes
-                                          (initial_root_env_for_fn callee)
-                                          (subst_type_params_ctx type_args
-                                            (fn_body_ctx callee))
-                                          (subst_type_params_expr type_args
-                                            callee.fn_body))
+                                        (check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
+                                          env callee type_args)
                                         (ty_compatible_b callee.fn_outlives
                                           t_callee
                                           (subst_type_params_ty type_args

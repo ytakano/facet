@@ -391,8 +391,14 @@ failures; invalid tests pass.
       arity/boundedness-premised field-place type-substitution transports;
       `EnvStructuralRules.v` target passes without narrowing accepted generic
       programs. Sub-agent patch was fixed locally before commit.
-    - T2a2d2ai in progress: use the bounded transports to prove substituted
-      direct-place runtime leaves and then the generic direct-call body bridge.
+    - T2a2d2ai blocked: bounded field-place transports are correct but
+      their arity/boundedness premises are not derivable from current
+      checker/typing evidence because field-place inference does not check
+      struct type-arg length; do not add that guard or narrow acceptance.
+    - T2a2d2aj in progress: prove the generic branch by an operational
+      runtime argument that preserves current fallback semantics for
+      under-applied struct type arguments, instead of using general place
+      type-substitution transport.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

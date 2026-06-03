@@ -46,8 +46,13 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    the ordinary narrow summary.
    Checks: `make EnvRuntimeBaseSafety.vo`, `dune build`, proof-hole scan,
    `generic_expected_return_zero_arg.facet` passes.
-4. Todo: accept empty generic constructor bodies in annotated-let, assignment,
-   and if-branch contexts.
+4. In progress: accept empty generic constructor bodies in wrapper contexts.
+   - Done: annotated-let return wrapper.
+     Checks: `make EnvRuntimeBaseSafety.vo`, `make EnvRuntimeCapturedSafety.vo`,
+     `dune build`, proof-hole scan,
+     `generic_expected_annotated_let_zero_arg.facet` passes.
+   - Todo: assignment RHS.
+   - Todo: if branches.
 5. Todo: accept generated generic function-value wrappers whose bodies are
    explicit `ECallGeneric` direct calls.
 6. Todo: accept `TTypeForall (... TFn ...)` function-value calls through the

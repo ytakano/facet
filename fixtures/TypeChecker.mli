@@ -1175,6 +1175,9 @@ val direct_call_target_expr : expr -> ((ident * expr list) * expr) option
 val generic_direct_call_target_expr :
   expr -> (((ident * ty list) * expr list) * expr) option
 
+val let_bound_generic_direct_call_target_expr :
+  expr -> ((((ident * ty list) * expr list) * ty) * expr) option
+
 val direct_call_ready_expr_b : expr -> bool
 
 val check_fn_root_shadow_direct_call_provenance_summary :

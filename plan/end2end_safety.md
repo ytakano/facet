@@ -474,6 +474,7 @@ failures; invalid tests pass.
       - T2a2d2ab3k8d done: add alpha-renamed generic-call typed-args call-frame bridge for recursive fuel proof; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass; sub-agent unavailable locally due patch sandbox.
       - T2a2d2ab3k8e done: prove recursive generic-call fuel exact package bridge; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass; sub-agent closed after converging.
       - T2a2d2ab3k8f done: expose general fuel generic-call runtime value wrapper from exact package bridge; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
+      - T2a2d2ab3k8g done: wire captured generic-direct branch to fuel runtime value theorem; `EnvRuntimeCapturedSafety.v` target and proof-hole scan pass.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

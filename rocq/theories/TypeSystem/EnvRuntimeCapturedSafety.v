@@ -1091,18 +1091,11 @@ Proof.
       destruct raw_body; try discriminate.
       inversion Htarget; subst. exact Heval_body_env. }
     assert (Hcallee_summary_body :
-      callee_body_root_shadow_store_safe_narrow_summary_instantiated
-        body_env fcallee type_args).
+      callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+        body_env 10000 fcallee type_args).
     { subst body_env.
-      destruct Hcallee_summary as
-        (T_callee & Gamma_callee & R_callee & roots_callee &
-          ret_roots_callee & Hcallee_nodup & Hcallee_body &
-          Hcallee_compat & Hcallee_roots & Hcallee_env).
-      exists T_callee, Gamma_callee, R_callee, roots_callee,
-        ret_roots_callee.
-      repeat split; try assumption.
-      eapply expr_root_shadow_store_safe_narrow_summary_global_env_with_local_bounds.
-      exact Hcallee_body. }
+      eapply callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel_global_env_with_local_bounds.
+      exact Hcallee_summary. }
     assert (Hsafe_args_body : store_safe_function_value_call_args body_env args).
     { subst body_env.
       apply store_safe_function_value_call_args_global_env_with_local_bounds.
@@ -1119,10 +1112,10 @@ Proof.
       - exact Hin_callee.
       - exact (eq_sym Hname_callee). }
     pose proof
-      (eval_generic_direct_call_store_safe_narrow_summary_value_prefix_named
+      (eval_generic_direct_call_store_safe_narrow_summary_value_prefix_named_fuel
         body_env (fn_outlives f) (fn_lifetimes f)
         (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
-        (fn_name fcallee) type_args args σ _ _ _ s s' v fcallee
+        (fn_name fcallee) type_args args σ _ _ _ s s' v fcallee 10000
         Hsafe_args_body Hcallee_summary_body Hstore_body_env Hroots
         Hshadow Hrn Hnamed Hkeys Hsummary_store_body_env Heval_call
         Hunique Hin_callee Hname_callee H1 H4 H5) as Hv_body.

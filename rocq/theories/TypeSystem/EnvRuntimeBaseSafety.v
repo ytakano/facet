@@ -11865,6 +11865,181 @@ Proof.
   repeat split; assumption.
 Qed.
 
+Lemma generic_direct_call_target_alpha_rename_subst_type_params_runtime_typed_args_call_frame :
+  forall env Omega n R Sigma Sigma_args R_args outer_arg_roots outer_args
+      type_args sigma_outer fdef fcall used' fname nested_type_args args
+      raw_body synthetic_body T_body Gamma_out R_body roots_body s s_args vs,
+    raw_body = subst_type_params_expr type_args (fn_body fdef) ->
+    generic_direct_call_target_expr raw_body =
+      Some (fname, nested_type_args, args, synthetic_body) ->
+    synthetic_body = ECallGeneric fname nested_type_args args ->
+    store_safe_function_value_call_args env args ->
+    fn_captures fdef = [] ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    NoDup (ctx_names (params_ctx
+      (apply_type_params type_args (fn_params fdef)))) ->
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env
+        (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fdef)))
+      synthetic_body T_body (sctx_of_ctx Gamma_out) R_body roots_body ->
+    typed_args_roots env Omega n R Sigma outer_args
+      (apply_lt_params sigma_outer
+        (apply_type_params type_args (fn_params fdef)))
+      Sigma_args R_args outer_arg_roots ->
+    store_safe_function_value_call_args env outer_args ->
+    eval_args env s outer_args s_args vs ->
+    provenance_ready_args outer_args ->
+    store_typed_prefix env s Sigma ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    exists argsr fcallee sigma_nested nested_arg_roots Sigma_nested R_nested,
+      subst_type_params_expr type_args (fn_body fcall) =
+        ECallGeneric fname nested_type_args argsr /\
+      store_safe_function_value_call_args env argsr /\
+      typed_args_roots
+        (global_env_with_local_bounds env
+          (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+        (fn_outlives fdef) (fn_lifetimes fdef)
+        (call_param_root_env (apply_type_params type_args (fn_params fcall))
+          outer_arg_roots R_args)
+        (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fcall)))
+        argsr
+        (apply_lt_params sigma_nested
+          (apply_type_params nested_type_args (fn_params fcallee)))
+        Sigma_nested R_nested nested_arg_roots /\
+      In fcallee (env_fns
+        (global_env_with_local_bounds env
+          (subst_type_params_trait_bounds type_args (fn_bounds fdef)))) /\
+      fn_name fcallee = fname /\
+      fn_captures fcallee = [] /\
+      Forall (fun '(a, b) => outlives (fn_outlives fdef) a b)
+        (apply_lt_outlives sigma_nested (fn_outlives fcallee)) /\
+      T_body = apply_lt_ty sigma_nested
+        (subst_type_params_ty nested_type_args (fn_ret fcallee)).
+Proof.
+  intros env Omega n R Sigma Sigma_args R_args outer_arg_roots outer_args
+    type_args sigma_outer fdef fcall used' fname nested_type_args args
+    raw_body synthetic_body T_body Gamma_out R_body roots_body s s_args vs
+    Hbody Htarget Hsynthetic Hsafe Hcaps Hrename Hnodup_applied Htyped_body
+    Htyped_outer_args Hsafe_outer_args Heval_outer_args Hprov_outer_args Hstore Hroots Hshadow
+    Hrn Hnamed Hkeys.
+  destruct (generic_direct_call_target_alpha_rename_subst_type_params_runtime_typed_args
+    env type_args (store_names s_args) fdef fcall used' fname
+    nested_type_args args raw_body synthetic_body T_body Gamma_out R_body
+    roots_body Hbody Htarget Hsynthetic Hsafe Hcaps Hrename Hnodup_applied
+    Htyped_body)
+    as (argsr & fcallee & sigma_nested & nested_arg_roots & Sigma_origin &
+        R_origin & roots_origin & Hbody_runtime & Hsafe_runtime &
+        Htyped_origin & Htyped_args_origin & Hin_nested & Hname_nested).
+  pose proof (alpha_rename_fn_def_shape (store_names s_args)
+                fdef fcall used' Hrename) as Hshape.
+  destruct Hshape as [_ [_ Hparams_alpha]].
+  assert (Hparams_alpha_applied :
+    params_alpha (apply_type_params type_args (fn_params fdef))
+      (apply_type_params type_args (fn_params fcall))).
+  { apply params_alpha_apply_type_compat. exact Hparams_alpha. }
+  assert (Hlen_outer_roots :
+    List.length outer_arg_roots =
+    List.length (apply_type_params type_args (fn_params fdef))).
+  { pose proof (typed_args_roots_arg_roots_length
+      env Omega n R Sigma outer_args
+      (apply_lt_params sigma_outer
+        (apply_type_params type_args (fn_params fdef)))
+      Sigma_args R_args outer_arg_roots Htyped_outer_args) as Hlen.
+    rewrite apply_lt_params_length in Hlen. exact Hlen. }
+  assert (Harg_roots_named :
+    Forall (fun roots => root_set_store_roots_named roots s_args)
+      outer_arg_roots).
+  { destruct (store_safe_function_value_call_args_typed_roots_store_named
+      env Omega n R Sigma outer_args
+      (apply_lt_params sigma_outer
+        (apply_type_params type_args (fn_params fdef)))
+      Sigma_args R_args outer_arg_roots s s_args vs
+      Hsafe_outer_args Htyped_outer_args Heval_outer_args Hnamed Hkeys)
+      as [_ [Hroots_named _]].
+    exact Hroots_named. }
+  assert (Hsubst_fresh :
+    root_subst_images_exclude_names
+      (expr_local_store_names (ECallGeneric fname nested_type_args argsr))
+      (root_subst_of_params (apply_type_params type_args (fn_params fdef))
+        outer_arg_roots)).
+  { rewrite root_subst_of_params_apply_type_params.
+    rewrite <- Hbody_runtime.
+    rewrite expr_local_store_names_subst_type_params_expr.
+    eapply root_subst_of_params_images_exclude_names_from_store_roots.
+    - exact Harg_roots_named.
+    - eapply alpha_rename_fn_def_body_local_store_names_fresh_used.
+      exact Hrename. }
+  assert (Hrn_origin_applied :
+    root_env_no_shadow
+      (initial_root_env_for_params_origin
+        (apply_type_params type_args (fn_params fdef))
+        (apply_type_params type_args (fn_params fcall)))).
+  { rewrite initial_root_env_for_params_origin_apply_type_params.
+    apply initial_root_env_for_params_origin_no_shadow.
+    - apply params_alpha_length. exact Hparams_alpha.
+    - eapply alpha_rename_fn_def_params_nodup_ctx_names. exact Hrename. }
+  assert (Hrn_call_empty :
+    root_env_no_shadow
+      (call_param_root_env (apply_type_params type_args (fn_params fcall))
+        outer_arg_roots [])).
+  { apply call_param_root_env_no_shadow.
+    - rewrite params_ctx_apply_type_params.
+      rewrite ctx_names_subst_type_params_ctx.
+      eapply alpha_rename_fn_def_params_nodup_ctx_names. exact Hrename.
+    - simpl. constructor. }
+  assert (Htail_fresh :
+    root_env_tail_fresh_names
+      (root_env_remove_params (apply_type_params type_args (fn_params fcall))
+        R_args)
+      (expr_local_store_names (ECallGeneric fname nested_type_args argsr))).
+  { rewrite root_env_remove_params_apply_type_params.
+    rewrite <- Hbody_runtime.
+    rewrite expr_local_store_names_subst_type_params_expr.
+    eapply (eval_args_root_tail_fresh_names_for_fresh_call_prefix_named
+      env Omega n R Sigma
+      (apply_lt_params sigma_outer
+        (apply_type_params type_args (fn_params fdef)))
+      Sigma_args R_args outer_arg_roots outer_args s s_args vs
+      fdef fcall used'); eassumption. }
+  assert (Htyped_origin_applied :
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env
+        (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_params_origin
+        (apply_type_params type_args (fn_params fdef))
+        (apply_type_params type_args (fn_params fcall)))
+      (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fcall)))
+      (ECallGeneric fname nested_type_args argsr)
+      T_body Sigma_origin R_origin roots_origin).
+  { rewrite initial_root_env_for_params_origin_apply_type_params.
+    exact Htyped_origin. }
+  destruct (typed_generic_direct_call_args_roots_call_frame_from_origin
+    (global_env_with_local_bounds env
+      (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+    (fn_outlives fdef) (fn_lifetimes fdef)
+    (apply_type_params type_args (fn_params fdef))
+    (apply_type_params type_args (fn_params fcall))
+    outer_arg_roots R_args
+    (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fcall)))
+    fname nested_type_args argsr T_body Sigma_origin R_origin roots_origin
+    Hparams_alpha_applied Hnodup_applied Hlen_outer_roots Hsubst_fresh
+    Hrn_origin_applied Hrn_call_empty Htail_fresh Htyped_origin_applied)
+    as (fcallee_frame & sigma_frame & nested_arg_roots_frame &
+        Sigma_frame & R_frame & Htyped_frame & Hin_frame & Hname_frame &
+        Hcaps_frame & Houtlives_frame & Hret_frame).
+  exists argsr, fcallee_frame, sigma_frame, nested_arg_roots_frame,
+    Sigma_frame, R_frame.
+  repeat split; try assumption.
+Qed.
+
 Lemma generic_direct_call_target_alpha_rename_subst_type_params_runtime_eval :
   forall env type_args used fdef fcall used' fname nested_type_args args
       raw_body synthetic_body s s' ret,

@@ -11576,10 +11576,18 @@ Lemma generic_direct_call_target_alpha_rename_subst_type_params_runtime_typed_ar
       (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fdef)))
       synthetic_body T_body (sctx_of_ctx Gamma_out) R_body roots_body ->
     exists argsr fcallee (sigma : list lifetime),
-      exists arg_roots Sigma_out_r R_body_r,
+      exists arg_roots Sigma_out_r R_body_r roots_body_r,
       subst_type_params_expr type_args (fn_body fcall) =
         ECallGeneric fname nested_type_args argsr /\
       store_safe_function_value_call_args env argsr /\
+      typed_env_roots_shadow_safe
+        (global_env_with_local_bounds env
+          (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+        (fn_outlives fdef) (fn_lifetimes fdef)
+        (initial_root_env_for_params_origin (fn_params fdef) (fn_params fcall))
+        (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fcall)))
+        (ECallGeneric fname nested_type_args argsr)
+        T_body Sigma_out_r R_body_r roots_body_r /\
       typed_args_roots
         (global_env_with_local_bounds env
           (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
@@ -11780,7 +11788,8 @@ Proof.
     Htyped_renamed_body_ctx)
     as (fcallee & sigma & arg_roots & Hin & Hname & _ & _ & _ &
         Htyped_args & _ & _ & _).
-  exists argsr, fcallee, sigma, arg_roots, Sigma_out_r, R_body_r.
+  exists argsr, fcallee, sigma, arg_roots, Sigma_out_r, R_body_r,
+    roots_body_r.
   repeat split; try assumption.
 Qed.
 

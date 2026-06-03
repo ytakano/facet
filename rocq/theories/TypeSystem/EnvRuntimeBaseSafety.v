@@ -627,6 +627,51 @@ Proof.
   - eapply store_safe_function_value_call_args_eval_values_summary; eassumption.
 Qed.
 
+Lemma store_safe_function_value_call_args_eval_runtime_package_prefix_named :
+  forall env Ω n R Σ args ps Σ_args R_args arg_roots s s_args vs,
+    store_safe_function_value_call_args env args ->
+    typed_args_roots env Ω n R Σ args ps Σ_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    store_typed_prefix env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_function_closure_targets_summary env s ->
+    store_typed_prefix env s_args Σ_args /\
+    eval_args_values_have_types env Ω s_args vs ps /\
+    store_ref_targets_preserved env s s_args /\
+    store_roots_within R_args s_args /\
+    Forall2 value_roots_within arg_roots vs /\
+    store_no_shadow s_args /\
+    root_env_no_shadow R_args /\
+    root_env_store_roots_named R_args s_args /\
+    root_env_store_keys_named R_args s_args /\
+    store_function_closure_targets_summary env s_args.
+Proof.
+  intros env Ω n R Σ args ps Σ_args R_args arg_roots s s_args vs
+    Hsafe_args Htyped_args Heval_args Hstore Hroots Hshadow Hrn Hnamed
+    Hkeys Hsummary.
+  pose proof (store_safe_function_value_call_args_preservation_ready
+                env args Hsafe_args) as Hready_args.
+  pose proof (preservation_ready_args_implies_provenance_ready_closure
+                args Hready_args) as Hprov_args.
+  destruct (proj1 (proj2 eval_preserves_typing_roots_ready_prefix_mutual)
+              env s args s_args vs Heval_args Ω n R Σ ps Σ_args R_args
+              arg_roots Hprov_args Hstore Hroots Hshadow Hrn Htyped_args)
+    as [Hstore_args [Hargs_values [Hpres_args [Hroots_args
+      [Harg_roots_values [Hshadow_args Hrn_args]]]]]].
+  assert (Hsummary_args : store_function_closure_targets_summary env s_args).
+  { eapply store_safe_function_value_call_args_eval_preserves_store_function_closure_targets_summary;
+      eassumption. }
+  destruct (store_safe_function_value_call_args_typed_roots_store_named
+              env Ω n R Σ args ps Σ_args R_args arg_roots s s_args vs
+              Hsafe_args Htyped_args Heval_args Hnamed Hkeys)
+    as [Hnamed_args [_ Hkeys_args]].
+  repeat split; assumption.
+Qed.
+
 Lemma generic_direct_call_args_bind_params_runtime_package :
   forall env Ω n R Σ args type_args sigma fdef fcall used'
       s s_args vs Σ_args R_args arg_roots,
@@ -11612,24 +11657,15 @@ Proof.
     env args Hsafe_args) as Hready_args.
   pose proof (preservation_ready_args_implies_provenance_ready_closure
     args Hready_args) as Hprov_args.
-  destruct (proj1 (proj2 eval_preserves_typing_roots_ready_prefix_mutual)
-    env s args s_args vs Heval_args Omega n R Sigma
-    (apply_lt_params sigma
-      (apply_type_params type_args (fn_params fdef)))
-    Sigma_args R_args arg_roots Hprov_args Hstore Hroots Hshadow Hrn
-    Htyped_args)
-    as [Hstore_args [Hargs_values_sigma [Hpres_args [Hroots_args
-      [Harg_roots_values [Hshadow_args Hrn_args]]]]]].
-  assert (Hsummary_args : store_function_closure_targets_summary env s_args).
-  { eapply store_safe_function_value_call_args_eval_preserves_store_function_closure_targets_summary;
-      eassumption. }
-  destruct (store_safe_function_value_call_args_typed_roots_store_named
+  destruct (store_safe_function_value_call_args_eval_runtime_package_prefix_named
     env Omega n R Sigma args
     (apply_lt_params sigma
       (apply_type_params type_args (fn_params fdef)))
     Sigma_args R_args arg_roots s s_args vs Hsafe_args Htyped_args
-    Heval_args Hnamed Hkeys)
-    as [Hnamed_args [_ Hkeys_args]].
+    Heval_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hsummary_store)
+    as (Hstore_args & Hargs_values_sigma & Hpres_args & Hroots_args &
+        Harg_roots_values & Hshadow_args & Hrn_args & Hnamed_args &
+        Hkeys_args & Hsummary_args).
   destruct (generic_direct_call_callee_body_root_shadow_store_safe_narrow_summary_bridge_of_summary_tfn_with_result_subset_prefix_named
     env Omega n R Sigma Sigma_args R_args arg_roots args type_args fdef fcall
     (map param_ty

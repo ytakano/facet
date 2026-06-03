@@ -11911,6 +11911,46 @@ Proof.
     eassumption.
 Qed.
 
+Lemma eval_generic_direct_call_store_safe_narrow_summary_exact_package_prefix_named_fuel_zero :
+  forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args
+      arg_roots s s' ret fdef,
+    store_safe_function_value_call_args env args ->
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env 0 fdef type_args ->
+    store_typed_prefix env s Sigma ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    store_function_closure_targets_summary env s ->
+    eval env s (ECallGeneric fname type_args args) s' ret ->
+    fn_env_unique_by_name env ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    typed_args_roots env Omega n R Sigma args
+      (apply_lt_params sigma
+        (apply_type_params type_args (fn_params fdef)))
+      Sigma_args R_args arg_roots ->
+    Forall (fun '(a, b) => outlives Omega a b)
+      (apply_lt_outlives sigma (fn_outlives fdef)) ->
+    generic_direct_call_runtime_package env s s' ret Sigma_args R_args
+      arg_roots
+      (apply_lt_ty sigma (subst_type_params_ty type_args (fn_ret fdef))) /\
+    exists s_args vs,
+      eval_args env s args s_args vs /\ s' = s_args.
+Proof.
+  intros env Omega n R Sigma fname type_args args sigma Sigma_args R_args
+    arg_roots s s' ret fdef Hsafe_args Hsummary Hstore Hroots Hshadow Hrn
+    Hnamed Hkeys Hsummary_store Heval Hunique Hin Hname Hcaps Htyped_args
+    Houtlives.
+  eapply eval_generic_direct_call_store_safe_narrow_summary_exact_package_prefix_named_expr;
+    try eassumption.
+  eapply callee_body_root_shadow_store_safe_narrow_summary_instantiated_of_fuel_zero.
+  exact Hsummary.
+Qed.
+
 Lemma eval_generic_direct_call_store_safe_narrow_summary_value_prefix_named_fuel_zero :
   forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args
       arg_roots s s' ret fdef,

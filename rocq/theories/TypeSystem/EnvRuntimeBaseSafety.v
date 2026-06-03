@@ -11555,6 +11555,235 @@ Proof.
 Qed.
 
 
+
+Lemma generic_direct_call_target_alpha_rename_subst_type_params_runtime_typed_args :
+  forall env type_args used fdef fcall used' fname nested_type_args args
+      raw_body synthetic_body T_body Gamma_out R_body roots_body,
+    raw_body = subst_type_params_expr type_args (fn_body fdef) ->
+    generic_direct_call_target_expr raw_body =
+      Some (fname, nested_type_args, args, synthetic_body) ->
+    synthetic_body = ECallGeneric fname nested_type_args args ->
+    store_safe_function_value_call_args env args ->
+    fn_captures fdef = [] ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    NoDup (ctx_names (params_ctx
+      (apply_type_params type_args (fn_params fdef)))) ->
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env
+        (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fdef)))
+      synthetic_body T_body (sctx_of_ctx Gamma_out) R_body roots_body ->
+    exists argsr fcallee (sigma : list lifetime),
+      exists arg_roots Sigma_out_r R_body_r,
+      subst_type_params_expr type_args (fn_body fcall) =
+        ECallGeneric fname nested_type_args argsr /\
+      store_safe_function_value_call_args env argsr /\
+      typed_args_roots
+        (global_env_with_local_bounds env
+          (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+        (fn_outlives fdef) (fn_lifetimes fdef)
+        (initial_root_env_for_params_origin (fn_params fdef) (fn_params fcall))
+        (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fcall)))
+        argsr
+        (apply_lt_params sigma
+          (apply_type_params nested_type_args (fn_params fcallee)))
+        Sigma_out_r R_body_r arg_roots /\
+      In fcallee (env_fns
+        (global_env_with_local_bounds env
+          (subst_type_params_trait_bounds type_args (fn_bounds fdef)))) /\
+      fn_name fcallee = fname.
+Proof.
+  intros env type_args used fdef fcall used' fname nested_type_args args
+    raw_body synthetic_body T_body Gamma_out R_body roots_body Hbody Htarget
+    Hsynthetic Hsafe Hcaps Hrename Hnodup_applied Htyped.
+  subst raw_body synthetic_body.
+  rewrite params_ctx_apply_type_params in Hnodup_applied.
+  rewrite ctx_names_subst_type_params_ctx in Hnodup_applied.
+  destruct (alpha_rename_fn_def_initial_support_facts
+              used fdef fcall used' Hrename Hnodup_applied)
+    as (rho & used_params & Hparams_rename & Hbody_rename &
+        Halpha_params & Hrn_initial & Hrn_initial_r & Hinitial_equiv &
+        Hkeys_initial & Hroots_initial & Hnocoll_initial & Hctx_used &
+        Hrange_used & Hdisj).
+  destruct (alpha_rename_fn_def_static_fields used fdef fcall used' Hrename)
+    as [_ [Hlts [Houts [Hcaps_eq [_ [_ Hbounds]]]]]].
+  unfold generic_direct_call_target_expr in Htarget.
+  destruct (subst_type_params_expr type_args (fn_body fdef)) eqn:Hsubst;
+    try discriminate.
+  inversion Htarget; subst i l l0; clear Htarget.
+  pose proof (alpha_rename_expr_subst_type_params_expr type_args rho
+    used_params (fn_body fdef) (fn_body fcall) used' Hbody_rename)
+    as Hbody_subst_rename.
+  rewrite Hsubst in Hbody_subst_rename.
+  simpl in Hbody_subst_rename.
+  destruct ((fix go (used0 : list ident) (args0 : list expr)
+      : list expr * list ident :=
+      match args0 with
+      | [] => ([], used0)
+      | arg :: rest =>
+          let (arg', used1) := alpha_rename_expr rho used0 arg in
+          let (rest', used2) := go used1 rest in
+          (arg' :: rest', used2)
+      end) used_params args) as [argsr used_args] eqn:Hargsr.
+  inversion Hbody_subst_rename; subst used_args; clear Hbody_subst_rename.
+  assert (Htyped_params :
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env
+        (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (subst_type_params_ctx type_args
+        (params_ctx (fn_params fdef))))
+      (ECallGeneric fname nested_type_args args)
+      T_body (sctx_of_ctx Gamma_out) R_body roots_body).
+  { rewrite <- (fn_body_ctx_eq_params_ctx_when_no_captures fdef Hcaps).
+    exact Htyped. }
+  assert (Hctx_alpha_subst :
+    ctx_alpha rho
+      (sctx_of_ctx (subst_type_params_ctx type_args
+        (params_ctx (fn_params fdef))))
+      (sctx_of_ctx (subst_type_params_ctx type_args
+        (params_ctx (fn_params fcall))))).
+  { apply ctx_alpha_subst_type_params_ctx. exact Halpha_params. }
+  assert (Hkeys_initial_subst :
+    root_env_sctx_keys_named (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (subst_type_params_ctx type_args
+        (params_ctx (fn_params fdef))))).
+  { unfold root_env_sctx_keys_named, root_env_keys_named in *.
+    intros x Hin. unfold sctx_of_ctx.
+    rewrite ctx_names_subst_type_params_ctx.
+    apply Hkeys_initial. exact Hin. }
+  assert (Hroots_initial_subst :
+    root_env_sctx_roots_named (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (subst_type_params_ctx type_args
+        (params_ctx (fn_params fdef))))).
+  { unfold root_env_sctx_roots_named in *.
+    intros x roots z Hlookup Hin.
+    change (In z (ctx_names (subst_type_params_ctx type_args
+      (params_ctx (fn_params fdef))))).
+    rewrite ctx_names_subst_type_params_ctx.
+    eapply Hroots_initial; eassumption. }
+  assert (Hkeys_body :
+    root_env_sctx_keys_named R_body (sctx_of_ctx Gamma_out)).
+  { destruct (typed_roots_shadow_safe_sctx_keys_named_mutual
+                (global_env_with_local_bounds env
+                  (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+                (fn_outlives fdef) (fn_lifetimes fdef)) as [Hkeys_expr _].
+    eapply Hkeys_expr; eassumption. }
+  assert (Hroots_body_named :
+    root_env_sctx_roots_named R_body (sctx_of_ctx Gamma_out) /\
+    root_set_sctx_roots_named roots_body (sctx_of_ctx Gamma_out)).
+  { destruct (typed_roots_shadow_safe_sctx_roots_named_mutual
+                (global_env_with_local_bounds env
+                  (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+                (fn_outlives fdef) (fn_lifetimes fdef)) as [Hroots_expr _].
+    eapply Hroots_expr; eassumption. }
+  destruct Hroots_body_named as [Hroots_env_body Hroots_set_body].
+  assert (Hrn_body : root_env_no_shadow R_body).
+  { eapply typed_env_roots_no_shadow.
+    - eapply typed_env_roots_shadow_safe_roots. exact Htyped_params.
+    - exact Hrn_initial. }
+  assert (Hnodup_apply :
+    NoDup (ctx_names (params_ctx
+      (apply_type_params type_args (fn_params fdef))))).
+  { rewrite params_ctx_apply_type_params.
+    rewrite ctx_names_subst_type_params_ctx. exact Hnodup_applied. }
+  assert (Hsame_body :
+    sctx_same_bindings
+      (sctx_of_ctx (subst_type_params_ctx type_args
+        (params_ctx (fn_params fdef))))
+      (sctx_of_ctx Gamma_out)).
+  { eapply typed_env_structural_same_bindings.
+    eapply typed_env_roots_structural.
+    eapply typed_env_roots_shadow_safe_roots. exact Htyped_params. }
+  assert (Hnocoll_body :
+    rename_no_collision_on rho (root_env_names R_body)).
+  { eapply rename_no_collision_on_root_env_names_from_typed_support
+      with (ps := apply_type_params type_args (fn_params fdef))
+           (psr := apply_type_params type_args (fn_params fcall))
+           (Σ := sctx_of_ctx Gamma_out).
+    - rewrite params_ctx_apply_type_params.
+      rewrite params_ctx_apply_type_params. exact Hctx_alpha_subst.
+    - rewrite params_ctx_apply_type_params. exact Hsame_body.
+    - exact Hnodup_apply.
+    - exact Hkeys_body. }
+  assert (Hrename_call_expr :
+    alpha_rename_expr rho used_params
+      (ECallGeneric fname nested_type_args args) =
+    (ECallGeneric fname nested_type_args argsr, used')).
+  { simpl. rewrite Hargsr. reflexivity. }
+  assert (Hctx_used_subst :
+    forall x,
+      In x (ctx_names (sctx_of_ctx (subst_type_params_ctx type_args
+        (params_ctx (fn_params fcall))))) ->
+      In x used_params).
+  { intros x Hin. unfold sctx_of_ctx in Hin.
+    rewrite ctx_names_subst_type_params_ctx in Hin.
+    apply Hctx_used. exact Hin. }
+  assert (Hdisj_subst :
+    disjoint_names
+      (free_vars_expr (ECallGeneric fname nested_type_args args))
+      (rename_range rho)).
+  { rewrite <- Hsubst.
+    rewrite expr_names_subst_type_params_expr.
+    exact Hdisj. }
+  destruct (alpha_rename_typed_env_roots_shadow_safe_full_support_forward
+              (global_env_with_local_bounds env
+                (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+              (fn_outlives fdef) (fn_lifetimes fdef) rho
+              (initial_root_env_for_fn fdef)
+              (initial_root_env_for_params_origin
+                (fn_params fdef) (fn_params fcall))
+              (sctx_of_ctx (subst_type_params_ctx type_args
+                (params_ctx (fn_params fdef))))
+              (sctx_of_ctx (subst_type_params_ctx type_args
+                (params_ctx (fn_params fcall))))
+              (ECallGeneric fname nested_type_args args)
+              (ECallGeneric fname nested_type_args argsr)
+              used_params used'
+              T_body (sctx_of_ctx Gamma_out) R_body roots_body
+              Htyped_params Hctx_alpha_subst Hrn_initial Hrn_initial_r
+              Hinitial_equiv Hkeys_initial_subst Hroots_initial_subst
+              Hnocoll_initial Hnocoll_body Hctx_used_subst Hrange_used Hdisj_subst
+              Hrename_call_expr)
+    as (Sigma_out_r & R_body_r & roots_body_r &
+        Htyped_renamed & _ & _ & _ & _).
+  assert (Hbody_runtime :
+    subst_type_params_expr type_args (fn_body fcall) =
+      ECallGeneric fname nested_type_args argsr).
+  { exact (eq_sym H0). }
+  assert (Hsafe_runtime :
+    store_safe_function_value_call_args env argsr).
+  { eapply store_safe_function_value_call_args_alpha_rename_call_go;
+      eassumption. }
+  assert (Htyped_renamed_body_ctx :
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env
+        (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_params_origin (fn_params fdef) (fn_params fcall))
+      (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fcall)))
+      (ECallGeneric fname nested_type_args argsr)
+      T_body Sigma_out_r R_body_r roots_body_r).
+  { rewrite (fn_body_ctx_eq_params_ctx_when_no_captures fcall).
+    - exact Htyped_renamed.
+    - rewrite Hcaps_eq. exact Hcaps. }
+  destruct (typed_env_roots_shadow_safe_call_generic_typed_args_roots
+    (global_env_with_local_bounds env
+      (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+    (fn_outlives fdef) (fn_lifetimes fdef)
+    (initial_root_env_for_params_origin (fn_params fdef) (fn_params fcall))
+    (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fcall)))
+    fname nested_type_args argsr T_body Sigma_out_r R_body_r roots_body_r
+    Htyped_renamed_body_ctx)
+    as (fcallee & sigma & arg_roots & Hin & Hname & _ & _ & _ &
+        Htyped_args & _ & _ & _).
+  exists argsr, fcallee, sigma, arg_roots, Sigma_out_r, R_body_r.
+  repeat split; try assumption.
+Qed.
+
 Lemma generic_direct_call_target_alpha_rename_subst_type_params_runtime_eval :
   forall env type_args used fdef fcall used' fname nested_type_args args
       raw_body synthetic_body s s' ret,

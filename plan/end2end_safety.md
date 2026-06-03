@@ -42,15 +42,19 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    Checks: `make EnvRuntimeBaseSafety.vo`, `make TypeChecker.vo`,
    `dune build`, proof-hole scan. Direct generic constructor tests still fail
    at the callee-body bridge.
-3. Todo: accept generic direct constructor results by extending the
-   instantiated callee-body bridge for empty `EStruct` bodies.
-4. Todo: accept generated generic function-value wrappers whose bodies are
+3. Done: accept no-bounds empty `EStruct` direct generic constructor bodies in
+   the ordinary narrow summary.
+   Checks: `make EnvRuntimeBaseSafety.vo`, `dune build`, proof-hole scan,
+   `generic_expected_return_zero_arg.facet` passes.
+4. Todo: accept empty generic constructor bodies in annotated-let, assignment,
+   and if-branch contexts.
+5. Todo: accept generated generic function-value wrappers whose bodies are
    explicit `ECallGeneric` direct calls.
-5. Todo: accept `TTypeForall (... TFn ...)` function-value calls through the
+6. Todo: accept `TTypeForall (... TFn ...)` function-value calls through the
    end-to-end store-safe summary.
-6. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`
+7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`
    function-value calls through the same safety path.
-7. Todo: final full verification and roadmap closeout.
+8. Todo: final full verification and roadmap closeout.
 
 ## Required checks
 

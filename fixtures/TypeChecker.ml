@@ -12953,6 +12953,16 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
          (&&) (store_safe_function_value_call_args_b env args)
            (check_supported_non_type_generic_function_value_call_expr env
              _UU03a9_ n r (ctx_of_sctx _UU03a3_) callee)
+       | EStruct (name, _, _, l1) ->
+         (match l1 with
+          | [] ->
+            (match lookup_struct name env with
+             | Some sdef ->
+               (match sdef.struct_bounds with
+                | [] -> capture_ref_free_ty_b env t
+                | _ :: _ -> false)
+             | None -> false)
+          | _ :: _ -> false)
        | EAssign (_, e0) -> (match e0 with
                              | ELit _ -> true
                              | _ -> false)

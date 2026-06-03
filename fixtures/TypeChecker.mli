@@ -1227,6 +1227,12 @@ val check_expr_root_shadow_store_safe_narrow_summary :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
   -> bool
 
+val check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel :
+  Big_int_Z.big_int -> global_env -> fn_def -> ty list -> bool
+
+val check_callee_body_root_shadow_store_safe_narrow_summary_instantiated :
+  global_env -> fn_def -> ty list -> bool
+
 val check_expr_root_shadow_store_safe_narrow_summary_checked_fuel :
   Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
   root_env -> sctx -> expr -> bool
@@ -1234,12 +1240,6 @@ val check_expr_root_shadow_store_safe_narrow_summary_checked_fuel :
 val check_expr_root_shadow_store_safe_narrow_summary_checked :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
   -> bool
-
-val check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel :
-  Big_int_Z.big_int -> global_env -> fn_def -> ty list -> bool
-
-val check_callee_body_root_shadow_store_safe_narrow_summary_instantiated :
-  global_env -> fn_def -> ty list -> bool
 
 val check_fn_root_shadow_captured_call_provenance_summary :
   global_env -> fn_def -> bool

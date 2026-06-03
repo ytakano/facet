@@ -8801,6 +8801,15 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_fuel
   | infer_ok (T, Σ', R', roots) =>
       match e with
       | EUnit => true
+      | EStruct name _ _ [] =>
+          match lookup_struct name env with
+          | Some sdef =>
+              match struct_bounds sdef with
+              | [] => capture_ref_free_ty_b env T
+              | _ :: _ => false
+              end
+          | None => false
+          end
       | EVar _ => non_function_value_ty_b T
       | EAssign _ (ELit _) => true
       | EAssign _ _ => false

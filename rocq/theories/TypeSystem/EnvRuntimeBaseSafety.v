@@ -1180,6 +1180,14 @@ Inductive expr_root_shadow_store_safe_narrow_summary
       typed_env_roots_shadow_safe env Omega n R Σ EUnit T Σ' R' roots ->
       expr_root_shadow_store_safe_narrow_summary
         env Omega n R Σ EUnit T Σ' R' roots roots
+  | ERSSN_EmptyStructRootless : forall R Σ name lts args T Σ' R' roots sdef,
+      lookup_struct name env = Some sdef ->
+      struct_bounds sdef = [] ->
+      typed_env_roots_shadow_safe env Omega n R Σ
+        (EStruct name lts args []) T Σ' R' roots ->
+      capture_ref_free_ty_b env T = true ->
+      expr_root_shadow_store_safe_narrow_summary
+        env Omega n R Σ (EStruct name lts args []) T Σ' R' roots []
   | ERSSN_AssignLit : forall R Σ p lit T Σ' R' roots,
       typed_env_roots_shadow_safe env Omega n R Σ (EAssign p (ELit lit))
         T Σ' R' roots ->
@@ -1477,6 +1485,7 @@ Proof.
   - exact H.
   - exact H.
   - exact H.
+  - exact H1.
   - exact H.
   - exact H.
   - exact H.
@@ -1685,6 +1694,16 @@ Proof.
   - apply root_set_equiv_refl.
   - apply root_set_equiv_refl.
   - apply root_set_equiv_refl.
+  - inversion H1; subst.
+    match goal with
+    | Hfields : typed_fields_roots_shadow_safe _ _ _ _ _ _ _ _ _ _ _ _ |- _ =>
+        inversion Hfields; subst
+    end.
+    + apply root_set_equiv_refl.
+    + match goal with
+      | Hlookup : lookup_field_b _ [] = Some _ |- _ =>
+          simpl in Hlookup; discriminate
+      end.
   - apply root_set_equiv_refl.
   - apply root_set_equiv_refl.
   - apply root_set_equiv_refl.
@@ -2541,6 +2560,13 @@ Proof.
     eapply typed_env_roots_shadow_safe_tail_frame.
     + exact H.
     + unfold root_env_tail_fresh_names. intros y Hy. contradiction.
+  - eapply ERSSN_EmptyStructRootless.
+    + exact H.
+    + exact H0.
+    + eapply typed_env_roots_shadow_safe_tail_frame.
+      * exact H1.
+      * exact Hfresh.
+    + exact H2.
   - eapply ERSSN_AssignLit.
     eapply typed_env_roots_shadow_safe_tail_frame.
     + exact H.
@@ -2618,6 +2644,7 @@ Proof.
     | R Σ rk p T Σ' R' roots x path Htyped Hpath Hsingle
     | R Σ p T Σ' R' roots x Htyped Hpath Hdirect Htarget Hsingle
     | R Σ T Σ' R' roots Htyped
+    | R Σ name lts args T Σ' R' roots sdef Hlookup_struct Hbounds_struct Htyped Hfree
     | R Σ p lit T Σ' R' roots Htyped
     | R Σ x T Σ' R' roots Htyped Hnonfun
     | R Σ p T Σ' R' roots x path Htyped Hpath ];
@@ -3184,6 +3211,17 @@ Proof.
     + apply ERSSN_Unit. exact Htypedr.
     + repeat split; try eassumption; try apply Hrootsr.
   - destruct (alpha_rename_typed_env_roots_shadow_safe_full_support_forward
+      env Omega n rho R Rr0 Σ Σr0 (EStruct name lts args []) er used used'
+      T Σ' R' roots Htyped Hctx HnsR HnsRr HRr Hkeys Hroots
+      HnocollR HnocollR' Hctx_used Hrange_used Hdisj Hrename)
+      as (Σr' & Rr' & rootsr & Htypedr & Hctxr & Hnsr & HRr' & Hrootsr).
+    simpl in Hrename. injection Hrename as <- <-.
+    exists Σr', Rr', rootsr, [].
+    split.
+    + eapply ERSSN_EmptyStructRootless; eassumption.
+    + repeat split; try eassumption; try apply Hrootsr;
+        apply root_set_equiv_refl.
+  - destruct (alpha_rename_typed_env_roots_shadow_safe_full_support_forward
       env Omega n rho R Rr0 Σ Σr0 (EAssign p (ELit lit)) er used used'
       T Σ' R' roots Htyped Hctx HnsR HnsRr HRr Hkeys Hroots
       HnocollR HnocollR' Hctx_used Hrange_used Hdisj Hrename)
@@ -3460,6 +3498,13 @@ Proof.
     exists Runit0, roots0, roots0. split.
     + apply ERSSN_Unit. exact Htyped0.
     + split; [exact Hns0 | split; [exact HRunit0 | exact Hroots0]].
+  - destruct (typed_env_roots_shadow_safe_instantiate_fresh
+      env Omega n rho R Σ (EStruct name lts args []) T Σ' R' roots
+      R0 H1 Hfresh HnsR HnsR0 HR0)
+      as (Rstruct0 & roots0 & Htyped0 & Hns0 & HRstruct0 & Hroots0).
+    exists Rstruct0, roots0, []. split.
+    + eapply ERSSN_EmptyStructRootless; eassumption.
+    + split; [exact Hns0 | split; [exact HRstruct0 | exact Hroots0]].
   - destruct (typed_env_roots_shadow_safe_instantiate_fresh
       env Omega n rho R Σ (EAssign p (ELit lit)) T Σ' R' roots
       R0 H Hfresh HnsR HnsR0 HR0)
@@ -3830,6 +3875,16 @@ Proof.
       * exact Htyped_call.
     + simpl in Hcheck.
       pose proof (infer_core_env_state_fuel_roots_shadow_safe_sound
+        (S fuel') env Omega n R Σ (EStruct s l l0 l1) T Σ' R' roots Hinfer)
+        as Htyped_struct.
+      destruct l1; try discriminate.
+      destruct (lookup_struct s env) as [sdef |] eqn:Hlookup; try discriminate.
+      destruct (struct_bounds sdef) eqn:Hbounds; try discriminate.
+      destruct (capture_ref_free_ty_b env T) eqn:Hfree; try discriminate.
+      exists [].
+      eapply ERSSN_EmptyStructRootless; eassumption.
+    + simpl in Hcheck.
+      pose proof (infer_core_env_state_fuel_roots_shadow_safe_sound
         (S fuel') env Omega n R Σ (EAssign p e) T Σ' R' roots Hinfer)
         as Htyped_assign.
       destruct e; try discriminate.
@@ -4145,6 +4200,18 @@ Proof.
               exists ret_roots.
               eapply ERSSNC_LetInfer_BoundCheckedCaptureRefFreeResult;
                 eauto using roots_exclude_b_sound, root_env_excludes_b_sound.
+        -- try rewrite Hun_top in Hcheck.
+           destruct fields; try discriminate.
+           destruct (capture_ref_free_ty_b env Ttop) eqn:Hfree_top;
+             try discriminate.
+           unfold roots_for_checked_result in Hinfer.
+           rewrite Hfree_top in Hinfer.
+           inversion Hinfer; subst; clear Hinfer.
+           exists [].
+           refine (ERSSNC_EmptyStruct_CaptureRefFreeResult env Omega n R Σ
+             sn ls tys T Σ' R' roots_top _ Hfree_top).
+           eapply infer_core_env_state_fuel_roots_shadow_safe_sound.
+           exact Hun_top.
         -- try rewrite Hun_top in Hcheck.
            destruct ed; try discriminate.
            destruct r; try discriminate.
@@ -4813,6 +4880,17 @@ Proof.
 Qed.
 
 
+
+Lemma eval_struct_fields_empty_exprs_store_eq :
+  forall env s defs s' values,
+    eval_struct_fields env s [] defs s' values ->
+    s' = s.
+Proof.
+  intros env s defs s' values Heval.
+  dependent induction Heval.
+  reflexivity.
+Qed.
+
 Lemma expr_root_shadow_store_safe_narrow_summary_runtime_package :
   forall env Omega n R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_store_safe_narrow_summary
@@ -5249,6 +5327,31 @@ Proof.
       try exact Hshadow; try exact Hrn; try exact Hnamed; try exact Hkeys;
       try exact Hsummary_store; eauto.
     unfold root_set_store_roots_named. intros z Hin. contradiction.
+  - pose proof (typed_env_roots_shadow_safe_roots
+      env Omega n R Σ (EStruct name lts args []) T Σ' R' roots H1)
+      as Htyped_roots.
+    destruct (proj1 eval_preserves_typing_roots_ready_mutual
+      env s (EStruct name lts args []) s' ret Heval
+      Omega n R Σ T Σ' R' roots
+      (ProvReady_Struct name lts args [] ProvReadyFields_Nil)
+      Hstore Hroots Hshadow Hrn Htyped_roots)
+      as [Hstore' [Hv [Hpres [Hroots' [Hvroots [Hshadow' Hrn']]]]]].
+    destruct (proj1 eval_preserves_root_names_ready_mutual
+      env s (EStruct name lts args []) s' ret Heval
+      Omega n R Σ T Σ' R' roots
+      (ProvReady_Struct name lts args [] ProvReadyFields_Nil)
+      Hstore Hroots Hshadow Hrn Hnamed Htyped_roots) as [Hnamed' Hrootset_named].
+    pose proof (proj1 eval_preserves_root_keys_named_ready_mutual
+      env s (EStruct name lts args []) s' ret Heval
+      Omega n R Σ T Σ' R' roots
+      (ProvReady_Struct name lts args [] ProvReadyFields_Nil)
+      Hstore Hroots Hshadow Hrn Hkeys Htyped_roots) as Hkeys'.
+    assert (Hs_eq : s' = s).
+    { inversion Heval; subst.
+      eapply eval_struct_fields_empty_exprs_store_eq; eassumption. }
+    subst s'.
+    repeat split; try eassumption;
+      try (eapply store_typed_function_closure_targets_summary; eassumption).
   - pose proof (typed_env_roots_shadow_safe_roots
       env Omega n R Σ (EAssign p (ELit lit)) T Σ' R' roots H)
       as Htyped_roots.
@@ -5752,6 +5855,28 @@ Proof.
   - apply ERSSN_Unit.
     inversion H; subst; try congruence.
     constructor.
+  - eapply ERSSN_EmptyStructRootless.
+    + change (lookup_struct name (global_env_with_local_bounds env bounds))
+        with (lookup_struct name env). exact H.
+    + exact H0.
+    + inversion H1; subst; try congruence.
+      match goal with
+      | Hlookup : lookup_struct name env = Some ?sdef0 |- _ =>
+          rewrite H in Hlookup; inversion Hlookup; subst sdef0
+      end.
+      match goal with
+      | Hfields : typed_fields_roots_shadow_safe _ _ _ _ _ _ _ _ _ _ _ _ |- _ =>
+          dependent destruction Hfields
+      end.
+      eapply TERS_Struct.
+      * change (lookup_struct name (global_env_with_local_bounds env bounds))
+          with (lookup_struct name env). exact H.
+      * eassumption.
+      * eassumption.
+      * rewrite H0. reflexivity.
+      * rewrite <- x. constructor.
+    + rewrite capture_ref_free_ty_b_global_env_with_local_bounds.
+      exact H2.
   - eapply ERSSN_AssignLit.
     inversion H; subst; try congruence.
     + eapply TERS_Assign_Path; eauto using
@@ -8029,17 +8154,6 @@ Proof.
   - unfold root_set_stores_subset. intros z Hin. inversion Hin.
 Qed.
 
-
-Lemma eval_struct_fields_empty_exprs_store_eq :
-  forall env s defs s' values,
-    eval_struct_fields env s [] defs s' values ->
-    s' = s.
-Proof.
-  intros env s defs s' values Heval.
-  dependent induction Heval.
-  reflexivity.
-Qed.
-
 Lemma expr_root_shadow_store_safe_narrow_summary_checked_runtime_package :
   forall env Omega n R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_store_safe_narrow_summary_checked
@@ -8809,6 +8923,31 @@ Proof.
       try exact Hshadow; try exact Hrn; try exact Hnamed; try exact Hkeys;
       try exact Hsummary_store; eauto.
     unfold root_set_store_roots_named. intros z Hin. contradiction.
+  - assert (Hempty_shape : Σ' = Σ /\ R' = R /\ roots = []).
+    { inversion H1; subst; try congruence.
+      match goal with
+      | Hfields : typed_fields_roots_shadow_safe _ _ _ _ _ _ _ _ _ _ _ _ |- _ =>
+          dependent destruction Hfields
+      end.
+      repeat split; reflexivity. }
+    destruct Hempty_shape as [HSigma [HR Hroots_nil]].
+    subst Σ' R' roots.
+    pose proof (typed_env_roots_shadow_safe_roots
+      env Omega n R Σ (EStruct name lts args []) T Σ R [] H1)
+      as Htyped_roots.
+    destruct (proj1 eval_preserves_typing_roots_ready_prefix_mutual
+      env s (EStruct name lts args []) s' ret Heval
+      Omega n R Σ T Σ R []
+      (ProvReady_Struct name lts args [] ProvReadyFields_Nil)
+      Hstore Hroots Hshadow Hrn Htyped_roots)
+      as [Hstore' [Hv [Hpres [Hroots' [Hvroots [Hshadow' Hrn']]]]]].
+    assert (Hs_eq : s' = s).
+    { inversion Heval; subst.
+      eapply eval_struct_fields_empty_exprs_store_eq; eassumption. }
+    subst s'.
+    repeat split; try eassumption;
+      try apply root_set_store_roots_named_nil;
+      try (eapply store_typed_prefix_function_closure_targets_summary; eassumption).
   - pose proof (typed_env_roots_shadow_safe_roots
       env Omega n R Σ (EAssign p (ELit lit)) T Σ' R' roots H)
       as Htyped_roots.
@@ -9517,6 +9656,32 @@ Proof.
       try exact Hshadow; try exact Hrn; try exact Hnamed; try exact Hkeys;
       try exact Hsummary_store; eauto.
     unfold root_set_store_roots_named. intros z Hin. contradiction.
+  - assert (Hempty_shape : Σ' = Σ /\ R' = R /\ roots = []).
+    { inversion H1; subst; try congruence.
+      match goal with
+      | Hfields : typed_fields_roots_shadow_safe _ _ _ _ _ _ _ _ _ _ _ _ |- _ =>
+          dependent destruction Hfields
+      end.
+      repeat split; reflexivity. }
+    destruct Hempty_shape as [HSigma [HR Hroots_nil]].
+    subst Σ' R' roots.
+    pose proof (typed_env_roots_shadow_safe_roots
+      env Omega n R Σ (EStruct name lts args []) T Σ R [] H1)
+      as Htyped_roots.
+    destruct (proj1 eval_preserves_typing_roots_ready_prefix_mutual
+      env s (EStruct name lts args []) s' ret Heval
+      Omega n R Σ T Σ R []
+      (ProvReady_Struct name lts args [] ProvReadyFields_Nil)
+      Hstore Hroots Hshadow Hrn Htyped_roots)
+      as [Hstore' [Hv [Hpres [Hroots' [Hvroots [Hshadow' Hrn']]]]]].
+    assert (Hs_eq : s' = s).
+    { inversion Heval; subst.
+      eapply eval_struct_fields_empty_exprs_store_eq; eassumption. }
+    subst s'.
+    repeat split; try eassumption;
+      try apply store_ref_targets_preserved_refl;
+      try apply root_set_store_roots_named_nil;
+      try (eapply store_typed_prefix_function_closure_targets_summary; eassumption).
   - pose proof (typed_env_roots_shadow_safe_roots
       env Omega n R Σ (EAssign p (ELit lit)) T Σ' R' roots H)
       as Htyped_roots.
@@ -10391,6 +10556,20 @@ Proof.
     inversion H; subst; try congruence;
       repeat split; try exact Hcover; try exact Hroots; try exact Hshadow;
       try exact Hrn; try exact Hscope; try exact Hfresh.
+  - assert (Hempty_shape : Σ' = Σ /\ R' = R).
+    { inversion H1; subst; try congruence.
+      match goal with
+      | Hfields : typed_fields_roots_shadow_safe _ _ _ _ _ _ _ _ _ _ _ _ |- _ =>
+          dependent destruction Hfields
+      end.
+      repeat split; reflexivity. }
+    destruct Hempty_shape as [HSigma HR]. subst Σ' R'.
+    assert (Hs_eq : s' = s).
+    { inversion Heval; subst.
+      eapply eval_struct_fields_empty_exprs_store_eq; eassumption. }
+    subst s'.
+    repeat split; try exact Hcover; try exact Hroots; try exact Hshadow;
+      try exact Hrn; try exact Hscope; try exact Hfresh.
   - destruct (expr_root_shadow_store_safe_narrow_summary_runtime_package_prefix_named
       env Omega n R Σ (EAssign p (ELit lit)) T Σ' R' roots roots
       (ERSSN_AssignLit env Omega n R Σ p lit T Σ' R' roots H)
@@ -10496,6 +10675,12 @@ Proof.
   - inversion H; subst; try congruence; exact Hcover.
   - inversion H; subst; try congruence; exact Hcover.
   - inversion H; subst; try congruence; exact Hcover.
+  - inversion H1; subst; try congruence.
+    match goal with
+    | Hfields : typed_fields_roots_shadow_safe _ _ _ _ _ _ _ _ _ _ _ _ |- _ =>
+        dependent destruction Hfields
+    end.
+    exact Hcover.
   - inversion H; subst; try congruence;
       match goal with
       | Hlit_typed : typed_env_roots_shadow_safe _ _ _ _ _ (ELit _) _ _ _ _ |- _ =>
@@ -10654,6 +10839,10 @@ Proof.
   - inversion Heval; subst. exists frame. inversion H; subst; try congruence; exact Hscope.
   - inversion Heval; subst. exists frame. inversion H; subst; try congruence; exact Hscope.
   - inversion Heval; subst. exists frame. inversion H; subst; try congruence; exact Hscope.
+  - assert (Hs_eq : s' = s).
+    { inversion Heval; subst.
+      eapply eval_struct_fields_empty_exprs_store_eq; eassumption. }
+    subst s'. exists frame. exact Hscope.
   - inversion Heval; subst;
       match goal with
       | Hlit : eval _ _ (ELit _) _ _ |- _ => inversion Hlit; subst

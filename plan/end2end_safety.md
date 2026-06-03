@@ -467,6 +467,7 @@ failures; invalid tests pass.
       - T2a2d2ab3k4 done: factor safe generic-call argument runtime package; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
       - T2a2d2ab3k5 done: add zero-fuel generic-call exact package bridge; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
       - T2a2d2ab3k6 done: add alpha-renamed generic-call runtime typed-args transport; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
+      - T2a2d2ab3k7 done: add generic-call runtime typed-args call-frame bridge; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass; sub-agent closed.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

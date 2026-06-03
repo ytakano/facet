@@ -11784,6 +11784,73 @@ Proof.
   repeat split; try assumption.
 Qed.
 
+Lemma typed_generic_direct_call_args_roots_call_frame_from_origin :
+  forall env Omega n ps_orig ps_call outer_arg_roots R_args Sigma
+      fname type_args argsr T Sigma_out R_body roots_body,
+    params_alpha ps_orig ps_call ->
+    NoDup (ctx_names (params_ctx ps_orig)) ->
+    List.length outer_arg_roots = List.length ps_orig ->
+    root_subst_images_exclude_names
+      (expr_local_store_names (ECallGeneric fname type_args argsr))
+      (root_subst_of_params ps_orig outer_arg_roots) ->
+    root_env_no_shadow
+      (initial_root_env_for_params_origin ps_orig ps_call) ->
+    root_env_no_shadow
+      (call_param_root_env ps_call outer_arg_roots []) ->
+    root_env_tail_fresh_names
+      (root_env_remove_params ps_call R_args)
+      (expr_local_store_names (ECallGeneric fname type_args argsr)) ->
+    typed_env_roots_shadow_safe env Omega n
+      (initial_root_env_for_params_origin ps_orig ps_call) Sigma
+      (ECallGeneric fname type_args argsr) T Sigma_out R_body roots_body ->
+    exists fcallee sigma arg_roots Sigma_args R_args_out,
+      typed_args_roots env Omega n
+        (call_param_root_env ps_call outer_arg_roots R_args) Sigma argsr
+        (apply_lt_params sigma
+          (apply_type_params type_args (fn_params fcallee)))
+        Sigma_args R_args_out arg_roots /\
+      In fcallee (env_fns env) /\
+      fn_name fcallee = fname.
+Proof.
+  intros env Omega n ps_orig ps_call outer_arg_roots R_args Sigma fname
+    type_args argsr T Sigma_out R_body roots_body Halpha Hnodup Hlen
+    Hsubst_fresh Hrn_origin Hrn_call_empty Htail_fresh Htyped_origin.
+  assert (Hinitial_inst_equiv :
+    root_env_equiv
+      (root_env_instantiate
+        (root_subst_of_params ps_orig outer_arg_roots)
+        (initial_root_env_for_params_origin ps_orig ps_call))
+      (call_param_root_env ps_call outer_arg_roots [])).
+  { eapply root_env_instantiate_initial_origin_equiv_call_param_root_env_empty;
+      eassumption. }
+  destruct (typed_env_roots_shadow_safe_instantiate_fresh
+              env Omega n
+              (root_subst_of_params ps_orig outer_arg_roots)
+              (initial_root_env_for_params_origin ps_orig ps_call) Sigma
+              (ECallGeneric fname type_args argsr) T Sigma_out R_body
+              roots_body (call_param_root_env ps_call outer_arg_roots [])
+              Htyped_origin Hsubst_fresh Hrn_origin Hrn_call_empty)
+    as (R_body_inst & roots_body_inst & Htyped_inst & Hrn_body_inst &
+        Hbody_inst_equiv & Hroots_inst_equiv).
+  { apply root_env_equiv_sym. exact Hinitial_inst_equiv. }
+  pose proof (typed_env_roots_shadow_safe_tail_frame
+    env Omega n (root_env_remove_params ps_call R_args)
+    (call_param_root_env ps_call outer_arg_roots []) Sigma
+    (ECallGeneric fname type_args argsr) T Sigma_out R_body_inst
+    roots_body_inst Htyped_inst Htail_fresh) as Htyped_tail.
+  rewrite <- call_param_root_env_app_tail in Htyped_tail.
+  destruct (typed_env_roots_shadow_safe_call_generic_typed_args_roots
+    env Omega n (call_param_root_env ps_call outer_arg_roots R_args)
+    Sigma fname type_args argsr T Sigma_out
+    (R_body_inst ++ root_env_remove_params ps_call R_args)
+    roots_body_inst Htyped_tail)
+    as (fcallee & sigma & arg_roots & Hin & Hname & _ & _ & _ &
+        Htyped_args & _ & _ & _).
+  exists fcallee, sigma, arg_roots, Sigma_out,
+    (R_body_inst ++ root_env_remove_params ps_call R_args).
+  repeat split; assumption.
+Qed.
+
 Lemma generic_direct_call_target_alpha_rename_subst_type_params_runtime_eval :
   forall env type_args used fdef fcall used' fname nested_type_args args
       raw_body synthetic_body s s' ret,

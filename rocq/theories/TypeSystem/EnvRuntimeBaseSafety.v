@@ -11810,7 +11810,10 @@ Lemma typed_generic_direct_call_args_roots_call_frame_from_origin :
           (apply_type_params type_args (fn_params fcallee)))
         Sigma_args R_args_out arg_roots /\
       In fcallee (env_fns env) /\
-      fn_name fcallee = fname.
+      fn_name fcallee = fname /\
+      fn_captures fcallee = [] /\
+      Forall (fun '(a, b) => outlives Omega a b)
+        (apply_lt_outlives sigma (fn_outlives fcallee)).
 Proof.
   intros env Omega n ps_orig ps_call outer_arg_roots R_args Sigma fname
     type_args argsr T Sigma_out R_body roots_body Halpha Hnodup Hlen
@@ -11844,8 +11847,8 @@ Proof.
     Sigma fname type_args argsr T Sigma_out
     (R_body_inst ++ root_env_remove_params ps_call R_args)
     roots_body_inst Htyped_tail)
-    as (fcallee & sigma & arg_roots & Hin & Hname & _ & _ & _ &
-        Htyped_args & _ & _ & _).
+    as (fcallee & sigma & arg_roots & Hin & Hname & Hcaps & _ & _ &
+        Htyped_args & Houtlives & _ & _).
   exists fcallee, sigma, arg_roots, Sigma_out,
     (R_body_inst ++ root_env_remove_params ps_call R_args).
   repeat split; assumption.

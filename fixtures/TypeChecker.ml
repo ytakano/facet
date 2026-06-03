@@ -13179,6 +13179,10 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_checked_fuel fuel env _
                           | Infer_err _ -> false))
                 | Infer_err _ -> false)
                 fuel)
+           | EStruct (_, _, _, l1) ->
+             (match l1 with
+              | [] -> capture_ref_free_ty_b env t
+              | _ :: _ -> false)
            | EDeref e0 ->
              (match e0 with
               | EBorrow (r0, _) ->

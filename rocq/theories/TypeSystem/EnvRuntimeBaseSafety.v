@@ -1218,6 +1218,12 @@ Inductive expr_root_shadow_store_safe_narrow_summary_checked
       capture_ref_free_ty_b env T = true ->
       expr_root_shadow_store_safe_narrow_summary_checked
         env Omega n R Σ (EDeref (EBorrow RShared p)) T Σ' R' [] []
+  | ERSSNC_EmptyStruct_CaptureRefFreeResult : forall R Σ name lts args T Σ' R' roots,
+      typed_env_roots_shadow_safe env Omega n R Σ
+        (EStruct name lts args []) T Σ' R' roots ->
+      capture_ref_free_ty_b env T = true ->
+      expr_root_shadow_store_safe_narrow_summary_checked
+        env Omega n R Σ (EStruct name lts args []) T Σ' R' [] []
   | ERSSNC_Let_CaptureRefFreeResult : forall R R1 R2 Σ Σ1 Sigma2 m x T_hidden T1 e1 e2
       T2 roots1 roots2 ret_roots1 ret_roots,
       expr_root_shadow_store_safe_narrow_summary_checked
@@ -8023,6 +8029,17 @@ Proof.
   - unfold root_set_stores_subset. intros z Hin. inversion Hin.
 Qed.
 
+
+Lemma eval_struct_fields_empty_exprs_store_eq :
+  forall env s defs s' values,
+    eval_struct_fields env s [] defs s' values ->
+    s' = s.
+Proof.
+  intros env s defs s' values Heval.
+  dependent induction Heval.
+  reflexivity.
+Qed.
+
 Lemma expr_root_shadow_store_safe_narrow_summary_checked_runtime_package :
   forall env Omega n R Σ e T Σ' R' roots ret_roots,
     expr_root_shadow_store_safe_narrow_summary_checked
@@ -8085,6 +8102,35 @@ Proof.
                 | eapply capture_ref_free_ty_b_runtime_rootless; exact H0 ]
               | apply root_set_store_roots_named_nil ]
           end ].
+  - pose proof (typed_env_roots_shadow_safe_roots
+      env Omega n R Σ (EStruct name lts args []) T Σ' R' roots H)
+      as Htyped_roots.
+    destruct (proj1 eval_preserves_typing_roots_ready_mutual
+      env s (EStruct name lts args []) s' ret Heval
+      Omega n R Σ T Σ' R' roots
+      (ProvReady_Struct name lts args [] ProvReadyFields_Nil)
+      Hstore Hroots Hshadow Hrn Htyped_roots)
+      as [Hstore' [Hv [Hpres [Hroots' [Hvroots [Hshadow' Hrn']]]]]].
+    destruct (proj1 eval_preserves_root_names_ready_mutual
+      env s (EStruct name lts args []) s' ret Heval
+      Omega n R Σ T Σ' R' roots
+      (ProvReady_Struct name lts args [] ProvReadyFields_Nil)
+      Hstore Hroots Hshadow Hrn Hnamed Htyped_roots) as [Hnamed' _].
+    pose proof (proj1 eval_preserves_root_keys_named_ready_mutual
+      env s (EStruct name lts args []) s' ret Heval
+      Omega n R Σ T Σ' R' roots
+      (ProvReady_Struct name lts args [] ProvReadyFields_Nil)
+      Hstore Hroots Hshadow Hrn Hkeys Htyped_roots) as Hkeys'.
+    assert (Hs_eq : s' = s).
+    { inversion Heval; subst.
+      eapply eval_struct_fields_empty_exprs_store_eq; eassumption. }
+    subst s'.
+    repeat split; try eassumption;
+      try apply root_set_store_roots_named_nil;
+      try (eapply value_has_type_runtime_rootless_empty_roots;
+        [ exact Hv
+        | eapply capture_ref_free_ty_b_runtime_rootless; exact H0 ]);
+      try (eapply store_typed_function_closure_targets_summary; eassumption).
   - dependent destruction Heval.
     destruct (IHHsummary1 s s1 v1 Hstore Hroots Hshadow Hrn Hnamed Hkeys
       Hsummary_store Heval1 Hunique)

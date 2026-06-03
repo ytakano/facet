@@ -8981,6 +8981,7 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
       | infer_ok (T, _, _, _) =>
           match e with
           | EDeref (EBorrow RShared _) => capture_ref_free_ty_b env T
+          | EStruct _ _ _ [] => capture_ref_free_ty_b env T
           | ELet m x T_hidden e1 e2 =>
               match fuel with
               | 0 => false

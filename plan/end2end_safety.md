@@ -38,15 +38,19 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
 ## Active tasks
 
 1. Done: compact roadmap to current baseline and remaining slices.
-2. Todo: accept generic direct constructor results used by expected-type
-   generic item expressions, including zero-arg `make<T>()` wrappers.
-3. Todo: accept generated generic function-value wrappers whose bodies are
+2. Done: add checked/rootless empty-struct constructor summaries.
+   Checks: `make EnvRuntimeBaseSafety.vo`, `make TypeChecker.vo`,
+   `dune build`, proof-hole scan. Direct generic constructor tests still fail
+   at the callee-body bridge.
+3. Todo: accept generic direct constructor results by extending the
+   instantiated callee-body bridge for empty `EStruct` bodies.
+4. Todo: accept generated generic function-value wrappers whose bodies are
    explicit `ECallGeneric` direct calls.
-4. Todo: accept `TTypeForall (... TFn ...)` function-value calls through the
+5. Todo: accept `TTypeForall (... TFn ...)` function-value calls through the
    end-to-end store-safe summary.
-5. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`
+6. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`
    function-value calls through the same safety path.
-6. Todo: final full verification and roadmap closeout.
+7. Todo: final full verification and roadmap closeout.
 
 ## Required checks
 

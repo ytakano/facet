@@ -51,8 +51,11 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      Checks: `make EnvRuntimeBaseSafety.vo`, `make EnvRuntimeCapturedSafety.vo`,
      `dune build`, proof-hole scan,
      `generic_expected_annotated_let_zero_arg.facet` passes.
+   - Done: if branches.
+     Checks: `make EnvRuntimeBaseSafety.vo`, `make EnvRuntimeCapturedSafety.vo`,
+     `dune build`, proof-hole scan, `generic_expected_if_branches.facet`
+     passes.
    - Todo: assignment RHS.
-   - Todo: if branches.
 5. Todo: accept generated generic function-value wrappers whose bodies are
    explicit `ECallGeneric` direct calls.
 6. Todo: accept `TTypeForall (... TFn ...)` function-value calls through the

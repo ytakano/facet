@@ -8399,6 +8399,29 @@ Definition let_bound_generic_direct_call_target_expr
   | _ => None
   end.
 
+Definition if_literal_generic_direct_call_target_expr
+    (e : expr)
+    : option (bool * ident * list Ty * list expr *
+              ident * list Ty * list expr * expr) :=
+  match e with
+  | EIf (ELit (LBool b))
+      (ECallGeneric fname_then type_args_then args_then)
+      (ECallGeneric fname_else type_args_else args_else) =>
+      if ident_eqb fname_then fname_else &&
+         ty_list_eqb type_args_then type_args_else
+      then
+        match args_then, args_else with
+        | [], [] => Some (b, fname_then, type_args_then, args_then,
+            fname_else, type_args_else, args_else,
+            EIf (ELit (LBool b))
+              (ECallGeneric fname_then type_args_then args_then)
+              (ECallGeneric fname_else type_args_else args_else))
+        | _, _ => None
+        end
+      else None
+  | _ => None
+  end.
+
 Definition direct_call_ready_expr_b (e : expr) : bool :=
   match direct_call_target_expr e with
   | Some (_, args, _) => preservation_ready_args_b args
@@ -9376,6 +9399,86 @@ Definition check_fn_root_shadow_captured_call_store_safe_summary
                | _, _, _ => false
                end
            end
+       end
+   | None => false
+   end) ||
+  (match if_literal_generic_direct_call_target_expr (fn_body fdef) with
+   | Some (b, fname_then, type_args_then, args_then,
+       fname_else, type_args_else, args_else, synthetic_body) =>
+       store_safe_function_value_call_args_b env args_then &&
+       store_safe_function_value_call_args_b env args_else &&
+       match lookup_fn_b fname_then (env_fns env),
+             lookup_fn_b fname_else (env_fns env) with
+       | Some callee_then, Some callee_else =>
+           Nat.eqb (Datatypes.length type_args_then)
+             (fn_type_params callee_then) &&
+           Nat.eqb (Datatypes.length type_args_else)
+             (fn_type_params callee_else) &&
+           match check_struct_bounds
+                   (global_env_with_local_bounds env (fn_bounds fdef))
+                   (fn_bounds callee_then) type_args_then,
+                 check_struct_bounds
+                   (global_env_with_local_bounds env (fn_bounds fdef))
+                   (fn_bounds callee_else) type_args_else with
+           | None, None =>
+               match infer_core_env_roots_shadow_safe env
+                         (fn_outlives callee_then)
+                         (fn_lifetimes callee_then)
+                         (initial_root_env_for_fn callee_then)
+                         (subst_type_params_ctx type_args_then
+                           (fn_body_ctx callee_then))
+                         (subst_type_params_expr type_args_then
+                           (fn_body callee_then)),
+                     infer_env_roots_shadow_safe env callee_then
+                       (initial_root_env_for_fn callee_then),
+                     infer_core_env_roots_shadow_safe env
+                         (fn_outlives callee_else)
+                         (fn_lifetimes callee_else)
+                         (initial_root_env_for_fn callee_else)
+                         (subst_type_params_ctx type_args_else
+                           (fn_body_ctx callee_else))
+                         (subst_type_params_expr type_args_else
+                           (fn_body callee_else)),
+                     infer_env_roots_shadow_safe env callee_else
+                       (initial_root_env_for_fn callee_else),
+                     infer_env_roots_shadow_safe env
+                       (fn_with_body fdef synthetic_body)
+                       (initial_root_env_for_fn fdef) with
+               | infer_ok (T_then, _, R_then, roots_then),
+                 infer_ok _,
+                 infer_ok (T_else, _, R_else, roots_else),
+                 infer_ok _,
+                 infer_ok (T_body, _, R_out, roots) =>
+                   check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
+                     env callee_then type_args_then &&
+                   ty_compatible_b (fn_outlives callee_then) T_then
+                     (subst_type_params_ty type_args_then
+                       (fn_ret callee_then)) &&
+                   fn_params_roots_exclude_b
+                     (apply_type_params type_args_then (fn_params callee_then))
+                     roots_then &&
+                   fn_params_root_env_excludes_b
+                     (apply_type_params type_args_then (fn_params callee_then))
+                     R_then &&
+                   check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
+                     env callee_else type_args_else &&
+                   ty_compatible_b (fn_outlives callee_else) T_else
+                     (subst_type_params_ty type_args_else
+                       (fn_ret callee_else)) &&
+                   fn_params_roots_exclude_b
+                     (apply_type_params type_args_else (fn_params callee_else))
+                     roots_else &&
+                   fn_params_root_env_excludes_b
+                     (apply_type_params type_args_else (fn_params callee_else))
+                     R_else &&
+                   ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) &&
+                   fn_params_roots_exclude_b (fn_params fdef) roots &&
+                   fn_params_root_env_excludes_b (fn_params fdef) R_out
+               | _, _, _, _, _ => false
+               end
+           | _, _ => false
+           end
+       | _, _ => false
        end
    | None => false
    end) ||

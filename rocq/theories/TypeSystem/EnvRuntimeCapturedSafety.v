@@ -2,7 +2,8 @@ From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules RootProvenance TypeChecker RuntimeTyping
   EnvStructuralRules CheckerSoundness AlphaRenaming EnvTypingSoundness.
 From Facet.TypeSystem Require Export EnvRuntimeNonCapturingSafety.
-From Facet.TypeSystem Require Import TypeSafetyDirectCallWrappers.
+From Facet.TypeSystem Require Import TypeSafetyDirectCallWrappers
+  TypeSafetyBasePreservationControl.
 From Stdlib Require Import List Bool Lia String Program.Equality.
 Import ListNotations.
 
@@ -1036,6 +1037,70 @@ Proof.
   exists s1, v1, s2. repeat split; assumption.
 Qed.
 
+Lemma if_literal_generic_direct_call_target_expr_shape :
+  forall raw_body b fname_then type_args_then args_then fname_else
+      type_args_else args_else synthetic_body,
+    if_literal_generic_direct_call_target_expr raw_body =
+      Some (b, fname_then, type_args_then, args_then,
+        fname_else, type_args_else, args_else, synthetic_body) ->
+    raw_body = EIf (ELit (LBool b))
+      (ECallGeneric fname_then type_args_then args_then)
+      (ECallGeneric fname_else type_args_else args_else) /\
+    synthetic_body = EIf (ELit (LBool b))
+      (ECallGeneric fname_then type_args_then args_then)
+      (ECallGeneric fname_else type_args_else args_else).
+Proof.
+  intros raw_body b fname_then type_args_then args_then fname_else
+    type_args_else args_else synthetic_body Htarget.
+  unfold if_literal_generic_direct_call_target_expr in Htarget.
+  destruct raw_body as
+    [| | | | | | | | | | | | | | | | | | | cond e_then e_else];
+    try discriminate.
+  destruct cond as
+    [| lit | | | | | | | | | | | | | | | | | |]; try discriminate.
+  destruct lit as [| | b0]; try discriminate.
+  destruct e_then as
+    [| | | | | | | | | fname_t type_args_t args_t | | | | | | | | | |];
+    try discriminate.
+  destruct e_else as
+    [| | | | | | | | | fname_e type_args_e args_e | | | | | | | | | |];
+    try discriminate.
+  destruct (ident_eqb fname_t fname_e && ty_list_eqb type_args_t type_args_e)
+    eqn:Heq; try discriminate.
+  destruct args_t; try discriminate.
+  destruct args_e; try discriminate.
+  inversion Htarget; subst; clear Htarget.
+  split; reflexivity.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_if_literal_generic_direct_call_roots :
+  forall env Omega n R Sigma b fname_then type_args_then args_then fname_else
+      type_args_else args_else T_body Sigma_out R_out roots,
+    typed_env_roots_shadow_safe env Omega n R Sigma
+      (EIf (ELit (LBool b))
+        (ECallGeneric fname_then type_args_then args_then)
+        (ECallGeneric fname_else type_args_else args_else))
+      T_body Sigma_out R_out roots ->
+    exists T_then Sigma_then R_then roots_then T_else Sigma_else R_else
+        roots_else,
+      typed_env_roots_shadow_safe env Omega n R Sigma
+        (ECallGeneric fname_then type_args_then args_then)
+        T_then Sigma_then R_then roots_then /\
+      typed_env_roots_shadow_safe env Omega n R Sigma
+        (ECallGeneric fname_else type_args_else args_else)
+        T_else Sigma_else R_else roots_else /\
+      ty_core T_then = ty_core T_else /\
+      T_body = MkTy (usage_max (ty_usage T_then) (ty_usage T_else))
+        (ty_core T_then).
+Proof.
+  intros env Omega n R Sigma b fname_then type_args_then args_then fname_else
+    type_args_else args_else T_body Sigma_out R_out roots Htyped.
+  dependent destruction Htyped.
+  dependent destruction Htyped1.
+  exists T2, Σ2, R2, roots2, T3, Σ3, R3, roots3.
+  repeat split; assumption || reflexivity.
+Qed.
+
 Theorem env_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready :
   forall env f s s' v,
     fn_env_unique_by_name env ->
@@ -1050,7 +1115,7 @@ Proof.
   pose proof (lookup_fn_in_unique_by_name env
     (fn_name f) f Hin eq_refl Hunique) as Hlookup.
   destruct (Hsummary (fn_name f) f Hlookup) as
-    [Hold | [Hdirect | [Hgeneric | [Hlet | Hnarrow]]]].
+    [Hold | [Hdirect | [Hgeneric | [Hlet | [Hif | Hnarrow]]]]].
   - eapply callee_body_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready.
     + exact Hunique.
     + exact Hold.
@@ -1288,6 +1353,154 @@ Proof.
         [ eapply VHT_Compatible;
           [ exact Hv_env | apply ty_compatible_b_sound; exact Hcall_compat ]
         | apply ty_compatible_b_sound; exact Hcompat ]).
+  - destruct Hif as
+      (b & fname_then & type_args_then & args_then & fname_else &
+        type_args_else & args_else & raw_body & synthetic_body & fthen &
+        felse & T_body & Gamma_out & R_body & roots_body & Hbody & Htarget &
+        Hsafe_then & Hsafe_else & Hin_then & Hname_then & Hin_else &
+        Hname_else & Htype_params_then & Htype_params_else & Hbounds_then &
+        Hbounds_else & Hthen_summary & Helse_summary & Hnodup & Htyped_shadow &
+        Hcompat & _ & _).
+    destruct (check_initial_root_runtime_ready_sound f s Hinitial) as
+      [Hroots [Hshadow [Hnamed Hkeys]]].
+    pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hrn.
+    rewrite Hbody in Heval.
+    pose (body_env := global_env_with_local_bounds env (fn_bounds f)).
+    assert (Hstore_body_env :
+      store_typed_prefix body_env s (sctx_of_ctx (fn_body_ctx f))).
+    { subst body_env. apply store_typed_prefix_exact.
+      eapply store_typed_global_env_with_local_bounds.
+      eapply initial_store_for_fn_store_typed. exact Hstore. }
+    assert (Hsummary_store_body_env :
+      store_function_closure_targets_summary body_env s).
+    { subst body_env.
+      apply store_function_closure_targets_summary_global_env_with_local_bounds.
+      eapply initial_store_for_fn_closure_targets_summary. exact Hstore. }
+    assert (Heval_body_env : eval body_env s raw_body s' v).
+    { subst body_env. eapply eval_global_env_with_local_bounds. exact Heval. }
+    assert (Hthen_summary_body :
+      callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+        body_env 10000 fthen type_args_then).
+    { subst body_env.
+      eapply callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel_global_env_with_local_bounds.
+      exact Hthen_summary. }
+    assert (Helse_summary_body :
+      callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+        body_env 10000 felse type_args_else).
+    { subst body_env.
+      eapply callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel_global_env_with_local_bounds.
+      exact Helse_summary. }
+    assert (Hsafe_then_body : store_safe_function_value_call_args body_env args_then).
+    { subst body_env.
+      apply store_safe_function_value_call_args_global_env_with_local_bounds.
+      exact Hsafe_then. }
+    assert (Hsafe_else_body : store_safe_function_value_call_args body_env args_else).
+    { subst body_env.
+      apply store_safe_function_value_call_args_global_env_with_local_bounds.
+      exact Hsafe_else. }
+    set (runtime_env := body_env) in *.
+    set (start_store := s) in *.
+    set (then_fname := fname_then) in *.
+    set (then_type_args := type_args_then) in *.
+    set (then_args := args_then) in *.
+    set (else_fname := fname_else) in *.
+    set (else_type_args := type_args_else) in *.
+    set (else_args := args_else) in *.
+    destruct (if_literal_generic_direct_call_target_expr_shape
+      raw_body b then_fname then_type_args then_args else_fname
+      else_type_args else_args synthetic_body Htarget)
+      as [Hraw_shape Hsynthetic_shape].
+    rewrite Hraw_shape in Heval_body_env.
+    rewrite Hsynthetic_shape in Htyped_shadow.
+    destruct (typed_env_roots_shadow_safe_if_literal_generic_direct_call_roots
+      body_env (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+      (sctx_of_ctx (fn_body_ctx f)) b then_fname then_type_args then_args
+      else_fname else_type_args else_args T_body (sctx_of_ctx Gamma_out)
+      R_body roots_body Htyped_shadow)
+      as (T_then & Sigma_then & R_then & roots_then & T_else & Sigma_else &
+          R_else & roots_else & Htyped_then_shadow & Htyped_else_shadow &
+          Hbranches_core & Hif_type).
+    destruct b.
+    + inversion Heval_body_env; subst; clear Heval_body_env;
+        match goal with
+        | Hlit : eval _ _ (ELit (LBool true)) _ _ |- _ =>
+            inversion Hlit; subst; clear Hlit
+        end.
+      pose proof (typed_env_roots_shadow_safe_roots
+        body_env (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+        (sctx_of_ctx (fn_body_ctx f))
+        (ECallGeneric then_fname then_type_args then_args) T_then
+        Sigma_then R_then roots_then Htyped_then_shadow) as Htyped_call.
+      dependent destruction Htyped_call.
+      assert (fdef = fthen) as ->.
+      { eapply Hunique.
+        - exact H.
+        - exact Hin_then.
+        - match goal with
+          | Hname : fn_name fdef = fn_name fthen |- _ => exact Hname
+          | Hname : fn_name fthen = fn_name fdef |- _ => exact (eq_sym Hname)
+          end. }
+      set (runtime_env := global_env_with_local_bounds env (fn_bounds f)) in *.
+      pose proof
+        (eval_generic_direct_call_store_safe_narrow_summary_value_prefix_named_fuel
+          runtime_env (fn_outlives f) (fn_lifetimes f)
+          (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
+          (fn_name fthen) then_type_args then_args σ Σ' R' arg_roots start_store s' v fthen 10000
+          Hsafe_then_body Hthen_summary_body Hstore_body_env Hroots
+          Hshadow Hrn Hnamed Hkeys Hsummary_store_body_env H6
+          Hunique Hin_then eq_refl H1 H4 H5) as Hv_body.
+      assert (Hv_env :
+        value_has_type env s' v
+          (apply_lt_ty σ
+            (subst_type_params_ty then_type_args (fn_ret fthen)))).
+      { subst runtime_env.
+        eapply value_has_type_clear_global_env_local_bounds. exact Hv_body. }
+      pose proof (value_has_type_if_left_result env s' v
+        (apply_lt_ty σ
+          (subst_type_params_ty then_type_args (fn_ret fthen)))
+        T_else Hv_env) as Hv_if.
+      exact (value_has_type_compatible env s' (fn_outlives f) v _ _
+        Hv_if (ty_compatible_b_sound _ _ _ Hcompat)).
+    + inversion Heval_body_env; subst; clear Heval_body_env;
+        match goal with
+        | Hlit : eval _ _ (ELit (LBool false)) _ _ |- _ =>
+            inversion Hlit; subst; clear Hlit
+        end.
+      pose proof (typed_env_roots_shadow_safe_roots
+        body_env (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+        (sctx_of_ctx (fn_body_ctx f))
+        (ECallGeneric else_fname else_type_args else_args) T_else
+        Sigma_else R_else roots_else Htyped_else_shadow) as Htyped_call.
+      dependent destruction Htyped_call.
+      assert (fdef = felse) as ->.
+      { eapply Hunique.
+        - exact H.
+        - exact Hin_else.
+        - match goal with
+          | Hname : fn_name fdef = fn_name felse |- _ => exact Hname
+          | Hname : fn_name felse = fn_name fdef |- _ => exact (eq_sym Hname)
+          end. }
+      set (runtime_env := global_env_with_local_bounds env (fn_bounds f)) in *.
+      pose proof
+        (eval_generic_direct_call_store_safe_narrow_summary_value_prefix_named_fuel
+          runtime_env (fn_outlives f) (fn_lifetimes f)
+          (initial_root_env_for_fn f) (sctx_of_ctx (fn_body_ctx f))
+          (fn_name felse) else_type_args else_args σ Σ' R' arg_roots start_store s' v felse 10000
+          Hsafe_else_body Helse_summary_body Hstore_body_env Hroots
+          Hshadow Hrn Hnamed Hkeys Hsummary_store_body_env H6
+          Hunique Hin_else eq_refl H1 H4 H5) as Hv_body.
+      assert (Hv_env :
+        value_has_type env s' v
+          (apply_lt_ty σ
+            (subst_type_params_ty else_type_args (fn_ret felse)))).
+      { subst runtime_env.
+        eapply value_has_type_clear_global_env_local_bounds. exact Hv_body. }
+      pose proof (value_has_type_if_right_result env s' v T_then
+        (apply_lt_ty σ
+          (subst_type_params_ty else_type_args (fn_ret felse)))
+        Hv_env Hbranches_core) as Hv_if.
+      exact (value_has_type_compatible env s' (fn_outlives f) v _ _
+        Hv_if (ty_compatible_b_sound _ _ _ Hcompat)).
   - destruct Hnarrow as
       (T_body & Gamma_out & R_body & roots_body & ret_roots & Hnodup &
         Hnarrow & Hcompat & _ & _).

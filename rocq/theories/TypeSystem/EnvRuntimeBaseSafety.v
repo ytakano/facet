@@ -13206,6 +13206,43 @@ Definition callee_body_root_shadow_captured_call_generic_direct_let_narrow_store
     roots_exclude_params (fn_params fdef) roots_body /\
     root_env_excludes_params (fn_params fdef) R_body.
 
+Definition callee_body_root_shadow_captured_call_generic_direct_if_literal_narrow_store_safe_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  exists b fname_then type_args_then args_then fname_else type_args_else
+      args_else raw_body synthetic_body fthen felse T_body Gamma_out R_body
+      roots_body,
+    fn_body fdef = raw_body /\
+    if_literal_generic_direct_call_target_expr raw_body =
+      Some (b, fname_then, type_args_then, args_then,
+        fname_else, type_args_else, args_else, synthetic_body) /\
+    store_safe_function_value_call_args env args_then /\
+    store_safe_function_value_call_args env args_else /\
+    In fthen (env_fns env) /\
+    fn_name fthen = fname_then /\
+    In felse (env_fns env) /\
+    fn_name felse = fname_else /\
+    Datatypes.length type_args_then = fn_type_params fthen /\
+    Datatypes.length type_args_else = fn_type_params felse /\
+    check_struct_bounds (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_bounds fthen) type_args_then = None /\
+    check_struct_bounds (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_bounds felse) type_args_else = None /\
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env 10000 fthen type_args_then /\
+    callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
+      env 10000 felse type_args_else /\
+    NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fdef))
+      (fn_outlives fdef)
+      (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      synthetic_body T_body (sctx_of_ctx Gamma_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) = true /\
+    roots_exclude_params (fn_params fdef) roots_body /\
+    root_env_excludes_params (fn_params fdef) R_body.
+
 Definition callee_body_root_shadow_captured_call_store_safe_summary
     (env : global_env) (fdef : fn_def) : Prop :=
   callee_body_root_shadow_captured_call_provenance_summary env fdef \/
@@ -13214,6 +13251,8 @@ Definition callee_body_root_shadow_captured_call_store_safe_summary
   callee_body_root_shadow_captured_call_generic_direct_narrow_store_safe_summary
     env fdef \/
   callee_body_root_shadow_captured_call_generic_direct_let_narrow_store_safe_summary
+    env fdef \/
+  callee_body_root_shadow_captured_call_generic_direct_if_literal_narrow_store_safe_summary
     env fdef \/
   exists T_body Gamma_out R_body roots_body ret_roots,
     NoDup (ctx_names (params_ctx (fn_params fdef))) /\
@@ -13234,8 +13273,9 @@ Lemma check_fn_root_shadow_captured_call_store_safe_summary_sound :
 Proof.
   intros env fdef Hcheck.
   unfold check_fn_root_shadow_captured_call_store_safe_summary in Hcheck.
-  apply orb_true_iff in Hcheck as [Hprefix_let | Hnarrow].
-  - apply orb_true_iff in Hprefix_let as [Hprefix | Hlet].
+  apply orb_true_iff in Hcheck as [Hprefix_if | Hnarrow].
+  - apply orb_true_iff in Hprefix_if as [Hprefix_let | Hif].
+    apply orb_true_iff in Hprefix_let as [Hprefix | Hlet].
     + apply orb_true_iff in Hprefix as [Hhead | Hgeneric].
       { apply orb_true_iff in Hhead as [Hold | Hdirect].
         * left. apply check_fn_root_shadow_captured_call_provenance_summary_sound.
@@ -13443,7 +13483,90 @@ Proof.
       split; [exact Hcompat |].
       split; [apply fn_params_roots_exclude_b_sound; exact Hroots |].
       apply fn_params_root_env_excludes_b_sound. exact Henv.
-  - right. right. right. right.
+    + right. right. right. right. left.
+      destruct (if_literal_generic_direct_call_target_expr (fn_body fdef))
+        as [[[[[[[[b fname_then] type_args_then] args_then] fname_else]
+                type_args_else] args_else] synthetic_body] |] eqn:Htarget;
+        try discriminate.
+      apply andb_true_iff in Hif as [Hsafes Hif].
+      apply andb_true_iff in Hsafes as [Hsafe_then Hsafe_else].
+      destruct (lookup_fn_b fname_then (env_fns env)) as [fthen |]
+        eqn:Hlookup_then; try discriminate.
+      destruct (lookup_fn_b fname_else (env_fns env)) as [felse |]
+        eqn:Hlookup_else; try discriminate.
+      apply andb_true_iff in Hif as [Htype_params_pair Hif].
+      apply andb_true_iff in Htype_params_pair as
+        [Htype_params_then Htype_params_else].
+      apply Nat.eqb_eq in Htype_params_then.
+      apply Nat.eqb_eq in Htype_params_else.
+      destruct (check_struct_bounds
+        (global_env_with_local_bounds env (fn_bounds fdef))
+        (fn_bounds fthen) type_args_then) as [bounds_then |]
+        eqn:Hbounds_then; try discriminate.
+      destruct (check_struct_bounds
+        (global_env_with_local_bounds env (fn_bounds fdef))
+        (fn_bounds felse) type_args_else) as [bounds_else |]
+        eqn:Hbounds_else; try discriminate.
+      destruct (infer_core_env_roots_shadow_safe env
+        (fn_outlives fthen) (fn_lifetimes fthen)
+        (initial_root_env_for_fn fthen)
+        (subst_type_params_ctx type_args_then (fn_body_ctx fthen))
+        (subst_type_params_expr type_args_then (fn_body fthen)))
+        as [[[[T_then Gamma_then] R_then] roots_then] | err]
+        eqn:Hthen_core; try discriminate.
+      destruct (infer_env_roots_shadow_safe env fthen
+        (initial_root_env_for_fn fthen))
+        as [[[[T_then_env Gamma_then_env] R_then_env]
+              roots_then_env] | err] eqn:Hthen_env; try discriminate.
+      destruct (infer_core_env_roots_shadow_safe env
+        (fn_outlives felse) (fn_lifetimes felse)
+        (initial_root_env_for_fn felse)
+        (subst_type_params_ctx type_args_else (fn_body_ctx felse))
+        (subst_type_params_expr type_args_else (fn_body felse)))
+        as [[[[T_else Gamma_else] R_else] roots_else] | err]
+        eqn:Helse_core; try discriminate.
+      destruct (infer_env_roots_shadow_safe env felse
+        (initial_root_env_for_fn felse))
+        as [[[[T_else_env Gamma_else_env] R_else_env]
+              roots_else_env] | err] eqn:Helse_env; try discriminate.
+      destruct (infer_env_roots_shadow_safe env
+        (fn_with_body fdef synthetic_body)
+        (initial_root_env_for_fn fdef))
+        as [[[[T_body Gamma_body] R_body] roots_body] | err]
+        eqn:Hbody_env; try discriminate.
+      repeat rewrite andb_true_iff in Hif.
+      destruct Hif as
+        [[[[[[[[[[Hthen_expr Hthen_compat] Hthen_roots]
+                Hthen_env_excl] Helse_expr] Helse_compat] Helse_roots]
+            Helse_env_excl] Hcompat] Hroots] Henv].
+      apply lookup_fn_b_sound in Hlookup_then.
+      destruct Hlookup_then as [Hin_then Hname_then].
+      apply lookup_fn_b_sound in Hlookup_else.
+      destruct Hlookup_else as [Hin_else Hname_else].
+      pose proof
+        (check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_sound
+          env fthen type_args_then Hthen_expr) as Hthen_summary.
+      pose proof
+        (check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_sound
+          env felse type_args_else Helse_expr) as Helse_summary.
+      pose proof (infer_env_roots_shadow_safe_sound env
+        (fn_with_body fdef synthetic_body) (initial_root_env_for_fn fdef)
+        T_body Gamma_body R_body roots_body Hbody_env) as Htyped_fn.
+      unfold typed_fn_env_roots_shadow_safe in Htyped_fn.
+      destruct Htyped_fn as
+        (T_body_actual & Gamma_out_actual & Htyped_body & Hcompat_body & _).
+      exists b, fname_then, type_args_then, args_then, fname_else,
+        type_args_else, args_else, (fn_body fdef), synthetic_body, fthen,
+        felse, T_body_actual, Gamma_out_actual, R_body, roots_body.
+      repeat split; try reflexivity; try eassumption;
+        try (apply store_safe_function_value_call_args_b_sound; eassumption);
+        try (apply fn_params_roots_exclude_b_sound; eassumption);
+        try (apply fn_params_root_env_excludes_b_sound; eassumption).
+      { change (NoDup
+          (ctx_names
+            (params_ctx (fn_params (fn_with_body fdef synthetic_body))))).
+        eapply infer_env_roots_shadow_safe_params_nodup. exact Hbody_env. }
+  - right. right. right. right. right.
     destruct (infer_core_env_roots_shadow_safe_checked env
       (fn_outlives fdef) (fn_lifetimes fdef)
       (initial_root_env_for_fn fdef) (fn_body_ctx fdef) (fn_body fdef))

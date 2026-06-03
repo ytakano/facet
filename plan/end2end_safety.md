@@ -475,6 +475,7 @@ failures; invalid tests pass.
       - T2a2d2ab3k8e done: prove recursive generic-call fuel exact package bridge; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass; sub-agent closed after converging.
       - T2a2d2ab3k8f done: expose general fuel generic-call runtime value wrapper from exact package bridge; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
       - T2a2d2ab3k8g done: wire captured generic-direct branch to fuel runtime value theorem; `EnvRuntimeCapturedSafety.v` target and proof-hole scan pass.
+      - T2a2d2ab3k8h done: broad verification: `cd rocq && make`, proof-hole scan, `dune build`, targeted generic direct CLI pass; `tests/run.sh` still fails known generic function-value safety-gate valids; `tests/fir/run.sh` still fails existing FIR string/function-value cases while generic direct FIR cases pass.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

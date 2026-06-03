@@ -396,6 +396,34 @@ Proof.
     intros z Hin_z; eapply Hnamed; eassumption.
 Qed.
 
+Lemma typed_env_roots_shadow_safe_call_generic_typed_args_roots :
+  forall env Ω n R Σ fname type_args args T Σ' R' roots,
+    typed_env_roots_shadow_safe env Ω n R Σ
+      (ECallGeneric fname type_args args) T Σ' R' roots ->
+    exists fdef σ arg_roots,
+      In fdef (env_fns env) /\
+      fn_name fdef = fname /\
+      fn_captures fdef = [] /\
+      Datatypes.length type_args = fn_type_params fdef /\
+      check_struct_bounds env (fn_bounds fdef) type_args = None /\
+      typed_args_roots env Ω n R Σ args
+        (apply_lt_params σ
+          (apply_type_params type_args (fn_params fdef))) Σ' R' arg_roots /\
+      Forall (fun '(a, b) => outlives Ω a b)
+        (apply_lt_outlives σ (fn_outlives fdef)) /\
+      T = apply_lt_ty σ
+        (subst_type_params_ty type_args (fn_ret fdef)) /\
+      roots = root_sets_union arg_roots.
+Proof.
+  intros env Ω n R Σ fname type_args args T Σ' R' roots Htyped.
+  pose proof (typed_env_roots_shadow_safe_roots
+    env Ω n R Σ (ECallGeneric fname type_args args)
+    T Σ' R' roots Htyped) as Htyped_roots.
+  dependent destruction Htyped_roots.
+  eexists. eexists. eexists.
+  repeat split; eauto.
+Qed.
+
 Lemma store_safe_function_value_call_args_typed_roots_static_named :
   forall env Omega n R Sigma args ps Sigma' R' arg_roots,
     typed_args_roots env Omega n R Sigma args ps Sigma' R' arg_roots ->

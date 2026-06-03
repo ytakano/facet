@@ -463,6 +463,7 @@ failures; invalid tests pass.
       - T2a2d2ab3j done: expose expression generic direct-call exact final args-store package; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
       - T2a2d2ab3k done: add alpha/type-parameter runtime target helper for generic direct calls; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
       - T2a2d2ab3k2 done: add runtime eval transport for alpha/type-parameter generic direct-call target; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
+      - T2a2d2ab3k3 done: add generic call typed-args inversion helper; `EnvRuntimeBaseSafety.v` target and proof-hole scan pass.
 
 Resolved writes accept direct-parent pathless writes and writable recursive
 deref-chain prefixes. Resolved unique borrows accept writable recursive

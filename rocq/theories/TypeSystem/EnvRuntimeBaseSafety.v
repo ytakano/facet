@@ -12743,6 +12743,165 @@ Qed.
 
 
 
+Lemma alpha_rename_store_safe_call_args_hidden_seed_excludes :
+  forall env rho used args argsr used' x,
+    store_safe_function_value_call_args env args ->
+    (forall y, In y (rename_range rho) -> y <> x) ->
+    ~ In x (args_free_vars_ts args) ->
+    ((fix go (used0 : list ident) (args0 : list expr)
+        : list expr * list ident :=
+        match args0 with
+        | [] => ([], used0)
+        | arg :: rest =>
+            let (arg', used1) := alpha_rename_expr rho used0 arg in
+            let (rest', used2) := go used1 rest in
+            (arg' :: rest', used2)
+        end) used args) = (argsr, used') ->
+    ~ In x (args_free_vars_ts argsr) /\
+    ~ In x (args_local_store_names argsr).
+Proof.
+  intros env rho used args argsr used' x Hsafe Hrange Hfree Hrename.
+  revert used argsr used' Hfree Hrename.
+  induction Hsafe as [| arg rest Harg Hsafe_rest IH];
+    intros used argsr used' Hfree Hrename; simpl in Hrename.
+  - injection Hrename as <- _. simpl. split; intros Hin; contradiction.
+  - destruct Harg as [| lit | y | fname0 fdef0 Hin0 Hname0 Hsummary0]; simpl in Hrename.
+    + destruct ((fix go (used0 : list ident) (args0 : list expr)
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used0)
+          | arg :: rest =>
+              let (arg', used1) := alpha_rename_expr rho used0 arg in
+              let (rest', used2) := go used1 rest in
+              (arg' :: rest', used2)
+          end) used rest) as [restr used_rest] eqn:Hrest.
+      injection Hrename as <- <-.
+      destruct (IH used restr used_rest) as [Hfree_rest Hlocal_rest].
+      * intros Hin. apply Hfree. simpl. exact Hin.
+      * exact Hrest.
+      * simpl. split; assumption.
+    + destruct ((fix go (used0 : list ident) (args0 : list expr)
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used0)
+          | arg :: rest =>
+              let (arg', used1) := alpha_rename_expr rho used0 arg in
+              let (rest', used2) := go used1 rest in
+              (arg' :: rest', used2)
+          end) used rest) as [restr used_rest] eqn:Hrest.
+      injection Hrename as <- <-.
+      destruct (IH used restr used_rest) as [Hfree_rest Hlocal_rest].
+      * intros Hin. apply Hfree. simpl. exact Hin.
+      * exact Hrest.
+      * simpl. split; assumption.
+    + destruct ((fix go (used0 : list ident) (args0 : list expr)
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used0)
+          | arg :: rest =>
+              let (arg', used1) := alpha_rename_expr rho used0 arg in
+              let (rest', used2) := go used1 rest in
+              (arg' :: rest', used2)
+          end) used rest) as [restr used_rest] eqn:Hrest.
+      injection Hrename as <- <-.
+      destruct (IH used restr used_rest) as [Hfree_rest Hlocal_rest].
+      * intros Hin. apply Hfree. simpl. right. exact Hin.
+      * exact Hrest.
+      * split.
+        -- simpl. intros Hin. destruct Hin as [Heq | Hin].
+           ++ destruct (lookup_rename_in_range_or_self rho y)
+                as [Hin_range | Hself].
+              ** apply (Hrange (lookup_rename y rho) Hin_range).
+                 exact Heq.
+              ** apply Hfree. simpl. left.
+                 rewrite Hself in Heq. exact Heq.
+           ++ apply Hfree_rest. exact Hin.
+        -- simpl. exact Hlocal_rest.
+    + destruct ((fix go (used0 : list ident) (args0 : list expr)
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used0)
+          | arg :: rest =>
+              let (arg', used1) := alpha_rename_expr rho used0 arg in
+              let (rest', used2) := go used1 rest in
+              (arg' :: rest', used2)
+          end) used rest) as [restr used_rest] eqn:Hrest.
+      injection Hrename as <- <-.
+      destruct (IH used restr used_rest) as [Hfree_rest Hlocal_rest].
+      * intros Hin. apply Hfree. simpl. exact Hin.
+      * exact Hrest.
+      * simpl. split; assumption.
+Qed.
+
+Lemma generic_direct_call_target_alpha_rename_runtime_args_hidden_seed_excludes :
+  forall env type_args used fdef fcall used' fname nested_type_args args
+      raw_body synthetic_body argsr x,
+    raw_body = subst_type_params_expr type_args (fn_body fdef) ->
+    generic_direct_call_target_expr raw_body =
+      Some (fname, nested_type_args, args, synthetic_body) ->
+    synthetic_body = ECallGeneric fname nested_type_args args ->
+    store_safe_function_value_call_args env args ->
+    In x used ->
+    ~ In x (args_free_vars_ts args) ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    subst_type_params_expr type_args (fn_body fcall) =
+      ECallGeneric fname nested_type_args argsr ->
+    ~ In x (args_free_vars_ts argsr) /\
+    ~ In x (args_local_store_names argsr).
+Proof.
+  intros env type_args used fdef fcall used' fname nested_type_args args
+    raw_body synthetic_body argsr x Hbody Htarget Hsynthetic Hsafe Hused
+    Hfree Hrename Hbody_runtime.
+  subst raw_body synthetic_body.
+  destruct fdef as [fname_def lifetimes outs captures ps ret body].
+  simpl in *.
+  unfold generic_direct_call_target_expr in Htarget.
+  destruct (subst_type_params_expr type_args body) eqn:Hsubst;
+    try discriminate.
+  inversion Htarget; subst i l l0; clear Htarget.
+  unfold alpha_rename_fn_def in Hrename. simpl in Hrename.
+  destruct (alpha_rename_params []
+    (param_names ps ++ param_names captures ++ free_vars_expr body ++ used) ps)
+    as [[psr rho] used_params] eqn:Hparams.
+  destruct (alpha_rename_expr rho used_params body) as [bodyr used_body]
+    eqn:Hbody_rename.
+  inversion Hrename; subst fcall used_body; clear Hrename.
+  pose proof (alpha_rename_expr_subst_type_params_expr type_args rho
+    used_params body bodyr used' Hbody_rename) as Hbody_subst_rename.
+  rewrite Hsubst in Hbody_subst_rename.
+  simpl in Hbody_subst_rename.
+  destruct ((fix go (used0 : list ident) (args0 : list expr)
+      : list expr * list ident :=
+      match args0 with
+      | [] => ([], used0)
+      | arg :: rest =>
+          let (arg', used1) := alpha_rename_expr rho used0 arg in
+          let (rest', used2) := go used1 rest in
+          (arg' :: rest', used2)
+      end) used_params args) as [argsr0 used_args] eqn:Hargsr.
+  injection Hbody_subst_rename as Hexpr_eq.
+  simpl in Hbody_runtime.
+  rewrite <- Hexpr_eq in Hbody_runtime.
+  injection Hbody_runtime as Hargs_eq.
+  assert (Hrange_fresh : forall y,
+    In y (rename_range rho) -> y <> x).
+  { intros y Hrange Hy.
+    subst y.
+    eapply alpha_rename_params_range_fresh_used_nil.
+    - exact Hparams.
+    - exact Hrange.
+    - apply in_or_app. right.
+      apply in_or_app. right.
+      apply in_or_app. right. exact Hused. }
+  destruct (alpha_rename_store_safe_call_args_hidden_seed_excludes
+    env rho used_params args argsr0 used_args x Hsafe Hrange_fresh Hfree Hargsr)
+    as [Hfree_runtime Hlocal_runtime].
+  split.
+  - rewrite <- Hargs_eq. exact Hfree_runtime.
+  - rewrite <- Hargs_eq. exact Hlocal_runtime.
+Qed.
+
+
 Lemma generic_direct_call_target_alpha_rename_subst_type_params_runtime :
   forall env type_args used fdef fcall used' fname nested_type_args args
       raw_body synthetic_body,
@@ -13805,6 +13964,7 @@ Lemma eval_generic_direct_call_hidden_frame_args_strip :
       lookup_fn fname (env_fns env) = Some fdef /\
       fn_captures fdef = [] /\
       store_hidden_frame_rel x T hidden s_args_hidden s_args /\
+      eval_args env s_hidden args s_args_hidden vs /\
       eval_args env s_base args s_args vs /\
       store_refs_exclude_root x s_args /\
       Forall (value_refs_exclude_root x) vs /\
@@ -13911,6 +14071,54 @@ Proof.
     subst ps.
     rewrite Hfinal.
     eapply store_hidden_frame_rel_remove_params; eassumption.
+Qed.
+
+
+Lemma eval_generic_direct_call_hidden_frame_package_from_stripped_body :
+  forall env x T hidden s_hidden s_base s_hidden' fname type_args args ret
+      Sigma_args R_args arg_roots ret_ty,
+    store_hidden_frame_rel x T hidden s_hidden s_base ->
+    preservation_ready_args args ->
+    ~ In x (args_free_vars_ts args) ->
+    ~ In x (args_local_store_names args) ->
+    store_refs_exclude_root x s_base ->
+    eval env s_hidden (ECallGeneric fname type_args args) s_hidden' ret ->
+    (forall (fdef fcall : fn_def) (used' : list ident)
+        (s_args_hidden s_args : store) (vs : list value)
+        (s_body_hidden : store),
+      lookup_fn fname (env_fns env) = Some fdef ->
+      fn_captures fdef = [] ->
+      store_hidden_frame_rel x T hidden s_args_hidden s_args ->
+      eval_args env s_hidden args s_args_hidden vs ->
+      eval_args env s_base args s_args vs ->
+      store_refs_exclude_root x s_args ->
+      Forall (value_refs_exclude_root x) vs ->
+      alpha_rename_fn_def (store_names s_args_hidden) fdef =
+        (fcall, used') ->
+      eval env
+        (bind_params (apply_type_params type_args (fn_params fcall))
+          vs s_args_hidden)
+        (subst_type_params_expr type_args (fn_body fcall))
+        s_body_hidden ret ->
+      s_hidden' =
+        store_remove_params
+          (apply_type_params type_args (fn_params fcall)) s_body_hidden ->
+      generic_direct_call_runtime_package env s_base (store_remove x s_hidden')
+        ret Sigma_args R_args arg_roots ret_ty) ->
+    generic_direct_call_runtime_package env s_base (store_remove x s_hidden')
+      ret Sigma_args R_args arg_roots ret_ty.
+Proof.
+  intros env x T hidden s_hidden s_base s_hidden' fname type_args args ret
+    Sigma_args R_args arg_roots ret_ty Hrel Hready Hnot_free Hnot_local Hrefs
+    Heval Hpackage_body.
+  destruct (eval_generic_direct_call_hidden_frame_args_strip
+    env x T hidden s_hidden s_base s_hidden' fname type_args args ret
+    Hrel Hready Hnot_free Hnot_local Hrefs Heval)
+    as (fdef & fcall & used' & s_args_hidden & s_args & vs &
+        s_body_hidden & Hlookup & Hcaps & Hrel_args & Heval_args_hidden &
+        Heval_args_base & Hrefs_args & Hvs_refs & Hrename &
+        Heval_body_hidden & Hfinal_hidden).
+  eapply Hpackage_body; eassumption.
 Qed.
 
 Lemma eval_generic_direct_call_store_safe_narrow_summary_exact_package_prefix_named_fuel :

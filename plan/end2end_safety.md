@@ -71,12 +71,17 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: require ready instantiated nested bodies for generic-direct wrapper
      safety; extraction updated `fixtures/TypeChecker.ml`.
      Check: `make EnvRuntimeBaseSafety.vo`.
-   - Blocker narrowed: generic hidden-frame strip cannot apply to calls because
-     `preservation_ready_expr` excludes `ECall`/`ECallGeneric`.
-   - Todo: extend the call-specific helper through generic-direct callee body
-     execution; its base case must avoid requiring closure-target summaries
-     for the hidden frame.
-   - Todo: rerun targeted CLI tests after captured proof compiles.
+   - Done: refactor the hidden-frame generic-call package helper so it
+     strips the outer arguments and delegates alpha-renamed body packaging; it
+     no longer requires `store_function_closure_targets_summary` for the hidden
+     local closure frame. Check: `make EnvRuntimeBaseSafety.vo`.
+   - Done: add alpha-renamed generic-direct runtime-argument freshness
+     for hidden binders. Check: `make EnvRuntimeBaseSafety.vo`.
+   - Blocker: recursive hidden-frame packaging now needs alpha-renamed nested
+     callee-body name support, so the preservation-ready body can be stripped
+     after nested args are stripped.
+   - Todo: finish the recursive hidden-frame package continuation in
+     `EnvRuntimeCapturedSafety.v`, then rerun targeted CLI tests.
 6. Todo: accept `TTypeForall (... TFn ...)` function-value calls through the
    end-to-end store-safe summary.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`

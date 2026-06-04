@@ -60,7 +60,13 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: checker/spec branch is binder-aware and rejects wrapper-call args
      that mention the temporary wrapper binder.
      Check: `make EnvRuntimeBaseSafety.vo`.
-   - Todo: finish captured runtime proof without broadening closure summaries.
+   - Done: add hidden-frame stripping helper for alpha-renamed callee
+     bodies; params/body locals are fresh from the hidden binder.
+     Check: `make EnvRuntimeBaseSafety.vo`.
+   - Blocker narrowed: generic hidden-frame strip cannot apply to calls because
+     `preservation_ready_expr` excludes `ECall`/`ECallGeneric`.
+   - Todo: add a call-specific hidden-frame runtime helper; its base case
+     must avoid requiring closure-target summaries for the hidden frame.
    - Todo: rerun targeted CLI tests after captured proof compiles.
 6. Todo: accept `TTypeForall (... TFn ...)` function-value calls through the
    end-to-end store-safe summary.

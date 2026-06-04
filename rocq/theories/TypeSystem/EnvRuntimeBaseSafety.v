@@ -13717,6 +13717,71 @@ Proof.
     eassumption.
 Qed.
 
+Lemma store_hidden_frame_rel_remove_base :
+  forall x T hidden s_with s_without,
+    store_hidden_frame_rel x T hidden s_with s_without ->
+    store_remove x s_with = s_without.
+Proof.
+  intros x T hidden s_with s_without Hrel.
+  induction Hrel as [s | se s_with s_without Hneq Hrel IH]; simpl.
+  - rewrite ident_eqb_refl. reflexivity.
+  - destruct (ident_eqb x (se_name se)) eqn:Heq.
+    + apply ident_eqb_eq in Heq. subst. contradiction.
+    + rewrite IH. reflexivity.
+Qed.
+
+Lemma alpha_rename_fn_def_used_name_fresh_params_and_body_locals :
+  forall used fdef fcall used' type_args x,
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    In x used ->
+    ~ In x (ctx_names (params_ctx
+      (apply_type_params type_args (fn_params fcall)))) /\
+    ~ In x (expr_local_store_names
+      (subst_type_params_expr type_args (fn_body fcall))).
+Proof.
+  intros used fdef fcall used' type_args x Hrename Hused.
+  split.
+  - rewrite params_ctx_apply_type_params.
+    rewrite ctx_names_subst_type_params_ctx.
+    intro Hin.
+    eapply alpha_rename_fn_def_params_fresh_used; eassumption.
+  - rewrite expr_local_store_names_subst_type_params_expr.
+    intro Hlocal.
+    pose proof (alpha_rename_fn_def_body_local_store_names_fresh_used
+      used fdef fcall used' Hrename) as Hfresh.
+    rewrite Forall_forall in Hfresh.
+    specialize (Hfresh x Hlocal).
+    contradiction.
+Qed.
+
+Lemma hidden_frame_eval_strip_alpha_renamed_fn_body :
+  forall env used fdef fcall used' type_args x T hidden s_with s_base
+      s_body_with ret,
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    In x used ->
+    eval env s_with
+      (subst_type_params_expr type_args (fn_body fcall)) s_body_with ret ->
+    store_hidden_frame_rel x T hidden s_with s_base ->
+    preservation_ready_expr
+      (subst_type_params_expr type_args (fn_body fcall)) ->
+    ~ In x (free_vars_expr
+      (subst_type_params_expr type_args (fn_body fcall))) ->
+    store_refs_exclude_root x s_base ->
+    exists s_body_base,
+      store_hidden_frame_rel x T hidden s_body_with s_body_base /\
+      eval env s_base
+        (subst_type_params_expr type_args (fn_body fcall)) s_body_base ret /\
+      store_refs_exclude_root x s_body_base /\
+      value_refs_exclude_root x ret.
+Proof.
+  intros env used fdef fcall used' type_args x T hidden s_with s_base
+    s_body_with ret Hrename Hused Heval Hrel Hready Hnot_free Hrefs.
+  destruct (alpha_rename_fn_def_used_name_fresh_params_and_body_locals
+    used fdef fcall used' type_args x Hrename Hused)
+    as [_ Hnot_local].
+  eapply (proj1 hidden_frame_eval_strip_rel_mutual); eassumption.
+Qed.
+
 Lemma eval_generic_direct_call_store_safe_narrow_summary_exact_package_prefix_named_fuel :
   forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args
       arg_roots s s' ret fdef fuel,

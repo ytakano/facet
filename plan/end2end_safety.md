@@ -14,11 +14,10 @@ Required theorem names stay intact:
 
 ## Current baseline
 
-Latest `sh tests/run.sh` baseline (2026-06-03): invalid tests pass; 9 valid
-tests fail, all remaining generic function-value safety-gate cases:
+Latest targeted baseline after task 5 (2026-06-03): invalid tests were previously
+passing; 7 valid tests still fail, all higher-order generic function-value
+safety-gate cases:
 
-- `generic_item_expected_fn_bound_satisfied.facet`
-- `generic_item_expected_fn_call.facet`
 - `generic_item_pass_monomorphic_hof.facet`
 - `mixed_forall_fn_value_annotated_let.facet`
 - `mixed_forall_fn_value_pass_and_call.facet`
@@ -55,9 +54,14 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      Checks: `make EnvRuntimeBaseSafety.vo`, `make EnvRuntimeCapturedSafety.vo`,
      `cd rocq && make`, `dune build`, proof-hole scan,
      `generic_expected_assignment_rhs.facet` plus prior wrapper targets pass.
-     `sh tests/run.sh` still fails only the 9 function-value tasks below.
-5. Todo: accept generated generic function-value wrappers whose bodies are
-   explicit `ECallGeneric` direct calls.
+     At that point `sh tests/run.sh` still failed only the 9 function-value tasks.
+5. In progress: accept generated generic function-value wrappers whose bodies
+   are explicit `ECallGeneric` direct calls.
+   - Done: checker/spec branch is binder-aware and rejects wrapper-call args
+     that mention the temporary wrapper binder.
+     Check: `make EnvRuntimeBaseSafety.vo`.
+   - Todo: finish captured runtime proof without broadening closure summaries.
+   - Todo: rerun targeted CLI tests after captured proof compiles.
 6. Todo: accept `TTypeForall (... TFn ...)` function-value calls through the
    end-to-end store-safe summary.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`

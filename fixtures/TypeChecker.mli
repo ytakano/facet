@@ -1190,6 +1190,9 @@ val check_fn_root_shadow_direct_call_provenance_summary :
 val local_fn_value_call_target_expr :
   expr -> ((ident * expr list) * expr) option
 
+val local_fn_value_call_target_expr_with_binder :
+  expr -> (((ident * ident) * expr list) * expr) option
+
 val supported_non_type_generic_function_value_call_callee_ty_b : ty -> bool
 
 val check_supported_non_type_generic_function_value_call_expr :
@@ -1247,6 +1250,9 @@ val check_expr_root_shadow_store_safe_narrow_summary_checked_fuel :
 val check_expr_root_shadow_store_safe_narrow_summary_checked :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
   -> bool
+
+val check_fn_root_shadow_generic_direct_store_safe_summary :
+  global_env -> fn_def -> bool
 
 val check_fn_root_shadow_captured_call_provenance_summary :
   global_env -> fn_def -> bool

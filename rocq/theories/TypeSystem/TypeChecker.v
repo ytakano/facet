@@ -8467,6 +8467,20 @@ Definition local_fn_value_call_target_expr
   | _ => None
   end.
 
+Definition local_fn_value_call_target_expr_with_binder
+    (e : expr) : option (ident * ident * list expr * expr) :=
+  match e with
+  | ELet m x T (EFn fname) (ECallExpr (EVar y) args) =>
+      if ident_eqb x y && usage_eqb (ty_usage T) UUnrestricted
+      then Some (x, fname, args, ELet m x T (EFn fname) (ECall fname args))
+      else None
+  | ELetInfer m x (EFn fname) (ECallExpr (EVar y) args) =>
+      if ident_eqb x y
+      then Some (x, fname, args, ELetInfer m x (EFn fname) (ECall fname args))
+      else None
+  | _ => None
+  end.
+
 Definition supported_non_type_generic_function_value_call_callee_ty_b
     (T : Ty) : bool :=
   match ty_core T with
@@ -9237,6 +9251,54 @@ Definition check_expr_root_shadow_store_safe_narrow_summary_checked
   check_expr_root_shadow_store_safe_narrow_summary_checked_fuel
     10000 env Ω n R (sctx_of_ctx Γ) e.
 
+Definition check_fn_root_shadow_generic_direct_store_safe_summary
+    (env : global_env) (fdef : fn_def) : bool :=
+  match generic_direct_call_target_expr (fn_body fdef) with
+  | Some (fname, type_args, args, synthetic_body) =>
+      store_safe_function_value_call_args_b env args &&
+      match lookup_fn_b fname (env_fns env) with
+      | None => false
+      | Some callee =>
+          Nat.eqb (Datatypes.length type_args) (fn_type_params callee) &&
+          match check_struct_bounds
+                  (global_env_with_local_bounds env (fn_bounds fdef))
+                  (fn_bounds callee) type_args with
+          | Some _ => false
+          | None =>
+              match infer_core_env_roots_shadow_safe env
+                        (fn_outlives callee)
+                        (fn_lifetimes callee)
+                        (initial_root_env_for_fn callee)
+                        (subst_type_params_ctx type_args (fn_body_ctx callee))
+                        (subst_type_params_expr type_args (fn_body callee)),
+                    infer_env_roots_shadow_safe env callee
+                      (initial_root_env_for_fn callee),
+                    infer_env_roots_shadow_safe env
+                      (fn_with_body fdef synthetic_body)
+                      (initial_root_env_for_fn fdef) with
+              | infer_ok (T_callee, _, R_callee, roots_callee),
+                infer_ok _,
+                infer_ok (T_body, _, R_out, roots) =>
+                  check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
+                    env callee type_args &&
+                  ty_compatible_b (fn_outlives callee) T_callee
+                    (subst_type_params_ty type_args (fn_ret callee)) &&
+                  fn_params_roots_exclude_b
+                    (apply_type_params type_args (fn_params callee))
+                    roots_callee &&
+                  fn_params_root_env_excludes_b
+                    (apply_type_params type_args (fn_params callee))
+                    R_callee &&
+                  ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) &&
+                  fn_params_roots_exclude_b (fn_params fdef) roots &&
+                  fn_params_root_env_excludes_b (fn_params fdef) R_out
+              | _, _, _ => false
+              end
+          end
+      end
+  | None => false
+  end.
+
 Definition check_fn_root_shadow_captured_call_provenance_summary
     (env : global_env) (fdef : fn_def) : bool :=
   match check_fn_root_shadow_non_capturing_call_provenance_summary env fdef with
@@ -9366,51 +9428,7 @@ Definition check_fn_root_shadow_captured_call_store_safe_summary
        end
    | None => false
    end) ||
-  (match generic_direct_call_target_expr (fn_body fdef) with
-   | Some (fname, type_args, args, synthetic_body) =>
-       store_safe_function_value_call_args_b env args &&
-       match lookup_fn_b fname (env_fns env) with
-       | None => false
-       | Some callee =>
-           Nat.eqb (Datatypes.length type_args) (fn_type_params callee) &&
-           match check_struct_bounds
-                   (global_env_with_local_bounds env (fn_bounds fdef))
-                   (fn_bounds callee) type_args with
-           | Some _ => false
-           | None =>
-               match infer_core_env_roots_shadow_safe env
-                         (fn_outlives callee)
-                         (fn_lifetimes callee)
-                         (initial_root_env_for_fn callee)
-                         (subst_type_params_ctx type_args (fn_body_ctx callee))
-                         (subst_type_params_expr type_args (fn_body callee)),
-                     infer_env_roots_shadow_safe env callee
-                       (initial_root_env_for_fn callee),
-                     infer_env_roots_shadow_safe env
-                       (fn_with_body fdef synthetic_body)
-                       (initial_root_env_for_fn fdef) with
-               | infer_ok (T_callee, _, R_callee, roots_callee),
-                 infer_ok _,
-                 infer_ok (T_body, _, R_out, roots) =>
-                   check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
-                     env callee type_args &&
-                   ty_compatible_b (fn_outlives callee) T_callee
-                     (subst_type_params_ty type_args (fn_ret callee)) &&
-                   fn_params_roots_exclude_b
-                     (apply_type_params type_args (fn_params callee))
-                     roots_callee &&
-                   fn_params_root_env_excludes_b
-                     (apply_type_params type_args (fn_params callee))
-                     R_callee &&
-                   ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) &&
-                   fn_params_roots_exclude_b (fn_params fdef) roots &&
-                   fn_params_root_env_excludes_b (fn_params fdef) R_out
-               | _, _, _ => false
-               end
-           end
-       end
-   | None => false
-   end)) ||
+  check_fn_root_shadow_generic_direct_store_safe_summary env fdef) ||
   (match let_bound_generic_direct_call_target_expr (fn_body fdef) with
    | Some (fname, type_args, args, T_hidden, synthetic_body) =>
        store_safe_function_value_call_args_b env args &&
@@ -9533,6 +9551,27 @@ Definition check_fn_root_shadow_captured_call_store_safe_summary
            | _, _ => false
            end
        | _, _ => false
+       end
+   | None => false
+   end) ||
+  (match local_fn_value_call_target_expr_with_binder (fn_body fdef) with
+   | Some (x, fname, args, synthetic_body) =>
+       store_safe_function_value_call_args_b env args &&
+       negb (ident_in_b x (args_free_vars_checker args)) &&
+       negb (ident_in_b x (args_local_store_names args)) &&
+       match lookup_fn_b fname (env_fns env) with
+       | None => false
+       | Some callee =>
+           check_fn_root_shadow_generic_direct_store_safe_summary env callee &&
+           match infer_env_roots_shadow_safe env
+                   (fn_with_body fdef synthetic_body)
+                   (initial_root_env_for_fn fdef) with
+           | infer_ok (T_body, _, R_out, roots) =>
+               ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) &&
+               fn_params_roots_exclude_b (fn_params fdef) roots &&
+               fn_params_root_env_excludes_b (fn_params fdef) R_out
+           | infer_err _ => false
+           end
        end
    | None => false
    end) ||

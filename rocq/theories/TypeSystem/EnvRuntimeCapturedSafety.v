@@ -1161,7 +1161,8 @@ Proof.
       callee_body_root_shadow_store_safe_narrow_summary body_env fcallee).
     { subst body_env.
       apply callee_body_root_shadow_store_safe_narrow_summary_global_env_with_local_bounds.
-      exact Hcallee_summary. }
+      - exact Hunique.
+      - exact Hcallee_summary. }
     assert (Hsafe_args_body : store_safe_function_value_call_args body_env args).
     { subst body_env.
       apply store_safe_function_value_call_args_global_env_with_local_bounds.
@@ -1231,7 +1232,8 @@ Proof.
         body_env 10000 fcallee type_args).
     { subst body_env.
       eapply callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel_global_env_with_local_bounds.
-      exact Hcallee_summary. }
+      - exact Hunique.
+      - exact Hcallee_summary. }
     assert (Hsafe_args_body : store_safe_function_value_call_args body_env args).
     { subst body_env.
       apply store_safe_function_value_call_args_global_env_with_local_bounds.
@@ -1291,7 +1293,8 @@ Proof.
         body_env 10000 fcallee type_args).
     { subst body_env.
       eapply callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel_global_env_with_local_bounds.
-      exact Hcallee_summary. }
+      - exact Hunique.
+      - exact Hcallee_summary. }
     assert (Hsafe_args_body : store_safe_function_value_call_args body_env args).
     { subst body_env.
       apply store_safe_function_value_call_args_global_env_with_local_bounds.
@@ -1383,13 +1386,15 @@ Proof.
         body_env 10000 fthen type_args_then).
     { subst body_env.
       eapply callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel_global_env_with_local_bounds.
-      exact Hthen_summary. }
+      - exact Hunique.
+      - exact Hthen_summary. }
     assert (Helse_summary_body :
       callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
         body_env 10000 felse type_args_else).
     { subst body_env.
       eapply callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel_global_env_with_local_bounds.
-      exact Helse_summary. }
+      - exact Hunique.
+      - exact Helse_summary. }
     assert (Hsafe_then_body : store_safe_function_value_call_args body_env args_then).
     { subst body_env.
       apply store_safe_function_value_call_args_global_env_with_local_bounds.

@@ -14,13 +14,9 @@ Required theorem names stay intact:
 
 ## Current baseline
 
-Latest `sh tests/run.sh` baseline (2026-06-03): invalid tests pass; 13 valid
-tests fail, all generic expected/function-value safety-gate cases:
+Latest `sh tests/run.sh` baseline (2026-06-03): invalid tests pass; 9 valid
+tests fail, all remaining generic function-value safety-gate cases:
 
-- `generic_expected_annotated_let_zero_arg.facet`
-- `generic_expected_assignment_rhs.facet`
-- `generic_expected_if_branches.facet`
-- `generic_expected_return_zero_arg.facet`
 - `generic_item_expected_fn_bound_satisfied.facet`
 - `generic_item_expected_fn_call.facet`
 - `generic_item_pass_monomorphic_hof.facet`
@@ -55,7 +51,11 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      Checks: `make EnvRuntimeBaseSafety.vo`, `make EnvRuntimeCapturedSafety.vo`,
      `dune build`, proof-hole scan, `generic_expected_if_branches.facet`
      passes.
-   - Todo: assignment RHS.
+   - Done: assignment RHS.
+     Checks: `make EnvRuntimeBaseSafety.vo`, `make EnvRuntimeCapturedSafety.vo`,
+     `cd rocq && make`, `dune build`, proof-hole scan,
+     `generic_expected_assignment_rhs.facet` plus prior wrapper targets pass.
+     `sh tests/run.sh` still fails only the 9 function-value tasks below.
 5. Todo: accept generated generic function-value wrappers whose bodies are
    explicit `ECallGeneric` direct calls.
 6. Todo: accept `TTypeForall (... TFn ...)` function-value calls through the

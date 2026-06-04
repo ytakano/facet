@@ -8847,6 +8847,60 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_fuel
           end
       | EVar _ => non_function_value_ty_b T
       | EAssign _ (ELit _) => true
+      | EAssign (PVar x) (ECallGeneric fname type_args []) =>
+          match lookup_fn_b fname (env_fns env) with
+          | None => false
+          | Some callee =>
+              match fn_bounds callee with
+              | [] =>
+                  match fn_params callee with
+                  | [] =>
+                      Nat.eqb (Datatypes.length type_args) (fn_type_params callee) &&
+                      let body_ctx :=
+                        subst_type_params_ctx type_args (fn_body_ctx callee) in
+                      let body :=
+                        subst_type_params_expr type_args (fn_body callee) in
+                      match body_ctx with
+                      | [] =>
+                      match body with
+                      | EStruct _ _ _ [] =>
+                          let params := apply_type_params type_args (fn_params callee) in
+                          match infer_core_env_state_fuel_roots_shadow_safe
+                                  fuel' env (fn_outlives callee)
+                                  (fn_lifetimes callee)
+                                  (initial_root_env_for_fn callee)
+                                  (sctx_of_ctx body_ctx) body,
+                                infer_env_roots_shadow_safe env callee
+                                  (initial_root_env_for_fn callee),
+                                infer_core_env_state_fuel_roots_shadow_safe
+                                  fuel' env Ω n R Σ
+                                  (ECallGeneric fname type_args []),
+                                infer_place_sctx env Σ (PVar x) with
+                          | infer_ok (T_body, _, R_body, roots_body),
+                            infer_ok _,
+                            infer_ok (T_rhs, _, _, _),
+                            infer_ok T_old =>
+                              check_expr_root_shadow_store_safe_narrow_summary_fuel
+                                fuel' env (fn_outlives callee)
+                                (fn_lifetimes callee)
+                                (initial_root_env_for_fn callee)
+                                (sctx_of_ctx body_ctx) body &&
+                              ty_compatible_b (fn_outlives callee) T_body
+                                (subst_type_params_ty type_args (fn_ret callee)) &&
+                              fn_params_roots_exclude_b params roots_body &&
+                              fn_params_root_env_excludes_b params R_body &&
+                              ty_compatible_b Ω T_rhs T_old
+                          | _, _, _, _ => false
+                          end
+                      | _ => false
+                      end
+                      | _ :: _ => false
+                      end
+                  | _ :: _ => false
+                  end
+              | _ :: _ => false
+              end
+          end
       | EAssign _ _ => false
       | EDrop (EPlace p) =>
           match place_path p with

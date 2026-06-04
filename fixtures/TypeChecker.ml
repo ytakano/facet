@@ -13015,9 +13015,107 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
                 | _ :: _ -> false)
              | None -> false)
           | _ :: _ -> false)
-       | EAssign (_, e0) -> (match e0 with
-                             | ELit _ -> true
-                             | _ -> false)
+       | EAssign (p2, e0) ->
+         (match p2 with
+          | PVar x ->
+            (match e0 with
+             | ELit _ -> true
+             | ECallGeneric (fname, type_args, l) ->
+               (match l with
+                | [] ->
+                  (match lookup_fn_b fname env.env_fns with
+                   | Some callee ->
+                     (match callee.fn_bounds with
+                      | [] ->
+                        (match callee.fn_params with
+                         | [] ->
+                           (&&)
+                             (Nat.eqb (length type_args)
+                               callee.fn_type_params)
+                             (let body_ctx =
+                                subst_type_params_ctx type_args
+                                  (fn_body_ctx callee)
+                              in
+                              let body =
+                                subst_type_params_expr type_args
+                                  callee.fn_body
+                              in
+                              (match body_ctx with
+                               | [] ->
+                                 (match body with
+                                  | EStruct (_, _, _, l1) ->
+                                    (match l1 with
+                                     | [] ->
+                                       let params =
+                                         apply_type_params type_args
+                                           callee.fn_params
+                                       in
+                                       (match infer_core_env_state_fuel_roots_shadow_safe
+                                                fuel' env callee.fn_outlives
+                                                callee.fn_lifetimes
+                                                (initial_root_env_for_fn
+                                                  callee)
+                                                (sctx_of_ctx body_ctx) body with
+                                        | Infer_ok p3 ->
+                                          let (p4, roots_body) = p3 in
+                                          let (p5, r_body) = p4 in
+                                          let (t_body, _) = p5 in
+                                          (match infer_env_roots_shadow_safe
+                                                   env callee
+                                                   (initial_root_env_for_fn
+                                                     callee) with
+                                           | Infer_ok _ ->
+                                             (match infer_core_env_state_fuel_roots_shadow_safe
+                                                      fuel' env _UU03a9_ n r
+                                                      _UU03a3_ (ECallGeneric
+                                                      (fname, type_args, [])) with
+                                              | Infer_ok p6 ->
+                                                let (p7, _) = p6 in
+                                                let (p8, _) = p7 in
+                                                let (t_rhs, _) = p8 in
+                                                (match infer_place_sctx env
+                                                         _UU03a3_ (PVar x) with
+                                                 | Infer_ok t_old ->
+                                                   (&&)
+                                                     ((&&)
+                                                       ((&&)
+                                                         ((&&)
+                                                           (check_expr_root_shadow_store_safe_narrow_summary_fuel
+                                                             fuel' env
+                                                             callee.fn_outlives
+                                                             callee.fn_lifetimes
+                                                             (initial_root_env_for_fn
+                                                               callee)
+                                                             (sctx_of_ctx
+                                                               body_ctx)
+                                                             body)
+                                                           (ty_compatible_b
+                                                             callee.fn_outlives
+                                                             t_body
+                                                             (subst_type_params_ty
+                                                               type_args
+                                                               callee.fn_ret)))
+                                                         (fn_params_roots_exclude_b
+                                                           params roots_body))
+                                                       (fn_params_root_env_excludes_b
+                                                         params r_body))
+                                                     (ty_compatible_b
+                                                       _UU03a9_ t_rhs t_old)
+                                                 | Infer_err _ -> false)
+                                              | Infer_err _ -> false)
+                                           | Infer_err _ -> false)
+                                        | Infer_err _ -> false)
+                                     | _ :: _ -> false)
+                                  | _ -> false)
+                               | _ :: _ -> false))
+                         | _ :: _ -> false)
+                      | _ :: _ -> false)
+                   | None -> false)
+                | _ :: _ -> false)
+             | _ -> false)
+          | _ -> (match e0 with
+                  | ELit _ -> true
+                  | _ -> false))
        | EBorrow (rk, p2) ->
          (match place_path p2 with
           | Some _ -> true

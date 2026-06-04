@@ -14231,6 +14231,7 @@ Proof.
         split; [exact Heval_args | reflexivity].
 Qed.
 
+
 Lemma eval_generic_direct_call_store_safe_narrow_summary_exact_package_prefix_named_fuel_zero :
   forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args
       arg_roots s s' ret fdef,
@@ -14361,6 +14362,8 @@ Definition callee_body_root_shadow_captured_call_generic_direct_narrow_store_saf
     Datatypes.length type_args = fn_type_params fcallee /\
     check_struct_bounds (global_env_with_local_bounds env (fn_bounds fdef))
       (fn_bounds fcallee) type_args = None /\
+    preservation_ready_expr
+      (subst_type_params_expr type_args (fn_body fcallee)) /\
     callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
       env 10000 fcallee type_args /\
     NoDup (ctx_names (params_ctx (fn_params fdef))) /\
@@ -14501,8 +14504,8 @@ Proof.
   destruct Hsummary as
     (fname & type_args & args & raw_body & synthetic_body & fcallee &
       T_body & Gamma_out & R_body & roots_body & Hbody & Htarget &
-      Hsynthetic & Hsafe & Hin & Hname & Harity & Hbounds & Hcallee_summary &
-      Hnodup & Htyped & Hcompat & Hexcl_roots & Hexcl_env).
+      Hsynthetic & Hsafe & Hin & Hname & Harity & Hbounds & Hcallee_ready &
+      Hcallee_summary & Hnodup & Htyped & Hcompat & Hexcl_roots & Hexcl_env).
   eapply CBRSSNI_GenericDirect with
     (raw_body := raw_body) (synthetic_body := synthetic_body)
     (fcallee := fcallee) (T_body := T_body) (Gamma_out := Gamma_out)
@@ -14588,7 +14591,7 @@ Proof.
     eqn:Hbody_env; try discriminate.
   repeat rewrite andb_true_iff in Hgeneric.
   destruct Hgeneric as
-    [[[[[[Hcallee_expr Hcallee_compat] Hcallee_roots]
+    [[[[[[[Hcallee_ready Hcallee_expr] Hcallee_compat] Hcallee_roots]
          Hcallee_env_excl] Hcompat] Hroots] Henv].
   apply lookup_fn_b_sound in Hlookup_b.
   destruct Hlookup_b as [Hin_callee Hname_callee].
@@ -14614,6 +14617,8 @@ Proof.
   split; [exact Hname_callee |].
   split; [exact Htype_params |].
   split; [exact Hbounds |].
+  split.
+  { apply preservation_ready_expr_b_sound. exact Hcallee_ready. }
   split; [exact Hcallee_summary |].
   split.
   { change (NoDup

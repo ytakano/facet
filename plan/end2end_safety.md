@@ -68,6 +68,9 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      Check: `make EnvRuntimeBaseSafety.vo`.
    - Done: add hidden-frame expression-body strip for generic-call bodies.
      Check: `make EnvRuntimeBaseSafety.vo`.
+   - Done: require ready instantiated nested bodies for generic-direct wrapper
+     safety; extraction updated `fixtures/TypeChecker.ml`.
+     Check: `make EnvRuntimeBaseSafety.vo`.
    - Blocker narrowed: generic hidden-frame strip cannot apply to calls because
      `preservation_ready_expr` excludes `ECall`/`ECallGeneric`.
    - Todo: extend the call-specific helper through generic-direct callee body

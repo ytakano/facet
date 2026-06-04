@@ -13528,8 +13528,12 @@ let check_fn_root_shadow_generic_direct_store_safe_summary env fdef =
                              ((&&)
                                ((&&)
                                  ((&&)
-                                   (check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
-                                     env callee type_args)
+                                   ((&&)
+                                     (preservation_ready_expr_b
+                                       (subst_type_params_expr type_args
+                                         callee.fn_body))
+                                     (check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
+                                       env callee type_args))
                                    (ty_compatible_b callee.fn_outlives
                                      t_callee
                                      (subst_type_params_ty type_args

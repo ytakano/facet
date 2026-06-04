@@ -9279,6 +9279,8 @@ Definition check_fn_root_shadow_generic_direct_store_safe_summary
               | infer_ok (T_callee, _, R_callee, roots_callee),
                 infer_ok _,
                 infer_ok (T_body, _, R_out, roots) =>
+                  preservation_ready_expr_b
+                    (subst_type_params_expr type_args (fn_body callee)) &&
                   check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
                     env callee type_args &&
                   ty_compatible_b (fn_outlives callee) T_callee

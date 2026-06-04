@@ -13833,6 +13833,86 @@ Proof.
   repeat split; try eassumption; reflexivity.
 Qed.
 
+Lemma eval_generic_direct_call_hidden_frame_expr_body_strip :
+  forall env x T hidden s_hidden s_base s_hidden' fname type_args args ret
+      fdef fcall used' s_args_hidden s_args vs s_body_hidden,
+    store_hidden_frame_rel x T hidden s_hidden s_base ->
+    preservation_ready_args args ->
+    ~ In x (args_free_vars_ts args) ->
+    ~ In x (args_local_store_names args) ->
+    store_refs_exclude_root x s_base ->
+    eval env s_hidden (ECallGeneric fname type_args args) s_hidden' ret ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    fn_captures fdef = [] ->
+    store_hidden_frame_rel x T hidden s_args_hidden s_args ->
+    eval_args env s_base args s_args vs ->
+    store_refs_exclude_root x s_args ->
+    Forall (value_refs_exclude_root x) vs ->
+    alpha_rename_fn_def (store_names s_args_hidden) fdef =
+      (fcall, used') ->
+    eval env
+      (bind_params (apply_type_params type_args (fn_params fcall))
+        vs s_args_hidden)
+      (subst_type_params_expr type_args (fn_body fcall))
+      s_body_hidden ret ->
+    s_hidden' =
+      store_remove_params
+        (apply_type_params type_args (fn_params fcall)) s_body_hidden ->
+    preservation_ready_expr
+      (subst_type_params_expr type_args (fn_body fcall)) ->
+    ~ In x (free_vars_expr
+      (subst_type_params_expr type_args (fn_body fcall))) ->
+    exists s_body_base s_final_base,
+      store_hidden_frame_rel x T hidden s_body_hidden s_body_base /\
+      eval env
+        (bind_params (apply_type_params type_args (fn_params fcall))
+          vs s_args)
+        (subst_type_params_expr type_args (fn_body fcall))
+        s_body_base ret /\
+      store_refs_exclude_root x s_body_base /\
+      value_refs_exclude_root x ret /\
+      s_final_base =
+        store_remove_params
+          (apply_type_params type_args (fn_params fcall)) s_body_base /\
+      store_hidden_frame_rel x T hidden s_hidden' s_final_base /\
+      store_remove x s_hidden' = s_final_base.
+Proof.
+  intros env x T hidden s_hidden s_base s_hidden' fname type_args args ret
+    fdef fcall used' s_args_hidden s_args vs s_body_hidden Hrel Hready
+    Hnot_free Hnot_local Hrefs Heval Hlookup Hcaps Hrel_args Heval_args
+    Hrefs_args Hvs_refs Hrename Heval_body Hfinal Hready_body Hbody_not_free.
+  pose proof (store_hidden_frame_rel_name_in x T hidden s_args_hidden s_args
+    Hrel_args) as Hused.
+  destruct (alpha_rename_fn_def_used_name_fresh_params_and_body_locals
+    (store_names s_args_hidden) fdef fcall used' type_args x Hrename Hused)
+    as [Hnotin_params Hnotin_body_locals].
+  pose (ps := apply_type_params type_args (fn_params fcall)).
+  assert (Hrel_bind :
+    store_hidden_frame_rel x T hidden
+      (bind_params ps vs s_args_hidden) (bind_params ps vs s_args)).
+  { subst ps. eapply store_hidden_frame_rel_bind_params; eassumption. }
+  assert (Hrefs_bind :
+    store_refs_exclude_root x (bind_params ps vs s_args)).
+  { subst ps. eapply bind_params_refs_exclude_root; eassumption. }
+  destruct (hidden_frame_eval_strip_alpha_renamed_fn_body
+    env (store_names s_args_hidden) fdef fcall used' type_args x T hidden
+    (bind_params ps vs s_args_hidden) (bind_params ps vs s_args)
+    s_body_hidden ret Hrename Hused Heval_body Hrel_bind Hready_body
+    Hbody_not_free Hrefs_bind)
+    as [s_body_base [Hrel_body [Heval_body_base [Hrefs_body Hv_refs]]]].
+  exists s_body_base,
+    (store_remove_params (apply_type_params type_args (fn_params fcall))
+      s_body_base).
+  repeat split; try eassumption; try reflexivity.
+  - subst ps.
+    rewrite Hfinal.
+    eapply store_hidden_frame_rel_remove_params; eassumption.
+  - eapply store_hidden_frame_rel_remove_base.
+    subst ps.
+    rewrite Hfinal.
+    eapply store_hidden_frame_rel_remove_params; eassumption.
+Qed.
+
 Lemma eval_generic_direct_call_store_safe_narrow_summary_exact_package_prefix_named_fuel :
   forall env Omega n R Sigma fname type_args args sigma Sigma_args R_args
       arg_roots s s' ret fdef fuel,

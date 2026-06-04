@@ -13730,6 +13730,17 @@ Proof.
     + rewrite IH. reflexivity.
 Qed.
 
+Lemma store_hidden_frame_rel_name_in :
+  forall x T hidden s_with s_without,
+    store_hidden_frame_rel x T hidden s_with s_without ->
+    In x (store_names s_with).
+Proof.
+  intros x T hidden s_with s_without Hrel.
+  induction Hrel as [s | se s_with s_without Hneq Hrel IH].
+  - unfold store_add. simpl. left. reflexivity.
+  - simpl. right. exact IH.
+Qed.
+
 Lemma alpha_rename_fn_def_used_name_fresh_params_and_body_locals :
   forall used fdef fcall used' type_args x,
     alpha_rename_fn_def used fdef = (fcall, used') ->
@@ -13780,6 +13791,46 @@ Proof.
     used fdef fcall used' type_args x Hrename Hused)
     as [_ Hnot_local].
   eapply (proj1 hidden_frame_eval_strip_rel_mutual); eassumption.
+Qed.
+
+Lemma eval_generic_direct_call_hidden_frame_args_strip :
+  forall env x T hidden s_hidden s_base s_hidden' fname type_args args ret,
+    store_hidden_frame_rel x T hidden s_hidden s_base ->
+    preservation_ready_args args ->
+    ~ In x (args_free_vars_ts args) ->
+    ~ In x (args_local_store_names args) ->
+    store_refs_exclude_root x s_base ->
+    eval env s_hidden (ECallGeneric fname type_args args) s_hidden' ret ->
+    exists fdef fcall used' s_args_hidden s_args vs s_body_hidden,
+      lookup_fn fname (env_fns env) = Some fdef /\
+      fn_captures fdef = [] /\
+      store_hidden_frame_rel x T hidden s_args_hidden s_args /\
+      eval_args env s_base args s_args vs /\
+      store_refs_exclude_root x s_args /\
+      Forall (value_refs_exclude_root x) vs /\
+      alpha_rename_fn_def (store_names s_args_hidden) fdef =
+        (fcall, used') /\
+      eval env
+        (bind_params (apply_type_params type_args (fn_params fcall))
+          vs s_args_hidden)
+        (subst_type_params_expr type_args (fn_body fcall))
+        s_body_hidden ret /\
+      s_hidden' =
+        store_remove_params
+          (apply_type_params type_args (fn_params fcall)) s_body_hidden.
+Proof.
+  intros env x T hidden s_hidden s_base s_hidden' fname type_args args ret
+    Hrel Hready Hnot_free Hnot_local Hrefs Heval.
+  inversion Heval; subst; clear Heval.
+  match goal with
+  | Heval_args : eval_args env s_hidden args s_args vs |- _ =>
+      destruct (proj1 (proj2 hidden_frame_eval_strip_rel_mutual)
+        env s_hidden args s_args vs Heval_args x T hidden s_base Hrel Hready
+        Hnot_free Hnot_local Hrefs)
+        as (s_args_base & Hrel_args & Heval_args_base & Hrefs_args & Hvs_refs)
+  end.
+  exists fdef, fcall, used', s_args, s_args_base, vs, s_body.
+  repeat split; try eassumption; reflexivity.
 Qed.
 
 Lemma eval_generic_direct_call_store_safe_narrow_summary_exact_package_prefix_named_fuel :

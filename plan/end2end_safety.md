@@ -63,10 +63,14 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: add hidden-frame stripping helper for alpha-renamed callee
      bodies; params/body locals are fresh from the hidden binder.
      Check: `make EnvRuntimeBaseSafety.vo`.
+   - Done: add hidden-frame generic-call argument decomposition; it strips
+     call args without summarizing the hidden closure frame.
+     Check: `make EnvRuntimeBaseSafety.vo`.
    - Blocker narrowed: generic hidden-frame strip cannot apply to calls because
      `preservation_ready_expr` excludes `ECall`/`ECallGeneric`.
-   - Todo: add a call-specific hidden-frame runtime helper; its base case
-     must avoid requiring closure-target summaries for the hidden frame.
+   - Todo: extend the call-specific helper through generic-direct callee body
+     execution; its base case must avoid requiring closure-target summaries
+     for the hidden frame.
    - Todo: rerun targeted CLI tests after captured proof compiles.
 6. Todo: accept `TTypeForall (... TFn ...)` function-value calls through the
    end-to-end store-safe summary.

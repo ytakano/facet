@@ -1113,6 +1113,36 @@ Proof.
             | exact Hcheck]
         | apply outlives_constraints_hold_b_sound; exact Hout]
       end.
+    + (* ECallExprGeneric e l l0 *)
+      cbn iota in Hinfer.
+      destruct (infer_core_env_state_fuel_roots fuel' env Ω n R Σ e)
+        as [[[[T_callee Σ1] R1] roots_callee] | err_callee] eqn:Hcallee_res;
+        try discriminate.
+      cbn iota in Hinfer.
+      rewrite infer_env_args_collect_roots_eq in Hinfer.
+      destruct (infer_env_args_collect_roots fuel' env Ω n R1 Σ1 l0)
+        as [[[[arg_tys Σarg] Rarg] arg_roots] | err_arg] eqn:Hcollect;
+        try discriminate.
+      cbn iota in Hinfer.
+      destruct T_callee as [u_callee c_callee].
+      unfold ty_core in Hinfer. cbn iota in Hinfer.
+      destruct c_callee eqn:Hcore; cbn iota in Hinfer; try discriminate.
+      destruct t as [u_body body_core]. cbn in Hinfer.
+      destruct body_core eqn:Hbody; cbn iota in Hinfer; try discriminate.
+      destruct (check_type_forall_bounds env l1 l) as [err |]
+        eqn:Htf_bounds; cbn iota in Hinfer; try discriminate.
+      destruct (check_arg_tys Ω arg_tys
+          (map (subst_type_params_ty l) l2)) as [err |]
+        eqn:Hcheck; cbn iota in Hinfer; try discriminate.
+      inversion Hinfer; subst.
+      eapply TER_CallExprGeneric_TypeForall with (u := u_callee);
+      [ eapply IH; exact Hcallee_res
+      | reflexivity
+      | exact Htf_bounds
+      | eapply infer_env_args_collect_roots_sound;
+        [ exact Hcollect
+        | intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0
+        | rewrite <- check_arg_tys_params_of_tys; exact Hcheck ]].
     + destruct (lookup_struct s env) as [sdef |] eqn:Hlookup; try discriminate.
       destruct (negb (Nat.eqb (Datatypes.length l) (struct_lifetimes sdef))) eqn:Hlts;
         try discriminate.
@@ -2158,6 +2188,36 @@ Proof.
             | exact Hcheck]
         | apply outlives_constraints_hold_b_sound; exact Hout]
       end.
+    + (* ECallExprGeneric e l l0 *)
+      cbn iota in Hinfer.
+      destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ e)
+        as [[[[T_callee Σ1] R1] roots_callee] | err_callee] eqn:Hcallee_res;
+        try discriminate.
+      cbn iota in Hinfer.
+      rewrite infer_env_args_collect_roots_shadow_safe_eq in Hinfer.
+      destruct (infer_env_args_collect_roots_shadow_safe fuel' env Ω n R1 Σ1 l0)
+        as [[[[arg_tys Σarg] Rarg] arg_roots] | err_arg] eqn:Hcollect;
+        try discriminate.
+      cbn iota in Hinfer.
+      destruct T_callee as [u_callee c_callee].
+      unfold ty_core in Hinfer. cbn iota in Hinfer.
+      destruct c_callee eqn:Hcore; cbn iota in Hinfer; try discriminate.
+      destruct t as [u_body body_core]. cbn in Hinfer.
+      destruct body_core eqn:Hbody; cbn iota in Hinfer; try discriminate.
+      destruct (check_type_forall_bounds env l1 l) as [err |]
+        eqn:Htf_bounds; cbn iota in Hinfer; try discriminate.
+      destruct (check_arg_tys Ω arg_tys
+          (map (subst_type_params_ty l) l2)) as [err |]
+        eqn:Hcheck; cbn iota in Hinfer; try discriminate.
+      inversion Hinfer; subst.
+      eapply TERS_CallExprGeneric_TypeForall with (u := u_callee);
+      [ eapply IH; exact Hcallee_res
+      | reflexivity
+      | exact Htf_bounds
+      | eapply infer_env_args_collect_roots_shadow_safe_sound;
+        [ exact Hcollect
+        | intros R0 Σ0 e0 T0 Σ2 R2 roots2 Hinfer0; eapply IH; exact Hinfer0
+        | rewrite <- check_arg_tys_params_of_tys; exact Hcheck ]].
     + destruct (lookup_struct s env) as [sdef |] eqn:Hlookup; try discriminate.
       destruct (negb (Nat.eqb (Datatypes.length l) (struct_lifetimes sdef))) eqn:Hlts;
         try discriminate.

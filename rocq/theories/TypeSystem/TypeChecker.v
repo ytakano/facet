@@ -6108,7 +6108,51 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
               end
           end
       end
-  | ECallExprGeneric _ _ _ => infer_err ErrNotImplemented
+  | ECallExprGeneric callee type_args args =>
+      match infer_core_env_state_fuel_roots fuel' env Ω n R Σ callee with
+      | infer_err err => infer_err err
+      | infer_ok (T_callee, Σ1, R1, roots_callee) =>
+          let fix collect (Σ0 : sctx) (R0 : root_env) (as_ : list expr)
+              : infer_result (list Ty * sctx * root_env * list root_set) :=
+            match as_ with
+            | [] => infer_ok ([], Σ0, R0, [])
+            | e' :: es =>
+                match infer_core_env_state_fuel_roots fuel' env Ω n R0 Σ0 e' with
+                | infer_err err => infer_err err
+                | infer_ok (T_e, Σ2, R2, roots_e) =>
+                    match collect Σ2 R2 es with
+                    | infer_err err => infer_err err
+                    | infer_ok (tys, Σ3, R3, roots_es) =>
+                        infer_ok (T_e :: tys, Σ3, R3, roots_e :: roots_es)
+                    end
+                end
+            end
+          in
+          match collect Σ1 R1 args with
+          | infer_err err => infer_err err
+          | infer_ok (arg_tys, Σ', R', arg_roots) =>
+              match ty_core T_callee with
+              | TTypeForall type_params bounds body =>
+                  match ty_core body with
+                  | TFn param_tys ret =>
+                      match check_type_forall_bounds env bounds type_args with
+                      | Some err => infer_err err
+                      | None =>
+                          match check_arg_tys Ω arg_tys
+                                  (map (subst_type_params_ty type_args) param_tys) with
+                          | Some err => infer_err err
+                          | None => infer_ok
+                              (subst_type_params_ty type_args ret, Σ', R',
+                                root_set_union roots_callee
+                                  (root_sets_union arg_roots))
+                          end
+                      end
+                  | c => infer_err (ErrMalformedHrtBody c)
+                  end
+              | _ => infer_err ErrNotImplemented
+              end
+          end
+      end
   end
   end.
 
@@ -7045,7 +7089,52 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
               end
           end
       end
-  | ECallExprGeneric _ _ _ => infer_err ErrNotImplemented
+  | ECallExprGeneric callee type_args args =>
+      match infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ callee with
+      | infer_err err => infer_err err
+      | infer_ok (T_callee, Σ1, R1, roots_callee) =>
+          let fix collect (Σ0 : sctx) (R0 : root_env) (as_ : list expr)
+              : infer_result (list Ty * sctx * root_env * list root_set) :=
+            match as_ with
+            | [] => infer_ok ([], Σ0, R0, [])
+            | e' :: es =>
+                match infer_core_env_state_fuel_roots_shadow_safe
+                        fuel' env Ω n R0 Σ0 e' with
+                | infer_err err => infer_err err
+                | infer_ok (T_e, Σ2, R2, roots_e) =>
+                    match collect Σ2 R2 es with
+                    | infer_err err => infer_err err
+                    | infer_ok (tys, Σ3, R3, roots_es) =>
+                        infer_ok (T_e :: tys, Σ3, R3, roots_e :: roots_es)
+                    end
+                end
+            end
+          in
+          match collect Σ1 R1 args with
+          | infer_err err => infer_err err
+          | infer_ok (arg_tys, Σ', R', arg_roots) =>
+              match ty_core T_callee with
+              | TTypeForall type_params bounds body =>
+                  match ty_core body with
+                  | TFn param_tys ret =>
+                      match check_type_forall_bounds env bounds type_args with
+                      | Some err => infer_err err
+                      | None =>
+                          match check_arg_tys Ω arg_tys
+                                  (map (subst_type_params_ty type_args) param_tys) with
+                          | Some err => infer_err err
+                          | None => infer_ok
+                              (subst_type_params_ty type_args ret, Σ', R',
+                                root_set_union roots_callee
+                                  (root_sets_union arg_roots))
+                          end
+                      end
+                  | c => infer_err (ErrMalformedHrtBody c)
+                  end
+              | _ => infer_err ErrNotImplemented
+              end
+          end
+      end
   end
   end.
 

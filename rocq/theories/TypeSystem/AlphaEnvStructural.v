@@ -2527,6 +2527,61 @@ Proof.
 		        * exact Hargs.
 		        * assumption.
 		        * exists Σr'. split; [eapply TES_CallExpr_TypeForall; eauto | exact Hctx_r].
+		      + destruct (disjoint_names_app_l (free_vars_expr callee)
+		              ((fix go (args0 : list expr) : list ident :=
+		                  match args0 with
+		                  | [] => []
+		                  | arg :: rest => free_vars_expr arg ++ go rest
+		                  end) args) (rename_range ρ) Hdisj) as [Hdisj_callee Hdisj_args].
+		        destruct (alpha_rename_expr ρ used callee) as [calleer used1] eqn:Hcallee.
+		        destruct ((fix go (used0 : list ident) (args0 : list expr)
+		                    : list expr * list ident :=
+		                    match args0 with
+		                    | [] => ([], used0)
+		                    | arg :: rest =>
+		                        let (arg', used2) := alpha_rename_expr ρ used0 arg in
+		                        let (rest', used3) := go used2 rest in
+		                        (arg' :: rest', used3)
+		                    end) used1 args) as [argsr used_args] eqn:Hargs.
+		        injection Hrename as <- <-.
+		        destruct (IH env Ω n ρ Σ Σr callee calleer used used1
+		          (MkTy u (TTypeForall m bounds body)) Σ1) as [Σr1 [Hcallee_r Hctx1_r]];
+		          try solve [simpl in Hlt; lia | eauto].
+		        assert (Hctx_used1 : forall y, In y (ctx_names Σr1) -> In y used1).
+		        { intros y Hy.
+		          eapply alpha_rename_expr_used_extends.
+		          - exact Hcallee.
+		          - apply Hctx_used.
+		            rewrite <- (sctx_same_bindings_names_alpha Σr Σr1).
+		            + exact Hy.
+		            + eapply typed_env_structural_same_bindings. exact Hcallee_r. }
+		        assert (Hrange_used1 : forall y, In y (rename_range ρ) -> In y used1).
+		        { intros y Hy. eapply alpha_rename_expr_used_extends; eauto. }
+		        destruct (alpha_rename_typed_args_env_structural_forward
+		          env Ω n ρ Σ1 Σr1 args argsr used1 used_args
+		          (params_of_tys (map (subst_type_params_ty type_args) param_tys))
+		          (params_of_tys (map (subst_type_params_ty type_args) param_tys)) Σ')
+		          as [Σr' [Hargs_r Hctx_r]].
+		        * intros Σa Σb used0 e0 er0 used_tail T0 Σa' Hin Halpha Hcu Hru Hd Hr Ht.
+		          eapply IH.
+		          -- pose proof (expr_size_callexpr_generic_arg_lt callee type_args args e0 Hin) as Harg_lt.
+		             eapply Nat.lt_le_trans.
+		             ++ exact Harg_lt.
+		             ++ apply Nat.lt_succ_r. exact Hlt.
+		          -- exact Halpha.
+		          -- exact Hcu.
+		          -- exact Hru.
+		          -- exact Hd.
+		          -- exact Hr.
+		          -- exact Ht.
+		        * exact Hctx1_r.
+		        * exact Hctx_used1.
+		        * exact Hrange_used1.
+		        * exact Hdisj_args.
+		        * apply params_alpha_refl.
+		        * exact Hargs.
+		        * assumption.
+		        * exists Σr'. split; [eapply TES_CallExprGeneric_TypeForall; eauto | exact Hctx_r].
 		      + destruct (disjoint_names_app_l (free_vars_expr (EMakeClosure fname captures))
           ((fix go (args0 : list expr) : list ident :=
               match args0 with

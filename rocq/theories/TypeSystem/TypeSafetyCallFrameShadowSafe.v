@@ -331,6 +331,11 @@ Proof.
     + exact e.
     + exact e0.
     + apply H0. eapply root_env_tail_fresh_names_app_r. exact H1.
+  - eapply TERS_CallExprGeneric_TypeForall.
+    + apply H. eapply root_env_tail_fresh_names_app_l. exact H1.
+    + exact e.
+    + exact e0.
+    + apply H0. eapply root_env_tail_fresh_names_app_r. exact H1.
   - eapply TERS_CallExpr_MixedForall.
     + exact n0.
     + apply H. eapply root_env_tail_fresh_names_app_l. exact H1.

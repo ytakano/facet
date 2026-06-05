@@ -1,0 +1,8 @@
+fn id<T>(x: unrestricted T) -> unrestricted T {
+  x
+}
+
+fn main() -> unrestricted for<T> fn(unrestricted T) -> unrestricted T {
+  let f: unrestricted for<T> fn(unrestricted T) -> unrestricted T = id in
+  (f f)
+}

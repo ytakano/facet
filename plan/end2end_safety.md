@@ -75,13 +75,11 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      strips the outer arguments and delegates alpha-renamed body packaging; it
      no longer requires `store_function_closure_targets_summary` for the hidden
      local closure frame. Check: `make EnvRuntimeBaseSafety.vo`.
-   - Done: add alpha-renamed generic-direct runtime-argument freshness
-     for hidden binders. Check: `make EnvRuntimeBaseSafety.vo`.
-   - Blocker: recursive hidden-frame packaging now needs alpha-renamed nested
-     callee-body name support, so the preservation-ready body can be stripped
-     after nested args are stripped.
-   - Todo: finish the recursive hidden-frame package continuation in
-     `EnvRuntimeCapturedSafety.v`, then rerun targeted CLI tests.
+   - Done: add store-safe typed-arg free-var support plus hidden-frame
+     freshness/value-typing transport helpers. Check: `make EnvRuntimeBaseSafety.vo`.
+   - Done: wrap stripped nested generic-direct packages back into the
+     outer hidden-frame package after parameter cleanup.
+     Check: `make EnvRuntimeCapturedSafety.vo`.
 6. Todo: accept `TTypeForall (... TFn ...)` function-value calls through the
    end-to-end store-safe summary.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`

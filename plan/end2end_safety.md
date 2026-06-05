@@ -165,9 +165,13 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: package original `ECallExprGeneric` roots-shadow typings into
      substituted existential result form with lifetime-equivalence evidence.
      Check: `make AlphaRoots.vo`, proof-hole scan.
-   - Todo: use the bridge to prove roots-shadow type-substitution
-     preservation for arbitrary bodies or an equivalent closed-type-arg
-     `callee_body_root_shadow_provenance_summary` lemma.
+   - Done: identify the runtime package blocker precisely: closure lookup
+     yields only unsubstituted callee provenance, while `ECallExprGeneric`
+     needs either provenance for `fn_subst_type_params type_args fdef`
+     or an instantiated narrow summary.
+   - Todo: provide that evidence by roots-shadow type-substitution
+     preservation for arbitrary bodies, or by strengthening the closure-target
+     runtime invariant with checked instantiated summaries.
    - Note: `contains_lbound_ty = false` is not an `apply_lt_ty` no-op because
      type args may contain `LVar`; transport must use lifetime equivalence.
    - Todo: use that lemma to finish the end-to-end store-safe summary

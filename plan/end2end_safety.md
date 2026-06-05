@@ -114,8 +114,11 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: add `ECallExprGeneric` route helper for pure type-generic
      function values. Check: `make TypeSafetyDirectCallWrappers.vo`,
      proof-hole scan.
-   - Todo: add end-to-end store-safe summary package for pure
-     `TTypeForall (... TFn ...)` `ECallExprGeneric` callees.
+   - Todo: prove roots-shadow type-substitution preservation for arbitrary
+     bodies, or an equivalent closed-type-arg preservation lemma for
+     `callee_body_root_shadow_provenance_summary`.
+   - Todo: use that lemma to finish the end-to-end store-safe summary
+     package for pure `TTypeForall (... TFn ...)` `ECallExprGeneric` callees.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`
    through `ECallExprGeneric` after task 6 compiles.
 8. Todo: final full verification and roadmap closeout.

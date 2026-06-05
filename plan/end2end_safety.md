@@ -231,6 +231,9 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      only unsubstituted callee provenance. The umbrella is a dispatcher, and
      `EMatch` needs exact substituted branch/core facts, not just compatible
      existentials.
+   - Blocked: the closed substitution route must be gate-aware and
+     exact-context; arbitrary `type_args` lack compatibility transport, and
+     existential output contexts cannot feed struct/enum/match/wrapper premises.
    - Todo: add a closed exact roots-shadow substitution theorem for
      `provenance_ready_expr`, or strengthen closure targets with checked
      instantiated summaries.

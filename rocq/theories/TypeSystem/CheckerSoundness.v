@@ -539,6 +539,221 @@ Proof.
     rewrite (proj2 (lifetime_eqb_eq l l) eq_refl); reflexivity.
 Qed.
 
+Lemma ty_compatible_b_fuel_refl :
+  forall fuel Omega T,
+    ty_depth T < fuel ->
+    ty_compatible_b_fuel fuel Omega T T = true.
+Proof.
+  induction fuel as [| fuel IH]; intros Omega [u c] Hdepth.
+  - simpl in Hdepth. lia.
+  - simpl.
+    rewrite usage_sub_bool_refl.
+    destruct c as [| | | | s | i | name lts args | name lts args
+                   | params ret | lc params ret | n Omega_body body
+                   | n bounds body | l rk inner];
+      simpl in *.
+    + reflexivity.
+    + reflexivity.
+    + reflexivity.
+    + reflexivity.
+    + rewrite String.eqb_refl. reflexivity.
+    + rewrite Nat.eqb_refl. reflexivity.
+    + exact (ty_core_eqb_refl (TStruct name lts args)).
+    + exact (ty_core_eqb_refl (TEnum name lts args)).
+    + assert (Hargs :
+        ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel) Omega
+          params params = true).
+      { revert Hdepth.
+        induction params as [| param params IHparams]; intros Hdepth; simpl; auto.
+        rewrite (IH Omega param); [| lia].
+        apply IHparams. lia. }
+      rewrite Hargs. simpl.
+      assert (Hret : ty_depth ret < fuel).
+      { clear Hargs. revert Hdepth.
+        induction params as [| param params IHparams]; intros Hdepth; simpl in *.
+        - lia.
+        - apply IHparams.
+          eapply Nat.le_lt_trans; [| exact Hdepth]. lia. }
+      apply IH. exact Hret.
+    + rewrite outlives_b_refl.
+      assert (Hargs :
+        ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel) Omega
+          params params = true).
+      { revert Hdepth.
+        induction params as [| param params IHparams]; intros Hdepth; simpl; auto.
+        rewrite (IH Omega param); [| lia].
+        apply IHparams. lia. }
+      rewrite Hargs. simpl.
+      assert (Hret : ty_depth ret < fuel).
+      { clear Hargs. revert Hdepth.
+        induction params as [| param params IHparams]; intros Hdepth; simpl in *.
+        - lia.
+        - apply IHparams.
+          eapply Nat.le_lt_trans; [| exact Hdepth]. lia. }
+      apply IH. exact Hret.
+    + rewrite Nat.eqb_refl, outlives_ctx_eqb_refl. simpl.
+      apply IH. lia.
+    + rewrite Nat.eqb_refl. simpl.
+      assert (Hbounds :
+        (fix go_bounds (xs ys : list (core_trait_bound Ty)) : bool :=
+           match xs with
+           | [] => match ys with | [] => true | _ :: _ => false end
+           | x :: xs' =>
+               match ys with
+               | [] => false
+               | y :: ys' =>
+                   Nat.eqb (core_bound_type_index Ty x) (core_bound_type_index Ty y) &&
+                   (fix go_refs (rs ss : list (core_trait_ref Ty)) : bool :=
+                      match rs with
+                      | [] => match ss with | [] => true | _ :: _ => false end
+                      | r :: rs' =>
+                          match ss with
+                          | [] => false
+                          | s :: ss' =>
+                              String.eqb (core_trait_ref_name Ty r) (core_trait_ref_name Ty s) &&
+                              (fix go_args (as_ bs : list Ty) : bool :=
+                                 match as_ with
+                                 | [] => match bs with | [] => true | _ :: _ => false end
+                                 | a :: as' =>
+                                     match bs with
+                                     | [] => false
+                                     | b :: bs' => ty_eqb a b && go_args as' bs'
+                                     end
+                                 end) (core_trait_ref_args Ty r) (core_trait_ref_args Ty s) &&
+                              go_refs rs' ss'
+                          end
+                      end) (core_bound_traits Ty x) (core_bound_traits Ty y) &&
+                   go_bounds xs' ys'
+               end
+           end) bounds bounds = true).
+      { pose proof (ty_core_eqb_refl (TTypeForall n bounds body)) as Hcore.
+        simpl in Hcore.
+        rewrite Nat.eqb_refl in Hcore.
+        simpl in Hcore.
+        rewrite ty_eqb_refl in Hcore.
+        apply andb_true_iff in Hcore as [Hbounds _].
+        exact Hbounds. }
+      rewrite Hbounds. simpl.
+      apply IH. lia.
+    + rewrite outlives_b_refl, ref_kind_eqb_refl.
+      destruct rk; simpl.
+      * apply IH. lia.
+      * apply ty_eqb_refl.
+Qed.
+
+Lemma ty_compatible_b_fuel_same_core_usage :
+  forall fuel Omega ua ue c,
+    ty_depth (MkTy ue c) < fuel ->
+    usage_sub_bool ua ue = true ->
+    ty_compatible_b_fuel fuel Omega (MkTy ua c) (MkTy ue c) = true.
+Proof.
+  induction fuel as [| fuel IH]; intros Omega ua ue c Hdepth Husage.
+  - simpl in Hdepth. lia.
+  - simpl.
+    rewrite Husage.
+    destruct c as [| | | | s | i | name lts args | name lts args
+                   | params ret | lc params ret | n Omega_body body
+                   | n bounds body | l rk inner];
+      simpl in *.
+    + reflexivity.
+    + reflexivity.
+    + reflexivity.
+    + reflexivity.
+    + rewrite String.eqb_refl. reflexivity.
+    + rewrite Nat.eqb_refl. reflexivity.
+    + exact (ty_core_eqb_refl (TStruct name lts args)).
+    + exact (ty_core_eqb_refl (TEnum name lts args)).
+    + assert (Hargs :
+        ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel) Omega
+          params params = true).
+      { revert Hdepth.
+        induction params as [| param params IHparams]; intros Hdepth; simpl; auto.
+        rewrite (ty_compatible_b_fuel_refl fuel Omega param); [| lia].
+        apply IHparams. lia. }
+      rewrite Hargs. simpl.
+      assert (Hret : ty_depth ret < fuel).
+      { clear Hargs. revert Hdepth.
+        induction params as [| param params IHparams]; intros Hdepth; simpl in *.
+        - lia.
+        - apply IHparams.
+          eapply Nat.le_lt_trans; [| exact Hdepth]. lia. }
+      apply ty_compatible_b_fuel_refl. exact Hret.
+    + rewrite outlives_b_refl.
+      assert (Hargs :
+        ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel) Omega
+          params params = true).
+      { revert Hdepth.
+        induction params as [| param params IHparams]; intros Hdepth; simpl; auto.
+        rewrite (ty_compatible_b_fuel_refl fuel Omega param); [| lia].
+        apply IHparams. lia. }
+      rewrite Hargs. simpl.
+      assert (Hret : ty_depth ret < fuel).
+      { clear Hargs. revert Hdepth.
+        induction params as [| param params IHparams]; intros Hdepth; simpl in *.
+        - lia.
+        - apply IHparams.
+          eapply Nat.le_lt_trans; [| exact Hdepth]. lia. }
+      apply ty_compatible_b_fuel_refl. exact Hret.
+    + rewrite Nat.eqb_refl, outlives_ctx_eqb_refl. simpl.
+      apply ty_compatible_b_fuel_refl. lia.
+    + rewrite Nat.eqb_refl. simpl.
+      assert (Hbounds :
+        (fix go_bounds (xs ys : list (core_trait_bound Ty)) : bool :=
+           match xs with
+           | [] => match ys with | [] => true | _ :: _ => false end
+           | x :: xs' =>
+               match ys with
+               | [] => false
+               | y :: ys' =>
+                   Nat.eqb (core_bound_type_index Ty x) (core_bound_type_index Ty y) &&
+                   (fix go_refs (rs ss : list (core_trait_ref Ty)) : bool :=
+                      match rs with
+                      | [] => match ss with | [] => true | _ :: _ => false end
+                      | r :: rs' =>
+                          match ss with
+                          | [] => false
+                          | s :: ss' =>
+                              String.eqb (core_trait_ref_name Ty r) (core_trait_ref_name Ty s) &&
+                              (fix go_args (as_ bs : list Ty) : bool :=
+                                 match as_ with
+                                 | [] => match bs with | [] => true | _ :: _ => false end
+                                 | a :: as' =>
+                                     match bs with
+                                     | [] => false
+                                     | b :: bs' => ty_eqb a b && go_args as' bs'
+                                     end
+                                 end) (core_trait_ref_args Ty r) (core_trait_ref_args Ty s) &&
+                              go_refs rs' ss'
+                          end
+                      end) (core_bound_traits Ty x) (core_bound_traits Ty y) &&
+                   go_bounds xs' ys'
+               end
+           end) bounds bounds = true).
+      { pose proof (ty_core_eqb_refl (TTypeForall n bounds body)) as Hcore.
+        simpl in Hcore.
+        rewrite Nat.eqb_refl in Hcore.
+        simpl in Hcore.
+        rewrite ty_eqb_refl in Hcore.
+        apply andb_true_iff in Hcore as [Hbounds _].
+        exact Hbounds. }
+      rewrite Hbounds. simpl.
+      apply ty_compatible_b_fuel_refl. lia.
+    + rewrite outlives_b_refl, ref_kind_eqb_refl.
+      destruct rk; simpl.
+      * apply ty_compatible_b_fuel_refl. lia.
+      * apply ty_eqb_refl.
+Qed.
+
+Lemma ty_compatible_b_same_core_usage :
+  forall Omega ua ue c,
+    usage_sub_bool ua ue = true ->
+    ty_compatible_b Omega (MkTy ua c) (MkTy ue c) = true.
+Proof.
+  intros Omega ua ue c Husage.
+  unfold ty_compatible_b.
+  apply ty_compatible_b_fuel_same_core_usage; [destruct c; simpl; lia | exact Husage].
+Qed.
+
 Lemma ty_compatible_b_sound : forall Ω T_actual T_expected,
   ty_compatible_b Ω T_actual T_expected = true ->
   ty_compatible Ω T_actual T_expected.

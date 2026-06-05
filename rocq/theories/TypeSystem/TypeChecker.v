@@ -8719,11 +8719,11 @@ Definition check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_
               (initial_root_env_for_fn fdef) with
       | infer_err _ => false
       | infer_ok _ =>
-          match infer_core_env_roots_shadow_safe env
+          match infer_core_env_state_fuel_roots_shadow_safe fuel' env
                    (fn_outlives fdef)
                    (fn_lifetimes fdef)
                    (initial_root_env_for_fn fdef)
-                   body_ctx body with
+                   (sctx_of_ctx body_ctx) body with
           | infer_ok (T_body, _, R_body, roots_body) =>
               check_expr fuel' env (fn_outlives fdef) (fn_lifetimes fdef)
                 (initial_root_env_for_fn fdef) (sctx_of_ctx body_ctx) body &&

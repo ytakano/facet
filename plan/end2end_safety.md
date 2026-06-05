@@ -151,6 +151,11 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      Check: `make TypeSafetyProvenanceReady.vo`, proof-hole scan.
    - Done: add roots-shadow type-substitution leaf/package helpers.
      Check: `make AlphaRoots.vo`, proof-hole scan.
+   - Blocked detail: arbitrary roots-shadow type-substitution transport fails
+     at `ECallGeneric` unless lifetime substitution and type-parameter
+     substitution are bridged for call signatures. Existing facts include
+     `apply_lt_ty_subst_type_params_ty` and lifetime-first generic-call
+     helpers; the next slice should package those for the transport proof.
    - Todo: prove roots-shadow type-substitution preservation for arbitrary
      bodies or an equivalent closed-type-arg
      `callee_body_root_shadow_provenance_summary` lemma.

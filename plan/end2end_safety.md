@@ -80,10 +80,15 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: wrap stripped nested generic-direct packages back into the
      outer hidden-frame package after parameter cleanup.
      Check: `make EnvRuntimeCapturedSafety.vo`.
-6. Todo: accept `TTypeForall (... TFn ...)` function-value calls through the
-   end-to-end store-safe summary.
+6. Blocked: `TTypeForall (... TFn ...)` function-value calls need a
+   semantics/proof design change. A checker-gate-only patch makes
+   `EnvRuntimeBaseSafety.v` fail: `ECallExpr` evaluates uninstantiated
+   `fn_params`/`fn_body`, while the proof needs `apply_type_params` and
+   `subst_type_params_expr`; store/value type annotations are not erased.
+   Passing subcase: `type_forall_fn_value_pass_and_call.facet` after the
+   gate patch. Still failing: annotated-let and bounded calls.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`
-   function-value calls through the same safety path.
+   function-value calls after task 6 has a sound runtime path.
 8. Todo: final full verification and roadmap closeout.
 
 ## Required checks

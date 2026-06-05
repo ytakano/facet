@@ -162,6 +162,9 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: add roots-shadow `ECallExprGeneric` type-forall
      substitution bridge that packages substituted args/callee plus result
      lifetime-equivalence. Check: `make AlphaRoots.vo`, proof-hole scan.
+   - Done: package original `ECallExprGeneric` roots-shadow typings into
+     substituted existential result form with lifetime-equivalence evidence.
+     Check: `make AlphaRoots.vo`, proof-hole scan.
    - Todo: use the bridge to prove roots-shadow type-substitution
      preservation for arbitrary bodies or an equivalent closed-type-arg
      `callee_body_root_shadow_provenance_summary` lemma.

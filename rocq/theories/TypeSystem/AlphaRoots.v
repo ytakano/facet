@@ -1046,6 +1046,85 @@ Proof.
     apply ty_lifetime_equiv_refl.
 Qed.
 
+Lemma typed_env_roots_shadow_safe_call_expr_generic_typeforall_subst_type_params_package :
+  forall env Omega n R Sigma callee call_type_args args T Sigma' R' roots
+      outer_type_args,
+    typed_env_roots_shadow_safe env Omega n R Sigma
+      (ECallExprGeneric callee call_type_args args) T Sigma' R' roots ->
+    (forall R0 Sigma0 T0 Sigma0' R0' roots0,
+        typed_env_roots_shadow_safe env Omega n R0 Sigma0 callee
+          T0 Sigma0' R0' roots0 ->
+        typed_env_roots_shadow_safe env Omega n R0
+          (subst_type_params_ctx outer_type_args Sigma0)
+          (subst_type_params_expr outer_type_args callee)
+          T0 (subst_type_params_ctx outer_type_args Sigma0') R0'
+          roots0) ->
+    (forall R0 Sigma0 e T0 Sigma0' R0' roots0,
+        In e args ->
+        typed_env_roots_shadow_safe env Omega n R0 Sigma0 e
+          T0 Sigma0' R0' roots0 ->
+        typed_env_roots_shadow_safe env Omega n R0
+          (subst_type_params_ctx outer_type_args Sigma0)
+          (subst_type_params_expr outer_type_args e)
+          (subst_type_params_ty outer_type_args T0)
+          (subst_type_params_ctx outer_type_args Sigma0') R0' roots0) ->
+    (forall T_actual T_expected,
+        ty_compatible_b Omega T_actual T_expected = true ->
+        ty_compatible_b Omega
+          (subst_type_params_ty outer_type_args T_actual)
+          (subst_type_params_ty outer_type_args T_expected) = true) ->
+    (forall bounds,
+        check_type_forall_bounds env bounds call_type_args = None ->
+        check_type_forall_bounds env bounds
+          (map (subst_type_params_ty outer_type_args) call_type_args) =
+        None) ->
+    compose_type_params outer_type_args call_type_args =
+      map (subst_type_params_ty outer_type_args) call_type_args ->
+    exists T_subst Gamma_out_subst,
+      typed_env_roots_shadow_safe env Omega n R
+        (subst_type_params_ctx outer_type_args Sigma)
+        (subst_type_params_expr outer_type_args
+          (ECallExprGeneric callee call_type_args args))
+        T_subst (sctx_of_ctx Gamma_out_subst) R' roots /\
+      ty_lifetime_equiv T_subst
+        (subst_type_params_ty outer_type_args T).
+Proof.
+  intros env Omega n R Sigma callee call_type_args args T Sigma' R' roots
+    outer_type_args Htyped Hcallee_subst Hexpr_subst Hcompat_subst
+    Hbounds_subst Hcompose.
+  inversion Htyped; subst; try discriminate.
+  match goal with
+  | Hcallee : typed_env_roots_shadow_safe _ _ _ _ _ callee
+      (MkTy ?u (TTypeForall ?type_params ?bounds ?body_ty)) _ _ ?roots_callee,
+    Hbody : ty_core ?body_ty = TFn ?param_tys ?ret_inner,
+    Hbounds : check_type_forall_bounds env ?bounds ?type_args = None,
+    Hargs : typed_args_roots_shadow_safe _ _ _ _ _ args
+      (params_of_tys (map (subst_type_params_ty ?type_args) ?param_tys))
+      _ _ ?arg_roots |- _ =>
+      pose proof
+        (typed_env_roots_shadow_safe_call_expr_generic_typeforall_subst_type_params_bridge
+          env Omega n _ _ _ _ _ _ callee args u type_params bounds
+          body_ty param_tys ret_inner type_args outer_type_args arg_roots
+          roots_callee Hcallee Hbody Hbounds Hargs)
+        as Hbridge
+  end.
+  destruct Hbridge as [Htyped_subst Hequiv].
+  - eapply Hcallee_subst. eassumption.
+  - exact Hexpr_subst.
+  - exact Hcompat_subst.
+  - apply Hbounds_subst. eassumption.
+  - exact Hcompose.
+  - match goal with
+    | Htyped_subst : typed_env_roots_shadow_safe _ _ _ _ _ _ ?T_subst _ _ _ |- _ =>
+        exists T_subst, (subst_type_params_ctx outer_type_args Sigma')
+    end.
+    split.
+    + change (subst_type_params_ctx outer_type_args Sigma') with
+        (sctx_of_ctx (subst_type_params_ctx outer_type_args Sigma')).
+      exact Htyped_subst.
+    + apply ty_lifetime_equiv_sym. exact Hequiv.
+Qed.
+
 Lemma typed_env_roots_shadow_safe_leaf_subst_type_params_ctx :
   forall env Omega n R Sigma e T Sigma' R' roots type_args,
     typed_env_roots_shadow_safe env Omega n R Sigma e T Sigma' R' roots ->

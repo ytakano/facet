@@ -178,6 +178,8 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      Check: `make TypeSafetyCheckedRoots.vo`, proof-hole scan.
    - Done: add leaf-subset args/fields type-substitution packages for
      structured provenance-ready bodies. Check: `make TypeSafetyCheckedRoots.vo`.
+   - Done: add leaf-subset struct/enum expression package helpers with
+     explicit result compatibility premises. Check: `make TypeSafetyCheckedRoots.vo`.
    - Todo: prove roots-shadow type-substitution preservation for the
      provenance-ready expression subset, or strengthen the closure-target
      runtime invariant with checked instantiated summaries.

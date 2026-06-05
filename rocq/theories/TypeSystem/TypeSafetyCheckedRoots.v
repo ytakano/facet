@@ -157,6 +157,130 @@ Proof.
     + eapply IH; eauto.
 Qed.
 
+Lemma typed_env_roots_shadow_safe_struct_provenance_ready_leaf_subst_type_params_package :
+  forall env Omega n R Sigma sname lts struct_type_args fields
+      sdef Sigma' R' roots type_args,
+    provenance_ready_fields fields ->
+    Program.lookup_struct sname env = Some sdef ->
+    Datatypes.length lts = Program.struct_lifetimes sdef ->
+    Datatypes.length struct_type_args = Program.struct_type_params sdef ->
+    check_struct_bounds env (Program.struct_bounds sdef) struct_type_args = None ->
+    check_struct_bounds env (Program.struct_bounds sdef)
+      (map (subst_type_params_ty type_args) struct_type_args) = None ->
+    typed_fields_roots_shadow_safe env Omega n lts struct_type_args R Sigma
+      fields (Program.struct_fields sdef) Sigma' R' roots ->
+    (forall name e,
+        lookup_field_b name fields = Some e ->
+        provenance_ready_leaf_expr e) ->
+    (forall T_actual T_expected,
+        ty_compatible_b Omega T_actual T_expected = true ->
+        ty_compatible_b Omega (subst_type_params_ty type_args T_actual)
+          (subst_type_params_ty type_args T_expected) = true) ->
+    ty_compatible_b Omega
+      (instantiate_struct_instance_ty sdef lts
+        (map (subst_type_params_ty type_args) struct_type_args))
+      (subst_type_params_ty type_args
+        (instantiate_struct_instance_ty sdef lts struct_type_args)) = true ->
+    compose_type_params type_args struct_type_args =
+      map (subst_type_params_ty type_args) struct_type_args ->
+    exists T_subst Gamma_out_subst,
+      typed_env_roots_shadow_safe env Omega n R
+        (subst_type_params_ctx type_args Sigma)
+        (subst_type_params_expr type_args
+          (EStruct sname lts struct_type_args fields))
+        T_subst (sctx_of_ctx Gamma_out_subst) R' roots /\
+      ty_compatible_b Omega T_subst
+        (subst_type_params_ty type_args
+          (instantiate_struct_instance_ty sdef lts struct_type_args)) = true.
+Proof.
+  intros env Omega n R Sigma sname lts struct_type_args fields
+    sdef Sigma' R' roots type_args Hready Hlookup Hlen_lts Hlen_args
+    _ Hbounds_subst Htyped_fields Hleaf_lookup Hcompat_subst Hcompat_result
+    Hcompose.
+  exists (instantiate_struct_instance_ty sdef lts
+      (map (subst_type_params_ty type_args) struct_type_args)),
+    (subst_type_params_ctx type_args Sigma').
+  split.
+  - simpl.
+    rewrite subst_type_params_fields_go_map.
+    eapply TERS_Struct; eauto.
+    + rewrite length_map. exact Hlen_args.
+    + change (sctx_of_ctx (subst_type_params_ctx type_args Sigma')) with
+        (subst_type_params_ctx type_args Sigma').
+      eapply typed_fields_roots_shadow_safe_provenance_ready_leaf_subst_type_params_package;
+        eauto.
+  - exact Hcompat_result.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_enum_provenance_ready_leaf_subst_type_params_package :
+  forall env Omega n R Sigma enum_name variant_name lts enum_type_args
+      payloads edef vdef Sigma' R' payload_roots type_args,
+    provenance_ready_args payloads ->
+    Program.lookup_enum enum_name env = Some edef ->
+    Program.lookup_enum_variant variant_name (Program.enum_variants edef) =
+      Some vdef ->
+    Datatypes.length lts = Program.enum_lifetimes edef ->
+    Datatypes.length enum_type_args = Program.enum_type_params edef ->
+    check_struct_bounds env (Program.enum_bounds edef) enum_type_args = None ->
+    check_struct_bounds env (Program.enum_bounds edef)
+      (map (subst_type_params_ty type_args) enum_type_args) = None ->
+    typed_args_roots_shadow_safe env Omega n R Sigma payloads
+      (params_of_tys
+        (map (instantiate_enum_variant_field_ty lts enum_type_args)
+          (Program.enum_variant_fields vdef))) Sigma' R' payload_roots ->
+    Forall provenance_ready_leaf_expr payloads ->
+    (forall T_actual T_expected,
+        ty_compatible_b Omega T_actual T_expected = true ->
+        ty_compatible_b Omega (subst_type_params_ty type_args T_actual)
+          (subst_type_params_ty type_args T_expected) = true) ->
+    ty_compatible_b Omega
+      (instantiate_enum_ty edef lts
+        (map (subst_type_params_ty type_args) enum_type_args))
+      (subst_type_params_ty type_args
+        (instantiate_enum_ty edef lts enum_type_args)) = true ->
+    compose_type_params type_args enum_type_args =
+      map (subst_type_params_ty type_args) enum_type_args ->
+    exists T_subst Gamma_out_subst,
+      typed_env_roots_shadow_safe env Omega n R
+        (subst_type_params_ctx type_args Sigma)
+        (subst_type_params_expr type_args
+          (EEnum enum_name variant_name lts enum_type_args payloads))
+        T_subst (sctx_of_ctx Gamma_out_subst) R'
+        (root_sets_union payload_roots) /\
+      ty_compatible_b Omega T_subst
+        (subst_type_params_ty type_args
+          (instantiate_enum_ty edef lts enum_type_args)) = true.
+Proof.
+  intros env Omega n R Sigma enum_name variant_name lts enum_type_args
+    payloads edef vdef Sigma' R' payload_roots type_args Hready Hlookup
+    Hlookup_variant Hlen_lts Hlen_args _ Hbounds_subst Htyped_payloads
+    Hleaf Hcompat_subst Hcompat_result Hcompose.
+  exists (instantiate_enum_ty edef lts
+      (map (subst_type_params_ty type_args) enum_type_args)),
+    (subst_type_params_ctx type_args Sigma').
+  split.
+  - simpl. rewrite subst_type_params_expr_list_go_map.
+    eapply TERS_Enum; eauto.
+    + rewrite length_map. exact Hlen_args.
+    + assert (Hpayload_tys :
+        map (subst_type_params_ty type_args)
+          (map (instantiate_enum_variant_field_ty lts enum_type_args)
+            (Program.enum_variant_fields vdef)) =
+        map (instantiate_enum_variant_field_ty lts
+          (map (subst_type_params_ty type_args) enum_type_args))
+          (Program.enum_variant_fields vdef)).
+      { rewrite <- Hcompose.
+        rewrite map_map.
+        apply map_ext. intro T.
+        apply instantiate_enum_variant_field_ty_type_subst_compose. }
+      rewrite <- Hpayload_tys.
+      change (sctx_of_ctx (subst_type_params_ctx type_args Sigma')) with
+        (subst_type_params_ctx type_args Sigma').
+      eapply typed_args_roots_shadow_safe_provenance_ready_leaf_subst_type_params_package;
+        eauto.
+  - exact Hcompat_result.
+Qed.
+
 Inductive typed_env_roots_checked
     (env : global_env) (Ω : outlives_ctx) (n : nat)
     : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set -> Prop :=

@@ -462,6 +462,81 @@ Proof.
   - eapply Hcompat_result; eauto.
 Qed.
 
+Lemma typed_env_roots_shadow_safe_eassign_subst_type_params_compat_package :
+  forall env Omega n R Sigma p e_new Sigma' R' roots type_args,
+    typed_env_roots_shadow_safe env Omega n R Sigma (EAssign p e_new)
+      (MkTy UUnrestricted TUnits) Sigma' R' roots ->
+    (forall T_new Sigma_new R_new roots_new,
+        typed_env_roots_shadow_safe env Omega n R Sigma e_new
+          T_new Sigma_new R_new roots_new ->
+        exists T_new_subst,
+          typed_env_roots_shadow_safe env Omega n R
+            (subst_type_params_ctx type_args Sigma)
+            (subst_type_params_expr type_args e_new)
+            T_new_subst (subst_type_params_ctx type_args Sigma_new)
+            R_new roots_new /\
+          ty_compatible_b Omega T_new_subst
+            (subst_type_params_ty type_args T_new) = true) ->
+    (forall T_old T_new T_new_subst,
+        ty_compatible_b Omega T_new_subst
+          (subst_type_params_ty type_args T_new) = true ->
+        ty_compatible_b Omega T_new T_old = true ->
+        ty_compatible_b Omega T_new_subst
+          (subst_type_params_ty type_args T_old) = true) ->
+    (forall T0, ty_compatible_b Omega T0 T0 = true) ->
+    exists T_subst Gamma_out_subst,
+      typed_env_roots_shadow_safe env Omega n R
+        (subst_type_params_ctx type_args Sigma)
+        (subst_type_params_expr type_args (EAssign p e_new))
+        T_subst (sctx_of_ctx Gamma_out_subst) R' roots /\
+      ty_compatible_b Omega T_subst
+        (subst_type_params_ty type_args (MkTy UUnrestricted TUnits)) = true.
+Proof.
+  intros env Omega n R Sigma p e_new Sigma' R' roots type_args
+    Htyped Htransport Hcompat_assign Hcompat_refl.
+  inversion Htyped; subst.
+  - match goal with
+    | Hnew : typed_env_roots_shadow_safe env Omega n R Sigma e_new
+        ?T_new ?Sigma_new ?R_new ?roots_new |- _ =>
+        pose proof (Htransport T_new Sigma_new R_new roots_new Hnew)
+          as [T_new_subst [Htyped_new_subst Hcompat_new]]
+    end.
+    exists (MkTy UUnrestricted TUnits), (subst_type_params_ctx type_args Sigma').
+    split.
+    + simpl. eapply TERS_Assign_Path.
+      * eapply typed_place_env_structural_subst_type_params_ctx. eassumption.
+      * rewrite ty_usage_subst_type_params_ty. eassumption.
+      * eassumption.
+      * eapply writable_place_env_structural_subst_type_params_ctx. eassumption.
+      * exact Htyped_new_subst.
+      * eassumption.
+      * eapply Hcompat_assign; eauto.
+      * change (sctx_path_available (subst_type_params_ctx type_args Sigma') x path = infer_ok tt).
+        rewrite sctx_path_available_subst_type_params_ctx. exact H10.
+    + simpl. apply Hcompat_refl.
+  - match goal with
+    | Hnew : typed_env_roots_shadow_safe env Omega n R Sigma e_new
+        ?T_new ?Sigma_new ?R_new ?roots_new |- _ =>
+        pose proof (Htransport T_new Sigma_new R_new roots_new Hnew)
+          as [T_new_subst [Htyped_new_subst Hcompat_new]]
+    end.
+    exists (MkTy UUnrestricted TUnits), (subst_type_params_ctx type_args Sigma').
+    split.
+    + simpl. eapply TERS_Assign_Resolved.
+      * eapply typed_place_env_structural_subst_type_params_ctx. eassumption.
+      * rewrite ty_usage_subst_type_params_ty. eassumption.
+      * eassumption.
+      * eapply place_resolved_write_writable_chain_subst_type_params_ctx.
+        eassumption.
+      * eassumption.
+      * rewrite sctx_lookup_mut_subst_type_params_ctx. eassumption.
+      * eapply writable_place_env_structural_subst_type_params_ctx. eassumption.
+      * exact Htyped_new_subst.
+      * eassumption.
+      * eapply Hcompat_assign; eauto.
+    + simpl. apply Hcompat_refl.
+Qed.
+
 Inductive typed_env_roots_checked
     (env : global_env) (Ω : outlives_ctx) (n : nat)
     : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set -> Prop :=

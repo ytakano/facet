@@ -1240,7 +1240,8 @@ Lemma typed_env_roots_shadow_safe_leaf_subst_type_params_ctx :
     (exists lit, e = ELit lit) \/
     (exists p, e = EPlace p) \/
     (exists rk p, e = EBorrow rk p) \/
-    (exists p, e = EDrop (EPlace p)) ->
+    (exists p, e = EDrop (EPlace p)) \/
+    (exists rk p, e = EDeref (EBorrow rk p)) ->
     typed_env_roots_shadow_safe env Omega n R
       (subst_type_params_ctx type_args Sigma)
       (subst_type_params_expr type_args e)
@@ -1260,11 +1261,16 @@ Proof.
       * destruct Hleaf as [[p Hleaf] | Hleaf]; subst; simpl.
         -- eapply typed_env_roots_shadow_safe_eplace_subst_type_params_ctx.
            exact Htyped.
-        -- destruct Hleaf as [[rk [p Hleaf]] | [p Hleaf]]; subst; simpl.
+        -- destruct Hleaf as [[rk [p Hleaf]] | Hleaf]; subst; simpl.
            ++ eapply typed_env_roots_shadow_safe_eborrow_subst_type_params_ctx.
               exact Htyped.
-           ++ eapply typed_env_roots_shadow_safe_edrop_eplace_subst_type_params_ctx.
-              exact Htyped.
+           ++ destruct Hleaf as [Hdrop | Hderef].
+              ** destruct Hdrop as [p Hleaf]; subst; simpl.
+                 eapply typed_env_roots_shadow_safe_edrop_eplace_subst_type_params_ctx.
+                 exact Htyped.
+              ** destruct Hderef as [rk [p Hleaf]]; subst; simpl.
+                 eapply typed_env_roots_shadow_safe_ederef_eborrow_subst_type_params_ctx.
+                 exact Htyped.
 Qed.
 
 Lemma typed_env_roots_shadow_safe_subst_type_params_expr_package :

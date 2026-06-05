@@ -11,7 +11,8 @@ Definition provenance_ready_leaf_expr (e : expr) : Prop :=
   (exists lit, e = ELit lit) \/
   (exists p, e = EPlace p) \/
   (exists rk p, e = EBorrow rk p) \/
-  (exists p, e = EDrop (EPlace p)).
+  (exists p, e = EDrop (EPlace p)) \/
+  (exists rk p, e = EDeref (EBorrow rk p)).
 
 Lemma provenance_ready_args_In :
   forall args e,
@@ -63,7 +64,8 @@ Lemma typed_env_roots_shadow_safe_provenance_ready_leaf_subst_type_params_compat
     (exists lit, e = ELit lit) \/
     (exists p, e = EPlace p) \/
     (exists rk p, e = EBorrow rk p) \/
-    (exists p, e = EDrop (EPlace p)) ->
+    (exists p, e = EDrop (EPlace p)) \/
+    (exists rk p, e = EDeref (EBorrow rk p)) ->
     (forall T0, ty_compatible_b Omega T0 T0 = true) ->
     exists T_subst Gamma_out_subst,
       typed_env_roots_shadow_safe env Omega n R

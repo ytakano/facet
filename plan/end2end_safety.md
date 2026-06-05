@@ -178,6 +178,8 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      Check: `make TypeSafetyCheckedRoots.vo`, proof-hole scan.
    - Done: add atomic deref-borrow roots-shadow type-substitution helper.
      Check: `make AlphaRoots.vo`.
+   - Done: widen the leaf-subset substitution package to include
+     deref-borrow atoms. Check: `make TypeSafetyCheckedRoots.vo`.
    - Done: add leaf-subset args/fields type-substitution packages for
      structured provenance-ready bodies. Check: `make TypeSafetyCheckedRoots.vo`.
    - Done: add leaf-subset struct/enum expression package helpers with

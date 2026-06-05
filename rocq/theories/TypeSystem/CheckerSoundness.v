@@ -754,6 +754,425 @@ Proof.
   apply ty_compatible_b_fuel_same_core_usage; [destruct c; simpl; lia | exact Husage].
 Qed.
 
+
+Lemma ty_compatible_b_fuel_of_b :
+  forall fuel Omega T_actual T_expected,
+    ty_depth T_actual + ty_depth T_expected <= fuel ->
+    ty_compatible_b Omega T_actual T_expected = true ->
+    ty_compatible_b_fuel fuel Omega T_actual T_expected = true.
+Proof.
+  intros fuel Omega T_actual T_expected Hfuel Hcompat.
+  unfold ty_compatible_b in Hcompat.
+  eapply ty_compatible_b_fuel_monotone; eauto.
+Qed.
+
+Lemma ty_compatible_args_contra_b_fuel_monotone_local :
+  forall fuel1 fuel2 Omega actual expected,
+    fuel1 <= fuel2 ->
+    ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel1) Omega
+      actual expected = true ->
+    ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel2) Omega
+      actual expected = true.
+Proof.
+  intros fuel1 fuel2 Omega actual.
+  revert fuel1 fuel2 Omega.
+  induction actual as [| a actual IHargs]; intros fuel1 fuel2 Omega [| e expected] Hle Hcompat;
+    simpl in Hcompat; try discriminate; simpl; try reflexivity.
+  apply andb_true_iff in Hcompat as [Hhead Htail].
+  apply andb_true_iff. split.
+  - eapply ty_compatible_b_fuel_monotone; eauto.
+  - eapply IHargs; eauto.
+Qed.
+
+Lemma subst_type_params_ty_list_fix_eq_map :
+  forall type_args xs,
+    ((fix go (xs0 : list Ty) : list Ty :=
+        match xs0 with
+        | [] => []
+        | x :: xs' => subst_type_params_ty type_args x :: go xs'
+        end) xs) = map (subst_type_params_ty type_args) xs.
+Proof.
+  intros type_args xs.
+  induction xs as [| x xs IHxs]; simpl; [reflexivity | rewrite IHxs; reflexivity].
+Qed.
+
+Lemma ty_depth_le_compat_arg_fuel :
+  forall base args,
+    ty_depth base <=
+      (fix go (l : list Ty) : nat :=
+         match l with
+         | [] => ty_depth base
+         | t :: l' => S (ty_depth t + go l')
+         end) args.
+Proof.
+  intros base args.
+  induction args as [| t args IHargs]; simpl; lia.
+Qed.
+
+Lemma subst_type_params_ty_preserves_top_not_lifetime_forall :
+  forall type_args T,
+    Forall (fun T => match ty_core T with TForall _ _ _ => False | _ => True end)
+      type_args ->
+    match ty_core T with TForall _ _ _ => False | _ => True end ->
+    match ty_core (subst_type_params_ty type_args T) with
+    | TForall _ _ _ => False
+    | _ => True
+    end.
+Proof.
+  intros type_args [u c] Hno_top Hnot_forall.
+  destruct c as [| | | | name | i | name lts args | name lts args
+                 | params ret | env_lt params ret | n bounds body
+                 | n bounds body | lt rk inner]; simpl in *; try exact I.
+  - destruct (nth_error type_args i) as [Targ|] eqn:Hnth; simpl.
+    + apply ((proj1 (@Forall_forall Ty
+        (fun T => match ty_core T with TForall _ _ _ => False | _ => True end)
+        type_args)) Hno_top Targ).
+      eapply nth_error_In. exact Hnth.
+    + exact I.
+  - contradiction.
+Qed.
+
+Lemma ty_compatible_b_subst_type_params_ty_same_core_usage :
+  forall Omega type_args ua ue ca ce,
+    usage_sub_bool ua ue = true ->
+    ty_core_eqb ca ce = true ->
+    ty_compatible_b Omega
+      (subst_type_params_ty type_args (MkTy ua ca))
+      (subst_type_params_ty type_args (MkTy ue ce)) = true.
+Proof.
+  intros Omega type_args ua ue ca ce Husage Hcore.
+  apply ty_core_eqb_true in Hcore. subst ce.
+  assert (Hce_full : ty_core_eqb
+      (ty_core (subst_type_params_ty type_args (MkTy ua ca)))
+      (ty_core (subst_type_params_ty type_args (MkTy ue ca))) = true).
+  { apply ty_core_eqb_subst_type_params_same_core. }
+  destruct (subst_type_params_ty type_args (MkTy ua ca)) as [ua' ca'] eqn:Ha.
+  destruct (subst_type_params_ty type_args (MkTy ue ca)) as [ue' ce'] eqn:He.
+  assert (Hua : ua' = ua).
+  { pose proof (ty_usage_subst_type_params_ty type_args (MkTy ua ca)) as H.
+    rewrite Ha in H. simpl in H. exact H. }
+  assert (Hue : ue' = ue).
+  { pose proof (ty_usage_subst_type_params_ty type_args (MkTy ue ca)) as H.
+    rewrite He in H. simpl in H. exact H. }
+  assert (Hce : ty_core_eqb ca' ce' = true).
+  { exact Hce_full. }
+  apply ty_core_eqb_true in Hce. subst ce'.
+  subst ua' ue'.
+  apply ty_compatible_b_same_core_usage. exact Husage.
+Qed.
+
+Lemma ty_compatible_b_subst_type_params_ty_forall_generalize_unused :
+  forall Omega type_args Traw ue nb body_b,
+    Forall (fun T => contains_lbound_ty T = false) type_args ->
+    Forall (fun T => match ty_core T with TForall _ _ _ => False | _ => True end)
+      type_args ->
+    match ty_core Traw with TForall _ _ _ => False | _ => True end ->
+    usage_sub_bool (ty_usage Traw) ue = true ->
+    contains_lbound_ty body_b = false ->
+    ty_compatible_b Omega
+      (subst_type_params_ty type_args Traw)
+      (subst_type_params_ty type_args body_b) = true ->
+    ty_compatible_b Omega
+      (subst_type_params_ty type_args Traw)
+      (subst_type_params_ty type_args (MkTy ue (TForall nb [] body_b))) = true.
+Proof.
+  intros Omega type_args Traw ue nb body_b Hclosed Hno_top Hnot_forall
+    Husage Hnob Hbody.
+  pose proof (subst_type_params_ty_preserves_top_not_lifetime_forall
+    type_args Traw Hno_top Hnot_forall) as Hnot_sub.
+  pose proof (ty_usage_subst_type_params_ty type_args Traw) as Husage_sub.
+  remember (subst_type_params_ty type_args Traw) as Tsub eqn:HTsub.
+  destruct Tsub as [us cs]. simpl in Husage_sub. subst us.
+  assert (Hbody_sub :
+    ty_compatible_b Omega (MkTy (ty_usage Traw) cs)
+      (subst_type_params_ty type_args body_b) = true).
+  { exact Hbody. }
+  unfold ty_compatible_b. simpl.
+  destruct cs as [| | | | | | | | | | n_forall Omega_forall body_forall | |];
+    simpl in Hnot_sub; try contradiction; simpl; rewrite Husage.
+  all: rewrite (contains_lbound_ty_subst_type_params_ty_closed_structural
+    type_args body_b Hclosed Hnob); simpl.
+  all: first [ exact Hbody_sub
+             | eapply ty_compatible_b_fuel_of_b; [simpl; lia | exact Hbody_sub] ].
+Qed.
+
+Lemma ty_compatible_b_fuel_subst_type_params_ty_closed_no_lifetime_forall :
+  forall fuel Omega type_args T_actual T_expected,
+    Forall (fun T => contains_lbound_ty T = false) type_args ->
+    Forall (fun T => match ty_core T with TForall _ _ _ => False | _ => True end)
+      type_args ->
+    ty_compatible_b_fuel fuel Omega T_actual T_expected = true ->
+    ty_compatible_b Omega
+      (subst_type_params_ty type_args T_actual)
+      (subst_type_params_ty type_args T_expected) = true.
+Proof.
+  induction fuel as [| fuel IH]; intros Omega type_args T_actual T_expected
+      Hclosed Hno_top Hcompat.
+  - simpl in Hcompat. discriminate.
+  - destruct T_actual as [ua ca], T_expected as [ue ce].
+    simpl in Hcompat.
+    apply andb_true_iff in Hcompat as [Husage Hcore].
+    destruct ca as [| | | | sa | ia | struct_a ltsa argsa | enum_a ltsa argsa
+                   | params_a ret_a | lca ctsa cra | na Ωa body_a
+                   | tna boundsa tbody_a | la rka Ta],
+             ce as [| | | | se | ie | struct_e ltse argse | enum_e ltse argse
+                   | params_e ret_e | lce ctse cre | nb Ωb body_b
+                   | tnb boundsb tbody_b | lb rkb Tb];
+      simpl in Hcore; try discriminate;
+      try solve [eapply ty_compatible_b_subst_type_params_ty_same_core_usage; eauto];
+      try solve [
+        destruct Ωb as [| b Ωb_tail]; simpl in Hcore; [| discriminate];
+        apply andb_true_iff in Hcore as [Hnob Hbody];
+        apply negb_true_iff in Hnob;
+        eapply ty_compatible_b_subst_type_params_ty_forall_generalize_unused;
+          [ exact Hclosed
+          | exact Hno_top
+          | simpl; exact I
+          | exact Husage
+          | exact Hnob
+          | eapply IH; [exact Hclosed | exact Hno_top | exact Hbody] ]
+      ].
+    + apply andb_true_iff in Hcore as [Hargs Hret].
+      unfold ty_compatible_b.
+      simpl. rewrite Husage.
+      assert (Hargs_sub :
+        ty_compatible_args_contra_b_fuel
+          (ty_compatible_b_fuel
+             ((fix go (l : list Ty) : nat :=
+                match l with
+                | [] => ty_depth (subst_type_params_ty type_args ret_a)
+                | t :: l' => S (ty_depth t + go l')
+                end) (map (subst_type_params_ty type_args) params_a) +
+              S ((fix go (l : list Ty) : nat :=
+                match l with
+                | [] => ty_depth (subst_type_params_ty type_args ret_e)
+                | t :: l' => S (ty_depth t + go l')
+                end) (map (subst_type_params_ty type_args) params_e))))
+          Omega
+          (map (subst_type_params_ty type_args) params_a)
+          (map (subst_type_params_ty type_args) params_e) = true).
+      { revert params_e Hargs.
+        induction params_a as [| a params_a IHargs]; intros [| e params_e] Hargs;
+          simpl in Hargs; try discriminate; cbn [ty_compatible_args_contra_b_fuel]; auto.
+        apply andb_true_iff in Hargs as [Hhead Htail].
+        assert (Hhead_sub :
+          ty_compatible_b Omega
+            (subst_type_params_ty type_args e)
+            (subst_type_params_ty type_args a) = true).
+        { eapply IH; eauto. }
+        apply andb_true_iff. split.
+        - eapply ty_compatible_b_fuel_of_b; [simpl; lia | exact Hhead_sub].
+        - eapply ty_compatible_args_contra_b_fuel_monotone_local;
+            [| apply IHargs; exact Htail].
+          cbn [map]; simpl; lia. }
+      replace ((fix go (xs : list Ty) : list Ty :=
+                  match xs with
+                  | [] => []
+                  | x :: xs' => subst_type_params_ty type_args x :: go xs'
+                  end) params_a) with (map (subst_type_params_ty type_args) params_a)
+        by apply subst_type_params_ty_list_fix_eq_map.
+      replace ((fix go (xs : list Ty) : list Ty :=
+                  match xs with
+                  | [] => []
+                  | x :: xs' => subst_type_params_ty type_args x :: go xs'
+                  end) params_e) with (map (subst_type_params_ty type_args) params_e)
+        by apply subst_type_params_ty_list_fix_eq_map.
+      rewrite Hargs_sub. simpl.
+      assert (Hret_sub :
+        ty_compatible_b Omega
+          (subst_type_params_ty type_args ret_a)
+          (subst_type_params_ty type_args ret_e) = true).
+      { eapply IH; eauto. }
+      apply ty_compatible_b_fuel_of_b;
+        [simpl;
+         pose proof (ty_depth_le_compat_arg_fuel
+           (subst_type_params_ty type_args ret_a)
+           (map (subst_type_params_ty type_args) params_a));
+         pose proof (ty_depth_le_compat_arg_fuel
+           (subst_type_params_ty type_args ret_e)
+           (map (subst_type_params_ty type_args) params_e)); lia
+        | exact Hret_sub].
+    + apply andb_true_iff in Hcore as [Hargs Hret].
+      unfold ty_compatible_b.
+      simpl. rewrite Husage.
+      assert (Hargs_sub :
+        ty_compatible_args_contra_b_fuel
+          (ty_compatible_b_fuel
+             ((fix go (l : list Ty) : nat :=
+                match l with
+                | [] => ty_depth (subst_type_params_ty type_args ret_a)
+                | t :: l' => S (ty_depth t + go l')
+                end) (map (subst_type_params_ty type_args) params_a) +
+              S ((fix go (l : list Ty) : nat :=
+                match l with
+                | [] => ty_depth (subst_type_params_ty type_args cre)
+                | t :: l' => S (ty_depth t + go l')
+                end) (map (subst_type_params_ty type_args) ctse))))
+          Omega
+          (map (subst_type_params_ty type_args) params_a)
+          (map (subst_type_params_ty type_args) ctse) = true).
+      { revert ctse Hargs.
+        induction params_a as [| a params_a IHargs]; intros [| e ctse] Hargs;
+          simpl in Hargs; try discriminate; cbn [ty_compatible_args_contra_b_fuel]; auto.
+        apply andb_true_iff in Hargs as [Hhead Htail].
+        assert (Hhead_sub :
+          ty_compatible_b Omega
+            (subst_type_params_ty type_args e)
+            (subst_type_params_ty type_args a) = true).
+        { eapply IH; eauto. }
+        apply andb_true_iff. split.
+        - eapply ty_compatible_b_fuel_of_b; [simpl; lia | exact Hhead_sub].
+        - eapply ty_compatible_args_contra_b_fuel_monotone_local;
+            [| apply IHargs; exact Htail].
+          cbn [map]; simpl; lia. }
+      replace ((fix go (xs : list Ty) : list Ty :=
+                  match xs with
+                  | [] => []
+                  | x :: xs' => subst_type_params_ty type_args x :: go xs'
+                  end) params_a) with (map (subst_type_params_ty type_args) params_a)
+        by apply subst_type_params_ty_list_fix_eq_map.
+      replace ((fix go (xs : list Ty) : list Ty :=
+                  match xs with
+                  | [] => []
+                  | x :: xs' => subst_type_params_ty type_args x :: go xs'
+                  end) ctse) with (map (subst_type_params_ty type_args) ctse)
+        by apply subst_type_params_ty_list_fix_eq_map.
+      rewrite Hargs_sub. simpl.
+      assert (Hret_sub :
+        ty_compatible_b Omega
+          (subst_type_params_ty type_args ret_a)
+          (subst_type_params_ty type_args cre) = true).
+      { eapply IH; eauto. }
+      apply ty_compatible_b_fuel_of_b;
+        [simpl;
+         pose proof (ty_depth_le_compat_arg_fuel
+           (subst_type_params_ty type_args ret_a)
+           (map (subst_type_params_ty type_args) params_a));
+         pose proof (ty_depth_le_compat_arg_fuel
+           (subst_type_params_ty type_args cre)
+           (map (subst_type_params_ty type_args) ctse)); lia
+        | exact Hret_sub].
+    + apply andb_true_iff in Hcore as [Hleft Hret].
+      try (apply andb_true_iff in Hleft as [Hl Hargs]).
+      try match goal with
+      | Hleft : outlives_b Omega lca lce = true |- _ =>
+          pose proof Hleft as Hl;
+          assert (Hargs :
+            ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel) Omega
+              ctsa ctse = true)
+            by (destruct ctsa, ctse; simpl in *; try discriminate; reflexivity)
+      end.
+      unfold ty_compatible_b.
+      simpl. rewrite Husage. simpl. rewrite Hl. simpl.
+      assert (Hargs_sub :
+        ty_compatible_args_contra_b_fuel
+          (ty_compatible_b_fuel
+             ((fix go (l : list Ty) : nat :=
+                match l with
+                | [] => ty_depth (subst_type_params_ty type_args cra)
+                | t :: l' => S (ty_depth t + go l')
+                end) (map (subst_type_params_ty type_args) ctsa) +
+              S ((fix go (l : list Ty) : nat :=
+                match l with
+                | [] => ty_depth (subst_type_params_ty type_args cre)
+                | t :: l' => S (ty_depth t + go l')
+                end) (map (subst_type_params_ty type_args) ctse))))
+          Omega
+          (map (subst_type_params_ty type_args) ctsa)
+          (map (subst_type_params_ty type_args) ctse) = true).
+      { revert ctse Hargs.
+        induction ctsa as [| a ctsa IHargs]; intros [| e ctse] Hargs;
+          simpl in Hargs; try discriminate; cbn [ty_compatible_args_contra_b_fuel]; auto.
+        apply andb_true_iff in Hargs as [Hhead Htail].
+        assert (Hhead_sub :
+          ty_compatible_b Omega
+            (subst_type_params_ty type_args e)
+            (subst_type_params_ty type_args a) = true).
+        { eapply IH; eauto. }
+        apply andb_true_iff. split.
+        - eapply ty_compatible_b_fuel_of_b; [simpl; lia | exact Hhead_sub].
+        - eapply ty_compatible_args_contra_b_fuel_monotone_local;
+            [| apply IHargs; exact Htail].
+          cbn [map]; simpl; lia. }
+      replace ((fix go (xs : list Ty) : list Ty :=
+                  match xs with
+                  | [] => []
+                  | x :: xs' => subst_type_params_ty type_args x :: go xs'
+                  end) ctsa) with (map (subst_type_params_ty type_args) ctsa)
+        by apply subst_type_params_ty_list_fix_eq_map.
+      replace ((fix go (xs : list Ty) : list Ty :=
+                  match xs with
+                  | [] => []
+                  | x :: xs' => subst_type_params_ty type_args x :: go xs'
+                  end) ctse) with (map (subst_type_params_ty type_args) ctse)
+        by apply subst_type_params_ty_list_fix_eq_map.
+      rewrite Hargs_sub. simpl.
+      assert (Hret_sub :
+        ty_compatible_b Omega
+          (subst_type_params_ty type_args cra)
+          (subst_type_params_ty type_args cre) = true).
+      { eapply IH; eauto. }
+      apply ty_compatible_b_fuel_of_b;
+        [simpl;
+         pose proof (ty_depth_le_compat_arg_fuel
+           (subst_type_params_ty type_args cra)
+           (map (subst_type_params_ty type_args) ctsa));
+         pose proof (ty_depth_le_compat_arg_fuel
+           (subst_type_params_ty type_args cre)
+           (map (subst_type_params_ty type_args) ctse)); lia
+        | exact Hret_sub].
+    + apply andb_true_iff in Hcore as [Hleft Hbody].
+      apply andb_true_iff in Hleft as [Hn HΩ].
+      unfold ty_compatible_b.
+      simpl. rewrite Husage, Hn, HΩ. simpl.
+      assert (Hbody_sub :
+        ty_compatible_b Omega
+          (subst_type_params_ty type_args body_a)
+          (subst_type_params_ty type_args body_b) = true).
+      { eapply IH; eauto. }
+      apply ty_compatible_b_fuel_of_b; [simpl; lia | exact Hbody_sub].
+    + apply andb_true_iff in Hcore as [Hleft Hbody].
+      apply andb_true_iff in Hleft as [Hn Hbounds].
+      unfold ty_compatible_b.
+      simpl. rewrite Husage, Hn, Hbounds. simpl.
+      assert (Hbody_sub : ty_compatible_b Omega tbody_a tbody_b = true).
+      { pose proof (IH Omega [] tbody_a tbody_b) as Hbody_default.
+        simpl in Hbody_default.
+        repeat rewrite subst_type_params_ty_nil in Hbody_default.
+        eapply Hbody_default; [constructor | constructor | exact Hbody]. }
+      apply ty_compatible_b_fuel_of_b; [simpl; lia | exact Hbody_sub].
+    + apply andb_true_iff in Hcore as [Hleft Hinner].
+      apply andb_true_iff in Hleft as [Hl Hrk].
+      destruct rka, rkb; simpl in Hrk; try discriminate.
+      * unfold ty_compatible_b.
+        simpl.
+        rewrite Husage, Hl. simpl.
+        assert (Hsub :
+          ty_compatible_b Omega
+            (subst_type_params_ty type_args Ta)
+            (subst_type_params_ty type_args Tb) = true).
+        { eapply IH; eauto. }
+        apply ty_compatible_b_fuel_of_b; [simpl; lia | exact Hsub].
+      * unfold ty_compatible_b.
+        simpl. rewrite Husage, Hl. simpl.
+        apply ty_eqb_subst_type_params_ty. exact Hinner.
+
+Qed.
+
+Lemma ty_compatible_b_subst_type_params_ty_closed_no_lifetime_forall :
+  forall Omega type_args T_actual T_expected,
+    Forall (fun T => contains_lbound_ty T = false) type_args ->
+    Forall (fun T => match ty_core T with TForall _ _ _ => False | _ => True end) type_args ->
+    ty_compatible_b Omega T_actual T_expected = true ->
+    ty_compatible_b Omega
+      (subst_type_params_ty type_args T_actual)
+      (subst_type_params_ty type_args T_expected) = true.
+Proof.
+  intros Omega type_args T_actual T_expected Hclosed Hno_top Hcompat.
+  unfold ty_compatible_b in Hcompat.
+  eapply ty_compatible_b_fuel_subst_type_params_ty_closed_no_lifetime_forall; eauto.
+Qed.
+
 Lemma ty_compatible_b_sound : forall Ω T_actual T_expected,
   ty_compatible_b Ω T_actual T_expected = true ->
   ty_compatible Ω T_actual T_expected.

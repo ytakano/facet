@@ -143,10 +143,12 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      top-level `TForall`, which blocks compatibility transport.
      Checks: `make EnvRuntimeShadowCheckerFacts.vo`, `dune build`,
      proof-hole scan.
-   - Todo: prove boolean compatibility substitution transport under the
-     type-arg gate, then roots-shadow
-     type-substitution preservation for arbitrary bodies or an equivalent
-     closed-type-arg `callee_body_root_shadow_provenance_summary` lemma.
+   - Done: prove boolean compatibility substitution transport under the
+     lbound-free, no-top-level-`TForall` type-arg gate.
+     Check: `make CheckerSoundness.vo`, proof-hole scan.
+   - Todo: prove roots-shadow type-substitution preservation for arbitrary
+     bodies or an equivalent closed-type-arg
+     `callee_body_root_shadow_provenance_summary` lemma.
    - Todo: use that lemma to finish the end-to-end store-safe summary
      package for pure `TTypeForall (... TFn ...)` `ECallExprGeneric` callees.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`

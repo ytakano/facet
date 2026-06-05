@@ -854,6 +854,65 @@ Proof.
 Qed.
 
 
+Lemma typed_env_roots_shadow_safe_leaf_subst_type_params_ctx :
+  forall env Omega n R Sigma e T Sigma' R' roots type_args,
+    typed_env_roots_shadow_safe env Omega n R Sigma e T Sigma' R' roots ->
+    (exists x, e = EVar x) \/
+    e = EUnit \/
+    (exists lit, e = ELit lit) \/
+    (exists p, e = EPlace p) \/
+    (exists rk p, e = EBorrow rk p) \/
+    (exists p, e = EDrop (EPlace p)) ->
+    typed_env_roots_shadow_safe env Omega n R
+      (subst_type_params_ctx type_args Sigma)
+      (subst_type_params_expr type_args e)
+      (subst_type_params_ty type_args T)
+      (subst_type_params_ctx type_args Sigma') R' roots.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots type_args Htyped Hleaf.
+  destruct Hleaf as [[x Hleaf] | Hleaf]; subst; simpl.
+  - eapply typed_env_roots_shadow_safe_evar_subst_type_params_ctx.
+    exact Htyped.
+  - destruct Hleaf as [Hleaf | Hleaf]; subst; simpl.
+    + eapply typed_env_roots_shadow_safe_eunit_subst_type_params_ctx.
+      exact Htyped.
+    + destruct Hleaf as [[lit Hleaf] | Hleaf]; subst; simpl.
+      * eapply typed_env_roots_shadow_safe_elit_subst_type_params_ctx.
+        exact Htyped.
+      * destruct Hleaf as [[p Hleaf] | Hleaf]; subst; simpl.
+        -- eapply typed_env_roots_shadow_safe_eplace_subst_type_params_ctx.
+           exact Htyped.
+        -- destruct Hleaf as [[rk [p Hleaf]] | [p Hleaf]]; subst; simpl.
+           ++ eapply typed_env_roots_shadow_safe_eborrow_subst_type_params_ctx.
+              exact Htyped.
+           ++ eapply typed_env_roots_shadow_safe_edrop_eplace_subst_type_params_ctx.
+              exact Htyped.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_subst_type_params_expr_package :
+  forall env Omega n R Sigma e T R' roots type_args
+      T_subst Sigma'_subst,
+    typed_env_roots_shadow_safe env Omega n R
+      (subst_type_params_ctx type_args Sigma)
+      (subst_type_params_expr type_args e)
+      T_subst Sigma'_subst R' roots ->
+    ty_compatible_b Omega T_subst (subst_type_params_ty type_args T) = true ->
+    exists T_body_subst Gamma_out_subst,
+      typed_env_roots_shadow_safe env Omega n R
+        (subst_type_params_ctx type_args Sigma)
+        (subst_type_params_expr type_args e)
+        T_body_subst (sctx_of_ctx Gamma_out_subst) R' roots /\
+      ty_compatible_b Omega T_body_subst
+        (subst_type_params_ty type_args T) = true.
+Proof.
+  intros env Omega n R Sigma e T R' roots type_args
+    T_subst Sigma'_subst Htyped Hcompat.
+  exists T_subst, Sigma'_subst. split.
+  - change Sigma'_subst with (sctx_of_ctx Sigma'_subst). exact Htyped.
+  - exact Hcompat.
+Qed.
+
+
 Scheme typed_env_roots_shadow_safe_ind' :=
   Induction for typed_env_roots_shadow_safe Sort Prop
 with typed_args_roots_shadow_safe_ind' :=

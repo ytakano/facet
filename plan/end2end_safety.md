@@ -195,6 +195,9 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: add `EReplace` wrapper substitution package with explicit
      RHS, restore-path, and replacement compatibility premises.
      Check: `make TypeSafetyCheckedRoots.vo`.
+   - Done: add `ELetInfer` wrapper substitution package with explicit
+     bound/body/check transport premises.
+     Check: `make TypeSafetyCheckedRoots.vo`.
    - Done: add leaf-subset args/fields type-substitution packages for
      structured provenance-ready bodies. Check: `make TypeSafetyCheckedRoots.vo`.
    - Done: add leaf-subset struct/enum expression package helpers with

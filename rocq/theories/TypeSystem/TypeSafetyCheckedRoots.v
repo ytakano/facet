@@ -462,6 +462,83 @@ Proof.
   - eapply Hcompat_result; eauto.
 Qed.
 
+Lemma typed_env_roots_shadow_safe_eletinfer_subst_type_params_compat_package :
+  forall env Omega n R Sigma m x e1 e2 T Sigma' R' roots type_args,
+    typed_env_roots_shadow_safe env Omega n R Sigma
+      (ELetInfer m x e1 e2) T Sigma' R' roots ->
+    (forall T1 Sigma1 R1 roots1,
+        typed_env_roots_shadow_safe env Omega n R Sigma e1
+          T1 Sigma1 R1 roots1 ->
+        exists T1_subst,
+          typed_env_roots_shadow_safe env Omega n R
+            (subst_type_params_ctx type_args Sigma)
+            (subst_type_params_expr type_args e1)
+            T1_subst (subst_type_params_ctx type_args Sigma1)
+            R1 roots1 /\
+          ty_compatible_b Omega T1_subst
+            (subst_type_params_ty type_args T1) = true) ->
+    (forall T1 T1_subst Sigma1 R1 roots1 T2 Sigma2 R2 roots2,
+        typed_env_roots_shadow_safe env Omega n
+          (root_env_add x roots1 R1) (sctx_add x T1 m Sigma1)
+          e2 T2 Sigma2 R2 roots2 ->
+        ty_compatible_b Omega T1_subst
+          (subst_type_params_ty type_args T1) = true ->
+        exists T2_subst,
+          typed_env_roots_shadow_safe env Omega n
+            (root_env_add x roots1 R1)
+            (sctx_add x T1_subst m
+              (subst_type_params_ctx type_args Sigma1))
+            (subst_type_params_expr type_args e2)
+            T2_subst (subst_type_params_ctx type_args Sigma2)
+            R2 roots2 /\
+          ty_compatible_b Omega T2_subst
+            (subst_type_params_ty type_args T2) = true) ->
+    (forall T1 T1_subst Sigma2,
+        ty_compatible_b Omega T1_subst
+          (subst_type_params_ty type_args T1) = true ->
+        sctx_check_ok env x T1 Sigma2 = true ->
+        sctx_check_ok env x T1_subst
+          (subst_type_params_ctx type_args Sigma2) = true) ->
+    exists T_subst Gamma_out_subst,
+      typed_env_roots_shadow_safe env Omega n R
+        (subst_type_params_ctx type_args Sigma)
+        (subst_type_params_expr type_args (ELetInfer m x e1 e2))
+        T_subst (sctx_of_ctx Gamma_out_subst) R' roots /\
+      ty_compatible_b Omega T_subst
+        (subst_type_params_ty type_args T) = true.
+Proof.
+  intros env Omega n R Sigma m x e1 e2 T Sigma' R' roots type_args
+    Htyped Htransport_e1 Htransport_e2 Hcheck_subst.
+  inversion Htyped; subst.
+  match goal with
+  | He1 : typed_env_roots_shadow_safe env Omega n R Sigma e1
+      ?T1 ?Sigma1 ?R1 ?roots1 |- _ =>
+      pose proof (Htransport_e1 T1 Sigma1 R1 roots1 He1)
+        as [T1_subst [Htyped_e1_subst Hcompat_e1]]
+  end.
+  match goal with
+  | He2 : typed_env_roots_shadow_safe env Omega n
+      (root_env_add x ?roots1 ?R1) (sctx_add x ?T1 m ?Sigma1)
+      e2 ?T2 ?Sigma2 ?R2 ?roots2 |- _ =>
+      pose proof (Htransport_e2 T1 T1_subst Sigma1 R1 roots1
+        T2 Sigma2 R2 roots2 He2 Hcompat_e1)
+        as [T2_subst [Htyped_e2_subst Hcompat_e2]]
+  end.
+  exists T2_subst, (subst_type_params_ctx type_args (sctx_remove x Σ2)).
+  split.
+  - simpl. rewrite subst_type_params_ctx_sctx_remove.
+    eapply TERS_LetInfer.
+    + exact Htyped_e1_subst.
+    + eassumption.
+    + eassumption.
+    + eassumption.
+    + exact Htyped_e2_subst.
+    + eapply Hcheck_subst; eauto.
+    + eassumption.
+    + eassumption.
+  - exact Hcompat_e2.
+Qed.
+
 Lemma typed_env_roots_shadow_safe_eassign_subst_type_params_compat_package :
   forall env Omega n R Sigma p e_new Sigma' R' roots type_args,
     typed_env_roots_shadow_safe env Omega n R Sigma (EAssign p e_new)

@@ -790,6 +790,30 @@ Proof.
 Qed.
 
 
+Lemma typed_env_roots_shadow_safe_ederef_eborrow_subst_type_params_ctx :
+  forall env Omega n R Sigma rk p T Sigma' R' roots type_args,
+    typed_env_roots_shadow_safe env Omega n R Sigma (EDeref (EBorrow rk p))
+      T Sigma' R' roots ->
+    typed_env_roots_shadow_safe env Omega n R
+      (subst_type_params_ctx type_args Sigma) (EDeref (EBorrow rk p))
+      (subst_type_params_ty type_args T)
+      (subst_type_params_ctx type_args Sigma') R' roots.
+Proof.
+  intros env Omega n R Sigma rk p T Sigma' R' roots type_args Htyped.
+  inversion Htyped; subst; try discriminate; simpl;
+    try solve
+      [ econstructor;
+        eauto using typed_place_env_structural_subst_type_params_ctx,
+          place_under_unique_ref_structural_subst_type_params_ctx;
+        match goal with
+        | |- ty_usage (subst_type_params_ty _ _) = UUnrestricted =>
+            rewrite ty_usage_subst_type_params_ty; eassumption
+        | |- sctx_lookup_mut _ (subst_type_params_ctx _ _) = Some MMutable =>
+            rewrite sctx_lookup_mut_subst_type_params_ctx; eassumption
+        | _ => eassumption
+        end ].
+Qed.
+
 Lemma typed_env_roots_shadow_safe_edrop_eplace_subst_type_params_ctx :
   forall env Omega n R Sigma p T Sigma' R' roots type_args,
     typed_env_roots_shadow_safe env Omega n R Sigma (EDrop (EPlace p))

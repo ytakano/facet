@@ -215,6 +215,8 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      Check: `make TypeSafetyCheckedRoots.vo`.
    - Done: add specialized match-tail package for applied type params.
      Check: `make TypeSafetyCheckedRoots.vo`.
+   - Done: add `EMatch` roots-shadow type-substitution package.
+     Check: `make TypeSafetyCheckedRoots.vo`.
    - Todo: prove roots-shadow type-substitution preservation for the
      provenance-ready expression subset, or strengthen the closure-target
      runtime invariant with checked instantiated summaries.

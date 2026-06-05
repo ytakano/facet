@@ -455,6 +455,166 @@ Proof.
       eapply Hbranch; eassumption.
 Qed.
 
+Lemma typed_env_roots_shadow_safe_ematch_subst_type_params_compat_package :
+  forall env Omega n R Sigma scrut branches T Sigma' R' roots type_args,
+    typed_env_roots_shadow_safe env Omega n R Sigma (EMatch scrut branches)
+      T Sigma' R' roots ->
+    (forall T_scrut Sigma1 R1 roots_scrut enum_name lts enum_type_args,
+        typed_env_roots_shadow_safe env Omega n R Sigma scrut
+          T_scrut Sigma1 R1 roots_scrut ->
+        ty_core T_scrut = TEnum enum_name lts enum_type_args ->
+        exists T_scrut_subst,
+          typed_env_roots_shadow_safe env Omega n R
+            (subst_type_params_ctx type_args Sigma)
+            (subst_type_params_expr type_args scrut)
+            T_scrut_subst (subst_type_params_ctx type_args Sigma1)
+            R1 roots_scrut /\
+          ty_core T_scrut_subst =
+            TEnum enum_name lts
+              (map (subst_type_params_ty type_args) enum_type_args)) ->
+    (forall edef enum_type_args,
+        check_struct_bounds env (Program.enum_bounds edef) enum_type_args = None ->
+        check_struct_bounds env (Program.enum_bounds edef)
+          (map (subst_type_params_ty type_args) enum_type_args) = None) ->
+    (forall enum_type_args,
+        compose_type_params type_args enum_type_args =
+          map (subst_type_params_ty type_args) enum_type_args) ->
+    (forall v rest e_branch T_branch Sigma_branch_payload R_branch_payload
+        roots_branch Sigma_branch Sigmas_tail Ts_tail roots_tail binders ps
+        lts enum_type_args R1 Sigma1 roots_scrut R_out T_head,
+        lookup_expr_branch_binders (Program.enum_variant_name v) branches =
+          Some binders ->
+        match_payload_params binders lts enum_type_args v = infer_ok ps ->
+        params_names_nodup_b ps = true ->
+        ctx_lookup_params_none_b ps Sigma1 = true ->
+        root_env_lookup_params_none_b ps R1 = true ->
+        lookup_expr_branch (Program.enum_variant_name v) branches =
+          Some e_branch ->
+        typed_env_roots_shadow_safe env Omega n
+          (root_env_add_params_roots_same ps roots_scrut R1)
+          (sctx_add_params ps Sigma1) e_branch T_branch
+          Sigma_branch_payload R_branch_payload roots_branch ->
+        params_ok_sctx_b env ps Sigma_branch_payload = true ->
+        roots_exclude_params ps roots_branch ->
+        root_env_excludes_params ps
+          (root_env_remove_match_params ps R_branch_payload) ->
+        Sigma_branch = sctx_remove_params ps Sigma_branch_payload ->
+        ty_core T_branch = ty_core T_head ->
+        root_env_equiv (root_env_remove_match_params ps R_branch_payload)
+          R_out ->
+        typed_match_tail_roots_shadow_safe env Omega n lts enum_type_args R1
+          roots_scrut Sigma1 branches rest (ty_core T_head) R_out
+          Sigmas_tail Ts_tail roots_tail ->
+        typed_env_roots_shadow_safe env Omega n
+          (root_env_add_params_roots_same (apply_type_params type_args ps)
+            roots_scrut R1)
+          (sctx_add_params (apply_type_params type_args ps)
+            (subst_type_params_ctx type_args Sigma1))
+          (subst_type_params_expr type_args e_branch)
+          (subst_type_params_ty type_args T_branch)
+          (subst_type_params_ctx type_args Sigma_branch_payload)
+          R_branch_payload roots_branch /\
+        params_ok_sctx_b env (apply_type_params type_args ps)
+          (subst_type_params_ctx type_args Sigma_branch_payload) = true /\
+        ty_core (subst_type_params_ty type_args T_branch) = ty_core T_head) ->
+    (forall Sigma_head Sigma_tail Gamma_out,
+        ctx_merge_many (ctx_of_sctx Sigma_head)
+          (map ctx_of_sctx Sigma_tail) = Some Gamma_out ->
+        ctx_merge_many
+          (ctx_of_sctx (subst_type_params_ctx type_args Sigma_head))
+          (map ctx_of_sctx
+            (map (subst_type_params_ctx type_args) Sigma_tail)) =
+          Some (subst_type_params_ctx type_args Gamma_out)) ->
+    (forall T_head Ts_tail T_head_subst,
+        ty_core T_head_subst = ty_core T_head ->
+        ty_compatible_b Omega
+          (MkTy (usage_max_tys_nonempty T_head_subst
+              (map (subst_type_params_ty type_args) Ts_tail))
+            (ty_core T_head_subst))
+          (subst_type_params_ty type_args
+            (MkTy (usage_max_tys_nonempty T_head Ts_tail)
+              (ty_core T_head))) = true) ->
+    exists T_subst Gamma_out_subst,
+      typed_env_roots_shadow_safe env Omega n R
+        (subst_type_params_ctx type_args Sigma)
+        (subst_type_params_expr type_args (EMatch scrut branches))
+        T_subst (sctx_of_ctx Gamma_out_subst) R' roots /\
+      ty_compatible_b Omega T_subst
+        (subst_type_params_ty type_args T) = true.
+Proof.
+  intros env Omega n R Sigma scrut branches T Sigma' R' roots type_args
+    Htyped Htransport_scrut Hbounds_subst Hcompose Hbranch Hmerge_subst
+    Hcompat_result.
+  inversion Htyped; subst.
+  destruct (Htransport_scrut T_scrut Σ1 R1 roots_scrut enum_name lts args
+    H1 H2) as [T_scrut_subst [Htyped_scrut_subst Hcore_scrut_subst]].
+  destruct (Hbranch v_head v_tail e_head T_head Σ_head_payload
+    R_head_payload roots_head (sctx_remove_params ps_head Σ_head_payload)
+    Σ_tail Ts_tail roots_tail binders_head ps_head lts args R1 Σ1
+    roots_scrut (root_env_remove_match_params ps_head R_head_payload)
+    T_head H9 H10 H11 H12 H13 H14 H16 H17 H18 H20 eq_refl
+    eq_refl (root_env_equiv_refl _) H24)
+    as [Htyped_head_subst [Hparams_ok_head_subst Hcore_head_subst]].
+  pose proof
+    (typed_match_tail_roots_shadow_safe_apply_type_params_package
+      env Omega n lts args R1 roots_scrut Σ1 branches v_tail
+      (ty_core T_head) (root_env_remove_match_params ps_head R_head_payload)
+      Σ_tail Ts_tail roots_tail type_args (Hcompose args) H24)
+    as Htail_package.
+  pose proof (Hmerge_subst (sctx_remove_params ps_head Σ_head_payload)
+    Σ_tail Γ_out H29) as Hmerge_subst_result.
+  pose proof (Hcompat_result T_head Ts_tail
+    (subst_type_params_ty type_args T_head) Hcore_head_subst)
+    as Hcompat_match.
+  exists (MkTy (usage_max_tys_nonempty (subst_type_params_ty type_args T_head)
+      (map (subst_type_params_ty type_args) Ts_tail))
+      (ty_core (subst_type_params_ty type_args T_head))),
+    (subst_type_params_ctx type_args Γ_out).
+  split.
+  - simpl. rewrite subst_type_params_match_branches_go_map.
+    change (sctx_of_ctx (subst_type_params_ctx type_args Γ_out)) with
+      (subst_type_params_ctx type_args (sctx_of_ctx Γ_out)).
+    eapply TERS_Match.
+    + exact Htyped_scrut_subst.
+    + exact Hcore_scrut_subst.
+    + eassumption.
+    + eassumption.
+    + rewrite length_map. eassumption.
+    + eapply Hbounds_subst; eassumption.
+    + eapply first_unknown_variant_branch_subst_type_params_match_branches.
+      eassumption.
+    + eassumption.
+    + eapply lookup_expr_branch_binders_subst_type_params_match_branches.
+      eassumption.
+    + eapply match_payload_params_subst_type_params_map; eauto.
+    + rewrite params_names_nodup_b_apply_type_params_checked_roots. eassumption.
+    + rewrite ctx_lookup_params_none_b_subst_type_params_ctx. eassumption.
+    + rewrite root_env_lookup_params_none_b_apply_type_params_checked_roots.
+      eassumption.
+    + eapply lookup_expr_branch_subst_type_params_match_branches.
+      eassumption.
+    + reflexivity.
+    + exact Htyped_head_subst.
+    + exact Hparams_ok_head_subst.
+    + eapply roots_exclude_params_apply_type_params_checked_roots.
+      eassumption.
+    + rewrite root_env_remove_match_params_apply_type_params_checked_roots.
+      reflexivity.
+    + eapply root_env_excludes_params_apply_type_params_checked_roots.
+      eassumption.
+    + rewrite sctx_remove_params_apply_type_params_checked_roots.
+      rewrite <- subst_type_params_ctx_sctx_remove_params.
+      reflexivity.
+    + rewrite Hcore_head_subst. apply Htail_package.
+      intros v rest e T0 Sigma_v_payload Rv_payload roots0 Sigma_v
+        Sigmas_tail0 Ts_tail0 roots_tail0 binders ps Hlookup_binders Hpayload
+        Hnodup Hctx_none Hroot_none Hlookup_expr Htyped_branch Hparams_ok
+        Hroots_excl Hroot_excl Hremove Hcore Hroot_equiv Htail0.
+      eapply Hbranch; eassumption.
+    + exact Hmerge_subst_result.
+  - exact Hcompat_match.
+Qed.
+
 Lemma typed_env_roots_shadow_safe_provenance_ready_leaf_subst_type_params_compat_package :
   forall env Omega n R Sigma e T Sigma' R' roots type_args,
     provenance_ready_expr e ->

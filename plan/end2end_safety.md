@@ -240,9 +240,8 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Blocked: adding instantiated summaries to the narrow checker needs
      definition-order work; the instantiated checker currently depends on the
      narrow checker and is defined later.
-   - Todo: add a closed exact roots-shadow substitution theorem for
-     `provenance_ready_expr`, or strengthen closure targets with checked
-     instantiated summaries.
+   - Todo: factor an early fuel-param instantiated summary checker so
+     `ECallExprGeneric` summaries can require checked instantiated bodies.
    - Todo: finish the pure `TTypeForall (... TFn ...)` runtime package after
      that route premise is derivable.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`

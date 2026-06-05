@@ -138,6 +138,28 @@ Proof.
   - destruct (root_env_lookup x R); [reflexivity | exact IH].
 Qed.
 
+Lemma root_env_add_params_roots_same_apply_type_params_checked_roots :
+  forall type_args ps roots R,
+    root_env_add_params_roots_same (apply_type_params type_args ps) roots R =
+    root_env_add_params_roots_same ps roots R.
+Proof.
+  intros type_args ps roots R.
+  induction ps as [| [m x T] ps IH]; simpl.
+  - reflexivity.
+  - rewrite IH. reflexivity.
+Qed.
+
+Lemma root_env_remove_match_params_apply_type_params_checked_roots :
+  forall type_args ps R,
+    root_env_remove_match_params (apply_type_params type_args ps) R =
+    root_env_remove_match_params ps R.
+Proof.
+  intros type_args ps.
+  induction ps as [| [m x T] ps IH]; intros R; simpl.
+  - reflexivity.
+  - apply IH.
+Qed.
+
 Lemma roots_exclude_params_apply_type_params_checked_roots :
   forall type_args ps roots,
     roots_exclude_params ps roots ->

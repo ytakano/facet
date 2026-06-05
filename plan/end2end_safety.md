@@ -149,6 +149,8 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: prove provenance readiness is preserved by type-parameter
      substitution for expressions, args, fields, and match branches.
      Check: `make TypeSafetyProvenanceReady.vo`, proof-hole scan.
+   - Done: add roots-shadow type-substitution leaf/package helpers.
+     Check: `make AlphaRoots.vo`, proof-hole scan.
    - Todo: prove roots-shadow type-substitution preservation for arbitrary
      bodies or an equivalent closed-type-arg
      `callee_body_root_shadow_provenance_summary` lemma.

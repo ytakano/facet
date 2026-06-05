@@ -1,9 +1,43 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules TypeChecker RuntimeTyping RootProvenance
   EnvStructuralRules AlphaRoots TypeSafetyRootFacts TypeSafetyRootedPackages
-  TypeSafetyRootsReadyMutual.
+  TypeSafetyProvenanceReady TypeSafetyRootsReadyMutual.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
+
+Lemma typed_env_roots_shadow_safe_provenance_ready_leaf_subst_type_params_compat_package :
+  forall env Omega n R Sigma e T Sigma' R' roots type_args,
+    provenance_ready_expr e ->
+    typed_env_roots_shadow_safe env Omega n R Sigma e T Sigma' R' roots ->
+    (exists x, e = EVar x) \/
+    e = EUnit \/
+    (exists lit, e = ELit lit) \/
+    (exists p, e = EPlace p) \/
+    (exists rk p, e = EBorrow rk p) \/
+    (exists p, e = EDrop (EPlace p)) ->
+    (forall T0, ty_compatible_b Omega T0 T0 = true) ->
+    exists T_subst Gamma_out_subst,
+      typed_env_roots_shadow_safe env Omega n R
+        (subst_type_params_ctx type_args Sigma)
+        (subst_type_params_expr type_args e)
+        T_subst (sctx_of_ctx Gamma_out_subst) R' roots /\
+      ty_compatible_b Omega T_subst
+        (subst_type_params_ty type_args T) = true.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots type_args
+    _ Htyped Hleaf Hcompat_refl.
+  pose proof
+    (typed_env_roots_shadow_safe_leaf_subst_type_params_ctx
+      env Omega n R Sigma e T Sigma' R' roots type_args Htyped Hleaf)
+    as Htyped_subst.
+  exists (subst_type_params_ty type_args T),
+    (subst_type_params_ctx type_args Sigma').
+  split.
+  - change (subst_type_params_ctx type_args Sigma') with
+      (sctx_of_ctx (subst_type_params_ctx type_args Sigma')).
+    exact Htyped_subst.
+  - apply Hcompat_refl.
+Qed.
 
 Inductive typed_env_roots_checked
     (env : global_env) (Ω : outlives_ctx) (n : nat)

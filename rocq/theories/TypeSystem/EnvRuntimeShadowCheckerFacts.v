@@ -418,12 +418,13 @@ Qed.
 Lemma check_supported_type_generic_function_value_call_expr_sound :
   forall env Ω n R Γ callee type_args args,
     check_supported_type_generic_function_value_call_expr
-      env Ω n R Γ callee = true ->
+      env Ω n R Γ callee type_args = true ->
     supported_type_generic_function_value_call_expr
       env Ω n R Γ callee type_args args.
 Proof.
   intros env Ω n R Γ callee type_args args Hcheck.
   unfold check_supported_type_generic_function_value_call_expr in Hcheck.
+  apply andb_true_iff in Hcheck as [Hclosed Hcheck].
   destruct callee; try discriminate.
   destruct (infer_core_env_roots_shadow_safe env Ω n R Γ (EVar i))
     as [[[[T_callee Γ_callee] R_callee] roots_callee] | err]
@@ -436,6 +437,11 @@ Proof.
   exists i, (MkTy u (TTypeForall n0 l (MkTy u_body (TFn l0 t)))),
     Γ_callee, R_callee, roots_callee.
   repeat split; try reflexivity.
+  - unfold type_args_lbound_free_b in Hclosed.
+    rewrite forallb_forall in Hclosed.
+    apply Forall_forall. intros T HT.
+    specialize (Hclosed T HT).
+    apply negb_true_iff in Hclosed. exact Hclosed.
   - exact Hinfer.
   - eapply SFV_TTypeForall_TFn; reflexivity.
 Qed.

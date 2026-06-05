@@ -8655,6 +8655,9 @@ Definition supported_type_generic_function_value_call_callee_ty_b
   | _ => false
   end.
 
+Definition type_args_lbound_free_b (type_args : list Ty) : bool :=
+  forallb (fun T => negb (contains_lbound_ty T)) type_args.
+
 Definition check_supported_non_type_generic_function_value_call_expr
     (env : global_env) (Ω : outlives_ctx) (n : nat)
     (R : root_env) (Γ : ctx) (callee : expr) : bool :=
@@ -8670,7 +8673,9 @@ Definition check_supported_non_type_generic_function_value_call_expr
 
 Definition check_supported_type_generic_function_value_call_expr
     (env : global_env) (Ω : outlives_ctx) (n : nat)
-    (R : root_env) (Γ : ctx) (callee : expr) : bool :=
+    (R : root_env) (Γ : ctx) (callee : expr)
+    (type_args : list Ty) : bool :=
+  type_args_lbound_free_b type_args &&
   match callee with
   | EVar _ =>
       match infer_core_env_roots_shadow_safe env Ω n R Γ callee with
@@ -9119,10 +9124,10 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_fuel
           store_safe_function_value_call_args_b env args &&
           check_supported_non_type_generic_function_value_call_expr
             env Ω n R (ctx_of_sctx Σ) callee
-      | ECallExprGeneric callee _ args =>
+      | ECallExprGeneric callee type_args args =>
           store_safe_function_value_call_args_b env args &&
           check_supported_type_generic_function_value_call_expr
-            env Ω n R (ctx_of_sctx Σ) callee
+            env Ω n R (ctx_of_sctx Σ) callee type_args
       | ELet m x T_hidden e1 e2 =>
           match infer_core_env_state_fuel_roots_shadow_safe
                   fuel' env Ω n R Σ e1 with

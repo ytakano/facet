@@ -105,6 +105,9 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      function-value call summary recognition.
      Checks: `make EnvRuntimeShadowCheckerFacts.vo`, `dune build`,
      proof-hole scan.
+   - Done: gate type-generic call summaries to lbound-free type args;
+     extraction updated. Checks: `make EnvRuntimeShadowCheckerFacts.vo`,
+     `dune build`, proof-hole scan.
    - Done: add closed type-argument helper proofs for type-generic
      function-value call runtime signatures.
      Check: `make TypeSafetyDirectCallWrappers.vo`.

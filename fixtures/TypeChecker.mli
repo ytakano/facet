@@ -1202,13 +1202,15 @@ val supported_non_type_generic_function_value_call_callee_ty_b : ty -> bool
 
 val supported_type_generic_function_value_call_callee_ty_b : ty -> bool
 
+val type_args_lbound_free_b : ty list -> bool
+
 val check_supported_non_type_generic_function_value_call_expr :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
   -> bool
 
 val check_supported_type_generic_function_value_call_expr :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
-  -> bool
+  -> ty list -> bool
 
 val check_fn_root_shadow_non_capturing_call_provenance_summary :
   global_env -> fn_def -> bool

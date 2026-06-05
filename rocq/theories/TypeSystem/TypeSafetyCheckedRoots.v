@@ -90,6 +90,37 @@ Proof.
   - apply Hcompat_refl.
 Qed.
 
+Lemma typed_env_roots_shadow_safe_efn_subst_type_params_compat_package :
+  forall env Omega n R Sigma fname T Sigma' R' roots type_args,
+    typed_env_roots_shadow_safe env Omega n R Sigma (EFn fname)
+      T Sigma' R' roots ->
+    (forall fdef,
+        In fdef (Program.env_fns env) ->
+        fn_name fdef = fname ->
+        fn_captures fdef = [] ->
+        ty_compatible_b Omega (fn_value_ty fdef)
+          (subst_type_params_ty type_args (fn_value_ty fdef)) = true) ->
+    exists T_subst Gamma_out_subst,
+      typed_env_roots_shadow_safe env Omega n R
+        (subst_type_params_ctx type_args Sigma)
+        (subst_type_params_expr type_args (EFn fname))
+        T_subst (sctx_of_ctx Gamma_out_subst) R' roots /\
+      ty_compatible_b Omega T_subst
+        (subst_type_params_ty type_args T) = true.
+Proof.
+  intros env Omega n R Sigma fname T Sigma' R' roots type_args
+    Htyped Hcompat_result.
+  inversion Htyped; subst; try discriminate.
+  match goal with
+  | |- exists T_subst Gamma_out_subst,
+      typed_env_roots_shadow_safe _ _ _ _ ?Sigma_sub _ _ _ _ _ /\ _ =>
+      exists (fn_value_ty fdef), Sigma_sub
+  end.
+  split.
+  - simpl. eapply TERS_Fn; eauto.
+  - eapply Hcompat_result; eauto.
+Qed.
+
 Lemma typed_args_roots_shadow_safe_provenance_ready_leaf_subst_type_params_package :
   forall env Omega n R Sigma args param_tys Sigma' R' roots type_args,
     provenance_ready_args args ->

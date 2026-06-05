@@ -724,6 +724,137 @@ Proof.
       reflexivity || exact Hhead.
 Qed.
 
+Lemma contains_lbound_ty_outer_usage_core_structural :
+  forall u T,
+    contains_lbound_ty (MkTy u (ty_core T)) = contains_lbound_ty T.
+Proof.
+  intros u [u0 core]. destruct core; reflexivity.
+Qed.
+
+Lemma existsb_contains_lbound_ty_false_of_Forall_structural :
+  forall ts,
+    Forall (fun T => contains_lbound_ty T = false) ts ->
+    existsb contains_lbound_ty ts = false.
+Proof.
+  intros ts H.
+  induction H as [| T ts HT _ IH]; simpl.
+  - reflexivity.
+  - rewrite HT, IH. reflexivity.
+Qed.
+
+Lemma contains_lbound_ty_subst_type_params_ty_closed_structural :
+  forall type_args T,
+    Forall (fun T => contains_lbound_ty T = false) type_args ->
+    contains_lbound_ty T = false ->
+    contains_lbound_ty (subst_type_params_ty type_args T) = false.
+Proof.
+  intros type_args T Hclosed.
+  revert T.
+  fix IH 1.
+  intros [u core] Hnone.
+  destruct core as [| | | | name | i | name lts args | name lts args
+                   | params ret | env_lt params ret | n bounds body
+                   | n bounds body | lt rk inner]; simpl in *; try reflexivity.
+  - destruct (nth_error type_args i) as [Targ|] eqn:Hnth; simpl.
+    + assert (Harg_closed : contains_lbound_ty Targ = false).
+      { apply ((proj1 (@Forall_forall Ty
+          (fun T => contains_lbound_ty T = false) type_args)) Hclosed Targ).
+        eapply nth_error_In. exact Hnth. }
+      destruct Targ as [uarg corearg]. destruct corearg; simpl in *; exact Harg_closed.
+    + reflexivity.
+  - apply Bool.orb_false_iff in Hnone as [Hlts Hargs].
+    rewrite Hlts. simpl.
+    assert (Hgo : forall args0 fallback,
+      existsb contains_lbound_ty args0 = false ->
+      Forall (fun T => contains_lbound_ty T = false) fallback ->
+      existsb contains_lbound_ty
+        ((fix go (xs fallback0 : list Ty) : list Ty :=
+            match xs with
+            | [] => fallback0
+            | x :: xs' =>
+                match fallback0 with
+                | [] => subst_type_params_ty type_args x :: go xs' []
+                | _ :: fb' => subst_type_params_ty type_args x :: go xs' fb'
+                end
+            end) args0 fallback) = false).
+    { fix IHargs 1.
+      intros args0 fallback Hargs0 Hfallback.
+      destruct args0 as [| T ts]; simpl in *.
+      - apply existsb_contains_lbound_ty_false_of_Forall_structural. exact Hfallback.
+      - apply Bool.orb_false_iff in Hargs0 as [HT Hts].
+        destruct fallback as [| Tfallback rest]; simpl.
+        + rewrite (IH T HT). apply IHargs; [exact Hts | constructor].
+        + rewrite (IH T HT). apply IHargs.
+          * exact Hts.
+          * inversion Hfallback; subst. assumption. }
+    exact (Hgo args type_args Hargs Hclosed).
+  - apply Bool.orb_false_iff in Hnone as [Hlts Hargs].
+    rewrite Hlts. simpl.
+    assert (Hgo : forall args0 fallback,
+      existsb contains_lbound_ty args0 = false ->
+      Forall (fun T => contains_lbound_ty T = false) fallback ->
+      existsb contains_lbound_ty
+        ((fix go (xs fallback0 : list Ty) : list Ty :=
+            match xs with
+            | [] => fallback0
+            | x :: xs' =>
+                match fallback0 with
+                | [] => subst_type_params_ty type_args x :: go xs' []
+                | _ :: fb' => subst_type_params_ty type_args x :: go xs' fb'
+                end
+            end) args0 fallback) = false).
+    { fix IHargs 1.
+      intros args0 fallback Hargs0 Hfallback.
+      destruct args0 as [| T ts]; simpl in *.
+      - apply existsb_contains_lbound_ty_false_of_Forall_structural. exact Hfallback.
+      - apply Bool.orb_false_iff in Hargs0 as [HT Hts].
+        destruct fallback as [| Tfallback rest]; simpl.
+        + rewrite (IH T HT). apply IHargs; [exact Hts | constructor].
+        + rewrite (IH T HT). apply IHargs.
+          * exact Hts.
+          * inversion Hfallback; subst. assumption. }
+    exact (Hgo args type_args Hargs Hclosed).
+  - apply Bool.orb_false_iff in Hnone as [Hparams Hret].
+    assert (Hparams_subst :
+      existsb contains_lbound_ty
+        ((fix go (xs : list Ty) : list Ty :=
+            match xs with
+            | [] => []
+            | x :: xs' => subst_type_params_ty type_args x :: go xs'
+            end) params) = false).
+    { revert params Hparams.
+      fix IHparams 1.
+      intros params Hparams.
+      destruct params as [| T ts]; simpl in *.
+      - reflexivity.
+      - apply Bool.orb_false_iff in Hparams as [HT Hts].
+        rewrite (IH T HT), (IHparams ts Hts). reflexivity. }
+    rewrite Hparams_subst, (IH ret Hret). reflexivity.
+  - apply Bool.orb_false_iff in Hnone as [Hleft Hret].
+    apply Bool.orb_false_iff in Hleft as [Hlt Hparams].
+    rewrite Hlt.
+    assert (Hparams_subst :
+      existsb contains_lbound_ty
+        ((fix go (xs : list Ty) : list Ty :=
+            match xs with
+            | [] => []
+            | x :: xs' => subst_type_params_ty type_args x :: go xs'
+            end) params) = false).
+    { revert params Hparams.
+      fix IHparams 1.
+      intros params Hparams.
+      destruct params as [| T ts]; simpl in *.
+      - reflexivity.
+      - apply Bool.orb_false_iff in Hparams as [HT Hts].
+        rewrite (IH T HT), (IHparams ts Hts). reflexivity. }
+    rewrite Hparams_subst, (IH ret Hret). reflexivity.
+  - apply Bool.orb_false_iff in Hnone as [Hout Hbody].
+    rewrite Hout, (IH body Hbody). reflexivity.
+  - exact Hnone.
+  - apply Bool.orb_false_iff in Hnone as [Hlt Hinner].
+    rewrite Hlt, (IH inner Hinner). reflexivity.
+Qed.
+
 Lemma usage_eqb_refl : forall u,
   usage_eqb u u = true.
 Proof.

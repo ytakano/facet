@@ -165,6 +165,9 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: package original `ECallExprGeneric` roots-shadow typings into
      substituted existential result form with lifetime-equivalence evidence.
      Check: `make AlphaRoots.vo`, proof-hole scan.
+   - Done: add exact boolean-compatible `ECallExprGeneric`
+     type-substitution package, avoiding an unsound lifetime-equivalence to
+     compatibility bridge. Check: `make AlphaRoots.vo`.
    - Done: identify the runtime package blocker precisely: closure lookup
      yields only unsubstituted callee provenance, while `ECallExprGeneric`
      needs either provenance for `fn_subst_type_params type_args fdef`

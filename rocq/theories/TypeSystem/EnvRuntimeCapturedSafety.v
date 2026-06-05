@@ -2419,8 +2419,34 @@ Proof.
             Hshadow_inner_bind, Hrn_inner_bind, Hcover_inner_bind,
             Hnamed_inner_bind, Hkeys_inner_bind, Hsummary_inner_bind,
             Hframe_inner_start.
+          pose (inner_body_env := global_env_with_local_bounds inner_env
+            (fn_bounds fcall_inner)).
+          assert (Hunique_inner_body_env : fn_env_unique_by_name inner_body_env).
+          { subst inner_body_env. unfold fn_env_unique_by_name in *. simpl.
+            exact Hunique_inner_env. }
+          assert (Hstore_inner_bind_body_env :
+            store_typed_prefix inner_body_env
+              (bind_params ps_inner vs_inner s_inner_base)
+              (sctx_of_ctx (params_ctx ps_inner))).
+          { subst inner_body_env.
+            eapply direct_call_store_typed_prefix_global_env_with_local_bounds.
+            exact Hstore_inner_bind. }
+          assert (Heval_inner_body_base_body_env :
+            eval inner_body_env
+              (bind_params ps_inner vs_inner s_inner_base)
+              (subst_type_params_expr type_args_nested (fn_body fcall_inner))
+              s_inner_body_base v).
+          { subst inner_body_env.
+            eapply direct_call_eval_global_env_with_local_bounds.
+            exact Heval_inner_body_base_inner. }
+          assert (Hsummary_inner_bind_body_env :
+            store_function_closure_targets_summary inner_body_env
+              (bind_params ps_inner vs_inner s_inner_base)).
+          { subst inner_body_env.
+            apply store_function_closure_targets_summary_global_env_with_local_bounds.
+            exact Hsummary_inner_bind. }
           destruct (expr_root_shadow_store_safe_narrow_summary_runtime_package_prefix_named
-            inner_env (fn_outlives fcall_inner) (fn_lifetimes fcall_inner)
+            inner_body_env (fn_outlives fcall_inner) (fn_lifetimes fcall_inner)
             (call_param_root_env ps_inner nested_arg_roots
               (root_env_remove x_local R_nested_runtime))
             (sctx_of_ctx (params_ctx ps_inner))
@@ -2428,9 +2454,10 @@ Proof.
             T_inner_body Sigma_inner_out R_inner_body roots_inner_body
             ret_roots_inner Hsummary_inner_body
             (bind_params ps_inner vs_inner s_inner_base) s_inner_body_base v
-            Hstore_inner_bind Hroots_inner_bind Hshadow_inner_bind
+            Hstore_inner_bind_body_env Hroots_inner_bind Hshadow_inner_bind
             Hrn_inner_bind Hnamed_inner_bind Hkeys_inner_bind
-            Hsummary_inner_bind Heval_inner_body_base_inner Hunique_inner_env)
+            Hsummary_inner_bind_body_env Heval_inner_body_base_body_env
+            Hunique_inner_body_env)
             as [Hstore_inner_body [Hv_inner_body [Hpres_inner_body
               [Hroots_inner_body [Hret_roots_inner [Hrootset_inner_body
                 [Hshadow_inner_body [Hrn_inner_body [Hnamed_inner_body
@@ -2473,7 +2500,7 @@ Proof.
           { eapply params_fresh_in_store_frame_static_fresh.
             exact Hfresh_inner. }
           destruct (expr_root_shadow_store_safe_narrow_summary_preserves_frame_scope_prefix_named
-            inner_env (fn_outlives fcall_inner) (fn_lifetimes fcall_inner)
+            inner_body_env (fn_outlives fcall_inner) (fn_lifetimes fcall_inner)
             (call_param_root_env ps_inner nested_arg_roots
               (root_env_remove x_local R_nested_runtime))
             (sctx_of_ctx (params_ctx ps_inner))
@@ -2481,10 +2508,11 @@ Proof.
             T_inner_body Sigma_inner_out R_inner_body roots_inner_body
             ret_roots_inner Hsummary_inner_body
             (bind_params ps_inner vs_inner s_inner_base) s_inner_body_base v
-            ps_inner s_inner_base Hstore_inner_bind Hroots_inner_bind
+            ps_inner s_inner_base Hstore_inner_bind_body_env Hroots_inner_bind
             Hshadow_inner_bind Hrn_inner_bind Hnamed_inner_bind
-            Hkeys_inner_bind Hsummary_inner_bind Heval_inner_body_base_inner
-            Hunique_inner_env Hcover_inner_bind Hframe_scope_inner_start
+            Hkeys_inner_bind Hsummary_inner_bind_body_env
+            Heval_inner_body_base_body_env Hunique_inner_body_env
+            Hcover_inner_bind Hframe_scope_inner_start
             Hframe_fresh_inner_start)
             as [_ [_ [_ [_ [Hframe_inner_body _]]]]].
           assert (Hsame_inner :
@@ -2509,7 +2537,8 @@ Proof.
               (subst_type_params_ty type_args_nested (fn_ret fcallee_nested))).
           { rewrite Hret_alpha_inner.
             eapply value_has_type_compatible.
-            - exact Hv_inner_body.
+            - eapply direct_call_value_has_type_clear_global_env_local_bounds.
+              exact Hv_inner_body.
             - apply ty_compatible_b_sound with (Ω := fn_outlives fcall_inner).
               exact Hcompat_inner_body. }
           assert (Hv_inner_final :
@@ -2758,8 +2787,34 @@ Proof.
               Hshadow_inner_bind, Hrn_inner_bind, Hcover_inner_bind,
               Hnamed_inner_bind, Hkeys_inner_bind, Hsummary_inner_bind,
               Hframe_inner_start.
+            pose (inner_body_env := global_env_with_local_bounds inner_env
+              (fn_bounds fcall_inner)).
+            assert (Hunique_inner_body_env : fn_env_unique_by_name inner_body_env).
+            { subst inner_body_env. unfold fn_env_unique_by_name in *. simpl.
+              exact Hunique_inner_env. }
+            assert (Hstore_inner_bind_body_env :
+              store_typed_prefix inner_body_env
+                (bind_params ps_inner vs_inner s_inner_base)
+                (sctx_of_ctx (params_ctx ps_inner))).
+            { subst inner_body_env.
+              eapply direct_call_store_typed_prefix_global_env_with_local_bounds.
+              exact Hstore_inner_bind. }
+            assert (Heval_inner_body_base_body_env :
+              eval inner_body_env
+                (bind_params ps_inner vs_inner s_inner_base)
+                (subst_type_params_expr type_args_nested (fn_body fcall_inner))
+                s_inner_body_base v).
+            { subst inner_body_env.
+              eapply direct_call_eval_global_env_with_local_bounds.
+              exact Heval_inner_body_base_inner. }
+            assert (Hsummary_inner_bind_body_env :
+              store_function_closure_targets_summary inner_body_env
+                (bind_params ps_inner vs_inner s_inner_base)).
+            { subst inner_body_env.
+              apply store_function_closure_targets_summary_global_env_with_local_bounds.
+              exact Hsummary_inner_bind. }
             destruct (expr_root_shadow_store_safe_narrow_summary_runtime_package_prefix_named
-              inner_env (fn_outlives fcall_inner) (fn_lifetimes fcall_inner)
+              inner_body_env (fn_outlives fcall_inner) (fn_lifetimes fcall_inner)
               (call_param_root_env ps_inner nested_arg_roots
                 (root_env_remove x_local R_nested_runtime))
               (sctx_of_ctx (params_ctx ps_inner))
@@ -2767,9 +2822,10 @@ Proof.
               T_inner_body Sigma_inner_out R_inner_body roots_inner_body
               ret_roots_inner Hsummary_inner_body
               (bind_params ps_inner vs_inner s_inner_base) s_inner_body_base v
-              Hstore_inner_bind Hroots_inner_bind Hshadow_inner_bind
+              Hstore_inner_bind_body_env Hroots_inner_bind Hshadow_inner_bind
               Hrn_inner_bind Hnamed_inner_bind Hkeys_inner_bind
-              Hsummary_inner_bind Heval_inner_body_base_inner Hunique_inner_env)
+              Hsummary_inner_bind_body_env Heval_inner_body_base_body_env
+              Hunique_inner_body_env)
               as [Hstore_inner_body [Hv_inner_body [Hpres_inner_body
                 [Hroots_inner_body [Hret_roots_inner [Hrootset_inner_body
                   [Hshadow_inner_body [Hrn_inner_body [Hnamed_inner_body
@@ -2812,7 +2868,7 @@ Proof.
             { eapply params_fresh_in_store_frame_static_fresh.
               exact Hfresh_inner. }
             destruct (expr_root_shadow_store_safe_narrow_summary_preserves_frame_scope_prefix_named
-              inner_env (fn_outlives fcall_inner) (fn_lifetimes fcall_inner)
+              inner_body_env (fn_outlives fcall_inner) (fn_lifetimes fcall_inner)
               (call_param_root_env ps_inner nested_arg_roots
                 (root_env_remove x_local R_nested_runtime))
               (sctx_of_ctx (params_ctx ps_inner))
@@ -2820,10 +2876,11 @@ Proof.
               T_inner_body Sigma_inner_out R_inner_body roots_inner_body
               ret_roots_inner Hsummary_inner_body
               (bind_params ps_inner vs_inner s_inner_base) s_inner_body_base v
-              ps_inner s_inner_base Hstore_inner_bind Hroots_inner_bind
+              ps_inner s_inner_base Hstore_inner_bind_body_env Hroots_inner_bind
               Hshadow_inner_bind Hrn_inner_bind Hnamed_inner_bind
-              Hkeys_inner_bind Hsummary_inner_bind Heval_inner_body_base_inner
-              Hunique_inner_env Hcover_inner_bind Hframe_scope_inner_start
+              Hkeys_inner_bind Hsummary_inner_bind_body_env
+              Heval_inner_body_base_body_env Hunique_inner_body_env
+              Hcover_inner_bind Hframe_scope_inner_start
               Hframe_fresh_inner_start)
               as [_ [_ [_ [_ [Hframe_inner_body _]]]]].
             assert (Hsame_inner :

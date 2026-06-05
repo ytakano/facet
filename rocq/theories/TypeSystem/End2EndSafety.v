@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Types Syntax Program RootProvenance TypeChecker EnvRootSoundness EnvRuntimeCapturedSafety.
+From Facet.TypeSystem Require Import Types Syntax Program RootProvenance TypeChecker EnvRootSoundness EnvRuntimeValidatorFacts EnvRuntimeCapturedSafety.
 From Stdlib Require Import List Bool.
 Import ListNotations.
 
@@ -53,7 +53,6 @@ Theorem infer_program_env_end2end_sound :
   forall env env' f,
     infer_program_env_end2end env = infer_ok env' ->
     In f (env_fns env') ->
-    env' = alpha_normalize_global_env env /\
     exists T Γ_out R_out roots,
       infer_fn_env_end2end env' f = infer_ok (T, Γ_out, R_out, roots) /\
       checked_fn_env_roots_checked env' f
@@ -64,38 +63,27 @@ Proof.
   unfold infer_program_env_end2end in Hprog.
   set (env_alpha := alpha_normalize_global_env env) in *.
   destruct (global_names_unique_b env_alpha) eqn:Hunique; try discriminate.
-  destruct (infer_fns_env_end2end env_alpha (env_fns env_alpha))
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
+    try discriminate.
+  destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
     as [[] | err] eqn:Hfns; try discriminate.
   inversion Hprog; subst env'.
-  split; [reflexivity |].
   eapply infer_fns_env_end2end_in_sound; eauto.
 Qed.
 
 Theorem check_program_env_end2end_sound :
-  forall env f,
+  forall env env' f,
     check_program_env_end2end env = true ->
-    In f (env_fns (alpha_normalize_global_env env)) ->
+    infer_program_env_end2end env = infer_ok env' ->
+    In f (env_fns env') ->
     exists T Γ_out R_out roots,
-      infer_fn_env_end2end (alpha_normalize_global_env env) f =
-        infer_ok (T, Γ_out, R_out, roots) /\
-      checked_fn_env_roots_checked (alpha_normalize_global_env env) f
+      infer_fn_env_end2end env' f = infer_ok (T, Γ_out, R_out, roots) /\
+      checked_fn_env_roots_checked env' f
         (initial_root_env_for_params (fn_params f ++ fn_captures f))
         R_out roots.
 Proof.
-  intros env f Hcheck Hin.
-  unfold check_program_env_end2end in Hcheck.
-  destruct (infer_program_env_end2end env) as [env' | err] eqn:Hprog;
-    try discriminate.
-  assert (Hin' : In f (env_fns env')).
-  { unfold infer_program_env_end2end in Hprog.
-    set (env_alpha := alpha_normalize_global_env env) in *.
-    destruct (global_names_unique_b env_alpha); try discriminate.
-    destruct (infer_fns_env_end2end env_alpha (env_fns env_alpha)) as [[] | err];
-      try discriminate.
-    injection Hprog as <-. exact Hin. }
-  destruct (infer_program_env_end2end_sound env env' f Hprog Hin')
-    as [Heq Hsound].
-  rewrite Heq in Hsound. exact Hsound.
+  intros env env' f _ Hprog Hin.
+  eapply infer_program_env_end2end_sound; eauto.
 Qed.
 
 Lemma infer_fn_env_end2end_gate :
@@ -141,13 +129,14 @@ Proof.
   unfold infer_program_env_end2end in Hprog.
   set (env_alpha := alpha_normalize_global_env env) in *.
   destruct (global_names_unique_b env_alpha) eqn:Hunique_global; try discriminate.
-  destruct (infer_fns_env_end2end env_alpha (env_fns env_alpha))
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
+    try discriminate.
+  destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
     as [[] | err] eqn:Hfns; try discriminate.
   injection Hprog as <-.
   eapply env_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready.
   - apply andb_true_iff in Hunique_global as [Hunique_top _].
-    apply top_level_names_unique_b_fn_env_unique_by_name.
-    exact Hunique_top.
+    eapply infer_program_env_alpha_elab_unique_by_name; eauto.
   - apply check_env_root_shadow_captured_call_store_safe_summary_ready.
     unfold check_env_root_shadow_captured_call_store_safe_summary.
     eapply infer_fns_env_end2end_check_env_ready. exact Hfns.

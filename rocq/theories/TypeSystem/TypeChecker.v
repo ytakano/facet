@@ -9961,9 +9961,13 @@ Definition infer_program_env_end2end (env : global_env)
     : infer_result global_env :=
   let env_alpha := alpha_normalize_global_env env in
   if global_names_unique_b env_alpha then
-    match infer_fns_env_end2end env_alpha (env_fns env_alpha) with
+    match infer_program_env_alpha_elab env with
     | infer_err err => infer_err err
-    | infer_ok _ => infer_ok env_alpha
+    | infer_ok env_elab =>
+        match infer_fns_env_end2end env_elab (env_fns env_elab) with
+        | infer_err err => infer_err err
+        | infer_ok _ => infer_ok env_elab
+        end
     end
   else infer_err ErrGlobalNamesNotUnique.
 

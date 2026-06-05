@@ -14527,8 +14527,11 @@ let rec infer_fns_env_end2end env = function
 let infer_program_env_end2end env =
   let env_alpha = alpha_normalize_global_env env in
   if global_names_unique_b env_alpha
-  then (match infer_fns_env_end2end env_alpha env_alpha.env_fns with
-        | Infer_ok _ -> Infer_ok env_alpha
+  then (match infer_program_env_alpha_elab env with
+        | Infer_ok env_elab ->
+          (match infer_fns_env_end2end env_elab env_elab.env_fns with
+           | Infer_ok _ -> Infer_ok env_elab
+           | Infer_err err -> Infer_err err)
         | Infer_err err -> Infer_err err)
   else Infer_err ErrGlobalNamesNotUnique
 

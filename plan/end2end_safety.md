@@ -252,10 +252,12 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      env witnesses. Checks: `make EnvRuntimeBaseSafety.vo`,
      `make EnvRuntimeShadowCheckerFacts.vo`, `make TypeChecker.vo`, proof-hole
      scan.
+   - Done: run the end-to-end gate on the elaborated env returned by
+     `infer_program_env_alpha_elab`; `type_forall_fn_value_pass_and_call.facet`
+     passes. Checks: `make EnvRuntimeCapturedSafety.vo`,
+     `make End2EndSafety.vo`, `dune build`, touched-file proof-hole scan.
    - Todo: investigate remaining pure generic function-value CLI safety-gate
-     failures after proof-package compile. Current targeted failures:
-     `type_forall_fn_value_pass_and_call.facet`,
-     `type_forall_fn_value_annotated_let.facet`,
+     failures: `type_forall_fn_value_annotated_let.facet`,
      `type_forall_fn_value_bound_call.facet`.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`
    through `ECallExprGeneric` after task 6 compiles.

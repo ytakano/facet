@@ -247,6 +247,8 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      Check: `make TypeChecker.vo`, proof-hole scan.
    - Done: check instantiated callee bodies in the function body env.
      Check: `make TypeChecker.vo`.
+   - Blocked: blanket generic-call transport across `global_env_with_local_bounds`
+     is false; type-forall bounds may depend on replaced local bounds.
    - Todo: finish the pure `TTypeForall (... TFn ...)` runtime package after
      that route premise is derivable.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`

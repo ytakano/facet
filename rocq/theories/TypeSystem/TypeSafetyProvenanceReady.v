@@ -84,6 +84,101 @@ with provenance_ready_match_branches : list (string * list ident * expr) -> Prop
       provenance_ready_match_branches rest ->
       provenance_ready_match_branches ((name, binders, e) :: rest).
 
+Lemma subst_type_params_expr_list_go_map :
+  forall type_args args,
+    ((fix go (es : list expr) : list expr :=
+        match es with
+        | [] => []
+        | e' :: es' => subst_type_params_expr type_args e' :: go es'
+        end) args) = map (subst_type_params_expr type_args) args.
+Proof.
+  intros type_args args. induction args as [| e args IH]; simpl;
+    congruence.
+Qed.
+
+Lemma subst_type_params_fields_go_map :
+  forall type_args fields,
+    ((fix go (fs : list (string * expr)) : list (string * expr) :=
+        match fs with
+        | [] => []
+        | (field, e') :: fs' =>
+            (field, subst_type_params_expr type_args e') :: go fs'
+        end) fields) =
+    map (fun '(name, e) =>
+      (name, subst_type_params_expr type_args e)) fields.
+Proof.
+  intros type_args fields.
+  induction fields as [| [name e] fields IH]; simpl; congruence.
+Qed.
+
+Lemma subst_type_params_match_branches_go_map :
+  forall type_args branches,
+    ((fix go (bs : list (string * list ident * expr))
+        : list (string * list ident * expr) :=
+        match bs with
+        | [] => []
+        | (name, binders, e') :: bs' =>
+            (name, binders, subst_type_params_expr type_args e') :: go bs'
+        end) branches) =
+    map (fun '(name, binders, e) =>
+      (name, binders, subst_type_params_expr type_args e)) branches.
+Proof.
+  intros type_args branches.
+  induction branches as [| [[name binders] e] branches IH]; simpl;
+    congruence.
+Qed.
+
+Scheme provenance_ready_expr_ind' :=
+  Induction for provenance_ready_expr Sort Prop
+with provenance_ready_args_ind' :=
+  Induction for provenance_ready_args Sort Prop
+with provenance_ready_fields_ind' :=
+  Induction for provenance_ready_fields Sort Prop
+with provenance_ready_match_branches_ind' :=
+  Induction for provenance_ready_match_branches Sort Prop.
+Combined Scheme provenance_ready_mutind
+  from provenance_ready_expr_ind', provenance_ready_args_ind',
+       provenance_ready_fields_ind', provenance_ready_match_branches_ind'.
+
+Lemma provenance_ready_subst_type_params_expr_mutual :
+  (forall e,
+    provenance_ready_expr e ->
+    forall type_args,
+      provenance_ready_expr (subst_type_params_expr type_args e)) /\
+  (forall args,
+    provenance_ready_args args ->
+    forall type_args,
+      provenance_ready_args (map (subst_type_params_expr type_args) args)) /\
+  (forall fields,
+    provenance_ready_fields fields ->
+    forall type_args,
+      provenance_ready_fields
+        (map (fun '(name, e) =>
+          (name, subst_type_params_expr type_args e)) fields)) /\
+  (forall branches,
+    provenance_ready_match_branches branches ->
+    forall type_args,
+      provenance_ready_match_branches
+        (map (fun '(name, binders, e) =>
+          (name, binders, subst_type_params_expr type_args e)) branches)).
+Proof.
+  apply provenance_ready_mutind; simpl; intros;
+    repeat rewrite subst_type_params_expr_list_go_map;
+    repeat rewrite subst_type_params_fields_go_map;
+    repeat rewrite subst_type_params_match_branches_go_map;
+    try constructor; eauto using provenance_ready_expr, provenance_ready_args,
+      provenance_ready_fields, provenance_ready_match_branches.
+Qed.
+
+Lemma provenance_ready_expr_subst_type_params_expr :
+  forall e type_args,
+    provenance_ready_expr e ->
+    provenance_ready_expr (subst_type_params_expr type_args e).
+Proof.
+  intros e type_args Hready.
+  exact (proj1 provenance_ready_subst_type_params_expr_mutual e Hready type_args).
+Qed.
+
 Scheme preservation_ready_expr_ind' :=
   Induction for preservation_ready_expr Sort Prop
 with preservation_ready_args_ind' :=

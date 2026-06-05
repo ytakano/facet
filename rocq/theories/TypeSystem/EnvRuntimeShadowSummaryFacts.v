@@ -367,6 +367,8 @@ Definition supported_type_generic_function_value_call_expr
     ECallExprGeneric callee type_args args =
       ECallExprGeneric (EVar x) type_args args /\
     Forall (fun T => contains_lbound_ty T = false) type_args /\
+    Forall (fun T => match ty_core T with TForall _ _ _ => False | _ => True end)
+      type_args /\
     infer_core_env_roots_shadow_safe env Ω n R Γ (EVar x) =
       infer_ok (T_callee, Γ_callee, R_callee, roots_callee) /\
     supported_type_generic_function_value_call_callee_shape T_callee.

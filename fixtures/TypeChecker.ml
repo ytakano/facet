@@ -12941,6 +12941,18 @@ let supported_type_generic_function_value_call_callee_ty_b t =
      | _ -> false)
   | _ -> false
 
+(** val type_arg_no_lifetime_forall_b : ty -> bool **)
+
+let type_arg_no_lifetime_forall_b t =
+  match ty_core t with
+  | TForall (_, _, _) -> false
+  | _ -> true
+
+(** val type_args_no_lifetime_forall_b : ty list -> bool **)
+
+let type_args_no_lifetime_forall_b type_args =
+  forallb type_arg_no_lifetime_forall_b type_args
+
 (** val type_args_lbound_free_b : ty list -> bool **)
 
 let type_args_lbound_free_b type_args =
@@ -12966,7 +12978,9 @@ let check_supported_non_type_generic_function_value_call_expr env _UU03a9_ n r _
     expr -> ty list -> bool **)
 
 let check_supported_type_generic_function_value_call_expr env _UU03a9_ n r _UU0393_ callee type_args =
-  (&&) (type_args_lbound_free_b type_args)
+  (&&)
+    ((&&) (type_args_lbound_free_b type_args)
+      (type_args_no_lifetime_forall_b type_args))
     (match callee with
      | EVar _ ->
        (match infer_core_env_roots_shadow_safe env _UU03a9_ n r _UU0393_

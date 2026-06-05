@@ -8655,6 +8655,15 @@ Definition supported_type_generic_function_value_call_callee_ty_b
   | _ => false
   end.
 
+Definition type_arg_no_lifetime_forall_b (T : Ty) : bool :=
+  match ty_core T with
+  | TForall _ _ _ => false
+  | _ => true
+  end.
+
+Definition type_args_no_lifetime_forall_b (type_args : list Ty) : bool :=
+  forallb type_arg_no_lifetime_forall_b type_args.
+
 Definition type_args_lbound_free_b (type_args : list Ty) : bool :=
   forallb (fun T => negb (contains_lbound_ty T)) type_args.
 
@@ -8676,6 +8685,7 @@ Definition check_supported_type_generic_function_value_call_expr
     (R : root_env) (Γ : ctx) (callee : expr)
     (type_args : list Ty) : bool :=
   type_args_lbound_free_b type_args &&
+  type_args_no_lifetime_forall_b type_args &&
   match callee with
   | EVar _ =>
       match infer_core_env_roots_shadow_safe env Ω n R Γ callee with

@@ -1202,6 +1202,10 @@ val supported_non_type_generic_function_value_call_callee_ty_b : ty -> bool
 
 val supported_type_generic_function_value_call_callee_ty_b : ty -> bool
 
+val type_arg_no_lifetime_forall_b : ty -> bool
+
+val type_args_no_lifetime_forall_b : ty list -> bool
+
 val type_args_lbound_free_b : ty list -> bool
 
 val check_supported_non_type_generic_function_value_call_expr :

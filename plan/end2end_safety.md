@@ -234,6 +234,9 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Blocked: the closed substitution route must be gate-aware and
      exact-context; arbitrary `type_args` lack compatibility transport, and
      existential output contexts cannot feed struct/enum/match/wrapper premises.
+   - Blocked: boolean compatibility transport would require transitivity
+     plus boolean outlives completeness; prefer instantiated narrow summaries
+     over proving a broad transport stack here.
    - Todo: add a closed exact roots-shadow substitution theorem for
      `provenance_ready_expr`, or strengthen closure targets with checked
      instantiated summaries.

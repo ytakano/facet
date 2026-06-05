@@ -114,6 +114,8 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: add `ECallExprGeneric` route helper for pure type-generic
      function values. Check: `make TypeSafetyDirectCallWrappers.vo`,
      proof-hole scan.
+   - Todo: add function-signature type-parameter boundedness evidence;
+     needed so non-generic global calls stay unchanged under substitution.
    - Todo: prove roots-shadow type-substitution preservation for arbitrary
      bodies, or an equivalent closed-type-arg preservation lemma for
      `callee_body_root_shadow_provenance_summary`.

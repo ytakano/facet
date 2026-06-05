@@ -708,6 +708,123 @@ Proof.
   - exact Hcompat_subst.
 Qed.
 
+Lemma typed_args_roots_shadow_safe_provenance_ready_subst_type_params_package :
+  forall env Omega n R Sigma args param_tys Sigma' R' roots type_args,
+    provenance_ready_args args ->
+    typed_args_roots_shadow_safe env Omega n R Sigma args
+      (params_of_tys param_tys) Sigma' R' roots ->
+    (forall R0 Sigma0 e T0 Sigma0' R0' roots0,
+        In e args ->
+        provenance_ready_expr e ->
+        typed_env_roots_shadow_safe env Omega n R0 Sigma0 e
+          T0 Sigma0' R0' roots0 ->
+        exists T_subst,
+          typed_env_roots_shadow_safe env Omega n R0
+            (subst_type_params_ctx type_args Sigma0)
+            (subst_type_params_expr type_args e)
+            T_subst (subst_type_params_ctx type_args Sigma0')
+            R0' roots0 /\
+          ty_compatible_b Omega T_subst
+            (subst_type_params_ty type_args T0) = true) ->
+    (forall T_actual T_actual_subst T_expected,
+        ty_compatible_b Omega T_actual_subst
+          (subst_type_params_ty type_args T_actual) = true ->
+        ty_compatible_b Omega T_actual T_expected = true ->
+        ty_compatible_b Omega T_actual_subst
+          (subst_type_params_ty type_args T_expected) = true) ->
+    typed_args_roots_shadow_safe env Omega n R
+      (subst_type_params_ctx type_args Sigma)
+      (map (subst_type_params_expr type_args) args)
+      (params_of_tys (map (subst_type_params_ty type_args) param_tys))
+      (subst_type_params_ctx type_args Sigma') R' roots.
+Proof.
+  intros env Omega n R Sigma args param_tys Sigma' R' roots type_args
+    Hready Htyped Htransport Hcompat_transport.
+  remember (params_of_tys param_tys) as ps eqn:Hps.
+  revert param_tys Hps Hready Htransport.
+  induction Htyped as
+    [R0 Sigma0
+    |R0 R1 R2 Sigma0 Sigma1 Sigma2 e es p ps T_e roots_e roots_es
+      Htyped_e Hcompat_e Htyped_es IH];
+    intros param_tys Hps Hready Htransport;
+    destruct param_tys as [| param_ty_hd param_tys_tl]; simpl in Hps;
+    inversion Hps; subst; simpl.
+  - constructor.
+  - inversion Hready; subst.
+    destruct (Htransport R0 Sigma0 e T_e Sigma1 R1 roots_e)
+      as [T_e_subst [Htyped_e_subst Hcompat_e_subst]].
+    { simpl. left. reflexivity. }
+    { assumption. }
+    { exact Htyped_e. }
+    eapply TERSArgs_Cons.
+    + exact Htyped_e_subst.
+    + eapply Hcompat_transport; eassumption.
+    + eapply IH.
+      * reflexivity.
+      * assumption.
+      * intros R3 Sigma3 e0 T0 Sigma3' R3' roots0 Hin Hready_e Htyped0.
+        eapply Htransport.
+        -- simpl. right. exact Hin.
+        -- exact Hready_e.
+        -- exact Htyped0.
+Qed.
+
+Lemma typed_fields_roots_shadow_safe_provenance_ready_subst_type_params_package :
+  forall env Omega n lts struct_type_args R Sigma fields defs Sigma' R'
+      roots type_args,
+    provenance_ready_fields fields ->
+    typed_fields_roots_shadow_safe env Omega n lts struct_type_args R Sigma
+      fields defs Sigma' R' roots ->
+    (forall name e R0 Sigma0 T0 Sigma0' R0' roots0,
+        lookup_field_b name fields = Some e ->
+        provenance_ready_expr e ->
+        typed_env_roots_shadow_safe env Omega n R0 Sigma0 e
+          T0 Sigma0' R0' roots0 ->
+        exists T_subst,
+          typed_env_roots_shadow_safe env Omega n R0
+            (subst_type_params_ctx type_args Sigma0)
+            (subst_type_params_expr type_args e)
+            T_subst (subst_type_params_ctx type_args Sigma0')
+            R0' roots0 /\
+          ty_compatible_b Omega T_subst
+            (subst_type_params_ty type_args T0) = true) ->
+    (forall T_actual T_actual_subst T_expected,
+        ty_compatible_b Omega T_actual_subst
+          (subst_type_params_ty type_args T_actual) = true ->
+        ty_compatible_b Omega T_actual T_expected = true ->
+        ty_compatible_b Omega T_actual_subst
+          (subst_type_params_ty type_args T_expected) = true) ->
+    compose_type_params type_args struct_type_args =
+      map (subst_type_params_ty type_args) struct_type_args ->
+    typed_fields_roots_shadow_safe env Omega n lts
+      (map (subst_type_params_ty type_args) struct_type_args) R
+      (subst_type_params_ctx type_args Sigma)
+      (map (fun '(field_name, field_expr) =>
+        (field_name, subst_type_params_expr type_args field_expr)) fields)
+      defs (subst_type_params_ctx type_args Sigma') R' roots.
+Proof.
+  intros env Omega n lts struct_type_args R Sigma fields defs Sigma' R'
+    roots type_args Hready Htyped Htransport Hcompat_transport Hcompose.
+  induction Htyped as
+    [lts0 args0 R0 Sigma0 fields0
+    |lts0 args0 R0 R1 R2 Sigma0 Sigma1 Sigma2 fields0 f rest
+      e_field T_field roots_field roots_rest Hlookup Htyped_field Hcompat
+      Htyped_rest IH]; simpl.
+  - constructor.
+  - destruct (Htransport (field_name f) e_field R0 Sigma0 T_field Sigma1 R1
+      roots_field Hlookup)
+      as [T_field_subst [Htyped_field_subst Hcompat_field_subst]].
+    { eapply provenance_ready_fields_lookup_b; eassumption. }
+    { exact Htyped_field. }
+    eapply TERSFields_Cons.
+    + eapply lookup_field_b_subst_type_params_fields. exact Hlookup.
+    + exact Htyped_field_subst.
+    + rewrite <- Hcompose.
+      rewrite <- instantiate_struct_field_ty_type_subst_compose.
+      eapply Hcompat_transport; eassumption.
+    + eapply IH; eauto.
+Qed.
+
 Lemma typed_fields_roots_shadow_safe_provenance_ready_leaf_subst_type_params_package :
   forall env Omega n lts struct_type_args R Sigma fields defs Sigma' R'
       roots type_args,

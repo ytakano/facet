@@ -1,5 +1,5 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
-  TypingRules TypeChecker AlphaRenaming.
+  TypingRules TypeChecker AlphaRenaming EnvStructuralRules.
 From Stdlib Require Import List String Bool Lia PeanoNat Program.Equality.
 Import ListNotations.
 
@@ -498,6 +498,29 @@ Proof.
   apply orb_false_iff in H as [Henv_ret Hbounds].
   apply orb_false_iff in Henv_ret as [Henv Hret].
   repeat split; assumption.
+Qed.
+
+Lemma ty_eqb_subst_type_params_ty :
+  forall type_args T1 T2,
+    ty_eqb T1 T2 = true ->
+    ty_eqb (subst_type_params_ty type_args T1)
+      (subst_type_params_ty type_args T2) = true.
+Proof.
+  intros type_args T1 T2 Heq.
+  apply ty_eqb_true in Heq. subst T2.
+  apply ty_eqb_refl.
+Qed.
+
+Lemma ty_core_eqb_subst_type_params_ty :
+  forall type_args ua ue ca ce,
+    ty_core_eqb ca ce = true ->
+    ty_core_eqb
+      (ty_core (subst_type_params_ty type_args (MkTy ua ca)))
+      (ty_core (subst_type_params_ty type_args (MkTy ue ce))) = true.
+Proof.
+  intros type_args ua ue ca ce Heq.
+  apply ty_core_eqb_true in Heq. subst ce.
+  apply ty_core_eqb_subst_type_params_same_core.
 Qed.
 
 Lemma ty_compatible_b_sound : forall Ω T_actual T_expected,

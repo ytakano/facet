@@ -1,4 +1,4 @@
-From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program Renaming TypingRules RootProvenance TypeChecker EnvStructuralRules.
+From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program Renaming TypingRules RootProvenance TypeChecker RuntimeTyping EnvStructuralRules.
 From Facet.TypeSystem Require Export ExprFacts AlphaCore AlphaCtx AlphaPlace AlphaExpr AlphaFn AlphaTyping AlphaEnvStructural.
 From Stdlib Require Import List String Bool Lia PeanoNat Program.Equality.
 Import ListNotations.
@@ -853,6 +853,100 @@ Proof.
         -- exact Htyped.
 Qed.
 
+Lemma alpha_roots_Forall2_ty_lifetime_equiv_apply_lt_ty :
+  forall sigma type_args,
+    Forall2 ty_lifetime_equiv type_args (map (apply_lt_ty sigma) type_args).
+Proof.
+  intros sigma type_args.
+  induction type_args as [| T type_args IH]; simpl; constructor.
+  - apply ty_lifetime_equiv_apply_lt_ty.
+  - exact IH.
+Qed.
+
+Lemma alpha_roots_subst_type_params_ty_apply_lt_ty_lifetime_equiv :
+  forall sigma type_args T,
+    ty_lifetime_equiv
+      (subst_type_params_ty type_args (apply_lt_ty sigma T))
+      (apply_lt_ty sigma (subst_type_params_ty type_args T)).
+Proof.
+  intros sigma type_args T.
+  rewrite apply_lt_ty_subst_type_params_ty.
+  apply subst_type_params_ty_lifetime_equiv.
+  - apply alpha_roots_Forall2_ty_lifetime_equiv_apply_lt_ty.
+  - apply ty_lifetime_equiv_refl.
+Qed.
+
+Lemma alpha_roots_call_generic_subst_result_lifetime_equiv :
+  forall sigma outer_type_args call_type_args fdef,
+    compose_type_params outer_type_args call_type_args =
+      map (subst_type_params_ty outer_type_args) call_type_args ->
+    ty_lifetime_equiv
+      (subst_type_params_ty outer_type_args
+        (apply_lt_ty sigma
+          (subst_type_params_ty call_type_args (fn_ret fdef))))
+      (apply_lt_ty sigma
+        (subst_type_params_ty
+          (map (subst_type_params_ty outer_type_args) call_type_args)
+          (fn_ret fdef))).
+Proof.
+  intros sigma outer_type_args call_type_args fdef Hcompose.
+  eapply ty_lifetime_equiv_trans.
+  - apply alpha_roots_subst_type_params_ty_apply_lt_ty_lifetime_equiv.
+  - rewrite subst_type_params_ty_compose.
+    rewrite Hcompose.
+    apply ty_lifetime_equiv_refl.
+Qed.
+
+Lemma typed_env_roots_shadow_safe_call_generic_subst_type_params_bridge :
+  forall env Omega n R Sigma Sigma' R' fname fdef
+      outer_type_args call_type_args args sigma arg_roots,
+    In fdef (Program.env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    Datatypes.length call_type_args = fn_type_params fdef ->
+    check_struct_bounds env (fn_bounds fdef)
+      (map (subst_type_params_ty outer_type_args) call_type_args) = None ->
+    typed_args_roots_shadow_safe env Omega n R
+      (subst_type_params_ctx outer_type_args Sigma)
+      (map (subst_type_params_expr outer_type_args) args)
+      (apply_lt_params sigma
+        (apply_type_params
+          (map (subst_type_params_ty outer_type_args) call_type_args)
+          (fn_params fdef)))
+      (subst_type_params_ctx outer_type_args Sigma') R' arg_roots ->
+    Forall (fun '(a, b) => Lifetime.outlives Omega a b)
+      (apply_lt_outlives sigma (fn_outlives fdef)) ->
+    compose_type_params outer_type_args call_type_args =
+      map (subst_type_params_ty outer_type_args) call_type_args ->
+    typed_env_roots_shadow_safe env Omega n R
+      (subst_type_params_ctx outer_type_args Sigma)
+      (subst_type_params_expr outer_type_args
+        (ECallGeneric fname call_type_args args))
+      (apply_lt_ty sigma
+        (subst_type_params_ty
+          (map (subst_type_params_ty outer_type_args) call_type_args)
+          (fn_ret fdef)))
+      (subst_type_params_ctx outer_type_args Sigma') R'
+      (root_sets_union arg_roots) /\
+    ty_lifetime_equiv
+      (subst_type_params_ty outer_type_args
+        (apply_lt_ty sigma
+          (subst_type_params_ty call_type_args (fn_ret fdef))))
+      (apply_lt_ty sigma
+        (subst_type_params_ty
+          (map (subst_type_params_ty outer_type_args) call_type_args)
+          (fn_ret fdef))).
+Proof.
+  intros env Omega n R Sigma Sigma' R' fname fdef outer_type_args
+    call_type_args args sigma arg_roots Hin Hfname Hcaps Hlen Hbounds
+    Hargs Houtlives Hcompose.
+  split.
+  - simpl.
+    eapply TERS_CallGeneric; eauto.
+    rewrite length_map. exact Hlen.
+  - eapply alpha_roots_call_generic_subst_result_lifetime_equiv.
+    exact Hcompose.
+Qed.
 
 Lemma typed_env_roots_shadow_safe_leaf_subst_type_params_ctx :
   forall env Omega n R Sigma e T Sigma' R' roots type_args,

@@ -9193,7 +9193,7 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_fuel
             env Ω n R (ctx_of_sctx Σ) callee type_args &&
           check_all_callee_bodies_root_shadow_store_safe_narrow_summary_instantiated_fuel
             check_expr_root_shadow_store_safe_narrow_summary_fuel
-            fuel' env type_args
+            (S fuel') env type_args
       | ELet m x T_hidden e1 e2 =>
           match infer_core_env_state_fuel_roots_shadow_safe
                   fuel' env Ω n R Σ e1 with

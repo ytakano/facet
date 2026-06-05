@@ -243,6 +243,8 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: factor an early fuel-param instantiated body checker and
      arity-filtered all-callee gate for `ECallExprGeneric` summaries.
      Check: `make TypeChecker.vo`, proof-hole scan.
+   - Done: align the all-callee gate fuel with its body inference fuel.
+     Check: `make TypeChecker.vo`, proof-hole scan.
    - Todo: finish the pure `TTypeForall (... TFn ...)` runtime package after
      that route premise is derivable.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`

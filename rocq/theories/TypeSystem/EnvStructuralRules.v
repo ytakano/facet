@@ -724,6 +724,64 @@ Proof.
       reflexivity || exact Hhead.
 Qed.
 
+Lemma ty_compatible_b_fuel_monotone :
+  forall fuel1 fuel2 Omega T_actual T_expected,
+    fuel1 <= fuel2 ->
+    ty_compatible_b_fuel fuel1 Omega T_actual T_expected = true ->
+    ty_compatible_b_fuel fuel2 Omega T_actual T_expected = true.
+Proof.
+  induction fuel1 as [| fuel1 IH]; intros fuel2 Omega T_actual T_expected Hle Hcompat.
+  - simpl in Hcompat. discriminate.
+  - destruct fuel2 as [| fuel2]; [lia |].
+    destruct T_actual as [ua ca], T_expected as [ue ce].
+    simpl in *.
+    apply andb_true_iff in Hcompat as [Husage Hcompat].
+    rewrite Husage.
+    assert (Hargs : forall actual expected,
+      ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel1) Omega
+        actual expected = true ->
+      ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel2) Omega
+        actual expected = true).
+    { induction actual as [| a actual' IHargs]; intros expected Hargs;
+        destruct expected as [| e expected']; simpl in *; try discriminate;
+        try reflexivity.
+      apply andb_true_iff in Hargs as [Hhead Htail].
+      rewrite (IH fuel2 Omega e a (le_S_n _ _ Hle) Hhead).
+      apply IHargs. exact Htail. }
+    destruct ca, ce; simpl in *; try exact Hcompat;
+      repeat match goal with
+      | |- context [match ?rk with RShared => _ | RUnique => _ end] => destruct rk; simpl in *
+      end;
+      try exact Hcompat;
+      repeat rewrite andb_assoc in *;
+      repeat match goal with
+      | H : _ && _ = true |- _ => apply andb_true_iff in H as [? ?]
+      end;
+      repeat match goal with
+      | H : ?b = true |- context [?b] => rewrite H
+      end;
+      repeat match goal with
+      | H : ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel1) Omega
+              ?actual ?expected = true
+        |- context [ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel2) Omega
+              ?actual ?expected] => rewrite (Hargs actual expected H)
+      | H : ty_compatible_b_fuel fuel1 Omega ?actual ?expected = true
+        |- context [ty_compatible_b_fuel fuel2 Omega ?actual ?expected] =>
+          rewrite (IH fuel2 Omega actual expected (le_S_n _ _ Hle) H)
+      end;
+      try reflexivity;
+      match goal with
+      | H : context [match ?bounds with [] => _ | _ :: _ => _ end]
+        |- context [match ?bounds with [] => _ | _ :: _ => _ end] =>
+          destruct bounds; simpl in *; try discriminate;
+          apply andb_true_iff in H as [? Hrec];
+          repeat match goal with
+          | Hclosed : ?b = true |- context [?b] => rewrite Hclosed
+          end;
+          eapply IH; [lia | exact Hrec]
+      end.
+Qed.
+
 Lemma fn_signature_type_params_subst_noop_captures :
   forall sigma f,
     fn_signature_type_params_subst_noop (Datatypes.length sigma) f ->

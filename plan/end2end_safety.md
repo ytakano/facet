@@ -209,6 +209,8 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      type-parameter substitution. Check: `make TypeSafetyCheckedRoots.vo`.
    - Done: add match-tail roots-shadow type-substitution package.
      Check: `make TypeSafetyCheckedRoots.vo`.
+   - Done: add match payload parameter substitution and name facts.
+     Check: `make TypeSafetyCheckedRoots.vo`.
    - Todo: prove roots-shadow type-substitution preservation for the
      provenance-ready expression subset, or strengthen the closure-target
      runtime invariant with checked instantiated summaries.

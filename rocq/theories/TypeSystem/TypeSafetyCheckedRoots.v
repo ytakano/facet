@@ -106,6 +106,117 @@ Proof.
     apply IH. exact Hunknown.
 Qed.
 
+Lemma param_names_apply_type_params_checked_roots :
+  forall type_args ps,
+    ctx_names (params_ctx (apply_type_params type_args ps)) =
+    ctx_names (params_ctx ps).
+Proof.
+  intros type_args ps.
+  rewrite params_ctx_apply_type_params.
+  apply ctx_names_subst_type_params_ctx.
+Qed.
+
+Lemma params_names_nodup_b_apply_type_params_checked_roots :
+  forall type_args ps,
+    params_names_nodup_b (apply_type_params type_args ps) =
+    params_names_nodup_b ps.
+Proof.
+  intros type_args ps.
+  unfold params_names_nodup_b.
+  rewrite param_names_apply_type_params_checked_roots.
+  reflexivity.
+Qed.
+
+Lemma root_env_lookup_params_none_b_apply_type_params_checked_roots :
+  forall type_args ps R,
+    root_env_lookup_params_none_b (apply_type_params type_args ps) R =
+    root_env_lookup_params_none_b ps R.
+Proof.
+  intros type_args ps R.
+  induction ps as [| [m x T] ps IH]; simpl.
+  - reflexivity.
+  - destruct (root_env_lookup x R); [reflexivity | exact IH].
+Qed.
+
+Lemma roots_exclude_params_apply_type_params_checked_roots :
+  forall type_args ps roots,
+    roots_exclude_params ps roots ->
+    roots_exclude_params (apply_type_params type_args ps) roots.
+Proof.
+  intros type_args ps roots Hexclude.
+  unfold roots_exclude_params in *.
+  rewrite param_names_apply_type_params_checked_roots.
+  exact Hexclude.
+Qed.
+
+Lemma root_env_excludes_params_apply_type_params_checked_roots :
+  forall type_args ps R,
+    root_env_excludes_params ps R ->
+    root_env_excludes_params (apply_type_params type_args ps) R.
+Proof.
+  intros type_args ps R Hexclude.
+  unfold root_env_excludes_params in *.
+  rewrite param_names_apply_type_params_checked_roots.
+  exact Hexclude.
+Qed.
+
+Lemma match_binder_params_subst_type_params :
+  forall type_args binders tys ps,
+    match_binder_params binders tys = infer_ok ps ->
+    match_binder_params binders
+      (map (subst_type_params_ty type_args) tys) =
+    infer_ok (apply_type_params type_args ps).
+Proof.
+  intros type_args binders.
+  induction binders as [| x xs IH]; intros tys ps Hmatch;
+    destruct tys as [| T Ts]; simpl in *; try discriminate.
+  - inversion Hmatch; subst. reflexivity.
+  - destruct (match_binder_params xs Ts) as [ps_tail | err] eqn:Htail;
+      try discriminate.
+    inversion Hmatch; subst.
+    rewrite (IH Ts ps_tail Htail). reflexivity.
+Qed.
+
+Lemma instantiate_enum_variant_field_tys_subst_type_params_compose :
+  forall type_args lts enum_type_args v,
+    instantiate_enum_variant_field_tys lts
+      (compose_type_params type_args enum_type_args) v =
+    map (subst_type_params_ty type_args)
+      (instantiate_enum_variant_field_tys lts enum_type_args v).
+Proof.
+  intros type_args lts enum_type_args v.
+  unfold instantiate_enum_variant_field_tys.
+  rewrite map_map. apply map_ext. intro T.
+  symmetry. apply instantiate_enum_variant_field_ty_type_subst_compose.
+Qed.
+
+Lemma match_payload_params_subst_type_params_compose :
+  forall type_args binders lts enum_type_args v ps,
+    match_payload_params binders lts enum_type_args v = infer_ok ps ->
+    match_payload_params binders lts
+      (compose_type_params type_args enum_type_args) v =
+    infer_ok (apply_type_params type_args ps).
+Proof.
+  intros type_args binders lts enum_type_args v ps Hmatch.
+  unfold match_payload_params in *.
+  rewrite instantiate_enum_variant_field_tys_subst_type_params_compose.
+  apply match_binder_params_subst_type_params. exact Hmatch.
+Qed.
+
+Lemma match_payload_params_subst_type_params_map :
+  forall type_args binders lts enum_type_args v ps,
+    compose_type_params type_args enum_type_args =
+      map (subst_type_params_ty type_args) enum_type_args ->
+    match_payload_params binders lts enum_type_args v = infer_ok ps ->
+    match_payload_params binders lts
+      (map (subst_type_params_ty type_args) enum_type_args) v =
+    infer_ok (apply_type_params type_args ps).
+Proof.
+  intros type_args binders lts enum_type_args v ps Hcompose Hmatch.
+  rewrite <- Hcompose.
+  eapply match_payload_params_subst_type_params_compose. exact Hmatch.
+Qed.
+
 Lemma typed_match_tail_roots_shadow_safe_subst_type_params_package :
   forall env Omega n lts enum_type_args R roots_scrut Sigma branches variants
       expected_core R_out Sigmas Ts roots_list type_args,

@@ -829,6 +829,56 @@ Proof.
   - exact Hequiv.
 Qed.
 
+Lemma Forall2_ty_lifetime_equiv_apply_lt_ty :
+  forall sigma ts,
+    Forall2 ty_lifetime_equiv ts (map (apply_lt_ty sigma) ts).
+Proof.
+  intros sigma ts.
+  induction ts as [| T ts IH]; simpl; constructor.
+  - apply ty_lifetime_equiv_apply_lt_ty.
+  - exact IH.
+Qed.
+
+Lemma subst_type_params_ty_apply_lt_ty_lifetime_equiv :
+  forall sigma type_args T,
+    ty_lifetime_equiv
+      (subst_type_params_ty type_args (apply_lt_ty sigma T))
+      (apply_lt_ty sigma (subst_type_params_ty type_args T)).
+Proof.
+  intros sigma type_args T.
+  rewrite apply_lt_ty_subst_type_params_ty.
+  apply subst_type_params_ty_lifetime_equiv.
+  - apply Forall2_ty_lifetime_equiv_apply_lt_ty.
+  - apply ty_lifetime_equiv_refl.
+Qed.
+
+Lemma Forall2_subst_type_params_ty_apply_lt_ty_lifetime_equiv :
+  forall sigma type_args ts,
+    Forall2 ty_lifetime_equiv
+      (map (subst_type_params_ty type_args) (map (apply_lt_ty sigma) ts))
+      (map (apply_lt_ty sigma) (map (subst_type_params_ty type_args) ts)).
+Proof.
+  intros sigma type_args ts.
+  induction ts as [| T ts IH]; simpl; constructor.
+  - apply subst_type_params_ty_apply_lt_ty_lifetime_equiv.
+  - exact IH.
+Qed.
+
+Lemma runtime_tfn_signature_bridge_subst_type_params_apply_lt_ty :
+  forall sigma type_args params ret,
+    runtime_tfn_signature_bridge
+      (map (subst_type_params_ty type_args) (map (apply_lt_ty sigma) params))
+      (subst_type_params_ty type_args (apply_lt_ty sigma ret))
+      (map (apply_lt_ty sigma) (map (subst_type_params_ty type_args) params))
+      (apply_lt_ty sigma (subst_type_params_ty type_args ret)).
+Proof.
+  intros sigma type_args params ret.
+  eapply RTSB_LifetimeEquiv.
+  - apply RTSB_Refl.
+  - apply Forall2_subst_type_params_ty_apply_lt_ty_lifetime_equiv.
+  - apply subst_type_params_ty_apply_lt_ty_lifetime_equiv.
+Qed.
+
 Lemma ty_compatible_subst_type_params_ty_closed :
   forall Omega type_args T_actual T_expected,
     Forall (fun T => contains_lbound_ty T = false) type_args ->

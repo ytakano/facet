@@ -151,15 +151,14 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      Check: `make TypeSafetyProvenanceReady.vo`, proof-hole scan.
    - Done: add roots-shadow type-substitution leaf/package helpers.
      Check: `make AlphaRoots.vo`, proof-hole scan.
-   - Blocked detail: arbitrary roots-shadow type-substitution transport fails
-     at `ECallGeneric` unless lifetime substitution and type-parameter
-     substitution are bridged for call signatures. `contains_lbound_ty = false`
-     is not enough for equality because type args may contain `LVar`; the
-     bridge must use compatibility/lifetime evidence, not an `apply_lt_ty`
-     no-op shortcut.
-   - Todo: prove roots-shadow type-substitution preservation for arbitrary
-     bodies or an equivalent closed-type-arg
+   - Done: package lifetime-equivalence bridges for type-parameter
+     substitution under lifetime substitution in generic call signatures.
+     Check: `make TypeSafetyDirectCallWrappers.vo`, proof-hole scan.
+   - Todo: use the bridge to prove roots-shadow type-substitution
+     preservation for arbitrary bodies or an equivalent closed-type-arg
      `callee_body_root_shadow_provenance_summary` lemma.
+   - Note: `contains_lbound_ty = false` is not an `apply_lt_ty` no-op because
+     type args may contain `LVar`; transport must use lifetime equivalence.
    - Todo: use that lemma to finish the end-to-end store-safe summary
      package for pure `TTypeForall (... TFn ...)` `ECallExprGeneric` callees.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`

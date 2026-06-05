@@ -314,6 +314,46 @@ Proof.
   - exact Hcompat_result.
 Qed.
 
+Lemma typed_env_roots_shadow_safe_edrop_provenance_ready_subst_type_params_compat_package :
+  forall env Omega n R Sigma e Sigma' R' roots type_args,
+    provenance_ready_expr e ->
+    typed_env_roots_shadow_safe env Omega n R Sigma (EDrop e)
+      (MkTy UUnrestricted TUnits) Sigma' R' roots ->
+    (forall T_inner Sigma_inner R_inner roots_inner,
+        typed_env_roots_shadow_safe env Omega n R Sigma e
+          T_inner Sigma_inner R_inner roots_inner ->
+        exists T_inner_subst Gamma_inner_subst,
+          typed_env_roots_shadow_safe env Omega n R
+            (subst_type_params_ctx type_args Sigma)
+            (subst_type_params_expr type_args e)
+            T_inner_subst (sctx_of_ctx Gamma_inner_subst)
+            R_inner roots_inner /\
+          ty_compatible_b Omega T_inner_subst
+            (subst_type_params_ty type_args T_inner) = true) ->
+    (forall T0, ty_compatible_b Omega T0 T0 = true) ->
+    exists T_subst Gamma_out_subst,
+      typed_env_roots_shadow_safe env Omega n R
+        (subst_type_params_ctx type_args Sigma)
+        (subst_type_params_expr type_args (EDrop e))
+        T_subst (sctx_of_ctx Gamma_out_subst) R' roots /\
+      ty_compatible_b Omega T_subst
+        (subst_type_params_ty type_args (MkTy UUnrestricted TUnits)) = true.
+Proof.
+  intros env Omega n R Sigma e Sigma' R' roots type_args
+    _ Htyped Htransport Hcompat_refl.
+  inversion Htyped; subst.
+  match goal with
+  | Hinner : typed_env_roots_shadow_safe env Omega n R Sigma e
+      ?T_inner ?Sigma_inner ?R_inner ?roots_inner |- _ =>
+      pose proof (Htransport T_inner Sigma_inner R_inner roots_inner Hinner)
+        as [T_inner_subst [Gamma_inner_subst [Htyped_inner_subst _]]]
+  end.
+  exists (MkTy UUnrestricted TUnits), Gamma_inner_subst.
+  split.
+  - simpl. eapply TERS_Drop. exact Htyped_inner_subst.
+  - simpl. apply Hcompat_refl.
+Qed.
+
 Inductive typed_env_roots_checked
     (env : global_env) (Ω : outlives_ctx) (n : nat)
     : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set -> Prop :=

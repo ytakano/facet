@@ -111,6 +111,9 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: add closed type-argument helper proofs for type-generic
      function-value call runtime signatures.
      Check: `make TypeSafetyDirectCallWrappers.vo`.
+   - Done: add `ECallExprGeneric` route helper for pure type-generic
+     function values. Check: `make TypeSafetyDirectCallWrappers.vo`,
+     proof-hole scan.
    - Todo: add end-to-end store-safe summary package for pure
      `TTypeForall (... TFn ...)` `ECallExprGeneric` callees.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`

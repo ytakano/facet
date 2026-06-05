@@ -245,6 +245,8 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      Check: `make TypeChecker.vo`, proof-hole scan.
    - Done: align the all-callee gate fuel with its body inference fuel.
      Check: `make TypeChecker.vo`, proof-hole scan.
+   - Done: check instantiated callee bodies in the function body env.
+     Check: `make TypeChecker.vo`.
    - Todo: finish the pure `TTypeForall (... TFn ...)` runtime package after
      that route premise is derivable.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`

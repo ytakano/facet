@@ -8715,17 +8715,18 @@ Definition check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_
       let body_ctx := subst_type_params_ctx type_args (fn_body_ctx fdef) in
       let body := subst_type_params_expr type_args (fn_body fdef) in
       let params := apply_type_params type_args (fn_params fdef) in
+      let body_env := global_env_with_local_bounds env (fn_bounds fdef) in
       match infer_env_roots_shadow_safe env fdef
               (initial_root_env_for_fn fdef) with
       | infer_err _ => false
       | infer_ok _ =>
-          match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+          match infer_core_env_state_fuel_roots_shadow_safe fuel' body_env
                    (fn_outlives fdef)
                    (fn_lifetimes fdef)
                    (initial_root_env_for_fn fdef)
                    (sctx_of_ctx body_ctx) body with
           | infer_ok (T_body, _, R_body, roots_body) =>
-              check_expr fuel' env (fn_outlives fdef) (fn_lifetimes fdef)
+              check_expr fuel' body_env (fn_outlives fdef) (fn_lifetimes fdef)
                 (initial_root_env_for_fn fdef) (sctx_of_ctx body_ctx) body &&
               ty_compatible_b (fn_outlives fdef) T_body
                 (subst_type_params_ty type_args (fn_ret fdef)) &&

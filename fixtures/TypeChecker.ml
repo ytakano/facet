@@ -12930,17 +12930,6 @@ let supported_non_type_generic_function_value_call_callee_ty_b t =
      | _ -> false)
   | _ -> false
 
-(** val supported_type_generic_function_value_call_callee_ty_b :
-    ty -> bool **)
-
-let supported_type_generic_function_value_call_callee_ty_b t =
-  match ty_core t with
-  | TTypeForall (_, _, body) ->
-    (match ty_core body with
-     | TFn (_, _) -> true
-     | _ -> false)
-  | _ -> false
-
 (** val type_arg_no_lifetime_forall_b : ty -> bool **)
 
 let type_arg_no_lifetime_forall_b t =
@@ -12989,9 +12978,63 @@ let check_supported_type_generic_function_value_call_expr env _UU03a9_ n r _UU03
           let (p0, _) = p in
           let (p1, _) = p0 in
           let (t_callee, _) = p1 in
-          supported_type_generic_function_value_call_callee_ty_b t_callee
+          (match ty_core t_callee with
+           | TTypeForall (type_params, _, body) ->
+             (&&) (Nat.eqb (length type_args) type_params)
+               (match ty_core body with
+                | TFn (_, _) -> true
+                | _ -> false)
+           | _ -> false)
         | Infer_err _ -> false)
      | _ -> false)
+
+(** val check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_body_fuel :
+    (Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+    root_env -> sctx -> expr -> bool) -> Big_int_Z.big_int -> global_env ->
+    fn_def -> ty list -> bool **)
+
+let check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_body_fuel check_expr fuel env fdef type_args =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> false)
+    (fun fuel' ->
+    let body_ctx = subst_type_params_ctx type_args (fn_body_ctx fdef) in
+    let body = subst_type_params_expr type_args fdef.fn_body in
+    let params = apply_type_params type_args fdef.fn_params in
+    let body_env = global_env_with_local_bounds env fdef.fn_bounds in
+    (match infer_env_roots_shadow_safe env fdef (initial_root_env_for_fn fdef) with
+     | Infer_ok _ ->
+       (match infer_core_env_state_fuel_roots_shadow_safe fuel' body_env
+                fdef.fn_outlives fdef.fn_lifetimes
+                (initial_root_env_for_fn fdef) (sctx_of_ctx body_ctx) body with
+        | Infer_ok p ->
+          let (p0, roots_body) = p in
+          let (p1, r_body) = p0 in
+          let (t_body, _) = p1 in
+          (&&)
+            ((&&)
+              ((&&)
+                (check_expr fuel' body_env fdef.fn_outlives fdef.fn_lifetimes
+                  (initial_root_env_for_fn fdef) (sctx_of_ctx body_ctx) body)
+                (ty_compatible_b fdef.fn_outlives t_body
+                  (subst_type_params_ty type_args fdef.fn_ret)))
+              (fn_params_roots_exclude_b params roots_body))
+            (fn_params_root_env_excludes_b params r_body)
+        | Infer_err _ -> false)
+     | Infer_err _ -> false))
+    fuel
+
+(** val check_all_callee_bodies_root_shadow_store_safe_narrow_summary_instantiated_fuel :
+    (Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+    root_env -> sctx -> expr -> bool) -> Big_int_Z.big_int -> global_env ->
+    ty list -> bool **)
+
+let check_all_callee_bodies_root_shadow_store_safe_narrow_summary_instantiated_fuel check_expr fuel env type_args =
+  forallb (fun fdef ->
+    if Nat.eqb (length type_args) fdef.fn_type_params
+    then check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_body_fuel
+           check_expr fuel env fdef type_args
+    else true) env.env_fns
 
 (** val check_fn_root_shadow_non_capturing_call_provenance_summary :
     global_env -> fn_def -> bool **)
@@ -13414,9 +13457,13 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
            (check_supported_non_type_generic_function_value_call_expr env
              _UU03a9_ n r (ctx_of_sctx _UU03a3_) callee)
        | ECallExprGeneric (callee, type_args, args) ->
-         (&&) (store_safe_function_value_call_args_b env args)
-           (check_supported_type_generic_function_value_call_expr env
-             _UU03a9_ n r (ctx_of_sctx _UU03a3_) callee type_args)
+         (&&)
+           ((&&) (store_safe_function_value_call_args_b env args)
+             (check_supported_type_generic_function_value_call_expr env
+               _UU03a9_ n r (ctx_of_sctx _UU03a3_) callee type_args))
+           (check_all_callee_bodies_root_shadow_store_safe_narrow_summary_instantiated_fuel
+             check_expr_root_shadow_store_safe_narrow_summary_fuel
+             (Big_int_Z.succ_big_int fuel') env type_args)
        | EStruct (name, _, _, l1) ->
          (match l1 with
           | [] ->
@@ -13580,24 +13627,9 @@ let rec check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_fue
     (match infer_env_roots_shadow_safe env fdef (initial_root_env_for_fn fdef) with
      | Infer_ok _ ->
        (||)
-         (match infer_core_env_roots_shadow_safe env fdef.fn_outlives
-                  fdef.fn_lifetimes (initial_root_env_for_fn fdef) body_ctx
-                  body with
-          | Infer_ok p ->
-            let (p0, roots_body) = p in
-            let (p1, r_body) = p0 in
-            let (t_body, _) = p1 in
-            (&&)
-              ((&&)
-                ((&&)
-                  (check_expr_root_shadow_store_safe_narrow_summary env
-                    fdef.fn_outlives fdef.fn_lifetimes
-                    (initial_root_env_for_fn fdef) body_ctx body)
-                  (ty_compatible_b fdef.fn_outlives t_body
-                    (subst_type_params_ty type_args fdef.fn_ret)))
-                (fn_params_roots_exclude_b params roots_body))
-              (fn_params_root_env_excludes_b params r_body)
-          | Infer_err _ -> false)
+         (check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_body_fuel
+           check_expr_root_shadow_store_safe_narrow_summary_fuel
+           (Big_int_Z.succ_big_int fuel') env fdef type_args)
          (match generic_direct_call_target_expr body with
           | Some p ->
             let (p0, synthetic_body) = p in

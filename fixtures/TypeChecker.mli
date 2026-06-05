@@ -1200,8 +1200,6 @@ val local_fn_value_call_target_expr_with_binder :
 
 val supported_non_type_generic_function_value_call_callee_ty_b : ty -> bool
 
-val supported_type_generic_function_value_call_callee_ty_b : ty -> bool
-
 val type_arg_no_lifetime_forall_b : ty -> bool
 
 val type_args_no_lifetime_forall_b : ty list -> bool
@@ -1215,6 +1213,16 @@ val check_supported_non_type_generic_function_value_call_expr :
 val check_supported_type_generic_function_value_call_expr :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
   -> ty list -> bool
+
+val check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_body_fuel :
+  (Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+  root_env -> sctx -> expr -> bool) -> Big_int_Z.big_int -> global_env ->
+  fn_def -> ty list -> bool
+
+val check_all_callee_bodies_root_shadow_store_safe_narrow_summary_instantiated_fuel :
+  (Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
+  root_env -> sctx -> expr -> bool) -> Big_int_Z.big_int -> global_env -> ty
+  list -> bool
 
 val check_fn_root_shadow_non_capturing_call_provenance_summary :
   global_env -> fn_def -> bool

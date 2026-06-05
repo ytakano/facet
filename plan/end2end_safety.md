@@ -260,8 +260,18 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      calls when `f` is not used in args; pure annotated/bound local cases pass.
      Checks: `make TypeChecker.vo`, `make End2EndSafety.vo`, `dune build`,
      proof-hole scan, three pure targeted CLI tests.
-7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`
-   through `ECallExprGeneric` after task 6 compiles.
+7. In progress: accept mixed `TForall (... TTypeForall (... TFn ...))`
+   function-value calls.
+   - Done: route mixed call inference through the existing mixed helper in
+     plain and elaborated `ECallExpr` paths; mixed tests now reach the
+     end-to-end safety gate. Checks: `make TypeChecker.vo`, `dune build`,
+     proof-hole scan, mixed targeted CLI tests.
+   - Todo: add runtime summary support for mixed higher-rank/type-generic
+     function-value calls. Current targeted gate failures:
+     `mixed_forall_fn_value_pass_and_call.facet`,
+     `mixed_forall_fn_value_annotated_let.facet`,
+     `mixed_forall_fn_value_trait_bound_call.facet`,
+     `generic_item_pass_monomorphic_hof.facet`.
 8. Todo: final full verification and roadmap closeout.
 
 ## Required checks

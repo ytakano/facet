@@ -2843,6 +2843,12 @@ Fixpoint infer_core_env_fuel (fuel : nat)
                   end
               | TForall m bounds body =>
                   match ty_core body with
+                  | TTypeForall type_params type_bounds type_body =>
+                      match infer_mixed_forall_call_env env Ω n m bounds
+                              type_params type_bounds type_body arg_tys with
+                      | infer_err err => infer_err err
+                      | infer_ok ret => infer_ok (ret, Γ')
+                      end
                   | TFn param_tys ret =>
                       match build_bound_sigma (repeat None m) arg_tys param_tys with
                       | None => infer_err ErrLifetimeConflict
@@ -4772,6 +4778,12 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
                   end
               | TForall m bounds body =>
                   match ty_core body with
+                  | TTypeForall type_params type_bounds type_body =>
+                      match infer_mixed_forall_call_env env Ω n m bounds
+                              type_params type_bounds type_body arg_tys with
+                      | infer_err err => infer_err err
+                      | infer_ok ret => infer_ok (ret, Σ', ECallExpr callee' args')
+                      end
                   | TFn param_tys ret =>
                       match build_bound_sigma (repeat None m) arg_tys param_tys with
                       | None => infer_err ErrLifetimeConflict

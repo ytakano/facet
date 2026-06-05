@@ -6156,6 +6156,12 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
                                     (callee', args')))
                              else Infer_err ErrHrtBoundUnsatisfied)
                    | None -> Infer_err ErrLifetimeConflict)
+                | TTypeForall (type_params, type_bounds, type_body) ->
+                  (match infer_mixed_forall_call_env env _UU03a9_ n m bounds
+                           type_params type_bounds type_body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok ((ret, _UU03a3_'), (ECallExpr (callee', args')))
+                   | Infer_err err -> Infer_err err)
                 | x -> Infer_err (ErrMalformedHrtBody x))
              | TTypeForall (type_params, bounds, body) ->
                (match infer_type_forall_call_env_elab env _UU03a9_

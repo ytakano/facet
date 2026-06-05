@@ -433,6 +433,8 @@ Proof.
   destruct T_callee as [u c]. simpl in Hcheck.
   destruct c; try discriminate.
   destruct t as [u_body c_body]. simpl in Hcheck.
+  apply andb_true_iff in Hcheck as [Harity Hcheck].
+  apply Nat.eqb_eq in Harity.
   destruct c_body; try discriminate.
   unfold supported_type_generic_function_value_call_expr.
   exists i, (MkTy u (TTypeForall n0 l (MkTy u_body (TFn l0 t)))),
@@ -451,6 +453,8 @@ Proof.
     destruct T as [uT cT]. simpl in Hnoforall.
     destruct cT; try exact I; discriminate.
   - exact Hinfer.
+  - exists u, n0, l, (MkTy u_body (TFn l0 t)).
+    split; [reflexivity|exact Harity].
   - eapply SFV_TTypeForall_TFn; reflexivity.
 Qed.
 

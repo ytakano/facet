@@ -8690,7 +8690,15 @@ Definition check_supported_type_generic_function_value_call_expr
   | EVar _ =>
       match infer_core_env_roots_shadow_safe env Ω n R Γ callee with
       | infer_ok (T_callee, _, _, _) =>
-          supported_type_generic_function_value_call_callee_ty_b T_callee
+          match ty_core T_callee with
+          | TTypeForall type_params _ body =>
+              Nat.eqb (Datatypes.length type_args) type_params &&
+              match ty_core body with
+              | TFn _ _ => true
+              | _ => false
+              end
+          | _ => false
+          end
       | infer_err _ => false
       end
   | _ => false

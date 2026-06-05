@@ -371,6 +371,9 @@ Definition supported_type_generic_function_value_call_expr
       type_args /\
     infer_core_env_roots_shadow_safe env Ω n R Γ (EVar x) =
       infer_ok (T_callee, Γ_callee, R_callee, roots_callee) /\
+    (exists u type_params bounds body,
+      T_callee = MkTy u (TTypeForall type_params bounds body) /\
+      Datatypes.length type_args = type_params) /\
     supported_type_generic_function_value_call_callee_shape T_callee.
 
 Definition supported_non_type_generic_function_value_call_expr

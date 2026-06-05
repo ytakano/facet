@@ -55,6 +55,57 @@ Proof.
     + apply IH. exact Hlookup.
 Qed.
 
+Lemma lookup_expr_branch_subst_type_params_match_branches :
+  forall type_args branches name e,
+    lookup_expr_branch name branches = Some e ->
+    lookup_expr_branch name
+      (map (fun '(branch_name, binders, branch_expr) =>
+        (branch_name, binders, subst_type_params_expr type_args branch_expr))
+        branches) = Some (subst_type_params_expr type_args e).
+Proof.
+  intros type_args branches name e Hlookup.
+  induction branches as [| [[branch_name binders] branch_expr] rest IH];
+    simpl in *.
+  - discriminate.
+  - destruct (String.eqb name branch_name) eqn:Hname.
+    + inversion Hlookup; subst. reflexivity.
+    + apply IH. exact Hlookup.
+Qed.
+
+Lemma lookup_expr_branch_binders_subst_type_params_match_branches :
+  forall type_args branches name binders,
+    lookup_expr_branch_binders name branches = Some binders ->
+    lookup_expr_branch_binders name
+      (map (fun '(branch_name, branch_binders, branch_expr) =>
+        (branch_name, branch_binders,
+          subst_type_params_expr type_args branch_expr)) branches) =
+      Some binders.
+Proof.
+  intros type_args branches name binders Hlookup.
+  induction branches as [| [[branch_name branch_binders] branch_expr] rest IH];
+    simpl in *.
+  - discriminate.
+  - destruct (String.eqb name branch_name) eqn:Hname.
+    + exact Hlookup.
+    + apply IH. exact Hlookup.
+Qed.
+
+Lemma first_unknown_variant_branch_subst_type_params_match_branches :
+  forall type_args branches variants,
+    first_unknown_variant_branch branches variants = None ->
+    first_unknown_variant_branch
+      (map (fun '(branch_name, binders, branch_expr) =>
+        (branch_name, binders, subst_type_params_expr type_args branch_expr))
+        branches) variants = None.
+Proof.
+  intros type_args branches variants Hunknown.
+  induction branches as [| [[branch_name binders] branch_expr] rest IH];
+    simpl in *.
+  - reflexivity.
+  - destruct (lookup_enum_variant branch_name variants); try discriminate.
+    apply IH. exact Hunknown.
+Qed.
+
 Lemma typed_env_roots_shadow_safe_provenance_ready_leaf_subst_type_params_compat_package :
   forall env Omega n R Sigma e T Sigma' R' roots type_args,
     provenance_ready_expr e ->

@@ -114,6 +114,9 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: add `ECallExprGeneric` route helper for pure type-generic
      function values. Check: `make TypeSafetyDirectCallWrappers.vo`,
      proof-hole scan.
+   - Done: expose generic `ECallExprGeneric` final-store equality
+     cleanup for pure `TTypeForall (... TFn ...)` calls.
+     Check: `make TypeSafetyDirectCallWrappers.vo`, proof-hole scan.
    - Done: add function-signature substitution-stability evidence;
      boundedness alone is insufficient because omitted struct/enum type
      args are filled from the active type-arg list.

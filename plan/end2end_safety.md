@@ -121,9 +121,12 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: add environment-level signature substitution-stability
      projections for non-generic global call blockers.
      Check: `make EnvStructuralRules.vo`, proof-hole scan.
-   - Todo: prove roots-shadow type-substitution preservation for arbitrary
-     bodies, or an equivalent closed-type-arg preservation lemma for
-     `callee_body_root_shadow_provenance_summary`.
+   - Done: add compatibility fuel monotonicity proof support for boolean
+     substitution transport.
+     Check: `make EnvStructuralRules.vo`, proof-hole scan.
+   - Todo: prove boolean compatibility substitution transport, then roots-shadow
+     type-substitution preservation for arbitrary bodies or an equivalent
+     closed-type-arg `callee_body_root_shadow_provenance_summary` lemma.
    - Todo: use that lemma to finish the end-to-end store-safe summary
      package for pure `TTypeForall (... TFn ...)` `ECallExprGeneric` callees.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`

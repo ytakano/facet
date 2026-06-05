@@ -138,7 +138,8 @@ Proof.
   destruct e as
     [| lit | z | m0 x0 T0 e1 e2 | m0 x0 e1 e2 | fname_value
 	     | fname_make captures_make | p | fname_direct args_direct
-	     | fname_generic tys_generic args_generic | callee args_call | sname lts tys fields
+	     | fname_generic tys_generic args_generic | callee args_call
+	     | callee_generic tys_call args_call_generic | sname lts tys fields
 	     | enum_name variant_name lts_enum tys_enum payloads | scrut_match branches_match
 	     | p e_new | p e_new | rk p | e | e | e1 e2 e3];
     try discriminate.
@@ -146,7 +147,8 @@ Proof.
     [| lit1 | z1 | m1 x1 T1 e11 e12 | m1 x1 e11 e12
 	     | fname_value1 | fname_make captures_make | p1
 	     | fname1 args1 | fname_generic1 tys_generic1 args_generic1
-	     | callee1 args1 | sname1 lts1 tys1 fields1
+	     | callee1 args1 | callee_generic1 tys_call1 args_call_generic1
+       | sname1 lts1 tys1 fields1
 	       | enum_name1 variant_name1 lts_enum1 tys_enum1 payloads1 | scrut_match1 branches_match1
 	     | p1 e_new1 | p1 e_new1 | rk1 p1 | e1 | e1 | e11 e12 e13];
     try discriminate.
@@ -154,7 +156,8 @@ Proof.
     [| lit2 | z2 | m2 x2 T2 e21 e22 | m2 x2 e21 e22
 	     | fname_value2 | fname_make2 captures_make2 | p2
 	     | fname2 args2 | fname_generic2 tys_generic2 args_generic2
-	     | callee2 args2 | sname2 lts2 tys2 fields2
+	     | callee2 args2 | callee_generic2 tys_call2 args_call_generic2
+       | sname2 lts2 tys2 fields2
 	       | enum_name2 variant_name2 lts_enum2 tys_enum2 payloads2 | scrut_match2 branches_match2
 	     | p2 e_new2 | p2 e_new2 | rk2 p2 | e2 | e2 | e21 e22 e23];
     try discriminate.
@@ -162,7 +165,8 @@ Proof.
     [| litc | y | mc xc Tc ec1 ec2 | mc xc ec1 ec2
 	     | fnamec | fname_makec captures_makec | pc
 	     | fnamec argsc | fname_genericc tys_genericc args_genericc
-	     | calleec argsc | snamec ltsc tysc fieldsc
+	     | calleec argsc | callee_genericc tys_callc args_call_genericc
+       | snamec ltsc tysc fieldsc
 	       | enum_namec variant_namec lts_enumc tys_enumc payloadsc | scrut_matchc branches_matchc
 	     | pc e_newc | pc e_newc | rkc pc | ec | ec | ec1 ec2 ec3];
     try discriminate.

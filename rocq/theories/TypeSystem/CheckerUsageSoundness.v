@@ -126,6 +126,7 @@ Fixpoint expr_linear_lets_used (fenv : list fn_def) (e : expr) {struct e}
   | ECall _ _ => True
   | ECallGeneric _ _ _ => True
 	  | ECallExpr _ _ => True
+  | ECallExprGeneric _ _ _ => True
 	  | EStruct _ _ _ _ => True
 	  | EEnum _ _ _ _ _ => True
   | EMatch _ _ => True

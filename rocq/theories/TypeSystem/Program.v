@@ -255,6 +255,17 @@ Fixpoint subst_type_params_expr (σ : list Ty) (e : expr) {struct e} : expr :=
         end
       in
       ECallExpr (subst_type_params_expr σ ef) (go args)
+  | ECallExprGeneric ef type_args args =>
+      let fix go (es : list expr) : list expr :=
+        match es with
+        | [] => []
+        | e' :: es' => subst_type_params_expr σ e' :: go es'
+        end
+      in
+      ECallExprGeneric
+        (subst_type_params_expr σ ef)
+        (map (subst_type_params_ty σ) type_args)
+        (go args)
   | EStruct name lts type_args fields =>
       let fix go (fs : list (string * expr)) : list (string * expr) :=
         match fs with
@@ -389,6 +400,7 @@ Proof.
   destruct e as
     [| lit | x | m x T e1 e2 | m x e1 e2 | fname | fname captures
      | p | fname args | fname type_args args | ef args
+     | ef type_args args
      | name lts type_args fields | enum_name variant lts type_args args
      | discr branches | p rhs | p rhs | rk p | e | e | e1 e2 e3];
     simpl; try reflexivity.
@@ -401,6 +413,9 @@ Proof.
     induction args as [| e args IHargs]; simpl; auto.
     rewrite (IH e), IHargs. reflexivity.
   - rewrite (IH ef). apply f_equal.
+    induction args as [| arg args IHargs]; simpl; auto.
+    rewrite (IH arg), IHargs. reflexivity.
+  - rewrite (IH ef), map_subst_type_params_ty_nil. apply f_equal.
     induction args as [| arg args IHargs]; simpl; auto.
     rewrite (IH arg), IHargs. reflexivity.
   - rewrite map_subst_type_params_ty_nil. apply f_equal.

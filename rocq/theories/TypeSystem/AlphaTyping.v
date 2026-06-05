@@ -115,6 +115,17 @@ Proof.
                      (arg' :: rest', used2)
                  end) used0 l).
     injection Hrename as <- _. simpl in Hplace. discriminate.
+  - destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
+    destruct ((fix go (used0 : list ident) (args0 : list expr)
+                : list expr * list ident :=
+                 match args0 with
+                 | [] => ([], used0)
+                 | arg :: rest =>
+                     let (arg', used1) := alpha_rename_expr ρ used0 arg in
+                     let (rest', used2) := go used1 rest in
+                     (arg' :: rest', used2)
+                 end) used0 l0).
+    injection Hrename as <- _. simpl in Hplace. discriminate.
 	  - destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
 	                : list (string * expr) * list ident :=
 	                 match fields0 with
@@ -226,6 +237,17 @@ Proof.
                      let (rest', used2) := go used1 rest in
                      (arg' :: rest', used2)
                  end) used0 l).
+    injection Hrename as <- _. reflexivity.
+  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
+    destruct ((fix go (used0 : list ident) (args0 : list expr)
+                : list expr * list ident :=
+                 match args0 with
+                 | [] => ([], used0)
+                 | arg :: rest =>
+                     let (arg', used1) := alpha_rename_expr ρ used0 arg in
+                     let (rest', used2) := go used1 rest in
+                     (arg' :: rest', used2)
+                 end) used0 l0).
     injection Hrename as <- _. reflexivity.
   - destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))
                 : list (string * expr) * list ident :=

@@ -85,6 +85,13 @@ Fixpoint expr_names (e : expr) : list ident :=
         | arg :: rest => expr_names arg ++ go rest
         end
       in expr_names callee ++ go args
+  | ECallExprGeneric callee _ args =>
+      let fix go (args0 : list expr) : list ident :=
+        match args0 with
+        | [] => []
+        | arg :: rest => expr_names arg ++ go rest
+        end
+      in expr_names callee ++ go args
   | EStruct _ _ _ fields =>
       let fix go (fields0 : list (string * expr)) : list ident :=
         match fields0 with
@@ -190,6 +197,20 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
       in
       let (args', used') := go used1 args in
       (ECallExpr callee' args', used')
+  | ECallExprGeneric callee type_args args =>
+      let (callee', used1) := alpha_rename_expr ρ used callee in
+      let fix go (used0 : list ident) (args0 : list expr)
+          : list expr * list ident :=
+        match args0 with
+        | [] => ([], used0)
+        | arg :: rest =>
+            let (arg', used1') := alpha_rename_expr ρ used0 arg in
+            let (rest', used2) := go used1' rest in
+            (arg' :: rest', used2)
+        end
+      in
+      let (args', used') := go used1 args in
+      (ECallExprGeneric callee' type_args args', used')
   | EStruct name lts args fields =>
       let fix go (used0 : list ident) (fields0 : list (string * expr))
           : list (string * expr) * list ident :=

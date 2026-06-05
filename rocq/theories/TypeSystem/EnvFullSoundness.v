@@ -25,6 +25,10 @@ Proof.
 	    induction l as [| a rest IHargs]; simpl.
     + reflexivity.
     + rewrite IH, IHargs. reflexivity.
+  - rewrite IH.
+    induction l0 as [| a rest IHargs]; simpl.
+    + reflexivity.
+    + rewrite IH, IHargs. reflexivity.
   - induction l1 as [| [fname field] rest IHfields]; simpl.
     + reflexivity.
     + rewrite IH, IHfields. reflexivity.

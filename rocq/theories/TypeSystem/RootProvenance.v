@@ -877,6 +877,9 @@ Fixpoint expr_local_store_names (e : expr) : list ident :=
   | ECallExpr callee args =>
       expr_local_store_names callee ++
       args_local_store_names_with expr_local_store_names args
+  | ECallExprGeneric callee _ args =>
+      expr_local_store_names callee ++
+      args_local_store_names_with expr_local_store_names args
   | EStruct _ _ _ fields =>
       fields_local_store_names_with expr_local_store_names fields
   | EEnum _ _ _ _ payloads =>
@@ -915,6 +918,7 @@ Proof.
   destruct e as
     [| lit | x | m x T e1 e2 | m x e1 e2 | fname | fname captures
      | p | fname args | fname type_args' args | ef args
+     | ef type_args' args
      | name lts type_args' fields | enum_name variant lts type_args' args
      | discr branches | p rhs | p rhs | rk p | e | e | e1 e2 e3];
     simpl; try reflexivity.
@@ -924,6 +928,17 @@ Proof.
     rewrite (IH type_args arg), IHargs. reflexivity.
   - induction args as [| arg args IHargs]; simpl; auto.
     rewrite (IH type_args arg), IHargs. reflexivity.
+  - assert (Hargs :
+      args_local_store_names_with expr_local_store_names
+        ((fix go (es : list expr) : list expr :=
+            match es with
+            | [] => []
+            | e' :: es' => subst_type_params_expr type_args e' :: go es'
+            end) args) =
+      args_local_store_names_with expr_local_store_names args).
+    { induction args as [| arg args IHargs]; simpl; auto.
+      rewrite (IH type_args arg), IHargs. reflexivity. }
+    rewrite (IH type_args ef), Hargs. reflexivity.
   - assert (Hargs :
       args_local_store_names_with expr_local_store_names
         ((fix go (es : list expr) : list expr :=
@@ -983,6 +998,14 @@ Lemma expr_local_store_names_call_expr :
     expr_local_store_names callee ++ args_local_store_names args.
 Proof.
   intros callee args. reflexivity.
+Qed.
+
+Lemma expr_local_store_names_call_expr_generic :
+  forall callee type_args args,
+    expr_local_store_names (ECallExprGeneric callee type_args args) =
+    expr_local_store_names callee ++ args_local_store_names args.
+Proof.
+  intros callee type_args args. reflexivity.
 Qed.
 
 Lemma expr_local_store_names_struct :

@@ -3488,6 +3488,11 @@ Inductive borrow_ok_env_structural (env : global_env)
       borrow_ok_env_structural env PBS Γ callee PBS1 ->
       borrow_ok_args_env_structural env PBS1 Γ args PBS2 ->
       borrow_ok_env_structural env PBS Γ (ECallExpr callee args) PBS2
+  | BOES_CallExprGeneric : forall PBS PBS1 PBS2 Γ callee type_args args,
+      borrow_ok_env_structural env PBS Γ callee PBS1 ->
+      borrow_ok_args_env_structural env PBS1 Γ args PBS2 ->
+      borrow_ok_env_structural env PBS Γ
+        (ECallExprGeneric callee type_args args) PBS2
 with borrow_ok_args_env_structural (env : global_env)
     : path_borrow_state -> ctx -> list expr -> path_borrow_state -> Prop :=
   | BOESArgs_Nil : forall PBS Γ,

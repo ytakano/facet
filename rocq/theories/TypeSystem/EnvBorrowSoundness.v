@@ -232,6 +232,25 @@ Proof.
             exact Ha.
          ++ apply IHargs; [simpl in *; lia | exact Hcheck].
 
+  (* ECallExprGeneric *)
+  + destruct (borrow_check_env env PBS Γ e) as [PBScallee|] eqn:Hcallee; [|discriminate].
+    apply BOES_CallExprGeneric with (PBS1 := PBScallee).
+    * apply IH with (e := e).
+      -- pose proof (expr_size_callexpr_generic_callee_lt e l l0). lia.
+      -- exact Hcallee.
+    * clear Hcallee. revert PBScallee PBS' Hcheck.
+      induction l0 as [| a rest IHargs]; intros PBScallee PBS' Hcheck.
+      -- simpl in Hcheck. injection Hcheck as <-. constructor.
+      -- simpl in Hcheck.
+         destruct (borrow_check_env env PBScallee Γ a) as [PBS1|] eqn:Ha; [|discriminate].
+         apply BOESArgs_Cons with (PBS1 := PBS1).
+         ++ apply IH with (e := a).
+            pose proof (expr_size_callexpr_generic_arg_lt e l (a :: rest) a
+              (or_introl eq_refl)).
+            simpl in Hlt. lia.
+            exact Ha.
+         ++ apply IHargs; [simpl in *; lia | exact Hcheck].
+
   (* EStruct *)
   + apply BOES_Struct.
     revert PBS PBS' Hcheck.

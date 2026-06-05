@@ -1124,6 +1124,11 @@ Inductive borrow_ok (fenv : list fn_def)
       borrow_ok_args fenv BS1 Γ args BS2 ->
       borrow_ok fenv BS Γ (ECallExpr callee args) BS2
 
+  | BO_CallExprGeneric : forall BS BS1 BS2 Γ callee type_args args,
+      borrow_ok fenv BS Γ callee BS1 ->
+      borrow_ok_args fenv BS1 Γ args BS2 ->
+      borrow_ok fenv BS Γ (ECallExprGeneric callee type_args args) BS2
+
   | BO_Enum : forall BS BS' Γ enum_name variant_name lts args payloads,
       borrow_ok_args fenv BS Γ payloads BS' ->
       borrow_ok fenv BS Γ (EEnum enum_name variant_name lts args payloads) BS'

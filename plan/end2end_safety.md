@@ -82,7 +82,12 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      Check: `make EnvRuntimeCapturedSafety.vo`.
 6. In progress: add an explicit elaborated generic function-value call
    node so inferred type args are present at runtime.
-   - Todo: add `ECallExprGeneric` syntax/traversal/FIR plumbing.
+   - Done: add `ECallExprGeneric` syntax/traversal/FIR plumbing; checker
+     accept paths still reject it as `ErrNotImplemented`.
+     Checks: `cd rocq && make`, `dune build`, proof-hole scan.
+     `sh tests/run.sh` still fails the 8 known generic function-value/local
+     safety-gate cases; `sh tests/fir/run.sh` remains red on existing
+     safety-gate and brittle FIR name-suffix expectations.
    - Todo: type-check pure `TTypeForall (... TFn ...)` calls to
      `ECallExprGeneric` and regenerate extraction.
    - Todo: prove pure `TTypeForall` runtime safety packages.

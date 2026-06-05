@@ -35,6 +35,13 @@ Fixpoint expr_size (e : expr) : nat :=
             | [] => 0
             | arg :: rest => expr_size arg + go rest
             end) args)
+  | ECallExprGeneric callee _ args =>
+      S (expr_size callee +
+         (fix go (args0 : list expr) : nat :=
+            match args0 with
+            | [] => 0
+            | arg :: rest => expr_size arg + go rest
+            end) args)
   | EStruct _ _ _ fields =>
       S ((fix go (fields0 : list (string * expr)) : nat :=
             match fields0 with
@@ -97,6 +104,25 @@ Lemma expr_size_callexpr_arg_lt : forall callee args arg,
   expr_size arg < expr_size (ECallExpr callee args).
 Proof.
   intros callee args.
+  induction args as [| a rest IH]; intros arg Hin.
+  - contradiction.
+  - simpl in *. destruct Hin as [<- | Hin].
+    + lia.
+    + specialize (IH arg Hin). simpl in IH. lia.
+Qed.
+
+Lemma expr_size_callexpr_generic_callee_lt : forall callee type_args args,
+  expr_size callee < expr_size (ECallExprGeneric callee type_args args).
+Proof.
+  intros. simpl. lia.
+Qed.
+
+Lemma expr_size_callexpr_generic_arg_lt :
+  forall callee type_args args arg,
+    In arg args ->
+    expr_size arg < expr_size (ECallExprGeneric callee type_args args).
+Proof.
+  intros callee type_args args.
   induction args as [| a rest IH]; intros arg Hin.
   - contradiction.
   - simpl in *. destruct Hin as [<- | Hin].

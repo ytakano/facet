@@ -1929,7 +1929,7 @@ Proof.
   fix IH 2. intros type_args e.
   destruct e as
     [| lit | x | m x T e1 e2 | m x e1 e2 | fname | fname captures
-     | p | fname args | fname type_args' args | ef args
+     | p | fname args | fname type_args' args | ef args | ef type_args' args
      | name lts type_args' fields | enum_name variant lts type_args' args
      | discr branches | p rhs | p rhs | rk p | e | e | e1 e2 e3];
     simpl; try reflexivity.
@@ -1939,6 +1939,25 @@ Proof.
     rewrite (IH type_args arg), IHargs. reflexivity.
   - induction args as [| arg args IHargs]; simpl; auto.
     rewrite (IH type_args arg), IHargs. reflexivity.
+  - assert (Hargs :
+      ((fix go (args0 : list expr) : list ident :=
+          match args0 with
+          | [] => []
+          | arg :: rest => expr_names arg ++ go rest
+          end)
+        ((fix go (es : list expr) : list expr :=
+            match es with
+            | [] => []
+            | e' :: es' => subst_type_params_expr type_args e' :: go es'
+            end) args)) =
+      ((fix go (args0 : list expr) : list ident :=
+          match args0 with
+          | [] => []
+          | arg :: rest => expr_names arg ++ go rest
+          end) args)).
+    { induction args as [| arg args IHargs]; simpl; auto.
+      rewrite (IH type_args arg), IHargs. reflexivity. }
+    rewrite (IH type_args ef), Hargs. reflexivity.
   - assert (Hargs :
       ((fix go (args0 : list expr) : list ident :=
           match args0 with
@@ -2025,7 +2044,7 @@ Proof.
     - lia.
     - destruct e as
         [| lit | x | m x T e1 e2 | m x e1 e2 | fname | fname captures
-         | p | fname args | fname type_args0 args | callee args
+         | p | fname args | fname type_args0 args | callee args | callee type_args0 args
          | sname lts type_args0 fields | ename variant lts type_args0 payloads
          | scrut branches | p rhs | p rhs | rk p | e | e | e1 e2 e3];
         simpl in Hrename |- *; try (inversion Hrename; subst; reflexivity).
@@ -2232,6 +2251,71 @@ Proof.
           end) used0 args) as [argsr used_args] eqn:Hgo.
         injection Hrename as <- <-.
         rewrite (IH rho used callee calleer used0); [| pose proof (expr_size_callexpr_callee_lt callee args); lia | exact Hcallee].
+        simpl. rewrite (Hargs args used0 argsr used_args (fun a H => H) Hgo). reflexivity.
+      + destruct (alpha_rename_expr rho used callee) as [calleer used0] eqn:Hcallee.
+        assert (Hargs : forall args0 used1 argsr usedr,
+          (forall a, In a args0 -> In a args) ->
+          ((fix go (used2 : list ident) (args1 : list expr) {struct args1}
+              : list expr * list ident :=
+              match args1 with
+              | [] => ([], used2)
+              | arg :: rest =>
+                  let (arg', used3) := alpha_rename_expr rho used2 arg in
+                  let (rest', used4) := go used3 rest in
+                  (arg' :: rest', used4)
+              end) used1 args0) = (argsr, usedr) ->
+          ((fix go (used2 : list ident) (args1 : list expr) {struct args1}
+              : list expr * list ident :=
+              match args1 with
+              | [] => ([], used2)
+              | arg :: rest =>
+                  let (arg', used3) := alpha_rename_expr rho used2 arg in
+                  let (rest', used4) := go used3 rest in
+                  (arg' :: rest', used4)
+              end) used1
+            ((fix subst_go (es : list expr) : list expr :=
+              match es with
+              | [] => []
+              | e0 :: es0 => subst_type_params_expr type_args e0 :: subst_go es0
+              end) args0)) =
+          ((fix subst_go (es : list expr) : list expr :=
+              match es with
+              | [] => []
+              | e0 :: es0 => subst_type_params_expr type_args e0 :: subst_go es0
+              end) argsr, usedr)).
+        { induction args0 as [| arg rest IHargs]; intros used1 argsr usedr Hincl Hgo; simpl in Hgo |- *.
+          - inversion Hgo; subst. reflexivity.
+          - destruct (alpha_rename_expr rho used1 arg) as [ar used2] eqn:Harg.
+            destruct ((fix go (used3 : list ident) (args1 : list expr) {struct args1}
+              : list expr * list ident :=
+              match args1 with
+              | [] => ([], used3)
+              | arg0 :: rest0 =>
+                  let (arg', used4) := alpha_rename_expr rho used3 arg0 in
+                  let (rest', used5) := go used4 rest0 in
+                  (arg' :: rest', used5)
+              end) used2 rest) as [restr used3] eqn:Hrest.
+            injection Hgo as <- <-.
+            rewrite (IH rho used1 arg ar used2).
+            + simpl.
+              rewrite (IHargs used2 restr used3); auto.
+              intros a Ha. apply Hincl. right. exact Ha.
+            + pose proof (expr_size_callexpr_generic_arg_lt callee type_args0 args arg
+                (Hincl arg (or_introl eq_refl))). lia.
+            + exact Harg. }
+        destruct ((fix go (used1 : list ident) (args0 : list expr) {struct args0}
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used1)
+          | arg :: rest =>
+              let (arg', used2) := alpha_rename_expr rho used1 arg in
+              let (rest', used3) := go used2 rest in
+              (arg' :: rest', used3)
+          end) used0 args) as [argsr used_args] eqn:Hgo.
+        injection Hrename as <- <-.
+        rewrite (IH rho used callee calleer used0);
+          [| pose proof (expr_size_callexpr_generic_callee_lt callee type_args0 args); lia
+           | exact Hcallee].
         simpl. rewrite (Hargs args used0 argsr used_args (fun a H => H) Hgo). reflexivity.
       + assert (Hfields : forall fields0 used0 fieldsr usedr,
           (forall field e0, In (field, e0) fields0 -> In (field, e0) fields) ->
@@ -4164,7 +4248,7 @@ Proof.
         set (body_ctx := subst_type_params_ctx l (fn_body_ctx fcallee)) in *.
         set (body := subst_type_params_expr l (fn_body fcallee)) in *.
         destruct body_ctx as [| ctx_head ctx_tail] eqn:Hbody_ctx; try discriminate.
-        destruct body as [| | | | | | | | | | | sname lts tys fields | | | | | | | |]
+        destruct body as [| | | | | | | | | | | | sname lts tys fields | | | | | | | |]
           eqn:Hbody_shape_eq; try discriminate.
         destruct fields as [| field fields_tail] eqn:Hfields.
         2: discriminate.
@@ -4360,7 +4444,7 @@ Proof.
         (S fuel') env Omega n R Σ e)
         as [[[[Ttop Sigmatop] Rtop] roots_top] | err_top]
         eqn:Hun_top.
-      * destruct e as [|lit|xv|mlet xlet t e1 e2|mlet xlet e1 e2|fn|fn caps|p|f args|f tys args|callee args|sn ls tys fields|en variant ls tys args|scrut branches|p e1|p e1|rk p|ed|e1|e1 e2 e3]; try discriminate.
+      * destruct e as [|lit|xv|mlet xlet t e1 e2|mlet xlet e1 e2|fn|fn caps|p|f args|f tys args|callee args|callee tys args|sn ls tys fields|en variant ls tys args|scrut branches|p e1|p e1|rk p|ed|e1|e1 e2 e3]; try discriminate.
         -- cbn [check_expr_root_shadow_store_safe_narrow_summary_checked_fuel] in Hcheck.
            try rewrite Hun_top in Hcheck.
            cbn [infer_core_env_state_fuel_roots_shadow_safe] in Hun_top.
@@ -4558,7 +4642,7 @@ Proof.
             infer_core_env_state_fuel_roots_shadow_safe
             infer_core_env_state_fuel_roots_shadow_safe_checked]
             in Hcheck; discriminate. }
-        destruct e as [|lit|xv|mlet xlet t e1 e2|mlet xlet e1 e2|fn|fn caps|p|f args|f tys args|callee args|sn ls tys fields|en variant ls tys args|scrut branches|p e1|p e1|rk p|e1|e1|e1 e2 e3];
+        destruct e as [|lit|xv|mlet xlet t e1 e2|mlet xlet e1 e2|fn|fn caps|p|f args|f tys args|callee args|callee tys args|sn ls tys fields|en variant ls tys args|scrut branches|p e1|p e1|rk p|e1|e1|e1 e2 e3];
           cbn [check_expr_root_shadow_store_safe_narrow_summary_checked_fuel]
             in Hcheck; try discriminate.
         -- destruct (infer_core_env_state_fuel_roots_shadow_safe
@@ -16045,6 +16129,10 @@ Proof.
 	    + rewrite IH, IHargs. reflexivity.
 	  - rewrite IH.
 	    induction l as [| a rest IHargs]; simpl.
+    + reflexivity.
+    + rewrite IH, IHargs. reflexivity.
+  - rewrite IH.
+    induction l0 as [| a rest IHargs]; simpl.
     + reflexivity.
     + rewrite IH, IHargs. reflexivity.
   - induction l1 as [| [fname field] rest IHfields]; simpl.

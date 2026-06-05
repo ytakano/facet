@@ -53,6 +53,12 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
       expr_alpha ρ callee calleer ->
       exprs_alpha ρ args argsr ->
       expr_alpha ρ (ECallExpr callee args) (ECallExpr calleer argsr)
+  | EA_CallExprGeneric : forall ρ callee calleer type_args args argsr,
+      expr_alpha ρ callee calleer ->
+      exprs_alpha ρ args argsr ->
+      expr_alpha ρ
+        (ECallExprGeneric callee type_args args)
+        (ECallExprGeneric calleer type_args argsr)
   | EA_Struct : forall ρ name lts args fields fieldsr,
       fields_alpha ρ fields fieldsr ->
       expr_alpha ρ (EStruct name lts args fields) (EStruct name lts args fieldsr)
@@ -548,6 +554,42 @@ Proof.
          ++ exact Hrename0.
 	      -- exact Hdisj_args.
 	      -- symmetry. exact Hargs.
+  + destruct (disjoint_names_app_l (free_vars_expr e)
+      ((fix go (args0 : list expr) : list ident :=
+          match args0 with
+          | [] => []
+          | arg :: rest => free_vars_expr arg ++ go rest
+          end) l0) (rename_range ρ) Hdisj) as [Hdisj_callee Hdisj_args].
+    destruct (alpha_rename_expr ρ used e) as [callee_r used0] eqn:Hcallee.
+    remember
+      ((fix go (used0 : list ident) (args0 : list expr)
+          : list expr * list ident :=
+          match args0 with
+          | [] => ([], used0)
+          | arg :: rest =>
+              let (arg', used1) := alpha_rename_expr ρ used0 arg in
+              let (rest', used2) := go used1 rest in
+              (arg' :: rest', used2)
+          end) used0 l0) as r eqn:Hargs.
+    destruct r as [argsr used_args].
+    injection Hrename as <- _.
+    constructor.
+    * eapply IH.
+      -- pose proof (expr_size_callexpr_generic_callee_lt e l l0) as Hcallee_lt.
+         assert (expr_size e < n) as Hlt_callee by lia.
+         exact Hlt_callee.
+      -- exact Hdisj_callee.
+      -- exact Hcallee.
+    * eapply alpha_rename_call_args_sound.
+      -- intros used_arg earg er0 used_tail Hin_arg Hdisj0 Hrename0.
+         eapply IH.
+         ++ pose proof (expr_size_callexpr_generic_arg_lt e l l0 earg Hin_arg) as Harg_lt.
+            assert (expr_size earg < n) as Hlt_arg by lia.
+            exact Hlt_arg.
+         ++ exact Hdisj0.
+         ++ exact Hrename0.
+      -- exact Hdisj_args.
+      -- symmetry. exact Hargs.
 	  + remember
 	      ((fix go (used0 : list ident) (fields0 : list (string * expr))
 	          : list (string * expr) * list ident :=

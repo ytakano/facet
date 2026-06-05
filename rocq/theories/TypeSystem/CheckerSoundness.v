@@ -1215,6 +1215,7 @@ Proof.
 		      + discriminate.
 			      + discriminate.
 			      + discriminate.
+              + discriminate.
 			      + destruct p as [x | p | p f].
         * destruct (ctx_lookup_b x Γ) as [[Tx bx] |] eqn:Hlookup; [|discriminate].
           destruct bx; [discriminate |].

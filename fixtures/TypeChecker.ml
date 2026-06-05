@@ -910,6 +910,7 @@ type expr =
 | ECall of ident * expr list
 | ECallGeneric of ident * ty list * expr list
 | ECallExpr of expr * expr list
+| ECallExprGeneric of expr * ty list * expr list
 | EStruct of string * lifetime list * ty list * (string * expr) list
 | EEnum of string * string * lifetime list * ty list * expr list
 | EMatch of expr * ((string * ident list) * expr) list
@@ -1276,6 +1277,15 @@ let rec subst_type_params_expr _UU03c3_ = function
     in go
   in
   ECallExpr ((subst_type_params_expr _UU03c3_ ef), (go args))
+| ECallExprGeneric (ef, type_args, args) ->
+  let go =
+    let rec go = function
+    | [] -> []
+    | e' :: es' -> (subst_type_params_expr _UU03c3_ e') :: (go es')
+    in go
+  in
+  ECallExprGeneric ((subst_type_params_expr _UU03c3_ ef),
+  (map (subst_type_params_ty _UU03c3_) type_args), (go args))
 | EStruct (name, lts, type_args, fields) ->
   let go =
     let rec go = function
@@ -2140,6 +2150,14 @@ let rec expr_names = function
     in go
   in
   app (expr_names callee) (go args)
+| ECallExprGeneric (callee, _, args) ->
+  let go =
+    let rec go = function
+    | [] -> []
+    | arg :: rest -> app (expr_names arg) (go rest)
+    in go
+  in
+  app (expr_names callee) (go args)
 | EStruct (_, _, _, fields) ->
   let rec go = function
   | [] -> []
@@ -2253,6 +2271,18 @@ let rec alpha_rename_expr _UU03c1_ used = function
     in go
   in
   let (args', used') = go used1 args in ((ECallExpr (callee', args')), used')
+| ECallExprGeneric (callee, type_args, args) ->
+  let (callee', used1) = alpha_rename_expr _UU03c1_ used callee in
+  let go =
+    let rec go used0 = function
+    | [] -> ([], used0)
+    | arg :: rest ->
+      let (arg', used1') = alpha_rename_expr _UU03c1_ used0 arg in
+      let (rest', used2) = go used1' rest in ((arg' :: rest'), used2)
+    in go
+  in
+  let (args', used') = go used1 args in
+  ((ECallExprGeneric (callee', type_args, args')), used')
 | EStruct (name, lts, args, fields) ->
   let go =
     let rec go used0 = function
@@ -2489,6 +2519,9 @@ let rec expr_local_store_names = function
 | ECallGeneric (_, _, args) ->
   args_local_store_names_with expr_local_store_names args
 | ECallExpr (callee, args) ->
+  app (expr_local_store_names callee)
+    (args_local_store_names_with expr_local_store_names args)
+| ECallExprGeneric (callee, _, args) ->
   app (expr_local_store_names callee)
     (args_local_store_names_with expr_local_store_names args)
 | EStruct (_, _, _, fields) ->
@@ -5334,6 +5367,7 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
              | x -> Infer_err (ErrNotAFunction x))
           | Infer_err err -> Infer_err err)
        | Infer_err err -> Infer_err err)
+    | ECallExprGeneric (_, _, _) -> Infer_err ErrNotImplemented
     | EStruct (sname, lts, args, fields) ->
       (match lookup_struct sname env with
        | Some s ->
@@ -6078,6 +6112,7 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
              | x -> Infer_err (ErrNotAFunction x))
           | Infer_err err -> Infer_err err)
        | Infer_err err -> Infer_err err)
+    | ECallExprGeneric (_, _, _) -> Infer_err ErrNotImplemented
     | EStruct (sname, lts, args, fields) ->
       (match lookup_struct sname env with
        | Some s ->
@@ -7818,6 +7853,83 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
+       | ECallExprGeneric (_, _, _) ->
+         (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
+                  _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n
+                         r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TForall (m, bounds, body) ->
+                  (match ty_core body with
+                   | TTypeForall (type_params, type_bounds, type_body) ->
+                     (match infer_mixed_forall_call_env env _UU03a9_ n m
+                              bounds type_params type_bounds type_body arg_tys with
+                      | Infer_ok ret ->
+                        Infer_ok (((ret, _UU03a3_'), r'),
+                          (root_set_union roots_callee
+                            (root_sets_union arg_roots)))
+                      | Infer_err err -> Infer_err err)
+                   | _ ->
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
+                      | Infer_ok ret ->
+                        Infer_ok (((ret, _UU03a3_'), r'),
+                          (root_set_union roots_callee
+                            (root_sets_union arg_roots)))
+                      | Infer_err err -> Infer_err err))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
        | EStruct (_, _, _, _) ->
          (match infer_core_env_state_fuel_roots fuel' env _UU03a9_ n r
                   _UU03a3_ callee with
@@ -8511,6 +8623,7 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err))
+    | ECallExprGeneric (_, _, _) -> Infer_err ErrNotImplemented
     | EStruct (sname, lts, args, fields) ->
       (match lookup_struct sname env with
        | Some s ->
@@ -10211,6 +10324,83 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err)
+       | ECallExprGeneric (_, _, _) ->
+         (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                  _UU03a9_ n r _UU03a3_ callee with
+          | Infer_ok p ->
+            let (p0, roots_callee) = p in
+            let (p1, r1) = p0 in
+            let (t_callee, _UU03a3_1) = p1 in
+            let collect =
+              let rec collect _UU03a3_0 r0 = function
+              | [] -> Infer_ok ((([], _UU03a3_0), r0), [])
+              | e' :: es ->
+                (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
+                         _UU03a9_ n r0 _UU03a3_0 e' with
+                 | Infer_ok p2 ->
+                   let (p3, roots_e) = p2 in
+                   let (p4, r2) = p3 in
+                   let (t_e, _UU03a3_2) = p4 in
+                   (match collect _UU03a3_2 r2 es with
+                    | Infer_ok p5 ->
+                      let (p6, roots_es) = p5 in
+                      let (p7, r3) = p6 in
+                      let (tys, _UU03a3_3) = p7 in
+                      Infer_ok ((((t_e :: tys), _UU03a3_3), r3),
+                      (roots_e :: roots_es))
+                    | Infer_err err -> Infer_err err)
+                 | Infer_err err -> Infer_err err)
+              in collect
+            in
+            (match collect _UU03a3_1 r1 args with
+             | Infer_ok p2 ->
+               let (p3, arg_roots) = p2 in
+               let (p4, r') = p3 in
+               let (arg_tys, _UU03a3_') = p4 in
+               (match ty_core t_callee with
+                | TFn (param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TClosure (_, param_tys, ret) ->
+                  (match check_arg_tys _UU03a9_ arg_tys param_tys with
+                   | Some err -> Infer_err err
+                   | None ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots))))
+                | TForall (m, bounds, body) ->
+                  (match ty_core body with
+                   | TTypeForall (type_params, type_bounds, type_body) ->
+                     (match infer_mixed_forall_call_env env _UU03a9_ n m
+                              bounds type_params type_bounds type_body arg_tys with
+                      | Infer_ok ret ->
+                        Infer_ok (((ret, _UU03a3_'), r'),
+                          (root_set_union roots_callee
+                            (root_sets_union arg_roots)))
+                      | Infer_err err -> Infer_err err)
+                   | _ ->
+                     (match infer_hrt_call_env _UU03a9_ n m bounds body
+                              arg_tys with
+                      | Infer_ok ret ->
+                        Infer_ok (((ret, _UU03a3_'), r'),
+                          (root_set_union roots_callee
+                            (root_sets_union arg_roots)))
+                      | Infer_err err -> Infer_err err))
+                | TTypeForall (type_params, bounds, body) ->
+                  (match infer_type_forall_call_env env _UU03a9_ type_params
+                           bounds body arg_tys with
+                   | Infer_ok ret ->
+                     Infer_ok (((ret, _UU03a3_'), r'),
+                       (root_set_union roots_callee
+                         (root_sets_union arg_roots)))
+                   | Infer_err err -> Infer_err err)
+                | _ -> Infer_err ErrNotImplemented)
+             | Infer_err err -> Infer_err err)
+          | Infer_err err -> Infer_err err)
        | EStruct (_, _, _, _) ->
          (match infer_core_env_state_fuel_roots_shadow_safe fuel' env
                   _UU03a9_ n r _UU03a3_ callee with
@@ -10904,6 +11094,7 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                 | _ -> Infer_err ErrNotImplemented)
              | Infer_err err -> Infer_err err)
           | Infer_err err -> Infer_err err))
+    | ECallExprGeneric (_, _, _) -> Infer_err ErrNotImplemented
     | EStruct (sname, lts, args, fields) ->
       (match lookup_struct sname env with
        | Some s ->
@@ -12179,6 +12370,17 @@ let rec borrow_check_env env pBS _UU0393_ = function
      | Infer_err err -> Infer_err err)
   in go pBS args
 | ECallExpr (callee, args) ->
+  (match borrow_check_env env pBS _UU0393_ callee with
+   | Infer_ok pBS1 ->
+     let rec go pBS0 = function
+     | [] -> Infer_ok pBS0
+     | a :: rest ->
+       (match borrow_check_env env pBS0 _UU0393_ a with
+        | Infer_ok pBS2 -> go pBS2 rest
+        | Infer_err err -> Infer_err err)
+     in go pBS1 args
+   | Infer_err err -> Infer_err err)
+| ECallExprGeneric (callee, _, args) ->
   (match borrow_check_env env pBS _UU0393_ callee with
    | Infer_ok pBS1 ->
      let rec go pBS0 = function

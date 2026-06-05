@@ -228,6 +228,13 @@ let rec to_value env = function
     let tmp = fresh_id env in
     emit env (FICallValue (tmp, result_ty, callee_val, flat));
     { fv = FVVar tmp; ft = result_ty }
+  | ECallExprGeneric (callee, type_args, args) ->
+    let callee_val = to_value env callee in
+    let result_ty = infer_expr_ty env (ECallExprGeneric (callee, type_args, args)) in
+    let flat = List.map (to_value env) args in
+    let tmp = fresh_id env in
+    emit env (FICallValue (tmp, result_ty, callee_val, flat));
+    { fv = FVVar tmp; ft = result_ty }
   | EStruct (sname, lts, args, fields) ->
     let struct_def =
       match lookup_struct sname env.env with
@@ -453,6 +460,14 @@ and emit_into env x t = function
   | ECallGeneric (f, _, args) ->
     let flat = List.map (to_value env) args in
     emit env (FICall (x, t, f, flat))
+  | ECallExpr (callee, args) ->
+    let callee_val = to_value env callee in
+    let flat = List.map (to_value env) args in
+    emit env (FICallValue (x, t, callee_val, flat))
+  | ECallExprGeneric (callee, _, args) ->
+    let callee_val = to_value env callee in
+    let flat = List.map (to_value env) args in
+    emit env (FICallValue (x, t, callee_val, flat))
   | EStruct _ as e ->
     emit env (FILet (x, t, to_value env e))
   | EDrop inner ->

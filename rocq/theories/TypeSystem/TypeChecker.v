@@ -2098,6 +2098,8 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
           end
       end
 
+  | ECallExprGeneric _ _ _ => infer_err ErrNotImplemented
+
   | ELetInfer m x e1 e2 =>
       match infer_core fenv Ω n Γ e1 with
       | infer_err err => infer_err err
@@ -2864,6 +2866,7 @@ Fixpoint infer_core_env_fuel (fuel : nat)
 	              end
 		          end
 		      end
+		  | ECallExprGeneric _ _ _ => infer_err ErrNotImplemented
 		  end
 	  end.
 
@@ -4130,6 +4133,7 @@ Fixpoint infer_core_env_state_fuel (fuel : nat)
               end
           end
       end
+  | ECallExprGeneric _ _ _ => infer_err ErrNotImplemented
   end
   end.
 
@@ -4775,6 +4779,7 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
               end
           end
       end
+  | ECallExprGeneric _ _ _ => infer_err ErrNotImplemented
   end
   end.
 
@@ -5069,6 +5074,7 @@ Fixpoint preservation_ready_expr_b (e : expr) : bool :=
   | ECall _ _ => false
   | ECallGeneric _ _ _ => false
   | ECallExpr _ _ => false
+  | ECallExprGeneric _ _ _ => false
   | ELet _ _ _ _ _ => false
   | ELetInfer _ _ _ _ => false
   | EDeref _ => false
@@ -5137,6 +5143,7 @@ Fixpoint provenance_ready_expr_b (e : expr) : bool :=
   | ECall _ _ => false
   | ECallGeneric _ _ _ => false
   | ECallExpr _ _ => false
+  | ECallExprGeneric _ _ _ => false
   | EDeref (EBorrow _ p) =>
       match place_path p with
       | Some _ => true
@@ -6079,6 +6086,7 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
               end
           end
       end
+  | ECallExprGeneric _ _ _ => infer_err ErrNotImplemented
   end
   end.
 
@@ -7015,6 +7023,7 @@ Fixpoint infer_core_env_state_fuel_roots_shadow_safe (fuel : nat)
               end
           end
       end
+  | ECallExprGeneric _ _ _ => infer_err ErrNotImplemented
   end
   end.
 
@@ -7966,6 +7975,21 @@ Fixpoint borrow_check (fenv : list fn_def) (BS : borrow_state) (Γ : ctx)
             end
           in go BS1 args
       end
+  | ECallExprGeneric callee _ args =>
+      match borrow_check fenv BS Γ callee with
+      | infer_err err => infer_err err
+      | infer_ok BS1 =>
+          let fix go (BS0 : borrow_state) (as_ : list expr) : infer_result borrow_state :=
+            match as_ with
+            | []      => infer_ok BS0
+            | a :: rest =>
+                match borrow_check fenv BS0 Γ a with
+                | infer_err err => infer_err err
+                | infer_ok BS2  => go BS2 rest
+                end
+            end
+          in go BS1 args
+      end
   end.
 
 (* Separate top-level borrow_check_args for BorrowCheckSoundness proofs. *)
@@ -8211,6 +8235,22 @@ Fixpoint borrow_check_env (env : global_env) (PBS : path_borrow_state) (Γ : ctx
         end
       in go PBS args
   | ECallExpr callee args =>
+      match borrow_check_env env PBS Γ callee with
+      | infer_err err => infer_err err
+      | infer_ok PBS1 =>
+          let fix go (PBS0 : path_borrow_state) (args0 : list expr)
+              : infer_result path_borrow_state :=
+            match args0 with
+            | [] => infer_ok PBS0
+            | a :: rest =>
+                match borrow_check_env env PBS0 Γ a with
+                | infer_err err => infer_err err
+                | infer_ok PBS2 => go PBS2 rest
+                end
+            end
+          in go PBS1 args
+      end
+  | ECallExprGeneric callee _ args =>
       match borrow_check_env env PBS Γ callee with
       | infer_err err => infer_err err
       | infer_ok PBS1 =>

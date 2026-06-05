@@ -170,6 +170,25 @@ Proof.
 	            simpl in Hlt. lia.
 	            exact Ha.
 	         ++ apply IHargs; [simpl; simpl in Hlt; lia | exact Hcheck].
+  (* ECallExprGeneric *)
+  + destruct (borrow_check fenv BS Γ e) as [BScallee|] eqn:Hcallee; [|discriminate].
+    apply BO_CallExprGeneric with (BS1 := BScallee).
+    * apply IH with (e := e).
+      -- pose proof (expr_size_callexpr_generic_callee_lt e l l0). lia.
+      -- exact Hcallee.
+    * clear Hcallee. apply borrow_check_call_go in Hcheck.
+      revert BScallee BS' Hcheck.
+      induction l0 as [| a rest IHargs]; intros BScallee BS' Hcheck.
+      -- simpl in Hcheck. injection Hcheck as <-. constructor.
+      -- simpl in Hcheck.
+         destruct (borrow_check fenv BScallee Γ a) as [BS1|] eqn:Ha; [|discriminate].
+         apply BO_Args_Cons with (BS1 := BS1).
+         ++ apply IH with (e := a).
+            pose proof (expr_size_callexpr_generic_arg_lt e l (a :: rest) a
+              (or_introl eq_refl)) as Harg_lt.
+            simpl in Hlt. lia.
+            exact Ha.
+         ++ apply IHargs; [simpl; simpl in Hlt; lia | exact Hcheck].
   (* EStruct *)
   + discriminate.
   (* EEnum *)
@@ -380,6 +399,12 @@ Proof.
 
   (* BO_CallExpr *)
   - intros BS BS1 BS2 Γ callee args _ IHcallee _ IHargs.
+    simpl. rewrite IHcallee.
+    apply borrow_check_call_go.
+    exact IHargs.
+
+  (* BO_CallExprGeneric *)
+  - intros BS BS1 BS2 Γ callee type_args args _ IHcallee _ IHargs.
     simpl. rewrite IHcallee.
     apply borrow_check_call_go.
     exact IHargs.

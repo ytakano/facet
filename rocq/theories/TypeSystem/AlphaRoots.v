@@ -992,6 +992,19 @@ Proof.
             (arg' :: rest', used2)
         end) u1 l) as [args' u'] eqn:Hargs.
     congruence.
+  - (* ECallExprGeneric callee tys args *)
+    simpl in Hrename.
+    destruct (alpha_rename_expr rho used e) as [c' u1] eqn:Hcallee.
+    destruct ((fix go (used0 : list ident) (args0 : list expr)
+        : list expr * list ident :=
+        match args0 with
+        | nil => (nil, used0)
+        | arg :: rest =>
+            let (arg', used1') := alpha_rename_expr rho used0 arg in
+            let (rest', used2) := go used1' rest in
+            (arg' :: rest', used2)
+        end) u1 l0) as [args' u'] eqn:Hargs.
+    congruence.
   - (* EStruct name lts tys fields *)
     simpl in Hrename.
     destruct ((fix go (used0 : list ident) (fields0 : list (string * expr))

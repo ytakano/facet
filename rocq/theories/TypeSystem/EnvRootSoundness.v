@@ -722,7 +722,7 @@ Theorem infer_core_env_state_fuel_roots_sound :
 Proof.
   induction fuel as [|fuel' IH]; intros env Ω n R Σ e T Σ' R' roots Hinfer.
   - simpl in Hinfer. discriminate.
-		  - destruct e as [|l|i|m i t e1 e2|m i e1 e2|i|i l|p|i l|i l l0|e l|
+		  - destruct e as [|l|i|m i t e1 e2|m i e1 e2|i|i l|p|i l|i l l0|e l|e l l0|
 		        s l l0 l1|s s0 l l0 l1|e l|p e|p e|r p|e|e|e1 e2 e3];
       simpl in Hinfer; try discriminate.
     + inversion Hinfer; subst. constructor.
@@ -1756,7 +1756,7 @@ Theorem infer_core_env_state_fuel_roots_shadow_safe_sound :
 Proof.
   induction fuel as [|fuel' IH]; intros env Ω n R Σ e T Σ' R' roots Hinfer.
   - simpl in Hinfer. discriminate.
-	  - destruct e as [|l|i|m i t e1 e2|m i e1 e2|i|i l|p|i l|i l l0|e l|
+	  - destruct e as [|l|i|m i t e1 e2|m i e1 e2|i|i l|p|i l|i l l0|e l|e l l0|
 	      s l l0 l1|s s0 l l0 l1|e l|p e|p e|r p|e|e|e1 e2 e3];
       simpl in Hinfer; try discriminate.
     + inversion Hinfer; subst. constructor.
@@ -2826,7 +2826,7 @@ Proof.
       * inversion Hchecked; subst; clear Hchecked.
         apply TERSC_Conservative.
         eapply infer_core_env_state_fuel_roots_shadow_safe_sound. exact Hinfer.
-    + destruct e as [|lit|y|m x Tann e1 e2|m x e1 e2|fname|fname caps|p|fname args|fname tys args|callee args|sname lts tys fields|ename vname lts tys args|scrut branches|p e_new|p e_new|rk p|e1|e1|e1 e2 e3]; try discriminate.
+    + destruct e as [|lit|y|m x Tann e1 e2|m x e1 e2|fname|fname caps|p|fname args|fname tys args|callee args|callee tys args|sname lts tys fields|ename vname lts tys args|scrut branches|p e_new|p e_new|rk p|e1|e1|e1 e2 e3]; try discriminate.
       * destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ e1)
           as [[[[T1 Σ1] R1] roots1] | err1] eqn:He1; try discriminate.
         destruct (ty_compatible_b Ω T1 Tann) eqn:Hcompat; try discriminate.

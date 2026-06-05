@@ -11907,6 +11907,19 @@ Proof.
         * exact Hrange_used.
         * exact Hdisj.
         * exact Hrename.
+      + simpl in Hrename.
+        destruct (alpha_rename_expr rho used e) as [callee_r used0] eqn:Hcallee.
+        destruct ((fix go (used0 : list ident) (args0 : list expr) {struct args0}
+                    : list expr * list ident :=
+                    match args0 with
+                    | [] => ([], used0)
+                    | arg :: rest =>
+                        let (arg', used1) := alpha_rename_expr rho used0 arg in
+                        let (rest', used2) := go used1 rest in
+                        (arg' :: rest', used2)
+                    end) used0 l0) as [argsr used_args] eqn:Hargs.
+        injection Hrename as <- <-.
+        inversion Htyped.
       + eapply (alpha_rename_typed_env_roots_struct_shadow_safe_support_forward
           env Ω n rho R Rr Σ Σr s l l0 l1 er used used' T Σ' R'
           roots).

@@ -58,6 +58,7 @@ Inductive expr : Type :=
 | ECall     : ident -> list expr -> expr
 | ECallGeneric : ident -> list Ty -> list expr -> expr
 | ECallExpr : expr -> list expr -> expr
+| ECallExprGeneric : expr -> list Ty -> list expr -> expr
 | EStruct   : string -> list lifetime -> list Ty -> list (string * expr) -> expr
 | EEnum     : string -> string -> list lifetime -> list Ty -> list expr -> expr
 | EMatch    : expr -> list (string * list ident * expr) -> expr

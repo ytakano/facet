@@ -221,6 +221,7 @@ type expr =
 | ECall of ident * expr list
 | ECallGeneric of ident * ty list * expr list
 | ECallExpr of expr * expr list
+| ECallExprGeneric of expr * ty list * expr list
 | EStruct of string * lifetime list * ty list * (string * expr) list
 | EEnum of string * string * lifetime list * ty list * expr list
 | EMatch of expr * ((string * ident list) * expr) list

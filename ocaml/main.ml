@@ -114,6 +114,10 @@ let rec diagnostic_add_expr map original alpha =
     ECallExpr (alpha_callee, alpha_args) ->
     let map = diagnostic_add_expr map original_callee alpha_callee in
     diagnostic_add_exprs map original_args alpha_args
+  | ECallExprGeneric (original_callee, _, original_args),
+    ECallExprGeneric (alpha_callee, _, alpha_args) ->
+    let map = diagnostic_add_expr map original_callee alpha_callee in
+    diagnostic_add_exprs map original_args alpha_args
   | EStruct (_, _, _, original_fields), EStruct (_, _, _, alpha_fields) ->
     diagnostic_add_fields map original_fields alpha_fields
   | EEnum (_, _, _, _, original_payloads), EEnum (_, _, _, _, alpha_payloads) ->

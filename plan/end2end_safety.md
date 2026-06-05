@@ -256,9 +256,10 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      `infer_program_env_alpha_elab`; `type_forall_fn_value_pass_and_call.facet`
      passes. Checks: `make EnvRuntimeCapturedSafety.vo`,
      `make End2EndSafety.vo`, `dune build`, touched-file proof-hole scan.
-   - Todo: investigate remaining pure generic function-value CLI safety-gate
-     failures: `type_forall_fn_value_annotated_let.facet`,
-     `type_forall_fn_value_bound_call.facet`.
+   - Done: elaborate `let f = id in f<T>(...)` to checked direct generic
+     calls when `f` is not used in args; pure annotated/bound local cases pass.
+     Checks: `make TypeChecker.vo`, `make End2EndSafety.vo`, `dune build`,
+     proof-hole scan, three pure targeted CLI tests.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`
    through `ECallExprGeneric` after task 6 compiles.
 8. Todo: final full verification and roadmap closeout.

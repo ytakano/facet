@@ -4438,7 +4438,22 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
                | infer_err err => infer_err err
                | infer_ok (T2, Σ2, e2') =>
                    if sctx_check_ok env x T Σ2
-                   then infer_ok (T2, sctx_remove x Σ2, ELet m x T e1' e2')
+                   then
+                     match e1', e2' with
+                     | EFn fname, ECallExprGeneric (EVar y) type_args args' =>
+                         if ident_eqb x y &&
+                            negb (existsb (fun arg => ident_in_b x (free_vars_expr arg)) args') &&
+                            negb (ident_in_b x (args_local_store_names args'))
+                         then
+                           match infer_core_env_state_fuel_elab fuel' env Ω n Σ
+                                   (ECallGeneric fname type_args args') with
+                           | infer_ok direct => infer_ok direct
+                           | infer_err _ => infer_ok (T2, sctx_remove x Σ2,
+                               ELet m x T e1' e2')
+                           end
+                         else infer_ok (T2, sctx_remove x Σ2, ELet m x T e1' e2')
+                     | _, _ => infer_ok (T2, sctx_remove x Σ2, ELet m x T e1' e2')
+                     end
                    else infer_err ErrContextCheckFailed
                end
           else infer_err (compatible_error T1 T)

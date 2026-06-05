@@ -5876,8 +5876,42 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
                  let (p2, e2') = p1 in
                  let (t2, _UU03a3_2) = p2 in
                  if sctx_check_ok env x t _UU03a3_2
-                 then Infer_ok ((t2, (sctx_remove x _UU03a3_2)), (ELet (m, x,
-                        t, e1', e2')))
+                 then (match e1' with
+                       | EFn fname ->
+                         (match e2' with
+                          | ECallExprGeneric (e0, type_args, args') ->
+                            (match e0 with
+                             | EVar y ->
+                               if (&&)
+                                    ((&&) (ident_eqb x y)
+                                      (negb
+                                        (existsb (fun arg ->
+                                          ident_in_b x (free_vars_expr arg))
+                                          args')))
+                                    (negb
+                                      (ident_in_b x
+                                        (args_local_store_names args')))
+                               then (match infer_core_env_state_fuel_elab
+                                             fuel' env _UU03a9_ n _UU03a3_
+                                             (ECallGeneric (fname, type_args,
+                                             args')) with
+                                     | Infer_ok direct -> Infer_ok direct
+                                     | Infer_err _ ->
+                                       Infer_ok ((t2,
+                                         (sctx_remove x _UU03a3_2)), (ELet
+                                         (m, x, t, e1', e2'))))
+                               else Infer_ok ((t2,
+                                      (sctx_remove x _UU03a3_2)), (ELet (m,
+                                      x, t, e1', e2')))
+                             | _ ->
+                               Infer_ok ((t2, (sctx_remove x _UU03a3_2)),
+                                 (ELet (m, x, t, e1', e2'))))
+                          | _ ->
+                            Infer_ok ((t2, (sctx_remove x _UU03a3_2)), (ELet
+                              (m, x, t, e1', e2'))))
+                       | _ ->
+                         Infer_ok ((t2, (sctx_remove x _UU03a3_2)), (ELet (m,
+                           x, t, e1', e2'))))
                  else Infer_err ErrContextCheckFailed
                | Infer_err err -> Infer_err err)
          else Infer_err (compatible_error t1 t)

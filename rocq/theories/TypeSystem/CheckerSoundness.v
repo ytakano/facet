@@ -523,6 +523,22 @@ Proof.
   apply ty_core_eqb_subst_type_params_same_core.
 Qed.
 
+Lemma usage_sub_bool_refl :
+  forall u,
+    usage_sub_bool u u = true.
+Proof.
+  destruct u; reflexivity.
+Qed.
+
+Lemma outlives_b_refl :
+  forall Omega l,
+    outlives_b Omega l l = true.
+Proof.
+  intros Omega l. unfold outlives_b.
+  destruct (Datatypes.length Omega); simpl; unfold outlives_direct_b;
+    rewrite (proj2 (lifetime_eqb_eq l l) eq_refl); reflexivity.
+Qed.
+
 Lemma ty_compatible_b_sound : forall Ω T_actual T_expected,
   ty_compatible_b Ω T_actual T_expected = true ->
   ty_compatible Ω T_actual T_expected.

@@ -153,9 +153,10 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      Check: `make AlphaRoots.vo`, proof-hole scan.
    - Blocked detail: arbitrary roots-shadow type-substitution transport fails
      at `ECallGeneric` unless lifetime substitution and type-parameter
-     substitution are bridged for call signatures. Existing facts include
-     `apply_lt_ty_subst_type_params_ty` and lifetime-first generic-call
-     helpers; the next slice should package those for the transport proof.
+     substitution are bridged for call signatures. `contains_lbound_ty = false`
+     is not enough for equality because type args may contain `LVar`; the
+     bridge must use compatibility/lifetime evidence, not an `apply_lt_ty`
+     no-op shortcut.
    - Todo: prove roots-shadow type-substitution preservation for arbitrary
      bodies or an equivalent closed-type-arg
      `callee_body_root_shadow_provenance_summary` lemma.

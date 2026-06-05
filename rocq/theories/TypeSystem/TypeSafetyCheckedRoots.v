@@ -5,6 +5,55 @@ From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
+Definition provenance_ready_leaf_expr (e : expr) : Prop :=
+  (exists x, e = EVar x) \/
+  e = EUnit \/
+  (exists lit, e = ELit lit) \/
+  (exists p, e = EPlace p) \/
+  (exists rk p, e = EBorrow rk p) \/
+  (exists p, e = EDrop (EPlace p)).
+
+Lemma provenance_ready_args_In :
+  forall args e,
+    provenance_ready_args args ->
+    In e args ->
+    provenance_ready_expr e.
+Proof.
+  intros args e Hready Hin.
+  induction Hready as [| e_hd rest Hready_hd _ IH].
+  - contradiction.
+  - simpl in Hin. destruct Hin as [Heq | Hin].
+    + subst. exact Hready_hd.
+    + apply IH. exact Hin.
+Qed.
+
+Lemma provenance_ready_fields_lookup_b :
+  forall fields name e,
+    provenance_ready_fields fields ->
+    lookup_field_b name fields = Some e ->
+    provenance_ready_expr e.
+Proof.
+  intros fields name e Hready Hlookup.
+  apply (provenance_ready_fields_lookup fields name e Hready).
+  rewrite <- lookup_field_b_lookup_expr_field. exact Hlookup.
+Qed.
+
+Lemma lookup_field_b_subst_type_params_fields :
+  forall type_args fields name e,
+    lookup_field_b name fields = Some e ->
+    lookup_field_b name
+      (map (fun '(field_name, field_expr) =>
+        (field_name, subst_type_params_expr type_args field_expr)) fields) =
+      Some (subst_type_params_expr type_args e).
+Proof.
+  intros type_args fields name e Hlookup.
+  induction fields as [| [field_name field_expr] rest IH]; simpl in *.
+  - discriminate.
+  - destruct (String.eqb name field_name) eqn:Hname.
+    + inversion Hlookup; subst. reflexivity.
+    + apply IH. exact Hlookup.
+Qed.
+
 Lemma typed_env_roots_shadow_safe_provenance_ready_leaf_subst_type_params_compat_package :
   forall env Omega n R Sigma e T Sigma' R' roots type_args,
     provenance_ready_expr e ->
@@ -37,6 +86,75 @@ Proof.
       (sctx_of_ctx (subst_type_params_ctx type_args Sigma')).
     exact Htyped_subst.
   - apply Hcompat_refl.
+Qed.
+
+Lemma typed_args_roots_shadow_safe_provenance_ready_leaf_subst_type_params_package :
+  forall env Omega n R Sigma args param_tys Sigma' R' roots type_args,
+    provenance_ready_args args ->
+    typed_args_roots_shadow_safe env Omega n R Sigma args
+      (params_of_tys param_tys) Sigma' R' roots ->
+    Forall provenance_ready_leaf_expr args ->
+    (forall T_actual T_expected,
+        ty_compatible_b Omega T_actual T_expected = true ->
+        ty_compatible_b Omega (subst_type_params_ty type_args T_actual)
+          (subst_type_params_ty type_args T_expected) = true) ->
+    typed_args_roots_shadow_safe env Omega n R
+      (subst_type_params_ctx type_args Sigma)
+      (map (subst_type_params_expr type_args) args)
+      (params_of_tys (map (subst_type_params_ty type_args) param_tys))
+      (subst_type_params_ctx type_args Sigma') R' roots.
+Proof.
+  intros env Omega n R Sigma args param_tys Sigma' R' roots type_args
+    Hready Htyped Hleaf Hcompat_subst.
+  eapply typed_args_roots_shadow_safe_subst_type_params_expr_params_of_tys.
+  - exact Htyped.
+  - intros R0 Sigma0 e T0 Sigma0' R0' roots0 Hin Htyped_e.
+    eapply typed_env_roots_shadow_safe_leaf_subst_type_params_ctx.
+    + exact Htyped_e.
+    + eapply Forall_forall in Hleaf; eauto.
+  - exact Hcompat_subst.
+Qed.
+
+Lemma typed_fields_roots_shadow_safe_provenance_ready_leaf_subst_type_params_package :
+  forall env Omega n lts struct_type_args R Sigma fields defs Sigma' R'
+      roots type_args,
+    provenance_ready_fields fields ->
+    typed_fields_roots_shadow_safe env Omega n lts struct_type_args R Sigma
+      fields defs Sigma' R' roots ->
+    (forall name e,
+        lookup_field_b name fields = Some e ->
+        provenance_ready_leaf_expr e) ->
+    (forall T_actual T_expected,
+        ty_compatible_b Omega T_actual T_expected = true ->
+        ty_compatible_b Omega (subst_type_params_ty type_args T_actual)
+          (subst_type_params_ty type_args T_expected) = true) ->
+    compose_type_params type_args struct_type_args =
+      map (subst_type_params_ty type_args) struct_type_args ->
+    typed_fields_roots_shadow_safe env Omega n lts
+      (map (subst_type_params_ty type_args) struct_type_args) R
+      (subst_type_params_ctx type_args Sigma)
+      (map (fun '(field_name, field_expr) =>
+        (field_name, subst_type_params_expr type_args field_expr)) fields)
+      defs (subst_type_params_ctx type_args Sigma') R' roots.
+Proof.
+  intros env Omega n lts struct_type_args R Sigma fields defs Sigma' R'
+    roots type_args Hready Htyped.
+  induction Htyped as
+    [lts0 args0 R0 Sigma0 fields0
+    |lts0 args0 R0 R1 R2 Sigma0 Sigma1 Sigma2 fields0 f rest
+      e_field T_field roots_field roots_rest Hlookup Htyped_field Hcompat
+      Htyped_rest IH];
+    intros Hleaf_lookup Hcompat_subst Hcompose; simpl.
+  - constructor.
+  - eapply TERSFields_Cons.
+    + eapply lookup_field_b_subst_type_params_fields. exact Hlookup.
+    + eapply typed_env_roots_shadow_safe_leaf_subst_type_params_ctx.
+      * exact Htyped_field.
+      * apply Hleaf_lookup with (name := field_name f). exact Hlookup.
+    + rewrite <- Hcompose.
+      rewrite <- instantiate_struct_field_ty_type_subst_compose.
+      apply Hcompat_subst. exact Hcompat.
+    + eapply IH; eauto.
 Qed.
 
 Inductive typed_env_roots_checked

@@ -176,6 +176,8 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      `provenance_ready_expr`, which excludes call forms.
    - Done: add leaf-subset provenance-ready type-substitution package.
      Check: `make TypeSafetyCheckedRoots.vo`, proof-hole scan.
+   - Done: add leaf-subset args/fields type-substitution packages for
+     structured provenance-ready bodies. Check: `make TypeSafetyCheckedRoots.vo`.
    - Todo: prove roots-shadow type-substitution preservation for the
      provenance-ready expression subset, or strengthen the closure-target
      runtime invariant with checked instantiated summaries.

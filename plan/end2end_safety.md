@@ -237,6 +237,9 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Blocked: boolean compatibility transport would require transitivity
      plus boolean outlives completeness; prefer instantiated narrow summaries
      over proving a broad transport stack here.
+   - Blocked: adding instantiated summaries to the narrow checker needs
+     definition-order work; the instantiated checker currently depends on the
+     narrow checker and is defined later.
    - Todo: add a closed exact roots-shadow substitution theorem for
      `provenance_ready_expr`, or strengthen closure targets with checked
      instantiated summaries.

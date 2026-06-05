@@ -105,6 +105,9 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      function-value call summary recognition.
      Checks: `make EnvRuntimeShadowCheckerFacts.vo`, `dune build`,
      proof-hole scan.
+   - Done: add closed type-argument helper proofs for type-generic
+     function-value call runtime signatures.
+     Check: `make TypeSafetyDirectCallWrappers.vo`.
    - Todo: add end-to-end store-safe summary package for pure
      `TTypeForall (... TFn ...)` `ECallExprGeneric` callees.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`

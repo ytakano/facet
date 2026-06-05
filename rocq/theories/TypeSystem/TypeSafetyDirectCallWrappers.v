@@ -683,6 +683,379 @@ Proof.
     + eassumption.
 Qed.
 
+Lemma contains_lbound_ty_outer_usage_core :
+  forall u T,
+    contains_lbound_ty (MkTy u (ty_core T)) = contains_lbound_ty T.
+Proof.
+  intros u [u0 core]. destruct core; reflexivity.
+Qed.
+
+Lemma existsb_contains_lbound_ty_false_of_Forall :
+  forall ts,
+    Forall (fun T => contains_lbound_ty T = false) ts ->
+    existsb contains_lbound_ty ts = false.
+Proof.
+  intros ts H.
+  induction H as [| T ts HT _ IH]; simpl.
+  - reflexivity.
+  - rewrite HT, IH. reflexivity.
+Qed.
+
+Lemma contains_lbound_ty_subst_type_params_ty_closed :
+  forall type_args T,
+    Forall (fun T => contains_lbound_ty T = false) type_args ->
+    contains_lbound_ty T = false ->
+    contains_lbound_ty (subst_type_params_ty type_args T) = false.
+Proof.
+  intros type_args T Hclosed.
+  revert T.
+  fix IH 1.
+  intros [u core] Hnone.
+  destruct core as [| | | | name | i | name lts args | name lts args
+                   | params ret | env_lt params ret | n bounds body
+                   | n bounds body | lt rk inner]; simpl in *; try reflexivity.
+  - destruct (nth_error type_args i) as [Targ|] eqn:Hnth; simpl.
+    + assert (Harg_closed : contains_lbound_ty Targ = false).
+      { apply ((proj1 (@Forall_forall Ty
+          (fun T => contains_lbound_ty T = false) type_args)) Hclosed Targ).
+        eapply nth_error_In. exact Hnth. }
+      destruct Targ as [uarg corearg]. destruct corearg; simpl in *; exact Harg_closed.
+    + reflexivity.
+  - apply Bool.orb_false_iff in Hnone as [Hlts Hargs].
+    rewrite Hlts. simpl.
+    assert (Hgo : forall args0 fallback,
+      existsb contains_lbound_ty args0 = false ->
+      Forall (fun T => contains_lbound_ty T = false) fallback ->
+      existsb contains_lbound_ty
+        ((fix go (xs fallback0 : list Ty) : list Ty :=
+            match xs with
+            | [] => fallback0
+            | x :: xs' =>
+                match fallback0 with
+                | [] => subst_type_params_ty type_args x :: go xs' []
+                | _ :: fb' => subst_type_params_ty type_args x :: go xs' fb'
+                end
+            end) args0 fallback) = false).
+    { fix IHargs 1.
+      intros args0 fallback Hargs0 Hfallback.
+      destruct args0 as [| T ts]; simpl in *.
+      - apply existsb_contains_lbound_ty_false_of_Forall. exact Hfallback.
+      - apply Bool.orb_false_iff in Hargs0 as [HT Hts].
+        destruct fallback as [| Tfallback rest]; simpl.
+        + rewrite (IH T HT). apply IHargs; [exact Hts | constructor].
+        + rewrite (IH T HT). apply IHargs.
+          * exact Hts.
+          * inversion Hfallback; subst. assumption. }
+    exact (Hgo args type_args Hargs Hclosed).
+  - apply Bool.orb_false_iff in Hnone as [Hlts Hargs].
+    rewrite Hlts. simpl.
+    assert (Hgo : forall args0 fallback,
+      existsb contains_lbound_ty args0 = false ->
+      Forall (fun T => contains_lbound_ty T = false) fallback ->
+      existsb contains_lbound_ty
+        ((fix go (xs fallback0 : list Ty) : list Ty :=
+            match xs with
+            | [] => fallback0
+            | x :: xs' =>
+                match fallback0 with
+                | [] => subst_type_params_ty type_args x :: go xs' []
+                | _ :: fb' => subst_type_params_ty type_args x :: go xs' fb'
+                end
+            end) args0 fallback) = false).
+    { fix IHargs 1.
+      intros args0 fallback Hargs0 Hfallback.
+      destruct args0 as [| T ts]; simpl in *.
+      - apply existsb_contains_lbound_ty_false_of_Forall. exact Hfallback.
+      - apply Bool.orb_false_iff in Hargs0 as [HT Hts].
+        destruct fallback as [| Tfallback rest]; simpl.
+        + rewrite (IH T HT). apply IHargs; [exact Hts | constructor].
+        + rewrite (IH T HT). apply IHargs.
+          * exact Hts.
+          * inversion Hfallback; subst. assumption. }
+    exact (Hgo args type_args Hargs Hclosed).
+  - apply Bool.orb_false_iff in Hnone as [Hparams Hret].
+    assert (Hparams_subst :
+      existsb contains_lbound_ty
+        ((fix go (xs : list Ty) : list Ty :=
+            match xs with
+            | [] => []
+            | x :: xs' => subst_type_params_ty type_args x :: go xs'
+            end) params) = false).
+    { revert params Hparams.
+      fix IHparams 1.
+      intros params Hparams.
+      destruct params as [| T ts]; simpl in *.
+      - reflexivity.
+      - apply Bool.orb_false_iff in Hparams as [HT Hts].
+        rewrite (IH T HT), (IHparams ts Hts). reflexivity. }
+    rewrite Hparams_subst, (IH ret Hret). reflexivity.
+  - apply Bool.orb_false_iff in Hnone as [Hleft Hret].
+    apply Bool.orb_false_iff in Hleft as [Hlt Hparams].
+    rewrite Hlt.
+    assert (Hparams_subst :
+      existsb contains_lbound_ty
+        ((fix go (xs : list Ty) : list Ty :=
+            match xs with
+            | [] => []
+            | x :: xs' => subst_type_params_ty type_args x :: go xs'
+            end) params) = false).
+    { revert params Hparams.
+      fix IHparams 1.
+      intros params Hparams.
+      destruct params as [| T ts]; simpl in *.
+      - reflexivity.
+      - apply Bool.orb_false_iff in Hparams as [HT Hts].
+        rewrite (IH T HT), (IHparams ts Hts). reflexivity. }
+    rewrite Hparams_subst, (IH ret Hret). reflexivity.
+  - apply Bool.orb_false_iff in Hnone as [Hout Hbody].
+    rewrite Hout, (IH body Hbody). reflexivity.
+  - exact Hnone.
+  - apply Bool.orb_false_iff in Hnone as [Hlt Hinner].
+    rewrite Hlt, (IH inner Hinner). reflexivity.
+Qed.
+
+Lemma ty_lifetime_equiv_subst_type_params_ty :
+  forall type_args T1 T2,
+    ty_lifetime_equiv T1 T2 ->
+    ty_lifetime_equiv
+      (subst_type_params_ty type_args T1)
+      (subst_type_params_ty type_args T2).
+Proof.
+  intros type_args T1 T2 Hequiv.
+  eapply subst_type_params_ty_lifetime_equiv.
+  - induction type_args as [| T Ts IH]; constructor.
+    + apply ty_lifetime_equiv_refl.
+    + exact IH.
+  - exact Hequiv.
+Qed.
+
+Lemma ty_compatible_subst_type_params_ty_closed :
+  forall Omega type_args T_actual T_expected,
+    Forall (fun T => contains_lbound_ty T = false) type_args ->
+    ty_compatible Omega T_actual T_expected ->
+    ty_compatible Omega
+      (subst_type_params_ty type_args T_actual)
+      (subst_type_params_ty type_args T_expected).
+Proof.
+  intros Omega type_args T_actual T_expected Hclosed.
+  revert T_actual T_expected.
+  fix IH 3.
+  intros T_actual T_expected Hcompat.
+  destruct Hcompat.
+  - subst ce.
+    replace (subst_type_params_ty type_args (MkTy ua ca)) with
+      (MkTy ua (ty_core (subst_type_params_ty type_args (MkTy ue ca)))).
+    2: { symmetry.
+         change (MkTy ua ca) with (MkTy ua (ty_core (MkTy ue ca))).
+         apply subst_type_params_ty_outer_usage_core. }
+    replace (subst_type_params_ty type_args (MkTy ue ca)) with
+      (MkTy ue (ty_core (subst_type_params_ty type_args (MkTy ue ca)))).
+    2: { symmetry.
+         change (MkTy ue ca) with (MkTy ue (ty_core (MkTy ue ca))).
+         apply subst_type_params_ty_outer_usage_core. }
+    apply TC_Core; [exact H | reflexivity].
+  - simpl. eapply TC_Ref_Shared; eauto.
+  - simpl. eapply TC_Ref_Unique; eauto.
+  - simpl. eapply TC_Fn; eauto.
+    induction H0 as [| expected actual params_e params_a Hparam Hparams IHparams];
+      simpl; constructor; auto.
+  - simpl. eapply TC_Closure; eauto.
+    induction H1 as [| expected actual params_e params_a Hparam Hparams IHparams];
+      simpl; constructor; auto.
+  - simpl. eapply TC_Fn_Closure; eauto.
+    induction H0 as [| expected actual params_e params_a Hparam Hparams IHparams];
+      simpl; constructor; auto.
+  - simpl. eapply TC_Forall; eauto.
+  - simpl. eapply TC_TypeForall; eauto.
+  - replace (subst_type_params_ty type_args (MkTy ua ca)) with
+      (MkTy ua (ty_core (subst_type_params_ty type_args (MkTy ua ca)))).
+    2: { symmetry.
+         change (MkTy ua ca) with (MkTy ua (ty_core (MkTy ua ca))).
+         apply subst_type_params_ty_outer_usage_core. }
+    eapply TC_Forall_GeneralizeUnused.
+    + exact H.
+    + eapply contains_lbound_ty_subst_type_params_ty_closed; eassumption.
+    + replace (MkTy ua (ty_core (subst_type_params_ty type_args (MkTy ua ca)))) with
+        (subst_type_params_ty type_args (MkTy ua ca)).
+      * eapply IH. exact Hcompat.
+      * change (MkTy ua ca) with (MkTy ua (ty_core (MkTy ua ca))).
+        apply subst_type_params_ty_outer_usage_core.
+Qed.
+
+Lemma runtime_tfn_signature_bridge_subst_type_params_ty_closed :
+  forall type_args params0 ret0 params1 ret1,
+    Forall (fun T => contains_lbound_ty T = false) type_args ->
+    runtime_tfn_signature_bridge params0 ret0 params1 ret1 ->
+    runtime_tfn_signature_bridge
+      (map (subst_type_params_ty type_args) params0)
+      (subst_type_params_ty type_args ret0)
+      (map (subst_type_params_ty type_args) params1)
+      (subst_type_params_ty type_args ret1).
+Proof.
+  intros type_args params0 ret0 params1 ret1 Hclosed Hbridge.
+  induction Hbridge.
+  - apply RTSB_Refl.
+  - eapply RTSB_Compatible.
+    + exact IHHbridge.
+    + assert (Hparams_subst : forall expected actual,
+        Forall2 (fun expected actual => ty_compatible Ω expected actual)
+          expected actual ->
+        Forall2 (fun expected actual => ty_compatible Ω expected actual)
+          (map (subst_type_params_ty type_args) expected)
+          (map (subst_type_params_ty type_args) actual)).
+      { fix IHparams 1.
+        intros expected actual Hparams.
+        destruct expected as [| expected_hd expected_tl];
+          destruct actual as [| actual_hd actual_tl];
+          inversion Hparams; subst; simpl; constructor.
+        - eapply ty_compatible_subst_type_params_ty_closed; eassumption.
+        - apply IHparams. eassumption. }
+      exact (Hparams_subst params2 params1 H).
+    + eapply ty_compatible_subst_type_params_ty_closed; eassumption.
+  - eapply RTSB_LifetimeEquiv.
+    + exact IHHbridge.
+    + assert (Hparams_subst : forall params_left params_right,
+        Forall2 ty_lifetime_equiv params_left params_right ->
+        Forall2 ty_lifetime_equiv
+          (map (subst_type_params_ty type_args) params_left)
+          (map (subst_type_params_ty type_args) params_right)).
+      { fix IHparams 1.
+        intros params_left params_right Hparams.
+        destruct params_left as [| left_hd left_tl];
+          destruct params_right as [| right_hd right_tl];
+          inversion Hparams; subst; simpl; constructor.
+        - apply ty_lifetime_equiv_subst_type_params_ty. eassumption.
+        - apply IHparams. eassumption. }
+      exact (Hparams_subst params1 params2 H).
+    + apply ty_lifetime_equiv_subst_type_params_ty. exact H0.
+Qed.
+
+Lemma map_param_ty_apply_type_params :
+  forall type_args ps,
+    map param_ty (apply_type_params type_args ps) =
+    map (subst_type_params_ty type_args) (map param_ty ps).
+Proof.
+  intros type_args ps.
+  induction ps as [| p ps IH]; simpl; auto.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma value_has_type_empty_closure_ttypeforall_tfn_components_closed :
+  forall env s fname fdef u type_params bounds body param_tys ret type_args,
+    Forall (fun T => contains_lbound_ty T = false) type_args ->
+    value_has_type env s (VClosure fname [])
+      (MkTy u (TTypeForall type_params bounds body)) ->
+    lookup_fn fname (env_fns env) = Some fdef ->
+    fn_env_unique_by_name env ->
+    ty_core body = TFn param_tys ret ->
+    fn_type_params fdef = type_params /\
+    fn_lifetimes fdef = 0 /\
+    fn_captures fdef = [] /\
+    runtime_tfn_signature_bridge
+      (map param_ty (apply_type_params type_args (fn_params fdef)))
+      (subst_type_params_ty type_args (fn_ret fdef))
+      (map (subst_type_params_ty type_args) param_tys)
+      (subst_type_params_ty type_args ret).
+Proof.
+  intros env s fname fdef u type_params bounds body param_tys ret type_args
+    Hclosed Htyped.
+  remember (VClosure fname []) as v eqn:Hv.
+  remember (MkTy u (TTypeForall type_params bounds body)) as T eqn:HT.
+  revert fname fdef u type_params bounds body param_tys ret type_args Hclosed Hv HT.
+  induction Htyped; intros fname0 fdef0 u0 type_params0 bounds0 body0
+      param_tys0 ret0 type_args0 Hclosed Hv HT Hlookup Hunique Hbody;
+    try discriminate.
+  - inversion Hv; subst fname0.
+    assert (fdef0 = fdef) as -> by (eapply lookup_fn_deterministic; eassumption).
+    unfold fn_value_ty, fn_signature_ty_with_usage in HT.
+    destruct (fn_type_params fdef) eqn:Htype_params;
+      [ simpl in HT; destruct (fn_lifetimes fdef); discriminate | ].
+    destruct (fn_lifetimes fdef) eqn:Hlifetimes; try discriminate.
+    simpl in HT. inversion HT; subst.
+    simpl in Hbody.
+    rewrite map_lifetimes_tys_close_fn_lifetime_0 in Hbody.
+    rewrite map_lifetimes_ty_close_fn_lifetime_0 in Hbody.
+    inversion Hbody; subst.
+    repeat split; try reflexivity; try exact H0.
+    rewrite map_param_ty_apply_type_params. apply RTSB_Refl.
+  - inversion Hv; subst fname0.
+    pose proof
+      (lookup_fn_unique_by_name env fname fdef0 fdef Hlookup H H0 Hunique)
+      as Heq.
+    subst fdef.
+    unfold fn_value_ty, fn_signature_ty_with_usage in HT.
+    destruct (fn_type_params fdef0) eqn:Htype_params;
+      [ simpl in HT; destruct (fn_lifetimes fdef0); discriminate | ].
+    destruct (fn_lifetimes fdef0) eqn:Hlifetimes; try discriminate.
+    simpl in HT. inversion HT; subst.
+    simpl in Hbody.
+    rewrite map_lifetimes_tys_close_fn_lifetime_0 in Hbody.
+    rewrite map_lifetimes_ty_close_fn_lifetime_0 in Hbody.
+    inversion Hbody; subst.
+    repeat split; try reflexivity; try exact H1.
+    rewrite map_param_ty_apply_type_params. apply RTSB_Refl.
+  - match goal with
+    | Hcompat : ty_compatible _ _ ?Texpect,
+      HTy : ?Texpect = MkTy _ (TTypeForall _ _ _) |- _ => rewrite HTy in Hcompat
+    | Hcompat : ty_compatible _ _ ?Texpect,
+      HTy : MkTy _ (TTypeForall _ _ _) = ?Texpect |- _ => rewrite <- HTy in Hcompat
+    end.
+    inversion H; subst; try discriminate.
+    + destruct body0 as [u_body core_body].
+      simpl in Hbody. rewrite Hbody in *.
+      destruct (IHHtyped fname0 fdef0 _ _ _ _
+        param_tys0 ret0 type_args0 Hclosed eq_refl eq_refl Hlookup Hunique
+        eq_refl) as [Htype_params [Hlifetimes [Hcaptures Hbridge]]].
+      repeat split; try exact Htype_params; try exact Hlifetimes;
+        try exact Hcaptures.
+      exact Hbridge.
+    + destruct body0 as [u_body core_body].
+      simpl in Hbody. rewrite Hbody in *.
+      match goal with
+      | Hcompat_body : ty_compatible ?Omega ?Tbody_actual
+          (MkTy u_body (TFn param_tys0 ret0)) |- _ =>
+          destruct (ty_compatible_tfn_signature_bridge Omega Tbody_actual
+            u_body param_tys0 ret0 Hcompat_body)
+            as [u_actual [params_actual [ret_actual [HTbody_actual Hstep]]]]
+      end.
+      rewrite HTbody_actual in *.
+      destruct (IHHtyped fname0 fdef0 _ _ _ _
+        params_actual ret_actual type_args0 Hclosed eq_refl eq_refl Hlookup Hunique
+        eq_refl) as [Htype_params [Hlifetimes [Hcaptures Hbridge]]].
+      repeat split; try exact Htype_params; try exact Hlifetimes;
+        try exact Hcaptures.
+      eapply runtime_tfn_signature_bridge_trans.
+      * exact Hbridge.
+      * eapply runtime_tfn_signature_bridge_subst_type_params_ty_closed;
+          eassumption.
+  - match goal with
+    | Hequiv : ty_lifetime_equiv _ ?Texpect,
+      HTy : ?Texpect = MkTy _ (TTypeForall _ _ _) |- _ => rewrite HTy in Hequiv
+    | Hequiv : ty_lifetime_equiv _ ?Texpect,
+      HTy : MkTy _ (TTypeForall _ _ _) = ?Texpect |- _ => rewrite <- HTy in Hequiv
+    end.
+    inversion H; subst; try discriminate.
+    destruct body0 as [u_body core_body].
+    simpl in Hbody. rewrite Hbody in *.
+    match goal with
+    | Hequiv_body : ty_lifetime_equiv ?Tbody_actual
+        (MkTy u_body (TFn param_tys0 ret0)) |- _ =>
+        destruct (ty_lifetime_equiv_tfn_signature_bridge Tbody_actual
+          u_body param_tys0 ret0 Hequiv_body)
+          as [params_actual [ret_actual [HTbody_actual Hstep]]]
+    end.
+    rewrite HTbody_actual in *.
+    destruct (IHHtyped fname0 fdef0 _ _ _ _
+      params_actual ret_actual type_args0 Hclosed eq_refl eq_refl Hlookup Hunique
+      eq_refl) as [Htype_params [Hlifetimes [Hcaptures Hbridge]]].
+    repeat split; try exact Htype_params; try exact Hlifetimes;
+      try exact Hcaptures.
+    eapply runtime_tfn_signature_bridge_trans.
+    + exact Hbridge.
+    + eapply runtime_tfn_signature_bridge_subst_type_params_ty_closed;
+        eassumption.
+Qed.
+
 Lemma eval_args_values_have_types_params_of_tys_compatible :
   forall env Ω_args Ω_bridge Ω_out s vs params_expected params_actual,
     Forall2 (fun expected actual => ty_compatible Ω_bridge expected actual)

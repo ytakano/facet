@@ -1,6 +1,6 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming TypingRules RootProvenance TypeChecker.
-From Stdlib Require Import Bool List String Lia.
+From Stdlib Require Import Bool List String PeanoNat Lia.
 Import ListNotations.
 
 Definition roots_exclude_params (ps : list param) (roots : root_set) : Prop :=
@@ -722,6 +722,288 @@ Proof.
   - reflexivity.
   - simpl. rewrite apply_type_param_noop_of_subst_noop; [rewrite IH |];
       reflexivity || exact Hhead.
+Qed.
+
+Lemma usage_eqb_refl : forall u,
+  usage_eqb u u = true.
+Proof.
+  destruct u; reflexivity.
+Qed.
+
+Lemma ref_kind_eqb_refl : forall rk,
+  ref_kind_eqb rk rk = true.
+Proof.
+  destruct rk; reflexivity.
+Qed.
+
+Lemma lifetime_list_eqb_refl : forall lts,
+  lifetime_list_eqb lts lts = true.
+Proof.
+  induction lts as [| lt lts IH]; simpl; auto.
+  apply andb_true_iff. split.
+  - apply lifetime_eqb_eq. reflexivity.
+  - exact IH.
+Qed.
+
+Lemma outlives_ctx_eqb_refl : forall Omega,
+  outlives_ctx_eqb Omega Omega = true.
+Proof.
+  induction Omega as [| [a b] Omega IH]; simpl; auto.
+  apply andb_true_iff. split.
+  - unfold lifetime_pair_eqb; simpl.
+    apply andb_true_iff. split; apply lifetime_eqb_eq; reflexivity.
+  - exact IH.
+Qed.
+
+Lemma ty_eqb_refl : forall T,
+  ty_eqb T T = true.
+Proof.
+  assert (Hsize : forall n T,
+      ty_depth T < n ->
+      ty_eqb T T = true).
+  {
+    induction n as [| n IH]; intros [u c] Hlt.
+    - simpl in Hlt. lia.
+    - simpl.
+      rewrite usage_eqb_refl.
+      destruct c as [| | | | s | i | name lts args | name lts args
+                     | ts r | lc cts cr | k Omega body
+                     | k bounds body | l rk inner];
+        simpl; try reflexivity.
+      + rewrite String.eqb_refl. reflexivity.
+      + rewrite Nat.eqb_refl. reflexivity.
+      + rewrite String.eqb_refl, lifetime_list_eqb_refl. simpl.
+        revert Hlt. induction args as [| t args IHargs]; intros Hlt; simpl; auto.
+        rewrite (IH t); [| simpl in Hlt; lia].
+        rewrite IHargs; [reflexivity | eapply Nat.le_lt_trans; [| exact Hlt]; simpl; lia].
+      + rewrite String.eqb_refl, lifetime_list_eqb_refl. simpl.
+        revert Hlt. induction args as [| t args IHargs]; intros Hlt; simpl; auto.
+        rewrite (IH t); [| simpl in Hlt; lia].
+        rewrite IHargs; [reflexivity | eapply Nat.le_lt_trans; [| exact Hlt]; simpl; lia].
+      + revert Hlt. induction ts as [| t ts IHts]; intros Hlt; simpl.
+        * apply IH. simpl in Hlt. lia.
+        * rewrite (IH t); [| simpl in Hlt; lia].
+          apply IHts. eapply Nat.le_lt_trans; [| exact Hlt]; simpl; lia.
+      + assert (Hlc : lifetime_eqb lc lc = true) by (apply lifetime_eqb_eq; reflexivity).
+        rewrite Hlc. simpl.
+        revert Hlt. induction cts as [| t cts IHts]; intros Hlt; simpl.
+        * apply IH. simpl in Hlt. lia.
+        * rewrite (IH t); [| simpl in Hlt; lia].
+          apply IHts. eapply Nat.le_lt_trans; [| exact Hlt]; simpl; lia.
+      + rewrite Nat.eqb_refl, outlives_ctx_eqb_refl. simpl.
+        apply IH. simpl in Hlt. lia.
+      + rewrite Nat.eqb_refl. simpl.
+        assert (Hbounds :
+          (fix go_bounds (xs ys : list (core_trait_bound Ty)) : bool :=
+             match xs with
+             | [] => match ys with | [] => true | _ :: _ => false end
+             | x :: xs' =>
+                 match ys with
+                 | [] => false
+                 | y :: ys' =>
+                     Nat.eqb (core_bound_type_index Ty x) (core_bound_type_index Ty y) &&
+                     (fix go_refs (rs ss : list (core_trait_ref Ty)) : bool :=
+                        match rs with
+                        | [] => match ss with | [] => true | _ :: _ => false end
+                        | r :: rs' =>
+                            match ss with
+                            | [] => false
+                            | s :: ss' =>
+                                String.eqb (core_trait_ref_name Ty r) (core_trait_ref_name Ty s) &&
+                                (fix go_args (as_ bs : list Ty) : bool :=
+                                   match as_ with
+                                   | [] => match bs with | [] => true | _ :: _ => false end
+                                   | a :: as' =>
+                                       match bs with
+                                       | [] => false
+                                       | b :: bs' => ty_eqb a b && go_args as' bs'
+                                       end
+                                   end) (core_trait_ref_args Ty r) (core_trait_ref_args Ty s) &&
+                                go_refs rs' ss'
+                            end
+                        end) (core_bound_traits Ty x) (core_bound_traits Ty y) &&
+                     go_bounds xs' ys'
+                 end
+             end) bounds bounds = true).
+        {
+          revert Hlt.
+          induction bounds as [| [idx refs] bounds IHbounds]; intros Hlt; simpl; auto.
+          rewrite Nat.eqb_refl. simpl.
+          assert (Hrefs :
+            (fix go_refs (rs ss : list (core_trait_ref Ty)) : bool :=
+               match rs with
+               | [] => match ss with | [] => true | _ :: _ => false end
+               | r :: rs' =>
+                   match ss with
+                   | [] => false
+                   | s :: ss' =>
+                       String.eqb (core_trait_ref_name Ty r) (core_trait_ref_name Ty s) &&
+                       (fix go_args (as_ bs : list Ty) : bool :=
+                          match as_ with
+                          | [] => match bs with | [] => true | _ :: _ => false end
+                          | a :: as' =>
+                              match bs with
+                              | [] => false
+                              | b :: bs' => ty_eqb a b && go_args as' bs'
+                              end
+                          end) (core_trait_ref_args Ty r) (core_trait_ref_args Ty s) &&
+                       go_refs rs' ss'
+                   end
+               end) refs refs = true).
+          {
+            revert Hlt.
+            induction refs as [| [tr_name tr_args] refs IHrefs]; intros Hlt; simpl; auto.
+            rewrite String.eqb_refl. simpl.
+            assert (Hargs :
+              (fix go_args (as_ bs : list Ty) : bool :=
+                 match as_ with
+                 | [] => match bs with | [] => true | _ :: _ => false end
+                 | a :: as' =>
+                     match bs with
+                     | [] => false
+                     | b :: bs' => ty_eqb a b && go_args as' bs'
+                     end
+                 end) tr_args tr_args = true).
+            {
+              revert Hlt.
+              induction tr_args as [| arg tr_args IHargs]; intros Hlt; simpl; auto.
+              rewrite (IH arg); [| simpl in Hlt; lia].
+              rewrite IHargs; [reflexivity | eapply Nat.lt_le_trans; [| exact Hlt]; simpl; lia].
+            }
+            rewrite Hargs, IHrefs; [reflexivity | eapply Nat.lt_le_trans; [| exact Hlt]; simpl; lia].
+          }
+          rewrite Hrefs, IHbounds; [reflexivity | eapply Nat.lt_le_trans; [| exact Hlt]; simpl; lia].
+        }
+        rewrite Hbounds. simpl.
+        apply IH. simpl in Hlt. lia.
+      + assert (Hl : lifetime_eqb l l = true) by (apply lifetime_eqb_eq; reflexivity).
+        rewrite Hl, ref_kind_eqb_refl. simpl.
+        apply IH. simpl in Hlt. lia.
+  }
+  intros T. exact (Hsize (S (ty_depth T)) T (Nat.lt_succ_diag_r _)).
+Qed.
+
+Lemma ty_core_eqb_refl : forall c,
+  ty_core_eqb c c = true.
+Proof.
+  intros c.
+  destruct c as [| | | | s | i | name lts args | name lts args
+                 | ts r | lc cts cr | k Omega body
+                 | k bounds body | l rk inner];
+    simpl; try reflexivity.
+  - rewrite String.eqb_refl. reflexivity.
+  - rewrite Nat.eqb_refl. reflexivity.
+  - rewrite String.eqb_refl, lifetime_list_eqb_refl. simpl.
+    induction args as [| t args IHargs]; simpl; auto.
+    rewrite ty_eqb_refl, IHargs. reflexivity.
+  - rewrite String.eqb_refl, lifetime_list_eqb_refl. simpl.
+    induction args as [| t args IHargs]; simpl; auto.
+    rewrite ty_eqb_refl, IHargs. reflexivity.
+  - induction ts as [| t ts IHts]; simpl.
+    + apply ty_eqb_refl.
+    + rewrite ty_eqb_refl. simpl. exact IHts.
+  - assert (Hlc : lifetime_eqb lc lc = true) by (apply lifetime_eqb_eq; reflexivity).
+    rewrite Hlc.
+    induction cts as [| t cts IHts]; simpl.
+    + apply ty_eqb_refl.
+    + rewrite ty_eqb_refl. simpl. exact IHts.
+  - rewrite Nat.eqb_refl, outlives_ctx_eqb_refl. simpl.
+    apply ty_eqb_refl.
+  - rewrite Nat.eqb_refl. simpl.
+    assert (Hbounds :
+      (fix go_bounds (xs ys : list (core_trait_bound Ty)) : bool :=
+         match xs with
+         | [] => match ys with | [] => true | _ :: _ => false end
+         | x :: xs' =>
+             match ys with
+             | [] => false
+             | y :: ys' =>
+                 Nat.eqb (core_bound_type_index Ty x) (core_bound_type_index Ty y) &&
+                 (fix go_refs (rs ss : list (core_trait_ref Ty)) : bool :=
+                    match rs with
+                    | [] => match ss with | [] => true | _ :: _ => false end
+                    | r :: rs' =>
+                        match ss with
+                        | [] => false
+                        | s :: ss' =>
+                            String.eqb (core_trait_ref_name Ty r) (core_trait_ref_name Ty s) &&
+                            (fix go_args (as_ bs : list Ty) : bool :=
+                               match as_ with
+                               | [] => match bs with | [] => true | _ :: _ => false end
+                               | a :: as' =>
+                                   match bs with
+                                   | [] => false
+                                   | b :: bs' => ty_eqb a b && go_args as' bs'
+                                   end
+                               end) (core_trait_ref_args Ty r) (core_trait_ref_args Ty s) &&
+                            go_refs rs' ss'
+                        end
+                    end) (core_bound_traits Ty x) (core_bound_traits Ty y) &&
+                 go_bounds xs' ys'
+             end
+         end) bounds bounds = true).
+    {
+      induction bounds as [| [idx refs] bounds IHbounds]; simpl; auto.
+      rewrite Nat.eqb_refl. simpl.
+      assert (Hrefs :
+        (fix go_refs (rs ss : list (core_trait_ref Ty)) : bool :=
+           match rs with
+           | [] => match ss with | [] => true | _ :: _ => false end
+           | r :: rs' =>
+               match ss with
+               | [] => false
+               | s :: ss' =>
+                   String.eqb (core_trait_ref_name Ty r) (core_trait_ref_name Ty s) &&
+                   (fix go_args (as_ bs : list Ty) : bool :=
+                      match as_ with
+                      | [] => match bs with | [] => true | _ :: _ => false end
+                      | a :: as' =>
+                          match bs with
+                          | [] => false
+                          | b :: bs' => ty_eqb a b && go_args as' bs'
+                          end
+                      end) (core_trait_ref_args Ty r) (core_trait_ref_args Ty s) &&
+                   go_refs rs' ss'
+               end
+           end) refs refs = true).
+      {
+        induction refs as [| [tr_name tr_args] refs IHrefs]; simpl; auto.
+        rewrite String.eqb_refl. simpl.
+        assert (Hargs :
+          (fix go_args (as_ bs : list Ty) : bool :=
+             match as_ with
+             | [] => match bs with | [] => true | _ :: _ => false end
+             | a :: as' =>
+                 match bs with
+                 | [] => false
+                 | b :: bs' => ty_eqb a b && go_args as' bs'
+                 end
+             end) tr_args tr_args = true).
+        {
+          induction tr_args as [| arg tr_args IHargs]; simpl; auto.
+          rewrite ty_eqb_refl, IHargs. reflexivity.
+        }
+        rewrite Hargs, IHrefs. reflexivity.
+      }
+      rewrite Hrefs, IHbounds. reflexivity.
+    }
+    rewrite Hbounds. simpl.
+    apply ty_eqb_refl.
+  - assert (Hl : lifetime_eqb l l = true) by (apply lifetime_eqb_eq; reflexivity).
+    rewrite Hl, ref_kind_eqb_refl. simpl.
+    apply ty_eqb_refl.
+Qed.
+
+Lemma ty_core_eqb_subst_type_params_same_core :
+  forall type_args ua ue c,
+    ty_core_eqb
+      (ty_core (subst_type_params_ty type_args (MkTy ua c)))
+      (ty_core (subst_type_params_ty type_args (MkTy ue c))) = true.
+Proof.
+  intros type_args ua ue c.
+  change (MkTy ua c) with (MkTy ua (ty_core (MkTy ue c))).
+  rewrite subst_type_params_ty_outer_usage_core.
+  simpl. apply ty_core_eqb_refl.
 Qed.
 
 Lemma ty_compatible_b_fuel_monotone :

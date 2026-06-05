@@ -124,6 +124,9 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: add compatibility fuel monotonicity proof support for boolean
      substitution transport.
      Check: `make EnvStructuralRules.vo`, proof-hole scan.
+   - Done: add equality boolean reflexivity/same-core proof support for
+     compatibility substitution transport.
+     Check: `make EnvStructuralRules.vo`, proof-hole scan.
    - Todo: prove boolean compatibility substitution transport, then roots-shadow
      type-substitution preservation for arbitrary bodies or an equivalent
      closed-type-arg `callee_body_root_shadow_provenance_summary` lemma.

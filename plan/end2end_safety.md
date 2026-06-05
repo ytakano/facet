@@ -88,8 +88,11 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      `sh tests/run.sh` still fails the 8 known generic function-value/local
      safety-gate cases; `sh tests/fir/run.sh` remains red on existing
      safety-gate and brittle FIR name-suffix expectations.
-   - Todo: type-check pure `TTypeForall (... TFn ...)` calls to
+   - Done: type-check pure `TTypeForall (... TFn ...)` calls to
      `ECallExprGeneric` and regenerate extraction.
+     Checks: `cd rocq && make`, `dune build`, proof-hole scan.
+     Targeted valid pure function-value tests now fail at the expected
+     end-to-end safety gate, not raw elaboration.
    - Todo: prove pure `TTypeForall` runtime safety packages.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`
    through `ECallExprGeneric` after task 6 compiles.

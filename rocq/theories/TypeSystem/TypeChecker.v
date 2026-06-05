@@ -1195,6 +1195,27 @@ Definition infer_type_forall_call_env
   | c => infer_err (ErrMalformedHrtBody c)
   end.
 
+Definition infer_type_forall_call_env_elab
+    (env : global_env) (Ω : outlives_ctx) (type_params : nat)
+    (bounds : list (core_trait_bound Ty)) (body : Ty) (arg_tys : list Ty)
+    : infer_result (list Ty * Ty) :=
+  match ty_core body with
+  | TFn param_tys ret =>
+      match infer_type_forall_args type_params param_tys arg_tys with
+      | None => infer_err ErrTypeArgInferenceFailed
+      | Some type_args =>
+          match check_type_forall_bounds env bounds type_args with
+          | Some err => infer_err err
+          | None =>
+              match check_arg_tys Ω arg_tys (map (subst_type_params_ty type_args) param_tys) with
+              | Some err => infer_err err
+              | None => infer_ok (type_args, subst_type_params_ty type_args ret)
+              end
+          end
+      end
+  | c => infer_err (ErrMalformedHrtBody c)
+  end.
+
 Definition shared_ref_lifetime_of_ty (T : Ty) : option lifetime :=
   match T with
   | MkTy _ (TRef l RShared _) => Some l
@@ -4729,9 +4750,10 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
                   | None => infer_ok (ret, Σ', ECallExpr callee' args')
                   end
               | TTypeForall type_params bounds body =>
-                  match infer_type_forall_call_env env Ω type_params bounds body arg_tys with
+                  match infer_type_forall_call_env_elab env Ω type_params bounds body arg_tys with
                   | infer_err err => infer_err err
-                  | infer_ok ret => infer_ok (ret, Σ', ECallExpr callee' args')
+                  | infer_ok (type_args, ret) =>
+                      infer_ok (ret, Σ', ECallExprGeneric callee' type_args args')
                   end
               | TForall m bounds body =>
                   match ty_core body with

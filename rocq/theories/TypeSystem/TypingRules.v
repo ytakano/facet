@@ -882,6 +882,14 @@ Inductive typed (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) : ctx -> expr
       Forall (fun '(a, b) => outlives Ω a b) (open_bound_outlives σ bounds) ->
       typed fenv Ω n Γ (ECallExpr callee args) (open_bound_ty σ ret) Γ'
 
+  | T_CallExpr_TypeForall : forall Γ Γ1 Γ' callee type_args args u m bounds body param_tys ret,
+      typed fenv Ω n Γ callee (MkTy u (TTypeForall m bounds body)) Γ1 ->
+      ty_core body = TFn param_tys ret ->
+      typed_args fenv Ω n Γ1 args
+        (params_of_tys (map (subst_type_params_ty type_args) param_tys)) Γ' ->
+      typed fenv Ω n Γ (ECallExprGeneric callee type_args args)
+        (subst_type_params_ty type_args ret) Γ'
+
 (* Type-check a list of arguments against a list of parameters.
    Each argument's type must have the same core type as the parameter's
    declared type and a compatible usage (subtype). The context threads

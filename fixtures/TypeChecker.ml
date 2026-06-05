@@ -4084,6 +4084,26 @@ let infer_type_forall_call_env env _UU03a9_ type_params bounds body arg_tys =
      | None -> Infer_err ErrTypeArgInferenceFailed)
   | x -> Infer_err (ErrMalformedHrtBody x)
 
+(** val infer_type_forall_call_env_elab :
+    global_env -> outlives_ctx -> Big_int_Z.big_int -> ty core_trait_bound
+    list -> ty -> ty list -> (ty list * ty) infer_result **)
+
+let infer_type_forall_call_env_elab env _UU03a9_ type_params bounds body arg_tys =
+  match ty_core body with
+  | TFn (param_tys, ret) ->
+    (match infer_type_forall_args type_params param_tys arg_tys with
+     | Some type_args ->
+       (match check_type_forall_bounds env bounds type_args with
+        | Some err -> Infer_err err
+        | None ->
+          (match check_arg_tys _UU03a9_ arg_tys
+                   (map (subst_type_params_ty type_args) param_tys) with
+           | Some err -> Infer_err err
+           | None ->
+             Infer_ok (type_args, (subst_type_params_ty type_args ret))))
+     | None -> Infer_err ErrTypeArgInferenceFailed)
+  | x -> Infer_err (ErrMalformedHrtBody x)
+
 (** val shared_ref_lifetime_of_ty : ty -> lifetime option **)
 
 let shared_ref_lifetime_of_ty = function
@@ -6104,10 +6124,12 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
                    | None -> Infer_err ErrLifetimeConflict)
                 | x -> Infer_err (ErrMalformedHrtBody x))
              | TTypeForall (type_params, bounds, body) ->
-               (match infer_type_forall_call_env env _UU03a9_ type_params
-                        bounds body arg_tys with
-                | Infer_ok ret ->
-                  Infer_ok ((ret, _UU03a3_'), (ECallExpr (callee', args')))
+               (match infer_type_forall_call_env_elab env _UU03a9_
+                        type_params bounds body arg_tys with
+                | Infer_ok p3 ->
+                  let (type_args, ret) = p3 in
+                  Infer_ok ((ret, _UU03a3_'), (ECallExprGeneric (callee',
+                  type_args, args')))
                 | Infer_err err -> Infer_err err)
              | x -> Infer_err (ErrNotAFunction x))
           | Infer_err err -> Infer_err err)

@@ -765,6 +765,10 @@ val infer_type_forall_call_env :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> ty core_trait_bound list
   -> ty -> ty list -> ty infer_result
 
+val infer_type_forall_call_env_elab :
+  global_env -> outlives_ctx -> Big_int_Z.big_int -> ty core_trait_bound list
+  -> ty -> ty list -> (ty list * ty) infer_result
+
 val shared_ref_lifetime_of_ty : ty -> lifetime option
 
 val collect_shared_ref_lifetimes : ty list -> lifetime list

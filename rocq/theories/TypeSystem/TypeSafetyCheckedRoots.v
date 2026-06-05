@@ -354,6 +354,114 @@ Proof.
   - simpl. apply Hcompat_refl.
 Qed.
 
+Lemma typed_env_roots_shadow_safe_eif_subst_type_params_compat_package :
+  forall env Omega n R Sigma e1 e2 e3 T Sigma' R' roots type_args,
+    typed_env_roots_shadow_safe env Omega n R Sigma (EIf e1 e2 e3)
+      T Sigma' R' roots ->
+    (forall T_cond Sigma1 R1 roots_cond,
+        typed_env_roots_shadow_safe env Omega n R Sigma e1
+          T_cond Sigma1 R1 roots_cond ->
+        exists T_cond_subst,
+          typed_env_roots_shadow_safe env Omega n R
+            (subst_type_params_ctx type_args Sigma)
+            (subst_type_params_expr type_args e1)
+            T_cond_subst (subst_type_params_ctx type_args Sigma1)
+            R1 roots_cond /\
+          ty_compatible_b Omega T_cond_subst
+            (subst_type_params_ty type_args T_cond) = true) ->
+    (forall Sigma1 R1 T2 Sigma2 R2 roots2,
+        typed_env_roots_shadow_safe env Omega n R1 Sigma1 e2
+          T2 Sigma2 R2 roots2 ->
+        exists T2_subst,
+          typed_env_roots_shadow_safe env Omega n R1
+            (subst_type_params_ctx type_args Sigma1)
+            (subst_type_params_expr type_args e2)
+            T2_subst (subst_type_params_ctx type_args Sigma2) R2 roots2 /\
+          ty_compatible_b Omega T2_subst
+            (subst_type_params_ty type_args T2) = true) ->
+    (forall Sigma1 R1 T3 Sigma3 R3 roots3,
+        typed_env_roots_shadow_safe env Omega n R1 Sigma1 e3
+          T3 Sigma3 R3 roots3 ->
+        exists T3_subst,
+          typed_env_roots_shadow_safe env Omega n R1
+            (subst_type_params_ctx type_args Sigma1)
+            (subst_type_params_expr type_args e3)
+            T3_subst (subst_type_params_ctx type_args Sigma3) R3 roots3 /\
+          ty_compatible_b Omega T3_subst
+            (subst_type_params_ty type_args T3) = true) ->
+    (forall T_cond T_cond_subst,
+        ty_compatible_b Omega T_cond_subst
+          (subst_type_params_ty type_args T_cond) = true ->
+        ty_core T_cond = TBooleans ->
+        ty_core T_cond_subst = TBooleans) ->
+    (forall T2 T3 T2_subst T3_subst,
+        ty_compatible_b Omega T2_subst
+          (subst_type_params_ty type_args T2) = true ->
+        ty_compatible_b Omega T3_subst
+          (subst_type_params_ty type_args T3) = true ->
+        ty_core T2 = ty_core T3 ->
+        ty_core T2_subst = ty_core T3_subst) ->
+    (forall Sigma2 Sigma3 Sigma4,
+        ctx_merge (ctx_of_sctx Sigma2) (ctx_of_sctx Sigma3) =
+          Some Sigma4 ->
+        ctx_merge (ctx_of_sctx (subst_type_params_ctx type_args Sigma2))
+          (ctx_of_sctx (subst_type_params_ctx type_args Sigma3)) =
+          Some (subst_type_params_ctx type_args Sigma4)) ->
+    (forall T2 T3 T2_subst T3_subst,
+        ty_compatible_b Omega T2_subst
+          (subst_type_params_ty type_args T2) = true ->
+        ty_compatible_b Omega T3_subst
+          (subst_type_params_ty type_args T3) = true ->
+        ty_compatible_b Omega
+          (MkTy (usage_max (ty_usage T2_subst) (ty_usage T3_subst))
+            (ty_core T2_subst))
+          (subst_type_params_ty type_args
+            (MkTy (usage_max (ty_usage T2) (ty_usage T3))
+              (ty_core T2))) = true) ->
+    exists T_subst Gamma_out_subst,
+      typed_env_roots_shadow_safe env Omega n R
+        (subst_type_params_ctx type_args Sigma)
+        (subst_type_params_expr type_args (EIf e1 e2 e3))
+        T_subst (sctx_of_ctx Gamma_out_subst) R' roots /\
+      ty_compatible_b Omega T_subst
+        (subst_type_params_ty type_args T) = true.
+Proof.
+  intros env Omega n R Sigma e1 e2 e3 T Sigma' R' roots type_args
+    Htyped Htransport_cond Htransport_then Htransport_else Hcond_core
+    Hbranch_core Hmerge_subst Hcompat_result.
+  inversion Htyped; subst.
+  match goal with
+  | Hcond : typed_env_roots_shadow_safe env Omega n R Sigma e1
+      ?T_cond ?Sigma1 ?R1 ?roots_cond |- _ =>
+      pose proof (Htransport_cond T_cond Sigma1 R1 roots_cond Hcond)
+        as [T_cond_subst [Htyped_cond_subst Hcompat_cond]]
+  end.
+  match goal with
+  | Hthen : typed_env_roots_shadow_safe env Omega n ?R1 ?Sigma1 e2
+      ?T2 ?Sigma2 ?R2 ?roots2 |- _ =>
+      pose proof (Htransport_then Sigma1 R1 T2 Sigma2 R2 roots2 Hthen)
+        as [T2_subst [Htyped_then_subst Hcompat_then]]
+  end.
+  match goal with
+  | Helse : typed_env_roots_shadow_safe env Omega n ?R1 ?Sigma1 e3
+      ?T3 ?Sigma3 ?R3 ?roots3 |- _ =>
+      pose proof (Htransport_else Sigma1 R1 T3 Sigma3 R3 roots3 Helse)
+        as [T3_subst [Htyped_else_subst Hcompat_else]]
+  end.
+  exists (MkTy (usage_max (ty_usage T2_subst) (ty_usage T3_subst))
+      (ty_core T2_subst)), (subst_type_params_ctx type_args Sigma').
+  split.
+  - simpl. eapply TERS_If.
+    + exact Htyped_cond_subst.
+    + eapply Hcond_core; eauto.
+    + exact Htyped_then_subst.
+    + exact Htyped_else_subst.
+    + eapply Hbranch_core; eauto.
+    + eapply Hmerge_subst; eauto.
+    + assumption.
+  - eapply Hcompat_result; eauto.
+Qed.
+
 Inductive typed_env_roots_checked
     (env : global_env) (Ω : outlives_ctx) (n : nat)
     : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set -> Prop :=

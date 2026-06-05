@@ -186,6 +186,9 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: add `EDrop` provenance-ready wrapper substitution package
      with explicit inner transport premise.
      Check: `make TypeSafetyCheckedRoots.vo`.
+   - Done: add `EIf` wrapper substitution package with explicit
+     condition, branch, merge, and result transport premises.
+     Check: `make TypeSafetyCheckedRoots.vo`.
    - Done: add leaf-subset args/fields type-substitution packages for
      structured provenance-ready bodies. Check: `make TypeSafetyCheckedRoots.vo`.
    - Done: add leaf-subset struct/enum expression package helpers with

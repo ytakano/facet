@@ -221,9 +221,11 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      Check: `make TypeSafetyCheckedRoots.vo`.
    - Done: add general struct/enum provenance-ready type-substitution packages.
      Check: `make TypeSafetyCheckedRoots.vo`.
-   - Todo: prove roots-shadow type-substitution preservation for the
-     provenance-ready expression subset, or strengthen the closure-target
-     runtime invariant with checked instantiated summaries.
+   - Done: add premise-heavy dispatch umbrella for roots-shadow
+     type-substitution over full `provenance_ready_expr`.
+     Check: `make TypeSafetyCheckedRoots.vo`, proof-hole scan.
+   - Todo: instantiate the umbrella package in the runtime summary proof,
+     or strengthen closure targets with checked instantiated summaries.
    - Note: `contains_lbound_ty = false` is not an `apply_lt_ty` no-op because
      type args may contain `LVar`; transport must use lifetime equivalence.
    - Todo: use that lemma to finish the end-to-end store-safe summary

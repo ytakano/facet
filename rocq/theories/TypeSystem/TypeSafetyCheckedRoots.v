@@ -1628,6 +1628,184 @@ Proof.
     + apply Hcompat_result.
 Qed.
 
+
+Lemma typed_env_roots_shadow_safe_provenance_ready_subst_type_params_compat_package :
+  forall env Omega n R Sigma e T Sigma' R' roots type_args,
+    provenance_ready_expr e ->
+    typed_env_roots_shadow_safe env Omega n R Sigma e T Sigma' R' roots ->
+    (forall e0 T0 Sigma0' R0' roots0,
+        provenance_ready_expr e0 ->
+        typed_env_roots_shadow_safe env Omega n R Sigma e0
+          T0 Sigma0' R0' roots0 ->
+        (exists x, e0 = EVar x) \/
+        e0 = EUnit \/
+        (exists lit, e0 = ELit lit) \/
+        (exists p, e0 = EPlace p) \/
+        (exists rk p, e0 = EBorrow rk p) \/
+        (exists p, e0 = EDrop (EPlace p)) \/
+        (exists rk p, e0 = EDeref (EBorrow rk p)) ->
+        exists T_subst Gamma_out_subst,
+          typed_env_roots_shadow_safe env Omega n R
+            (subst_type_params_ctx type_args Sigma)
+            (subst_type_params_expr type_args e0)
+            T_subst (sctx_of_ctx Gamma_out_subst) R0' roots0 /\
+          ty_compatible_b Omega T_subst
+            (subst_type_params_ty type_args T0) = true) ->
+    (forall fname T0 Sigma0' R0' roots0,
+        typed_env_roots_shadow_safe env Omega n R Sigma (EFn fname)
+          T0 Sigma0' R0' roots0 ->
+        exists T_subst Gamma_out_subst,
+          typed_env_roots_shadow_safe env Omega n R
+            (subst_type_params_ctx type_args Sigma)
+            (subst_type_params_expr type_args (EFn fname))
+            T_subst (sctx_of_ctx Gamma_out_subst) R0' roots0 /\
+          ty_compatible_b Omega T_subst
+            (subst_type_params_ty type_args T0) = true) ->
+    (forall sname lts struct_type_args fields T0 Sigma0' R0' roots0,
+        provenance_ready_fields fields ->
+        typed_env_roots_shadow_safe env Omega n R Sigma
+          (EStruct sname lts struct_type_args fields)
+          T0 Sigma0' R0' roots0 ->
+        exists T_subst Gamma_out_subst,
+          typed_env_roots_shadow_safe env Omega n R
+            (subst_type_params_ctx type_args Sigma)
+            (subst_type_params_expr type_args
+              (EStruct sname lts struct_type_args fields))
+            T_subst (sctx_of_ctx Gamma_out_subst) R0' roots0 /\
+          ty_compatible_b Omega T_subst
+            (subst_type_params_ty type_args T0) = true) ->
+    (forall enum_name variant_name lts enum_type_args payloads
+        T0 Sigma0' R0' roots0,
+        provenance_ready_args payloads ->
+        typed_env_roots_shadow_safe env Omega n R Sigma
+          (EEnum enum_name variant_name lts enum_type_args payloads)
+          T0 Sigma0' R0' roots0 ->
+        exists T_subst Gamma_out_subst,
+          typed_env_roots_shadow_safe env Omega n R
+            (subst_type_params_ctx type_args Sigma)
+            (subst_type_params_expr type_args
+              (EEnum enum_name variant_name lts enum_type_args payloads))
+            T_subst (sctx_of_ctx Gamma_out_subst) R0' roots0 /\
+          ty_compatible_b Omega T_subst
+            (subst_type_params_ty type_args T0) = true) ->
+    (forall scrut branches T0 Sigma0' R0' roots0,
+        provenance_ready_expr scrut ->
+        provenance_ready_match_branches branches ->
+        typed_env_roots_shadow_safe env Omega n R Sigma
+          (EMatch scrut branches) T0 Sigma0' R0' roots0 ->
+        exists T_subst Gamma_out_subst,
+          typed_env_roots_shadow_safe env Omega n R
+            (subst_type_params_ctx type_args Sigma)
+            (subst_type_params_expr type_args (EMatch scrut branches))
+            T_subst (sctx_of_ctx Gamma_out_subst) R0' roots0 /\
+          ty_compatible_b Omega T_subst
+            (subst_type_params_ty type_args T0) = true) ->
+    (forall m x T_ann e1 e2 T0 Sigma0' R0' roots0,
+        provenance_ready_expr e1 ->
+        provenance_ready_expr e2 ->
+        typed_env_roots_shadow_safe env Omega n R Sigma
+          (ELet m x T_ann e1 e2) T0 Sigma0' R0' roots0 ->
+        exists T_subst Gamma_out_subst,
+          typed_env_roots_shadow_safe env Omega n R
+            (subst_type_params_ctx type_args Sigma)
+            (subst_type_params_expr type_args (ELet m x T_ann e1 e2))
+            T_subst (sctx_of_ctx Gamma_out_subst) R0' roots0 /\
+          ty_compatible_b Omega T_subst
+            (subst_type_params_ty type_args T0) = true) ->
+    (forall m x e1 e2 T0 Sigma0' R0' roots0,
+        provenance_ready_expr e1 ->
+        provenance_ready_expr e2 ->
+        typed_env_roots_shadow_safe env Omega n R Sigma
+          (ELetInfer m x e1 e2) T0 Sigma0' R0' roots0 ->
+        exists T_subst Gamma_out_subst,
+          typed_env_roots_shadow_safe env Omega n R
+            (subst_type_params_ctx type_args Sigma)
+            (subst_type_params_expr type_args (ELetInfer m x e1 e2))
+            T_subst (sctx_of_ctx Gamma_out_subst) R0' roots0 /\
+          ty_compatible_b Omega T_subst
+            (subst_type_params_ty type_args T0) = true) ->
+    (forall e1 T0 Sigma0' R0' roots0,
+        provenance_ready_expr e1 ->
+        typed_env_roots_shadow_safe env Omega n R Sigma (EDrop e1)
+          T0 Sigma0' R0' roots0 ->
+        exists T_subst Gamma_out_subst,
+          typed_env_roots_shadow_safe env Omega n R
+            (subst_type_params_ctx type_args Sigma)
+            (subst_type_params_expr type_args (EDrop e1))
+            T_subst (sctx_of_ctx Gamma_out_subst) R0' roots0 /\
+          ty_compatible_b Omega T_subst
+            (subst_type_params_ty type_args T0) = true) ->
+    (forall p e_new T0 Sigma0' R0' roots0,
+        provenance_ready_expr e_new ->
+        typed_env_roots_shadow_safe env Omega n R Sigma (EAssign p e_new)
+          T0 Sigma0' R0' roots0 ->
+        exists T_subst Gamma_out_subst,
+          typed_env_roots_shadow_safe env Omega n R
+            (subst_type_params_ctx type_args Sigma)
+            (subst_type_params_expr type_args (EAssign p e_new))
+            T_subst (sctx_of_ctx Gamma_out_subst) R0' roots0 /\
+          ty_compatible_b Omega T_subst
+            (subst_type_params_ty type_args T0) = true) ->
+    (forall p e_new T0 Sigma0' R0' roots0,
+        provenance_ready_expr e_new ->
+        typed_env_roots_shadow_safe env Omega n R Sigma (EReplace p e_new)
+          T0 Sigma0' R0' roots0 ->
+        exists T_subst Gamma_out_subst,
+          typed_env_roots_shadow_safe env Omega n R
+            (subst_type_params_ctx type_args Sigma)
+            (subst_type_params_expr type_args (EReplace p e_new))
+            T_subst (sctx_of_ctx Gamma_out_subst) R0' roots0 /\
+          ty_compatible_b Omega T_subst
+            (subst_type_params_ty type_args T0) = true) ->
+    (forall e1 e2 e3 T0 Sigma0' R0' roots0,
+        provenance_ready_expr e1 ->
+        provenance_ready_expr e2 ->
+        provenance_ready_expr e3 ->
+        typed_env_roots_shadow_safe env Omega n R Sigma (EIf e1 e2 e3)
+          T0 Sigma0' R0' roots0 ->
+        exists T_subst Gamma_out_subst,
+          typed_env_roots_shadow_safe env Omega n R
+            (subst_type_params_ctx type_args Sigma)
+            (subst_type_params_expr type_args (EIf e1 e2 e3))
+            T_subst (sctx_of_ctx Gamma_out_subst) R0' roots0 /\
+          ty_compatible_b Omega T_subst
+            (subst_type_params_ty type_args T0) = true) ->
+    exists T_subst Gamma_out_subst,
+      typed_env_roots_shadow_safe env Omega n R
+        (subst_type_params_ctx type_args Sigma)
+        (subst_type_params_expr type_args e)
+        T_subst (sctx_of_ctx Gamma_out_subst) R' roots /\
+      ty_compatible_b Omega T_subst
+        (subst_type_params_ty type_args T) = true.
+Proof.
+  intros env Omega n R Sigma e T Sigma' R' roots type_args Hready Htyped
+    Hleaf Hfn Hstruct Henum Hmatch Hlet Hletinfer Hdrop Hassign Hreplace Hif.
+  destruct e; try solve [inversion Hready].
+  - eapply Hleaf; [exact Hready | exact Htyped |].
+    right. left. reflexivity.
+  - eapply Hleaf; [exact Hready | exact Htyped |].
+    right. right. left. eexists. reflexivity.
+  - eapply Hleaf; [exact Hready | exact Htyped |].
+    left. eexists. reflexivity.
+  - inversion Hready; subst. eapply Hlet; eassumption.
+  - inversion Hready; subst. eapply Hletinfer; eassumption.
+  - eapply Hfn. exact Htyped.
+  - eapply Hleaf; [exact Hready | exact Htyped |].
+    right. right. right. left. eexists. reflexivity.
+  - inversion Hready; subst. eapply Hstruct; eassumption.
+  - inversion Hready; subst. eapply Henum; eassumption.
+  - inversion Hready; subst. eapply Hmatch; eassumption.
+  - inversion Hready; subst. eapply Hreplace; eassumption.
+  - inversion Hready; subst. eapply Hassign; eassumption.
+  - eapply Hleaf; [exact Hready | exact Htyped |].
+    right. right. right. right. left. do 2 eexists. reflexivity.
+  - destruct e; try solve [inversion Hready].
+    eapply Hleaf; [exact Hready | exact Htyped |].
+    right. right. right. right. right. right. do 2 eexists. reflexivity.
+  - inversion Hready; subst. eapply Hdrop; eassumption.
+  - inversion Hready; subst. eapply Hif; eassumption.
+Qed.
+
 Inductive typed_env_roots_checked
     (env : global_env) (Ω : outlives_ctx) (n : nat)
     : root_env -> sctx -> expr -> Ty -> sctx -> root_env -> root_set -> Prop :=

@@ -724,6 +724,15 @@ Proof.
       reflexivity || exact Hhead.
 Qed.
 
+Lemma fn_signature_type_params_subst_noop_captures :
+  forall sigma f,
+    fn_signature_type_params_subst_noop (Datatypes.length sigma) f ->
+    apply_type_params sigma (fn_captures f) = fn_captures f.
+Proof.
+  intros sigma f [Hcaptures _].
+  apply apply_type_params_noop_of_subst_noop. exact Hcaptures.
+Qed.
+
 Lemma fn_signature_type_params_subst_noop_params :
   forall sigma f,
     fn_signature_type_params_subst_noop (Datatypes.length sigma) f ->
@@ -740,6 +749,55 @@ Lemma fn_signature_type_params_subst_noop_ret :
 Proof.
   intros sigma f [_ [_ Hret]].
   apply subst_type_params_ty_noop_of_subst_noop. exact Hret.
+Qed.
+
+Definition env_fns_signature_type_params_subst_noop
+    (subst_arity : nat) (env : global_env) : Prop :=
+  Forall (fn_signature_type_params_subst_noop subst_arity) (env_fns env).
+
+Lemma env_fns_signature_type_params_subst_noop_in :
+  forall (sigma : list Ty) env f,
+    env_fns_signature_type_params_subst_noop (Datatypes.length sigma) env ->
+    In f (env_fns env) ->
+    fn_signature_type_params_subst_noop (Datatypes.length sigma) f.
+Proof.
+  intros sigma env f Henv Hin.
+  unfold env_fns_signature_type_params_subst_noop in Henv.
+  rewrite Forall_forall in Henv.
+  apply Henv. exact Hin.
+Qed.
+
+Lemma env_fns_signature_type_params_subst_noop_captures :
+  forall (sigma : list Ty) env f,
+    env_fns_signature_type_params_subst_noop (Datatypes.length sigma) env ->
+    In f (env_fns env) ->
+    apply_type_params sigma (fn_captures f) = fn_captures f.
+Proof.
+  intros sigma env f Henv Hin.
+  apply fn_signature_type_params_subst_noop_captures.
+  eapply env_fns_signature_type_params_subst_noop_in; eassumption.
+Qed.
+
+Lemma env_fns_signature_type_params_subst_noop_params :
+  forall (sigma : list Ty) env f,
+    env_fns_signature_type_params_subst_noop (Datatypes.length sigma) env ->
+    In f (env_fns env) ->
+    apply_type_params sigma (fn_params f) = fn_params f.
+Proof.
+  intros sigma env f Henv Hin.
+  apply fn_signature_type_params_subst_noop_params.
+  eapply env_fns_signature_type_params_subst_noop_in; eassumption.
+Qed.
+
+Lemma env_fns_signature_type_params_subst_noop_ret :
+  forall (sigma : list Ty) env f,
+    env_fns_signature_type_params_subst_noop (Datatypes.length sigma) env ->
+    In f (env_fns env) ->
+    subst_type_params_ty sigma (fn_ret f) = fn_ret f.
+Proof.
+  intros sigma env f Henv Hin.
+  apply fn_signature_type_params_subst_noop_ret.
+  eapply env_fns_signature_type_params_subst_noop_in; eassumption.
 Qed.
 
 Lemma subst_type_params_ty_args_compose_go : forall sigma args fallback,

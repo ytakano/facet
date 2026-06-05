@@ -118,6 +118,9 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      boundedness alone is insufficient because omitted struct/enum type
      args are filled from the active type-arg list.
      Check: `make EnvStructuralRules.vo`, proof-hole scan.
+   - Done: add environment-level signature substitution-stability
+     projections for non-generic global call blockers.
+     Check: `make EnvStructuralRules.vo`, proof-hole scan.
    - Todo: prove roots-shadow type-substitution preservation for arbitrary
      bodies, or an equivalent closed-type-arg preservation lemma for
      `callee_body_root_shadow_provenance_summary`.

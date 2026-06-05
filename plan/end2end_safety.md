@@ -207,6 +207,8 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      explicit result compatibility premises. Check: `make TypeSafetyCheckedRoots.vo`.
    - Done: add match-branch lookup preservation facts under
      type-parameter substitution. Check: `make TypeSafetyCheckedRoots.vo`.
+   - Done: add match-tail roots-shadow type-substitution package.
+     Check: `make TypeSafetyCheckedRoots.vo`.
    - Todo: prove roots-shadow type-substitution preservation for the
      provenance-ready expression subset, or strengthen the closure-target
      runtime invariant with checked instantiated summaries.

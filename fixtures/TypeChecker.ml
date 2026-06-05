@@ -12967,6 +12967,10 @@ let supported_non_type_generic_function_value_call_callee_ty_b t =
   | TForall (_, _, body) ->
     (match ty_core body with
      | TFn (_, _) -> true
+     | TTypeForall (_, _, inner) ->
+       (match ty_core inner with
+        | TFn (_, _) -> true
+        | _ -> false)
      | _ -> false)
   | _ -> false
 

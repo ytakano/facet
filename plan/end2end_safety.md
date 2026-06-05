@@ -270,9 +270,11 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      admit `TForall (... TTypeForall (... TFn ...))`. Checks:
      `make EnvRuntimeShadowCheckerFacts.vo`, `make TypeChecker.vo`,
      proof-hole scan.
-   - Todo: add runtime summary support for mixed higher-rank/type-generic
+   - Done: regenerate extraction for the mixed callee-shape gate;
+     `mixed_forall_fn_value_pass_and_call.facet` passes. Checks:
+     `make TypeChecker.vo`, `dune build`, targeted CLI tests.
+   - Todo: add runtime summary support for local mixed higher-rank/type-generic
      function-value calls. Current targeted gate failures:
-     `mixed_forall_fn_value_pass_and_call.facet`,
      `mixed_forall_fn_value_annotated_let.facet`,
      `mixed_forall_fn_value_trait_bound_call.facet`,
      `generic_item_pass_monomorphic_hof.facet`.

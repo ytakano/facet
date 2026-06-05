@@ -2154,6 +2154,10 @@ Proof.
 	      used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
 	      Heval_body IHbody Ω n R Σ T Σ' R' roots Hready _ _ _ _.
     inversion Hready.
+  - intros s s_fn s_args s_body callee type_args args0 fname captured fdef fcall
+      vs ret used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
+      Heval_body IHbody Ω n R Σ T Σ' R' roots Hready _ _ _ _.
+    inversion Hready.
   - intros s Ω n R Σ ps Σ' R' roots _ Hroots Hnodup Hrn Htyped.
     inversion Htyped; subst. repeat split; try assumption; constructor.
   - intros s s1 s2 e es v vs Heval_e IHe Heval_rest IHrest

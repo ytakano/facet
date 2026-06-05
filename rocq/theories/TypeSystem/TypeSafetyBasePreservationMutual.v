@@ -1631,6 +1631,10 @@ Proof.
 	      used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
 	      Heval_body IHbody Ω n Σ T Σ' Hready _ _.
     inversion Hready.
+  - intros s s_fn s_args s_body callee type_args args fname captured fdef fcall
+      vs ret used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
+      Heval_body IHbody Ω n Σ T Σ' Hready _ _.
+    inversion Hready.
   - intros s Ω n Σ ps Σ' _ Hstore Htyped.
     inversion Htyped; subst.
     repeat split.

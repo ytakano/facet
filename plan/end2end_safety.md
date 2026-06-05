@@ -98,8 +98,11 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      Checks: `make EnvRootSoundness.vo`, `cd rocq && make`, `dune build`,
      proof-hole scan. Targeted pure valid tests still fail at the end-to-end
      summary/evaluator gate.
-   - Todo: add `ECallExprGeneric` evaluator and end-to-end store-safe summary
-     package for pure `TTypeForall (... TFn ...)` callees.
+   - Done: add `ECallExprGeneric` evaluator and thread impossible
+     evaluator cases through readiness/preservation proofs.
+     Check: `cd rocq && make`.
+   - Todo: add end-to-end store-safe summary package for pure
+     `TTypeForall (... TFn ...)` `ECallExprGeneric` callees.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`
    through `ECallExprGeneric` after task 6 compiles.
 8. Todo: final full verification and roadmap closeout.

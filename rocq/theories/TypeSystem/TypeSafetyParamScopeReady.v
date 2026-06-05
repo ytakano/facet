@@ -846,6 +846,10 @@ Proof.
 	      used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
 	      Heval_body IHbody Ω n R Σ T Σ' R' roots ps frame Hready _ _ _.
     inversion Hready.
+  - intros s s_fn s_args s_body callee type_args args0 fname captured fdef fcall
+      vs ret used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
+      Heval_body IHbody Ω n R Σ T Σ' R' roots ps frame Hready _ _ _.
+    inversion Hready.
   - intros s Ω n R Σ params Σ' R' roots ps frame _ Htyped Hcover Hscope.
     inversion Htyped; subst. split; [exact Hcover | exists frame; exact Hscope].
   - intros s s1 s2 e es v vs Heval_e IHe Heval_rest IHrest

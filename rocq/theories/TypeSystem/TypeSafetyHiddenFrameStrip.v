@@ -1091,6 +1091,10 @@ Proof.
 	      vs ret used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
 	      Heval_body IHbody x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
     inversion Hready.
+  - intros s s_fn s_args s_body callee type_args args fname captured fdef fcall
+      vs ret used' Heval_callee IHcallee Hlookup Heval_args IHargs Hrename
+      Heval_body IHbody x T hidden s_base0 Hs Hready Hfree Hlocal Hrefs.
+    inversion Hready.
   - intros s x T hidden s_base Hs Hready Hfree Hlocal Hrefs.
     exists s_base. repeat split; try constructor; assumption.
   - intros s s1 s2 e es v vs Heval_e IHe Heval_args IHargs

@@ -571,6 +571,21 @@ Inductive eval (env : global_env) : store -> expr -> store -> value -> Prop :=
                (store_remove_params (fn_captures fcall)
                   (store_remove_params (fn_params fcall) s_body)) ret
 
+  | Eval_CallExprGeneric : forall s s_fn s_args s_body callee type_args args
+        fname captured fdef fcall vs ret used',
+      eval env s callee s_fn (VClosure fname captured) ->
+      lookup_fn fname (env_fns env) = Some fdef ->
+      eval_args env s_fn args s_args vs ->
+      alpha_rename_fn_def (store_names (captured ++ s_args)) fdef = (fcall, used') ->
+      eval env
+        (bind_params (apply_type_params type_args (fn_params fcall))
+          vs (captured ++ s_args))
+        (subst_type_params_expr type_args (fn_body fcall)) s_body ret ->
+      eval env s (ECallExprGeneric callee type_args args)
+        (store_remove_params (fn_captures fcall)
+          (store_remove_params
+            (apply_type_params type_args (fn_params fcall)) s_body)) ret
+
 (* Evaluate argument list left-to-right, threading the store. *)
 with eval_args (env : global_env)
     : store -> list expr -> store -> list value -> Prop :=

@@ -1200,7 +1200,13 @@ val local_fn_value_call_target_expr_with_binder :
 
 val supported_non_type_generic_function_value_call_callee_ty_b : ty -> bool
 
+val supported_type_generic_function_value_call_callee_ty_b : ty -> bool
+
 val check_supported_non_type_generic_function_value_call_expr :
+  global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
+  -> bool
+
+val check_supported_type_generic_function_value_call_expr :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx -> expr
   -> bool
 

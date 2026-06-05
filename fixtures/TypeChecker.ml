@@ -12930,6 +12930,17 @@ let supported_non_type_generic_function_value_call_callee_ty_b t =
      | _ -> false)
   | _ -> false
 
+(** val supported_type_generic_function_value_call_callee_ty_b :
+    ty -> bool **)
+
+let supported_type_generic_function_value_call_callee_ty_b t =
+  match ty_core t with
+  | TTypeForall (_, _, body) ->
+    (match ty_core body with
+     | TFn (_, _) -> true
+     | _ -> false)
+  | _ -> false
+
 (** val check_supported_non_type_generic_function_value_call_expr :
     global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx ->
     expr -> bool **)
@@ -12942,6 +12953,21 @@ let check_supported_non_type_generic_function_value_call_expr env _UU03a9_ n r _
      let (p1, _) = p0 in
      let (t_callee, _) = p1 in
      supported_non_type_generic_function_value_call_callee_ty_b t_callee
+   | Infer_err _ -> false)
+| _ -> false
+
+(** val check_supported_type_generic_function_value_call_expr :
+    global_env -> outlives_ctx -> Big_int_Z.big_int -> root_env -> ctx ->
+    expr -> bool **)
+
+let check_supported_type_generic_function_value_call_expr env _UU03a9_ n r _UU0393_ callee = match callee with
+| EVar _ ->
+  (match infer_core_env_roots_shadow_safe env _UU03a9_ n r _UU0393_ callee with
+   | Infer_ok p ->
+     let (p0, _) = p in
+     let (p1, _) = p0 in
+     let (t_callee, _) = p1 in
+     supported_type_generic_function_value_call_callee_ty_b t_callee
    | Infer_err _ -> false)
 | _ -> false
 
@@ -13364,6 +13390,10 @@ let rec check_expr_root_shadow_store_safe_narrow_summary_fuel fuel env _UU03a9_ 
        | ECallExpr (callee, args) ->
          (&&) (store_safe_function_value_call_args_b env args)
            (check_supported_non_type_generic_function_value_call_expr env
+             _UU03a9_ n r (ctx_of_sctx _UU03a3_) callee)
+       | ECallExprGeneric (callee, _, args) ->
+         (&&) (store_safe_function_value_call_args_b env args)
+           (check_supported_type_generic_function_value_call_expr env
              _UU03a9_ n r (ctx_of_sctx _UU03a3_) callee)
        | EStruct (name, _, _, l1) ->
          (match l1 with

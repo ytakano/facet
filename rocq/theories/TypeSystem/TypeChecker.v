@@ -8644,6 +8644,17 @@ Definition supported_non_type_generic_function_value_call_callee_ty_b
   | _ => false
   end.
 
+Definition supported_type_generic_function_value_call_callee_ty_b
+    (T : Ty) : bool :=
+  match ty_core T with
+  | TTypeForall _ _ body =>
+      match ty_core body with
+      | TFn _ _ => true
+      | _ => false
+      end
+  | _ => false
+  end.
+
 Definition check_supported_non_type_generic_function_value_call_expr
     (env : global_env) (Ω : outlives_ctx) (n : nat)
     (R : root_env) (Γ : ctx) (callee : expr) : bool :=
@@ -8652,6 +8663,19 @@ Definition check_supported_non_type_generic_function_value_call_expr
       match infer_core_env_roots_shadow_safe env Ω n R Γ callee with
       | infer_ok (T_callee, _, _, _) =>
           supported_non_type_generic_function_value_call_callee_ty_b T_callee
+      | infer_err _ => false
+      end
+  | _ => false
+  end.
+
+Definition check_supported_type_generic_function_value_call_expr
+    (env : global_env) (Ω : outlives_ctx) (n : nat)
+    (R : root_env) (Γ : ctx) (callee : expr) : bool :=
+  match callee with
+  | EVar _ =>
+      match infer_core_env_roots_shadow_safe env Ω n R Γ callee with
+      | infer_ok (T_callee, _, _, _) =>
+          supported_type_generic_function_value_call_callee_ty_b T_callee
       | infer_err _ => false
       end
   | _ => false
@@ -9094,6 +9118,10 @@ Fixpoint check_expr_root_shadow_store_safe_narrow_summary_fuel
       | ECallExpr callee args =>
           store_safe_function_value_call_args_b env args &&
           check_supported_non_type_generic_function_value_call_expr
+            env Ω n R (ctx_of_sctx Σ) callee
+      | ECallExprGeneric callee _ args =>
+          store_safe_function_value_call_args_b env args &&
+          check_supported_type_generic_function_value_call_expr
             env Ω n R (ctx_of_sctx Σ) callee
       | ELet m x T_hidden e1 e2 =>
           match infer_core_env_state_fuel_roots_shadow_safe

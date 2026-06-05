@@ -401,6 +401,45 @@ Proof.
     + eapply SFV_TForall_TFn; reflexivity.
 Qed.
 
+Lemma supported_type_generic_function_value_call_callee_ty_b_sound :
+  forall T,
+    supported_type_generic_function_value_call_callee_ty_b T = true ->
+    supported_type_generic_function_value_call_callee_ty T.
+Proof.
+  intros [u c] H.
+  unfold supported_type_generic_function_value_call_callee_ty.
+  simpl in H.
+  destruct c; try discriminate.
+  destruct t as [u_body c_body]. simpl in H.
+  destruct c_body; try discriminate.
+  eapply SFV_TTypeForall_TFn; reflexivity.
+Qed.
+
+Lemma check_supported_type_generic_function_value_call_expr_sound :
+  forall env Ω n R Γ callee type_args args,
+    check_supported_type_generic_function_value_call_expr
+      env Ω n R Γ callee = true ->
+    supported_type_generic_function_value_call_expr
+      env Ω n R Γ callee type_args args.
+Proof.
+  intros env Ω n R Γ callee type_args args Hcheck.
+  unfold check_supported_type_generic_function_value_call_expr in Hcheck.
+  destruct callee; try discriminate.
+  destruct (infer_core_env_roots_shadow_safe env Ω n R Γ (EVar i))
+    as [[[[T_callee Γ_callee] R_callee] roots_callee] | err]
+    eqn:Hinfer; try discriminate.
+  destruct T_callee as [u c]. simpl in Hcheck.
+  destruct c; try discriminate.
+  destruct t as [u_body c_body]. simpl in Hcheck.
+  destruct c_body; try discriminate.
+  unfold supported_type_generic_function_value_call_expr.
+  exists i, (MkTy u (TTypeForall n0 l (MkTy u_body (TFn l0 t)))),
+    Γ_callee, R_callee, roots_callee.
+  repeat split; try reflexivity.
+  - exact Hinfer.
+  - eapply SFV_TTypeForall_TFn; reflexivity.
+Qed.
+
 Lemma check_fn_root_shadow_non_capturing_call_provenance_summary_sound :
   forall env fdef,
     check_fn_root_shadow_non_capturing_call_provenance_summary env fdef = true ->

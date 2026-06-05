@@ -101,6 +101,10 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: add `ECallExprGeneric` evaluator and thread impossible
      evaluator cases through readiness/preservation proofs.
      Check: `cd rocq && make`.
+   - Done: add checker/spec support for pure type-generic
+     function-value call summary recognition.
+     Checks: `make EnvRuntimeShadowCheckerFacts.vo`, `dune build`,
+     proof-hole scan.
    - Todo: add end-to-end store-safe summary package for pure
      `TTypeForall (... TFn ...)` `ECallExprGeneric` callees.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`

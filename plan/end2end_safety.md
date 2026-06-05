@@ -224,12 +224,16 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: add premise-heavy dispatch umbrella for roots-shadow
      type-substitution over full `provenance_ready_expr`.
      Check: `make TypeSafetyCheckedRoots.vo`, proof-hole scan.
-   - Todo: instantiate the umbrella package in the runtime summary proof,
-     or strengthen closure targets with checked instantiated summaries.
-   - Note: `contains_lbound_ty = false` is not an `apply_lt_ty` no-op because
-     type args may contain `LVar`; transport must use lifetime equivalence.
-   - Todo: use that lemma to finish the end-to-end store-safe summary
-     package for pure `TTypeForall (... TFn ...)` `ECallExprGeneric` callees.
+   - Blocked: runtime `ECallExprGeneric (EVar ...)` branch needs a
+     route for `fn_subst_type_params type_args fcall`; closure lookup gives
+     only unsubstituted callee provenance. The umbrella is a dispatcher, and
+     `EMatch` needs exact substituted branch/core facts, not just compatible
+     existentials.
+   - Todo: add a closed exact roots-shadow substitution theorem for
+     `provenance_ready_expr`, or strengthen closure targets with checked
+     instantiated summaries.
+   - Todo: finish the pure `TTypeForall (... TFn ...)` runtime package after
+     that route premise is derivable.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`
    through `ECallExprGeneric` after task 6 compiles.
 8. Todo: final full verification and roadmap closeout.

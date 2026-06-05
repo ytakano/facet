@@ -224,6 +224,8 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: add premise-heavy dispatch umbrella for roots-shadow
      type-substitution over full `provenance_ready_expr`.
      Check: `make TypeSafetyCheckedRoots.vo`, proof-hole scan.
+   - Done: add exact struct/enum instance type-substitution equality facts.
+     Check: `make TypeSafetyCheckedRoots.vo`, proof-hole scan.
    - Blocked: runtime `ECallExprGeneric (EVar ...)` branch needs a
      route for `fn_subst_type_params type_args fcall`; closure lookup gives
      only unsubstituted callee provenance. The umbrella is a dispatcher, and

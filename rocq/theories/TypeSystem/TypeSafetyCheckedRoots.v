@@ -769,6 +769,96 @@ Proof.
         -- exact Htyped0.
 Qed.
 
+Lemma usage_max_tys_subst_type_params_ty :
+  forall type_args tys,
+    usage_max_tys (map (subst_type_params_ty type_args) tys) =
+    usage_max_tys tys.
+Proof.
+  intros type_args tys.
+  induction tys as [| T rest IH]; simpl.
+  - reflexivity.
+  - rewrite ty_usage_subst_type_params_ty, IH. reflexivity.
+Qed.
+
+Lemma instantiate_struct_instance_ty_subst_type_params_map :
+  forall type_args sdef lts struct_type_args,
+    compose_type_params type_args struct_type_args =
+      map (subst_type_params_ty type_args) struct_type_args ->
+    instantiate_struct_instance_ty sdef lts
+      (map (subst_type_params_ty type_args) struct_type_args) =
+    subst_type_params_ty type_args
+      (instantiate_struct_instance_ty sdef lts struct_type_args).
+Proof.
+  intros type_args sdef lts struct_type_args Hcompose.
+  unfold instantiate_struct_instance_ty.
+  simpl.
+  apply f_equal2.
+  - rewrite <- (usage_max_tys_subst_type_params_ty type_args
+      (map (instantiate_struct_field_ty lts struct_type_args)
+        (struct_fields sdef))).
+    apply f_equal.
+    rewrite map_map.
+    apply map_ext. intro f.
+    rewrite <- Hcompose.
+    symmetry. apply instantiate_struct_field_ty_type_subst_compose.
+  - f_equal.
+    rewrite <- Hcompose.
+    assert (Hgo : forall fallback,
+      compose_type_params_go type_args struct_type_args fallback =
+      (fix go (xs fallback : list Ty) {struct xs} : list Ty :=
+        match xs with
+        | [] => fallback
+        | x :: xs' =>
+            match fallback with
+            | [] => subst_type_params_ty type_args x :: go xs' []
+            | _ :: fb' => subst_type_params_ty type_args x :: go xs' fb'
+            end
+        end) struct_type_args fallback).
+    { clear Hcompose.
+      induction struct_type_args as [| T_arg rest IH]; intros fallback;
+        destruct fallback as [| T_fallback fallback]; simpl.
+      - reflexivity.
+      - reflexivity.
+      - f_equal. exact (IH []).
+      - f_equal. exact (IH fallback). }
+    unfold compose_type_params. exact (Hgo type_args).
+Qed.
+
+Lemma instantiate_enum_ty_subst_type_params_map :
+  forall type_args edef lts enum_type_args,
+    compose_type_params type_args enum_type_args =
+      map (subst_type_params_ty type_args) enum_type_args ->
+    instantiate_enum_ty edef lts
+      (map (subst_type_params_ty type_args) enum_type_args) =
+    subst_type_params_ty type_args
+      (instantiate_enum_ty edef lts enum_type_args).
+Proof.
+  intros type_args edef lts enum_type_args Hcompose.
+  unfold instantiate_enum_ty.
+  simpl.
+  f_equal. f_equal.
+  rewrite <- Hcompose.
+  assert (Hgo : forall fallback,
+    compose_type_params_go type_args enum_type_args fallback =
+    (fix go (xs fallback : list Ty) {struct xs} : list Ty :=
+        match xs with
+        | [] => fallback
+        | x :: xs' =>
+            match fallback with
+            | [] => subst_type_params_ty type_args x :: go xs' []
+            | _ :: fb' => subst_type_params_ty type_args x :: go xs' fb'
+            end
+        end) enum_type_args fallback).
+  { clear Hcompose.
+    induction enum_type_args as [| T_arg rest IH]; intros fallback;
+      destruct fallback as [| T_fallback fallback]; simpl.
+    - reflexivity.
+    - reflexivity.
+    - f_equal. exact (IH []).
+    - f_equal. exact (IH fallback). }
+  unfold compose_type_params. exact (Hgo type_args).
+Qed.
+
 Lemma typed_fields_roots_shadow_safe_provenance_ready_subst_type_params_package :
   forall env Omega n lts struct_type_args R Sigma fields defs Sigma' R'
       roots type_args,

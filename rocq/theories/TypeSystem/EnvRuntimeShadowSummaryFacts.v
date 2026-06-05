@@ -349,8 +349,8 @@ Definition supported_non_type_generic_function_value_call_callee_ty
   supported_non_type_generic_function_value_call_callee_shape T.
 
 Inductive supported_type_generic_function_value_call_callee_shape : Ty -> Prop :=
-  | SFV_TTypeForall_TFn : forall T type_params bounds body param_tys ret,
-      ty_core T = TTypeForall type_params bounds body ->
+  | SFV_TTypeForall_TFn : forall T type_params body param_tys ret,
+      ty_core T = TTypeForall type_params [] body ->
       ty_core body = TFn param_tys ret ->
       supported_type_generic_function_value_call_callee_shape T.
 
@@ -371,8 +371,8 @@ Definition supported_type_generic_function_value_call_expr
       type_args /\
     infer_core_env_roots_shadow_safe env Ω n R Γ (EVar x) =
       infer_ok (T_callee, Γ_callee, R_callee, roots_callee) /\
-    (exists u type_params bounds body,
-      T_callee = MkTy u (TTypeForall type_params bounds body) /\
+    (exists u type_params body,
+      T_callee = MkTy u (TTypeForall type_params [] body) /\
       Datatypes.length type_args = type_params) /\
     supported_type_generic_function_value_call_callee_shape T_callee.
 

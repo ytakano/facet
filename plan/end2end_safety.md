@@ -247,10 +247,16 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      Check: `make TypeChecker.vo`, proof-hole scan.
    - Done: check instantiated callee bodies in the function body env.
      Check: `make TypeChecker.vo`.
-   - Blocked: blanket generic-call transport across `global_env_with_local_bounds`
-     is false; type-forall bounds may depend on replaced local bounds.
-   - Todo: finish the pure `TTypeForall (... TFn ...)` runtime package after
-     that route premise is derivable.
+   - Done: finish the pure empty-bounds `TTypeForall (... TFn ...)`
+     runtime package using instantiated body summaries and local-bounds body
+     env witnesses. Checks: `make EnvRuntimeBaseSafety.vo`,
+     `make EnvRuntimeShadowCheckerFacts.vo`, `make TypeChecker.vo`, proof-hole
+     scan.
+   - Todo: investigate remaining pure generic function-value CLI safety-gate
+     failures after proof-package compile. Current targeted failures:
+     `type_forall_fn_value_pass_and_call.facet`,
+     `type_forall_fn_value_annotated_let.facet`,
+     `type_forall_fn_value_bound_call.facet`.
 7. Todo: accept mixed `TForall (... TTypeForall (... TFn ...))`
    through `ECallExprGeneric` after task 6 compiles.
 8. Todo: final full verification and roadmap closeout.

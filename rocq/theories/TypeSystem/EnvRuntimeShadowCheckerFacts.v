@@ -410,6 +410,7 @@ Proof.
   unfold supported_type_generic_function_value_call_callee_ty.
   simpl in H.
   destruct c; try discriminate.
+  destruct l; try discriminate.
   destruct t as [u_body c_body]. simpl in H.
   destruct c_body; try discriminate.
   eapply SFV_TTypeForall_TFn; reflexivity.
@@ -432,12 +433,13 @@ Proof.
     eqn:Hinfer; try discriminate.
   destruct T_callee as [u c]. simpl in Hcheck.
   destruct c; try discriminate.
-  destruct t as [u_body c_body]. simpl in Hcheck.
   apply andb_true_iff in Hcheck as [Harity Hcheck].
   apply Nat.eqb_eq in Harity.
+  destruct l; try discriminate.
+  destruct t as [u_body c_body]. simpl in Hcheck.
   destruct c_body; try discriminate.
   unfold supported_type_generic_function_value_call_expr.
-  exists i, (MkTy u (TTypeForall n0 l (MkTy u_body (TFn l0 t)))),
+  exists i, (MkTy u (TTypeForall n0 [] (MkTy u_body (TFn l t)))),
     Γ_callee, R_callee, roots_callee.
   repeat split; try reflexivity.
   - unfold type_args_lbound_free_b in Hclosed.
@@ -453,7 +455,7 @@ Proof.
     destruct T as [uT cT]. simpl in Hnoforall.
     destruct cT; try exact I; discriminate.
   - exact Hinfer.
-  - exists u, n0, l, (MkTy u_body (TFn l0 t)).
+  - exists u, n0, (MkTy u_body (TFn l t)).
     split; [reflexivity|exact Harity].
   - eapply SFV_TTypeForall_TFn; reflexivity.
 Qed.

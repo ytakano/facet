@@ -12979,11 +12979,14 @@ let check_supported_type_generic_function_value_call_expr env _UU03a9_ n r _UU03
           let (p1, _) = p0 in
           let (t_callee, _) = p1 in
           (match ty_core t_callee with
-           | TTypeForall (type_params, _, body) ->
+           | TTypeForall (type_params, bounds, body) ->
              (&&) (Nat.eqb (length type_args) type_params)
-               (match ty_core body with
-                | TFn (_, _) -> true
-                | _ -> false)
+               (match bounds with
+                | [] ->
+                  (match ty_core body with
+                   | TFn (_, _) -> true
+                   | _ -> false)
+                | _ :: _ -> false)
            | _ -> false)
         | Infer_err _ -> false)
      | _ -> false)

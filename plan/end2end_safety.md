@@ -172,8 +172,10 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      yields only unsubstituted callee provenance, while `ECallExprGeneric`
      needs either provenance for `fn_subst_type_params type_args fdef`
      or an instantiated narrow summary.
-   - Todo: provide that evidence by roots-shadow type-substitution
-     preservation for arbitrary bodies, or by strengthening the closure-target
+   - Done: narrow the substitution obligation: callee provenance bodies are
+     `provenance_ready_expr`, which excludes call forms.
+   - Todo: prove roots-shadow type-substitution preservation for the
+     provenance-ready expression subset, or strengthen the closure-target
      runtime invariant with checked instantiated summaries.
    - Note: `contains_lbound_ty = false` is not an `apply_lt_ty` no-op because
      type args may contain `LVar`; transport must use lifetime equivalence.

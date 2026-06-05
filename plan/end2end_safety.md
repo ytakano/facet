@@ -136,6 +136,9 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
    - Done: add structural lbound-closed preservation for type-parameter
      substitution.
      Check: `make EnvStructuralRules.vo`, proof-hole scan.
+   - Done: add same-core boolean compatibility support for substituted type
+     parameters.
+     Check: `make CheckerSoundness.vo`, proof-hole scan.
    - Todo: prove boolean compatibility substitution transport, then roots-shadow
      type-substitution preservation for arbitrary bodies or an equivalent
      closed-type-arg `callee_body_root_shadow_provenance_summary` lemma.

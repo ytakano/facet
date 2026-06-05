@@ -528,6 +528,220 @@ Fixpoint type_params_bounded_ty_fuel
 Definition type_params_bounded_ty (n : nat) (T : Ty) : Prop :=
   exists fuel, type_params_bounded_ty_fuel fuel n T.
 
+Definition param_type_params_bounded (n : nat) (p : param) : Prop :=
+  type_params_bounded_ty n (param_ty p).
+
+Definition params_type_params_bounded (n : nat) (ps : list param) : Prop :=
+  Forall (param_type_params_bounded n) ps.
+
+Definition fn_type_params_bounded (f : fn_def) : Prop :=
+  params_type_params_bounded (fn_type_params f) (fn_captures f) /\
+  params_type_params_bounded (fn_type_params f) (fn_params f) /\
+  type_params_bounded_ty (fn_type_params f) (fn_ret f).
+
+Fixpoint type_params_no_implicit_fallback_ty_fuel
+    (fuel subst_arity : nat) (T : Ty) {struct fuel} : Prop :=
+  match fuel with
+  | O => False
+  | S fuel' =>
+      match T with
+      | MkTy _ TUnits => True
+      | MkTy _ TIntegers => True
+      | MkTy _ TFloats => True
+      | MkTy _ TBooleans => True
+      | MkTy _ (TNamed _) => True
+      | MkTy _ (TParam i) => i < 0
+      | MkTy _ (TStruct _ _ args) =>
+          Datatypes.length args >= subst_arity /\
+          Forall (type_params_no_implicit_fallback_ty_fuel fuel' subst_arity) args
+      | MkTy _ (TEnum _ _ args) =>
+          Datatypes.length args >= subst_arity /\
+          Forall (type_params_no_implicit_fallback_ty_fuel fuel' subst_arity) args
+      | MkTy _ (TFn params ret) =>
+          Forall (type_params_no_implicit_fallback_ty_fuel fuel' subst_arity) params /\
+          type_params_no_implicit_fallback_ty_fuel fuel' subst_arity ret
+      | MkTy _ (TClosure _ params ret) =>
+          Forall (type_params_no_implicit_fallback_ty_fuel fuel' subst_arity) params /\
+          type_params_no_implicit_fallback_ty_fuel fuel' subst_arity ret
+      | MkTy _ (TForall _ _ body) =>
+          type_params_no_implicit_fallback_ty_fuel fuel' subst_arity body
+      | MkTy _ (TTypeForall _ _ _) => True
+      | MkTy _ (TRef _ _ inner) =>
+          type_params_no_implicit_fallback_ty_fuel fuel' subst_arity inner
+      end
+  end.
+
+Definition type_params_no_implicit_fallback_ty
+    (subst_arity : nat) (T : Ty) : Prop :=
+  exists fuel, type_params_no_implicit_fallback_ty_fuel fuel subst_arity T.
+
+Definition type_params_subst_noop_ty (subst_arity : nat) (T : Ty) : Prop :=
+  type_params_bounded_ty 0 T /\
+  type_params_no_implicit_fallback_ty subst_arity T.
+
+Definition param_type_params_subst_noop (subst_arity : nat) (p : param) : Prop :=
+  type_params_subst_noop_ty subst_arity (param_ty p).
+
+Definition params_type_params_subst_noop
+    (subst_arity : nat) (ps : list param) : Prop :=
+  Forall (param_type_params_subst_noop subst_arity) ps.
+
+Definition fn_signature_type_params_subst_noop
+    (subst_arity : nat) (f : fn_def) : Prop :=
+  params_type_params_subst_noop subst_arity (fn_captures f) /\
+  params_type_params_subst_noop subst_arity (fn_params f) /\
+  type_params_subst_noop_ty subst_arity (fn_ret f).
+
+Lemma subst_type_params_ty_go_noop :
+  forall sigma args fallback,
+    Datatypes.length args >= Datatypes.length fallback ->
+    Forall (fun T => subst_type_params_ty sigma T = T) args ->
+    ((fix go (xs fallback0 : list Ty) {struct xs} : list Ty :=
+        match xs with
+        | [] => fallback0
+        | x :: rest =>
+            match fallback0 with
+            | [] => subst_type_params_ty sigma x :: go rest []
+            | _ :: fb => subst_type_params_ty sigma x :: go rest fb
+            end
+        end) args fallback) = args.
+Proof.
+  intros sigma args.
+  induction args as [| T args IH]; intros fallback Hlen Hnoop.
+  - destruct fallback; simpl in *; [reflexivity | lia].
+  - inversion Hnoop as [| ? ? Hhead Htail]; subst.
+    destruct fallback as [| F fallback]; simpl in *.
+    + rewrite Hhead. f_equal.
+      apply (IH []); [apply le_0_n | exact Htail].
+    + rewrite Hhead. f_equal.
+      apply (IH fallback); [lia | exact Htail].
+Qed.
+
+Lemma subst_type_params_ty_list_noop :
+  forall sigma args,
+    Forall (fun T => subst_type_params_ty sigma T = T) args ->
+    ((fix go (xs : list Ty) : list Ty :=
+        match xs with
+        | [] => []
+        | x :: rest => subst_type_params_ty sigma x :: go rest
+        end) args) = args.
+Proof.
+  intros sigma args Hnoop.
+  induction Hnoop as [| T args Hhead Htail IH].
+  - reflexivity.
+  - simpl. rewrite Hhead, IH. reflexivity.
+Qed.
+
+Lemma subst_type_params_ty_noop_of_bounded_zero_and_no_fallback_fuel :
+  forall fuel_bounded fuel_fallback sigma T,
+    type_params_bounded_ty_fuel fuel_bounded 0 T ->
+    type_params_no_implicit_fallback_ty_fuel fuel_fallback
+      (Datatypes.length sigma) T ->
+    subst_type_params_ty sigma T = T.
+Proof.
+  induction fuel_bounded as [| fuel_bounded IH];
+    intros fuel_fallback sigma [u core] Hbounded Hfallback;
+    simpl in Hbounded; try contradiction.
+  destruct fuel_fallback as [| fuel_fallback]; simpl in Hfallback;
+    try contradiction.
+  destruct core; simpl in Hbounded, Hfallback |- *; try reflexivity.
+  - lia.
+  - destruct Hfallback as [Hlen Hfallback].
+    apply (f_equal (fun args => MkTy u (TStruct s l args))).
+    eapply subst_type_params_ty_go_noop.
+    + exact Hlen.
+    + clear Hlen.
+      induction Hbounded as [| T args Hbounded_T Hbounded_args IHbounded_args].
+      * constructor.
+      * inversion Hfallback as [| ? ? Hfallback_T Hfallback_args]; subst.
+        constructor.
+        -- eapply IH; eassumption.
+        -- apply IHbounded_args. exact Hfallback_args.
+  - destruct Hfallback as [Hlen Hfallback].
+    apply (f_equal (fun args => MkTy u (TEnum s l args))).
+    eapply subst_type_params_ty_go_noop.
+    + exact Hlen.
+    + clear Hlen.
+      induction Hbounded as [| T args Hbounded_T Hbounded_args IHbounded_args].
+      * constructor.
+      * inversion Hfallback as [| ? ? Hfallback_T Hfallback_args]; subst.
+        constructor.
+        -- eapply IH; eassumption.
+        -- apply IHbounded_args. exact Hfallback_args.
+  - destruct Hbounded as [Hbounded_params Hbounded_ret].
+    destruct Hfallback as [Hfallback_params Hfallback_ret].
+    rewrite (subst_type_params_ty_list_noop sigma l).
+    + rewrite (IH fuel_fallback sigma t); [reflexivity | exact Hbounded_ret | exact Hfallback_ret].
+    + induction Hbounded_params as [| T params Hbounded_T Hbounded_params IHbounded_params].
+      * constructor.
+      * inversion Hfallback_params as [| ? ? Hfallback_T Hfallback_params_tail]; subst.
+        constructor.
+        -- eapply IH; eassumption.
+        -- apply IHbounded_params. exact Hfallback_params_tail.
+  - destruct Hbounded as [Hbounded_params Hbounded_ret].
+    destruct Hfallback as [Hfallback_params Hfallback_ret].
+    rewrite (subst_type_params_ty_list_noop sigma l0).
+    + rewrite (IH fuel_fallback sigma t); [reflexivity | exact Hbounded_ret | exact Hfallback_ret].
+    + induction Hbounded_params as [| T params Hbounded_T Hbounded_params IHbounded_params].
+      * constructor.
+      * inversion Hfallback_params as [| ? ? Hfallback_T Hfallback_params_tail]; subst.
+        constructor.
+        -- eapply IH; eassumption.
+        -- apply IHbounded_params. exact Hfallback_params_tail.
+  - rewrite (IH fuel_fallback sigma t); [reflexivity | exact Hbounded | exact Hfallback].
+  - rewrite (IH fuel_fallback sigma t); [reflexivity | exact Hbounded | exact Hfallback].
+Qed.
+
+Lemma subst_type_params_ty_noop_of_subst_noop :
+  forall sigma T,
+    type_params_subst_noop_ty (Datatypes.length sigma) T ->
+    subst_type_params_ty sigma T = T.
+Proof.
+  intros sigma T [[fuel_bounded Hbounded] [fuel_fallback Hfallback]].
+  eapply subst_type_params_ty_noop_of_bounded_zero_and_no_fallback_fuel;
+    eassumption.
+Qed.
+
+Lemma apply_type_param_noop_of_subst_noop :
+  forall sigma p,
+    param_type_params_subst_noop (Datatypes.length sigma) p ->
+    apply_type_param sigma p = p.
+Proof.
+  intros sigma [m x T] Hnoop.
+  unfold apply_type_param, param_type_params_subst_noop in *; simpl in *.
+  rewrite subst_type_params_ty_noop_of_subst_noop; [reflexivity | exact Hnoop].
+Qed.
+
+Lemma apply_type_params_noop_of_subst_noop :
+  forall sigma ps,
+    params_type_params_subst_noop (Datatypes.length sigma) ps ->
+    apply_type_params sigma ps = ps.
+Proof.
+  intros sigma ps Hnoop.
+  induction Hnoop as [| p ps Hhead Htail IH].
+  - reflexivity.
+  - simpl. rewrite apply_type_param_noop_of_subst_noop; [rewrite IH |];
+      reflexivity || exact Hhead.
+Qed.
+
+Lemma fn_signature_type_params_subst_noop_params :
+  forall sigma f,
+    fn_signature_type_params_subst_noop (Datatypes.length sigma) f ->
+    apply_type_params sigma (fn_params f) = fn_params f.
+Proof.
+  intros sigma f [_ [Hparams _]].
+  apply apply_type_params_noop_of_subst_noop. exact Hparams.
+Qed.
+
+Lemma fn_signature_type_params_subst_noop_ret :
+  forall sigma f,
+    fn_signature_type_params_subst_noop (Datatypes.length sigma) f ->
+    subst_type_params_ty sigma (fn_ret f) = fn_ret f.
+Proof.
+  intros sigma f [_ [_ Hret]].
+  apply subst_type_params_ty_noop_of_subst_noop. exact Hret.
+Qed.
+
 Lemma subst_type_params_ty_args_compose_go : forall sigma args fallback,
   ((fix go (xs fallback : list Ty) {struct xs} : list Ty :=
       match xs with

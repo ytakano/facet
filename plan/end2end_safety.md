@@ -266,6 +266,10 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      plain and elaborated `ECallExpr` paths; mixed tests now reach the
      end-to-end safety gate. Checks: `make TypeChecker.vo`, `dune build`,
      proof-hole scan, mixed targeted CLI tests.
+   - Done: extend the supported function-value callee shape gate to
+     admit `TForall (... TTypeForall (... TFn ...))`. Checks:
+     `make EnvRuntimeShadowCheckerFacts.vo`, `make TypeChecker.vo`,
+     proof-hole scan.
    - Todo: add runtime summary support for mixed higher-rank/type-generic
      function-value calls. Current targeted gate failures:
      `mixed_forall_fn_value_pass_and_call.facet`,

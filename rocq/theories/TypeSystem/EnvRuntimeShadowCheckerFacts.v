@@ -368,7 +368,10 @@ Proof.
   - eapply SFV_TFn. reflexivity.
   - destruct t as [u_body c_body]. simpl in H.
     destruct c_body; try discriminate.
-    eapply SFV_TForall_TFn; reflexivity.
+    + eapply SFV_TForall_TFn; reflexivity.
+    + destruct t as [u_inner c_inner]. simpl in H.
+      destruct c_inner; try discriminate.
+      eapply SFV_TForall_TTypeForall_TFn; reflexivity.
 Qed.
 
 Lemma check_supported_non_type_generic_function_value_call_expr_sound :
@@ -393,12 +396,23 @@ Proof.
     + eapply SFV_TFn. reflexivity.
   - destruct t as [u_body c_body]. simpl in Hcheck.
     destruct c_body; try discriminate.
-    unfold supported_non_type_generic_function_value_call_expr.
-    exists i, (MkTy u (TForall n0 o (MkTy u_body (TFn l t)))),
-      Γ_callee, R_callee, roots_callee.
-    repeat split; try reflexivity.
-    + exact Hinfer.
-    + eapply SFV_TForall_TFn; reflexivity.
+    + unfold supported_non_type_generic_function_value_call_expr.
+      exists i, (MkTy u (TForall n0 o (MkTy u_body (TFn l t)))),
+        Γ_callee, R_callee, roots_callee.
+      repeat split; try reflexivity.
+      * exact Hinfer.
+      * eapply SFV_TForall_TFn; reflexivity.
+    + destruct t as [u_inner c_inner]. simpl in Hcheck.
+      destruct c_inner; try discriminate.
+      unfold supported_non_type_generic_function_value_call_expr.
+      exists i,
+        (MkTy u
+          (TForall n0 o
+            (MkTy u_body (TTypeForall n1 l (MkTy u_inner (TFn l0 t)))))),
+        Γ_callee, R_callee, roots_callee.
+      repeat split; try reflexivity.
+      * exact Hinfer.
+      * eapply SFV_TForall_TTypeForall_TFn; reflexivity.
 Qed.
 
 Lemma supported_type_generic_function_value_call_callee_ty_b_sound :

@@ -111,26 +111,31 @@ Progress:
 - Split raw elaboration and extraction-adjacent definitions into
   `CheckerRawElab.v`.
 
-Next small task:
+Status: complete.
 
-1. Final facade/extraction boundary audit.
-2. Run full verification.
+Final verification passed:
+
+```sh
+cd rocq && make
+dune build
+sh tests/run.sh
+sh tests/fir/run.sh
+rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
+git diff --check
+git diff -- fixtures/TypeChecker.ml fixtures/TypeChecker.mli
+```
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving
 implementation groups into focused modules.
 
-Proposed order:
+Final structure:
 
-1. `CheckerBase.v`: equality, compatibility, context helpers, infer result
-   and error types.
-2. `CheckerTraits.v`: trait refs, impl lookup, type-argument inference, generic
-   call helpers.
-3. `CheckerOrdinary.v`: ordinary place, field, branch, and parameter helpers.
-4. `CheckerState.v`: `sctx`, binding-state helpers, structural checker.
-5. `CheckerElab.v`: raw elaboration and wrapper adapters.
-6. `CheckerRoots.v`: root/provenance readiness, root-aware checker,
-   end-to-end checker entrypoints.
-7. `TypeChecker.v`: re-exports plus extraction block.
+1. `CheckerBase.v` through `CheckerProgram.v`: executable checker layers.
+2. `CheckerExamplesBasic.v` and `CheckerExamplesRootSidecars.v`: Rocq regression examples.
+3. `CheckerBorrow.v`, `CheckerFull.v`, `CheckerAlphaElabProgram.v`, and
+   `CheckerRootSidecars.v`: borrow, full, alpha/elab, and end-to-end wrappers.
+4. `CheckerRawElab.v`: raw syntax and elaboration entrypoints.
+5. `TypeChecker.v`: re-exports plus extraction block.
 
 Rules:
 

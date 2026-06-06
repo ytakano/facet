@@ -33,8 +33,9 @@ Done:
 - Added `rocq/tools/unused-allowlist.txt` for protected public/checker roots.
 - Added `rocq/tools/unused-classification.md` with the first `dpdusage`
   candidate batch.
-- Deleted private unused helper `field_names_unique_b` after source, fixture,
-  build, and proof-hole checks.
+- Deleted private unused helpers `field_names_unique_b`, `trait_impl_error`,
+  and `infer_call_type_args` after source, fixture, build, and proof-hole
+  checks.
 - Verified:
 
 ```sh

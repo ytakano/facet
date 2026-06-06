@@ -4531,6 +4531,50 @@ let infer_mixed_forall_call_env env _UU03a9_ n m lt_bounds type_params type_boun
      | None -> Infer_err ErrTypeArgInferenceFailed)
   | x -> Infer_err (ErrMalformedHrtBody x)
 
+(** val infer_mixed_forall_call_env_elab :
+    global_env -> outlives_ctx -> Big_int_Z.big_int -> Big_int_Z.big_int ->
+    outlives_ctx -> Big_int_Z.big_int -> ty core_trait_bound list -> ty -> ty
+    list -> (ty list * ty) infer_result **)
+
+let infer_mixed_forall_call_env_elab env _UU03a9_ n m lt_bounds type_params type_bounds body arg_tys =
+  match ty_core body with
+  | TFn (param_tys, ret) ->
+    (match infer_type_forall_args type_params param_tys arg_tys with
+     | Some type_args ->
+       let param_tys_t = map (subst_type_params_ty type_args) param_tys in
+       (match build_bound_sigma (repeat None m) arg_tys param_tys_t with
+        | Some _UU03c3_0 ->
+          let _UU03c3_ = complete_bound_sigma_with_vars n _UU03c3_0 in
+          let param_tys_open = map (open_bound_ty _UU03c3_) param_tys_t in
+          (match check_arg_tys _UU03a9_ arg_tys param_tys_open with
+           | Some err -> Infer_err err
+           | None ->
+             let ret_open =
+               open_bound_ty _UU03c3_ (subst_type_params_ty type_args ret)
+             in
+             let lt_bounds_open = open_bound_outlives _UU03c3_ lt_bounds in
+             let type_bounds_open =
+               open_core_trait_bounds _UU03c3_ type_bounds
+             in
+             if (||)
+                  ((||) (contains_lbound_ty ret_open)
+                    (contains_lbound_outlives lt_bounds_open))
+                  (existsb (fun b ->
+                    existsb (fun tr ->
+                      existsb contains_lbound_ty tr.core_trait_ref_args)
+                      b.core_bound_traits)
+                    type_bounds_open)
+             then Infer_err ErrHrtUnresolvedBound
+             else if outlives_constraints_hold_b _UU03a9_ lt_bounds_open
+                  then (match check_type_forall_bounds env type_bounds_open
+                                type_args with
+                        | Some err -> Infer_err err
+                        | None -> Infer_ok (type_args, ret_open))
+                  else Infer_err ErrHrtBoundUnsatisfied)
+        | None -> Infer_err ErrLifetimeConflict)
+     | None -> Infer_err ErrTypeArgInferenceFailed)
+  | x -> Infer_err (ErrMalformedHrtBody x)
+
 type sctx_entry = ctx_entry
 
 type sctx = ctx
@@ -6157,10 +6201,12 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
                              else Infer_err ErrHrtBoundUnsatisfied)
                    | None -> Infer_err ErrLifetimeConflict)
                 | TTypeForall (type_params, type_bounds, type_body) ->
-                  (match infer_mixed_forall_call_env env _UU03a9_ n m bounds
-                           type_params type_bounds type_body arg_tys with
-                   | Infer_ok ret ->
-                     Infer_ok ((ret, _UU03a3_'), (ECallExpr (callee', args')))
+                  (match infer_mixed_forall_call_env_elab env _UU03a9_ n m
+                           bounds type_params type_bounds type_body arg_tys with
+                   | Infer_ok p3 ->
+                     let (type_args, ret) = p3 in
+                     Infer_ok ((ret, _UU03a3_'), (ECallExprGeneric (callee',
+                     type_args, args')))
                    | Infer_err err -> Infer_err err)
                 | x -> Infer_err (ErrMalformedHrtBody x))
              | TTypeForall (type_params, bounds, body) ->
@@ -12258,6 +12304,41 @@ let fn_with_body f body =
     fn_ret = f.fn_ret; fn_body = body; fn_type_params = f.fn_type_params;
     fn_bounds = f.fn_bounds }
 
+(** val lookup_param_ty : ident -> param list -> ty option **)
+
+let rec lookup_param_ty x = function
+| [] -> None
+| p :: ps' ->
+  if ident_eqb x p.param_name then Some p.param_ty else lookup_param_ty x ps'
+
+(** val mixed_forall_type_generic_fn_ty_b : ty -> bool **)
+
+let mixed_forall_type_generic_fn_ty_b t =
+  match ty_core t with
+  | TForall (_, _, body) ->
+    (match ty_core body with
+     | TTypeForall (_, _, inner) ->
+       (match ty_core inner with
+        | TFn (_, _) -> true
+        | _ -> false)
+     | _ -> false)
+  | _ -> false
+
+(** val cleanup_mixed_param_call_expr : param list -> expr -> expr **)
+
+let cleanup_mixed_param_call_expr ps e = match e with
+| ECallExprGeneric (e0, _, args) ->
+  (match e0 with
+   | EVar x ->
+     (match lookup_param_ty x ps with
+      | Some t ->
+        if mixed_forall_type_generic_fn_ty_b t
+        then ECallExpr ((EVar x), args)
+        else e
+      | None -> e)
+   | _ -> e)
+| _ -> e
+
 (** val infer_env_elab :
     global_env -> fn_def -> ((ty * ctx) * fn_def) infer_result **)
 
@@ -12283,7 +12364,9 @@ let infer_env_elab env f =
                   else if ty_compatible_b _UU03a9_ t_body f.fn_ret
                        then if params_ok_env_b env f.fn_params _UU0393__out
                             then Infer_ok ((f.fn_ret, _UU0393__out),
-                                   (fn_with_body f body'))
+                                   (fn_with_body f
+                                     (cleanup_mixed_param_call_expr
+                                       f.fn_params body')))
                             else Infer_err ErrContextCheckFailed
                        else Infer_err (compatible_error t_body f.fn_ret)
                 | Infer_err err -> Infer_err err))

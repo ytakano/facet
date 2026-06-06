@@ -7664,6 +7664,42 @@ Definition fn_with_body (f : fn_def) (body : expr) : fn_def :=
     (fn_captures f) (fn_params f) (fn_ret f) body
     (fn_type_params f) (fn_bounds f).
 
+Fixpoint lookup_param_ty (x : ident) (ps : list param) : option Ty :=
+  match ps with
+  | [] => None
+  | p :: ps' =>
+      if ident_eqb x (param_name p)
+      then Some (param_ty p)
+      else lookup_param_ty x ps'
+  end.
+
+Definition mixed_forall_type_generic_fn_ty_b (T : Ty) : bool :=
+  match ty_core T with
+  | TForall _ _ body =>
+      match ty_core body with
+      | TTypeForall _ _ inner =>
+          match ty_core inner with
+          | TFn _ _ => true
+          | _ => false
+          end
+      | _ => false
+      end
+  | _ => false
+  end.
+
+Definition cleanup_mixed_param_call_expr (ps : list param) (e : expr) : expr :=
+  match e with
+  | ECallExprGeneric (EVar x) _ args =>
+      match lookup_param_ty x ps with
+      | Some T =>
+          if mixed_forall_type_generic_fn_ty_b T
+          then ECallExpr (EVar x) args
+          else e
+      | None => e
+      end
+  | _ => e
+  end.
+
 Definition infer_env_elab (env : global_env) (f : fn_def)
     : infer_result (Ty * ctx * fn_def) :=
   let n := fn_lifetimes f in
@@ -7687,7 +7723,8 @@ Definition infer_env_elab (env : global_env) (f : fn_def)
       else
       if ty_compatible_b Ω T_body (fn_ret f) then
         if params_ok_env_b env (fn_params f) Γ_out
-        then infer_ok (fn_ret f, Γ_out, fn_with_body f body')
+        then infer_ok (fn_ret f, Γ_out,
+               fn_with_body f (cleanup_mixed_param_call_expr (fn_params f) body'))
         else infer_err ErrContextCheckFailed
       else infer_err (compatible_error T_body (fn_ret f))
   end

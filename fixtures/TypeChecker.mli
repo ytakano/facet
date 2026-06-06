@@ -869,6 +869,11 @@ val infer_mixed_forall_call_env :
   outlives_ctx -> Big_int_Z.big_int -> ty core_trait_bound list -> ty -> ty
   list -> ty infer_result
 
+val infer_mixed_forall_call_env_elab :
+  global_env -> outlives_ctx -> Big_int_Z.big_int -> Big_int_Z.big_int ->
+  outlives_ctx -> Big_int_Z.big_int -> ty core_trait_bound list -> ty -> ty
+  list -> (ty list * ty) infer_result
+
 type sctx_entry = ctx_entry
 
 type sctx = ctx
@@ -1089,6 +1094,12 @@ val global_names_unique_b : global_env -> bool
 val infer_env : global_env -> fn_def -> (ty * ctx) infer_result
 
 val fn_with_body : fn_def -> expr -> fn_def
+
+val lookup_param_ty : ident -> param list -> ty option
+
+val mixed_forall_type_generic_fn_ty_b : ty -> bool
+
+val cleanup_mixed_param_call_expr : param list -> expr -> expr
 
 val infer_env_elab :
   global_env -> fn_def -> ((ty * ctx) * fn_def) infer_result

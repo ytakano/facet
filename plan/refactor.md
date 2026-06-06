@@ -92,10 +92,11 @@ Progress:
 - Split ordinary `infer_core` checker body into `CheckerCore.v`.
 - Split env-aware `infer_core_env_fuel` checker body into `CheckerEnvCore.v`.
 - Split `sctx`/binding-state/field-path state helpers into `CheckerState.v`.
+- Split ordinary state checker body into `CheckerStateCore.v`.
 
 Next small task:
 
-1. Check dependencies before moving `infer_core_env_state_fuel`.
+1. Check dependencies before moving elab helpers and `infer_core_env_state_fuel_elab`.
 2. Run full verification.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving

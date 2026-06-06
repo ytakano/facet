@@ -17,6 +17,7 @@ theories/TypeSystem/CheckerEnvHelpers.v
 theories/TypeSystem/CheckerCore.v
 theories/TypeSystem/CheckerEnvCore.v
 theories/TypeSystem/CheckerState.v
+theories/TypeSystem/CheckerStateCore.v
 theories/TypeSystem/TypeChecker.v
 theories/TypeSystem/RuntimeTyping.v
 theories/TypeSystem/EnvStructuralRules.v

@@ -718,10 +718,6 @@ Definition trait_impl_error_with_args
       end
   end.
 
-Definition trait_impl_error
-    (env : global_env) (trait_name : string) (for_ty : Ty) : option infer_error :=
-  trait_impl_error_with_args env trait_name [] for_ty.
-
 Definition instantiate_trait_ref (args : list Ty) (tr : trait_ref) : trait_ref :=
   MkTraitRef (trait_ref_name tr)
     (map (subst_type_params_ty args) (trait_ref_args tr)).
@@ -890,14 +886,6 @@ Fixpoint finalize_type_args (σ : list (option Ty)) : option (list Ty) :=
       | None => None
       end
   | None :: _ => None
-  end.
-
-Definition infer_call_type_args
-    (fdef : fn_def) (arg_tys : list Ty) : option (list Ty) :=
-  match infer_type_args_from_params
-          (fn_params fdef) arg_tys (repeat None (fn_type_params fdef)) with
-  | Some σ => finalize_type_args σ
-  | None => None
   end.
 
 Definition infer_call_type_args_expected

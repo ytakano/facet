@@ -87,8 +87,7 @@ documentation anchors before any deletion pass:
 
 Ordinary helper candidates need per-name source review and proof/build checks:
 
-`infer_call_type_args`, `trait_impl_error`, `MkRawFnDef`,
-`borrow_check_env_prefix_fields_conflict`,
+`MkRawFnDef`, `borrow_check_env_prefix_fields_conflict`,
 `borrow_check_env_sibling_fields_do_not_conflict`,
 `capture_ref_free_ty_b_sound`, `check_expr_root_shadow_store_safe_summary`,
 `infer_full`, `root_env_*`, `params_names_nodup_b`,
@@ -104,3 +103,11 @@ checker helper facts from
 
 `field_names_unique_b`: deleted. Private checker helper with no callers beyond
 self-recursion and no extracted fixture occurrence.
+
+`trait_impl_error`: deleted. Private wrapper around
+`trait_impl_error_with_args`, no callers outside classification, no fixture
+occurrence.
+
+`infer_call_type_args`: deleted. Private wrapper superseded by
+`infer_call_type_args_expected`, no callers outside classification, no fixture
+occurrence.

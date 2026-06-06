@@ -41,6 +41,8 @@ Done:
 - Reclassified protected candidates: extraction roots, raw elaboration
   constructor, public/proof-facing facts, regression examples, automation
   artifacts, and executable checker helpers with real callers.
+- Started `TypeChecker.v` splitting by moving equality and depth helpers to
+  `CheckerBase.v` while keeping `TypeChecker.v` as the facade.
 - Verified:
 
 ```sh
@@ -66,11 +68,9 @@ rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
 
 Next small task:
 
-1. Inspect the top `TypeChecker.v` helper block through `infer_result`.
-2. Identify the smallest move-only `CheckerBase.v` slice with no extraction
-   naming surprises.
-3. Implement only that slice, update `_CoqProject`, run verification, and
-   commit.
+1. Move a small compatibility helper slice after `ty_depth`, keeping
+   `TypeChecker.v` as the facade.
+2. Update `_CoqProject`, run full verification, and commit.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving
 implementation groups into focused modules.

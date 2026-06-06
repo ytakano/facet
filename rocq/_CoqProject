@@ -8,6 +8,7 @@ theories/TypeSystem/Renaming.v
 theories/TypeSystem/OperationalSemantics.v
 theories/TypeSystem/TypingRules.v
 theories/TypeSystem/RootProvenance.v
+theories/TypeSystem/CheckerBase.v
 theories/TypeSystem/TypeChecker.v
 theories/TypeSystem/RuntimeTyping.v
 theories/TypeSystem/EnvStructuralRules.v

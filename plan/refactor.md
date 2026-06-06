@@ -45,6 +45,8 @@ Done:
   `CheckerBase.v` while keeping `TypeChecker.v` as the facade.
 - Moved compatibility helpers to `CheckerBase.v` while keeping `TypeChecker.v`
   as the facade.
+- Moved capture/ref-free type predicates and soundness lemmas to
+  `CheckerBase.v` while keeping `TypeChecker.v` as the facade.
 - Verified:
 
 ```sh
@@ -70,9 +72,9 @@ rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
 
 Next small task:
 
-1. Move the next small base checker slice after compatibility helpers, keeping
+1. Move decidable context operations into `CheckerBase.v`, keeping
    `TypeChecker.v` as the facade.
-2. Update `_CoqProject`, run full verification, and commit.
+2. Run full verification and commit.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving
 implementation groups into focused modules.

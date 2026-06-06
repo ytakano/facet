@@ -181,8 +181,10 @@ Progress:
   `EnvRuntimeFunctionValueCallFacts.v`.
 - Split narrow summary definitions and alpha-renaming/substitution helper facts
   into `EnvRuntimeNarrowSummaryFacts.v`.
+- Split generic direct-call instantiation and fresh-renaming facts into
+  `EnvRuntimeGenericDirectCallFacts.v`.
 
-Next small task: instantiated/generic direct call proof boundary check.
+Next small task: direct-call runtime bridge boundary check.
 
 ## Phase 4: Split `AlphaShadowProvenance.v`
 

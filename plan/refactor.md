@@ -102,10 +102,12 @@ Progress:
 - Split basic regression examples into `CheckerExamplesBasic.v`.
 - Split borrow conflict checker into `CheckerBorrow.v`.
 - Split combined type + borrow checker wrappers into `CheckerFull.v`.
+- Split alpha-normalization and elab program wrappers into
+  `CheckerAlphaElabProgram.v`.
 
 Next small task:
 
-1. Check raw elaboration and extraction boundary dependencies.
+1. Check root-shadow sidecar summaries and examples dependencies.
 2. Run full verification.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving

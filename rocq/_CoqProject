@@ -25,6 +25,7 @@ theories/TypeSystem/CheckerProgram.v
 theories/TypeSystem/CheckerExamplesBasic.v
 theories/TypeSystem/CheckerBorrow.v
 theories/TypeSystem/CheckerFull.v
+theories/TypeSystem/CheckerAlphaElabProgram.v
 theories/TypeSystem/TypeChecker.v
 theories/TypeSystem/RuntimeTyping.v
 theories/TypeSystem/EnvStructuralRules.v

@@ -170,6 +170,7 @@ Proposed modules:
 - `EnvRuntimeNarrowRuntimePackage.v`
 - `EnvRuntimeDirectCallStoreSafeFacts.v`
 - `EnvRuntimeCheckedPrefixRuntimePackage.v`
+- `EnvRuntimeFinalStoreScopeFacts.v`
 - `EnvRuntimeCapturedCallFacts.v`
 - `EnvRuntimeBaseSafety.v` as compatibility facade
 
@@ -201,8 +202,10 @@ Progress:
   `EnvRuntimeDirectCallStoreSafeFacts.v`.
 - Split checked and prefix runtime package proofs into
   `EnvRuntimeCheckedPrefixRuntimePackage.v`.
+- Split final-store, frame-scope, and param-scope preservation proofs into
+  `EnvRuntimeFinalStoreScopeFacts.v`.
 
-Next small task: final-store and scope preservation extraction.
+Next small task: direct and generic captured-call summary extraction.
 
 ## Phase 4: Split `AlphaShadowProvenance.v`
 

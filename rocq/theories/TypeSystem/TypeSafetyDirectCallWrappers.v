@@ -2760,7 +2760,7 @@ Theorem eval_call_expr_generic_ttypeforall_tfn_components_preserve_typing_with_c
           (apply_type_params type_args (fn_params fcall))
           (subst_type_params_ty type_args (fn_ret fcall))
           (subst_type_params_expr type_args (fn_body fcall))
-          (fn_type_params fcall) (fn_bounds fcall) in
+          (fn_type_params fcall) (subst_type_params_trait_bounds type_args (fn_bounds fcall)) in
       callee_body_root_shadow_provenance_ready_at_result_subset env
         fcall_type_inst
         (call_param_root_env
@@ -2889,7 +2889,7 @@ Proof.
         Hprov_body & Htyped_body_shadow & Hcompat_body &
         Hexclude_roots & Hexclude_env & Hresult_subset).
   pose proof (typed_env_roots_shadow_safe_roots
-    (global_env_with_local_bounds env (fn_bounds fcall))
+    (global_env_with_local_bounds env (subst_type_params_trait_bounds type_args (fn_bounds fcall)))
     (fn_outlives fcall) (fn_lifetimes fcall)
     (call_param_root_env
       (apply_type_params type_args (fn_params fcall)) arg_roots R')
@@ -2899,7 +2899,7 @@ Proof.
     Htyped_body_shadow) as Htyped_body_ctx.
   assert (Htyped_body :
     typed_env_roots
-      (global_env_with_local_bounds env (fn_bounds fcall))
+      (global_env_with_local_bounds env (subst_type_params_trait_bounds type_args (fn_bounds fcall)))
       (fn_outlives fcall) (fn_lifetimes fcall)
       (call_param_root_env
         (apply_type_params type_args (fn_params fcall)) arg_roots R')
@@ -2922,7 +2922,7 @@ Proof.
       (sctx_of_ctx
         (params_ctx (apply_type_params type_args (fn_params fcall))))).
   { eapply bind_params_store_typed_prefix; eassumption. }
-  pose (body_env := global_env_with_local_bounds env (fn_bounds fcall)).
+  pose (body_env := global_env_with_local_bounds env (subst_type_params_trait_bounds type_args (fn_bounds fcall))).
   assert (Hstore_bind_body_env :
     store_typed_prefix body_env
       (bind_params (apply_type_params type_args (fn_params fcall)) vs s_args)
@@ -3130,7 +3130,7 @@ Theorem eval_call_expr_generic_ttypeforall_tfn_components_final_store_eq_route_p
           (apply_type_params type_args (fn_params fcall))
           (subst_type_params_ty type_args (fn_ret fcall))
           (subst_type_params_expr type_args (fn_body fcall))
-          (fn_type_params fcall) (fn_bounds fcall) in
+          (fn_type_params fcall) (subst_type_params_trait_bounds type_args (fn_bounds fcall)) in
       callee_body_root_shadow_provenance_ready_at_result_subset env
         fcall_type_inst
         (call_param_root_env
@@ -3247,7 +3247,7 @@ Proof.
     as (T_body & Gamma_out & R_body & roots_body &
         Hprov_body & Htyped_body_shadow & _ & _ & _ & _).
   pose proof (typed_env_roots_shadow_safe_roots
-    (global_env_with_local_bounds env (fn_bounds fcall))
+    (global_env_with_local_bounds env (subst_type_params_trait_bounds type_args (fn_bounds fcall)))
     (fn_outlives fcall) (fn_lifetimes fcall)
     (call_param_root_env
       (apply_type_params type_args (fn_params fcall)) arg_roots R')
@@ -3257,7 +3257,7 @@ Proof.
     Htyped_body_shadow) as Htyped_body_ctx.
   assert (Htyped_body :
     typed_env_roots
-      (global_env_with_local_bounds env (fn_bounds fcall))
+      (global_env_with_local_bounds env (subst_type_params_trait_bounds type_args (fn_bounds fcall)))
       (fn_outlives fcall) (fn_lifetimes fcall)
       (call_param_root_env
         (apply_type_params type_args (fn_params fcall)) arg_roots R')
@@ -3274,7 +3274,7 @@ Proof.
       with (f := fcall_type_inst).
     - subst fcall_type_inst. simpl. exact Hcaps_call_type.
     - subst fcall_type_inst. simpl. exact Htyped_body_ctx. }
-  pose (body_env := global_env_with_local_bounds env (fn_bounds fcall)).
+  pose (body_env := global_env_with_local_bounds env (subst_type_params_trait_bounds type_args (fn_bounds fcall))).
   assert (Heval_body_body_env :
     eval body_env
       (bind_params (apply_type_params type_args (fn_params fcall)) vs s_args)

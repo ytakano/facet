@@ -8962,7 +8962,9 @@ Definition check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_
       let body_ctx := subst_type_params_ctx type_args (fn_body_ctx fdef) in
       let body := subst_type_params_expr type_args (fn_body fdef) in
       let params := apply_type_params type_args (fn_params fdef) in
-      let body_env := global_env_with_local_bounds env (fn_bounds fdef) in
+      let body_env :=
+        global_env_with_local_bounds env
+          (subst_type_params_trait_bounds type_args (fn_bounds fdef)) in
       match infer_env_roots_shadow_safe env fdef
               (initial_root_env_for_fn fdef) with
       | infer_err _ => false
@@ -9751,7 +9753,10 @@ Definition check_fn_root_shadow_generic_direct_store_safe_summary
                   (fn_bounds callee) type_args with
           | Some _ => false
           | None =>
-              match infer_core_env_roots_shadow_safe env
+              let callee_body_env :=
+                global_env_with_local_bounds env
+                  (subst_type_params_trait_bounds type_args (fn_bounds callee)) in
+              match infer_core_env_roots_shadow_safe callee_body_env
                         (fn_outlives callee)
                         (fn_lifetimes callee)
                         (initial_root_env_for_fn callee)
@@ -9765,8 +9770,6 @@ Definition check_fn_root_shadow_generic_direct_store_safe_summary
               | infer_ok (T_callee, _, R_callee, roots_callee),
                 infer_ok _,
                 infer_ok (T_body, _, R_out, roots) =>
-                  preservation_ready_expr_b
-                    (subst_type_params_expr type_args (fn_body callee)) &&
                   check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
                     env callee type_args &&
                   ty_compatible_b (fn_outlives callee) T_callee
@@ -9929,7 +9932,10 @@ Definition check_fn_root_shadow_captured_call_store_safe_summary
                    (fn_bounds callee) type_args with
            | Some _ => false
            | None =>
-               match infer_core_env_roots_shadow_safe env
+               let callee_body_env :=
+                 global_env_with_local_bounds env
+                   (subst_type_params_trait_bounds type_args (fn_bounds callee)) in
+               match infer_core_env_roots_shadow_safe callee_body_env
                          (fn_outlives callee)
                          (fn_lifetimes callee)
                          (initial_root_env_for_fn callee)

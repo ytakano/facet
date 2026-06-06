@@ -2710,7 +2710,7 @@ Definition fn_subst_type_params (type_args : list Ty) (f : fn_def) : fn_def :=
     (apply_type_params type_args (fn_params f))
     (subst_type_params_ty type_args (fn_ret f))
     (subst_type_params_expr type_args (fn_body f))
-    (fn_type_params f) (fn_bounds f).
+    (fn_type_params f) (subst_type_params_trait_bounds type_args (fn_bounds f)).
 
 Lemma apply_type_params_app :
   forall type_args ps1 ps2,
@@ -2759,7 +2759,8 @@ Definition callee_body_root_shadow_store_safe_narrow_summary_instantiated
     NoDup (ctx_names (params_ctx
       (apply_type_params type_args (fn_params fdef)))) /\
     expr_root_shadow_store_safe_narrow_summary
-      (global_env_with_local_bounds env (fn_bounds fdef))
+      (global_env_with_local_bounds env
+        (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
       (fn_outlives fdef) (fn_lifetimes fdef)
       (initial_root_env_for_fn fdef)
       (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fdef)))
@@ -5040,7 +5041,8 @@ Proof.
   remember (subst_type_params_ctx type_args (fn_body_ctx fdef)) as body_ctx.
   remember (subst_type_params_expr type_args (fn_body fdef)) as body.
   remember (apply_type_params type_args (fn_params fdef)) as params.
-  remember (global_env_with_local_bounds env (fn_bounds fdef)) as body_env.
+  remember (global_env_with_local_bounds env
+    (subst_type_params_trait_bounds type_args (fn_bounds fdef))) as body_env.
   destruct (infer_env_roots_shadow_safe env fdef (initial_root_env_for_fn fdef))
     as [[[[T_env Gamma_env] R_env] roots_env] | err_env] eqn:Henv;
     try discriminate.
@@ -5053,7 +5055,8 @@ Proof.
   destruct Hcheck as [[[Hexpr Hcompat] Hroots] Hroot_env].
   subst body_ctx body params body_env.
   destruct (check_expr_root_shadow_store_safe_narrow_summary_fuel_sound
-    fuel' (global_env_with_local_bounds env (fn_bounds fdef))
+    fuel' (global_env_with_local_bounds env
+      (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
     (fn_outlives fdef) (fn_lifetimes fdef) (initial_root_env_for_fn fdef)
     (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fdef)))
     (subst_type_params_expr type_args (fn_body fdef))
@@ -6274,8 +6277,10 @@ Proof.
   cbn [check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_body_fuel].
   rewrite infer_env_roots_shadow_safe_global_env_with_local_bounds.
   change (global_env_with_local_bounds
-    (global_env_with_local_bounds env bounds) (fn_bounds fdef))
-    with (global_env_with_local_bounds env (fn_bounds fdef)).
+    (global_env_with_local_bounds env bounds)
+      (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
+    with (global_env_with_local_bounds env
+      (subst_type_params_trait_bounds type_args (fn_bounds fdef))).
   reflexivity.
 Qed.
 
@@ -7140,7 +7145,8 @@ Lemma callee_body_root_shadow_provenance_summary_fn_subst_type_params :
         (fn_body fdef) T_body (sctx_of_ctx Gamma_out) R_body roots_body ->
       exists T_body_subst Gamma_out_subst,
         typed_env_roots_shadow_safe
-          (global_env_with_local_bounds env (fn_bounds fdef))
+          (global_env_with_local_bounds env
+            (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
           (fn_outlives fdef) (fn_lifetimes fdef)
           (initial_root_env_for_fn fdef)
           (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fdef)))
@@ -13814,7 +13820,8 @@ Inductive callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
       NoDup (ctx_names (params_ctx
         (apply_type_params type_args (fn_params fdef)))) ->
       expr_root_shadow_store_safe_narrow_summary
-        (global_env_with_local_bounds env (fn_bounds fdef))
+        (global_env_with_local_bounds env
+          (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
         (fn_outlives fdef) (fn_lifetimes fdef)
         (initial_root_env_for_fn fdef)
         (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fdef)))
@@ -14027,7 +14034,8 @@ Lemma callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel_cases 
       NoDup (ctx_names (params_ctx
         (apply_type_params type_args (fn_params fdef)))) /\
       expr_root_shadow_store_safe_narrow_summary
-        (global_env_with_local_bounds env (fn_bounds fdef))
+        (global_env_with_local_bounds env
+          (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
         (fn_outlives fdef) (fn_lifetimes fdef)
         (initial_root_env_for_fn fdef)
         (sctx_of_ctx (subst_type_params_ctx type_args (fn_body_ctx fdef)))
@@ -14152,7 +14160,8 @@ Lemma generic_direct_call_callee_body_root_shadow_store_safe_narrow_summary_brid
       alpha_rename_fn_def seed fdef = (fcall, used') ->
       exists T_body Sigma_out R_body roots_body ret_roots,
         expr_root_shadow_store_safe_narrow_summary
-          (global_env_with_local_bounds env (fn_bounds fcall))
+          (global_env_with_local_bounds env
+            (subst_type_params_trait_bounds type_args (fn_bounds fcall)))
           (fn_outlives fcall) (fn_lifetimes fcall)
           (call_param_root_env
             (apply_type_params type_args (fn_params fcall)) arg_roots R_args)
@@ -14172,7 +14181,8 @@ Proof.
     fdef fcall param_tys ret_ty s s_args vs used' seed Hsummary Hcaps Hbridge
     Hsafe_args Htyped_args Heval_args Hprov_args Hstore Hroots Hshadow Hrn
     Hnamed Hkeys Hseed_names Hrename.
-  set (body_env := global_env_with_local_bounds env (fn_bounds fdef)).
+  set (body_env := global_env_with_local_bounds env
+    (subst_type_params_trait_bounds type_args (fn_bounds fdef))).
   set (fdefT := fn_subst_type_params type_args fdef).
   set (fcallT := fn_subst_type_params type_args fcall).
   destruct (alpha_rename_fn_def_static_fields seed fdef fcall used' Hrename)
@@ -14248,7 +14258,8 @@ Lemma generic_direct_call_callee_body_root_shadow_store_safe_narrow_summary_brid
       alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
       exists T_body Sigma_out R_body roots_body ret_roots,
         expr_root_shadow_store_safe_narrow_summary
-          (global_env_with_local_bounds env (fn_bounds fcall))
+          (global_env_with_local_bounds env
+            (subst_type_params_trait_bounds type_args (fn_bounds fcall)))
           (fn_outlives fcall) (fn_lifetimes fcall)
           (call_param_root_env
             (apply_type_params type_args (fn_params fcall)) arg_roots R_args)
@@ -14440,7 +14451,8 @@ Proof.
     rewrite params_ctx_apply_type_params.
     rewrite ctx_names_subst_type_params_ctx.
     eapply alpha_rename_fn_def_params_nodup_ctx_names. exact Hrename. }
-  pose (body_env := global_env_with_local_bounds env (fn_bounds fcall)).
+  pose (body_env := global_env_with_local_bounds env
+            (subst_type_params_trait_bounds type_args (fn_bounds fcall))).
   fold body_env in Hsummary_body.
   fold ps_runtime in Hsummary_body.
   rename Hsummary_body into Hsummary_body_env.
@@ -15467,7 +15479,8 @@ Proof.
     rewrite params_ctx_apply_type_params.
     rewrite ctx_names_subst_type_params_ctx.
     eapply alpha_rename_fn_def_params_nodup_ctx_names. exact Hrename. }
-  pose (body_env := global_env_with_local_bounds env (fn_bounds fcall)).
+  pose (body_env := global_env_with_local_bounds env
+            (subst_type_params_trait_bounds type_args (fn_bounds fcall))).
   fold body_env in Hsummary_body.
   fold ps_runtime in Hsummary_body.
   rename Hsummary_body into Hsummary_body_env.
@@ -15856,7 +15869,8 @@ Proof.
           Hrange_used & Hdisj).
     assert (Hsummary_params :
       expr_root_shadow_store_safe_narrow_summary
-        (global_env_with_local_bounds env (fn_bounds fdef))
+        (global_env_with_local_bounds env
+          (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
         (fn_outlives fdef) (fn_lifetimes fdef)
         (initial_root_env_for_fn fdef)
         (sctx_of_ctx (subst_type_params_ctx type_args
@@ -15867,7 +15881,8 @@ Proof.
       exact Hnarrow. }
     assert (Htyped_body :
       typed_env_roots_shadow_safe
-        (global_env_with_local_bounds env (fn_bounds fdef))
+        (global_env_with_local_bounds env
+          (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
         (fn_outlives fdef) (fn_lifetimes fdef)
         (initial_root_env_for_fn fdef)
         (sctx_of_ctx (subst_type_params_ctx type_args
@@ -15922,7 +15937,8 @@ Proof.
     assert (Hkeys_body :
       root_env_sctx_keys_named R_body (sctx_of_ctx Gamma_out)).
     { destruct (typed_roots_shadow_safe_sctx_keys_named_mutual
-                  (global_env_with_local_bounds env (fn_bounds fdef))
+                  (global_env_with_local_bounds env
+                    (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
                   (fn_outlives fdef) (fn_lifetimes fdef)) as [Hkeys_expr _].
       eapply Hkeys_expr; eassumption. }
     assert (Hrn_body : root_env_no_shadow R_body).
@@ -15964,7 +15980,8 @@ Proof.
       - exact Hnodup_apply.
       - exact Hkeys_body. }
     destruct (expr_root_shadow_store_safe_narrow_summary_alpha_rename_forward
-      (global_env_with_local_bounds env (fn_bounds fdef))
+      (global_env_with_local_bounds env
+        (subst_type_params_trait_bounds type_args (fn_bounds fdef)))
       (fn_outlives fdef) (fn_lifetimes fdef)
       (initial_root_env_for_fn fdef)
       (sctx_of_ctx (subst_type_params_ctx type_args
@@ -16719,8 +16736,6 @@ Definition callee_body_root_shadow_captured_call_generic_direct_narrow_store_saf
     Datatypes.length type_args = fn_type_params fcallee /\
     check_struct_bounds (global_env_with_local_bounds env (fn_bounds fdef))
       (fn_bounds fcallee) type_args = None /\
-    preservation_ready_expr
-      (subst_type_params_expr type_args (fn_body fcallee)) /\
     callee_body_root_shadow_store_safe_narrow_summary_instantiated_fuel
       env 10000 fcallee type_args /\
     NoDup (ctx_names (params_ctx (fn_params fdef))) /\
@@ -16861,7 +16876,7 @@ Proof.
   destruct Hsummary as
     (fname & type_args & args & raw_body & synthetic_body & fcallee &
       T_body & Gamma_out & R_body & roots_body & Hbody & Htarget &
-      Hsynthetic & Hsafe & Hin & Hname & Harity & Hbounds & Hcallee_ready &
+      Hsynthetic & Hsafe & Hin & Hname & Harity & Hbounds &
       Hcallee_summary & Hnodup & Htyped & Hcompat & Hexcl_roots & Hexcl_env).
   eapply CBRSSNI_GenericDirect with
     (raw_body := raw_body) (synthetic_body := synthetic_body)
@@ -16930,7 +16945,10 @@ Proof.
     (global_env_with_local_bounds env (fn_bounds fdef))
     (fn_bounds fcallee) type_args)
     as [bounds_err |] eqn:Hbounds; try discriminate.
-  destruct (infer_core_env_roots_shadow_safe env
+  remember (global_env_with_local_bounds env
+    (subst_type_params_trait_bounds type_args (fn_bounds fcallee)))
+    as callee_body_env.
+  destruct (infer_core_env_roots_shadow_safe callee_body_env
     (fn_outlives fcallee) (fn_lifetimes fcallee)
     (initial_root_env_for_fn fcallee)
     (subst_type_params_ctx type_args (fn_body_ctx fcallee))
@@ -16948,7 +16966,7 @@ Proof.
     eqn:Hbody_env; try discriminate.
   repeat rewrite andb_true_iff in Hgeneric.
   destruct Hgeneric as
-    [[[[[[[Hcallee_ready Hcallee_expr] Hcallee_compat] Hcallee_roots]
+    [[[[[[Hcallee_expr Hcallee_compat] Hcallee_roots]
          Hcallee_env_excl] Hcompat] Hroots] Henv].
   apply lookup_fn_b_sound in Hlookup_b.
   destruct Hlookup_b as [Hin_callee Hname_callee].
@@ -16974,8 +16992,6 @@ Proof.
   split; [exact Hname_callee |].
   split; [exact Htype_params |].
   split; [exact Hbounds |].
-  split.
-  { apply preservation_ready_expr_b_sound. exact Hcallee_ready. }
   split; [exact Hcallee_summary |].
   split.
   { change (NoDup
@@ -17092,7 +17108,10 @@ Proof.
         (global_env_with_local_bounds env (fn_bounds fdef))
         (fn_bounds fcallee) type_args)
         as [bounds_err |] eqn:Hbounds; try discriminate.
-      destruct (infer_core_env_roots_shadow_safe env
+      remember (global_env_with_local_bounds env
+        (subst_type_params_trait_bounds type_args (fn_bounds fcallee)))
+        as callee_body_env.
+      destruct (infer_core_env_roots_shadow_safe callee_body_env
         (fn_outlives fcallee) (fn_lifetimes fcallee)
         (initial_root_env_for_fn fcallee)
         (subst_type_params_ctx type_args (fn_body_ctx fcallee))

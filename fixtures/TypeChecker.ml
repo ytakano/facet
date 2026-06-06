@@ -13281,7 +13281,10 @@ let check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_body_fu
     let body_ctx = subst_type_params_ctx type_args (fn_body_ctx fdef) in
     let body = subst_type_params_expr type_args fdef.fn_body in
     let params = apply_type_params type_args fdef.fn_params in
-    let body_env = global_env_with_local_bounds env fdef.fn_bounds in
+    let body_env =
+      global_env_with_local_bounds env
+        (subst_type_params_trait_bounds type_args fdef.fn_bounds)
+    in
     (match infer_env_roots_shadow_safe env fdef (initial_root_env_for_fn fdef) with
      | Infer_ok _ ->
        (match infer_core_env_state_fuel_roots_shadow_safe fuel' body_env
@@ -14194,8 +14197,13 @@ let check_fn_root_shadow_generic_direct_store_safe_summary env fdef =
                     callee.fn_bounds type_args with
             | Some _ -> false
             | None ->
-              (match infer_core_env_roots_shadow_safe env callee.fn_outlives
-                       callee.fn_lifetimes (initial_root_env_for_fn callee)
+              let callee_body_env =
+                global_env_with_local_bounds env
+                  (subst_type_params_trait_bounds type_args callee.fn_bounds)
+              in
+              (match infer_core_env_roots_shadow_safe callee_body_env
+                       callee.fn_outlives callee.fn_lifetimes
+                       (initial_root_env_for_fn callee)
                        (subst_type_params_ctx type_args (fn_body_ctx callee))
                        (subst_type_params_expr type_args callee.fn_body) with
                | Infer_ok p2 ->
@@ -14218,12 +14226,8 @@ let check_fn_root_shadow_generic_direct_store_safe_summary env fdef =
                              ((&&)
                                ((&&)
                                  ((&&)
-                                   ((&&)
-                                     (preservation_ready_expr_b
-                                       (subst_type_params_expr type_args
-                                         callee.fn_body))
-                                     (check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
-                                       env callee type_args))
+                                   (check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
+                                     env callee type_args)
                                    (ty_compatible_b callee.fn_outlives
                                      t_callee
                                      (subst_type_params_ty type_args
@@ -14438,8 +14442,14 @@ let check_fn_root_shadow_captured_call_store_safe_summary env fdef =
                              callee.fn_bounds type_args with
                      | Some _ -> false
                      | None ->
-                       (match infer_core_env_roots_shadow_safe env
-                                callee.fn_outlives callee.fn_lifetimes
+                       let callee_body_env =
+                         global_env_with_local_bounds env
+                           (subst_type_params_trait_bounds type_args
+                             callee.fn_bounds)
+                       in
+                       (match infer_core_env_roots_shadow_safe
+                                callee_body_env callee.fn_outlives
+                                callee.fn_lifetimes
                                 (initial_root_env_for_fn callee)
                                 (subst_type_params_ctx type_args
                                   (fn_body_ctx callee))

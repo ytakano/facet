@@ -276,6 +276,11 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      is invalid until elaborated to a wrapper/generic call. Checks:
      `make EnvRuntimeBaseSafety.vo`, `make EnvRuntimeShadowCheckerFacts.vo`,
      `dune build`, targeted valid/invalid CLI tests.
+   - Done: check instantiated generic callee bodies under substituted local
+     trait bounds and rely on instantiated summaries for nested generic-direct
+     callees; `generic_local_bound_body.facet` passes. Checks:
+     `make TypeChecker.vo`, `make EnvRuntimeBaseSafety.vo`, `dune build`,
+     proof-hole scan, targeted valid/invalid CLI tests.
 8. Todo: final full verification and roadmap closeout.
 
 ## Required checks

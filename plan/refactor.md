@@ -249,6 +249,8 @@ Progress:
   replace, assign, var, place, and borrow expressions into `AlphaTypedRoots.v`.
 - Moved root-env remove/params/no-collision helper facts used by typed-root
   let preservation into `AlphaTypedRoots.v`.
+- Moved root-env name subset helpers and non-shadow-safe let/letinfer
+  alpha-preservation lemmas into `AlphaTypedRoots.v`.
 
 Commit after each moved proof group with:
 

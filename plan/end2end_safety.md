@@ -274,8 +274,10 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      normalize mixed parameter calls back to plain call expressions;
      mixed parameter, annotated-let, and trait-bound cases pass. Checks:
      `make TypeChecker.vo`, `dune build`, proof-hole scan, targeted CLI tests.
-   - Todo: add runtime summary support for the remaining monomorphic HOF gate
-     failure: `generic_item_pass_monomorphic_hof.facet`.
+   - Done: specialize local generated-wrapper calls through simple HOF
+     adapters to checked generic direct calls; `generic_item_pass_monomorphic_hof.facet`
+     passes. Checks: `make TypeChecker.vo`, `dune build`, proof-hole scan,
+     targeted CLI tests.
 8. Todo: final full verification and roadmap closeout.
 
 ## Required checks

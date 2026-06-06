@@ -5884,6 +5884,140 @@ let infer_core_env env _UU03a9_ n _UU0393_ e =
     let (t, _UU03a3_) = p in Infer_ok (t, (ctx_of_sctx _UU03a3_))
   | Infer_err err -> Infer_err err
 
+(** val param_name_in_b : ident -> param list -> bool **)
+
+let rec param_name_in_b x = function
+| [] -> false
+| p :: ps' -> (||) (ident_eqb x p.param_name) (param_name_in_b x ps')
+
+(** val param_vars_exact_b : param list -> expr list -> bool **)
+
+let rec param_vars_exact_b ps args =
+  match ps with
+  | [] -> (match args with
+           | [] -> true
+           | _ :: _ -> false)
+  | p :: ps' ->
+    (match args with
+     | [] -> false
+     | e :: args' ->
+       (match e with
+        | EVar x ->
+          (&&) (ident_eqb x p.param_name) (param_vars_exact_b ps' args')
+        | _ -> false))
+
+(** val lookup_call_arg_for_param :
+    ident -> param list -> expr list -> expr option **)
+
+let rec lookup_call_arg_for_param x ps args =
+  match ps with
+  | [] -> None
+  | p :: ps' ->
+    (match args with
+     | [] -> None
+     | arg :: args' ->
+       if ident_eqb x p.param_name
+       then Some arg
+       else lookup_call_arg_for_param x ps' args')
+
+(** val adapter_call_uses_bound_fn_only :
+    ident -> ident -> param list -> expr list -> bool **)
+
+let rec adapter_call_uses_bound_fn_only x fparam ps args =
+  match ps with
+  | [] -> (match args with
+           | [] -> true
+           | _ :: _ -> false)
+  | p :: ps' ->
+    (match args with
+     | [] -> false
+     | arg :: args' ->
+       if ident_eqb p.param_name fparam
+       then (match arg with
+             | EVar y ->
+               (&&) (ident_eqb x y)
+                 (adapter_call_uses_bound_fn_only x fparam ps' args')
+             | _ -> false)
+       else (&&)
+              ((&&) (negb (ident_in_b x (free_vars_expr arg)))
+                (negb (ident_in_b x (args_local_store_names (arg :: [])))))
+              (adapter_call_uses_bound_fn_only x fparam ps' args'))
+
+(** val adapter_body_actual_args :
+    ident -> param list -> expr list -> expr list -> expr list option **)
+
+let rec adapter_body_actual_args fparam ps call_args = function
+| [] -> Some []
+| e :: rest ->
+  (match e with
+   | EVar y ->
+     if ident_eqb y fparam
+     then None
+     else (match lookup_call_arg_for_param y ps call_args with
+           | Some actual ->
+             (match adapter_body_actual_args fparam ps call_args rest with
+              | Some actuals -> Some (actual :: actuals)
+              | None -> None)
+           | None -> None)
+   | _ -> None)
+
+(** val generic_fn_wrapper_target : fn_def -> (ident * ty list) option **)
+
+let generic_fn_wrapper_target fdef =
+  if (&&)
+       ((&&) (no_captures_b fdef)
+         (Nat.eqb fdef.fn_lifetimes Big_int_Z.zero_big_int))
+       (Nat.eqb fdef.fn_type_params Big_int_Z.zero_big_int)
+  then (match fdef.fn_body with
+        | ECallGeneric (target, type_args, args) ->
+          if param_vars_exact_b fdef.fn_params args
+          then Some (target, type_args)
+          else None
+        | _ -> None)
+  else None
+
+(** val adapter_call_target : fn_def -> (ident * expr list) option **)
+
+let adapter_call_target fdef =
+  if params_names_nodup_b fdef.fn_params
+  then (match fdef.fn_body with
+        | ECallExpr (e, body_args) ->
+          (match e with
+           | EVar fparam ->
+             if param_name_in_b fparam fdef.fn_params
+             then Some (fparam, body_args)
+             else None
+           | _ -> None)
+        | _ -> None)
+  else None
+
+(** val direct_generic_call_for_let_wrapper_adapter :
+    global_env -> ident -> ident -> ident -> expr list -> expr option **)
+
+let direct_generic_call_for_let_wrapper_adapter env x wrapper_name adapter_name call_args =
+  match lookup_fn_b wrapper_name env.env_fns with
+  | Some wrapper ->
+    (match lookup_fn_b adapter_name env.env_fns with
+     | Some adapter ->
+       (match generic_fn_wrapper_target wrapper with
+        | Some p ->
+          let (target, type_args) = p in
+          (match adapter_call_target adapter with
+           | Some p0 ->
+             let (fparam, adapter_body_args) = p0 in
+             if adapter_call_uses_bound_fn_only x fparam adapter.fn_params
+                  call_args
+             then (match adapter_body_actual_args fparam adapter.fn_params
+                           call_args adapter_body_args with
+                   | Some actual_args ->
+                     Some (ECallGeneric (target, type_args, actual_args))
+                   | None -> None)
+             else None
+           | None -> None)
+        | None -> None)
+     | None -> None)
+  | None -> None
+
 (** val infer_core_env_state_fuel_elab :
     Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
     sctx -> expr -> ((ty * sctx) * expr) infer_result **)
@@ -5921,8 +6055,28 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
                  let (t2, _UU03a3_2) = p2 in
                  if sctx_check_ok env x t _UU03a3_2
                  then (match e1' with
-                       | EFn fname ->
+                       | EFn wrapper_name ->
                          (match e2' with
+                          | ECall (adapter_name, call_args) ->
+                            if usage_eqb (ty_usage t) UUnrestricted
+                            then (match direct_generic_call_for_let_wrapper_adapter
+                                          env x wrapper_name adapter_name
+                                          call_args with
+                                  | Some direct_call ->
+                                    (match infer_core_env_state_fuel_elab
+                                             fuel' env _UU03a9_ n _UU03a3_
+                                             direct_call with
+                                     | Infer_ok direct -> Infer_ok direct
+                                     | Infer_err _ ->
+                                       Infer_ok ((t2,
+                                         (sctx_remove x _UU03a3_2)), (ELet
+                                         (m, x, t, e1', e2'))))
+                                  | None ->
+                                    Infer_ok ((t2,
+                                      (sctx_remove x _UU03a3_2)), (ELet (m,
+                                      x, t, e1', e2'))))
+                            else Infer_ok ((t2, (sctx_remove x _UU03a3_2)),
+                                   (ELet (m, x, t, e1', e2')))
                           | ECallExprGeneric (e0, type_args, args') ->
                             (match e0 with
                              | EVar y ->
@@ -5937,8 +6091,8 @@ let rec infer_core_env_state_fuel_elab fuel env _UU03a9_ n _UU03a3_ e =
                                         (args_local_store_names args')))
                                then (match infer_core_env_state_fuel_elab
                                              fuel' env _UU03a9_ n _UU03a3_
-                                             (ECallGeneric (fname, type_args,
-                                             args')) with
+                                             (ECallGeneric (wrapper_name,
+                                             type_args, args')) with
                                      | Infer_ok direct -> Infer_ok direct
                                      | Infer_err _ ->
                                        Infer_ok ((t2,

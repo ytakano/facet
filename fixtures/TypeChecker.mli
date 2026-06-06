@@ -989,6 +989,26 @@ val infer_core_env :
   global_env -> outlives_ctx -> Big_int_Z.big_int -> ctx -> expr ->
   (ty * ctx) infer_result
 
+val param_name_in_b : ident -> param list -> bool
+
+val param_vars_exact_b : param list -> expr list -> bool
+
+val lookup_call_arg_for_param :
+  ident -> param list -> expr list -> expr option
+
+val adapter_call_uses_bound_fn_only :
+  ident -> ident -> param list -> expr list -> bool
+
+val adapter_body_actual_args :
+  ident -> param list -> expr list -> expr list -> expr list option
+
+val generic_fn_wrapper_target : fn_def -> (ident * ty list) option
+
+val adapter_call_target : fn_def -> (ident * expr list) option
+
+val direct_generic_call_for_let_wrapper_adapter :
+  global_env -> ident -> ident -> ident -> expr list -> expr option
+
 val infer_core_env_state_fuel_elab :
   Big_int_Z.big_int -> global_env -> outlives_ctx -> Big_int_Z.big_int ->
   sctx -> expr -> ((ty * sctx) * expr) infer_result

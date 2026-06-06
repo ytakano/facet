@@ -4218,6 +4218,116 @@ Definition infer_core_env
   | infer_err err => infer_err err
   end.
 
+Fixpoint param_name_in_b (x : ident) (ps : list param) : bool :=
+  match ps with
+  | [] => false
+  | p :: ps' => ident_eqb x (param_name p) || param_name_in_b x ps'
+  end.
+
+Fixpoint param_vars_exact_b (ps : list param) (args : list expr) : bool :=
+  match ps, args with
+  | [], [] => true
+  | p :: ps', EVar x :: args' =>
+      ident_eqb x (param_name p) && param_vars_exact_b ps' args'
+  | _, _ => false
+  end.
+
+Fixpoint lookup_call_arg_for_param
+    (x : ident) (ps : list param) (args : list expr) : option expr :=
+  match ps, args with
+  | [], [] => None
+  | p :: ps', arg :: args' =>
+      if ident_eqb x (param_name p)
+      then Some arg
+      else lookup_call_arg_for_param x ps' args'
+  | _, _ => None
+  end.
+
+Fixpoint adapter_call_uses_bound_fn_only
+    (x fparam : ident) (ps : list param) (args : list expr) : bool :=
+  match ps, args with
+  | [], [] => true
+  | p :: ps', arg :: args' =>
+      if ident_eqb (param_name p) fparam
+      then
+        match arg with
+        | EVar y =>
+            ident_eqb x y &&
+            adapter_call_uses_bound_fn_only x fparam ps' args'
+        | _ => false
+        end
+      else
+        negb (ident_in_b x (free_vars_expr arg)) &&
+        negb (ident_in_b x (args_local_store_names [arg])) &&
+        adapter_call_uses_bound_fn_only x fparam ps' args'
+  | _, _ => false
+  end.
+
+Fixpoint adapter_body_actual_args
+    (fparam : ident) (ps : list param) (call_args body_args : list expr)
+    : option (list expr) :=
+  match body_args with
+  | [] => Some []
+  | EVar y :: rest =>
+      if ident_eqb y fparam then None else
+      match lookup_call_arg_for_param y ps call_args,
+            adapter_body_actual_args fparam ps call_args rest with
+      | Some actual, Some actuals => Some (actual :: actuals)
+      | _, _ => None
+      end
+  | _ :: _ => None
+  end.
+
+Definition generic_fn_wrapper_target
+    (fdef : fn_def) : option (ident * list Ty) :=
+  if no_captures_b fdef &&
+     Nat.eqb (fn_lifetimes fdef) 0 &&
+     Nat.eqb (fn_type_params fdef) 0
+  then
+    match fn_body fdef with
+    | ECallGeneric target type_args args =>
+        if param_vars_exact_b (fn_params fdef) args
+        then Some (target, type_args)
+        else None
+    | _ => None
+    end
+  else None.
+
+Definition adapter_call_target
+    (fdef : fn_def) : option (ident * list expr) :=
+  if params_names_nodup_b (fn_params fdef)
+  then
+    match fn_body fdef with
+    | ECallExpr (EVar fparam) body_args =>
+        if param_name_in_b fparam (fn_params fdef)
+        then Some (fparam, body_args)
+        else None
+    | _ => None
+    end
+  else None.
+
+Definition direct_generic_call_for_let_wrapper_adapter
+    (env : global_env) (x wrapper_name adapter_name : ident)
+    (call_args : list expr) : option expr :=
+  match lookup_fn_b wrapper_name (env_fns env),
+        lookup_fn_b adapter_name (env_fns env) with
+  | Some wrapper, Some adapter =>
+      match generic_fn_wrapper_target wrapper,
+            adapter_call_target adapter with
+      | Some (target, type_args), Some (fparam, adapter_body_args) =>
+          if adapter_call_uses_bound_fn_only x fparam (fn_params adapter) call_args
+          then
+            match adapter_body_actual_args fparam (fn_params adapter)
+                    call_args adapter_body_args with
+            | Some actual_args => Some (ECallGeneric target type_args actual_args)
+            | None => None
+            end
+          else None
+      | _, _ => None
+      end
+  | _, _ => None
+  end.
+
 Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
     (env : global_env) (Ω : outlives_ctx) (n : nat) (Σ : sctx) (e : expr)
     : infer_result (Ty * sctx * expr) :=
@@ -4504,6 +4614,23 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
                                ELet m x T e1' e2')
                            end
                          else infer_ok (T2, sctx_remove x Σ2, ELet m x T e1' e2')
+                     | EFn wrapper_name, ECall adapter_name call_args =>
+                         if usage_eqb (ty_usage T) UUnrestricted
+                         then
+                           match direct_generic_call_for_let_wrapper_adapter
+                                   env x wrapper_name adapter_name call_args with
+                           | Some direct_call =>
+                               match infer_core_env_state_fuel_elab fuel' env Ω n Σ
+                                       direct_call with
+                               | infer_ok direct => infer_ok direct
+                               | infer_err _ => infer_ok (T2, sctx_remove x Σ2,
+                                   ELet m x T e1' e2')
+                               end
+                           | None => infer_ok (T2, sctx_remove x Σ2,
+                               ELet m x T e1' e2')
+                           end
+                         else infer_ok (T2, sctx_remove x Σ2,
+                             ELet m x T e1' e2')
                      | _, _ => infer_ok (T2, sctx_remove x Σ2, ELet m x T e1' e2')
                      end
                    else infer_err ErrContextCheckFailed

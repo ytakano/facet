@@ -168,6 +168,7 @@ Proposed modules:
 - `EnvRuntimeFunctionValueRuntimeFacts.v`
 - `EnvRuntimeLocalBoundsBridgeFacts.v`
 - `EnvRuntimeNarrowRuntimePackage.v`
+- `EnvRuntimeDirectCallStoreSafeFacts.v`
 - `EnvRuntimeCapturedCallFacts.v`
 - `EnvRuntimeBaseSafety.v` as compatibility facade
 
@@ -195,8 +196,10 @@ Progress:
   `EnvRuntimeLocalBoundsBridgeFacts.v`.
 - Split the narrow summary runtime package induction into
   `EnvRuntimeNarrowRuntimePackage.v`.
+- Split direct-call store-safe bridge and prefix runtime facts into
+  `EnvRuntimeDirectCallStoreSafeFacts.v`.
 
-Next small task: direct-call store-safe bridge extraction.
+Next small task: checked and prefix runtime package extraction.
 
 ## Phase 4: Split `AlphaShadowProvenance.v`
 

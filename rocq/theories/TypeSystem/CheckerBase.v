@@ -252,3 +252,76 @@ Fixpoint ty_depth (T : Ty) : nat :=
       | _ => 1
       end
   end.
+
+Fixpoint ty_compatible_args_contra_b_fuel
+    (compat : outlives_ctx -> Ty -> Ty -> bool)
+    (Ω : outlives_ctx)
+    (actual expected : list Ty) : bool :=
+  match actual, expected with
+  | [], [] => true
+  | a :: actual', e :: expected' =>
+      compat Ω e a &&
+      ty_compatible_args_contra_b_fuel compat Ω actual' expected'
+  | _, _ => false
+  end.
+
+Fixpoint ty_compatible_b_fuel (fuel : nat) (Ω : outlives_ctx)
+    (T_actual T_expected : Ty) : bool :=
+  match fuel with
+  | O => false
+  | S fuel' =>
+      usage_sub_bool (ty_usage T_actual) (ty_usage T_expected) &&
+      match ty_core T_actual, ty_core T_expected with
+      | TRef la rka Ta, TRef lb rkb Tb =>
+          outlives_b Ω la lb && ref_kind_eqb rka rkb &&
+          match rka with
+          | RShared => ty_compatible_b_fuel fuel' Ω Ta Tb
+          | RUnique => ty_eqb Ta Tb
+          end
+      | TFn params_a ret_a, TFn params_e ret_e =>
+          ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel') Ω params_a params_e &&
+          ty_compatible_b_fuel fuel' Ω ret_a ret_e
+      | TClosure env_a params_a ret_a, TClosure env_e params_e ret_e =>
+          outlives_b Ω env_a env_e &&
+          ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel') Ω params_a params_e &&
+          ty_compatible_b_fuel fuel' Ω ret_a ret_e
+      | TFn params_a ret_a, TClosure _ params_e ret_e =>
+          ty_compatible_args_contra_b_fuel (ty_compatible_b_fuel fuel') Ω params_a params_e &&
+          ty_compatible_b_fuel fuel' Ω ret_a ret_e
+      | TForall na Ωa Ta, TForall nb Ωb Tb =>
+          Nat.eqb na nb && outlives_ctx_eqb Ωa Ωb &&
+          ty_compatible_b_fuel fuel' Ω Ta Tb
+      | TTypeForall na ba Ta, TTypeForall nb bb Tb =>
+          Nat.eqb na nb &&
+          (fix go_bounds (xs ys : list (core_trait_bound Ty)) : bool :=
+             match xs, ys with
+             | [], [] => true
+             | x :: xs', y :: ys' =>
+                 Nat.eqb (core_bound_type_index Ty x) (core_bound_type_index Ty y) &&
+                 (fix go_refs (rs ss : list (core_trait_ref Ty)) : bool :=
+                    match rs, ss with
+                    | [], [] => true
+                    | r :: rs', s :: ss' =>
+                        String.eqb (core_trait_ref_name Ty r) (core_trait_ref_name Ty s) &&
+                        (fix go_args (as_ bs : list Ty) : bool :=
+                           match as_, bs with
+                           | [], [] => true
+                           | a :: as', b :: bs' => ty_eqb a b && go_args as' bs'
+                           | _, _ => false
+                           end) (core_trait_ref_args Ty r) (core_trait_ref_args Ty s) &&
+                        go_refs rs' ss'
+                    | _, _ => false
+                    end) (core_bound_traits Ty x) (core_bound_traits Ty y) &&
+                 go_bounds xs' ys'
+             | _, _ => false
+             end) ba bb &&
+          ty_compatible_b_fuel fuel' Ω Ta Tb
+      | _, TForall _ [] Tb =>
+          negb (contains_lbound_ty Tb) &&
+          ty_compatible_b_fuel fuel' Ω T_actual Tb
+      | ca, cb => ty_core_eqb ca cb
+      end
+  end.
+
+Definition ty_compatible_b (Ω : outlives_ctx) (T_actual T_expected : Ty) : bool :=
+  ty_compatible_b_fuel (ty_depth T_actual + ty_depth T_expected) Ω T_actual T_expected.

@@ -43,6 +43,8 @@ Done:
   artifacts, and executable checker helpers with real callers.
 - Started `TypeChecker.v` splitting by moving equality and depth helpers to
   `CheckerBase.v` while keeping `TypeChecker.v` as the facade.
+- Moved compatibility helpers to `CheckerBase.v` while keeping `TypeChecker.v`
+  as the facade.
 - Verified:
 
 ```sh
@@ -68,7 +70,7 @@ rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
 
 Next small task:
 
-1. Move a small compatibility helper slice after `ty_depth`, keeping
+1. Move the next small base checker slice after compatibility helpers, keeping
    `TypeChecker.v` as the facade.
 2. Update `_CoqProject`, run full verification, and commit.
 

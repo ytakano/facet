@@ -140,6 +140,7 @@ theories/TypeSystem/EnvRuntimeShadowExprCheckerFacts.v
 theories/TypeSystem/EnvRuntimeValidatorFacts.v
 theories/TypeSystem/EnvRuntimeInitialFacts.v
 theories/TypeSystem/EnvRuntimeFunctionValueCallFacts.v
+theories/TypeSystem/EnvRuntimeNarrowSummaryFacts.v
 theories/TypeSystem/EnvRuntimeBaseSafety.v
 theories/TypeSystem/EnvRuntimeDirectSafety.v
 theories/TypeSystem/EnvRuntimeNonCapturingSafety.v

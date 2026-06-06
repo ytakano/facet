@@ -179,8 +179,10 @@ Progress:
 - Move initial store/type-param/root helper facts to `EnvRuntimeInitialFacts.v`.
 - Split function-value call argument safety/helper facts into
   `EnvRuntimeFunctionValueCallFacts.v`.
+- Split narrow summary definitions and alpha-renaming/substitution helper facts
+  into `EnvRuntimeNarrowSummaryFacts.v`.
 
-Next small task: narrow summary and generic direct call proof boundary check.
+Next small task: instantiated/generic direct call proof boundary check.
 
 ## Phase 4: Split `AlphaShadowProvenance.v`
 

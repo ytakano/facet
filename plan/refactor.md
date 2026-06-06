@@ -266,6 +266,8 @@ Progress:
   `AlphaTypedRoots.v`.
 - Moved assign shadow-safe and support alpha-preservation lemmas into
   `AlphaTypedRoots.v`.
+- Moved if shadow-safe and support alpha-preservation lemmas into
+  `AlphaTypedRoots.v`.
 
 Commit after each moved proof group with:
 

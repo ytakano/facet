@@ -32,7 +32,9 @@ Done:
   public soundness roots.
 - Added `rocq/tools/unused-allowlist.txt` for protected public/checker roots.
 - Added `rocq/tools/unused-classification.md` with the first `dpdusage`
-  candidate batch. No `DELETE_NOW` candidate is proven yet.
+  candidate batch.
+- Deleted private unused helper `field_names_unique_b` after source, fixture,
+  build, and proof-hole checks.
 - Verified:
 
 ```sh
@@ -46,7 +48,7 @@ rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
 
 Next small task:
 
-1. Pick one `INVESTIGATE` helper group from
+1. Pick the next small `INVESTIGATE` helper group from
    `rocq/tools/unused-classification.md`.
 2. Inspect source references, dynamic uses, extraction exposure, and proof
    automation risk.

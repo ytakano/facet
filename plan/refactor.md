@@ -101,10 +101,11 @@ Progress:
   `CheckerProgram.v`.
 - Split basic regression examples into `CheckerExamplesBasic.v`.
 - Split borrow conflict checker into `CheckerBorrow.v`.
+- Split combined type + borrow checker wrappers into `CheckerFull.v`.
 
 Next small task:
 
-1. Check full wrappers and raw elaboration/extraction boundary dependencies.
+1. Check raw elaboration and extraction boundary dependencies.
 2. Run full verification.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving

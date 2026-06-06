@@ -94,10 +94,11 @@ Progress:
 - Split `sctx`/binding-state/field-path state helpers into `CheckerState.v`.
 - Split ordinary state checker body into `CheckerStateCore.v`.
 - Split elab helpers and elab state checker body into `CheckerElabCore.v`.
+- Split root helpers and ordinary root-aware checker body into `CheckerRootsCore.v`.
 
 Next small task:
 
-1. Check dependencies before moving root helpers and the root-aware checker.
+1. Check dependencies before moving the shadow-safe root checker.
 2. Run full verification.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving

@@ -47,6 +47,8 @@ Done:
   as the facade.
 - Moved capture/ref-free type predicates and soundness lemmas to
   `CheckerBase.v` while keeping `TypeChecker.v` as the facade.
+- Moved decidable context operations to `CheckerBase.v` while keeping
+  `TypeChecker.v` as the facade.
 - Verified:
 
 ```sh
@@ -72,8 +74,8 @@ rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
 
 Next small task:
 
-1. Move decidable context operations into `CheckerBase.v`, keeping
-   `TypeChecker.v` as the facade.
+1. Move checker result/error types and directly coupled error helpers into
+   `CheckerBase.v`, keeping `TypeChecker.v` as the facade.
 2. Run full verification and commit.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving

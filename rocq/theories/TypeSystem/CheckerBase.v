@@ -518,3 +518,56 @@ Proof.
   unfold capture_ref_free_ty_b in Hfree.
   eapply capture_ref_free_ty_b_fuel_ty_ref_free. exact Hfree.
 Qed.
+
+(* ------------------------------------------------------------------ *)
+(* Decidable context operations                                          *)
+(* ------------------------------------------------------------------ *)
+
+Fixpoint ctx_lookup_b (x : ident) (Γ : ctx) : option (Ty * bool) :=
+  match Γ with
+  | []              => None
+  | (n, T, st, _) :: t =>
+      if ident_eqb x n then Some (T, st_consumed st) else ctx_lookup_b x t
+  end.
+
+Fixpoint ctx_consume_b (x : ident) (Γ : ctx) : option ctx :=
+  match Γ with
+  | []              => None
+  | (n, T, st, m) :: t =>
+      if ident_eqb x n
+      then Some ((n, T, state_consume_path [] st, m) :: t)
+      else match ctx_consume_b x t with
+           | None    => None
+           | Some t' => Some ((n, T, st, m) :: t')
+           end
+  end.
+
+Fixpoint ctx_lookup_mut_b (x : ident) (Γ : ctx) : option mutability :=
+  match Γ with
+  | [] => None
+  | (n, _, _, m) :: t => if ident_eqb x n then Some m else ctx_lookup_mut_b x t
+  end.
+
+Definition ctx_add_b (x : ident) (T : Ty) (m : mutability) (Γ : ctx) : ctx :=
+  (x, T, binding_state_of_bool false, m) :: Γ.
+
+Fixpoint ctx_remove_b (x : ident) (Γ : ctx) : ctx :=
+  match Γ with
+  | []              => []
+  | (n, T, st, m) :: t =>
+      if ident_eqb x n then t
+      else (n, T, st, m) :: ctx_remove_b x t
+  end.
+
+(* Returns true iff x's usage constraint is satisfied after its scope:
+   - linear: x must be consumed (found with consumed=true)
+   - affine/unrestricted: always ok *)
+Definition ctx_check_ok (x : ident) (T : Ty) (Γ : ctx) : bool :=
+  match ty_usage T with
+  | ULinear =>
+      match ctx_lookup_state x Γ with
+      | Some (_, st) => st_consumed st
+      | _              => false
+      end
+  | _ => true
+  end.

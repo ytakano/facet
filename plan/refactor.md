@@ -61,6 +61,8 @@ Done:
   `CheckerHrt.v` while keeping `TypeChecker.v` as the facade.
 - Moved closure capture helpers to `CheckerClosure.v` while keeping
   `TypeChecker.v` as the facade.
+- Moved ordinary place, field, branch, and parameter helpers to
+  `CheckerOrdinary.v` while keeping `TypeChecker.v` as the facade.
 - Verified:
 
 ```sh
@@ -86,8 +88,8 @@ rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
 
 Next small task:
 
-1. Check dependencies before moving ordinary `infer_place` and field/variant
-   helper slice into the next checker module.
+1. Check dependencies before moving env-aware `infer_place_env` and HRT call
+   helpers into the next checker module.
 2. Run full verification and commit.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving
@@ -99,7 +101,7 @@ Proposed order:
    and error types.
 2. `CheckerTraits.v`: trait refs, impl lookup, type-argument inference, generic
    call helpers.
-3. `CheckerOrdinary.v`: `infer_core`, `infer_env`, `infer_full_env`.
+3. `CheckerOrdinary.v`: ordinary place, field, branch, and parameter helpers.
 4. `CheckerState.v`: `sctx`, binding-state helpers, structural checker.
 5. `CheckerElab.v`: raw elaboration and wrapper adapters.
 6. `CheckerRoots.v`: root/provenance readiness, root-aware checker,

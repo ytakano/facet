@@ -12,6 +12,7 @@ theories/TypeSystem/CheckerBase.v
 theories/TypeSystem/CheckerTraits.v
 theories/TypeSystem/CheckerHrt.v
 theories/TypeSystem/CheckerClosure.v
+theories/TypeSystem/CheckerOrdinary.v
 theories/TypeSystem/TypeChecker.v
 theories/TypeSystem/RuntimeTyping.v
 theories/TypeSystem/EnvStructuralRules.v

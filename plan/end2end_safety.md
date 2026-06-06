@@ -255,7 +255,7 @@ updates.
      calls when `f` is not used in args; pure annotated/bound local cases pass.
      Checks: `make TypeChecker.vo`, `make End2EndSafety.vo`, `dune build`,
      proof-hole scan, three pure targeted CLI tests.
-7. In progress: accept mixed `TForall (... TTypeForall (... TFn ...))`
+7. Done: accept mixed `TForall (... TTypeForall (... TFn ...))`
    function-value calls.
    - Done: route mixed call inference through the existing mixed helper in
      plain and elaborated `ECallExpr` paths; mixed tests now reach the

@@ -20,6 +20,7 @@ theories/TypeSystem/CheckerState.v
 theories/TypeSystem/CheckerStateCore.v
 theories/TypeSystem/CheckerElabCore.v
 theories/TypeSystem/CheckerRootsCore.v
+theories/TypeSystem/CheckerRootsShadow.v
 theories/TypeSystem/TypeChecker.v
 theories/TypeSystem/RuntimeTyping.v
 theories/TypeSystem/EnvStructuralRules.v

@@ -95,10 +95,12 @@ Progress:
 - Split ordinary state checker body into `CheckerStateCore.v`.
 - Split elab helpers and elab state checker body into `CheckerElabCore.v`.
 - Split root helpers and ordinary root-aware checker body into `CheckerRootsCore.v`.
+- Split shadow-safe root checker body and checked wrappers into
+  `CheckerRootsShadow.v`.
 
 Next small task:
 
-1. Check dependencies before moving the shadow-safe root checker.
+1. Check dependencies before moving function-level/check-program wrappers.
 2. Run full verification.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving

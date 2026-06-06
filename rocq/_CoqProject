@@ -27,6 +27,7 @@ theories/TypeSystem/CheckerBorrow.v
 theories/TypeSystem/CheckerFull.v
 theories/TypeSystem/CheckerAlphaElabProgram.v
 theories/TypeSystem/CheckerRootSidecars.v
+theories/TypeSystem/CheckerExamplesRootSidecars.v
 theories/TypeSystem/TypeChecker.v
 theories/TypeSystem/RuntimeTyping.v
 theories/TypeSystem/EnvStructuralRules.v

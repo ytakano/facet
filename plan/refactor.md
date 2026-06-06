@@ -106,10 +106,12 @@ Progress:
   `CheckerAlphaElabProgram.v`.
 - Split root-shadow sidecar summaries and program end-to-end checker wrappers
   into `CheckerRootSidecars.v`.
+- Split large root-sidecar regression examples into
+  `CheckerExamplesRootSidecars.v`.
 
 Next small task:
 
-1. Check large examples block and raw elaboration dependencies.
+1. Check infer_direct/raw elaboration and extraction boundary dependencies.
 2. Run full verification.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving

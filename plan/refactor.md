@@ -89,10 +89,11 @@ rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
 Progress:
 
 - Split env-aware place and HRT call helpers into `CheckerEnvHelpers.v`.
+- Split ordinary `infer_core` checker body into `CheckerCore.v`.
 
 Next small task:
 
-1. Check dependencies before moving `infer_core` / ordinary checker body, or decide whether to start a larger checker module split.
+1. Check dependencies before moving `infer_core_env_fuel` or starting the state/root checker module split.
 2. Run full verification and commit.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving

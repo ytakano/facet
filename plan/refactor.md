@@ -99,10 +99,11 @@ Progress:
   `CheckerRootsShadow.v`.
 - Split function-level and program-level checker wrappers plus nodup lemmas into
   `CheckerProgram.v`.
+- Split basic regression examples into `CheckerExamplesBasic.v`.
 
 Next small task:
 
-1. Check examples, borrow checker, raw elaboration, and extraction boundary
+1. Check borrow checker, full wrapper, raw elaboration, and extraction boundary
    dependencies before the next split.
 2. Run full verification.
 

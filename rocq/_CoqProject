@@ -22,6 +22,7 @@ theories/TypeSystem/CheckerElabCore.v
 theories/TypeSystem/CheckerRootsCore.v
 theories/TypeSystem/CheckerRootsShadow.v
 theories/TypeSystem/CheckerProgram.v
+theories/TypeSystem/CheckerExamplesBasic.v
 theories/TypeSystem/TypeChecker.v
 theories/TypeSystem/RuntimeTyping.v
 theories/TypeSystem/EnvStructuralRules.v

@@ -31,25 +31,27 @@ Done:
 - Added `rocq/tools/unused_graph.v`, a `coq-dpdgraph` driver for checker and
   public soundness roots.
 - Added `rocq/tools/unused-allowlist.txt` for protected public/checker roots.
+- Added `rocq/tools/unused-classification.md` with the first `dpdusage`
+  candidate batch. No `DELETE_NOW` candidate is proven yet.
 - Verified:
 
 ```sh
 cd rocq
 opam exec -- rocq compile -R theories Facet tools/unused_graph.v
-opam exec -- dpdusage unused-analysis.dpd
+opam exec -- dpdusage unused-analysis.dpd >/tmp/facet-unused.raw
+rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
 ```
 
 ## Phase 1: Unused Rocq Artifact Workflow
 
 Next small task:
 
-1. Generate `unused.raw.txt` and `low-usage.raw.txt` from
-   `rocq/tools/unused_graph.v`.
-2. Classify a small first batch of candidates as one of:
-   `DELETE_NOW`, `KEEP_PUBLIC_API`, `KEEP_EXTRACTION_ROOT`,
-   `KEEP_AUTOMATION`, `KEEP_DOCUMENTATION`, `KEEP_FUTURE_WORK`,
-   or `INVESTIGATE`.
-3. Delete only private helpers that are clearly dead, in a tiny batch.
+1. Pick one `INVESTIGATE` helper group from
+   `rocq/tools/unused-classification.md`.
+2. Inspect source references, dynamic uses, extraction exposure, and proof
+   automation risk.
+3. Delete only if the group is clearly private and dead; otherwise reclassify
+   it precisely.
 4. Run:
 
 ```sh

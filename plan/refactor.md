@@ -108,10 +108,12 @@ Progress:
   into `CheckerRootSidecars.v`.
 - Split large root-sidecar regression examples into
   `CheckerExamplesRootSidecars.v`.
+- Split raw elaboration and extraction-adjacent definitions into
+  `CheckerRawElab.v`.
 
 Next small task:
 
-1. Check infer_direct/raw elaboration and extraction boundary dependencies.
+1. Final facade/extraction boundary audit.
 2. Run full verification.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving

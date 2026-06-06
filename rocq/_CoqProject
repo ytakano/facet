@@ -143,6 +143,7 @@ theories/TypeSystem/EnvRuntimeFunctionValueCallFacts.v
 theories/TypeSystem/EnvRuntimeNarrowSummaryFacts.v
 theories/TypeSystem/EnvRuntimeGenericDirectCallFacts.v
 theories/TypeSystem/EnvRuntimeNarrowCheckerFacts.v
+theories/TypeSystem/EnvRuntimeFunctionValueRuntimeFacts.v
 theories/TypeSystem/EnvRuntimeBaseSafety.v
 theories/TypeSystem/EnvRuntimeDirectSafety.v
 theories/TypeSystem/EnvRuntimeNonCapturingSafety.v

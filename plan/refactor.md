@@ -34,8 +34,9 @@ Done:
 - Added `rocq/tools/unused-classification.md` with the first `dpdusage`
   candidate batch.
 - Deleted private unused helpers `field_names_unique_b`, `trait_impl_error`,
-  and `infer_call_type_args` after source, fixture, build, and proof-hole
-  checks.
+  `infer_call_type_args`, `infer_args`, and
+  `duplicate_param_name_none_nodup_params_ctx_suffix` after source, fixture,
+  build, and proof-hole checks.
 - Reclassified protected candidates: `infer_full`, `MkRawFnDef`,
   `capture_ref_free_ty_b_sound`, and borrow-check regression examples.
 - Verified:

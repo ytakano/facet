@@ -164,6 +164,7 @@ Proposed modules:
 - `EnvRuntimeInitialFacts.v`
 - `EnvRuntimeFunctionValueCallFacts.v`
 - `EnvRuntimeGenericDirectCallFacts.v`
+- `EnvRuntimeNarrowCheckerFacts.v`
 - `EnvRuntimeCapturedCallFacts.v`
 - `EnvRuntimeBaseSafety.v` as compatibility facade
 
@@ -183,8 +184,10 @@ Progress:
   into `EnvRuntimeNarrowSummaryFacts.v`.
 - Split generic direct-call instantiation and fresh-renaming facts into
   `EnvRuntimeGenericDirectCallFacts.v`.
+- Split narrow summary checker and runtime target helper facts into
+  `EnvRuntimeNarrowCheckerFacts.v`.
 
-Next small task: direct-call runtime bridge boundary check.
+Next small task: direct-call runtime bridge proof extraction.
 
 ## Phase 4: Split `AlphaShadowProvenance.v`
 

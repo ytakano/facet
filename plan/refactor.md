@@ -104,10 +104,12 @@ Progress:
 - Split combined type + borrow checker wrappers into `CheckerFull.v`.
 - Split alpha-normalization and elab program wrappers into
   `CheckerAlphaElabProgram.v`.
+- Split root-shadow sidecar summaries and program end-to-end checker wrappers
+  into `CheckerRootSidecars.v`.
 
 Next small task:
 
-1. Check root-shadow sidecar summaries and examples dependencies.
+1. Check large examples block and raw elaboration dependencies.
 2. Run full verification.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving

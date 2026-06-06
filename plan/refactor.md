@@ -166,6 +166,7 @@ Proposed modules:
 - `EnvRuntimeGenericDirectCallFacts.v`
 - `EnvRuntimeNarrowCheckerFacts.v`
 - `EnvRuntimeFunctionValueRuntimeFacts.v`
+- `EnvRuntimeLocalBoundsBridgeFacts.v`
 - `EnvRuntimeCapturedCallFacts.v`
 - `EnvRuntimeBaseSafety.v` as compatibility facade
 
@@ -189,8 +190,10 @@ Progress:
   `EnvRuntimeNarrowCheckerFacts.v`.
 - Split function-value call runtime preservation facts into
   `EnvRuntimeFunctionValueRuntimeFacts.v`.
+- Split local-bounds and direct-call provenance bridge facts into
+  `EnvRuntimeLocalBoundsBridgeFacts.v`.
 
-Next small task: local-bounds and direct-call bridge proof extraction.
+Next small task: narrow summary runtime package extraction.
 
 ## Phase 4: Split `AlphaShadowProvenance.v`
 

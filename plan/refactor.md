@@ -255,6 +255,7 @@ Progress:
   `AlphaTypedRoots.v`.
 - Moved shadow-safe support let/letinfer alpha-preservation lemmas into
   `AlphaTypedRoots.v`.
+- Moved non-shadow-safe if alpha-preservation lemma into `AlphaTypedRoots.v`.
 
 Commit after each moved proof group with:
 

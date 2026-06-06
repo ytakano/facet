@@ -1769,6 +1769,52 @@ Definition infer_mixed_forall_call_env
   | c => infer_err (ErrMalformedHrtBody c)
   end.
 
+Definition infer_mixed_forall_call_env_elab
+    (env : global_env) (Ω : outlives_ctx) (n m : nat)
+    (lt_bounds : outlives_ctx) (type_params : nat)
+    (type_bounds : list (core_trait_bound Ty)) (body : Ty)
+    (arg_tys : list Ty) : infer_result (list Ty * Ty) :=
+  match ty_core body with
+  | TFn param_tys ret =>
+      match infer_type_forall_args type_params param_tys arg_tys with
+      | None => infer_err ErrTypeArgInferenceFailed
+      | Some type_args =>
+          let param_tys_t := map (subst_type_params_ty type_args) param_tys in
+          match build_bound_sigma (repeat None m) arg_tys param_tys_t with
+          | None => infer_err ErrLifetimeConflict
+          | Some σ0 =>
+              let σ := complete_bound_sigma_with_vars n σ0 in
+              let param_tys_open := map (open_bound_ty σ) param_tys_t in
+              match check_arg_tys Ω arg_tys param_tys_open with
+              | Some err => infer_err err
+              | None =>
+                  let ret_open := open_bound_ty σ
+                    (subst_type_params_ty type_args ret) in
+                  let lt_bounds_open := open_bound_outlives σ lt_bounds in
+                  let type_bounds_open := open_core_trait_bounds σ type_bounds in
+                  if contains_lbound_ty ret_open ||
+                     contains_lbound_outlives lt_bounds_open ||
+                     existsb
+                       (fun b =>
+                         existsb
+                           (fun tr =>
+                             existsb contains_lbound_ty (core_trait_ref_args Ty tr))
+                           (core_bound_traits Ty b))
+                       type_bounds_open
+                  then infer_err ErrHrtUnresolvedBound
+                  else if outlives_constraints_hold_b Ω lt_bounds_open
+                  then
+                    match check_type_forall_bounds env type_bounds_open type_args with
+                    | Some err => infer_err err
+                    | None => infer_ok (type_args, ret_open)
+                    end
+                  else infer_err ErrHrtBoundUnsatisfied
+              end
+          end
+      end
+  | c => infer_err (ErrMalformedHrtBody c)
+  end.
+
 (* ------------------------------------------------------------------ *)
 (* Type inference                                                        *)
 (*                                                                      *)
@@ -4779,10 +4825,12 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
               | TForall m bounds body =>
                   match ty_core body with
                   | TTypeForall type_params type_bounds type_body =>
-                      match infer_mixed_forall_call_env env Ω n m bounds
+                      match infer_mixed_forall_call_env_elab env Ω n m bounds
                               type_params type_bounds type_body arg_tys with
                       | infer_err err => infer_err err
-                      | infer_ok ret => infer_ok (ret, Σ', ECallExpr callee' args')
+                      | infer_ok (type_args, ret) =>
+                          infer_ok (ret, Σ',
+                            ECallExprGeneric callee' type_args args')
                       end
                   | TFn param_tys ret =>
                       match build_bound_sigma (repeat None m) arg_tys param_tys with

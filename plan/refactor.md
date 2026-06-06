@@ -90,11 +90,12 @@ Progress:
 
 - Split env-aware place and HRT call helpers into `CheckerEnvHelpers.v`.
 - Split ordinary `infer_core` checker body into `CheckerCore.v`.
+- Split env-aware `infer_core_env_fuel` checker body into `CheckerEnvCore.v`.
 
 Next small task:
 
-1. Check dependencies before moving `infer_core_env_fuel` or starting the state/root checker module split.
-2. Run full verification and commit.
+1. Check dependencies before moving `sctx`/state helpers or `infer_core_env_state_fuel`.
+2. Run full verification.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving
 implementation groups into focused modules.

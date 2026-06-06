@@ -204,8 +204,10 @@ Progress:
   `EnvRuntimeCheckedPrefixRuntimePackage.v`.
 - Split final-store, frame-scope, and param-scope preservation proofs into
   `EnvRuntimeFinalStoreScopeFacts.v`.
+- Split captured-call summary, checker, instantiated-fuel, and bridge foundation
+  facts into `EnvRuntimeCapturedCallFacts.v`.
 
-Next small task: direct and generic captured-call summary extraction.
+Next small task: generic direct-call runtime package extraction.
 
 ## Phase 4: Split `AlphaShadowProvenance.v`
 

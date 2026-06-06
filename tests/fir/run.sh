@@ -6,13 +6,22 @@ cd "$root_dir"
 
 status=0
 
+normalize_fir_stream() {
+  sed 's/\(^\|[^%[:alnum:]_]\)\([[:alpha:]_][[:alnum:]_]*\)#[0-9][0-9]*/\1\2#_/g'
+}
+
+normalize_fir_text() {
+  printf '%s\n' "$1" | normalize_fir_stream
+}
+
 run_case() {
   file=$1
   expected=$2
   tmp=$(mktemp)
 
   if dune exec ocaml/main.exe -- --emit-fir "$tmp" "$file" >/dev/null 2>&1; then
-    if grep -Fq "$expected" "$tmp"; then
+    expected_norm=$(normalize_fir_text "$expected")
+    if normalize_fir_stream < "$tmp" | grep -Fq "$expected_norm"; then
       printf 'ok   %s\n' "$file"
     else
       printf 'FAIL %s: expected FIR to contain %s\n' "$file" "$expected"
@@ -33,7 +42,8 @@ run_drop_case() {
   tmp=$(mktemp)
 
   if dune exec ocaml/main.exe -- --emit-fir "$tmp" "$file" >/dev/null 2>&1; then
-    if grep -F "drop " "$tmp" | grep -Fq "$place"; then
+    place_norm=$(normalize_fir_text "$place")
+    if normalize_fir_stream < "$tmp" | grep -F "drop " | grep -Fq "$place_norm"; then
       printf 'ok   %s\n' "$file"
     else
       printf 'FAIL %s: expected FIR drop line to contain %s\n' "$file" "$place"
@@ -54,7 +64,8 @@ run_drop_absent() {
   tmp=$(mktemp)
 
   if dune exec ocaml/main.exe -- --emit-fir "$tmp" "$file" >/dev/null 2>&1; then
-    if grep -F "drop " "$tmp" | grep -Fq "$place"; then
+    place_norm=$(normalize_fir_text "$place")
+    if normalize_fir_stream < "$tmp" | grep -F "drop " | grep -Fq "$place_norm"; then
       printf 'FAIL %s: FIR unexpectedly contained drop of %s\n' "$file" "$place"
       cat "$tmp"
       status=1

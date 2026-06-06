@@ -12981,11 +12981,59 @@ let specialize_simple_generic_wrapper_calls_top env e = match e with
    | None -> e)
 | _ -> e
 
+(** val simplify_local_fn_value_result_let_top : expr -> expr **)
+
+let simplify_local_fn_value_result_let_top e = match e with
+| ELet (m, x, t, e0, e1) ->
+  (match e0 with
+   | EFn fname ->
+     (match e1 with
+      | ELet (_, result, _, e2, e3) ->
+        (match e2 with
+         | ECallExpr (e4, args) ->
+           (match e4 with
+            | EVar y ->
+              (match e3 with
+               | EVar result' ->
+                 if (&&) ((&&) (ident_eqb x y) (ident_eqb result result'))
+                      (usage_eqb (ty_usage t) UUnrestricted)
+                 then ELet (m, x, t, (EFn fname), (ECallExpr ((EVar y),
+                        args)))
+                 else e
+               | _ -> e)
+            | _ -> e)
+         | _ -> e)
+      | _ -> e)
+   | _ -> e)
+| ELetInfer (m, x, e0, e1) ->
+  (match e0 with
+   | EFn fname ->
+     (match e1 with
+      | ELet (_, result, _, e2, e3) ->
+        (match e2 with
+         | ECallExpr (e4, args) ->
+           (match e4 with
+            | EVar y ->
+              (match e3 with
+               | EVar result' ->
+                 if (&&) (ident_eqb x y) (ident_eqb result result')
+                 then ELetInfer (m, x, (EFn fname), (ECallExpr ((EVar y),
+                        args)))
+                 else e
+               | _ -> e)
+            | _ -> e)
+         | _ -> e)
+      | _ -> e)
+   | _ -> e)
+| _ -> e
+
 (** val specialize_simple_generic_wrapper_fn :
     global_env -> fn_def -> fn_def **)
 
 let specialize_simple_generic_wrapper_fn env f =
-  fn_with_body f (specialize_simple_generic_wrapper_calls_top env f.fn_body)
+  fn_with_body f
+    (simplify_local_fn_value_result_let_top
+      (specialize_simple_generic_wrapper_calls_top env f.fn_body))
 
 (** val specialize_simple_generic_wrapper_fns :
     global_env -> fn_def list -> fn_def list **)

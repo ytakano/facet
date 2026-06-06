@@ -1196,6 +1196,8 @@ val specialize_simple_generic_wrapper_call :
 
 val specialize_simple_generic_wrapper_calls_top : global_env -> expr -> expr
 
+val simplify_local_fn_value_result_let_top : expr -> expr
+
 val specialize_simple_generic_wrapper_fn : global_env -> fn_def -> fn_def
 
 val specialize_simple_generic_wrapper_fns :

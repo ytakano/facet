@@ -8724,9 +8724,27 @@ Definition specialize_simple_generic_wrapper_calls_top
   | _ => e
   end.
 
+Definition simplify_local_fn_value_result_let_top (e : expr) : expr :=
+  match e with
+  | ELet m x T (EFn fname)
+      (ELet m_res result T_res (ECallExpr (EVar y) args) (EVar result')) =>
+      if ident_eqb x y && ident_eqb result result' &&
+         usage_eqb (ty_usage T) UUnrestricted
+      then ELet m x T (EFn fname) (ECallExpr (EVar y) args)
+      else e
+  | ELetInfer m x (EFn fname)
+      (ELet m_res result T_res (ECallExpr (EVar y) args) (EVar result')) =>
+      if ident_eqb x y && ident_eqb result result'
+      then ELetInfer m x (EFn fname) (ECallExpr (EVar y) args)
+      else e
+  | _ => e
+  end.
+
 Definition specialize_simple_generic_wrapper_fn
     (env : global_env) (f : fn_def) : fn_def :=
-  fn_with_body f (specialize_simple_generic_wrapper_calls_top env (fn_body f)).
+  fn_with_body f
+    (simplify_local_fn_value_result_let_top
+      (specialize_simple_generic_wrapper_calls_top env (fn_body f))).
 
 Fixpoint specialize_simple_generic_wrapper_fns
     (env : global_env) (fns : list fn_def) : list fn_def :=

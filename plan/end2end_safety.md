@@ -14,14 +14,16 @@ Required theorem names stay intact:
 
 ## Current baseline
 
-Latest targeted status: invalid tests were previously passing. The wrapper HOF
-and mixed annotated/trait-bound function-value cases now pass; the direct mixed
-parameter-call case is intentionally invalid until elaborated to a wrapper or
-explicit generic call. Remaining full verification is task 8.
+Final status: full Rocq, OCaml, CLI, and FIR verification pass. CLI acceptance
+uses the extracted end-to-end checker; fallback checker acceptance remains
+disabled. The direct mixed parameter-call case is intentionally invalid until
+elaborated to a wrapper or explicit generic call.
 
 Completed work: direct generic calls, nested generic direct-call fuel runtime
 packages, resolved reborrow/write roots, checked narrow/rootless paths, OCaml
-CLI end-to-end entrypoint enforcement, and extraction fixture updates.
+CLI end-to-end entrypoint enforcement, function-value/generic wrapper
+specialization, FIR suffix-resilient smoke checks, and extraction fixture
+updates.
 
 ## Active tasks
 
@@ -287,7 +289,14 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      `make TypeChecker.vo`, `make EnvRuntimeValidatorFacts.vo`,
      `make EnvRuntimeCapturedSafety.vo`, `dune build`, proof-hole scan,
      targeted valid/invalid CLI tests.
-8. Todo: final full verification and roadmap closeout.
+8. Done: final full verification and roadmap closeout.
+   - Done: simplify top-level `let f = id in let r = f(args) in r` after
+     alpha elaboration to the proven local function-value call shape;
+     `tests/fir/function_value_call.facet` emits FIR.
+   - Done: normalize user identifier suffixes in FIR smoke expectations so
+     alpha-renaming drift does not break semantic checks.
+   - Checks: `cd rocq && make`, proof-hole scan, `dune build`,
+     `sh tests/run.sh`, `sh tests/fir/run.sh`.
 
 ## Required checks
 

@@ -2933,3 +2933,29 @@ Proof.
     eapply typed_fields_roots_shadow_safe_roots. exact Htyped_fields.
   - exact Hroots.
 Qed.
+
+Lemma root_env_names_in_lookup :
+  forall x R,
+    In x (root_env_names R) ->
+    exists roots, root_env_lookup x R = Some roots.
+Proof.
+  intros x R Hin.
+  induction R as [| [y roots_y] rest IH]; simpl in Hin; try contradiction.
+  simpl.
+  destruct Hin as [Heq | Hin].
+  - subst y. rewrite ident_eqb_refl. eauto.
+  - destruct (ident_eqb x y); eauto.
+Qed.
+
+Lemma root_env_equiv_names_subset_l :
+  forall R R' x,
+    root_env_equiv R R' ->
+    In x (root_env_names R) ->
+    In x (root_env_names R').
+Proof.
+  intros R R' x Heq Hin.
+  destruct (root_env_names_in_lookup x R Hin) as [roots Hlookup].
+  destruct (root_env_equiv_lookup_l R R' x roots Heq Hlookup)
+    as [roots' [Hlookup' _]].
+  eapply root_env_lookup_some_in_names. exact Hlookup'.
+Qed.

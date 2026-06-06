@@ -177,6 +177,7 @@ Proposed modules:
 - `EnvRuntimeGenericDirectHiddenFrameFacts.v`
 - `EnvRuntimeGenericDirectFuelRuntimeFacts.v`
 - `EnvRuntimeCapturedCallSummaryFacts.v`
+- `EnvRuntimeTopLevelSafetyFacts.v`
 - `EnvRuntimeBaseSafety.v` as compatibility facade
 
 Commit after each moved proof group with:
@@ -221,8 +222,11 @@ Progress:
   `EnvRuntimeGenericDirectFuelRuntimeFacts.v`.
 - Split captured-call store-safe summary and checker facts into
   `EnvRuntimeCapturedCallSummaryFacts.v`.
+- Move runtime structural helper facts and top-level safety theorems into
+  `EnvRuntimeTopLevelSafetyFacts.v`, leaving `EnvRuntimeBaseSafety.v` as a
+  pure compatibility facade.
 
-Next small task: runtime structural and top-level theorem facade cleanup.
+Next small task: Phase 4 `AlphaShadowProvenance.v` split.
 
 ## Phase 4: Split `AlphaShadowProvenance.v`
 

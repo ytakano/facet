@@ -155,6 +155,7 @@ theories/TypeSystem/EnvRuntimeGenericDirectAlphaRuntimeFacts.v
 theories/TypeSystem/EnvRuntimeGenericDirectHiddenFrameFacts.v
 theories/TypeSystem/EnvRuntimeGenericDirectFuelRuntimeFacts.v
 theories/TypeSystem/EnvRuntimeCapturedCallSummaryFacts.v
+theories/TypeSystem/EnvRuntimeTopLevelSafetyFacts.v
 theories/TypeSystem/EnvRuntimeBaseSafety.v
 theories/TypeSystem/EnvRuntimeDirectSafety.v
 theories/TypeSystem/EnvRuntimeNonCapturingSafety.v

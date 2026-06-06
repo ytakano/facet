@@ -38,7 +38,8 @@ Done:
   `duplicate_param_name_none_nodup_params_ctx_suffix` after source, fixture,
   build, and proof-hole checks.
 - Reclassified protected candidates: `infer_full`, `MkRawFnDef`,
-  `capture_ref_free_ty_b_sound`, and borrow-check regression examples.
+  `capture_ref_free_ty_b_sound`, borrow-check regression examples,
+  closure-capture checker facts, and writable-chain proof facts.
 - Verified:
 
 ```sh

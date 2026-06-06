@@ -342,12 +342,6 @@ Inductive supported_non_type_generic_function_value_call_callee_shape : Ty -> Pr
   | SFV_TForall_TFn : forall T m bounds body param_tys ret,
       ty_core T = TForall m bounds body ->
       ty_core body = TFn param_tys ret ->
-      supported_non_type_generic_function_value_call_callee_shape T
-  | SFV_TForall_TTypeForall_TFn :
-      forall T m lt_bounds body type_params type_bounds inner param_tys ret,
-      ty_core T = TForall m lt_bounds body ->
-      ty_core body = TTypeForall type_params type_bounds inner ->
-      ty_core inner = TFn param_tys ret ->
       supported_non_type_generic_function_value_call_callee_shape T.
 
 Definition supported_non_type_generic_function_value_call_callee_ty

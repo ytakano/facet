@@ -14,17 +14,10 @@ Required theorem names stay intact:
 
 ## Current baseline
 
-Latest targeted baseline after task 5 (2026-06-03): invalid tests were previously
-passing; 7 valid tests still fail, all higher-order generic function-value
-safety-gate cases:
-
-- `generic_item_pass_monomorphic_hof.facet`
-- `mixed_forall_fn_value_annotated_let.facet`
-- `mixed_forall_fn_value_pass_and_call.facet`
-- `mixed_forall_fn_value_trait_bound_call.facet`
-- `type_forall_fn_value_annotated_let.facet`
-- `type_forall_fn_value_bound_call.facet`
-- `type_forall_fn_value_pass_and_call.facet`
+Latest targeted status: invalid tests were previously passing. The wrapper HOF
+and mixed annotated/trait-bound function-value cases now pass; the direct mixed
+parameter-call case is intentionally invalid until elaborated to a wrapper or
+explicit generic call. Remaining full verification is task 8.
 
 Completed work: direct generic calls, nested generic direct-call fuel runtime
 packages, resolved reborrow/write roots, checked narrow/rootless paths, OCaml
@@ -278,6 +271,11 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      adapters to checked generic direct calls; `generic_item_pass_monomorphic_hof.facet`
      passes. Checks: `make TypeChecker.vo`, `dune build`, proof-hole scan,
      targeted CLI tests.
+   - Done: retract unsupported direct mixed parameter-call summaries; erased
+     runtime calls do not apply inferred type args, so `mixed_forall_fn_value_pass_and_call.facet`
+     is invalid until elaborated to a wrapper/generic call. Checks:
+     `make EnvRuntimeBaseSafety.vo`, `make EnvRuntimeShadowCheckerFacts.vo`,
+     `dune build`, targeted valid/invalid CLI tests.
 8. Todo: final full verification and roadmap closeout.
 
 ## Required checks

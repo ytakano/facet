@@ -8878,11 +8878,6 @@ Definition supported_non_type_generic_function_value_call_callee_ty_b
   | TForall _ _ body =>
       match ty_core body with
       | TFn _ _ => true
-      | TTypeForall _ _ inner =>
-          match ty_core inner with
-          | TFn _ _ => true
-          | _ => false
-          end
       | _ => false
       end
   | _ => false

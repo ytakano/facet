@@ -5219,20 +5219,19 @@ Proof.
         rewrite Hcore in Hshape; simpl in Hshape;
         first [discriminate | inversion Hshape; subst; simpl in Hbody_shape; discriminate]
     end.
-  - match goal with
-    | Htyped_callee : typed_env_roots_shadow_safe _ _ _ _ _ (EVar x)
-        ?T_typed ?Σ_typed ?R_typed ?roots_typed |- _ =>
-        pose proof (typed_env_roots_shadow_safe_evar_core_eq_base
-          env Omega n R Σ x T_callee Σ_callee R_callee roots_callee
-          T_typed Σ_typed R_typed roots_typed
-          Htyped_callee_summary Htyped_callee) as Hcore;
-        destruct Hcallee_shape as
-          [Tshape params_shape ret_shape Hshape
-          | Tshape m_shape bounds_shape body_shape params_shape ret_shape
-              Hshape Hbody_shape];
-        rewrite Hcore in Hshape; simpl in Hshape;
-        first [discriminate | inversion Hshape; subst; simpl in Hbody_shape; discriminate]
-    end.
+  - pose proof (typed_env_roots_shadow_safe_evar_core_eq_base
+      env Omega n R Σ x T_callee Σ_callee R_callee roots_callee
+      (MkTy u (TForall m bounds
+        (MkTy u_body (TTypeForall type_params type_bounds body_ty))))
+      Σ1 R1 roots_callee0 Htyped_callee_summary Htyped) as Hcore.
+    destruct Hcallee_shape as
+      [Tshape params_shape ret_shape Hshape
+      | Tshape m_shape bounds_shape body_shape params_shape ret_shape
+          Hshape Hbody_shape].
+    + rewrite Hcore in Hshape; simpl in Hshape; discriminate.
+    + rewrite Hcore in Hshape; simpl in Hshape.
+      inversion Hshape; subst.
+      simpl in Hbody_shape. discriminate.
   - pose proof (typed_env_roots_shadow_safe_roots
       env Omega n R Σ (EVar x) (MkTy u (TForall m bounds body_ty))
       Σ1 R1 roots_callee0 Htyped) as Htyped_callee_roots.

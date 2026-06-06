@@ -251,6 +251,8 @@ Progress:
   let preservation into `AlphaTypedRoots.v`.
 - Moved root-env name subset helpers and non-shadow-safe let/letinfer
   alpha-preservation lemmas into `AlphaTypedRoots.v`.
+- Moved shadow-safe let/letinfer alpha-preservation lemmas into
+  `AlphaTypedRoots.v`.
 
 Commit after each moved proof group with:
 

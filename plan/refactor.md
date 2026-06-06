@@ -97,10 +97,13 @@ Progress:
 - Split root helpers and ordinary root-aware checker body into `CheckerRootsCore.v`.
 - Split shadow-safe root checker body and checked wrappers into
   `CheckerRootsShadow.v`.
+- Split function-level and program-level checker wrappers plus nodup lemmas into
+  `CheckerProgram.v`.
 
 Next small task:
 
-1. Check dependencies before moving function-level/check-program wrappers.
+1. Check examples, borrow checker, raw elaboration, and extraction boundary
+   dependencies before the next split.
 2. Run full verification.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving

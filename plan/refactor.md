@@ -31,17 +31,16 @@ Done:
 - Added `rocq/tools/unused_graph.v`, a `coq-dpdgraph` driver for checker and
   public soundness roots.
 - Added `rocq/tools/unused-allowlist.txt` for protected public/checker roots.
-- Added `rocq/tools/unused-classification.md` with the first `dpdusage`
-  candidate batch.
+- Added `rocq/tools/unused-classification.md`; first-pass candidates are
+  classified with no remaining `INVESTIGATE` entries.
 - Deleted private unused helpers `field_names_unique_b`, `trait_impl_error`,
   `infer_call_type_args`, `infer_args`,
   `infer_type_forall_call_no_env`, and
   `duplicate_param_name_none_nodup_params_ctx_suffix` after source, fixture,
   build, and proof-hole checks.
-- Reclassified protected candidates: `infer_full`, `MkRawFnDef`,
-  `capture_ref_free_ty_b_sound`, borrow-check regression examples,
-  closure-capture checker facts, writable-chain proof facts, and executable
-  checker helpers with real callers.
+- Reclassified protected candidates: extraction roots, raw elaboration
+  constructor, public/proof-facing facts, regression examples, automation
+  artifacts, and executable checker helpers with real callers.
 - Verified:
 
 ```sh
@@ -53,24 +52,25 @@ rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
 
 ## Phase 1: Unused Rocq Artifact Workflow
 
-Next small task:
+Status: complete for the first pass. Re-run this workflow before any future
+Rocq artifact deletion.
 
-1. Pick the next small `INVESTIGATE` helper group from
-   `rocq/tools/unused-classification.md`.
-2. Inspect source references, dynamic uses, extraction exposure, and proof
-   automation risk.
-3. Delete only if the group is clearly private and dead; otherwise reclassify
-   it precisely.
-4. Run:
+Completed checks:
 
 ```sh
 cd rocq && make
 rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
 ```
 
-Commit after the batch passes.
-
 ## Phase 2: Split `TypeChecker.v`
+
+Next small task:
+
+1. Inspect the top `TypeChecker.v` helper block through `infer_result`.
+2. Identify the smallest move-only `CheckerBase.v` slice with no extraction
+   naming surprises.
+3. Implement only that slice, update `_CoqProject`, run verification, and
+   commit.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving
 implementation groups into focused modules.

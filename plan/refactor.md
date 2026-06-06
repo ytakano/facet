@@ -175,6 +175,7 @@ Proposed modules:
 - `EnvRuntimeGenericDirectRuntimePackage.v`
 - `EnvRuntimeGenericDirectAlphaRuntimeFacts.v`
 - `EnvRuntimeGenericDirectHiddenFrameFacts.v`
+- `EnvRuntimeGenericDirectFuelRuntimeFacts.v`
 - `EnvRuntimeBaseSafety.v` as compatibility facade
 
 Commit after each moved proof group with:
@@ -215,8 +216,10 @@ Progress:
   into `EnvRuntimeGenericDirectAlphaRuntimeFacts.v`.
 - Split hidden-frame generic direct-call runtime helper facts into
   `EnvRuntimeGenericDirectHiddenFrameFacts.v`.
+- Split fuel-based generic direct-call runtime facts into
+  `EnvRuntimeGenericDirectFuelRuntimeFacts.v`.
 
-Next small task: fuel-based generic direct-call runtime extraction.
+Next small task: captured-call store-safe summary checker extraction.
 
 ## Phase 4: Split `AlphaShadowProvenance.v`
 

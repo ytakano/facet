@@ -281,6 +281,12 @@ CLI end-to-end entrypoint enforcement, and extraction fixture updates.
      callees; `generic_local_bound_body.facet` passes. Checks:
      `make TypeChecker.vo`, `make EnvRuntimeBaseSafety.vo`, `dune build`,
      proof-hole scan, targeted valid/invalid CLI tests.
+   - Done: specialize simple top-level generic wrapper calls after full
+     alpha elaboration, preserving strict generic-direct readiness while
+     accepting `wrap<T>(x) -> require_show<T>(x)` callers. Checks:
+     `make TypeChecker.vo`, `make EnvRuntimeValidatorFacts.vo`,
+     `make EnvRuntimeCapturedSafety.vo`, `dune build`, proof-hole scan,
+     targeted valid/invalid CLI tests.
 8. Todo: final full verification and roadmap closeout.
 
 ## Required checks

@@ -2420,7 +2420,7 @@ Proof.
             Hnamed_inner_bind, Hkeys_inner_bind, Hsummary_inner_bind,
             Hframe_inner_start.
           pose (inner_body_env := global_env_with_local_bounds inner_env
-            (fn_bounds fcall_inner)).
+            (subst_type_params_trait_bounds type_args_nested (fn_bounds fcall_inner))).
           assert (Hunique_inner_body_env : fn_env_unique_by_name inner_body_env).
           { subst inner_body_env. unfold fn_env_unique_by_name in *. simpl.
             exact Hunique_inner_env. }
@@ -2788,7 +2788,7 @@ Proof.
               Hnamed_inner_bind, Hkeys_inner_bind, Hsummary_inner_bind,
               Hframe_inner_start.
             pose (inner_body_env := global_env_with_local_bounds inner_env
-              (fn_bounds fcall_inner)).
+              (subst_type_params_trait_bounds type_args_nested (fn_bounds fcall_inner))).
             assert (Hunique_inner_body_env : fn_env_unique_by_name inner_body_env).
             { subst inner_body_env. unfold fn_env_unique_by_name in *. simpl.
               exact Hunique_inner_env. }

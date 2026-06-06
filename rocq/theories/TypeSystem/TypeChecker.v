@@ -8684,6 +8684,59 @@ Definition alpha_normalize_global_env (env : global_env) : global_env :=
   MkGlobalEnv (env_structs env) (env_enums env) (env_traits env) (env_impls env)
     (env_local_bounds env) (alpha_rename_syntax (env_fns env)).
 
+Fixpoint expr_vars_match_params (args : list expr) (ps : list param) : bool :=
+  match args, ps with
+  | [], [] => true
+  | EVar x :: args', p :: ps' =>
+      ident_eqb x (param_name p) && expr_vars_match_params args' ps'
+  | _, _ => false
+  end.
+
+Definition specialize_simple_generic_wrapper_call
+    (env : global_env) (fname : ident) (type_args : list Ty)
+    (args : list expr) : option (ident * list Ty * list expr) :=
+  match lookup_fn_b fname (env_fns env) with
+  | None => None
+  | Some fdef =>
+      if no_captures_b fdef &&
+         Nat.eqb (Datatypes.length type_args) (fn_type_params fdef)
+      then
+        match fn_body fdef with
+        | ECallGeneric target nested_type_args wrapper_args =>
+            if expr_vars_match_params wrapper_args (fn_params fdef)
+            then Some (target,
+              map (subst_type_params_ty type_args) nested_type_args, args)
+            else None
+        | _ => None
+        end
+      else None
+  end.
+
+Definition specialize_simple_generic_wrapper_calls_top
+    (env : global_env) (e : expr) : expr :=
+  match e with
+  | ECallGeneric fname type_args args =>
+      match specialize_simple_generic_wrapper_call env fname type_args args with
+      | Some (target, target_type_args, target_args) =>
+          ECallGeneric target target_type_args target_args
+      | None => e
+      end
+  | _ => e
+  end.
+
+Definition specialize_simple_generic_wrapper_fn
+    (env : global_env) (f : fn_def) : fn_def :=
+  fn_with_body f (specialize_simple_generic_wrapper_calls_top env (fn_body f)).
+
+Fixpoint specialize_simple_generic_wrapper_fns
+    (env : global_env) (fns : list fn_def) : list fn_def :=
+  match fns with
+  | [] => []
+  | f :: rest =>
+      specialize_simple_generic_wrapper_fn env f ::
+      specialize_simple_generic_wrapper_fns env rest
+  end.
+
 Fixpoint infer_fns_env_elab (env : global_env) (fns : list fn_def)
     : infer_result (list fn_def) :=
   match fns with
@@ -8705,9 +8758,13 @@ Definition infer_program_env_alpha_elab (env : global_env)
   match infer_fns_env_elab env_alpha (env_fns env_alpha) with
   | infer_err err => infer_err err
   | infer_ok fns' =>
-      infer_ok (MkGlobalEnv (env_structs env_alpha) (env_enums env_alpha)
+      let env_elab := MkGlobalEnv (env_structs env_alpha) (env_enums env_alpha)
         (env_traits env_alpha) (env_impls env_alpha)
-        (env_local_bounds env_alpha) fns')
+        (env_local_bounds env_alpha) fns' in
+      infer_ok (MkGlobalEnv (env_structs env_elab) (env_enums env_elab)
+        (env_traits env_elab) (env_impls env_elab)
+        (env_local_bounds env_elab)
+        (specialize_simple_generic_wrapper_fns env_elab fns'))
   end.
 
 Definition fn_params_roots_exclude_b (ps : list param) (roots : root_set) : bool :=
@@ -9770,6 +9827,8 @@ Definition check_fn_root_shadow_generic_direct_store_safe_summary
               | infer_ok (T_callee, _, R_callee, roots_callee),
                 infer_ok _,
                 infer_ok (T_body, _, R_out, roots) =>
+                  preservation_ready_expr_b
+                    (subst_type_params_expr type_args (fn_body callee)) &&
                   check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
                     env callee type_args &&
                   ty_compatible_b (fn_outlives callee) T_callee
@@ -10999,6 +11058,7 @@ Fixpoint expr_vars_of_params (ps : list param) : list expr :=
   | p :: rest => EVar (param_name p) :: expr_vars_of_params rest
   end.
 
+
 Definition infer_fn_value_type_args_expected
     (fdef : fn_def) (expected : option Ty) : option (list Ty * list Ty * Ty) :=
   match expected with
@@ -11285,8 +11345,15 @@ Fixpoint elaborate_raw_expr_fuel
                               match check_struct_bounds env' (fn_bounds fdef) type_args with
                               | Some err => infer_err err
                               | None =>
-                                  finish env' (ECallGeneric fname type_args args')
-                                    extras next'
+                                  match specialize_simple_generic_wrapper_call env' fname type_args args' with
+                                  | Some (target, target_type_args, target_args) =>
+                                      finish env'
+                                        (ECallGeneric target target_type_args target_args)
+                                        extras next'
+                                  | None =>
+                                      finish env' (ECallGeneric fname type_args args')
+                                        extras next'
+                                  end
                               end
                           end
                       end
@@ -11309,8 +11376,15 @@ Fixpoint elaborate_raw_expr_fuel
           match go_args fuel' env Σ next args with
           | infer_err err => infer_err err
           | infer_ok (args', _, extras, next') =>
-              finish (append_env_fns env extras)
-                (ECallGeneric fname type_args args') extras next'
+              let env' := append_env_fns env extras in
+              match specialize_simple_generic_wrapper_call env' fname type_args args' with
+              | Some (target, target_type_args, target_args) =>
+                  finish env' (ECallGeneric target target_type_args target_args)
+                    extras next'
+              | None =>
+                  finish env' (ECallGeneric fname type_args args')
+                    extras next'
+              end
           end
       | RawCallExpr callee args =>
           match elaborate_raw_expr_fuel fuel' None env Ω n Σ next callee with

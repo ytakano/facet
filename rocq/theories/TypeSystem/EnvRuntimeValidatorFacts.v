@@ -175,6 +175,17 @@ Proof.
     + apply IH. exact Hnames_head.
 Qed.
 
+Lemma specialize_simple_generic_wrapper_fns_fn_names :
+  forall env fns,
+    map fn_name (specialize_simple_generic_wrapper_fns env fns) =
+    map fn_name fns.
+Proof.
+  intros env fns.
+  induction fns as [| f rest IH]; simpl; auto.
+  unfold specialize_simple_generic_wrapper_fn. simpl.
+  rewrite IH. reflexivity.
+Qed.
+
 Lemma infer_program_env_alpha_elab_unique_by_name :
   forall env env',
     top_level_names_unique_b (alpha_normalize_global_env env) = true ->
@@ -194,8 +205,21 @@ Proof.
   pose proof (infer_fns_env_elab_fn_names
     (alpha_normalize_global_env env)
     (env_fns (alpha_normalize_global_env env)) fns' Hfns) as Hnames.
+  pose (env_elab := MkGlobalEnv (env_structs (alpha_normalize_global_env env))
+    (env_enums (alpha_normalize_global_env env))
+    (env_traits (alpha_normalize_global_env env))
+    (env_impls (alpha_normalize_global_env env))
+    (env_local_bounds (alpha_normalize_global_env env)) fns').
+  change (NoDup (fn_name_strings
+    (specialize_simple_generic_wrapper_fns env_elab fns'))).
+  pose proof (specialize_simple_generic_wrapper_fns_fn_names env_elab fns')
+    as Hspec_names.
+  pose proof (fn_name_strings_of_fn_names
+    (specialize_simple_generic_wrapper_fns env_elab fns') fns'
+    Hspec_names) as Hstrings_spec.
   pose proof (fn_name_strings_of_fn_names fns'
     (env_fns (alpha_normalize_global_env env)) Hnames) as Hstrings.
+  rewrite Hstrings_spec.
   rewrite Hstrings.
   exact Hnodup.
 Qed.

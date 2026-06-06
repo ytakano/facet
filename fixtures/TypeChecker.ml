@@ -12932,6 +12932,70 @@ let alpha_normalize_global_env env =
     env.env_traits; env_impls = env.env_impls; env_local_bounds =
     env.env_local_bounds; env_fns = (alpha_rename_syntax env.env_fns) }
 
+(** val expr_vars_match_params : expr list -> param list -> bool **)
+
+let rec expr_vars_match_params args ps =
+  match args with
+  | [] -> (match ps with
+           | [] -> true
+           | _ :: _ -> false)
+  | e :: args' ->
+    (match e with
+     | EVar x ->
+       (match ps with
+        | [] -> false
+        | p :: ps' ->
+          (&&) (ident_eqb x p.param_name) (expr_vars_match_params args' ps'))
+     | _ -> false)
+
+(** val specialize_simple_generic_wrapper_call :
+    global_env -> ident -> ty list -> expr list -> ((ident * ty list) * expr
+    list) option **)
+
+let specialize_simple_generic_wrapper_call env fname type_args args =
+  match lookup_fn_b fname env.env_fns with
+  | Some fdef ->
+    if (&&) (no_captures_b fdef)
+         (Nat.eqb (length type_args) fdef.fn_type_params)
+    then (match fdef.fn_body with
+          | ECallGeneric (target, nested_type_args, wrapper_args) ->
+            if expr_vars_match_params wrapper_args fdef.fn_params
+            then Some ((target,
+                   (map (subst_type_params_ty type_args) nested_type_args)),
+                   args)
+            else None
+          | _ -> None)
+    else None
+  | None -> None
+
+(** val specialize_simple_generic_wrapper_calls_top :
+    global_env -> expr -> expr **)
+
+let specialize_simple_generic_wrapper_calls_top env e = match e with
+| ECallGeneric (fname, type_args, args) ->
+  (match specialize_simple_generic_wrapper_call env fname type_args args with
+   | Some p ->
+     let (p0, target_args) = p in
+     let (target, target_type_args) = p0 in
+     ECallGeneric (target, target_type_args, target_args)
+   | None -> e)
+| _ -> e
+
+(** val specialize_simple_generic_wrapper_fn :
+    global_env -> fn_def -> fn_def **)
+
+let specialize_simple_generic_wrapper_fn env f =
+  fn_with_body f (specialize_simple_generic_wrapper_calls_top env f.fn_body)
+
+(** val specialize_simple_generic_wrapper_fns :
+    global_env -> fn_def list -> fn_def list **)
+
+let rec specialize_simple_generic_wrapper_fns env = function
+| [] -> []
+| f :: rest ->
+  (specialize_simple_generic_wrapper_fn env f) :: (specialize_simple_generic_wrapper_fns
+                                                    env rest)
+
 (** val infer_fns_env_elab :
     global_env -> fn_def list -> fn_def list infer_result **)
 
@@ -12953,10 +13017,15 @@ let infer_program_env_alpha_elab env =
   let env_alpha = alpha_normalize_global_env env in
   (match infer_fns_env_elab env_alpha env_alpha.env_fns with
    | Infer_ok fns' ->
-     Infer_ok { env_structs = env_alpha.env_structs; env_enums =
+     let env_elab = { env_structs = env_alpha.env_structs; env_enums =
        env_alpha.env_enums; env_traits = env_alpha.env_traits; env_impls =
        env_alpha.env_impls; env_local_bounds = env_alpha.env_local_bounds;
        env_fns = fns' }
+     in
+     Infer_ok { env_structs = env_elab.env_structs; env_enums =
+     env_elab.env_enums; env_traits = env_elab.env_traits; env_impls =
+     env_elab.env_impls; env_local_bounds = env_elab.env_local_bounds;
+     env_fns = (specialize_simple_generic_wrapper_fns env_elab fns') }
    | Infer_err err -> Infer_err err)
 
 (** val fn_params_roots_exclude_b : param list -> root_set -> bool **)
@@ -14226,8 +14295,12 @@ let check_fn_root_shadow_generic_direct_store_safe_summary env fdef =
                              ((&&)
                                ((&&)
                                  ((&&)
-                                   (check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
-                                     env callee type_args)
+                                   ((&&)
+                                     (preservation_ready_expr_b
+                                       (subst_type_params_expr type_args
+                                         callee.fn_body))
+                                     (check_callee_body_root_shadow_store_safe_narrow_summary_instantiated
+                                       env callee type_args))
                                    (ty_compatible_b callee.fn_outlives
                                      t_callee
                                      (subst_type_params_ty type_args
@@ -15281,8 +15354,16 @@ let rec elaborate_raw_expr_fuel fuel expected env _UU03a9_ n _UU03a3_ next e =
                                   type_args with
                           | Some err -> Infer_err err
                           | None ->
-                            finish env' (ECallGeneric (fname, type_args,
-                              args')) extras next')
+                            (match specialize_simple_generic_wrapper_call
+                                     env' fname type_args args' with
+                             | Some p3 ->
+                               let (p4, target_args) = p3 in
+                               let (target, target_type_args) = p4 in
+                               finish env' (ECallGeneric (target,
+                                 target_type_args, target_args)) extras next'
+                             | None ->
+                               finish env' (ECallGeneric (fname, type_args,
+                                 args')) extras next'))
                        | None -> Infer_err ErrTypeArgInferenceFailed)
                     | Infer_err err -> Infer_err err)
             | None -> finish env' (ECall (fname, args')) extras next')
@@ -15308,8 +15389,16 @@ let rec elaborate_raw_expr_fuel fuel expected env _UU03a9_ n _UU03a3_ next e =
           let (p0, next') = p in
           let (p1, extras) = p0 in
           let (args', _) = p1 in
-          finish (append_env_fns env extras) (ECallGeneric (fname, type_args,
-            args')) extras next'
+          let env' = append_env_fns env extras in
+          (match specialize_simple_generic_wrapper_call env' fname type_args
+                   args' with
+           | Some p2 ->
+             let (p3, target_args) = p2 in
+             let (target, target_type_args) = p3 in
+             finish env' (ECallGeneric (target, target_type_args,
+               target_args)) extras next'
+           | None ->
+             finish env' (ECallGeneric (fname, type_args, args')) extras next')
         | Infer_err err -> Infer_err err)
      | RawCallExpr (callee, args) ->
        (match elaborate_raw_expr_fuel fuel' None env _UU03a9_ n _UU03a3_ next

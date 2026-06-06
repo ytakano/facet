@@ -1188,6 +1188,19 @@ val infer_full_env_roots_checked :
 
 val alpha_normalize_global_env : global_env -> global_env
 
+val expr_vars_match_params : expr list -> param list -> bool
+
+val specialize_simple_generic_wrapper_call :
+  global_env -> ident -> ty list -> expr list -> ((ident * ty list) * expr
+  list) option
+
+val specialize_simple_generic_wrapper_calls_top : global_env -> expr -> expr
+
+val specialize_simple_generic_wrapper_fn : global_env -> fn_def -> fn_def
+
+val specialize_simple_generic_wrapper_fns :
+  global_env -> fn_def list -> fn_def list
+
 val infer_fns_env_elab : global_env -> fn_def list -> fn_def list infer_result
 
 val infer_program_env_alpha_elab : global_env -> global_env infer_result

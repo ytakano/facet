@@ -1140,28 +1140,6 @@ Definition check_type_forall_bounds
     : option infer_error :=
   check_struct_bounds env (trait_bounds_of_core_trait_bounds bounds) type_args.
 
-Definition infer_type_forall_call_no_env
-    (Ω : outlives_ctx) (type_params : nat)
-    (bounds : list (core_trait_bound Ty)) (body : Ty) (arg_tys : list Ty)
-    : infer_result Ty :=
-  match bounds with
-  | [] =>
-      match ty_core body with
-      | TFn param_tys ret =>
-          match infer_type_forall_args type_params param_tys arg_tys with
-          | None => infer_err ErrTypeArgInferenceFailed
-          | Some type_args =>
-              let param_tys' := map (subst_type_params_ty type_args) param_tys in
-              match check_arg_tys Ω arg_tys param_tys' with
-              | Some err => infer_err err
-              | None => infer_ok (subst_type_params_ty type_args ret)
-              end
-          end
-      | c => infer_err (ErrMalformedHrtBody c)
-      end
-  | _ => infer_err ErrNotImplemented
-  end.
-
 Definition infer_type_forall_call_env
     (env : global_env) (Ω : outlives_ctx) (type_params : nat)
     (bounds : list (core_trait_bound Ty)) (body : Ty) (arg_tys : list Ty)

@@ -60,6 +60,11 @@ Checker/proof-facing closure and writable-chain facts:
 `place_resolved_write_mutable_chain_instantiate`,
 `place_resolved_write_mutable_chain_equiv`.
 
+Executable and proof-facing checker helpers with real callers:
+
+`params_names_nodup_b`, `top_level_names_unique_b_fn_names_nodup`,
+`infer_core_env_fuel`.
+
 ## KEEP_DOCUMENTATION
 
 TypeChecker example and ready-gap matrix entries ending in accepts, rejects, or
@@ -105,10 +110,7 @@ documentation anchors before any deletion pass:
 Ordinary helper candidates need per-name source review and proof/build checks:
 
 `check_expr_root_shadow_store_safe_summary`,
-`root_env_*`, `params_names_nodup_b`,
-`top_level_names_unique_b_fn_names_nodup`,
-`infer_core_env_fuel`,
-`match_payload_params_names`, `infer_type_forall_call_no_env`,
+`root_env_*`, `match_payload_params_names`,
 checker helper facts from
 `CheckerSoundness`.
 
@@ -128,6 +130,9 @@ occurrence.
 `infer_args`: deleted. Old top-level argument checker superseded by
 `infer_args_collect`, with no callers outside classification and no fixture
 occurrence.
+
+`infer_type_forall_call_no_env`: deleted. Unused no-env variant superseded
+by env-aware helpers, no callers, no fixture occurrence.
 
 `duplicate_param_name_none_nodup_params_ctx_suffix`: deleted. Unused suffix
 variant; the base and prefix lemmas cover current callers.

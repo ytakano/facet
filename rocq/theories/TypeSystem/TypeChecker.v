@@ -186,17 +186,6 @@ Fixpoint check_arg_tys (Ω : outlives_ctx) (arg_tys params : list Ty)
   | _, _ => Some ErrArityMismatch
   end.
 
-Inductive infer_result (A : Type) : Type :=
-  | infer_ok : A -> infer_result A
-  | infer_err : infer_error -> infer_result A.
-
-Arguments infer_ok {_} _.
-Arguments infer_err {_} _.
-
-Definition infer_if_bool {A : Type} (b : bool)
-    (ok err : infer_result A) : infer_result A :=
-  if b then ok else err.
-
 Fixpoint tys_depth (ts : list Ty) : nat :=
   match ts with
   | [] => 0

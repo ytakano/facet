@@ -3501,6 +3501,16 @@ let no_captures_b f =
   | [] -> true
   | _ :: _ -> false
 
+type 'a infer_result =
+| Infer_ok of 'a
+| Infer_err of infer_error
+
+(** val infer_if_bool :
+    bool -> 'a1 infer_result -> 'a1 infer_result -> 'a1 infer_result **)
+
+let infer_if_bool b ok err =
+  if b then ok else err
+
 (** val trait_impl_error_with_args :
     global_env -> string -> ty list -> ty -> infer_error option **)
 
@@ -4032,16 +4042,6 @@ let rec check_arg_tys _UU03a9_ arg_tys params =
        if ty_compatible_b _UU03a9_ t p
        then check_arg_tys _UU03a9_ ts ps
        else Some (compatible_error t p))
-
-type 'a infer_result =
-| Infer_ok of 'a
-| Infer_err of infer_error
-
-(** val infer_if_bool :
-    bool -> 'a1 infer_result -> 'a1 infer_result -> 'a1 infer_result **)
-
-let infer_if_bool b ok err =
-  if b then ok else err
 
 (** val tys_depth : ty list -> Big_int_Z.big_int **)
 

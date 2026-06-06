@@ -53,6 +53,8 @@ Done:
   `CheckerBase.v` while keeping `TypeChecker.v` as the facade.
 - Moved checker error helpers to `CheckerBase.v` while keeping `TypeChecker.v`
   as the facade.
+- Moved generic checker result helpers to `CheckerBase.v` while keeping
+  `TypeChecker.v` as the facade.
 - Moved trait and type-argument helpers to `CheckerTraits.v` while keeping
   `TypeChecker.v` as the facade.
 - Verified:
@@ -80,8 +82,8 @@ rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
 
 Next small task:
 
-1. Check dependencies before moving the `infer_result`/HRT helper slice into
-   the next checker module.
+1. Check dependencies before moving the HRT lifetime substitution and
+   check-args helper slice into the next checker module.
 2. Run full verification and commit.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving

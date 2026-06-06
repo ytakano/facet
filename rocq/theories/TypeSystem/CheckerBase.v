@@ -701,3 +701,14 @@ Definition no_captures_b (f : fn_def) : bool :=
   | [] => true
   | _ :: _ => false
   end.
+
+Inductive infer_result (A : Type) : Type :=
+  | infer_ok : A -> infer_result A
+  | infer_err : infer_error -> infer_result A.
+
+Arguments infer_ok {_} _.
+Arguments infer_err {_} _.
+
+Definition infer_if_bool {A : Type} (b : bool)
+    (ok err : infer_result A) : infer_result A :=
+  if b then ok else err.

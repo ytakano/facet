@@ -65,6 +65,13 @@ Executable and proof-facing checker helpers with real callers:
 `params_names_nodup_b`, `top_level_names_unique_b_fn_names_nodup`,
 `infer_core_env_fuel`.
 
+Proof-facing checker and root-shadow facts with real proof callers:
+
+`check_expr_root_shadow_store_safe_summary`, `root_env_*`,
+`match_payload_params_names`, `usage_sub_bool_complete`, `ctx_remove_b_eq`,
+`ctx_add_b_eq`, `ty_core_eqb_subst_type_params_ty`, and related
+`CheckerSoundness` helper facts.
+
 ## KEEP_DOCUMENTATION
 
 TypeChecker example and ready-gap matrix entries ending in accepts, rejects, or
@@ -107,12 +114,7 @@ documentation anchors before any deletion pass:
 
 ## INVESTIGATE
 
-Ordinary helper candidates need per-name source review and proof/build checks:
-
-`check_expr_root_shadow_store_safe_summary`,
-`root_env_*`, `match_payload_params_names`,
-checker helper facts from
-`CheckerSoundness`.
+No first-pass candidates remain in INVESTIGATE.
 
 ## DELETE_NOW / Deleted
 

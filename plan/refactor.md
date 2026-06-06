@@ -253,6 +253,8 @@ Progress:
   alpha-preservation lemmas into `AlphaTypedRoots.v`.
 - Moved shadow-safe let/letinfer alpha-preservation lemmas into
   `AlphaTypedRoots.v`.
+- Moved shadow-safe support let/letinfer alpha-preservation lemmas into
+  `AlphaTypedRoots.v`.
 
 Commit after each moved proof group with:
 

@@ -245,6 +245,8 @@ Progress:
   `AlphaRootEnvFacts.v`.
 - Split typed-root shadow-safe mutual naming theorems into
   `AlphaTypedRoots.v`.
+- Moved base typed-root alpha-preservation lemmas for trivial, fn, drop,
+  replace, assign, var, place, and borrow expressions into `AlphaTypedRoots.v`.
 
 Commit after each moved proof group with:
 

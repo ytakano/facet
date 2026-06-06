@@ -1,0 +1,8 @@
+# Protected public/checker roots for unused-artifact analysis.
+# dpdusage candidates matching these names are not deletion candidates.
+
+infer_program_env_end2end  # extracted checker entrypoint
+check_program_env_end2end  # extracted checker entrypoint
+infer_program_env_end2end_sound  # public end-to-end soundness theorem
+check_program_env_end2end_sound  # public end-to-end soundness theorem
+infer_program_env_end2end_big_step_safe_checked_initial_ready  # public safety theorem

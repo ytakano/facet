@@ -177,8 +177,10 @@ rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
 Progress:
 
 - Move initial store/type-param/root helper facts to `EnvRuntimeInitialFacts.v`.
+- Split function-value call argument safety/helper facts into
+  `EnvRuntimeFunctionValueCallFacts.v`.
 
-Next small task: function-value call facts dependency check.
+Next small task: narrow summary and generic direct call proof boundary check.
 
 ## Phase 4: Split `AlphaShadowProvenance.v`
 

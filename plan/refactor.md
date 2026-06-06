@@ -247,6 +247,8 @@ Progress:
   `AlphaTypedRoots.v`.
 - Moved base typed-root alpha-preservation lemmas for trivial, fn, drop,
   replace, assign, var, place, and borrow expressions into `AlphaTypedRoots.v`.
+- Moved root-env remove/params/no-collision helper facts used by typed-root
+  let preservation into `AlphaTypedRoots.v`.
 
 Commit after each moved proof group with:
 

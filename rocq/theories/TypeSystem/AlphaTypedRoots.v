@@ -1942,3 +1942,331 @@ Proof.
   all: try exact Hsafe_root; try exact HnocollR; try exact HnocollR'; try exact HnocollResolved; try exact Hctx; eauto.
 
 Qed.
+
+Lemma root_env_names_remove_preserve_neq :
+  forall x y R,
+    x <> y ->
+    In y (root_env_names R) ->
+    In y (root_env_names (root_env_remove x R)).
+Proof.
+  intros x y R Hneq Hin.
+  induction R as [| [z roots] rest IH]; simpl in *.
+  - contradiction.
+  - destruct Hin as [Hy | Hin].
+    + subst z.
+      destruct (ident_eqb x y) eqn:Hxy.
+      * apply ident_eqb_eq in Hxy. contradiction.
+      * simpl. left. reflexivity.
+    + destruct (ident_eqb x z); simpl.
+      * exact Hin.
+      * right. apply IH. exact Hin.
+Qed.
+
+Lemma root_env_add_params_roots_same_preserve_name :
+  forall ps roots R x,
+    In x (root_env_names R) ->
+    In x (root_env_names (root_env_add_params_roots_same ps roots R)).
+Proof.
+  induction ps as [| p ps IH]; intros roots R x Hin; simpl.
+  - exact Hin.
+  - right. apply IH. exact Hin.
+Qed.
+
+Lemma root_env_lookup_params_none_b_not_in :
+  forall ps R x,
+    root_env_lookup_params_none_b ps R = true ->
+    In x (ctx_names (params_ctx ps)) ->
+    ~ In x (root_env_names R).
+Proof.
+  induction ps as [| [m y T] ps IH]; intros R x Hfresh Hin; simpl in *.
+  - contradiction.
+  - destruct (root_env_lookup y R) as [roots |] eqn:Hlookup;
+      try discriminate.
+    destruct Hin as [Heq | Hin].
+    + subst x.
+      apply root_env_lookup_none_not_in_names. exact Hlookup.
+    + eapply IH; eassumption.
+Qed.
+
+Lemma root_env_remove_match_params_preserve_name_not_params :
+  forall ps R x,
+    (forall y, In y (ctx_names (params_ctx ps)) -> x <> y) ->
+    In x (root_env_names R) ->
+    In x (root_env_names (root_env_remove_match_params ps R)).
+Proof.
+  induction ps as [| [m y T] ps IH]; intros R x Hnot Hin; simpl.
+  - exact Hin.
+  - apply IH.
+    + intros z Hz. apply Hnot. right. exact Hz.
+    + apply root_env_names_remove_preserve_neq.
+      * intros Heq. apply (Hnot y); [left; reflexivity | symmetry; exact Heq].
+      * exact Hin.
+Qed.
+
+Lemma root_env_remove_shadow_safe_rename_no_collision_on :
+  forall rho Σ Σr R x xr T m,
+    ctx_alpha rho Σ Σr ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R (sctx_add x T m Σ) ->
+    ~ In xr (ctx_names Σr) ->
+    rename_no_collision_on rho (root_env_names (root_env_remove x R)) ->
+    rename_no_collision_on ((x, xr) :: rho) (root_env_names R).
+Proof.
+  unfold rename_no_collision_on, rename_no_collision_for.
+  intros rho Σ Σr R x xr T m Halpha Hns Hkeys Hfresh Hnocoll
+    y Hy z Hz Hneq.
+  destruct (ident_eqb y x) eqn:Hxy.
+  - apply ident_eqb_eq in Hxy. subst y.
+    simpl. rewrite ident_eqb_refl.
+    destruct (ident_eqb z x) eqn:Hzx.
+    + apply ident_eqb_eq in Hzx. subst z. contradiction.
+    + assert (Hno :
+        lookup_rename z ((x, xr) :: rho) <> xr).
+      { eapply root_env_sctx_keys_named_added_bound_no_collision.
+        - exact Halpha.
+        - exact Hkeys.
+        - exact Hfresh.
+        - exact Hz.
+        - intros Heq. subst z. rewrite ident_eqb_refl in Hzx.
+          discriminate. }
+      simpl in Hno. rewrite Hzx in Hno. exact Hno.
+  - destruct (ident_eqb z x) eqn:Hzx.
+    + apply ident_eqb_eq in Hzx. subst z.
+      simpl. rewrite Hxy. rewrite ident_eqb_refl.
+      assert (Hno : lookup_rename y ((x, xr) :: rho) <> xr).
+      { eapply root_env_sctx_keys_named_added_bound_no_collision.
+        - exact Halpha.
+        - exact Hkeys.
+        - exact Hfresh.
+        - exact Hy.
+        - intros Heq'. subst y. rewrite ident_eqb_refl in Hxy.
+          discriminate. }
+      simpl in Hno. rewrite Hxy in Hno.
+      intros Heq. apply Hno. symmetry. exact Heq.
+    + simpl. rewrite Hxy. rewrite Hzx.
+      eapply Hnocoll.
+      * eapply root_env_names_remove_preserve_neq.
+        -- intros Heq. subst y. rewrite ident_eqb_refl in Hxy.
+           discriminate.
+        -- exact Hy.
+      * eapply root_env_names_remove_preserve_neq.
+        -- intros Heq. subst z. rewrite ident_eqb_refl in Hzx.
+           discriminate.
+        -- exact Hz.
+      * exact Hneq.
+Qed.
+
+Lemma root_env_remove_shadow_safe_rename_no_collision_on_same_bindings :
+  forall rho Σ Σ2 Σr R x xr T m,
+    ctx_alpha rho Σ Σr ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R Σ2 ->
+    sctx_same_bindings (sctx_add x T m Σ) Σ2 ->
+    ~ In xr (ctx_names Σr) ->
+    rename_no_collision_on rho (root_env_names (root_env_remove x R)) ->
+    rename_no_collision_on ((x, xr) :: rho) (root_env_names R).
+Proof.
+  intros rho Σ Σ2 Σr R x xr T m Halpha Hns Hkeys Hsame Hfresh
+    Hnocoll.
+  eapply root_env_remove_shadow_safe_rename_no_collision_on.
+  - exact Halpha.
+  - exact Hns.
+  - eapply root_env_sctx_keys_named_same_bindings.
+    + apply sctx_same_bindings_sym. exact Hsame.
+    + exact Hkeys.
+  - exact Hfresh.
+  - exact Hnocoll.
+Qed.
+
+Lemma alpha_rename_params_root_env_remove_match_params_no_collision_on :
+  forall rho used ps psr rho' used' R Σ Σr,
+    alpha_rename_params rho used ps = (psr, rho', used') ->
+    ctx_alpha rho Σ Σr ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R (sctx_add_params ps Σ) ->
+    params_names_nodup_b ps = true ->
+    (forall x, In x (ctx_names Σr) -> In x used) ->
+    (forall x, In x (rename_range rho) -> In x used) ->
+    rename_no_collision_on rho
+      (root_env_names (root_env_remove_match_params ps R)) ->
+    rename_no_collision_on rho' (root_env_names R).
+Proof.
+  intros rho used ps.
+  revert rho used.
+  induction ps as [| [m x T] ps IH]; intros rho used psr rho' used' R
+    Σ Σr Hrename Hctx Hns Hkeys Hnodup Hctx_used Hrange_used Hnocoll.
+  - simpl in Hrename. inversion Hrename; subst.
+    simpl in Hnocoll. exact Hnocoll.
+  - simpl in Hrename.
+    destruct (alpha_rename_params rho (fresh_ident x used :: used) ps)
+      as [[ps_tail rho_tail] used_tail] eqn:Htail.
+    inversion Hrename; subst; clear Hrename.
+    simpl in Hnodup.
+    apply andb_true_iff in Hnodup as [Hnotin_b Hnodup_tail].
+    set (R_tail := root_env_remove x R).
+    assert (Hctx_tail :
+      ctx_alpha rho_tail (sctx_add_params ps Σ) (sctx_add_params ps_tail Σr)).
+    { unfold sctx_add_params, ctx_add_params.
+      eapply alpha_rename_params_ctx_alpha_extend_tail.
+      - exact Htail.
+      - exact Hctx.
+      - intros y Hy. right. apply Hctx_used. exact Hy.
+      - intros y Hy. right. apply Hrange_used. exact Hy. }
+    assert (Hfresh_tail :
+      ~ In (fresh_ident x used) (ctx_names (sctx_add_params ps_tail Σr))).
+    { unfold sctx_add_params, ctx_add_params.
+      rewrite ctx_names_app.
+      intros Hin.
+      apply in_app_or in Hin as [Hin_params | Hin_tail].
+      - eapply alpha_rename_params_names_fresh_used.
+        + exact Htail.
+        + exact Hin_params.
+        + left. reflexivity.
+      - apply (fresh_ident_not_in x used).
+        apply Hctx_used. exact Hin_tail. }
+    assert (Hkeys_tail :
+      root_env_sctx_keys_named R_tail (sctx_add_params ps Σ)).
+    { unfold R_tail.
+      eapply root_env_sctx_keys_named_same_bindings.
+      - apply sctx_same_bindings_sym.
+        eapply sctx_same_bindings_remove_added.
+        + apply sctx_same_bindings_refl.
+        + apply sctx_same_bindings_refl.
+      - apply root_env_sctx_keys_named_remove_binding.
+        + exact Hns.
+        + exact Hkeys. }
+    assert (Hnocoll_tail :
+      rename_no_collision_on rho_tail (root_env_names R_tail)).
+    { unfold R_tail.
+      eapply IH.
+      - exact Htail.
+      - exact Hctx.
+      - apply root_env_no_shadow_remove. exact Hns.
+      - exact Hkeys_tail.
+      - exact Hnodup_tail.
+      - intros y Hy. right. apply Hctx_used. exact Hy.
+      - intros y Hy. right. apply Hrange_used. exact Hy.
+      - exact Hnocoll. }
+    eapply root_env_remove_shadow_safe_rename_no_collision_on_same_bindings
+      with (Σ := sctx_add_params ps Σ)
+           (Σ2 := sctx_add x T m (sctx_add_params ps Σ))
+           (Σr := sctx_add_params ps_tail Σr).
+    + exact Hctx_tail.
+    + exact Hns.
+    + exact Hkeys.
+    + apply sctx_same_bindings_refl.
+    + exact Hfresh_tail.
+    + exact Hnocoll_tail.
+Qed.
+
+Lemma rename_no_collision_on_weaken_names :
+  forall rho names names',
+    rename_no_collision_on rho names' ->
+    (forall x, In x names -> In x names') ->
+    rename_no_collision_on rho names.
+Proof.
+  unfold rename_no_collision_on.
+  intros rho names names' Hnocoll Hsub x Hin.
+  eapply rename_no_collision_for_weaken_names.
+  - apply Hnocoll. apply Hsub. exact Hin.
+  - exact Hsub.
+Qed.
+
+Lemma alpha_rename_params_rename_no_collision_for_params :
+  forall rho used ps psr rho' used' R Σ Σr,
+    alpha_rename_params rho used ps = (psr, rho', used') ->
+    ctx_alpha rho Σ Σr ->
+    root_env_no_shadow R ->
+    root_env_sctx_keys_named R (sctx_add_params ps Σ) ->
+    params_names_nodup_b ps = true ->
+    (forall x, In x (ctx_names Σr) -> In x used) ->
+    (forall x, In x (rename_range rho) -> In x used) ->
+    rename_no_collision_on rho' (root_env_names R) ->
+    forall x,
+      In x (ctx_names (params_ctx ps)) ->
+      rename_no_collision_for rho' x (root_env_names R).
+Proof.
+  intros rho used ps.
+  revert rho used.
+  induction ps as [| [m x T] ps IH]; intros rho used psr rho' used'
+    R Σ Σr Hrename Hctx Hns Hkeys Hnodup Hctx_used Hrange_used Hnocoll_result
+    y Hy.
+  - simpl in Hy. contradiction.
+  - simpl in Hrename.
+    destruct (alpha_rename_params rho (fresh_ident x used :: used) ps)
+      as [[ps_tail rho_tail] used_tail] eqn:Htail.
+    inversion Hrename; subst; clear Hrename.
+    simpl in Hnodup, Hy.
+    apply andb_true_iff in Hnodup as [Hnotin_b Hnodup_tail].
+    assert (Hctx_tail :
+      ctx_alpha rho_tail (sctx_add_params ps Σ)
+        (sctx_add_params ps_tail Σr)).
+    { unfold sctx_add_params, ctx_add_params.
+      eapply alpha_rename_params_ctx_alpha_extend_tail.
+      - exact Htail.
+      - exact Hctx.
+      - intros z Hz. right. apply Hctx_used. exact Hz.
+      - intros z Hz. right. apply Hrange_used. exact Hz. }
+    assert (Hfresh_tail :
+      ~ In (fresh_ident x used) (ctx_names (sctx_add_params ps_tail Σr))).
+    { unfold sctx_add_params, ctx_add_params.
+      rewrite ctx_names_app.
+      intros Hin.
+      apply in_app_or in Hin as [Hin_params | Hin_tail].
+      - eapply alpha_rename_params_names_fresh_used.
+        + exact Htail.
+        + exact Hin_params.
+        + left. reflexivity.
+      - apply (fresh_ident_not_in x used).
+        apply Hctx_used. exact Hin_tail. }
+    destruct Hy as [Hy | Hy].
+    + subst y.
+      eapply root_env_sctx_keys_named_added_no_collision_for_head.
+      * exact Hctx_tail.
+      * exact Hkeys.
+      * exact Hfresh_tail.
+    + unfold rename_no_collision_for.
+      intros z Hz Hzy.
+      simpl.
+      destruct (ident_eqb y x) eqn:Hyx.
+      * apply ident_eqb_eq in Hyx. subst y.
+        apply negb_true_iff in Hnotin_b.
+        apply ident_in_b_false_not_in in Hnotin_b.
+        contradiction.
+      * destruct (ident_eqb z x) eqn:Hzx.
+        -- apply ident_eqb_eq in Hzx. subst z.
+           intros Heq.
+           assert (Hneq :
+             lookup_rename y ((x, fresh_ident x used) :: rho_tail) <>
+             fresh_ident x used).
+           { eapply ctx_alpha_bound_no_collision_for.
+             - exact Hctx_tail.
+             - exact Hfresh_tail.
+             - unfold sctx_add_params, ctx_add_params.
+               rewrite ctx_names_app. apply in_or_app. left. exact Hy.
+             - intros Heq_yx. subst y.
+               apply negb_true_iff in Hnotin_b.
+               apply ident_in_b_false_not_in in Hnotin_b.
+               contradiction. }
+           apply Hneq. simpl. rewrite Hyx. symmetry. exact Heq.
+        -- simpl.
+           eapply (IH rho (fresh_ident x used :: used) ps_tail rho_tail
+             used' (root_env_remove x R) Σ Σr).
+           ++ exact Htail.
+           ++ exact Hctx.
+           ++ apply root_env_no_shadow_remove. exact Hns.
+           ++ eapply root_env_sctx_keys_named_remove_strip_added_same_bindings.
+              ** exact Hns.
+              ** exact Hkeys.
+              ** apply sctx_same_bindings_refl.
+           ++ exact Hnodup_tail.
+           ++ intros w Hw. right. apply Hctx_used. exact Hw.
+           ++ intros w Hw. right. apply Hrange_used. exact Hw.
+           ++ eapply rename_no_collision_on_tail_remove; eassumption.
+           ++ exact Hy.
+           ++ apply root_env_names_remove_preserve_neq.
+              ** intros Heq_zx. subst z. rewrite ident_eqb_refl in Hzx.
+                 discriminate.
+              ** exact Hz.
+           ++ exact Hzy.
+Qed.

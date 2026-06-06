@@ -59,6 +59,8 @@ Done:
   `TypeChecker.v` as the facade.
 - Moved HRT lifetime substitution and call-argument helpers to
   `CheckerHrt.v` while keeping `TypeChecker.v` as the facade.
+- Moved closure capture helpers to `CheckerClosure.v` while keeping
+  `TypeChecker.v` as the facade.
 - Verified:
 
 ```sh
@@ -84,8 +86,8 @@ rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
 
 Next small task:
 
-1. Check dependencies before moving closure capture helpers or ordinary
-   infer_place/field helpers into the next checker module.
+1. Check dependencies before moving ordinary `infer_place` and field/variant
+   helper slice into the next checker module.
 2. Run full verification and commit.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving

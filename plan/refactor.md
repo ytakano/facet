@@ -100,11 +100,11 @@ Progress:
 - Split function-level and program-level checker wrappers plus nodup lemmas into
   `CheckerProgram.v`.
 - Split basic regression examples into `CheckerExamplesBasic.v`.
+- Split borrow conflict checker into `CheckerBorrow.v`.
 
 Next small task:
 
-1. Check borrow checker, full wrapper, raw elaboration, and extraction boundary
-   dependencies before the next split.
+1. Check full wrappers and raw elaboration/extraction boundary dependencies.
 2. Run full verification.
 
 Target: keep `TypeChecker.v` as the facade and extraction boundary while moving

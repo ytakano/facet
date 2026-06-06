@@ -226,7 +226,7 @@ Progress:
   `EnvRuntimeTopLevelSafetyFacts.v`, leaving `EnvRuntimeBaseSafety.v` as a
   pure compatibility facade.
 
-Next small task: Phase 4 `AlphaTypedRoots.v` split.
+Next small task: continue Phase 4 `AlphaShadowProvenance.v` alpha-preservation split.
 
 ## Phase 4: Split `AlphaShadowProvenance.v`
 
@@ -243,6 +243,8 @@ Progress:
 
 - Split root/sctx naming, root-env rename/equiv, and no-collision helper facts into
   `AlphaRootEnvFacts.v`.
+- Split typed-root shadow-safe mutual naming theorems into
+  `AlphaTypedRoots.v`.
 
 Commit after each moved proof group with:
 

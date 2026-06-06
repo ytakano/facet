@@ -52,6 +52,14 @@ Raw elaboration / OCaml interface constructor:
 
 `MkRawFnDef`.
 
+Checker/proof-facing closure and writable-chain facts:
+
+`check_make_closure_captures_sctx`,
+`place_resolved_write_mutable_chain_b_sound`,
+`place_resolved_write_mutable_chain_shape`,
+`place_resolved_write_mutable_chain_instantiate`,
+`place_resolved_write_mutable_chain_equiv`.
+
 ## KEEP_DOCUMENTATION
 
 TypeChecker example and ready-gap matrix entries ending in accepts, rejects, or
@@ -99,8 +107,7 @@ Ordinary helper candidates need per-name source review and proof/build checks:
 `check_expr_root_shadow_store_safe_summary`,
 `root_env_*`, `params_names_nodup_b`,
 `top_level_names_unique_b_fn_names_nodup`,
-`check_make_closure_captures_sctx`,
-`place_resolved_write_mutable_chain_*`, `infer_core_env_fuel`,
+`infer_core_env_fuel`,
 `match_payload_params_names`, `infer_type_forall_call_no_env`,
 checker helper facts from
 `CheckerSoundness`.

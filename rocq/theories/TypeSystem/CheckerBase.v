@@ -571,3 +571,73 @@ Definition ctx_check_ok (x : ident) (T : Ty) (Γ : ctx) : bool :=
       end
   | _ => true
   end.
+
+(* ------------------------------------------------------------------ *)
+(* Function environment lookup                                        *)
+(* ------------------------------------------------------------------ *)
+
+Fixpoint lookup_fn_b (name : ident) (fenv : list fn_def) : option fn_def :=
+  match fenv with
+  | []     => None
+  | f :: t => if ident_eqb name (fn_name f) then Some f
+              else lookup_fn_b name t
+  end.
+
+(* ------------------------------------------------------------------ *)
+(* Lifetime well-formedness                                           *)
+(*                                                                    *)
+(* mk_region_ctx n  =  [LVar 0; LVar 1; ...; LVar (n-1)]             *)
+(* wf_type_b Δ T    =  true iff every reference lifetime in T is      *)
+(*                      LStatic or a member of Δ.                     *)
+(* ------------------------------------------------------------------ *)
+
+Fixpoint mk_region_ctx (n : nat) : region_ctx :=
+  match n with
+  | O    => []
+  | S k  => mk_region_ctx k ++ [LVar k]
+  end.
+
+Definition wf_lifetime_at_b (bound_depth : nat) (Δ : region_ctx) (l : lifetime) : bool :=
+  match l with
+  | LStatic => true
+  | LVar _  => existsb (lifetime_eqb l) Δ
+  | LBound i => Nat.ltb i bound_depth
+  end.
+
+Definition wf_outlives_at_b (bound_depth : nat) (Δ : region_ctx) (Ω : outlives_ctx) : bool :=
+  forallb (fun '(a, b) => wf_lifetime_at_b bound_depth Δ a && wf_lifetime_at_b bound_depth Δ b) Ω.
+
+Fixpoint wf_type_at_b (bound_depth : nat) (Δ : region_ctx) (T : Ty) : bool :=
+  match T with
+  | MkTy _ (TStruct _ lts args) =>
+      forallb (wf_lifetime_at_b bound_depth Δ) lts &&
+      forallb (wf_type_at_b bound_depth Δ) args
+  | MkTy _ (TEnum _ lts args) =>
+      forallb (wf_lifetime_at_b bound_depth Δ) lts &&
+      forallb (wf_type_at_b bound_depth Δ) args
+  | MkTy u (TRef l rk T_inner) =>
+      ref_usage_ok_b u rk && wf_lifetime_at_b bound_depth Δ l && wf_type_at_b bound_depth Δ T_inner
+  | MkTy _ (TFn ts r) =>
+      forallb (wf_type_at_b bound_depth Δ) ts && wf_type_at_b bound_depth Δ r
+  | MkTy _ (TClosure l ts r) =>
+      wf_lifetime_at_b bound_depth Δ l &&
+      forallb (wf_type_at_b bound_depth Δ) ts && wf_type_at_b bound_depth Δ r
+  | MkTy _ (TForall n Ω body) =>
+      wf_outlives_at_b (n + bound_depth) Δ Ω && wf_type_at_b (n + bound_depth) Δ body
+  | MkTy _ (TTypeForall _ bounds body) =>
+      forallb
+        (fun b =>
+           forallb
+             (fun tr => forallb (wf_type_at_b bound_depth Δ)
+                (core_trait_ref_args Ty tr))
+             (core_bound_traits Ty b))
+        bounds &&
+      wf_type_at_b bound_depth Δ body
+  | _ => true
+  end.
+
+Definition wf_lifetime_b (Δ : region_ctx) (l : lifetime) : bool :=
+  wf_lifetime_at_b 0 Δ l.
+
+Definition wf_type_b (Δ : region_ctx) (T : Ty) : bool :=
+  wf_type_at_b 0 Δ T.

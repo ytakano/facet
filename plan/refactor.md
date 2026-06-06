@@ -49,6 +49,8 @@ Done:
   `CheckerBase.v` while keeping `TypeChecker.v` as the facade.
 - Moved decidable context operations to `CheckerBase.v` while keeping
   `TypeChecker.v` as the facade.
+- Moved function lookup and lifetime well-formedness helpers to
+  `CheckerBase.v` while keeping `TypeChecker.v` as the facade.
 - Verified:
 
 ```sh

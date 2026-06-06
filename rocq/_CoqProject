@@ -150,6 +150,7 @@ theories/TypeSystem/EnvRuntimeDirectCallStoreSafeFacts.v
 theories/TypeSystem/EnvRuntimeCheckedPrefixRuntimePackage.v
 theories/TypeSystem/EnvRuntimeFinalStoreScopeFacts.v
 theories/TypeSystem/EnvRuntimeCapturedCallFacts.v
+theories/TypeSystem/EnvRuntimeGenericDirectRuntimePackage.v
 theories/TypeSystem/EnvRuntimeBaseSafety.v
 theories/TypeSystem/EnvRuntimeDirectSafety.v
 theories/TypeSystem/EnvRuntimeNonCapturingSafety.v

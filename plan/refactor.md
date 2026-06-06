@@ -172,6 +172,7 @@ Proposed modules:
 - `EnvRuntimeCheckedPrefixRuntimePackage.v`
 - `EnvRuntimeFinalStoreScopeFacts.v`
 - `EnvRuntimeCapturedCallFacts.v`
+- `EnvRuntimeGenericDirectRuntimePackage.v`
 - `EnvRuntimeBaseSafety.v` as compatibility facade
 
 Commit after each moved proof group with:
@@ -206,8 +207,10 @@ Progress:
   `EnvRuntimeFinalStoreScopeFacts.v`.
 - Split captured-call summary, checker, instantiated-fuel, and bridge foundation
   facts into `EnvRuntimeCapturedCallFacts.v`.
+- Split generic direct-call cleanup, runtime package, and prefix-named
+  value proof into `EnvRuntimeGenericDirectRuntimePackage.v`.
 
-Next small task: generic direct-call runtime package extraction.
+Next small task: generic direct-call alpha-renaming and runtime typed-args extraction.
 
 ## Phase 4: Split `AlphaShadowProvenance.v`
 

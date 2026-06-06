@@ -7414,26 +7414,6 @@ Definition infer_body (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : c
   infer_core fenv Ω n Γ e.
 
 (* ------------------------------------------------------------------ *)
-(* Expose infer_args as a top-level definition for CheckerSoundness      *)
-(* ------------------------------------------------------------------ *)
-
-Fixpoint infer_args (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx)
-    (args : list expr) (params : list param) : infer_result ctx :=
-  match args, params with
-  | [],       []       => infer_ok Γ
-  | [],       _ :: _   => infer_err ErrArityMismatch
-  | _ :: _,   []       => infer_err ErrArityMismatch
-  | e :: es,  p :: ps  =>
-      match infer_core fenv Ω n Γ e with
-      | infer_err err            => infer_err err
-      | infer_ok (T_e, Γ1) =>
-          if ty_compatible_b Ω T_e (param_ty p)
-          then infer_args fenv Ω n Γ1 es ps
-          else infer_err (compatible_error T_e (param_ty p))
-      end
-  end.
-
-(* ------------------------------------------------------------------ *)
 (* Argument collection helper for ECall soundness                        *)
 (* ------------------------------------------------------------------ *)
 
@@ -7666,19 +7646,6 @@ Proof.
   unfold duplicate_param_name in Hnone.
   eapply duplicate_param_name_aux_none_nodup_param_names.
   exact Hnone.
-Qed.
-
-Lemma duplicate_param_name_none_nodup_params_ctx_suffix : forall caps ps,
-  duplicate_param_name (caps ++ ps) = None ->
-  NoDup (ctx_names (params_ctx ps)).
-Proof.
-  intros caps ps Hnone.
-  rewrite ctx_names_params_ctx_param_names.
-  pose proof (duplicate_param_name_none_nodup_params_ctx (caps ++ ps) Hnone)
-    as Hnodup_all.
-  rewrite ctx_names_params_ctx_param_names in Hnodup_all.
-  rewrite param_names_app in Hnodup_all.
-  eapply NoDup_app_right. exact Hnodup_all.
 Qed.
 
 Lemma duplicate_param_name_none_nodup_params_ctx_prefix : forall ps caps,

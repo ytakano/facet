@@ -98,8 +98,7 @@ Ordinary helper candidates need per-name source review and proof/build checks:
 
 `check_expr_root_shadow_store_safe_summary`,
 `root_env_*`, `params_names_nodup_b`,
-`duplicate_param_name_none_nodup_params_ctx_suffix`,
-`top_level_names_unique_b_fn_names_nodup`, `infer_args`,
+`top_level_names_unique_b_fn_names_nodup`,
 `check_make_closure_captures_sctx`,
 `place_resolved_write_mutable_chain_*`, `infer_core_env_fuel`,
 `match_payload_params_names`, `infer_type_forall_call_no_env`,
@@ -118,3 +117,10 @@ occurrence.
 `infer_call_type_args`: deleted. Private wrapper superseded by
 `infer_call_type_args_expected`, no callers outside classification, no fixture
 occurrence.
+
+`infer_args`: deleted. Old top-level argument checker superseded by
+`infer_args_collect`, with no callers outside classification and no fixture
+occurrence.
+
+`duplicate_param_name_none_nodup_params_ctx_suffix`: deleted. Unused suffix
+variant; the base and prefix lemmas cover current callers.

@@ -174,6 +174,12 @@ cd rocq && make
 rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
 ```
 
+Progress:
+
+- Move initial store/type-param/root helper facts to `EnvRuntimeInitialFacts.v`.
+
+Next small task: function-value call facts dependency check.
+
 ## Phase 4: Split `AlphaShadowProvenance.v`
 
 Target: separate root/sctx naming facts from typed-root and provenance alpha

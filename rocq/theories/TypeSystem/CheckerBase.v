@@ -641,3 +641,63 @@ Definition wf_lifetime_b (Δ : region_ctx) (l : lifetime) : bool :=
 
 Definition wf_type_b (Δ : region_ctx) (T : Ty) : bool :=
   wf_type_at_b 0 Δ T.
+
+(* ------------------------------------------------------------------ *)
+(* Checker error helpers                                              *)
+(* ------------------------------------------------------------------ *)
+
+Inductive infer_error : Type :=
+  | ErrUnknownVar : ident -> infer_error
+  | ErrAlreadyConsumed : ident -> infer_error
+  | ErrTypeMismatch : TypeCore Ty -> TypeCore Ty -> infer_error
+  | ErrNotMutable : ident -> infer_error
+  | ErrUsageMismatch : usage -> usage -> infer_error
+  | ErrFunctionNotFound : ident -> infer_error
+  | ErrArityMismatch : infer_error
+  | ErrDuplicateParam : ident -> infer_error
+  | ErrContextCheckFailed : infer_error
+  | ErrNotImplemented : infer_error
+  | ErrImmutableBorrow : ident -> infer_error       (* &mut x where x is immutable *)
+  | ErrNotAReference : TypeCore Ty -> infer_error   (* *e where e is not a reference type *)
+  | ErrNotAFunction : TypeCore Ty -> infer_error
+  | ErrBorrowConflict : ident -> infer_error       (* borrow conflicts with existing active borrow *)
+  | ErrLifetimeLeak : infer_error                 (* return type references a local lifetime *)
+  | ErrLifetimeConflict : infer_error             (* unification conflict in call lifetime substitution *)
+  | ErrHrtBoundUnsatisfied : infer_error
+  | ErrHrtUnresolvedBound : infer_error
+  | ErrHrtMonomorphicUsedBound : infer_error
+  | ErrMalformedHrtBody : TypeCore Ty -> infer_error
+  | ErrStructNotFound : string -> infer_error
+  | ErrEnumNotFound : string -> infer_error
+  | ErrVariantNotFound : string -> infer_error
+  | ErrNotAnEnum : TypeCore Ty -> infer_error
+  | ErrDuplicateVariant : string -> infer_error
+  | ErrMissingVariant : string -> infer_error
+  | ErrMatchPayloadUnsupported : string -> infer_error
+  | ErrFieldNotFound : string -> infer_error
+  | ErrDuplicateField : string -> infer_error
+  | ErrMissingField : string -> infer_error
+  | ErrTraitImplNotFound : string -> Ty -> infer_error
+  | ErrTraitImplAmbiguous : string -> Ty -> infer_error
+  | ErrTypeArgInferenceFailed : infer_error
+  | ErrEndToEndSafetyGateFailed : infer_error
+  | ErrGlobalNamesNotUnique : infer_error
+  | ErrInFunction : ident -> infer_error -> infer_error.
+
+Definition compatible_error (T_actual T_expected : Ty) : infer_error :=
+  match ty_core T_actual, ty_core T_expected with
+  | TFn _ _, TForall _ _ body =>
+      if contains_lbound_ty body
+      then ErrHrtMonomorphicUsedBound
+      else ErrTypeMismatch (ty_core T_actual) (ty_core T_expected)
+  | _, _ =>
+      if ty_core_eqb (ty_core T_actual) (ty_core T_expected)
+      then ErrUsageMismatch (ty_usage T_actual) (ty_usage T_expected)
+      else ErrTypeMismatch (ty_core T_actual) (ty_core T_expected)
+  end.
+
+Definition no_captures_b (f : fn_def) : bool :=
+  match fn_captures f with
+  | [] => true
+  | _ :: _ => false
+  end.

@@ -96,6 +96,11 @@ Ordinary helper candidates need per-name source review and proof/build checks:
 `top_level_names_unique_b_fn_names_nodup`, `infer_args`,
 `check_make_closure_captures_sctx`,
 `place_resolved_write_mutable_chain_*`, `infer_core_env_fuel`,
-`match_payload_params_names`, `field_names_unique_b`,
-`infer_type_forall_call_no_env`, checker helper facts from
+`match_payload_params_names`, `infer_type_forall_call_no_env`,
+checker helper facts from
 `CheckerSoundness`.
+
+## DELETE_NOW / Deleted
+
+`field_names_unique_b`: deleted. Private checker helper with no callers beyond
+self-recursion and no extracted fixture occurrence.

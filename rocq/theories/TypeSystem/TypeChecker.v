@@ -1411,13 +1411,6 @@ Definition has_field_b (name : string) (fields : list (string * expr)) : bool :=
   | None => false
   end.
 
-Fixpoint field_names_unique_b (fields : list (string * expr)) : bool :=
-  match fields with
-  | [] => true
-  | (name, _) :: rest =>
-      negb (has_field_b name rest) && field_names_unique_b rest
-  end.
-
 Definition first_duplicate_field (fields : list (string * expr)) : option string :=
   let fix go fields0 :=
     match fields0 with

@@ -226,7 +226,7 @@ Progress:
   `EnvRuntimeTopLevelSafetyFacts.v`, leaving `EnvRuntimeBaseSafety.v` as a
   pure compatibility facade.
 
-Next small task: Phase 4 `AlphaShadowProvenance.v` split.
+Next small task: Phase 4 `AlphaTypedRoots.v` split.
 
 ## Phase 4: Split `AlphaShadowProvenance.v`
 
@@ -238,6 +238,11 @@ Proposed modules:
 - `AlphaRootEnvFacts.v`
 - `AlphaTypedRoots.v`
 - `AlphaShadowProvenance.v` as compatibility facade
+
+Progress:
+
+- Split root/sctx naming, root-env rename/equiv, and no-collision helper facts into
+  `AlphaRootEnvFacts.v`.
 
 Commit after each moved proof group with:
 

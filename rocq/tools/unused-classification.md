@@ -2,15 +2,15 @@
 
 First batch source: `dpdusage unused-analysis.dpd`.
 
-No `DELETE_NOW` candidate was proven in the first batch. All entries below are
-protected or need narrower investigation before removal.
+First-pass candidates are classified below. Deletions are recorded only after
+separate source, fixture, build, and proof-hole checks.
 
 ## KEEP_EXTRACTION_ROOT
 
 OCaml extraction roots from `TypeChecker.v`:
 
 `infer_core_env_roots`, `infer_env_roots`, `infer_full_env_roots`, `infer_env`,
-`infer_full_env`, `check_program_env`, `infer_core_env_elab`,
+`infer_full_env`, `infer_full`, `check_program_env`, `infer_core_env_elab`,
 `infer_env_elab`, `infer_full_env_elab`, `infer_program_env_alpha_elab`,
 `check_program_env_alpha_elab`, `elaborate_raw_expr`,
 `elaborate_raw_global_env`, `alpha_normalize_global_env`,
@@ -46,7 +46,11 @@ Other public theorem candidates from the first batch:
 `check_program_env_alpha_checked_structural`, `infer_affine_value_at_most_once`,
 `infer_checked_fn_linear_usage`, `infer_direct_sound`, `check_program_sound`,
 `check_make_closure_captures_exact_ctx_sound`, `borrow_check_complete`,
-`borrow_ok_args_mut`, `borrow_check_sound`.
+`borrow_ok_args_mut`, `borrow_check_sound`, `capture_ref_free_ty_b_sound`.
+
+Raw elaboration / OCaml interface constructor:
+
+`MkRawFnDef`.
 
 ## KEEP_DOCUMENTATION
 
@@ -59,6 +63,11 @@ ok-style names document checker behavior and regression intent. Examples:
 `infer_core_env_*_accepted`, `infer_core_env_*_rejected`,
 `*_ready_gap_let`, `*_shared_ref_capture_*`, `*_moved_field_*`,
 `*_usage_after_args`, `*_linear_not_generated`.
+
+Borrow checker behavioral regression examples:
+
+`borrow_check_env_prefix_fields_conflict`,
+`borrow_check_env_sibling_fields_do_not_conflict`.
 
 ## KEEP_AUTOMATION
 
@@ -87,10 +96,8 @@ documentation anchors before any deletion pass:
 
 Ordinary helper candidates need per-name source review and proof/build checks:
 
-`MkRawFnDef`, `borrow_check_env_prefix_fields_conflict`,
-`borrow_check_env_sibling_fields_do_not_conflict`,
-`capture_ref_free_ty_b_sound`, `check_expr_root_shadow_store_safe_summary`,
-`infer_full`, `root_env_*`, `params_names_nodup_b`,
+`check_expr_root_shadow_store_safe_summary`,
+`root_env_*`, `params_names_nodup_b`,
 `duplicate_param_name_none_nodup_params_ctx_suffix`,
 `top_level_names_unique_b_fn_names_nodup`, `infer_args`,
 `check_make_closure_captures_sctx`,

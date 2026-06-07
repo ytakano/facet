@@ -1,0 +1,11 @@
+enum Hidden<T> {
+  Borrowed<'a>(unrestricted &'a affine T),
+  Empty
+}
+
+fn score(x: unrestricted Hidden<affine isize>) -> unrestricted isize {
+  match x {
+    Borrowed(r) => 1,
+    Empty => 0,
+  }
+}

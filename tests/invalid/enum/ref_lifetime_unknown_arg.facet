@@ -1,0 +1,8 @@
+enum RefBox<'a> {
+  Ref(unrestricted &'a unrestricted isize),
+  Empty
+}
+
+fn make<'a>(r: unrestricted &'a unrestricted isize) -> unrestricted RefBox<'b> {
+  RefBox<'a>::Ref(r)
+}

@@ -1,0 +1,9 @@
+enum Token {
+  One,
+  Two
+}
+
+fn main() -> unrestricted () {
+  let t: affine Token = Token::One();
+  ()
+}

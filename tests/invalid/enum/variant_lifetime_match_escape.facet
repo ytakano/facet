@@ -1,0 +1,11 @@
+enum Hidden<T> {
+  Borrowed<'a>(unrestricted &'a affine T),
+  Empty
+}
+
+fn leak<'b>(x: unrestricted Hidden<affine isize>, fallback: unrestricted &'b affine isize) -> unrestricted &'b affine isize {
+  match x {
+    Borrowed(r) => r,
+    Empty => fallback,
+  }
+}

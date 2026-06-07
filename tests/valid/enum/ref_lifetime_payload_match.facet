@@ -1,0 +1,11 @@
+enum RefBox<'a> {
+  Ref(unrestricted &'a unrestricted isize),
+  Empty
+}
+
+fn get<'a>(x: unrestricted RefBox<'a>, fallback: unrestricted &'a unrestricted isize) -> unrestricted &'a unrestricted isize {
+  match x {
+    Ref(r) => r,
+    Empty => fallback,
+  }
+}

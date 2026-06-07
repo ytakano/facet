@@ -1,0 +1,8 @@
+enum Hidden<T> {
+  Borrowed<'a>(unrestricted &'a affine T),
+  Empty
+}
+
+fn make<'x>(r: unrestricted &'x affine isize) -> unrestricted Hidden<affine isize> {
+  Hidden<affine isize>::Borrowed<'x>(r)
+}

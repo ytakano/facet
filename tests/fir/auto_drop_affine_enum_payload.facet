@@ -1,0 +1,9 @@
+enum Slot {
+  Full(affine isize),
+  Empty
+}
+
+fn main() -> unrestricted () {
+  let s: affine Slot = Slot::Full(1);
+  ()
+}

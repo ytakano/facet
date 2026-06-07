@@ -1,0 +1,11 @@
+enum RefChoice<'a, 'b> where 'a: 'b {
+  Left(unrestricted &'b unrestricted isize),
+  Empty
+}
+
+fn get<'a, 'b>(x: unrestricted RefChoice<'a, 'b>, fallback: unrestricted &'b unrestricted isize) -> unrestricted &'b unrestricted isize where 'a: 'b {
+  match x {
+    Left(r) => r,
+    Empty => fallback,
+  }
+}

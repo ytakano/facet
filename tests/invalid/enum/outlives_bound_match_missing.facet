@@ -1,0 +1,9 @@
+enum NeedsOutlives<'a, 'b> where 'a: 'b {
+  Empty
+}
+
+fn bad<'a, 'b>(x: unrestricted NeedsOutlives<'a, 'b>) -> unrestricted isize {
+  match x {
+    Empty => 0,
+  }
+}

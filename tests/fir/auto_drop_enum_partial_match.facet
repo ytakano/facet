@@ -1,0 +1,11 @@
+enum Maybe {
+  Some(affine isize),
+  None
+}
+
+fn consume_payload(m: affine Maybe) -> unrestricted () {
+  match m {
+    Some(x) => (drop x),
+    None => (),
+  }
+}

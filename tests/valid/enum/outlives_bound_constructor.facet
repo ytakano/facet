@@ -1,0 +1,7 @@
+enum NeedsOutlives<'a, 'b> where 'a: 'b {
+  Empty
+}
+
+fn make<'a, 'b>() -> unrestricted NeedsOutlives<'a, 'b> where 'a: 'b {
+  NeedsOutlives<'a, 'b>::Empty()
+}

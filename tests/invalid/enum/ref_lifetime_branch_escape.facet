@@ -1,0 +1,11 @@
+enum RefBox<'a> {
+  Ref(unrestricted &'a unrestricted isize),
+  Empty
+}
+
+fn leak<'a, 'b>(x: unrestricted RefBox<'a>, fallback: unrestricted &'b unrestricted isize) -> unrestricted &'b unrestricted isize {
+  match x {
+    Ref(r) => r,
+    Empty => fallback,
+  }
+}

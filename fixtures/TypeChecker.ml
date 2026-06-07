@@ -15886,21 +15886,23 @@ let rec elaborate_raw_expr_fuel fuel expected env _UU03a9_ n _UU03a3_ next e =
            | Infer_err err -> Infer_err err)
         | Infer_err err -> Infer_err err)
      | RawLetRec (captures, rec_fns, body) ->
-       (match captures with
-        | [] ->
+       (match closure_elab_capture_params env _UU03a9_ _UU03a3_ captures with
+        | Infer_ok cap_params ->
           let stubs =
             map (fun rf -> { fn_name = (raw_rec_fn_name rf); fn_lifetimes =
-              n; fn_outlives = _UU03a9_; fn_captures = []; fn_params =
-              (raw_rec_fn_params rf); fn_ret = (raw_rec_fn_ret rf); fn_body =
-              EUnit; fn_type_params = Big_int_Z.zero_big_int; fn_bounds =
-              [] }) rec_fns
+              n; fn_outlives = _UU03a9_; fn_captures = cap_params;
+              fn_params = (raw_rec_fn_params rf); fn_ret =
+              (raw_rec_fn_ret rf); fn_body = EUnit; fn_type_params =
+              Big_int_Z.zero_big_int; fn_bounds = [] }) rec_fns
           in
           let env_stubs = append_env_fns env stubs in
           let go_rec_fns =
             let rec go_rec_fns fuel0 env0 next0 = function
             | [] -> Infer_ok ([], next0)
             | rf :: rest ->
-              let body_ctx = sctx_of_ctx (params_ctx (raw_rec_fn_params rf))
+              let body_ctx =
+                sctx_of_ctx
+                  (params_ctx (app cap_params (raw_rec_fn_params rf)))
               in
               (match elaborate_raw_expr_fuel fuel0 (Some (raw_rec_fn_ret rf))
                        env0 _UU03a9_ n body_ctx next0 (raw_rec_fn_body rf) with
@@ -15909,10 +15911,10 @@ let rec elaborate_raw_expr_fuel fuel expected env _UU03a9_ n _UU03a3_ next e =
                  let (p1, body_extras) = p0 in
                  let (body', _) = p1 in
                  let fdef = { fn_name = (raw_rec_fn_name rf); fn_lifetimes =
-                   n; fn_outlives = _UU03a9_; fn_captures = []; fn_params =
-                   (raw_rec_fn_params rf); fn_ret = (raw_rec_fn_ret rf);
-                   fn_body = body'; fn_type_params = Big_int_Z.zero_big_int;
-                   fn_bounds = [] }
+                   n; fn_outlives = _UU03a9_; fn_captures = cap_params;
+                   fn_params = (raw_rec_fn_params rf); fn_ret =
+                   (raw_rec_fn_ret rf); fn_body = body'; fn_type_params =
+                   Big_int_Z.zero_big_int; fn_bounds = [] }
                  in
                  let env1 = append_env_fns env0 (app body_extras (fdef :: []))
                  in
@@ -15941,7 +15943,7 @@ let rec elaborate_raw_expr_fuel fuel expected env _UU03a9_ n _UU03a3_ next e =
                 finish (append_env_fns env extras) body' extras next2
               | Infer_err err -> Infer_err err)
            | Infer_err err -> Infer_err err)
-        | _ :: _ -> Infer_err ErrNotImplemented)
+        | Infer_err err -> Infer_err err)
      | RawCore ecore -> finish env ecore [] next)
      fuel)
 

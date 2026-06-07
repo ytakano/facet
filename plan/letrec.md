@@ -19,6 +19,8 @@ Done:
   into synthetic no-capture function definitions plus direct calls.
 - Local-rec raw lowering now emits reserved `__facet_local_rec_*` synthetic
   function names and rejects user top-level `__facet_*` names.
+- Explicit-capture local rec groups lower rec references to closure values and
+  reuse existing closure capture checking for non-recursive captured calls.
 
 Next:
 
@@ -203,6 +205,8 @@ Valid tests:
 - Shadowing where a local binding hides a rec function name.
 - Non-capturing local self-recursion.
 - Non-capturing local mutual recursion.
+- Captured local rec closure with an immutable unrestricted capture, called
+  from the `in` body.
 - Captured recursive closure with an immutable unrestricted capture.
 - Captured mutual recursive closures sharing one capture list.
 - Shadowing where a parameter hides a rec function name.

@@ -789,10 +789,20 @@ let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (
 let add_capture_binding outer_scope closure_scope name =
   (name, lookup outer_scope name) :: closure_scope
 
-type rec_scope = (string * ident) list
+type rec_scope = (string * (ident * ident list)) list
 
 let rec_ident rec_scope name =
   List.assoc_opt name rec_scope
+
+let raw_rec_value rec_id captures =
+  match captures with
+  | [] -> RawFn rec_id
+  | _ -> RawCore (EMakeClosure (rec_id, captures))
+
+let raw_rec_call rec_id captures args =
+  match captures with
+  | [] -> RawCall (rec_id, args)
+  | _ -> RawCallExpr (RawCore (EMakeClosure (rec_id, captures)), args)
 
 let local_rec_counter = ref 0
 
@@ -815,7 +825,7 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
   | NVar name       ->
     if in_scope scope name then RawVar (ident_of_name scope name)
     else begin match rec_ident rec_scope name with
-    | Some id -> RawFn id
+    | Some (id, captures) -> raw_rec_value id captures
     | None ->
       if List.mem name fn_names then RawFn (make_ident name 0)
       else RawVar (ident_of_name scope name)
@@ -836,7 +846,7 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
     if type_args = [] then
       if in_scope scope f then RawCallExpr (RawVar (ident_of_name scope f), args')
       else begin match rec_ident rec_scope f with
-      | Some id -> RawCall (id, args')
+      | Some (id, captures) -> raw_rec_call id captures args'
       | None -> RawCall (make_ident f 0, args')
       end
     else if in_scope scope f || Option.is_some (rec_ident rec_scope f) then
@@ -895,7 +905,7 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
     let capture_ids = List.map (ident_of_name scope) captures in
     let rec_names = List.map (fun rf -> rf.nrf_name) rec_fns in
     let rec_ids = List.map fresh_local_rec_ident rec_names in
-    let rec_scope' = List.combine rec_names rec_ids @ rec_scope in
+    let rec_scope' = List.combine rec_names (List.map (fun rec_id -> (rec_id, capture_ids)) rec_ids) @ rec_scope in
     let lower_rec_fn rf rec_id =
       let closure_scope = List.fold_left (add_capture_binding scope) [] captures in
       let (body_scope, raw_params) =

@@ -298,6 +298,8 @@ Tasks:
   `ocaml/fir.ml`.
 - Routed `--emit-fir` `Failure` exceptions to a user-facing `FIR error` and
   removed the unreachable checker-result `assert false`.
+- Audited remaining `failwith` sites: parser/debruijn failures are caught as
+  `Validation error`; FIR failures are now caught as `FIR error`.
 - Do not add any handwritten OCaml checker fallback.
 
 Verification:

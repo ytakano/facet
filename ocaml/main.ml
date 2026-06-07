@@ -307,15 +307,30 @@ let normalize_path path =
 let is_regular_file path =
   Sys.file_exists path && not (Sys.is_directory path)
 
-let module_file_path declaring_file name =
+let path_within root path =
+  let root = normalize_path root in
+  let path = normalize_path path in
+  path = root || String.starts_with ~prefix:(root ^ "/") path
+
+let ensure_within_package package_root name path =
+  match package_root with
+  | None -> path
+  | Some root ->
+    if path_within root path then path
+    else failwith ("file module escapes package root: " ^ name)
+
+let module_file_path ?package_root declaring_file name =
   let dir = Filename.dirname declaring_file in
-  let flat = Filename.concat dir (name ^ ".facet") in
-  let nested = Filename.concat (Filename.concat dir name) "mod.facet" in
-  match is_regular_file flat, is_regular_file nested with
-  | true, false -> flat
-  | false, true -> nested
-  | true, true -> failwith ("duplicate file module candidates: " ^ name)
-  | false, false -> failwith ("missing file module: " ^ name)
+  let flat = normalize_path (Filename.concat dir (name ^ ".facet")) in
+  let nested = normalize_path (Filename.concat (Filename.concat dir name) "mod.facet") in
+  let path =
+    match is_regular_file flat, is_regular_file nested with
+    | true, false -> flat
+    | false, true -> nested
+    | true, true -> failwith ("duplicate file module candidates: " ^ name)
+    | false, false -> failwith ("missing file module: " ^ name)
+  in
+  ensure_within_package package_root name path
 
 let module_decl_name = function
   | Ast.NIMod (_, name, _) -> Some name
@@ -338,35 +353,56 @@ let cycle_message path stack =
   let chain = List.rev (path :: stack) in
   "file module cycle: " ^ String.concat " -> " chain
 
-let rec load_source_file stack filename =
+let rec load_source_file ?package_root stack filename =
   let filename = normalize_path filename in
+  begin match package_root with
+  | None -> ()
+  | Some root ->
+    if not (path_within root filename)
+    then failwith ("source file escapes package root: " ^ filename)
+  end;
   if List.mem filename stack then failwith (cycle_message filename stack)
   else
     let items = parse_file_raw filename in
-    expand_file_modules (filename :: stack) filename items
+    expand_file_modules ?package_root (filename :: stack) filename items
 
-and expand_file_modules stack declaring_file items =
+and expand_file_modules ?package_root stack declaring_file items =
   reject_duplicate_module_decls items;
   List.map
     (function
       | Ast.NIMod (visibility, name, children) ->
-        Ast.NIMod (visibility, name, expand_file_modules stack declaring_file children)
+        Ast.NIMod (visibility, name, expand_file_modules ?package_root stack declaring_file children)
       | Ast.NIModFile (visibility, name) ->
-        let module_file = module_file_path declaring_file name in
-        let children = load_source_file stack module_file in
+        let module_file = module_file_path ?package_root declaring_file name in
+        let children = load_source_file ?package_root stack module_file in
         Ast.NIMod (visibility, name, children)
       | item -> item)
     items
 
-let parse_file filename = load_source_file [] filename
+let parse_file ?package_root filename =
+  let filename =
+    match package_root with
+    | Some root when Filename.is_relative filename -> Filename.concat root filename
+    | _ -> filename
+  in
+  let filename = normalize_path filename in
+  let package_root =
+    match package_root with
+    | Some root -> Some (normalize_path root)
+    | None -> Some (Filename.dirname filename)
+  in
+  load_source_file ?package_root [] filename
 
-let core_dir () =
-  match Sys.getenv_opt "FACET_CORE_DIR" with
+let core_dir override =
+  match override with
   | Some dir -> dir
-  | None -> "core"
+  | None ->
+    match Sys.getenv_opt "FACET_CORE_DIR" with
+    | Some dir -> dir
+    | None -> "core"
 
-let load_core_items () =
-  let dir = core_dir () in
+let load_core_items core_dir_override =
+  let dir = core_dir core_dir_override in
   if Sys.file_exists dir && Sys.is_directory dir then
     Sys.readdir dir
     |> Array.to_list
@@ -383,6 +419,8 @@ let () =
   end;
   (* Parse optional flags before the source file argument *)
   let emit_fir_file = ref None in
+  let core_dir_override = ref None in
+  let package_root = ref None in
   let i = ref 1 in
   while !i < Array.length args && String.length args.(!i) > 0
         && args.(!i).[0] = '-' do
@@ -393,20 +431,34 @@ let () =
       end;
       emit_fir_file := Some args.(!i + 1);
       i := !i + 2
+    end else if args.(!i) = "--core-dir" then begin
+      if !i + 1 >= Array.length args then begin
+        Printf.eprintf "Error: --core-dir requires a directory argument\n";
+        exit 1
+      end;
+      core_dir_override := Some args.(!i + 1);
+      i := !i + 2
+    end else if args.(!i) = "--package-root" then begin
+      if !i + 1 >= Array.length args then begin
+        Printf.eprintf "Error: --package-root requires a directory argument\n";
+        exit 1
+      end;
+      package_root := Some (normalize_path args.(!i + 1));
+      i := !i + 2
     end else begin
       Printf.eprintf "Error: unknown option: %s\n" args.(!i);
       exit 1
     end
   done;
   if !i >= Array.length args then begin
-    Printf.eprintf "Usage: %s [--emit-fir <outfile>] [--generate-grammar] FILE\n" args.(0);
+    Printf.eprintf "Usage: %s [--emit-fir <outfile>] [--core-dir DIR] [--package-root DIR] [--generate-grammar] FILE\n" args.(0);
     exit 1
   end;
   let filename = args.(!i) in
   let env =
     try
-      let core_items = load_core_items () in
-      let named_items = parse_file filename in
+      let core_items = load_core_items !core_dir_override in
+      let named_items = parse_file ?package_root:!package_root filename in
       Debruijn.convert_program_items_with_core core_items named_items
     with Failure msg ->
       Printf.eprintf "Validation error: %s\n" msg;

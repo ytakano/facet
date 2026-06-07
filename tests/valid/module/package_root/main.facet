@@ -1,0 +1,5 @@
+mod numbers;
+
+fn main() -> affine isize {
+  (numbers::id 7)
+}

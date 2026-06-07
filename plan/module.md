@@ -18,7 +18,7 @@
 5. **M4.1 named imports**: done. `use path;` imports a module-local final segment, resolves to the same canonical path as explicit qualification, and rejects unknown, private, duplicate, or ambiguous imports.
 6. **M4.2 import aliases**: done. `use path as Name;` binds a module-local alias for function/type paths and rejects private targets or alias collisions.
 7. **M5.1 file module declarations**: done. `mod foo;` expands to `foo.facet` or `foo/mod.facet` relative to the declaring file and rejects missing files, duplicate module declarations, and load cycles.
-8. **M6.1 package root flags**: add explicit `--core-dir DIR` and, if needed, `--package-root DIR`; keep `core::...` globally available.
+8. **M6.1 package root flags**: done. CLI accepts `--core-dir DIR` and `--package-root DIR`; crate files default to their parent package root, relative crate paths resolve under the package root, and file modules are contained within it.
 
 ## Current Scope Rules
 

@@ -194,6 +194,9 @@ For an explicit-capture recursive closure group:
    - Done: add the no-capture direct-call component boolean summary in
      `CheckerRootSidecars.v`; it is intentionally not connected to the
      end-to-end gate until the Prop soundness and safety theorem work lands.
+   - Done: prove the boolean no-capture direct-call component summary sound
+     against a matching Prop summary in `EnvRuntimeCapturedCallSummaryFacts.v`;
+     it is still intentionally not wired into the gate.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

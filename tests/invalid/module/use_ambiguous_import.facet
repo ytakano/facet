@@ -1,0 +1,14 @@
+pub mod api {
+  pub fn id(x: affine isize) -> affine isize { x }
+}
+
+pub mod other {
+  pub fn id(x: affine isize) -> affine isize { x }
+}
+
+use api::id;
+use other::id;
+
+fn main() -> affine isize {
+  (id 1)
+}

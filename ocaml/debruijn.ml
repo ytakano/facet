@@ -36,6 +36,11 @@ type item_info = {
   info_ancestors : (string list * named_visibility) list;
 }
 
+type import_info = {
+  import_name : string;
+  import_target : string;
+}
+
 let rec path_starts_with prefix path =
   match prefix, path with
   | [], _ -> true
@@ -60,20 +65,28 @@ let resolve_info_from known prefix name =
     if item_visible_from prefix info then Some info
     else failwith ("private path: " ^ name)
 
-let resolve_path_from known prefix path =
+let resolve_path_from known imports prefix path =
   match path with
   | [] -> failwith "empty path"
   | [name] ->
-    let candidates = List.map (fun p -> string_of_path (p @ [name])) (parent_prefixes prefix) in
-    begin match List.find_map (resolve_info_from known prefix) candidates with
-    | Some info -> info.info_name
-    | None -> name
+    begin match List.find_opt (fun info -> info.import_name = name) imports with
+    | Some info -> info.import_target
+    | None ->
+      let candidates = List.map (fun p -> string_of_path (p @ [name])) (parent_prefixes prefix) in
+      begin match List.find_map (resolve_info_from known prefix) candidates with
+      | Some info -> info.info_name
+      | None -> name
+      end
     end
-  | _ ->
-    let name = string_of_path path in
-    begin match resolve_info_from known prefix name with
-    | Some info -> info.info_name
-    | None -> name
+  | head :: rest ->
+    begin match List.find_opt (fun info -> info.import_name = head) imports with
+    | Some info -> info.import_target ^ "::" ^ string_of_path rest
+    | None ->
+      let name = string_of_path path in
+      begin match resolve_info_from known prefix name with
+      | Some info -> info.info_name
+      | None -> name
+      end
     end
 
 let rec map_named_ty f ty_params (NTy (u, c)) =
@@ -171,10 +184,11 @@ let item_local_name = function
   | NIEnum e -> e.ne_name
   | NITrait t -> t.nt_name
   | NIImpl _ -> "<impl>"
+  | NIUse _ -> "<use>"
   | NIMod (_, name, _) -> name
 
 let duplicate_module_name names =
-  let names = List.filter ((<>) "<impl>") names in
+  let names = List.filter (fun name -> name <> "<impl>" && name <> "<use>") names in
   let rec go seen = function
     | [] -> None
     | x :: xs -> if List.mem x seen then Some x else go (x :: seen) xs
@@ -199,7 +213,8 @@ let rec collect_item_paths prefix items =
       | NIStruct st -> [prefix @ [st.ns_name]]
       | NIEnum e -> [prefix @ [e.ne_name]]
       | NITrait t -> [prefix @ [t.nt_name]]
-      | NIImpl _ -> [])
+      | NIImpl _ -> []
+      | NIUse _ -> [])
     items
 
 let rec collect_item_infos ancestors prefix items =
@@ -228,13 +243,51 @@ let rec collect_item_infos ancestors prefix items =
            info_visibility = t.nt_visibility;
            info_owner = prefix;
            info_ancestors = ancestors }]
-      | NIImpl _ -> [])
+      | NIImpl _ -> []
+      | NIUse _ -> [])
     items
+
+let last_path_segment path =
+  match List.rev path with
+  | [] -> failwith "empty import path"
+  | name :: _ -> name
+
+let known_info_exists known name =
+  List.exists (fun info -> info.info_name = name) known
+
+let resolve_import_target known prefix path =
+  let target = resolve_path_from known [] prefix path in
+  if known_info_exists known target then target
+  else failwith ("unknown import path: " ^ string_of_path path)
+
+let collect_module_imports known prefix items =
+  let local_names =
+    List.filter
+      (fun name -> name <> "<impl>" && name <> "<use>")
+      (List.map item_local_name items)
+  in
+  let add_import imports path =
+    let name = last_path_segment path in
+    if List.mem name local_names
+    then failwith ("ambiguous import: " ^ name)
+    else if List.exists (fun info -> info.import_name = name) imports
+    then failwith ("ambiguous import: " ^ name)
+    else { import_name = name; import_target = resolve_import_target known prefix path } :: imports
+  in
+  List.rev
+    (List.fold_left
+       (fun imports item ->
+          match item with
+          | NIUse path -> add_import imports path
+          | _ -> imports)
+       []
+       items)
 
 let rec flatten_modules known prefix items =
   let known_names = List.map (fun info -> info.info_name) known in
   let fn_names = known_names in
-  let resolve = resolve_path_from known prefix in
+  let imports = collect_module_imports known prefix items in
+  let resolve = resolve_path_from known imports prefix in
   List.concat_map
     (function
       | NIMod (_, name, children) -> flatten_modules known (prefix @ [name]) children
@@ -268,7 +321,8 @@ let rec flatten_modules known prefix items =
         let (_lts, tys) = split_generics i.ni_generics in
         [NIImpl { i with ni_trait_name = [resolve i.ni_trait_name];
                          ni_trait_args = List.map (map_named_type_arg resolve tys) i.ni_trait_args;
-                         ni_for_ty = map_named_ty resolve tys i.ni_for_ty }])
+                         ni_for_ty = map_named_ty resolve tys i.ni_for_ty }]
+      | NIUse _ -> [])
     items
 
 let flatten_program_items items =
@@ -400,6 +454,7 @@ let validate_item_paths known = function
     require_known "trait" known.known_trait_names trait_name;
     List.iter (validate_type_arg_paths known tys) i.ni_trait_args;
     validate_ty_paths known tys i.ni_for_ty
+  | NIUse _ -> ()
   | NIMod _ -> ()
 
 let validate_flattened_paths struct_names enum_names trait_names fn_names items =

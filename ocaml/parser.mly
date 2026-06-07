@@ -109,7 +109,7 @@ let split_constructor_path segments =
 
 %}
 
-%token KW_FN KW_FOR KW_STRUCT KW_ENUM KW_TRAIT KW_IMPL KW_MATCH KW_MOD KW_PUB KW_LET KW_IN KW_MUT KW_DROP KW_REPLACE KW_CLOSURE
+%token KW_FN KW_FOR KW_STRUCT KW_ENUM KW_TRAIT KW_IMPL KW_MATCH KW_MOD KW_PUB KW_USE KW_LET KW_IN KW_MUT KW_DROP KW_REPLACE KW_CLOSURE
 %token KW_AFFINE KW_LINEAR KW_UNRESTRICTED KW_ISIZE KW_F64
 %token KW_IF KW_ELSE KW_TRUE KW_FALSE KW_BOOL KW_WHERE
 %token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET LANGLE RANGLE
@@ -134,6 +134,7 @@ top_item:
   | vis = visibility; e = enum_def { NIEnum { e with ne_visibility = vis } }
   | vis = visibility; t = trait_def { NITrait { t with nt_visibility = vis } }
   | i = impl_def { NIImpl i }
+  | u = use_def { NIUse u }
   | vis = visibility; m = mod_def { let (name, items) = m in NIMod (vis, name, items) }
 
 visibility:
@@ -143,6 +144,10 @@ visibility:
 mod_def:
   | KW_MOD; name = ID; LBRACE; items = list(top_item); RBRACE
     { (name, items) }
+
+use_def:
+  | KW_USE; target = path_name; SEMI
+    { target }
 
 fn_def:
   | KW_FN; name = ID; generics = opt_generic_params;

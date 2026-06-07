@@ -1,0 +1,5 @@
+use core::option::Option;
+
+fn main() -> affine Option<affine isize> {
+  Option<affine isize>::Some(1)
+}

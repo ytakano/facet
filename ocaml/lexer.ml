@@ -32,6 +32,7 @@ let keywords = [
   "match",        Parser.KW_MATCH;
   "mod",          Parser.KW_MOD;
   "pub",          Parser.KW_PUB;
+  "use",          Parser.KW_USE;
   "let",          Parser.KW_LET;
   "in",           Parser.KW_IN;
   "mut",          Parser.KW_MUT;

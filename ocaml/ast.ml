@@ -123,4 +123,5 @@ type named_item =
   | NIEnum of named_enum_def
   | NITrait of named_trait_def
   | NIImpl of named_impl_def
+  | NIUse of path
   | NIMod of named_visibility * name * named_item list

@@ -296,6 +296,8 @@ Tasks:
   `diagnostic_map` annotation.
 - Audit reachable `failwith` in `ocaml/debruijn.ml`, `ocaml/parser.mly`, and
   `ocaml/fir.ml`.
+- Routed `--emit-fir` `Failure` exceptions to a user-facing `FIR error` and
+  removed the unreachable checker-result `assert false`.
 - Do not add any handwritten OCaml checker fallback.
 
 Verification:

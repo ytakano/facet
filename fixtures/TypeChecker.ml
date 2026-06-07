@@ -5633,7 +5633,7 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
                                                                 (ctx_lookup_params_none_b
                                                                   ps
                                                                   _UU03a3_1)
-                                                           then (match
+                                                           then (match 
                                                                  infer_core_env_state_fuel
                                                                    fuel' env
                                                                    _UU03a9_ n
@@ -5647,24 +5647,24 @@ let rec infer_core_env_state_fuel fuel env _UU03a9_ n _UU03a3_ e =
                                                                     _UU03a3__branch_payload) =
                                                                     p0
                                                                    in
-                                                                   if
+                                                                   if 
                                                                     contains_lbound_ty
                                                                     t_branch
-                                                                   then
+                                                                   then 
                                                                     Infer_err
                                                                     ErrLifetimeLeak
-                                                                   else
-                                                                    if
+                                                                   else 
+                                                                    if 
                                                                     params_ok_sctx_b
                                                                     env ps
                                                                     _UU03a3__branch_payload
-                                                                    then
+                                                                    then 
                                                                     Infer_ok
                                                                     (t_branch,
                                                                     (sctx_remove_params
                                                                     ps
                                                                     _UU03a3__branch_payload))
-                                                                    else
+                                                                    else 
                                                                     Infer_err
                                                                     ErrContextCheckFailed
                                                                  | Infer_err err ->
@@ -9268,11 +9268,11 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                                                                 in
                                                                 if contains_lbound_ty
                                                                     t_branch
-                                                                then
+                                                                then 
                                                                   Infer_err
                                                                     ErrLifetimeLeak
-                                                                else
-                                                                  if
+                                                                else 
+                                                                  if 
                                                                     (&&)
                                                                     ((&&)
                                                                     (params_ok_sctx_b
@@ -9284,7 +9284,7 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                                                                     (root_env_excludes_params_b
                                                                     ps
                                                                     r_branch)
-                                                                  then
+                                                                  then 
                                                                     Infer_ok
                                                                     (((t_branch,
                                                                     (sctx_remove_params
@@ -9292,7 +9292,7 @@ let rec infer_core_env_state_fuel_roots fuel env _UU03a9_ n r _UU03a3_ e =
                                                                     _UU03a3__branch_payload)),
                                                                     r_branch),
                                                                     roots_branch)
-                                                                  else
+                                                                  else 
                                                                     Infer_err
                                                                     ErrContextCheckFailed
                                                               | Infer_err err ->
@@ -11845,11 +11845,11 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                                                                 in
                                                                 if contains_lbound_ty
                                                                     t_branch
-                                                                then
+                                                                then 
                                                                   Infer_err
                                                                     ErrLifetimeLeak
-                                                                else
-                                                                  if
+                                                                else 
+                                                                  if 
                                                                     (&&)
                                                                     ((&&)
                                                                     (params_ok_sctx_b
@@ -11861,7 +11861,7 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                                                                     (root_env_excludes_params_b
                                                                     ps
                                                                     r_branch)
-                                                                  then
+                                                                  then 
                                                                     Infer_ok
                                                                     (((t_branch,
                                                                     (sctx_remove_params
@@ -11869,7 +11869,7 @@ let rec infer_core_env_state_fuel_roots_shadow_safe fuel env _UU03a9_ n r _UU03a
                                                                     _UU03a3__branch_payload)),
                                                                     r_branch),
                                                                     roots_branch)
-                                                                  else
+                                                                  else 
                                                                     Infer_err
                                                                     ErrContextCheckFailed
                                                               | Infer_err err ->
@@ -15174,7 +15174,10 @@ type raw_expr =
 | RawDrop of raw_expr
 | RawIf of raw_expr * raw_expr * raw_expr
 | RawClosure of ident list * param list * ty * raw_expr
+| RawLetRec of ident list * raw_rec_fn list * raw_expr
 | RawCore of expr
+and raw_rec_fn =
+| MkRawRecFn of ident * param list * ty * raw_expr
 
 type raw_fn_def = { raw_fn_name : ident;
                     raw_fn_lifetimes : Big_int_Z.big_int;
@@ -15862,6 +15865,7 @@ let rec elaborate_raw_expr_fuel fuel expected env _UU03a9_ n _UU03a3_ next e =
               | Infer_err err -> Infer_err err)
            | Infer_err err -> Infer_err err)
         | Infer_err err -> Infer_err err)
+     | RawLetRec (_, _, _) -> Infer_err ErrNotImplemented
      | RawCore ecore -> finish env ecore [] next)
      fuel)
 

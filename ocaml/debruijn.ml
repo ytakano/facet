@@ -177,8 +177,17 @@ let rec map_named_expr f fn_names ty_params value_scope = function
     let value_scope' = List.map (fun p -> p.np_name) params @ captures @ value_scope in
     NClosure (captures, params', map_named_ty f ty_params ret,
       map_named_expr f fn_names ty_params value_scope' body)
-  | NLetRec _ ->
-    failwith "let rec is not implemented yet"
+  | NLetRec (captures, rec_fns, body) ->
+    let rec_names = List.map (fun rf -> rf.nrf_name) rec_fns in
+    let map_rec_fn rf =
+      let params' = List.map (map_named_param f ty_params) rf.nrf_params in
+      let body_scope =
+        List.map (fun p -> p.np_name) rf.nrf_params @ captures @ rec_names @ value_scope in
+      { rf with nrf_params = params'; nrf_ret = map_named_ty f ty_params rf.nrf_ret;
+                nrf_body = map_named_expr f fn_names ty_params body_scope rf.nrf_body }
+    in
+    NLetRec (captures, List.map map_rec_fn rec_fns,
+      map_named_expr f fn_names ty_params (rec_names @ value_scope) body)
 
 let item_local_name = function
   | NIFn f -> f.nf_name
@@ -434,8 +443,17 @@ let rec validate_expr_paths known ty_params value_scope = function
     validate_ty_paths known ty_params ret;
     let value_scope' = List.map (fun p -> p.np_name) params @ captures @ value_scope in
     validate_expr_paths known ty_params value_scope' body
-  | NLetRec _ ->
-    failwith "let rec is not implemented yet"
+  | NLetRec (captures, rec_fns, body) ->
+    let rec_names = List.map (fun rf -> rf.nrf_name) rec_fns in
+    List.iter
+      (fun rf ->
+        List.iter (validate_param_paths known ty_params) rf.nrf_params;
+        validate_ty_paths known ty_params rf.nrf_ret;
+        let body_scope =
+          List.map (fun p -> p.np_name) rf.nrf_params @ captures @ rec_names @ value_scope in
+        validate_expr_paths known ty_params body_scope rf.nrf_body)
+      rec_fns;
+    validate_expr_paths known ty_params (rec_names @ value_scope) body
 
 let validate_item_paths known = function
   | NIFn f ->
@@ -837,8 +855,24 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
     in
     RawClosure (capture_ids, raw_params, lower_named_ty ty_scope ret,
       convert_raw fn_names ty_scope body_scope body)
-  | NLetRec _ ->
-    failwith "let rec is not implemented yet"
+  | NLetRec (captures, rec_fns, body) ->
+    let capture_ids = List.map (ident_of_name scope) captures in
+    let rec_names = List.map (fun rf -> rf.nrf_name) rec_fns in
+    let (rec_scope, rec_ids) = add_bindings_with_idents scope rec_names in
+    let lower_rec_fn rf rec_id =
+      let closure_scope = List.fold_left (add_capture_binding rec_scope) [] captures in
+      let (body_scope, raw_params) =
+        List.fold_left
+          (fun (sc, acc) np ->
+            let (sc', p) = lower_param ty_scope sc np in
+            (sc', acc @ [p]))
+          (closure_scope, []) rf.nrf_params
+      in
+      MkRawRecFn (rec_id, raw_params, lower_named_ty ty_scope rf.nrf_ret,
+        convert_raw fn_names ty_scope body_scope rf.nrf_body)
+    in
+    RawLetRec (capture_ids, List.map2 lower_rec_fn rec_fns rec_ids,
+      convert_raw fn_names ty_scope rec_scope body)
 
 let convert_fn_def_with_names struct_names enum_names fn_names (f : named_fn_def) : fn_def =
   let (lts, tys) = split_generics f.nf_generics in

@@ -1401,7 +1401,10 @@ type raw_expr =
 | RawDrop of raw_expr
 | RawIf of raw_expr * raw_expr * raw_expr
 | RawClosure of ident list * param list * ty * raw_expr
+| RawLetRec of ident list * raw_rec_fn list * raw_expr
 | RawCore of expr
+and raw_rec_fn =
+| MkRawRecFn of ident * param list * ty * raw_expr
 
 type raw_fn_def = { raw_fn_name : ident;
                     raw_fn_lifetimes : Big_int_Z.big_int;

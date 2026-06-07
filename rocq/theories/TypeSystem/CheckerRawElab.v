@@ -66,7 +66,10 @@ Inductive raw_expr : Type :=
 | RawDrop : raw_expr -> raw_expr
 | RawIf : raw_expr -> raw_expr -> raw_expr -> raw_expr
 | RawClosure : list ident -> list param -> Ty -> raw_expr -> raw_expr
-| RawCore : expr -> raw_expr.
+| RawLetRec : list ident -> list raw_rec_fn -> raw_expr -> raw_expr
+| RawCore : expr -> raw_expr
+with raw_rec_fn : Type :=
+| MkRawRecFn : ident -> list param -> Ty -> raw_expr -> raw_rec_fn.
 
 Record raw_fn_def : Type := MkRawFnDef {
   raw_fn_name      : ident;
@@ -604,6 +607,7 @@ Fixpoint elaborate_raw_expr_fuel
                   end
               end
           end
+      | RawLetRec _ _ _ => infer_err ErrNotImplemented
       end
   end.
 

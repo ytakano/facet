@@ -10,7 +10,9 @@ Done:
 - Baseline tests lock current top-level recursive function values.
 - `rec` and `and` are reserved words in the OCaml frontend.
 - Parser and named AST accept local `let rec` groups, including shared explicit
-  capture lists, but conversion fails with `let rec is not implemented yet`.
+  capture lists.
+- Raw AST includes `RawLetRec`; raw elaboration rejects it with extracted
+  `ErrNotImplemented` until rec-group semantics are implemented.
 
 Next:
 
@@ -18,7 +20,7 @@ Next:
   end-to-end safety gate. They currently type-check far enough to reach
   `ErrEndToEndSafetyGateFailed`, because the store-safe sidecar only accepts
   direct calls whose callee body is already narrow-store-safe.
-- Add raw AST/de Bruijn lowering for local rec groups.
+- Implement rec-name-aware raw elaboration for local rec groups.
 
 This roadmap adds local recursion in stages, ending with a safe v1 for
 explicit-capture recursive closures. The first implementation should avoid a
@@ -130,14 +132,16 @@ For an explicit-capture recursive closure group:
      `let rec is not implemented yet`; parser validation remains syntactic only.
 
 3. Name resolution and raw AST.
-   - Add a raw expression for recursive groups, for example
-     `RawLetRec captures rec_fns body`.
+   - Done: add raw `RawLetRec captures rec_fns body` and lower parsed groups
+     to it.
    - In de Bruijn conversion, assign stable source idents to rec function names
      and reject duplicate names in the group.
    - Maintain a local rec-name environment separate from ordinary value scope
      so that calls can lower differently from normal variables.
    - When an ordinary local binding or parameter shadows a rec name, resolve to
      the ordinary value first.
+   - Next: make rec-name resolution distinguish recursive function names from
+     ordinary values during raw elaboration.
    - For non-capturing groups, lower rec references to direct function items.
      For captured groups, lower rec references to closure construction using
      the shared capture ids.

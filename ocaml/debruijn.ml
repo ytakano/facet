@@ -772,6 +772,14 @@ let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (
 let add_capture_binding outer_scope closure_scope name =
   (name, lookup outer_scope name) :: closure_scope
 
+type rec_scope = (string * ident) list
+
+let rec_ident rec_scope name =
+  List.assoc_opt name rec_scope
+
+let local_rec_ident scope name =
+  make_ident name (current_depth scope name + 2)
+
 let lower_param ty_scope scope np =
   let (scope', d) = add_binding scope np.np_name in
   let p = { param_mutability = np.np_mutability;
@@ -779,31 +787,38 @@ let lower_param ty_scope scope np =
             param_ty         = lower_named_ty ty_scope np.np_ty } in
   (scope', p)
 
-let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (e : named_expr) : raw_expr =
+let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (rec_scope : rec_scope) (e : named_expr) : raw_expr =
   match e with
   | NUnit           -> RawUnit
   | NLit l          -> RawLit l
   | NVar name       ->
     if in_scope scope name then RawVar (ident_of_name scope name)
-    else if List.mem name fn_names then RawFn (make_ident name 0)
-    else RawVar (ident_of_name scope name)
+    else begin match rec_ident rec_scope name with
+    | Some id -> RawFn id
+    | None ->
+      if List.mem name fn_names then RawFn (make_ident name 0)
+      else RawVar (ident_of_name scope name)
+    end
   | NPlace p        -> RawPlace (convert_place scope p)
-  | NDrop e1        -> RawDrop (convert_raw fn_names ty_scope scope e1)
+  | NDrop e1        -> RawDrop (convert_raw fn_names ty_scope scope rec_scope e1)
   | NReplace (p, e1) ->
-    RawReplace (convert_place scope p, convert_raw fn_names ty_scope scope e1)
+    RawReplace (convert_place scope p, convert_raw fn_names ty_scope scope rec_scope e1)
   | NAssign (p, e1) ->
-    RawAssign (convert_place scope p, convert_raw fn_names ty_scope scope e1)
+    RawAssign (convert_place scope p, convert_raw fn_names ty_scope scope rec_scope e1)
   | NBorrow (rk, p) ->
     RawBorrow (rk, convert_place scope p)
   | NDeref e1 ->
-    RawDeref (convert_raw fn_names ty_scope scope e1)
+    RawDeref (convert_raw fn_names ty_scope scope rec_scope e1)
   | NCall (f_path, type_args, args) ->
     let f = string_of_path f_path in
-    let args' = List.map (convert_raw fn_names ty_scope scope) args in
+    let args' = List.map (convert_raw fn_names ty_scope scope rec_scope) args in
     if type_args = [] then
       if in_scope scope f then RawCallExpr (RawVar (ident_of_name scope f), args')
-      else RawCall (make_ident f 0, args')
-    else if in_scope scope f then
+      else begin match rec_ident rec_scope f with
+      | Some id -> RawCall (id, args')
+      | None -> RawCall (make_ident f 0, args')
+      end
+    else if in_scope scope f || Option.is_some (rec_ident rec_scope f) then
       failwith "explicit type arguments are only supported for direct function calls"
     else
       RawCallGeneric (make_ident f 0, lower_call_type_args ty_scope type_args, args')
@@ -811,38 +826,38 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
     let name = string_of_path name_path in
     let (lts, tys) = split_expr_type_args ty_scope args in
     RawStruct (name, lts, tys,
-      List.map (fun (field, e1) -> (field, convert_raw fn_names ty_scope scope e1)) fields)
+      List.map (fun (field, e1) -> (field, convert_raw fn_names ty_scope scope rec_scope e1)) fields)
   | NEnum (enum_name_path, args, variant_name, variant_args, payloads) ->
     let enum_name = string_of_path enum_name_path in
     let (lts, tys) = split_expr_type_args ty_scope args in
     let (variant_lts, variant_tys) = split_expr_type_args ty_scope variant_args in
     if variant_tys <> [] then failwith "variant-local type arguments are not supported";
     RawEnum (enum_name, variant_name, lts, variant_lts, tys,
-      List.map (convert_raw fn_names ty_scope scope) payloads)
+      List.map (convert_raw fn_names ty_scope scope rec_scope) payloads)
   | NMatch (scrut, branches) ->
     RawMatch
-      (convert_raw fn_names ty_scope scope scrut,
+      (convert_raw fn_names ty_scope scope rec_scope scrut,
        List.map
          (fun (variant, binders, body) ->
             let (branch_scope, binder_ids) = add_bindings_with_idents scope binders in
-            ((variant, binder_ids), convert_raw fn_names ty_scope branch_scope body))
+            ((variant, binder_ids), convert_raw fn_names ty_scope branch_scope rec_scope body))
          branches)
   | NLet (m, name, Some ty, e1, e2) ->
     if named_ty_has_elided_ref_lifetime ty
     then failwith "cannot elide lifetime in local type annotation";
-    let e1' = convert_raw fn_names ty_scope scope e1 in
+    let e1' = convert_raw fn_names ty_scope scope rec_scope e1 in
     let (scope', d) = add_binding scope name in
-    let e2' = convert_raw fn_names ty_scope scope' e2 in
+    let e2' = convert_raw fn_names ty_scope scope' rec_scope e2 in
     RawLet (m, make_ident name d, lower_named_ty ty_scope ty, e1', e2')
   | NLet (m, name, None, e1, e2) ->
-    let e1' = convert_raw fn_names ty_scope scope e1 in
+    let e1' = convert_raw fn_names ty_scope scope rec_scope e1 in
     let (scope', d) = add_binding scope name in
-    let e2' = convert_raw fn_names ty_scope scope' e2 in
+    let e2' = convert_raw fn_names ty_scope scope' rec_scope e2 in
     RawLetInfer (m, make_ident name d, e1', e2')
   | NIf (cond, then_e, else_e) ->
-    RawIf (convert_raw fn_names ty_scope scope cond,
-           convert_raw fn_names ty_scope scope then_e,
-           convert_raw fn_names ty_scope scope else_e)
+    RawIf (convert_raw fn_names ty_scope scope rec_scope cond,
+           convert_raw fn_names ty_scope scope rec_scope then_e,
+           convert_raw fn_names ty_scope scope rec_scope else_e)
   | NClosure (captures, params, ret, body) ->
     let capture_ids = List.map (ident_of_name scope) captures in
     let closure_scope = List.fold_left (add_capture_binding scope) [] captures in
@@ -854,13 +869,14 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
         (closure_scope, []) params
     in
     RawClosure (capture_ids, raw_params, lower_named_ty ty_scope ret,
-      convert_raw fn_names ty_scope body_scope body)
+      convert_raw fn_names ty_scope body_scope rec_scope body)
   | NLetRec (captures, rec_fns, body) ->
     let capture_ids = List.map (ident_of_name scope) captures in
     let rec_names = List.map (fun rf -> rf.nrf_name) rec_fns in
-    let (rec_scope, rec_ids) = add_bindings_with_idents scope rec_names in
+    let rec_ids = List.map (local_rec_ident scope) rec_names in
+    let rec_scope' = List.combine rec_names rec_ids @ rec_scope in
     let lower_rec_fn rf rec_id =
-      let closure_scope = List.fold_left (add_capture_binding rec_scope) [] captures in
+      let closure_scope = List.fold_left (add_capture_binding scope) [] captures in
       let (body_scope, raw_params) =
         List.fold_left
           (fun (sc, acc) np ->
@@ -869,10 +885,10 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
           (closure_scope, []) rf.nrf_params
       in
       MkRawRecFn (rec_id, raw_params, lower_named_ty ty_scope rf.nrf_ret,
-        convert_raw fn_names ty_scope body_scope rf.nrf_body)
+        convert_raw fn_names ty_scope body_scope rec_scope' rf.nrf_body)
     in
     RawLetRec (capture_ids, List.map2 lower_rec_fn rec_fns rec_ids,
-      convert_raw fn_names ty_scope rec_scope body)
+      convert_raw fn_names ty_scope scope rec_scope' body)
 
 let convert_fn_def_with_names struct_names enum_names fn_names (f : named_fn_def) : fn_def =
   let (lts, tys) = split_generics f.nf_generics in
@@ -929,7 +945,7 @@ let convert_raw_fn_def_with_names struct_names enum_names fn_names (f : named_fn
     raw_fn_outlives = f.nf_outlives;
     raw_fn_params    = params;
     raw_fn_ret       = ret_ty;
-    raw_fn_body      = convert_raw fn_names ty_scope scope f.nf_body;
+    raw_fn_body      = convert_raw fn_names ty_scope scope [] f.nf_body;
     raw_fn_type_params = Big_int_Z.big_int_of_int (List.length tys);
     raw_fn_bounds = List.map (trait_bound_of_named ty_scope tys) f.nf_bounds }
 

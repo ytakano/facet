@@ -13,6 +13,8 @@ Done:
   capture lists.
 - Raw AST includes `RawLetRec`; raw elaboration rejects it with extracted
   `ErrNotImplemented` until rec-group semantics are implemented.
+- OCaml raw lowering keeps recursive function names separate from ordinary
+  value scope and emits direct raw references/calls to local-rec ids.
 
 Next:
 
@@ -140,8 +142,9 @@ For an explicit-capture recursive closure group:
      so that calls can lower differently from normal variables.
    - When an ordinary local binding or parameter shadows a rec name, resolve to
      the ordinary value first.
-   - Next: make rec-name resolution distinguish recursive function names from
-     ordinary values during raw elaboration.
+   - Done: make OCaml raw lowering distinguish recursive function names from
+     ordinary values.
+   - Next: implement raw elaboration for non-capturing rec groups.
    - For non-capturing groups, lower rec references to direct function items.
      For captured groups, lower rec references to closure construction using
      the shared capture ids.

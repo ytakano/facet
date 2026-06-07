@@ -1,0 +1,7 @@
+fn loop(x: unrestricted isize) -> unrestricted isize {
+  let f: unrestricted fn(unrestricted isize) -> unrestricted isize = loop in x
+}
+
+fn main() -> unrestricted isize {
+  0
+}

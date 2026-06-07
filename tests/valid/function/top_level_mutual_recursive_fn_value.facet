@@ -1,0 +1,11 @@
+fn left(x: unrestricted isize) -> unrestricted isize {
+  let f: unrestricted fn(unrestricted isize) -> unrestricted isize = right in x
+}
+
+fn right(x: unrestricted isize) -> unrestricted isize {
+  let f: unrestricted fn(unrestricted isize) -> unrestricted isize = left in x
+}
+
+fn main() -> unrestricted isize {
+  0
+}

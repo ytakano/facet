@@ -2,7 +2,19 @@
 
 ## Status
 
-Planned.
+In progress.
+
+Done:
+
+- Roadmap captured in this file.
+- Baseline tests lock current top-level recursive function values.
+
+Next:
+
+- Make direct top-level self-recursive and mutually recursive calls pass the
+  end-to-end safety gate. They currently type-check far enough to reach
+  `ErrEndToEndSafetyGateFailed`, because the store-safe sidecar only accepts
+  direct calls whose callee body is already narrow-store-safe.
 
 This roadmap adds local recursion in stages, ending with a safe v1 for
 explicit-capture recursive closures. The first implementation should avoid a
@@ -97,12 +109,12 @@ For an explicit-capture recursive closure group:
 
 ## Implementation Steps
 
-1. Baseline tests and documentation.
-   - Add valid tests for top-level self-recursion and top-level mutual
-     recursion.
-   - Confirm those programs go through the extracted end-to-end checker.
-   - Document that direct top-level recursion is accepted only for
-     no-capture functions.
+1. Baseline tests and direct-call gate.
+   - Done: add valid tests for top-level recursive function values.
+   - Next: add valid tests for direct top-level self-recursion and mutual
+     recursion, then extend the store-safe sidecar so those no-capture direct
+     calls pass the extracted end-to-end checker.
+   - Keep direct top-level recursion no-capture only.
 
 2. Parser and named AST.
    - Reserve `rec` and `and` in the lexer.

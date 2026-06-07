@@ -1,0 +1,7 @@
+fn __facet_local_rec_0_f() -> unrestricted isize {
+  0
+}
+
+fn main() -> unrestricted isize {
+  (__facet_local_rec_0_f)
+}

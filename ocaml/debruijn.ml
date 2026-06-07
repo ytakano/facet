@@ -785,8 +785,12 @@ type rec_scope = (string * ident) list
 let rec_ident rec_scope name =
   List.assoc_opt name rec_scope
 
-let local_rec_ident scope name =
-  make_ident name (current_depth scope name + 2)
+let local_rec_counter = ref 0
+
+let fresh_local_rec_ident name =
+  let id = !local_rec_counter in
+  incr local_rec_counter;
+  make_ident ("__facet_local_rec_" ^ string_of_int id ^ "_" ^ name) 0
 
 let lower_param ty_scope scope np =
   let (scope', d) = add_binding scope np.np_name in
@@ -881,7 +885,7 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
   | NLetRec (captures, rec_fns, body) ->
     let capture_ids = List.map (ident_of_name scope) captures in
     let rec_names = List.map (fun rf -> rf.nrf_name) rec_fns in
-    let rec_ids = List.map (local_rec_ident scope) rec_names in
+    let rec_ids = List.map fresh_local_rec_ident rec_names in
     let rec_scope' = List.combine rec_names rec_ids @ rec_scope in
     let lower_rec_fn rf rec_id =
       let closure_scope = List.fold_left (add_capture_binding scope) [] captures in
@@ -1013,6 +1017,17 @@ let duplicate_name names =
     | x :: xs -> if List.mem x seen then Some x else go (x :: seen) xs
   in
   go [] names
+
+let synthetic_name_prefix = "__facet_"
+
+let has_prefix prefix s =
+  let plen = String.length prefix in
+  String.length s >= plen && String.sub s 0 plen = prefix
+
+let reject_reserved_synthetic_names names =
+  match List.find_opt (has_prefix synthetic_name_prefix) names with
+  | Some name -> failwith ("reserved top-level name: " ^ name)
+  | None -> ()
 
 let validate_env env =
   let top_names =
@@ -1282,6 +1297,7 @@ let convert_program_items_from_flattened items : global_env =
     List.map (fun t -> t.nt_name) traits @
     fn_names
   in
+  reject_reserved_synthetic_names top_names;
   begin match duplicate_name top_names with
   | Some name -> failwith ("duplicate top-level name: " ^ name)
   | None -> ()

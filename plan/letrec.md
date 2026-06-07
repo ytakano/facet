@@ -17,6 +17,8 @@ Done:
   value scope and emits direct raw references/calls to local-rec ids.
 - Rocq raw elaboration accepts non-capturing local rec groups and lowers them
   into synthetic no-capture function definitions plus direct calls.
+- Local-rec raw lowering now emits reserved `__facet_local_rec_*` synthetic
+  function names and rejects user top-level `__facet_*` names.
 
 Next:
 
@@ -24,8 +26,6 @@ Next:
   end-to-end safety gate. They currently type-check far enough to reach
   `ErrEndToEndSafetyGateFailed`, because the store-safe sidecar only accepts
   direct calls whose callee body is already narrow-store-safe.
-- Make local-rec synthetic function names collision-proof against top-level
-  functions and sibling/nested local rec groups.
 - Extend local-rec semantics from direct calls in the `in` expression to actual
   recursive calls once the direct-call safety gate is fixed.
 
@@ -150,8 +150,10 @@ For an explicit-capture recursive closure group:
    - Done: make OCaml raw lowering distinguish recursive function names from
      ordinary values.
    - Done: implement raw elaboration for non-capturing rec groups.
-   - Next: make generated names collision-proof and then enable recursive
-     bodies after the direct-call safety gate accepts recursion.
+   - Done: make generated local-rec function names collision-proof against
+     user top-level names and sibling/nested local rec groups.
+   - Next: enable recursive bodies after the direct-call safety gate accepts
+     recursion.
    - For non-capturing groups, lower rec references to direct function items.
      For captured groups, lower rec references to closure construction using
      the shared capture ids.
@@ -218,6 +220,7 @@ Invalid tests:
 - Linear capture.
 - Explicit type arguments on a local rec function value, unless a later
   generic-rec roadmap adds that feature.
+- User-defined top-level names starting with reserved `__facet_`.
 
 FIR tests:
 

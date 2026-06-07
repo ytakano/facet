@@ -272,6 +272,8 @@ Progress:
   `AlphaTypedRoots.v`.
 - Moved root-env lookup/name subset helpers into `AlphaRootEnvFacts.v` and
   match-tail shadow-safe alpha-preservation into `AlphaTypedRoots.v`.
+- Moved call/struct non-support alpha-preservation lemmas into
+  `AlphaTypedRoots.v`.
 
 Commit after each moved proof group with:
 

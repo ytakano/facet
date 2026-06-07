@@ -71,6 +71,26 @@ Inductive raw_expr : Type :=
 with raw_rec_fn : Type :=
 | MkRawRecFn : ident -> list param -> Ty -> raw_expr -> raw_rec_fn.
 
+Definition raw_rec_fn_name (rf : raw_rec_fn) : ident :=
+  match rf with
+  | MkRawRecFn fname _ _ _ => fname
+  end.
+
+Definition raw_rec_fn_params (rf : raw_rec_fn) : list param :=
+  match rf with
+  | MkRawRecFn _ params _ _ => params
+  end.
+
+Definition raw_rec_fn_ret (rf : raw_rec_fn) : Ty :=
+  match rf with
+  | MkRawRecFn _ _ ret _ => ret
+  end.
+
+Definition raw_rec_fn_body (rf : raw_rec_fn) : raw_expr :=
+  match rf with
+  | MkRawRecFn _ _ _ body => body
+  end.
+
 Record raw_fn_def : Type := MkRawFnDef {
   raw_fn_name      : ident;
   raw_fn_lifetimes : nat;
@@ -607,7 +627,52 @@ Fixpoint elaborate_raw_expr_fuel
                   end
               end
           end
-      | RawLetRec _ _ _ => infer_err ErrNotImplemented
+      | RawLetRec captures rec_fns body =>
+          match captures with
+          | _ :: _ => infer_err ErrNotImplemented
+          | [] =>
+              let stubs :=
+                map (fun rf =>
+                  MkFnDef (raw_rec_fn_name rf) n Ω []
+                    (raw_rec_fn_params rf) (raw_rec_fn_ret rf) EUnit 0 [])
+                  rec_fns in
+              let env_stubs := append_env_fns env stubs in
+              let fix go_rec_fns fuel0 env0 next0 rfs :=
+                match rfs with
+                | [] => infer_ok ([], next0)
+                | rf :: rest =>
+                    let body_ctx := sctx_of_ctx (params_ctx (raw_rec_fn_params rf)) in
+                    match elaborate_raw_expr_fuel fuel0 (Some (raw_rec_fn_ret rf))
+                            env0 Ω n body_ctx next0 (raw_rec_fn_body rf) with
+                    | infer_err err => infer_err err
+                    | infer_ok (body', _, body_extras, next1) =>
+                        let fdef := MkFnDef (raw_rec_fn_name rf) n Ω []
+                                      (raw_rec_fn_params rf) (raw_rec_fn_ret rf)
+                                      body' 0 [] in
+                        let env1 := append_env_fns env0 (body_extras ++ [fdef]) in
+                        match infer_full_env env1 fdef with
+                        | infer_err err => infer_err err
+                        | infer_ok _ =>
+                            match go_rec_fns fuel0 env1 next1 rest with
+                            | infer_err err => infer_err err
+                            | infer_ok (rest_fns, next2) =>
+                                infer_ok (body_extras ++ fdef :: rest_fns, next2)
+                            end
+                        end
+                    end
+                end in
+              match go_rec_fns fuel' env_stubs next rec_fns with
+              | infer_err err => infer_err err
+              | infer_ok (rec_extras, next1) =>
+                  let env_rec := append_env_fns env rec_extras in
+                  match elaborate_raw_expr_fuel fuel' expected env_rec Ω n Σ next1 body with
+                  | infer_err err => infer_err err
+                  | infer_ok (body', _, body_extras, next2) =>
+                      let extras := rec_extras ++ body_extras in
+                      finish (append_env_fns env extras) body' extras next2
+                  end
+              end
+          end
       end
   end.
 

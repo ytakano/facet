@@ -1406,6 +1406,14 @@ type raw_expr =
 and raw_rec_fn =
 | MkRawRecFn of ident * param list * ty * raw_expr
 
+val raw_rec_fn_name : raw_rec_fn -> ident
+
+val raw_rec_fn_params : raw_rec_fn -> param list
+
+val raw_rec_fn_ret : raw_rec_fn -> ty
+
+val raw_rec_fn_body : raw_rec_fn -> raw_expr
+
 type raw_fn_def = { raw_fn_name : ident;
                     raw_fn_lifetimes : Big_int_Z.big_int;
                     raw_fn_outlives : outlives_ctx;

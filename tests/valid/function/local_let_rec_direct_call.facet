@@ -1,0 +1,6 @@
+fn main() -> unrestricted isize {
+  let rec id_local(x: unrestricted isize) -> unrestricted isize {
+    x
+  }
+  in (id_local 41)
+}

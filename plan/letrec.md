@@ -15,6 +15,8 @@ Done:
   `ErrNotImplemented` until rec-group semantics are implemented.
 - OCaml raw lowering keeps recursive function names separate from ordinary
   value scope and emits direct raw references/calls to local-rec ids.
+- Rocq raw elaboration accepts non-capturing local rec groups and lowers them
+  into synthetic no-capture function definitions plus direct calls.
 
 Next:
 
@@ -22,7 +24,10 @@ Next:
   end-to-end safety gate. They currently type-check far enough to reach
   `ErrEndToEndSafetyGateFailed`, because the store-safe sidecar only accepts
   direct calls whose callee body is already narrow-store-safe.
-- Implement rec-name-aware raw elaboration for local rec groups.
+- Make local-rec synthetic function names collision-proof against top-level
+  functions and sibling/nested local rec groups.
+- Extend local-rec semantics from direct calls in the `in` expression to actual
+  recursive calls once the direct-call safety gate is fixed.
 
 This roadmap adds local recursion in stages, ending with a safe v1 for
 explicit-capture recursive closures. The first implementation should avoid a
@@ -144,7 +149,9 @@ For an explicit-capture recursive closure group:
      the ordinary value first.
    - Done: make OCaml raw lowering distinguish recursive function names from
      ordinary values.
-   - Next: implement raw elaboration for non-capturing rec groups.
+   - Done: implement raw elaboration for non-capturing rec groups.
+   - Next: make generated names collision-proof and then enable recursive
+     bodies after the direct-call safety gate accepts recursion.
    - For non-capturing groups, lower rec references to direct function items.
      For captured groups, lower rec references to closure construction using
      the shared capture ids.
@@ -188,6 +195,7 @@ Valid tests:
 
 - Top-level self-recursion.
 - Top-level mutual recursion.
+- Basic non-capturing local rec group called from the `in` body.
 - Non-capturing local self-recursion.
 - Non-capturing local mutual recursion.
 - Local rec function used as a first-class `fn` value in the `in` body.

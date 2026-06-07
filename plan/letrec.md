@@ -26,13 +26,16 @@ Done:
 
 Next:
 
-- Make direct top-level self-recursive and mutually recursive calls pass the
-  end-to-end safety gate. They currently type-check far enough to reach
+- Design and prove the direct-call store-safe sidecar for recursive call
+  graphs before enabling actual self-recursive or mutually recursive direct
+  calls. They currently type-check far enough to reach
   `ErrEndToEndSafetyGateFailed`, because the store-safe sidecar only accepts
-  direct calls whose callee body is already narrow-store-safe.
-- Extend local-rec semantics from direct calls in the `in` expression to
-  same-group direct calls and actual recursive calls once the direct-call
-  safety gate is fixed.
+  direct calls whose callee body is already narrow-store-safe. A simple
+  fuel-unfolding extension is not enough for true cycles: it can cover finite
+  forward direct-call chains, but self/mutual cycles bottom out at fuel 0 and
+  also make the current proof search too expensive.
+- After that proof design lands, extend local-rec semantics from direct calls
+  in the `in` expression to same-group direct calls and actual recursive calls.
 
 This roadmap adds local recursion in stages, ending with a safe v1 for
 explicit-capture recursive closures. The first implementation should avoid a
@@ -179,7 +182,13 @@ For an explicit-capture recursive closure group:
    - Prefer reusing existing `EFn`, `ECall`, `EMakeClosure`, and `ECallExpr`
      typing/checker rules. Do not add a new core typing rule unless raw
      elaboration proves insufficient.
-   - Ensure checker soundness still routes through the existing end-to-end
+   - Done: non-recursive local-rec call sites reuse the existing extracted
+     checker authority; no OCaml fallback checker was added.
+   - Next: replace the current acyclic direct-call store-safe sidecar with a
+     verified recursive-call graph summary, or another proof structure that can
+     justify self/mutual direct-call cycles without depending on finite fuel
+     unfolding of the same cycle.
+   - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,
      `check_program_env_end2end_sound`, and

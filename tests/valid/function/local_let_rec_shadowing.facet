@@ -1,0 +1,6 @@
+fn main() -> unrestricted isize {
+  let rec f(x: unrestricted isize) -> unrestricted isize {
+    x
+  }
+  in let f: unrestricted isize = 9 in f
+}

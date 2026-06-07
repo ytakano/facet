@@ -26,8 +26,9 @@ Next:
   end-to-end safety gate. They currently type-check far enough to reach
   `ErrEndToEndSafetyGateFailed`, because the store-safe sidecar only accepts
   direct calls whose callee body is already narrow-store-safe.
-- Extend local-rec semantics from direct calls in the `in` expression to actual
-  recursive calls once the direct-call safety gate is fixed.
+- Extend local-rec semantics from direct calls in the `in` expression to
+  same-group direct calls and actual recursive calls once the direct-call
+  safety gate is fixed.
 
 This roadmap adds local recursion in stages, ending with a safe v1 for
 explicit-capture recursive closures. The first implementation should avoid a
@@ -198,12 +199,13 @@ Valid tests:
 - Top-level self-recursion.
 - Top-level mutual recursion.
 - Basic non-capturing local rec group called from the `in` body.
+- Local rec function used as a first-class `fn` value in the `in` body.
+- Shadowing where a local binding hides a rec function name.
 - Non-capturing local self-recursion.
 - Non-capturing local mutual recursion.
-- Local rec function used as a first-class `fn` value in the `in` body.
 - Captured recursive closure with an immutable unrestricted capture.
 - Captured mutual recursive closures sharing one capture list.
-- Shadowing where a parameter or local binding hides a rec function name.
+- Shadowing where a parameter hides a rec function name.
 
 Invalid tests:
 

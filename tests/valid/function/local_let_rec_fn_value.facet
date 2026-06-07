@@ -1,0 +1,6 @@
+fn main() -> unrestricted isize {
+  let rec id_local(x: unrestricted isize) -> unrestricted isize {
+    x
+  }
+  in let f: unrestricted fn(unrestricted isize) -> unrestricted isize = id_local in (f 7)
+}

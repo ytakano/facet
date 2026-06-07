@@ -1,0 +1,3 @@
+fn main() -> affine core::result::Result<affine isize, affine bool> {
+  core::result::Result<affine isize, affine bool>::Ok(1)
+}

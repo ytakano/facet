@@ -102,9 +102,14 @@ let expr_of_place = function
   | NPVar x -> NVar x
   | p -> NPlace p
 
+let split_constructor_path segments =
+  match List.rev segments with
+  | variant :: enum_rev when enum_rev <> [] -> (List.rev enum_rev, variant)
+  | _ -> failwith "enum constructor path must include enum and variant"
+
 %}
 
-%token KW_FN KW_FOR KW_STRUCT KW_ENUM KW_TRAIT KW_IMPL KW_MATCH KW_LET KW_IN KW_MUT KW_DROP KW_REPLACE KW_CLOSURE
+%token KW_FN KW_FOR KW_STRUCT KW_ENUM KW_TRAIT KW_IMPL KW_MATCH KW_MOD KW_LET KW_IN KW_MUT KW_DROP KW_REPLACE KW_CLOSURE
 %token KW_AFFINE KW_LINEAR KW_UNRESTRICTED KW_ISIZE KW_F64
 %token KW_IF KW_ELSE KW_TRUE KW_FALSE KW_BOOL KW_WHERE
 %token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET LANGLE RANGLE
@@ -129,6 +134,11 @@ top_item:
   | e = enum_def { NIEnum e }
   | t = trait_def { NITrait t }
   | i = impl_def { NIImpl i }
+  | m = mod_def { m }
+
+mod_def:
+  | KW_MOD; name = ID; LBRACE; items = list(top_item); RBRACE
+    { NIMod (name, items) }
 
 fn_def:
   | KW_FN; name = ID; generics = opt_generic_params;
@@ -169,7 +179,7 @@ trait_def:
     { { nt_name = name; nt_generics = generics; nt_bounds = bounds } }
 
 impl_def:
-  | KW_IMPL; generics = opt_generic_params; trait_name = ID; trait_args = opt_type_args;
+  | KW_IMPL; generics = opt_generic_params; trait_name = path_name; trait_args = opt_type_args;
     KW_FOR; for_ty = ty; SEMI
     { { ni_generics = generics; ni_trait_name = trait_name;
         ni_trait_args = trait_args; ni_for_ty = for_ty } }
@@ -201,7 +211,7 @@ trait_bound:
     { { ntb_type_name = type_name; ntb_traits = traits } }
 
 trait_ref:
-  | name = ID; args = opt_type_args
+  | name = path_name; args = opt_type_args
     { { ntr_name = name; ntr_args = args } }
 
 struct_field:
@@ -277,24 +287,33 @@ atom_expr:
   | KW_FALSE
     { NLit (LBool false) }
   | name = ID; LBRACE; fields = separated_list(COMMA, struct_literal_field); RBRACE
+    { NStruct ([name], [], fields) }
+  | name = qualified_path; LBRACE; fields = separated_list(COMMA, struct_literal_field); RBRACE
     { NStruct (name, [], fields) }
-  | name = ID; LANGLE; args = separated_nonempty_list(COMMA, type_arg); RANGLE;
-    LBRACE; fields = separated_list(COMMA, struct_literal_field); RBRACE
-    { NStruct (name, args, fields) }
-  | enum_name = ID; DCOLON; variant_name = ID; LPAREN;
-    payloads = separated_list(COMMA, atom_expr); RPAREN
-    { NEnum (enum_name, [], variant_name, [], payloads) }
+  | ctor = qualified_path; LPAREN; payloads = separated_list(COMMA, atom_expr); RPAREN
+    { let (enum_name, variant_name) = split_constructor_path ctor in
+      NEnum (enum_name, [], variant_name, [], payloads) }
   | enum_name = ID; DCOLON; variant_name = ID;
     LANGLE; variant_args = separated_nonempty_list(COMMA, type_arg); RANGLE;
     LPAREN; payloads = separated_list(COMMA, atom_expr); RPAREN
-    { NEnum (enum_name, [], variant_name, variant_args, payloads) }
+    { NEnum ([enum_name], [], variant_name, variant_args, payloads) }
   | enum_name = ID; LANGLE; args = separated_nonempty_list(COMMA, type_arg); RANGLE;
+    DCOLON; variant_name = ID; LPAREN; payloads = separated_list(COMMA, atom_expr); RPAREN
+    { NEnum ([enum_name], args, variant_name, [], payloads) }
+  | enum_name = qualified_path; LANGLE; args = separated_nonempty_list(COMMA, type_arg); RANGLE;
     DCOLON; variant_name = ID; LPAREN; payloads = separated_list(COMMA, atom_expr); RPAREN
     { NEnum (enum_name, args, variant_name, [], payloads) }
   | enum_name = ID; LANGLE; args = separated_nonempty_list(COMMA, type_arg); RANGLE;
     DCOLON; variant_name = ID; LANGLE; variant_args = separated_nonempty_list(COMMA, type_arg); RANGLE;
     LPAREN; payloads = separated_list(COMMA, atom_expr); RPAREN
+    { NEnum ([enum_name], args, variant_name, variant_args, payloads) }
+  | enum_name = qualified_path; LANGLE; args = separated_nonempty_list(COMMA, type_arg); RANGLE;
+    DCOLON; variant_name = ID; LANGLE; variant_args = separated_nonempty_list(COMMA, type_arg); RANGLE;
+    LPAREN; payloads = separated_list(COMMA, atom_expr); RPAREN
     { NEnum (enum_name, args, variant_name, variant_args, payloads) }
+  | name = ID; LANGLE; args = separated_nonempty_list(COMMA, type_arg); RANGLE;
+    LBRACE; fields = separated_list(COMMA, struct_literal_field); RBRACE
+    { NStruct ([name], args, fields) }
   | KW_MATCH; scrut = match_scrut; LBRACE; branches = match_branches; RBRACE
     { NMatch (scrut, branches) }
   | p = place
@@ -311,7 +330,7 @@ atom_expr:
     { NBorrow (RUnique, p) }
   | LPAREN; STAR; e = expr; RPAREN
     { NDeref e }
-  | LPAREN; f = ID; type_args = opt_type_args; args = list(atom_expr); RPAREN
+  | LPAREN; f = path_name; type_args = opt_type_args; args = list(atom_expr); RPAREN
     { NCall (f, type_args, args) }
   | KW_IF; cond = atom_expr; LBRACE; then_e = block; RBRACE;
     KW_ELSE; LBRACE; else_e = block; RBRACE
@@ -335,6 +354,16 @@ place_base:
 
 field_suffix:
   | DOT; f = ID { f }
+
+path_name:
+  | name = ID { [name] }
+  | p = qualified_path { p }
+
+qualified_path:
+  | head = ID; DCOLON; second = ID; tail = list(path_suffix) { head :: second :: tail }
+
+path_suffix:
+  | DCOLON; name = ID { name }
 
 struct_literal_field:
   | name = ID; EQUAL; e = expr { (name, e) }
@@ -368,7 +397,7 @@ ty_core:
   | KW_F64   { NTFloats }
   | KW_BOOL  { NTBooleans }
   | LPAREN; RPAREN { NTUnits }
-  | name = ID; args = opt_type_args { NTNamed (name, args) }
+  | name = path_name; args = opt_type_args { NTNamed (name, args) }
   | AMP; t = ty { NTRef (None, RShared, t) }
   | AMP; KW_MUT; t = ty { NTRef (None, RUnique, t) }
   | AMP; lt = LIFETIME; t = ty { NTRef (Some (resolve_lifetime lt), RShared, t) }
@@ -401,7 +430,7 @@ signature_ty_core:
   | KW_F64   { NTFloats }
   | KW_BOOL  { NTBooleans }
   | LPAREN; RPAREN { NTUnits }
-  | name = ID; args = opt_type_args { NTNamed (name, args) }
+  | name = path_name; args = opt_type_args { NTNamed (name, args) }
   | AMP; t = signature_ty { NTRef (None, RShared, t) }
   | AMP; KW_MUT; t = signature_ty { NTRef (None, RUnique, t) }
   | AMP; lt = LIFETIME; t = signature_ty { NTRef (Some (resolve_lifetime lt), RShared, t) }

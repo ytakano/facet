@@ -252,6 +252,51 @@ let rec string_of_infer_error ?(diagnostics = []) = function
       (string_of_diagnostic_ident diagnostics id)
       (string_of_infer_error ~diagnostics err)
 
+
+let parse_file filename =
+  let ic = try open_in filename
+    with Sys_error msg ->
+      Printf.eprintf "Error: cannot open file: %s\n" msg;
+      exit 1
+  in
+  let content = really_input_string ic (in_channel_length ic) in
+  close_in ic;
+  let buf = Sedlexing.Utf8.from_string content in
+  Sedlexing.set_filename buf filename;
+  let state = Lexer.make_state filename buf in
+  let lexer_fn = Lexer.provider state in
+  try MenhirLib.Convert.Simplified.traditional2revised Parser.program lexer_fn
+  with
+  | Lexer.LexError (pos, msg) ->
+    Printf.eprintf "Lex error at %s:%d:%d: %s\n"
+      pos.Lexer.pos_fname
+      pos.Lexer.pos_lnum
+      (pos.Lexer.pos_cnum - pos.Lexer.pos_bol)
+      msg;
+    exit 1
+  | Parser.Error ->
+    let (start, _) = Sedlexing.lexing_positions buf in
+    Printf.eprintf "Parse error at %s:%d:%d\n"
+      filename
+      start.Lexing.pos_lnum
+      (start.Lexing.pos_cnum - start.Lexing.pos_bol);
+    exit 1
+
+let core_dir () =
+  match Sys.getenv_opt "FACET_CORE_DIR" with
+  | Some dir -> dir
+  | None -> "core"
+
+let load_core_items () =
+  let dir = core_dir () in
+  if Sys.file_exists dir && Sys.is_directory dir then
+    Sys.readdir dir
+    |> Array.to_list
+    |> List.filter (fun name -> Filename.check_suffix name ".facet")
+    |> List.sort String.compare
+    |> List.concat_map (fun name -> parse_file (Filename.concat dir name))
+  else []
+
 let () =
   let args = Sys.argv in
   if Array.length args >= 2 && args.(1) = "--generate-grammar" then begin
@@ -280,37 +325,10 @@ let () =
     exit 1
   end;
   let filename = args.(!i) in
-  let ic = try open_in filename
-    with Sys_error msg ->
-      Printf.eprintf "Error: cannot open file: %s\n" msg;
-      exit 1
-  in
-  let content = really_input_string ic (in_channel_length ic) in
-  close_in ic;
-  let buf = Sedlexing.Utf8.from_string content in
-  Sedlexing.set_filename buf filename;
-  let state = Lexer.make_state filename buf in
-  let lexer_fn = Lexer.provider state in
-  let named_items =
-    try MenhirLib.Convert.Simplified.traditional2revised Parser.program lexer_fn
-    with
-    | Lexer.LexError (pos, msg) ->
-      Printf.eprintf "Lex error at %s:%d:%d: %s\n"
-        pos.Lexer.pos_fname
-        pos.Lexer.pos_lnum
-        (pos.Lexer.pos_cnum - pos.Lexer.pos_bol)
-        msg;
-      exit 1
-    | Parser.Error ->
-      let (start, _) = Sedlexing.lexing_positions buf in
-      Printf.eprintf "Parse error at %s:%d:%d\n"
-        filename
-        start.Lexing.pos_lnum
-        (start.Lexing.pos_cnum - start.Lexing.pos_bol);
-      exit 1
-  in
+  let core_items = load_core_items () in
+  let named_items = parse_file filename in
   let env =
-    try Debruijn.convert_program_items named_items
+    try Debruijn.convert_program_items_with_core core_items named_items
     with Failure msg ->
       Printf.eprintf "Validation error: %s\n" msg;
       exit 1

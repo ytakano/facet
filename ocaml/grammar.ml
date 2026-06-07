@@ -4,7 +4,7 @@ let grammar = {|
 ## program
 ```
 program ::= top_item*
-top_item ::= fn_def | struct_def | enum_def | trait_def | impl_def
+top_item ::= fn_def | struct_def | enum_def | trait_def | impl_def | mod_def
 ```
 
 ## top-level items
@@ -13,12 +13,13 @@ fn_def ::= "fn" ID opt_generic_params "(" params ")" "->" ty opt_fn_where_clause
 struct_def ::= "struct" ID opt_generic_params opt_trait_bounds "{" struct_field ("," struct_field)* "}"
 enum_def ::= "enum" ID opt_generic_params opt_fn_where_clause "{" enum_variant ("," enum_variant)* "}"
 trait_def ::= "trait" ID opt_generic_params opt_trait_bounds ";"
-impl_def ::= "impl" opt_generic_params ID opt_type_args "for" ty ";"
+impl_def ::= "impl" opt_generic_params path opt_type_args "for" ty ";"
+mod_def ::= "mod" ID "{" top_item* "}"
 struct_field ::= opt_mut ID ":" ty
 enum_variant ::= ID
                | ID "(" ty ("," ty)* ")"
 trait_bound ::= ID ":" trait_ref ("+" trait_ref)*
-trait_ref ::= ID opt_type_args
+trait_ref ::= path opt_type_args
 opt_fn_where_clause ::= ""
                       | "where" fn_where_item ("," fn_where_item)*
 fn_where_item ::= trait_bound | outlives_constraint
@@ -91,9 +92,14 @@ atom_expr ::= "()"
             | "false"
             | place
             | ID "{" struct_literal_field ("," struct_literal_field)* "}"
+            | qualified_path "{" struct_literal_field ("," struct_literal_field)* "}"
             | ID "<" type_arg ("," type_arg)* ">" "{" struct_literal_field ("," struct_literal_field)* "}"
-            | ID "::" ID "(" [atom_expr ("," atom_expr)*] ")"
+            | qualified_path "(" [atom_expr ("," atom_expr)*] ")"
+            | ID "::" ID "<" type_arg ("," type_arg)* ">" "(" [atom_expr ("," atom_expr)*] ")"
             | ID "<" type_arg ("," type_arg)* ">" "::" ID "(" [atom_expr ("," atom_expr)*] ")"
+            | qualified_path "<" type_arg ("," type_arg)* ">" "::" ID "(" [atom_expr ("," atom_expr)*] ")"
+            | ID "<" type_arg ("," type_arg)* ">" "::" ID "<" type_arg ("," type_arg)* ">" "(" [atom_expr ("," atom_expr)*] ")"
+            | qualified_path "<" type_arg ("," type_arg)* ">" "::" ID "<" type_arg ("," type_arg)* ">" "(" [atom_expr ("," atom_expr)*] ")"
             | "match" match_scrut "{" match_branch ("," match_branch)* [","] "}"
             | "(" "drop" expr ")"
             | "(" "replace" place atom_expr ")"
@@ -112,6 +118,8 @@ atom_expr ::= "()"
 place ::= place_base ("." ID)*
 place_base ::= ID
              | "*" place
+path ::= ID | qualified_path
+qualified_path ::= ID "::" ID ("::" ID)*
 struct_literal_field ::= ID "=" expr
 match_branch ::= ID "=>" expr
 match_scrut ::= place
@@ -133,7 +141,7 @@ ty_core ::= "isize"
            | "f64"
            | "bool"
            | "()"
-           | ID opt_type_args
+           | path opt_type_args
            | "&" ty
            | "&" "mut" ty
            | "&" LIFETIME ty
@@ -164,7 +172,7 @@ LIFETIME  ::= "'" alpha (alpha | digit | "_")*
 ## Reserved words
 `fn`, `let`, `in`, `mut`, `drop`, `replace`, `affine`, `linear`,
 `unrestricted`, `isize`, `f64`, `bool`, `true`, `false`, `if`, `else`,
-`struct`, `enum`, `trait`, `impl`, `for`, `where`, `closure`, `match`
+`struct`, `enum`, `trait`, `impl`, `mod`, `for`, `where`, `closure`, `match`
 |}
 
 let print_grammar () = print_string grammar

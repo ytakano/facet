@@ -1,4 +1,5 @@
 type name = string
+type path = name list
 
 type named_place =
   | NPVar of name
@@ -12,7 +13,7 @@ and named_ty_core =
   | NTIntegers
   | NTFloats
   | NTBooleans
-  | NTNamed of string * named_type_arg list
+  | NTNamed of path * named_type_arg list
   | NTFn of named_ty list * named_ty
   | NTClosure of TypeChecker.lifetime * named_ty list * named_ty
   | NTForall of Big_int_Z.big_int * (TypeChecker.lifetime * TypeChecker.lifetime) list * named_ty
@@ -26,7 +27,7 @@ and named_trait_bound = {
   ntb_traits    : named_trait_ref list;
 }
 and named_trait_ref = {
-  ntr_name : string;
+  ntr_name : path;
   ntr_args : named_type_arg list;
 }
 
@@ -46,9 +47,9 @@ type named_expr =
   | NVar    of name
   | NPlace  of named_place
   | NLet    of TypeChecker.mutability * name * named_ty option * named_expr * named_expr
-  | NCall   of name * named_type_arg list * named_expr list
-  | NStruct of name * named_type_arg list * (name * named_expr) list
-  | NEnum   of name * named_type_arg list * name * named_type_arg list * named_expr list
+  | NCall   of path * named_type_arg list * named_expr list
+  | NStruct of path * named_type_arg list * (name * named_expr) list
+  | NEnum   of path * named_type_arg list * name * named_type_arg list * named_expr list
   | NMatch  of named_expr * (name * name list * named_expr) list
   | NReplace of named_place * named_expr
   | NAssign of named_place * named_expr
@@ -103,7 +104,7 @@ type named_trait_def = {
 
 type named_impl_def = {
   ni_generics   : named_generic_param list;
-  ni_trait_name : name;
+  ni_trait_name : path;
   ni_trait_args : named_type_arg list;
   ni_for_ty     : named_ty;
 }
@@ -114,3 +115,4 @@ type named_item =
   | NIEnum of named_enum_def
   | NITrait of named_trait_def
   | NIImpl of named_impl_def
+  | NIMod of name * named_item list

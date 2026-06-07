@@ -1,0 +1,15 @@
+mod core {
+  mod option {
+    enum Option<T> {
+      None,
+      Some(affine T)
+    }
+  }
+
+  mod result {
+    enum Result<T, E> {
+      Ok(affine T),
+      Err(affine E)
+    }
+  }
+}

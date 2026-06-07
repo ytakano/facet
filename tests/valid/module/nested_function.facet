@@ -1,0 +1,9 @@
+mod math {
+  fn id(x: affine isize) -> affine isize {
+    x
+  }
+}
+
+fn main() -> affine isize {
+  (math::id 1)
+}

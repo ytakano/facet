@@ -10,6 +10,210 @@ type ty_scope = {
   enum_names   : string list;
 }
 
+let string_of_path path = String.concat "::" path
+
+let split_generics params =
+  let rec go lts tys = function
+    | [] -> (List.rev lts, List.rev tys)
+    | NGLifetime lt :: rest -> go (lt :: lts) tys rest
+    | NGType ty :: rest -> go lts (ty :: tys) rest
+  in
+  go [] [] params
+
+
+let parent_prefixes prefix =
+  let rec aux acc p =
+    match p with
+    | [] -> List.rev ([] :: acc)
+    | _ -> aux (p :: acc) (List.rev (List.tl (List.rev p)))
+  in
+  aux [] prefix
+
+let resolve_path_from known prefix path =
+  match path with
+  | [] -> failwith "empty path"
+  | [name] ->
+    let candidates = List.map (fun p -> string_of_path (p @ [name])) (parent_prefixes prefix) in
+    begin match List.find_opt (fun candidate -> List.mem candidate known) candidates with
+    | Some resolved -> resolved
+    | None -> name
+    end
+  | _ -> string_of_path path
+
+let rec map_named_ty f ty_params (NTy (u, c)) =
+  NTy (u, map_named_ty_core f ty_params c)
+
+and map_named_ty_core f ty_params = function
+  | NTUnits -> NTUnits
+  | NTIntegers -> NTIntegers
+  | NTFloats -> NTFloats
+  | NTBooleans -> NTBooleans
+  | NTNamed ([name], args) when List.mem name ty_params ->
+    NTNamed ([name], List.map (map_named_type_arg f ty_params) args)
+  | NTNamed (path, args) ->
+    NTNamed ([f path], List.map (map_named_type_arg f ty_params) args)
+  | NTFn (ts, ret) ->
+    NTFn (List.map (map_named_ty f ty_params) ts, map_named_ty f ty_params ret)
+  | NTClosure (lt, ts, ret) ->
+    NTClosure (lt, List.map (map_named_ty f ty_params) ts, map_named_ty f ty_params ret)
+  | NTForall (n, outs, body) ->
+    NTForall (n, outs, map_named_ty f ty_params body)
+  | NTTypeForall (params, bounds, body) ->
+    NTTypeForall (params, List.map (map_named_trait_bound f ty_params) bounds,
+      map_named_ty f (params @ ty_params) body)
+  | NTRef (lt, rk, inner) ->
+    NTRef (lt, rk, map_named_ty f ty_params inner)
+
+and map_named_type_arg f ty_params = function
+  | NTArgLifetime lt -> NTArgLifetime lt
+  | NTArgTy ty -> NTArgTy (map_named_ty f ty_params ty)
+
+and map_named_trait_ref f ty_params r =
+  { ntr_name = [f r.ntr_name];
+    ntr_args = List.map (map_named_type_arg f ty_params) r.ntr_args }
+
+and map_named_trait_bound f ty_params b =
+  { b with ntb_traits = List.map (map_named_trait_ref f ty_params) b.ntb_traits }
+
+let map_named_param f ty_params p =
+  { p with np_ty = map_named_ty f ty_params p.np_ty }
+
+let rec map_named_expr f fn_names ty_params value_scope = function
+  | NUnit -> NUnit
+  | NLit l -> NLit l
+  | NVar name ->
+    if List.mem name value_scope then NVar name
+    else
+      let resolved = f [name] in
+      if List.mem resolved fn_names then NVar resolved else NVar name
+  | NPlace p -> NPlace p
+  | NLet (m, name, ty_opt, e1, e2) ->
+    let ty_opt' = Option.map (map_named_ty f ty_params) ty_opt in
+    NLet (m, name, ty_opt',
+      map_named_expr f fn_names ty_params value_scope e1,
+      map_named_expr f fn_names ty_params (name :: value_scope) e2)
+  | NCall (path, args, exprs) ->
+    let path' =
+      match path with
+      | [name] when List.mem name value_scope -> [name]
+      | _ -> [f path]
+    in
+    NCall (path', List.map (map_named_type_arg f ty_params) args,
+      List.map (map_named_expr f fn_names ty_params value_scope) exprs)
+  | NStruct (path, args, fields) ->
+    NStruct ([f path], List.map (map_named_type_arg f ty_params) args,
+      List.map (fun (field, e) ->
+        (field, map_named_expr f fn_names ty_params value_scope e)) fields)
+  | NEnum (path, args, variant, variant_args, payloads) ->
+    NEnum ([f path], List.map (map_named_type_arg f ty_params) args, variant,
+      List.map (map_named_type_arg f ty_params) variant_args,
+      List.map (map_named_expr f fn_names ty_params value_scope) payloads)
+  | NMatch (scrut, branches) ->
+    NMatch (map_named_expr f fn_names ty_params value_scope scrut,
+      List.map (fun (variant, binders, body) ->
+        (variant, binders, map_named_expr f fn_names ty_params (binders @ value_scope) body)) branches)
+  | NReplace (place, e) ->
+    NReplace (place, map_named_expr f fn_names ty_params value_scope e)
+  | NAssign (place, e) ->
+    NAssign (place, map_named_expr f fn_names ty_params value_scope e)
+  | NBorrow (rk, place) -> NBorrow (rk, place)
+  | NDeref e -> NDeref (map_named_expr f fn_names ty_params value_scope e)
+  | NDrop e -> NDrop (map_named_expr f fn_names ty_params value_scope e)
+  | NIf (a, b, c) ->
+    NIf (map_named_expr f fn_names ty_params value_scope a,
+         map_named_expr f fn_names ty_params value_scope b,
+         map_named_expr f fn_names ty_params value_scope c)
+  | NClosure (captures, params, ret, body) ->
+    let params' = List.map (map_named_param f ty_params) params in
+    let value_scope' = List.map (fun p -> p.np_name) params @ captures @ value_scope in
+    NClosure (captures, params', map_named_ty f ty_params ret,
+      map_named_expr f fn_names ty_params value_scope' body)
+
+let item_local_name = function
+  | NIFn f -> f.nf_name
+  | NIStruct s -> s.ns_name
+  | NIEnum e -> e.ne_name
+  | NITrait t -> t.nt_name
+  | NIImpl _ -> "<impl>"
+  | NIMod (name, _) -> name
+
+let duplicate_module_name names =
+  let names = List.filter ((<>) "<impl>") names in
+  let rec go seen = function
+    | [] -> None
+    | x :: xs -> if List.mem x seen then Some x else go (x :: seen) xs
+  in
+  go [] names
+
+let rec reject_user_core_module = function
+  | [] -> ()
+  | NIMod ("core", _) :: _ -> failwith "user-defined module core is reserved"
+  | NIMod (_, items) :: rest -> reject_user_core_module items; reject_user_core_module rest
+  | _ :: rest -> reject_user_core_module rest
+
+let rec collect_item_paths prefix items =
+  begin match duplicate_module_name (List.map item_local_name items) with
+  | Some name -> failwith ("duplicate item in module " ^ string_of_path prefix ^ ": " ^ name)
+  | None -> ()
+  end;
+  List.concat_map
+    (function
+      | NIMod (name, children) -> collect_item_paths (prefix @ [name]) children
+      | NIFn f -> [prefix @ [f.nf_name]]
+      | NIStruct st -> [prefix @ [st.ns_name]]
+      | NIEnum e -> [prefix @ [e.ne_name]]
+      | NITrait t -> [prefix @ [t.nt_name]]
+      | NIImpl _ -> [])
+    items
+
+let rec flatten_modules known prefix items =
+  let known_names = List.map string_of_path known in
+  let fn_names = known_names in
+  let resolve = resolve_path_from known_names prefix in
+  List.concat_map
+    (function
+      | NIMod (name, children) -> flatten_modules known (prefix @ [name]) children
+      | NIFn f ->
+        let (_lts, tys) = split_generics f.nf_generics in
+        [NIFn { f with nf_name = string_of_path (prefix @ [f.nf_name]);
+                      nf_bounds = List.map (map_named_trait_bound resolve tys) f.nf_bounds;
+                      nf_params = List.map (map_named_param resolve tys) f.nf_params;
+                      nf_ret = map_named_ty resolve tys f.nf_ret;
+                      nf_body = map_named_expr resolve fn_names tys
+                        (List.map (fun p -> p.np_name) f.nf_params) f.nf_body }]
+      | NIStruct st ->
+        let (_lts, tys) = split_generics st.ns_generics in
+        [NIStruct { st with ns_name = string_of_path (prefix @ [st.ns_name]);
+                           ns_bounds = List.map (map_named_trait_bound resolve tys) st.ns_bounds;
+                           ns_fields = List.map
+                             (fun field -> { field with nfield_ty = map_named_ty resolve tys field.nfield_ty })
+                             st.ns_fields }]
+      | NIEnum e ->
+        let (_lts, tys) = split_generics e.ne_generics in
+        [NIEnum { e with ne_name = string_of_path (prefix @ [e.ne_name]);
+                         ne_bounds = List.map (map_named_trait_bound resolve tys) e.ne_bounds;
+                         ne_variants = List.map
+                           (fun v -> { v with nev_fields = List.map (map_named_ty resolve tys) v.nev_fields })
+                           e.ne_variants }]
+      | NITrait t ->
+        let (_lts, tys) = split_generics t.nt_generics in
+        [NITrait { t with nt_name = string_of_path (prefix @ [t.nt_name]);
+                          nt_bounds = List.map (map_named_trait_bound resolve tys) t.nt_bounds }]
+      | NIImpl i ->
+        let (_lts, tys) = split_generics i.ni_generics in
+        [NIImpl { i with ni_trait_name = [resolve i.ni_trait_name];
+                         ni_trait_args = List.map (map_named_type_arg resolve tys) i.ni_trait_args;
+                         ni_for_ty = map_named_ty resolve tys i.ni_for_ty }])
+    items
+
+let flatten_program_items items =
+  let known = collect_item_paths [] items in
+  flatten_modules known [] items
+
+let flatten_program_items_with_core core_items user_items =
+  reject_user_core_module user_items;
+  flatten_program_items (core_items @ user_items)
+
 let current_depth scope name =
   match List.assoc_opt name scope with
   | Some d -> d
@@ -72,7 +276,8 @@ and lower_named_ty_core ty_scope c =
   | NTIntegers -> TIntegers
   | NTFloats -> TFloats
   | NTBooleans -> TBooleans
-  | NTNamed (s, args) ->
+  | NTNamed (path, args) ->
+    let s = string_of_path path in
     begin match index_of s ty_scope.type_params with
     | Some i ->
       if args <> [] then failwith ("type parameter cannot take arguments: " ^ s);
@@ -124,15 +329,15 @@ and core_trait_bound_of_named ty_scope type_params b =
 and core_trait_ref_of_named ty_scope r =
   let (lts, args) = split_type_args ty_scope r.ntr_args in
   if lts <> []
-  then failwith ("trait bound cannot take lifetime arguments: " ^ r.ntr_name);
-  { core_trait_ref_name = r.ntr_name;
+  then failwith ("trait bound cannot take lifetime arguments: " ^ string_of_path r.ntr_name);
+  { core_trait_ref_name = string_of_path r.ntr_name;
     core_trait_ref_args = args }
 
 let trait_ref_of_named ty_scope r =
   let (lts, args) = split_type_args ty_scope r.ntr_args in
   if lts <> []
-  then failwith ("trait bound cannot take lifetime arguments: " ^ r.ntr_name);
-  { trait_ref_name = r.ntr_name;
+  then failwith ("trait bound cannot take lifetime arguments: " ^ string_of_path r.ntr_name);
+  { trait_ref_name = string_of_path r.ntr_name;
     trait_ref_args = args }
 
 let rec named_ty_has_elided_ref_lifetime (NTy (_, c)) =
@@ -238,7 +443,8 @@ let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (
     EBorrow (rk, convert_place scope p)
   | NDeref e1 ->
     EDeref (convert fn_names ty_scope scope e1)
-  | NCall (f, type_args, args) ->
+  | NCall (f_path, type_args, args) ->
+    let f = string_of_path f_path in
     let args' = List.map (convert fn_names ty_scope scope) args in
     if type_args = [] then
       if in_scope scope f then ECallExpr (EVar (make_ident f (lookup scope f)), args')
@@ -247,11 +453,13 @@ let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (
       failwith "explicit type arguments are only supported for direct function calls"
     else
       ECallGeneric (make_ident f 0, lower_call_type_args ty_scope type_args, args')
-  | NStruct (name, args, fields) ->
+  | NStruct (name_path, args, fields) ->
+    let name = string_of_path name_path in
     let (lts, tys) = split_expr_type_args ty_scope args in
     EStruct (name, lts, tys,
       List.map (fun (field, e1) -> (field, convert fn_names ty_scope scope e1)) fields)
-  | NEnum (enum_name, args, variant_name, variant_args, payloads) ->
+  | NEnum (enum_name_path, args, variant_name, variant_args, payloads) ->
+    let enum_name = string_of_path enum_name_path in
     let (lts, tys) = split_expr_type_args ty_scope args in
     let (variant_lts, variant_tys) = split_expr_type_args ty_scope variant_args in
     if variant_tys <> [] then failwith "variant-local type arguments are not supported";
@@ -312,7 +520,8 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
     RawBorrow (rk, convert_place scope p)
   | NDeref e1 ->
     RawDeref (convert_raw fn_names ty_scope scope e1)
-  | NCall (f, type_args, args) ->
+  | NCall (f_path, type_args, args) ->
+    let f = string_of_path f_path in
     let args' = List.map (convert_raw fn_names ty_scope scope) args in
     if type_args = [] then
       if in_scope scope f then RawCallExpr (RawVar (ident_of_name scope f), args')
@@ -321,11 +530,13 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
       failwith "explicit type arguments are only supported for direct function calls"
     else
       RawCallGeneric (make_ident f 0, lower_call_type_args ty_scope type_args, args')
-  | NStruct (name, args, fields) ->
+  | NStruct (name_path, args, fields) ->
+    let name = string_of_path name_path in
     let (lts, tys) = split_expr_type_args ty_scope args in
     RawStruct (name, lts, tys,
       List.map (fun (field, e1) -> (field, convert_raw fn_names ty_scope scope e1)) fields)
-  | NEnum (enum_name, args, variant_name, variant_args, payloads) ->
+  | NEnum (enum_name_path, args, variant_name, variant_args, payloads) ->
+    let enum_name = string_of_path enum_name_path in
     let (lts, tys) = split_expr_type_args ty_scope args in
     let (variant_lts, variant_tys) = split_expr_type_args ty_scope variant_args in
     if variant_tys <> [] then failwith "variant-local type arguments are not supported";
@@ -470,10 +681,10 @@ let convert_impl struct_names enum_names i =
   let ty_scope = { type_params = tys; struct_names; enum_names } in
   let (trait_lts, trait_args) = split_expr_type_args ty_scope i.ni_trait_args in
   if trait_lts <> []
-  then failwith ("trait impl target cannot take lifetime arguments: " ^ i.ni_trait_name);
+  then failwith ("trait impl target cannot take lifetime arguments: " ^ string_of_path i.ni_trait_name);
   { impl_lifetimes = Big_int_Z.big_int_of_int (List.length lts);
     impl_type_params = Big_int_Z.big_int_of_int (List.length tys);
-    impl_trait_name = i.ni_trait_name;
+    impl_trait_name = string_of_path i.ni_trait_name;
     impl_trait_args = trait_args;
     impl_for_ty = lower_named_ty ty_scope i.ni_for_ty }
 
@@ -736,7 +947,7 @@ let validate_env env =
       in
       if dup_impl env.env_impls then Some "duplicate impl" else None
 
-let convert_program_items (items : named_item list) : global_env =
+let convert_program_items_from_flattened items : global_env =
   let structs = List.filter_map (function NIStruct s -> Some s | _ -> None) items in
   let enums = List.filter_map (function NIEnum e -> Some e | _ -> None) items in
   let traits = List.filter_map (function NITrait t -> Some t | _ -> None) items in
@@ -777,6 +988,12 @@ let convert_program_items (items : named_item list) : global_env =
   match validate_env env with
   | None -> env
   | Some msg -> failwith msg
+
+let convert_program_items items =
+  convert_program_items_from_flattened (flatten_program_items items)
+
+let convert_program_items_with_core core_items user_items =
+  convert_program_items_from_flattened (flatten_program_items_with_core core_items user_items)
 
 let convert_program (items : named_item list) : fn_def list =
   (convert_program_items items).env_fns

@@ -21,6 +21,8 @@ Done:
   function names and rejects user top-level `__facet_*` names.
 - Explicit-capture local rec groups lower rec references to closure values and
   reuse existing closure capture checking for non-recursive captured calls.
+- FIR regression coverage locks synthetic local-rec function emission, direct
+  calls, and captured closure construction/calls.
 
 Next:
 
@@ -232,8 +234,8 @@ Invalid tests:
 
 FIR tests:
 
-- Non-capturing local rec emits synthetic functions and direct calls.
-- Captured local rec emits synthetic captured functions and closure values.
+- Done: non-capturing local rec emits synthetic functions and direct calls.
+- Done: captured local rec emits synthetic captured functions and closure calls.
 
 Required checks for implementation PRs:
 

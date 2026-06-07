@@ -9,6 +9,8 @@ Done:
 - Roadmap captured in this file.
 - Baseline tests lock current top-level recursive function values.
 - `rec` and `and` are reserved words in the OCaml frontend.
+- Parser and named AST accept local `let rec` groups, including shared explicit
+  capture lists, but conversion fails with `let rec is not implemented yet`.
 
 Next:
 
@@ -16,6 +18,7 @@ Next:
   end-to-end safety gate. They currently type-check far enough to reach
   `ErrEndToEndSafetyGateFailed`, because the store-safe sidecar only accepts
   direct calls whose callee body is already narrow-store-safe.
+- Add raw AST/de Bruijn lowering for local rec groups.
 
 This roadmap adds local recursion in stages, ending with a safe v1 for
 explicit-capture recursive closures. The first implementation should avoid a
@@ -119,12 +122,12 @@ For an explicit-capture recursive closure group:
 
 2. Parser and named AST.
    - Done: reserve `rec` and `and` in the lexer/parser token set.
-   - Add a named AST node for local recursive groups with optional shared
+   - Done: add a named AST node for local recursive groups with optional shared
      capture list, function names, params, returns, and bodies.
-   - Update grammar printing to include both non-capturing and capturing forms.
-   - Keep parser validation syntactic only: duplicate names and capture
-     validity are handled by later conversion/elaboration unless the error is
-     purely grammatical.
+   - Done: update grammar printing to include both non-capturing and capturing
+     forms.
+   - Done: conversion currently rejects the parsed node with
+     `let rec is not implemented yet`; parser validation remains syntactic only.
 
 3. Name resolution and raw AST.
    - Add a raw expression for recursive groups, for example

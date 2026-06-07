@@ -291,6 +291,21 @@ expr:
     { NLet (m, x, Some t, e1, e2) }
   | KW_LET; m = opt_mut; x = var_name; EQUAL; e1 = expr; KW_IN; e2 = expr
     { NLet (m, x, None, e1, e2) }
+  | KW_LET; KW_REC; captures = opt_rec_captures; f = rec_fn_def; rest = list(rec_and_fn_def);
+    KW_IN; body = expr
+    { NLetRec (captures, f :: rest, body) }
+
+rec_fn_def:
+  | name = ID; LPAREN; ps = params; RPAREN; ARROW; ret = signature_ty;
+    LBRACE; body = block; RBRACE
+    { { nrf_name = name; nrf_params = ps; nrf_ret = ret; nrf_body = body } }
+
+rec_and_fn_def:
+  | KW_AND; f = rec_fn_def { f }
+
+opt_rec_captures:
+  | { [] }
+  | LBRACKET; captures = separated_list(COMMA, ID); RBRACKET { captures }
 
 (* Atomic expressions — no inline let; used for call args and expr-stmts *)
 atom_expr:

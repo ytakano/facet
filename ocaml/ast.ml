@@ -62,6 +62,13 @@ type named_expr =
   | NDrop   of named_expr
   | NIf     of named_expr * named_expr * named_expr
   | NClosure of name list * named_param list * named_ty * named_expr
+  | NLetRec of name list * named_rec_fn list * named_expr
+and named_rec_fn = {
+  nrf_name   : name;
+  nrf_params : named_param list;
+  nrf_ret    : named_ty;
+  nrf_body   : named_expr;
+}
 
 type named_fn_def = {
   nf_visibility     : named_visibility;

@@ -85,6 +85,11 @@ var_name ::= ID
 expr ::= atom_expr
        | "let" opt_mut var_name ":" ty "=" expr "in" expr
        | "let" opt_mut var_name "=" expr "in" expr
+       | "let" "rec" opt_rec_captures rec_fn_def ("and" rec_fn_def)* "in" expr
+
+rec_fn_def ::= ID "(" params ")" "->" ty "{" block "}"
+opt_rec_captures ::= ""
+                   | "[" capture_list "]"
 ```
 
 ## atom_expr

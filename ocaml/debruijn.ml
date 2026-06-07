@@ -177,6 +177,8 @@ let rec map_named_expr f fn_names ty_params value_scope = function
     let value_scope' = List.map (fun p -> p.np_name) params @ captures @ value_scope in
     NClosure (captures, params', map_named_ty f ty_params ret,
       map_named_expr f fn_names ty_params value_scope' body)
+  | NLetRec _ ->
+    failwith "let rec is not implemented yet"
 
 let item_local_name = function
   | NIFn f -> f.nf_name
@@ -432,6 +434,8 @@ let rec validate_expr_paths known ty_params value_scope = function
     validate_ty_paths known ty_params ret;
     let value_scope' = List.map (fun p -> p.np_name) params @ captures @ value_scope in
     validate_expr_paths known ty_params value_scope' body
+  | NLetRec _ ->
+    failwith "let rec is not implemented yet"
 
 let validate_item_paths known = function
   | NIFn f ->
@@ -744,6 +748,8 @@ let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (
          convert fn_names ty_scope scope else_e)
   | NClosure _ ->
     failwith "closure literals must be lowered through raw elaboration"
+  | NLetRec _ ->
+    failwith "let rec is not implemented yet"
 
 let add_capture_binding outer_scope closure_scope name =
   (name, lookup outer_scope name) :: closure_scope
@@ -831,6 +837,8 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
     in
     RawClosure (capture_ids, raw_params, lower_named_ty ty_scope ret,
       convert_raw fn_names ty_scope body_scope body)
+  | NLetRec _ ->
+    failwith "let rec is not implemented yet"
 
 let convert_fn_def_with_names struct_names enum_names fn_names (f : named_fn_def) : fn_def =
   let (lts, tys) = split_generics f.nf_generics in

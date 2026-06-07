@@ -29,16 +29,52 @@ let parent_prefixes prefix =
   in
   aux [] prefix
 
+type item_info = {
+  info_name : string;
+  info_visibility : named_visibility;
+  info_owner : string list;
+  info_ancestors : (string list * named_visibility) list;
+}
+
+let rec path_starts_with prefix path =
+  match prefix, path with
+  | [], _ -> true
+  | p :: ps, x :: xs when p = x -> path_starts_with ps xs
+  | _ -> false
+
+let item_visible_from prefix info =
+  let visible_from_owner owner visibility =
+    match visibility with
+    | VPublic -> true
+    | VPrivate -> path_starts_with owner prefix
+  in
+  visible_from_owner info.info_owner info.info_visibility
+  && List.for_all
+    (fun (owner, visibility) -> visible_from_owner owner visibility)
+    info.info_ancestors
+
+let resolve_info_from known prefix name =
+  match List.find_opt (fun info -> info.info_name = name) known with
+  | None -> None
+  | Some info ->
+    if item_visible_from prefix info then Some info
+    else failwith ("private path: " ^ name)
+
 let resolve_path_from known prefix path =
   match path with
   | [] -> failwith "empty path"
   | [name] ->
     let candidates = List.map (fun p -> string_of_path (p @ [name])) (parent_prefixes prefix) in
-    begin match List.find_opt (fun candidate -> List.mem candidate known) candidates with
-    | Some resolved -> resolved
+    begin match List.find_map (resolve_info_from known prefix) candidates with
+    | Some info -> info.info_name
     | None -> name
     end
-  | _ -> string_of_path path
+  | _ ->
+    let name = string_of_path path in
+    begin match resolve_info_from known prefix name with
+    | Some info -> info.info_name
+    | None -> name
+    end
 
 let rec map_named_ty f ty_params (NTy (u, c)) =
   NTy (u, map_named_ty_core f ty_params c)
@@ -166,10 +202,39 @@ let rec collect_item_paths prefix items =
       | NIImpl _ -> [])
     items
 
+let rec collect_item_infos ancestors prefix items =
+  List.concat_map
+    (function
+      | NIMod (visibility, name, children) ->
+        let module_path = prefix @ [name] in
+        collect_item_infos ((prefix, visibility) :: ancestors) module_path children
+      | NIFn f ->
+        [{ info_name = string_of_path (prefix @ [f.nf_name]);
+           info_visibility = f.nf_visibility;
+           info_owner = prefix;
+           info_ancestors = ancestors }]
+      | NIStruct st ->
+        [{ info_name = string_of_path (prefix @ [st.ns_name]);
+           info_visibility = st.ns_visibility;
+           info_owner = prefix;
+           info_ancestors = ancestors }]
+      | NIEnum e ->
+        [{ info_name = string_of_path (prefix @ [e.ne_name]);
+           info_visibility = e.ne_visibility;
+           info_owner = prefix;
+           info_ancestors = ancestors }]
+      | NITrait t ->
+        [{ info_name = string_of_path (prefix @ [t.nt_name]);
+           info_visibility = t.nt_visibility;
+           info_owner = prefix;
+           info_ancestors = ancestors }]
+      | NIImpl _ -> [])
+    items
+
 let rec flatten_modules known prefix items =
-  let known_names = List.map string_of_path known in
+  let known_names = List.map (fun info -> info.info_name) known in
   let fn_names = known_names in
-  let resolve = resolve_path_from known_names prefix in
+  let resolve = resolve_path_from known prefix in
   List.concat_map
     (function
       | NIMod (_, name, children) -> flatten_modules known (prefix @ [name]) children
@@ -207,7 +272,8 @@ let rec flatten_modules known prefix items =
     items
 
 let flatten_program_items items =
-  let known = collect_item_paths [] items in
+  ignore (collect_item_paths [] items);
+  let known = collect_item_infos [] [] items in
   flatten_modules known [] items
 
 let flatten_program_items_with_core core_items user_items =

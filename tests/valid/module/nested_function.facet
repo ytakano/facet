@@ -1,5 +1,5 @@
-mod math {
-  fn id(x: affine isize) -> affine isize {
+pub mod math {
+  pub fn id(x: affine isize) -> affine isize {
     x
   }
 }

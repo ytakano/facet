@@ -1,0 +1,13 @@
+mod api {
+  fn id(x: affine isize) -> affine isize { x }
+
+  mod child {
+    fn call(x: affine isize) -> affine isize {
+      (id x)
+    }
+  }
+}
+
+fn main() -> affine isize {
+  1
+}

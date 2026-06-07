@@ -1,0 +1,9 @@
+mod a {
+  fn id(x: affine isize) -> affine isize { x }
+}
+
+mod b {
+  fn call() -> affine isize {
+    (a::id 1)
+  }
+}

@@ -1,13 +1,13 @@
-mod core {
-  mod option {
-    enum Option<T> {
+pub mod core {
+  pub mod option {
+    pub enum Option<T> {
       None,
       Some(affine T)
     }
   }
 
-  mod result {
-    enum Result<T, E> {
+  pub mod result {
+    pub enum Result<T, E> {
       Ok(affine T),
       Err(affine E)
     }

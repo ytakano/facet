@@ -16,7 +16,7 @@
 3. **M3.2 visibility resolver**: done. Flattening rejects private qualified paths outside the owner module subtree and respects private module ancestors.
 4. **M3.3 visibility fixtures**: done. Covered public path access, private sibling rejection, child access to parent private helpers, private module ancestors, and public core paths.
 5. **M4.1 named imports**: done. `use path;` imports a module-local final segment, resolves to the same canonical path as explicit qualification, and rejects unknown, private, duplicate, or ambiguous imports.
-6. **M4.2 import aliases**: add `use path as Name;` for type/function paths.
+6. **M4.2 import aliases**: done. `use path as Name;` binds a module-local alias for function/type paths and rejects private targets or alias collisions.
 7. **M5.1 file module declarations**: parse `mod foo;` and load `foo.facet` or `foo/mod.facet` relative to the declaring file, rejecting missing files, duplicate inline/file modules, and cycles.
 8. **M6.1 package root flags**: add explicit `--core-dir DIR` and, if needed, `--package-root DIR`; keep `core::...` globally available.
 

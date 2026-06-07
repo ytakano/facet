@@ -14,7 +14,8 @@ struct_def ::= opt_pub "struct" ID opt_generic_params opt_trait_bounds "{" struc
 enum_def ::= opt_pub "enum" ID opt_generic_params opt_fn_where_clause "{" enum_variant ("," enum_variant)* "}"
 trait_def ::= opt_pub "trait" ID opt_generic_params opt_trait_bounds ";"
 impl_def ::= "impl" opt_generic_params path opt_type_args "for" ty ";"
-use_def ::= "use" path ";"
+use_def ::= "use" path opt_use_alias ";"
+opt_use_alias ::= "" | "as" ID
 mod_def ::= opt_pub "mod" ID "{" top_item* "}"
 opt_pub ::= "" | "pub"
 struct_field ::= opt_mut ID ":" ty
@@ -174,7 +175,7 @@ LIFETIME  ::= "'" alpha (alpha | digit | "_")*
 ## Reserved words
 `fn`, `let`, `in`, `mut`, `drop`, `replace`, `affine`, `linear`,
 `unrestricted`, `isize`, `f64`, `bool`, `true`, `false`, `if`, `else`,
-`struct`, `enum`, `trait`, `impl`, `mod`, `pub`, `use`, `for`, `where`, `closure`, `match`
+`struct`, `enum`, `trait`, `impl`, `mod`, `pub`, `use`, `as`, `for`, `where`, `closure`, `match`
 |}
 
 let print_grammar () = print_string grammar

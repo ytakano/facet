@@ -1,0 +1,5 @@
+use core::option::Option as Maybe;
+
+fn main() -> affine Maybe<affine isize> {
+  Maybe<affine isize>::Some(1)
+}

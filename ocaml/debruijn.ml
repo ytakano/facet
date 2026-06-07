@@ -266,8 +266,8 @@ let collect_module_imports known prefix items =
       (fun name -> name <> "<impl>" && name <> "<use>")
       (List.map item_local_name items)
   in
-  let add_import imports path =
-    let name = last_path_segment path in
+  let add_import imports path alias =
+    let name = match alias with Some name -> name | None -> last_path_segment path in
     if List.mem name local_names
     then failwith ("ambiguous import: " ^ name)
     else if List.exists (fun info -> info.import_name = name) imports
@@ -278,7 +278,7 @@ let collect_module_imports known prefix items =
     (List.fold_left
        (fun imports item ->
           match item with
-          | NIUse path -> add_import imports path
+          | NIUse (path, alias) -> add_import imports path alias
           | _ -> imports)
        []
        items)

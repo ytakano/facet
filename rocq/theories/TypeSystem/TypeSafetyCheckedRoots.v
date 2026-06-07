@@ -268,6 +268,7 @@ Lemma typed_match_tail_roots_shadow_safe_subst_type_params_package :
         typed_env_roots_shadow_safe env Omega n
           (root_env_add_params_roots_same ps roots_scrut R)
           (sctx_add_params ps Sigma) e T Sigma_v_payload Rv_payload roots ->
+        contains_lbound_ty T = false ->
         params_ok_sctx_b env ps Sigma_v_payload = true ->
         roots_exclude_params ps roots ->
         Sigma_v = sctx_remove_params ps Sigma_v_payload ->
@@ -292,6 +293,7 @@ Lemma typed_match_tail_roots_shadow_safe_subst_type_params_package :
             (subst_type_params_ty type_args T)
             (subst_type_params_ctx type_args Sigma_v_payload)
             Rv_payload roots /\
+          contains_lbound_ty (subst_type_params_ty type_args T) = false /\
           params_ok_sctx_b env ps_subst
             (subst_type_params_ctx type_args Sigma_v_payload) = true /\
           roots_exclude_params ps_subst roots /\
@@ -320,10 +322,11 @@ Proof.
   - simpl.
     subst R_payload Rv.
     destruct (Hbranch v rest e T Σv_payload Rv_payload roots Σv
-      Σs Ts rootss binders ps H H0 H1 H2 H3 H4 H6 H7 H8 H11 H12 H13 Htail)
+      Σs Ts rootss binders ps H H0 H1 H2 H3 H4 H6 H7 H8 H9 H12 H13 H14 Htail)
       as (ps_subst & Hparams_subst & Hnodup_subst & Hctx_none_subst &
-        Hroot_none_subst & Htyped_subst & Hparams_ok_subst &
-        Hroots_exclude_subst & Hroot_excludes_subst & Hremove_subst &
+        Hroot_none_subst & Htyped_subst & Hno_lbound_subst &
+        Hparams_ok_subst & Hroots_exclude_subst & Hroot_excludes_subst &
+        Hremove_subst &
         Hcore_subst & Hroot_equiv_subst).
     eapply TERSMatchTail_Cons
       with (ps := ps_subst)
@@ -341,6 +344,7 @@ Proof.
     + eapply lookup_expr_branch_subst_type_params_match_branches. exact H4.
     + reflexivity.
     + exact Htyped_subst.
+    + exact Hno_lbound_subst.
     + exact Hparams_ok_subst.
     + exact Hroots_exclude_subst.
     + reflexivity.
@@ -373,6 +377,7 @@ Lemma typed_match_tail_roots_shadow_safe_apply_type_params_package :
         typed_env_roots_shadow_safe env Omega n
           (root_env_add_params_roots_same ps roots_scrut R)
           (sctx_add_params ps Sigma) e T Sigma_v_payload Rv_payload roots ->
+        contains_lbound_ty T = false ->
         params_ok_sctx_b env ps Sigma_v_payload = true ->
         roots_exclude_params ps roots ->
         root_env_excludes_params ps
@@ -392,6 +397,7 @@ Lemma typed_match_tail_roots_shadow_safe_apply_type_params_package :
           (subst_type_params_ty type_args T)
           (subst_type_params_ctx type_args Sigma_v_payload)
           Rv_payload roots /\
+        contains_lbound_ty (subst_type_params_ty type_args T) = false /\
         params_ok_sctx_b env (apply_type_params type_args ps)
           (subst_type_params_ctx type_args Sigma_v_payload) = true /\
         ty_core (subst_type_params_ty type_args T) = expected_core) ->
@@ -412,8 +418,8 @@ Proof.
   - simpl. constructor.
   - simpl. subst R_payload Rv.
     destruct (Hbranch v rest e T Σv_payload Rv_payload roots Σv
-      Σs Ts rootss binders ps H H0 H1 H2 H3 H4 H6 H7 H8 H10 H11 H12 H13
-      Htail) as [Htyped_subst [Hparams_ok_subst Hcore_subst]].
+      Σs Ts rootss binders ps H H0 H1 H2 H3 H4 H6 H7 H8 H9 H11 H12 H13 H14
+      Htail) as [Htyped_subst [Hno_lbound_subst [Hparams_ok_subst Hcore_subst]]].
     eapply TERSMatchTail_Cons
       with (ps := apply_type_params type_args ps)
            (R_payload :=
@@ -433,19 +439,20 @@ Proof.
     + eapply lookup_expr_branch_subst_type_params_match_branches. exact H4.
     + reflexivity.
     + exact Htyped_subst.
+    + exact Hno_lbound_subst.
     + exact Hparams_ok_subst.
-    + eapply roots_exclude_params_apply_type_params_checked_roots. exact H8.
+    + eapply roots_exclude_params_apply_type_params_checked_roots. exact H9.
     + reflexivity.
     + rewrite root_env_remove_match_params_apply_type_params_checked_roots.
       eapply root_env_excludes_params_apply_type_params_checked_roots.
-      exact H10.
+      exact H11.
     + subst Σv.
       rewrite sctx_remove_params_apply_type_params_checked_roots.
       rewrite <- subst_type_params_ctx_sctx_remove_params.
       reflexivity.
     + exact Hcore_subst.
     + rewrite root_env_remove_match_params_apply_type_params_checked_roots.
-      exact H13.
+      exact H14.
     + apply IHHtail.
       * exact Hcompose.
       * intros v0 rest0 e0 T0 Sigma_v_payload0 Rv_payload0 roots0 Sigma_v0
@@ -494,6 +501,7 @@ Lemma typed_env_roots_shadow_safe_ematch_subst_type_params_compat_package :
           (root_env_add_params_roots_same ps roots_scrut R1)
           (sctx_add_params ps Sigma1) e_branch T_branch
           Sigma_branch_payload R_branch_payload roots_branch ->
+        contains_lbound_ty T_branch = false ->
         params_ok_sctx_b env ps Sigma_branch_payload = true ->
         roots_exclude_params ps roots_branch ->
         root_env_excludes_params ps
@@ -514,6 +522,7 @@ Lemma typed_env_roots_shadow_safe_ematch_subst_type_params_compat_package :
           (subst_type_params_ty type_args T_branch)
           (subst_type_params_ctx type_args Sigma_branch_payload)
           R_branch_payload roots_branch /\
+        contains_lbound_ty (subst_type_params_ty type_args T_branch) = false /\
         params_ok_sctx_b env (apply_type_params type_args ps)
           (subst_type_params_ctx type_args Sigma_branch_payload) = true /\
         ty_core (subst_type_params_ty type_args T_branch) = ty_core T_head) ->
@@ -552,17 +561,18 @@ Proof.
     R_head_payload roots_head (sctx_remove_params ps_head Σ_head_payload)
     Σ_tail Ts_tail roots_tail binders_head ps_head lts args R1 Σ1
     roots_scrut (root_env_remove_match_params ps_head R_head_payload)
-    T_head H9 H10 H11 H12 H13 H14 H16 H17 H18 H20 eq_refl
-    eq_refl (root_env_equiv_refl _) H24)
-    as [Htyped_head_subst [Hparams_ok_head_subst Hcore_head_subst]].
+    T_head H10 H11 H12 H13 H14 H15 H17 H18 H19 H20 H22 eq_refl
+    eq_refl (root_env_equiv_refl _) H26)
+    as [Htyped_head_subst [Hno_lbound_head_subst
+      [Hparams_ok_head_subst Hcore_head_subst]]].
   pose proof
     (typed_match_tail_roots_shadow_safe_apply_type_params_package
       env Omega n lts args R1 roots_scrut Σ1 branches v_tail
       (ty_core T_head) (root_env_remove_match_params ps_head R_head_payload)
-      Σ_tail Ts_tail roots_tail type_args (Hcompose args) H24)
+      Σ_tail Ts_tail roots_tail type_args (Hcompose args) H26)
     as Htail_package.
   pose proof (Hmerge_subst (sctx_remove_params ps_head Σ_head_payload)
-    Σ_tail Γ_out H29) as Hmerge_subst_result.
+    Σ_tail Γ_out H31) as Hmerge_subst_result.
   pose proof (Hcompat_result T_head Ts_tail
     (subst_type_params_ty type_args T_head) Hcore_head_subst)
     as Hcompat_match.
@@ -581,6 +591,7 @@ Proof.
     + eassumption.
     + rewrite length_map. eassumption.
     + eapply Hbounds_subst; eassumption.
+    + exact H7.
     + eapply first_unknown_variant_branch_subst_type_params_match_branches.
       eassumption.
     + eassumption.
@@ -595,6 +606,7 @@ Proof.
       eassumption.
     + reflexivity.
     + exact Htyped_head_subst.
+    + exact Hno_lbound_head_subst.
     + exact Hparams_ok_head_subst.
     + eapply roots_exclude_params_apply_type_params_checked_roots.
       eassumption.
@@ -608,8 +620,8 @@ Proof.
     + rewrite Hcore_head_subst. apply Htail_package.
       intros v rest e T0 Sigma_v_payload Rv_payload roots0 Sigma_v
         Sigmas_tail0 Ts_tail0 roots_tail0 binders ps Hlookup_binders Hpayload
-        Hnodup Hctx_none Hroot_none Hlookup_expr Htyped_branch Hparams_ok
-        Hroots_excl Hroot_excl Hremove Hcore Hroot_equiv Htail0.
+        Hnodup Hctx_none Hroot_none Hlookup_expr Htyped_branch Hno_lbound
+        Hparams_ok Hroots_excl Hroot_excl Hremove Hcore Hroot_equiv Htail0.
       eapply Hbranch; eassumption.
     + exact Hmerge_subst_result.
   - exact Hcompat_match.
@@ -1013,20 +1025,23 @@ Proof.
 Qed.
 
 Lemma typed_env_roots_shadow_safe_enum_provenance_ready_leaf_subst_type_params_package :
-  forall env Omega n R Sigma enum_name variant_name lts enum_type_args
+  forall env Omega n R Sigma enum_name variant_name lts variant_lts enum_type_args
       payloads edef vdef Sigma' R' payload_roots type_args,
     provenance_ready_args payloads ->
     Program.lookup_enum enum_name env = Some edef ->
     Program.lookup_enum_variant variant_name (Program.enum_variants edef) =
       Some vdef ->
     Datatypes.length lts = Program.enum_lifetimes edef ->
+    Datatypes.length variant_lts = Program.enum_variant_lifetimes vdef ->
     Datatypes.length enum_type_args = Program.enum_type_params edef ->
     check_struct_bounds env (Program.enum_bounds edef) enum_type_args = None ->
+    Forall (fun '(a, b) => outlives Omega a b)
+      (apply_lt_outlives lts (Program.enum_outlives edef)) ->
     check_struct_bounds env (Program.enum_bounds edef)
       (map (subst_type_params_ty type_args) enum_type_args) = None ->
     typed_args_roots_shadow_safe env Omega n R Sigma payloads
       (params_of_tys
-        (map (instantiate_enum_variant_field_ty lts enum_type_args)
+        (map (instantiate_enum_variant_field_ty lts variant_lts enum_type_args)
           (Program.enum_variant_fields vdef))) Sigma' R' payload_roots ->
     Forall provenance_ready_leaf_expr payloads ->
     (forall T_actual T_expected,
@@ -1044,29 +1059,36 @@ Lemma typed_env_roots_shadow_safe_enum_provenance_ready_leaf_subst_type_params_p
       typed_env_roots_shadow_safe env Omega n R
         (subst_type_params_ctx type_args Sigma)
         (subst_type_params_expr type_args
-          (EEnum enum_name variant_name lts enum_type_args payloads))
+          (EEnum enum_name variant_name lts variant_lts enum_type_args payloads))
         T_subst (sctx_of_ctx Gamma_out_subst) R'
         (root_sets_union payload_roots) /\
       ty_compatible_b Omega T_subst
         (subst_type_params_ty type_args
           (instantiate_enum_ty edef lts enum_type_args)) = true.
 Proof.
-  intros env Omega n R Sigma enum_name variant_name lts enum_type_args
+  intros env Omega n R Sigma enum_name variant_name lts variant_lts enum_type_args
     payloads edef vdef Sigma' R' payload_roots type_args Hready Hlookup
-    Hlookup_variant Hlen_lts Hlen_args _ Hbounds_subst Htyped_payloads
+    Hlookup_variant Hlen_lts Hlen_variant_lts Hlen_args _ Houtlives
+    Hbounds_subst Htyped_payloads
     Hleaf Hcompat_subst Hcompat_result Hcompose.
   exists (instantiate_enum_ty edef lts
       (map (subst_type_params_ty type_args) enum_type_args)),
     (subst_type_params_ctx type_args Sigma').
   split.
   - simpl. rewrite subst_type_params_expr_list_go_map.
-    eapply TERS_Enum; eauto.
+    eapply TERS_Enum.
+    + exact Hlookup.
+    + exact Hlookup_variant.
+    + exact Hlen_lts.
+    + exact Hlen_variant_lts.
     + rewrite length_map. exact Hlen_args.
+    + exact Hbounds_subst.
+    + exact Houtlives.
     + assert (Hpayload_tys :
         map (subst_type_params_ty type_args)
-          (map (instantiate_enum_variant_field_ty lts enum_type_args)
+          (map (instantiate_enum_variant_field_ty lts variant_lts enum_type_args)
             (Program.enum_variant_fields vdef)) =
-        map (instantiate_enum_variant_field_ty lts
+        map (instantiate_enum_variant_field_ty lts variant_lts
           (map (subst_type_params_ty type_args) enum_type_args))
           (Program.enum_variant_fields vdef)).
       { rewrite <- Hcompose.
@@ -1148,20 +1170,23 @@ Proof.
 Qed.
 
 Lemma typed_env_roots_shadow_safe_enum_provenance_ready_subst_type_params_package :
-  forall env Omega n R Sigma enum_name variant_name lts enum_type_args
+  forall env Omega n R Sigma enum_name variant_name lts variant_lts enum_type_args
       payloads edef vdef Sigma' R' payload_roots type_args,
     provenance_ready_args payloads ->
     Program.lookup_enum enum_name env = Some edef ->
     Program.lookup_enum_variant variant_name (Program.enum_variants edef) =
       Some vdef ->
     Datatypes.length lts = Program.enum_lifetimes edef ->
+    Datatypes.length variant_lts = Program.enum_variant_lifetimes vdef ->
     Datatypes.length enum_type_args = Program.enum_type_params edef ->
     check_struct_bounds env (Program.enum_bounds edef) enum_type_args = None ->
+    Forall (fun '(a, b) => outlives Omega a b)
+      (apply_lt_outlives lts (Program.enum_outlives edef)) ->
     check_struct_bounds env (Program.enum_bounds edef)
       (map (subst_type_params_ty type_args) enum_type_args) = None ->
     typed_args_roots_shadow_safe env Omega n R Sigma payloads
       (params_of_tys
-        (map (instantiate_enum_variant_field_ty lts enum_type_args)
+        (map (instantiate_enum_variant_field_ty lts variant_lts enum_type_args)
           (Program.enum_variant_fields vdef))) Sigma' R' payload_roots ->
     (forall R0 Sigma0 e T0 Sigma0' R0' roots0,
         In e payloads ->
@@ -1193,29 +1218,36 @@ Lemma typed_env_roots_shadow_safe_enum_provenance_ready_subst_type_params_packag
       typed_env_roots_shadow_safe env Omega n R
         (subst_type_params_ctx type_args Sigma)
         (subst_type_params_expr type_args
-          (EEnum enum_name variant_name lts enum_type_args payloads))
+          (EEnum enum_name variant_name lts variant_lts enum_type_args payloads))
         T_subst (sctx_of_ctx Gamma_out_subst) R'
         (root_sets_union payload_roots) /\
       ty_compatible_b Omega T_subst
         (subst_type_params_ty type_args
           (instantiate_enum_ty edef lts enum_type_args)) = true.
 Proof.
-  intros env Omega n R Sigma enum_name variant_name lts enum_type_args
+  intros env Omega n R Sigma enum_name variant_name lts variant_lts enum_type_args
     payloads edef vdef Sigma' R' payload_roots type_args Hready Hlookup
-    Hlookup_variant Hlen_lts Hlen_args _ Hbounds_subst Htyped_payloads
+    Hlookup_variant Hlen_lts Hlen_variant_lts Hlen_args _ Houtlives
+    Hbounds_subst Htyped_payloads
     Htransport Hcompat_transport Hcompat_result Hcompose.
   exists (instantiate_enum_ty edef lts
       (map (subst_type_params_ty type_args) enum_type_args)),
     (subst_type_params_ctx type_args Sigma').
   split.
   - simpl. rewrite subst_type_params_expr_list_go_map.
-    eapply TERS_Enum; eauto.
+    eapply TERS_Enum.
+    + exact Hlookup.
+    + exact Hlookup_variant.
+    + exact Hlen_lts.
+    + exact Hlen_variant_lts.
     + rewrite length_map. exact Hlen_args.
+    + exact Hbounds_subst.
+    + exact Houtlives.
     + assert (Hpayload_tys :
         map (subst_type_params_ty type_args)
-          (map (instantiate_enum_variant_field_ty lts enum_type_args)
+          (map (instantiate_enum_variant_field_ty lts variant_lts enum_type_args)
             (Program.enum_variant_fields vdef)) =
-        map (instantiate_enum_variant_field_ty lts
+        map (instantiate_enum_variant_field_ty lts variant_lts
           (map (subst_type_params_ty type_args) enum_type_args))
           (Program.enum_variant_fields vdef)).
       { rewrite <- Hcompose.
@@ -1764,17 +1796,17 @@ Lemma typed_env_roots_shadow_safe_provenance_ready_subst_type_params_compat_pack
             T_subst (sctx_of_ctx Gamma_out_subst) R0' roots0 /\
           ty_compatible_b Omega T_subst
             (subst_type_params_ty type_args T0) = true) ->
-    (forall enum_name variant_name lts enum_type_args payloads
+    (forall enum_name variant_name lts variant_lts enum_type_args payloads
         T0 Sigma0' R0' roots0,
         provenance_ready_args payloads ->
         typed_env_roots_shadow_safe env Omega n R Sigma
-          (EEnum enum_name variant_name lts enum_type_args payloads)
+          (EEnum enum_name variant_name lts variant_lts enum_type_args payloads)
           T0 Sigma0' R0' roots0 ->
         exists T_subst Gamma_out_subst,
           typed_env_roots_shadow_safe env Omega n R
             (subst_type_params_ctx type_args Sigma)
             (subst_type_params_expr type_args
-              (EEnum enum_name variant_name lts enum_type_args payloads))
+              (EEnum enum_name variant_name lts variant_lts enum_type_args payloads))
             T_subst (sctx_of_ctx Gamma_out_subst) R0' roots0 /\
           ty_compatible_b Omega T_subst
             (subst_type_params_ty type_args T0) = true) ->

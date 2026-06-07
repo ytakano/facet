@@ -299,7 +299,9 @@ Definition match_payload_params_opt
     (binders : list ident) (lts : list lifetime) (args : list Ty)
     (v : enum_variant_def) : option (list param) :=
   match_binder_params_opt binders
-    (map (instantiate_enum_variant_field_ty lts args) (enum_variant_fields v)).
+    (map (instantiate_enum_variant_field_ty lts
+      (variant_lifetime_witnesses (enum_variant_lifetimes v)) args)
+      (enum_variant_fields v)).
 
 Definition fn_signature_ty_with_usage (u : usage) (f : fn_def) : Ty :=
   let m := fn_lifetimes f in
@@ -1137,9 +1139,10 @@ Inductive borrow_ok (fenv : list fn_def)
       borrow_ok_args fenv BS1 Γ args BS2 ->
       borrow_ok fenv BS Γ (ECallExprGeneric callee type_args args) BS2
 
-  | BO_Enum : forall BS BS' Γ enum_name variant_name lts args payloads,
+  | BO_Enum : forall BS BS' Γ enum_name variant_name lts variant_lts args payloads,
       borrow_ok_args fenv BS Γ payloads BS' ->
-      borrow_ok fenv BS Γ (EEnum enum_name variant_name lts args payloads) BS'
+      borrow_ok fenv BS Γ
+        (EEnum enum_name variant_name lts variant_lts args payloads) BS'
 
 with borrow_ok_args (fenv : list fn_def)
     : borrow_state -> ctx -> list expr -> borrow_state -> Prop :=

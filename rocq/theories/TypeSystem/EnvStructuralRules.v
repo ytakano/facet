@@ -1916,18 +1916,21 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_fields_env_structural env Ω n lts args Σ fields (struct_fields sdef) Σ' ->
       typed_env_structural env Ω n Σ (EStruct sname lts args fields)
         (instantiate_struct_instance_ty sdef lts args) Σ'
-  | TES_Enum : forall Σ Σ' enum_name variant_name lts args payloads edef vdef,
+  | TES_Enum : forall Σ Σ' enum_name variant_name lts variant_lts args payloads edef vdef,
       lookup_enum enum_name env = Some edef ->
       lookup_enum_variant variant_name (enum_variants edef) = Some vdef ->
       Datatypes.length lts = enum_lifetimes edef ->
+      Datatypes.length variant_lts = enum_variant_lifetimes vdef ->
       Datatypes.length args = enum_type_params edef ->
       check_struct_bounds env (enum_bounds edef) args = None ->
+      Forall (fun '(a, b) => outlives Ω a b)
+        (apply_lt_outlives lts (enum_outlives edef)) ->
       typed_args_env_structural env Ω n Σ payloads
         (params_of_tys
-          (map (instantiate_enum_variant_field_ty lts args)
+          (map (instantiate_enum_variant_field_ty lts variant_lts args)
             (enum_variant_fields vdef))) Σ' ->
       typed_env_structural env Ω n Σ
-        (EEnum enum_name variant_name lts args payloads)
+        (EEnum enum_name variant_name lts variant_lts args payloads)
         (instantiate_enum_ty edef lts args) Σ'
   | TES_Let : forall Σ Σ1 Σ2 m x T T1 e1 e2 T2,
       typed_env_structural env Ω n Σ e1 T1 Σ1 ->
@@ -2020,6 +2023,8 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       Datatypes.length lts = enum_lifetimes edef ->
       Datatypes.length args = enum_type_params edef ->
       check_struct_bounds env (enum_bounds edef) args = None ->
+      Forall (fun '(a, b) => outlives Ω a b)
+        (apply_lt_outlives lts (enum_outlives edef)) ->
       first_unknown_variant_branch branches (enum_variants edef) = None ->
       enum_variants edef = v_head :: v_tail ->
       lookup_expr_branch_binders (enum_variant_name v_head) branches = Some binders_head ->
@@ -2029,6 +2034,7 @@ Inductive typed_env_structural (env : global_env) (Ω : outlives_ctx) (n : nat)
       lookup_expr_branch (enum_variant_name v_head) branches = Some e_head ->
       typed_env_structural env Ω n (sctx_add_params ps_head Σ1)
         e_head T_head Σ_head_payload ->
+      contains_lbound_ty T_head = false ->
       params_ok_sctx_b env ps_head Σ_head_payload = true ->
       Σ_head = sctx_remove_params ps_head Σ_head_payload ->
       typed_match_tail_env_structural env Ω n lts args Σ1 branches v_tail
@@ -2170,6 +2176,7 @@ with typed_match_tail_env_structural
       ctx_lookup_params_none_b ps Σ = true ->
       lookup_expr_branch (enum_variant_name v) branches = Some e ->
       typed_env_structural env Ω n (sctx_add_params ps Σ) e T Σv_payload ->
+      contains_lbound_ty T = false ->
       params_ok_sctx_b env ps Σv_payload = true ->
       Σv = sctx_remove_params ps Σv_payload ->
       ty_core T = expected_core ->
@@ -2365,19 +2372,22 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       typed_fields_roots env Ω n lts args R Σ fields (struct_fields sdef) Σ' R' roots ->
       typed_env_roots env Ω n R Σ (EStruct sname lts args fields)
         (instantiate_struct_instance_ty sdef lts args) Σ' R' roots
-  | TER_Enum : forall R R' Σ Σ' enum_name variant_name lts args payloads
+  | TER_Enum : forall R R' Σ Σ' enum_name variant_name lts variant_lts args payloads
       edef vdef payload_roots,
       lookup_enum enum_name env = Some edef ->
       lookup_enum_variant variant_name (enum_variants edef) = Some vdef ->
       Datatypes.length lts = enum_lifetimes edef ->
+      Datatypes.length variant_lts = enum_variant_lifetimes vdef ->
       Datatypes.length args = enum_type_params edef ->
       check_struct_bounds env (enum_bounds edef) args = None ->
+      Forall (fun '(a, b) => outlives Ω a b)
+        (apply_lt_outlives lts (enum_outlives edef)) ->
       typed_args_roots env Ω n R Σ payloads
         (params_of_tys
-          (map (instantiate_enum_variant_field_ty lts args)
+          (map (instantiate_enum_variant_field_ty lts variant_lts args)
             (enum_variant_fields vdef))) Σ' R' payload_roots ->
       typed_env_roots env Ω n R Σ
-        (EEnum enum_name variant_name lts args payloads)
+        (EEnum enum_name variant_name lts variant_lts args payloads)
         (instantiate_enum_ty edef lts args) Σ' R'
         (root_sets_union payload_roots)
   | TER_Match : forall R R1 R_payload R_head_payload R_out Σ Σ1
@@ -2390,6 +2400,8 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       Datatypes.length lts = enum_lifetimes edef ->
       Datatypes.length args = enum_type_params edef ->
       check_struct_bounds env (enum_bounds edef) args = None ->
+      Forall (fun '(a, b) => outlives Ω a b)
+        (apply_lt_outlives lts (enum_outlives edef)) ->
       first_unknown_variant_branch branches (enum_variants edef) = None ->
       enum_variants edef = v_head :: v_tail ->
       lookup_expr_branch_binders (enum_variant_name v_head) branches = Some binders_head ->
@@ -2401,6 +2413,7 @@ Inductive typed_env_roots (env : global_env) (Ω : outlives_ctx) (n : nat)
       R_payload = root_env_add_params_roots_same ps_head roots_scrut R1 ->
       typed_env_roots env Ω n R_payload (sctx_add_params ps_head Σ1)
         e_head T_head Σ_head_payload R_head_payload roots_head ->
+      contains_lbound_ty T_head = false ->
       params_ok_sctx_b env ps_head Σ_head_payload = true ->
       roots_exclude_params ps_head roots_head ->
       R_out = root_env_remove_match_params ps_head R_head_payload ->
@@ -2637,6 +2650,7 @@ with typed_match_tail_roots
       R_payload = root_env_add_params_roots_same ps roots_scrut R ->
       typed_env_roots env Ω n R_payload (sctx_add_params ps Σ)
         e T Σv_payload Rv_payload roots ->
+      contains_lbound_ty T = false ->
       params_ok_sctx_b env ps Σv_payload = true ->
       roots_exclude_params ps roots ->
       Rv = root_env_remove_match_params ps Rv_payload ->
@@ -3282,8 +3296,9 @@ Proof.
     + exact HnsR0'.
     + exact HR0'.
     + exact Hroots0.
-	  - intros R R' Σ Σ' enum_name variant_name lts args payloads edef vdef
-	      payload_roots Hlookup Hvariant Hlen_lts Hlen_args Hbounds Hpayloads
+	  - intros R R' Σ Σ' enum_name variant_name lts variant_lts args payloads edef vdef
+	      payload_roots Hlookup Hvariant Hlen_lts Hlen_variant_lts Hlen_args Hbounds
+        Houtlives Hpayloads
 	      IHpayloads Hfresh R0 HnsR HnsR0 HR0.
     rewrite expr_local_store_names_enum in Hfresh.
     destruct (IHpayloads Hfresh R0 HnsR HnsR0 HR0)
@@ -3299,11 +3314,12 @@ Proof.
       Σ_head Σ_tail Γ_out scrut branches enum_name lts args edef v_head
 	      v_tail e_head T_scrut T_head Ts_tail roots_scrut roots_head
 	      roots_tail binders_head ps_head Hscrut IHscrut Hcore Hlookup
-	      Hlen_lts Hlen_args Hbounds Hunknown Hvariants
+	      Hlen_lts Hlen_args Hbounds Houtlives Hunknown Hvariants
 	      Hbinders_head Hpayload_head Hnodup_head
 	      Hctx_fresh_head Hroot_fresh_head
-      Hlookup_head HRpayload Hhead IHhead Hparams_ok_head Hroots_excl_head
-      HRout Henv_excl_head HΣhead Htail IHtail Hmerge Hfresh R0 HnsR
+      Hlookup_head HRpayload Hhead IHhead Hno_lbound_head Hparams_ok_head
+      Hroots_excl_head HRout Henv_excl_head HΣhead Htail IHtail Hmerge
+      Hfresh R0 HnsR
       HnsR0 HR0.
     simpl in Hfresh.
     apply root_subst_images_exclude_names_app_inv in Hfresh.
@@ -3928,8 +3944,8 @@ Proof.
 	      Σv_payload Σv R_out roots Σs Ts rootss expected_core binders ps
 	      lts args roots_scrut Hbinders Hpayload
 	      Hnodup Hctx_fresh Hroot_fresh Hlookup HRpayload Htyped IHtyped
-	      Hparams_ok Hroots_excl HRv Henv_excl HΣv Hcore Heq_tail Htail
-	      IHtail Hfresh roots_scrut0
+	      Hno_lbound Hparams_ok Hroots_excl HRv Henv_excl HΣv Hcore
+	      Heq_tail Htail IHtail Hfresh roots_scrut0
       R0 R0_out Hroots_scrut0 HnsR HnsR0 HnsR0_out HR0 HR0_out.
     assert (Hfresh_R0 : root_env_lookup_params_none_b ps R0 = true).
     { eapply root_env_lookup_params_none_b_instantiate_equiv; eassumption. }
@@ -4207,10 +4223,10 @@ Inductive borrow_ok_env_structural (env : global_env)
   | BOES_Struct : forall PBS PBS' Γ sname lts args fields,
       borrow_ok_fields_env_structural env PBS Γ fields PBS' ->
       borrow_ok_env_structural env PBS Γ (EStruct sname lts args fields) PBS'
-  | BOES_Enum : forall PBS PBS' Γ enum_name variant_name lts args payloads,
+  | BOES_Enum : forall PBS PBS' Γ enum_name variant_name lts variant_lts args payloads,
       borrow_ok_args_env_structural env PBS Γ payloads PBS' ->
       borrow_ok_env_structural env PBS Γ
-        (EEnum enum_name variant_name lts args payloads) PBS'
+        (EEnum enum_name variant_name lts variant_lts args payloads) PBS'
   | BOES_Match : forall PBS PBS1 PBS2 Γ scrut name binders branch rest,
       borrow_ok_env_structural env PBS Γ scrut PBS1 ->
       borrow_ok_env_structural env PBS1

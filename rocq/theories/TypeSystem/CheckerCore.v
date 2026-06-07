@@ -68,7 +68,7 @@ Fixpoint infer_core (fenv : list fn_def) (Ω : outlives_ctx) (n : nat) (Γ : ctx
   | EPlace _ => infer_err ErrNotImplemented
 
   | EStruct _ _ _ _ => infer_err ErrNotImplemented
-  | EEnum _ _ _ _ _ => infer_err ErrNotImplemented
+  | EEnum _ _ _ _ _ _ => infer_err ErrNotImplemented
   | EMatch _ _ => infer_err ErrNotImplemented
 
   | ELet m x T e1 e2 =>

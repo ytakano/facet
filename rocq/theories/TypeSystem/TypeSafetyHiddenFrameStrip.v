@@ -812,7 +812,7 @@ Proof.
     + eapply Eval_Struct; eassumption.
     + split; try assumption.
       constructor. exact Hvalues.
-  - intros s s' enum_name variant_name lts args payloads values edef vdef
+  - intros s s' enum_name variant_name lts variant_lts args payloads values edef vdef
       Hlookup Hvariant Heval_args IH x T hidden s_base Hs Hready Hfree
       Hlocal Hrefs.
     inversion Hready; subst.

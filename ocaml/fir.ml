@@ -25,6 +25,7 @@ type fir_instr =
   | FICallValue of ident * ty * fir_tval * fir_tval list
   | FIProject of ident * ty * fir_place * ty
   | FIDrop    of ident * fir_place * ty
+  | FIBindEnumPayload of ident * ty * fir_tval * string * int
   | FIReplace of ident * ty * fir_place * ty * fir_tval
   | FIBorrow  of ident * ref_kind * fir_place * ty
   | FIDeref   of ident * ty * ident * ty
@@ -160,6 +161,37 @@ let get_fn_value_ty env f =
   | Some fd -> fn_value_ty fd
   | None -> failwith ("FIR: function not found: " ^ fst f)
 
+let enum_payload_binder_tys env scrut_ty variant binders =
+  match ty_core scrut_ty with
+  | TEnum (enum_name, lts, args) ->
+    let enum_def =
+      match lookup_enum enum_name env.env with
+      | Some e -> e
+      | None -> failwith ("FIR: enum not found: " ^ enum_name)
+    in
+    let variant_def =
+      match lookup_enum_variant variant enum_def.enum_variants with
+      | Some v -> v
+      | None -> failwith ("FIR: enum variant not found: " ^ variant)
+    in
+    let field_tys =
+      List.map (instantiate_enum_variant_field_ty lts [] args)
+        variant_def.enum_variant_fields
+    in
+    if List.length field_tys <> List.length binders then
+      failwith ("FIR: match payload binder arity mismatch: " ^ variant)
+    else
+      field_tys
+  | _ -> failwith "FIR: match scrutinee is not an enum"
+
+let bind_enum_payloads env scrut_val variant binders =
+  let tys = enum_payload_binder_tys env scrut_val.ft variant binders in
+  List.iteri
+    (fun idx (binder, ty) ->
+      emit env (FIBindEnumPayload (binder, ty, scrut_val, variant, idx));
+      env.ctx <- ctx_add_b binder ty MImmutable env.ctx)
+    (List.combine binders tys)
+
 let ident_of_tval env tv =
   match tv.fv with
   | FVVar x -> x
@@ -254,7 +286,7 @@ let rec to_value env = function
     in
     { fv = FVStruct (sname, field_values);
       ft = instantiate_struct_instance_ty struct_def lts args }
-  | EEnum (enum_name, variant_name, lts, args, payloads) ->
+  | EEnum (enum_name, variant_name, lts, _variant_lts, args, payloads) ->
     let enum_def =
       match lookup_enum enum_name env.env with
       | Some e -> e
@@ -330,11 +362,6 @@ let rec to_value env = function
     emit env (FILabel end_lbl);
     { fv = FVVar result_tmp; ft = result_ty }
   | EMatch (scrut, branches) ->
-    List.iter
-      (fun ((variant, binders), _) ->
-        if binders <> [] then
-          failwith ("FIR: match branch payload binders are not supported yet: " ^ variant))
-      branches;
     let result_ty = infer_expr_ty env (EMatch (scrut, branches)) in
     let scrut_val = to_value env scrut in
     let end_lbl = fresh_label env "match_end_" in
@@ -347,7 +374,7 @@ let rec to_value env = function
     let saved_ctx = env.ctx in
     emit env (FIMatch (scrut_val, branch_labels));
     List.iter
-      (fun ((variant, _), body) ->
+      (fun ((variant, binders), body) ->
         let lbl =
           match List.assoc_opt variant branch_labels with
           | Some lbl -> lbl
@@ -355,6 +382,7 @@ let rec to_value env = function
         in
         env.ctx <- saved_ctx;
         emit env (FILabel lbl);
+        bind_enum_payloads env scrut_val variant binders;
         let branch_val = to_value env body in
         emit env (FILet (result_tmp, result_ty, branch_val));
         emit env (FIGoto end_lbl))
@@ -617,6 +645,9 @@ let pp_instr = function
   | FIDrop (r, src, src_ty) ->
     Printf.sprintf "  drop %s as unrestricted unit = %s as %s"
       (pp_ident r) (pp_place src) (pp_ty src_ty)
+  | FIBindEnumPayload (x, t, scrut, variant, idx) ->
+    Printf.sprintf "  payload %s as %s = %s.%s[%d]"
+      (pp_ident x) (pp_ty t) (pp_tval scrut) variant idx
   | FIReplace (r, r_ty, tgt, tgt_ty, v_new) ->
     Printf.sprintf "  replace %s as %s = %s as %s with %s"
       (pp_ident r) (pp_ty r_ty) (pp_place tgt) (pp_ty tgt_ty) (pp_tval v_new)

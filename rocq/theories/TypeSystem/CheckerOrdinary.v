@@ -174,7 +174,9 @@ Fixpoint match_binder_params (binders : list ident) (tys : list Ty)
 
 Definition instantiate_enum_variant_field_tys
     (lts : list lifetime) (args : list Ty) (v : enum_variant_def) : list Ty :=
-  map (instantiate_enum_variant_field_ty lts args) (enum_variant_fields v).
+  map (instantiate_enum_variant_field_ty lts
+    (variant_lifetime_witnesses (enum_variant_lifetimes v)) args)
+    (enum_variant_fields v).
 
 Definition match_payload_params
     (binders : list ident) (lts : list lifetime) (args : list Ty)

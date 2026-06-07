@@ -222,7 +222,7 @@ Proof.
       * exact Hcheck.
 Qed.
 
-Fixpoint infer_env_enum_payloads_collect_roots fuel env Ω n lts args
+Fixpoint infer_env_enum_payloads_collect_roots fuel env Ω n lts variant_lts args
     (R : root_env) (Σ : sctx) (fields : list Ty) (payloads : list expr)
     : infer_result (sctx * root_env * root_set) :=
   match fields, payloads with
@@ -231,10 +231,10 @@ Fixpoint infer_env_enum_payloads_collect_roots fuel env Ω n lts args
       match infer_core_env_state_fuel_roots fuel env Ω n R Σ e_payload with
       | infer_err err => infer_err err
       | infer_ok (T_payload, Σ1, R1, roots_payload) =>
-          let T_expected := instantiate_enum_variant_field_ty lts args T_field in
+          let T_expected := instantiate_enum_variant_field_ty lts variant_lts args T_field in
           if ty_compatible_b Ω T_payload T_expected
           then
-            match infer_env_enum_payloads_collect_roots fuel env Ω n lts args
+            match infer_env_enum_payloads_collect_roots fuel env Ω n lts variant_lts args
                     R1 Σ1 fields' payloads' with
             | infer_err err => infer_err err
             | infer_ok (Σ2, R2, roots_rest) =>
@@ -246,7 +246,7 @@ Fixpoint infer_env_enum_payloads_collect_roots fuel env Ω n lts args
   end.
 
 Lemma infer_env_enum_payloads_collect_roots_eq :
-  forall fuel env Ω n lts args fields payloads R Σ,
+  forall fuel env Ω n lts variant_lts args fields payloads R Σ,
     (fix go (Σ0 : sctx) (R0 : root_env)
         (fields0 : list Ty) (es : list expr)
         : infer_result (sctx * root_env * root_set) :=
@@ -257,7 +257,7 @@ Lemma infer_env_enum_payloads_collect_roots_eq :
            | infer_err err => infer_err err
            | infer_ok (T_payload, Σ1, R1, roots_payload) =>
                let T_expected :=
-                 instantiate_enum_variant_field_ty lts args T_field in
+                 instantiate_enum_variant_field_ty lts variant_lts args T_field in
                if ty_compatible_b Ω T_payload T_expected
                then
                  match go Σ1 R1 fields' es' with
@@ -269,22 +269,22 @@ Lemma infer_env_enum_payloads_collect_roots_eq :
            end
        | _, _ => infer_err ErrArityMismatch
        end) Σ R fields payloads =
-    infer_env_enum_payloads_collect_roots fuel env Ω n lts args R Σ fields payloads.
+    infer_env_enum_payloads_collect_roots fuel env Ω n lts variant_lts args R Σ fields payloads.
 Proof.
-  intros fuel env Ω n lts args fields.
+  intros fuel env Ω n lts variant_lts args fields.
   induction fields as [|T_field rest IH]; intros payloads R Σ;
     destruct payloads as [|e_payload payloads']; simpl; try reflexivity.
   destruct (infer_core_env_state_fuel_roots fuel env Ω n R Σ e_payload)
     as [[[[T_payload Σ1] R1] roots_payload] | err] eqn:Hpayload;
     try reflexivity.
   destruct (ty_compatible_b Ω T_payload
-    (instantiate_enum_variant_field_ty lts args T_field)); try reflexivity.
+    (instantiate_enum_variant_field_ty lts variant_lts args T_field)); try reflexivity.
   rewrite IH. reflexivity.
 Qed.
 
 Lemma infer_env_enum_payloads_collect_roots_sound :
-  forall fuel env Ω n lts args R Σ fields payloads Σ' R' roots,
-    infer_env_enum_payloads_collect_roots fuel env Ω n lts args R Σ fields payloads =
+  forall fuel env Ω n lts variant_lts args R Σ fields payloads Σ' R' roots,
+    infer_env_enum_payloads_collect_roots fuel env Ω n lts variant_lts args R Σ fields payloads =
       infer_ok (Σ', R', roots) ->
     (forall R0 Σ0 e T Σ1 R1 roots1,
         infer_core_env_state_fuel_roots fuel env Ω n R0 Σ0 e =
@@ -293,11 +293,11 @@ Lemma infer_env_enum_payloads_collect_roots_sound :
     exists payload_roots,
       typed_args_roots env Ω n R Σ payloads
         (params_of_tys
-          (map (instantiate_enum_variant_field_ty lts args) fields))
+          (map (instantiate_enum_variant_field_ty lts variant_lts args) fields))
         Σ' R' payload_roots /\
       roots = root_sets_union payload_roots.
 Proof.
-  intros fuel env Ω n lts args R Σ fields.
+  intros fuel env Ω n lts variant_lts args R Σ fields.
   revert R Σ.
   induction fields as [|T_field rest IH]; intros R Σ payloads Σ' R' roots Hcollect Hexpr;
     destruct payloads as [|e_payload payloads']; simpl in Hcollect; try discriminate.
@@ -305,9 +305,9 @@ Proof.
   - destruct (infer_core_env_state_fuel_roots fuel env Ω n R Σ e_payload)
       as [[[[T_payload Σ1] R1] roots_payload] | err] eqn:Hp; try discriminate.
     destruct (ty_compatible_b Ω T_payload
-      (instantiate_enum_variant_field_ty lts args T_field)) eqn:Hcompat;
+      (instantiate_enum_variant_field_ty lts variant_lts args T_field)) eqn:Hcompat;
       try discriminate.
-    destruct (infer_env_enum_payloads_collect_roots fuel env Ω n lts args
+    destruct (infer_env_enum_payloads_collect_roots fuel env Ω n lts variant_lts args
       R1 Σ1 rest payloads') as [[[Σ2 R2] roots_rest] | err] eqn:Hrest;
       try discriminate.
     inversion Hcollect; subst.
@@ -501,7 +501,7 @@ Proof.
       * exact Hcheck.
 Qed.
 
-Fixpoint infer_env_enum_payloads_collect_roots_shadow_safe fuel env Ω n lts args
+Fixpoint infer_env_enum_payloads_collect_roots_shadow_safe fuel env Ω n lts variant_lts args
     (R : root_env) (Σ : sctx) (fields : list Ty) (payloads : list expr)
     : infer_result (sctx * root_env * root_set) :=
   match fields, payloads with
@@ -510,11 +510,11 @@ Fixpoint infer_env_enum_payloads_collect_roots_shadow_safe fuel env Ω n lts arg
       match infer_core_env_state_fuel_roots_shadow_safe fuel env Ω n R Σ e_payload with
       | infer_err err => infer_err err
       | infer_ok (T_payload, Σ1, R1, roots_payload) =>
-          let T_expected := instantiate_enum_variant_field_ty lts args T_field in
+          let T_expected := instantiate_enum_variant_field_ty lts variant_lts args T_field in
           if ty_compatible_b Ω T_payload T_expected
           then
             match infer_env_enum_payloads_collect_roots_shadow_safe
-                    fuel env Ω n lts args R1 Σ1 fields' payloads' with
+                    fuel env Ω n lts variant_lts args R1 Σ1 fields' payloads' with
             | infer_err err => infer_err err
             | infer_ok (Σ2, R2, roots_rest) =>
                 infer_ok (Σ2, R2, root_set_union roots_payload roots_rest)
@@ -525,7 +525,7 @@ Fixpoint infer_env_enum_payloads_collect_roots_shadow_safe fuel env Ω n lts arg
   end.
 
 Lemma infer_env_enum_payloads_collect_roots_shadow_safe_eq :
-  forall fuel env Ω n lts args fields payloads R Σ,
+  forall fuel env Ω n lts variant_lts args fields payloads R Σ,
     (fix go (Σ0 : sctx) (R0 : root_env)
         (fields0 : list Ty) (es : list expr)
         : infer_result (sctx * root_env * root_set) :=
@@ -537,7 +537,7 @@ Lemma infer_env_enum_payloads_collect_roots_shadow_safe_eq :
            | infer_err err => infer_err err
            | infer_ok (T_payload, Σ1, R1, roots_payload) =>
                let T_expected :=
-                 instantiate_enum_variant_field_ty lts args T_field in
+                 instantiate_enum_variant_field_ty lts variant_lts args T_field in
                if ty_compatible_b Ω T_payload T_expected
                then
                  match go Σ1 R1 fields' es' with
@@ -550,23 +550,23 @@ Lemma infer_env_enum_payloads_collect_roots_shadow_safe_eq :
        | _, _ => infer_err ErrArityMismatch
        end) Σ R fields payloads =
     infer_env_enum_payloads_collect_roots_shadow_safe
-      fuel env Ω n lts args R Σ fields payloads.
+      fuel env Ω n lts variant_lts args R Σ fields payloads.
 Proof.
-  intros fuel env Ω n lts args fields.
+  intros fuel env Ω n lts variant_lts args fields.
   induction fields as [|T_field rest IH]; intros payloads R Σ;
     destruct payloads as [|e_payload payloads']; simpl; try reflexivity.
   destruct (infer_core_env_state_fuel_roots_shadow_safe fuel env Ω n R Σ e_payload)
     as [[[[T_payload Σ1] R1] roots_payload] | err] eqn:Hpayload;
     try reflexivity.
   destruct (ty_compatible_b Ω T_payload
-    (instantiate_enum_variant_field_ty lts args T_field)); try reflexivity.
+    (instantiate_enum_variant_field_ty lts variant_lts args T_field)); try reflexivity.
   rewrite IH. reflexivity.
 Qed.
 
 Lemma infer_env_enum_payloads_collect_roots_shadow_safe_sound :
-  forall fuel env Ω n lts args R Σ fields payloads Σ' R' roots,
+  forall fuel env Ω n lts variant_lts args R Σ fields payloads Σ' R' roots,
     infer_env_enum_payloads_collect_roots_shadow_safe
-      fuel env Ω n lts args R Σ fields payloads =
+      fuel env Ω n lts variant_lts args R Σ fields payloads =
       infer_ok (Σ', R', roots) ->
     (forall R0 Σ0 e T Σ1 R1 roots1,
         infer_core_env_state_fuel_roots_shadow_safe fuel env Ω n R0 Σ0 e =
@@ -575,11 +575,11 @@ Lemma infer_env_enum_payloads_collect_roots_shadow_safe_sound :
     exists payload_roots,
       typed_args_roots_shadow_safe env Ω n R Σ payloads
         (params_of_tys
-          (map (instantiate_enum_variant_field_ty lts args) fields))
+          (map (instantiate_enum_variant_field_ty lts variant_lts args) fields))
         Σ' R' payload_roots /\
       roots = root_sets_union payload_roots.
 Proof.
-  intros fuel env Ω n lts args R Σ fields.
+  intros fuel env Ω n lts variant_lts args R Σ fields.
   revert R Σ.
   induction fields as [|T_field rest IH]; intros R Σ payloads Σ' R' roots Hcollect Hexpr;
     destruct payloads as [|e_payload payloads']; simpl in Hcollect; try discriminate.
@@ -587,9 +587,9 @@ Proof.
   - destruct (infer_core_env_state_fuel_roots_shadow_safe fuel env Ω n R Σ e_payload)
       as [[[[T_payload Σ1] R1] roots_payload] | err] eqn:Hp; try discriminate.
     destruct (ty_compatible_b Ω T_payload
-      (instantiate_enum_variant_field_ty lts args T_field)) eqn:Hcompat;
+      (instantiate_enum_variant_field_ty lts variant_lts args T_field)) eqn:Hcompat;
       try discriminate.
-    destruct (infer_env_enum_payloads_collect_roots_shadow_safe fuel env Ω n lts args
+    destruct (infer_env_enum_payloads_collect_roots_shadow_safe fuel env Ω n lts variant_lts args
       R1 Σ1 rest payloads') as [[[Σ2 R2] roots_rest] | err] eqn:Hrest;
       try discriminate.
     inversion Hcollect; subst.
@@ -1173,21 +1173,26 @@ Proof.
     + destruct (lookup_enum s env) as [edef |] eqn:Hlookup; try discriminate.
       destruct (negb (Nat.eqb (Datatypes.length l) (enum_lifetimes edef))) eqn:Hlts;
         try discriminate.
-      destruct (negb (Nat.eqb (Datatypes.length l0) (enum_type_params edef))) eqn:Hargslen;
+      destruct (negb (Nat.eqb (Datatypes.length l1) (enum_type_params edef))) eqn:Hargslen;
         try discriminate.
-      destruct (check_struct_bounds env (enum_bounds edef) l0) as [err |] eqn:Hbounds;
+      destruct (check_struct_bounds env (enum_bounds edef) l1) as [err |] eqn:Hbounds;
+        try discriminate.
+      destruct (enum_outlives_hold_b Ω edef l) eqn:Hout_enum;
         try discriminate.
       destruct (lookup_enum_variant s0 (enum_variants edef)) as [vdef |] eqn:Hvariant;
         try discriminate.
+      destruct (negb (Nat.eqb (Datatypes.length l0) (enum_variant_lifetimes vdef))) eqn:Hvargslen;
+        try discriminate.
       rewrite infer_env_enum_payloads_collect_roots_eq in Hinfer.
-      destruct (infer_env_enum_payloads_collect_roots fuel' env Ω n l l0 R Σ
-        (enum_variant_fields vdef) l1) as [[[Σpayloads Rpayloads] roots_payloads] | err]
+      destruct (infer_env_enum_payloads_collect_roots fuel' env Ω n l l0 l1 R Σ
+        (enum_variant_fields vdef) l2) as [[[Σpayloads Rpayloads] roots_payloads] | err]
         eqn:Hpayloads; try discriminate.
       inversion Hinfer; subst.
       apply negb_false_iff in Hlts. apply Nat.eqb_eq in Hlts.
+      apply negb_false_iff in Hvargslen. apply Nat.eqb_eq in Hvargslen.
       apply negb_false_iff in Hargslen. apply Nat.eqb_eq in Hargslen.
-      destruct (infer_env_enum_payloads_collect_roots_sound fuel' env Ω n l l0
-        R Σ (enum_variant_fields vdef) l1 Σ' R' roots
+      destruct (infer_env_enum_payloads_collect_roots_sound fuel' env Ω n l l0 l1
+        R Σ (enum_variant_fields vdef) l2 Σ' R' roots
         Hpayloads) as [payload_roots [Hpayload_roots Hroots]].
       { intros R0 Σ0 e0 T0 Σ1 R1 roots1 Hinfer0.
         eapply IH. exact Hinfer0. }
@@ -1196,8 +1201,11 @@ Proof.
       * exact Hlookup.
       * exact Hvariant.
       * exact Hlts.
+      * exact Hvargslen.
       * exact Hargslen.
       * exact Hbounds.
+      * unfold enum_outlives_hold_b in Hout_enum.
+        apply outlives_constraints_hold_b_sound. exact Hout_enum.
       * exact Hpayload_roots.
     + destruct (infer_core_env_state_fuel_roots fuel' env Ω n R Σ e)
         as [[[[T_scrut Σ1] R1] roots_scrut] | err_scrut] eqn:Hscrut;
@@ -1209,6 +1217,8 @@ Proof.
       destruct (negb (Nat.eqb (Datatypes.length l1) (enum_type_params edef))) eqn:Hargslen;
         try discriminate.
       destruct (check_struct_bounds env (enum_bounds edef) l1) as [err |] eqn:Hbounds;
+        try discriminate.
+      destruct (enum_outlives_hold_b Ω edef l0) eqn:Hout_enum;
         try discriminate.
       destruct (first_duplicate_branch l) as [dup |] eqn:Hdup; try discriminate.
       destruct (first_unknown_variant_branch l (enum_variants edef)) as [unknown |]
@@ -1233,6 +1243,7 @@ Proof.
           (sctx_add_params ps_head Σ1) e_head)
         as [[[[T_head Σ_head_payload] R_head_payload] roots_head] | err_head] eqn:Hhead;
         try discriminate.
+      destruct (contains_lbound_ty T_head) eqn:Hno_lbound_head; try discriminate.
       destruct (params_ok_sctx_b env ps_head Σ_head_payload &&
           roots_exclude_params_b ps_head roots_head &&
           root_env_excludes_params_b ps_head
@@ -1261,7 +1272,9 @@ Proof.
                                         (sctx_add_params ps Σ1) e_branch with
                                 | infer_ok (T_branch, Σ_branch_payload,
                                             R_branch_payload, roots_branch) =>
-                                    if params_ok_sctx_b env ps Σ_branch_payload &&
+                                    if contains_lbound_ty T_branch
+                                    then infer_err ErrLifetimeLeak
+                                    else if params_ok_sctx_b env ps Σ_branch_payload &&
                                        roots_exclude_params_b ps roots_branch &&
                                        root_env_excludes_params_b ps
                                          (root_env_remove_match_params ps R_branch_payload)
@@ -1321,6 +1334,7 @@ Proof.
               (root_env_add_params_roots_same ps roots_scrut R1)
               (sctx_add_params ps Σ1) e0)
             as [[[[T0 Σ0] R0] roots0] | err0] eqn:Hinfer0; try discriminate.
+          destruct (contains_lbound_ty T0) eqn:Hno_lbound0; try discriminate.
           destruct (params_ok_sctx_b env ps Σ0 &&
               roots_exclude_params_b ps roots0 &&
               root_env_excludes_params_b ps (root_env_remove_match_params ps R0))
@@ -1353,7 +1367,9 @@ Proof.
                                             (root_env_add_params_roots_same ps0 roots_scrut R1)
                                             (sctx_add_params ps0 Σ1) e1 with
                                     | infer_ok (T1, Σ1_payload, R1_payload, roots1) =>
-                                        if params_ok_sctx_b env ps0 Σ1_payload &&
+                                        if contains_lbound_ty T1
+                                        then infer_err ErrLifetimeLeak
+                                        else if params_ok_sctx_b env ps0 Σ1_payload &&
                                            roots_exclude_params_b ps0 roots1 &&
                                            root_env_excludes_params_b ps0
                                              (root_env_remove_match_params ps0 R1_payload)
@@ -1409,6 +1425,7 @@ Proof.
           + exact Hlookup0.
           + reflexivity.
           + eapply IH. exact Hinfer0.
+          + exact Hno_lbound0.
           + apply andb_prop in Hcleanup_checks as [Hok_rest Hrexcl].
             apply andb_prop in Hok_rest as [Hok _]. exact Hok.
           + apply andb_prop in Hcleanup_checks as [Hok_rest _].
@@ -1436,11 +1453,12 @@ Proof.
         simpl in Hmissing.
         simpl.
         rewrite Hscrut, Hscrut_core, Hlookup, Hlts, Hargslen, Hbounds,
-          Hdup, Hvariants.
+          Hout_enum, Hdup, Hvariants.
         simpl.
         rewrite Hunknown, Hmissing.
         rewrite Hbinders_head, Hlookup_branch, Hparams_head, Hnodup_head,
           Hhead.
+        simpl. rewrite Hno_lbound_head.
         simpl.
         destruct (params_ok_sctx_b env ps_head Σ_head_payload &&
             roots_exclude_params_b ps_head roots_head &&
@@ -1475,6 +1493,8 @@ Proof.
         | apply negb_false_iff in Hlts; apply Nat.eqb_eq in Hlts; exact Hlts
         | apply negb_false_iff in Hargslen; apply Nat.eqb_eq in Hargslen; exact Hargslen
 	        | exact Hbounds
+        | unfold enum_outlives_hold_b in Hout_enum;
+          apply outlives_constraints_hold_b_sound; exact Hout_enum
 	        | rewrite Hvariants; exact Hunknown
 	        | exact Hvariants
 		        | exact Hbinders_head
@@ -1485,6 +1505,7 @@ Proof.
         | exact Hlookup_branch
         | reflexivity
         | eapply IH; exact Hhead
+        | exact Hno_lbound_head
         | apply andb_prop in Hcleanup_head as [Hok_rest Hrexcl]; apply andb_prop in Hok_rest as [Hok _]; exact Hok
         | apply andb_prop in Hcleanup_head as [Hok_rest _]; apply andb_prop in Hok_rest as [_ Hexcl]; apply roots_exclude_params_b_sound_local; exact Hexcl
         | reflexivity
@@ -2248,21 +2269,26 @@ Proof.
     + destruct (lookup_enum s env) as [edef |] eqn:Hlookup; try discriminate.
       destruct (negb (Nat.eqb (Datatypes.length l) (enum_lifetimes edef))) eqn:Hlts;
         try discriminate.
-      destruct (negb (Nat.eqb (Datatypes.length l0) (enum_type_params edef))) eqn:Hargslen;
+      destruct (negb (Nat.eqb (Datatypes.length l1) (enum_type_params edef))) eqn:Hargslen;
         try discriminate.
-      destruct (check_struct_bounds env (enum_bounds edef) l0) as [err |] eqn:Hbounds;
+      destruct (check_struct_bounds env (enum_bounds edef) l1) as [err |] eqn:Hbounds;
+        try discriminate.
+      destruct (enum_outlives_hold_b Ω edef l) eqn:Hout_enum;
         try discriminate.
       destruct (lookup_enum_variant s0 (enum_variants edef)) as [vdef |] eqn:Hvariant;
         try discriminate.
+      destruct (negb (Nat.eqb (Datatypes.length l0) (enum_variant_lifetimes vdef))) eqn:Hvargslen;
+        try discriminate.
       rewrite infer_env_enum_payloads_collect_roots_shadow_safe_eq in Hinfer.
-      destruct (infer_env_enum_payloads_collect_roots_shadow_safe fuel' env Ω n l l0 R Σ
-        (enum_variant_fields vdef) l1) as [[[Σpayloads Rpayloads] roots_payloads] | err]
+      destruct (infer_env_enum_payloads_collect_roots_shadow_safe fuel' env Ω n l l0 l1 R Σ
+        (enum_variant_fields vdef) l2) as [[[Σpayloads Rpayloads] roots_payloads] | err]
         eqn:Hpayloads; try discriminate.
       inversion Hinfer; subst.
       apply negb_false_iff in Hlts. apply Nat.eqb_eq in Hlts.
+      apply negb_false_iff in Hvargslen. apply Nat.eqb_eq in Hvargslen.
       apply negb_false_iff in Hargslen. apply Nat.eqb_eq in Hargslen.
       destruct (infer_env_enum_payloads_collect_roots_shadow_safe_sound
-        fuel' env Ω n l l0 R Σ (enum_variant_fields vdef) l1
+        fuel' env Ω n l l0 l1 R Σ (enum_variant_fields vdef) l2
         Σ' R' roots Hpayloads)
         as [payload_roots [Hpayload_roots Hroots]].
       { intros R0 Σ0 e0 T0 Σ1 R1 roots1 Hinfer0.
@@ -2272,8 +2298,11 @@ Proof.
       * exact Hlookup.
       * exact Hvariant.
       * exact Hlts.
+      * exact Hvargslen.
       * exact Hargslen.
       * exact Hbounds.
+      * unfold enum_outlives_hold_b in Hout_enum.
+        apply outlives_constraints_hold_b_sound. exact Hout_enum.
       * exact Hpayload_roots.
     + destruct (infer_core_env_state_fuel_roots_shadow_safe fuel' env Ω n R Σ e)
         as [[[[T_scrut Σ1] R1] roots_scrut] | err_scrut] eqn:Hscrut;
@@ -2285,6 +2314,8 @@ Proof.
       destruct (negb (Nat.eqb (Datatypes.length l1) (enum_type_params edef))) eqn:Hargslen;
         try discriminate.
       destruct (check_struct_bounds env (enum_bounds edef) l1) as [err |] eqn:Hbounds;
+        try discriminate.
+      destruct (enum_outlives_hold_b Ω edef l0) eqn:Hout_enum;
         try discriminate.
       destruct (first_duplicate_branch l) as [dup |] eqn:Hdup; try discriminate.
       destruct (first_unknown_variant_branch l (enum_variants edef)) as [unknown |]
@@ -2309,6 +2340,7 @@ Proof.
           (sctx_add_params ps_head Σ1) e_head)
         as [[[[T_head Σ_head_payload] R_head_payload] roots_head] | err_head] eqn:Hhead;
         try discriminate.
+      destruct (contains_lbound_ty T_head) eqn:Hno_lbound_head; try discriminate.
       destruct (params_ok_sctx_b env ps_head Σ_head_payload &&
           roots_exclude_params_b ps_head roots_head &&
           root_env_excludes_params_b ps_head
@@ -2337,7 +2369,9 @@ Proof.
                                         (sctx_add_params ps Σ1) e_branch with
                                 | infer_ok (T_branch, Σ_branch_payload,
                                             R_branch_payload, roots_branch) =>
-                                    if params_ok_sctx_b env ps Σ_branch_payload &&
+                                    if contains_lbound_ty T_branch
+                                    then infer_err ErrLifetimeLeak
+                                    else if params_ok_sctx_b env ps Σ_branch_payload &&
                                        roots_exclude_params_b ps roots_branch &&
                                        root_env_excludes_params_b ps
                                          (root_env_remove_match_params ps R_branch_payload)
@@ -2398,6 +2432,7 @@ Proof.
               (root_env_add_params_roots_same ps roots_scrut R1)
               (sctx_add_params ps Σ1) e0)
             as [[[[T0 Σ0] R0] roots0] | err0] eqn:Hinfer0; try discriminate.
+          destruct (contains_lbound_ty T0) eqn:Hno_lbound0; try discriminate.
           destruct (params_ok_sctx_b env ps Σ0 &&
               roots_exclude_params_b ps roots0 &&
               root_env_excludes_params_b ps (root_env_remove_match_params ps R0))
@@ -2430,7 +2465,9 @@ Proof.
                                             (root_env_add_params_roots_same ps0 roots_scrut R1)
                                             (sctx_add_params ps0 Σ1) e1 with
                                     | infer_ok (T1, Σ1_payload, R1_payload, roots1) =>
-                                        if params_ok_sctx_b env ps0 Σ1_payload &&
+                                        if contains_lbound_ty T1
+                                        then infer_err ErrLifetimeLeak
+                                        else if params_ok_sctx_b env ps0 Σ1_payload &&
                                            roots_exclude_params_b ps0 roots1 &&
                                            root_env_excludes_params_b ps0
                                              (root_env_remove_match_params ps0 R1_payload)
@@ -2486,6 +2523,7 @@ Proof.
           + exact Hlookup0.
           + reflexivity.
           + eapply IH. exact Hinfer0.
+          + exact Hno_lbound0.
           + apply andb_prop in Hcleanup_checks as [Hok_rest Hrexcl].
             apply andb_prop in Hok_rest as [Hok _]. exact Hok.
           + apply andb_prop in Hcleanup_checks as [Hok_rest _].
@@ -2513,11 +2551,12 @@ Proof.
         simpl in Hmissing.
         simpl.
         rewrite Hscrut, Hscrut_core, Hlookup, Hlts, Hargslen, Hbounds,
-          Hdup, Hvariants.
+          Hout_enum, Hdup, Hvariants.
         simpl.
         rewrite Hunknown, Hmissing.
         rewrite Hbinders_head, Hlookup_branch, Hparams_head, Hnodup_head,
           Hhead.
+        simpl. rewrite Hno_lbound_head.
         simpl.
         destruct (params_ok_sctx_b env ps_head Σ_head_payload &&
             roots_exclude_params_b ps_head roots_head &&
@@ -2552,6 +2591,8 @@ Proof.
         | apply negb_false_iff in Hlts; apply Nat.eqb_eq in Hlts; exact Hlts
         | apply negb_false_iff in Hargslen; apply Nat.eqb_eq in Hargslen; exact Hargslen
         | exact Hbounds
+        | unfold enum_outlives_hold_b in Hout_enum;
+          apply outlives_constraints_hold_b_sound; exact Hout_enum
         | rewrite Hvariants; exact Hunknown
         | exact Hvariants
         | exact Hbinders_head
@@ -2562,6 +2603,7 @@ Proof.
         | exact Hlookup_branch
         | reflexivity
         | eapply IH; exact Hhead
+        | exact Hno_lbound_head
         | apply andb_prop in Hcleanup_head as [Hok_rest Hrexcl]; apply andb_prop in Hok_rest as [Hok _]; exact Hok
         | apply andb_prop in Hcleanup_head as [Hok_rest _]; apply andb_prop in Hok_rest as [_ Hexcl]; apply roots_exclude_params_b_sound_local; exact Hexcl
         | reflexivity

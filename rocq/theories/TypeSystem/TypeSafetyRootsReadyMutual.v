@@ -157,8 +157,8 @@ Proof.
        Σv_payload Σv R_out roots Σs Ts rootss expected_core
        binders ps lts args roots_scrut
        Hbinders Hparams Hnodup Hctx_none Hroot_none Hlookup Hpayload
-       Htyped Hparams_ok Hroots_excl Hremove Henv_excl Hctx_remove
-       Hcore Hequiv Htail IHtail];
+       Htyped Hno_lbound Hparams_ok Hroots_excl Hremove Henv_excl
+       Hctx_remove Hcore Hequiv Htail IHtail];
     intros Hvariant Hbranch.
   - simpl in Hvariant. discriminate.
   - simpl in Hvariant.
@@ -1041,7 +1041,7 @@ Proof.
       apply sctx_same_bindings_remove_added_params.
       eapply typed_env_structural_same_bindings.
       eapply typed_env_roots_structural. exact t.
-    + rewrite <- e9. exact Hroot_scoped.
+    + rewrite <- e10. exact Hroot_scoped.
 Qed.
 
 Theorem typed_roots_ctx_keys_named_mutual :
@@ -1537,7 +1537,7 @@ Proof.
     end.
     repeat split; try assumption.
     constructor. exact Hvals.
-  - intros s s' enum_name variant_name lts args payloads values edef vdef
+  - intros s s' enum_name variant_name lts variant_lts args payloads values edef vdef
       Hlookup Hvariant Heval_args IHargs Ω n R Σ T Σ' R' roots Hready Hroots
       Hnodup Hrn Htyped.
     dependent destruction Hready.
@@ -1973,7 +1973,10 @@ Proof.
 	      exists vdef, lookup_enum_variant variant_name (enum_variants edef0) =
 	        Some vdef).
 	    { eapply first_unknown_variant_branch_lookup_some; eassumption. }
-	    rewrite H6 in Hvariant_known.
+	    match goal with
+	    | Hvariants : enum_variants edef0 = v_head :: v_tail |- _ =>
+	        rewrite Hvariants in Hvariant_known
+	    end.
 	    simpl in Hvariant_known.
 	    destruct (String.eqb variant_name (enum_variant_name v_head))
 	      eqn:Hvariant_head.

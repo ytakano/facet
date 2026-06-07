@@ -30,9 +30,10 @@ Inductive provenance_ready_expr : expr -> Prop :=
   | ProvReady_Struct : forall sname lts args fields,
       provenance_ready_fields fields ->
       provenance_ready_expr (EStruct sname lts args fields)
-  | ProvReady_Enum : forall enum_name variant_name lts args payloads,
+  | ProvReady_Enum : forall enum_name variant_name lts variant_lts args payloads,
       provenance_ready_args payloads ->
-      provenance_ready_expr (EEnum enum_name variant_name lts args payloads)
+      provenance_ready_expr
+        (EEnum enum_name variant_name lts variant_lts args payloads)
   | ProvReady_Match : forall scrut branches,
       provenance_ready_expr scrut ->
       provenance_ready_match_branches branches ->

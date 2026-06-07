@@ -62,11 +62,11 @@ Inductive expr_alpha : rename_env -> expr -> expr -> Prop :=
   | EA_Struct : forall ρ name lts args fields fieldsr,
       fields_alpha ρ fields fieldsr ->
       expr_alpha ρ (EStruct name lts args fields) (EStruct name lts args fieldsr)
-  | EA_Enum : forall ρ enum_name variant_name lts args payloads payloadsr,
+  | EA_Enum : forall ρ enum_name variant_name lts variant_lts args payloads payloadsr,
       exprs_alpha ρ payloads payloadsr ->
       expr_alpha ρ
-        (EEnum enum_name variant_name lts args payloads)
-        (EEnum enum_name variant_name lts args payloadsr)
+        (EEnum enum_name variant_name lts variant_lts args payloads)
+        (EEnum enum_name variant_name lts variant_lts args payloadsr)
   | EA_Match : forall ρ scrut scrutr branches branchesr,
       expr_alpha ρ scrut scrutr ->
       branches_alpha ρ branches branchesr ->
@@ -623,14 +623,14 @@ Proof.
 		              let (e0', used1) := alpha_rename_expr ρ used0 e0 in
 		              let (rest', used2) := go used1 rest in
 		              (e0' :: rest', used2)
-		          end) used l1) as r eqn:Hpayloads.
+		          end) used l2) as r eqn:Hpayloads.
 		    destruct r as [payloadsr used_payloads].
 		    injection Hrename as <- _.
 		    apply EA_Enum.
 		    eapply alpha_rename_call_args_sound.
 		    * intros used0 epayload er0 used1 Hin Hdisj0 Hrename0.
 		      eapply IH.
-		      -- pose proof (expr_size_enum_payload_lt s s0 l l0 l1 epayload Hin)
+		      -- pose proof (expr_size_enum_payload_lt s s0 l l0 l1 l2 epayload Hin)
 		           as Hpayload_lt.
 		         assert (expr_size epayload < n) as Hlt_payload by lia.
 		         exact Hlt_payload.

@@ -390,7 +390,7 @@ Proof.
     + split.
       * econstructor; eassumption.
       * exact Hpres_fields.
-  - intros s s' enum_name variant_name lts args payloads values edef vdef
+  - intros s s' enum_name variant_name lts variant_lts args payloads values edef vdef
       Hlookup Hvariant Heval_args IHargs Ω n Σ T Σ' Hready Hstore Htyped.
     dependent destruction Hready.
     inversion Htyped; subst.
@@ -410,11 +410,11 @@ Proof.
     | Hready_args : preservation_ready_args payloads,
       Htyped_args : typed_args_env_structural env Ω n Σ payloads
         (params_of_tys
-          (map (instantiate_enum_variant_field_ty lts args)
+          (map (instantiate_enum_variant_field_ty lts variant_lts args)
             (enum_variant_fields vdef))) Σ' |- _ =>
         destruct (IHargs Ω n Σ
                     (params_of_tys
-                      (map (instantiate_enum_variant_field_ty lts args)
+                      (map (instantiate_enum_variant_field_ty lts variant_lts args)
                         (enum_variant_fields vdef))) Σ'
                     Hready_args Hstore Htyped_args)
           as [Hstore' [Hvalues Hpres_args]]
@@ -765,13 +765,14 @@ Proof.
           simpl in Hpayload_runtime; try discriminate.
         inversion Hpayload_runtime. reflexivity. }
       assert (Hps_head_nil : ps_head = []).
-      { unfold match_payload_params in H8.
-        unfold instantiate_enum_variant_field_tys in H8.
-        rewrite Hbinders_head_nil in H8.
-        destruct (map (instantiate_enum_variant_field_ty lts args)
+      { unfold match_payload_params in H9.
+        unfold instantiate_enum_variant_field_tys in H9.
+        rewrite Hbinders_head_nil in H9.
+        destruct (map (instantiate_enum_variant_field_ty lts
+          (variant_lifetime_witnesses (enum_variant_lifetimes v_head)) args)
           (enum_variant_fields v_head)) as [| field fields];
           try discriminate.
-        inversion H8. reflexivity. }
+        inversion H9. reflexivity. }
       assert (Hvalues_nil : values = []).
       { rewrite Hpayload_nil in Hvalues_len.
         destruct values as [| value values']; simpl in Hvalues_len;
@@ -786,10 +787,12 @@ Proof.
         as [Hstore_branch [Hv_branch Hpres_branch]].
       split.
       * subst s'. rewrite Hpayload_nil. simpl.
-        rewrite Hps_head_nil in H15. simpl in H15.
-        eapply store_typed_prefix_ctx_merge_many_left.
-        -- exact Hstore_branch.
-        -- exact H15.
+        match goal with
+        | Hmerge : ctx_merge_many (ctx_of_sctx _) _ = Some _ |- _ =>
+            rewrite Hps_head_nil in Hmerge; simpl in Hmerge;
+            eapply store_typed_prefix_ctx_merge_many_left;
+            [ exact Hstore_branch | exact Hmerge ]
+        end.
       * split.
         -- rewrite Hremove_params, Hpayload_nil. simpl.
            eapply value_has_type_match_head_result. exact Hv_branch.
@@ -801,13 +804,17 @@ Proof.
     + assert (Hvdef_runtime_tail : vdef_runtime = vdef_typed_runtime).
       { assert (Hedef_same : edef_runtime = edef) by congruence.
         subst edef_runtime.
-        rewrite H6 in Hlookup_variant_runtime. simpl in Hlookup_variant_runtime.
+        match goal with
+        | Hvariants : enum_variants edef = v_head :: v_tail |- _ =>
+            rewrite Hvariants in Hlookup_variant_runtime
+        end.
+        simpl in Hlookup_variant_runtime.
         rewrite Hvariant_head in Hlookup_variant_runtime.
         congruence. }
       subst vdef_typed_runtime.
       destruct (typed_match_tail_lookup env Ω n lts args Σ1 branches v_tail
                 (ty_core T_head) Σ_tail Ts_tail variant_name vdef_runtime e_branch
-                H14 Hvariant_runtime Hlookup_branch_eval)
+                ltac:(eassumption) Hvariant_runtime Hlookup_branch_eval)
         as [T_branch [Σ_branch_payload [Σ_branch [ps_branch
           [binders_branch Htail_branch]]]]];
       destruct Htail_branch as [Hbinders_branch Htail_branch].
@@ -826,7 +833,7 @@ Proof.
           | Hready_branches : preservation_ready_match_branches branches |- _ =>
               exact Hready_branches
           end)
-        H14 Hvariant_runtime Hbinders_branch) as Hbinders_branch_nil.
+        ltac:(eassumption) Hvariant_runtime Hbinders_branch) as Hbinders_branch_nil.
       assert (Hbinders_nil : binders = []).
       { rewrite Hbinders_branch_nil in Hbinders_branch.
         rewrite Hlookup_binders in Hbinders_branch.
@@ -861,15 +868,15 @@ Proof.
       { eapply lookup_expr_branch_binders_preservation_ready_empty;
           eassumption. }
       assert (Hps_head_nil_tail : ps_head = []).
-      { unfold match_payload_params in H8.
-        unfold instantiate_enum_variant_field_tys in H8.
-        rewrite Hbinders_head_nil_tail in H8.
-        destruct (map (instantiate_enum_variant_field_ty lts args)
+      { unfold match_payload_params in H9.
+        unfold instantiate_enum_variant_field_tys in H9.
+        rewrite Hbinders_head_nil_tail in H9.
+        destruct (map (instantiate_enum_variant_field_ty lts
+          (variant_lifetime_witnesses (enum_variant_lifetimes v_head)) args)
           (enum_variant_fields v_head)) as [| field fields];
           try discriminate.
-        inversion H8. reflexivity. }
+        inversion H9. reflexivity. }
       pose (Σ_head := sctx_remove_params ps_head Σ_head_payload).
-      fold Σ_head in H15.
       assert (Hsame_head_tail : Forall (sctx_same_bindings Σ_head) Σ_tail).
       {
         assert (Hsame_head : sctx_same_bindings Σ1 Σ_head).
@@ -913,7 +920,7 @@ Proof.
         -- exact Hsame_head_tail.
         -- simpl. right. exact HinΣ.
         -- match goal with
-           | Hmerge : ctx_merge_many (ctx_of_sctx Σ_head) (map ctx_of_sctx Σ_tail) = Some Γ_out |- _ =>
+           | Hmerge : ctx_merge_many (ctx_of_sctx _) _ = Some _ |- _ =>
                exact Hmerge
            end.
       * split.

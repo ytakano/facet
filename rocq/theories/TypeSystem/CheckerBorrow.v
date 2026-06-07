@@ -26,7 +26,7 @@ Fixpoint borrow_check (fenv : list fn_def) (BS : borrow_state) (Γ : ctx)
         end
       in go captures
   | EStruct _ _ _ _ => infer_err ErrNotImplemented
-  | EEnum _ _ _ _ payloads =>
+  | EEnum _ _ _ _ _ payloads =>
       let fix go (BS0 : borrow_state) (as_ : list expr) : infer_result borrow_state :=
         match as_ with
         | [] => infer_ok BS0
@@ -299,7 +299,7 @@ Fixpoint borrow_check_env (env : global_env) (PBS : path_borrow_state) (Γ : ctx
             end
         end
       in go PBS fields
-  | EEnum _ _ _ _ payloads =>
+  | EEnum _ _ _ _ _ payloads =>
       let fix go (PBS0 : path_borrow_state) (args0 : list expr)
           : infer_result path_borrow_state :=
         match args0 with

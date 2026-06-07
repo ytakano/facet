@@ -882,7 +882,7 @@ Fixpoint expr_local_store_names (e : expr) : list ident :=
       args_local_store_names_with expr_local_store_names args
   | EStruct _ _ _ fields =>
       fields_local_store_names_with expr_local_store_names fields
-  | EEnum _ _ _ _ payloads =>
+  | EEnum _ _ _ _ _ payloads =>
       args_local_store_names_with expr_local_store_names payloads
   | EMatch scrut branches =>
       expr_local_store_names scrut ++
@@ -919,7 +919,7 @@ Proof.
     [| lit | x | m x T e1 e2 | m x e1 e2 | fname | fname captures
      | p | fname args | fname type_args' args | ef args
      | ef type_args' args
-     | name lts type_args' fields | enum_name variant lts type_args' args
+     | name lts type_args' fields | enum_name variant lts variant_lts type_args' args
      | discr branches | p rhs | p rhs | rk p | e | e | e1 e2 e3];
     simpl; try reflexivity.
   - rewrite (IH type_args e1), (IH type_args e2). reflexivity.
@@ -1017,11 +1017,12 @@ Proof.
 Qed.
 
 Lemma expr_local_store_names_enum :
-  forall enum_name variant_name lts args payloads,
-    expr_local_store_names (EEnum enum_name variant_name lts args payloads) =
+  forall enum_name variant_name lts variant_lts args payloads,
+    expr_local_store_names
+      (EEnum enum_name variant_name lts variant_lts args payloads) =
     args_local_store_names payloads.
 Proof.
-  intros enum_name variant_name lts args payloads. reflexivity.
+  intros enum_name variant_name lts variant_lts args payloads. reflexivity.
 Qed.
 
 Definition root_env_excludes (x : ident) (R : root_env) : Prop :=

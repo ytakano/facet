@@ -88,6 +88,16 @@ let install_generics params =
   current_lifetimes := lts;
   params
 
+
+let open_variant_lifetimes lts =
+  check_unique_lifetimes lts;
+  let prev = !current_lifetimes in
+  current_lifetimes := lts @ prev;
+  (lts, prev)
+
+let close_variant_lifetimes prev =
+  current_lifetimes := prev
+
 let expr_of_place = function
   | NPVar x -> NVar x
   | p -> NPlace p
@@ -135,14 +145,24 @@ struct_def:
 
 enum_def:
   | KW_ENUM; name = ID; generics = opt_generic_params;
-    bounds = opt_trait_bounds; LBRACE; variants = separated_list(COMMA, enum_variant); RBRACE
-    { { ne_name = name; ne_generics = generics; ne_bounds = bounds; ne_variants = variants } }
+    where_clause = opt_fn_where_clause; LBRACE; variants = separated_list(COMMA, enum_variant); RBRACE
+    { let (bounds, outs) = where_clause in
+      { ne_name = name; ne_generics = generics; ne_bounds = bounds;
+        ne_outlives = outs; ne_variants = variants } }
 
 enum_variant:
   | name = ID
-    { { nev_name = name; nev_fields = [] } }
+    { { nev_name = name; nev_lifetimes = []; nev_fields = [] } }
   | name = ID; LPAREN; fields = separated_list(COMMA, ty); RPAREN
-    { { nev_name = name; nev_fields = fields } }
+    { { nev_name = name; nev_lifetimes = []; nev_fields = fields } }
+  | name = ID; h = variant_lifetime_open; LPAREN; fields = separated_list(COMMA, ty); RPAREN
+    { let (lts, prev) = h in
+      close_variant_lifetimes prev;
+      { nev_name = name; nev_lifetimes = lts; nev_fields = fields } }
+
+variant_lifetime_open:
+  | LANGLE; lts = separated_nonempty_list(COMMA, LIFETIME); RANGLE
+    { open_variant_lifetimes lts }
 
 trait_def:
   | KW_TRAIT; name = ID; generics = opt_generic_params; bounds = opt_trait_bounds; SEMI
@@ -263,10 +283,18 @@ atom_expr:
     { NStruct (name, args, fields) }
   | enum_name = ID; DCOLON; variant_name = ID; LPAREN;
     payloads = separated_list(COMMA, atom_expr); RPAREN
-    { NEnum (enum_name, [], variant_name, payloads) }
+    { NEnum (enum_name, [], variant_name, [], payloads) }
+  | enum_name = ID; DCOLON; variant_name = ID;
+    LANGLE; variant_args = separated_nonempty_list(COMMA, type_arg); RANGLE;
+    LPAREN; payloads = separated_list(COMMA, atom_expr); RPAREN
+    { NEnum (enum_name, [], variant_name, variant_args, payloads) }
   | enum_name = ID; LANGLE; args = separated_nonempty_list(COMMA, type_arg); RANGLE;
     DCOLON; variant_name = ID; LPAREN; payloads = separated_list(COMMA, atom_expr); RPAREN
-    { NEnum (enum_name, args, variant_name, payloads) }
+    { NEnum (enum_name, args, variant_name, [], payloads) }
+  | enum_name = ID; LANGLE; args = separated_nonempty_list(COMMA, type_arg); RANGLE;
+    DCOLON; variant_name = ID; LANGLE; variant_args = separated_nonempty_list(COMMA, type_arg); RANGLE;
+    LPAREN; payloads = separated_list(COMMA, atom_expr); RPAREN
+    { NEnum (enum_name, args, variant_name, variant_args, payloads) }
   | KW_MATCH; scrut = match_scrut; LBRACE; branches = match_branches; RBRACE
     { NMatch (scrut, branches) }
   | p = place

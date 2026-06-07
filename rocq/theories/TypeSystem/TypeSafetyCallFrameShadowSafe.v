@@ -393,6 +393,7 @@ Proof.
     + exact e1.
     + exact e2.
     + exact e3.
+    + exact f.
     + exact e4.
     + exact e5.
 	    + exact e6.
@@ -406,14 +407,15 @@ Proof.
 	    + apply H0.
 	      eapply root_env_tail_fresh_names_lookup_expr_branch; eassumption.
 	    + exact e13.
+	    + exact e14.
 	    + exact r.
-	    + rewrite e14. symmetry.
+    + rewrite e15. symmetry.
 	      apply root_env_remove_match_params_app_left.
 	      exact Htail_params_none.
 	    + apply root_env_excludes_params_app_local; assumption.
-	    + exact e15.
-	    + apply H1. exact Hfresh_branches.
 	    + exact e16.
+	    + apply H1. exact Hfresh_branches.
+	    + exact e17.
   - pose proof (root_env_tail_fresh_names_app_l _ _ _ H1) as Hfresh1.
     pose proof (root_env_tail_fresh_names_app_r _ _ _ H1) as Hfresh_tail.
     destruct (root_env_tail_fresh_names_cons_head _ _ _ Hfresh_tail)
@@ -611,13 +613,14 @@ Proof.
 	      apply root_env_add_params_roots_same_app_left.
 	    + apply H. eapply root_env_tail_fresh_names_lookup_expr_branch; eassumption.
 	    + exact e7.
+	    + exact e8.
 	    + exact r.
-	    + rewrite e8. symmetry.
+	    + rewrite e9. symmetry.
 	      apply root_env_remove_match_params_app_left.
 	      exact Htail_params_none.
 	    + apply root_env_excludes_params_app_local; assumption.
-	    + exact e9.
 	    + exact e10.
+	    + exact e11.
     + apply root_env_equiv_app.
       * exact r1.
       * apply root_env_equiv_refl.

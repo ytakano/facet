@@ -146,9 +146,10 @@ Inductive preservation_ready_expr : expr -> Prop :=
   | PRE_Struct : forall sname lts args fields,
       preservation_ready_fields fields ->
       preservation_ready_expr (EStruct sname lts args fields)
-  | PRE_Enum : forall enum_name variant_name lts args payloads,
+  | PRE_Enum : forall enum_name variant_name lts variant_lts args payloads,
       preservation_ready_args payloads ->
-      preservation_ready_expr (EEnum enum_name variant_name lts args payloads)
+      preservation_ready_expr
+        (EEnum enum_name variant_name lts variant_lts args payloads)
   | PRE_Match : forall scrut branches,
       preservation_ready_expr scrut ->
       preservation_ready_match_branches branches ->
@@ -617,7 +618,7 @@ Proof.
     match goal with
     | H : preservation_ready_fields fields |- _ => exact H
     end.
-  - intros s s' enum_name variant_name lts args payloads values edef vdef
+  - intros s s' enum_name variant_name lts variant_lts args payloads values edef vdef
       Hlookup Hvariant Heval_args IH Hready.
     inversion Hready; subst. apply IH.
     match goal with

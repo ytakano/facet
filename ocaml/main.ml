@@ -120,7 +120,7 @@ let rec diagnostic_add_expr map original alpha =
     diagnostic_add_exprs map original_args alpha_args
   | EStruct (_, _, _, original_fields), EStruct (_, _, _, alpha_fields) ->
     diagnostic_add_fields map original_fields alpha_fields
-  | EEnum (_, _, _, _, original_payloads), EEnum (_, _, _, _, alpha_payloads) ->
+  | EEnum (_, _, _, _, _, original_payloads), EEnum (_, _, _, _, _, alpha_payloads) ->
     diagnostic_add_exprs map original_payloads alpha_payloads
   | EReplace (original_p, original_e), EReplace (alpha_p, alpha_e)
   | EAssign (original_p, original_e), EAssign (alpha_p, alpha_e) ->

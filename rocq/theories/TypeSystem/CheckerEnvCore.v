@@ -117,7 +117,7 @@ Fixpoint infer_core_env_fuel (fuel : nat)
               end
           end
       end
-  | EEnum enum_name variant_name lts args payloads =>
+  | EEnum enum_name variant_name lts variant_lts args payloads =>
       match lookup_enum enum_name env with
       | None => infer_err (ErrEnumNotFound enum_name)
       | Some edef =>
@@ -129,9 +129,16 @@ Fixpoint infer_core_env_fuel (fuel : nat)
           match check_struct_bounds env (enum_bounds edef) args with
           | Some err => infer_err err
           | None =>
+              if negb (enum_outlives_hold_b Ω edef lts)
+              then infer_err ErrLifetimeConflict
+              else
               match lookup_enum_variant variant_name (enum_variants edef) with
               | None => infer_err (ErrVariantNotFound variant_name)
               | Some vdef =>
+                  if negb (Nat.eqb (List.length variant_lts)
+                      (enum_variant_lifetimes vdef))
+                  then infer_err ErrArityMismatch
+                  else
                   let fix go (Γ0 : ctx) (fields : list Ty) (es : list expr)
                       : infer_result ctx :=
                     match fields, es with
@@ -141,7 +148,7 @@ Fixpoint infer_core_env_fuel (fuel : nat)
                         | infer_err err => infer_err err
                         | infer_ok (T_payload, Γ1) =>
                             let T_expected :=
-                              instantiate_enum_variant_field_ty lts args T_field in
+                              instantiate_enum_variant_field_ty lts variant_lts args T_field in
                             if ty_compatible_b Ω T_payload T_expected
                             then go Γ1 fields' es'
                             else infer_err (compatible_error T_payload T_expected)
@@ -173,6 +180,9 @@ Fixpoint infer_core_env_fuel (fuel : nat)
                     match check_struct_bounds env (enum_bounds edef) args with
                     | Some err => infer_err err
                     | None =>
+                        if negb (enum_outlives_hold_b Ω edef lts)
+                        then infer_err ErrLifetimeConflict
+                        else
                         match first_duplicate_branch branches with
                         | Some name => infer_err (ErrDuplicateVariant name)
                         | None =>
@@ -206,7 +216,9 @@ Fixpoint infer_core_env_fuel (fuel : nat)
                                                           (ctx_add_params ps Γ1) e_branch with
                                                   | infer_err err => infer_err err
                                                   | infer_ok (T_branch, Γ_branch_payload) =>
-                                                      if ctx_check_ok_params ps Γ_branch_payload
+                                                      if contains_lbound_ty T_branch
+                                                      then infer_err ErrLifetimeLeak
+                                                      else if ctx_check_ok_params ps Γ_branch_payload
                                                       then infer_ok
                                                         (T_branch, ctx_remove_params ps Γ_branch_payload)
                                                       else infer_err ErrContextCheckFailed

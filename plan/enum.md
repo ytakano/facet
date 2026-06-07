@@ -241,37 +241,43 @@ Status: **implemented**. Phase 4 is complete.
 
 ## Phase 5: Drop Lowering
 
-Integrate enums with affine/linear drop.
+Status: implemented for the current FIR target as primitive whole-enum drops.
+The Rocq/raw elaboration auto-drop path already emits a root drop for affine
+non-struct values, which covers `TEnum`; linear enum values still have ordinary
+consumption obligations. OCaml FIR lowering now supports enum match payload
+binders so partial payload-drop smoke tests can be emitted instead of rejected.
 
-- Extend structural drop helpers from structs to enums.
-- For affine enum values, lower drop as variant dispatch that drops live payload
-  fields for the actual variant.
-- Linear enum values are not auto-dropped and remain ordinary consumption
-  obligations.
-- Extend assignment and replace old-value handling so affine enum old values are
-  structurally dropped after the old value is produced.
-- FIR may initially use a primitive `drop enum` operation if variant dispatch
-  FIR is not yet available, but the roadmap should keep the target semantics as
-  variant-specific payload dropping.
-
-Regression coverage should include:
+Implemented coverage:
 
 - scope-end affine enum drop;
-- enum with affine payload drop;
-- enum with partially consumed payload after match;
+- enum with affine payload drop, currently as primitive `drop enum`;
+- enum payload consumed after match, with no extra scrutinee drop;
 - assignment old-value drop for affine enum;
 - mutable-reference assignment old-value drop for affine enum.
 
+Future refinement: replace primitive FIR `drop enum` with variant dispatch that
+drops live payload fields for the actual variant once variant-dispatch FIR is
+available.
+
 ## Phase 6: Reference Lifetimes
 
-Make enum-level lifetimes work through construction and match.
+Status: implemented. Enum-level lifetime parameters and enum definition
+outlives constraints work through construction and match payload binders.
+Regression tests cover valid reference payload construction/matching, enum
+`where` outlives constraints at constructor and match use sites, rejection of
+unknown lifetime args, missing enum outlives evidence, and branch result
+lifetime escape.
+
+Implemented:
 
 - Payload references may mention enum-level lifetime params.
 - Construction instantiates payload reference lifetimes from the enum type args.
 - Match payload binders preserve the instantiated reference lifetime.
-- Outlives constraints on enum definitions must be checked at use sites.
 - Branch result types must not leak lifetimes that are not available in the
   surrounding function context.
+- Enum definitions carry outlives constraints from surface `where` clauses.
+- Constructor and match typing/checker paths require instantiated enum outlives
+  constraints to hold at each use site.
 
 Example:
 
@@ -298,6 +304,15 @@ Invalid cases:
 
 ## Phase 7: Variant-Local Lifetimes
 
+Status: implemented for basic existential unpacking. Variant-local lifetime
+binders are represented in `enum_variant_def`, constructor expressions carry
+erased lifetime witnesses, the checker validates constructor witness arity, and
+extraction/OCaml parsing support `Enum::Variant<'a>(...)` syntax. Match payload
+instantiation now opens variant-local lifetimes as branch-local `LBound`
+witnesses and rejects branch result types that would let those opened lifetimes
+escape. Regression tests cover valid construction, missing constructor witnesses,
+valid local match use, and match result escape rejection.
+
 Add variant-local lifetimes after enum-level lifetimes and match are stable.
 This is an existential-lifetime feature, not just more generic syntax.
 
@@ -323,7 +338,8 @@ Semantics:
 Required proof/checker additions:
 
 - variant-local lifetime binders on `enum_variant_def`;
-- branch-local lifetime context extension;
+- constructor-side erased lifetime witnesses with arity checking;
+- branch-local lifetime opening for match payload binder types;
 - opened-lifetime escape checks for match branch result types;
 - no unresolved opened lifetime in merged match result;
 - runtime/FIR erasure of variant-local lifetime evidence.

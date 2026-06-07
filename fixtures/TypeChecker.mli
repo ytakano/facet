@@ -223,7 +223,8 @@ type expr =
 | ECallExpr of expr * expr list
 | ECallExprGeneric of expr * ty list * expr list
 | EStruct of string * lifetime list * ty list * (string * expr) list
-| EEnum of string * string * lifetime list * ty list * expr list
+| EEnum of string * string * lifetime list * lifetime list * ty list
+   * expr list
 | EMatch of expr * ((string * ident list) * expr) list
 | EReplace of place * expr
 | EAssign of place * expr
@@ -292,11 +293,13 @@ type struct_def = { struct_name : string;
                     struct_fields : field_def list }
 
 type enum_variant_def = { enum_variant_name : string;
+                          enum_variant_lifetimes : Big_int_Z.big_int;
                           enum_variant_fields : ty list }
 
 type enum_def = { enum_name : string; enum_lifetimes : Big_int_Z.big_int;
                   enum_type_params : Big_int_Z.big_int;
                   enum_bounds : trait_bound list;
+                  enum_outlives : outlives_ctx;
                   enum_variants : enum_variant_def list }
 
 type trait_def = { trait_name : string;
@@ -351,7 +354,10 @@ val subst_type_params_expr : ty list -> expr -> expr
 
 val instantiate_struct_field_ty : lifetime list -> ty list -> field_def -> ty
 
-val instantiate_enum_variant_field_ty : lifetime list -> ty list -> ty -> ty
+val variant_lifetime_witnesses : Big_int_Z.big_int -> lifetime list
+
+val instantiate_enum_variant_field_ty :
+  lifetime list -> lifetime list -> ty list -> ty -> ty
 
 val usage_max_ty_list : ty list -> usage
 
@@ -856,6 +862,8 @@ val infer_place_env : global_env -> ctx -> place -> ty infer_result
 val wf_outlives_b : region_ctx -> outlives_ctx -> bool
 
 val outlives_constraints_hold_b : outlives_ctx -> outlives_ctx -> bool
+
+val enum_outlives_hold_b : outlives_ctx -> enum_def -> lifetime list -> bool
 
 val infer_hrt_call_env :
   outlives_ctx -> Big_int_Z.big_int -> Big_int_Z.big_int -> outlives_ctx ->
@@ -1383,7 +1391,8 @@ type raw_expr =
 | RawCallGeneric of ident * ty list * raw_expr list
 | RawCallExpr of raw_expr * raw_expr list
 | RawStruct of string * lifetime list * ty list * (string * raw_expr) list
-| RawEnum of string * string * lifetime list * ty list * raw_expr list
+| RawEnum of string * string * lifetime list * lifetime list * ty list
+   * raw_expr list
 | RawMatch of raw_expr * ((string * ident list) * raw_expr) list
 | RawReplace of place * raw_expr
 | RawAssign of place * raw_expr

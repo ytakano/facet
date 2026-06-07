@@ -99,7 +99,7 @@ Fixpoint expr_names (e : expr) : list ident :=
         | (_, e) :: rest => expr_names e ++ go rest
         end
       in go fields
-  | EEnum _ _ _ _ payloads =>
+  | EEnum _ _ _ _ _ payloads =>
       let fix go (payloads0 : list expr) : list ident :=
         match payloads0 with
         | [] => []
@@ -224,7 +224,7 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
       in
       let (fields', used') := go used fields in
       (EStruct name lts args fields', used')
-  | EEnum enum_name variant_name lts args payloads =>
+  | EEnum enum_name variant_name lts variant_lts args payloads =>
       let fix go (used0 : list ident) (payloads0 : list expr)
           : list expr * list ident :=
         match payloads0 with
@@ -236,7 +236,7 @@ Fixpoint alpha_rename_expr (ρ : rename_env) (used : list ident)
         end
       in
       let (payloads', used') := go used payloads in
-      (EEnum enum_name variant_name lts args payloads', used')
+      (EEnum enum_name variant_name lts variant_lts args payloads', used')
   | EMatch scrut branches =>
       let (scrut', used1) := alpha_rename_expr ρ used scrut in
       let fix go (used0 : list ident)

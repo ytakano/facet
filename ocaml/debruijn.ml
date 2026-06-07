@@ -251,9 +251,11 @@ let rec convert (fn_names : string list) (ty_scope : ty_scope) (scope : scope) (
     let (lts, tys) = split_expr_type_args ty_scope args in
     EStruct (name, lts, tys,
       List.map (fun (field, e1) -> (field, convert fn_names ty_scope scope e1)) fields)
-  | NEnum (enum_name, args, variant_name, payloads) ->
+  | NEnum (enum_name, args, variant_name, variant_args, payloads) ->
     let (lts, tys) = split_expr_type_args ty_scope args in
-    EEnum (enum_name, variant_name, lts, tys,
+    let (variant_lts, variant_tys) = split_expr_type_args ty_scope variant_args in
+    if variant_tys <> [] then failwith "variant-local type arguments are not supported";
+    EEnum (enum_name, variant_name, lts, variant_lts, tys,
       List.map (convert fn_names ty_scope scope) payloads)
   | NMatch (scrut, branches) ->
     EMatch
@@ -323,9 +325,11 @@ let rec convert_raw (fn_names : string list) (ty_scope : ty_scope) (scope : scop
     let (lts, tys) = split_expr_type_args ty_scope args in
     RawStruct (name, lts, tys,
       List.map (fun (field, e1) -> (field, convert_raw fn_names ty_scope scope e1)) fields)
-  | NEnum (enum_name, args, variant_name, payloads) ->
+  | NEnum (enum_name, args, variant_name, variant_args, payloads) ->
     let (lts, tys) = split_expr_type_args ty_scope args in
-    RawEnum (enum_name, variant_name, lts, tys,
+    let (variant_lts, variant_tys) = split_expr_type_args ty_scope variant_args in
+    if variant_tys <> [] then failwith "variant-local type arguments are not supported";
+    RawEnum (enum_name, variant_name, lts, variant_lts, tys,
       List.map (convert_raw fn_names ty_scope scope) payloads)
   | NMatch (scrut, branches) ->
     RawMatch
@@ -445,10 +449,12 @@ let convert_enum struct_names enum_names e =
     enum_lifetimes = Big_int_Z.big_int_of_int (List.length lts);
     enum_type_params = Big_int_Z.big_int_of_int (List.length tys);
     enum_bounds = List.map (trait_bound_of_named ty_scope tys) e.ne_bounds;
+    enum_outlives = e.ne_outlives;
     enum_variants =
       List.map
         (fun v ->
           { enum_variant_name = v.nev_name;
+            enum_variant_lifetimes = Big_int_Z.big_int_of_int (List.length v.nev_lifetimes);
             enum_variant_fields = List.map (lower_named_ty ty_scope) v.nev_fields })
         e.ne_variants }
 
@@ -672,10 +678,12 @@ let validate_env env =
         first_some
           (List.concat_map
              (fun v ->
-                List.map (type_error e.enum_type_params e.enum_lifetimes zero)
+                List.map (type_error e.enum_type_params
+                  (Big_int_Z.add_big_int e.enum_lifetimes v.enum_variant_lifetimes) zero)
                   v.enum_variant_fields)
              e.enum_variants @
-           List.map (validate_bound e.enum_type_params e.enum_lifetimes) e.enum_bounds)
+           List.map (validate_bound e.enum_type_params e.enum_lifetimes) e.enum_bounds @
+           [outlives_error e.enum_lifetimes zero e.enum_outlives])
     in
     let validate_trait t =
       first_some (List.map (validate_bound t.trait_type_params zero) t.trait_bounds)

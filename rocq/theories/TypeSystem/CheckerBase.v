@@ -352,7 +352,7 @@ Inductive capture_ref_free_ty (env : global_env) : Ty -> Prop :=
            Forall
              (fun T =>
                 capture_ref_free_ty env
-                  (instantiate_enum_variant_field_ty lts args T))
+                  (instantiate_enum_variant_field_ty lts [] args T))
              (enum_variant_fields v))
         (enum_variants edef) ->
       capture_ref_free_ty env (MkTy u (TEnum name lts args))
@@ -394,7 +394,7 @@ Fixpoint capture_ref_free_ty_b_fuel
                   forallb
                     (fun T =>
                       capture_ref_free_ty_b_fuel fuel' env
-                        (instantiate_enum_variant_field_ty lts args T))
+                        (instantiate_enum_variant_field_ty lts [] args T))
                     (enum_variant_fields v))
                 (enum_variants edef)
           | None => false

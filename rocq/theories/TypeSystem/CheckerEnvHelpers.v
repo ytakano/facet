@@ -44,6 +44,10 @@ Definition wf_outlives_b (Δ : region_ctx) (Ω : outlives_ctx) : bool :=
 Definition outlives_constraints_hold_b (Ω : outlives_ctx) (constraints : outlives_ctx) : bool :=
   forallb (fun '(a, b) => outlives_b Ω a b) constraints.
 
+Definition enum_outlives_hold_b
+    (Ω : outlives_ctx) (edef : enum_def) (lts : list lifetime) : bool :=
+  outlives_constraints_hold_b Ω (apply_lt_outlives lts (enum_outlives edef)).
+
 (* Infer the return type for a HRT (for<'a,...> fn(&...) -> ...) call.
    Used by the roots checker to handle TForall callee types. *)
 Definition infer_hrt_call_env

@@ -216,7 +216,7 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
               end
           end
       end
-  | EEnum enum_name variant_name lts args payloads =>
+  | EEnum enum_name variant_name lts variant_lts args payloads =>
       match lookup_enum enum_name env with
       | None => infer_err (ErrEnumNotFound enum_name)
       | Some edef =>
@@ -228,9 +228,16 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
           match check_struct_bounds env (enum_bounds edef) args with
           | Some err => infer_err err
           | None =>
+              if negb (enum_outlives_hold_b Ω edef lts)
+              then infer_err ErrLifetimeConflict
+              else
               match lookup_enum_variant variant_name (enum_variants edef) with
               | None => infer_err (ErrVariantNotFound variant_name)
               | Some vdef =>
+                  if negb (Nat.eqb (List.length variant_lts)
+                      (enum_variant_lifetimes vdef))
+                  then infer_err ErrArityMismatch
+                  else
                   let fix go (Σ0 : sctx) (fields : list Ty) (es : list expr)
                       : infer_result (sctx * list expr) :=
                     match fields, es with
@@ -240,7 +247,7 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
                         | infer_err err => infer_err err
                         | infer_ok (T_payload, Σ1, e_payload') =>
                             let T_expected :=
-                              instantiate_enum_variant_field_ty lts args T_field in
+                              instantiate_enum_variant_field_ty lts variant_lts args T_field in
                             if ty_compatible_b Ω T_payload T_expected
                             then match go Σ1 fields' es' with
                                  | infer_err err => infer_err err
@@ -256,7 +263,7 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
                   | infer_err err => infer_err err
                   | infer_ok (Σ', payloads') =>
                       infer_ok (instantiate_enum_ty edef lts args, Σ',
-                        EEnum enum_name variant_name lts args payloads')
+                        EEnum enum_name variant_name lts variant_lts args payloads')
                   end
               end
           end
@@ -301,7 +308,9 @@ Fixpoint infer_core_env_state_fuel_elab (fuel : nat)
                                                           (sctx_add_params ps Σ1) e_branch with
                                                   | infer_err err => infer_err err
                                                   | infer_ok (T_branch, Σ_branch_payload, e_branch') =>
-                                                      if params_ok_sctx_b env ps Σ_branch_payload
+                                                      if contains_lbound_ty T_branch
+                                                      then infer_err ErrLifetimeLeak
+                                                      else if params_ok_sctx_b env ps Σ_branch_payload
                                                       then infer_ok
                                                         (T_branch,
                                                          sctx_remove_params ps Σ_branch_payload,

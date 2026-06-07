@@ -50,8 +50,8 @@ Proof.
        Σv_payload Σv R_out roots Σs Ts rootss expected_core
        binders ps lts args roots_scrut
        Hbinders Hparams Hnodup Hctx_none Hroot_none Hlookup Hpayload
-       Htyped Hparams_ok Hroots_excl Hremove Henv_excl Hctx_remove
-       Hcore Hequiv Htail IHtail];
+       Htyped Hno_lbound Hparams_ok Hroots_excl Hremove Henv_excl
+       Hctx_remove Hcore Hequiv Htail IHtail];
     intros Hvariant Hbranch.
   - simpl in Hvariant. discriminate.
   - simpl in Hvariant.
@@ -898,7 +898,7 @@ Proof.
                  Hready_fields Htyped_fields Hcover Hroots Hshadow Hrn
                  Hscope Hfresh)
     end.
-  - intros s s' enum_name variant_name lts args payloads values edef vdef
+  - intros s s' enum_name variant_name lts variant_lts args payloads values edef vdef
       Hlookup Hvariant Heval_args IHargs Ω n R Σ T Σ' R' roots ps frame
       Hready Htyped Hcover Hroots Hshadow Hrn Hscope Hfresh.
     dependent destruction Hready.
@@ -1325,7 +1325,11 @@ Proof.
       exists vdef, lookup_enum_variant variant_name (enum_variants edef) =
         Some vdef).
     { eapply first_unknown_variant_branch_lookup_some; eassumption. }
-	    rewrite H6 in Hvariant_known. simpl in Hvariant_known.
+	    match goal with
+	    | Hvariants : enum_variants edef = v_head :: v_tail |- _ =>
+	        rewrite Hvariants in Hvariant_known
+	    end.
+	    simpl in Hvariant_known.
 	    assert (Hsame_head_final :
 	      sctx_same_bindings (sctx_remove_params ps_head Σ_head_payload)
 	        (sctx_of_ctx Γ_out)).

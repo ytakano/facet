@@ -253,7 +253,7 @@ Fixpoint preservation_ready_expr_b (e : expr) : bool :=
             preservation_ready_expr_b e_field && go rest
         end
       in go fields
-  | EEnum _ _ _ _ payloads =>
+  | EEnum _ _ _ _ _ payloads =>
       forallb preservation_ready_expr_b payloads
   | EMatch scrut branches =>
       preservation_ready_expr_b scrut &&
@@ -329,7 +329,7 @@ Fixpoint provenance_ready_expr_b (e : expr) : bool :=
             provenance_ready_expr_b e_field && go rest
         end
       in go fields
-  | EEnum _ _ _ _ payloads =>
+  | EEnum _ _ _ _ _ payloads =>
       forallb provenance_ready_expr_b payloads
   | EMatch scrut branches =>
       provenance_ready_expr_b scrut &&
@@ -611,7 +611,7 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
               end
           end
       end
-  | EEnum enum_name variant_name lts args payloads =>
+  | EEnum enum_name variant_name lts variant_lts args payloads =>
       match lookup_enum enum_name env with
       | None => infer_err (ErrEnumNotFound enum_name)
       | Some edef =>
@@ -623,9 +623,16 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
           match check_struct_bounds env (enum_bounds edef) args with
           | Some err => infer_err err
           | None =>
+              if negb (enum_outlives_hold_b Ω edef lts)
+              then infer_err ErrLifetimeConflict
+              else
               match lookup_enum_variant variant_name (enum_variants edef) with
               | None => infer_err (ErrVariantNotFound variant_name)
               | Some vdef =>
+                  if negb (Nat.eqb (List.length variant_lts)
+                      (enum_variant_lifetimes vdef))
+                  then infer_err ErrArityMismatch
+                  else
                   let fix go (Σ0 : sctx) (R0 : root_env)
                       (fields : list Ty) (es : list expr)
                       : infer_result (sctx * root_env * root_set) :=
@@ -637,7 +644,7 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
                         | infer_err err => infer_err err
                         | infer_ok (T_payload, Σ1, R1, roots_payload) =>
                             let T_expected :=
-                              instantiate_enum_variant_field_ty lts args T_field in
+                              instantiate_enum_variant_field_ty lts variant_lts args T_field in
                             if ty_compatible_b Ω T_payload T_expected
                             then
                               match go Σ1 R1 fields' es' with
@@ -676,6 +683,9 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
                   else match check_struct_bounds env (enum_bounds edef) args with
                   | Some err => infer_err err
                   | None =>
+                      if negb (enum_outlives_hold_b Ω edef lts)
+                      then infer_err ErrLifetimeConflict
+                      else
                   match first_duplicate_branch branches with
                   | Some name => infer_err (ErrDuplicateVariant name)
                   | None =>
@@ -714,7 +724,9 @@ Fixpoint infer_core_env_state_fuel_roots (fuel : nat)
                                                               R_branch_payload, roots_branch) =>
                                                       let R_branch :=
                                                         root_env_remove_match_params ps R_branch_payload in
-                                                      if params_ok_sctx_b env ps Σ_branch_payload &&
+                                                      if contains_lbound_ty T_branch
+                                                      then infer_err ErrLifetimeLeak
+                                                      else if params_ok_sctx_b env ps Σ_branch_payload &&
                                                          roots_exclude_params_b ps roots_branch &&
                                                          root_env_excludes_params_b ps R_branch
                                                       then infer_ok

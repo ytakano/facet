@@ -823,14 +823,14 @@ Proof.
                 (fun T : Ty =>
                   capture_ref_free_ty_b_fuel fuel
                     (global_env_with_local_bounds env bounds)
-                    (instantiate_enum_variant_field_ty lts args T))
+                    (instantiate_enum_variant_field_ty lts [] args T))
                 (enum_variant_fields v)) (enum_variants edef) =
           forallb
             (fun v : enum_variant_def =>
               forallb
                 (fun T : Ty =>
                   capture_ref_free_ty_b_fuel fuel env
-                    (instantiate_enum_variant_field_ty lts args T))
+                    (instantiate_enum_variant_field_ty lts [] args T))
                 (enum_variant_fields v)) (enum_variants edef)).
         { induction (enum_variants edef) as [| v vs IHvs]; simpl.
           - reflexivity.
@@ -839,17 +839,17 @@ Proof.
                 (fun T : Ty =>
                   capture_ref_free_ty_b_fuel fuel
                     (global_env_with_local_bounds env bounds)
-                    (instantiate_enum_variant_field_ty lts args T))
+                    (instantiate_enum_variant_field_ty lts [] args T))
                 (enum_variant_fields v) =
               forallb
                 (fun T : Ty =>
                   capture_ref_free_ty_b_fuel fuel env
-                    (instantiate_enum_variant_field_ty lts args T))
+                    (instantiate_enum_variant_field_ty lts [] args T))
                 (enum_variant_fields v)).
             { induction (enum_variant_fields v) as [| T Ts IHTs]; simpl.
               - reflexivity.
               - rewrite (IH env bounds
-                  (instantiate_enum_variant_field_ty lts args T)).
+                  (instantiate_enum_variant_field_ty lts [] args T)).
                 rewrite IHTs. reflexivity. }
             rewrite Hfields, IHvs. reflexivity. }
         rewrite Hvariants. reflexivity.

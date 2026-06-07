@@ -147,7 +147,7 @@ with runtime_rootless_enum_fields
   | RREF_Nil : forall lts args,
       runtime_rootless_enum_fields env lts args []
   | RREF_Cons : forall lts args T Ts,
-      runtime_rootless_ty env (instantiate_enum_variant_field_ty lts args T) ->
+      runtime_rootless_ty env (instantiate_enum_variant_field_ty lts [] args T) ->
       runtime_rootless_enum_fields env lts args Ts ->
       runtime_rootless_enum_fields env lts args (T :: Ts).
 
@@ -378,16 +378,31 @@ Proof.
     + eapply IH; eassumption.
 Qed.
 
+
+Lemma Forall2_ty_lifetime_equiv_refl_rootfacts :
+  forall args, Forall2 ty_lifetime_equiv args args.
+Proof.
+  induction args as [| T args IH]; constructor.
+  - apply ty_lifetime_equiv_refl.
+  - exact IH.
+Qed.
+
 Lemma runtime_rootless_enum_fields_Forall :
-  forall env lts args Ts,
+  forall env lts variant_lts args Ts,
     runtime_rootless_enum_fields env lts args Ts ->
     Forall (runtime_rootless_ty env)
-      (map (instantiate_enum_variant_field_ty lts args) Ts).
+      (map (instantiate_enum_variant_field_ty lts variant_lts args) Ts).
 Proof.
-  intros env lts args Ts Hrootless.
+  intros env lts variant_lts args Ts Hrootless.
   induction Hrootless.
   - constructor.
-  - simpl. constructor; assumption.
+  - simpl. constructor.
+    + assert (Hargs_equiv : Forall2 ty_lifetime_equiv args args).
+      { apply Forall2_ty_lifetime_equiv_refl_rootfacts. }
+      eapply ty_lifetime_equiv_runtime_rootless_actual.
+      { eapply instantiate_enum_variant_field_ty_lifetime_equiv. exact Hargs_equiv. }
+      exact H.
+    + exact IHHrootless.
 Qed.
 
 Lemma value_roots_within_excludes_rootfacts :
@@ -592,8 +607,8 @@ Proof.
     | Hroot_fields : runtime_rootless_fields env lts args (struct_fields sdef) |- _ =>
         eapply IHfields; exact Hroot_fields
     end.
-  - intros enum_name variant_name lts args values edef vdef Hlookup Hvariant
-      Hvalues IHvalues Hrootless.
+  - intros enum_name variant_name lts variant_lts args values edef vdef Hlookup
+      Hvariant Hlen_variant_lts Hvalues IHvalues Hrootless.
     destruct (lookup_enum_success_rootfacts env enum_name edef Hlookup)
       as [_ Henum_name].
     subst enum_name.
@@ -720,8 +735,8 @@ Proof.
           (struct_fields sdef) |- _ =>
           exact (IHfields Hroot_fields s')
       end.
-  - intros enum_name variant_name lts args values edef vdef Hlookup Hvariant
-      Hvalues IHvalues Hrootless s'.
+  - intros enum_name variant_name lts variant_lts args values edef vdef Hlookup
+      Hvariant Hlen_variant_lts Hvalues IHvalues Hrootless s'.
     destruct (lookup_enum_success_rootfacts env enum_name edef Hlookup)
       as [_ Henum_name].
     subst enum_name.
@@ -732,6 +747,7 @@ Proof.
     eapply VHT_Enum.
     + exact Hlookup.
     + exact Hvariant.
+    + exact Hlen_variant_lts.
     + eapply IHvalues.
       eapply runtime_rootless_enum_fields_Forall.
       eapply lookup_enum_variant_runtime_rootless; eassumption.

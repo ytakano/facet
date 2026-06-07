@@ -353,20 +353,23 @@ Inductive typed_env_roots_shadow_safe
       typed_env_roots_shadow_safe env Ω n R Σ
         (EStruct sname lts args fields)
         (instantiate_struct_instance_ty sdef lts args) Σ' R' roots
-  | TERS_Enum : forall R R' Σ Σ' enum_name variant_name lts args payloads
+  | TERS_Enum : forall R R' Σ Σ' enum_name variant_name lts variant_lts args payloads
       edef vdef payload_roots,
       Program.lookup_enum enum_name env = Some edef ->
       Program.lookup_enum_variant variant_name (Program.enum_variants edef) =
         Some vdef ->
       Datatypes.length lts = Program.enum_lifetimes edef ->
+      Datatypes.length variant_lts = Program.enum_variant_lifetimes vdef ->
       Datatypes.length args = Program.enum_type_params edef ->
       check_struct_bounds env (Program.enum_bounds edef) args = None ->
+      Forall (fun '(a, b) => outlives Ω a b)
+        (apply_lt_outlives lts (Program.enum_outlives edef)) ->
       typed_args_roots_shadow_safe env Ω n R Σ payloads
         (params_of_tys
-          (map (instantiate_enum_variant_field_ty lts args)
+          (map (instantiate_enum_variant_field_ty lts variant_lts args)
             (Program.enum_variant_fields vdef))) Σ' R' payload_roots ->
       typed_env_roots_shadow_safe env Ω n R Σ
-        (EEnum enum_name variant_name lts args payloads)
+        (EEnum enum_name variant_name lts variant_lts args payloads)
         (instantiate_enum_ty edef lts args) Σ' R'
         (root_sets_union payload_roots)
   | TERS_Match : forall R R1 R_payload R_head_payload R_out
@@ -379,6 +382,8 @@ Inductive typed_env_roots_shadow_safe
       Datatypes.length lts = Program.enum_lifetimes edef ->
       Datatypes.length args = Program.enum_type_params edef ->
 	      check_struct_bounds env (Program.enum_bounds edef) args = None ->
+      Forall (fun '(a, b) => outlives Ω a b)
+        (apply_lt_outlives lts (Program.enum_outlives edef)) ->
 	      first_unknown_variant_branch branches (Program.enum_variants edef) = None ->
 	      Program.enum_variants edef = v_head :: v_tail ->
 	      lookup_expr_branch_binders (Program.enum_variant_name v_head) branches = Some binders_head ->
@@ -390,6 +395,7 @@ Inductive typed_env_roots_shadow_safe
       R_payload = root_env_add_params_roots_same ps_head roots_scrut R1 ->
       typed_env_roots_shadow_safe env Ω n R_payload (sctx_add_params ps_head Σ1)
         e_head T_head Σ_head_payload R_head_payload roots_head ->
+      contains_lbound_ty T_head = false ->
       params_ok_sctx_b env ps_head Σ_head_payload = true ->
       roots_exclude_params ps_head roots_head ->
       R_out = root_env_remove_match_params ps_head R_head_payload ->
@@ -635,6 +641,7 @@ with typed_match_tail_roots_shadow_safe
       R_payload = root_env_add_params_roots_same ps roots_scrut R ->
       typed_env_roots_shadow_safe env Ω n R_payload (sctx_add_params ps Σ)
         e T Σv_payload Rv_payload roots ->
+      contains_lbound_ty T = false ->
       params_ok_sctx_b env ps Σv_payload = true ->
       roots_exclude_params ps roots ->
       Rv = root_env_remove_match_params ps Rv_payload ->
@@ -1482,7 +1489,7 @@ Proof.
             let (ep', used1) := alpha_rename_expr rho used0 ep in
             let (rest', used2) := go used1 rest in
             (ep' :: rest', used2)
-        end) used l1) as [payloads' u'] eqn:Hpayloads.
+        end) used l2) as [payloads' u'] eqn:Hpayloads.
     congruence.
   - (* EMatch scrut branches *)
     simpl in Hrename.
@@ -1915,8 +1922,9 @@ Proof.
     + exact HnsR0'.
     + exact HR0'.
     + exact Hroots0.
-  - intros R R' Σ Σ' enum_name variant_name lts args payloads edef vdef
-      payload_roots Hlookup Hvariant Hlen_lts Hlen_args Hbounds Hpayloads
+  - intros R R' Σ Σ' enum_name variant_name lts variant_lts args payloads edef vdef
+      payload_roots Hlookup Hvariant Hlen_lts Hlen_variant_lts Hlen_args Hbounds
+      Houtlives Hpayloads
       IHpayloads Hfresh R0 HnsR HnsR0 HR0.
     rewrite expr_local_store_names_enum in Hfresh.
     destruct (IHpayloads Hfresh R0 HnsR HnsR0 HR0)
@@ -1932,11 +1940,11 @@ Proof.
 	      Σ_head Σ_tail Γ_out scrut branches enum_name lts args edef v_head
 	      v_tail e_head T_scrut T_head Ts_tail binders_head ps_head roots_scrut
 	      roots_head roots_tail Hscrut IHscrut Hcore Hlookup Hlen_lts Hlen_args
-	      Hbounds Hunknown Hvariants
+	      Hbounds Houtlives Hunknown Hvariants
 	      Hbinders_head Hpayload_head Hnodup_head Hctx_fresh_head Hroot_fresh_head
 	      Hlookup_head HRpayload Hhead IHhead
-      Hparams_ok_head Hroots_excl_head HRout Henv_excl_head HΣhead Htail
-      IHtail Hmerge Hfresh R0 HnsR HnsR0 HR0.
+      Hno_lbound_head Hparams_ok_head Hroots_excl_head HRout Henv_excl_head
+      HΣhead Htail IHtail Hmerge Hfresh R0 HnsR HnsR0 HR0.
     simpl in Hfresh.
     apply root_subst_images_exclude_names_app_inv in Hfresh.
     destruct Hfresh as [Hfresh_scrut Hfresh_branches].
@@ -2595,8 +2603,9 @@ Proof.
 	  - intros R R_payload Rv_payload Rv Σ branches v rest e T
 	      Σv_payload Σv R_out roots Σs Ts rootss expected_core binders ps
 	      lts args roots_scrut Hbinders Hpayload Hnodup
-	      Hctx_fresh Hroot_fresh Hlookup HRpayload Htyped IHtyped Hparams_ok Hroots_excl HRv
-      Henv_excl HΣv Hcore Heq_tail Htail IHtail Hfresh roots_scrut0
+	      Hctx_fresh Hroot_fresh Hlookup HRpayload Htyped IHtyped
+      Hno_lbound Hparams_ok Hroots_excl HRv Henv_excl HΣv Hcore Heq_tail
+      Htail IHtail Hfresh roots_scrut0
       R0 R0_out Hroots_scrut0 HnsR HnsR0 HnsR0_out HR0 HR0_out.
     assert (Hfresh_R0 : root_env_lookup_params_none_b ps R0 = true).
     { eapply root_env_lookup_params_none_b_instantiate_equiv; eassumption. }

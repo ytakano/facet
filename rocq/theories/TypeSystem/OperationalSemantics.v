@@ -429,11 +429,11 @@ Inductive eval (env : global_env) : store -> expr -> store -> value -> Prop :=
       eval_struct_fields env s fields (struct_fields sdef) s' values ->
       eval env s (EStruct name lts args fields) s' (VStruct name values)
 
-  | Eval_Enum : forall s s' enum_name variant_name lts args payloads values edef vdef,
+  | Eval_Enum : forall s s' enum_name variant_name lts variant_lts args payloads values edef vdef,
       lookup_enum enum_name env = Some edef ->
       lookup_enum_variant variant_name (enum_variants edef) = Some vdef ->
       eval_args env s payloads s' values ->
-      eval env s (EEnum enum_name variant_name lts args payloads) s'
+      eval env s (EEnum enum_name variant_name lts variant_lts args payloads) s'
         (VEnum enum_name variant_name lts args values)
 
   (* let x: T = e1 in e2 *)

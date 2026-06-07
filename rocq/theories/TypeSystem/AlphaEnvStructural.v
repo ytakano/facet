@@ -1129,7 +1129,7 @@ Proof.
 	          apply in_or_app. right. apply in_or_app. right.
 	          apply Hused_prefix. apply Hrange_used. exact Hin.
 	        - exact Hctx_branch_payload.
-	        - exact H5. }
+	        - exact H6. }
 	      specialize (IHHtyped_tail Hexpr Hctx Hdisj Hrename).
 	      destruct IHHtyped_tail as [Σrs [Htail_r Hctxs_tail]].
 	      exists (sctx_remove_params psr Σv_payload_r :: Σrs). split.
@@ -1140,9 +1140,10 @@ Proof.
 	        -- exact Hctx_none_r.
 	        -- exact Hlookup_r.
 	        -- exact Htyped_branch_r.
+        -- exact H5.
 	        -- exact Hparams_ok_r.
 	        -- reflexivity.
-	        -- exact H7.
+	        -- exact H8.
 	        -- exact Htail_r.
       * constructor.
         -- subst Σv.
@@ -1245,7 +1246,7 @@ Proof.
 		                     let (e0', used1) := alpha_rename_expr ρ used0 e0 in
 		                     let (rest', used2) := go used1 rest in
 		                     (e0' :: rest', used2)
-		                 end) used l1).
+		                 end) used l2).
 		    injection Hrename as <- _. discriminate.
 		  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
 		    destruct ((fix go (used0 : list ident) (branches0 : list (string * list ident * expr))
@@ -1361,7 +1362,7 @@ Proof.
 		                     let (e0', used1) := alpha_rename_expr ρ used0 e0 in
 		                     let (rest', used2) := go used1 rest in
 		                     (e0' :: rest', used2)
-		                 end) used l1).
+		                 end) used l2).
 		    injection Hrename as <- _. reflexivity.
 		  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
 		    destruct ((fix go (used0 : list ident) (branches0 : list (string * list ident * expr))
@@ -1574,14 +1575,14 @@ Proof.
         destruct (alpha_rename_typed_args_env_structural_forward
           env Ω n ρ Σ Σr payloads payloadsr used used_payloads
           (params_of_tys
-            (map (instantiate_enum_variant_field_ty lts args)
+            (map (instantiate_enum_variant_field_ty lts variant_lts args)
               (enum_variant_fields vdef)))
           (params_of_tys
-            (map (instantiate_enum_variant_field_ty lts args)
+            (map (instantiate_enum_variant_field_ty lts variant_lts args)
               (enum_variant_fields vdef))) Σ') as [Σr' [Hpayloads_r Hctx_r]].
         * intros Σa Σb used0 e0 er0 used1 T0 Σa' Hin Halpha Hcu Hru Hd Hr Ht.
           eapply IH.
-          -- pose proof (expr_size_enum_payload_lt enum_name variant_name lts args
+          -- pose proof (expr_size_enum_payload_lt enum_name variant_name lts variant_lts args
                payloads e0 Hin) as Hpayload_lt.
              eapply Nat.lt_le_trans.
              ++ exact Hpayload_lt.
@@ -1598,7 +1599,7 @@ Proof.
         * exact Hdisj.
         * apply params_alpha_refl.
         * exact Hpayloads.
-        * exact H4.
+        * exact H6.
         * exists Σr'. split.
           -- eapply TES_Enum; eauto.
           -- exact Hctx_r.
@@ -1959,19 +1960,19 @@ Proof.
         { intros y Hy. eapply alpha_rename_expr_used_extends; eauto. }
 	        destruct (alpha_rename_match_branches_lookup_payload_forward
 	          ρ used_scrut branches branchesr used_branches
-	          (enum_variant_name v_head) binders_head e_head Hbranches H6 H10)
+	          (enum_variant_name v_head) binders_head e_head Hbranches H7 H11)
 	          as [binders_head_r [ρ_head [e_headr
 	            [used_head_pre [used_head [used_head_out
 	              [Hbinders_head_r [Hlookup_head_r [Hrename_head_binders
 	                [Hrename_head Hused_head_pre]]]]]]]]]].
-	        pose proof (lookup_expr_branch_binders_expr_in_alpha _ _ _ _ H6 H10)
+	        pose proof (lookup_expr_branch_binders_expr_in_alpha _ _ _ _ H7 H11)
 	          as Hhead_in.
-	        unfold match_payload_params in H7.
+	        unfold match_payload_params in H8.
 	        destruct (match_binder_params_alpha_rename_idents
 	          ρ (binders_head ++ free_vars_expr e_head ++ used_head_pre)
 	          binders_head binders_head_r ρ_head used_head
 	          (instantiate_enum_variant_field_tys lts args v_head) ps_head
-	          Hrename_head_binders H7)
+	          Hrename_head_binders H8)
 	          as [ps_head_r [Hparams_head_r [Hparams_head_alpha
 	            Hrename_head_params]]].
         assert (Hparams_head_nodup_r :
@@ -2045,7 +2046,7 @@ Proof.
             + exact Hy_params.
             + apply in_or_app. right. apply in_or_app. left. exact Hfree.
 	          - eapply lookup_expr_branch_disjoint_alpha.
-	            + exact H10.
+	            + exact H11.
 	            + exact Hdisj_branches.
 	            + exact Hfree.
 	            + exact Hy_range. }
@@ -2061,16 +2062,16 @@ Proof.
           { eapply alpha_rename_params_params_ok_sctx_b_forward_gen.
 	            - exact Hrename_head_params.
 	            - rewrite <- params_ctx_names_param_names.
-	              eapply params_names_nodup_b_sound. exact H8.
+	              eapply params_names_nodup_b_sound. exact H9.
 	            - intros y Hy.
 	              rewrite <- params_ctx_names_param_names in Hy.
-	              rewrite (match_binder_params_names _ _ _ H7) in Hy.
+	              rewrite (match_binder_params_names _ _ _ H8) in Hy.
 	              apply in_or_app. left. exact Hy.
             - intros y Hy.
               apply in_or_app. right. apply in_or_app. right.
 	              apply Hused_head_pre. apply Hrange_used1. exact Hy.
 	            - exact Hctx_head_payload_r.
-	            - exact H11. }
+	            - exact H13. }
           assert (Hctx_head_r :
             ctx_alpha ρ Σ_head
               (sctx_remove_params ps_head_r Σ_head_payload_r)).
@@ -2101,14 +2102,14 @@ Proof.
           -- exact Hrange_used1.
 	          -- exact Hdisj_branches.
 	          -- exact Hbranches.
-	          -- exact H13.
+	          -- exact H15.
 	          -- destruct (ctx_alpha_merge_many_forward ρ
 	               Σ_head (sctx_remove_params ps_head_r Σ_head_payload_r)
 	               Σ_tail Σ_tailr Γ_out)
                as [Γ_outr [Hmerge_r Hctx_merge_r]].
 	             ++ exact Hctx_head_r.
 	             ++ exact Hctx_tail_r.
-	             ++ exact H14.
+	             ++ exact H16.
 	             ++ exists (sctx_of_ctx Γ_outr). split.
 	                ** { eapply TES_Match; eauto;
 	                     try solve
@@ -2119,6 +2120,7 @@ Proof.
                        | exact Hctx_head_none_r
                        | exact Hlookup_head_r
                        | exact Hhead_r
+                       | exact H12
                        | exact Hparams_head_ok_r
                        | reflexivity ]. }
                 ** unfold sctx_of_ctx. exact Hctx_merge_r.

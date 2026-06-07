@@ -144,7 +144,7 @@ Proof.
                      let (e0', used1) := alpha_rename_expr ρ used0 e0 in
                      let (rest', used2) := go used1 rest in
                      (e0' :: rest', used2)
-                 end) used l1).
+                 end) used l2).
     injection Hrename as <- _. simpl in Hplace. discriminate.
   - destruct (alpha_rename_expr ρ used e) as [er0 used0] eqn:He.
     destruct ((fix go (used0 : list ident)
@@ -267,7 +267,7 @@ Proof.
                      let (e0', used1) := alpha_rename_expr ρ used0 e0 in
                      let (rest', used2) := go used1 rest in
                      (e0' :: rest', used2)
-                 end) used l1).
+                 end) used l2).
     injection Hrename as <- _. reflexivity.
 	  - destruct (alpha_rename_expr ρ used e) as [er0 used0].
 	    destruct ((fix go (used0 : list ident) (branches0 : list (string * list ident * expr))

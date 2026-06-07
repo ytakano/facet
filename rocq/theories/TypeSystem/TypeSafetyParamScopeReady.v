@@ -483,7 +483,7 @@ Proof.
         exact (IHfields Ω n lts args R Σ Σ' R' roots ps frame
           Hready_fields Htyped_fields Hcover Hscope)
     end.
-  - intros s s' enum_name variant_name lts args payloads values edef vdef
+  - intros s s' enum_name variant_name lts variant_lts args payloads values edef vdef
       Hlookup Hvariant Heval_args IHargs Ω n R Σ T Σ' R' roots ps frame
       Hready Htyped Hcover Hscope.
     dependent destruction Hready.
@@ -694,7 +694,11 @@ Proof.
       exists vdef, lookup_enum_variant variant_name (enum_variants edef) =
         Some vdef).
     { eapply first_unknown_variant_branch_lookup_some; eassumption. }
-    rewrite H6 in Hvariant_known. simpl in Hvariant_known.
+    match goal with
+    | Hvariants : enum_variants edef = v_head :: v_tail |- _ =>
+        rewrite Hvariants in Hvariant_known
+    end.
+    simpl in Hvariant_known.
     destruct (String.eqb variant_name (enum_variant_name v_head))
       eqn:Hvariant_head.
 	    + apply String.eqb_eq in Hvariant_head. subst variant_name.

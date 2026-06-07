@@ -57,7 +57,7 @@ Inductive raw_expr : Type :=
 | RawCallGeneric : ident -> list Ty -> list raw_expr -> raw_expr
 | RawCallExpr : raw_expr -> list raw_expr -> raw_expr
 | RawStruct : string -> list lifetime -> list Ty -> list (string * raw_expr) -> raw_expr
-| RawEnum : string -> string -> list lifetime -> list Ty -> list raw_expr -> raw_expr
+| RawEnum : string -> string -> list lifetime -> list lifetime -> list Ty -> list raw_expr -> raw_expr
 | RawMatch : raw_expr -> list (string * list ident * raw_expr) -> raw_expr
 | RawReplace : place -> raw_expr -> raw_expr
 | RawAssign : place -> raw_expr -> raw_expr
@@ -466,12 +466,12 @@ Fixpoint elaborate_raw_expr_fuel
               finish (append_env_fns env extras)
                 (EStruct sname lts tys fields') extras next'
           end
-      | RawEnum enum_name variant_name lts tys payloads =>
+      | RawEnum enum_name variant_name lts variant_lts tys payloads =>
           match go_args fuel' env Σ next payloads with
           | infer_err err => infer_err err
           | infer_ok (payloads', _, extras, next') =>
               finish (append_env_fns env extras)
-                (EEnum enum_name variant_name lts tys payloads') extras next'
+                (EEnum enum_name variant_name lts variant_lts tys payloads') extras next'
           end
       | RawMatch scrut branches =>
           match elaborate_raw_expr_fuel fuel' None env Ω n Σ next scrut with

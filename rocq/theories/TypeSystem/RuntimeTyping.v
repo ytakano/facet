@@ -695,13 +695,15 @@ Proof.
 Qed.
 
 Lemma instantiate_enum_variant_field_ty_lifetime_equiv :
-  forall lts_actual lts_expected args_actual args_expected T,
+  forall lts_actual lts_expected variant_lts_actual variant_lts_expected
+      args_actual args_expected T,
     Forall2 ty_lifetime_equiv args_actual args_expected ->
     ty_lifetime_equiv
-      (instantiate_enum_variant_field_ty lts_actual args_actual T)
-      (instantiate_enum_variant_field_ty lts_expected args_expected T).
+      (instantiate_enum_variant_field_ty lts_actual variant_lts_actual args_actual T)
+      (instantiate_enum_variant_field_ty lts_expected variant_lts_expected args_expected T).
 Proof.
-  intros lts_actual lts_expected args_actual args_expected T Hargs.
+  intros lts_actual lts_expected variant_lts_actual variant_lts_expected
+    args_actual args_expected T Hargs.
   unfold instantiate_enum_variant_field_ty.
   apply subst_type_params_ty_lifetime_equiv.
   - exact Hargs.
@@ -722,11 +724,12 @@ Inductive value_has_type (env : global_env) (s : store) : value -> Ty -> Prop :=
       struct_fields_have_type env s lts args fields (struct_fields sdef) ->
       value_has_type env s (VStruct name fields)
         (instantiate_struct_instance_ty sdef lts args)
-  | VHT_Enum : forall enum_name variant_name lts args values edef vdef,
+  | VHT_Enum : forall enum_name variant_name lts variant_lts args values edef vdef,
       lookup_enum enum_name env = Some edef ->
       lookup_enum_variant variant_name (enum_variants edef) = Some vdef ->
+      Datatypes.length variant_lts = enum_variant_lifetimes vdef ->
       enum_values_have_type env s values
-        (map (instantiate_enum_variant_field_ty lts args)
+        (map (instantiate_enum_variant_field_ty lts variant_lts args)
           (enum_variant_fields vdef)) ->
       value_has_type env s (VEnum enum_name variant_name lts args values)
         (instantiate_enum_ty edef lts args)

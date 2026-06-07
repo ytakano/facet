@@ -48,7 +48,7 @@ Fixpoint expr_size (e : expr) : nat :=
             | [] => 0
             | (_, e) :: rest => expr_size e + go rest
             end) fields)
-  | EEnum _ _ _ _ payloads =>
+  | EEnum _ _ _ _ _ payloads =>
       S ((fix go (payloads0 : list expr) : nat :=
             match payloads0 with
             | [] => 0
@@ -158,11 +158,12 @@ Proof.
 Qed.
 
 Lemma expr_size_enum_payload_lt :
-  forall enum_name variant_name lts args payloads payload,
+  forall enum_name variant_name lts variant_lts args payloads payload,
     In payload payloads ->
-    expr_size payload < expr_size (EEnum enum_name variant_name lts args payloads).
+    expr_size payload <
+      expr_size (EEnum enum_name variant_name lts variant_lts args payloads).
 Proof.
-  intros enum_name variant_name lts args payloads.
+  intros enum_name variant_name lts variant_lts args payloads.
   induction payloads as [| p rest IH]; intros payload Hin.
   - contradiction.
   - simpl in *. destruct Hin as [<- | Hin].

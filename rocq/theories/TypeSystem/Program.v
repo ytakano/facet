@@ -21,8 +21,9 @@ Record struct_def : Type := MkStructDef {
 }.
 
 Record enum_variant_def : Type := MkEnumVariantDef {
-  enum_variant_name   : string;
-  enum_variant_fields : list Ty
+  enum_variant_name      : string;
+  enum_variant_lifetimes : nat;
+  enum_variant_fields    : list Ty
 }.
 
 Record enum_def : Type := MkEnumDef {
@@ -30,6 +31,7 @@ Record enum_def : Type := MkEnumDef {
   enum_lifetimes   : nat;
   enum_type_params : nat;
   enum_bounds      : list trait_bound;
+  enum_outlives    : outlives_ctx;
   enum_variants    : list enum_variant_def
 }.
 
@@ -274,14 +276,15 @@ Fixpoint subst_type_params_expr (σ : list Ty) (e : expr) {struct e} : expr :=
         end
       in
       EStruct name lts (map (subst_type_params_ty σ) type_args) (go fields)
-  | EEnum name variant lts type_args args =>
+  | EEnum name variant lts variant_lts type_args args =>
       let fix go (es : list expr) : list expr :=
         match es with
         | [] => []
         | e' :: es' => subst_type_params_expr σ e' :: go es'
         end
       in
-      EEnum name variant lts (map (subst_type_params_ty σ) type_args) (go args)
+      EEnum name variant lts variant_lts
+        (map (subst_type_params_ty σ) type_args) (go args)
   | EMatch discr branches =>
       let fix go (bs : list (string * list ident * expr))
           : list (string * list ident * expr) :=
@@ -401,7 +404,7 @@ Proof.
     [| lit | x | m x T e1 e2 | m x e1 e2 | fname | fname captures
      | p | fname args | fname type_args args | ef args
      | ef type_args args
-     | name lts type_args fields | enum_name variant lts type_args args
+     | name lts type_args fields | enum_name variant lts variant_lts type_args args
      | discr branches | p rhs | p rhs | rk p | e | e | e1 e2 e3];
     simpl; try reflexivity.
   - rewrite subst_type_params_ty_nil, (IH e1), (IH e2). reflexivity.
@@ -691,10 +694,17 @@ Definition instantiate_struct_ty
   MkTy (usage_max_list (struct_fields s))
        (TStruct (struct_name s) lifetime_args type_args).
 
+Fixpoint variant_lifetime_witnesses (n : nat) : list lifetime :=
+  match n with
+  | O => []
+  | S k => variant_lifetime_witnesses k ++ [LBound k]
+  end.
+
 Definition instantiate_enum_variant_field_ty
-    (lifetime_args : list lifetime) (type_args : list Ty)
-    (T : Ty) : Ty :=
-  subst_type_params_ty type_args (apply_lt_ty lifetime_args T).
+    (lifetime_args : list lifetime) (variant_lifetime_args : list lifetime)
+    (type_args : list Ty) (T : Ty) : Ty :=
+  subst_type_params_ty type_args
+    (apply_lt_ty (variant_lifetime_args ++ lifetime_args) T).
 
 Lemma instantiate_struct_field_ty_type_subst_compose : forall σ lts args f,
   subst_type_params_ty σ (instantiate_struct_field_ty lts args f) =
@@ -704,11 +714,11 @@ Proof.
   apply subst_type_params_ty_compose.
 Qed.
 
-Lemma instantiate_enum_variant_field_ty_type_subst_compose : forall σ lts args T,
-  subst_type_params_ty σ (instantiate_enum_variant_field_ty lts args T) =
-  instantiate_enum_variant_field_ty lts (compose_type_params σ args) T.
+Lemma instantiate_enum_variant_field_ty_type_subst_compose : forall σ lts vlts args T,
+  subst_type_params_ty σ (instantiate_enum_variant_field_ty lts vlts args T) =
+  instantiate_enum_variant_field_ty lts vlts (compose_type_params σ args) T.
 Proof.
-  intros σ lts args T. unfold instantiate_enum_variant_field_ty.
+  intros σ lts vlts args T. unfold instantiate_enum_variant_field_ty.
   apply subst_type_params_ty_compose.
 Qed.
 

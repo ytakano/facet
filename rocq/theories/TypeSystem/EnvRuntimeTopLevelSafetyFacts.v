@@ -76,7 +76,7 @@ Proof.
   - induction l1 as [| [fname field] rest IHfields]; simpl.
     + reflexivity.
     + rewrite IH, IHfields. reflexivity.
-	  - induction l1 as [| payload rest IHargs]; simpl.
+	  - induction l2 as [| payload rest IHargs]; simpl.
 	    + reflexivity.
 	    + rewrite IH, IHargs. reflexivity.
   - rewrite IH.

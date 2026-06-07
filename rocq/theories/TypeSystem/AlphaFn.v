@@ -419,13 +419,13 @@ Proof.
               let (e0', used1) := alpha_rename_expr ρ used0 e0 in
               let (rest', used2) := go used1 rest in
               (e0' :: rest', used2)
-          end) used l1) as r eqn:Hpayloads.
+          end) used l2) as r eqn:Hpayloads.
     destruct r as [payloadsr used_payloads].
     injection Hrename as _ <-.
     eapply alpha_rename_call_args_used_extends.
     * intros used_arg epayload er0 used_tail Hin_payload Hrename0.
       eapply IH.
-      -- pose proof (expr_size_enum_payload_lt s s0 l l0 l1 epayload Hin_payload)
+      -- pose proof (expr_size_enum_payload_lt s s0 l l0 l1 l2 epayload Hin_payload)
            as Hpayload_lt.
          assert (expr_size epayload < n) as Hlt_payload by lia.
          exact Hlt_payload.
@@ -934,14 +934,14 @@ Proof.
                 let (e0', used1) := alpha_rename_expr rho used0 e0 in
                 let (rest', used2) := go used1 rest in
                 (e0' :: rest', used2)
-            end) used l1) as r eqn:Hpayloads.
+            end) used l2) as r eqn:Hpayloads.
       destruct r as [payloadsr used_payloads].
       injection Hrename as <- <-.
       rewrite expr_local_store_names_enum in Hin.
       eapply alpha_rename_call_args_local_store_names_in_used.
       * intros used_arg epayload er0 used_tail Hin_payload Hrename0.
         eapply IH.
-        -- pose proof (expr_size_enum_payload_lt s s0 l l0 l1 epayload Hin_payload)
+        -- pose proof (expr_size_enum_payload_lt s s0 l l0 l1 l2 epayload Hin_payload)
              as Hpayload_lt.
            assert (expr_size epayload < n) as Hlt_payload by lia. exact Hlt_payload.
         -- exact Hrename0.
@@ -1427,14 +1427,14 @@ Proof.
                 let (e0', used1) := alpha_rename_expr rho used0 e0 in
                 let (rest', used2) := go used1 rest in
                 (e0' :: rest', used2)
-            end) used l1) as r eqn:Hpayloads.
+            end) used l2) as r eqn:Hpayloads.
       destruct r as [payloadsr used_payloads].
       injection Hrename as <- _.
       rewrite expr_local_store_names_enum.
       eapply alpha_rename_call_args_local_store_names_fresh_used.
       * intros used0 epayload er0 used1 Hin_payload Hrename0.
         eapply IH.
-        -- pose proof (expr_size_enum_payload_lt s s0 l l0 l1 epayload Hin_payload)
+        -- pose proof (expr_size_enum_payload_lt s s0 l l0 l1 l2 epayload Hin_payload)
              as Hpayload_lt.
            assert (expr_size epayload < n) as Hlt_payload by lia.
            exact Hlt_payload.
@@ -1968,14 +1968,14 @@ Proof.
                 let (e0', used1) := alpha_rename_expr rho used0 e0 in
                 let (rest', used2) := go used1 rest in
                 (e0' :: rest', used2)
-            end) used l1) as r eqn:Hpayloads.
+            end) used l2) as r eqn:Hpayloads.
       destruct r as [payloadsr used_payloads].
       injection Hrename as <- _.
       rewrite expr_local_store_names_enum.
       eapply alpha_rename_call_args_local_store_names_nodup.
       * intros used0 epayload er0 used1 Hin_payload Hrename0.
         eapply IH.
-        -- pose proof (expr_size_enum_payload_lt s s0 l l0 l1 epayload Hin_payload)
+        -- pose proof (expr_size_enum_payload_lt s s0 l l0 l1 l2 epayload Hin_payload)
              as Hpayload_lt.
            assert (expr_size epayload < n) as Hlt_payload by lia. exact Hlt_payload.
         -- exact Hrename0.

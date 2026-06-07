@@ -39,13 +39,13 @@ Proof.
              ++ simpl. simpl in Hlt. lia.
              ++ exact Hrest.
       + apply PRE_Enum.
-        induction l1 as [| payload rest IHpayloads].
+        induction l2 as [| payload rest IHpayloads].
         * constructor.
         * simpl in Hready.
           apply andb_true_iff in Hready as [Hpayload Hrest].
           constructor.
           -- apply IH with (e := payload).
-             ++ pose proof (expr_size_enum_payload_lt s s0 l l0
+             ++ pose proof (expr_size_enum_payload_lt s s0 l l0 l1
                   (payload :: rest) payload (or_introl eq_refl)).
                 lia.
 	             ++ exact Hpayload.
@@ -188,13 +188,13 @@ Proof.
              ++ simpl. simpl in Hlt. lia.
              ++ exact Hrest.
       + apply ProvReady_Enum.
-        induction l1 as [| payload rest IHpayloads].
+        induction l2 as [| payload rest IHpayloads].
         * constructor.
         * simpl in Hready.
           apply andb_true_iff in Hready as [Hpayload Hrest].
           constructor.
           -- apply IH with (e := payload).
-             ++ pose proof (expr_size_enum_payload_lt s s0 l l0
+             ++ pose proof (expr_size_enum_payload_lt s s0 l l0 l1
                   (payload :: rest) payload (or_introl eq_refl)).
                 lia.
 	             ++ exact Hpayload.

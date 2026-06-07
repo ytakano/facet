@@ -738,7 +738,7 @@ Proof.
   destruct e as
     [| lit | x | m x T e1 e2 | m x e1 e2 | fname | fname captures
      | p | fname args | fname type_args' args | ef args | ef type_args' args
-     | name lts type_args' fields | enum_name variant lts type_args' args
+     | name lts type_args' fields | enum_name variant lts variant_lts type_args' payloads
      | discr branches | p rhs | p rhs | rk p | e | e | e1 e2 e3];
     simpl; try reflexivity.
   - rewrite (IH type_args e1), (IH type_args e2). reflexivity.
@@ -787,8 +787,8 @@ Proof.
     rewrite (IH type_args ef), Hargs. reflexivity.
   - induction fields as [| [field expr] fields IHfields]; simpl; auto.
     rewrite (IH type_args expr), IHfields. reflexivity.
-  - induction args as [| arg args IHargs]; simpl; auto.
-    rewrite (IH type_args arg), IHargs. reflexivity.
+  - induction payloads as [| payload payloads IHpayloads]; simpl; auto.
+    rewrite (IH type_args payload), IHpayloads. reflexivity.
   - assert (Hbranches :
       ((fix go (branches0 : list (string * list ident * expr)) : list ident :=
           match branches0 with
@@ -853,7 +853,7 @@ Proof.
     - destruct e as
         [| lit | x | m x T e1 e2 | m x e1 e2 | fname | fname captures
          | p | fname args | fname type_args0 args | callee args | callee type_args0 args
-         | sname lts type_args0 fields | ename variant lts type_args0 payloads
+         | sname lts type_args0 fields | ename variant lts variant_lts type_args0 payloads
          | scrut branches | p rhs | p rhs | rk p | e | e | e1 e2 e3];
         simpl in Hrename |- *; try (inversion Hrename; subst; reflexivity).
       + destruct (alpha_rename_expr rho used e1) as [e1r used1] eqn:He1.
@@ -1238,7 +1238,7 @@ Proof.
             + simpl.
               rewrite (IHpayloads used1 restr used2); auto.
               intros e1 Hin. apply Hincl. right. exact Hin.
-            + pose proof (expr_size_enum_payload_lt ename variant lts type_args0 payloads e0
+            + pose proof (expr_size_enum_payload_lt ename variant lts variant_lts type_args0 payloads e0
                 (Hincl e0 (or_introl eq_refl))). lia.
             + exact He0. }
         destruct ((fix go (used0 : list ident) (payloads0 : list expr) {struct payloads0}

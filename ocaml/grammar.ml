@@ -11,7 +11,7 @@ top_item ::= fn_def | struct_def | enum_def | trait_def | impl_def
 ```
 fn_def ::= "fn" ID opt_generic_params "(" params ")" "->" ty opt_fn_where_clause "{" block "}"
 struct_def ::= "struct" ID opt_generic_params opt_trait_bounds "{" struct_field ("," struct_field)* "}"
-enum_def ::= "enum" ID opt_generic_params opt_trait_bounds "{" enum_variant ("," enum_variant)* "}"
+enum_def ::= "enum" ID opt_generic_params opt_fn_where_clause "{" enum_variant ("," enum_variant)* "}"
 trait_def ::= "trait" ID opt_generic_params opt_trait_bounds ";"
 impl_def ::= "impl" opt_generic_params ID opt_type_args "for" ty ";"
 struct_field ::= opt_mut ID ":" ty

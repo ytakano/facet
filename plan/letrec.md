@@ -11,8 +11,8 @@ Done:
 - `rec` and `and` are reserved words in the OCaml frontend.
 - Parser and named AST accept local `let rec` groups, including shared explicit
   capture lists.
-- Raw AST includes `RawLetRec`; raw elaboration rejects it with extracted
-  `ErrNotImplemented` until rec-group semantics are implemented.
+- Raw AST includes `RawLetRec`; raw elaboration supports non-capturing
+  groups and explicit-capture groups using synthetic function definitions.
 - OCaml raw lowering keeps recursive function names separate from ordinary
   value scope and emits direct raw references/calls to local-rec ids.
 - Rocq raw elaboration accepts non-capturing local rec groups and lowers them
@@ -138,8 +138,8 @@ For an explicit-capture recursive closure group:
      capture list, function names, params, returns, and bodies.
    - Done: update grammar printing to include both non-capturing and capturing
      forms.
-   - Done: conversion currently rejects the parsed node with
-     `let rec is not implemented yet`; parser validation remains syntactic only.
+   - Done: parser validation remains syntactic; semantic checks stay in
+     de Bruijn validation, raw elaboration, and the extracted checker.
 
 3. Name resolution and raw AST.
    - Done: add raw `RawLetRec captures rec_fns body` and lower parsed groups
@@ -162,16 +162,16 @@ For an explicit-capture recursive closure group:
      the shared capture ids.
 
 4. Rocq raw elaboration.
-   - Extend `CheckerRawElab.v` with the raw rec-group form and an elaboration
-     helper that allocates all synthetic names before checking any body.
-   - Build group stubs first, append them to the current environment, then
-     elaborate every rec body with the full group available.
-   - For `[]` captures, create `MkFnDef` entries with `fn_captures = []` and
-     check them with the existing full-env path.
-   - For non-empty captures, reuse the current `RawClosure` capture machinery
-     and create one captured synthetic `fn_def` per rec function.
-   - Elaborate the `in` expression with the completed synthetic functions
-     available and return the synthetic functions as extras.
+   - Done: `CheckerRawElab.v` has `RawLetRec` and allocates all synthetic
+     names before checking any body.
+   - Done: group stubs are appended before body elaboration so the group is
+     in scope while each rec body is elaborated.
+   - Done: `[]` captures create no-capture `MkFnDef` entries and use the
+     existing full-env path.
+   - Done: non-empty captures reuse closure capture checking and create one
+     captured synthetic `fn_def` per rec function.
+   - Done: the `in` expression elaborates with completed synthetic functions
+     available and returns the synthetic functions as extras.
 
 5. Checker, typing, borrow, and safety alignment.
    - Prefer reusing existing `EFn`, `ECall`, `EMakeClosure`, and `ECallExpr`
@@ -205,10 +205,12 @@ Valid tests:
 - Shadowing where a local binding hides a rec function name.
 - Non-capturing local self-recursion.
 - Non-capturing local mutual recursion.
+- Same-group non-recursive forward direct call.
 - Captured local rec closure with an immutable unrestricted capture, called
   from the `in` body.
 - Captured recursive closure with an immutable unrestricted capture.
 - Captured mutual recursive closures sharing one capture list.
+- Captured same-group non-recursive forward direct call.
 - Shadowing where a parameter hides a rec function name.
 
 Invalid tests:

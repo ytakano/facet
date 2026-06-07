@@ -277,6 +277,8 @@ Progress:
 - Moved call support alpha-preservation lemmas into `AlphaTypedRoots.v`.
 - Moved struct support alpha-preservation lemma into `AlphaTypedRoots.v`.
 - Moved full support alpha-preservation lemma into `AlphaTypedRoots.v`.
+- Moved function structural alpha-preservation lemma into
+  `AlphaEnvStructural.v`, leaving `AlphaShadowProvenance.v` as a facade.
 
 Commit after each moved proof group with:
 

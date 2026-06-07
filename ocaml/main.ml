@@ -253,7 +253,7 @@ let rec string_of_infer_error ?(diagnostics = []) = function
       (string_of_infer_error ~diagnostics err)
 
 
-let parse_file filename =
+let parse_file_raw filename =
   let ic = try open_in filename
     with Sys_error msg ->
       Printf.eprintf "Error: cannot open file: %s\n" msg;
@@ -281,6 +281,84 @@ let parse_file filename =
       start.Lexing.pos_lnum
       (start.Lexing.pos_cnum - start.Lexing.pos_bol);
     exit 1
+
+
+let normalize_path path =
+  let path =
+    if Filename.is_relative path then Filename.concat (Sys.getcwd ()) path else path
+  in
+  let is_abs = String.length path > 0 && path.[0] = '/' in
+  let parts = String.split_on_char '/' path in
+  let parts =
+    List.fold_left
+      (fun acc part ->
+         match part, acc with
+         | "", _ | ".", _ -> acc
+         | "..", _ :: rest -> rest
+         | "..", [] -> acc
+         | _, _ -> part :: acc)
+      []
+      parts
+    |> List.rev
+  in
+  let joined = String.concat "/" parts in
+  if is_abs then "/" ^ joined else joined
+
+let is_regular_file path =
+  Sys.file_exists path && not (Sys.is_directory path)
+
+let module_file_path declaring_file name =
+  let dir = Filename.dirname declaring_file in
+  let flat = Filename.concat dir (name ^ ".facet") in
+  let nested = Filename.concat (Filename.concat dir name) "mod.facet" in
+  match is_regular_file flat, is_regular_file nested with
+  | true, false -> flat
+  | false, true -> nested
+  | true, true -> failwith ("duplicate file module candidates: " ^ name)
+  | false, false -> failwith ("missing file module: " ^ name)
+
+let module_decl_name = function
+  | Ast.NIMod (_, name, _) -> Some name
+  | Ast.NIModFile (_, name) -> Some name
+  | _ -> None
+
+let reject_duplicate_module_decls items =
+  let rec go seen = function
+    | [] -> ()
+    | item :: rest ->
+      match module_decl_name item with
+      | None -> go seen rest
+      | Some name ->
+        if List.mem name seen then failwith ("duplicate module declaration: " ^ name)
+        else go (name :: seen) rest
+  in
+  go [] items
+
+let cycle_message path stack =
+  let chain = List.rev (path :: stack) in
+  "file module cycle: " ^ String.concat " -> " chain
+
+let rec load_source_file stack filename =
+  let filename = normalize_path filename in
+  if List.mem filename stack then failwith (cycle_message filename stack)
+  else
+    let items = parse_file_raw filename in
+    expand_file_modules (filename :: stack) filename items
+
+and expand_file_modules stack declaring_file items =
+  reject_duplicate_module_decls items;
+  List.map
+    (function
+      | Ast.NIMod (visibility, name, children) ->
+        Ast.NIMod (visibility, name, expand_file_modules stack declaring_file children)
+      | Ast.NIModFile (visibility, name) ->
+        let module_file = module_file_path declaring_file name in
+        let children = load_source_file stack module_file in
+        Ast.NIMod (visibility, name, children)
+      | item -> item)
+    items
+
+let parse_file filename = load_source_file [] filename
 
 let core_dir () =
   match Sys.getenv_opt "FACET_CORE_DIR" with
@@ -325,10 +403,11 @@ let () =
     exit 1
   end;
   let filename = args.(!i) in
-  let core_items = load_core_items () in
-  let named_items = parse_file filename in
   let env =
-    try Debruijn.convert_program_items_with_core core_items named_items
+    try
+      let core_items = load_core_items () in
+      let named_items = parse_file filename in
+      Debruijn.convert_program_items_with_core core_items named_items
     with Failure msg ->
       Printf.eprintf "Validation error: %s\n" msg;
       exit 1

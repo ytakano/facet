@@ -1,0 +1,5 @@
+mod math;
+
+fn main() -> affine isize {
+  (math::id 1)
+}

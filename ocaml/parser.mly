@@ -135,6 +135,7 @@ top_item:
   | vis = visibility; t = trait_def { NITrait { t with nt_visibility = vis } }
   | i = impl_def { NIImpl i }
   | u = use_def { let (path, alias) = u in NIUse (path, alias) }
+  | vis = visibility; m = mod_file_def { NIModFile (vis, m) }
   | vis = visibility; m = mod_def { let (name, items) = m in NIMod (vis, name, items) }
 
 visibility:
@@ -144,6 +145,10 @@ visibility:
 mod_def:
   | KW_MOD; name = ID; LBRACE; items = list(top_item); RBRACE
     { (name, items) }
+
+mod_file_def:
+  | KW_MOD; name = ID; SEMI
+    { name }
 
 use_def:
   | KW_USE; target = path_name; alias = opt_use_alias; SEMI

@@ -124,4 +124,5 @@ type named_item =
   | NITrait of named_trait_def
   | NIImpl of named_impl_def
   | NIUse of path * name option
+  | NIModFile of named_visibility * name
   | NIMod of named_visibility * name * named_item list

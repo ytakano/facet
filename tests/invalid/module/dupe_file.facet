@@ -1,0 +1,11 @@
+mod item {
+  pub fn id(x: affine isize) -> affine isize { x }
+}
+
+mod item {
+  pub fn id(x: affine isize) -> affine isize { x }
+}
+
+fn main() -> affine isize {
+  1
+}

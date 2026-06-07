@@ -185,6 +185,7 @@ let item_local_name = function
   | NITrait t -> t.nt_name
   | NIImpl _ -> "<impl>"
   | NIUse _ -> "<use>"
+  | NIModFile (_, name) -> name
   | NIMod (_, name, _) -> name
 
 let duplicate_module_name names =
@@ -198,6 +199,7 @@ let duplicate_module_name names =
 let rec reject_user_core_module = function
   | [] -> ()
   | NIMod (_, "core", _) :: _ -> failwith "user-defined module core is reserved"
+  | NIModFile (_, "core") :: _ -> failwith "user-defined module core is reserved"
   | NIMod (_, _, items) :: rest -> reject_user_core_module items; reject_user_core_module rest
   | _ :: rest -> reject_user_core_module rest
 
@@ -209,6 +211,7 @@ let rec collect_item_paths prefix items =
   List.concat_map
     (function
       | NIMod (_, name, children) -> collect_item_paths (prefix @ [name]) children
+      | NIModFile (_, name) -> failwith ("unexpanded file module: " ^ string_of_path (prefix @ [name]))
       | NIFn f -> [prefix @ [f.nf_name]]
       | NIStruct st -> [prefix @ [st.ns_name]]
       | NIEnum e -> [prefix @ [e.ne_name]]
@@ -223,6 +226,7 @@ let rec collect_item_infos ancestors prefix items =
       | NIMod (visibility, name, children) ->
         let module_path = prefix @ [name] in
         collect_item_infos ((prefix, visibility) :: ancestors) module_path children
+      | NIModFile (_, name) -> failwith ("unexpanded file module: " ^ string_of_path (prefix @ [name]))
       | NIFn f ->
         [{ info_name = string_of_path (prefix @ [f.nf_name]);
            info_visibility = f.nf_visibility;
@@ -291,6 +295,7 @@ let rec flatten_modules known prefix items =
   List.concat_map
     (function
       | NIMod (_, name, children) -> flatten_modules known (prefix @ [name]) children
+      | NIModFile (_, name) -> failwith ("unexpanded file module: " ^ string_of_path (prefix @ [name]))
       | NIFn f ->
         let (_lts, tys) = split_generics f.nf_generics in
         [NIFn { f with nf_name = string_of_path (prefix @ [f.nf_name]);
@@ -455,6 +460,7 @@ let validate_item_paths known = function
     List.iter (validate_type_arg_paths known tys) i.ni_trait_args;
     validate_ty_paths known tys i.ni_for_ty
   | NIUse _ -> ()
+  | NIModFile (_, name) -> failwith ("unexpanded file module: " ^ name)
   | NIMod _ -> ()
 
 let validate_flattened_paths struct_names enum_names trait_names fn_names items =

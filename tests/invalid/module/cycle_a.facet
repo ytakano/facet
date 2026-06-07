@@ -1,0 +1,5 @@
+mod cycle_b;
+
+fn main() -> affine isize {
+  1
+}

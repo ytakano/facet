@@ -1,0 +1,5 @@
+mod util;
+
+fn main() -> affine isize {
+  (util::id 1)
+}

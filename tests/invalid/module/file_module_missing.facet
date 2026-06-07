@@ -1,0 +1,5 @@
+mod missing_file_module;
+
+fn main() -> affine isize {
+  1
+}

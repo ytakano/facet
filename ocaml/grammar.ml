@@ -17,6 +17,7 @@ impl_def ::= "impl" opt_generic_params path opt_type_args "for" ty ";"
 use_def ::= "use" path opt_use_alias ";"
 opt_use_alias ::= "" | "as" ID
 mod_def ::= opt_pub "mod" ID "{" top_item* "}"
+          | opt_pub "mod" ID ";"
 opt_pub ::= "" | "pub"
 struct_field ::= opt_mut ID ":" ty
 enum_variant ::= ID

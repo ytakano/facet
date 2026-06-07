@@ -35,6 +35,8 @@ let keywords = [
   "use",          Parser.KW_USE;
   "as",           Parser.KW_AS;
   "let",          Parser.KW_LET;
+  "rec",          Parser.KW_REC;
+  "and",          Parser.KW_AND;
   "in",           Parser.KW_IN;
   "mut",          Parser.KW_MUT;
   "drop",         Parser.KW_DROP;

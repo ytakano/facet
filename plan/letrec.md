@@ -8,6 +8,7 @@ Done:
 
 - Roadmap captured in this file.
 - Baseline tests lock current top-level recursive function values.
+- `rec` and `and` are reserved words in the OCaml frontend.
 
 Next:
 
@@ -117,7 +118,7 @@ For an explicit-capture recursive closure group:
    - Keep direct top-level recursion no-capture only.
 
 2. Parser and named AST.
-   - Reserve `rec` and `and` in the lexer.
+   - Done: reserve `rec` and `and` in the lexer/parser token set.
    - Add a named AST node for local recursive groups with optional shared
      capture list, function names, params, returns, and bodies.
    - Update grammar printing to include both non-capturing and capturing forms.

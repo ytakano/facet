@@ -1,0 +1,4 @@
+fn main() -> unrestricted () {
+  missing::pkg::Box { value = 1 };
+  ()
+}

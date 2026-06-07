@@ -1,0 +1,3 @@
+fn main() -> affine isize {
+  (missing::id 1)
+}

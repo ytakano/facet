@@ -1,0 +1,3 @@
+fn id<T>(x: affine T) -> affine T where T: missing::traits::Show {
+  x
+}

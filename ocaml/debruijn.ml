@@ -214,6 +214,132 @@ let flatten_program_items_with_core core_items user_items =
   reject_user_core_module user_items;
   flatten_program_items (core_items @ user_items)
 
+type known_paths = {
+  known_struct_names : string list;
+  known_enum_names : string list;
+  known_trait_names : string list;
+  known_fn_names : string list;
+}
+
+let is_qualified_name name = String.contains name ':'
+
+let require_known kind known name =
+  if List.mem name known then ()
+  else if is_qualified_name name then failwith ("unknown " ^ kind ^ " path: " ^ name)
+  else ()
+
+let rec validate_ty_paths known ty_params (NTy (_, core)) =
+  match core with
+  | NTUnits | NTIntegers | NTFloats | NTBooleans -> ()
+  | NTNamed (path, args) ->
+    let name = string_of_path path in
+    if not (List.mem name ty_params) then
+      require_known "type" (known.known_struct_names @ known.known_enum_names) name;
+    List.iter (validate_type_arg_paths known ty_params) args
+  | NTFn (args, ret) ->
+    List.iter (validate_ty_paths known ty_params) args;
+    validate_ty_paths known ty_params ret
+  | NTClosure (_, args, ret) ->
+    List.iter (validate_ty_paths known ty_params) args;
+    validate_ty_paths known ty_params ret
+  | NTForall (_, _, body) -> validate_ty_paths known ty_params body
+  | NTTypeForall (params, bounds, body) ->
+    let ty_params' = params @ ty_params in
+    List.iter (validate_trait_bound_paths known ty_params') bounds;
+    validate_ty_paths known ty_params' body
+  | NTRef (_, _, inner) -> validate_ty_paths known ty_params inner
+
+and validate_type_arg_paths known ty_params = function
+  | NTArgLifetime _ -> ()
+  | NTArgTy ty -> validate_ty_paths known ty_params ty
+
+and validate_trait_ref_paths known ty_params r =
+  let name = string_of_path r.ntr_name in
+  require_known "trait" known.known_trait_names name;
+  List.iter (validate_type_arg_paths known ty_params) r.ntr_args
+
+and validate_trait_bound_paths known ty_params b =
+  List.iter (validate_trait_ref_paths known ty_params) b.ntb_traits
+
+let validate_param_paths known ty_params p =
+  validate_ty_paths known ty_params p.np_ty
+
+let rec validate_expr_paths known ty_params value_scope = function
+  | NUnit | NLit _ | NPlace _ | NBorrow _ -> ()
+  | NVar _ -> ()
+  | NLet (_, name, ty_opt, e1, e2) ->
+    Option.iter (validate_ty_paths known ty_params) ty_opt;
+    validate_expr_paths known ty_params value_scope e1;
+    validate_expr_paths known ty_params (name :: value_scope) e2
+  | NCall (path, type_args, args) ->
+    let name = string_of_path path in
+    begin match path with
+    | [local] when List.mem local value_scope -> ()
+    | _ -> require_known "function" known.known_fn_names name
+    end;
+    List.iter (validate_type_arg_paths known ty_params) type_args;
+    List.iter (validate_expr_paths known ty_params value_scope) args
+  | NStruct (path, type_args, fields) ->
+    let name = string_of_path path in
+    require_known "struct" known.known_struct_names name;
+    List.iter (validate_type_arg_paths known ty_params) type_args;
+    List.iter (fun (_, e) -> validate_expr_paths known ty_params value_scope e) fields
+  | NEnum (path, type_args, _, variant_args, payloads) ->
+    let name = string_of_path path in
+    require_known "enum" known.known_enum_names name;
+    List.iter (validate_type_arg_paths known ty_params) type_args;
+    List.iter (validate_type_arg_paths known ty_params) variant_args;
+    List.iter (validate_expr_paths known ty_params value_scope) payloads
+  | NMatch (scrut, branches) ->
+    validate_expr_paths known ty_params value_scope scrut;
+    List.iter
+      (fun (_, binders, body) ->
+        validate_expr_paths known ty_params (binders @ value_scope) body)
+      branches
+  | NReplace (_, e) | NAssign (_, e) | NDeref e | NDrop e ->
+    validate_expr_paths known ty_params value_scope e
+  | NIf (cond, then_e, else_e) ->
+    validate_expr_paths known ty_params value_scope cond;
+    validate_expr_paths known ty_params value_scope then_e;
+    validate_expr_paths known ty_params value_scope else_e
+  | NClosure (captures, params, ret, body) ->
+    List.iter (validate_param_paths known ty_params) params;
+    validate_ty_paths known ty_params ret;
+    let value_scope' = List.map (fun p -> p.np_name) params @ captures @ value_scope in
+    validate_expr_paths known ty_params value_scope' body
+
+let validate_item_paths known = function
+  | NIFn f ->
+    let (_lts, tys) = split_generics f.nf_generics in
+    List.iter (validate_trait_bound_paths known tys) f.nf_bounds;
+    List.iter (validate_param_paths known tys) f.nf_params;
+    validate_ty_paths known tys f.nf_ret;
+    validate_expr_paths known tys (List.map (fun p -> p.np_name) f.nf_params) f.nf_body
+  | NIStruct st ->
+    let (_lts, tys) = split_generics st.ns_generics in
+    List.iter (validate_trait_bound_paths known tys) st.ns_bounds;
+    List.iter (fun field -> validate_ty_paths known tys field.nfield_ty) st.ns_fields
+  | NIEnum e ->
+    let (_lts, tys) = split_generics e.ne_generics in
+    List.iter (validate_trait_bound_paths known tys) e.ne_bounds;
+    List.iter
+      (fun variant -> List.iter (validate_ty_paths known tys) variant.nev_fields)
+      e.ne_variants
+  | NITrait t ->
+    let (_lts, tys) = split_generics t.nt_generics in
+    List.iter (validate_trait_bound_paths known tys) t.nt_bounds
+  | NIImpl i ->
+    let (_lts, tys) = split_generics i.ni_generics in
+    let trait_name = string_of_path i.ni_trait_name in
+    require_known "trait" known.known_trait_names trait_name;
+    List.iter (validate_type_arg_paths known tys) i.ni_trait_args;
+    validate_ty_paths known tys i.ni_for_ty
+  | NIMod _ -> ()
+
+let validate_flattened_paths struct_names enum_names trait_names fn_names items =
+  let known = { known_struct_names = struct_names; known_enum_names = enum_names; known_trait_names = trait_names; known_fn_names = fn_names } in
+  List.iter (validate_item_paths known) items
+
 let current_depth scope name =
   match List.assoc_opt name scope with
   | Some d -> d
@@ -956,6 +1082,7 @@ let convert_program_items_from_flattened items : global_env =
   let struct_names = List.map (fun s -> s.ns_name) structs in
   let enum_names = List.map (fun e -> e.ne_name) enums in
   let fn_names = List.map (fun f -> f.nf_name) fns in
+  validate_flattened_paths struct_names enum_names (List.map (fun t -> t.nt_name) traits) fn_names items;
   let top_names =
     List.map (fun s -> s.ns_name) structs @
     enum_names @

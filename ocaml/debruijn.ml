@@ -453,6 +453,15 @@ let rec validate_expr_paths known ty_params value_scope = function
     | Some name -> failwith ("duplicate let rec function name: " ^ name)
     | None -> ()
     end;
+    begin match first_duplicate [] captures with
+    | Some name -> failwith ("duplicate let rec capture name: " ^ name)
+    | None -> ()
+    end;
+    List.iter
+      (fun name ->
+        if not (List.mem name value_scope)
+        then failwith ("unknown let rec capture name: " ^ name))
+      captures;
     List.iter
       (fun rf ->
         List.iter (validate_param_paths known ty_params) rf.nrf_params;

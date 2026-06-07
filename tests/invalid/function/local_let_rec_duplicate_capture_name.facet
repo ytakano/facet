@@ -1,0 +1,7 @@
+fn main() -> unrestricted isize {
+  let y: unrestricted isize = 1 in
+  let rec [y, y] f(x: unrestricted isize) -> unrestricted isize {
+    x
+  }
+  in (f 1)
+}

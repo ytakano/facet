@@ -12,7 +12,7 @@
 ## Next Small Tasks
 
 1. **M2.1 diagnostics**: done. Unresolved qualified function, enum constructor, struct literal, trait, and type paths are rejected before raw elaboration with the original path in the validation error.
-2. **M3.1 visibility syntax**: parse `pub` on modules and item definitions, store it in the named AST, and preserve current behavior by treating all omitted visibility as private only after M3.2 is ready.
+2. **M3.1 visibility syntax**: done. `pub` parses on modules/functions/structs/enums/traits and is stored in the named AST; enforcement remains deferred to M3.2.
 3. **M3.2 visibility resolver**: enforce private/public access during module flattening. Private items are visible in the defining module and child modules; public items are visible by explicit path from outside.
 4. **M3.3 visibility tests/docs**: add valid/invalid fixtures for public sibling access, private sibling rejection, child access to parent private helper, and public item dependency policy.
 5. **M4.1 named imports**: parse `use path;`, resolve module-local type/function/constructor names, and reject ambiguous imports. No aliases or glob imports yet.

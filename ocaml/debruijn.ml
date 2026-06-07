@@ -135,7 +135,7 @@ let item_local_name = function
   | NIEnum e -> e.ne_name
   | NITrait t -> t.nt_name
   | NIImpl _ -> "<impl>"
-  | NIMod (name, _) -> name
+  | NIMod (_, name, _) -> name
 
 let duplicate_module_name names =
   let names = List.filter ((<>) "<impl>") names in
@@ -147,8 +147,8 @@ let duplicate_module_name names =
 
 let rec reject_user_core_module = function
   | [] -> ()
-  | NIMod ("core", _) :: _ -> failwith "user-defined module core is reserved"
-  | NIMod (_, items) :: rest -> reject_user_core_module items; reject_user_core_module rest
+  | NIMod (_, "core", _) :: _ -> failwith "user-defined module core is reserved"
+  | NIMod (_, _, items) :: rest -> reject_user_core_module items; reject_user_core_module rest
   | _ :: rest -> reject_user_core_module rest
 
 let rec collect_item_paths prefix items =
@@ -158,7 +158,7 @@ let rec collect_item_paths prefix items =
   end;
   List.concat_map
     (function
-      | NIMod (name, children) -> collect_item_paths (prefix @ [name]) children
+      | NIMod (_, name, children) -> collect_item_paths (prefix @ [name]) children
       | NIFn f -> [prefix @ [f.nf_name]]
       | NIStruct st -> [prefix @ [st.ns_name]]
       | NIEnum e -> [prefix @ [e.ne_name]]
@@ -172,7 +172,7 @@ let rec flatten_modules known prefix items =
   let resolve = resolve_path_from known_names prefix in
   List.concat_map
     (function
-      | NIMod (name, children) -> flatten_modules known (prefix @ [name]) children
+      | NIMod (_, name, children) -> flatten_modules known (prefix @ [name]) children
       | NIFn f ->
         let (_lts, tys) = split_generics f.nf_generics in
         [NIFn { f with nf_name = string_of_path (prefix @ [f.nf_name]);

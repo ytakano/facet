@@ -1,6 +1,10 @@
 type name = string
 type path = name list
 
+type named_visibility =
+  | VPrivate
+  | VPublic
+
 type named_place =
   | NPVar of name
   | NPDeref of named_place
@@ -60,6 +64,7 @@ type named_expr =
   | NClosure of name list * named_param list * named_ty * named_expr
 
 type named_fn_def = {
+  nf_visibility     : named_visibility;
   nf_name           : name;
   nf_generics       : named_generic_param list;
   nf_bounds         : named_trait_bound list;
@@ -76,6 +81,7 @@ type named_field_def = {
 }
 
 type named_struct_def = {
+  ns_visibility : named_visibility;
   ns_name     : name;
   ns_generics : named_generic_param list;
   ns_bounds   : named_trait_bound list;
@@ -89,6 +95,7 @@ type named_enum_variant_def = {
 }
 
 type named_enum_def = {
+  ne_visibility : named_visibility;
   ne_name     : name;
   ne_generics : named_generic_param list;
   ne_bounds   : named_trait_bound list;
@@ -97,6 +104,7 @@ type named_enum_def = {
 }
 
 type named_trait_def = {
+  nt_visibility : named_visibility;
   nt_name     : name;
   nt_generics : named_generic_param list;
   nt_bounds   : named_trait_bound list;
@@ -115,4 +123,4 @@ type named_item =
   | NIEnum of named_enum_def
   | NITrait of named_trait_def
   | NIImpl of named_impl_def
-  | NIMod of name * named_item list
+  | NIMod of named_visibility * name * named_item list

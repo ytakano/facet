@@ -109,7 +109,7 @@ let split_constructor_path segments =
 
 %}
 
-%token KW_FN KW_FOR KW_STRUCT KW_ENUM KW_TRAIT KW_IMPL KW_MATCH KW_MOD KW_LET KW_IN KW_MUT KW_DROP KW_REPLACE KW_CLOSURE
+%token KW_FN KW_FOR KW_STRUCT KW_ENUM KW_TRAIT KW_IMPL KW_MATCH KW_MOD KW_PUB KW_LET KW_IN KW_MUT KW_DROP KW_REPLACE KW_CLOSURE
 %token KW_AFFINE KW_LINEAR KW_UNRESTRICTED KW_ISIZE KW_F64
 %token KW_IF KW_ELSE KW_TRUE KW_FALSE KW_BOOL KW_WHERE
 %token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET LANGLE RANGLE
@@ -129,35 +129,39 @@ program:
   | items = list(top_item); EOF { items }
 
 top_item:
-  | f = fn_def { NIFn f }
-  | s = struct_def { NIStruct s }
-  | e = enum_def { NIEnum e }
-  | t = trait_def { NITrait t }
+  | vis = visibility; f = fn_def { NIFn { f with nf_visibility = vis } }
+  | vis = visibility; s = struct_def { NIStruct { s with ns_visibility = vis } }
+  | vis = visibility; e = enum_def { NIEnum { e with ne_visibility = vis } }
+  | vis = visibility; t = trait_def { NITrait { t with nt_visibility = vis } }
   | i = impl_def { NIImpl i }
-  | m = mod_def { m }
+  | vis = visibility; m = mod_def { let (name, items) = m in NIMod (vis, name, items) }
+
+visibility:
+  | { VPrivate }
+  | KW_PUB { VPublic }
 
 mod_def:
   | KW_MOD; name = ID; LBRACE; items = list(top_item); RBRACE
-    { NIMod (name, items) }
+    { (name, items) }
 
 fn_def:
   | KW_FN; name = ID; generics = opt_generic_params;
     LPAREN; ps = params; RPAREN;
     ARROW; ret = signature_ty; where_clause = opt_fn_where_clause; LBRACE; body = block; RBRACE
     { let (bounds, outs) = where_clause in
-      { nf_name = name; nf_generics = generics; nf_bounds = bounds;
+      { nf_visibility = VPrivate; nf_name = name; nf_generics = generics; nf_bounds = bounds;
         nf_outlives = outs; nf_params = ps; nf_ret = ret; nf_body = body } }
 
 struct_def:
   | KW_STRUCT; name = ID; generics = opt_generic_params;
     bounds = opt_trait_bounds; LBRACE; fields = separated_list(COMMA, struct_field); RBRACE
-    { { ns_name = name; ns_generics = generics; ns_bounds = bounds; ns_fields = fields } }
+    { { ns_visibility = VPrivate; ns_name = name; ns_generics = generics; ns_bounds = bounds; ns_fields = fields } }
 
 enum_def:
   | KW_ENUM; name = ID; generics = opt_generic_params;
     where_clause = opt_fn_where_clause; LBRACE; variants = separated_list(COMMA, enum_variant); RBRACE
     { let (bounds, outs) = where_clause in
-      { ne_name = name; ne_generics = generics; ne_bounds = bounds;
+      { ne_visibility = VPrivate; ne_name = name; ne_generics = generics; ne_bounds = bounds;
         ne_outlives = outs; ne_variants = variants } }
 
 enum_variant:
@@ -176,7 +180,7 @@ variant_lifetime_open:
 
 trait_def:
   | KW_TRAIT; name = ID; generics = opt_generic_params; bounds = opt_trait_bounds; SEMI
-    { { nt_name = name; nt_generics = generics; nt_bounds = bounds } }
+    { { nt_visibility = VPrivate; nt_name = name; nt_generics = generics; nt_bounds = bounds } }
 
 impl_def:
   | KW_IMPL; generics = opt_generic_params; trait_name = path_name; trait_args = opt_type_args;

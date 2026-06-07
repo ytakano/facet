@@ -9,12 +9,13 @@ top_item ::= fn_def | struct_def | enum_def | trait_def | impl_def | mod_def
 
 ## top-level items
 ```
-fn_def ::= "fn" ID opt_generic_params "(" params ")" "->" ty opt_fn_where_clause "{" block "}"
-struct_def ::= "struct" ID opt_generic_params opt_trait_bounds "{" struct_field ("," struct_field)* "}"
-enum_def ::= "enum" ID opt_generic_params opt_fn_where_clause "{" enum_variant ("," enum_variant)* "}"
-trait_def ::= "trait" ID opt_generic_params opt_trait_bounds ";"
+fn_def ::= opt_pub "fn" ID opt_generic_params "(" params ")" "->" ty opt_fn_where_clause "{" block "}"
+struct_def ::= opt_pub "struct" ID opt_generic_params opt_trait_bounds "{" struct_field ("," struct_field)* "}"
+enum_def ::= opt_pub "enum" ID opt_generic_params opt_fn_where_clause "{" enum_variant ("," enum_variant)* "}"
+trait_def ::= opt_pub "trait" ID opt_generic_params opt_trait_bounds ";"
 impl_def ::= "impl" opt_generic_params path opt_type_args "for" ty ";"
-mod_def ::= "mod" ID "{" top_item* "}"
+mod_def ::= opt_pub "mod" ID "{" top_item* "}"
+opt_pub ::= "" | "pub"
 struct_field ::= opt_mut ID ":" ty
 enum_variant ::= ID
                | ID "(" ty ("," ty)* ")"
@@ -172,7 +173,7 @@ LIFETIME  ::= "'" alpha (alpha | digit | "_")*
 ## Reserved words
 `fn`, `let`, `in`, `mut`, `drop`, `replace`, `affine`, `linear`,
 `unrestricted`, `isize`, `f64`, `bool`, `true`, `false`, `if`, `else`,
-`struct`, `enum`, `trait`, `impl`, `mod`, `for`, `where`, `closure`, `match`
+`struct`, `enum`, `trait`, `impl`, `mod`, `pub`, `for`, `where`, `closure`, `match`
 |}
 
 let print_grammar () = print_string grammar

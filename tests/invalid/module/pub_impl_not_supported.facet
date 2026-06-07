@@ -1,0 +1,3 @@
+trait Show;
+
+pub impl Show for unrestricted isize;

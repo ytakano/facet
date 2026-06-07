@@ -1,0 +1,6 @@
+fn main() -> unrestricted isize {
+  let rec f(f: unrestricted isize) -> unrestricted isize {
+    f
+  }
+  in (f 5)
+}

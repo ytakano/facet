@@ -1,0 +1,7 @@
+trait Show;
+
+fn main() -> unrestricted isize {
+  let rec f(x: unrestricted isize) -> unrestricted isize where T: Show {
+    x
+  } in (f 1)
+}

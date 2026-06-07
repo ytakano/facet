@@ -1,0 +1,5 @@
+fn main() -> unrestricted isize {
+  let rec f<T>(x: unrestricted T) -> unrestricted T {
+    x
+  } in (f 1)
+}

@@ -226,20 +226,21 @@ Valid tests:
 
 Invalid tests:
 
-- Duplicate function names in one rec group.
-- Recursive non-function binding.
-- Missing parameter or return annotation.
-- Local-rec generic parameters or `where` clause.
-- Rec body uses an outer local variable not listed in the capture list.
-- Unknown capture name.
-- Duplicate capture name.
-- Mutable capture.
-- Unique-reference capture.
-- Affine capture.
-- Linear capture.
-- Explicit type arguments on a local rec function value, unless a later
-  generic-rec roadmap adds that feature.
-- User-defined top-level names starting with reserved `__facet_`.
+- Done: duplicate function names in one rec group.
+- Done: missing parameter or return annotation.
+- Done: local-rec generic parameters or `where` clause.
+- Done: rec body uses an outer local variable not listed in the capture list.
+- Done: unknown capture name.
+- Done: duplicate capture name.
+- Done: mutable capture.
+- Done: affine capture.
+- Done: linear capture.
+- Done: explicit type arguments on a local rec function value.
+- Done: user-defined top-level names starting with reserved `__facet_`.
+- Done: actual local recursive body calls remain rejected by the current
+  end-to-end safety gate until the recursive direct-call proof lands.
+- Recursive non-function binding is not representable in the v1 parser syntax.
+- Unique-reference capture coverage remains under the closure test suite.
 
 FIR tests:
 

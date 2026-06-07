@@ -191,6 +191,9 @@ For an explicit-capture recursive closure group:
      commits: boolean checker summary for no-capture direct-call components,
      soundness from the boolean summary to the Prop summary, then the big-step
      safety theorem change that uses evaluation induction for direct calls.
+   - Done: add the no-capture direct-call component boolean summary in
+     `CheckerRootSidecars.v`; it is intentionally not connected to the
+     end-to-end gate until the Prop soundness and safety theorem work lands.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

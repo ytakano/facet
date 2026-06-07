@@ -1084,6 +1084,41 @@ Definition check_fn_root_shadow_generic_direct_store_safe_summary
   | None => false
   end.
 
+Definition check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+    (env : global_env) (fdef : fn_def) : bool :=
+  match fn_captures fdef with
+  | [] =>
+      match direct_call_target_expr (fn_body fdef) with
+      | Some (fname, args, synthetic_body) =>
+          store_safe_function_value_call_args_b env args &&
+          match lookup_fn_b fname (env_fns env) with
+          | None => false
+          | Some callee =>
+              match fn_captures callee with
+              | [] =>
+                  match infer_env_roots_shadow_safe env
+                          (fn_with_body fdef synthetic_body)
+                          (initial_root_env_for_fn fdef) with
+                  | infer_ok (T_body, _, R_out, roots) =>
+                      ty_compatible_b (fn_outlives fdef) T_body (fn_ret fdef) &&
+                      fn_params_roots_exclude_b (fn_params fdef) roots &&
+                      fn_params_root_env_excludes_b (fn_params fdef) R_out
+                  | infer_err _ => false
+                  end
+              | _ => false
+              end
+          end
+      | None => false
+      end
+  | _ => false
+  end.
+
+Definition check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+    (env : global_env) : bool :=
+  forallb
+    (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary env)
+    (env_fns env).
+
 Definition check_fn_root_shadow_captured_call_provenance_summary
     (env : global_env) (fdef : fn_def) : bool :=
   match check_fn_root_shadow_non_capturing_call_provenance_summary env fdef with

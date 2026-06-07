@@ -445,6 +445,14 @@ let rec validate_expr_paths known ty_params value_scope = function
     validate_expr_paths known ty_params value_scope' body
   | NLetRec (captures, rec_fns, body) ->
     let rec_names = List.map (fun rf -> rf.nrf_name) rec_fns in
+    let rec first_duplicate seen = function
+      | [] -> None
+      | x :: xs -> if List.mem x seen then Some x else first_duplicate (x :: seen) xs
+    in
+    begin match first_duplicate [] rec_names with
+    | Some name -> failwith ("duplicate let rec function name: " ^ name)
+    | None -> ()
+    end;
     List.iter
       (fun rf ->
         List.iter (validate_param_paths known ty_params) rf.nrf_params;

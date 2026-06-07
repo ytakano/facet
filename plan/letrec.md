@@ -136,8 +136,8 @@ For an explicit-capture recursive closure group:
 3. Name resolution and raw AST.
    - Done: add raw `RawLetRec captures rec_fns body` and lower parsed groups
      to it.
-   - In de Bruijn conversion, assign stable source idents to rec function names
-     and reject duplicate names in the group.
+   - Done: de Bruijn conversion assigns stable source idents to rec function
+     names and rejects duplicate names in the group.
    - Maintain a local rec-name environment separate from ordinary value scope
      so that calls can lower differently from normal variables.
    - When an ordinary local binding or parameter shadows a rec name, resolve to

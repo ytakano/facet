@@ -289,6 +289,8 @@ rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
 
 ## Phase 5: Small OCaml Cleanup
 
+Status: complete.
+
 Tasks:
 
 - Remove or justify `[@@warning "-34"]` in `ocaml/main.ml`.
@@ -318,3 +320,14 @@ sh tests/fir/run.sh
 - `EnvRuntimeBaseSafety.v` and `AlphaShadowProvenance.v` are split or explicitly
   documented as intentionally aggregated.
 - All baseline commands pass serially.
+
+Final verification passed serially:
+
+```sh
+cd rocq && make
+dune build
+sh tests/run.sh
+sh tests/fir/run.sh
+rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
+git diff --check
+```

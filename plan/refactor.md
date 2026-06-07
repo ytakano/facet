@@ -276,6 +276,7 @@ Progress:
   `AlphaTypedRoots.v`.
 - Moved call support alpha-preservation lemmas into `AlphaTypedRoots.v`.
 - Moved struct support alpha-preservation lemma into `AlphaTypedRoots.v`.
+- Moved full support alpha-preservation lemma into `AlphaTypedRoots.v`.
 
 Commit after each moved proof group with:
 

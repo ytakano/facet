@@ -1,0 +1,7 @@
+fn main() -> linear isize {
+  let y: linear isize = 1 in
+  let rec [y] f(x: linear isize) -> linear isize {
+    x
+  }
+  in (f 0)
+}

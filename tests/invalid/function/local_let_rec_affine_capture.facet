@@ -1,0 +1,7 @@
+fn main() -> affine isize {
+  let y: affine isize = 1 in
+  let rec [y] f(x: affine isize) -> affine isize {
+    x
+  }
+  in (f 0)
+}

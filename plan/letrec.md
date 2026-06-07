@@ -197,6 +197,8 @@ For an explicit-capture recursive closure group:
    - Done: prove the boolean no-capture direct-call component summary sound
      against a matching Prop summary in `EnvRuntimeCapturedCallSummaryFacts.v`;
      it is still intentionally not wired into the gate.
+   - Done: add the env-level ready lemma for that component summary, preparing
+     the later gate connection without changing current accept/reject behavior.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

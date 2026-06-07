@@ -292,6 +292,8 @@ rg -n "\bAxiom\b|Admitted\.|Abort\." rocq/theories
 Tasks:
 
 - Remove or justify `[@@warning "-34"]` in `ocaml/main.ml`.
+- Replaced the `ocaml/main.ml` diagnostic-map warning suppression with an explicit
+  `diagnostic_map` annotation.
 - Audit reachable `failwith` in `ocaml/debruijn.ml`, `ocaml/parser.mly`, and
   `ocaml/fir.ml`.
 - Do not add any handwritten OCaml checker fallback.

@@ -64,7 +64,7 @@ type diagnostic_entry = {
   span          : diagnostic_span option;
 }
 
-type diagnostic_map = (ident * diagnostic_entry) list [@@warning "-34"]
+type diagnostic_map = (ident * diagnostic_entry) list
 
 let diagnostic_entry name =
   { original_name = name; span = None }
@@ -166,7 +166,7 @@ let diagnostic_map_of_envs original_env alpha_env =
   with Invalid_argument _ ->
     []
 
-let diagnostic_lookup map id =
+let diagnostic_lookup (map : diagnostic_map) id =
   match List.find_opt (fun (id', _) -> ident_eqb id id') map with
   | Some (_, entry) -> Some entry.original_name
   | None -> None

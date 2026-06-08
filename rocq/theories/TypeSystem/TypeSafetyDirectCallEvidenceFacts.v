@@ -179,6 +179,24 @@ Definition callee_body_root_shadow_provenance_ready_at
     roots_exclude_params (fn_params fcall) roots_body /\
     root_env_excludes_params (fn_params fcall) R_body.
 
+Definition callee_body_root_shadow_synthetic_direct_call_ready_at_result_subset
+    (env : global_env) (fcall : fn_def) (R_params : root_env)
+    (roots_bound : root_set) : Prop :=
+  exists fname args synthetic_body T_body Γ_out R_body roots_body,
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname, args, synthetic_body) /\
+    synthetic_body = ECall fname args /\
+    preservation_direct_call_ready_expr synthetic_body /\
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
+      R_params (sctx_of_ctx (fn_body_ctx fcall))
+      synthetic_body T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
+    roots_exclude_params (fn_params fcall) roots_body /\
+    root_env_excludes_params (fn_params fcall) R_body /\
+    root_set_stores_subset roots_body roots_bound.
+
 Definition callee_body_root_shadow_provenance_ready_at_result_subset
     (env : global_env) (fcall : fn_def) (R_params : root_env)
     (roots_bound : root_set) : Prop :=

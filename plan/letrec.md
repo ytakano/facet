@@ -264,10 +264,16 @@ For an explicit-capture recursive closure group:
      bridge that derives both env-level and local-bounds synthetic callee-body
      evidence from synthetic shadow summary evidence, its bridge, and the
      existing root-name/root-key preservation packages.
-   - Next: prove the missing projection from callee-body value roots to the
-     outer `TER_Call` roots (`root_sets_union arg_roots`) and connect the full
-     recursive direct-call route. Defer safety-gate connection until that full
-     route is established.
+   - Done: add synthetic direct-call-ready result-subset evidence and a
+     call-time bridge from synthetic shadow summaries to
+     `root_set_stores_subset roots_body (root_sets_union arg_roots)`, mirroring
+     the provenance result-subset path. Also add the route-side wrapper that
+     derives this result-subset evidence from env-level synthetic summaries.
+   - Next: thread the result-subset evidence through the synthetic `ECall`
+     cleanup bridge so the cleanup witness and subset proof share the same
+     `roots_body`, then discharge the final outer `value_roots_within roots v`
+     projection and connect the full recursive direct-call route. Defer
+     safety-gate connection until that full route is established.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

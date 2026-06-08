@@ -121,6 +121,11 @@ Done:
   `eval_synthetic_direct_call_body_cleanup_prefix_from_result_subset_call_statement_evidence`
   and
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_summary_bridge_final_roots_core`.
+- The frame/parameter-scope exact-call cleanup path now also has
+  call-statement-premise variants:
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_exact_call_statement_of_call_statement_cleanup`
+  and
+  `eval_preserves_frame_param_scope_store_safe_synthetic_direct_call_ready_summary_exact_call_statement_of_call_statement_cleanup`.
 
 Next:
 
@@ -529,6 +534,12 @@ For an explicit-capture recursive closure group:
      `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_summary_bridge_final_roots_core`,
      carrying the reduced call-statement premise through result-subset cleanup
      and final-roots preservation.
+   - Done: add scope-side call-statement cleanup variants
+     `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_exact_call_statement_of_call_statement_cleanup`
+     and
+     `eval_preserves_frame_param_scope_store_safe_synthetic_direct_call_ready_summary_exact_call_statement_of_call_statement_cleanup`,
+     carrying the reduced call-statement premise through frame/parameter scope
+     exact-call cleanup.
    - Done: add non-invasive `End2EndSafety.v` bridge lemmas
      `infer_fn_env_end2end_combined_gate` and
      `infer_fns_env_end2end_combined_check_env_ready`, proving that the current

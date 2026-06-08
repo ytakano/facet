@@ -224,6 +224,11 @@ Definition eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_
       store_frame_scope ps Σ' s' frame /\
       exists frame', store_param_scope ps s' frame'.
 
+Definition eval_preserves_synthetic_direct_call_ready_call_routes_statement
+    : Prop :=
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement /\
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement.
+
 Definition eval_preserves_synthetic_direct_call_ready_summary_call_package_statement
     : Prop :=
   eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_call_statement /\
@@ -233,6 +238,20 @@ Definition eval_preserves_synthetic_direct_call_ready_summary_exact_call_package
     : Prop :=
   eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_exact_call_statement /\
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_exact_call_statement.
+
+Lemma eval_preserves_synthetic_direct_call_ready_call_routes_prefix :
+  eval_preserves_synthetic_direct_call_ready_call_routes_statement ->
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement.
+Proof.
+  intros [Hprefix _]. exact Hprefix.
+Qed.
+
+Lemma eval_preserves_synthetic_direct_call_ready_call_routes_scope :
+  eval_preserves_synthetic_direct_call_ready_call_routes_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement.
+Proof.
+  intros [_ Hscope]. exact Hscope.
+Qed.
 
 Lemma eval_preserves_synthetic_direct_call_ready_summary_call_package_prefix :
   eval_preserves_synthetic_direct_call_ready_summary_call_package_statement ->
@@ -1570,6 +1589,95 @@ Proof.
     eassumption.
 Qed.
 
+
+Lemma eval_call_bind_params_route_inputs_from_components :
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  forall env (Omega : outlives_ctx) (n : nat) R Sigma Sigma_args
+      R_args arg_roots (fname : ident) args fdef fcall
+      (sigma : list lifetime) s s_args vs used',
+    typed_args_roots env Omega n R Sigma args
+      (apply_lt_params sigma (fn_params fdef)) Sigma_args R_args
+      arg_roots ->
+    eval_args env s args s_args vs ->
+    preservation_ready_args args ->
+    provenance_ready_args args ->
+    store_typed env s Sigma ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    root_env_store_roots_named
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    root_env_store_keys_named
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall))) /\
+    store_roots_within
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) /\
+    store_no_shadow (bind_params (fn_params fcall) vs s_args) /\
+    root_env_no_shadow
+      (call_param_root_env (fn_params fcall) arg_roots R_args) /\
+    root_env_store_roots_named
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) /\
+    root_env_store_keys_named
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args).
+Proof.
+  intros Htyping_ready Hroots_ready env Omega n R Sigma Sigma_args R_args
+    arg_roots fname args fdef fcall sigma s s_args vs used' Htyped_args
+    Heval_args Hready_args Hprov_args Hstore Hroots Hshadow Hrn Hrename
+    Hnamed_bind Hkeys_bind.
+  destruct (proj1 (proj2 Htyping_ready)
+              env s args s_args vs Heval_args Omega n Sigma
+              (apply_lt_params sigma (fn_params fdef)) Sigma_args
+              Hready_args Hstore
+              (typed_args_roots_structural env Omega n R Sigma args
+                (apply_lt_params sigma (fn_params fdef)) Sigma_args R_args
+                arg_roots Htyped_args))
+    as [_ [Hargs_subst _]].
+  pose proof (alpha_rename_fn_def_shape (store_names s_args)
+                fdef fcall used' Hrename) as Hshape.
+  destruct Hshape as [_ [_ Hparams_alpha]].
+  assert (Hargs_unsubst_fdef :
+    eval_args_values_have_types env Omega s_args vs (fn_params fdef)).
+  { eapply eval_args_values_have_types_apply_lt_params_inv.
+    exact Hargs_subst. }
+  assert (Hargs_fcall :
+    eval_args_values_have_types env Omega s_args vs (fn_params fcall)).
+  { eapply eval_args_values_have_types_params_alpha.
+    - exact Hparams_alpha.
+    - exact Hargs_unsubst_fdef. }
+  assert (Hnodup :
+    NoDup (ctx_names (params_ctx (fn_params fcall)))).
+  { eapply alpha_rename_fn_def_params_nodup_ctx_names. exact Hrename. }
+  assert (Hfresh : params_fresh_in_store (fn_params fcall) s_args).
+  { eapply alpha_rename_fn_def_params_fresh_in_store. exact Hrename. }
+  destruct
+    (eval_args_bind_params_call_param_root_env_ready
+      env s args s_args vs Omega n R Sigma
+      (apply_lt_params sigma (fn_params fdef)) Sigma_args R_args arg_roots
+      (fn_params fcall) Heval_args Hprov_args Htyped_args Hroots Hshadow Hrn
+      Hnodup Hfresh Hargs_fcall)
+    as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
+  assert (Hstore_bind_env :
+    store_typed_prefix env (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))).
+  { eapply bind_params_store_typed_prefix; eassumption. }
+  split.
+  - eapply direct_call_store_typed_prefix_global_env_with_local_bounds.
+    exact Hstore_bind_env.
+  - split; [exact Hroots_bind |].
+    split; [exact Hshadow_bind |].
+    split; [exact Hrn_bind |].
+    split; assumption.
+Qed.
+
 Lemma eval_synthetic_direct_call_body_cleanup_prefix_package_from_call_statement_ready_evidence :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement ->
   eval_preserves_typing_ready_mutual_statement ->
@@ -2707,50 +2815,17 @@ Proof.
               (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots
               Hprov_args Hroots Hshadow Hrn H7)
     as [Hroots_args [_ [Hshadow_args Hrn_args]]].
-  destruct (proj1 (proj2 Htyping_ready)
-              env s args s_args vs H1 Ω n Σ
-              (apply_lt_params σ (fn_params fdef0)) Σ'
-              Hready_args Hstore
-              (typed_args_roots_structural env Ω n R Σ args
-                (apply_lt_params σ (fn_params fdef0)) Σ' R'
-                arg_roots H7))
-    as [_ [Hargs_subst _]].
-  pose proof (alpha_rename_fn_def_shape (store_names s_args)
-                fdef0 fcall used' H2) as Hshape.
-  destruct Hshape as [_ [_ Hparams_alpha]].
-  assert (Hargs_unsubst_fdef :
-    eval_args_values_have_types env Ω s_args vs (fn_params fdef0)).
-  { eapply eval_args_values_have_types_apply_lt_params_inv.
-    exact Hargs_subst. }
-  assert (Hargs_fcall :
-    eval_args_values_have_types env Ω s_args vs (fn_params fcall)).
-  { eapply eval_args_values_have_types_params_alpha.
-    - exact Hparams_alpha.
-    - exact Hargs_unsubst_fdef. }
-  assert (Hnodup :
-    NoDup (ctx_names (params_ctx (fn_params fcall)))).
-  { eapply alpha_rename_fn_def_params_nodup_ctx_names. exact H2. }
-  assert (Hfresh : params_fresh_in_store (fn_params fcall) s_args).
-  { eapply alpha_rename_fn_def_params_fresh_in_store. exact H2. }
-  destruct (eval_args_bind_params_call_param_root_env_ready
-              env s args s_args vs Ω n R Σ
-              (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots
-              (fn_params fcall) H1 Hprov_args H7
-              Hroots Hshadow Hrn Hnodup Hfresh Hargs_fcall)
-    as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
   destruct (Hbind_named Σ' R' arg_roots (fn_name fdef0) fdef0 fcall σ
               s_args s_body vs ret used' H3 eq_refl H0 H7 H1 Hprov_args
               H2 Heval) as [Hnamed_bind Hkeys_bind].
-  assert (Hstore_bind_env :
-    store_typed_prefix env (bind_params (fn_params fcall) vs s_args)
-      (sctx_of_ctx (params_ctx (fn_params fcall)))).
-  { eapply bind_params_store_typed_prefix; eassumption. }
-  assert (Hstore_bind_body_env :
-    store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
-      (bind_params (fn_params fcall) vs s_args)
-      (sctx_of_ctx (params_ctx (fn_params fcall)))).
-  { eapply direct_call_store_typed_prefix_global_env_with_local_bounds.
-    exact Hstore_bind_env. }
+  destruct
+    (eval_call_bind_params_route_inputs_from_components
+      Htyping_ready Hroots_ready env Ω n R Σ Σ' R' arg_roots
+      (fn_name fdef0) args fdef0 fcall σ s s_args vs used' H7 H1
+      Hready_args Hprov_args Hstore Hroots Hshadow Hrn H2 Hnamed_bind
+      Hkeys_bind)
+    as [Hstore_bind_body_env [Hroots_bind [Hshadow_bind [Hrn_bind
+        [Hnamed_bind_route Hkeys_bind_route]]]]].
   pose proof
     (eval_synthetic_direct_call_body_scope_callback_from_ready_evidence
       Hscope_synthetic Htyping_ready env Ω n R Σ Σ' R' arg_roots
@@ -3989,6 +4064,16 @@ Proof.
     exact Hprefix_call.
   - eapply eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_call_statement_of_call_statement.
     exact Hscope_call.
+Qed.
+
+Theorem eval_preserves_synthetic_direct_call_ready_summary_call_package_statement_of_call_routes :
+  eval_preserves_synthetic_direct_call_ready_call_routes_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_call_package_statement.
+Proof.
+  intros Hroutes.
+  eapply eval_preserves_synthetic_direct_call_ready_summary_call_package_statement_of_call_statements.
+  - exact (eval_preserves_synthetic_direct_call_ready_call_routes_prefix Hroutes).
+  - exact (eval_preserves_synthetic_direct_call_ready_call_routes_scope Hroutes).
 Qed.
 
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_with_summary_bridge_prefix_narrow_core :

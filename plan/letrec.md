@@ -147,11 +147,14 @@ Done:
   `check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_store_safe_synthetic_direct_call_ready_summary`
   and the combined-branch extractor
   `check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_store_safe_synthetic_direct_call_ready_summary_when_not_captured`.
-- The two concrete call-statement route premises can now be packaged for
+- The two concrete call-statement route premises can now be packaged as
+  `eval_preserves_synthetic_direct_call_ready_call_routes_statement`, bridged to
   summary-bridge narrow-core helpers via
-  `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement_of_call_statements`
+  `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement_of_call_routes`,
   and lifted directly to summary-bridge preservation with
   `eval_preserves_synthetic_direct_call_ready_with_summary_bridge_narrow_core_of_call_statement_routes`.
+- The direct-call route proof now factors bind-parameter inputs through
+  `eval_call_bind_params_route_inputs_from_components`.
 
 Next:
 
@@ -603,6 +606,14 @@ For an explicit-capture recursive closure group:
      `eval_preserves_synthetic_direct_call_ready_with_summary_bridge_narrow_core_of_call_statement_routes`,
      lifting the two call-statement route premises directly through the
      summary-bridge narrow-core wrapper.
+   - Done: add named call-routes package
+     `eval_preserves_synthetic_direct_call_ready_call_routes_statement`
+     with accessors and
+     `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement_of_call_routes`,
+     preparing the remaining simultaneous route proof.
+   - Done: factor direct-call bind-parameter route inputs into
+     `eval_call_bind_params_route_inputs_from_components`, removing duplicated
+     setup in the call-statement cleanup bridge.
    - Done: add non-invasive `End2EndSafety.v` bridge lemmas
      `infer_fn_env_end2end_combined_gate` and
      `infer_fns_env_end2end_combined_check_env_ready`, proving that the current

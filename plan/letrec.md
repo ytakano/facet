@@ -552,6 +552,12 @@ Done:
   and pass it to the store-safe route; current upper wrappers keep their public
   generic route premise by adapting it through
   `store_safe_function_value_call_args_preservation_ready`.
+- The route layer now has
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_body_call_store_safe_route`,
+  a bridge that builds the store-safe evidence-at route from the existing
+  body-callback constructor, using only the store-safe route and a nested
+  store-safe-arguments provider for recursive body calls rather than the
+  generic evidence-at route.
 
 Next:
 

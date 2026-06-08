@@ -129,6 +129,9 @@ Done:
 - The store-safe exact-call package can now be built from the reduced
   call-statement premise via
   `eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement_of_call_statement_final_roots_and_cleanup`.
+- Combined captured/no-capture component safety now has call-statement-route
+  wrappers, ending at
+  `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_call_statement_synthetic_route`.
 
 Next:
 
@@ -546,6 +549,9 @@ For an explicit-capture recursive closure group:
    - Done: add store-safe exact-call package wrapper
      `eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement_of_call_statement_final_roots_and_cleanup`,
      combining the call-statement final-roots and scope cleanup projections.
+   - Done: add call-statement-route safety wrappers through the combined
+     captured/no-capture component path, ending at
+     `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_call_statement_synthetic_route`.
    - Done: add non-invasive `End2EndSafety.v` bridge lemmas
      `infer_fn_env_end2end_combined_gate` and
      `infer_fns_env_end2end_combined_check_env_ready`, proving that the current

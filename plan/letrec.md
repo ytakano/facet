@@ -514,19 +514,22 @@ Done:
   `direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_summary_with_result_subset_prefix_store_core`.
   This bridge still requires static `root_env_ctx_*_named R Sigma` premises,
   because prefix stores cannot recover those facts from runtime store names for
-  the hidden tail frame. The remaining reduction is to thread or derive those
-  static naming premises at the call route and add the matching prefix-store
-  scope callback, `eval_synthetic_direct_call_body_scope_callback_from_result_subset_prefix_store`,
-  before a prefix-only cleanup core can remove the full-store premise.
+  the hidden tail frame. The scope side now also has a prefix-store callback,
+  `eval_synthetic_direct_call_body_scope_callback_from_result_subset_prefix_store`,
+  which derives frame/parameter scope from the result-subset body evidence and
+  prefix preservation instead of full-store evidence. The remaining reduction is
+  to thread or derive the static naming premises at the call route and use both
+  prefix-store helpers in a prefix-only cleanup core to remove the full-store
+  premise.
 
 Next:
 
 - Close the remaining direct-call route premises needed by the closure-check
   bridge. Next, thread or derive the static ctx naming premises needed by the
-  prefix-store result-subset bridge, add the prefix-store scope callback, and
-  then use both to remove the full-store premise from the body-callback route
-  factor. After that, supply the body-call callback from evaluation-derivation
-  induction.
+  prefix-store result-subset bridge, then use both prefix-store helpers in a
+  prefix-only cleanup core to remove the full-store premise from the
+  body-callback route factor. After that, supply the body-call callback from
+  evaluation-derivation induction.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

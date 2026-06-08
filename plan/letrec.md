@@ -126,6 +126,9 @@ Done:
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_exact_call_statement_of_call_statement_cleanup`
   and
   `eval_preserves_frame_param_scope_store_safe_synthetic_direct_call_ready_summary_exact_call_statement_of_call_statement_cleanup`.
+- The store-safe exact-call package can now be built from the reduced
+  call-statement premise via
+  `eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement_of_call_statement_final_roots_and_cleanup`.
 
 Next:
 
@@ -540,6 +543,9 @@ For an explicit-capture recursive closure group:
      `eval_preserves_frame_param_scope_store_safe_synthetic_direct_call_ready_summary_exact_call_statement_of_call_statement_cleanup`,
      carrying the reduced call-statement premise through frame/parameter scope
      exact-call cleanup.
+   - Done: add store-safe exact-call package wrapper
+     `eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement_of_call_statement_final_roots_and_cleanup`,
+     combining the call-statement final-roots and scope cleanup projections.
    - Done: add non-invasive `End2EndSafety.v` bridge lemmas
      `infer_fn_env_end2end_combined_gate` and
      `infer_fns_env_end2end_combined_check_env_ready`, proving that the current

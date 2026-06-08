@@ -1245,6 +1245,39 @@ Proof.
       eassumption.
 Qed.
 
+Theorem eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement_of_call_statement_final_roots_and_cleanup :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement.
+Proof.
+  intros Hsynthetic_call_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready.
+  split.
+  - intros env s fname args s' v Heval Ω n R Σ T Σ' R' roots
+      Hsafe_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique
+      Hsummary Hbridge.
+    destruct
+      (eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_summary_bridge_final_roots_core
+        Hsynthetic_call_route Hscope_synthetic Htyping_ready Hroots_ready
+        Hroot_names Hroot_keys env s s' v fname args Heval Ω n R Σ T Σ'
+        R' roots Hsafe_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped
+        Hunique Hsummary Hbridge)
+      as [Hstore' [Hv [Hpres [Hroots' [Hvroots [Hshadow' Hrn']]]]]].
+    repeat split; try assumption.
+    eapply store_typed_prefix_exact. exact Hstore'.
+  - intros env s fname args s' v Heval Ω n R Σ T Σ' R' roots ps frame
+      Hsafe_args Hstore Hnamed Hkeys Htyped Hunique Hsummary Hbridge
+      Hcover Hroots Hshadow Hrn Hframe Hfresh Hparam.
+    eapply eval_preserves_frame_param_scope_store_safe_synthetic_direct_call_ready_summary_exact_call_statement_of_call_statement_cleanup;
+      eassumption.
+Qed.
+
 
 Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds :
   forall env bounds fdef,

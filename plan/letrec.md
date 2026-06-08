@@ -431,9 +431,10 @@ Done:
 Next:
 
 - Derive `component_body_no_capture_direct_call_component_alpha_nested_target_in_provider`
-  from the closure checker sidecar, or add the alpha-rename/direct-target
-  converse facts needed to connect closure-check-local target evidence to the
-  alpha-renamed route `fcall`.
+  from the closure checker sidecar. The next proof dependency is an
+  alpha-rename/direct-target converse fact for the `ECall` and
+  `ECallExpr (EFn ...)` cases, including the callee-expression inverse needed
+  when a renamed `ECallExpr` target is observed on route `fcall`.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

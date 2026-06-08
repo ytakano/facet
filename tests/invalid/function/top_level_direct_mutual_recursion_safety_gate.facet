@@ -1,0 +1,11 @@
+fn left(x: unrestricted isize) -> unrestricted isize {
+  (right x)
+}
+
+fn right(x: unrestricted isize) -> unrestricted isize {
+  (left x)
+}
+
+fn main() -> unrestricted isize {
+  (left 1)
+}

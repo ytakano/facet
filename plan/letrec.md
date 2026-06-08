@@ -239,6 +239,8 @@ Valid tests:
 
 Invalid tests:
 
+- Done: current top-level direct self/mutual recursion safety-gate failures,
+  until the recursive direct-call proof lands and these move to valid tests.
 - Done: duplicate function names in one rec group.
 - Done: missing parameter or return annotation.
 - Done: local-rec generic parameters or `where` clause.

@@ -1,0 +1,7 @@
+fn loop(x: unrestricted isize) -> unrestricted isize {
+  (loop x)
+}
+
+fn main() -> unrestricted isize {
+  (loop 1)
+}

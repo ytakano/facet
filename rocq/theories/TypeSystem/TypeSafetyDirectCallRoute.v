@@ -315,6 +315,41 @@ Proof.
   eapply Hevidence_at_all; eassumption.
 Qed.
 
+Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_with_evidence_at_all :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement ->
+  forall env s fname args s' v,
+    eval env s (ECall fname args) s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      preservation_ready_args args ->
+      store_typed_prefix env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ (ECall fname args) T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname ->
+      (forall fname_top,
+        direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+          env fname_top) ->
+      store_typed_prefix env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R'.
+Proof.
+  intros Hcall env s fname args s' v Heval Ω n R Σ T Σ' R' roots
+    Hready_args Hstore Hroots Hshadow Hrn Hnamed Hkeys
+    Htyped Hunique _Hsummary_at Hevidence_at_all.
+  eapply Hcall; try eassumption.
+  eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_evidence_at_all.
+  intros fname_top.
+  eapply Hevidence_at_all.
+Qed.
+
 Definition eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_exact_call_statement
     : Prop :=
   forall env s fname args s' v,

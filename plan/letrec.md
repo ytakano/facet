@@ -459,6 +459,10 @@ Done:
   direct-call evidence shape. This gives the next route-closure step a way to
   reuse older body-env evidence interfaces when all names in that body env have
   pointwise evidence.
+- The route layer now uses that bridge in
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_with_evidence_at_all`,
+  a prefix-call wrapper that consumes all-name evidence-at callbacks for the
+  current env while reusing the older env-wide direct-call route interface.
 
 Next:
 

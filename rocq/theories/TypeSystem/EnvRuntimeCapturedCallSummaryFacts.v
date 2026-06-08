@@ -1610,6 +1610,7 @@ Proof.
   exact Hsafe_args.
 Qed.
 
+
 Lemma subst_type_params_trait_ref_nil : forall tr,
   subst_type_params_trait_ref [] tr = tr.
 Proof.
@@ -1834,6 +1835,19 @@ Proof.
   split; [exact Hcompat_body |].
   split; [apply fn_params_roots_exclude_b_sound; exact Hroots |].
   apply fn_params_root_env_excludes_b_sound. exact Henv.
+Qed.
+
+Lemma check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_store_safe_synthetic_direct_call_ready_summary :
+  forall env fdef,
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef = true ->
+    callee_body_root_shadow_store_safe_synthetic_direct_call_ready_summary
+      env fdef.
+Proof.
+  intros env fdef Hcheck.
+  apply callee_body_root_shadow_store_safe_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component.
+  apply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
+  exact Hcheck.
 Qed.
 
 Lemma check_fn_root_shadow_captured_call_store_safe_summary_sound :

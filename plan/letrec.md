@@ -532,12 +532,18 @@ Done:
   now call that store-safe prefix body-callback final-roots core internally,
   using the existing evidence-at route premise only as the nested body-call
   callback.
+- The route layer now names the store-safe evidence-at prefix route as
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at`,
+  with constructor
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_body_call_callback`.
+  This is the induction target for the direct-component path and avoids the
+  generic static-runtime naming premise.
 
 Next:
 
-- Close the evidence-at prefix call route directly from an evaluation-derivation
-  induction so the direct-component wrappers no longer need the recursive route
-  premise for nested body calls.
+- Close the store-safe evidence-at prefix call route directly from an
+  evaluation-derivation induction so the direct-component wrappers no longer
+  need the recursive route premise for nested body calls.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

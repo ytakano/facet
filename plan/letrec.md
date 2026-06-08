@@ -276,6 +276,11 @@ Done:
   `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_at_final_roots_core`,
   plus the statement wrapper
   `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_exact_call_statement_of_final_roots_bridge`.
+- The frame/scope exact-call route and package now have pointwise current-target
+  variants:
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_exact_call_statement_of_cleanup`
+  and
+  `eval_preserves_synthetic_direct_call_ready_summary_at_exact_call_package_statement_of_cleanup`.
 
 Next:
 

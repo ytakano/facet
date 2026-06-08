@@ -663,3 +663,32 @@ Example borrow_check_env_prefix_fields_conflict :
       (EBorrow RUnique (PVar (("p"%string), 0)))) =
   infer_err (ErrBorrowConflict (("p"%string), 0)).
 Proof. vm_compute. reflexivity. Qed.
+
+
+Definition ex_direct_self_rec_param : param :=
+  MkParam MImmutable (("x"%string), 0) (MkTy UUnrestricted TIntegers).
+
+Definition ex_direct_self_rec_loop_fn : fn_def :=
+  MkFnDef (("direct_self_rec_loop"%string), 0) 0 [] []
+    [ex_direct_self_rec_param]
+    (MkTy UUnrestricted TIntegers)
+    (ECall (("direct_self_rec_loop"%string), 0)
+      [EVar (("x"%string), 0)]) 0 [].
+
+Definition ex_direct_self_rec_main_fn : fn_def :=
+  MkFnDef (("direct_self_rec_main"%string), 0) 0 [] [] []
+    (MkTy UUnrestricted TIntegers)
+    (ECall (("direct_self_rec_loop"%string), 0)
+      [ELit (LInt 1)]) 0 [].
+
+Definition ex_direct_self_rec_env : global_env :=
+  MkGlobalEnv [] [] [] [] []
+    [ex_direct_self_rec_loop_fn; ex_direct_self_rec_main_fn].
+
+Example end2end_rejects_direct_self_recursion_current_gate :
+  check_program_env_end2end ex_direct_self_rec_env = false.
+Proof. vm_compute. reflexivity. Qed.
+
+Example strict_exact_shadow_accepts_direct_self_recursion :
+  check_program_env_end2end_strict_exact_closure ex_direct_self_rec_env = true.
+Proof. vm_compute. reflexivity. Qed.

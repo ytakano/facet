@@ -692,6 +692,9 @@ Done:
   `infer_program_env_end2end_strict_exact_closure`, and
   `check_program_env_end2end_strict_exact_closure`) and the regenerated OCaml
   fixtures build with dune, while the CLI still uses the existing checker.
+- Rocq checker examples now lock the intended gate delta for direct self
+  recursion: `check_program_env_end2end` still rejects the core direct-recursive
+  example, while `check_program_env_end2end_strict_exact_closure` accepts it.
 
 Next:
 

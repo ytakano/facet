@@ -231,6 +231,8 @@ For an explicit-capture recursive closure group:
      synthetic direct-call-ready evidence.
    - Done: prove the call-time bridge from env-level synthetic direct-call-ready
      shadow summaries to alpha-renamed call bodies; no gates are wired yet.
+   - Done: add the proof-interface statement for the recursive synthetic
+     direct-call-ready route.
    - Next: prove and use the recursive direct-call route over synthetic
      direct-call-ready evidence alone. Defer safety-gate connection until that
      route is established.

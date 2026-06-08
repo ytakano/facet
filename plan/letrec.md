@@ -76,19 +76,17 @@ Done:
 
 Next:
 
-- Complete `preservation_ready_expr_static_runtime_named_statement` beyond the
-  current leaf-complete proof. The remaining non-leaf direct borrow/assign-style
-  constructors should use the threaded `store_roots_within` evidence plus the
-  singleton store-root helper when roots such as `[RStore x]` are introduced by
-  store locations instead of `root_env_lookup`.
-- Discharge the recursive direct-call route package using the store-safe
-  synthetic evidence path. The evidence constructor is now available; the
-  remaining route work is replacing the older ctx-based argument named/key step
-  with a store-safe/runtime-name argument proof.
-- After those obligations are closed, add the safety-gate connection that feeds
-  env-level synthetic shadow summary evidence into the recursive route, then
-  move the direct recursion invalid tests to valid tests when the end-to-end
-  checker accepts them.
+- Connect the combined captured/store-safe-or-direct-component sidecar to a
+  function-level and env-level safety theorem. The component branch can now use
+  the store-safe synthetic package; the remaining work is preserving the old
+  captured-call branches without requiring every function to be a direct-call
+  component.
+- Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
+  store-safe sidecar to the combined sidecar only after the combined safety
+  theorem is in place and the required synthetic evidence is scoped precisely
+  enough for mixed programs.
+- Move the direct recursion invalid tests to valid tests once the extracted
+  end-to-end checker accepts direct self-recursion and mutual recursion.
 
 This roadmap adds local recursion in stages, ending with a safe v1 for
 explicit-capture recursive closures. The first implementation should avoid a
@@ -438,20 +436,15 @@ For an explicit-capture recursive closure group:
      `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary`
      and its soundness/ready lemmas. This prepares an end-to-end gate switch
      without changing the existing checker authority yet.
-   - Remaining gap: complete or specialize
-     `preservation_ready_expr_static_runtime_named_statement` beyond the leaf
-     constructors, then replace the older ctx-based argument named/key step with
-     the runtime-store-name helper. The full statement now records the required
-     `root_env_no_shadow R` premise; without it, match/let-style root-env
-     removals can expose duplicate hidden bindings. Direct borrow/assign-style
-     constructors also need an additional way to prove place roots such as
-     `[RStore x]` are present in the runtime store when those roots are not
-     obtained from `root_env_lookup`.
-   - Next: discharge
-     `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement`
-     or its store-safe-summary variant by replacing the remaining ctx-based
-     argument named/key derivations with store-safe/runtime-name evidence; then
-     connect the safety gate.
+   - Remaining gap: connect the combined sidecar to a safety theorem that
+     preserves the existing captured-call store-safe branches and uses the new
+     component theorem only for the no-capture direct-call component branch.
+     The current component theorem still assumes store-safe synthetic summary
+     evidence; before switching the end-to-end gate, scope that evidence so mixed
+     programs do not have to make every function a direct-call component.
+   - Next: add the combined function/env safety theorem, then switch the
+     extracted end-to-end checker gate to the combined sidecar and move direct
+     self/mutual recursion tests from invalid to valid.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

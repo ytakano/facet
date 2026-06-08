@@ -679,6 +679,10 @@ Done:
   `infer_program_env_end2end_strict_exact_closure`, plus checker soundness and
   gate/readiness lemmas in `End2EndSafety.v`. These prepare the final gate
   switch without changing the current OCaml-facing checker behavior.
+- The strict shadow program checker now has route-premised safety theorems,
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route`
+  and the exact-body variant
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_synthetic_evidence_at_route`.
 
 Next:
 

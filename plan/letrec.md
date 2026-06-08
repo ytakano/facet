@@ -209,6 +209,10 @@ Done:
   `env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_component_body_store_safe_summary_evidence`
   and
   `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_component_body_store_safe_summary_evidence`.
+- End-to-end safety now has the matching summary exact-package bridge
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_exact_package_and_component_body_store_safe_summary_evidence`,
+  so the old whole-env component check has a single remaining replacement point:
+  construction of the direct-component body-env store-safe summary provider.
 
 Next:
 

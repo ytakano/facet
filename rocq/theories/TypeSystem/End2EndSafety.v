@@ -252,6 +252,48 @@ Proof.
   - exact Heval.
 Qed.
 
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_exact_package_and_component_body_store_safe_summary_evidence :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end env = infer_ok env' ->
+    (forall f_component,
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' f_component ->
+      env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+        (global_env_with_local_bounds env' (fn_bounds f_component))) ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hroot_names Hroot_keys Hpackage env env' f s s' v Hprog
+    Hbody_summary Hinitial Hin Hstore Heval.
+  unfold infer_program_env_end2end in Hprog.
+  set (env_alpha := alpha_normalize_global_env env) in *.
+  destruct (global_names_unique_b env_alpha) eqn:Hunique_global; try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
+    try discriminate.
+  destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
+    as [[] | err] eqn:Hfns; try discriminate.
+  injection Hprog as <-.
+  eapply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_component_body_store_safe_summary_evidence.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hpackage.
+  - apply andb_true_iff in Hunique_global as [Hunique_top _].
+    eapply infer_program_env_alpha_elab_unique_by_name; eauto.
+  - unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
+    eapply infer_fns_env_end2end_combined_check_env_ready. exact Hfns.
+  - exact Hbody_summary.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_call_package_and_component_check :
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
   eval_preserves_frame_scope_roots_ready_mutual_statement ->

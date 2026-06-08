@@ -312,13 +312,20 @@ Done:
   The proof handles self-cycles by using the component's `In` evidence plus
   `fn_env_unique_by_name`, and handles fresh callees via the closure checker's
   callee/head soundness facts.
+- `TypeSafetyDirectCallRoute.v` now names the missing pointwise prefix-call
+  interface as
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement`
+  and packages it with the pointwise scope route as
+  `eval_preserves_synthetic_direct_call_ready_summary_at_call_package_statement`.
+  This records the route shape needed for recursive body cleanup, where only
+  `store_typed_prefix` is available.
 
 Next:
 
-- Derive `component_body_synthetic_direct_call_ready_body_env_evidence_in_provider`
-  from the closure checker, using the new closure-derived pointwise summary
-  provider to rebuild the recursive body-env route instead of requiring
-  env-wide synthetic summary evidence.
+- Add a cleanup-prefix helper that consumes the new pointwise prefix-call route
+  for the callee body's synthetic `ECall`, instead of requiring env-wide
+  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence` for the
+  whole body environment.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

@@ -418,12 +418,17 @@ Done:
 - The final-roots alpha call-route wrapper now has an evidence-at variant,
   `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_call_route_final_roots_core`,
   removing the broad nested body-env evidence premise at that layer.
+- The evidence-at final-roots route is now threaded through component,
+  env/checker, and end-to-end wrappers, ending at
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_component_body_summary_provider_and_closure_check`.
+  This removes the broad alpha nested body-env provider from the alpha route
+  bridge that still uses `component_body_synthetic_direct_call_ready_summary_provider`.
 
 Next:
 
-- Thread `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_call_route_final_roots_core`
-  into the component/env/end-to-end call-route wrappers, then remove the
-  now-unneeded broad nested body-env provider premise from the alpha route path.
+- Replace the remaining `component_body_synthetic_direct_call_ready_summary_provider`
+  dependency in the evidence-at alpha bridge with closure-derived alpha nested
+  summary evidence, using `component_body_no_capture_direct_call_component_alpha_nested_target_in_provider`.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

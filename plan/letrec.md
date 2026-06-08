@@ -266,19 +266,22 @@ Done:
 
 Next:
 
-- Close the top-level exact summary package through the summary/result-subset
-  path while separating the recursive body route: the outer synthetic `ECall`
-  can start from `store_typed`, but the callee body runs under
-  `bind_params ... s_args`, where only `store_typed_prefix` is currently
-  available. The non-exact summary/raw call-statement forms are therefore still
-  too weak as the final package shape, but a body-prefix sub-route is still
-  needed for recursive calls inside the callee body.
-- Construct `component_body_store_safe_synthetic_direct_call_ready_summary_provider`
-  from the direct-call closure of each component branch, not from whole-env
-  no-capture component readiness. Then switch `infer_fn_env_end2end` /
-  `infer_fns_env_end2end` from the old captured store-safe sidecar to the
-  combined captured-or-component sidecar and update the unconditional end-to-end
-  safety theorem accordingly.
+- Add a pointwise direct-call evidence package for the current `ECall` target
+  and its callee body route. A direct copy of
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_bridge_final_roots_core`
+  is not enough: env-wide summary evidence is still used to build
+  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence_package_of_shadow_summary`
+  for the scope callback and recursive body-env calls. Split that package into
+  pointwise current-call evidence plus a body-prefix recursive-call route.
+- Use the pointwise package to replace
+  `component_body_*_synthetic_direct_call_ready_summary_provider` with a
+  closure-scoped provider derived from
+  `check_fn_root_shadow_no_capture_direct_call_component_closure`; it must not
+  require every function in `env_fns` to be a synthetic direct-call component.
+- Once the closure-scoped provider feeds the component safety wrapper, switch
+  `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
+  store-safe sidecar to the captured-or-component-closure sidecar and update the
+  unconditional end-to-end safety theorem accordingly.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.
 

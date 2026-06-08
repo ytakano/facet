@@ -565,6 +565,49 @@ Proof.
     eapply IH. exact Hlookup.
 Qed.
 
+Lemma lookup_fn_of_in_unique_by_name_list :
+  forall fenv fname fdef,
+    (forall f1 f2,
+      In f1 fenv ->
+      In f2 fenv ->
+      fn_name f1 = fn_name f2 ->
+      f1 = f2) ->
+    In fdef fenv ->
+    fn_name fdef = fname ->
+    lookup_fn fname fenv = Some fdef.
+Proof.
+  induction fenv as [| f rest IH]; intros fname fdef Hunique Hin Hname;
+    simpl in *; try contradiction.
+  destruct Hin as [Heq | Hin].
+  - subst f.
+    rewrite Hname, ident_eqb_refl.
+    reflexivity.
+  - destruct (ident_eqb fname (fn_name f)) eqn:Hfname.
+    + apply ident_eqb_eq in Hfname.
+      assert (f = fdef).
+      { eapply Hunique; simpl; try eassumption.
+        - left. reflexivity.
+        - right. exact Hin.
+        - rewrite <- Hfname. symmetry. exact Hname. }
+      subst f. reflexivity.
+    + eapply IH; try eassumption.
+      intros f1 f2 Hin1 Hin2 Hnames.
+      eapply Hunique; simpl; try eassumption.
+      * right. exact Hin1.
+      * right. exact Hin2.
+Qed.
+
+Lemma lookup_fn_of_in_unique_by_name :
+  forall env fname fdef,
+    fn_env_unique_by_name env ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    lookup_fn fname (env_fns env) = Some fdef.
+Proof.
+  intros env fname fdef Hunique Hin Hname.
+  eapply lookup_fn_of_in_unique_by_name_list; eassumption.
+Qed.
+
 Lemma component_body_synthetic_direct_call_ready_summary_at_in_provider_of_provider :
   forall env,
     component_body_synthetic_direct_call_ready_summary_at_provider env ->

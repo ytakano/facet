@@ -718,6 +718,11 @@ Done:
   callbacks. This confirmed that evaluation height alone does not close the
   exact-body route: when `fn_body fcall` is itself the target `ECall`, the
   nested call is the whole body, so no strict body-height decrease is available.
+- Summary facts now include `lookup_fn_of_in_unique_by_name`, and the failed
+  single-function exact-closure package attempt clarified the remaining route
+  closure must use env-level/component-level readiness: exact closure accepts
+  cycles through `seen`, so a callee head summary is not derivable from one
+  function's closure check alone.
 
 Next:
 

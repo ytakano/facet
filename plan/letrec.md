@@ -103,6 +103,15 @@ Next:
   the component branch:
   `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement` and
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement`.
+  The current wrapper graph is intentionally not closed by a simple theorem
+  alias: `*_statement_of_call_statement` reduces these to the direct-call
+  call-statement premises, while the cleanup/summary bridges that produce the
+  exact-call package take the same two statement premises back as inputs. The
+  smallest non-circular remaining proof is therefore a mutual induction over
+  `eval`, `eval_args`, and `eval_struct_fields` that handles `Eval_Call` by
+  using `direct_call_callee_body_root_synthetic_direct_call_ready_evidence` for
+  the synthetic callee body and the induction hypotheses for that body and its
+  arguments.
 - Scope the store-safe synthetic summary evidence needed by the component branch
   so mixed programs do not have to make every function a direct-call component.
   Then switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old

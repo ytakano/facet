@@ -340,13 +340,22 @@ For an explicit-capture recursive closure group:
      `store_typed`. The helper factors the remaining proof obligation into
      `preservation_ready_expr_static_runtime_named_statement`, an expression
      static-runtime named/key premise over `typed_env_roots`.
-   - Remaining gap: prove or supply
-     `preservation_ready_expr_static_runtime_named_statement` for the direct-call
-     route constructors needed by the recursive `ECall` package, then replace
-     the older ctx-based argument named/key step with the runtime-store-name
-     helper. The exact constructor blocker is the expression-level static
-     named/key preservation for `typed_env_roots` under `preservation_ready_expr`
-     without converting through exact `store_typed`.
+   - Done: add route-local runtime named/key building blocks and the compiled
+     leaf-constructor theorem
+     `preservation_ready_expr_static_runtime_named_leaf_complete`. It closes the
+     expression-level static runtime named/key obligation for `EUnit`, `ELit`,
+     `EVar`, `EFn`, and direct `EPlace` using only runtime root-env named/key
+     facts, plus the no-shadow invariant already available in the direct-call
+     route.
+   - Remaining gap: complete or specialize
+     `preservation_ready_expr_static_runtime_named_statement` beyond the leaf
+     constructors, then replace the older ctx-based argument named/key step with
+     the runtime-store-name helper. The full statement now records the required
+     `root_env_no_shadow R` premise; without it, match/let-style root-env
+     removals can expose duplicate hidden bindings. Direct borrow/assign-style
+     constructors also need an additional way to prove place roots such as
+     `[RStore x]` are present in the runtime store when those roots are not
+     obtained from `root_env_lookup`.
    - Next: discharge
      `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement`
      or its store-safe-summary variant, then connect the safety gate.

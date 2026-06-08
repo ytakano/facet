@@ -254,11 +254,18 @@ For an explicit-capture recursive closure group:
      a bridge: local-bounds synthetic evidence, exact bind-param body typing,
      bind-param named/key facts, and the final outer `value_roots_within roots`
      projection remain explicit premises.
-   - Next: discharge the explicit bridge premises: derive local-bounds
-     synthetic evidence and exact/named/key bind-param facts from the component
-     summary, then prove the missing projection from callee-body value roots to
-     the outer `TER_Call` roots (`root_sets_union arg_roots`). Defer
-     safety-gate connection until that full route is established.
+   - Done: add a wrapper around that bridge which derives the bind-param
+     named/key facts from the standard typing, roots, root-name, and root-key
+     preservation packages. Exact bind-param body typing remains explicit
+     because the current synthetic route statement requires exact `store_typed`,
+     while the standard direct-call argument setup provides a prefix store
+     typing for `bind_params`.
+   - Next: either add a prefix-store synthetic direct-call-ready route, or
+     otherwise bridge the remaining exact bind-param typing premise; then derive
+     local-bounds synthetic evidence from the component summary and prove the
+     missing projection from callee-body value roots to the outer `TER_Call`
+     roots (`root_sets_union arg_roots`). Defer safety-gate connection until
+     that full route is established.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

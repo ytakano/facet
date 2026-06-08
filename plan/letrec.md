@@ -170,6 +170,9 @@ Done:
   `direct_call_callee_body_root_synthetic_direct_call_ready_evidence_package_of_shadow_summary`.
 - Summary bridge route wrappers now consume that evidence package directly,
   keeping top-level and body-env recursive-call evidence in sync.
+- Store-safe exact-call packaging can now be derived from the plain summary
+  exact-call package via
+  `eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement_of_plain_summary_exact_package`.
 
 Next:
 

@@ -339,6 +339,29 @@ Proof.
   eapply Hsummary. exact Hlookup.
 Qed.
 
+Theorem eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement_of_plain_summary_exact_package :
+  eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement ->
+  eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement.
+Proof.
+  intros [Hplain_prefix Hplain_scope]. split.
+  - intros env s fname args s' v Heval Ω n R Σ T Σ' R' roots
+      Hsafe_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique
+      Hsummary Hbridge.
+    eapply Hplain_prefix; try eassumption.
+    + eapply store_safe_function_value_call_args_preservation_ready.
+      exact Hsafe_args.
+    + eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_of_store_safe.
+      exact Hsummary.
+  - intros env s fname args s' v Heval Ω n R Σ T Σ' R' roots ps frame
+      Hsafe_args Hstore Hnamed Hkeys Htyped Hunique Hsummary Hbridge
+      Hcover Hroots Hshadow Hrn Hframe Hfresh Hparam.
+    eapply Hplain_scope; try eassumption.
+    + eapply store_safe_function_value_call_args_preservation_ready.
+      exact Hsafe_args.
+    + eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_of_store_safe.
+      exact Hsummary.
+Qed.
+
 Lemma direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_store_safe_shadow_summary_bridge :
   forall env,
     env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence

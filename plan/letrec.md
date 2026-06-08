@@ -574,6 +574,11 @@ Done:
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_body_call_route_package`,
   grouping the summary-at and store-safe-args body-call providers used by the
   store-safe recursive route bridge.
+- End-to-end safety now has closure-gate mirrors of the current checker gate:
+  `infer_fn_env_end2end_closure_combined_gate` and
+  `infer_fns_env_end2end_closure_combined_check_env_ready`. These do not change
+  checker behavior, but prove that the existing captured-call gate implies the
+  newer captured-or-direct-component-closure checker sidecar.
 
 Next:
 

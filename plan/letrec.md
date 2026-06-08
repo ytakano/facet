@@ -220,9 +220,12 @@ For an explicit-capture recursive closure group:
      normalized `ECall` target bodies.
    - Done: bridge the no-capture direct-call component summary to env-level
      synthetic direct-call-ready shadow evidence; no gates are wired yet.
+   - Done: add a compatibility direct-call route wrapper that accepts synthetic
+     direct-call-ready evidence alongside the older body-ready evidence, without
+     changing current gate behavior.
    - Next: prove and use the recursive direct-call route over synthetic
-     direct-call-ready evidence. Defer safety-gate connection until that route
-     is established.
+     direct-call-ready evidence alone. Defer safety-gate connection until that
+     route is established.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

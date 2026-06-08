@@ -225,6 +225,8 @@ For an explicit-capture recursive closure group:
      changing current gate behavior.
    - Done: add alpha-renaming shape evidence for `direct_call_target_expr`, so
      component summaries can be transported to alpha-renamed call bodies.
+   - Done: add fn-body alpha-renaming preservation for direct-call-ready
+     expressions.
    - Next: prove and use the recursive direct-call route over synthetic
      direct-call-ready evidence alone. Defer safety-gate connection until that
      route is established.

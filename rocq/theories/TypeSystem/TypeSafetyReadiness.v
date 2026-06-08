@@ -525,6 +525,24 @@ Proof.
     eapply alpha_rename_preservation_ready_args; eassumption.
 Qed.
 
+Lemma alpha_rename_fn_def_direct_call_ready_body :
+  forall used f fr used',
+    alpha_rename_fn_def used f = (fr, used') ->
+    preservation_direct_call_ready_expr (fn_body f) ->
+    preservation_direct_call_ready_expr (fn_body fr).
+Proof.
+  intros used f fr used' Hrename Hready.
+  unfold alpha_rename_fn_def in Hrename.
+  destruct (alpha_rename_params [] (param_names (fn_params f) ++
+             param_names (fn_captures f) ++
+             free_vars_expr (fn_body f) ++ used) (fn_params f))
+    as [[paramsr ρ] used1] eqn:Hparams.
+  destruct (alpha_rename_expr ρ used1 (fn_body f)) as [bodyr used2]
+    eqn:Hbody.
+  inversion Hrename; subst. simpl.
+  eapply alpha_rename_direct_call_ready_expr; eauto.
+Qed.
+
 Lemma lookup_alpha_rename_fn_def_preservation_ready_body :
   forall env fname fdef fcall used used',
     lookup_fn fname (env_fns env) = Some fdef ->

@@ -281,6 +281,14 @@ Proof.
   intros [_ Hscope]. exact Hscope.
 Qed.
 
+Lemma eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement_of_exact_statements :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_exact_call_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_exact_call_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement.
+Proof.
+  intros Hprefix Hscope. split; assumption.
+Qed.
+
 Lemma eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_exact_call_statement_of_prefix :
   eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_call_statement ->
   eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_exact_call_statement.

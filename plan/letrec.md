@@ -190,13 +190,18 @@ Done:
 - The summary exact-call package now has prefix/scope projection helpers:
   `eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_prefix`
   and `eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_scope`.
+- The summary exact-call package now also has the explicit constructor helper
+  `eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement_of_exact_statements`.
 
 Next:
 
-- Close `eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement`
-  directly through the summary/result-subset path. The non-exact summary/raw
-  call-statement forms still take `store_typed_prefix`, which is too weak for
-  the current synthetic evidence and result-subset cleanup helpers.
+- Close the top-level exact summary package through the summary/result-subset
+  path while separating the recursive body route: the outer synthetic `ECall`
+  can start from `store_typed`, but the callee body runs under
+  `bind_params ... s_args`, where only `store_typed_prefix` is currently
+  available. The non-exact summary/raw call-statement forms are therefore still
+  too weak as the final package shape, but a body-prefix sub-route is still
+  needed for recursive calls inside the callee body.
 - Scope the store-safe synthetic summary evidence needed by the component branch
   so mixed programs do not have to make every function a direct-call component.
   Then switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old

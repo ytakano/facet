@@ -127,6 +127,51 @@ Definition eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_sta
       store_frame_scope ps Σ' s' frame /\
       exists frame', store_param_scope ps s' frame'.
 
+Definition eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_call_statement
+    : Prop :=
+  forall env s fname args s' v,
+    eval env s (ECall fname args) s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      preservation_ready_args args ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ (ECall fname args) T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+      direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge env ->
+      store_typed_prefix env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R'.
+
+Definition eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_call_statement
+    : Prop :=
+  forall env s fname args s' v,
+    eval env s (ECall fname args) s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots
+        ps frame,
+      preservation_ready_args args ->
+      typed_env_roots env Ω n R Σ (ECall fname args) T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+      direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge env ->
+      root_env_covers_params ps R ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      store_frame_scope ps Σ s frame ->
+      store_frame_static_fresh Σ frame ->
+      store_param_scope ps s frame ->
+      store_frame_scope ps Σ' s' frame /\
+      exists frame', store_param_scope ps s' frame'.
+
 Lemma eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement_of_call_statement :
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement ->
@@ -1911,6 +1956,118 @@ Proof.
   - rewrite Hremoved_exact. exact Hroots_args.
   - eapply direct_call_value_roots_within_store_subset; eassumption.
   - rewrite Hremoved_exact. exact Hshadow_args.
+Qed.
+
+
+Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_call_statement_of_final_roots_bridge :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_call_statement.
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys env s fname args s' v Heval Ω n R Σ T Σ' R'
+    roots Hready_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique
+    Hsummary Hbridge.
+  destruct
+    (eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_bridge_final_roots_core
+      Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+      Hroot_names Hroot_keys env s s' v fname args Heval Ω n R Σ T Σ'
+      R' roots Hready_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped
+      Hunique Hsummary Hbridge)
+    as [Hstore' [Hv [Hpres [Hroots' [Hvroots [Hshadow' Hrn']]]]]].
+  repeat split; try assumption.
+  eapply store_typed_prefix_exact. exact Hstore'.
+Qed.
+
+Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_call_statement_of_call_statement :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_call_statement.
+Proof.
+  intros Hcall env s fname args s' v Heval Ω n R Σ T Σ' R' roots ps
+    frame Hready_args Htyped _Hunique _Hsummary _Hbridge Hcover Hroots
+    Hshadow Hrn Hframe Hfresh Hparam.
+  eapply Hcall; eassumption.
+Qed.
+
+Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_with_summary_bridge_prefix_narrow_core :
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_call_statement ->
+  forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      preservation_direct_call_ready_expr e ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+      direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge env ->
+      store_typed_prefix env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R'.
+Proof.
+  intros Hprefix_ready Hsummary_call env s e s' v Heval Ω n R Σ T Σ' R'
+    roots Hready Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique
+    Hsummary Hbridge.
+  inversion Hready as [e_ready Hpres_ready | fname args Hready_args]; subst.
+  - pose proof
+      (preservation_ready_expr_implies_provenance_ready_direct_call
+        e Hpres_ready) as Hprov.
+    exact (proj1 Hprefix_ready env s e s' v Heval Ω n R Σ T Σ' R'
+      roots Hprov (store_typed_prefix_exact env s Σ Hstore) Hroots Hshadow
+      Hrn Htyped).
+  - eapply Hsummary_call; eassumption.
+Qed.
+
+Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_with_summary_bridge_narrow_core :
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_call_statement ->
+  forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots
+        ps frame,
+      preservation_direct_call_ready_expr e ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+      direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge env ->
+      root_env_covers_params ps R ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      store_frame_scope ps Σ s frame ->
+      store_frame_static_fresh Σ frame ->
+      store_param_scope ps s frame ->
+      store_frame_scope ps Σ' s' frame /\
+      exists frame', store_param_scope ps s' frame'.
+Proof.
+  intros Hframe_ready Hparam_ready Hsummary_call env s e s' v Heval Ω n R Σ
+    T Σ' R' roots ps frame Hready Htyped Hunique Hsummary Hbridge Hcover
+    Hroots Hshadow Hrn Hframe Hfresh Hparam.
+  inversion Hready as [e_ready Hpres_ready | fname args Hready_args]; subst.
+  - pose proof
+      (preservation_ready_expr_implies_provenance_ready_direct_call
+        e Hpres_ready) as Hprov.
+    destruct (proj1 Hframe_ready env s e s' v Heval Ω n R Σ T Σ' R'
+      roots ps frame Hprov Htyped Hcover Hroots Hshadow Hrn Hframe Hfresh)
+      as [_ [_ [_ [_ [Hframe' _]]]]].
+    destruct (proj1 Hparam_ready env s e s' v Heval Ω n R Σ T Σ' R'
+      roots ps frame Hprov Htyped Hcover Hparam) as [frame' Hparam'].
+    split; [exact Hframe' | exists frame'; exact Hparam'].
+  - eapply Hsummary_call; eassumption.
 Qed.
 
 

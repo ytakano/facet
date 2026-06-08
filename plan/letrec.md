@@ -286,10 +286,20 @@ For an explicit-capture recursive closure group:
      the route can use the narrower `ECall`-only prefix and frame/parameter
      scope obligations through
      `eval_preserves_typing_roots_synthetic_direct_call_ready_with_summary_bridge_narrow_core`.
-   - Next: prove the two remaining direct-`ECall` obligations for synthetic
-     direct-call-ready prefix preservation and frame/parameter scope
-     preservation, then add the safety-gate connection that feeds the env-level
-     synthetic shadow summary evidence into this route.
+   - Done: add summary/bridge-specific direct-`ECall` proof interfaces:
+     `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_call_statement`
+     exposes the final-roots cleanup bridge with prefix result shape via
+     `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_call_statement_of_final_roots_bridge`,
+     and
+     `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_call_statement`
+     is threaded through
+     `eval_preserves_frame_param_scope_synthetic_direct_call_ready_with_summary_bridge_narrow_core`.
+   - Next: prove the remaining summary/bridge direct-`ECall` obligations
+     without depending on the broad synthetic recursive assumptions: prefix
+     preservation for recursive direct calls, and frame/parameter scope
+     preservation for recursive direct calls. After those are closed, add the
+     safety-gate connection that feeds env-level synthetic shadow summary
+     evidence into this route.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

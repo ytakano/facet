@@ -227,6 +227,8 @@ For an explicit-capture recursive closure group:
      component summaries can be transported to alpha-renamed call bodies.
    - Done: add fn-body alpha-renaming preservation for direct-call-ready
      expressions.
+   - Done: add constructors from synthetic direct-call-ready summary bridges to
+     synthetic direct-call-ready evidence.
    - Next: prove and use the recursive direct-call route over synthetic
      direct-call-ready evidence alone. Defer safety-gate connection until that
      route is established.

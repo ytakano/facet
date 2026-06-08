@@ -824,3 +824,29 @@ Proof.
   eapply callee_body_root_direct_call_ready_at_of_shadow_direct_call_ready_at.
   eapply Hbridge; eassumption.
 Qed.
+
+
+Lemma direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_summary_bridge :
+  forall env,
+    env_fns_root_synthetic_direct_call_ready_summary_evidence env ->
+    direct_call_callee_body_root_synthetic_direct_call_ready_summary_bridge env ->
+    direct_call_callee_body_root_synthetic_direct_call_ready_evidence env.
+Proof.
+  intros env Hsummary Hbridge Ω n R Σ Σ_args R_args arg_roots fname args
+    fdef fcall σ s s_args vs used' Hin Hfname Hcaps Htyped_args Heval_args
+    Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
+  eapply Hbridge; eassumption.
+Qed.
+
+Lemma direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_shadow_summary_bridge :
+  forall env,
+    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+    direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge env ->
+    direct_call_callee_body_root_synthetic_direct_call_ready_evidence env.
+Proof.
+  intros env Hsummary Hbridge Ω n R Σ Σ_args R_args arg_roots fname args
+    fdef fcall σ s s_args vs used' Hin Hfname Hcaps Htyped_args Heval_args
+    Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
+  eapply callee_body_root_synthetic_direct_call_ready_at_of_shadow.
+  eapply Hbridge; eassumption.
+Qed.

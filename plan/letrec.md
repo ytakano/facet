@@ -351,11 +351,13 @@ Done:
   and
   `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_at_call_route_with_component_body_nested_in_evidence`,
   consuming the In-aware current-target provider plus the nested body providers.
+- End-to-end safety now has the matching pointwise call-route bridge
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_call_route_and_component_body_nested_in_evidence`.
 
 Next:
 
-- Lift the checker-level pointwise call-route wrapper to an end-to-end safety
-  wrapper, then derive the nested providers from the closure checker.
+- Derive the nested body-target summary and nested body-env evidence providers
+  from the closure checker, then feed them into the new end-to-end bridge.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

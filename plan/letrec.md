@@ -481,14 +481,18 @@ Done:
 - The alpha nested final-roots summary-at call-route bridge now uses that
   localized result-subset cleanup helper, so its prefix-side recursive body
   preservation path flows through the same current-target evidence-at factoring.
+- The pointwise summary-at call package now has constructor
+  `eval_preserves_synthetic_direct_call_ready_summary_at_pointwise_call_package_statement_of_call_route_cleanup`,
+  bundling a prefix call route with the existing frame/scope cleanup-derived
+  call route.
 
 Next:
 
 - Close the remaining direct-call route premises needed by the closure-check
-  bridge. For the prefix route, package the localized final-roots path into a
-  reusable prefix call-route theorem value. The frame/parameter-scope route
-  statement must also become a theorem value before the unconditional end-to-end
-  safety theorem can use the closure-check bridge without extra assumptions.
+  bridge. The pointwise package can now bundle the prefix route with the derived
+  scope route; the remaining hard step is turning the prefix route itself into a
+  theorem value, then wiring that package into the closure-check end-to-end
+  bridge without extra assumptions.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

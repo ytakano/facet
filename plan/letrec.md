@@ -69,6 +69,10 @@ Done:
   `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_of_mutual`,
   which constructs the store-safe package and local-bounds bridge from the
   existing direct-call route proof interfaces.
+- The checker sidecar layer now has an OR summary for existing captured-call
+  store-safe summaries or no-capture direct-call components:
+  `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary`,
+  with Prop-level readiness and soundness lemmas.
 
 Next:
 
@@ -430,6 +434,10 @@ For an explicit-capture recursive closure group:
      `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_of_mutual`,
      so callers can provide the existing direct-call route interfaces instead of
      prebuilt package/bridge evidence.
+   - Done: add the non-invasive OR checker sidecar
+     `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary`
+     and its soundness/ready lemmas. This prepares an end-to-end gate switch
+     without changing the existing checker authority yet.
    - Remaining gap: complete or specialize
      `preservation_ready_expr_static_runtime_named_statement` beyond the leaf
      constructors, then replace the older ctx-based argument named/key step with

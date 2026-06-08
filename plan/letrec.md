@@ -646,6 +646,10 @@ Done:
   and `check_fn_root_shadow_no_capture_direct_call_component_closure_of_exact_closure`,
   with a provider-level adapter
   `component_body_no_capture_direct_call_component_closure_check_provider_of_exact_closure_check_provider`.
+- Exact direct-call closure checks now also expose recursive callee exact-check
+  evidence through
+  `check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_callee`,
+  matching the ordinary closure callee decomposition used by provider proofs.
 
 Next:
 

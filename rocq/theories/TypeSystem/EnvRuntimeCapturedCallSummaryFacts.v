@@ -3073,6 +3073,30 @@ Proof.
 Qed.
 
 
+Lemma check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_callee :
+  forall fuel seen env fdef fname args synthetic_body fcallee,
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+      fuel seen env fdef = true ->
+    CheckerOrdinary.ident_in_b (fn_name fdef) seen = false ->
+    direct_call_target_expr (fn_body fdef) = Some (fname, args, synthetic_body) ->
+    lookup_fn_b fname (env_fns env) = Some fcallee ->
+    exists fuel',
+      fuel = S fuel' /\
+      check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+        fuel' (fn_name fdef :: seen) env fcallee = true.
+Proof.
+  intros fuel seen env fdef fname args synthetic_body fcallee Hcheck
+    Hnot_seen Htarget Hlookup.
+  destruct fuel as [| fuel']; simpl in Hcheck; try discriminate.
+  destruct (CheckerOrdinary.ident_in_b (fn_name fdef) seen) eqn:Hseen;
+    try discriminate; try rewrite Hseen in Hnot_seen; try discriminate.
+  apply andb_true_iff in Hcheck as [_ Hcallee].
+  rewrite Htarget in Hcallee.
+  rewrite Hlookup in Hcallee.
+  exists fuel'. split; [reflexivity | exact Hcallee].
+Qed.
+
+
 Lemma component_body_no_capture_direct_call_component_exact_body_target_provider_of_exact_closure_check_provider :
   forall env,
     component_body_no_capture_direct_call_component_exact_closure_check_provider

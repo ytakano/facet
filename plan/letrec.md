@@ -632,6 +632,10 @@ Done:
   `callee_body_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_of_strict_exact_closure`
   and
   `env_fns_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_ready_of_strict_exact_closure`.
+- Captured safety now has a checker-level strict exact-closure wrapper,
+  `check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_lookup_evidence`,
+  connecting the strict sidecar to the existing evidence-at component route
+  without switching the end-to-end checker gate yet.
 
 Next:
 

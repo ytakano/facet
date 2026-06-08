@@ -57,6 +57,10 @@ Done:
   `eval_preserves_frame_param_scope_store_safe_synthetic_direct_call_ready_summary_exact_call_statement_of_cleanup`,
   completing the two exact-call cleanup projections needed for a store-safe
   package wrapper.
+- Those store-safe exact-call projections are now packaged as
+  `eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement`,
+  with constructor theorem
+  `eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement_of_final_roots_and_cleanup`.
 
 Next:
 
@@ -406,6 +410,10 @@ For an explicit-capture recursive closure group:
      `eval_preserves_frame_param_scope_store_safe_synthetic_direct_call_ready_summary_exact_call_statement_of_cleanup`.
      These close the two exact-call projections over store-safe synthetic
      summary evidence.
+   - Done: package those exact-call projections as
+     `eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement`
+     and prove
+     `eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement_of_final_roots_and_cleanup`.
    - Remaining gap: complete or specialize
      `preservation_ready_expr_static_runtime_named_statement` beyond the leaf
      constructors, then replace the older ctx-based argument named/key step with

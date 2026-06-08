@@ -264,6 +264,14 @@ Definition callee_body_root_shadow_no_capture_direct_call_component_store_safe_s
   env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence
     (global_env_with_local_bounds env (fn_bounds fdef)).
 
+Definition component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider
+    (env : global_env) : Prop :=
+  forall f_component,
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+      env f_component.
+
 Definition component_body_store_safe_synthetic_direct_call_ready_summary_provider
     (env : global_env) : Prop :=
   forall f_component,
@@ -735,6 +743,29 @@ Proof.
   intros env Hsummary fname fdef Hlookup.
   eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_of_store_safe.
   eapply Hsummary. exact Hlookup.
+Qed.
+
+Lemma component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider_of_summary_provider :
+  forall env,
+    component_body_synthetic_direct_call_ready_summary_provider env ->
+    component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider env.
+Proof.
+  intros env Hprovider f_component Hcomponent.
+  split.
+  - exact Hcomponent.
+  - eapply Hprovider. exact Hcomponent.
+Qed.
+
+Lemma component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider_of_store_safe_provider :
+  forall env,
+    component_body_store_safe_synthetic_direct_call_ready_summary_provider env ->
+    component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider env.
+Proof.
+  intros env Hprovider f_component Hcomponent.
+  split.
+  - exact Hcomponent.
+  - eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_of_store_safe.
+    eapply Hprovider. exact Hcomponent.
 Qed.
 
 Lemma component_body_synthetic_direct_call_ready_summary_provider_of_store_safe :

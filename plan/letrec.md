@@ -727,6 +727,9 @@ Done:
   `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary`,
   plus `store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_body_summary_ready`,
   which turns that readiness into the scoped exact-body route package.
+- Summary facts now also have
+  `component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider`,
+  with constructors from plain and store-safe component body summary providers.
 
 Next:
 

@@ -615,6 +615,13 @@ Done:
   which builds the store-safe evidence-at route from the ordinary evidence-at
   route plus exact body-call providers, then reuses the existing component
   closure-check safety wrapper.
+- The checker sidecar layer now has a strict exact-closure combined checker,
+  `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary`
+  plus its environment form. It checks exact closure whenever the direct-component
+  summary checker succeeds, otherwise falls back to the captured-call summary,
+  so component-branch closure evidence is not hidden by the captured branch.
+  Summary facts prove readiness and component exact-closure extraction for this
+  strict sidecar.
 
 Next:
 

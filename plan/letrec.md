@@ -48,6 +48,10 @@ Done:
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_bridge_core`,
   consuming store-safe synthetic summary evidence plus the existing shadow
   summary bridge.
+- The env-runtime summary layer now also has the final-roots store-safe wrapper
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_bridge_final_roots_core`,
+  using store-safe argument facts for named/key preservation while reusing the
+  existing result-subset bridge through summary conversion.
 
 Next:
 

@@ -952,6 +952,10 @@ For an explicit-capture recursive closure group:
      `infer_fn_env_end2end_combined_gate` and
      `infer_fns_env_end2end_combined_check_env_ready`, proving that the current
      old gate implies the combined OR sidecar.
+   - Done: add final-roots alpha evidence-at bridge
+     `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_body_call_callback_final_roots_core`,
+     replacing the route-premise cleanup helper with the concrete nested body-call
+     callback helper for the alpha-renamed direct-call body.
    - Remaining gap: prove the concrete recursive synthetic direct-call route
      statements
      `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement`

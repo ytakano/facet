@@ -260,6 +260,29 @@ Proof.
       exact Htyped).
 Qed.
 
+Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_synthetic_direct_call_ready :
+  forall env fdef,
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef ->
+    exists fname args synthetic_body,
+      direct_call_target_expr (fn_body fdef) =
+        Some (fname, args, synthetic_body) /\
+      synthetic_body = ECall fname args /\
+      preservation_direct_call_ready_expr synthetic_body.
+Proof.
+  intros env fdef Hsummary.
+  destruct Hsummary as
+    (fname & args & raw_body & synthetic_body & fcallee & T_body &
+      Gamma_out & R_body & roots_body & _ & Hbody & Htarget & Hsynthetic &
+      Hsafe_args & _).
+  subst raw_body synthetic_body.
+  exists fname, args, (ECall fname args).
+  repeat split; try exact Htarget.
+  apply PDCR_Call.
+  eapply store_safe_function_value_call_args_preservation_ready.
+  exact Hsafe_args.
+Qed.
+
 Lemma subst_type_params_trait_ref_nil : forall tr,
   subst_type_params_trait_ref [] tr = tr.
 Proof.

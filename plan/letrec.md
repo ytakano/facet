@@ -44,6 +44,10 @@ Done:
   `direct_call_callee_body_root_synthetic_direct_call_ready_evidence`, via
   `direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_store_safe_shadow_summary_bridge`.
 - The route layer now has `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_named_bind_facts_core`, a store-safe variant of the synthetic direct-call cleanup bridge that derives readiness and argument named/key facts from `store_safe_function_value_call_args`.
+- The env-runtime summary layer now wraps that store-safe cleanup bridge as
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_bridge_core`,
+  consuming store-safe synthetic summary evidence plus the existing shadow
+  summary bridge.
 
 Next:
 
@@ -381,6 +385,11 @@ For an explicit-capture recursive closure group:
      which combines store-safe synthetic direct-call summary evidence with the
      existing shadow synthetic-summary bridge to produce the synthetic
      direct-call-ready callee evidence required by the recursive route.
+   - Done: add the env-runtime wrapper
+     `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_bridge_core`,
+     so store-safe synthetic summary evidence can invoke the store-safe cleanup
+     bridge without exposing ctx-based argument named/key derivations at the
+     wrapper boundary.
    - Remaining gap: complete or specialize
      `preservation_ready_expr_static_runtime_named_statement` beyond the leaf
      constructors, then replace the older ctx-based argument named/key step with

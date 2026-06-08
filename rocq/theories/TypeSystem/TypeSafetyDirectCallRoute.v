@@ -2254,7 +2254,6 @@ Proof.
       * unfold fn_env_unique_by_name in *; simpl; exact Hunique.
 Qed.
 
-
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_bridge_final_roots_core :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

@@ -52,6 +52,11 @@ Done:
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_bridge_final_roots_core`,
   using store-safe argument facts for named/key preservation while reusing the
   existing result-subset bridge through summary conversion.
+- The env-runtime summary layer now also has the frame/parameter scope
+  store-safe cleanup wrapper
+  `eval_preserves_frame_param_scope_store_safe_synthetic_direct_call_ready_summary_exact_call_statement_of_cleanup`,
+  completing the two exact-call cleanup projections needed for a store-safe
+  package wrapper.
 
 Next:
 
@@ -394,6 +399,13 @@ For an explicit-capture recursive closure group:
      so store-safe synthetic summary evidence can invoke the store-safe cleanup
      bridge without exposing ctx-based argument named/key derivations at the
      wrapper boundary.
+   - Done: add the final-roots and frame/parameter scope store-safe
+     cleanup wrappers
+     `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_bridge_final_roots_core`
+     and
+     `eval_preserves_frame_param_scope_store_safe_synthetic_direct_call_ready_summary_exact_call_statement_of_cleanup`.
+     These close the two exact-call projections over store-safe synthetic
+     summary evidence.
    - Remaining gap: complete or specialize
      `preservation_ready_expr_static_runtime_named_statement` beyond the leaf
      constructors, then replace the older ctx-based argument named/key step with

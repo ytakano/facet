@@ -360,12 +360,14 @@ Done:
   `component_body_synthetic_direct_call_ready_nested_body_env_evidence_in_provider_of_summary_evidence`,
   and
   `component_body_synthetic_direct_call_ready_nested_body_env_evidence_in_provider_of_provider`.
+- The new end-to-end pointwise call-route bridge can now be closed from the
+  older component-body summary provider via
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_call_route_and_component_body_summary_provider`.
 
 Next:
 
-- Narrow the nested provider source from the older env-wide/component-body
-  summary paths to the closure checker, then feed those closure-derived
-  providers into the new end-to-end bridge.
+- Narrow the provider source from the older component-body summary provider to
+  the closure checker while preserving the same end-to-end bridge shape.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

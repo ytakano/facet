@@ -3193,35 +3193,6 @@ Proof.
       eassumption.
 Qed.
 
-Lemma callee_body_root_shadow_synthetic_direct_call_ready_summary_global_env_with_local_bounds :
-  forall env bounds fdef,
-    callee_body_root_shadow_synthetic_direct_call_ready_summary env fdef ->
-    callee_body_root_shadow_synthetic_direct_call_ready_summary
-      (global_env_with_local_bounds env bounds) fdef.
-Proof.
-  intros env bounds fdef [Hnodup Hready].
-  split; [exact Hnodup |].
-  unfold callee_body_root_shadow_synthetic_direct_call_ready_at in *.
-  destruct Hready as
-    (fname & args & synthetic_body & T_body & Gamma_out & R_body & roots_body &
-      Htarget & Hsynthetic & Hready_body & Htyped_body & Hcompat_body &
-      Hexclude_roots & Hexclude_env).
-  exists fname, args, synthetic_body, T_body, Gamma_out, R_body, roots_body.
-  repeat split; assumption.
-Qed.
-
-Lemma env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds :
-  forall env bounds,
-    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
-    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence
-      (global_env_with_local_bounds env bounds).
-Proof.
-  intros env bounds Hsummary fname fdef Hlookup.
-  change (lookup_fn fname (env_fns env) = Some fdef) in Hlookup.
-  eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_global_env_with_local_bounds.
-  exact (Hsummary fname fdef Hlookup).
-Qed.
-
 Lemma callee_body_root_shadow_synthetic_direct_call_ready_result_subset_from_env_summary :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

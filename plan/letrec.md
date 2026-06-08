@@ -156,10 +156,11 @@ Done:
 - The direct-call route proof now factors bind-parameter inputs through
   `eval_call_bind_params_route_inputs_from_components`.
 - Shadow synthetic direct-call-ready summary evidence now lifts through
-  `global_env_with_local_bounds` via
+  `global_env_with_local_bounds` in `TypeSafetyDirectCallEvidenceFacts.v` via
   `callee_body_root_shadow_synthetic_direct_call_ready_summary_global_env_with_local_bounds`
   and
-  `env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds`.
+  `env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds`;
+  the route layer reuses those shared facts instead of local duplicates.
 
 Next:
 

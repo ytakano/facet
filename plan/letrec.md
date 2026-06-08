@@ -353,11 +353,19 @@ Done:
   consuming the In-aware current-target provider plus the nested body providers.
 - End-to-end safety now has the matching pointwise call-route bridge
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_call_route_and_component_body_nested_in_evidence`.
+- Nested body-target providers now have compatibility constructors from env-wide
+  summary evidence and from the older component-body summary provider:
+  `component_body_synthetic_direct_call_ready_nested_summary_at_in_provider_of_summary_evidence`,
+  `component_body_synthetic_direct_call_ready_nested_summary_at_in_provider_of_provider`,
+  `component_body_synthetic_direct_call_ready_nested_body_env_evidence_in_provider_of_summary_evidence`,
+  and
+  `component_body_synthetic_direct_call_ready_nested_body_env_evidence_in_provider_of_provider`.
 
 Next:
 
-- Derive the nested body-target summary and nested body-env evidence providers
-  from the closure checker, then feed them into the new end-to-end bridge.
+- Narrow the nested provider source from the older env-wide/component-body
+  summary paths to the closure checker, then feed those closure-derived
+  providers into the new end-to-end bridge.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

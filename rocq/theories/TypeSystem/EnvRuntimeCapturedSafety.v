@@ -4158,6 +4158,75 @@ Proof.
   - eapply Hprovider. exact Hcomponent.
 Qed.
 
+
+Lemma component_body_synthetic_direct_call_ready_nested_summary_at_in_provider_of_summary_evidence :
+  forall env,
+    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+    component_body_synthetic_direct_call_ready_nested_summary_at_in_provider env.
+Proof.
+  intros env Hsummary f_component _Hin _Hcomponent fcall fname args
+    synthetic_body _Htarget.
+  eapply fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_env.
+  eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+  eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+  exact Hsummary.
+Qed.
+
+Lemma component_body_synthetic_direct_call_ready_nested_summary_at_in_provider_of_provider :
+  forall env,
+    component_body_synthetic_direct_call_ready_summary_provider env ->
+    component_body_synthetic_direct_call_ready_nested_summary_at_in_provider env.
+Proof.
+  intros env Hprovider f_component _Hin Hcomponent fcall fname args
+    synthetic_body _Htarget.
+  eapply fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_env.
+  eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+  eapply Hprovider. exact Hcomponent.
+Qed.
+
+Lemma component_body_synthetic_direct_call_ready_nested_body_env_evidence_in_provider_of_summary_evidence :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+    component_body_synthetic_direct_call_ready_nested_body_env_evidence_in_provider env.
+Proof.
+  intros Hroot_names Hroot_keys env Hunique Hsummary f_component _Hin
+    _Hcomponent fcall fcall_inner.
+  eapply (direct_call_callee_body_root_synthetic_direct_call_ready_evidence_global_env_with_local_bounds_of_shadow_summary
+    Hroot_names Hroot_keys
+    (global_env_with_local_bounds
+      (global_env_with_local_bounds env (fn_bounds f_component))
+      (fn_bounds fcall))
+    (fn_bounds fcall_inner)).
+  - unfold fn_env_unique_by_name in *; simpl. exact Hunique.
+  - eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+    eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+    exact Hsummary.
+Qed.
+
+Lemma component_body_synthetic_direct_call_ready_nested_body_env_evidence_in_provider_of_provider :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env,
+    fn_env_unique_by_name env ->
+    component_body_synthetic_direct_call_ready_summary_provider env ->
+    component_body_synthetic_direct_call_ready_nested_body_env_evidence_in_provider env.
+Proof.
+  intros Hroot_names Hroot_keys env Hunique Hprovider f_component _Hin
+    Hcomponent fcall fcall_inner.
+  eapply (direct_call_callee_body_root_synthetic_direct_call_ready_evidence_global_env_with_local_bounds_of_shadow_summary
+    Hroot_names Hroot_keys
+    (global_env_with_local_bounds
+      (global_env_with_local_bounds env (fn_bounds f_component))
+      (fn_bounds fcall))
+    (fn_bounds fcall_inner)).
+  - unfold fn_env_unique_by_name in *; simpl. exact Hunique.
+  - eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+    eapply Hprovider. exact Hcomponent.
+Qed.
+
 Theorem env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_at_exact_package_with_component_body_summary_at_evidence :
   eval_preserves_synthetic_direct_call_ready_summary_at_exact_call_package_statement ->
   forall env f s s' v,

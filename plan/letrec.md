@@ -39,6 +39,10 @@ Done:
   for the named list helper and
   `store_safe_function_value_call_args_alpha_rename_call_go` for the local
   `fix go` shape used while normalizing synthetic `ECall` targets.
+- Store-safe synthetic direct-call summary evidence can now be paired with the
+  existing shadow synthetic-summary bridge to produce
+  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence`, via
+  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_store_safe_shadow_summary_bridge`.
 
 Next:
 
@@ -47,13 +51,10 @@ Next:
   constructors should use the threaded `store_roots_within` evidence plus the
   singleton store-root helper when roots such as `[RStore x]` are introduced by
   store locations instead of `root_env_lookup`.
-- Wire the recursive direct-call route through the store-safe synthetic summary
-  variant. The no-capture component summary now retains
-  `store_safe_function_value_call_args env args` when converted to synthetic
-  direct-call-ready evidence; the next proof step should consume that stronger
-  evidence, using the alpha-renaming helpers above for normalized target args,
-  instead of trying to recover ctx-level named/key invariants from a prefix
-  store.
+- Discharge the recursive direct-call route package using the store-safe
+  synthetic evidence path. The evidence constructor is now available; the
+  remaining route work is replacing the older ctx-based argument named/key step
+  with a store-safe/runtime-name argument proof.
 - After those obligations are closed, add the safety-gate connection that feeds
   env-level synthetic shadow summary evidence into the recursive route, then
   move the direct recursion invalid tests to valid tests when the end-to-end
@@ -374,6 +375,11 @@ For an explicit-capture recursive closure group:
      `EVar`, `EFn`, and direct `EPlace` using only runtime root-env named/key
      facts, plus the no-shadow invariant already available in the direct-call
      route.
+   - Done: add
+     `direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_store_safe_shadow_summary_bridge`,
+     which combines store-safe synthetic direct-call summary evidence with the
+     existing shadow synthetic-summary bridge to produce the synthetic
+     direct-call-ready callee evidence required by the recursive route.
    - Remaining gap: complete or specialize
      `preservation_ready_expr_static_runtime_named_statement` beyond the leaf
      constructors, then replace the older ctx-based argument named/key step with
@@ -385,7 +391,9 @@ For an explicit-capture recursive closure group:
      obtained from `root_env_lookup`.
    - Next: discharge
      `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement`
-     or its store-safe-summary variant, then connect the safety gate.
+     or its store-safe-summary variant by replacing the remaining ctx-based
+     argument named/key derivations with store-safe/runtime-name evidence; then
+     connect the safety gate.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

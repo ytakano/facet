@@ -282,6 +282,21 @@ Proof.
   eapply Hsummary. exact Hlookup.
 Qed.
 
+Lemma direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_store_safe_shadow_summary_bridge :
+  forall env,
+    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+      env ->
+    direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge
+      env ->
+    direct_call_callee_body_root_synthetic_direct_call_ready_evidence env.
+Proof.
+  intros env Hsummary Hbridge.
+  eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_shadow_summary_bridge.
+  - eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_of_store_safe.
+    exact Hsummary.
+  - exact Hbridge.
+Qed.
+
 Lemma callee_body_root_shadow_store_safe_synthetic_direct_call_ready_summary_global_env_with_local_bounds :
   forall env bounds fdef,
     callee_body_root_shadow_store_safe_synthetic_direct_call_ready_summary

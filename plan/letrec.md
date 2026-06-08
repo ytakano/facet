@@ -182,18 +182,17 @@ Done:
 - The checker-level combined sidecar safety wrapper can now consume the plain
   summary exact-call package via
   `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package`.
+- End-to-end safety now has a bridge from a plain summary exact-call package
+  plus the component sidecar check via
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_exact_package_and_component_check`.
 
 Next:
 
-- Close the recursive direct-call route through the summary/result-subset path
-  first, not the raw prefix statement. The raw
-  `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement`
-  has two missing inputs in `Eval_Call`: `store_typed_prefix` does not imply the
-  raw evidence's `store_typed`, and raw synthetic evidence does not provide the
-  `roots_body <= root_sets_union arg_roots` fact needed for the returned
-  `value_roots_within roots v`. The non-circular route should therefore prove
-  the summary/result-subset call-statement package and then derive the remaining
-  wrappers from it.
+- Close `eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement`
+  through the summary/result-subset path. The raw prefix call-statement remains
+  too strong for direct proof: `store_typed_prefix` does not imply the raw
+  evidence's `store_typed`, and raw synthetic evidence lacks
+  `roots_body <= root_sets_union arg_roots`.
 - Scope the store-safe synthetic summary evidence needed by the component branch
   so mixed programs do not have to make every function a direct-call component.
   Then switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old

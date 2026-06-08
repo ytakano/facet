@@ -81,6 +81,10 @@ Done:
   `env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_mutual`,
   which dispatches old captured-call summaries through the factored theorem and
   no-capture direct components through the store-safe synthetic route.
+- There is also a conservative checker-level wrapper,
+  `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_mutual`,
+  which combines the OR sidecar checker with the existing whole-env no-capture
+  component checker to supply store-safe synthetic evidence.
 
 Next:
 
@@ -442,6 +446,10 @@ For an explicit-capture recursive closure group:
    - Done: add
      `env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_mutual`,
      which dispatches the combined sidecar branch-by-branch.
+   - Done: add the conservative checker-level wrapper
+     `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_mutual`,
+     which uses the whole-env no-capture component checker as a temporary source
+     of store-safe synthetic evidence.
    - Remaining gap: scope the store-safe synthetic summary evidence required by
      the component branch, then switch the extracted end-to-end checker gate to
      the combined sidecar and move direct self/mutual recursion tests from

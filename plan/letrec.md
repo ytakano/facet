@@ -76,18 +76,18 @@ Done:
 - Captured-call store-safe safety is factored into the function-level
   `callee_body_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready`
   plus the existing env-level wrapper.
+- The combined captured/store-safe-or-direct-component sidecar now has an
+  env-level safety theorem,
+  `env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_mutual`,
+  which dispatches old captured-call summaries through the factored theorem and
+  no-capture direct components through the store-safe synthetic route.
 
 Next:
 
-- Connect the combined captured/store-safe-or-direct-component sidecar to a
-  function-level and env-level safety theorem. The component branch can now use
-  the store-safe synthetic package; the remaining work is preserving the old
-  captured-call branches without requiring every function to be a direct-call
-  component.
-- Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
-  store-safe sidecar to the combined sidecar only after the combined safety
-  theorem is in place and the required synthetic evidence is scoped precisely
-  enough for mixed programs.
+- Scope the store-safe synthetic summary evidence needed by the component branch
+  so mixed programs do not have to make every function a direct-call component.
+  Then switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old
+  captured store-safe sidecar to the combined sidecar.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.
 
@@ -439,15 +439,13 @@ For an explicit-capture recursive closure group:
      `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary`
      and its soundness/ready lemmas. This prepares an end-to-end gate switch
      without changing the existing checker authority yet.
-   - Remaining gap: connect the combined sidecar to a safety theorem that
-     preserves the existing captured-call store-safe branches and uses the new
-     component theorem only for the no-capture direct-call component branch.
-     The current component theorem still assumes store-safe synthetic summary
-     evidence; before switching the end-to-end gate, scope that evidence so mixed
-     programs do not have to make every function a direct-call component.
-   - Next: add the combined function/env safety theorem, then switch the
-     extracted end-to-end checker gate to the combined sidecar and move direct
-     self/mutual recursion tests from invalid to valid.
+   - Done: add
+     `env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_mutual`,
+     which dispatches the combined sidecar branch-by-branch.
+   - Remaining gap: scope the store-safe synthetic summary evidence required by
+     the component branch, then switch the extracted end-to-end checker gate to
+     the combined sidecar and move direct self/mutual recursion tests from
+     invalid to valid.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

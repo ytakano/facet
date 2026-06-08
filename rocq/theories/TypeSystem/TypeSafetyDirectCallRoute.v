@@ -302,6 +302,19 @@ Definition eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_pr
       store_no_shadow s' /\
       root_env_no_shadow R'.
 
+Lemma direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_evidence_at_all :
+  forall env,
+    (forall fname,
+      direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+        env fname) ->
+    direct_call_callee_body_root_synthetic_direct_call_ready_evidence env.
+Proof.
+  intros env Hevidence_at_all Ω n R Σ Σ_args R_args arg_roots fname args
+    fdef fcall σ s s_args vs used' Hin Hfname Hcaps Htyped_args
+    Heval_args Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
+  eapply Hevidence_at_all; eassumption.
+Qed.
+
 Definition eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_exact_call_statement
     : Prop :=
   forall env s fname args s' v,

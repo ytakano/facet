@@ -514,17 +514,22 @@ Done:
   `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_body_call_callback`
   to call it. The prefix route now uses prefix argument typing, the
   prefix-store result-subset/scope helpers, and the prefix-only cleanup helper.
-- Argument runtime naming for this prefix route is derived through
+- Argument runtime naming for the generic prefix route is derived through
   `eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr`,
-  so the remaining new input at this layer is
+  so that generic layer needs
   `preservation_ready_expr_static_runtime_named_statement` rather than a full
   store-typed premise.
+- The route layer also now has the store-safe argument variant
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_body_call_callback_prefix_store_final_roots_core`,
+  which derives argument runtime naming from
+  `store_safe_function_value_call_args_typed_roots_store_named`. This matches
+  the direct-component checker sidecar and avoids needing the generic static
+  runtime naming statement for that path.
 
 Next:
 
-- Prove or package `preservation_ready_expr_static_runtime_named_statement` for
-  all preservation-ready expressions needed by call arguments, then thread it
-  into the enclosing evidence-at call-route closure.
+- Thread the store-safe prefix body-callback final-roots core into the
+  direct-component wrappers that already carry `store_safe_function_value_call_args`.
 - Supply the body-call callback from evaluation-derivation induction so the
   evidence-at prefix call route closes without recursive full-store recovery.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured

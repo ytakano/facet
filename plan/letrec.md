@@ -378,11 +378,16 @@ Done:
   `component_body_no_capture_direct_call_component_nested_target_in_provider`,
   with `component_body_synthetic_direct_call_ready_closure_nested_summary_at_in_provider_of_target_provider`
   deriving closure-scoped nested summary evidence from it.
+- Alpha-renamed callee target evidence is now named as
+  `component_body_no_capture_direct_call_component_alpha_nested_target_in_provider`,
+  matching the `alpha_rename_fn_def ... = (fcall, used')` evidence available
+  inside the pointwise call route.
 
 Next:
 
-- Derive the nested target provider from the current-target provider and thread
-  it through the pointwise call-route wrappers.
+- Thread alpha-renamed nested target evidence through the pointwise call-route
+  wrappers so closure-scoped nested providers can replace the wider nested
+  providers.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

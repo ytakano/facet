@@ -388,6 +388,30 @@ Definition component_body_no_capture_direct_call_component_nested_target_in_prov
             (global_env_with_local_bounds env (fn_bounds f_component))
             (fn_bounds fcall)) fdef.
 
+
+Definition component_body_no_capture_direct_call_component_alpha_nested_target_in_provider
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    forall fdef fcall used used' fname args synthetic_body,
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        (global_env_with_local_bounds env (fn_bounds f_component)) fdef ->
+      alpha_rename_fn_def used fdef = (fcall, used') ->
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname, args, synthetic_body) ->
+      forall ftarget,
+        lookup_fn fname
+          (env_fns
+            (global_env_with_local_bounds
+              (global_env_with_local_bounds env (fn_bounds f_component))
+              (fn_bounds fcall))) = Some ftarget ->
+        callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+          (global_env_with_local_bounds
+            (global_env_with_local_bounds env (fn_bounds f_component))
+            (fn_bounds fcall)) ftarget.
+
 Definition component_body_synthetic_direct_call_ready_closure_nested_summary_at_in_provider
     (env : global_env) : Prop :=
   forall f_component,

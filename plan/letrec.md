@@ -215,6 +215,10 @@ Done:
   construction of the direct-component body-env store-safe summary provider.
 - End-to-end safety also has the matching summary call-package bridge
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_call_package_and_component_body_store_safe_summary_evidence`.
+- The direct-component body-env store-safe summary provider is now named as
+  `component_body_store_safe_synthetic_direct_call_ready_summary_provider`,
+  and the env/checker/end-to-end wrappers consume that named Prop instead of an
+  inline forall.
 
 Next:
 

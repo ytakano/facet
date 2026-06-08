@@ -3707,11 +3707,8 @@ Theorem env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_
     fn_env_unique_by_name env ->
     env_fns_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_ready
       env ->
-    (forall f_component,
-      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
-        env f_component ->
-      env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
-        (global_env_with_local_bounds env (fn_bounds f_component))) ->
+    component_body_store_safe_synthetic_direct_call_ready_summary_provider
+      env ->
     check_initial_root_runtime_ready f s = true ->
     In f (env_fns env) ->
     initial_store_for_fn env f s ->
@@ -3749,11 +3746,8 @@ Theorem check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_comp
     fn_env_unique_by_name env ->
     check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
       env = true ->
-    (forall f_component,
-      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
-        env f_component ->
-      env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
-        (global_env_with_local_bounds env (fn_bounds f_component))) ->
+    component_body_store_safe_synthetic_direct_call_ready_summary_provider
+      env ->
     check_initial_root_runtime_ready f s = true ->
     In f (env_fns env) ->
     initial_store_for_fn env f s ->

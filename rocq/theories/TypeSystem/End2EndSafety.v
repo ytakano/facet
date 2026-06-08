@@ -258,11 +258,8 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summa
   eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement ->
   forall env env' f s s' v,
     infer_program_env_end2end env = infer_ok env' ->
-    (forall f_component,
-      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
-        env' f_component ->
-      env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
-        (global_env_with_local_bounds env' (fn_bounds f_component))) ->
+    component_body_store_safe_synthetic_direct_call_ready_summary_provider
+      env' ->
     check_initial_root_runtime_ready f s = true ->
     In f (env_fns env') ->
     initial_store_for_fn env' f s ->
@@ -303,11 +300,8 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summa
   eval_preserves_synthetic_direct_call_ready_summary_call_package_statement ->
   forall env env' f s s' v,
     infer_program_env_end2end env = infer_ok env' ->
-    (forall f_component,
-      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
-        env' f_component ->
-      env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
-        (global_env_with_local_bounds env' (fn_bounds f_component))) ->
+    component_body_store_safe_synthetic_direct_call_ready_summary_provider
+      env' ->
     check_initial_root_runtime_ready f s = true ->
     In f (env_fns env') ->
     initial_store_for_fn env' f s ->

@@ -662,6 +662,10 @@ Done:
   `component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_of_closure_check`,
   plus exact-closure variants, so future safety wrappers can use branch-local
   closure evidence without a whole-env provider.
+- Captured safety now has branch-local strict exact-closure wrappers,
+  `env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route`
+  and its checker-level form, using exact closure evidence retained in the strict
+  component branch instead of external component-body providers.
 
 Next:
 

@@ -463,18 +463,21 @@ Done:
   `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_with_evidence_at_all`,
   a prefix-call wrapper that consumes all-name evidence-at callbacks for the
   current env while reusing the older env-wide direct-call route interface.
+- The exact evidence-at prefix-call route is now factored by
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_body_env_provider`,
+  reducing that route Prop to the older summary-at route plus a focused provider
+  that turns the current callee's pointwise evidence into recursive body-env
+  direct-call evidence.
 
 Next:
 
 - Close the remaining direct-call route premises needed by the closure-check
-  bridge, starting with
-  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at`
-  and the frame/parameter-scope route statement. These must be theorem values
-  before the unconditional end-to-end safety theorem can use the closure-check
-  bridge without extra assumptions. The current-name evidence-at route cannot be
-  closed by folding back to the old env-wide evidence interface; the next proof
-  step must close the direct `ECall` cleanup path against the pointwise callee
-  evidence directly.
+  bridge. For the prefix route, construct the body-env provider required by
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_body_env_provider`,
+  then use it with the existing summary-at route. The frame/parameter-scope
+  route statement must also become a theorem value before the unconditional
+  end-to-end safety theorem can use the closure-check bridge without extra
+  assumptions.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

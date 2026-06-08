@@ -436,13 +436,23 @@ Done:
   `direct_call_target_expr_alpha_rename_fn_def_inv`, so route-level
   `alpha_rename_fn_def ... = (fcall, used')` evidence can recover the original
   direct-call target on `fdef`.
+- Closure-derived alpha nested target evidence now has a target-lookup scoped
+  provider,
+  `component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_provider`,
+  with constructor
+  `component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_provider_of_closure_check_provider`.
+  This uses the closure checker sidecar, the alpha direct-target inverse, and
+  existing local-bounds summary lifting to handle recursive self/mutual seen-set
+  cases without requiring a whole body-env summary provider.
 
 Next:
 
-- Use `direct_call_target_expr_alpha_rename_fn_def_inv` to derive
-  `component_body_no_capture_direct_call_component_alpha_nested_target_in_provider`
-  from the closure checker sidecar, after isolating any needed local-bounds
-  summary-to-closure-check bridge.
+- Thread
+  `component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_provider`
+  through the component/env/checker/end-to-end evidence-at call-route wrappers,
+  replacing the broader `component_body_no_capture_direct_call_component_alpha_nested_target_in_provider`
+  premise where the route already has the component direct-target lookup and
+  local-bounds callee summary evidence.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

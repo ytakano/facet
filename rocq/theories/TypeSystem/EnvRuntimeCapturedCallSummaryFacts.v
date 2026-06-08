@@ -389,6 +389,36 @@ Definition component_body_no_capture_direct_call_component_nested_target_in_prov
             (fn_bounds fcall)) fdef.
 
 
+Definition component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_provider
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    forall fname_component args_component synthetic_component,
+      direct_call_target_expr (fn_body f_component) =
+        Some (fname_component, args_component, synthetic_component) ->
+      forall fdef,
+        lookup_fn fname_component
+          (env_fns (global_env_with_local_bounds env (fn_bounds f_component))) =
+          Some fdef ->
+        callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+          (global_env_with_local_bounds env (fn_bounds f_component)) fdef ->
+        forall fcall used used' fname args synthetic_body,
+          alpha_rename_fn_def used fdef = (fcall, used') ->
+          direct_call_target_expr (fn_body fcall) =
+            Some (fname, args, synthetic_body) ->
+          forall ftarget,
+            lookup_fn fname
+              (env_fns
+                (global_env_with_local_bounds
+                  (global_env_with_local_bounds env (fn_bounds f_component))
+                  (fn_bounds fcall))) = Some ftarget ->
+            callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+              (global_env_with_local_bounds
+                (global_env_with_local_bounds env (fn_bounds f_component))
+                (fn_bounds fcall)) ftarget.
+
 Definition component_body_no_capture_direct_call_component_alpha_nested_target_in_provider
     (env : global_env) : Prop :=
   forall f_component,
@@ -2790,6 +2820,97 @@ Proof.
     + eapply check_fn_root_shadow_no_capture_direct_call_component_closure_seen_head_sound.
       * exact Hcallee_check.
       * exact Hseen.
+Qed.
+
+Lemma component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_provider_of_closure_check_provider :
+  forall env,
+    fn_env_unique_by_name env ->
+    component_body_no_capture_direct_call_component_closure_check_provider env ->
+    component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_provider env.
+Proof.
+  intros env Hunique Hprovider f_component Hin_component Hcomponent
+    fname_component args_component synthetic_component Htarget_component fdef
+    Hlookup_component Hfdef_component fcall used used' fname args
+    synthetic_body Hrename Htarget ftarget Hlookup_target.
+  change (lookup_fn fname_component (env_fns env) = Some fdef)
+    in Hlookup_component.
+  change (lookup_fn fname (env_fns env) = Some ftarget) in Hlookup_target.
+  pose proof (lookup_fn_b_of_lookup_fn fname_component (env_fns env) fdef
+    Hlookup_component) as Hlookup_component_b.
+  pose proof (lookup_fn_b_of_lookup_fn fname (env_fns env) ftarget
+    Hlookup_target) as Hlookup_target_b.
+  destruct (direct_call_target_expr_alpha_rename_fn_def_inv
+              used fdef fcall used' fname args synthetic_body Hrename Htarget)
+    as (args0 & Htarget_original).
+  pose proof (Hprovider f_component Hcomponent) as Hcheck_component.
+  unfold check_fn_root_shadow_no_capture_direct_call_component_closure
+    in Hcheck_component.
+  destruct (check_fn_root_shadow_no_capture_direct_call_component_closure_seen_callee
+              10001 [] env f_component fname_component args_component
+              synthetic_component fdef Hcheck_component eq_refl
+              Htarget_component Hlookup_component_b)
+    as (fuel_component & Hfuel_component & Hcheck_fdef).
+  inversion Hfuel_component; subst fuel_component; clear Hfuel_component.
+  destruct (CheckerOrdinary.ident_in_b (fn_name fdef) [fn_name f_component])
+    eqn:Hseen_fdef.
+  - assert (Hsame_name : fn_name fdef = fn_name f_component).
+    { simpl in Hseen_fdef.
+      destruct (ident_eqb (fn_name fdef) (fn_name f_component)) eqn:Hname;
+        try discriminate.
+      apply ident_eqb_eq in Hname. exact Hname. }
+    destruct (lookup_fn_in_name fname_component (env_fns env) fdef
+      Hlookup_component) as [Hin_fdef _Hname_fdef].
+    assert (Hsame_def : fdef = f_component).
+    { eapply Hunique; eassumption. }
+    subst fdef.
+    eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds.
+    + unfold fn_env_unique_by_name in *; simpl. exact Hunique.
+    + eapply component_body_no_capture_direct_call_component_target_in_provider_of_closure_check_provider.
+      * exact Hunique.
+      * exact Hprovider.
+      * exact Hin_component.
+      * exact Hcomponent.
+      * exact Htarget_original.
+      * exact Hlookup_target.
+  - destruct (check_fn_root_shadow_no_capture_direct_call_component_closure_seen_callee
+                10000 [fn_name f_component] env fdef fname args0
+                (ECall fname args0) ftarget Hcheck_fdef Hseen_fdef
+                Htarget_original Hlookup_target_b)
+      as (fuel_target & _Hfuel_target & Hcheck_target).
+    destruct (CheckerOrdinary.ident_in_b (fn_name ftarget)
+                (fn_name fdef :: fn_name f_component :: []))
+      eqn:Hseen_target.
+    + simpl in Hseen_target.
+      destruct (ident_eqb (fn_name ftarget) (fn_name fdef)) eqn:Htarget_fdef.
+      * apply ident_eqb_eq in Htarget_fdef.
+        destruct (lookup_fn_in_name fname_component (env_fns env) fdef
+          Hlookup_component) as [Hin_fdef _].
+        destruct (lookup_fn_in_name fname (env_fns env) ftarget
+          Hlookup_target) as [Hin_target _].
+        assert (ftarget = fdef) by (eapply Hunique; eassumption).
+        subst ftarget.
+        eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds.
+        -- unfold fn_env_unique_by_name in *; simpl. exact Hunique.
+        -- exact Hfdef_component.
+      * destruct (ident_eqb (fn_name ftarget) (fn_name f_component))
+          eqn:Htarget_component_name; try discriminate.
+        apply ident_eqb_eq in Htarget_component_name.
+        destruct (lookup_fn_in_name fname (env_fns env) ftarget
+          Hlookup_target) as [Hin_target _].
+        assert (ftarget = f_component) by (eapply Hunique; eassumption).
+        subst ftarget.
+        eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds.
+        -- unfold fn_env_unique_by_name in *; simpl. exact Hunique.
+        -- eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds.
+           ++ exact Hunique.
+           ++ exact Hcomponent.
+    + eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds.
+      * unfold fn_env_unique_by_name in *; simpl. exact Hunique.
+      * eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds.
+        -- exact Hunique.
+        -- eapply check_fn_root_shadow_no_capture_direct_call_component_closure_seen_head_sound.
+           ++ exact Hcheck_target.
+           ++ exact Hseen_target.
 Qed.
 
 Lemma component_body_synthetic_direct_call_ready_summary_at_in_provider_of_closure_check_provider :

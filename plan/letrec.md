@@ -485,14 +485,22 @@ Done:
   `eval_preserves_synthetic_direct_call_ready_summary_at_pointwise_call_package_statement_of_call_route_cleanup`,
   bundling a prefix call route with the existing frame/scope cleanup-derived
   call route.
+- The lookup-evidence component wrapper cannot be reduced from the
+  evidence-at prefix route back to the summary-at prefix route using only the
+  closure target lookup provider: the summary-at route still requires broad
+  `forall fcall_inner` nested body-env evidence, while lookup evidence is scoped
+  to the concrete next target. The remaining route-closure work must therefore
+  prove the evidence-at prefix route itself, rather than trying to derive that
+  wrapper through the older summary-at route.
 
 Next:
 
 - Close the remaining direct-call route premises needed by the closure-check
-  bridge. The pointwise package can now bundle the prefix route with the derived
-  scope route; the remaining hard step is turning the prefix route itself into a
-  theorem value, then wiring that package into the closure-check end-to-end
-  bridge without extra assumptions.
+  bridge. The next hard step is proving
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at`
+  as a theorem value directly, likely by reworking the prefix call route around
+  evaluation-derivation recursion so nested `ECall` body evaluations use the
+  smaller subderivation instead of an external route premise.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

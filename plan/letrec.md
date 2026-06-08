@@ -346,11 +346,16 @@ Done:
   `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_summary_at_call_route_evidence`,
   taking the component body's target summary, one nested target-summary
   callback, and one nested body-env evidence callback.
+- Env/checker safety now has pointwise call-route wrappers,
+  `env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_at_call_route_with_component_body_nested_in_evidence`
+  and
+  `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_at_call_route_with_component_body_nested_in_evidence`,
+  consuming the In-aware current-target provider plus the nested body providers.
 
 Next:
 
-- Lift the component-level pointwise call-route wrapper to env/checker/end-to-end
-  safety wrappers that consume the named nested providers.
+- Lift the checker-level pointwise call-route wrapper to an end-to-end safety
+  wrapper, then derive the nested providers from the closure checker.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

@@ -517,19 +517,22 @@ Done:
   the hidden tail frame. The scope side now also has a prefix-store callback,
   `eval_synthetic_direct_call_body_scope_callback_from_result_subset_prefix_store`,
   which derives frame/parameter scope from the result-subset body evidence and
-  prefix preservation instead of full-store evidence. The remaining reduction is
-  to thread or derive the static naming premises at the call route and use both
-  prefix-store helpers in a prefix-only cleanup core to remove the full-store
-  premise.
+  prefix preservation instead of full-store evidence. The next reduction is a
+  prefix-only cleanup core that uses the existing lower-level prefix cleanup
+  lemma `store_remove_match_payload_cleanup_prefix_store_typed_names` instead of
+  `eval_direct_call_body_cleanup_preserves_value_and_refs_core`; after that,
+  thread or derive the static naming premises at the call route and use the
+  prefix-store helpers to remove the full-store premise.
 
 Next:
 
 - Close the remaining direct-call route premises needed by the closure-check
-  bridge. Next, thread or derive the static ctx naming premises needed by the
-  prefix-store result-subset bridge, then use both prefix-store helpers in a
-  prefix-only cleanup core to remove the full-store premise from the
-  body-callback route factor. After that, supply the body-call callback from
-  evaluation-derivation induction.
+  bridge. Next, implement the prefix-only cleanup core using
+  `store_remove_match_payload_cleanup_prefix_store_typed_names`, thread or
+  derive the static ctx naming premises needed by the prefix-store result-subset
+  bridge, and remove the full-store premise from the body-callback route factor.
+  After that, supply the body-call callback from evaluation-derivation
+  induction.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

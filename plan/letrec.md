@@ -456,14 +456,16 @@ Done:
 
 Next:
 
+- Close the remaining direct-call route premises needed by the closure-check
+  bridge, starting with
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at`
+  and the frame/parameter-scope route statement. These must be theorem values
+  before the unconditional end-to-end safety theorem can use the closure-check
+  bridge without extra assumptions.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_component_body_closure_check`.
-- Once the closure-scoped providers feed the component safety wrapper, switch
-  `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
-  store-safe sidecar to the captured-or-component-closure sidecar and update the
-  unconditional end-to-end safety theorem accordingly.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.
 

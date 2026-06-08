@@ -289,6 +289,11 @@ Done:
   `component_body_synthetic_direct_call_ready_summary_at_provider`, with
   compatibility helpers from env-wide summary evidence and the older env-wide
   component-body provider.
+- Component-body recursive-call evidence is now named as
+  `component_body_synthetic_direct_call_ready_body_env_evidence_provider`, and
+  env/checker safety wrappers can consume it together with the pointwise summary
+  provider via the `...summary_at_exact_package_with_component_body_summary_at_evidence`
+  theorems.
 
 Next:
 

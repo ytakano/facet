@@ -363,11 +363,17 @@ Done:
 - The new end-to-end pointwise call-route bridge can now be closed from the
   older component-body summary provider via
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_call_route_and_component_body_summary_provider`.
+- Closure-scoped nested provider Props now exist for recursive body callbacks
+  that are known to be on the direct-call component chain:
+  `component_body_synthetic_direct_call_ready_closure_nested_summary_at_in_provider`
+  and
+  `component_body_synthetic_direct_call_ready_closure_nested_body_env_evidence_in_provider`,
+  with compatibility helpers from the wider nested provider forms.
 
 Next:
 
-- Narrow the provider source from the older component-body summary provider to
-  the closure checker while preserving the same end-to-end bridge shape.
+- Change the pointwise call-route safety wrappers to consume the closure-scoped
+  nested providers, then derive those providers from the closure checker.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

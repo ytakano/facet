@@ -453,6 +453,12 @@ Done:
   The bridge now uses only the closure checker sidecar for the direct-component
   branch, instead of a separate broad component-body summary provider or broad
   alpha nested target provider.
+- The route layer now has
+  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_evidence_at_all`,
+  a small bridge from per-name evidence-at callbacks to the older env-wide
+  direct-call evidence shape. This gives the next route-closure step a way to
+  reuse older body-env evidence interfaces when all names in that body env have
+  pointwise evidence.
 
 Next:
 

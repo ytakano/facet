@@ -8,6 +8,22 @@ From Stdlib Require Import List Bool Lia String Program.Equality.
 Import ListNotations.
 
 
+Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_body_summary_ready :
+  store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_statement
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary.
+Proof.
+  intros env fname fdef fcall used used' fname_body args_body
+    [Hcomponent Hbody_summary] _Hin _Hname Hrename Htarget.
+  split.
+  - pose proof (alpha_rename_fn_def_bounds used fdef fcall used' Hrename)
+      as Hbounds.
+    rewrite Hbounds.
+    eapply fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_env.
+    exact Hbody_summary.
+  - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_alpha_renamed_target_args_global_env_with_local_bounds;
+      eassumption.
+Qed.
+
 Theorem callee_body_root_shadow_captured_call_provenance_summary_big_step_safe_checked_initial_ready :
   forall env f s s' v,
     fn_env_unique_by_name env ->

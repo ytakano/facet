@@ -257,6 +257,13 @@ Definition env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_ev
     callee_body_root_shadow_store_safe_synthetic_direct_call_ready_summary
       env fdef.
 
+Definition callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+    env fdef /\
+  env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence
+    (global_env_with_local_bounds env (fn_bounds fdef)).
+
 Definition component_body_store_safe_synthetic_direct_call_ready_summary_provider
     (env : global_env) : Prop :=
   forall f_component,
@@ -563,6 +570,22 @@ Proof.
   - discriminate.
   - destruct (ident_eqb fname (fn_name f)); [exact Hlookup |].
     eapply IH. exact Hlookup.
+Qed.
+
+Lemma alpha_rename_fn_def_bounds :
+  forall used fdef fcall used',
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    fn_bounds fcall = fn_bounds fdef.
+Proof.
+  intros used fdef fcall used' Hrename.
+  destruct fdef as [fname lifetimes outs captures ps ret body].
+  unfold alpha_rename_fn_def in Hrename.
+  simpl in Hrename.
+  destruct (alpha_rename_params []
+    (param_names ps ++ param_names captures ++ free_vars_expr body ++ used) ps)
+    as [[ps' rho] used1] eqn:Hps.
+  destruct (alpha_rename_expr rho used1 body) as [body' used2] eqn:Hbody.
+  inversion Hrename; reflexivity.
 Qed.
 
 Lemma lookup_fn_of_in_unique_by_name_list :

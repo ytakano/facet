@@ -107,6 +107,11 @@ Done:
   `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_core`.
   This reduces the remaining prefix-side cycle from the full synthetic route
   statement to the direct-call call-statement premise.
+- The call-statement premise reduction now reaches the named-bind and store-safe
+  bridge layers via
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_named_bind_facts_core`
+  and
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_named_bind_facts_core`.
 
 Next:
 
@@ -500,6 +505,11 @@ For an explicit-capture recursive closure group:
      These factor the prefix-side recursive route so the cleanup bridge can use
      the direct-call call-statement premise instead of the full recursive
      synthetic route statement.
+   - Done: lift the same call-statement premise reduction through named-bind
+     and store-safe bridge wrappers with
+     `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_named_bind_facts_core`
+     and
+     `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_named_bind_facts_core`.
    - Done: add non-invasive `End2EndSafety.v` bridge lemmas
      `infer_fn_env_end2end_combined_gate` and
      `infer_fns_env_end2end_combined_check_env_ready`, proving that the current

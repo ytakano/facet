@@ -507,18 +507,25 @@ Done:
   factors the full evidence-at prefix route through that callback plus a
   prefix-to-full-store premise.
 - The prefix-to-full-store premise cannot be discharged directly: `store_typed_prefix`
-  does not imply full `store_typed`. The next reduction must introduce
-  prefix-store variants of the result-subset bridge and scope callback, e.g.
-  `callee_body_root_shadow_synthetic_direct_call_ready_result_subset_from_summary_at_prefix_store`
-  and `eval_synthetic_direct_call_body_scope_callback_from_result_subset_prefix_store`,
-  before a prefix-only cleanup core can remove that premise.
+  does not imply full `store_typed`. The result-subset side now has a
+  prefix-store bridge,
+  `callee_body_root_shadow_synthetic_direct_call_ready_result_subset_from_summary_at_prefix_store`,
+  backed by
+  `direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_summary_with_result_subset_prefix_store_core`.
+  This bridge still requires static `root_env_ctx_*_named R Sigma` premises,
+  because prefix stores cannot recover those facts from runtime store names for
+  the hidden tail frame. The remaining reduction is to thread or derive those
+  static naming premises at the call route and add the matching prefix-store
+  scope callback, `eval_synthetic_direct_call_body_scope_callback_from_result_subset_prefix_store`,
+  before a prefix-only cleanup core can remove the full-store premise.
 
 Next:
 
 - Close the remaining direct-call route premises needed by the closure-check
-  bridge. Next, add prefix-store variants of the result-subset bridge and scope
-  callback so the body-callback route factor no longer needs a full-store
-  premise; after that, supply the body-call callback from evaluation-derivation
+  bridge. Next, thread or derive the static ctx naming premises needed by the
+  prefix-store result-subset bridge, add the prefix-store scope callback, and
+  then use both to remove the full-store premise from the body-callback route
+  factor. After that, supply the body-call callback from evaluation-derivation
   induction.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update

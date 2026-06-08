@@ -5266,7 +5266,7 @@ Lemma callee_body_root_shadow_synthetic_direct_call_ready_result_subset_from_sum
     root_env_store_roots_named R s ->
     root_env_store_keys_named R s ->
     root_env_ctx_roots_named R Sigma ->
-    root_env_sctx_keys_named R Sigma ->
+    root_env_ctx_keys_named R Sigma ->
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
     callee_body_root_shadow_synthetic_direct_call_ready_at_result_subset
       env fcall

@@ -116,6 +116,35 @@ Proof.
     + eapply IH. exact Hinfer.
 Qed.
 
+Lemma infer_fn_env_end2end_combined_gate :
+  forall env f T Γ_out R_out roots,
+    infer_fn_env_end2end env f = infer_ok (T, Γ_out, R_out, roots) ->
+    check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env f = true.
+Proof.
+  intros env f T Γ_out R_out roots Hend.
+  unfold check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
+  rewrite (infer_fn_env_end2end_gate env f T Γ_out R_out roots Hend).
+  reflexivity.
+Qed.
+
+Lemma infer_fns_env_end2end_combined_check_env_ready :
+  forall env fns,
+    infer_fns_env_end2end env fns = infer_ok tt ->
+    forallb
+      (check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+        env) fns = true.
+Proof.
+  intros env fns.
+  induction fns as [| f rest IH]; intros Hinfer; simpl in *.
+  - reflexivity.
+  - destruct (infer_fn_env_end2end env f)
+      as [[[[T Γ] R] roots] | err] eqn:Hhead; try discriminate.
+    apply andb_true_iff. split.
+    + eapply infer_fn_env_end2end_combined_gate. exact Hhead.
+    + eapply IH. exact Hinfer.
+Qed.
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready :
   forall env env' f s s' v,
     infer_program_env_end2end env = infer_ok env' ->

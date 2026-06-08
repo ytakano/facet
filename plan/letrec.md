@@ -85,6 +85,10 @@ Done:
   `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_mutual`,
   which combines the OR sidecar checker with the existing whole-env no-capture
   component checker to supply store-safe synthetic evidence.
+- `End2EndSafety.v` now derives the combined OR sidecar from the current old
+  end-to-end gate via `infer_fn_env_end2end_combined_gate` and
+  `infer_fns_env_end2end_combined_check_env_ready`, without changing checker
+  behavior yet.
 
 Next:
 
@@ -450,6 +454,10 @@ For an explicit-capture recursive closure group:
      `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_mutual`,
      which uses the whole-env no-capture component checker as a temporary source
      of store-safe synthetic evidence.
+   - Done: add non-invasive `End2EndSafety.v` bridge lemmas
+     `infer_fn_env_end2end_combined_gate` and
+     `infer_fns_env_end2end_combined_check_env_ready`, proving that the current
+     old gate implies the combined OR sidecar.
    - Remaining gap: scope the store-safe synthetic summary evidence required by
      the component branch, then switch the extracted end-to-end checker gate to
      the combined sidecar and move direct self/mutual recursion tests from

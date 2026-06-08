@@ -328,12 +328,19 @@ Done:
   `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_at_call_route_final_roots_core`,
   threading body-target summary callbacks and nested body-env evidence callbacks
   into the new cleanup helper.
+- The frame/scope summary-at route now has the matching pointwise call-route
+  statement and wrapper,
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_statement`
+  and
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_statement_of_cleanup`.
+  The two pointwise call routes are packaged as
+  `eval_preserves_synthetic_direct_call_ready_summary_at_pointwise_call_package_statement`.
 
 Next:
 
-- Thread the new pointwise cleanup helper into the frame/scope summary-at
-  exact-call wrapper, then package the final-roots and scope variants as a
-  pointwise call package.
+- Add component/env/checker/end-to-end safety wrappers that consume the new
+  pointwise call package plus closure-derived body-target summary callbacks,
+  replacing the older env-wide recursive body evidence requirement on this path.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

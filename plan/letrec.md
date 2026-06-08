@@ -478,16 +478,17 @@ Done:
   which applies the older summary-at prefix route at the concrete nested body
   call while supplying recursive body-env evidence only for that nested body
   environment.
+- The alpha nested final-roots summary-at call-route bridge now uses that
+  localized result-subset cleanup helper, so its prefix-side recursive body
+  preservation path flows through the same current-target evidence-at factoring.
 
 Next:
 
 - Close the remaining direct-call route premises needed by the closure-check
-  bridge. For the prefix route, thread the localized body-env provider helper
-  up through the final-roots summary-at call-route bridge, then package the
-  resulting prefix call route as a theorem value. The frame/parameter-scope
-  route statement must also become a theorem value before the unconditional
-  end-to-end safety theorem can use the closure-check bridge without extra
-  assumptions.
+  bridge. For the prefix route, package the localized final-roots path into a
+  reusable prefix call-route theorem value. The frame/parameter-scope route
+  statement must also become a theorem value before the unconditional end-to-end
+  safety theorem can use the closure-check bridge without extra assumptions.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

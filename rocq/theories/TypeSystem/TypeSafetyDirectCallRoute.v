@@ -5143,8 +5143,8 @@ Proof.
       Hsummary_at H3 eq_refl H0 H7 H1 Hprov_args Hstore Hroots Hshadow Hrn
       Hnamed Hkeys H2) as Hbody_result_subset.
   destruct
-    (eval_synthetic_direct_call_body_cleanup_prefix_from_result_subset_summary_at_call_statement_evidence
-      Hsynthetic_route Htyping_ready Hroots_ready env Omega n R Σ Σ'
+    (eval_synthetic_direct_call_body_cleanup_prefix_from_result_subset_summary_at_call_statement_evidence_at_local_body_env_provider
+      Hsynthetic_route Htyping_ready Hroots_ready Hroot_names Hroot_keys env Omega n R Σ Σ'
       R' arg_roots (fn_name fdef0) args fdef0 fcall σ s s_args s_body
       vs ret used' Hbody_result_subset
       (fun fname_body args_body synthetic_body Htarget_body =>

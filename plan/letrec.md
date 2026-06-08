@@ -294,12 +294,14 @@ For an explicit-capture recursive closure group:
      `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_call_statement`
      is threaded through
      `eval_preserves_frame_param_scope_synthetic_direct_call_ready_with_summary_bridge_narrow_core`.
-   - Next: prove the remaining summary/bridge direct-`ECall` obligations
-     without depending on the broad synthetic recursive assumptions: prefix
-     preservation for recursive direct calls, and frame/parameter scope
-     preservation for recursive direct calls. After those are closed, add the
-     safety-gate connection that feeds env-level synthetic shadow summary
-     evidence into this route.
+   - Done: prove the summary/bridge direct-`ECall` frame/parameter scope
+     preservation path using the synthetic cleanup result. The summary call
+     scope interface now carries the store typing and root-name/key facts
+     required by the cleanup and summary-bridge evidence.
+   - Next: prove the remaining summary/bridge direct-`ECall` prefix
+     preservation obligation without depending on the broad synthetic recursive
+     assumptions, then add the safety-gate connection that feeds env-level
+     synthetic shadow summary evidence into this route.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

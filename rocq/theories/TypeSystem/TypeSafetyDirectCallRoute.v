@@ -327,8 +327,10 @@ Definition preservation_ready_expr_static_runtime_named_statement : Prop :=
     preservation_ready_expr e ->
     typed_env_roots env Ω n R Σ e T Σ' R' roots ->
     root_env_no_shadow R ->
+    store_roots_within R s ->
     root_env_store_roots_named R s ->
     root_env_store_keys_named R s ->
+    store_roots_within R' s /\
     root_env_store_roots_named R' s /\
     root_set_store_roots_named roots s /\
     root_env_store_keys_named R' s.
@@ -342,6 +344,17 @@ Proof.
   unfold root_env_store_roots_named, root_set_store_roots_named.
   intros R s x roots Hnamed Hlookup z Hin.
   eapply Hnamed; eassumption.
+Qed.
+
+Lemma root_set_store_roots_named_single_of_store_roots_within_direct_route :
+  forall R s x,
+    store_roots_within R s ->
+    In x (store_names s) ->
+    root_set_store_roots_named [RStore x] s.
+Proof.
+  intros R s x Hwithin Hin.
+  destruct (store_roots_within_name_lookup_some R s x Hwithin Hin) as [_ _].
+  apply root_set_store_roots_named_single. exact Hin.
 Qed.
 
 Lemma root_env_store_keys_named_update_env_direct_route :
@@ -430,13 +443,16 @@ Lemma preservation_ready_expr_static_runtime_named_leaf_complete :
     preservation_ready_expr e ->
     typed_env_roots env Ω n R Σ e T Σ' R' roots ->
     root_env_no_shadow R ->
+    store_roots_within R s ->
     root_env_store_roots_named R s ->
     root_env_store_keys_named R s ->
+    store_roots_within R' s /\
     root_env_store_roots_named R' s /\
     root_set_store_roots_named roots s /\
     root_env_store_keys_named R' s.
 Proof.
-  intros env s e Ω n R Σ T Σ' R' roots Hleaf Hready Htyped _ Hnamed Hkeys.
+  intros env s e Ω n R Σ T Σ' R' roots Hleaf Hready Htyped _ Hwithin
+    Hnamed Hkeys.
   inversion Hleaf; subst; inversion Htyped; subst;
     repeat split; try assumption; try apply root_set_store_roots_named_nil;
     try (eapply root_env_lookup_store_roots_named_direct_route; eassumption).
@@ -482,30 +498,32 @@ Lemma typed_args_roots_preservation_ready_static_runtime_named :
     preservation_ready_args args ->
     typed_args_roots env Ω n R Σ args ps Σ_args R_args arg_roots ->
     root_env_no_shadow R ->
+    store_roots_within R s ->
     root_env_store_roots_named R s ->
     root_env_store_keys_named R s ->
+    store_roots_within R_args s /\
     root_env_store_roots_named R_args s /\
     Forall (fun roots => root_set_store_roots_named roots s) arg_roots /\
     root_env_store_keys_named R_args s.
 Proof.
   intros Hexpr env s args Ω n R Σ ps Σ_args R_args arg_roots Hready
-    Htyped Hrn Hnamed Hkeys.
-  revert Hready Hrn Hnamed Hkeys.
+    Htyped Hrn Hwithin Hnamed Hkeys.
+  revert Hready Hrn Hwithin Hnamed Hkeys.
   induction Htyped as
     [R0 Σ0
     | R0 R1 R2 Σ0 Σ1 Σ2 e es p ps0 T_e roots roots_rest
         Htyped_e Hcompat Htyped_rest IH];
-    intros Hready Hrn Hnamed Hkeys.
+    intros Hready Hrn Hwithin Hnamed Hkeys.
   - dependent destruction Hready.
     repeat split; try constructor; assumption.
   - dependent destruction Hready.
     assert (Hrn1 : root_env_no_shadow R1)
       by (eapply typed_env_roots_no_shadow; eassumption).
     destruct (Hexpr env s e Ω n R0 Σ0 T_e Σ1 R1 roots H
-                Htyped_e Hrn Hnamed Hkeys)
-      as [Hnamed1 [Hroots_named Hkeys1]].
-    destruct (IH Hready Hrn1 Hnamed1 Hkeys1)
-      as [Hnamed2 [Hroots_rest_named Hkeys2]].
+                Htyped_e Hrn Hwithin Hnamed Hkeys)
+      as [Hwithin1 [Hnamed1 [Hroots_named Hkeys1]]].
+    destruct (IH Hready Hrn1 Hwithin1 Hnamed1 Hkeys1)
+      as [Hwithin2 [Hnamed2 [Hroots_rest_named Hkeys2]]].
     repeat split; try assumption.
     constructor; assumption.
 Qed.
@@ -516,6 +534,7 @@ Lemma eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static
     eval_args env s args s_args vs ->
     preservation_ready_args args ->
     root_env_no_shadow R ->
+    store_roots_within R s ->
     root_env_store_roots_named R s ->
     root_env_store_keys_named R s ->
     typed_args_roots env Ω n R Σ args ps Σ_args R_args arg_roots ->
@@ -524,13 +543,13 @@ Lemma eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static
     root_env_store_keys_named R_args s_args.
 Proof.
   intros Hexpr env s args s_args vs Ω n R Σ ps Σ_args R_args arg_roots
-    Heval_args Hready Hrn Hnamed Hkeys Htyped.
+    Heval_args Hready Hrn Hwithin Hnamed Hkeys Htyped.
   pose proof (proj1 (proj2 preservation_ready_eval_store_names_mutual)
                 env s args s_args vs Heval_args Hready) as Hnames.
   destruct (typed_args_roots_preservation_ready_static_runtime_named
               Hexpr env s args Ω n R Σ ps Σ_args R_args arg_roots
-              Hready Htyped Hrn Hnamed Hkeys)
-    as [Hnamed_args [Hroots_named Hkeys_args]].
+              Hready Htyped Hrn Hwithin Hnamed Hkeys)
+    as [_ [Hnamed_args [Hroots_named Hkeys_args]]].
   repeat split.
   - eapply root_env_store_roots_named_direct_route_store_names_eq;
       eassumption.

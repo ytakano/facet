@@ -23,11 +23,23 @@ Done:
   reuse existing closure capture checking for non-recursive captured calls.
 - FIR regression coverage locks synthetic local-rec function emission, direct
   calls, and captured closure construction/calls.
+- The local direct-call route now has a bounded static-runtime named helper
+  chain that threads `store_roots_within R s` from each argument root
+  environment to the next. `preservation_ready_expr_static_runtime_named_statement`
+  returns the updated `store_roots_within R' s`, and
+  `typed_args_roots_preservation_ready_static_runtime_named` recurses from that
+  evidence. A route-local singleton helper packages `[RStore x]` naming from
+  store-name membership for later borrow/assign constructor proofs.
 
 Next:
 
-- Wire the recursive direct-call route through the store-safe synthetic
-  summary variant. The no-capture component summary now retains
+- Complete `preservation_ready_expr_static_runtime_named_statement` beyond the
+  current leaf-complete proof. The remaining non-leaf direct borrow/assign-style
+  constructors should use the threaded `store_roots_within` evidence plus the
+  singleton store-root helper when roots such as `[RStore x]` are introduced by
+  store locations instead of `root_env_lookup`.
+- Wire the recursive direct-call route through the store-safe synthetic summary
+  variant. The no-capture component summary now retains
   `store_safe_function_value_call_args env args` when converted to synthetic
   direct-call-ready evidence; the next proof step should consume that stronger
   evidence instead of trying to recover ctx-level named/key invariants from a

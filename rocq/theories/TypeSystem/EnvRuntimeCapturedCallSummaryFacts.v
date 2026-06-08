@@ -1850,6 +1850,23 @@ Proof.
   exact Hcheck.
 Qed.
 
+Lemma check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_store_safe_synthetic_direct_call_ready_summary_when_not_captured :
+  forall env fdef,
+    check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env fdef = true ->
+    check_fn_root_shadow_captured_call_store_safe_summary env fdef = false ->
+    callee_body_root_shadow_store_safe_synthetic_direct_call_ready_summary
+      env fdef.
+Proof.
+  intros env fdef Hcombined Hcaptured.
+  unfold check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+    in Hcombined.
+  rewrite Hcaptured in Hcombined.
+  simpl in Hcombined.
+  eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_store_safe_synthetic_direct_call_ready_summary.
+  exact Hcombined.
+Qed.
+
 Lemma check_fn_root_shadow_captured_call_store_safe_summary_sound :
   forall env fdef,
     check_fn_root_shadow_captured_call_store_safe_summary env fdef = true ->

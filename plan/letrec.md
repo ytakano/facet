@@ -144,7 +144,9 @@ Done:
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_call_statement_routes_and_component_check`.
 - Component evidence localization has started with the per-function checker
   bridge
-  `check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_store_safe_synthetic_direct_call_ready_summary`.
+  `check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_store_safe_synthetic_direct_call_ready_summary`
+  and the combined-branch extractor
+  `check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_store_safe_synthetic_direct_call_ready_summary_when_not_captured`.
 
 Next:
 
@@ -583,6 +585,10 @@ For an explicit-capture recursive closure group:
      `check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_store_safe_synthetic_direct_call_ready_summary`,
      so later proofs can use a checked component function without first
      requiring an environment-wide component sidecar.
+   - Done: add combined-branch evidence extractor
+     `check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_store_safe_synthetic_direct_call_ready_summary_when_not_captured`,
+     deriving the same summary when the combined OR sidecar succeeds and the
+     captured sidecar is false for that function.
    - Done: add non-invasive `End2EndSafety.v` bridge lemmas
      `infer_fn_env_end2end_combined_gate` and
      `infer_fns_env_end2end_combined_check_env_ready`, proving that the current

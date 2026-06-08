@@ -269,11 +269,13 @@ For an explicit-capture recursive closure group:
      `root_set_stores_subset roots_body (root_sets_union arg_roots)`, mirroring
      the provenance result-subset path. Also add the route-side wrapper that
      derives this result-subset evidence from env-level synthetic summaries.
-   - Next: thread the result-subset evidence through the synthetic `ECall`
-     cleanup bridge so the cleanup witness and subset proof share the same
-     `roots_body`, then discharge the final outer `value_roots_within roots v`
-     projection and connect the full recursive direct-call route. Defer
-     safety-gate connection until that full route is established.
+   - Done: thread result-subset evidence through the synthetic `ECall`
+     cleanup bridge via a result-subset cleanup package, so the cleanup witness
+     and subset proof share the same `roots_body`; add the final-roots summary
+     wrapper that discharges the outer `value_roots_within roots v` projection.
+   - Next: connect this final-roots synthetic `ECall` cleanup bridge to the
+     full recursive direct-call route over synthetic direct-call-ready evidence
+     alone. Defer safety-gate connection until that full route is established.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

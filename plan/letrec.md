@@ -335,12 +335,18 @@ Done:
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_statement_of_cleanup`.
   The two pointwise call routes are packaged as
   `eval_preserves_synthetic_direct_call_ready_summary_at_pointwise_call_package_statement`.
+- Recursive body-target providers are now named separately as
+  `component_body_synthetic_direct_call_ready_nested_summary_at_in_provider`
+  and
+  `component_body_synthetic_direct_call_ready_nested_body_env_evidence_in_provider`,
+  matching the extra callbacks required by the pointwise call package for
+  alpha-renamed callee bodies.
 
 Next:
 
 - Add component/env/checker/end-to-end safety wrappers that consume the new
-  pointwise call package plus closure-derived body-target summary callbacks,
-  replacing the older env-wide recursive body evidence requirement on this path.
+  pointwise call package plus the nested body-target providers, replacing the
+  older env-wide recursive body evidence requirement on this path.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

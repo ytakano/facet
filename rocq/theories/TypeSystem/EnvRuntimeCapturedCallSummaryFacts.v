@@ -321,6 +321,35 @@ Definition component_body_synthetic_direct_call_ready_body_env_evidence_in_provi
           (fn_bounds fcall)).
 
 
+Definition component_body_synthetic_direct_call_ready_nested_summary_at_in_provider
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    forall fcall fname args synthetic_body,
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname, args, synthetic_body) ->
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+        (global_env_with_local_bounds
+          (global_env_with_local_bounds env (fn_bounds f_component))
+          (fn_bounds fcall)) fname.
+
+Definition component_body_synthetic_direct_call_ready_nested_body_env_evidence_in_provider
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    forall fcall fcall_inner,
+      direct_call_callee_body_root_synthetic_direct_call_ready_evidence
+        (global_env_with_local_bounds
+          (global_env_with_local_bounds
+            (global_env_with_local_bounds env (fn_bounds f_component))
+            (fn_bounds fcall))
+          (fn_bounds fcall_inner)).
+
+
 Lemma lookup_fn_b_of_lookup_fn :
   forall fname fenv fdef,
     lookup_fn fname fenv = Some fdef ->

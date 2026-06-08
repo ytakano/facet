@@ -26,12 +26,12 @@ Done:
 
 Next:
 
-- Prove the combined direct-`ECall` synthetic direct-call-ready summary
-  package, or wire it as the recursive route induction hypothesis. A
-  prefix-store eval-args helper now derives the direct-call argument root-name
-  and key facts from prefix preservation plus ctx-level named/key invariants;
-  the remaining package proof must expose or derive those ctx-level invariants
-  for the outer prefix call.
+- Wire the recursive direct-call route through the store-safe synthetic
+  summary variant. The no-capture component summary now retains
+  `store_safe_function_value_call_args env args` when converted to synthetic
+  direct-call-ready evidence; the next proof step should consume that stronger
+  evidence instead of trying to recover ctx-level named/key invariants from a
+  prefix store.
 - After those obligations are closed, add the safety-gate connection that feeds
   env-level synthetic shadow summary evidence into the recursive route, then
   move the direct recursion invalid tests to valid tests when the end-to-end
@@ -329,18 +329,17 @@ For an explicit-capture recursive closure group:
      evaluation from `store_typed_prefix`, prefix preservation, and ctx-level
      `root_env_ctx_roots_named` / `root_env_ctx_keys_named`, without invoking
      the exact-store root-name/key mutual preservation packages.
-   - Remaining gap: prove the prefix-friendly summary/bridge direct-`ECall`
-     package from the package/IH itself, then use it to close the recursive
-     synthetic direct-call route. The exact-entry bridge and prefix eval-args
-     named/key helper are available, but the public package still needs a way
-     to expose or derive the initial ctx-level root-name/key invariants for the
-     outer `store_typed_prefix env s Σ` call; plain store-level named/key facts
-     are not enough to recover those invariants for all of `R` when a prefix
-     frame is present.
+   - Done: add a store-safe synthetic direct-call-ready summary/evidence
+     variant that retains `store_safe_function_value_call_args env args` for
+     the normalized direct `ECall` target, plus conversions from the existing
+     no-capture component store-safe summary.
+   - Remaining gap: wire the recursive synthetic direct-call route to consume
+     the store-safe synthetic summary variant, then use the retained
+     store-safe-args fact to avoid deriving ctx-level root-name/key invariants
+     from a prefix `store_typed_prefix` call.
    - Next: discharge
      `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement`
-     by direct `ECall` induction over the prefix-friendly obligation, then
-     connect the safety gate.
+     or its store-safe-summary variant, then connect the safety gate.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

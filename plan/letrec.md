@@ -227,6 +227,9 @@ Done:
 - Existing whole-env store-safe synthetic summary evidence can also construct
   the named provider via
   `component_body_store_safe_synthetic_direct_call_ready_summary_provider_of_store_safe_summary_evidence`.
+- The plain body-env synthetic summary provider is now named as
+  `component_body_synthetic_direct_call_ready_summary_provider`, with conversion
+  helpers from store-safe providers and whole-env plain summary evidence.
 
 Next:
 

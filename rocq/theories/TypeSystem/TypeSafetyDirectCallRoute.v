@@ -350,6 +350,25 @@ Proof.
   eapply Hevidence_at_all.
 Qed.
 
+Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_body_env_provider :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement ->
+  (forall env fname,
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname ->
+    direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+      env fname ->
+    forall fcall,
+      direct_call_callee_body_root_synthetic_direct_call_ready_evidence
+        (global_env_with_local_bounds env (fn_bounds fcall))) ->
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at.
+Proof.
+  intros Hroute Hbody_env_provider env s fname args s' v Heval Ω n R Σ T
+    Σ' R' roots Hready_args Hstore Hroots Hshadow Hrn Hnamed Hkeys
+    Htyped Hunique Hsummary_at Hevidence_at.
+  eapply Hroute; try eassumption.
+  intros fcall.
+  eapply Hbody_env_provider; eassumption.
+Qed.
+
 Definition eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_exact_call_statement
     : Prop :=
   forall env s fname args s' v,

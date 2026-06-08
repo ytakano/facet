@@ -173,22 +173,15 @@ Done:
 
 Next:
 
-- Close the two recursive synthetic direct-call route statements required by
-  the component branch:
+- Close the recursive direct-call route through the summary/result-subset path
+  first, not the raw prefix statement. The raw
   `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement`
-  and
-  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement`.
-  The current wrapper graph is intentionally not closed by a simple theorem
-  alias: `*_statement_of_call_statement` reduces these to the direct-call
-  call-statement premises, while the cleanup/summary bridges that produce the
-  exact-call package take the same two statement premises back as inputs. The
-  exact synthetic `ECall` subcase can now use
-  `eval_synthetic_direct_call_body_cleanup_prefix_package_from_call_statement_ready_evidence`.
-  The remaining non-circular proof is still a mutual induction over `eval`,
-  `eval_args`, and `eval_struct_fields` that handles the general `Eval_Call`
-  case, including raw bodies normalized from `ECallExpr (EFn ...)`, by using
-  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence` and the
-  induction hypotheses for the callee body and arguments.
+  has two missing inputs in `Eval_Call`: `store_typed_prefix` does not imply the
+  raw evidence's `store_typed`, and raw synthetic evidence does not provide the
+  `roots_body <= root_sets_union arg_roots` fact needed for the returned
+  `value_roots_within roots v`. The non-circular route should therefore prove
+  the summary/result-subset call-statement package and then derive the remaining
+  wrappers from it.
 - Scope the store-safe synthetic summary evidence needed by the component branch
   so mixed programs do not have to make every function a direct-call component.
   Then switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old

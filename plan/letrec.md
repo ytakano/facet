@@ -333,10 +333,20 @@ For an explicit-capture recursive closure group:
      variant that retains `store_safe_function_value_call_args env args` for
      the normalized direct `ECall` target, plus conversions from the existing
      no-capture component store-safe summary.
-   - Remaining gap: wire the recursive synthetic direct-call route to consume
-     the store-safe synthetic summary variant, then use the retained
-     store-safe-args fact to avoid deriving ctx-level root-name/key invariants
-     from a prefix `store_typed_prefix` call.
+   - Done: add the bounded runtime-store-name preservation helper
+     `eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr`.
+     It transports argument root/name facts across `eval_args` using
+     `preservation_ready_eval_store_names_mutual`, without requiring exact
+     `store_typed`. The helper factors the remaining proof obligation into
+     `preservation_ready_expr_static_runtime_named_statement`, an expression
+     static-runtime named/key premise over `typed_env_roots`.
+   - Remaining gap: prove or supply
+     `preservation_ready_expr_static_runtime_named_statement` for the direct-call
+     route constructors needed by the recursive `ECall` package, then replace
+     the older ctx-based argument named/key step with the runtime-store-name
+     helper. The exact constructor blocker is the expression-level static
+     named/key preservation for `typed_env_roots` under `preservation_ready_expr`
+     without converting through exact `store_typed`.
    - Next: discharge
      `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement`
      or its store-safe-summary variant, then connect the safety gate.

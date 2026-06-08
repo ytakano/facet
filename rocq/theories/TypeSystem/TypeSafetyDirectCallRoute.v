@@ -322,6 +322,112 @@ Proof.
   - eapply root_env_ctx_keys_named_store_typed_prefix; eassumption.
 Qed.
 
+Definition preservation_ready_expr_static_runtime_named_statement : Prop :=
+  forall env s e (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+    preservation_ready_expr e ->
+    typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    root_env_store_roots_named R' s /\
+    root_set_store_roots_named roots s /\
+    root_env_store_keys_named R' s.
+
+Lemma root_env_store_roots_named_direct_route_store_names_eq :
+  forall R s s',
+    store_names s' = store_names s ->
+    root_env_store_roots_named R s ->
+    root_env_store_roots_named R s'.
+Proof.
+  unfold root_env_store_roots_named.
+  intros R s s' Hnames Hnamed x roots z Hlookup Hin.
+  rewrite Hnames. eapply Hnamed; eassumption.
+Qed.
+
+Lemma root_set_store_roots_named_direct_route_store_names_eq :
+  forall roots s s',
+    store_names s' = store_names s ->
+    root_set_store_roots_named roots s ->
+    root_set_store_roots_named roots s'.
+Proof.
+  unfold root_set_store_roots_named.
+  intros roots s s' Hnames Hnamed z Hin.
+  rewrite Hnames. eapply Hnamed; eassumption.
+Qed.
+
+Lemma root_env_store_keys_named_direct_route_store_names_eq :
+  forall R s s',
+    store_names s' = store_names s ->
+    root_env_store_keys_named R s ->
+    root_env_store_keys_named R s'.
+Proof.
+  unfold root_env_store_keys_named, root_env_keys_named.
+  intros R s s' Hnames Hkeys x Hin.
+  rewrite Hnames. eapply Hkeys; eassumption.
+Qed.
+
+Lemma typed_args_roots_preservation_ready_static_runtime_named :
+  preservation_ready_expr_static_runtime_named_statement ->
+  forall env s args (Ω : outlives_ctx) (n : nat) R Σ ps Σ_args R_args
+      arg_roots,
+    preservation_ready_args args ->
+    typed_args_roots env Ω n R Σ args ps Σ_args R_args arg_roots ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    root_env_store_roots_named R_args s /\
+    Forall (fun roots => root_set_store_roots_named roots s) arg_roots /\
+    root_env_store_keys_named R_args s.
+Proof.
+  intros Hexpr env s args Ω n R Σ ps Σ_args R_args arg_roots Hready
+    Htyped Hnamed Hkeys.
+  revert Hready Hnamed Hkeys.
+  induction Htyped as
+    [R0 Σ0
+    | R0 R1 R2 Σ0 Σ1 Σ2 e es p ps0 T_e roots roots_rest
+        Htyped_e Hcompat Htyped_rest IH];
+    intros Hready Hnamed Hkeys.
+  - dependent destruction Hready.
+    repeat split; try constructor; assumption.
+  - dependent destruction Hready.
+    destruct (Hexpr env s e Ω n R0 Σ0 T_e Σ1 R1 roots H
+                Htyped_e Hnamed Hkeys)
+      as [Hnamed1 [Hroots_named Hkeys1]].
+    destruct (IH Hready Hnamed1 Hkeys1)
+      as [Hnamed2 [Hroots_rest_named Hkeys2]].
+    repeat split; try assumption.
+    constructor; assumption.
+Qed.
+
+Lemma eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr :
+  preservation_ready_expr_static_runtime_named_statement ->
+  forall env s args s_args vs Ω n R Σ ps Σ_args R_args arg_roots,
+    eval_args env s args s_args vs ->
+    preservation_ready_args args ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    typed_args_roots env Ω n R Σ args ps Σ_args R_args arg_roots ->
+    root_env_store_roots_named R_args s_args /\
+    Forall (fun roots => root_set_store_roots_named roots s_args) arg_roots /\
+    root_env_store_keys_named R_args s_args.
+Proof.
+  intros Hexpr env s args s_args vs Ω n R Σ ps Σ_args R_args arg_roots
+    Heval_args Hready Hnamed Hkeys Htyped.
+  pose proof (proj1 (proj2 preservation_ready_eval_store_names_mutual)
+                env s args s_args vs Heval_args Hready) as Hnames.
+  destruct (typed_args_roots_preservation_ready_static_runtime_named
+              Hexpr env s args Ω n R Σ ps Σ_args R_args arg_roots
+              Hready Htyped Hnamed Hkeys)
+    as [Hnamed_args [Hroots_named Hkeys_args]].
+  repeat split.
+  - eapply root_env_store_roots_named_direct_route_store_names_eq;
+      eassumption.
+  - eapply Forall_impl; [| exact Hroots_named].
+    intros roots Hroot_named.
+    eapply root_set_store_roots_named_direct_route_store_names_eq;
+      eassumption.
+  - eapply root_env_store_keys_named_direct_route_store_names_eq;
+      eassumption.
+Qed.
+
 Lemma eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement_of_call_statement :
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement ->

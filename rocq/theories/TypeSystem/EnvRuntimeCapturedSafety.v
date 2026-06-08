@@ -4440,6 +4440,18 @@ Proof.
   eapply Hprovider. exact Hcomponent.
 Qed.
 
+Lemma component_body_synthetic_direct_call_ready_alpha_nested_summary_at_in_provider_of_provider :
+  forall env,
+    component_body_synthetic_direct_call_ready_summary_provider env ->
+    component_body_synthetic_direct_call_ready_alpha_nested_summary_at_in_provider env.
+Proof.
+  intros env Hprovider f_component _Hin Hcomponent fdef fcall used used'
+    fname args synthetic_body _Hfdef_component _Hrename _Htarget.
+  eapply fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_env.
+  eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+  eapply Hprovider. exact Hcomponent.
+Qed.
+
 Lemma component_body_synthetic_direct_call_ready_nested_body_env_evidence_in_provider_of_summary_evidence :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

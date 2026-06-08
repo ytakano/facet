@@ -402,12 +402,18 @@ Done:
   existing component summary provider via
   `component_body_synthetic_direct_call_ready_alpha_nested_body_env_evidence_in_provider_of_provider`,
   matching the previous broad nested body-env evidence construction.
+- The alpha-aware end-to-end call-route bridge can now consume the existing
+  component summary provider plus the closure-check provider through
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_nested_evidence_at_call_route_and_component_body_summary_provider_and_closure_check`;
+  the closure provider supplies direct target evidence while the summary provider
+  supplies alpha nested summary/body evidence.
 
 Next:
 
-- Derive the alpha-aware nested summary and target/body providers from the
-  closure checker sidecar, then switch the end-to-end call-route bridge from
-  broad summary-provider assumptions to closure-derived target/body providers.
+- Remove the remaining dependency on the broad component summary provider by
+  deriving alpha nested summary/body evidence directly from closure-check-local
+  component target evidence, or add the missing local-bounds closure-check
+  provider lift needed to do so.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

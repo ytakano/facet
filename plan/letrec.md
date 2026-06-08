@@ -622,6 +622,11 @@ Done:
   so component-branch closure evidence is not hidden by the captured branch.
   Summary facts prove readiness and component exact-closure extraction for this
   strict sidecar.
+- The summary facts now also retain strict branch evidence in Prop via
+  `callee_body_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary`
+  and
+  `env_fns_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_ready`,
+  with checker soundness lemmas preserving the exact-closure component branch.
 
 Next:
 

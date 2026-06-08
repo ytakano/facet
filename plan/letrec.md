@@ -237,18 +237,12 @@ Next:
   available. The non-exact summary/raw call-statement forms are therefore still
   too weak as the final package shape, but a body-prefix sub-route is still
   needed for recursive calls inside the callee body.
-- Scope the store-safe synthetic summary evidence needed by the component branch
-  so mixed programs do not have to make every function a direct-call component.
-  The current blocker is the component safety theorem's call into the store-safe
-  exact package: it requires
-  `env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence`
-  for the whole `body_env`, so the checker wrapper still asks for
-  `check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
-  env = true` in addition to the combined captured-or-component sidecar. The
-  next proof step should narrow that package input to the direct-call closure of
-  the component branch, not to every function in the environment. Then switch
-  `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
-  store-safe sidecar to the combined sidecar.
+- Construct `component_body_store_safe_synthetic_direct_call_ready_summary_provider`
+  from the direct-call closure of each component branch, not from whole-env
+  no-capture component readiness. Then switch `infer_fn_env_end2end` /
+  `infer_fns_env_end2end` from the old captured store-safe sidecar to the
+  combined captured-or-component sidecar and update the unconditional end-to-end
+  safety theorem accordingly.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.
 

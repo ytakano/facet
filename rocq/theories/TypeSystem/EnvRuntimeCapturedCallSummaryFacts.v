@@ -855,6 +855,27 @@ Definition env_fns_root_shadow_no_capture_direct_call_component_store_safe_summa
     callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
       env fdef.
 
+Definition env_fns_no_capture_direct_call_component_synthetic_ready
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    exists call_name args synthetic_body,
+      direct_call_target_expr (fn_body fdef) =
+        Some (call_name, args, synthetic_body) /\
+      synthetic_body = ECall call_name args /\
+      preservation_direct_call_ready_expr synthetic_body.
+
+Lemma env_fns_no_capture_direct_call_component_synthetic_ready_of_summary :
+  forall env,
+    env_fns_root_shadow_no_capture_direct_call_component_store_safe_summary_ready
+      env ->
+    env_fns_no_capture_direct_call_component_synthetic_ready env.
+Proof.
+  intros env Hsummary fname fdef Hlookup.
+  eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_synthetic_direct_call_ready.
+  eapply Hsummary. exact Hlookup.
+Qed.
+
 Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_ready :
   forall env,
     check_env_root_shadow_no_capture_direct_call_component_store_safe_summary

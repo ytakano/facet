@@ -203,6 +203,8 @@ For an explicit-capture recursive closure group:
      summary, matching the existing summary lifting style.
    - Done: add a helper extracting direct-call readiness for the synthetic
      direct-call body from the no-capture component summary.
+   - Done: add an env-level synthetic direct-call-ready invariant derived from
+     the no-capture component summary.
    - Next: derive the `direct_call_callee_body_root_evidence` bridge from the
      recursive direct-call component summaries, then use the existing direct-call
      route theorem instead of adding an ad hoc safety path. This also requires a

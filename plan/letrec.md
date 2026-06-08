@@ -101,6 +101,12 @@ Done:
   plus `direct_call_target_expr_same_is_call`. The helper reuses the
   call-statement preservation route for synthetic bodies already normalized to
   `ECall`, avoiding the full recursive synthetic route premise in that case.
+- The exact-call helper is now lifted through scope cleanup by
+  `eval_synthetic_direct_call_body_cleanup_prefix_from_call_statement_ready_evidence`
+  and through the top-level `ECall` cleanup bridge by
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_core`.
+  This reduces the remaining prefix-side cycle from the full synthetic route
+  statement to the direct-call call-statement premise.
 
 Next:
 
@@ -486,6 +492,14 @@ For an explicit-capture recursive closure group:
      which closes the six ordinary mutual preservation premises internally and
      leaves only the two recursive synthetic direct-call route statements as
      explicit inputs.
+   - Done: add exact-call route helpers
+     `eval_synthetic_direct_call_body_cleanup_prefix_package_from_call_statement_ready_evidence`,
+     `eval_synthetic_direct_call_body_cleanup_prefix_from_call_statement_ready_evidence`,
+     and
+     `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_core`.
+     These factor the prefix-side recursive route so the cleanup bridge can use
+     the direct-call call-statement premise instead of the full recursive
+     synthetic route statement.
    - Done: add non-invasive `End2EndSafety.v` bridge lemmas
      `infer_fn_env_end2end_combined_gate` and
      `infer_fns_env_end2end_combined_check_env_ready`, proving that the current

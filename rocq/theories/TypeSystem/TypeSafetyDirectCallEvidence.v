@@ -554,6 +554,7 @@ Proof.
 Qed.
 
 
+
 Lemma direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_summary_with_result_subset_with_preservation_core :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
@@ -917,6 +918,26 @@ Proof.
   eapply callee_body_root_shadow_synthetic_direct_call_ready_at_of_result_subset.
   eapply direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_summary_with_result_subset_with_preservation_core;
     eassumption.
+Qed.
+
+Lemma direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at_of_shadow_summary_at :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env fname,
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname ->
+    fn_env_unique_by_name env ->
+    direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+      env fname.
+Proof.
+  intros Hroot_names Hroot_keys env fname Hsummary_at Hunique Ω n R Σ
+    Σ_args R_args arg_roots args fdef fcall σ s s_args vs used' Hin Hfname
+    Hcaps Htyped_args Heval_args Hprov_args Hstore Hroots Hshadow Hrn
+    Hnamed Hkeys Hrename.
+  eapply callee_body_root_synthetic_direct_call_ready_at_of_shadow.
+  eapply direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_summary_with_preservation_core;
+    try eassumption.
+  eapply Hsummary_at.
+  eapply lookup_fn_in_unique_by_name; eassumption.
 Qed.
 
 Lemma direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_with_result_subset_with_preservation_core :

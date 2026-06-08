@@ -263,6 +263,10 @@ Done:
   `callee_body_root_shadow_synthetic_direct_call_ready_result_subset_from_summary_at`,
   mirroring the env-wide helper but consuming only the current call target's
   summary evidence.
+- Current-call direct-call ready evidence is now named as
+  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at`, with
+  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at_of_shadow_summary_at`
+  deriving it from pointwise shadow summary evidence.
 
 Next:
 

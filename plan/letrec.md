@@ -640,6 +640,12 @@ Done:
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_strict_exact_closure_check`,
   so a future checker-gate switch has a direct safety target once the remaining
   component-body providers are available.
+- Exact direct-call closure checks now imply the ordinary direct-call closure
+  checker via
+  `check_fn_root_shadow_no_capture_direct_call_component_closure_seen_of_exact_closure_seen`
+  and `check_fn_root_shadow_no_capture_direct_call_component_closure_of_exact_closure`,
+  with a provider-level adapter
+  `component_body_no_capture_direct_call_component_closure_check_provider_of_exact_closure_check_provider`.
 
 Next:
 

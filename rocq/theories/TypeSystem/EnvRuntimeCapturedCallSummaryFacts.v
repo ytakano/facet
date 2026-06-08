@@ -2949,6 +2949,54 @@ Proof.
   exact Hcomponent.
 Qed.
 
+Lemma check_fn_root_shadow_no_capture_direct_call_component_closure_seen_of_exact_closure_seen :
+  forall fuel seen env fdef,
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+      fuel seen env fdef = true ->
+    check_fn_root_shadow_no_capture_direct_call_component_closure_seen
+      fuel seen env fdef = true.
+Proof.
+  induction fuel as [| fuel' IH]; intros seen env fdef Hcheck; simpl in *;
+    try discriminate.
+  destruct (CheckerOrdinary.ident_in_b (fn_name fdef) seen) eqn:Hseen;
+    try reflexivity.
+  apply andb_true_iff in Hcheck as [Hhead Hcallee_exact].
+  apply andb_true_iff in Hhead as [Hcomponent _Hexact].
+  rewrite Hcomponent. simpl.
+  destruct (direct_call_target_expr (fn_body fdef)) as [[[fname args] synthetic_body] |]
+    eqn:Htarget; try discriminate.
+  destruct (lookup_fn_b fname (env_fns env)) as [callee |] eqn:Hlookup;
+    try discriminate.
+  eapply IH. exact Hcallee_exact.
+Qed.
+
+Lemma check_fn_root_shadow_no_capture_direct_call_component_closure_of_exact_closure :
+  forall env fdef,
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env fdef = true ->
+    check_fn_root_shadow_no_capture_direct_call_component_closure
+      env fdef = true.
+Proof.
+  intros env fdef Hcheck.
+  unfold check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+    in Hcheck.
+  unfold check_fn_root_shadow_no_capture_direct_call_component_closure.
+  eapply check_fn_root_shadow_no_capture_direct_call_component_closure_seen_of_exact_closure_seen.
+  exact Hcheck.
+Qed.
+
+Lemma component_body_no_capture_direct_call_component_closure_check_provider_of_exact_closure_check_provider :
+  forall env,
+    component_body_no_capture_direct_call_component_exact_closure_check_provider
+      env ->
+    component_body_no_capture_direct_call_component_closure_check_provider env.
+Proof.
+  intros env Hprovider f_component Hcomponent.
+  eapply check_fn_root_shadow_no_capture_direct_call_component_closure_of_exact_closure.
+  eapply Hprovider. exact Hcomponent.
+Qed.
+
+
 Lemma check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_head_sound :
   forall fuel seen env fdef,
     check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen

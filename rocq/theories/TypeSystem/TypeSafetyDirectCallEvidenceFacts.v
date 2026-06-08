@@ -255,6 +255,16 @@ Definition callee_body_root_shadow_summary (env : global_env) (fdef : fn_def)
   NoDup (ctx_names (params_ctx (fn_params fdef))) /\
   callee_body_root_shadow_ready_at env fdef (initial_root_env_for_fn fdef).
 
+Definition callee_body_root_direct_call_ready_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  callee_body_root_direct_call_ready_at env fdef (initial_root_env_for_fn fdef).
+
+Definition callee_body_root_shadow_direct_call_ready_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+  callee_body_root_shadow_direct_call_ready_at env fdef
+    (initial_root_env_for_fn fdef).
+
 Definition callee_body_root_provenance_summary
     (env : global_env) (fdef : fn_def) : Prop :=
   callee_body_root_provenance_ready_at env fdef (initial_root_env_for_fn fdef).
@@ -274,6 +284,18 @@ Definition env_fns_root_shadow_summary_evidence (env : global_env) : Prop :=
   forall fname fdef,
     lookup_fn fname (env_fns env) = Some fdef ->
     callee_body_root_shadow_summary env fdef.
+
+Definition env_fns_root_direct_call_ready_summary_evidence
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_direct_call_ready_summary env fdef.
+
+Definition env_fns_root_shadow_direct_call_ready_summary_evidence
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_direct_call_ready_summary env fdef.
 
 Definition env_fns_root_provenance_summary_evidence
     (env : global_env) : Prop :=
@@ -328,6 +350,37 @@ Proof.
   split.
   - exact Hnodup.
   - eapply callee_body_root_shadow_provenance_ready_at_of_ready_at.
+    exact Hready.
+Qed.
+
+Lemma env_fns_root_direct_call_ready_summary_evidence_of_shadow :
+  forall env,
+    env_fns_root_shadow_summary_evidence env ->
+    env_fns_root_direct_call_ready_summary_evidence env.
+Proof.
+  intros env Hshadow fname fdef Hlookup.
+  unfold env_fns_root_shadow_summary_evidence in Hshadow.
+  unfold callee_body_root_shadow_summary,
+    callee_body_root_direct_call_ready_summary in *.
+  destruct (Hshadow fname fdef Hlookup) as [_ Hready].
+  eapply callee_body_root_direct_call_ready_at_of_ready_at.
+  eapply callee_body_root_ready_at_of_shadow_ready_at.
+  exact Hready.
+Qed.
+
+Lemma env_fns_root_shadow_direct_call_ready_summary_evidence_of_shadow :
+  forall env,
+    env_fns_root_shadow_summary_evidence env ->
+    env_fns_root_shadow_direct_call_ready_summary_evidence env.
+Proof.
+  intros env Hshadow fname fdef Hlookup.
+  unfold env_fns_root_shadow_summary_evidence in Hshadow.
+  unfold callee_body_root_shadow_summary,
+    callee_body_root_shadow_direct_call_ready_summary in *.
+  destruct (Hshadow fname fdef Hlookup) as [Hnodup Hready].
+  split.
+  - exact Hnodup.
+  - eapply callee_body_root_shadow_direct_call_ready_at_of_shadow_ready_at.
     exact Hready.
 Qed.
 

@@ -213,6 +213,8 @@ For an explicit-capture recursive closure group:
      `ECall` route in later recursive-component proofs.
    - Done: add direct-call-ready callee evidence definitions alongside the
      older preservation-ready evidence, with conversions from the old evidence.
+   - Done: add env-level direct-call-ready summary evidence and conversions from
+     the older shadow summary evidence.
    - Next: derive a recursive direct-call route over that direct-call-ready
      evidence, then connect the no-capture component summaries to the safety
      theorem.

@@ -650,6 +650,9 @@ Done:
   evidence through
   `check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_callee`,
   matching the ordinary closure callee decomposition used by provider proofs.
+- Exact direct-call closure providers now adapt directly to the existing
+  component-body target, alpha-nested lookup, and summary-at providers via the
+  `..._of_exact_closure_check_provider` lemmas.
 
 Next:
 

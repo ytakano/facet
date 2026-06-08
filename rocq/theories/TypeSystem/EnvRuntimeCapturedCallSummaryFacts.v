@@ -3282,6 +3282,46 @@ Proof.
     + exact Hseen.
 Qed.
 
+Lemma component_body_no_capture_direct_call_component_target_in_provider_of_exact_closure_check_provider :
+  forall env,
+    fn_env_unique_by_name env ->
+    component_body_no_capture_direct_call_component_exact_closure_check_provider env ->
+    component_body_no_capture_direct_call_component_target_in_provider env.
+Proof.
+  intros env Hunique Hprovider.
+  eapply component_body_no_capture_direct_call_component_target_in_provider_of_closure_check_provider.
+  - exact Hunique.
+  - eapply component_body_no_capture_direct_call_component_closure_check_provider_of_exact_closure_check_provider.
+    exact Hprovider.
+Qed.
+
+Lemma component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_provider_of_exact_closure_check_provider :
+  forall env,
+    fn_env_unique_by_name env ->
+    component_body_no_capture_direct_call_component_exact_closure_check_provider env ->
+    component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_provider env.
+Proof.
+  intros env Hunique Hprovider.
+  eapply component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_provider_of_closure_check_provider.
+  - exact Hunique.
+  - eapply component_body_no_capture_direct_call_component_closure_check_provider_of_exact_closure_check_provider.
+    exact Hprovider.
+Qed.
+
+Lemma component_body_synthetic_direct_call_ready_summary_at_in_provider_of_exact_closure_check_provider :
+  forall env,
+    fn_env_unique_by_name env ->
+    component_body_no_capture_direct_call_component_exact_closure_check_provider env ->
+    component_body_synthetic_direct_call_ready_summary_at_in_provider env.
+Proof.
+  intros env Hunique Hprovider.
+  eapply component_body_synthetic_direct_call_ready_summary_at_in_provider_of_closure_check_provider.
+  - exact Hunique.
+  - eapply component_body_no_capture_direct_call_component_closure_check_provider_of_exact_closure_check_provider.
+    exact Hprovider.
+Qed.
+
+
 Lemma check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_closure_summary_sound :
   forall env fdef,
     check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_closure_summary

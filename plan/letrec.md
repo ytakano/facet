@@ -136,6 +136,9 @@ Done:
   variant,
   `eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement_of_call_statement_routes_final_roots_and_cleanup`,
   reducing both prefix and frame/parameter-scope route premises.
+- Combined component safety now also has a two-sided call-statement-route
+  wrapper,
+  `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_call_statement_routes`.
 
 Next:
 
@@ -562,6 +565,9 @@ For an explicit-capture recursive closure group:
      `eval_preserves_frame_param_scope_store_safe_synthetic_direct_call_ready_summary_exact_call_statement_of_call_statement_routes_cleanup`,
      and
      `eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement_of_call_statement_routes_final_roots_and_cleanup`.
+   - Done: add two-sided call-statement-route safety wrappers through the
+     combined captured/no-capture component path, ending at
+     `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_call_statement_routes`.
    - Done: add non-invasive `End2EndSafety.v` bridge lemmas
      `infer_fn_env_end2end_combined_gate` and
      `infer_fns_env_end2end_combined_check_env_ready`, proving that the current

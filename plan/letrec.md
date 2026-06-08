@@ -242,6 +242,10 @@ Done:
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_exact_package_and_component_body_summary_evidence`,
   and
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_call_package_and_component_body_summary_evidence`.
+- A visited-set/fuel based direct-call component closure checker now exists as
+  `check_fn_root_shadow_no_capture_direct_call_component_closure_seen` and
+  `check_fn_root_shadow_no_capture_direct_call_component_closure`, with head
+  and callee soundness facts for the checker route.
 
 Next:
 

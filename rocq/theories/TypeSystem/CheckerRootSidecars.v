@@ -1113,6 +1113,33 @@ Definition check_fn_root_shadow_no_capture_direct_call_component_store_safe_summ
   | _ => false
   end.
 
+Fixpoint check_fn_root_shadow_no_capture_direct_call_component_closure_seen
+    (fuel : nat) (seen : list ident) (env : global_env)
+    (fdef : fn_def) : bool :=
+  match fuel with
+  | O => false
+  | S fuel' =>
+      if ident_in_b (fn_name fdef) seen then true
+      else
+        check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+          env fdef &&
+        match direct_call_target_expr (fn_body fdef) with
+        | Some (fname, _, _) =>
+            match lookup_fn_b fname (env_fns env) with
+            | Some callee =>
+                check_fn_root_shadow_no_capture_direct_call_component_closure_seen
+                  fuel' (fn_name fdef :: seen) env callee
+            | None => false
+            end
+        | None => false
+        end
+  end.
+
+Definition check_fn_root_shadow_no_capture_direct_call_component_closure
+    (env : global_env) (fdef : fn_def) : bool :=
+  check_fn_root_shadow_no_capture_direct_call_component_closure_seen
+    10001 [] env fdef.
+
 Definition check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
     (env : global_env) : bool :=
   forallb

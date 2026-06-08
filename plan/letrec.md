@@ -538,12 +538,21 @@ Done:
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_body_call_callback`.
   This is the induction target for the direct-component path and avoids the
   generic static-runtime naming premise.
+- The component summary facts now recover store-safe arguments for the
+  alpha-renamed body call:
+  `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_alpha_renamed_target_args_global_env_with_local_bounds`
+  turns the component sidecar plus `alpha_rename_fn_def` and the renamed
+  `direct_call_target_expr` into
+  `store_safe_function_value_call_args (global_env_with_local_bounds env (fn_bounds fcall)) args_body`.
+  This is the missing input for using the store-safe route inside recursive
+  body-call callbacks.
 
 Next:
 
-- Close the store-safe evidence-at prefix call route directly from an
-  evaluation-derivation induction so the direct-component wrappers no longer
-  need the recursive route premise for nested body calls.
+- Use the recovered alpha-renamed body-call store-safe arguments to replace the
+  remaining generic nested route callback in the direct-component wrappers with
+  the store-safe route statement, then close that store-safe route directly
+  from an evaluation-derivation induction.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

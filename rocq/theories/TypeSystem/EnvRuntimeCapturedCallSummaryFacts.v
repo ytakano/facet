@@ -1919,6 +1919,77 @@ Proof.
       exact Htyped).
 Qed.
 
+Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_alpha_renamed_target_args_global_env_with_local_bounds :
+  forall env fdef used fcall used' fname_body args_body synthetic_body,
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    store_safe_function_value_call_args
+      (global_env_with_local_bounds env (fn_bounds fcall)) args_body.
+Proof.
+  intros env fdef used fcall used' fname_body args_body synthetic_body
+    Hsummary Hrename Htarget_renamed.
+  destruct Hsummary as
+    (fname & args & raw_body & synthetic_body0 & fcallee & T_body &
+      Gamma_out & R_body & roots_body & _Hcaptures & Hbody &
+      Htarget & Hsynthetic & Hsafe_args & _).
+  subst synthetic_body0.
+  destruct (alpha_rename_fn_def_params_body used fdef fcall used' Hrename)
+    as (rho & used_params & _Hparams & Hrename_body).
+  rewrite Hbody in Hrename_body.
+  unfold direct_call_target_expr in Htarget.
+  destruct raw_body as
+    [| lit | x | m x T e1 e2 | m x e1 e2 | fname0 | fname0 captures
+     | p | fname0 args0 | fname0 type_args args0 | callee args0
+     | callee type_args args0 | sname lts tys fields
+     | ename variant lts1 lts2 tys payloads | scrut branches
+     | p e | p e | rk p | e | e | e1 e2 e3];
+    try discriminate.
+  - inversion Htarget; subst fname0 args0.
+    simpl in Hrename_body.
+    destruct ((fix go (used0 : list ident) (args1 : list expr)
+        : list expr * list ident :=
+        match args1 with
+        | [] => ([], used0)
+        | arg :: rest =>
+            let (arg', used1) := alpha_rename_expr rho used0 arg in
+            let (rest', used2) := go used1 rest in
+            (arg' :: rest', used2)
+        end) used_params args) as [args_r used_r] eqn:Hargs_r.
+    injection Hrename_body as Hbody_fcall Hused_eq.
+    try subst used_r.
+    rewrite <- Hbody_fcall in Htarget_renamed.
+    simpl in Htarget_renamed.
+    inversion Htarget_renamed; subst.
+    apply store_safe_function_value_call_args_global_env_with_local_bounds.
+    eapply store_safe_function_value_call_args_alpha_rename_call_go.
+    + exact Hsafe_args.
+    + exact Hargs_r.
+  - destruct callee; try discriminate.
+    inversion Htarget; subst i args0.
+    simpl in Hrename_body.
+    destruct ((fix go (used0 : list ident) (args1 : list expr)
+        : list expr * list ident :=
+        match args1 with
+        | [] => ([], used0)
+        | arg :: rest =>
+            let (arg', used1) := alpha_rename_expr rho used0 arg in
+            let (rest', used2) := go used1 rest in
+            (arg' :: rest', used2)
+        end) used_params args) as [args_r used_r] eqn:Hargs_r.
+    injection Hrename_body as Hbody_fcall Hused_eq.
+    try subst used_r.
+    rewrite <- Hbody_fcall in Htarget_renamed.
+    simpl in Htarget_renamed.
+    inversion Htarget_renamed; subst.
+    apply store_safe_function_value_call_args_global_env_with_local_bounds.
+    eapply store_safe_function_value_call_args_alpha_rename_call_go.
+    + exact Hsafe_args.
+    + exact Hargs_r.
+Qed.
+
 Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_synthetic_direct_call_ready :
   forall env fdef,
     callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary

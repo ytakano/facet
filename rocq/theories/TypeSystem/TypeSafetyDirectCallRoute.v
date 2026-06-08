@@ -3293,6 +3293,45 @@ Proof.
   eapply lookup_fn_in_unique_by_name; eassumption.
 Qed.
 
+
+Lemma callee_body_root_shadow_synthetic_direct_call_ready_result_subset_from_summary_at :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env (Omega : outlives_ctx) (n : nat) R Sigma Sigma_args R_args
+      arg_roots fname args fdef fcall (sigma : list lifetime) s s_args vs used',
+    fn_env_unique_by_name env ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    typed_args_roots env Omega n R Sigma args
+      (apply_lt_params sigma (fn_params fdef)) Sigma_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Sigma ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    callee_body_root_shadow_synthetic_direct_call_ready_at_result_subset
+      env fcall
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (root_sets_union arg_roots).
+Proof.
+  intros Hroot_names Hroot_keys env Omega n R Sigma Sigma_args R_args
+    arg_roots fname args fdef fcall sigma s s_args vs used' Hunique
+    Hsummary_at Hin Hfname Hcaps Htyped_args Heval_args Hprov_args Hstore
+    Hroots Hshadow Hrn Hnamed Hkeys Hrename.
+  eapply
+    (direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_summary_with_result_subset_with_preservation_core
+      Hroot_names Hroot_keys);
+    try eassumption.
+  eapply Hsummary_at.
+  eapply lookup_fn_in_unique_by_name; eassumption.
+Qed.
+
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_bridge_core :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

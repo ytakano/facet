@@ -259,6 +259,10 @@ Done:
   `direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_summary_with_preservation_core`,
   derived from the existing result-subset helper and a result-subset-to-ready
   conversion.
+- The direct-call route now has a pointwise result-subset helper,
+  `callee_body_root_shadow_synthetic_direct_call_ready_result_subset_from_summary_at`,
+  mirroring the env-wide helper but consuming only the current call target's
+  summary evidence.
 
 Next:
 

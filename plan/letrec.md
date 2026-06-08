@@ -444,15 +444,22 @@ Done:
   This uses the closure checker sidecar, the alpha direct-target inverse, and
   existing local-bounds summary lifting to handle recursive self/mutual seen-set
   cases without requiring a whole body-env summary provider.
+- The target-lookup scoped alpha nested provider is now threaded through the
+  component/env/checker/end-to-end evidence-at call-route wrappers via
+  `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_lookup_evidence`,
+  `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_lookup_evidence`,
+  and
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_component_body_closure_check`.
+  The bridge now uses only the closure checker sidecar for the direct-component
+  branch, instead of a separate broad component-body summary provider or broad
+  alpha nested target provider.
 
 Next:
 
-- Thread
-  `component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_provider`
-  through the component/env/checker/end-to-end evidence-at call-route wrappers,
-  replacing the broader `component_body_no_capture_direct_call_component_alpha_nested_target_in_provider`
-  premise where the route already has the component direct-target lookup and
-  local-bounds callee summary evidence.
+- Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
+  store-safe sidecar to the captured-or-component-closure sidecar, then update
+  the unconditional end-to-end safety theorem to use
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_component_body_closure_check`.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

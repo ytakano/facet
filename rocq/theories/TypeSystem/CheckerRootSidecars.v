@@ -1666,3 +1666,49 @@ Definition check_program_env_end2end (env : global_env) : bool :=
   | infer_err _ => false
   end.
 
+
+Definition infer_fn_env_end2end_strict_exact_closure (env : global_env)
+    (f : fn_def) : infer_result (Ty * ctx * root_env * root_set) :=
+  let R0 := initial_root_env_for_params (fn_params f ++ fn_captures f) in
+  match infer_full_env_roots_checked env f R0 with
+  | infer_err err => infer_err err
+  | infer_ok res =>
+      if check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+           env f
+      then infer_ok res
+      else infer_err ErrEndToEndSafetyGateFailed
+  end.
+
+Fixpoint infer_fns_env_end2end_strict_exact_closure (env : global_env)
+    (fns : list fn_def) : infer_result unit :=
+  match fns with
+  | [] => infer_ok tt
+  | f :: rest =>
+      match infer_fn_env_end2end_strict_exact_closure env f with
+      | infer_err err => infer_err (ErrInFunction (fn_name f) err)
+      | infer_ok _ => infer_fns_env_end2end_strict_exact_closure env rest
+      end
+  end.
+
+Definition infer_program_env_end2end_strict_exact_closure (env : global_env)
+    : infer_result global_env :=
+  let env_alpha := alpha_normalize_global_env env in
+  if global_names_unique_b env_alpha then
+    match infer_program_env_alpha_elab env with
+    | infer_err err => infer_err err
+    | infer_ok env_elab =>
+        match infer_fns_env_end2end_strict_exact_closure
+                env_elab (env_fns env_elab) with
+        | infer_err err => infer_err err
+        | infer_ok _ => infer_ok env_elab
+        end
+    end
+  else infer_err ErrGlobalNamesNotUnique.
+
+Definition check_program_env_end2end_strict_exact_closure
+    (env : global_env) : bool :=
+  match infer_program_env_end2end_strict_exact_closure env with
+  | infer_ok _ => true
+  | infer_err _ => false
+  end.
+

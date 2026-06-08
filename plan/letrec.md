@@ -673,6 +673,12 @@ Done:
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_exact_body_call_synthetic_evidence_at_route_and_branch_local_strict_exact_closure_check`,
   reusing the exact-body store-safe route adapter while keeping the strict
   checker sidecar branch-local.
+- `CheckerRootSidecars.v` now has non-extracted shadow entrypoints
+  `infer_fn_env_end2end_strict_exact_closure`,
+  `infer_fns_env_end2end_strict_exact_closure`, and
+  `infer_program_env_end2end_strict_exact_closure`, plus checker soundness and
+  gate/readiness lemmas in `End2EndSafety.v`. These prepare the final gate
+  switch without changing the current OCaml-facing checker behavior.
 
 Next:
 

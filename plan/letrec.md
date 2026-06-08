@@ -260,10 +260,14 @@ For an explicit-capture recursive closure group:
    - Done: add the prefix-store synthetic direct-call-ready route interface and
      route the synthetic `ECall` cleanup bridge through prefix bind-param store
      typing, removing the exact bind-param body typing premise.
-   - Next: derive local-bounds synthetic evidence from the component summary
-     and prove the missing projection from callee-body value roots to the outer
-     `TER_Call` roots (`root_sets_union arg_roots`). Defer safety-gate
-     connection until that full route is established.
+   - Done: add a summary/bridge wrapper around the synthetic `ECall` cleanup
+     bridge that derives both env-level and local-bounds synthetic callee-body
+     evidence from synthetic shadow summary evidence, its bridge, and the
+     existing root-name/root-key preservation packages.
+   - Next: prove the missing projection from callee-body value roots to the
+     outer `TER_Call` roots (`root_sets_union arg_roots`) and connect the full
+     recursive direct-call route. Defer safety-gate connection until that full
+     route is established.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

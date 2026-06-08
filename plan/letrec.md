@@ -636,6 +636,10 @@ Done:
   `check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_lookup_evidence`,
   connecting the strict sidecar to the existing evidence-at component route
   without switching the end-to-end checker gate yet.
+- End-to-end safety now has the corresponding explicit strict-sidecar bridge,
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_strict_exact_closure_check`,
+  so a future checker-gate switch has a direct safety target once the remaining
+  component-body providers are available.
 
 Next:
 

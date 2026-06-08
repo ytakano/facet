@@ -5279,10 +5279,11 @@ Lemma direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_br
       store_roots_within R s ->
       store_no_shadow s ->
       root_env_no_shadow R ->
-      root_env_ctx_roots_named R Σ ->
-      root_env_ctx_keys_named R Σ ->
       root_env_store_roots_named R s ->
       root_env_store_keys_named R s ->
+      root_env_store_roots_named R_args s_args ->
+      Forall (fun roots => root_set_store_roots_named roots s_args) arg_roots ->
+      root_env_store_keys_named R_args s_args ->
       alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
       callee_body_root_shadow_synthetic_direct_call_ready_at_result_subset
         env fcall
@@ -5291,8 +5292,8 @@ Lemma direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_br
 Proof.
   intros Hprefix_ready env Ω n R Σ Σ_args R_args arg_roots args
     fdef fcall σ s s_args vs used' Hsummary Hcaps Htyped_args Heval_args
-    Hprov_args Hstore Hroots Hshadow Hrn Hctx_roots Hctx_keys Hnamed Hkeys
-    Hrename.
+    Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hnamed_args
+    Harg_roots_named Hkeys_args Hrename.
   unfold callee_body_root_shadow_synthetic_direct_call_ready_summary in Hsummary.
   destruct Hsummary as [Hnodup_fdef Hready].
   unfold callee_body_root_shadow_synthetic_direct_call_ready_at in Hready.
@@ -5454,29 +5455,7 @@ Proof.
       (call_param_root_env (fn_params fcall) arg_roots [])).
   { eapply root_env_instantiate_initial_origin_equiv_call_param_root_env_empty;
       eassumption. }
-  assert (Harg_runtime :
-    root_env_store_roots_named R_args s_args /\
-    Forall (fun roots => root_set_store_roots_named roots s_args) arg_roots /\
-    root_env_store_keys_named R_args s_args).
-  { destruct (proj1 (proj2 Hprefix_ready)
-                env s args s_args vs Heval_args Ω n R Σ
-                (apply_lt_params σ (fn_params fdef)) Σ_args R_args
-                arg_roots Hprov_args Hstore Hroots Hshadow Hrn Htyped_args)
-      as [Hstore_args _].
-    destruct (proj1 (proj2 (typed_roots_ctx_roots_named_mutual env Ω n))
-                R Σ args (apply_lt_params σ (fn_params fdef)) Σ_args R_args
-                arg_roots Htyped_args Hrn Hctx_roots)
-      as [Hargs_ctx_roots Harg_roots_ctx_named].
-    pose proof (proj1 (proj2 (typed_roots_ctx_keys_named_mutual env Ω n))
-                  R Σ args (apply_lt_params σ (fn_params fdef)) Σ_args R_args
-                  arg_roots Htyped_args Hrn Hctx_keys) as Hargs_ctx_keys.
-    repeat split.
-    - eapply root_env_ctx_roots_named_store_typed_prefix; eassumption.
-    - eapply Forall_impl; [| exact Harg_roots_ctx_named].
-      intros roots_i Hctx_named_i.
-      eapply root_set_ctx_roots_named_store_typed_prefix; eassumption.
-    - eapply root_env_ctx_keys_named_store_typed_prefix; eassumption. }
-  destruct Harg_runtime as [Hnamed_args [Harg_roots_named Hkeys_args]].
+
   assert (Hfresh_body_names :
     Forall (fun x => ~ In x (store_names s_args))
       (expr_local_store_names (fn_body fcall))).
@@ -5722,8 +5701,9 @@ Lemma callee_body_root_shadow_synthetic_direct_call_ready_result_subset_from_sum
     root_env_no_shadow R ->
     root_env_store_roots_named R s ->
     root_env_store_keys_named R s ->
-    root_env_ctx_roots_named R Sigma ->
-    root_env_ctx_keys_named R Sigma ->
+    root_env_store_roots_named R_args s_args ->
+    Forall (fun roots => root_set_store_roots_named roots s_args) arg_roots ->
+    root_env_store_keys_named R_args s_args ->
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
     callee_body_root_shadow_synthetic_direct_call_ready_at_result_subset
       env fcall
@@ -5733,7 +5713,7 @@ Proof.
   intros Hprefix_ready env Omega n R Sigma Sigma_args R_args arg_roots
     fname args fdef fcall sigma s s_args vs used' Hunique Hsummary_at
     Hin Hfname Hcaps Htyped_args Heval_args Hprov_args Hstore Hroots
-    Hshadow Hrn Hnamed Hkeys Hctx_roots Hctx_keys Hrename.
+    Hshadow Hrn Hnamed Hkeys Hnamed_args Harg_roots_named Hkeys_args Hrename.
   eapply
     (direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_summary_with_result_subset_prefix_store_core
       Hprefix_ready);

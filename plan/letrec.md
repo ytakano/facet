@@ -524,21 +524,20 @@ Done:
   using prefix argument preservation plus the hidden-frame cleanup facts for
   removed parameters. The remaining reduction is to thread or derive the static
   naming premises at the call route, use the prefix-store result-subset/scope
-  helpers with this cleanup core, and remove the full-store premise. Static
-  naming for the whole initial `R` cannot be recovered from `typed_args_roots`;
-  the next proof step should weaken the prefix result-subset helper so it needs
-  only the argument-result naming facts for `R_args` and `arg_roots`, not
-  `root_env_ctx_*_named R Sigma` for the entire incoming root environment.
+  helpers with this cleanup core, and remove the full-store premise. The prefix
+  result-subset bridge has been weakened so it no longer asks for
+  `root_env_ctx_*_named R Sigma` over the whole incoming root environment; it now
+  consumes only the argument-result runtime naming facts for `R_args` and
+  `arg_roots`, which are the facts the proof actually uses.
 
 Next:
 
 - Close the remaining direct-call route premises needed by the closure-check
-  bridge. Next, weaken the prefix-store result-subset bridge to consume
-  argument-result naming facts for `R_args` and `arg_roots` instead of whole-`R`
-  static ctx naming, wire the prefix-store result-subset/scope helpers into the
-  new prefix-only cleanup core, and remove the full-store premise from the
-  body-callback route factor. After that, supply the body-call callback from
-  evaluation-derivation induction.
+  bridge. Next, derive the argument-result runtime naming facts needed by the
+  weakened prefix result-subset bridge, wire the prefix-store result-subset/scope
+  helpers into the new prefix-only cleanup core, and remove the full-store
+  premise from the body-callback route factor. After that, supply the body-call
+  callback from evaluation-derivation induction.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

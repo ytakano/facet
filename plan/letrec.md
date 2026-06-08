@@ -230,6 +230,11 @@ Done:
 - The plain body-env synthetic summary provider is now named as
   `component_body_synthetic_direct_call_ready_summary_provider`, with conversion
   helpers from store-safe providers and whole-env plain summary evidence.
+- Component safety now has plain body-summary evidence wrappers,
+  `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_summary_evidence`
+  and
+  `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_body_summary_evidence`,
+  avoiding the store-safe exact-package conversion on that route.
 
 Next:
 

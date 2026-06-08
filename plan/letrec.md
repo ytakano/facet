@@ -201,6 +201,9 @@ For an explicit-capture recursive closure group:
      the later gate connection without changing current accept/reject behavior.
    - Done: add local-bounds lifting for the no-capture direct-call component
      summary, matching the existing summary lifting style.
+   - Next: derive the `direct_call_callee_body_root_evidence` bridge from the
+     recursive direct-call component summaries, then use the existing direct-call
+     route theorem instead of adding an ad hoc safety path.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

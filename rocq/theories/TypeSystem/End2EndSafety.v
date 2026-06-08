@@ -749,6 +749,59 @@ Proof.
 Qed.
 
 
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_component_body_closure_target_provider :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end env = infer_ok env' ->
+    component_body_no_capture_direct_call_component_closure_check_provider env' ->
+    component_body_no_capture_direct_call_component_alpha_nested_target_in_provider env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys env env' f s s' v Hprog Hclosure_provider
+    Halpha_target_provider Hinitial Hin Hstore Heval.
+  assert (Hunique : fn_env_unique_by_name env').
+  { unfold infer_program_env_end2end in Hprog.
+    set (env_alpha := alpha_normalize_global_env env) in *.
+    destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
+      try discriminate.
+    destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
+      try discriminate.
+    destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
+      as [[] | err] eqn:Hfns; try discriminate.
+    injection Hprog as <-.
+    apply andb_true_iff in Hunique_global as [Hunique_top _].
+    eapply infer_program_env_alpha_elab_unique_by_name; eauto. }
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_component_body_summary_in_evidence.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hprog.
+  - eapply component_body_synthetic_direct_call_ready_summary_at_in_provider_of_closure_check_provider;
+      eassumption.
+  - eapply component_body_no_capture_direct_call_component_target_in_provider_of_closure_check_provider;
+      eassumption.
+  - eapply component_body_synthetic_direct_call_ready_alpha_nested_summary_at_in_provider_of_alpha_target_provider.
+    exact Halpha_target_provider.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_call_route_and_component_body_summary_provider :
   eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

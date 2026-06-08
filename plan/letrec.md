@@ -423,12 +423,17 @@ Done:
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_component_body_summary_provider_and_closure_check`.
   This removes the broad alpha nested body-env provider from the alpha route
   bridge that still uses `component_body_synthetic_direct_call_ready_summary_provider`.
+- The evidence-at alpha end-to-end bridge no longer needs the broad component
+  summary provider when given closure-derived direct target evidence plus
+  alpha nested target evidence, via
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_component_body_closure_target_provider`.
 
 Next:
 
-- Replace the remaining `component_body_synthetic_direct_call_ready_summary_provider`
-  dependency in the evidence-at alpha bridge with closure-derived alpha nested
-  summary evidence, using `component_body_no_capture_direct_call_component_alpha_nested_target_in_provider`.
+- Derive `component_body_no_capture_direct_call_component_alpha_nested_target_in_provider`
+  from the closure checker sidecar, or add the alpha-rename/direct-target
+  converse facts needed to connect closure-check-local target evidence to the
+  alpha-renamed route `fcall`.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

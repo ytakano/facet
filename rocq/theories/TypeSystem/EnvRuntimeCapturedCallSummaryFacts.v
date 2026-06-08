@@ -283,6 +283,28 @@ Proof.
   exact Hsafe_args.
 Qed.
 
+Lemma callee_body_root_shadow_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component :
+  forall env fdef,
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef ->
+    callee_body_root_shadow_synthetic_direct_call_ready_summary env fdef.
+Proof.
+  intros env fdef Hsummary.
+  destruct Hsummary as
+    (fname & args & raw_body & synthetic_body & fcallee & T_body &
+      Gamma_out & R_body & roots_body & _ & Hbody & Htarget & Hsynthetic &
+      Hsafe_args & _ & _ & _ & Hnodup & Htyped & Hcompat & Hroots & Henv).
+  split; [exact Hnodup |].
+  unfold callee_body_root_shadow_synthetic_direct_call_ready_at.
+  subst raw_body.
+  exists fname, args, synthetic_body, T_body, Gamma_out, R_body, roots_body.
+  repeat split; try assumption.
+  rewrite Hsynthetic.
+  apply PDCR_Call.
+  eapply store_safe_function_value_call_args_preservation_ready.
+  exact Hsafe_args.
+Qed.
+
 Lemma subst_type_params_trait_ref_nil : forall tr,
   subst_type_params_trait_ref [] tr = tr.
 Proof.
@@ -876,6 +898,17 @@ Proof.
   eapply Hsummary. exact Hlookup.
 Qed.
 
+Lemma env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_of_no_capture_direct_call_component :
+  forall env,
+    env_fns_root_shadow_no_capture_direct_call_component_store_safe_summary_ready
+      env ->
+    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env.
+Proof.
+  intros env Hsummary fname fdef Hlookup.
+  eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component.
+  eapply Hsummary. exact Hlookup.
+Qed.
+
 Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_ready :
   forall env,
     check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
@@ -890,6 +923,18 @@ Proof.
     as [Hin _].
   apply forallb_forall with (x := fdef) in Hcheck; [| exact Hin].
   apply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
+  exact Hcheck.
+Qed.
+
+Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_synthetic_direct_call_ready_summary_evidence :
+  forall env,
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env = true ->
+    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env.
+Proof.
+  intros env Hcheck.
+  apply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_of_no_capture_direct_call_component.
+  apply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_ready.
   exact Hcheck.
 Qed.
 

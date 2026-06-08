@@ -574,9 +574,10 @@ For an explicit-capture recursive closure group:
      old gate implies the combined OR sidecar.
    - Remaining gap: prove the concrete recursive synthetic direct-call route
      statements
-     `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement`
-     and `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement`,
-     then scope the store-safe synthetic summary evidence required by the
+     `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement`
+     and
+     `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement`,
+     then localize the store-safe synthetic summary evidence required by the
      component branch, switch the extracted end-to-end checker gate to the
      combined sidecar, and move direct self/mutual recursion tests from invalid
      to valid.

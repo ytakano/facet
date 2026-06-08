@@ -708,6 +708,10 @@ Done:
   `direct_call_eval_struct_fields_height`) plus local-bounds stability and
   existence lemmas, preparing a guarded proof of the recursive store-safe
   evidence-at route.
+- Direct-call body safety now also has
+  `direct_call_eval_height_ecall_inv`, extracting the argument and callee-body
+  height from an `ECall` derivation and proving the body height is strictly
+  smaller than the call height.
 
 Next:
 

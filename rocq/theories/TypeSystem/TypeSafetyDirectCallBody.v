@@ -2,7 +2,7 @@ From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules TypeChecker RuntimeTyping RootProvenance
   EnvStructuralRules AlphaRenaming EnvSoundnessFacts CheckerSoundness.
 From Facet.TypeSystem Require Export TypeSafetyDirectCallSetup.
-From Stdlib Require Import List Bool ZArith String Program.Equality.
+From Stdlib Require Import List Bool ZArith String Program.Equality Lia.
 Import ListNotations.
 
 Lemma direct_call_type_lookup_path_global_env_with_local_bounds :
@@ -485,6 +485,28 @@ Proof.
   intros env.
   destruct (direct_call_eval_height_exists_mutual env) as [_ [_ H]].
   eauto.
+Qed.
+
+Lemma direct_call_eval_height_ecall_inv :
+  forall env s s' fname args v n,
+    direct_call_eval_height env s (ECall fname args) s' v n ->
+    exists s_args s_body fdef fcall vs ret used' n_args n_body,
+      lookup_fn fname (env_fns env) = Some fdef /\
+      fn_captures fdef = [] /\
+      direct_call_eval_args_height env s args s_args vs n_args /\
+      alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') /\
+      direct_call_eval_height env
+        (bind_params (fn_params fcall) vs s_args)
+        (fn_body fcall) s_body ret n_body /\
+      s' = store_remove_params (fn_params fcall) s_body /\
+      v = ret /\
+      n = S (Nat.max n_args n_body) /\
+      n_body < n.
+Proof.
+  intros env s s' fname args v n Hheight.
+  dependent destruction Hheight.
+  exists s_args, s_body, fdef, fcall, vs, ret, used', n_args, n_body.
+  repeat split; eauto; lia.
 Qed.
 
 Lemma direct_call_eval_global_env_with_local_bounds :

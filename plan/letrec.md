@@ -407,14 +407,19 @@ Done:
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_nested_evidence_at_call_route_and_component_body_summary_provider_and_closure_check`;
   the closure provider supplies direct target evidence while the summary provider
   supplies alpha nested summary/body evidence.
+- The target-scoped call-route interface is now named as
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at`,
+  replacing the broad nested body-env evidence premise with evidence for the
+  current callee name.
 
 Next:
 
 - Narrow the remaining nested body-env route premise from broad
-  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence` to a
-  target-scoped evidence-at callback for the nested direct-call callee. The
-  current broad body-env premise ranges over arbitrary callees in the nested body
-  environment, so it cannot be derived from closure target evidence alone.
+  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence` to the
+  target-scoped route interface
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at`.
+  The current broad body-env premise ranges over arbitrary callees in the nested
+  body environment, so it cannot be derived from closure target evidence alone.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

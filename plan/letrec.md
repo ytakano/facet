@@ -26,16 +26,15 @@ Done:
 
 Next:
 
-- Design and prove the direct-call store-safe sidecar for recursive call
-  graphs before enabling actual self-recursive or mutually recursive direct
-  calls. They currently type-check far enough to reach
-  `ErrEndToEndSafetyGateFailed`, because the store-safe sidecar only accepts
-  direct calls whose callee body is already narrow-store-safe. A simple
-  fuel-unfolding extension is not enough for true cycles: it can cover finite
-  forward direct-call chains, but self/mutual cycles bottom out at fuel 0 and
-  also make the current proof search too expensive.
-- After that proof design lands, extend local-rec semantics from direct calls
-  in the `in` expression to same-group direct calls and actual recursive calls.
+- Close the remaining direct-`ECall` proof obligations for the synthetic
+  direct-call-ready prefix route and frame/parameter scope route. The broad
+  proof-interface assumptions have been split so existing provenance-ready
+  mutual packages discharge the non-call branch; the remaining gap is the
+  concrete recursive direct-call branch.
+- After those obligations are closed, add the safety-gate connection that feeds
+  env-level synthetic shadow summary evidence into the recursive route, then
+  move the direct recursion invalid tests to valid tests when the end-to-end
+  checker accepts them.
 
 This roadmap adds local recursion in stages, ending with a safe v1 for
 explicit-capture recursive closures. The first implementation should avoid a
@@ -278,10 +277,19 @@ For an explicit-capture recursive closure group:
      evidence. The theorem handles both direct-call-ready constructors:
      provenance/root preservation for `PDCR_Ready`, and the synthetic summary
      bridge plus final-roots cleanup path for `PDCR_Call`.
-   - Next: add the tiny wrapper/safety-gate connection that feeds the
-     env-level synthetic shadow summary evidence into this route, then move the
-     direct recursion invalid tests to valid tests when the end-to-end checker
-     accepts them.
+   - Done: split the two broad proof-interface assumptions used by that route
+     into concrete wrappers. Existing provenance-ready mutual packages now
+     discharge the non-call branch of
+     `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement`
+     and
+     `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement`;
+     the route can use the narrower `ECall`-only prefix and frame/parameter
+     scope obligations through
+     `eval_preserves_typing_roots_synthetic_direct_call_ready_with_summary_bridge_narrow_core`.
+   - Next: prove the two remaining direct-`ECall` obligations for synthetic
+     direct-call-ready prefix preservation and frame/parameter scope
+     preservation, then add the safety-gate connection that feeds the env-level
+     synthetic shadow summary evidence into this route.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

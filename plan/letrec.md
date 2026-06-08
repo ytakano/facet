@@ -233,6 +233,9 @@ For an explicit-capture recursive closure group:
      shadow summaries to alpha-renamed call bodies; no gates are wired yet.
    - Done: add the proof-interface statement for the recursive synthetic
      direct-call-ready route.
+   - Done: add a route helper that uses synthetic direct-call-ready evidence
+     to normalize an alpha-renamed callee body evaluation to the typed
+     synthetic `ECall` target.
    - Next: prove and use the recursive direct-call route over synthetic
      direct-call-ready evidence alone. Defer safety-gate connection until that
      route is established.

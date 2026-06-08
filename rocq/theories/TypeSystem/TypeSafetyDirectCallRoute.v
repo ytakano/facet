@@ -420,6 +420,63 @@ Proof.
     apply eval_call_expr_fn_as_call. exact Heval.
 Qed.
 
+Lemma eval_synthetic_direct_call_body_from_ready_evidence :
+  forall env (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+      (fname : ident) args fdef fcall (σ : list lifetime) s s_args
+      s_body vs ret used',
+    direct_call_callee_body_root_synthetic_direct_call_ready_evidence env ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    typed_args_roots env Ω n R Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    eval env (bind_params (fn_params fcall) vs s_args)
+      (fn_body fcall) s_body ret ->
+    exists fname_body args_body synthetic_body T_body Γ_out R_body roots_body,
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname_body, args_body, synthetic_body) /\
+      synthetic_body = ECall fname_body args_body /\
+      preservation_direct_call_ready_expr synthetic_body /\
+      typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+        (fn_outlives fcall) (fn_lifetimes fcall)
+        (call_param_root_env (fn_params fcall) arg_roots R_args)
+        (sctx_of_ctx (fn_body_ctx fcall))
+        synthetic_body T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+      ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
+      roots_exclude_params (fn_params fcall) roots_body /\
+      root_env_excludes_params (fn_params fcall) R_body /\
+      eval env (bind_params (fn_params fcall) vs s_args)
+        synthetic_body s_body ret.
+Proof.
+  intros env Ω n R Σ Σ_args R_args arg_roots fname args fdef fcall σ
+    s s_args s_body vs ret used' Hevidence Hin Hfname Hcaps Htyped_args
+    Heval_args Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename
+    Heval_body.
+  pose proof
+    (Hevidence Ω n R Σ Σ_args R_args arg_roots fname args fdef fcall σ
+      s s_args vs used' Hin Hfname Hcaps Htyped_args Heval_args
+      Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename)
+    as Hbody_ready.
+  unfold callee_body_root_synthetic_direct_call_ready_at in Hbody_ready.
+  destruct Hbody_ready as
+    (fname_body & args_body & synthetic_body & T_body & Γ_out &
+      R_body & roots_body & Htarget & Hsynthetic & Hready_body &
+      Htyped_body & Hcompat_body & Hexclude_roots & Hexclude_env).
+  exists fname_body, args_body, synthetic_body, T_body, Γ_out, R_body,
+    roots_body.
+  repeat split; try assumption.
+  eapply eval_direct_call_target_expr_as_call; eassumption.
+Qed.
+
 Theorem eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary_with_preservation_core :
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->

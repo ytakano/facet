@@ -4322,6 +4322,180 @@ Proof.
 Qed.
 
 
+Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_at_call_route_final_roots_core :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env s s' v fname args,
+    eval env s (ECall fname args) s' v ->
+    forall (Omega : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      preservation_ready_args args ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Omega n R Σ (ECall fname args) T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname ->
+      (forall fcall fname_body args_body synthetic_body,
+        direct_call_target_expr (fn_body fcall) =
+          Some (fname_body, args_body, synthetic_body) ->
+        fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+          (global_env_with_local_bounds env (fn_bounds fcall)) fname_body) ->
+      (forall fcall fcall_inner,
+        direct_call_callee_body_root_synthetic_direct_call_ready_evidence
+          (global_env_with_local_bounds
+            (global_env_with_local_bounds env (fn_bounds fcall))
+            (fn_bounds fcall_inner))) ->
+      store_typed env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R'.
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys env s s' v fname args Heval Omega n R Σ T
+    Σ' R' roots Hready_args Hstore Hroots Hshadow Hrn Hnamed Hkeys
+    Htyped Hunique Hsummary_at Hsummary_body_at_all Hevidence_body_env_all.
+  pose proof (preservation_ready_args_implies_provenance_ready_closure
+                args Hready_args) as Hprov_args.
+  dependent destruction Heval.
+  dependent destruction Htyped.
+  simpl in *.
+  repeat match goal with
+  | Hlookup : lookup_fn (fn_name ?f_typed) (env_fns env) =
+      Some ?f_runtime,
+    Hin0 : In ?f_typed (env_fns env) |- _ =>
+      pose proof (lookup_fn_unique_by_name env (fn_name f_typed)
+        f_runtime f_typed Hlookup Hin0 eq_refl Hunique) as Hsame;
+      subst f_runtime
+  | Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?f_runtime,
+    Hin0 : In ?f_typed (env_fns env),
+    Hname : fn_name ?f_typed = ?fname_call |- _ =>
+      pose proof (lookup_fn_unique_by_name env fname_call f_runtime f_typed
+        Hlookup Hin0 Hname Hunique) as Hsame;
+      subst f_typed
+  | Hlookup : lookup_fn ?fname_call (env_fns env) = Some ?f_runtime,
+    Hin0 : In ?f_typed (env_fns env),
+    Hname : ?fname_call = fn_name ?f_typed |- _ =>
+      pose proof (lookup_fn_unique_by_name env fname_call f_runtime f_typed
+        Hlookup Hin0 (eq_sym Hname) Hunique) as Hsame;
+      subst f_typed
+  end.
+  destruct (proj1 (proj2 Hroots_ready)
+              env s args s_args vs H1 Omega n R Σ
+              (apply_lt_params σ (fn_params fdef0)) Σ' R'
+              arg_roots Hprov_args Hroots Hshadow Hrn H7)
+    as [Hroots_args [_ [Hshadow_args Hrn_args]]].
+  destruct (proj1 (proj2 Htyping_ready)
+              env s args s_args vs H1 Omega n Σ
+              (apply_lt_params σ (fn_params fdef0)) Σ'
+              Hready_args Hstore
+              (typed_args_roots_structural env Omega n R Σ args
+                (apply_lt_params σ (fn_params fdef0)) Σ' R'
+                arg_roots H7))
+    as [_ [Hargs_subst _]].
+  pose proof (alpha_rename_fn_def_shape (store_names s_args)
+                fdef0 fcall used' H2) as Hshape.
+  destruct Hshape as [_ [_ Hparams_alpha]].
+  assert (Hargs_unsubst_fdef :
+    eval_args_values_have_types env Omega s_args vs (fn_params fdef0)).
+  { eapply eval_args_values_have_types_apply_lt_params_inv.
+    exact Hargs_subst. }
+  assert (Hargs_fcall :
+    eval_args_values_have_types env Omega s_args vs (fn_params fcall)).
+  { eapply eval_args_values_have_types_params_alpha.
+    - exact Hparams_alpha.
+    - exact Hargs_unsubst_fdef. }
+  assert (Hnodup :
+    NoDup (ctx_names (params_ctx (fn_params fcall)))).
+  { eapply alpha_rename_fn_def_params_nodup_ctx_names. exact H2. }
+  assert (Hfresh : params_fresh_in_store (fn_params fcall) s_args).
+  { eapply alpha_rename_fn_def_params_fresh_in_store. exact H2. }
+  destruct (eval_args_bind_params_call_param_root_env_ready
+              env s args s_args vs Omega n R Σ
+              (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots
+              (fn_params fcall) H1 Hprov_args H7
+              Hroots Hshadow Hrn Hnodup Hfresh Hargs_fcall)
+    as [Hroots_bind [Hshadow_bind [Hrn_bind _Hcover_bind]]].
+  destruct (proj1 (proj2 Hroot_names)
+              env s args s_args vs H1 Omega n R Σ
+              (apply_lt_params σ (fn_params fdef0)) Σ' R'
+              arg_roots Hprov_args Hstore Hroots Hshadow Hrn Hnamed H7)
+    as [Hnamed_args Harg_roots_named].
+  pose proof (proj1 (proj2 Hroot_keys)
+                env s args s_args vs H1 Omega n R Σ
+                (apply_lt_params σ (fn_params fdef0)) Σ' R'
+                arg_roots Hprov_args Hstore Hroots Hshadow Hrn Hkeys H7)
+    as Hkeys_args.
+  assert (Hnamed_bind :
+    root_env_store_roots_named
+      (call_param_root_env (fn_params fcall) arg_roots R')
+      (bind_params (fn_params fcall) vs s_args)).
+  { eapply root_env_store_roots_named_call_param_bind_params;
+      eassumption. }
+  assert (Hkeys_bind :
+    root_env_store_keys_named
+      (call_param_root_env (fn_params fcall) arg_roots R')
+      (bind_params (fn_params fcall) vs s_args)).
+  { eapply root_env_store_keys_named_call_param_bind_params;
+      eassumption. }
+  assert (Hstore_bind_env :
+    store_typed_prefix env (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))).
+  { eapply bind_params_store_typed_prefix; eassumption. }
+  assert (Hstore_bind_body_env :
+    store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))).
+  { eapply direct_call_store_typed_prefix_global_env_with_local_bounds.
+    exact Hstore_bind_env. }
+  pose proof
+    (direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at_of_shadow_summary_at
+      Hroot_names Hroot_keys env (fn_name fdef0) Hsummary_at Hunique) as Hevidence.
+  pose proof
+    (eval_synthetic_direct_call_body_scope_callback_from_ready_evidence_at
+      Hscope_synthetic Htyping_ready env Omega n R Σ Σ' R'
+      arg_roots (fn_name fdef0) args fdef0 fcall σ s s_args s_body
+      vs ret used' Hevidence H3 eq_refl H0 H7 H1 Hready_args Hprov_args
+      Hstore Hroots Hshadow Hrn Hnamed Hkeys H2 Heval) as Hscopes.
+  pose proof
+    (callee_body_root_shadow_synthetic_direct_call_ready_result_subset_from_summary_at
+      Hroot_names Hroot_keys env Omega n R Σ Σ' R' arg_roots
+      (fn_name fdef0) args fdef0 fcall σ s s_args vs used' Hunique
+      Hsummary_at H3 eq_refl H0 H7 H1 Hprov_args Hstore Hroots Hshadow Hrn
+      Hnamed Hkeys H2) as Hbody_result_subset.
+  destruct
+    (eval_synthetic_direct_call_body_cleanup_prefix_from_result_subset_summary_at_call_statement_evidence
+      Hsynthetic_route Htyping_ready Hroots_ready env Omega n R Σ Σ'
+      R' arg_roots (fn_name fdef0) args fdef0 fcall σ s s_args s_body
+      vs ret used' Hbody_result_subset
+      (Hsummary_body_at_all fcall)
+      (Hevidence_body_env_all fcall)
+      Hunique H3 eq_refl H0 H7 H1 Hready_args Hprov_args Hstore Hroots
+      Hshadow Hrn Hnamed Hkeys H2 Hstore_bind_body_env Hroots_bind
+      Hshadow_bind Hrn_bind Hnamed_bind Hkeys_bind Heval Hscopes)
+    as (_fname_body & _args_body & _synthetic_body & _T_body & _Gamma_out &
+        _R_body & roots_body & _frame_final & _locals & _Htarget &
+        _Hsynthetic & _Hready_body & _Htyped_body & _Hcompat_body &
+        _Hexclude_roots & _Hexclude_env & Hresult_subset & _Heval_synthetic &
+        _Hstore_args & Hstore_final & _Hstore_prefix & _Hroots_body &
+        _Hshadow_body & _Hrn_body & Hv_final & Hpres_final & _Hremoved &
+        _Hret_exclude & _Hstore_exclude & Hremoved_exact & Hret_roots).
+  repeat split; try assumption.
+  - rewrite Hremoved_exact. exact Hroots_args.
+  - eapply direct_call_value_roots_within_store_subset; eassumption.
+  - rewrite Hremoved_exact. exact Hshadow_args.
+Qed.
+
+
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_exact_call_statement_of_final_roots_bridge :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

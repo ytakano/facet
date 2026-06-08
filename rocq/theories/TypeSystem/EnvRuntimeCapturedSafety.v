@@ -3611,6 +3611,30 @@ Proof.
     exact Hcomponent_check.
 Qed.
 
+Theorem check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_store_safe_summary_evidence :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement ->
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env = true ->
+    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+      env ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hroot_names Hroot_keys Hpackage env f s s' v Hunique
+    Hcombined_check Hsynthetic_summary Hinitial Hin Hstore Heval.
+  eapply env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package;
+    try eassumption.
+  eapply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_ready.
+  exact Hcombined_check.
+Qed.
+
 Theorem callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_of_call_statement_routes_mutual :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement ->

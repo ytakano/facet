@@ -192,6 +192,11 @@ Done:
   and `eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_scope`.
 - The summary exact-call package now also has the explicit constructor helper
   `eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement_of_exact_statements`.
+- The checker-level summary exact-package wrapper now has a variant that takes
+  `env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence`
+  directly,
+  `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_store_safe_summary_evidence`,
+  isolating the replacement point for the old whole-env component check.
 
 Next:
 

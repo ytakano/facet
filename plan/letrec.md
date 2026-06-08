@@ -27,10 +27,11 @@ Done:
 Next:
 
 - Prove the combined direct-`ECall` synthetic direct-call-ready summary
-  package, or wire it as the recursive route induction hypothesis. The prefix
-  preservation and frame/parameter scope obligations are now threaded as one
-  combined recursive obligation, avoiding the previous circular dependency
-  between their separate wrappers.
+  package, or wire it as the recursive route induction hypothesis. A
+  prefix-store eval-args helper now derives the direct-call argument root-name
+  and key facts from prefix preservation plus ctx-level named/key invariants;
+  the remaining package proof must expose or derive those ctx-level invariants
+  for the outer prefix call.
 - After those obligations are closed, add the safety-gate connection that feeds
   env-level synthetic shadow summary evidence into the recursive route, then
   move the direct recursion invalid tests to valid tests when the end-to-end
@@ -321,11 +322,21 @@ For an explicit-capture recursive closure group:
      package-based narrow route theorem and a recursive package assumption,
      giving exact callers a small reusable constructor-level bridge without
      duplicating the cleanup proof.
+   - Done: add the prefix-store argument named/key helper
+     `eval_args_preserves_root_names_keys_ready_prefix_ctx`. It derives
+     `Forall (fun roots => root_set_store_roots_named roots s_args) arg_roots`
+     and `root_env_store_keys_named R_args s_args` for direct-call argument
+     evaluation from `store_typed_prefix`, prefix preservation, and ctx-level
+     `root_env_ctx_roots_named` / `root_env_ctx_keys_named`, without invoking
+     the exact-store root-name/key mutual preservation packages.
    - Remaining gap: prove the prefix-friendly summary/bridge direct-`ECall`
      package from the package/IH itself, then use it to close the recursive
-     synthetic direct-call route. The exact-entry bridge is available, but the
-     public package still needs a proof that starts from only
-     `store_typed_prefix env s Σ` at the outer call.
+     synthetic direct-call route. The exact-entry bridge and prefix eval-args
+     named/key helper are available, but the public package still needs a way
+     to expose or derive the initial ctx-level root-name/key invariants for the
+     outer `store_typed_prefix env s Σ` call; plain store-level named/key facts
+     are not enough to recover those invariants for all of `R` when a prefix
+     frame is present.
    - Next: discharge
      `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement`
      by direct `ECall` induction over the prefix-friendly obligation, then

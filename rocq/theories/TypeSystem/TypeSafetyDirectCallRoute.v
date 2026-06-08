@@ -282,6 +282,46 @@ Proof.
       Hpackage).
 Qed.
 
+Lemma eval_args_preserves_root_names_keys_ready_prefix_ctx :
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  forall env s args s_args vs
+      (Ω : outlives_ctx) (n : nat) R Σ ps Σ_args R_args arg_roots,
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed_prefix env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_ctx_roots_named R Σ ->
+    root_env_ctx_keys_named R Σ ->
+    typed_args_roots env Ω n R Σ args ps Σ_args R_args arg_roots ->
+    Forall (fun roots => root_set_store_roots_named roots s_args) arg_roots /\
+    root_env_store_keys_named R_args s_args.
+Proof.
+  intros Hprefix_ready env s args s_args vs Ω n R Σ ps Σ_args R_args
+    arg_roots Heval_args Hready_args Hstore Hroots Hshadow Hrn Hctx_roots
+    Hctx_keys Htyped_args.
+  destruct (proj1 (proj2 Hprefix_ready)
+              env s args s_args vs Heval_args Ω n R Σ ps Σ_args R_args
+              arg_roots Hready_args Hstore Hroots Hshadow Hrn Htyped_args)
+    as [Hstore_args _].
+  destruct (proj1 (proj2 (typed_roots_ctx_roots_named_mutual env Ω n))
+              R Σ args ps Σ_args R_args arg_roots Htyped_args Hrn
+              Hctx_roots)
+    as [_ Harg_roots_ctx_named].
+  pose proof (proj1 (proj2 (typed_roots_ctx_keys_named_mutual env Ω n))
+                R Σ args ps Σ_args R_args arg_roots Htyped_args Hrn
+                Hctx_keys) as Hctx_keys_args.
+  split.
+  - clear Htyped_args.
+    induction Harg_roots_ctx_named as [| roots_i rest Hctx_named_i _ IH].
+    + constructor.
+    + constructor.
+      * eapply root_set_ctx_roots_named_store_typed_prefix; eassumption.
+      * exact IH.
+  - eapply root_env_ctx_keys_named_store_typed_prefix; eassumption.
+Qed.
+
 Lemma eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement_of_call_statement :
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement ->

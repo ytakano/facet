@@ -506,13 +506,20 @@ Done:
   `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_body_call_callback`
   factors the full evidence-at prefix route through that callback plus a
   prefix-to-full-store premise.
+- The prefix-to-full-store premise cannot be discharged directly: `store_typed_prefix`
+  does not imply full `store_typed`. The next reduction must introduce
+  prefix-store variants of the result-subset bridge and scope callback, e.g.
+  `callee_body_root_shadow_synthetic_direct_call_ready_result_subset_from_summary_at_prefix_store`
+  and `eval_synthetic_direct_call_body_scope_callback_from_result_subset_prefix_store`,
+  before a prefix-only cleanup core can remove that premise.
 
 Next:
 
 - Close the remaining direct-call route premises needed by the closure-check
-  bridge. The evidence-at prefix route is now factored by a body-call callback;
-  next, prove the prefix-to-full-store premise or remove that requirement, then
-  supply the body-call callback from evaluation-derivation induction.
+  bridge. Next, add prefix-store variants of the result-subset bridge and scope
+  callback so the body-callback route factor no longer needs a full-store
+  premise; after that, supply the body-call callback from evaluation-derivation
+  induction.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

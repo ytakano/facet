@@ -427,14 +427,17 @@ Done:
   summary provider when given closure-derived direct target evidence plus
   alpha nested target evidence, via
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_component_body_closure_target_provider`.
+- Alpha-renaming now has direct-call target converse facts:
+  `alpha_rename_expr_efn_inv` and
+  `direct_call_target_expr_alpha_rename_expr_inv`, covering the `ECall` and
+  `ECallExpr (EFn ...)` cases needed to relate a route `fcall` target back to
+  the pre-renamed closure-check function body.
 
 Next:
 
-- Derive `component_body_no_capture_direct_call_component_alpha_nested_target_in_provider`
-  from the closure checker sidecar. The next proof dependency is an
-  alpha-rename/direct-target converse fact for the `ECall` and
-  `ECallExpr (EFn ...)` cases, including the callee-expression inverse needed
-  when a renamed `ECallExpr` target is observed on route `fcall`.
+- Use `direct_call_target_expr_alpha_rename_expr_inv` to derive
+  `component_body_no_capture_direct_call_component_alpha_nested_target_in_provider`
+  from the closure checker sidecar.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

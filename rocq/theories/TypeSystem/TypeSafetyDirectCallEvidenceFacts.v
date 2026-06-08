@@ -48,6 +48,71 @@ Proof.
     exists args_r. reflexivity.
 Qed.
 
+Lemma alpha_rename_expr_efn_inv :
+  forall rho used e fname used',
+    alpha_rename_expr rho used e = (EFn fname, used') ->
+    e = EFn fname.
+Proof.
+  intros rho used e fname used' Hrename.
+  destruct e; simpl in Hrename; try solve
+    [repeat match goal with
+     | H : context[match ?x with _ => _ end] |- _ => destruct x eqn:?
+     end; discriminate].
+  inversion Hrename; reflexivity.
+Qed.
+
+Lemma direct_call_target_expr_alpha_rename_expr_inv :
+  forall rho used raw_body raw_body_r used' fname args synthetic_body,
+    alpha_rename_expr rho used raw_body = (raw_body_r, used') ->
+    direct_call_target_expr raw_body_r = Some (fname, args, synthetic_body) ->
+    exists args0,
+      direct_call_target_expr raw_body = Some (fname, args0, ECall fname args0).
+Proof.
+  intros rho used raw_body raw_body_r used' fname args synthetic_body
+    Hrename Htarget.
+  destruct raw_body as
+    [| lit | x | m x T e1 e2 | m x e1 e2 | fname0 | fname0 captures
+     | p | fname0 args0 | fname0 type_args args0 | callee args0
+     | callee type_args args0 | sname lts tys fields
+     | ename variant lts1 lts2 tys payloads | scrut branches
+     | p e | p e | rk p | e | e | e1 e2 e3];
+    simpl in Hrename; try solve
+      [repeat match goal with
+       | H : context[match ?x with _ => _ end] |- _ => destruct x eqn:?
+       end; inversion Hrename; subst; simpl in Htarget; discriminate].
+  - destruct ((fix go (used0 : list ident) (args1 : list expr)
+      : list expr * list ident :=
+      match args1 with
+      | [] => ([], used0)
+      | arg :: rest =>
+          let (arg', used1) := alpha_rename_expr rho used0 arg in
+          let (rest', used2) := go used1 rest in
+          (arg' :: rest', used2)
+      end) used args0) as [args_r used_r] eqn:Hargs.
+    inversion Hrename; subst.
+    simpl in Htarget. inversion Htarget; subst.
+    exists args0. reflexivity.
+  - destruct (alpha_rename_expr rho used callee) as [callee_r used1]
+      eqn:Hcallee.
+    destruct ((fix go (used0 : list ident) (args1 : list expr)
+      : list expr * list ident :=
+      match args1 with
+      | [] => ([], used0)
+      | arg :: rest =>
+          let (arg', used1') := alpha_rename_expr rho used0 arg in
+          let (rest', used2) := go used1' rest in
+          (arg' :: rest', used2)
+      end) used1 args0) as [args_r used_r] eqn:Hargs.
+    inversion Hrename; subst.
+    simpl in Htarget.
+    destruct callee_r; try discriminate.
+    inversion Htarget; subst.
+    pose proof (alpha_rename_expr_efn_inv rho used callee fname used1
+      Hcallee) as Hcallee_eq.
+    subst callee.
+    exists args0. reflexivity.
+Qed.
+
 Definition direct_call_callee_root_evidence (env : global_env) : Prop :=
   forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
       (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs

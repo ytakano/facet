@@ -113,6 +113,19 @@ Proof.
     exists args0. reflexivity.
 Qed.
 
+Lemma direct_call_target_expr_alpha_rename_fn_def_inv :
+  forall used fdef fcall used' fname args synthetic_body,
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) = Some (fname, args, synthetic_body) ->
+    exists args0,
+      direct_call_target_expr (fn_body fdef) = Some (fname, args0, ECall fname args0).
+Proof.
+  intros used fdef fcall used' fname args synthetic_body Hrename Htarget.
+  destruct (alpha_rename_fn_def_params_body used fdef fcall used' Hrename)
+    as (rho & used_params & _Hparams & Hbody).
+  eapply direct_call_target_expr_alpha_rename_expr_inv; eassumption.
+Qed.
+
 Definition direct_call_callee_root_evidence (env : global_env) : Prop :=
   forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
       (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs

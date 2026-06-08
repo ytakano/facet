@@ -432,12 +432,17 @@ Done:
   `direct_call_target_expr_alpha_rename_expr_inv`, covering the `ECall` and
   `ECallExpr (EFn ...)` cases needed to relate a route `fcall` target back to
   the pre-renamed closure-check function body.
+- The expression-level converse is now lifted to function definitions as
+  `direct_call_target_expr_alpha_rename_fn_def_inv`, so route-level
+  `alpha_rename_fn_def ... = (fcall, used')` evidence can recover the original
+  direct-call target on `fdef`.
 
 Next:
 
-- Use `direct_call_target_expr_alpha_rename_expr_inv` to derive
+- Use `direct_call_target_expr_alpha_rename_fn_def_inv` to derive
   `component_body_no_capture_direct_call_component_alpha_nested_target_in_provider`
-  from the closure checker sidecar.
+  from the closure checker sidecar, after isolating any needed local-bounds
+  summary-to-closure-check bridge.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

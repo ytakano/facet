@@ -410,10 +410,11 @@ Done:
 
 Next:
 
-- Remove the remaining dependency on the broad component summary provider by
-  deriving alpha nested summary/body evidence directly from closure-check-local
-  component target evidence, or add the missing local-bounds closure-check
-  provider lift needed to do so.
+- Narrow the remaining nested body-env route premise from broad
+  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence` to a
+  target-scoped evidence-at callback for the nested direct-call callee. The
+  current broad body-env premise ranges over arbitrary callees in the nested body
+  environment, so it cannot be derived from closure target evidence alone.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

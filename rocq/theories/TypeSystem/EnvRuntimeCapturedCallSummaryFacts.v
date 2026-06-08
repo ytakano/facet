@@ -429,6 +429,24 @@ Definition component_body_synthetic_direct_call_ready_alpha_nested_summary_at_in
           (global_env_with_local_bounds env (fn_bounds f_component))
           (fn_bounds fcall)) fname.
 
+Definition component_body_synthetic_direct_call_ready_alpha_nested_body_env_evidence_in_provider
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    forall fdef fcall used used',
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        (global_env_with_local_bounds env (fn_bounds f_component)) fdef ->
+      alpha_rename_fn_def used fdef = (fcall, used') ->
+      forall fcall_inner,
+        direct_call_callee_body_root_synthetic_direct_call_ready_evidence
+          (global_env_with_local_bounds
+            (global_env_with_local_bounds
+              (global_env_with_local_bounds env (fn_bounds f_component))
+              (fn_bounds fcall))
+            (fn_bounds fcall_inner)).
+
 Definition component_body_synthetic_direct_call_ready_closure_nested_summary_at_in_provider
     (env : global_env) : Prop :=
   forall f_component,

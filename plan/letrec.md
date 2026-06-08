@@ -30,6 +30,10 @@ Done:
   `typed_args_roots_preservation_ready_static_runtime_named` recurses from that
   evidence. A route-local singleton helper packages `[RStore x]` naming from
   store-name membership for later borrow/assign constructor proofs.
+- The store-safe synthetic direct-call-ready summary can now be lowered back
+  to the existing synthetic summary evidence and lifted through local-bounds
+  environments, so later safety wrappers can keep the stronger store-safe data
+  while reusing the older summary/bridge route where possible.
 
 Next:
 
@@ -345,6 +349,11 @@ For an explicit-capture recursive closure group:
      variant that retains `store_safe_function_value_call_args env args` for
      the normalized direct `ECall` target, plus conversions from the existing
      no-capture component store-safe summary.
+   - Done: add conversions from the store-safe synthetic summary back to the
+     existing synthetic summary evidence, plus local-bounds lifting for the
+     store-safe variant. This lets later wrappers carry the stronger
+     `store_safe_function_value_call_args` fact without forking every older
+     summary bridge immediately.
    - Done: add the bounded runtime-store-name preservation helper
      `eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr`.
      It transports argument root/name facts across `eval_args` using

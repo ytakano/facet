@@ -252,6 +252,70 @@ Definition env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_ev
     callee_body_root_shadow_store_safe_synthetic_direct_call_ready_summary
       env fdef.
 
+Lemma callee_body_root_shadow_synthetic_direct_call_ready_summary_of_store_safe :
+  forall env fdef,
+    callee_body_root_shadow_store_safe_synthetic_direct_call_ready_summary
+      env fdef ->
+    callee_body_root_shadow_synthetic_direct_call_ready_summary env fdef.
+Proof.
+  intros env fdef [Hnodup Hready].
+  split; [exact Hnodup |].
+  unfold callee_body_root_shadow_store_safe_synthetic_direct_call_ready_at
+    in Hready.
+  unfold callee_body_root_shadow_synthetic_direct_call_ready_at.
+  destruct Hready as
+    (fname & args & synthetic_body & T_body & Gamma_out & R_body &
+      roots_body & Htarget & Hsynthetic & _Hsafe & Hready_body & Htyped &
+      Hcompat & Hexclude_roots & Hexclude_env).
+  exists fname, args, synthetic_body, T_body, Gamma_out, R_body, roots_body.
+  repeat split; assumption.
+Qed.
+
+Lemma env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_of_store_safe :
+  forall env,
+    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+      env ->
+    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env.
+Proof.
+  intros env Hsummary fname fdef Hlookup.
+  eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_of_store_safe.
+  eapply Hsummary. exact Hlookup.
+Qed.
+
+Lemma callee_body_root_shadow_store_safe_synthetic_direct_call_ready_summary_global_env_with_local_bounds :
+  forall env bounds fdef,
+    callee_body_root_shadow_store_safe_synthetic_direct_call_ready_summary
+      env fdef ->
+    callee_body_root_shadow_store_safe_synthetic_direct_call_ready_summary
+      (global_env_with_local_bounds env bounds) fdef.
+Proof.
+  intros env bounds fdef [Hnodup Hready].
+  split; [exact Hnodup |].
+  unfold callee_body_root_shadow_store_safe_synthetic_direct_call_ready_at
+    in *.
+  destruct Hready as
+    (fname & args & synthetic_body & T_body & Gamma_out & R_body &
+      roots_body & Htarget & Hsynthetic & Hsafe & Hready_body & Htyped &
+      Hcompat & Hexclude_roots & Hexclude_env).
+  exists fname, args, synthetic_body, T_body, Gamma_out, R_body, roots_body.
+  repeat split; try assumption.
+  apply store_safe_function_value_call_args_global_env_with_local_bounds.
+  exact Hsafe.
+Qed.
+
+Lemma env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds :
+  forall env bounds,
+    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+      env ->
+    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+      (global_env_with_local_bounds env bounds).
+Proof.
+  intros env bounds Hsummary fname fdef Hlookup.
+  change (lookup_fn fname (env_fns env) = Some fdef) in Hlookup.
+  eapply callee_body_root_shadow_store_safe_synthetic_direct_call_ready_summary_global_env_with_local_bounds.
+  exact (Hsummary fname fdef Hlookup).
+Qed.
+
 Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds :
   forall env bounds fdef,
     fn_env_unique_by_name env ->

@@ -246,10 +246,19 @@ For an explicit-capture recursive closure group:
    - Done: add a direct-call-ready frame/parameter scope preservation
      statement and a callback helper that feeds normalized synthetic `ECall`
      scope results into the synthetic cleanup path; no gates are wired yet.
-   - Next: prove the recursive direct-call route over synthetic
-     direct-call-ready evidence alone by supplying the synthetic typing/roots
-     route and the new scope route to cleanup. Defer safety-gate connection
-     until that route is established.
+   - Done: add an `ECall` cleanup bridge for the recursive synthetic
+     direct-call route. It destructs the outer direct call, invokes the
+     synthetic typing/roots route and synthetic scope callback, and returns the
+     outer store typing, value typing, ref preservation, final roots/shadow
+     facts, plus the callee-body value-root witness. It is intentionally still
+     a bridge: local-bounds synthetic evidence, exact bind-param body typing,
+     bind-param named/key facts, and the final outer `value_roots_within roots`
+     projection remain explicit premises.
+   - Next: discharge the explicit bridge premises: derive local-bounds
+     synthetic evidence and exact/named/key bind-param facts from the component
+     summary, then prove the missing projection from callee-body value roots to
+     the outer `TER_Call` roots (`root_sets_union arg_roots`). Defer
+     safety-gate connection until that full route is established.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

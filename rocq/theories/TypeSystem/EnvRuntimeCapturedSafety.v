@@ -1148,6 +1148,89 @@ Proof.
   dependent destruction Hready.
 Qed.
 
+Theorem callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready :
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+      env ->
+    (forall bounds,
+      direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge
+        (global_env_with_local_bounds env bounds)) ->
+    eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f ->
+    check_initial_root_runtime_ready f s = true ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros env f s s' v Hunique Hsummary Hbridge_bounds Hpackage
+    Hcomponent Hinitial Hstore Heval.
+  destruct Hcomponent as
+    (fname & args & raw_body & synthetic_body & fcallee & T_body &
+      Gamma_out & R_body & roots_body & _Hcaptures & Hbody & Htarget &
+      Hsynthetic & Hsafe_args & _Hin_callee & _Hname_callee &
+      _Hcallee_captures & Hnodup & Htyped_shadow & Hcompat & _Hroots &
+      _Henv).
+  destruct (check_initial_root_runtime_ready_sound f s Hinitial) as
+    [Hroots [Hshadow [Hnamed Hkeys]]].
+  pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hrn.
+  rewrite Hbody in Heval.
+  pose (body_env := global_env_with_local_bounds env (fn_bounds f)).
+  assert (Hstore_body_env :
+    store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
+  { subst body_env.
+    eapply store_typed_global_env_with_local_bounds.
+    eapply initial_store_for_fn_store_typed. exact Hstore. }
+  assert (Heval_body_env : eval body_env s raw_body s' v).
+  { subst body_env. eapply eval_global_env_with_local_bounds. exact Heval. }
+  assert (Htyped_call_shadow :
+    typed_env_roots_shadow_safe body_env
+      (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+      (sctx_of_ctx (fn_body_ctx f)) (ECall fname args)
+      T_body (sctx_of_ctx Gamma_out) R_body roots_body).
+  { rewrite <- Hsynthetic. exact Htyped_shadow. }
+  assert (Htyped_call :
+    typed_env_roots body_env
+      (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+      (sctx_of_ctx (fn_body_ctx f)) (ECall fname args)
+      T_body (sctx_of_ctx Gamma_out) R_body roots_body).
+  { eapply typed_env_roots_shadow_safe_roots. exact Htyped_call_shadow. }
+  assert (Heval_call : eval body_env s (ECall fname args) s' v).
+  { unfold direct_call_target_expr in Htarget.
+    destruct raw_body; try discriminate.
+    - inversion Htarget; subst. exact Heval_body_env.
+    - destruct raw_body; try discriminate.
+      inversion Htarget; subst.
+      apply eval_call_expr_fn_as_call. exact Heval_body_env. }
+  assert (Hsafe_args_body : store_safe_function_value_call_args body_env args).
+  { subst body_env.
+    apply store_safe_function_value_call_args_global_env_with_local_bounds.
+    exact Hsafe_args. }
+  assert (Hsummary_body :
+    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+      body_env).
+  { subst body_env.
+    eapply env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+    exact Hsummary. }
+  destruct Hpackage as [Hprefix _].
+  destruct
+    (Hprefix body_env s fname args s' v Heval_call
+      (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+      (sctx_of_ctx (fn_body_ctx f)) T_body (sctx_of_ctx Gamma_out)
+      R_body roots_body Hsafe_args_body Hstore_body_env Hroots Hshadow Hrn
+      Hnamed Hkeys Htyped_call)
+    as [_Hstore_prefix [Hv_body [_Hpres [_Hroots_ready
+        [_Hvroots [_Hshadow_ready _Hrn_ready]]]]]].
+  - unfold fn_env_unique_by_name in *; subst body_env; simpl. exact Hunique.
+  - exact Hsummary_body.
+  - subst body_env. apply Hbridge_bounds.
+  - eapply VHT_Compatible.
+    + subst body_env.
+      eapply value_has_type_clear_global_env_local_bounds. exact Hv_body.
+    + apply ty_compatible_b_sound. exact Hcompat.
+Qed.
+
 Theorem env_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready :
   forall env f s s' v,
     fn_env_unique_by_name env ->

@@ -61,6 +61,10 @@ Done:
   `eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement`,
   with constructor theorem
   `eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement_of_final_roots_and_cleanup`.
+- `EnvRuntimeCapturedSafety.v` now has
+  `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready`,
+  proving a single no-capture direct-call component safe from the store-safe
+  synthetic package and lifted summary bridge.
 
 Next:
 
@@ -414,6 +418,10 @@ For an explicit-capture recursive closure group:
      `eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement`
      and prove
      `eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement_of_final_roots_and_cleanup`.
+   - Done: add
+     `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready`,
+     which applies the store-safe synthetic package to one no-capture direct-call
+     component under a local-bounds body environment.
    - Remaining gap: complete or specialize
      `preservation_ready_expr_static_runtime_named_statement` beyond the leaf
      constructors, then replace the older ctx-based argument named/key step with

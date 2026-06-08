@@ -563,6 +563,17 @@ Done:
   The temporary generic-route adapters above the direct-component wrappers were
   removed, so the remaining route premise on this path is store-safe all the
   way up to `End2EndSafety.v`.
+- Component-ready environments now expose a reusable alpha-renamed body-call
+  store-safe-args provider:
+  `env_fns_root_shadow_no_capture_direct_call_component_store_safe_summary_ready_alpha_renamed_target_args_global_env_with_local_bounds`.
+  This packages uniqueness plus component readiness into the second provider
+  required by the store-safe recursive route bridge.
+- The route layer now has
+  `store_safe_synthetic_direct_call_ready_body_call_route_package_statement`
+  and
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_body_call_route_package`,
+  grouping the summary-at and store-safe-args body-call providers used by the
+  store-safe recursive route bridge.
 
 Next:
 

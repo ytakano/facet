@@ -327,6 +327,19 @@ Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_su
       store_no_shadow s' /\
       root_env_no_shadow R'.
 
+Definition store_safe_synthetic_direct_call_ready_body_call_route_package_statement
+    : Prop :=
+  forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body /\
+    store_safe_function_value_call_args
+      (global_env_with_local_bounds env (fn_bounds fcall)) args_body.
+
 Lemma direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_evidence_at_all :
   forall env,
     (forall fname,
@@ -7311,6 +7324,34 @@ Proof.
       (global_env_with_local_bounds env (fn_bounds fcall)) args_body).
   { eapply Hsafe_body_at_all; eassumption. }
   eapply Hstore_safe_route; eassumption.
+Qed.
+
+Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_body_call_route_package :
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  store_safe_synthetic_direct_call_ready_body_call_route_package_statement ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at.
+Proof.
+  intros Hstore_safe_route Hscope_synthetic Htyping_prefix Hprefix_ready
+    Hroots_ready Hroot_names Hroot_keys Hbody_package.
+  eapply
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_body_call_store_safe_route;
+    try eassumption.
+  - intros env fname fdef fcall used used' fname_body args_body
+      synthetic_body Hin Hname Hrename Htarget.
+    destruct (Hbody_package env fname fdef fcall used used' fname_body
+      args_body synthetic_body Hin Hname Hrename Htarget) as [Hsummary _].
+    exact Hsummary.
+  - intros env fname fdef fcall used used' fname_body args_body
+      synthetic_body Hin Hname Hrename Htarget.
+    destruct (Hbody_package env fname fdef fcall used used' fname_body
+      args_body synthetic_body Hin Hname Hrename Htarget) as [_ Hsafe].
+    exact Hsafe.
 Qed.
 
 

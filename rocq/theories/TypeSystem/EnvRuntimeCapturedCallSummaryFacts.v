@@ -1990,6 +1990,7 @@ Proof.
     + exact Hargs_r.
 Qed.
 
+
 Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_synthetic_direct_call_ready :
   forall env fdef,
     callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
@@ -2740,6 +2741,29 @@ Definition env_fns_no_capture_direct_call_component_synthetic_ready
         Some (call_name, args, synthetic_body) /\
       synthetic_body = ECall call_name args /\
       preservation_direct_call_ready_expr synthetic_body.
+
+Lemma env_fns_root_shadow_no_capture_direct_call_component_store_safe_summary_ready_alpha_renamed_target_args_global_env_with_local_bounds :
+  forall env,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_no_capture_direct_call_component_store_safe_summary_ready
+      env ->
+    forall fname fdef fcall used used' fname_body args_body synthetic_body,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      alpha_rename_fn_def used fdef = (fcall, used') ->
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname_body, args_body, synthetic_body) ->
+      store_safe_function_value_call_args
+        (global_env_with_local_bounds env (fn_bounds fcall)) args_body.
+Proof.
+  intros env Hunique Hready fname fdef fcall used used' fname_body
+    args_body synthetic_body Hin Hname Hrename Htarget.
+  eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_alpha_renamed_target_args_global_env_with_local_bounds.
+  - eapply Hready.
+    eapply lookup_fn_in_unique_by_name; eassumption.
+  - exact Hrename.
+  - exact Htarget.
+Qed.
 
 Lemma env_fns_no_capture_direct_call_component_synthetic_ready_of_summary :
   forall env,

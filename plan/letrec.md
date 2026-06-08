@@ -190,11 +190,10 @@ Done:
 
 Next:
 
-- Close `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement`
-  through the summary/result-subset path. The raw prefix call-statement remains
-  too strong for direct proof: `store_typed_prefix` does not imply the raw
-  evidence's `store_typed`, and raw synthetic evidence lacks
-  `roots_body <= root_sets_union arg_roots`.
+- Close `eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement`
+  directly through the summary/result-subset path. The non-exact summary/raw
+  call-statement forms still take `store_typed_prefix`, which is too weak for
+  the current synthetic evidence and result-subset cleanup helpers.
 - Scope the store-safe synthetic summary evidence needed by the component branch
   so mixed programs do not have to make every function a direct-call component.
   Then switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old

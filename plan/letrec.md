@@ -197,6 +197,10 @@ Done:
   directly,
   `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_store_safe_summary_evidence`,
   isolating the replacement point for the old whole-env component check.
+- Component safety can now consume store-safe synthetic summary evidence scoped to
+  the component's `body_env` via
+  `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_store_safe_summary_evidence`,
+  instead of requiring top-level whole-env evidence and lifting it internally.
 
 Next:
 

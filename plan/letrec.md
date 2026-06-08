@@ -297,6 +297,9 @@ Done:
 - The new body-env evidence provider has compatibility constructors from
   env-wide summary evidence and the older component-body env-wide summary
   provider, keeping the pointwise route connected to existing wrappers.
+- End-to-end safety can now consume the pointwise exact-call package plus the
+  pointwise component-body providers via
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_exact_package_and_component_body_summary_at_evidence`.
 
 Next:
 

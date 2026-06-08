@@ -55,6 +55,31 @@ Definition callee_body_root_shadow_ready_at
     roots_exclude_params (fn_params fcall) roots_body /\
     root_env_excludes_params (fn_params fcall) R_body.
 
+Definition callee_body_root_direct_call_ready_at
+    (env : global_env) (fcall : fn_def) (R_params : root_env) : Prop :=
+  exists T_body Γ_out R_body roots_body,
+    preservation_direct_call_ready_expr (fn_body fcall) /\
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
+      R_params (sctx_of_ctx (fn_body_ctx fcall))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
+    roots_exclude_params (fn_params fcall) roots_body /\
+    root_env_excludes_params (fn_params fcall) R_body.
+
+Definition callee_body_root_shadow_direct_call_ready_at
+    (env : global_env) (fcall : fn_def) (R_params : root_env) : Prop :=
+  exists T_body Γ_out R_body roots_body,
+    preservation_direct_call_ready_expr (fn_body fcall) /\
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
+      R_params (sctx_of_ctx (fn_body_ctx fcall))
+      (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
+    roots_exclude_params (fn_params fcall) roots_body /\
+    root_env_excludes_params (fn_params fcall) R_body.
+
 Definition callee_body_root_provenance_ready_at
     (env : global_env) (fcall : fn_def) (R_params : root_env) : Prop :=
   exists T_body Γ_out R_body roots_body,
@@ -109,6 +134,54 @@ Proof.
   exists T_body, Γ_out, R_body, roots_body.
   repeat split; try assumption.
   eapply typed_env_roots_shadow_safe_roots. exact Htyped.
+Qed.
+
+Lemma callee_body_root_direct_call_ready_at_of_ready_at :
+  forall env fcall R_params,
+    callee_body_root_ready_at env fcall R_params ->
+    callee_body_root_direct_call_ready_at env fcall R_params.
+Proof.
+  intros env fcall R_params Hready.
+  unfold callee_body_root_ready_at in Hready.
+  destruct Hready as
+    (T_body & Γ_out & R_body & roots_body &
+      _ & Hpres & Htyped & Hcompat & Hexclude_roots & Hexclude_env).
+  unfold callee_body_root_direct_call_ready_at.
+  exists T_body, Γ_out, R_body, roots_body.
+  repeat split; try assumption.
+  apply PDCR_Ready. exact Hpres.
+Qed.
+
+Lemma callee_body_root_direct_call_ready_at_of_shadow_direct_call_ready_at :
+  forall env fcall R_params,
+    callee_body_root_shadow_direct_call_ready_at env fcall R_params ->
+    callee_body_root_direct_call_ready_at env fcall R_params.
+Proof.
+  intros env fcall R_params Hshadow.
+  unfold callee_body_root_shadow_direct_call_ready_at in Hshadow.
+  destruct Hshadow as
+    (T_body & Γ_out & R_body & roots_body &
+      Hready & Htyped & Hcompat & Hexclude_roots & Hexclude_env).
+  unfold callee_body_root_direct_call_ready_at.
+  exists T_body, Γ_out, R_body, roots_body.
+  repeat split; try assumption.
+  eapply typed_env_roots_shadow_safe_roots. exact Htyped.
+Qed.
+
+Lemma callee_body_root_shadow_direct_call_ready_at_of_shadow_ready_at :
+  forall env fcall R_params,
+    callee_body_root_shadow_ready_at env fcall R_params ->
+    callee_body_root_shadow_direct_call_ready_at env fcall R_params.
+Proof.
+  intros env fcall R_params Hready.
+  unfold callee_body_root_shadow_ready_at in Hready.
+  destruct Hready as
+    (T_body & Γ_out & R_body & roots_body &
+      _ & Hpres & Htyped & Hcompat & Hexclude_roots & Hexclude_env).
+  unfold callee_body_root_shadow_direct_call_ready_at.
+  exists T_body, Γ_out, R_body, roots_body.
+  repeat split; try assumption.
+  apply PDCR_Ready. exact Hpres.
 Qed.
 
 Lemma callee_body_root_provenance_ready_at_of_shadow_provenance_ready_at :

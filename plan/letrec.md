@@ -468,6 +468,10 @@ Done:
   reducing that route Prop to the older summary-at route plus a focused provider
   that turns the current callee's pointwise evidence into recursive body-env
   direct-call evidence.
+- The prefix-call route also has a localized body-env provider wrapper,
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_local_body_env_provider`,
+  so component-level wrappers can pass body-env recursive evidence for the
+  current call without first constructing a global route Prop.
 
 Next:
 

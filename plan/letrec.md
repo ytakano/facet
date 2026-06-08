@@ -703,6 +703,11 @@ Done:
 - The strict shadow program checker now has the matching component-scoped
   exact-body route-package safety bridge,
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_route_scoped_package`.
+- Direct-call body safety now has proof-only evaluation-height relations
+  (`direct_call_eval_height`, `direct_call_eval_args_height`, and
+  `direct_call_eval_struct_fields_height`) plus local-bounds stability and
+  existence lemmas, preparing a guarded proof of the recursive store-safe
+  evidence-at route.
 
 Next:
 

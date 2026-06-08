@@ -148,6 +148,345 @@ Proof.
   exact Hpath'.
 Qed.
 
+Inductive direct_call_eval_height (env : global_env)
+    : store -> expr -> store -> value -> nat -> Prop :=
+  | DCEH_Unit : forall s,
+      direct_call_eval_height env s EUnit s VUnit 1
+  | DCEH_LitInt : forall s n,
+      direct_call_eval_height env s (ELit (LInt n)) s (VInt n) 1
+  | DCEH_LitFloat : forall s f,
+      direct_call_eval_height env s (ELit (LFloat f)) s (VFloat f) 1
+  | DCEH_LitBool : forall s b,
+      direct_call_eval_height env s (ELit (LBool b)) s (VBool b) 1
+  | DCEH_Var_Copy : forall s x e,
+      store_lookup x s = Some e ->
+      needs_consume (se_ty e) = false ->
+      direct_call_eval_height env s (EVar x) s (se_val e) 1
+  | DCEH_Var_Consume : forall s x e,
+      store_lookup x s = Some e ->
+      needs_consume (se_ty e) = true ->
+      se_used e = false ->
+      direct_call_eval_height env s (EVar x) (store_mark_used x s) (se_val e) 1
+  | DCEH_Place_Copy : forall s p x path e T v,
+      eval_place s p x path ->
+      store_lookup x s = Some e ->
+      binding_available_b (se_state e) path = true ->
+      type_lookup_path env (se_ty e) path = Some T ->
+      needs_consume T = false ->
+      value_lookup_path (se_val e) path = Some v ->
+      direct_call_eval_height env s (EPlace p) s v 1
+  | DCEH_Place_Consume : forall s s' p x path e T v,
+      eval_place s p x path ->
+      store_lookup x s = Some e ->
+      binding_available_b (se_state e) path = true ->
+      type_lookup_path env (se_ty e) path = Some T ->
+      needs_consume T = true ->
+      value_lookup_path (se_val e) path = Some v ->
+      store_consume_path x path s = Some s' ->
+      direct_call_eval_height env s (EPlace p) s' v 1
+  | DCEH_Struct : forall s s' name lts args fields values sdef n,
+      lookup_struct name env = Some sdef ->
+      direct_call_eval_struct_fields_height env s fields (struct_fields sdef) s' values n ->
+      direct_call_eval_height env s (EStruct name lts args fields) s'
+        (VStruct name values) (S n)
+  | DCEH_Enum : forall s s' enum_name variant_name lts variant_lts args payloads
+      values edef vdef n,
+      lookup_enum enum_name env = Some edef ->
+      lookup_enum_variant variant_name (enum_variants edef) = Some vdef ->
+      direct_call_eval_args_height env s payloads s' values n ->
+      direct_call_eval_height env s
+        (EEnum enum_name variant_name lts variant_lts args payloads) s'
+        (VEnum enum_name variant_name lts args values) (S n)
+  | DCEH_Let : forall s s1 s2 m x T e1 e2 v1 v2 n1 n2,
+      direct_call_eval_height env s e1 s1 v1 n1 ->
+      direct_call_eval_height env (store_add x T v1 s1) e2 s2 v2 n2 ->
+      direct_call_eval_height env s (ELet m x T e1 e2)
+        (store_remove x s2) v2 (S (Nat.max n1 n2))
+  | DCEH_Drop : forall s s' e v n,
+      direct_call_eval_height env s e s' v n ->
+      direct_call_eval_height env s (EDrop e) s' VUnit (S n)
+  | DCEH_Replace : forall s s1 s2 s3 x old_e e_new v_new n,
+      store_lookup x s = Some old_e ->
+      direct_call_eval_height env s e_new s1 v_new n ->
+      store_update_val x v_new s1 = Some s2 ->
+      store_restore_path x [] s2 = Some s3 ->
+      direct_call_eval_height env s (EReplace (PVar x) e_new) s3
+        (se_val old_e) (S n)
+  | DCEH_Assign : forall s s1 s2 x old_e e_new v_new n,
+      store_lookup x s = Some old_e ->
+      direct_call_eval_height env s e_new s1 v_new n ->
+      store_update_val x v_new s1 = Some s2 ->
+      direct_call_eval_height env s (EAssign (PVar x) e_new) s2 VUnit (S n)
+  | DCEH_Replace_Place : forall s s1 s2 s3 p x path old_v e_new v_new n,
+      eval_place s p x path ->
+      store_lookup_path x path s = Some old_v ->
+      direct_call_eval_height env s e_new s1 v_new n ->
+      store_update_path x path v_new s1 = Some s2 ->
+      store_restore_path x path s2 = Some s3 ->
+      direct_call_eval_height env s (EReplace p e_new) s3 old_v (S n)
+  | DCEH_Assign_Place : forall s s1 s2 p x path e_new v_new n,
+      eval_place s p x path ->
+      direct_call_eval_height env s e_new s1 v_new n ->
+      store_update_path x path v_new s1 = Some s2 ->
+      direct_call_eval_height env s (EAssign p e_new) s2 VUnit (S n)
+  | DCEH_Borrow : forall s p x path rk,
+      eval_place s p x path ->
+      direct_call_eval_height env s (EBorrow rk p) s (VRef x path) 1
+  | DCEH_Deref_Place : forall s r p x path e v T,
+      expr_as_place r = Some p ->
+      eval_place s (PDeref p) x path ->
+      store_lookup x s = Some e ->
+      value_lookup_path (se_val e) path = Some v ->
+      type_lookup_path env (se_ty e) path = Some T ->
+      ty_usage T = UUnrestricted ->
+      direct_call_eval_height env s (EDeref r) s v 1
+  | DCEH_Deref : forall s s_r r x path e v T n,
+      expr_as_place r = None ->
+      direct_call_eval_height env s r s_r (VRef x path) n ->
+      store_lookup x s_r = Some e ->
+      value_lookup_path (se_val e) path = Some v ->
+      type_lookup_path env (se_ty e) path = Some T ->
+      ty_usage T = UUnrestricted ->
+      direct_call_eval_height env s (EDeref r) s_r v (S n)
+  | DCEH_Fn : forall s fname fdef,
+      lookup_fn fname (env_fns env) = Some fdef ->
+      fn_captures fdef = [] ->
+      direct_call_eval_height env s (EFn fname) s (VClosure fname []) 1
+  | DCEH_MakeClosure : forall s fname captures captured fdef,
+      lookup_fn fname (env_fns env) = Some fdef ->
+      copy_capture_store_as captures (fn_captures fdef) s = Some captured ->
+      direct_call_eval_height env s (EMakeClosure fname captures) s
+        (VClosure fname captured) 1
+  | DCEH_If_True : forall s s1 s2 e1 e2 e3 v n1 n2,
+      direct_call_eval_height env s e1 s1 (VBool true) n1 ->
+      direct_call_eval_height env s1 e2 s2 v n2 ->
+      direct_call_eval_height env s (EIf e1 e2 e3) s2 v
+        (S (Nat.max n1 n2))
+  | DCEH_If_False : forall s s1 s2 e1 e2 e3 v n1 n2,
+      direct_call_eval_height env s e1 s1 (VBool false) n1 ->
+      direct_call_eval_height env s1 e3 s2 v n2 ->
+      direct_call_eval_height env s (EIf e1 e2 e3) s2 v
+        (S (Nat.max n1 n2))
+  | DCEH_MatchEnum : forall s s_scrut s_branch s' scrut branches
+        enum_name variant_name lts args values edef vdef binders ps e_branch v
+        n_scrut n_branch,
+      direct_call_eval_height env s scrut s_scrut
+        (VEnum enum_name variant_name lts args values) n_scrut ->
+      lookup_enum enum_name env = Some edef ->
+      lookup_enum_variant variant_name (enum_variants edef) = Some vdef ->
+      lookup_expr_branch_binders variant_name branches = Some binders ->
+      match_payload_params_opt binders lts args vdef = Some ps ->
+      List.length values = List.length ps ->
+      lookup_match_branch variant_name branches = Some e_branch ->
+      direct_call_eval_height env (bind_params ps values s_scrut)
+        e_branch s_branch v n_branch ->
+      s' = store_remove_params ps s_branch ->
+      direct_call_eval_height env s (EMatch scrut branches) s' v
+        (S (Nat.max n_scrut n_branch))
+  | DCEH_Call : forall s s_args s_body fname fdef fcall args vs ret used'
+      n_args n_body,
+      lookup_fn fname (env_fns env) = Some fdef ->
+      fn_captures fdef = [] ->
+      direct_call_eval_args_height env s args s_args vs n_args ->
+      alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+      direct_call_eval_height env (bind_params (fn_params fcall) vs s_args)
+        (fn_body fcall) s_body ret n_body ->
+      direct_call_eval_height env s (ECall fname args)
+        (store_remove_params (fn_params fcall) s_body) ret
+        (S (Nat.max n_args n_body))
+  | DCEH_CallGeneric : forall s s_args s_body fname type_args fdef fcall args
+      vs ret used' n_args n_body,
+      lookup_fn fname (env_fns env) = Some fdef ->
+      fn_captures fdef = [] ->
+      direct_call_eval_args_height env s args s_args vs n_args ->
+      alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+      direct_call_eval_height env
+        (bind_params (apply_type_params type_args (fn_params fcall)) vs s_args)
+        (subst_type_params_expr type_args (fn_body fcall)) s_body ret n_body ->
+      direct_call_eval_height env s (ECallGeneric fname type_args args)
+        (store_remove_params
+          (apply_type_params type_args (fn_params fcall)) s_body) ret
+        (S (Nat.max n_args n_body))
+  | DCEH_CallExpr : forall s s_fn s_args s_body callee args fname captured
+      fdef fcall vs ret used' n_fn n_args n_body,
+      direct_call_eval_height env s callee s_fn (VClosure fname captured) n_fn ->
+      lookup_fn fname (env_fns env) = Some fdef ->
+      direct_call_eval_args_height env s_fn args s_args vs n_args ->
+      alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
+        (fcall, used') ->
+      direct_call_eval_height env
+        (bind_params (fn_params fcall) vs (captured ++ s_args))
+        (fn_body fcall) s_body ret n_body ->
+      direct_call_eval_height env s (ECallExpr callee args)
+        (store_remove_params (fn_captures fcall)
+          (store_remove_params (fn_params fcall) s_body)) ret
+        (S (Nat.max n_fn (Nat.max n_args n_body)))
+  | DCEH_CallExprGeneric : forall s s_fn s_args s_body callee type_args args
+        fname captured fdef fcall vs ret used' n_fn n_args n_body,
+      direct_call_eval_height env s callee s_fn (VClosure fname captured) n_fn ->
+      lookup_fn fname (env_fns env) = Some fdef ->
+      direct_call_eval_args_height env s_fn args s_args vs n_args ->
+      alpha_rename_fn_def (store_names (captured ++ s_args)) fdef =
+        (fcall, used') ->
+      direct_call_eval_height env
+        (bind_params (apply_type_params type_args (fn_params fcall))
+          vs (captured ++ s_args))
+        (subst_type_params_expr type_args (fn_body fcall)) s_body ret n_body ->
+      direct_call_eval_height env s (ECallExprGeneric callee type_args args)
+        (store_remove_params (fn_captures fcall)
+          (store_remove_params
+            (apply_type_params type_args (fn_params fcall)) s_body)) ret
+        (S (Nat.max n_fn (Nat.max n_args n_body)))
+with direct_call_eval_args_height (env : global_env)
+    : store -> list expr -> store -> list value -> nat -> Prop :=
+  | DCEAH_Nil : forall s,
+      direct_call_eval_args_height env s [] s [] 1
+  | DCEAH_Cons : forall s s1 s2 e es v vs n_e n_es,
+      direct_call_eval_height env s e s1 v n_e ->
+      direct_call_eval_args_height env s1 es s2 vs n_es ->
+      direct_call_eval_args_height env s (e :: es) s2 (v :: vs)
+        (S (Nat.max n_e n_es))
+with direct_call_eval_struct_fields_height (env : global_env)
+    : store -> list (string * expr) -> list field_def -> store ->
+      list (string * value) -> nat -> Prop :=
+  | DCESFH_Nil : forall s,
+      direct_call_eval_struct_fields_height env s [] [] s [] 1
+  | DCESFH_Cons : forall s s1 s2 fields f rest e v values n_e n_rest,
+      lookup_expr_field (field_name f) fields = Some e ->
+      direct_call_eval_height env s e s1 v n_e ->
+      direct_call_eval_struct_fields_height env s1 fields rest s2 values n_rest ->
+      direct_call_eval_struct_fields_height env s fields (f :: rest) s2
+        ((field_name f, v) :: values) (S (Nat.max n_e n_rest)).
+
+Lemma direct_call_eval_height_global_env_with_local_bounds :
+  forall env bounds s e s' v n,
+    direct_call_eval_height env s e s' v n ->
+    direct_call_eval_height (global_env_with_local_bounds env bounds)
+      s e s' v n
+with direct_call_eval_args_height_global_env_with_local_bounds :
+  forall env bounds s args s' vs n,
+    direct_call_eval_args_height env s args s' vs n ->
+    direct_call_eval_args_height (global_env_with_local_bounds env bounds)
+      s args s' vs n
+with direct_call_eval_struct_fields_height_global_env_with_local_bounds :
+  forall env bounds s fields defs s' values n,
+    direct_call_eval_struct_fields_height env s fields defs s' values n ->
+    direct_call_eval_struct_fields_height
+      (global_env_with_local_bounds env bounds) s fields defs s' values n.
+Proof.
+  - intros env bounds s e s' v n Hheight.
+    induction Hheight;
+      try solve
+        [ econstructor; simpl in *; eauto;
+          rewrite ?direct_call_type_lookup_path_global_env_with_local_bounds;
+          eauto ].
+  - intros env bounds s args s' vs n Hheight.
+    induction Hheight; try solve [econstructor; eauto].
+  - intros env bounds s fields defs s' values n Hheight.
+    induction Hheight; try solve [econstructor; eauto].
+Qed.
+
+Lemma direct_call_eval_height_exists_mutual :
+  forall env,
+    (forall s e s' v,
+      eval env s e s' v ->
+      exists n, direct_call_eval_height env s e s' v n) /\
+    (forall s args s' vs,
+      eval_args env s args s' vs ->
+      exists n, direct_call_eval_args_height env s args s' vs n) /\
+    (forall s fields defs s' values,
+      eval_struct_fields env s fields defs s' values ->
+      exists n,
+        direct_call_eval_struct_fields_height env s fields defs s' values n).
+Proof.
+  intro env.
+  apply eval_eval_args_eval_struct_fields_ind;
+    intros;
+    repeat match goal with
+    | IH : eval ?env ?s ?e ?s' ?v -> exists n, _,
+      Heval : eval ?env ?s ?e ?s' ?v |- _ =>
+        let n := fresh "n" in
+        let Hheight := fresh "Hheight" in
+        destruct (IH Heval) as [n Hheight]; clear IH
+    | IH : eval_args ?env ?s ?args ?s' ?vs -> exists n, _,
+      Hargs : eval_args ?env ?s ?args ?s' ?vs |- _ =>
+        let n := fresh "n" in
+        let Hheight := fresh "Hheight" in
+        destruct (IH Hargs) as [n Hheight]; clear IH
+    | IH : eval_struct_fields ?env ?s ?fields ?defs ?s' ?values ->
+        exists n, _,
+      Hfields : eval_struct_fields ?env ?s ?fields ?defs ?s' ?values |- _ =>
+        let n := fresh "n" in
+        let Hheight := fresh "Hheight" in
+        destruct (IH Hfields) as [n Hheight]; clear IH
+    | H : exists n, _ |- _ => destruct H as [? ?]
+    end;
+    eexists;
+    first
+      [ solve [eapply DCEH_Unit; eauto]
+      | solve [eapply DCEH_LitInt; eauto]
+      | solve [eapply DCEH_LitFloat; eauto]
+      | solve [eapply DCEH_LitBool; eauto]
+      | solve [eapply DCEH_Var_Copy; eauto]
+      | solve [eapply DCEH_Var_Consume; eauto]
+      | solve [eapply DCEH_Place_Copy; eauto]
+      | solve [eapply DCEH_Place_Consume; eauto]
+      | solve [eapply DCEH_Struct; eauto]
+      | solve [eapply DCEH_Enum; eauto]
+      | solve [eapply DCEH_Let; eauto]
+      | solve [eapply DCEH_Drop; eauto]
+      | solve [eapply DCEH_Replace; eauto]
+      | solve [eapply DCEH_Assign; eauto]
+      | solve [eapply DCEH_Replace_Place; eauto]
+      | solve [eapply DCEH_Assign_Place; eauto]
+      | solve [eapply DCEH_Borrow; eauto]
+      | solve [eapply DCEH_Deref_Place; eauto]
+      | solve [eapply DCEH_Deref; eauto]
+      | solve [eapply DCEH_Fn; eauto]
+      | solve [eapply DCEH_MakeClosure; eauto]
+      | solve [eapply DCEH_If_True; eauto]
+      | solve [eapply DCEH_If_False; eauto]
+      | solve [eapply DCEH_MatchEnum; eauto]
+      | solve [eapply DCEH_Call; eauto]
+      | solve [eapply DCEH_CallGeneric; eauto]
+      | solve [eapply DCEH_CallExpr; eauto]
+      | solve [eapply DCEH_CallExprGeneric; eauto]
+      | solve [eapply DCEAH_Nil; eauto]
+      | solve [eapply DCEAH_Cons; eauto]
+      | solve [eapply DCESFH_Nil; eauto]
+      | solve [eapply DCESFH_Cons; eauto] ].
+Qed.
+
+Lemma direct_call_eval_height_exists :
+  forall env s e s' v,
+    eval env s e s' v ->
+    exists n, direct_call_eval_height env s e s' v n.
+Proof.
+  intros env.
+  destruct (direct_call_eval_height_exists_mutual env) as [H _].
+  eauto.
+Qed.
+
+Lemma direct_call_eval_args_height_exists :
+  forall env s args s' vs,
+    eval_args env s args s' vs ->
+    exists n, direct_call_eval_args_height env s args s' vs n.
+Proof.
+  intros env.
+  destruct (direct_call_eval_height_exists_mutual env) as [_ [H _]].
+  eauto.
+Qed.
+
+Lemma direct_call_eval_struct_fields_height_exists :
+  forall env s fields defs s' values,
+    eval_struct_fields env s fields defs s' values ->
+    exists n, direct_call_eval_struct_fields_height env s fields defs s' values n.
+Proof.
+  intros env.
+  destruct (direct_call_eval_height_exists_mutual env) as [_ [_ H]].
+  eauto.
+Qed.
+
 Lemma direct_call_eval_global_env_with_local_bounds :
   forall env bounds s e s' v,
     eval env s e s' v ->

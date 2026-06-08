@@ -414,12 +414,10 @@ Done:
 
 Next:
 
-- Narrow the remaining nested body-env route premise from broad
-  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence` to the
-  target-scoped route interface
-  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at`.
-  The current broad body-env premise ranges over arbitrary callees in the nested
-  body environment, so it cannot be derived from closure target evidence alone.
+- Thread `eval_synthetic_direct_call_body_cleanup_prefix_from_result_subset_summary_at_call_statement_evidence_at`
+  into the final-roots and component/env/end-to-end call-route wrappers, then
+  remove the now-unneeded broad nested body-env provider premise from the alpha
+  route path.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

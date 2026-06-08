@@ -525,13 +525,19 @@ Done:
   `store_safe_function_value_call_args_typed_roots_store_named`. This matches
   the direct-component checker sidecar and avoids needing the generic static
   runtime naming statement for that path.
+- The direct-component wrappers
+  `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_evidence`
+  and
+  `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_lookup_evidence`
+  now call that store-safe prefix body-callback final-roots core internally,
+  using the existing evidence-at route premise only as the nested body-call
+  callback.
 
 Next:
 
-- Thread the store-safe prefix body-callback final-roots core into the
-  direct-component wrappers that already carry `store_safe_function_value_call_args`.
-- Supply the body-call callback from evaluation-derivation induction so the
-  evidence-at prefix call route closes without recursive full-store recovery.
+- Close the evidence-at prefix call route directly from an evaluation-derivation
+  induction so the direct-component wrappers no longer need the recursive route
+  premise for nested body calls.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

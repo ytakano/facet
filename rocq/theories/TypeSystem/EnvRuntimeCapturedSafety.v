@@ -1853,15 +1853,19 @@ Proof.
     fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
       body_env fname).
   { subst body_env. eapply Hsummary_at. rewrite Hbody. exact Htarget. }
+  assert (Hstore_body_prefix :
+    store_typed_prefix body_env s (sctx_of_ctx (fn_body_ctx f))).
+  { eapply store_typed_prefix_exact. exact Hstore_body_env. }
   destruct
-    (eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_call_route_final_roots_core
-      Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-      Hroot_names Hroot_keys body_env s s' v fname args Heval_call
+    (eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_body_call_callback_prefix_store_final_roots_core
+      Hscope_synthetic eval_preserves_typing_ready_prefix_mutual
+      eval_preserves_typing_roots_ready_prefix_mutual Hroots_ready Hroot_names
+      Hroot_keys body_env s s' v fname args Heval_call
       (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
       (sctx_of_ctx (fn_body_ctx f)) T_body (sctx_of_ctx Gamma_out)
-      R_body roots_body Hready_args_body Hstore_body_env Hroots Hshadow Hrn
+      R_body roots_body Hsafe_args_body Hstore_body_prefix Hroots Hshadow Hrn
       Hnamed Hkeys Htyped_call)
-    as [_Hstore_body [Hv_body [_Hpres_body [_Hroots_body
+    as [Hstore_body_prefix' [Hv_body [_Hpres_body [_Hroots_body
         [_Hvroots_body [_Hshadow_body _Hrn_body]]]]]].
   - unfold fn_env_unique_by_name in *; subst body_env; simpl. exact Hunique.
   - exact Hsummary_target.
@@ -1874,6 +1878,12 @@ Proof.
       * eapply lookup_fn_in_unique_by_name; eassumption.
     + exact Hrename.
     + exact Htarget_body.
+  - intros fdef_call fcall used used' s_args s_body vs ret R_args arg_roots
+      fname_body args_body T_body0 Gamma_out0 R_body0 roots_body0 Hin_call
+      Hname_call Hrename Htarget_body Hready_body Htyped_body Hunique_body
+      Hsummary_body Hevidence_body Hstore_bind Hroots_bind Hshadow_bind
+      Hrn_bind Hnamed_bind Hkeys_bind Heval_nested.
+    eapply Hsynthetic_route; try eassumption.
   - eapply VHT_Compatible.
     + subst body_env.
       eapply value_has_type_clear_global_env_local_bounds. exact Hv_body.
@@ -1973,15 +1983,19 @@ Proof.
     fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
       body_env fname).
   { subst body_env. eapply Hsummary_at. rewrite Hbody. exact Htarget. }
+  assert (Hstore_body_prefix :
+    store_typed_prefix body_env s (sctx_of_ctx (fn_body_ctx f))).
+  { eapply store_typed_prefix_exact. exact Hstore_body_env. }
   destruct
-    (eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_call_route_final_roots_core
-      Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
-      Hroot_names Hroot_keys body_env s s' v fname args Heval_call
+    (eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_body_call_callback_prefix_store_final_roots_core
+      Hscope_synthetic eval_preserves_typing_ready_prefix_mutual
+      eval_preserves_typing_roots_ready_prefix_mutual Hroots_ready Hroot_names
+      Hroot_keys body_env s s' v fname args Heval_call
       (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
       (sctx_of_ctx (fn_body_ctx f)) T_body (sctx_of_ctx Gamma_out)
-      R_body roots_body Hready_args_body Hstore_body_env Hroots Hshadow Hrn
+      R_body roots_body Hsafe_args_body Hstore_body_prefix Hroots Hshadow Hrn
       Hnamed Hkeys Htyped_call)
-    as [_Hstore_body [Hv_body [_Hpres_body [_Hroots_body
+    as [Hstore_body_prefix' [Hv_body [_Hpres_body [_Hroots_body
         [_Hvroots_body [_Hshadow_body _Hrn_body]]]]]].
   - unfold fn_env_unique_by_name in *; subst body_env; simpl. exact Hunique.
   - exact Hsummary_target.
@@ -2001,6 +2015,12 @@ Proof.
       * exact Hlookup_call.
     + exact Hrename.
     + exact Htarget_body.
+  - intros fdef_call fcall used used' s_args s_body vs ret R_args arg_roots
+      fname_body args_body T_body0 Gamma_out0 R_body0 roots_body0 Hin_call
+      Hname_call Hrename Htarget_body Hready_body Htyped_body Hunique_body
+      Hsummary_body Hevidence_body Hstore_bind Hroots_bind Hshadow_bind
+      Hrn_bind Hnamed_bind Hkeys_bind Heval_nested.
+    eapply Hsynthetic_route; try eassumption.
   - eapply VHT_Compatible.
     + subst body_env.
       eapply value_has_type_clear_global_env_local_bounds. exact Hv_body.

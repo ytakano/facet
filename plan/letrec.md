@@ -201,6 +201,9 @@ Done:
   the component's `body_env` via
   `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_store_safe_summary_evidence`,
   instead of requiring top-level whole-env evidence and lifting it internally.
+- The summary exact-package component wrapper now also has a body-env evidence
+  variant,
+  `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_body_store_safe_summary_evidence`.
 
 Next:
 

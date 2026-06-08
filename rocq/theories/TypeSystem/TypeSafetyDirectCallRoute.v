@@ -3978,6 +3978,19 @@ Proof.
   eapply Hcall; eassumption.
 Qed.
 
+Theorem eval_preserves_synthetic_direct_call_ready_summary_call_package_statement_of_call_statements :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_call_package_statement.
+Proof.
+  intros Hprefix_call Hscope_call.
+  split.
+  - eapply eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_call_statement_of_call_statement.
+    exact Hprefix_call.
+  - eapply eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_call_statement_of_call_statement.
+    exact Hscope_call.
+Qed.
+
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_with_summary_bridge_prefix_narrow_core :
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_call_statement ->

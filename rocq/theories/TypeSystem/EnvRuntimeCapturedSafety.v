@@ -1766,7 +1766,7 @@ Proof.
 Qed.
 
 Theorem callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_evidence :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->
@@ -1883,6 +1883,16 @@ Proof.
       Hname_call Hrename Htarget_body Hready_body Htyped_body Hunique_body
       Hsummary_body Hevidence_body Hstore_bind Hroots_bind Hshadow_bind
       Hrn_bind Hnamed_bind Hkeys_bind Heval_nested.
+    assert (Hsafe_args_body_nested :
+      store_safe_function_value_call_args
+        (global_env_with_local_bounds body_env (fn_bounds fcall)) args_body).
+    { subst body_env.
+      eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_alpha_renamed_target_args_global_env_with_local_bounds.
+      - eapply Htarget_component.
+        + rewrite Hbody. exact Htarget.
+        + eapply lookup_fn_in_unique_by_name; eassumption.
+      - exact Hrename.
+      - exact Htarget_body. }
     eapply Hsynthetic_route; try eassumption.
   - eapply VHT_Compatible.
     + subst body_env.
@@ -1891,7 +1901,7 @@ Proof.
 Qed.
 
 Theorem callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_lookup_evidence :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->
@@ -2020,6 +2030,20 @@ Proof.
       Hname_call Hrename Htarget_body Hready_body Htyped_body Hunique_body
       Hsummary_body Hevidence_body Hstore_bind Hroots_bind Hshadow_bind
       Hrn_bind Hnamed_bind Hkeys_bind Heval_nested.
+    assert (Hlookup_call :
+      lookup_fn fname (env_fns body_env) = Some fdef_call).
+    { subst body_env.
+      eapply lookup_fn_in_unique_by_name; eassumption. }
+    assert (Hsafe_args_body_nested :
+      store_safe_function_value_call_args
+        (global_env_with_local_bounds body_env (fn_bounds fcall)) args_body).
+    { subst body_env.
+      eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_alpha_renamed_target_args_global_env_with_local_bounds.
+      - eapply Htarget_component.
+        + rewrite Hbody. exact Htarget.
+        + exact Hlookup_call.
+      - exact Hrename.
+      - exact Htarget_body. }
     eapply Hsynthetic_route; try eassumption.
   - eapply VHT_Compatible.
     + subst body_env.
@@ -5189,7 +5213,12 @@ Proof.
     + exact Hstore.
     + exact Heval.
   - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_evidence.
-    + exact Hsynthetic_route.
+    + intros env0 s0 fname0 args0 s0' v0 Heval0 Omega0 n0 R0 Sigma0
+        T0 Sigma0' R0' roots0 Hsafe0 Hstore0 Hroots0 Hshadow0 Hrn0
+        Hnamed0 Hkeys0 Htyped0 Hunique0 Hsummary0 Hevidence0.
+      eapply Hsynthetic_route; try eassumption.
+      eapply store_safe_function_value_call_args_preservation_ready.
+      exact Hsafe0.
     + exact Hscope_synthetic.
     + exact Htyping_ready.
     + exact Hroots_ready.
@@ -5285,7 +5314,12 @@ Proof.
     + exact Hstore.
     + exact Heval.
   - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_lookup_evidence.
-    + exact Hsynthetic_route.
+    + intros env0 s0 fname0 args0 s0' v0 Heval0 Omega0 n0 R0 Sigma0
+        T0 Sigma0' R0' roots0 Hsafe0 Hstore0 Hroots0 Hshadow0 Hrn0
+        Hnamed0 Hkeys0 Htyped0 Hunique0 Hsummary0 Hevidence0.
+      eapply Hsynthetic_route; try eassumption.
+      eapply store_safe_function_value_call_args_preservation_ready.
+      exact Hsafe0.
     + exact Hscope_synthetic.
     + exact Htyping_ready.
     + exact Hroots_ready.

@@ -546,13 +546,18 @@ Done:
   `store_safe_function_value_call_args (global_env_with_local_bounds env (fn_bounds fcall)) args_body`.
   This is the missing input for using the store-safe route inside recursive
   body-call callbacks.
+- The direct-component alpha evidence-at wrappers now require the store-safe
+  evidence-at prefix route for nested body calls. They derive the renamed
+  body-call `store_safe_function_value_call_args` from the component sidecar
+  and pass it to the store-safe route; current upper wrappers keep their public
+  generic route premise by adapting it through
+  `store_safe_function_value_call_args_preservation_ready`.
 
 Next:
 
-- Use the recovered alpha-renamed body-call store-safe arguments to replace the
-  remaining generic nested route callback in the direct-component wrappers with
-  the store-safe route statement, then close that store-safe route directly
-  from an evaluation-derivation induction.
+- Close the store-safe evidence-at prefix call route directly from an
+  evaluation-derivation induction, then remove the temporary generic-route
+  adapters above the direct-component wrappers.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

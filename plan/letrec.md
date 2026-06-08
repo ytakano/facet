@@ -237,9 +237,13 @@ For an explicit-capture recursive closure group:
    - Done: add a route helper that uses synthetic direct-call-ready evidence
      to normalize an alpha-renamed callee body evaluation to the typed
      synthetic `ECall` target.
-   - Next: prove and use the recursive direct-call route over synthetic
-     direct-call-ready evidence alone. Defer safety-gate connection until that
-     route is established.
+   - Done: add direct-call body cleanup helpers that run the synthetic
+     direct-call-ready route for the normalized body and expose cleanup results
+     once frame/parameter scope facts are supplied; no gates are wired yet.
+   - Next: derive the missing frame/parameter scope facts for synthetic
+     direct-call-ready bodies, then prove and use the recursive direct-call
+     route over synthetic direct-call-ready evidence alone. Defer safety-gate
+     connection until that route is established.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

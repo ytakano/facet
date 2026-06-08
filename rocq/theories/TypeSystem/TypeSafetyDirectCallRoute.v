@@ -1319,6 +1319,279 @@ Proof.
   split; assumption.
 Qed.
 
+
+Lemma eval_synthetic_direct_call_body_from_ready_evidence_at :
+  forall env (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+      (fname : ident) args fdef fcall (σ : list lifetime) s s_args
+      s_body vs ret used',
+    direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+      env fname ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    typed_args_roots env Ω n R Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    eval env (bind_params (fn_params fcall) vs s_args)
+      (fn_body fcall) s_body ret ->
+    exists fname_body args_body synthetic_body T_body Γ_out R_body roots_body,
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname_body, args_body, synthetic_body) /\
+      synthetic_body = ECall fname_body args_body /\
+      preservation_direct_call_ready_expr synthetic_body /\
+      typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+        (fn_outlives fcall) (fn_lifetimes fcall)
+        (call_param_root_env (fn_params fcall) arg_roots R_args)
+        (sctx_of_ctx (fn_body_ctx fcall))
+        synthetic_body T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+      ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
+      roots_exclude_params (fn_params fcall) roots_body /\
+      root_env_excludes_params (fn_params fcall) R_body /\
+      eval env (bind_params (fn_params fcall) vs s_args)
+        synthetic_body s_body ret.
+Proof.
+  intros env Ω n R Σ Σ_args R_args arg_roots fname args fdef fcall σ
+    s s_args s_body vs ret used' Hevidence Hin Hfname Hcaps Htyped_args
+    Heval_args Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename
+    Heval_body.
+  pose proof
+    (Hevidence Ω n R Σ Σ_args R_args arg_roots args fdef fcall σ
+      s s_args vs used' Hin Hfname Hcaps Htyped_args Heval_args
+      Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename)
+    as Hbody_ready.
+  unfold callee_body_root_synthetic_direct_call_ready_at in Hbody_ready.
+  destruct Hbody_ready as
+    (fname_body & args_body & synthetic_body & T_body & Γ_out &
+      R_body & roots_body & Htarget & Hsynthetic & Hready_body &
+      Htyped_body & Hcompat_body & Hexclude_roots & Hexclude_env).
+  exists fname_body, args_body, synthetic_body, T_body, Γ_out, R_body,
+    roots_body.
+  repeat split; try assumption.
+  eapply eval_direct_call_target_expr_as_call; eassumption.
+Qed.
+
+Lemma eval_synthetic_direct_call_body_scope_inputs_from_ready_evidence_at :
+  eval_preserves_typing_ready_mutual_statement ->
+  forall env (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+      (fname : ident) args fdef fcall (σ : list lifetime) s s_args
+      s_body vs ret used',
+    direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+      env fname ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    typed_args_roots env Ω n R Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    preservation_ready_args args ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    eval env (bind_params (fn_params fcall) vs s_args)
+      (fn_body fcall) s_body ret ->
+    exists fname_body args_body synthetic_body T_body Γ_out R_body roots_body,
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname_body, args_body, synthetic_body) /\
+      synthetic_body = ECall fname_body args_body /\
+      preservation_direct_call_ready_expr synthetic_body /\
+      typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+        (fn_outlives fcall) (fn_lifetimes fcall)
+        (call_param_root_env (fn_params fcall) arg_roots R_args)
+        (sctx_of_ctx (fn_body_ctx fcall))
+        synthetic_body T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+      ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
+      roots_exclude_params (fn_params fcall) roots_body /\
+      root_env_excludes_params (fn_params fcall) R_body /\
+      eval (global_env_with_local_bounds env (fn_bounds fcall))
+        (bind_params (fn_params fcall) vs s_args)
+        synthetic_body s_body ret /\
+      eval_args_values_have_types env Ω s_args vs (fn_params fcall) /\
+      store_roots_within
+        (call_param_root_env (fn_params fcall) arg_roots R_args)
+        (bind_params (fn_params fcall) vs s_args) /\
+      store_no_shadow (bind_params (fn_params fcall) vs s_args) /\
+      root_env_no_shadow
+        (call_param_root_env (fn_params fcall) arg_roots R_args) /\
+      root_env_covers_params (fn_params fcall)
+        (call_param_root_env (fn_params fcall) arg_roots R_args) /\
+      store_frame_scope (fn_params fcall)
+        (sctx_of_ctx (params_ctx (fn_params fcall)))
+        (bind_params (fn_params fcall) vs s_args) s_args /\
+      store_frame_static_fresh
+        (sctx_of_ctx (params_ctx (fn_params fcall))) s_args /\
+      store_param_scope (fn_params fcall)
+        (bind_params (fn_params fcall) vs s_args) s_args.
+Proof.
+  intros Htyping_ready env Ω n R Σ Σ_args R_args arg_roots fname args fdef
+    fcall σ s s_args s_body vs ret used' Hevidence Hin Hfname Hcaps
+    Htyped_args Heval_args Hready_args Hprov_args Hstore Hroots Hshadow Hrn
+    Hnamed Hkeys Hrename Heval_body.
+  destruct
+    (eval_synthetic_direct_call_body_from_ready_evidence_at
+      env Ω n R Σ Σ_args R_args arg_roots fname args fdef fcall σ s s_args
+      s_body vs ret used' Hevidence Hin Hfname Hcaps Htyped_args Heval_args
+      Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename Heval_body)
+    as (fname_body & args_body & synthetic_body & T_body & Γ_out &
+        R_body & roots_body & Htarget & Hsynthetic & Hready_body &
+        Htyped_body & Hcompat_body & Hexclude_roots & Hexclude_env &
+        Heval_synthetic).
+  destruct (proj1 (proj2 Htyping_ready)
+              env s args s_args vs Heval_args Ω n Σ
+              (apply_lt_params σ (fn_params fdef)) Σ_args
+              Hready_args Hstore
+              (typed_args_roots_structural env Ω n R Σ args
+                (apply_lt_params σ (fn_params fdef)) Σ_args R_args
+                arg_roots Htyped_args))
+    as [_ [Hargs_subst _]].
+  pose proof (alpha_rename_fn_def_shape (store_names s_args)
+                fdef fcall used' Hrename) as Hshape.
+  destruct Hshape as [_ [_ Hparams_alpha]].
+  assert (Hargs_unsubst_fdef :
+    eval_args_values_have_types env Ω s_args vs (fn_params fdef)).
+  { eapply eval_args_values_have_types_apply_lt_params_inv.
+    exact Hargs_subst. }
+  assert (Hargs_fcall :
+    eval_args_values_have_types env Ω s_args vs (fn_params fcall)).
+  { eapply eval_args_values_have_types_params_alpha.
+    - exact Hparams_alpha.
+    - exact Hargs_unsubst_fdef. }
+  assert (Hnodup :
+    NoDup (ctx_names (params_ctx (fn_params fcall)))).
+  { eapply alpha_rename_fn_def_params_nodup_ctx_names. exact Hrename. }
+  assert (Hfresh : params_fresh_in_store (fn_params fcall) s_args).
+  { eapply alpha_rename_fn_def_params_fresh_in_store. exact Hrename. }
+  destruct
+    (eval_args_bind_params_call_param_root_env_ready
+      env s args s_args vs Ω n R Σ
+      (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots
+      (fn_params fcall) Heval_args Hprov_args Htyped_args Hroots Hshadow Hrn
+      Hnodup Hfresh Hargs_fcall)
+    as [Hroots_bind [Hshadow_bind [Hrn_params Hcover_params]]].
+  assert (Heval_synthetic_body_env :
+    eval (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      synthetic_body s_body ret).
+  { eapply direct_call_eval_global_env_with_local_bounds.
+    exact Heval_synthetic. }
+  assert (Hframe_start :
+    store_frame_scope (fn_params fcall)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (bind_params (fn_params fcall) vs s_args) s_args).
+  { eapply store_frame_scope_bind_params. exact Hargs_fcall. }
+  assert (Hframe_fresh_start :
+    store_frame_static_fresh
+      (sctx_of_ctx (params_ctx (fn_params fcall))) s_args).
+  { eapply params_fresh_in_store_frame_static_fresh. exact Hfresh. }
+  assert (Hscope_start :
+    store_param_scope (fn_params fcall)
+      (bind_params (fn_params fcall) vs s_args) s_args).
+  { eapply store_param_scope_bind_params. exact Hargs_fcall. }
+  exists fname_body, args_body, synthetic_body, T_body, Γ_out, R_body,
+    roots_body.
+  repeat split; assumption.
+Qed.
+
+Lemma eval_synthetic_direct_call_body_scope_callback_from_ready_evidence_at :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  forall env (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+      (fname : ident) args fdef fcall (σ : list lifetime) s s_args
+      s_body vs ret used',
+    direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+      env fname ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    typed_args_roots env Ω n R Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    preservation_ready_args args ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    eval env (bind_params (fn_params fcall) vs s_args)
+      (fn_body fcall) s_body ret ->
+    forall fname_body args_body synthetic_body T_body Gamma_out R_body
+        roots_body,
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname_body, args_body, synthetic_body) ->
+      synthetic_body = ECall fname_body args_body ->
+      typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+        (fn_outlives fcall) (fn_lifetimes fcall)
+        (call_param_root_env (fn_params fcall) arg_roots R_args)
+        (sctx_of_ctx (fn_body_ctx fcall))
+        synthetic_body T_body (sctx_of_ctx Gamma_out) R_body roots_body ->
+      exists frame_final,
+        store_frame_scope (fn_params fcall)
+          (sctx_of_ctx Gamma_out) s_body s_args /\
+        store_param_scope (fn_params fcall) s_body frame_final.
+Proof.
+  intros Hscope_synthetic Htyping_ready env Ω n R Σ Σ_args R_args
+    arg_roots fname args fdef fcall σ s s_args s_body vs ret used'
+    Hevidence Hin Hfname Hcaps Htyped_args Heval_args Hready_args
+    Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename Heval_body
+    fname_body args_body synthetic_body T_body Gamma_out R_body roots_body
+    Htarget _Hsynthetic Htyped_body.
+  destruct
+    (eval_synthetic_direct_call_body_scope_inputs_from_ready_evidence_at
+      Htyping_ready env Ω n R Σ Σ_args R_args arg_roots fname args fdef
+      fcall σ s s_args s_body vs ret used' Hevidence Hin Hfname Hcaps
+      Htyped_args Heval_args Hready_args Hprov_args Hstore Hroots Hshadow
+      Hrn Hnamed Hkeys Hrename Heval_body)
+    as (fname_body0 & args_body0 & synthetic_body0 & T_body0 & Γ_out0 &
+        R_body0 & roots_body0 & Htarget0 & _Hsynthetic0 & Hready_body0 &
+        _Htyped_body0 & _Hcompat_body & _Hexclude_roots & _Hexclude_env &
+        Heval_synthetic_body_env & _Hargs_fcall & Hroots_bind &
+        Hshadow_bind & Hrn_bind & Hcover_params & Hframe_start &
+        Hframe_fresh_start & Hparam_start).
+  rewrite Htarget in Htarget0.
+  inversion Htarget0; subst fname_body0 args_body0 synthetic_body0; clear Htarget0.
+  subst synthetic_body.
+  assert (Hcaps_call : fn_captures fcall = []).
+  { rewrite (alpha_rename_fn_def_captures
+              (store_names s_args) fdef fcall used' Hrename).
+    exact Hcaps. }
+  pose proof
+    (typed_env_roots_fn_body_ctx_to_params_ctx_when_no_captures
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      fcall (ECall fname_body args_body) T_body (sctx_of_ctx Gamma_out)
+      R_body roots_body Hcaps_call Htyped_body) as Htyped_body_params.
+  destruct (Hscope_synthetic
+              (global_env_with_local_bounds env (fn_bounds fcall))
+              (bind_params (fn_params fcall) vs s_args)
+              (ECall fname_body args_body) s_body ret Heval_synthetic_body_env
+              (fn_outlives fcall) (fn_lifetimes fcall)
+              (call_param_root_env (fn_params fcall) arg_roots R_args)
+              (sctx_of_ctx (params_ctx (fn_params fcall))) T_body
+              (sctx_of_ctx Gamma_out) R_body roots_body
+              (fn_params fcall) s_args Hready_body0 Htyped_body_params
+              Hcover_params Hroots_bind Hshadow_bind Hrn_bind
+              Hframe_start Hframe_fresh_start Hparam_start)
+    as [Hframe_final [frame_final Hparam_final]].
+  exists frame_final.
+  split; assumption.
+Qed.
+
 Lemma eval_synthetic_direct_call_body_scope_callback_from_call_statement_ready_evidence :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement ->
   eval_preserves_typing_ready_mutual_statement ->

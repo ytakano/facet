@@ -267,6 +267,11 @@ Done:
   `direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at`, with
   `direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at_of_shadow_summary_at`
   deriving it from pointwise shadow summary evidence.
+- The direct-call route now has current-call evidence variants for body and
+  scope setup:
+  `eval_synthetic_direct_call_body_from_ready_evidence_at`,
+  `eval_synthetic_direct_call_body_scope_inputs_from_ready_evidence_at`, and
+  `eval_synthetic_direct_call_body_scope_callback_from_ready_evidence_at`.
 
 Next:
 

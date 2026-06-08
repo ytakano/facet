@@ -669,6 +669,10 @@ Done:
 - End-to-end safety now has the matching branch-local strict wrapper,
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_branch_local_strict_exact_closure_check`,
   eliminating external component-body provider premises from that bridge.
+- End-to-end safety now also has an exact-body route variant of that bridge,
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_exact_body_call_synthetic_evidence_at_route_and_branch_local_strict_exact_closure_check`,
+  reusing the exact-body store-safe route adapter while keeping the strict
+  checker sidecar branch-local.
 
 Next:
 

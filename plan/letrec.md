@@ -598,6 +598,13 @@ Done:
   soundness and expose
   `component_body_no_capture_direct_call_component_exact_body_target_provider`
   from the exact closure checker.
+- The exact captured-or-direct-component-closure checker now has function- and
+  environment-level soundness lemmas,
+  `check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary_sound`
+  and
+  `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary_ready`,
+  returning the existing combined readiness Prop while retaining exact-body
+  information through the separate provider.
 
 Next:
 

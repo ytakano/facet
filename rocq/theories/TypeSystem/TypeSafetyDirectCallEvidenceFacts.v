@@ -486,6 +486,74 @@ Definition direct_call_callee_body_root_evidence (env : global_env) : Prop :=
     callee_body_root_ready_at env fcall
       (call_param_root_env (fn_params fcall) arg_roots R_args).
 
+Definition direct_call_callee_body_root_direct_call_ready_summary_bridge
+    (env : global_env) : Prop :=
+  env_fns_root_direct_call_ready_summary_evidence env ->
+  forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+      (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs
+      used',
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    typed_args_roots env Ω n R Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    callee_body_root_direct_call_ready_at env fcall
+      (call_param_root_env (fn_params fcall) arg_roots R_args).
+
+Definition direct_call_callee_body_root_shadow_direct_call_ready_summary_bridge
+    (env : global_env) : Prop :=
+  env_fns_root_shadow_direct_call_ready_summary_evidence env ->
+  forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+      (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs
+      used',
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    typed_args_roots env Ω n R Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    callee_body_root_shadow_direct_call_ready_at env fcall
+      (call_param_root_env (fn_params fcall) arg_roots R_args).
+
+Definition direct_call_callee_body_root_direct_call_ready_evidence
+    (env : global_env) : Prop :=
+  forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+      (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs
+      used',
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    typed_args_roots env Ω n R Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    callee_body_root_direct_call_ready_at env fcall
+      (call_param_root_env (fn_params fcall) arg_roots R_args).
+
 Lemma direct_call_callee_body_root_evidence_of_summary_bridge :
   forall env,
     env_fns_root_summary_evidence env ->
@@ -508,5 +576,68 @@ Proof.
     fdef fcall σ s s_args vs used' Hin Hfname Hcaps Htyped_args Heval_args
     Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
   eapply callee_body_root_ready_at_of_shadow_ready_at.
+  eapply Hbridge; eassumption.
+Qed.
+
+Lemma direct_call_callee_body_root_direct_call_ready_summary_bridge_of_summary_bridge :
+  forall env,
+    env_fns_root_summary_evidence env ->
+    direct_call_callee_body_root_summary_bridge env ->
+    direct_call_callee_body_root_direct_call_ready_summary_bridge env.
+Proof.
+  intros env Hsummary Hbridge _ Ω n R Σ Σ_args R_args arg_roots fname
+    args fdef fcall σ s s_args vs used' Hin Hfname Hcaps Htyped_args
+    Heval_args Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
+  eapply callee_body_root_direct_call_ready_at_of_ready_at.
+  eapply Hbridge; eassumption.
+Qed.
+
+Lemma direct_call_callee_body_root_shadow_direct_call_ready_summary_bridge_of_shadow_summary_bridge :
+  forall env,
+    env_fns_root_shadow_summary_evidence env ->
+    direct_call_callee_body_root_shadow_summary_bridge env ->
+    direct_call_callee_body_root_shadow_direct_call_ready_summary_bridge env.
+Proof.
+  intros env Hsummary Hbridge _ Ω n R Σ Σ_args R_args arg_roots fname
+    args fdef fcall σ s s_args vs used' Hin Hfname Hcaps Htyped_args
+    Heval_args Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
+  eapply callee_body_root_shadow_direct_call_ready_at_of_shadow_ready_at.
+  eapply Hbridge; eassumption.
+Qed.
+
+Lemma direct_call_callee_body_root_direct_call_ready_evidence_of_evidence :
+  forall env,
+    direct_call_callee_body_root_evidence env ->
+    direct_call_callee_body_root_direct_call_ready_evidence env.
+Proof.
+  intros env Hevidence Ω n R Σ Σ_args R_args arg_roots fname args
+    fdef fcall σ s s_args vs used' Hin Hfname Hcaps Htyped_args Heval_args
+    Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
+  eapply callee_body_root_direct_call_ready_at_of_ready_at.
+  eapply Hevidence; eassumption.
+Qed.
+
+Lemma direct_call_callee_body_root_direct_call_ready_evidence_of_summary_bridge :
+  forall env,
+    env_fns_root_direct_call_ready_summary_evidence env ->
+    direct_call_callee_body_root_direct_call_ready_summary_bridge env ->
+    direct_call_callee_body_root_direct_call_ready_evidence env.
+Proof.
+  intros env Hsummary Hbridge Ω n R Σ Σ_args R_args arg_roots fname args
+    fdef fcall σ s s_args vs used' Hin Hfname Hcaps Htyped_args Heval_args
+    Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
+  eapply Hbridge; eassumption.
+Qed.
+
+Lemma direct_call_callee_body_root_direct_call_ready_evidence_of_shadow_summary_bridge :
+  forall env,
+    env_fns_root_shadow_direct_call_ready_summary_evidence env ->
+    direct_call_callee_body_root_shadow_direct_call_ready_summary_bridge env ->
+    direct_call_callee_body_root_direct_call_ready_evidence env.
+Proof.
+  intros env Hsummary Hbridge Ω n R Σ Σ_args R_args arg_roots fname args
+    fdef fcall σ s s_args vs used' Hin Hfname Hcaps Htyped_args Heval_args
+    Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
+  eapply callee_body_root_direct_call_ready_at_of_shadow_direct_call_ready_at.
   eapply Hbridge; eassumption.
 Qed.

@@ -211,13 +211,14 @@ For an explicit-capture recursive closure group:
    - Done: factor evaluation normalization for `direct_call_target_expr`, so
      raw `ECall` and `ECallExpr (EFn ...)` bodies can share the synthetic
      `ECall` route in later recursive-component proofs.
-   - Done: add direct-call-ready callee evidence definitions alongside the
-     older preservation-ready evidence, with conversions from the old evidence.
+   - Done: add direct-call-ready callee evidence definitions, root/shadow
+     summary bridges, and conversion lemmas alongside the older
+     preservation-ready evidence.
    - Done: add env-level direct-call-ready summary evidence and conversions from
      the older shadow summary evidence.
-   - Next: derive a recursive direct-call route over that direct-call-ready
-     evidence, then connect the no-capture component summaries to the safety
-     theorem.
+   - Next: prove and use a recursive direct-call route over the
+     direct-call-ready evidence. Defer safety-gate connection until that route
+     is established.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

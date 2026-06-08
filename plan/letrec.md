@@ -675,18 +675,18 @@ Next:
 - Close the store-safe evidence-at prefix call route directly from an
   evaluation-derivation induction, or package a guarded/fuel-based fixpoint
   if the current big-step induction cannot expose a structurally smaller
-  nested body-call derivation under `global_env_with_local_bounds`.
+  nested body-call derivation under `global_env_with_local_bounds`. The main
+  safety bridge to target is now
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_branch_local_strict_exact_closure_check`,
+  which needs only the store-safe evidence-at route plus the strict checker
+  sidecar.
 - Only after that route is closed, switch `infer_fn_env_end2end` /
-  `infer_fns_env_end2end` from the old captured store-safe sidecar to the
-  captured-or-component-closure sidecar, then update the unconditional
-  end-to-end safety theorem to use
-  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_component_body_closure_check`.
-  A premature checker-gate switch is not sound with the current theorem stack:
-  `component_body_no_capture_direct_call_component_closure_check_provider` is
-  Prop-level and cannot be recovered from a simple `captured || component`
-  boolean gate without either the closed store-safe route path or a stronger
-  ready relation that carries the closure-check evidence in its component
-  branch.
+  `infer_fns_env_end2end` from the old captured store-safe sidecar to
+  `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary`,
+  then update the unconditional end-to-end safety theorem to use the
+  branch-local strict bridge. A premature checker-gate switch is not sound: the
+  current unconditional theorem has no route premise, and the route closure is
+  still the missing proof obligation.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.
 

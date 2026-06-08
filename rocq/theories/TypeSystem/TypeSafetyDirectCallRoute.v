@@ -3956,6 +3956,18 @@ Proof.
       eassumption.
 Qed.
 
+Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_call_statement_of_call_statement :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement ->
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_call_statement.
+Proof.
+  intros Hcall env s fname args s' v Heval Ω n R Σ T Σ' R' roots
+    Hready_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique
+    Hsummary Hbridge.
+  eapply Hcall; try eassumption.
+  eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_shadow_summary_bridge;
+    eassumption.
+Qed.
+
 Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_call_statement_of_call_statement :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_call_statement.

@@ -4398,6 +4398,7 @@ Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_br
       fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname ->
       (forall fdef fcall used used' fname_body args_body synthetic_body,
         In fdef (env_fns env) ->
+        fn_name fdef = fname ->
         alpha_rename_fn_def used fdef = (fcall, used') ->
         direct_call_target_expr (fn_body fcall) =
           Some (fname_body, args_body, synthetic_body) ->
@@ -4535,7 +4536,7 @@ Proof.
       vs ret used' Hbody_result_subset
       (fun fname_body args_body synthetic_body Htarget_body =>
         Hsummary_body_at_alpha fdef0 fcall (store_names s_args) used'
-          fname_body args_body synthetic_body H3 H2 Htarget_body)
+          fname_body args_body synthetic_body H3 eq_refl H2 Htarget_body)
       (Hevidence_body_env_all fcall)
       Hunique H3 eq_refl H0 H7 H1 Hready_args Hprov_args Hstore Hroots
       Hshadow Hrn Hnamed Hkeys H2 Hstore_bind_body_env Hroots_bind
@@ -4599,7 +4600,7 @@ Proof.
   eapply eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_summary_at_call_route_final_roots_core;
     try eassumption.
   intros fdef fcall used used' fname_body args_body synthetic_body _Hin
-    _Hrename Htarget.
+    _Hname _Hrename Htarget.
   eapply Hsummary_body_at_all. exact Htarget.
 Qed.
 

@@ -387,12 +387,18 @@ Done:
   and the direct-call route has alpha-aware call-route variants that pass the
   route's `alpha_rename_fn_def ... = (fcall, used')` evidence to nested summary
   callbacks while preserving the old broad-provider wrapper.
+- The alpha-renamed nested summary provider is now threaded through the
+  component, env/checker, and end-to-end pointwise call-route wrappers via
+  `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_summary_at_call_route_evidence`,
+  `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_summary_at_call_route_with_component_body_nested_in_evidence`,
+  and
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_summary_at_call_route_and_component_body_nested_in_evidence`.
 
 Next:
 
-- Thread alpha-renamed nested summary evidence through the env/checker/end-to-end
-  pointwise call-route wrappers. After that, isolate the remaining wide nested
-  dependency to body-env evidence and replace it with an alpha-aware provider.
+- Isolate the remaining wide nested dependency to body-env evidence and replace
+  it with an alpha-aware provider that follows the same `alpha_rename_fn_def ...`
+  route evidence.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

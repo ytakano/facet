@@ -222,6 +222,44 @@ Definition callee_body_root_shadow_no_capture_direct_call_component_store_safe_s
     roots_exclude_params (fn_params fdef) roots_body /\
     root_env_excludes_params (fn_params fdef) R_body.
 
+Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds :
+  forall env bounds fdef,
+    fn_env_unique_by_name env ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      (global_env_with_local_bounds env bounds) fdef.
+Proof.
+  intros env bounds fdef _ Hsummary.
+  destruct Hsummary as
+    (fname & args & raw_body & synthetic_body & fcallee & T_body &
+      Gamma_out & R_body & roots_body & Hcaptures & Hbody & Htarget &
+      Hsynthetic & Hsafe_args & Hin & Hname & Hcallee_captures &
+      Hnodup & Htyped & Hcompat & Hroots & Henv).
+  exists fname, args, raw_body, synthetic_body, fcallee, T_body, Gamma_out,
+    R_body, roots_body.
+  repeat split; try assumption;
+    try (apply store_safe_function_value_call_args_global_env_with_local_bounds;
+      exact Hsafe_args);
+    try (change (env_fns (global_env_with_local_bounds env bounds))
+      with (env_fns env); exact Hin);
+    try (change (typed_env_roots_shadow_safe
+      (global_env_with_local_bounds
+        (global_env_with_local_bounds env bounds)
+        (fn_bounds fdef))
+      (fn_outlives fdef) (fn_lifetimes fdef)
+      (initial_root_env_for_fn fdef)
+      (sctx_of_ctx (fn_body_ctx fdef))
+      synthetic_body T_body (sctx_of_ctx Gamma_out) R_body roots_body)
+      with (typed_env_roots_shadow_safe
+        (global_env_with_local_bounds env (fn_bounds fdef))
+        (fn_outlives fdef) (fn_lifetimes fdef)
+        (initial_root_env_for_fn fdef)
+        (sctx_of_ctx (fn_body_ctx fdef))
+        synthetic_body T_body (sctx_of_ctx Gamma_out) R_body roots_body);
+      exact Htyped).
+Qed.
+
 Lemma subst_type_params_trait_ref_nil : forall tr,
   subst_type_params_trait_ref [] tr = tr.
 Proof.

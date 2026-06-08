@@ -199,6 +199,8 @@ For an explicit-capture recursive closure group:
      it is still intentionally not wired into the gate.
    - Done: add the env-level ready lemma for that component summary, preparing
      the later gate connection without changing current accept/reject behavior.
+   - Done: add local-bounds lifting for the no-capture direct-call component
+     summary, matching the existing summary lifting style.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

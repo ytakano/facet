@@ -605,6 +605,11 @@ Done:
   `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary_ready`,
   returning the existing combined readiness Prop while retaining exact-body
   information through the separate provider.
+- End-to-end safety now also mirrors the current checker gate into the exact
+  captured-or-direct-component-closure sidecar via
+  `infer_fn_env_end2end_exact_closure_combined_gate` and
+  `infer_fns_env_end2end_exact_closure_combined_check_env_ready`. This is a
+  proof-only bridge; it does not widen checker acceptance yet.
 
 Next:
 

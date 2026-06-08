@@ -213,6 +213,8 @@ Done:
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_exact_package_and_component_body_store_safe_summary_evidence`,
   so the old whole-env component check has a single remaining replacement point:
   construction of the direct-component body-env store-safe summary provider.
+- End-to-end safety also has the matching summary call-package bridge
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_call_package_and_component_body_store_safe_summary_evidence`.
 
 Next:
 

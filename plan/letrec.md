@@ -219,6 +219,11 @@ Done:
   `component_body_store_safe_synthetic_direct_call_ready_summary_provider`,
   and the env/checker/end-to-end wrappers consume that named Prop instead of an
   inline forall.
+- Existing whole-env no-capture component readiness/checks can now construct the
+  named provider via
+  `component_body_store_safe_synthetic_direct_call_ready_summary_provider_of_no_capture_direct_call_component_ready`
+  and
+  `check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_component_body_store_safe_provider`.
 
 Next:
 

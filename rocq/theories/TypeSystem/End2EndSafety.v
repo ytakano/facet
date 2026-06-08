@@ -237,7 +237,7 @@ Proof.
   destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
     as [[] | err] eqn:Hfns; try discriminate.
   injection Hprog as <-.
-  eapply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package.
+  eapply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_component_body_store_safe_summary_evidence.
   - exact Hroot_names.
   - exact Hroot_keys.
   - exact Hpackage.
@@ -245,7 +245,8 @@ Proof.
     eapply infer_program_env_alpha_elab_unique_by_name; eauto.
   - unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
     eapply infer_fns_env_end2end_combined_check_env_ready. exact Hfns.
-  - exact Hcomponent_check.
+  - eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_component_body_store_safe_provider.
+    exact Hcomponent_check.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

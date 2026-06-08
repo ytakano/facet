@@ -2336,6 +2336,18 @@ Proof.
   eapply Hsummary. exact Hlookup.
 Qed.
 
+Lemma component_body_store_safe_synthetic_direct_call_ready_summary_provider_of_no_capture_direct_call_component_ready :
+  forall env,
+    env_fns_root_shadow_no_capture_direct_call_component_store_safe_summary_ready
+      env ->
+    component_body_store_safe_synthetic_direct_call_ready_summary_provider env.
+Proof.
+  intros env Hready f_component _Hcomponent fname fdef Hlookup.
+  eapply callee_body_root_shadow_store_safe_synthetic_direct_call_ready_summary_global_env_with_local_bounds.
+  eapply callee_body_root_shadow_store_safe_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component.
+  eapply Hready. exact Hlookup.
+Qed.
+
 Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_ready :
   forall env,
     check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
@@ -2350,6 +2362,18 @@ Proof.
     as [Hin _].
   apply forallb_forall with (x := fdef) in Hcheck; [| exact Hin].
   apply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
+  exact Hcheck.
+Qed.
+
+Lemma check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_component_body_store_safe_provider :
+  forall env,
+    check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env = true ->
+    component_body_store_safe_synthetic_direct_call_ready_summary_provider env.
+Proof.
+  intros env Hcheck.
+  eapply component_body_store_safe_synthetic_direct_call_ready_summary_provider_of_no_capture_direct_call_component_ready.
+  eapply check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_ready.
   exact Hcheck.
 Qed.
 

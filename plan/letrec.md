@@ -204,6 +204,11 @@ Done:
 - The summary exact-package component wrapper now also has a body-env evidence
   variant,
   `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_body_store_safe_summary_evidence`.
+- Env-level and checker-level summary exact-package wrappers can now take a
+  direct-component-only body-env store-safe summary provider via
+  `env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_component_body_store_safe_summary_evidence`
+  and
+  `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package_with_component_body_store_safe_summary_evidence`.
 
 Next:
 

@@ -472,13 +472,19 @@ Done:
   `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_local_body_env_provider`,
   so component-level wrappers can pass body-env recursive evidence for the
   current call without first constructing a global route Prop.
+- The result-subset body cleanup path now has a localized body-env provider
+  variant,
+  `eval_synthetic_direct_call_body_cleanup_prefix_from_result_subset_summary_at_call_statement_evidence_at_local_body_env_provider`,
+  which applies the older summary-at prefix route at the concrete nested body
+  call while supplying recursive body-env evidence only for that nested body
+  environment.
 
 Next:
 
 - Close the remaining direct-call route premises needed by the closure-check
-  bridge. For the prefix route, construct the body-env provider required by
-  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_body_env_provider`,
-  then use it with the existing summary-at route. The frame/parameter-scope
+  bridge. For the prefix route, thread the localized body-env provider helper
+  up through the final-roots summary-at call-route bridge, then package the
+  resulting prefix call route as a theorem value. The frame/parameter-scope
   route statement must also become a theorem value before the unconditional
   end-to-end safety theorem can use the closure-check bridge without extra
   assumptions.

@@ -6,6 +6,48 @@ From Facet.TypeSystem Require Export TypeSafetyDirectCallBody.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
+Lemma direct_call_target_expr_alpha_rename_expr :
+  forall rho used raw_body raw_body_r used' fname args synthetic_body,
+    direct_call_target_expr raw_body = Some (fname, args, synthetic_body) ->
+    synthetic_body = ECall fname args ->
+    alpha_rename_expr rho used raw_body = (raw_body_r, used') ->
+    exists args_r,
+      direct_call_target_expr raw_body_r = Some (fname, args_r, ECall fname args_r).
+Proof.
+  intros rho used raw_body raw_body_r used' fname args synthetic_body
+    Htarget Hsynthetic Hrename.
+  subst synthetic_body.
+  unfold direct_call_target_expr in Htarget.
+  destruct raw_body; try discriminate.
+  - simpl in Hrename.
+    destruct ((fix go (used0 : list ident) (args0 : list expr)
+      : list expr * list ident :=
+      match args0 with
+      | [] => ([], used0)
+      | arg :: rest =>
+          let (arg', used1) := alpha_rename_expr rho used0 arg in
+          let (rest', used2) := go used1 rest in
+          (arg' :: rest', used2)
+      end) used l) as [args_r used_r] eqn:Hargs.
+    inversion Htarget; subst.
+    inversion Hrename; subst.
+    exists args_r. reflexivity.
+  - destruct raw_body; try discriminate.
+    simpl in Hrename.
+    destruct ((fix go (used0 : list ident) (args0 : list expr)
+      : list expr * list ident :=
+      match args0 with
+      | [] => ([], used0)
+      | arg :: rest =>
+          let (arg', used1) := alpha_rename_expr rho used0 arg in
+          let (rest', used2) := go used1 rest in
+          (arg' :: rest', used2)
+      end) used l) as [args_r used_r] eqn:Hargs.
+    inversion Htarget; subst.
+    inversion Hrename; subst.
+    exists args_r. reflexivity.
+Qed.
+
 Definition direct_call_callee_root_evidence (env : global_env) : Prop :=
   forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
       (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs

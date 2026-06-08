@@ -223,6 +223,8 @@ For an explicit-capture recursive closure group:
    - Done: add a compatibility direct-call route wrapper that accepts synthetic
      direct-call-ready evidence alongside the older body-ready evidence, without
      changing current gate behavior.
+   - Done: add alpha-renaming shape evidence for `direct_call_target_expr`, so
+     component summaries can be transported to alpha-renamed call bodies.
    - Next: prove and use the recursive direct-call route over synthetic
      direct-call-ready evidence alone. Defer safety-gate connection until that
      route is established.

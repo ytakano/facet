@@ -205,11 +205,12 @@ For an explicit-capture recursive closure group:
      direct-call body from the no-capture component summary.
    - Done: add an env-level synthetic direct-call-ready invariant derived from
      the no-capture component summary.
+   - Done: add a no-env-ready direct-call route wrapper, so recursive
+     direct-call components no longer need the whole environment to satisfy
+     `env_fns_preservation_ready` before entering the existing direct-call route.
    - Next: derive the `direct_call_callee_body_root_evidence` bridge from the
-     recursive direct-call component summaries, then use the existing direct-call
-     route theorem instead of adding an ad hoc safety path. This also requires a
-     direct-call-ready environment invariant, because the existing route still
-     assumes `env_fns_preservation_ready`.
+     recursive direct-call component summaries and connect that bridge to the
+     safety theorem.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

@@ -5,7 +5,7 @@ From Facet.TypeSystem Require Export TypeSafetyDirectCallEvidence.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
-Theorem eval_preserves_typing_direct_call_roots_ready_with_preservation_core :
+Theorem eval_preserves_typing_direct_call_roots_ready_without_env_ready_with_preservation_core :
   eval_preserves_typing_roots_ready_mutual_statement ->
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->
@@ -24,7 +24,6 @@ Theorem eval_preserves_typing_direct_call_roots_ready_with_preservation_core :
       root_env_store_keys_named R s ->
       typed_env_roots env Ω n R Σ e T Σ' R' roots ->
       fn_env_unique_by_name env ->
-      env_fns_preservation_ready env ->
       direct_call_callee_body_root_evidence env ->
       store_typed env s' Σ' /\
       value_has_type env s' v T /\
@@ -33,7 +32,7 @@ Proof.
   intros Htyping_roots Htyping_ready Hroots_ready Hframe_scope_ready
     Htyping_roots_prefix_ready Hparam_scope_ready env s e s' v Heval Ω n R
     Σ T Σ' R' roots Hready Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped
-    Hunique _ Hcallee_roots.
+    Hunique Hcallee_roots.
   inversion Hready as [e_ready Hpres_ready | fname args Hready_args]; subst.
   - pose proof
       (preservation_ready_expr_implies_provenance_ready_direct_call
@@ -154,6 +153,42 @@ Proof.
             Hparam_scope_ready);
           eauto
     end; eauto.
+Qed.
+
+Theorem eval_preserves_typing_direct_call_roots_ready_with_preservation_core :
+  eval_preserves_typing_roots_ready_mutual_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_package_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      preservation_direct_call_ready_expr e ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      env_fns_preservation_ready env ->
+      direct_call_callee_body_root_evidence env ->
+      store_typed env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s'.
+Proof.
+  intros Htyping_roots Htyping_ready Hroots_ready Hframe_scope_ready
+    Htyping_roots_prefix_ready Hparam_scope_ready env s e s' v Heval Ω n R
+    Σ T Σ' R' roots Hready Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped
+    Hunique _ Hcallee_roots.
+  eapply
+    (eval_preserves_typing_direct_call_roots_ready_without_env_ready_with_preservation_core
+      Htyping_roots Htyping_ready Hroots_ready Hframe_scope_ready
+      Htyping_roots_prefix_ready Hparam_scope_ready);
+    eassumption.
 Qed.
 
 Theorem eval_preserves_typing_direct_call_roots_provenance_ready_with_preservation_core :

@@ -417,6 +417,36 @@ Proof.
     eassumption.
 Qed.
 
+Theorem eval_preserves_typing_direct_call_roots_ready_without_env_ready :
+  forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      preservation_direct_call_ready_expr e ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      direct_call_callee_body_root_evidence env ->
+      store_typed env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s'.
+Proof.
+  eapply
+    (eval_preserves_typing_direct_call_roots_ready_without_env_ready_with_preservation_core
+      eval_preserves_typing_roots_ready_mutual
+      eval_preserves_typing_ready_mutual
+      eval_preserves_roots_ready_mutual
+      eval_preserves_frame_scope_roots_ready_mutual
+      (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
+         eval_preserves_typing_roots_ready_prefix_mutual)
+      eval_preserves_param_scope_roots_ready_mutual);
+    eassumption.
+Qed.
+
 Theorem eval_preserves_typing_direct_call_roots_ready :
   forall env s e s' v,
     eval env s e s' v ->
@@ -436,15 +466,9 @@ Theorem eval_preserves_typing_direct_call_roots_ready :
       value_has_type env s' v T /\
       store_ref_targets_preserved env s s'.
 Proof.
-  eapply
-    (eval_preserves_typing_direct_call_roots_ready_with_preservation_core
-      eval_preserves_typing_roots_ready_mutual
-      eval_preserves_typing_ready_mutual
-      eval_preserves_roots_ready_mutual
-      eval_preserves_frame_scope_roots_ready_mutual
-      (eval_preserves_typing_roots_ready_prefix_mutual_statement_to_package
-         eval_preserves_typing_roots_ready_prefix_mutual)
-      eval_preserves_param_scope_roots_ready_mutual);
+  intros env s e s' v Heval Ω n R Σ T Σ' R' roots Hready Hstore
+    Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique _ Hcallee_roots.
+  eapply eval_preserves_typing_direct_call_roots_ready_without_env_ready;
     eassumption.
 Qed.
 

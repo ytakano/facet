@@ -149,14 +149,17 @@ Done:
   `check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_store_safe_synthetic_direct_call_ready_summary_when_not_captured`.
 - The two concrete call-statement route premises can now be packaged for
   summary-bridge narrow-core helpers via
-  `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement_of_call_statements`.
+  `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement_of_call_statements`
+  and lifted directly to summary-bridge preservation with
+  `eval_preserves_synthetic_direct_call_ready_with_summary_bridge_narrow_core_of_call_statement_routes`.
 
 Next:
 
 - Close the two recursive synthetic direct-call route statements required by
   the component branch:
-  `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement` and
-  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement`.
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement`
+  and
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement`.
   The current wrapper graph is intentionally not closed by a simple theorem
   alias: `*_statement_of_call_statement` reduces these to the direct-call
   call-statement premises, while the cleanup/summary bridges that produce the
@@ -596,6 +599,10 @@ For an explicit-capture recursive closure group:
      `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement_of_call_statements`,
      packaging the prefix and frame/parameter-scope call-statement route
      premises for existing summary-bridge narrow-core helpers.
+   - Done: add summary-bridge preservation corollary
+     `eval_preserves_synthetic_direct_call_ready_with_summary_bridge_narrow_core_of_call_statement_routes`,
+     lifting the two call-statement route premises directly through the
+     summary-bridge narrow-core wrapper.
    - Done: add non-invasive `End2EndSafety.v` bridge lemmas
      `infer_fn_env_end2end_combined_gate` and
      `infer_fns_env_end2end_combined_check_env_ready`, proving that the current

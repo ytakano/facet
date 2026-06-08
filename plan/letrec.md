@@ -499,15 +499,20 @@ Done:
   `ECall` body evaluation and preserving the evidence-at summary/evidence
   inputs. This is the insertion point for an evaluation-derivation induction
   hypothesis when closing the evidence-at prefix route directly.
+- The evidence-at final-roots bridge now has body-callback variants:
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_body_call_callback_final_roots_core`
+  connects final-roots preservation to the concrete nested body-call callback,
+  and
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_body_call_callback`
+  factors the full evidence-at prefix route through that callback plus a
+  prefix-to-full-store premise.
 
 Next:
 
 - Close the remaining direct-call route premises needed by the closure-check
-  bridge. Next, thread the concrete nested-call callback helper up into the
-  evidence-at final-roots bridge, then use evaluation-derivation induction to
-  supply that callback and prove
-  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at`
-  as a theorem value.
+  bridge. The evidence-at prefix route is now factored by a body-call callback;
+  next, prove the prefix-to-full-store premise or remove that requirement, then
+  supply the body-call callback from evaluation-derivation induction.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

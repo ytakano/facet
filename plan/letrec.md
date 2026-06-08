@@ -85,6 +85,13 @@ Done:
   `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_mutual`,
   which combines the OR sidecar checker with the existing whole-env no-capture
   component checker to supply store-safe synthetic evidence.
+- A narrower wrapper,
+  `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_synthetic_route`,
+  now instantiates the six ordinary mutual preservation facts internally. The
+  remaining open inputs for the component branch are the two recursive synthetic
+  direct-call route statements:
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement` and
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement`.
 - `End2EndSafety.v` now derives the combined OR sidecar from the current old
   end-to-end gate via `infer_fn_env_end2end_combined_gate` and
   `infer_fns_env_end2end_combined_check_env_ready`, without changing checker
@@ -92,6 +99,10 @@ Done:
 
 Next:
 
+- Close the two recursive synthetic direct-call route statements required by
+  the component branch:
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement` and
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement`.
 - Scope the store-safe synthetic summary evidence needed by the component branch
   so mixed programs do not have to make every function a direct-call component.
   Then switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old
@@ -454,14 +465,23 @@ For an explicit-capture recursive closure group:
      `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_mutual`,
      which uses the whole-env no-capture component checker as a temporary source
      of store-safe synthetic evidence.
+   - Done: add
+     `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_with_synthetic_route`,
+     which closes the six ordinary mutual preservation premises internally and
+     leaves only the two recursive synthetic direct-call route statements as
+     explicit inputs.
    - Done: add non-invasive `End2EndSafety.v` bridge lemmas
      `infer_fn_env_end2end_combined_gate` and
      `infer_fns_env_end2end_combined_check_env_ready`, proving that the current
      old gate implies the combined OR sidecar.
-   - Remaining gap: scope the store-safe synthetic summary evidence required by
-     the component branch, then switch the extracted end-to-end checker gate to
-     the combined sidecar and move direct self/mutual recursion tests from
-     invalid to valid.
+   - Remaining gap: prove the concrete recursive synthetic direct-call route
+     statements
+     `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement`
+     and `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement`,
+     then scope the store-safe synthetic summary evidence required by the
+     component branch, switch the extracted end-to-end checker gate to the
+     combined sidecar, and move direct self/mutual recursion tests from invalid
+     to valid.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

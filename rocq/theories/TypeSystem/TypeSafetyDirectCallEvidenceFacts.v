@@ -430,6 +430,21 @@ Definition env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence
     lookup_fn fname (env_fns env) = Some fdef ->
     callee_body_root_shadow_synthetic_direct_call_ready_summary env fdef.
 
+Definition fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+    (env : global_env) (fname : ident) : Prop :=
+  forall fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_synthetic_direct_call_ready_summary env fdef.
+
+Lemma fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_env :
+  forall env fname,
+    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname.
+Proof.
+  intros env fname Hsummary fdef Hlookup.
+  eapply Hsummary. exact Hlookup.
+Qed.
+
 Definition env_fns_root_provenance_summary_evidence
     (env : global_env) : Prop :=
   forall fname fdef,

@@ -251,6 +251,10 @@ Done:
   and
   `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_closure_summary`,
   with soundness back to the existing combined readiness Prop.
+- Direct-call evidence now has a pointwise summary-evidence form,
+  `fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at`, plus an
+  env-wide projection lemma. This is the replacement point for package variants
+  that should consume only the current `ECall` target instead of all `env_fns`.
 
 Next:
 

@@ -185,10 +185,12 @@ Done:
 - End-to-end safety now has a bridge from a plain summary exact-call package
   plus the component sidecar check via
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_exact_package_and_component_check`.
+- End-to-end safety can now consume the plain summary call package via
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_call_package_and_component_check`.
 
 Next:
 
-- Close `eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement`
+- Close `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement`
   through the summary/result-subset path. The raw prefix call-statement remains
   too strong for direct proof: `store_typed_prefix` does not imply the raw
   evidence's `store_typed`, and raw synthetic evidence lacks

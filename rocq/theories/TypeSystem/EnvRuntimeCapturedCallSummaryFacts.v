@@ -2768,6 +2768,30 @@ Definition env_fns_root_shadow_strict_exact_closure_captured_or_no_capture_direc
     callee_body_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
       env fdef.
 
+Lemma callee_body_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_of_strict_exact_closure :
+  forall env fdef,
+    callee_body_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+      env fdef ->
+    callee_body_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env fdef.
+Proof.
+  intros env fdef [Hcaptured | (_Hcomponent_check & Hcomponent & _Hexact)].
+  - left. exact Hcaptured.
+  - right. exact Hcomponent.
+Qed.
+
+Lemma env_fns_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_ready_of_strict_exact_closure :
+  forall env,
+    env_fns_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_ready
+      env ->
+    env_fns_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_ready
+      env.
+Proof.
+  intros env Hstrict fname fdef Hlookup.
+  eapply callee_body_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_of_strict_exact_closure.
+  eapply Hstrict. exact Hlookup.
+Qed.
+
 Lemma check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_sound :
   forall env fdef,
     check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary

@@ -627,6 +627,11 @@ Done:
   and
   `env_fns_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_ready`,
   with checker soundness lemmas preserving the exact-closure component branch.
+- Strict exact-closure readiness now converts back to the existing combined
+  readiness through
+  `callee_body_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_of_strict_exact_closure`
+  and
+  `env_fns_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_ready_of_strict_exact_closure`.
 
 Next:
 

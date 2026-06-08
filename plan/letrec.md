@@ -656,6 +656,12 @@ Done:
 - End-to-end safety now has a strict-sidecar bridge that consumes an exact
   closure provider directly:
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_strict_exact_closure_check_and_exact_closure_provider`.
+- Component summary facts now have local single-component closure-check helpers,
+  `component_body_no_capture_direct_call_component_target_in_of_closure_check`
+  and
+  `component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_of_closure_check`,
+  plus exact-closure variants, so future safety wrappers can use branch-local
+  closure evidence without a whole-env provider.
 
 Next:
 

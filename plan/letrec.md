@@ -319,13 +319,16 @@ Done:
   `eval_preserves_synthetic_direct_call_ready_summary_at_call_package_statement`.
   This records the route shape needed for recursive body cleanup, where only
   `store_typed_prefix` is available.
+- The callee-body cleanup helper now has a pointwise call-route variant,
+  `eval_synthetic_direct_call_body_cleanup_prefix_from_result_subset_summary_at_call_statement_evidence`,
+  which consumes summary evidence for the body's concrete synthetic `ECall`
+  target and a nested body-env evidence callback.
 
 Next:
 
-- Add a cleanup-prefix helper that consumes the new pointwise prefix-call route
-  for the callee body's synthetic `ECall`, instead of requiring env-wide
-  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence` for the
-  whole body environment.
+- Thread the new pointwise cleanup helper into the final-roots and frame/scope
+  summary-at exact-call wrappers, replacing their direct calls to the older
+  env-wide body-evidence cleanup helper.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

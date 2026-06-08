@@ -622,11 +622,14 @@ For an explicit-capture recursive closure group:
      statements
      `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement`
      and
-     `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement`,
-     then localize the store-safe synthetic summary evidence required by the
-     component branch, switch the extracted end-to-end checker gate to the
-     combined sidecar, and move direct self/mutual recursion tests from invalid
-     to valid.
+     `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement`.
+     The current hard sub-obligation is supplying the body-env synthetic
+     direct-call evidence under `global_env_with_local_bounds env (fn_bounds fcall)`
+     while using the prefix/scope call routes simultaneously for the recursive
+     body call. Then finish localizing the store-safe synthetic summary evidence
+     required by the component branch, switch the extracted end-to-end checker
+     gate to the combined sidecar, and move direct self/mutual recursion tests
+     from invalid to valid.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

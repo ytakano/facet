@@ -173,6 +173,9 @@ Done:
 - Store-safe exact-call packaging can now be derived from the plain summary
   exact-call package via
   `eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement_of_plain_summary_exact_package`.
+- No-capture direct-call component safety can now consume a plain summary
+  exact-call package through
+  `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_of_summary_exact_package`.
 
 Next:
 

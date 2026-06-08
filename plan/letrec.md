@@ -712,6 +712,12 @@ Done:
   `direct_call_eval_height_ecall_inv`, extracting the argument and callee-body
   height from an `ECall` derivation and proving the body height is strictly
   smaller than the call height.
+- The route layer now has a height-aware callback wrapper,
+  `eval_synthetic_direct_call_body_cleanup_prefix_from_result_subset_summary_at_call_statement_body_call_callback_prefix_store_with_height`,
+  which can pass a nested `ECall` evaluation-height proof to body-call
+  callbacks. This confirmed that evaluation height alone does not close the
+  exact-body route: when `fn_body fcall` is itself the target `ECall`, the
+  nested call is the whole body, so no strict body-height decrease is available.
 
 Next:
 

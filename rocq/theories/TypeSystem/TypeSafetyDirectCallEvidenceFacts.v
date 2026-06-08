@@ -276,6 +276,24 @@ Proof.
   apply PDCR_Ready. exact Hpres.
 Qed.
 
+Lemma callee_body_root_shadow_synthetic_direct_call_ready_at_of_result_subset :
+  forall env fcall R_params roots_bound,
+    callee_body_root_shadow_synthetic_direct_call_ready_at_result_subset
+      env fcall R_params roots_bound ->
+    callee_body_root_shadow_synthetic_direct_call_ready_at env fcall R_params.
+Proof.
+  intros env fcall R_params roots_bound Hready.
+  unfold callee_body_root_shadow_synthetic_direct_call_ready_at_result_subset
+    in Hready.
+  unfold callee_body_root_shadow_synthetic_direct_call_ready_at.
+  destruct Hready as
+    (fname & args & synthetic_body & T_body & Γ_out & R_body & roots_body &
+      Htarget & Hsynthetic & Hready_body & Htyped & Hcompat & Hexclude_roots &
+      Hexclude_env & _Hsubset).
+  exists fname, args, synthetic_body, T_body, Γ_out, R_body, roots_body.
+  repeat split; assumption.
+Qed.
+
 Lemma callee_body_root_synthetic_direct_call_ready_at_of_shadow :
   forall env fcall R_params,
     callee_body_root_shadow_synthetic_direct_call_ready_at env fcall

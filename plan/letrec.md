@@ -255,6 +255,10 @@ Done:
   `fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at`, plus an
   env-wide projection lemma. This is the replacement point for package variants
   that should consume only the current `ECall` target instead of all `env_fns`.
+- The direct-call bridge now has a pointwise exact helper,
+  `direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_summary_with_preservation_core`,
+  derived from the existing result-subset helper and a result-subset-to-ready
+  conversion.
 
 Next:
 

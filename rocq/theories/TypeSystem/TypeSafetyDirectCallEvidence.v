@@ -888,6 +888,37 @@ Proof.
 Qed.
 
 
+
+Lemma direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_summary_with_preservation_core :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+      args fdef fcall (σ : list lifetime) s s_args vs used',
+      callee_body_root_shadow_synthetic_direct_call_ready_summary env fdef ->
+      fn_captures fdef = [] ->
+      typed_args_roots env Ω n R Σ args
+        (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+      eval_args env s args s_args vs ->
+      provenance_ready_args args ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+      callee_body_root_shadow_synthetic_direct_call_ready_at
+        env fcall
+        (call_param_root_env (fn_params fcall) arg_roots R_args).
+Proof.
+  intros Hroot_names Hroot_keys env Ω n R Σ Σ_args R_args arg_roots
+    args fdef fcall σ s s_args vs used' Hsummary Hcaps Htyped_args
+    Heval_args Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Hrename.
+  eapply callee_body_root_shadow_synthetic_direct_call_ready_at_of_result_subset.
+  eapply direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_summary_with_result_subset_with_preservation_core;
+    eassumption.
+Qed.
+
 Lemma direct_call_callee_body_root_shadow_provenance_summary_bridge_of_summary_with_result_subset_with_preservation_core :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

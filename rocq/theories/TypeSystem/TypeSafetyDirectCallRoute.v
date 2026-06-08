@@ -175,6 +175,25 @@ Definition eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_
       store_frame_scope ps Σ' s' frame /\
       exists frame', store_param_scope ps s' frame'.
 
+Definition eval_preserves_synthetic_direct_call_ready_summary_call_package_statement
+    : Prop :=
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_call_statement /\
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_call_statement.
+
+Lemma eval_preserves_synthetic_direct_call_ready_summary_call_package_prefix :
+  eval_preserves_synthetic_direct_call_ready_summary_call_package_statement ->
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_call_statement.
+Proof.
+  intros [Hprefix _]. exact Hprefix.
+Qed.
+
+Lemma eval_preserves_synthetic_direct_call_ready_summary_call_package_scope :
+  eval_preserves_synthetic_direct_call_ready_summary_call_package_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_call_statement.
+Proof.
+  intros [_ Hscope]. exact Hscope.
+Qed.
+
 Lemma eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement_of_call_statement :
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement ->
@@ -2243,6 +2262,128 @@ Proof.
   - eapply Hsummary_call; eassumption.
 Qed.
 
+
+Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_with_summary_bridge_package_prefix_narrow_core :
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_call_package_statement ->
+  forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      preservation_direct_call_ready_expr e ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+      direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge env ->
+      store_typed_prefix env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R'.
+Proof.
+  intros Hprefix_ready Hpackage.
+  eapply eval_preserves_typing_roots_synthetic_direct_call_ready_with_summary_bridge_prefix_narrow_core.
+  - exact Hprefix_ready.
+  - exact (eval_preserves_synthetic_direct_call_ready_summary_call_package_prefix
+      Hpackage).
+Qed.
+
+Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_with_summary_bridge_package_narrow_core :
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_call_package_statement ->
+  forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots
+        ps frame,
+      preservation_direct_call_ready_expr e ->
+      store_typed env s Σ ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+      direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge env ->
+      root_env_covers_params ps R ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      store_frame_scope ps Σ s frame ->
+      store_frame_static_fresh Σ frame ->
+      store_param_scope ps s frame ->
+      store_frame_scope ps Σ' s' frame /\
+      exists frame', store_param_scope ps s' frame'.
+Proof.
+  intros Hframe_ready Hparam_ready Hpackage.
+  eapply eval_preserves_frame_param_scope_synthetic_direct_call_ready_with_summary_bridge_narrow_core.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - exact (eval_preserves_synthetic_direct_call_ready_summary_call_package_scope
+      Hpackage).
+Qed.
+
+Theorem eval_preserves_synthetic_direct_call_ready_with_summary_bridge_package_narrow_core :
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_call_package_statement ->
+  (forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      preservation_direct_call_ready_expr e ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+      direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge env ->
+      store_typed_prefix env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R') /\
+  (forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots
+        ps frame,
+      preservation_direct_call_ready_expr e ->
+      store_typed env s Σ ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+      direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge env ->
+      root_env_covers_params ps R ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      store_frame_scope ps Σ s frame ->
+      store_frame_static_fresh Σ frame ->
+      store_param_scope ps s frame ->
+      store_frame_scope ps Σ' s' frame /\
+      exists frame', store_param_scope ps s' frame').
+Proof.
+  intros Hprefix_ready Hframe_ready Hparam_ready Hpackage.
+  split.
+  - eapply eval_preserves_typing_roots_synthetic_direct_call_ready_with_summary_bridge_package_prefix_narrow_core;
+      eassumption.
+  - eapply eval_preserves_frame_param_scope_synthetic_direct_call_ready_with_summary_bridge_package_narrow_core;
+      eassumption.
+Qed.
 
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_with_summary_bridge_core :
   eval_preserves_typing_roots_ready_mutual_statement ->

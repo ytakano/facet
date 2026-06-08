@@ -26,11 +26,11 @@ Done:
 
 Next:
 
-- Close the remaining direct-`ECall` proof obligations for the synthetic
-  direct-call-ready prefix route and frame/parameter scope route. The broad
-  proof-interface assumptions have been split so existing provenance-ready
-  mutual packages discharge the non-call branch; the remaining gap is the
-  concrete recursive direct-call branch.
+- Prove the combined direct-`ECall` synthetic direct-call-ready summary
+  package, or wire it as the recursive route induction hypothesis. The prefix
+  preservation and frame/parameter scope obligations are now threaded as one
+  combined recursive obligation, avoiding the previous circular dependency
+  between their separate wrappers.
 - After those obligations are closed, add the safety-gate connection that feeds
   env-level synthetic shadow summary evidence into the recursive route, then
   move the direct recursion invalid tests to valid tests when the end-to-end
@@ -298,10 +298,16 @@ For an explicit-capture recursive closure group:
      preservation path using the synthetic cleanup result. The summary call
      scope interface now carries the store typing and root-name/key facts
      required by the cleanup and summary-bridge evidence.
-   - Next: prove the remaining summary/bridge direct-`ECall` prefix
-     preservation obligation without depending on the broad synthetic recursive
-     assumptions, then add the safety-gate connection that feeds env-level
-     synthetic shadow summary evidence into this route.
+   - Done: package the summary/bridge direct-`ECall` prefix
+     preservation and frame/parameter scope obligations into
+     `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement`,
+     with projection lemmas and package-based narrow route wrappers. This gives
+     future recursive proofs a single combined obligation instead of two
+     separately circular obligations.
+   - Next: prove the combined summary/bridge direct-`ECall` package by direct
+     `ECall` eval induction, or wire the combined package as the recursive
+     direct-call route induction hypothesis, then add the safety-gate connection
+     that feeds env-level synthetic shadow summary evidence into this route.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

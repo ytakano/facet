@@ -165,6 +165,9 @@ Done:
   `direct_call_callee_body_root_synthetic_direct_call_ready_evidence_global_env_with_local_bounds_of_shadow_summary`,
   factoring reconstruction of body-env raw synthetic direct-call evidence from
   shadow summary evidence plus the existing summary bridge.
+- The route layer also packages top-level and body-env raw synthetic
+  direct-call evidence as
+  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence_package_of_shadow_summary`.
 
 Next:
 

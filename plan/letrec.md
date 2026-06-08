@@ -507,44 +507,26 @@ Done:
   factors the full evidence-at prefix route through that callback plus a
   prefix-to-full-store premise.
 - The prefix-to-full-store premise cannot be discharged directly: `store_typed_prefix`
-  does not imply full `store_typed`. The result-subset side now has a
-  prefix-store bridge,
-  `callee_body_root_shadow_synthetic_direct_call_ready_result_subset_from_summary_at_prefix_store`,
-  backed by
-  `direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_summary_with_result_subset_prefix_store_core`.
-  This bridge still requires static `root_env_ctx_*_named R Sigma` premises,
-  because prefix stores cannot recover those facts from runtime store names for
-  the hidden tail frame. The scope side now also has a prefix-store callback,
-  `eval_synthetic_direct_call_body_scope_callback_from_result_subset_prefix_store`,
-  which derives frame/parameter scope from the result-subset body evidence and
-  prefix preservation instead of full-store evidence. The next reduction is a
-  prefix-only cleanup core has been added as
-  `eval_synthetic_direct_call_body_cleanup_prefix_from_result_subset_summary_at_call_statement_body_call_callback_prefix_store`.
-  It avoids `eval_direct_call_body_cleanup_preserves_value_and_refs_core` by
-  using prefix argument preservation plus the hidden-frame cleanup facts for
-  removed parameters. The remaining reduction is to thread or derive the static
-  naming premises at the call route, use the prefix-store result-subset/scope
-  helpers with this cleanup core, and remove the full-store premise. The prefix
-  result-subset bridge has been weakened so it no longer asks for
-  `root_env_ctx_*_named R Sigma` over the whole incoming root environment; it now
-  consumes only the argument-result runtime naming facts for `R_args` and
-  `arg_roots`, which are the facts the proof actually uses. Those facts are
-  still currently available only through the full-store root-name preservation
-  package. A static-ctx prefix wrapper,
-  `eval_args_preserves_root_names_keys_ready_prefix_ctx_full`, now packages all
-  three facts when `root_env_ctx_*_named R Sigma` is available, but the route
-  still needs either those static premises or a true prefix root-name preservation
-  theorem to remove the full-store premise.
+  does not imply full `store_typed`. The route now avoids that premise in the
+  body-callback factor by adding
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_body_call_callback_prefix_store_final_roots_core`
+  and rewiring
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_body_call_callback`
+  to call it. The prefix route now uses prefix argument typing, the
+  prefix-store result-subset/scope helpers, and the prefix-only cleanup helper.
+- Argument runtime naming for this prefix route is derived through
+  `eval_args_preserves_root_names_keys_preservation_ready_runtime_with_static_expr`,
+  so the remaining new input at this layer is
+  `preservation_ready_expr_static_runtime_named_statement` rather than a full
+  store-typed premise.
 
 Next:
 
-- Close the remaining direct-call route premises needed by the closure-check
-  bridge. Next, either thread `root_env_ctx_*_named R Sigma` to the prefix route
-  or prove a true prefix-store root-name/key preservation theorem for evaluated
-  arguments; then wire the prefix-store result-subset/scope helpers into the new
-  prefix-only cleanup core and remove the full-store premise from the
-  body-callback route factor. After that, supply the body-call callback from
-  evaluation-derivation induction.
+- Prove or package `preservation_ready_expr_static_runtime_named_statement` for
+  all preservation-ready expressions needed by call arguments, then thread it
+  into the enclosing evidence-at call-route closure.
+- Supply the body-call callback from evaluation-derivation induction so the
+  evidence-at prefix call route closes without recursive full-store recovery.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

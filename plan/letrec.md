@@ -341,12 +341,16 @@ Done:
   `component_body_synthetic_direct_call_ready_nested_body_env_evidence_in_provider`,
   matching the extra callbacks required by the pointwise call package for
   alpha-renamed callee bodies.
+- Component-level direct-call safety can now consume the pointwise call-route
+  final-roots core directly via
+  `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_summary_at_call_route_evidence`,
+  taking the component body's target summary, one nested target-summary
+  callback, and one nested body-env evidence callback.
 
 Next:
 
-- Add component/env/checker/end-to-end safety wrappers that consume the new
-  pointwise call package plus the nested body-target providers, replacing the
-  older env-wide recursive body evidence requirement on this path.
+- Lift the component-level pointwise call-route wrapper to env/checker/end-to-end
+  safety wrappers that consume the named nested providers.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

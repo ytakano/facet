@@ -34,6 +34,11 @@ Done:
   to the existing synthetic summary evidence and lifted through local-bounds
   environments, so later safety wrappers can keep the stronger store-safe data
   while reusing the older summary/bridge route where possible.
+- Store-safe direct-call arguments are stable under alpha-renaming. The facts
+  file now has both `store_safe_function_value_call_args_alpha_rename_exprs`
+  for the named list helper and
+  `store_safe_function_value_call_args_alpha_rename_call_go` for the local
+  `fix go` shape used while normalizing synthetic `ECall` targets.
 
 Next:
 
@@ -46,8 +51,9 @@ Next:
   variant. The no-capture component summary now retains
   `store_safe_function_value_call_args env args` when converted to synthetic
   direct-call-ready evidence; the next proof step should consume that stronger
-  evidence instead of trying to recover ctx-level named/key invariants from a
-  prefix store.
+  evidence, using the alpha-renaming helpers above for normalized target args,
+  instead of trying to recover ctx-level named/key invariants from a prefix
+  store.
 - After those obligations are closed, add the safety-gate connection that feeds
   env-level synthetic shadow summary evidence into the recursive route, then
   move the direct recursion invalid tests to valid tests when the end-to-end

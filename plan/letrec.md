@@ -610,6 +610,11 @@ Done:
   `infer_fn_env_end2end_exact_closure_combined_gate` and
   `infer_fns_env_end2end_exact_closure_combined_check_env_ready`. This is a
   proof-only bridge; it does not widen checker acceptance yet.
+- End-to-end safety now has
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_exact_body_call_synthetic_evidence_at_route_and_component_body_closure_check`,
+  which builds the store-safe evidence-at route from the ordinary evidence-at
+  route plus exact body-call providers, then reuses the existing component
+  closure-check safety wrapper.
 
 Next:
 

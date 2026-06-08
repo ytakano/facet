@@ -28,6 +28,28 @@ Definition eval_preserves_typing_roots_synthetic_direct_call_ready_statement : P
       store_no_shadow s' /\
       root_env_no_shadow R'.
 
+Definition eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement : Prop :=
+  forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      preservation_direct_call_ready_expr e ->
+      store_typed_prefix env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      direct_call_callee_body_root_synthetic_direct_call_ready_evidence env ->
+      store_typed_prefix env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R'.
+
 Definition eval_preserves_typing_synthetic_direct_call_ready_statement : Prop :=
   forall env s e s' v,
     eval env s e s' v ->
@@ -729,8 +751,8 @@ Proof.
   split; assumption.
 Qed.
 
-Lemma eval_synthetic_direct_call_body_cleanup_package_from_ready_evidence :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_statement ->
+Lemma eval_synthetic_direct_call_body_cleanup_prefix_package_from_ready_evidence :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->
   forall env (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
@@ -755,9 +777,9 @@ Lemma eval_synthetic_direct_call_body_cleanup_package_from_ready_evidence :
     root_env_store_roots_named R s ->
     root_env_store_keys_named R s ->
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
-    store_typed (global_env_with_local_bounds env (fn_bounds fcall))
+    store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
       (bind_params (fn_params fcall) vs s_args)
-      (sctx_of_ctx (fn_body_ctx fcall)) ->
+      (sctx_of_ctx (params_ctx (fn_params fcall))) ->
     store_roots_within
       (call_param_root_env (fn_params fcall) arg_roots R_args)
       (bind_params (fn_params fcall) vs s_args) ->
@@ -847,23 +869,34 @@ Proof.
   assert (Hunique_body_env : fn_env_unique_by_name body_env).
   { subst body_env.
     unfold fn_env_unique_by_name in *; simpl; exact Hunique. }
+  assert (Hcaps_call_for_route : fn_captures fcall = []).
+  { rewrite (alpha_rename_fn_def_captures
+              (store_names s_args) fdef fcall used' Hrename).
+    exact Hcaps. }
+  pose proof
+    (typed_env_roots_fn_body_ctx_to_params_ctx_when_no_captures
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      fcall synthetic_body T_body (sctx_of_ctx Γ_out) R_body roots_body
+      Hcaps_call_for_route Htyped_body) as Htyped_body_params_for_route.
   destruct (Hsynthetic_route body_env
               (bind_params (fn_params fcall) vs s_args)
               synthetic_body s_body ret Heval_synthetic_body_env
               (fn_outlives fcall) (fn_lifetimes fcall)
               (call_param_root_env (fn_params fcall) arg_roots R_args)
-              (sctx_of_ctx (fn_body_ctx fcall)) T_body
+              (sctx_of_ctx (params_ctx (fn_params fcall))) T_body
               (sctx_of_ctx Γ_out) R_body roots_body Hready_body
               Hstore_bind_body_env Hroots_bind Hshadow_bind Hrn_bind
               Hnamed_bind Hkeys_bind
-              Htyped_body Hunique_body_env Hevidence_body_env)
+              Htyped_body_params_for_route Hunique_body_env Hevidence_body_env)
     as [Hstore_body [Hv_body [Hpres_body [Hroots_body [Hret_roots
         [Hshadow_body Hrn_body]]]]]].
   assert (Hstore_body_env :
     store_typed_prefix env s_body (sctx_of_ctx Γ_out)).
   { subst body_env.
     eapply direct_call_store_typed_prefix_clear_global_env_local_bounds.
-    apply store_typed_prefix_exact. exact Hstore_body. }
+    exact Hstore_body. }
   assert (Hv_body_env : value_has_type env s_body ret T_body).
   { subst body_env.
     eapply direct_call_value_has_type_clear_global_env_local_bounds.
@@ -919,8 +952,8 @@ Proof.
     eassumption.
 Qed.
 
-Lemma eval_synthetic_direct_call_body_cleanup_from_ready_evidence :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_statement ->
+Lemma eval_synthetic_direct_call_body_cleanup_prefix_from_ready_evidence :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->
   forall env (Omega : outlives_ctx) (n : nat) R Sigma Sigma_args R_args arg_roots
@@ -945,9 +978,9 @@ Lemma eval_synthetic_direct_call_body_cleanup_from_ready_evidence :
     root_env_store_roots_named R s ->
     root_env_store_keys_named R s ->
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
-    store_typed (global_env_with_local_bounds env (fn_bounds fcall))
+    store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
       (bind_params (fn_params fcall) vs s_args)
-      (sctx_of_ctx (fn_body_ctx fcall)) ->
+      (sctx_of_ctx (params_ctx (fn_params fcall))) ->
     store_roots_within
       (call_param_root_env (fn_params fcall) arg_roots R_args)
       (bind_params (fn_params fcall) vs s_args) ->
@@ -1016,7 +1049,7 @@ Proof.
     Hnamed Hkeys Hrename Hstore_bind_body_env Hroots_bind Hshadow_bind
     Hrn_bind Hnamed_bind Hkeys_bind Heval_body Hscopes.
   destruct
-    (eval_synthetic_direct_call_body_cleanup_package_from_ready_evidence
+    (eval_synthetic_direct_call_body_cleanup_prefix_package_from_ready_evidence
       Hsynthetic_route Htyping_ready Hroots_ready env Omega n R Sigma
       Sigma_args R_args arg_roots fname args fdef fcall sigma s s_args
       s_body vs ret used' Hevidence Hevidence_body_env Hunique Hin Hfname
@@ -1043,7 +1076,7 @@ Proof.
 Qed.
 
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_preservation_core :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->
@@ -1074,20 +1107,6 @@ Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_br
         alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
         eval env (bind_params (fn_params fcall) vs s_args)
           (fn_body fcall) s_body ret ->
-        store_typed (global_env_with_local_bounds env (fn_bounds fcall))
-          (bind_params (fn_params fcall) vs s_args)
-          (sctx_of_ctx (fn_body_ctx fcall))) ->
-      (forall Σ_args R_args arg_roots fname_call fdef fcall σ s_args s_body vs ret used',
-        In fdef (env_fns env) ->
-        fn_name fdef = fname_call ->
-        fn_captures fdef = [] ->
-        typed_args_roots env Ω n R Σ args
-          (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
-        eval_args env s args s_args vs ->
-        provenance_ready_args args ->
-        alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
-        eval env (bind_params (fn_params fcall) vs s_args)
-          (fn_body fcall) s_body ret ->
         root_env_store_roots_named
           (call_param_root_env (fn_params fcall) arg_roots R_args)
           (bind_params (fn_params fcall) vs s_args) /\
@@ -1106,7 +1125,7 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready env s
     s' v fname args Heval Ω n R Σ T Σ' R' roots Hready_args Hstore
     Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique Hevidence
-    Hevidence_body_env Hbind_exact Hbind_named.
+    Hevidence_body_env Hbind_named.
   pose proof (preservation_ready_args_implies_provenance_ready_closure
                 args Hready_args) as Hprov_args.
   dependent destruction Heval.
@@ -1171,6 +1190,16 @@ Proof.
   destruct (Hbind_named Σ' R' arg_roots (fn_name fdef0) fdef0 fcall σ
               s_args s_body vs ret used' H3 eq_refl H0 H7 H1 Hprov_args
               H2 Heval) as [Hnamed_bind Hkeys_bind].
+  assert (Hstore_bind_env :
+    store_typed_prefix env (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))).
+  { eapply bind_params_store_typed_prefix; eassumption. }
+  assert (Hstore_bind_body_env :
+    store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))).
+  { eapply direct_call_store_typed_prefix_global_env_with_local_bounds.
+    exact Hstore_bind_env. }
   pose proof
     (eval_synthetic_direct_call_body_scope_callback_from_ready_evidence
       Hscope_synthetic Htyping_ready env Ω n R Σ Σ' R' arg_roots
@@ -1178,14 +1207,12 @@ Proof.
       Hevidence H3 eq_refl H0 H7 H1 Hready_args Hprov_args Hstore
       Hroots Hshadow Hrn Hnamed Hkeys H2 Heval) as Hscopes.
   destruct
-    (eval_synthetic_direct_call_body_cleanup_from_ready_evidence
+    (eval_synthetic_direct_call_body_cleanup_prefix_from_ready_evidence
       Hsynthetic_route Htyping_ready Hroots_ready env Ω n R Σ Σ' R'
       arg_roots (fn_name fdef0) args fdef0 fcall σ s s_args s_body vs ret
       used' Hevidence (Hevidence_body_env fcall) Hunique H3 eq_refl H0
       H7 H1 Hready_args Hprov_args Hstore Hroots Hshadow Hrn Hnamed Hkeys
-      H2
-      (Hbind_exact Σ' R' arg_roots (fn_name fdef0) fdef0 fcall σ s_args
-        s_body vs ret used' H3 eq_refl H0 H7 H1 Hprov_args H2 Heval)
+      H2 Hstore_bind_body_env
       Hroots_bind Hshadow_bind Hrn_bind Hnamed_bind Hkeys_bind Heval
       Hscopes)
     as (_fname_body & _args_body & _synthetic_body & _T_body &
@@ -1207,7 +1234,7 @@ Proof.
 Qed.
 
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_named_bind_facts_core :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->
@@ -1229,20 +1256,6 @@ Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_br
       (forall fcall,
         direct_call_callee_body_root_synthetic_direct_call_ready_evidence
           (global_env_with_local_bounds env (fn_bounds fcall))) ->
-      (forall Σ_args R_args arg_roots fname_call fdef fcall σ s_args s_body vs ret used',
-        In fdef (env_fns env) ->
-        fn_name fdef = fname_call ->
-        fn_captures fdef = [] ->
-        typed_args_roots env Ω n R Σ args
-          (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
-        eval_args env s args s_args vs ->
-        provenance_ready_args args ->
-        alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
-        eval env (bind_params (fn_params fcall) vs s_args)
-          (fn_body fcall) s_body ret ->
-        store_typed (global_env_with_local_bounds env (fn_bounds fcall))
-          (bind_params (fn_params fcall) vs s_args)
-          (sctx_of_ctx (fn_body_ctx fcall))) ->
       store_typed env s' Σ' /\
       value_has_type env s' v T /\
       store_ref_targets_preserved env s s' /\
@@ -1255,7 +1268,7 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys env s s' v fname args Heval Ω n R Σ T Σ' R'
     roots Hready_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped
-    Hunique Hevidence Hevidence_body_env Hbind_exact.
+    Hunique Hevidence Hevidence_body_env.
   eapply
     (eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_preservation_core
       Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready);

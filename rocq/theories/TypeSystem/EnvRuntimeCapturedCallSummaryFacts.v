@@ -268,6 +268,16 @@ Definition component_body_synthetic_direct_call_ready_summary_provider
     env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence
       (global_env_with_local_bounds env (fn_bounds f_component)).
 
+Definition component_body_synthetic_direct_call_ready_summary_at_provider
+    (env : global_env) : Prop :=
+  forall f_component fname args synthetic_body,
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    direct_call_target_expr (fn_body f_component) =
+      Some (fname, args, synthetic_body) ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds f_component)) fname.
+
 Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_prefix_exact_call_statement
     : Prop :=
   forall env s fname args s' v,
@@ -373,6 +383,29 @@ Proof.
   intros env Hsummary f_component _Hcomponent.
   eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
   exact Hsummary.
+Qed.
+
+Lemma component_body_synthetic_direct_call_ready_summary_at_provider_of_summary_evidence :
+  forall env,
+    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+    component_body_synthetic_direct_call_ready_summary_at_provider env.
+Proof.
+  intros env Hsummary f_component fname args synthetic_body _Hcomponent
+    _Htarget.
+  eapply fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_env.
+  eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+  exact Hsummary.
+Qed.
+
+Lemma component_body_synthetic_direct_call_ready_summary_at_provider_of_provider :
+  forall env,
+    component_body_synthetic_direct_call_ready_summary_provider env ->
+    component_body_synthetic_direct_call_ready_summary_at_provider env.
+Proof.
+  intros env Hprovider f_component fname args synthetic_body Hcomponent
+    _Htarget.
+  eapply fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_env.
+  eapply Hprovider. exact Hcomponent.
 Qed.
 
 Theorem eval_preserves_synthetic_direct_call_ready_store_safe_summary_exact_call_package_statement_of_plain_summary_exact_package :

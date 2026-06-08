@@ -285,6 +285,10 @@ Done:
   `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_summary_at_evidence`,
   taking only the component body's direct target summary plus an explicit
   recursive body-env evidence route.
+- Component-body pointwise summary evidence is now named as
+  `component_body_synthetic_direct_call_ready_summary_at_provider`, with
+  compatibility helpers from env-wide summary evidence and the older env-wide
+  component-body provider.
 
 Next:
 

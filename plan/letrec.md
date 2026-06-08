@@ -155,6 +155,11 @@ Done:
   `eval_preserves_synthetic_direct_call_ready_with_summary_bridge_narrow_core_of_call_statement_routes`.
 - The direct-call route proof now factors bind-parameter inputs through
   `eval_call_bind_params_route_inputs_from_components`.
+- Shadow synthetic direct-call-ready summary evidence now lifts through
+  `global_env_with_local_bounds` via
+  `callee_body_root_shadow_synthetic_direct_call_ready_summary_global_env_with_local_bounds`
+  and
+  `env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds`.
 
 Next:
 

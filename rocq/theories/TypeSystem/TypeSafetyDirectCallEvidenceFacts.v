@@ -442,6 +442,35 @@ Definition env_fns_root_shadow_provenance_summary_evidence
     lookup_fn fname (env_fns env) = Some fdef ->
     callee_body_root_shadow_provenance_summary env fdef.
 
+Lemma callee_body_root_shadow_synthetic_direct_call_ready_summary_global_env_with_local_bounds :
+  forall env bounds fdef,
+    callee_body_root_shadow_synthetic_direct_call_ready_summary env fdef ->
+    callee_body_root_shadow_synthetic_direct_call_ready_summary
+      (global_env_with_local_bounds env bounds) fdef.
+Proof.
+  intros env bounds fdef [Hnodup Hready].
+  split; [exact Hnodup |].
+  unfold callee_body_root_shadow_synthetic_direct_call_ready_at in *.
+  destruct Hready as
+    (fname & args & synthetic_body & T_body & Gamma_out & R_body &
+      roots_body & Htarget & Hsynthetic & Hready_body & Htyped &
+      Hcompat & Hexclude_roots & Hexclude_env).
+  exists fname, args, synthetic_body, T_body, Gamma_out, R_body, roots_body.
+  repeat split; try assumption.
+Qed.
+
+Lemma env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds :
+  forall env bounds,
+    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence
+      (global_env_with_local_bounds env bounds).
+Proof.
+  intros env bounds Hsummary fname fdef Hlookup.
+  change (lookup_fn fname (env_fns env) = Some fdef) in Hlookup.
+  eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_global_env_with_local_bounds.
+  exact (Hsummary fname fdef Hlookup).
+Qed.
+
 Lemma env_fns_root_shadow_summary_evidence_in_unique :
   forall env,
     env_fns_root_shadow_summary_evidence env ->

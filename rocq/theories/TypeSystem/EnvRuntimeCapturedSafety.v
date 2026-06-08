@@ -4015,6 +4015,43 @@ Proof.
 Qed.
 
 
+Lemma component_body_synthetic_direct_call_ready_body_env_evidence_provider_of_summary_evidence :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+    component_body_synthetic_direct_call_ready_body_env_evidence_provider env.
+Proof.
+  intros Hroot_names Hroot_keys env Hunique Hsummary f_component
+    _Hcomponent fcall.
+  eapply (direct_call_callee_body_root_synthetic_direct_call_ready_evidence_global_env_with_local_bounds_of_shadow_summary
+    Hroot_names Hroot_keys
+    (global_env_with_local_bounds env (fn_bounds f_component))
+    (fn_bounds fcall)).
+  - unfold fn_env_unique_by_name in *; simpl. exact Hunique.
+  - eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+    exact Hsummary.
+Qed.
+
+Lemma component_body_synthetic_direct_call_ready_body_env_evidence_provider_of_provider :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env,
+    fn_env_unique_by_name env ->
+    component_body_synthetic_direct_call_ready_summary_provider env ->
+    component_body_synthetic_direct_call_ready_body_env_evidence_provider env.
+Proof.
+  intros Hroot_names Hroot_keys env Hunique Hprovider f_component Hcomponent
+    fcall.
+  eapply (direct_call_callee_body_root_synthetic_direct_call_ready_evidence_global_env_with_local_bounds_of_shadow_summary
+    Hroot_names Hroot_keys
+    (global_env_with_local_bounds env (fn_bounds f_component))
+    (fn_bounds fcall)).
+  - unfold fn_env_unique_by_name in *; simpl. exact Hunique.
+  - eapply Hprovider. exact Hcomponent.
+Qed.
+
 Theorem env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_at_exact_package_with_component_body_summary_at_evidence :
   eval_preserves_synthetic_direct_call_ready_summary_at_exact_call_package_statement ->
   forall env f s s' v,

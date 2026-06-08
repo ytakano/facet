@@ -294,6 +294,9 @@ Done:
   env/checker safety wrappers can consume it together with the pointwise summary
   provider via the `...summary_at_exact_package_with_component_body_summary_at_evidence`
   theorems.
+- The new body-env evidence provider has compatibility constructors from
+  env-wide summary evidence and the older component-body env-wide summary
+  provider, keeping the pointwise route connected to existing wrappers.
 
 Next:
 

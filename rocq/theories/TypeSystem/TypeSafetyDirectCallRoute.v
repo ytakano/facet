@@ -3305,21 +3305,15 @@ Proof.
     Hroot_names Hroot_keys env s s' v fname args Heval Omega n R Sigma T Sigma' R'
     roots Hready_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped
     Hunique Hsummary Hbridge.
+  destruct
+    (direct_call_callee_body_root_synthetic_direct_call_ready_evidence_package_of_shadow_summary
+      Hroot_names Hroot_keys env Hunique Hsummary Hbridge)
+    as [Hevidence Hevidence_body_env].
   eapply
     (eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_named_bind_facts_core
       Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
       Hroot_names Hroot_keys);
     try eassumption.
-  - eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_shadow_summary_bridge;
-      eassumption.
-  - intros fcall.
-    eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_shadow_summary_bridge.
-    + eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
-      exact Hsummary.
-    + eapply direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_unique_with_preservation_core.
-      * exact Hroot_names.
-      * exact Hroot_keys.
-      * unfold fn_env_unique_by_name in *; simpl; exact Hunique.
 Qed.
 
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_bridge_final_roots_core :
@@ -3448,16 +3442,11 @@ Proof.
       (sctx_of_ctx (params_ctx (fn_params fcall)))).
   { eapply direct_call_store_typed_prefix_global_env_with_local_bounds.
     exact Hstore_bind_env. }
-  assert (Hevidence :
-    direct_call_callee_body_root_synthetic_direct_call_ready_evidence env).
-  { eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_shadow_summary_bridge;
-      eassumption. }
-  assert (Hevidence_body_env :
-    direct_call_callee_body_root_synthetic_direct_call_ready_evidence
-      (global_env_with_local_bounds env (fn_bounds fcall))).
-  { eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_global_env_with_local_bounds_of_shadow_summary;
-      eassumption.
-  }
+  destruct
+    (direct_call_callee_body_root_synthetic_direct_call_ready_evidence_package_of_shadow_summary
+      Hroot_names Hroot_keys env Hunique Hsummary Hbridge)
+    as [Hevidence Hevidence_body_env_all].
+  pose proof (Hevidence_body_env_all fcall) as Hevidence_body_env.
   pose proof
     (eval_synthetic_direct_call_body_scope_callback_from_ready_evidence
       Hscope_synthetic Htyping_ready env Omega n R Σ Σ' R'
@@ -3636,16 +3625,11 @@ Proof.
       (sctx_of_ctx (params_ctx (fn_params fcall)))).
   { eapply direct_call_store_typed_prefix_global_env_with_local_bounds.
     exact Hstore_bind_env. }
-  assert (Hevidence :
-    direct_call_callee_body_root_synthetic_direct_call_ready_evidence env).
-  { eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_shadow_summary_bridge;
-      eassumption. }
-  assert (Hevidence_body_env :
-    direct_call_callee_body_root_synthetic_direct_call_ready_evidence
-      (global_env_with_local_bounds env (fn_bounds fcall))).
-  { eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_global_env_with_local_bounds_of_shadow_summary;
-      eassumption.
-  }
+  destruct
+    (direct_call_callee_body_root_synthetic_direct_call_ready_evidence_package_of_shadow_summary
+      Hroot_names Hroot_keys env Hunique Hsummary Hbridge)
+    as [Hevidence Hevidence_body_env_all].
+  pose proof (Hevidence_body_env_all fcall) as Hevidence_body_env.
   pose proof
     (eval_synthetic_direct_call_body_scope_callback_from_ready_evidence
       Hscope_synthetic Htyping_ready env Ω n R Σ Σ' R'
@@ -3798,16 +3782,11 @@ Proof.
       (sctx_of_ctx (params_ctx (fn_params fcall)))).
   { eapply direct_call_store_typed_prefix_global_env_with_local_bounds.
     exact Hstore_bind_env. }
-  assert (Hevidence :
-    direct_call_callee_body_root_synthetic_direct_call_ready_evidence env).
-  { eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_shadow_summary_bridge;
-      eassumption. }
-  assert (Hevidence_body_env :
-    direct_call_callee_body_root_synthetic_direct_call_ready_evidence
-      (global_env_with_local_bounds env (fn_bounds fcall))).
-  { eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_global_env_with_local_bounds_of_shadow_summary;
-      eassumption.
-  }
+  destruct
+    (direct_call_callee_body_root_synthetic_direct_call_ready_evidence_package_of_shadow_summary
+      Hroot_names Hroot_keys env Hunique Hsummary Hbridge)
+    as [Hevidence Hevidence_body_env_all].
+  pose proof (Hevidence_body_env_all fcall) as Hevidence_body_env.
   pose proof
     (eval_synthetic_direct_call_body_scope_callback_from_ready_evidence
       Hscope_synthetic Htyping_ready env Ω n R Σ Σ' R'
@@ -3960,16 +3939,11 @@ Proof.
       (sctx_of_ctx (params_ctx (fn_params fcall)))).
   { eapply direct_call_store_typed_prefix_global_env_with_local_bounds.
     exact Hstore_bind_env. }
-  assert (Hevidence :
-    direct_call_callee_body_root_synthetic_direct_call_ready_evidence env).
-  { eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_shadow_summary_bridge;
-      eassumption. }
-  assert (Hevidence_body_env :
-    direct_call_callee_body_root_synthetic_direct_call_ready_evidence
-      (global_env_with_local_bounds env (fn_bounds fcall))).
-  { eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_global_env_with_local_bounds_of_shadow_summary;
-      eassumption.
-  }
+  destruct
+    (direct_call_callee_body_root_synthetic_direct_call_ready_evidence_package_of_shadow_summary
+      Hroot_names Hroot_keys env Hunique Hsummary Hbridge)
+    as [Hevidence Hevidence_body_env_all].
+  pose proof (Hevidence_body_env_all fcall) as Hevidence_body_env.
   pose proof
     (eval_synthetic_direct_call_body_scope_callback_from_call_statement_ready_evidence
       Hscope_call Htyping_ready env Ω n R Σ Σ' R'

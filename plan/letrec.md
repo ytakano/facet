@@ -168,6 +168,8 @@ Done:
 - The route layer also packages top-level and body-env raw synthetic
   direct-call evidence as
   `direct_call_callee_body_root_synthetic_direct_call_ready_evidence_package_of_shadow_summary`.
+- Summary bridge route wrappers now consume that evidence package directly,
+  keeping top-level and body-env recursive-call evidence in sync.
 
 Next:
 

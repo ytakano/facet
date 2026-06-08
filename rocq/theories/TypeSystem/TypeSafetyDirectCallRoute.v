@@ -2495,6 +2495,31 @@ Proof.
       eassumption.
 Qed.
 
+Theorem eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement_of_package_narrow_core :
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_call_package_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement.
+Proof.
+  intros Hprefix_ready Hframe_ready Hparam_ready Hpackage.
+  pose proof
+    (eval_preserves_synthetic_direct_call_ready_with_summary_bridge_package_narrow_core
+      Hprefix_ready Hframe_ready Hparam_ready Hpackage)
+    as [Hprefix Hscope].
+  split.
+  - intros env s fname args s' v Heval Ω n R Σ T Σ' R' roots
+      Hready_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique
+      Hsummary Hbridge.
+    eapply Hprefix; try eassumption.
+    apply PDCR_Call. exact Hready_args.
+  - intros env s fname args s' v Heval Ω n R Σ T Σ' R' roots ps frame
+      Hready_args Hstore Hnamed Hkeys Htyped Hunique Hsummary Hbridge
+      Hcover Hroots Hshadow Hrn Hframe Hfresh Hparam.
+    eapply Hscope; try eassumption.
+    apply PDCR_Call. exact Hready_args.
+Qed.
+
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_with_summary_bridge_core :
   eval_preserves_typing_roots_ready_mutual_statement ->
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->

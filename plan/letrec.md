@@ -176,6 +176,9 @@ Done:
 - No-capture direct-call component safety can now consume a plain summary
   exact-call package through
   `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_of_summary_exact_package`.
+- Combined captured-or-direct-component env safety can now consume the plain
+  summary exact-call package via
+  `env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package`.
 
 Next:
 

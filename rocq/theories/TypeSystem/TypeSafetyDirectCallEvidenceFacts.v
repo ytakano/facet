@@ -1,6 +1,7 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules TypeChecker RuntimeTyping RootProvenance
-  EnvStructuralRules AlphaRenaming EnvSoundnessFacts CheckerSoundness.
+  EnvStructuralRules AlphaRenaming EnvSoundnessFacts CheckerSoundness
+  CheckerRootSidecars.
 From Facet.TypeSystem Require Export TypeSafetyDirectCallBody.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
@@ -76,6 +77,37 @@ Definition callee_body_root_shadow_direct_call_ready_at
       (fn_outlives fcall) (fn_lifetimes fcall)
       R_params (sctx_of_ctx (fn_body_ctx fcall))
       (fn_body fcall) T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
+    roots_exclude_params (fn_params fcall) roots_body /\
+    root_env_excludes_params (fn_params fcall) R_body.
+
+Definition callee_body_root_synthetic_direct_call_ready_at
+    (env : global_env) (fcall : fn_def) (R_params : root_env) : Prop :=
+  exists fname args synthetic_body T_body Γ_out R_body roots_body,
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname, args, synthetic_body) /\
+    synthetic_body = ECall fname args /\
+    preservation_direct_call_ready_expr synthetic_body /\
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
+      R_params (sctx_of_ctx (fn_body_ctx fcall))
+      synthetic_body T_body (sctx_of_ctx Γ_out) R_body roots_body /\
+    ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
+    roots_exclude_params (fn_params fcall) roots_body /\
+    root_env_excludes_params (fn_params fcall) R_body.
+
+Definition callee_body_root_shadow_synthetic_direct_call_ready_at
+    (env : global_env) (fcall : fn_def) (R_params : root_env) : Prop :=
+  exists fname args synthetic_body T_body Γ_out R_body roots_body,
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname, args, synthetic_body) /\
+    synthetic_body = ECall fname args /\
+    preservation_direct_call_ready_expr synthetic_body /\
+    typed_env_roots_shadow_safe
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
+      R_params (sctx_of_ctx (fn_body_ctx fcall))
+      synthetic_body T_body (sctx_of_ctx Γ_out) R_body roots_body /\
     ty_compatible_b (fn_outlives fcall) T_body (fn_ret fcall) = true /\
     roots_exclude_params (fn_params fcall) roots_body /\
     root_env_excludes_params (fn_params fcall) R_body.
@@ -184,6 +216,24 @@ Proof.
   apply PDCR_Ready. exact Hpres.
 Qed.
 
+Lemma callee_body_root_synthetic_direct_call_ready_at_of_shadow :
+  forall env fcall R_params,
+    callee_body_root_shadow_synthetic_direct_call_ready_at env fcall
+      R_params ->
+    callee_body_root_synthetic_direct_call_ready_at env fcall R_params.
+Proof.
+  intros env fcall R_params Hshadow.
+  unfold callee_body_root_shadow_synthetic_direct_call_ready_at in Hshadow.
+  destruct Hshadow as
+    (fname & args & synthetic_body & T_body & Γ_out & R_body &
+      roots_body & Htarget & Hsynthetic & Hready & Htyped & Hcompat &
+      Hexclude_roots & Hexclude_env).
+  unfold callee_body_root_synthetic_direct_call_ready_at.
+  exists fname, args, synthetic_body, T_body, Γ_out, R_body, roots_body.
+  repeat split; try assumption.
+  eapply typed_env_roots_shadow_safe_roots. exact Htyped.
+Qed.
+
 Lemma callee_body_root_provenance_ready_at_of_shadow_provenance_ready_at :
   forall env fcall R_params,
     callee_body_root_shadow_provenance_ready_at env fcall R_params ->
@@ -265,6 +315,17 @@ Definition callee_body_root_shadow_direct_call_ready_summary
   callee_body_root_shadow_direct_call_ready_at env fdef
     (initial_root_env_for_fn fdef).
 
+Definition callee_body_root_synthetic_direct_call_ready_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  callee_body_root_synthetic_direct_call_ready_at env fdef
+    (initial_root_env_for_fn fdef).
+
+Definition callee_body_root_shadow_synthetic_direct_call_ready_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  NoDup (ctx_names (params_ctx (fn_params fdef))) /\
+  callee_body_root_shadow_synthetic_direct_call_ready_at env fdef
+    (initial_root_env_for_fn fdef).
+
 Definition callee_body_root_provenance_summary
     (env : global_env) (fdef : fn_def) : Prop :=
   callee_body_root_provenance_ready_at env fdef (initial_root_env_for_fn fdef).
@@ -296,6 +357,18 @@ Definition env_fns_root_shadow_direct_call_ready_summary_evidence
   forall fname fdef,
     lookup_fn fname (env_fns env) = Some fdef ->
     callee_body_root_shadow_direct_call_ready_summary env fdef.
+
+Definition env_fns_root_synthetic_direct_call_ready_summary_evidence
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_synthetic_direct_call_ready_summary env fdef.
+
+Definition env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence
+    (env : global_env) : Prop :=
+  forall fname fdef,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    callee_body_root_shadow_synthetic_direct_call_ready_summary env fdef.
 
 Definition env_fns_root_provenance_summary_evidence
     (env : global_env) : Prop :=
@@ -532,6 +605,52 @@ Definition direct_call_callee_body_root_shadow_direct_call_ready_summary_bridge
     callee_body_root_shadow_direct_call_ready_at env fcall
       (call_param_root_env (fn_params fcall) arg_roots R_args).
 
+Definition direct_call_callee_body_root_synthetic_direct_call_ready_summary_bridge
+    (env : global_env) : Prop :=
+  env_fns_root_synthetic_direct_call_ready_summary_evidence env ->
+  forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+      (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs
+      used',
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    typed_args_roots env Ω n R Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    callee_body_root_synthetic_direct_call_ready_at env fcall
+      (call_param_root_env (fn_params fcall) arg_roots R_args).
+
+Definition direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge
+    (env : global_env) : Prop :=
+  env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+  forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+      (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs
+      used',
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    typed_args_roots env Ω n R Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    callee_body_root_shadow_synthetic_direct_call_ready_at env fcall
+      (call_param_root_env (fn_params fcall) arg_roots R_args).
+
 Definition direct_call_callee_body_root_direct_call_ready_evidence
     (env : global_env) : Prop :=
   forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
@@ -552,6 +671,28 @@ Definition direct_call_callee_body_root_direct_call_ready_evidence
     root_env_store_keys_named R s ->
     alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
     callee_body_root_direct_call_ready_at env fcall
+      (call_param_root_env (fn_params fcall) arg_roots R_args).
+
+Definition direct_call_callee_body_root_synthetic_direct_call_ready_evidence
+    (env : global_env) : Prop :=
+  forall (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
+      (fname : ident) args fdef fcall (σ : list lifetime) s s_args vs
+      used',
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    fn_captures fdef = [] ->
+    typed_args_roots env Ω n R Σ args
+      (apply_lt_params σ (fn_params fdef)) Σ_args R_args arg_roots ->
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    store_typed env s Σ ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    root_env_store_roots_named R s ->
+    root_env_store_keys_named R s ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    callee_body_root_synthetic_direct_call_ready_at env fcall
       (call_param_root_env (fn_params fcall) arg_roots R_args).
 
 Lemma direct_call_callee_body_root_evidence_of_summary_bridge :

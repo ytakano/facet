@@ -216,7 +216,9 @@ For an explicit-capture recursive closure group:
      preservation-ready evidence.
    - Done: add env-level direct-call-ready summary evidence and conversions from
      the older shadow summary evidence.
-   - Next: prove and use a recursive direct-call route over the
+   - Done: add synthetic direct-call-ready callee evidence definitions for
+     normalized `ECall` target bodies.
+   - Next: prove the recursive direct-call route over synthetic
      direct-call-ready evidence. Defer safety-gate connection until that route
      is established.
    - The recursive-call proof must still route through the existing end-to-end

@@ -5181,7 +5181,7 @@ Proof.
   - exact Heval.
 Qed.
 Theorem env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_summary_in_evidence :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->
@@ -5213,12 +5213,7 @@ Proof.
     + exact Hstore.
     + exact Heval.
   - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_evidence.
-    + intros env0 s0 fname0 args0 s0' v0 Heval0 Omega0 n0 R0 Sigma0
-        T0 Sigma0' R0' roots0 Hsafe0 Hstore0 Hroots0 Hshadow0 Hrn0
-        Hnamed0 Hkeys0 Htyped0 Hunique0 Hsummary0 Hevidence0.
-      eapply Hsynthetic_route; try eassumption.
-      eapply store_safe_function_value_call_args_preservation_ready.
-      exact Hsafe0.
+    + exact Hsynthetic_route.
     + exact Hscope_synthetic.
     + exact Htyping_ready.
     + exact Hroots_ready.
@@ -5240,7 +5235,7 @@ Qed.
 
 
 Theorem check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_summary_in_evidence :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->
@@ -5282,7 +5277,7 @@ Proof.
 Qed.
 
 Theorem env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_lookup_evidence :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->
@@ -5314,12 +5309,7 @@ Proof.
     + exact Hstore.
     + exact Heval.
   - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_lookup_evidence.
-    + intros env0 s0 fname0 args0 s0' v0 Heval0 Omega0 n0 R0 Sigma0
-        T0 Sigma0' R0' roots0 Hsafe0 Hstore0 Hroots0 Hshadow0 Hrn0
-        Hnamed0 Hkeys0 Htyped0 Hunique0 Hsummary0 Hevidence0.
-      eapply Hsynthetic_route; try eassumption.
-      eapply store_safe_function_value_call_args_preservation_ready.
-      exact Hsafe0.
+    + exact Hsynthetic_route.
     + exact Hscope_synthetic.
     + exact Htyping_ready.
     + exact Hroots_ready.
@@ -5342,7 +5332,7 @@ Proof.
 Qed.
 
 Theorem check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_lookup_evidence :
-  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->

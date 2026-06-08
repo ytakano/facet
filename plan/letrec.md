@@ -558,12 +558,18 @@ Done:
   body-callback constructor, using only the store-safe route and a nested
   store-safe-arguments provider for recursive body calls rather than the
   generic evidence-at route.
+- The captured-or-direct-component safety wrappers and their end-to-end
+  component-route theorems now take the store-safe evidence-at route directly.
+  The temporary generic-route adapters above the direct-component wrappers were
+  removed, so the remaining route premise on this path is store-safe all the
+  way up to `End2EndSafety.v`.
 
 Next:
 
 - Close the store-safe evidence-at prefix call route directly from an
-  evaluation-derivation induction, then remove the temporary generic-route
-  adapters above the direct-component wrappers.
+  evaluation-derivation induction, or package a guarded/fuel-based fixpoint
+  if the current big-step induction cannot expose a structurally smaller
+  nested body-call derivation under `global_env_with_local_bounds`.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

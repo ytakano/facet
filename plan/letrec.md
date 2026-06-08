@@ -281,6 +281,10 @@ Done:
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_exact_call_statement_of_cleanup`
   and
   `eval_preserves_synthetic_direct_call_ready_summary_at_exact_call_package_statement_of_cleanup`.
+- Component safety can now consume the pointwise exact-call package through
+  `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_summary_at_evidence`,
+  taking only the component body's direct target summary plus an explicit
+  recursive body-env evidence route.
 
 Next:
 

@@ -365,6 +365,29 @@ Definition component_body_no_capture_direct_call_component_target_in_provider
       callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
         (global_env_with_local_bounds env (fn_bounds f_component)) fdef.
 
+
+Definition component_body_no_capture_direct_call_component_nested_target_in_provider
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    forall fcall fname args synthetic_body,
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        (global_env_with_local_bounds env (fn_bounds f_component)) fcall ->
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname, args, synthetic_body) ->
+      forall fdef,
+        lookup_fn fname
+          (env_fns
+            (global_env_with_local_bounds
+              (global_env_with_local_bounds env (fn_bounds f_component))
+              (fn_bounds fcall))) = Some fdef ->
+        callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+          (global_env_with_local_bounds
+            (global_env_with_local_bounds env (fn_bounds f_component))
+            (fn_bounds fcall)) fdef.
+
 Definition component_body_synthetic_direct_call_ready_closure_nested_summary_at_in_provider
     (env : global_env) : Prop :=
   forall f_component,
@@ -396,6 +419,7 @@ Definition component_body_synthetic_direct_call_ready_closure_nested_body_env_ev
             (global_env_with_local_bounds env (fn_bounds f_component))
             (fn_bounds fcall))
           (fn_bounds fcall_inner)).
+
 
 
 
@@ -1849,6 +1873,17 @@ Proof.
   apply PDCR_Call.
   eapply store_safe_function_value_call_args_preservation_ready.
   exact Hsafe_args.
+Qed.
+
+Lemma component_body_synthetic_direct_call_ready_closure_nested_summary_at_in_provider_of_target_provider :
+  forall env,
+    component_body_no_capture_direct_call_component_nested_target_in_provider env ->
+    component_body_synthetic_direct_call_ready_closure_nested_summary_at_in_provider env.
+Proof.
+  intros env Htarget_provider f_component Hin Hcomponent fcall fname args
+    synthetic_body Hfcall_component Htarget fdef Hlookup.
+  eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component.
+  eapply Htarget_provider; eassumption.
 Qed.
 
 Lemma callee_body_root_shadow_store_safe_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component :

@@ -304,10 +304,21 @@ For an explicit-capture recursive closure group:
      with projection lemmas and package-based narrow route wrappers. This gives
      future recursive proofs a single combined obligation instead of two
      separately circular obligations.
-   - Next: prove the combined summary/bridge direct-`ECall` package by direct
-     `ECall` eval induction, or wire the combined package as the recursive
-     direct-call route induction hypothesis, then add the safety-gate connection
-     that feeds env-level synthetic shadow summary evidence into this route.
+   - Done: add the concrete package combiner
+     `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement_of_final_roots_and_cleanup`,
+     which pairs the final-roots prefix bridge and cleanup-based frame/parameter
+     scope bridge under the existing synthetic prefix/scope route assumptions.
+   - Remaining gap: prove those synthetic prefix/scope route assumptions from
+     the package/IH itself. The blocker is the recursive body-call entry store:
+     direct-call body setup currently provides `store_typed_prefix` for
+     `bind_params`, while the summary/bridge package statement requires exact
+     `store_typed`; a prefix-input summary/bridge route, or an exact
+     `bind_params` store-typing bridge, is needed before the combined package can
+     be closed by direct `ECall` induction.
+   - Next: add the prefix-input summary/bridge recursive route needed for body
+     calls, or prove an exact `store_typed` bridge for `bind_params`, then use
+     it to discharge the combined direct-`ECall` package and connect the
+     safety gate.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

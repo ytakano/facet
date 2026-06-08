@@ -2172,6 +2172,26 @@ Proof.
   - exists frame_args. rewrite Hremoved_exact. exact Hparam_args.
 Qed.
 
+Theorem eval_preserves_synthetic_direct_call_ready_summary_call_package_statement_of_final_roots_and_cleanup :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  eval_preserves_synthetic_direct_call_ready_summary_call_package_statement.
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hframe_ready Hparam_ready.
+  split.
+  - eapply eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_call_statement_of_final_roots_bridge;
+      eassumption.
+  - eapply eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_call_statement_of_cleanup;
+      eassumption.
+Qed.
+
 Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_call_statement_of_call_statement :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_call_statement.

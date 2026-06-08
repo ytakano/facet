@@ -730,6 +730,9 @@ Done:
 - Summary facts now also have
   `component_body_no_capture_direct_call_component_store_safe_summary_with_body_summary_provider`,
   with constructors from plain and store-safe component body summary providers.
+- End-to-end strict shadow safety now has
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_component_body_summary_route_package`,
+  fixing the scoped route package to the component body summary readiness shape.
 
 Next:
 

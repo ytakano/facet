@@ -289,6 +289,56 @@ Definition component_body_synthetic_direct_call_ready_body_env_evidence_provider
           (global_env_with_local_bounds env (fn_bounds f_component))
           (fn_bounds fcall)).
 
+Definition component_body_no_capture_direct_call_component_closure_check_provider
+    (env : global_env) : Prop :=
+  forall f_component,
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    check_fn_root_shadow_no_capture_direct_call_component_closure
+      env f_component = true.
+
+Definition component_body_synthetic_direct_call_ready_summary_at_in_provider
+    (env : global_env) : Prop :=
+  forall f_component fname args synthetic_body,
+    In f_component (env_fns env) ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    direct_call_target_expr (fn_body f_component) =
+      Some (fname, args, synthetic_body) ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds f_component)) fname.
+
+Definition component_body_synthetic_direct_call_ready_body_env_evidence_in_provider
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    forall fcall,
+      direct_call_callee_body_root_synthetic_direct_call_ready_evidence
+        (global_env_with_local_bounds
+          (global_env_with_local_bounds env (fn_bounds f_component))
+          (fn_bounds fcall)).
+
+Lemma component_body_synthetic_direct_call_ready_summary_at_in_provider_of_provider :
+  forall env,
+    component_body_synthetic_direct_call_ready_summary_at_provider env ->
+    component_body_synthetic_direct_call_ready_summary_at_in_provider env.
+Proof.
+  intros env Hprovider f_component fname args synthetic_body _Hin Hcomponent
+    Htarget.
+  eapply Hprovider; eassumption.
+Qed.
+
+Lemma component_body_synthetic_direct_call_ready_body_env_evidence_in_provider_of_provider :
+  forall env,
+    component_body_synthetic_direct_call_ready_body_env_evidence_provider env ->
+    component_body_synthetic_direct_call_ready_body_env_evidence_in_provider env.
+Proof.
+  intros env Hprovider f_component _Hin Hcomponent fcall.
+  eapply Hprovider. exact Hcomponent.
+Qed.
+
 Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_prefix_exact_call_statement
     : Prop :=
   forall env s fname args s' v,

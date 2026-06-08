@@ -300,6 +300,10 @@ Done:
 - End-to-end safety can now consume the pointwise exact-call package plus the
   pointwise component-body providers via
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_exact_package_and_component_body_summary_at_evidence`.
+- In-aware component provider variants now exist for closure-derived evidence:
+  `component_body_synthetic_direct_call_ready_summary_at_in_provider` and
+  `component_body_synthetic_direct_call_ready_body_env_evidence_in_provider`,
+  with compatibility helpers from the earlier provider forms.
 
 Next:
 

@@ -73,6 +73,9 @@ Done:
   store-safe summaries or no-capture direct-call components:
   `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary`,
   with Prop-level readiness and soundness lemmas.
+- Captured-call store-safe safety is factored into the function-level
+  `callee_body_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready`
+  plus the existing env-level wrapper.
 
 Next:
 

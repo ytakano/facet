@@ -302,6 +302,22 @@ Definition component_body_no_capture_direct_call_component_closure_check_provide
     check_fn_root_shadow_no_capture_direct_call_component_closure
       env f_component = true.
 
+Definition component_body_no_capture_direct_call_component_exact_closure_check_provider
+    (env : global_env) : Prop :=
+  forall f_component,
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env f_component = true.
+
+Definition component_body_no_capture_direct_call_component_exact_body_target_provider
+    (env : global_env) : Prop :=
+  forall f_component,
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env f_component.
+
 Definition component_body_synthetic_direct_call_ready_summary_at_in_provider
     (env : global_env) : Prop :=
   forall f_component fname args synthetic_body,
@@ -2861,6 +2877,20 @@ Proof.
 Qed.
 
 
+Lemma check_fn_root_shadow_no_capture_direct_call_component_exact_body_target_sound :
+  forall env fdef,
+    check_fn_root_shadow_no_capture_direct_call_component_exact_body_target
+      env fdef = true ->
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env fdef.
+Proof.
+  intros env fdef Hcheck.
+  unfold check_fn_root_shadow_no_capture_direct_call_component_exact_body_target
+    in Hcheck.
+  destruct (fn_body fdef) eqn:Hbody; try discriminate.
+  exists i, l. exact Hbody.
+Qed.
+
 Lemma check_fn_root_shadow_no_capture_direct_call_component_closure_seen_head_sound :
   forall fuel seen env fdef,
     check_fn_root_shadow_no_capture_direct_call_component_closure_seen
@@ -2876,6 +2906,45 @@ Proof.
   apply andb_true_iff in Hcheck as [Hcomponent _].
   eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
   exact Hcomponent.
+Qed.
+
+Lemma check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_head_sound :
+  forall fuel seen env fdef,
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+      fuel seen env fdef = true ->
+    CheckerOrdinary.ident_in_b (fn_name fdef) seen = false ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef /\
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env fdef.
+Proof.
+  intros fuel seen env fdef Hcheck Hnot_seen.
+  destruct fuel as [| fuel']; simpl in Hcheck; try discriminate.
+  destruct (CheckerOrdinary.ident_in_b (fn_name fdef) seen) eqn:Hseen;
+    try discriminate; try rewrite Hseen in Hnot_seen; try discriminate.
+  apply andb_true_iff in Hcheck as [Hhead Hcallee].
+  apply andb_true_iff in Hhead as [Hcomponent Hexact].
+  split.
+  - eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
+    exact Hcomponent.
+  - eapply check_fn_root_shadow_no_capture_direct_call_component_exact_body_target_sound.
+    exact Hexact.
+Qed.
+
+Lemma check_fn_root_shadow_no_capture_direct_call_component_exact_closure_head_sound :
+  forall env fdef,
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure env fdef = true ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef /\
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env fdef.
+Proof.
+  intros env fdef Hcheck.
+  unfold check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+    in Hcheck.
+  eapply check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_head_sound.
+  - exact Hcheck.
+  - reflexivity.
 Qed.
 
 Lemma check_fn_root_shadow_no_capture_direct_call_component_closure_head_sound :
@@ -2914,6 +2983,20 @@ Proof.
   exists fuel'. split; [reflexivity | exact Hcallee].
 Qed.
 
+
+Lemma component_body_no_capture_direct_call_component_exact_body_target_provider_of_exact_closure_check_provider :
+  forall env,
+    component_body_no_capture_direct_call_component_exact_closure_check_provider
+      env ->
+    component_body_no_capture_direct_call_component_exact_body_target_provider
+      env.
+Proof.
+  intros env Hprovider f_component Hcomponent.
+  destruct (check_fn_root_shadow_no_capture_direct_call_component_exact_closure_head_sound
+              env f_component (Hprovider f_component Hcomponent))
+    as [_ Hexact].
+  exact Hexact.
+Qed.
 
 Lemma component_body_no_capture_direct_call_component_target_in_provider_of_closure_check_provider :
   forall env,

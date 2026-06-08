@@ -591,6 +591,13 @@ Done:
   `callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_alpha_renamed_target`.
   This supplies the route-layer exact-body bridge without changing checker
   behavior.
+- The checker sidecar layer now has exact direct-call component closure checks:
+  `check_fn_root_shadow_no_capture_direct_call_component_exact_body_target`,
+  `check_fn_root_shadow_no_capture_direct_call_component_exact_closure`, and
+  the captured-or-exact-closure combined checker. Summary facts prove head
+  soundness and expose
+  `component_body_no_capture_direct_call_component_exact_body_target_provider`
+  from the exact closure checker.
 
 Next:
 

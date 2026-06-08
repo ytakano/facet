@@ -1140,6 +1140,42 @@ Definition check_fn_root_shadow_no_capture_direct_call_component_closure
   check_fn_root_shadow_no_capture_direct_call_component_closure_seen
     10001 [] env fdef.
 
+Definition check_fn_root_shadow_no_capture_direct_call_component_exact_body_target
+    (_env : global_env) (fdef : fn_def) : bool :=
+  match fn_body fdef with
+  | ECall _ _ => true
+  | _ => false
+  end.
+
+Fixpoint check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+    (fuel : nat) (seen : list ident) (env : global_env)
+    (fdef : fn_def) : bool :=
+  match fuel with
+  | O => false
+  | S fuel' =>
+      if ident_in_b (fn_name fdef) seen then true
+      else
+        check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+          env fdef &&
+        check_fn_root_shadow_no_capture_direct_call_component_exact_body_target
+          env fdef &&
+        match direct_call_target_expr (fn_body fdef) with
+        | Some (fname, _, _) =>
+            match lookup_fn_b fname (env_fns env) with
+            | Some callee =>
+                check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+                  fuel' (fn_name fdef :: seen) env callee
+            | None => false
+            end
+        | None => false
+        end
+  end.
+
+Definition check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+    (env : global_env) (fdef : fn_def) : bool :=
+  check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+    10001 [] env fdef.
+
 Definition check_env_root_shadow_no_capture_direct_call_component_store_safe_summary
     (env : global_env) : bool :=
   forallb
@@ -1467,10 +1503,22 @@ Definition check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_co
   check_fn_root_shadow_captured_call_store_safe_summary env fdef ||
   check_fn_root_shadow_no_capture_direct_call_component_closure env fdef.
 
+Definition check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+    (env : global_env) (fdef : fn_def) : bool :=
+  check_fn_root_shadow_captured_call_store_safe_summary env fdef ||
+  check_fn_root_shadow_no_capture_direct_call_component_exact_closure env fdef.
+
 Definition check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_closure_summary
     (env : global_env) : bool :=
   forallb
     (check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_closure_summary
+      env)
+    (env_fns env).
+
+Definition check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+    (env : global_env) : bool :=
+  forallb
+    (check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
       env)
     (env_fns env).
 

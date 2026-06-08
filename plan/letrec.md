@@ -273,9 +273,15 @@ For an explicit-capture recursive closure group:
      cleanup bridge via a result-subset cleanup package, so the cleanup witness
      and subset proof share the same `roots_body`; add the final-roots summary
      wrapper that discharges the outer `value_roots_within roots v` projection.
-   - Next: connect this final-roots synthetic `ECall` cleanup bridge to the
-     full recursive direct-call route over synthetic direct-call-ready evidence
-     alone. Defer safety-gate connection until that full route is established.
+   - Done: connect the final-roots synthetic `ECall` cleanup bridge to a
+     full recursive direct-call route theorem over synthetic direct-call-ready
+     evidence. The theorem handles both direct-call-ready constructors:
+     provenance/root preservation for `PDCR_Ready`, and the synthetic summary
+     bridge plus final-roots cleanup path for `PDCR_Call`.
+   - Next: add the tiny wrapper/safety-gate connection that feeds the
+     env-level synthetic shadow summary evidence into this route, then move the
+     direct recursion invalid tests to valid tests when the end-to-end checker
+     accepts them.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

@@ -1833,6 +1833,54 @@ Proof.
   - rewrite Hremoved_exact. exact Hshadow_args.
 Qed.
 
+
+Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_with_summary_bridge_core :
+  eval_preserves_typing_roots_ready_mutual_statement ->
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      preservation_direct_call_ready_expr e ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+      direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge env ->
+      store_typed env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R'.
+Proof.
+  intros Htyping_roots Hsynthetic_route Hscope_synthetic Htyping_ready
+    Hroots_ready Hroot_names Hroot_keys env s e s' v Heval Ω n R Σ T
+    Σ' R' roots Hready Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped
+    Hunique Hsummary Hbridge.
+  inversion Hready as [e_ready Hpres_ready | fname args Hready_args]; subst.
+  - pose proof
+      (preservation_ready_expr_implies_provenance_ready_direct_call
+        e Hpres_ready) as Hprov.
+    exact (proj1 Htyping_roots env s e s' v Heval Ω n R Σ T Σ' R'
+      roots Hprov Hstore Hroots Hshadow Hrn Htyped).
+  - eapply
+      (eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_bridge_final_roots_core
+        Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+        Hroot_names Hroot_keys);
+      eassumption.
+Qed.
+
 Theorem eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary_with_preservation_core :
   eval_preserves_typing_ready_mutual_statement ->
   eval_preserves_roots_ready_mutual_statement ->

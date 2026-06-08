@@ -246,6 +246,11 @@ Done:
   `check_fn_root_shadow_no_capture_direct_call_component_closure_seen` and
   `check_fn_root_shadow_no_capture_direct_call_component_closure`, with head
   and callee soundness facts for the checker route.
+- The checker now also has a captured-or-direct-component-closure gate,
+  `check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_closure_summary`
+  and
+  `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_closure_summary`,
+  with soundness back to the existing combined readiness Prop.
 
 Next:
 

@@ -695,6 +695,11 @@ Done:
 - Rocq checker examples now lock the intended gate delta for direct self
   recursion: `check_program_env_end2end` still rejects the core direct-recursive
   example, while `check_program_env_end2end_strict_exact_closure` accepts it.
+- The route layer now has component-scoped exact-body route packages via
+  `store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_statement`
+  and bridge theorem
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_scoped_package`,
+  reducing the package obligation to functions proven to be in the direct-call component.
 
 Next:
 

@@ -96,6 +96,11 @@ Done:
   end-to-end gate via `infer_fn_env_end2end_combined_gate` and
   `infer_fns_env_end2end_combined_check_env_ready`, without changing checker
   behavior yet.
+- `TypeSafetyDirectCallRoute.v` now has a non-circular exact-call helper,
+  `eval_synthetic_direct_call_body_cleanup_prefix_package_from_call_statement_ready_evidence`,
+  plus `direct_call_target_expr_same_is_call`. The helper reuses the
+  call-statement preservation route for synthetic bodies already normalized to
+  `ECall`, avoiding the full recursive synthetic route premise in that case.
 
 Next:
 
@@ -107,11 +112,13 @@ Next:
   alias: `*_statement_of_call_statement` reduces these to the direct-call
   call-statement premises, while the cleanup/summary bridges that produce the
   exact-call package take the same two statement premises back as inputs. The
-  smallest non-circular remaining proof is therefore a mutual induction over
-  `eval`, `eval_args`, and `eval_struct_fields` that handles `Eval_Call` by
-  using `direct_call_callee_body_root_synthetic_direct_call_ready_evidence` for
-  the synthetic callee body and the induction hypotheses for that body and its
-  arguments.
+  exact synthetic `ECall` subcase can now use
+  `eval_synthetic_direct_call_body_cleanup_prefix_package_from_call_statement_ready_evidence`.
+  The remaining non-circular proof is still a mutual induction over `eval`,
+  `eval_args`, and `eval_struct_fields` that handles the general `Eval_Call`
+  case, including raw bodies normalized from `ECallExpr (EFn ...)`, by using
+  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence` and the
+  induction hypotheses for the callee body and arguments.
 - Scope the store-safe synthetic summary evidence needed by the component branch
   so mixed programs do not have to make every function a direct-call component.
   Then switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old

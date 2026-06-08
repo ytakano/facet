@@ -306,22 +306,20 @@ Done:
   with compatibility helpers from the earlier provider forms.
 - Env/checker/end-to-end safety now also has In-aware pointwise provider
   wrappers via the `...component_body_summary_at_in_evidence` theorem family.
+- The closure checker can now construct the In-aware current-target pointwise
+  summary provider through
+  `component_body_synthetic_direct_call_ready_summary_at_in_provider_of_closure_check_provider`.
+  The proof handles self-cycles by using the component's `In` evidence plus
+  `fn_env_unique_by_name`, and handles fresh callees via the closure checker's
+  callee/head soundness facts.
 
 Next:
 
-- Add a pointwise direct-call evidence package for the current `ECall` target
-  and its callee body route. A direct copy of
-  `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_bridge_final_roots_core`
-  is not enough: env-wide summary evidence is still used to build
-  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence_package_of_shadow_summary`
-  for the scope callback and recursive body-env calls. Split that package into
-  pointwise current-call evidence plus a body-prefix recursive-call route.
-- Use the pointwise package to replace
-  `component_body_*_synthetic_direct_call_ready_summary_provider` with a
-  closure-scoped provider derived from
-  `check_fn_root_shadow_no_capture_direct_call_component_closure`; it must not
-  require every function in `env_fns` to be a synthetic direct-call component.
-- Once the closure-scoped provider feeds the component safety wrapper, switch
+- Derive `component_body_synthetic_direct_call_ready_body_env_evidence_in_provider`
+  from the closure checker, using the new closure-derived pointwise summary
+  provider to rebuild the recursive body-env route instead of requiring
+  env-wide synthetic summary evidence.
+- Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the
   unconditional end-to-end safety theorem accordingly.

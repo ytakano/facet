@@ -411,13 +411,19 @@ Done:
   `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at`,
   replacing the broad nested body-env evidence premise with evidence for the
   current callee name.
+- The cleanup helper now has an evidence-at route variant,
+  `eval_synthetic_direct_call_body_cleanup_prefix_from_result_subset_summary_at_call_statement_evidence_at`,
+  which builds nested callee evidence from the nested `summary_at` fact instead
+  of requiring broad body-env evidence.
+- The final-roots alpha call-route wrapper now has an evidence-at variant,
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_call_route_final_roots_core`,
+  removing the broad nested body-env evidence premise at that layer.
 
 Next:
 
-- Thread `eval_synthetic_direct_call_body_cleanup_prefix_from_result_subset_summary_at_call_statement_evidence_at`
-  into the final-roots and component/env/end-to-end call-route wrappers, then
-  remove the now-unneeded broad nested body-env provider premise from the alpha
-  route path.
+- Thread `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_call_route_final_roots_core`
+  into the component/env/end-to-end call-route wrappers, then remove the
+  now-unneeded broad nested body-env provider premise from the alpha route path.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

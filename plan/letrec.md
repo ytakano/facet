@@ -179,6 +179,9 @@ Done:
 - Combined captured-or-direct-component env safety can now consume the plain
   summary exact-call package via
   `env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package`.
+- The checker-level combined sidecar safety wrapper can now consume the plain
+  summary exact-call package via
+  `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_exact_package`.
 
 Next:
 

@@ -1,6 +1,7 @@
 From Facet.TypeSystem Require Import Lifetime Types Syntax PathState Program
   Renaming OperationalSemantics TypingRules TypeChecker RuntimeTyping RootProvenance
-  EnvStructuralRules AlphaRenaming EnvSoundnessFacts CheckerSoundness.
+  EnvStructuralRules AlphaRenaming EnvSoundnessFacts CheckerSoundness
+  CheckerRootSidecars.
 From Facet.TypeSystem Require Export TypeSafetyDirectCallEvidence.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
@@ -345,6 +346,24 @@ Proof.
       eapply Eval_Call;
       [ exact Hlookup | exact Hcaps_fn | exact Hargs | exact Hrename | exact Hbody ]
   end.
+Qed.
+
+Lemma eval_direct_call_target_expr_as_call :
+  forall env s raw_body s' v fname args synthetic_body,
+    direct_call_target_expr raw_body = Some (fname, args, synthetic_body) ->
+    synthetic_body = ECall fname args ->
+    eval env s raw_body s' v ->
+    eval env s synthetic_body s' v.
+Proof.
+  intros env s raw_body s' v fname args synthetic_body Htarget Hsynthetic
+    Heval.
+  subst synthetic_body.
+  unfold direct_call_target_expr in Htarget.
+  destruct raw_body; try discriminate.
+  - inversion Htarget; subst. exact Heval.
+  - destruct raw_body; try discriminate.
+    inversion Htarget; subst.
+    apply eval_call_expr_fn_as_call. exact Heval.
 Qed.
 
 Theorem eval_preserves_typing_direct_call_roots_provenance_ready_with_callee_summary_with_preservation_core :

@@ -208,6 +208,9 @@ For an explicit-capture recursive closure group:
    - Done: add a no-env-ready direct-call route wrapper, so recursive
      direct-call components no longer need the whole environment to satisfy
      `env_fns_preservation_ready` before entering the existing direct-call route.
+   - Done: factor evaluation normalization for `direct_call_target_expr`, so
+     raw `ECall` and `ECallExpr (EFn ...)` bodies can share the synthetic
+     `ECall` route in later recursive-component proofs.
    - Next: derive the `direct_call_callee_body_root_evidence` bridge from the
      recursive direct-call component summaries and connect that bridge to the
      safety theorem.

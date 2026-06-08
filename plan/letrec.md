@@ -492,15 +492,22 @@ Done:
   to the concrete next target. The remaining route-closure work must therefore
   prove the evidence-at prefix route itself, rather than trying to derive that
   wrapper through the older summary-at route.
+- The result-subset body cleanup path now also has a concrete nested-call
+  callback helper,
+  `eval_synthetic_direct_call_body_cleanup_prefix_from_result_subset_summary_at_call_statement_body_call_callback`,
+  replacing the recursive route premise with a callback for the exact nested
+  `ECall` body evaluation and preserving the evidence-at summary/evidence
+  inputs. This is the insertion point for an evaluation-derivation induction
+  hypothesis when closing the evidence-at prefix route directly.
 
 Next:
 
 - Close the remaining direct-call route premises needed by the closure-check
-  bridge. The next hard step is proving
+  bridge. Next, thread the concrete nested-call callback helper up into the
+  evidence-at final-roots bridge, then use evaluation-derivation induction to
+  supply that callback and prove
   `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at`
-  as a theorem value directly, likely by reworking the prefix call route around
-  evaluation-derivation recursion so nested `ECall` body evaluations use the
-  smaller subderivation instead of an external route premise.
+  as a theorem value.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

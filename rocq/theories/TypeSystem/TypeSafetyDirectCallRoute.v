@@ -6,6 +6,28 @@ From Facet.TypeSystem Require Export TypeSafetyDirectCallEvidence.
 From Stdlib Require Import List Bool ZArith String Program.Equality.
 Import ListNotations.
 
+Definition eval_preserves_typing_roots_synthetic_direct_call_ready_statement : Prop :=
+  forall env s e s' v,
+    eval env s e s' v ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      preservation_direct_call_ready_expr e ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ e T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      direct_call_callee_body_root_synthetic_direct_call_ready_evidence env ->
+      store_typed env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R'.
+
 Definition eval_preserves_typing_synthetic_direct_call_ready_statement : Prop :=
   forall env s e s' v,
     eval env s e s' v ->

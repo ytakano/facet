@@ -272,6 +272,10 @@ Done:
   `eval_synthetic_direct_call_body_from_ready_evidence_at`,
   `eval_synthetic_direct_call_body_scope_inputs_from_ready_evidence_at`, and
   `eval_synthetic_direct_call_body_scope_callback_from_ready_evidence_at`.
+- The typing-roots exact-call route now has a pointwise current-target variant,
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_at_final_roots_core`,
+  plus the statement wrapper
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_exact_call_statement_of_final_roots_bridge`.
 
 Next:
 

@@ -187,6 +187,9 @@ Done:
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_exact_package_and_component_check`.
 - End-to-end safety can now consume the plain summary call package via
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_call_package_and_component_check`.
+- The summary exact-call package now has prefix/scope projection helpers:
+  `eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_prefix`
+  and `eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_scope`.
 
 Next:
 

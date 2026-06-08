@@ -439,6 +439,57 @@ Proof.
 Qed.
 
 
+Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_summary_bridge_core :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env s s' v fname args,
+    eval env s (ECall fname args) s' v ->
+    forall (Omega : outlives_ctx) (n : nat) R Sigma T Sigma' R' roots,
+      store_safe_function_value_call_args env args ->
+      store_typed env s Sigma ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Omega n R Sigma (ECall fname args) T Sigma' R' roots ->
+      fn_env_unique_by_name env ->
+      env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence env ->
+      direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge env ->
+      store_typed env s' Sigma' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      store_no_shadow s' /\
+      root_env_no_shadow R' /\
+      exists roots_body,
+        value_roots_within roots_body v.
+Proof.
+  intros Hsynthetic_call_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys env s s' v fname args Heval Omega n R Sigma T
+    Sigma' R' roots Hsafe_args Hstore Hroots Hshadow Hrn Hnamed Hkeys
+    Htyped Hunique Hsummary Hbridge.
+  eapply
+    (eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_named_bind_facts_core
+      Hsynthetic_call_route Hscope_synthetic Htyping_ready Hroots_ready);
+    try eassumption.
+  - eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_store_safe_shadow_summary_bridge;
+      eassumption.
+  - intros fcall.
+    eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_store_safe_shadow_summary_bridge.
+    + eapply env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+      exact Hsummary.
+    + eapply direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_unique_with_preservation_core.
+      * exact Hroot_names.
+      * exact Hroot_keys.
+      * unfold fn_env_unique_by_name in *; simpl; exact Hunique.
+Qed.
+
+
 Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_bridge_final_roots_core :
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

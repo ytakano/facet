@@ -112,6 +112,10 @@ Done:
   `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_named_bind_facts_core`
   and
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_named_bind_facts_core`.
+- The store-safe summary bridge now also has a call-statement-premise variant,
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_summary_bridge_core`,
+  so env-level store-safe synthetic summary evidence can use the reduced prefix
+  route at the non-final-roots bridge layer.
 
 Next:
 
@@ -510,6 +514,10 @@ For an explicit-capture recursive closure group:
      `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_named_bind_facts_core`
      and
      `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_named_bind_facts_core`.
+   - Done: add the env-summary bridge wrapper
+     `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_call_statement_summary_bridge_core`,
+     carrying the reduced call-statement premise through store-safe synthetic
+     summary evidence.
    - Done: add non-invasive `End2EndSafety.v` bridge lemmas
      `infer_fn_env_end2end_combined_gate` and
      `infer_fns_env_end2end_combined_check_env_ready`, proving that the current

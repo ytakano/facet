@@ -243,11 +243,13 @@ For an explicit-capture recursive closure group:
    - Done: package the scope-start inputs for normalized synthetic direct-call
      bodies: typed target, body-env evaluation, call-parameter root coverage,
      argument value typing, and initial frame/parameter scope facts.
-   - Next: add a direct-call-ready frame/parameter scope preservation helper
-     for the normalized synthetic `ECall`, then feed it to the synthetic
-     cleanup callback and prove the recursive direct-call route over synthetic
-     direct-call-ready evidence alone. Defer safety-gate connection until that
-     route is established.
+   - Done: add a direct-call-ready frame/parameter scope preservation
+     statement and a callback helper that feeds normalized synthetic `ECall`
+     scope results into the synthetic cleanup path; no gates are wired yet.
+   - Next: prove the recursive direct-call route over synthetic
+     direct-call-ready evidence alone by supplying the synthetic typing/roots
+     route and the new scope route to cleanup. Defer safety-gate connection
+     until that route is established.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

@@ -1145,6 +1145,10 @@ For an explicit-capture recursive closure group:
      `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_body_call_callback_final_roots_core`,
      replacing the route-premise cleanup helper with the concrete nested body-call
      callback helper for the alpha-renamed direct-call body.
+   - Done: add exact-body store-safe route package bridge
+     `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package`,
+     allowing the self-recursive store-safe route premise to consume a narrow
+     exact-`ECall` body package instead of broad synthetic-body providers.
    - Remaining gap: prove the concrete recursive synthetic direct-call route
      statements
      `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement`

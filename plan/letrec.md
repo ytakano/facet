@@ -530,19 +530,21 @@ Done:
   consumes only the argument-result runtime naming facts for `R_args` and
   `arg_roots`, which are the facts the proof actually uses. Those facts are
   still currently available only through the full-store root-name preservation
-  package, so the next dependency is a prefix-store root-name/key preservation
-  wrapper for evaluated arguments.
+  package. A static-ctx prefix wrapper,
+  `eval_args_preserves_root_names_keys_ready_prefix_ctx_full`, now packages all
+  three facts when `root_env_ctx_*_named R Sigma` is available, but the route
+  still needs either those static premises or a true prefix root-name preservation
+  theorem to remove the full-store premise.
 
 Next:
 
 - Close the remaining direct-call route premises needed by the closure-check
-  bridge. Next, add a prefix-store argument root-name/key preservation wrapper
-  that produces `root_env_store_roots_named R_args s_args`,
-  `Forall (fun roots => root_set_store_roots_named roots s_args) arg_roots`,
-  and `root_env_store_keys_named R_args s_args`; then wire the prefix-store
-  result-subset/scope helpers into the new prefix-only cleanup core and remove
-  the full-store premise from the body-callback route factor. After that, supply
-  the body-call callback from evaluation-derivation induction.
+  bridge. Next, either thread `root_env_ctx_*_named R Sigma` to the prefix route
+  or prove a true prefix-store root-name/key preservation theorem for evaluated
+  arguments; then wire the prefix-store result-subset/scope helpers into the new
+  prefix-only cleanup core and remove the full-store premise from the
+  body-callback route factor. After that, supply the body-call callback from
+  evaluation-derivation induction.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

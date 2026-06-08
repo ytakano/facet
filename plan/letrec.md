@@ -161,6 +161,10 @@ Done:
   and
   `env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds`;
   the route layer reuses those shared facts instead of local duplicates.
+- The route layer now has
+  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence_global_env_with_local_bounds_of_shadow_summary`,
+  factoring reconstruction of body-env raw synthetic direct-call evidence from
+  shadow summary evidence plus the existing summary bridge.
 
 Next:
 

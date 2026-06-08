@@ -3193,6 +3193,25 @@ Proof.
       eassumption.
 Qed.
 
+Lemma direct_call_callee_body_root_synthetic_direct_call_ready_evidence_global_env_with_local_bounds_of_shadow_summary :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env bounds,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env ->
+    direct_call_callee_body_root_synthetic_direct_call_ready_evidence
+      (global_env_with_local_bounds env bounds).
+Proof.
+  intros Hroot_names Hroot_keys env bounds Hunique Hsummary.
+  eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_shadow_summary_bridge.
+  - eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+    exact Hsummary.
+  - eapply direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_unique_with_preservation_core.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + unfold fn_env_unique_by_name in *; simpl; exact Hunique.
+Qed.
+
 Lemma callee_body_root_shadow_synthetic_direct_call_ready_result_subset_from_env_summary :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
@@ -3415,13 +3434,8 @@ Proof.
   assert (Hevidence_body_env :
     direct_call_callee_body_root_synthetic_direct_call_ready_evidence
       (global_env_with_local_bounds env (fn_bounds fcall))).
-  { eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_shadow_summary_bridge.
-    - eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
-      exact Hsummary.
-    - eapply direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_unique_with_preservation_core.
-      + exact Hroot_names.
-      + exact Hroot_keys.
-      + unfold fn_env_unique_by_name in *; simpl; exact Hunique.
+  { eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_global_env_with_local_bounds_of_shadow_summary;
+      eassumption.
   }
   pose proof
     (eval_synthetic_direct_call_body_scope_callback_from_ready_evidence
@@ -3608,13 +3622,8 @@ Proof.
   assert (Hevidence_body_env :
     direct_call_callee_body_root_synthetic_direct_call_ready_evidence
       (global_env_with_local_bounds env (fn_bounds fcall))).
-  { eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_shadow_summary_bridge.
-    - eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
-      exact Hsummary.
-    - eapply direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_unique_with_preservation_core.
-      + exact Hroot_names.
-      + exact Hroot_keys.
-      + unfold fn_env_unique_by_name in *; simpl; exact Hunique.
+  { eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_global_env_with_local_bounds_of_shadow_summary;
+      eassumption.
   }
   pose proof
     (eval_synthetic_direct_call_body_scope_callback_from_ready_evidence
@@ -3775,13 +3784,8 @@ Proof.
   assert (Hevidence_body_env :
     direct_call_callee_body_root_synthetic_direct_call_ready_evidence
       (global_env_with_local_bounds env (fn_bounds fcall))).
-  { eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_shadow_summary_bridge.
-    - eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
-      exact Hsummary.
-    - eapply direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_unique_with_preservation_core.
-      + exact Hroot_names.
-      + exact Hroot_keys.
-      + unfold fn_env_unique_by_name in *; simpl; exact Hunique.
+  { eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_global_env_with_local_bounds_of_shadow_summary;
+      eassumption.
   }
   pose proof
     (eval_synthetic_direct_call_body_scope_callback_from_ready_evidence
@@ -3942,13 +3946,8 @@ Proof.
   assert (Hevidence_body_env :
     direct_call_callee_body_root_synthetic_direct_call_ready_evidence
       (global_env_with_local_bounds env (fn_bounds fcall))).
-  { eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_shadow_summary_bridge.
-    - eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
-      exact Hsummary.
-    - eapply direct_call_callee_body_root_shadow_synthetic_direct_call_ready_summary_bridge_of_unique_with_preservation_core.
-      + exact Hroot_names.
-      + exact Hroot_keys.
-      + unfold fn_env_unique_by_name in *; simpl; exact Hunique.
+  { eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_global_env_with_local_bounds_of_shadow_summary;
+      eassumption.
   }
   pose proof
     (eval_synthetic_direct_call_body_scope_callback_from_call_statement_ready_evidence

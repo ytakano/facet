@@ -400,6 +400,42 @@ Proof.
   - exact Heval.
 Qed.
 
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_exact_package_and_component_body_summary_at_in_evidence :
+  eval_preserves_synthetic_direct_call_ready_summary_at_exact_call_package_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end env = infer_ok env' ->
+    component_body_synthetic_direct_call_ready_summary_at_in_provider env' ->
+    component_body_synthetic_direct_call_ready_body_env_evidence_in_provider env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hpackage env env' f s s' v Hprog Hsummary_at_provider
+    Hbody_evidence_provider Hinitial Hin Hstore Heval.
+  unfold infer_program_env_end2end in Hprog.
+  set (env_alpha := alpha_normalize_global_env env) in *.
+  destruct (global_names_unique_b env_alpha) eqn:Hunique_global; try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
+    try discriminate.
+  destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
+    as [[] | err] eqn:Hfns; try discriminate.
+  injection Hprog as <-.
+  eapply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_at_exact_package_with_component_body_summary_at_in_evidence.
+  - exact Hpackage.
+  - apply andb_true_iff in Hunique_global as [Hunique_top _].
+    eapply infer_program_env_alpha_elab_unique_by_name; eauto.
+  - unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
+    eapply infer_fns_env_end2end_combined_check_env_ready. exact Hfns.
+  - exact Hsummary_at_provider.
+  - exact Hbody_evidence_provider.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_call_package_and_component_body_summary_evidence :
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
   eval_preserves_frame_scope_roots_ready_mutual_statement ->

@@ -304,6 +304,8 @@ Done:
   `component_body_synthetic_direct_call_ready_summary_at_in_provider` and
   `component_body_synthetic_direct_call_ready_body_env_evidence_in_provider`,
   with compatibility helpers from the earlier provider forms.
+- Env/checker/end-to-end safety now also has In-aware pointwise provider
+  wrappers via the `...component_body_summary_at_in_evidence` theorem family.
 
 Next:
 

@@ -683,6 +683,10 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route`
   and the exact-body variant
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_synthetic_evidence_at_route`.
+- The strict shadow program checker now also has an exact-body route-package
+  safety bridge,
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_route_package`,
+  aligning end-to-end safety with the narrow exact-`ECall` route package.
 
 Next:
 

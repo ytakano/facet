@@ -585,6 +585,12 @@ Done:
   when the alpha-renamed function body target is literally `ECall fname args`.
   This separates the direct `ECall` case from the remaining `ECallExpr (EFn ...)`
   normalization case.
+- The component summary facts now name exact direct-call bodies with
+  `callee_body_root_shadow_no_capture_direct_call_component_exact_body_target`
+  and preserve that exactness through alpha-renaming via
+  `callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_alpha_renamed_target`.
+  This supplies the route-layer exact-body bridge without changing checker
+  behavior.
 
 Next:
 

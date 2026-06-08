@@ -222,6 +222,11 @@ Definition callee_body_root_shadow_no_capture_direct_call_component_store_safe_s
     roots_exclude_params (fn_params fdef) roots_body /\
     root_env_excludes_params (fn_params fdef) R_body.
 
+Definition callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+    (_env : global_env) (fdef : fn_def) : Prop :=
+  exists fname args,
+    fn_body fdef = ECall fname args.
+
 Definition callee_body_root_shadow_store_safe_synthetic_direct_call_ready_at
     (env : global_env) (fcall : fn_def) (R_params : root_env) : Prop :=
   exists fname args synthetic_body T_body Γ_out R_body roots_body,
@@ -1990,6 +1995,39 @@ Proof.
     + exact Hargs_r.
 Qed.
 
+
+Lemma callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_alpha_renamed_target :
+  forall env fdef used fcall used' fname_body args_body,
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env fdef ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall).
+Proof.
+  intros env fdef used fcall used' fname_body args_body
+    (fname & args & Hbody) Hrename Htarget.
+  destruct (alpha_rename_fn_def_params_body used fdef fcall used' Hrename)
+    as (rho & used_params & _Hparams & Hrename_body).
+  rewrite Hbody in Hrename_body.
+  simpl in Hrename_body.
+  destruct ((fix go (used0 : list ident) (args1 : list expr)
+      : list expr * list ident :=
+      match args1 with
+      | [] => ([], used0)
+      | arg :: rest =>
+          let (arg', used1) := alpha_rename_expr rho used0 arg in
+          let (rest', used2) := go used1 rest in
+          (arg' :: rest', used2)
+      end) used_params args) as [args_r used_r] eqn:Hargs_r.
+  injection Hrename_body as Hbody_fcall Hused_eq.
+  rewrite <- Hbody_fcall in Htarget.
+  simpl in Htarget.
+  inversion Htarget; subst fname_body args_body.
+  rewrite <- Hbody_fcall.
+  reflexivity.
+Qed.
 
 Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_synthetic_direct_call_ready :
   forall env fdef,

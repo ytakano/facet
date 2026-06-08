@@ -412,6 +412,23 @@ Definition component_body_no_capture_direct_call_component_alpha_nested_target_i
             (global_env_with_local_bounds env (fn_bounds f_component))
             (fn_bounds fcall)) ftarget.
 
+Definition component_body_synthetic_direct_call_ready_alpha_nested_summary_at_in_provider
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    forall fdef fcall used used' fname args synthetic_body,
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        (global_env_with_local_bounds env (fn_bounds f_component)) fdef ->
+      alpha_rename_fn_def used fdef = (fcall, used') ->
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname, args, synthetic_body) ->
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+        (global_env_with_local_bounds
+          (global_env_with_local_bounds env (fn_bounds f_component))
+          (fn_bounds fcall)) fname.
+
 Definition component_body_synthetic_direct_call_ready_closure_nested_summary_at_in_provider
     (env : global_env) : Prop :=
   forall f_component,
@@ -1906,6 +1923,17 @@ Lemma component_body_synthetic_direct_call_ready_closure_nested_summary_at_in_pr
 Proof.
   intros env Htarget_provider f_component Hin Hcomponent fcall fname args
     synthetic_body Hfcall_component Htarget fdef Hlookup.
+  eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component.
+  eapply Htarget_provider; eassumption.
+Qed.
+
+Lemma component_body_synthetic_direct_call_ready_alpha_nested_summary_at_in_provider_of_alpha_target_provider :
+  forall env,
+    component_body_no_capture_direct_call_component_alpha_nested_target_in_provider env ->
+    component_body_synthetic_direct_call_ready_alpha_nested_summary_at_in_provider env.
+Proof.
+  intros env Htarget_provider f_component Hin Hcomponent fdef fcall used used'
+    fname args synthetic_body Hfdef_component Hrename Htarget ftarget Hlookup.
   eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component.
   eapply Htarget_provider; eassumption.
 Qed.

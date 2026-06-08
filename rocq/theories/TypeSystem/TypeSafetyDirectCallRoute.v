@@ -4376,7 +4376,7 @@ Proof.
 Qed.
 
 
-Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_at_call_route_final_roots_core :
+Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_summary_at_call_route_final_roots_core :
   eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->
@@ -4396,7 +4396,9 @@ Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_br
       typed_env_roots env Omega n R Σ (ECall fname args) T Σ' R' roots ->
       fn_env_unique_by_name env ->
       fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname ->
-      (forall fcall fname_body args_body synthetic_body,
+      (forall fdef fcall used used' fname_body args_body synthetic_body,
+        In fdef (env_fns env) ->
+        alpha_rename_fn_def used fdef = (fcall, used') ->
         direct_call_target_expr (fn_body fcall) =
           Some (fname_body, args_body, synthetic_body) ->
         fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
@@ -4417,7 +4419,7 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys env s s' v fname args Heval Omega n R Σ T
     Σ' R' roots Hready_args Hstore Hroots Hshadow Hrn Hnamed Hkeys
-    Htyped Hunique Hsummary_at Hsummary_body_at_all Hevidence_body_env_all.
+    Htyped Hunique Hsummary_at Hsummary_body_at_alpha Hevidence_body_env_all.
   pose proof (preservation_ready_args_implies_provenance_ready_closure
                 args Hready_args) as Hprov_args.
   dependent destruction Heval.
@@ -4531,7 +4533,9 @@ Proof.
       Hsynthetic_route Htyping_ready Hroots_ready env Omega n R Σ Σ'
       R' arg_roots (fn_name fdef0) args fdef0 fcall σ s s_args s_body
       vs ret used' Hbody_result_subset
-      (Hsummary_body_at_all fcall)
+      (fun fname_body args_body synthetic_body Htarget_body =>
+        Hsummary_body_at_alpha fdef0 fcall (store_names s_args) used'
+          fname_body args_body synthetic_body H3 H2 Htarget_body)
       (Hevidence_body_env_all fcall)
       Hunique H3 eq_refl H0 H7 H1 Hready_args Hprov_args Hstore Hroots
       Hshadow Hrn Hnamed Hkeys H2 Hstore_bind_body_env Hroots_bind
@@ -4547,6 +4551,56 @@ Proof.
   - rewrite Hremoved_exact. exact Hroots_args.
   - eapply direct_call_value_roots_within_store_subset; eassumption.
   - rewrite Hremoved_exact. exact Hshadow_args.
+Qed.
+
+
+Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_at_call_route_final_roots_core :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env s s' v fname args,
+    eval env s (ECall fname args) s' v ->
+    forall (Omega : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      preservation_ready_args args ->
+      store_typed env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Omega n R Σ (ECall fname args) T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname ->
+      (forall fcall fname_body args_body synthetic_body,
+        direct_call_target_expr (fn_body fcall) =
+          Some (fname_body, args_body, synthetic_body) ->
+        fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+          (global_env_with_local_bounds env (fn_bounds fcall)) fname_body) ->
+      (forall fcall fcall_inner,
+        direct_call_callee_body_root_synthetic_direct_call_ready_evidence
+          (global_env_with_local_bounds
+            (global_env_with_local_bounds env (fn_bounds fcall))
+            (fn_bounds fcall_inner))) ->
+      store_typed env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R'.
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys env s s' v fname args Heval Omega n R Σ T
+    Σ' R' roots Hready_args Hstore Hroots Hshadow Hrn Hnamed Hkeys
+    Htyped Hunique Hsummary_at Hsummary_body_at_all Hevidence_body_env_all.
+  eapply eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_summary_at_call_route_final_roots_core;
+    try eassumption.
+  intros fdef fcall used used' fname_body args_body synthetic_body _Hin
+    _Hrename Htarget.
+  eapply Hsummary_body_at_all. exact Htarget.
 Qed.
 
 

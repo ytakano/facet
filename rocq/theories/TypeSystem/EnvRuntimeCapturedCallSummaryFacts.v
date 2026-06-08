@@ -350,6 +350,21 @@ Definition component_body_synthetic_direct_call_ready_nested_body_env_evidence_i
           (fn_bounds fcall_inner)).
 
 
+
+Definition component_body_no_capture_direct_call_component_target_in_provider
+    (env : global_env) : Prop :=
+  forall f_component fname args synthetic_body,
+    In f_component (env_fns env) ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    direct_call_target_expr (fn_body f_component) =
+      Some (fname, args, synthetic_body) ->
+    forall fdef,
+      lookup_fn fname (env_fns (global_env_with_local_bounds env (fn_bounds f_component))) =
+        Some fdef ->
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        (global_env_with_local_bounds env (fn_bounds f_component)) fdef.
+
 Definition component_body_synthetic_direct_call_ready_closure_nested_summary_at_in_provider
     (env : global_env) : Prop :=
   forall f_component,
@@ -2629,6 +2644,47 @@ Proof.
   rewrite Htarget in Hcallee.
   rewrite Hlookup in Hcallee.
   exists fuel'. split; [reflexivity | exact Hcallee].
+Qed.
+
+
+Lemma component_body_no_capture_direct_call_component_target_in_provider_of_closure_check_provider :
+  forall env,
+    fn_env_unique_by_name env ->
+    component_body_no_capture_direct_call_component_closure_check_provider env ->
+    component_body_no_capture_direct_call_component_target_in_provider env.
+Proof.
+  intros env Hunique Hprovider f_component fname args synthetic_body
+    Hin_component Hcomponent Htarget fdef Hlookup.
+  change (lookup_fn fname (env_fns env) = Some fdef) in Hlookup.
+  pose proof (lookup_fn_b_of_lookup_fn fname (env_fns env) fdef Hlookup)
+    as Hlookup_b.
+  pose proof (Hprovider f_component Hcomponent) as Hcheck.
+  unfold check_fn_root_shadow_no_capture_direct_call_component_closure in Hcheck.
+  destruct (check_fn_root_shadow_no_capture_direct_call_component_closure_seen_callee
+              10001 [] env f_component fname args synthetic_body fdef
+              Hcheck eq_refl Htarget Hlookup_b)
+    as (fuel' & Hfuel & Hcallee_check).
+  inversion Hfuel; subst fuel'; clear Hfuel.
+  destruct (CheckerOrdinary.ident_in_b (fn_name fdef) [fn_name f_component])
+    eqn:Hseen.
+  - assert (Hsame_name : fn_name fdef = fn_name f_component).
+    { simpl in Hseen.
+      destruct (ident_eqb (fn_name fdef) (fn_name f_component)) eqn:Hname;
+        try discriminate.
+      apply ident_eqb_eq in Hname. exact Hname. }
+    destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+      as [Hin_fdef _Hname_fdef].
+    assert (Hsame_def : fdef = f_component).
+    { eapply Hunique; eassumption. }
+    subst fdef.
+    eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds.
+    + exact Hunique.
+    + exact Hcomponent.
+  - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds.
+    + exact Hunique.
+    + eapply check_fn_root_shadow_no_capture_direct_call_component_closure_seen_head_sound.
+      * exact Hcallee_check.
+      * exact Hseen.
 Qed.
 
 Lemma component_body_synthetic_direct_call_ready_summary_at_in_provider_of_closure_check_provider :

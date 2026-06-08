@@ -369,11 +369,17 @@ Done:
   and
   `component_body_synthetic_direct_call_ready_closure_nested_body_env_evidence_in_provider`,
   with compatibility helpers from the wider nested provider forms.
+- The closure checker can now also produce current-target direct-call component
+  evidence via
+  `component_body_no_capture_direct_call_component_target_in_provider_of_closure_check_provider`,
+  preserving the component-summary fact that the pointwise route needs before
+  alpha-renamed body cleanup.
 
 Next:
 
-- Change the pointwise call-route safety wrappers to consume the closure-scoped
-  nested providers, then derive those providers from the closure checker.
+- Thread current-target component evidence through the pointwise call-route
+  wrappers so closure-scoped nested providers can replace the wider nested
+  providers.
 - Once the closure-scoped providers feed the component safety wrapper, switch
   `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar and update the

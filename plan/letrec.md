@@ -579,6 +579,12 @@ Done:
   `infer_fns_env_end2end_closure_combined_check_env_ready`. These do not change
   checker behavior, but prove that the existing captured-call gate implies the
   newer captured-or-direct-component-closure checker sidecar.
+- The route layer now has an exact-body bridge,
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_synthetic_evidence_at_route`,
+  closing store-safe nested body calls through the ordinary evidence-at route
+  when the alpha-renamed function body target is literally `ECall fname args`.
+  This separates the direct `ECall` case from the remaining `ECallExpr (EFn ...)`
+  normalization case.
 
 Next:
 

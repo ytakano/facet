@@ -224,6 +224,9 @@ Done:
   `component_body_store_safe_synthetic_direct_call_ready_summary_provider_of_no_capture_direct_call_component_ready`
   and
   `check_env_root_shadow_no_capture_direct_call_component_store_safe_summary_component_body_store_safe_provider`.
+- Existing whole-env store-safe synthetic summary evidence can also construct
+  the named provider via
+  `component_body_store_safe_synthetic_direct_call_ready_summary_provider_of_store_safe_summary_evidence`.
 
 Next:
 

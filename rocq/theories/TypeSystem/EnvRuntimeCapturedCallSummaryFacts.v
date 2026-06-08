@@ -2336,6 +2336,17 @@ Proof.
   eapply Hsummary. exact Hlookup.
 Qed.
 
+Lemma component_body_store_safe_synthetic_direct_call_ready_summary_provider_of_store_safe_summary_evidence :
+  forall env,
+    env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence
+      env ->
+    component_body_store_safe_synthetic_direct_call_ready_summary_provider env.
+Proof.
+  intros env Hsummary f_component _Hcomponent.
+  eapply env_fns_root_shadow_store_safe_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+  exact Hsummary.
+Qed.
+
 Lemma component_body_store_safe_synthetic_direct_call_ready_summary_provider_of_no_capture_direct_call_component_ready :
   forall env,
     env_fns_root_shadow_no_capture_direct_call_component_store_safe_summary_ready

@@ -14573,6 +14573,82 @@ let check_fn_root_shadow_generic_direct_store_safe_summary env fdef =
        | None -> false)
   | None -> false
 
+(** val check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary env fdef =
+  match fdef.fn_captures with
+  | [] ->
+    (match direct_call_target_expr fdef.fn_body with
+     | Some p ->
+       let (p0, synthetic_body) = p in
+       let (fname, args) = p0 in
+       (&&) (store_safe_function_value_call_args_b env args)
+         (match lookup_fn_b fname env.env_fns with
+          | Some callee ->
+            (match callee.fn_captures with
+             | [] ->
+               (match infer_env_roots_shadow_safe env
+                        (fn_with_body fdef synthetic_body)
+                        (initial_root_env_for_fn fdef) with
+                | Infer_ok p1 ->
+                  let (p2, roots) = p1 in
+                  let (p3, r_out) = p2 in
+                  let (t_body, _) = p3 in
+                  (&&)
+                    ((&&)
+                      (ty_compatible_b fdef.fn_outlives t_body fdef.fn_ret)
+                      (fn_params_roots_exclude_b fdef.fn_params roots))
+                    (fn_params_root_env_excludes_b fdef.fn_params r_out)
+                | Infer_err _ -> false)
+             | _ :: _ -> false)
+          | None -> false)
+     | None -> false)
+  | _ :: _ -> false
+
+(** val check_fn_root_shadow_no_capture_direct_call_component_exact_body_target :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_no_capture_direct_call_component_exact_body_target _ fdef =
+  match fdef.fn_body with
+  | ECall (_, _) -> true
+  | _ -> false
+
+(** val check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen :
+    Big_int_Z.big_int -> ident list -> global_env -> fn_def -> bool **)
+
+let rec check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen fuel seen env fdef =
+  (fun fO fS n -> if Big_int_Z.sign_big_int n <= 0 then fO ()
+  else fS (Big_int_Z.pred_big_int n))
+    (fun _ -> false)
+    (fun fuel' ->
+    if ident_in_b fdef.fn_name seen
+    then true
+    else (&&)
+           ((&&)
+             (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+               env fdef)
+             (check_fn_root_shadow_no_capture_direct_call_component_exact_body_target
+               env fdef))
+           (match direct_call_target_expr fdef.fn_body with
+            | Some p ->
+              let (p0, _) = p in
+              let (fname, _) = p0 in
+              (match lookup_fn_b fname env.env_fns with
+               | Some callee ->
+                 check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+                   fuel' (fdef.fn_name :: seen) env callee
+               | None -> false)
+            | None -> false))
+    fuel
+
+(** val check_fn_root_shadow_no_capture_direct_call_component_exact_closure :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_no_capture_direct_call_component_exact_closure env fdef =
+  check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+    (of_num_uint (UIntDecimal (D1 (D0 (D0 (D0 (D1 Nil))))))) [] env fdef
+
 (** val check_fn_root_shadow_captured_call_provenance_summary :
     global_env -> fn_def -> bool **)
 
@@ -15017,6 +15093,16 @@ let check_fn_root_shadow_captured_call_store_safe_summary env fdef =
         | Infer_err _ -> false)
      | Infer_err _ -> false)
 
+(** val check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary env fdef =
+  if check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+       env fdef
+  then check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+         env fdef
+  else check_fn_root_shadow_captured_call_store_safe_summary env fdef
+
 (** val check_env_root_shadow_direct_call_provenance_summary :
     global_env -> bool **)
 
@@ -15149,6 +15235,52 @@ let infer_program_env_end2end env =
 
 let check_program_env_end2end env =
   match infer_program_env_end2end env with
+  | Infer_ok _ -> true
+  | Infer_err _ -> false
+
+(** val infer_fn_env_end2end_strict_exact_closure :
+    global_env -> fn_def -> (((ty * ctx) * root_env) * root_set) infer_result **)
+
+let infer_fn_env_end2end_strict_exact_closure env f =
+  let r0 = initial_root_env_for_params (app f.fn_params f.fn_captures) in
+  (match infer_full_env_roots_checked env f r0 with
+   | Infer_ok res ->
+     if check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+          env f
+     then Infer_ok res
+     else Infer_err ErrEndToEndSafetyGateFailed
+   | Infer_err err -> Infer_err err)
+
+(** val infer_fns_env_end2end_strict_exact_closure :
+    global_env -> fn_def list -> unit infer_result **)
+
+let rec infer_fns_env_end2end_strict_exact_closure env = function
+| [] -> Infer_ok ()
+| f :: rest ->
+  (match infer_fn_env_end2end_strict_exact_closure env f with
+   | Infer_ok _ -> infer_fns_env_end2end_strict_exact_closure env rest
+   | Infer_err err -> Infer_err (ErrInFunction (f.fn_name, err)))
+
+(** val infer_program_env_end2end_strict_exact_closure :
+    global_env -> global_env infer_result **)
+
+let infer_program_env_end2end_strict_exact_closure env =
+  let env_alpha = alpha_normalize_global_env env in
+  if global_names_unique_b env_alpha
+  then (match infer_program_env_alpha_elab env with
+        | Infer_ok env_elab ->
+          (match infer_fns_env_end2end_strict_exact_closure env_elab
+                   env_elab.env_fns with
+           | Infer_ok _ -> Infer_ok env_elab
+           | Infer_err err -> Infer_err err)
+        | Infer_err err -> Infer_err err)
+  else Infer_err ErrGlobalNamesNotUnique
+
+(** val check_program_env_end2end_strict_exact_closure :
+    global_env -> bool **)
+
+let check_program_env_end2end_strict_exact_closure env =
+  match infer_program_env_end2end_strict_exact_closure env with
   | Infer_ok _ -> true
   | Infer_err _ -> false
 

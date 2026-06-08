@@ -1333,10 +1333,25 @@ val check_expr_root_shadow_store_safe_narrow_summary_checked :
 val check_fn_root_shadow_generic_direct_store_safe_summary :
   global_env -> fn_def -> bool
 
+val check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary :
+  global_env -> fn_def -> bool
+
+val check_fn_root_shadow_no_capture_direct_call_component_exact_body_target :
+  global_env -> fn_def -> bool
+
+val check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen :
+  Big_int_Z.big_int -> ident list -> global_env -> fn_def -> bool
+
+val check_fn_root_shadow_no_capture_direct_call_component_exact_closure :
+  global_env -> fn_def -> bool
+
 val check_fn_root_shadow_captured_call_provenance_summary :
   global_env -> fn_def -> bool
 
 val check_fn_root_shadow_captured_call_store_safe_summary :
+  global_env -> fn_def -> bool
+
+val check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary :
   global_env -> fn_def -> bool
 
 val check_env_root_shadow_direct_call_provenance_summary : global_env -> bool
@@ -1378,6 +1393,17 @@ val infer_fns_env_end2end : global_env -> fn_def list -> unit infer_result
 val infer_program_env_end2end : global_env -> global_env infer_result
 
 val check_program_env_end2end : global_env -> bool
+
+val infer_fn_env_end2end_strict_exact_closure :
+  global_env -> fn_def -> (((ty * ctx) * root_env) * root_set) infer_result
+
+val infer_fns_env_end2end_strict_exact_closure :
+  global_env -> fn_def list -> unit infer_result
+
+val infer_program_env_end2end_strict_exact_closure :
+  global_env -> global_env infer_result
+
+val check_program_env_end2end_strict_exact_closure : global_env -> bool
 
 type raw_expr =
 | RawUnit

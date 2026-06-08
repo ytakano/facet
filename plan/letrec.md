@@ -653,6 +653,9 @@ Done:
 - Exact direct-call closure providers now adapt directly to the existing
   component-body target, alpha-nested lookup, and summary-at providers via the
   `..._of_exact_closure_check_provider` lemmas.
+- End-to-end safety now has a strict-sidecar bridge that consumes an exact
+  closure provider directly:
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_strict_exact_closure_check_and_exact_closure_provider`.
 
 Next:
 

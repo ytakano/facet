@@ -528,16 +528,21 @@ Done:
   result-subset bridge has been weakened so it no longer asks for
   `root_env_ctx_*_named R Sigma` over the whole incoming root environment; it now
   consumes only the argument-result runtime naming facts for `R_args` and
-  `arg_roots`, which are the facts the proof actually uses.
+  `arg_roots`, which are the facts the proof actually uses. Those facts are
+  still currently available only through the full-store root-name preservation
+  package, so the next dependency is a prefix-store root-name/key preservation
+  wrapper for evaluated arguments.
 
 Next:
 
 - Close the remaining direct-call route premises needed by the closure-check
-  bridge. Next, derive the argument-result runtime naming facts needed by the
-  weakened prefix result-subset bridge, wire the prefix-store result-subset/scope
-  helpers into the new prefix-only cleanup core, and remove the full-store
-  premise from the body-callback route factor. After that, supply the body-call
-  callback from evaluation-derivation induction.
+  bridge. Next, add a prefix-store argument root-name/key preservation wrapper
+  that produces `root_env_store_roots_named R_args s_args`,
+  `Forall (fun roots => root_set_store_roots_named roots s_args) arg_roots`,
+  and `root_env_store_keys_named R_args s_args`; then wire the prefix-store
+  result-subset/scope helpers into the new prefix-only cleanup core and remove
+  the full-store premise from the body-callback route factor. After that, supply
+  the body-call callback from evaluation-derivation induction.
 - Switch `infer_fn_env_end2end` / `infer_fns_env_end2end` from the old captured
   store-safe sidecar to the captured-or-component-closure sidecar, then update
   the unconditional end-to-end safety theorem to use

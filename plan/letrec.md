@@ -304,21 +304,26 @@ For an explicit-capture recursive closure group:
      with projection lemmas and package-based narrow route wrappers. This gives
      future recursive proofs a single combined obligation instead of two
      separately circular obligations.
-   - Done: add the concrete package combiner
-     `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement_of_final_roots_and_cleanup`,
-     which pairs the final-roots prefix bridge and cleanup-based frame/parameter
-     scope bridge under the existing synthetic prefix/scope route assumptions.
-   - Remaining gap: prove those synthetic prefix/scope route assumptions from
-     the package/IH itself. The blocker is the recursive body-call entry store:
-     direct-call body setup currently provides `store_typed_prefix` for
-     `bind_params`, while the summary/bridge package statement requires exact
-     `store_typed`; a prefix-input summary/bridge route, or an exact
-     `bind_params` store-typing bridge, is needed before the combined package can
-     be closed by direct `ECall` induction.
-   - Next: add the prefix-input summary/bridge recursive route needed for body
-     calls, or prove an exact `store_typed` bridge for `bind_params`, then use
-     it to discharge the combined direct-`ECall` package and connect the
-     safety gate.
+   - Done: split the summary/bridge direct-`ECall` package into prefix-friendly
+     obligations for recursive/IH use and exact-store helper obligations for the
+     existing cleanup bridge. The public package
+     `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement`
+     now starts from `store_typed_prefix env s Σ`, while exact callers can use
+     `eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement_of_prefix`
+     and the per-obligation exact wrappers.
+   - Done: keep the concrete cleanup combiner as the exact-store helper
+     `eval_preserves_synthetic_direct_call_ready_summary_exact_call_package_statement_of_final_roots_and_cleanup`;
+     this documents that the currently reused root-name/key and argument
+     preservation packages still require exact `store_typed` at the outer call.
+   - Remaining gap: prove the prefix-friendly summary/bridge direct-`ECall`
+     package from the package/IH itself, then use it to close the recursive
+     synthetic direct-call route. The previous exact-store interface blocker for
+     recursive body-call entry is handled; the remaining work is the actual
+     recursive package proof and safety-gate connection.
+   - Next: discharge
+     `eval_preserves_synthetic_direct_call_ready_summary_call_package_statement`
+     by direct `ECall` induction over the prefix-friendly obligation, then
+     connect the safety gate.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

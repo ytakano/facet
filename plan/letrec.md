@@ -1101,6 +1101,9 @@ Done:
 - The env-family scoped exact-body height route now localizes its exact-body
   target premise to the same environment family, removing another all-env
   assumption from the accepted-env route path.
+- The scoped exact-body package now has a route-specific component-ready
+  constructor requiring only component safety plus alpha-renamed direct-target
+  summary-at evidence, avoiding full body-summary evidence for End2End wiring.
 
 Next:
 

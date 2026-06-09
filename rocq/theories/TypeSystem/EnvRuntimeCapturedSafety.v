@@ -35,6 +35,40 @@ Proof.
   exact store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_body_summary_ready.
 Qed.
 
+Definition callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_route_summary
+    (env : global_env) (fdef : fn_def) : Prop :=
+  callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+    env fdef /\
+  forall fcall used used' fname_body args_body synthetic_body,
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body.
+
+Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_route_summary_ready :
+  store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_statement
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_route_summary.
+Proof.
+  intros env fname fdef fcall used used' fname_body args_body
+    [Hcomponent Hroute_summary] _Hin _Hname Hrename Htarget.
+  split.
+  - eapply Hroute_summary; eassumption.
+  - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_alpha_renamed_target_args_global_env_with_local_bounds;
+      eassumption.
+Qed.
+
+Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider_of_component_route_summary_ready :
+  forall env,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider
+      env
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_route_summary.
+Proof.
+  intros env.
+  eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider_of_scoped_package.
+  exact store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_route_summary_ready.
+Qed.
+
 Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_route_summary_at_provider :
   forall component_ready,
     (forall env fname fdef fcall used used' fname_body args_body

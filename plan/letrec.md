@@ -1407,6 +1407,9 @@ Done:
 - Direct-call route safety now also names store-safe body-call height
   callback statements, including env-family/local-bounds variants, so route
   package evidence can provide nested `store_safe_function_value_call_args`.
+- EnvRuntime captured safety now has a component-body theorem variant
+  consuming the store-safe callback-height statement, threading the nested
+  direct-call `store_safe_function_value_call_args` proof into the callback.
 
 Next:
 

@@ -906,10 +906,10 @@ Done:
 
 Next:
 
-- Bridge the summary-at scope call route to the ordinary direct `ECall` scope
-  route expected by
-  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement`,
-  then close
+- Prove the ordinary direct `ECall` scope route separately. The summary-at
+  full-store scope route cannot project to it directly because the ordinary
+  route lacks the `store_typed`, named/key, uniqueness, and summary/evidence
+  premises required by the cleanup route. Then close
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement` by
   splitting `preservation_direct_call_ready_expr` into the generic ready route
   and the direct `ECall` route.
@@ -1413,8 +1413,10 @@ For an explicit-capture recursive closure group:
    - Done: add the height-indexed scope call-route interface
      `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_height_statement`
      and projection to the ordinary call route.
-   - Remaining gap: bridge the summary-at full-store scope route to the
-     ordinary direct `ECall` scope route, then project it through
+   - Remaining gap: prove the ordinary direct `ECall` scope route separately;
+     the summary-at full-store route records the stronger cleanup path but does
+     not supply the weaker route's missing store/named/evidence premises. Then
+     project it through
      `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement_of_call_statement`
      to close
      `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement`.

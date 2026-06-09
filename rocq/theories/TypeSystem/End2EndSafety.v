@@ -825,6 +825,31 @@ Proof.
   exact Hexact.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_seen_route_summary_and_exact_target_in_local_bounds_family :
+  forall env env' base env0 fdef fuel seen,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+      fuel seen env' fdef = true ->
+    CheckerOrdinary.ident_in_b (fn_name fdef) seen = false ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_route_summary
+      env0 fdef /\
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env0 fdef.
+Proof.
+  intros env env' base env0 fdef fuel seen Hprog Hbase Henv Hin Hseen
+    Hnot_seen.
+  eapply infer_program_env_end2end_strict_exact_closure_route_summary_and_exact_target_in_local_bounds_family.
+  - exact Hprog.
+  - exact Hbase.
+  - exact Henv.
+  - exact Hin.
+  - eapply infer_program_env_end2end_strict_exact_closure_seen_component_check_in_local_bounds_family;
+      eassumption.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_callee_seen_in_local_bounds_family :
   forall env env' base env0 f_component fname args synthetic_body fcallee,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

@@ -1183,6 +1183,9 @@ Done:
 - The older component-check-provider local-bounds route bridge now factors
   through the payload-provider bridge, leaving a single route-closure insertion
   point for reachable component predicates.
+- End-to-end strict exact-closure safety now derives the payload-provider
+  payload directly from reachable `seen` exact-closure evidence via
+  `infer_program_env_end2end_strict_exact_closure_seen_route_summary_and_exact_target_in_local_bounds_family`.
 
 Next:
 

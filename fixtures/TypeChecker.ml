@@ -15093,6 +15093,14 @@ let check_fn_root_shadow_captured_call_store_safe_summary env fdef =
         | Infer_err _ -> false)
      | Infer_err _ -> false)
 
+(** val check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary :
+    global_env -> fn_def -> bool **)
+
+let check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary env fdef =
+  (||) (check_fn_root_shadow_captured_call_store_safe_summary env fdef)
+    (check_fn_root_shadow_no_capture_direct_call_component_exact_closure env
+      fdef)
+
 (** val check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary :
     global_env -> fn_def -> bool **)
 
@@ -15203,7 +15211,8 @@ let infer_fn_env_end2end env f =
   let r0 = initial_root_env_for_params (app f.fn_params f.fn_captures) in
   (match infer_full_env_roots_checked env f r0 with
    | Infer_ok res ->
-     if check_fn_root_shadow_captured_call_store_safe_summary env f
+     if check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+          env f
      then Infer_ok res
      else Infer_err ErrEndToEndSafetyGateFailed
    | Infer_err err -> Infer_err err)

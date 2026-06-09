@@ -685,8 +685,8 @@ Definition ex_direct_self_rec_env : global_env :=
   MkGlobalEnv [] [] [] [] []
     [ex_direct_self_rec_loop_fn; ex_direct_self_rec_main_fn].
 
-Example end2end_rejects_direct_self_recursion_current_gate :
-  check_program_env_end2end ex_direct_self_rec_env = false.
+Example end2end_accepts_direct_self_recursion_current_gate :
+  check_program_env_end2end ex_direct_self_rec_env = true.
 Proof. vm_compute. reflexivity. Qed.
 
 Example strict_exact_shadow_accepts_direct_self_recursion :

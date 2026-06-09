@@ -19,7 +19,8 @@ Proof.
     as R0 eqn:HR0.
   destruct (infer_full_env_roots_checked env f R0)
     as [[[[T0 Γ0] R0_out] roots0] | err] eqn:Hroots; try discriminate.
-  destruct (check_fn_root_shadow_captured_call_store_safe_summary env f);
+  destruct (check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+              env f);
     try discriminate.
   injection Hend as <- <- <- <-.
   eapply infer_full_env_roots_checked_sound. exact Hroots.
@@ -217,22 +218,25 @@ Qed.
 Lemma infer_fn_env_end2end_gate :
   forall env f T Γ_out R_out roots,
     infer_fn_env_end2end env f = infer_ok (T, Γ_out, R_out, roots) ->
-    check_fn_root_shadow_captured_call_store_safe_summary env f = true.
+    check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+      env f = true.
 Proof.
   intros env f T Γ_out R_out roots Hend.
   unfold infer_fn_env_end2end in Hend.
   destruct (infer_full_env_roots_checked env f
       (initial_root_env_for_params (fn_params f ++ fn_captures f)))
     as [[[[T0 Γ0] R0_out] roots0] | err] eqn:Hroots; try discriminate.
-  destruct (check_fn_root_shadow_captured_call_store_safe_summary env f)
-    eqn:Hgate; try discriminate.
+  destruct (check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+              env f) eqn:Hgate; try discriminate.
   reflexivity.
 Qed.
 
 Lemma infer_fns_env_end2end_check_env_ready :
   forall env fns,
     infer_fns_env_end2end env fns = infer_ok tt ->
-    forallb (check_fn_root_shadow_captured_call_store_safe_summary env) fns = true.
+    forallb
+      (check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+        env) fns = true.
 Proof.
   intros env fns.
   induction fns as [| f rest IH]; intros Hinfer; simpl in *.
@@ -251,9 +255,22 @@ Lemma infer_fn_env_end2end_combined_gate :
       env f = true.
 Proof.
   intros env f T Γ_out R_out roots Hend.
+  pose proof (infer_fn_env_end2end_gate env f T Γ_out R_out roots Hend)
+    as Hexact.
   unfold check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
-  rewrite (infer_fn_env_end2end_gate env f T Γ_out R_out roots Hend).
-  reflexivity.
+  unfold check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+    in Hexact.
+  apply orb_true_iff in Hexact as [Hcaptured | Hexact].
+  - rewrite Hcaptured. reflexivity.
+  - assert (Hcomponent :
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env f = true).
+    { unfold check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+        in Hexact.
+      eapply check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_component_check;
+        try exact Hexact.
+      reflexivity. }
+    rewrite Hcomponent. rewrite orb_true_r. reflexivity.
 Qed.
 
 Lemma infer_fns_env_end2end_combined_check_env_ready :
@@ -280,9 +297,17 @@ Lemma infer_fn_env_end2end_closure_combined_gate :
       env f = true.
 Proof.
   intros env f T Γ_out R_out roots Hend.
+  pose proof (infer_fn_env_end2end_gate env f T Γ_out R_out roots Hend)
+    as Hexact.
   unfold check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_closure_summary.
-  rewrite (infer_fn_env_end2end_gate env f T Γ_out R_out roots Hend).
-  reflexivity.
+  unfold check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+    in Hexact.
+  apply orb_true_iff in Hexact as [Hcaptured | Hexact].
+  - rewrite Hcaptured. reflexivity.
+  - pose proof
+      (check_fn_root_shadow_no_capture_direct_call_component_closure_of_exact_closure
+        env f Hexact) as Hclosure.
+    rewrite Hclosure. rewrite orb_true_r. reflexivity.
 Qed.
 
 Lemma infer_fns_env_end2end_closure_combined_check_env_ready :
@@ -309,9 +334,7 @@ Lemma infer_fn_env_end2end_exact_closure_combined_gate :
       env f = true.
 Proof.
   intros env f T Γ_out R_out roots Hend.
-  unfold check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary.
-  rewrite (infer_fn_env_end2end_gate env f T Γ_out R_out roots Hend).
-  reflexivity.
+  exact (infer_fn_env_end2end_gate env f T Γ_out R_out roots Hend).
 Qed.
 
 Lemma infer_fns_env_end2end_exact_closure_combined_check_env_ready :
@@ -423,7 +446,8 @@ Qed.
 Lemma infer_program_env_end2end_check_env_ready :
   forall env env',
     infer_program_env_end2end env = infer_ok env' ->
-    check_env_root_shadow_captured_call_store_safe_summary env' = true.
+    check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+      env' = true.
 Proof.
   intros env env' Hprog.
   unfold infer_program_env_end2end in Hprog.
@@ -435,7 +459,7 @@ Proof.
   destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
     as [[] | err] eqn:Hfns; try discriminate.
   injection Hprog as <-.
-  unfold check_env_root_shadow_captured_call_store_safe_summary.
+  unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary.
   eapply infer_fns_env_end2end_check_env_ready.
   exact Hfns.
 Qed.
@@ -2422,21 +2446,41 @@ Proof.
 Qed.
 
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready :
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
   forall env env' f s s' v,
     infer_program_env_end2end env = infer_ok env' ->
+    component_body_synthetic_direct_call_ready_summary_at_in_provider env' ->
+    component_body_no_capture_direct_call_component_target_in_provider env' ->
+    component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_provider env' ->
     check_initial_root_runtime_ready f s = true ->
     In f (env_fns env') ->
     initial_store_for_fn env' f s ->
     eval env' s (fn_body f) s' v ->
     value_has_type env' s' v (fn_ret f).
 Proof.
-  intros env env' f s s' v Hprog Hinitial Hin Hstore Heval.
-  eapply env_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys env env' f s s' v Hprog Hsummary_provider
+    Htarget_provider Halpha_lookup_provider Hinitial Hin Hstore Heval.
+  eapply env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_lookup_evidence.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
   - eapply infer_program_env_end2end_unique_by_name.
     exact Hprog.
-  - apply check_env_root_shadow_captured_call_store_safe_summary_ready.
+  - apply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary_ready.
     eapply infer_program_env_end2end_check_env_ready.
     exact Hprog.
+  - exact Hsummary_provider.
+  - exact Htarget_provider.
+  - exact Halpha_lookup_provider.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

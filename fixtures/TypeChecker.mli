@@ -1351,6 +1351,9 @@ val check_fn_root_shadow_captured_call_provenance_summary :
 val check_fn_root_shadow_captured_call_store_safe_summary :
   global_env -> fn_def -> bool
 
+val check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary :
+  global_env -> fn_def -> bool
+
 val check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary :
   global_env -> fn_def -> bool
 

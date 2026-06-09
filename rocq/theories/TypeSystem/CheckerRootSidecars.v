@@ -1630,7 +1630,8 @@ Definition infer_fn_env_end2end (env : global_env) (f : fn_def)
   match infer_full_env_roots_checked env f R0 with
   | infer_err err => infer_err err
   | infer_ok res =>
-      if check_fn_root_shadow_captured_call_store_safe_summary env f
+      if check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary
+           env f
       then infer_ok res
       else infer_err ErrEndToEndSafetyGateFailed
   end.

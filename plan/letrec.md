@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress.
+Implemented through the extracted end-to-end checker gate promotion for direct recursion.
 
 Done:
 
@@ -1479,20 +1479,27 @@ Done:
   providers from a single component check, then exposes
   `infer_program_env_end2end_strict_exact_closure_component_store_safe_callback_at_provider_and_callbacks_of_component_check`.
 - End2End now exposes the final component-check-only at-target safety wrapper,
-  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_check_store_safe_at_target_callbacks`,
-  without narrowing the standard `infer_program_env_end2end_big_step_safe_checked_initial_ready` theorem.
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_check_store_safe_at_target_callbacks`.
+- The standard extracted end-to-end checker gate now accepts functions whose
+  sidecar proves either the existing captured-call store-safe summary or the
+  no-capture direct-call exact-closure component summary:
+  `check_fn_root_shadow_captured_call_store_safe_or_no_capture_direct_component_exact_closure_summary`.
+  This preserves existing captured/direct-call valid programs while admitting
+  direct self-recursion and mutual recursion through exact closure.
+- `infer_program_env_end2end_check_env_ready` now exposes the accepted-env
+  exact-closure combined sidecar, and the standard
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready` theorem is
+  extended to consume the component-body evidence providers required by that
+  combined branch.
+- The extracted `fixtures/TypeChecker.ml/.mli` artifacts were regenerated from
+  Rocq, and the direct-recursion safety-gate regression cases were moved from
+  `tests/invalid/function/` to `tests/valid/function/`.
 
-Next:
+Follow-up:
 
-- Add a route-indexed local-bounds wrapper that carries the current function's
-  strict exact-closure/component-check evidence through recursive direct-call
-  steps, rather than requiring an all-function component-check provider.
-- Use that route-indexed wrapper to expose the final End2End strict
-  exact-closure wrapper that derives component body-env routes from the
-  accepted-env sidecar; do not narrow
-  `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
-- Move the direct recursion invalid tests to valid tests once the extracted
-  end-to-end checker accepts direct self-recursion and mutual recursion.
+- Close the remaining provider assumptions on the standard end-to-end safety
+  theorem with a fully internal exact-combined wrapper, so the theorem can again
+  be used without explicit component-body evidence parameters.
 
 This roadmap adds local recursion in stages, ending with a safe v1 for
 explicit-capture recursive closures. The first implementation should avoid a

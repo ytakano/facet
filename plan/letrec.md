@@ -840,6 +840,11 @@ Done:
   intermediate interface with the existing full `store_typed` cleanup premise,
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_height_statement`,
   plus projection back to the ordinary pointwise call statement.
+- The route layer now has exact-body package projection helpers,
+  `fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_exact_body_call_route_package`
+  and `store_safe_function_value_call_args_of_exact_body_call_route_package`,
+  so exact-body route proofs can reuse package summary/store-safe facts without
+  duplicating target-normalization code.
 
 Next:
 

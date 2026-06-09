@@ -1607,6 +1607,74 @@ Proof.
   - destruct raw_body; try discriminate.
 Qed.
 
+Lemma fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_exact_body_call_route_package :
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall)) ->
+  store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement ->
+  forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body.
+Proof.
+  intros Hexact_body_target Hbody_package env fname fdef fcall used used'
+    fname_body args_body synthetic_body Hin Hname Hrename Htarget.
+  pose proof
+    (Hexact_body_target env fname fdef fcall used used' fname_body
+      args_body synthetic_body Hin Hname Hrename Htarget) as Htarget_exact.
+  pose proof
+    (direct_call_target_expr_same_is_call (fn_body fcall) fname_body
+      args_body Htarget_exact) as Hbody_exact.
+  destruct
+    (Hbody_package env fname fdef fcall used used' fname_body args_body
+      Hin Hname Hrename) as [Hsummary _].
+  { rewrite <- Hbody_exact. exact Htarget_exact. }
+  exact Hsummary.
+Qed.
+
+Lemma store_safe_function_value_call_args_of_exact_body_call_route_package :
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall)) ->
+  store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement ->
+  forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    store_safe_function_value_call_args
+      (global_env_with_local_bounds env (fn_bounds fcall)) args_body.
+Proof.
+  intros Hexact_body_target Hbody_package env fname fdef fcall used used'
+    fname_body args_body synthetic_body Hin Hname Hrename Htarget.
+  pose proof
+    (Hexact_body_target env fname fdef fcall used used' fname_body
+      args_body synthetic_body Hin Hname Hrename Htarget) as Htarget_exact.
+  pose proof
+    (direct_call_target_expr_same_is_call (fn_body fcall) fname_body
+      args_body Htarget_exact) as Hbody_exact.
+  destruct
+    (Hbody_package env fname fdef fcall used used' fname_body args_body
+      Hin Hname Hrename) as [_ Hsafe].
+  { rewrite <- Hbody_exact. exact Htarget_exact. }
+  exact Hsafe.
+Qed.
+
 Lemma eval_synthetic_direct_call_body_from_ready_evidence :
   forall env (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
       (fname : ident) args fdef fcall (σ : list lifetime) s s_args

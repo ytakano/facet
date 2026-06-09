@@ -918,12 +918,17 @@ Done:
 - Component safety can now consume the summary-at prefix-scope final-roots
   bridge through
   `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_summary_at_prefix_scope_call_route_evidence`.
+- Env-level captured-or-direct-component safety now has nested2 provider Props
+  and a summary-at prefix-scope wrapper:
+  `component_body_synthetic_direct_call_ready_nested2_summary_at_in_provider`,
+  `component_body_synthetic_direct_call_ready_nested2_body_env_evidence_in_provider`,
+  and
+  `env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_at_prefix_scope_call_route_with_component_body_nested_in_evidence`.
 
 Next:
 
-- Thread the summary-at prefix-scope component wrapper through the env/checker
-  and end-to-end strict-check wrappers, then connect it to the exact-body route
-  package projections.
+- Add the checker/end-to-end summary-at prefix-scope wrappers, then connect
+  them to the exact-body route package projections.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.
 

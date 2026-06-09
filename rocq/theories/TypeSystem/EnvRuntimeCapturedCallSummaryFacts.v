@@ -387,6 +387,39 @@ Definition component_body_synthetic_direct_call_ready_nested_body_env_evidence_i
 
 
 
+Definition component_body_synthetic_direct_call_ready_nested2_summary_at_in_provider
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    forall fcall fcall_inner fname args synthetic_body,
+      direct_call_target_expr (fn_body fcall_inner) =
+        Some (fname, args, synthetic_body) ->
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+        (global_env_with_local_bounds
+          (global_env_with_local_bounds
+            (global_env_with_local_bounds env (fn_bounds f_component))
+            (fn_bounds fcall))
+          (fn_bounds fcall_inner)) fname.
+
+Definition component_body_synthetic_direct_call_ready_nested2_body_env_evidence_in_provider
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    forall fcall fcall_inner fcall_inner2,
+      direct_call_callee_body_root_synthetic_direct_call_ready_evidence
+        (global_env_with_local_bounds
+          (global_env_with_local_bounds
+            (global_env_with_local_bounds
+              (global_env_with_local_bounds env (fn_bounds f_component))
+              (fn_bounds fcall))
+            (fn_bounds fcall_inner))
+          (fn_bounds fcall_inner2)).
+
+
 Definition component_body_no_capture_direct_call_component_target_in_provider
     (env : global_env) : Prop :=
   forall f_component fname args synthetic_body,

@@ -704,6 +704,130 @@ Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_bo
   eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_callback_height_statement_in_env_family
     (global_env_local_bounds_family base).
 
+Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement
+    : Prop :=
+  forall env fname fdef fcall used used' s_args s_body vs ret R_args
+      arg_roots fname_body args_body T_body Gamma_out R_body roots_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body) ->
+    store_safe_function_value_call_args
+      (global_env_with_local_bounds env (fn_bounds fcall)) args_body ->
+    preservation_ready_args args_body ->
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (ECall fname_body args_body) T_body (sctx_of_ctx Gamma_out) R_body
+      roots_body ->
+    fn_env_unique_by_name (global_env_with_local_bounds env (fn_bounds fcall)) ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body ->
+    direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body ->
+    store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall))) ->
+    store_roots_within
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    store_no_shadow (bind_params (fn_params fcall) vs s_args) ->
+    root_env_no_shadow
+      (call_param_root_env (fn_params fcall) arg_roots R_args) ->
+    root_env_store_roots_named
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    root_env_store_keys_named
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    eval (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (ECall fname_body args_body) s_body ret ->
+    forall n_body_call,
+    direct_call_eval_height
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (ECall fname_body args_body) s_body ret n_body_call ->
+    store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
+      s_body (sctx_of_ctx Gamma_out) /\
+    value_has_type (global_env_with_local_bounds env (fn_bounds fcall))
+      s_body ret T_body /\
+    store_ref_targets_preserved
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args) s_body /\
+    store_roots_within R_body s_body /\
+    value_roots_within roots_body ret /\
+    store_no_shadow s_body /\
+    root_env_no_shadow R_body.
+
+Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_in_env_family
+    (env_family : global_env -> Prop) : Prop :=
+  forall env,
+    env_family env ->
+  forall fname fdef fcall used used' s_args s_body vs ret R_args
+      arg_roots fname_body args_body T_body Gamma_out R_body roots_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body) ->
+    store_safe_function_value_call_args
+      (global_env_with_local_bounds env (fn_bounds fcall)) args_body ->
+    preservation_ready_args args_body ->
+    typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+      (fn_outlives fcall) (fn_lifetimes fcall)
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall)))
+      (ECall fname_body args_body) T_body (sctx_of_ctx Gamma_out) R_body
+      roots_body ->
+    fn_env_unique_by_name (global_env_with_local_bounds env (fn_bounds fcall)) ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body ->
+    direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body ->
+    store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (sctx_of_ctx (params_ctx (fn_params fcall))) ->
+    store_roots_within
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    store_no_shadow (bind_params (fn_params fcall) vs s_args) ->
+    root_env_no_shadow
+      (call_param_root_env (fn_params fcall) arg_roots R_args) ->
+    root_env_store_roots_named
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    root_env_store_keys_named
+      (call_param_root_env (fn_params fcall) arg_roots R_args)
+      (bind_params (fn_params fcall) vs s_args) ->
+    eval (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (ECall fname_body args_body) s_body ret ->
+    forall n_body_call,
+    direct_call_eval_height
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (ECall fname_body args_body) s_body ret n_body_call ->
+    store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
+      s_body (sctx_of_ctx Gamma_out) /\
+    value_has_type (global_env_with_local_bounds env (fn_bounds fcall))
+      s_body ret T_body /\
+    store_ref_targets_preserved
+      (global_env_with_local_bounds env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args) s_body /\
+    store_roots_within R_body s_body /\
+    value_roots_within roots_body ret /\
+    store_no_shadow s_body /\
+    root_env_no_shadow R_body.
+
+Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_in_local_bounds_family
+    (base : global_env) : Prop :=
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_in_env_family
+    (global_env_local_bounds_family base).
+
+
 Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement
     : Prop :=
   forall env s fname args s' v n_call,

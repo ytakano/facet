@@ -1404,6 +1404,9 @@ Done:
 - End-to-end strict exact-closure safety now exposes the matching wrapper
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_body_call_callback_height_callbacks`,
   passing accepted-env uniqueness/readiness into the callback-height provider path.
+- Direct-call route safety now also names store-safe body-call height
+  callback statements, including env-family/local-bounds variants, so route
+  package evidence can provide nested `store_safe_function_value_call_args`.
 
 Next:
 

@@ -762,12 +762,15 @@ Done:
   `direct_call_eval_height_ecall_body_lt_of_eval_call`, aligning height
   inversion back to the route proof's `eval_args`, alpha-renamed `fcall`, and
   body evaluation.
+- The route layer now has the exact-body decreasing callback bridge
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_decreasing_body_call_callback_prefix_store_final_roots_core_exact_body`,
+  which passes `n_body_call < n_call` from the outer direct-call height into
+  the body-call callback when `fn_body fcall` is literally the target `ECall`.
 
 Next:
 
-- Use `direct_call_eval_height_ecall_body_lt_of_eval_call` to build the
-  decreasing body-call callback for the height-indexed store-safe evidence-at
-  prefix route, then close that route by well-founded induction on
+- Use the exact-body decreasing callback bridge to prove the height-indexed
+  store-safe evidence-at prefix route by well-founded induction on
   `direct_call_eval_height`. The current safety bridge to target is
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_route_scoped_package`,
   which still needs the store-safe evidence-at route but now consumes the narrow

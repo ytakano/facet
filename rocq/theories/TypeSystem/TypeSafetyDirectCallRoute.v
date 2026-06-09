@@ -12718,6 +12718,98 @@ Proof.
     eapply Henv_family_step. exact Henv.
 Qed.
 
+Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family_of_exact_body_call_route_package_at_provider :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env_family,
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    env_family env ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall)) ->
+  (forall env bounds,
+    env_family env ->
+    env_family (global_env_with_local_bounds env bounds)) ->
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    env_family env ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+      env fname) ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
+    env_family.
+Proof.
+  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
+    Hroot_names Hroot_keys env_family Hexact_body_target Henv_family_step
+    Hpackage_at_provider.
+  eapply
+    (eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family_of_exact_body_call_route_scoped_package
+      Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready Hroot_names
+      Hroot_keys env_family
+      (fun env fdef =>
+        store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+          env (fn_name fdef))).
+  - exact Hexact_body_target.
+  - exact Henv_family_step.
+  - intros env fname fdef fcall used used' fname_body args_body
+      synthetic_body Henv Hin Hname Hrename Htarget.
+    rewrite Hname.
+    eapply Hpackage_at_provider; eassumption.
+  - intros env fname fdef fcall used used' fname_body args_body Hpackage_at
+      Hin Hname Hrename Htarget.
+    rewrite Hname in Hpackage_at.
+    eapply Hpackage_at; eassumption.
+Qed.
+
+Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_exact_body_call_route_package_at_provider :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall base,
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    global_env_local_bounds_family base env ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall)) ->
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    global_env_local_bounds_family base env ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+      env fname) ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+    base.
+Proof.
+  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
+    Hroot_names Hroot_keys base Hexact_body_target Hpackage_at_provider.
+  eapply
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family_of_exact_body_call_route_package_at_provider;
+    try eassumption.
+  intros env bounds Henv.
+  eapply global_env_local_bounds_family_with_local_bounds. exact Henv.
+Qed.
+
 Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_exact_body_call_route_scoped_package :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->

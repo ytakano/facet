@@ -1352,12 +1352,18 @@ Done:
 - End-to-end strict exact-closure safety now derives a current-target
   exact-body route package from accepted-env local-bounds sidecars via
   `infer_program_env_end2end_strict_exact_closure_exact_body_route_package_at_of_component_check_in_local_bounds_family`.
+- Direct-call route safety now has env-family and local-bounds wrappers,
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family_of_exact_body_call_route_package_at_provider`
+  and
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_exact_body_call_route_package_at_provider`,
+  consuming current-target package-at providers without reintroducing an
+  env-wide route package.
 
 Next:
 
-- Use the branch-local package-at helper to expose the End2End strict
-  exact-closure wrapper that derives component body-env routes from the
-  accepted-env sidecar; do not narrow
+- Use the branch-local package-at helper and local-bounds package-at-provider
+  route wrapper to expose the End2End strict exact-closure wrapper that derives
+  component body-env routes from the accepted-env sidecar; do not narrow
   `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.

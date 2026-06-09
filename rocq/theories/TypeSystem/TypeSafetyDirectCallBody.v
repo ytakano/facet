@@ -358,6 +358,72 @@ with direct_call_eval_struct_fields_height (env : global_env)
       direct_call_eval_struct_fields_height env s fields (f :: rest) s2
         ((field_name f, v) :: values) (S (Nat.max n_e n_rest)).
 
+Lemma direct_call_store_lookup_deterministic :
+  forall x s e1 e2,
+    store_lookup x s = Some e1 ->
+    store_lookup x s = Some e2 ->
+    e1 = e2.
+Proof.
+  intros x s.
+  induction s as [| e rest IH]; intros e1 e2 H1 H2; simpl in *.
+  - discriminate.
+  - destruct (ident_eqb x (se_name e)).
+    + inversion H1; subst. inversion H2; subst. reflexivity.
+    + eapply IH; eassumption.
+Qed.
+
+Lemma direct_call_lookup_expr_field_deterministic :
+  forall name fields e1 e2,
+    lookup_expr_field name fields = Some e1 ->
+    lookup_expr_field name fields = Some e2 ->
+    e1 = e2.
+Proof.
+  intros name fields.
+  induction fields as [| [fname e] rest IH]; intros e1 e2 H1 H2; simpl in *.
+  - discriminate.
+  - destruct (String.eqb name fname).
+    + inversion H1; subst. inversion H2; subst. reflexivity.
+    + eapply IH; eassumption.
+Qed.
+
+Lemma direct_call_store_update_path_nil_update_val :
+  forall x v s,
+    store_update_path x [] v s = store_update_val x v s.
+Proof.
+  intros x v s.
+  induction s as [| se rest IH]; simpl.
+  - reflexivity.
+  - destruct (ident_eqb x (se_name se)); simpl; rewrite ?IH; try reflexivity.
+    rewrite value_update_path_nil. reflexivity.
+Qed.
+
+Lemma direct_call_eval_place_deterministic :
+  forall s p x1 path1 x2 path2,
+    eval_place s p x1 path1 ->
+    eval_place s p x2 path2 ->
+    x1 = x2 /\ path1 = path2.
+Proof.
+  intros s p x1 path1 x2 path2 H1.
+  revert x2 path2.
+  induction H1; intros x2 path2 H2; dependent destruction H2.
+  - split; reflexivity.
+  - match goal with
+    | IH : forall x2 path2,
+        eval_place s p x2 path2 -> _ /\ _ |- _ =>
+        destruct (IH _ _ H2) as [-> ->]
+    end.
+    split; reflexivity.
+  - match goal with
+    | IH : forall x2 path2,
+        eval_place s p x2 path2 -> _ /\ _ |- _ =>
+        destruct (IH _ _ H2) as [-> ->]
+    end.
+    assert (se_r0 = se_r) as -> by
+      (eapply direct_call_store_lookup_deterministic; eassumption).
+    rewrite H0 in H4. inversion H4; subst.
+    split; reflexivity.
+Qed.
+
 Lemma direct_call_eval_args_height_eval_args_result_of_eval_result :
   forall env,
     (forall s e s_h v_h n_h s' v,
@@ -379,6 +445,182 @@ Proof.
     destruct (IHHheight s3 vs0 Heval) as [Hs2 Hvs].
     subst s3 vs0.
     split; reflexivity.
+Qed.
+
+Lemma direct_call_eval_height_eval_result_mutual :
+  forall env,
+    (forall s e s' v,
+      eval env s e s' v ->
+      forall s_h v_h n_h,
+        direct_call_eval_height env s e s_h v_h n_h ->
+        s_h = s' /\ v_h = v) /\
+    (forall s args s' values,
+      eval_args env s args s' values ->
+      forall s_h values_h n_h,
+        direct_call_eval_args_height env s args s_h values_h n_h ->
+        s_h = s' /\ values_h = values) /\
+    (forall s fields defs s' values,
+      eval_struct_fields env s fields defs s' values ->
+      forall s_h values_h n_h,
+        direct_call_eval_struct_fields_height env s fields defs s_h values_h n_h ->
+        s_h = s' /\ values_h = values).
+Proof.
+  intro env.
+  apply eval_eval_args_eval_struct_fields_ind;
+    intros;
+    match goal with
+    | H : direct_call_eval_height _ _ _ _ _ _ |- _ => dependent destruction H
+    | H : direct_call_eval_args_height _ _ _ _ _ _ |- _ => dependent destruction H
+    | H : direct_call_eval_struct_fields_height _ _ _ _ _ _ _ |- _ =>
+        dependent destruction H
+    end;
+    repeat match goal with
+    | H1 : lookup_struct ?name ?env = Some ?sdef1,
+      H2 : lookup_struct ?name ?env = Some ?sdef2 |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    | H1 : lookup_enum ?name ?env = Some ?edef1,
+      H2 : lookup_enum ?name ?env = Some ?edef2 |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    | H1 : lookup_enum_variant ?name ?variants = Some ?vdef1,
+      H2 : lookup_enum_variant ?name ?variants = Some ?vdef2 |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    | H1 : lookup_expr_branch_binders ?name ?branches = Some ?b1,
+      H2 : lookup_expr_branch_binders ?name ?branches = Some ?b2 |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    | H1 : match_payload_params_opt ?binders ?lts ?args ?vdef = Some ?ps1,
+      H2 : match_payload_params_opt ?binders ?lts ?args ?vdef = Some ?ps2 |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    | H1 : lookup_match_branch ?name ?branches = Some ?e1,
+      H2 : lookup_match_branch ?name ?branches = Some ?e2 |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    | H1 : lookup_fn ?fname ?fns = Some ?fdef1,
+      H2 : lookup_fn ?fname ?fns = Some ?fdef2 |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    | H1 : store_lookup ?x ?s = Some ?e1,
+      H2 : store_lookup ?x ?s = Some ?e2 |- _ =>
+        assert (e1 = e2) by
+          (eapply direct_call_store_lookup_deterministic; eassumption);
+        subst; clear H2
+    | H1 : lookup_expr_field ?name ?fields = Some ?e1,
+      H2 : lookup_expr_field ?name ?fields = Some ?e2 |- _ =>
+        assert (e1 = e2) by
+          (eapply direct_call_lookup_expr_field_deterministic; eassumption);
+        subst; clear H2
+    | H1 : eval_place ?s ?p ?x1 ?path1,
+      H2 : eval_place ?s ?p ?x2 ?path2 |- _ =>
+        let Hx := fresh "Hx" in
+        let Hp := fresh "Hp" in
+        destruct (direct_call_eval_place_deterministic s p x1 path1 x2 path2
+          H1 H2) as [Hx Hp]; subst; clear H2
+    | H : eval_place ?s (PVar ?x) ?y ?path |- _ =>
+        dependent destruction H
+    | H : store_lookup_path ?x [] ?s = Some ?v,
+      Hlookup : store_lookup ?x ?s = Some ?se |- _ =>
+        unfold store_lookup_path in H; rewrite Hlookup in H;
+        simpl in H; inversion H; subst; clear H
+    | H : store_update_path ?x [] ?v ?s = Some ?s1 |- _ =>
+        rewrite direct_call_store_update_path_nil_update_val in H
+    | IH : forall s_h v_h n_h,
+        direct_call_eval_height ?env ?s ?e s_h v_h n_h -> _ /\ _,
+      H : direct_call_eval_height ?env ?s ?e ?s_h ?v_h ?n_h |- _ =>
+        let Hs := fresh "Hs" in
+        let Hv := fresh "Hv" in
+        destruct (IH s_h v_h n_h H) as [Hs Hv]; subst; clear H
+    | IH : forall s_h values_h n_h,
+        direct_call_eval_args_height ?env ?s ?args s_h values_h n_h -> _ /\ _,
+      H : direct_call_eval_args_height ?env ?s ?args ?s_h ?values_h ?n_h |- _ =>
+        let Hs := fresh "Hs" in
+        let Hvalues := fresh "Hvalues" in
+        destruct (IH s_h values_h n_h H) as [Hs Hvalues]; subst; clear H
+    | IH : forall s_h values_h n_h,
+        direct_call_eval_struct_fields_height ?env ?s ?fields ?defs s_h values_h n_h -> _ /\ _,
+      H : direct_call_eval_struct_fields_height ?env ?s ?fields ?defs ?s_h ?values_h ?n_h |- _ =>
+        let Hs := fresh "Hs" in
+        let Hvalues := fresh "Hvalues" in
+        destruct (IH s_h values_h n_h H) as [Hs Hvalues]; subst; clear H
+    | H1 : alpha_rename_fn_def ?names ?fdef = (?fcall1, ?used1),
+      H2 : alpha_rename_fn_def ?names ?fdef = (?fcall2, ?used2) |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    | H : VRef ?x1 ?p1 = VRef ?x2 ?p2 |- _ =>
+        inversion H; subst; clear H
+    | H : VClosure ?f1 ?c1 = VClosure ?f2 ?c2 |- _ =>
+        inversion H; subst; clear H
+    | H : VEnum ?en1 ?vn1 ?lts1 ?args1 ?values1 =
+          VEnum ?en2 ?vn2 ?lts2 ?args2 ?values2 |- _ =>
+        inversion H; subst; clear H
+    | H1 : type_lookup_path ?env ?T ?path = Some ?T1,
+      H2 : type_lookup_path ?env ?T ?path = Some ?T2 |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    | H1 : value_lookup_path ?v ?path = Some ?v1,
+      H2 : value_lookup_path ?v ?path = Some ?v2 |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    | H1 : expr_as_place ?e = Some ?p1,
+      H2 : expr_as_place ?e = Some ?p2 |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    | H1 : expr_as_place ?e = Some ?p,
+      H2 : expr_as_place ?e = None |- _ =>
+        rewrite H1 in H2; discriminate
+    | H1 : expr_as_place ?e = None,
+      H2 : expr_as_place ?e = Some ?p |- _ =>
+        rewrite H1 in H2; discriminate
+    | H1 : store_lookup_path ?x ?path ?s = Some ?v1,
+      H2 : store_lookup_path ?x ?path ?s = Some ?v2 |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    | H1 : store_consume_path ?x ?path ?s = Some ?s1,
+      H2 : store_consume_path ?x ?path ?s = Some ?s2 |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    | H1 : store_update_val ?x ?v ?s = Some ?s1,
+      H2 : store_update_val ?x ?v ?s = Some ?s2 |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    | H1 : store_restore_path ?x ?path ?s = Some ?s1,
+      H2 : store_restore_path ?x ?path ?s = Some ?s2 |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    | H1 : store_update_path ?x ?path ?v ?s = Some ?s1,
+      H2 : store_update_path ?x ?path ?v ?s = Some ?s2 |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    | H1 : copy_capture_store_as ?captures ?params ?s = Some ?c1,
+      H2 : copy_capture_store_as ?captures ?params ?s = Some ?c2 |- _ =>
+        rewrite H1 in H2; inversion H2; subst; clear H2
+    | H1 : ?b = false, H2 : ?b = true |- _ =>
+        rewrite H1 in H2; discriminate
+    | H1 : ?b = true, H2 : ?b = false |- _ =>
+        rewrite H1 in H2; discriminate
+    end;
+    try discriminate;
+    split; reflexivity.
+Qed.
+
+Lemma direct_call_eval_height_eval_result :
+  forall env s e s_h v_h n_h s' v,
+    direct_call_eval_height env s e s_h v_h n_h ->
+    eval env s e s' v ->
+    s_h = s' /\ v_h = v.
+Proof.
+  intros env s e s_h v_h n_h s' v Hheight Heval.
+  destruct (direct_call_eval_height_eval_result_mutual env) as [H _].
+  eauto.
+Qed.
+
+Lemma direct_call_eval_args_height_eval_args_result :
+  forall env s args s_h values_h n_h s' values,
+    direct_call_eval_args_height env s args s_h values_h n_h ->
+    eval_args env s args s' values ->
+    s_h = s' /\ values_h = values.
+Proof.
+  intros env s args s_h values_h n_h s' values Hheight Heval.
+  destruct (direct_call_eval_height_eval_result_mutual env) as [_ [H _]].
+  eauto.
+Qed.
+
+Lemma direct_call_eval_struct_fields_height_eval_struct_fields_result :
+  forall env s fields defs s_h values_h n_h s' values,
+    direct_call_eval_struct_fields_height env s fields defs s_h values_h n_h ->
+    eval_struct_fields env s fields defs s' values ->
+    s_h = s' /\ values_h = values.
+Proof.
+  intros env s fields defs s_h values_h n_h s' values Hheight Heval.
+  destruct (direct_call_eval_height_eval_result_mutual env) as [_ [_ H]].
+  eauto.
 Qed.
 
 Lemma direct_call_eval_height_global_env_with_local_bounds :

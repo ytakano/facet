@@ -1375,6 +1375,8 @@ Done:
   bundles those current-target package providers with the existing
   component-body callbacks via
   `infer_program_env_end2end_strict_exact_closure_component_body_route_package_and_callbacks_of_component_check`.
+- The route-indexed package provider has a named projection,
+  `infer_program_env_end2end_strict_exact_closure_component_body_route_package_at_provider_of_component_check`.
 
 Next:
 

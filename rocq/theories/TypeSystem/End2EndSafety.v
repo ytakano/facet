@@ -1838,6 +1838,22 @@ Proof.
       eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_component_body_route_package_at_provider_of_component_check :
+  forall env env' f_component,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    strict_exact_closure_component_body_route_package_at_provider
+      env' f_component.
+Proof.
+  intros env env' f_component Hprog Hin Hcomponent_check.
+  destruct (infer_program_env_end2end_strict_exact_closure_component_body_route_package_and_callbacks_of_component_check
+              env env' f_component Hprog Hin Hcomponent_check)
+    as [Hroute_package _].
+  exact Hroute_package.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_body_summary_at_callback_of_component_check :
   forall env env' f_component,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

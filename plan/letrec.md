@@ -1380,6 +1380,10 @@ Done:
 - End-to-end strict exact-closure safety can apply that provider through an
   alpha-renamed component body target via
   `infer_program_env_end2end_strict_exact_closure_component_body_route_package_at_provider_alpha_target`.
+- Direct-call route safety now names the body-call recursive callback shape as
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_callback_height_statement`,
+  preparing route-indexed local-bounds wrappers to pass current-component
+  evidence through recursive calls.
 
 Next:
 

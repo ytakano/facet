@@ -1074,6 +1074,9 @@ Done:
   preserving accepted-env evidence through recursive body environments.
 - Strict exact-closure program inference now exposes that local-bounds-family
   scoped route package directly as an End2End sidecar for the accepted env.
+- The store-safe evidence-at prefix route now also has a height-indexed
+  env-local statement plus projections to and from the existing all-env route
+  shape, enabling future exact-body induction to stay scoped to an accepted env.
 
 Next:
 

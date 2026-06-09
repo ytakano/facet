@@ -471,6 +471,45 @@ Proof.
   eapply Hroute; eassumption.
 Qed.
 
+Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+    (env : global_env) : Prop :=
+  forall s fname args s' v n_call,
+    eval env s (ECall fname args) s' v ->
+    direct_call_eval_height env s (ECall fname args) s' v n_call ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+      store_safe_function_value_call_args env args ->
+      store_typed_prefix env s Σ ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      root_env_store_roots_named R s ->
+      root_env_store_keys_named R s ->
+      typed_env_roots env Ω n R Σ (ECall fname args) T Σ' R' roots ->
+      fn_env_unique_by_name env ->
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname ->
+      direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+        env fname ->
+      store_typed_prefix env s' Σ' /\
+      value_has_type env s' v T /\
+      store_ref_targets_preserved env s s' /\
+      store_roots_within R' s' /\
+      value_roots_within roots v /\
+      store_no_shadow s' /\
+      root_env_no_shadow R'.
+
+Lemma eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_in_env_of_height_statement_in_env :
+  forall env,
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env env ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_in_env env.
+Proof.
+  intros env Hheight s fname args s' v Heval Ω n R Σ T Σ' R' roots
+    Hsafe_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique
+    Hsummary Hevidence.
+  destruct (direct_call_eval_height_exists env s (ECall fname args) s' v
+              Heval) as [n_call Hheight_call].
+  eapply Hheight; eassumption.
+Qed.
+
 Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement
     : Prop :=
   forall env s fname args s' v n_call,
@@ -496,6 +535,18 @@ Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_su
       value_roots_within roots v /\
       store_no_shadow s' /\
       root_env_no_shadow R'.
+
+Lemma eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_statement :
+  forall env,
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env.
+Proof.
+  intros env Hroute s fname args s' v n_call Heval Hheight Ω n R Σ T Σ' R'
+    roots Hsafe_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique
+    Hsummary Hevidence.
+  eapply Hroute; eassumption.
+Qed.
 
 Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_height_statement :
   eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement ->

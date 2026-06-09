@@ -1251,6 +1251,10 @@ Done:
   route-and-callback construction as
   `infer_program_env_end2end_strict_exact_closure_component_route_and_callbacks_of_component_check_provider`,
   keeping later strict-sidecar provider replacement localized.
+- End-to-end strict exact-closure safety now derives accepted-env
+  direct-component checker booleans for direct callee lookups through
+  `infer_program_env_end2end_strict_exact_closure_direct_callee_component_check_of_lookup_in_local_bounds_family`,
+  splitting singleton seen cycles from non-seen reachable callees.
 
 Next:
 

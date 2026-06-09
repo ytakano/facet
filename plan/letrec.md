@@ -1023,6 +1023,11 @@ Done:
 - The default main safety theorem
   `infer_program_env_end2end_big_step_safe_checked_initial_ready` now uses
   accepted-env sidecars directly instead of reopening program inference.
+- Program checker booleans now expose infer witnesses through
+  `check_program_env_end2end_infer_ok` and
+  `check_program_env_end2end_strict_exact_closure_infer_ok`; strict checker
+  acceptance also has the constructive soundness wrapper
+  `check_program_env_end2end_strict_exact_closure_sound_exists`.
 
 Next:
 

@@ -776,13 +776,20 @@ Done:
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_scoped_package_height`.
   The strict end-to-end exact-body scoped bridge no longer takes a
   self-recursive store-safe route premise.
+- The exact-body scoped store-safe route can now be lifted to synthetic call
+  routes by
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement_of_exact_body_call_route_scoped_package_height`
+  and
+  `eval_preserves_synthetic_direct_call_ready_call_routes_statement_of_exact_body_call_route_scoped_package_height`,
+  but this wrapper still has strong bridge premises for ready args and
+  environment-wide synthetic summary evidence.
 
 Next:
 
-- Prove the concrete recursive synthetic direct-call route statements
-  `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement`
-  and
-  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement`.
+- Remove or discharge the strong bridge premises from the synthetic call-route
+  wrapper, especially `preservation_ready_args -> store_safe_function_value_call_args`
+  and `direct_call_callee_body_root_synthetic_direct_call_ready_evidence ->
+  env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence`.
   The default checker gate cannot switch to
   `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary`
   until the unconditional
@@ -1246,8 +1253,13 @@ For an explicit-capture recursive closure group:
      `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_scoped_package_height`,
      and remove the self-recursive store-safe route premise from
      `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_route_scoped_package`.
-   - Remaining gap: prove the concrete recursive synthetic direct-call route
-     statements before switching the extracted checker gate to the strict
+   - Done: add strong-premise wrappers
+     `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement_of_exact_body_call_route_scoped_package_height`
+     and
+     `eval_preserves_synthetic_direct_call_ready_call_routes_statement_of_exact_body_call_route_scoped_package_height`,
+     connecting the exact-body scoped route to synthetic call routes.
+   - Remaining gap: remove or discharge the wrappers' strong bridge premises
+     before switching the extracted checker gate to the strict
      exact-body component sidecar path; otherwise the default end-to-end
      big-step safety theorem loses the route evidence needed by the
      branch-local strict bridge. The route statements are

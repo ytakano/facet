@@ -1456,6 +1456,9 @@ Done:
 - The typing-roots current-call height helper now has a reachable package
   provider wrapper,
   `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_reachable_exact_body_call_route_package_provider`.
+- The frame/parameter-scope current-call height helper now has the matching
+  reachable package provider wrapper,
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_reachable_exact_body_call_route_package_provider`.
 
 Next:
 

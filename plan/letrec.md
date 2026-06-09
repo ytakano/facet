@@ -915,10 +915,13 @@ Done:
   `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_nested_evidence_summary_at_prefix_scope_call_route_final_roots_core`
   and
   `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_at_prefix_scope_call_route_final_roots_core`.
+- Component safety can now consume the summary-at prefix-scope final-roots
+  bridge through
+  `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_summary_at_prefix_scope_call_route_evidence`.
 
 Next:
 
-- Thread the summary-at prefix-scope final-roots bridge through the component
+- Thread the summary-at prefix-scope component wrapper through the env/checker
   and end-to-end strict-check wrappers, then connect it to the exact-body route
   package projections.
 - Move the direct recursion invalid tests to valid tests once the extracted

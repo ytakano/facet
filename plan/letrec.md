@@ -1290,6 +1290,9 @@ Done:
 - Direct callee lookups now project to local-bounds component-ready payloads via
   `infer_program_env_end2end_strict_exact_closure_direct_callee_component_ready_payload_in_local_bounds_family`,
   combining reachable callee component checks with local-bounds checker stability.
+- The direct callee component-ready payload projection now has an alpha-renamed
+  wrapper,
+  `infer_program_env_end2end_strict_exact_closure_alpha_direct_callee_component_ready_payload_in_local_bounds_family`.
 
 Next:
 

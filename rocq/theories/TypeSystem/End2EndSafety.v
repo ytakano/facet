@@ -1371,6 +1371,46 @@ Proof.
       eapply Hroute_summary; eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_component_body_direct_callee_ready_payload_in_local_bounds_family :
+  forall env env' f_component,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' f_component = true ->
+    forall fname args synthetic_body fdef,
+      direct_call_target_expr (fn_body f_component) =
+        Some (fname, args, synthetic_body) ->
+      lookup_fn fname
+        (env_fns (global_env_with_local_bounds env' (fn_bounds f_component))) =
+        Some fdef ->
+      fn_env_unique_by_name
+        (global_env_with_local_bounds env' (fn_bounds f_component)) /\
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        (global_env_with_local_bounds env' (fn_bounds f_component)) fdef /\
+      check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+        (global_env_with_local_bounds env' (fn_bounds f_component)) fdef = true.
+Proof.
+  intros env env' f_component Hprog Hin_component Hcomponent_check Hexact
+    fname args synthetic_body fdef Htarget Hlookup.
+  pose (body_env := global_env_with_local_bounds env' (fn_bounds f_component)).
+  assert (Hbase : global_env_local_bounds_family env' body_env).
+  { subst body_env. exists (fn_bounds f_component). reflexivity. }
+  assert (Hbody_family : global_env_local_bounds_family body_env body_env).
+  { eapply global_env_local_bounds_family_base. }
+  subst body_env.
+  eapply infer_program_env_end2end_strict_exact_closure_direct_callee_component_ready_payload_in_local_bounds_family.
+  - exact Hprog.
+  - exact Hbase.
+  - exact Hbody_family.
+  - exact Hin_component.
+  - exact Hcomponent_check.
+  - exact Hexact.
+  - exact Htarget.
+  - exact Hlookup.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_body_summary_at_callback_in_local_bounds_family :
   forall env env' f_component,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

@@ -872,15 +872,23 @@ Done:
   duplicating target-normalization code.
   Existing exact-body route package wrappers now use those helpers instead of
   repeating the inline target-normalization/projection proof.
+- The height-indexed evidence-at prefix-store `ECall` scope route now has a
+  typed-route bridge,
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_from_typed_route_and_exact_body_call_route_package`.
+  It closes frame/parameter cleanup from the exact-body package using the
+  result-subset cleanup path, height body-scope callback, argument scope helper,
+  and `direct_call_eval_height_ecall_body_lt_of_eval_call`, while taking the
+  height-indexed typed/roots route as the remaining recursive premise.
 
 Next:
 
-- Prove the height-indexed evidence-at prefix-store `ECall` scope route from the
-  exact-body scoped package, using the result-subset cleanup path, the height
-  body-scope callback, and `direct_call_eval_height_ecall_body_lt_of_eval_call`.
-- Thread that evidence-at route through a wrapper that still has root-name/root-key
-  route premises, then lift the prefix-store route to the full-store typed/named
-  route and finally to the direct `ECall` scope route.
+- Close the recursive knot between the height-indexed evidence-at typed/roots
+  route and the new typed-route-to-scope bridge, preferably by a small mutual or
+  wrapper theorem that keeps the typed route as the only recursive preservation
+  premise.
+- Thread the resulting evidence-at scope route through a wrapper that still has
+  root-name/root-key route premises, then lift the prefix-store route to the
+  full-store typed/named route and finally to the direct `ECall` scope route.
 - Project that route to
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement`,
   then close
@@ -1387,8 +1395,10 @@ For an explicit-capture recursive closure group:
    - Done: add the height-indexed scope call-route interface
      `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_height_statement`
      and projection to the ordinary call route.
-   - Remaining gap: prove the height-indexed scope call route, then project it
-     through `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement_of_call_statement`
+   - Remaining gap: close the mutual connection between the height-indexed
+     typed/roots evidence-at route and the typed-route-to-scope bridge, then
+     project the resulting scope route through
+     `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement_of_call_statement`
      to close
      `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement`.
      The branch-local exact-body End2End route is available, but the default

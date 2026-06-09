@@ -1180,6 +1180,9 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_component_local_bounds_route_of_component_payload_provider`,
   a local-bounds route bridge that consumes a component payload provider carrying
   route-summary readiness plus exact-body target evidence.
+- The older component-check-provider local-bounds route bridge now factors
+  through the payload-provider bridge, leaving a single route-closure insertion
+  point for reachable component predicates.
 
 Next:
 

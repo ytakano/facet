@@ -839,11 +839,20 @@ Done:
 
 Next:
 
-- Prove the concrete scope-route theorem
-  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement`.
-  This should split on `preservation_direct_call_ready_expr`: use existing
-  frame/param-scope ready mutual preservation for `PDCR_Ready`, and the direct
-  `ECall` route for `PDCR_Call`.
+- Add a typed/named intermediate scope route for direct `ECall`s. The current
+  scope-only target lacks the `store_typed_prefix`, root-name, and root-key
+  premises required by the existing result-subset cleanup bridge, so first make
+  that dependency explicit in a narrower intermediate statement instead of
+  forcing those premises into the final public scope theorem.
+- Prove the height-indexed direct `ECall` scope route from the exact-body scoped
+  package, using the typed/named intermediate cleanup path and
+  `direct_call_eval_height_ecall_body_lt_of_eval_call` for recursive body calls.
+- Project that route to
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement`,
+  then close
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement` by
+  splitting `preservation_direct_call_ready_expr` into the generic ready route
+  and the direct `ECall` route.
 - Then use the branch-local strict-check bridge as the target for the default
   checker gate switch, or prove the default checker itself produces the strict
   sidecar before switching the extracted entrypoint.

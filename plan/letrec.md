@@ -1046,6 +1046,10 @@ Done:
 - Four more default summary-at/alpha route wrappers now use accepted-env
   sidecars directly, further reducing direct dependence on the internal shape
   of `infer_program_env_end2end`.
+- Remaining default route wrappers now derive `fn_env_unique_by_name` and
+  combined checker sidecars from program-level accepted-env lemmas, leaving
+  direct `infer_program_env_end2end` expansion only in the sidecar lemmas
+  themselves.
 
 Next:
 

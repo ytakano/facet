@@ -1146,17 +1146,7 @@ Proof.
     Hroot_names Hroot_keys env env' f s s' v Hprog Hprovider
     Hclosure_provider Hinitial Hin Hstore Heval.
   assert (Hunique : fn_env_unique_by_name env').
-  { unfold infer_program_env_end2end in Hprog.
-    set (env_alpha := alpha_normalize_global_env env) in *.
-    destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
-      try discriminate.
-    destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-      try discriminate.
-    destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
-      as [[] | err] eqn:Hfns; try discriminate.
-    injection Hprog as <-.
-    apply andb_true_iff in Hunique_global as [Hunique_top _].
-    eapply infer_program_env_alpha_elab_unique_by_name; eauto. }
+  { eapply infer_program_env_end2end_unique_by_name. exact Hprog. }
   eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_component_body_summary_in_evidence.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -1200,17 +1190,7 @@ Proof.
     Hroot_names Hroot_keys env env' f s s' v Hprog Hclosure_provider
     Halpha_target_provider Hinitial Hin Hstore Heval.
   assert (Hunique : fn_env_unique_by_name env').
-  { unfold infer_program_env_end2end in Hprog.
-    set (env_alpha := alpha_normalize_global_env env) in *.
-    destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
-      try discriminate.
-    destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-      try discriminate.
-    destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
-      as [[] | err] eqn:Hfns; try discriminate.
-    injection Hprog as <-.
-    apply andb_true_iff in Hunique_global as [Hunique_top _].
-    eapply infer_program_env_alpha_elab_unique_by_name; eauto. }
+  { eapply infer_program_env_end2end_unique_by_name. exact Hprog. }
   eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_component_body_summary_in_evidence.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -1251,17 +1231,7 @@ Proof.
     Hroot_names Hroot_keys env env' f s s' v Hprog Hclosure_provider
     Hinitial Hin Hstore Heval.
   assert (Hunique : fn_env_unique_by_name env').
-  { unfold infer_program_env_end2end in Hprog.
-    set (env_alpha := alpha_normalize_global_env env) in *.
-    destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
-      try discriminate.
-    destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-      try discriminate.
-    destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
-      as [[] | err] eqn:Hfns; try discriminate.
-    injection Hprog as <-.
-    apply andb_true_iff in Hunique_global as [Hunique_top _].
-    eapply infer_program_env_alpha_elab_unique_by_name; eauto. }
+  { eapply infer_program_env_end2end_unique_by_name. exact Hprog. }
   eapply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_lookup_evidence.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -1270,17 +1240,8 @@ Proof.
   - exact Hroot_names.
   - exact Hroot_keys.
   - exact Hunique.
-  - unfold infer_program_env_end2end in Hprog.
-    set (env_alpha := alpha_normalize_global_env env) in *.
-    destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
-      try discriminate.
-    destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-      try discriminate.
-    destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
-      as [[] | err] eqn:Hfns; try discriminate.
-    injection Hprog as <-.
-    unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
-    eapply infer_fns_env_end2end_combined_check_env_ready. exact Hfns.
+  - eapply infer_program_env_end2end_combined_check_env_ready.
+    exact Hprog.
   - eapply component_body_synthetic_direct_call_ready_summary_at_in_provider_of_closure_check_provider;
       eassumption.
   - eapply component_body_no_capture_direct_call_component_target_in_provider_of_closure_check_provider;
@@ -1318,17 +1279,7 @@ Proof.
     Hroot_names Hroot_keys env env' f s s' v Hprog Hstrict_check
     Hsummary_at_provider Htarget_provider Halpha_lookup_provider Hinitial Hin Hstore Heval.
   assert (Hunique : fn_env_unique_by_name env').
-  { unfold infer_program_env_end2end in Hprog.
-    set (env_alpha := alpha_normalize_global_env env) in *.
-    destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
-      try discriminate.
-    destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-      try discriminate.
-    destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
-      as [[] | err] eqn:Hfns; try discriminate.
-    injection Hprog as <-.
-    apply andb_true_iff in Hunique_global as [Hunique_top _].
-    eapply infer_program_env_alpha_elab_unique_by_name; eauto. }
+  { eapply infer_program_env_end2end_unique_by_name. exact Hprog. }
   eapply check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_lookup_evidence.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -1373,17 +1324,7 @@ Proof.
     Hroot_names Hroot_keys Hstatic env env' f s s' v Hprog Hstrict_check
     Hsummary_at_provider Htarget_provider Halpha_lookup_provider Hinitial Hin Hstore Heval.
   assert (Hunique : fn_env_unique_by_name env').
-  { unfold infer_program_env_end2end in Hprog.
-    set (env_alpha := alpha_normalize_global_env env) in *.
-    destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
-      try discriminate.
-    destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-      try discriminate.
-    destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
-      as [[] | err] eqn:Hfns; try discriminate.
-    injection Hprog as <-.
-    apply andb_true_iff in Hunique_global as [Hunique_top _].
-    eapply infer_program_env_alpha_elab_unique_by_name; eauto. }
+  { eapply infer_program_env_end2end_unique_by_name. exact Hprog. }
   eapply check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_lookup_evidence_non_store_safe.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -1459,17 +1400,7 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys env env' f s s' v Hprog Hstrict_check Hinitial Hin Hstore Heval.
   assert (Hunique : fn_env_unique_by_name env').
-  { unfold infer_program_env_end2end in Hprog.
-    set (env_alpha := alpha_normalize_global_env env) in *.
-    destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
-      try discriminate.
-    destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-      try discriminate.
-    destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
-      as [[] | err] eqn:Hfns; try discriminate.
-    injection Hprog as <-.
-    apply andb_true_iff in Hunique_global as [Hunique_top _].
-    eapply infer_program_env_alpha_elab_unique_by_name; eauto. }
+  { eapply infer_program_env_end2end_unique_by_name. exact Hprog. }
   eapply check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -1507,17 +1438,7 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys Hstatic env env' f s s' v Hprog Hstrict_check Hinitial Hin Hstore Heval.
   assert (Hunique : fn_env_unique_by_name env').
-  { unfold infer_program_env_end2end in Hprog.
-    set (env_alpha := alpha_normalize_global_env env) in *.
-    destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
-      try discriminate.
-    destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-      try discriminate.
-    destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
-      as [[] | err] eqn:Hfns; try discriminate.
-    injection Hprog as <-.
-    apply andb_true_iff in Hunique_global as [Hunique_top _].
-    eapply infer_program_env_alpha_elab_unique_by_name; eauto. }
+  { eapply infer_program_env_end2end_unique_by_name. exact Hprog. }
   eapply check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_non_store_safe.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -1557,17 +1478,7 @@ Proof.
     Hroot_names Hroot_keys env env' f s s' v Hprog Hstrict_check
     Hexact_provider Hinitial Hin Hstore Heval.
   assert (Hunique : fn_env_unique_by_name env').
-  { unfold infer_program_env_end2end in Hprog.
-    set (env_alpha := alpha_normalize_global_env env) in *.
-    destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
-      try discriminate.
-    destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-      try discriminate.
-    destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
-      as [[] | err] eqn:Hfns; try discriminate.
-    injection Hprog as <-.
-    apply andb_true_iff in Hunique_global as [Hunique_top _].
-    eapply infer_program_env_alpha_elab_unique_by_name; eauto. }
+  { eapply infer_program_env_end2end_unique_by_name. exact Hprog. }
   eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_strict_exact_closure_check.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -2362,17 +2273,7 @@ Proof.
     Hroot_names Hroot_keys env env' f s s' v Hprog Hprovider Hinitial Hin
     Hstore Heval.
   assert (Hunique : fn_env_unique_by_name env').
-  { unfold infer_program_env_end2end in Hprog.
-    set (env_alpha := alpha_normalize_global_env env) in *.
-    destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
-      try discriminate.
-    destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-      try discriminate.
-    destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
-      as [[] | err] eqn:Hfns; try discriminate.
-    injection Hprog as <-.
-    apply andb_true_iff in Hunique_global as [Hunique_top _].
-    eapply infer_program_env_alpha_elab_unique_by_name; eauto. }
+  { eapply infer_program_env_end2end_unique_by_name. exact Hprog. }
   eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_call_route_and_component_body_nested_in_evidence.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -2417,17 +2318,7 @@ Proof.
     Hroot_names Hroot_keys env env' f s s' v Hprog Hprovider Hinitial Hin
     Hstore Heval.
   assert (Hunique : fn_env_unique_by_name env').
-  { unfold infer_program_env_end2end in Hprog.
-    set (env_alpha := alpha_normalize_global_env env) in *.
-    destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
-      try discriminate.
-    destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-      try discriminate.
-    destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
-      as [[] | err] eqn:Hfns; try discriminate.
-    injection Hprog as <-.
-    apply andb_true_iff in Hunique_global as [Hunique_top _].
-    eapply infer_program_env_alpha_elab_unique_by_name; eauto. }
+  { eapply infer_program_env_end2end_unique_by_name. exact Hprog. }
   eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_prefix_scope_call_route_and_component_body_nested_in_evidence.
   - exact Hsynthetic_route.
   - exact Hscope_summary_at.

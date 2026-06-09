@@ -898,13 +898,16 @@ Done:
   with projection wrappers for the typed/roots route and the evidence-at
   prefix-store scope route that no longer require the broad synthetic scope
   premise.
+- The evidence-at prefix-store scope route now projects through the existing
+  summary-at/full-store route layers via
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_of_evidence_at`
+  and the exact-body package wrappers ending at
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_statement_of_exact_body_call_route_package`.
 
 Next:
 
-- Thread the resulting evidence-at scope route through a wrapper that still has
-  root-name/root-key route premises, then lift the prefix-store route to the
-  full-store typed/named route and finally to the direct `ECall` scope route.
-- Project that route to
+- Bridge the summary-at scope call route to the ordinary direct `ECall` scope
+  route expected by
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement`,
   then close
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement` by
@@ -1410,8 +1413,8 @@ For an explicit-capture recursive closure group:
    - Done: add the height-indexed scope call-route interface
      `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_height_statement`
      and projection to the ordinary call route.
-   - Remaining gap: thread the new evidence-at prefix-store scope route through
-     the full-store/call-statement projection path, then project it through
+   - Remaining gap: bridge the summary-at full-store scope route to the
+     ordinary direct `ECall` scope route, then project it through
      `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement_of_call_statement`
      to close
      `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement`.

@@ -813,6 +813,21 @@ Proof.
   eapply Hheight; eassumption.
 Qed.
 
+Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_of_evidence_at :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement.
+Proof.
+  intros Hroot_names Hroot_keys Hprefix env s fname args s' v n_call Heval
+    Hheight Omega n R Sigma T Sigma' R' roots ps frame Hready_args Hstore
+    Hnamed Hkeys Htyped Hunique Hsummary_at _Hsummary_body_at_all
+    _Hevidence_body_env_all Hcover Hroots Hshadow Hrn Hframe Hfresh Hparam.
+  eapply Hprefix; try eassumption.
+  eapply direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at_of_shadow_summary_at;
+    eassumption.
+Qed.
+
 Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_height_statement_of_prefix_call_height_statement :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_height_statement.
@@ -10191,6 +10206,89 @@ Proof.
       Hframe_ready Hparam_ready Hexact_body_target Hbody_package)
     as [_ Hscope].
   exact Hscope.
+Qed.
+
+Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_of_exact_body_call_route_package :
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall)) ->
+  store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement.
+Proof.
+  intros Htyping_prefix Hprefix_ready Hroots_ready Hroot_names Hroot_keys
+    Hstatic Hframe_ready Hparam_ready Hexact_body_target Hbody_package.
+  eapply eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_of_evidence_at.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - eapply eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_of_exact_body_call_route_package;
+      eassumption.
+Qed.
+
+Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_height_statement_of_exact_body_call_route_package :
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall)) ->
+  store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_height_statement.
+Proof.
+  intros Htyping_prefix Hprefix_ready Hroots_ready Hroot_names Hroot_keys
+    Hstatic Hframe_ready Hparam_ready Hexact_body_target Hbody_package.
+  eapply eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_height_statement_of_prefix_call_height_statement.
+  eapply eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_of_exact_body_call_route_package;
+    eassumption.
+Qed.
+
+Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_statement_of_exact_body_call_route_package :
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall)) ->
+  store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_statement.
+Proof.
+  intros Htyping_prefix Hprefix_ready Hroots_ready Hroot_names Hroot_keys
+    Hstatic Hframe_ready Hparam_ready Hexact_body_target Hbody_package.
+  eapply eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_statement_of_height_statement.
+  eapply eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_height_statement_of_exact_body_call_route_package;
+    eassumption.
 Qed.
 
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package_height :

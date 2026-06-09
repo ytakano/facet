@@ -837,14 +837,16 @@ Done:
   plus projection back to
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement`.
 - The pointwise typed/named scope route now also has a height-indexed
-  intermediate interface,
+  intermediate interface with the existing full `store_typed` cleanup premise,
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_height_statement`,
   plus projection back to the ordinary pointwise call statement.
 
 Next:
 
 - Prove the height-indexed pointwise typed/named `ECall` scope route from the
-  exact-body scoped package, using the result-subset cleanup path and
+  exact-body scoped package. This route still needs the existing full
+  `store_typed` cleanup premise; do not try to recover full store typing from
+  `store_typed_prefix`. Use the result-subset cleanup path and
   `direct_call_eval_height_ecall_body_lt_of_eval_call` for recursive body calls.
 - Use that intermediate theorem to prove the height-indexed direct `ECall`
   scope route from the exact-body scoped

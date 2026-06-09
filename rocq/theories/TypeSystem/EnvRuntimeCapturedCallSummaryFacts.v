@@ -3917,6 +3917,22 @@ Proof.
   exact Hcheck.
 Qed.
 
+Lemma check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_check_when_not_captured :
+  forall env fdef,
+    check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+      env fdef = true ->
+    check_fn_root_shadow_captured_call_store_safe_summary env fdef = false ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef = true.
+Proof.
+  intros env fdef Hstrict Hcaptured.
+  unfold check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+    in Hstrict.
+  destruct (check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+              env fdef) eqn:Hcomponent_check; try reflexivity.
+  rewrite Hcaptured in Hstrict. discriminate.
+Qed.
+
 Lemma check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_ready_when_not_captured :
   forall env fdef,
     check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
@@ -3956,6 +3972,23 @@ Proof.
     exact Hcomponent_check.
   - eapply check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_exact_closure;
       eassumption.
+Qed.
+
+Lemma check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_check_when_not_captured :
+  forall env fdef,
+    check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+      env = true ->
+    In fdef (env_fns env) ->
+    check_fn_root_shadow_captured_call_store_safe_summary env fdef = false ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef = true.
+Proof.
+  intros env fdef Hcheck Hin Hcaptured.
+  unfold check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+    in Hcheck.
+  apply forallb_forall with (x := fdef) in Hcheck; [| exact Hin].
+  eapply check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_check_when_not_captured;
+    eassumption.
 Qed.
 
 Lemma check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_ready_when_not_captured :

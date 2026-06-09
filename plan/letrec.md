@@ -1009,6 +1009,10 @@ Done:
   `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_ready_when_not_captured`,
   its env-level counterpart, and
   `infer_program_env_end2end_strict_exact_closure_component_ready_when_not_captured`.
+- The same non-captured branch now exposes component-check evidence through
+  `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_check_when_not_captured`,
+  its env/program wrappers, and the route wrapper
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_closure_non_captured_route_package`.
 
 Next:
 

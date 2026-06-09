@@ -1453,6 +1453,10 @@ The Rocq definitions and extracted checker remain the source of truth. The
 OCaml parser and de Bruijn conversion may represent the surface syntax, but
 must not duplicate type-checking logic or add fallback acceptance paths.
 
+- The route-indexed store-safe body-call callback provider is now named as
+  `strict_exact_closure_component_body_store_safe_callback_at_provider`, and
+  the strict exact-closure at-target wrapper consumes that named provider.
+
 ## Surface Syntax
 
 Use an `fn`-like local group syntax:

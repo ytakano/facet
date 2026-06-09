@@ -1467,6 +1467,9 @@ Done:
 - End2End strict exact-closure now derives reachable exact-body route package
   providers for a component body's direct-callee route via
   `infer_program_env_end2end_strict_exact_closure_component_body_reachable_exact_body_route_package_provider_of_component_check`.
+- TypeSafety can turn a reachable exact-body route package provider into a
+  route-indexed store-safe body-call callback-at proof via
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at_of_reachable_exact_body_call_route_package_provider`.
 
 Next:
 

@@ -928,14 +928,6 @@ Proof.
     Hroot_names Hroot_keys env env' f s s' v Hprog Hsummary_at_provider
     Hnested_summary_provider Hnested_body_provider Hnested2_summary_provider
     Hnested2_body_provider Hinitial Hin Hstore Heval.
-  unfold infer_program_env_end2end in Hprog.
-  set (env_alpha := alpha_normalize_global_env env) in *.
-  destruct (global_names_unique_b env_alpha) eqn:Hunique_global; try discriminate.
-  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-    try discriminate.
-  destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
-    as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
   eapply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_at_prefix_scope_call_route_with_component_body_nested_in_evidence.
   - exact Hsynthetic_route.
   - exact Hscope_summary_at.
@@ -943,10 +935,10 @@ Proof.
   - exact Hroots_ready.
   - exact Hroot_names.
   - exact Hroot_keys.
-  - apply andb_true_iff in Hunique_global as [Hunique_top _].
-    eapply infer_program_env_alpha_elab_unique_by_name; eauto.
-  - unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
-    eapply infer_fns_env_end2end_combined_check_env_ready. exact Hfns.
+  - eapply infer_program_env_end2end_unique_by_name.
+    exact Hprog.
+  - eapply infer_program_env_end2end_combined_check_env_ready.
+    exact Hprog.
   - exact Hsummary_at_provider.
   - exact Hnested_summary_provider.
   - exact Hnested_body_provider.
@@ -982,14 +974,6 @@ Proof.
     Hroot_names Hroot_keys env env' f s s' v Hprog Hsummary_at_provider
     Htarget_provider Halpha_nested_summary_provider Hnested_body_provider
     Hinitial Hin Hstore Heval.
-  unfold infer_program_env_end2end in Hprog.
-  set (env_alpha := alpha_normalize_global_env env) in *.
-  destruct (global_names_unique_b env_alpha) eqn:Hunique_global; try discriminate.
-  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-    try discriminate.
-  destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
-    as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
   eapply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_summary_at_call_route_with_component_body_nested_in_evidence.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -997,10 +981,10 @@ Proof.
   - exact Hroots_ready.
   - exact Hroot_names.
   - exact Hroot_keys.
-  - apply andb_true_iff in Hunique_global as [Hunique_top _].
-    eapply infer_program_env_alpha_elab_unique_by_name; eauto.
-  - unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
-    eapply infer_fns_env_end2end_combined_check_env_ready. exact Hfns.
+  - eapply infer_program_env_end2end_unique_by_name.
+    exact Hprog.
+  - eapply infer_program_env_end2end_combined_check_env_ready.
+    exact Hprog.
   - exact Hsummary_at_provider.
   - exact Htarget_provider.
   - exact Halpha_nested_summary_provider.
@@ -1035,14 +1019,6 @@ Proof.
     Hroot_names Hroot_keys env env' f s s' v Hprog Hsummary_at_provider
     Htarget_provider Halpha_nested_summary_provider Halpha_nested_body_provider
     Hinitial Hin Hstore Heval.
-  unfold infer_program_env_end2end in Hprog.
-  set (env_alpha := alpha_normalize_global_env env) in *.
-  destruct (global_names_unique_b env_alpha) eqn:Hunique_global; try discriminate.
-  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-    try discriminate.
-  destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
-    as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
   eapply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_nested_evidence_at_call_route_with_component_body_nested_in_evidence.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -1050,10 +1026,10 @@ Proof.
   - exact Hroots_ready.
   - exact Hroot_names.
   - exact Hroot_keys.
-  - apply andb_true_iff in Hunique_global as [Hunique_top _].
-    eapply infer_program_env_alpha_elab_unique_by_name; eauto.
-  - unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
-    eapply infer_fns_env_end2end_combined_check_env_ready. exact Hfns.
+  - eapply infer_program_env_end2end_unique_by_name.
+    exact Hprog.
+  - eapply infer_program_env_end2end_combined_check_env_ready.
+    exact Hprog.
   - exact Hsummary_at_provider.
   - exact Htarget_provider.
   - exact Halpha_nested_summary_provider.
@@ -1084,14 +1060,6 @@ Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys env env' f s s' v Hprog Hsummary_at_provider
     Htarget_provider Halpha_nested_summary_provider Hinitial Hin Hstore Heval.
-  unfold infer_program_env_end2end in Hprog.
-  set (env_alpha := alpha_normalize_global_env env) in *.
-  destruct (global_names_unique_b env_alpha) eqn:Hunique_global; try discriminate.
-  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-    try discriminate.
-  destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
-    as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
   eapply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_summary_in_evidence.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -1099,10 +1067,10 @@ Proof.
   - exact Hroots_ready.
   - exact Hroot_names.
   - exact Hroot_keys.
-  - apply andb_true_iff in Hunique_global as [Hunique_top _].
-    eapply infer_program_env_alpha_elab_unique_by_name; eauto.
-  - unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
-    eapply infer_fns_env_end2end_combined_check_env_ready. exact Hfns.
+  - eapply infer_program_env_end2end_unique_by_name.
+    exact Hprog.
+  - eapply infer_program_env_end2end_combined_check_env_ready.
+    exact Hprog.
   - exact Hsummary_at_provider.
   - exact Htarget_provider.
   - exact Halpha_nested_summary_provider.

@@ -1043,6 +1043,9 @@ Done:
 - Five additional default summary/body-evidence route wrappers now use the
   accepted-env uniqueness and combined-check sidecars directly, instead of
   reopening `infer_program_env_end2end` in each proof.
+- Four more default summary-at/alpha route wrappers now use accepted-env
+  sidecars directly, further reducing direct dependence on the internal shape
+  of `infer_program_env_end2end`.
 
 Next:
 

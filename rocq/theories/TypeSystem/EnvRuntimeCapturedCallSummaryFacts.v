@@ -362,6 +362,17 @@ Definition component_body_synthetic_direct_call_ready_summary_at_in_provider
     fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
       (global_env_with_local_bounds env (fn_bounds f_component)) fname.
 
+Definition component_body_synthetic_direct_call_ready_summary_at_check_in_provider
+    (env : global_env) : Prop :=
+  forall f_component fname args synthetic_body,
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    direct_call_target_expr (fn_body f_component) =
+      Some (fname, args, synthetic_body) ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds f_component)) fname.
+
 Definition component_body_synthetic_direct_call_ready_body_env_evidence_in_provider
     (env : global_env) : Prop :=
   forall f_component,
@@ -3421,6 +3432,17 @@ Proof.
   - eapply Hprovider; eassumption.
   - exact Htarget.
   - exact Hlookup.
+Qed.
+
+Lemma component_body_synthetic_direct_call_ready_summary_at_check_in_provider_of_target_check_in_provider :
+  forall env,
+    component_body_no_capture_direct_call_component_target_check_in_provider env ->
+    component_body_synthetic_direct_call_ready_summary_at_check_in_provider env.
+Proof.
+  intros env Htarget_provider f_component fname args synthetic_body
+    Hin_component Hcomponent_check Htarget fdef Hlookup.
+  eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component.
+  eapply Htarget_provider; eassumption.
 Qed.
 
 Lemma component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_of_closure_check :

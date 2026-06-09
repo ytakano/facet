@@ -1000,6 +1000,10 @@ Done:
   plus strict accepted-env derivation through
   `infer_program_env_end2end_strict_exact_closure_target_check_in_provider`.
   This avoids requiring Prop-to-bool completeness for component summaries.
+- Bool component sidecars now also expose summary-at evidence through
+  `component_body_synthetic_direct_call_ready_summary_at_check_in_provider`
+  and strict accepted-env derivation through
+  `infer_program_env_end2end_strict_exact_closure_summary_at_check_in_provider`.
 
 Next:
 

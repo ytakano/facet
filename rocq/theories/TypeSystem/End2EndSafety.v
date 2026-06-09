@@ -472,6 +472,18 @@ Proof.
     exact Hprog.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_summary_at_check_in_provider :
+  forall env env',
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    component_body_synthetic_direct_call_ready_summary_at_check_in_provider
+      env'.
+Proof.
+  intros env env' Hprog.
+  eapply component_body_synthetic_direct_call_ready_summary_at_check_in_provider_of_target_check_in_provider.
+  eapply infer_program_env_end2end_strict_exact_closure_target_check_in_provider.
+  exact Hprog.
+Qed.
+
 
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready :
   forall env env' f s s' v,

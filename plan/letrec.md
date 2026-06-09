@@ -802,6 +802,12 @@ Done:
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_exact_body_call_route_scoped_package_and_branch_local_strict_exact_closure_check`,
   avoiding the callee-local premise for that end-to-end path.
 
+- The component-level direct-call safety path now has a non-store-safe
+  lookup-evidence wrapper,
+  `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_lookup_evidence_non_store_safe`,
+  so the strict/direct-component branch can consume the non-store-safe
+  evidence-at route once the env/checker wrappers are lifted.
+
 Next:
 
 - Use the branch-local strict-check bridge as the target for the default checker
@@ -1286,11 +1292,15 @@ For an explicit-capture recursive closure group:
    - Done: thread the scoped exact-body evidence_at route into the default
      checker plus branch-local strict-check bridge with
      `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_exact_body_call_route_scoped_package_and_branch_local_strict_exact_closure_check`.
-   - Remaining gap: target the default checker gate switch through that
-     branch-local bridge, or first prove the default checker produces the strict
-     sidecar, before switching the extracted checker gate to the strict
-     exact-body component sidecar path; otherwise the default end-to-end
-     big-step safety theorem loses the route evidence needed by the
+   - Done: add the component-level non-store-safe lookup-evidence safety
+     wrapper
+     `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_lookup_evidence_non_store_safe`.
+   - Remaining gap: lift that non-store-safe lookup-evidence wrapper through
+     env/checker/strict end-to-end safety, then target the default checker gate
+     switch through the branch-local bridge, or first prove the default checker
+     produces the strict sidecar, before switching the extracted checker gate to
+     the strict exact-body component sidecar path; otherwise the default
+     end-to-end big-step safety theorem loses the route evidence needed by the
      branch-local strict bridge. The route statements are
      `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement`
      and

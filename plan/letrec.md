@@ -1367,6 +1367,9 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_component_body_exact_body_route_package_at_of_component_check`,
   converting a component body's direct-callee lookup into a current-target
   exact-body route package.
+- The same route-indexed package helper is available for alpha-renamed component
+  bodies as
+  `infer_program_env_end2end_strict_exact_closure_component_body_alpha_exact_body_route_package_at_of_component_check`.
 
 Next:
 

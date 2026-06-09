@@ -1574,6 +1574,34 @@ Proof.
   split; [exact Hcomponent | exact Hexact].
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_component_body_alpha_exact_body_route_package_at_of_component_check :
+  forall env env' f_component fcall used used' fname args synthetic_body fdef,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    alpha_rename_fn_def used f_component = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname, args, synthetic_body) ->
+    lookup_fn fname
+      (env_fns (global_env_with_local_bounds env' (fn_bounds f_component))) =
+      Some fdef ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+      (global_env_with_local_bounds env' (fn_bounds f_component)) fname.
+Proof.
+  intros env env' f_component fcall used used' fname args synthetic_body fdef
+    Hprog Hin_component Hcomponent_check Hrename Htarget Hlookup.
+  destruct (direct_call_target_expr_alpha_rename_fn_def_inv
+              used f_component fcall used' fname args synthetic_body
+              Hrename Htarget) as (args0 & Htarget_original).
+  eapply infer_program_env_end2end_strict_exact_closure_component_body_exact_body_route_package_at_of_component_check.
+  - exact Hprog.
+  - exact Hin_component.
+  - exact Hcomponent_check.
+  - exact Htarget_original.
+  - exact Hlookup.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_body_summary_at_callback_in_local_bounds_family :
   forall env env' f_component,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

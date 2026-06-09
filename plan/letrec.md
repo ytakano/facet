@@ -1172,6 +1172,10 @@ Done:
   route-summary readiness with exact-body target evidence through
   `infer_program_env_end2end_strict_exact_closure_route_summary_and_exact_target_in_local_bounds_family`,
   preparing a compact component-ready payload for reachable-route predicates.
+- Env-runtime captured safety now has
+  `store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_route_summary_and_exact_target_ready`,
+  a scoped route package constructor for component-ready payloads that already
+  carry route-summary readiness plus exact-body target evidence.
 
 Next:
 

@@ -58,6 +58,20 @@ Proof.
       eassumption.
 Qed.
 
+Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_route_summary_and_exact_target_ready :
+  store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_statement
+    (fun env fdef =>
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_route_summary
+        env fdef /\
+      callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+        env fdef).
+Proof.
+  intros env fname fdef fcall used used' fname_body args_body
+    [Hroute_summary _Hexact] Hin Hname Hrename Htarget.
+  eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_route_summary_ready;
+    eassumption.
+Qed.
+
 Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider_of_component_route_summary_ready :
   forall env,
     store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider

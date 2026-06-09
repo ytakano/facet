@@ -1892,6 +1892,117 @@ Proof.
   - exact Heval.
 Qed.
 
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_prefix_scope_call_route_and_component_body_summary_provider :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end env = infer_ok env' ->
+    component_body_synthetic_direct_call_ready_summary_provider env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_summary_at Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys env env' f s s' v Hprog Hprovider Hinitial Hin
+    Hstore Heval.
+  assert (Hunique : fn_env_unique_by_name env').
+  { unfold infer_program_env_end2end in Hprog.
+    set (env_alpha := alpha_normalize_global_env env) in *.
+    destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
+      try discriminate.
+    destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
+      try discriminate.
+    destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
+      as [[] | err] eqn:Hfns; try discriminate.
+    injection Hprog as <-.
+    apply andb_true_iff in Hunique_global as [Hunique_top _].
+    eapply infer_program_env_alpha_elab_unique_by_name; eauto. }
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_prefix_scope_call_route_and_component_body_nested_in_evidence.
+  - exact Hsynthetic_route.
+  - exact Hscope_summary_at.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hprog.
+  - eapply component_body_synthetic_direct_call_ready_summary_at_in_provider_of_provider.
+    eapply component_body_synthetic_direct_call_ready_summary_at_provider_of_provider.
+    exact Hprovider.
+  - eapply component_body_synthetic_direct_call_ready_nested_summary_at_in_provider_of_provider.
+    exact Hprovider.
+  - eapply component_body_synthetic_direct_call_ready_nested_body_env_evidence_in_provider_of_provider.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hunique.
+    + exact Hprovider.
+  - eapply component_body_synthetic_direct_call_ready_nested2_summary_at_in_provider_of_provider.
+    exact Hprovider.
+  - eapply component_body_synthetic_direct_call_ready_nested2_body_env_evidence_in_provider_of_provider.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hunique.
+    + exact Hprovider.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
+Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_exact_body_call_route_package_and_component_body_summary_provider :
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall)) ->
+  store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end env = infer_ok env' ->
+    component_body_synthetic_direct_call_ready_summary_provider env' ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Htyping_prefix Hprefix_ready Hroots_ready Hroot_names Hroot_keys
+    Hstatic Hframe_ready Hparam_ready Hexact_body_target Hbody_package
+    env env' f s s' v Hprog Hprovider Hinitial Hin Hstore Heval.
+  eapply infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_prefix_scope_call_route_and_component_body_summary_provider.
+  - eapply eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_of_evidence_at;
+      try eassumption.
+    eapply eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package_no_scope;
+      eassumption.
+  - eapply eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_statement_of_exact_body_call_route_package;
+      eassumption.
+  - exact eval_preserves_typing_ready_mutual.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hprog.
+  - exact Hprovider.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_call_package_and_component_body_summary_evidence :
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
   eval_preserves_frame_scope_roots_ready_mutual_statement ->

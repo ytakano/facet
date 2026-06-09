@@ -5154,6 +5154,43 @@ Proof.
     eapply Hprovider. exact Hcomponent.
 Qed.
 
+Lemma component_body_synthetic_direct_call_ready_nested2_summary_at_in_provider_of_provider :
+  forall env,
+    component_body_synthetic_direct_call_ready_summary_provider env ->
+    component_body_synthetic_direct_call_ready_nested2_summary_at_in_provider env.
+Proof.
+  intros env Hprovider f_component _Hin Hcomponent fcall fcall_inner fname
+    args synthetic_body _Htarget.
+  eapply fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_env.
+  eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+  eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+  eapply Hprovider. exact Hcomponent.
+Qed.
+
+Lemma component_body_synthetic_direct_call_ready_nested2_body_env_evidence_in_provider_of_provider :
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env,
+    fn_env_unique_by_name env ->
+    component_body_synthetic_direct_call_ready_summary_provider env ->
+    component_body_synthetic_direct_call_ready_nested2_body_env_evidence_in_provider env.
+Proof.
+  intros Hroot_names Hroot_keys env Hunique Hprovider f_component _Hin
+    Hcomponent fcall fcall_inner fcall_inner2.
+  eapply (direct_call_callee_body_root_synthetic_direct_call_ready_evidence_global_env_with_local_bounds_of_shadow_summary
+    Hroot_names Hroot_keys
+    (global_env_with_local_bounds
+      (global_env_with_local_bounds
+        (global_env_with_local_bounds env (fn_bounds f_component))
+        (fn_bounds fcall))
+      (fn_bounds fcall_inner))
+    (fn_bounds fcall_inner2)).
+  - unfold fn_env_unique_by_name in *; simpl. exact Hunique.
+  - eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+    eapply env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence_global_env_with_local_bounds.
+    eapply Hprovider. exact Hcomponent.
+Qed.
+
 Lemma component_body_synthetic_direct_call_ready_alpha_nested_body_env_evidence_in_provider_of_provider :
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->

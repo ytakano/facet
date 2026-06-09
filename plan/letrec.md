@@ -929,12 +929,20 @@ Done:
   `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_at_prefix_scope_call_route_with_component_body_nested_in_evidence`
   and
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_prefix_scope_call_route_and_component_body_nested_in_evidence`.
+- The exact-body route package now connects to the summary-at prefix-scope
+  end-to-end bridge through
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_statement_of_exact_body_call_route_package`,
+  `component_body_synthetic_direct_call_ready_nested2_summary_at_in_provider_of_provider`,
+  `component_body_synthetic_direct_call_ready_nested2_body_env_evidence_in_provider_of_provider`,
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_prefix_scope_call_route_and_component_body_summary_provider`,
+  and
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_exact_body_call_route_package_and_component_body_summary_provider`.
 
 Next:
 
-- Connect the exact-body route package projection to the summary-at
-  prefix-scope end-to-end wrapper, including providers for nested2
-  summary/evidence.
+- Use the exact-body route-package end-to-end bridge to replace the remaining
+  strict exact-body gate inputs, then switch the default checker gate when the
+  sidecar provider is available without assumptions.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.
 

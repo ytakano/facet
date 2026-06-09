@@ -1190,6 +1190,11 @@ Done:
   case through
   `infer_program_env_end2end_strict_exact_closure_single_seen_route_summary_and_exact_target_in_local_bounds_family`,
   reusing the root component payload when a callee name matches the root.
+- End-to-end strict exact-closure safety now derives route-summary plus
+  exact-target payload for a direct callee lookup via
+  `infer_program_env_end2end_strict_exact_closure_direct_callee_route_summary_and_exact_target_in_local_bounds_family`,
+  splitting the reachable callee into the singleton seen-cycle case or the
+  non-seen reachable `seen` payload case.
 
 Next:
 

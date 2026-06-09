@@ -944,6 +944,39 @@ Proof.
     exact Hlookup.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_direct_callee_route_summary_and_exact_target_in_local_bounds_family :
+  forall env env' base env0 f_component fname args synthetic_body fcallee,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' f_component = true ->
+    direct_call_target_expr (fn_body f_component) =
+      Some (fname, args, synthetic_body) ->
+    lookup_fn fname (env_fns env0) = Some fcallee ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_route_summary
+      env0 fcallee /\
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env0 fcallee.
+Proof.
+  intros env env' base env0 f_component fname args synthetic_body fcallee
+    Hprog Hbase Henv Hin_component Hcomponent_check Hexact Htarget Hlookup.
+  destruct (lookup_fn_in_name fname (env_fns env0) fcallee Hlookup)
+    as [Hin_callee _Hname_callee].
+  destruct (infer_program_env_end2end_strict_exact_closure_callee_seen_of_lookup_in_local_bounds_family
+              env env' base env0 f_component fname args synthetic_body fcallee
+              Hprog Hbase Henv Hexact Htarget Hlookup) as (fuel' & Hseen).
+  destruct (CheckerOrdinary.ident_in_b (fn_name fcallee) [fn_name f_component])
+    eqn:Hseen_name.
+  - eapply infer_program_env_end2end_strict_exact_closure_single_seen_route_summary_and_exact_target_in_local_bounds_family;
+      eassumption.
+  - eapply infer_program_env_end2end_strict_exact_closure_seen_route_summary_and_exact_target_in_local_bounds_family;
+      eassumption.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_local_bounds_route_of_component_payload_provider :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->

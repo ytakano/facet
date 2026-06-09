@@ -1115,6 +1115,10 @@ Done:
 - Strict exact-closure program inference now projects accepted-env exact-body
   target sidecars through arbitrary local-bounds descendants via
   `infer_program_env_end2end_strict_exact_closure_exact_body_target_in_local_bounds_family`.
+- Strict exact-closure program inference now also projects accepted-env
+  direct-component store-safe summaries through arbitrary local-bounds
+  descendants via
+  `infer_program_env_end2end_strict_exact_closure_component_summary_in_local_bounds_family`.
 
 Next:
 

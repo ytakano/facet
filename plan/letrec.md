@@ -1410,6 +1410,8 @@ Done:
 - EnvRuntime captured safety now has a component-body theorem variant
   consuming the store-safe callback-height statement, threading the nested
   direct-call `store_safe_function_value_call_args` proof into the callback.
+- EnvRuntime captured safety now has the matching top-level wrapper for
+  per-component store-safe callback-height providers.
 
 Next:
 

@@ -333,6 +333,24 @@ Definition component_body_no_capture_direct_call_component_exact_body_target_pro
     callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
       env f_component.
 
+Definition component_body_no_capture_direct_call_component_exact_closure_check_in_provider
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env f_component = true.
+
+Definition component_body_no_capture_direct_call_component_exact_body_target_in_provider
+    (env : global_env) : Prop :=
+  forall f_component,
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env f_component.
+
 Definition component_body_synthetic_direct_call_ready_summary_at_in_provider
     (env : global_env) : Prop :=
   forall f_component fname args synthetic_body,
@@ -3897,6 +3915,47 @@ Proof.
   destruct (check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_ready
               env f_component Hcheck Hin Hcomponent) as [_ Hexact].
   exact Hexact.
+Qed.
+
+Lemma component_body_no_capture_direct_call_component_exact_closure_check_in_provider_of_strict_exact_closure_check :
+  forall env,
+    check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+      env = true ->
+    component_body_no_capture_direct_call_component_exact_closure_check_in_provider
+      env.
+Proof.
+  intros env Hcheck f_component Hin Hcomponent_check.
+  eapply check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_exact_closure.
+  - exact Hcheck.
+  - exact Hin.
+  - exact Hcomponent_check.
+Qed.
+
+Lemma component_body_no_capture_direct_call_component_exact_body_target_in_provider_of_exact_closure_check_in_provider :
+  forall env,
+    component_body_no_capture_direct_call_component_exact_closure_check_in_provider
+      env ->
+    component_body_no_capture_direct_call_component_exact_body_target_in_provider
+      env.
+Proof.
+  intros env Hprovider f_component Hin Hcomponent_check.
+  destruct (check_fn_root_shadow_no_capture_direct_call_component_exact_closure_head_sound
+              env f_component (Hprovider f_component Hin Hcomponent_check))
+    as [_ Hexact].
+  exact Hexact.
+Qed.
+
+Lemma component_body_no_capture_direct_call_component_exact_body_target_in_provider_of_strict_exact_closure_check :
+  forall env,
+    check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+      env = true ->
+    component_body_no_capture_direct_call_component_exact_body_target_in_provider
+      env.
+Proof.
+  intros env Hcheck.
+  eapply component_body_no_capture_direct_call_component_exact_body_target_in_provider_of_exact_closure_check_in_provider.
+  eapply component_body_no_capture_direct_call_component_exact_closure_check_in_provider_of_strict_exact_closure_check.
+  exact Hcheck.
 Qed.
 
 Lemma check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_closure_summary_ready :

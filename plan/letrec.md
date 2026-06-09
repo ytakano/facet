@@ -976,6 +976,11 @@ Done:
   directly through
   `infer_program_env_end2end_strict_exact_closure_check_env_ready` and
   `infer_program_env_end2end_strict_exact_closure_combined_check_env_ready`.
+- Exact-closure component sidecars now have In-scoped provider forms,
+  `component_body_no_capture_direct_call_component_exact_closure_check_in_provider`
+  and `component_body_no_capture_direct_call_component_exact_body_target_in_provider`,
+  plus constructors from the strict exact-closure env check. These avoid relying
+  on Prop-to-bool completeness for component summaries.
 
 Next:
 

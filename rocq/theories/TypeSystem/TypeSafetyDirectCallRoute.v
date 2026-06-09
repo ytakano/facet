@@ -2384,6 +2384,41 @@ Proof.
   split; assumption.
 Qed.
 
+Lemma eval_args_preserves_frame_param_scope_roots_ready :
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  forall env s args s_args vs (Ω : outlives_ctx) (n : nat) R Σ params Σ' R'
+      arg_roots ps frame,
+    eval_args env s args s_args vs ->
+    provenance_ready_args args ->
+    typed_args_roots env Ω n R Σ args params Σ' R' arg_roots ->
+    root_env_covers_params ps R ->
+    store_roots_within R s ->
+    store_no_shadow s ->
+    root_env_no_shadow R ->
+    store_frame_scope ps Σ s frame ->
+    store_frame_static_fresh Σ frame ->
+    store_param_scope ps s frame ->
+    store_frame_scope ps Σ' s_args frame /\
+    exists frame_args, store_param_scope ps s_args frame_args.
+Proof.
+  intros Hframe_ready Hparam_ready env s args s_args vs Ω n R Σ params Σ'
+    R' arg_roots ps frame Heval_args Hprov_args Htyped_args Hcover Hroots
+    Hshadow Hrn Hframe Hfresh Hparam.
+  destruct (proj1 (proj2 Hframe_ready)
+              env s args s_args vs Heval_args Ω n R Σ params Σ' R'
+              arg_roots ps frame Hprov_args Htyped_args Hcover Hroots
+              Hshadow Hrn Hframe Hfresh)
+    as [_ [_ [_ [_ [Hframe_args _]]]]].
+  destruct (proj1 (proj2 Hparam_ready)
+              env s args s_args vs Heval_args Ω n R Σ params Σ' R'
+              arg_roots ps frame Hprov_args Htyped_args Hcover Hparam)
+    as [frame_args Hparam_args].
+  split.
+  - exact Hframe_args.
+  - exists frame_args. exact Hparam_args.
+Qed.
+
 Lemma eval_synthetic_direct_call_body_scope_callback_from_result_subset_prefix_store :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_roots_ready_prefix_mutual_statement ->
@@ -9574,17 +9609,12 @@ Proof.
         Hlookup Hin0 (eq_sym Hname) Hunique) as Hsame;
       subst f_typed
   end.
-  destruct (proj1 (proj2 Hframe_ready)
-              env s args s_args vs H1 Ω n R Σ
-              (apply_lt_params σ (fn_params fdef0)) Σ' R'
-              arg_roots ps frame Hprov_args H7 Hcover Hroots Hshadow Hrn
-              Hframe Hfresh)
-    as [_ [_ [_ [_ [Hframe_args _]]]]].
-  destruct (proj1 (proj2 Hparam_ready)
-              env s args s_args vs H1 Ω n R Σ
-              (apply_lt_params σ (fn_params fdef0)) Σ' R'
-              arg_roots ps frame Hprov_args H7 Hcover Hparam)
-    as [frame_args Hparam_args].
+  destruct
+    (eval_args_preserves_frame_param_scope_roots_ready
+      Hframe_ready Hparam_ready env s args s_args vs Ω n R Σ
+      (apply_lt_params σ (fn_params fdef0)) Σ' R' arg_roots ps frame H1
+      Hprov_args H7 Hcover Hroots Hshadow Hrn Hframe Hfresh Hparam)
+    as [Hframe_args [frame_args Hparam_args]].
   destruct (proj1 (proj2 Htyping_ready)
               env s args s_args vs H1 Ω n Σ
               (apply_lt_params σ (fn_params fdef0)) Σ'

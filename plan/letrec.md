@@ -1377,6 +1377,9 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_component_body_route_package_and_callbacks_of_component_check`.
 - The route-indexed package provider has a named projection,
   `infer_program_env_end2end_strict_exact_closure_component_body_route_package_at_provider_of_component_check`.
+- End-to-end strict exact-closure safety can apply that provider through an
+  alpha-renamed component body target via
+  `infer_program_env_end2end_strict_exact_closure_component_body_route_package_at_provider_alpha_target`.
 
 Next:
 

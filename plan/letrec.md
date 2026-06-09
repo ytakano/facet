@@ -1232,6 +1232,10 @@ Done:
   `env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_local_bounds_family_callbacks`,
   letting each no-capture component provide its body-env route together with the
   branch-local callback bundle.
+- End-to-end strict exact-closure safety now exposes
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_local_bounds_family_callbacks`,
+  combining an external component body-env route provider with callback bundles
+  derived from the accepted-env sidecar.
 
 Next:
 

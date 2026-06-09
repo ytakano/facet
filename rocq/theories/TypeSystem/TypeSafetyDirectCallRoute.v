@@ -1159,6 +1159,147 @@ Proof.
     eassumption.
 Qed.
 
+Definition eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_reachable_less_callback
+    (base_env : global_env) (base_fname : ident) (n_call : nat) : Prop :=
+  forall m,
+    m < n_call ->
+    forall env fname,
+      store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable
+        base_env base_fname env fname ->
+    forall s args s' v,
+      eval env s (ECall fname args) s' v ->
+      direct_call_eval_height env s (ECall fname args) s' v m ->
+      forall (Omega : outlives_ctx) (n : nat) R Sigma T Sigma' R' roots,
+        preservation_ready_args args ->
+        store_typed_prefix env s Sigma ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        root_env_store_roots_named R s ->
+        root_env_store_keys_named R s ->
+        typed_env_roots env Omega n R Sigma (ECall fname args) T Sigma' R'
+          roots ->
+        fn_env_unique_by_name env ->
+        fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env
+          fname ->
+        direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+          env fname ->
+        store_typed_prefix env s' Sigma' /\
+        value_has_type env s' v T /\
+        store_ref_targets_preserved env s s' /\
+        store_roots_within R' s' /\
+        value_roots_within roots v /\
+        store_no_shadow s' /\
+        root_env_no_shadow R'.
+
+Definition eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_reachable_less_callback
+    (base_env : global_env) (base_fname : ident) (n_call : nat) : Prop :=
+  forall m,
+    m < n_call ->
+    forall env fname,
+      store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable
+        base_env base_fname env fname ->
+    forall s args s' v,
+      eval env s (ECall fname args) s' v ->
+      direct_call_eval_height env s (ECall fname args) s' v m ->
+      forall (Omega : outlives_ctx) (n : nat) R Sigma T Sigma' R' roots
+          ps frame,
+        preservation_ready_args args ->
+        store_typed_prefix env s Sigma ->
+        root_env_store_roots_named R s ->
+        root_env_store_keys_named R s ->
+        typed_env_roots env Omega n R Sigma (ECall fname args) T Sigma' R'
+          roots ->
+        fn_env_unique_by_name env ->
+        fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env
+          fname ->
+        direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+          env fname ->
+        root_env_covers_params ps R ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        store_frame_scope ps Sigma s frame ->
+        store_frame_static_fresh Sigma frame ->
+        store_param_scope ps s frame ->
+        store_frame_scope ps Sigma' s' frame /\
+        exists frame', store_param_scope ps s' frame'.
+
+Lemma eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_reachable_less_callback_of_all :
+  forall base_env base_fname n_call,
+  (forall m, m < n_call ->
+    forall env s fname args s' v,
+      eval env s (ECall fname args) s' v ->
+      direct_call_eval_height env s (ECall fname args) s' v m ->
+      forall (Omega : outlives_ctx) (n : nat) R Sigma T Sigma' R' roots,
+        preservation_ready_args args ->
+        store_typed_prefix env s Sigma ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        root_env_store_roots_named R s ->
+        root_env_store_keys_named R s ->
+        typed_env_roots env Omega n R Sigma (ECall fname args) T Sigma' R'
+          roots ->
+        fn_env_unique_by_name env ->
+        fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env
+          fname ->
+        direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+          env fname ->
+        store_typed_prefix env s' Sigma' /\
+        value_has_type env s' v T /\
+        store_ref_targets_preserved env s s' /\
+        store_roots_within R' s' /\
+        value_roots_within roots v /\
+        store_no_shadow s' /\
+        root_env_no_shadow R') ->
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_reachable_less_callback
+    base_env base_fname n_call.
+Proof.
+  intros base_env base_fname n_call Hall m Hlt env fname _Hreachable s args
+    s' v Heval Hheight Omega n R Sigma T Sigma' R' roots Hready Hstore
+    Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique Hsummary Hevidence.
+  eapply Hall; eassumption.
+Qed.
+
+Lemma eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_reachable_less_callback_of_all :
+  forall base_env base_fname n_call,
+  (forall m, m < n_call ->
+    forall env s fname args s' v,
+      eval env s (ECall fname args) s' v ->
+      direct_call_eval_height env s (ECall fname args) s' v m ->
+      forall (Omega : outlives_ctx) (n : nat) R Sigma T Sigma' R' roots
+          ps frame,
+        preservation_ready_args args ->
+        store_typed_prefix env s Sigma ->
+        root_env_store_roots_named R s ->
+        root_env_store_keys_named R s ->
+        typed_env_roots env Omega n R Sigma (ECall fname args) T Sigma' R'
+          roots ->
+        fn_env_unique_by_name env ->
+        fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env
+          fname ->
+        direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+          env fname ->
+        root_env_covers_params ps R ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        store_frame_scope ps Sigma s frame ->
+        store_frame_static_fresh Sigma frame ->
+        store_param_scope ps s frame ->
+        store_frame_scope ps Sigma' s' frame /\
+        exists frame', store_param_scope ps s' frame') ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_reachable_less_callback
+    base_env base_fname n_call.
+Proof.
+  intros base_env base_fname n_call Hall m Hlt env fname _Hreachable s args
+    s' v Heval Hheight Omega n R Sigma T Sigma' R' roots ps frame Hready
+    Hstore Hnamed Hkeys Htyped Hunique Hsummary Hevidence Hcover Hroots
+    Hshadow Hrn Hframe Hfresh Hparam.
+  eapply Hall; eassumption.
+Qed.
+
 Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at_of_package :
   store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement ->
   forall env fname,

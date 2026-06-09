@@ -1447,6 +1447,9 @@ Done:
   plus compatibility lemmas from all-target providers and one-step body-call
   reachability. It also has a direct bridge from summary height preservation
   to a pointwise store-safe body-call callback.
+- TypeSafety now also names reachable-indexed typing and frame/parameter
+  less-callback interfaces for the evidence-at height route, with
+  compatibility lemmas from the existing all-target less-callback shape.
 
 Next:
 

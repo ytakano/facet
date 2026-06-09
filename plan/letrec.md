@@ -1107,6 +1107,11 @@ Done:
 - Strict exact-closure env/checker safety now also has branch-local
   local-bounds-family route variants, requiring the route only after the
   direct-component checker branch is known.
+- Strict exact-body target evidence is now stable across
+  `global_env_with_local_bounds` via
+  `callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_global_env_with_local_bounds`,
+  preparing accepted-env exact-target sidecars for branch-local body-env route
+  construction.
 
 Next:
 

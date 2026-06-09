@@ -2084,6 +2084,17 @@ Proof.
   eapply Hunique; eassumption.
 Qed.
 
+Lemma callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_global_env_with_local_bounds :
+  forall env bounds fdef,
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env fdef ->
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      (global_env_with_local_bounds env bounds) fdef.
+Proof.
+  intros env bounds fdef Htarget.
+  exact Htarget.
+Qed.
+
 Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds :
   forall env bounds fdef,
     fn_env_unique_by_name env ->

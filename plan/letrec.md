@@ -1199,6 +1199,10 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_alpha_direct_callee_route_summary_and_exact_target_in_local_bounds_family`,
   so route callbacks can recover the original component target before deriving
   the callee payload.
+- End-to-end strict exact-closure safety now converts alpha direct-callee
+  payloads into per-name synthetic direct-call summary evidence via
+  `infer_program_env_end2end_strict_exact_closure_alpha_direct_callee_summary_evidence_at_in_local_bounds_family`,
+  matching the branch-local `Hsummary_at` callback shape.
 
 Next:
 

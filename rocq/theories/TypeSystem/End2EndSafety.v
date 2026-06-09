@@ -1014,6 +1014,35 @@ Proof.
   - exact Hlookup.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_alpha_direct_callee_summary_evidence_at_in_local_bounds_family :
+  forall env env' base env0 f_component fcall used used' fname args
+      synthetic_body,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' f_component = true ->
+    alpha_rename_fn_def used f_component = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname, args, synthetic_body) ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      env0 fname.
+Proof.
+  intros env env' base env0 f_component fcall used used' fname args
+    synthetic_body Hprog Hbase Henv Hin_component Hcomponent_check Hexact
+    Hrename Htarget fcallee Hlookup.
+  destruct (infer_program_env_end2end_strict_exact_closure_alpha_direct_callee_route_summary_and_exact_target_in_local_bounds_family
+              env env' base env0 f_component fcall used used' fname args
+              synthetic_body fcallee Hprog Hbase Henv Hin_component
+              Hcomponent_check Hexact Hrename Htarget Hlookup)
+    as [[Hcomponent _Hroute_summary] _Hexact].
+  eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component.
+  exact Hcomponent.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_local_bounds_route_of_component_payload_provider :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->

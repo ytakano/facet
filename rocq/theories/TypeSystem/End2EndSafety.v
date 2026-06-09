@@ -589,20 +589,12 @@ Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready :
     value_has_type env' s' v (fn_ret f).
 Proof.
   intros env env' f s s' v Hprog Hinitial Hin Hstore Heval.
-  unfold infer_program_env_end2end in Hprog.
-  set (env_alpha := alpha_normalize_global_env env) in *.
-  destruct (global_names_unique_b env_alpha) eqn:Hunique_global; try discriminate.
-  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-    try discriminate.
-  destruct (infer_fns_env_end2end env_elab (env_fns env_elab))
-    as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
   eapply env_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready.
-  - apply andb_true_iff in Hunique_global as [Hunique_top _].
-    eapply infer_program_env_alpha_elab_unique_by_name; eauto.
+  - eapply infer_program_env_end2end_unique_by_name.
+    exact Hprog.
   - apply check_env_root_shadow_captured_call_store_safe_summary_ready.
-    unfold check_env_root_shadow_captured_call_store_safe_summary.
-    eapply infer_fns_env_end2end_check_env_ready. exact Hfns.
+    eapply infer_program_env_end2end_check_env_ready.
+    exact Hprog.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

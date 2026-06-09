@@ -1020,6 +1020,9 @@ Done:
   `infer_program_env_end2end_check_env_ready` and
   `infer_program_env_end2end_combined_check_env_ready`, matching the fns-level
   captured and captured-or-direct component checks.
+- The default main safety theorem
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready` now uses
+  accepted-env sidecars directly instead of reopening program inference.
 
 Next:
 

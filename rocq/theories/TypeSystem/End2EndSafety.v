@@ -575,6 +575,22 @@ Proof.
   - exact Hcomponent_check.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_component_exact_closure :
+  forall env env' f_component,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' f_component = true.
+Proof.
+  intros env env' f_component Hprog Hin Hcomponent_check.
+  destruct (infer_program_env_end2end_strict_exact_closure_component_ready
+              env env' f_component Hprog Hin Hcomponent_check)
+    as [_ Hexact].
+  exact Hexact.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_summary_in_local_bounds_family :
   forall env env' base env0 fdef,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

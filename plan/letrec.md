@@ -1219,6 +1219,9 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_local_bounds_family`,
   connecting the accepted-env strict sidecar to the component-local-bounds route
   wrapper while leaving only the component route provider to discharge.
+- The accepted-env component-ready sidecar now has a named exact-closure
+  projection, `infer_program_env_end2end_strict_exact_closure_component_exact_closure`,
+  for component route-provider construction.
 
 Next:
 

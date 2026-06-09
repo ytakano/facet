@@ -1222,6 +1222,9 @@ Done:
 - The accepted-env component-ready sidecar now has a named exact-closure
   projection, `infer_program_env_end2end_strict_exact_closure_component_exact_closure`,
   for component route-provider construction.
+- Component body callback projections now also have component-check-only wrappers,
+  deriving exact-closure internally from the accepted strict sidecar before
+  exposing root, direct-callee, and alpha nested summary callbacks.
 
 Next:
 

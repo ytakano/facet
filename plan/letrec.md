@@ -1013,6 +1013,9 @@ Done:
   `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_check_when_not_captured`,
   its env/program wrappers, and the route wrapper
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_closure_non_captured_route_package`.
+- Default end-to-end inference now has the accepted-env uniqueness sidecar
+  `infer_program_env_end2end_unique_by_name`, matching the strict sidecar and
+  reducing repeated proof expansion in route wrappers.
 
 Next:
 

@@ -1255,6 +1255,9 @@ Done:
   direct-component checker booleans for direct callee lookups through
   `infer_program_env_end2end_strict_exact_closure_direct_callee_component_check_of_lookup_in_local_bounds_family`,
   splitting singleton seen cycles from non-seen reachable callees.
+- The direct-callee component-check projection now has an alpha-renamed wrapper,
+  `infer_program_env_end2end_strict_exact_closure_alpha_direct_callee_component_check_of_lookup_in_local_bounds_family`,
+  matching the alpha direct-callee route and summary-evidence callbacks.
 
 Next:
 

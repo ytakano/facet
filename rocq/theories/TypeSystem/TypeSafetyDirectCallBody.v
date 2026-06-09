@@ -358,6 +358,29 @@ with direct_call_eval_struct_fields_height (env : global_env)
       direct_call_eval_struct_fields_height env s fields (f :: rest) s2
         ((field_name f, v) :: values) (S (Nat.max n_e n_rest)).
 
+Lemma direct_call_eval_args_height_eval_args_result_of_eval_result :
+  forall env,
+    (forall s e s_h v_h n_h s' v,
+      direct_call_eval_height env s e s_h v_h n_h ->
+      eval env s e s' v ->
+      s_h = s' /\ v_h = v) ->
+    forall s args s_h vs_h n_h s' values,
+      direct_call_eval_args_height env s args s_h vs_h n_h ->
+      eval_args env s args s' values ->
+      s_h = s' /\ vs_h = values.
+Proof.
+  intros env Hexpr s args s_h vs_h n_h s' values Hheight.
+  revert s' values.
+  induction Hheight; intros s' values Heval; dependent destruction Heval.
+  - split; reflexivity.
+  - destruct (Hexpr s e s1 v n_e s0 v0 H H0)
+      as [Hs1 Hv].
+    subst s0 v0.
+    destruct (IHHheight s3 vs0 Heval) as [Hs2 Hvs].
+    subst s3 vs0.
+    split; reflexivity.
+Qed.
+
 Lemma direct_call_eval_height_global_env_with_local_bounds :
   forall env bounds s e s' v n,
     direct_call_eval_height env s e s' v n ->

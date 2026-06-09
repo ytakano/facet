@@ -747,13 +747,19 @@ Done:
   plus projection theorem
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_height_statement`
   from the height-indexed target back to the ordinary route statement.
+- Direct-call evaluation height now has a focused `eval_args` alignment helper,
+  `direct_call_eval_args_height_eval_args_result_of_eval_result`, so once an
+  expression-level height/eval result-alignment premise is available, outer
+  `ECall` height inversion can be matched back to the ordinary `eval_args`
+  derivation used by the route proof.
 
 Next:
 
-- Prove the height-indexed store-safe evidence-at prefix route by well-founded
-  induction on `direct_call_eval_height`, using the existing body-call callback
-  helper and `direct_call_eval_height_ecall_inv` to supply the strictly smaller
-  nested `ECall` route. The current safety bridge to target is
+- Prove expression-level result alignment between `direct_call_eval_height` and
+  ordinary `eval`, then use it with
+  `direct_call_eval_args_height_eval_args_result_of_eval_result` to build the
+  decreasing body-call callback for the height-indexed store-safe evidence-at
+  prefix route. The current safety bridge to target is
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_route_scoped_package`,
   which still needs the store-safe evidence-at route but now consumes the narrow
   component-scoped exact-`ECall` body route package and the strict shadow checker.

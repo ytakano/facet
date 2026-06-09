@@ -1327,12 +1327,14 @@ Done:
   `exact_body_call_route_callbacks_of_package_at`, grouping target summary,
   exact-body equality, and store-safe argument facts for low-level route
   theorems.
+- The low-level typing-roots exact-body cleanup route now has a current-target
+  package-at wrapper,
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_decreasing_body_call_callback_prefix_store_final_roots_core_exact_body_package_at`.
 
 Next:
 
-- Push the pointwise exact-body route package from all-target providers down to
-  the current-call step, so component-body accepted sidecars can provide only
-  the reachable direct target evidence they own.
+- Add the matching frame/parameter-scope low-level package-at wrapper, then
+  lift both into the height-indexed current-call route theorem.
 - Expose the End2End strict exact-closure wrapper that derives branch-local
   component body-env routes from the accepted-env sidecar; do not narrow
   `infer_program_env_end2end_big_step_safe_checked_initial_ready`.

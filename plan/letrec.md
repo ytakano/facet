@@ -1333,11 +1333,16 @@ Done:
 - The frame/parameter-scope body-callback route now has an all-target
   pointwise-package wrapper,
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_from_body_call_callback_and_exact_body_call_route_package_at_all`.
+- The height-indexed typing-roots current-call route now has a package-at
+  variant,
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_exact_body_call_route_package_at`,
+  replacing the env-wide package at that current-call step.
 
 Next:
 
-- Lift the pointwise package-at wrappers into the height-indexed current-call
-  route theorem, replacing the env-wide package at the current-call step.
+- Add the matching height-indexed frame/parameter-scope current-call package-at
+  variant, then rebuild the combined pointwise route wrapper from the two
+  current-call package-at theorems.
 - Expose the End2End strict exact-closure wrapper that derives branch-local
   component body-env routes from the accepted-env sidecar; do not narrow
   `infer_program_env_end2end_big_step_safe_checked_initial_ready`.

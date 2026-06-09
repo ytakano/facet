@@ -1140,6 +1140,12 @@ Done:
   `check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_head_or_seen`,
   distinguishing already-seen recursive callees from non-seen callees with fresh
   component summary/exact-target facts.
+- Exact direct-call closure `seen` checks now expose head checker booleans via
+  `check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_head_checks`
+  and
+  `check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_component_check`,
+  so reachable-route providers can pass accepted component-check sidecars
+  without converting Prop evidence back to booleans.
 
 Next:
 

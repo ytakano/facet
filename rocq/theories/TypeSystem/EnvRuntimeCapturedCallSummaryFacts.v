@@ -3247,6 +3247,39 @@ Proof.
       eassumption.
 Qed.
 
+Lemma check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_head_checks :
+  forall fuel seen env fdef,
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+      fuel seen env fdef = true ->
+    CheckerOrdinary.ident_in_b (fn_name fdef) seen = false ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef = true /\
+    check_fn_root_shadow_no_capture_direct_call_component_exact_body_target
+      env fdef = true.
+Proof.
+  intros fuel seen env fdef Hcheck Hnot_seen.
+  destruct fuel as [| fuel']; simpl in Hcheck; try discriminate.
+  destruct (CheckerOrdinary.ident_in_b (fn_name fdef) seen) eqn:Hseen;
+    try discriminate; try rewrite Hseen in Hnot_seen; try discriminate.
+  apply andb_true_iff in Hcheck as [Hhead _Hcallee].
+  apply andb_true_iff in Hhead as [Hcomponent Hexact].
+  split; assumption.
+Qed.
+
+Lemma check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_component_check :
+  forall fuel seen env fdef,
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+      fuel seen env fdef = true ->
+    CheckerOrdinary.ident_in_b (fn_name fdef) seen = false ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef = true.
+Proof.
+  intros fuel seen env fdef Hcheck Hnot_seen.
+  destruct (check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_head_checks
+              fuel seen env fdef Hcheck Hnot_seen) as [Hcomponent _Hexact].
+  exact Hcomponent.
+Qed.
+
 Lemma check_fn_root_shadow_no_capture_direct_call_component_exact_closure_head_sound :
   forall env fdef,
     check_fn_root_shadow_no_capture_direct_call_component_exact_closure env fdef = true ->

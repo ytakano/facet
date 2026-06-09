@@ -1158,6 +1158,10 @@ Done:
 - The callee-seen sidecar now has a `lookup_fn`-based local-bounds wrapper,
   `infer_program_env_end2end_strict_exact_closure_callee_seen_of_lookup_in_local_bounds_family`,
   matching the lookup evidence produced by direct-call route callbacks.
+- Env-runtime captured safety now has
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_exact_body_call_route_scoped_package_with_component_exact_target`,
+  letting local-bounds exact-body route closure derive exact-target obligations
+  from the route's component-ready predicate.
 
 Next:
 

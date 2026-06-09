@@ -69,6 +69,52 @@ Proof.
   exact store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_route_summary_ready.
 Qed.
 
+Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_exact_body_call_route_scoped_package_with_component_exact_target :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall base component_ready,
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    global_env_local_bounds_family base env ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    component_ready env fdef) ->
+  (forall env fdef,
+    component_ready env fdef ->
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env fdef) ->
+  store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_statement
+    component_ready ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+    base.
+Proof.
+  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
+    Hroot_names Hroot_keys base component_ready Hcomponent_provider
+    Htarget_provider Hscoped_package.
+  eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_exact_body_call_route_scoped_package.
+  - exact Hscope_synthetic.
+  - exact Htyping_prefix.
+  - exact Hprefix_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - intros env fname fdef fcall used used' fname_body args_body
+      synthetic_body Hfamily Hin Hname Hrename Htarget.
+    eapply callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_alpha_renamed_target_any.
+    + eapply Htarget_provider.
+      eapply Hcomponent_provider; eassumption.
+    + exact Hrename.
+    + exact Htarget.
+  - exact Hcomponent_provider.
+  - exact Hscoped_package.
+Qed.
+
 Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_route_summary_at_provider :
   forall component_ready,
     (forall env fname fdef fcall used used' fname_body args_body

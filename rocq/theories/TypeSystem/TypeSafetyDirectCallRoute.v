@@ -10622,6 +10622,102 @@ Proof.
   - exists frame_args. rewrite Hremoved_exact. exact Hparam_args.
 Qed.
 
+Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_from_body_call_callback_and_exact_body_call_route_package_at_all :
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_statement ->
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall)) ->
+  (forall env fname n_call fdef fcall used used' s_args s_body vs ret
+      R_args arg_roots
+      fname_body args_body T_body Gamma_out R_body roots_body,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      alpha_rename_fn_def used fdef = (fcall, used') ->
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname_body, args_body, ECall fname_body args_body) ->
+      preservation_ready_args args_body ->
+      typed_env_roots (global_env_with_local_bounds env (fn_bounds fcall))
+        (fn_outlives fcall) (fn_lifetimes fcall)
+        (call_param_root_env (fn_params fcall) arg_roots R_args)
+        (sctx_of_ctx (params_ctx (fn_params fcall)))
+        (ECall fname_body args_body) T_body (sctx_of_ctx Gamma_out) R_body
+        roots_body ->
+      fn_env_unique_by_name
+        (global_env_with_local_bounds env (fn_bounds fcall)) ->
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+        (global_env_with_local_bounds env (fn_bounds fcall)) fname_body ->
+      direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+        (global_env_with_local_bounds env (fn_bounds fcall)) fname_body ->
+      store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
+        (bind_params (fn_params fcall) vs s_args)
+        (sctx_of_ctx (params_ctx (fn_params fcall))) ->
+      store_roots_within
+        (call_param_root_env (fn_params fcall) arg_roots R_args)
+        (bind_params (fn_params fcall) vs s_args) ->
+      store_no_shadow (bind_params (fn_params fcall) vs s_args) ->
+      root_env_no_shadow
+        (call_param_root_env (fn_params fcall) arg_roots R_args) ->
+      root_env_store_roots_named
+        (call_param_root_env (fn_params fcall) arg_roots R_args)
+        (bind_params (fn_params fcall) vs s_args) ->
+      root_env_store_keys_named
+        (call_param_root_env (fn_params fcall) arg_roots R_args)
+        (bind_params (fn_params fcall) vs s_args) ->
+      eval (global_env_with_local_bounds env (fn_bounds fcall))
+        (bind_params (fn_params fcall) vs s_args)
+        (ECall fname_body args_body) s_body ret ->
+      forall n_body_call,
+      direct_call_eval_height
+        (global_env_with_local_bounds env (fn_bounds fcall))
+        (bind_params (fn_params fcall) vs s_args)
+        (ECall fname_body args_body) s_body ret n_body_call ->
+      n_body_call < n_call ->
+      store_typed_prefix (global_env_with_local_bounds env (fn_bounds fcall))
+        s_body (sctx_of_ctx Gamma_out) /\
+      value_has_type (global_env_with_local_bounds env (fn_bounds fcall))
+        s_body ret T_body /\
+      store_ref_targets_preserved
+        (global_env_with_local_bounds env (fn_bounds fcall))
+        (bind_params (fn_params fcall) vs s_args) s_body /\
+      store_roots_within R_body s_body /\
+      value_roots_within roots_body ret /\
+      store_no_shadow s_body /\
+      root_env_no_shadow R_body) ->
+  (forall env fname,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+      env fname) ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at.
+Proof.
+  intros Htyping_prefix Hprefix_ready Hroots_ready Hroot_names Hroot_keys
+    Hstatic Hframe_ready Hparam_ready Hexact_body_target
+    Hbody_call_callback_all Hbody_package_at.
+  eapply eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_from_body_call_callback_and_exact_body_call_route_package.
+  - exact Htyping_prefix.
+  - exact Hprefix_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hstatic.
+  - exact Hframe_ready.
+  - exact Hparam_ready.
+  - exact Hexact_body_target.
+  - exact Hbody_call_callback_all.
+  - eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement_of_at_all.
+    exact Hbody_package_at.
+Qed.
+
 Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_from_typed_route_and_exact_body_call_route_package :
   eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->

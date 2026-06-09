@@ -1330,11 +1330,14 @@ Done:
 - The low-level typing-roots exact-body cleanup route now has a current-target
   package-at wrapper,
   `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_decreasing_body_call_callback_prefix_store_final_roots_core_exact_body_package_at`.
+- The frame/parameter-scope body-callback route now has an all-target
+  pointwise-package wrapper,
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_from_body_call_callback_and_exact_body_call_route_package_at_all`.
 
 Next:
 
-- Add the matching frame/parameter-scope low-level package-at wrapper, then
-  lift both into the height-indexed current-call route theorem.
+- Lift the pointwise package-at wrappers into the height-indexed current-call
+  route theorem, replacing the env-wide package at the current-call step.
 - Expose the End2End strict exact-closure wrapper that derives branch-local
   component body-env routes from the accepted-env sidecar; do not narrow
   `infer_program_env_end2end_big_step_safe_checked_initial_ready`.

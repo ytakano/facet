@@ -24,6 +24,17 @@ Proof.
       eassumption.
 Qed.
 
+Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider_of_component_body_summary_ready :
+  forall env,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider
+      env
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_body_summary.
+Proof.
+  intros env.
+  eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider_of_scoped_package.
+  exact store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_body_summary_ready.
+Qed.
+
 Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_route_summary_at_provider :
   forall component_ready,
     (forall env fname fdef fcall used used' fname_body args_body
@@ -44,6 +55,34 @@ Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_packag
       component_ready.
 Proof.
   intros component_ready Hsummary_at Hcomponent_summary env fname fdef
+    fcall used used' fname_body args_body Hcomponent Hin Hname Hrename
+    Htarget.
+  split.
+  - eapply Hsummary_at; eassumption.
+  - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_alpha_renamed_target_args_global_env_with_local_bounds;
+      eauto.
+Qed.
+
+Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider_of_route_summary_at_provider :
+  forall env component_ready,
+    (forall fname fdef fcall used used' fname_body args_body
+        synthetic_body,
+      component_ready env fdef ->
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      alpha_rename_fn_def used fdef = (fcall, used') ->
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname_body, args_body, synthetic_body) ->
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+        (global_env_with_local_bounds env (fn_bounds fcall)) fname_body) ->
+    (forall fdef,
+      component_ready env fdef ->
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env fdef) ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider
+      env component_ready.
+Proof.
+  intros env component_ready Hsummary_at Hcomponent_summary fname fdef
     fcall used used' fname_body args_body Hcomponent Hin Hname Hrename
     Htarget.
   split.
@@ -83,6 +122,22 @@ Proof.
     + exact Htarget_original.
     + exact Hlookup.
   - intros env fdef (_Hunique & Hcomponent & _Hexact). exact Hcomponent.
+Qed.
+
+Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider_of_exact_closure_component_ready :
+  forall env,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider
+      env
+      (fun env fdef =>
+        fn_env_unique_by_name env /\
+        callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+          env fdef /\
+        check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+          env fdef = true).
+Proof.
+  intros env.
+  eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider_of_scoped_package.
+  exact store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_exact_closure_component_ready.
 Qed.
 
 Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_body_summary_provider :

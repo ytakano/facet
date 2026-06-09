@@ -1053,6 +1053,9 @@ Done:
 - The exact-body scoped route package now has an accepted-env-shaped
   `..._in_provider` Prop plus a projection from the existing all-env scoped
   package, preparing the remaining provider assumptions for env-localization.
+- Env-runtime captured safety now has env-local constructors for the scoped
+  exact-body route package from component-body summary readiness, env-local
+  summary-at providers, and exact-closure component readiness.
 
 Next:
 

@@ -1016,6 +1016,10 @@ Done:
 - Default end-to-end inference now has the accepted-env uniqueness sidecar
   `infer_program_env_end2end_unique_by_name`, matching the strict sidecar and
   reducing repeated proof expansion in route wrappers.
+- Default end-to-end inference now exposes program-level checker sidecars
+  `infer_program_env_end2end_check_env_ready` and
+  `infer_program_env_end2end_combined_check_env_ready`, matching the fns-level
+  captured and captured-or-direct component checks.
 
 Next:
 

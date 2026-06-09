@@ -497,6 +497,54 @@ Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_su
       store_no_shadow s' /\
       root_env_no_shadow R'.
 
+Definition global_env_local_bounds_family
+    (base env : global_env) : Prop :=
+  exists bounds, env = global_env_with_local_bounds base bounds.
+
+Lemma global_env_local_bounds_family_base :
+  forall env,
+    global_env_local_bounds_family env env.
+Proof.
+  intros env.
+  exists (env_local_bounds env).
+  destruct env; reflexivity.
+Qed.
+
+Lemma global_env_local_bounds_family_with_local_bounds :
+  forall base env bounds,
+    global_env_local_bounds_family base env ->
+    global_env_local_bounds_family base
+      (global_env_with_local_bounds env bounds).
+Proof.
+  intros base env bounds (bounds0 & ->).
+  exists bounds.
+  destruct base; reflexivity.
+Qed.
+
+Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
+    (env_family : global_env -> Prop) : Prop :=
+  forall env,
+    env_family env ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env.
+
+Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+    (base : global_env) : Prop :=
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
+    (global_env_local_bounds_family base).
+
+Lemma eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_family :
+  forall env_family env,
+    env_family env ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
+      env_family ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env
+      env.
+Proof.
+  intros env_family env Henv Hfamily.
+  eapply Hfamily. exact Henv.
+Qed.
+
 Lemma eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_in_env_of_height_statement_in_env :
   forall env,
     eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env env ->
@@ -546,6 +594,17 @@ Proof.
     roots Hsafe_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique
     Hsummary Hevidence.
   eapply Hroute; eassumption.
+Qed.
+
+Lemma eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family_of_statement :
+  forall env_family,
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
+      env_family.
+Proof.
+  intros env_family Hroute env _Henv.
+  eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_statement.
+  exact Hroute.
 Qed.
 
 Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_height_statement :
@@ -11262,30 +11321,6 @@ Proof.
       synthetic_body Hin Hname Hrename Htarget.
     eapply store_safe_function_value_call_args_of_exact_body_call_route_package;
       eassumption.
-Qed.
-
-Definition global_env_local_bounds_family
-    (base env : global_env) : Prop :=
-  exists bounds, env = global_env_with_local_bounds base bounds.
-
-Lemma global_env_local_bounds_family_base :
-  forall env,
-    global_env_local_bounds_family env env.
-Proof.
-  intros env.
-  exists (env_local_bounds env).
-  destruct env; reflexivity.
-Qed.
-
-Lemma global_env_local_bounds_family_with_local_bounds :
-  forall base env bounds,
-    global_env_local_bounds_family base env ->
-    global_env_local_bounds_family base
-      (global_env_with_local_bounds env bounds).
-Proof.
-  intros base env bounds (bounds0 & ->).
-  exists bounds.
-  destruct base; reflexivity.
 Qed.
 
 Definition store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_statement

@@ -1081,6 +1081,9 @@ Done:
   `global_env_local_bounds_family`, with base/step lemmas, and the strict
   exact-closure scoped route sidecar uses that named family instead of an
   inline existential.
+- The store-safe height-indexed evidence-at prefix route now has
+  env-family/local-bounds-family statement forms plus an all-env projection, so
+  the next exact-body induction can quantify over only accepted-env descendants.
 
 Next:
 

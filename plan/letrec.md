@@ -1125,6 +1125,10 @@ Done:
 - Strict exact-closure program inference now exposes a route-summary based
   local-bounds-family scoped exact-body route package through
   `infer_program_env_end2end_strict_exact_closure_exact_body_route_scoped_package_local_bounds_family_with_route_summary`.
+- End-to-end strict exact-closure safety now has a provider-parametric bridge,
+  `infer_program_env_end2end_strict_exact_closure_component_local_bounds_route_of_component_check_provider`,
+  deriving a branch-local local-bounds-family store-safe route from accepted-env
+  sidecars plus a local component-check provider.
 
 Next:
 

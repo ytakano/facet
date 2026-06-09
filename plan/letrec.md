@@ -1228,6 +1228,10 @@ Done:
 - Env-runtime captured safety now has
   `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_lookup_evidence_callbacks_in_local_bounds_family`,
   a local-bounds wrapper that consumes the branch-local callback bundle directly.
+- Env-runtime strict exact-closure safety now also has
+  `env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_local_bounds_family_callbacks`,
+  letting each no-capture component provide its body-env route together with the
+  branch-local callback bundle.
 
 Next:
 

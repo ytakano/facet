@@ -11830,18 +11830,88 @@ Theorem eval_preserves_typing_roots_and_frame_param_scope_synthetic_direct_call_
 Proof.
   intros Htyping_prefix Hprefix_ready Hroots_ready Hroot_names Hroot_keys
     Hstatic Hframe_ready Hparam_ready Hexact_body_target Hbody_package_at.
-  eapply eval_preserves_typing_roots_and_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_of_exact_body_call_route_package.
-  - exact Htyping_prefix.
-  - exact Hprefix_ready.
-  - exact Hroots_ready.
-  - exact Hroot_names.
-  - exact Hroot_keys.
-  - exact Hstatic.
-  - exact Hframe_ready.
-  - exact Hparam_ready.
-  - exact Hexact_body_target.
-  - eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement_of_at_all.
-    exact Hbody_package_at.
+  assert (Hall : forall n_call,
+    (forall env s fname args s' v,
+      eval env s (ECall fname args) s' v ->
+      direct_call_eval_height env s (ECall fname args) s' v n_call ->
+      forall (Omega : outlives_ctx) (n : nat) R Σ T Σ' R' roots,
+        preservation_ready_args args ->
+        store_typed_prefix env s Σ ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        root_env_store_roots_named R s ->
+        root_env_store_keys_named R s ->
+        typed_env_roots env Omega n R Σ (ECall fname args) T Σ' R'
+          roots ->
+        fn_env_unique_by_name env ->
+        fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env
+          fname ->
+        direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+          env fname ->
+        store_typed_prefix env s' Σ' /\
+        value_has_type env s' v T /\
+        store_ref_targets_preserved env s s' /\
+        store_roots_within R' s' /\
+        value_roots_within roots v /\
+        store_no_shadow s' /\
+        root_env_no_shadow R') /\
+    (forall env s fname args s' v,
+      eval env s (ECall fname args) s' v ->
+      direct_call_eval_height env s (ECall fname args) s' v n_call ->
+      forall (Omega : outlives_ctx) (n : nat) R Σ T Σ' R' roots ps frame,
+        preservation_ready_args args ->
+        store_typed_prefix env s Σ ->
+        root_env_store_roots_named R s ->
+        root_env_store_keys_named R s ->
+        typed_env_roots env Omega n R Σ (ECall fname args) T Σ' R'
+          roots ->
+        fn_env_unique_by_name env ->
+        fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env
+          fname ->
+        direct_call_callee_body_root_synthetic_direct_call_ready_evidence_at
+          env fname ->
+        root_env_covers_params ps R ->
+        store_roots_within R s ->
+        store_no_shadow s ->
+        root_env_no_shadow R ->
+        store_frame_scope ps Σ s frame ->
+        store_frame_static_fresh Σ frame ->
+        store_param_scope ps s frame ->
+        store_frame_scope ps Σ' s' frame /\
+        exists frame', store_param_scope ps s' frame')).
+  { intro n_call.
+    induction n_call as [n_call IH] using Wf_nat.lt_wf_ind.
+    split.
+    - intros env s fname args s' v Heval Hheight Omega n R Σ T Σ' R' roots
+        Hready Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique Hsummary
+        Hevidence.
+      eapply eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_exact_body_call_route_package_at;
+        try eassumption.
+      + exact (Hbody_package_at env fname).
+      + intros m Hlt. exact (proj1 (IH m Hlt)).
+      + intros m Hlt. exact (proj2 (IH m Hlt)).
+    - intros env s fname args s' v Heval Hheight Omega n R Σ T Σ' R' roots
+        ps frame Hready Hstore Hnamed Hkeys Htyped Hunique Hsummary Hevidence
+        Hcover Hroots Hshadow Hrn Hframe Hfresh Hparam.
+      eapply eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_exact_body_call_route_package_at;
+        try eassumption.
+      + exact (Hbody_package_at env fname).
+      + intros m Hlt. exact (proj1 (IH m Hlt)).
+      + intros m Hlt. exact (proj2 (IH m Hlt)). }
+  split.
+  - intros env s fname args s' v n_call Heval Hheight Omega n R Σ T Σ' R'
+      roots Hready Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique
+      Hsummary Hevidence.
+    exact (proj1 (Hall n_call) env s fname args s' v Heval Hheight Omega n R
+      Σ T Σ' R' roots Hready Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped
+      Hunique Hsummary Hevidence).
+  - intros env s fname args s' v n_call Heval Hheight Omega n R Σ T Σ' R'
+      roots ps frame Hready Hstore Hnamed Hkeys Htyped Hunique Hsummary
+      Hevidence Hcover Hroots Hshadow Hrn Hframe Hfresh Hparam.
+    exact (proj2 (Hall n_call) env s fname args s' v Heval Hheight Omega n R
+      Σ T Σ' R' roots ps frame Hready Hstore Hnamed Hkeys Htyped Hunique
+      Hsummary Hevidence Hcover Hroots Hshadow Hrn Hframe Hfresh Hparam).
 Qed.
 
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_of_exact_body_call_route_package_at_all_no_scope :

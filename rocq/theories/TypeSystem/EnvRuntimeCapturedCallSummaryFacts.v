@@ -3229,6 +3229,24 @@ Proof.
     exact Hexact.
 Qed.
 
+Lemma check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_head_or_seen :
+  forall fuel seen env fdef,
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+      fuel seen env fdef = true ->
+    CheckerOrdinary.ident_in_b (fn_name fdef) seen = true \/
+    (callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef /\
+     callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env fdef).
+Proof.
+  intros fuel seen env fdef Hcheck.
+  destruct (CheckerOrdinary.ident_in_b (fn_name fdef) seen) eqn:Hseen.
+  - left. reflexivity.
+  - right.
+    eapply check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_head_sound;
+      eassumption.
+Qed.
+
 Lemma check_fn_root_shadow_no_capture_direct_call_component_exact_closure_head_sound :
   forall env fdef,
     check_fn_root_shadow_no_capture_direct_call_component_exact_closure env fdef = true ->

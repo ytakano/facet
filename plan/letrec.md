@@ -1136,6 +1136,10 @@ Done:
 - Direct callee `seen` evidence now projects component summary and exact-body
   target facts for non-seen callees via
   `check_fn_root_shadow_no_capture_direct_call_component_exact_closure_callee_seen_head_sound`.
+- Exact direct-call closure `seen` checks now expose a branch point via
+  `check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_head_or_seen`,
+  distinguishing already-seen recursive callees from non-seen callees with fresh
+  component summary/exact-target facts.
 
 Next:
 

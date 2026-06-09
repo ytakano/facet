@@ -1420,6 +1420,8 @@ Done:
   summary routes through the store-safe callback bridge.
 - End2End safety now exposes a strict exact-closure sidecar wrapper that
   uses the store-safe callback route without narrowing the standard theorem.
+- TypeSafety now names a route-indexable `(env, fdef)` store-safe
+  body-call callback statement, with bridges from existing family callbacks.
 
 Next:
 

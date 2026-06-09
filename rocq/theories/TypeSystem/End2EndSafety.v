@@ -2558,6 +2558,42 @@ Proof.
   eapply forallb_forall; eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_component_ready_provider_of_component_check_provider :
+  forall env env' f_component,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    (forall env0 fdef,
+      global_env_local_bounds_family env' env0 ->
+      In fdef (env_fns env0) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' fdef = true) ->
+    forall env0 fname fdef fcall used used' fname_body args_body synthetic_body,
+      global_env_local_bounds_family
+        (global_env_with_local_bounds env' (fn_bounds f_component)) env0 ->
+      In fdef (env_fns env0) ->
+      fn_name fdef = fname ->
+      alpha_rename_fn_def used fdef = (fcall, used') ->
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname_body, args_body, synthetic_body) ->
+      fn_env_unique_by_name env0 /\
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env0 fdef /\
+      check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+        env0 fdef = true.
+Proof.
+  intros env env' f_component Hprog Hcomponent_check_provider env0 fname
+    fdef fcall used used' fname_body args_body synthetic_body Hfamily Hin
+    _Hname _Hrename _Htarget.
+  eapply infer_program_env_end2end_strict_exact_closure_component_ready_payload_in_local_bounds_family.
+  - exact Hprog.
+  - exists (fn_bounds f_component). reflexivity.
+  - exact Hfamily.
+  - exact Hin.
+  - eapply Hcomponent_check_provider.
+    + eapply global_env_local_bounds_family_of_local_bounds_base.
+      exact Hfamily.
+    + exact Hin.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_route_and_callbacks_of_component_ready_provider :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->
@@ -2932,7 +2968,7 @@ Proof.
   intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
     Hroot_names Hroot_keys env env' f s s' v Hprog Hcomponent_check_provider
     Hinitial Hin Hstore Heval.
-  eapply infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_payload_provider_callbacks.
+  eapply infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_ready_provider_callbacks.
   - exact Hscope_synthetic.
   - exact Htyping_prefix.
   - exact Hprefix_ready.
@@ -2940,18 +2976,17 @@ Proof.
   - exact Hroot_names.
   - exact Hroot_keys.
   - exact Hprog.
-  - intros f_component Hin_component Hcomponent_check env0 fname fdef fcall
-      used used' fname_body args_body synthetic_body Hfamily Hin0 _Hname
-      _Hrename _Htarget.
-    eapply infer_program_env_end2end_strict_exact_closure_route_summary_and_exact_target_in_local_bounds_family.
+  - intros f_component _Hin_component _Hcomponent_check env0 fname fdef fcall
+      used used' fname_body args_body synthetic_body Hfamily Hin0 Hname
+      Hrename Htarget.
+    eapply infer_program_env_end2end_strict_exact_closure_component_ready_provider_of_component_check_provider.
     + exact Hprog.
-    + exists (fn_bounds f_component). reflexivity.
+    + exact Hcomponent_check_provider.
     + exact Hfamily.
     + exact Hin0.
-    + eapply Hcomponent_check_provider.
-      * eapply global_env_local_bounds_family_of_local_bounds_base.
-        exact Hfamily.
-      * exact Hin0.
+    + exact Hname.
+    + exact Hrename.
+    + exact Htarget.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

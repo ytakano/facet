@@ -1299,6 +1299,10 @@ Done:
 - The component body direct-callee ready payload projection now has a
   component-check-only wrapper,
   `infer_program_env_end2end_strict_exact_closure_component_body_direct_callee_ready_payload_of_component_check`.
+- All-component check providers now convert to component-ready providers via
+  `infer_program_env_end2end_strict_exact_closure_component_ready_provider_of_component_check_provider`,
+  and the check-provider final wrapper factors through the ready-provider
+  wrapper.
 
 Next:
 

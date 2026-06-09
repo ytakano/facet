@@ -3844,6 +3844,45 @@ Proof.
   exact Hcheck.
 Qed.
 
+Lemma check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_ready :
+  forall env fdef,
+    check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+      env fdef = true ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef = true ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef /\
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env fdef = true.
+Proof.
+  intros env fdef Hstrict Hcomponent_check.
+  split.
+  - eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
+    exact Hcomponent_check.
+  - eapply check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_exact_closure;
+      eassumption.
+Qed.
+
+Lemma check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_ready :
+  forall env f_component,
+    check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+      env = true ->
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component /\
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env f_component = true.
+Proof.
+  intros env f_component Hcheck Hin Hcomponent_check.
+  unfold check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+    in Hcheck.
+  apply forallb_forall with (x := f_component) in Hcheck; [| exact Hin].
+  eapply check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_ready;
+    eassumption.
+Qed.
+
 Lemma check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_exact_closure :
   forall env f_component,
     check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
@@ -3855,11 +3894,9 @@ Lemma check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_c
       env f_component = true.
 Proof.
   intros env f_component Hcheck Hin Hcomponent.
-  unfold check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
-    in Hcheck.
-  apply forallb_forall with (x := f_component) in Hcheck; [| exact Hin].
-  eapply check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_exact_closure;
-    eassumption.
+  destruct (check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_ready
+              env f_component Hcheck Hin Hcomponent) as [_ Hexact].
+  exact Hexact.
 Qed.
 
 Lemma check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_closure_summary_ready :

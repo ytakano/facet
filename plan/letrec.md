@@ -967,6 +967,11 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_closure_component_ready_route_package`,
   combining unique-name, component-summary, and exact-closure checker facts
   into the existing scoped package.
+- Strict exact-closure checker facts now expose the direct-component branch as
+  paired Prop/checker evidence through
+  `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_ready`
+  and
+  `check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_ready`.
 
 Next:
 

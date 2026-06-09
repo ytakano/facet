@@ -3306,6 +3306,25 @@ Proof.
 Qed.
 
 
+Lemma check_fn_root_shadow_no_capture_direct_call_component_exact_closure_callee_seen :
+  forall env fdef fname args synthetic_body fcallee,
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env fdef = true ->
+    direct_call_target_expr (fn_body fdef) = Some (fname, args, synthetic_body) ->
+    lookup_fn_b fname (env_fns env) = Some fcallee ->
+    exists fuel',
+      check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+        fuel' [fn_name fdef] env fcallee = true.
+Proof.
+  intros env fdef fname args synthetic_body fcallee Hcheck Htarget Hlookup.
+  unfold check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+    in Hcheck.
+  destruct (check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_callee
+              10001 [] env fdef fname args synthetic_body fcallee
+              Hcheck eq_refl Htarget Hlookup) as (fuel' & _Hfuel & Hcallee).
+  exists fuel'. exact Hcallee.
+Qed.
+
 Lemma component_body_no_capture_direct_call_component_exact_body_target_provider_of_exact_closure_check_provider :
   forall env,
     component_body_no_capture_direct_call_component_exact_closure_check_provider

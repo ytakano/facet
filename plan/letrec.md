@@ -1129,6 +1129,10 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_component_local_bounds_route_of_component_check_provider`,
   deriving a branch-local local-bounds-family store-safe route from accepted-env
   sidecars plus a local component-check provider.
+- Exact direct-call closure checks now expose direct callee `seen` evidence via
+  `check_fn_root_shadow_no_capture_direct_call_component_exact_closure_callee_seen`,
+  preparing route closure to track only functions reachable from the current
+  direct-component branch.
 
 Next:
 

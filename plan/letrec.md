@@ -1239,6 +1239,10 @@ Done:
 - Env-runtime strict exact-closure safety now has the matching checker-sidecar
   callback wrapper,
   `check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_local_bounds_family_callbacks`.
+- End-to-end strict exact-closure safety now exposes
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_check_provider_callbacks`,
+  deriving each component body-env route from a local-bounds component-check
+  provider and the accepted-env callback bundle.
 
 Next:
 

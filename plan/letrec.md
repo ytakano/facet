@@ -1060,6 +1060,9 @@ Done:
   accepted-env component checker bools plus summary-at checker providers, and
   strict exact-closure program inference exposes that package as an End2End
   sidecar.
+- The store-safe evidence-at prefix route now has an env-local statement
+  `..._in_env` plus a projection from the existing all-env statement, preparing
+  exact-body route closure to consume accepted-env package sidecars.
 
 Next:
 

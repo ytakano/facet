@@ -1090,11 +1090,15 @@ Done:
 - Local-bounds-family height routes now project to ordinary env-local routes for
   any descendant environment, preparing component-body callbacks to avoid the
   old all-env route premise.
+- The no-capture direct component branch now has a lookup-evidence safety
+  wrapper that consumes the component body-env local-bounds-family route instead
+  of a whole-env route.
 
 Next:
 
-- Add the component-branch safety wrapper that consumes a body-env
-  local-bounds-family route instead of a whole-env route; do not narrow
+- Lift the strict exact-closure env/checker safety wrappers over the new
+  component body-env local-bounds-family route and then expose the matching
+  End2End strict sidecar; do not narrow
   `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.

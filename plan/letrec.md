@@ -1034,6 +1034,9 @@ Done:
 - The strict summary-at prefix-scope route wrapper
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_summary_at_prefix_scope_call_route_and_component_body_summary_provider`
   also uses accepted-env uniqueness and combined-check sidecars directly.
+- The default call-statement route wrapper
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_call_statement_routes_and_component_check`
+  now uses accepted-env uniqueness and combined-check sidecars directly.
 
 Next:
 

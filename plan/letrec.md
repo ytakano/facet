@@ -1393,6 +1393,10 @@ Done:
 - Direct-call route safety can now derive a fixed-env store-safe route
   statement from a body-call height callback via
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_in_env_of_body_call_callback_height`.
+- EnvRuntime captured safety now has a component-body theorem variant
+  `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_lookup_evidence_body_call_callback_height`,
+  which consumes local-bounds body-call height callbacks instead of a broad
+  local-bounds route statement.
 
 Next:
 

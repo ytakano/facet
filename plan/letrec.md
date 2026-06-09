@@ -734,6 +734,14 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_component_body_summary_route_package`,
   fixing the scoped route package to the component body summary readiness shape.
 
+- Captured safety now has route-local scoped exact-body package constructors:
+  `store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_route_summary_at_provider`,
+  `store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_exact_closure_component_ready`,
+  and
+  `store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_body_summary_provider`.
+  These keep the route obligation scoped to the current direct-call component
+  instead of requiring a broad body-summary provider.
+
 Next:
 
 - Close the store-safe evidence-at prefix call route directly from an

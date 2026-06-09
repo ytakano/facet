@@ -1475,6 +1475,9 @@ Done:
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at_of_reachable_exact_body_call_route_package_and_target_provider`,
   so callback-at preservation no longer needs an all-function exact-target
   premise.
+- End2End strict exact-closure now derives both reachable package and target
+  providers from a single component check, then exposes
+  `infer_program_env_end2end_strict_exact_closure_component_store_safe_callback_at_provider_and_callbacks_of_component_check`.
 
 Next:
 

@@ -1243,6 +1243,10 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_check_provider_callbacks`,
   deriving each component body-env route from a local-bounds component-check
   provider and the accepted-env callback bundle.
+- End-to-end strict exact-closure safety now derives that local-bounds
+  component-check provider from the all-component no-capture checker sidecar via
+  `infer_program_env_end2end_strict_exact_closure_component_check_provider_of_check_env_no_capture`,
+  and exposes the resulting all-component check callback wrapper.
 
 Next:
 

@@ -1440,6 +1440,13 @@ Done:
   at-target callback provider and the at-target strict exact-closure safety
   wrapper via
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_check_provider_store_safe_at_target_callbacks`.
+- TypeSafety now names reachable exact-body route package providers with
+  `store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable`
+  and
+  `store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_package_provider`,
+  plus compatibility lemmas from all-target providers and one-step body-call
+  reachability. It also has a direct bridge from summary height preservation
+  to a pointwise store-safe body-call callback.
 
 Next:
 

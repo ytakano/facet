@@ -937,6 +937,22 @@ Proof.
 Qed.
 
 
+Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at_of_summary_at_prefix_call_statement_evidence_at_height :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement ->
+  forall env fdef,
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at
+      env fdef.
+Proof.
+  intros Hsummary env fdef.
+  unfold
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at.
+  intros fname fcall used used' s_args s_body vs ret R_args arg_roots
+    fname_body args_body T_body Gamma_out R_body roots_body Hin Hname
+    Hrename Htarget Hsafe_args Hready Htyped Hunique Hsummary_at Hevidence
+    Hstore Hroots Hshadow Hrn Hnamed Hkeys Heval n_body_call Hheight.
+  eapply Hsummary; eassumption.
+Qed.
+
 Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at_of_in_env_family :
   forall env_family env fdef,
     eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_in_env_family

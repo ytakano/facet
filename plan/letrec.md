@@ -1270,6 +1270,10 @@ Done:
   exact-closure component-ready providers via
   `infer_program_env_end2end_strict_exact_closure_component_local_bounds_route_of_component_ready_provider`,
   using the existing exact-closure scoped route package.
+- Component-ready providers now feed the callback path through
+  `infer_program_env_end2end_strict_exact_closure_component_route_and_callbacks_of_component_ready_provider`
+  and the final wrapper
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_ready_provider_callbacks`.
 
 Next:
 

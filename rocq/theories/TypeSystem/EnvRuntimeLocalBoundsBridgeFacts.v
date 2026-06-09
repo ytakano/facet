@@ -530,6 +530,34 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma check_fn_root_shadow_provenance_summary_global_env_with_local_bounds :
+  forall env bounds fdef,
+    check_fn_root_shadow_provenance_summary
+      (global_env_with_local_bounds env bounds) fdef =
+    check_fn_root_shadow_provenance_summary env fdef.
+Proof.
+  intros env bounds fdef.
+  unfold check_fn_root_shadow_provenance_summary.
+  rewrite infer_env_roots_shadow_safe_global_env_with_local_bounds.
+  reflexivity.
+Qed.
+
+Lemma store_safe_function_value_call_args_b_global_env_with_local_bounds :
+  forall env bounds args,
+    store_safe_function_value_call_args_b
+      (global_env_with_local_bounds env bounds) args =
+    store_safe_function_value_call_args_b env args.
+Proof.
+  intros env bounds args.
+  induction args as [| arg rest IH]; simpl; try reflexivity.
+  destruct arg; try exact IH; try reflexivity.
+  change (env_fns (global_env_with_local_bounds env bounds))
+    with (env_fns env).
+  destruct (lookup_fn_b i (env_fns env)); try reflexivity.
+  rewrite check_fn_root_shadow_provenance_summary_global_env_with_local_bounds.
+  rewrite IH. reflexivity.
+Qed.
+
 Lemma check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_body_fuel_global_env_with_local_bounds :
   forall check_expr fuel env bounds fdef type_args,
     check_callee_body_root_shadow_store_safe_narrow_summary_instantiated_body_fuel

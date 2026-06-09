@@ -2095,6 +2095,28 @@ Proof.
   exact Htarget.
 Qed.
 
+Lemma check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds :
+  forall env bounds fdef,
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      (global_env_with_local_bounds env bounds) fdef =
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fdef.
+Proof.
+  intros env bounds fdef.
+  unfold check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary.
+  destruct (fn_captures fdef) as [| capture captures]; try reflexivity.
+  destruct (direct_call_target_expr (fn_body fdef))
+    as [[[fname args] synthetic_body] |] eqn:Htarget; try reflexivity.
+  rewrite store_safe_function_value_call_args_b_global_env_with_local_bounds.
+  change (env_fns (global_env_with_local_bounds env bounds))
+    with (env_fns env).
+  destruct (lookup_fn_b fname (env_fns env)) as [callee |]; try reflexivity.
+  destruct (fn_captures callee) as [| callee_capture callee_captures];
+    try reflexivity.
+  rewrite infer_env_roots_shadow_safe_global_env_with_local_bounds.
+  reflexivity.
+Qed.
+
 Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds :
   forall env bounds fdef,
     fn_env_unique_by_name env ->

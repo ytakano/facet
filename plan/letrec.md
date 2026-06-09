@@ -1277,6 +1277,10 @@ Done:
 - Accepted strict exact-closure inference now projects function-name uniqueness
   through nested local-bounds families via
   `infer_program_env_end2end_strict_exact_closure_unique_by_name_in_local_bounds_family`.
+- Local-bounds bridge facts now preserve provenance and store-safe argument
+  checker booleans, and captured-call summary facts preserve the no-capture
+  direct component store-safe checker boolean under
+  `global_env_with_local_bounds`.
 
 Next:
 

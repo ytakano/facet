@@ -903,19 +903,16 @@ Done:
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_of_evidence_at`
   and the exact-body package wrappers ending at
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_statement_of_exact_body_call_route_package`.
+- The exact-body package now projects directly to the pointwise summary-at call
+  package via
+  `eval_preserves_synthetic_direct_call_ready_summary_at_pointwise_call_package_statement_of_exact_body_call_route_package`,
+  avoiding the weaker ordinary direct `ECall` scope route.
 
 Next:
 
-- Prove the ordinary direct `ECall` scope route separately. The summary-at
-  full-store scope route cannot project to it directly because the ordinary
-  route lacks the `store_typed`, named/key, uniqueness, and summary/evidence
-  premises required by the cleanup route. Then close
-  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement` by
-  splitting `preservation_direct_call_ready_expr` into the generic ready route
-  and the direct `ECall` route.
-- Then use the branch-local strict-check bridge as the target for the default
-  checker gate switch, or prove the default checker itself produces the strict
-  sidecar before switching the extracted entrypoint.
+- Thread the exact-body pointwise summary-at call package through the next
+  end-to-end strict-check bridge, then switch the default checker gate once the
+  remaining wrapper premises are supplied without assumptions.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.
 
@@ -1413,16 +1410,10 @@ For an explicit-capture recursive closure group:
    - Done: add the height-indexed scope call-route interface
      `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_height_statement`
      and projection to the ordinary call route.
-   - Remaining gap: prove the ordinary direct `ECall` scope route separately;
-     the summary-at full-store route records the stronger cleanup path but does
-     not supply the weaker route's missing store/named/evidence premises. Then
-     project it through
-     `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement_of_call_statement`
-     to close
-     `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement`.
-     The branch-local exact-body End2End route is available, but the default
-     checker gate still cannot switch until this remaining scope-route premise
-     can be supplied without assumptions. Then switch the extracted end-to-end
+   - Done: exact-body route packages now project to pointwise summary-at call
+     packages without proving the weaker ordinary direct `ECall` scope route.
+   - Remaining gap: thread that pointwise summary-at package through the next
+     end-to-end exact-body safety bridge, then switch the extracted end-to-end
      checker gate to the strict exact-body component sidecar path and move
      direct self/mutual recursion tests from invalid to valid.
    - The recursive-call proof must still route through the existing end-to-end

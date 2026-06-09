@@ -558,6 +558,21 @@ Proof.
   eapply Hheight; eassumption.
 Qed.
 
+Lemma eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_in_env_of_height_statement_in_local_bounds_family :
+  forall base env,
+    global_env_local_bounds_family base env ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      base ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_in_env
+      env.
+Proof.
+  intros base env Henv Hfamily.
+  eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_in_env_of_height_statement_in_env.
+  eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_of_family.
+  - exact Henv.
+  - exact Hfamily.
+Qed.
+
 Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement
     : Prop :=
   forall env s fname args s' v n_call,

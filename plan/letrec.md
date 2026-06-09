@@ -1087,12 +1087,15 @@ Done:
 - The scoped exact-body package now drives a store-safe height induction over
   an arbitrary environment family, with a local-bounds-family specialization for
   accepted-env descendants.
+- Local-bounds-family height routes now project to ordinary env-local routes for
+  any descendant environment, preparing component-body callbacks to avoid the
+  old all-env route premise.
 
 Next:
 
-- Wire the strict exact-closure accepted-env local-bounds-family sidecar into
-  End2End safety through the new local-bounds-family height route; do not
-  narrow `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
+- Add the component-branch safety wrapper that consumes a body-env
+  local-bounds-family route instead of a whole-env route; do not narrow
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.
 

@@ -1497,10 +1497,10 @@ Done:
   Rocq, and the direct-recursion safety-gate regression cases were moved from
   `tests/invalid/function/` to `tests/valid/function/`.
 
-Follow-up:
+Non-blocking maintenance:
 
-- Continue tightening the proof surface by retiring older strict-only wrapper
-  variants once no downstream theorem uses them.
+- Retire older strict-only wrapper variants only after a separate dependency
+  audit shows no downstream theorem uses them.
 
 This roadmap adds local recursion in stages, ending with a safe v1 for
 explicit-capture recursive closures. The first implementation should avoid a

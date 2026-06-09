@@ -911,12 +911,16 @@ Done:
   `eval_synthetic_direct_call_body_scope_callback_from_ready_evidence_at_summary_at_prefix_call_statement`,
   which builds callee-body frame/parameter scope callbacks from the
   summary-at prefix scope route and body-env summary/evidence providers.
+- The final-roots cleanup bridge now has summary-at prefix-scope route variants:
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_nested_evidence_summary_at_prefix_scope_call_route_final_roots_core`
+  and
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_summary_at_prefix_scope_call_route_final_roots_core`.
 
 Next:
 
-- Add the final-roots cleanup bridge variant that consumes the summary-at
-  prefix/scope routes through the new callee-body scope callback, then thread
-  the exact-body pointwise summary-at package into the strict-check bridge.
+- Thread the summary-at prefix-scope final-roots bridge through the component
+  and end-to-end strict-check wrappers, then connect it to the exact-body route
+  package projections.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.
 

@@ -1093,6 +1093,32 @@ Proof.
   - eapply Hcall; eassumption.
 Qed.
 
+Lemma eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement_of_statement :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement.
+Proof.
+  intros Hscope env s fname args s' v Heval Ω n R Σ T Σ' R' roots ps
+    frame Hready_args Htyped Hcover Hroots Hshadow Hrn Hframe Hfresh
+    Hparam.
+  eapply Hscope; try eassumption.
+  apply PDCR_Call. exact Hready_args.
+Qed.
+
+Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement_iff_call_statement :
+  eval_preserves_frame_scope_roots_ready_mutual_statement ->
+  eval_preserves_param_scope_roots_ready_mutual_statement ->
+  (eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement <->
+   eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement).
+Proof.
+  intros Hframe_ready Hparam_ready.
+  split.
+  - apply
+      eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement_of_statement.
+  - apply
+      eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement_of_call_statement;
+      assumption.
+Qed.
+
 
 Theorem eval_preserves_typing_direct_call_roots_ready_without_env_ready_with_preservation_core :
   eval_preserves_typing_roots_ready_mutual_statement ->

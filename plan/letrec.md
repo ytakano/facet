@@ -1195,6 +1195,10 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_direct_callee_route_summary_and_exact_target_in_local_bounds_family`,
   splitting the reachable callee into the singleton seen-cycle case or the
   non-seen reachable `seen` payload case.
+- The direct-callee route payload now has an alpha-renamed callback wrapper,
+  `infer_program_env_end2end_strict_exact_closure_alpha_direct_callee_route_summary_and_exact_target_in_local_bounds_family`,
+  so route callbacks can recover the original component target before deriving
+  the callee payload.
 
 Next:
 

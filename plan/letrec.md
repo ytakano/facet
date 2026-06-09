@@ -1050,6 +1050,9 @@ Done:
   combined checker sidecars from program-level accepted-env lemmas, leaving
   direct `infer_program_env_end2end` expansion only in the sidecar lemmas
   themselves.
+- The exact-body scoped route package now has an accepted-env-shaped
+  `..._in_provider` Prop plus a projection from the existing all-env scoped
+  package, preparing the remaining provider assumptions for env-localization.
 
 Next:
 

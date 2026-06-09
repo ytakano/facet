@@ -11153,6 +11153,34 @@ Definition store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_p
     store_safe_function_value_call_args
       (global_env_with_local_bounds env (fn_bounds fcall)) args_body.
 
+
+Definition store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider
+    (env : global_env) (component_ready : global_env -> fn_def -> Prop)
+    : Prop :=
+  forall fname fdef fcall used used' fname_body args_body,
+    component_ready env fdef ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body) ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body /\
+    store_safe_function_value_call_args
+      (global_env_with_local_bounds env (fn_bounds fcall)) args_body.
+
+Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider_of_scoped_package :
+  forall env component_ready,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_statement
+      component_ready ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider
+      env component_ready.
+Proof.
+  intros env component_ready Hpackage fname fdef fcall used used' fname_body
+    args_body Hcomponent Hin Hname Hrename Htarget.
+  eapply Hpackage; eassumption.
+Qed.
+
 Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_scoped_package :
   eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

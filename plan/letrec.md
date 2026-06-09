@@ -1358,12 +1358,15 @@ Done:
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_exact_body_call_route_package_at_provider`,
   consuming current-target package-at providers without reintroducing an
   env-wide route package.
+- End-to-end strict exact-closure component-check route construction now has
+  `infer_program_env_end2end_strict_exact_closure_component_local_bounds_route_of_component_check_provider_package_at`,
+  and the existing component-check route helper factors through this
+  branch-local package-at path.
 
 Next:
 
-- Use the branch-local package-at helper and local-bounds package-at-provider
-  route wrapper to expose the End2End strict exact-closure wrapper that derives
-  component body-env routes from the accepted-env sidecar; do not narrow
+- Expose the final End2End strict exact-closure wrapper that derives component
+  body-env routes from the accepted-env sidecar; do not narrow
   `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.

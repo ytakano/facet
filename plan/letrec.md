@@ -1478,6 +1478,9 @@ Done:
 - End2End strict exact-closure now derives both reachable package and target
   providers from a single component check, then exposes
   `infer_program_env_end2end_strict_exact_closure_component_store_safe_callback_at_provider_and_callbacks_of_component_check`.
+- End2End now exposes the final component-check-only at-target safety wrapper,
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_check_store_safe_at_target_callbacks`,
+  without narrowing the standard `infer_program_env_end2end_big_step_safe_checked_initial_ready` theorem.
 
 Next:
 

@@ -1104,11 +1104,14 @@ Done:
 - The scoped exact-body package now has a route-specific component-ready
   constructor requiring only component safety plus alpha-renamed direct-target
   summary-at evidence, avoiding full body-summary evidence for End2End wiring.
+- Strict exact-closure env/checker safety now also has branch-local
+  local-bounds-family route variants, requiring the route only after the
+  direct-component checker branch is known.
 
 Next:
 
-- Expose the End2End strict exact-closure wrapper that derives the component
-  body-env local-bounds-family route from the accepted-env sidecar; do not narrow
+- Expose the End2End strict exact-closure wrapper that derives branch-local
+  component body-env routes from the accepted-env sidecar; do not narrow
   `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.

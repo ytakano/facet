@@ -768,6 +768,23 @@ Proof.
     + exact Hcomponent_check.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_seen_component_check_in_local_bounds_family :
+  forall env env' base env0 fdef fuel seen,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+      fuel seen env' fdef = true ->
+    CheckerOrdinary.ident_in_b (fn_name fdef) seen = false ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' fdef = true.
+Proof.
+  intros env env' base env0 fdef fuel seen _Hprog _Hbase _Henv Hseen
+    Hnot_seen.
+  eapply check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_component_check;
+    eassumption.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_local_bounds_route_of_component_check_provider :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->

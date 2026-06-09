@@ -1146,6 +1146,10 @@ Done:
   `check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_component_check`,
   so reachable-route providers can pass accepted component-check sidecars
   without converting Prop evidence back to booleans.
+- End-to-end strict exact-closure safety now has a named local-bounds helper,
+  `infer_program_env_end2end_strict_exact_closure_seen_component_check_in_local_bounds_family`,
+  projecting reachable `seen` exact-closure evidence to accepted-env
+  direct-component checker booleans.
 
 Next:
 

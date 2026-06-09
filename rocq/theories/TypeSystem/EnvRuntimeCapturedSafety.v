@@ -153,6 +153,37 @@ Proof.
     exact Hcomponent_check.
 Qed.
 
+Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_summary_at_check_provider_local_bounds_family :
+  forall env,
+    fn_env_unique_by_name env ->
+    component_body_synthetic_direct_call_ready_summary_at_check_in_provider env ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_statement
+      (fun env0 fdef =>
+        exists bounds,
+          env0 = global_env_with_local_bounds env bounds /\
+          In fdef (env_fns env) /\
+          check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+            env fdef = true).
+Proof.
+  intros env Hunique Hsummary_provider.
+  eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_route_summary_at_provider.
+  - intros env0 fname fdef fcall used used' fname_body args_body
+      synthetic_body (bounds & -> & Hin & Hcomponent_check) _Hin _Hname
+      Hrename Htarget.
+    destruct (direct_call_target_expr_alpha_rename_fn_def_inv
+                used fdef fcall used' fname_body args_body synthetic_body
+                Hrename Htarget) as (args0 & Htarget_original).
+    pose proof (alpha_rename_fn_def_bounds used fdef fcall used' Hrename)
+      as Hbounds.
+    rewrite Hbounds.
+    eapply Hsummary_provider; eassumption.
+  - intros env0 fdef (bounds & -> & _Hin & Hcomponent_check).
+    eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds.
+    + exact Hunique.
+    + eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
+      exact Hcomponent_check.
+Qed.
+
 Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider_of_exact_closure_component_ready :
   forall env,
     store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider

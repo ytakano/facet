@@ -1203,6 +1203,10 @@ Done:
   payloads into per-name synthetic direct-call summary evidence via
   `infer_program_env_end2end_strict_exact_closure_alpha_direct_callee_summary_evidence_at_in_local_bounds_family`,
   matching the branch-local `Hsummary_at` callback shape.
+- The same summary-evidence conversion is available for unrenamed direct
+  component targets through
+  `infer_program_env_end2end_strict_exact_closure_direct_callee_summary_evidence_at_in_local_bounds_family`,
+  matching the root component `Hsummary_at` callback.
 
 Next:
 

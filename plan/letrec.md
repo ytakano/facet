@@ -1084,11 +1084,14 @@ Done:
 - The store-safe height-indexed evidence-at prefix route now has
   env-family/local-bounds-family statement forms plus an all-env projection, so
   the next exact-body induction can quantify over only accepted-env descendants.
+- The scoped exact-body package now drives a store-safe height induction over
+  an arbitrary environment family, with a local-bounds-family specialization for
+  accepted-env descendants.
 
 Next:
 
-- Add the local-bounds-family exact-body height induction so recursive body
-  calls consume the accepted-env strict exact-closure route sidecar; do not
+- Wire the strict exact-closure accepted-env local-bounds-family sidecar into
+  End2End safety through the new local-bounds-family height route; do not
   narrow `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.

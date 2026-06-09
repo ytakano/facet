@@ -771,14 +771,15 @@ Done:
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_of_exact_body_call_route_package`,
   and projected back to the ordinary route by
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package_height`.
+- The height-projected exact-body route is now connected to the scoped
+  component package by
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_scoped_package_height`.
+  The strict end-to-end exact-body scoped bridge no longer takes a
+  self-recursive store-safe route premise.
 
 Next:
 
-- Connect the height-projected exact-body route to the scoped component package
-  and the current target bridge
-  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_route_scoped_package`,
-  removing the remaining self-recursive store-safe route premise from that path.
-- Only after that bridge is closed, switch `infer_fn_env_end2end` /
+- Switch `infer_fn_env_end2end` /
   `infer_fns_env_end2end` from the old captured store-safe sidecar to
   `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary`,
   then update the unconditional end-to-end safety theorem to use the
@@ -1238,9 +1239,14 @@ For an explicit-capture recursive closure group:
      `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_of_exact_body_call_route_package`,
      with ordinary route projection through
      `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package_height`.
-   - Remaining gap: connect the height-projected exact-body route through the
-     scoped component package and strict end-to-end safety bridge, then prove the
-     concrete recursive synthetic direct-call route statements
+   - Done: connect the height-projected exact-body route through the scoped
+     component package with
+     `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_scoped_package_height`,
+     and remove the self-recursive store-safe route premise from
+     `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_route_scoped_package`.
+   - Remaining gap: switch the extracted checker gate to the strict exact-body
+     component sidecar path, then prove the concrete recursive synthetic
+     direct-call route statements
      `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement`
      and
      `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement`.

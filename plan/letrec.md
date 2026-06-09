@@ -1315,6 +1315,11 @@ Done:
   `store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at`,
   plus compatibility lemmas to project an env-wide package to pointwise form and
   rebuild the env-wide package from an all-target pointwise provider.
+- Pointwise exact-body packages now feed the current-target summary and
+  store-safe argument projections through
+  `fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_exact_body_call_route_package_at`
+  and
+  `store_safe_function_value_call_args_of_exact_body_call_route_package_at`.
 
 Next:
 

@@ -396,6 +396,30 @@ Proof.
   exact Hfns.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_exact_closure_check_in_provider :
+  forall env env',
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    component_body_no_capture_direct_call_component_exact_closure_check_in_provider
+      env'.
+Proof.
+  intros env env' Hprog.
+  eapply component_body_no_capture_direct_call_component_exact_closure_check_in_provider_of_strict_exact_closure_check.
+  eapply infer_program_env_end2end_strict_exact_closure_check_env_ready.
+  exact Hprog.
+Qed.
+
+Lemma infer_program_env_end2end_strict_exact_closure_exact_body_target_in_provider :
+  forall env env',
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    component_body_no_capture_direct_call_component_exact_body_target_in_provider
+      env'.
+Proof.
+  intros env env' Hprog.
+  eapply component_body_no_capture_direct_call_component_exact_body_target_in_provider_of_strict_exact_closure_check.
+  eapply infer_program_env_end2end_strict_exact_closure_check_env_ready.
+  exact Hprog.
+Qed.
+
 
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready :
   forall env env' f s s' v,

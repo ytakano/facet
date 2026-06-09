@@ -985,13 +985,18 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_closure_component_check_route_package`,
   which builds exact-closure component-ready evidence from checker bool sidecars
   plus strict env sidecar checks.
+- Strict exact-closure program inference now derives accepted-env in-provider
+  sidecars directly through
+  `infer_program_env_end2end_strict_exact_closure_exact_closure_check_in_provider`
+  and
+  `infer_program_env_end2end_strict_exact_closure_exact_body_target_in_provider`.
 
 Next:
 
-- Close the remaining exact-body route/provider assumptions needed by
-  `infer_program_env_end2end_big_step_safe_checked_initial_ready` before
-  switching the default `infer_program_env_end2end` gate; do not narrow the
-  required program-level safety theorem.
+- Close the remaining route/provider assumptions that still quantify over
+  arbitrary environments before switching the default `infer_program_env_end2end`
+  gate; do not narrow
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.
 

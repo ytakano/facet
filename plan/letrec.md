@@ -1176,6 +1176,10 @@ Done:
   `store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_component_route_summary_and_exact_target_ready`,
   a scoped route package constructor for component-ready payloads that already
   carry route-summary readiness plus exact-body target evidence.
+- End-to-end strict exact-closure safety now has
+  `infer_program_env_end2end_strict_exact_closure_component_local_bounds_route_of_component_payload_provider`,
+  a local-bounds route bridge that consumes a component payload provider carrying
+  route-summary readiness plus exact-body target evidence.
 
 Next:
 

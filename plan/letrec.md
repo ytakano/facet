@@ -794,12 +794,15 @@ Done:
   `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_scoped_package_height`,
   so it no longer needs
   `preservation_ready_args -> store_safe_function_value_call_args`.
+- The remaining summary/evidence bridge premise has been localized from
+  env-wide summary evidence to callee-local
+  `fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at`.
 
 Next:
 
-- Discharge or localize the remaining summary/evidence bridge premise
-  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence ->
-  env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence`.
+- Discharge the remaining callee-local summary/evidence bridge premise, or
+  thread it from the strict exact-body component sidecar into the default
+  end-to-end bridge.
   The default checker gate cannot switch to
   `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary`
   until the unconditional
@@ -1273,8 +1276,11 @@ For an explicit-capture recursive closure group:
    - Done: replace the strong-premise wrapper with the non-store-safe
      decreasing bridge route, removing the invalid
      `preservation_ready_args -> store_safe_function_value_call_args` premise.
-   - Remaining gap: discharge or localize the remaining summary/evidence bridge
-     premise before switching the extracted checker gate to the strict
+   - Done: localize the remaining summary/evidence bridge premise from
+     env-wide summary evidence to callee-local
+     `fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at`.
+   - Remaining gap: discharge or thread that callee-local premise before
+     switching the extracted checker gate to the strict
      exact-body component sidecar path; otherwise the default end-to-end
      big-step safety theorem loses the route evidence needed by the
      branch-local strict bridge. The route statements are

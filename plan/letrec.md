@@ -1004,6 +1004,11 @@ Done:
   `component_body_synthetic_direct_call_ready_summary_at_check_in_provider`
   and strict accepted-env derivation through
   `infer_program_env_end2end_strict_exact_closure_summary_at_check_in_provider`.
+- Strict exact-closure checker facts now expose a branch-local component-ready
+  path when the captured-call branch is known false, through
+  `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_ready_when_not_captured`,
+  its env-level counterpart, and
+  `infer_program_env_end2end_strict_exact_closure_component_ready_when_not_captured`.
 
 Next:
 

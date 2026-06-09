@@ -415,6 +415,24 @@ Proof.
   exact Hfns.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_component_ready_when_not_captured :
+  forall env env' f_component,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_captured_call_store_safe_summary env' f_component = false ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component /\
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env' f_component = true.
+Proof.
+  intros env env' f_component Hprog Hin Hcaptured.
+  eapply check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_ready_when_not_captured.
+  - eapply infer_program_env_end2end_strict_exact_closure_check_env_ready.
+    exact Hprog.
+  - exact Hin.
+  - exact Hcaptured.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_ready :
   forall env env' f_component,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

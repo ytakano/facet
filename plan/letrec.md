@@ -1428,6 +1428,13 @@ Done:
   per-component route-indexed store-safe callback providers.
 - End2End safety now has the matching strict exact-closure wrapper for
   per-component route-indexed store-safe callback providers.
+- The route-indexed store-safe body-call callback provider is now named as
+  `strict_exact_closure_component_body_store_safe_callback_at_provider`, and
+  the strict exact-closure at-target wrapper consumes that named provider.
+- Existing all-component-check provider routes now bridge to the named
+  at-target callback provider and the at-target strict exact-closure safety
+  wrapper via
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_check_provider_store_safe_at_target_callbacks`.
 
 Next:
 
@@ -1453,9 +1460,6 @@ The Rocq definitions and extracted checker remain the source of truth. The
 OCaml parser and de Bruijn conversion may represent the surface syntax, but
 must not duplicate type-checking logic or add fallback acceptance paths.
 
-- The route-indexed store-safe body-call callback provider is now named as
-  `strict_exact_closure_component_body_store_safe_callback_at_provider`, and
-  the strict exact-closure at-target wrapper consumes that named provider.
 
 ## Surface Syntax
 

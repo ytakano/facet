@@ -3461,6 +3461,119 @@ Proof.
   - exact Hcallbacks.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_component_store_safe_callback_at_provider_and_callbacks_of_component_check_provider :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env env' f_component,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    (forall env0 fdef,
+      global_env_local_bounds_family env' env0 ->
+      In fdef (env_fns env0) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' fdef = true) ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    strict_exact_closure_component_body_store_safe_callback_at_provider
+      env' f_component /\
+    ((forall fname args synthetic_body,
+      direct_call_target_expr (fn_body f_component) =
+        Some (fname, args, synthetic_body) ->
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+        (global_env_with_local_bounds env' (fn_bounds f_component)) fname) /\
+     (forall fname args synthetic_body fdef,
+      direct_call_target_expr (fn_body f_component) =
+        Some (fname, args, synthetic_body) ->
+      lookup_fn fname
+        (env_fns (global_env_with_local_bounds env' (fn_bounds f_component))) =
+        Some fdef ->
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        (global_env_with_local_bounds env' (fn_bounds f_component)) fdef) /\
+     (forall fname args synthetic_body fdef,
+      direct_call_target_expr (fn_body f_component) =
+        Some (fname, args, synthetic_body) ->
+      lookup_fn fname
+        (env_fns (global_env_with_local_bounds env' (fn_bounds f_component))) =
+        Some fdef ->
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        (global_env_with_local_bounds env' (fn_bounds f_component)) fdef ->
+      forall fcall used used' fname_body args_body synthetic_body_nested,
+        alpha_rename_fn_def used fdef = (fcall, used') ->
+        direct_call_target_expr (fn_body fcall) =
+          Some (fname_body, args_body, synthetic_body_nested) ->
+        fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+          (global_env_with_local_bounds
+            (global_env_with_local_bounds env' (fn_bounds f_component))
+            (fn_bounds fcall)) fname_body)).
+Proof.
+  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
+    Hroot_names Hroot_keys env env' f_component Hprog
+    Hcomponent_check_provider Hin_component Hcomponent_check.
+  destruct
+    (infer_program_env_end2end_strict_exact_closure_component_store_safe_callback_and_callbacks_of_component_check_provider
+      Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready Hroot_names
+      Hroot_keys env env' f_component Hprog Hcomponent_check_provider
+      Hin_component Hcomponent_check) as [Hfamily Hcallbacks].
+  split.
+  - intros fname args synthetic_body fdef _Htarget _Hlookup.
+    eapply eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at_of_in_local_bounds_family.
+    + exact Hfamily.
+    + apply global_env_local_bounds_family_base.
+  - exact Hcallbacks.
+Qed.
+
+Theorem infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_check_provider_store_safe_at_target_callbacks :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env env' f s s' v,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    (forall env0 fdef,
+      global_env_local_bounds_family env' env0 ->
+      In fdef (env_fns env0) ->
+      check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+        env' fdef = true) ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env') ->
+    initial_store_for_fn env' f s ->
+    eval env' s (fn_body f) s' v ->
+    value_has_type env' s' v (fn_ret f).
+Proof.
+  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
+    Hroot_names Hroot_keys env env' f s s' v Hprog Hcomponent_check_provider
+    Hinitial Hin Hstore Heval.
+  eapply infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_body_call_store_safe_callback_height_at_target_callbacks.
+  - exact Hscope_synthetic.
+  - exact eval_preserves_typing_ready_mutual.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hprog.
+  - intros f_component Hin_component Hcomponent_check.
+    eapply infer_program_env_end2end_strict_exact_closure_component_store_safe_callback_at_provider_and_callbacks_of_component_check_provider.
+    + exact Hscope_synthetic.
+    + exact Htyping_prefix.
+    + exact Hprefix_ready.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hprog.
+    + exact Hcomponent_check_provider.
+    + exact Hin_component.
+    + exact Hcomponent_check.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
 Theorem infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_check_provider_store_safe_callbacks :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->

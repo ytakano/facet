@@ -1422,6 +1422,8 @@ Done:
   uses the store-safe callback route without narrowing the standard theorem.
 - TypeSafety now names a route-indexable `(env, fdef)` store-safe
   body-call callback statement, with bridges from existing family callbacks.
+- EnvRuntime captured safety now has a component-body theorem variant
+  consuming a route-indexed store-safe callback for the selected callee.
 
 Next:
 

@@ -2799,6 +2799,171 @@ Proof.
 Qed.
 
 
+Theorem callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_lookup_evidence_body_call_store_safe_callback_height_at_target :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    (forall fname args synthetic_body fdef,
+      direct_call_target_expr (fn_body f) = Some (fname, args, synthetic_body) ->
+      lookup_fn fname
+        (env_fns (global_env_with_local_bounds env (fn_bounds f))) =
+        Some fdef ->
+      eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at
+        (global_env_with_local_bounds env (fn_bounds f)) fdef) ->
+    (forall fname args synthetic_body,
+      direct_call_target_expr (fn_body f) = Some (fname, args, synthetic_body) ->
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+        (global_env_with_local_bounds env (fn_bounds f)) fname) ->
+    (forall fname args synthetic_body fdef,
+      direct_call_target_expr (fn_body f) = Some (fname, args, synthetic_body) ->
+      lookup_fn fname
+        (env_fns (global_env_with_local_bounds env (fn_bounds f))) =
+        Some fdef ->
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        (global_env_with_local_bounds env (fn_bounds f)) fdef) ->
+    (forall fname args synthetic_body fdef,
+      direct_call_target_expr (fn_body f) = Some (fname, args, synthetic_body) ->
+      lookup_fn fname
+        (env_fns (global_env_with_local_bounds env (fn_bounds f))) =
+        Some fdef ->
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        (global_env_with_local_bounds env (fn_bounds f)) fdef ->
+      forall fcall used used' fname_body args_body synthetic_body_nested,
+        alpha_rename_fn_def used fdef = (fcall, used') ->
+        direct_call_target_expr (fn_body fcall) =
+          Some (fname_body, args_body, synthetic_body_nested) ->
+        fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+          (global_env_with_local_bounds
+            (global_env_with_local_bounds env (fn_bounds f))
+            (fn_bounds fcall)) fname_body) ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f ->
+    check_initial_root_runtime_ready f s = true ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hscope_synthetic Htyping_ready Hroots_ready Hroot_names Hroot_keys
+    env f s s' v Hunique Hbody_call_store_safe_callback_height Hsummary_at
+    Htarget_component Hsummary_body_at Hcomponent Hinitial Hstore Heval.
+  destruct Hcomponent as
+    (fname & args & raw_body & synthetic_body & fcallee & T_body &
+      Gamma_out & R_body & roots_body & _Hcaptures & Hbody & Htarget &
+      Hsynthetic & Hsafe_args & _Hin_callee & _Hname_callee &
+      _Hcallee_captures & Hnodup & Htyped_shadow & Hcompat & _Hroots &
+      _Henv).
+  destruct (check_initial_root_runtime_ready_sound f s Hinitial) as
+    [Hroots [Hshadow [Hnamed Hkeys]]].
+  pose proof (initial_root_env_for_fn_no_shadow f Hnodup) as Hrn.
+  rewrite Hbody in Heval.
+  pose (body_env := global_env_with_local_bounds env (fn_bounds f)).
+  assert (Hstore_body_env :
+    store_typed body_env s (sctx_of_ctx (fn_body_ctx f))).
+  { subst body_env.
+    eapply store_typed_global_env_with_local_bounds.
+    eapply initial_store_for_fn_store_typed. exact Hstore. }
+  assert (Heval_body_env : eval body_env s raw_body s' v).
+  { subst body_env. eapply eval_global_env_with_local_bounds. exact Heval. }
+  assert (Htyped_call_shadow :
+    typed_env_roots_shadow_safe body_env
+      (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+      (sctx_of_ctx (fn_body_ctx f)) (ECall fname args)
+      T_body (sctx_of_ctx Gamma_out) R_body roots_body).
+  { rewrite <- Hsynthetic. exact Htyped_shadow. }
+  assert (Htyped_call :
+    typed_env_roots body_env
+      (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+      (sctx_of_ctx (fn_body_ctx f)) (ECall fname args)
+      T_body (sctx_of_ctx Gamma_out) R_body roots_body).
+  { eapply typed_env_roots_shadow_safe_roots. exact Htyped_call_shadow. }
+  assert (Heval_call : eval body_env s (ECall fname args) s' v).
+  { unfold direct_call_target_expr in Htarget.
+    destruct raw_body; try discriminate.
+    - inversion Htarget; subst. exact Heval_body_env.
+    - destruct raw_body; try discriminate.
+      inversion Htarget; subst.
+      apply eval_call_expr_fn_as_call. exact Heval_body_env. }
+  assert (Hsafe_args_body : store_safe_function_value_call_args body_env args).
+  { subst body_env.
+    apply store_safe_function_value_call_args_global_env_with_local_bounds.
+    exact Hsafe_args. }
+  assert (Hready_args_body : preservation_ready_args args).
+  { eapply store_safe_function_value_call_args_preservation_ready.
+    exact Hsafe_args_body. }
+  assert (Hsummary_target :
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      body_env fname).
+  { subst body_env. eapply Hsummary_at. rewrite Hbody. exact Htarget. }
+  assert (Hstore_body_prefix :
+    store_typed_prefix body_env s (sctx_of_ctx (fn_body_ctx f))).
+  { eapply store_typed_prefix_exact. exact Hstore_body_env. }
+  destruct
+    (eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_body_call_callback_prefix_store_final_roots_core
+      Hscope_synthetic eval_preserves_typing_ready_prefix_mutual
+      eval_preserves_typing_roots_ready_prefix_mutual Hroots_ready Hroot_names
+      Hroot_keys body_env s s' v fname args Heval_call
+      (fn_outlives f) (fn_lifetimes f) (initial_root_env_for_fn f)
+      (sctx_of_ctx (fn_body_ctx f)) T_body (sctx_of_ctx Gamma_out)
+      R_body roots_body Hsafe_args_body Hstore_body_prefix Hroots Hshadow Hrn
+      Hnamed Hkeys Htyped_call)
+    as [Hstore_body_prefix' [Hv_body [_Hpres_body [_Hroots_body
+        [_Hvroots_body [_Hshadow_body _Hrn_body]]]]]].
+  - unfold fn_env_unique_by_name in *; subst body_env; simpl. exact Hunique.
+  - exact Hsummary_target.
+  - subst body_env.
+    intros fdef_call fcall used used' fname_body args_body synthetic_body_nested
+      Hin_call Hname_call Hrename Htarget_body.
+    pose proof (lookup_fn_in_unique_by_name
+      (global_env_with_local_bounds env (fn_bounds f)) fname fdef_call
+      Hin_call Hname_call
+      ltac:(unfold fn_env_unique_by_name in *; simpl; exact Hunique))
+      as Hlookup_call.
+    eapply Hsummary_body_at.
+    + rewrite Hbody. exact Htarget.
+    + exact Hlookup_call.
+    + eapply Htarget_component.
+      * rewrite Hbody. exact Htarget.
+      * exact Hlookup_call.
+    + exact Hrename.
+    + exact Htarget_body.
+  - intros fdef_call fcall used used' s_args s_body vs ret R_args arg_roots
+      fname_body args_body T_body0 Gamma_out0 R_body0 roots_body0 Hin_call
+      Hname_call Hrename Htarget_body Hready_body Htyped_body Hunique_body
+      Hsummary_body Hevidence_body Hstore_bind Hroots_bind Hshadow_bind
+      Hrn_bind Hnamed_bind Hkeys_bind Heval_nested.
+    assert (Hlookup_call :
+      lookup_fn fname (env_fns body_env) = Some fdef_call).
+    { subst body_env.
+      eapply lookup_fn_in_unique_by_name; eassumption. }
+    assert (Hsafe_args_body_nested :
+      store_safe_function_value_call_args
+        (global_env_with_local_bounds body_env (fn_bounds fcall)) args_body).
+    { subst body_env.
+      eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_alpha_renamed_target_args_global_env_with_local_bounds.
+      - eapply Htarget_component.
+        + rewrite Hbody. exact Htarget.
+        + exact Hlookup_call.
+      - exact Hrename.
+      - exact Htarget_body. }
+    destruct (direct_call_eval_height_exists
+      (global_env_with_local_bounds body_env (fn_bounds fcall))
+      (bind_params (fn_params fcall) vs s_args)
+      (ECall fname_body args_body) s_body ret Heval_nested)
+      as [n_body_call Hheight_nested].
+    eapply (Hbody_call_store_safe_callback_height fname args synthetic_body fdef_call);
+      try eassumption.
+    rewrite Hbody. exact Htarget.
+  - eapply VHT_Compatible.
+    + subst body_env.
+      eapply value_has_type_clear_global_env_local_bounds. exact Hv_body.
+    + apply ty_compatible_b_sound. exact Hcompat.
+Qed.
+
+
 Theorem callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_lookup_evidence_in_local_bounds_family :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_mutual_statement ->

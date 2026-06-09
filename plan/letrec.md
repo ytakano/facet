@@ -1303,6 +1303,9 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_component_ready_provider_of_component_check_provider`,
   and the check-provider final wrapper factors through the ready-provider
   wrapper.
+- Component-body direct callee lookups now expose a nested body-env
+  component-ready provider through
+  `infer_program_env_end2end_strict_exact_closure_component_body_direct_callee_ready_provider_of_component_check`.
 
 Next:
 

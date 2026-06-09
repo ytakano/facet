@@ -1439,6 +1439,74 @@ Proof.
       eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_component_body_direct_callee_ready_provider_of_component_check :
+  forall env env' f_component fname args synthetic_body fdef,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    direct_call_target_expr (fn_body f_component) =
+      Some (fname, args, synthetic_body) ->
+    lookup_fn fname
+      (env_fns (global_env_with_local_bounds env' (fn_bounds f_component))) =
+      Some fdef ->
+    forall fcall used used' fname_body args_body synthetic_body_nested,
+      alpha_rename_fn_def used fdef = (fcall, used') ->
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname_body, args_body, synthetic_body_nested) ->
+      fn_env_unique_by_name
+        (global_env_with_local_bounds
+          (global_env_with_local_bounds env' (fn_bounds f_component))
+          (fn_bounds fcall)) /\
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        (global_env_with_local_bounds
+          (global_env_with_local_bounds env' (fn_bounds f_component))
+          (fn_bounds fcall)) fdef /\
+      check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+        (global_env_with_local_bounds
+          (global_env_with_local_bounds env' (fn_bounds f_component))
+          (fn_bounds fcall)) fdef = true.
+Proof.
+  intros env env' f_component fname args synthetic_body fdef Hprog Hin
+    Hcomponent_check Htarget Hlookup fcall used used' fname_body args_body
+    synthetic_body_nested Hrename Htarget_body.
+  pose (body_env := global_env_with_local_bounds env' (fn_bounds f_component)).
+  pose (nested_env := global_env_with_local_bounds body_env (fn_bounds fcall)).
+  assert (Hbase : global_env_local_bounds_family env' body_env).
+  { subst body_env. exists (fn_bounds f_component). reflexivity. }
+  assert (Hbody_family : global_env_local_bounds_family body_env body_env).
+  { eapply global_env_local_bounds_family_base. }
+  assert (Hnested : global_env_local_bounds_family body_env nested_env).
+  { subst nested_env. exists (fn_bounds fcall). reflexivity. }
+  destruct (lookup_fn_in_name fname (env_fns body_env) fdef Hlookup)
+    as [Hin_fdef _Hname_fdef].
+  assert (Hcallee_check :
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' fdef = true).
+  { eapply infer_program_env_end2end_strict_exact_closure_direct_callee_component_check_of_lookup_in_local_bounds_family.
+    - exact Hprog.
+    - exact Hbase.
+    - exact Hbody_family.
+    - exact Hin.
+    - exact Hcomponent_check.
+    - eapply infer_program_env_end2end_strict_exact_closure_component_exact_closure;
+        eassumption.
+    - exact Htarget.
+    - exact Hlookup. }
+  subst nested_env body_env.
+  change (In fdef
+    (env_fns
+      (global_env_with_local_bounds
+        (global_env_with_local_bounds env' (fn_bounds f_component))
+        (fn_bounds fcall)))) in Hin_fdef.
+  eapply infer_program_env_end2end_strict_exact_closure_component_ready_payload_in_local_bounds_family.
+  - exact Hprog.
+  - exact Hbase.
+  - exact Hnested.
+  - exact Hin_fdef.
+  - exact Hcallee_check.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_body_summary_at_callback_in_local_bounds_family :
   forall env env' f_component,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

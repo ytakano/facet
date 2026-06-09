@@ -626,6 +626,25 @@ Proof.
 Qed.
 
 
+Lemma infer_program_env_end2end_strict_exact_closure_exact_body_route_scoped_package_check_in_provider :
+  forall env env',
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider
+      env'
+      (fun env0 fdef =>
+        env0 = env' /\
+        In fdef (env_fns env') /\
+        check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+          env' fdef = true).
+Proof.
+  intros env env' Hprog.
+  eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_in_provider_of_summary_at_check_provider.
+  - eapply infer_program_env_end2end_strict_exact_closure_unique_by_name.
+    exact Hprog.
+  - eapply infer_program_env_end2end_strict_exact_closure_summary_at_check_in_provider.
+    exact Hprog.
+Qed.
+
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready :
   forall env env' f s s' v,
     infer_program_env_end2end env = infer_ok env' ->

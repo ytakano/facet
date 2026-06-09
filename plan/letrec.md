@@ -1056,6 +1056,10 @@ Done:
 - Env-runtime captured safety now has env-local constructors for the scoped
   exact-body route package from component-body summary readiness, env-local
   summary-at providers, and exact-closure component readiness.
+- The env-local exact-body route package now also has a constructor from
+  accepted-env component checker bools plus summary-at checker providers, and
+  strict exact-closure program inference exposes that package as an End2End
+  sidecar.
 
 Next:
 

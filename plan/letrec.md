@@ -766,16 +766,19 @@ Done:
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_decreasing_body_call_callback_prefix_store_final_roots_core_exact_body`,
   which passes `n_body_call < n_call` from the outer direct-call height into
   the body-call callback when `fn_body fcall` is literally the target `ECall`.
+- The recursive store-safe route is now closed at the height-indexed package
+  level by
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_of_exact_body_call_route_package`,
+  and projected back to the ordinary route by
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package_height`.
 
 Next:
 
-- Use the exact-body decreasing callback bridge to prove the height-indexed
-  store-safe evidence-at prefix route by well-founded induction on
-  `direct_call_eval_height`. The current safety bridge to target is
+- Connect the height-projected exact-body route to the scoped component package
+  and the current target bridge
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_route_scoped_package`,
-  which still needs the store-safe evidence-at route but now consumes the narrow
-  component-scoped exact-`ECall` body route package and the strict shadow checker.
-- Only after that route is closed, switch `infer_fn_env_end2end` /
+  removing the remaining self-recursive store-safe route premise from that path.
+- Only after that bridge is closed, switch `infer_fn_env_end2end` /
   `infer_fns_env_end2end` from the old captured store-safe sidecar to
   `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary`,
   then update the unconditional end-to-end safety theorem to use the
@@ -1230,8 +1233,14 @@ For an explicit-capture recursive closure group:
      `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package`,
      allowing the self-recursive store-safe route premise to consume a narrow
      exact-`ECall` body package instead of broad synthetic-body providers.
-   - Remaining gap: prove the concrete recursive synthetic direct-call route
-     statements
+   - Done: close the exact-body store-safe route recursion by
+     `direct_call_eval_height` well-founded induction in
+     `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_of_exact_body_call_route_package`,
+     with ordinary route projection through
+     `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_package_height`.
+   - Remaining gap: connect the height-projected exact-body route through the
+     scoped component package and strict end-to-end safety bridge, then prove the
+     concrete recursive synthetic direct-call route statements
      `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement`
      and
      `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement`.

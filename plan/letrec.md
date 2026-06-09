@@ -924,11 +924,17 @@ Done:
   `component_body_synthetic_direct_call_ready_nested2_body_env_evidence_in_provider`,
   and
   `env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_at_prefix_scope_call_route_with_component_body_nested_in_evidence`.
+- Checker and end-to-end safety now have matching summary-at prefix-scope
+  wrappers:
+  `check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_at_prefix_scope_call_route_with_component_body_nested_in_evidence`
+  and
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_prefix_scope_call_route_and_component_body_nested_in_evidence`.
 
 Next:
 
-- Add the checker/end-to-end summary-at prefix-scope wrappers, then connect
-  them to the exact-body route package projections.
+- Connect the exact-body route package projection to the summary-at
+  prefix-scope end-to-end wrapper, including providers for nested2
+  summary/evidence.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.
 

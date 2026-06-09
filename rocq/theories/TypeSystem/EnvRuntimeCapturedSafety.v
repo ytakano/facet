@@ -5407,6 +5407,53 @@ Proof.
   - exact Heval.
 Qed.
 
+Theorem check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_at_prefix_scope_call_route_with_component_body_nested_in_evidence :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env = true ->
+    component_body_synthetic_direct_call_ready_summary_at_in_provider env ->
+    component_body_synthetic_direct_call_ready_nested_summary_at_in_provider env ->
+    component_body_synthetic_direct_call_ready_nested_body_env_evidence_in_provider env ->
+    component_body_synthetic_direct_call_ready_nested2_summary_at_in_provider env ->
+    component_body_synthetic_direct_call_ready_nested2_body_env_evidence_in_provider env ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_summary_at Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys env f s s' v Hunique Hcombined_check
+    Hsummary_at_provider Hnested_summary_provider Hnested_body_provider
+    Hnested2_summary_provider Hnested2_body_provider Hinitial Hin Hstore Heval.
+  eapply env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_at_prefix_scope_call_route_with_component_body_nested_in_evidence.
+  - exact Hsynthetic_route.
+  - exact Hscope_summary_at.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hunique.
+  - eapply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_ready.
+    exact Hcombined_check.
+  - exact Hsummary_at_provider.
+  - exact Hnested_summary_provider.
+  - exact Hnested_body_provider.
+  - exact Hnested2_summary_provider.
+  - exact Hnested2_body_provider.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
 Theorem env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_summary_at_call_route_with_component_body_nested_in_evidence :
   eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->

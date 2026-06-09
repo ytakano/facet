@@ -671,6 +671,41 @@ Definition store_safe_synthetic_direct_call_ready_exact_body_call_route_package_
     store_safe_function_value_call_args
       (global_env_with_local_bounds env (fn_bounds fcall)) args_body.
 
+Definition store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+    (env : global_env) (fname : ident) : Prop :=
+  forall fdef fcall used used' fname_body args_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body) ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body /\
+    store_safe_function_value_call_args
+      (global_env_with_local_bounds env (fn_bounds fcall)) args_body.
+
+Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at_of_package :
+  store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement ->
+  forall env fname,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+      env fname.
+Proof.
+  intros Hpackage env fname fdef fcall used used' fname_body args_body
+    Hin Hname Hrename Htarget.
+  eapply Hpackage; eassumption.
+Qed.
+
+Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement_of_at_all :
+  (forall env fname,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+      env fname) ->
+  store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement.
+Proof.
+  intros Hpackage_at env fname fdef fcall used used' fname_body args_body
+    Hin Hname Hrename Htarget.
+  eapply Hpackage_at; eassumption.
+Qed.
+
 Lemma direct_call_callee_body_root_synthetic_direct_call_ready_evidence_of_evidence_at_all :
   forall env,
     (forall fname,

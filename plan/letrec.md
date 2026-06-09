@@ -1311,12 +1311,16 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_component_body_ready_payload_and_callbacks_of_component_check`,
   giving the next route wrapper one accepted-component sidecar input instead
   of separate payload and callback premises.
+- The exact-body route package now has a pointwise current-target form,
+  `store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at`,
+  plus compatibility lemmas to project an env-wide package to pointwise form and
+  rebuild the env-wide package from an all-target pointwise provider.
 
 Next:
 
-- Narrow the exact-body/scoped route package or add a pointwise wrapper so it
-  consumes the component body's reachable direct target evidence instead of a
-  broad local-bounds-family provider over arbitrary `env_fns`.
+- Thread the pointwise exact-body route package through the height-indexed
+  typing-roots and frame/parameter-scope route theorems, replacing the broad
+  env-wide package premise at the current-call step.
 - Expose the End2End strict exact-closure wrapper that derives branch-local
   component body-env routes from the accepted-env sidecar; do not narrow
   `infer_program_env_end2end_big_step_safe_checked_initial_ready`.

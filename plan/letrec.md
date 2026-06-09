@@ -1096,6 +1096,8 @@ Done:
 - Strict exact-closure env/checker safety now has local-bounds-family route
   variants, threading the component body-env route through the direct-component
   branch while leaving captured-call handling unchanged.
+- Local-bounds families now have an inclusion lemma from a nested body-env base
+  back to the accepted-env base, simplifying End2End route sidecar wiring.
 
 Next:
 

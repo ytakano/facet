@@ -521,6 +521,17 @@ Proof.
   destruct base; reflexivity.
 Qed.
 
+Lemma global_env_local_bounds_family_of_local_bounds_base :
+  forall base bounds env,
+    global_env_local_bounds_family
+      (global_env_with_local_bounds base bounds) env ->
+    global_env_local_bounds_family base env.
+Proof.
+  intros base bounds env (bounds0 & ->).
+  exists bounds0.
+  destruct base; reflexivity.
+Qed.
+
 Definition eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family
     (env_family : global_env -> Prop) : Prop :=
   forall env,

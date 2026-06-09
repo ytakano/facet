@@ -1212,6 +1212,9 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_component_body_direct_callee_callbacks_in_local_bounds_family`,
   deriving root summary evidence, direct-callee component summaries, and nested
   body summary evidence from the accepted-env exact-closure sidecar.
+- The branch-local component body callback bundle now has named projections for
+  root summary evidence, direct-callee component summaries, and alpha nested
+  summary evidence, keeping upcoming body-env route wrappers small.
 
 Next:
 

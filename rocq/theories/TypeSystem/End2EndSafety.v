@@ -1539,6 +1539,41 @@ Proof.
   - exact Hcallee_check.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_component_body_exact_body_route_package_at_of_component_check :
+  forall env env' f_component fname args synthetic_body fdef,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    direct_call_target_expr (fn_body f_component) =
+      Some (fname, args, synthetic_body) ->
+    lookup_fn fname
+      (env_fns (global_env_with_local_bounds env' (fn_bounds f_component))) =
+      Some fdef ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+      (global_env_with_local_bounds env' (fn_bounds f_component)) fname.
+Proof.
+  intros env env' f_component fname args synthetic_body fdef Hprog Hin_component
+    Hcomponent_check Htarget Hlookup fdef0 fcall used used' fname_body
+    args_body Hin0 Hname0 Hrename Htarget_body.
+  pose (body_env := global_env_with_local_bounds env' (fn_bounds f_component)).
+  destruct (lookup_fn_in_name fname (env_fns body_env) fdef Hlookup)
+    as [Hin_fdef Hname_fdef].
+  destruct
+    (infer_program_env_end2end_strict_exact_closure_component_body_direct_callee_ready_payload_of_component_check
+      env env' f_component Hprog Hin_component Hcomponent_check fname args
+      synthetic_body fdef Htarget Hlookup)
+    as [Hunique [Hcomponent Hexact]].
+  assert (Heq : fdef0 = fdef).
+  { eapply Hunique; try eassumption.
+    rewrite Hname0. exact (eq_sym Hname_fdef). }
+  subst fdef0 body_env.
+  eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_exact_closure_component_ready;
+    try eassumption.
+  split; [exact Hunique |].
+  split; [exact Hcomponent | exact Hexact].
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_body_summary_at_callback_in_local_bounds_family :
   forall env env' f_component,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

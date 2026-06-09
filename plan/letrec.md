@@ -1362,6 +1362,11 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_component_local_bounds_route_of_component_check_provider_package_at`,
   and the existing component-check route helper factors through this
   branch-local package-at path.
+- End-to-end strict exact-closure safety now has the route-indexed direct-callee
+  package helper
+  `infer_program_env_end2end_strict_exact_closure_component_body_exact_body_route_package_at_of_component_check`,
+  converting a component body's direct-callee lookup into a current-target
+  exact-body route package.
 
 Next:
 

@@ -774,6 +774,45 @@ Proof.
   repeat split; eauto; lia.
 Qed.
 
+Lemma direct_call_eval_height_ecall_body_lt_of_eval_call :
+  forall env s s_args s_body fname args fdef fcall vs ret used' n_call,
+    lookup_fn fname (env_fns env) = Some fdef ->
+    fn_captures fdef = [] ->
+    eval_args env s args s_args vs ->
+    alpha_rename_fn_def (store_names s_args) fdef = (fcall, used') ->
+    eval env (bind_params (fn_params fcall) vs s_args)
+      (fn_body fcall) s_body ret ->
+    direct_call_eval_height env s (ECall fname args)
+      (store_remove_params (fn_params fcall) s_body) ret n_call ->
+    exists n_body,
+      direct_call_eval_height env
+        (bind_params (fn_params fcall) vs s_args)
+        (fn_body fcall) s_body ret n_body /\
+      n_body < n_call.
+Proof.
+  intros env s s_args s_body fname args fdef fcall vs ret used' n_call
+    Hlookup Hcaptures Heval_args Hrename Heval_body Hheight_call.
+  destruct (direct_call_eval_height_ecall_inv env s
+              (store_remove_params (fn_params fcall) s_body) fname args ret
+              n_call Hheight_call)
+    as (s_args_h & s_body_h & fdef_h & fcall_h & vs_h & ret_h & used_h &
+        n_args_h & n_body_h & Hlookup_h & Hcaptures_h & Hargs_h &
+        Hrename_h & Hbody_h & Hstore_eq & Hret_eq & _Hheight_eq & Hlt).
+  assert (fdef_h = fdef) as -> by
+    (eapply lookup_fn_deterministic; eassumption).
+  destruct (direct_call_eval_args_height_eval_args_result env s args
+              s_args_h vs_h n_args_h s_args vs Hargs_h Heval_args)
+    as [Hs_args Hvs].
+  subst s_args_h vs_h.
+  rewrite Hrename in Hrename_h. inversion Hrename_h; subst fcall_h used_h.
+  destruct (direct_call_eval_height_eval_result env
+              (bind_params (fn_params fcall) vs s_args) (fn_body fcall)
+              s_body_h ret_h n_body_h s_body ret Hbody_h Heval_body)
+    as [Hs_body Hret].
+  subst s_body_h ret_h.
+  exists n_body_h. split; assumption.
+Qed.
+
 Lemma direct_call_eval_global_env_with_local_bounds :
   forall env bounds s e s' v,
     eval env s e s' v ->

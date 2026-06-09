@@ -850,6 +850,48 @@ Proof.
       eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_single_seen_route_summary_and_exact_target_in_local_bounds_family :
+  forall env env' base env0 f_component fdef,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In f_component (env_fns env') ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    CheckerOrdinary.ident_in_b (fn_name fdef) [fn_name f_component] = true ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_with_route_summary
+      env0 fdef /\
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env0 fdef.
+Proof.
+  intros env env' base env0 f_component fdef Hprog Hbase Henv
+    Hin_component Hin Hcomponent_check Hseen.
+  simpl in Hseen.
+  destruct (ident_eqb (fn_name fdef) (fn_name f_component)) eqn:Hname;
+    try discriminate.
+  apply ident_eqb_eq in Hname.
+  destruct Hbase as (bounds_base & ->).
+  destruct Henv as (bounds & ->).
+  change (env_fns
+    (global_env_with_local_bounds
+      (global_env_with_local_bounds env' bounds_base) bounds))
+    with (env_fns env') in Hin.
+  assert (Heq : fdef = f_component).
+  { eapply infer_program_env_end2end_strict_exact_closure_unique_by_name.
+    - exact Hprog.
+    - exact Hin.
+    - exact Hin_component.
+    - exact Hname. }
+  subst fdef.
+  eapply infer_program_env_end2end_strict_exact_closure_route_summary_and_exact_target_in_local_bounds_family.
+  - exact Hprog.
+  - exists bounds_base. reflexivity.
+  - exists bounds. reflexivity.
+  - exact Hin_component.
+  - exact Hcomponent_check.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_callee_seen_in_local_bounds_family :
   forall env env' base env0 f_component fname args synthetic_body fcallee,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

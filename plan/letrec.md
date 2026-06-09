@@ -1186,6 +1186,10 @@ Done:
 - End-to-end strict exact-closure safety now derives the payload-provider
   payload directly from reachable `seen` exact-closure evidence via
   `infer_program_env_end2end_strict_exact_closure_seen_route_summary_and_exact_target_in_local_bounds_family`.
+- End-to-end strict exact-closure safety now handles the singleton seen-cycle
+  case through
+  `infer_program_env_end2end_strict_exact_closure_single_seen_route_summary_and_exact_target_in_local_bounds_family`,
+  reusing the root component payload when a callee name matches the root.
 
 Next:
 

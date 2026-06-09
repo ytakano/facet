@@ -1464,6 +1464,9 @@ Done:
   `eval_preserves_typing_roots_and_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_of_reachable_exact_body_call_route_package_provider`,
   so recursive direct-call proof obligations can stay on the current reachable
   route instead of widening to all local-bounds functions.
+- End2End strict exact-closure now derives reachable exact-body route package
+  providers for a component body's direct-callee route via
+  `infer_program_env_end2end_strict_exact_closure_component_body_reachable_exact_body_route_package_provider_of_component_check`.
 
 Next:
 

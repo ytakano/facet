@@ -1344,11 +1344,14 @@ Done:
   `eval_preserves_typing_roots_and_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_of_exact_body_call_route_package_at_all`,
   now rebuilds its height induction from the two current-call package-at
   theorems instead of widening back to an env-wide route package.
+- End-to-end strict exact-closure safety now has
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_of_pointwise_exact_body_call_route_package_non_store_safe`,
+  using the combined pointwise route wrapper's typing projection for the
+  non-store-safe strict route path while keeping the existing generic scope
+  preservation input.
 
 Next:
 
-- Use the combined pointwise route wrapper from the End2End strict exact-closure
-  route.
 - Expose the End2End strict exact-closure wrapper that derives branch-local
   component body-env routes from the accepted-env sidecar; do not narrow
   `infer_program_env_end2end_big_step_safe_checked_initial_ready`.

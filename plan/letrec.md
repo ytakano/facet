@@ -1168,6 +1168,10 @@ Done:
 - End-to-end strict exact-closure safety now also projects reachable `seen`
   exact-closure evidence to local-bounds exact-body target facts via
   `infer_program_env_end2end_strict_exact_closure_seen_exact_body_target_in_local_bounds_family`.
+- End-to-end strict exact-closure safety now bundles local-bounds
+  route-summary readiness with exact-body target evidence through
+  `infer_program_env_end2end_strict_exact_closure_route_summary_and_exact_target_in_local_bounds_family`,
+  preparing a compact component-ready payload for reachable-route predicates.
 
 Next:
 

@@ -844,6 +844,11 @@ Done:
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_statement`
   and its height-indexed form. These match recursive body-call stores, where
   only `store_typed_prefix` is available for the callee parameter context.
+- Prefix-store pointwise scope routes now lift back to the existing full-store
+  typed/named route interfaces via
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_height_statement_of_prefix_call_height_statement`
+  and
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_statement_of_prefix_call_statement`.
 - The route layer now has exact-body package projection helpers,
   `fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_exact_body_call_route_package`
   and `store_safe_function_value_call_args_of_exact_body_call_route_package`,

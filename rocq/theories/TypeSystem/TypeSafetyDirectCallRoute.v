@@ -750,6 +750,30 @@ Proof.
   eapply Hheight; eassumption.
 Qed.
 
+Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_height_statement_of_prefix_call_height_statement :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_height_statement.
+Proof.
+  intros Hprefix env s fname args s' v n_call Heval Hheight Omega n R Sigma
+    T Sigma' R' roots ps frame Hready_args Hstore Hnamed Hkeys Htyped
+    Hunique Hsummary_at Hsummary_body_at_all Hevidence_body_env_all Hcover
+    Hroots Hshadow Hrn Hframe Hfresh Hparam.
+  eapply Hprefix; try eassumption.
+  eapply store_typed_prefix_exact. exact Hstore.
+Qed.
+
+Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_statement_of_prefix_call_statement :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_statement.
+Proof.
+  intros Hprefix env s fname args s' v Heval Omega n R Sigma T Sigma' R'
+    roots ps frame Hready_args Hstore Hnamed Hkeys Htyped Hunique
+    Hsummary_at Hsummary_body_at_all Hevidence_body_env_all Hcover Hroots
+    Hshadow Hrn Hframe Hfresh Hparam.
+  eapply Hprefix; try eassumption.
+  eapply store_typed_prefix_exact. exact Hstore.
+Qed.
+
 Definition eval_preserves_synthetic_direct_call_ready_call_routes_statement
     : Prop :=
   eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement /\

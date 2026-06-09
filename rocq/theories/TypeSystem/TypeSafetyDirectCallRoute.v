@@ -8216,16 +8216,9 @@ Proof.
     try eassumption.
   - intros fdef fcall used used' fname_body args_body synthetic_body
       Hin Hname Hrename Htarget.
-    pose proof
-      (Hexact_body_target env fname fdef fcall used used' fname_body
-        args_body synthetic_body Hin Hname Hrename Htarget) as Htarget_exact.
-    pose proof
-      (direct_call_target_expr_same_is_call (fn_body fcall) fname_body
-        args_body Htarget_exact) as Hbody_exact.
-    destruct (Hbody_package env fname fdef fcall used used' fname_body
-      args_body Hin Hname Hrename) as [Hsummary _].
-    { rewrite Hbody_exact. reflexivity. }
-    exact Hsummary.
+    eapply
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_exact_body_call_route_package;
+      eassumption.
   - intros fdef fcall used used' fname_body args_body
       Hin Hname Hrename Htarget.
     pose proof
@@ -8328,16 +8321,9 @@ Proof.
     try eassumption.
   - intros fdef fcall used used' fname_body args_body synthetic_body
       Hin Hname Hrename Htarget.
-    pose proof
-      (Hexact_body_target env fname fdef fcall used used' fname_body
-        args_body synthetic_body Hin Hname Hrename Htarget) as Htarget_exact.
-    pose proof
-      (direct_call_target_expr_same_is_call (fn_body fcall) fname_body
-        args_body Htarget_exact) as Hbody_exact.
-    destruct (Hbody_package env fname fdef fcall used used' fname_body
-      args_body Hin Hname Hrename) as [Hsummary _].
-    { rewrite Hbody_exact. reflexivity. }
-    exact Hsummary.
+    eapply
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_exact_body_call_route_package;
+      eassumption.
   - intros fdef fcall used used' fname_body args_body
       Hin Hname Hrename Htarget.
     pose proof
@@ -8351,8 +8337,11 @@ Proof.
       Hsummary_body Hevidence_body Hstore_bind Hroots_bind Hshadow_bind
       Hrn_bind Hnamed_bind Hkeys_bind Heval_nested n_body_call
       Hheight_nested Hlt.
-    destruct (Hbody_package env fname fdef fcall used used' fname_body
-      args_body Hin Hname Hrename Htarget_body) as [_ Hsafe_body].
+    pose proof
+      (store_safe_function_value_call_args_of_exact_body_call_route_package
+        Hexact_body_target Hbody_package env fname fdef fcall used used'
+        fname_body args_body (ECall fname_body args_body) Hin Hname Hrename
+        Htarget_body) as Hsafe_body.
     eapply IH; try eassumption.
 Qed.
 
@@ -8590,28 +8579,13 @@ Proof.
     try eassumption.
   - intros env fname fdef fcall used used' fname_body args_body
       synthetic_body Hin Hname Hrename Htarget.
-    pose proof
-      (Hexact_body_target env fname fdef fcall used used' fname_body
-        args_body synthetic_body Hin Hname Hrename Htarget) as Htarget_exact.
-    pose proof
-      (direct_call_target_expr_same_is_call (fn_body fcall) fname_body
-        args_body Htarget_exact) as Hbody_exact.
-    destruct (Hexact_body_package env fname fdef fcall used used' fname_body
-      args_body Hin Hname Hrename) as [Hsummary _].
-    { rewrite Hbody_exact. reflexivity. }
-    exact Hsummary.
+    eapply
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_exact_body_call_route_package;
+      eassumption.
   - intros env fname fdef fcall used used' fname_body args_body
       synthetic_body Hin Hname Hrename Htarget.
-    pose proof
-      (Hexact_body_target env fname fdef fcall used used' fname_body
-        args_body synthetic_body Hin Hname Hrename Htarget) as Htarget_exact.
-    pose proof
-      (direct_call_target_expr_same_is_call (fn_body fcall) fname_body
-        args_body Htarget_exact) as Hbody_exact.
-    destruct (Hexact_body_package env fname fdef fcall used used' fname_body
-      args_body Hin Hname Hrename) as [_ Hsafe].
-    { rewrite Hbody_exact. reflexivity. }
-    exact Hsafe.
+    eapply store_safe_function_value_call_args_of_exact_body_call_route_package;
+      eassumption.
 Qed.
 
 Definition store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_statement

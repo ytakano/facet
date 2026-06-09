@@ -845,6 +845,8 @@ Done:
   and `store_safe_function_value_call_args_of_exact_body_call_route_package`,
   so exact-body route proofs can reuse package summary/store-safe facts without
   duplicating target-normalization code.
+  Existing exact-body route package wrappers now use those helpers instead of
+  repeating the inline target-normalization/projection proof.
 
 Next:
 

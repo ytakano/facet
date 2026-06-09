@@ -1416,6 +1416,8 @@ Done:
   per-component store-safe callback-height providers.
 - TypeSafety now has a local-bounds bridge from summary-at-prefix height
   routes to store-safe body-call callback-height statements.
+- End2End safety now has a component-check-provider wrapper that feeds
+  summary routes through the store-safe callback bridge.
 
 Next:
 

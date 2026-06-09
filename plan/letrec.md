@@ -1365,8 +1365,12 @@ Done:
 
 Next:
 
-- Expose the final End2End strict exact-closure wrapper that derives component
-  body-env routes from the accepted-env sidecar; do not narrow
+- Add a route-indexed local-bounds wrapper that carries the current function's
+  strict exact-closure/component-check evidence through recursive direct-call
+  steps, rather than requiring an all-function component-check provider.
+- Use that route-indexed wrapper to expose the final End2End strict
+  exact-closure wrapper that derives component body-env routes from the
+  accepted-env sidecar; do not narrow
   `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.

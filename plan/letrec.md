@@ -1284,6 +1284,9 @@ Done:
 - No-capture direct component exact-closure `seen` checks and the top-level
   exact-closure checker are now stable under `global_env_with_local_bounds`,
   preparing accepted exact-closure booleans for local-bounds providers.
+- Accepted component-check booleans now project to local-bounds
+  component-ready payloads through
+  `infer_program_env_end2end_strict_exact_closure_component_ready_payload_in_local_bounds_family`.
 
 Next:
 

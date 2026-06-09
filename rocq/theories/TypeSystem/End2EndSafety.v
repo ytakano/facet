@@ -710,6 +710,47 @@ Proof.
   exact Hprog.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_component_ready_payload_in_local_bounds_family :
+  forall env env' base env0 fdef,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' fdef = true ->
+    fn_env_unique_by_name env0 /\
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env0 fdef /\
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env0 fdef = true.
+Proof.
+  intros env env' base env0 fdef Hprog Hbase Henv Hin Hcomponent_check.
+  split.
+  - eapply infer_program_env_end2end_strict_exact_closure_unique_by_name_in_local_bounds_family;
+      eassumption.
+  - split.
+    + eapply infer_program_env_end2end_strict_exact_closure_component_summary_in_local_bounds_family.
+      * exact Hprog.
+      * eapply infer_program_env_end2end_strict_exact_closure_unique_by_name.
+        exact Hprog.
+      * exact Hbase.
+      * exact Henv.
+      * exact Hin.
+      * exact Hcomponent_check.
+    + destruct Hbase as (bounds_base & ->).
+      destruct Henv as (bounds & ->).
+      change (env_fns
+        (global_env_with_local_bounds
+          (global_env_with_local_bounds env' bounds_base) bounds))
+        with (env_fns env') in Hin.
+      rewrite check_fn_root_shadow_no_capture_direct_call_component_exact_closure_global_env_with_local_bounds.
+      rewrite check_fn_root_shadow_no_capture_direct_call_component_exact_closure_global_env_with_local_bounds.
+      eapply infer_program_env_end2end_strict_exact_closure_component_exact_closure.
+      * exact Hprog.
+      * exact Hin.
+      * exact Hcomponent_check.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_route_summary_in_local_bounds_family :
   forall env env' base env0 fdef,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

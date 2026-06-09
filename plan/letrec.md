@@ -821,6 +821,9 @@ Done:
 - End-to-end safety now has the matching default-checker plus explicit strict
   sidecar bridge,
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_strict_exact_closure_check_non_store_safe`.
+- End-to-end branch-local strict safety now also has a non-store-safe route
+  bridge,
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_branch_local_strict_exact_closure_check_non_store_safe`.
 
 Next:
 
@@ -1321,8 +1324,10 @@ For an explicit-capture recursive closure group:
    - Done: lift the non-store-safe strict path through default end-to-end safety
      with an explicit strict sidecar check via
      `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_strict_exact_closure_check_non_store_safe`.
+   - Done: add the branch-local strict End2End non-store-safe bridge
+     `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_and_branch_local_strict_exact_closure_check_non_store_safe`.
    - Remaining gap: connect the exact-body scoped package to this non-store-safe
-     End2End bridge, then target the default checker gate
+     branch-local End2End bridge, then target the default checker gate
      switch through the branch-local bridge, or first prove the default checker
      produces the strict sidecar, before switching the extracted checker gate to
      the strict exact-body component sidecar path; otherwise the default

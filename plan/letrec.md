@@ -1320,12 +1320,15 @@ Done:
   `fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_exact_body_call_route_package_at`
   and
   `store_safe_function_value_call_args_of_exact_body_call_route_package_at`.
+- Height-indexed typing-roots and frame/parameter-scope route wrappers can now
+  consume all-target pointwise exact-body package providers through the
+  `..._of_exact_body_call_route_package_at_all` theorem family.
 
 Next:
 
-- Thread the pointwise exact-body route package through the height-indexed
-  typing-roots and frame/parameter-scope route theorems, replacing the broad
-  env-wide package premise at the current-call step.
+- Push the pointwise exact-body route package from all-target providers down to
+  the current-call step, so component-body accepted sidecars can provide only
+  the reachable direct target evidence they own.
 - Expose the End2End strict exact-closure wrapper that derives branch-local
   component body-env routes from the accepted-env sidecar; do not narrow
   `infer_program_env_end2end_big_step_safe_checked_initial_ready`.

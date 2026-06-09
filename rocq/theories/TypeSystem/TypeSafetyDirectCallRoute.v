@@ -11264,6 +11264,30 @@ Proof.
       eassumption.
 Qed.
 
+Definition global_env_local_bounds_family
+    (base env : global_env) : Prop :=
+  exists bounds, env = global_env_with_local_bounds base bounds.
+
+Lemma global_env_local_bounds_family_base :
+  forall env,
+    global_env_local_bounds_family env env.
+Proof.
+  intros env.
+  exists (env_local_bounds env).
+  destruct env; reflexivity.
+Qed.
+
+Lemma global_env_local_bounds_family_with_local_bounds :
+  forall base env bounds,
+    global_env_local_bounds_family base env ->
+    global_env_local_bounds_family base
+      (global_env_with_local_bounds env bounds).
+Proof.
+  intros base env bounds (bounds0 & ->).
+  exists bounds.
+  destruct base; reflexivity.
+Qed.
+
 Definition store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_statement
     (component_ready : global_env -> fn_def -> Prop) : Prop :=
   forall env fname fdef fcall used used' fname_body args_body,

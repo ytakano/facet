@@ -631,8 +631,7 @@ Lemma infer_program_env_end2end_strict_exact_closure_exact_body_route_scoped_pac
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
     store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_statement
       (fun env0 fdef =>
-        exists bounds,
-          env0 = global_env_with_local_bounds env' bounds /\
+        global_env_local_bounds_family env' env0 /\
           In fdef (env_fns env') /\
           check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
             env' fdef = true).

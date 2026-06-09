@@ -1077,13 +1077,16 @@ Done:
 - The store-safe evidence-at prefix route now also has a height-indexed
   env-local statement plus projections to and from the existing all-env route
   shape, enabling future exact-body induction to stay scoped to an accepted env.
+- Local-bounds environment families are now named by
+  `global_env_local_bounds_family`, with base/step lemmas, and the strict
+  exact-closure scoped route sidecar uses that named family instead of an
+  inline existential.
 
 Next:
 
-- Close the remaining route/provider assumptions that still quantify over
-  arbitrary environments before switching the default `infer_program_env_end2end`
-  gate; do not narrow
-  `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
+- Add the local-bounds-family exact-body height induction so recursive body
+  calls consume the accepted-env strict exact-closure route sidecar; do not
+  narrow `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.
 

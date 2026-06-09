@@ -452,6 +452,20 @@ Definition component_body_no_capture_direct_call_component_target_in_provider
       callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
         (global_env_with_local_bounds env (fn_bounds f_component)) fdef.
 
+Definition component_body_no_capture_direct_call_component_target_check_in_provider
+    (env : global_env) : Prop :=
+  forall f_component fname args synthetic_body,
+    In f_component (env_fns env) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component = true ->
+    direct_call_target_expr (fn_body f_component) =
+      Some (fname, args, synthetic_body) ->
+    forall fdef,
+      lookup_fn fname (env_fns (global_env_with_local_bounds env (fn_bounds f_component))) =
+        Some fdef ->
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        (global_env_with_local_bounds env (fn_bounds f_component)) fdef.
+
 
 Definition component_body_no_capture_direct_call_component_nested_target_in_provider
     (env : global_env) : Prop :=
@@ -3388,6 +3402,25 @@ Proof.
     try eassumption.
   eapply check_fn_root_shadow_no_capture_direct_call_component_closure_of_exact_closure.
   exact Hcheck.
+Qed.
+
+Lemma component_body_no_capture_direct_call_component_target_check_in_provider_of_exact_closure_check_in_provider :
+  forall env,
+    fn_env_unique_by_name env ->
+    component_body_no_capture_direct_call_component_exact_closure_check_in_provider
+      env ->
+    component_body_no_capture_direct_call_component_target_check_in_provider env.
+Proof.
+  intros env Hunique Hprovider f_component fname args synthetic_body
+    Hin_component Hcomponent_check Htarget fdef Hlookup.
+  eapply component_body_no_capture_direct_call_component_target_in_of_exact_closure_check.
+  - exact Hunique.
+  - exact Hin_component.
+  - eapply check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_sound.
+    exact Hcomponent_check.
+  - eapply Hprovider; eassumption.
+  - exact Htarget.
+  - exact Hlookup.
 Qed.
 
 Lemma component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_of_closure_check :

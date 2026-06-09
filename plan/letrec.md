@@ -995,6 +995,11 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_component_ready`, connecting
   `In` plus bool component sidecars to Prop component summary and exact-closure
   checker evidence.
+- Bool component sidecars now have a target-propagation provider,
+  `component_body_no_capture_direct_call_component_target_check_in_provider`,
+  plus strict accepted-env derivation through
+  `infer_program_env_end2end_strict_exact_closure_target_check_in_provider`.
+  This avoids requiring Prop-to-bool completeness for component summaries.
 
 Next:
 

@@ -354,6 +354,25 @@ Proof.
     + eapply IH. exact Hinfer.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_unique_by_name :
+  forall env env',
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    fn_env_unique_by_name env'.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_strict_exact_closure in Hprog.
+  set (env_alpha := alpha_normalize_global_env env) in *.
+  destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
+    try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
+    try discriminate.
+  destruct (infer_fns_env_end2end_strict_exact_closure env_elab (env_fns env_elab))
+    as [[] | err] eqn:Hfns; try discriminate.
+  injection Hprog as <-.
+  apply andb_true_iff in Hunique_global as [Hunique_top _].
+  eapply infer_program_env_alpha_elab_unique_by_name; eauto.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_check_env_ready :
   forall env env',
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
@@ -437,6 +456,20 @@ Proof.
   eapply component_body_no_capture_direct_call_component_exact_body_target_in_provider_of_strict_exact_closure_check.
   eapply infer_program_env_end2end_strict_exact_closure_check_env_ready.
   exact Hprog.
+Qed.
+
+Lemma infer_program_env_end2end_strict_exact_closure_target_check_in_provider :
+  forall env env',
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    component_body_no_capture_direct_call_component_target_check_in_provider
+      env'.
+Proof.
+  intros env env' Hprog.
+  eapply component_body_no_capture_direct_call_component_target_check_in_provider_of_exact_closure_check_in_provider.
+  - eapply infer_program_env_end2end_strict_exact_closure_unique_by_name.
+    exact Hprog.
+  - eapply infer_program_env_end2end_strict_exact_closure_exact_closure_check_in_provider.
+    exact Hprog.
 Qed.
 
 

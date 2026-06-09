@@ -1225,6 +1225,9 @@ Done:
 - Component body callback projections now also have component-check-only wrappers,
   deriving exact-closure internally from the accepted strict sidecar before
   exposing root, direct-callee, and alpha nested summary callbacks.
+- Env-runtime captured safety now has
+  `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_lookup_evidence_callbacks_in_local_bounds_family`,
+  a local-bounds wrapper that consumes the branch-local callback bundle directly.
 
 Next:
 

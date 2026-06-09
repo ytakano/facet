@@ -2117,6 +2117,38 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_global_env_with_local_bounds :
+  forall fuel seen env bounds fdef,
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+      fuel seen (global_env_with_local_bounds env bounds) fdef =
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+      fuel seen env fdef.
+Proof.
+  induction fuel as [| fuel' IH]; intros seen env bounds fdef; simpl;
+    try reflexivity.
+  destruct (CheckerOrdinary.ident_in_b (fn_name fdef) seen);
+    try reflexivity.
+  rewrite check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds.
+  change (env_fns (global_env_with_local_bounds env bounds))
+    with (env_fns env).
+  destruct (direct_call_target_expr (fn_body fdef))
+    as [[[fname args] synthetic_body] |]; try reflexivity.
+  destruct (lookup_fn_b fname (env_fns env)) as [callee |]; try reflexivity.
+  rewrite IH. reflexivity.
+Qed.
+
+Lemma check_fn_root_shadow_no_capture_direct_call_component_exact_closure_global_env_with_local_bounds :
+  forall env bounds fdef,
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      (global_env_with_local_bounds env bounds) fdef =
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env fdef.
+Proof.
+  intros env bounds fdef.
+  unfold check_fn_root_shadow_no_capture_direct_call_component_exact_closure.
+  apply check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_global_env_with_local_bounds.
+Qed.
+
 Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds :
   forall env bounds fdef,
     fn_env_unique_by_name env ->

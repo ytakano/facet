@@ -1281,6 +1281,9 @@ Done:
   checker booleans, and captured-call summary facts preserve the no-capture
   direct component store-safe checker boolean under
   `global_env_with_local_bounds`.
+- No-capture direct component exact-closure `seen` checks and the top-level
+  exact-closure checker are now stable under `global_env_with_local_bounds`,
+  preparing accepted exact-closure booleans for local-bounds providers.
 
 Next:
 

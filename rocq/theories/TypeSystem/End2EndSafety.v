@@ -737,6 +737,37 @@ Proof.
     exact Hprog.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_exact_body_route_scoped_package_local_bounds_family_with_route_summary :
+  forall env env',
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_statement
+      (fun env0 fdef =>
+        global_env_local_bounds_family env' env0 /\
+          In fdef (env_fns env0) /\
+          check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+            env' fdef = true).
+Proof.
+  intros env env' Hprog.
+  eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_route_summary_at_provider.
+  - intros env0 fname fdef fcall used used' fname_body args_body
+      synthetic_body (Hfamily & Hin & Hcomponent_check) _Hin Hname
+      Hrename Htarget.
+    destruct (infer_program_env_end2end_strict_exact_closure_component_route_summary_in_local_bounds_family
+                env env' env' env0 fdef Hprog
+                (global_env_local_bounds_family_base env') Hfamily Hin
+                Hcomponent_check) as [_ Hroute_summary].
+    eapply Hroute_summary; eassumption.
+  - intros env0 fdef (Hfamily & Hin & Hcomponent_check).
+    eapply infer_program_env_end2end_strict_exact_closure_component_summary_in_local_bounds_family.
+    + exact Hprog.
+    + eapply infer_program_env_end2end_strict_exact_closure_unique_by_name.
+      exact Hprog.
+    + apply global_env_local_bounds_family_base.
+    + exact Hfamily.
+    + exact Hin.
+    + exact Hcomponent_check.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_exact_body_route_scoped_package_check_in_provider :
   forall env env',
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

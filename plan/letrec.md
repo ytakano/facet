@@ -1258,6 +1258,10 @@ Done:
 - The direct-callee component-check projection now has an alpha-renamed wrapper,
   `infer_program_env_end2end_strict_exact_closure_alpha_direct_callee_component_check_of_lookup_in_local_bounds_family`,
   matching the alpha direct-callee route and summary-evidence callbacks.
+- Component route-and-callback construction now has a payload-provider entry
+  point,
+  `infer_program_env_end2end_strict_exact_closure_component_route_and_callbacks_of_component_payload_provider`,
+  and the older check-provider helper factors through it.
 
 Next:
 

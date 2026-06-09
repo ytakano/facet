@@ -1287,6 +1287,9 @@ Done:
 - Accepted component-check booleans now project to local-bounds
   component-ready payloads through
   `infer_program_env_end2end_strict_exact_closure_component_ready_payload_in_local_bounds_family`.
+- Direct callee lookups now project to local-bounds component-ready payloads via
+  `infer_program_env_end2end_strict_exact_closure_direct_callee_component_ready_payload_in_local_bounds_family`,
+  combining reachable callee component checks with local-bounds checker stability.
 
 Next:
 

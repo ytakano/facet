@@ -990,6 +990,11 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_exact_closure_check_in_provider`
   and
   `infer_program_env_end2end_strict_exact_closure_exact_body_target_in_provider`.
+- Strict exact-closure program inference now exposes accepted-env
+  component-ready evidence through
+  `infer_program_env_end2end_strict_exact_closure_component_ready`, connecting
+  `In` plus bool component sidecars to Prop component summary and exact-closure
+  checker evidence.
 
 Next:
 

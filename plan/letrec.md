@@ -797,12 +797,16 @@ Done:
 - The remaining summary/evidence bridge premise has been localized from
   env-wide summary evidence to callee-local
   `fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at`.
+- The scoped exact-body evidence_at route is now threaded into the default
+  checker plus branch-local strict-check bridge by
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_exact_body_call_route_scoped_package_and_branch_local_strict_exact_closure_check`,
+  avoiding the callee-local premise for that end-to-end path.
 
 Next:
 
-- Discharge the remaining callee-local summary/evidence bridge premise, or
-  thread it from the strict exact-body component sidecar into the default
-  end-to-end bridge.
+- Use the branch-local strict-check bridge as the target for the default checker
+  gate switch, or prove the default checker itself produces the strict sidecar
+  before switching the extracted entrypoint.
   The default checker gate cannot switch to
   `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary`
   until the unconditional
@@ -1279,8 +1283,12 @@ For an explicit-capture recursive closure group:
    - Done: localize the remaining summary/evidence bridge premise from
      env-wide summary evidence to callee-local
      `fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at`.
-   - Remaining gap: discharge or thread that callee-local premise before
-     switching the extracted checker gate to the strict
+   - Done: thread the scoped exact-body evidence_at route into the default
+     checker plus branch-local strict-check bridge with
+     `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_exact_body_call_route_scoped_package_and_branch_local_strict_exact_closure_check`.
+   - Remaining gap: target the default checker gate switch through that
+     branch-local bridge, or first prove the default checker produces the strict
+     sidecar, before switching the extracted checker gate to the strict
      exact-body component sidecar path; otherwise the default end-to-end
      big-step safety theorem loses the route evidence needed by the
      branch-local strict bridge. The route statements are

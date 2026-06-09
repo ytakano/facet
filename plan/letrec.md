@@ -948,6 +948,13 @@ Done:
   provider from the whole-env direct-component checker through
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_route_package_and_component_check`,
   reducing one Prop-level provider input to an executable sidecar check.
+- The strict exact-closure route now has a component-scoped exact-body target
+  bridge. `callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_alpha_renamed_target_any`
+  generalizes exact-body target projection to arbitrary direct-call target
+  witnesses, and
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_route_scoped_package_and_component_exact_body_target`
+  lets the scoped route package derive the old global `Hexact_body_target`
+  input from a component-ready exact-body target provider.
 
 Next:
 

@@ -2142,17 +2142,17 @@ Proof.
 Qed.
 
 
-Lemma callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_alpha_renamed_target :
-  forall env fdef used fcall used' fname_body args_body,
+Lemma callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_alpha_renamed_target_any :
+  forall env fdef used fcall used' fname_body args_body synthetic_body,
     callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
       env fdef ->
     alpha_rename_fn_def used fdef = (fcall, used') ->
     direct_call_target_expr (fn_body fcall) =
-      Some (fname_body, args_body, ECall fname_body args_body) ->
+      Some (fname_body, args_body, synthetic_body) ->
     direct_call_target_expr (fn_body fcall) =
       Some (fname_body, args_body, fn_body fcall).
 Proof.
-  intros env fdef used fcall used' fname_body args_body
+  intros env fdef used fcall used' fname_body args_body synthetic_body
     (fname & args & Hbody) Hrename Htarget.
   destruct (alpha_rename_fn_def_params_body used fdef fcall used' Hrename)
     as (rho & used_params & _Hparams & Hrename_body).
@@ -2170,9 +2170,25 @@ Proof.
   injection Hrename_body as Hbody_fcall Hused_eq.
   rewrite <- Hbody_fcall in Htarget.
   simpl in Htarget.
-  inversion Htarget; subst fname_body args_body.
+  inversion Htarget; subst fname_body args_body synthetic_body.
   rewrite <- Hbody_fcall.
   reflexivity.
+Qed.
+
+Lemma callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_alpha_renamed_target :
+  forall env fdef used fcall used' fname_body args_body,
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env fdef ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall).
+Proof.
+  intros env fdef used fcall used' fname_body args_body Htarget_body
+    Hrename Htarget.
+  eapply callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_alpha_renamed_target_any;
+    eassumption.
 Qed.
 
 Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_synthetic_direct_call_ready :

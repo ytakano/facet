@@ -907,12 +907,16 @@ Done:
   package via
   `eval_preserves_synthetic_direct_call_ready_summary_at_pointwise_call_package_statement_of_exact_body_call_route_package`,
   avoiding the weaker ordinary direct `ECall` scope route.
+- The route layer now has
+  `eval_synthetic_direct_call_body_scope_callback_from_ready_evidence_at_summary_at_prefix_call_statement`,
+  which builds callee-body frame/parameter scope callbacks from the
+  summary-at prefix scope route and body-env summary/evidence providers.
 
 Next:
 
-- Thread the exact-body pointwise summary-at call package through the next
-  end-to-end strict-check bridge, then switch the default checker gate once the
-  remaining wrapper premises are supplied without assumptions.
+- Add the final-roots cleanup bridge variant that consumes the summary-at
+  prefix/scope routes through the new callee-body scope callback, then thread
+  the exact-body pointwise summary-at package into the strict-check bridge.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.
 

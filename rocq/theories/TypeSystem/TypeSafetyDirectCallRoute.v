@@ -2188,6 +2188,56 @@ Proof.
   exact Hsafe.
 Qed.
 
+Lemma exact_body_call_route_callbacks_of_package_at :
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, fn_body fcall)) ->
+  forall env fname,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+      env fname ->
+    (forall fdef fcall used used' fname_body args_body synthetic_body,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      alpha_rename_fn_def used fdef = (fcall, used') ->
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname_body, args_body, synthetic_body) ->
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+        (global_env_with_local_bounds env (fn_bounds fcall)) fname_body) /\
+    (forall fdef fcall used used' fname_body args_body,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      alpha_rename_fn_def used fdef = (fcall, used') ->
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname_body, args_body, ECall fname_body args_body) ->
+      fn_body fcall = ECall fname_body args_body) /\
+    (forall fdef fcall used used' fname_body args_body synthetic_body,
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      alpha_rename_fn_def used fdef = (fcall, used') ->
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname_body, args_body, synthetic_body) ->
+      store_safe_function_value_call_args
+        (global_env_with_local_bounds env (fn_bounds fcall)) args_body).
+Proof.
+  intros Hexact_body_target env fname Hpackage_at.
+  split.
+  - intros.
+    eapply fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_exact_body_call_route_package_at;
+      eassumption.
+  - split.
+    + intros.
+      eapply direct_call_target_expr_same_is_call.
+      eapply Hexact_body_target; eassumption.
+    + intros.
+      eapply store_safe_function_value_call_args_of_exact_body_call_route_package_at;
+        eassumption.
+Qed.
+
 Lemma eval_synthetic_direct_call_body_from_ready_evidence :
   forall env (Ω : outlives_ctx) (n : nat) R Σ Σ_args R_args arg_roots
       (fname : ident) args fdef fcall (σ : list lifetime) s s_args

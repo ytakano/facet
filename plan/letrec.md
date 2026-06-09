@@ -1323,6 +1323,10 @@ Done:
 - Height-indexed typing-roots and frame/parameter-scope route wrappers can now
   consume all-target pointwise exact-body package providers through the
   `..._of_exact_body_call_route_package_at_all` theorem family.
+- Pointwise exact-body packages now build the current-call callback bundle via
+  `exact_body_call_route_callbacks_of_package_at`, grouping target summary,
+  exact-body equality, and store-safe argument facts for low-level route
+  theorems.
 
 Next:
 

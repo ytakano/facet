@@ -1397,6 +1397,10 @@ Done:
   `callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_lookup_evidence_body_call_callback_height`,
   which consumes local-bounds body-call height callbacks instead of a broad
   local-bounds route statement.
+- EnvRuntime captured safety now has a top-level strict exact-closure
+  component wrapper
+  `env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_call_callback_height_callbacks`,
+  so final safety can consume per-component callback-height providers.
 
 Next:
 

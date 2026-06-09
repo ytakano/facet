@@ -1384,6 +1384,9 @@ Done:
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_callback_height_statement`,
   preparing route-indexed local-bounds wrappers to pass current-component
   evidence through recursive calls.
+- Direct-call route safety now has a generic bridge from that named height
+  callback to the store-safe direct-call height statement:
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_of_body_call_callback_height`.
 
 Next:
 

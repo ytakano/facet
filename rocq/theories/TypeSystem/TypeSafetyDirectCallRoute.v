@@ -10234,6 +10234,58 @@ Proof.
   - rewrite Hremoved_exact. exact Hshadow_args.
 Qed.
 
+
+Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_of_body_call_callback_height :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_prefix_mutual_statement ->
+  eval_preserves_typing_roots_ready_prefix_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, synthetic_body) ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body) ->
+  (forall env fname fdef fcall used used' fname_body args_body,
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body) ->
+    fn_body fcall = ECall fname_body args_body) ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_callback_height_statement ->
+  eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement.
+Proof.
+  intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
+    Hroot_names Hroot_keys Hsummary_body_at_all Hbody_exact
+    Hbody_call_callback_height.
+  unfold
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement.
+  intros env s fname args s' v n_call Heval_call Hheight_call Omega n R
+    Sigma T Sigma' R' roots Hsafe_args Hstore Hroots Hshadow Hrn Hnamed
+    Hkeys Htyped Hunique Hsummary_at Hevidence_at.
+  eapply
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_decreasing_body_call_callback_prefix_store_final_roots_core_exact_body;
+    try eassumption.
+  - intros fdef fcall used used' fname_body args_body synthetic_body
+      Hin Hname Hrename Htarget.
+    eapply Hsummary_body_at_all; eassumption.
+  - intros fdef fcall used used' fname_body args_body
+      Hin Hname Hrename Htarget.
+    eapply Hbody_exact; eassumption.
+  - intros fdef fcall used used' s_args s_body vs ret R_args arg_roots
+      fname_body args_body T_body Gamma_out R_body roots_body Hin Hname
+      Hrename Htarget_body Hready_body Htyped_body Hunique_body
+      Hsummary_body Hevidence_body Hstore_bind Hroots_bind Hshadow_bind
+      Hrn_bind Hnamed_bind Hkeys_bind Heval_nested n_body_call
+      Hheight_nested _Hlt.
+    eapply Hbody_call_callback_height; eassumption.
+Qed.
+
 Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_of_exact_body_call_route_package :
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
   eval_preserves_typing_ready_prefix_mutual_statement ->

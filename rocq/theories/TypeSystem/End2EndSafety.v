@@ -1780,6 +1780,59 @@ Proof.
       eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_component_body_route_package_and_callbacks_of_component_check :
+  forall env env' f_component,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    In f_component (env_fns env') ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' f_component = true ->
+    (forall fname args synthetic_body fdef,
+      direct_call_target_expr (fn_body f_component) =
+        Some (fname, args, synthetic_body) ->
+      lookup_fn fname
+        (env_fns (global_env_with_local_bounds env' (fn_bounds f_component))) =
+        Some fdef ->
+      store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+        (global_env_with_local_bounds env' (fn_bounds f_component)) fname) /\
+    ((forall fname args synthetic_body,
+      direct_call_target_expr (fn_body f_component) =
+        Some (fname, args, synthetic_body) ->
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+        (global_env_with_local_bounds env' (fn_bounds f_component)) fname) /\
+     (forall fname args synthetic_body fdef,
+      direct_call_target_expr (fn_body f_component) =
+        Some (fname, args, synthetic_body) ->
+      lookup_fn fname
+        (env_fns (global_env_with_local_bounds env' (fn_bounds f_component))) =
+        Some fdef ->
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        (global_env_with_local_bounds env' (fn_bounds f_component)) fdef) /\
+     (forall fname args synthetic_body fdef,
+      direct_call_target_expr (fn_body f_component) =
+        Some (fname, args, synthetic_body) ->
+      lookup_fn fname
+        (env_fns (global_env_with_local_bounds env' (fn_bounds f_component))) =
+        Some fdef ->
+      callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+        (global_env_with_local_bounds env' (fn_bounds f_component)) fdef ->
+      forall fcall used used' fname_body args_body synthetic_body_nested,
+        alpha_rename_fn_def used fdef = (fcall, used') ->
+        direct_call_target_expr (fn_body fcall) =
+          Some (fname_body, args_body, synthetic_body_nested) ->
+        fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+          (global_env_with_local_bounds
+            (global_env_with_local_bounds env' (fn_bounds f_component))
+            (fn_bounds fcall)) fname_body)).
+Proof.
+  intros env env' f_component Hprog Hin Hcomponent_check.
+  split.
+  - intros fname args synthetic_body fdef Htarget Hlookup.
+    eapply infer_program_env_end2end_strict_exact_closure_component_body_exact_body_route_package_at_of_component_check;
+      eassumption.
+  - eapply infer_program_env_end2end_strict_exact_closure_component_body_callbacks_of_component_check;
+      eassumption.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_body_summary_at_callback_of_component_check :
   forall env env' f_component,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

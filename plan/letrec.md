@@ -1370,6 +1370,9 @@ Done:
 - The same route-indexed package helper is available for alpha-renamed component
   bodies as
   `infer_program_env_end2end_strict_exact_closure_component_body_alpha_exact_body_route_package_at_of_component_check`.
+- End-to-end strict exact-closure safety now bundles route-indexed
+  current-target package providers with the existing component-body callbacks via
+  `infer_program_env_end2end_strict_exact_closure_component_body_route_package_and_callbacks_of_component_check`.
 
 Next:
 

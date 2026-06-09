@@ -981,6 +981,10 @@ Done:
   and `component_body_no_capture_direct_call_component_exact_body_target_in_provider`,
   plus constructors from the strict exact-closure env check. These avoid relying
   on Prop-to-bool completeness for component summaries.
+- End-to-end strict exact-closure safety now has
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_closure_component_check_route_package`,
+  which builds exact-closure component-ready evidence from checker bool sidecars
+  plus strict env sidecar checks.
 
 Next:
 

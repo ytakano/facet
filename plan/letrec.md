@@ -827,17 +827,22 @@ Done:
 - The exact-body scoped package is now connected directly to that non-store-safe
   branch-local End2End bridge by
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_exact_body_call_route_scoped_package_and_branch_local_strict_exact_closure_check_non_store_safe`.
+- The default checker gate switch is now narrowed to the remaining concrete
+  scope-route target: close
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement` by
+  combining the existing generic ready frame/param-scope preservation with the
+  direct `ECall` frame/param-scope route.
 
 Next:
 
-- Use the branch-local strict-check bridge as the target for the default checker
-  gate switch, or prove the default checker itself produces the strict sidecar
-  before switching the extracted entrypoint.
-  The default checker gate cannot switch to
-  `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary`
-  until the unconditional
-  `infer_program_env_end2end_big_step_safe_checked_initial_ready` theorem can
-  use the branch-local strict bridge without extra premises.
+- Prove the concrete scope-route theorem
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement`.
+  This should split on `preservation_direct_call_ready_expr`: use existing
+  frame/param-scope ready mutual preservation for `PDCR_Ready`, and the direct
+  `ECall` route for `PDCR_Call`.
+- Then use the branch-local strict-check bridge as the target for the default
+  checker gate switch, or prove the default checker itself produces the strict
+  sidecar before switching the extracted entrypoint.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.
 
@@ -1332,22 +1337,13 @@ For an explicit-capture recursive closure group:
    - Done: connect the exact-body scoped package to the non-store-safe
      branch-local End2End bridge with
      `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_exact_body_call_route_scoped_package_and_branch_local_strict_exact_closure_check_non_store_safe`.
-   - Remaining gap: target the default checker gate
-     switch through the branch-local bridge, or first prove the default checker
-     produces the strict sidecar, before switching the extracted checker gate to
-     the strict exact-body component sidecar path; otherwise the default
-     end-to-end big-step safety theorem loses the route evidence needed by the
-     branch-local strict bridge. The route statements are
-     `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement`
-     and
-     `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement`.
-     The current hard sub-obligation is supplying the body-env synthetic
-     direct-call evidence under `global_env_with_local_bounds env (fn_bounds fcall)`
-     while using the prefix/scope call routes simultaneously for the recursive
-     body call. Then finish localizing the store-safe synthetic summary evidence
-     required by the component branch, switch the extracted end-to-end checker
-     gate to the combined sidecar, and move direct self/mutual recursion tests
-     from invalid to valid.
+   - Remaining gap: prove the concrete
+     `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement`.
+     The branch-local exact-body End2End route is available, but the default
+     checker gate still cannot switch until this remaining scope-route premise
+     can be supplied without assumptions. Then switch the extracted end-to-end
+     checker gate to the strict exact-body component sidecar path and move
+     direct self/mutual recursion tests from invalid to valid.
    - The recursive-call proof must still route through the existing end-to-end
      program theorems:
      `infer_program_env_end2end_sound`,

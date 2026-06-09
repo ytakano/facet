@@ -959,6 +959,10 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_component_body_summary_route_package_and_exact_body_target_provider`,
   replacing the old global exact-body target premise with an exact-body target
   provider matched to the component summary sidecar.
+- The same route now has
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_component_body_summary_route_package_and_exact_closure_provider`,
+  deriving that exact-body target provider from the exact-closure component
+  checker provider.
 
 Next:
 

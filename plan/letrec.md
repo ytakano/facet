@@ -1119,6 +1119,9 @@ Done:
   direct-component store-safe summaries through arbitrary local-bounds
   descendants via
   `infer_program_env_end2end_strict_exact_closure_component_summary_in_local_bounds_family`.
+- Strict exact-closure program inference now projects accepted-env
+  direct-component route-summary readiness through local-bounds descendants via
+  `infer_program_env_end2end_strict_exact_closure_component_route_summary_in_local_bounds_family`.
 
 Next:
 

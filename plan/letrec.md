@@ -1028,6 +1028,9 @@ Done:
   `check_program_env_end2end_strict_exact_closure_infer_ok`; strict checker
   acceptance also has the constructive soundness wrapper
   `check_program_env_end2end_strict_exact_closure_sound_exists`.
+- The strict alpha-evidence safety wrapper
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route`
+  now uses accepted-env sidecars directly instead of reopening program inference.
 
 Next:
 

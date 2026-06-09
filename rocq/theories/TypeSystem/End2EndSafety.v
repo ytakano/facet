@@ -1509,14 +1509,6 @@ Theorem infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_ini
 Proof.
   intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
     Hroot_names Hroot_keys env env' f s s' v Hprog Hinitial Hin Hstore Heval.
-  unfold infer_program_env_end2end_strict_exact_closure in Hprog.
-  set (env_alpha := alpha_normalize_global_env env) in *.
-  destruct (global_names_unique_b env_alpha) eqn:Hunique_global; try discriminate.
-  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-    try discriminate.
-  destruct (infer_fns_env_end2end_strict_exact_closure env_elab (env_fns env_elab))
-    as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
   eapply check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route.
   - exact Hsynthetic_route.
   - exact Hscope_synthetic.
@@ -1524,10 +1516,10 @@ Proof.
   - exact Hroots_ready.
   - exact Hroot_names.
   - exact Hroot_keys.
-  - apply andb_true_iff in Hunique_global as [Hunique_top _].
-    eapply infer_program_env_alpha_elab_unique_by_name; eauto.
-  - unfold check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary.
-    eapply infer_fns_env_end2end_strict_exact_closure_check_env_ready. exact Hfns.
+  - eapply infer_program_env_end2end_strict_exact_closure_unique_by_name.
+    exact Hprog.
+  - eapply infer_program_env_end2end_strict_exact_closure_check_env_ready.
+    exact Hprog.
   - exact Hinitial.
   - exact Hin.
   - exact Hstore.

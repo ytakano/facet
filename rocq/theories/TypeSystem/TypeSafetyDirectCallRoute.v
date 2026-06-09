@@ -11398,7 +11398,9 @@ Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summa
   eval_preserves_roots_ready_mutual_statement ->
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env_family component_ready,
   (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    env_family env ->
     In fdef (env_fns env) ->
     fn_name fdef = fname ->
     alpha_rename_fn_def used fdef = (fcall, used') ->
@@ -11406,7 +11408,6 @@ Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summa
       Some (fname_body, args_body, synthetic_body) ->
     direct_call_target_expr (fn_body fcall) =
       Some (fname_body, args_body, fn_body fcall)) ->
-  forall env_family component_ready,
   (forall env bounds,
     env_family env ->
     env_family (global_env_with_local_bounds env bounds)) ->
@@ -11424,7 +11425,7 @@ Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summa
     env_family.
 Proof.
   intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
-    Hroot_names Hroot_keys Hexact_body_target env_family component_ready
+    Hroot_names Hroot_keys env_family component_ready Hexact_body_target
     Henv_family_step Hcomponent_provider Hscoped_package.
   unfold
     eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family,
@@ -11469,7 +11470,7 @@ Proof.
       Hin Hname Hrename Htarget.
     pose proof
       (Hexact_body_target env fname fdef fcall used used' fname_body
-        args_body synthetic_body Hin Hname Hrename Htarget) as Htarget_exact.
+        args_body synthetic_body Henv Hin Hname Hrename Htarget) as Htarget_exact.
     pose proof
       (direct_call_target_expr_same_is_call (fn_body fcall) fname_body
         args_body Htarget_exact) as Hbody_exact.
@@ -11484,7 +11485,7 @@ Proof.
       Hin Hname Hrename Htarget.
     pose proof
       (Hexact_body_target env fname fdef fcall used used' fname_body
-        args_body (ECall fname_body args_body) Hin Hname Hrename Htarget)
+        args_body (ECall fname_body args_body) Henv Hin Hname Hrename Htarget)
       as Htarget_exact.
     eapply direct_call_target_expr_same_is_call; exact Htarget_exact.
   - intros fdef fcall used used' s_args s_body vs ret R_args arg_roots
@@ -11510,7 +11511,9 @@ Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summa
   eval_preserves_roots_ready_mutual_statement ->
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall base component_ready,
   (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
+    global_env_local_bounds_family base env ->
     In fdef (env_fns env) ->
     fn_name fdef = fname ->
     alpha_rename_fn_def used fdef = (fcall, used') ->
@@ -11518,7 +11521,6 @@ Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summa
       Some (fname_body, args_body, synthetic_body) ->
     direct_call_target_expr (fn_body fcall) =
       Some (fname_body, args_body, fn_body fcall)) ->
-  forall base component_ready,
   (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
     global_env_local_bounds_family base env ->
     In fdef (env_fns env) ->
@@ -11533,7 +11535,7 @@ Theorem eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summa
     base.
 Proof.
   intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
-    Hroot_names Hroot_keys Hexact_body_target base component_ready
+    Hroot_names Hroot_keys base component_ready Hexact_body_target
     Hcomponent_provider Hscoped_package.
   eapply
     eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_env_family_of_exact_body_call_route_scoped_package;

@@ -1098,6 +1098,9 @@ Done:
   branch while leaving captured-call handling unchanged.
 - Local-bounds families now have an inclusion lemma from a nested body-env base
   back to the accepted-env base, simplifying End2End route sidecar wiring.
+- The env-family scoped exact-body height route now localizes its exact-body
+  target premise to the same environment family, removing another all-env
+  assumption from the accepted-env route path.
 
 Next:
 

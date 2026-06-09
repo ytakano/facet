@@ -751,6 +751,38 @@ Proof.
       * exact Hcomponent_check.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_exact_body_route_package_at_of_component_check_in_local_bounds_family :
+  forall env env' base env0 fname fdef,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    fn_name fdef = fname ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' fdef = true ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+      env0 fname.
+Proof.
+  intros env env' base env0 fname fdef Hprog Hbase Henv Hin Hname
+    Hcomponent_check fdef0 fcall used used' fname_body args_body Hin0 Hname0
+    Hrename Htarget.
+  assert (Hunique : fn_env_unique_by_name env0).
+  { eapply infer_program_env_end2end_strict_exact_closure_unique_by_name_in_local_bounds_family;
+      eassumption. }
+  assert (Heq : fdef0 = fdef).
+  { eapply Hunique; try eassumption.
+    rewrite Hname0. exact (eq_sym Hname). }
+  subst fdef0.
+  eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_scoped_package_of_exact_closure_component_ready;
+    try eassumption.
+  split; [exact Hunique |].
+  destruct
+    (infer_program_env_end2end_strict_exact_closure_component_ready_payload_in_local_bounds_family
+      env env' base env0 fdef Hprog Hbase Henv Hin Hcomponent_check)
+    as [_ Hpayload].
+  exact Hpayload.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_route_summary_in_local_bounds_family :
   forall env env' base env0 fdef,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

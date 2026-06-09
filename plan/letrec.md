@@ -1349,11 +1349,15 @@ Done:
   using the combined pointwise route wrapper's typing projection for the
   non-store-safe strict route path while keeping the existing generic scope
   preservation input.
+- End-to-end strict exact-closure safety now derives a current-target
+  exact-body route package from accepted-env local-bounds sidecars via
+  `infer_program_env_end2end_strict_exact_closure_exact_body_route_package_at_of_component_check_in_local_bounds_family`.
 
 Next:
 
-- Expose the End2End strict exact-closure wrapper that derives branch-local
-  component body-env routes from the accepted-env sidecar; do not narrow
+- Use the branch-local package-at helper to expose the End2End strict
+  exact-closure wrapper that derives component body-env routes from the
+  accepted-env sidecar; do not narrow
   `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.

@@ -853,6 +853,10 @@ Done:
   `eval_synthetic_direct_call_body_scope_callback_from_result_subset_prefix_store_body_callback`,
   which replaces the circular public scope-route call with an explicit body-scope
   callback for the concrete nested `ECall`.
+- The body-scope callback setup now also has the height-aware wrapper
+  `eval_synthetic_direct_call_body_scope_callback_from_result_subset_prefix_store_body_callback_with_height`,
+  supplying nested `direct_call_eval_height` evidence to a callback for the
+  concrete body `ECall`.
 - Prefix-store pointwise scope routes now lift back to the existing full-store
   typed/named route interfaces via
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_call_height_statement_of_prefix_call_height_statement`
@@ -868,9 +872,12 @@ Done:
 
 Next:
 
+- Add prefix-store frame/param preservation for outer direct-call arguments;
+  the evidence-at scope height proof needs `Hframe_args`/`Hparam_args` before
+  rewriting the final store with `Hremoved_exact`.
 - Prove the height-indexed evidence-at prefix-store `ECall` scope route from the
-  exact-body scoped package, using the result-subset cleanup path and
-  `direct_call_eval_height_ecall_body_lt_of_eval_call` for recursive body calls.
+  exact-body scoped package, using the result-subset cleanup path, the height
+  body-scope callback, and `direct_call_eval_height_ecall_body_lt_of_eval_call`.
 - Thread that evidence-at route through a wrapper that still has root-name/root-key
   route premises, then lift the prefix-store route to the full-store typed/named
   route and finally to the direct `ECall` scope route.

@@ -1470,6 +1470,11 @@ Done:
 - TypeSafety can turn a reachable exact-body route package provider into a
   route-indexed store-safe body-call callback-at proof via
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at_of_reachable_exact_body_call_route_package_provider`.
+- TypeSafety now also has reachable exact-body-target provider variants,
+  culminating in
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_body_call_store_safe_callback_height_statement_at_of_reachable_exact_body_call_route_package_and_target_provider`,
+  so callback-at preservation no longer needs an all-function exact-target
+  premise.
 
 Next:
 

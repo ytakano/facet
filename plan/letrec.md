@@ -1063,6 +1063,9 @@ Done:
 - The store-safe evidence-at prefix route now has an env-local statement
   `..._in_env` plus a projection from the existing all-env statement, preparing
   exact-body route closure to consume accepted-env package sidecars.
+- The non-store-safe evidence-at prefix route now has the same env-local
+  statement/projection shape, matching the branch-local strict wrappers that
+  use the non-store-safe route.
 
 Next:
 

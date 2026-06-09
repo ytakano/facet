@@ -1165,6 +1165,9 @@ Done:
 - The End2End provider-parametric local-bounds route bridge now uses that
   component-exact-target route wrapper, keeping component membership and
   exact-target derivation aligned for the upcoming reachable predicate.
+- End-to-end strict exact-closure safety now also projects reachable `seen`
+  exact-closure evidence to local-bounds exact-body target facts via
+  `infer_program_env_end2end_strict_exact_closure_seen_exact_body_target_in_local_bounds_family`.
 
 Next:
 

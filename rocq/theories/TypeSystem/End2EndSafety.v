@@ -785,6 +785,25 @@ Proof.
     eassumption.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_seen_exact_body_target_in_local_bounds_family :
+  forall env env' base env0 fdef fuel seen,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+      fuel seen env' fdef = true ->
+    CheckerOrdinary.ident_in_b (fn_name fdef) seen = false ->
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env0 fdef.
+Proof.
+  intros env env' base env0 fdef fuel seen _Hprog _Hbase _Henv Hseen
+    Hnot_seen.
+  destruct (check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_head_checks
+              fuel seen env' fdef Hseen Hnot_seen) as [_Hcomponent Hexact].
+  eapply check_fn_root_shadow_no_capture_direct_call_component_exact_body_target_sound.
+  exact Hexact.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_callee_seen_in_local_bounds_family :
   forall env env' base env0 f_component fname args synthetic_body fcallee,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

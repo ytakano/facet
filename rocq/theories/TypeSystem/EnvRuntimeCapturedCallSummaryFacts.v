@@ -3325,6 +3325,21 @@ Proof.
   exists fuel'. exact Hcallee.
 Qed.
 
+Lemma check_fn_root_shadow_no_capture_direct_call_component_exact_closure_callee_seen_head_sound :
+  forall env fdef fcallee fuel',
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen
+      fuel' [fn_name fdef] env fcallee = true ->
+    CheckerOrdinary.ident_in_b (fn_name fcallee) [fn_name fdef] = false ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env fcallee /\
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env fcallee.
+Proof.
+  intros env fdef fcallee fuel' Hseen Hnot_seen.
+  eapply check_fn_root_shadow_no_capture_direct_call_component_exact_closure_seen_head_sound;
+    eassumption.
+Qed.
+
 Lemma component_body_no_capture_direct_call_component_exact_body_target_provider_of_exact_closure_check_provider :
   forall env,
     component_body_no_capture_direct_call_component_exact_closure_check_provider

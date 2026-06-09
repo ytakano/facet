@@ -1155,6 +1155,9 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_callee_seen_in_local_bounds_family`,
   connecting a component's exact-closure check and direct callee lookup to the
   callee's `seen` exact-closure evidence.
+- The callee-seen sidecar now has a `lookup_fn`-based local-bounds wrapper,
+  `infer_program_env_end2end_strict_exact_closure_callee_seen_of_lookup_in_local_bounds_family`,
+  matching the lookup evidence produced by direct-call route callbacks.
 
 Next:
 

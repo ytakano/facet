@@ -1066,6 +1066,9 @@ Done:
 - The non-store-safe evidence-at prefix route now has the same env-local
   statement/projection shape, matching the branch-local strict wrappers that
   use the non-store-safe route.
+- Function-environment name uniqueness now has a local-bounds stability lemma,
+  preparing strict exact-closure component providers to be lifted through
+  recursive body environments.
 
 Next:
 

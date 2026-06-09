@@ -2075,6 +2075,15 @@ Proof.
 Qed.
 
 
+Lemma fn_env_unique_by_name_global_env_with_local_bounds :
+  forall env bounds,
+    fn_env_unique_by_name env ->
+    fn_env_unique_by_name (global_env_with_local_bounds env bounds).
+Proof.
+  intros env bounds Hunique f1 f2 Hin1 Hin2 Hname.
+  eapply Hunique; eassumption.
+Qed.
+
 Lemma callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_global_env_with_local_bounds :
   forall env bounds fdef,
     fn_env_unique_by_name env ->

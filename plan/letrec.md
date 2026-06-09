@@ -789,12 +789,17 @@ Done:
   removing the need for the invalid
   `preservation_ready_args -> store_safe_function_value_call_args` premise at
   the bridge level.
+- The strong-premise synthetic call-route wrapper now uses the non-store-safe
+  decreasing bridge through
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_scoped_package_height`,
+  so it no longer needs
+  `preservation_ready_args -> store_safe_function_value_call_args`.
 
 Next:
 
-- Use the new non-store-safe decreasing bridge to replace the strong-premise
-  synthetic call-route wrapper and discharge or record only the remaining
-  exact-body summary/evidence bridge premise.
+- Discharge or localize the remaining summary/evidence bridge premise
+  `direct_call_callee_body_root_synthetic_direct_call_ready_evidence ->
+  env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence`.
   The default checker gate cannot switch to
   `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary`
   until the unconditional
@@ -1265,9 +1270,11 @@ For an explicit-capture recursive closure group:
      connecting the exact-body scoped route to synthetic call routes.
    - Done: add non-store-safe exact-body decreasing body-call callback bridge
      `eval_preserves_typing_roots_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_decreasing_body_call_callback_prefix_store_final_roots_core_exact_body`.
-   - Remaining gap: use that bridge to replace the strong-premise wrapper, then
-     discharge any remaining exact-body summary/evidence bridge premises before
-     switching the extracted checker gate to the strict
+   - Done: replace the strong-premise wrapper with the non-store-safe
+     decreasing bridge route, removing the invalid
+     `preservation_ready_args -> store_safe_function_value_call_args` premise.
+   - Remaining gap: discharge or localize the remaining summary/evidence bridge
+     premise before switching the extracted checker gate to the strict
      exact-body component sidecar path; otherwise the default end-to-end
      big-step safety theorem loses the route evidence needed by the
      branch-local strict bridge. The route statements are

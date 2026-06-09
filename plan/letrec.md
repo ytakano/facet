@@ -1487,19 +1487,20 @@ Done:
   This preserves existing captured/direct-call valid programs while admitting
   direct self-recursion and mutual recursion through exact closure.
 - `infer_program_env_end2end_check_env_ready` now exposes the accepted-env
-  exact-closure combined sidecar, and the standard
-  `infer_program_env_end2end_big_step_safe_checked_initial_ready` theorem is
-  extended to consume the component-body evidence providers required by that
-  combined branch.
+  exact-closure combined sidecar.
+- The standard `infer_program_env_end2end_big_step_safe_checked_initial_ready`
+  theorem now closes the exact-combined component branch internally, deriving
+  the summary-at, direct-target, and nested-target evidence from the accepted
+  function's exact-closure check instead of requiring explicit provider
+  parameters.
 - The extracted `fixtures/TypeChecker.ml/.mli` artifacts were regenerated from
   Rocq, and the direct-recursion safety-gate regression cases were moved from
   `tests/invalid/function/` to `tests/valid/function/`.
 
 Follow-up:
 
-- Close the remaining provider assumptions on the standard end-to-end safety
-  theorem with a fully internal exact-combined wrapper, so the theorem can again
-  be used without explicit component-body evidence parameters.
+- Continue tightening the proof surface by retiring older strict-only wrapper
+  variants once no downstream theorem uses them.
 
 This roadmap adds local recursion in stages, ending with a safe v1 for
 explicit-capture recursive closures. The first implementation should avoid a

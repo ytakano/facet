@@ -3890,6 +3890,56 @@ Proof.
     + exact Hseen.
 Qed.
 
+Lemma component_body_synthetic_direct_call_ready_summary_at_in_of_exact_closure_check :
+  forall env f_component,
+    fn_env_unique_by_name env ->
+    In f_component (env_fns env) ->
+    callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env f_component ->
+    check_fn_root_shadow_no_capture_direct_call_component_exact_closure
+      env f_component = true ->
+    forall fname args synthetic_body,
+      direct_call_target_expr (fn_body f_component) =
+        Some (fname, args, synthetic_body) ->
+      fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at
+        (global_env_with_local_bounds env (fn_bounds f_component)) fname.
+Proof.
+  intros env f_component Hunique Hin_component Hcomponent Hcheck fname args
+    synthetic_body Htarget fdef Hlookup.
+  change (lookup_fn fname (env_fns env) = Some fdef) in Hlookup.
+  pose proof (lookup_fn_b_of_lookup_fn fname (env_fns env) fdef Hlookup)
+    as Hlookup_b.
+  pose proof
+    (check_fn_root_shadow_no_capture_direct_call_component_closure_of_exact_closure
+      env f_component Hcheck) as Hclosure.
+  unfold check_fn_root_shadow_no_capture_direct_call_component_closure in Hclosure.
+  destruct (check_fn_root_shadow_no_capture_direct_call_component_closure_seen_callee
+              10001 [] env f_component fname args synthetic_body fdef
+              Hclosure eq_refl Htarget Hlookup_b)
+    as (fuel' & Hfuel & Hcallee_check).
+  inversion Hfuel; subst fuel'; clear Hfuel.
+  destruct (CheckerOrdinary.ident_in_b (fn_name fdef) [fn_name f_component])
+    eqn:Hseen.
+  - assert (Hsame_name : fn_name fdef = fn_name f_component).
+    { simpl in Hseen.
+      destruct (ident_eqb (fn_name fdef) (fn_name f_component)) eqn:Hname;
+        try discriminate.
+      apply ident_eqb_eq in Hname. exact Hname. }
+    destruct (lookup_fn_in_name fname (env_fns env) fdef Hlookup)
+      as [Hin_fdef _Hname_fdef].
+    assert (Hsame_def : fdef = f_component).
+    { eapply Hunique; eassumption. }
+    subst fdef.
+    eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_global_env_with_local_bounds.
+    eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component.
+    exact Hcomponent.
+  - eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_global_env_with_local_bounds.
+    eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component.
+    eapply check_fn_root_shadow_no_capture_direct_call_component_closure_seen_head_sound.
+    + exact Hcallee_check.
+    + exact Hseen.
+Qed.
+
 Lemma component_body_no_capture_direct_call_component_target_in_provider_of_exact_closure_check_provider :
   forall env,
     fn_env_unique_by_name env ->

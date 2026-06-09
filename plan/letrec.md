@@ -1150,6 +1150,11 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_seen_component_check_in_local_bounds_family`,
   projecting reachable `seen` exact-closure evidence to accepted-env
   direct-component checker booleans.
+- End-to-end strict exact-closure safety now also names the local-bounds
+  callee-seen projection as
+  `infer_program_env_end2end_strict_exact_closure_callee_seen_in_local_bounds_family`,
+  connecting a component's exact-closure check and direct callee lookup to the
+  callee's `seen` exact-closure evidence.
 
 Next:
 

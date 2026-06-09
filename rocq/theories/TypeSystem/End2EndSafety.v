@@ -2567,25 +2567,8 @@ Proof.
     Hroot_names Hroot_keys env env' f s s' v Hprog Hprovider Hinitial Hin
     Hstore Heval.
   assert (Hunique : fn_env_unique_by_name env').
-  { unfold infer_program_env_end2end_strict_exact_closure in Hprog.
-    set (env_alpha := alpha_normalize_global_env env) in *.
-    destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
-      try discriminate.
-    destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-      try discriminate.
-    destruct (infer_fns_env_end2end_strict_exact_closure env_elab (env_fns env_elab))
-      as [[] | err] eqn:Hfns; try discriminate.
-    injection Hprog as <-.
-    apply andb_true_iff in Hunique_global as [Hunique_top _].
-    eapply infer_program_env_alpha_elab_unique_by_name; eauto. }
-  unfold infer_program_env_end2end_strict_exact_closure in Hprog.
-  set (env_alpha := alpha_normalize_global_env env) in *.
-  destruct (global_names_unique_b env_alpha) eqn:Hunique_global; try discriminate.
-  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
-    try discriminate.
-  destruct (infer_fns_env_end2end_strict_exact_closure env_elab (env_fns env_elab))
-    as [[] | err] eqn:Hfns; try discriminate.
-  injection Hprog as <-.
+  { eapply infer_program_env_end2end_strict_exact_closure_unique_by_name.
+    exact Hprog. }
   eapply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_summary_at_prefix_scope_call_route_with_component_body_nested_in_evidence.
   - exact Hsynthetic_route.
   - exact Hscope_summary_at.
@@ -2594,9 +2577,8 @@ Proof.
   - exact Hroot_names.
   - exact Hroot_keys.
   - exact Hunique.
-  - unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
-    eapply infer_fns_env_end2end_strict_exact_closure_combined_check_env_ready.
-    exact Hfns.
+  - eapply infer_program_env_end2end_strict_exact_closure_combined_check_env_ready.
+    exact Hprog.
   - eapply component_body_synthetic_direct_call_ready_summary_at_in_provider_of_provider.
     eapply component_body_synthetic_direct_call_ready_summary_at_provider_of_provider.
     exact Hprovider.

@@ -1031,6 +1031,9 @@ Done:
 - The strict alpha-evidence safety wrapper
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route`
   now uses accepted-env sidecars directly instead of reopening program inference.
+- The strict summary-at prefix-scope route wrapper
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_summary_at_prefix_scope_call_route_and_component_body_summary_provider`
+  also uses accepted-env uniqueness and combined-check sidecars directly.
 
 Next:
 

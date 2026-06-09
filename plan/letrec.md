@@ -937,12 +937,20 @@ Done:
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_at_prefix_scope_call_route_and_component_body_summary_provider`,
   and
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_exact_body_call_route_package_and_component_body_summary_provider`.
+- The strict exact-closure entrypoint now has the same combined-sidecar and
+  exact-body route-package/provider bridge shape through
+  `infer_fn_env_end2end_strict_exact_closure_combined_gate`,
+  `infer_fns_env_end2end_strict_exact_closure_combined_check_env_ready`,
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_summary_at_prefix_scope_call_route_and_component_body_summary_provider`,
+  and
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_route_package_and_component_body_summary_provider`.
 
 Next:
 
-- Use the exact-body route-package end-to-end bridge to replace the remaining
-  strict exact-body gate inputs, then switch the default checker gate when the
-  sidecar provider is available without assumptions.
+- Close the remaining exact-body route/provider assumptions needed by
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready` before
+  switching the default `infer_program_env_end2end` gate; do not narrow the
+  required program-level safety theorem.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.
 

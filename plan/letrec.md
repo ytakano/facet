@@ -1306,9 +1306,17 @@ Done:
 - Component-body direct callee lookups now expose a nested body-env
   component-ready provider through
   `infer_program_env_end2end_strict_exact_closure_component_body_direct_callee_ready_provider_of_component_check`.
+- Component-body direct-callee ready payloads and callback bundles are now
+  packaged together by
+  `infer_program_env_end2end_strict_exact_closure_component_body_ready_payload_and_callbacks_of_component_check`,
+  giving the next route wrapper one accepted-component sidecar input instead
+  of separate payload and callback premises.
 
 Next:
 
+- Narrow the exact-body/scoped route package or add a pointwise wrapper so it
+  consumes the component body's reachable direct target evidence instead of a
+  broad local-bounds-family provider over arbitrary `env_fns`.
 - Expose the End2End strict exact-closure wrapper that derives branch-local
   component body-env routes from the accepted-env sidecar; do not narrow
   `infer_program_env_end2end_big_step_safe_checked_initial_ready`.

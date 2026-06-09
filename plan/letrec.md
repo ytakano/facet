@@ -1207,6 +1207,11 @@ Done:
   component targets through
   `infer_program_env_end2end_strict_exact_closure_direct_callee_summary_evidence_at_in_local_bounds_family`,
   matching the root component `Hsummary_at` callback.
+- End-to-end strict exact-closure safety now bundles the branch-local component
+  body callbacks as
+  `infer_program_env_end2end_strict_exact_closure_component_body_direct_callee_callbacks_in_local_bounds_family`,
+  deriving root summary evidence, direct-callee component summaries, and nested
+  body summary evidence from the accepted-env exact-closure sidecar.
 
 Next:
 

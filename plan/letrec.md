@@ -1247,6 +1247,10 @@ Done:
   component-check provider from the all-component no-capture checker sidecar via
   `infer_program_env_end2end_strict_exact_closure_component_check_provider_of_check_env_no_capture`,
   and exposes the resulting all-component check callback wrapper.
+- End-to-end strict exact-closure safety now names the combined component
+  route-and-callback construction as
+  `infer_program_env_end2end_strict_exact_closure_component_route_and_callbacks_of_component_check_provider`,
+  keeping later strict-sidecar provider replacement localized.
 
 Next:
 

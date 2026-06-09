@@ -5578,6 +5578,63 @@ Proof.
     + exact Heval.
 Qed.
 
+Theorem env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_lookup_evidence_non_store_safe :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_statement ->
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_ready
+      env ->
+    component_body_synthetic_direct_call_ready_summary_at_in_provider env ->
+    component_body_no_capture_direct_call_component_target_in_provider env ->
+    component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_provider env ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hstatic env f s s' v Hunique Hcombined
+    Hsummary_at_provider Htarget_provider Halpha_lookup_provider Hinitial Hin Hstore Heval.
+  pose proof (lookup_fn_in_unique_by_name env
+    (fn_name f) f Hin eq_refl Hunique) as Hlookup.
+  destruct (Hcombined (fn_name f) f Hlookup) as [Hcaptured | Hcomponent].
+  - eapply callee_body_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready.
+    + exact Hunique.
+    + exact Hcaptured.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+  - eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_lookup_evidence_non_store_safe.
+    + exact Hsynthetic_route.
+    + exact Hscope_synthetic.
+    + exact Htyping_ready.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hstatic.
+    + exact Hunique.
+    + intros fname args synthetic_body Htarget.
+      eapply Hsummary_at_provider; eassumption.
+    + intros fname args synthetic_body fdef Htarget Hlookup_target.
+      eapply Htarget_provider; eassumption.
+    + intros fname_component args_component synthetic_component fdef Htarget_component
+        Hlookup_component Hfdef_component fcall used used' fname_body args_body
+        synthetic_body Hrename Htarget_body ftarget Hlookup_target.
+      eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component.
+      eapply Halpha_lookup_provider; eassumption.
+    + exact Hcomponent.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+Qed.
+
 Theorem check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_lookup_evidence :
   eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -5608,6 +5665,51 @@ Proof.
   - exact Hroots_ready.
   - exact Hroot_names.
   - exact Hroot_keys.
+  - exact Hunique.
+  - eapply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_ready.
+    exact Hcombined_check.
+  - exact Hsummary_at_provider.
+  - exact Htarget_provider.
+  - exact Halpha_lookup_provider.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
+
+Theorem check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_lookup_evidence_non_store_safe :
+  eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  preservation_ready_expr_static_runtime_named_statement ->
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env = true ->
+    component_body_synthetic_direct_call_ready_summary_at_in_provider env ->
+    component_body_no_capture_direct_call_component_target_in_provider env ->
+    component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_provider env ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hsynthetic_route Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys Hstatic env f s s' v Hunique Hcombined_check
+    Hsummary_at_provider Htarget_provider Halpha_lookup_provider Hinitial Hin Hstore Heval.
+  eapply env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_lookup_evidence_non_store_safe.
+  - exact Hsynthetic_route.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hstatic.
   - exact Hunique.
   - eapply check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary_ready.
     exact Hcombined_check.

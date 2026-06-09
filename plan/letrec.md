@@ -1401,6 +1401,9 @@ Done:
   component wrapper
   `env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_with_component_body_call_callback_height_callbacks`,
   so final safety can consume per-component callback-height providers.
+- End-to-end strict exact-closure safety now exposes the matching wrapper
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_body_call_callback_height_callbacks`,
+  passing accepted-env uniqueness/readiness into the callback-height provider path.
 
 Next:
 

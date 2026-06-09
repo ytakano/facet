@@ -1296,6 +1296,9 @@ Done:
 - Component body direct-callee lookups now expose body-env component-ready
   payloads through
   `infer_program_env_end2end_strict_exact_closure_component_body_direct_callee_ready_payload_in_local_bounds_family`.
+- The component body direct-callee ready payload projection now has a
+  component-check-only wrapper,
+  `infer_program_env_end2end_strict_exact_closure_component_body_direct_callee_ready_payload_of_component_check`.
 
 Next:
 

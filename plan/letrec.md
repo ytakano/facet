@@ -832,6 +832,10 @@ Done:
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement` by
   combining the existing generic ready frame/param-scope preservation with the
   direct `ECall` frame/param-scope route.
+- The scope side now has a height-indexed call-route interface,
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_height_statement`,
+  plus projection back to
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement`.
 
 Next:
 
@@ -1337,7 +1341,12 @@ For an explicit-capture recursive closure group:
    - Done: connect the exact-body scoped package to the non-store-safe
      branch-local End2End bridge with
      `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_exact_body_call_route_scoped_package_and_branch_local_strict_exact_closure_check_non_store_safe`.
-   - Remaining gap: prove the concrete
+   - Done: add the height-indexed scope call-route interface
+     `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_height_statement`
+     and projection to the ordinary call route.
+   - Remaining gap: prove the height-indexed scope call route, then project it
+     through `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement_of_call_statement`
+     to close
      `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement`.
      The branch-local exact-body End2End route is available, but the default
      checker gate still cannot switch until this remaining scope-route premise

@@ -129,6 +129,37 @@ Definition eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_sta
       store_frame_scope ps Σ' s' frame /\
       exists frame', store_param_scope ps s' frame'.
 
+Definition eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_height_statement
+    : Prop :=
+  forall env s fname args s' v n_call,
+    eval env s (ECall fname args) s' v ->
+    direct_call_eval_height env s (ECall fname args) s' v n_call ->
+    forall (Ω : outlives_ctx) (n : nat) R Σ T Σ' R' roots
+        ps frame,
+      preservation_ready_args args ->
+      typed_env_roots env Ω n R Σ (ECall fname args) T Σ' R' roots ->
+      root_env_covers_params ps R ->
+      store_roots_within R s ->
+      store_no_shadow s ->
+      root_env_no_shadow R ->
+      store_frame_scope ps Σ s frame ->
+      store_frame_static_fresh Σ frame ->
+      store_param_scope ps s frame ->
+      store_frame_scope ps Σ' s' frame /\
+      exists frame', store_param_scope ps s' frame'.
+
+Theorem eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement_of_height_statement :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_height_statement ->
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement.
+Proof.
+  intros Hheight env s fname args s' v Heval Omega n R Sigma T Sigma' R'
+    roots ps frame Hready_args Htyped Hcover Hroots Hshadow Hrn Hframe
+    Hfresh Hparam.
+  destruct (direct_call_eval_height_exists env s (ECall fname args) s' v
+              Heval) as [n_call Hheight_call].
+  eapply Hheight; eassumption.
+Qed.
+
 Definition eval_preserves_typing_roots_synthetic_direct_call_ready_summary_prefix_exact_call_statement
     : Prop :=
   forall env s fname args s' v,

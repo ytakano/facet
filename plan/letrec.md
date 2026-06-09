@@ -1072,6 +1072,8 @@ Done:
 - The scoped exact-body route package now has a local-bounds-family constructor
   from base-env component checker bools and summary-at checker providers,
   preserving accepted-env evidence through recursive body environments.
+- Strict exact-closure program inference now exposes that local-bounds-family
+  scoped route package directly as an End2End sidecar for the accepted env.
 
 Next:
 

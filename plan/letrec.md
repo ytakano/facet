@@ -1037,6 +1037,9 @@ Done:
 - The default call-statement route wrapper
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_call_statement_routes_and_component_check`
   now uses accepted-env uniqueness and combined-check sidecars directly.
+- The default summary exact package wrapper
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_exact_package_and_component_check`
+  now uses accepted-env uniqueness and combined-check sidecars directly.
 
 Next:
 

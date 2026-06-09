@@ -1274,6 +1274,9 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_component_route_and_callbacks_of_component_ready_provider`
   and the final wrapper
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_ready_provider_callbacks`.
+- Accepted strict exact-closure inference now projects function-name uniqueness
+  through nested local-bounds families via
+  `infer_program_env_end2end_strict_exact_closure_unique_by_name_in_local_bounds_family`.
 
 Next:
 

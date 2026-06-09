@@ -591,6 +591,22 @@ Proof.
   exact Hexact.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_unique_by_name_in_local_bounds_family :
+  forall env env' base env0,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    fn_env_unique_by_name env0.
+Proof.
+  intros env env' base env0 Hprog Hbase Henv.
+  destruct Hbase as (bounds_base & ->).
+  destruct Henv as (bounds & ->).
+  eapply fn_env_unique_by_name_global_env_with_local_bounds.
+  eapply fn_env_unique_by_name_global_env_with_local_bounds.
+  eapply infer_program_env_end2end_strict_exact_closure_unique_by_name.
+  exact Hprog.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_component_summary_in_local_bounds_family :
   forall env env' base env0 fdef,
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

@@ -8642,9 +8642,9 @@ Theorem eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_stat
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
   preservation_ready_expr_static_runtime_named_statement ->
-  (forall env,
+  (forall env fname,
     direct_call_callee_body_root_synthetic_direct_call_ready_evidence env ->
-    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env) ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname) ->
   (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
     In fdef (env_fns env) ->
     fn_name fdef = fname ->
@@ -8677,8 +8677,7 @@ Proof.
     Hready_args Hstore Hroots Hshadow Hrn Hnamed Hkeys Htyped Hunique
     Hevidence.
   eapply Hroute; try eassumption.
-  - eapply fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at_of_env.
-    eapply Hsummary_of_evidence. exact Hevidence.
+  - eapply Hsummary_of_evidence. exact Hevidence.
   - intros Omega0 n0 R0 Sigma0 Sigma_args R_args arg_roots args0 fdef
       fcall sigma s0 s_args vs used' Hin Hname Hcaps Htyped_args
       Heval_args Hprov_args Hstore0 Hroots0 Hshadow0 Hrn0 Hnamed0 Hkeys0
@@ -8694,9 +8693,9 @@ Theorem eval_preserves_synthetic_direct_call_ready_call_routes_statement_of_exac
   eval_preserves_root_names_ready_mutual_statement ->
   eval_preserves_root_keys_named_ready_mutual_statement ->
   preservation_ready_expr_static_runtime_named_statement ->
-  (forall env,
+  (forall env fname,
     direct_call_callee_body_root_synthetic_direct_call_ready_evidence env ->
-    env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence env) ->
+    fn_root_shadow_synthetic_direct_call_ready_summary_evidence_at env fname) ->
   (forall env fname fdef fcall used used' fname_body args_body synthetic_body,
     In fdef (env_fns env) ->
     fn_name fdef = fname ->

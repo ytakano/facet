@@ -1431,6 +1431,11 @@ Done:
 - The route-indexed store-safe body-call callback provider is now named as
   `strict_exact_closure_component_body_store_safe_callback_at_provider`, and
   the strict exact-closure at-target wrapper consumes that named provider.
+- End2End safety now has all-component check-provider compatibility wrappers
+  for the named at-target provider path:
+  `infer_program_env_end2end_strict_exact_closure_component_store_safe_callback_at_provider_and_callbacks_of_component_check_provider`
+  and
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_check_provider_store_safe_at_target_callbacks`.
 - Existing all-component-check provider routes now bridge to the named
   at-target callback provider and the at-target strict exact-closure safety
   wrapper via

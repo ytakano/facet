@@ -779,13 +779,15 @@ Done:
 
 Next:
 
-- Switch `infer_fn_env_end2end` /
-  `infer_fns_env_end2end` from the old captured store-safe sidecar to
-  `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary`,
-  then update the unconditional end-to-end safety theorem to use the
-  branch-local strict bridge. A premature checker-gate switch is not sound: the
-  current unconditional theorem has no route premise, and the route closure is
-  still the missing proof obligation.
+- Prove the concrete recursive synthetic direct-call route statements
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement`
+  and
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement`.
+  The default checker gate cannot switch to
+  `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary`
+  until the unconditional
+  `infer_program_env_end2end_big_step_safe_checked_initial_ready` theorem can
+  use the branch-local strict bridge without extra premises.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.
 
@@ -1244,9 +1246,11 @@ For an explicit-capture recursive closure group:
      `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_of_exact_body_call_route_scoped_package_height`,
      and remove the self-recursive store-safe route premise from
      `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_route_scoped_package`.
-   - Remaining gap: switch the extracted checker gate to the strict exact-body
-     component sidecar path, then prove the concrete recursive synthetic
-     direct-call route statements
+   - Remaining gap: prove the concrete recursive synthetic direct-call route
+     statements before switching the extracted checker gate to the strict
+     exact-body component sidecar path; otherwise the default end-to-end
+     big-step safety theorem loses the route evidence needed by the
+     branch-local strict bridge. The route statements are
      `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement`
      and
      `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_statement`.

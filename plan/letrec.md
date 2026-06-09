@@ -1424,6 +1424,8 @@ Done:
   body-call callback statement, with bridges from existing family callbacks.
 - EnvRuntime captured safety now has a component-body theorem variant
   consuming a route-indexed store-safe callback for the selected callee.
+- EnvRuntime captured safety now has the matching top-level wrapper for
+  per-component route-indexed store-safe callback providers.
 
 Next:
 

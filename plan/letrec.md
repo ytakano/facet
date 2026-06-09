@@ -1418,6 +1418,8 @@ Done:
   routes to store-safe body-call callback-height statements.
 - End2End safety now has a component-check-provider wrapper that feeds
   summary routes through the store-safe callback bridge.
+- End2End safety now exposes a strict exact-closure sidecar wrapper that
+  uses the store-safe callback route without narrowing the standard theorem.
 
 Next:
 

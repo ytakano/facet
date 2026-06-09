@@ -972,6 +972,10 @@ Done:
   `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_ready`
   and
   `check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_component_ready`.
+- Strict exact-closure program inference now exposes its accepted env sidecars
+  directly through
+  `infer_program_env_end2end_strict_exact_closure_check_env_ready` and
+  `infer_program_env_end2end_strict_exact_closure_combined_check_env_ready`.
 
 Next:
 

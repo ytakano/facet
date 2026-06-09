@@ -354,6 +354,48 @@ Proof.
     + eapply IH. exact Hinfer.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_check_env_ready :
+  forall env env',
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+      env' = true.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_strict_exact_closure in Hprog.
+  set (env_alpha := alpha_normalize_global_env env) in *.
+  destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
+    try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
+    try discriminate.
+  destruct (infer_fns_env_end2end_strict_exact_closure env_elab (env_fns env_elab))
+    as [[] | err] eqn:Hfns; try discriminate.
+  injection Hprog as <-.
+  unfold check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary.
+  eapply infer_fns_env_end2end_strict_exact_closure_check_env_ready.
+  exact Hfns.
+Qed.
+
+Lemma infer_program_env_end2end_strict_exact_closure_combined_check_env_ready :
+  forall env env',
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary
+      env' = true.
+Proof.
+  intros env env' Hprog.
+  unfold infer_program_env_end2end_strict_exact_closure in Hprog.
+  set (env_alpha := alpha_normalize_global_env env) in *.
+  destruct (global_names_unique_b env_alpha) eqn:Hunique_global;
+    try discriminate.
+  destruct (infer_program_env_alpha_elab env) as [env_elab | err] eqn:Helab;
+    try discriminate.
+  destruct (infer_fns_env_end2end_strict_exact_closure env_elab (env_fns env_elab))
+    as [[] | err] eqn:Hfns; try discriminate.
+  injection Hprog as <-.
+  unfold check_env_root_shadow_captured_call_store_safe_or_no_capture_direct_component_summary.
+  eapply infer_fns_env_end2end_strict_exact_closure_combined_check_env_ready.
+  exact Hfns.
+Qed.
+
 
 Theorem infer_program_env_end2end_big_step_safe_checked_initial_ready :
   forall env env' f s s' v,

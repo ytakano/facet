@@ -599,6 +599,30 @@ Proof.
   exact Hprog.
 Qed.
 
+Lemma infer_program_env_end2end_strict_exact_closure_exact_body_target_in_local_bounds_family :
+  forall env env' base env0 fdef,
+    infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->
+    global_env_local_bounds_family env' base ->
+    global_env_local_bounds_family base env0 ->
+    In fdef (env_fns env0) ->
+    check_fn_root_shadow_no_capture_direct_call_component_store_safe_summary
+      env' fdef = true ->
+    callee_body_root_shadow_no_capture_direct_call_component_exact_body_target
+      env0 fdef.
+Proof.
+  intros env env' base env0 fdef Hprog Hbase Henv Hin Hcomponent_check.
+  destruct Hbase as (bounds_base & ->).
+  destruct Henv as (bounds & ->).
+  change (env_fns
+    (global_env_with_local_bounds
+      (global_env_with_local_bounds env' bounds_base) bounds))
+    with (env_fns env') in Hin.
+  eapply callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_global_env_with_local_bounds.
+  eapply callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_global_env_with_local_bounds.
+  eapply infer_program_env_end2end_strict_exact_closure_exact_body_target_in_provider;
+    eassumption.
+Qed.
+
 Lemma infer_program_env_end2end_strict_exact_closure_target_check_in_provider :
   forall env env',
     infer_program_env_end2end_strict_exact_closure env = infer_ok env' ->

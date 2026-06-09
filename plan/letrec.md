@@ -1112,6 +1112,9 @@ Done:
   `callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_global_env_with_local_bounds`,
   preparing accepted-env exact-target sidecars for branch-local body-env route
   construction.
+- Strict exact-closure program inference now projects accepted-env exact-body
+  target sidecars through arbitrary local-bounds descendants via
+  `infer_program_env_end2end_strict_exact_closure_exact_body_target_in_local_bounds_family`.
 
 Next:
 

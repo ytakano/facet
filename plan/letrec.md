@@ -1597,10 +1597,10 @@ For an explicit-capture recursive closure group:
 ## Implementation Steps
 
 1. Baseline tests and direct-call gate.
-   - Done: add valid tests for top-level recursive function values.
-   - Next: add valid tests for direct top-level self-recursion and mutual
-     recursion, then extend the store-safe sidecar so those no-capture direct
-     calls pass the extracted end-to-end checker.
+   - Done: valid tests cover top-level recursive function values, direct
+     self-recursion, mutual recursion, and local recursive direct-call bodies.
+   - Done: the extracted end-to-end checker accepts no-capture direct recursive
+     components through the exact-closure sidecar.
    - Keep direct top-level recursion no-capture only.
 
 2. Parser and named AST.
@@ -1615,22 +1615,15 @@ For an explicit-capture recursive closure group:
 3. Name resolution and raw AST.
    - Done: add raw `RawLetRec captures rec_fns body` and lower parsed groups
      to it.
-   - Done: de Bruijn conversion assigns stable source idents to rec function
-     names and rejects duplicate names in the group.
-   - Maintain a local rec-name environment separate from ordinary value scope
-     so that calls can lower differently from normal variables.
-   - When an ordinary local binding or parameter shadows a rec name, resolve to
-     the ordinary value first.
-   - Done: make OCaml raw lowering distinguish recursive function names from
-     ordinary values.
-   - Done: implement raw elaboration for non-capturing rec groups.
-   - Done: make generated local-rec function names collision-proof against
-     user top-level names and sibling/nested local rec groups.
-   - Next: enable recursive bodies after the direct-call safety gate accepts
-     recursion.
-   - For non-capturing groups, lower rec references to direct function items.
-     For captured groups, lower rec references to closure construction using
-     the shared capture ids.
+   - Done: OCaml raw lowering maintains a rec-name environment separate from
+     ordinary value scope, so ordinary local bindings and parameters shadow rec
+     names while recursive references still lower to the right callable form.
+   - Done: generated local-rec function names are reserved and collision-proof.
+   - Done: recursive bodies are enabled by the exact-closure direct-call safety
+     gate.
+   - Done: non-capturing groups lower rec references to direct function items;
+     captured groups lower rec references to closure construction using the
+     shared capture ids.
 
 4. Rocq raw elaboration.
    - Done: `CheckerRawElab.v` has `RawLetRec` and allocates all synthetic
@@ -1648,23 +1641,17 @@ For an explicit-capture recursive closure group:
    - Prefer reusing existing `EFn`, `ECall`, `EMakeClosure`, and `ECallExpr`
      typing/checker rules. Do not add a new core typing rule unless raw
      elaboration proves insufficient.
-   - Done: non-recursive local-rec call sites reuse the existing extracted
-     checker authority; no OCaml fallback checker was added.
-   - Next: replace the current acyclic direct-call store-safe sidecar with a
-     verified recursive-call graph summary, or another proof structure that can
-     justify self/mutual direct-call cycles without depending on finite fuel
-     unfolding of the same cycle. Split this proof work into three small
-     commits: boolean checker summary for no-capture direct-call components,
-     soundness from the boolean summary to the Prop summary, then the big-step
-     safety theorem change that uses evaluation induction for direct calls.
+   - Done: local-rec call sites reuse the existing extracted checker authority;
+     no OCaml fallback checker was added.
+   - Done: replace the old acyclic direct-call gate with the no-capture
+     direct-call exact-closure sidecar and safety proof path.
    - Done: add the no-capture direct-call component boolean summary in
-     `CheckerRootSidecars.v`; it is intentionally not connected to the
-     end-to-end gate until the Prop soundness and safety theorem work lands.
+     `CheckerRootSidecars.v` and wire the exact-closure combined sidecar into
+     the standard end-to-end checker gate.
    - Done: prove the boolean no-capture direct-call component summary sound
-     against a matching Prop summary in `EnvRuntimeCapturedCallSummaryFacts.v`;
-     it is still intentionally not wired into the gate.
-   - Done: add the env-level ready lemma for that component summary, preparing
-     the later gate connection without changing current accept/reject behavior.
+     against a matching Prop summary in `EnvRuntimeCapturedCallSummaryFacts.v`.
+   - Done: add the env-level ready lemma for that component summary and use the
+     exact-closure combined sidecar in the accepted-env safety theorem.
    - Done: add local-bounds lifting for the no-capture direct-call component
      summary, matching the existing summary lifting style.
    - Done: add a helper extracting direct-call readiness for the synthetic

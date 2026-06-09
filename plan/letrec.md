@@ -786,10 +786,15 @@ Done:
 
 Next:
 
-- Remove or discharge the strong bridge premises from the synthetic call-route
-  wrapper, especially `preservation_ready_args -> store_safe_function_value_call_args`
-  and `direct_call_callee_body_root_synthetic_direct_call_ready_evidence ->
-  env_fns_root_shadow_synthetic_direct_call_ready_summary_evidence`.
+- Replace the strong-premise synthetic call-route wrapper with a
+  non-store-safe height/decreasing body-call callback bridge, analogous to
+  `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_ecall_cleanup_bridge_with_alpha_evidence_at_decreasing_body_call_callback_prefix_store_final_roots_core_exact_body`
+  but targeting
+  `eval_preserves_typing_roots_synthetic_direct_call_ready_prefix_call_statement`.
+  This should remove the invalid
+  `preservation_ready_args -> store_safe_function_value_call_args` premise;
+  the remaining summary/evidence bridge should be discharged locally from the
+  same exact-body scoped package or recorded as the next proof gap.
   The default checker gate cannot switch to
   `check_fn_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary`
   until the unconditional
@@ -1258,8 +1263,10 @@ For an explicit-capture recursive closure group:
      and
      `eval_preserves_synthetic_direct_call_ready_call_routes_statement_of_exact_body_call_route_scoped_package_height`,
      connecting the exact-body scoped route to synthetic call routes.
-   - Remaining gap: remove or discharge the wrappers' strong bridge premises
-     before switching the extracted checker gate to the strict
+   - Remaining gap: replace the strong-premise wrapper with a non-store-safe
+     height/decreasing body-call callback bridge for the synthetic prefix call
+     route, then discharge any remaining exact-body summary/evidence bridge
+     premises before switching the extracted checker gate to the strict
      exact-body component sidecar path; otherwise the default end-to-end
      big-step safety theorem loses the route evidence needed by the
      branch-local strict bridge. The route statements are

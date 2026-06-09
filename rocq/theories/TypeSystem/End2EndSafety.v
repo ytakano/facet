@@ -858,7 +858,7 @@ Proof.
   intros Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready
     Hroot_names Hroot_keys env env' base Hprog Hbase Hcomponent_check_provider.
   destruct Hbase as (bounds_base & ->).
-  eapply (eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_exact_body_call_route_scoped_package
+  eapply (eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_exact_body_call_route_scoped_package_with_component_exact_target
     Hscope_synthetic Htyping_prefix Hprefix_ready Hroots_ready Hroot_names
     Hroot_keys (global_env_with_local_bounds env' bounds_base)
     (fun env0 fdef =>
@@ -868,23 +868,19 @@ Proof.
           env' fdef = true)).
   - intros env0 fname fdef fcall used used' fname_body args_body
       synthetic_body Hfamily Hin Hname Hrename Htarget.
-    eapply callee_body_root_shadow_no_capture_direct_call_component_exact_body_target_alpha_renamed_target_any.
-    + eapply infer_program_env_end2end_strict_exact_closure_exact_body_target_in_local_bounds_family.
-      * exact Hprog.
-      * exists bounds_base. reflexivity.
-      * exact Hfamily.
-      * exact Hin.
-      * eapply Hcomponent_check_provider; eassumption.
-    + exact Hrename.
-    + exact Htarget.
-  - intros env0 fname fdef fcall used used' fname_body args_body
-      synthetic_body Hfamily Hin Hname Hrename Htarget.
     split.
     + eapply global_env_local_bounds_family_of_local_bounds_base.
       exact Hfamily.
     + split.
       * exact Hin.
       * eapply Hcomponent_check_provider; eassumption.
+  - intros env0 fdef (Hfamily & Hin & Hcomponent_check).
+    eapply infer_program_env_end2end_strict_exact_closure_exact_body_target_in_local_bounds_family.
+    + exact Hprog.
+    + exists bounds_base. reflexivity.
+    + exact Hfamily.
+    + exact Hin.
+    + exact Hcomponent_check.
   - eapply infer_program_env_end2end_strict_exact_closure_exact_body_route_scoped_package_local_bounds_family_with_route_summary.
     exact Hprog.
 Qed.

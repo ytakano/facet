@@ -1162,6 +1162,9 @@ Done:
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family_of_exact_body_call_route_scoped_package_with_component_exact_target`,
   letting local-bounds exact-body route closure derive exact-target obligations
   from the route's component-ready predicate.
+- The End2End provider-parametric local-bounds route bridge now uses that
+  component-exact-target route wrapper, keeping component membership and
+  exact-target derivation aligned for the upcoming reachable predicate.
 
 Next:
 

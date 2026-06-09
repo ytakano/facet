@@ -1085,6 +1085,80 @@ Definition store_safe_synthetic_direct_call_ready_exact_body_call_route_package_
     store_safe_function_value_call_args
       (global_env_with_local_bounds env (fn_bounds fcall)) args_body.
 
+Inductive store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable :
+    global_env -> ident -> global_env -> ident -> Prop :=
+| store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_here :
+    forall env fname,
+      store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable
+        env fname env fname
+| store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_body_call :
+    forall base_env base_fname env fname fdef fcall used used'
+        fname_body args_body,
+      store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable
+        base_env base_fname env fname ->
+      In fdef (env_fns env) ->
+      fn_name fdef = fname ->
+      alpha_rename_fn_def used fdef = (fcall, used') ->
+      direct_call_target_expr (fn_body fcall) =
+        Some (fname_body, args_body, ECall fname_body args_body) ->
+      store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable
+        base_env base_fname
+        (global_env_with_local_bounds env (fn_bounds fcall)) fname_body.
+
+Definition store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_package_provider
+    (base_env : global_env) (base_fname : ident) : Prop :=
+  forall env fname,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable
+      base_env base_fname env fname ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+      env fname.
+
+Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_package_provider_of_at_all :
+  (forall env fname,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+      env fname) ->
+  forall base_env base_fname,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_package_provider
+      base_env base_fname.
+Proof.
+  intros Hpackage_at base_env base_fname env fname _Hreachable.
+  exact (Hpackage_at env fname).
+Qed.
+
+Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_package_provider_here :
+  forall base_env base_fname,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_package_provider
+      base_env base_fname ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+      base_env base_fname.
+Proof.
+  intros base_env base_fname Hprovider.
+  eapply Hprovider.
+  constructor.
+Qed.
+
+Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_package_provider_body_call :
+  forall base_env base_fname env fname fdef fcall used used'
+      fname_body args_body,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_package_provider
+      base_env base_fname ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable
+      base_env base_fname env fname ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body) ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body.
+Proof.
+  intros base_env base_fname env fname fdef fcall used used' fname_body
+    args_body Hprovider Hreachable Hin Hname Hrename Htarget.
+  eapply Hprovider.
+  eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_body_call;
+    eassumption.
+Qed.
+
 Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_package_at_of_package :
   store_safe_synthetic_direct_call_ready_exact_body_call_route_package_statement ->
   forall env fname,

@@ -1450,6 +1450,9 @@ Done:
 - TypeSafety now also names reachable-indexed typing and frame/parameter
   less-callback interfaces for the evidence-at height route, with
   compatibility lemmas from the existing all-target less-callback shape.
+- The one-step body-call reachability constructor is now exposed as
+  `store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_body_call_step`
+  for use in reachable-indexed height-induction wrappers.
 
 Next:
 

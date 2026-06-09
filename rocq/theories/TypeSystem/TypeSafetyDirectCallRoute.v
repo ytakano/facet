@@ -1137,6 +1137,26 @@ Proof.
   constructor.
 Qed.
 
+Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_body_call_step :
+  forall base_env base_fname env fname fdef fcall used used'
+      fname_body args_body,
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable
+      base_env base_fname env fname ->
+    In fdef (env_fns env) ->
+    fn_name fdef = fname ->
+    alpha_rename_fn_def used fdef = (fcall, used') ->
+    direct_call_target_expr (fn_body fcall) =
+      Some (fname_body, args_body, ECall fname_body args_body) ->
+    store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable
+      base_env base_fname
+      (global_env_with_local_bounds env (fn_bounds fcall)) fname_body.
+Proof.
+  intros base_env base_fname env fname fdef fcall used used' fname_body
+    args_body Hreachable Hin Hname Hrename Htarget.
+  eapply store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_body_call;
+    eassumption.
+Qed.
+
 Lemma store_safe_synthetic_direct_call_ready_exact_body_call_route_reachable_package_provider_body_call :
   forall base_env base_fname env fname fdef fcall used used'
       fname_body args_body,

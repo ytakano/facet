@@ -884,13 +884,17 @@ Done:
   This removes the full typed-route premise at that layer and exposes the
   concrete nested `ECall` typed/roots callback with height and `< n_call`
   evidence, matching the typed/roots height induction shape.
+- The scope route now also has a current-height helper,
+  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_exact_body_call_route_package`,
+  which takes typed/roots and scope callbacks only for heights strictly smaller
+  than the current call. This is the form needed by the upcoming mutual
+  height induction.
 
 Next:
 
-- Use the bounded body-call callback scope bridge inside the typed/roots
-  height-indexed evidence-at route, so the typed route can supply its nested
-  callback from the local height induction instead of assuming the broad
-  `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement`.
+- Add the mutual height induction theorem that proves both typed/roots and
+  frame/parameter scope evidence-at routes; use the current-height scope helper
+  for the scope half and the local typed/roots IH for nested cleanup callbacks.
 - Thread the resulting evidence-at scope route through a wrapper that still has
   root-name/root-key route premises, then lift the prefix-store route to the
   full-store typed/named route and finally to the direct `ECall` scope route.
@@ -1400,7 +1404,7 @@ For an explicit-capture recursive closure group:
    - Done: add the height-indexed scope call-route interface
      `eval_preserves_frame_param_scope_synthetic_direct_call_ready_call_height_statement`
      and projection to the ordinary call route.
-   - Remaining gap: use the bounded body-call callback scope bridge to remove
+   - Remaining gap: add the mutual height induction theorem that removes
      the broad scope-route premise from the height-indexed typed/roots
      evidence-at route, then project the resulting scope route through
      `eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement_of_call_statement`

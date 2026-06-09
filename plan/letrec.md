@@ -1040,6 +1040,9 @@ Done:
 - The default summary exact package wrapper
   `infer_program_env_end2end_big_step_safe_checked_initial_ready_with_summary_exact_package_and_component_check`
   now uses accepted-env uniqueness and combined-check sidecars directly.
+- Five additional default summary/body-evidence route wrappers now use the
+  accepted-env uniqueness and combined-check sidecars directly, instead of
+  reopening `infer_program_env_end2end` in each proof.
 
 Next:
 

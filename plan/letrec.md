@@ -1262,6 +1262,10 @@ Done:
   point,
   `infer_program_env_end2end_strict_exact_closure_component_route_and_callbacks_of_component_payload_provider`,
   and the older check-provider helper factors through it.
+- End-to-end strict exact-closure safety now exposes the payload-provider final
+  wrapper
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_alpha_evidence_at_call_route_with_component_payload_provider_callbacks`,
+  and the check-provider callback wrapper factors through it.
 
 Next:
 

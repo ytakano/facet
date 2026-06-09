@@ -1093,12 +1093,14 @@ Done:
 - The no-capture direct component branch now has a lookup-evidence safety
   wrapper that consumes the component body-env local-bounds-family route instead
   of a whole-env route.
+- Strict exact-closure env/checker safety now has local-bounds-family route
+  variants, threading the component body-env route through the direct-component
+  branch while leaving captured-call handling unchanged.
 
 Next:
 
-- Lift the strict exact-closure env/checker safety wrappers over the new
-  component body-env local-bounds-family route and then expose the matching
-  End2End strict sidecar; do not narrow
+- Expose the End2End strict exact-closure wrapper that derives the component
+  body-env local-bounds-family route from the accepted-env sidecar; do not narrow
   `infer_program_env_end2end_big_step_safe_checked_initial_ready`.
 - Move the direct recursion invalid tests to valid tests once the extracted
   end-to-end checker accepts direct self-recursion and mutual recursion.

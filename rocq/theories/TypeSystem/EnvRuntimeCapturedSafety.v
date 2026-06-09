@@ -6345,6 +6345,85 @@ Proof.
     + exact Heval.
 Qed.
 
+Theorem env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_in_local_bounds_family :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    env_fns_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_ready
+      env ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      (global_env_with_local_bounds env (fn_bounds f)) ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys env f s s' v Hunique Hstrict Hsynthetic_route_body
+    Hinitial Hin Hstore Heval.
+  pose proof (lookup_fn_in_unique_by_name env
+    (fn_name f) f Hin eq_refl Hunique) as Hlookup.
+  destruct (Hstrict (fn_name f) f Hlookup) as [Hcaptured | Hcomponent_branch].
+  - eapply callee_body_root_shadow_captured_call_store_safe_summary_big_step_safe_checked_initial_ready.
+    + exact Hunique.
+    + exact Hcaptured.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+  - destruct Hcomponent_branch as [Hcomponent_check [Hcomponent Hexact_check]].
+    eapply callee_body_root_shadow_no_capture_direct_call_component_store_safe_summary_big_step_safe_checked_initial_ready_with_body_alpha_evidence_at_call_route_lookup_evidence_in_local_bounds_family.
+    + exact Hscope_synthetic.
+    + exact Htyping_ready.
+    + exact Hroots_ready.
+    + exact Hroot_names.
+    + exact Hroot_keys.
+    + exact Hunique.
+    + exact Hsynthetic_route_body.
+    + intros fname args synthetic_body Htarget.
+      pose proof Hcomponent as Hcomponent_summary.
+      destruct Hcomponent_summary as
+        (fname0 & args0 & raw_body0 & synthetic_body0 & fcallee & T_body0 &
+          Gamma_out0 & R_body0 & roots_body0 & _Hcaptures0 & Hbody0 &
+          Htarget0 & _Hsynthetic0 & _Hsafe_args0 & Hin_callee & Hname_callee &
+          _Hcallee_captures0 & _Hnodup0 & _Htyped0 & _Hcompat0 & _Hroots0 &
+          _Henv0).
+      rewrite Hbody0 in Htarget.
+      rewrite Htarget0 in Htarget. injection Htarget as <- <- <-.
+      intros fdef Hlookup_target.
+      eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component.
+      eapply component_body_no_capture_direct_call_component_target_in_of_exact_closure_check.
+      * exact Hunique.
+      * exact Hin.
+      * exact Hcomponent.
+      * exact Hexact_check.
+      * rewrite Hbody0. exact Htarget0.
+      * exact Hlookup_target.
+    + intros fname args synthetic_body fdef Htarget Hlookup_target.
+      eapply component_body_no_capture_direct_call_component_target_in_of_exact_closure_check.
+      * exact Hunique.
+      * exact Hin.
+      * exact Hcomponent.
+      * exact Hexact_check.
+      * exact Htarget.
+      * exact Hlookup_target.
+    + intros fname_component args_component synthetic_component fdef Htarget_component
+        Hlookup_component Hfdef_component fcall used used' fname_body args_body
+        synthetic_body Hrename Htarget_body ftarget Hlookup_target.
+      eapply callee_body_root_shadow_synthetic_direct_call_ready_summary_of_no_capture_direct_call_component.
+      eapply component_body_no_capture_direct_call_component_alpha_nested_target_lookup_in_of_exact_closure_check;
+        eassumption.
+    + exact Hcomponent.
+    + exact Hinitial.
+    + exact Hstore.
+    + exact Heval.
+Qed.
+
+
 Theorem env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_non_store_safe :
   eval_preserves_typing_roots_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at ->
   eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
@@ -6457,6 +6536,45 @@ Proof.
   - exact Hstore.
   - exact Heval.
 Qed.
+
+
+Theorem check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_in_local_bounds_family :
+  eval_preserves_frame_param_scope_synthetic_direct_call_ready_statement ->
+  eval_preserves_typing_ready_mutual_statement ->
+  eval_preserves_roots_ready_mutual_statement ->
+  eval_preserves_root_names_ready_mutual_statement ->
+  eval_preserves_root_keys_named_ready_mutual_statement ->
+  forall env f s s' v,
+    fn_env_unique_by_name env ->
+    check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary
+      env = true ->
+    eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_in_local_bounds_family
+      (global_env_with_local_bounds env (fn_bounds f)) ->
+    check_initial_root_runtime_ready f s = true ->
+    In f (env_fns env) ->
+    initial_store_for_fn env f s ->
+    eval env s (fn_body f) s' v ->
+    value_has_type env s' v (fn_ret f).
+Proof.
+  intros Hscope_synthetic Htyping_ready Hroots_ready
+    Hroot_names Hroot_keys env f s s' v Hunique Hstrict_check
+    Hsynthetic_route_body Hinitial Hin Hstore Heval.
+  eapply env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_in_local_bounds_family.
+  - exact Hscope_synthetic.
+  - exact Htyping_ready.
+  - exact Hroots_ready.
+  - exact Hroot_names.
+  - exact Hroot_keys.
+  - exact Hunique.
+  - eapply check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_strict_ready.
+    exact Hstrict_check.
+  - exact Hsynthetic_route_body.
+  - exact Hinitial.
+  - exact Hin.
+  - exact Hstore.
+  - exact Heval.
+Qed.
+
 
 
 Theorem check_env_root_shadow_strict_exact_closure_captured_or_no_capture_direct_component_summary_big_step_safe_checked_initial_ready_of_alpha_evidence_at_call_route_non_store_safe :

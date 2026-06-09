@@ -1387,6 +1387,9 @@ Done:
 - Direct-call route safety now has a generic bridge from that named height
   callback to the store-safe direct-call height statement:
   `eval_preserves_typing_roots_store_safe_synthetic_direct_call_ready_summary_at_prefix_call_statement_evidence_at_height_statement_of_body_call_callback_height`.
+- Direct-call route safety now has env-family and local-bounds variants of
+  the named height callback bridge, so End2End can supply component-scoped
+  recursive-call evidence without requiring a global all-function provider.
 
 Next:
 

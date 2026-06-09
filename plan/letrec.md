@@ -944,6 +944,10 @@ Done:
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_summary_at_prefix_scope_call_route_and_component_body_summary_provider`,
   and
   `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_route_package_and_component_body_summary_provider`.
+- The strict exact-closure bridge can now build the component-body summary
+  provider from the whole-env direct-component checker through
+  `infer_program_env_end2end_strict_exact_closure_big_step_safe_checked_initial_ready_with_exact_body_call_route_package_and_component_check`,
+  reducing one Prop-level provider input to an executable sidecar check.
 
 Next:
 

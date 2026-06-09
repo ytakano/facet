@@ -1459,6 +1459,11 @@ Done:
 - The frame/parameter-scope current-call height helper now has the matching
   reachable package provider wrapper,
   `eval_preserves_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_current_from_less_callbacks_and_reachable_exact_body_call_route_package_provider`.
+- TypeSafety now has reachable-less current-call helpers and a combined
+  reachable package-provider height induction,
+  `eval_preserves_typing_roots_and_frame_param_scope_synthetic_direct_call_ready_summary_at_prefix_call_height_statement_evidence_at_of_reachable_exact_body_call_route_package_provider`,
+  so recursive direct-call proof obligations can stay on the current reachable
+  route instead of widening to all local-bounds functions.
 
 Next:
 

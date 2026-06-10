@@ -1371,57 +1371,59 @@ let convert_impl_method_raw_fns struct_names enum_names fn_names needed_names i 
        (string_of_path i.ni_trait_name) trait_args self_ty)
     i.ni_items
 
-let rec method_call_names_in_expr ty_scope = function
+let rec method_call_targets_in_expr ty_scope = function
   | NUnit | NLit _ | NVar _ | NPlace _ | NBorrow _ -> []
   | NLet (_, _, _, e1, e2) ->
-    method_call_names_in_expr ty_scope e1 @ method_call_names_in_expr ty_scope e2
+    method_call_targets_in_expr ty_scope e1 @ method_call_targets_in_expr ty_scope e2
   | NCall (_, _, args) ->
-    List.concat_map (method_call_names_in_expr ty_scope) args
+    List.concat_map (method_call_targets_in_expr ty_scope) args
   | NMethodCall (self_ty, trait_ref, method_name, args) ->
     let (f, _) = lower_method_call_target ty_scope self_ty trait_ref method_name in
-    f :: List.concat_map (method_call_names_in_expr ty_scope) args
+    (f, string_of_path trait_ref.ntr_name ^ "::" ^ method_name) ::
+    List.concat_map (method_call_targets_in_expr ty_scope) args
   | NStruct (_, _, fields) ->
-    List.concat_map (fun (_, e) -> method_call_names_in_expr ty_scope e) fields
+    List.concat_map (fun (_, e) -> method_call_targets_in_expr ty_scope e) fields
   | NEnum (_, _, _, _, payloads) ->
-    List.concat_map (method_call_names_in_expr ty_scope) payloads
+    List.concat_map (method_call_targets_in_expr ty_scope) payloads
   | NMatch (scrut, branches) ->
-    method_call_names_in_expr ty_scope scrut @
-    List.concat_map (fun (_, _, body) -> method_call_names_in_expr ty_scope body) branches
+    method_call_targets_in_expr ty_scope scrut @
+    List.concat_map (fun (_, _, body) -> method_call_targets_in_expr ty_scope body) branches
   | NReplace (_, e) | NAssign (_, e) | NDeref e | NDrop e ->
-    method_call_names_in_expr ty_scope e
+    method_call_targets_in_expr ty_scope e
   | NIf (cond, then_e, else_e) ->
-    method_call_names_in_expr ty_scope cond @
-    method_call_names_in_expr ty_scope then_e @
-    method_call_names_in_expr ty_scope else_e
+    method_call_targets_in_expr ty_scope cond @
+    method_call_targets_in_expr ty_scope then_e @
+    method_call_targets_in_expr ty_scope else_e
   | NClosure (_, _, _, body) ->
-    method_call_names_in_expr ty_scope body
+    method_call_targets_in_expr ty_scope body
   | NLetRec (_, rec_fns, body) ->
     List.concat_map
-      (fun rf -> method_call_names_in_expr ty_scope rf.nrf_body)
-      rec_fns @ method_call_names_in_expr ty_scope body
+      (fun rf -> method_call_targets_in_expr ty_scope rf.nrf_body)
+      rec_fns @ method_call_targets_in_expr ty_scope body
 
-let method_call_names_in_fn struct_names enum_names f =
+let method_call_targets_in_fn struct_names enum_names f =
   let (_lts, tys) = split_generics f.nf_generics in
   let ty_scope = { type_params = tys; struct_names; enum_names } in
-  method_call_names_in_expr ty_scope f.nf_body
+  method_call_targets_in_expr ty_scope f.nf_body
 
-let method_call_names_in_impl_method struct_names enum_names i item =
+let method_call_targets_in_impl_method struct_names enum_names i item =
   match item with
   | NIIMethodDef m ->
     let (_lts, tys) = split_generics i.ni_generics in
     let ty_scope = { type_params = "Self" :: tys; struct_names; enum_names } in
-    method_call_names_in_expr ty_scope m.nmd_body
+    method_call_targets_in_expr ty_scope m.nmd_body
   | NIIAssocTypeDef _ -> []
 
-let method_call_names_in_item struct_names enum_names = function
-  | NIFn f -> method_call_names_in_fn struct_names enum_names f
+let method_call_targets_in_item struct_names enum_names = function
+  | NIFn f -> method_call_targets_in_fn struct_names enum_names f
   | NIImpl i ->
-    List.concat_map (method_call_names_in_impl_method struct_names enum_names i) i.ni_items
+    List.concat_map (method_call_targets_in_impl_method struct_names enum_names i) i.ni_items
   | _ -> []
 
-let needed_impl_method_names struct_names enum_names items =
-  List.sort_uniq String.compare
-    (List.concat_map (method_call_names_in_item struct_names enum_names) items)
+let needed_impl_method_targets struct_names enum_names items =
+  List.sort_uniq
+    (fun (name, _) (name', _) -> String.compare name name')
+    (List.concat_map (method_call_targets_in_item struct_names enum_names) items)
 
 let duplicate_name names =
   let rec go seen = function
@@ -1998,7 +2000,8 @@ let convert_program_items_from_flattened items : global_env =
   | None -> ()
   | Some msg -> failwith msg
   end;
-  let needed_method_names = needed_impl_method_names struct_names enum_names items in
+  let needed_method_targets = needed_impl_method_targets struct_names enum_names items in
+  let needed_method_names = List.map fst needed_method_targets in
   let impl_method_raw_fns =
     List.concat_map
       (convert_impl_method_raw_fns struct_names enum_names fn_names needed_method_names)
@@ -2006,11 +2009,11 @@ let convert_program_items_from_flattened items : global_env =
   let produced_method_names =
     List.map (fun f -> fst f.raw_fn_name) impl_method_raw_fns
   in
-  begin match List.filter
-    (fun name -> not (List.mem name produced_method_names))
-    needed_method_names with
-  | missing :: _ -> failwith ("unresolved trait method call: " ^ missing)
-  | [] -> ()
+  begin match List.find_opt
+    (fun (name, _) -> not (List.mem name produced_method_names))
+    needed_method_targets with
+  | Some (_, display) -> failwith ("unresolved trait method call: " ^ display)
+  | None -> ()
   end;
   let raw_fns =
     List.map (normalize_raw_fn base_env)

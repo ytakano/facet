@@ -30,7 +30,8 @@ Completed:
 - Explicit parenthesized UFCS method calls are accepted in the ordinary call
   shape as `(<Ty as Trait>::method receiver args...)`; called impl methods are
   lowered to hidden generic functions and checked through the extracted direct
-  call path.
+  call path; unresolved explicit targets report source-level `Trait::method`
+  names.
 - Concrete associated type projections are normalized in converted env/raw/core
   types when a unique impl defines the associated type, allowing uses such as
   `<unrestricted isize as Iterator>::Item` to type-check as `isize`.
@@ -62,8 +63,6 @@ Key temporary limitations:
 2. Harden UFCS trait method calls.
    - Add the shorter `(Trait::method receiver args...)` form after receiver
      type-directed resolution exists in Rocq.
-   - Improve diagnostic text from synthetic hidden names to source-level
-     trait/method names.
    - Support more safety-gate shapes for receiver expressions, including local
      struct receivers, without weakening the end-to-end checker.
    - Keep dot method-call syntax out of this phase.

@@ -1749,6 +1749,27 @@ let validate_env env =
           let subst_trait_method_param p =
             { p with param_ty = subst_type_params_ty trait_method_type_subst p.param_ty }
           in
+          let subst_trait_method_ref r =
+            { r with trait_ref_args =
+                List.map (subst_type_params_ty trait_method_type_subst) r.trait_ref_args }
+          in
+          let subst_trait_method_bound b =
+            { b with bound_traits = List.map subst_trait_method_ref b.bound_traits }
+          in
+          let trait_ref_equal a b =
+            a.trait_ref_name = b.trait_ref_name &&
+            List.length a.trait_ref_args = List.length b.trait_ref_args &&
+            List.for_all2 ty_eqb a.trait_ref_args b.trait_ref_args
+          in
+          let trait_bound_equal a b =
+            Big_int_Z.eq_big_int a.bound_type_index b.bound_type_index &&
+            List.length a.bound_traits = List.length b.bound_traits &&
+            List.for_all2 trait_ref_equal a.bound_traits b.bound_traits
+          in
+          let trait_bounds_equal actual expected =
+            List.length actual = List.length expected &&
+            List.for_all2 trait_bound_equal actual expected
+          in
           let method_matches_sig actual expected =
             let expected_params =
               List.map subst_trait_method_param expected.trait_method_params
@@ -1764,7 +1785,9 @@ let validate_env env =
                  (Big_int_Z.add_big_int i.impl_type_params
                     expected.trait_method_type_params)) &&
             params_sig_equal actual.fn_params expected_params &&
-            ty_eqb actual.fn_ret expected_ret
+            ty_eqb actual.fn_ret expected_ret &&
+            trait_bounds_equal actual.fn_bounds
+              (List.map subst_trait_method_bound expected.trait_method_bounds)
           in
           let method_sig_error =
             first_some

@@ -439,6 +439,28 @@ Definition subst_trait_method_params
 Definition subst_trait_method_ty (trait_args : list Ty) (T : Ty) : Ty :=
   subst_type_params_ty (trait_method_type_subst trait_args) T.
 
+Definition subst_trait_method_bounds
+    (trait_args : list Ty) (bounds : list trait_bound) : list trait_bound :=
+  subst_type_params_trait_bounds (trait_method_type_subst trait_args) bounds.
+
+Fixpoint trait_refs_eqb (xs ys : list trait_ref) : bool :=
+  match xs, ys with
+  | [], [] => true
+  | x :: xs', y :: ys' => trait_ref_eqb x y && trait_refs_eqb xs' ys'
+  | _, _ => false
+  end.
+
+Definition trait_bound_eqb (a b : trait_bound) : bool :=
+  Nat.eqb (bound_type_index a) (bound_type_index b) &&
+  trait_refs_eqb (bound_traits a) (bound_traits b).
+
+Fixpoint trait_bounds_eqb (xs ys : list trait_bound) : bool :=
+  match xs, ys with
+  | [], [] => true
+  | x :: xs', y :: ys' => trait_bound_eqb x y && trait_bounds_eqb xs' ys'
+  | _, _ => false
+  end.
+
 Definition impl_method_matches_trait_sig_b
     (impl_ty_params impl_lt_params : nat) (trait_args : list Ty)
     (actual : fn_def) (expected : trait_method_sig) : bool :=
@@ -450,7 +472,9 @@ Definition impl_method_matches_trait_sig_b
   method_params_sig_eqb (fn_params actual)
     (subst_trait_method_params trait_args (trait_method_params expected)) &&
   ty_eqb_decl (fn_ret actual)
-    (subst_trait_method_ty trait_args (trait_method_ret expected)).
+    (subst_trait_method_ty trait_args (trait_method_ret expected)) &&
+  trait_bounds_eqb (fn_bounds actual)
+    (subst_trait_method_bounds trait_args (trait_method_bounds expected)).
 
 Fixpoint find_impl_method_by_name
     (name : string) (methods : list fn_def) : option fn_def :=

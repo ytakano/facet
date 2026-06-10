@@ -26,7 +26,9 @@ Completed:
 - Method-local type parameter syntax is accepted in trait and impl methods as
   `fn name<T>(...) -> ... where T: Bound`; parameters, return types, and bounds
   are converted into the existing Rocq method/function generic fields and
-  signature arity matching rejects non-generic impls for generic trait methods.
+  signature arity matching rejects non-generic impls for generic trait methods,
+  and method-local bounds are matched structurally after trait-argument
+  substitution.
 - Explicit UFCS method calls can pass method-local type arguments as
   `(<Ty as Trait>::method<Arg> receiver args...)`; lowering prepends `Self` to
   those method arguments before calling the hidden generic impl method.
@@ -42,8 +44,6 @@ Completed:
 Key temporary limitations:
 
 - Method-local lifetime generics are rejected for now.
-- Method-local bounds are preserved and well-formed, but exact trait/impl bound
-  equivalence for method signatures still needs a dedicated matcher.
 - Only explicitly called impl methods are hidden-function elaborated and
   type-checked; uncalled impl method bodies remain stored but not checked as
   standalone functions.
@@ -56,8 +56,6 @@ Key temporary limitations:
 ## Remaining Roadmap 1-3 Tasks
 
 1. Finish method generics.
-   - Match trait and impl method-local bounds structurally after trait-argument
-     substitution.
    - Decide whether method-local lifetime generics are in scope for this phase.
 
 2. Harden UFCS trait method calls.

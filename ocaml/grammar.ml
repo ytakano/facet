@@ -31,6 +31,7 @@ enum_variant ::= ID
                | ID "(" ty ("," ty)* ")"
 trait_bound ::= ID ":" trait_ref ("+" trait_ref)*
 trait_ref ::= path opt_type_args
+surface_trait_ref ::= path opt_surface_type_args
 opt_fn_where_clause ::= ""
                       | "where" fn_where_item ("," fn_where_item)*
 fn_where_item ::= trait_bound | outlives_constraint
@@ -161,6 +162,7 @@ ty_core ::= "isize"
            | "bool"
            | "()"
            | path opt_type_args
+           | "<" ty "as" trait_ref ">" "::" ID
            | "&" ty
            | "&" "mut" ty
            | "&" LIFETIME ty
@@ -189,6 +191,7 @@ surface_ty_core ::= "isize"
                   | "bool"
                   | "()"
                   | path opt_surface_type_args
+                  | "<" surface_ty "as" surface_trait_ref ">" "::" ID
                   | "&" surface_ty
                   | "&" "mut" surface_ty
                   | "&" LIFETIME surface_ty

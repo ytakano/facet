@@ -228,9 +228,11 @@ Proof.
       subst u2.
       f_equal.
 	      destruct c1 as [| | | | s1 | i1 | name1 lts1 args1 | name1 lts1 args1
-                     | ts1 r1 | lc1 cts1 cr1 | n1 Ω1 b1 | tn1 bs1 tb1 | l1 k1 t1],
-	               c2 as [| | | | s2 | i2 | name2 lts2 args2 | name2 lts2 args2
-                     | ts2 r2 | lc2 cts2 cr2 | n2 Ω2 b2 | tn2 bs2 tb2 | l2 k2 t2];
+                     | ts1 r1 | lc1 cts1 cr1 | n1 Ω1 b1 | tn1 bs1 tb1
+                     | for1 trait1 assoc_args1 assoc1 | l1 k1 t1],
+               c2 as [| | | | s2 | i2 | name2 lts2 args2 | name2 lts2 args2
+                     | ts2 r2 | lc2 cts2 cr2 | n2 Ω2 b2 | tn2 bs2 tb2
+                     | for2 trait2 assoc_args2 assoc2 | l2 k2 t2];
         simpl in Hc; try discriminate.
       + reflexivity.
       + reflexivity.
@@ -345,6 +347,23 @@ Proof.
         f_equal.
         apply IH;
           [pose proof (ty_depth_type_forall_body_lt u1 tn1 bs1 tb1); lia | exact Ht].
+      + apply andb_true_iff in Hc as [Hleft Hassoc].
+        apply andb_true_iff in Hleft as [Hleft Hargs].
+        apply andb_true_iff in Hleft as [Hfor Htrait].
+        assert (Hfor_eq : for1 = for2) by (apply IH; [simpl in Hlt; lia | exact Hfor]).
+        subst for2.
+        apply String.eqb_eq in Htrait. subst trait2.
+        apply String.eqb_eq in Hassoc. subst assoc2.
+        assert (Hargs_eq : assoc_args1 = assoc_args2).
+        { revert assoc_args2 Hargs.
+          induction assoc_args1 as [| a1 args1' IHargs]; intros assoc_args2 Hargs.
+          - destruct assoc_args2; simpl in Hargs; [reflexivity | discriminate].
+          - destruct assoc_args2 as [| a2 args2']; simpl in Hargs; [discriminate |].
+            apply andb_true_iff in Hargs as [Ha Htail].
+            f_equal.
+            + apply IH; [simpl in Hlt; lia | exact Ha].
+            + apply IHargs; [simpl; simpl in Hlt; lia | exact Htail]. }
+        subst assoc_args2. reflexivity.
       + apply andb_true_iff in Hc as [Hlk Ht].
         apply andb_true_iff in Hlk as [Hl Hk].
         apply lifetime_eqb_eq in Hl. subst l2.
@@ -360,9 +379,11 @@ Lemma ty_core_eqb_true : forall c1 c2,
 Proof.
   intros c1 c2 H.
   destruct c1 as [| | | | s1 | i1 | name1 lts1 args1 | name1 lts1 args1
-                  | ts1 r1 | lc1 cts1 cr1 | n1 Ω1 b1 | tn1 bs1 tb1 | l1 k1 t1],
+                  | ts1 r1 | lc1 cts1 cr1 | n1 Ω1 b1 | tn1 bs1 tb1
+                  | for1 trait1 assoc_args1 assoc1 | l1 k1 t1],
            c2 as [| | | | s2 | i2 | name2 lts2 args2 | name2 lts2 args2
-                  | ts2 r2 | lc2 cts2 cr2 | n2 Ω2 b2 | tn2 bs2 tb2 | l2 k2 t2];
+                  | ts2 r2 | lc2 cts2 cr2 | n2 Ω2 b2 | tn2 bs2 tb2
+                  | for2 trait2 assoc_args2 assoc2 | l2 k2 t2];
     simpl in H; try discriminate.
   - reflexivity.
   - reflexivity.
@@ -431,6 +452,22 @@ Proof.
         (MkTy UUnrestricted (TTypeForall tn2 bs2 tb2)) = true).
     { simpl. exact H. }
     apply ty_eqb_true in Hty. inversion Hty. reflexivity.
+  - apply andb_true_iff in H as [Hleft Hassoc].
+    apply andb_true_iff in Hleft as [Hleft Hargs].
+    apply andb_true_iff in Hleft as [Hfor Htrait].
+    apply ty_eqb_true in Hfor. subst for2.
+    apply String.eqb_eq in Htrait. subst trait2.
+    apply String.eqb_eq in Hassoc. subst assoc2.
+    assert (Hargs_eq : assoc_args1 = assoc_args2).
+    { revert assoc_args2 Hargs.
+      induction assoc_args1 as [| a1 args1' IHargs]; intros assoc_args2 Hargs.
+      - destruct assoc_args2; simpl in Hargs; [reflexivity | discriminate].
+      - destruct assoc_args2 as [| a2 args2']; simpl in Hargs; [discriminate |].
+        apply andb_true_iff in Hargs as [Ha Htail].
+        f_equal.
+        + apply ty_eqb_true. exact Ha.
+        + apply IHargs. exact Htail. }
+    subst assoc_args2. reflexivity.
   - apply andb_true_iff in H as [Hlk Ht].
     apply andb_true_iff in Hlk as [Hl Hk].
     apply lifetime_eqb_eq in Hl. subst l2.
@@ -550,7 +587,8 @@ Proof.
     rewrite usage_sub_bool_refl.
     destruct c as [| | | | s | i | name lts args | name lts args
                    | params ret | lc params ret | n Omega_body body
-                   | n bounds body | l rk inner];
+                   | n bounds body | for_ty trait_name trait_args assoc_name
+                   | l rk inner];
       simpl in *.
     + reflexivity.
     + reflexivity.
@@ -635,6 +673,7 @@ Proof.
         exact Hbounds. }
       rewrite Hbounds. simpl.
       apply IH. lia.
+    + exact (ty_core_eqb_refl (TAssoc for_ty trait_name trait_args assoc_name)).
     + rewrite outlives_b_refl, ref_kind_eqb_refl.
       destruct rk; simpl.
       * apply IH. lia.
@@ -653,7 +692,8 @@ Proof.
     rewrite Husage.
     destruct c as [| | | | s | i | name lts args | name lts args
                    | params ret | lc params ret | n Omega_body body
-                   | n bounds body | l rk inner];
+                   | n bounds body | for_ty trait_name trait_args assoc_name
+                   | l rk inner];
       simpl in *.
     + reflexivity.
     + reflexivity.
@@ -738,6 +778,7 @@ Proof.
         exact Hbounds. }
       rewrite Hbounds. simpl.
       apply ty_compatible_b_fuel_refl. lia.
+    + exact (ty_core_eqb_refl (TAssoc for_ty trait_name trait_args assoc_name)).
     + rewrite outlives_b_refl, ref_kind_eqb_refl.
       destruct rk; simpl.
       * apply ty_compatible_b_fuel_refl. lia.
@@ -822,7 +863,8 @@ Proof.
   intros type_args [u c] Hno_top Hnot_forall.
   destruct c as [| | | | name | i | name lts args | name lts args
                  | params ret | env_lt params ret | n bounds body
-                 | n bounds body | lt rk inner]; simpl in *; try exact I.
+                 | n bounds body | for_ty trait_name trait_args assoc_name
+                 | lt rk inner]; simpl in *; try exact I.
   - destruct (nth_error type_args i) as [Targ|] eqn:Hnth; simpl.
     + apply ((proj1 (@Forall_forall Ty
         (fun T => match ty_core T with TForall _ _ _ => False | _ => True end)
@@ -888,7 +930,7 @@ Proof.
       (subst_type_params_ty type_args body_b) = true).
   { exact Hbody. }
   unfold ty_compatible_b. simpl.
-  destruct cs as [| | | | | | | | | | n_forall Omega_forall body_forall | |];
+  destruct cs as [| | | | | | | | | | n_forall Omega_forall body_forall | | |];
     simpl in Hnot_sub; try contradiction; simpl; rewrite Husage.
   all: rewrite (contains_lbound_ty_subst_type_params_ty_closed_structural
     type_args body_b Hclosed Hnob); simpl.
@@ -914,10 +956,12 @@ Proof.
     apply andb_true_iff in Hcompat as [Husage Hcore].
     destruct ca as [| | | | sa | ia | struct_a ltsa argsa | enum_a ltsa argsa
                    | params_a ret_a | lca ctsa cra | na Ωa body_a
-                   | tna boundsa tbody_a | la rka Ta],
+                   | tna boundsa tbody_a | for_a trait_a assoc_args_a assoc_a
+                   | la rka Ta],
              ce as [| | | | se | ie | struct_e ltse argse | enum_e ltse argse
                    | params_e ret_e | lce ctse cre | nb Ωb body_b
-                   | tnb boundsb tbody_b | lb rkb Tb];
+                   | tnb boundsb tbody_b | for_b trait_b assoc_args_b assoc_b
+                   | lb rkb Tb];
       simpl in Hcore; try discriminate;
       try solve [eapply ty_compatible_b_subst_type_params_ty_same_core_usage; eauto];
       try solve [
@@ -1187,9 +1231,11 @@ Proof.
   - destruct T_actual as [ua ca], T_expected as [ue ce].
     simpl in H. apply andb_true_iff in H as [Hu Hc].
 	    destruct ca as [| | | | sa | ia | struct_a ltsa argsa | enum_a ltsa argsa
-                     | tsa ra | lca ctsa cra | na Ωa body_a | tna boundsa tbody_a | la rka Ta],
-	             ce as [| | | | se | ie | struct_e ltse argse | enum_e ltse argse
-                     | tse re | lce ctse cre | nb Ωb body_b | tnb boundsb tbody_b | lb rkb Tb];
+                     | tsa ra | lca ctsa cra | na Ωa body_a | tna boundsa tbody_a
+                     | for_a trait_a assoc_args_a assoc_a | la rka Ta],
+             ce as [| | | | se | ie | struct_e ltse argse | enum_e ltse argse
+                     | tse re | lce ctse cre | nb Ωb body_b | tnb boundsb tbody_b
+                     | for_b trait_b assoc_args_b assoc_b | lb rkb Tb];
       simpl in Hc; try discriminate;
 	      try (apply TC_Core;
 	           [apply usage_sub_bool_sound; exact Hu
@@ -1347,7 +1393,14 @@ Proof.
 	      * exact Hu.
 	      * exact Hnob.
 	      * eapply IH. exact Hrec.
-	    + apply andb_true_iff in Hc as [Hlr HT].
+    + destruct Ωb as [|p Ωb]; [|discriminate].
+      apply andb_true_iff in Hc as [Hnob Hrec].
+      apply negb_true_iff in Hnob.
+      eapply ty_compatible_forall_generalize_unused_sound.
+      * exact Hu.
+      * exact Hnob.
+      * eapply IH. exact Hrec.
+    + apply andb_true_iff in Hc as [Hlr HT].
       apply andb_true_iff in Hlr as [Hl Hr].
       apply ref_kind_eqb_true in Hr. subst rkb.
       destruct rka.
@@ -1786,9 +1839,9 @@ Proof.
 	        * discriminate.
 	        * discriminate.
 	        * discriminate.
-		        * discriminate.
-		        * discriminate.
-		        * discriminate.
+			      * discriminate.
+			      * discriminate.
+              * discriminate.
 		        * discriminate.
 		        * discriminate.
 	        * destruct (check_arg_tys Ω arg_tys l0) as [err |] eqn:Hcheck; [discriminate |].
@@ -1885,9 +1938,10 @@ Proof.
 	          ++ apply outlives_constraints_hold_b_sound. exact Hout.
 		        * discriminate.
 			        * discriminate.
-		      + discriminate.
+		      * discriminate.
 			      + discriminate.
 			      + discriminate.
+              + discriminate.
               + discriminate.
 			      + destruct p as [x | p | p f].
         * destruct (ctx_lookup_b x Γ) as [[Tx bx] |] eqn:Hlookup; [|discriminate].

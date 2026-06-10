@@ -126,6 +126,9 @@ Inductive runtime_rootless_ty (env : global_env) : Ty -> Prop :=
   | RRT_TypeForall : forall u n bounds body,
       runtime_rootless_ty env body ->
       runtime_rootless_ty env (MkTy u (TTypeForall n bounds body))
+  | RRT_Assoc : forall u for_ty trait_name trait_args assoc_name,
+      runtime_rootless_ty env for_ty ->
+      runtime_rootless_ty env (MkTy u (TAssoc for_ty trait_name trait_args assoc_name))
 with runtime_rootless_fields
     (env : global_env) : list lifetime -> list Ty -> list field_def -> Prop :=
   | RRF_Nil : forall lts args,
@@ -229,6 +232,8 @@ Proof.
 	      eapply ty_lifetime_equiv_runtime_rootless_actual; eassumption.
 	    + apply RRT_TypeForall.
 	      eapply ty_lifetime_equiv_runtime_rootless_actual; eassumption.
+	    + apply RRT_Assoc.
+	      eapply ty_lifetime_equiv_runtime_rootless_actual; eassumption.
 	  - intros env lts_actual lts_expected args_actual args_expected fdefs
       Hargs Hfields.
     induction Hfields.
@@ -266,7 +271,8 @@ Proof.
   destruct T as [u core].
   destruct core as
     [| | | | named | tparam | name lts args | name lts args | params ret
-     | env_lt params ret | n Ω body | tn tbounds tbody | la rk inner];
+     | env_lt params ret | n Ω body | tn tbounds tbody
+     | for_ty trait_name trait_args assoc_name | la rk inner];
     simpl in *; try discriminate.
   - constructor.
   - constructor.
@@ -303,6 +309,8 @@ Proof.
   - constructor.
   - apply RRT_Forall. apply IH. exact Hfree.
   - apply RRT_TypeForall. apply IH. exact Hfree.
+  - apply andb_true_iff in Hfree as [Hfor _Hargs].
+    apply RRT_Assoc. apply IH. exact Hfor.
 Qed.
 
 Lemma capture_ref_free_ty_b_runtime_rootless :

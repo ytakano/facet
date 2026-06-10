@@ -119,6 +119,16 @@ Fixpoint ty_eqb (T1 T2 : Ty) {struct T1} : bool :=
              | _, _ => false
              end) bs1 bs2 &&
           ty_eqb b1 b2
+      | TAssoc for1 trait1 args1 assoc1, TAssoc for2 trait2 args2 assoc2 =>
+          ty_eqb for1 for2 &&
+          String.eqb trait1 trait2 &&
+          (fix go_args (l1 l2 : list Ty) : bool :=
+             match l1, l2 with
+             | [], [] => true
+             | t1 :: l1', t2 :: l2' => ty_eqb t1 t2 && go_args l1' l2'
+             | _, _ => false
+             end) args1 args2 &&
+          String.eqb assoc1 assoc2
       | TRef l1 k1 t1, TRef l2 k2 t2 =>
           lifetime_eqb l1 l2 && ref_kind_eqb k1 k2 && ty_eqb t1 t2
       | _, _ => false
@@ -193,6 +203,16 @@ Definition ty_core_eqb (c1 c2 : TypeCore Ty) : bool :=
          | _, _ => false
          end) bs1 bs2 &&
       ty_eqb b1 b2
+  | TAssoc for1 trait1 args1 assoc1, TAssoc for2 trait2 args2 assoc2 =>
+      ty_eqb for1 for2 &&
+      String.eqb trait1 trait2 &&
+      (fix go_args (l1 l2 : list Ty) : bool :=
+         match l1, l2 with
+         | [], [] => true
+         | t1 :: l1', t2 :: l2' => ty_eqb t1 t2 && go_args l1' l2'
+         | _, _ => false
+         end) args1 args2 &&
+      String.eqb assoc1 assoc2
   | TRef l1 k1 t1, TRef l2 k2 t2 =>
       lifetime_eqb l1 l2 && ref_kind_eqb k1 k2 && ty_eqb t1 t2
   | _, _ => false
@@ -228,6 +248,13 @@ Fixpoint ty_depth (T : Ty) : nat :=
                 | [] => 0
                 | t :: l' => S (ty_depth t) + go l'
                 end) args)
+      | TAssoc for_ty _ trait_args _ =>
+          S (ty_depth for_ty +
+             (fix go_args (args : list Ty) : nat :=
+                match args with
+                | [] => 0
+                | arg :: args' => S (ty_depth arg) + go_args args'
+                end) trait_args)
       | TRef _ _ t => S (ty_depth t)
       | TForall _ Ω body => S (List.length Ω + ty_depth body)
       | TTypeForall _ bounds body =>
@@ -366,6 +393,11 @@ Inductive capture_ref_free_ty (env : global_env) : Ty -> Prop :=
   | CRFT_TypeForall : forall u n bounds body,
       capture_ref_free_ty env body ->
       capture_ref_free_ty env (MkTy u (TTypeForall n bounds body))
+  | CRFT_Assoc : forall u for_ty trait_name trait_args assoc_name,
+      capture_ref_free_ty env for_ty ->
+      Forall (capture_ref_free_ty env) trait_args ->
+      capture_ref_free_ty env
+        (MkTy u (TAssoc for_ty trait_name trait_args assoc_name))
   .
 
 Fixpoint capture_ref_free_ty_b_fuel
@@ -407,6 +439,9 @@ Fixpoint capture_ref_free_ty_b_fuel
           capture_ref_free_ty_b_fuel fuel' env body
       | MkTy _ (TTypeForall _ bounds body) =>
           capture_ref_free_ty_b_fuel fuel' env body
+      | MkTy _ (TAssoc for_ty _ trait_args _) =>
+          capture_ref_free_ty_b_fuel fuel' env for_ty &&
+          forallb (capture_ref_free_ty_b_fuel fuel' env) trait_args
       | MkTy _ (TRef _ _ _) => false
       | MkTy _ (TNamed _) => false
       | MkTy _ (TParam _) => false
@@ -437,7 +472,8 @@ Proof.
   destruct T as [u core].
   destruct core as
     [| | | | named | tparam | name lts args | name lts args | params ret
-     | env_lt params ret | n Ω body | tn tbounds tbody | la rk inner];
+     | env_lt params ret | n Ω body | tn tbounds tbody
+     | for_ty trait_name trait_args assoc_name | la rk inner];
     simpl in *; try discriminate.
   - constructor.
   - constructor.
@@ -472,6 +508,10 @@ Proof.
     + apply IH. exact Hret.
   - apply CRFT_Forall. apply IH. exact Hfree.
   - apply CRFT_TypeForall. apply IH. exact Hfree.
+  - apply andb_true_iff in Hfree as [Hfor Hargs].
+    eapply CRFT_Assoc.
+    + apply IH. exact Hfor.
+    + apply Hlist. exact Hargs.
 Qed.
 
 Lemma capture_ref_free_ty_b_sound :
@@ -507,6 +547,8 @@ Proof.
     rewrite (Hlist _ Hargs), (IH env t Hret). reflexivity.
   - apply (IH env t). exact Hfree.
   - apply (IH env t). exact Hfree.
+  - apply andb_true_iff in Hfree as [Hfor Hargs].
+    rewrite (IH env t Hfor), (Hlist _ Hargs). reflexivity.
 Qed.
 
 Lemma capture_ref_free_ty_b_ty_ref_free :

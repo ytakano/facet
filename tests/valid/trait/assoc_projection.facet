@@ -1,0 +1,19 @@
+trait Iterator {
+  type Item;
+}
+
+struct Counter {
+  value: unrestricted isize
+}
+
+impl Iterator for unrestricted Counter {
+  type Item = isize;
+}
+
+fn accept_item(x: unrestricted <unrestricted Counter as Iterator>::Item) -> unrestricted () {
+  ()
+}
+
+fn main() -> unrestricted () {
+  ()
+}

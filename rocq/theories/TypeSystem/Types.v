@@ -39,6 +39,7 @@ Inductive TypeCore (A : Type) : Type :=
 | TClosure  : lifetime -> list A -> A -> TypeCore A
 | TForall   : nat -> outlives_ctx -> A -> TypeCore A
 | TTypeForall : nat -> list (core_trait_bound A) -> A -> TypeCore A
+| TAssoc   : A -> string -> list A -> string -> TypeCore A
 | TRef      : lifetime -> ref_kind -> A -> TypeCore A.
 
 Arguments TUnits {A}.
@@ -53,6 +54,7 @@ Arguments TFn {A} _ _.
 Arguments TClosure {A} _ _ _.
 Arguments TForall {A} _ _ _.
 Arguments TTypeForall {A} _ _ _.
+Arguments TAssoc {A} _ _ _ _.
 Arguments TRef {A} _ _ _.
 
 Inductive Ty : Type :=
@@ -158,6 +160,9 @@ Fixpoint apply_lt_ty (σ : list lifetime) (T : Ty) {struct T} : Ty :=
       MkTy u (TTypeForall n
         (map (map_core_trait_bound (apply_lt_ty σ)) bounds)
         (apply_lt_ty σ body))
+  | MkTy u (TAssoc for_ty trait_name trait_args assoc_name) =>
+      MkTy u (TAssoc (apply_lt_ty σ for_ty) trait_name
+        (map (apply_lt_ty σ) trait_args) assoc_name)
   | MkTy u (TRef l rk t) =>
       MkTy u (TRef (apply_lt_lifetime σ l) rk (apply_lt_ty σ t))
   end.
@@ -232,6 +237,9 @@ Fixpoint map_lifetimes_ty
         (map_lifetimes_ty f body))
   | MkTy u (TTypeForall n bounds body) =>
       MkTy u (TTypeForall n bounds (map_lifetimes_ty f body))
+  | MkTy u (TAssoc for_ty trait_name trait_args assoc_name) =>
+      MkTy u (TAssoc (map_lifetimes_ty f for_ty) trait_name
+        (map (map_lifetimes_ty f) trait_args) assoc_name)
   | MkTy u (TRef l rk t) =>
       MkTy u (TRef (f l) rk (map_lifetimes_ty f t))
   end.
@@ -253,7 +261,8 @@ Proof.
   fix IH 1.
   intros [u core].
   destruct core as [| | | | s | i | s lts args | s lts args
-                   | ts r | l ts r | n o body | n bounds body | l rk t];
+                   | ts r | l ts r | n o body | n bounds body
+                   | for_ty trait_name trait_args assoc_name | l rk t];
     simpl; try reflexivity.
   - assert (Hlts : map (close_fn_lifetime 0) lts = lts).
     { induction lts as [| lt lts IHlts]; simpl.
@@ -308,6 +317,10 @@ Proof.
       - rewrite !close_fn_lifetime_0, IHrest. reflexivity. }
     rewrite Hbounds, IH. reflexivity.
   - rewrite IH. reflexivity.
+  - assert (Hargs : map (map_lifetimes_ty (close_fn_lifetime 0)) trait_args = trait_args).
+    { induction trait_args as [| T Ts IHTs]; simpl; try reflexivity.
+      rewrite IH, IHTs. reflexivity. }
+    rewrite IH, Hargs. reflexivity.
   - rewrite close_fn_lifetime_0, IH. reflexivity.
 Qed.
 
@@ -370,6 +383,8 @@ Fixpoint contains_lbound_ty (T : Ty) : bool :=
              (fun tr => existsb contains_lbound_ty (core_trait_ref_args Ty tr))
              (core_bound_traits Ty b))
         bounds || contains_lbound_ty body
+  | MkTy _ (TAssoc for_ty _ trait_args _) =>
+      contains_lbound_ty for_ty || existsb contains_lbound_ty trait_args
   | MkTy _ (TRef l _ t) =>
       contains_lbound_lifetime l || contains_lbound_ty t
   | _ => false
@@ -389,6 +404,8 @@ Fixpoint ty_ref_free_b (T : Ty) : bool :=
       ty_ref_free_b body
   | MkTy _ (TTypeForall _ bounds body) =>
       ty_ref_free_b body
+  | MkTy _ (TAssoc for_ty _ trait_args _) =>
+      ty_ref_free_b for_ty && forallb ty_ref_free_b trait_args
   | MkTy _ (TRef _ _ _) =>
       false
   | _ => true

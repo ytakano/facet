@@ -182,8 +182,11 @@ Fixpoint type_env_wf_b
 	      outlives_wf_b lt_params (n + bound_depth) Ω &&
 	      type_env_wf_b structs ty_params lt_params (n + bound_depth) body
 	  | MkTy _ (TTypeForall n _ body) =>
-	      type_env_wf_b structs (n + ty_params) lt_params bound_depth body
-	  | MkTy _ (TRef l _ inner) =>
+      type_env_wf_b structs (n + ty_params) lt_params bound_depth body
+  | MkTy _ (TAssoc for_ty _ trait_args _) =>
+      type_env_wf_b structs ty_params lt_params bound_depth for_ty &&
+      forallb (type_env_wf_b structs ty_params lt_params bound_depth) trait_args
+  | MkTy _ (TRef l _ inner) =>
       lifetime_wf_b lt_params bound_depth l &&
       type_env_wf_b structs ty_params lt_params bound_depth inner
   end.
@@ -236,7 +239,10 @@ Fixpoint used_type_params_ty (T : Ty) : list nat :=
 	      in go args
 	  | MkTy _ (TForall _ _ body) => used_type_params_ty body
 	  | MkTy _ (TTypeForall _ _ body) => used_type_params_ty body
-	  | MkTy _ (TRef _ _ inner) => used_type_params_ty inner
+  | MkTy _ (TAssoc for_ty _ trait_args _) =>
+      used_type_params_ty for_ty ++
+      fold_right (fun T acc => used_type_params_ty T ++ acc) [] trait_args
+  | MkTy _ (TRef _ _ inner) => used_type_params_ty inner
   | _ => []
   end.
 
@@ -289,7 +295,10 @@ Fixpoint used_lifetime_vars_ty (T : Ty) : list nat :=
 	      in go args
 	  | MkTy _ (TForall _ _ body) => used_lifetime_vars_ty body
 	  | MkTy _ (TTypeForall _ _ body) => used_lifetime_vars_ty body
-	  | MkTy _ (TRef (LVar i) _ inner) => i :: used_lifetime_vars_ty inner
+  | MkTy _ (TAssoc for_ty _ trait_args _) =>
+      used_lifetime_vars_ty for_ty ++
+      fold_right (fun T acc => used_lifetime_vars_ty T ++ acc) [] trait_args
+  | MkTy _ (TRef (LVar i) _ inner) => i :: used_lifetime_vars_ty inner
   | MkTy _ (TRef _ _ inner) => used_lifetime_vars_ty inner
   | _ => []
   end.

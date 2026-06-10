@@ -584,6 +584,12 @@ and pp_ty_core = function
       (List.init (Big_int_Z.int_of_big_int n)
          (fun i -> "T" ^ string_of_int i)) ^
     "> " ^ pp_ty body
+  | TAssoc (for_ty, trait_name, trait_args, assoc_name) ->
+    let trait =
+      if trait_args = [] then trait_name
+      else Printf.sprintf "%s<%s>" trait_name (String.concat ", " (List.map pp_ty trait_args))
+    in
+    Printf.sprintf "<%s as %s>::%s" (pp_ty for_ty) trait assoc_name
   | TRef (_, RShared, t) -> "& " ^ pp_ty t
   | TRef (_, RUnique, t) -> "&mut " ^ pp_ty t
 

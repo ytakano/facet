@@ -12,9 +12,8 @@ validity checks belong in Rocq and the extracted checker.
 Completed:
 
 - Trait and impl item block syntax is accepted by the OCaml frontend while
-  preserving existing marker forms:
-  `trait Show;`, `trait Show {}`, `impl Show for T;`, and
-  `impl Show for T {}`.
+  preserving existing marker forms: `trait Show;`, `trait Show {}`,
+  `impl Show for T;`, and `impl Show for T {}`.
 - Trait blocks can carry associated type declarations and method signatures in
   the surface AST.
 - Impl blocks can carry associated type definitions and method bodies in the
@@ -23,16 +22,19 @@ Completed:
   declarations/definitions are represented in the extracted environment.
 - Impl associated type definitions are validated against the selected trait:
   missing, extra, and duplicate definitions are rejected.
-- Method items are still kept only in the surface AST until projection and
-  method typing are introduced.
+- Associated type projections have syntax, lowering, core representation, type
+  traversal support, extraction, OCaml validation, and printer coverage:
+  `<Ty as Trait>::Assoc` and `Self::Assoc`.
+- Method items are still kept only in the surface AST until method typing is
+  introduced.
 
-Key temporary limitation: method signatures/bodies that mention `Self` or
-`Self::Assoc` are parsed but not lowered into Rocq method items yet. This is
-intentional until associated type projection exists.
+Key temporary limitation: associated type projections are represented and
+validated structurally, but concrete projection normalization through impl
+associated type definitions is still pending.
 
 ## Remaining Roadmap 1-3 Tasks
 
-1. Lower and validate trait methods after projection types exist.
+1. Lower and validate trait methods.
    - Add core representation for method signatures that can mention `Self` and
      associated type projections.
    - Lower trait method signatures from the surface AST into Rocq.
@@ -40,18 +42,17 @@ intentional until associated type projection exists.
    - Keep method bodies unresolved until UFCS method resolution can target them.
 
 2. Add parenthesized UFCS trait method calls.
-   - Use Facet call syntax: `(<Ty as Trait>::method receiver args...)` and
-     `(Trait::method receiver args...)`.
-   - Treat the qualified method path as the callee and the receiver as the
-     first ordinary argument.
+   - Match Facet's ordinary function call shape: `(callee arg...)`.
+   - Use qualified method callees: `(Trait::method receiver args...)` and
+     `(<Ty as Trait>::method receiver args...)`.
+   - Treat the receiver as the first ordinary argument; do not introduce a dot
+     method-call form in this phase.
    - Resolve calls through a unique impl or local bound in Rocq, then elaborate
      to an ordinary resolved call or an explicit resolved core trait-call form.
    - Reject missing impls, ambiguous impls, missing methods, wrong arity, and
      receiver usage violations.
 
-3. Add associated type projection.
-   - Add type syntax and core representation for `<Ty as Trait>::Assoc` and
-     `Self::Assoc`.
+3. Normalize associated type projections.
    - Normalize concrete projections through the selected impl definition.
    - Preserve generic projections such as `<T as Trait>::Assoc` under local
      bounds.

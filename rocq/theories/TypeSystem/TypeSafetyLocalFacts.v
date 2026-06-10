@@ -42,7 +42,8 @@ Proof.
   fix IH 1.
   intros [u core].
   destruct core as [| | | | s | i | s lts args | s lts args
-                   | ts r | l ts r | n o body | n bounds body | l rk t];
+                   | ts r | l ts r | n o body | n bounds body
+                   | for_ty trait_name trait_args assoc_name | l rk t];
     cbn [apply_lt_ty]; try reflexivity.
   - assert (Hlts : map (apply_lt_lifetime []) lts = lts).
     { induction lts as [| lt lts IHl]; cbn [map].
@@ -116,7 +117,12 @@ Proof.
 			              MkCoreTraitBound Ty idx refs :: bs).
 			      rewrite Hrefs. f_equal. exact IHbs. }
 		    rewrite Hbounds. rewrite IH. reflexivity.
-	  - rewrite apply_lt_lifetime_nil_ts. rewrite IH. reflexivity.
+  - rewrite IH.
+    assert (Hargs : map (apply_lt_ty []) trait_args = trait_args).
+    { induction trait_args as [| T Ts IHTs]; cbn [map]; try reflexivity.
+      rewrite IH, IHTs. reflexivity. }
+    rewrite Hargs. reflexivity.
+  - rewrite apply_lt_lifetime_nil_ts. rewrite IH. reflexivity.
 Qed.
 
 Lemma NoDup_app_remove_middle_ts : forall (xs ys zs : list ident),

@@ -53,6 +53,13 @@ Inductive ty_lifetime_equiv : Ty -> Ty -> Prop :=
       ty_lifetime_equiv
         (MkTy u (TTypeForall n bounds_actual body_actual))
         (MkTy u (TTypeForall n bounds_expected body_expected))
+  | TLE_Assoc : forall u for_actual for_expected trait_name
+      args_actual args_expected assoc_name,
+      ty_lifetime_equiv for_actual for_expected ->
+      Forall2 ty_lifetime_equiv args_actual args_expected ->
+      ty_lifetime_equiv
+        (MkTy u (TAssoc for_actual trait_name args_actual assoc_name))
+        (MkTy u (TAssoc for_expected trait_name args_expected assoc_name))
   | TLE_Ref : forall u l_actual l_expected rk T_actual T_expected,
       ty_lifetime_equiv T_actual T_expected ->
       ty_lifetime_equiv
@@ -108,6 +115,16 @@ Fixpoint ty_lifetime_equiv_refl (T : Ty) : ty_lifetime_equiv T T :=
       TLE_Forall u n Ω Ω body body (ty_lifetime_equiv_refl body)
   | MkTy u (TTypeForall n bounds body) =>
       TLE_TypeForall u n bounds bounds body body (ty_lifetime_equiv_refl body)
+  | MkTy u (TAssoc for_ty trait_name trait_args assoc_name) =>
+      let fix go (xs : list Ty) : Forall2 ty_lifetime_equiv xs xs :=
+        match xs with
+        | [] => @Forall2_nil Ty Ty ty_lifetime_equiv
+        | x :: xs' => @Forall2_cons Ty Ty ty_lifetime_equiv x x xs' xs'
+            (ty_lifetime_equiv_refl x) (go xs')
+        end
+      in
+      TLE_Assoc u for_ty for_ty trait_name trait_args trait_args assoc_name
+        (ty_lifetime_equiv_refl for_ty) (go trait_args)
   | MkTy u (TRef l rk Tinner) =>
       TLE_Ref u l l rk Tinner Tinner (ty_lifetime_equiv_refl Tinner)
   end.
@@ -133,6 +150,14 @@ Proof.
   - eapply IH; eassumption.
   - eapply IH; eassumption.
   - eapply IH; eassumption.
+  - eapply IH; eassumption.
+  - match goal with
+    | Hleft : Forall2 ty_lifetime_equiv ?xs ?ys,
+      Hright : Forall2 ty_lifetime_equiv ?ys ?zs
+      |- Forall2 ty_lifetime_equiv ?xs ?zs =>
+        revert zs Hright; induction Hleft; intros zs Hright;
+          inversion Hright; subst; constructor; eauto
+    end.
   - eapply IH; eassumption.
 Qed.
 
@@ -284,6 +309,19 @@ Fixpoint ty_lifetime_equiv_apply_lt_ty
         (map (map_core_trait_bound (apply_lt_ty σ)) bounds)
         body (apply_lt_ty σ body)
         (ty_lifetime_equiv_apply_lt_ty σ body)
+  | MkTy u (TAssoc for_ty trait_name trait_args assoc_name) =>
+      let fix go (xs : list Ty)
+          : Forall2 ty_lifetime_equiv xs (map (apply_lt_ty σ) xs) :=
+        match xs with
+        | [] => @Forall2_nil Ty Ty ty_lifetime_equiv
+        | x :: xs' => @Forall2_cons Ty Ty ty_lifetime_equiv
+            x (apply_lt_ty σ x) xs' (map (apply_lt_ty σ) xs')
+            (ty_lifetime_equiv_apply_lt_ty σ x) (go xs')
+        end
+      in
+      TLE_Assoc u for_ty (apply_lt_ty σ for_ty) trait_name
+        trait_args (map (apply_lt_ty σ) trait_args) assoc_name
+        (ty_lifetime_equiv_apply_lt_ty σ for_ty) (go trait_args)
   | MkTy u (TRef l rk Tinner) =>
       TLE_Ref u l (apply_lt_lifetime σ l) rk
         Tinner (apply_lt_ty σ Tinner)
@@ -325,6 +363,9 @@ Proof.
     + apply IH. exact Heq.
   - constructor. apply IH. exact Heq.
   - constructor. apply IH. exact Heq.
+  - constructor.
+    + apply IH. exact Heq.
+    + induction H; constructor; eauto.
   - constructor. apply IH. exact Heq.
 Qed.
 
@@ -534,6 +575,27 @@ Fixpoint ty_lifetime_equiv_apply_lt_ty_two
         (apply_lt_ty σ_actual body)
         (apply_lt_ty σ_expected body)
         (ty_lifetime_equiv_apply_lt_ty_two σ_actual σ_expected body)
+  | MkTy u (TAssoc for_ty trait_name trait_args assoc_name) =>
+      let fix go (xs : list Ty)
+          : Forall2 ty_lifetime_equiv
+              (map (apply_lt_ty σ_actual) xs)
+              (map (apply_lt_ty σ_expected) xs) :=
+        match xs with
+        | [] => @Forall2_nil Ty Ty ty_lifetime_equiv
+        | x :: xs' => @Forall2_cons Ty Ty ty_lifetime_equiv
+            (apply_lt_ty σ_actual x) (apply_lt_ty σ_expected x)
+            (map (apply_lt_ty σ_actual) xs')
+            (map (apply_lt_ty σ_expected) xs')
+            (ty_lifetime_equiv_apply_lt_ty_two σ_actual σ_expected x)
+            (go xs')
+        end
+      in
+      TLE_Assoc u (apply_lt_ty σ_actual for_ty)
+        (apply_lt_ty σ_expected for_ty) trait_name
+        (map (apply_lt_ty σ_actual) trait_args)
+        (map (apply_lt_ty σ_expected) trait_args) assoc_name
+        (ty_lifetime_equiv_apply_lt_ty_two σ_actual σ_expected for_ty)
+        (go trait_args)
   | MkTy u (TRef l rk Tinner) =>
       TLE_Ref u (apply_lt_lifetime σ_actual l)
         (apply_lt_lifetime σ_expected l) rk
@@ -678,6 +740,12 @@ Proof.
   - apply TLE_Closure.
     + induction H; simpl; constructor; eauto.
     + eapply IH; eassumption.
+  - apply TLE_Assoc.
+    + eapply IH; eassumption.
+    + match goal with
+      | Hlist : Forall2 ty_lifetime_equiv _ _ |- _ =>
+          induction Hlist; simpl; constructor; eauto
+      end.
 Qed.
 
 Lemma instantiate_struct_field_ty_lifetime_equiv :

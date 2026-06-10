@@ -236,6 +236,9 @@ Fixpoint subst_type_params_ty (σ : list Ty) (T : Ty) {struct T} : Ty :=
       MkTy u (TForall n Ω (subst_type_params_ty σ body))
   | MkTy u (TTypeForall n bounds body) =>
       MkTy u (TTypeForall n bounds body)
+  | MkTy u (TAssoc for_ty trait_name trait_args assoc_name) =>
+      MkTy u (TAssoc (subst_type_params_ty σ for_ty) trait_name
+        (map (subst_type_params_ty σ) trait_args) assoc_name)
   | MkTy u (TRef l rk inner) =>
       MkTy u (TRef l rk (subst_type_params_ty σ inner))
   end.
@@ -394,6 +397,10 @@ Proof.
     + simpl in *. rewrite (IH T0). injection IHTs as Hparams Hret.
       rewrite Hparams, Hret. reflexivity.
   - rewrite (IH t). reflexivity.
+  - assert (Hargs : map (subst_type_params_ty []) l = l).
+    { induction l as [| T0 Ts IHTs]; simpl; try reflexivity.
+      rewrite (IH T0), IHTs. reflexivity. }
+    rewrite (IH t), Hargs. reflexivity.
   - rewrite (IH t). reflexivity.
 Qed.
 
@@ -614,6 +621,12 @@ Proof.
     + simpl in *. rewrite (IH T0). injection IHTs as Hparams Hret.
       rewrite Hparams, Hret. reflexivity.
   - simpl. rewrite (IH t). reflexivity.
+  - simpl. assert (Hargs :
+      map (subst_type_params_ty σ) (map (subst_type_params_ty τ) l) =
+      map (subst_type_params_ty (compose_type_params σ τ)) l).
+    { induction l as [| T0 Ts IHTs]; simpl; try reflexivity.
+      rewrite (IH T0), IHTs. reflexivity. }
+    rewrite (IH t), Hargs. reflexivity.
   - simpl. rewrite (IH t). reflexivity.
 Qed.
 
@@ -705,6 +718,13 @@ Proof.
     + simpl in *. rewrite (IH T0). injection IHTs as Hparams Hret.
       rewrite Hparams, Hret. reflexivity.
   - simpl. rewrite (IH t). reflexivity.
+  - simpl. assert (Hargs :
+      map (apply_lt_ty σ) (map (subst_type_params_ty type_args) l) =
+      map (subst_type_params_ty (map (apply_lt_ty σ) type_args))
+        (map (apply_lt_ty σ) l)).
+    { induction l as [| T0 Ts IHTs]; simpl; try reflexivity.
+      rewrite (IH T0), IHTs. reflexivity. }
+    rewrite (IH t), Hargs. reflexivity.
   - simpl. rewrite (IH t). reflexivity.
 Qed.
 
@@ -867,6 +887,16 @@ Fixpoint ty_eqb_decl (T1 T2 : Ty) {struct T1} : bool :=
              | _, _ => false
              end) bs1 bs2 &&
           ty_eqb_decl b1 b2
+      | TAssoc for1 trait1 args1 assoc1, TAssoc for2 trait2 args2 assoc2 =>
+          ty_eqb_decl for1 for2 &&
+          String.eqb trait1 trait2 &&
+          (fix go (xs ys : list Ty) : bool :=
+             match xs, ys with
+             | [], [] => true
+             | x :: xs', y :: ys' => ty_eqb_decl x y && go xs' ys'
+             | _, _ => false
+             end) args1 args2 &&
+          String.eqb assoc1 assoc2
       | TRef l1 rk1 t1, TRef l2 rk2 t2 =>
           lifetime_eqb l1 l2 && ref_kind_eqb_decl rk1 rk2 && ty_eqb_decl t1 t2
       | _, _ => false
@@ -989,6 +1019,13 @@ Fixpoint match_ty
                    (MkTy UUnrestricted (TTypeForall n2 bs2 b2))
               then Some st
               else None
+          | TAssoc for1 trait1 args1 assoc1, TAssoc for2 trait2 args2 assoc2 =>
+              if String.eqb trait1 trait2 && String.eqb assoc1 assoc2
+              then match match_ty ty_params lt_params fuel' for1 for2 st with
+                   | Some st' => match_tys ty_params lt_params fuel' args1 args2 st'
+                   | None => None
+                   end
+              else None
           | TRef l1 rk1 t1, TRef l2 rk2 t2 =>
               if ref_kind_eqb_decl rk1 rk2
               then match match_lifetime lt_params l1 l2 st with
@@ -1029,6 +1066,9 @@ Fixpoint ty_match_fuel (T : Ty) : nat :=
   | MkTy _ (TForall _ Ω body) => S (List.length Ω + ty_match_fuel body)
   | MkTy _ (TTypeForall _ bounds body) =>
       S (List.length bounds + ty_match_fuel body)
+  | MkTy _ (TAssoc for_ty _ trait_args _) =>
+      S (ty_match_fuel for_ty +
+        fold_right (fun T acc => ty_match_fuel T + acc) 0 trait_args)
   | MkTy _ (TRef _ _ inner) => S (ty_match_fuel inner)
   | _ => 1
   end.

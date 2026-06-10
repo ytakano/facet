@@ -644,6 +644,7 @@ type 'a typeCore =
 | TClosure of lifetime * 'a list * 'a
 | TForall of Big_int_Z.big_int * outlives_ctx * 'a
 | TTypeForall of Big_int_Z.big_int * 'a core_trait_bound list * 'a
+| TAssoc of 'a * string * 'a list * string
 | TRef of lifetime * ref_kind * 'a
 
 type ty =
@@ -749,6 +750,9 @@ let rec apply_lt_ty _UU03c3_ = function
      MkTy (u, (TTypeForall (n,
        (map (map_core_trait_bound (apply_lt_ty _UU03c3_)) bounds),
        (apply_lt_ty _UU03c3_ body))))
+   | TAssoc (for_ty, trait_name0, trait_args, assoc_name) ->
+     MkTy (u, (TAssoc ((apply_lt_ty _UU03c3_ for_ty), trait_name0,
+       (map (apply_lt_ty _UU03c3_) trait_args), assoc_name)))
    | TRef (l, rk, t1) ->
      MkTy (u, (TRef ((apply_lt_lifetime _UU03c3_ l), rk,
        (apply_lt_ty _UU03c3_ t1))))
@@ -797,6 +801,9 @@ let rec map_lifetimes_ty f = function
        (map_lifetimes_ty f body))))
    | TTypeForall (n, bounds, body) ->
      MkTy (u, (TTypeForall (n, bounds, (map_lifetimes_ty f body))))
+   | TAssoc (for_ty, trait_name0, trait_args, assoc_name) ->
+     MkTy (u, (TAssoc ((map_lifetimes_ty f for_ty), trait_name0,
+       (map (map_lifetimes_ty f) trait_args), assoc_name)))
    | TRef (l, rk, t1) -> MkTy (u, (TRef ((f l), rk, (map_lifetimes_ty f t1))))
    | x -> MkTy (u, x))
 
@@ -877,6 +884,8 @@ let rec contains_lbound_ty = function
            b.core_bound_traits)
          bounds)
        (contains_lbound_ty body)
+   | TAssoc (for_ty, _, trait_args, _) ->
+     (||) (contains_lbound_ty for_ty) (existsb contains_lbound_ty trait_args)
    | TRef (l, _, t1) ->
      (||) (contains_lbound_lifetime l) (contains_lbound_ty t1)
    | _ -> false)
@@ -1256,6 +1265,9 @@ let rec subst_type_params_ty _UU03c3_ = function
      MkTy (u, (TClosure (env, (go ps), (subst_type_params_ty _UU03c3_ r))))
    | TForall (n, _UU03a9_, body) ->
      MkTy (u, (TForall (n, _UU03a9_, (subst_type_params_ty _UU03c3_ body))))
+   | TAssoc (for_ty, trait_name0, trait_args, assoc_name) ->
+     MkTy (u, (TAssoc ((subst_type_params_ty _UU03c3_ for_ty), trait_name0,
+       (map (subst_type_params_ty _UU03c3_) trait_args), assoc_name)))
    | TRef (l, rk, inner) ->
      MkTy (u, (TRef (l, rk, (subst_type_params_ty _UU03c3_ inner))))
    | x -> MkTy (u, x))
@@ -1586,6 +1598,23 @@ let rec ty_eqb_decl t1 t2 =
                in go_bounds bs1 bs2))
             (ty_eqb_decl b1 b2)
         | _ -> false)
+     | TAssoc (for1, trait1, args1, assoc1) ->
+       (match c2 with
+        | TAssoc (for2, trait2, args2, assoc2) ->
+          (&&)
+            ((&&) ((&&) (ty_eqb_decl for1 for2) ((=) trait1 trait2))
+              (let rec go xs ys =
+                 match xs with
+                 | [] -> (match ys with
+                          | [] -> true
+                          | _ :: _ -> false)
+                 | x :: xs' ->
+                   (match ys with
+                    | [] -> false
+                    | y :: ys' -> (&&) (ty_eqb_decl x y) (go xs' ys'))
+               in go args1 args2))
+            ((=) assoc1 assoc2)
+        | _ -> false)
      | TRef (l1, rk1, t3) ->
        (match c2 with
         | TRef (l2, rk2, t4) ->
@@ -1762,6 +1791,16 @@ let rec match_ty ty_params lt_params fuel pattern actual st =
                   then Some st
                   else None
                 | _ -> None)
+             | TAssoc (for1, trait1, args1, assoc1) ->
+               (match c_a with
+                | TAssoc (for2, trait2, args2, assoc2) ->
+                  if (&&) ((=) trait1 trait2) ((=) assoc1 assoc2)
+                  then (match match_ty ty_params lt_params fuel' for1 for2 st with
+                        | Some st' ->
+                          match_tys ty_params lt_params fuel' args1 args2 st'
+                        | None -> None)
+                  else None
+                | _ -> None)
              | TRef (l1, rk1, t1) ->
                (match c_a with
                 | TRef (l2, rk2, t2) ->
@@ -1821,6 +1860,11 @@ let rec ty_match_fuel = function
      Big_int_Z.succ_big_int (add (length _UU03a9_) (ty_match_fuel body))
    | TTypeForall (_, bounds, body) ->
      Big_int_Z.succ_big_int (add (length bounds) (ty_match_fuel body))
+   | TAssoc (for_ty, _, trait_args, _) ->
+     Big_int_Z.succ_big_int
+       (add (ty_match_fuel for_ty)
+         (fold_right (fun t1 acc -> add (ty_match_fuel t1) acc)
+           Big_int_Z.zero_big_int trait_args))
    | TRef (_, _, inner) -> Big_int_Z.succ_big_int (ty_match_fuel inner)
    | _ -> Big_int_Z.succ_big_int Big_int_Z.zero_big_int)
 
@@ -2881,6 +2925,23 @@ let rec ty_eqb t1 t2 =
                in go_bounds bs1 bs2))
             (ty_eqb b1 b2)
         | _ -> false)
+     | TAssoc (for1, trait1, args1, assoc1) ->
+       (match c2 with
+        | TAssoc (for2, trait2, args2, assoc2) ->
+          (&&)
+            ((&&) ((&&) (ty_eqb for1 for2) ((=) trait1 trait2))
+              (let rec go_args l1 l2 =
+                 match l1 with
+                 | [] -> (match l2 with
+                          | [] -> true
+                          | _ :: _ -> false)
+                 | t3 :: l1' ->
+                   (match l2 with
+                    | [] -> false
+                    | t4 :: l2' -> (&&) (ty_eqb t3 t4) (go_args l1' l2'))
+               in go_args args1 args2))
+            ((=) assoc1 assoc2)
+        | _ -> false)
      | TRef (l1, k1, t3) ->
        (match c2 with
         | TRef (l2, k2, t4) ->
@@ -3028,6 +3089,23 @@ let ty_core_eqb c1 c2 =
             in go_bounds bs1 bs2))
          (ty_eqb b1 b2)
      | _ -> false)
+  | TAssoc (for1, trait1, args1, assoc1) ->
+    (match c2 with
+     | TAssoc (for2, trait2, args2, assoc2) ->
+       (&&)
+         ((&&) ((&&) (ty_eqb for1 for2) ((=) trait1 trait2))
+           (let rec go_args l1 l2 =
+              match l1 with
+              | [] -> (match l2 with
+                       | [] -> true
+                       | _ :: _ -> false)
+              | t1 :: l1' ->
+                (match l2 with
+                 | [] -> false
+                 | t2 :: l2' -> (&&) (ty_eqb t1 t2) (go_args l1' l2'))
+            in go_args args1 args2))
+         ((=) assoc1 assoc2)
+     | _ -> false)
   | TRef (l1, k1, t1) ->
     (match c2 with
      | TRef (l2, k2, t2) ->
@@ -3088,6 +3166,14 @@ let rec ty_depth = function
                in go_refs b.core_bound_traits)
               (go_bounds bs')
           in go_bounds bounds))
+   | TAssoc (for_ty, _, trait_args, _) ->
+     Big_int_Z.succ_big_int
+       (add (ty_depth for_ty)
+         (let rec go_args = function
+          | [] -> Big_int_Z.zero_big_int
+          | arg :: args' ->
+            add (Big_int_Z.succ_big_int (ty_depth arg)) (go_args args')
+          in go_args trait_args))
    | TRef (_, _, t0) -> Big_int_Z.succ_big_int (ty_depth t0)
    | _ -> Big_int_Z.succ_big_int Big_int_Z.zero_big_int)
 
@@ -3281,6 +3367,16 @@ let rec ty_compatible_b_fuel fuel _UU03a9_ t_actual t_expected =
                  in go_bounds ba bb))
               (ty_compatible_b_fuel fuel' _UU03a9_ ta tb)
           | x -> ty_core_eqb ca x)
+       | TAssoc (t, s, l, s0) ->
+         let ca = TAssoc (t, s, l, s0) in
+         (match ty_core t_expected with
+          | TForall (n, o, tb) ->
+            (match o with
+             | [] ->
+               (&&) (negb (contains_lbound_ty tb))
+                 (ty_compatible_b_fuel fuel' _UU03a9_ t_actual tb)
+             | p :: l0 -> ty_core_eqb ca (TForall (n, (p :: l0), tb)))
+          | x -> ty_core_eqb ca x)
        | TRef (la, rka, ta) ->
          let ca = TRef (la, rka, ta) in
          (match ty_core t_expected with
@@ -3352,6 +3448,9 @@ let rec capture_ref_free_ty_b_fuel fuel env t =
          (capture_ref_free_ty_b_fuel fuel' env r)
      | TForall (_, _, body) -> capture_ref_free_ty_b_fuel fuel' env body
      | TTypeForall (_, _, body) -> capture_ref_free_ty_b_fuel fuel' env body
+     | TAssoc (for_ty, _, trait_args, _) ->
+       (&&) (capture_ref_free_ty_b_fuel fuel' env for_ty)
+         (forallb (capture_ref_free_ty_b_fuel fuel' env) trait_args)
      | _ -> false))
     fuel
 

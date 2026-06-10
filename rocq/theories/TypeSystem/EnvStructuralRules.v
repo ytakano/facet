@@ -520,6 +520,9 @@ Fixpoint type_params_bounded_ty_fuel
       | MkTy _ (TForall _ _ body) =>
           type_params_bounded_ty_fuel fuel' n body
       | MkTy _ (TTypeForall _ _ _) => True
+      | MkTy _ (TAssoc for_ty _ trait_args _) =>
+          type_params_bounded_ty_fuel fuel' n for_ty /\
+          Forall (type_params_bounded_ty_fuel fuel' n) trait_args
       | MkTy _ (TRef _ _ inner) =>
           type_params_bounded_ty_fuel fuel' n inner
       end
@@ -566,6 +569,9 @@ Fixpoint type_params_no_implicit_fallback_ty_fuel
       | MkTy _ (TForall _ _ body) =>
           type_params_no_implicit_fallback_ty_fuel fuel' subst_arity body
       | MkTy _ (TTypeForall _ _ _) => True
+      | MkTy _ (TAssoc for_ty _ trait_args _) =>
+          type_params_no_implicit_fallback_ty_fuel fuel' subst_arity for_ty /\
+          Forall (type_params_no_implicit_fallback_ty_fuel fuel' subst_arity) trait_args
       | MkTy _ (TRef _ _ inner) =>
           type_params_no_implicit_fallback_ty_fuel fuel' subst_arity inner
       end
@@ -689,6 +695,17 @@ Proof.
         -- eapply IH; eassumption.
         -- apply IHbounded_params. exact Hfallback_params_tail.
   - rewrite (IH fuel_fallback sigma t); [reflexivity | exact Hbounded | exact Hfallback].
+  - destruct Hbounded as [Hbounded_for Hbounded_args].
+    destruct Hfallback as [Hfallback_for Hfallback_args].
+    rewrite (IH fuel_fallback sigma t); [| exact Hbounded_for | exact Hfallback_for].
+    assert (Hargs : map (subst_type_params_ty sigma) l = l).
+    { induction Hbounded_args as [| T args Hbounded_T Hbounded_args IHbounded_args].
+      - reflexivity.
+      - inversion Hfallback_args as [| ? ? Hfallback_T Hfallback_args_tail]; subst.
+        simpl. rewrite (IH fuel_fallback sigma T);
+          [| exact Hbounded_T | exact Hfallback_T].
+        rewrite (IHbounded_args Hfallback_args_tail). reflexivity. }
+    rewrite Hargs. reflexivity.
   - rewrite (IH fuel_fallback sigma t); [reflexivity | exact Hbounded | exact Hfallback].
 Qed.
 
@@ -754,7 +771,8 @@ Proof.
   intros [u core] Hnone.
   destruct core as [| | | | name | i | name lts args | name lts args
                    | params ret | env_lt params ret | n bounds body
-                   | n bounds body | lt rk inner]; simpl in *; try reflexivity.
+                   | n bounds body | for_ty trait_name trait_args assoc_name
+                   | lt rk inner]; simpl in *; try reflexivity.
   - destruct (nth_error type_args i) as [Targ|] eqn:Hnth; simpl.
     + assert (Harg_closed : contains_lbound_ty Targ = false).
       { apply ((proj1 (@Forall_forall Ty
@@ -851,6 +869,19 @@ Proof.
   - apply Bool.orb_false_iff in Hnone as [Hout Hbody].
     rewrite Hout, (IH body Hbody). reflexivity.
   - exact Hnone.
+  - apply Bool.orb_false_iff in Hnone as [Hfor Hargs].
+    rewrite (IH for_ty Hfor).
+    assert (Hargs_subst :
+      existsb contains_lbound_ty
+        (map (subst_type_params_ty type_args) trait_args) = false).
+    { revert trait_args Hargs.
+      fix IHargs 1.
+      intros trait_args Hargs.
+      destruct trait_args as [| T ts]; simpl in *.
+      - reflexivity.
+      - apply Bool.orb_false_iff in Hargs as [HT Hts].
+        rewrite (IH T HT), (IHargs ts Hts). reflexivity. }
+    rewrite Hargs_subst. reflexivity.
   - apply Bool.orb_false_iff in Hnone as [Hlt Hinner].
     rewrite Hlt, (IH inner Hinner). reflexivity.
 Qed.
@@ -899,7 +930,8 @@ Proof.
       rewrite usage_eqb_refl.
       destruct c as [| | | | s | i | name lts args | name lts args
                      | ts r | lc cts cr | k Omega body
-                     | k bounds body | l rk inner];
+                     | k bounds body | for_ty trait_name trait_args assoc_name
+                     | l rk inner];
         simpl; try reflexivity.
       + rewrite String.eqb_refl. reflexivity.
       + rewrite Nat.eqb_refl. reflexivity.
@@ -1007,6 +1039,23 @@ Proof.
         }
         rewrite Hbounds. simpl.
         apply IH. simpl in Hlt. lia.
+      + rewrite (IH for_ty); [| simpl in Hlt; lia].
+        rewrite String.eqb_refl. simpl.
+        assert (Hargs :
+          (fix go_args (l1 l2 : list Ty) : bool :=
+             match l1 with
+             | [] => match l2 with | [] => true | _ :: _ => false end
+             | t1 :: l1' =>
+                 match l2 with
+                 | [] => false
+                 | t2 :: l2' => ty_eqb t1 t2 && go_args l1' l2'
+                 end
+             end) trait_args trait_args = true).
+        { revert Hlt. induction trait_args as [| t trait_args IHargs]; intros Hlt; simpl.
+          - reflexivity.
+          - rewrite (IH t); [| simpl in Hlt; lia].
+            rewrite IHargs; [reflexivity | eapply Nat.le_lt_trans; [| exact Hlt]; simpl; lia]. }
+        rewrite Hargs, String.eqb_refl. reflexivity.
       + assert (Hl : lifetime_eqb l l = true) by (apply lifetime_eqb_eq; reflexivity).
         rewrite Hl, ref_kind_eqb_refl. simpl.
         apply IH. simpl in Hlt. lia.
@@ -1020,7 +1069,8 @@ Proof.
   intros c.
   destruct c as [| | | | s | i | name lts args | name lts args
                  | ts r | lc cts cr | k Omega body
-                 | k bounds body | l rk inner];
+                 | k bounds body | for_ty trait_name trait_args assoc_name
+                 | l rk inner];
     simpl; try reflexivity.
   - rewrite String.eqb_refl. reflexivity.
   - rewrite Nat.eqb_refl. reflexivity.
@@ -1120,6 +1170,21 @@ Proof.
     }
     rewrite Hbounds. simpl.
     apply ty_eqb_refl.
+  - rewrite ty_eqb_refl, String.eqb_refl. simpl.
+    assert (Hargs :
+      (fix go_args (l1 l2 : list Ty) : bool :=
+         match l1 with
+         | [] => match l2 with | [] => true | _ :: _ => false end
+         | t1 :: l1' =>
+             match l2 with
+             | [] => false
+             | t2 :: l2' => ty_eqb t1 t2 && go_args l1' l2'
+             end
+         end) trait_args trait_args = true).
+    { induction trait_args as [| t trait_args IHargs]; simpl.
+      - reflexivity.
+      - rewrite ty_eqb_refl, IHargs. reflexivity. }
+    rewrite Hargs, String.eqb_refl. reflexivity.
   - assert (Hl : lifetime_eqb l l = true) by (apply lifetime_eqb_eq; reflexivity).
     rewrite Hl, ref_kind_eqb_refl. simpl.
     apply ty_eqb_refl.

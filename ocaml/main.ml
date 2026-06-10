@@ -48,6 +48,13 @@ let rec string_of_ty_core : ty typeCore -> string = function
          (List.init (Big_int_Z.int_of_big_int n)
             (fun i -> Printf.sprintf "T%d" i)))
       (string_of_ty body)
+  | TAssoc (for_ty, trait_name, trait_args, assoc_name) ->
+    let trait =
+      if trait_args = [] then trait_name
+      else Printf.sprintf "%s<%s>" trait_name
+        (String.concat ", " (List.map string_of_ty trait_args))
+    in
+    Printf.sprintf "<%s as %s>::%s" (string_of_ty for_ty) trait assoc_name
   | TRef (_, RShared, t) -> "&" ^ string_of_ty t
   | TRef (_, RUnique, t) -> "&mut " ^ string_of_ty t
 

@@ -18,6 +18,7 @@ and named_ty_core =
   | NTFloats
   | NTBooleans
   | NTNamed of path * named_type_arg list
+  | NTAssoc of named_ty * named_trait_ref * name
   | NTFn of named_ty list * named_ty
   | NTClosure of TypeChecker.lifetime * named_ty list * named_ty
   | NTForall of Big_int_Z.big_int * (TypeChecker.lifetime * TypeChecker.lifetime) list * named_ty
@@ -138,12 +139,17 @@ and named_surface_ty_core =
   | NSTFloats
   | NSTBooleans
   | NSTNamed of path * named_surface_type_arg list
+  | NSTAssoc of named_surface_ty * named_surface_trait_ref * name
   | NSTFn of named_surface_ty list * named_surface_ty
   | NSTClosure of TypeChecker.lifetime * named_surface_ty list * named_surface_ty
   | NSTRef of TypeChecker.lifetime option * TypeChecker.ref_kind * named_surface_ty
 and named_surface_type_arg =
   | NSTArgLifetime of TypeChecker.lifetime
   | NSTArgTy of named_surface_ty
+and named_surface_trait_ref = {
+  nstr_name : path;
+  nstr_args : named_surface_type_arg list;
+}
 
 type named_impl_def = {
   ni_generics   : named_generic_param list;

@@ -101,6 +101,9 @@ and map_named_ty_core f ty_params = function
     NTNamed ([name], List.map (map_named_type_arg f ty_params) args)
   | NTNamed (path, args) ->
     NTNamed ([f path], List.map (map_named_type_arg f ty_params) args)
+  | NTAssoc (self_ty, trait_ref, assoc) ->
+    NTAssoc (map_named_ty f ty_params self_ty,
+      map_named_trait_ref f ty_params trait_ref, assoc)
   | NTFn (ts, ret) ->
     NTFn (List.map (map_named_ty f ty_params) ts, map_named_ty f ty_params ret)
   | NTClosure (lt, ts, ret) ->
@@ -136,6 +139,9 @@ and map_named_surface_ty_core f ty_params = function
     NSTNamed ([name], List.map (map_named_surface_type_arg f ty_params) args)
   | NSTNamed (path, args) ->
     NSTNamed ([f path], List.map (map_named_surface_type_arg f ty_params) args)
+  | NSTAssoc (self_ty, trait_ref, assoc) ->
+    NSTAssoc (map_named_surface_ty f ty_params self_ty,
+      map_named_surface_trait_ref f ty_params trait_ref, assoc)
   | NSTFn (ts, ret) ->
     NSTFn (List.map (map_named_surface_ty f ty_params) ts, map_named_surface_ty f ty_params ret)
   | NSTClosure (lt, ts, ret) ->
@@ -146,6 +152,10 @@ and map_named_surface_ty_core f ty_params = function
 and map_named_surface_type_arg f ty_params = function
   | NSTArgLifetime lt -> NSTArgLifetime lt
   | NSTArgTy ty -> NSTArgTy (map_named_surface_ty f ty_params ty)
+
+and map_named_surface_trait_ref f ty_params r =
+  { nstr_name = [f r.nstr_name];
+    nstr_args = List.map (map_named_surface_type_arg f ty_params) r.nstr_args }
 
 let map_named_param f ty_params p =
   { p with np_ty = map_named_ty f ty_params p.np_ty }
@@ -417,6 +427,9 @@ let rec validate_ty_paths known ty_params (NTy (_, core)) =
     if not (List.mem name ty_params) then
       require_known "type" (known.known_struct_names @ known.known_enum_names) name;
     List.iter (validate_type_arg_paths known ty_params) args
+  | NTAssoc (self_ty, trait_ref, _) ->
+    validate_ty_paths known ty_params self_ty;
+    validate_trait_ref_paths known ty_params trait_ref
   | NTFn (args, ret) ->
     List.iter (validate_ty_paths known ty_params) args;
     validate_ty_paths known ty_params ret
@@ -626,6 +639,11 @@ and lower_named_ty_core ty_scope c =
       else if args <> [] then TStruct (s, lts, tys)
       else TNamed s
     end
+  | NTAssoc (self_ty, trait_ref, assoc) ->
+    let (lts, trait_args) = split_type_args ty_scope trait_ref.ntr_args in
+    if lts <> [] then failwith ("associated type trait cannot take lifetime arguments: " ^ string_of_path trait_ref.ntr_name);
+    TAssoc ((lower_named_ty ty_scope self_ty),
+      (string_of_path trait_ref.ntr_name), trait_args, assoc)
   | NTFn (ts, ret) ->
     TFn (List.map (lower_named_ty ty_scope) ts, lower_named_ty ty_scope ret)
   | NTClosure (env_lt, ts, ret) ->
@@ -679,6 +697,11 @@ and lower_surface_ty_core ty_scope c =
       else if args <> [] then TStruct (s, lts, tys)
       else TNamed s
     end
+  | NSTAssoc (self_ty, trait_ref, assoc) ->
+    let (lts, trait_args) = split_surface_type_args ty_scope trait_ref.nstr_args in
+    if lts <> [] then failwith ("associated type trait cannot take lifetime arguments: " ^ string_of_path trait_ref.nstr_name);
+    TAssoc ((lower_surface_ty ty_scope self_ty),
+      (string_of_path trait_ref.nstr_name), trait_args, assoc)
   | NSTFn (ts, ret) ->
     TFn (List.map (lower_surface_ty ty_scope) ts, lower_surface_ty ty_scope ret)
   | NSTClosure (env_lt, ts, ret) ->
@@ -738,6 +761,9 @@ and named_ty_core_has_elided_ref_lifetime c =
     named_ty_has_elided_ref_lifetime body
   | NTTypeForall (_, _, body) ->
     named_ty_has_elided_ref_lifetime body
+  | NTAssoc (self_ty, trait_ref, _) ->
+    named_ty_has_elided_ref_lifetime self_ty ||
+    List.exists named_type_arg_has_elided_ref_lifetime trait_ref.ntr_args
   | NTRef (None, _, _) -> true
   | NTRef (Some _, _, inner) ->
     named_ty_has_elided_ref_lifetime inner
@@ -1267,6 +1293,19 @@ let validate_env env =
         first_some
           (List.map validate_core_bound bounds @
            [type_error ty_params' lt_params bound_depth body])
+      | TAssoc (for_ty, trait_name, trait_args, assoc_name) ->
+        begin match find_trait trait_name with
+        | None -> Some ("unknown trait in associated type projection: " ^ trait_name)
+        | Some trait_def ->
+          if not (Big_int_Z.eq_big_int (big_len trait_args) trait_def.trait_type_params)
+          then Some ("associated type trait arity mismatch: " ^ trait_name)
+          else if not (List.exists (fun a -> a.trait_assoc_name = assoc_name) trait_def.trait_assoc_types)
+          then Some ("unknown associated type: " ^ trait_name ^ "::" ^ assoc_name)
+          else
+            first_some
+              (type_error ty_params lt_params bound_depth for_ty ::
+               List.map (type_error ty_params lt_params bound_depth) trait_args)
+        end
       | TRef (lt, _, inner) ->
         begin match lifetime_error lt_params bound_depth lt with
         | Some _ as err -> err
@@ -1308,6 +1347,8 @@ let validate_env env =
               b.core_bound_traits)
           bounds @
         type_struct_refs body
+      | TAssoc (for_ty, _, trait_args, _) ->
+        type_struct_refs for_ty @ List.concat_map type_struct_refs trait_args
       | TRef (_, _, inner) -> type_struct_refs inner
       | TUnits | TIntegers | TFloats | TBooleans | TNamed _ | TParam _ -> []
     in

@@ -768,7 +768,8 @@ Proof.
   intros [u core] Hnone.
   destruct core as [| | | | name | i | name lts args | name lts args
                    | params ret | env_lt params ret | n bounds body
-                   | n bounds body | lt rk inner]; simpl in *; try reflexivity.
+                   | n bounds body | for_ty trait_name trait_args assoc_name
+                   | lt rk inner]; simpl in *; try reflexivity.
   - destruct (nth_error type_args i) as [Targ|] eqn:Hnth; simpl.
     + assert (Harg_closed : contains_lbound_ty Targ = false).
       { apply ((proj1 (@Forall_forall Ty
@@ -865,6 +866,19 @@ Proof.
   - apply Bool.orb_false_iff in Hnone as [Hout Hbody].
     rewrite Hout, (IH body Hbody). reflexivity.
   - exact Hnone.
+  - apply Bool.orb_false_iff in Hnone as [Hfor Hargs].
+    rewrite (IH for_ty Hfor).
+    assert (Hargs_subst :
+      existsb contains_lbound_ty
+        (map (subst_type_params_ty type_args) trait_args) = false).
+    { revert trait_args Hargs.
+      fix IHargs 1.
+      intros trait_args Hargs.
+      destruct trait_args as [| T ts]; simpl in *.
+      - reflexivity.
+      - apply Bool.orb_false_iff in Hargs as [HT Hts].
+        rewrite (IH T HT), (IHargs ts Hts). reflexivity. }
+    rewrite Hargs_subst. reflexivity.
   - apply Bool.orb_false_iff in Hnone as [Hlt Hinner].
     rewrite Hlt, (IH inner Hinner). reflexivity.
 Qed.
@@ -1419,7 +1433,8 @@ Proof.
   intros f [u core].
   destruct core as [| | | | s | i | name lts args | name lts args
                    | params ret | env_lt params ret | n Ω body
-                   | n bounds body | lt rk body]; simpl.
+                   | n bounds body | for_ty trait_name trait_args assoc_name
+                   | lt rk body]; simpl.
   - constructor.
   - constructor.
   - constructor.
@@ -1438,6 +1453,9 @@ Proof.
     + apply IH.
   - apply TLE_Forall. apply IH.
   - apply TLE_TypeForall. apply IH.
+  - apply TLE_Assoc.
+    + apply IH.
+    + induction trait_args as [| T Ts IHTs]; simpl; constructor; auto.
   - apply TLE_Ref. apply IH.
 Qed.
 

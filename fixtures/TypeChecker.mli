@@ -152,6 +152,7 @@ type 'a typeCore =
 | TClosure of lifetime * 'a list * 'a
 | TForall of Big_int_Z.big_int * outlives_ctx * 'a
 | TTypeForall of Big_int_Z.big_int * 'a core_trait_bound list * 'a
+| TAssoc of 'a * string * 'a list * string
 | TRef of lifetime * ref_kind * 'a
 
 type ty =

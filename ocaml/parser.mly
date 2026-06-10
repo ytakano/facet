@@ -262,6 +262,10 @@ trait_ref:
   | name = path_name; args = opt_type_args
     { { ntr_name = name; ntr_args = args } }
 
+surface_trait_ref:
+  | name = path_name; args = opt_surface_type_args
+    { { nstr_name = name; nstr_args = args } }
+
 struct_field:
   | m = opt_mut; name = ID; COLON; t = ty
     { { nfield_mutability = m; nfield_name = name; nfield_ty = t } }
@@ -469,6 +473,8 @@ ty_core:
   | KW_BOOL  { NTBooleans }
   | LPAREN; RPAREN { NTUnits }
   | name = path_name; args = opt_type_args { NTNamed (name, args) }
+  | LANGLE; self_ty = ty; KW_AS; trait = trait_ref; RANGLE; DCOLON; assoc = ID
+    { NTAssoc (self_ty, trait, assoc) }
   | AMP; t = ty { NTRef (None, RShared, t) }
   | AMP; KW_MUT; t = ty { NTRef (None, RUnique, t) }
   | AMP; lt = LIFETIME; t = ty { NTRef (Some (resolve_lifetime lt), RShared, t) }
@@ -506,6 +512,8 @@ surface_ty_core:
   | KW_BOOL  { NSTBooleans }
   | LPAREN; RPAREN { NSTUnits }
   | name = path_name; args = opt_surface_type_args { NSTNamed (name, args) }
+  | LANGLE; self_ty = surface_ty; KW_AS; trait = surface_trait_ref; RANGLE; DCOLON; assoc = ID
+    { NSTAssoc (self_ty, trait, assoc) }
   | AMP; t = surface_ty { NSTRef (None, RShared, t) }
   | AMP; KW_MUT; t = surface_ty { NSTRef (None, RUnique, t) }
   | AMP; lt = LIFETIME; t = surface_ty { NSTRef (Some (resolve_lifetime lt), RShared, t) }
@@ -538,6 +546,8 @@ signature_ty_core:
   | KW_BOOL  { NTBooleans }
   | LPAREN; RPAREN { NTUnits }
   | name = path_name; args = opt_type_args { NTNamed (name, args) }
+  | LANGLE; self_ty = signature_ty; KW_AS; trait = trait_ref; RANGLE; DCOLON; assoc = ID
+    { NTAssoc (self_ty, trait, assoc) }
   | AMP; t = signature_ty { NTRef (None, RShared, t) }
   | AMP; KW_MUT; t = signature_ty { NTRef (None, RUnique, t) }
   | AMP; lt = LIFETIME; t = signature_ty { NTRef (Some (resolve_lifetime lt), RShared, t) }

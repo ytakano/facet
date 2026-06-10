@@ -121,9 +121,11 @@ Key temporary limitations:
      float, or bool literals are now accepted by pure receiver-let elimination
      in raw lowering and covered by valid regression tests. Struct, enum, and
      direct function-call expression receivers now resolve in raw lowering but
-     still hit the end-to-end safety gate; generic direct-call receivers and
-     annotated local struct receivers in short and explicit UFCS are covered
-     by invalid tests for this boundary.
+     still hit the end-to-end safety gate. Direct-call receivers cannot be
+     completed by a raw temporary-let rewrite alone, because let-bound direct
+     calls still need store-safe summary evidence. Generic direct-call
+     receivers and annotated local struct receivers in short and explicit UFCS
+     are covered by invalid tests for this boundary.
      General annotated local receivers still need a Prop-level summary plus
      checker soundness and runtime safety branch; a checker-only clause
      is insufficient. Inferred

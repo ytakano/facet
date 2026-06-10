@@ -119,8 +119,8 @@ Key temporary limitations:
      in raw lowering and covered by valid regression tests. Struct, enum, and
      direct function-call expression receivers now resolve in raw lowering but
      still hit the end-to-end safety gate; generic direct-call receivers and
-     annotated local struct receivers are covered by invalid tests for this
-     boundary.
+     annotated local struct receivers in short and explicit UFCS are covered
+     by invalid tests for this boundary.
      General annotated local receivers still need a Prop-level summary plus
      checker soundness and runtime safety branch; a checker-only clause
      is insufficient. Inferred

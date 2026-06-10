@@ -2003,6 +2003,15 @@ let convert_program_items_from_flattened items : global_env =
     List.concat_map
       (convert_impl_method_raw_fns struct_names enum_names fn_names needed_method_names)
       impls in
+  let produced_method_names =
+    List.map (fun f -> fst f.raw_fn_name) impl_method_raw_fns
+  in
+  begin match List.filter
+    (fun name -> not (List.mem name produced_method_names))
+    needed_method_names with
+  | missing :: _ -> failwith ("unresolved trait method call: " ^ missing)
+  | [] -> ()
+  end;
   let raw_fns =
     List.map (normalize_raw_fn base_env)
       (impl_method_raw_fns @

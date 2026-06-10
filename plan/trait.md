@@ -62,8 +62,8 @@ Key temporary limitations:
 2. Harden UFCS trait method calls.
    - Add the shorter `(Trait::method receiver args...)` form after receiver
      type-directed resolution exists in Rocq.
-   - Improve missing impl and missing method diagnostics; current failures are
-     rejected through hidden direct-call lookup.
+   - Improve diagnostic text from synthetic hidden names to source-level
+     trait/method names.
    - Support more safety-gate shapes for receiver expressions, including local
      struct receivers, without weakening the end-to-end checker.
    - Keep dot method-call syntax out of this phase.

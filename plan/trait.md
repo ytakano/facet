@@ -72,6 +72,7 @@ Completed:
   type-check as `isize` across call arguments, let annotations, struct fields,
   enum payloads, function-value signatures, closure signatures, trait method
   signatures, and method-local type arguments in explicit and short UFCS calls,
+  and direct generic function-call type arguments,
   with mismatch regressions for those method type arguments.
   Global environment and raw function normalization now
   happen inside the extracted Rocq raw-elaboration entrypoint before hidden

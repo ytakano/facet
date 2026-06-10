@@ -1,0 +1,15 @@
+trait Provider {
+  type Item;
+}
+
+impl Provider for unrestricted isize {
+  type Item = unrestricted bool;
+}
+
+fn id<T>(value: unrestricted T) -> unrestricted T {
+  value
+}
+
+fn main() -> unrestricted bool {
+  (id<unrestricted <unrestricted isize as Provider>::Item> 1)
+}

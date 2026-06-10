@@ -32,8 +32,10 @@ Completed:
 - Explicit UFCS method calls can pass method-local type arguments as
   `(<Ty as Trait>::method<Arg> receiver args...)`; lowering prepends `Self` to
   those method arguments before calling the hidden generic impl method.
-- Explicit parenthesized UFCS method calls are accepted in the ordinary call
-  shape as `(<Ty as Trait>::method receiver args...)`; called impl methods are
+- Explicit parenthesized UFCS method calls are accepted in the ordinary
+  function-call shape as `(<Ty as Trait>::method receiver args...)`; the
+  receiver is the first argument, so method calls stay aligned with
+  `(function args...)` rather than dot syntax. Called impl methods are
   lowered to hidden generic functions and checked through the extracted direct
   call path; hidden method bodies substitute `Self` with the concrete impl
   target type before raw elaboration; unresolved explicit targets report
@@ -61,8 +63,9 @@ Key temporary limitations:
 ## Remaining Roadmap 2-3 Tasks
 
 1. Harden UFCS trait method calls.
-   - Add the shorter `(Trait::method receiver args...)` form after receiver
-     type-directed resolution exists in Rocq.
+   - Add the shorter prefix-form method call `(Trait::method receiver args...)`
+     after receiver type-directed resolution exists in Rocq. This keeps method
+     calls aligned with `(function args...)`; do not introduce dot-call syntax.
    - Support receiver-let/generic-call safety-gate shapes, including local struct
      receivers, by adding a Prop-level summary plus checker soundness and
      runtime safety branch; a checker-only clause is insufficient.

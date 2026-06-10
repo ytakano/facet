@@ -123,9 +123,11 @@ and named_trait_item =
   | NTIAssocTypeDecl of name
   | NTIMethodSig of named_method_sig
 and named_method_sig = {
-  nms_name   : name;
-  nms_params : named_surface_param list;
-  nms_ret    : named_surface_ty;
+  nms_name     : name;
+  nms_generics : named_generic_param list;
+  nms_bounds   : named_trait_bound list;
+  nms_params   : named_surface_param list;
+  nms_ret      : named_surface_ty;
 }
 and named_surface_param = {
   nsp_mutability : TypeChecker.mutability;
@@ -163,10 +165,12 @@ and named_impl_item =
   | NIIAssocTypeDef of name * named_surface_ty
   | NIIMethodDef of named_method_def
 and named_method_def = {
-  nmd_name   : name;
-  nmd_params : named_surface_param list;
-  nmd_ret    : named_surface_ty;
-  nmd_body   : named_expr;
+  nmd_name     : name;
+  nmd_generics : named_generic_param list;
+  nmd_bounds   : named_trait_bound list;
+  nmd_params   : named_surface_param list;
+  nmd_ret      : named_surface_ty;
+  nmd_body     : named_expr;
 }
 
 type named_item =

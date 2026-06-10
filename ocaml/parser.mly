@@ -208,8 +208,10 @@ trait_item:
     { NTIMethodSig sig_ }
 
 method_sig:
-  | KW_FN; name = ID; LPAREN; ps = surface_params; RPAREN; ARROW; ret = surface_ty
-    { { nms_name = name; nms_params = ps; nms_ret = ret } }
+  | KW_FN; name = ID; generics = opt_generic_params; LPAREN; ps = surface_params; RPAREN;
+    ARROW; ret = surface_ty; bounds = opt_trait_bounds
+    { { nms_name = name; nms_generics = generics; nms_bounds = bounds;
+        nms_params = ps; nms_ret = ret } }
 
 impl_def:
   | KW_IMPL; generics = opt_generic_params; trait_name = path_name; trait_args = opt_type_args;
@@ -224,9 +226,11 @@ impl_def:
 impl_item:
   | kw_type; name = ID; EQUAL; t = surface_ty; SEMI
     { NIIAssocTypeDef (name, t) }
-  | KW_FN; name = ID; LPAREN; ps = surface_params; RPAREN; ARROW; ret = surface_ty;
+  | KW_FN; name = ID; generics = opt_generic_params; LPAREN; ps = surface_params; RPAREN;
+    ARROW; ret = surface_ty; bounds = opt_trait_bounds;
     LBRACE; body = block; RBRACE
-    { NIIMethodDef { nmd_name = name; nmd_params = ps; nmd_ret = ret; nmd_body = body } }
+    { NIIMethodDef { nmd_name = name; nmd_generics = generics; nmd_bounds = bounds;
+        nmd_params = ps; nmd_ret = ret; nmd_body = body } }
 
 kw_type:
   | kw = ID

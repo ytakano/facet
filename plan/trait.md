@@ -20,13 +20,13 @@ Completed:
 - Associated type projections have syntax, lowering, core representation, type
   traversal support, extraction, OCaml validation, and printer coverage for the
   explicit form `<Ty as Trait>::Assoc`.
-- Trait method signatures are lowered into Rocq `trait_method_sig` values and
-  validated for duplicate names, parameter/return types, `Self`, associated
-  projections, and lifetime elision in method inputs/outputs.
-- Impl method definitions are lowered into `impl_methods`, preserved in the
-  environment, checked for well-formed types, and validated for duplicate,
-  missing, extra, and structurally mismatched method signatures against the
-  selected trait.
+- Trait method signatures and impl method definitions are lowered into Rocq
+  records, validated for duplicate/missing/extra/mismatched methods, and checked
+  against substituted impl trait arguments.
+- Method-local type parameter syntax is accepted in trait and impl methods as
+  `fn name<T>(...) -> ... where T: Bound`; parameters, return types, and bounds
+  are converted into the existing Rocq method/function generic fields and
+  signature arity matching rejects non-generic impls for generic trait methods.
 - Explicit parenthesized UFCS method calls are accepted in the ordinary call
   shape as `(<Ty as Trait>::method receiver args...)`; called impl methods are
   lowered to hidden generic functions and checked through the extracted direct
@@ -38,9 +38,11 @@ Completed:
 
 Key temporary limitations:
 
-- Impl method signature matching substitutes the impl's concrete trait arguments
-  into the trait method signature before comparison; method-local type
-  parameters remain deferred because method generic syntax is not implemented.
+- Method-local lifetime generics are rejected for now; method-local type
+  parameters are represented, but explicit method call type arguments are not
+  yet supported in UFCS syntax.
+- Method-local bounds are preserved and well-formed, but exact trait/impl bound
+  equivalence for method signatures still needs a dedicated matcher.
 - Only explicitly called impl methods are hidden-function elaborated and
   type-checked; uncalled impl method bodies remain stored but not checked as
   standalone functions.
@@ -52,19 +54,18 @@ Key temporary limitations:
 
 ## Remaining Roadmap 1-3 Tasks
 
-1. Extend method generics when syntax exists.
-   - Add method-local type parameters and bounds to trait method signatures and
-     impl methods.
-   - Reuse the current substitution-aware signature matcher for method-local
-     type parameters once they are represented.
-   - Keep receiver type-directed shorthand resolution pending; explicit UFCS
-     targets are already lowered through hidden direct calls.
+1. Finish method generics.
+   - Add explicit method type arguments to UFCS calls and hidden method lowering.
+   - Match trait and impl method-local bounds structurally after trait-argument
+     substitution.
+   - Decide whether method-local lifetime generics are in scope for this phase.
 
 2. Harden UFCS trait method calls.
    - Add the shorter `(Trait::method receiver args...)` form after receiver
      type-directed resolution exists in Rocq.
-   - Support more safety-gate shapes for receiver expressions, including local
-     struct receivers, without weakening the end-to-end checker.
+   - Support receiver-let/generic-call safety-gate shapes, including local struct
+     receivers, by adding a Prop-level summary plus checker soundness and
+     runtime safety branch; a checker-only clause is insufficient.
    - Keep dot method-call syntax out of this phase.
 
 3. Move associated type normalization into Rocq compatibility.

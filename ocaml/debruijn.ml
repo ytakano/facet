@@ -164,16 +164,22 @@ let map_named_surface_param f ty_params p =
   { p with nsp_ty = map_named_surface_ty f ty_params p.nsp_ty }
 
 let map_named_method_sig f ty_params m =
-  { m with nms_params = List.map (map_named_surface_param f ty_params) m.nms_params;
-           nms_ret = map_named_surface_ty f ty_params m.nms_ret }
+  let (_lts, method_tys) = split_generics m.nms_generics in
+  let ty_params' = ty_params @ method_tys in
+  { m with nms_bounds = List.map (map_named_trait_bound f ty_params') m.nms_bounds;
+           nms_params = List.map (map_named_surface_param f ty_params') m.nms_params;
+           nms_ret = map_named_surface_ty f ty_params' m.nms_ret }
 
 let map_named_trait_item f ty_params = function
   | NTIAssocTypeDecl name -> NTIAssocTypeDecl name
   | NTIMethodSig sig_ -> NTIMethodSig (map_named_method_sig f ty_params sig_)
 
 let map_named_method_def f ty_params m =
-  { m with nmd_params = List.map (map_named_surface_param f ty_params) m.nmd_params;
-           nmd_ret = map_named_surface_ty f ty_params m.nmd_ret }
+  let (_lts, method_tys) = split_generics m.nmd_generics in
+  let ty_params' = ty_params @ method_tys in
+  { m with nmd_bounds = List.map (map_named_trait_bound f ty_params') m.nmd_bounds;
+           nmd_params = List.map (map_named_surface_param f ty_params') m.nmd_params;
+           nmd_ret = map_named_surface_ty f ty_params' m.nmd_ret }
 
 let map_named_impl_item f ty_params = function
   | NIIAssocTypeDef (name, ty) ->
@@ -1244,11 +1250,15 @@ let convert_trait_assoc_item = function
 
 let convert_trait_method_item ty_scope = function
   | NTIMethodSig m ->
+    let (method_lts, method_tys) = split_generics m.nms_generics in
+    if method_lts <> [] then failwith "trait method lifetime generics are not supported";
+    let method_ty_scope =
+      { ty_scope with type_params = ty_scope.type_params @ method_tys } in
     let (params, next_lifetime, input_lts) =
       List.fold_left
         (fun (acc, next_lt, input_lts) p ->
           let (param_ty, next_lt', input_lts') =
-            lower_surface_input_ty ty_scope next_lt input_lts p.nsp_ty
+            lower_surface_input_ty method_ty_scope next_lt input_lts p.nsp_ty
           in
           let param =
             { param_mutability = p.nsp_mutability;
@@ -1260,10 +1270,12 @@ let convert_trait_method_item ty_scope = function
     in
     Some { trait_method_name = m.nms_name;
            trait_method_lifetimes = Big_int_Z.big_int_of_int next_lifetime;
-           trait_method_type_params = Big_int_Z.zero_big_int;
+           trait_method_type_params = Big_int_Z.big_int_of_int (List.length method_tys);
            trait_method_params = params;
-           trait_method_ret = lower_surface_output_ty ty_scope input_lts m.nms_ret;
-           trait_method_bounds = [] }
+           trait_method_ret = lower_surface_output_ty method_ty_scope input_lts m.nms_ret;
+           trait_method_bounds =
+             List.map (trait_bound_of_named method_ty_scope method_ty_scope.type_params)
+               m.nms_bounds }
   | NTIAssocTypeDecl _ -> None
 
 let convert_impl_assoc_item ty_scope = function
@@ -1273,12 +1285,16 @@ let convert_impl_assoc_item ty_scope = function
 
 let convert_impl_method_item fn_names ty_scope initial_lifetimes = function
   | NIIMethodDef m ->
+    let (method_lts, method_tys) = split_generics m.nmd_generics in
+    if method_lts <> [] then failwith "impl method lifetime generics are not supported";
+    let method_ty_scope =
+      { ty_scope with type_params = ty_scope.type_params @ method_tys } in
     let (scope, params, next_lifetime, input_lts) =
       List.fold_left
         (fun (sc, acc, next_lt, input_lts) p ->
           let (sc', d) = add_binding sc p.nsp_name in
           let (param_ty, next_lt', input_lts') =
-            lower_surface_input_ty ty_scope next_lt input_lts p.nsp_ty
+            lower_surface_input_ty method_ty_scope next_lt input_lts p.nsp_ty
           in
           let param =
             { param_mutability = p.nsp_mutability;
@@ -1293,10 +1309,12 @@ let convert_impl_method_item fn_names ty_scope initial_lifetimes = function
            fn_outlives = [];
            fn_captures = [];
            fn_params = params;
-           fn_ret = lower_surface_output_ty ty_scope input_lts m.nmd_ret;
-           fn_body = convert fn_names ty_scope scope m.nmd_body;
-           fn_type_params = Big_int_Z.big_int_of_int (List.length ty_scope.type_params);
-           fn_bounds = [] }
+           fn_ret = lower_surface_output_ty method_ty_scope input_lts m.nmd_ret;
+           fn_body = convert fn_names method_ty_scope scope m.nmd_body;
+           fn_type_params = Big_int_Z.big_int_of_int (List.length method_ty_scope.type_params);
+           fn_bounds =
+             List.map (trait_bound_of_named method_ty_scope method_ty_scope.type_params)
+               m.nmd_bounds }
   | NIIAssocTypeDef _ -> None
 
 let convert_trait struct_names enum_names t =
@@ -1328,6 +1346,10 @@ let convert_impl struct_names enum_names fn_names i =
 let convert_impl_method_raw_item fn_names needed_names ty_scope initial_lifetimes
     trait_name trait_args self_ty = function
   | NIIMethodDef m ->
+    let (method_lts, method_tys) = split_generics m.nmd_generics in
+    if method_lts <> [] then failwith "impl method lifetime generics are not supported";
+    let method_ty_scope =
+      { ty_scope with type_params = ty_scope.type_params @ method_tys } in
     let synthetic_name =
       synthetic_impl_method_name trait_name trait_args self_ty m.nmd_name
     in
@@ -1337,7 +1359,7 @@ let convert_impl_method_raw_item fn_names needed_names ty_scope initial_lifetime
         (fun (sc, acc, next_lt, input_lts) p ->
           let (sc', d) = add_binding sc p.nsp_name in
           let (param_ty, next_lt', input_lts') =
-            lower_surface_input_ty ty_scope next_lt input_lts p.nsp_ty
+            lower_surface_input_ty method_ty_scope next_lt input_lts p.nsp_ty
           in
           let param =
             { param_mutability = p.nsp_mutability;
@@ -1351,11 +1373,13 @@ let convert_impl_method_raw_item fn_names needed_names ty_scope initial_lifetime
            raw_fn_lifetimes = Big_int_Z.big_int_of_int next_lifetime;
            raw_fn_outlives = [];
            raw_fn_params = params;
-           raw_fn_ret = lower_surface_output_ty ty_scope input_lts m.nmd_ret;
-           raw_fn_body = convert_raw fn_names ty_scope scope [] m.nmd_body;
+           raw_fn_ret = lower_surface_output_ty method_ty_scope input_lts m.nmd_ret;
+           raw_fn_body = convert_raw fn_names method_ty_scope scope [] m.nmd_body;
            raw_fn_type_params =
-             Big_int_Z.big_int_of_int (List.length ty_scope.type_params);
-           raw_fn_bounds = [] }
+             Big_int_Z.big_int_of_int (List.length method_ty_scope.type_params);
+           raw_fn_bounds =
+             List.map (trait_bound_of_named method_ty_scope method_ty_scope.type_params)
+               m.nmd_bounds }
   | NIIAssocTypeDef _ -> None
 
 let convert_impl_method_raw_fns struct_names enum_names fn_names needed_names i =

@@ -28,51 +28,24 @@ Completed:
   checked through the extracted checker even when the method is not called;
   the generated grammar documents method-local generics and bounds for trait
   and impl methods.
-- Explicit UFCS method calls can pass method-local type arguments as
-  `(<Ty as Trait>::method<Arg> receiver args...)`; lowering prepends `Self` to
-  those method arguments before calling the hidden generic impl method.
-- Explicit parenthesized UFCS method calls are accepted in the ordinary
-  function-call shape as `(<Ty as Trait>::method receiver args...)`; the
-  receiver is the first argument, and additional arguments follow it, so
-  method calls stay aligned with `(function args...)` rather than dot
-  syntax. This prefix parenthesized UFCS spelling is the canonical method-call surface
-  for Roadmap 1-3; dot calls are not aliases during this phase. Called impl methods are
-  lowered to hidden generic functions and checked through the extracted direct
-  call path; hidden method bodies substitute `Self` with the concrete impl
-  target type before raw elaboration; unresolved explicit targets report
-  source-level `Trait::method` names. The generic-direct runtime package
-  interface is split into an earlier Rocq module so UFCS runtime safety can
-  reuse it without a module cycle. Rocq now exposes extracted helpers for
-  resolving a trait method target from `(trait, trait args, receiver type,
-  method name)` against unique impls and matching impl methods. The shorter
-  prefix form `(Trait::method receiver args...)` is accepted when `receiver` is
-  a variable whose type is known from the raw-lowering value context, currently
-  function parameters including struct parameters, and when the receiver is a
-  literal expression whose type is syntactically known during raw lowering.
-  Struct literal, enum constructor, and direct function-call receivers are
-  recognized by short-UFCS raw lowering, and the same expression-receiver
-  shapes are parsed by explicit UFCS, but these expression receivers
-  currently reach the end-to-end safety gate and remain covered by
-  invalid regression tests, including generic direct-call receivers.
-  Immutable annotated or inferred local receivers initialized with
-  unrestricted unit, int, float, or bool literals are lowered for short and
-  explicit UFCS by eliminating the pure receiver `let` when the local name is
-  used only as the receiver, including calls with additional arguments, so
-  `(Trait::method x arg ...)`
-  reaches the checker as the same prefix call shape as `(Trait::method 1 arg ...)`.
-  Short UFCS uses the same ordinary call layout for method-local type
-  arguments and additional arguments, `(Trait::method<Arg> receiver arg ...)`.
-  The generated grammar also documents explicit UFCS method-local type
-  arguments in the prefix shape. Accepted variable and literal receiver
-  calls, generic-trait explicit UFCS with method-local type arguments and
-  accepted/rejected method-local bounds, plus ordinary and generic-trait
-  explicit UFCS excess method type arguments are covered by regression
-  tests, and dot syntax, including type-argument dot calls, is rejected
-  for this phase.
-  Concrete non-generic impl methods no longer keep an unused hidden `Self` type
-  argument, so local struct receivers elaborate to the safety-gate boundary
-  instead of failing raw lifetime unification. Generic trait arguments require
-  the explicit `<Ty as Trait<...>>` UFCS spelling.
+- Prefix UFCS method calls use the ordinary function-call shape, with the
+  receiver as the first argument: `(<Ty as Trait>::method receiver args...)`
+  and `(Trait::method receiver args...)`. Method-local type arguments use the
+  same layout, for example `(<Ty as Trait>::method<Arg> receiver args...)`;
+  lowering prepends the concrete `Self` type before calling the hidden generic
+  impl method. Dot calls are intentionally rejected for Roadmap 1-3.
+  Called impl methods lower to hidden functions checked through the extracted
+  direct-call path, hidden method bodies substitute `Self`, unresolved targets
+  report source-level `Trait::method` names, and Rocq exposes extracted method
+  resolution helpers for unique impl lookup. Short UFCS accepts receiver types
+  known during raw lowering: function-parameter variables, syntactically typed
+  literals, and immutable annotated or inferred pure local literals after
+  receiver-let elimination. Struct, enum, direct-call, generic direct-call,
+  and non-pure inferred local receivers remain at the documented safety-gate
+  boundary with invalid tests. Regression coverage includes generic-trait
+  explicit UFCS with method-local type args and bounds, extra method type args,
+  pure local receivers in short and explicit UFCS, and dot-syntax rejection.
+  Generic trait arguments require the explicit `<Ty as Trait<...>>` spelling.
 - Concrete associated type projections are normalized by extracted Rocq
   env/raw/core traversal helpers when a unique impl defines the associated
   type, allowing uses such as `<unrestricted isize as Iterator>::Item` to

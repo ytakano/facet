@@ -46,8 +46,9 @@ Completed:
   resolving a trait method target from `(trait, trait args, receiver type,
   method name)` against unique impls and matching impl methods. The shorter
   prefix form `(Trait::method receiver args...)` is accepted when `receiver` is
-  a variable whose type is known from the raw-lowering value context, currently function
-  parameters.
+  a variable whose type is known from the raw-lowering value context, currently
+  function parameters. Generic trait arguments require the explicit `<Ty as Trait<...>>`
+  UFCS spelling.
 - Concrete associated type projections are normalized by an extracted Rocq helper
   in converted env/raw/core types when a unique impl defines the associated
   type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
@@ -69,9 +70,9 @@ Key temporary limitations:
 
 1. Harden UFCS trait method calls.
    - Extend short prefix UFCS beyond typed variable receivers to receiver
-     expressions whose type must be inferred during lowering, and decide whether
-     to support trait type arguments in the short form or require the explicit
-     `<Ty as Trait>` spelling for those cases.
+     expressions whose type must be inferred during lowering. Generic trait
+     arguments stay explicit through `<Ty as Trait<...>>`; do not add a short
+     form for them in Roadmap 1-3.
    - Support receiver-let/generic-call safety-gate shapes, including local struct
      receivers, by adding a Prop-level summary plus checker soundness and
      runtime safety branch; a checker-only clause is insufficient. The reusable

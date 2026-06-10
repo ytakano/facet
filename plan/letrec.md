@@ -1496,11 +1496,12 @@ Done:
 - The extracted `fixtures/TypeChecker.ml/.mli` artifacts were regenerated from
   Rocq, and the direct-recursion safety-gate regression cases were moved from
   `tests/invalid/function/` to `tests/valid/function/`.
+- Removed audited-unused strict-only callback projection wrappers from
+  `End2EndSafety.v`.
 
 Non-blocking maintenance:
 
-- Retire older strict-only wrapper variants only after a separate dependency
-  audit shows no downstream theorem uses them.
+- Retire strict-only wrappers only after dependency audit confirms no users.
 
 This roadmap adds local recursion in stages, ending with a safe v1 for
 explicit-capture recursive closures. The first implementation should avoid a

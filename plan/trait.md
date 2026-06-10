@@ -51,8 +51,9 @@ Completed:
   literal expression whose type is syntactically known during raw lowering.
   Immutable annotated local receivers initialized with unrestricted unit, int,
   float, or bool literals are lowered by eliminating the pure receiver `let`
-  when the local name is used only as the receiver, so `(Trait::method x ...)`
-  reaches the checker as the same prefix call shape as `(Trait::method 1 ...)`.
+  when the local name is used only as the receiver, including calls with
+  additional arguments, so `(Trait::method x arg ...)` reaches the checker as
+  the same prefix call shape as `(Trait::method 1 arg ...)`.
   Short UFCS uses the same ordinary call layout for additional arguments,
   `(Trait::method receiver arg ...)`, and dot syntax is rejected by regression
   tests for this phase.
@@ -95,7 +96,7 @@ Key temporary limitations:
    - Support the remaining receiver-let/generic-call safety-gate shapes.
      Immutable annotated local receivers initialized by unrestricted unit, int,
      float, or bool literals are now accepted by pure receiver-let elimination
-     in raw lowering and covered by a valid regression test. General annotated
+     in raw lowering and covered by valid regression tests. General annotated
      local receivers still need a Prop-level summary plus checker soundness and
      runtime safety branch; a checker-only clause is insufficient. Inferred
      local receivers still fail earlier because short UFCS has no checker-backed

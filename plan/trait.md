@@ -70,14 +70,12 @@ Completed:
 - Concrete associated type projections are normalized by extracted Rocq
   env/raw/core traversal helpers when a unique impl defines the associated
   type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
-  type-check as `isize` across call arguments, let annotations, struct fields,
-  enum payloads, function-value signatures, closure signatures, trait method
-  signatures, and method-local type arguments in explicit and short UFCS calls,
-  direct generic function-call type arguments, generic struct/enum type
-  arguments, trait-bound type arguments, impl trait arguments, trait own-bound
-  type arguments, function-bound type arguments, and method-local bound
-  type arguments,
-  with mismatch regressions for those type-argument positions.
+  type-check as `isize` across value compatibility sites, aggregate fields and
+  payloads, function/closure/method signatures, explicit and short UFCS
+  method type arguments, generic call and aggregate type arguments, impl trait
+  arguments, and trait-bound positions including trait, function, trait-own,
+  and method-local bounds. Accepted cases and mismatch rejections are covered
+  by regression tests.
   Global environment and raw function normalization now
   happen inside the extracted Rocq raw-elaboration entrypoint before hidden
   stubs and checked bodies are built; OCaml no longer runs an associated-type

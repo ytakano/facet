@@ -1,0 +1,15 @@
+trait Iterator {
+  type Item;
+  fn next(self: Self) -> Self::Item;
+}
+
+impl Iterator for unrestricted isize {
+  type Item = isize;
+  fn next(self: Self) -> Self::Item {
+    self
+  }
+}
+
+fn main() -> unrestricted isize {
+  (<unrestricted isize as Iterator>::next 1)
+}

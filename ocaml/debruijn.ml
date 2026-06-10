@@ -8,9 +8,24 @@ type ty_scope = {
   type_params  : string list;
   struct_names : string list;
   enum_names   : string list;
+  self_assoc_trait : (path * named_type_arg list) option;
 }
 
 let string_of_path path = String.concat "::" path
+
+let named_type_param_arg name =
+  NTArgTy (NTy (UUnrestricted, NTNamed ([name], [])))
+
+let self_assoc_trait_for_trait name tys =
+  Some ([name], List.map named_type_param_arg tys)
+
+let self_assoc_name_from_flat name =
+  let prefix = "Self::" in
+  let prefix_len = String.length prefix in
+  if String.length name > prefix_len &&
+     String.sub name 0 prefix_len = prefix
+  then Some (String.sub name prefix_len (String.length name - prefix_len))
+  else None
 
 let split_generics params =
   let rec go lts tys = function
@@ -644,6 +659,25 @@ and lower_named_ty_core ty_scope c =
   | NTIntegers -> TIntegers
   | NTFloats -> TFloats
   | NTBooleans -> TBooleans
+  | NTNamed ([flat], []) when Option.is_some (self_assoc_name_from_flat flat) ->
+    let assoc = Option.get (self_assoc_name_from_flat flat) in
+    begin match ty_scope.self_assoc_trait with
+    | Some (trait_path, trait_args_named) ->
+      let (lts, trait_args) = split_type_args ty_scope trait_args_named in
+      if lts <> [] then failwith ("Self associated type trait cannot take lifetime arguments: " ^ string_of_path trait_path);
+      TAssoc (lower_named_ty ty_scope (NTy (UUnrestricted, NTNamed (["Self"], []))),
+        string_of_path trait_path, trait_args, assoc)
+    | None -> failwith ("Self associated type shorthand is only valid in trait or impl items: " ^ flat)
+    end
+  | NTNamed (["Self"; assoc], []) ->
+    begin match ty_scope.self_assoc_trait with
+    | Some (trait_path, trait_args_named) ->
+      let (lts, trait_args) = split_type_args ty_scope trait_args_named in
+      if lts <> [] then failwith ("Self associated type trait cannot take lifetime arguments: " ^ string_of_path trait_path);
+      TAssoc (lower_named_ty ty_scope (NTy (UUnrestricted, NTNamed (["Self"], []))),
+        string_of_path trait_path, trait_args, assoc)
+    | None -> failwith ("Self associated type shorthand is only valid in trait or impl items: Self::" ^ assoc)
+    end
   | NTNamed (path, args) ->
     let s = string_of_path path in
     begin match index_of s ty_scope.type_params with
@@ -702,6 +736,25 @@ and lower_surface_ty_core ty_scope c =
   | NSTIntegers -> TIntegers
   | NSTFloats -> TFloats
   | NSTBooleans -> TBooleans
+  | NSTNamed ([flat], []) when Option.is_some (self_assoc_name_from_flat flat) ->
+    let assoc = Option.get (self_assoc_name_from_flat flat) in
+    begin match ty_scope.self_assoc_trait with
+    | Some (trait_path, trait_args_named) ->
+      let (lts, trait_args) = split_type_args ty_scope trait_args_named in
+      if lts <> [] then failwith ("Self associated type trait cannot take lifetime arguments: " ^ string_of_path trait_path);
+      TAssoc (lower_named_ty ty_scope (NTy (UUnrestricted, NTNamed (["Self"], []))),
+        string_of_path trait_path, trait_args, assoc)
+    | None -> failwith ("Self associated type shorthand is only valid in trait or impl items: " ^ flat)
+    end
+  | NSTNamed (["Self"; assoc], []) ->
+    begin match ty_scope.self_assoc_trait with
+    | Some (trait_path, trait_args_named) ->
+      let (lts, trait_args) = split_type_args ty_scope trait_args_named in
+      if lts <> [] then failwith ("Self associated type trait cannot take lifetime arguments: " ^ string_of_path trait_path);
+      TAssoc (lower_named_ty ty_scope (NTy (UUnrestricted, NTNamed (["Self"], []))),
+        string_of_path trait_path, trait_args, assoc)
+    | None -> failwith ("Self associated type shorthand is only valid in trait or impl items: Self::" ^ assoc)
+    end
   | NSTNamed (path, args) ->
     let s = string_of_path path in
     begin match index_of s ty_scope.type_params with
@@ -1162,6 +1215,7 @@ let convert_fn_def_with_names struct_names enum_names fn_names (f : named_fn_def
     type_params = tys;
     struct_names;
     enum_names;
+    self_assoc_trait = None;
   } in
   let (scope, params, next_lifetime, input_lts) = List.fold_left
     (fun (sc, acc, next_lt, input_lts) np ->
@@ -1192,6 +1246,7 @@ let convert_raw_fn_def_with_names struct_names enum_names fn_names (f : named_fn
     type_params = tys;
     struct_names;
     enum_names;
+    self_assoc_trait = None;
   } in
   let (scope, params, next_lifetime, input_lts) = List.fold_left
     (fun (sc, acc, next_lt, input_lts) np ->
@@ -1217,7 +1272,7 @@ let convert_raw_fn_def_with_names struct_names enum_names fn_names (f : named_fn
 
 let convert_struct struct_names enum_names s =
   let (lts, tys) = split_generics s.ns_generics in
-  let ty_scope = { type_params = tys; struct_names; enum_names } in
+  let ty_scope = { type_params = tys; struct_names; enum_names; self_assoc_trait = None } in
   { struct_name = s.ns_name;
     struct_lifetimes = Big_int_Z.big_int_of_int (List.length lts);
     struct_type_params = Big_int_Z.big_int_of_int (List.length tys);
@@ -1232,7 +1287,7 @@ let convert_struct struct_names enum_names s =
 
 let convert_enum struct_names enum_names e =
   let (lts, tys) = split_generics e.ne_generics in
-  let ty_scope = { type_params = tys; struct_names; enum_names } in
+  let ty_scope = { type_params = tys; struct_names; enum_names; self_assoc_trait = None } in
   { enum_name = e.ne_name;
     enum_lifetimes = Big_int_Z.big_int_of_int (List.length lts);
     enum_type_params = Big_int_Z.big_int_of_int (List.length tys);
@@ -1321,8 +1376,9 @@ let convert_impl_method_item fn_names ty_scope initial_lifetimes = function
 
 let convert_trait struct_names enum_names t =
   let (_lts, tys) = split_generics t.nt_generics in
-  let ty_scope = { type_params = tys; struct_names; enum_names } in
-  let item_ty_scope = { ty_scope with type_params = "Self" :: tys } in
+  let ty_scope = { type_params = tys; struct_names; enum_names; self_assoc_trait = None } in
+  let item_ty_scope = { ty_scope with type_params = "Self" :: tys;
+    self_assoc_trait = self_assoc_trait_for_trait t.nt_name tys } in
   { trait_name = t.nt_name;
     trait_type_params = Big_int_Z.big_int_of_int (List.length tys);
     trait_bounds = List.map (trait_bound_of_named ty_scope tys) t.nt_bounds;
@@ -1331,11 +1387,12 @@ let convert_trait struct_names enum_names t =
 
 let convert_impl struct_names enum_names fn_names i =
   let (lts, tys) = split_generics i.ni_generics in
-  let ty_scope = { type_params = tys; struct_names; enum_names } in
+  let ty_scope = { type_params = tys; struct_names; enum_names; self_assoc_trait = None } in
   let (trait_lts, trait_args) = split_expr_type_args ty_scope i.ni_trait_args in
   if trait_lts <> []
   then failwith ("trait impl target cannot take lifetime arguments: " ^ string_of_path i.ni_trait_name);
-  let item_ty_scope = { ty_scope with type_params = "Self" :: tys } in
+  let item_ty_scope = { ty_scope with type_params = "Self" :: tys;
+    self_assoc_trait = Some (i.ni_trait_name, i.ni_trait_args) } in
   { impl_lifetimes = Big_int_Z.big_int_of_int (List.length lts);
     impl_type_params = Big_int_Z.big_int_of_int (List.length tys);
     impl_trait_name = string_of_path i.ni_trait_name;
@@ -1447,12 +1504,13 @@ let convert_impl_method_raw_item fn_names needed_names ty_scope initial_lifetime
 
 let convert_impl_method_raw_fns struct_names enum_names fn_names needed_names i =
   let (lts, tys) = split_generics i.ni_generics in
-  let ty_scope = { type_params = tys; struct_names; enum_names } in
+  let ty_scope = { type_params = tys; struct_names; enum_names; self_assoc_trait = None } in
   let (trait_lts, trait_args) = split_expr_type_args ty_scope i.ni_trait_args in
   if trait_lts <> []
   then failwith ("trait impl target cannot take lifetime arguments: " ^ string_of_path i.ni_trait_name);
   let self_ty = lower_named_ty ty_scope i.ni_for_ty in
-  let item_ty_scope = { ty_scope with type_params = "Self" :: tys } in
+  let item_ty_scope = { ty_scope with type_params = "Self" :: tys;
+    self_assoc_trait = Some (i.ni_trait_name, i.ni_trait_args) } in
   List.filter_map
     (convert_impl_method_raw_item fn_names needed_names item_ty_scope (List.length lts)
        (string_of_path i.ni_trait_name) trait_args self_ty)
@@ -1490,14 +1548,15 @@ let rec method_call_targets_in_expr ty_scope = function
 
 let method_call_targets_in_fn struct_names enum_names f =
   let (_lts, tys) = split_generics f.nf_generics in
-  let ty_scope = { type_params = tys; struct_names; enum_names } in
+  let ty_scope = { type_params = tys; struct_names; enum_names; self_assoc_trait = None } in
   method_call_targets_in_expr ty_scope f.nf_body
 
 let method_call_targets_in_impl_method struct_names enum_names i item =
   match item with
   | NIIMethodDef m ->
     let (_lts, tys) = split_generics i.ni_generics in
-    let ty_scope = { type_params = "Self" :: tys; struct_names; enum_names } in
+    let ty_scope = { type_params = "Self" :: tys; struct_names; enum_names;
+      self_assoc_trait = Some (i.ni_trait_name, i.ni_trait_args) } in
     method_call_targets_in_expr ty_scope m.nmd_body
   | NIIAssocTypeDef _ -> []
 

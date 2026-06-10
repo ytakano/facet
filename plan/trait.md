@@ -43,7 +43,8 @@ Completed:
 - Concrete associated type projections are normalized by an extracted Rocq helper
   in converted env/raw/core types when a unique impl defines the associated
   type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
-  type-check as `isize`.
+  type-check as `isize`. In trait and impl items, `Self::Assoc` is accepted as
+  shorthand for the current trait projection.
 
 Key temporary limitations:
 
@@ -57,8 +58,6 @@ Key temporary limitations:
   normalization algorithm itself is now extracted from Rocq; wiring it into
   Rocq compatibility and proving the corresponding soundness rule remains
   pending.
-- `Self::Assoc` shorthand is pending; use explicit `<Self as Trait>::Assoc` in
-  validated method signatures for now.
 
 ## Remaining Roadmap 2-3 Tasks
 

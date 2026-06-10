@@ -164,6 +164,7 @@ ty_core ::= "isize"
            | "()"
            | path opt_type_args
            | "<" ty "as" trait_ref ">" "::" ID
+           | "Self" "::" ID
            | "&" ty
            | "&" "mut" ty
            | "&" LIFETIME ty
@@ -193,6 +194,7 @@ surface_ty_core ::= "isize"
                   | "()"
                   | path opt_surface_type_args
                   | "<" surface_ty "as" surface_trait_ref ">" "::" ID
+                  | "Self" "::" ID
                   | "&" surface_ty
                   | "&" "mut" surface_ty
                   | "&" LIFETIME surface_ty

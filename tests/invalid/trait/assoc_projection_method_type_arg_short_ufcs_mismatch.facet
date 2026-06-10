@@ -1,0 +1,21 @@
+trait Provider {
+  type Item;
+}
+
+impl Provider for unrestricted isize {
+  type Item = bool;
+}
+
+trait Mapper {
+  fn map<T>(self: Self, value: unrestricted T) -> unrestricted T;
+}
+
+impl Mapper for unrestricted isize {
+  fn map<T>(self: Self, value: unrestricted T) -> unrestricted T {
+    value
+  }
+}
+
+fn main(x: unrestricted isize) -> unrestricted bool {
+  (Mapper::map<unrestricted <unrestricted isize as Provider>::Item> x 1)
+}

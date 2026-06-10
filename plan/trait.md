@@ -68,7 +68,8 @@ Completed:
   type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
   type-check as `isize` across call arguments, let annotations, struct fields,
   enum payloads, function-value signatures, closure signatures, trait method
-  signatures, and method-local type arguments in explicit and short UFCS calls.
+  signatures, and method-local type arguments in explicit and short UFCS calls,
+  with mismatch regressions for those method type arguments.
   Global environment and raw function normalization now
   happen inside the extracted Rocq raw-elaboration entrypoint before hidden
   stubs and checked bodies are built; OCaml no longer runs an associated-type

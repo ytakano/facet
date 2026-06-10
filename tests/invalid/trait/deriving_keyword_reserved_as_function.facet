@@ -1,0 +1,7 @@
+fn deriving() -> unrestricted isize {
+  0
+}
+
+fn main() -> unrestricted isize {
+  (deriving)
+}

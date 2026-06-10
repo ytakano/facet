@@ -145,13 +145,15 @@ Key temporary limitations:
    - Keep associated type defaults and equality constraints deferred.
 
 3. Keep Haskell-style deriving on the trait roadmap.
-   - After associated compatibility and UFCS are checker-backed, add a
-     `deriving` surface form that expands to ordinary impl declarations and
-     is validated by the extracted checker rather than by OCaml fallback
-     logic. Initial candidates are structural traits with deterministic
-     generated bodies. Current syntax is intentionally rejected by regression
-     tests; deriving for traits with associated type defaults or equality
-     constraints waits until those features exist.
+   - `deriving` is reserved for a future surface form. For now, provisional
+     `struct ... deriving Trait { ... }` syntax is caught by the parser and
+     rejected with an explicit deferred error, and `deriving` cannot be used as
+     an identifier. Once associated compatibility and UFCS are checker-backed,
+     deriving should expand to ordinary impl declarations validated by the
+     extracted checker rather than by OCaml fallback logic. Initial candidates
+     are structural traits with deterministic generated bodies; traits with
+     associated type defaults or equality constraints wait until those features
+     exist.
 
 ## Constraints and Checks
 

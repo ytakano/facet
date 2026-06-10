@@ -53,6 +53,7 @@ let keywords = [
   "false",        Parser.KW_FALSE;
   "bool",         Parser.KW_BOOL;
   "where",        Parser.KW_WHERE;
+  "deriving",     Parser.KW_DERIVING;
 ]
 
 let id_or_kw s =

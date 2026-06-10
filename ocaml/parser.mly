@@ -111,7 +111,7 @@ let split_constructor_path segments =
 
 %token KW_FN KW_FOR KW_STRUCT KW_ENUM KW_TRAIT KW_IMPL KW_MATCH KW_MOD KW_PUB KW_USE KW_AS KW_LET KW_REC KW_AND KW_IN KW_MUT KW_DROP KW_REPLACE KW_CLOSURE
 %token KW_AFFINE KW_LINEAR KW_UNRESTRICTED KW_ISIZE KW_F64
-%token KW_IF KW_ELSE KW_TRUE KW_FALSE KW_BOOL KW_WHERE
+%token KW_IF KW_ELSE KW_TRUE KW_FALSE KW_BOOL KW_WHERE KW_DERIVING
 %token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET LANGLE RANGLE
 %token ARROW FATARROW AMP STAR
 %token COMMA COLON DCOLON EQUAL SEMI UNDERSCORE DOT PLUS
@@ -170,6 +170,9 @@ struct_def:
   | KW_STRUCT; name = ID; generics = opt_generic_params;
     bounds = opt_trait_bounds; LBRACE; fields = separated_list(COMMA, struct_field); RBRACE
     { { ns_visibility = VPrivate; ns_name = name; ns_generics = generics; ns_bounds = bounds; ns_fields = fields } }
+  | KW_STRUCT; name = ID; _generics = opt_generic_params;
+    KW_DERIVING; _derived = trait_ref; LBRACE; _fields = separated_list(COMMA, struct_field); RBRACE
+    { failwith (Printf.sprintf "deriving syntax is deferred: %s" name) }
 
 enum_def:
   | KW_ENUM; name = ID; generics = opt_generic_params;

@@ -1,0 +1,27 @@
+trait Provider {
+  type Item;
+}
+
+impl Provider for unrestricted isize {
+  type Item = unrestricted bool;
+}
+
+trait Marker<T>;
+
+impl Marker<unrestricted bool> for unrestricted bool;
+
+trait Mapper {
+  fn map<T>(self: Self, value: unrestricted T) -> unrestricted T
+    where T: Marker<unrestricted <unrestricted isize as Provider>::Item>;
+}
+
+impl Mapper for unrestricted isize {
+  fn map<T>(self: Self, value: unrestricted T) -> unrestricted T
+    where T: Marker<unrestricted <unrestricted isize as Provider>::Item> {
+    value
+  }
+}
+
+fn main() -> unrestricted bool {
+  (<unrestricted isize as Mapper>::map<unrestricted bool> 1 true)
+}

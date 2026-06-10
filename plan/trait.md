@@ -74,7 +74,8 @@ Completed:
   enum payloads, function-value signatures, closure signatures, trait method
   signatures, and method-local type arguments in explicit and short UFCS calls,
   direct generic function-call type arguments, generic struct/enum type
-  arguments, trait-bound type arguments, impl trait arguments, and trait own-bound type arguments,
+  arguments, trait-bound type arguments, impl trait arguments, trait own-bound
+  type arguments, and method-local bound type arguments,
   with mismatch regressions for those type-argument positions.
   Global environment and raw function normalization now
   happen inside the extracted Rocq raw-elaboration entrypoint before hidden
@@ -147,7 +148,11 @@ Key temporary limitations:
      existing env/root typing rules still require ordinary `typed_args`
      compatibility, so full soundness fails. The next implementation step is
      assoc-aware env/root argument compatibility rules or a proved bridge,
-     followed by checker helper switching.
+     followed by checker helper switching. A direct attempt to add assoc
+     helper soundness lemmas in `EnvSoundnessFacts.v` reintroduced a heavy
+     `CompatBoolSoundness` import path and did not finish single-file
+     compilation quickly, so this needs either a lighter proof module split or
+     localized lightweight compatibility soundness before call-site wiring.
    - Keep associated type defaults and equality constraints deferred.
 
 3. Keep Haskell-style deriving on the trait roadmap.

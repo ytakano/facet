@@ -68,7 +68,10 @@ Key temporary limitations:
      calls aligned with `(function args...)`; do not introduce dot-call syntax.
    - Support receiver-let/generic-call safety-gate shapes, including local struct
      receivers, by adding a Prop-level summary plus checker soundness and
-     runtime safety branch; a checker-only clause is insufficient.
+     runtime safety branch; a checker-only clause is insufficient. The next
+     implementation cut must first expose or move the reusable generic-direct
+     runtime package before `EnvRuntimeNarrowRuntimePackage.v` without creating
+     a module cycle.
    - Keep dot method-call syntax out of this phase.
 
 2. Move associated type normalization into Rocq compatibility.

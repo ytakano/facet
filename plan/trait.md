@@ -88,13 +88,13 @@ Key temporary limitations:
      parameters, and syntactically typed literals are supported; generic trait
      arguments stay explicit through `<Ty as Trait<...>>`, and Roadmap 1-3 does
      not add a short form for them.
-   - Support receiver-let/generic-call safety-gate shapes, including inferred
-     local receivers and local struct receivers, by adding a Prop-level summary
-     plus checker soundness and runtime safety branch; a checker-only clause is
-     insufficient. Local struct receiver calls now reach this safety-gate
-     boundary. The reusable generic-direct runtime package interface is now
-     available before `EnvRuntimeNarrowRuntimePackage.v`, so the next cut can
-     add the Prop summary, checker soundness, and runtime branch.
+   - Support receiver-let/generic-call safety-gate shapes. Annotated local
+     receivers currently resolve to hidden `ECallGeneric` and fail the
+     end-to-end safety gate; inferred local receivers still fail earlier because
+     short UFCS has no checker-backed receiver type inference. Both boundaries
+     are covered by invalid regression tests. The next cut must add a Prop-level
+     summary plus checker soundness and runtime safety branch; a checker-only
+     clause is insufficient.
    - Keep dot method-call syntax out of this phase; parser-level rejection is
      covered by regression tests.
 

@@ -1057,10 +1057,18 @@ let lit_ty = function
   | LFloat _ -> MkTy (UUnrestricted, TFloats)
   | LBool _ -> MkTy (UUnrestricted, TBooleans)
 
-let infer_short_method_receiver_ty value_tys = function
+let infer_short_method_receiver_ty ty_scope value_tys = function
   | NLit lit -> Some (lit_ty lit)
   | NUnit -> Some (MkTy (UUnrestricted, TUnits))
   | NVar name -> value_ty_lookup name value_tys
+  | NStruct (name_path, args, _) ->
+    let (lts, tys) = split_expr_type_args ty_scope args in
+    Some (MkTy (UUnrestricted, TStruct (string_of_path name_path, lts, tys)))
+  | NEnum (enum_name_path, args, _, variant_args, _) ->
+    let (lts, tys) = split_expr_type_args ty_scope args in
+    let (_variant_lts, variant_tys) = split_expr_type_args ty_scope variant_args in
+    if variant_tys <> [] then None
+    else Some (MkTy (UUnrestricted, TEnum (string_of_path enum_name_path, lts, tys)))
   | _ -> None
 
 let pure_unrestricted_receiver_expr ty expr =
@@ -1116,10 +1124,10 @@ let rec named_expr_mentions_name name = function
       rec_fns
   | NUnit | NLit _ -> false
 
-let short_method_target_for_expr env _ty_scope value_tys fn_names f_path receiver =
+let short_method_target_for_expr env ty_scope value_tys fn_names f_path receiver =
   let f = string_of_path f_path in
   if List.mem f fn_names then None else
-  match infer_short_method_receiver_ty value_tys receiver with
+  match infer_short_method_receiver_ty ty_scope value_tys receiver with
   | Some receiver_ty ->
     begin match short_method_target_for_receiver env f_path receiver_ty with
     | Some (target, display) -> Some (target, display, receiver_ty)

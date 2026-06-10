@@ -49,6 +49,10 @@ Completed:
   a variable whose type is known from the raw-lowering value context, currently
   function parameters including struct parameters, and when the receiver is a
   literal expression whose type is syntactically known during raw lowering.
+  Struct literal and enum constructor receivers are also recognized as
+  syntactically typed short-UFCS receivers, but currently reach the same
+  end-to-end safety gate as explicit UFCS expression receivers and remain
+  rejected by regression tests.
   Immutable annotated local receivers initialized with unrestricted unit, int,
   float, or bool literals are lowered by eliminating the pure receiver `let`
   when the local name is used only as the receiver, including calls with
@@ -104,9 +108,12 @@ Key temporary limitations:
    - Support the remaining receiver-let/generic-call safety-gate shapes.
      Immutable annotated local receivers initialized by unrestricted unit, int,
      float, or bool literals are now accepted by pure receiver-let elimination
-     in raw lowering and covered by valid regression tests. General annotated
-     local receivers still need a Prop-level summary plus checker soundness and
-     runtime safety branch; a checker-only clause is insufficient. Inferred
+     in raw lowering and covered by valid regression tests. Struct and enum
+     expression receivers now resolve in raw lowering but still hit the
+     end-to-end safety gate, like explicit UFCS expression receivers.
+     General annotated local receivers still need a Prop-level summary plus
+     checker soundness and runtime safety branch; a checker-only clause
+     is insufficient. Inferred
      local receivers still fail earlier because short UFCS has no checker-backed
      receiver type inference and remain covered by an invalid regression test.
    - Keep dot method-call syntax out of this phase; parser-level rejection is

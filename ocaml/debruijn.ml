@@ -1057,10 +1057,31 @@ let lit_ty = function
   | LFloat _ -> MkTy (UUnrestricted, TFloats)
   | LBool _ -> MkTy (UUnrestricted, TBooleans)
 
-let infer_short_method_receiver_ty ty_scope value_tys = function
+let direct_call_receiver_ret_ty env ty_scope f_path type_args =
+  let f = string_of_path f_path in
+  match lookup_fn_b (make_ident f 0) env.env_fns with
+  | None -> None
+  | Some fdef ->
+    let lowered_type_args = lower_call_type_args ty_scope type_args in
+    if type_args = [] then
+      if Big_int_Z.eq_big_int fdef.fn_type_params Big_int_Z.zero_big_int
+      then Some fdef.fn_ret
+      else None
+    else if Big_int_Z.eq_big_int
+        (Big_int_Z.big_int_of_int (List.length lowered_type_args))
+        fdef.fn_type_params
+    then Some (subst_type_params_ty lowered_type_args fdef.fn_ret)
+    else None
+
+let infer_short_method_receiver_ty env ty_scope value_tys fn_names = function
   | NLit lit -> Some (lit_ty lit)
   | NUnit -> Some (MkTy (UUnrestricted, TUnits))
   | NVar name -> value_ty_lookup name value_tys
+  | NCall (f_path, type_args, _args) ->
+    let f = string_of_path f_path in
+    if List.mem f fn_names
+    then direct_call_receiver_ret_ty env ty_scope f_path type_args
+    else None
   | NStruct (name_path, args, _) ->
     let (lts, tys) = split_expr_type_args ty_scope args in
     Some (MkTy (UUnrestricted, TStruct (string_of_path name_path, lts, tys)))
@@ -1127,7 +1148,7 @@ let rec named_expr_mentions_name name = function
 let short_method_target_for_expr env ty_scope value_tys fn_names f_path receiver =
   let f = string_of_path f_path in
   if List.mem f fn_names then None else
-  match infer_short_method_receiver_ty ty_scope value_tys receiver with
+  match infer_short_method_receiver_ty env ty_scope value_tys fn_names receiver with
   | Some receiver_ty ->
     begin match short_method_target_for_receiver env f_path receiver_ty with
     | Some (target, display) -> Some (target, display, receiver_ty)

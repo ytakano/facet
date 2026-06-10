@@ -1,0 +1,17 @@
+trait Runner {
+  fn run(self: Self) -> unrestricted isize;
+}
+
+impl Runner for unrestricted isize {
+  fn run(self: Self) -> unrestricted isize {
+    self
+  }
+}
+
+fn make() -> unrestricted isize {
+  1
+}
+
+fn main() -> unrestricted isize {
+  (Runner::run (make))
+}

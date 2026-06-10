@@ -18,6 +18,54 @@ Definition trait_impl_error_with_args
       end
   end.
 
+Fixpoint find_trait_method_sig (method_name : string)
+    (methods : list trait_method_sig) : option trait_method_sig :=
+  match methods with
+  | [] => None
+  | m :: rest =>
+      if String.eqb (trait_method_name m) method_name
+      then Some m
+      else find_trait_method_sig method_name rest
+  end.
+
+Fixpoint find_impl_method_def (method_name : string)
+    (methods : list fn_def) : option fn_def :=
+  match methods with
+  | [] => None
+  | m :: rest =>
+      if String.eqb (fst (fn_name m)) method_name
+      then Some m
+      else find_impl_method_def method_name rest
+  end.
+
+Definition resolve_trait_method_impl
+    (env : global_env) (trait_name : string) (trait_args : list Ty)
+    (for_ty : Ty) (method_name : string) : option impl_def :=
+  match lookup_trait trait_name env with
+  | None => None
+  | Some t =>
+      if negb (Nat.eqb (List.length trait_args) (trait_type_params t))
+      then None
+      else
+      match find_trait_method_sig method_name (trait_methods t),
+            matching_impls trait_name trait_args for_ty (env_impls env) with
+      | Some _, [impl] =>
+          match find_impl_method_def method_name (impl_methods impl) with
+          | Some _ => Some impl
+          | None => None
+          end
+      | _, _ => None
+      end
+  end.
+
+Definition resolve_trait_method_def
+    (env : global_env) (trait_name : string) (trait_args : list Ty)
+    (for_ty : Ty) (method_name : string) : option fn_def :=
+  match resolve_trait_method_impl env trait_name trait_args for_ty method_name with
+  | Some impl => find_impl_method_def method_name (impl_methods impl)
+  | None => None
+  end.
+
 Definition instantiate_trait_ref (args : list Ty) (tr : trait_ref) : trait_ref :=
   MkTraitRef (trait_ref_name tr)
     (map (subst_type_params_ty args) (trait_ref_args tr)).

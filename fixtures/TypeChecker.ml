@@ -4051,6 +4051,56 @@ let trait_impl_error_with_args env trait_name0 trait_args for_ty =
              | _ :: _ -> Some (ErrTraitImplAmbiguous (trait_name0, for_ty))))
   | None -> Some (ErrTraitImplNotFound (trait_name0, for_ty))
 
+(** val find_trait_method_sig :
+    string -> trait_method_sig list -> trait_method_sig option **)
+
+let rec find_trait_method_sig method_name = function
+| [] -> None
+| m :: rest ->
+  if (=) m.trait_method_name method_name
+  then Some m
+  else find_trait_method_sig method_name rest
+
+(** val find_impl_method_def : string -> fn_def list -> fn_def option **)
+
+let rec find_impl_method_def method_name = function
+| [] -> None
+| m :: rest ->
+  if (=) (fst m.fn_name) method_name
+  then Some m
+  else find_impl_method_def method_name rest
+
+(** val resolve_trait_method_impl :
+    global_env -> string -> ty list -> ty -> string -> impl_def option **)
+
+let resolve_trait_method_impl env trait_name0 trait_args for_ty method_name =
+  match lookup_trait trait_name0 env with
+  | Some t ->
+    if negb (Nat.eqb (length trait_args) t.trait_type_params)
+    then None
+    else (match find_trait_method_sig method_name t.trait_methods with
+          | Some _ ->
+            (match matching_impls trait_name0 trait_args for_ty env.env_impls with
+             | [] -> None
+             | impl :: l ->
+               (match l with
+                | [] ->
+                  (match find_impl_method_def method_name impl.impl_methods with
+                   | Some _ -> Some impl
+                   | None -> None)
+                | _ :: _ -> None))
+          | None -> None)
+  | None -> None
+
+(** val resolve_trait_method_def :
+    global_env -> string -> ty list -> ty -> string -> fn_def option **)
+
+let resolve_trait_method_def env trait_name0 trait_args for_ty method_name =
+  match resolve_trait_method_impl env trait_name0 trait_args for_ty
+          method_name with
+  | Some impl -> find_impl_method_def method_name impl.impl_methods
+  | None -> None
+
 (** val instantiate_trait_ref : ty list -> trait_ref -> trait_ref **)
 
 let instantiate_trait_ref args tr =

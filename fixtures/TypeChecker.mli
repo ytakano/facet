@@ -695,6 +695,17 @@ val infer_if_bool :
 val trait_impl_error_with_args :
   global_env -> string -> ty list -> ty -> infer_error option
 
+val find_trait_method_sig :
+  string -> trait_method_sig list -> trait_method_sig option
+
+val find_impl_method_def : string -> fn_def list -> fn_def option
+
+val resolve_trait_method_impl :
+  global_env -> string -> ty list -> ty -> string -> impl_def option
+
+val resolve_trait_method_def :
+  global_env -> string -> ty list -> ty -> string -> fn_def option
+
 val instantiate_trait_ref : ty list -> trait_ref -> trait_ref
 
 val subst_type_params_trait_ref : ty list -> trait_ref -> trait_ref

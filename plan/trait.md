@@ -45,9 +45,9 @@ Completed:
   function parameters including struct parameters, and when the receiver is a
   literal expression whose type is syntactically known during raw lowering.
   Struct literal, enum constructor, and direct function-call receivers are
-  recognized by short-UFCS raw lowering, and the same struct and enum
-  expression-receiver shapes are parsed by explicit UFCS, but these expression
-  receivers currently reach the end-to-end safety gate and remain covered by
+  recognized by short-UFCS raw lowering, and the same expression-receiver
+  shapes are parsed by explicit UFCS, but these expression receivers
+  currently reach the end-to-end safety gate and remain covered by
   invalid regression tests.
   Immutable annotated local receivers initialized with unrestricted unit, int,
   float, or bool literals are lowered by eliminating the pure receiver `let`

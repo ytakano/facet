@@ -1231,6 +1231,32 @@ Fixpoint normalize_assoc_expr (env : global_env) (e : expr) : expr :=
         (normalize_assoc_expr env e2) (normalize_assoc_expr env e3)
   end.
 
+Definition normalize_assoc_field (env : global_env) (f : field_def) : field_def :=
+  {| field_name := field_name f;
+     field_mutability := field_mutability f;
+     field_ty := normalize_assoc_ty env (field_ty f) |}.
+
+Definition normalize_assoc_struct (env : global_env) (s : struct_def) : struct_def :=
+  {| struct_name := struct_name s;
+     struct_lifetimes := struct_lifetimes s;
+     struct_type_params := struct_type_params s;
+     struct_bounds := map (normalize_assoc_trait_bound env) (struct_bounds s);
+     struct_fields := map (normalize_assoc_field env) (struct_fields s) |}.
+
+Definition normalize_assoc_enum_variant
+    (env : global_env) (v : enum_variant_def) : enum_variant_def :=
+  {| enum_variant_name := enum_variant_name v;
+     enum_variant_lifetimes := enum_variant_lifetimes v;
+     enum_variant_fields := map (normalize_assoc_ty env) (enum_variant_fields v) |}.
+
+Definition normalize_assoc_enum (env : global_env) (e : enum_def) : enum_def :=
+  {| enum_name := enum_name e;
+     enum_lifetimes := enum_lifetimes e;
+     enum_type_params := enum_type_params e;
+     enum_bounds := map (normalize_assoc_trait_bound env) (enum_bounds e);
+     enum_outlives := enum_outlives e;
+     enum_variants := map (normalize_assoc_enum_variant env) (enum_variants e) |}.
+
 Definition normalize_assoc_fn (env : global_env) (f : fn_def) : fn_def :=
   {| fn_name := fn_name f;
      fn_lifetimes := fn_lifetimes f;
@@ -1257,8 +1283,8 @@ Definition normalize_assoc_impl (env : global_env) (i : impl_def) : impl_def :=
      impl_methods := map (normalize_assoc_fn env) (impl_methods i) |}.
 
 Definition normalize_assoc_global_env (env : global_env) : global_env :=
-  {| env_structs := env_structs env;
-     env_enums := env_enums env;
+  {| env_structs := map (normalize_assoc_struct env) (env_structs env);
+     env_enums := map (normalize_assoc_enum env) (env_enums env);
      env_traits := env_traits env;
      env_impls := map (normalize_assoc_impl env) (env_impls env);
      env_local_bounds := map (normalize_assoc_trait_bound env) (env_local_bounds env);

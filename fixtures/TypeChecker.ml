@@ -2359,6 +2359,37 @@ let rec normalize_assoc_expr env = function
     (normalize_assoc_expr env e3))
 | x -> x
 
+(** val normalize_assoc_field : global_env -> field_def -> field_def **)
+
+let normalize_assoc_field env f =
+  { field_name = f.field_name; field_mutability = f.field_mutability;
+    field_ty = (normalize_assoc_ty env f.field_ty) }
+
+(** val normalize_assoc_struct : global_env -> struct_def -> struct_def **)
+
+let normalize_assoc_struct env s =
+  { struct_name = s.struct_name; struct_lifetimes = s.struct_lifetimes;
+    struct_type_params = s.struct_type_params; struct_bounds =
+    (map (normalize_assoc_trait_bound env) s.struct_bounds); struct_fields =
+    (map (normalize_assoc_field env) s.struct_fields) }
+
+(** val normalize_assoc_enum_variant :
+    global_env -> enum_variant_def -> enum_variant_def **)
+
+let normalize_assoc_enum_variant env v =
+  { enum_variant_name = v.enum_variant_name; enum_variant_lifetimes =
+    v.enum_variant_lifetimes; enum_variant_fields =
+    (map (normalize_assoc_ty env) v.enum_variant_fields) }
+
+(** val normalize_assoc_enum : global_env -> enum_def -> enum_def **)
+
+let normalize_assoc_enum env e =
+  { enum_name = e.enum_name; enum_lifetimes = e.enum_lifetimes;
+    enum_type_params = e.enum_type_params; enum_bounds =
+    (map (normalize_assoc_trait_bound env) e.enum_bounds); enum_outlives =
+    e.enum_outlives; enum_variants =
+    (map (normalize_assoc_enum_variant env) e.enum_variants) }
+
 (** val normalize_assoc_fn : global_env -> fn_def -> fn_def **)
 
 let normalize_assoc_fn env f =
@@ -2390,7 +2421,8 @@ let normalize_assoc_impl env i =
 (** val normalize_assoc_global_env : global_env -> global_env **)
 
 let normalize_assoc_global_env env =
-  { env_structs = env.env_structs; env_enums = env.env_enums; env_traits =
+  { env_structs = (map (normalize_assoc_struct env) env.env_structs);
+    env_enums = (map (normalize_assoc_enum env) env.env_enums); env_traits =
     env.env_traits; env_impls =
     (map (normalize_assoc_impl env) env.env_impls); env_local_bounds =
     (map (normalize_assoc_trait_bound env) env.env_local_bounds); env_fns =

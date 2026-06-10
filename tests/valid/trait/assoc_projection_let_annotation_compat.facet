@@ -1,0 +1,12 @@
+trait Iterator {
+  type Item;
+}
+
+impl Iterator for unrestricted isize {
+  type Item = isize;
+}
+
+fn main() -> unrestricted isize {
+  let x: unrestricted <unrestricted isize as Iterator>::Item = 1;
+  x
+}

@@ -65,7 +65,8 @@ Completed:
   env/raw/core traversal helpers when a unique impl defines the associated
   type, allowing uses such as `<unrestricted isize as Iterator>::Item` to
   type-check as `isize`, including at function call argument compatibility
-  boundaries. Global environment and raw function normalization now
+  boundaries, let annotations, struct field types, and enum payload types.
+  Global environment and raw function normalization now
   happen inside the extracted Rocq raw-elaboration entrypoint before hidden
   stubs and checked bodies are built; OCaml no longer runs an associated-type
   normalization pass. In trait and impl items, `Self::Assoc` is accepted as
@@ -88,6 +89,9 @@ Key temporary limitations:
   checks inside the extracted Rocq raw elaborator. Wiring checker call sites to
   `ty_compatible_assoc_b` and proving the corresponding soundness connection
   remain pending.
+- Short method calls intentionally use the same parenthesized call syntax as
+  functions: `(Trait::method receiver args...)`. Dot method-call syntax remains
+  out of phase and is covered by rejection tests.
 
 ## Remaining Roadmap 2-3 Tasks
 
@@ -111,8 +115,9 @@ Key temporary limitations:
 2. Move associated type normalization into Rocq compatibility.
    - Replace pre-compatibility normalization with env-aware Rocq compatibility
      so associated projection equality is checked at the typing rule boundary;
-     call-argument compatibility has regression coverage for both accepted
-     concrete projections and rejected mismatches.
+     call-argument, let-annotation, struct-field, and enum-payload compatibility
+     have regression coverage for both accepted concrete projections and
+     rejected mismatches.
    - Wire checker compatibility call sites to env-aware associated
      compatibility instead of relying on pre-pass normalization.
    - Keep associated type defaults and equality constraints deferred.

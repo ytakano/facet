@@ -1,0 +1,15 @@
+trait Iterator {
+  type Item;
+}
+
+impl Iterator for unrestricted isize {
+  type Item = isize;
+}
+
+struct Box {
+  value: unrestricted <unrestricted isize as Iterator>::Item
+}
+
+fn main() -> unrestricted Box {
+  Box { value = true }
+}

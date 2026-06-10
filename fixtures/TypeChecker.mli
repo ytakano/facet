@@ -443,6 +443,15 @@ val normalize_assoc_trait_bound : global_env -> trait_bound -> trait_bound
 
 val normalize_assoc_expr : global_env -> expr -> expr
 
+val normalize_assoc_field : global_env -> field_def -> field_def
+
+val normalize_assoc_struct : global_env -> struct_def -> struct_def
+
+val normalize_assoc_enum_variant :
+  global_env -> enum_variant_def -> enum_variant_def
+
+val normalize_assoc_enum : global_env -> enum_def -> enum_def
+
 val normalize_assoc_fn : global_env -> fn_def -> fn_def
 
 val normalize_assoc_impl_assoc :
